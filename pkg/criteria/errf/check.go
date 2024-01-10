@@ -22,12 +22,40 @@ package errf
 import (
 	"encoding/json"
 	"errors"
+	"regexp"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
+	terrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
+	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
 const mysqlDuplicatedNumber = 1062
+
+// GetTypedError 尝试转换为指定类型的错误
+func GetTypedError[T any](err error) *T {
+	var terr = new(T)
+	if errors.As(err, terr) {
+		return terr
+	}
+	return nil
+}
+
+// GetBPassApprovalErrorf 尝试转换为触发BPass审批错误，如果不符合条件将返回nil
+func GetBPassApprovalErrorf(err error) *ErrorF {
+
+	if terr := GetTypedError[terrors.TencentCloudSDKError](err); terr != nil &&
+		terr.GetCode() == vpc.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED {
+
+		// 	获取审批单号
+		msg := terr.GetMessage()
+		appIDExp := regexp.MustCompile("ApplicationId: \\d+")
+		if appIDMsg := appIDExp.FindString(msg); appIDMsg != "" {
+			return &ErrorF{Code: NeedBPassApproval, Message: appIDMsg[15:]}
+		}
+	}
+	return nil
+}
 
 // GetMySQLDuplicated return mysql.MySQLError if error is a mysql duplicated error
 func GetMySQLDuplicated(err error) (merr *mysql.MySQLError) {

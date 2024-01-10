@@ -17,41 +17,9 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package enumor
-
-import "fmt"
-
-// Vendor defines the cloud type where the hybrid cloud service is supported.
-type Vendor string
-
-// Validate the vendor is valid or not
-func (v Vendor) Validate() error {
-	switch v {
-	case TCloud:
-	case Aws:
-	case Gcp:
-	case Azure:
-	case HuaWei:
-	case TCloudZiyan:
-	default:
-		return fmt.Errorf("unsupported cloud vendor: %s", v)
-	}
-
-	return nil
-}
+package constant
 
 const (
-	// TCloud is tencent cloud
-	TCloud Vendor = "tcloud"
-	// Aws is amazon cloud
-	Aws Vendor = "aws"
-	// Gcp is the Google Cloud Platform
-	Gcp Vendor = "gcp"
-	// Azure is microsoft azure cloud.
-	Azure Vendor = "azure"
-	// HuaWei is hua wei cloud.
-	HuaWei Vendor = "huawei"
-
-	// TCloudZiyan  腾讯自研云
-	TCloudZiyan Vendor = "tcloud-ziyan"
+	// InternalVpcEndpoint vpc 内部域名
+	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
 )
