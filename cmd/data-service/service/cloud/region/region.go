@@ -65,6 +65,8 @@ func (svc *regionSvc) BatchCreateRegion(cts *rest.Contexts) (interface{}, error)
 		return svc.BatchCreateHuaWeiRegion(cts)
 	case enumor.Azure:
 		return svc.BatchCreateAzureRegion(cts)
+	case enumor.TCloudZiyan:
+		return svc.BatchCreateTCloudZiyanRegion(cts)
 	}
 
 	return nil, nil
@@ -89,6 +91,8 @@ func (svc *regionSvc) BatchUpdateRegion(cts *rest.Contexts) (interface{}, error)
 		return svc.BatchUpdateHuaWeiRegion(cts)
 	case enumor.Azure:
 		return svc.BatchUpdateAzureRegion(cts)
+	case enumor.TCloudZiyan:
+		err = svc.BatchUpdateTCloudZiyanRegion(cts)
 	}
 
 	return nil, err
@@ -112,6 +116,8 @@ func (svc *regionSvc) ListRegion(cts *rest.Contexts) (interface{}, error) {
 		return svc.ListHuaWeiRegion(cts)
 	case enumor.Azure:
 		return svc.ListAzureRegion(cts)
+	case enumor.TCloudZiyan:
+		return svc.ListTCloudZiyanRegion(cts)
 	}
 
 	return nil, nil
@@ -136,6 +142,8 @@ func (svc *regionSvc) BatchDeleteRegion(cts *rest.Contexts) (interface{}, error)
 		return svc.BatchDeleteHuaWeiRegion(cts)
 	case enumor.Azure:
 		return svc.BatchDeleteAzureRegion(cts)
+	case enumor.TCloudZiyan:
+		err = svc.BatchDeleteTCloudZiyanRegion(cts)
 	}
 
 	return nil, err

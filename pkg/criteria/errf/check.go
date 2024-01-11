@@ -30,12 +30,19 @@ import (
 	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
+// 腾讯云bpass审批id匹配正则
+var tcloudBPassIDRegexp *regexp.Regexp
+
+func init() {
+	tcloudBPassIDRegexp = regexp.MustCompile("ApplicationId: \\d+")
+}
+
 const mysqlDuplicatedNumber = 1062
 
 // GetTypedError 尝试转换为指定类型的错误
 func GetTypedError[T any](err error) *T {
 	var terr = new(T)
-	if errors.As(err, terr) {
+	if errors.As(err, &terr) {
 		return terr
 	}
 	return nil
@@ -49,8 +56,7 @@ func GetBPassApprovalErrorf(err error) *ErrorF {
 
 		// 	获取审批单号
 		msg := terr.GetMessage()
-		appIDExp := regexp.MustCompile("ApplicationId: \\d+")
-		if appIDMsg := appIDExp.FindString(msg); appIDMsg != "" {
+		if appIDMsg := tcloudBPassIDRegexp.FindString(msg); appIDMsg != "" {
 			return &ErrorF{Code: NeedBPassApproval, Message: appIDMsg[15:]}
 		}
 	}

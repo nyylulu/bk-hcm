@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package cloud
+package securitygroup
 
 import (
 	"fmt"
@@ -41,32 +41,32 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// initTCloudSGRuleService initial the tcloud security group rule service
-func initTCloudSGRuleService(cap *capability.Capability) {
-	svc := &tcloudSGRuleSvc{
+// initTCloudZiyanSGRuleService initial the tcloud security group rule service
+func initTCloudZiyanSGRuleService(cap *capability.Capability) {
+	svc := &tcloudZiyanSGRuleSvc{
 		dao: cap.Dao,
 	}
 
 	h := rest.NewHandler()
 
-	h.Add("BatchCreateTCloudRule", "POST", "/vendors/tcloud/security_groups/{security_group_id}/rules/batch/create",
-		svc.BatchCreateTCloudRule)
-	h.Add("BatchUpdateTCloudRule", "PUT", "/vendors/tcloud/security_groups/{security_group_id}/rules/batch",
-		svc.BatchUpdateTCloudRule)
-	h.Add("ListTCloudRule", "POST", "/vendors/tcloud/security_groups/{security_group_id}/rules/list",
-		svc.ListTCloudRule)
-	h.Add("DeleteTCloudRule", "DELETE", "/vendors/tcloud/security_groups/{security_group_id}/rules/batch",
-		svc.DeleteTCloudRule)
+	h.Add("BatchCreateTCloudZiyanRule", "POST",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/create", svc.BatchCreateTCloudZiyanRule)
+	h.Add("BatchUpdateTCloudZiyanRule", "PUT",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch", svc.BatchUpdateTCloudZiyanRule)
+	h.Add("ListTCloudZiyanRule", "POST",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/list", svc.ListTCloudZiyanRule)
+	h.Add("DeleteTCloudZiyanRule", "DELETE",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch", svc.DeleteTCloudZiyanRule)
 
 	h.Load(cap.WebService)
 }
 
-type tcloudSGRuleSvc struct {
+type tcloudZiyanSGRuleSvc struct {
 	dao dao.Set
 }
 
-// BatchCreateTCloudRule batch create tcloud rule.
-func (svc *tcloudSGRuleSvc) BatchCreateTCloudRule(cts *rest.Contexts) (interface{}, error) {
+// BatchCreateTCloudZiyanRule batch create tcloud rule.
+func (svc *tcloudZiyanSGRuleSvc) BatchCreateTCloudZiyanRule(cts *rest.Contexts) (interface{}, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security group id is required")
@@ -81,9 +81,9 @@ func (svc *tcloudSGRuleSvc) BatchCreateTCloudRule(cts *rest.Contexts) (interface
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	rules := make([]*tablecloud.TCloudSecurityGroupRuleTable, 0, len(req.Rules))
+	rules := make([]*tablecloud.TCloudZiyanSecurityGroupRuleTable, 0, len(req.Rules))
 	for _, rule := range req.Rules {
-		rules = append(rules, &tablecloud.TCloudSecurityGroupRuleTable{
+		rules = append(rules, &tablecloud.TCloudZiyanSecurityGroupRuleTable{
 			Region:                     rule.Region,
 			CloudPolicyIndex:           rule.CloudPolicyIndex,
 			Version:                    rule.Version,
@@ -107,10 +107,10 @@ func (svc *tcloudSGRuleSvc) BatchCreateTCloudRule(cts *rest.Contexts) (interface
 		})
 	}
 
-	ruleIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		ruleIDs, err := svc.dao.TCloudSGRule().BatchCreateOrUpdateWithTx(cts.Kit, txn, rules)
+	ruleIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (any, error) {
+		ruleIDs, err := svc.dao.TCloudZiyanSGRule().BatchCreateOrUpdateWithTx(cts.Kit, txn, rules)
 		if err != nil {
-			return nil, fmt.Errorf("batch create tcloud security group rule failed, err: %v", err)
+			return nil, fmt.Errorf("batch create tcloud ziyan security group rule failed, err: %v", err)
 		}
 
 		return ruleIDs, nil
@@ -121,15 +121,15 @@ func (svc *tcloudSGRuleSvc) BatchCreateTCloudRule(cts *rest.Contexts) (interface
 
 	ids, ok := ruleIDs.([]string)
 	if !ok {
-		return nil, fmt.Errorf("batch create tcloud security group rule but return id type is not string, id type: %v",
+		return nil, fmt.Errorf("batch create tcloud ziyan security group rule but return id type is not string, id type: %v",
 			reflect.TypeOf(ruleIDs).String())
 	}
 
 	return &core.BatchCreateResult{IDs: ids}, nil
 }
 
-// BatchUpdateTCloudRule update tcloud rule.
-func (svc *tcloudSGRuleSvc) BatchUpdateTCloudRule(cts *rest.Contexts) (interface{}, error) {
+// BatchUpdateTCloudZiyanRule update tcloud ziyan rule.
+func (svc *tcloudZiyanSGRuleSvc) BatchUpdateTCloudZiyanRule(cts *rest.Contexts) (interface{}, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security group id is required")
@@ -144,9 +144,9 @@ func (svc *tcloudSGRuleSvc) BatchUpdateTCloudRule(cts *rest.Contexts) (interface
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (any, error) {
 		for _, one := range req.Rules {
-			rule := &tablecloud.TCloudSecurityGroupRuleTable{
+			rule := &tablecloud.TCloudZiyanSecurityGroupRuleTable{
 				Region:                     one.Region,
 				CloudPolicyIndex:           one.CloudPolicyIndex,
 				Version:                    one.Version,
@@ -183,9 +183,9 @@ func (svc *tcloudSGRuleSvc) BatchUpdateTCloudRule(cts *rest.Contexts) (interface
 					},
 				},
 			}
-			if err := svc.dao.TCloudSGRule().UpdateWithTx(cts.Kit, txn, flt, rule); err != nil {
-				logs.Errorf("update tcloud security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
-				return nil, fmt.Errorf("update tcloud security group rule failed, err: %v", err)
+			if err := svc.dao.TCloudZiyanSGRule().UpdateWithTx(cts.Kit, txn, flt, rule); err != nil {
+				logs.Errorf("update tcloud ziyan security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
+				return nil, fmt.Errorf("update tcloud ziyan security group rule failed, err: %v", err)
 			}
 		}
 
@@ -198,8 +198,8 @@ func (svc *tcloudSGRuleSvc) BatchUpdateTCloudRule(cts *rest.Contexts) (interface
 	return nil, nil
 }
 
-// ListTCloudRule list tcloud rule.
-func (svc *tcloudSGRuleSvc) ListTCloudRule(cts *rest.Contexts) (interface{}, error) {
+// ListTCloudZiyanRule list tcloud ziyan rule.
+func (svc *tcloudZiyanSGRuleSvc) ListTCloudZiyanRule(cts *rest.Contexts) (interface{}, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security group id is required")
@@ -220,14 +220,14 @@ func (svc *tcloudSGRuleSvc) ListTCloudRule(cts *rest.Contexts) (interface{}, err
 		Filter:          req.Filter,
 		Page:            req.Page,
 	}
-	result, err := svc.dao.TCloudSGRule().List(cts.Kit, opt)
+	result, err := svc.dao.TCloudZiyanSGRule().List(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("list tcloud security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, fmt.Errorf("list tcloud security group rule failed, err: %v", err)
+		logs.Errorf("list tcloud ziyan security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, fmt.Errorf("list tcloud ziyan security group rule failed, err: %v", err)
 	}
 
 	if req.Page.Count {
-		return &protocloud.TCloudSGRuleListResult{Count: result.Count}, nil
+		return &types.ListResult[corecloud.TCloudSecurityGroupRule]{Count: result.Count}, nil
 	}
 
 	details := make([]corecloud.TCloudSecurityGroupRule, 0, len(result.Details))
@@ -259,11 +259,11 @@ func (svc *tcloudSGRuleSvc) ListTCloudRule(cts *rest.Contexts) (interface{}, err
 		})
 	}
 
-	return &protocloud.TCloudSGRuleListResult{Details: details}, nil
+	return &types.ListResult[corecloud.TCloudSecurityGroupRule]{Details: details}, nil
 }
 
-// DeleteTCloudRule delete tcloud rule.
-func (svc *tcloudSGRuleSvc) DeleteTCloudRule(cts *rest.Contexts) (interface{}, error) {
+// DeleteTCloudZiyanRule delete tcloud ziyan rule.
+func (svc *tcloudZiyanSGRuleSvc) DeleteTCloudZiyanRule(cts *rest.Contexts) (interface{}, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security group id is required")
@@ -284,10 +284,10 @@ func (svc *tcloudSGRuleSvc) DeleteTCloudRule(cts *rest.Contexts) (interface{}, e
 		Filter:          req.Filter,
 		Page:            core.NewDefaultBasePage(),
 	}
-	listResp, err := svc.dao.TCloudSGRule().List(cts.Kit, opt)
+	listResp, err := svc.dao.TCloudZiyanSGRule().List(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("list tcloud security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, fmt.Errorf("list tcloud security group rule failed, err: %v", err)
+		logs.Errorf("list tcloud ziyan security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, fmt.Errorf("list tcloud ziyan security group rule failed, err: %v", err)
 	}
 
 	if len(listResp.Details) == 0 {
@@ -300,8 +300,8 @@ func (svc *tcloudSGRuleSvc) DeleteTCloudRule(cts *rest.Contexts) (interface{}, e
 	}
 
 	delFilter := tools.ContainersExpression("id", delIDs)
-	if err := svc.dao.TCloudSGRule().Delete(cts.Kit, delFilter); err != nil {
-		logs.Errorf("delete tcloud security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err := svc.dao.TCloudZiyanSGRule().Delete(cts.Kit, delFilter); err != nil {
+		logs.Errorf("delete tcloud ziyan security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

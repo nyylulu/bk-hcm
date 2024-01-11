@@ -145,6 +145,11 @@ const (
 	CloudSelectionBizTypeTable Name = "cloud_selection_biz_type"
 	// CloudSelectionIdcTable 云选型机房信息
 	CloudSelectionIdcTable Name = "cloud_selection_idc"
+
+	// TCloudZiyanRegionTable 腾讯自研云地域表名
+	TCloudZiyanRegionTable Name = "tcloud_ziyan_region"
+	// TCloudZiyanSecurityGroupRuleTable 腾讯自研云安全组规则表名
+	TCloudZiyanSecurityGroupRuleTable = "tcloud_ziyan_security_group_rule"
 )
 
 // Validate whether the table name is valid or not.
@@ -211,6 +216,9 @@ var TableMap = map[Name]struct{}{
 	CloudSelectionSchemeTable:    {},
 	CloudSelectionBizTypeTable:   {},
 	CloudSelectionIdcTable:       {},
+
+	TCloudZiyanSecurityGroupRuleTable: {},
+	TCloudZiyanRegionTable:            {},
 
 	// TODO: 临时方案
 	RecycleRecordTableTaskID: {},

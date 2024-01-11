@@ -106,6 +106,9 @@ type Set interface {
 	CloudSelectionBizType() daoselection.BizTypeInterface
 	CloudSelectionIdc() daoselection.IdcInterface
 
+	TCloudZiyanRegion() region.TCloudZiyanRegion
+	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
+
 	Txn() *Txn
 }
 
@@ -512,4 +515,18 @@ func (s *set) CloudSelectionIdc() daoselection.IdcInterface {
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
+}
+
+// TCloudZiyanSGRule 腾讯自研云安全组规则dao.
+func (s *set) TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule {
+	return &securitygroup.TCloudZiyanSGRuleDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// TCloudZiyanRegion 腾讯自研云region dao.
+func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
+	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
 }
