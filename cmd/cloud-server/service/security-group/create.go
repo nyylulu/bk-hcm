@@ -76,6 +76,9 @@ func (svc *securityGroupSvc) createSecurityGroup(cts *rest.Contexts, bizID int64
 		return svc.createHuaWeiSecurityGroup(cts, bizID, req)
 	case enumor.Azure:
 		return svc.createAzureSecurityGroup(cts, bizID, req)
+	case enumor.TCloudZiyan:
+		return svc.createTCloudZiyanSecurityGroup(cts, bizID, req)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", req.Vendor)
 	}
@@ -193,4 +196,23 @@ func (svc *securityGroupSvc) checkAzureSGParams(req *proto.SecurityGroupCreateRe
 	}
 
 	return nil
+}
+
+func (svc *securityGroupSvc) createTCloudZiyanSecurityGroup(cts *rest.Contexts, bizID int64,
+	req *proto.SecurityGroupCreateReq) (any, error) {
+
+	createReq := &hcproto.TCloudSecurityGroupCreateReq{
+		Region:    req.Region,
+		Name:      req.Name,
+		Memo:      req.Memo,
+		AccountID: req.AccountID,
+		BkBizID:   bizID,
+	}
+	result, err := svc.client.HCService().TCloudZiyan.SecurityGroup.CreateSecurityGroup(cts.Kit, createReq)
+	if err != nil {
+		logs.Errorf("create tcloud ziyan security group failed, err: %v, req: %v, rid: %s", err, createReq, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }

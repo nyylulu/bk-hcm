@@ -66,6 +66,33 @@ func (cli *SecretClient) TCloudSecret(kt *kit.Kit, accountID string) (*types.Bas
 	return secret, nil
 }
 
+// TCloudZiyanSecret get tcloud ziyan secret and validate secret.
+func (cli *SecretClient) TCloudZiyanSecret(kt *kit.Kit, accountID string) (*types.BaseSecret, error) {
+	account, err := cli.data.TCloudZiyan.Account.Get(kt, accountID)
+	if err != nil {
+		return nil, fmt.Errorf("get tcloud ziyan account failed, err: %v", err)
+	}
+
+	if account.Type != enumor.ResourceAccount {
+		return nil, fmt.Errorf("account: %s not resource account type", accountID)
+	}
+
+	if account.Extension == nil {
+		return nil, errors.New("tcloud ziyan account extension is nil")
+	}
+
+	secret := &types.BaseSecret{
+		CloudSecretID:  account.Extension.CloudSecretID,
+		CloudSecretKey: account.Extension.CloudSecretKey,
+	}
+
+	if err := secret.Validate(); err != nil {
+		return nil, err
+	}
+
+	return secret, nil
+}
+
 // AwsSecret get aws secret and validate secret.
 func (cli *SecretClient) AwsSecret(kt *kit.Kit, accountID string) (*types.BaseSecret, string, error) {
 	account, err := cli.data.Aws.Account.Get(kt.Ctx, kt.Header(), accountID)

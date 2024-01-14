@@ -30,6 +30,7 @@ import (
 	"hcm/cmd/cloud-server/service/sync/gcp"
 	"hcm/cmd/cloud-server/service/sync/huawei"
 	"hcm/cmd/cloud-server/service/sync/tcloud"
+	tziyan "hcm/cmd/cloud-server/service/sync/tcloud-ziyan"
 	"hcm/pkg/api/core"
 	corecloud "hcm/pkg/api/core/cloud"
 	protocloud "hcm/pkg/api/data-service/cloud"
@@ -59,7 +60,8 @@ func CloudResourceSync(intervalMin time.Duration, sd serviced.ServiceDiscover, c
 
 		waitGroup := new(sync.WaitGroup)
 
-		vendors := []enumor.Vendor{enumor.TCloud, enumor.Aws, enumor.HuaWei, enumor.Azure, enumor.Gcp}
+		vendors := []enumor.Vendor{enumor.TCloud, enumor.Aws, enumor.HuaWei, enumor.Azure, enumor.Gcp,
+			enumor.TCloudZiyan}
 		waitGroup.Add(len(vendors))
 		for _, vendor := range vendors {
 			go func(vendor enumor.Vendor) {
@@ -129,6 +131,10 @@ func allAccountSync(kt *kit.Kit, cliSet *client.ClientSet, vendor enumor.Vendor)
 			case enumor.Gcp:
 				opt := &gcp.SyncAllResourceOption{AccountID: one.ID, SyncPublicResource: syncPublicResource}
 				resName, err = gcp.SyncAllResource(kt, cliSet, opt)
+
+			case enumor.TCloudZiyan:
+				opt := &tziyan.SyncAllResourceOption{AccountID: one.ID, SyncPublicResource: syncPublicResource}
+				resName, err = tziyan.SyncAllResource(kt, cliSet, opt)
 
 			default:
 				logs.Errorf("unknown %s vendor type", one.Vendor)

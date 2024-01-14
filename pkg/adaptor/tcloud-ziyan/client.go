@@ -46,7 +46,8 @@ func newClientSet(s *types.BaseSecret, profile *profile.ClientProfile) *clientSe
 
 }
 
-func (c *clientSet) camServiceClient(region string) (*cam.Client, error) {
+// CamServiceClient tcloud ziyan sdk cam client
+func (c *clientSet) CamServiceClient(region string) (*cam.Client, error) {
 	client, err := cam.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -55,7 +56,8 @@ func (c *clientSet) camServiceClient(region string) (*cam.Client, error) {
 	return client, nil
 }
 
-func (c *clientSet) cvmClient(region string) (*cvm.Client, error) {
+// CvmClient tcloud ziyan sdk cvm client
+func (c *clientSet) CvmClient(region string) (*cvm.Client, error) {
 	client, err := cvm.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -64,7 +66,8 @@ func (c *clientSet) cvmClient(region string) (*cvm.Client, error) {
 	return client, nil
 }
 
-func (c *clientSet) cbsClient(region string) (*cbs.Client, error) {
+// CbsClient tcloud ziyan sdk cbs client
+func (c *clientSet) CbsClient(region string) (*cbs.Client, error) {
 	client, err := cbs.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -73,7 +76,8 @@ func (c *clientSet) cbsClient(region string) (*cbs.Client, error) {
 	return client, nil
 }
 
-func (c *clientSet) vpcClient(region string) (*vpc.Client, error) {
+// VpcClient tcloud ziyan sdk vpc client
+func (c *clientSet) VpcClient(region string) (*vpc.Client, error) {
 	// 使用内部域名
 	c.profile.HttpProfile.Endpoint = constant.InternalVpcEndpoint
 	client, err := vpc.NewClient(c.credential, region, c.profile)
@@ -84,7 +88,8 @@ func (c *clientSet) vpcClient(region string) (*vpc.Client, error) {
 	return client, nil
 }
 
-func (c *clientSet) billClient() (*billing.Client, error) {
+// BillClient tcloud ziyan sdk bill client
+func (c *clientSet) BillClient() (*billing.Client, error) {
 	client, err := billing.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err

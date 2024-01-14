@@ -17,10 +17,26 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package constant
+package hcziyancli
 
-// 自研账号需要使用内部域名
-const (
-	// InternalVpcEndpoint vpc 内部域名
-	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+import (
+	"hcm/pkg/rest"
 )
+
+// Client is a tcloud api client
+type Client struct {
+	Account       *AccountClient
+	SecurityGroup *SecurityGroupClient
+	Zone          *ZoneClient
+	Region        *RegionClient
+}
+
+// NewClient create a new tcloud api client.
+func NewClient(client rest.ClientInterface) *Client {
+	return &Client{
+		Account:       NewAccountClient(client),
+		SecurityGroup: NewCloudSecurityGroupClient(client),
+		Zone:          NewZoneClient(client),
+		Region:        NewRegionClient(client),
+	}
+}

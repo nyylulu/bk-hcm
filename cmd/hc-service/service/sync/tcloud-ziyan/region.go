@@ -17,10 +17,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package constant
+package ziyan
 
-// 自研账号需要使用内部域名
-const (
-	// InternalVpcEndpoint vpc 内部域名
-	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+import (
+	"hcm/cmd/hc-service/logics/res-sync/ziyan"
+	"hcm/pkg/api/hc-service/sync"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
+	"hcm/pkg/rest"
 )
+
+// SyncRegion sync tcloud ziyan region
+func (svc *service) SyncRegion(cts *rest.Contexts) (any, error) {
+	req := new(sync.TCloudGlobalSyncReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	syncCli, err := svc.syncCli.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	if _, err := syncCli.Region(cts.Kit, &ziyan.SyncRegionOption{AccountID: req.AccountID}); err != nil {
+		logs.Errorf("sync tcloud ziyan region failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}

@@ -17,10 +17,33 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package constant
+package ziyan
 
-// 自研账号需要使用内部域名
-const (
-	// InternalVpcEndpoint vpc 内部域名
-	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+import (
+	"fmt"
+
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/validator"
 )
+
+// SyncBaseParams ...
+type SyncBaseParams struct {
+	AccountID string   `json:"account_id" validate:"required"`
+	Region    string   `json:"region" validate:"required"`
+	CloudIDs  []string `json:"cloud_ids" validate:"required,min=1"`
+}
+
+// Validate ...
+func (opt SyncBaseParams) Validate() error {
+
+	if len(opt.CloudIDs) > constant.CloudResourceSyncMaxLimit {
+		return fmt.Errorf("cloudIDs shuold <= %d", constant.CloudResourceSyncMaxLimit)
+	}
+
+	return validator.Validate.Struct(opt)
+}
+
+// SyncResult sync result.
+type SyncResult struct {
+	CreatedIds []string
+}

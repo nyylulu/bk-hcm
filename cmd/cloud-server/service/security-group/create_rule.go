@@ -87,6 +87,9 @@ func (svc *securityGroupSvc) createSGRule(cts *rest.Contexts, validHandler handl
 	case enumor.Azure:
 		return svc.createAzureSGRule(cts, sgBaseInfo)
 
+	case enumor.TCloudZiyan:
+		return svc.createTCloudZiyanSGRule(cts, sgBaseInfo)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}
@@ -369,4 +372,48 @@ func (svc *securityGroupSvc) checkCreateAzureSGRuleParams(req hcproto.AzureSGRul
 	}
 
 	return nil
+}
+
+func (svc *securityGroupSvc) createTCloudZiyanSGRule(cts *rest.Contexts, sgBaseInfo *types.CloudResourceBasicInfo) (
+	any, error) {
+
+	req := new(proto.SecurityGroupRuleCreateReq[proto.TCloudSecurityGroupRule])
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	createReq := &hcproto.TCloudSGRuleCreateReq{
+		AccountID: sgBaseInfo.AccountID,
+	}
+	if len(req.EgressRuleSet) != 0 {
+		createReq.EgressRuleSet = slice.Map(req.EgressRuleSet, convertToTCLoudSGRuleCreate)
+	}
+
+	if len(req.IngressRuleSet) != 0 {
+		createReq.IngressRuleSet = slice.Map(req.IngressRuleSet, convertToTCLoudSGRuleCreate)
+	}
+
+	result, err := svc.client.HCService().TCloudZiyan.SecurityGroup.BatchCreateSecurityGroupRule(cts.Kit,
+		sgBaseInfo.ID, createReq)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func convertToTCLoudSGRuleCreate(reqRule proto.TCloudSecurityGroupRule) hcproto.TCloudSGRuleCreate {
+	return hcproto.TCloudSGRuleCreate{
+		Protocol:                   reqRule.Protocol,
+		Port:                       reqRule.Port,
+		IPv4Cidr:                   reqRule.IPv4Cidr,
+		IPv6Cidr:                   reqRule.IPv6Cidr,
+		CloudTargetSecurityGroupID: reqRule.CloudTargetSecurityGroupID,
+		Action:                     reqRule.Action,
+		Memo:                       reqRule.Memo,
+	}
 }

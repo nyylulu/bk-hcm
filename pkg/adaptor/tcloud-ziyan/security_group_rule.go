@@ -44,7 +44,7 @@ func (t *ZiyanAdpt) CreateSecurityGroupRule(kt *kit.Kit, opt *securitygrouprule.
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.vpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(opt.Region)
 	if err != nil {
 		return fmt.Errorf("init tcloud vpc client failed, err: %v", err)
 	}
@@ -115,7 +115,7 @@ func (t *ZiyanAdpt) DeleteSecurityGroupRule(kt *kit.Kit, opt *securitygrouprule.
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.vpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(opt.Region)
 	if err != nil {
 		return fmt.Errorf("init tcloud vpc client failed, err: %v", err)
 	}
@@ -177,7 +177,7 @@ func (t *ZiyanAdpt) UpdateSecurityGroupRule(kt *kit.Kit, opt *securitygrouprule.
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.vpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(opt.Region)
 	if err != nil {
 		return fmt.Errorf("init tcloud vpc client failed, err: %v", err)
 	}
@@ -254,7 +254,7 @@ func (t *ZiyanAdpt) ListSecurityGroupRule(kt *kit.Kit, opt *securitygrouprule.TC
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.vpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(opt.Region)
 	if err != nil {
 		return nil, fmt.Errorf("init tcloud vpc client failed, err: %v", err)
 	}

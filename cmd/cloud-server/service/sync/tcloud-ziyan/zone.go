@@ -17,10 +17,41 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package constant
+package tziyan
 
-// 自研账号需要使用内部域名
-const (
-	// InternalVpcEndpoint vpc 内部域名
-	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+import (
+	"time"
+
+	"hcm/pkg/api/hc-service/zone"
+	hcservice "hcm/pkg/client/hc-service"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
+
+// SyncZone sync zone
+func SyncZone(kt *kit.Kit, hcCli *hcservice.Client, accountID string, regions []string) error {
+
+	// 重新设置rid方便定位
+	kt = kt.NewSubKit()
+
+	start := time.Now()
+	logs.V(3).Infof("tcloud ziyan account[%s] sync zone start, time: %v, rid: %s", accountID, start, kt.Rid)
+
+	defer func() {
+		logs.V(3).Infof("tcloud ziyan account[%s] sync zone end, cost: %v, rid: %s",
+			accountID, time.Since(start), kt.Rid)
+	}()
+
+	for _, region := range regions {
+		syncReq := &zone.TCloudZoneSyncReq{
+			AccountID: accountID,
+			Region:    region,
+		}
+		if err := hcCli.TCloudZiyan.Zone.SyncZone(kt, syncReq); err != nil {
+			logs.Errorf("sync tcloud ziyan zone failed, err: %v, req: %v, rid: %s", err, syncReq, kt.Rid)
+			return err
+		}
+	}
+
+	return nil
+}

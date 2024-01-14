@@ -34,12 +34,14 @@ import (
 	"github.com/TencentBlueKing/gopkg/conv"
 )
 
+// VendorSecretKeyFieldMap 秘钥字段
 var VendorSecretKeyFieldMap = map[enumor.Vendor]string{
-	enumor.TCloud: "cloud_secret_key",
-	enumor.Aws:    "cloud_secret_key",
-	enumor.HuaWei: "cloud_secret_key",
-	enumor.Gcp:    "cloud_service_secret_key",
-	enumor.Azure:  "cloud_client_secret_key",
+	enumor.TCloud:      "cloud_secret_key",
+	enumor.Aws:         "cloud_secret_key",
+	enumor.HuaWei:      "cloud_secret_key",
+	enumor.Gcp:         "cloud_service_secret_key",
+	enumor.Azure:       "cloud_client_secret_key",
+	enumor.TCloudZiyan: "cloud_secret_key",
 }
 
 func canListAccountExtension(appCode string) error {

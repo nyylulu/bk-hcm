@@ -111,6 +111,12 @@ func (svc *RegionSvc) ListRegion(cts *rest.Contexts) (interface{}, error) {
 			Page:   reqPage,
 		}
 		return svc.client.DataService().Gcp.Region.ListRegion(cts.Kit.Ctx, cts.Kit.Header(), listReq)
+	case enumor.TCloudZiyan:
+		listReq := &dataregion.TCloudRegionListReq{
+			Filter: req.Filter,
+			Page:   reqPage,
+		}
+		return svc.client.DataService().TCloudZiyan.Region.ListRegion(cts.Kit, listReq)
 
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)

@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/adaptor/gcp"
 	"hcm/pkg/adaptor/huawei"
 	"hcm/pkg/adaptor/tcloud"
+	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
 )
@@ -57,6 +58,16 @@ func (cli *CloudAdaptorClient) TCloud(kt *kit.Kit, accountID string) (tcloud.TCl
 	}
 
 	return cli.adaptor.TCloud(secret)
+}
+
+// TCloudZiyan return tcloud client.
+func (cli *CloudAdaptorClient) TCloudZiyan(kt *kit.Kit, accountID string) (ziyan.TCloudZiyan, error) {
+	secret, err := cli.secretCli.TCloudZiyanSecret(kt, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return cli.adaptor.TCloudZiyan(secret)
 }
 
 // Aws return aws client.

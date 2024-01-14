@@ -17,10 +17,28 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package constant
+package hcziyancli
 
-// 自研账号需要使用内部域名
-const (
-	// InternalVpcEndpoint vpc 内部域名
-	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+import (
+	"hcm/pkg/api/hc-service/region"
+	"hcm/pkg/client/common"
+	"hcm/pkg/kit"
+	"hcm/pkg/rest"
 )
+
+// NewRegionClient create a new zone api client.
+func NewRegionClient(client rest.ClientInterface) *RegionClient {
+	return &RegionClient{
+		client: client,
+	}
+}
+
+// RegionClient is hc service region api client.
+type RegionClient struct {
+	client rest.ClientInterface
+}
+
+// Sync sync zone.
+func (cli *RegionClient) Sync(kt *kit.Kit, request *region.TCloudRegionSyncReq) error {
+	return common.RequestNoResp[region.TCloudRegionSyncReq](cli.client, rest.POST, kt, request, "/regions/sync")
+}

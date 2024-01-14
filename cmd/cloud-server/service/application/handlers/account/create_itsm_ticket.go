@@ -90,6 +90,12 @@ func (a *ApplicationOfAddAccount) RenderItsmForm() (string, error) {
 			{Label: "应用程序名称", Value: req.Extension["cloud_application_name"]},
 			{Label: "客户端密钥ID", Value: req.Extension["cloud_client_secret_id"]},
 		}...)
+	case enumor.TCloudZiyan:
+		formItems = append(formItems, []formItem{
+			{Label: "主账号ID", Value: req.Extension["cloud_main_account_id"]},
+			{Label: "子账号ID", Value: req.Extension["cloud_sub_account_id"]},
+			{Label: "SecretId", Value: req.Extension["cloud_secret_id"]},
+		}...)
 	}
 
 	// 负责人

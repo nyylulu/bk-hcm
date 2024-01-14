@@ -30,6 +30,7 @@ import (
 	"hcm/cmd/cloud-server/service/sync/huawei"
 	"hcm/cmd/cloud-server/service/sync/lock"
 	"hcm/cmd/cloud-server/service/sync/tcloud"
+	tziyan "hcm/cmd/cloud-server/service/sync/tcloud-ziyan"
 	"hcm/pkg/api/core"
 	protoregion "hcm/pkg/api/data-service/cloud/region"
 	protocloud "hcm/pkg/api/data-service/cloud/zone"
@@ -99,7 +100,7 @@ func isNeedSyncPublicResource(kt *kit.Kit, dataCli *dataservice.Client, vendor e
 	}
 
 	switch vendor {
-	case enumor.Aws, enumor.TCloud, enumor.HuaWei, enumor.Gcp:
+	case enumor.Aws, enumor.TCloud, enumor.HuaWei, enumor.Gcp, enumor.TCloudZiyan:
 		listZoneReq := &protocloud.ZoneListReq{
 			Filter: tools.EqualExpression("vendor", vendor),
 			Page:   core.NewCountPage(),
@@ -120,7 +121,7 @@ func isNeedSyncPublicResource(kt *kit.Kit, dataCli *dataservice.Client, vendor e
 	}
 
 	switch vendor {
-	case enumor.Aws, enumor.TCloud, enumor.HuaWei, enumor.Gcp, enumor.Azure:
+	case enumor.Aws, enumor.TCloud, enumor.HuaWei, enumor.Gcp, enumor.Azure, enumor.TCloudZiyan:
 		listZoneReq := &core.ListReq{
 			Filter: tools.EqualExpression("vendor", vendor),
 			Page:   core.NewCountPage(),
@@ -198,6 +199,16 @@ func isNeedSyncRegion(kt *kit.Kit, dataCli *dataservice.Client, vendor enumor.Ve
 			return false, err
 		}
 		regionCount = result.Count
+	case enumor.TCloudZiyan:
+		listReq := &protoregion.TCloudRegionListReq{
+			Filter: tools.AllExpression(),
+			Page:   core.NewCountPage(),
+		}
+		result, err := dataCli.TCloudZiyan.Region.ListRegion(kt, listReq)
+		if err != nil {
+			return false, err
+		}
+		regionCount = result.Count
 
 	default:
 		return false, fmt.Errorf("vendor: %s not support", vendor)
@@ -251,6 +262,12 @@ func SyncAllResource(kt *kit.Kit, cli *client.ClientSet, vendor enumor.Vendor,
 			SyncPublicResource: isNeed,
 		}
 		resType, err = azure.SyncAllResource(kt, cli, opt)
+	case enumor.TCloudZiyan:
+		opt := &tziyan.SyncAllResourceOption{
+			AccountID:          accountID,
+			SyncPublicResource: isNeed,
+		}
+		resType, err = tziyan.SyncAllResource(kt, cli, opt)
 
 	default:
 		logs.Errorf("account: %s's vendor not support, vendor: %s, rid: %s", accountID, vendor, kt.Rid)

@@ -41,6 +41,8 @@ func InitAccountService(cap *capability.Capability) {
 	h.Add("HuaWeiAccountCheck", http.MethodPost, "/vendors/huawei/accounts/check", svc.HuaWeiAccountCheck)
 	h.Add("GcpAccountCheck", http.MethodPost, "/vendors/gcp/accounts/check", svc.GcpAccountCheck)
 	h.Add("AzureAccountCheck", http.MethodPost, "/vendors/azure/accounts/check", svc.AzureAccountCheck)
+	h.Add("TCloudZiyanAccountCheck", http.MethodPost,
+		"/vendors/tcloud-ziyan/accounts/check", svc.TCloudZiyanAccountCheck)
 
 	// 获取账号配额
 	h.Add("GetTCloudAccountZoneQuota", http.MethodPost, "/vendors/tcloud/accounts/zones/quotas",
@@ -56,6 +58,8 @@ func InitAccountService(cap *capability.Capability) {
 	h.Add("HuaWeiGetInfoBySecret", http.MethodPost, "/vendors/huawei/accounts/secret", svc.HuaWeiGetInfoBySecret)
 	h.Add("GcpGetInfoBySecret", http.MethodPost, "/vendors/gcp/accounts/secret", svc.GcpGetInfoBySecret)
 	h.Add("AzureGetInfoBySecret", http.MethodPost, "/vendors/azure/accounts/secret", svc.AzureGetInfoBySecret)
+	h.Add("TCloudZiyanGetInfoBySecret", http.MethodPost,
+		"/vendors/tcloud-ziyan/accounts/secret", svc.TCloudZiyanGetInfoBySecret)
 
 	// 通过秘钥获取资源数量
 	h.Add("HuaWeiGetResCountBySecret", http.MethodPost, "/vendors/huawei/accounts/res_counts/by_secrets",

@@ -134,6 +134,18 @@ func (svc *securityGroupSvc) getSecurityGroup(cts *rest.Contexts, validHandler h
 			Extension:             sg.Extension,
 		}, nil
 
+	case enumor.TCloudZiyan:
+		sg, err := svc.client.DataService().TCloudZiyan.SecurityGroup.GetSecurityGroup(cts.Kit, id)
+		if err != nil {
+			return nil, err
+		}
+
+		return &proto.SecurityGroup[corecloud.TCloudSecurityGroupExtension]{
+			BaseSecurityGroup: sg.BaseSecurityGroup,
+			CvmCount:          cvmCount,
+			Extension:         sg.Extension,
+		}, nil
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", id, baseInfo.Vendor)
 	}

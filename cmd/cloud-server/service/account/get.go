@@ -90,6 +90,15 @@ func (a *accountSvc) Get(cts *rest.Contexts) (interface{}, error) {
 		}
 		accountDetailFullFill(a, cts, account)
 		return account, err
+
+	case enumor.TCloudZiyan:
+		account, err := a.client.DataService().TCloudZiyan.Account.Get(cts.Kit, accountID)
+		// 敏感信息不显示，置空
+		if account != nil {
+			account.Extension.CloudSecretKey = ""
+		}
+		accountDetailFullFill(a, cts, account)
+		return account, err
 	default:
 		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("no support vendor: %s", baseInfo.Vendor))
 	}
@@ -142,6 +151,9 @@ func (a *accountSvc) GetAccountBySecret(cts *rest.Contexts) (interface{}, error)
 		return a.getAndCheckGcpAccountInfo(cts)
 	case enumor.HuaWei:
 		return a.getAndCheckHuaWeiAccountInfo(cts)
+	case enumor.TCloudZiyan:
+		// 复用腾讯云接口，如果后面出现差异再独立实现
+		return a.getAndCheckTCloudAccountInfo(cts)
 	}
 
 	return nil, nil

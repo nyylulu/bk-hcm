@@ -17,20 +17,48 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package handlers
+package tziyan
 
 import (
-	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/client"
+	"hcm/pkg/criteria/validator"
+	"hcm/pkg/kit"
 )
 
-var (
-	// VendorNameMap 厂商中文名 TODO: 在外部版 移动到pkg
-	VendorNameMap = map[enumor.Vendor]string{
-		enumor.TCloud:      "腾讯云",
-		enumor.Aws:         "亚马逊云",
-		enumor.HuaWei:      "华为云",
-		enumor.Gcp:         "谷歌云",
-		enumor.Azure:       "微软云",
-		enumor.TCloudZiyan: "腾讯云自研账号",
+// SyncPublicResourceOption ...
+type SyncPublicResourceOption struct {
+	AccountID string `json:"account_id" validate:"required"`
+}
+
+// Validate SyncPublicResourceOption
+func (opt *SyncPublicResourceOption) Validate() error {
+	return validator.Validate.Struct(opt)
+}
+
+// SyncPublicResource ...
+func SyncPublicResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncPublicResourceOption) error {
+
+	if err := opt.Validate(); err != nil {
+		return err
 	}
-)
+
+	if err := SyncRegion(kt, cliSet.HCService(), opt.AccountID); err != nil {
+		return err
+	}
+
+	regions, err := ListRegion(kt, cliSet.DataService())
+	if err != nil {
+		return err
+	}
+
+	if err = SyncZone(kt, cliSet.HCService(), opt.AccountID, regions); err != nil {
+		return err
+	}
+
+	// 暂未接入
+	// if err = SyncTCloudImage(kt, cliSet.HCService(), opt.AccountID, regions); err != nil {
+	// 	return err
+	// }
+
+	return nil
+}

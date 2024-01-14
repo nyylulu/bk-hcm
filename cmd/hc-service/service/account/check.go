@@ -63,6 +63,43 @@ func (svc *service) TCloudAccountCheck(cts *rest.Contexts) (interface{}, error) 
 	return nil, err
 }
 
+// TCloudZiyanAccountCheck 根据传入秘钥去云上获取数据，并和传入其他数据对比，要求和云上获取数据一致
+func (svc *service) TCloudZiyanAccountCheck(cts *rest.Contexts) (interface{}, error) {
+	req := new(proto.TCloudAccountCheckReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.Adaptor().TCloudZiyan(
+		&types.BaseSecret{
+			CloudSecretID:  req.CloudSecretID,
+			CloudSecretKey: req.CloudSecretKey,
+		})
+	if err != nil {
+		return nil, err
+	}
+
+	infoBySecret, err := client.GetAccountInfoBySecret(cts.Kit)
+	if err != nil {
+		return nil, err
+	}
+	// check if cloud account info matches the hcm account detail.
+	if infoBySecret.CloudSubAccountID != req.CloudSubAccountID {
+		return nil, errf.New(errf.InvalidParameter,
+			"CloudSubAccountID does not match the account to which the secret belongs")
+	}
+
+	if infoBySecret.CloudMainAccountID != req.CloudMainAccountID {
+		return nil, errf.New(errf.InvalidParameter,
+			"CloudMainAccountID does not match the account to which the secret belongs")
+	}
+
+	return nil, err
+}
+
 // AwsAccountCheck authentication information and permissions.
 func (svc *service) AwsAccountCheck(cts *rest.Contexts) (interface{}, error) {
 	req := new(proto.AwsAccountCheckReq)

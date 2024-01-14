@@ -32,19 +32,19 @@ import (
 // NewZiyanCloud new ziyan cloud.
 func NewZiyanCloud(s *types.BaseSecret) (TCloudZiyan, error) {
 
-	tcloudAdpt, err := tcloud.NewTCloud(s)
-	if err != nil {
-		return nil, err
-	}
-
 	prof := profile.NewClientProfile()
 	if err := validateSecret(s); err != nil {
 		return nil, err
 	}
 
+	cs := newClientSet(s, prof)
+
+	tcloudAdpt := new(tcloud.TCloudImpl)
+	tcloudAdpt.SetClientSet(cs)
+
 	ziyan := &ZiyanAdpt{
 		TCloud:    tcloudAdpt,
-		clientSet: newClientSet(s, prof),
+		clientSet: cs,
 	}
 	return ziyan, nil
 }

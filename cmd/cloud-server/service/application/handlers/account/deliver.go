@@ -48,6 +48,8 @@ func (a *ApplicationOfAddAccount) Deliver() (enumor.ApplicationStatus, map[strin
 		accountID, err = a.createForGcp()
 	case enumor.Azure:
 		accountID, err = a.createForAzure()
+	case enumor.TCloudZiyan:
+		accountID, err = a.createForTCloudZiyan()
 	}
 	// 交付失败
 	if err != nil {
@@ -85,6 +87,29 @@ func (a *ApplicationOfAddAccount) createForTCloud() (string, error) {
 	result, err := a.Client.DataService().TCloud.Account.Create(
 		a.Cts.Kit.Ctx,
 		a.Cts.Kit.Header(),
+		&dataprotocloud.AccountCreateReq[dataprotocloud.TCloudAccountExtensionCreateReq]{
+			Name:     a.req.Name,
+			Managers: a.req.Managers,
+			Type:     a.req.Type,
+			Site:     a.req.Site,
+			Memo:     a.req.Memo,
+			BkBizIDs: a.req.BkBizIDs,
+			Extension: &dataprotocloud.TCloudAccountExtensionCreateReq{
+				CloudMainAccountID: a.req.Extension["cloud_main_account_id"],
+				CloudSubAccountID:  a.req.Extension["cloud_sub_account_id"],
+				CloudSecretID:      a.req.Extension["cloud_secret_id"],
+				CloudSecretKey:     a.req.Extension["cloud_secret_key"],
+			},
+		},
+	)
+	if err != nil {
+		return "", err
+	}
+	return result.ID, err
+}
+
+func (a *ApplicationOfAddAccount) createForTCloudZiyan() (string, error) {
+	result, err := a.Client.DataService().TCloudZiyan.Account.Create(a.Cts.Kit,
 		&dataprotocloud.AccountCreateReq[dataprotocloud.TCloudAccountExtensionCreateReq]{
 			Name:     a.req.Name,
 			Managers: a.req.Managers,
