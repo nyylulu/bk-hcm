@@ -169,10 +169,12 @@ POST /api/v1/cloud/argument_template/list
         "name": "template-test",
         "vendor": "tcloud",
         "account_id": "0000001",
-        "value": [
+        "bk_biz_id": -1,
+        "templates": [
           {"address":"127.0.0.1:80", "description":"test1"},
           {"address":"127.0.0.1:81", "description":"test2"}
         ],
+        "group_templates": [],
         "type": "address",
         "memo": "xxxx",
         "creator": "Jim",
@@ -221,7 +223,9 @@ POST /api/v1/cloud/argument_template/list
 | name               | string             | 名称                                          |
 | vendor             | string             | 云厂商（枚举值：tcloud，当前版本暂只支持tcloud）   |
 | account_id         | string             | 账号ID                                        |
-| value              | address_info array | 参数模版的参数数组                              |
+| bk_biz_id          | int64              | 业务ID                                        |
+| templates          | address_info array | IP地址、端口协议的参数模版的参数数组               |
+| group_templates    | string array       | IP地址组、端口协议组的参数模版的参数数组            |
 | type               | string             | 模版类型（address:IP地址、address_group:IP地址组、service:协议端口、service_group:协议端口组）|
 | memo               | string             | 备注                                           |
 | creator            | string             | 创建者                                         |

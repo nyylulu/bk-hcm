@@ -41,7 +41,7 @@ var ArgumentTplTableColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
 	{Column: "type", NamedC: "type", Type: enumor.String},
-	{Column: "value", NamedC: "value", Type: enumor.Json},
+	{Column: "templates", NamedC: "templates", Type: enumor.Json},
 	{Column: "memo", NamedC: "memo", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},

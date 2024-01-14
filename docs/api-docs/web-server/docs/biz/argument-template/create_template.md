@@ -10,14 +10,15 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/argument_template/create
 
 ### 输入参数
 
-| 参数名称      | 参数类型              | 必选 | 描述                                          |
-|--------------|---------------------|------|----------------------------------------------|
-| bk_biz_id    | int64               | 是   | 业务ID                                        |
-| vendor       | string              | 是   | 云厂商（枚举值：tcloud，当前版本暂只支持tcloud）   |
-| account_id   | string              | 是   | 账号ID                                        |
-| name         | string              | 是   | 参数模版名称                                   |
-| type         | string              | 是   | 模版类型（address:IP地址、address_group:IP地址组、service:协议端口、service_group:协议端口组） |
-| templates    | address_info array  | 是   | 参数模版的参数数组                              |
+| 参数名称         | 参数类型              | 必选 | 描述                                          |
+|-----------------|---------------------|------|----------------------------------------------|
+| bk_biz_id       | int64               | 是   | 业务ID                                        |
+| vendor          | string              | 是   | 云厂商（枚举值：tcloud，当前版本暂只支持tcloud）   |
+| account_id      | string              | 是   | 账号ID                                        |
+| name            | string              | 是   | 参数模版名称                                   |
+| type            | string              | 是   | 模版类型（address:IP地址、address_group:IP地址组、service:协议端口、service_group:协议端口组） |
+| templates       | address_info array  | 否   | "IP地址"、"协议端口"参数模版的参数数组（互斥，templates 和 group_templates必须传其中一个）       |
+| group_templates | string array        | 否   | "IP地址组"、"协议端口组"参数模版的参数数组（互斥，templates 和 group_templates必须传其中一个）    |
 
 #### address_info
 
@@ -35,8 +36,8 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/argument_template/create
     "name": "test-template",
     "type": "address",
     "templates": [
-        {"address":"127.0.0.1:80", "description":"test1"},
-        {"address":"127.0.0.1:81", "description":"test2"}
+        {"address":"127.0.0.1", "description":"test1"},
+        {"address":"127.0.0.2", "description":"test2"}
     ],
 }
 ```

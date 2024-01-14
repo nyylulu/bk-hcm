@@ -6,18 +6,25 @@
 
 ### URL
 
-DELETE /api/v1/cloud/bizs/{bk_biz_id}/argument_template/{id}
+DELETE /api/v1/cloud/bizs/{bk_biz_id}/argument_template/batch
 
 ### 输入参数
 
-| 参数名称   | 参数类型 | 必选  | 描述        |
-|-----------|--------|-------|------------|
-| bk_biz_id | int64  | 是    | 业务ID      |
-| id        | string | 是    | 参数模版的ID |
+| 参数名称   | 参数类型       | 必选  | 描述            |
+|-----------|--------------|-------|----------------|
+| bk_biz_id | int64        | 是    | 业务ID          |
+| ids       | string array | 是    | 参数模版的ID列表  |
 
-### 调用示例
+### 调用示例s
 
 ```json
+{
+  "ids": [
+    "1",
+    "2",
+    "3"
+  ]
+}
 ```
 
 ### 响应示例
