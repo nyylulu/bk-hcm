@@ -6,7 +6,7 @@
 
 ### URL
 
-PUT /api/v1/cloud/bizs/{bk_biz_id}/argument_template/{id}
+PUT /api/v1/cloud/bizs/{bk_biz_id}/argument_templates/{id}
 
 ### 输入参数
 

@@ -38,10 +38,12 @@ var ArgumentTplTableColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "cloud_id", NamedC: "cloud_id", Type: enumor.String},
 	{Column: "name", NamedC: "name", Type: enumor.String},
 	{Column: "vendor", NamedC: "vendor", Type: enumor.String},
+	{Column: "region", NamedC: "region", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
 	{Column: "type", NamedC: "type", Type: enumor.String},
 	{Column: "templates", NamedC: "templates", Type: enumor.Json},
+	{Column: "group_templates", NamedC: "group_templates", Type: enumor.Json},
 	{Column: "memo", NamedC: "memo", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},
@@ -59,14 +61,18 @@ type ArgumentTemplateTable struct {
 	Name string `db:"name" validate:"max=255" json:"name"`
 	// Vendor 云厂商
 	Vendor enumor.Vendor `db:"vendor" json:"vendor"`
+	// Region 区域/地域
+	Region string `db:"region" json:"region"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" validate:"min=-1" json:"bk_biz_id"`
 	// AccountID 账号ID
 	AccountID string `json:"account_id" db:"account_id"`
 	// Type 参数模版类型
-	Type string `db:"type" json:"type"`
+	Type enumor.TemplateType `db:"type" json:"type"`
 	// Templates 参数模版的参数数组
 	Templates types.JsonField `db:"templates" json:"templates"`
+	// GroupTemplates 参数模版组的参数数组
+	GroupTemplates types.JsonField `db:"group_templates" json:"group_templates"`
 	// Memo 备注
 	Memo *string `db:"memo" json:"memo"`
 	// Creator 创建者

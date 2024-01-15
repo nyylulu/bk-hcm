@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/cloud/bizs/{bk_biz_id}/argument_template/create
+POST /api/v1/cloud/bizs/{bk_biz_id}/argument_templates/create
 
 ### 输入参数
 

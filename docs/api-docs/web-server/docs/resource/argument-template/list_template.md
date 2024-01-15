@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/cloud/argument_template/list
+POST /api/v1/cloud/argument_templates/list
 
 ### 输入参数
 

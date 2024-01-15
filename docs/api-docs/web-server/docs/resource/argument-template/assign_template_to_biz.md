@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/cloud/argument_template/assign/bizs
+POST /api/v1/cloud/argument_templates/assign/bizs
 
 ### 输入参数
 

@@ -6,7 +6,7 @@
 
 ### URL
 
-DELETE /api/v1/cloud/bizs/{bk_biz_id}/argument_template/batch
+DELETE /api/v1/cloud/bizs/{bk_biz_id}/argument_templates/batch
 
 ### 输入参数
 

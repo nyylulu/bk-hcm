@@ -139,11 +139,11 @@ func (dao Dao) Update(kt *kit.Kit, expr *filter.Expression, model *tableargstpl.
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
 
 	_, err = dao.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		effected, err := dao.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
-		if err != nil {
+		effected, uErr := dao.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
+		if uErr != nil {
 			logs.Errorf("update argument template failed, sql: %s, whereValue: %+v, err: %v, rid: %v",
-				sql, whereValue, err, kt.Rid)
-			return nil, err
+				sql, whereValue, uErr, kt.Rid)
+			return nil, uErr
 		}
 		if effected == 0 {
 			logs.Infof("update argument template, but record not found, sql: %s, whereValue: %+v, rid: %v",
