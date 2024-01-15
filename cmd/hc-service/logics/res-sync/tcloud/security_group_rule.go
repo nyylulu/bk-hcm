@@ -442,17 +442,27 @@ func isSGRuleChange(version string, cloud *vpc.SecurityGroupPolicy,
 		return true
 	}
 
-	if cloud.ServiceTemplate != nil && (db.CloudServiceID != nil || db.CloudServiceGroupID != nil) {
-		if !assert.IsPtrStringEqual(cloud.ServiceTemplate.ServiceId, db.CloudServiceID) {
+	if cloud.ServiceTemplate != nil {
+		// 参数模版-协议端口、协议端口组为空，则需要更新
+		if (converter.PtrToVal(cloud.ServiceTemplate.ServiceId) != "" && db.ServiceID == nil) ||
+			(converter.PtrToVal(cloud.ServiceTemplate.ServiceGroupId) != "" && db.ServiceGroupID == nil) {
 			return true
 		}
 
-		if !assert.IsPtrStringEqual(cloud.ServiceTemplate.ServiceGroupId, db.CloudServiceGroupID) {
-			return true
+		if db.CloudServiceID != nil || db.CloudServiceGroupID != nil {
+			if !assert.IsPtrStringEqual(cloud.ServiceTemplate.ServiceId, db.CloudServiceID) {
+				return true
+			}
+
+			if !assert.IsPtrStringEqual(cloud.ServiceTemplate.ServiceGroupId, db.CloudServiceGroupID) {
+				return true
+			}
 		}
 	}
 
-	if cloud.ServiceTemplate == nil && (db.CloudServiceID != nil || db.CloudServiceGroupID != nil) {
+	if cloud.ServiceTemplate == nil && (converter.PtrToVal(db.ServiceID) != "" ||
+		converter.PtrToVal(db.CloudServiceID) != "" || converter.PtrToVal(db.ServiceGroupID) != "" ||
+		converter.PtrToVal(db.CloudServiceGroupID) != "") {
 		return true
 	}
 
@@ -468,17 +478,27 @@ func isSGRuleChange(version string, cloud *vpc.SecurityGroupPolicy,
 		return true
 	}
 
-	if cloud.AddressTemplate != nil && (db.CloudAddressID != nil || db.CloudAddressGroupID != nil) {
-		if !assert.IsPtrStringEqual(cloud.AddressTemplate.AddressId, db.CloudAddressID) {
+	if cloud.AddressTemplate != nil {
+		// 参数模版-IP地址、IP地址组为空，则需要更新
+		if (converter.PtrToVal(cloud.AddressTemplate.AddressId) != "" && db.AddressID == nil) ||
+			(converter.PtrToVal(cloud.AddressTemplate.AddressGroupId) != "" && db.AddressGroupID == nil) {
 			return true
 		}
 
-		if !assert.IsPtrStringEqual(cloud.AddressTemplate.AddressGroupId, db.CloudAddressGroupID) {
-			return true
+		if db.CloudAddressID != nil || db.CloudAddressGroupID != nil {
+			if !assert.IsPtrStringEqual(cloud.AddressTemplate.AddressId, db.CloudAddressID) {
+				return true
+			}
+
+			if !assert.IsPtrStringEqual(cloud.AddressTemplate.AddressGroupId, db.CloudAddressGroupID) {
+				return true
+			}
 		}
 	}
 
-	if cloud.AddressTemplate == nil && (db.CloudAddressID != nil || db.CloudAddressGroupID != nil) {
+	if cloud.AddressTemplate == nil && (converter.PtrToVal(db.AddressID) != "" ||
+		converter.PtrToVal(db.CloudAddressID) != "" || converter.PtrToVal(db.AddressGroupID) != "" ||
+		converter.PtrToVal(db.CloudAddressGroupID) != "") {
 		return true
 	}
 
