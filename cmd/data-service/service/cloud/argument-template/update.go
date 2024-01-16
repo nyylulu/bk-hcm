@@ -78,7 +78,7 @@ func (svc *argsTplSvc) BatchUpdateArgsTplExt(cts *rest.Contexts) (interface{}, e
 	}
 
 	switch vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return batchUpdateArgsTplExt[coreargstpl.TCloudArgsTplExtension](cts, svc)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)

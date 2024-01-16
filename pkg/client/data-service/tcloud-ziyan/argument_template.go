@@ -17,28 +17,30 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package hcziyancli
+package ziyan
 
 import (
+	"hcm/pkg/api/core"
+	coreargstpl "hcm/pkg/api/core/cloud/argument-template"
+	protocloud "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/client/common"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
 
-// Client is a tcloud api client
-type Client struct {
-	Account       *AccountClient
-	SecurityGroup *SecurityGroupClient
-	Zone          *ZoneClient
-	Region        *RegionClient
-	ArgsTpl       *ArgsTplClient
+// BatchCreateArgsTpl batch create argument template.
+func (cli *restClient) BatchCreateArgsTpl(kt *kit.Kit,
+	request *protocloud.ArgsTplBatchCreateReq[coreargstpl.TCloudArgsTplExtension]) (*core.BatchCreateResult, error) {
+
+	return common.Request[protocloud.ArgsTplBatchCreateReq[coreargstpl.TCloudArgsTplExtension], core.BatchCreateResult](
+		cli.client, rest.POST, kt, request,
+		"/argument_templates/create")
 }
 
-// NewClient create a new tcloud api client.
-func NewClient(client rest.ClientInterface) *Client {
-	return &Client{
-		Account:       NewAccountClient(client),
-		SecurityGroup: NewCloudSecurityGroupClient(client),
-		Zone:          NewZoneClient(client),
-		Region:        NewRegionClient(client),
-		ArgsTpl:       NewArgsTplClient(client),
-	}
+// ListArgsTplExt list argument template.
+func (cli *restClient) ListArgsTplExt(kt *kit.Kit, request *core.ListReq) (
+	*protocloud.ArgsTplExtListResult[coreargstpl.TCloudArgsTplExtension], error) {
+
+	return common.Request[core.ListReq, protocloud.ArgsTplExtListResult[coreargstpl.TCloudArgsTplExtension]](
+		cli.client, rest.POST, kt, request, "/argument_templates/list")
 }

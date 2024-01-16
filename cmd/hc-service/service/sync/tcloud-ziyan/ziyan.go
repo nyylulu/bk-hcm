@@ -46,6 +46,7 @@ func InitService(cap *capability.Capability) {
 	h.Add("SyncSecurityGroup", "POST", "/security_groups/sync", v.SyncSecurityGroup)
 	h.Add("SyncZone", "POST", "/zones/sync", v.SyncZone)
 	h.Add("SyncRegion", "POST", "/regions/sync", v.SyncRegion)
+	h.Add("SyncArgsTpl", "POST", "/argument_templates/sync", v.SyncArgsTpl)
 
 	h.Load(cap.WebService)
 }
