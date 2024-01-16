@@ -38,7 +38,6 @@ var ArgumentTplTableColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "cloud_id", NamedC: "cloud_id", Type: enumor.String},
 	{Column: "name", NamedC: "name", Type: enumor.String},
 	{Column: "vendor", NamedC: "vendor", Type: enumor.String},
-	{Column: "region", NamedC: "region", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "account_id", NamedC: "account_id", Type: enumor.String},
 	{Column: "type", NamedC: "type", Type: enumor.String},
@@ -61,8 +60,6 @@ type ArgumentTemplateTable struct {
 	Name string `db:"name" validate:"max=255" json:"name"`
 	// Vendor 云厂商
 	Vendor enumor.Vendor `db:"vendor" json:"vendor"`
-	// Region 区域/地域
-	Region string `db:"region" json:"region"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" validate:"min=-1" json:"bk_biz_id"`
 	// AccountID 账号ID

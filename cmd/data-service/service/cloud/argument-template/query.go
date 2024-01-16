@@ -160,7 +160,7 @@ func convArgsTplListResult[T coreargstpl.Extension](kt *kit.Kit, tables []tablea
 	for _, one := range tables {
 		tmpData, err := convTableToBaseArgsTpl(&one)
 		if err != nil {
-			logs.Errorf("list loop cert detail failed, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("list loop argument template detail failed, err: %v, rid: %s", err, kt.Rid)
 			continue
 		}
 

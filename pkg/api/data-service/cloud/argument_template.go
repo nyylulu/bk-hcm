@@ -45,7 +45,6 @@ type ArgsTplBatchCreate[Extension coreargstpl.Extension] struct {
 	CloudID        string              `json:"cloud_id" validate:"required"`
 	Name           string              `json:"name" validate:"required"`
 	Vendor         string              `json:"vendor" validate:"required"`
-	Region         string              `json:"region" validate:"required"`
 	AccountID      string              `json:"account_id" validate:"required"`
 	BkBizID        int64               `json:"bk_biz_id" validate:"omitempty"`
 	Type           enumor.TemplateType `json:"type"`

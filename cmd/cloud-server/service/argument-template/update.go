@@ -45,6 +45,10 @@ func (svc *argsTplSvc) UpdateArgsTpl(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
+	if len(req.AccountID) == 0 {
+		return nil, errf.Newf(errf.InvalidParameter, "account_id is required")
+	}
+
 	authRes := meta.ResourceAttribute{Basic: &meta.Basic{
 		Type: meta.ArgumentTemplate, Action: meta.Update, ResourceID: req.AccountID}}
 	if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {

@@ -165,7 +165,11 @@ func (cli *client) updateAddress(kt *kit.Kit, accountID string,
 			return fmt.Errorf("json marshal template failed, err: %w", err)
 		}
 
-		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{IDs: []string{id}, Templates: templateJson}
+		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{
+			IDs:       []string{id},
+			Name:      converter.PtrToVal(one.AddressTemplateName),
+			Templates: templateJson,
+		}
 
 		if _, err = cli.dbCli.Global.ArgsTpl.BatchUpdateArgsTpl(kt, &updateReq); err != nil {
 			logs.Errorf("[%s] request dataservice BatchUpdateArgsTpl address failed, err: %v, rid: %s",
@@ -241,8 +245,7 @@ func (cli *client) listFromCloudAddress(kt *kit.Kit, params *SyncBaseParams) (
 	list := make([]typeargstpl.TCloudArgsTplAddress, 0)
 	for _, tmpCloudID := range params.CloudIDs {
 		opt := &typeargstpl.TCloudListOption{
-			Region: params.Region,
-			Page:   &adcore.TCloudPage{Offset: 0, Limit: 1},
+			Page: &adcore.TCloudPage{Offset: 0, Limit: 1},
 			Filters: []*vpc.Filter{
 				{
 					Name:   tcommon.StringPtr("address-template-id"),
@@ -273,8 +276,7 @@ func (cli *client) listFromCloudAddressGroup(kt *kit.Kit, params *SyncBaseParams
 	list := make([]typeargstpl.TCloudArgsTplAddressGroup, 0)
 	for _, tmpCloudID := range params.CloudIDs {
 		opt := &typeargstpl.TCloudListOption{
-			Region: params.Region,
-			Page:   &adcore.TCloudPage{Offset: 0, Limit: 1},
+			Page: &adcore.TCloudPage{Offset: 0, Limit: 1},
 			Filters: []*vpc.Filter{
 				{
 					Name:   tcommon.StringPtr("address-template-group-id"),
@@ -305,8 +307,7 @@ func (cli *client) listFromCloudService(kt *kit.Kit, params *SyncBaseParams) (
 	list := make([]typeargstpl.TCloudArgsTplService, 0)
 	for _, tmpCloudID := range params.CloudIDs {
 		opt := &typeargstpl.TCloudListOption{
-			Region: params.Region,
-			Page:   &adcore.TCloudPage{Offset: 0, Limit: 1},
+			Page: &adcore.TCloudPage{Offset: 0, Limit: 1},
 			Filters: []*vpc.Filter{
 				{
 					Name:   tcommon.StringPtr("service-template-id"),
@@ -337,8 +338,7 @@ func (cli *client) listFromCloudServiceGroup(kt *kit.Kit, params *SyncBaseParams
 	list := make([]typeargstpl.TCloudArgsTplServiceGroup, 0)
 	for _, tmpCloudID := range params.CloudIDs {
 		opt := &typeargstpl.TCloudListOption{
-			Region: params.Region,
-			Page:   &adcore.TCloudPage{Offset: 0, Limit: 1},
+			Page: &adcore.TCloudPage{Offset: 0, Limit: 1},
 			Filters: []*vpc.Filter{
 				{
 					Name:   tcommon.StringPtr("service-template-group-id"),
@@ -594,7 +594,11 @@ func (cli *client) updateAddressGroup(kt *kit.Kit, accountID string,
 			return fmt.Errorf("json marshal group template failed, err: %w", err)
 		}
 
-		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{IDs: []string{id}, GroupTemplates: groupTemplateJson}
+		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{
+			IDs:            []string{id},
+			Name:           converter.PtrToVal(one.AddressTemplateGroupName),
+			GroupTemplates: groupTemplateJson,
+		}
 
 		if _, err = cli.dbCli.Global.ArgsTpl.BatchUpdateArgsTpl(kt, &updateReq); err != nil {
 			logs.Errorf("[%s] request dataservice BatchUpdateArgsTpl address group failed, err: %v, rid: %s",
@@ -853,7 +857,11 @@ func (cli *client) updateService(kt *kit.Kit, accountID string,
 			return fmt.Errorf("json marshal template failed, err: %w", err)
 		}
 
-		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{IDs: []string{id}, Templates: templateJson}
+		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{
+			IDs:       []string{id},
+			Name:      converter.PtrToVal(one.ServiceTemplateName),
+			Templates: templateJson,
+		}
 
 		if _, err = cli.dbCli.Global.ArgsTpl.BatchUpdateArgsTpl(kt, &updateReq); err != nil {
 			logs.Errorf("[%s] request dataservice BatchUpdateArgsTpl service failed, err: %v, rid: %s",
@@ -1115,7 +1123,11 @@ func (cli *client) updateServiceGroup(kt *kit.Kit, accountID string,
 			return fmt.Errorf("json marshal group template failed, err: %w", err)
 		}
 
-		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{IDs: []string{id}, GroupTemplates: groupTemplateJson}
+		var updateReq = protocloud.ArgsTplBatchUpdateExprReq{
+			IDs:            []string{id},
+			Name:           converter.PtrToVal(one.ServiceTemplateGroupName),
+			GroupTemplates: groupTemplateJson,
+		}
 
 		if _, err = cli.dbCli.Global.ArgsTpl.BatchUpdateArgsTpl(kt, &updateReq); err != nil {
 			logs.Errorf("[%s] request dataservice BatchUpdateArgsTpl service group failed, err: %v, rid: %s",

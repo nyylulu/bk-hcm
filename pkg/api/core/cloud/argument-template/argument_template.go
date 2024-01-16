@@ -31,7 +31,6 @@ type BaseArgsTpl struct {
 	CloudID        string              `json:"cloud_id"`
 	Name           string              `json:"name"`
 	Vendor         enumor.Vendor       `json:"vendor"`
-	Region         string              `json:"region"`
 	BkBizID        int64               `json:"bk_biz_id"`
 	AccountID      string              `json:"account_id"`
 	Type           enumor.TemplateType `json:"type"`

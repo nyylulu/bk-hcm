@@ -31,7 +31,6 @@ import (
 
 // TCloudVpcTaskResultOption defines options to list tcloud vpc task result instances.
 type TCloudVpcTaskResultOption struct {
-	Region string `json:"region" validate:"required"`
 	TaskID string `json:"task_id" validate:"required"`
 }
 
@@ -44,8 +43,7 @@ func (opt TCloudVpcTaskResultOption) Validate() error {
 
 // TCloudListOption defines options to list tcloud argument template instances.
 type TCloudListOption struct {
-	Region string           `json:"region" validate:"required"`
-	Page   *core.TCloudPage `json:"page" validate:"omitempty"`
+	Page *core.TCloudPage `json:"page" validate:"omitempty"`
 	// 过滤条件。
 	// ------ IP地址模版 ------
 	// - address-template-name - IP地址模板名称。
@@ -83,7 +81,6 @@ func (opt TCloudListOption) Validate() error {
 
 // TCloudDeleteOption defines options to operation tcloud argument template instances.
 type TCloudDeleteOption struct {
-	Region  string `json:"region" validate:"required"`
 	CloudID string `json:"cloud_id" validate:"required"`
 }
 
@@ -96,7 +93,6 @@ func (opt TCloudDeleteOption) Validate() error {
 
 // TCloudCreateAddressOption defines options to create tcloud argument template address instances.
 type TCloudCreateAddressOption struct {
-	Region         string             `json:"region" validate:"required"`
 	TemplateName   string             `json:"template_name" validate:"required"`
 	AddressesExtra []*vpc.AddressInfo `json:"addresses_extra" validate:"required"`
 }
@@ -110,7 +106,6 @@ func (opt TCloudCreateAddressOption) Validate() error {
 
 // TCloudUpdateAddressOption defines options to update tcloud argument template address instances.
 type TCloudUpdateAddressOption struct {
-	Region         string             `json:"region" validate:"required"`
 	TemplateID     string             `json:"template_id" validate:"required"`
 	TemplateName   string             `json:"template_name" validate:"omitempty"`
 	AddressesExtra []*vpc.AddressInfo `json:"addresses_extra" validate:"omitempty"`
@@ -125,7 +120,6 @@ func (opt TCloudUpdateAddressOption) Validate() error {
 
 // TCloudCreateAddressGroupOption defines options to create tcloud argument template address group instances.
 type TCloudCreateAddressGroupOption struct {
-	Region            string   `json:"region" validate:"required"`
 	TemplateGroupName string   `json:"template_group_name" validate:"required"`
 	TemplateIDs       []string `json:"template_ids" validate:"required"`
 }
@@ -139,7 +133,6 @@ func (opt TCloudCreateAddressGroupOption) Validate() error {
 
 // TCloudUpdateAddressGroupOption defines options to update tcloud argument template address group instances.
 type TCloudUpdateAddressGroupOption struct {
-	Region            string   `json:"region" validate:"required"`
 	TemplateGroupID   string   `json:"template_group_id" validate:"required"`
 	TemplateGroupName string   `json:"template_group_name" validate:"omitempty"`
 	TemplateIDs       []string `json:"template_ids" validate:"omitempty"`
@@ -154,7 +147,6 @@ func (opt TCloudUpdateAddressGroupOption) Validate() error {
 
 // TCloudCreateServiceOption defines options to create tcloud argument template service instances.
 type TCloudCreateServiceOption struct {
-	Region        string              `json:"region" validate:"required"`
 	TemplateName  string              `json:"template_name" validate:"required"`
 	ServicesExtra []*vpc.ServicesInfo `json:"services_extra" validate:"required"`
 }
@@ -168,7 +160,6 @@ func (opt TCloudCreateServiceOption) Validate() error {
 
 // TCloudUpdateServiceOption defines options to update tcloud argument template service instances.
 type TCloudUpdateServiceOption struct {
-	Region        string              `json:"region" validate:"required"`
 	TemplateID    string              `json:"template_id" validate:"required"`
 	TemplateName  string              `json:"template_name" validate:"omitempty"`
 	ServicesExtra []*vpc.ServicesInfo `json:"services_extra" validate:"omitempty"`
@@ -183,7 +174,6 @@ func (opt TCloudUpdateServiceOption) Validate() error {
 
 // TCloudCreateServiceGroupOption defines options to create tcloud argument template service group instances.
 type TCloudCreateServiceGroupOption struct {
-	Region            string   `json:"region" validate:"required"`
 	TemplateGroupName string   `json:"template_group_name" validate:"required"`
 	TemplateIDs       []string `json:"template_ids" validate:"required"`
 }
@@ -197,7 +187,6 @@ func (opt TCloudCreateServiceGroupOption) Validate() error {
 
 // TCloudUpdateServiceGroupOption defines options to update tcloud argument template service group instances.
 type TCloudUpdateServiceGroupOption struct {
-	Region            string   `json:"region" validate:"required"`
 	TemplateGroupID   string   `json:"template_group_id" validate:"required"`
 	TemplateGroupName string   `json:"template_group_name" validate:"omitempty"`
 	TemplateIDs       []string `json:"template_ids" validate:"omitempty"`

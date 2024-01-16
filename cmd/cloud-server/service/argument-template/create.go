@@ -36,12 +36,12 @@ import (
 
 // CreateArgsTpl create resource argument template.
 func (svc *argsTplSvc) CreateArgsTpl(cts *rest.Contexts) (interface{}, error) {
-	return svc.createArgsTpl(cts, handler.BizOperateAuth, false)
+	return svc.createArgsTpl(cts, handler.ResOperateAuth, false)
 }
 
 // CreateBizArgsTpl create biz argument template.
 func (svc *argsTplSvc) CreateBizArgsTpl(cts *rest.Contexts) (interface{}, error) {
-	return svc.createArgsTpl(cts, handler.ResOperateAuth, true)
+	return svc.createArgsTpl(cts, handler.BizOperateAuth, true)
 }
 
 func (svc *argsTplSvc) createArgsTpl(cts *rest.Contexts, authHandler handler.ValidWithAuthHandler, bizRequired bool) (
@@ -51,6 +51,10 @@ func (svc *argsTplSvc) createArgsTpl(cts *rest.Contexts, authHandler handler.Val
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("create argument template request decode failed, req: %+v, err: %v, rid: %s", req, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if len(req.AccountID) == 0 {
+		return nil, errf.Newf(errf.InvalidParameter, "account_id is required")
 	}
 
 	// create authorized instances

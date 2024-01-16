@@ -98,7 +98,6 @@ func (svc *argsTplSvc) CreateTCloudArgsTpl(cts *rest.Contexts) (interface{}, err
 			CloudID:        cloudID,
 			Name:           req.Name,
 			Vendor:         string(enumor.TCloud),
-			Region:         req.Region,
 			AccountID:      req.AccountID,
 			BkBizID:        req.BkBizID,
 			Type:           req.Type,
@@ -128,7 +127,6 @@ func (svc *argsTplSvc) createTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 	switch req.Type {
 	case enumor.AddressType:
 		opt := &typeargstpl.TCloudCreateAddressOption{
-			Region:       req.Region,
 			TemplateName: req.Name,
 		}
 		for _, addr := range req.Templates {
@@ -148,7 +146,6 @@ func (svc *argsTplSvc) createTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.AddressGroupType:
 		opt := &typeargstpl.TCloudCreateAddressGroupOption{
-			Region:            req.Region,
 			TemplateGroupName: req.Name,
 			TemplateIDs:       req.GroupTemplates,
 		}
@@ -162,7 +159,6 @@ func (svc *argsTplSvc) createTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.ServiceType:
 		opt := &typeargstpl.TCloudCreateServiceOption{
-			Region:       req.Region,
 			TemplateName: req.Name,
 		}
 		for _, addr := range req.Templates {
@@ -181,7 +177,6 @@ func (svc *argsTplSvc) createTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.ServiceGroupType:
 		opt := &typeargstpl.TCloudCreateServiceGroupOption{
-			Region:            req.Region,
 			TemplateGroupName: req.Name,
 			TemplateIDs:       req.GroupTemplates,
 		}
@@ -257,6 +252,7 @@ func (svc *argsTplSvc) UpdateTCloudArgsTpl(cts *rest.Contexts) (interface{}, err
 
 	updateReq := &dataproto.ArgsTplBatchUpdateExprReq{
 		IDs:            []string{id},
+		BkBizID:        req.BkBizID,
 		Name:           req.Name,
 		Templates:      templatesJson,
 		GroupTemplates: groupTemplatesJson,
@@ -276,7 +272,6 @@ func (svc *argsTplSvc) updateTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 	switch templateType {
 	case enumor.AddressType:
 		opt := &typeargstpl.TCloudUpdateAddressOption{
-			Region:       req.Region,
 			TemplateID:   cloudTemplateID,
 			TemplateName: req.Name,
 		}
@@ -301,7 +296,6 @@ func (svc *argsTplSvc) updateTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.AddressGroupType:
 		opt := &typeargstpl.TCloudUpdateAddressGroupOption{
-			Region:            req.Region,
 			TemplateGroupID:   cloudTemplateID,
 			TemplateGroupName: req.Name,
 			TemplateIDs:       req.GroupTemplates,
@@ -320,7 +314,6 @@ func (svc *argsTplSvc) updateTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.ServiceType:
 		opt := &typeargstpl.TCloudUpdateServiceOption{
-			Region:       req.Region,
 			TemplateID:   cloudTemplateID,
 			TemplateName: req.Name,
 		}
@@ -344,7 +337,6 @@ func (svc *argsTplSvc) updateTCloudCloud(kt *kit.Kit, client tcloud.TCloud, req 
 
 	case enumor.ServiceGroupType:
 		opt := &typeargstpl.TCloudUpdateServiceGroupOption{
-			Region:            req.Region,
 			TemplateGroupID:   cloudTemplateID,
 			TemplateGroupName: req.Name,
 			TemplateIDs:       req.GroupTemplates,
@@ -403,7 +395,6 @@ func (svc *argsTplSvc) DeleteTCloudArgsTpl(cts *rest.Contexts) (interface{}, err
 	}
 
 	opt := &typeargstpl.TCloudDeleteOption{
-		Region:  req.Region,
 		CloudID: listResp.Details[0].CloudID,
 	}
 
@@ -464,10 +455,7 @@ func (svc *argsTplSvc) ListTCloudArgsTpl(cts *rest.Contexts) (interface{}, error
 		return nil, err
 	}
 
-	opt := &typeargstpl.TCloudListOption{
-		Region: req.Region,
-	}
-
+	opt := &typeargstpl.TCloudListOption{}
 	if len(req.Filters) > 0 {
 		opt.Filters = req.Filters
 	}

@@ -33,9 +33,8 @@ import (
 
 // -------------------------- Delete --------------------------
 
-// TCloudDeleteReq define delete cert req.
+// TCloudDeleteReq define delete req.
 type TCloudDeleteReq struct {
-	Region    string `json:"region" validate:"required"`
 	AccountID string `json:"account_id" validate:"required"`
 	ID        string `json:"id" validate:"required"`
 }
@@ -49,7 +48,6 @@ func (req *TCloudDeleteReq) Validate() error {
 
 // TCloudCreateReq tcloud create req.
 type TCloudCreateReq struct {
-	Region         string              `json:"region" validate:"required"`
 	BkBizID        int64               `json:"bk_biz_id" validate:"omitempty"`
 	AccountID      string              `json:"account_id" validate:"required"`
 	Vendor         string              `json:"vendor" validate:"required"`
@@ -91,7 +89,6 @@ func (req *TCloudCreateReq) Validate(bizRequired bool) error {
 
 // TCloudUpdateReq tcloud update req.
 type TCloudUpdateReq struct {
-	Region         string          `json:"region" validate:"required"`
 	Vendor         string          `json:"vendor" validate:"required"`
 	BkBizID        int64           `json:"bk_biz_id" validate:"omitempty"`
 	Name           string          `json:"name" validate:"omitempty"`
@@ -128,7 +125,6 @@ type CreateResp struct {
 // ArgsTplListReq list req.
 type ArgsTplListReq struct {
 	AccountID string              `json:"account_id" validate:"required"`
-	Region    string              `json:"region" validate:"required"`
 	Type      enumor.TemplateType `json:"type" validate:"required"`
 	Page      *core.TCloudPage    `json:"page" validate:"required"`
 	// 过滤条件。

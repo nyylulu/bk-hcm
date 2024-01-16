@@ -399,10 +399,14 @@ func convTCloudRule(policy *vpc.SecurityGroupPolicy, sg *corecloud.BaseSecurityG
 		// 该安全组规则绑定的[协议端口]参数模版的本地ID
 		if argsTplInfo, ok := argsTplMap[converter.PtrToVal(spec.CloudServiceID)]; ok {
 			spec.ServiceID = converter.ValToPtr(argsTplInfo.ID)
+		} else {
+			spec.ServiceID = converter.ValToPtr("")
 		}
 
 		if argsTplInfo, ok := argsTplMap[converter.PtrToVal(spec.CloudServiceGroupID)]; ok {
 			spec.ServiceGroupID = converter.ValToPtr(argsTplInfo.ID)
+		} else {
+			spec.ServiceGroupID = converter.ValToPtr("")
 		}
 	}
 
@@ -413,10 +417,14 @@ func convTCloudRule(policy *vpc.SecurityGroupPolicy, sg *corecloud.BaseSecurityG
 		// 该安全组规则绑定的[IP]参数模版的本地ID
 		if argsTplInfo, ok := argsTplMap[converter.PtrToVal(spec.CloudAddressID)]; ok {
 			spec.AddressID = converter.ValToPtr(argsTplInfo.ID)
+		} else {
+			spec.AddressID = converter.ValToPtr("")
 		}
 
 		if argsTplInfo, ok := argsTplMap[converter.PtrToVal(spec.CloudAddressGroupID)]; ok {
 			spec.AddressGroupID = converter.ValToPtr(argsTplInfo.ID)
+		} else {
+			spec.AddressGroupID = converter.ValToPtr("")
 		}
 	}
 

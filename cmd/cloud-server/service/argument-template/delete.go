@@ -28,6 +28,7 @@ import (
 	protoargstpl "hcm/pkg/api/hc-service/argument-template"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -54,7 +55,7 @@ func (svc *argsTplSvc) deleteArgsTplSvc(cts *rest.Contexts, validHandler handler
 	basicInfoReq := dataproto.ListResourceBasicInfoReq{
 		ResourceType: enumor.ArgumentTemplateResType,
 		IDs:          req.IDs,
-		Fields:       []string{"id", "vendor", "account_id", "bk_biz_id", "region"},
+		Fields:       types.CommonBasicInfoFields,
 	}
 	basicInfoMap, err := svc.client.DataService().Global.Cloud.ListResBasicInfo(cts.Kit, basicInfoReq)
 	if err != nil {
@@ -86,7 +87,6 @@ func (svc *argsTplSvc) deleteArgsTplSvc(cts *rest.Contexts, validHandler handler
 
 		err = svc.client.HCService().TCloud.ArgsTpl.DeleteArgsTpl(cts.Kit, &protoargstpl.TCloudDeleteReq{
 			AccountID: basicInfo.AccountID,
-			Region:    basicInfo.Region,
 			ID:        id,
 		})
 		if err != nil {

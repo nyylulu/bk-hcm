@@ -69,7 +69,6 @@ func batchCreateArgsTpl[T coreargstpl.Extension](cts *rest.Contexts, svc *argsTp
 				CloudID:        one.CloudID,
 				Name:           one.Name,
 				Vendor:         vendor,
-				Region:         one.Region,
 				BkBizID:        one.BkBizID,
 				AccountID:      one.AccountID,
 				Type:           one.Type,

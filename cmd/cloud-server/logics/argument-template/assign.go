@@ -35,7 +35,7 @@ import (
 	"hcm/pkg/tools/slice"
 )
 
-// Assign 分配证书到业务下
+// Assign 分配参数模版到业务下
 func Assign(kt *kit.Kit, cli *dataservice.Client, ids []string, bizID int64) error {
 	if len(ids) == 0 {
 		return fmt.Errorf("ids is required")
@@ -45,7 +45,7 @@ func Assign(kt *kit.Kit, cli *dataservice.Client, ids []string, bizID int64) err
 		return err
 	}
 
-	// create cert assign audit
+	// create assign audit
 	audit := logicaudit.NewAudit(cli)
 	if err := audit.ResBizAssignAudit(kt, enumor.ArgumentTemplateAuditResType, ids, bizID); err != nil {
 		logs.Errorf("create assign argstpl audit failed, ids: %v, bizID: %d, err: %v, rid: %s", ids, bizID, err, kt.Rid)

@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/adaptor/types"
 	typeargstpl "hcm/pkg/adaptor/types/argument-template"
 	"hcm/pkg/adaptor/types/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -50,7 +51,7 @@ func (t *TCloudImpl) ListVpcTaskResult(kt *kit.Kit, opt *typeargstpl.TCloudVpcTa
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("new tcloud vpc client failed, err: %v", err)
 	}
@@ -81,7 +82,7 @@ func (t *TCloudImpl) ListArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudList
 		return nil, 0, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, 0, fmt.Errorf("new tcloud vpc client failed, err: %v", err)
 	}
@@ -124,7 +125,7 @@ func (t *TCloudImpl) CreateArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudCr
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -154,7 +155,7 @@ func (t *TCloudImpl) DeleteArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudDe
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -168,9 +169,8 @@ func (t *TCloudImpl) DeleteArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudDe
 		return err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchDeleteArgsTplPollerOption())
 	if err != nil {
@@ -199,7 +199,7 @@ func (t *TCloudImpl) UpdateArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudUp
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -221,9 +221,8 @@ func (t *TCloudImpl) UpdateArgsTplAddress(kt *kit.Kit, opt *typeargstpl.TCloudUp
 		return nil, err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchUpdateArgsTplPollerOption())
 	if err != nil {
@@ -248,7 +247,7 @@ func (t *TCloudImpl) ListArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TClou
 		return nil, 0, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, 0, fmt.Errorf("new tcloud vpc client failed, err: %v", err)
 	}
@@ -291,7 +290,7 @@ func (t *TCloudImpl) CreateArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -321,7 +320,7 @@ func (t *TCloudImpl) DeleteArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -336,9 +335,8 @@ func (t *TCloudImpl) DeleteArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchDeleteArgsTplPollerOption())
 	if err != nil {
@@ -368,7 +366,7 @@ func (t *TCloudImpl) UpdateArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -391,9 +389,8 @@ func (t *TCloudImpl) UpdateArgsTplAddressGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchUpdateArgsTplPollerOption())
 	if err != nil {
@@ -418,7 +415,7 @@ func (t *TCloudImpl) ListArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudList
 		return nil, 0, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, 0, fmt.Errorf("new tcloud vpc client failed, err: %v", err)
 	}
@@ -461,7 +458,7 @@ func (t *TCloudImpl) CreateArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudCr
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -491,7 +488,7 @@ func (t *TCloudImpl) DeleteArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudDe
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -506,9 +503,8 @@ func (t *TCloudImpl) DeleteArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudDe
 		return err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchDeleteArgsTplPollerOption())
 	if err != nil {
@@ -537,7 +533,7 @@ func (t *TCloudImpl) UpdateArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudUp
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -559,9 +555,8 @@ func (t *TCloudImpl) UpdateArgsTplService(kt *kit.Kit, opt *typeargstpl.TCloudUp
 		return nil, err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchUpdateArgsTplPollerOption())
 	if err != nil {
@@ -586,7 +581,7 @@ func (t *TCloudImpl) ListArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TClou
 		return nil, 0, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, 0, fmt.Errorf("new tcloud vpc client failed, err: %v", err)
 	}
@@ -629,7 +624,7 @@ func (t *TCloudImpl) CreateArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -659,7 +654,7 @@ func (t *TCloudImpl) DeleteArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -674,9 +669,8 @@ func (t *TCloudImpl) DeleteArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchDeleteArgsTplPollerOption())
 	if err != nil {
@@ -706,7 +700,7 @@ func (t *TCloudImpl) UpdateArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	client, err := t.clientSet.VpcClient(opt.Region)
+	client, err := t.clientSet.VpcClient(constant.TCloudDefaultRegion)
 	if err != nil {
 		return nil, fmt.Errorf("init tencent cloud vpc client failed, err: %v", err)
 	}
@@ -729,9 +723,8 @@ func (t *TCloudImpl) UpdateArgsTplServiceGroup(kt *kit.Kit, opt *typeargstpl.TCl
 		return nil, err
 	}
 
-	handler := &vpcTaskResultPollingHandler{opt.Region}
 	respPoller := poller.Poller[*TCloudImpl, []*vpc.DescribeVpcTaskResultResponseParams,
-		poller.BaseDoneResult]{Handler: handler}
+		poller.BaseDoneResult]{Handler: &vpcTaskResultPollingHandler{}}
 	result, err := respPoller.PollUntilDone(t, kt, []*string{resp.Response.RequestId},
 		types.NewBatchUpdateArgsTplPollerOption())
 	if err != nil {
@@ -787,7 +780,6 @@ func (h *vpcTaskResultPollingHandler) Poll(client *TCloudImpl, kt *kit.Kit, clou
 	for _, partIDs := range cloudIDSplit {
 		for _, tmpCloud := range partIDs {
 			opt := &typeargstpl.TCloudVpcTaskResultOption{
-				Region: h.region,
 				TaskID: converter.PtrToVal(tmpCloud),
 			}
 			resp, err := client.ListVpcTaskResult(kt, opt)

@@ -32,7 +32,6 @@ create table if not exists `argument_template`
     `cloud_id`            varchar(255) not null,
     `name`                varchar(255) not null,
     `vendor`              varchar(16)  not null,
-    `region`              varchar(255) not null default '',
     `bk_biz_id`           bigint       not null default '-1',
     `account_id`          varchar(64)  not null,
     `type`                varchar(16)  not null,

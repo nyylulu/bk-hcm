@@ -47,13 +47,22 @@ func (svc *argsTplSvc) BatchUpdateArgsTpl(cts *rest.Contexts) (interface{}, erro
 	}
 
 	updateData := &tableargstpl.ArgumentTemplateTable{
-		BkBizID:        req.BkBizID,
-		Name:           req.Name,
-		Type:           req.Type,
-		Templates:      req.Templates,
-		GroupTemplates: req.GroupTemplates,
-		Reviser:        cts.Kit.User,
+		BkBizID: req.BkBizID,
+		Reviser: cts.Kit.User,
 	}
+
+	if len(req.Name) > 0 {
+		updateData.Name = req.Name
+	}
+
+	if len(req.Templates) > 0 && !req.Templates.IsEmpty() {
+		updateData.Templates = req.Templates
+	}
+
+	if len(req.GroupTemplates) > 0 && !req.GroupTemplates.IsEmpty() {
+		updateData.GroupTemplates = req.GroupTemplates
+	}
+
 	if err := svc.dao.ArgsTpl().Update(cts.Kit, tools.ContainersExpression("id", req.IDs), updateData); err != nil {
 		return nil, err
 	}

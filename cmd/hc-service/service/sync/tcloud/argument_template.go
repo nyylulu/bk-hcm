@@ -26,6 +26,7 @@ import (
 	argstpl "hcm/pkg/adaptor/types/argument-template"
 	typecore "hcm/pkg/adaptor/types/core"
 	"hcm/pkg/api/hc-service/sync"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -94,7 +95,6 @@ func (hd *argsTplAddressHandler) Prepare(cts *rest.Contexts) error {
 // Next ...
 func (hd *argsTplAddressHandler) Next(kt *kit.Kit) ([]string, error) {
 	listOpt := &argstpl.TCloudListOption{
-		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
 			Limit:  typecore.TCloudQueryLimit,
@@ -127,7 +127,8 @@ func (hd *argsTplAddressHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 		Region:    hd.request.Region,
 		CloudIDs:  cloudIDs,
 	}
-	if _, err := hd.syncCli.ArgsTplAddress(kt, params, new(tcloud.SyncArgsTplOption)); err != nil {
+	if _, err := hd.syncCli.ArgsTplAddress(kt, params,
+		&tcloud.SyncArgsTplOption{BkBizID: constant.UnassignedBiz}); err != nil {
 		logs.Errorf("sync tcloud argument template address failed, opt: %v, err: %v, rid: %s", params, err, kt.Rid)
 		return err
 	}
@@ -173,7 +174,6 @@ func (hd *argsTplAddressGroupHandler) Prepare(_ *rest.Contexts) error {
 // Next ...
 func (hd *argsTplAddressGroupHandler) Next(kt *kit.Kit) ([]string, error) {
 	listOpt := &argstpl.TCloudListOption{
-		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
 			Limit:  typecore.TCloudQueryLimit,
@@ -206,7 +206,8 @@ func (hd *argsTplAddressGroupHandler) Sync(kt *kit.Kit, cloudIDs []string) error
 		Region:    hd.request.Region,
 		CloudIDs:  cloudIDs,
 	}
-	if _, err := hd.syncCli.ArgsTplAddressGroup(kt, params, new(tcloud.SyncArgsTplOption)); err != nil {
+	if _, err := hd.syncCli.ArgsTplAddressGroup(kt, params,
+		&tcloud.SyncArgsTplOption{BkBizID: constant.UnassignedBiz}); err != nil {
 		logs.Errorf("sync tcloud argument template address group failed, opt: %v, err: %v, rid: %s",
 			params, err, kt.Rid)
 		return err
@@ -254,7 +255,6 @@ func (hd *argsTplServiceHandler) Prepare(_ *rest.Contexts) error {
 // Next ...
 func (hd *argsTplServiceHandler) Next(kt *kit.Kit) ([]string, error) {
 	listOpt := &argstpl.TCloudListOption{
-		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
 			Limit:  typecore.TCloudQueryLimit,
@@ -287,7 +287,8 @@ func (hd *argsTplServiceHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 		Region:    hd.request.Region,
 		CloudIDs:  cloudIDs,
 	}
-	if _, err := hd.syncCli.ArgsTplService(kt, params, new(tcloud.SyncArgsTplOption)); err != nil {
+	if _, err := hd.syncCli.ArgsTplService(kt, params,
+		&tcloud.SyncArgsTplOption{BkBizID: constant.UnassignedBiz}); err != nil {
 		logs.Errorf("sync tcloud argument template service failed, opt: %v, err: %v, rid: %s", params, err, kt.Rid)
 		return err
 	}
@@ -333,7 +334,6 @@ func (hd *argsTplServiceGroupHandler) Prepare(_ *rest.Contexts) error {
 // Next ...
 func (hd *argsTplServiceGroupHandler) Next(kt *kit.Kit) ([]string, error) {
 	listOpt := &argstpl.TCloudListOption{
-		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
 			Limit:  typecore.TCloudQueryLimit,
@@ -366,7 +366,8 @@ func (hd *argsTplServiceGroupHandler) Sync(kt *kit.Kit, cloudIDs []string) error
 		Region:    hd.request.Region,
 		CloudIDs:  cloudIDs,
 	}
-	if _, err := hd.syncCli.ArgsTplServiceGroup(kt, params, new(tcloud.SyncArgsTplOption)); err != nil {
+	if _, err := hd.syncCli.ArgsTplServiceGroup(kt, params,
+		&tcloud.SyncArgsTplOption{BkBizID: constant.UnassignedBiz}); err != nil {
 		logs.Errorf("sync tcloud argument template service group failed, opt: %v, err: %v, rid: %s",
 			params, err, kt.Rid)
 		return err
