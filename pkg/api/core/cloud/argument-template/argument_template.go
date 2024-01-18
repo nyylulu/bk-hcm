@@ -41,6 +41,7 @@ type BaseArgsTpl struct {
 	*core.Revision `json:",inline"`
 }
 
+// TemplateInfo define argument template's template info.
 type TemplateInfo struct {
 	// ip地址、协议端口等
 	Address *string `json:"address,omitempty" name:"address"`

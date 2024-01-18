@@ -121,7 +121,7 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		return enumor.SubAccountCloudResType, hitErr
 	}
 
-	if hitErr = SyncArgsTpl(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+	if hitErr = SyncArgsTpl(kt, cliSet, opt.AccountID, sd); hitErr != nil {
 		return enumor.ArgumentTemplateResType, hitErr
 	}
 

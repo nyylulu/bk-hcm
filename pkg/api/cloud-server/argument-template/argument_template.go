@@ -60,3 +60,19 @@ type BindArgsTplInstanceRuleResp struct {
 	InstanceNum int64  `json:"instance_num"`
 	RuleNum     int64  `json:"rule_num"`
 }
+
+// -------------------------- Delete --------------------------
+
+// ArgsTplBatchIDsReq argument template batch ids request.
+type ArgsTplBatchIDsReq struct {
+	IDs []string `json:"ids" validate:"required"`
+}
+
+// Validate argument template batch ids validate.
+func (req *ArgsTplBatchIDsReq) Validate() error {
+	if len(req.IDs) > constant.BatchOperationMaxLimit {
+		return fmt.Errorf("ids should <= %d", constant.BatchOperationMaxLimit)
+	}
+
+	return validator.Validate.Struct(req)
+}

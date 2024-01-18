@@ -25,14 +25,14 @@ import (
 	"hcm/cmd/cloud-server/service/sync/detail"
 	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
 
 // SyncArgsTpl ...
-func SyncArgsTpl(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions []string,
-	sd *detail.SyncDetail) error {
+func SyncArgsTpl(kt *kit.Kit, cliSet *client.ClientSet, accountID string, sd *detail.SyncDetail) error {
 
 	// 重新设置rid方便定位
 	kt = kt.NewSubKit()
@@ -50,15 +50,13 @@ func SyncArgsTpl(kt *kit.Kit, cliSet *client.ClientSet, accountID string, region
 			accountID, time.Since(start), kt.Rid)
 	}()
 
-	for _, region := range regions {
-		req := &sync.TCloudSyncReq{
-			AccountID: accountID,
-			Region:    region,
-		}
-		if err := cliSet.HCService().TCloud.ArgsTpl.SyncArgsTpl(kt, req); err != nil {
-			logs.Errorf("sync tcloud argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
-			return err
-		}
+	req := &sync.TCloudSyncReq{
+		AccountID: accountID,
+		Region:    constant.TCloudDefaultRegion,
+	}
+	if err := cliSet.HCService().TCloud.ArgsTpl.SyncArgsTpl(kt, req); err != nil {
+		logs.Errorf("sync tcloud argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return err
 	}
 
 	// 同步成功

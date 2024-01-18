@@ -23,6 +23,7 @@ package argstpl
 import (
 	proto "hcm/pkg/api/cloud-server"
 	csargstpl "hcm/pkg/api/cloud-server/argument-template"
+	csprotoargstpl "hcm/pkg/api/cloud-server/argument-template"
 	"hcm/pkg/api/core"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/errf"
@@ -82,9 +83,9 @@ func (svc *argsTplSvc) ListBizArgsTplBindInstanceRule(cts *rest.Contexts) (inter
 }
 
 func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (
-	interface{}, error) {
+	any, error) {
 
-	req := new(proto.BatchDeleteReq)
+	req := new(csprotoargstpl.ArgsTplBatchIDsReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
 	}
@@ -140,6 +141,15 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 		}
 	}
 
+	list := svc.buildArgsTplBinding(sgRuleList, sgMap)
+	return list, nil
+}
+
+// buildArgsTplBinding build argument template binding.
+// description: sgRuleList.SecurityGroupRule里面会同时包含AddressID、AddressGroupID、ServiceID、ServiceGroupID
+func (svc *argsTplSvc) buildArgsTplBinding(sgRuleList *protocloud.TCloudSGRuleListExtResult,
+	sgMap map[string]int64) []*csargstpl.BindArgsTplInstanceRuleResp {
+
 	argsTplMap := make(map[string]*csargstpl.BindArgsTplInstanceRuleResp)
 	for _, item := range sgRuleList.SecurityGroupRule {
 		if item.AddressID != nil {
@@ -152,6 +162,7 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 			argsTplMap[tmpID].InstanceNum = sgMap[item.SecurityGroupID]
 			argsTplMap[tmpID].RuleNum++
 		}
+
 		if item.AddressGroupID != nil {
 			tmpID := converter.PtrToVal(item.AddressGroupID)
 			if _, ok := argsTplMap[tmpID]; !ok {
@@ -162,6 +173,7 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 			argsTplMap[tmpID].InstanceNum = sgMap[item.SecurityGroupID]
 			argsTplMap[tmpID].RuleNum++
 		}
+
 		if item.ServiceID != nil {
 			tmpID := converter.PtrToVal(item.ServiceID)
 			if _, ok := argsTplMap[tmpID]; !ok {
@@ -172,6 +184,7 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 			argsTplMap[tmpID].InstanceNum = sgMap[item.SecurityGroupID]
 			argsTplMap[tmpID].RuleNum++
 		}
+
 		if item.ServiceGroupID != nil {
 			tmpID := converter.PtrToVal(item.ServiceGroupID)
 			if _, ok := argsTplMap[tmpID]; !ok {
@@ -184,10 +197,5 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 		}
 	}
 
-	list := make([]*csargstpl.BindArgsTplInstanceRuleResp, 0, len(argsTplMap))
-	for _, item := range argsTplMap {
-		list = append(list, item)
-	}
-
-	return list, nil
+	return converter.MapValueToSlice(argsTplMap)
 }

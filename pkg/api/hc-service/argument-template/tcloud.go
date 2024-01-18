@@ -57,6 +57,7 @@ type TCloudCreateReq struct {
 	GroupTemplates []string            `json:"group_templates" validate:"omitempty"`
 }
 
+// TemplateInfo define argument template's template info.
 type TemplateInfo struct {
 	// ip地址、协议端口等
 	Address *string `json:"address,omitempty" name:"address"`
