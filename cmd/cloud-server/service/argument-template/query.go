@@ -141,14 +141,14 @@ func (svc *argsTplSvc) listArgsTplBindInstanceRule(cts *rest.Contexts, authHandl
 		}
 	}
 
-	list := svc.buildArgsTplBinding(sgRuleList, sgMap)
+	list := svc.buildArgsTplBinding(sgRuleList, sgMap, req.IDs)
 	return list, nil
 }
 
 // buildArgsTplBinding build argument template binding.
 // description: sgRuleList.SecurityGroupRule里面会同时包含AddressID、AddressGroupID、ServiceID、ServiceGroupID
 func (svc *argsTplSvc) buildArgsTplBinding(sgRuleList *protocloud.TCloudSGRuleListExtResult,
-	sgMap map[string]int64) []*csargstpl.BindArgsTplInstanceRuleResp {
+	sgMap map[string]int64, ids []string) []*csargstpl.BindArgsTplInstanceRuleResp {
 
 	argsTplMap := make(map[string]*csargstpl.BindArgsTplInstanceRuleResp)
 	for _, item := range sgRuleList.SecurityGroupRule {
@@ -197,5 +197,12 @@ func (svc *argsTplSvc) buildArgsTplBinding(sgRuleList *protocloud.TCloudSGRuleLi
 		}
 	}
 
-	return converter.MapValueToSlice(argsTplMap)
+	list := make([]*csargstpl.BindArgsTplInstanceRuleResp, 0)
+	for _, tmpID := range ids {
+		if val, ok := argsTplMap[tmpID]; ok {
+			list = append(list, val)
+		}
+	}
+
+	return list
 }
