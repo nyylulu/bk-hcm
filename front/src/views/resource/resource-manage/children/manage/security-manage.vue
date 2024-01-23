@@ -4,9 +4,9 @@ import type {
   FilterType,
 } from '@/typings/resource';
 import { GcpTypeEnum, CloudType } from '@/typings';
-import { Button, InfoBox, Message, Tag } from 'bkui-vue';
+import { Button, InfoBox, Message, Tag, bkTooltips } from 'bkui-vue';
 import { useResourceStore, useAccountStore } from '@/store';
-import { ref, h, PropType, watch, reactive, defineExpose, computed } from 'vue';
+import { ref, h, PropType, watch, reactive, defineExpose, computed, withDirectives } from 'vue';
 
 import { useI18n } from 'vue-i18n';
 import { useRouter, useRoute } from 'vue-router';
@@ -24,6 +24,9 @@ import {
 } from '@/views/resource/resource-manage/children/dialog/batch-distribution';
 import { TemplateTypeMap } from '../dialog/template-dialog';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import http from '@/http';
+
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 const props = defineProps({
   filter: {
@@ -81,6 +84,8 @@ const state = reactive<any>({
   },
 });
 
+const templateData = ref([]);
+
 const { searchData, searchValue, filter } = useFilter(props);
 
 const {
@@ -120,12 +125,15 @@ const selectSearchData = computed(() => {
       id: 'cloud_id',
     },
     ...searchData.value,
-    ...[
-      {
-        name: '云地域',
-        id: 'region',
-      },
-    ],
+    ...(
+      activeType.value === 'template'
+        ? []
+        : [{
+          name: '云地域',
+          id: 'region',
+        },
+        ]
+    ),
   ];
 });
 
@@ -146,6 +154,29 @@ watch(
     state.pagination.limit = 10;
     handleSwtichType(v);
     resetSelections();
+  },
+);
+
+watch(
+  () => datas.value,
+  async (data) => {
+    if (activeType.value === 'template') {
+      templateData.value = data;
+      const ids = data.map(({ id }) => id);
+      const url = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud${whereAmI.value === Senarios.business ? `/bizs/${accountStore.bizs}` : ''}/argument_templates/instance/rule/list`;
+      const res = await http.post(url, {
+        ids,
+        bk_biz_id: whereAmI.value === Senarios.business ? accountStore.bizs : undefined,
+      });
+      for (let i = 0;i < templateData.value.length;i++) {
+        const item = templateData.value[i];
+        item.instance_num = res.data?.details?.[i].instance_num || '--';
+        item.rule_num = res.data?.details?.[i].rule_num || '--';
+      }
+    }
+  },
+  {
+    deep: true,
   },
 );
 
@@ -679,29 +710,31 @@ const templateColumns = [
     render: ({ cell }: any) => TemplateTypeMap[cell],
 
   },
-  // {
-  //   label: '关联实例',
-  //   field: 'associatedInstance',
-  // },
-  // {
-  //   label: '规则数',
-  //   field: 'ruleCount',
-  // },
+  {
+    label: '关联实例数',
+    field: 'instance_num',
+  },
+  {
+    label: '规则数',
+    field: 'rule_num',
+  },
   {
     label: '是否分配',
     field: 'bk_biz_id',
     render: ({ data }: { data: { bk_biz_id: number }; cell: number }) => {
-      return h(
+      return withDirectives(h(
         Tag,
         {
           theme: data.bk_biz_id === -1 ? false : 'success',
         },
         [data.bk_biz_id === -1 ? '未分配' : '已分配'],
-      );
+      ), [
+        [bkTooltips, {
+          content: businessMapStore.businessMap.get(data.bk_biz_id),
+          theme: 'light',
+        }],
+      ]);
     },
-  },
-  {
-    label: '操作',
     field: 'actions',
     render({ data }: any) {
       return h('span', {}, [
@@ -718,6 +751,7 @@ const templateColumns = [
                 name: data.name,
                 bk_biz_id: data.bk_biz_id,
                 id: data.id,
+                account_id: data.account_id,
               });
             },
           },
