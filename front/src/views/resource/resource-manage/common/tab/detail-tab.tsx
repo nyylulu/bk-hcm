@@ -27,7 +27,6 @@ export default defineComponent({
   },
 
   render() {
-    console.log(this);
     return <>
       <bk-tab
         v-model:active={this.activeTab}

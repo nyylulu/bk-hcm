@@ -4,6 +4,7 @@ export enum VendorEnum {
   AZURE = 'azure',
   GCP = 'gcp',
   HUAWEI = 'huawei',
+  ZIYAN = 'tcloud-ziyan',
 }
 
 export enum ResourceTypeEnum {
@@ -73,6 +74,10 @@ export const VENDORS = [
   {
     id: 'huawei',
     name: '华为云',
+  },
+  {
+    id: 'tcloud-ziyan',
+    name: '自研云',
   },
 ];
 

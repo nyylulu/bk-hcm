@@ -109,14 +109,14 @@ const componentMap = {
 };
 
 // 标签相关数据
-const tabs = RESOURCE_TYPES.map((type) => {
+const tabs = ref(RESOURCE_TYPES.map((type) => {
   return {
     name: type.type,
     type: t(type.name),
     component: componentMap[type.type],
   };
-});
-const activeTab = ref((route.query.type as string) || tabs[0].type);
+}));
+const activeTab = ref((route.query.type as string) || tabs.value[0].type);
 
 const filterData = (key: string, val: string | number) => {
   if (!filter.value.rules.length) {
@@ -268,6 +268,22 @@ watch(
   (resourceAccount: any) => {
     if (resourceAccount?.id) accountId.value = resourceAccount.id;
     else accountId.value = '';
+    if ([VendorEnum.ZIYAN].includes(resourceAccount?.vendor)) tabs.value = RESOURCE_TYPES.filter(type => type.type === 'security').map((type) => {
+      return {
+        name: type.type,
+        type: t(type.name),
+        component: componentMap[type.type],
+      };
+    });
+    else {
+      tabs.value = RESOURCE_TYPES.map((type) => {
+        return {
+          name: type.type,
+          type: t(type.name),
+          component: componentMap[type.type],
+        };
+      });
+    }
   },
   {
     deep: true,
@@ -346,57 +362,135 @@ getResourceAccountList();
       <div class="card-layout">
         <p class="resource-title">
           <span class="main-account-name">
-            {{ resourceAccountStore?.resourceAccount?.name || "全部账号" }}
+            {{ resourceAccountStore?.resourceAccount?.name || '全部账号' }}
           </span>
           <template v-if="resourceAccountStore?.resourceAccount?.id">
-            <div v-if="resourceAccountStore?.resourceAccount?.vendor === VendorEnum.TCLOUD"
-                 class="extension">
-              <span>主账号ID：
+            <div
+              v-if="
+                [VendorEnum.TCLOUD, VendorEnum.ZIYAN].includes(
+                  resourceAccountStore?.resourceAccount?.vendor,
+                )
+              "
+              class="extension"
+            >
+              <span>
+                主账号ID：
                 <span class="info-text">
-                  {{ resourceAccountStore.resourceAccount.extension.cloud_main_account_id }}
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_main_account_id
+                  }}
                 </span>
               </span>
-              <span>子账号ID：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_sub_account_id }}</span>
-              </span>
-            </div>
-            <div v-else-if="resourceAccountStore?.resourceAccount?.vendor === VendorEnum.AWS"
-                 class="extension">
-              <span>云账号ID：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_account_id }}</span>
-              </span>
-              <span>云iam用户名：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_iam_username }}</span>
-              </span>
-            </div>
-            <div v-else-if="resourceAccountStore?.resourceAccount?.vendor === VendorEnum.GCP"
-                 class="extension">
-              <span>云项目ID：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_project_id }}</span>
-              </span>
-              <span>云项目名称：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_project_name }}</span>
-              </span>
-            </div>
-            <div v-else-if="resourceAccountStore?.resourceAccount?.vendor === VendorEnum.AZURE"
-                 class="extension">
-              <span>云租户ID：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_tenant_id }}</span>
-              </span>
-              <span>云订阅名称：
+              <span>
+                子账号ID：
                 <span class="info-text">
-                  {{ resourceAccountStore.resourceAccount.extension.cloud_subscription_name }}
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_sub_account_id
+                  }}
                 </span>
               </span>
             </div>
-            <div v-else-if="resourceAccountStore?.resourceAccount?.vendor === VendorEnum.HUAWEI"
-                 class="extension">
-              <span>子账号ID：
-                <span class="info-text">{{ resourceAccountStore.resourceAccount.extension.cloud_sub_account_id }}</span>
-              </span>
-              <span>云子账号名称：
+            <div
+              v-else-if="
+                resourceAccountStore?.resourceAccount?.vendor === VendorEnum.AWS
+              "
+              class="extension"
+            >
+              <span>
+                云账号ID：
                 <span class="info-text">
-                  {{ resourceAccountStore.resourceAccount.extension.cloud_sub_account_name }}
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_account_id
+                  }}
+                </span>
+              </span>
+              <span>
+                云iam用户名：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_iam_username
+                  }}
+                </span>
+              </span>
+            </div>
+            <div
+              v-else-if="
+                resourceAccountStore?.resourceAccount?.vendor === VendorEnum.GCP
+              "
+              class="extension"
+            >
+              <span>
+                云项目ID：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_project_id
+                  }}
+                </span>
+              </span>
+              <span>
+                云项目名称：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_project_name
+                  }}
+                </span>
+              </span>
+            </div>
+            <div
+              v-else-if="
+                resourceAccountStore?.resourceAccount?.vendor ===
+                  VendorEnum.AZURE
+              "
+              class="extension"
+            >
+              <span>
+                云租户ID：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_tenant_id
+                  }}
+                </span>
+              </span>
+              <span>
+                云订阅名称：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_subscription_name
+                  }}
+                </span>
+              </span>
+            </div>
+            <div
+              v-else-if="
+                resourceAccountStore?.resourceAccount?.vendor ===
+                  VendorEnum.HUAWEI
+              "
+              class="extension"
+            >
+              <span>
+                子账号ID：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_sub_account_id
+                  }}
+                </span>
+              </span>
+              <span>
+                云子账号名称：
+                <span class="info-text">
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      .cloud_sub_account_name
+                  }}
                 </span>
               </span>
             </div>
@@ -476,14 +570,21 @@ getResourceAccountList();
               <bk-button
                 theme="primary"
                 class="new-button"
-                :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.iaas_resource_create }"
-                @click="() => {
-                  if (!authVerifyData?.permissionAction?.iaas_resource_create) {
-                    handleAuth('iaas_resource_create');
-                  } else {
-                    handleAdd();
-                  }
+                :class="{
+                  'hcm-no-permision-btn':
+                    !authVerifyData?.permissionAction?.iaas_resource_create,
                 }"
+                @click="
+                  () => {
+                    if (
+                      !authVerifyData?.permissionAction?.iaas_resource_create
+                    ) {
+                      handleAuth('iaas_resource_create');
+                    } else {
+                      handleAdd();
+                    }
+                  }
+                "
               >
                 {{ activeTab === 'host' ? '购买' : '新建' }}
               </bk-button>
@@ -538,7 +639,6 @@ getResourceAccountList();
         }"
       />
     </div>
-
 
     <RouterView v-else></RouterView>
   </div>
@@ -603,9 +703,9 @@ getResourceAccountList();
 
   .extension {
     font-size: 14px;
-    color: #63656E;
+    color: #63656e;
 
-    &>span {
+    & > span {
       margin-left: 20px;
 
       .info-text {
@@ -623,7 +723,8 @@ getResourceAccountList();
 </style>
 
 <style lang="scss">
-.delete-resource-infobox, .recycle-resource-infobox {
+.delete-resource-infobox,
+.recycle-resource-infobox {
   .bk-info-sub-title {
     word-break: break-all;
   }

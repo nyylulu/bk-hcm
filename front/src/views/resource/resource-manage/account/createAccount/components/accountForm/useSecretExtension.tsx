@@ -52,6 +52,33 @@ export const useSecretExtension = (props: IProp) => {
     },
     validatedStatus: ValidateStatus.UNKOWN,
   });
+  const ziyanExtension: IExtension = reactive({
+    output1: {
+      cloud_sub_account_id: {
+        value: '',
+        label: '云子账户ID',
+        placeholder: '密钥校验成功后自动填充',
+      },
+    },
+    output2: {
+      cloud_main_account_id: {
+        value: '',
+        label: '云主账户ID',
+        placeholder: '密钥校验成功后自动填充',
+      },
+    },
+    input: {
+      cloud_secret_id: {
+        value: '',
+        label: '云密钥ID',
+      },
+      cloud_secret_key: {
+        value: '',
+        label: '云密钥',
+      },
+    },
+    validatedStatus: ValidateStatus.UNKOWN,
+  });
   // 亚马逊云
   const awsExtension: IExtension = reactive({
     output1: {
@@ -209,6 +236,10 @@ export const useSecretExtension = (props: IProp) => {
           curExtension.value = tcloudExtension;
           break;
         }
+        case VendorEnum.ZIYAN: {
+          curExtension.value = ziyanExtension;
+          break;
+        }
         case VendorEnum.AWS: {
           curExtension.value = awsExtension;
           break;
@@ -272,6 +303,7 @@ export const useSecretExtension = (props: IProp) => {
   return {
     curExtension,
     tcloudExtension,
+    ziyanExtension,
     awsExtension,
     azureExtension,
     gcpExtension,
