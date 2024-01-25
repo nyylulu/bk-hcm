@@ -24,6 +24,7 @@ import (
 
 	cloudserver "hcm/pkg/api/cloud-server"
 	"hcm/pkg/api/hc-service/argument-template"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/types"
@@ -57,11 +58,20 @@ func (svc *argsTplSvc) createArgsTpl(cts *rest.Contexts, authHandler handler.Val
 		return nil, errf.Newf(errf.InvalidParameter, "account_id is required")
 	}
 
+	var bkBizID int64 = constant.UnassignedBiz
+	var err error
+	if bizRequired {
+		bkBizID, err = cts.PathParameter("bk_biz_id").Int64()
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	// create authorized instances
 	basicInfo := &types.CloudResourceBasicInfo{
 		AccountID: req.AccountID,
 	}
-	err := authHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.ArgumentTemplate,
+	err = authHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.ArgumentTemplate,
 		Action: meta.Create, BasicInfo: basicInfo})
 	if err != nil {
 		logs.Errorf("create argument template auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -77,15 +87,15 @@ func (svc *argsTplSvc) createArgsTpl(cts *rest.Contexts, authHandler handler.Val
 
 	switch info.Vendor {
 	case enumor.TCloud:
-		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bizRequired)
+		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bkBizID)
 	case enumor.TCloudZiyan:
-		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bizRequired)
+		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
 }
 
-func (svc *argsTplSvc) createTCloudArgumentTemplate(kt *kit.Kit, body json.RawMessage, bizRequired bool) (
+func (svc *argsTplSvc) createTCloudArgumentTemplate(kt *kit.Kit, body json.RawMessage, bkBizID int64) (
 	interface{}, error) {
 
 	req := new(hcargstpl.TCloudCreateReq)
@@ -93,10 +103,11 @@ func (svc *argsTplSvc) createTCloudArgumentTemplate(kt *kit.Kit, body json.RawMe
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(bizRequired); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	req.BkBizID = bkBizID
 	result, err := svc.client.HCService().TCloud.ArgsTpl.CreateArgsTpl(kt, req)
 	if err != nil {
 		logs.Errorf("create tcloud argument template failed, req: %+v, result: %+v, err: %v, rid: %s",

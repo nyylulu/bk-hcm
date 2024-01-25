@@ -66,11 +66,7 @@ type TemplateInfo struct {
 }
 
 // Validate request.
-func (req *TCloudCreateReq) Validate(bizRequired bool) error {
-	if bizRequired && req.BkBizID == 0 {
-		return errors.New("bk_biz_id is required")
-	}
-
+func (req *TCloudCreateReq) Validate() error {
 	if len(req.Templates) == 0 && len(req.GroupTemplates) == 0 {
 		return errors.New("templates or group_templates is required")
 	}
@@ -98,11 +94,7 @@ type TCloudUpdateReq struct {
 }
 
 // Validate request.
-func (req *TCloudUpdateReq) Validate(bizRequired bool) error {
-	if bizRequired && req.BkBizID == 0 {
-		return errors.New("bk_biz_id is required")
-	}
-
+func (req *TCloudUpdateReq) Validate() error {
 	if len(req.Templates) == 0 && len(req.GroupTemplates) == 0 {
 		return errors.New("templates or group_templates is required")
 	}

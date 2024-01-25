@@ -24,16 +24,25 @@ import (
 
 	cloudserver "hcm/pkg/api/cloud-server"
 	"hcm/pkg/api/hc-service/argument-template"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/hooks/handler"
 )
 
-// UpdateArgsTpl update argument template.
-func (svc *argsTplSvc) UpdateArgsTpl(cts *rest.Contexts) (interface{}, error) {
+// UpdateBizArgsTpl update biz argument template.
+func (svc *argsTplSvc) UpdateBizArgsTpl(cts *rest.Contexts) (interface{}, error) {
+	return svc.updateArgsTpl(cts, handler.BizOperateAuth, true)
+}
+
+func (svc *argsTplSvc) updateArgsTpl(cts *rest.Contexts, authHandler handler.ValidWithAuthHandler, bizRequired bool) (
+	interface{}, error) {
+
 	id := cts.PathParameter("id").String()
 	if len(id) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "id is required")
@@ -49,14 +58,28 @@ func (svc *argsTplSvc) UpdateArgsTpl(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.Newf(errf.InvalidParameter, "account_id is required")
 	}
 
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{
-		Type: meta.ArgumentTemplate, Action: meta.Update, ResourceID: req.AccountID}}
-	if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+	var bkBizID int64 = constant.UnassignedBiz
+	var err error
+	if bizRequired {
+		bkBizID, err = cts.PathParameter("bk_biz_id").Int64()
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	// authorized instances
+	basicInfo := &types.CloudResourceBasicInfo{
+		AccountID: req.AccountID,
+	}
+	err = authHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.ArgumentTemplate,
+		Action: meta.Update, BasicInfo: basicInfo})
+	if err != nil {
 		logs.Errorf("update argument template auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	info, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.ArgumentTemplateResType, id)
+	info, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(
+		cts.Kit, enumor.AccountCloudResType, req.AccountID)
 	if err != nil {
 		logs.Errorf("get account basic info failed, accID: %s, id: %s, err: %v, rid: %s",
 			req.AccountID, id, err, cts.Kit.Rid)
@@ -65,22 +88,25 @@ func (svc *argsTplSvc) UpdateArgsTpl(cts *rest.Contexts) (interface{}, error) {
 
 	switch info.Vendor {
 	case enumor.TCloud:
-		return svc.updateTCloudArgumentTemplate(cts.Kit, id, req.Data)
+		return svc.updateTCloudArgumentTemplate(cts.Kit, req.Data, id, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
 }
 
-func (svc *argsTplSvc) updateTCloudArgumentTemplate(kt *kit.Kit, id string, body json.RawMessage) (interface{}, error) {
+func (svc *argsTplSvc) updateTCloudArgumentTemplate(kt *kit.Kit, body json.RawMessage, id string, bkBizID int64) (
+	interface{}, error) {
+
 	req := new(hcargstpl.TCloudUpdateReq)
 	if err := json.Unmarshal(body, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(true); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	req.BkBizID = bkBizID
 	err := svc.client.HCService().TCloud.ArgsTpl.UpdateArgsTpl(kt, id, req)
 	if err != nil {
 		logs.Errorf("update tcloud argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)

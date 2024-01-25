@@ -65,7 +65,7 @@ func (svc *argsTplSvc) CreateTCloudZiyanArgsTpl(cts *rest.Contexts) (interface{}
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(false); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -206,7 +206,7 @@ func (svc *argsTplSvc) UpdateTCloudZiyanArgsTpl(cts *rest.Contexts) (interface{}
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(false); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 

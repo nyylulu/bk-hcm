@@ -43,9 +43,9 @@ func InitArgsTplService(c *capability.Capability) {
 	h.Add("ListBizArgsTpl", http.MethodPost, "/bizs/{bk_biz_id}/argument_templates/list", svc.ListBizArgsTpl)
 	h.Add("ListBizArgsTplBindInstanceRule", http.MethodPost, "/bizs/{bk_biz_id}/argument_templates/instance/rule/list",
 		svc.ListBizArgsTplBindInstanceRule)
-	h.Add("CreateArgsTpl", http.MethodPost, "/bizs/{bk_biz_id}/argument_templates/create", svc.CreateBizArgsTpl)
-	h.Add("UpdateArgsTpl", http.MethodPut, "/bizs/{bk_biz_id}/argument_templates/{id}", svc.UpdateArgsTpl)
-	h.Add("DeleteArgsTpl", http.MethodDelete, "/bizs/{bk_biz_id}/argument_templates/batch", svc.DeleteBizArgsTpl)
+	h.Add("CreateBizArgsTpl", http.MethodPost, "/bizs/{bk_biz_id}/argument_templates/create", svc.CreateBizArgsTpl)
+	h.Add("UpdateBizArgsTpl", http.MethodPut, "/bizs/{bk_biz_id}/argument_templates/{id}", svc.UpdateBizArgsTpl)
+	h.Add("DeleteBizArgsTpl", http.MethodDelete, "/bizs/{bk_biz_id}/argument_templates/batch", svc.DeleteBizArgsTpl)
 
 	// apis in resource
 	h.Add("ListArgsTpl", http.MethodPost, "/argument_templates/list", svc.ListArgsTpl)

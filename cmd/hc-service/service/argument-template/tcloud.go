@@ -62,7 +62,7 @@ func (svc *argsTplSvc) CreateTCloudArgsTpl(cts *rest.Contexts) (interface{}, err
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(false); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -202,7 +202,7 @@ func (svc *argsTplSvc) UpdateTCloudArgsTpl(cts *rest.Contexts) (interface{}, err
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(false); err != nil {
+	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
