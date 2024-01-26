@@ -608,6 +608,21 @@ export default defineComponent({
             </div>
           </Exception>
         </Dialog>
+
+        <Dialog
+          title='结果确认'
+          confirmText='查看审批流程'
+          onConfirm={() => {
+            const url = `https://console.cloud.tencent.com/bpaas/application/${accountStore.securityConfirmMessage}`;
+            window.open(url, '_blank');
+            accountStore.updateSecurityConfirmMessage('');
+          }}
+          isShow={!!accountStore.securityConfirmMessage.length}
+        >
+          <span>
+            当前配置已提交，查看<Button theme='primary' text>审批流程</Button>查看关注进度
+          </span>
+        </Dialog>
       </main>
     );
   },

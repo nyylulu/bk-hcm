@@ -12,6 +12,7 @@ import { v4 as uuidv4 } from 'uuid';
 import bus from '@/common/bus';
 import CachedPromise from './cached-promise';
 import RequestQueue from './request-queue';
+import { useAccountStore } from '@/store';
 // import { bus } from '@/common/bus';
 // import { messageError } from '@/common/bkmagic';
 // import UrlParse from 'url-parse';
@@ -217,6 +218,9 @@ function handleReject(error: any, config: any) {
     return Promise.reject(nextError);
   }
   if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
+  if (error.code === '2000012' && error.message) {
+    useAccountStore().updateSecurityConfirmMessage(error.message);
+  }
   console.error(error.message);
   return Promise.reject(error);
 }
