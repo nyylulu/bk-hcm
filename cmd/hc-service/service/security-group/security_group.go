@@ -106,6 +106,11 @@ func InitSecurityGroupService(cap *capability.Capability) {
 	h.Add("DeleteTCloudZiyanSGRule", "DELETE",
 		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", sg.DeleteTCloudZiyanSGRule)
 
+	h.Add("TZiyanSGBatchAssociateCloudCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/cloud_cvms/batch", sg.TZiyanSGBatchAssociateCloudCvm)
+	h.Add("TZiyanSGBatchDisassociateCloudCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/cloud_cvms/batch", sg.TZiyanSGBatchDisassociateCloudCvm)
+
 	h.Load(cap.WebService)
 }
 

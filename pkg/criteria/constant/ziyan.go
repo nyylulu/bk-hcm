@@ -23,4 +23,12 @@ package constant
 const (
 	// InternalVpcEndpoint vpc 内部域名
 	InternalVpcEndpoint = "vpc.internal.tencentcloudapi.com"
+	// InternalCvmEndpoint cvm 内部域名
+	InternalCvmEndpoint = "cvm.internal.tencentcloudapi.com"
+	// InternalCbsEndpoint cbs 内部域名
+	InternalCbsEndpoint = "cbs.internal.tencentcloudapi.com"
+	// InternalCamEndpoint cam 内部域名
+	InternalCamEndpoint = "cam.internal.tencentcloudapi.com"
+	// InternalBillingEndpoint 账单内部域名
+	InternalBillingEndpoint = "billing.internal.tencentcloudapi.com"
 )

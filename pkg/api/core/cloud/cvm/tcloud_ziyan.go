@@ -17,30 +17,33 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package hcziyancli
+package cvm
 
 import (
-	"hcm/pkg/rest"
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
 )
 
-// Client is a tcloud api client
-type Client struct {
-	Account       *AccountClient
-	SecurityGroup *SecurityGroupClient
-	Zone          *ZoneClient
-	Region        *RegionClient
-	ArgsTpl       *ArgsTplClient
-	Cvm           *CvmClient
+// QueryCloudCvmReq 查询云上cvm信息
+type QueryCloudCvmReq struct {
+	Vendor    enumor.Vendor `json:"vendor" validate:"required"`
+	AccountID string        `json:"account_id" validate:"required"`
+	Region    string        `json:"region" validate:"required"`
+	CvmIDs    []string      `json:"cvm_ids"`
+	// 安全组id
+	SGIDs []string       `json:"security_groups_ids"`
+	Page  *core.BasePage `json:"page" validate:"required"`
 }
 
-// NewClient create a new tcloud api client.
-func NewClient(client rest.ClientInterface) *Client {
-	return &Client{
-		Account:       NewAccountClient(client),
-		SecurityGroup: NewCloudSecurityGroupClient(client),
-		Zone:          NewZoneClient(client),
-		Region:        NewRegionClient(client),
-		ArgsTpl:       NewArgsTplClient(client),
-		Cvm:           NewCvmClient(client),
-	}
+// Validate ...
+func (r QueryCloudCvmReq) Validate() error {
+
+	return validator.Validate.Struct(r)
+}
+
+// TCloudZiyanCvmExtension 自研云cvm拓展
+type TCloudZiyanCvmExtension struct {
+	*TCloudCvmExtension `json:",inline"`
+	SecurityGroupNames  []string `json:"security_group_names"`
 }

@@ -20,27 +20,29 @@
 package hcziyancli
 
 import (
+	"hcm/pkg/api/core"
+	"hcm/pkg/api/core/cloud/cvm"
+	"hcm/pkg/client/common"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
 
-// Client is a tcloud api client
-type Client struct {
-	Account       *AccountClient
-	SecurityGroup *SecurityGroupClient
-	Zone          *ZoneClient
-	Region        *RegionClient
-	ArgsTpl       *ArgsTplClient
-	Cvm           *CvmClient
+// NewCvmClient create a new cvm api client.
+func NewCvmClient(client rest.ClientInterface) *CvmClient {
+	return &CvmClient{
+		client: client,
+	}
 }
 
-// NewClient create a new tcloud api client.
-func NewClient(client rest.ClientInterface) *Client {
-	return &Client{
-		Account:       NewAccountClient(client),
-		SecurityGroup: NewCloudSecurityGroupClient(client),
-		Zone:          NewZoneClient(client),
-		Region:        NewRegionClient(client),
-		ArgsTpl:       NewArgsTplClient(client),
-		Cvm:           NewCvmClient(client),
-	}
+// CvmClient is hc service cvm api client.
+type CvmClient struct {
+	client rest.ClientInterface
+}
+
+// QueryTCloudZiyanCVM  查询云上cvm
+func (cli *CvmClient) QueryTCloudZiyanCVM(kt *kit.Kit, request *cvm.QueryCloudCvmReq) (
+	*core.ListResultT[cvm.Cvm[cvm.TCloudZiyanCvmExtension]], error) {
+
+	return common.Request[cvm.QueryCloudCvmReq, core.ListResultT[cvm.Cvm[cvm.TCloudZiyanCvmExtension]]](cli.client,
+		rest.POST, kt, request, "/cvms/query")
 }

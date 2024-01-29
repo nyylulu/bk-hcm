@@ -34,16 +34,16 @@ import (
 var tcloudBPassIDRegexp *regexp.Regexp
 
 func init() {
-	tcloudBPassIDRegexp = regexp.MustCompile("ApplicationId: \\d+")
+	tcloudBPassIDRegexp = regexp.MustCompile("ApplicationId: `\\d+`")
 }
 
 const mysqlDuplicatedNumber = 1062
 
 // GetTypedError 尝试转换为指定类型的错误
-func GetTypedError[T any](err error) *T {
-	var terr = new(T)
+func GetTypedError[T error](err error) *T {
+	var terr T
 	if errors.As(err, &terr) {
-		return terr
+		return &terr
 	}
 	return nil
 }
@@ -51,14 +51,16 @@ func GetTypedError[T any](err error) *T {
 // GetBPassApprovalErrorf 尝试转换为触发BPass审批错误，如果不符合条件将返回nil
 func GetBPassApprovalErrorf(err error) *ErrorF {
 
-	if terr := GetTypedError[terrors.TencentCloudSDKError](err); terr != nil &&
-		terr.GetCode() == vpc.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED {
+	if terr := GetTypedError[*terrors.TencentCloudSDKError](err); terr != nil &&
+		(*terr).GetCode() == vpc.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED {
 
 		// 	获取审批单号
-		msg := terr.GetMessage()
-		if appIDMsg := tcloudBPassIDRegexp.FindString(msg); appIDMsg != "" {
-			return &ErrorF{Code: NeedBPassApproval, Message: appIDMsg[15:]}
+		msg := (*terr).GetMessage()
+		var applicationID string
+		if appIDMsg := tcloudBPassIDRegexp.FindString(msg); len(appIDMsg) > 17 {
+			applicationID = appIDMsg[16 : len(appIDMsg)-1]
 		}
+		return &ErrorF{Code: NeedBPassApproval, Message: applicationID}
 	}
 	return nil
 }

@@ -48,6 +48,8 @@ func newClientSet(s *types.BaseSecret, profile *profile.ClientProfile) *clientSe
 
 // CamServiceClient tcloud ziyan sdk cam client
 func (c *clientSet) CamServiceClient(region string) (*cam.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalCamEndpoint
 	client, err := cam.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -58,6 +60,8 @@ func (c *clientSet) CamServiceClient(region string) (*cam.Client, error) {
 
 // CvmClient tcloud ziyan sdk cvm client
 func (c *clientSet) CvmClient(region string) (*cvm.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalCvmEndpoint
 	client, err := cvm.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -68,6 +72,8 @@ func (c *clientSet) CvmClient(region string) (*cvm.Client, error) {
 
 // CbsClient tcloud ziyan sdk cbs client
 func (c *clientSet) CbsClient(region string) (*cbs.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalCbsEndpoint
 	client, err := cbs.NewClient(c.credential, region, c.profile)
 	if err != nil {
 		return nil, err
@@ -90,6 +96,8 @@ func (c *clientSet) VpcClient(region string) (*vpc.Client, error) {
 
 // BillClient tcloud ziyan sdk bill client
 func (c *clientSet) BillClient() (*billing.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalBillingEndpoint
 	client, err := billing.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err

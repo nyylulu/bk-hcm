@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/cloud-server/logics/audit"
 	"hcm/cmd/cloud-server/logics/disk"
 	"hcm/cmd/cloud-server/logics/eip"
+	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
 	rr "hcm/pkg/api/core/recycle-record"
 	"hcm/pkg/client"
@@ -31,6 +32,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Interface define cvm interface.
@@ -43,6 +45,10 @@ type Interface interface {
 	RecyclePreCheck(kt *kit.Kit, infoMap map[string]types.CloudResourceBasicInfo) error
 	BatchFinalizeRelRecord(kt *kit.Kit, resType enumor.CloudResourceType,
 		status enumor.RecycleRecordStatus, resIds []string) error
+	QueryCvmBySGID(k *kit.Kit, bizID int64, sgID string) (any, error)
+	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.ListBizHostResult, error)
+	QuerySecurityGroupNamesByCloudID(kt *kit.Kit, vendor enumor.Vendor,
+		sgCloudIds []string) (map[string]string, error)
 }
 
 type cvm struct {

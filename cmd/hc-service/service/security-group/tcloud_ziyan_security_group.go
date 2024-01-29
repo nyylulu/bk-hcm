@@ -31,7 +31,7 @@ import (
 	"hcm/pkg/rest"
 )
 
-// CreateTCloudZiyanSecurityGroup create tcloud security group.
+// CreateTCloudZiyanSecurityGroup create tcloud ziyan security group.
 func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
 	req := new(proto.TCloudSecurityGroupCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -54,7 +54,7 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	}
 	sg, err := client.CreateSecurityGroup(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("request adaptor to create tcloud security group failed, err: %v, opt: %v, rid: %s",
+		logs.Errorf("request adaptor to create tcloud ziyan security group failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
 		return nil, err
 	}
@@ -74,7 +74,8 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	}
 	result, err := g.dataCli.TCloudZiyan.SecurityGroup.BatchCreateSecurityGroup(cts.Kit, createReq)
 	if err != nil {
-		logs.Errorf("request dataservice to create tcloud security group failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("request dataservice to create tcloud ziyan security group failed, err: %v, rid: %s", err,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -176,5 +177,97 @@ func (g *securityGroup) UpdateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+// TZiyanSGBatchAssociateCloudCvm 根据cvm云id 绑定安全组
+func (g *securityGroup) TZiyanSGBatchAssociateCloudCvm(cts *rest.Contexts) (any, error) {
+
+	req := new(proto.SecurityGroupAssociateCloudCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sgReq := &protocloud.SecurityGroupListReq{
+		Filter: tools.EqualExpression("id", req.SecurityGroupID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	sgResult, err := g.dataCli.Global.SecurityGroup.ListSecurityGroup(cts.Kit.Ctx, cts.Kit.Header(), sgReq)
+	if err != nil {
+		logs.Errorf("request dataservice list tcloud ziyan security group failed, err: %v, id: %s, rid: %s",
+			err, req.SecurityGroupID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(sgResult.Details) == 0 {
+		return nil, errf.Newf(errf.RecordNotFound, "security group: %s not found", req.SecurityGroupID)
+	}
+
+	sg := sgResult.Details[0]
+	client, err := g.ad.TCloudZiyan(cts.Kit, sg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &adptsg.TCloudBatchAssociateCvmOption{
+		Region:               sg.Region,
+		CloudSecurityGroupID: sg.CloudID,
+		CloudCvmIDs:          req.CloudCvmIDs,
+	}
+	if err = client.SecurityGroupCvmBatchAssociate(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud ziyan security group associate cvm failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// TZiyanSGBatchDisassociateCloudCvm  根据cvm云id 解绑安全组
+func (g *securityGroup) TZiyanSGBatchDisassociateCloudCvm(cts *rest.Contexts) (any, error) {
+	req := new(proto.SecurityGroupAssociateCloudCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sgReq := &protocloud.SecurityGroupListReq{
+		Filter: tools.EqualExpression("id", req.SecurityGroupID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	sgResult, err := g.dataCli.Global.SecurityGroup.ListSecurityGroup(cts.Kit.Ctx, cts.Kit.Header(), sgReq)
+	if err != nil {
+		logs.Errorf("request dataservice list tcloud ziyan security group failed, err: %v, id: %s, rid: %s",
+			err, req.SecurityGroupID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(sgResult.Details) == 0 {
+		return nil, errf.Newf(errf.RecordNotFound, "security group: %s not found", req.SecurityGroupID)
+	}
+
+	sg := sgResult.Details[0]
+	client, err := g.ad.TCloudZiyan(cts.Kit, sg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &adptsg.TCloudBatchAssociateCvmOption{
+		Region:               sg.Region,
+		CloudSecurityGroupID: sg.CloudID,
+		CloudCvmIDs:          req.CloudCvmIDs,
+	}
+	if err = client.SecurityGroupCvmBatchDisassociate(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud ziyan security group disassociate cvm failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
 	return nil, nil
 }

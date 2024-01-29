@@ -17,30 +17,43 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package hcziyancli
+package cvm
 
 import (
-	"hcm/pkg/rest"
+	"errors"
+
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
-// Client is a tcloud api client
-type Client struct {
-	Account       *AccountClient
-	SecurityGroup *SecurityGroupClient
-	Zone          *ZoneClient
-	Region        *RegionClient
-	ArgsTpl       *ArgsTplClient
-	Cvm           *CvmClient
-}
+// QueryCvmBySGID 根据安全组id查询主机
+func (c *cvm) QueryCvmBySGID(kt *kit.Kit, bizID int64, sgID string) (any, error) {
 
-// NewClient create a new tcloud api client.
-func NewClient(client rest.ClientInterface) *Client {
-	return &Client{
-		Account:       NewAccountClient(client),
-		SecurityGroup: NewCloudSecurityGroupClient(client),
-		Zone:          NewZoneClient(client),
-		Region:        NewRegionClient(client),
-		ArgsTpl:       NewArgsTplClient(client),
-		Cvm:           NewCvmClient(client),
+	sgInfo, err := c.client.DataService().Global.Cloud.GetResBasicInfo(kt, enumor.SecurityGroupCloudResType, sgID)
+	if err != nil {
+		logs.Errorf("fail to query Security group basic info, err:%v, sg_id: %s, rid: %s", err, sgID, kt.Rid)
+		return nil, err
 	}
+
+	vendor := sgInfo.Vendor
+
+	switch vendor {
+	case enumor.TCloud:
+		// TODO: 实现逻辑
+	case enumor.Aws:
+		// TODO: 实现逻辑
+	case enumor.HuaWei:
+		// TODO: 实现逻辑
+	case enumor.Azure:
+		// TODO: 实现逻辑
+	case enumor.TCloudZiyan:
+		return c.queryTCloudZiyanCvmBySGIDWithSGName(kt, bizID, sgInfo)
+	default:
+		return nil, errf.New(errf.InvalidParameter, "not support vendor: "+string(vendor))
+	}
+
+	return nil, errors.New("not implemented yet")
+
 }

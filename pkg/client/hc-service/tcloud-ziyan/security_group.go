@@ -91,3 +91,25 @@ func (cli *SecurityGroupClient) DeleteSecurityGroupRule(kt *kit.Kit, sgID, id st
 	return common.RequestNoResp[common.Empty](cli.client, rest.DELETE, kt, nil,
 		"/security_groups/%s/rules/%s", sgID, id)
 }
+
+// BatchAssociateCloudCvm 根据cvm云id绑定安全组
+func (cli *SecurityGroupClient) BatchAssociateCloudCvm(kt *kit.Kit, sgID string, cloudCvmIDs []string) error {
+
+	req := &proto.SecurityGroupAssociateCloudCvmReq{
+		SecurityGroupID: sgID,
+		CloudCvmIDs:     cloudCvmIDs,
+	}
+	return common.RequestNoResp[proto.SecurityGroupAssociateCloudCvmReq](cli.client, rest.POST, kt, req,
+		"/security_groups/associate/cloud_cvms/batch")
+}
+
+// BatchDisassociateCloudCvm 根据cvm云id解绑安全组
+func (cli *SecurityGroupClient) BatchDisassociateCloudCvm(kt *kit.Kit, sgID string, cloudCvmIDs []string) error {
+
+	req := &proto.SecurityGroupAssociateCloudCvmReq{
+		SecurityGroupID: sgID,
+		CloudCvmIDs:     cloudCvmIDs,
+	}
+	return common.RequestNoResp[proto.SecurityGroupAssociateCloudCvmReq](cli.client, rest.POST, kt, req,
+		"/security_groups/disassociate/cloud_cvms/batch")
+}

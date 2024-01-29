@@ -39,7 +39,7 @@ func (s *SecurityGroup) tcloudZiyanSGRuleUpdateAuditBuild(kt *kit.Kit, sg tablec
 		ids = append(ids, one.ResID)
 	}
 
-	idSgRuleMap, err := s.listTCloudSGRule(kt, sg.ID, ids)
+	idSgRuleMap, err := s.listTCloudZiyanSGRule(kt, sg.ID, ids)
 	if err != nil {
 		return nil, err
 	}

@@ -73,8 +73,8 @@ type TCloudZiyanSecurityGroupRuleTable struct {
 	Port                       *string    `db:"port" validate:"omitempty,lte=255" json:"port"`
 	CloudServiceID             *string    `db:"cloud_service_id" validate:"omitempty,lte=255" json:"cloud_service_id"`
 	CloudServiceGroupID        *string    `db:"cloud_service_group_id" validate:"omitempty,lte=255" json:"cloud_service_group_id"`
-	IPv4Cidr                   *string    `db:"ipv4_cidr" validate:"omitempty,lte=255" json:"i_pv_4_cidr"`
-	IPv6Cidr                   *string    `db:"ipv6_cidr" validate:"omitempty,lte=255" json:"i_pv_6_cidr"`
+	IPv4Cidr                   *string    `db:"ipv4_cidr" validate:"omitempty,lte=255" json:"ipv4_cidr"`
+	IPv6Cidr                   *string    `db:"ipv6_cidr" validate:"omitempty,lte=255" json:"ipv6_cidr"`
 	CloudTargetSecurityGroupID *string    `db:"cloud_target_security_group_id" validate:"omitempty,lte=255" json:"cloud_target_security_group_id"`
 	CloudAddressID             *string    `db:"cloud_address_id" validate:"omitempty,lte=255" json:"cloud_address_id"`
 	CloudAddressGroupID        *string    `db:"cloud_address_group_id" validate:"omitempty,lte=255" json:"cloud_address_group_id"`

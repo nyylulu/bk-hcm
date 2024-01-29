@@ -79,6 +79,10 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchDeleteBizRecycledCvm", http.MethodDelete, "/bizs/{bk_biz_id}/recycled/cvms/batch",
 		svc.BatchDeleteBizRecycledCvm)
 
+	h.Add("QueryCvmBySGID", http.MethodGet, "/cvms/security_groups/{sg_id}", svc.QueryCvmBySGID)
+	h.Add("QueryBizCvmBySGID", http.MethodGet, "/bizs/{bk_biz_id}/cvms/security_groups/{sg_id}", svc.QueryBizCvmBySGID)
+	h.Add("ListZiyanCmdbHost", "POST", "/bizs/{bk_biz_id}/vendors/tcloud-ziyan/cmdb/hosts/list", svc.ListZiyanCmdbHost)
+
 	h.Load(c.WebService)
 }
 

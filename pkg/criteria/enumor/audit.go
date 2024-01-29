@@ -35,6 +35,7 @@ const (
 	SubnetAuditResType            AuditResourceType = "subnet"
 	DiskAuditResType              AuditResourceType = "disk"
 	CvmAuditResType               AuditResourceType = "cvm"
+	CloudCvmAuditResType          AuditResourceType = "cloud_cvm"
 	RouteTableAuditResType        AuditResourceType = "route_table"
 	RouteAuditResType             AuditResourceType = "route"
 	EipAuditResType               AuditResourceType = "eip"

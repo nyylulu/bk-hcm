@@ -207,6 +207,8 @@ func (s *SecurityGroup) OperationAuditBuild(kt *kit.Kit, operations []protoaudit
 	[]*tableaudit.AuditTable, error) {
 
 	cvmAssOperations := make([]protoaudit.CloudResourceOperationInfo, 0)
+	//  绑定云上主机的审计
+	cloudCvmAssOperations := make([]protoaudit.CloudResourceOperationInfo, 0)
 	subnetAssOperations := make([]protoaudit.CloudResourceOperationInfo, 0)
 	niAssOperations := make([]protoaudit.CloudResourceOperationInfo, 0)
 	for _, operation := range operations {
@@ -219,6 +221,9 @@ func (s *SecurityGroup) OperationAuditBuild(kt *kit.Kit, operations []protoaudit
 				subnetAssOperations = append(subnetAssOperations, operation)
 			case enumor.NetworkInterfaceAuditResType:
 				niAssOperations = append(niAssOperations, operation)
+			case enumor.CloudCvmAuditResType:
+				// 绑定云上主机的审计
+				cloudCvmAssOperations = append(cloudCvmAssOperations, operation)
 			default:
 				return nil, fmt.Errorf("audit associated resource type: %s not support", operation.AssociatedResType)
 			}
@@ -231,6 +236,15 @@ func (s *SecurityGroup) OperationAuditBuild(kt *kit.Kit, operations []protoaudit
 	audits := make([]*tableaudit.AuditTable, 0, len(operations))
 	if len(cvmAssOperations) != 0 {
 		audit, err := s.cvmAssOperationAuditBuild(kt, cvmAssOperations)
+		if err != nil {
+			return nil, err
+		}
+
+		audits = append(audits, audit...)
+	}
+	// 绑定云上主机的审计
+	if len(cloudCvmAssOperations) != 0 {
+		audit, err := s.cloudCvmAssOperationAuditBuild(kt, cloudCvmAssOperations)
 		if err != nil {
 			return nil, err
 		}
@@ -315,6 +329,62 @@ func (s *SecurityGroup) cvmAssOperationAuditBuild(kt *kit.Kit, operations []prot
 					AssResID:      cvm.ID,
 					AssResCloudID: cvm.CloudID,
 					AssResName:    cvm.Name,
+				},
+			},
+		})
+	}
+
+	return audits, nil
+}
+
+// cloudCvmAssOperationAuditBuild 绑定云主机的审计
+func (s *SecurityGroup) cloudCvmAssOperationAuditBuild(kt *kit.Kit,
+	operations []protoaudit.CloudResourceOperationInfo) ([]*tableaudit.AuditTable, error) {
+
+	sgIDs := make([]string, 0)
+	cvmIDs := make([]string, 0)
+	for _, one := range operations {
+		sgIDs = append(sgIDs, one.ResID)
+		cvmIDs = append(cvmIDs, one.AssociatedResID)
+	}
+
+	sgIDMap, err := s.listSecurityGroup(kt, sgIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	audits := make([]*tableaudit.AuditTable, 0, len(operations))
+	for _, one := range operations {
+		sg, exist := sgIDMap[one.ResID]
+		if !exist {
+			return nil, errf.Newf(errf.RecordNotFound, "security group: %s not found", one.ResID)
+		}
+
+		action, err := one.Action.ConvAuditAction()
+		if err != nil {
+			return nil, err
+		}
+
+		audits = append(audits, &tableaudit.AuditTable{
+			ResID:      sg.ID,
+			CloudResID: sg.CloudID,
+			ResName:    sg.Name,
+			ResType:    enumor.SecurityGroupAuditResType,
+			Action:     action,
+			BkBizID:    sg.BkBizID,
+			Vendor:     sg.Vendor,
+			AccountID:  sg.AccountID,
+			Operator:   kt.User,
+			Source:     kt.GetRequestSource(),
+			Rid:        kt.Rid,
+			AppCode:    kt.AppCode,
+			Detail: &tableaudit.BasicDetail{
+				Data: &tableaudit.AssociatedOperationAudit{
+					// 绑定云主机没有对应的本地资源id
+					AssResType: enumor.CloudCvmAuditResType,
+					// AssResID:      one.AssociatedResID,
+					AssResCloudID: one.AssociatedResID,
+					// AssResName:    cvm.Name,
 				},
 			},
 		})
