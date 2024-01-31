@@ -21,11 +21,15 @@ import { useCloudAreaStore } from '@/store/useCloudAreaStore';
 import StatusAbnormal from '@/assets/image/Status-abnormal.png';
 import StatusNormal from '@/assets/image/Status-normal.png';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
+import StatusSuccess from '@/assets/image/success-account.png';
+import StatusFailure from '@/assets/image/failed-account.png';
+import StatusPartialSuccess from '@/assets/image/result-waiting.png';
 import {
   HOST_RUNNING_STATUS,
   HOST_SHUTDOWN_STATUS,
 } from '../common/table/HostOperations';
 import './use-columns.scss';
+import moment from 'moment';
 
 export default (type: string, isSimpleShow = false, vendor?: string) => {
   const router = useRouter();
@@ -1057,6 +1061,89 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const operationRecordColumns = [
+    {
+      label: '操作时间',
+      field: 'created_at',
+      isDefaultShow: true,
+      sort: true,
+      render: ({ cell }: { cell: string }) => {
+        return moment(cell).format('YYYY-MM-DD HH:mm:ss');
+      },
+    },
+    {
+      label: '资源类型',
+      field: 'res_type',
+    },
+    {
+      label: '资源名称',
+      field: 'res_name',
+      isDefaultShow: true,
+    },
+    // {
+    //   label: '云资源ID',
+    //   field: 'cloud_res_id',
+    // },
+    {
+      label: '操作方式',
+      field: 'action',
+      isDefaultShow: true,
+      filter: true,
+    },
+    {
+      label: '操作来源',
+      field: 'source',
+      isDefaultShow: true,
+      filter: true,
+    },
+    {
+      label: '所属业务',
+      field: 'bk_biz_id',
+      isOnlyShowInResource: true,
+      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
+    },
+    // {
+    //   label: '云厂商',
+    //   field: 'vendor',
+    // },
+    {
+      label: '云账号',
+      field: 'account_id',
+    },
+    {
+      label: '任务状态',
+      field: 'task_status',
+      isDefaultShow: true,
+      filter: true,
+      render: ({ cell }: { cell: string }) => {
+        if (!cell) return '--';
+        let icon;
+        switch (cell) {
+          case 'success':
+            icon = StatusSuccess;
+            break;
+          case 'fail':
+            icon = StatusFailure;
+            break;
+          case 'partial_success':
+            icon = StatusPartialSuccess;
+            break;
+        }
+        return (
+          <div class='status-column-cell'>
+            <img class='status-icon' src={icon} alt='' />
+            <span>{cell === 'success' ? '成功' : cell === 'fail' ? '失败' : '部分成功'}</span>
+          </div>
+        );
+      },
+    },
+    {
+      label: '操作人',
+      field: 'operator',
+      isDefaultShow: true,
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -1069,6 +1156,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     cvms: cvmsColumns,
     securityCommon: securityCommonColumns,
     eips: eipColumns,
+    operationRecord: operationRecordColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

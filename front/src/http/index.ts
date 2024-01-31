@@ -218,7 +218,7 @@ function handleReject(error: any, config: any) {
     return Promise.reject(nextError);
   }
   if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
-  if (error.code === '2000012' && error.message) {
+  if (error.code === 2000012 && error.message) {
     useAccountStore().updateSecurityConfirmMessage(error.message);
   }
   console.error(error.message);

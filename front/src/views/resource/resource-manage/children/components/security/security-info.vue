@@ -17,6 +17,7 @@ import {
   Message } from 'bkui-vue';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 
 const props = defineProps({
   id: {
@@ -43,6 +44,7 @@ const {
 const resourceStore = useResourceStore();
 const { getRegionName } = useRegionsStore();
 const { getNameFromBusinessMap } = useBusinessMapStore();
+const { whereAmI } = useWhereAmI();
 
 const settingInfo: any[] = [
   {
@@ -89,7 +91,7 @@ const settingInfo: any[] = [
     prop: 'memo',
     edit: props.vendor !== 'aws',
   },
-];
+].filter(({ prop }) => (whereAmI.value === Senarios.business && !['bk_biz_id'].includes(prop)) || whereAmI.value !== Senarios.business);
 
 
 if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'huawei') {

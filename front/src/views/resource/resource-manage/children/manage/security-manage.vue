@@ -163,6 +163,7 @@ watch(
     if (activeType.value === 'template') {
       templateData.value = data;
       const ids = data.map(({ id }) => id);
+      if (!ids.length) return;
       const url = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud${whereAmI.value === Senarios.business ? `/bizs/${accountStore.bizs}` : ''}/argument_templates/instance/rule/list`;
       const res = await http.post(url, {
         ids,
@@ -367,7 +368,7 @@ const groupColumns = [
             },
           },
           [
-            h(
+            withDirectives(h(
               Button,
               {
                 text: true,
@@ -377,11 +378,13 @@ const groupColumns = [
                       ? 'iaas_resource_operate'
                       : 'biz_iaas_resource_operate'
                   ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage),
+                  || (data.bk_biz_id !== -1 && props.isResourcePage)
+                  || (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
                 theme: 'primary',
                 onClick() {
                   const routeInfo: any = {
                     query: {
+                      ...route.query,
                       activeTab: 'rule',
                       id: data.id,
                       vendor: data.vendor,
@@ -404,7 +407,15 @@ const groupColumns = [
                 },
               },
               [t('配置规则')],
-            ),
+            ), [
+              [
+                bkTooltips, {
+                  content: '自研云安全组只允许业务下操作',
+                  theme: 'light',
+                  disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                },
+              ],
+            ]),
           ],
         ),
         h(
@@ -420,31 +431,43 @@ const groupColumns = [
             },
           },
           [
-            h(
-              Button,
-              {
-                class: 'ml10',
-                disabled:
+            withDirectives(
+              h(
+                Button,
+                {
+                  class: 'ml10',
+                  disabled:
                   !props.authVerifyData?.permissionAction[
                     props.isResourcePage
                       ? 'iaas_resource_delete'
                       : 'biz_iaas_resource_delete'
                   ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage),
-                text: true,
-                theme: 'primary',
-                onClick() {
-                  securityHandleShowDelete(data);
+                  || (data.bk_biz_id !== -1 && props.isResourcePage)
+                  || (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  text: true,
+                  theme: 'primary',
+                  onClick() {
+                    securityHandleShowDelete(data);
+                  },
                 },
-              },
-              [t('删除')],
+                [t('删除')],
+              ),
+              [
+                [
+                  bkTooltips, {
+                    content: '自研云安全组只允许业务下操作',
+                    theme: 'light',
+                    disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  },
+                ],
+              ],
             ),
           ],
         ),
       ]);
     },
   },
-];
+].filter(({ field }) => (whereAmI.value === Senarios.business && !['bk_biz_id2', 'bk_biz_id'].includes(field)) || whereAmI.value !== Senarios.business);
 
 const groupSettings = generateColumnsSettings(groupColumns);
 
@@ -732,10 +755,14 @@ const templateColumns = [
         [bkTooltips, {
           content: businessMapStore.businessMap.get(data.bk_biz_id),
           theme: 'light',
+          disabled: data.bk_biz_id === -1,
         }],
       ]);
     },
+  },
+  {
     field: 'actions',
+    label: '操作',
     render({ data }: any) {
       return h('span', {}, [
         h(
@@ -752,6 +779,7 @@ const templateColumns = [
                 bk_biz_id: data.bk_biz_id,
                 id: data.id,
                 account_id: data.account_id,
+                vendor: data.vendor,
               });
             },
           },
@@ -772,7 +800,8 @@ const templateColumns = [
       ]);
     },
   },
-].filter(({ field }) => (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource);
+].filter(({ field }) => (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource)
+  .filter(({ field }) => (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business);
 
 const templateSettings = generateColumnsSettings(templateColumns);
 

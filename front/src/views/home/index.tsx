@@ -557,7 +557,7 @@ export default defineComponent({
                         ['/service/my-apply'].includes(curPath.value)
                           ? 'view-warp no-padding'
                           : 'view-warp'
-                      } style={{ height: route.path !== '/business/host' ? 'calc(100vh - 52px)' : 'calc(100% - 104px)' }}>
+                      } style={{ height: route.path !== '/business/host' ? 'calc(100% - 52px)' : 'calc(100% - 104px)' }}>
                       {isRouterAlive.value ? renderRouterView() : null}
                     </div>
                   </>
@@ -620,7 +620,7 @@ export default defineComponent({
           isShow={!!accountStore.securityConfirmMessage.length}
         >
           <span>
-            当前配置已提交，查看<Button theme='primary' text>审批流程</Button>查看关注进度
+            当前配置已提交，查看审批流程关注进度
           </span>
         </Dialog>
       </main>

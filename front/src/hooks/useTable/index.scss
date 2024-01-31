@@ -1,4 +1,29 @@
-.common-search-selector {
-  margin-left: auto;
+.operation-wrap {
+  display: flex;
+  justify-content: space-between;
   margin-bottom: 16px;
+
+  .operate-btn-groups {
+    display: flex;
+
+    .bk-button {
+      min-width: 88px;
+
+      &:not(:last-child) {
+        margin-right: 12px;
+      }
+    }
+  }
+}
+
+.loading-table-container {
+  height: calc(100% - 64px);
+
+  .table-container {
+    max-height: 100%;
+
+    .binding-row td{
+      background-color: #f2fff4 !important;
+    }
+  }
 }

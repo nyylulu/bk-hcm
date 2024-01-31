@@ -188,7 +188,7 @@ const getTemplateData = async (detail: { account_id: string;}) => {
         <security-relate v-if="type === 'relate'" />
         <security-rule v-if="type === 'rule'" :filter="filter" :id="securityId" :vendor="vendor"
                        :related-security-groups="relatedSecurityGroups" :template-data="templateData" />
-        <security-bind-cvm v-if="type === 'cvm'" :detail="detail" :sg-id="(securityId as string)" />
+        <security-bind-cvm v-if="type === 'cvm'" :detail="detail" :sg-id="(securityId as string)" :sg-cloud-id="detail.cloud_id"/>
       </template>
     </detail-tab>
   </div>
