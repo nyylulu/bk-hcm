@@ -22,6 +22,7 @@ package ziyan
 import (
 	"hcm/pkg/adaptor/types"
 	"hcm/pkg/criteria/constant"
+	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
 
 	billing "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/billing/v20180709"
 	cam "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cam/v20190116"
@@ -99,6 +100,18 @@ func (c *clientSet) BillClient() (*billing.Client, error) {
 	// 使用内部域名
 	c.profile.HttpProfile.Endpoint = constant.InternalBillingEndpoint
 	client, err := billing.NewClient(c.credential, "", c.profile)
+	if err != nil {
+		return nil, err
+	}
+
+	return client, nil
+}
+
+// BPaasClient tcloud ziyan sdk bpaas client
+func (c *clientSet) BPaasClient() (*bpaas.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalBPaasEndpoint
+	client, err := bpaas.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err
 	}

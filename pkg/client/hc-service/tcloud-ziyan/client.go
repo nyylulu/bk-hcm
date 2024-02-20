@@ -31,6 +31,7 @@ type Client struct {
 	Region        *RegionClient
 	ArgsTpl       *ArgsTplClient
 	Cvm           *CvmClient
+	Application   *ApplicationClient
 }
 
 // NewClient create a new tcloud api client.
@@ -42,5 +43,6 @@ func NewClient(client rest.ClientInterface) *Client {
 		Region:        NewRegionClient(client),
 		ArgsTpl:       NewArgsTplClient(client),
 		Cvm:           NewCvmClient(client),
+		Application:   NewApplicationClient(client),
 	}
 }

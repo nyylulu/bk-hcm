@@ -80,6 +80,12 @@ func (g *securityGroup) BatchCreateTCloudZiyanSGRule(cts *rest.Contexts) (any, e
 	}
 
 	if err := client.CreateSecurityGroupRule(cts.Kit, opt); err != nil {
+		berr := errf.GetBPassApprovalErrorf(err)
+		if berr != nil {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				sg.AccountID, enumor.CreateSecurityGroupRule, opt, berr)
+		}
+
 		logs.Errorf("request adaptor to create tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
 
@@ -144,6 +150,12 @@ func (g *securityGroup) UpdateTCloudZiyanSGRule(cts *rest.Contexts) (any, error)
 	}
 
 	if err := client.UpdateSecurityGroupRule(cts.Kit, opt); err != nil {
+		berr := errf.GetBPassApprovalErrorf(err)
+		if berr != nil {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				rule.AccountID, enumor.UpdateSecurityGroupRule, opt, berr)
+		}
+
 		logs.Errorf("request adaptor to update tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
 
@@ -221,9 +233,17 @@ func (g *securityGroup) DeleteTCloudZiyanSGRule(cts *rest.Contexts) (any, error)
 		return nil, fmt.Errorf("unknown security group rule type: %s", rule.Type)
 	}
 	if err := client.DeleteSecurityGroupRule(cts.Kit, opt); err != nil {
+
+		berr := errf.GetBPassApprovalErrorf(err)
+		if berr != nil {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				rule.AccountID, enumor.DeleteSecurityGroupRule, opt, berr)
+		}
+
 		logs.Errorf("request adaptor to delete tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
 
+		//同步函数中带有日志
 		_, _ = g.syncZiyanSGRule(cts.Kit, syncParam)
 		return nil, err
 	}

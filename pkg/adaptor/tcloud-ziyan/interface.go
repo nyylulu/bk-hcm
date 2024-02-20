@@ -21,9 +21,12 @@ package ziyan
 
 import (
 	"hcm/pkg/adaptor/tcloud"
+	"hcm/pkg/kit"
+	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
 )
 
 // TCloudZiyan 自研云adaptor接口，基本同步腾讯云接口，避免冗余
 type TCloudZiyan interface {
 	tcloud.TCloud
+	GetBPaasApplicationDetail(kt *kit.Kit, applicationID uint64) (*bpaas.GetBpaasApplicationDetailResponseParams, error)
 }

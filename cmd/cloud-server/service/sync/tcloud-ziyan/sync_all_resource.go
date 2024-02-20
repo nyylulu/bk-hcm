@@ -89,39 +89,9 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		Vendor:    string(enumor.TCloudZiyan),
 	}
 
-	// 暂未接入
-	// if hitErr = SyncDisk(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.DiskCloudResType, hitErr
-	// }
-	//
-	// if hitErr = SyncVpc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.VpcCloudResType, hitErr
-	// }
-	//
-	// if hitErr = SyncSubnet(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.SubnetCloudResType, hitErr
-	// }
-	//
-	// if hitErr = SyncEip(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.EipCloudResType, hitErr
-	// }
-
 	if hitErr = SyncSG(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
 		return enumor.SecurityGroupCloudResType, hitErr
 	}
-
-	// 暂未接入
-	// if hitErr = SyncCvm(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.CvmCloudResType, hitErr
-	// }
-	//
-	// if hitErr = SyncRouteTable(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-	// 	return enumor.RouteTableCloudResType, hitErr
-	// }
-	//
-	// if hitErr = SyncSubAccount(kt, cliSet, opt.AccountID, sd); hitErr != nil {
-	// 	return enumor.SubAccountCloudResType, hitErr
-	// }
 
 	// 参数模板
 	if hitErr = SyncArgsTpl(kt, cliSet, opt.AccountID, sd); hitErr != nil {

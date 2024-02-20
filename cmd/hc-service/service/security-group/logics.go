@@ -25,11 +25,14 @@ import (
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	datacli "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/json"
 )
 
 func buildSGCvmRelDeleteReq(sgID, cvmID string) *dataproto.BatchDeleteReq {
@@ -85,4 +88,44 @@ func (g *securityGroup) getSecurityGroupAndCvm(kt *kit.Kit, sgID, cvmID string) 
 	}
 
 	return &sgResult.Details[0], &cvmResult.Details[0], nil
+}
+
+func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountID string,
+	action enumor.ApplicationType, content any, bpaasErr *errf.ErrorF) error {
+
+	bpaasSN := bpaasErr.Message
+	logs.Infof("bpaas approval triggered, action: %s, application id: %v, account id: %s, rid: %s",
+		action, bpaasSN, accountID, kt.Rid)
+	// 保存本地申请单
+	contentStr, err := json.MarshalToString(content)
+	if err != nil {
+		logs.Errorf("fail to marshal content to string, err: %v, action: %s, rid: %s", err, action, kt.Rid)
+		return err
+	}
+
+	contentStr, err = json.UpdateMerge(map[string]interface{}{"account_id": accountID}, contentStr)
+	if err != nil {
+		logs.Errorf("fail to merge account id(%s) into content(%s), err: %v, action: %s, rid: %s",
+			accountID, contentStr, err, action, kt.Rid)
+		return err
+	}
+
+	applicationReq := &dataproto.ApplicationCreateReq{
+		Source:         enumor.ApplicationSourceBPaas,
+		SN:             bpaasSN,
+		Type:           action,
+		Status:         enumor.Pending,
+		Applicant:      kt.User,
+		Content:        contentStr,
+		DeliveryDetail: "{}",
+		Memo:           nil,
+	}
+	_, err = dataCli.Global.Application.Create(kt.Ctx, kt.Header(), applicationReq)
+	if err != nil {
+		logs.Errorf("fail to create application for bpaas(id: %s), err: %v, action: %s, rid: %s",
+			bpaasSN, err, action, kt.Rid)
+		return err
+	}
+	// 重新返回bpaas错误以触发前端提示
+	return bpaasErr
 }

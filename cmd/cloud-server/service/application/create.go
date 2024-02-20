@@ -143,7 +143,9 @@ func (a *applicationSvc) create(cts *rest.Contexts, req *proto.CreateCommonReq,
 		cts.Kit.Ctx,
 		cts.Kit.Header(),
 		&dataproto.ApplicationCreateReq{
-			SN:             sn,
+			SN: sn,
+			// 这里默认创建的是ITSM申请单
+			Source:         enumor.ApplicationSourceITSM,
 			Type:           applicationType,
 			Status:         enumor.Pending,
 			Applicant:      cts.Kit.User,

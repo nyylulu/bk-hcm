@@ -33,6 +33,18 @@ func (a ApplicationType) Validate() error {
 	case CreateCvm:
 	case CreateVpc:
 	case CreateDisk:
+
+	case CreateSecurityGroupRule:
+	case UpdateSecurityGroupRule:
+	case DeleteSecurityGroupRule:
+
+	case CreateSecurityGroup:
+	case UpdateSecurityGroup:
+	case DeleteSecurityGroup:
+
+	case AssociateSecurityGroup:
+	case DisassociateSecurityGroup:
+
 	default:
 		return fmt.Errorf("unsupported application type: %s", a)
 	}
@@ -49,6 +61,24 @@ const (
 	CreateVpc ApplicationType = "create_vpc"
 	// CreateDisk 创建云盘
 	CreateDisk ApplicationType = "create_disk"
+
+	// CreateSecurityGroup 创建安全组
+	CreateSecurityGroup ApplicationType = "create_security_group"
+	// UpdateSecurityGroup 更新安全组
+	UpdateSecurityGroup ApplicationType = "update_security_group"
+	// DeleteSecurityGroup 删除安全组
+	DeleteSecurityGroup ApplicationType = "delete_security_group"
+	// AssociateSecurityGroup 安全组关联资源
+	AssociateSecurityGroup ApplicationType = "associate_security_group"
+	// DisassociateSecurityGroup 安全组资源解关联
+	DisassociateSecurityGroup ApplicationType = "disassociate_security_group"
+
+	// CreateSecurityGroupRule 创建安全组规则
+	CreateSecurityGroupRule ApplicationType = "create_security_group_rule"
+	// UpdateSecurityGroupRule 更新安全组规则
+	UpdateSecurityGroupRule ApplicationType = "update_security_group_rule"
+	// DeleteSecurityGroupRule 删除安全组规则
+	DeleteSecurityGroupRule ApplicationType = "delete_security_group_rule"
 )
 
 type ApplicationStatus string
@@ -70,4 +100,11 @@ const (
 	DeliverPartial = "deliver_partial"
 	// DeliverError 单据交付异常
 	DeliverError ApplicationStatus = "deliver_error"
+)
+
+type ApplicationSource string
+
+const (
+	ApplicationSourceITSM  ApplicationSource = "itsm"
+	ApplicationSourceBPaas ApplicationSource = "bpaas"
 )

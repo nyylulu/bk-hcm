@@ -27,6 +27,7 @@ import (
 // ApplicationGetResp ...
 type ApplicationGetResp struct {
 	ID             string                   `json:"id"`
+	Source         enumor.ApplicationSource `json:"source"`
 	SN             string                   `json:"sn"`
 	Type           enumor.ApplicationType   `json:"type"`
 	Status         enumor.ApplicationStatus `json:"status"`

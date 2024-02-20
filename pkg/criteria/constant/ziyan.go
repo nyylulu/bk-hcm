@@ -31,4 +31,6 @@ const (
 	InternalCamEndpoint = "cam.internal.tencentcloudapi.com"
 	// InternalBillingEndpoint 账单内部域名
 	InternalBillingEndpoint = "billing.internal.tencentcloudapi.com"
+	// InternalBPaasEndpoint bpaas 内部域名
+	InternalBPaasEndpoint = "bpaas.internal.tencentcloudapi.com"
 )
