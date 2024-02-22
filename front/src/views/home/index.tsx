@@ -613,7 +613,7 @@ export default defineComponent({
           title='结果确认'
           confirmText='查看审批流程'
           onConfirm={() => {
-            const url = `https://console.cloud.tencent.com/bpaas/application/${accountStore.securityConfirmMessage}`;
+            const url = '/#/service/my-apply';
             window.open(url, '_blank');
             accountStore.updateSecurityConfirmMessage('');
           }}

@@ -5,7 +5,7 @@
     <div class="header-info">
       <span class="title" :title="data.sn">{{data.sn}}</span>
       <div :class="['status', statusItem[data.status]?.value || '']">
-        {{ statusItem[data.status]?.label || '' }}
+        {{ data.source === 'bpaas' ? '云单据' : (statusItem[data.status]?.label || '') }}
       </div>
     </div>
     <div class="bottom-info">
@@ -90,7 +90,7 @@ export default defineComponent({
     });
 
     const handleClick = () => {
-      emit('on-change', props.data.id);
+      emit('on-change', props.data);
     };
 
     return {

@@ -171,6 +171,12 @@ export const useAccountStore = defineStore({
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/${id}`);
     },
     /**
+     * 查询bpass申请单据详情信息
+     */
+    async getBpassDetail(data: any) {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/vendors/tcloud-ziyan/applications/bpaas/query`, data);
+    },
+    /**
      * @description: 撤销申请
      * @param {number} id
      * @return {*}
