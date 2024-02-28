@@ -280,6 +280,10 @@ func convertToTCloudAdaptorSGRuleCreate(rule hcservice.TCloudSGRuleCreate) adpts
 		CloudTargetSecurityGroupID: rule.CloudTargetSecurityGroupID,
 		Action:                     rule.Action,
 		Description:                rule.Memo,
+		CloudServiceID:             rule.CloudServiceID,
+		CloudServiceGroupID:        rule.CloudServiceGroupID,
+		CloudAddressID:             rule.CloudAddressID,
+		CloudAddressGroupID:        rule.CloudAddressGroupID,
 	}
 }
 
@@ -294,5 +298,9 @@ func convertToTCloudSGRuleUpdate(ruleIdx int64, req *hcservice.TCloudSGRuleUpdat
 		CloudTargetSecurityGroupID: req.CloudTargetSecurityGroupID,
 		Action:                     req.Action,
 		Description:                req.Memo,
+		CloudServiceID:             req.CloudServiceID,
+		CloudServiceGroupID:        req.CloudServiceGroupID,
+		CloudAddressID:             req.CloudAddressID,
+		CloudAddressGroupID:        req.CloudAddressGroupID,
 	}
 }

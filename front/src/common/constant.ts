@@ -11,6 +11,7 @@ export enum ResourceTypeEnum {
   CVM = 'cvm',
   VPC = 'vpc',
   DISK = 'disk',
+  SUBNET = 'subnet',
 }
 
 // 资源类型
@@ -518,4 +519,11 @@ export const VendorMap = {
   [VendorEnum.HUAWEI]: '华为云',
   [VendorEnum.TCLOUD]: '腾讯云',
   [VendorEnum.ZIYAN]: '自研云',
+};
+
+export const SYNC_STAUS_MAP = {
+  a: '绑定中',
+  b: '成功',
+  c: '失败',
+  d: '部分成功',
 };

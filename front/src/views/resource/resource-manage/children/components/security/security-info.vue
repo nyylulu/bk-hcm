@@ -18,6 +18,7 @@ import {
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import { timeFormatter } from '@/common/util';
 
 const props = defineProps({
   id: {
@@ -81,10 +82,12 @@ const settingInfo: any[] = [
   {
     name: t('创建时间'),
     prop: 'created_at',
+    render: (val: string) => timeFormatter(val),
   },
   {
     name: t('修改时间'),
     prop: 'updated_at',
+    render: (val: string) => timeFormatter(val),
   },
   {
     name: t('备注'),
@@ -118,7 +121,7 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
     });
   }
 } else if (props.vendor === 'azure') {
-  settingInfo.splice(8, 0, {
+  settingInfo.splice(7, 0, {
     name: t('关联网络接口数'),
     prop: 'network_interface_count',
     render(val: any) {
@@ -152,6 +155,6 @@ const handleChange = async (val: any) => {
   <bk-loading
     :loading="props.loading"
   >
-    <detail-info class="mt20" :fields="settingInfo" :detail="props.detail" @change="handleChange"></detail-info>
+    <detail-info :fields="settingInfo" :detail="props.detail" @change="handleChange"></detail-info>
   </bk-loading>
 </template>

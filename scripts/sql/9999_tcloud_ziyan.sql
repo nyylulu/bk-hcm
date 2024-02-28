@@ -25,6 +25,12 @@
 
 START TRANSACTION;
 
+
+add column `service_id` varchar(64) default null after `port`,
+    add column `service_group_id` varchar(64) default null after `cloud_service_id`,
+    add column `address_id` varchar(64) default null after `cloud_target_security_group_id`,
+    add column `address_group_id` varchar(64) default null after `cloud_address_id`;
+
 create table if not exists `tcloud_ziyan_security_group_rule`
 (
     `id`                             varchar(64)  not null,
@@ -38,12 +44,16 @@ create table if not exists `tcloud_ziyan_security_group_rule`
     `action`                         varchar(10)  not null,
     `protocol`                       varchar(10)           default null,
     `port`                           varchar(255)          default null,
+    `service_id`                     varchar(64)           default null
     `cloud_service_id`               varchar(255)          default null,
+    `service_group_id`               varchar(64)           default null
     `cloud_service_group_id`         varchar(255)          default null,
     `ipv4_cidr`                      varchar(255)          default null,
     `ipv6_cidr`                      varchar(255)          default null,
     `cloud_target_security_group_id` varchar(255)          default null,
+    `address_id`                     varchar(64)           default null
     `cloud_address_id`               varchar(255)          default null,
+    `address_group_id`               varchar(64)           default null
     `cloud_address_group_id`         varchar(255)          default null,
     `memo`                           varchar(255)          default null,
     `creator`                        varchar(64)  not null,

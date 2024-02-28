@@ -528,6 +528,7 @@ func (s *set) ArgsTpl() argstpl.Interface {
 	}
 }
 
+
 // TCloudZiyanSGRule 腾讯自研云安全组规则dao.
 func (s *set) TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule {
 	return &securitygroup.TCloudZiyanSGRuleDao{
