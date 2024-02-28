@@ -164,8 +164,12 @@ func (svc *securityGroupSvc) updateTCloudZiyanSGRule(cts *rest.Contexts, sgBaseI
 	updateReq := &hcproto.TCloudSGRuleUpdateReq{
 		Protocol:                   req.Protocol,
 		Port:                       req.Port,
+		CloudServiceID:             req.CloudServiceID,
+		CloudServiceGroupID:        req.CloudServiceGroupID,
 		IPv4Cidr:                   req.IPv4Cidr,
 		IPv6Cidr:                   req.IPv6Cidr,
+		CloudAddressID:             req.CloudAddressID,
+		CloudAddressGroupID:        req.CloudAddressGroupID,
 		CloudTargetSecurityGroupID: req.CloudTargetSecurityGroupID,
 		Action:                     req.Action,
 		Memo:                       req.Memo,

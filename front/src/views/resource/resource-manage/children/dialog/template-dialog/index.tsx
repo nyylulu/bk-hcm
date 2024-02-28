@@ -160,13 +160,6 @@ export default defineComponent({
     );
 
     watch(
-      () => formData.value.account_id,
-      (id) => {
-        formData.value.vendor = accountVendorMap.value.get(id) || '';
-      },
-    );
-
-    watch(
       () => [formData.value.type, formData.value.account_id],
       async ([type, accountID]) => {
         if (!accountID) return;
@@ -175,6 +168,11 @@ export default defineComponent({
           filter: {
             op: 'and',
             rules: [
+              {
+                field: 'vendor',
+                op: 'eq',
+                value: 'tcloud',
+              },
               {
                 field: 'type',
                 op: 'eq',

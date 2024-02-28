@@ -19,7 +19,7 @@ POST /api/v1/cloud/argument_templates/assign/bizs
 
 ```json
 {
-  "template_ids": [
+    "template_ids": [
     "00000001",
     "00000002"
   ],
