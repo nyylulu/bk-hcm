@@ -45,6 +45,7 @@ const headerExtensionMap = computed(() => {
   const map = { firstLabel: '', firstField: '', secondLabel: '', secondField: '' };
   switch (resourceAccountStore.resourceAccount.vendor) {
     case VendorEnum.TCLOUD:
+    case VendorEnum.ZIYAN:
       Object.assign(map, {
         firstLabel: '主账号ID',
         firstField: 'cloud_main_account_id',

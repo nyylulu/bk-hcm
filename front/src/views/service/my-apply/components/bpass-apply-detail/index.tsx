@@ -220,13 +220,13 @@ export default defineComponent({
               申请状态
               <div class={'tip'}>
                 {props.loading ? (
-                  <div>
-                    <Spinner /> 正在同步最新进度中...
-                  </div>
+                  <>
+                    <Spinner />&nbsp;正在同步最新进度中...
+                  </>
                 ) : (
-                  <div>
-                    <InfoLine /> 已是最新的进度数据。
-                  </div>
+                  <>
+                    <InfoLine />&nbsp;已是最新的进度数据。
+                  </>
                 )}
               </div>
             </div>
