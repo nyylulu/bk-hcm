@@ -109,7 +109,7 @@ func (cli *client) securityGroupRule(kt *kit.Kit, opt *syncSGRuleOption) (*SyncR
 	argsTplMap, err := cli.listArgumentTemplateMapFromDB(kt, argsTplCloudIDs)
 	if err != nil {
 		logs.Errorf("[%s] request dataservice get TCloud argument template failed, cloudIDs: %v, err: %v, rid: %s",
-			enumor.TCloud, argsTplCloudIDs, err, kt.Rid)
+			enumor.TCloudZiyan, argsTplCloudIDs, err, kt.Rid)
 		return nil, err
 	}
 

@@ -89,13 +89,14 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		Vendor:    string(enumor.TCloudZiyan),
 	}
 
-	if hitErr = SyncSG(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-		return enumor.SecurityGroupCloudResType, hitErr
-	}
-
 	// 参数模板
 	if hitErr = SyncArgsTpl(kt, cliSet, opt.AccountID, sd); hitErr != nil {
 		return enumor.ArgumentTemplateResType, hitErr
 	}
+
+	if hitErr = SyncSG(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+		return enumor.SecurityGroupCloudResType, hitErr
+	}
+
 	return "", nil
 }
