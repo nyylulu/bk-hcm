@@ -175,8 +175,8 @@ watch(
       });
       for (let i = 0;i < templateData.value.length;i++) {
         const item = templateData.value[i];
-        item.instance_num = res.data?.details?.[i].instance_num || '--';
-        item.rule_num = res.data?.details?.[i].rule_num || '--';
+        item.instance_num = res.data?.[i]?.instance_num || '--';
+        item.rule_num = res.data?.[i]?.rule_num || '--';
       }
     }
   },
@@ -507,7 +507,6 @@ const gcpColumns = [
         {
           text: true,
           theme: 'primary',
-          disabled: data.bk_biz_id !== -1,
           onClick() {
             const routeInfo: any = {
               query: {
@@ -739,37 +738,75 @@ const templateColumns = [
     type: 'selection',
     width: '100',
     onlyShowOnList: true,
+    isDefaultShow: true,
   },
   {
     label: '模板ID',
     field: 'cloud_id',
+    isDefaultShow: true,
+    render: ({ data }: any) => {
+      return h(
+        Button,
+        {
+          text: true,
+          theme: 'primary',
+          onClick() {
+            const routeInfo: any = {
+              query: {
+                ...route.query,
+                id: data.cloud_id,
+              },
+            };
+            if (route.path.includes('business')) {
+              Object.assign(routeInfo, {
+                name: 'templateBusinessDetail',
+              });
+            } else {
+              Object.assign(routeInfo, {
+                name: 'resourceDetail',
+                params: {
+                  type: 'template',
+                },
+              });
+            }
+            router.push(routeInfo);
+          },
+        },
+        [data.cloud_id],
+      );
+    },
   },
   {
     label: '模板名称',
     field: 'name',
+    isDefaultShow: true,
   },
   {
     label: '云厂商',
     field: 'vendor',
     render: ({ cell }: any) => VendorMap[cell],
+    isDefaultShow: true,
   },
   {
     label: '类型',
     field: 'type',
     render: ({ cell }: any) => TemplateTypeMap[cell],
-
+    isDefaultShow: true,
   },
   {
     label: '关联实例数',
     field: 'instance_num',
+    isDefaultShow: true,
   },
   {
     label: '规则数',
     field: 'rule_num',
+    isDefaultShow: true,
   },
   {
     label: '是否分配',
     field: 'bk_biz_id',
+    isDefaultShow: true,
     render: ({ data }: { data: { bk_biz_id: number }; cell: number }) => {
       return withDirectives(h(
         Tag,
@@ -789,6 +826,7 @@ const templateColumns = [
   {
     field: 'actions',
     label: '操作',
+    isDefaultShow: true,
     render({ data }: any) {
       return h('span', {}, [
         h(
@@ -1004,7 +1042,7 @@ const securityHandleShowDelete = (data: any) => {
         remote-pagination
         :pagination="state.pagination"
         :columns="templateColumns"
-        :data="state.datas"
+        :data="templateData"
         show-overflow-tooltip
         :is-row-select-enable="isRowSelectEnable"
         @selection-change="(selections: any) => handleSelectionChange(selections, isCurRowSelectEnable)"
