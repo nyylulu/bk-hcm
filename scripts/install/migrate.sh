@@ -135,7 +135,7 @@ arg_check() {
 main() {
 
     # 遍历每个sql文件，其中ls 默认按文件名的字符序排序
-    for sqlfile in "$SQLDIR"/*.sql; do
+    for sqlfile in `ls -1 "$SQLDIR"/*.sql`; do
         # 获取匹配的版本信息
         hcmver_of_sql=$(get_hcm_ver "$sqlfile")
         echo -n "[$hcmver_of_sql]" "$sqlfile" --\>

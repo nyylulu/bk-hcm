@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0015,HCMVER=v1.4.0
 
     Notes:
     1. 增加自研云安全组规则表
@@ -95,6 +95,6 @@ alter table application
     add constraint idx_uk_source_sn unique (source, sn);
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.4.0' as `hcm_ver`, '0015' as `sql_ver`;
 
 COMMIT

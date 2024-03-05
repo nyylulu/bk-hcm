@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v9.9.9+。
+- 该接口提供版本：v1.4.0+。
 - 该接口所需权限：资源分配。
 - 该接口功能描述：分配参数模版到业务下。
 
@@ -19,7 +19,7 @@ POST /api/v1/cloud/argument_templates/assign/bizs
 
 ```json
 {
-    "template_ids": [
+  "template_ids": [
     "00000001",
     "00000002"
   ],
