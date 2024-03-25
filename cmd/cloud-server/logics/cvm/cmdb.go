@@ -53,7 +53,7 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 		Page:               req.Page,
 		HostPropertyFilter: &cmdb.QueryFilter{Rule: combinedRule},
 	}
-	cmdbResult, err := c.esbClient.Cmdb().ListBizHost(kt.Ctx, params)
+	cmdbResult, err := c.esbClient.Cmdb().ListBizHost(kt, params)
 	if err != nil {
 		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
