@@ -25,73 +25,68 @@ import (
 	"net"
 	"strconv"
 
-	"hcm/cmd/api-server/options"
-	"hcm/cmd/api-server/service"
+	"hcm/cmd/woa-server/options"
+	"hcm/cmd/woa-server/service"
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
 	"hcm/pkg/runtime/ctl"
 	"hcm/pkg/runtime/ctl/cmd"
-	"hcm/pkg/runtime/gwparser"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 )
 
-// Run start the api server
+// Run start the woa server
 func Run(opt *options.Option) error {
-	as := new(apiService)
-	if err := as.prepare(opt); err != nil {
+	s := new(woaServer)
+	if err := s.prepare(opt); err != nil {
 		return err
 	}
 
-	svc, err := service.NewService(as.dis)
-	if err != nil {
-		return fmt.Errorf("initialize service failed, err: %v", err)
-	}
-	as.svc = svc
-	if err := as.svc.ListenAndServeRest(); err != nil {
+	if err := s.svc.ListenAndServeRest(); err != nil {
 		return err
 	}
 
-	shutdown.RegisterFirstShutdown(as.finalizer)
+	shutdown.RegisterFirstShutdown(s.finalizer)
 	shutdown.WaitShutdown(20)
 	return nil
 }
 
-type apiService struct {
+type woaServer struct {
 	svc *service.Service
 	dis serviced.Discover
 }
 
 // prepare do prepare jobs before run api server.
-func (as *apiService) prepare(opt *options.Option) error {
+func (s *woaServer) prepare(opt *options.Option) error {
 	// load settings from config file.
 	if err := cc.LoadSettings(opt.Sys); err != nil {
 		return fmt.Errorf("load settings from config files failed, err: %v", err)
 	}
 
-	logs.InitLogger(cc.ApiServer().Log.Logs())
+	logs.InitLogger(cc.WoaServer().Log.Logs())
 
 	logs.Infof("load settings from config file success.")
 
-	if err := gwparser.Init(opt.DisableJWT, opt.PublicKey); err != nil {
-		return err
-	}
-	logs.Infof("jwt disable state: %v", opt.DisableJWT)
-
 	// init metrics
-	network := cc.ApiServer().Network
+	network := cc.WoaServer().Network
 	metrics.InitMetrics(net.JoinHostPort(network.BindIP, strconv.Itoa(int(network.Port))))
 
 	// new api server discovery client.
-	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.CloudServerName, cc.WoaServerName}}
-	dis, err := serviced.NewDiscovery(cc.ApiServer().Service, discOpt)
+	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName}}
+	dis, err := serviced.NewDiscovery(cc.WoaServer().Service, discOpt)
 	if err != nil {
 		return fmt.Errorf("new service discovery faield, err: %v", err)
 	}
 
-	as.dis = dis
+	s.dis = dis
 	logs.Infof("create discovery success.")
+
+	svc, err := service.NewService(s.dis)
+	if err != nil {
+		return fmt.Errorf("initialize service failed, err: %v", err)
+	}
+	s.svc = svc
 
 	// init hcm control tool
 	if err := ctl.LoadCtl(cmd.WithLog()); err != nil {
@@ -101,6 +96,6 @@ func (as *apiService) prepare(opt *options.Option) error {
 	return nil
 }
 
-func (as *apiService) finalizer() {
+func (s *woaServer) finalizer() {
 	return
 }

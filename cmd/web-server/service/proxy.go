@@ -120,6 +120,8 @@ func (p *proxy) proxyRequest(req *restful.Request, w http.ResponseWriter) {
 		switch servicePath {
 		case "cloud":
 			service = cc.CloudServerName
+		case "woa":
+			service = cc.WoaServerName
 		}
 	} else {
 		logs.Errorf("received url path length not conform to the regulations, path: %s", req.Request.URL.Path)

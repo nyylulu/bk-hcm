@@ -250,6 +250,9 @@ func (s *Service) proxyApiSet() *restful.WebService {
 	ws.Path("/api/v1/cloud").Filter(
 		NewUserAuthenticateFilter(s.esbClient, cc.WebServer().Web.BkLoginUrl, cc.WebServer().Web.BkLoginCookieName),
 	)
+	ws.Path("/api/v1/woa").Filter(
+		NewUserAuthenticateFilter(s.esbClient, cc.WebServer().Web.BkLoginUrl, cc.WebServer().Web.BkLoginCookieName),
+	)
 	ws.Route(ws.GET("{.*}").To(s.proxy.Do))
 	ws.Route(ws.POST("{.*}").To(s.proxy.Do))
 	ws.Route(ws.PUT("{.*}").To(s.proxy.Do))

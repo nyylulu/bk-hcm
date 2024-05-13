@@ -77,6 +77,8 @@ func loadFromFile(filename string) (Setting, error) {
 		s = new(WebServerSetting)
 	case TaskServerName:
 		s = new(TaskServerSetting)
+	case WoaServerName:
+		s = new(WoaServerSetting)
 	default:
 		return nil, fmt.Errorf("unknown %s service name", ServiceName())
 	}
