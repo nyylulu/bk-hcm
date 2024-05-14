@@ -22,20 +22,10 @@ package errf
 import (
 	"encoding/json"
 	"errors"
-	"regexp"
 	"strings"
 
 	"github.com/go-sql-driver/mysql"
-	terrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
-	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
-
-// 腾讯云bpass审批id匹配正则
-var tcloudBPassIDRegexp *regexp.Regexp
-
-func init() {
-	tcloudBPassIDRegexp = regexp.MustCompile("ApplicationId: `\\d+`")
-}
 
 const mysqlDuplicatedNumber = 1062
 
@@ -44,23 +34,6 @@ func GetTypedError[T error](err error) *T {
 	var terr T
 	if errors.As(err, &terr) {
 		return &terr
-	}
-	return nil
-}
-
-// GetBPassApprovalErrorf 尝试转换为触发BPass审批错误，如果不符合条件将返回nil
-func GetBPassApprovalErrorf(err error) *ErrorF {
-
-	if terr := GetTypedError[*terrors.TencentCloudSDKError](err); terr != nil &&
-		(*terr).GetCode() == vpc.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED {
-
-		// 	获取审批单号
-		msg := (*terr).GetMessage()
-		var applicationID string
-		if appIDMsg := tcloudBPassIDRegexp.FindString(msg); len(appIDMsg) > 17 {
-			applicationID = appIDMsg[16 : len(appIDMsg)-1]
-		}
-		return &ErrorF{Code: NeedBPassApproval, Message: applicationID}
 	}
 	return nil
 }

@@ -40,30 +40,6 @@ import (
 	"github.com/aws/aws-sdk-go/aws/request"
 )
 
-// TCloudZiyanGetInfoBySecret 根据秘钥信息去云上获取账号信息
-func (svc *service) TCloudZiyanGetInfoBySecret(cts *rest.Contexts) (interface{}, error) {
-	// 1. 参数解析与校验
-	req := new(cloud.TCloudSecret)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	client, err := svc.ad.Adaptor().TCloudZiyan(
-		&types.BaseSecret{
-			CloudSecretID:  req.CloudSecretID,
-			CloudSecretKey: req.CloudSecretKey,
-		})
-	if err != nil {
-		return nil, err
-	}
-	// 2. 云上信息获取
-	return client.GetAccountInfoBySecret(cts.Kit)
-
-}
-
 // TCloudGetInfoBySecret 根据秘钥信息去云上获取账号信息
 func (svc *service) TCloudGetInfoBySecret(cts *rest.Contexts) (interface{}, error) {
 	// 1. 参数解析与校验

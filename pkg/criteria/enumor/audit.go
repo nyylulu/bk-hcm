@@ -35,13 +35,15 @@ const (
 	SubnetAuditResType            AuditResourceType = "subnet"
 	DiskAuditResType              AuditResourceType = "disk"
 	CvmAuditResType               AuditResourceType = "cvm"
-	CloudCvmAuditResType          AuditResourceType = "cloud_cvm"
 	RouteTableAuditResType        AuditResourceType = "route_table"
 	RouteAuditResType             AuditResourceType = "route"
 	EipAuditResType               AuditResourceType = "eip"
 	GcpFirewallRuleAuditResType   AuditResourceType = "gcp_firewall_rule"
 	NetworkInterfaceAuditResType  AuditResourceType = "network_interface"
 	ArgumentTemplateAuditResType  AuditResourceType = "argument_template"
+
+	// 自研云-云上主机
+	CloudCvmAuditResType AuditResourceType = "cloud_cvm"
 )
 
 // AuditResourceTypeEnums resource type map.

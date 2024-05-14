@@ -61,6 +61,4 @@ const (
 	RecordNotUpdate int32 = 2000010
 	// RecordDuplicated 数据重复，对应 MySQL Error 1062 (23000)
 	RecordDuplicated int32 = 2000011
-	// NeedBPassApproval 触发BPass审批流程
-	NeedBPassApproval int32 = 2000012
 )

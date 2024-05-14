@@ -96,9 +96,3 @@ type CloudHostListResp struct {
 	Count   int64             `json:"count"`
 	Details []corecvm.BaseCvm `json:"details"`
 }
-
-// CloudHostListRespT define cloud host list response.
-type CloudHostListRespT[T corecvm.Extension] struct {
-	Count   int64             `json:"count"`
-	Details []*corecvm.Cvm[T] `json:"details"`
-}

@@ -25,9 +25,7 @@ import (
 
 	rr "hcm/pkg/api/core/recycle-record"
 	"hcm/pkg/criteria/constant"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // AssignCvmToBizReq define assign cvm to biz req.
@@ -161,33 +159,4 @@ type CvmRelatedInfo struct {
 	DiskCount int      `json:"disk_count"`
 	EipCount  int      `json:"eip_count"`
 	Eip       []string `json:"eip"`
-}
-
-// CmdbHostListReq 从cc 查询主机api 接口
-type CmdbHostListReq struct {
-	// 为false则只拉取cmdb信息，为true则进一步拉取对应云上cvm信息
-	QueryFromCloud bool          `json:"query_from_cloud"`
-	AccountID      string        `json:"account_id" validate:"required"`
-	Region         string        `json:"region" validate:"omitempty"`
-	CloudInstIDs   []string      `json:"inst_i_ds" validate:"omitempty"`
-	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
-	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
-	Page           cmdb.BasePage `json:"page" validate:"required"`
-}
-
-// Validate CloudHostListReq.
-func (req CmdbHostListReq) Validate() error {
-	return validator.Validate.Struct(req)
-}
-
-// CmdbHostQueryReq 从cc 查询主机
-type CmdbHostQueryReq struct {
-	BkBizID      int64
-	Vendor       enumor.Vendor
-	AccountID    string        `json:"account_id" validate:"required"`
-	Region       string        `json:"region" validate:"omitempty"`
-	CloudInstIDs []string      `json:"inst_i_ds" validate:"omitempty"`
-	BkSetIDs     []int64       `json:"bk_set_ids" validate:"omitempty"`
-	BkModuleIDs  []int64       `json:"bk_module_ids" validate:"omitempty"`
-	Page         cmdb.BasePage `json:"page" validate:"required"`
 }

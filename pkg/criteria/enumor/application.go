@@ -105,6 +105,7 @@ const (
 type ApplicationSource string
 
 const (
-	ApplicationSourceITSM  ApplicationSource = "itsm"
-	ApplicationSourceBPaas ApplicationSource = "bpaas"
+	ApplicationSourceITSM ApplicationSource = "itsm"
 )
+
+const ApplicationSourceBPaas ApplicationSource = "bpaas"

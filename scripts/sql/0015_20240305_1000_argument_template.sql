@@ -44,9 +44,9 @@ create table if not exists `argument_template`
     `updated_at`          timestamp    not null default current_timestamp on update current_timestamp,
     primary key (`id`),
     unique key `idx_uk_bk_biz_id_cloud_id` (`bk_biz_id`, `cloud_id`)
-    ) engine = innodb
-    default charset = utf8mb4
-    collate utf8mb4_bin comment ='参数模版表';
+) engine = innodb
+  default charset = utf8mb4
+  collate utf8mb4_bin comment ='参数模版表';
 
 insert into id_generator(`resource`, `max_id`)
 values ('argument_template', '0');

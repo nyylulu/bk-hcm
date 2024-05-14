@@ -162,14 +162,3 @@ type AzureSecurityGroupAssociateNIReq struct {
 func (opt AzureSecurityGroupAssociateNIReq) Validate() error {
 	return validator.Validate.Struct(opt)
 }
-
-// SecurityGroupAssociateCloudCvmReq define security group bind cvm option.
-type SecurityGroupAssociateCloudCvmReq struct {
-	SecurityGroupID string   `json:"security_group_id" validate:"required"`
-	CloudCvmIDs     []string `json:"cloud_cvm_ids" validate:"required"`
-}
-
-// Validate security group cvm bind option.
-func (opt SecurityGroupAssociateCloudCvmReq) Validate() error {
-	return validator.Validate.Struct(opt)
-}
