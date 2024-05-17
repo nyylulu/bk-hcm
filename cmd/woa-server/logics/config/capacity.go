@@ -1,0 +1,358 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package config
+
+import (
+	"errors"
+	"fmt"
+
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/blog"
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	arrayutil "hcm/cmd/woa-server/common/util"
+	"hcm/cmd/woa-server/model/config"
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/kit"
+)
+
+// CapacityIf provides management interface for operations of resource apply capacity
+type CapacityIf interface {
+	// GetCapacity gets resource apply capacity info
+	GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*types.GetCapacityRst, error)
+	// UpdateCapacity updates resource apply capacity info
+	UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam) error
+}
+
+// NewCapacityOp creates a capacity interface
+func NewCapacityOp(thirdCli *thirdparty.Client) CapacityIf {
+	return &capacity{
+		cvm: thirdCli.CVM,
+	}
+}
+
+type capacity struct {
+	cvm cvmapi.CVMClientInterface
+}
+
+// GetCapacity gets resource apply capacity info
+func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*types.GetCapacityRst, error) {
+	// 1. query subnet from db
+	filter := map[string]interface{}{
+		"region": input.Region,
+	}
+	if input.Zone != "" && input.Zone != cvmapi.CvmSeparateCampus {
+		filter["zone"] = input.Zone
+	}
+	vpc := input.Vpc
+	if vpc == "" {
+		dftVpc, err := GetDftCvmVpc(input.Region)
+		if err != nil {
+			return nil, err
+		}
+		vpc = dftVpc
+	}
+	filter["vpc_id"] = vpc
+
+	if input.Subnet != "" {
+		filter["subnet_id"] = input.Subnet
+	} else {
+		if IsDftCvmVpc(vpc) {
+			// filter subnet with name prefix cvm_use_
+			filter["subnet_name"] = mapstr.MapStr{
+				common.BKDBLIKE: "^cvm_use_",
+			}
+		}
+	}
+
+	// get subnet with enable flag only
+	filter["enable"] = true
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: common.BKNoLimit,
+	}
+
+	subnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filter)
+	if err != nil {
+		blog.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
+		return nil, err
+	}
+
+	zoneToVpc := make(map[string][]string)
+	vpcToSubnet := make(map[string][]string)
+
+	for _, subnet := range subnetList {
+		zoneToVpc[subnet.Zone] = append(zoneToVpc[subnet.Zone], subnet.VpcId)
+		vpcToSubnet[subnet.VpcId] = append(vpcToSubnet[subnet.VpcId], subnet.SubnetId)
+	}
+
+	// 2. query apply capacity
+	zoneToCapacity := make(map[string]*types.CapacityInfo)
+	for zone, vpcList := range zoneToVpc {
+		vpcUniq := arrayutil.StrArrayUnique(vpcList)
+		cap := c.getZoneCapacity(kt, input.RequireType, input.DeviceType, input.Region, zone, vpcUniq, vpcToSubnet)
+		if cap != nil {
+			zoneToCapacity[zone] = cap
+		}
+	}
+
+	rst := &types.GetCapacityRst{}
+	for _, capInfo := range zoneToCapacity {
+		rst.Info = append(rst.Info, capInfo)
+	}
+	rst.Count = int64(len(rst.Info))
+
+	return rst, nil
+}
+
+// UpdateCapacity updates resource apply capacity info
+func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam) error {
+	// 1. get capacity
+	param := &types.GetCapacityParam{
+		RequireType: input.RequireType,
+		DeviceType:  input.DeviceType,
+		Region:      input.Region,
+		Zone:        input.Zone,
+	}
+
+	rst, err := c.GetCapacity(kt, param)
+	if err != nil {
+		blog.Errorf("failed to get capacity, err: %v, %s", err, kt.Rid)
+		return err
+	}
+
+	count := len(rst.Info)
+	if count != 1 {
+		blog.Errorf("get invalid capacity info num %d not equal 1, rid: %s", count, kt.Rid)
+		return fmt.Errorf("get invalid capacity info num %d not equal 1", count)
+	}
+
+	if rst.Info[0] == nil {
+		blog.Errorf("get invalid null capacity info, rid: %s", kt.Rid)
+		return errors.New("get invalid null capacity info")
+	}
+
+	maxNum := rst.Info[0].MaxNum
+
+	// 2. calculate capacity flag
+	flag := c.getCapacityFlag(int(maxNum))
+
+	// 3. update capacity info in db
+	filter := map[string]interface{}{
+		"require_type": input.RequireType,
+		"region":       input.Region,
+		"zone":         input.Zone,
+		"device_type":  input.DeviceType,
+	}
+
+	update := map[string]interface{}{
+		"capacity_flag": flag,
+	}
+
+	if err := config.Operation().CvmDevice().UpdateDevice(kt.Ctx, filter, update); err != nil {
+		blog.Errorf("failed to update capacity info in db, err: %v, %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string, vpcList []string,
+	vpcToSubnet map[string][]string) *types.CapacityInfo {
+
+	// 1. query cvm capacity
+	if len(vpcList) == 0 {
+		capacity := &types.CapacityInfo{
+			Region:  region,
+			Zone:    zone,
+			Vpc:     "",
+			Subnet:  "",
+			MaxNum:  0,
+			MaxInfo: make([]*types.CapacityMaxInfo, 0),
+		}
+
+		return capacity
+	}
+
+	req := c.createCapacityReq(requireType, deviceType, region, zone, vpcList, vpcToSubnet)
+
+	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
+	if err != nil {
+		blog.Errorf("failed to get cvm apply capacity, err: %v, rid", err, kt.Rid)
+		return nil
+	}
+
+	if resp.Error.Code != 0 {
+		blog.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid", resp.Error.Code, resp.Error.Message,
+			kt.Rid)
+		return nil
+	}
+
+	if resp.Result == nil {
+		blog.Errorf("failed to get cvm apply capacity, for result is nil, rid", kt.Rid)
+		return nil
+	}
+
+	capacityItem := &types.CapacityInfo{
+		Region:  region,
+		Zone:    zone,
+		MaxNum:  int64(resp.Result.MaxNum),
+		MaxInfo: make([]*types.CapacityMaxInfo, 0),
+	}
+
+	for _, info := range resp.Result.MaxInfo {
+		capacityItem.MaxInfo = append(capacityItem.MaxInfo, &types.CapacityMaxInfo{
+			Key:   c.translateCapacityKey(info.Key),
+			Value: int64(info.Value),
+		})
+	}
+
+	// 2. query all subnet info for left ip number
+	subnetToLeftIp := make(map[string]*cvmapi.SubnetInfo)
+	for _, vpc := range vpcList {
+		subnetList, err := c.querySubnet(kt, region, zone, vpc)
+		if err != nil {
+			blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+			return nil
+		}
+		for _, subnet := range subnetList {
+			subnetToLeftIp[subnet.Id] = subnet
+		}
+	}
+
+	// 3. sum up total left ip number
+	totalLeftIp := c.sumLeftIp(subnetToLeftIp, vpcList, vpcToSubnet)
+
+	// 4. update max info
+	c.updateCapacityMaxInfo(capacityItem, totalLeftIp)
+
+	return capacityItem
+}
+
+func (c *capacity) createCapacityReq(requireType int64, deviceType, region, zone string, vpcList []string,
+	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
+
+	projectName := cvmapi.GetObsProject(requireType)
+
+	req := &cvmapi.CapacityReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmCapacityMethod,
+		},
+		Params: &cvmapi.CapacityParam{
+			DeptId:       cvmapi.CvmDeptId,
+			Business3Id:  cvmapi.CvmLaunchBiz3Id,
+			CloudCampus:  zone,
+			InstanceType: deviceType,
+			VpcId:        vpcList[0],
+			SubnetId:     vpcToSubnet[vpcList[0]][0],
+			ProjectName:  projectName,
+		},
+	}
+
+	return req
+}
+
+func (c *capacity) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi.SubnetInfo, error) {
+	req := &cvmapi.SubnetReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmSubnetMethod,
+		},
+		Params: &cvmapi.SubnetParam{
+			DeptId: cvmapi.CvmDeptId,
+			Region: region,
+			Zone:   zone,
+			VpcId:  vpc,
+		},
+	}
+
+	resp, err := c.cvm.QueryCvmSubnet(nil, nil, req)
+	if err != nil {
+		blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return resp.Result, nil
+}
+
+func (c *capacity) sumLeftIp(subnetToLeftIp map[string]*cvmapi.SubnetInfo, vpcList []string,
+	vpcToSubnet map[string][]string) int64 {
+
+	subnetIdList := make([]string, 0)
+	for _, vpc := range vpcList {
+		subnetIdList = append(subnetIdList, vpcToSubnet[vpc]...)
+	}
+
+	subnetIdList = arrayutil.StrArrayUnique(subnetIdList)
+
+	total := 0
+	for _, subnetId := range subnetIdList {
+		if subnetToLeftIp[subnetId] != nil {
+			total = total + subnetToLeftIp[subnetId].LeftIpNum
+		}
+	}
+
+	return int64(total)
+}
+
+func (c *capacity) updateCapacityMaxInfo(capacity *types.CapacityInfo, leftIp int64) {
+	maxNum := leftIp
+	for _, maxInfo := range capacity.MaxInfo {
+		if maxInfo.Key == "所选VPC子网可用IP数" {
+			maxInfo.Value = leftIp
+		}
+
+		if maxInfo.Value < maxNum {
+			maxNum = maxInfo.Value
+		}
+	}
+
+	capacity.MaxNum = maxNum
+}
+
+func (c *capacity) getCapacityFlag(num int) int {
+	flag := types.CapLevelEmpty
+	if num <= 10 {
+		flag = types.CapLevelLow
+	} else if num <= 50 {
+		flag = types.CapLevelMedium
+	} else {
+		flag = types.CapLevelHigh
+	}
+
+	return flag
+}
+
+// translateCapacityKey translate yunti capacity info key to cr capacity info key
+func (c *capacity) translateCapacityKey(key string) string {
+	switch key {
+	case "云后端CBS容量计算可申领量":
+		return "云后端CBS库存可申请量"
+	case "云后端CVM容量计算可申领量":
+		return "云后端CVM库存可申请量"
+	case "所选VPC子网可用IP数":
+		return "所选VPC子网可用IP数"
+	case "未执行需求预测的可申领量":
+		return "未执行需求预测的可申请量"
+	case "云梯系统单次提单最大量":
+		return "云梯系统单次最大申请量"
+	default:
+		return key
+	}
+}

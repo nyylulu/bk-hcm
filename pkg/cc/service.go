@@ -400,10 +400,14 @@ func (s TaskServerSetting) Validate() error {
 
 // WoaServerSetting defines woa server used setting options.
 type WoaServerSetting struct {
-	Network Network   `yaml:"network"`
-	Service Service   `yaml:"service"`
-	Log     LogOption `yaml:"log"`
-	Esb     Esb       `yaml:"esb"`
+	Network      Network   `yaml:"network"`
+	Service      Service   `yaml:"service"`
+	Log          LogOption `yaml:"log"`
+	Esb          Esb       `yaml:"esb"`
+	MongoDB      MongoDB   `yaml:"mongodb"`
+	Watch        MongoDB   `yaml:"watch"`
+	Redis        Redis     `yaml:"redis"`
+	ClientConfig `yaml:",inline"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -431,6 +435,22 @@ func (s WoaServerSetting) Validate() error {
 	}
 
 	if err := s.Esb.validate(); err != nil {
+		return err
+	}
+
+	if err := s.MongoDB.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Watch.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Redis.validate(); err != nil {
+		return err
+	}
+
+	if err := s.ClientConfig.validate(); err != nil {
 		return err
 	}
 

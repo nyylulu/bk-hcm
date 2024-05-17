@@ -29,6 +29,13 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/cmd/woa-server/service/config"
+	"hcm/cmd/woa-server/storage/dal/mongo"
+	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/cmd/woa-server/storage/driver/mongodb"
+	redisCli "hcm/cmd/woa-server/storage/driver/redis"
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/handler"
@@ -38,7 +45,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -50,6 +56,7 @@ type Service struct {
 	esbClient esb.Client
 	// authorizer 鉴权所需接口集合
 	authorizer auth.Authorizer
+	thirdCli   *thirdparty.Client
 }
 
 // NewService create a service instance.
@@ -61,15 +68,50 @@ func NewService(dis serviced.Discover) (*Service, error) {
 		return nil, err
 	}
 
+	// 创建调用第三方平台Client
+	thirdCli, err := thirdparty.NewClient(cc.WoaServer().ClientConfig, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
 	// create authorizer
 	authorizer, err := auth.NewAuthorizer(dis, cc.WoaServer().Network.TLS)
 	if err != nil {
 		return nil, err
 	}
 
+	// init mongodb client
+	mConf := cc.WoaServer().MongoDB
+	mongoConf, err := mongo.NewConf(&mConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = mongodb.InitClient("", mongoConf); err != nil {
+		return nil, err
+	}
+	wConf := cc.WoaServer().Watch
+	watchConf, err := mongo.NewConf(&wConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = mongodb.InitClient("", watchConf); err != nil {
+		return nil, err
+	}
+
+	// init redis client
+	rConf := cc.WoaServer().Redis
+	redisConf, err := redis.NewConf(&rConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = redisCli.InitClient("redis", redisConf); err != nil {
+		return nil, err
+	}
+
 	return &Service{
 		esbClient:  esbClient,
 		authorizer: authorizer,
+		thirdCli:   thirdCli,
 	}, nil
 }
 
@@ -137,7 +179,11 @@ func (s *Service) apiSet() *restful.Container {
 		WebService: ws,
 		Authorizer: s.authorizer,
 		EsbClient:  s.esbClient,
+		ThirdCli:   s.thirdCli,
+		ClientConf: cc.WoaServer().ClientConfig,
 	}
+
+	config.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

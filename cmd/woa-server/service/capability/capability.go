@@ -21,8 +21,10 @@
 package capability
 
 import (
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg/cc"
 	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/esb"
 
 	"github.com/emicklei/go-restful/v3"
 )
@@ -31,5 +33,7 @@ import (
 type Capability struct {
 	WebService *restful.WebService
 	EsbClient  esb.Client
+	ThirdCli   *thirdparty.Client
 	Authorizer auth.Authorizer
+	ClientConf cc.ClientConfig
 }

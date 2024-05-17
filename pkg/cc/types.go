@@ -781,3 +781,251 @@ type ThreshHoldRanges struct {
 	Score int   `yaml:"score" json:"score"`
 	Range []int `yaml:"range" json:"range"`
 }
+
+// MongoDB mongodb config
+type MongoDB struct {
+	Host                 string `yaml:"host"`
+	Port                 string `yaml:"port"`
+	Usr                  string `yaml:"usr"`
+	Pwd                  string `yaml:"pwd"`
+	Database             string `yaml:"database"`
+	MaxOpenConns         uint64 `yaml:"maxOpenConns"`
+	MaxIdleConns         uint64 `yaml:"maxIdleConns"`
+	Mechanism            string `yaml:"mechanism"`
+	RsName               string `yaml:"rsName"`
+	SocketTimeoutSeconds int    `yaml:"socketTimeoutSeconds"`
+}
+
+// validate mongodb.
+func (m MongoDB) validate() error {
+	if len(m.Host) == 0 {
+		return errors.New("mongodb host is not set")
+	}
+	if len(m.Usr) == 0 {
+		return errors.New("mongodb usr is not set")
+	}
+	if len(m.Pwd) == 0 {
+		return errors.New("mongodb pwd is not set")
+	}
+	if len(m.Database) == 0 {
+		return errors.New("mongodb database is not set")
+	}
+	if len(m.RsName) == 0 {
+		return errors.New("mongodb rsName is not set")
+	}
+
+	return nil
+}
+
+// Redis config
+type Redis struct {
+	Host         string `yaml:"host"`
+	Pwd          string `yaml:"pwd"`
+	SentinelPwd  string `yaml:"sentinelPwd"`
+	Database     string `yaml:"database"`
+	MaxOpenConns int    `yaml:"maxOpenConns"`
+	MasterName   string `yaml:"masterName"`
+}
+
+// validate redis.
+func (r Redis) validate() error {
+	if len(r.Host) == 0 {
+		return errors.New("redis host is not set")
+	}
+	if len(r.Pwd) == 0 {
+		return errors.New("redis pwd is not set")
+	}
+	if len(r.Database) == 0 {
+		return errors.New("redis database is not set")
+	}
+
+	return nil
+}
+
+// ClientConfig third-party api client config set
+type ClientConfig struct {
+	CvmOpt    CVMCli    `yaml:"cvm"`
+	TjjOpt    TjjCli    `yaml:"tjj"`
+	SojobOpt  SojobCli  `yaml:"sojob"`
+	XshipOpt  XshipCli  `yaml:"xship"`
+	TCloudOpt TCloudCli `yaml:"tencentcloud"`
+}
+
+func (c ClientConfig) validate() error {
+	if err := c.CvmOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TjjOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.SojobOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.XshipOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TCloudOpt.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CVMCli yunti client options
+type CVMCli struct {
+	// yunti api address
+	CvmApiAddr string `yaml:"host"`
+}
+
+func (c CVMCli) validate() error {
+	if len(c.CvmApiAddr) == 0 {
+		return errors.New("cvm.host is not set")
+	}
+
+	return nil
+}
+
+// TjjCli tjj client options
+type TjjCli struct {
+	// tjj api address
+	TjjApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (t TjjCli) validate() error {
+	if len(t.TjjApiAddr) == 0 {
+		return errors.New("tjj.host is not set")
+	}
+
+	if len(t.SecretID) == 0 {
+		return errors.New("tjj.secret_id is not set")
+	}
+
+	if len(t.SecretKey) == 0 {
+		return errors.New("tjj.secret_key is not set")
+	}
+
+	if len(t.Operator) == 0 {
+		return errors.New("tjj.operator is not set")
+	}
+
+	return nil
+}
+
+// SojobCli sojob client options
+type SojobCli struct {
+	// sojob api address
+	SojobApiAddr string `yaml:"host"`
+	SecretID     string `yaml:"secret_id"`
+	SecretKey    string `yaml:"secret_key"`
+	Operator     string `yaml:"operator"`
+}
+
+func (s SojobCli) validate() error {
+	if len(s.SojobApiAddr) == 0 {
+		return errors.New("sojob.host is not set")
+	}
+
+	if len(s.SecretID) == 0 {
+		return errors.New("sojob.secret_id is not set")
+	}
+
+	if len(s.SecretKey) == 0 {
+		return errors.New("sojob.secret_key is not set")
+	}
+
+	if len(s.Operator) == 0 {
+		return errors.New("sojob.operator is not set")
+	}
+
+	return nil
+}
+
+// XshipCli xship client options
+type XshipCli struct {
+	// Xship api address
+	XshipApiAddr string `yaml:"host"`
+	ClientID     string `yaml:"client_id"`
+	SecretKey    string `yaml:"secret_key"`
+}
+
+func (x XshipCli) validate() error {
+	if len(x.XshipApiAddr) == 0 {
+		return errors.New("xship.host is not set")
+	}
+
+	if len(x.ClientID) == 0 {
+		return errors.New("xship.client_id is not set")
+	}
+
+	if len(x.SecretKey) == 0 {
+		return errors.New("xship.secret_key is not set")
+	}
+
+	return nil
+}
+
+// TCloudCli  tencent cloud client options
+type TCloudCli struct {
+	Endpoints  TCloudEndpoints  `yaml:"endpoints"`
+	Credential TCloudCredential `yaml:"credential"`
+}
+
+func (t TCloudCli) validate() error {
+	if err := t.Endpoints.validate(); err != nil {
+		return err
+	}
+
+	if err := t.Credential.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TCloudEndpoints tencent cloud endpoints
+type TCloudEndpoints struct {
+	Cvm string `yaml:"cvm"`
+	Vpc string `yaml:"vpc"`
+	Clb string `yaml:"clb"`
+}
+
+func (e TCloudEndpoints) validate() error {
+	if len(e.Cvm) == 0 {
+		return errors.New("tencentcloud.endpoints.cvm is not set")
+	}
+
+	if len(e.Vpc) == 0 {
+		return errors.New("tencentcloud.endpoints.vpc is not set")
+	}
+
+	if len(e.Clb) == 0 {
+		return errors.New("tencentcloud.endpoints.clb is not set")
+	}
+
+	return nil
+}
+
+// TCloudCredential tencent cloud credential
+type TCloudCredential struct {
+	ID  string `yaml:"id"`
+	Key string `yaml:"key"`
+}
+
+func (e TCloudCredential) validate() error {
+	if len(e.ID) == 0 {
+		return errors.New("tencentcloud.credential.id is not set")
+	}
+
+	if len(e.Key) == 0 {
+		return errors.New("tencentcloud.credential.key is not set")
+	}
+
+	return nil
+}
