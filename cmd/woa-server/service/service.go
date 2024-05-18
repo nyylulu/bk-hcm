@@ -30,6 +30,7 @@ import (
 
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
+	"hcm/cmd/woa-server/service/pool"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
@@ -184,6 +185,7 @@ func (s *Service) apiSet() *restful.Container {
 	}
 
 	config.InitService(c)
+	pool.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }
