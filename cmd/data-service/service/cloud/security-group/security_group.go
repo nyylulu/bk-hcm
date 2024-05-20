@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -51,7 +51,8 @@ func InitSecurityGroupService(cap *capability.Capability) {
 	initHuaWeiSGRuleService(cap)
 	initAzureSGRuleService(cap)
 	initAwsSGRuleService(cap)
-	initTCloudZiyanSGRuleService(cap)
+
+	initSGServiceHook(cap)
 }
 
 // initSecurityGroupService initial the security group service
@@ -62,8 +63,8 @@ func initSecurityGroupService(cap *capability.Capability) {
 
 	h := rest.NewHandler()
 
-	h.Add("BatchCreateSecurityGroup", http.MethodPost,
-		"/vendors/{vendor}/security_groups/batch/create", svc.BatchCreateSecurityGroup)
+	h.Add("BatchCreateSecurityGroup", http.MethodPost, "/vendors/{vendor}/security_groups/batch/create",
+		svc.BatchCreateSecurityGroup)
 	h.Add("BatchUpdateSecurityGroup", http.MethodPatch, "/vendors/{vendor}/security_groups/batch/update",
 		svc.BatchUpdateSecurityGroup)
 	h.Add("GetSecurityGroup", http.MethodGet, "/vendors/{vendor}/security_groups/{id}",

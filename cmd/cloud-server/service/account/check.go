@@ -105,37 +105,6 @@ func ParseAndCheckTCloudExtension(
 	return extension, nil
 }
 
-// ParseAndCheckTCloudZiyanExtension  联通性校验，并检查字段是否匹配
-func ParseAndCheckTCloudZiyanExtension(cts *rest.Contexts, client *client.ClientSet, accountType enumor.AccountType,
-	reqExtension json.RawMessage) (*proto.TCloudAccountExtensionCreateReq, error) {
-	// 解析Extension
-	extension := new(proto.TCloudAccountExtensionCreateReq)
-	if err := common.DecodeExtension(cts.Kit, reqExtension, extension); err != nil {
-		return nil, err
-	}
-	// 校验Extension
-	if err := extension.Validate(accountType); err != nil {
-		return nil, err
-	}
-
-	// 检查联通性，账号是否正确
-	if accountType != enumor.RegistrationAccount || extension.IsFull() {
-		err := client.HCService().TCloudZiyan.Account.Check(cts.Kit,
-			&hcproto.TCloudAccountCheckReq{
-				CloudMainAccountID: extension.CloudMainAccountID,
-				CloudSubAccountID:  extension.CloudSubAccountID,
-				CloudSecretID:      extension.CloudSecretID,
-				CloudSecretKey:     extension.CloudSecretKey,
-			},
-		)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	return extension, nil
-}
-
 // ParseAndCheckAwsExtension  联通性校验，并检查字段是否匹配
 func ParseAndCheckAwsExtension(
 	cts *rest.Contexts, client *client.ClientSet, accountType enumor.AccountType, reqExtension json.RawMessage,
@@ -548,10 +517,7 @@ func CheckDuplicateMainAccount(cts *rest.Contexts, client *client.ClientSet, ven
 
 	// TODO: 后续需要解决并发问题
 	// 后台查询是否主账号重复
-	mainAccountIDFieldName, supported := enumor.VendorMainAccountIDFieldMap[vendor]
-	if !supported {
-		return errf.New(errf.InvalidParameter, "not supported vendor: "+string(vendor))
-	}
+	mainAccountIDFieldName := vendor.GetMainAccountIDField()
 
 	result, err := client.DataService().Global.Account.List(
 		cts.Kit.Ctx,

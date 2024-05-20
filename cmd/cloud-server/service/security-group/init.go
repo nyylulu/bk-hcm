@@ -99,10 +99,7 @@ func InitSecurityGroupService(c *capability.Capability) {
 	h.Add("DeleteBizSGRule", http.MethodDelete,
 		"/bizs/{bk_biz_id}/vendors/{vendor}/security_groups/{security_group_id}/rules/{id}", svc.DeleteBizSGRule)
 
-	h.Add("BatchAssociateBizCloudCvm", http.MethodPost,
-		"/bizs/{bk_biz_id}/security_groups/associate/cloud_cvms/batch", svc.BatchAssociateBizCloudCvm)
-	h.Add("BatchDisassociateBizCloudCvm", http.MethodPost,
-		"/bizs/{bk_biz_id}/security_groups/disassociate/cloud_cvms/batch", svc.BatchDisassociateBizCloudCvm)
+	initSecurityGroupServiceHooks(svc, h)
 
 	h.Load(c.WebService)
 }

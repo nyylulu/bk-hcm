@@ -81,6 +81,7 @@ const (
 	DeleteSecurityGroupRule ApplicationType = "delete_security_group_rule"
 )
 
+// ApplicationStatus 单据状态
 type ApplicationStatus string
 
 const (
@@ -102,10 +103,13 @@ const (
 	DeliverError ApplicationStatus = "deliver_error"
 )
 
+// ApplicationSource 单据来源
 type ApplicationSource string
 
 const (
+	// ApplicationSourceITSM itsm 单据
 	ApplicationSourceITSM ApplicationSource = "itsm"
 )
 
+// ApplicationSourceBPaas BPaas 单据，上云版
 const ApplicationSourceBPaas ApplicationSource = "bpaas"

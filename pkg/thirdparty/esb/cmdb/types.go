@@ -255,7 +255,7 @@ type Host struct {
 	BkComment       *string `json:"bk_comment,omitempty"`
 }
 
-// HostFields cmd common fields
+// HostFields cmdb common fields
 var HostFields = []string{
 	"bk_cloud_inst_id",
 	"bk_host_id",

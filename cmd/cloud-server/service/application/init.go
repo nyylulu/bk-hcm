@@ -65,8 +65,7 @@ func InitApplicationService(c *capability.Capability, bkHcmUrl string) {
 	h.Add("CreateForCreateVpc", "POST", "/vendors/{vendor}/applications/types/create_vpc", svc.CreateForCreateVpc)
 	h.Add("CreateForCreateDisk", "POST", "/vendors/{vendor}/applications/types/create_disk", svc.CreateForCreateDisk)
 
-	h.Add("QueryBPaasApplication", "POST", "/vendors/tcloud-ziyan/applications/bpaas/query", svc.QueryBPaasApplication)
-
+	initApplicationServiceHooks(svc, h)
 	h.Load(c.WebService)
 }
 

@@ -93,23 +93,7 @@ func InitSecurityGroupService(cap *capability.Capability) {
 	h.Add("DeleteAzureSGRule", "DELETE", "/vendors/azure/security_groups/{security_group_id}/rules/{id}",
 		sg.DeleteAzureSGRule)
 
-	h.Add("CreateTCloudZiyanSecurityGroup", "POST",
-		"/vendors/tcloud-ziyan/security_groups/create", sg.CreateTCloudZiyanSecurityGroup)
-	h.Add("DeleteTCloudZiyanSecurityGroup", "DELETE",
-		"/vendors/tcloud-ziyan/security_groups/{id}", sg.DeleteTCloudZiyanSecurityGroup)
-	h.Add("UpdateTCloudZiyanSecurityGroup", "PATCH",
-		"/vendors/tcloud-ziyan/security_groups/{id}", sg.UpdateTCloudZiyanSecurityGroup)
-	h.Add("BatchCreateTCloudZiyanSGRule", "POST",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/create", sg.BatchCreateTCloudZiyanSGRule)
-	h.Add("UpdateTCloudZiyanSGRule", "PUT",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", sg.UpdateTCloudZiyanSGRule)
-	h.Add("DeleteTCloudZiyanSGRule", "DELETE",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", sg.DeleteTCloudZiyanSGRule)
-
-	h.Add("TZiyanSGBatchAssociateCloudCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/associate/cloud_cvms/batch", sg.TZiyanSGBatchAssociateCloudCvm)
-	h.Add("TZiyanSGBatchDisassociateCloudCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/disassociate/cloud_cvms/batch", sg.TZiyanSGBatchDisassociateCloudCvm)
+	initSecurityGroupServiceHooks(sg, h)
 
 	h.Load(cap.WebService)
 }
