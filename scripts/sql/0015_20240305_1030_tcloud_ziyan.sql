@@ -84,15 +84,6 @@ values ('tcloud_ziyan_security_group_rule', '0'),
        ('tcloud_ziyan_region', '0');
 
 
--- 添加申请单来源字段
-alter table application
-    add column source varchar(64) default '' after `id`;
-
-update application set source ='itsm' where source='';
-
-alter table application drop key idx_uk_sn;
-alter table application
-    add constraint idx_uk_source_sn unique (source, sn);
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
 SELECT 'v1.4.0' as `hcm_ver`, '0015' as `sql_ver`;

@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/api/cloud-server/account"
 	"hcm/pkg/api/core/cloud"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	hsaccount "hcm/pkg/api/hc-service/account"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -350,6 +351,9 @@ func (a *accountSvc) GetResCountBySecret(cts *rest.Contexts) (interface{}, error
 		}
 
 		return a.client.HCService().HuaWei.Account.GetResCountBySecret(cts.Kit, req)
+	case enumor.TCloudZiyan:
+		// return empty data for ziyan account
+		return &hsaccount.ResCount{Items: []*hsaccount.ResCountItem{}}, nil
 	default:
 		return nil, fmt.Errorf("not support vendor %s", vendor)
 	}
