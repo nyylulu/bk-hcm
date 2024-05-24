@@ -20,6 +20,7 @@
 package account
 
 import (
+	"errors"
 	"fmt"
 
 	"hcm/pkg/api/core"
@@ -126,6 +127,10 @@ func (svc *service) GetAccount(cts *rest.Contexts) (interface{}, error) {
 		account, err = convertToAccountResult[protocore.GcpAccountExtension](baseAccount, dbAccount.Extension, svc)
 	case enumor.Azure:
 		account, err = convertToAccountResult[protocore.AzureAccountExtension](baseAccount, dbAccount.Extension, svc)
+	case enumor.TCloudZiyan:
+		account, err = convertToAccountResult[protocore.TCloudAccountExtension](baseAccount, dbAccount.Extension, svc)
+	default:
+		return nil, errors.New("unknown vendor: " + string(vendor))
 	}
 
 	if err != nil {
@@ -357,6 +362,8 @@ func (svc *service) ListAccountWithExtension(cts *rest.Contexts) (interface{}, e
 			extension, err = convertToAccountExtension[protocore.GcpAccountExtension](account.Extension, svc)
 		case enumor.Azure:
 			extension, err = convertToAccountExtension[protocore.AzureAccountExtension](account.Extension, svc)
+		case enumor.TCloudZiyan:
+			extension, err = convertToAccountExtension[protocore.TCloudAccountExtension](account.Extension, svc)
 		}
 		if err != nil {
 			return nil, fmt.Errorf("json unmarshal extension to vendor extension failed, err: %v", err)

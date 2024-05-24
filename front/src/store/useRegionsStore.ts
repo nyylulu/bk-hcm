@@ -21,7 +21,7 @@ export const useRegionsStore = defineStore('useRegions', () => {
   const REQUIRED_MAX_SIZE = 500;
 
   const fetchRegions = async (
-    vendor: VendorEnum.TCLOUD | VendorEnum.HUAWEI,
+    vendor: VendorEnum.TCLOUD | VendorEnum.HUAWEI | VendorEnum.ZIYAN,
     payload: Object = {
       filter: {
         op: 'and',
@@ -36,7 +36,7 @@ export const useRegionsStore = defineStore('useRegions', () => {
   ) => {
     const res = await ressourceStore.getCloudRegion(vendor, payload);
     const details = res?.data?.details || [];
-    if (vendor === VendorEnum.TCLOUD) {
+    if ([VendorEnum.TCLOUD, VendorEnum.ZIYAN].includes(vendor)) {
       details.forEach((v: { region_id: string; region_name: string }) => {
         tcloud.value.set(v.region_id, v.region_name);
       });
@@ -64,6 +64,8 @@ export const useRegionsStore = defineStore('useRegions', () => {
       case VendorEnum.TCLOUD:
         regionName = tcloud.value.get(id) || id;
         break;
+      case VendorEnum.ZIYAN:
+        return tcloud.value.get(id) || id;
       default:
         regionName = id;
     }

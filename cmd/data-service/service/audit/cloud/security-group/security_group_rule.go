@@ -52,6 +52,9 @@ func (s *SecurityGroup) SecurityGroupRuleUpdateAuditBuild(kt *kit.Kit, sgID stri
 		return s.huaWeiSGRuleUpdateAuditBuild(kt, sg, updates)
 	case enumor.Azure:
 		return s.azureSGRuleUpdateAuditBuild(kt, sg, updates)
+	case enumor.TCloudZiyan:
+		return s.tcloudZiyanSGRuleUpdateAuditBuild(kt, sg, updates)
+
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", sg.Vendor)
 	}
@@ -80,7 +83,10 @@ func (s *SecurityGroup) SecurityGroupRuleDeleteAuditBuild(kt *kit.Kit, sgID stri
 		return s.huaWeiSGRuleDeleteAuditBuild(kt, sg, deletes)
 	case enumor.Azure:
 		return s.azureSGRuleDeleteAuditBuild(kt, sg, deletes)
+	case enumor.TCloudZiyan:
+		return s.tcloudZiyanSGRuleDeleteAuditBuild(kt, sg, deletes)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", sg.Vendor)
+
 	}
 }

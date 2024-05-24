@@ -20,8 +20,10 @@
             :is="currCom"
             :params="state.comInfo.currentApplyData"
             :loading="state.comInfo.loading"
+            :bpaas-payload="state.comInfo.bpaasPayload"
             :cancel-loading="state.comInfo.cancelLoading"
             @on-cancel="handleCancel"
+            :get-bpaas-detail="getMyApplyDetail"
           />
         </div>
       </slot>
@@ -33,14 +35,23 @@
 import { defineComponent, computed, reactive, ref, onMounted } from 'vue';
 import LeftSide from './components/left-side/index.vue';
 import ApplyDetail from './components/apply-detail/index.vue';
+import BpassApplyDetail from './components/bpass-apply-detail/index';
 import { useAccountStore } from '@/store';
 import moment from 'moment';
+
+// 申请单据的类型
+export enum ApplyType {
+  itsm = 'itsm',
+  bpaas = 'bpaas',
+};
+
 // 复杂数据结构先不按照泛型一个个定义，先从简
 export default defineComponent({
   name: 'MyApply',
   components: {
     LeftSide,
     ApplyDetail,
+    BpassApplyDetail,
   },
   setup() {
     const accountStore = useAccountStore();
@@ -49,6 +60,7 @@ export default defineComponent({
     );
 
     const currCom = computed(() => {
+      if (!Object.keys(state.comInfo.currentApplyData).length) return '';
       let com = '';
       for (const [key, value] of COM_MAP.entries()) {
         if (
@@ -59,6 +71,7 @@ export default defineComponent({
           break;
         }
       }
+      if (!com) com = 'BpassApplyDetail';
       return com;
     });
 
@@ -120,6 +133,12 @@ export default defineComponent({
         currentApplyData: {} as any,
         loading: false,
         cancelLoading: false,
+        bpaasPayload: {
+          bpaas_sn: 0,
+          account_id: '',
+          id: '',
+          applicant: '',
+        }
       },
     });
 
@@ -159,8 +178,18 @@ export default defineComponent({
       };
     };
 
-    const handleChange = (id: string) => {
-      getMyApplyDetail(id);
+
+    const handleChange = (data: any) => {
+      if(data.source === ApplyType.itsm) getMyApplyDetail(data.id);
+      else if(data.source === ApplyType.bpaas) {
+        state.comInfo.bpaasPayload = {
+          bpaas_sn: +data.sn, 
+          account_id: JSON.parse(data.content).account_id,
+          id: data.id,
+          applicant: data.applicant,
+        };
+        getMyApplyDetail(data.id, true, state.comInfo.bpaasPayload);
+      }
     };
 
     // 滚动加载更多
@@ -199,7 +228,15 @@ export default defineComponent({
         backupData.value = res.data.details;
         applyList.value.push(...res.data.details);
         id.value = res.data.details[0]?.id;
-        if (id.value) {
+        if (res.data.details[0]?.source === ApplyType.bpaas) {
+          state.comInfo.bpaasPayload = {
+            bpaas_sn: +res.data.details[0].sn, 
+            account_id: JSON.parse(res.data.details[0].content).account_id,
+            id: id.value,
+            applicant: res.data.details[0].applicant
+          };
+          getMyApplyDetail(id.value, true, state.comInfo.bpaasPayload);
+        } else if (id.value) {
           getMyApplyDetail(id.value);
         } else {
           initRequestQueue.value.length > 0 && initRequestQueue.value.shift();
@@ -213,10 +250,11 @@ export default defineComponent({
     };
 
     // 获取我的申请详情
-    const getMyApplyDetail = async (id: string) => {
+    const getMyApplyDetail = async (id: string, isBpaas?: boolean, payload?: { bpaas_sn: number, account_id: string }) => {
       state.comInfo.loading = true;
       try {
-        const res = await accountStore.getApplyAccountDetail(id);
+        const promise = isBpaas ? accountStore.getBpassDetail(payload) : accountStore.getApplyAccountDetail(id)
+        const res = await promise;
         state.comInfo.currentApplyData = res.data;
         state.comInfo.comKey = res.data.id;
       } catch (error) {
@@ -254,6 +292,7 @@ export default defineComponent({
       handleLoadMore,
       pageLoading,
       canScrollLoad,
+      getMyApplyDetail,
     };
   },
 });

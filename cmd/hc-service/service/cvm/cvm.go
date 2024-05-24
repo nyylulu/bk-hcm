@@ -39,6 +39,7 @@ func InitCvmService(cap *capability.Capability) {
 	svc.initAzureCvmService(cap)
 	svc.initGcpCvmService(cap)
 	svc.initHuaWeiCvmService(cap)
+	svc.initTCloudZiyanCvmService(cap)
 }
 
 type cvmSvc struct {

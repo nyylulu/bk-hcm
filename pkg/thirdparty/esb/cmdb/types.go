@@ -355,24 +355,28 @@ const (
 	AzureCloudVendor CloudVendor = "4"
 	// HuaWeiCloudVendor cmdb huawei vendor
 	HuaWeiCloudVendor CloudVendor = "15"
+	// TCloudZiyanCloudVendor 腾讯自研云厂商
+	TCloudZiyanCloudVendor CloudVendor = "17"
 )
 
 // HcmCmdbVendorMap is hcm vendor to cmdb cloud vendor map.
 var HcmCmdbVendorMap = map[enumor.Vendor]CloudVendor{
-	enumor.Aws:    AwsCloudVendor,
-	enumor.TCloud: TCloudCloudVendor,
-	enumor.Gcp:    GcpCloudVendor,
-	enumor.Azure:  AzureCloudVendor,
-	enumor.HuaWei: HuaWeiCloudVendor,
+	enumor.Aws:         AwsCloudVendor,
+	enumor.TCloud:      TCloudCloudVendor,
+	enumor.Gcp:         GcpCloudVendor,
+	enumor.Azure:       AzureCloudVendor,
+	enumor.HuaWei:      HuaWeiCloudVendor,
+	enumor.TCloudZiyan: TCloudZiyanCloudVendor,
 }
 
 // CmdbHcmVendorMap cmdb vendor to hcm vendor
 var CmdbHcmVendorMap = map[CloudVendor]enumor.Vendor{
-	AwsCloudVendor:    enumor.Aws,
-	TCloudCloudVendor: enumor.TCloud,
-	GcpCloudVendor:    enumor.Gcp,
-	AzureCloudVendor:  enumor.Azure,
-	HuaWeiCloudVendor: enumor.HuaWei,
+	AwsCloudVendor:         enumor.Aws,
+	TCloudCloudVendor:      enumor.TCloud,
+	GcpCloudVendor:         enumor.Gcp,
+	AzureCloudVendor:       enumor.Azure,
+	HuaWeiCloudVendor:      enumor.HuaWei,
+	TCloudZiyanCloudVendor: enumor.TCloudZiyan,
 }
 
 // CloudHostStatus defines cmdb cloud host status type.

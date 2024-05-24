@@ -122,6 +122,9 @@ type Set interface {
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
 
+	TCloudZiyanRegion() region.TCloudZiyanRegion
+	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
+
 	Txn() *Txn
 }
 
@@ -548,6 +551,15 @@ func (s *set) Cert() cert.Interface {
 	}
 }
 
+// TCloudZiyanSGRule 腾讯自研云安全组规则dao.
+func (s *set) TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule {
+	return &securitygroup.TCloudZiyanSGRuleDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // LoadBalancer return load balancer dao.
 func (s *set) LoadBalancer() loadbalancer.LoadBalancerInterface {
 	return &loadbalancer.LoadBalancerDao{
@@ -625,4 +637,9 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 	return &sgcomrel.Dao{
 		Orm: s.orm,
 	}
+}
+
+// TCloudZiyanRegion 腾讯自研云region dao.
+func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
+	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
 }

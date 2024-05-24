@@ -4,11 +4,17 @@ import DetailTab from '../../common/tab/detail-tab';
 import SecurityInfo from '../components/security/security-info.vue';
 import SecurityRelate from '../components/security/security-relate.vue';
 import SecurityRule from '../components/security/security-rule.vue';
-import { useI18n } from 'vue-i18n';
+import SecurityBindCvm from '../components/security/security-bind-cvm';
+import {
+  useI18n,
+} from 'vue-i18n';
 
 import { watch, ref, reactive } from 'vue';
+import { VendorEnum } from '@/common/constant';
 
-import { useRoute } from 'vue-router';
+import {
+  useRoute,
+} from 'vue-router';
 import useDetail from '../../hooks/use-detail';
 import { QueryRuleOPEnum } from '@/typings';
 import { useResourceStore } from '@/store';
@@ -34,7 +40,7 @@ const resoureStore = useResourceStore();
 
 const { loading, detail, getDetail } = useDetail('security_groups', securityId.value as string);
 
-const tabs = [
+const tabs = ref([
   {
     name: t('基本信息'),
     value: 'detail',
@@ -47,7 +53,24 @@ const tabs = [
     name: t('安全组规则'),
     value: 'rule',
   },
-];
+]);
+
+watch(
+  () => route.query.vendor,
+  (vendorVal) => {
+    if (![VendorEnum.ZIYAN].includes(vendorVal as VendorEnum)) {
+      tabs.value = tabs.value.filter(({ value }) => value !== 'cvm');
+    } else {
+      tabs.value.push({
+        name: '绑定主机',
+        value: 'cvm',
+      });
+    }
+  },
+  {
+    immediate: true,
+  },
+);
 
 const handleTabsChange = (val: string) => {
   if (val === 'rule') getRelatedSecurityGroups(detail.value);
@@ -152,14 +175,9 @@ const getTemplateData = async (detail: { account_id: string }) => {
           :get-detail="getDetail"
         />
         <security-relate v-if="type === 'relate'" />
-        <security-rule
-          v-if="type === 'rule'"
-          :filter="filter"
-          :id="securityId"
-          :vendor="vendor"
-          :related-security-groups="relatedSecurityGroups"
-          :template-data="templateData"
-        />
+        <security-rule v-if="type === 'rule'" :filter="filter" :id="securityId" :vendor="vendor"
+                       :related-security-groups="relatedSecurityGroups" :template-data="templateData" />
+        <security-bind-cvm v-if="type === 'cvm'" :detail="detail" :sg-id="(securityId as string)" :sg-cloud-id="detail.cloud_id"/>
       </template>
     </detail-tab>
   </div>

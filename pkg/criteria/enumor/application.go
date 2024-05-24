@@ -110,3 +110,6 @@ const (
 	// ApplicationSourceITSM itsm 单据
 	ApplicationSourceITSM ApplicationSource = "itsm"
 )
+
+// ApplicationSourceBPaas BPaas 单据，上云版
+const ApplicationSourceBPaas ApplicationSource = "bpaas"

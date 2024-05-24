@@ -4,6 +4,7 @@ export enum VendorEnum {
   AZURE = 'azure',
   GCP = 'gcp',
   HUAWEI = 'huawei',
+  ZIYAN = 'tcloud-ziyan',
 }
 
 export enum ResourceTypeEnum {
@@ -83,6 +84,10 @@ export const VENDORS = [
   {
     id: 'huawei',
     name: '华为云',
+  },
+  {
+    id: 'tcloud-ziyan',
+    name: '自研云',
   },
 ];
 
@@ -522,6 +527,7 @@ export const VendorMap = {
   [VendorEnum.GCP]: '谷歌云',
   [VendorEnum.HUAWEI]: '华为云',
   [VendorEnum.TCLOUD]: '腾讯云',
+  [VendorEnum.ZIYAN]: '自研云',
 };
 
 export const VendorReverseMap = {

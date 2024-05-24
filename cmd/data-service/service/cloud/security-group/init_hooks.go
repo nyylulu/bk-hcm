@@ -23,5 +23,5 @@ import "hcm/cmd/data-service/service/capability"
 
 // sg service init hook  placeholder
 func initSGServiceHook(cap *capability.Capability) {
-
+	initTCloudZiyanSGRuleService(cap)
 }

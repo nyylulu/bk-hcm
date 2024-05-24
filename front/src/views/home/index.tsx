@@ -470,6 +470,21 @@ export default defineComponent({
             </div>
           </Exception>
         </Dialog>
+
+        <Dialog
+          title='结果确认'
+          confirmText='查看审批流程'
+          onConfirm={() => {
+            const url = '/#/service/my-apply';
+            window.open(url, '_blank');
+            accountStore.updateSecurityConfirmMessage('');
+          }}
+          isShow={!!accountStore.securityConfirmMessage.length}
+        >
+          <span>
+            当前配置已提交，查看审批流程关注进度
+          </span>
+        </Dialog>
       </main>
     );
   },

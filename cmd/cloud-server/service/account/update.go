@@ -96,6 +96,8 @@ func (a *accountSvc) Update(cts *rest.Contexts) (interface{}, error) {
 		return a.updateForGcp(cts, req, accountID)
 	case enumor.Azure:
 		return a.updateForAzure(cts, req, accountID)
+	case enumor.TCloudZiyan:
+		return a.updateForTCloudZiyan(cts, req, accountID)
 	default:
 		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("no support vendor: %s", baseInfo.Vendor))
 	}
@@ -131,6 +133,48 @@ func (a *accountSvc) updateForTCloud(
 	_, err = a.client.DataService().TCloud.Account.Update(
 		cts.Kit.Ctx,
 		cts.Kit.Header(),
+		accountID,
+		&dataproto.AccountUpdateReq[dataproto.TCloudAccountExtensionUpdateReq]{
+			Name:               req.Name,
+			Managers:           req.Managers,
+			RecycleReserveTime: req.RecycleReserveTime,
+			Memo:               req.Memo,
+			Extension:          shouldUpdatedExtension,
+		},
+	)
+	if err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return nil, nil
+
+}
+
+func (a *accountSvc) updateForTCloudZiyan(cts *rest.Contexts, req *proto.AccountUpdateReq, accountID string) (any,
+	error) {
+	// 解析Extension
+	var (
+		extension *proto.TCloudAccountExtensionUpdateReq
+		err       error
+	)
+	if req.Extension != nil {
+		extension, err = a.parseAndCheckTCloudExtensionByID(cts, accountID, req.Extension)
+		if err != nil {
+			return nil, errf.NewFromErr(errf.InvalidParameter, err)
+		}
+	}
+
+	var shouldUpdatedExtension *dataproto.TCloudAccountExtensionUpdateReq = nil
+	if req.Extension != nil {
+		shouldUpdatedExtension = &dataproto.TCloudAccountExtensionUpdateReq{
+			CloudSubAccountID: extension.CloudSubAccountID,
+			CloudSecretID:     &extension.CloudSecretID,
+			CloudSecretKey:    &extension.CloudSecretKey,
+		}
+	}
+
+	// 更新
+	_, err = a.client.DataService().TCloudZiyan.Account.Update(cts.Kit,
 		accountID,
 		&dataproto.AccountUpdateReq[dataproto.TCloudAccountExtensionUpdateReq]{
 			Name:               req.Name,

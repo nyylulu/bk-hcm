@@ -111,6 +111,13 @@ func (svc *securityGroupSvc) updateSecurityGroup(cts *rest.Contexts, validHandle
 		err = svc.client.HCService().Azure.SecurityGroup.UpdateSecurityGroup(cts.Kit.Ctx, cts.Kit.Header(),
 			id, updateReq)
 
+	case enumor.TCloudZiyan:
+		updateReq := &hcproto.SecurityGroupUpdateReq{
+			Name: req.Name,
+			Memo: req.Memo,
+		}
+		err = svc.client.HCService().TCloudZiyan.SecurityGroup.UpdateSecurityGroup(cts.Kit, id, updateReq)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", id, baseInfo.Vendor)
 	}

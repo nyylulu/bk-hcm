@@ -57,6 +57,8 @@ func (a *ApplicationOfAddAccount) CheckReq() error {
 		_, err = accountsvc.ParseAndCheckGcpExtension(a.Cts, a.Client, a.req.Type, extensionJson)
 	case enumor.Azure:
 		_, err = accountsvc.ParseAndCheckAzureExtension(a.Cts, a.Client, a.req.Type, extensionJson)
+	case enumor.TCloudZiyan:
+		_, err = accountsvc.ParseAndCheckTCloudZiyanExtension(a.Cts, a.Client, a.req.Type, extensionJson)
 	default:
 		err = fmt.Errorf("no support vendor: %s", a.req.Vendor)
 	}

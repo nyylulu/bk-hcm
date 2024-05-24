@@ -47,6 +47,7 @@ const headerExtensionMap = computed(() => {
   const map = { firstLabel: '', firstField: '', secondLabel: '', secondField: '' };
   switch (resourceAccountStore.resourceAccount.vendor) {
     case VendorEnum.TCLOUD:
+    case VendorEnum.ZIYAN:
       Object.assign(map, {
         firstLabel: '主账号ID',
         firstField: 'cloud_main_account_id',
@@ -158,14 +159,14 @@ const componentMap = {
 };
 
 // 标签相关数据
-const tabs = RESOURCE_TYPES.map((type) => {
+const tabs = ref(RESOURCE_TYPES.map((type) => {
   return {
     name: type.type,
     type: t(type.name),
     component: componentMap[type.type],
   };
-});
-const activeTab = ref((route.query.type as string) || tabs[0].type);
+}));
+const activeTab = ref((route.query.type as string) || tabs.value[0].type);
 
 const filterData = (key: string, val: string | number) => {
   if (!filter.value.rules.length) {
@@ -324,6 +325,22 @@ watch(
   (resourceAccount: any) => {
     if (resourceAccount?.id) accountId.value = resourceAccount.id;
     else accountId.value = '';
+    if ([VendorEnum.ZIYAN].includes(resourceAccount?.vendor)) tabs.value = RESOURCE_TYPES.filter(type => type.type === 'security').map((type) => {
+      return {
+        name: type.type,
+        type: t(type.name),
+        component: componentMap[type.type],
+      };
+    });
+    else {
+      tabs.value = RESOURCE_TYPES.map((type) => {
+        return {
+          name: type.type,
+          type: t(type.name),
+          component: componentMap[type.type],
+        };
+      });
+    }
   },
   {
     deep: true,
@@ -437,13 +454,20 @@ onMounted(() => {
               <span>
                 {{ headerExtensionMap.firstLabel }}：
                 <span class="info-text">
-                  {{ resourceAccountStore.resourceAccount.extension[headerExtensionMap.firstField] }}
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      [headerExtensionMap.firstField]
+                  }}
                 </span>
               </span>
               <span>
+
                 {{ headerExtensionMap.secondLabel }}：
                 <span class="info-text">
-                  {{ resourceAccountStore.resourceAccount.extension[headerExtensionMap.secondField] }}
+                  {{
+                    resourceAccountStore.resourceAccount.extension
+                      [headerExtensionMap.secondField]
+                  }}
                 </span>
               </span>
             </div>
@@ -560,14 +584,21 @@ onMounted(() => {
               <bk-button
                 theme="primary"
                 class="new-button"
-                :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.iaas_resource_create }"
-                @click="() => {
-                  if (!authVerifyData?.permissionAction?.iaas_resource_create) {
-                    handleAuth('iaas_resource_create');
-                  } else {
-                    handleAdd();
-                  }
+                :class="{
+                  'hcm-no-permision-btn':
+                    !authVerifyData?.permissionAction?.iaas_resource_create,
                 }"
+                @click="
+                  () => {
+                    if (
+                      !authVerifyData?.permissionAction?.iaas_resource_create
+                    ) {
+                      handleAuth('iaas_resource_create');
+                    } else {
+                      handleAdd();
+                    }
+                  }
+                "
               >
                 {{ ['host', 'clb'].includes(activeTab) ? '购买' : '新建' }}
               </bk-button>

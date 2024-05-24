@@ -48,6 +48,9 @@ const (
 	ListenerAuditResType          AuditResourceType = "listener"
 	UrlRuleAuditResType           AuditResourceType = "url_rule"
 	UrlRuleDomainAuditResType     AuditResourceType = "url_rule_domain"
+
+	// 自研云-云上主机
+	CloudCvmAuditResType AuditResourceType = "cloud_cvm"
 )
 
 // AuditResourceTypeEnums resource type map.

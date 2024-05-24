@@ -98,6 +98,8 @@ func (svc *securityGroupSvc) BatchCreateSecurityGroup(cts *rest.Contexts) (inter
 		return batchCreateSecurityGroup[corecloud.HuaWeiSecurityGroupExtension](vendor, svc, cts)
 	case enumor.Azure:
 		return batchCreateSecurityGroup[corecloud.AzureSecurityGroupExtension](vendor, svc, cts)
+	case enumor.TCloudZiyan:
+		return batchCreateSecurityGroup[corecloud.TCloudSecurityGroupExtension](vendor, svc, cts)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
@@ -119,6 +121,8 @@ func (svc *securityGroupSvc) BatchUpdateSecurityGroup(cts *rest.Contexts) (inter
 		return batchUpdateSecurityGroup[corecloud.HuaWeiSecurityGroupExtension](cts, svc)
 	case enumor.Azure:
 		return batchUpdateSecurityGroup[corecloud.AzureSecurityGroupExtension](cts, svc)
+	case enumor.TCloudZiyan:
+		return batchUpdateSecurityGroup[corecloud.TCloudSecurityGroupExtension](cts, svc)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
@@ -245,6 +249,9 @@ func (svc *securityGroupSvc) deleteSecurityGroupRule(kt *kit.Kit, txn *sqlx.Tx,
 			err = svc.dao.HuaWeiSGRule().DeleteWithTx(kt, txn, tools.ContainersExpression("security_group_id", sgIDs))
 		case enumor.Azure:
 			err = svc.dao.AzureSGRule().DeleteWithTx(kt, txn, tools.ContainersExpression("security_group_id", sgIDs))
+		case enumor.TCloudZiyan:
+			err = svc.dao.TCloudZiyanSGRule().DeleteWithTx(kt, txn,
+				tools.ContainersExpression("security_group_id", sgIDs))
 		default:
 			return fmt.Errorf("vendor: %s not support", vendor)
 		}
@@ -283,6 +290,8 @@ func (svc *securityGroupSvc) GetSecurityGroup(cts *rest.Contexts) (interface{}, 
 		return convertToSGResult[corecloud.HuaWeiSecurityGroupExtension](base, sgTable.Extension)
 	case enumor.Azure:
 		return convertToSGResult[corecloud.AzureSecurityGroupExtension](base, sgTable.Extension)
+	case enumor.TCloudZiyan:
+		return convertToSGResult[corecloud.TCloudSecurityGroupExtension](base, sgTable.Extension)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
@@ -532,6 +541,8 @@ func (svc *securityGroupSvc) ListSecurityGroupExt(cts *rest.Contexts) (interface
 		return convSecurityGroupExtListResult[corecloud.AzureSecurityGroupExtension](listResp.Details)
 	case enumor.HuaWei:
 		return convSecurityGroupExtListResult[corecloud.HuaWeiSecurityGroupExtension](listResp.Details)
+	case enumor.TCloudZiyan:
+		return convSecurityGroupExtListResult[corecloud.TCloudSecurityGroupExtension](listResp.Details)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)
 	}

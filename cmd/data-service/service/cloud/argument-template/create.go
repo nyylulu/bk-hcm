@@ -42,7 +42,7 @@ func (svc *argsTplSvc) CreateArgsTpl(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	switch vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return batchCreateArgsTpl[coreargstpl.TCloudArgsTplExtension](cts, svc, vendor)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)

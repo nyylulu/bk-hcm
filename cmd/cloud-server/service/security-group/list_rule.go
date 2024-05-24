@@ -108,6 +108,13 @@ func (svc *securityGroupSvc) listSGRule(cts *rest.Contexts, validHandler handler
 		return svc.client.DataService().Azure.SecurityGroup.ListSecurityGroupRule(cts.Kit.Ctx, cts.Kit.Header(),
 			listReq, sgID)
 
+	case enumor.TCloudZiyan:
+		listReq := &dataproto.TCloudSGRuleListReq{
+			Filter: req.Filter,
+			Page:   req.Page,
+		}
+		return svc.client.DataService().TCloudZiyan.SecurityGroup.ListSecurityGroupRule(cts.Kit, listReq, sgID)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}

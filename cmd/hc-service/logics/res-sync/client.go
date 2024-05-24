@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/gcp"
 	"hcm/cmd/hc-service/logics/res-sync/huawei"
 	"hcm/cmd/hc-service/logics/res-sync/tcloud"
+	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
 )
@@ -37,6 +38,7 @@ type Interface interface {
 	HuaWei(kt *kit.Kit, accountID string) (huawei.Interface, error)
 	Gcp(kt *kit.Kit, accountID string) (gcp.Interface, error)
 	Azure(kt *kit.Kit, accountID string) (azure.Interface, error)
+	TCloudZiyan(kt *kit.Kit, accountID string) (ziyan.Interface, error)
 }
 
 var _ Interface = new(client)
@@ -103,4 +105,14 @@ func (cli *client) Azure(kt *kit.Kit, accountID string) (azure.Interface, error)
 	}
 
 	return azure.NewClient(cli.dataCli, cloudCli), nil
+}
+
+// TCloudZiyan 腾讯自研云同步接口
+func (cli *client) TCloudZiyan(kt *kit.Kit, accountID string) (ziyan.Interface, error) {
+	cloudCli, err := cli.ad.TCloudZiyan(kt, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return ziyan.NewClient(cli.dataCli, cloudCli), nil
 }
