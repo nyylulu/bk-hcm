@@ -9,12 +9,15 @@
  * either express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package util provides common utility functions
 package util
 
 import (
 	"sort"
 )
 
+// MergeMaps merge multiple maps into one
 func MergeMaps(maps ...map[string]interface{}) map[string]interface{} {
 	result := make(map[string]interface{})
 	for _, m := range maps {

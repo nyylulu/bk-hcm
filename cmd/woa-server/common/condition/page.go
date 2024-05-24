@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package condition provide some common condition
 package condition
 
 import (
@@ -19,6 +20,7 @@ import (
 	"hcm/cmd/woa-server/common"
 )
 
+// Page Const
 const (
 	PageName         = "page"
 	PageSort         = "sort"
@@ -34,6 +36,7 @@ type BasePage struct {
 	Start int    `json:"start,omitempty"`
 }
 
+// ParsePage parse page from origin
 func ParsePage(origin interface{}) BasePage {
 	if origin == nil {
 		return BasePage{Limit: common.BKNoLimit}

@@ -31,12 +31,14 @@ import (
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/pool"
+	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	redisCli "hcm/cmd/woa-server/storage/driver/redis"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/esb"
+	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/handler"
@@ -56,12 +58,15 @@ type Service struct {
 	// EsbClient 调用接入ESB的第三方系统API集合
 	esbClient esb.Client
 	// authorizer 鉴权所需接口集合
-	authorizer auth.Authorizer
-	thirdCli   *thirdparty.Client
+	authorizer     auth.Authorizer
+	thirdCli       *thirdparty.Client
+	mongoConf      *mongo.Config
+	mongoWatchConf *mongo.Config
+	serviceState   serviced.State
 }
 
 // NewService create a service instance.
-func NewService(dis serviced.Discover) (*Service, error) {
+func NewService(dis serviced.Discover, sd serviced.State) (*Service, error) {
 	// 创建ESB Client
 	esbConfig := cc.WoaServer().Esb
 	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
@@ -110,9 +115,12 @@ func NewService(dis serviced.Discover) (*Service, error) {
 	}
 
 	return &Service{
-		esbClient:  esbClient,
-		authorizer: authorizer,
-		thirdCli:   thirdCli,
+		esbClient:      esbClient,
+		authorizer:     authorizer,
+		thirdCli:       thirdCli,
+		mongoConf:      mongoConf,
+		mongoWatchConf: watchConf,
+		serviceState:   sd,
 	}, nil
 }
 
@@ -186,6 +194,13 @@ func (s *Service) apiSet() *restful.Container {
 
 	config.InitService(c)
 	pool.InitService(c)
+
+	taskOptions := types.Config{
+		Mongo:      *s.mongoConf,
+		WatchMongo: *s.mongoWatchConf,
+		ClientConf: c.ClientConf,
+	}
+	task.InitService(c, s.serviceState, taskOptions)
 
 	return restful.NewContainer().Add(c.WebService)
 }

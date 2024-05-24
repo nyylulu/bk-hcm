@@ -10,15 +10,16 @@
  * limitations under the License.
  */
 
+// Package config zone config
 package config
 
 import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -26,7 +27,7 @@ import (
 func (s *service) GetQcloudZone(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetZoneParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get zone list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get zone list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -44,7 +45,7 @@ func (s *service) GetQcloudZone(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.Zone().GetZone(cts.Kit, &cond)
 	if err != nil {
-		blog.Errorf("failed to get zone list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get zone list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -55,13 +56,13 @@ func (s *service) GetQcloudZone(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateQcloudZone(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.Zone)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Zone().CreateZone(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -72,18 +73,18 @@ func (s *service) CreateQcloudZone(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateQcloudZone(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Zone().UpdateZone(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -94,12 +95,12 @@ func (s *service) UpdateQcloudZone(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DeleteQcloudZone(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Zone().DeleteZone(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -110,7 +111,7 @@ func (s *service) DeleteQcloudZone(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetIdcZone(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetIdcZoneParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get idc zone list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get idc zone list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -124,7 +125,7 @@ func (s *service) GetIdcZone(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.Zone().GetIdcZone(cts.Kit, &cond)
 	if err != nil {
-		blog.Errorf("failed to get idc zone list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get idc zone list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -135,13 +136,13 @@ func (s *service) GetIdcZone(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateIdcZone(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.IdcZone)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create idc zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create idc zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Zone().CreateIdcZone(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create idc zone, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create idc zone, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

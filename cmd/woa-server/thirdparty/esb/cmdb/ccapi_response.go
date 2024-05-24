@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package cmdb CC API response
 package cmdb
 
 import "strings"
@@ -48,13 +49,13 @@ type UpdateHostsResp struct {
 	RespMeta `json:",inline"`
 }
 
-// HostConfigData host module relation response
+// HostModuleResp host module relation response
 type HostModuleResp struct {
 	RespMeta `json:",inline"`
 	Data     []ModuleHost `json:"data"`
 }
 
-// HostConfigData host module relation result
+// ModuleHost host module relation result
 type ModuleHost struct {
 	AppID    int64  `json:"bk_biz_id,omitempty" bson:"bk_biz_id"`
 	HostID   int64  `json:"bk_host_id,omitempty" bson:"bk_host_id"`
@@ -63,7 +64,7 @@ type ModuleHost struct {
 	OwnerID  string `json:"bk_supplier_account,omitempty" bson:"bk_supplier_account"`
 }
 
-// Device topo info
+// DeviceTopoInfo topo info
 type DeviceTopoInfo struct {
 	InnerIP      string `json:"innerIP"`
 	AssetID      string `json:"assetID"`

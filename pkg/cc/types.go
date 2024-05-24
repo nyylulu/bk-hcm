@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package cc ...
 package cc
 
 import (
@@ -844,11 +845,24 @@ func (r Redis) validate() error {
 
 // ClientConfig third-party api client config set
 type ClientConfig struct {
-	CvmOpt    CVMCli    `yaml:"cvm"`
-	TjjOpt    TjjCli    `yaml:"tjj"`
-	SojobOpt  SojobCli  `yaml:"sojob"`
-	XshipOpt  XshipCli  `yaml:"xship"`
-	TCloudOpt TCloudCli `yaml:"tencentcloud"`
+	CvmOpt    CVMCli     `yaml:"cvm"`
+	TjjOpt    TjjCli     `yaml:"tjj"`
+	SojobOpt  SojobCli   `yaml:"sojob"`
+	XshipOpt  XshipCli   `yaml:"xship"`
+	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
+	DvmOpt    DVMCli     `yaml:"dvm"`
+	ErpOpt    ErpCli     `yaml:"erp"`
+	TmpOpt    TmpCli     `yaml:"tmp"`
+	Uwork     UworkCli   `yaml:"uwork"`
+	GCS       GCSCli     `yaml:"gcs"`
+	Tcaplus   TcaplusCli `yaml:"tcaplus"`
+	TGW       TGWCli     `yaml:"tgw"`
+	L5        L5Cli      `yaml:"l5"`
+	IAM       IamCli     `yaml:"iam"`
+	Safety    SafetyCli  `yaml:"safety"`
+	BkChat    BkChatCli  `yaml:"bkchat"`
+	Sops      SopsCli    `yaml:"sops"`
+	ITSM      ItsmCli    `yaml:"itsm"`
 }
 
 func (c ClientConfig) validate() error {
@@ -872,18 +886,71 @@ func (c ClientConfig) validate() error {
 		return err
 	}
 
+	if err := c.DvmOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.ErpOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TmpOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Uwork.validate(); err != nil {
+		return err
+	}
+
+	if err := c.GCS.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Tcaplus.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TGW.validate(); err != nil {
+		return err
+	}
+
+	if err := c.L5.validate(); err != nil {
+		return err
+	}
+
+	if err := c.IAM.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Safety.validate(); err != nil {
+		return err
+	}
+
+	if err := c.BkChat.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Sops.validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // CVMCli yunti client options
 type CVMCli struct {
 	// yunti api address
-	CvmApiAddr string `yaml:"host"`
+	CvmApiAddr        string `yaml:"host"`
+	CvmLaunchPassword string `yaml:"launch_password"`
 }
 
 func (c CVMCli) validate() error {
 	if len(c.CvmApiAddr) == 0 {
 		return errors.New("cvm.host is not set")
+	}
+
+	if len(c.CvmLaunchPassword) == 0 {
+		return errors.New("cvm.launch_password is not set")
 	}
 
 	return nil
@@ -1025,6 +1092,254 @@ func (e TCloudCredential) validate() error {
 
 	if len(e.Key) == 0 {
 		return errors.New("tencentcloud.credential.key is not set")
+	}
+
+	return nil
+}
+
+// ErpCli erp client options
+type ErpCli struct {
+	// erp api address
+	ErpApiAddr string `yaml:"host"`
+}
+
+func (c ErpCli) validate() error {
+	if len(c.ErpApiAddr) == 0 {
+		return errors.New("erp.host is not set")
+	}
+
+	return nil
+}
+
+// TmpCli tmp client options
+type TmpCli struct {
+	// tmp api address
+	TMPApiAddr string `yaml:"host"`
+}
+
+func (c TmpCli) validate() error {
+	if len(c.TMPApiAddr) == 0 {
+		return errors.New("tmp.host is not set")
+	}
+
+	return nil
+}
+
+// UworkCli Uwork client options
+type UworkCli struct {
+	// Uwork api address
+	UworkApiAddr string `yaml:"host"`
+}
+
+func (c UworkCli) validate() error {
+	if len(c.UworkApiAddr) == 0 {
+		return errors.New("uwork.host is not set")
+	}
+
+	return nil
+}
+
+// GCSCli gcs client options
+type GCSCli struct {
+	// gcs api address
+	GcsApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (c GCSCli) validate() error {
+	if len(c.GcsApiAddr) == 0 {
+		return errors.New("gcs.host is not set")
+	}
+
+	if len(c.SecretID) == 0 {
+		return errors.New("gcs.secret_id is not set")
+	}
+
+	if len(c.SecretKey) == 0 {
+		return errors.New("gcs.secret_key is not set")
+	}
+
+	if len(c.Operator) == 0 {
+		return errors.New("gcs.operator is not set")
+	}
+
+	return nil
+}
+
+// TcaplusCli tcaplus client options
+type TcaplusCli struct {
+	// tcaplus api address
+	TcaplusApiAddr string `yaml:"host"`
+}
+
+func (c TcaplusCli) validate() error {
+	if len(c.TcaplusApiAddr) == 0 {
+		return errors.New("tcaplus.host is not set")
+	}
+
+	return nil
+}
+
+// TGWCli tgw client options
+type TGWCli struct {
+	// tgw api address
+	TgwApiAddr string `yaml:"host"`
+}
+
+func (c TGWCli) validate() error {
+	if len(c.TgwApiAddr) == 0 {
+		return errors.New("tgw.host is not set")
+	}
+
+	return nil
+}
+
+// L5Cli l5 client options
+type L5Cli struct {
+	// l5 api address
+	L5ApiAddr string `yaml:"host"`
+}
+
+func (c L5Cli) validate() error {
+	if len(c.L5ApiAddr) == 0 {
+		return errors.New("l5.host is not set")
+	}
+
+	return nil
+}
+
+// SafetyCli Safety client options
+type SafetyCli struct {
+	// safety api address
+	SafetyApiAddr string `yaml:"host"`
+}
+
+func (c SafetyCli) validate() error {
+	if len(c.SafetyApiAddr) == 0 {
+		return errors.New("safety.host is not set")
+	}
+
+	return nil
+}
+
+// IamCli iam client options
+type IamCli struct {
+	// iam api address
+	IAMApiAddr string `yaml:"host"`
+	AppCode    string `yaml:"app_code"`
+	AppSecret  string `yaml:"app_secret"`
+	Operator   string `yaml:"operator"`
+}
+
+func (c IamCli) validate() error {
+	if len(c.IAMApiAddr) == 0 {
+		return errors.New("iam.host is not set")
+	}
+
+	if len(c.AppCode) == 0 {
+		return errors.New("iam.app_code is not set")
+	}
+
+	if len(c.AppSecret) == 0 {
+		return errors.New("iam.app_secret is not set")
+	}
+
+	if len(c.Operator) == 0 {
+		return errors.New("iam.operator is not set")
+	}
+
+	return nil
+}
+
+// DVMCli dvm client options
+type DVMCli struct {
+	DvmApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (c DVMCli) validate() error {
+	if len(c.DvmApiAddr) == 0 {
+		return errors.New("dvm.host is not set")
+	}
+
+	if len(c.SecretID) == 0 {
+		return errors.New("dvm.secret_id is not set")
+	}
+
+	if len(c.SecretKey) == 0 {
+		return errors.New("dvm.secret_key is not set")
+	}
+
+	if len(c.Operator) == 0 {
+		return errors.New("dvm.operator is not set")
+	}
+
+	return nil
+}
+
+// BkChatCli bkchat client options
+type BkChatCli struct {
+	BkChatApiAddr string `yaml:"host"`
+	NoticeFmt     string `yaml:"notice_fmt"`
+}
+
+func (c BkChatCli) validate() error {
+	if len(c.BkChatApiAddr) == 0 {
+		return errors.New("bkchat.host is not set")
+	}
+
+	return nil
+}
+
+// SopsCli sops client options
+type SopsCli struct {
+	SopsApiAddr string `yaml:"host"`
+	AppCode     string `yaml:"app_code"`
+	AppSecret   string `yaml:"app_secret"`
+	Operator    string `yaml:"operator"`
+}
+
+func (c SopsCli) validate() error {
+	if len(c.SopsApiAddr) == 0 {
+		return errors.New("sops.host is not set")
+	}
+
+	if len(c.AppCode) == 0 {
+		return errors.New("sops.app_code is not set")
+	}
+
+	if len(c.AppSecret) == 0 {
+		return errors.New("sops.app_secret is not set")
+	}
+
+	return nil
+}
+
+// ItsmCli itsm client options
+type ItsmCli struct {
+	ITSMApiAddr  string `yaml:"host"`
+	AppCode      string `yaml:"app_code"`
+	AppSecret    string `yaml:"app_secret"`
+	Operator     string `yaml:"operator"`
+	ServiceId    int64  `yaml:"service_id"`
+	ApplyLinkFmt string `yaml:"apply_link_fmt"`
+}
+
+func (c ItsmCli) validate() error {
+	if len(c.ITSMApiAddr) == 0 {
+		return errors.New("itsm.host is not set")
+	}
+
+	if len(c.AppCode) == 0 {
+		return errors.New("itsm.app_code is not set")
+	}
+
+	if len(c.AppSecret) == 0 {
+		return errors.New("itsm.app_secret is not set")
 	}
 
 	return nil

@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package esb implements esb client.
 package esb
 
 import (
@@ -64,6 +65,7 @@ type esbCli struct {
 	cc cmdb.Client
 }
 
+// Cmdb return cmdb client
 func (e *esbCli) Cmdb() cmdb.Client {
 	return e.cc
 }

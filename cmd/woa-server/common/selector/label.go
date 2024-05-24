@@ -9,6 +9,8 @@
  * either express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package selector ...
 package selector
 
 import (
@@ -16,13 +18,16 @@ import (
 	"regexp"
 )
 
+// Labels ...
 type Labels map[string]string
 
+// LabelRule ...
 var (
 	LabelNGKeyRule   = regexp.MustCompile(`^[a-zA-Z]([a-z0-9A-Z\-_.]*[a-z0-9A-Z])?$`)
 	LabelNGValueRule = regexp.MustCompile(`^[a-z0-9A-Z]([a-z0-9A-Z\-_.]*[a-z0-9A-Z])?$`)
 )
 
+// Validate ...
 func (lng Labels) Validate() (string, error) {
 	// https://kubernetes.io/docs/concepts/overview/working-with-objects/labels/#syntax-and-character-set
 	// https://www.replex.io/blog/9-best-practices-and-examples-for-working-with-kubernetes-labels
@@ -47,18 +52,21 @@ func (lng Labels) Validate() (string, error) {
 	return "", nil
 }
 
+// AddLabel ...
 func (lng Labels) AddLabel(l Labels) {
 	for key, value := range l {
 		lng[key] = value
 	}
 }
 
+// RemoveLabel ...
 func (lng Labels) RemoveLabel(keys []string) {
 	for _, key := range keys {
 		delete(lng, key)
 	}
 }
 
+// LabelInstance ...
 type LabelInstance struct {
 	Labels Labels `bson:"labels" json:"labels"`
 }

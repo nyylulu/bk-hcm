@@ -16,7 +16,6 @@ import (
 	"encoding/json"
 	"testing"
 
-	//"hcm/cmd/woa-server/common/blog"
 	types "hcm/cmd/woa-server/common/mapstr"
 )
 

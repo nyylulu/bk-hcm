@@ -13,11 +13,11 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // CvmImageIf provides management interface for operations of cvm image config
@@ -73,14 +73,14 @@ func (i *cvmImage) GetCvmImage(kt *kit.Kit, cond *mapstr.MapStr) (*types.GetCvmI
 func (i *cvmImage) CreateCvmImage(kt *kit.Kit, input *types.CvmImage) (mapstr.MapStr, error) {
 	id, err := config.Operation().CvmImage().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create cvm image, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create cvm image, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().CvmImage().CreateCvmImage(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create cvm image, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create cvm image, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -97,7 +97,7 @@ func (i *cvmImage) UpdateCvmImage(kt *kit.Kit, instId int64, input *mapstr.MapSt
 	}
 
 	if err := config.Operation().CvmImage().UpdateCvmImage(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update cvm image, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update cvm image, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -111,7 +111,7 @@ func (i *cvmImage) DeleteCvmImage(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().CvmImage().DeleteCvmImage(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete cvm image, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete cvm image, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

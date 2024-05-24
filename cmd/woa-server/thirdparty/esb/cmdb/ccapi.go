@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package cmdb provides client to interact with cc 3.0 api
 package cmdb
 
 import (

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package condition condition
 package condition
 
 import (
@@ -75,9 +76,12 @@ func (cli *condition) SetPage(page types.MapStr) error {
 	return nil
 }
 
+// SetFields set the fields
 func (cli *condition) SetFields(fields []string) {
 	cli.filterFields = fields
 }
+
+// GetFields get the fields
 func (cli *condition) GetFields() []string {
 	return cli.filterFields
 }

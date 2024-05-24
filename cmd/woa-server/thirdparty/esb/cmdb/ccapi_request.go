@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package cmdb CC API response
 package cmdb
 
 import (

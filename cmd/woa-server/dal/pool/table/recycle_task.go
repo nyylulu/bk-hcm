@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package table defines the common table operations
 package table
 
 import "time"

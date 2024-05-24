@@ -23,10 +23,10 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/mongo/uuid"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg/logs"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -270,7 +270,7 @@ func (t *TxnManager) setTxnError(sessionID sessionKey, txnErr error) {
 		key := sessionID.genErrKey()
 		err := t.cache.SetNX(context.Background(), key, string(WriteConflictType), time.Minute*5).Err()
 		if err != nil {
-			blog.Errorf("set txn error(%v) failed, err: %v, session id: %s", txnErr, err, sessionID)
+			logs.Errorf("set txn error(%v) failed, err: %v, session id: %s", txnErr, err, sessionID)
 		}
 	default:
 	}
@@ -281,7 +281,7 @@ func (t *TxnManager) GetTxnError(sessionID sessionKey) TxnErrorType {
 	key := sessionID.genErrKey()
 	errorType, err := t.cache.Get(context.Background(), key).Result()
 	if err != nil && redis.IsNilErr(err) {
-		blog.Errorf("get txn error failed, err: %v, session id: %s", err, sessionID)
+		logs.Errorf("get txn error failed, err: %v, session id: %s", err, sessionID)
 		return UnknownType
 	}
 

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package condition provide a condition interface
 package condition
 
 import (
@@ -154,6 +155,7 @@ func (cli *field) Exists(val interface{}) Condition {
 	return cli.condition
 }
 
+// GetFieldName get the field name
 func (cli *field) GetFieldName() string {
 	return cli.fieldName
 }

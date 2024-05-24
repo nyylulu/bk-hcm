@@ -15,11 +15,11 @@ package config
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // DeviceRestrictIf provides management interface for operations of device restrict config
@@ -67,14 +67,14 @@ func (d *deviceRestrict) GetDeviceRestrict(kt *kit.Kit) (*types.GetDeviceRestric
 func (d *deviceRestrict) CreateDeviceRestrict(kt *kit.Kit, input *types.DeviceRestrict) (mapstr.MapStr, error) {
 	id, err := config.Operation().DeviceRestrict().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create device restrict, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create device restrict, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().DeviceRestrict().CreateDeviceRestrict(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create device restrict, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create device restrict, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -91,7 +91,7 @@ func (d *deviceRestrict) UpdateDeviceRestrict(kt *kit.Kit, instId int64, input *
 	}
 
 	if err := config.Operation().DeviceRestrict().UpdateDeviceRestrict(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update device restrict, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update device restrict, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -105,7 +105,7 @@ func (d *deviceRestrict) DeleteDeviceRestrict(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().DeviceRestrict().DeleteDeviceRestrict(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete device restrict, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete device restrict, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

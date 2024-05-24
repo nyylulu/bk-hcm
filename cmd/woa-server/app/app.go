@@ -55,6 +55,7 @@ func Run(opt *options.Option) error {
 type woaServer struct {
 	svc *service.Service
 	dis serviced.Discover
+	sd  serviced.Service
 }
 
 // prepare do prepare jobs before run api server.
@@ -73,16 +74,21 @@ func (s *woaServer) prepare(opt *options.Option) error {
 	metrics.InitMetrics(net.JoinHostPort(network.BindIP, strconv.Itoa(int(network.Port))))
 
 	// new api server discovery client.
+	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network)
 	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName}}
 	dis, err := serviced.NewDiscovery(cc.WoaServer().Service, discOpt)
 	if err != nil {
-		return fmt.Errorf("new service discovery faield, err: %v", err)
+		return fmt.Errorf("new service discovery failed, err: %v", err)
 	}
-
+	sd, err := serviced.NewServiceD(cc.WoaServer().Service, svcOpt, discOpt)
+	if err != nil {
+		return fmt.Errorf("new serviced failed, err: %v", err)
+	}
 	s.dis = dis
+	s.sd = sd
 	logs.Infof("create discovery success.")
 
-	svc, err := service.NewService(s.dis)
+	svc, err := service.NewService(s.dis, s.sd)
 	if err != nil {
 		return fmt.Errorf("initialize service failed, err: %v", err)
 	}

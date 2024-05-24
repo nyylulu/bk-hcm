@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package recycler ...
 package recycler
 
 import (
@@ -18,15 +19,17 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 )
 
+// ReinstallStatus reinstall task status
 type ReinstallStatus int
 
+// ReinstallStatus ...
 const (
 	ReinstallStatusSuccess ReinstallStatus = 0
 	ReinstallStatusRunning ReinstallStatus = 1
@@ -45,11 +48,11 @@ func (r *Recycler) createReinstallTask(task *table.RecallDetail) error {
 	resType, ok := task.Labels[table.ResourceTypeKey]
 	if !ok {
 		err := errors.New("get no resource type from task label")
-		blog.Errorf("failed to create reinstall task, err: %v", err)
+		logs.Errorf("failed to create reinstall task, err: %v", err)
 
 		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -85,13 +88,13 @@ func (r *Recycler) getPwd(hostID int64) (string, error) {
 	// 1. get ip
 	ip, err := r.getIpByHostID(hostID)
 	if err != nil {
-		blog.Errorf("failed to get host ip by id %d, err: %v", hostID, err)
+		logs.Errorf("failed to get host ip by id %d, err: %v", hostID, err)
 		return "", err
 	}
 
 	pwd, err := r.tjj.GetPwd(nil, nil, ip)
 	if err != nil {
-		blog.Errorf("failed to get tjj pwd by ip %s, err: %v", ip, err)
+		logs.Errorf("failed to get tjj pwd by ip %s, err: %v", ip, err)
 		return "", err
 	}
 

@@ -10,21 +10,23 @@
  * limitations under the License.
  */
 
+// Package config requirement config
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
+	"strconv"
+
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"strconv"
 )
 
 // GetRequirement gets requirement type config list
 func (s *service) GetRequirement(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.Requirement().GetRequirement(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get requirement list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get requirement list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -35,13 +37,13 @@ func (s *service) GetRequirement(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateRequirement(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.Requirement)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Requirement().CreateRequirement(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -52,18 +54,18 @@ func (s *service) CreateRequirement(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateRequirement(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Requirement().UpdateRequirement(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -74,12 +76,12 @@ func (s *service) UpdateRequirement(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DeleteRequirement(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Requirement().DeleteRequirement(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete requirement type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

@@ -10,12 +10,14 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
 	"hcm/cmd/woa-server/common/mapstr"
 )
 
+// Group Field Const
 const (
 	GroupFieldID              = "id"
 	GroupFieldGroupID         = "bk_group_id"

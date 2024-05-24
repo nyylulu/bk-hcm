@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package pool pool server types
 package pool
 
 const (

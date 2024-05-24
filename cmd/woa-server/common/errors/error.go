@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"strings"
 
-	"hcm/cmd/woa-server/common/blog"
+	"hcm/pkg/logs"
 )
 
 // ccErrorHelper CC 错误处理接口的实现
@@ -61,19 +61,20 @@ func (cli *ccErrorHelper) CCError(language string, errCode int) CCErrorCoder {
 	}}
 }
 
-// Errorf returns an error that adapt to the error interface which accepts arguments
+// CCErrorf returns an error that adapt to the error interface which accepts arguments
 func (cli *ccErrorHelper) CCErrorf(language string, ErrorCode int, args ...interface{}) CCErrorCoder {
 	return &ccError{code: ErrorCode, callback: func() string {
 		return cli.errorStrf(language, ErrorCode, args...)
 	}}
 }
 
-// load load language package file from dir
+// Load load language package file from dir
 func (cli *ccErrorHelper) Load(errcode map[string]ErrorCode) {
-	// blog.V(3).Infof("loaded error resource: %#v", errcode)
+	// logs.V(3).Infof("loaded error resource: %#v", errcode)
 	cli.errCode = errcode
 }
 
+// LoadErrorResourceFromDir load language package file from dir
 func LoadErrorResourceFromDir(dir string) (map[string]ErrorCode, error) {
 	// read all language file from dir
 	var errCode = map[string]ErrorCode{}
@@ -102,7 +103,7 @@ func LoadErrorResourceFromDir(dir string) (map[string]ErrorCode, error) {
 		res := ErrorCode{}
 		jsErr := json.Unmarshal(data, &res)
 		if nil != jsErr {
-			blog.Errorf("LoadErrorResourceFromDir error: %v, file: %s", jsErr, path)
+			logs.Errorf("LoadErrorResourceFromDir error: %v, file: %s", jsErr, path)
 			return jsErr
 		}
 
@@ -129,6 +130,7 @@ func LoadErrorResourceFromDir(dir string) (map[string]ErrorCode, error) {
 	return errCode, nil
 }
 
+// GetErrorCode get error code manager
 func (cli *ccErrorHelper) GetErrorCode() map[string]ErrorCode {
 	return cli.errCode
 }

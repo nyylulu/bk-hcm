@@ -20,7 +20,6 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/utils/wait"
@@ -30,6 +29,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/esb"
 	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -69,7 +69,7 @@ func (r *Recaller) Run(workers int) {
 
 	select {
 	case <-r.ctx.Done():
-		blog.Info("dispatcher exits")
+		logs.Infof("dispatcher exits")
 	}
 }
 
@@ -85,7 +85,7 @@ func (r *Recaller) Pop() (uint64, error) {
 	id, ok := obj.(uint64)
 	if !ok {
 		r.queue.Forget(obj)
-		blog.Warnf("Expected uint64 in queue but got %#v", obj)
+		logs.Warnf("Expected uint64 in queue but got %#v", obj)
 		return 0, errors.New("got non-uint64 from queue")
 	}
 
@@ -103,16 +103,16 @@ func (r *Recaller) Add(id uint64) {
 func (r *Recaller) runWorker() error {
 	orderId, err := r.Pop()
 	if err != nil {
-		blog.Errorf("failed to deal recall task, for get recall task from informer err: %v", err)
+		logs.Errorf("failed to deal recall task, for get recall task from informer err: %v", err)
 		return err
 	}
 
 	if err := r.dispatchHandler(orderId); err != nil {
-		blog.Errorf("failed to dispatch recall task, err: %v, order id: %d", err, orderId)
+		logs.Errorf("failed to dispatch recall task, err: %v, order id: %d", err, orderId)
 		return err
 	}
 
-	blog.Infof("Successfully dispatch recall task %d", orderId)
+	logs.Infof("Successfully dispatch recall task %d", orderId)
 
 	return nil
 }
@@ -122,19 +122,19 @@ func (r *Recaller) dispatchHandler(id uint64) error {
 	// 1. get recycle task
 	task, err := r.getTask(id)
 	if err != nil {
-		blog.Errorf("failed to get recall task, err: %v", err)
+		logs.Errorf("failed to get recall task, err: %v", err)
 		return err
 	}
 
 	switch task.Status.Phase {
 	case table.OpTaskPhaseSuccess:
 		{
-			blog.Infof("recall task %d is success, need not handle", task.ID)
+			logs.Infof("recall task %d is success, need not handle", task.ID)
 			return nil
 		}
 	case table.OpTaskPhaseFailed:
 		{
-			blog.Warnf("recall task %d is failed, cannot handle", task.ID)
+			logs.Warnf("recall task %d is failed, cannot handle", task.ID)
 			return nil
 		}
 	case table.OpTaskPhaseRunning, table.OpTaskPhaseInit:
@@ -163,7 +163,7 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 	// 1. get idle hosts
 	hosts, err := r.getIdleHosts(task)
 	if err != nil {
-		blog.Errorf("failed to get idle host for recall task %d, err: %v", task.ID, err)
+		logs.Errorf("failed to get idle host for recall task %d, err: %v", task.ID, err)
 		return err
 	}
 
@@ -171,26 +171,26 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 		// transfer hosts from 资源运营服务-CR资源池 to 资源运营服务-CR资源下架中
 		if err := r.transferHost(host.HostID, types.BizIDPool, types.BizIDPool,
 			types.ModuleIDPoolRecalling); err != nil {
-			blog.Errorf("failed to transfer host %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to transfer host %d, err: %v", host.HostID, err)
 			return err
 		}
 
 		// update pool host status
 		if err := r.updateHostStatus(host.HostID, table.PoolHostPhaseForRecall); err != nil {
-			blog.Errorf("failed to update host %d status, err: %v", host.HostID, err)
+			logs.Errorf("failed to update host %d status, err: %v", host.HostID, err)
 			return err
 		}
 	}
 
 	// update op record
 	if err := r.createRecallOpRecords(task, hosts); err != nil {
-		blog.Errorf("failed to create recall op record, err: %v", err)
+		logs.Errorf("failed to create recall op record, err: %v", err)
 		return err
 	}
 
 	// update recall detail
 	if err := r.createRecallDetail(task, hosts); err != nil {
-		blog.Errorf("failed to create recall detail, err: %v", err)
+		logs.Errorf("failed to create recall detail, err: %v", err)
 		return err
 	}
 
@@ -204,7 +204,7 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 	}
 
 	if err := r.updateRecallTaskStatus(task); err != nil {
-		blog.Errorf("failed to update recall task status, id: %d, err: %v", task.ID, err)
+		logs.Errorf("failed to update recall task status, id: %d, err: %v", task.ID, err)
 		return err
 	}
 
@@ -309,7 +309,7 @@ func (r *Recaller) createRecallOpRecords(task *table.RecallTask, hosts []*table.
 	for _, host := range hosts {
 		id, err := dao.Set().OpRecord().NextSequence(context.Background())
 		if err != nil {
-			blog.Errorf("failed to create op record, err: %v", err)
+			logs.Errorf("failed to create op record, err: %v", err)
 			return err
 		}
 		record := &table.OpRecord{
@@ -326,7 +326,7 @@ func (r *Recaller) createRecallOpRecords(task *table.RecallTask, hosts []*table.
 		}
 
 		if err := dao.Set().OpRecord().CreateOpRecord(context.Background(), record); err != nil {
-			blog.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 		}
 	}
@@ -354,7 +354,7 @@ func (r *Recaller) createRecallDetail(task *table.RecallTask, hosts []*table.Poo
 		}
 
 		if err := dao.Set().RecallDetail().CreateRecallDetail(context.Background(), detail); err != nil {
-			blog.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
 		}
 

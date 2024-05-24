@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata provide the metadata of host
 package metadata
 
 import (
@@ -18,7 +19,7 @@ import (
 	"strings"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
+	"hcm/pkg/logs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/bsoncodec"
@@ -28,9 +29,10 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx/bsoncore"
 )
 
-// host map with string type ip and operator, can only get host from db with this map
+// HostMapStr with string type ip and operator, can only get host from db with this map
 type HostMapStr map[string]interface{}
 
+// UnmarshalBSON with string type ip and operator, can only get host from db with this map
 func (h *HostMapStr) UnmarshalBSON(b []byte) error {
 	if h == nil {
 		return bsonx.ErrNilDocument
@@ -122,9 +124,10 @@ func parseBsonStringArrayValueToString(value bsoncore.Value) ([]byte, error) {
 	}
 }
 
-// special field whose string array value is parsed into string value from db
+// StringArrayToString special field whose string array value is parsed into string value from db
 type StringArrayToString string
 
+// UnmarshalBSONValue unmarshal string array value to string
 func (s *StringArrayToString) UnmarshalBSONValue(typo bsontype.Type, raw []byte) error {
 	if s == nil {
 		return bsonx.ErrNilDocument
@@ -144,7 +147,7 @@ func (s *StringArrayToString) UnmarshalBSONValue(typo bsontype.Type, raw []byte)
 var specialFields = []string{common.BKHostInnerIPField, common.BKHostOuterIPField, common.BKOperatorField,
 	common.BKBakOperatorField}
 
-// convert host ip and operator fields value from string to array
+// ConvertHostSpecialStringToArray convert host ip and operator fields value from string to array
 // NOTICE: if host special value is empty, convert it to null to trespass the unique check, **do not change this logic**
 func ConvertHostSpecialStringToArray(host map[string]interface{}) map[string]interface{} {
 	for _, field := range specialFields {
@@ -169,11 +172,11 @@ func ConvertHostSpecialStringToArray(host map[string]interface{}) map[string]int
 			if len(v) == 0 {
 				host[field] = nil
 			} else {
-				blog.Errorf("host %s type invalid, value %v", field, host[field])
+				logs.Errorf("host %s type invalid, value %v", field, host[field])
 			}
 		case nil:
 		default:
-			blog.Errorf("host %s type invalid, value %v", field, host[field])
+			logs.Errorf("host %s type invalid, value %v", field, host[field])
 		}
 	}
 	return host

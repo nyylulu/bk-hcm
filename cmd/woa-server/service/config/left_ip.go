@@ -10,14 +10,15 @@
  * limitations under the License.
  */
 
+// Package config left ip config
 package config
 
 import (
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/dal/config/table"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -25,19 +26,19 @@ import (
 func (s *service) GetLeftIP(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetLeftIPParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get zone with left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get zone with left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.LeftIP().GetLeftIP(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -48,13 +49,13 @@ func (s *service) GetLeftIP(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateLeftIP(cts *rest.Contexts) (interface{}, error) {
 	input := new(table.ZoneLeftIP)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.LeftIP().CreateLeftIP(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -65,13 +66,13 @@ func (s *service) CreateLeftIP(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateLeftIPProperty(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.UpdateLeftIPPropertyParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to update zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to update zone with left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to update zone with left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -86,7 +87,7 @@ func (s *service) UpdateLeftIPProperty(cts *rest.Contexts) (interface{}, error) 
 	delete(data, "id")
 
 	if err := s.logics.LeftIP().UpdateLeftIPBatch(cts.Kit, cond, input.Property); err != nil {
-		blog.Errorf("failed to update zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update zone with left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -97,18 +98,18 @@ func (s *service) UpdateLeftIPProperty(cts *rest.Contexts) (interface{}, error) 
 func (s *service) SyncLeftIP(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.SyncLeftIPParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to sync left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to sync left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to sync left ip, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	if err := s.logics.LeftIP().SyncLeftIP(cts.Kit, input); err != nil {
-		blog.Errorf("failed to sync left ip, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync left ip, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

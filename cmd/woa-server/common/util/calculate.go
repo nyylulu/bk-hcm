@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util implements some utility functions
 package util
 
 import "math/rand"

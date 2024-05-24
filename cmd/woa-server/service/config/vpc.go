@@ -10,15 +10,16 @@
  * limitations under the License.
  */
 
+// Package config vpc config
 package config
 
 import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -26,7 +27,7 @@ import (
 func (s *service) GetVpc(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetVpcParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -36,7 +37,7 @@ func (s *service) GetVpc(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.Vpc().GetVpc(cts.Kit, &cond)
 	if err != nil {
-		blog.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -47,7 +48,7 @@ func (s *service) GetVpc(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetVpcList(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetVpcListParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -60,7 +61,7 @@ func (s *service) GetVpcList(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.Vpc().GetVpcList(cts.Kit, cond)
 	if err != nil {
-		blog.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get vpc list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -71,13 +72,13 @@ func (s *service) GetVpcList(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateVpc(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.Vpc)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Vpc().CreateVpc(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -88,18 +89,18 @@ func (s *service) CreateVpc(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateVpc(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Vpc().UpdateVpc(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -110,12 +111,12 @@ func (s *service) UpdateVpc(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DeleteVpc(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Vpc().DeleteVpc(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -126,12 +127,12 @@ func (s *service) DeleteVpc(cts *rest.Contexts) (interface{}, error) {
 func (s *service) SyncVpc(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.GetVpcParam)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to sync vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Vpc().SyncVpc(cts.Kit, inputData); err != nil {
-		blog.Errorf("failed to sync vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync vpc, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

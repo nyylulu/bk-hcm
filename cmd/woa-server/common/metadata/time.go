@@ -10,16 +10,16 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
+	"database/sql/driver"
 	"fmt"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
-
-	"database/sql/driver"
 
 	"github.com/coccyx/timeparser"
 	"github.com/mitchellh/mapstructure"
@@ -28,6 +28,7 @@ import (
 	"go.mongodb.org/mongo-driver/x/bsonx"
 )
 
+// Time time
 type Time struct {
 	time.Time `bson:",inline" json:",inline"`
 }
@@ -43,6 +44,7 @@ func (t Time) Value() (driver.Value, error) {
 	return t.Time, nil
 }
 
+// MarshalJSON implements the json.Marshaler interface.
 func (t Time) MarshalJSON() ([]byte, error) {
 	return []byte(t.Format(`"2006-01-02 15:04:05"`)), nil
 }
@@ -147,6 +149,7 @@ func Now() Time {
 
 var local = Now()
 
+// StringToTimeDurationHookFunc returns a DecodeHookFunc that converts
 func StringToTimeDurationHookFunc() mapstructure.DecodeHookFunc {
 	return func(
 		f reflect.Type,
@@ -172,6 +175,7 @@ func StringToTimeDurationHookFunc() mapstructure.DecodeHookFunc {
 	}
 }
 
+// ParseTime parses a string into a time.Time
 func ParseTime(data interface{}) (time.Time, error) {
 	// Convert it by parsing
 	var parsed time.Time

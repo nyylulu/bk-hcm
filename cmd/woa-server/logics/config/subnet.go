@@ -16,7 +16,6 @@ import (
 	"fmt"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/config"
@@ -24,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // SubnetIf provides management interface for operations of subnet config
@@ -79,7 +79,7 @@ func (s *subnet) GetSubnet(kt *kit.Kit, cond map[string]interface{}) (*types.Get
 func (s *subnet) GetSubnetList(kt *kit.Kit, input *types.GetSubnetListParam) (*types.GetSubnetResult, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config subnet detail failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config subnet detail failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -87,7 +87,7 @@ func (s *subnet) GetSubnetList(kt *kit.Kit, input *types.GetSubnetListParam) (*t
 	if input.Page.EnableCount {
 		cnt, err := config.Operation().Subnet().CountSubnet(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get subnet detail count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get subnet detail count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -97,7 +97,7 @@ func (s *subnet) GetSubnetList(kt *kit.Kit, input *types.GetSubnetListParam) (*t
 
 	insts, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, input.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recycle order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recycle order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -111,14 +111,14 @@ func (s *subnet) GetSubnetList(kt *kit.Kit, input *types.GetSubnetListParam) (*t
 func (s *subnet) CreateSubnet(kt *kit.Kit, input *types.Subnet) (mapstr.MapStr, error) {
 	id, err := config.Operation().Subnet().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create subnet, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create subnet, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().Subnet().CreateSubnet(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create subnet, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create subnet, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -135,7 +135,7 @@ func (s *subnet) UpdateSubnet(kt *kit.Kit, instId int64, input map[string]interf
 	}
 
 	if err := config.Operation().Subnet().UpdateSubnet(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -145,7 +145,7 @@ func (s *subnet) UpdateSubnet(kt *kit.Kit, instId int64, input map[string]interf
 // UpdateSubnetBatch updates subnet config in batch
 func (s *subnet) UpdateSubnetBatch(kt *kit.Kit, cond, update map[string]interface{}) error {
 	if err := config.Operation().Subnet().UpdateSubnet(kt.Ctx, cond, update); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -159,7 +159,7 @@ func (s *subnet) DeleteSubnet(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().Subnet().DeleteSubnet(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete subnet, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete subnet, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -184,12 +184,12 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 
 	resp, err := s.cvm.QueryCvmSubnet(kt.Ctx, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get cvm subnet info, err: %v", err)
 		return err
 	}
 
 	if resp.Error.Code != 0 {
-		blog.Errorf("failed to get cvm subnet info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to get cvm subnet info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 		return fmt.Errorf("failed to get cvm subnet info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
@@ -203,7 +203,7 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 		}
 		cnt, err := config.Operation().Subnet().CountSubnet(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to count subnet with filter: %+v, err: %v", filter, err)
+			logs.Errorf("failed to count subnet with filter: %+v, err: %v", filter, err)
 			return err
 		}
 		if cnt <= 0 {
@@ -217,7 +217,7 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 				Comment:    "",
 			}
 			if _, err := s.CreateSubnet(kt, subnetCfg); err != nil {
-				blog.Errorf("failed to create subnet, err: %v", filter, err)
+				logs.Errorf("failed to create subnet, err: %v", filter, err)
 				return err
 			}
 		}

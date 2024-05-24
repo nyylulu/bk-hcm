@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package recycler ...
 package recycler
 
 import (
@@ -18,12 +19,12 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -34,12 +35,12 @@ func (r *Recycler) createCvmReinstallTask(task *table.RecallDetail) error {
 	// 1. get cvm info
 	cvmInfo, err := r.getCvmInfo(task)
 	if err != nil {
-		blog.Errorf("failed to get cvm info, err: %v", err)
+		logs.Errorf("failed to get cvm info, err: %v", err)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -48,12 +49,12 @@ func (r *Recycler) createCvmReinstallTask(task *table.RecallDetail) error {
 	// 2. get password
 	pwd, err := r.getPwd(task.HostID)
 	if err != nil {
-		blog.Errorf("failed to get host %d pwd", task.HostID)
+		logs.Errorf("failed to get host %d pwd", task.HostID)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to get host %d pwd", task.HostID)
@@ -65,12 +66,12 @@ func (r *Recycler) createCvmReinstallTask(task *table.RecallDetail) error {
 	// 4. create reinstall task
 	taskID, err := r.createCvmReinstallOrder(cvmInfo, pwd, imageID)
 	if err != nil {
-		blog.Errorf("failed to create cvm reinstall order, err: %v", err)
+		logs.Errorf("failed to create cvm reinstall order, err: %v", err)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -79,7 +80,7 @@ func (r *Recycler) createCvmReinstallTask(task *table.RecallDetail) error {
 	// 5. update task status
 	if err := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, taskID, "",
 		table.RecallStatusReinstalling); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -96,12 +97,12 @@ func (r *Recycler) checkCvmReinstallStatus(task *table.RecallDetail) error {
 	// get cvm info
 	cvmInfo, err := r.getCvmInfo(task)
 	if err != nil {
-		blog.Errorf("failed to get cvm info, err: %v", err)
+		logs.Errorf("failed to get cvm info, err: %v", err)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 	}
 
@@ -120,7 +121,7 @@ func (r *Recycler) checkCvmReinstallStatus(task *table.RecallDetail) error {
 	// 返回的resp是一个DescribeInstancesResponse的实例，与请求对象对应
 	resp, err := client.DescribeInstances(request)
 	if err != nil {
-		blog.Errorf("failed to describe cvm instance, err: %v", err)
+		logs.Errorf("failed to describe cvm instance, err: %v", err)
 		return err
 	}
 
@@ -131,7 +132,7 @@ func (r *Recycler) checkCvmReinstallStatus(task *table.RecallDetail) error {
 			err := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm,
 				"", "", table.RecallStatusInitializing)
 			if err != nil {
-				blog.Warnf("failed to update recall task status, err: %v", err)
+				logs.Warnf("failed to update recall task status, err: %v", err)
 				return err
 			}
 
@@ -148,7 +149,7 @@ func (r *Recycler) checkCvmReinstallStatus(task *table.RecallDetail) error {
 			errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypeCvm, "", msg,
 				table.RecallStatusReinstallFailed)
 			if err != nil {
-				blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+				logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 			}
 
 			return err
@@ -163,7 +164,7 @@ func (r *Recycler) checkCvmReinstallStatus(task *table.RecallDetail) error {
 		}
 	default:
 		{
-			blog.Warnf("unknown reinstall status %d", status)
+			logs.Warnf("unknown reinstall status %d", status)
 		}
 	}
 
@@ -190,23 +191,23 @@ func (r *Recycler) getCvmInfo(task *table.RecallDetail) (*cvmapi.InstanceItem, e
 
 	resp, err := r.cvm.QueryCvmInstances(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to query cvm instance, err: %v", err)
+		logs.Errorf("failed to query cvm instance, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Error.Code != 0 {
-		blog.Errorf("failed to query cvm instance, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to query cvm instance, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 		return nil, fmt.Errorf("failed to query cvm instance, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
 	if resp.Result == nil {
-		blog.Errorf("failed to query cvm instance, for result is nil")
+		logs.Errorf("failed to query cvm instance, for result is nil")
 		return nil, errors.New("failed to query cvm instance, for result is nil")
 	}
 
 	num := len(resp.Result.Data)
 	if num != 1 {
-		blog.Errorf("failed to query cvm instance, for data num %d != 1", num)
+		logs.Errorf("failed to query cvm instance, for data num %d != 1", num)
 		return nil, fmt.Errorf("failed to query cvm instance, for data num %d != 1", num)
 	}
 
@@ -235,13 +236,13 @@ func (r *Recycler) createCvmReinstallOrder(inst *cvmapi.InstanceItem, pwd, image
 	// 返回的resp是一个ResetInstanceResponse的实例，与请求对象对应
 	resp, err := client.ResetInstance(request)
 	if err != nil {
-		blog.Errorf("failed to reset cvm, err: %v", err)
+		logs.Errorf("failed to reset cvm, err: %v", err)
 		return "", err
 	}
 
 	if resp.Response == nil {
 		err := errors.New("failed to reset cvm, for response is nil")
-		blog.Errorf("failed to reset cvm, for response is nil")
+		logs.Errorf("failed to reset cvm, for response is nil")
 
 		return "", err
 	}
@@ -254,7 +255,7 @@ func (r *Recycler) parseCvmReinstallRst(resp *cvm.DescribeInstancesResponse, tas
 
 	if resp.Response == nil {
 		err := errors.New("failed to describe cvm instance, for response is nil")
-		blog.Errorf("failed to describe cvm instance, for response is nil")
+		logs.Errorf("failed to describe cvm instance, for response is nil")
 
 		return ReinstallStatusFailed, err
 	}
@@ -262,7 +263,7 @@ func (r *Recycler) parseCvmReinstallRst(resp *cvm.DescribeInstancesResponse, tas
 	num := len(resp.Response.InstanceSet)
 	if num != 1 {
 		err := fmt.Errorf("failed to describe cvm instance, for response instance num %d != 1", num)
-		blog.Errorf("failed to describe cvm instance, for response instance num %d != 1", num)
+		logs.Errorf("failed to describe cvm instance, for response instance num %d != 1", num)
 
 		return ReinstallStatusFailed, err
 	}
@@ -270,14 +271,14 @@ func (r *Recycler) parseCvmReinstallRst(resp *cvm.DescribeInstancesResponse, tas
 	instance := resp.Response.InstanceSet[0]
 	if instance == nil {
 		err := errors.New("failed to describe cvm instance, for response instance is nil")
-		blog.Errorf("failed to describe cvm instance, for response instance is nil")
+		logs.Errorf("failed to describe cvm instance, for response instance is nil")
 
 		return ReinstallStatusFailed, err
 	}
 
 	if *instance.LatestOperation != "ResetInstance" {
 		err := errors.New("failed to check reinstall status, for latest operation is not reset instance")
-		blog.Errorf("failed to check reinstall status, for latest operation is not reset instance")
+		logs.Errorf("failed to check reinstall status, for latest operation is not reset instance")
 
 		return ReinstallStatusFailed, err
 	}
@@ -285,7 +286,7 @@ func (r *Recycler) parseCvmReinstallRst(resp *cvm.DescribeInstancesResponse, tas
 	if *instance.LatestOperationRequestId != task.ReinstallID {
 		err := fmt.Errorf("failed to check reinstall status, for latest operation request id %s != %s",
 			*instance.LatestOperationRequestId, task.ReinstallID)
-		blog.Errorf("failed to check reinstall status, for latest operation request id %s != %s",
+		logs.Errorf("failed to check reinstall status, for latest operation request id %s != %s",
 			*instance.LatestOperationRequestId, task.ReinstallID)
 
 		return ReinstallStatusFailed, err
@@ -294,19 +295,19 @@ func (r *Recycler) parseCvmReinstallRst(resp *cvm.DescribeInstancesResponse, tas
 	switch *instance.LatestOperationState {
 	case "SUCCESS":
 		{
-			blog.Infof("reinstall order %s is done", task.ReinstallID)
+			logs.Infof("reinstall order %s is done", task.ReinstallID)
 			return ReinstallStatusSuccess, nil
 		}
 	case "FAILED":
 		{
 			err := fmt.Errorf("reinstall order %s failed, status: %s", task.ReinstallID, *instance.LatestOperationState)
-			blog.Errorf("reinstall order %s failed, status: %s", task.ReinstallID, *instance.LatestOperationState)
+			logs.Errorf("reinstall order %s failed, status: %s", task.ReinstallID, *instance.LatestOperationState)
 
 			return ReinstallStatusFailed, err
 		}
 	default:
 		{
-			blog.Infof("reinstall order %s handling, status: %s", task.ReinstallID, *instance.LatestOperationState)
+			logs.Infof("reinstall order %s handling, status: %s", task.ReinstallID, *instance.LatestOperationState)
 			return ReinstallStatusRunning, nil
 		}
 	}
@@ -321,17 +322,17 @@ func (r *Recycler) getImageID(task *table.RecallDetail) string {
 
 	recallOrder, err := dao.Set().RecallOrder().GetRecallOrder(context.Background(), filter)
 	if err != nil {
-		blog.Warnf("failed to get recall order by id: %d", task.RecallID)
+		logs.Warnf("failed to get recall order by id: %d", task.RecallID)
 		return imageID
 	}
 
 	if recallOrder == nil || recallOrder.RecyclePolicy == nil {
-		blog.Warnf("get invalid nil recall order or recycle policy by id: %d", task.RecallID)
+		logs.Warnf("get invalid nil recall order or recycle policy by id: %d", task.RecallID)
 		return imageID
 	}
 
 	if recallOrder.RecyclePolicy.ImageID == "" {
-		blog.Warnf("get invalid empty image id by id: %d", task.RecallID)
+		logs.Warnf("get invalid empty image id by id: %d", task.RecallID)
 		return imageID
 	}
 

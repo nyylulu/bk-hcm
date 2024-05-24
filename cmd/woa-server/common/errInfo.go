@@ -10,7 +10,13 @@
  * limitations under the License.
  */
 
+// Package common defines the common error info
 package common
+
+import "errors"
+
+// NoAuthorizeError is the no authorization error.
+var NoAuthorizeError = errors.New("no authorize")
 
 // CC error number defined in this file
 // Errno name is composed of the following format CCErr[XXX]
@@ -108,19 +114,19 @@ const (
 	// CCErrCommNotAuthItem failed to get authorization information
 	CCErrCommNotAuthItem = 1199027
 
-	// CCErrCommNotAuthItem field validate failed
+	// CCErrCommFieldNotValid field validate failed
 	CCErrCommFieldNotValid = 1199028
 
 	// CCErrCommReplyDataFormatError Return data format error
 	CCErrCommReplyDataFormatError = 1199029
 
-	// CCErrCommReplyDataFormatError Return data format error
+	// CCErrCommPostInputParseError Return data format error
 	CCErrCommPostInputParseError = 1199030
 
 	// CCErrCommResourceInitFailed %s init failed
 	CCErrCommResourceInitFailed = 1199031
 
-	// CCErrCommParams should be string
+	// CCErrCommParamsShouldBeString should be string
 	CCErrCommParamsShouldBeString = 1199032
 
 	// CCErrCommSearchPropertyFailed get object property fields error
@@ -135,13 +141,13 @@ const (
 	CCErrProxyRequestFailed      = 1199036
 	CCErrRewriteRequestUriFailed = 1199037
 
-	// CCErrCommLogicDataNil   need data %s is null
+	// CCErrCommInstDataNil CCErrCommLogicDataNil   need data %s is null
 	CCErrCommInstDataNil = 1199038
 	// CCErrCommInstFieldNotFound  %s field does not exist in %s
 	CCErrCommInstFieldNotFound = 1199039
 	// CCErrCommInstFieldConvertFail  convert %s  field %s to %s error %s
 	CCErrCommInstFieldConvertFail = 1199040
-	// CCErrCommUtilFail  handle %s error %s
+	// CCErrCommUtilHandleFail  handle %s error %s
 	CCErrCommUtilHandleFail = 1199041
 	// CCErrCommParamsNeedFloat the parameter must be float type
 	CCErrCommParamsNeedFloat = 1199042
@@ -149,13 +155,13 @@ const (
 	CCErrCommFieldNotValidFail = 1199043
 
 	CCErrCommNotAllSuccess = 1199044
-	// parse auth attribute in api server rest filter failed.
+	// CCErrCommParseAuthAttributeFailed parse auth attribute in api server rest filter failed.
 	CCErrCommParseAuthAttributeFailed = 1199045
 
-	// authorize request to auth center failed
+	// CCErrCommCheckAuthorizeFailed authorize request to auth center failed
 	CCErrCommCheckAuthorizeFailed = 1199046
 
-	// auth failed, do not have permission.
+	// CCErrCommAuthNotHavePermission auth failed, do not have permission.
 	CCErrCommAuthNotHavePermission = 1199047
 
 	CCErrCommAuthorizeFailed             = 1199048
@@ -190,10 +196,10 @@ const (
 	CCErrCommListAuthorizedResourcedFromIAMFailed = 1199068
 	CCErrParseAttrOptionEnumFailed                = 1199069
 
-	// CCErrCommParamsNotSupportXXErr 参数%s的值%s 无效
+	// CCErrCommParamsValueInvalidError 参数%s的值%s 无效
 	CCErrCommParamsValueInvalidError = 1199070
 
-	// 构造DB查询条件失败
+	// CCErrConstructDBFilterFailed 构造DB查询条件失败
 	CCErrConstructDBFilterFailed = 1199071
 	CCErrGetNoAuthSkipURLFailed  = 1199072
 
@@ -204,12 +210,12 @@ const (
 	CCErrCommForbiddenOperateMainlineInstanceWithCommonAPI = 1199075
 	CCErrTopoUpdateBuiltInCloudForbidden                   = 1199076
 
-	// CCErrTopoModuleNotFoundError module [%s] does not exist in the business topology
+	// CCErrCommTopoModuleNotFoundError module [%s] does not exist in the business topology
 	CCErrCommTopoModuleNotFoundError = 1199078
-	// CCErrBizNotFoundError business [%s] does not exist
+	// CCErrCommBizNotFoundError business [%s] does not exist
 	CCErrCommBizNotFoundError      = 1199079
 	CCErrParseAttrOptionListFailed = 1199080
-	// one argument: maxValue
+	// CCErrExceedMaxOperationRecordsAtOnce one argument: maxValue
 	CCErrExceedMaxOperationRecordsAtOnce = 1199081
 
 	CCErrCommListAuthorizedResourceFromIAMFailed             = 1199082
@@ -230,22 +236,22 @@ const (
 	//CCIllegalRegularExpression the regular expression's type assertion failed
 	CCIllegalRegularExpression = 1199090
 
-	// too many requests
+	// CCErrTooManyRequestErr too many requests
 	CCErrTooManyRequestErr = 1199997
 
-	// unknown or unrecognized error
+	// CCErrorUnknownOrUnrecognizedError unknown or unrecognized error
 	CCErrorUnknownOrUnrecognizedError = 1199998
 
 	// CCErrCommInternalServerError %s Internal Server Error
 	CCErrCommInternalServerError = 1199999
 
-	// apiserver 1100XXX
+	// CCErrAPIGetAuthorizedAppListFromAuthFailed apiserver 1100XXX
 	CCErrAPIGetAuthorizedAppListFromAuthFailed = 1100001
 	CCErrAPIGetUserResourceAuthStatusFailed    = 1100002
 	CCErrAPINoObjectInstancesIsFound           = 1100003
 	CCErrAPINoPassSourceCertification          = 1100004
 
-	// toposerver 1101XXX
+	// CCErrTopoInstCreateFailed toposerver 1101XXX
 	// CCErrTopoInstCreateFailed unable to create the instance
 	CCErrTopoInstCreateFailed = 1101000
 
@@ -351,55 +357,55 @@ const (
 	CCErrTopoGetAppFailed = 1101033
 	// CCErrTopoGetModuleFailed search  module err %s
 	CCErrTopoGetModuleFailed = 1101034
-	// CCErrTopoBizTopoOverLevel the mainline topo level over limit
+	// CCErrTopoBizTopoLevelOverLimit the mainline topo level over limit
 	CCErrTopoBizTopoLevelOverLimit = 1101035
 	// CCErrTopoInstHasBeenAssociation the instance has been associated
 	CCErrTopoInstHasBeenAssociation = 1101036
-	// it is forbidden to delete , that has some insts
+	// CCErrTopoObjectHasSomeInstsForbiddenToDelete it is forbidden to delete , that has some insts
 	CCErrTopoObjectHasSomeInstsForbiddenToDelete = 1101037
-	// the associations %s->%s already exist
+	// CCErrTopoAssociationAlreadyExist the associations %s->%s already exist
 	CCErrTopoAssociationAlreadyExist = 1101038
-	// the source association object does not exist
+	// CCErrTopoAssociationSourceObjectNotExist the source association object does not exist
 	CCErrTopoAssociationSourceObjectNotExist = 1101039
-	// the destination association object does not exist
+	// CCErrTopoAssociationDestinationObjectNotExist the destination association object does not exist
 	CCErrTopoAssociationDestinationObjectNotExist = 1101040
-	// invalid object association id, should be int64
+	// CCErrTopoInvalidObjectAssociationID invalid object association id, should be int64
 	CCErrTopoInvalidObjectAssociationID = 1101041
-	// got multiple object association with one association id
+	// CCErrTopoGotMultipleAssociationInstance got multiple object association with one association id
 	CCErrTopoGotMultipleAssociationInstance = 1101042
-	// association with a object has multiple instance, can not be deleted.
+	// CCErrTopoAssociationHasAlreadyBeenInstantiated association with a object has multiple instance, not be deleted.
 	CCErrTopoAssociationHasAlreadyBeenInstantiated = 1101043
-	// get association kind with id failed.
+	// CCErrTopoGetAssociationKindFailed get association kind with id failed.
 	CCErrTopoGetAssociationKindFailed = 1101044
-	// create object association missing object kind id, src object id or destination object id.
+	// CCErrorTopoAssociationMissingParameters missing object kind id, src object id or destination object id.
 	CCErrorTopoAssociationMissingParameters = 1101045
-	// the given association id does not exist.
+	// CCErrorTopoObjectAssociationNotExist the given association id does not exist.
 	CCErrorTopoObjectAssociationNotExist = 1101046
-	// update object association, but update fields that can not be updated.
+	// CCErrorTopoObjectAssociationUpdateForbiddenFields update fields that can not be updated.
 	CCErrorTopoObjectAssociationUpdateForbiddenFields = 1101047
-	// mainline object association do not exist
+	// CCErrorTopoMainlineObjectAssociationNotExist mainline object association do not exist
 	CCErrorTopoMainlineObjectAssociationNotExist = 1101048
 	// CCErrorTopoImportAssociation  import association error
 	CCErrorTopoImportAssociation = 1101049
-	// got multiple association kind with a id
+	// CCErrorTopoGetMultipleAssocKindInstWithOneID got multiple association kind with a id
 	CCErrorTopoGetMultipleAssocKindInstWithOneID = 1101050
-	// delete a pre-defined association kind.
+	// CCErrorTopoDeletePredefinedAssociationKind delete a pre-defined association kind.
 	CCErrorTopoDeletePredefinedAssociationKind = 1101051
-	// create new instance for a new association, but association map is 1:1
+	// CCErrorTopoCreateMultipleInstancesForOneToOneAssociation association map is 1:1
 	CCErrorTopoCreateMultipleInstancesForOneToOneAssociation = 1101052
-	// the object has associate to another object, or has been associated by another one.
+	// CCErrorTopoObjectHasAlreadyAssociated has been associated by another one.
 	CCErrorTopoObjectHasAlreadyAssociated = 1101053
-	// update a pre-defined association, it's forbidden.
+	// CCErrorTopoUpdatePredefinedAssociation update a pre-defined association, it's forbidden.
 	CCErrorTopoUpdatePredefinedAssociation = 1101054
-	// can not delete a pre-defined association.
+	// CCErrorTopoDeletePredefinedAssociation can not delete a pre-defined association.
 	CCErrorTopoDeletePredefinedAssociation = 1101055
-	// association do not exist.
+	// CCErrorTopoAssociationDoNotExist association do not exist.
 	CCErrorTopoAssociationDoNotExist = 1101056
-	// create model's instance batch, but instance's data missing field bk_inst_name
+	// CCErrorTopoObjectInstanceMissingInstanceNameField instance's data missing field bk_inst_name
 	CCErrorTopoObjectInstanceMissingInstanceNameField = 1101057
-	// object instance's bk_inst_name filed is not string
+	// CCErrorTopoInvalidObjectInstanceNameFieldValue object instance's bk_inst_name filed is not string
 	CCErrorTopoInvalidObjectInstanceNameFieldValue = 1101058
-	// create model's instance patch, but instance's name is duplicate.
+	// CCErrorTopoMultipleObjectInstanceName create model's instance patch, but instance's name is duplicate.
 	CCErrorTopoMultipleObjectInstanceName = 1101059
 
 	CCErrorTopoAssociationKindHasBeenUsed                     = 1101060
@@ -427,9 +433,9 @@ const (
 	CCErrTopoObjectUniquePresetCouldNotDelOrEdit              = 1101167
 	CCErrTopoObjectUniqueCanNotHasMultipleMustCheck           = 1101168
 	CCErrTopoObjectUniqueShouldHaveMoreThanOne                = 1101069
-	// association kind has been apply to object
+	// CCErrorTopoAssKindHasApplyToObject association kind has been apply to object
 	CCErrorTopoAssKindHasApplyToObject = 1101070
-	// pre definition association kind can not be delete
+	// CCErrorTopoPreAssKindCanNotBeDelete pre definition association kind can not be delete
 	CCErrorTopoPreAssKindCanNotBeDelete = 1101071
 	CCErrorTopoAsstKindIsNotExist       = 1101072
 	CCErrorAsstInstIsNotExist           = 1101073
@@ -446,7 +452,7 @@ const (
 	CCErrorTopoAssociationKindInconsistent = 1101083
 	// CCErrorTopoModelStopped means model have been stopped to use
 	CCErrorTopoModelStopped = 1101084
-	// mainline's object unique can not be updated, deleted or create new rules.
+	// CCErrorTopoMainlineObjectCanNotBeChanged deleted or create new rules.
 	CCErrorTopoMainlineObjectCanNotBeChanged   = 1101085
 	CCErrorTopoGetAuthorizedBusinessListFailed = 1101086
 	CCErrTopoArchiveBusinessHasHost            = 1101087
@@ -505,7 +511,7 @@ const (
 	// CCErrObjectDBOpErrno failed to operation database
 	CCErrObjectDBOpErrno = 1102020
 
-	// event_server 1103XXX
+	// CCErrEventSubscribeInsertFailed event_server 1103XXX
 	// CCErrEventSubscribeInsertFailed failed to save the Subscribe
 	CCErrEventSubscribeInsertFailed = 1103000
 
@@ -520,23 +526,23 @@ const (
 
 	// CCErrEventSubscribePingFailed failed to ping the target
 	CCErrEventSubscribePingFailed = 1103004
-	// CCErrEventSubscribePingFailed failed to telnet the target
+	// CCErrEventSubscribeTelnetFailed failed to telnet the target
 	CCErrEventSubscribeTelnetFailed = 1103005
-	// CCErrEventOperateSuccessBUtSentEventFailed failed to sent event
+	// CCErrEventPushEventFailed failed to sent event
 	CCErrEventPushEventFailed = 1103006
 
 	CCErrEventChainNodeNotExist = 1103007
 	CCErrEventDetailNotExist    = 1103008
 
-	// host 1104XXX
+	// CCErrHostModuleRelationAddFailed host 1104XXX
 	CCErrHostModuleRelationAddFailed = 1104000
 
-	// migrate 1105XXX
+	// CCErrCommMigrateFailed migrate 1105XXX
 	//  CCErrCommMigrateFailed failed to migrate
 	CCErrCommMigrateFailed        = 1105000
 	CCErrCommInitAuthCenterFailed = 1105001
 
-	// host controller 1106XXX
+	// CCErrHostSelectInst host controller 1106XXX
 	CCErrHostSelectInst                  = 1106000
 	CCErrHostCreateInst                  = 1106002
 	CCErrHostGetSnapshot                 = 1106003
@@ -562,7 +568,7 @@ const (
 	CCErrCloudSyncHistorySearchFail      = 1106023
 	CCErrHostGetSnapshotBatch            = 1106024
 
-	// process controller 1107XXX
+	// CCErrProcDeleteProc2Module process controller 1107XXX
 	CCErrProcDeleteProc2Module   = 1107001
 	CCErrProcCreateProc2Module   = 1107002
 	CCErrProcSelectProc2Module   = 1107003
@@ -577,7 +583,7 @@ const (
 	CCErrProcCreateProc2Template = 1107012
 	CCErrProcSelectProc2Template = 1107013
 
-	// process server 1108XXX
+	// CCErrProcSearchDetailFaile process server 1108XXX
 	CCErrProcSearchDetailFaile          = 1108001
 	CCErrProcBindToMoudleFaile          = 1108002
 	CCErrProcUnBindToMoudleFaile        = 1108003
@@ -628,14 +634,14 @@ const (
 
 	CCErrSyncServiceInstanceByTemplateFailed = 1108045
 
-	// audit log 1109XXX
+	// CCErrAuditSaveLogFailed audit log 1109XXX
 	CCErrAuditSaveLogFailed      = 1109001
 	CCErrAuditTakeSnapshotFailed = 1109002
 	CCErrAuditSelectFailed       = 1109003
 	CCErrAuditSelectTimeout      = 1109004
 	CCErrAuditGenerateLogFailed  = 1109005
 
-	// host server
+	// CCErrHostGetFail host server
 	CCErrHostGetFail               = 1110001
 	CCErrHostUpdateFail            = 1110002
 	CCErrHostUpdateFieldFail       = 1110003
@@ -668,7 +674,7 @@ const (
 	CCErrAddHostToModuleFailStr    = 1110030
 	CCErrTransferHostToArchivedApp = 1110031
 
-	// hostserver api machinery new error code
+	// CCErrAddUserCustomQueryFailed hostserver api machinery new error code
 	CCErrAddUserCustomQueryFailed       = 1110040
 	CCErrUpdateUserCustomQueryFailed    = 1110041
 	CCErrDeleteUserCustomQueryFailed    = 1110042
@@ -706,7 +712,7 @@ const (
 	CCErrDeleteDefaultCloudAreaFail                           = 1110066
 	CCErrHostFindManyCloudAreaAddSyncTaskIDsFieldFail         = 1110067
 
-	// web 1111XXX
+	// CCErrWebFileNoFound web 1111XXX
 	CCErrWebFileNoFound                 = 1111001
 	CCErrWebFileSaveFail                = 1111002
 	CCErrWebOpenFileFail                = 1111003
@@ -727,7 +733,7 @@ const (
 	CCErrWebGetUsernameMapFail          = 1111018
 	CCErrWebHostCheckFail               = 1111019
 
-	// datacollection 1112xxx
+	// CCErrCollectNetDeviceCreateFail datacollection 1112xxx
 	CCErrCollectNetDeviceCreateFail            = 1112000
 	CCErrCollectNetDeviceGetFail               = 1112001
 	CCErrCollectNetDeviceDeleteFail            = 1112002
@@ -748,15 +754,15 @@ const (
 	CCErrCollectNetDeviceUpdateFail            = 1112017
 	CCErrCollectNetPropertyUpdateFail          = 1112018
 
-	// coreservice 1113xxx
-	// CCErrorModelAttributeGroupHasSomeAttributes the group has some attributes
+	// CCErrCoreServiceModelAttributeGroupHasSomeAttributes coreservice 1113xxx
+	// the group has some attributes
 	CCErrCoreServiceModelAttributeGroupHasSomeAttributes = 1113001
 
 	// CCErrCoreServiceHostNotBelongBusiness hostID [%#v] does not belong of  businessID [%d]
 	CCErrCoreServiceHostNotBelongBusiness = 1113002
 	// CCErrCoreServiceHostNotExist hostID [%#v] does not exist
 	CCErrCoreServiceHostNotExist = 1113003
-	// ModuleID [%#v] has not belong of  businessID [%d]
+	// CCErrCoreServiceHasModuleNotBelongBusiness ModuleID [%#v] has not belong of  businessID [%d]
 	CCErrCoreServiceHasModuleNotBelongBusiness = 1113004
 	// CCErrCoreServiceModuleContainDefaultModuleErr  translate host to multiple module not contain default module
 	CCErrCoreServiceModuleContainDefaultModuleErr = 1113005
@@ -771,7 +777,7 @@ const (
 	// CCErrCoreServiceEventPushEventFailed failed to sent event
 	CCErrCoreServiceEventPushEventFailed = 1113010
 
-	// 禁止释放(转移到空闲机/故障机/资源池)已关联到服务实例的主机
+	// CCErrCoreServiceForbiddenReleaseHostReferencedByServiceInstance 禁止释放(转移到空闲机/故障机/资源池)已关联到服务实例的主机
 	CCErrCoreServiceForbiddenReleaseHostReferencedByServiceInstance = 1113011
 
 	CCErrHostRemoveFromDefaultModuleFailed                                    = 1113012
@@ -787,13 +793,13 @@ const (
 	CCErrCoreServiceShouldNotRemoveProcessCreateByTemplate                    = 1113022
 	// CCErrCoreServiceDeleteMultpleObjectIDRecordErr 删除多个模型中的%s数据
 	CCErrCoreServiceDeleteMultpleObjectIDRecordErr = 1113023
-	// CCErrCoreServiceDeleteMultipleObjectIDRecordErr 不允许删除在唯一校验中的字段
+	// CCErrCoreServiceNotAllowUniqueAttr 不允许删除在唯一校验中的字段
 	CCErrCoreServiceNotAllowUniqueAttr = 1113024
 	// CCErrCoreServiceNotUpdatePredefinedAttrErr 修改不允许修改的属性的描述
 	CCErrCoreServiceNotUpdatePredefinedAttrErr = 1113025
 	// CCErrCoreServiceNotAllowAddRequiredFieldErr 模型[%s]不允许新加必填字段
 	CCErrCoreServiceNotAllowAddRequiredFieldErr = 1113026
-	// CCErrCoreServiceNotAllowAddRequiredFieldErr 模型[%s]不允许修改必填字段
+	// CCErrCoreServiceNotAllowChangeRequiredFieldErr 模型[%s]不允许修改必填字段
 	CCErrCoreServiceNotAllowChangeRequiredFieldErr = 1113027
 	// CCErrCoreServiceNotAllowAddFieldErr 模型[%s]不允许新加字段
 	CCErrCoreServiceNotAllowAddFieldErr = 1113028
@@ -804,10 +810,10 @@ const (
 	// CCErrCoreServiceModelHasAssociationErr 模型与其他模型有关联关系
 	CCErrCoreServiceModelHasAssociationErr           = 1113031
 	CCErrCoreServiceOnlyNodeServiceCategoryAvailable = 1113032
-	// Deprecated SearchTopoTreeScanTooManyData means hit too many data, we return directly.
+	// SearchTopoTreeScanTooManyData means hit too many data, we return directly.
 	SearchTopoTreeScanTooManyData = 1113038
 
-	// CCERrrCoreServiceUniqueRuleExist 模型唯一校验规则已经存在
+	// CCERrrCoreServiceSameUniqueCheckRuleExist 模型唯一校验规则已经存在
 	CCERrrCoreServiceSameUniqueCheckRuleExist = 1113050
 	// CCERrrCoreServiceSubsetUniqueRuleExist 已存在 “X字段” 唯一校验，请在该规则基础上进行补充
 	CCERrrCoreServiceSubsetUniqueRuleExist = 1113051
@@ -825,10 +831,10 @@ const (
 	CCErrCoreServiceCreateDBUniqueIndex = 1113036
 	// CCErrCoreServiceSearchDBUniqueIndex 获取db唯一索引失败
 	CCErrCoreServiceSearchDBUniqueIndex = 1113037
-	// CCErrCoreServiceCreateDBUniqueIndex 创建唯一索引失败,现有数据有重复值
+	// CCErrCoreServiceCreateDBUniqueIndexDuplicateValue 创建唯一索引失败,现有数据有重复值
 	CCErrCoreServiceCreateDBUniqueIndexDuplicateValue = 1113039
 
-	// synchronize data core service  11139xx
+	// CCErrCoreServiceSyncError synchronize data core service  11139xx
 	CCErrCoreServiceSyncError = 1113900
 	// CCErrCoreServiceSyncDataClassifyNotExistError %s type data synchronization, data of the same type %s does not
 	// exist
@@ -838,7 +844,7 @@ const (
 
 	CCErrSynchronizeError = 1113903
 
-	// operation_server 1116xxx
+	// CCErrOperationBizModuleHostAmountFail operation_server 1116xxx
 	CCErrOperationBizModuleHostAmountFail = 1116001
 	CCErrOperationNewAddStatisticFail     = 1116002
 	CCErrOperationChartAlreadyExist       = 1116003
@@ -848,8 +854,8 @@ const (
 	CCErrOperationGetChartDataFail        = 1116007
 	CCErrOperationUpdateChartPositionFail = 1116008
 
-	// task_server 1117xxx
-	// CCErrTaskNotFound task not found
+	// CCErrTaskNotFound task_server 1117xxx
+	//  task not found
 	CCErrTaskNotFound = 1117001
 	// CCErrTaskSubTaskNotFound sub task not found
 	CCErrTaskSubTaskNotFound = 1117002
@@ -862,8 +868,8 @@ const (
 	CCErrTaskListTaskFail         = 1117007
 	CCErrTaskCreateConflict       = 1117008
 
-	// cloud_server 1118xxx
-	// CCErrCloudVendorNotSupport cloud vendor not support
+	// CCErrCloudVendorNotSupport cloud_server 1118xxx
+	// cloud vendor not support
 	CCErrCloudVendorNotSupport                = 1118001
 	CCErrCloudAccountNameAlreadyExist         = 1118002
 	CCErrCloudValidAccountParamFail           = 1118003
@@ -890,7 +896,7 @@ const (
 
 	/** TODO: 以下错误码需要改造 **/
 
-	// json
+	// CCErrCommJsonDecode json
 	CCErrCommJsonDecode    = 3001
 	CCErrCommJsonDecodeStr = "json decode failed!"
 	CCErrCommJsonEncode    = 3002

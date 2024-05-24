@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata 定义了metadata相关的数据结构
 package metadata
 
 import (
@@ -19,6 +20,7 @@ import (
 	"hcm/cmd/woa-server/common"
 )
 
+// Page for paging query
 const (
 	PageName         = "page"
 	PageSort         = "sort"
@@ -36,6 +38,7 @@ type BasePage struct {
 	EnableCount bool   `json:"enable_count,omitempty" mapstructure:"enable_count,omitempty"`
 }
 
+// Validate page
 func (page BasePage) Validate(allowNoLimit bool) (string, error) {
 	// 此场景下如果仅仅是获取查询对象的数量，page的其余参数只能是初始化值
 	if page.EnableCount {
@@ -79,6 +82,7 @@ func (page BasePage) ValidateLimit(maxLimit int) error {
 	return nil
 }
 
+// ParsePage parse page
 func ParsePage(origin interface{}) BasePage {
 	if origin == nil {
 		return BasePage{Limit: common.BKNoLimit}
@@ -103,6 +107,7 @@ func ParsePage(origin interface{}) BasePage {
 	return result
 }
 
+// ToSearchSort to search sort
 func (page BasePage) ToSearchSort() []SearchSort {
 	return NewSearchSortParse().String(page.Sort).ToSearchSortArr()
 }

@@ -13,11 +13,11 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // ZoneIf provides management interface for operations of zone config
@@ -64,14 +64,14 @@ func (z *zone) GetZone(kt *kit.Kit, cond *mapstr.MapStr) (*types.GetZoneResult, 
 func (z *zone) CreateZone(kt *kit.Kit, input *types.Zone) (mapstr.MapStr, error) {
 	id, err := config.Operation().Zone().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create zone, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().Zone().CreateZone(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create zone, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -88,7 +88,7 @@ func (z *zone) UpdateZone(kt *kit.Kit, instId int64, input *mapstr.MapStr) error
 	}
 
 	if err := config.Operation().Zone().UpdateZone(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update zone, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -102,7 +102,7 @@ func (z *zone) DeleteZone(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().Zone().DeleteZone(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete zone, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -128,14 +128,14 @@ func (z *zone) GetIdcZone(kt *kit.Kit, cond *mapstr.MapStr) (*types.GetIdcZoneRs
 func (z *zone) CreateIdcZone(kt *kit.Kit, input *types.IdcZone) (mapstr.MapStr, error) {
 	id, err := config.Operation().IdcZone().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create idc zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create idc zone, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().IdcZone().CreateZone(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create idc zone, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create idc zone, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{

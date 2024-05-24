@@ -20,16 +20,18 @@ import (
 	"hcm/cmd/woa-server/common/http/httpclient"
 )
 
+// NewMetricController create a new MetricController
 func NewMetricController(conf Config, healthFunc HealthFunc, collectors ...*Collector) []Action {
 	return newMetricController(conf, healthFunc, collectors...)
 }
 
+// RunModeType define the run mode of your module
 type RunModeType string
 
-// used when your module running with Master_Slave_Mode mode
+// RoleType used when your module running with Master_Slave_Mode mode
 type RoleType string
 
-// metric const define
+// MetricPort metric const define
 const (
 	MetricPort = 60060
 )
@@ -80,18 +82,22 @@ type MetricMeta struct {
 	Help string `json:"help"`
 }
 
+// MetricInterf define the metric interface
 type MetricInterf interface {
 	GetMeta() *MetricMeta
 	GetValue() (*FloatOrString, error)
 	GetExtension() (*MetricExtension, error)
 }
 
+// MetricExtension define the metric extension
 type MetricExtension struct{}
 
+// CollectInter define the collector interface
 type CollectInter interface {
 	Collect() []MetricInterf
 }
 
+// NewCollector build the collector
 func NewCollector(name string, collector CollectInter) *Collector {
 	return &Collector{
 		Name:      CollectorName(name),
@@ -99,6 +105,7 @@ func NewCollector(name string, collector CollectInter) *Collector {
 	}
 }
 
+// CheckHealthy check the healthy of the server
 func CheckHealthy(address string) error {
 	if "" == address {
 		return errors.New("address not found")

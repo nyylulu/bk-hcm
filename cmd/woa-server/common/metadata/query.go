@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata define the common query condition definition
 package metadata
 
 import (
@@ -66,6 +67,7 @@ type QueryResult struct {
 	Info  []mapstr.MapStr `json:"info"`
 }
 
+// QueryConditionResult common query condition result
 type QueryConditionResult ResponseInstData
 
 // SearchSortParse SearchSort parse interface
@@ -82,11 +84,12 @@ type searchSortParse struct {
 	data []SearchSort
 }
 
+// NewSearchSortParse create SearchSortParse
 func NewSearchSortParse() SearchSortParse {
 	return &searchSortParse{}
 }
 
-//  String convert string sort to cc SearchSort struct array
+// String convert string sort to cc SearchSort struct array
 func (ss *searchSortParse) String(sort string) SearchSortParse {
 	if sort == "" {
 		return ss
@@ -106,7 +109,7 @@ func (ss *searchSortParse) String(sort string) SearchSortParse {
 	return ss
 }
 
-//  Field   cc SearchSort struct array
+// Field cc SearchSort struct array
 func (ss *searchSortParse) Field(field string, isDesc bool) SearchSortParse {
 
 	ssInst := SearchSort{
@@ -117,6 +120,7 @@ func (ss *searchSortParse) Field(field string, isDesc bool) SearchSortParse {
 	return ss
 }
 
+// Set cc SearchSort struct array
 func (ss *searchSortParse) Set(ssArr []SearchSort) SearchSortParse {
 	ss.data = append(ss.data, ssArr...)
 	return ss
@@ -127,7 +131,7 @@ func (ss *searchSortParse) ToSearchSortArr() []SearchSort {
 	return ss.data
 }
 
-// searchSortParse cc SearchSort struct to mongodb sort filed
+// ToMongo cc SearchSort struct to mongodb sort filed
 func (ss *searchSortParse) ToMongo() string {
 	var orderByArr []string
 	for _, item := range ss.data {

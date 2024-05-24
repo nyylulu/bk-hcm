@@ -19,7 +19,6 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
@@ -31,6 +30,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/tjjapi"
 	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	"hcm/pkg/cc"
+	"hcm/pkg/logs"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -74,7 +74,7 @@ func (r *Recycler) Run(workers int) {
 
 	select {
 	case <-r.ctx.Done():
-		blog.Info("dispatcher exits")
+		logs.Infof("dispatcher exits")
 	}
 }
 
@@ -90,7 +90,7 @@ func (r *Recycler) Pop() (string, error) {
 	id, ok := obj.(string)
 	if !ok {
 		r.queue.Forget(obj)
-		blog.Warnf("Expected uint64 in queue but got %#v", obj)
+		logs.Warnf("Expected uint64 in queue but got %#v", obj)
 		return "", errors.New("got non-uint64 from queue")
 	}
 
@@ -108,16 +108,16 @@ func (r *Recycler) Add(id string) {
 func (r *Recycler) runWorker() error {
 	id, err := r.Pop()
 	if err != nil {
-		blog.Errorf("failed to deal recycle task, for get recycle task from informer err: %v", err)
+		logs.Errorf("failed to deal recycle task, for get recycle task from informer err: %v", err)
 		return err
 	}
 
 	if err := r.dispatchHandler(id); err != nil {
-		blog.Errorf("failed to dispatch recycle task, err: %v, id: %s", err, id)
+		logs.Errorf("failed to dispatch recycle task, err: %v, id: %s", err, id)
 		return err
 	}
 
-	blog.Infof("Successfully dispatch recycle task %s", id)
+	logs.Infof("Successfully dispatch recycle task %s", id)
 
 	return nil
 }
@@ -127,7 +127,7 @@ func (r *Recycler) dispatchHandler(id string) error {
 	// 1. get recycle task
 	task, err := r.getTask(id)
 	if err != nil {
-		blog.Errorf("failed to get recycle task, err: %v", err)
+		logs.Errorf("failed to get recycle task, err: %v", err)
 		return err
 	}
 
@@ -162,24 +162,24 @@ func (r *Recycler) dispatchHandler(id string) error {
 		}
 	case table.RecallStatusDone:
 		{
-			blog.Infof("recall task %s is done, need not handle", task.ID)
+			logs.Infof("recall task %s is done, need not handle", task.ID)
 			err = nil
 		}
 	case table.RecallStatusTerminate:
 		{
-			blog.Infof("recall task %s is terminate, need not handle", task.ID)
+			logs.Infof("recall task %s is terminate, need not handle", task.ID)
 			err = nil
 		}
 	case table.RecallStatusPreCheckFailed, table.RecallStatusClearCheckFailed, table.RecallStatusReinstallFailed,
 		table.RecallStatusInitializeFailed, table.RecallStatusDataDeleteFailed, table.RecallStatusConfCheckFailed,
 		table.RecallStatusTransitFailed:
 		{
-			blog.Warnf("recall task %s is failed, need not handle", task.ID)
+			logs.Warnf("recall task %s is failed, need not handle", task.ID)
 			err = nil
 		}
 	default:
 		{
-			blog.Warnf("recall task %s unsupported recall task status %s, cannot handle", task.ID, task.Status)
+			logs.Warnf("recall task %s unsupported recall task status %s, cannot handle", task.ID, task.Status)
 			err = fmt.Errorf("recall task %s unsupported recall task status %s, cannot handle", task.ID, task.Status)
 		}
 	}

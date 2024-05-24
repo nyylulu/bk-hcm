@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package mapstr provide mapstr convert
 package mapstr
 
 import (

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package config implements cvm restrict config
 package config
 
 import (

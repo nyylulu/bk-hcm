@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package recycler ...
 package recycler
 
 import (
@@ -18,26 +19,26 @@ import (
 	"strings"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/querybuilder"
 	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
 	hostInfos, err := r.getHostBaseInfo([]int64{hostID})
 	if err != nil {
-		blog.Errorf("failed to get host base info, err: %v", err)
+		logs.Errorf("failed to get host base info, err: %v", err)
 		return "", err
 	}
 
 	cnt := len(hostInfos)
 	if cnt != 1 {
-		blog.Errorf("get unexpected host base info, for count %d != 1", cnt)
+		logs.Errorf("get unexpected host base info, for count %d != 1", cnt)
 		return "", fmt.Errorf("get unexpected host base info, for count %d != 1", cnt)
 	}
 
 	if hostInfos[0].BkHostId != hostID {
-		blog.Errorf("get unexpected host base info, for return host id %d != target %d", hostInfos[0].BkHostId, hostID)
+		logs.Errorf("get unexpected host base info, for return host id %d != target %d", hostInfos[0].BkHostId, hostID)
 		return "", fmt.Errorf("get unexpected host base info, for return host id %d != target %d",
 			hostInfos[0].BkHostId, hostID)
 	}
@@ -81,12 +82,12 @@ func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*ccapi.HostInfo, error) {
 
 	resp, err := r.esbCli.Cmdb().ListHost(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc host info, err: %v", err)
+		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 

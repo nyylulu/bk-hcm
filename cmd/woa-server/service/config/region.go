@@ -10,14 +10,15 @@
  * limitations under the License.
  */
 
+// Package config region config
 package config
 
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -25,7 +26,7 @@ import (
 func (s *service) GetQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.Region().GetRegion(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get region list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get region list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -36,13 +37,13 @@ func (s *service) GetQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.Region)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create region, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create region, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Region().CreateRegion(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create region, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create region, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -53,18 +54,18 @@ func (s *service) CreateQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update region, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update region, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Region().UpdateRegion(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update region, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update region, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -75,12 +76,12 @@ func (s *service) UpdateQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DeleteQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Region().DeleteRegion(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete region, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete region, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -91,7 +92,7 @@ func (s *service) DeleteQcloudRegion(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetIdcRegion(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.Region().GetIdcRegion(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get idc region list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get idc region list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

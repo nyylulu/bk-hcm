@@ -20,11 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/utils"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) dealClearCheckTask(task *table.RecallDetail) error {
@@ -40,11 +40,11 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	ip, ok := task.Labels[table.IPKey]
 	if !ok || ip == "" {
 		err := errors.New("get no ip from task label")
-		blog.Errorf("failed to create clear check task, err: %v", err)
+		logs.Errorf("failed to create clear check task, err: %v", err)
 
 		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -53,11 +53,11 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	ips := []string{ip}
 	taskID, err := r.createSoJob("isclear", ips)
 	if err != nil {
-		blog.Errorf("host %s failed to create clear check task, err: %v", ip, err)
+		logs.Errorf("host %s failed to create clear check task, err: %v", ip, err)
 
 		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to create clear check task, err: %v", err)
@@ -66,7 +66,7 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	// update task status
 	if err := r.updateTaskClearCheckStatus(task, strconv.Itoa(taskID), "",
 		table.RecallStatusClearChecking); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -82,12 +82,12 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 	taskID, err := strconv.Atoi(task.ClearCheckID)
 	if err != nil {
-		blog.Errorf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
+		logs.Errorf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
 
 		msg := fmt.Sprintf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
 		errUpdate := r.updateTaskClearCheckStatus(task, "", msg, table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
@@ -96,13 +96,13 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 	if err := r.checkClearJobStatus(taskID); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
-			blog.Infof("task %s ping death, skip clear check step", taskID)
+			logs.Infof("task %s ping death, skip clear check step", taskID)
 		} else {
-			blog.Infof("failed to clear check, job id: %d, err: %v", taskID, err)
+			logs.Infof("failed to clear check, job id: %d, err: %v", taskID, err)
 
 			errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
 			if errUpdate != nil {
-				blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+				logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 			}
 
 			return fmt.Errorf("failed to clear check, job id: %d, err: %v", taskID, err)
@@ -111,7 +111,7 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskClearCheckStatus(task, "", "", table.RecallStatusReinstalling); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 
 		return err
 	}

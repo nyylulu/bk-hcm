@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package config define the config of woa-server
 package config
 
 import (

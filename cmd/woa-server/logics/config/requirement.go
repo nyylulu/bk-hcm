@@ -13,11 +13,11 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // RequirementIf provides management interface for operations of requirement config
@@ -60,14 +60,14 @@ func (r *requirement) GetRequirement(kt *kit.Kit) (*types.GetRequirementResult, 
 func (r *requirement) CreateRequirement(kt *kit.Kit, input *types.Requirement) (mapstr.MapStr, error) {
 	id, err := config.Operation().Requirement().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create requirement, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create requirement, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().Requirement().CreateRequirement(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create requirement, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create requirement, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -84,7 +84,7 @@ func (r *requirement) UpdateRequirement(kt *kit.Kit, instId int64, input *mapstr
 	}
 
 	if err := config.Operation().Requirement().UpdateRequirement(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update requirement, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update requirement, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -98,7 +98,7 @@ func (r *requirement) DeleteRequirement(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().Requirement().DeleteRequirement(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete requirement, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete requirement, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

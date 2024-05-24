@@ -39,8 +39,10 @@ var (
 )
 
 var (
+	// CCDistrEnterprise means whether the current distribution is enterprise
 	CCDistrEnterprise = "enterprise"
-	CCDistrCommunity  = "community"
+	// CCDistrCommunity means whether the current distribution is community
+	CCDistrCommunity = "community"
 )
 
 var (

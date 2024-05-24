@@ -16,7 +16,6 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/config/dao"
@@ -26,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // LeftIPIf provides management interface for operations of left ip config
@@ -57,7 +57,7 @@ type leftIP struct {
 func (l *leftIP) GetLeftIP(kt *kit.Kit, input *types.GetLeftIPParam) (*types.GetLeftIPRst, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("failed to get filter, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get filter, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -65,7 +65,7 @@ func (l *leftIP) GetLeftIP(kt *kit.Kit, input *types.GetLeftIPParam) (*types.Get
 	if input.Page.EnableCount {
 		cnt, err := dao.Set().ZoneLeftIP().CountZoneLeftIP(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get config left ip count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get config left ip count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -75,7 +75,7 @@ func (l *leftIP) GetLeftIP(kt *kit.Kit, input *types.GetLeftIPParam) (*types.Get
 
 	insts, err := dao.Set().ZoneLeftIP().FindManyZoneLeftIP(kt.Ctx, input.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get config left ip, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get config left ip, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -89,13 +89,13 @@ func (l *leftIP) GetLeftIP(kt *kit.Kit, input *types.GetLeftIPParam) (*types.Get
 func (l *leftIP) CreateLeftIP(kt *kit.Kit, input *table.ZoneLeftIP) (mapstr.MapStr, error) {
 	id, err := dao.Set().ZoneLeftIP().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create config left ip, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create config left ip, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	input.ID = id
 	if err := dao.Set().ZoneLeftIP().CreateZoneLeftIP(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create config left ip, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create config left ip, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -112,7 +112,7 @@ func (l *leftIP) UpdateLeftIP(kt *kit.Kit, instId int64, input map[string]interf
 	}
 
 	if err := dao.Set().ZoneLeftIP().UpdateZoneLeftIP(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update left ip, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update left ip, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -122,7 +122,7 @@ func (l *leftIP) UpdateLeftIP(kt *kit.Kit, instId int64, input map[string]interf
 // UpdateLeftIPBatch updates left ip config in batch
 func (l *leftIP) UpdateLeftIPBatch(kt *kit.Kit, cond, update map[string]interface{}) error {
 	if err := dao.Set().ZoneLeftIP().UpdateZoneLeftIP(kt.Ctx, cond, update); err != nil {
-		blog.Errorf("failed to update left ip, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update left ip, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -155,7 +155,7 @@ func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 
 	cfgSubnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filterSubnet)
 	if err != nil {
-		blog.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filterSubnet, err, kt.Rid)
+		logs.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filterSubnet, err, kt.Rid)
 		return err
 	}
 
@@ -163,7 +163,7 @@ func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 	subnetToLeftIp := make(map[string]*cvmapi.SubnetInfo)
 	cvmSubnetList, err := l.querySubnet(kt, input.Region, input.Zone, vpc)
 	if err != nil {
-		blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return nil
 	}
 	for _, subnet := range cvmSubnetList {
@@ -189,7 +189,7 @@ func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 	}
 
 	if err := dao.Set().ZoneLeftIP().UpdateZoneLeftIP(kt.Ctx, filterLeftIP, update); err != nil {
-		blog.Errorf("failed to update zone with left ip info in db, err: %v, %s", err, kt.Rid)
+		logs.Errorf("failed to update zone with left ip info in db, err: %v, %s", err, kt.Rid)
 		return err
 	}
 
@@ -213,7 +213,7 @@ func (l *leftIP) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi.S
 
 	resp, err := l.cvm.QueryCvmSubnet(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 

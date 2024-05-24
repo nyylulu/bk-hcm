@@ -13,11 +13,11 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // RegionIf provides management interface for operations of region config
@@ -62,14 +62,14 @@ func (r *region) GetRegion(kt *kit.Kit) (*types.GetRegionResult, error) {
 func (r *region) CreateRegion(kt *kit.Kit, input *types.Region) (mapstr.MapStr, error) {
 	id, err := config.Operation().Region().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create region, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create region, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().Region().CreateRegion(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create region, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create region, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -86,7 +86,7 @@ func (r *region) UpdateRegion(kt *kit.Kit, instId int64, input *mapstr.MapStr) e
 	}
 
 	if err := config.Operation().Region().UpdateRegion(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update region, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update region, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -100,7 +100,7 @@ func (r *region) DeleteRegion(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().Region().DeleteRegion(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete region, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete region, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata is the metadata of api limiter
 package metadata
 
 import (

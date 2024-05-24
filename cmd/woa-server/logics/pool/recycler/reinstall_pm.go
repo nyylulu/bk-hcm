@@ -18,24 +18,24 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) createPmReinstallTask(task *table.RecallDetail) error {
 	// 1. get password
 	pwd, err := r.getPwd(task.HostID)
 	if err != nil {
-		blog.Errorf("failed to get host %d pwd", task.HostID)
+		logs.Errorf("failed to get host %d pwd", task.HostID)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to get host %d pwd", task.HostID)
@@ -47,13 +47,13 @@ func (r *Recycler) createPmReinstallTask(task *table.RecallDetail) error {
 	// 3. create install order
 	assetID, ok := task.Labels[table.AssetIDKey]
 	if !ok || assetID == "" {
-		blog.Errorf("get no asset id by host id %d", task.HostID)
+		logs.Errorf("get no asset id by host id %d", task.HostID)
 
 		msg := fmt.Sprintf("get no asset id by host id %d", task.HostID)
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", msg,
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("get no asset id by host id %d", task.HostID)
@@ -61,12 +61,12 @@ func (r *Recycler) createPmReinstallTask(task *table.RecallDetail) error {
 
 	taskID, err := r.createXshipReinstallOrder(assetID, pwd, osVersion)
 	if err != nil {
-		blog.Errorf("failed to create xship reinstall order, err: %v", err)
+		logs.Errorf("failed to create xship reinstall order, err: %v", err)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -75,7 +75,7 @@ func (r *Recycler) createPmReinstallTask(task *table.RecallDetail) error {
 	// 4. update task status
 	if err := r.updateTaskReinstallStatus(task, types.ResourceTypePm, taskID, "",
 		table.RecallStatusReinstalling); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -104,35 +104,35 @@ func (r *Recycler) createXshipReinstallOrder(assetID, pwd, osVersion string) (st
 
 	resp, err := r.xship.CreateReinstallTask(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to create xship reinstall task, err: %v", err)
+		logs.Errorf("failed to create xship reinstall task, err: %v", err)
 		return "", err
 	}
 
 	if resp.Code != xshipapi.CodeSuccess {
-		blog.Errorf("failed to create xship reinstall task, code: %s, msg: %s", resp.Code, resp.Message)
+		logs.Errorf("failed to create xship reinstall task, code: %s, msg: %s", resp.Code, resp.Message)
 		return "", err
 	}
 
 	if resp.Data == nil {
-		blog.Errorf("failed to create xship reinstall task, for return data is nil")
+		logs.Errorf("failed to create xship reinstall task, for return data is nil")
 		return "", errors.New("failed to create xship reinstall task, for return data is nil")
 	}
 
 	orderNum := len(resp.Data.AcceptOrders)
 	if orderNum != 1 {
-		blog.Errorf("failed to create xship reinstall task, for return order num %d != 1", orderNum)
+		logs.Errorf("failed to create xship reinstall task, for return order num %d != 1", orderNum)
 		return "", fmt.Errorf("failed to create xship reinstall task, for return order num %d != 1", orderNum)
 	}
 
 	order := resp.Data.AcceptOrders[0]
 
 	if order == nil {
-		blog.Errorf("failed to create xship reinstall task, for return order is nil")
+		logs.Errorf("failed to create xship reinstall task, for return order is nil")
 		return "", errors.New("failed to create xship reinstall task, for return order is nil")
 	}
 
 	if order.AcceptStatus != 0 {
-		blog.Errorf("failed to create xship reinstall task, accept status %d, msg: %s", order.AcceptStatus,
+		logs.Errorf("failed to create xship reinstall task, accept status %d, msg: %s", order.AcceptStatus,
 			order.AcceptMsg)
 		return "", fmt.Errorf("failed to create xship reinstall task, accept status %d, msg: %s", order.AcceptStatus,
 			order.AcceptMsg)
@@ -144,12 +144,12 @@ func (r *Recycler) createXshipReinstallOrder(assetID, pwd, osVersion string) (st
 func (r *Recycler) checkPmReinstallStatus(task *table.RecallDetail) error {
 	resp, err := r.xship.GetReinstallTaskStatus(nil, nil, task.ReinstallID)
 	if err != nil {
-		blog.Errorf("failed to get xship reinstall task status, err: %v", err)
+		logs.Errorf("failed to get xship reinstall task status, err: %v", err)
 
 		errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", err.Error(),
 			table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", err)
+			logs.Warnf("failed to update recall task status, err: %v", err)
 		}
 
 		return err
@@ -161,7 +161,7 @@ func (r *Recycler) checkPmReinstallStatus(task *table.RecallDetail) error {
 		{
 			err := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", "", table.RecallStatusInitializing)
 			if err != nil {
-				blog.Warnf("failed to update recall task status, err: %v", err)
+				logs.Warnf("failed to update recall task status, err: %v", err)
 				return err
 			}
 
@@ -174,7 +174,7 @@ func (r *Recycler) checkPmReinstallStatus(task *table.RecallDetail) error {
 			errUpdate := r.updateTaskReinstallStatus(task, types.ResourceTypePm, "", err.Error(),
 				table.RecallStatusReinstallFailed)
 			if err != nil {
-				blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+				logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 			}
 
 			return err
@@ -189,7 +189,7 @@ func (r *Recycler) checkPmReinstallStatus(task *table.RecallDetail) error {
 		}
 	default:
 		{
-			blog.Warnf("unknown reinstall status %d", status)
+			logs.Warnf("unknown reinstall status %d", status)
 		}
 	}
 
@@ -199,13 +199,13 @@ func (r *Recycler) checkPmReinstallStatus(task *table.RecallDetail) error {
 func (r *Recycler) parsePmReinstallRst(resp *xshipapi.ReinstallStatusResp) (ReinstallStatus, error) {
 	if resp.Code != xshipapi.CodeSuccess {
 		err := fmt.Errorf("failed to get xship reinstall task status, code: %s, msg: %s", resp.Code, resp.Message)
-		blog.Errorf("failed to get xship reinstall task status, code: %s, msg: %s", resp.Code, resp.Message)
+		logs.Errorf("failed to get xship reinstall task status, code: %s, msg: %s", resp.Code, resp.Message)
 		return ReinstallStatusFailed, err
 	}
 
 	if resp.Data == nil {
 		err := errors.New("xship reinstall task status return data is nil")
-		blog.Errorf("xship reinstall task status return data is nil")
+		logs.Errorf("xship reinstall task status return data is nil")
 
 		return ReinstallStatusFailed, err
 	}
@@ -213,7 +213,7 @@ func (r *Recycler) parsePmReinstallRst(resp *xshipapi.ReinstallStatusResp) (Rein
 	orderNum := len(resp.Data.ReinstallInfos)
 	if orderNum != 1 {
 		err := fmt.Errorf("xship reinstall task status return order num %d != 1", orderNum)
-		blog.Errorf("xship reinstall task status return order num %d != 1", orderNum)
+		logs.Errorf("xship reinstall task status return order num %d != 1", orderNum)
 
 		return ReinstallStatusFailed, err
 	}
@@ -221,7 +221,7 @@ func (r *Recycler) parsePmReinstallRst(resp *xshipapi.ReinstallStatusResp) (Rein
 	order := resp.Data.ReinstallInfos[0]
 	if order == nil {
 		err := errors.New("xship reinstall task status return order is nil")
-		blog.Errorf("xship reinstall task status return order is nil")
+		logs.Errorf("xship reinstall task status return order is nil")
 
 		return ReinstallStatusFailed, err
 	}
@@ -229,20 +229,20 @@ func (r *Recycler) parsePmReinstallRst(resp *xshipapi.ReinstallStatusResp) (Rein
 	switch order.Status {
 	case xshipapi.AcceptStatusDone:
 		{
-			blog.Infof("reinstall order %s is done", order.OrderID)
+			logs.Infof("reinstall order %s is done", order.OrderID)
 			return ReinstallStatusSuccess, nil
 		}
 	case xshipapi.AcceptStatusRejected, xshipapi.AcceptStatusExpired:
 		{
 			err := fmt.Errorf("reinstall order %s failed, status: %d, err: %s", order.OrderID, order.Status,
 				order.ErrMsg)
-			blog.Errorf("reinstall order %s failed, status: %s, err: %s", order.OrderID, order.Status, order.ErrMsg)
+			logs.Errorf("reinstall order %s failed, status: %s, err: %s", order.OrderID, order.Status, order.ErrMsg)
 
 			return ReinstallStatusFailed, err
 		}
 	default:
 		{
-			blog.Infof("reinstall order %s handling, status: %s", order.OrderID, order.Status)
+			logs.Infof("reinstall order %s handling, status: %s", order.OrderID, order.Status)
 			return ReinstallStatusRunning, nil
 		}
 	}
@@ -257,17 +257,17 @@ func (r *Recycler) getOsType(task *table.RecallDetail) string {
 
 	recallOrder, err := dao.Set().RecallOrder().GetRecallOrder(context.Background(), filter)
 	if err != nil {
-		blog.Warnf("failed to get recall order by id: %d", task.RecallID)
+		logs.Warnf("failed to get recall order by id: %d", task.RecallID)
 		return osVersion
 	}
 
 	if recallOrder == nil || recallOrder.RecyclePolicy == nil {
-		blog.Warnf("get invalid nil recall order or recycle policy by id: %d", task.RecallID)
+		logs.Warnf("get invalid nil recall order or recycle policy by id: %d", task.RecallID)
 		return osVersion
 	}
 
 	if recallOrder.RecyclePolicy.OsType == "" {
-		blog.Warnf("get invalid empty os type by id: %d", task.RecallID)
+		logs.Warnf("get invalid empty os type by id: %d", task.RecallID)
 		return osVersion
 	}
 

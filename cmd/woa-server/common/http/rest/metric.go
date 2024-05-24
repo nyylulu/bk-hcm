@@ -10,13 +10,15 @@
  * limitations under the License.
  */
 
+// Package rest defines the restful api
 package rest
 
 import (
 	"sync"
 
-	"github.com/prometheus/client_golang/prometheus"
 	"hcm/cmd/woa-server/common/metrics"
+
+	"github.com/prometheus/client_golang/prometheus"
 )
 
 var rm *restMetric

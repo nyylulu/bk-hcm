@@ -10,13 +10,14 @@
  * limitations under the License.
  */
 
+// Package language defines language interface
 package language
 
 // DefaultCCLanguageIf defines default language interface
 type DefaultCCLanguageIf interface {
 	// Language returns an content with key
 	Language(key string) string
-	// Errorf returns an content with key
+	// Languagef returns an content with key
 	Languagef(key string, args ...interface{}) string
 }
 

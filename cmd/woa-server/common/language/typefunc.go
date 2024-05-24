@@ -10,14 +10,15 @@
  * limitations under the License.
  */
 
+// Package language provide language module
 package language
 
-// Error implementation of content interface
+// Content implementation of content interface
 func (cli *ccLanguage) Content() string {
 	return cli.callback()
 }
 
-// GetCode returns key
+// GetKey returns key
 func (cli *ccLanguage) GetKey() string {
 	return cli.key
 }

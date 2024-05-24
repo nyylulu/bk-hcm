@@ -18,23 +18,23 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
 	// get host from module 资源运营服务-CR资源下架中
 	host, err := r.getHostByIDFromPool(task.HostID)
 	if err != nil {
-		blog.Errorf("failed to get host by id from pool, err: %v", task.HostID, err)
+		logs.Errorf("failed to get host by id from pool, err: %v", task.HostID, err)
 
 		errUpdate := r.updateTaskPreCheckStatus(task, "", "", err.Error(), table.RecallStatusPreCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -43,7 +43,7 @@ func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
 	// update task status
 	err = r.updateTaskPreCheckStatus(task, host.BkHostInnerIp, host.BkAssetId, "", table.RecallStatusClearChecking)
 	if err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -89,26 +89,26 @@ func (r *Recycler) getHostByIDFromPool(hostID int64) (*ccapi.HostInfo, error) {
 
 	resp, err := r.esbCli.Cmdb().ListBizHost(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc host info, err: %v", err)
+		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
 	num := len(resp.Data.Info)
 	if num != 1 {
 		err := fmt.Errorf("get invalid hosts num %d != 1", num)
-		blog.Errorf("get invalid hosts num %d != 1", num)
+		logs.Errorf("get invalid hosts num %d != 1", num)
 		return nil, err
 	}
 
 	host := resp.Data.Info[0]
 	if host.BkHostId != hostID {
 		err := fmt.Errorf("get invalid host id %d != targe %d", host.BkHostId, hostID)
-		blog.Errorf("get invalid host id %d != targe %d", host.BkHostId, hostID)
+		logs.Errorf("get invalid host id %d != targe %d", host.BkHostId, hostID)
 		return nil, err
 	}
 

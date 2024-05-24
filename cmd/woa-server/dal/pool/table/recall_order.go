@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package table defines the table structure
 package table
 
 import "time"

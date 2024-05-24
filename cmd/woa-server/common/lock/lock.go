@@ -1,3 +1,23 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package lock redis lock
 package lock
 
 import (
@@ -8,8 +28,8 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg/logs"
 
 	"github.com/rs/xid"
 )
@@ -37,13 +57,14 @@ type Locker interface {
 	Unlock() error
 }
 
+// MLocker redis multi lock
 type MLocker interface {
 	MLock(rid string, retrytimes int, expire time.Duration, values ...StrFormat) (locked bool, err error)
 	MUnlock() error
 }
 
+// NewLocker create a new lock
 func NewLocker(cache redis.Client) Locker {
-
 	return &lock{
 		isFirst:    false,
 		cache:      cache,
@@ -70,8 +91,8 @@ func (l *lock) Lock(key StrFormat, expire time.Duration) (locked bool, err error
 	return locked, err
 }
 
+// NewMLocker create a new lock
 func NewMLocker(cache redis.Client) MLocker {
-
 	return &mlock{
 		isFirst:    false,
 		cache:      cache,
@@ -101,6 +122,7 @@ func getExecSetNxBoolResult(result string) (string, bool) {
 	return keySlice[1], false
 }
 
+// MLock can lock one, key from GetLockKey function
 func (l *mlock) MLock(rid string, retry int, expire time.Duration, keys ...StrFormat) (locked bool, err error) {
 	if l.isFirst {
 		return false, errors.New("repeat lock")
@@ -154,7 +176,7 @@ func (l *mlock) MLock(rid string, retry int, expire time.Duration, keys ...StrFo
 				for _, v := range pipeRes[true] {
 					delKeys = append(delKeys, v)
 				}
-				blog.Errorf("delete key fail. the key: %v,rid: %s", pipeRes[true], rid)
+				logs.Errorf("delete key fail. the key: %v,rid: %s", pipeRes[true], rid)
 			}
 		} else {
 			// obtain lock success
@@ -183,6 +205,7 @@ func (l *mlock) MLock(rid string, retry int, expire time.Duration, keys ...StrFo
 	return false, errors.New("obtain lock fail")
 }
 
+// Unlock unlock the lock
 func (l *lock) Unlock() error {
 	// locked sucess , can unlock
 	if !l.needUnlock {
@@ -191,6 +214,7 @@ func (l *lock) Unlock() error {
 	return l.cache.Del(context.Background(), l.key).Err()
 }
 
+// MUnlock unlock the lock
 func (l *mlock) MUnlock() error {
 	// locked sucess , can unlock
 	if !l.needUnlock {

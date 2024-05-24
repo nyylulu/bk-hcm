@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package config provide ccapi server configuration
 package config
 
 import (
@@ -40,7 +41,7 @@ func NewCCAPIConfig() *CCAPIConfig {
 	}
 }
 
-// IPV6 addr port, like ::1:80
+// GetAddress IPV6 addr port, like ::1:80
 // IPV4 addr port, like 127.0.0.1:80
 // GetAddress get the address
 func (conf *CCAPIConfig) GetAddress() (string, error) {

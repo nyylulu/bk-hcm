@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
@@ -44,6 +45,7 @@ func (br *BaseResp) Error() error {
 	return errors.New(br.Code, br.ErrMsg)
 }
 
+// ToString return the string format of BaseResp
 func (br *BaseResp) ToString() string {
 	return fmt.Sprintf("code:%d, message:%s", br.Code, br.ErrMsg)
 }
@@ -62,24 +64,28 @@ type JsonCntInfoResp struct {
 	Data CntInfoString `json:"data"`
 }
 
+// CntInfoString defines a response's data field that do not parse the count and info fields
 type CntInfoString struct {
 	Count int64 `json:"count"`
 	// info is a json array string field.
 	Info string `json:"info"`
 }
 
+// IamPermission define the permission field of the response
 type IamPermission struct {
 	SystemID   string      `json:"system_id"`
 	SystemName string      `json:"system_name"`
 	Actions    []IamAction `json:"actions"`
 }
 
+// IamAction define the actions field of the permission
 type IamAction struct {
 	ID                   string            `json:"id"`
 	Name                 string            `json:"name"`
 	RelatedResourceTypes []IamResourceType `json:"related_resource_types"`
 }
 
+// IamResourceType define the related_resource_types field of the action
 type IamResourceType struct {
 	SystemID   string                  `json:"system_id"`
 	SystemName string                  `json:"system_name"`
@@ -89,6 +95,7 @@ type IamResourceType struct {
 	Attributes []IamResourceAttribute  `json:"attributes,omitempty"`
 }
 
+// IamResourceInstance define the instances field of the resource
 type IamResourceInstance struct {
 	Type     string `json:"type"`
 	TypeName string `json:"type_name"`
@@ -96,15 +103,18 @@ type IamResourceInstance struct {
 	Name     string `json:"name"`
 }
 
+// IamResourceAttribute define the attributes field of the resource
 type IamResourceAttribute struct {
 	ID     string                      `json:"id"`
 	Values []IamResourceAttributeValue `json:"values"`
 }
 
+// IamResourceAttributeValue define the values field of the attribute
 type IamResourceAttributeValue struct {
 	ID string `json:"id"`
 }
 
+// IamInstanceWithCreator define the instances field of the resource
 type IamInstanceWithCreator struct {
 	System    string                `json:"system"`
 	Type      string                `json:"type"`
@@ -127,18 +137,21 @@ type IamInstancesWithCreator struct {
 	Creator      string `json:"creator"`
 }
 
+// IamInstance iam instance
 type IamInstance struct {
 	ID        string                `json:"id"`
 	Name      string                `json:"name"`
 	Ancestors []IamInstanceAncestor `json:"ancestors,omitempty"`
 }
 
+// IamInstanceAncestor iam instance ancestor
 type IamInstanceAncestor struct {
 	System string `json:"system"`
 	Type   string `json:"type"`
 	ID     string `json:"id"`
 }
 
+// IamCreatorActionPolicy iam creator action policy
 type IamCreatorActionPolicy struct {
 	Action   ActionWithID `json:"action"`
 	PolicyID int64        `json:"policy_id"`
@@ -160,10 +173,13 @@ type IamBatchOperateInstanceAuthReq struct {
 	ExpiredAt    int64            `json:"expired_at"`
 }
 
+// IamAuthOperation iam auth operation
 type IamAuthOperation string
 
 const (
-	IamGrantOperation  = "grant"
+	// IamGrantOperation grant operation
+	IamGrantOperation = "grant"
+	// IamRevokeOperation revoke operation
 	IamRevokeOperation = "revoke"
 )
 
@@ -199,6 +215,7 @@ type Permission struct {
 	Resources [][]Resource `json:"resources"`
 }
 
+// Resource describes a single resource that a user has authority to operate.
 type Resource struct {
 	ResourceTypeName string `json:"resource_type_name"`
 	ResourceType     string `json:"resource_type"`
@@ -206,6 +223,7 @@ type Resource struct {
 	ResourceID       string `json:"resource_id"`
 }
 
+// NewNoPermissionResp create a new no permission response
 func NewNoPermissionResp(permission *IamPermission) BaseResp {
 	return BaseResp{
 		Result:      false,
@@ -218,11 +236,13 @@ func NewNoPermissionResp(permission *IamPermission) BaseResp {
 // SuccessBaseResp default result
 var SuccessBaseResp = BaseResp{Result: true, Code: common.CCSuccess, ErrMsg: common.CCSuccessStr}
 
+// SuccessResponse default success response
 type SuccessResponse struct {
 	BaseResp `json:",inline"`
 	Data     interface{} `json:"data"`
 }
 
+// NewSuccessResponse create a new success response
 func NewSuccessResponse(data interface{}) *SuccessResponse {
 	return &SuccessResponse{
 		BaseResp: SuccessBaseResp,
@@ -333,11 +353,13 @@ type ReadModelAttrResult struct {
 	Data     QueryModelAttributeDataResult `json:"data"`
 }
 
+// ReadModelAttributeGroupResult read model attribute group api http response return result struct
 type ReadModelAttributeGroupResult struct {
 	BaseResp `json:",inline"`
 	Data     QueryModelAttributeGroupDataResult `json:"data"`
 }
 
+// ReadModelUniqueResult read model unique api http response return result struct
 type ReadModelUniqueResult struct {
 	BaseResp `json:",inline"`
 	Data     QueryUniqueResult `json:"data"`
@@ -349,16 +371,19 @@ type OperaterException struct {
 	Data     []ExceptionResult `json:"data"`
 }
 
+// Uint64DataResponse uint64 data response
 type Uint64DataResponse struct {
 	BaseResp `json:",inline"`
 	Data     uint64 `json:"data"`
 }
 
+// TransferException transfer exception
 type TransferException struct {
 	HostID []int64 `json:"bk_host_id"`
 	ErrMsg string  `json:"bk_error_msg"`
 }
 
+// TransferExceptionResult transfer exception result
 type TransferExceptionResult struct {
 	BaseResp `json:",inline"`
 	Data     TransferException `json:"data"`

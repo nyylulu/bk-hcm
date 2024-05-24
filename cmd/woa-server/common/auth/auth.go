@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package auth ...
 package auth
 
 import (
@@ -19,8 +20,11 @@ import (
 	"hcm/pkg/logs"
 )
 
+// EnableAuth is the default handler which match the --enable-auth flag
 var EnableAuth = "true"
 var enableAuth = true
+
+// EnableAuthFlag is the default handler which match the --enable-auth flag
 var EnableAuthFlag *authValue
 var once = sync.Once{}
 
@@ -30,6 +34,7 @@ func (a *authValue) String() string {
 	return strconv.FormatBool(enableAuth)
 }
 
+// Set is the default handler which match the --enable-auth flag
 func (a *authValue) Set(s string) error {
 	v, err := strconv.ParseBool(s)
 	if err != nil {
@@ -39,6 +44,7 @@ func (a *authValue) Set(s string) error {
 	return nil
 }
 
+// Type is the default handler which match the --enable-auth flag
 func (a *authValue) Type() string {
 	return "bool"
 }
@@ -58,6 +64,7 @@ func setEnableAuth(enable bool) {
 	})
 }
 
+// EnableAuthorize is the default handler which match the --enable-auth flag
 func EnableAuthorize() bool {
 	return enableAuth
 }

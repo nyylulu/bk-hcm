@@ -13,8 +13,8 @@
 package sojobapi
 
 const (
-	// sojob初始化任务详情链接前缀
+	// InitTaskLinkPrefix sojob初始化任务详情链接前缀
 	InitTaskLinkPrefix = "http://scr.ied.com/#/sojob/list/"
-	// sojob任务详情链接前缀
+	// TaskLinkPrefix sojob任务详情链接前缀
 	TaskLinkPrefix = "http://scr.ied.com/#/sojob/list/"
 )

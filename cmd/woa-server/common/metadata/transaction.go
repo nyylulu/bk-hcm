@@ -10,10 +10,12 @@
  * limitations under the License.
  */
 
+// Package metadata transaction
 package metadata
 
 import "time"
 
+// TxnOption transaction option
 type TxnOption struct {
 	// transaction timeout time
 	// min value: 5 * time.Second
@@ -21,6 +23,7 @@ type TxnOption struct {
 	Timeout time.Duration
 }
 
+// TxnCapable transaction capable
 type TxnCapable struct {
 	Timeout   time.Duration `json:"timeout"`
 	SessionID string        `json:"session_id"`

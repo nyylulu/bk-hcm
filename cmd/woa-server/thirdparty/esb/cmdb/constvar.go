@@ -10,13 +10,14 @@
  * limitations under the License.
  */
 
+// Package cmdb ...
 package cmdb
 
 const (
-	// "空闲机"模块
+	// DftModuleIdle "空闲机"模块
 	DftModuleIdle int = 1
-	// "故障机"模块
+	// DftModuleFault "故障机"模块
 	DftModuleFault int = 2
-	// "待回收"模块
+	// DftModuleRecycle "待回收"模块
 	DftModuleRecycle int = 3
 )

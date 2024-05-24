@@ -13,9 +13,10 @@
 package mongodb
 
 import (
-	"hcm/pkg/logs"
 	"strings"
 	"time"
+
+	"hcm/pkg/logs"
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/errors"
@@ -54,7 +55,7 @@ func InitClient(prefix string, config *mongo.Config) errors.CCErrorCoder {
 	var dbErr error
 	db, dbErr = local.NewMgo(config.GetMongoConf(), time.Minute)
 	if dbErr != nil {
-		logs.Errorf("failed to connect the mongo server, error info is %s", dbErr.Error())
+		logs.Errorf("failed to connect the mongo server, error info is: %s", dbErr.Error())
 		lastInitErr = errors.NewCCError(common.CCErrCommResourceInitFailed,
 			"'"+prefix+".mongodb' initialization failed")
 		return lastInitErr

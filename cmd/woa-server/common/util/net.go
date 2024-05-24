@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util provides some utility functions
 package util
 
 import (
@@ -32,6 +33,7 @@ func GetDailAddress(URL string) (string, error) {
 	return uri.Hostname() + ":" + port, err
 }
 
+// PeekRequest peek request body
 func PeekRequest(req *http.Request) ([]byte, error) {
 	if req.Body != nil {
 		byt, err := ioutil.ReadAll(req.Body)

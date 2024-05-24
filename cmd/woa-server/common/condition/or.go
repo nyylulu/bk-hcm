@@ -10,13 +10,14 @@
  * limitations under the License.
  */
 
+// Package condition the condition struct
 package condition
 
 import (
 	types "hcm/cmd/woa-server/common/mapstr"
 )
 
-// Field create a field
+// OR create a field
 type OR interface {
 	Item(val interface{}) Condition
 	Array(val []interface{}) Condition

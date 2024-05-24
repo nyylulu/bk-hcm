@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util provides common utility functions
 package util
 
 import (
@@ -44,7 +45,7 @@ var (
 	userRegexp             = regexp.MustCompile(userPattern)
 )
 
-// 字符串输入长度
+// CheckLen 字符串输入长度
 func CheckLen(sInput string, min, max int) bool {
 	if len(sInput) >= min && len(sInput) <= max {
 		return true
@@ -52,21 +53,22 @@ func CheckLen(sInput string, min, max int) bool {
 	return false
 }
 
-// 是否大、小写字母组合
+// IsChar 是否大、小写字母组合
 func IsChar(sInput string) bool {
 	return charRegexp.MatchString(sInput)
 }
 
-// 是否字母、数字组合
+// IsNumChar 是否字母、数字组合
 func IsNumChar(sInput string) bool {
 	return numCharRegexp.MatchString(sInput)
 }
 
-// 是否日期
+// IsDate 是否日期
 func IsDate(sInput string) bool {
 	return dateRegexp.MatchString(sInput)
 }
 
+// DateTimeFieldType the date time
 type DateTimeFieldType string
 
 const (
@@ -77,7 +79,7 @@ const (
 	invalidDateTimeType  DateTimeFieldType = "invalid"
 )
 
-// 是否时间
+// IsTime 是否时间
 func IsTime(sInput string) (DateTimeFieldType, bool) {
 	if dateTimeRegexp.MatchString(sInput) {
 		return timeWithoutLocationType, true
@@ -127,6 +129,7 @@ func FirstNotEmptyString(strs ...string) string {
 	return ""
 }
 
+// ContainsAnyString check if s contains any string in subs
 func ContainsAnyString(s string, subs ...string) bool {
 	for index := range subs {
 		if strings.Contains(s, subs[index]) {

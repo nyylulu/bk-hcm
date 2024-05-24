@@ -15,13 +15,13 @@ package config
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // VpcIf provides management interface for operations of vpc config
@@ -84,14 +84,14 @@ func (v *vpc) GetVpcList(kt *kit.Kit, cond map[string]interface{}) (*types.GetVp
 func (v *vpc) CreateVpc(kt *kit.Kit, input *types.Vpc) (mapstr.MapStr, error) {
 	id, err := config.Operation().Vpc().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create vpc, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create vpc, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().Vpc().CreateVpc(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create vpc, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create vpc, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -108,7 +108,7 @@ func (v *vpc) UpdateVpc(kt *kit.Kit, instId int64, input *mapstr.MapStr) error {
 	}
 
 	if err := config.Operation().Vpc().UpdateVpc(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update vpc, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update vpc, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -122,7 +122,7 @@ func (v *vpc) DeleteVpc(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().Vpc().DeleteVpc(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete vpc, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete vpc, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -145,12 +145,12 @@ func (v *vpc) SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error {
 
 	resp, err := v.cvm.QueryCvmVpc(kt.Ctx, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cvm vpc info, err: %v", err)
+		logs.Errorf("failed to get cvm vpc info, err: %v", err)
 		return err
 	}
 
 	if resp.Error.Code != 0 {
-		blog.Errorf("failed to get cvm vpc info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to get cvm vpc info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 		return fmt.Errorf("failed to get cvm vpc info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
@@ -162,7 +162,7 @@ func (v *vpc) SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error {
 		}
 		cnt, err := config.Operation().Vpc().CountVpc(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to count vpc with filter: %+v, err: %v", filter, err)
+			logs.Errorf("failed to count vpc with filter: %+v, err: %v", filter, err)
 			return err
 		}
 		if cnt <= 0 {
@@ -172,7 +172,7 @@ func (v *vpc) SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error {
 				VpcName: vpc.Name,
 			}
 			if _, err := v.CreateVpc(kt, vpcCfg); err != nil {
-				blog.Errorf("failed to create vpc, err: %v", filter, err)
+				logs.Errorf("failed to create vpc, err: %v", filter, err)
 				return err
 			}
 		}

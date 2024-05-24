@@ -10,15 +10,16 @@
  * limitations under the License.
  */
 
+// Package config subnet config
 package config
 
 import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -26,7 +27,7 @@ import (
 func (s *service) GetSubnet(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetSubnetParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -40,7 +41,7 @@ func (s *service) GetSubnet(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.Subnet().GetSubnet(cts.Kit, cond)
 	if err != nil {
-		blog.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -51,19 +52,19 @@ func (s *service) GetSubnet(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetSubnetList(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetSubnetListParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get subnet list, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get subnet list, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Subnet().GetSubnetList(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get subnet list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -74,13 +75,13 @@ func (s *service) GetSubnetList(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateSubnet(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.Subnet)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Subnet().CreateSubnet(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -91,18 +92,18 @@ func (s *service) CreateSubnet(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateSubnet(cts *rest.Contexts) (interface{}, error) {
 	input := make(map[string]interface{})
 	if err := cts.DecodeInto(&input); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Subnet().UpdateSubnet(cts.Kit, instId, input); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -113,13 +114,13 @@ func (s *service) UpdateSubnet(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateSubnetProperty(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.UpdateSubnetPropertyParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to update subnet, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to update subnet, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -134,7 +135,7 @@ func (s *service) UpdateSubnetProperty(cts *rest.Contexts) (interface{}, error) 
 	delete(data, "id")
 
 	if err := s.logics.Subnet().UpdateSubnetBatch(cts.Kit, cond, input.Property); err != nil {
-		blog.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -145,12 +146,12 @@ func (s *service) UpdateSubnetProperty(cts *rest.Contexts) (interface{}, error) 
 func (s *service) DeleteSubnet(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Subnet().DeleteSubnet(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -161,12 +162,12 @@ func (s *service) DeleteSubnet(cts *rest.Contexts) (interface{}, error) {
 func (s *service) SyncSubnet(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.GetSubnetParam)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to sync subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Subnet().SyncSubnet(cts.Kit, inputData); err != nil {
-		blog.Errorf("failed to sync subnet, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to sync subnet, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

@@ -10,8 +10,10 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
+// BkSystemInstallRequest install host request
 type BkSystemInstallRequest struct {
 	SetName    string                            `json:"bk_set_name"`
 	ModuleName string                            `json:"bk_module_name"`

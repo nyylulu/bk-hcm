@@ -33,6 +33,7 @@ const (
 // ResourceType resource type
 type ResourceType string
 
+// ResourceType resource type
 const (
 	ResourceTypePm          ResourceType = "IDCPM"
 	ResourceTypeCvm         ResourceType = "QCLOUDCVM"

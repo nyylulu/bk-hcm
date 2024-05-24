@@ -22,7 +22,7 @@ import (
 	"unicode/utf8"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
+	"hcm/pkg/logs"
 
 	"github.com/emicklei/go-restful"
 	"github.com/mssola/user_agent"
@@ -132,7 +132,7 @@ func (s *Service) RestfulWebService() *restful.WebService {
 	ws := restful.WebService{}
 	ws.Path("/metrics")
 	ws.Route(ws.GET("/").To(func(req *restful.Request, resp *restful.Response) {
-		blog.Info("metrics")
+		logs.Infof("metrics")
 		s.httpHandler.ServeHTTP(resp, req.Request)
 	}))
 
@@ -162,7 +162,7 @@ func (s *Service) HTTPMiddleware(next http.Handler) http.Handler {
 		}
 
 		if !utf8.ValidString(uri) {
-			blog.Errorf("uri: %s not utf-8", uri)
+			logs.Errorf("uri: %s not utf-8", uri)
 			return
 		}
 

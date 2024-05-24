@@ -10,10 +10,12 @@
  * limitations under the License.
  */
 
+// Package util provides some useful util functions
 package util
 
 import "strings"
 
+// CalSliceDiff calculate the diff between two string slice
 func CalSliceDiff(oldSlice, newSlice []string) (subs, plugs []string) {
 	subs = make([]string, 0)
 	plugs = make([]string, 0)
@@ -30,6 +32,7 @@ func CalSliceDiff(oldSlice, newSlice []string) (subs, plugs []string) {
 	return
 }
 
+// CaseInsensitiveContains check if string target in array
 func CaseInsensitiveContains(s string, substr string) bool {
 	return strings.Contains(strings.ToLower(s), strings.ToLower(substr))
 }
@@ -64,6 +67,7 @@ func ContainsInt(set []int64, sub int64) bool {
 	return false
 }
 
+// CalSliceInt64Diff calculate the diff between two int64 slice
 func CalSliceInt64Diff(oldSlice, newSlice []int64) (subs, inter, plugs []int64) {
 	subs = make([]int64, 0)
 	inter = make([]int64, 0)

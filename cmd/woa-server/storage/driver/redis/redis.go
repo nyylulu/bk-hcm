@@ -23,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/common/types"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 /*
@@ -73,7 +74,7 @@ func InitClient(prefix string, config *redis.Config) errors.CCErrorCoder {
 	lastInitErr = nil
 	db, dbErr := redis.NewFromConfig(*config)
 	if dbErr != nil {
-		logs.Errorf("failed to connect the redis server, error info is %s", dbErr.Error())
+		logs.Errorf("failed to connect the redis server, error info is:%s, config: %+v", dbErr.Error(), cvt.PtrToVal(config))
 		lastInitErr = errors.NewCCError(common.CCErrCommResourceInitFailed, "'"+prefix+" redis' initialization failed")
 		return lastInitErr
 	}

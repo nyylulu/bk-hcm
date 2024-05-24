@@ -17,21 +17,21 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) dealTransitTask(task *table.RecallDetail) error {
 	// transfer hosts from 资源运营服务-CR资源下架中 to 资源运营服务-SA云化池
 	if err := r.transferHost(task.HostID, types.BizIDPool, types.BizIDPool, types.ModuleIDPoolMatch); err != nil {
-		blog.Errorf("failed to transfer host %d, err: %v", task.HostID, err)
+		logs.Errorf("failed to transfer host %d, err: %v", task.HostID, err)
 
 		errUpdate := r.updateTaskTransitStatus(task, err.Error(), table.RecallStatusTransitFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -39,7 +39,7 @@ func (r *Recycler) dealTransitTask(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskTransitStatus(task, "", table.RecallStatusDone); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 

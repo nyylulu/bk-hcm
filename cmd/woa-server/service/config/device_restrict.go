@@ -10,14 +10,15 @@
  * limitations under the License.
  */
 
+// Package config device restrict config
 package config
 
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -25,7 +26,7 @@ import (
 func (s *service) GetDeviceRestrict(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.DeviceRestrict().GetDeviceRestrict(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get device restrict list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device restrict list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -36,13 +37,13 @@ func (s *service) GetDeviceRestrict(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateDeviceRestrict(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.DeviceRestrict)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.DeviceRestrict().CreateDeviceRestrict(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -53,18 +54,18 @@ func (s *service) CreateDeviceRestrict(cts *rest.Contexts) (interface{}, error) 
 func (s *service) UpdateDeviceRestrict(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.DeviceRestrict().UpdateDeviceRestrict(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -75,12 +76,12 @@ func (s *service) UpdateDeviceRestrict(cts *rest.Contexts) (interface{}, error) 
 func (s *service) DeleteDeviceRestrict(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.DeviceRestrict().DeleteDeviceRestrict(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete device restrict, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

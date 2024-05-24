@@ -21,7 +21,6 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/querybuilder"
@@ -38,6 +37,7 @@ import (
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // PoolIf provides management interface for operations of resource pool
@@ -108,12 +108,12 @@ func (p *pool) CreateLaunchTask(kt *kit.Kit, param *types.LaunchReq) (mapstr.Map
 	// 1. get hosts info
 	hosts, err := p.getHostDetailInfo(nil, nil, param.HostIDs)
 	if err != nil {
-		blog.Errorf("failed to get host info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if len(hosts) == 0 {
-		blog.Errorf("get no valid host to create launch task")
+		logs.Errorf("get no valid host to create launch task")
 		return nil, errors.New("get no valid host to create launch task")
 	}
 
@@ -123,7 +123,7 @@ func (p *pool) CreateLaunchTask(kt *kit.Kit, param *types.LaunchReq) (mapstr.Map
 	// 3. init and save launch task
 	task, err := p.initAndSaveLaunchTask(kt, hosts)
 	if err != nil {
-		blog.Errorf("failed to init launch task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to init launch task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -141,7 +141,7 @@ func (p *pool) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*ta
 	// 1. get host base info
 	hostBase, err := p.getHostBaseInfo(ips, assetIds, hostIds)
 	if err != nil {
-		blog.Errorf("failed to get host detail info, for list host err: %v", err)
+		logs.Errorf("failed to get host detail info, for list host err: %v", err)
 		return nil, err
 	}
 
@@ -151,7 +151,7 @@ func (p *pool) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*ta
 
 	gradeConfigs, err := p.getGradeCfg()
 	if err != nil {
-		blog.Errorf("failed to get device grade config, err: %v", err)
+		logs.Errorf("failed to get device grade config, err: %v", err)
 		return nil, err
 	}
 
@@ -249,12 +249,12 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*ccap
 
 	resp, err := p.esbCli.Cmdb().ListHost(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc host info, err: %v", err)
+		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
@@ -270,7 +270,7 @@ func (p *pool) getGradeCfg() (map[string]*table.GradeCfg, error) {
 
 	insts, err := dao.Set().GradeCfg().FindManyGradeCfg(context.Background(), page, filter)
 	if err != nil {
-		blog.Errorf("failed to get grade configs, err: %v", err)
+		logs.Errorf("failed to get grade configs, err: %v", err)
 		return nil, err
 	}
 
@@ -285,7 +285,7 @@ func (p *pool) getGradeCfg() (map[string]*table.GradeCfg, error) {
 func (p *pool) initAndSaveLaunchTask(kt *kit.Kit, hosts []*table.PoolHost) (*table.LaunchTask, error) {
 	id, err := dao.Set().LaunchTask().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create launch task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create launch task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -307,12 +307,12 @@ func (p *pool) initAndSaveLaunchTask(kt *kit.Kit, hosts []*table.PoolHost) (*tab
 
 	// create and save launch op records
 	if err := p.initAndSaveOpRecords(kt, task, hosts); err != nil {
-		blog.Errorf("failed to create launch task for save op record err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create launch task for save op record err: %v, rid: %s", err, kt.Rid)
 		return nil, fmt.Errorf("failed to create launch task for save op record err: %v", err)
 	}
 
 	if err := dao.Set().LaunchTask().CreateLaunchTask(kt.Ctx, task); err != nil {
-		blog.Errorf("failed to create launch task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create launch task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -324,7 +324,7 @@ func (p *pool) initAndSaveOpRecords(kt *kit.Kit, task *table.LaunchTask, hosts [
 	for _, host := range hosts {
 		id, err := dao.Set().OpRecord().NextSequence(kt.Ctx)
 		if err != nil {
-			blog.Errorf("failed to create op record, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to create op record, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
 		record := &table.OpRecord{
@@ -341,7 +341,7 @@ func (p *pool) initAndSaveOpRecords(kt *kit.Kit, task *table.LaunchTask, hosts [
 		}
 
 		if err := dao.Set().OpRecord().CreateOpRecord(context.Background(), record); err != nil {
-			blog.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 		}
 	}
@@ -362,12 +362,12 @@ func (p *pool) getHostTopoInfo(hostIds []int64) ([]*ccapi.HostBizRel, error) {
 
 	resp, err := p.esbCli.Cmdb().FindHostBizRelation(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc host topo info, err: %v", err)
+		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
 	}
 
@@ -398,12 +398,12 @@ func (p *pool) getBizInfo(bizIds []int64) ([]*ccapi.BizInfo, error) {
 
 	resp, err := p.esbCli.Cmdb().SearchBiz(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc business info, err: %v", err)
+		logs.Errorf("failed to get cc business info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc business info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("failed to get cc business info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc business info, err: %s", resp.ErrMsg)
 	}
 
@@ -428,12 +428,12 @@ func (p *pool) getModuleInfo(kt *kit.Kit, bizId int64, moduleIds []int64) ([]*cc
 
 	resp, err := p.esbCli.Cmdb().SearchModule(kt.Ctx, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc module info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc module info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
+		logs.Errorf("failed to get cc module info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
 		return nil, fmt.Errorf("failed to get cc module info, err: %s", resp.ErrMsg)
 	}
 
@@ -449,7 +449,7 @@ func (p *pool) CreateRecallTask(kt *kit.Kit, param *types.RecallReq) (mapstr.Map
 	// 3. init and save recall task
 	task, err := p.initAndSaveRecallTask(kt, param)
 	if err != nil {
-		blog.Errorf("failed to init and save recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to init and save recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -465,7 +465,7 @@ func (p *pool) CreateRecallTask(kt *kit.Kit, param *types.RecallReq) (mapstr.Map
 func (p *pool) initAndSaveRecallTask(kt *kit.Kit, param *types.RecallReq) (*table.RecallTask, error) {
 	id, err := dao.Set().RecallTask().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -537,7 +537,7 @@ func (p *pool) initAndSaveRecallTask(kt *kit.Kit, param *types.RecallReq) (*tabl
 	}
 
 	if err := dao.Set().RecallTask().CreateRecallTask(kt.Ctx, task); err != nil {
-		blog.Errorf("failed to create recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -553,7 +553,7 @@ func (p *pool) startRecallTask(task *table.RecallTask) {
 func (p *pool) GetLaunchTask(kt *kit.Kit, param *types.GetLaunchTaskReq) (*types.GetLaunchTaskRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		blog.Errorf("failed to get launch task, for get filter err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get launch task, for get filter err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -561,7 +561,7 @@ func (p *pool) GetLaunchTask(kt *kit.Kit, param *types.GetLaunchTaskReq) (*types
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().LaunchTask().CountLaunchTask(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get launch task count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get launch task count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -571,7 +571,7 @@ func (p *pool) GetLaunchTask(kt *kit.Kit, param *types.GetLaunchTaskReq) (*types
 
 	insts, err := dao.Set().LaunchTask().FindManyLaunchTask(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get launch task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get launch task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -585,7 +585,7 @@ func (p *pool) GetLaunchTask(kt *kit.Kit, param *types.GetLaunchTaskReq) (*types
 func (p *pool) GetRecallTask(kt *kit.Kit, param *types.GetRecallTaskReq) (*types.GetRecallTaskRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		blog.Errorf("failed to get recall task, for get filter err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recall task, for get filter err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -593,7 +593,7 @@ func (p *pool) GetRecallTask(kt *kit.Kit, param *types.GetRecallTaskReq) (*types
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().RecallTask().CountRecallTask(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get recall task count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get recall task count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -603,7 +603,7 @@ func (p *pool) GetRecallTask(kt *kit.Kit, param *types.GetRecallTaskReq) (*types
 
 	insts, err := dao.Set().RecallTask().FindManyRecallTask(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -617,7 +617,7 @@ func (p *pool) GetRecallTask(kt *kit.Kit, param *types.GetRecallTaskReq) (*types
 func (p *pool) GetLaunchHost(kt *kit.Kit, param *types.GetLaunchHostReq) (*types.GetLaunchHostRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		blog.Errorf("failed to get filter, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get filter, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -625,7 +625,7 @@ func (p *pool) GetLaunchHost(kt *kit.Kit, param *types.GetLaunchHostReq) (*types
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().OpRecord().CountOpRecord(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get launch host count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get launch host count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -635,7 +635,7 @@ func (p *pool) GetLaunchHost(kt *kit.Kit, param *types.GetLaunchHostReq) (*types
 
 	insts, err := dao.Set().OpRecord().FindManyOpRecord(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get launch host, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get launch host, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -656,7 +656,7 @@ func (p *pool) GetRecallHost(kt *kit.Kit, param *types.GetRecallHostReq) (*types
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().OpRecord().CountOpRecord(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get launch host count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get launch host count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -666,7 +666,7 @@ func (p *pool) GetRecallHost(kt *kit.Kit, param *types.GetRecallHostReq) (*types
 
 	insts, err := dao.Set().OpRecord().FindManyOpRecord(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get launch host, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get launch host, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -680,7 +680,7 @@ func (p *pool) GetRecallHost(kt *kit.Kit, param *types.GetRecallHostReq) (*types
 func (p *pool) GetPoolHost(kt *kit.Kit, param *types.GetPoolHostReq) (*types.GetPoolHostRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		blog.Errorf("failed to get pool host, for get filter err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool host, for get filter err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -688,7 +688,7 @@ func (p *pool) GetPoolHost(kt *kit.Kit, param *types.GetPoolHostReq) (*types.Get
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().PoolHost().CountPoolHost(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get pool host count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get pool host count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -698,7 +698,7 @@ func (p *pool) GetPoolHost(kt *kit.Kit, param *types.GetPoolHostReq) (*types.Get
 
 	insts, err := dao.Set().PoolHost().FindManyPoolHost(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -723,7 +723,7 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	}
 	hosts, err := dao.Set().PoolHost().FindManyPoolHost(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 	hostIDToHost := make(map[int64]*table.PoolHost)
@@ -735,12 +735,12 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	for _, hostID := range param.HostIDs {
 		host, ok := hostIDToHost[hostID]
 		if !ok {
-			blog.Errorf("invalid bk_host_id %d, for not exist in resource pool", hostID)
+			logs.Errorf("invalid bk_host_id %d, for not exist in resource pool", hostID)
 			return fmt.Errorf("invalid bk_host_id %d, not exist in resource pool", hostID)
 		}
 
 		if host.Status.Phase != table.PoolHostPhaseIdle {
-			blog.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase, table.PoolHostPhaseIdle)
+			logs.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase, table.PoolHostPhaseIdle)
 			return fmt.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase,
 				table.PoolHostPhaseIdle)
 		}
@@ -750,13 +750,13 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	for _, hostID := range param.HostIDs {
 		// transfer hosts from 资源运营服务-CR资源池 to destination business
 		if err := p.transferHost(hostID, 931, param.ToBizID, 0); err != nil {
-			blog.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
+			logs.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
 
 		// update pool host status
 		if err := p.updateHostStatus(hostID, table.PoolHostPhaseInUse); err != nil {
-			blog.Errorf("failed to update host %d status, err: %v, rid: %s", hostID, err, kt.Rid)
+			logs.Errorf("failed to update host %d status, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
 	}
@@ -771,13 +771,13 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 func (p *pool) ReturnHost(kt *kit.Kit, param *types.ReturnHostReq) error {
 	task, err := p.getRecallTaskByID(param.RecallID)
 	if err != nil {
-		blog.Errorf("failed to get recall task by id %d, err: %v", param.RecallID, err)
+		logs.Errorf("failed to get recall task by id %d, err: %v", param.RecallID, err)
 		return err
 	}
 
 	// 1. check task status
 	if task.Status.Phase == table.OpTaskPhaseSuccess {
-		blog.Errorf("need not return host for recall task %d, for its phase is %s", param.RecallID,
+		logs.Errorf("need not return host for recall task %d, for its phase is %s", param.RecallID,
 			table.OpTaskPhaseSuccess)
 		return fmt.Errorf("need not return host for recall task %d, for its phase is %s", param.RecallID,
 			table.OpTaskPhaseSuccess)
@@ -789,39 +789,39 @@ func (p *pool) ReturnHost(kt *kit.Kit, param *types.ReturnHostReq) error {
 	// 2. get host info
 	hosts, err := p.getPoolHostInfo(param.HostIDs)
 	if err != nil {
-		blog.Errorf("failed to get pool host info: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool host info: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	// 3. check host status
 	if err := p.checkHostStatus(hosts, param.HostIDs); err != nil {
-		blog.Errorf("failed to check host status: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to check host status: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	for _, hostID := range param.HostIDs {
 		// transfer hosts to 资源运营服务-CR资源下架中
 		if err := p.transferHost(hostID, param.FromBizID, types.BizIDPool, types.ModuleIDPoolRecalling); err != nil {
-			blog.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
+			logs.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
 
 		// update pool host status
 		if err := p.updateHostStatus(hostID, table.PoolHostPhaseForRecall); err != nil {
-			blog.Errorf("failed to update host %d status, err: %v, rid: %s", hostID, err, kt.Rid)
+			logs.Errorf("failed to update host %d status, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
 	}
 
 	// update op record
 	if err := p.createRecallOpRecords(kt, task, hosts); err != nil {
-		blog.Errorf("failed to create recall op record, err: %v", err)
+		logs.Errorf("failed to create recall op record, err: %v", err)
 		return err
 	}
 
 	// update recall detail
 	if err := p.createRecallDetail(kt, task, hosts); err != nil {
-		blog.Errorf("failed to create recall detail, err: %v", err)
+		logs.Errorf("failed to create recall detail, err: %v", err)
 		return err
 	}
 
@@ -835,7 +835,7 @@ func (p *pool) ReturnHost(kt *kit.Kit, param *types.ReturnHostReq) error {
 	}
 
 	if err := p.updateRecallTaskStatus(task); err != nil {
-		blog.Errorf("failed to update recall task status, id: %d, err: %v", task.ID, err)
+		logs.Errorf("failed to update recall task status, id: %d, err: %v", task.ID, err)
 		return err
 	}
 
@@ -856,7 +856,7 @@ func (p *pool) getPoolHostInfo(hostIDs []int64) ([]*table.PoolHost, error) {
 
 	hosts, err := dao.Set().PoolHost().FindManyPoolHost(context.Background(), page, filter)
 	if err != nil {
-		blog.Errorf("failed to get pool host, err: %v", err)
+		logs.Errorf("failed to get pool host, err: %v", err)
 		return nil, err
 	}
 
@@ -873,12 +873,12 @@ func (p *pool) checkHostStatus(hosts []*table.PoolHost, hostIDs []int64) error {
 	for _, hostID := range hostIDs {
 		host, ok := hostIDToHost[hostID]
 		if !ok {
-			blog.Errorf("invalid bk_host_id %d, for not exist in resource pool", hostID)
+			logs.Errorf("invalid bk_host_id %d, for not exist in resource pool", hostID)
 			return fmt.Errorf("invalid bk_host_id %d, not exist in resource pool", hostID)
 		}
 
 		if host.Status.Phase != table.PoolHostPhaseInUse {
-			blog.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase,
+			logs.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase,
 				table.PoolHostPhaseInUse)
 			return fmt.Errorf("invalid bk_host_id %d, for phase %s != %s", hostID, host.Status.Phase,
 				table.PoolHostPhaseInUse)
@@ -954,7 +954,7 @@ func (p *pool) createRecallOpRecords(kt *kit.Kit, task *table.RecallTask, hosts 
 	for _, host := range hosts {
 		id, err := dao.Set().OpRecord().NextSequence(kt.Ctx)
 		if err != nil {
-			blog.Errorf("failed to create op record, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to create op record, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
 		record := &table.OpRecord{
@@ -971,7 +971,7 @@ func (p *pool) createRecallOpRecords(kt *kit.Kit, task *table.RecallTask, hosts 
 		}
 
 		if err := dao.Set().OpRecord().CreateOpRecord(context.Background(), record); err != nil {
-			blog.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 		}
 	}
@@ -999,7 +999,7 @@ func (p *pool) createRecallDetail(kt *kit.Kit, task *table.RecallTask, hosts []*
 		}
 
 		if err := dao.Set().RecallDetail().CreateRecallDetail(context.Background(), detail); err != nil {
-			blog.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
 		}
 
@@ -1047,13 +1047,13 @@ func (p *pool) CreateRecallOrder(kt *kit.Kit, param *types.CreateRecallOrderReq)
 	}
 	task, err := p.initAndSaveRecallTask(kt, taskParam)
 	if err != nil {
-		blog.Errorf("failed to init and save recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to init and save recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// init and save recall order
 	if err := p.initAndSaveRecallOrder(kt, task, param); err != nil {
-		blog.Errorf("failed to init and save recall order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to init and save recall order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1082,7 +1082,7 @@ func (p *pool) initAndSaveRecallOrder(kt *kit.Kit, task *table.RecallTask, param
 	}
 
 	if err := dao.Set().RecallOrder().CreateRecallOrder(kt.Ctx, order); err != nil {
-		blog.Errorf("failed to create recall order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create recall order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -1097,7 +1097,7 @@ func (p *pool) GetRecallOrder(kt *kit.Kit, param *types.GetRecallOrderReq) (*typ
 
 	inst, err := dao.Set().RecallOrder().GetRecallOrder(kt.Ctx, filter)
 	if err != nil {
-		blog.Errorf("failed to get recall task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recall task, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1107,7 +1107,7 @@ func (p *pool) GetRecallOrder(kt *kit.Kit, param *types.GetRecallOrderReq) (*typ
 	}
 	succCnt, err := dao.Set().RecallDetail().CountRecallDetail(kt.Ctx, detailFilter)
 	if err != nil {
-		blog.Errorf("failed to get recalled host count, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recalled host count, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1140,7 +1140,7 @@ func (p *pool) GetRecalledInstance(kt *kit.Kit, param *types.GetRecalledInstReq)
 
 	insts, err := dao.Set().RecallDetail().FindManyRecallDetail(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recalled instance, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recalled instance, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1158,18 +1158,18 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 
 	req, err := p.createListMatchDeviceReq(param)
 	if err != nil {
-		blog.Errorf("failed to create get cc host req, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create get cc host req, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	resp, err := p.esbCli.Cmdb().ListBizHost(kt.Ctx, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cc host info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		blog.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
+		logs.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
@@ -1181,7 +1181,7 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 	for _, host := range resp.Data.Info {
 		rackId, err := strconv.Atoi(host.RackId)
 		if err != nil {
-			blog.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
+			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
 			rackId = 0
 		}
 		device := &types.MatchDevice{
@@ -1405,7 +1405,7 @@ func (p *pool) GetRecallMatchDevice(kt *kit.Kit, param *types.GetRecallMatchDevi
 
 	filter, err := p.getRecallMatchDeviceFilter(param)
 	if err != nil {
-		blog.Errorf("failed to get resource recall match device filter, err: %v", err)
+		logs.Errorf("failed to get resource recall match device filter, err: %v", err)
 		return nil, err
 	}
 
@@ -1416,7 +1416,7 @@ func (p *pool) GetRecallMatchDevice(kt *kit.Kit, param *types.GetRecallMatchDevi
 
 	insts, err := dao.Set().PoolHost().FindManyPoolHost(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool host, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1529,7 +1529,7 @@ func (p *pool) GetRecallDetail(kt *kit.Kit, param *types.GetRecallDetailReq) (*t
 	if param.Page.EnableCount {
 		cnt, err := dao.Set().RecallDetail().CountRecallDetail(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get recall detail count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get recall detail count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -1539,7 +1539,7 @@ func (p *pool) GetRecallDetail(kt *kit.Kit, param *types.GetRecallDetailReq) (*t
 
 	insts, err := dao.Set().RecallDetail().FindManyRecallDetail(kt.Ctx, param.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recall detail, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recall detail, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1561,13 +1561,13 @@ func (p *pool) ResumeRecycleTask(kt *kit.Kit, param *types.ResumeRecycleTaskReq)
 
 	insts, err := dao.Set().RecallDetail().FindManyRecallDetail(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recycle task, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recycle task, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	cnt := len(insts)
 	if cnt == 0 {
-		blog.Errorf("found no recycle task to resume, rid: %s", cnt, kt.Rid)
+		logs.Errorf("found no recycle task to resume, rid: %s", cnt, kt.Rid)
 		return fmt.Errorf("found no recycle task to resume")
 	}
 
@@ -1583,7 +1583,7 @@ func (p *pool) ResumeRecycleTask(kt *kit.Kit, param *types.ResumeRecycleTaskReq)
 func (p *pool) CreateGradeCfg(kt *kit.Kit, param *table.GradeCfg) (mapstr.MapStr, error) {
 	id, err := dao.Set().GradeCfg().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create plan config, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create plan config, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1593,7 +1593,7 @@ func (p *pool) CreateGradeCfg(kt *kit.Kit, param *table.GradeCfg) (mapstr.MapStr
 	param.UpdateAt = now
 
 	if err := dao.Set().GradeCfg().CreateGradeCfg(kt.Ctx, param); err != nil {
-		blog.Errorf("failed to create grade config, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create grade config, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1614,7 +1614,7 @@ func (p *pool) GetGradeCfg(kt *kit.Kit) (*types.GetGradeCfgRst, error) {
 
 	insts, err := dao.Set().GradeCfg().FindManyGradeCfg(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to get pool grade config, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get pool grade config, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 

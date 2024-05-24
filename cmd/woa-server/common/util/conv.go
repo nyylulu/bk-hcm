@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util ...
 package util
 
 import (
@@ -21,6 +22,7 @@ import (
 	"strings"
 )
 
+// GetStrByInterface interface to string
 func GetStrByInterface(a interface{}) string {
 	if nil == a {
 		return ""
@@ -28,6 +30,7 @@ func GetStrByInterface(a interface{}) string {
 	return fmt.Sprintf("%v", a)
 }
 
+// GetIntByInterface interface to int
 func GetIntByInterface(a interface{}) (int, error) {
 	id := 0
 	var err error
@@ -57,6 +60,7 @@ func GetIntByInterface(a interface{}) (int, error) {
 	return id, err
 }
 
+// GetInt64ByInterface interface to int64
 func GetInt64ByInterface(a interface{}) (int64, error) {
 	var id int64 = 0
 	var err error
@@ -98,6 +102,7 @@ func GetInt64ByInterface(a interface{}) (int64, error) {
 	return id, err
 }
 
+// GetFloat64ByInterface interface to float64
 func GetFloat64ByInterface(a interface{}) (float64, error) {
 	switch i := a.(type) {
 	case int:
@@ -133,6 +138,7 @@ func GetFloat64ByInterface(a interface{}) (float64, error) {
 	}
 }
 
+// GetMapInterfaceByInerface interface to map
 func GetMapInterfaceByInerface(data interface{}) ([]interface{}, error) {
 	values := make([]interface{}, 0)
 	switch data.(type) {
@@ -165,7 +171,7 @@ func GetMapInterfaceByInerface(data interface{}) ([]interface{}, error) {
 	return values, nil
 }
 
-// SliceStrToInt: 将字符串切片转换为整型切片
+// SliceStrToInt 将字符串切片转换为整型切片
 func SliceStrToInt(sliceStr []string) ([]int, error) {
 	sliceInt := make([]int, 0)
 	for _, idStr := range sliceStr {
@@ -217,6 +223,7 @@ func GetStrValsFromArrMapInterfaceByKey(arrI []interface{}, key string) []string
 	return ret
 }
 
+// ConverToInterfaceSlice convert interface to []interface{}
 func ConverToInterfaceSlice(value interface{}) []interface{} {
 	rflVal := reflect.ValueOf(value)
 	for rflVal.CanAddr() {
@@ -290,7 +297,7 @@ func SliceInterfaceToInt64(faceSlice []interface{}) ([]int64, error) {
 	return results, nil
 }
 
-// SliceInterfaceToBool将interface切片转化为string切片,且interface的真实类型必须是string.
+// SliceInterfaceToString 将interface切片转化为string切片,且interface的真实类型必须是string.
 // 失败则返回nil,error.
 func SliceInterfaceToString(faceSlice []interface{}) ([]string, error) {
 	// 预分配空间.
@@ -309,7 +316,7 @@ func SliceInterfaceToString(faceSlice []interface{}) ([]string, error) {
 	return results, nil
 }
 
-// SliceInterfaceToBool将interface切片转化为bool切片,且interface的真实类型必须是bool.
+// SliceInterfaceToBool 将interface切片转化为bool切片,且interface的真实类型必须是bool.
 // 失败则返回nil,error.
 func SliceInterfaceToBool(faceSlice []interface{}) ([]bool, error) {
 	// 预分配空间.

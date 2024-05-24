@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
@@ -29,7 +30,7 @@ import (
 
 const defaultError = "{\"result\": false, \"code\": 1199000, \"message\": %s}"
 
-// RespError
+// RespError response
 type RespError struct {
 	// error message
 	Msg error
@@ -69,12 +70,13 @@ func NewSuccessResp(data interface{}) *Response {
 	}
 }
 
+// Response response
 type Response struct {
 	BaseResp `json:",inline"`
 	Data     interface{} `json:"data" mapstructure:"data"`
 }
 
-// CountResponse count action response content.
+// CountResponseContent count action response content.
 type CountResponseContent struct {
 	// Count count num.
 	Count uint64 `json:"count"`
@@ -86,21 +88,25 @@ type CountResponse struct {
 	Data     CountResponseContent `json:"data"`
 }
 
+// BoolResponse bool response.
 type BoolResponse struct {
 	BaseResp `json:",inline"`
 	Data     bool `json:"data"`
 }
 
+// Uint64Response uint64 response.
 type Uint64Response struct {
 	BaseResp `json:",inline"`
 	Count    uint64 `json:"count"`
 }
 
+// CoreUint64Response uint64 response.
 type CoreUint64Response struct {
 	BaseResp `json:",inline"`
 	Data     uint64 `json:"data"`
 }
 
+// ArrayResponse array response.
 type ArrayResponse struct {
 	BaseResp `json:",inline"`
 	Data     []interface{} `json:"data"`
@@ -112,12 +118,13 @@ type HostCountResponse struct {
 	Data     int64 `json:"data"`
 }
 
+// MapArrayResponse map array response.
 type MapArrayResponse struct {
 	BaseResp `json:",inline"`
 	Data     []mapstr.MapStr `json:"data"`
 }
 
-// ResponseInstData
+// ResponseInstData response instance data
 type ResponseInstData struct {
 	BaseResp `json:",inline"`
 	Data     InstDataInfo `json:"data"`
@@ -129,11 +136,13 @@ type InstDataInfo struct {
 	Info  []mapstr.MapStr `json:"info"`
 }
 
+// ResponseDataMapStr response data map str
 type ResponseDataMapStr struct {
 	BaseResp `json:",inline"`
 	Data     mapstr.MapStr `json:"data"`
 }
 
+// QueryInput query input
 type QueryInput struct {
 	Condition map[string]interface{} `json:"condition"`
 	// 非必填，只能用来查时间，且与Condition是与关系
@@ -145,12 +154,14 @@ type QueryInput struct {
 	DisableCounter bool           `json:"disable_counter,omitempty"`
 }
 
+// TimeConditionItem time condition item
 type TimeConditionItem struct {
 	Field string       `json:"field" bson:"field"`
 	Start *cctime.Time `json:"start" bson:"start"`
 	End   *cctime.Time `json:"end" bson:"end"`
 }
 
+// TimeCondition time condition
 type TimeCondition struct {
 	Operator string              `json:"oper" bson:"oper"`
 	Rules    []TimeConditionItem `json:"rules" bson:"rules"`
@@ -305,17 +316,20 @@ func (o *QueryInput) convInterfaceToTime(val interface{}) (interface{}, error) {
 
 }
 
+// CloudHostModuleParams cloud host module params
 type CloudHostModuleParams struct {
 	ApplicationID int64        `json:"bk_biz_id"`
 	HostInfoArr   []BkHostInfo `json:"host_info"`
 	ModuleID      int64        `json:"bk_module_id"`
 }
 
+// BkHostInfo bk host info
 type BkHostInfo struct {
 	IP      string `json:"bk_host_innerip"`
 	CloudID int    `json:"bk_cloud_id"`
 }
 
+// DefaultModuleHostConfigParams default module host config params
 type DefaultModuleHostConfigParams struct {
 	ApplicationID int64   `json:"bk_biz_id"`
 	HostIDs       []int64 `json:"bk_host_id"`
@@ -330,7 +344,7 @@ type Condition struct {
 	TimeCondition *TimeCondition `json:"time_condition,omitempty"`
 }
 
-// common search struct
+// SearchParams common search struct
 type SearchParams struct {
 	Condition map[string]interface{} `json:"condition"`
 	Page      map[string]interface{} `json:"page,omitempty"`
@@ -343,16 +357,19 @@ type PropertyGroupCondition struct {
 	Data      map[string]interface{} `json:"data"`
 }
 
+// UpdateParams common update struct
 type UpdateParams struct {
 	Condition map[string]interface{} `json:"condition"`
 	Data      map[string]interface{} `json:"data"`
 }
 
+// SearchInstBatchOption used to reflect the search inst batch json
 type SearchInstBatchOption struct {
 	IDs    []int64  `json:"bk_ids"`
 	Fields []string `json:"fields"`
 }
 
+// Validate used to validate the search inst batch option
 func (s *SearchInstBatchOption) Validate() (rawError errors.RawErrorInfo) {
 	if len(s.IDs) == 0 || len(s.IDs) > common.BKMaxInstanceLimit {
 		return errors.RawErrorInfo{
@@ -377,6 +394,7 @@ type BkBaseResp struct {
 	Message string `json:"message"`
 }
 
+// BKResponse common response defined in blueking api protocol
 type BKResponse struct {
 	BkBaseResp `json:",inline"`
 	Data       interface{} `json:"data"`

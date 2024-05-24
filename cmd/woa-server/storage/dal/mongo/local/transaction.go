@@ -17,9 +17,9 @@ import (
 	"fmt"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg/logs"
 )
 
 // CommitTransaction 提交事务
@@ -32,25 +32,25 @@ func (c *Mongo) CommitTransaction(ctx context.Context, cap *metadata.TxnCapable)
 	txnNumber, err := c.tm.GetTxnNumber(cap.SessionID)
 	if err != nil {
 		if redis.IsNilErr(err) {
-			blog.Infof("commit transaction: %s but no transaction need to commit, *skip*, rid: %s", cap.SessionID, rid)
+			logs.Infof("commit transaction: %s but no transaction need to commit, *skip*, rid: %s", cap.SessionID, rid)
 			return nil
 		}
 		return fmt.Errorf("get txn number failed, err: %v", err)
 	}
 	if txnNumber == 0 {
-		blog.Infof("commit transaction: %s but no transaction to commit, **skip**, rid: %s", cap.SessionID, rid)
+		logs.Infof("commit transaction: %s but no transaction to commit, **skip**, rid: %s", cap.SessionID, rid)
 		return nil
 	}
 
 	reloadSession, err := c.tm.PrepareTransaction(cap, c.dbc)
 	if err != nil {
-		blog.Errorf("commit transaction, but prepare transaction failed, err: %v, rid: %v", err, rid)
+		logs.Errorf("commit transaction, but prepare transaction failed, err: %v, rid: %v", err, rid)
 		return err
 	}
 	// reset the transaction state, so that we can commit the transaction after start the
 	// transaction immediately.
 	if err := CmdbPrepareCommitOrAbort(reloadSession); err != nil {
-		blog.Errorf("reset the commit transaction state failed, err: %v, rid: %v", err, rid)
+		logs.Errorf("reset the commit transaction state failed, err: %v, rid: %v", err, rid)
 		return err
 	}
 
@@ -63,7 +63,7 @@ func (c *Mongo) CommitTransaction(ctx context.Context, cap *metadata.TxnCapable)
 	err = c.tm.RemoveSessionKey(cap.SessionID)
 	if err != nil {
 		// this key has ttl, it's ok if we not delete it, cause this key has a ttl.
-		blog.Errorf("commit transaction, but delete txn session: %s key failed, err: %v, rid: %v", cap.SessionID, err,
+		logs.Errorf("commit transaction, but delete txn session: %s key failed, err: %v, rid: %v", cap.SessionID, err,
 			rid)
 		// do not return.
 	}
@@ -76,13 +76,13 @@ func (c *Mongo) AbortTransaction(ctx context.Context, cap *metadata.TxnCapable) 
 	rid := ctx.Value(common.ContextRequestIDField)
 	reloadSession, err := c.tm.PrepareTransaction(cap, c.dbc)
 	if err != nil {
-		blog.Errorf("abort transaction, but prepare transaction failed, err: %v, rid: %v", err, rid)
+		logs.Errorf("abort transaction, but prepare transaction failed, err: %v, rid: %v", err, rid)
 		return false, err
 	}
 	// reset the transaction state, so that we can abort the transaction after start the
 	// transaction immediately.
 	if err := CmdbPrepareCommitOrAbort(reloadSession); err != nil {
-		blog.Errorf("reset abort transaction state failed, err: %v, rid: %v", err, rid)
+		logs.Errorf("reset abort transaction state failed, err: %v, rid: %v", err, rid)
 		return false, err
 	}
 
@@ -95,7 +95,7 @@ func (c *Mongo) AbortTransaction(ctx context.Context, cap *metadata.TxnCapable) 
 	err = c.tm.RemoveSessionKey(cap.SessionID)
 	if err != nil {
 		// this key has ttl, it's ok if we not delete it, cause this key has a ttl.
-		blog.Errorf("abort transaction, but delete txn session: %s key failed, err: %v, rid: %v", cap.SessionID, err,
+		logs.Errorf("abort transaction, but delete txn session: %s key failed, err: %v, rid: %v", cap.SessionID, err,
 			rid)
 		// do not return.
 	}

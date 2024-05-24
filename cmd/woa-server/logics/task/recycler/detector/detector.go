@@ -1,0 +1,501 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package detector implements rejected device detector
+// which prevents serious recycle consequences.
+package detector
+
+import (
+	"context"
+	"fmt"
+	"sync"
+	"time"
+
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/dal/task/dao"
+	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/cmd/woa-server/thirdparty/gcsapi"
+	"hcm/cmd/woa-server/thirdparty/l5api"
+	"hcm/cmd/woa-server/thirdparty/safetyapi"
+	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/thirdparty/tcaplusapi"
+	"hcm/cmd/woa-server/thirdparty/tgwapi"
+	"hcm/cmd/woa-server/thirdparty/tmpapi"
+	"hcm/cmd/woa-server/thirdparty/uworkapi"
+	"hcm/pkg/cc"
+	"hcm/pkg/logs"
+)
+
+// Detector detects rejected device for recycle
+type Detector struct {
+	cc      cmdb.Client
+	uwork   uworkapi.UworkClientInterface
+	tmp     tmpapi.TMPClientInterface
+	gcs     gcsapi.GcsClientInterface
+	tcaplus tcaplusapi.TcaplusClientInterface
+	tgw     tgwapi.TgwClientInterface
+	l5      l5api.L5ClientInterface
+	sojob   sojobapi.SojobClientInterface
+	safety  safetyapi.SafetyClientInterface
+	cvm     cvmapi.CVMClientInterface
+	tcOpt   cc.TCloudCli
+
+	ctx context.Context
+}
+
+// New creates a detector
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Detector, error) {
+	detector := &Detector{
+		cc:      esbCli.Cmdb(),
+		uwork:   thirdCli.Uwork,
+		tmp:     thirdCli.Tmp,
+		gcs:     thirdCli.GCS,
+		tcaplus: thirdCli.Tcaplus,
+		tgw:     thirdCli.TGW,
+		l5:      thirdCli.L5,
+		sojob:   thirdCli.SoJob,
+		safety:  thirdCli.Safety,
+		cvm:     thirdCli.CVM,
+		tcOpt:   thirdCli.TencentCloudOpt,
+		ctx:     ctx,
+	}
+
+	return detector, nil
+}
+
+// DealRecycleOrder deals with recycle order by running detection tasks
+func (d *Detector) DealRecycleOrder(orderId string) error {
+	// get tasks by order id
+	taskInfos, err := d.getRecycleTasks(orderId)
+	if err != nil {
+		logs.Errorf("failed to get recycle tasks by order id: %d, err: %v", orderId, err)
+		return err
+	}
+
+	// run recycle tasks
+	wg := sync.WaitGroup{}
+	for _, task := range taskInfos {
+		wg.Add(1)
+		go func(task *table.DetectTask) {
+			defer wg.Done()
+			d.runRecycleTask(task)
+		}(task)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// DealRecycleTask deals with recycle task
+func (d *Detector) DealRecycleTask(taskId string) error {
+	// get task by task id
+	task, err := d.getRecycleTaskById(taskId)
+	if err != nil {
+		logs.Errorf("failed to get recycle task by task id: %d, err: %v", taskId, err)
+		return err
+	}
+
+	go d.runRecycleTask(task)
+
+	return nil
+}
+
+// getRecycleTasks gets recycle tasks by recycle order id
+func (d *Detector) getRecycleTasks(orderId string) ([]*table.DetectTask, error) {
+	filter := map[string]interface{}{
+		"suborder_id": orderId,
+	}
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: common.BKNoLimit,
+	}
+	tasks, err := dao.Set().DetectTask().FindManyDetectTask(context.Background(), page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle tasks by order id: %s", orderId)
+		return nil, err
+	}
+
+	return tasks, nil
+}
+
+// getRecycleTaskById gets recycle task by recycle task id
+func (d *Detector) getRecycleTaskById(taskId string) (*table.DetectTask, error) {
+	filter := map[string]interface{}{
+		"task_id": taskId,
+	}
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: 1,
+	}
+	tasks, err := dao.Set().DetectTask().FindManyDetectTask(context.Background(), page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle tasks by task id: %s", taskId)
+		return nil, err
+	}
+
+	cnt := len(tasks)
+	if cnt != 1 {
+		logs.Errorf("get invalid recycle task count %d != 1 by task id %s", cnt, taskId)
+		return nil, fmt.Errorf("get invalid recycle task count %d != 1 by task id %s", cnt, taskId)
+	}
+
+	return tasks[0], nil
+}
+
+func (d *Detector) runRecycleTask(task *table.DetectTask) {
+	// check task status
+	if task.Status == table.DetectStatusSuccess || task.Status == table.DetectStatusRunning {
+		logs.Infof("recycle task %s need not dispatch, status: %s", task.TaskID, task.Status)
+		return
+	}
+
+	// get recycle steps
+	steps, err := d.getRecycleSteps()
+	if err != nil {
+		logs.Errorf("failed to run recycle task, task id: %s, err: %v", task.TaskID, err)
+		return
+	}
+
+	// init task status
+	if err := d.initTaskStatus(task); err != nil {
+		logs.Errorf("failed to init recycle task status, task id: %s, err: %v", task.TaskID, err)
+		return
+	}
+
+	// run recycle steps in serial
+	total := uint(len(steps))
+	success := uint(0)
+	failed := uint(0)
+	var lastErr error = nil
+	for _, step := range steps {
+		errRun := d.runRecycleStep(task, step)
+		if errRun != nil {
+			logs.Errorf("failed to run recycle step, step name: %s, task id: %s, err: %v", step.Name, task.TaskID,
+				errRun)
+			lastErr = errRun
+			failed++
+		} else {
+			success++
+		}
+
+		if err := d.updateTaskProgress(task, total, success, failed); err != nil {
+			logs.Warnf("failed to update recycle task status, task id: %s, err: %v", task.TaskID, err)
+		}
+	}
+
+	// update task status
+	if err := d.updateRecycleTask(task, lastErr); err != nil {
+		logs.Errorf("failed to update recycle task status, task id: %s, err: %v", task.TaskID, err)
+	}
+
+	// update recycle task
+	if err := d.updateRecycleHost(task.SuborderID, task.IP, lastErr); err != nil {
+		logs.Errorf("failed to update recycle host %s, err: %v", task.IP, err)
+	}
+
+	return
+}
+
+func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectStepCfg) error {
+	// check step status
+	stepId := fmt.Sprintf("%s-%d", task.TaskID, stepCfg.ID)
+	steps, err := d.getRecycleTaskStep(stepId)
+	if err != nil {
+		logs.Errorf("failed to get recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name, err)
+		return err
+	}
+
+	step := new(table.DetectStep)
+	cnt := len(steps)
+	if cnt > 1 {
+		logs.Errorf("failed to get recycle step, for invalid count > 1, step id: %s", stepId)
+		return fmt.Errorf("failed to get recycle step, for invalid count > 1, step id: %s", stepId)
+	} else if cnt == 1 {
+		step = steps[0]
+	} else {
+		// init step status
+		step, err = d.initRecycleStep(task, stepCfg)
+		if err != nil {
+			logs.Errorf("failed to init recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name, err)
+			return err
+		}
+	}
+
+	// can not skip pre-check step
+	if step.Status == table.DetectStatusSuccess && step.StepName != table.StepPreCheck {
+		logs.Infof("step %s already success, skip", stepId)
+		return nil
+	} else if step.Status == table.DetectStatusRunning {
+		logs.Errorf("step %s is running, can not execute again", stepId)
+		return fmt.Errorf("step %s is running, can not execute again", stepId)
+	}
+
+	// update step status to running
+	if err := d.updateRecycleStep(step, table.DetectStatusRunning, 0, "running", ""); err != nil {
+		logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
+		return err
+	}
+
+	// execute step
+	attempt, exeInfo, errExec := d.executeRecycleStep(step, stepCfg.Retry)
+	if errExec != nil {
+		logs.Infof("failed to execute recycle step, step id: %s, err: %v", step.ID, errExec)
+	} else {
+		logs.Infof("success to execute recycle step, step id: %s", step.ID)
+	}
+
+	// update step status
+	if errExec != nil {
+		if err := d.updateRecycleStep(step, table.DetectStatusFailed, attempt, errExec.Error(), exeInfo); err != nil {
+			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
+			return err
+		}
+	} else {
+		if err := d.updateRecycleStep(step, table.DetectStatusSuccess, attempt, "success", exeInfo); err != nil {
+			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
+			return err
+		}
+	}
+
+	// return execution result
+	return errExec
+}
+
+func (d *Detector) initTaskStatus(task *table.DetectTask) error {
+	task.Status = table.DetectStatusRunning
+
+	filter := &mapstr.MapStr{
+		"task_id": task.TaskID,
+	}
+
+	doc := &mapstr.MapStr{
+		"status":     task.Status,
+		"status_seq": table.DetectStatusSeqRunning,
+		"message":    "running",
+		"update_at":  time.Now(),
+	}
+
+	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
+		logs.Errorf("failed to update recycle task, ip: %s, update: %+v, err: %v", task.IP, doc, err)
+		return err
+	}
+
+	return nil
+}
+
+func (d *Detector) updateRecycleTask(task *table.DetectTask, lastErr error) error {
+	task.Status = table.DetectStatusSuccess
+
+	filter := &mapstr.MapStr{
+		"task_id": task.TaskID,
+	}
+
+	if lastErr != nil {
+		task.Status = table.DetectStatusFailed
+	}
+
+	seq, ok := table.DetectStatus2Seq[task.Status]
+	if !ok {
+		logs.Warnf("found no recycle status seq by %v", task.Status)
+		seq = 0
+	}
+	doc := &mapstr.MapStr{
+		"status":     task.Status,
+		"status_seq": seq,
+		"update_at":  time.Now(),
+	}
+
+	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
+		logs.Errorf("failed to update detection task, task id: %s, update: %+v, err: %v", task.TaskID, doc, err)
+		return err
+	}
+
+	return nil
+}
+
+func (d *Detector) updateTaskProgress(task *table.DetectTask, total, success, failed uint) error {
+	filter := &mapstr.MapStr{
+		"task_id": task.TaskID,
+	}
+
+	doc := &mapstr.MapStr{
+		"total_num":   total,
+		"success_num": success,
+		"failed_num":  failed,
+		"update_at":   time.Now(),
+	}
+
+	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
+		logs.Errorf("failed to update recycle task, task id: %s, update: %+v, err: %v", task.TaskID, doc, err)
+		return err
+	}
+
+	return nil
+}
+
+func (d *Detector) updateRecycleHost(orderId, ip string, lastErr error) error {
+	status := table.RecycleStatusDetecting
+
+	filter := &mapstr.MapStr{
+		"suborder_id": orderId,
+		"ip":          ip,
+	}
+
+	if lastErr != nil {
+		status = table.RecycleStatusDetectFailed
+	}
+
+	doc := &mapstr.MapStr{
+		"status":    status,
+		"update_at": time.Now(),
+	}
+
+	if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), filter, doc); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (d *Detector) getRecycleSteps() ([]*table.DetectStepCfg, error) {
+	filter := map[string]interface{}{
+		"enable": true,
+	}
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: common.BKNoLimit,
+	}
+
+	steps, err := dao.Set().DetectStepCfg().GetDetectStepConfig(context.Background(), page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle step config, err: %v", err)
+		return nil, err
+	}
+
+	return steps, nil
+}
+
+func (d *Detector) getRecycleTaskStep(stepId string) ([]*table.DetectStep, error) {
+	filter := map[string]interface{}{
+		"id": stepId,
+	}
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: 1,
+	}
+
+	insts, err := dao.Set().DetectStep().FindManyDetectStep(context.Background(), page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle task step, err: %v, step id: %s", err, stepId)
+		return nil, err
+	}
+
+	return insts, nil
+}
+
+func (d *Detector) initRecycleStep(task *table.DetectTask, cfg *table.DetectStepCfg) (*table.DetectStep, error) {
+	now := time.Now()
+	step := &table.DetectStep{
+		OrderID:    task.OrderID,
+		SuborderID: task.SuborderID,
+		TaskID:     task.TaskID,
+		ID:         fmt.Sprintf("%s-%d", task.TaskID, cfg.ID),
+		StepID:     cfg.Sequence,
+		StepName:   cfg.Name,
+		StepDesc:   cfg.Description,
+		IP:         task.IP,
+		User:       task.User,
+		RetryTime:  0,
+		Status:     table.DetectStatusInit,
+		Message:    "",
+		StartAt:    now,
+		EndAt:      now,
+		CreateAt:   now,
+		UpdateAt:   now,
+	}
+
+	if err := dao.Set().DetectStep().CreateDetectStep(context.Background(), step); err != nil {
+		logs.Errorf("failed to save step, step id: %s", step.ID)
+		return nil, fmt.Errorf("failed to save step, step id: %s", step.ID)
+	}
+
+	return step, nil
+}
+
+func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, string, error) {
+	attempt := 0
+	exeInfo := ""
+	var err error
+
+	switch step.StepName {
+	case table.StepPreCheck:
+		attempt, exeInfo, err = d.preCheck(step, retry)
+	case table.StepCheckUwork:
+		attempt, exeInfo, err = d.checkUwork(step, retry)
+	case table.StepCheckGCS:
+		attempt, exeInfo, err = d.checkGCS(step, retry)
+	case table.StepBasicCheck:
+		attempt, exeInfo, err = d.basicCheck(step, retry)
+	case table.StepCheckOwner:
+		attempt, exeInfo, err = d.checkOwner(step, retry)
+	case table.StepCvmCheck:
+		attempt, exeInfo, err = d.cvmCheck(step, retry)
+	case table.StepCheckSafety:
+		attempt, exeInfo, err = d.checkSecurityBaseline(step, retry)
+	case table.StepCheckReturn:
+		attempt, exeInfo, err = d.checkReturn(step, retry)
+	case table.StepCheckProcess:
+		attempt, exeInfo, err = d.checkProcess(step, retry)
+	default:
+		logs.Errorf("unknown recycle step %s", step.StepName)
+		err = fmt.Errorf("unknown recycle step %s", step.StepName)
+	}
+
+	return attempt, exeInfo, err
+}
+
+func (d *Detector) updateRecycleStep(step *table.DetectStep, status table.DetectStatus, attempt int, msg,
+	log string) error {
+
+	filter := &mapstr.MapStr{
+		"id": step.ID,
+	}
+
+	now := time.Now()
+	doc := mapstr.MapStr{
+		"retry_time": attempt,
+		"status":     status,
+		"message":    msg,
+		"log":        log,
+		"update_at":  now,
+	}
+
+	switch status {
+	case table.DetectStatusSuccess, table.DetectStatusFailed:
+		doc["end_at"] = now
+	case table.DetectStatusRunning:
+		doc["start_at"] = now
+	}
+
+	if err := dao.Set().DetectStep().UpdateDetectStep(context.Background(), filter, &doc); err != nil {
+		logs.Errorf("failed to update recycle step, step id: %s, update: %+v, err: %v", step.ID, doc, err)
+		return err
+	}
+
+	return nil
+}

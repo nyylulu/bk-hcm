@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package mapstr provide the mapstr factory
 package mapstr
 
 import (
@@ -85,13 +86,12 @@ func NewFromMap(data map[string]interface{}) MapStr {
 
 // NewFromStruct convert the  struct into MapStr , the struct must be taged with 'tagName' .
 //
-//  eg:
-//  type targetStruct struct{
-//       Name string `field:"testName"`
-//  }
-//  will be converted the follow map
-//  {"testName":""}
-//
+//	eg:
+//	type targetStruct struct{
+//	     Name string `field:"testName"`
+//	}
+//	will be converted the follow map
+//	{"testName":""}
 func NewFromStruct(targetStruct interface{}, tagName string) MapStr {
 	return SetValueToMapStrByTagsWithTagName(targetStruct, tagName)
 }

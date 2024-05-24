@@ -13,11 +13,11 @@
 package pool
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/pool/table"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -25,19 +25,19 @@ import (
 func (s *service) CreateLaunchTask(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.LaunchReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to create pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().CreateLaunchTask(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -48,19 +48,19 @@ func (s *service) CreateLaunchTask(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateRecallTask(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.RecallReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to create pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().CreateRecallTask(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -71,19 +71,19 @@ func (s *service) CreateRecallTask(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetLaunchTask(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetLaunchTaskReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetLaunchTask(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -94,19 +94,19 @@ func (s *service) GetLaunchTask(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetRecallTask(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallTaskReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecallTask(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -117,19 +117,19 @@ func (s *service) GetRecallTask(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetLaunchHost(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetLaunchHostReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool launch host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool launch host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetLaunchHost(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool launch host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -140,19 +140,19 @@ func (s *service) GetLaunchHost(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetRecallHost(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallHostReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool recall host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool recall host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecallHost(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool recall host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -163,7 +163,7 @@ func (s *service) GetRecallHost(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetIdleHost(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetPoolHostReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool idle host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool idle host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -172,13 +172,13 @@ func (s *service) GetIdleHost(cts *rest.Contexts) (interface{}, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool idle host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool idle host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetPoolHost(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool idle host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool idle host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -189,18 +189,18 @@ func (s *service) GetIdleHost(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DrawHost(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.DrawHostReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to draw host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to draw host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to draw host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to draw host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	if err := s.logics.Pool().DrawHost(cts.Kit, input); err != nil {
-		blog.Errorf("failed to draw host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to draw host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -211,18 +211,18 @@ func (s *service) DrawHost(cts *rest.Contexts) (interface{}, error) {
 func (s *service) ReturnHost(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.ReturnHostReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to return host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to return host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	if err := s.logics.Pool().ReturnHost(cts.Kit, input); err != nil {
-		blog.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -233,19 +233,19 @@ func (s *service) ReturnHost(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateRecallOrder(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.CreateRecallOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to create pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().CreateRecallOrder(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -256,19 +256,19 @@ func (s *service) CreateRecallOrder(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetRecallOrder(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecallOrder(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -279,19 +279,19 @@ func (s *service) GetRecallOrder(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetRecalledInstance(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecalledInstReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get pool recalled instances, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recalled instances, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get pool recalled instances, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recalled instances, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecalledInstance(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get pool recalled instances, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recalled instances, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -302,19 +302,19 @@ func (s *service) GetRecalledInstance(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetRecallDetail(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallDetailReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get recall task detail info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall task detail info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get get recall task detail info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get get recall task detail info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecallDetail(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get recall task detail info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall task detail info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -325,19 +325,19 @@ func (s *service) GetRecallDetail(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetLaunchMatchDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetLaunchMatchDeviceReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get launch match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get launch match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get launch match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get launch match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetLaunchMatchDevice(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get launch match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get launch match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -348,19 +348,19 @@ func (s *service) GetLaunchMatchDevice(cts *rest.Contexts) (interface{}, error) 
 func (s *service) GetRecallMatchDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallMatchDeviceReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get recall match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().GetRecallMatchDevice(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -371,18 +371,18 @@ func (s *service) GetRecallMatchDevice(cts *rest.Contexts) (interface{}, error) 
 func (s *service) ResumeRecycleTask(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.ResumeRecycleTaskReq)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to resumes recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to resumes recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to resumes recycle task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to resumes recycle task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	if err := s.logics.Pool().ResumeRecycleTask(cts.Kit, input); err != nil {
-		blog.Errorf("failed to resume recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to resume recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -393,19 +393,19 @@ func (s *service) ResumeRecycleTask(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateGradeCfg(cts *rest.Contexts) (interface{}, error) {
 	input := new(table.GradeCfg)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to create pool grade config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool grade config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Pool().CreateGradeCfg(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -416,7 +416,7 @@ func (s *service) CreateGradeCfg(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetGradeCfg(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.Pool().GetGradeCfg(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -533,7 +533,7 @@ func (s *service) GetTaskStatusCfg(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetDeviceType(cts *rest.Contexts) (interface{}, error) {
 	rst, err := s.logics.Pool().GetDeviceType(cts.Kit)
 	if err != nil {
-		blog.Errorf("failed to get pool supported device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool supported device type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

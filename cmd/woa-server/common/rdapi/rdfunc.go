@@ -21,10 +21,10 @@ import (
 	"strings"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/errors"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/util"
+	"hcm/pkg/logs"
 
 	"github.com/emicklei/go-restful"
 )
@@ -45,6 +45,7 @@ func checkHTTPAuth(req *restful.Request, defErr errors.DefaultCCErrorIf) (int, s
 
 }
 
+// AllGlobalFilter global filter
 func AllGlobalFilter(errFunc func() errors.CCErrorIf) func(req *restful.Request, resp *restful.Response,
 	fchain *restful.FilterChain) {
 
@@ -52,9 +53,9 @@ func AllGlobalFilter(errFunc func() errors.CCErrorIf) func(req *restful.Request,
 		defer func() {
 			if fetalErr := recover(); fetalErr != nil {
 				rid := util.GetHTTPCCRequestID(req.Request.Header)
-				blog.Errorf("server panic, err:%#v, rid:%s, debug strace:%s", fetalErr, rid, debug.Stack())
-				ccErrTip := errFunc().CreateDefaultCCErrorIf(util.GetLanguage(req.Request.Header)).Errorf(common.CCErrCommInternalServerError,
-					common.GetIdentification())
+				logs.Errorf("server panic, err:%#v, rid:%s, debug strace:%s", fetalErr, rid, debug.Stack())
+				ccErrTip := errFunc().CreateDefaultCCErrorIf(util.GetLanguage(req.Request.Header)).
+					Errorf(common.CCErrCommInternalServerError, common.GetIdentification())
 				respErrInfo := &metadata.RespError{Msg: ccErrTip}
 				io.WriteString(resp, respErrInfo.Error())
 			}
@@ -87,11 +88,12 @@ func AllGlobalFilter(errFunc func() errors.CCErrorIf) func(req *restful.Request,
 	}
 }
 
+// RequestLogFilter 打印请求日志
 func RequestLogFilter() func(req *restful.Request, resp *restful.Response, fchain *restful.FilterChain) {
 	return func(req *restful.Request, resp *restful.Response, fchain *restful.FilterChain) {
 		header := req.Request.Header
 		body, _ := util.PeekRequest(req.Request)
-		blog.Infof("code: %s, user: %s, rip: %s, uri: %s, body: %s, rid: %s",
+		logs.Infof("code: %s, user: %s, rip: %s, uri: %s, body: %s, rid: %s",
 			header.Get("Bk-App-Code"), header.Get("Bk_user"), header.Get("X-Real-Ip"),
 			req.Request.RequestURI, body, util.GetHTTPCCRequestID(header))
 
@@ -100,6 +102,7 @@ func RequestLogFilter() func(req *restful.Request, resp *restful.Response, fchai
 	}
 }
 
+// HTTPRequestIDFilter 生成http请求id
 func HTTPRequestIDFilter() func(req *restful.Request, resp *restful.Response, fchain *restful.FilterChain) {
 	return func(req *restful.Request, resp *restful.Response, fchain *restful.FilterChain) {
 		GenerateHttpHeaderRID(req.Request, resp.ResponseWriter)
@@ -130,6 +133,7 @@ func createAPIRspStr(errcode int, info string) (string, error) {
 	return string(s), err
 }
 
+// GenerateHttpHeaderRID 生成http请求id
 func GenerateHttpHeaderRID(req *http.Request, resp http.ResponseWriter) {
 	cid := util.GetHTTPCCRequestID(req.Header)
 	if "" == cid {
@@ -144,8 +148,9 @@ func GenerateHttpHeaderRID(req *http.Request, resp http.ResponseWriter) {
 	return
 }
 
+// ServiceErrorHandler 处理restful service error
 func ServiceErrorHandler(err restful.ServiceError, req *restful.Request, resp *restful.Response) {
-	blog.Errorf("HTTP ERROR: %v, HTTP MESSAGE: %v, RequestURI: %s %s", err.Code, err.Message, req.Request.Method,
+	logs.Errorf("HTTP ERROR: %v, HTTP MESSAGE: %v, RequestURI: %s %s", err.Code, err.Message, req.Request.Method,
 		req.Request.RequestURI)
 	ret := metadata.BaseResp{
 		Result: false,
@@ -157,7 +162,7 @@ func ServiceErrorHandler(err restful.ServiceError, req *restful.Request, resp *r
 	resp.WriteHeaderAndJson(err.Code, ret, "application/json")
 }
 
-// getHTTPOtherRequestID return other system request id from http header
+// GetHTTPOtherRequestID return other system request id from http header
 func GetHTTPOtherRequestID(header http.Header) string {
 	return header.Get(common.BKHTTPOtherRequestID)
 }

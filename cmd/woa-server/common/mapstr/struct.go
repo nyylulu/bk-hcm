@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package mapstr provides a map[string]interface{} type and some helper functions to manipulate it.
 package mapstr
 
 import (
@@ -18,7 +19,7 @@ import (
 	"reflect"
 	"strings"
 
-	"hcm/cmd/woa-server/common/blog"
+	"hcm/pkg/logs"
 )
 
 func setMapStrByStruct(targetType reflect.Type, targetValue reflect.Value, values MapStr, tagName string) error {
@@ -80,7 +81,7 @@ func setMapStrByStruct(targetType reflect.Type, targetValue reflect.Value, value
 			innerValue := dealPointer(fieldValue, tags[0], tagName)
 			values.Set(tags[0], innerValue)
 		default:
-			blog.Infof("[mapstr] invalid kind: %v for field %v", structField.Type.Kind(), tags[0])
+			logs.Infof("[mapstr] invalid kind: %v for field %v", structField.Type.Kind(), tags[0])
 		}
 
 	}

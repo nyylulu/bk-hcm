@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package mapstr implements map[string]interface{}
 package mapstr
 
 import "reflect"

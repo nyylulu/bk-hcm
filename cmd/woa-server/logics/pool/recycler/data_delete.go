@@ -19,10 +19,10 @@ import (
 	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) dealDataDeleteTask(task *table.RecallDetail) error {
@@ -38,11 +38,11 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 	ip, ok := task.Labels[table.IPKey]
 	if !ok || ip == "" {
 		err := errors.New("get no ip from task label")
-		blog.Errorf("failed to create data delete task, err: %v", err)
+		logs.Errorf("failed to create data delete task, err: %v", err)
 
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -50,11 +50,11 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 
 	taskID, err := r.createSoJob("delete_data", []string{ip})
 	if err != nil {
-		blog.Errorf("host %s failed to data delete, err: %v", ip, err)
+		logs.Errorf("host %s failed to data delete, err: %v", ip, err)
 
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to data delete, err: %v", ip, err)
@@ -62,7 +62,7 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskDataDeleteStatus(task, strconv.Itoa(taskID), "", table.RecallStatusDataDeleting); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -79,11 +79,11 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 	ip, ok := task.Labels[table.IPKey]
 	if !ok {
 		err := errors.New("get no ip from task label")
-		blog.Errorf("failed to create data delete task, err: %v", err)
+		logs.Errorf("failed to create data delete task, err: %v", err)
 
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -91,23 +91,23 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 
 	taskID, err := strconv.Atoi(task.DataDeleteID)
 	if err != nil {
-		blog.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
+		logs.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
 
 		msg := fmt.Sprintf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", msg, table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
 	}
 
 	if err := r.checkJobStatus(taskID); err != nil {
-		blog.Infof("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
+		logs.Infof("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
 
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
@@ -115,7 +115,7 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskDataDeleteStatus(task, "", "", table.RecallStatusConfChecking); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 
 		return err
 	}

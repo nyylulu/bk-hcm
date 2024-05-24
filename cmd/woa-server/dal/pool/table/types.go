@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package table define the table structure of the resource pool
 package table
 
 import (

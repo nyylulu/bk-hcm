@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata the metadata for config admin
 package metadata
 
 import (
@@ -34,7 +35,7 @@ type PlatformSettingResult struct {
 	Data     PlatformSettingConfig `json:"data"`
 }
 
-// ConfigAdminParams used to admin the cmdb config
+// ConfigAdminParmams used to admin the cmdb config
 type ConfigAdminParmams struct {
 	Config ConfigAdmin `json:"config"`
 }
@@ -128,7 +129,7 @@ func (s GlobalModule) Validate() error {
 	return nil
 }
 
-// AdminBackendCfg
+// AdminBackendCfg backend config
 type AdminBackendCfg struct {
 	MaxBizTopoLevel int64  `json:"max_biz_topo_level"`
 	SnapshotBizName string `json:"snapshot_biz_name"`
@@ -147,7 +148,7 @@ func (b AdminBackendCfg) Validate() error {
 	return nil
 }
 
-// ObjectString
+// ObjectString object string
 type ObjectString string
 
 // Validate validate the fields of ObjectString
@@ -385,10 +386,13 @@ type SetOption struct {
 }
 
 const (
-	ConfigUpdateTypeSet    ConfigUpdateType = "set"
+	// ConfigUpdateTypeSet used to modify the idle set config
+	ConfigUpdateTypeSet ConfigUpdateType = "set"
+	// ConfigUpdateTypeModule used to modify the idle module config
 	ConfigUpdateTypeModule ConfigUpdateType = "module"
 )
 
+// ConfigUpdateType used to modify the idle update config
 type ConfigUpdateType string
 
 // ConfigUpdateSettingOption  used to modify the idle update config
@@ -564,6 +568,7 @@ func (b *BaseCfgItem) ValidateRegex() error {
 	return nil
 }
 
+// I18N i18n
 type I18N struct {
 	CN string `json:"cn"`
 	EN string `json:"en"`
@@ -586,14 +591,17 @@ func (s SiteCfg) Validate() error {
 	return nil
 }
 
+// TitleItem used to admin title Config
 type TitleItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// FooterItem used to admin footer Config
 type FooterItem struct {
 	Links []LinksItem `json:"links"`
 }
 
+// LinksItem used to admin links of footer
 type LinksItem struct {
 	BaseCfgItem `json:",inline"`
 	Enabled     bool `json:"enabled"`
@@ -651,58 +659,72 @@ func (v ValidationRulesCfg) Validate() error {
 	return nil
 }
 
+// NumberItem used to admin number of validation rules Config
 type NumberItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// FloatItem used to admin float of validation rules Config
 type FloatItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// SinglecharItem used to admin singlechar of validation rules Config
 type SinglecharItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// LongcharItem used to admin longchar of validation rules Config
 type LongcharItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// AssociationIdItem used to admin associationId of validation rules Config
 type AssociationIdItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// ClassifyIdItem used to admin classifyId of validation rules Config
 type ClassifyIdItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// ModelIdItem used to admin modelId of validation rules Config
 type ModelIdItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// EnumIdItem used to admin enumId of validation rules Config
 type EnumIdItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// EnumNameItem used to admin enumName of validation rules Config
 type EnumNameItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// FieldIdItem used to admin fieldId of validation rules Config
 type FieldIdItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// NamedCharacterItem used to admin namedCharacter of validation rules Config
 type NamedCharacterItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// InstanceTagKeyItem used to admin instanceTagKey of validation rules Config
 type InstanceTagKeyItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// InstanceTagValueItem used to admin instanceTagValue of validation rules Config
 type InstanceTagValueItem struct {
 	BaseCfgItem `json:",inline"`
 }
 
+// BusinessTopoInstNamesItem used to admin businessTopoInstNames of validation rules Config
 type BusinessTopoInstNamesItem struct {
 	BaseCfgItem `json:",inline"`
 }

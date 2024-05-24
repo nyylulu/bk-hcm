@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util provides utility functions
 package util
 
 import (
@@ -28,10 +29,12 @@ var (
 	convTimeFields = []string{common.CreateTimeField, common.LastTimeField, common.ConfirmTimeField}
 )
 
+// GetCurrentTimeStr get current time
 func GetCurrentTimeStr() string {
 	return time.Now().Format("2006-01-02 15:04:05")
 }
 
+// GetCurrentTimePtr get current time
 func GetCurrentTimePtr() *time.Time {
 	now := time.Now()
 	return &now
@@ -43,6 +46,7 @@ func TimeStrToUnixSecondDefault(str string) int64 {
 	return parseTime.Unix()
 }
 
+// ConvParamsTime convert time params
 func ConvParamsTime(data interface{}) interface{} {
 	conds, ok := data.(map[string]interface{})
 	if true != ok && nil != conds {
@@ -168,7 +172,7 @@ func convItemToTime(val interface{}) (interface{}, error) {
 
 var validPeriod = regexp.MustCompile("^\\d*[DHMS]$") // period regexp to check period
 
-// 00002H --> 2H
+// FormatPeriod 00002H --> 2H
 // 0000D/0M ---> ∞
 // empty string / ∞ ---> ∞
 // regexp matched: positive integer (include positive integer begin with more the one '0') + [D/H/M/S]

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata 定义了查询条件结构体
 package metadata
 
 import (
@@ -22,9 +23,11 @@ import (
 )
 
 const (
+	// CC_time_type_parse_flag 查询条件中字段包含cc_type key ，子节点变为time.Time
 	CC_time_type_parse_flag = "cc_time_type"
 )
 
+// ObjQueryInput 查询条件
 type ObjQueryInput struct {
 	Condition      interface{} `json:"condition"`
 	Fields         string      `json:"fields"`
@@ -51,7 +54,7 @@ func (o *ObjQueryInput) ConvTime() error {
 	return nil
 }
 
-//convTimeItem 转义具体的某一项,将查询条件中字段包含cc_time_type
+// convTimeItem 转义具体的某一项,将查询条件中字段包含cc_time_type
 func (o *ObjQueryInput) convTimeItem(item interface{}) (interface{}, error) {
 
 	switch item.(type) {
@@ -120,7 +123,7 @@ func (o *ObjQueryInput) convTimeItem(item interface{}) (interface{}, error) {
 	return item, nil
 }
 
-func (O *ObjQueryInput) convInterfaceToTime(val interface{}) (interface{}, error) {
+func (o *ObjQueryInput) convInterfaceToTime(val interface{}) (interface{}, error) {
 	switch val.(type) {
 	case string:
 		ts, err := timeparser.TimeParser(val.(string))

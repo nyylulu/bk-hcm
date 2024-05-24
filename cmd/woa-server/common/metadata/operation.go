@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
@@ -18,6 +19,7 @@ import (
 	"hcm/cmd/woa-server/common"
 )
 
+// ChartConfig ...
 type ChartConfig struct {
 	ConfigID   uint64 `json:"config_id" bson:"config_id"`
 	ReportType string `json:"report_type" bson:"report_type"`
@@ -31,25 +33,30 @@ type ChartConfig struct {
 	XAxisCount int64  `json:"x_axis_count" bson:"x_axis_count"`
 }
 
+// ChartPosition chart position
 type ChartPosition struct {
 	BizID    int64        `json:"bk_biz_id" bson:"bk_biz_id"`
 	Position PositionInfo `json:"position" bson:"position"`
 	OwnerID  string       `json:"bk_supplier_account" bson:"bk_supplier_account"`
 }
 
+// PositionInfo chart position
 type PositionInfo struct {
 	Host []uint64 `json:"host" bson:"host"`
 	Inst []uint64 `json:"inst" bson:"inst"`
 }
 
+// ModelInstChange model inst change
 type ModelInstChange map[string]*InstChangeCount
 
+// InstChangeCount inst change count
 type InstChangeCount struct {
 	Create int64 `json:"create" bson:"create"`
 	Update int64 `json:"update" bson:"update"`
 	Delete int64 `json:"delete" bson:"delete"`
 }
 
+// AggregateIntResponse aggregate int response
 type AggregateIntResponse struct {
 	BaseResp `json:",inline"`
 	Data     []IntIDCount `json:"data"`
@@ -67,6 +74,7 @@ type IntIDArrayCount struct {
 	Count []int64 `json:"count" bson:"count"`
 }
 
+// AggregateStringResponse aggregate string response
 type AggregateStringResponse struct {
 	BaseResp `json:",inline"`
 	Data     []StringIDCount `json:"data"`
@@ -88,16 +96,19 @@ type ObjectIDCount struct {
 	Count int64 `bson:"count" json:"instance_count"`
 }
 
+// UpdateInstCount update instance count.
 type UpdateInstCount struct {
 	ID    UpdateID `json:"id" bson:"_id"`
 	Count int64    `json:"count" bson:"count"`
 }
 
+// UpdateID update instance id.
 type UpdateID struct {
 	ObjID  string `json:"bk_obj_id" bson:"bk_obj_id"`
 	InstID int64  `json:"bk_inst_id" bson:"bk_inst_id"`
 }
 
+// HostChangeChartData host change chart data
 type HostChangeChartData struct {
 	ReportType string          `json:"report_type" bson:"report_type"`
 	Data       []StringIDCount `json:"data" bson:"data"`
@@ -105,6 +116,7 @@ type HostChangeChartData struct {
 	CreateTime string          `json:"create_time" bson:"create_time"`
 }
 
+// ChartData chart data
 type ChartData struct {
 	ReportType string      `json:"report_type" bson:"report_type"`
 	Data       interface{} `json:"data" data:"data"`
@@ -112,6 +124,7 @@ type ChartData struct {
 	LastTime   time.Time   `json:"last_time" bson:"last_time"`
 }
 
+// ModelInstChartData model instance chart data
 type ModelInstChartData struct {
 	ReportType string          `json:"report_type" bson:"report_type"`
 	Data       []StringIDCount `json:"data" data:"data"`
@@ -119,26 +132,31 @@ type ModelInstChartData struct {
 	LastTime   time.Time       `json:"last_time" bson:"last_time"`
 }
 
+// SearchChartResponse search chart response
 type SearchChartResponse struct {
 	BaseResp `json:",inline"`
 	Data     SearchChartConfig `json:"data"`
 }
 
+// SearchChartCommon search chart common
 type SearchChartCommon struct {
 	BaseResp `json:",inline"`
 	Data     CommonSearchChart `json:"data"`
 }
 
+// CommonSearchChart common search chart
 type CommonSearchChart struct {
 	Count uint64      `json:"count"`
 	Info  ChartConfig `json:"info"`
 }
 
+// SearchChartConfig search chart config
 type SearchChartConfig struct {
 	Count uint64                   `json:"count"`
 	Info  map[string][]ChartConfig `json:"info"`
 }
 
+// CloudMapping cloud mapping
 type CloudMapping struct {
 	CreateTime Time   `json:"create_time" bson:"create_time"`
 	LastTime   Time   `json:"last_time" bson:"lsat_time"`
@@ -147,17 +165,20 @@ type CloudMapping struct {
 	CloudID    int64  `json:"bk_cloud_id" bson:"bk_cloud_id"`
 }
 
+// ChartClassification chart classification
 type ChartClassification struct {
 	Host []ChartConfig `json:"host"`
 	Inst []ChartConfig `json:"inst"`
 	Nav  []ChartConfig `json:"nav"`
 }
 
+// ObjectIDName object id name
 type ObjectIDName struct {
 	ObjectID   string `json:"bk_object_id"`
 	ObjectName string `json:"bk_object_name"`
 }
 
+// StatisticInstOperation statistic inst operation
 type StatisticInstOperation struct {
 	Create []StringIDCount   `json:"create"`
 	Delete []StringIDCount   `json:"delete"`
@@ -165,10 +186,12 @@ type StatisticInstOperation struct {
 }
 
 var (
+	// BizModuleHostChart biz module host chart
 	BizModuleHostChart = ChartConfig{
 		ReportType: common.BizModuleHostChart,
 	}
 
+	// HostOsChart host os chart
 	HostOsChart = ChartConfig{
 		ReportType: common.HostOSChart,
 		Name:       "按操作系统类型统计",
@@ -179,6 +202,7 @@ var (
 		XAxisCount: 10,
 	}
 
+	// HostBizChart host biz chart
 	HostBizChart = ChartConfig{
 		ReportType: common.HostBizChart,
 		Name:       "按业务统计",
@@ -188,6 +212,7 @@ var (
 		XAxisCount: 10,
 	}
 
+	// HostCloudChart host cloud chart
 	HostCloudChart = ChartConfig{
 		ReportType: common.HostCloudChart,
 		Name:       "按云区域统计",
@@ -198,6 +223,7 @@ var (
 		XAxisCount: 20,
 	}
 
+	// HostChangeBizChart host change biz chart
 	HostChangeBizChart = ChartConfig{
 		ReportType: common.HostChangeBizChart,
 		Name:       "主机数量变化趋势",
@@ -205,10 +231,12 @@ var (
 		XAxisCount: 20,
 	}
 
+	// ModelAndInstCountChart model and inst count chart
 	ModelAndInstCountChart = ChartConfig{
 		ReportType: common.ModelAndInstCount,
 	}
 
+	// ModelInstChart model inst chart
 	ModelInstChart = ChartConfig{
 		ReportType: common.ModelInstChart,
 		Name:       "实例数量统计",
@@ -217,6 +245,7 @@ var (
 		XAxisCount: 10,
 	}
 
+	// ModelInstChangeChart model inst change chart
 	ModelInstChangeChart = ChartConfig{
 		ReportType: common.ModelInstChangeChart,
 		Name:       "实例变更统计",
@@ -225,6 +254,7 @@ var (
 		XAxisCount: 10,
 	}
 
+	// InnerChartsMap inner charts map
 	InnerChartsMap = map[string]ChartConfig{
 		common.BizModuleHostChart:   BizModuleHostChart,
 		common.ModelAndInstCount:    ModelAndInstCountChart,
@@ -236,6 +266,7 @@ var (
 		common.ModelInstChangeChart: ModelInstChangeChart,
 	}
 
+	// InnerChartsArr inner charts array
 	InnerChartsArr = []string{
 		common.BizModuleHostChart,
 		common.ModelAndInstCount,

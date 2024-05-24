@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package language provide language resource
 package language
 
 // EmptyLanguageSetting empty language setting
@@ -23,7 +24,7 @@ func New(dir string) (CCLanguageIf, error) {
 
 	langType, err := LoadLanguageResourceFromDir(dir)
 	if nil != err {
-		//blog.Errorf("failed to load the error resource, error info is %s", err.Error())
+		//logs.Errorf("failed to load the error resource, error info is %s", err.Error())
 		return nil, err
 	}
 	tmp.Load(langType)

@@ -10,15 +10,16 @@
  * limitations under the License.
  */
 
+// Package config cvm image config
 package config
 
 import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -26,7 +27,7 @@ import (
 func (s *service) GetCvmImage(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetCvmImageParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get cvm image list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get cvm image list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -37,7 +38,7 @@ func (s *service) GetCvmImage(cts *rest.Contexts) (interface{}, error) {
 
 	rst, err := s.logics.CvmImage().GetCvmImage(cts.Kit, &cond)
 	if err != nil {
-		blog.Errorf("failed to get cvm image list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get cvm image list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -48,13 +49,13 @@ func (s *service) GetCvmImage(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateCvmImage(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.CvmImage)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.CvmImage().CreateCvmImage(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -65,18 +66,18 @@ func (s *service) CreateCvmImage(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateCvmImage(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(mapstr.MapStr)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to update cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.CvmImage().UpdateCvmImage(cts.Kit, instId, inputData); err != nil {
-		blog.Errorf("failed to update cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -87,12 +88,12 @@ func (s *service) UpdateCvmImage(cts *rest.Contexts) (interface{}, error) {
 func (s *service) DeleteCvmImage(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.CvmImage().DeleteCvmImage(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete cvm image, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

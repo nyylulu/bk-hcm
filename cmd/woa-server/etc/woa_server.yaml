@@ -68,9 +68,9 @@ esb:
   endpoints:
     - http://paas.bk.com
   # appCode is the BlueKing app code of hcm to request esb.
-  appCode:
+  appCode: hcm
   # appSecret is the BlueKing app secret of hcm to request esb.
-  appSecret:
+  appSecret: hcm
   # user is the BlueKing user of hcm to request esb.
   user: admin
   # defines tls related options.
@@ -89,8 +89,8 @@ esb:
 mongodb:
   host: 127.0.0.1:27017
   port: 27017
-  usr:
-  pwd:
+  usr: hcm
+  pwd: hcm
   database: cr
   maxOpenConns: 300
   maxIdleConns: 100
@@ -101,42 +101,44 @@ mongodb:
 watch:
   host: 127.0.0.1:27017
   port: 27017
-  usr:
-  pwd:
-  database:
-  maxOpenConns: 10
-  maxIdleConns: 5
+  usr: hcm
+  pwd: hcm
+  database: cr
+  maxOpenConns: 100
+  maxIdleConns: 50
   mechanism: SCRAM-SHA-1
   rsName: rs0
   socketTimeoutSeconds: 10
 
 redis:
   host: 127.0.0.1:6379
-  pwd:
+  pwd: test
   sentinelPwd:
   database: "0"
-  maxOpenConns: 300
-  masterName:
+  maxOpenConns: 3000
+  maxIdleConns: 100
+  masterName: mymaster
 
 cvm:
   host: http://127.0.0.1
+  launch_password: test
 
 tjj:
   host: http://127.0.0.1
-  secret_id:
-  secret_key:
-  operator:
+  secret_id: test
+  secret_key: test
+  operator: admin
 
 sojob:
   host: http://127.0.0.1
-  secret_id:
-  secret_key:
-  operator:
+  secret_id: test
+  secret_key: test
+  operator: admin
 
 xship:
   host: http://127.0.0.1
-  client_id:
-  secret_key:
+  client_id: test
+  secret_key: test
 
 tencentcloud:
   endpoints:
@@ -144,6 +146,66 @@ tencentcloud:
     vpc: http://127.0.0.1
     clb: http://127.0.0.1
   credential:
-    id:
-    key:
+    id: test
+    key: test
+
+erp:
+  host: http://127.0.0.1
+
+tmp:
+  host: http://127.0.0.1
+
+uwork:
+  host: http://127.0.0.1
+
+gcs:
+  host: http://127.0.0.1
+  secret_id: test
+  secret_key: test
+  operator: admin
+
+tcaplus:
+  host: http://127.0.0.1
+
+tgw:
+  host: http://127.0.0.1
+
+l5:
+  host: http://127.0.0.1
+
+iam:
+  host: http://127.0.0.1
+  app_code: test
+  app_secret: test
+  operator: admin
+
+safety:
+  host: http://127.0.0.1
+
+sops:
+  host: https://127.0.0.1
+  app_code: test
+  app_secret: test
+  operator: admin
+
+dvm:
+  host: http://127.0.0.1
+  secret_id: test
+  secret_key: test
+  operator: admin
+
+bkchat:
+  host: http://bkchat.ied.com:8000
+  notify_format: |
+    『HCM』资源申请【单据完成通知】
+
+     标题：资源申请单据完成[order_id:%d]
+     资源申请单号：%d
+     提单人：%s
+     业务：%s
+     需求类型：%s
+     创建时间：%s
+     备注：%s
+     资源申请单链接：http://scrtest.ied.com/#/cr/service/apply/records/%d
+
 

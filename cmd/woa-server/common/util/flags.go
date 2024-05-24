@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util provides common utilities for all modules
 package util
 
 import (
@@ -18,8 +19,8 @@ import (
 	"strings"
 
 	"hcm/cmd/woa-server/common/auth"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/version"
+	"hcm/pkg/logs"
 
 	"github.com/spf13/pflag"
 )
@@ -51,5 +52,5 @@ func InitFlags() {
 		os.Exit(0)
 	}
 
-	blog.Infof("[auth] enableAuth: %v", auth.EnableAuthorize())
+	logs.Infof("[auth] enableAuth: %v", auth.EnableAuthorize())
 }

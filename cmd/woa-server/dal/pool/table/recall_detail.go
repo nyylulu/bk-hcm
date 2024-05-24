@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package table defines the resource recall task's execution detail information
 package table
 
 import "time"

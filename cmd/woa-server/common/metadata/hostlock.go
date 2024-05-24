@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
@@ -18,19 +19,23 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 )
 
+// HostLockRequest ...
 type HostLockRequest struct {
 	IDS []int64 `json:"id_list"`
 }
 
+// QueryHostLockRequest ...
 type QueryHostLockRequest struct {
 	IDS []int64 `json:"id_list"`
 }
 
+// HostLockResultResponse ...
 type HostLockResultResponse struct {
 	BaseResp `json:",inline"`
 	Data     map[int64]bool `json:"data"`
 }
 
+// HostLockData host lock data
 type HostLockData struct {
 	User       string    `json:"bk_user" bson:"bk_user"`
 	ID         int64     `json:"bk_host_id" bson:"bk_host_id"`
@@ -38,6 +43,7 @@ type HostLockData struct {
 	OwnerID    string    `json:"-" bson:"bk_supplier_account"`
 }
 
+// HostLockQueryResponse host lock query response
 type HostLockQueryResponse struct {
 	BaseResp `json:",inline"`
 	Data     struct {
@@ -46,6 +52,7 @@ type HostLockQueryResponse struct {
 	}
 }
 
+// HostLockResponse host lock response
 type HostLockResponse struct {
 	BaseResp `json:",inline"`
 	Data     mapstr.MapStr `json:"data"`

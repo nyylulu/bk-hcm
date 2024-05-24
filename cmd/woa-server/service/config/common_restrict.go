@@ -10,12 +10,13 @@
  * limitations under the License.
  */
 
+// Package config implements config service
 package config
 
 import (
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -23,7 +24,7 @@ import (
 func (s *service) GetAffinity(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetAffinityParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get affinity list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get affinity list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

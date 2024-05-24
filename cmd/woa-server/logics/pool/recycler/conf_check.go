@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package recycler ...
 package recycler
 
 import (
@@ -19,10 +20,10 @@ import (
 	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/pkg/logs"
 )
 
 func (r *Recycler) dealConfCheckTask(task *table.RecallDetail) error {
@@ -38,11 +39,11 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 	ip, ok := task.Labels[table.IPKey]
 	if !ok || ip == "" {
 		err := errors.New("get no ip from task label")
-		blog.Errorf("failed to create conf check task, err: %v", err)
+		logs.Errorf("failed to create conf check task, err: %v", err)
 
 		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -50,11 +51,11 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 
 	taskID, err := r.createSoJob("confcheck", []string{ip})
 	if err != nil {
-		blog.Errorf("host %s failed to conf check, err: %v", ip, err)
+		logs.Errorf("host %s failed to conf check, err: %v", ip, err)
 
 		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to conf check, err: %v", ip, err)
@@ -62,7 +63,7 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskConfCheckStatus(task, strconv.Itoa(taskID), "", table.RecallStatusConfChecking); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
 
@@ -79,11 +80,11 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 	ip, ok := task.Labels[table.IPKey]
 	if !ok {
 		err := errors.New("get no ip from task label")
-		blog.Errorf("failed to create conf check task, err: %v", err)
+		logs.Errorf("failed to create conf check task, err: %v", err)
 
 		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return err
@@ -91,23 +92,23 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 
 	taskID, err := strconv.Atoi(task.ConfCheckID)
 	if err != nil {
-		blog.Errorf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
+		logs.Errorf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
 
 		msg := fmt.Sprintf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
 		errUpdate := r.updateTaskConfCheckStatus(task, "", msg, table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
 	}
 
 	if err := r.checkJobStatus(taskID); err != nil {
-		blog.Infof("host %s failed to conf check, job id: %d, err: %v", ip, taskID, err)
+		logs.Infof("host %s failed to conf check, job id: %d, err: %v", ip, taskID, err)
 
 		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			blog.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to conf check, job id: %d, err: %v", ip, taskID, err)
@@ -115,7 +116,7 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 
 	// update task status
 	if err := r.updateTaskConfCheckStatus(task, "", "", table.RecallStatusTransiting); err != nil {
-		blog.Errorf("failed to update recall task status, err: %v", err)
+		logs.Errorf("failed to update recall task status, err: %v", err)
 
 		return err
 	}

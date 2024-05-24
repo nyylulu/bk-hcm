@@ -10,12 +10,15 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
+// AuthBathVerifyRequest request body
 type AuthBathVerifyRequest struct {
 	Resources []AuthResource `json:"resources"`
 }
 
+// AuthResource request body
 type AuthResource struct {
 	BizID        int64  `json:"bk_biz_id"`
 	ResourceType string `json:"resource_type"`
@@ -29,6 +32,7 @@ type AuthResource struct {
 	} `json:"parent_layers"`
 }
 
+// AuthBathVerifyResult response body
 type AuthBathVerifyResult struct {
 	AuthResource
 	// the authorize decision, whether a user has been authorized or not.

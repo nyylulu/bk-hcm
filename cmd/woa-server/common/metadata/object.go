@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata contains the metadata of the object
 package metadata
 
 import (
@@ -17,6 +18,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 )
 
+// Model Field Const
 const (
 	ModelFieldID          = "id"
 	ModelFieldObjCls      = "bk_classification_id"
@@ -68,6 +70,7 @@ func (o *Object) GetInstIDFieldName() string {
 
 }
 
+// GetInstIDFieldByObjID get instid filed
 func GetInstIDFieldByObjID(objID string) string {
 	switch objID {
 	case common.BKInnerObjIDApp:
@@ -90,6 +93,7 @@ func GetInstIDFieldByObjID(objID string) string {
 
 }
 
+// GetInstNameFieldName get the inst name
 func GetInstNameFieldName(objID string) string {
 	switch objID {
 	case common.BKInnerObjIDApp:
@@ -143,6 +147,8 @@ func (o *Object) GetObjectID() string {
 func (o *Object) IsCommon() bool {
 	return IsCommon(o.ObjectID)
 }
+
+// IsCommon is common object
 func IsCommon(objID string) bool {
 	switch objID {
 	case common.BKInnerObjIDApp:
@@ -184,6 +190,7 @@ type MainLineObject struct {
 	AssociationID string `json:"bk_asst_obj_id"`
 }
 
+// ObjectClsDes object classification description
 type ObjectClsDes struct {
 	ID      int    `json:"id" bson:"id"`
 	ClsID   string `json:"bk_classification_id" bson:"bk_classification_id"`
@@ -192,6 +199,7 @@ type ObjectClsDes struct {
 	ClsIcon string `json:"bk_classification_icon" bson:"bk_classification_icon"`
 }
 
+// InnerModule inner module
 type InnerModule struct {
 	ModuleID         int64  `field:"bk_module_id" json:"bk_module_id" bson:"bk_module_id" mapstructure:"bk_module_id"`
 	ModuleName       string `field:"bk_module_name" bson:"bk_module_name" json:"bk_module_name" mapstructure:"bk_module_name"`
@@ -199,6 +207,7 @@ type InnerModule struct {
 	HostApplyEnabled bool   `field:"host_apply_enabled" bson:"host_apply_enabled" json:"host_apply_enabled" mapstructure:"host_apply_enabled"`
 }
 
+// InnterAppTopo inner app topo
 type InnterAppTopo struct {
 	SetID   int64         `json:"bk_set_id" field:"bk_set_id"`
 	SetName string        `json:"bk_set_name" field:"bk_set_name"`
@@ -224,23 +233,23 @@ type ObjectTopo struct {
 	Arrows    string   `json:"arrows"`
 }
 
-//ObjectCountParams define parameter of search objects count
+// ObjectCountParams define parameter of search objects count
 type ObjectCountParams struct {
 	Condition ObjectIDArray `json:"condition"`
 }
 
-//ObjectIDArray a slice of object ids
+// ObjectIDArray a slice of object ids
 type ObjectIDArray struct {
 	ObjectIDs []string `json:"obj_ids"`
 }
 
-//ObjectCountResult result by searching object count
+// ObjectCountResult result by searching object count
 type ObjectCountResult struct {
 	BaseResp `json:",inline"`
 	Data     []ObjectCountDetails `json:"data"`
 }
 
-//ObjectCountDetails one object count or error message of searching
+// ObjectCountDetails one object count or error message of searching
 type ObjectCountDetails struct {
 	ObjectID  string `json:"bk_obj_id"`
 	InstCount uint64 `json:"inst_count"`

@@ -16,11 +16,11 @@ import (
 	"errors"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // DeviceIf provides management interface for operations of device config
@@ -69,7 +69,7 @@ type device struct {
 func (d *device) GetDeviceWithCapacity(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetDeviceInfoResult, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	// get devices with enable capacity only
@@ -97,7 +97,7 @@ func (d *device) GetDeviceWithCapacity(kt *kit.Kit, input *types.GetDeviceParam)
 func (d *device) GetDevice(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetDeviceInfoResult, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	// get devices with enable apply only
@@ -121,11 +121,11 @@ func (d *device) GetDevice(kt *kit.Kit, input *types.GetDeviceParam) (*types.Get
 	return rst, nil
 }
 
-// GetDevice get cvm device detail config list
+// GetCvmDeviceDetail get cvm device detail config list
 func (d *device) GetCvmDeviceDetail(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetDeviceInfoResult, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config device detail failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -133,7 +133,7 @@ func (d *device) GetCvmDeviceDetail(kt *kit.Kit, input *types.GetDeviceParam) (*
 	if input.Page.EnableCount {
 		cnt, err := config.Operation().CvmDevice().CountDevice(kt.Ctx, filter)
 		if err != nil {
-			blog.Errorf("failed to get device detail count, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get device detail count, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		rst.Count = int64(cnt)
@@ -143,7 +143,7 @@ func (d *device) GetCvmDeviceDetail(kt *kit.Kit, input *types.GetDeviceParam) (*
 
 	insts, err := config.Operation().CvmDevice().FindManyDevice(kt.Ctx, input.Page, filter)
 	if err != nil {
-		blog.Errorf("failed to get recycle order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get recycle order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -157,7 +157,7 @@ func (d *device) GetCvmDeviceDetail(kt *kit.Kit, input *types.GetDeviceParam) (*
 func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetDeviceTypeResult, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config device type failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config device type failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	// get devices with enable apply only
@@ -182,7 +182,7 @@ func (d *device) GetDeviceTypeDetail(kt *kit.Kit, input *types.GetDeviceParam) (
 
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config device type failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config device type failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	// get devices with enable apply only
@@ -232,26 +232,26 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 
 	cnt, err := config.Operation().CvmDevice().CountDevice(kt.Ctx, filter)
 	if err != nil {
-		blog.Errorf("failed to count device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to count device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if cnt != 0 {
-		blog.Errorf("device exist, need not create again, rid: %s", kt.Rid)
+		logs.Errorf("device exist, need not create again, rid: %s", kt.Rid)
 		return nil, errors.New("device exist, need not create again")
 	}
 
 	// create instance
 	id, err := config.Operation().CvmDevice().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().CvmDevice().CreateDevice(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -271,7 +271,7 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 
 	zones, err := config.Operation().Zone().FindManyZone(kt.Ctx, filter)
 	if err != nil {
-		blog.Errorf("failed to get zones, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get zones, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -298,7 +298,7 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 			param.RequireType = requireType
 
 			if _, err := d.CreateDevice(kt, param); err != nil {
-				blog.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+				logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
 				return err
 			}
 		}
@@ -314,7 +314,7 @@ func (d *device) UpdateDevice(kt *kit.Kit, instId int64, input map[string]interf
 	}
 
 	if err := config.Operation().CvmDevice().UpdateDevice(kt.Ctx, filter, input); err != nil {
-		blog.Errorf("failed to update device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update device, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -324,7 +324,7 @@ func (d *device) UpdateDevice(kt *kit.Kit, instId int64, input map[string]interf
 // UpdateDeviceBatch updates device config in batch
 func (d *device) UpdateDeviceBatch(kt *kit.Kit, cond, update map[string]interface{}) error {
 	if err := config.Operation().CvmDevice().UpdateDevice(kt.Ctx, cond, update); err != nil {
-		blog.Errorf("failed to update device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update device, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -338,7 +338,7 @@ func (d *device) DeleteDevice(kt *kit.Kit, instId int64) error {
 	}
 
 	if err := config.Operation().CvmDevice().DeleteDevice(kt.Ctx, filter); err != nil {
-		blog.Errorf("failed to delete device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to delete device, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -349,7 +349,7 @@ func (d *device) DeleteDevice(kt *kit.Kit, instId int64) error {
 func (d *device) GetDvmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetDvmDeviceRst, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config dvm device type failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config dvm device type failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -375,14 +375,14 @@ func (d *device) GetDvmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*ty
 func (d *device) CreateDvmDevice(kt *kit.Kit, input *types.DvmDeviceInfo) (mapstr.MapStr, error) {
 	id, err := config.Operation().DvmDevice().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create dvm device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create dvm device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().DvmDevice().CreateDevice(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create dvm device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create dvm device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{
@@ -396,7 +396,7 @@ func (d *device) CreateDvmDevice(kt *kit.Kit, input *types.DvmDeviceInfo) (mapst
 func (d *device) GetPmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetPmDeviceRst, error) {
 	filter, err := input.GetFilter()
 	if err != nil {
-		blog.Errorf("get config physical machine device type failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get config physical machine device type failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -422,14 +422,14 @@ func (d *device) GetPmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*typ
 func (d *device) CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.MapStr, error) {
 	id, err := config.Operation().PmDevice().NextSequence(kt.Ctx)
 	if err != nil {
-		blog.Errorf("failed to create physical machine device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create physical machine device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	instId := int64(id)
 
 	input.BkInstId = instId
 	if err := config.Operation().PmDevice().CreateDevice(kt.Ctx, input); err != nil {
-		blog.Errorf("failed to create physical machine device, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create physical machine device, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	rst := mapstr.MapStr{

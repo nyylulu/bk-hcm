@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package metadata define the metadata struct
 package metadata
 
 import (
@@ -20,6 +21,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 )
 
+// ObjectUnique define the unique attribute of object
 type ObjectUnique struct {
 	ID       uint64      `json:"id" bson:"id"`
 	ObjID    string      `json:"bk_obj_id" bson:"bk_obj_id"`
@@ -40,6 +42,7 @@ func (cli *ObjectUnique) Parse(data mapstr.MapStr) (*ObjectUnique, error) {
 	return cli, err
 }
 
+// KeysHash return the unique keys hash
 func (u ObjectUnique) KeysHash() string {
 	keys := []string{}
 	for _, key := range u.Keys {
@@ -49,16 +52,20 @@ func (u ObjectUnique) KeysHash() string {
 	return strings.Join(keys, "#")
 }
 
+// UniqueKey define the unique key
 type UniqueKey struct {
 	Kind string `json:"key_kind" bson:"key_kind"`
 	ID   uint64 `json:"key_id" bson:"key_id"`
 }
 
 const (
-	UniqueKeyKindProperty    = "property"
+	// UniqueKeyKindProperty property
+	UniqueKeyKindProperty = "property"
+	// UniqueKeyKindAssociation association
 	UniqueKeyKindAssociation = "association"
 )
 
+// CreateUniqueRequest create unique request
 type CreateUniqueRequest struct {
 	ObjID string      `json:"bk_obj_id" bson:"bk_obj_id"`
 	Keys  []UniqueKey `json:"keys" bson:"keys"`
@@ -69,38 +76,46 @@ type RspID struct {
 	ID int64 `json:"id"`
 }
 
+// CreateUniqueResult create unique result
 type CreateUniqueResult struct {
 	BaseResp
 	Data RspID `json:"data"`
 }
 
+// UpdateUniqueRequest update unique request
 type UpdateUniqueRequest struct {
 	Keys     []UniqueKey `json:"keys" bson:"keys"`
 	LastTime Time        `json:"last_time" bson:"last_time"`
 }
 
+// UpdateUniqueResult update unique result
 type UpdateUniqueResult struct {
 	BaseResp
 }
 
+// DeleteUniqueRequest delete unique request
 type DeleteUniqueRequest struct {
 	ID    uint64 `json:"id"`
 	ObjID string `json:"bk_obj_id"`
 }
 
+// DeleteUniqueResult delete unique result
 type DeleteUniqueResult struct {
 	BaseResp
 }
 
+// SearchUniqueRequest search unique request
 type SearchUniqueRequest struct {
 	ObjID string `json:"bk_obj_id"`
 }
 
+// SearchUniqueResult search unique result
 type SearchUniqueResult struct {
 	BaseResp
 	Data []ObjectUnique `json:"data"`
 }
 
+// QueryUniqueResult query unique result
 type QueryUniqueResult struct {
 	Count uint64         `json:"count"`
 	Info  []ObjectUnique `json:"info"`

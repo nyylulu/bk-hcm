@@ -19,13 +19,13 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg/logs"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -59,7 +59,7 @@ func (l *Launcher) Run(workers int) {
 
 	select {
 	case <-l.ctx.Done():
-		blog.Info("dispatcher exits")
+		logs.Infof("dispatcher exits")
 	}
 }
 
@@ -75,7 +75,7 @@ func (l *Launcher) Pop() (uint64, error) {
 	id, ok := obj.(uint64)
 	if !ok {
 		l.queue.Forget(obj)
-		blog.Warnf("Expected uint64 in queue but got %#v", obj)
+		logs.Warnf("Expected uint64 in queue but got %#v", obj)
 		return 0, errors.New("got non-uint64 from queue")
 	}
 
@@ -93,16 +93,16 @@ func (l *Launcher) Add(id uint64) {
 func (l *Launcher) runWorker() error {
 	id, err := l.Pop()
 	if err != nil {
-		blog.Errorf("failed to deal launch task, for get launch task from informer err: %v", err)
+		logs.Errorf("failed to deal launch task, for get launch task from informer err: %v", err)
 		return err
 	}
 
 	if err := l.dispatchHandler(id); err != nil {
-		blog.Errorf("failed to dispatch launch task, err: %v, task id: %d", err, id)
+		logs.Errorf("failed to dispatch launch task, err: %v, task id: %d", err, id)
 		return err
 	}
 
-	blog.Infof("Successfully dispatch launch task %d", id)
+	logs.Infof("Successfully dispatch launch task %d", id)
 
 	return nil
 }
@@ -111,13 +111,13 @@ func (l *Launcher) runWorker() error {
 func (l *Launcher) dispatchHandler(id uint64) error {
 	task, err := l.getTask(id)
 	if err != nil {
-		blog.Errorf("failed to get launch task, err: %v", err)
+		logs.Errorf("failed to get launch task, err: %v", err)
 		return err
 	}
 
 	records, err := l.getOpRecords(id)
 	if err != nil {
-		blog.Errorf("failed to get launch op records, err: %v", err)
+		logs.Errorf("failed to get launch op records, err: %v", err)
 		return err
 	}
 
@@ -127,24 +127,24 @@ func (l *Launcher) dispatchHandler(id uint64) error {
 	}
 
 	if len(hostIDs) == 0 {
-		blog.Errorf("failed to deal launch task, for get no hosts")
+		logs.Errorf("failed to deal launch task, for get no hosts")
 		return errors.New("failed to deal launch task, for get no hosts")
 	}
 
 	if err := l.transferHost2Pool(hostIDs, 931); err != nil {
-		blog.Errorf("failed to transfer hosts to pool, err: %v", err)
+		logs.Errorf("failed to transfer hosts to pool, err: %v", err)
 		return err
 	}
 
 	// add host to pool
 	if err := l.updatePoolHost(records); err != nil {
-		blog.Errorf("failed to update pool host, err: %v", err)
+		logs.Errorf("failed to update pool host, err: %v", err)
 		return err
 	}
 
 	// update records status
 	if err := l.updateOpRecordStatus(id, table.OpTaskPhaseSuccess); err != nil {
-		blog.Errorf("failed to update op record status, err: %v, err")
+		logs.Errorf("failed to update op record status, err: %v, err")
 		return err
 	}
 
@@ -154,7 +154,7 @@ func (l *Launcher) dispatchHandler(id uint64) error {
 	task.Status.FailedNum = 0
 	// update task status
 	if err := l.updateTaskStatus(task); err != nil {
-		blog.Errorf("failed to update launch task status, id: %s, err: %v", task.ID, err)
+		logs.Errorf("failed to update launch task status, id: %s, err: %v", task.ID, err)
 		return err
 	}
 
@@ -253,7 +253,7 @@ func (l *Launcher) updatePoolHost(records []*table.OpRecord) error {
 		}
 
 		if err := dao.Set().PoolHost().UpsertPoolHost(context.Background(), filter, newHost); err != nil {
-			blog.Errorf("failed to upsert pool host, err: %v", err)
+			logs.Errorf("failed to upsert pool host, err: %v", err)
 			return err
 		}
 	}

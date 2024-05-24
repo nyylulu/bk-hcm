@@ -10,16 +10,19 @@
  * limitations under the License.
  */
 
+// Package util provides some utility functions
 package util
 
 import (
 	"net/http"
 )
 
+// MapBuilder is a utility to build a map
 type MapBuilder struct {
 	value map[string]interface{}
 }
 
+// NewMapBuilder creates a new MapBuilder
 func NewMapBuilder(kvPairs ...interface{}) *MapBuilder {
 	value := map[string]interface{}{}
 	for i := range kvPairs {
@@ -30,14 +33,17 @@ func NewMapBuilder(kvPairs ...interface{}) *MapBuilder {
 	return &MapBuilder{value}
 }
 
+// Build returns the built map
 func (m *MapBuilder) Build() map[string]interface{} {
 	return m.value
 }
 
+// Set sets the value of the key
 func (m *MapBuilder) Set(k string, v interface{}) {
 	m.value[k] = v
 }
 
+// Append appends the value to the key
 func (m *MapBuilder) Append(k string, vs ...interface{}) {
 	_, ok := m.value[k]
 	if !ok {
@@ -46,10 +52,12 @@ func (m *MapBuilder) Append(k string, vs ...interface{}) {
 	m.value[k] = append(m.value[k].([]interface{}), vs...)
 }
 
+// Delete deletes the key
 func (m *MapBuilder) Delete(k string) {
 	delete(m.value, k)
 }
 
+// CopyMap copies the data from src to target, and ignores the keys in ignores
 func CopyMap(data map[string]interface{}, keys []string, ignores []string) map[string]interface{} {
 	newInst := make(map[string]interface{})
 

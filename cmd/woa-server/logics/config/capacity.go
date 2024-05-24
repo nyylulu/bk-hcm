@@ -17,7 +17,6 @@ import (
 	"fmt"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	arrayutil "hcm/cmd/woa-server/common/util"
@@ -26,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // CapacityIf provides management interface for operations of resource apply capacity
@@ -87,7 +87,7 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 
 	subnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filter)
 	if err != nil {
-		blog.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
+		logs.Errorf("failed to find subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
 		return nil, err
 	}
 
@@ -130,18 +130,18 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 
 	rst, err := c.GetCapacity(kt, param)
 	if err != nil {
-		blog.Errorf("failed to get capacity, err: %v, %s", err, kt.Rid)
+		logs.Errorf("failed to get capacity, err: %v, %s", err, kt.Rid)
 		return err
 	}
 
 	count := len(rst.Info)
 	if count != 1 {
-		blog.Errorf("get invalid capacity info num %d not equal 1, rid: %s", count, kt.Rid)
+		logs.Errorf("get invalid capacity info num %d not equal 1, rid: %s", count, kt.Rid)
 		return fmt.Errorf("get invalid capacity info num %d not equal 1", count)
 	}
 
 	if rst.Info[0] == nil {
-		blog.Errorf("get invalid null capacity info, rid: %s", kt.Rid)
+		logs.Errorf("get invalid null capacity info, rid: %s", kt.Rid)
 		return errors.New("get invalid null capacity info")
 	}
 
@@ -163,7 +163,7 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 	}
 
 	if err := config.Operation().CvmDevice().UpdateDevice(kt.Ctx, filter, update); err != nil {
-		blog.Errorf("failed to update capacity info in db, err: %v, %s", err, kt.Rid)
+		logs.Errorf("failed to update capacity info in db, err: %v, %s", err, kt.Rid)
 		return err
 	}
 
@@ -191,18 +191,18 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 
 	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cvm apply capacity, err: %v, rid", err, kt.Rid)
+		logs.Errorf("failed to get cvm apply capacity, err: %v, rid", err, kt.Rid)
 		return nil
 	}
 
 	if resp.Error.Code != 0 {
-		blog.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid", resp.Error.Code, resp.Error.Message,
+		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid", resp.Error.Code, resp.Error.Message,
 			kt.Rid)
 		return nil
 	}
 
 	if resp.Result == nil {
-		blog.Errorf("failed to get cvm apply capacity, for result is nil, rid", kt.Rid)
+		logs.Errorf("failed to get cvm apply capacity, for result is nil, rid", kt.Rid)
 		return nil
 	}
 
@@ -225,7 +225,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 	for _, vpc := range vpcList {
 		subnetList, err := c.querySubnet(kt, region, zone, vpc)
 		if err != nil {
-			blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 			return nil
 		}
 		for _, subnet := range subnetList {
@@ -284,7 +284,7 @@ func (c *capacity) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi
 
 	resp, err := c.cvm.QueryCvmSubnet(nil, nil, req)
 	if err != nil {
-		blog.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 

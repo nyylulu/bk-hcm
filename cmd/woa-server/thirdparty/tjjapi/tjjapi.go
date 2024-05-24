@@ -78,7 +78,6 @@ func (t *tjjApi) sign(rtx string) (tokenString string, err error) {
 func (t *tjjApi) GetPwd(ctx context.Context, header http.Header, ip string) (string, error) {
 	subPath := "/thirdpartyapi/tjj/devicepassword"
 
-	// TODO: sign with user from config
 	token, signErr := t.sign(t.opts.Operator)
 	if signErr != nil {
 		return "", signErr

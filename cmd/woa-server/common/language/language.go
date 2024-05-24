@@ -21,7 +21,7 @@ import (
 	"regexp"
 	"strings"
 
-	"hcm/cmd/woa-server/common/blog"
+	"hcm/pkg/logs"
 )
 
 // ccErrorHelper CC 错误处理接口的实现
@@ -50,15 +50,15 @@ func (cli *ccLanguageHelper) Languagef(language string, key string, args ...inte
 	return cli.languageStrf(language, key, args...)
 }
 
-// load load language package file from dir
+// Load load language package file from dir
 func (cli *ccLanguageHelper) Load(lang map[string]LanguageMap) {
-	// blog.V(3).Infof("loaded language resource: %#v", lang)
+	// logs.V(3).Infof("loaded language resource: %#v", lang)
 	cli.lang = lang
 }
 
 // LoadLanguageResourceFromDir  load language resource from file
 func LoadLanguageResourceFromDir(dir string) (map[string]LanguageMap, error) {
-	blog.Infof("loading language from %s\n", dir)
+	logs.Infof("loading language from %s\n", dir)
 	// read all language file from dir
 	var langMap = map[string]LanguageMap{}
 	walkerr := filepath.Walk(dir, func(path string, f os.FileInfo, err error) error {
@@ -103,7 +103,7 @@ func LoadLanguageResourceFromDir(dir string) (map[string]LanguageMap, error) {
 		return nil
 
 	})
-	// blog.Infof("loaded language from dir %v", langMap)
+	// logs.Infof("loaded language from dir %v", langMap)
 
 	if walkerr != nil {
 		return nil, walkerr

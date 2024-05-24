@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package table defines all table schema
 package table
 
 import "time"

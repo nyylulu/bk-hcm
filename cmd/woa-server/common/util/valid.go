@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package util common util
 package util
 
 import (
@@ -19,8 +20,8 @@ import (
 	"unicode/utf8"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/errors"
+	"hcm/pkg/logs"
 )
 
 // ValidPropertyOption valid property field option
@@ -38,6 +39,7 @@ func ValidPropertyOption(propertyType string, option interface{}, errProxy error
 	return nil
 }
 
+// ValidFieldTypeEnumOption valid enum option
 func ValidFieldTypeEnumOption(option interface{}, errProxy errors.DefaultCCErrorIf) error {
 	if nil == option {
 		return errProxy.Errorf(common.CCErrCommParamsLostField, "option")
@@ -45,53 +47,53 @@ func ValidFieldTypeEnumOption(option interface{}, errProxy errors.DefaultCCError
 
 	arrOption, ok := option.([]interface{})
 	if false == ok {
-		blog.Errorf(" option %v not enum option", option)
+		logs.Errorf(" option %v not enum option", option)
 		return errProxy.Errorf(common.CCErrCommParamsIsInvalid, "option")
 	}
 
 	if len(arrOption) > common.AttributeOptionArrayMaxLength {
-		blog.Errorf(" option array length %d exceeds max length %d", len(arrOption),
+		logs.Errorf(" option array length %d exceeds max length %d", len(arrOption),
 			common.AttributeOptionArrayMaxLength)
 		return errProxy.Errorf(common.CCErrCommValExceedMaxFailed, "option", common.AttributeOptionArrayMaxLength)
 	}
 	for _, o := range arrOption {
 		mapOption, ok := o.(map[string]interface{})
 		if false == ok || mapOption == nil {
-			blog.Errorf(" option %v not enum option, enum option item must id and name", option)
+			logs.Errorf(" option %v not enum option, enum option item must id and name", option)
 			return errProxy.Errorf(common.CCErrCommParamsIsInvalid, "option")
 		}
 		idVal, idOk := mapOption["id"]
 		if !idOk || idVal == "" {
-			blog.Errorf("enum option id can't be empty", option)
+			logs.Errorf("enum option id can't be empty", option)
 			return errProxy.Errorf(common.CCErrCommParamsNeedSet, "option id")
 		}
 		if idValStr, ok := idVal.(string); !ok {
-			blog.Errorf("idVal %v not string", idVal)
+			logs.Errorf("idVal %v not string", idVal)
 			return errProxy.Errorf(common.CCErrCommParamsNeedString, "option id")
 		} else if common.AttributeOptionValueMaxLength < utf8.RuneCountInString(idValStr) {
-			blog.Errorf(" option id %s length %d exceeds max length %d", idValStr, utf8.RuneCountInString(idValStr),
+			logs.Errorf(" option id %s length %d exceeds max length %d", idValStr, utf8.RuneCountInString(idValStr),
 				common.AttributeOptionValueMaxLength)
 			return errProxy.Errorf(common.CCErrCommValExceedMaxFailed, "option id",
 				common.AttributeOptionValueMaxLength)
 		}
 		nameVal, nameOk := mapOption["name"]
 		if !nameOk || nameVal == "" {
-			blog.Errorf("enum option name can't be empty", option)
+			logs.Errorf("enum option name can't be empty", option)
 			return errProxy.Errorf(common.CCErrCommParamsNeedSet, "option name")
 		}
 		switch mapOption["type"] {
 		case "text":
 			if nameValStr, ok := nameVal.(string); !ok {
-				blog.Errorf(" nameVal %v not string", nameVal)
+				logs.Errorf(" nameVal %v not string", nameVal)
 				return errProxy.Errorf(common.CCErrCommParamsNeedString, "option name")
 			} else if common.AttributeOptionValueMaxLength < utf8.RuneCountInString(nameValStr) {
-				blog.Errorf(" option name %s length %d exceeds max length %d", nameValStr,
+				logs.Errorf(" option name %s length %d exceeds max length %d", nameValStr,
 					utf8.RuneCountInString(nameValStr), common.AttributeOptionValueMaxLength)
 				return errProxy.Errorf(common.CCErrCommValExceedMaxFailed, "option name",
 					common.AttributeOptionValueMaxLength)
 			}
 		default:
-			blog.Errorf("enum option type must be 'text', current: %v", mapOption["type"])
+			logs.Errorf("enum option type must be 'text', current: %v", mapOption["type"])
 			return errProxy.Errorf(common.CCErrCommParamsIsInvalid, "option type")
 		}
 	}
@@ -99,6 +101,7 @@ func ValidFieldTypeEnumOption(option interface{}, errProxy errors.DefaultCCError
 	return nil
 }
 
+// ValidFieldTypeIntOption 验证枚举选项
 func ValidFieldTypeIntOption(option interface{}, errProxy errors.DefaultCCErrorIf) error {
 	if nil == option {
 		return errProxy.Errorf(common.CCErrCommParamsLostField, "option")
@@ -171,6 +174,7 @@ func ValidFieldTypeIntOption(option interface{}, errProxy errors.DefaultCCErrorI
 	return nil
 }
 
+// ValidFieldTypeListOption 验证枚举值
 func ValidFieldTypeListOption(option interface{}, errProxy errors.DefaultCCErrorIf) error {
 	if nil == option {
 		return errProxy.Errorf(common.CCErrCommParamsLostField, "option")
@@ -178,11 +182,11 @@ func ValidFieldTypeListOption(option interface{}, errProxy errors.DefaultCCError
 
 	arrOption, ok := option.([]interface{})
 	if false == ok {
-		blog.Errorf(" option %v not string type list option", option)
+		logs.Errorf(" option %v not string type list option", option)
 		return errProxy.Errorf(common.CCErrCommParamsIsInvalid, "option")
 	}
 	if len(arrOption) > common.AttributeOptionArrayMaxLength {
-		blog.Errorf(" option array length %d exceeds max length %d", len(arrOption),
+		logs.Errorf(" option array length %d exceeds max length %d", len(arrOption),
 			common.AttributeOptionArrayMaxLength)
 		return errProxy.Errorf(common.CCErrCommValExceedMaxFailed, "option", common.AttributeOptionArrayMaxLength)
 	}
@@ -191,13 +195,13 @@ func ValidFieldTypeListOption(option interface{}, errProxy errors.DefaultCCError
 		switch value := val.(type) {
 		case string: // 只可以是字符类型
 			if common.AttributeOptionValueMaxLength < utf8.RuneCountInString(value) {
-				blog.Errorf(" option value %s length %d exceeds max length %d", value, utf8.RuneCountInString(value),
+				logs.Errorf(" option value %s length %d exceeds max length %d", value, utf8.RuneCountInString(value),
 					common.AttributeOptionValueMaxLength)
 				return errProxy.Errorf(common.CCErrCommValExceedMaxFailed, "option",
 					common.AttributeOptionValueMaxLength)
 			}
 		default:
-			blog.Errorf(" option %v not string type list option", option)
+			logs.Errorf(" option %v not string type list option", option)
 			return errProxy.Errorf(common.CCErrCommParamsIsInvalid, "list option need string type item")
 		}
 	}
@@ -205,6 +209,7 @@ func ValidFieldTypeListOption(option interface{}, errProxy errors.DefaultCCError
 	return nil
 }
 
+// ValidFieldRegularExpressionOption 验证正则表达式
 func ValidFieldRegularExpressionOption(option interface{}, errProxy errors.DefaultCCErrorIf) error {
 	// check regular is legal
 	if option == nil {
@@ -213,7 +218,7 @@ func ValidFieldRegularExpressionOption(option interface{}, errProxy errors.Defau
 
 	regular, ok := option.(string)
 	if !ok {
-		blog.Errorf("variable type conversion error")
+		logs.Errorf("variable type conversion error")
 		return errProxy.Errorf(common.CCIllegalRegularExpression, "option")
 	}
 
@@ -223,7 +228,7 @@ func ValidFieldRegularExpressionOption(option interface{}, errProxy errors.Defau
 
 	_, err := regexp.Compile(regular)
 	if err != nil {
-		blog.Errorf("regular expression is wrong, regular expression is:%s, err:%s", regular, err)
+		logs.Errorf("regular expression is wrong, regular expression is:%s, err:%s", regular, err)
 		return errProxy.Errorf(common.CCErrorCheckRegularFailed)
 	}
 

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package cvmapi ...
 package cvmapi
 
 import (
@@ -65,7 +66,7 @@ func getDissolveObsProject() string {
 	return project
 }
 
-// 需求预测接口调整类型
+// CvmCbsPlanModityType 需求预测接口调整类型
 var CvmCbsPlanModityType = map[int64]string{
 	1: "add",
 	2: "delete",
@@ -73,100 +74,98 @@ var CvmCbsPlanModityType = map[int64]string{
 }
 
 const (
-	// CVM请求ID
+	// CvmId CVM请求ID
 	CvmId = "1"
-	// CVM请求JSONRPC
+	// CvmJsonRpc CVM请求JSONRPC
 	CvmJsonRpc = "2.0"
 
-	// CVM容量查询部门ID
+	// CvmDeptId CVM容量查询部门ID
 	CvmDeptId = 1041
-	// CVM生产时部门名称
+	// CvmLaunchDeptName CVM生产时部门名称
 	CvmLaunchDeptName = "IEG技术运营部"
-	// CVM运营产品名（项目名）
+	// CvmLaunchProductName CVM运营产品名（项目名）
 	CvmLaunchProductName = "互娱资源公共平台"
-	// CVM一级业务ID
+	// CvmLaunchBiz1Id CVM一级业务ID
 	CvmLaunchBiz1Id = 656545
-	// CVM一级业务名
+	// CvmLaunchBiz1Name CVM一级业务名
 	CvmLaunchBiz1Name = "CC_资源运营服务"
-	// CVM二级业务ID
+	// CvmLaunchBiz2Id CVM二级业务ID
 	CvmLaunchBiz2Id = 656560
-	// CVM二级业务名
+	// CvmLaunchBiz2Name CVM二级业务名
 	CvmLaunchBiz2Name = "CC_资源运营服务"
-	// CVM三级业务ID
+	// CvmLaunchBiz3Id CVM三级业务ID
 	CvmLaunchBiz3Id = 1073015
-	// CVM三级业务名
+	// CvmLaunchBiz3Name CVM三级业务名
 	CvmLaunchBiz3Name = "CC_SCR_加工池"
-	// CVM生产时系统盘类型，当前固定为高性能云盘
+	// CvmLaunchSystemDiskTypePremium CVM生产时系统盘类型，当前固定为高性能云盘
 	CvmLaunchSystemDiskTypePremium = "CLOUD_PREMIUM"
-	// CVM生产时系统盘类型，对于固定为本地盘
+	// CvmLaunchSystemDiskTypeBasic CVM生产时系统盘类型，对于固定为本地盘
 	CvmLaunchSystemDiskTypeBasic = "LOCAL_BASIC"
-	// CVM生产时系统盘大小，当前固定为100G
+	// CvmLaunchSystemDiskSizePremium CVM生产时系统盘大小，当前固定为100G
 	CvmLaunchSystemDiskSizePremium = 100
-	// CVM生产时系统盘大小，对于IT设备固定为50G
+	// CvmLaunchSystemDiskSizeBasic CVM生产时系统盘大小，对于IT设备固定为50G
 	CvmLaunchSystemDiskSizeBasic = 50
-	CVM_LAUNCH_USETIME           = "0000-00-00 00:00:00" //CVM生产时必填项，yuti开发对该字段含义也未知，暂时写死为该固定值0000-00-00 00:00:00
-	// CVM项目ID，yuti开发对该字段含义也未知，暂时写死为固定值0
+	// CVM_LAUNCH_USETIME CVM生产时数据盘类型，当前固定为高性能云盘
+	CVM_LAUNCH_USETIME = "0000-00-00 00:00:00" //CVM生产时必填项，yuti开发对该字段含义也未知，暂时写死为该固定值0000-00-00 00:00:00
+	// CvmLaunchProjectId CVM项目ID，yuti开发对该字段含义也未知，暂时写死为固定值0
 	CvmLaunchProjectId = 0
-	// CVM生产密码
-	// TODO: IMPORTANT!!! get from config
-	CvmLaunchPassword = "bG5T2OTx3rP6" //CVM生产密码
-	// CVM生产单据详情链接前缀
+	// CvmOrderLinkPrefix CVM生产单据详情链接前缀
 	CvmOrderLinkPrefix = "https://yunti.woa.com/orders/cvm/"
-	// CVM退回单据详情链接前缀
+	// CvmReturnLinkPrefix CVM退回单据详情链接前缀
 	CvmReturnLinkPrefix = "https://yunti.woa.com/orders/cvmreturn/"
-	// CVM&CBS需求单据详情链接前缀
+	// CvmPlanLinkPrefix CVM&CBS需求单据详情链接前缀
 	CvmPlanLinkPrefix = "https://yunti.woa.com/orders/iaasplan/"
 
-	// 分Campus
+	// CvmSeparateCampus 分Campus
 	CvmSeparateCampus = "cvm_separate_campus"
 
-	// CVM API key
+	// CvmApiKey CVM API key
 	CvmApiKey = "api_key"
-	// CVM API key value
+	// CvmApiKeyVal CVM API key value
 	CvmApiKeyVal = "octopuskg"
 
-	// 需求预测查询id
+	// CvmCbsPlanQueryId 需求预测查询id
 	CvmCbsPlanQueryId = "16318853269804145"
-	// 需求预测调整id
+	// CvmCbsPlanAdjustId 需求预测调整id
 	CvmCbsPlanAdjustId = "16319322822855177"
 
-	// 需求预测首页查询接口事业群名称
+	// CvmCbsPlanQueryBgName 需求预测首页查询接口事业群名称
 	CvmCbsPlanQueryBgName = "IEG互动娱乐事业群"
-	// 需求预测接口事业群ID
+	// CvmCbsPlanDeptId 需求预测接口事业群ID
 	CvmCbsPlanDeptId = 1041
-	// 需求预测默认规划产品
+	// DefaultPlanProductName 需求预测默认规划产品
 	DefaultPlanProductName = "互娱运营支撑产品"
 
-	// cvm methods
+	// CvmLaunchMethod cvm methods
 	// 创建CVM订单方法
 	CvmLaunchMethod = "createCvmOrder"
-	// CVM单据进度查询方法
+	// CvmOrderStatusMethod CVM单据进度查询方法
 	CvmOrderStatusMethod = "queryOrders"
-	// CVM实例状态查询方法
+	// CvmInstanceStatusMethod CVM实例状态查询方法
 	CvmInstanceStatusMethod = "queryCVMInstances"
-	// CVM容量查询方法
+	// CvmCapacityMethod CVM容量查询方法
 	CvmCapacityMethod = "queryApplyCapacity"
-	// CVM vpc信息查询方法
+	// CvmVpcMethod CVM vpc信息查询方法
 	CvmVpcMethod = "getVpcInfo"
-	// CVM subnet信息查询方法
+	// CvmSubnetMethod CVM subnet信息查询方法
 	CvmSubnetMethod = "getSubNetInfo"
-	// 需求预测首页查询接口
+	// CvmCbsPlanQueryMethod 需求预测首页查询接口
 	CvmCbsPlanQueryMethod = "queryCvmCbsInfo"
-	// 需求预测首页调整接口
+	// CvmCbsPlanAdjustMethod 需求预测首页调整接口
 	CvmCbsPlanAdjustMethod = "adjustOrder"
-	// 需求预测追加接口
+	// CvmCbsPlanAddMethod 需求预测追加接口
 	CvmCbsPlanAddMethod = "addYuntiOrder"
-	// 需求单据查询接口
+	// CvmCbsPlanOrderQueryMethod 需求单据查询接口
 	CvmCbsPlanOrderQueryMethod = "queryYuntiOrder"
-	// CVM流程查询方法
+	// CvmGetProcessMethod CVM流程查询方法
 	CvmGetProcessMethod = "getCVMProcess"
-	// ERP流程查询方法
+	// GetErpProcessMethod ERP流程查询方法
 	GetErpProcessMethod = "getERPProcess"
-	// CVM退回提单方法
+	// CvmReturnMethod CVM退回提单方法
 	CvmReturnMethod = "createCvmReturnOrder"
-	// CVM退回单据状态查询方法
+	// CvmReturnStatusMethod CVM退回单据状态查询方法
 	CvmReturnStatusMethod = "queryCvmReturnOrder"
-	// 根据单号查询退回CVM方法
+	// CvmReturnDetailMethod 根据单号查询退回CVM方法
 	CvmReturnDetailMethod = "queryReturnCvmByOrder"
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)

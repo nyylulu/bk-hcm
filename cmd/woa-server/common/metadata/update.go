@@ -9,6 +9,8 @@
  * either express or implied. See the License for the specific language governing permissions and
  * limitations under the License.
  */
+
+// Package metadata update metadata
 package metadata
 
 import "hcm/cmd/woa-server/common/mapstr"
@@ -33,6 +35,7 @@ type UpdatedAttrIndexResult struct {
 	Data     *UpdateAttrIndexData `json:"data"`
 }
 
+// UpdateAttrIndexData update attributes index data
 type UpdateAttrIndexData struct {
 	Info  []*UpdateAttributeIndex `json:"info"`
 	Count uint64                  `json:"count"`

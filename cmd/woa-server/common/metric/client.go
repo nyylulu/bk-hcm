@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	"hcm/cmd/woa-server/common/metadata"
+	"hcm/pkg/logs"
 )
 
 var metricController *MetricController
@@ -108,7 +108,7 @@ func (mc *MetricController) PackMetrics() (*[]byte, error) {
 			for _, mc := range c.Collect() {
 				metric, err := newMetric(mc)
 				if nil != err {
-					blog.Errorf("new metric failed. err: %v", err)
+					logs.Errorf("new metric failed. err: %v", err)
 					continue
 				}
 				mf.MetricBundle[name] = append(mf.MetricBundle[name], metric)
@@ -118,7 +118,7 @@ func (mc *MetricController) PackMetrics() (*[]byte, error) {
 
 		select {
 		case <-time.After(time.Duration(10 * time.Second)):
-			blog.Errorf("get metric bundle: %s timeout, skip it.", name)
+			logs.Errorf("get metric bundle: %s timeout, skip it.", name)
 			continue
 		case <-done:
 			close(done)

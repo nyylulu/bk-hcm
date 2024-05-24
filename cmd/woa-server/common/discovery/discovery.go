@@ -10,7 +10,7 @@
  * limitations under the License.
  */
 
-// Package discovery TODO
+// Package discovery discovery service
 package discovery
 
 // ServiceManageInterface service manage interface

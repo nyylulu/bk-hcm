@@ -10,15 +10,16 @@
  * limitations under the License.
  */
 
+// Package config device config
 package config
 
 import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/blog"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -27,13 +28,13 @@ func (s *service) GetDeviceWithCapacity(cts *rest.Contexts) (interface{}, error)
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetDeviceWithCapacity(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -45,13 +46,13 @@ func (s *service) GetDevice(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetDevice(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -63,13 +64,13 @@ func (s *service) GetDeviceType(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetDeviceType(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -81,13 +82,13 @@ func (s *service) GetDeviceTypeDetail(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get device type detail, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device type detail, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetDeviceTypeDetail(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get device type detail, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device type detail, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -98,19 +99,19 @@ func (s *service) GetDeviceTypeDetail(cts *rest.Contexts) (interface{}, error) {
 func (s *service) GetCvmDeviceDetail(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to get cvm device config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get cvm device config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	rst, err := s.logics.Device().GetCvmDeviceDetail(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -121,13 +122,13 @@ func (s *service) GetCvmDeviceDetail(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateDevice(cts *rest.Contexts) (interface{}, error) {
 	inputData := new(types.DeviceInfo)
 	if err := cts.DecodeInto(inputData); err != nil {
-		blog.Errorf("failed to create device, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().CreateDevice(cts.Kit, inputData)
 	if err != nil {
-		blog.Errorf("failed to create device, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -138,18 +139,18 @@ func (s *service) CreateDevice(cts *rest.Contexts) (interface{}, error) {
 func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.CreateManyDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create device in batch, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device in batch, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to create device in batch, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create device in batch, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
 	if err := s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
-		blog.Errorf("failed to create device in batch, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create device in batch, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -160,18 +161,18 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateDevice(cts *rest.Contexts) (interface{}, error) {
 	input := make(map[string]interface{})
 	if err := cts.DecodeInto(&input); err != nil {
-		blog.Errorf("failed to update device, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Device().UpdateDevice(cts.Kit, instId, input); err != nil {
-		blog.Errorf("failed to update device, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -182,13 +183,13 @@ func (s *service) UpdateDevice(cts *rest.Contexts) (interface{}, error) {
 func (s *service) UpdateDeviceProperty(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.UpdateDevicePropertyParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	errKey, err := input.Validate()
 	if err != nil {
-		blog.Errorf("failed to update cvm device config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm device config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
@@ -203,7 +204,7 @@ func (s *service) UpdateDeviceProperty(cts *rest.Contexts) (interface{}, error) 
 	delete(data, "id")
 
 	if err := s.logics.Device().UpdateDeviceBatch(cts.Kit, cond, input.Property); err != nil {
-		blog.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -214,12 +215,12 @@ func (s *service) UpdateDeviceProperty(cts *rest.Contexts) (interface{}, error) 
 func (s *service) DeleteDevice(cts *rest.Contexts) (interface{}, error) {
 	instId, err := strconv.ParseInt(cts.Request.PathParameter("id"), 10, 64)
 	if err != nil {
-		blog.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to parse id, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	if err := s.logics.Device().DeleteDevice(cts.Kit, instId); err != nil {
-		blog.Errorf("failed to delete device, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to delete device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -231,13 +232,13 @@ func (s *service) GetDvmDeviceType(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get dvm device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get dvm device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetDvmDeviceType(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get dvm device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get dvm device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -249,13 +250,13 @@ func (s *service) CreateDvmDevice(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.DvmDeviceInfo)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create dvm device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create dvm device type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().CreateDvmDevice(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create dvm device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create dvm device type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -267,13 +268,13 @@ func (s *service) GetPmDeviceType(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.GetDeviceParam)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to get physical machine device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get physical machine device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().GetPmDeviceType(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to get physical machine device list, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get physical machine device list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -285,13 +286,13 @@ func (s *service) CreatePmDevice(cts *rest.Contexts) (interface{}, error) {
 	// TODO: input validation
 	input := new(types.PmDeviceInfo)
 	if err := cts.DecodeInto(input); err != nil {
-		blog.Errorf("failed to create physical machine device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create physical machine device type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	rst, err := s.logics.Device().CreatePmDevice(cts.Kit, input)
 	if err != nil {
-		blog.Errorf("failed to create physical machine device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create physical machine device type, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

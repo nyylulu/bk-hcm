@@ -10,17 +10,19 @@
  * limitations under the License.
  */
 
+// Package metadata ...
 package metadata
 
 import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"hcm/pkg/logs"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"hcm/pkg/logs"
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/errors"
@@ -31,6 +33,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 )
 
+// Field Desc
 const (
 	AttributeFieldID              = "id"
 	AttributeFieldSupplierAccount = "bk_supplier_account"
@@ -118,11 +121,13 @@ type ObjAttDes struct {
 	PropertyGroupName string `json:"bk_property_group_name"`
 }
 
+// HostObjAttDes 主机模型属性
 type HostObjAttDes struct {
 	ObjAttDes        `json:",inline" bson:",inline"`
 	HostApplyEnabled bool `json:"host_apply_enabled"`
 }
 
+// Validate attribute
 func (attribute *Attribute) Validate(ctx context.Context, data interface{}, key string) (rawError errors.RawErrorInfo) {
 	fieldType := attribute.PropertyType
 	switch fieldType {
@@ -1029,6 +1034,7 @@ func ParseFloatOption(ctx context.Context, val interface{}) FloatOption {
 	return floatOption
 }
 
+// PrettyValue parse value to pretty string
 func (attribute Attribute) PrettyValue(ctx context.Context, val interface{}) (string, error) {
 	if val == nil {
 		return "", nil
@@ -1131,6 +1137,7 @@ func (attribute Attribute) PrettyValue(ctx context.Context, val interface{}) (st
 	return "", nil
 }
 
+// HostApplyFieldMap define host apply field map
 var HostApplyFieldMap = map[string]bool{
 	common.BKOperatorField:        true,
 	common.BKBakOperatorField:     true,
@@ -1173,6 +1180,7 @@ func CheckAllowHostApplyOnField(field string) bool {
 	return true
 }
 
+// SubAttributeOption sub attribute metadata definition
 type SubAttributeOption []SubAttribute
 
 // SubAttribute sub attribute metadata definition
@@ -1191,6 +1199,7 @@ type SubAttribute struct {
 	PropertyGroup string      `field:"bk_property_group" json:"bk_property_group" bson:"bk_property_group"`
 }
 
+// Validate sub attribute
 func (sa *SubAttribute) Validate(ctx context.Context, data interface{}, key string) (rawError errors.RawErrorInfo) {
 	attr := Attribute{
 		PropertyID:   sa.PropertyID,
@@ -1283,8 +1292,10 @@ func parseSubAttr(options map[string]interface{}) SubAttribute {
 	return subAttr
 }
 
+// EnumOptions enum options
 type EnumOptions []AttributesOption
 
+// AttributesOption enum option
 type AttributesOption struct {
 	ID        string `json:"id" bson:"id"`
 	Name      string `json:"name" bson:"name"`
@@ -1292,4 +1303,5 @@ type AttributesOption struct {
 	IsDefault bool   `json:"is_default" bson:"is_default"`
 }
 
+// ListOptions enum options
 type ListOptions []string

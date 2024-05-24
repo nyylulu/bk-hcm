@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package mapstr provide some useful functions for MapStr
 package mapstr
 
 import (
@@ -63,13 +64,13 @@ func (cli MapStr) ToMapInterface() map[string]interface{} {
 
 // ToStructByTag convert self into a struct with 'tagName'
 //
-//  eg:
-//  self := MapStr{"testName":"testvalue"}
-//  targetStruct := struct{
-//      Name string `field:"testName"`
-//  }
-//  After call the function self.ToStructByTag(targetStruct, "field")
-//  the targetStruct.Name value will be 'testvalue'
+//	eg:
+//	self := MapStr{"testName":"testvalue"}
+//	targetStruct := struct{
+//	    Name string `field:"testName"`
+//	}
+//	After call the function self.ToStructByTag(targetStruct, "field")
+//	the targetStruct.Name value will be 'testvalue'
 func (cli MapStr) ToStructByTag(targetStruct interface{}, tagName string) error {
 	return SetValueToStructByTagsWithTagName(targetStruct, cli, tagName)
 }
