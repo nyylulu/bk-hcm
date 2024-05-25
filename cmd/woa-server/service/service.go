@@ -30,6 +30,7 @@ import (
 
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
+	"hcm/cmd/woa-server/service/cvm"
 	"hcm/cmd/woa-server/service/pool"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
@@ -194,6 +195,7 @@ func (s *Service) apiSet() *restful.Container {
 
 	config.InitService(c)
 	pool.InitService(c)
+	cvm.InitService(c)
 
 	taskOptions := types.Config{
 		Mongo:      *s.mongoConf,
