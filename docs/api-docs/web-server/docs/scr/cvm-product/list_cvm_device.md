@@ -23,7 +23,7 @@ POST /api/v1/woa/cvm/findmany/apply/device
 | limit        | int    | 是  | 每页限制条数，最大200              |
 | enable_count | bool   | 是  | 本次请求是否为获取数量还是详情的标记  |
 
-注意：
+**注意：**
 
 enable_count 如果此标记为true，表示此次请求是获取数量。此时其余字段必须为初始化值，start为0,limit为:0。
 
@@ -94,6 +94,6 @@ enable_count 如果此标记为true，表示此次请求是获取数量。此时
 | ip           | string	   | 设备IP     |
 | cvm_inst_id  | string	   | CVM实例ID  |
 
-注意：
+**注意：**
 
-如果本次请求是查询详细信息那么count为0，如果查询的是数量，那么info为空。
+- 如果本次请求是查询详细信息那么count为0，如果查询的是数量，那么info为空。

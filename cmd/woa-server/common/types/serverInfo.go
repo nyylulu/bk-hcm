@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package types ...
 package types
 
 import (
@@ -59,13 +60,6 @@ const (
 	CCFunctionalityServicediscover = "servicediscover"
 	CCFunctionalityMongo           = "mongo"
 	CCFunctionalityRedis           = "redis"
-)
-
-const (
-	CCConfigureRedis  = "redis"
-	CCConfigureMongo  = "mongodb"
-	CCConfigureCommon = "common"
-	CCConfigureExtra  = "extra"
 )
 
 // ServerInfo define base server information
@@ -122,7 +116,7 @@ type APIServerServInfo struct {
 	ServerInfo
 }
 
-// Address convert struct to host address
+// RegisterAddress convert struct to host address
 func (s *ServerInfo) RegisterAddress() string {
 	if s == nil {
 		return ""
@@ -130,6 +124,7 @@ func (s *ServerInfo) RegisterAddress() string {
 	return fmt.Sprintf("%s://%s:%d", s.Scheme, s.RegisterIP, s.Port)
 }
 
+// Instance convert struct to host address
 func (s *ServerInfo) Instance() string {
 	if s == nil {
 		return ""
