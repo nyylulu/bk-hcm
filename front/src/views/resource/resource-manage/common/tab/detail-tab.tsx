@@ -1,14 +1,10 @@
-import {
-  defineComponent,
-  PropType,
-  ref,
-} from 'vue';
+import { defineComponent, PropType, ref } from 'vue';
 
 import './detail-tab.scss';
 
 type Tab = {
-  name: string,
-  value: string
+  name: string;
+  value: string;
 };
 
 export default defineComponent({

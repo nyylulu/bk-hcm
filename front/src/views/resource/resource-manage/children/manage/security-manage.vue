@@ -19,10 +19,7 @@ import { cloneDeep } from 'lodash-es';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
 import useSelection from '../../hooks/use-selection';
-import {
-  BatchDistribution,
-  DResourceType,
-} from '@/views/resource/resource-manage/children/dialog/batch-distribution';
+import { BatchDistribution, DResourceType } from '@/views/resource/resource-manage/children/dialog/batch-distribution';
 import { TemplateTypeMap } from '../dialog/template-dialog';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
@@ -62,13 +59,7 @@ const accountStore = useAccountStore();
 const activeType = ref('group');
 const fetchUrl = ref<string>('security_groups/list');
 
-const emit = defineEmits([
-  'auth',
-  'handleSecrityType',
-  'edit',
-  'tabchange',
-  'editTemplate',
-]);
+const emit = defineEmits(['auth', 'handleSecrityType', 'edit', 'tabchange', 'editTemplate']);
 const { columns, generateColumnsSettings } = useColumns('group');
 const businessMapStore = useBusinessMapStore();
 
@@ -93,14 +84,7 @@ const templateData = ref([]);
 
 const { searchData, searchValue, filter } = useFilter(props);
 
-const {
-  datas,
-  pagination,
-  isLoading,
-  handlePageChange,
-  handlePageSizeChange,
-  getList,
-} = useQueryCommonList(
+const { datas, pagination, isLoading, handlePageChange, handlePageSizeChange, getList } = useQueryCommonList(
   {
     ...props,
     filter: filter.value,
@@ -130,15 +114,14 @@ const selectSearchData = computed(() => {
       id: 'cloud_id',
     },
     ...searchData.value,
-    ...(
-      activeType.value === 'template'
-        ? []
-        : [{
-          name: '云地域',
-          id: 'region',
-        },
-        ]
-    ),
+    ...(activeType.value === 'template'
+      ? []
+      : [
+          {
+            name: '云地域',
+            id: 'region',
+          },
+        ]),
   ];
 });
 
@@ -168,12 +151,14 @@ watch(
       templateData.value = data;
       const ids = data.map(({ id }) => id);
       if (!ids.length) return;
-      const url = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud${whereAmI.value === Senarios.business ? `/bizs/${accountStore.bizs}` : ''}/argument_templates/instance/rule/list`;
+      const url = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud${
+        whereAmI.value === Senarios.business ? `/bizs/${accountStore.bizs}` : ''
+      }/argument_templates/instance/rule/list`;
       const res = await http.post(url, {
         ids,
         bk_biz_id: whereAmI.value === Senarios.business ? accountStore.bizs : undefined,
       });
-      for (let i = 0;i < templateData.value.length;i++) {
+      for (let i = 0; i < templateData.value.length; i++) {
         const item = templateData.value[i];
         item.instance_num = res.data?.[i]?.instance_num || '--';
         item.rule_num = res.data?.[i]?.rule_num || '--';
@@ -310,19 +295,25 @@ const groupColumns = [
     isOnlyShowInResource: true,
     isDefaultShow: true,
     render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => {
-      return withDirectives(h(
-        Tag,
-        {
-          theme: data.bk_biz_id === -1 ? false : 'success',
-        },
-        [data.bk_biz_id === -1 ? '未分配' : '已分配'],
-      ), [
-        [bkTooltips, {
-          content: businessMapStore.businessMap.get(cell),
-          disabled: !cell || cell === -1,
-          theme: 'light',
-        }],
-      ]);
+      return withDirectives(
+        h(
+          Tag,
+          {
+            theme: data.bk_biz_id === -1 ? false : 'success',
+          },
+          [data.bk_biz_id === -1 ? '未分配' : '已分配'],
+        ),
+        [
+          [
+            bkTooltips,
+            {
+              content: businessMapStore.businessMap.get(cell),
+              disabled: !cell || cell === -1,
+              theme: 'light',
+            },
+          ],
+        ],
+      );
     },
   },
   {
@@ -330,11 +321,7 @@ const groupColumns = [
     field: 'bk_biz_id2',
     isOnlyShowInResource: true,
     render({ data }: any) {
-      return h('span', {}, [
-        data.bk_biz_id === -1
-          ? t('未分配')
-          : businessMapStore.businessMap.get(data.bk_biz_id),
-      ]);
+      return h('span', {}, [data.bk_biz_id === -1 ? t('未分配') : businessMapStore.businessMap.get(data.bk_biz_id)]);
     },
   },
   {
@@ -355,7 +342,7 @@ const groupColumns = [
     label: t('创建时间'),
     field: 'created_at',
     sort: true,
-    render: ({ cell }: { cell: string }) =>  timeFormatter(cell),
+    render: ({ cell }: { cell: string }) => timeFormatter(cell),
   },
   {
     label: t('修改时间'),
@@ -375,12 +362,7 @@ const groupColumns = [
           'span',
           {
             onClick() {
-              emit(
-                'auth',
-                props.isResourcePage
-                  ? 'iaas_resource_operate'
-                  : 'biz_iaas_resource_operate',
-              );
+              emit('auth', props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate');
             },
           },
           [
@@ -438,12 +420,7 @@ const groupColumns = [
           'span',
           {
             onClick() {
-              emit(
-                'auth',
-                props.isResourcePage
-                  ? 'iaas_resource_delete'
-                  : 'biz_iaas_resource_delete',
-              );
+              emit('auth', props.isResourcePage ? 'iaas_resource_delete' : 'biz_iaas_resource_delete');
             },
           },
           [
@@ -581,9 +558,7 @@ const gcpColumns = [
     sort: true,
     isDefaultShow: true,
     render({ data }: any) {
-      return h('span', {}, [
-        data.target_tags || data.target_service_accounts || '--',
-      ]);
+      return h('span', {}, [data.target_tags || data.target_service_accounts || '--']);
     },
   },
   // {
@@ -601,8 +576,8 @@ const gcpColumns = [
         {},
         data?.allowed || data?.denied
           ? (data?.allowed || data?.denied).map((e: any) => {
-            return h('div', {}, `${e.protocol}:${e.port}`);
-          })
+              return h('div', {}, `${e.protocol}:${e.port}`);
+            })
           : '--',
       );
     },
@@ -614,19 +589,25 @@ const gcpColumns = [
     isOnlyShowInResource: true,
     isDefaultShow: true,
     render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => {
-      return withDirectives(h(
-        Tag,
-        {
-          theme: data.bk_biz_id === -1 ? false : 'success',
-        },
-        [data.bk_biz_id === -1 ? '未分配' : '已分配'],
-      ), [
-        [bkTooltips, {
-          content: businessMapStore.businessMap.get(cell),
-          disabled: !cell || cell === -1,
-          theme: 'light',
-        }],
-      ]);
+      return withDirectives(
+        h(
+          Tag,
+          {
+            theme: data.bk_biz_id === -1 ? false : 'success',
+          },
+          [data.bk_biz_id === -1 ? '未分配' : '已分配'],
+        ),
+        [
+          [
+            bkTooltips,
+            {
+              content: businessMapStore.businessMap.get(cell),
+              disabled: !cell || cell === -1,
+              theme: 'light',
+            },
+          ],
+        ],
+      );
     },
   },
   {
@@ -634,24 +615,20 @@ const gcpColumns = [
     field: 'bk_biz_id2',
     isOnlyShowInResource: true,
     render({ data }: any) {
-      return h('span', {}, [
-        data.bk_biz_id === -1
-          ? t('未分配')
-          : businessMapStore.businessMap.get(data.bk_biz_id),
-      ]);
+      return h('span', {}, [data.bk_biz_id === -1 ? t('未分配') : businessMapStore.businessMap.get(data.bk_biz_id)]);
     },
   },
   {
     label: t('创建时间'),
     field: 'created_at',
     sort: true,
-    render: ({ cell }: { cell: string }) =>  timeFormatter(cell),
+    render: ({ cell }: { cell: string }) => timeFormatter(cell),
   },
   {
     label: t('修改时间'),
     field: 'updated_at',
     sort: true,
-    render: ({ cell }: { cell: string }) =>  timeFormatter(cell),
+    render: ({ cell }: { cell: string }) => timeFormatter(cell),
   },
   {
     label: t('操作'),
@@ -663,12 +640,7 @@ const gcpColumns = [
           'span',
           {
             onClick() {
-              emit(
-                'auth',
-                props.isResourcePage
-                  ? 'iaas_resource_operate'
-                  : 'biz_iaas_resource_operate',
-              );
+              emit('auth', props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate');
             },
           },
           [
@@ -679,11 +651,9 @@ const gcpColumns = [
                 theme: 'primary',
                 disabled:
                   !props.authVerifyData?.permissionAction[
-                    props.isResourcePage
-                      ? 'iaas_resource_operate'
-                      : 'biz_iaas_resource_operate'
-                  ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage),
+                    props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate'
+                  ] ||
+                  (data.bk_biz_id !== -1 && props.isResourcePage),
                 onClick() {
                   emit('edit', cloneDeep(data));
                 },
@@ -696,12 +666,7 @@ const gcpColumns = [
           'span',
           {
             onClick() {
-              emit(
-                'auth',
-                props.isResourcePage
-                  ? 'iaas_resource_operate'
-                  : 'biz_iaas_resource_operate',
-              );
+              emit('auth', props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate');
             },
           },
           [
@@ -712,11 +677,9 @@ const gcpColumns = [
                 text: true,
                 disabled:
                   !props.authVerifyData?.permissionAction[
-                    props.isResourcePage
-                      ? 'iaas_resource_delete'
-                      : 'biz_iaas_resource_delete'
-                  ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage),
+                    props.isResourcePage ? 'iaas_resource_delete' : 'biz_iaas_resource_delete'
+                  ] ||
+                  (data.bk_biz_id !== -1 && props.isResourcePage),
                 theme: 'primary',
                 onClick() {
                   securityHandleShowDelete(data);
@@ -808,19 +771,25 @@ const templateColumns = [
     field: 'bk_biz_id',
     isDefaultShow: true,
     render: ({ data }: { data: { bk_biz_id: number }; cell: number }) => {
-      return withDirectives(h(
-        Tag,
-        {
-          theme: data.bk_biz_id === -1 ? false : 'success',
-        },
-        [data.bk_biz_id === -1 ? '未分配' : '已分配'],
-      ), [
-        [bkTooltips, {
-          content: businessMapStore.businessMap.get(data.bk_biz_id),
-          theme: 'light',
-          disabled: !data.bk_biz_id || data.bk_biz_id === -1,
-        }],
-      ]);
+      return withDirectives(
+        h(
+          Tag,
+          {
+            theme: data.bk_biz_id === -1 ? false : 'success',
+          },
+          [data.bk_biz_id === -1 ? '未分配' : '已分配'],
+        ),
+        [
+          [
+            bkTooltips,
+            {
+              content: businessMapStore.businessMap.get(data.bk_biz_id),
+              disabled: !data.bk_biz_id || data.bk_biz_id === -1,
+              theme: 'light',
+            },
+          ],
+        ],
+      );
     },
   },
   {
@@ -901,11 +870,15 @@ watch(types, () => {
     activeType.value = 'group';
   }
 });
-watch(activeType, (val) => {
-  emit('tabchange', val);
-}, {
-  immediate: true,
-});
+watch(
+  activeType,
+  (val) => {
+    emit('tabchange', val);
+  },
+  {
+    immediate: true,
+  },
+);
 // const computedSettings = computed(() => {
 //   const fields = [];
 //   const columns = securityType.value === 'group' ? groupColumns : gcpColumns;
@@ -949,16 +922,12 @@ const securityHandleShowDelete = (data: any) => {
           break;
         }
       }
-      try {
-        await resourceStore.deleteBatch(type, { ids: [data.id] });
-        getList();
-        Message({
-          message: t('删除成功'),
-          theme: 'success',
-        });
-      } catch (error) {
-        console.log(error);
-      }
+      await resourceStore.deleteBatch(type, { ids: [data.id] });
+      getList();
+      Message({
+        message: t('删除成功'),
+        theme: 'success',
+      });
     },
   });
 };
@@ -973,7 +942,9 @@ const securityHandleShowDelete = (data: any) => {
         :type="
           activeType === 'group'
             ? DResourceType.security_groups
-            : activeType === 'template' ? DResourceType.templates : DResourceType.firewall
+            : activeType === 'template'
+            ? DResourceType.templates
+            : DResourceType.firewall
         "
         :get-data="
           () => {
@@ -984,11 +955,7 @@ const securityHandleShowDelete = (data: any) => {
       />
       <section class="flex-row align-items-center mt20">
         <bk-radio-group v-model="activeType" :disabled="state.isLoading">
-          <bk-radio-button
-            v-for="item in types"
-            :key="item.name"
-            :label="item.name"
-          >
+          <bk-radio-button v-for="item in types" :key="item.name" :label="item.name">
             {{ item.label }}
           </bk-radio-button>
         </bk-radio-group>

@@ -1,20 +1,13 @@
 <script lang="ts" setup>
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 
-import {
-  useResourceStore,
-} from '@/store';
+import { useResourceStore } from '@/store';
 
-import {
-  useI18n,
-} from 'vue-i18n';
+import { useI18n } from 'vue-i18n';
 
-import {
-  PropType,
-} from 'vue';
+import { PropType } from 'vue';
 
-import {
-  Message } from 'bkui-vue';
+import { Message } from 'bkui-vue';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
@@ -38,9 +31,7 @@ const props = defineProps({
   },
 });
 
-const {
-  t,
-} = useI18n();
+const { t } = useI18n();
 
 const resourceStore = useResourceStore();
 const { getRegionName } = useRegionsStore();
@@ -96,7 +87,6 @@ const settingInfo: any[] = [
   },
 ].filter(({ prop }) => (whereAmI.value === Senarios.business && !['bk_biz_id'].includes(prop)) || whereAmI.value !== Senarios.business);
 
-
 if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'huawei') {
   settingInfo.splice(8, 0, {
     name: t('关联CVM实例数'),
@@ -106,34 +96,44 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
     },
   });
   if (props.vendor === 'aws') {
-    settingInfo.splice(9, 0, {
-      name: t('所属VPC'),
-      prop: 'vpc_id',
-      render(val: any) {
-        return val;
+    settingInfo.splice(
+      9,
+      0,
+      {
+        name: t('所属VPC'),
+        prop: 'vpc_id',
+        render(val: any) {
+          return val;
+        },
       },
-    }, {
-      name: t('所属云VPC'),
-      prop: 'cloud_vpc_id',
-      render(val: any) {
-        return val;
+      {
+        name: t('所属云VPC'),
+        prop: 'cloud_vpc_id',
+        render(val: any) {
+          return val;
+        },
       },
-    });
+    );
   }
 } else if (props.vendor === 'azure') {
-  settingInfo.splice(7, 0, {
-    name: t('关联网络接口数'),
-    prop: 'network_interface_count',
-    render(val: any) {
-      return val;
+  settingInfo.splice(
+    7,
+    0,
+    {
+      name: t('关联网络接口数'),
+      prop: 'network_interface_count',
+      render(val: any) {
+        return val;
+      },
     },
-  }, {
-    name: t('关联子网数'),
-    prop: 'subnet_count',
-    render(val: any) {
-      return val;
+    {
+      name: t('关联子网数'),
+      prop: 'subnet_count',
+      render(val: any) {
+        return val;
+      },
     },
-  });
+  );
 }
 
 const handleChange = async (val: any) => {
@@ -145,16 +145,12 @@ const handleChange = async (val: any) => {
       message: t('更新成功'),
     });
     props.getDetail();
-  } catch (error) {
-
-  }
+  } catch (error) {}
 };
 </script>
 
 <template>
-  <bk-loading
-    :loading="props.loading"
-  >
+  <bk-loading :loading="props.loading">
     <detail-info :fields="settingInfo" :detail="props.detail" @change="handleChange"></detail-info>
   </bk-loading>
 </template>

@@ -100,7 +100,7 @@ export const useAllVendorsAccounts = () => {
     [VendorEnum.ZIYAN]: accountsMatrix[5],
   };
 
-  const checkIsExpand = (vendorName: VendorEnum) => accountsMatrix.find(item => item.vendor === vendorName)?.isExpand;
+  const checkIsExpand = (vendorName: VendorEnum) => accountsMatrix.find((item) => item.vendor === vendorName)?.isExpand;
 
   const handleExpand = (vendorName: VendorEnum) => {
     for (const item of accountsMatrix) {
@@ -124,17 +124,17 @@ export const useAllVendorsAccounts = () => {
         op: 'and',
         rules: accountName.length
           ? [
-            { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
-            { field: 'name', op: QueryRuleOPEnum.CS, value: accountName },
-            { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
-          ]
+              { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
+              { field: 'name', op: QueryRuleOPEnum.CS, value: accountName },
+              { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
+            ]
           : [
-            { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
-            { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
-          ],
+              { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
+              { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
+            ],
       }))
       .map((filter) => {
-        return [false, true].map(isCount => ({
+        return [false, true].map((isCount) => ({
           filter,
           page: {
             start: 0,
@@ -143,8 +143,8 @@ export const useAllVendorsAccounts = () => {
           },
         }));
       });
-    const detailPromises = payloads.map(payload => accountStore.getAccountList(payload[0]));
-    const countPromises = payloads.map(payload => accountStore.getAccountList(payload[1]));
+    const detailPromises = payloads.map((payload) => accountStore.getAccountList(payload[0]));
+    const countPromises = payloads.map((payload) => accountStore.getAccountList(payload[1]));
     const detailRes = await Promise.all(detailPromises);
     const countRes = await Promise.all(countPromises);
     accountsMatrix.forEach((obj, idx) => {
@@ -159,25 +159,30 @@ export const useAllVendorsAccounts = () => {
   const getVendorAccountList = async (vendor: VendorEnum, accountName = '') => {
     isLoading.value = true;
     pageOptions[vendor].start += 50;
-    const [res1, res2] = await Promise.all([false, true].map(isCount => accountStore.getAccountList({
-      filter: {
-        op: 'and',
-        rules: accountName.length ? [
-          { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
-          { field: 'name', op: QueryRuleOPEnum.CS, value: accountName },
-          { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
-        ]
-          : [
-            { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
-            { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
-          ],
-      },
-      page: {
-        start: isCount ? 0 : pageOptions[vendor].start,
-        limit: isCount ? 0 : 50,
-        count: isCount,
-      },
-    })));
+    const [res1, res2] = await Promise.all(
+      [false, true].map((isCount) =>
+        accountStore.getAccountList({
+          filter: {
+            op: 'and',
+            rules: accountName.length
+              ? [
+                  { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
+                  { field: 'name', op: QueryRuleOPEnum.CS, value: accountName },
+                  { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
+                ]
+              : [
+                  { field: 'vendor', op: QueryRuleOPEnum.EQ, value: vendor },
+                  { field: 'type', op: QueryRuleOPEnum.EQ, value: 'resource' },
+                ],
+          },
+          page: {
+            start: isCount ? 0 : pageOptions[vendor].start,
+            limit: isCount ? 0 : 50,
+            count: isCount,
+          },
+        }),
+      ),
+    );
     isLoading.value = false;
     vendorAccountMatrixMap[vendor].accounts = [...vendorAccountMatrixMap[vendor].accounts, ...res1.data.details];
     vendorAccountMatrixMap[vendor].count = res2.data.count;
@@ -193,4 +198,3 @@ export const useAllVendorsAccounts = () => {
     checkIsExpand,
   };
 };
-
