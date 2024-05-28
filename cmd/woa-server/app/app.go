@@ -25,13 +25,13 @@ import (
 	"net"
 	"strconv"
 
+	"hcm/cmd/cloud-server/service/sync/lock"
 	"hcm/cmd/woa-server/options"
 	"hcm/cmd/woa-server/service"
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
 	"hcm/pkg/runtime/ctl"
-	"hcm/pkg/runtime/ctl/cmd"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 )
@@ -40,10 +40,17 @@ import (
 func Run(opt *options.Option) error {
 	s := new(woaServer)
 	if err := s.prepare(opt); err != nil {
+		logs.Errorf("run prepare failed, err: %v", err)
 		return err
 	}
 
 	if err := s.svc.ListenAndServeRest(); err != nil {
+		logs.Errorf("run listen and serve rest failed, err: %v", err)
+		return err
+	}
+
+	if err := s.register(); err != nil {
+		logs.Errorf("run register failed, err: %v", err)
 		return err
 	}
 
@@ -54,7 +61,6 @@ func Run(opt *options.Option) error {
 
 type woaServer struct {
 	svc *service.Service
-	dis serviced.Discover
 	sd  serviced.Service
 }
 
@@ -76,32 +82,48 @@ func (s *woaServer) prepare(opt *options.Option) error {
 	// new api server discovery client.
 	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network)
 	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName}}
-	dis, err := serviced.NewDiscovery(cc.WoaServer().Service, discOpt)
-	if err != nil {
-		return fmt.Errorf("new service discovery failed, err: %v", err)
-	}
 	sd, err := serviced.NewServiceD(cc.WoaServer().Service, svcOpt, discOpt)
 	if err != nil {
-		return fmt.Errorf("new serviced failed, err: %v", err)
+		return fmt.Errorf("new serviced discovery failed, err: %v", err)
 	}
-	s.dis = dis
 	s.sd = sd
 	logs.Infof("create discovery success.")
 
-	svc, err := service.NewService(s.dis, s.sd)
+	// init service.
+	svc, err := service.NewService(sd, s.sd)
 	if err != nil {
+		logs.Errorf("initialize service failed, err: %v", err)
 		return fmt.Errorf("initialize service failed, err: %v", err)
 	}
 	s.svc = svc
 
 	// init hcm control tool
-	if err := ctl.LoadCtl(cmd.WithLog()); err != nil {
+	if err := ctl.LoadCtl(ctl.WithBasics(sd)...); err != nil {
 		return fmt.Errorf("load control tool failed, err: %v", err)
 	}
 
+	logs.Infof("initialize service success.")
+	return nil
+}
+
+// register woa-server to etcd.
+func (s *woaServer) register() error {
+	if err := s.sd.Register(); err != nil {
+		return fmt.Errorf("register woa server failed, err: %v", err)
+	}
+
+	logs.Infof("register woa server to etcd success.")
 	return nil
 }
 
 func (s *woaServer) finalizer() {
+	lock.Manager.Close()
+
+	if err := s.sd.Deregister(); err != nil {
+		logs.Errorf("process service shutdown, but deregister failed, err: %v", err)
+		return
+	}
+
+	logs.Infof("shutting down service, deregister service success.")
 	return
 }

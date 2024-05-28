@@ -28,25 +28,33 @@ import (
 	"strconv"
 	"time"
 
+	"hcm/cmd/woa-server/logics/task/informer"
+	"hcm/cmd/woa-server/logics/task/operation"
+	"hcm/cmd/woa-server/logics/task/recycler"
+	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/cvm"
 	"hcm/cmd/woa-server/service/pool"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
+	"hcm/cmd/woa-server/storage/dal/mongo/local"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	redisCli "hcm/cmd/woa-server/storage/driver/redis"
+	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/esb"
-	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
+	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/handler"
 	"hcm/pkg/iam/auth"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
 	"hcm/pkg/rest"
+	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/tools/ssl"
@@ -56,6 +64,7 @@ import (
 
 // Service do all the woa server's work
 type Service struct {
+	client *client.ClientSet
 	// EsbClient 调用接入ESB的第三方系统API集合
 	esbClient esb.Client
 	// authorizer 鉴权所需接口集合
@@ -64,10 +73,35 @@ type Service struct {
 	mongoConf      *mongo.Config
 	mongoWatchConf *mongo.Config
 	serviceState   serviced.State
+	clientConf     cc.ClientConfig
+	schedulerIf    scheduler.Interface
+	informerIf     informer.Interface
+	recyclerIf     recycler.Interface
+	operationIf    operation.Interface
 }
 
 // NewService create a service instance.
-func NewService(dis serviced.Discover, sd serviced.State) (*Service, error) {
+func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, error) {
+	tls := cc.WoaServer().Network.TLS
+
+	var tlsConfig *ssl.TLSConfig
+	if tls.Enable() {
+		tlsConfig = &ssl.TLSConfig{
+			InsecureSkipVerify: tls.InsecureSkipVerify,
+			CertFile:           tls.CertFile,
+			KeyFile:            tls.KeyFile,
+			CAFile:             tls.CAFile,
+			Password:           tls.Password,
+		}
+	}
+
+	// initiate system api client set.
+	restCli, err := restcli.NewClient(tlsConfig)
+	if err != nil {
+		return nil, err
+	}
+	apiClientSet := client.NewClientSet(restCli, dis)
+
 	// 创建ESB Client
 	esbConfig := cc.WoaServer().Esb
 	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
@@ -115,13 +149,57 @@ func NewService(dis serviced.Discover, sd serviced.State) (*Service, error) {
 		return nil, err
 	}
 
+	// init task service logics
+	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+	if err != nil {
+		logs.Errorf("new loop stream failed, err: %v", err)
+		return nil, err
+	}
+
+	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+	if err != nil {
+		logs.Errorf("new watch mongo client failed, err: %v", err)
+		return nil, err
+	}
+
+	informerIf, err := informer.New(loopW, watchDB)
+	if err != nil {
+		logs.Errorf("new informer failed, err: %v", err)
+		return nil, err
+	}
+
+	kt := kit.New()
+	schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+	if err != nil {
+		logs.Errorf("new scheduler failed, err: %v", err)
+		return nil, err
+	}
+
+	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient)
+	if err != nil {
+		logs.Errorf("new recycler failed, err: %v", err)
+		return nil, err
+	}
+
+	operationIf, err := operation.New(kt.Ctx)
+	if err != nil {
+		logs.Errorf("new operation failed, err: %v", err)
+		return nil, err
+	}
+
 	return &Service{
+		client:         apiClientSet,
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
 		mongoConf:      mongoConf,
 		mongoWatchConf: watchConf,
 		serviceState:   sd,
+		clientConf:     cc.WoaServer().ClientConfig,
+		informerIf:     informerIf,
+		schedulerIf:    schedulerIf,
+		recyclerIf:     recyclerIf,
+		operationIf:    operationIf,
 	}, nil
 }
 
@@ -186,29 +264,27 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	c := &capability.Capability{
-		WebService: ws,
-		Authorizer: s.authorizer,
-		EsbClient:  s.esbClient,
-		ThirdCli:   s.thirdCli,
-		ClientConf: cc.WoaServer().ClientConfig,
+		WebService:  ws,
+		Authorizer:  s.authorizer,
+		EsbClient:   s.esbClient,
+		ThirdCli:    s.thirdCli,
+		ClientConf:  s.clientConf,
+		SchedulerIf: s.schedulerIf,
+		InformerIf:  s.informerIf,
+		RecyclerIf:  s.recyclerIf,
+		OperationIf: s.operationIf,
 	}
 
 	config.InitService(c)
 	pool.InitService(c)
 	cvm.InitService(c)
-
-	taskOptions := types.Config{
-		Mongo:      *s.mongoConf,
-		WatchMongo: *s.mongoWatchConf,
-		ClientConf: c.ClientConf,
-	}
-	task.InitService(c, s.serviceState, taskOptions)
+	task.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }
 
 // Healthz service health check.
-func (s *Service) Healthz(w http.ResponseWriter, r *http.Request) {
+func (s *Service) Healthz(w http.ResponseWriter, _ *http.Request) {
 	if shutdown.IsShuttingDown() {
 		logs.Errorf("service healthz check failed, current service is shutting down")
 		w.WriteHeader(http.StatusServiceUnavailable)

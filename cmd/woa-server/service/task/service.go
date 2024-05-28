@@ -19,21 +19,12 @@ import (
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/thirdparty/iamapi"
-	types "hcm/cmd/woa-server/types/task"
-	"hcm/pkg/kit"
-	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/serviced"
 )
 
 // InitService initial the service
-func InitService(c *capability.Capability, dis serviced.State, config types.Config) {
-	logics, err := taskLogics.New(kit.New().Ctx, dis, config, c.ThirdCli, c.EsbClient)
-	if err != nil {
-		logs.Errorf("woa-server init task service failed, err: %v", err)
-		panic(err)
-	}
-
+func InitService(c *capability.Capability) {
+	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
 		logics: logics,
 		Cc:     c.EsbClient.Cmdb(),

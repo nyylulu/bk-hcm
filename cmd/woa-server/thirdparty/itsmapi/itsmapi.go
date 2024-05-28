@@ -38,7 +38,7 @@ type ITSMClientInterface interface {
 }
 
 // NewIAMClientInterface creates iam api instance
-func NewIAMClientInterface(opts cc.ItsmCli, reg prometheus.Registerer) (ITSMClientInterface, error) {
+func NewIAMClientInterface(opts cc.ApiGateway, reg prometheus.Registerer) (ITSMClientInterface, error) {
 	cli, err := client.NewClient(nil)
 	if err != nil {
 		return nil, err
@@ -48,28 +48,28 @@ func NewIAMClientInterface(opts cc.ItsmCli, reg prometheus.Registerer) (ITSMClie
 		Client: cli,
 		Discover: &ServerDiscovery{
 			name:    "itsm api",
-			servers: []string{opts.ITSMApiAddr},
+			servers: opts.Endpoints,
 		},
 		MetricOpts: client.MetricOption{Register: reg},
 	}
 
-	client := &itsmCli{
+	itsmClient := &itsmCli{
 		client: rest.NewClient(c, ""),
 	}
 
-	return client, nil
+	return itsmClient, nil
 }
 
 // itsmApi itsm api interface implementation
 type itsmCli struct {
 	client rest.ClientInterface
-	opts   *cc.ItsmCli
+	opts   *cc.ApiGateway
 }
 
 func (c *itsmCli) getAuthHeader() (string, string) {
 	key := "X-Bkapi-Authorization"
 	val := fmt.Sprintf("{\"bk_app_code\": \"%s\", \"bk_app_secret\": \"%s\", \"bk_username\":\"%s\"}", c.opts.AppCode,
-		c.opts.AppSecret, c.opts.Operator)
+		c.opts.AppSecret, c.opts.User)
 
 	return key, val
 }
@@ -85,22 +85,22 @@ func (c *itsmCli) CreateTicket(ctx context.Context, header http.Header, user str
 	}
 	header.Set(key, val)
 	req := &CreateTicketReq{
-		ServiceId: int(c.opts.ServiceId),
+		ServiceId: int(c.opts.ServiceID),
 		Creator:   user,
 		Fields: []*TicketField{
-			&TicketField{
+			{
 				Key:   TicketKeyTitle,
 				Value: fmt.Sprintf(TicketValTitleFormat, orderId),
 			},
-			&TicketField{
+			{
 				Key:   TicketKeyApplyId,
 				Value: strconv.Itoa(int(orderId)),
 			},
-			&TicketField{
+			{
 				Key:   TicketKeyApplyLink,
 				Value: fmt.Sprintf(c.opts.ApplyLinkFmt, orderId),
 			},
-			&TicketField{
+			{
 				Key:   TicketKeyNeedSysAudit,
 				Value: TicketValNeedSysAuditNo,
 			},

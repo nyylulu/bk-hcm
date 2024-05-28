@@ -671,8 +671,10 @@ type ApiGateway struct {
 	// BkTicket is the BlueKing access ticket of hcm to request api gateway.
 	BkTicket string `yaml:"bkTicket"`
 	// BkToken is the BlueKing access token of hcm to request api gateway.
-	BkToken string    `yaml:"bkToken"`
-	TLS     TLSConfig `yaml:"tls"`
+	BkToken      string    `yaml:"bkToken"`
+	ServiceID    int64     `yaml:"serviceID"`
+	ApplyLinkFmt string    `yaml:"applyLinkFmt"`
+	TLS          TLSConfig `yaml:"tls"`
 }
 
 // validate hcm runtime.
@@ -862,7 +864,7 @@ type ClientConfig struct {
 	Safety    SafetyCli  `yaml:"safety"`
 	BkChat    BkChatCli  `yaml:"bkchat"`
 	Sops      SopsCli    `yaml:"sops"`
-	ITSM      ItsmCli    `yaml:"itsm"`
+	ITSM      ApiGateway `yaml:"itsm"`
 }
 
 func (c ClientConfig) validate() error {
@@ -1314,32 +1316,6 @@ func (c SopsCli) validate() error {
 
 	if len(c.AppSecret) == 0 {
 		return errors.New("sops.app_secret is not set")
-	}
-
-	return nil
-}
-
-// ItsmCli itsm client options
-type ItsmCli struct {
-	ITSMApiAddr  string `yaml:"host"`
-	AppCode      string `yaml:"app_code"`
-	AppSecret    string `yaml:"app_secret"`
-	Operator     string `yaml:"operator"`
-	ServiceId    int64  `yaml:"service_id"`
-	ApplyLinkFmt string `yaml:"apply_link_fmt"`
-}
-
-func (c ItsmCli) validate() error {
-	if len(c.ITSMApiAddr) == 0 {
-		return errors.New("itsm.host is not set")
-	}
-
-	if len(c.AppCode) == 0 {
-		return errors.New("itsm.app_code is not set")
-	}
-
-	if len(c.AppSecret) == 0 {
-		return errors.New("itsm.app_secret is not set")
 	}
 
 	return nil
