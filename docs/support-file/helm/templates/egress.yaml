@@ -1,0 +1,43 @@
+apiVersion: bkbcs.tencent.com/v1alpha1
+kind: Egress
+metadata:
+  name: hcm-egress
+spec:
+  replicas: 2 # 创建的statefulset，副本数
+  gateImage: "mirrors.tencent.com/bcs/gate:latest"
+  podIPImage: "mirrors.tencent.com/bcs/podip:latest"
+  podDefaultDisabled: false # 默认true,处于关闭状态表示该pod不做转发，待pod ready之后
+  gateArgs:
+    - -backend=ipvs
+    - -outer=eth0
+  annotations:
+    tke.cloud.tencent.com/vpc-ip-claim-delete-policy: Never
+    tke.cloud.tencent.com/networks: "tke-route-eni"
+  podCidrs:
+    - 192.168.0.0/16
+    - 172.17.0.1/16
+    - 9.0.0.0/8
+    - 10.0.0.0/8
+    - 11.0.0.0/8
+    - 100.64.0.0/10
+    - 30.0.0.0/8
+  resources:
+    cpu: 500m
+    memory: 512Mi
+    tke.cloud.tencent.com/eni-ip: "1"
+  rules:
+    - dport: 80
+      host: api.yunti.oa.com # 云梯
+      protocol: TCP
+      sport: 80
+      service: api.yunti.oa.com
+    - dport: 80
+      host: alarm.nm.tencent-cloud.com # tmp
+      protocol: TCP
+      sport: 80
+      service: alarm.nm.tencent-cloud.com
+    - dport: 80
+      host: api.process.tencent-cloud.com # uwork
+      protocol: TCP
+      sport: 80
+      service: api.process.tencent-cloud.com
