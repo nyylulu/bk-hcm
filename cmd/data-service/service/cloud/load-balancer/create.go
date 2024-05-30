@@ -263,6 +263,7 @@ func convTargetGroupCreateReqToTable[T corelb.TargetGroupExtension](kt *kit.Kit,
 	return targetGroup, nil
 }
 
+// accountID 参数和tgID 参数 会覆盖rsList 中指定的参数. 对于cvm 类型数据会尝试查询对应的的cvm信息
 func (svc *lbSvc) batchCreateTargetWithGroupID(kt *kit.Kit, txn *sqlx.Tx, accountID, tgID string,
 	rsList []*dataproto.TargetBaseReq) ([]string, error) {
 
@@ -297,10 +298,13 @@ func (svc *lbSvc) batchCreateTargetWithGroupID(kt *kit.Kit, txn *sqlx.Tx, accoun
 
 	for _, item := range rsList {
 		tmpRs := &tablelb.LoadBalancerTargetTable{
-			AccountID:     accountID,
-			InstType:      item.InstType,
-			CloudInstID:   item.CloudInstID,
-			TargetGroupID: item.TargetGroupID,
+			AccountID:        item.AccountID,
+			IP:               item.IP,
+			InstType:         item.InstType,
+			CloudInstID:      item.CloudInstID,
+			TargetGroupID:    item.TargetGroupID,
+			PrivateIPAddress: item.PrivateIPAddress,
+			PublicIPAddress:  item.PublicIPAddress,
 			// for local target group its cloud id is same as local id
 			CloudTargetGroupID: item.TargetGroupID,
 			Port:               item.Port,
@@ -318,6 +322,10 @@ func (svc *lbSvc) batchCreateTargetWithGroupID(kt *kit.Kit, txn *sqlx.Tx, accoun
 			tmpRs.Zone = cvmMap[item.CloudInstID].Zone
 			tmpRs.AccountID = cvmMap[item.CloudInstID].AccountID
 			tmpRs.CloudVpcIDs = cvmMap[item.CloudInstID].CloudVpcIDs
+		}
+		if item.InstType == enumor.CcnInstType {
+			tmpRs.InstID = tmpRs.CloudInstID
+			tmpRs.AccountID = item.AccountID
 		}
 
 		rsModels = append(rsModels, tmpRs)
@@ -539,14 +547,14 @@ func (svc *lbSvc) BatchCreateListener(cts *rest.Contexts) (any, error) {
 
 	switch vendor {
 	case enumor.TCloud, enumor.TCloudZiyan:
-		return batchCreateListener(cts, svc)
+		return batchCreateListener[corelb.TCloudListenerExtension](cts, svc)
 	default:
 		return nil, errf.New(errf.InvalidParameter, "unsupported vendor: "+string(vendor))
 	}
 }
 
-func batchCreateListener(cts *rest.Contexts, svc *lbSvc) (any, error) {
-	req := new(dataproto.ListenerBatchCreateReq)
+func batchCreateListener[T corelb.ListenerExtension](cts *rest.Contexts, svc *lbSvc) (any, error) {
+	req := new(dataproto.ListenerBatchCreateReq[T])
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -558,6 +566,12 @@ func batchCreateListener(cts *rest.Contexts, svc *lbSvc) (any, error) {
 	result, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (any, error) {
 		models := make([]*tablelb.LoadBalancerListenerTable, 0, len(req.Listeners))
 		for _, item := range req.Listeners {
+			ext, err := json.MarshalToString(item.Extension)
+			if err != nil {
+				logs.Errorf("fail to marshal listener extension to json, err: %v, extension: %+v, rid: %s",
+					err, ext, cts.Kit.Rid)
+				return nil, err
+			}
 			models = append(models, &tablelb.LoadBalancerListenerTable{
 				CloudID:       item.CloudID,
 				Name:          item.Name,
@@ -569,6 +583,7 @@ func batchCreateListener(cts *rest.Contexts, svc *lbSvc) (any, error) {
 				Protocol:      item.Protocol,
 				Port:          item.Port,
 				DefaultDomain: item.DefaultDomain,
+				Extension:     types.JsonField(ext),
 				Creator:       cts.Kit.User,
 				Reviser:       cts.Kit.User,
 			})
@@ -715,24 +730,7 @@ func (svc *lbSvc) createListenerWithRule(kt *kit.Kit, txn *sqlx.Tx, item datapro
 
 	switch item.Vendor {
 	case enumor.TCloud:
-		ruleModels := []*tablelb.TCloudLbUrlRuleTable{{
-			CloudID:            item.CloudRuleID,
-			RuleType:           item.RuleType,
-			LbID:               item.LbID,
-			CloudLbID:          item.CloudLbID,
-			LblID:              lblIDs[0],
-			CloudLBLID:         item.CloudID,
-			TargetGroupID:      item.TargetGroupID,
-			CloudTargetGroupID: item.CloudTargetGroupID,
-			Domain:             item.Domain,
-			URL:                item.Url,
-			Scheduler:          item.Scheduler,
-			SessionType:        item.SessionType,
-			SessionExpire:      item.SessionExpire,
-			Certificate:        types.JsonField(certJSON),
-			Creator:            kt.User,
-			Reviser:            kt.User,
-		}}
+		ruleModels := []*tablelb.TCloudLbUrlRuleTable{convTCloudLBRule(kt, item, lblIDs[0], certJSON)}
 		ruleIDs, err := svc.dao.LoadBalancerTCloudUrlRule().BatchCreateWithTx(kt, txn, ruleModels)
 		if err != nil {
 			logs.Errorf("fail to batch create listener url rule, err: %v, rid:%s", err, kt.Rid)
@@ -741,34 +739,63 @@ func (svc *lbSvc) createListenerWithRule(kt *kit.Kit, txn *sqlx.Tx, item datapro
 		lblID = lblIDs[0]
 		ruleID = ruleIDs[0]
 	case enumor.TCloudZiyan:
-		ruleModels := []*tablelb.TCloudZiyanLbUrlRuleTable{{
-			CloudID:            item.CloudRuleID,
-			RuleType:           item.RuleType,
-			LbID:               item.LbID,
-			CloudLbID:          item.CloudLbID,
-			LblID:              lblIDs[0],
-			CloudLBLID:         item.CloudID,
-			TargetGroupID:      item.TargetGroupID,
-			CloudTargetGroupID: item.CloudTargetGroupID,
-			Domain:             item.Domain,
-			URL:                item.Url,
-			Scheduler:          item.Scheduler,
-			SessionType:        item.SessionType,
-			SessionExpire:      item.SessionExpire,
-			Certificate:        types.JsonField(certJSON),
-			Creator:            kt.User,
-			Reviser:            kt.User,
-		}}
+		ruleModels := []*tablelb.TCloudZiyanLbUrlRuleTable{convZiyanLBRule(kt, item, lblIDs[0], certJSON)}
 		ruleIDs, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().BatchCreateWithTx(kt, txn, ruleModels)
 		if err != nil {
-			logs.Errorf("fail to batch create listener url rule, err: %v, rid:%s", err, kt.Rid)
+			logs.Errorf("fail to batch create ziyan listener url rule, err: %v, rid:%s", err, kt.Rid)
 			return "", "", fmt.Errorf("batch create listener url rule failed, err: %v", err)
 		}
 		lblID = lblIDs[0]
 		ruleID = ruleIDs[0]
 	}
 
-	return
+	return lblID, ruleID, nil
+}
+
+func convTCloudLBRule(kt *kit.Kit, item dataproto.ListenerWithRuleCreateReq, lblID string,
+	certJSON string) *tablelb.TCloudLbUrlRuleTable {
+
+	return &tablelb.TCloudLbUrlRuleTable{
+		CloudID:            item.CloudRuleID,
+		RuleType:           item.RuleType,
+		LbID:               item.LbID,
+		CloudLbID:          item.CloudLbID,
+		LblID:              lblID,
+		CloudLBLID:         item.CloudID,
+		TargetGroupID:      item.TargetGroupID,
+		CloudTargetGroupID: item.CloudTargetGroupID,
+		Domain:             item.Domain,
+		URL:                item.Url,
+		Scheduler:          item.Scheduler,
+		SessionType:        item.SessionType,
+		SessionExpire:      item.SessionExpire,
+		Certificate:        types.JsonField(certJSON),
+		Creator:            kt.User,
+		Reviser:            kt.User,
+	}
+}
+
+func convZiyanLBRule(kt *kit.Kit, item dataproto.ListenerWithRuleCreateReq, lblID string,
+	certJSON string) *tablelb.TCloudZiyanLbUrlRuleTable {
+
+	return &tablelb.TCloudZiyanLbUrlRuleTable{
+		CloudID:            item.CloudRuleID,
+		RuleType:           item.RuleType,
+		LbID:               item.LbID,
+		CloudLbID:          item.CloudLbID,
+		LblID:              lblID,
+		CloudLBLID:         item.CloudID,
+		TargetGroupID:      item.TargetGroupID,
+		CloudTargetGroupID: item.CloudTargetGroupID,
+		Domain:             item.Domain,
+		URL:                item.Url,
+		Scheduler:          item.Scheduler,
+		SessionType:        item.SessionType,
+		SessionExpire:      item.SessionExpire,
+		Certificate:        types.JsonField(certJSON),
+		Creator:            kt.User,
+		Reviser:            kt.User,
+	}
 }
 
 // CreateResFlowLock 创建资源跟Flow的锁定关系
