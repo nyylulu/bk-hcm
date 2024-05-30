@@ -34,7 +34,8 @@ func tcloudZiyanService(h *rest.Handler, svc *lbSvc) {
 		http.MethodPatch, "/vendors/tcloud-ziyan/url_rules/batch/update", svc.BatchUpdateTCloudZiyanUrlRule)
 	h.Add("BatchDeleteTCloudUrlRule",
 		http.MethodDelete, "/vendors/tcloud-ziyan/url_rules/batch", svc.BatchDeleteTCloudZiyanUrlRule)
-	h.Add("ListTCloudUrlRule", http.MethodPost, "/vendors/tcloud-ziyan/load_balancers/url_rules/list", svc.ListTCloudZiyanUrlRule)
+	h.Add("ListTCloudUrlRule", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/url_rules/list", svc.ListTCloudZiyanUrlRule)
 }
 
 // ListTCloudZiyanUrlRule list tcloud url rule.
@@ -325,8 +326,8 @@ func (svc *lbSvc) BatchUpdateTCloudZiyanUrlRule(cts *rest.Contexts) (any, error)
 				}
 				update.Certificate = tabletype.JsonField(mergedCert)
 			}
-
-			if err = svc.dao.LoadBalancerTCloudZiyanUrlRule().UpdateByIDWithTx(cts.Kit, txn, rule.ID, update); err != nil {
+			err = svc.dao.LoadBalancerTCloudZiyanUrlRule().UpdateByIDWithTx(cts.Kit, txn, rule.ID, update)
+			if err != nil {
 				logs.Errorf("update tcloud rule by id failed, err: %v, id: %s, rid: %s", err, rule.ID, cts.Kit.Rid)
 				return nil, fmt.Errorf("update rule failed, err: %v", err)
 			}

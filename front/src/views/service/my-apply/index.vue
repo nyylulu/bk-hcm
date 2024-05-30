@@ -56,7 +56,12 @@ export default defineComponent({
   setup() {
     const accountStore = useAccountStore();
     const COM_MAP = Object.freeze(
-      new Map([[['add_account', 'service_apply', 'create_cvm', 'create_disk', 'create_vpc'], 'ApplyDetail']]),
+      new Map([
+        [
+          ['add_account', 'service_apply', 'create_cvm', 'create_disk', 'create_vpc', 'create_load_balancer'],
+          'ApplyDetail',
+        ],
+      ]),
     );
 
     const currCom = computed(() => {
@@ -200,8 +205,6 @@ export default defineComponent({
         const res = await accountStore.getApplyAccountList(filterParams.value);
         backupData.value = res.data.details;
         applyList.value.push(...res.data.details);
-      } catch (error) {
-        console.log('error', error);
       } finally {
         isApplyLoading.value = false;
       }
@@ -214,8 +217,6 @@ export default defineComponent({
         await accountStore.cancelApplyAccount(id);
         getMyApplyDetail(id);
         changeApplyitemStatus(id);
-      } catch (error) {
-        console.log(error);
       } finally {
         state.comInfo.cancelLoading = false;
       }
@@ -241,8 +242,6 @@ export default defineComponent({
         } else {
           initRequestQueue.value.length > 0 && initRequestQueue.value.shift();
         }
-      } catch (error) {
-        console.log('error', error);
       } finally {
         isApplyLoading.value = false;
         initRequestQueue.value.length > 0 && initRequestQueue.value.shift();
@@ -257,8 +256,6 @@ export default defineComponent({
         const res = await promise;
         state.comInfo.currentApplyData = res.data;
         state.comInfo.comKey = res.data.id;
-      } catch (error) {
-        console.log('error', error);
       } finally {
         initRequestQueue.value.length > 0 && initRequestQueue.value.shift();
         state.comInfo.loading = false;

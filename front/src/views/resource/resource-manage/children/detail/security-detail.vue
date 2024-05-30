@@ -2,19 +2,15 @@
 import DetailHeader from '../../common/header/detail-header';
 import DetailTab from '../../common/tab/detail-tab';
 import SecurityInfo from '../components/security/security-info.vue';
-import SecurityRelate from '../components/security/security-relate.vue';
+import SecurityRelate from '../components/security/security-relate';
 import SecurityRule from '../components/security/security-rule.vue';
 import SecurityBindCvm from '../components/security/security-bind-cvm';
-import {
-  useI18n,
-} from 'vue-i18n';
+import { useI18n } from 'vue-i18n';
 
 import { watch, ref, reactive } from 'vue';
 import { VendorEnum } from '@/common/constant';
 
-import {
-  useRoute,
-} from 'vue-router';
+import { useRoute } from 'vue-router';
 import useDetail from '../../hooks/use-detail';
 import { QueryRuleOPEnum } from '@/typings';
 import { useResourceStore } from '@/store';
@@ -45,13 +41,13 @@ const tabs = ref([
     name: t('基本信息'),
     value: 'detail',
   },
-  // {
-  //   name: t('关联实例'),
-  //   value: 'relate',
-  // },
   {
     name: t('安全组规则'),
     value: 'rule',
+  },
+  {
+    name: t('关联实例'),
+    value: 'relate',
   },
 ]);
 
@@ -174,10 +170,21 @@ const getTemplateData = async (detail: { account_id: string }) => {
           :detail="detail"
           :get-detail="getDetail"
         />
-        <security-relate v-if="type === 'relate'" />
-        <security-rule v-if="type === 'rule'" :filter="filter" :id="securityId" :vendor="vendor"
-                       :related-security-groups="relatedSecurityGroups" :template-data="templateData" />
-        <security-bind-cvm v-if="type === 'cvm'" :detail="detail" :sg-id="(securityId as string)" :sg-cloud-id="detail.cloud_id"/>
+        <security-rule
+          v-else-if="type === 'rule'"
+          :filter="filter"
+          :id="securityId"
+          :vendor="vendor"
+          :related-security-groups="relatedSecurityGroups"
+          :template-data="templateData"
+        />
+        <security-bind-cvm
+          v-else-if="type === 'cvm'"
+          :detail="detail"
+          :sg-id="(securityId as string)"
+          :sg-cloud-id="detail.cloud_id"
+        />
+        <security-relate v-else />
       </template>
     </detail-tab>
   </div>

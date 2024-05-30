@@ -136,10 +136,10 @@ func (cli *LoadBalancerClient) BatchDeleteTCloudUrlRule(kt *kit.Kit, req *datapr
 }
 
 // BatchCreateTCloudListener 批量创建腾讯云监听器
-func (cli *LoadBalancerClient) BatchCreateTCloudListener(kt *kit.Kit, req *dataproto.ListenerBatchCreateReq) (
-	*core.BatchCreateResult, error) {
+func (cli *LoadBalancerClient) BatchCreateTCloudListener(kt *kit.Kit,
+	req *dataproto.TCloudListenerBatchCreateReq) (*core.BatchCreateResult, error) {
 
-	return common.Request[dataproto.ListenerBatchCreateReq, core.BatchCreateResult](
+	return common.Request[dataproto.ListenerBatchCreateReq[corelb.TCloudListenerExtension], core.BatchCreateResult](
 		cli.client, rest.POST, kt, req, "/listeners/batch/create")
 }
 
