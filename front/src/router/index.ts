@@ -13,12 +13,12 @@ import service from './module/service';
 import serviceInside from './module/service-inside';
 import business from './module/business';
 import scheme from './module/scheme';
+import ziyanScr from './module/ziyan-scr';
 import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
 import { useVerify } from '@/hooks';
 
 const { t } = i18n.global;
-
 const routes: RouteRecordRaw[] = [
   ...common,
   ...workbench,
@@ -28,6 +28,7 @@ const routes: RouteRecordRaw[] = [
   ...serviceInside,
   ...business,
   ...scheme,
+  ...ziyanScr,
   {
     // path: '/',
     // name: 'index',

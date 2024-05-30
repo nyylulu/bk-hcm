@@ -1,6 +1,7 @@
 /* eslint-disable no-nested-ternary */
 import { QueryRuleOPEnum, RulesItem } from '@/typings/common';
 import { FilterType } from '@/typings';
+import http from '@/http';
 import { Loading, SearchSelect, Table } from 'bkui-vue';
 import type { Column } from 'bkui-vue/lib/table/props';
 import { ISearchItem } from 'bkui-vue/lib/search-select/utils';
@@ -19,7 +20,7 @@ import usePagination from '../usePagination';
 
 export interface IProp {
   // search-select 配置项
-  searchOptions: {
+  searchOptions?: {
     // search-select 可选项
     searchData?: Array<ISearchItem> | (() => Array<ISearchItem>);
     // 是否禁用 search-select
@@ -39,7 +40,7 @@ export interface IProp {
     extra?: Object;
   };
   // 请求相关字段
-  requestOption: {
+  requestOption?: {
     // 资源类型
     type: string;
     // 排序参数
@@ -70,11 +71,26 @@ export interface IProp {
   };
   // 资源下筛选业务功能相关的 prop
   bizFilter?: FilterType;
+  // Scr插槽配置项
+  slotAllocation?: () => {
+    // 是否开启上方的查询表单项和按钮
+    ScrSwitch: Boolean;
+    interface: {
+      // 请求接口参数data
+      Parameters: Object;
+      // 查询参数filter
+      filter: Object;
+      // 请求接口路径
+      path: string;
+      // 请求接口方式
+      method?: string;
+    };
+  };
 }
 
 export const useTable = (props: IProp) => {
   const { whereAmI } = useWhereAmI();
-
+  const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
   const regionsStore = useRegionsStore();
   const resourceStore = useResourceStore();
   const businessStore = useBusinessStore();
@@ -120,47 +136,70 @@ export const useTable = (props: IProp) => {
       return;
     }
     isLoading.value = true;
-
-    // 判断是业务下, 还是资源下
-    const api = whereAmI.value === Senarios.business ? businessStore.list : resourceStore.list;
-    // 请求数据
-    const [detailsRes, countRes] = await Promise.all(
-      [false, true].map((isCount) =>
-        api(
-          {
-            page: {
-              limit: isCount ? 0 : pagination.limit,
-              start: isCount ? 0 : pagination.start,
-              sort: isCount ? undefined : sort.value,
-              order: isCount ? undefined : order.value,
-              count: isCount,
+    if (typeof props?.slotAllocation === 'function') {
+      const {
+        interface: { Parameters, path },
+      } = props?.slotAllocation();
+      // Scr表格请求接口结构;
+      try {
+        const Scrdata = await http.post(BK_HCM_AJAX_URL_PREFIX + path, Parameters);
+        // 更新数据
+        dataList.value = props.requestOption.dataPath
+          ? lodash_get(Scrdata, props.requestOption.dataPath)
+          : Scrdata?.data?.info;
+        // 处理 pagination.count
+        if (typeof props.requestOption.resolvePaginationCountCb === 'function') {
+          props.requestOption.resolvePaginationCountCb(Scrdata?.data).then((newCount: number) => {
+            pagination.count = newCount;
+          });
+        } else {
+          pagination.count = Scrdata?.data?.count || 0;
+        }
+      } finally {
+        dataList.value = [];
+        pagination.count = 0;
+      }
+    } else {
+      // 判断是业务下, 还是资源下
+      const api = whereAmI.value === Senarios.business ? businessStore.list : resourceStore.list;
+      // 请求数据
+      const [detailsRes, countRes] = await Promise.all(
+        [false, true].map((isCount) =>
+          api(
+            {
+              page: {
+                limit: isCount ? 0 : pagination.limit,
+                start: isCount ? 0 : pagination.start,
+                sort: isCount ? undefined : sort.value,
+                order: isCount ? undefined : order.value,
+                count: isCount,
+              },
+              filter: { op: filter.op, rules: filter.rules },
+              ...props.requestOption.extension,
             },
-            filter: { op: filter.op, rules: filter.rules },
-            ...props.requestOption.extension,
-          },
-          type ? type : props.requestOption.type,
+            type ? type : props.requestOption.type,
+          ),
         ),
-      ),
-    );
-    // 更新数据
-    dataList.value = props.requestOption.dataPath
-      ? lodash_get(detailsRes, props.requestOption.dataPath)
-      : detailsRes?.data?.details;
+      );
+      // 更新数据
+      dataList.value = props.requestOption.dataPath
+        ? lodash_get(detailsRes, props.requestOption.dataPath)
+        : detailsRes?.data?.details;
+      // 处理 pagination.count
+      if (typeof props.requestOption.resolvePaginationCountCb === 'function') {
+        props.requestOption.resolvePaginationCountCb(countRes?.data).then((newCount: number) => {
+          pagination.count = newCount;
+        });
+      } else {
+        pagination.count = countRes?.data?.count || 0;
+      }
+    }
 
     // 异步处理 dataList
     if (typeof props.requestOption.resolveDataListCb === 'function') {
       props.requestOption.resolveDataListCb(dataList.value, getListData).then((newDataList: any[]) => {
         dataList.value = newDataList;
       });
-    }
-
-    // 处理 pagination.count
-    if (typeof props.requestOption.resolvePaginationCountCb === 'function') {
-      props.requestOption.resolvePaginationCountCb(countRes?.data).then((newCount: number) => {
-        pagination.count = newCount;
-      });
-    } else {
-      pagination.count = countRes?.data?.count || 0;
     }
 
     isLoading.value = false;
@@ -177,20 +216,25 @@ export const useTable = (props: IProp) => {
       });
 
       return () => (
-        <div class={`remote-table-container${props.searchOptions.disabled ? ' no-search' : ''}`}>
-          <section class='operation-wrap'>
-            {slots.operation && <div class='operate-btn-groups'>{slots.operation?.()}</div>}
-            {!props.searchOptions.disabled && (
-              <SearchSelect
-                class='table-search-selector'
-                style={props.searchOptions?.extra?.searchSelectExtStyle}
-                v-model={searchVal.value}
-                data={searchData.value}
-                valueBehavior='need-key'
-                {...(props.searchOptions.extra || {})}
-              />
-            )}
-          </section>
+        <div class={`remote-table-container${props?.searchOptions?.disabled ? ' no-search' : ''}`}>
+          {typeof props?.slotAllocation === 'function' ? (
+            props?.slotAllocation().ScrSwitch && <div class='slotstabselect'> {slots.tabselect?.()}</div>
+          ) : (
+            <section class='operation-wrap'>
+              {slots.operation && <div class='operate-btn-groups'>{slots.operation?.()}</div>}
+              {!props.searchOptions.disabled && (
+                <SearchSelect
+                  class='table-search-selector'
+                  style={props.searchOptions?.extra?.searchSelectExtStyle}
+                  v-model={searchVal.value}
+                  data={searchData.value}
+                  valueBehavior='need-key'
+                  {...(props.searchOptions.extra || {})}
+                />
+              )}
+            </section>
+          )}
+
           <Loading loading={isLoading.value} class='loading-table-container'>
             <Table
               class='table-container'

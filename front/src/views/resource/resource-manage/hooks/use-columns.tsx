@@ -23,6 +23,7 @@ import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostO
 import './use-columns.scss';
 import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
+import { capacityLevel } from '@/utils/scr';
 import { IP_VERSION_MAP, LBRouteName, LB_NETWORK_TYPE_MAP, SCHEDULER_MAP } from '@/constants/clb';
 import { getInstVip } from '@/utils';
 import dayjs from 'dayjs';
@@ -1797,7 +1798,122 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       ),
     },
   ];
-
+  const hIColumns = [
+    {
+      label: '需求类型',
+      field: 'require_type',
+    },
+    {
+      label: '实例族',
+      field: 'label.device_group',
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: 'CPU(核)',
+      field: 'cpu',
+      sort: true,
+    },
+    {
+      label: '内存(G)',
+      field: 'mem',
+      sort: true,
+    },
+    {
+      label: '地域',
+      field: 'region',
+    },
+    {
+      label: '园区',
+      field: 'zone',
+    },
+    {
+      label: '库存情况',
+      field: 'capacity_flag',
+      render({ cell }: { cell: string }) {
+        const { class: theClass, text } = capacityLevel(cell);
+        return <span class={theClass}>{text}</span>;
+      },
+    },
+  ];
+  const CHColumns = [
+    {
+      label: '机型',
+      field: 'require_type',
+    },
+    {
+      label: '需求数量',
+      field: 'label.device_group',
+    },
+    {
+      label: '地域',
+      field: 'device_type',
+    },
+    {
+      label: '园区',
+      field: 'device_type',
+    },
+    {
+      label: '镜像',
+      field: 'cpu',
+      sort: true,
+    },
+    {
+      label: '数据盘大小',
+      field: 'mem',
+      sort: true,
+    },
+    {
+      label: '数据盘类型',
+      field: 'region',
+    },
+    {
+      label: '网络类型',
+      field: 'capacity_flag',
+      render({ cell }: { cell: string }) {
+        const { class: theClass, text } = capacityLevel(cell);
+        return <span class={theClass}>{text}</span>;
+      },
+    },
+    {
+      label: '备注',
+      field: 'zone',
+    },
+  ];
+  const PMColumns = [
+    {
+      label: '机型',
+      field: 'require_type',
+    },
+    {
+      label: '需求数量',
+      field: 'label.device_group',
+    },
+    {
+      label: '地域',
+      field: 'device_type',
+    },
+    {
+      label: '园区',
+      field: 'cpu',
+      sort: true,
+    },
+    {
+      label: 'RAID 类型',
+      field: 'mem',
+      sort: true,
+    },
+    {
+      label: '操作系统',
+      field: 'region',
+    },
+    {
+      label: '备注',
+      field: 'region',
+    },
+  ];
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -1819,6 +1935,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     url: urlColumns,
     targetGroupListener: targetGroupListenerColumns,
     cert: certColumns,
+    hostInventor: hIColumns,
+    CloudHost: CHColumns,
+    PhysicalMachine: PMColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

@@ -56,7 +56,6 @@ export function deepMerge(...objectArray: any) {
 export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss') {
   return val ? dayjs(val).format(format) : '--';
 }
-
 /**
  * 相对当前的时间
  * @param val 待比较的时间
@@ -174,9 +173,11 @@ export function formatStorageSize(value: number, digits = 0) {
 export function getScoreColor(score: number) {
   if (score > 0 && score < 180) {
     return '#00A62B';
-  } else if (score >= 180 && score <= 360) {
+  }
+  if (score >= 180 && score <= 360) {
     return '#FF9D00';
-  } else if (score > 360) {
+  }
+  if (score > 360) {
     return '#EA3636';
   }
   return '#63656E';

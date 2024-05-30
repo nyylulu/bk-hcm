@@ -386,7 +386,9 @@ export default defineComponent({
                       activeKey={route.meta.activeKey as string}>
                       {menus.value.map((menuItem) =>
                         Array.isArray(menuItem.children) ? (
-                          <Menu.Group key={menuItem.path as string} name={menuItem.name as string}>
+                          <Menu.Group
+                            key={menuItem.path as string}
+                            name={(menuItem.name as string) || (menuItem.meta.menuName as string)}>
                             {{
                               default: () =>
                                 menuItem.children

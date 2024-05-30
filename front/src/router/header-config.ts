@@ -19,6 +19,11 @@ export const headRouteConfig = [
     path: '/resource/resource',
   },
   {
+    id: 'ziyanScr',
+    name: '自研云资源',
+    path: '/ziyanScr/hostInventory',
+  },
+  {
     id: 'scheme',
     name: '资源选型',
     path: '/scheme/recommendation',

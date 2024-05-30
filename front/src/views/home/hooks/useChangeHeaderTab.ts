@@ -5,6 +5,7 @@ import workbench from '@/router/module/workbench';
 import resource from '@/router/module/resource';
 import service from '@/router/module/service';
 import business from '@/router/module/business';
+import ziyanScr from '@/router/module/ziyan-scr';
 import scheme from '@/router/module/scheme';
 // import stores
 import { useAccountStore } from '@/store';
@@ -66,6 +67,9 @@ export default (businessId: Ref<number>, businessList: Ref<any[]>) => {
     // 更新当前 active header-tab
     topMenuActiveItem.value = id;
     switch (id) {
+      case 'ziyanScr':
+        menus.value = ziyanScr;
+        break;
       case 'business':
         menus.value = business;
         // 业务下需要获取业务列表
