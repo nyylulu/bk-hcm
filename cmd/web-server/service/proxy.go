@@ -46,7 +46,7 @@ type proxy struct {
 func newProxy(dis serviced.Discover, cli *http.Client) (*proxy, error) {
 	apiDiscovery := make(map[cc.Name]*discovery.APIDiscovery)
 
-	discoverServices := []cc.Name{cc.CloudServerName}
+	discoverServices := []cc.Name{cc.CloudServerName, cc.WoaServerName}
 	for _, service := range discoverServices {
 		apiDiscovery[service] = discovery.NewAPIDiscovery(service, dis)
 	}
@@ -138,7 +138,7 @@ func (p *proxy) proxyRequest(req *restful.Request, w http.ResponseWriter) {
 
 	servers, err := discovery.GetServers()
 	if err != nil {
-		logs.Errorf("received request service %s has no servers, path: %s", service, req.Request.URL.Path)
+		logs.Errorf("received request service %s has no servers, path: %s, err: %v", service, req.Request.URL.Path, err)
 		fmt.Fprintf(w, errf.New(http.StatusNotFound, "Servers Not Found").Error())
 		return
 	}
