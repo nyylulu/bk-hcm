@@ -1538,6 +1538,15 @@ type CreateLoadBalancerRequest struct {
 
 	// 网络出口
 	Egress *string `json:"Egress,omitnil,omitempty" name:"Egress"`
+
+	// ZhiTong 【仅限自研云】是否支持直通
+	ZhiTong *bool `json:"ZhiTong,omitnil,omitempty" name:"ZhiTong"`
+
+	// TgwGroupName 【仅限自研云】Tgw独占集群标签，配置为TgwGroupName='ziyan_mianliu' 支持免流
+	TgwGroupName *string `json:"TgwGroupName,omitnil,omitempty" name:"TgwGroupName"`
+
+	// Zones【仅限自研云】 多可用区，仅适用于私有网络内网负载均衡。内网就近接入时，选择可用区下发。
+	Zones []*string `json:"Zones,omitnil,omitempty" name:"Zones"`
 }
 
 func (r *CreateLoadBalancerRequest) ToJsonString() string {
@@ -1548,41 +1557,6 @@ func (r *CreateLoadBalancerRequest) ToJsonString() string {
 // FromJsonString It is highly **NOT** recommended to use this function
 // because it has no param check, nor strict type check
 func (r *CreateLoadBalancerRequest) FromJsonString(s string) error {
-	f := make(map[string]interface{})
-	if err := json.Unmarshal([]byte(s), &f); err != nil {
-		return err
-	}
-	delete(f, "LoadBalancerType")
-	delete(f, "Forward")
-	delete(f, "LoadBalancerName")
-	delete(f, "VpcId")
-	delete(f, "SubnetId")
-	delete(f, "ProjectId")
-	delete(f, "AddressIPVersion")
-	delete(f, "Number")
-	delete(f, "MasterZoneId")
-	delete(f, "ZoneId")
-	delete(f, "InternetAccessible")
-	delete(f, "VipIsp")
-	delete(f, "Tags")
-	delete(f, "Vip")
-	delete(f, "BandwidthPackageId")
-	delete(f, "ExclusiveCluster")
-	delete(f, "SlaType")
-	delete(f, "ClusterIds")
-	delete(f, "ClientToken")
-	delete(f, "SnatPro")
-	delete(f, "SnatIps")
-	delete(f, "ClusterTag")
-	delete(f, "SlaveZoneId")
-	delete(f, "EipAddressId")
-	delete(f, "LoadBalancerPassToTarget")
-	delete(f, "DynamicVip")
-	delete(f, "Egress")
-	if len(f) > 0 {
-		return tcerr.NewTencentCloudSDKError("ClientError.BuildRequestError",
-			"CreateLoadBalancerRequest has unknown keys!", "")
-	}
 	return json.Unmarshal([]byte(s), &r)
 }
 
