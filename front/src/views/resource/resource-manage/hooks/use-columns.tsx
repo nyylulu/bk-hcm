@@ -25,7 +25,8 @@ import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
 import { IP_VERSION_MAP, LBRouteName, LB_NETWORK_TYPE_MAP, SCHEDULER_MAP } from '@/constants/clb';
-import { getInstVip } from '@/utils';
+import { getInstVip, getResourceTypeName, getReturnPlanName } from '@/utils';
+import { getRecycleTaskStatusView } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
 import dayjs from 'dayjs';
 
 interface LinkFieldOptions {
@@ -1914,6 +1915,100 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'region',
     },
   ];
+  // 资源 - 主机回收列表
+  const recycleOrderColumns = [
+    {
+      type: 'selection',
+    },
+    {
+      label: '单号',
+      field: 'orderId',
+      width: 80,
+    },
+    {
+      label: '子单号',
+      field: 'suborderId',
+      width: 80,
+      // 单据详情
+      render: ({ row }) => {
+        return (
+          // <router-link to={{ name: 'recycle-detail', query: { suborderId: row.suborderId } }}></router-link>
+          <span>{row.suborderId}</span>
+        );
+      },
+    },
+    {
+      label: '业务',
+      field: 'bkBizId',
+    },
+    {
+      label: '资源类型',
+      field: 'resourceType',
+      width: 120,
+      render: ({ row }) => {
+        return <span>{getResourceTypeName(row.resourceType)}</span>;
+      },
+    },
+    {
+      label: '回收类型',
+      field: 'returnPlan',
+      render: ({ row }) => {
+        return <span>{getReturnPlanName(row.returnPlan, row.resourceType)}</span>;
+      },
+    },
+    {
+      label: '回收成本',
+      field: 'costConcerned',
+      width: 80,
+      render: ({ row }) => {
+        return <span>{row.costConcerned ? '涉及' : '不涉及'}</span>;
+      },
+    },
+    {
+      label: '状态',
+      field: 'status',
+      width: 100,
+      render: ({ row }) => {
+        return getRecycleTaskStatusView(row.status);
+      },
+    },
+    {
+      label: '当前处理人',
+      field: 'handler',
+    },
+    {
+      label: '总数/成功/失败',
+      render: ({ row }) => {
+        return (
+          <div>
+            <span>{row.totalNum}</span>
+            <span>/</span>
+            <span class={row.successNum > 0 ? 'c-success' : ''}>{row.successNum}</span>
+            <span>/</span>
+            <span class={row.failedNum > 0 ? 'c-danger' : ''}>{row.failedNum}</span>
+          </div>
+        );
+      },
+    },
+    {
+      label: '回收人',
+      field: 'bkUsername',
+    },
+    {
+      label: '回收时间',
+      field: 'createAt',
+    },
+    {
+      label: '描述',
+      field: 'remark',
+      showOverflowTooltip: true,
+    },
+    {
+      label: 'OBS项目类型',
+      field: 'recycle_type',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -1938,6 +2033,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     hostInventor: hIColumns,
     CloudHost: CHColumns,
     PhysicalMachine: PMColumns,
+    hostRecycle: recycleOrderColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
