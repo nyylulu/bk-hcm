@@ -2,6 +2,7 @@ import { defineComponent, ref, defineAsyncComponent, h, resolveComponent } from 
 export default defineComponent({
   components: {
     HostRecycleTable: defineAsyncComponent(() => import('./host-recycle-table')),
+    DeviceQueryTable: defineAsyncComponent(() => import('./device-query-table')),
   },
   setup() {
     const activeName = ref('HostRecycleTable');
@@ -9,6 +10,10 @@ export default defineComponent({
       {
         name: 'HostRecycleTable',
         label: '主机回收',
+      },
+      {
+        name: 'DeviceQueryTable',
+        label: '设备查询',
       },
     ]);
 

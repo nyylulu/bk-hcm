@@ -2008,7 +2008,95 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'recycle_type',
     },
   ];
-
+  // 资源- 设备查询
+  const deviceQueryColumns = [
+    {
+      label: '单号',
+      field: 'orderId',
+      width: 80,
+    },
+    {
+      label: '子单号',
+      prop: 'suborderId',
+      width: 80,
+      render: ({ row }) => (
+        // <router-link class="link-type" to={{ name: 'recycle-detail', query: { suborderId: row.suborderId } }}>
+        // </router-link>
+        <span>{row.suborderId}</span>
+      ),
+    },
+    {
+      label: '固资号',
+      prop: 'assetId',
+    },
+    {
+      label: '机型',
+      prop: 'deviceType',
+    },
+    {
+      label: '内网IP',
+      prop: 'ip',
+    },
+    {
+      label: '回收业务',
+      prop: 'bkBizId',
+      // TODO 类似过滤器
+      // formatter: ({ bkBizId: bkBizId }) => {
+      //   return this.$bkBizIdTransform(bkBizId);
+      // },
+    },
+    {
+      label: '地域',
+      prop: 'bkZoneName',
+    },
+    {
+      label: '园区',
+      prop: 'subZone',
+    },
+    {
+      label: 'Module名称',
+      prop: 'moduleName',
+    },
+    {
+      label: '标记',
+      prop: 'returnTag',
+    },
+    {
+      label: '成本分摊比例',
+      prop: 'returnCostRate',
+      render: ({ row }) => {
+        return row.returnCostRate ? `${Math.ceil(row.returnCostRate * 100)}%` : '-';
+      },
+    },
+    {
+      label: '状态',
+      prop: 'status',
+      render: ({ row }) => getRecycleTaskStatusView(row.status),
+      // exportFormatter: (row) => this.$recycleTaskStatusTransform(row.status),
+    },
+    {
+      label: '回收人',
+      prop: 'bkUsername',
+      // TODO
+      // nodes: ({ bkUsername }) => {
+      //   return <w-name username={bkUsername} />;
+      // },
+    },
+    {
+      label: '创建时间',
+      prop: 'createAt',
+      // TODO 类似过滤器
+      // formatter: ({ createAt }) => this.$dateTimeTransform(createAt),
+    },
+    {
+      label: '完成时间',
+      prop: 'returnTime',
+    },
+    {
+      label: '备注',
+      prop: 'remark',
+    },
+  ];
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2034,6 +2122,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     CloudHost: CHColumns,
     PhysicalMachine: PMColumns,
     hostRecycle: recycleOrderColumns,
+    deviceQuery: deviceQueryColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

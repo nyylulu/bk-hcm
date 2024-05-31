@@ -61,3 +61,18 @@ export const getRecycleHosts = (params, config) => {
     ...config,
   });
 };
+
+/** 已回收设备机型列表查询接口 */
+export const getDeviceTypeList = () => {
+  return http.get('task/find/recycle/record/devicetype');
+};
+
+/** 已回收设备地域列表查询接口 */
+export const getRegionList = () => {
+  return http.get('task/find/recycle/record/region');
+};
+
+/** 已回收设备园区列表查询接口 */
+export const getZoneList = () => {
+  return http.get('task/find/recycle/record/zone');
+};
