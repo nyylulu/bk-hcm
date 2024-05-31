@@ -41,4 +41,10 @@ func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
 	h.Add("TZiyanSGBatchDisassociateCloudCvm", "POST",
 		"/vendors/tcloud-ziyan/security_groups/disassociate/cloud_cvms/batch", svc.TZiyanSGBatchDisassociateCloudCvm)
 
+	h.Add("TCloudZiyanSecurityGroupAssociateLoadBalancer", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/load_balancers", svc.TCloudZiyanSecurityGroupAssociateLoadBalancer)
+	h.Add("TCloudZiyanSecurityGroupDisassociateLoadBalancer", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/load_balancers",
+		svc.TCloudZiyanSecurityGroupDisassociateLoadBalancer)
+
 }

@@ -34,6 +34,7 @@ func InitLoadBalancerService(cap *capability.Capability) {
 	}
 
 	svc.initTCloudClbService(cap)
+	svc.initTCloudZiyanClbService(cap)
 }
 
 type clbSvc struct {

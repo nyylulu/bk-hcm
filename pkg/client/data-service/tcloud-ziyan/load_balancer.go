@@ -39,8 +39,8 @@ func NewLoadBalancerClient(client rest.ClientInterface) *LoadBalancerClient {
 	return &LoadBalancerClient{client: client}
 }
 
-// BatchCreateTCloudnClb 批量创建自研云CLB
-func (cli *LoadBalancerClient) BatchCreateTCloudnClb(kt *kit.Kit, req *dataproto.TCloudCLBCreateReq) (
+// BatchCreateClb 批量创建自研云CLB
+func (cli *LoadBalancerClient) BatchCreateClb(kt *kit.Kit, req *dataproto.TCloudCLBCreateReq) (
 	*core.BatchCreateResult, error) {
 
 	return common.Request[dataproto.TCloudCLBCreateReq, core.BatchCreateResult](
@@ -135,8 +135,8 @@ func (cli *LoadBalancerClient) BatchDeleteTCloudUrlRule(kt *kit.Kit, req *datapr
 		cli.client, rest.DELETE, kt, req, "/url_rules/batch")
 }
 
-// BatchCreateTCloudListener 批量创建腾讯云监听器
-func (cli *LoadBalancerClient) BatchCreateTCloudListener(kt *kit.Kit,
+// BatchCreateListener 批量创建腾讯云监听器
+func (cli *LoadBalancerClient) BatchCreateListener(kt *kit.Kit,
 	req *dataproto.TCloudListenerBatchCreateReq) (*core.BatchCreateResult, error) {
 
 	return common.Request[dataproto.ListenerBatchCreateReq[corelb.TCloudListenerExtension], core.BatchCreateResult](
