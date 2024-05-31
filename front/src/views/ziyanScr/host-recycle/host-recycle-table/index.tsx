@@ -8,6 +8,7 @@ import RequireNameSelect from './require-name-select';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import { Search } from 'bkui-vue/lib/icon';
+import BillDetail from '../bill-detail';
 import './index.scss';
 
 export default defineComponent({
@@ -16,6 +17,7 @@ export default defineComponent({
     RequireNameSelect,
     MemberSelect,
     ExportToExcelButton,
+    BillDetail,
   },
   setup() {
     const defaultRecycleForm = {
@@ -363,6 +365,9 @@ export default defineComponent({
             }}
           </CommonTable>
         );
+      }
+      if (hostRecyclePage.value === 1) {
+        return <BillDetail />;
       }
       return null;
     };

@@ -2097,6 +2097,103 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       prop: 'remark',
     },
   ];
+  // 资源 - 主机回收 - 单据详情 设备销毁列表
+  const deviceDestroyColumns = [
+    {
+      type: 'selection',
+    },
+    {
+      label: '固资号',
+      field: 'assetId',
+    },
+    {
+      label: '内网IP',
+      field: 'ip',
+    },
+    {
+      label: '实例ID',
+      field: 'instanceId',
+    },
+    {
+      label: '机型',
+      field: 'deviceType',
+    },
+    {
+      label: '园区',
+      field: 'subZone',
+    },
+    {
+      label: 'Module名称',
+      field: 'moduleName',
+    },
+    {
+      label: '维护人',
+      field: 'operator',
+      render: ({ row }) => {
+        // return <w-name username={operator} />;
+        return <span>{row.operator}</span>;
+      },
+    },
+    {
+      label: '备份维护人',
+      field: 'bakOperator',
+      render: ({ row }) => {
+        // return <w-name username={bakOperator} />;
+        return <span>{row.operator}</span>;
+      },
+    },
+    {
+      label: '标记',
+      field: 'returnTag',
+    },
+    {
+      label: '成本分摊比例',
+      field: 'returnCostRate',
+      render: ({ row }) => {
+        return row.returnCostRate ? `${Math.ceil(row.returnCostRate * 100)}%` : '-';
+      },
+    },
+    {
+      label: '校验结果',
+      field: 'returnPlanMsg',
+      showOverflowTooltip: true,
+      render: ({ row }) => {
+        // v-clipboard:copy={returnPlanMsg}
+        return (
+          <bk-link type='info' class='fz-12' underline={false}>
+            {row.returnPlanMsg}
+          </bk-link>
+        );
+      },
+    },
+    {
+      label: '上架时间',
+      field: 'inputTime',
+      // formatter: ({ inputTime }) => this.$dateTimeTransform(inputTime),
+    },
+    {
+      label: '销毁时间',
+      field: 'returnTime',
+      // formatter: ({ returnTime }) => this.$dateTimeTransform(returnTime),
+    },
+    {
+      label: '回收单号',
+      field: 'returnId',
+      render: ({ row }) => {
+        return (
+          <bk-link type='primary' class='fz-12' underline={false} href={row.returnLink} target='_blank'>
+            {row.returnId}
+          </bk-link>
+        );
+      },
+    },
+    {
+      label: '状态',
+      field: 'status',
+      render: ({ row }) => getRecycleTaskStatusView(row.status),
+      // exportFormatter: (row) => this.$recycleTaskStatusTransform(row.status),
+    },
+  ];
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2123,6 +2220,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     PhysicalMachine: PMColumns,
     hostRecycle: recycleOrderColumns,
     deviceQuery: deviceQueryColumns,
+    deviceDestroy: deviceDestroyColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

@@ -76,3 +76,16 @@ export const getRegionList = () => {
 export const getZoneList = () => {
   return http.get('task/find/recycle/record/zone');
 };
+
+/** 资源回收单据审批接口 */
+export const auditOrder = ({ suborderId, approval, remark }, config) => {
+  return http.post(
+    'task/audit/recycle/order',
+    {
+      suborder_id: suborderId,
+      approval,
+      remark,
+    },
+    config,
+  );
+};
