@@ -1,0 +1,39 @@
+.bill-detail {
+    padding: 0 15px 15px;
+    background-color: #fff;
+    .bk-button+.bk-button {
+        margin-left: 10px;
+    }
+    h2{
+        padding: 15px 0;
+    }
+    .base-info {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #dcdfe6;
+        &-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            & > div {
+                margin-bottom: 10px;
+            }
+        }
+    }
+    .handle-process {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #dcdfe6;
+        .check-export {
+            &-man {
+                margin: 10px 0;
+            }
+            &-trigger {
+                margin-top: 15px;
+            }
+        }
+    }
+    .device-destroy {
+        &-top{
+            margin-bottom: 15px;
+        }
+    }
+
+}

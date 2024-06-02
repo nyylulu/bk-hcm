@@ -26,4 +26,65 @@ const getInstVip = (inst: any) => {
   return '--';
 };
 
-export { getInstVip };
+/**
+ * 导出表格数据为 Excel
+ * @param {Array} list 表格数据
+ * @param {Array} columns 表格列
+ * @param {String} filename 文件名，自动添加时间戳
+ */
+const exportTableToExcel = (list, columns, filename) => {
+  import('@/vendor/Export2Excel').then((excel) => {
+    const header = columns.map((col) => col.label);
+    const data = list.map((item) =>
+      columns.map((col) => {
+        if (col.formatter) {
+          return col.formatter({ [col.prop]: item[col.prop] });
+        }
+
+        if (col.exportFormatter) {
+          return col.exportFormatter(item);
+        }
+
+        return item[col.prop];
+      }),
+    );
+
+    excel.export_json_to_excel({
+      header,
+      data,
+      filename: `${filename}${getDate('yyyyMMddhhmmss')}`,
+    });
+  });
+};
+
+const getDate = (fmt, n) => {
+  let d;
+  if (n) {
+    let nd = Date.parse(new Date());
+    nd = nd + n * 86400000;
+    d = new Date(nd);
+  } else {
+    d = new Date();
+  }
+  const o = {
+    'M+': d.getMonth() + 1, // 月份
+    'd+': d.getDate(), // 日
+    'h+': d.getHours(), // 小时
+    'm+': d.getMinutes(), // 分
+    's+': d.getSeconds(), // 秒
+    'q+': Math.floor((d.getMonth() + 3) / 3), // 季度
+    S: d.getMilliseconds(), // 毫秒
+  };
+
+  if (/(y+)/.test(fmt)) {
+    fmt = fmt.replace(RegExp.$1, `${d.getFullYear()}`.substr(4 - RegExp.$1.length));
+  }
+  Object.keys(o).forEach((k) => {
+    if (new RegExp(`(${k})`).test(fmt)) {
+      fmt = fmt.replace(RegExp.$1, RegExp.$1.length === 1 ? o[k] : `00${o[k]}`.substr(`${o[k]}`.length));
+    }
+  });
+  return fmt;
+};
+
+export { getInstVip, exportTableToExcel, getDate };
