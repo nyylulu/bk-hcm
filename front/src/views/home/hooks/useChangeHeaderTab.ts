@@ -7,6 +7,7 @@ import service from '@/router/module/service';
 import business from '@/router/module/business';
 import ziyanScr from '@/router/module/ziyan-scr';
 import scheme from '@/router/module/scheme';
+import bill from '@/router/module/bill';
 // import stores
 import { useAccountStore } from '@/store';
 // import hooks
@@ -89,6 +90,9 @@ export default (businessId: Ref<number>, businessList: Ref<any[]>) => {
       case 'scheme':
         menus.value = scheme;
         accountStore.updateBizsId(0); // 初始化业务ID
+        break;
+      case 'bill':
+        menus.value = bill;
         break;
       default:
         if (subPath[0] === 'biz_access') {

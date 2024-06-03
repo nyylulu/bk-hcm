@@ -31,6 +31,10 @@ export default defineComponent({
       default: false,
     },
     handleClose: Function,
+    noFooter: {
+      type: Boolean,
+      default: false,
+    }, // 是否不需要footer
   },
   emits: ['update:isShow', 'handleSubmit'],
   setup(props, ctx) {
