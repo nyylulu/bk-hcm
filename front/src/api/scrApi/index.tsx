@@ -51,7 +51,7 @@ const getDiskTypes = async () => {
 };
 const getAntiAffinityLevels = async (resourceType, hasZone, config) => {
   const { data } = await http.get(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/mov/config/find/config/affinity`,
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/affinity`,
     {
       resource_type: resourceType,
       has_zone: hasZone,
@@ -62,5 +62,38 @@ const getAntiAffinityLevels = async (resourceType, hasZone, config) => {
   );
   return data;
 };
-
-export default { getAreas, getZones, getCvmTypes, getImages, getDiskTypes, getAntiAffinityLevels };
+const getRecyclableHosts = async ({ bk_biz_id, ips, asset_ids, bk_host_ids }, config) => {
+  const { data } = await http.post(
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/recycle/recyclability`,
+    {
+      bk_biz_id,
+      ips,
+      asset_ids,
+      bk_host_ids,
+    },
+    config,
+  );
+  return data;
+};
+/** 业务待回收主机列表查询接口 */
+const getRecycleList = async ({ bkBizId, page }, config) => {
+  const { data } = await http.post(
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/recycle/biz/host`,
+    {
+      bk_biz_id: bkBizId,
+      page,
+    },
+    config,
+  );
+  return data;
+};
+export default {
+  getAreas,
+  getZones,
+  getCvmTypes,
+  getImages,
+  getDiskTypes,
+  getAntiAffinityLevels,
+  getRecyclableHosts,
+  getRecycleList,
+};

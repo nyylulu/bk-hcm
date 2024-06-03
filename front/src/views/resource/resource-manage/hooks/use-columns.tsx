@@ -1915,6 +1915,138 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'region',
     },
   ];
+  const RRColumns = [
+    {
+      label: '状态',
+      field: 'recyclable',
+    },
+    {
+      label: '固资号',
+      field: 'asset_id',
+    },
+    {
+      label: '内网IP',
+      field: 'ip',
+    },
+    {
+      label: '所属业务',
+      field: 'bk_biz_name',
+      sort: true,
+    },
+    {
+      label: '所属模块',
+      field: 'topo_module',
+      sort: true,
+    },
+    {
+      label: '维护人',
+      field: 'operator',
+    },
+    {
+      label: '备份维护人',
+      field: 'bak_operator',
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+      sort: true,
+    },
+    {
+      label: '主机状态',
+      field: 'state',
+      sort: true,
+    },
+    {
+      label: '入库时间',
+      field: 'input_time',
+    },
+  ];
+  const BSAColumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+    },
+    {
+      label: '固资号',
+      field: 'asset_id',
+    },
+    {
+      label: '内网IP',
+      field: 'ip',
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: '园区',
+      field: 'sub_zone',
+    },
+  ];
+  const DBColumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+    },
+    {
+      label: '业务',
+      field: 'bk_biz_name',
+    },
+    {
+      label: '资源类型',
+      field: 'resource_type)',
+    },
+    {
+      label: '回收类型',
+      field: 'recycle_type',
+    },
+    {
+      label: '回收选项',
+      field: 'resource_type',
+    },
+    {
+      label: '资源总数',
+      field: 'total_num',
+    },
+    {
+      label: '回收成本',
+      field: 'cost_concerned',
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+  ];
+  const RTColumns = [
+    {
+      label: '固资号',
+      field: 'bk_biz_name',
+    },
+    {
+      label: '内网IP',
+      field: 'resource_type)',
+    },
+    {
+      label: '机型',
+      field: 'recycle_type',
+    },
+    {
+      label: '园区',
+      field: 'resource_type',
+    },
+    {
+      label: '维护人',
+      field: 'total_num',
+    },
+    {
+      label: '备份维护人',
+      field: 'cost_concerned',
+    },
+  ];
   // 资源 - 主机回收列表
   const recycleOrderColumns = [
     {
@@ -2218,6 +2350,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     hostInventor: hIColumns,
     CloudHost: CHColumns,
     PhysicalMachine: PMColumns,
+    RecyclingResources: RRColumns,
+    BusinessSelection: BSAColumns,
+    DetermineBusiness: DBColumns,
+    ResourcesTotal: RTColumns,
     hostRecycle: recycleOrderColumns,
     deviceQuery: deviceQueryColumns,
     deviceDestroy: deviceDestroyColumns,
