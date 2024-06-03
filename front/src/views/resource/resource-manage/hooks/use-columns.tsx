@@ -2047,6 +2047,67 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'cost_concerned',
     },
   ];
+  const DQcolumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+      align: 'center',
+    },
+    {
+      label: '业务',
+      field: 'require_type',
+    },
+    {
+      label: '单号',
+      field: 'label.device_group',
+    },
+    {
+      label: '子单号',
+      field: 'device_type',
+    },
+    {
+      label: '需求类型',
+      field: 'cpu',
+    },
+    {
+      label: '申请人',
+      field: 'mem',
+    },
+    {
+      label: '内网IP',
+      field: 'region',
+    },
+    {
+      label: '固资号',
+      field: 'region',
+    },
+    {
+      label: '资源类型',
+      field: 'cpu',
+    },
+    {
+      label: '机型',
+      field: 'mem',
+    },
+    {
+      label: '园区',
+      field: 'region',
+    },
+    {
+      label: '交付时间',
+      field: 'region',
+    },
+    {
+      label: '申请时间',
+      field: 'cpu',
+    },
+    {
+      label: '备注信息',
+      field: 'mem',
+    },
+  ];
   // 资源 - 主机回收列表
   const recycleOrderColumns = [
     {
@@ -2357,6 +2418,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     hostRecycle: recycleOrderColumns,
     deviceQuery: deviceQueryColumns,
     deviceDestroy: deviceDestroyColumns,
+    DeviceQuerycolumns: DQcolumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
