@@ -177,3 +177,6 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+// 自研云需要修改sdk，支持差异化参数
+replace github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb => ./pkg/thirdparty/tencentcloud/clb

@@ -31,7 +31,10 @@ type CmdbHostListReq struct {
 	QueryFromCloud bool          `json:"query_from_cloud"`
 	AccountID      string        `json:"account_id" validate:"required"`
 	Region         string        `json:"region" validate:"omitempty"`
-	CloudInstIDs   []string      `json:"inst_i_ds" validate:"omitempty"`
+	Zone           string        `json:"zone" validate:"omitempty"`
+	CloudInstIDs   []string      `json:"inst_ids" validate:"omitempty"`
+	CloudVpcIDs    []string      `json:"cloud_vpc_ids" validate:"omitempty"`
+	CloudSubnetIDs []string      `json:"cloud_subnet_ids" validate:"omitempty"`
 	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
 	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
 	Page           cmdb.BasePage `json:"page" validate:"required"`
@@ -44,12 +47,15 @@ func (req CmdbHostListReq) Validate() error {
 
 // CmdbHostQueryReq 从cc 查询主机
 type CmdbHostQueryReq struct {
-	BkBizID      int64
-	Vendor       enumor.Vendor
-	AccountID    string        `json:"account_id" validate:"required"`
-	Region       string        `json:"region" validate:"omitempty"`
-	CloudInstIDs []string      `json:"inst_i_ds" validate:"omitempty"`
-	BkSetIDs     []int64       `json:"bk_set_ids" validate:"omitempty"`
-	BkModuleIDs  []int64       `json:"bk_module_ids" validate:"omitempty"`
-	Page         cmdb.BasePage `json:"page" validate:"required"`
+	BkBizID        int64
+	Vendor         enumor.Vendor
+	AccountID      string        `json:"account_id" validate:"required"`
+	Region         string        `json:"region" validate:"omitempty"`
+	Zone           string        `json:"zone" validate:"omitempty"`
+	CloudVpcIDs    []string      `json:"cloud_vpc_ids" validate:"omitempty"`
+	CloudSubnetIDs []string      `json:"cloud_subnet_ids" validate:"omitempty"`
+	CloudInstIDs   []string      `json:"inst_ids" validate:"omitempty"`
+	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
+	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
+	Page           cmdb.BasePage `json:"page" validate:"required"`
 }

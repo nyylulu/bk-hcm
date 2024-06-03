@@ -20,11 +20,13 @@
 package securitygroup
 
 import (
+	typelb "hcm/pkg/adaptor/types/load-balancer"
 	adptsg "hcm/pkg/adaptor/types/security-group"
 	"hcm/pkg/api/core"
 	corecloud "hcm/pkg/api/core/cloud"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	proto "hcm/pkg/api/hc-service"
+	hclb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -299,5 +301,123 @@ func (g *securityGroup) TZiyanSGBatchDisassociateCloudCvm(cts *rest.Contexts) (a
 			err, opt, cts.Kit.Rid)
 		return nil, err
 	}
+	return nil, nil
+}
+
+// TCloudZiyanSecurityGroupAssociateLoadBalancer ...
+func (g *securityGroup) TCloudZiyanSecurityGroupAssociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
+	req := new(hclb.TCloudSetLbSecurityGroupReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 根据LbID查询负载均衡基本信息
+	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
+	if err != nil {
+		return nil, err
+	}
+
+	sgCloudIDs, sgComReq, err := g.getUpsertSGIDsParams(cts.Kit, req, sgComList)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &typelb.TCloudSetClbSecurityGroupOption{
+		Region:         lbInfo.Region,
+		LoadBalancerID: lbInfo.CloudID,
+		SecurityGroups: sgCloudIDs,
+	}
+	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud security group associate lb failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err = g.dataCli.Global.SGCommonRel.BatchUpsert(cts.Kit, sgComReq); err != nil {
+		logs.Errorf("request dataservice upsert security group lb rels failed, err: %v, req: %+v, rid: %s",
+			err, sgComReq, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// TCloudZiyanSecurityGroupDisassociateLoadBalancer ...
+func (g *securityGroup) TCloudZiyanSecurityGroupDisassociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
+	req := new(hclb.TCloudDisAssociateLbSecurityGroupReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 根据LbID查询负载均衡基本信息
+	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
+	if err != nil {
+		return nil, err
+	}
+
+	allSGIDs := make([]string, 0)
+	existSG := false
+	for _, rel := range sgComList.Details {
+		if rel.SecurityGroupID == req.SecurityGroupID {
+			existSG = true
+		}
+		allSGIDs = append(allSGIDs, rel.SecurityGroupID)
+	}
+	if !existSG {
+		return nil, errf.Newf(errf.RecordNotFound, "not found sg id: %s", req.SecurityGroupID)
+	}
+
+	sgMap, err := g.getSecurityGroupMap(cts.Kit, allSGIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// 安全组的云端ID数组
+	sgCloudIDs := make([]string, 0)
+	for _, sgID := range allSGIDs {
+		sg, ok := sgMap[sgID]
+		if !ok {
+			continue
+		}
+		sgCloudIDs = append(sgCloudIDs, sg.CloudID)
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &typelb.TCloudSetClbSecurityGroupOption{
+		Region:         lbInfo.Region,
+		LoadBalancerID: lbInfo.CloudID,
+		SecurityGroups: sgCloudIDs,
+	}
+	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud security group disAssociate lb failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	deleteReq := buildSGCommonRelDeleteReq(
+		enumor.TCloud, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
+	if err = g.dataCli.Global.SGCommonRel.BatchDelete(cts.Kit, deleteReq); err != nil {
+		logs.Errorf("request dataservice tcloud delete security group lb rels failed, err: %v, req: %+v, rid: %s",
+			err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
 	return nil, nil
 }

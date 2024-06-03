@@ -45,6 +45,8 @@ func (svc *certSvc) CreateCert(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return batchCreateCert[corecert.TCloudCertExtension](cts, svc, vendor)
+	case enumor.TCloudZiyan:
+		return batchCreateCert[corecert.TCloudCertExtension](cts, svc, vendor)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}

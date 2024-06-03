@@ -80,6 +80,41 @@ func (r CombinedRule) GetDeep() int {
 	return maxChildDeep + 1
 }
 
+// Combined ...
+func Combined(cond Condition, rules ...Rule) CombinedRule {
+	return CombinedRule{
+		Condition: cond,
+		Rules:     rules,
+	}
+}
+
+// Equal ...
+func Equal(field string, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: OperatorEqual,
+		Value:    value,
+	}
+}
+
+// In ...
+func In(field string, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: OperatorIn,
+		Value:    value,
+	}
+}
+
+// Atomic ...
+func Atomic(field string, op Operator, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: op,
+		Value:    value,
+	}
+}
+
 // AtomRule is cmdb atomic query rule.
 type AtomRule struct {
 	Field    string      `json:"field"`
@@ -253,6 +288,11 @@ type Host struct {
 	BkBakOperator   string  `json:"bk_bak_operator"`
 	BkHostName      string  `json:"bk_host_name"`
 	BkComment       *string `json:"bk_comment,omitempty"`
+
+	// 以下字段仅内部版支持，由cc从云梯获取
+	BkCloudZone     string `json:"bk_cloud_zone"`
+	BkCloudVpcID    string `json:"bk_cloud_vpc_id"`
+	BkCloudSubnetID string `json:"bk_cloud_subnet_id"`
 }
 
 // HostFields cmdb common fields
@@ -269,6 +309,11 @@ var HostFields = []string{
 	"bk_host_innerip_v6",
 	"bk_host_outerip_v6",
 	"bk_cloud_host_status",
+
+	// 以下字段仅内部版支持，由cc从云梯获取
+	"bk_cloud_vpc_id",
+	"bk_cloud_subnet_id",
+	"bk_cloud_zone",
 }
 
 type esbFindHostTopoRelationParams struct {

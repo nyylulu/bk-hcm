@@ -122,6 +122,7 @@ type CloudServerSetting struct {
 	Recycle        Recycle        `yaml:"recycle"`
 	BillConfig     BillConfig     `yaml:"billConfig"`
 	Itsm           ApiGateway     `yaml:"itsm"`
+	Cmdb           ApiGateway     `yaml:"cmdb"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
 }
 

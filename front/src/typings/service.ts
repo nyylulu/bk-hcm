@@ -11,4 +11,5 @@ export enum ServiceAccountType {
   create_security_group_rule = '创建安全组规则',
   update_security_group_rule = '更新安全组规则',
   delete_security_group_rule = '删除安全组规则',
+  create_load_balancer = '申请负载均衡',
 }

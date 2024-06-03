@@ -10,6 +10,7 @@ const config = {
       outputDir: __dirname + '/dist',// 打包输出目录
       assetsDir: './', // js/css/font资源归属目录
       AJAX_URL_PREFIX: '',
+      isInternal: false,
     },
     open: {
       NODE_ENV: JSON.stringify('production'),
@@ -36,6 +37,12 @@ const config = {
     }
     if (process.env.NODE_ENV === 'development') {
       env = config.development;
+    }
+    if (process.env?.version === 'internal') {
+      env = {
+        ...env,
+        isInternal: true,
+      }
     }
     return env;
   };

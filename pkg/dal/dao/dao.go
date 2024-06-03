@@ -118,6 +118,7 @@ type Set interface {
 	LoadBalancerTargetGroup() loadbalancer.TargetGroupInterface
 	LoadBalancerTargetGroupListenerRuleRel() loadbalancer.TargetGroupListenerRuleRelInterface
 	LoadBalancerTCloudUrlRule() loadbalancer.LbTCloudUrlRuleInterface
+	LoadBalancerTCloudZiyanUrlRule() loadbalancer.LbTCloudZiyanUrlRuleInterface
 	ResourceFlowRel() resflow.ResourceFlowRelInterface
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
@@ -608,6 +609,14 @@ func (s *set) LoadBalancerTargetGroupListenerRuleRel() loadbalancer.TargetGroupL
 // LoadBalancerTCloudUrlRule return load balancer tcloud url rule dao.
 func (s *set) LoadBalancerTCloudUrlRule() loadbalancer.LbTCloudUrlRuleInterface {
 	return &loadbalancer.LbTCloudUrlRuleDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+func (s *set) LoadBalancerTCloudZiyanUrlRule() loadbalancer.LbTCloudZiyanUrlRuleInterface {
+	return &loadbalancer.LbTCloudZiyanUrlRuleDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

@@ -110,6 +110,8 @@ func InitService(cap *capability.Capability) {
 	h.Add("BatchDeleteResFlowRel", http.MethodDelete, "/res_flow_rels/batch", svc.BatchDeleteResFlowRel)
 	h.Add("ListResFlowRel", http.MethodPost, "/res_flow_rels/list", svc.ListResFlowRel)
 
+	tcloudZiyanService(h, svc)
+
 	h.Load(cap.WebService)
 }
 
