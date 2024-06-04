@@ -604,7 +604,7 @@ mariadb:
   enabled: true
   architecture: standalone
   auth:
-    rootPassword: "admin"
+    rootPassword: ""
     database: hcm
     username: hcm
     password: "admin"
@@ -745,3 +745,11 @@ itsm:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+egress:
+  podCidrs:
+    - 9.0.0.0/8
+    - 10.0.0.0/8
+    - 11.0.0.0/8
+    - 30.0.0.0/8
+  yuntiDomain: ""

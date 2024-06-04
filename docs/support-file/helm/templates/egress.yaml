@@ -14,23 +14,19 @@ spec:
     tke.cloud.tencent.com/vpc-ip-claim-delete-policy: Never
     tke.cloud.tencent.com/networks: "tke-route-eni"
   podCidrs:
-    - 192.168.0.0/16
-    - 172.17.0.1/16
-    - 9.0.0.0/8
-    - 10.0.0.0/8
-    - 11.0.0.0/8
-    - 100.64.0.0/10
-    - 30.0.0.0/8
+  {{- range .Values.egress.podCidrs }}
+      - {{ . }}
+  {{- end }}
   resources:
     cpu: 500m
     memory: 512Mi
     tke.cloud.tencent.com/eni-ip: "1"
   rules:
     - dport: 80
-      host: api.yunti.oa.com # 云梯
+      host: {{ .Values.egress.yuntiDomain }} # 云梯
       protocol: TCP
       sport: 80
-      service: api.yunti.oa.com
+      service: {{ .Values.egress.yuntiDomain }}
     - dport: 80
       host: alarm.nm.tencent-cloud.com # tmp
       protocol: TCP
