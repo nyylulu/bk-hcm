@@ -160,6 +160,8 @@ const (
 	LoadBalancerListenerTable Name = "load_balancer_listener"
 	// TCloudLbUrlRuleTable is tcloud_lb_url_rule table's name.
 	TCloudLbUrlRuleTable Name = "tcloud_lb_url_rule"
+	// TCloudZiyanLbUrlRuleTable is tcloud_ziyan_lb_url_rule table's name.
+	TCloudZiyanLbUrlRuleTable Name = "tcloud_ziyan_lb_url_rule"
 	// LoadBalancerTargetTable is load_balancer_target table's name.
 	LoadBalancerTargetTable Name = "load_balancer_target"
 	// LoadBalancerTargetGroupTable is load_balancer_target_group table's name.
@@ -257,6 +259,7 @@ var TableMap = map[Name]struct{}{
 	SecurityGroupCommonRelTable:     {},
 	LoadBalancerListenerTable:       {},
 	TCloudLbUrlRuleTable:            {},
+	TCloudZiyanLbUrlRuleTable:       {},
 	LoadBalancerTargetTable:         {},
 	LoadBalancerTargetGroupTable:    {},
 	TargetGroupListenerRuleRelTable: {},

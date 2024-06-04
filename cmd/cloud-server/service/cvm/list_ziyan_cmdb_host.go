@@ -68,14 +68,17 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 
 	// 1. 获取cmdb 业务下主机列表
 	cmdbResult, err := c.cvmLgc.GetCmdbBizHosts(cts.Kit, &cscvm.CmdbHostQueryReq{
-		BkBizID:      bizID,
-		Vendor:       enumor.TCloudZiyan,
-		AccountID:    req.AccountID,
-		Region:       req.Region,
-		CloudInstIDs: req.CloudInstIDs,
-		BkSetIDs:     req.BkSetIDs,
-		BkModuleIDs:  req.BkModuleIDs,
-		Page:         req.Page,
+		BkBizID:        bizID,
+		Vendor:         enumor.TCloudZiyan,
+		AccountID:      req.AccountID,
+		Region:         req.Region,
+		Zone:           req.Zone,
+		CloudVpcIDs:    req.CloudVpcIDs,
+		CloudSubnetIDs: req.CloudSubnetIDs,
+		CloudInstIDs:   req.CloudInstIDs,
+		BkSetIDs:       req.BkSetIDs,
+		BkModuleIDs:    req.BkModuleIDs,
+		Page:           req.Page,
 	})
 	if err != nil {
 		logs.Errorf("fail to query cmdb biz hosts, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
@@ -105,10 +108,13 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 				BkBizID:              bizID,
 				AccountID:            req.AccountID,
 				Region:               ch.BkCloudRegion,
+				Zone:                 ch.BkCloudZone,
 				PrivateIPv4Addresses: strings.Split(ch.BkHostInnerIP, ","),
 				PrivateIPv6Addresses: strings.Split(ch.BkHostInnerIPv6, ","),
 				PublicIPv4Addresses:  strings.Split(ch.BkHostOuterIP, ","),
 				PublicIPv6Addresses:  strings.Split(ch.BkHostOuterIPv6, ","),
+				CloudVpcIDs:          []string{ch.BkCloudVpcID},
+				CloudSubnetIDs:       []string{ch.BkCloudSubnetID},
 			},
 		}
 	})

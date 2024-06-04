@@ -27,10 +27,13 @@ import (
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
 	rr "hcm/pkg/api/core/recycle-record"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/kit"
+	"hcm/pkg/metrics"
+	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
@@ -57,16 +60,24 @@ type cvm struct {
 	eip       eip.Interface
 	disk      disk.Interface
 	esbClient esb.Client
+	cmdb      cmdb.Client
 }
 
 // NewCvm new cvm.
 func NewCvm(client *client.ClientSet, audit audit.Interface, eip eip.Interface, disk disk.Interface,
 	esbClient esb.Client) Interface {
+
+	cmdbCfg := cc.CloudServer().Cmdb
+	cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), esbClient)
+	if err != nil {
+		return nil
+	}
 	return &cvm{
 		client:    client,
 		audit:     audit,
 		eip:       eip,
 		disk:      disk,
 		esbClient: esbClient,
+		cmdb:      cmdbCli,
 	}
 }

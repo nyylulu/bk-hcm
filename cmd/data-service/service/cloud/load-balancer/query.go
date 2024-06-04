@@ -178,6 +178,8 @@ func (svc *lbSvc) ListLoadBalancerExt(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return convLbListResult[corelb.TCloudClbExtension](data.Details)
+	case enumor.TCloudZiyan:
+		return convLbListResult[corelb.TCloudClbExtension](data.Details)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)
 	}
@@ -211,7 +213,7 @@ func (svc *lbSvc) GetLoadBalancer(cts *rest.Contexts) (any, error) {
 
 	lbTable := result.Details[0]
 	switch lbTable.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return convLoadBalancerWithExt(&lbTable)
 	default:
 		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
@@ -488,6 +490,7 @@ func (svc *lbSvc) ListTarget(cts *rest.Contexts) (interface{}, error) {
 func convTableToBaseTarget(one *tablelb.LoadBalancerTargetTable) *corelb.BaseTarget {
 	return &corelb.BaseTarget{
 		ID:                 one.ID,
+		IP:                 one.IP,
 		AccountID:          one.AccountID,
 		InstType:           one.InstType,
 		InstID:             one.InstID,
@@ -577,7 +580,7 @@ func (svc *lbSvc) GetTargetGroup(cts *rest.Contexts) (any, error) {
 
 	tgInfo := result.Details[0]
 	switch tgInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return convTableToBaseTargetGroup(cts.Kit, &tgInfo)
 	default:
 		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
@@ -654,6 +657,13 @@ func (svc *lbSvc) GetListener(cts *rest.Contexts) (any, error) {
 		newLblInfo, err := convTableToListener[corelb.TCloudListenerExtension](&lblInfo)
 		if err != nil {
 			logs.Errorf("fail to conv listener with extension, lblID: %s, err: %v, rid: %s", id, err, cts.Kit.Rid)
+			return nil, err
+		}
+		return newLblInfo, nil
+	case enumor.TCloudZiyan:
+		newLblInfo, err := convTableToListener[corelb.TCloudListenerExtension](&lblInfo)
+		if err != nil {
+			logs.Errorf("fail to conv listener with extension in tcloud-ziyan, lblID: %s, err: %v, rid: %s", id, err, cts.Kit.Rid)
 			return nil, err
 		}
 		return newLblInfo, nil

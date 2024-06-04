@@ -35,6 +35,7 @@ func InitCertService(cap *capability.Capability) {
 	}
 
 	svc.initTCloudCertService(cap)
+	svc.initTCloudZiyanCertService(cap)
 }
 
 type certSvc struct {

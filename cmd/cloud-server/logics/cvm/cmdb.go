@@ -34,16 +34,23 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 	if !exists {
 		return nil, errf.New(errf.InvalidParameter, "not supported vendor: %s"+string(req.Vendor))
 	}
-	combinedRule := &cmdb.CombinedRule{Condition: "AND",
-		Rules: []cmdb.Rule{&cmdb.AtomRule{Field: "bk_cloud_vendor", Operator: cmdb.OperatorEqual, Value: ccVendor}}}
+	combinedRule := cmdb.Combined("AND", cmdb.Equal("bk_cloud_vendor", ccVendor))
 	if req.Region != "" {
 		// 筛选地域
-		combinedRule.Rules = append(combinedRule.Rules,
-			&cmdb.AtomRule{Field: "bk_cloud_region", Operator: cmdb.OperatorEqual, Value: req.Region})
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.Equal("bk_cloud_region", req.Region))
+	}
+	if req.Zone != "" {
+		// 筛选可用区
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.Equal("bk_cloud_zone", req.Zone))
 	}
 	if len(req.CloudInstIDs) != 0 {
-		combinedRule.Rules = append(combinedRule.Rules, &cmdb.AtomRule{
-			Field: "bk_cloud_inst_id", Operator: cmdb.OperatorIn, Value: req.CloudInstIDs})
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_inst_id", req.CloudInstIDs))
+	}
+	if len(req.CloudVpcIDs) != 0 {
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_vpc_ids", req.CloudVpcIDs))
+	}
+	if len(req.CloudSubnetIDs) != 0 {
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_subnet_ids", req.CloudSubnetIDs))
 	}
 	params := &cmdb.ListBizHostParams{
 		BizID:              req.BkBizID,
@@ -53,7 +60,7 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 		Page:               req.Page,
 		HostPropertyFilter: &cmdb.QueryFilter{Rule: combinedRule},
 	}
-	cmdbResult, err := c.esbClient.Cmdb().ListBizHost(kt, params)
+	cmdbResult, err := c.cmdb.ListBizHost(kt, params)
 	if err != nil {
 		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err

@@ -205,6 +205,8 @@ func (c *LoadBalancer) UrlRuleUpdateAuditBuild(kt *kit.Kit, lblID string,
 	switch lbl.Vendor {
 	case enumor.TCloud:
 		return c.tcloudUrlRuleUpdateAuditBuild(kt, lbl, updates)
+	case enumor.TCloudZiyan:
+		return c.tcloudZiyanUrlRuleUpdateAuditBuild(kt, lbl, updates)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", lbl.Vendor)
 	}
@@ -272,10 +274,13 @@ func (c *LoadBalancer) UrlRuleDeleteAuditBuild(kt *kit.Kit, lblID string,
 	switch lbl.Vendor {
 	case enumor.TCloud:
 		return c.tcloudUrlRuleDeleteAuditBuild(kt, lbl, deletes)
+	case enumor.TCloudZiyan:
+		return c.tcloudZiyanUrlRuleDeleteAuditBuild(kt, lbl, deletes)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", lbl.Vendor)
 	}
 }
+
 func (c *LoadBalancer) tcloudUrlRuleDeleteAuditBuild(kt *kit.Kit, lbl tablelb.LoadBalancerListenerTable,
 	deletes []protoaudit.CloudResourceDeleteInfo) ([]*tableaudit.AuditTable, error) {
 
@@ -355,6 +360,8 @@ func (c *LoadBalancer) UrlRuleDeleteByDomainAuditBuild(kt *kit.Kit, lblID string
 	switch lbl.Vendor {
 	case enumor.TCloud:
 		return c.tcloudUrlRuleDeleteByDomainAuditBuild(kt, lbl, deletes)
+	case enumor.TCloudZiyan:
+		return c.tcloudZiyanUrlRuleDeleteByDomainAuditBuild(kt, lbl, deletes)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", lbl.Vendor)
 	}

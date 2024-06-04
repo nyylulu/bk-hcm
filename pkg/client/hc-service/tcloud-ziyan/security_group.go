@@ -22,6 +22,7 @@ package hcziyancli
 import (
 	"hcm/pkg/api/core"
 	proto "hcm/pkg/api/hc-service"
+	hclb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/client/common"
 	"hcm/pkg/kit"
@@ -112,4 +113,18 @@ func (cli *SecurityGroupClient) BatchDisassociateCloudCvm(kt *kit.Kit, sgID stri
 	}
 	return common.RequestNoResp[proto.SecurityGroupAssociateCloudCvmReq](cli.client, rest.POST, kt, req,
 		"/security_groups/disassociate/cloud_cvms/batch")
+}
+
+// AssociateLb ...
+func (cli *SecurityGroupClient) AssociateLb(kt *kit.Kit, req *hclb.TCloudSetLbSecurityGroupReq) error {
+
+	return common.RequestNoResp[hclb.TCloudSetLbSecurityGroupReq](cli.client, rest.POST, kt, req,
+		"/security_groups/associate/load_balancers")
+}
+
+// DisassociateLb ...
+func (cli *SecurityGroupClient) DisassociateLb(kt *kit.Kit, req *hclb.TCloudDisAssociateLbSecurityGroupReq) error {
+
+	return common.RequestNoResp[hclb.TCloudDisAssociateLbSecurityGroupReq](cli.client, rest.POST, kt, req,
+		"/security_groups/disassociate/load_balancers")
 }

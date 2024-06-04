@@ -88,6 +88,8 @@ func (svc *certSvc) BatchUpdateCertExt(cts *rest.Contexts) (interface{}, error) 
 	switch vendor {
 	case enumor.TCloud:
 		return batchUpdateCertExt[corecert.TCloudCertExtension](cts, svc)
+	case enumor.TCloudZiyan:
+		return batchUpdateCertExt[corecert.TCloudCertExtension](cts, svc)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)
 	}
