@@ -16,7 +16,6 @@ import AntiAffinityLevelSelect from './components/AntiAffinityLevelSelect';
 import { RightShape, DownShape } from 'bkui-vue/lib/icon';
 import { useziyanScrStore } from '@/store';
 export default defineComponent({
-  name: 'AllhostInventoryManager',
   setup() {
     const addResourceRequirements = ref(false);
     const order = {

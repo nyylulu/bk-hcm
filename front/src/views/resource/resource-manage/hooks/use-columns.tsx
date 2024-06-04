@@ -2108,6 +2108,28 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'mem',
     },
   ];
+  const ERcolumns = [
+    {
+      label: '步骤',
+      field: 'stepDesc',
+    },
+    {
+      label: '状态',
+      field: 'status',
+    },
+    {
+      label: '开始时间',
+      field: 'createAt',
+    },
+    {
+      label: '结束时间',
+      field: 'endAt',
+    },
+    {
+      label: '执行日志',
+      field: 'log',
+    },
+  ];
   // 资源 - 主机回收列表
   const recycleOrderColumns = [
     {
@@ -2419,6 +2441,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     deviceQuery: deviceQueryColumns,
     deviceDestroy: deviceDestroyColumns,
     DeviceQuerycolumns: DQcolumns,
+    ExecutionRecords: ERcolumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

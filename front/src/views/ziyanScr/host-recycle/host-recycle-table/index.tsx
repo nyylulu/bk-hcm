@@ -1,5 +1,4 @@
 import { defineComponent, ref, onMounted } from 'vue';
-// import { useRouter } from 'vue-router';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 // import { getRecycleOrders, getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
@@ -7,8 +6,10 @@ import AppSelect from '@blueking/app-select';
 import RequireNameSelect from './require-name-select';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import { Search } from 'bkui-vue/lib/icon';
+import { Search, ArrowsLeft } from 'bkui-vue/lib/icon';
 import BillDetail from '../bill-detail';
+import PreDetail from '../pre-details';
+import RecyclingResources from '../../RecyclingResources/index';
 import './index.scss';
 
 export default defineComponent({
@@ -18,6 +19,8 @@ export default defineComponent({
     MemberSelect,
     ExportToExcelButton,
     BillDetail,
+    PreDetail,
+    RecyclingResources,
   },
   setup() {
     const defaultRecycleForm = {
@@ -35,7 +38,7 @@ export default defineComponent({
       //   bkUsername: [this.$store.getters.name],
     };
     const recycleForm = ref(defaultRecycleForm);
-    const bussinessList = [];
+    const bussinessList: any[] = [];
     const resourceTypeList = [
       {
         key: 'QCLOUDCVM',
@@ -60,8 +63,9 @@ export default defineComponent({
         value: '延迟销毁',
       },
     ];
-    const stageList = [];
+    const stageList: any[] = [];
     const recycleMen = [];
+    // const route = useRoute();
     const start = ref(0);
     // const selectedSuborderId = ref([]);
     const selectedRows = ref([]);
@@ -164,7 +168,7 @@ export default defineComponent({
           return (
             <div>
               {/* <router-link to={{ name: 'precheck-detail', query: { suborderId: row.suborderId } }}> */}
-              <bk-button size='small' type='text'>
+              <bk-button size='small' onClick={returnPreDetails} type='text'>
                 预检详情
               </bk-button>
               {/* </router-link> */}
@@ -244,9 +248,20 @@ export default defineComponent({
         };
       },
     });
+    const switchPage = ref('HostRecycling');
+    const returnPreDetails = () => {
+      switchPage.value = 'PreDetails';
+    };
+    const returnMain = () => {
+      switchPage.value = 'HostRecycling';
+    };
+    const returnRecyclingResources = () => {
+      switchPage.value = 'RecyclingResources';
+    };
     const renderNodes = () => {
       if (hostRecyclePage.value === 0) {
-        return (
+        // eslint-disable-next-line no-nested-ternary
+        return switchPage.value === 'HostRecycling' ? (
           <CommonTable>
             {{
               tabselect: () => (
@@ -254,7 +269,7 @@ export default defineComponent({
                   <bk-form-item label-width='0'>
                     {/* to={{ name: 'recycle-create' }} */}
                     {/* <router-link> */}
-                    <bk-button theme='primary' icon='el-icon-plus'>
+                    <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
                       回收资源
                     </bk-button>
                     {/* </router-link> */}
@@ -364,6 +379,22 @@ export default defineComponent({
               ),
             }}
           </CommonTable>
+        ) : switchPage.value === 'PreDetails' ? (
+          <>
+            <div class='displayflex' onClick={returnMain}>
+              <ArrowsLeft />
+              预检详情
+            </div>
+            <PreDetail></PreDetail>
+          </>
+        ) : (
+          <>
+            <div class='displayflex' onClick={returnMain}>
+              <ArrowsLeft />
+              回收资源
+            </div>
+            <RecyclingResources></RecyclingResources>
+          </>
         );
       }
       if (hostRecyclePage.value === 1) {

@@ -27,7 +27,7 @@ const ziyanScr: RouteRecordRaw[] = [
         },
       },
       {
-        path: '/ziyanScr/zjhs',
+        path: '/ziyanScr/hostRecycling',
         name: '主机回收',
         component: () => import('@/views/ziyanScr/host-recycle'),
         children: [],

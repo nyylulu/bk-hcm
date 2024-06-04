@@ -11,7 +11,7 @@ import './index.scss';
 export default defineComponent({
   name: 'RecyclingResources',
   setup() {
-    const active = ref(2);
+    const active = ref(1);
     const objectSteps = ref([{ title: '输入IP/固资' }, { title: '确认回收类型' }, { title: '信息确认与提交' }]);
     const tableHosts = ref([]);
     const bkBizId = ref();
