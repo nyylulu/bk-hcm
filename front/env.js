@@ -38,7 +38,7 @@ const config = {
     if (process.env.NODE_ENV === 'development') {
       env = config.development;
     }
-    if (process.env?.version === 'internal') {
+    if (process.env?.version === 'bcc') {
       env = {
         ...env,
         isInternal: true,
