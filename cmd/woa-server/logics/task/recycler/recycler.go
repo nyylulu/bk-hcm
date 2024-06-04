@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 	"time"
 
@@ -38,7 +37,6 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/iamapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
@@ -97,7 +95,6 @@ type Interface interface {
 type recycler struct {
 	lang language.CCLanguageIf
 	//clientSet apimachinery.ClientSetInterface
-	iam iamapi.IAMClientInterface
 	cc  cmdb.Client
 	cvm cvmapi.CVMClientInterface
 
@@ -132,7 +129,6 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 
 	recycler := &recycler{
 		lang:       language.NewFromCtx(language.EmptyLanguageSetting),
-		iam:        thirdCli.IAM,
 		cc:         esbCli.Cmdb(),
 		cvm:        thirdCli.CVM,
 		dispatcher: dispatch,
@@ -1561,43 +1557,44 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 	return rst, nil
 }
 
-func (r *recycler) hasRecyclePermission(kit *kit.Kit, bizId int64) (bool, error) {
+// TODO 需要替换为海垒的权限Auth模型
+func (r *recycler) hasRecyclePermission(kit *kit.Kit, _ int64) (bool, error) {
 	user := kit.User
 	if user == "" {
 		logs.Errorf("failed to check permission, for invalid user is empty, rid: %s", kit.Rid)
 		return false, errors.New("failed to check permission, for invalid user is empty")
 	}
 
-	req := &iamapi.AuthVerifyReq{
-		System: "bk_cr",
-		Subject: &iamapi.Subject{
-			Type: "user",
-			ID:   user,
-		},
-		Action: &iamapi.Action{
-			ID: "resource_recycle",
-		},
-		Resources: []*iamapi.Resource{
-			&iamapi.Resource{
-				System: "bk_cmdb",
-				Type:   "biz",
-				ID:     strconv.Itoa(int(bizId)),
-			},
-		},
-	}
-	resp, err := r.iam.AuthVerify(nil, nil, req)
-	if err != nil {
-		logs.Errorf("failed to auth verify, err: %v, rid: %s", err, kit.Rid)
-		return false, err
-	}
-	if resp.Code != 0 {
-		logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, kit.Rid)
-		return false, fmt.Errorf("failed to auth verify, err: %s", resp.Message)
-	}
-
-	if resp.Data.Allowed != true {
-		return false, nil
-	}
+	//req := &iamapi.AuthVerifyReq{
+	//	System: "bk_cr",
+	//	Subject: &iamapi.Subject{
+	//		Type: "user",
+	//		ID:   user,
+	//	},
+	//	Action: &iamapi.Action{
+	//		ID: "resource_recycle",
+	//	},
+	//	Resources: []*iamapi.Resource{
+	//		&iamapi.Resource{
+	//			System: "bk_cmdb",
+	//			Type:   "biz",
+	//			ID:     strconv.Itoa(int(bizId)),
+	//		},
+	//	},
+	//}
+	//resp, err := r.iam.AuthVerify(nil, nil, req)
+	//if err != nil {
+	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, kit.Rid)
+	//	return false, err
+	//}
+	//if resp.Code != 0 {
+	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, kit.Rid)
+	//	return false, fmt.Errorf("failed to auth verify, err: %s", resp.Message)
+	//}
+	//
+	//if resp.Data.Allowed != true {
+	//	return false, nil
+	//}
 
 	return true, nil
 }

@@ -18,7 +18,6 @@ import (
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/iamapi"
 	"hcm/pkg/rest"
 )
 
@@ -42,7 +41,6 @@ func InitService(c *capability.Capability) {
 type service struct {
 	logics taskLogics.Logics
 	Cc     cmdb.Client
-	Iam    iamapi.IAMClientInterface
 }
 
 func (s *service) initOperationService(h *rest.Handler) {

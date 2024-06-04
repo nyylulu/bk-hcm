@@ -15,14 +15,10 @@ package task
 
 import (
 	"errors"
-	"fmt"
-	"strconv"
 
-	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/iamapi"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -75,68 +71,69 @@ func (s *service) getBizName(kit *kit.Kit, bizId int64) string {
 	return resp.Data.Info[0].BkBizName
 }
 
-func (s *service) checkPermission(kit *kit.Kit, bizId int64, opType string) (*metadata.BaseResp, error) {
+// TODO 需要替换为海垒的权限Auth模型
+func (s *service) checkPermission(kit *kit.Kit, _ int64, _ string) (*metadata.BaseResp, error) {
 	user := kit.User
 	if user == "" {
 		logs.Errorf("failed to check permission, for invalid user is empty, rid: %s", kit.Rid)
 		return nil, errors.New("failed to check permission, for invalid user is empty")
 	}
 
-	req := &iamapi.AuthVerifyReq{
-		System: "bk_cr",
-		Subject: &iamapi.Subject{
-			Type: "user",
-			ID:   user,
-		},
-		Action: &iamapi.Action{
-			ID: opType,
-		},
-		Resources: []*iamapi.Resource{
-			&iamapi.Resource{
-				System: "bk_cmdb",
-				Type:   "biz",
-				ID:     strconv.Itoa(int(bizId)),
-			},
-		},
-	}
-	resp, err := s.Iam.AuthVerify(nil, nil, req)
-	if err != nil {
-		logs.Errorf("failed to auth verify, err: %v, rid: %s", err, kit.Rid)
-		return nil, err
-	}
-	if resp.Code != 0 {
-		logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, kit.Rid)
-		return nil, fmt.Errorf("failed to auth verify, err: %s", resp.Message)
-	}
-
-	bizName := s.getBizName(kit, bizId)
-	if resp.Data.Allowed != true {
-		permission := &metadata.IamPermission{
-			SystemID: "bk_cr",
-			Actions: []metadata.IamAction{
-				metadata.IamAction{
-					ID: opType,
-					RelatedResourceTypes: []metadata.IamResourceType{
-						metadata.IamResourceType{
-							SystemID: "bk_cmdb",
-							Type:     "biz",
-							Instances: [][]metadata.IamResourceInstance{
-								[]metadata.IamResourceInstance{
-									metadata.IamResourceInstance{
-										Type: "biz",
-										ID:   strconv.Itoa(int(bizId)),
-										Name: bizName,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-		authResp := metadata.NewNoPermissionResp(permission)
-		return &authResp, common.NoAuthorizeError
-	}
+	//req := &iamapi.AuthVerifyReq{
+	//	System: "bk_cr",
+	//	Subject: &iamapi.Subject{
+	//		Type: "user",
+	//		ID:   user,
+	//	},
+	//	Action: &iamapi.Action{
+	//		ID: opType,
+	//	},
+	//	Resources: []*iamapi.Resource{
+	//		{
+	//			System: "bk_cmdb",
+	//			Type:   "biz",
+	//			ID:     strconv.Itoa(int(bizId)),
+	//		},
+	//	},
+	//}
+	//resp, err := s.Iam.AuthVerify(nil, nil, req)
+	//if err != nil {
+	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, kit.Rid)
+	//	return nil, err
+	//}
+	//if resp.Code != 0 {
+	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, kit.Rid)
+	//	return nil, fmt.Errorf("failed to auth verify, err: %s", resp.Message)
+	//}
+	//
+	//bizName := s.getBizName(kit, bizId)
+	//if resp.Data.Allowed != true {
+	//	permission := &metadata.IamPermission{
+	//		SystemID: "bk_cr",
+	//		Actions: []metadata.IamAction{
+	//			{
+	//				ID: opType,
+	//				RelatedResourceTypes: []metadata.IamResourceType{
+	//					{
+	//						SystemID: "bk_cmdb",
+	//						Type:     "biz",
+	//						Instances: [][]metadata.IamResourceInstance{
+	//							{
+	//								metadata.IamResourceInstance{
+	//									Type: "biz",
+	//									ID:   strconv.Itoa(int(bizId)),
+	//									Name: bizName,
+	//								},
+	//							},
+	//						},
+	//					},
+	//				},
+	//			},
+	//		},
+	//	}
+	//	authResp := metadata.NewNoPermissionResp(permission)
+	//	return &authResp, common.NoAuthorizeError
+	//}
 
 	return nil, nil
 }

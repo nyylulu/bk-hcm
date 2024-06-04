@@ -23,7 +23,6 @@ import (
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty/iamapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
@@ -42,8 +41,8 @@ func (s *service) UpdateApplyTicket(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to update apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().UpdateApplyTicket(cts.Kit, input)
@@ -65,8 +64,8 @@ func (s *service) GetApplyTicket(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
@@ -88,8 +87,8 @@ func (s *service) GetApplyAudit(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyAudit(cts.Kit, input)
@@ -111,8 +110,8 @@ func (s *service) AuditApplyTicket(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to audit apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	if err := s.logics.Scheduler().AuditTicket(cts.Kit, input); err != nil {
@@ -133,8 +132,8 @@ func (s *service) AutoAuditApplyTicket(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to auto audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to auto audit apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().AutoAuditTicket(cts.Kit, input)
@@ -156,8 +155,8 @@ func (s *service) ApproveApplyTicket(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to approve apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to approve apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	if err := s.logics.Scheduler().ApproveTicket(cts.Kit, input); err != nil {
@@ -178,65 +177,66 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to create apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	req := &iamapi.AuthVerifyReq{
-		System: "bk_cr",
-		Subject: &iamapi.Subject{
-			Type: "user",
-			ID:   input.User,
-		},
-		Action: &iamapi.Action{
-			ID: "resource_apply",
-		},
-		Resources: []*iamapi.Resource{
-			&iamapi.Resource{
-				System: "bk_cmdb",
-				Type:   "biz",
-				ID:     strconv.Itoa(int(input.BkBizId)),
-			},
-		},
-	}
-	resp, err := s.Iam.AuthVerify(nil, nil, req)
-	if err != nil {
-		logs.Errorf("failed to auth verify, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
-	if resp.Code != 0 {
-		logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, cts.Kit.Rid)
-		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to auth verify, err: %s", resp.Message)
-	}
-
-	bizName := s.getBizName(cts.Kit, input.BkBizId)
-	if resp.Data.Allowed != true {
-		permission := &metadata.IamPermission{
-			SystemID: "bk_cr",
-			Actions: []metadata.IamAction{
-				metadata.IamAction{
-					ID: "resource_apply",
-					RelatedResourceTypes: []metadata.IamResourceType{
-						metadata.IamResourceType{
-							SystemID: "bk_cmdb",
-							Type:     "biz",
-							Instances: [][]metadata.IamResourceInstance{
-								[]metadata.IamResourceInstance{
-									metadata.IamResourceInstance{
-										Type: "biz",
-										ID:   strconv.Itoa(int(input.BkBizId)),
-										Name: bizName,
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-		}
-		authResp := metadata.NewNoPermissionResp(permission)
-		return authResp, nil
-	}
+	// TODO 需要替换为海垒的权限Auth模型
+	//req := &iamapi.AuthVerifyReq{
+	//	System: "bk_cr",
+	//	Subject: &iamapi.Subject{
+	//		Type: "user",
+	//		ID:   input.User,
+	//	},
+	//	Action: &iamapi.Action{
+	//		ID: "resource_apply",
+	//	},
+	//	Resources: []*iamapi.Resource{
+	//		{
+	//			System: "bk_cmdb",
+	//			Type:   "biz",
+	//			ID:     strconv.Itoa(int(input.BkBizId)),
+	//		},
+	//	},
+	//}
+	//resp, err := s.Iam.AuthVerify(nil, nil, req)
+	//if err != nil {
+	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, cts.Kit.Rid)
+	//	return nil, err
+	//}
+	//if resp.Code != 0 {
+	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, cts.Kit.Rid)
+	//	return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to auth verify, err: %s", resp.Message)
+	//}
+	//
+	//bizName := s.getBizName(cts.Kit, input.BkBizId)
+	//if resp.Data.Allowed != true {
+	//	permission := &metadata.IamPermission{
+	//		SystemID: "bk_cr",
+	//		Actions: []metadata.IamAction{
+	//			{
+	//				ID: "resource_apply",
+	//				RelatedResourceTypes: []metadata.IamResourceType{
+	//					{
+	//						SystemID: "bk_cmdb",
+	//						Type:     "biz",
+	//						Instances: [][]metadata.IamResourceInstance{
+	//							{
+	//								metadata.IamResourceInstance{
+	//									Type: "biz",
+	//									ID:   strconv.Itoa(int(input.BkBizId)),
+	//									Name: bizName,
+	//								},
+	//							},
+	//						},
+	//					},
+	//				},
+	//			},
+	//		},
+	//	}
+	//	authResp := metadata.NewNoPermissionResp(permission)
+	//	return authResp, nil
+	//}
 
 	rst, err := s.logics.Scheduler().CreateApplyOrder(cts.Kit, input)
 	if err != nil {
@@ -257,8 +257,8 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, input)
@@ -280,8 +280,8 @@ func (s *service) GetBizApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get biz apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get biz apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// check permission
@@ -364,8 +364,8 @@ func (s *service) GetApplyGenerate(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply generate record, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply generate record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyGenerate(cts.Kit, input)
@@ -387,8 +387,8 @@ func (s *service) GetApplyInit(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply init record, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply init record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyInit(cts.Kit, input)
@@ -410,8 +410,8 @@ func (s *service) GetApplyDiskCheck(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply disk check record, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply disk check record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyDiskCheck(cts.Kit, input)
@@ -433,8 +433,8 @@ func (s *service) GetApplyDeliver(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply deliver record, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply deliver record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyDeliver(cts.Kit, input)
@@ -456,8 +456,8 @@ func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyDevice(cts.Kit, input)
@@ -479,8 +479,8 @@ func (s *service) GetDeliverDeviceByOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply delivered device info, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply delivered device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rule := querybuilder.CombinedRule{
@@ -544,8 +544,9 @@ func (s *service) ExportDeliverDevice(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to export apply delivered device info, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to export apply delivered device info, err: %v, errKey: %s, rid: %s",
+			err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().ExportDeliverDevice(cts.Kit, input)
@@ -567,8 +568,8 @@ func (s *service) GetMatchDevice(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply match device info, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply match device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetMatchDevice(cts.Kit, input)
@@ -590,8 +591,8 @@ func (s *service) MatchDevice(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to match devices, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to match devices, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	if err := s.logics.Scheduler().MatchDevice(cts.Kit, input); err != nil {
@@ -612,8 +613,8 @@ func (s *service) MatchPoolDevice(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to match pool devices, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to match pool devices, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	if err := s.logics.Scheduler().MatchPoolDevice(cts.Kit, input); err != nil {
@@ -625,13 +626,13 @@ func (s *service) MatchPoolDevice(cts *rest.Contexts) (any, error) {
 }
 
 // PauseApplyOrder pauses apply order
-func (s *service) PauseApplyOrder(cts *rest.Contexts) (any, error) {
+func (s *service) PauseApplyOrder(_ *rest.Contexts) (any, error) {
 	// TODO
 	return nil, nil
 }
 
 // ResumeApplyOrder resumes apply order
-func (s *service) ResumeApplyOrder(cts *rest.Contexts) (any, error) {
+func (s *service) ResumeApplyOrder(_ *rest.Contexts) (any, error) {
 	// TODO
 	return nil, nil
 }
@@ -646,8 +647,8 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to start apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// get orders' biz id list
@@ -694,8 +695,8 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to terminate apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to terminate apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// get orders' biz id list
@@ -742,8 +743,8 @@ func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to modify apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// get orders' biz id list
@@ -791,8 +792,8 @@ func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to recommend apply order, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to recommend apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// get orders' biz id list
@@ -840,8 +841,8 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply order modify record, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.New(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get apply order modify record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Scheduler().GetApplyModify(cts.Kit, input)

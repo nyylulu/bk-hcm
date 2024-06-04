@@ -61,8 +61,6 @@ data:
       {{- toYaml .Values.tgw | nindent 6 }}
     l5:
       {{- toYaml .Values.l5 | nindent 6 }}
-    iam:
-      {{- toYaml .Values.iam | nindent 6 }}
     safety:
       {{- toYaml .Values.safety | nindent 6 }}
     sops:

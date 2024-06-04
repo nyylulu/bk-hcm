@@ -26,7 +26,6 @@ import (
 	"hcm/cmd/woa-server/thirdparty/dvmapi"
 	"hcm/cmd/woa-server/thirdparty/erpapi"
 	"hcm/cmd/woa-server/thirdparty/gcsapi"
-	"hcm/cmd/woa-server/thirdparty/iamapi"
 	"hcm/cmd/woa-server/thirdparty/itsmapi"
 	"hcm/cmd/woa-server/thirdparty/l5api"
 	"hcm/cmd/woa-server/thirdparty/safetyapi"
@@ -58,7 +57,6 @@ type Client struct {
 	Tcaplus         tcaplusapi.TcaplusClientInterface
 	TGW             tgwapi.TgwClientInterface
 	L5              l5api.L5ClientInterface
-	IAM             iamapi.IAMClientInterface
 	Safety          safetyapi.SafetyClientInterface
 	TencentCloudOpt cc.TCloudCli
 	BkChat          bkchatapi.BkChatClientInterface
@@ -123,13 +121,6 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 
 // newApiGWClient 实例化API网关client
 func newApiGWClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Client) (*Client, error) {
-	iam, err := iamapi.NewIAMClientInterface(opts.IAM, reg)
-	if err != nil {
-		logs.Errorf("failed to new iam api client, err: %v", err)
-		return nil, err
-	}
-	client.IAM = iam
-
 	sops, err := sopsapi.NewSopsClientInterface(opts.Sops, reg)
 	if err != nil {
 		logs.Errorf("failed to new sops api client, err: %v", err)

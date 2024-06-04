@@ -30,8 +30,9 @@ func (s *service) GetApplyStatistics(cts *rest.Contexts) (any, error) {
 
 	errKey, err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get resource apply operation statistics, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, errKey)
+		logs.Errorf("failed to get resource apply operation statistics, err: %v, errKey: %s, rid: %s",
+			err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Operation().GetApplyStatistics(cts.Kit, input)
