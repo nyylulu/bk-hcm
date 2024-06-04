@@ -184,9 +184,8 @@ func (svc *lbSvc) getTargetGroup(cts *rest.Contexts, validHandler handler.ListAu
 	}
 
 	switch basicInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return svc.getTCloudTargetGroup(cts.Kit, id)
-
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", id, basicInfo.Vendor)
 	}

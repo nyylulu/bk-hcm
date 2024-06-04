@@ -56,6 +56,11 @@ func (t tcloudZiyanSyncer) CountRegion(kt *kit.Kit, dataCli *dataservice.Client)
 	return result.Count, nil
 }
 
+// CountImage ...
+func (t tcloudZiyanSyncer) CountImage(kt *kit.Kit, dataCli *dataservice.Client) (uint64, error) {
+	return 1, nil
+}
+
 // SyncAllResource ...
 func (t tcloudZiyanSyncer) SyncAllResource(kt *kit.Kit, cli *client.ClientSet, account string,
 	syncPubRes bool) (reType enumor.CloudResourceType, err error) {

@@ -80,6 +80,8 @@ func (svc *vpcSvc) BatchCreateVpc(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return batchCreateVpc[protocloud.TCloudVpcCreateExt](cts, vendor, svc)
+	case enumor.TCloudZiyan:
+		return batchCreateVpc[protocloud.TCloudVpcCreateExt](cts, vendor, svc)
 	case enumor.Aws:
 		return batchCreateVpc[protocloud.AwsVpcCreateExt](cts, vendor, svc)
 	case enumor.Gcp:
@@ -162,6 +164,8 @@ func (svc *vpcSvc) BatchUpdateVpc(cts *rest.Contexts) (interface{}, error) {
 
 	switch vendor {
 	case enumor.TCloud:
+		return batchUpdateVpc[protocloud.TCloudVpcUpdateExt](cts, svc)
+	case enumor.TCloudZiyan:
 		return batchUpdateVpc[protocloud.TCloudVpcUpdateExt](cts, svc)
 	case enumor.Aws:
 		return batchUpdateVpc[protocloud.AwsVpcUpdateExt](cts, svc)
@@ -342,6 +346,8 @@ func (svc *vpcSvc) GetVpc(cts *rest.Contexts) (interface{}, error) {
 
 	switch vendor {
 	case enumor.TCloud:
+		return convertToVpcResult[protocore.TCloudVpcExtension](base, dbVpc.Extension)
+	case enumor.TCloudZiyan:
 		return convertToVpcResult[protocore.TCloudVpcExtension](base, dbVpc.Extension)
 	case enumor.Aws:
 		return convertToVpcResult[protocore.AwsVpcExtension](base, dbVpc.Extension)
@@ -530,6 +536,8 @@ func (svc *vpcSvc) ListVpcExt(cts *rest.Contexts) (interface{}, error) {
 
 	switch vendor {
 	case enumor.TCloud:
+		return conVpcExtListResult[protocore.TCloudVpcExtension](listResp.Details)
+	case enumor.TCloudZiyan:
 		return conVpcExtListResult[protocore.TCloudVpcExtension](listResp.Details)
 	case enumor.Aws:
 		return conVpcExtListResult[protocore.AwsVpcExtension](listResp.Details)

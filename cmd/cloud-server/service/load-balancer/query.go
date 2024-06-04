@@ -190,7 +190,8 @@ func (svc *lbSvc) getLoadBalancer(cts *rest.Contexts, validHandler handler.ListA
 	switch basicInfo.Vendor {
 	case enumor.TCloud:
 		return svc.client.DataService().TCloud.LoadBalancer.Get(cts.Kit, id)
-
+	case enumor.TCloudZiyan:
+		return svc.client.DataService().TCloudZiyan.LoadBalancer.Get(cts.Kit, id)
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", id, basicInfo.Vendor)
 	}
@@ -331,6 +332,16 @@ func (svc *lbSvc) listTargetsHealthByTGID(cts *rest.Contexts, validHandler handl
 			}
 		}
 		return svc.client.HCService().TCloud.Clb.ListTargetHealth(cts.Kit, req)
+	case enumor.TCloudZiyan:
+		tgInfo, newCloudLbIDs, err := svc.checkBindGetTargetGroupInfo(cts.Kit, tgID, req.CloudLbIDs)
+		if err != nil {
+			return nil, err
+		}
+
+		req.AccountID = tgInfo.AccountID
+		req.Region = tgInfo.Region
+		req.CloudLbIDs = newCloudLbIDs
+		return svc.client.HCService().TCloudZiyan.Clb.ListTargetHealth(cts.Kit, req)
 	default:
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", tgID, basicInfo.Vendor)
 	}
@@ -409,7 +420,8 @@ func (svc *lbSvc) getLoadBalancerLockStatus(cts *rest.Contexts, validHandler han
 	}
 
 	switch basicInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
+		// 里面的内容自研云和公有云没有太大差异，直接复用
 		// 预检测-是否有执行中的负载均衡
 		flowRelResp, err := svc.checkResFlowRel(cts.Kit, id, enumor.LoadBalancerCloudResType)
 		if err != nil {

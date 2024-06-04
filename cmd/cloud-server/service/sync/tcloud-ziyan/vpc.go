@@ -25,43 +25,45 @@ import (
 	"hcm/cmd/cloud-server/service/sync/detail"
 	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/client"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
 
-// SyncArgsTpl ...
-func SyncArgsTpl(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions []string,
+// SyncVpc ...
+func SyncVpc(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions []string,
 	sd *detail.SyncDetail) error {
 
 	// 重新设置rid方便定位
 	kt = kt.NewSubKit()
 
 	start := time.Now()
-	logs.Infof("tcloud ziyan account[%s] sync argument template start, time: %v, rid: %s", accountID, start, kt.Rid)
+	logs.V(3).Infof("tcloud ziyan account[%s] sync vpc start, time: %v, rid: %s",
+		accountID, start, kt.Rid)
 
 	// 同步中
-	if err := sd.ResSyncStatusSyncing(enumor.ArgumentTemplateResType); err != nil {
+	if err := sd.ResSyncStatusSyncing(enumor.VpcCloudResType); err != nil {
 		return err
 	}
 
 	defer func() {
-		logs.Infof("tcloud ziyan account[%s] sync argument template end, cost: %v, rid: %s",
+		logs.V(3).Infof("tcloud ziyan account[%s] sync vpc end, cost: %v, rid: %s",
 			accountID, time.Since(start), kt.Rid)
 	}()
 
-	req := &sync.TCloudSyncReq{
-		AccountID: accountID,
-		Region:    constant.TCloudDefaultRegion,
-	}
-	if err := cliSet.HCService().TCloudZiyan.ArgsTpl.SyncArgsTpl(kt, req); err != nil {
-		logs.Errorf("sync tcloud ziyan argument template failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
-		return err
+	for _, region := range regions {
+		req := &sync.TCloudSyncReq{
+			AccountID: accountID,
+			Region:    region,
+		}
+		if err := cliSet.HCService().TCloudZiyan.Vpc.SyncVpc(kt.Ctx, kt.Header(), req); err != nil {
+			logs.Errorf("sync tcloud ziyan vpc failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
+			return err
+		}
 	}
 
 	// 同步成功
-	if err := sd.ResSyncStatusSuccess(enumor.ArgumentTemplateResType); err != nil {
+	if err := sd.ResSyncStatusSuccess(enumor.VpcCloudResType); err != nil {
 		return err
 	}
 

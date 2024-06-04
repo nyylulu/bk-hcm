@@ -49,7 +49,7 @@ func (opt SyncSGRuleOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }
 
-//TODO 尽量复用公有云代码，降低修改成本
+// TODO 尽量复用公有云代码，降低修改成本
 
 // SecurityGroupRule 同步安全组规则唯一指定方法
 func (cli *client) SecurityGroupRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGRuleOption) (*SyncResult, error) {
@@ -108,7 +108,7 @@ func (cli *client) securityGroupRule(kt *kit.Kit, opt *syncSGRuleOption) (*SyncR
 	// 获取模版参数列表
 	argsTplMap, err := cli.listArgumentTemplateMapFromDB(kt, argsTplCloudIDs)
 	if err != nil {
-		logs.Errorf("[%s] request dataservice get TCloud argument template failed, cloudIDs: %v, err: %v, rid: %s",
+		logs.Errorf("[%s] request dataservice get tcloud ziyan argument template failed, cloudIDs: %v, err: %v, rid: %s",
 			enumor.TCloudZiyan, argsTplCloudIDs, err, kt.Rid)
 		return nil, err
 	}

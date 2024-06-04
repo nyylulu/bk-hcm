@@ -21,6 +21,8 @@
 package cert
 
 import (
+	"fmt"
+
 	dataproto "hcm/pkg/api/data-service/cloud"
 	protocert "hcm/pkg/api/hc-service/cert"
 	"hcm/pkg/criteria/enumor"
@@ -76,15 +78,26 @@ func (svc *certSvc) deleteCertSvc(cts *rest.Contexts, validHandler handler.Valid
 		return nil, errf.Newf(errf.Aborted, "cert %s record is not found", id)
 	}
 
-	err = svc.client.HCService().TCloud.Cert.DeleteCert(cts.Kit, &protocert.TCloudDeleteReq{
-		AccountID: certInfo.AccountID,
-		ID:        id,
-	})
+	switch certInfo.Vendor {
+	case enumor.TCloud:
+		err = svc.client.HCService().TCloud.Cert.DeleteCert(cts.Kit, &protocert.TCloudDeleteReq{
+			AccountID: certInfo.AccountID,
+			ID:        id,
+		})
+
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.Cert.DeleteCert(cts.Kit, &protocert.TCloudDeleteReq{
+			AccountID: certInfo.AccountID,
+			ID:        id,
+		})
+
+	default:
+		return nil, fmt.Errorf("vendor: %s not support", certInfo.Vendor)
+	}
 	if err != nil {
 		logs.Errorf("[%s] request hcservice to delete cert failed, id: %s, err: %v, rid: %s",
-			enumor.TCloud, id, err, cts.Kit.Rid)
+			certInfo.Vendor, id, err, cts.Kit.Rid)
 		return nil, err
 	}
-
 	return nil, nil
 }

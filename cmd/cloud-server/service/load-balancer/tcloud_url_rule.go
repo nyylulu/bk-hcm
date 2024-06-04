@@ -147,6 +147,9 @@ func (svc *lbSvc) fillRuleRelatedRes(kt *kit.Kit, urlRuleList *dataproto.TCloudU
 	return resList, nil
 }
 
+type listRuleWithConditionFunc func(kt *kit.Kit, listReq *core.ListReq, conditions ...filter.RuleFactory) (
+	*dataproto.TCloudURLRuleListResult, error)
+
 // listRuleWithCondition list rule with additional rules
 func (svc *lbSvc) listRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, conditions ...filter.RuleFactory) (
 	*dataproto.TCloudURLRuleListResult, error) {
@@ -167,6 +170,35 @@ func (svc *lbSvc) listRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, cond
 	}
 
 	urlRuleList, err := svc.client.DataService().TCloud.LoadBalancer.ListUrlRule(kt, req)
+	if err != nil {
+		logs.Errorf("list tcloud url with rule failed,  err: %v, req: %+v, conditions: %+v, rid: %s",
+			err, listReq, conditions, kt.Rid)
+		return nil, err
+	}
+
+	return urlRuleList, nil
+}
+
+// listTCloudZiyanRuleWithCondition list ziyan rule with additional rules
+func (svc *lbSvc) listTCloudZiyanRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, conditions ...filter.RuleFactory) (
+	*dataproto.TCloudURLRuleListResult, error) {
+
+	req := &core.ListReq{
+		Filter: listReq.Filter,
+		Page:   listReq.Page,
+		Fields: listReq.Fields,
+	}
+	if len(conditions) > 0 {
+		conditions = append(conditions, listReq.Filter)
+		combinedFilter, err := tools.And(conditions...)
+		if err != nil {
+			logs.Errorf("fail to merge list request, err: %v, listReq: %+v, rid: %s", err, listReq, kt.Rid)
+			return nil, err
+		}
+		req.Filter = combinedFilter
+	}
+
+	urlRuleList, err := svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, req)
 	if err != nil {
 		logs.Errorf("list tcloud url with rule failed,  err: %v, req: %+v, conditions: %+v, rid: %s",
 			err, listReq, conditions, kt.Rid)

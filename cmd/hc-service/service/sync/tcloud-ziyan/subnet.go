@@ -24,34 +24,33 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/sync/handler"
 	typecore "hcm/pkg/adaptor/types/core"
-	typeclb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/tools/converter"
 )
 
-// SyncLoadBalancer 同步负载均衡接口
-func (svc *service) SyncLoadBalancer(cts *rest.Contexts) (interface{}, error) {
-	return nil, handler.ResourceSync(cts, &lbHandler{cli: svc.syncCli})
+// SyncSubnet ....
+func (svc *service) SyncSubnet(cts *rest.Contexts) (interface{}, error) {
+	return nil, handler.ResourceSync(cts, &subnetHandler{cli: svc.syncCli})
 }
 
-// lbHandler lb sync handler.
-type lbHandler struct {
+// subnetHandler subnet sync handler.
+type subnetHandler struct {
 	cli ressync.Interface
 
+	// Prepare 构建参数
 	request *sync.TCloudSyncReq
 	syncCli ziyan.Interface
 	offset  uint64
 }
 
-var _ handler.Handler = new(lbHandler)
+var _ handler.Handler = new(subnetHandler)
 
 // Prepare ...
-func (hd *lbHandler) Prepare(cts *rest.Contexts) error {
+func (hd *subnetHandler) Prepare(cts *rest.Contexts) error {
 	request, syncCli, err := defaultPrepare(cts, hd.cli)
 	if err != nil {
 		return err
@@ -64,43 +63,43 @@ func (hd *lbHandler) Prepare(cts *rest.Contexts) error {
 }
 
 // Next ...
-func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
-	listOpt := &typeclb.TCloudListOption{
+func (hd *subnetHandler) Next(kt *kit.Kit) ([]string, error) {
+	listOpt := &typecore.TCloudListOption{
 		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
-			Limit:  constant.TCloudLoadBalancerQueryMax,
+			Limit:  constant.CloudResourceSyncMaxLimit,
 		},
 	}
 
-	lbResult, err := hd.syncCli.CloudCli().ListLoadBalancer(kt, listOpt)
+	subnetResult, err := hd.syncCli.CloudCli().ListSubnet(kt, listOpt)
 	if err != nil {
-		logs.Errorf("request adaptor list tcloud load balancer failed, err: %v, opt: %v, rid: %s", err, listOpt, kt.Rid)
+		logs.Errorf("request adaptor list tcloud ziyan subnet failed, err: %v, opt: %v, rid: %s", err, listOpt, kt.Rid)
 		return nil, err
 	}
 
-	if len(lbResult) == 0 {
+	if len(subnetResult.Details) == 0 {
 		return nil, nil
 	}
 
-	cloudIDs := make([]string, 0, len(lbResult))
-	for _, one := range lbResult {
-		cloudIDs = append(cloudIDs, converter.PtrToVal(one.LoadBalancerId))
+	cloudIDs := make([]string, 0, len(subnetResult.Details))
+	for _, one := range subnetResult.Details {
+		cloudIDs = append(cloudIDs, one.CloudID)
 	}
 
-	hd.offset += constant.TCloudLoadBalancerQueryMax
+	hd.offset += constant.CloudResourceSyncMaxLimit
 	return cloudIDs, nil
 }
 
 // Sync ...
-func (hd *lbHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
+func (hd *subnetHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 	params := &ziyan.SyncBaseParams{
 		AccountID: hd.request.AccountID,
 		Region:    hd.request.Region,
 		CloudIDs:  cloudIDs,
 	}
-	if _, err := hd.syncCli.LoadBalancerWithListener(kt, params, new(ziyan.SyncLBOption)); err != nil {
-		logs.Errorf("sync tcloud load balancer with rel failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
+	if _, err := hd.syncCli.Subnet(kt, params, new(ziyan.SyncSubnetOption)); err != nil {
+		logs.Errorf("sync tcloud ziyan subnet failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
 		return err
 	}
 
@@ -108,17 +107,17 @@ func (hd *lbHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 }
 
 // RemoveDeleteFromCloud ...
-func (hd *lbHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
-	if err := hd.syncCli.RemoveLoadBalancerDeleteFromCloud(kt, hd.request.AccountID, hd.request.Region); err != nil {
-		logs.Errorf("remove load balancer delete from cloud failed, err: %v, accountID: %s, region: %s, rid: %s", err,
-			hd.request.AccountID, hd.request.Region, kt.Rid)
+func (hd *subnetHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
+	if err := hd.syncCli.RemoveSubnetDeleteFromCloud(kt, hd.request.AccountID, hd.request.Region); err != nil {
+		logs.Errorf("remove subnet delete from cloud failed, err: %v, accountID: %s, region: %s, rid: %s",
+			err, hd.request.AccountID, hd.request.Region, kt.Rid)
 		return err
 	}
 
 	return nil
 }
 
-// Name load_balancer
-func (hd *lbHandler) Name() enumor.CloudResourceType {
-	return enumor.LoadBalancerCloudResType
+// Name ...
+func (hd *subnetHandler) Name() enumor.CloudResourceType {
+	return enumor.SubnetCloudResType
 }

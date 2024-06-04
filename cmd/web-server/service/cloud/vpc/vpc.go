@@ -86,6 +86,28 @@ func (svc *service) ListVpcWithSubnetCountInBiz(cts *rest.Contexts) (interface{}
 		}
 
 		return &proto.ListVpcWithSubnetCountResult[corecloud.TCloudVpcExtension]{Details: details}, nil
+	case enumor.TCloudZiyan:
+		vpcResult, err := svc.client.CloudServer().Vpc.TCloudZiyanListExtInBiz(cts.Kit.Ctx, cts.Kit.Header(), bizID,
+			listVpcReq)
+		if err != nil {
+			logs.Errorf("list vpc failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
+		details := make([]proto.VpcWithSubnetCount[corecloud.TCloudVpcExtension], 0, len(vpcResult.Details))
+		for _, one := range vpcResult.Details {
+			vpcSubnetCount, zoneSubnetCount, err := svc.getVpcSubnetCount(cts.Kit, one.ID, req.Zone, bizID)
+			if err != nil {
+				return nil, err
+			}
+
+			details = append(details, proto.VpcWithSubnetCount[corecloud.TCloudVpcExtension]{
+				Vpc:                    one,
+				SubnetCount:            vpcSubnetCount,
+				CurrentZoneSubnetCount: zoneSubnetCount,
+			})
+		}
+
+		return &proto.ListVpcWithSubnetCountResult[corecloud.TCloudVpcExtension]{Details: details}, nil
 
 	case enumor.Aws:
 		vpcResult, err := svc.client.CloudServer().Vpc.AwsListExtInBiz(cts.Kit.Ctx, cts.Kit.Header(), bizID, listVpcReq)
@@ -254,6 +276,28 @@ func (svc *service) ListVpcWithSubnetCountInRes(cts *rest.Contexts) (interface{}
 	switch vendor {
 	case enumor.TCloud:
 		vpcResult, err := svc.client.CloudServer().Vpc.TCloudListExtInRes(cts.Kit.Ctx, cts.Kit.Header(), listVpcReq)
+		if err != nil {
+			logs.Errorf("list vpc failed, err: %v, rid: %svc", err, cts.Kit.Rid)
+			return nil, err
+		}
+		details := make([]proto.VpcWithSubnetCount[corecloud.TCloudVpcExtension], 0, len(vpcResult.Details))
+		for _, one := range vpcResult.Details {
+			vpcSubnetCount, zoneSubnetCount, err := svc.getVpcSubnetCountInRes(cts.Kit, one.ID, req.Zone)
+			if err != nil {
+				return nil, err
+			}
+
+			details = append(details, proto.VpcWithSubnetCount[corecloud.TCloudVpcExtension]{
+				Vpc:                    one,
+				SubnetCount:            vpcSubnetCount,
+				CurrentZoneSubnetCount: zoneSubnetCount,
+			})
+		}
+
+		return &proto.ListVpcWithSubnetCountResult[corecloud.TCloudVpcExtension]{Details: details}, nil
+	case enumor.TCloudZiyan:
+		vpcResult, err := svc.client.CloudServer().Vpc.TCloudZiyanListExtInRes(
+			cts.Kit.Ctx, cts.Kit.Header(), listVpcReq)
 		if err != nil {
 			logs.Errorf("list vpc failed, err: %v, rid: %svc", err, cts.Kit.Rid)
 			return nil, err

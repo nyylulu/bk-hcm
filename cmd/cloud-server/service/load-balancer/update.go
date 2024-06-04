@@ -88,6 +88,8 @@ func (svc *lbSvc) UpdateBizTCloudLoadBalancer(cts *rest.Contexts) (any, error) {
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
 		return nil, svc.client.HCService().TCloud.Clb.Update(cts.Kit, lbID, req)
+	case enumor.TCloudZiyan:
+		return nil, svc.client.HCService().TCloudZiyan.Clb.Update(cts.Kit, lbID, req)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
 	}
@@ -121,6 +123,9 @@ func (svc *lbSvc) updateTargetGroup(cts *rest.Contexts, authHandler handler.Vali
 
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
+		return svc.batchUpdateTCloudTargetGroup(cts, id)
+	case enumor.TCloudZiyan:
+		// 目前UpdateTargetGroup的行为是通用的(都是修改数据库)，暂时复用这个方法
 		return svc.batchUpdateTCloudTargetGroup(cts, id)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
@@ -199,6 +204,8 @@ func (svc *lbSvc) updateTargetGroupHealth(cts *rest.Contexts, authHandler handle
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
 		return svc.updateTCloudTargetGroupHealthCheck(cts, tgID)
+	case enumor.TCloudZiyan:
+		return svc.updateTCloudZiyanTargetGroupHealthCheck(cts, tgID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
 	}
@@ -233,6 +240,78 @@ func (svc *lbSvc) updateTCloudTargetGroupHealthCheck(cts *rest.Contexts, tgID st
 	}
 
 	return nil, nil
+}
+
+func (svc *lbSvc) updateTCloudZiyanTargetGroupHealthCheck(cts *rest.Contexts, tgID string) (any, error) {
+
+	req := new(hclbproto.HealthCheckUpdateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 更新云上监听器
+	if err := svc.updateZiyanRelatedListenerHealthCheck(cts.Kit, tgID, req); err != nil {
+		return nil, err
+	}
+
+	// 3. 更新db
+	dbReq := &dataproto.TargetGroupUpdateReq{
+		IDs:         []string{tgID},
+		HealthCheck: req.HealthCheck,
+	}
+
+	err := svc.client.DataService().TCloudZiyan.LoadBalancer.BatchUpdateTCloudTargetGroup(cts.Kit, dbReq)
+	if err != nil {
+		logs.Errorf("update db tcloud target group failed, err: %v,  req: %+v, rid: %s", dbReq, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (svc *lbSvc) updateZiyanRelatedListenerHealthCheck(kt *kit.Kit, tgID string,
+	healthReq *hclbproto.HealthCheckUpdateReq) error {
+
+	// 1. 获取目标组关联监听器
+	relListReq := &core.ListReq{
+		Filter: tools.EqualExpression("target_group_id", tgID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	relResp, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroupListenerRel(kt, relListReq)
+	if err != nil {
+		return err
+	}
+	if len(relResp.Details) == 0 {
+		// 无关联关系 直接返回
+		return nil
+	}
+
+	// 本地目标组只有一个关联的规则或者监听器
+	rel := relResp.Details[0]
+	// 2. 更新云上监听器/规则
+	switch rel.ListenerRuleType {
+	case enumor.Layer7RuleType:
+		// 仅更新规则的健康检查字段
+		req := &hclbproto.TCloudRuleUpdateReq{HealthCheck: healthReq.HealthCheck}
+		err := svc.client.HCService().TCloudZiyan.Clb.UpdateUrlRule(kt, rel.LblID, rel.ListenerRuleID, req)
+		if err != nil {
+			logs.Errorf("fail to update health check of rule, err: %v, listener id: %s, rule id: %s, rid: %s",
+				err, rel.LblID, rel.ListenerRuleID, kt.Rid)
+			return err
+		}
+	case enumor.Layer4RuleType:
+		err := svc.client.HCService().TCloudZiyan.Clb.UpdateListenerHealthCheck(kt, rel.LblID, healthReq)
+		if err != nil {
+			logs.Errorf("fail to update health check of listener, err: %v, listener id: %s,  rid: %s",
+				err, rel.LblID, kt.Rid)
+			return err
+		}
+	}
+	return nil
 }
 
 func (svc *lbSvc) updateRelatedListenerHealthCheck(kt *kit.Kit, tgID string,
@@ -319,6 +398,8 @@ func (svc *lbSvc) updateListener(cts *rest.Contexts, authHandler handler.ValidWi
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.batchUpdateTCloudListener(cts.Kit, req.Data, id)
+	case enumor.TCloudZiyan:
+		return svc.batchUpdateTCloudZiyanListener(cts.Kit, req.Data, id)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
@@ -335,6 +416,25 @@ func (svc *lbSvc) batchUpdateTCloudListener(kt *kit.Kit, body json.RawMessage, i
 	}
 
 	_, err := svc.client.HCService().TCloud.Clb.UpdateListener(kt, id, req)
+	if err != nil {
+		logs.Errorf("update tcloud listener failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (svc *lbSvc) batchUpdateTCloudZiyanListener(kt *kit.Kit, body json.RawMessage, id string) (interface{}, error) {
+	req := new(hclbproto.ListenerWithRuleUpdateReq)
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	_, err := svc.client.HCService().TCloudZiyan.Clb.UpdateListener(kt, id, req)
 	if err != nil {
 		logs.Errorf("update tcloud listener failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
 		return nil, err
@@ -388,6 +488,14 @@ func (svc *lbSvc) updateDomainAttr(cts *rest.Contexts, authHandler handler.Valid
 			return nil, err
 		}
 		return nil, nil
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.Clb.UpdateDomainAttr(cts.Kit, lblID, req)
+		if err != nil {
+			logs.Errorf(
+				"update tcloud ziyan listener url rule domain attr failed, lblID: %s, req: %+v, err: %v, rid: %s",
+				lblID, err, cts.Kit.Rid)
+		}
+		return nil, err
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
 	}

@@ -1,5 +1,4 @@
 /*
- *
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
  * Copyright (C) 2024 THL A29 Limited,
@@ -18,25 +17,34 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package account
+package hcziyancli
 
 import (
-	"hcm/pkg/criteria/errf"
+	"net/http"
+
+	"hcm/pkg/adaptor/types"
+	hcbwpkg "hcm/pkg/api/hc-service/bandwidth-packages"
+	"hcm/pkg/client/common"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
 
-// GetTCloudNetworkAccountType ...
-func (svc *service) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error) {
-
-	accountID := cts.PathParameter("account_id").String()
-	if len(accountID) == 0 {
-		return nil, errf.New(errf.InvalidParameter, "accountID is required")
+// NewBandPkgClient create a new bandwidth package api client.
+func NewBandPkgClient(client rest.ClientInterface) *BandwidthPackageClient {
+	return &BandwidthPackageClient{
+		client: client,
 	}
+}
 
-	client, err := svc.ad.TCloud(cts.Kit, accountID)
-	if err != nil {
-		return nil, err
-	}
+// BandwidthPackageClient is hc service bandwidth package  api client.
+type BandwidthPackageClient struct {
+	client rest.ClientInterface
+}
 
-	return client.DescribeNetworkAccountType(cts.Kit)
+// ListBandwidthPackage 查询带宽包
+func (c *BandwidthPackageClient) ListBandwidthPackage(kt *kit.Kit, req *hcbwpkg.ListTCloudBwPkgOption) (
+	*types.TCloudListBwPkgResult, error) {
+
+	return common.Request[hcbwpkg.ListTCloudBwPkgOption, types.TCloudListBwPkgResult](c.client, http.MethodPost, kt,
+		req, "/bandwidth_packages/list")
 }

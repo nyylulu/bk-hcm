@@ -102,6 +102,8 @@ func (svc *securityGroupSvc) associateLb(cts *rest.Contexts, validHandler handle
 	switch vendor {
 	case enumor.TCloud:
 		err = svc.client.HCService().TCloud.SecurityGroup.AssociateLb(cts.Kit.Ctx, cts.Kit.Header(), req)
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.SecurityGroup.AssociateLb(cts.Kit, req)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}
@@ -182,6 +184,8 @@ func (svc *securityGroupSvc) disassociateLb(cts *rest.Contexts, validHandler han
 	switch vendor {
 	case enumor.TCloud:
 		err = svc.client.HCService().TCloud.SecurityGroup.DisassociateLb(cts.Kit.Ctx, cts.Kit.Header(), req)
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.SecurityGroup.DisassociateLb(cts.Kit, req)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}
