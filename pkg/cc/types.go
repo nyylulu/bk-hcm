@@ -860,7 +860,6 @@ type ClientConfig struct {
 	Tcaplus   TcaplusCli `yaml:"tcaplus"`
 	TGW       TGWCli     `yaml:"tgw"`
 	L5        L5Cli      `yaml:"l5"`
-	IAM       IamCli     `yaml:"iam"`
 	Safety    SafetyCli  `yaml:"safety"`
 	BkChat    BkChatCli  `yaml:"bkchat"`
 	Sops      SopsCli    `yaml:"sops"`
@@ -917,10 +916,6 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.L5.validate(); err != nil {
-		return err
-	}
-
-	if err := c.IAM.validate(); err != nil {
 		return err
 	}
 
@@ -1221,35 +1216,6 @@ type SafetyCli struct {
 func (c SafetyCli) validate() error {
 	if len(c.SafetyApiAddr) == 0 {
 		return errors.New("safety.host is not set")
-	}
-
-	return nil
-}
-
-// IamCli iam client options
-type IamCli struct {
-	// iam api address
-	IAMApiAddr string `yaml:"host"`
-	AppCode    string `yaml:"app_code"`
-	AppSecret  string `yaml:"app_secret"`
-	Operator   string `yaml:"operator"`
-}
-
-func (c IamCli) validate() error {
-	if len(c.IAMApiAddr) == 0 {
-		return errors.New("iam.host is not set")
-	}
-
-	if len(c.AppCode) == 0 {
-		return errors.New("iam.app_code is not set")
-	}
-
-	if len(c.AppSecret) == 0 {
-		return errors.New("iam.app_secret is not set")
-	}
-
-	if len(c.Operator) == 0 {
-		return errors.New("iam.operator is not set")
 	}
 
 	return nil
