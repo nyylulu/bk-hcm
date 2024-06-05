@@ -91,13 +91,12 @@ const ziyanScr: RouteRecordRaw[] = [
         },
       },
       {
-        path: '/ziyanScr/zysxj',
-
+        path: '/ziyanScr/resource-manage',
         name: '资源上下架',
+        component: () => import('@/views/ziyanScr/resource-manage'),
         children: [],
         meta: {
-          activeKey: 'zysxj',
-          breadcrumb: ['资源', '主机'],
+          activeKey: 'scr-resource-manage',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
         },

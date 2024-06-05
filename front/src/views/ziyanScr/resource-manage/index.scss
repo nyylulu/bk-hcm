@@ -1,0 +1,27 @@
+.scr-resource-manage-page {
+  padding: 24px;
+
+  .manage-container {
+    padding: 6px 14px;
+
+    .filter-container {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+
+      .filter-item {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+    }
+
+    .w150 {
+      width: 150px;
+    }
+
+    .w200 {
+      width: 200px;
+    }
+  }
+}

@@ -27,6 +27,24 @@ const getInstVip = (inst: any) => {
 };
 
 /**
+ * 清洗请求载荷，去除空值
+ * @param payload 请求载荷
+ * @returns 返回新的请求载荷
+ */
+const cleanPayload = (payload: any) => {
+  const newPayload = {};
+  Object.keys(payload).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      const value = payload[key];
+      if (value !== '' && !(Array.isArray(value) && value.length === 0)) {
+        newPayload[key] = value;
+      }
+    }
+  });
+  return newPayload;
+};
+
+/**
  * 导出表格数据为 Excel
  * @param {Array} list 表格数据
  * @param {Array} columns 表格列
@@ -87,4 +105,4 @@ const getDate = (fmt, n) => {
   return fmt;
 };
 
-export { getInstVip, exportTableToExcel, getDate };
+export { getInstVip, exportTableToExcel, getDate, cleanPayload };

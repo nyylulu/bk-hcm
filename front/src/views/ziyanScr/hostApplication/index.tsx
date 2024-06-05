@@ -14,7 +14,7 @@ import CvmTypeSelector from './components/CvmTypeSelector';
 import ImageSelector from './components/ImageSelector';
 import AntiAffinityLevelSelect from './components/AntiAffinityLevelSelect';
 import { RightShape, DownShape } from 'bkui-vue/lib/icon';
-import { useziyanScrStore } from '@/store';
+import { useZiyanScrStore } from '@/store';
 export default defineComponent({
   setup() {
     const addResourceRequirements = ref(false);
@@ -290,7 +290,7 @@ export default defineComponent({
     const loadSubnets = () => {
       const { qcloudRegionId, qcloudZoneId, vpcId } = resourceForm.value.selector;
 
-      useziyanScrStore()
+      useZiyanScrStore()
         .listSubnet({
           region: qcloudRegionId,
           zone: qcloudZoneId,
@@ -304,7 +304,7 @@ export default defineComponent({
         });
     };
     const loadVpcs = () => {
-      useziyanScrStore()
+      useZiyanScrStore()
         .listVpc(resourceForm.value.selector.qcloudRegionId)
         .then(({ data }: any) => {
           vpcs.value = data;

@@ -2397,6 +2397,63 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       // exportFormatter: (row) => this.$recycleTaskStatusTransform(row.status),
     },
   ];
+
+  const scrResourceOnlineColumns = [
+    {
+      label: '单号',
+      field: 'id',
+      render: () => <Button text>id</Button>,
+    },
+    {
+      label: '创建人',
+      field: 'bk_username',
+    },
+    {
+      label: '创建时间',
+      field: 'createAt',
+    },
+    {
+      label: '上架数量',
+      field: 'totalNum',
+    },
+    {
+      label: '完成数量',
+      field: 'successNum',
+    },
+    {
+      label: '单据状态',
+      field: 'phase',
+    },
+  ];
+
+  const scrResourceOfflineColumns = [
+    {
+      label: '单号',
+      field: 'id',
+      render: () => <Button text>id</Button>,
+    },
+    {
+      label: '创建人',
+      field: 'bk_username',
+    },
+    {
+      label: '创建时间',
+      field: 'createAt',
+    },
+    {
+      label: '下架数量',
+      field: 'totalNum',
+    },
+    {
+      label: '完成数量',
+      field: 'successNum',
+    },
+    {
+      label: '单据状态',
+      field: 'phase',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2430,6 +2487,8 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     deviceDestroy: deviceDestroyColumns,
     DeviceQuerycolumns: DQcolumns,
     ExecutionRecords: ERcolumns,
+    scrResourceOnline: scrResourceOnlineColumns,
+    scrResourceOffline: scrResourceOfflineColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
