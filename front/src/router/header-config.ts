@@ -9,6 +9,11 @@ export const headRouteConfig = [
     path: '/business/host',
   },
   {
+    id: 'resource-plan',
+    name: '服务请求',
+    path: '/resource-plan/manage',
+  },
+  {
     id: 'service',
     name: '我的单据',
     path: '/service/my-apply',
