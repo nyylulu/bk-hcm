@@ -77,11 +77,11 @@ export interface IProp {
     ScrSwitch: Boolean;
     interface: {
       // 请求接口参数data
-      Parameters: Object;
+      Parameters?: Object;
       // 查询参数filter
-      filter: Object;
+      filter?: Object;
       // 请求接口路径
-      path: string;
+      path?: string;
       // 请求接口方式
       method?: string;
     };
@@ -142,20 +142,33 @@ export const useTable = (props: IProp) => {
       } = props?.slotAllocation();
       // Scr表格请求接口结构;
       try {
-        const Scrdata = await http.post(BK_HCM_AJAX_URL_PREFIX + path, Parameters);
+        const [detailsRes, countRes] = await Promise.all(
+          [false, true].map((isCount) =>
+            http.post(
+              BK_HCM_AJAX_URL_PREFIX + path,
+              Object.assign(Parameters, {
+                page: {
+                  start: isCount ? 0 : pagination.start,
+                  limit: isCount ? 0 : pagination.limit,
+                  enable_count: isCount,
+                },
+              }),
+            ),
+          ),
+        );
         // 更新数据
         dataList.value = props.requestOption.dataPath
-          ? lodash_get(Scrdata, props.requestOption.dataPath)
-          : Scrdata?.data?.info;
+          ? lodash_get(detailsRes, props.requestOption.dataPath)
+          : detailsRes?.data?.info;
         // 处理 pagination.count
         if (typeof props.requestOption.resolvePaginationCountCb === 'function') {
-          props.requestOption.resolvePaginationCountCb(Scrdata?.data).then((newCount: number) => {
+          props.requestOption.resolvePaginationCountCb(countRes?.data).then((newCount: number) => {
             pagination.count = newCount;
           });
         } else {
-          pagination.count = Scrdata?.data?.count || 0;
+          pagination.count = countRes?.data?.count || 0;
         }
-      } finally {
+      } catch {
         dataList.value = [];
         pagination.count = 0;
       }
@@ -206,7 +219,7 @@ export const useTable = (props: IProp) => {
   };
 
   const CommonTable = defineComponent({
-    setup(_props, { slots }) {
+    setup(_props, { slots, expose }) {
       const searchData = computed(() => {
         return (
           (typeof props.searchOptions.searchData === 'function'
@@ -214,7 +227,8 @@ export const useTable = (props: IProp) => {
             : props.searchOptions.searchData) || []
         );
       });
-
+      // 暴露出表格数据
+      expose({ dataList });
       return () => (
         <div class={`remote-table-container${props?.searchOptions?.disabled ? ' no-search' : ''}`}>
           {typeof props?.slotAllocation === 'function' ? (

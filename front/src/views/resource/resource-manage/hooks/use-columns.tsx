@@ -26,7 +26,12 @@ import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
 import { IP_VERSION_MAP, LBRouteName, LB_NETWORK_TYPE_MAP, SCHEDULER_MAP } from '@/constants/clb';
 import { getInstVip, getResourceTypeName, getReturnPlanName } from '@/utils';
-import { getRecycleTaskStatusView } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
+import {
+  getRecycleTaskStatusLabel,
+  getBusinessNameById,
+  dateTimeTransform,
+} from '@/views/ziyanScr/host-recycle/field-dictionary';
+import { Spinner } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 
 interface LinkFieldOptions {
@@ -2118,6 +2123,34 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'log',
     },
   ];
+  const getRecycleTaskStatusView = (value: string) => {
+    const label = getRecycleTaskStatusLabel(value);
+    if (value === 'DONE') {
+      return <span class='c-success'>{label}</span>;
+    }
+    if (value.includes('ING')) {
+      return (
+        <>
+          <Spinner />
+          <span>{label}</span>
+        </>
+      );
+    }
+    if (value === 'DETECT_FAILED') {
+      return (
+        <bk-badge
+          class='c-danger'
+          v-bk-tooltips={{ content: '请到“预检详情”查看失败原因，或者点击“去除预检失败IP提交”' }}
+          dot>
+          {label}
+        </bk-badge>
+      );
+    }
+    if (value.includes('FAILED')) {
+      return <span class='c-danger'>{label}</span>;
+    }
+    return <span>{label}</span>;
+  };
   // 资源 - 主机回收列表
   const recycleOrderColumns = [
     {
@@ -2125,46 +2158,45 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '单号',
-      field: 'orderId',
+      field: 'order_id',
       width: 80,
-    },
-    {
-      label: '子单号',
-      field: 'suborderId',
-      width: 80,
-      // 单据详情
-      render: ({ row }) => {
-        return (
-          // <router-link to={{ name: 'recycle-detail', query: { suborderId: row.suborderId } }}></router-link>
-          <span>{row.suborderId}</span>
-        );
-      },
     },
     {
       label: '业务',
-      field: 'bkBizId',
+      field: 'bk_biz_id',
+      formatter: ({ bk_biz_id }) => {
+        return getBusinessNameById(bk_biz_id);
+      },
     },
     {
       label: '资源类型',
-      field: 'resourceType',
+      field: 'resource_type',
       width: 120,
       render: ({ row }) => {
-        return <span>{getResourceTypeName(row.resourceType)}</span>;
+        return <span>{getResourceTypeName(row.resource_type)}</span>;
+      },
+      formatter: ({ resource_type }) => {
+        return getResourceTypeName(resource_type);
       },
     },
     {
       label: '回收类型',
-      field: 'returnPlan',
+      field: 'return_plan',
       render: ({ row }) => {
-        return <span>{getReturnPlanName(row.returnPlan, row.resourceType)}</span>;
+        return <span>{getReturnPlanName(row.return_plan, row.resource_type)}</span>;
+      },
+      formatter: ({ return_plan, resource_type }) => {
+        return getReturnPlanName(return_plan, resource_type);
       },
     },
     {
       label: '回收成本',
-      field: 'costConcerned',
-      width: 80,
+      field: 'cost_concerned',
       render: ({ row }) => {
-        return <span>{row.costConcerned ? '涉及' : '不涉及'}</span>;
+        return <span>{row.cost_concerned ? '涉及' : '不涉及'}</span>;
+      },
+      formatter: ({ cost_concerned }) => {
+        return cost_concerned ? '涉及' : '不涉及';
       },
     },
     {
@@ -2174,32 +2206,54 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ row }) => {
         return getRecycleTaskStatusView(row.status);
       },
+      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
     },
     {
       label: '当前处理人',
       field: 'handler',
-    },
-    {
-      label: '总数/成功/失败',
       render: ({ row }) => {
         return (
-          <div>
-            <span>{row.totalNum}</span>
-            <span>/</span>
-            <span class={row.successNum > 0 ? 'c-success' : ''}>{row.successNum}</span>
-            <span>/</span>
-            <span class={row.failedNum > 0 ? 'c-danger' : ''}>{row.failedNum}</span>
-          </div>
+          <a href={`wxwork://message?username=${row.handler}`} class='username'>
+            {row.handler}
+          </a>
         );
       },
     },
     {
+      label: '总数/成功/失败',
+      width: 120,
+      render: ({ row }) => {
+        return (
+          <div>
+            <span>{row.total_num}</span>
+            <span>/</span>
+            <span class={row.success_num > 0 ? 'c-success' : ''}>{row.success_num}</span>
+            <span>/</span>
+            <span class={row.failed_num > 0 ? 'c-danger' : ''}>{row.failed_num}</span>
+          </div>
+        );
+      },
+      exportFormatter: (row) => {
+        return `${row.success_num}/${row.failed_num}/${row.total_num}`;
+      },
+    },
+    {
       label: '回收人',
-      field: 'bkUsername',
+      field: 'bk_username',
+      render: ({ row }) => {
+        return (
+          <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
+            {row.bk_username}
+          </a>
+        );
+      },
     },
     {
       label: '回收时间',
-      field: 'createAt',
+      field: 'create_at',
+      formatter: ({ create_at }) => {
+        return dateTimeTransform(create_at);
+      },
     },
     {
       label: '描述',
@@ -2209,95 +2263,89 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: 'OBS项目类型',
       field: 'recycle_type',
+      width: 120,
     },
   ];
   // 资源- 设备查询
   const deviceQueryColumns = [
     {
       label: '单号',
-      field: 'orderId',
+      field: 'order_id',
       width: 80,
-    },
-    {
-      label: '子单号',
-      prop: 'suborderId',
-      width: 80,
-      render: ({ row }) => (
-        // <router-link class="link-type" to={{ name: 'recycle-detail', query: { suborderId: row.suborderId } }}>
-        // </router-link>
-        <span>{row.suborderId}</span>
-      ),
     },
     {
       label: '固资号',
-      prop: 'assetId',
+      field: 'asset_id',
     },
     {
       label: '机型',
-      prop: 'deviceType',
+      field: 'device_type',
     },
     {
       label: '内网IP',
-      prop: 'ip',
+      field: 'ip',
     },
     {
       label: '回收业务',
-      prop: 'bkBizId',
-      // TODO 类似过滤器
-      // formatter: ({ bkBizId: bkBizId }) => {
-      //   return this.$bkBizIdTransform(bkBizId);
-      // },
+      field: 'bk_biz_id',
+      formatter: ({ bk_biz_id }) => {
+        return getBusinessNameById(bk_biz_id);
+      },
     },
     {
       label: '地域',
-      prop: 'bkZoneName',
+      field: 'bk_zone_name',
     },
     {
       label: '园区',
-      prop: 'subZone',
+      field: 'sub_zone',
     },
     {
       label: 'Module名称',
-      prop: 'moduleName',
+      field: 'module_name',
     },
     {
       label: '标记',
-      prop: 'returnTag',
+      field: 'return_tag',
     },
     {
       label: '成本分摊比例',
-      prop: 'returnCostRate',
+      field: 'return_cost_rate',
       render: ({ row }) => {
-        return row.returnCostRate ? `${Math.ceil(row.returnCostRate * 100)}%` : '-';
+        return row.return_cost_rate ? `${Math.ceil(row.return_cost_rate * 100)}%` : '-';
       },
     },
     {
       label: '状态',
-      prop: 'status',
+      field: 'status',
       render: ({ row }) => getRecycleTaskStatusView(row.status),
-      // exportFormatter: (row) => this.$recycleTaskStatusTransform(row.status),
+      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
     },
     {
       label: '回收人',
-      prop: 'bkUsername',
-      // TODO
-      // nodes: ({ bkUsername }) => {
-      //   return <w-name username={bkUsername} />;
-      // },
+      field: 'bk_username',
+      render: ({ row }) => {
+        return (
+          <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
+            {row.bk_username}
+          </a>
+        );
+      },
     },
     {
       label: '创建时间',
-      prop: 'createAt',
-      // TODO 类似过滤器
-      // formatter: ({ createAt }) => this.$dateTimeTransform(createAt),
+      field: 'create_at',
+      formatter: ({ create_at }) => {
+        return dateTimeTransform(create_at);
+      },
     },
     {
       label: '完成时间',
-      prop: 'returnTime',
+      field: 'return_time',
     },
     {
       label: '备注',
-      prop: 'remark',
+      field: 'remark',
     },
   ];
   // 资源 - 主机回收 - 单据详情 设备销毁列表
@@ -2307,7 +2355,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '固资号',
-      field: 'assetId',
+      field: 'asset_id',
     },
     {
       label: '内网IP',
@@ -2315,77 +2363,86 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '实例ID',
-      field: 'instanceId',
+      field: 'instance_id',
     },
     {
       label: '机型',
-      field: 'deviceType',
+      field: 'device_type',
     },
     {
       label: '园区',
-      field: 'subZone',
+      field: 'sub_zone',
     },
     {
       label: 'Module名称',
-      field: 'moduleName',
+      field: 'module_name',
     },
     {
       label: '维护人',
       field: 'operator',
       render: ({ row }) => {
-        // return <w-name username={operator} />;
-        return <span>{row.operator}</span>;
+        return (
+          <a href={`wxwork://message?username=${row.operator}`} class='username'>
+            {row.operator}
+          </a>
+        );
       },
     },
     {
       label: '备份维护人',
-      field: 'bakOperator',
+      field: 'bak_operator',
       render: ({ row }) => {
-        // return <w-name username={bakOperator} />;
-        return <span>{row.operator}</span>;
+        return (
+          <a href={`wxwork://message?username=${row.bak_operator}`} class='username'>
+            {row.bak_operator}
+          </a>
+        );
       },
     },
     {
       label: '标记',
-      field: 'returnTag',
+      field: 'return_tag',
     },
     {
       label: '成本分摊比例',
-      field: 'returnCostRate',
+      field: 'return_cost_rate',
       render: ({ row }) => {
-        return row.returnCostRate ? `${Math.ceil(row.returnCostRate * 100)}%` : '-';
+        return row.return_cost_rate ? `${Math.ceil(row.return_cost_rate * 100)}%` : '-';
       },
     },
     {
       label: '校验结果',
-      field: 'returnPlanMsg',
+      field: 'return_plan_msg',
       showOverflowTooltip: true,
       render: ({ row }) => {
-        // v-clipboard:copy={returnPlanMsg}
         return (
-          <bk-link type='info' class='fz-12' underline={false}>
-            {row.returnPlanMsg}
+          <bk-link type='info' v-clipboard={row.return_plan_msg} underline={false}>
+            {row.return_plan_msg}
           </bk-link>
         );
       },
     },
     {
       label: '上架时间',
-      field: 'inputTime',
-      // formatter: ({ inputTime }) => this.$dateTimeTransform(inputTime),
+      field: 'input_time',
+      formatter: ({ input_time }) => {
+        return dateTimeTransform(input_time);
+      },
     },
     {
       label: '销毁时间',
-      field: 'returnTime',
-      // formatter: ({ returnTime }) => this.$dateTimeTransform(returnTime),
+      field: 'return_time',
+      formatter: ({ return_time }) => {
+        return dateTimeTransform(return_time);
+      },
     },
     {
       label: '回收单号',
-      field: 'returnId',
+      field: 'return_id',
       render: ({ row }) => {
         return (
-          <bk-link type='primary' class='fz-12' underline={false} href={row.returnLink} target='_blank'>
-            {row.returnId}
+          <bk-link type='primary' underline={false} href={row.return_link} target='_blank'>
+            {row.return_id}
           </bk-link>
         );
       },
@@ -2394,7 +2451,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '状态',
       field: 'status',
       render: ({ row }) => getRecycleTaskStatusView(row.status),
-      // exportFormatter: (row) => this.$recycleTaskStatusTransform(row.status),
+      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
     },
   ];
 

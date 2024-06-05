@@ -1,8 +1,9 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, computed, watch, onMounted } from 'vue';
+import { useAccountStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
-// import { getRecycleOrders, getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
-import AppSelect from '@blueking/app-select';
+import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -11,10 +12,10 @@ import BillDetail from '../bill-detail';
 import PreDetail from '../pre-details';
 import RecyclingResources from '../../RecyclingResources/index';
 import './index.scss';
+import dayjs from 'dayjs';
 
 export default defineComponent({
   components: {
-    AppSelect,
     RequireNameSelect,
     MemberSelect,
     ExportToExcelButton,
@@ -22,23 +23,45 @@ export default defineComponent({
     PreDetail,
     RecyclingResources,
   },
-  setup() {
-    const defaultRecycleForm = {
-      bkBizId: [],
-      orderId: [],
-      suborderId: [],
-      resourceType: [],
+  props: {
+    pageIndex: {
+      type: Number,
+      default: 0,
+    },
+    subBillNum: {
+      type: String,
+    },
+  },
+  setup(props) {
+    const defaultRecycleForm = () => ({
+      bk_biz_id: [],
+      resource_type: [],
       recycle_type: [],
-      returnPlan: [],
+      return_plan: [],
       stage: [],
-      handlerTime: [new Date(), new Date()],
-      //   start: getDate('yyyy-MM-dd', -30),
-      //   end: getDate('yyyy-MM-dd', 0),
-      bkUsername: '',
-      //   bkUsername: [this.$store.getters.name],
+      bk_username: [],
+    });
+    const defaultPartForm = () => ({
+      handlerTime: [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()],
+      order_id: '',
+      suborder_id: '',
+    });
+    const recycleForm = ref(defaultRecycleForm());
+    const partForm = ref(defaultPartForm());
+    const pageInfo = ref({
+      start: 0,
+      limit: 10,
+      enable_count: false,
+    });
+    const requestListParams = ref({
+      page: pageInfo.value,
+    });
+    const accountStore = useAccountStore();
+    const bussinessList = ref([]);
+    const getBusinesses = async () => {
+      const { data } = await accountStore.getBizListWithAuth();
+      bussinessList.value = data || [];
     };
-    const recycleForm = ref(defaultRecycleForm);
-    const bussinessList: any[] = [];
     const resourceTypeList = [
       {
         key: 'QCLOUDCVM',
@@ -63,96 +86,86 @@ export default defineComponent({
         value: '延迟销毁',
       },
     ];
-    const stageList: any[] = [];
-    const recycleMen = [];
-    // const route = useRoute();
-    const start = ref(0);
-    // const selectedSuborderId = ref([]);
-    const selectedRows = ref([]);
-    const billList = ref([]);
-    // const pageInfo = ref({
-    //   start: 0,
-    //   limit: 10,
-    //   total: 0,
-    // });
-    // const currentParams = ref({});
+    const stageList = ref([]);
+    const fetchStageList = async () => {
+      const data = await getRecycleStageOpts();
+      stageList.value = data?.info || [];
+    };
     const loadOrders = ({ enableCount } = { enableCount: false }) => {
-      return enableCount;
-      // const params = {
-      //   ...recycleForm.value,
-      //   page: pageInfo.value,
-      // };
-      // params.orderId = params.orderId.map((item) => Number(item));
-
-      // currentParams.value = { ...params };
-      // return getRecycleOrders(params, {
-      //   // requestId: this.orders.requestId,
-      //   enableCount,
-      // })
-      //   .then((res) => {
-      //     if (enableCount) pageInfo.value.total = res.data.count;
-      //     billList.value = res.data.info;
-      //   })
-      //   .catch(() => {
-      //     billList.value = [];
-      //   });
+      pageInfo.value.enable_count = enableCount;
+      const params = {
+        ...recycleForm.value,
+        start: dayjs(partForm.value.handlerTime[0]).format('YYYY-MM-DD'),
+        end: dayjs(partForm.value.handlerTime[1]).format('YYYY-MM-DD'),
+        order_id:
+          partForm.value.order_id
+            .trim()
+            .split('|')
+            .map((item) => Number(item)) || [],
+        suborder_id: partForm.value.suborder_id.trim().split('|'),
+        page: enableCount ? Object.assign(pageInfo.value, { limit: 0 }) : pageInfo.value,
+      };
+      requestListParams.value = { ...params };
+      getListData();
     };
     const filterOrders = () => {
-      start.value = 0;
+      pageInfo.value.start = 0;
       loadOrders({ enableCount: true });
     };
     const clearFilter = () => {
-      // TODO 可能会影响到原始值
-      recycleForm.value = defaultRecycleForm;
+      recycleForm.value = defaultRecycleForm();
+      partForm.value = defaultPartForm();
       filterOrders();
     };
-    // const router = new useRouter();
     const goToPrecheck = () => {
       // TODO 不知为啥 pinia
       // this.$store.commit('SET_SUBORDER_IDS', this.selectedSuborderId)
       // router.push({ name: 'precheck-detail' });
     };
-    const retryOrderFunc = (id) => {
-      return id;
-      // const suborderId = id === 'isBatch' ? selectedSuborderId : [id];
-      // retryOrder({
-      //   suborderId,
-      // }).then((res) => {
-      //   if (res.code === 0) {
-      //       this.$message.success('重试成功');
-      //     loadOrders();
-      //   } else {
-      //       this.$message.error(res.message);
-      //   }
-      // });
+    const getBatchSuborderId = () => {
+      return selections.value.map((item) => {
+        return item.suborder_id;
+      });
     };
-    const stopOrderFunc = (id) => {
-      return id;
-      // stopOrder({
-      //   suborderId: [id],
-      // }).then((res) => {
-      //   if (res.code === 0) {
-      //       this.$message.success('终止成功');
-      //     loadOrders();
-      //   } else {
-      //       this.$message.error(res.message);
-      //   }
-      // });
+    const retryOrderFunc = (id: string) => {
+      const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
+      retryOrder(
+        {
+          suborderId,
+        },
+        {},
+      ).then((res) => {
+        if (res.code === 0) {
+          loadOrders();
+        }
+      });
     };
-    const submitOrderFunc = (id) => {
-      return id;
-      // const suborderId = id === 'isBatch' ? selectedSuborderId : [id];
-      // submitOrder({
-      //   suborderId,
-      // }).then((res) => {
-      //   if (res.code === 0) {
-      //       this.$message.success('提交成功');
-      //     loadOrders();
-      //   } else {
-      //       this.$message.error(res.message);
-      //   }
-      // });
+    const stopOrderFunc = (id: string) => {
+      stopOrder(
+        {
+          suborderId: [id],
+        },
+        {},
+      ).then((res) => {
+        if (res.code === 0) {
+          loadOrders();
+        }
+      });
     };
+    const submitOrderFunc = (id: string) => {
+      const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
+      submitOrder(
+        {
+          suborderId,
+        },
+        {},
+      ).then((res) => {
+        if (res.code === 0) {
+          loadOrders();
+        }
+      });
+    };
+    const { selections, handleSelectionChange } = useSelection();
     const { columns } = useColumns('hostRecycle');
     // 0 表示单据列表，1 表示单据详情
     const hostRecyclePage = ref(0);
@@ -161,60 +174,69 @@ export default defineComponent({
       hostRecyclePage.value = pageFlag;
       suborderId.value = params;
     };
+    watch(
+      () => props.subBillNum,
+      (newVal) => {
+        enterDetail(props.pageIndex, newVal);
+      },
+    );
     const operateColList = [
       {
         label: '操作',
+        width: 320,
         render: ({ row }) => {
           return (
-            <div>
-              {/* <router-link to={{ name: 'precheck-detail', query: { suborderId: row.suborderId } }}> */}
-              <bk-button size='small' onClick={returnPreDetails} type='text'>
+            <div class='recycle-operation'>
+              <bk-button size='small' theme='primary' text onClick={returnPreDetails}>
                 预检详情
               </bk-button>
-              {/* </router-link> */}
-              {/* <router-link to={{ name: 'recycle-detail', query: { suborderId: row.suborderId } }}> */}
-              <bk-button class='ml-10' size='small' type='text' onClick={enterDetail(1, row.suborderId)}>
+              <bk-button size='small' theme='primary' text onClick={() => enterDetail(1, row.suborder_id)}>
                 单据详情
               </bk-button>
-              {/* </router-link> */}
               {!['DONE', 'TERMINATE'].includes(row.status) ? (
-                <div>
-                  <bk-button
-                    onClick={() => retryOrderFunc(row.suborderId)}
-                    // loading全局配置
-                    // loading={this.$isLoading(`retry-${row.suborderId}`)}
-                    class='ml-10'
-                    size='small'
-                    type='text'>
-                    <svg-icon v-bk-tooltips={{ content: '重试' }} icon-class='retry' />
+                <>
+                  <bk-button onClick={() => retryOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                    重试
                   </bk-button>
-                  <bk-button
-                    onClick={() => stopOrderFunc(row.suborderId)}
-                    // loading={this.$isLoading(`stop-${row.suborderId}`)}
-                    class='ml-10'
-                    size='small'
-                    type='text'>
-                    <svg-icon v-bk-tooltips={{ content: '终止' }} icon-class='stop' />
+                  <bk-button onClick={() => stopOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                    终止
                   </bk-button>
-                  <bk-button
-                    onClick={() => submitOrderFunc(row.suborderId)}
-                    // loading={this.$isLoading(`submit-${row.suborderId}`)}
-                    class='ml-10'
-                    size='small'
-                    type='text'>
-                    <svg-icon v-bk-tooltips={{ content: '去除预检失败IP提交' }} icon-class='refresh' />
+                  <bk-button onClick={() => submitOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                    去除预检失败IP提交
                   </bk-button>
-                </div>
+                </>
               ) : null}
             </div>
           );
         },
       },
     ];
+    // 在第三个加子单号，需要跳转到单据详情，未用到路由
+    columns.splice(2, 0, {
+      label: '子单号',
+      field: 'suborder_id',
+      width: 80,
+      render: ({ row }) => {
+        return (
+          // 单据详情
+          <span class='sub-order-num' onClick={() => enterDetail(1, row.suborder_id)}>
+            {row.suborder_id}
+          </span>
+        );
+      },
+    });
     const tableColumns = [...columns, ...operateColList];
-    const { CommonTable } = useTable({
+    const { CommonTable, getListData } = useTable({
       tableOptions: {
         columns: tableColumns,
+        extra: {
+          onSelect: (selections: any) => {
+            handleSelectionChange(selections, () => true, false);
+          },
+          onSelectAll: (selections: any) => {
+            handleSelectionChange(selections, () => true, true);
+          },
+        },
       },
       requestOption: {
         type: 'load_balancers/with/delete_protection',
@@ -225,25 +247,9 @@ export default defineComponent({
           ScrSwitch: true,
           interface: {
             Parameters: {
-              filter: {
-                condition: 'AND',
-                rules: [
-                  {
-                    field: 'require_type',
-                    operator: 'equal',
-                    value: 1,
-                  },
-                  {
-                    field: 'label.device_group',
-                    operator: 'in',
-                    value: ['标准型'],
-                  },
-                ],
-              },
-              page: [],
+              ...requestListParams.value,
             },
-            filter: { simpleConditions: true, requestId: 'devices' },
-            path: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+            path: '/api/v1/woa/task/findmany/recycle/order',
           },
         };
       },
@@ -258,120 +264,108 @@ export default defineComponent({
     const returnRecyclingResources = () => {
       switchPage.value = 'RecyclingResources';
     };
-    const renderNodes = () => {
+    const backRecyclePage = (val: number) => {
+      hostRecyclePage.value = val;
+      // TODO 单据列表 是否初始化
+    };
+    const recycleRef = ref(null);
+    const renderNodes = computed(() => {
       if (hostRecyclePage.value === 0) {
         // eslint-disable-next-line no-nested-ternary
         return switchPage.value === 'HostRecycling' ? (
-          <CommonTable>
+          <CommonTable ref={recycleRef}>
             {{
               tabselect: () => (
                 <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
                   <bk-form-item label-width='0'>
-                    {/* to={{ name: 'recycle-create' }} */}
-                    {/* <router-link> */}
                     <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
                       回收资源
                     </bk-button>
-                    {/* </router-link> */}
                   </bk-form-item>
                   <bk-form-item label='业务'>
-                    {/* <AppSelect>
-                    {
-                      {
-                        //   append: () => (
-                        //     <div class={'app-action-content'}>
-                        //       <i class={'hcm-icon bkhcm-icon-plus-circle app-action-content-icon'} />
-                        //       <span class={'app-action-content-text'}>新建业务</span>
-                        //     </div>
-                        //   ),
-                      }
-                    }
-                  </AppSelect> */}
-                    {/* TODO AppSelect使用不对 */}
-                    <bk-select v-model={recycleForm.value.resourceType} multiple clearable placeholder='请选择业务'>
-                      {bussinessList.map(({ key, value }) => {
+                    <bk-select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择业务'>
+                      {bussinessList.value.map(({ key, value }) => {
                         return <bk-option key={key} label={value} value={key}></bk-option>;
                       })}
                     </bk-select>
+                    <business-selector v-model={recycleForm.value.resource_type} authed={true} />
                   </bk-form-item>
                   <bk-form-item label='OBS项目类型'>
                     <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
                   </bk-form-item>
                   <bk-form-item label='单号'>
                     {/* TODO 是否封装成旧的 */}
-                    <bk-input v-model={recycleForm.value.orderId} />
+                    <bk-input
+                      class='order-width'
+                      v-model={partForm.value.order_id}
+                      clearable
+                      placeholder='请输入单号，多个用"|"分割'
+                    />
                   </bk-form-item>
                   <bk-form-item label='子单号'>
                     {/* TODO 是否封装成旧的 */}
-                    <bk-input v-model={recycleForm.value.suborderId} />
+                    <bk-input
+                      class='order-width'
+                      v-model={partForm.value.suborder_id}
+                      clearable
+                      placeholder='请输入子单号，多个用"|"分割'
+                    />
                   </bk-form-item>
                   <bk-form-item label='资源类型'>
-                    <bk-select v-model={recycleForm.value.resourceType} multiple clearable placeholder='请选择资源类型'>
+                    <bk-select
+                      v-model={recycleForm.value.resource_type}
+                      multiple
+                      clearable
+                      placeholder='请选择资源类型'>
                       {resourceTypeList.map(({ key, value }) => {
                         return <bk-option key={key} label={value} value={key}></bk-option>;
                       })}
                     </bk-select>
                   </bk-form-item>
                   <bk-form-item label='回收类型'>
-                    <bk-select v-model={recycleForm.value.returnPlan} multiple clearable placeholder='请选择回收类型'>
+                    <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
                       {returnPlanList.map(({ key, value }) => {
                         return <bk-option key={key} label={value} value={key}></bk-option>;
                       })}
                     </bk-select>
                   </bk-form-item>
                   <bk-form-item label='状态'>
-                    <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择回收类型'>
-                      {stageList.map(({ key, value }) => {
-                        return <bk-option key={key} label={value} value={key}></bk-option>;
+                    <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
+                      {stageList.value.map(({ stage, description }) => {
+                        return <bk-option key={stage} label={description} value={stage}></bk-option>;
                       })}
                     </bk-select>
                   </bk-form-item>
                   <bk-form-item label='回收人'>
-                    {/* TODO MemberSelect使用不对 */}
-                    {/* <member-select v-model={recycleForm.value.bkUsername} multiple clearable allowCreate /> */}
-                    <bk-select v-model={recycleForm.value.resourceType} multiple clearable placeholder='请选择业务'>
-                      {recycleMen.map(({ key, value }) => {
-                        return <bk-option key={key} label={value} value={key}></bk-option>;
-                      })}
-                    </bk-select>
+                    <member-select
+                      class='tag-input-width'
+                      v-model={recycleForm.value.bk_username}
+                      multiple
+                      clearable
+                      placeholder='请输入企业微信名'
+                    />
                   </bk-form-item>
                   <bk-form-item label='回收时间'>
-                    {/* TODO 是否封装成旧的 */}
-                    <bk-date-picker v-model={recycleForm.value.handlerTime} type='daterange' />
+                    <bk-date-picker v-model={partForm.value.handlerTime} type='daterange' />
                   </bk-form-item>
                   <bk-form-item label-width='0' class='bill-form-btn'>
-                    <bk-button
-                      theme='primary'
-                      //   :loading="$isLoading(orders.requestId)"
-                      native-type='submit'
-                      onClick={filterOrders}>
+                    <bk-button theme='primary' onClick={filterOrders}>
                       <Search />
                       查询
                     </bk-button>
-                    <bk-button
-                      //   :loading="$isLoading(orders.requestId)"
-                      onClick={clearFilter}>
-                      {/* TODO icon='el-icon-refresh' */}
-                      <Search />
-                      清空
-                    </bk-button>
-                    <export-to-excel-button data={billList.value} columns={tableColumns} filename='回收单据列表' />
-                    <bk-button
-                      //   :loading="$isLoading(orders.requestId)"
-                      disabled={!selectedRows.value.length}
-                      onClick={goToPrecheck}>
+                    <bk-button onClick={() => clearFilter()}>清空</bk-button>
+                    <export-to-excel-button
+                      data={recycleRef.value?.dataList}
+                      columns={tableColumns}
+                      filename='回收单据列表'
+                    />
+                    <bk-button disabled={!selections.value.length} onClick={() => goToPrecheck}>
                       批量查看预检详情
                     </bk-button>
-                    <bk-button
-                      //   :loading="$isLoading(orders.requestId)"
-                      disabled={!selectedRows.value.length}
-                      onClick={retryOrderFunc('isBatch')}>
+                    <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
                       批量重试
                     </bk-button>
-                    <bk-button
-                      //   :loading="$isLoading(orders.requestId)"
-                      disabled={!selectedRows.value.length}
-                      onClick={submitOrderFunc('isBatch')}>
+                    <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
                       批量去除预检失败IP提交
                     </bk-button>
                   </bk-form-item>
@@ -398,13 +392,14 @@ export default defineComponent({
         );
       }
       if (hostRecyclePage.value === 1) {
-        return <BillDetail />;
+        return <BillDetail suborderIdStr={suborderId.value} onGoBack={backRecyclePage} />;
       }
       return null;
-    };
-    onMounted(() => {
-      // getListData();
     });
-    return () => <div>{renderNodes()}</div>;
+    onMounted(() => {
+      getBusinesses();
+      fetchStageList();
+    });
+    return () => <div>{renderNodes.value}</div>;
   },
 });

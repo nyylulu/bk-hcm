@@ -56,17 +56,16 @@ const exportTableToExcel = (list, columns, filename) => {
     const data = list.map((item) =>
       columns.map((col) => {
         if (col.formatter) {
-          return col.formatter({ [col.prop]: item[col.prop] });
+          return col.formatter({ [col.field]: item[col.field] });
         }
 
         if (col.exportFormatter) {
           return col.exportFormatter(item);
         }
 
-        return item[col.prop];
+        return item[col.field];
       }),
     );
-
     excel.export_json_to_excel({
       header,
       data,
@@ -74,7 +73,6 @@ const exportTableToExcel = (list, columns, filename) => {
     });
   });
 };
-
 const getDate = (fmt, n) => {
   let d;
   if (n) {
@@ -105,4 +103,10 @@ const getDate = (fmt, n) => {
   return fmt;
 };
 
-export { getInstVip, exportTableToExcel, getDate, cleanPayload };
+// 拼接 接口 路径
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+const getEntirePath = (tailPath: string, interfacePrefix = '/api/v1/woa/') => {
+  return `${BK_HCM_AJAX_URL_PREFIX + interfacePrefix + tailPath}`;
+};
+
+export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload };

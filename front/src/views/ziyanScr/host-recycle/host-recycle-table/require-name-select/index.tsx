@@ -1,5 +1,5 @@
 import { defineComponent, ref, watch, onMounted } from 'vue';
-// import { getRequireTypes } from '@/api/host/task';
+import { getRequireTypes } from '@/api/host/task';
 export default defineComponent({
   props: {
     modelValue: {
@@ -22,17 +22,16 @@ export default defineComponent({
       emit('update:modelValue', value);
     };
     const fetchOptions = () => {
-      // getRequireTypes()
-      //   .then((res) => {
-      //     options.value = res.data.info.map((item) => ({
-      //       label: item.require_name,
-      //       value: item.require_name,
-      //     }));
-      //   })
-      //   .catch(() => {
-      //     options.value = [];
-      //     //   console.error('获取OBS项目类型失败');
-      //   });
+      getRequireTypes()
+        .then((res) => {
+          options.value = res.data?.info?.map((item) => ({
+            label: item.require_name,
+            value: item.require_name,
+          }));
+        })
+        .catch(() => {
+          options.value = [];
+        });
     };
     onMounted(() => {
       fetchOptions();
@@ -45,7 +44,7 @@ export default defineComponent({
         // :loading="$isLoading(optionsRequestId)"
       >
         {options.value.map(({ value, label }) => {
-          return <bk-options key={value} label={label} value={value} />;
+          return <bk-option key={value} label={label} value={value} />;
         })}
       </bk-select>
     );

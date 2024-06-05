@@ -8,11 +8,28 @@
         margin-bottom: 10px;
     }
     .bill-form-btn {
-        display: flex;
-        align-items: center;
-        .bk-button+.bk-button {
-            margin-left: 10px;
+        .bk-form-content {
+            display: flex;
+            align-items: center;
+            .bk-button+.bk-button {
+                margin-left: 10px;
+            }
         }
+    }
+}
+.sub-order-num,.username {
+    color: #409eff;
+    cursor: pointer;
+}
+.order-width {
+    width: 180px;
+}
+.tag-input-width {
+    width: 165px;
+}
+.recycle-operation {
+    .bk-button+.bk-button {
+        margin-left: 10px;
     }
 }
 .displayflex {
