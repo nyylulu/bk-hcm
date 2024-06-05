@@ -38,3 +38,6 @@ type Config struct {
 	WatchMongo mongo.Config
 	ClientConf cc.ClientConfig
 }
+
+// AuthorizedBizID 临时给前端同学进行联调的可操作的业务id reborn (213)  todo 待删除
+const AuthorizedBizID = 213

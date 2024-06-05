@@ -15,10 +15,12 @@ package task
 
 import (
 	"errors"
+	"fmt"
 
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -72,11 +74,16 @@ func (s *service) getBizName(kit *kit.Kit, bizId int64) string {
 }
 
 // TODO 需要替换为海垒的权限Auth模型
-func (s *service) checkPermission(kit *kit.Kit, _ int64, _ string) (*metadata.BaseResp, error) {
+func (s *service) checkPermission(kit *kit.Kit, bizId int64, _ string) (*metadata.BaseResp, error) {
 	user := kit.User
 	if user == "" {
 		logs.Errorf("failed to check permission, for invalid user is empty, rid: %s", kit.Rid)
 		return nil, errors.New("failed to check permission, for invalid user is empty")
+	}
+
+	// TODO 临时测试使用，后续需要删除
+	if bizId != types.AuthorizedBizID {
+		return nil, fmt.Errorf("不能操作业务id: %d下的机器", bizId)
 	}
 
 	//req := &iamapi.AuthVerifyReq{

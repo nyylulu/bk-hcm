@@ -15,6 +15,7 @@ package task
 
 import (
 	"errors"
+	"fmt"
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
@@ -182,6 +183,11 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	// TODO 需要替换为海垒的权限Auth模型
+	// TODO 临时测试使用，后续需要删除
+	if input.BkBizId != types.AuthorizedBizID {
+		return nil, fmt.Errorf("不能操作业务id: %d下的机器", input.BkBizId)
+	}
+
 	//req := &iamapi.AuthVerifyReq{
 	//	System: "bk_cr",
 	//	Subject: &iamapi.Subject{

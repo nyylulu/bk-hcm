@@ -1558,13 +1558,17 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 }
 
 // TODO 需要替换为海垒的权限Auth模型
-func (r *recycler) hasRecyclePermission(kit *kit.Kit, _ int64) (bool, error) {
+func (r *recycler) hasRecyclePermission(kit *kit.Kit, bizId int64) (bool, error) {
 	user := kit.User
 	if user == "" {
 		logs.Errorf("failed to check permission, for invalid user is empty, rid: %s", kit.Rid)
 		return false, errors.New("failed to check permission, for invalid user is empty")
 	}
 
+	// TODO 临时测试使用，后续需要删除
+	if bizId != types.AuthorizedBizID {
+		return false, fmt.Errorf("不能操作业务id: %d下的机器", bizId)
+	}
 	//req := &iamapi.AuthVerifyReq{
 	//	System: "bk_cr",
 	//	Subject: &iamapi.Subject{
