@@ -2,9 +2,9 @@ import { PropType, computed, defineComponent, onMounted, ref } from 'vue';
 import { Table, Loading } from 'bkui-vue';
 import Empty from '../empty';
 import usePagination from '@/hooks/usePagination';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import http from '@/http';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
+import { Column } from 'bkui-vue/lib/table/props';
 import './index.scss';
 
 type UrlType = string | (() => string);
@@ -26,7 +26,7 @@ const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
   name: 'RemoteTable',
   props: {
-    columnName: String,
+    columns: Array as PropType<Column[]>,
     noSort: { type: Boolean, default: false },
     apis: Array as PropType<RequestApi[]>,
     path: {
@@ -45,13 +45,11 @@ export default defineComponent({
     const dataList = ref([]);
     const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => getDataList());
 
-    const { columns, settings } = useColumns(props.columnName);
-
     const renderColumns = computed(() => {
       if (props.noSort) {
-        return columns.map((item: any) => ({ ...item, sort: false }));
+        return props.columns.map((item: any) => ({ ...item, sort: false }));
       }
-      return columns;
+      return props.columns;
     });
 
     const buildApiMethod = async (fetchUrl: string, rules: RulesItem[], payload: PayloadType) => {
@@ -105,7 +103,6 @@ export default defineComponent({
           data={dataList.value}
           rowKey='id'
           columns={renderColumns.value}
-          settings={settings.value}
           pagination={pagination}
           remotePagination
           showOverflowTooltip

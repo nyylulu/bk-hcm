@@ -109,4 +109,4 @@ const getEntirePath = (tailPath: string, interfacePrefix = '/api/v1/woa/') => {
   return `${BK_HCM_AJAX_URL_PREFIX + interfacePrefix + tailPath}`;
 };
 
-export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload };
+export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload, getDate };

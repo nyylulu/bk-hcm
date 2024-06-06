@@ -1,0 +1,27 @@
+.scr-resource-manage-detail-page {
+  height: 100%;
+
+  .detail-container {
+    position: relative;
+    top: 52px;
+    height: calc(100% - 52px);
+    padding: 24px;
+
+    .detail-content {
+      height: 100%;
+      padding: 16px 24px;
+      background-color: #fff;
+      overflow-y: auto;
+
+      .operation-bar {
+        display: flex;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+    }
+  }
+
+  .w200 {
+    width: 200px;
+  }
+}

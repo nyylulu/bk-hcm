@@ -5,13 +5,14 @@ import { Plus, Search } from 'bkui-vue/lib/icon';
 import MemberSelect from '@/components/MemberSelect';
 import RemoteTable from '@/components/RemoteTable';
 import { useZiyanScrStore } from '@/store';
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { cleanPayload, getDate } from '@/utils';
 import { timeFormatter } from '@/common/util';
 import './index.scss';
 
 const { TabPanel } = Tab;
 
-export interface ResourceManageFilterType {
+interface ResourceManageFilterType {
   id?: string[];
   bk_username?: string[];
   phase?: string[];
@@ -28,20 +29,24 @@ export default defineComponent({
     const router = useRouter();
     const ziyanScrStore = useZiyanScrStore();
 
+    const { columns: scrResourceOnlineColumns } = useColumns('scrResourceOnline');
+    const { columns: scrResourceOfflineColumns } = useColumns('scrResourceOffline');
+
     const types = [
       {
         label: '资源上架',
         value: 'online',
-        columnName: 'scrResourceOnline',
+        columns: scrResourceOnlineColumns,
         url: '/api/v1/woa/pool/findmany/launch/task',
       },
       {
         label: '资源下架',
         value: 'offline',
-        columnName: 'scrResourceOffline',
+        columns: scrResourceOfflineColumns,
         url: '/api/v1/woa/pool/findmany/recall/task',
       },
     ];
+
     const activeType = ref('online');
     watchEffect(() => {
       router.push({ query: { type: activeType.value } });
@@ -79,7 +84,7 @@ export default defineComponent({
     return () => (
       <div class='scr-resource-manage-page'>
         <Tab v-model:active={activeType.value} type='card-grid'>
-          {types.map(({ label, value, columnName, url }) => (
+          {types.map(({ label, value, columns, url }) => (
             <TabPanel key={value} label={label} name={value} renderDirective='if'>
               <div class='manage-container'>
                 <div class='filter-container'>
@@ -128,14 +133,15 @@ export default defineComponent({
                 </div>
                 <RemoteTable
                   ref={remoteTableRef}
-                  columnName={columnName}
+                  columns={columns}
                   noSort
+                  path={{ start: 'start', limit: 'limit', count: 'enable_count', data: 'info', total: 'count' }}
                   apis={[
                     {
                       url,
                       payload: () => ({
                         ...cleanPayload(filter),
-                        id: filter.id.map((id) => Number(id)),
+                        id: filter.id.length ? filter.id.map((id) => Number(id)) : undefined,
                         start: timeFormatter(filter.start, 'YYYY-MM-DD'),
                         end: timeFormatter(filter.end, 'YYYY-MM-DD'),
                         filter: undefined,

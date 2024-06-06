@@ -2511,6 +2511,81 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const scrResourceOnlineHostColumns = [
+    {
+      label: '内网IP',
+      field: 'ip',
+      render: ({ data }: any) => data?.labels?.ip,
+    },
+    {
+      label: '固资号',
+      field: 'bk_asset_id',
+      render: ({ data }: any) => data?.labels?.bk_asset_id,
+    },
+    {
+      label: '设备类型',
+      field: 'device_type',
+      render: ({ data }: any) => data?.labels?.device_type,
+    },
+    {
+      label: '状态',
+      field: 'phase',
+    },
+    {
+      label: '开始时间',
+      field: 'create_at',
+      render: ({ cell }: any) => timeFormatter(cell),
+    },
+    {
+      label: '结束时间',
+      field: 'update_at',
+      render: ({ cell }: any) => timeFormatter(cell),
+    },
+    {
+      label: '信息',
+      field: 'message',
+    },
+  ];
+
+  const scrResourceOfflineHostColumns = [
+    {
+      label: '内网IP',
+      field: 'ip',
+      render: ({ data }: any) => data?.labels?.ip,
+    },
+    {
+      label: '固资号',
+      field: 'bk_asset_id',
+      render: ({ data }: any) => data?.labels?.bk_asset_id,
+    },
+    {
+      label: '系统重装任务',
+      field: 'reinstall_link',
+    },
+    {
+      label: '配置检查任务',
+      field: 'conf_check_link',
+    },
+    {
+      label: '状态',
+      field: 'status',
+    },
+    {
+      label: '开始时间',
+      field: 'create_at',
+      render: ({ cell }: any) => timeFormatter(cell),
+    },
+    {
+      label: '结束时间',
+      field: 'update_at',
+      render: ({ cell }: any) => timeFormatter(cell),
+    },
+    {
+      label: '信息',
+      field: 'message',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2546,6 +2621,8 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
+    scrResourceOnlineHost: scrResourceOnlineHostColumns,
+    scrResourceOfflineHost: scrResourceOfflineHostColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

@@ -93,8 +93,27 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/resource-manage',
         name: '资源上下架',
-        component: () => import('@/views/ziyanScr/resource-manage'),
-        children: [],
+        children: [
+          {
+            path: '',
+            name: 'resourceManage',
+            component: () => import('@/views/ziyanScr/resource-manage'),
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
+          {
+            path: 'detail/:id',
+            name: 'scrResourceManageDetail',
+            component: () => import('@/views/ziyanScr/resource-manage/detail'),
+            props(route) {
+              return { ...route.params, ...route.query };
+            },
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
+        ],
         meta: {
           activeKey: 'scr-resource-manage',
           isShowBreadcrumb: true,
