@@ -512,3 +512,39 @@ var HuaWeiCmdbStatusMap = map[string]CloudHostStatus{
 	"SHELVED_OFFLOADED": UnknownCloudHostStatus,
 	"UNKNOWN":           UnknownCloudHostStatus,
 }
+
+// SearchBizBelongingParams is search cmdb business belonging parameter.
+type SearchBizBelongingParams struct {
+	BizIDs   []int64                `json:"bk_biz_ids,omitempty"`
+	BizNames []string               `json:"bk_biz_names,omitempty"`
+	Page     SearchBizBelongingPage `json:"page,omitempty"`
+}
+
+// SearchBizBelongingPage is search cmdb business belonging paging info.
+type SearchBizBelongingPage struct {
+	Limit int `json:"limit"`
+	Start int `json:"start"`
+}
+
+// SearchBizBelongingResult is search cmdb business belonging result.
+type SearchBizBelongingResult struct {
+	Data []SearchBizBelonging `json:"data"`
+}
+
+// SearchBizBelonging is search cmdb business belonging element of result.
+type SearchBizBelonging struct {
+	BizID            int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	BkProductID      int64  `json:"bsi_product_id"`
+	BkProductName    string `json:"bsi_product_name"`
+	PlanProductID    int64  `json:"plan_product_id"`
+	PlanProductName  string `json:"plan_product_name"`
+	BusinessDeptID   int64  `json:"business_dept_id"`
+	BusinessDeptName string `json:"business_dept_name"`
+	Bs1Name          string `json:"bs1_name"`
+	Bs1NameID        int64  `json:"bs1_name_id"`
+	Bs2Name          string `json:"bs2_name"`
+	Bs2NameID        int64  `json:"bs2_name_id"`
+	VirtualDeptID    int64  `json:"virtual_dept_id"`
+	VirtualDeptName  string `json:"virtual_dept_name"`
+}
