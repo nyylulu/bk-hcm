@@ -8,12 +8,12 @@
 
 POST /api/v1/woa/plan/resource/ticket/create
 
-| 参数名称         | 参数类型         | 必选 | 描述                           |
-|--------------|--------------|----|------------------------------|
-| bk_biz_id    | int          | 是  | 业务ID                         |
-| demand_class | string       | 是  | 预测的需求类型(枚举值：cvm(CVM)、ca(CA)) |
-| demands      | object array | 是  | 需求列表                         |
-| remark       | string       | 是  | 预测说明，最少20字，最多1024字           |
+| 参数名称         | 参数类型         | 必选 | 描述                  |
+|--------------|--------------|----|---------------------|
+| bk_biz_id    | int          | 是  | 业务ID                |
+| demand_class | string       | 是  | 预测的需求类型(枚举值：CVM、CA) |
+| demands      | object array | 是  | 需求列表                |
+| remark       | string       | 是  | 预测说明，最少20字，最多1024字  |
 
 #### demands[i]
 
@@ -34,9 +34,9 @@ POST /api/v1/woa/plan/resource/ticket/create
 |-------------|--------|----|--------------------|
 | res_mode    | string | 是  | 资源模式(枚举值：按机型、按机型族) |
 | device_type | string | 是  | 机型规格               |
-| os          | float  | 是  | OS数，单位：台           |
-| cpu_core    | float  | 是  | CPU核心数，单位：核        |
-| memory_size | float  | 是  | 内存大小，单位：GB         |
+| os          | int    | 是  | OS数，单位：台           |
+| cpu_core    | int    | 是  | CPU核心数，单位：核        |
+| memory      | int    | 是  | 内存大小，单位：GB         |
 
 #### demands[i].cbs
 
@@ -63,9 +63,9 @@ POST /api/v1/woa/plan/resource/ticket/create
       "cvm": {
         "res_mode": "按机型",
         "device_type": "S5.2XLARGE16",
-        "os": 123.4,
-        "cpu_core": 123.4,
-        "memory_size": 123.4
+        "os": 123,
+        "cpu_core": 123,
+        "memory": 123
       },
       "cbs": {
         "disk_type": "CLOUD_PREMIUM",

@@ -38,7 +38,7 @@ GET /api/v1/woa/plan/resource/ticket/{id}
       "plan_product_name": "规划产品",
       "virtual_dept_id": 2,
       "virtual_dept_name": "部门",
-      "demand_class": "cvm"
+      "demand_class": "CVM"
     },
     "status_info": {
       "status": "AUDIT",
@@ -65,16 +65,16 @@ GET /api/v1/woa/plan/resource/ticket/{id}
           "res_mode": "按机型",
           "device_family": "标准型",
           "device_type": "S5.2XLARGE16",
-          "cpu_core": 123.4,
-          "memory_size": 123.4,
+          "cpu_core": 123,
+          "memory": 123,
           "res_pool": "自研池",
           "core_type": "大核心"
         },
         "cbs": {
           "disk_type": "CLOUD_PREMIUM",
           "disk_type_name": "高性能云硬盘",
-          "disk_io": 123.456,
-          "disk_size": 1024.23
+          "disk_io": 123,
+          "disk_size": 1024
         }
       }
     ]
@@ -148,8 +148,8 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 | res_mode      | string | 资源模式(枚举值：按机型、按机型族) |
 | device_family | string | 机型族                |
 | device_type   | string | 机型规格               |
-| cpu_core      | float  | CPU核心数，单位：核        |
-| memory_size   | float  | 内存大小，单位：GB         |
+| cpu_core      | int    | CPU核心数，单位：核        |
+| memory        | int    | 内存大小，单位：GB         |
 | res_pool      | string | 资源池(枚举值：自研池、公有池)   |
 | core_type     | string | 核心类型(枚举值：大核心、小核心)  |
 
@@ -159,5 +159,5 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 |----------------|--------|---------------------------------------------------|
 | disk_type      | string | 云盘类型(枚举值：CLOUD_PREMIUM(高性能云硬盘)、CLOUD_SSD(SSD云硬盘)) |
 | disk_type_name | string | 云盘类型名称                                            |
-| disk_io        | float  | 磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260         |
-| disk_size      | float  | 云盘大小，单位：GB                                        |
+| disk_io        | int    | 磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260         |
+| disk_size      | int    | 云盘大小，单位：GB                                        |

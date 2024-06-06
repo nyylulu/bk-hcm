@@ -27,13 +27,13 @@ POST /api/v1/woa/plan/resource/ticket/list
 
 #### page
 
-| 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                                             |
-|-------|--------|----|--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但不返回查询结果详情数据，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但不返回总记录条数 count                                      |
-| start | int    | 否  | 记录开始位置，start 起始值为0                                                                                                                                                             |
-| limit | int    | 否  | 每页限制条数，最大500，不能为0                                                                                                                                                              |
-| sort  | string | 否  | 排序字段，返回数据将按该字段进行排序，默认根据submitted_at(提单时间)倒序排序，枚举值为：cpu_core(CPU核心数)、memory_size(内存大小)、disk_size(云盘大小)、expect_time(期望交付时间)、submitted_at(提单时间)、created_at(创建时间)、updated_at(更新时间) |
-| order | string | 否  | 排序顺序，枚举值：ASC(升序)、DESC(降序)                                                                                                                                                      |
+| 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                                        |
+|-------|--------|----|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但不返回查询结果详情数据，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但不返回总记录条数 count                                 |
+| start | int    | 否  | 记录开始位置，start 起始值为0                                                                                                                                                        |
+| limit | int    | 否  | 每页限制条数，最大500，不能为0                                                                                                                                                         |
+| sort  | string | 否  | 排序字段，返回数据将按该字段进行排序，默认根据submitted_at(提单时间)倒序排序，枚举值为：cpu_core(CPU核心数)、memory(内存大小)、disk_size(云盘大小)、expect_time(期望交付时间)、submitted_at(提单时间)、created_at(创建时间)、updated_at(更新时间) |
+| order | string | 否  | 排序顺序，枚举值：ASC(升序)、DESC(降序)                                                                                                                                                 |
 
 ### 调用示例
 
@@ -84,10 +84,10 @@ POST /api/v1/woa/plan/resource/ticket/list
         "bk_product_name": "运营产品",
         "plan_product_id": 333,
         "plan_product_name": "规划产品",
-        "obs_project": "常规项目",
-        "cpu_core": 123.456,
-        "memory_size": 123.456,
-        "disk_size": 123.456,
+        "demand_class": "CVM",
+        "cpu_core": 123,
+        "memory": 123,
+        "disk_size": 123,
         "demand_week": "PLAN_0_4W",
         "demand_week_name": "0-4周",
         "remark": "这里是预测说明",
@@ -128,10 +128,10 @@ POST /api/v1/woa/plan/resource/ticket/list
 | bk_product_name   | string | 运营产品名称                            |
 | plan_product_id   | int    | 规划产品ID                            |
 | plan_product_name | string | 规划产品名称                            |
-| obs_project       | string | OBS项目类型                           |
-| cpu_core          | float  | 总CPU核心数，单位：核                      |
-| memory_size       | float  | 总内存大小，单位：GB                       |
-| disk_size         | float  | 总云盘大小，单位：GB                       |
+| demand_class      | string | 预测的需求类型                           |
+| cpu_core          | int    | 总CPU核心数，单位：核                      |
+| memory            | int    | 总内存大小，单位：GB                       |
+| disk_size         | int    | 总云盘大小，单位：GB                       |
 | demand_week       | string | 13周需求类型，由CRP系统定义                  |
 | demand_week_name  | string | 13周需求类型名称                         |
 | remark            | string | 预测说明                              |
