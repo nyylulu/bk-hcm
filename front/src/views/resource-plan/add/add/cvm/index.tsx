@@ -1,7 +1,11 @@
 import { defineComponent } from 'vue';
+import Panel from '@/components/panel';
+import { useI18n } from 'vue-i18n';
 
 export default defineComponent({
   setup() {
-    return () => <section>233</section>;
+    const { t } = useI18n();
+
+    return () => <Panel title={t('CVM云主机信息')}>233</Panel>;
   },
 });
