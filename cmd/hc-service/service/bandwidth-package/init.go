@@ -55,7 +55,8 @@ func (svc bwPkgSvc) initTCloudBwPkgService(cap *capability.Capability) {
 
 	h.Add("ListBandwidthPackage", http.MethodPost,
 		"/vendors/tcloud/bandwidth_packages/list", svc.ListTCloudBandwidthPackage)
-
+	h.Add("ListBandwidthPackage", http.MethodPost,
+		"/vendors/tcloud-ziyan/bandwidth_packages/list", svc.ListTCloudZiyanBandwidthPackage)
 	h.Load(cap.WebService)
 }
 
@@ -75,6 +76,51 @@ func (svc bwPkgSvc) ListTCloudBandwidthPackage(cts *rest.Contexts) (any, error) 
 	}
 
 	cli, err := svc.ad.TCloud(cts.Kit, req.AccountID)
+	if err != nil {
+		logs.Errorf("tcloud request adaptor client err, err: %+v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+	if req.Page.Limit > core.TCloudQueryLimit {
+		req.Page.Limit = core.TCloudQueryLimit
+	}
+	opt := &types.TCloudListBwPkgOption{
+		Region:        req.Region,
+		Page:          req.Page,
+		PkgCloudIds:   req.PkgCloudIds,
+		PkgNames:      req.PkgNames,
+		NetworkTypes:  req.NetworkTypes,
+		ChargeTypes:   req.ChargeTypes,
+		ResourceTypes: req.ResourceTypes,
+		ResourceIds:   req.ResourceIds,
+		ResAddressIps: req.ResAddressIps,
+	}
+
+	resp, err := cli.ListBandwidthPackage(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("tcloud request adaptor list bandwidth package failed, err: %v, req: %v, rid: %s",
+			err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// ListTCloudZiyanBandwidthPackage 查询自研云带宽包
+func (svc bwPkgSvc) ListTCloudZiyanBandwidthPackage(cts *rest.Contexts) (any, error) {
+	req := new(hcbwpkg.ListTCloudBwPkgOption)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if req.Page == nil {
+		req.Page = &core.TCloudPage{Offset: 0, Limit: core.TCloudQueryLimit}
+	}
+
+	cli, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
 	if err != nil {
 		logs.Errorf("tcloud request adaptor client err, err: %+v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 		return nil, err

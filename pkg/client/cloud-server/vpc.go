@@ -319,6 +319,18 @@ func (v *VpcClient) AzureListExtInRes(ctx context.Context, h http.Header, req *c
 	return listVpcExtInRes[corecloud.AzureVpcExtension](ctx, h, v.client, enumor.Azure, req)
 }
 
+// TCloudZiyanListExtInBiz ...
+func (v *VpcClient) TCloudZiyanListExtInBiz(ctx context.Context, h http.Header, bizID int64, req *core.ListReq) (
+	*protocloud.VpcExtListResult[corecloud.TCloudVpcExtension], error) {
+	return listVpcExt[corecloud.TCloudVpcExtension](ctx, h, v.client, bizID, enumor.TCloudZiyan, req)
+}
+
+// TCloudZiyanListExtInRes ...
+func (v *VpcClient) TCloudZiyanListExtInRes(ctx context.Context, h http.Header, req *core.ListReq) (
+	*protocloud.VpcExtListResult[corecloud.TCloudVpcExtension], error) {
+	return listVpcExtInRes[corecloud.TCloudVpcExtension](ctx, h, v.client, enumor.TCloudZiyan, req)
+}
+
 // listVpcExtInRes list vpc with extension.
 func listVpcExtInRes[T corecloud.VpcExtension](ctx context.Context, h http.Header, cli rest.ClientInterface,
 	vendor enumor.Vendor, req *core.ListReq) (*protocloud.VpcExtListResult[T], error) {

@@ -86,6 +86,8 @@ func (svc *subnetSvc) BatchCreateSubnet(cts *rest.Contexts) (interface{}, error)
 		return batchCreateSubnet[protocloud.HuaWeiSubnetCreateExt](cts, vendor, svc)
 	case enumor.Azure:
 		return batchCreateSubnet[protocloud.AzureSubnetCreateExt](cts, vendor, svc)
+	case enumor.TCloudZiyan:
+		return batchCreateSubnet[protocloud.TCloudSubnetCreateExt](cts, vendor, svc)
 	}
 
 	return nil, nil
@@ -184,6 +186,9 @@ func (svc *subnetSvc) BatchUpdateSubnet(cts *rest.Contexts) (interface{}, error)
 		return batchUpdateSubnet[protocloud.HuaWeiSubnetUpdateExt](cts, svc)
 	case enumor.Azure:
 		return batchUpdateSubnet[protocloud.AzureSubnetUpdateExt](cts, svc)
+	case enumor.TCloudZiyan:
+		return batchUpdateSubnet[protocloud.TCloudSubnetUpdateExt](cts, svc)
+
 	}
 
 	return nil, nil
@@ -337,6 +342,8 @@ func (svc *subnetSvc) GetSubnet(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return convertToSubnetResult[protocore.TCloudSubnetExtension](base, dbSubnet.Extension)
+	case enumor.TCloudZiyan:
+		return convertToSubnetResult[protocore.TCloudSubnetExtension](base, dbSubnet.Extension)
 	case enumor.Aws:
 		return convertToSubnetResult[protocore.AwsSubnetExtension](base, dbSubnet.Extension)
 	case enumor.Gcp:
@@ -350,7 +357,8 @@ func (svc *subnetSvc) GetSubnet(cts *rest.Contexts) (interface{}, error) {
 	return nil, nil
 }
 
-func convertToSubnetResult[T protocore.SubnetExtension](baseSubnet *protocore.BaseSubnet, dbExtension tabletype.JsonField) (
+func convertToSubnetResult[T protocore.SubnetExtension](baseSubnet *protocore.BaseSubnet,
+	dbExtension tabletype.JsonField) (
 	*protocore.Subnet[T], error) {
 
 	extension := new(T)
@@ -524,6 +532,8 @@ func (svc *subnetSvc) ListSubnetExt(cts *rest.Contexts) (interface{}, error) {
 
 	switch vendor {
 	case enumor.TCloud:
+		return conSubnetExtListResult[protocore.TCloudSubnetExtension](listResp.Details)
+	case enumor.TCloudZiyan:
 		return conSubnetExtListResult[protocore.TCloudSubnetExtension](listResp.Details)
 	case enumor.Aws:
 		return conSubnetExtListResult[protocore.AwsSubnetExtension](listResp.Details)

@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/rest"
 )
 
+// GetTCloudNetworkAccountType ...
 func (svc *service) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error) {
 
 	accountID := cts.PathParameter("account_id").String()

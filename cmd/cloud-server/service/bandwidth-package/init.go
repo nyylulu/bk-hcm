@@ -99,6 +99,8 @@ func (svc *bandSvc) QueryBandPackage(cts *rest.Contexts) (any, error) {
 	switch account.Vendor {
 	case enumor.TCloud:
 		return svc.ListTCloudBwPkg(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.ListTCloudBwPkg(cts.Kit, req.Data)
 	default:
 		return nil, errors.New("unsupported vendor: " + string(account.Vendor))
 	}
@@ -115,6 +117,24 @@ func (svc *bandSvc) ListTCloudBwPkg(kt *kit.Kit, data json.RawMessage) (any, err
 		return nil, err
 	}
 	bandwidthPackage, err := svc.client.HCService().TCloud.BandPkg.ListBandwidthPackage(kt, req)
+	if err != nil {
+		logs.Errorf("fail to list bandwidth package, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	return bandwidthPackage, nil
+}
+
+// ListTCloudZiyanBwPkg ...
+func (svc *bandSvc) ListTCloudZiyanBwPkg(kt *kit.Kit, data json.RawMessage) (any, error) {
+	req := new(bwpkg.ListTCloudBwPkgOption)
+
+	if err := json.Unmarshal(data, req); err != nil {
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	bandwidthPackage, err := svc.client.HCService().TCloudZiyan.BandPkg.ListBandwidthPackage(kt, req)
 	if err != nil {
 		logs.Errorf("fail to list bandwidth package, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

@@ -28,6 +28,8 @@ type Client struct {
 	*restClient
 	Account       *AccountClient
 	Region        *RegionClient
+	Vpc           *VpcClient
+	Subnet        *SubnetClient
 	Zone          *ZoneClient
 	SecurityGroup *SecurityGroupClient
 	LoadBalancer  *LoadBalancerClient
@@ -40,9 +42,10 @@ type restClient struct {
 // NewClient create a new tcloud api client.
 func NewClient(client rest.ClientInterface) *Client {
 	return &Client{
-		restClient: &restClient{client: client},
-		Account:    NewAccountClient(client),
-
+		restClient:    &restClient{client: client},
+		Account:       NewAccountClient(client),
+		Vpc:           NewVpcClient(client),
+		Subnet:        NewSubnetClient(client),
 		Region:        NewRegionClient(client),
 		Zone:          NewZoneClient(client),
 		SecurityGroup: NewCloudSecurityGroupClient(client),

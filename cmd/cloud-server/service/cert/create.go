@@ -89,6 +89,8 @@ func (svc *certSvc) createCert(cts *rest.Contexts, authHandler handler.ValidWith
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.createTCloudCert(cts.Kit, req.Data, bkBizID)
+	case enumor.TCloudZiyan:
+		return svc.createTCloudZiyanCert(cts.Kit, req.Data, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
@@ -108,7 +110,7 @@ func (svc *certSvc) createTCloudCert(kt *kit.Kit, body json.RawMessage, bkBizID 
 
 	privateKey, err := base64.URLEncoding.DecodeString(req.PrivateKey)
 	if err != nil {
-		logs.Errorf("create tcloud cert decode privatekey failed, ik: %s, err: %v, rid: %s", req.PublicKey, err, kt.Rid)
+		logs.Errorf("create tcloud cert decode privatekey failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 	req.PublicKey = string(publicKey)
@@ -120,6 +122,40 @@ func (svc *certSvc) createTCloudCert(kt *kit.Kit, body json.RawMessage, bkBizID 
 	}
 
 	result, err := svc.client.HCService().TCloud.Cert.CreateCert(kt, req)
+	if err != nil {
+		logs.Errorf("create tcloud cert failed, req: %+v, result: %+v, err: %v, rid: %s", req, result, err, kt.Rid)
+		return result, err
+	}
+
+	return result, nil
+}
+
+func (svc *certSvc) createTCloudZiyanCert(kt *kit.Kit, body json.RawMessage, bkBizID int64) (interface{}, error) {
+	req := new(hccert.TCloudCreateReq)
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	publicKey, err := base64.URLEncoding.DecodeString(req.PublicKey)
+	if err != nil {
+		logs.Errorf("create tcloud cert decode publickey failed, pk: %s, err: %v, rid: %s", req.PublicKey, err, kt.Rid)
+		return nil, err
+	}
+
+	privateKey, err := base64.URLEncoding.DecodeString(req.PrivateKey)
+	if err != nil {
+		logs.Errorf("create tcloud ziyan cert decode privatekey failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	req.PublicKey = string(publicKey)
+	req.PrivateKey = string(privateKey)
+	req.BkBizID = bkBizID
+
+	if err = req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	result, err := svc.client.HCService().TCloudZiyan.Cert.CreateCert(kt, req)
 	if err != nil {
 		logs.Errorf("create tcloud cert failed, req: %+v, result: %+v, err: %v, rid: %s", req, result, err, kt.Rid)
 		return result, err
