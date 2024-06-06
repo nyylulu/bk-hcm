@@ -1,11 +1,11 @@
-import { defineComponent, onMounted, reactive, ref, watchEffect } from 'vue';
-import { useRouter } from 'vue-router';
+import { defineComponent, onMounted, reactive, ref, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { Button, DatePicker, Select, Tab, TagInput } from 'bkui-vue';
 import { Plus, Search } from 'bkui-vue/lib/icon';
 import MemberSelect from '@/components/MemberSelect';
-import RemoteTable from '@/components/RemoteTable';
 import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import { useTable } from '@/hooks/useTable/useTable';
 import { cleanPayload, getDate } from '@/utils';
 import { timeFormatter } from '@/common/util';
 import './index.scss';
@@ -27,29 +27,78 @@ export default defineComponent({
   name: 'ScrResourceManage',
   setup() {
     const router = useRouter();
+    const route = useRoute();
     const ziyanScrStore = useZiyanScrStore();
 
     const { columns: scrResourceOnlineColumns } = useColumns('scrResourceOnline');
     const { columns: scrResourceOfflineColumns } = useColumns('scrResourceOffline');
 
+    const {
+      CommonTable: ScrResourceOnlineTable,
+      getListData: reloadScrResourceOnlineTable,
+      pagination: scrResourceOnlinePagination,
+    } = useTable({
+      tableOptions: {
+        columns: scrResourceOnlineColumns,
+      },
+      scrConfig: () => ({
+        url: '/api/v1/woa/pool/findmany/launch/task',
+        payload: {
+          ...cleanPayload(filter),
+          id: filter.id.length ? filter.id.map((id) => Number(id)) : undefined,
+          start: timeFormatter(filter.start, 'YYYY-MM-DD'),
+          end: timeFormatter(filter.end, 'YYYY-MM-DD'),
+        },
+      }),
+    });
+
+    const {
+      CommonTable: ScrResourceOfflineTable,
+      getListData: reloadScrResourceOfflineTable,
+      pagination: scrResourceOfflinePagination,
+    } = useTable({
+      tableOptions: {
+        columns: scrResourceOfflineColumns,
+      },
+      scrConfig: () => ({
+        url: '/api/v1/woa/pool/findmany/recall/task',
+        payload: {
+          ...cleanPayload(filter),
+          id: filter.id.length ? filter.id.map((id) => Number(id)) : undefined,
+          start: timeFormatter(filter.start, 'YYYY-MM-DD'),
+          end: timeFormatter(filter.end, 'YYYY-MM-DD'),
+        },
+      }),
+    });
+
+    const reloadDataList = () => {
+      if (activeType.value === 'online') {
+        scrResourceOnlinePagination.start = 0;
+        reloadScrResourceOnlineTable();
+      } else {
+        scrResourceOfflinePagination.start = 0;
+        reloadScrResourceOfflineTable();
+      }
+    };
+
     const types = [
       {
         label: '资源上架',
         value: 'online',
-        columns: scrResourceOnlineColumns,
-        url: '/api/v1/woa/pool/findmany/launch/task',
+        Component: ScrResourceOnlineTable,
       },
       {
         label: '资源下架',
         value: 'offline',
-        columns: scrResourceOfflineColumns,
-        url: '/api/v1/woa/pool/findmany/recall/task',
+        Component: ScrResourceOfflineTable,
       },
     ];
 
-    const activeType = ref('online');
-    watchEffect(() => {
-      router.push({ query: { type: activeType.value } });
+    const activeType = ref(route.query.type || 'online');
+
+    watch(activeType, (val) => {
+      router.push({ query: { type: val } });
+      reloadDataList();
     });
 
     const getDefaultFilter = (): ResourceManageFilterType => ({
@@ -68,23 +117,20 @@ export default defineComponent({
         const res = await ziyanScrStore.getTaskStatusList();
         phaseList.value = res.data.info || [];
       };
+
       getPhaseList();
+      reloadDataList();
     });
 
-    const remoteTableRef = ref();
-    const filterList = () => {
-      remoteTableRef.value.pagination.start = 0;
-      remoteTableRef.value.getDataList();
-    };
     const clearFilter = () => {
       Object.assign(filter, getDefaultFilter());
-      filterList();
+      reloadDataList();
     };
 
     return () => (
       <div class='scr-resource-manage-page'>
         <Tab v-model:active={activeType.value} type='card-grid'>
-          {types.map(({ label, value, columns, url }) => (
+          {types.map(({ label, value, Component }) => (
             <TabPanel key={value} label={label} name={value} renderDirective='if'>
               <div class='manage-container'>
                 <div class='filter-container'>
@@ -122,7 +168,7 @@ export default defineComponent({
                     </Select>
                   </div>
                   <div class='filter-item mr8'>
-                    <Button onClick={filterList}>
+                    <Button onClick={reloadDataList}>
                       <Search />
                       查询
                     </Button>
@@ -131,24 +177,7 @@ export default defineComponent({
                     <Button onClick={clearFilter}>清空</Button>
                   </div>
                 </div>
-                <RemoteTable
-                  ref={remoteTableRef}
-                  columns={columns}
-                  noSort
-                  path={{ start: 'start', limit: 'limit', count: 'enable_count', data: 'info', total: 'count' }}
-                  apis={[
-                    {
-                      url,
-                      payload: () => ({
-                        ...cleanPayload(filter),
-                        id: filter.id.length ? filter.id.map((id) => Number(id)) : undefined,
-                        start: timeFormatter(filter.start, 'YYYY-MM-DD'),
-                        end: timeFormatter(filter.end, 'YYYY-MM-DD'),
-                        filter: undefined,
-                      }),
-                    },
-                  ]}
-                />
+                <Component />
               </div>
             </TabPanel>
           ))}

@@ -73,17 +73,13 @@ export default defineComponent({
         columns: tableColumns,
       },
       requestOption: {
-        type: 'load_balancers/with/delete_protection',
-        sortOption: { sort: 'created_at', order: 'DESC' },
+        dataPath: 'data.info',
       },
-      slotAllocation: () => {
+      scrConfig: () => {
         return {
-          ScrSwitch: true,
-          interface: {
-            Parameters: {
-              ...requestListParams.value,
-            },
-            path: '/api/v1/woa/task/findmany/recycle/host',
+          url: '/api/v1/woa/task/findmany/recycle/host',
+          payload: {
+            ...requestListParams.value,
           },
         };
       },

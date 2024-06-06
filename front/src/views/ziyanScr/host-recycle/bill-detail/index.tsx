@@ -159,34 +159,30 @@ export default defineComponent({
         columns: tableColumns,
       },
       requestOption: {
-        type: 'load_balancers/with/delete_protection',
-        sortOption: { sort: 'created_at', order: 'DESC' },
+        dataPath: 'data.info',
       },
-      slotAllocation: () => {
+      scrConfig: () => {
         return {
-          ScrSwitch: false,
-          interface: {
-            Parameters: {
-              filter: {
-                condition: 'AND',
-                rules: [
-                  {
-                    field: 'require_type',
-                    operator: 'equal',
-                    value: 1,
-                  },
-                  {
-                    field: 'label.device_group',
-                    operator: 'in',
-                    value: ['标准型'],
-                  },
-                ],
-              },
-              page: [],
+          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+          payload: {
+            filter: {
+              condition: 'AND',
+              rules: [
+                {
+                  field: 'require_type',
+                  operator: 'equal',
+                  value: 1,
+                },
+                {
+                  field: 'label.device_group',
+                  operator: 'in',
+                  value: ['标准型'],
+                },
+              ],
             },
-            filter: { simpleConditions: true, requestId: 'devices' },
-            path: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+            page: [],
           },
+          filter: { simpleConditions: true, requestId: 'devices' },
         };
       },
     });
