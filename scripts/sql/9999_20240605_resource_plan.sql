@@ -32,6 +32,7 @@ START TRANSACTION;
 create table if not exists `res_plan_ticket`
 (
     `id`                varchar(64)   not null comment '唯一ID',
+    `applicant`         varchar(64)   not null comment '申请人',
     `bk_biz_id`         bigint        not null comment '业务ID',
     `bsi_product_id`    bigint        not null comment '运营产品ID',
     `bsi_product_name`  varchar(64)   not null comment '运营产品名称',
@@ -44,13 +45,10 @@ create table if not exists `res_plan_ticket`
     `cpu_core`          double        not null comment '总CPU核心数，单位：核',
     `memory_size`       double        not null comment '总内存大小，单位：GB',
     `disk_size`         double        not null comment '总云盘大小，单位：GB',
-    `itsm_sn`           varchar(64)            default '' comment '关联的itsm单据编码',
-    `itsm_url`          varchar(64)            default '' comment '关联的itsm单据链接',
-    `crp_sn`            varchar(64)            default '' comment '关联的crp单据编码',
-    `crp_url`           varchar(64)            default '' comment '关联的crp单据链接',
     `remark`            varchar(1024) not null comment '预测说明，最少20字，最多1024字',
     `creator`           varchar(64)   not null comment '创建人',
     `reviser`           varchar(64)   not null comment '更新人',
+    `submitted_at`      timestamp     not null default current_timestamp comment '提单或改单的时间',
     `created_at`        timestamp     not null default current_timestamp comment '该记录创建的时间',
     `updated_at`        timestamp     not null default current_timestamp on update current_timestamp comment '该记录更新的时间',
     primary key (`id`)
@@ -79,9 +77,60 @@ create table if not exists `res_plan_demand`
 ) engine = innodb
   default charset = utf8mb4;
 
+# busniess resource plan ticket status info related table structure
+create table if not exists `res_plan_ticket_status`
+(
+    `ticket_id`  varchar(64) not null comment '对应的单据唯一ID',
+    `status`     varchar(64) not null comment '单据状态',
+    `itsm_sn`    varchar(64)          default '' comment '关联的itsm单据编码',
+    `itsm_url`   varchar(64)          default '' comment '关联的itsm单据链接',
+    `crp_sn`     varchar(64)          default '' comment '关联的crp单据编码',
+    `crp_url`    varchar(64)          default '' comment '关联的crp单据链接',
+    `created_at` timestamp   not null default current_timestamp comment '该记录创建的时间',
+    `updated_at` timestamp   not null default current_timestamp on update current_timestamp comment '该记录更新的时间',
+    primary key (`ticket_id`)
+) engine = innodb
+  default charset = utf8mb4;
+
+# woa zone info related table structure
+create table if not exists `woa_zone`
+(
+    `id`          varchar(64) not null comment '唯一ID',
+    `zone_id`     varchar(64) not null comment '可用区ID',
+    `zone_name`   varchar(64) not null comment '可用区名称',
+    `region`      varchar(64) not null comment '地区/城市ID',
+    `region_name` varchar(64) not null comment '地区/城市名称',
+    `area`        varchar(64) not null comment '地域ID',
+    `area_name`   varchar(64) not null comment '地域名称',
+    `created_at`  timestamp   not null default current_timestamp comment '该记录创建的时间',
+    `updated_at`  timestamp   not null default current_timestamp on update current_timestamp comment '该记录更新的时间',
+    primary key (`id`),
+    unique key `idx_uk_zone` (`zone_id`)
+) engine = innodb
+  default charset = utf8mb4;
+
+# woa device type info related table structure
+create table if not exists `woa_device_type`
+(
+    `id`            varchar(64) not null comment '唯一ID',
+    `device_type`   varchar(64) not null comment '机型',
+    `device_class`  varchar(64) not null comment '机型分类',
+    `device_family` varchar(64) not null comment '机型族',
+    `core_type`     varchar(64) not null comment '核心类型',
+    `cpu_core`      bigint(1)   not null comment 'CPU核心数',
+    `memory`        bigint(1)   not null comment '内存大小，单位GB',
+    `created_at`    timestamp   not null default current_timestamp comment '该记录创建的时间',
+    `updated_at`    timestamp   not null default current_timestamp on update current_timestamp comment '该记录更新的时间',
+    primary key (`id`),
+    unique key `idx_uk_device_type` (`device_type`)
+) engine = innodb
+  default charset = utf8mb4;
+
 insert into id_generator(`resource`, `max_id`)
-values ('res_plan_demand', '0'),
-       ('res_plan_demand_detail', '0');
+values ('res_plan_ticket', '0'),
+       ('res_plan_demand', '0'),
+       ('woa_zone', '0'),
+       ('woa_device_type', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
 SELECT 'v9.9.9' AS `hcm_ver`, '9999' AS `sql_ver`;
