@@ -124,7 +124,7 @@ func (c *clientSet) ClbClient(region string) (*clb.Client, error) {
 // CertClient tcloud cert client
 func (c *clientSet) CertClient() (*ssl.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalClbEndpoint
+	c.profile.HttpProfile.Endpoint = constant.InternalCertEndpoint
 	client, err := ssl.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err

@@ -85,13 +85,17 @@ func (svc *lbSvc) batchAddBizTarget(cts *rest.Contexts, authHandler handler.Vali
 
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
-		return svc.buildAddTCloudTarget(cts.Kit, req.Data, accountInfo.AccountID)
+		return svc.buildAddTCloudTarget(cts.Kit, req.Data, accountInfo.AccountID, enumor.TCloud)
+	case enumor.TCloudZiyan:
+		return svc.buildAddTCloudTarget(cts.Kit, req.Data, accountInfo.AccountID, enumor.TCloudZiyan)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
 }
 
-func (svc *lbSvc) buildAddTCloudTarget(kt *kit.Kit, body json.RawMessage, accountID string) (interface{}, error) {
+func (svc *lbSvc) buildAddTCloudTarget(kt *kit.Kit, body json.RawMessage,
+	accountID string, vendor enumor.Vendor) (interface{}, error) {
+
 	req := new(cslb.TCloudTargetBatchCreateReq)
 	if err := json.Unmarshal(body, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -155,7 +159,7 @@ func (svc *lbSvc) buildAddTCloudTarget(kt *kit.Kit, body json.RawMessage, accoun
 		return nil, errf.New(errf.InvalidParameter, "target group need belong to the same load balancer")
 	}
 
-	return svc.buildAddTCloudTargetTasks(kt, accountID, lbIDs[0], targetGroupRsListMap)
+	return svc.buildAddTCloudTargetTasks(kt, accountID, lbIDs[0], targetGroupRsListMap, vendor)
 }
 
 func (svc *lbSvc) checkTargetExists(kt *kit.Kit, req *cslb.TCloudTargetBatchCreateReq, accountID string) error {
@@ -213,7 +217,7 @@ func (svc *lbSvc) batchCreateTargetDb(kt *kit.Kit, targets []*dataproto.TargetBa
 }
 
 func (svc *lbSvc) buildAddTCloudTargetTasks(kt *kit.Kit, accountID, lbID string,
-	tgMap map[string][]*dataproto.TargetBaseReq) (*core.FlowStateResult, error) {
+	tgMap map[string][]*dataproto.TargetBaseReq, vendor enumor.Vendor) (*core.FlowStateResult, error) {
 
 	// 预检测
 	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
@@ -222,7 +226,7 @@ func (svc *lbSvc) buildAddTCloudTargetTasks(kt *kit.Kit, accountID, lbID string,
 	}
 
 	// 创建Flow跟Task的初始化数据
-	flowID, err := svc.initFlowAddTargetByLbID(kt, accountID, lbID, tgMap)
+	flowID, err := svc.initFlowAddTargetByLbID(kt, accountID, lbID, tgMap, vendor)
 	if err != nil {
 		return nil, err
 	}
@@ -237,7 +241,7 @@ func (svc *lbSvc) buildAddTCloudTargetTasks(kt *kit.Kit, accountID, lbID string,
 }
 
 func (svc *lbSvc) initFlowAddTargetByLbID(kt *kit.Kit, accountID, lbID string,
-	tgMap map[string][]*dataproto.TargetBaseReq) (string, error) {
+	tgMap map[string][]*dataproto.TargetBaseReq, vendor enumor.Vendor) (string, error) {
 
 	tasks := make([]ts.CustomFlowTask, 0)
 	getActionID := counter.NewNumStringCounter(1, 10)
@@ -258,7 +262,7 @@ func (svc *lbSvc) initFlowAddTargetByLbID(kt *kit.Kit, accountID, lbID string,
 				ActionID:   actionID,
 				ActionName: enumor.ActionTargetGroupAddRS,
 				Params: &actionlb.OperateRsOption{
-					Vendor:                      enumor.TCloud,
+					Vendor:                      vendor,
 					TCloudBatchOperateTargetReq: *addRsParams,
 				},
 				Retry: tableasync.NewRetryWithPolicy(3, 100, 200),

@@ -293,6 +293,12 @@ func (svc *lbSvc) ListListener(cts *rest.Contexts) (interface{}, error) {
 
 // ListListenerExt list listener with extension.
 func (svc *lbSvc) ListListenerExt(cts *rest.Contexts) (any, error) {
+
+	vendor := enumor.Vendor(cts.PathParameter("vendor").String())
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
 	req := new(core.ListReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
@@ -317,16 +323,21 @@ func (svc *lbSvc) ListListenerExt(cts *rest.Contexts) (any, error) {
 		return &protocloud.ListenerListResult{Count: result.Count}, nil
 	}
 
-	details := make([]corelb.Listener[corelb.TCloudListenerExtension], 0, len(result.Details))
-	for _, one := range result.Details {
-		tmpOne, err := convTableToListener[corelb.TCloudListenerExtension](&one)
-		if err != nil {
-			logs.Errorf("fail to conv listener with extension, err: %v, rid: %s", err, cts.Kit.Rid)
+	switch vendor {
+	case enumor.TCloud, enumor.TCloudZiyan:
+		details := make([]corelb.Listener[corelb.TCloudListenerExtension], 0, len(result.Details))
+		for _, one := range result.Details {
+			tmpOne, err := convTableToListener[corelb.TCloudListenerExtension](&one)
+			if err != nil {
+				logs.Errorf("[%s]fail to conv listener with extension, err: %v, rid: %s", vendor, err, cts.Kit.Rid)
+			}
+			details = append(details, *tmpOne)
 		}
-		details = append(details, *tmpOne)
-	}
 
-	return &protocloud.TCloudListenerListResult{Details: details}, nil
+		return &protocloud.TCloudListenerListResult{Details: details}, nil
+	default:
+		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
+	}
 }
 
 func convTableToBaseListener(one *tablelb.LoadBalancerListenerTable) *corelb.BaseListener {
@@ -663,7 +674,8 @@ func (svc *lbSvc) GetListener(cts *rest.Contexts) (any, error) {
 	case enumor.TCloudZiyan:
 		newLblInfo, err := convTableToListener[corelb.TCloudListenerExtension](&lblInfo)
 		if err != nil {
-			logs.Errorf("fail to conv listener with extension in tcloud-ziyan, lblID: %s, err: %v, rid: %s", id, err, cts.Kit.Rid)
+			logs.Errorf("fail to conv listener with extension in tcloud-ziyan, lblID: %s, err: %v, rid: %s", id, err,
+				cts.Kit.Rid)
 			return nil, err
 		}
 		return newLblInfo, nil
@@ -707,11 +719,12 @@ func (svc *lbSvc) ListTargetGroupListenerRel(cts *rest.Contexts) (interface{}, e
 	return &protocloud.TargetListenerRuleRelListResult{Details: details}, nil
 }
 
-func convTableToBaseTargetListenerRuleRel(
-	one *tablelb.TargetGroupListenerRuleRelTable) *corelb.BaseTargetListenerRuleRel {
+func convTableToBaseTargetListenerRuleRel(one *tablelb.TargetGroupListenerRuleRelTable) *corelb.
+	BaseTargetListenerRuleRel {
 
 	return &corelb.BaseTargetListenerRuleRel{
 		ID:                  one.ID,
+		Vendor:              one.Vendor,
 		ListenerRuleID:      one.ListenerRuleID,
 		ListenerRuleType:    one.ListenerRuleType,
 		CloudListenerRuleID: one.CloudListenerRuleID,

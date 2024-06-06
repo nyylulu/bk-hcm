@@ -54,6 +54,8 @@ func (svc *lbSvc) listLoadBalancerQuotas(cts *rest.Contexts, authHandler handler
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.listTCloudLoadBalancerQuota(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.listTCloudZiyanLoadBalancerQuota(cts.Kit, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
@@ -70,6 +72,25 @@ func (svc *lbSvc) listTCloudLoadBalancerQuota(kt *kit.Kit, body json.RawMessage)
 	}
 
 	result, err := svc.client.HCService().TCloud.Clb.ListQuota(kt, req)
+	if err != nil {
+		logs.Errorf("list tcloud load balancer quota failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (svc *lbSvc) listTCloudZiyanLoadBalancerQuota(kt *kit.Kit, body json.RawMessage) (any, error) {
+	req := new(hcproto.TCloudListLoadBalancerQuotaReq)
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	result, err := svc.client.HCService().TCloudZiyan.Clb.ListQuota(kt, req)
 	if err != nil {
 		logs.Errorf("list tcloud load balancer quota failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

@@ -21,6 +21,7 @@ package constant
 
 // 负载均衡相关的常量
 const (
+	TCloudLoadBalancerQueryMax = 20
 	// LoadBalancerBindSecurityGroupMaxLimit 一个负载均衡实例最多可绑定安全组的最大数量限制
 	LoadBalancerBindSecurityGroupMaxLimit = 5
 	// BatchListenerMaxLimit 单次操作监听器的最大数量

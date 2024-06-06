@@ -354,6 +354,12 @@ func (svc *vpcSvc) getVpc(cts *rest.Contexts, validHandler handler.ValidWithAuth
 			return nil, err
 		}
 		return vpc, err
+	case enumor.TCloudZiyan:
+		vpc, err := svc.client.DataService().TCloudZiyan.Vpc.Get(cts.Kit.Ctx, cts.Kit.Header(), id)
+		if err != nil {
+			return nil, err
+		}
+		return vpc, err
 	}
 
 	return nil, nil
@@ -438,6 +444,8 @@ func (svc *vpcSvc) listVpcExt(cts *rest.Contexts, authHandler handler.ListAuthRe
 	switch vendor {
 	case enumor.TCloud:
 		return svc.client.DataService().TCloud.Vpc.ListVpcExt(cts.Kit.Ctx, cts.Kit.Header(), req)
+	case enumor.TCloudZiyan:
+		return svc.client.DataService().TCloudZiyan.Vpc.ListVpcExt(cts.Kit.Ctx, cts.Kit.Header(), req)
 	case enumor.Aws:
 		return svc.client.DataService().Aws.Vpc.ListVpcExt(cts.Kit.Ctx, cts.Kit.Header(), req)
 	case enumor.Gcp:

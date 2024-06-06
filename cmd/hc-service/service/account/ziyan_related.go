@@ -87,3 +87,19 @@ func (svc *service) TCloudZiyanAccountCheck(cts *rest.Contexts) (interface{}, er
 
 	return nil, err
 }
+
+// GetTCloudZiyanNetworkAccountType ...
+func (svc *service) GetTCloudZiyanNetworkAccountType(cts *rest.Contexts) (any, error) {
+
+	accountID := cts.PathParameter("account_id").String()
+	if len(accountID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "accountID is required")
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, accountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.DescribeNetworkAccountType(cts.Kit)
+}

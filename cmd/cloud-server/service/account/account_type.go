@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/rest"
 )
 
+// GetTCloudNetworkAccountType ...
 func (a *accountSvc) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error) {
 
 	accountID := cts.PathParameter("account_id").String()
@@ -45,8 +46,12 @@ func (a *accountSvc) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if baseInfo.Vendor != enumor.TCloud {
-		return nil, errf.New(errf.InvalidParameter, "only TCloud account is support now")
+	switch baseInfo.Vendor {
+	case enumor.TCloud:
+		return a.client.HCService().TCloud.Account.GetNetworkAccountType(cts.Kit, accountID)
+	case enumor.TCloudZiyan:
+		return a.client.HCService().TCloudZiyan.Account.GetNetworkAccountType(cts.Kit, accountID)
+	default:
+		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", baseInfo.Vendor)
 	}
-	return a.client.HCService().TCloud.Account.GetNetworkAccountType(cts.Kit, accountID)
 }

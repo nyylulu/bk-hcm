@@ -58,6 +58,8 @@ func (svc *lbSvc) InquiryPriceLoadBalancer(cts *rest.Contexts) (any, error) {
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.inquiryPriceTCloudLoadBalancer(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.inquiryPriceTCloudZiyanLoadBalancer(cts.Kit, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}
@@ -73,6 +75,24 @@ func (svc *lbSvc) inquiryPriceTCloudLoadBalancer(kt *kit.Kit, body json.RawMessa
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 	result, err := svc.client.HCService().TCloud.Clb.InquiryPrice(kt, req)
+	if err != nil {
+		logs.Errorf("inquiry price tcloud load balancer failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+func (svc *lbSvc) inquiryPriceTCloudZiyanLoadBalancer(kt *kit.Kit, body json.RawMessage) (any, error) {
+	req := new(hcproto.TCloudLoadBalancerCreateReq)
+	if err := json.Unmarshal(body, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	result, err := svc.client.HCService().TCloudZiyan.Clb.InquiryPrice(kt, req)
 	if err != nil {
 		logs.Errorf("inquiry price tcloud load balancer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

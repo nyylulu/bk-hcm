@@ -104,14 +104,16 @@ func (svc *lbSvc) associateTargetGroupListenerRel(cts *rest.Contexts,
 
 	switch vendor {
 	case enumor.TCloud:
-		return svc.tcloudTargetGroupListenerRel(cts.Kit, req)
+		return svc.tcloudTargetGroupListenerRel(cts.Kit, req, svc.listRuleWithCondition)
+	case enumor.TCloudZiyan:
+		return svc.tcloudTargetGroupListenerRel(cts.Kit, req, svc.listTCloudZiyanRuleWithCondition)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}
 }
 
-func (svc *lbSvc) tcloudTargetGroupListenerRel(kt *kit.Kit, req *cslb.TargetGroupListenerRelAssociateReq) (
-	interface{}, error) {
+func (svc *lbSvc) tcloudTargetGroupListenerRel(kt *kit.Kit, req *cslb.TargetGroupListenerRelAssociateReq,
+	listRuleFunc listRuleWithConditionFunc) (interface{}, error) {
 
 	lblInfo, err := lblogic.GetListenerByID(kt, svc.client.DataService(), req.ListenerID)
 	if err != nil {
@@ -143,7 +145,7 @@ func (svc *lbSvc) tcloudTargetGroupListenerRel(kt *kit.Kit, req *cslb.TargetGrou
 		),
 		Page: core.NewDefaultBasePage(),
 	}
-	ruleList, err := svc.listRuleWithCondition(kt, ruleReq)
+	ruleList, err := listRuleFunc(kt, ruleReq)
 	if err != nil {
 		return nil, err
 	}

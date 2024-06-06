@@ -20,11 +20,15 @@
 package hcziyancli
 
 import (
+	"net/http"
+
 	"hcm/pkg/api/core/cloud"
 	hsaccount "hcm/pkg/api/hc-service/account"
 	"hcm/pkg/client/common"
 	"hcm/pkg/kit"
 	"hcm/pkg/rest"
+
+	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
 // AccountClient is hc service account api client.
@@ -50,4 +54,13 @@ func (a *AccountClient) GetBySecret(kt *kit.Kit, request *cloud.TCloudSecret) (*
 
 	return common.Request[cloud.TCloudSecret, cloud.TCloudInfoBySecret](a.client, rest.POST, kt, request,
 		"/accounts/secret")
+}
+
+// GetNetworkAccountType ...
+func (a *AccountClient) GetNetworkAccountType(kt *kit.Kit, accountID string) (
+	*vpc.DescribeNetworkAccountTypeResponseParams, error) {
+
+	return common.Request[common.Empty, vpc.DescribeNetworkAccountTypeResponseParams](
+		a.client, http.MethodGet, kt, nil, "accounts/%s/network_type", accountID)
+
 }

@@ -25,8 +25,8 @@ import (
 
 	"hcm/pkg/adaptor/poller"
 	"hcm/pkg/adaptor/types"
-	"hcm/pkg/adaptor/types/core"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -56,7 +56,7 @@ func (t *TCloudImpl) ListLoadBalancer(kt *kit.Kit, opt *typelb.TCloudListOption)
 	// 负载均衡实例ID。实例ID数量上限为20个
 	if len(opt.CloudIDs) != 0 {
 		req.LoadBalancerIds = common.StringPtrs(opt.CloudIDs)
-		req.Limit = common.Int64Ptr(int64(core.TCloudQueryLimit))
+		req.Limit = common.Int64Ptr(int64(constant.TCloudLoadBalancerQueryMax))
 	}
 
 	if opt.Page != nil {

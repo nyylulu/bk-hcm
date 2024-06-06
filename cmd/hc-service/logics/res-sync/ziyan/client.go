@@ -32,6 +32,12 @@ type Interface interface {
 	SecurityGroup(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGOption) (*SyncResult, error)
 	RemoveSecurityGroupDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 
+	Subnet(kt *kit.Kit, params *SyncBaseParams, opt *SyncSubnetOption) (*SyncResult, error)
+	RemoveSubnetDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
+
+	Vpc(kt *kit.Kit, params *SyncBaseParams, opt *SyncVpcOption) (*SyncResult, error)
+	RemoveVpcDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
+
 	SecurityGroupRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGRuleOption) (*SyncResult, error)
 
 	Zone(kt *kit.Kit, opt *SyncZoneOption) (*SyncResult, error)
@@ -53,8 +59,11 @@ type Interface interface {
 	LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)
 	RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 
+	// LoadBalancerWithListener 同步负载均衡及监听器
 	LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)
-	Listener(kt *kit.Kit, opt *SyncListenerOfSingleLBOption) (*SyncResult, error)
+
+	// Listener 同步指定负载均衡下的指定云id 负载均衡
+	Listener(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption) (*SyncResult, error)
 }
 
 var _ Interface = new(client)

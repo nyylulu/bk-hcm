@@ -38,6 +38,10 @@ type SyncAllResourceOption struct {
 	SyncPublicResource bool `json:"sync_public_resource" validate:"omitempty"`
 }
 
+// ResSyncFunc 资源同步函数
+type ResSyncFunc func(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions []string,
+	sd *detail.SyncDetail) error
+
 // Validate SyncAllResourceOption
 func (opt *SyncAllResourceOption) Validate() error {
 	return validator.Validate.Struct(opt)
@@ -63,7 +67,7 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 			return
 		}
 
-		logs.V(3).Infof("tcloud ziyan account[%s] sync all resource end, cost: %v, opt: %v, rid: %s", opt.AccountID,
+		logs.V(3).Infof("tcloud ziyan account(%s) sync all resource end, cost: %v, opt: %v, rid: %s", opt.AccountID,
 			time.Since(start), opt, kt.Rid)
 	}()
 
@@ -89,14 +93,33 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		Vendor:    string(enumor.TCloudZiyan),
 	}
 
-	// 参数模板
-	if hitErr = SyncArgsTpl(kt, cliSet, opt.AccountID, sd); hitErr != nil {
-		return enumor.ArgumentTemplateResType, hitErr
+	for _, syncer := range syncOrder {
+		if hitErr = syncer.ResSyncFunc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+			return syncer.ResType, hitErr
+		}
 	}
 
-	if hitErr = SyncSG(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+	if hitErr = SyncCert(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+		return enumor.SecurityGroupCloudResType, hitErr
+	}
+
+	if hitErr = SyncLoadBalancer(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
 		return enumor.SecurityGroupCloudResType, hitErr
 	}
 
 	return "", nil
+}
+
+type syncItem struct {
+	ResType enumor.CloudResourceType
+	ResSyncFunc
+}
+
+var syncOrder = []syncItem{
+	{enumor.VpcCloudResType, SyncVpc},
+	{enumor.SubnetCloudResType, SyncSubnet},
+	{enumor.ArgumentTemplateResType, SyncArgsTpl},
+	{enumor.SecurityGroupCloudResType, SyncSG},
+	{enumor.CertCloudResType, SyncCert},
+	{enumor.LoadBalancerCloudResType, SyncLoadBalancer},
 }

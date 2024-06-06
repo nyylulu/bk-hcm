@@ -285,7 +285,7 @@ func (r TCloudRuleDeleteByDomainReq) Validate() error {
 
 // ListenerWithRuleCreateReq listener with rule create req.
 type ListenerWithRuleCreateReq struct {
-	Name          string                        `json:"name" validate:"required"`
+	Name          string                        `json:"name" validate:"omitempty"`
 	BkBizID       int64                         `json:"bk_biz_id" validate:"omitempty"`
 	LbID          string                        `json:"lb_id" validate:"required"`
 	Protocol      enumor.ProtocolType           `json:"protocol" validate:"required"`

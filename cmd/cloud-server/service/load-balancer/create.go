@@ -71,6 +71,8 @@ func (svc *lbSvc) BatchCreateLB(cts *rest.Contexts) (any, error) {
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
 		return svc.batchCreateTCloudLB(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.batchCreateTCloudZiyanLB(cts.Kit, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -87,6 +89,19 @@ func (svc *lbSvc) batchCreateTCloudLB(kt *kit.Kit, rawReq json.RawMessage) (any,
 	}
 	req.BkBizID = constant.UnassignedBiz
 	return svc.client.HCService().TCloud.Clb.BatchCreate(kt, req)
+}
+
+func (svc *lbSvc) batchCreateTCloudZiyanLB(kt *kit.Kit, rawReq json.RawMessage) (any, error) {
+	req := new(hcproto.TCloudLoadBalancerCreateReq)
+	if err := json.Unmarshal(rawReq, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	// 参数校验
+	if err := req.Validate(false); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	req.BkBizID = constant.UnassignedBiz
+	return svc.client.HCService().TCloudZiyan.Clb.BatchCreate(kt, req)
 }
 
 // CreateBizTargetGroup create biz target group.
@@ -132,6 +147,8 @@ func (svc *lbSvc) createBizTargetGroup(cts *rest.Contexts, authHandler handler.V
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
 		return svc.batchCreateTCloudTargetGroup(cts.Kit, req.Data, bkBizID)
+	case enumor.TCloudZiyan:
+		return svc.batchCreateTCloudZiyanTargetGroup(cts.Kit, req.Data, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -177,6 +194,48 @@ func (svc *lbSvc) batchCreateTCloudTargetGroup(kt *kit.Kit, rawReq json.RawMessa
 		},
 	}
 	return svc.client.DataService().TCloud.LoadBalancer.BatchCreateTCloudTargetGroup(kt, opt)
+}
+
+func (svc *lbSvc) batchCreateTCloudZiyanTargetGroup(kt *kit.Kit, rawReq json.RawMessage, bkBizID int64) (any, error) {
+	req := new(cslb.TargetGroupCreateReq)
+	if err := json.Unmarshal(rawReq, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	// 参数校验
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if cvt.PtrToVal(req.HealthCheck.HealthSwitch) == 0 {
+		req.HealthCheck.HealthSwitch = cvt.ValToPtr(int64(0))
+	}
+	healthJson, err := json.Marshal(req.HealthCheck)
+	if err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	opt := &dataproto.TCloudTargetGroupCreateReq{
+		TargetGroups: []dataproto.TargetGroupBatchCreate[corelb.TCloudTargetGroupExtension]{
+			{
+				Name:            req.Name,
+				Vendor:          enumor.TCloud,
+				AccountID:       req.AccountID,
+				BkBizID:         bkBizID,
+				Region:          req.Region,
+				Protocol:        req.Protocol,
+				Port:            req.Port,
+				VpcID:           "",
+				CloudVpcID:      req.CloudVpcID,
+				TargetGroupType: enumor.LocalTargetGroupType,
+				Weight:          0,
+				HealthCheck:     tabletype.JsonField(healthJson),
+				Memo:            nil,
+				Extension:       nil,
+				RsList:          req.RsList,
+			},
+		},
+	}
+	return svc.client.DataService().TCloudZiyan.LoadBalancer.BatchCreateTCloudTargetGroup(kt, opt)
 }
 
 // CreateBizListener create biz listener.
@@ -227,6 +286,8 @@ func (svc *lbSvc) createListener(cts *rest.Contexts, authHandler handler.ValidWi
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
 		return svc.batchCreateTCloudListener(cts.Kit, req.Data, bkBizID, lbID)
+	case enumor.TCloudZiyan:
+		return svc.batchCreateTCloudZiyanListener(cts.Kit, req.Data, bkBizID, lbID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -262,6 +323,56 @@ func (svc *lbSvc) batchCreateTCloudListener(kt *kit.Kit, rawReq json.RawMessage,
 	createResp, err := svc.client.HCService().TCloud.Clb.CreateListener(kt, req)
 	if err != nil {
 		logs.Errorf("fail to create tcloud url rule, err: %v, req: %+v, cert: %+v, rid: %s",
+			err, req, cvt.PtrToVal(req.Certificate), kt.Rid)
+		return nil, err
+	}
+
+	if len(createResp.CloudLblID) == 0 {
+		logs.Errorf("no listener have been created, lbID: %s, req: %+v, rid: %s", lbID, req, kt.Rid)
+		return nil, errors.New("create listener failed")
+	}
+
+	// 构建异步任务将目标组中的RS绑定到对应规则上
+	lblInfo := &corelb.BaseListener{CloudID: createResp.CloudLblID, Protocol: req.Protocol, LbID: req.LbID}
+	err = svc.applyTargetToRule(kt, req.TargetGroupID, createResp.CloudRuleID, lblInfo)
+	if err != nil {
+		logs.Errorf("fail to bind listener and target group register flow, err: %v, req: %+v, createResp: %+v, rid: %s",
+			err, req, createResp, kt.Rid)
+		return nil, err
+	}
+	return &core.BatchCreateResult{IDs: []string{createResp.CloudLblID}}, nil
+}
+
+func (svc *lbSvc) batchCreateTCloudZiyanListener(kt *kit.Kit, rawReq json.RawMessage, bkBizID int64,
+	lbID string) (any, error) {
+
+	req := new(hcproto.ListenerWithRuleCreateReq)
+	if err := json.Unmarshal(rawReq, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	// 参数校验
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 预检测-是否有执行中的负载均衡
+	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
+	if err != nil {
+		return nil, err
+	}
+
+	// 预检测-检查四层监听器，绑定的目标组里面的RS，是否已绑定其他监听器
+	err = svc.checkLayerFourGlobalUniqueTarget(kt, req)
+	if err != nil {
+		return nil, err
+	}
+
+	req.BkBizID = bkBizID
+	req.LbID = lbID
+	createResp, err := svc.client.HCService().TCloudZiyan.Clb.CreateListener(kt, req)
+	if err != nil {
+		logs.Errorf("fail to create tcloud ziyan url rule, err: %v, req: %+v, cert: %+v, rid: %s",
 			err, req, cvt.PtrToVal(req.Certificate), kt.Rid)
 		return nil, err
 	}

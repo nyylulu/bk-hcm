@@ -53,7 +53,7 @@ func InitService(cap *capability.Capability) {
 	// 监听器
 	h.Add("GetListener", http.MethodGet, "/vendors/{vendor}/listeners/{id}", svc.GetListener)
 	h.Add("ListListener", http.MethodPost, "/load_balancers/listeners/list", svc.ListListener)
-	h.Add("ListListenerExt", http.MethodPost, "/vendors/tcloud/load_balancers/listeners/list", svc.ListListenerExt)
+	h.Add("ListListenerExt", http.MethodPost, "/vendors/{vendor}/load_balancers/listeners/list", svc.ListListenerExt)
 	h.Add("BatchCreateListener", http.MethodPost, "/vendors/{vendor}/listeners/batch/create", svc.BatchCreateListener)
 	h.Add("BatchCreateListenerWithRule", http.MethodPost, "/vendors/{vendor}/listeners/rules/batch/create",
 		svc.BatchCreateListenerWithRule)
