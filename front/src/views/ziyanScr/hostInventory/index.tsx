@@ -1,37 +1,29 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
-// import http from '@/http';
-// import components
+import apiService from '@/api/scrApi';
 import { Button } from 'bkui-vue';
+import { useRouter } from 'vue-router';
+import AreaSelector from '../hostApplication/components/AreaSelector';
+import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {
-    // const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
     const { columns } = useColumns('hostInventor');
     const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
-    const application = () => {};
-    const defaultFilter = () => ({
+    const router = useRouter();
+    const filter = ref({
       require_type: 1,
       region: [],
       zone: [],
       device_type: [],
-      device_group: deviceGroups || [deviceGroups[0]],
-      cpu: '',
-      mem: '',
-      enable_capacity: true,
-    });
-    const filter = ref({
-      require_type: '',
-      region: [],
-      zone: [],
-      device_type: [],
-      device_group: '',
+      device_group: deviceGroups && [deviceGroups[0]],
       cpu: '',
       mem: '',
       disk: '',
+      enable_capacity: true,
     });
     const options = ref({
       require_types: [],
@@ -43,26 +35,37 @@ export default defineComponent({
       mem: [],
     });
     const deviceConfigDisabled = ref(false);
-    const querying = ref(false);
     const deviceTypeDisabled = ref(false);
     const page = ref({
       limit: 50,
       start: 0,
       sort: '-capacity_flag',
     });
+    const queryrules = ref(
+      [
+        filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
+        filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
+        filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
+        filter.value.device_group && { field: 'label.device_group', operator: 'in', value: filter.value.device_group },
+        filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
+        filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
+        filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
+        filter.value.enable_capacity && {
+          field: 'enable_capacity',
+          operator: 'equal',
+          value: filter.value.enable_capacity,
+        },
+      ].filter(Boolean),
+    );
     const loadResources = () => {
-      querying.value = true;
       getListData();
     };
-    const handleRequireTypeChange = () => {};
-    // const handleZoneChange = () => {};
     const handleDeviceConfigChange = () => {
       filter.value.device_type = [];
       const { cpu, mem } = filter.value;
-      deviceConfigDisabled.value = Boolean(cpu || mem);
+      deviceTypeDisabled.value = Boolean(cpu || mem);
     };
     const clearFilter = () => {
-      filter.value = Object.assign({}, filter.value, defaultFilter());
       deviceConfigDisabled.value = false;
       deviceTypeDisabled.value = false;
       filterDevices();
@@ -74,6 +77,20 @@ export default defineComponent({
       loadDeviceTypes();
     };
     const filterDevices = () => {
+      queryrules.value = [
+        filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
+        filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
+        filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
+        filter.value.device_group && {
+          field: 'label.device_group',
+          operator: 'in',
+          value: filter.value.device_group,
+        },
+        filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
+        filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
+        filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
+      ].filter(Boolean);
+
       page.value.start = 0;
       loadResources();
     };
@@ -82,25 +99,33 @@ export default defineComponent({
       filter.value.mem = '';
       deviceConfigDisabled.value = filter.value.device_type.length > 0;
     };
-    const loadRequireTypes = async () => {
-      //   const [res] = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/requirement`);
-      //   options.value.require_types = res?.data?.info || [];
-    };
     const loadDeviceTypes = async () => {
-      //   const [res] = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/requirement`, filter.value);
-      //   options.value.device_types = res?.data?.info || [];
+      const { info } = await apiService.getDeviceTypes(filter.value);
+      options.value.device_types = info || [];
     };
     const loadRestrict = async () => {
-      //   const [res] = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/requirement`);
-      //   const { cpu, mem } = res?.data || {};
-      //   options.value.cpu = cpu || [];
-      //   options.value.mem = mem || [];
+      const { cpu, mem } = await apiService.getRestrict();
+      options.value.cpu = cpu || [];
+      options.value.mem = mem || [];
+    };
+    const getfetchOptionslist = async () => {
+      const { info } = await apiService.getRequireTypes();
+      options.value.require_types = info;
+    };
+    const application = (row: any) => {
+      router.push({
+        path: '/ziyanScr/hostApplication',
+        query: {
+          ...row,
+        },
+      });
     };
     onMounted(() => {
-      loadRequireTypes();
       loadRestrict();
       loadDeviceTypes();
+      getfetchOptionslist();
     });
+
     const { CommonTable, getListData } = useTable({
       tableOptions: {
         columns: [
@@ -108,13 +133,13 @@ export default defineComponent({
           {
             label: '操作',
             width: 120,
-            render: ({ data }: { data: any }) => {
+            render: ({ row }: { row: any }) => {
               return (
                 <Button
                   text
                   theme='primary'
-                  disabled={data.listenerNum > 0 || data.delete_protect}
-                  onClick={() => application()}>
+                  disabled={row.listenerNum > 0 || row.delete_protect}
+                  onClick={() => application(row)}>
                   一键申请
                 </Button>
               );
@@ -131,18 +156,7 @@ export default defineComponent({
           payload: {
             filter: {
               condition: 'AND',
-              rules: [
-                {
-                  field: 'require_type',
-                  operator: 'equal',
-                  value: 1,
-                },
-                {
-                  field: 'label.device_group',
-                  operator: 'in',
-                  value: ['标准型'],
-                },
-              ],
+              rules: [...queryrules.value],
             },
             page: page.value,
           },
@@ -158,48 +172,37 @@ export default defineComponent({
               <>
                 <div class='tabselect'>
                   <span>需求类型</span>
-                  <bk-select class='tbkselect' v-model={filter.value.require_type} onChange={handleRequireTypeChange}>
+                  <bk-select class='tbkselect' v-model={filter.value.require_type}>
                     {options.value.require_types.map((item) => (
                       <bk-option
                         key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
+                        value={item.require_type}
+                        label={item.require_name}></bk-option>
                     ))}
                   </bk-select>
                 </div>
                 <div class='tabselect'>
                   <span>地域</span>
-                  <bk-select
+                  <AreaSelector
+                    ref='areaSelector'
                     class='tbkselect'
                     v-model={filter.value.region}
+                    multiple
+                    clearable
                     filterable
-                    show-select-all
-                    multiple-mode='tag'
-                    collapse-tags>
-                    {options.value.regions.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
-                    ))}
-                  </bk-select>
+                    params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
                 </div>
                 <div class='tabselect'>
                   <span>园区</span>
-                  <bk-select
-                    class='tbkselect'
+                  <ZoneSelector
+                    ref='zoneSelector'
                     v-model={filter.value.zone}
-                    filterable
-                    show-select-all
-                    multiple-mode='tag'
-                    collapse-tags>
-                    {options.value.zones.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
-                    ))}
-                  </bk-select>
+                    class='tbkselect'
+                    multiple
+                    params={{
+                      resourceType: 'QCLOUDCVM',
+                      region: filter.value.region,
+                    }}></ZoneSelector>
                 </div>
                 <div class='tabselect'>
                   <span>实例族</span>
@@ -222,6 +225,7 @@ export default defineComponent({
                     v-model={filter.value.device_type}
                     clearable
                     multiple
+                    disabled={deviceTypeDisabled.value}
                     filterable
                     onChange={handleDeviceTypeChange}>
                     {options.value.device_types.map((item) => (
@@ -235,6 +239,7 @@ export default defineComponent({
                     class='tbkselect'
                     v-model={filter.value.cpu}
                     clearable
+                    disabled={deviceConfigDisabled.value}
                     filterable
                     onChange={handleDeviceConfigChange}>
                     {options.value.cpu.map((item) => (
@@ -248,6 +253,7 @@ export default defineComponent({
                     class='tbkselect'
                     v-model={filter.value.mem}
                     clearable
+                    disabled={deviceConfigDisabled.value}
                     filterable
                     onChange={handleDeviceConfigChange}>
                     {options.value.mem.map((item) => (
@@ -256,12 +262,7 @@ export default defineComponent({
                   </bk-select>
                 </div>
                 <div class='tabselect'>
-                  <bk-button
-                    icon='bk-icon-search'
-                    theme='primary'
-                    class='bkbutton'
-                    loading={querying.value}
-                    onClick={filterDevices}>
+                  <bk-button icon='bk-icon-search' theme='primary' class='bkbutton' onClick={filterDevices}>
                     <Search></Search>
                     查询
                   </bk-button>

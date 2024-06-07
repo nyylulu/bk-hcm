@@ -3,13 +3,12 @@ import { Tab, Input, Button, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import CommonCard from '@/components/CommonCard';
 import { useTable } from '@/hooks/useTable/useTable';
+import { useRoute } from 'vue-router';
 import './index.scss';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import AreaSelector from './components/AreaSelector';
 import ZoneSelector from './components/ZoneSelector';
-// import CvmTypeSelector from './components/CvmTypeSelector';
-// import ImageSelector from './components/ImageSelector';
 import DiskTypeSelect from './components/DiskTypeSelect';
 import AntiAffinityLevelSelect from './components/AntiAffinityLevelSelect';
 import { RightShape, DownShape, Search } from 'bkui-vue/lib/icon';
@@ -17,6 +16,7 @@ import { useAccountStore } from '@/store';
 import apiService from '@/api/scrApi';
 export default defineComponent({
   setup() {
+    const route = useRoute();
     const accountStore = useAccountStore();
     const addResourceRequirements = ref(false);
     const CVMapplication = ref(false);
@@ -81,15 +81,12 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          ScrSwitch: true,
-          interface: {
-            Parameters: {
-              filter: undefined,
-              page: { start: 0, limit: 10 },
-            },
-            filter: { simpleConditions: true, requestId: 'devices' },
-            path: '/api/v1/woa/task/findmany/apply/device',
+          url: '/api/v1/woa/task/findmany/apply/device',
+          payload: {
+            filter: undefined,
+            page: { start: 0, limit: 10 },
           },
+          filter: { simpleConditions: true, requestId: 'devices' },
         };
       },
     });
@@ -138,13 +135,11 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          ScrSwitch: true,
-          interface: {
-            Parameters: {
-              ...requestListParams.value,
-            },
-            path: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+          payload: {
+            ...requestListParams.value,
           },
+          filter: {},
         };
       },
     });
@@ -518,10 +513,6 @@ export default defineComponent({
         diskSize: 0, // 数据盘size
         networkType: '万兆',
       };
-      // QCLOUDCVMForm.value.spec.region = row.region;
-      // QCLOUDCVMForm.value.spec.deviceType = row.device_type;
-      // QCLOUDCVMForm.value.spec.zone = row.zone;
-      // QCLOUDCVMForm.value.spec.imageId = 'img-fjxtfi0n';
       addResourceRequirements.value = true;
     };
     const ARtriggerShow = (isShow: boolean) => {
@@ -587,8 +578,22 @@ export default defineComponent({
     onMounted(() => {
       getBusinessesList();
       getfetchOptionslist();
+      if (route.query.id) {
+        QCLOUDCVMForm.value.spec = {
+          deviceType: String(route.query.device_type), // 机型
+          region: String(route.query.region), // 地域
+          zone: String(route.query.zone), // 园区
+          vpc: '', //  vpc
+          subnet: '', //  子网
+          imageId: 'img-fjxtfi0n', // 镜像
+          diskType: 'CLOUD_PREMIUM', // 数据盘tyle
+          diskSize: 0, // 数据盘size
+          networkType: '万兆',
+        };
+        resourceForm.value.resourceType = 'QCLOUDCVM';
+        addResourceRequirements.value = true;
+      }
     });
-
     return () => (
       <Tab v-model:active={activeName.value} type='unborder-card'>
         <BkTabPanel key='HostApplication' name='HostApplication' label='主机申请'>
