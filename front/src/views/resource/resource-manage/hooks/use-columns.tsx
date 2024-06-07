@@ -3138,6 +3138,227 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  // 服务请求 - 资源预测
+  const forecastDemandColumns = [
+    {
+      label: '预测单号',
+      field: 'forecast_order_number',
+      isDefaultShow: true,
+    },
+    {
+      label: '需求年月',
+      field: 'demand_year_month',
+    },
+    {
+      label: '期望到货时间',
+      field: 'expected_delivery_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '业务',
+      field: 'business',
+      isFormItem: true,
+      isDefaultShow: true,
+    },
+    {
+      label: '运营产品',
+      field: 'operation_product',
+      isFormItem: true,
+    },
+    {
+      label: '规划产品',
+      field: 'planning_product',
+      isFormItem: true,
+    },
+    {
+      label: '项目类型',
+      field: 'project_type',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核心数',
+      field: 'total_cpu_cores',
+      isDefaultShow: true,
+    },
+    {
+      label: '13周需求类型',
+      field: '13_week_demand_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '提单人',
+      field: 'submitter',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remarks',
+    },
+    {
+      label: '创建时间',
+      field: 'creation_time',
+      isFormItem: true,
+    },
+    {
+      label: '提单时间',
+      field: 'submission_time',
+      isDefaultShow: true,
+    },
+  ];
+
+  // 资源预测详情
+  const forecastDemandDetailColums = [
+    {
+      label: '地域',
+      field: 'region',
+    },
+    {
+      label: '城市',
+      field: 'city',
+    },
+    {
+      label: '地域',
+      field: 'resource_model',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型',
+      field: 'model_family',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型类型',
+      field: 'model_type',
+    },
+    {
+      label: '机型代次',
+      field: 'model_generation',
+    },
+    {
+      label: '机型规格',
+      field: 'model_specification',
+    },
+    {
+      label: '资源池',
+      field: 'resource_pool',
+    },
+    {
+      label: '核心类型',
+      field: 'core_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例数',
+      field: 'number_of_instances',
+    },
+    {
+      label: '总CPU核数',
+      field: 'total_cpu_cores',
+    },
+    {
+      label: '总内存(G)',
+      field: 'total_memory_gb',
+    },
+    {
+      label: '单例磁盘IO(MB/s)',
+      field: 'single_instance_disk_io',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'cloud_disk_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '总云盘大小',
+      field: 'total_cloud_disk_size',
+    },
+    {
+      label: '备注',
+      field: 'remarks',
+    },
+  ];
+
+  // 预测清单
+  const forecastListColums = [
+    {
+      label: '项目类型',
+      field: 'project_type',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核数',
+      field: 'total_cpu_cores',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量',
+      field: 'total_memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云盘总量',
+      field: 'total_cloud_disk',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expected_delivery_time',
+    },
+    {
+      label: '区域',
+      field: 'region',
+    },
+    {
+      label: '城市',
+      field: 'city',
+    },
+    {
+      label: '资源模式',
+      field: 'resource_model',
+    },
+    {
+      label: '项目类型',
+      field: 'project_type',
+    },
+  ];
+
+  // 单据管理 - 账号
+  const accountColums = [
+    {
+      label: '单号',
+      field: 'order_number',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源类型',
+      field: 'resource_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '单据状态',
+      field: 'document_status',
+      isDefaultShow: true,
+    },
+    {
+      label: '申请人',
+      field: 'applicant',
+      isDefaultShow: true,
+    },
+    {
+      label: '申请时间',
+      field: 'application_time',
+    },
+    {
+      label: ' 结束时间',
+      field: 'end_time',
+    },
+    {
+      label: '备注',
+      field: 'remarks',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -3173,6 +3394,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
+    forecastDemand: forecastDemandColumns,
+    forecastDemandDetail: forecastDemandDetailColums,
+    forecastList: forecastListColums,
+    account: accountColums,
     CVMApplication: CAcolumns,
     scrResourceOnlineHost: scrResourceOnlineHostColumns,
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
