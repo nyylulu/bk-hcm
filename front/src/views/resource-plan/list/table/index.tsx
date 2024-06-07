@@ -1,7 +1,8 @@
-import { defineComponent, computed } from 'vue';
+import { defineComponent, computed, PropType, watch } from 'vue';
 import { Button } from 'bkui-vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
+// import { useResourcePlanStore } from '@/store';
 
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import cssModule from '../index.module.scss';
@@ -9,9 +10,24 @@ import Panel from '@/components/panel';
 import { useRouter } from 'vue-router';
 
 export default defineComponent({
-  setup() {
+  props: {
+    searchData: {
+      type: Object as PropType<{
+        bk_biz_ids: number[];
+        obs_projects: string[];
+        ticket_ids: string;
+        applicants: string[];
+        submit_time_range: {
+          start: string;
+          end: string;
+        };
+      }>,
+    },
+  },
+  setup(props) {
     const renderTableData = [
       {
+        id: '999',
         forecast_order: '12123',
         demand_year_month: '2022-12-09',
         business: '业务名称',
@@ -19,6 +35,8 @@ export default defineComponent({
         creation_time: '2023-09-11',
       },
     ];
+
+    // const resourcePlanStore = useResourcePlanStore();
     const { columns, settings } = useColumns('forecastDemand');
     const router = useRouter();
 
@@ -38,9 +56,9 @@ export default defineComponent({
         {
           label: '操作',
           width: 120,
-          render: ({ data }: any) => (
+          render: () => (
             <div>
-              <Button text theme={'primary'} onClick={() => handleAdjustmentDemand(data)}>
+              <Button text theme={'primary'}>
                 调整需求
               </Button>
             </div>
@@ -74,20 +92,29 @@ export default defineComponent({
     const handleToDetail = (data) => {
       router.push({
         path: '/resource-plan/detail',
-        query: { data: JSON.stringify(data) },
+        query: { id: data.id },
       });
-      // baseMap.value = formItemBase.reduce((pre, cur) => {
-      //   if (cur.field in data) {
-      //     pre.push({
-      //       label: cur.label,
-      //       value: data[cur.field],
-      //     });
-      //   }
-      //   return pre;
-      // }, []);
     };
 
-    const handleAdjustmentDemand = () => {};
+    const getTableData = async () => {
+      try {
+        // const res = await resourcePlanStore.reqListTickets({
+        //   ...props.searchData,
+        // });
+      } catch (error) {
+        console.error(error, 'error'); // eslint-disable-line no-console
+      }
+    };
+
+    watch(
+      () => props.searchData,
+      () => {
+        getTableData();
+      },
+      {
+        deep: true,
+      },
+    );
     return () => (
       <Panel>
         <Button theme='primary' onClick={() => handleToAdd()}>

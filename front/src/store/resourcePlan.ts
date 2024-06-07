@@ -1,6 +1,11 @@
 import http from '@/http';
 import { defineStore } from 'pinia';
-import type { IPlanTicket } from '@/typings/resourcePlan';
+import {
+  IListTicketsParam,
+  ResourcePlanIListTicketsResult,
+  ResourcePlanTicketByIdResult,
+  IPlanTicket,
+} from '@/typings/resourcePlan';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -10,6 +15,18 @@ export const useResourcePlanStore = defineStore({
   actions: {
     getDiskTypes() {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/disk_type/list`);
+    },
+    // 查询OBS项目类型列表。
+    getObsProjects() {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/obs_project/list`);
+    },
+    // 查询资源预测单据。
+    reqListTickets(data: IListTicketsParam): Promise<ResourcePlanIListTicketsResult> {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/list`, data);
+    },
+    // 获取资源预测申请单据详情。
+    getTicketById(id: string): Promise<ResourcePlanTicketByIdResult> {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/${id}`);
     },
     createPlan(data: IPlanTicket) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/create`, data);

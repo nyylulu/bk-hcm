@@ -8,7 +8,7 @@ const props = defineProps({
   autoSelect: Boolean as PropType<boolean>,
   isAudit: Boolean as PropType<boolean>,
 });
-const emit = defineEmits(['update:modelValue']);
+const emit = defineEmits(['update:modelValue', 'handleClear']);
 
 const accountStore = useAccountStore();
 const businessList = ref([]);
@@ -49,7 +49,7 @@ defineExpose({
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" filterable :loading="loading">
+  <bk-select v-model="selectedValue" filterable :loading="loading" @clear="emit('handleClear')">
     <bk-option v-for="(item, index) in businessList" :key="index" :value="item.id" :label="item.name" />
   </bk-select>
 </template>
