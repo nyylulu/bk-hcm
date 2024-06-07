@@ -4,7 +4,7 @@ import i18n from '@/language/i18n';
 import { CloudType, SecurityRuleEnum, HuaweiSecurityRuleEnum, AzureSecurityRuleEnum } from '@/typings';
 import { useAccountStore, useLoadBalancerStore } from '@/store';
 import { Button } from 'bkui-vue';
-import type { Settings } from 'bkui-vue/lib/table/props';
+import { type Settings } from 'bkui-vue/lib/table/props';
 import { h, ref } from 'vue';
 import type { Ref } from 'vue';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
@@ -1818,6 +1818,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '地域',
       field: 'region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
@@ -1835,77 +1836,79 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const CHColumns = [
     {
       label: '机型',
-      field: 'require_type',
+      field: 'spec.deviceType',
     },
     {
       label: '需求数量',
-      field: 'label.device_group',
+      field: 'replicas',
     },
     {
       label: '地域',
-      field: 'device_type',
+      field: 'spec.region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
-      field: 'device_type',
+      field: 'spec.zone',
     },
     {
       label: '镜像',
-      field: 'cpu',
-      sort: true,
+      field: 'spec.imageId',
     },
     {
       label: '数据盘大小',
-      field: 'mem',
-      sort: true,
+      field: 'spec.diskSize',
     },
     {
       label: '数据盘类型',
-      field: 'region',
+      field: 'spec.diskType',
+    },
+    {
+      label: '私有网络',
+      field: 'spec.vpc',
+    },
+    {
+      label: '私有子网',
+      field: 'spec.subnet',
     },
     {
       label: '网络类型',
-      field: 'capacity_flag',
-      render({ cell }: { cell: string }) {
-        const { class: theClass, text } = capacityLevel(cell);
-        return <span class={theClass}>{text}</span>;
-      },
+      field: 'spec.networkType',
     },
     {
       label: '备注',
-      field: 'zone',
+      field: 'remark',
     },
   ];
   const PMColumns = [
     {
       label: '机型',
-      field: 'require_type',
+      field: 'deviceType',
     },
     {
       label: '需求数量',
-      field: 'label.device_group',
+      field: 'replicas',
     },
     {
       label: '地域',
       field: 'device_type',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
       field: 'cpu',
-      sort: true,
     },
     {
       label: 'RAID 类型',
-      field: 'mem',
-      sort: true,
+      field: 'raidType',
     },
     {
       label: '操作系统',
-      field: 'region',
+      field: 'osType',
     },
     {
       label: '备注',
-      field: 'region',
+      field: 'remark',
     },
   ];
   const RRColumns = [
@@ -2050,55 +2053,101 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '业务',
-      field: 'require_type',
+      field: 'bkBiz_id',
     },
     {
       label: '单号',
-      field: 'label.device_group',
+      field: 'order_id',
+      render: (row: { order_id: any }) => {
+        return (
+          // <router-link class='link-type' to={{ name: 'cr-resource-apply-detail', params: { billId: row.order_id } }}>
+          row.order_id
+          // </router-link>
+        );
+      },
     },
     {
       label: '子单号',
-      field: 'device_type',
+      field: 'suborder_id',
     },
     {
       label: '需求类型',
-      field: 'cpu',
+      field: 'require_type',
     },
     {
       label: '申请人',
-      field: 'mem',
+      field: 'bk_username',
     },
     {
       label: '内网IP',
-      field: 'region',
+      field: 'ip',
     },
     {
       label: '固资号',
-      field: 'region',
+      field: 'asset_id',
     },
     {
       label: '资源类型',
-      field: 'cpu',
+      field: 'resource_type',
     },
     {
       label: '机型',
-      field: 'mem',
+      field: 'device_type',
     },
     {
       label: '园区',
-      field: 'region',
+      field: 'zone_id',
     },
     {
       label: '交付时间',
-      field: 'region',
+      field: 'update_at',
     },
     {
       label: '申请时间',
-      field: 'cpu',
+      field: 'create_at',
     },
     {
       label: '备注信息',
+      field: 'message',
+    },
+  ];
+  const CAcolumns = [
+    {
+      label: '需求类型',
+      field: 'require_type',
+    },
+    {
+      label: '实例族',
+      field: 'label.device_group',
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: 'CPU核',
+      field: 'cpu',
+    },
+    {
+      label: '内存(G)',
       field: 'mem',
+    },
+    {
+      label: '地域',
+      field: 'region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+    },
+    {
+      label: '园区',
+      field: 'zone',
+    },
+    {
+      label: '库存情况',
+      field: 'capacity_flag',
+      render({ cell }: { cell: string }) {
+        const { class: theClass, text } = capacityLevel(cell);
+        return <span class={theClass}>{text}</span>;
+      },
     },
   ];
   const ERcolumns = [
@@ -2685,6 +2734,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
+    CVMApplication: CAcolumns,
     scrResourceOnlineHost: scrResourceOnlineHostColumns,
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
     scrResourceOnlineCreate: scrResourceOnlineCreateColumns,

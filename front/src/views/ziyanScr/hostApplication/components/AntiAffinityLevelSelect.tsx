@@ -15,7 +15,7 @@ export default defineComponent({
     },
   },
   emits: ['value-change'],
-  setup(props, { emit, attrs }) {
+  setup(props, { emit }) {
     const selectedValue = ref(props.value);
     const options = ref<{ value: string; label: string }[]>([]);
     const optionsRequestId = Symbol();
@@ -24,11 +24,11 @@ export default defineComponent({
       const { resourceType, hasZone } = props.params;
 
       try {
-        const res = await apiService.getAntiAffinityLevels(resourceType, hasZone, {
+        const { info } = await apiService.getAntiAffinityLevels(resourceType, hasZone, {
           requestId: optionsRequestId,
         });
         options.value =
-          res.data?.info.map((item: any) => ({
+          info.map((item: any) => ({
             value: item.level,
             label: item.description,
           })) || [];
@@ -69,7 +69,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <bk-select v-model={selectedValue.value} {...attrs}>
+        <bk-select v-model={selectedValue.value}>
           {options.value.map((opt) => (
             <bk-option key={opt.value} label={opt.label} value={opt.value} />
           ))}

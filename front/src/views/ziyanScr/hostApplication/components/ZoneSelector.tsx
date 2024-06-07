@@ -1,5 +1,7 @@
-import { defineComponent, ref, watch, onMounted, PropType } from 'vue';
+import { defineComponent, ref, watch, PropType, computed } from 'vue';
 import apiService from '../../../../api/scrApi';
+import isEqual from 'lodash/isEqual';
+import isEmpty from 'lodash/isEmpty';
 export default defineComponent({
   name: 'ZoneSelector',
   props: {
@@ -7,65 +9,109 @@ export default defineComponent({
       type: String as PropType<string>,
       default: '',
     },
-    area: {
-      type: String as PropType<string>,
-      required: true,
+    params: {
+      type: Object,
+      default: () => ({}),
+    },
+    valueKey: {
+      type: String,
       default: '',
+      validator: (val) => ['cmdbZoneName', ''].includes(val),
+    },
+    separateCampus: {
+      type: Boolean,
+      default: true,
     },
   },
   emits: ['change'],
-  setup(props, { emit, attrs }) {
+  setup(props, { emit }) {
     const options = ref<{ label: string; value: string }[]>([]);
-    const loading = ref(false);
-
-    const loadOptions = async () => {
-      if (props.area) {
-        loading.value = true;
-        try {
-          const res = await apiService.getZones(props.area);
-          options.value = res.data.zoneList;
-        } finally {
-          loading.value = false;
-        }
+    const optionsRequestId = ref();
+    const selectedValue = ref();
+    const regionsIsEmpty = computed(() => {
+      return isEmpty(props.params.region);
+    });
+    const regions = computed(() => {
+      if (typeof props.params.region === 'string') {
+        if (!props.params.region) return [];
+        return [props.params.region];
       }
-    };
 
+      return props.params.region || [];
+    });
     const handleSelectorChange = (value: string) => {
       emit('change', value);
     };
+    const initValue = () => {
+      selectedValue.value = props.value;
+    };
+    const fetchOptions = () => {
+      const { resourceType } = props.params;
 
-    // const selectedLabel = computed(() => {
-    //   const { value } = props;
-    //   return value ? options.value.find((i) => i.value === value)?.label || '' : '';
-    // });
+      if (['QCLOUDCVM', 'QCLOUDDVM'].includes(resourceType)) {
+        loadQcloudZones();
+      }
 
+      if (['IDCDVM', 'IDCPM'].includes(resourceType)) {
+        loadIdcZones();
+      }
+
+      initValue();
+    };
+    const loadQcloudZones = async () => {
+      const { info } = await apiService.getZones(
+        { vendor: 'qcloud', region: regions.value, isCmdbRegion: props.valueKey === 'cmdbZoneName' },
+        {
+          requestId: optionsRequestId.value,
+        },
+      );
+
+      options.value = info.map((item) => {
+        return {
+          label: `${item.zone_cn}(${item.cmdb_zone_name})`,
+          value: props.valueKey === 'cmdbZoneName' ? item.cmdb_zone_name : item.zone,
+        };
+      });
+    };
+    const loadIdcZones = async () => {
+      const { info } = await apiService.getZones(
+        { vendor: 'idc', region: regions.value },
+        {
+          requestId: optionsRequestId.value,
+        },
+      );
+
+      options.value = info.map((item) => {
+        return {
+          value: item.cmdb_zone_name,
+          label: item.cmdb_zone_name,
+        };
+      });
+    };
     watch(
-      () => props.area,
-      (newVal) => {
-        if (newVal) {
-          loadOptions();
-          emit('change', '');
+      () => props.value,
+      (val: any) => {
+        if (!isEqual(val, selectedValue.value) && options.value.length !== 0) {
+          initValue();
         }
       },
+      { immediate: true },
     );
-
-    onMounted(() => {
-      if (props.area) {
-        loadOptions();
-      }
-    });
-
+    watch(
+      () => props.params,
+      (newVal: any, oldVal: any) => {
+        if (!isEqual(newVal, oldVal)) {
+          fetchOptions();
+        }
+      },
+      { immediate: true },
+    );
     return () => (
-      <bk-select
-        filterable
-        default-first-option
-        v-model={props.value}
-        loading={loading.value}
-        {...attrs}
-        onChange={handleSelectorChange}>
+      <bk-select filterable default-first-option v-model={props.value} onChange={handleSelectorChange}>
         {options.value.map((item, index) => (
           <bk-option key={index} value={item.value} label={item.label}></bk-option>
         ))}
+        {props.separateCampus && !regionsIsEmpty.value && <bk-option label='分Campus' value='cvm_separate_campus' />}
       </bk-select>
     );
   },

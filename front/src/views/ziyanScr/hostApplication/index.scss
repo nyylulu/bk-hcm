@@ -1,6 +1,10 @@
 .mt15 {
   margin-top: 15px;
 }
+.CloudbkTable {
+  margin-top: 15px;
+  width: 100%;
+}
 .displayflex {
   display: flex;
   align-items: center;
@@ -19,6 +23,9 @@
 .mr16 {
   margin-right: 16px;
 }
+.mb16 {
+  margin-bottom: 16px;
+}
 .mt16 {
   margin-top: 16px;
   width: 1550px;
@@ -32,19 +39,19 @@
 .item-warp-qcloudZoneId {
   width: 200px;
 }
-.item-warp-replicas{
-    width: 100px;
+.item-warp-replicas {
+  width: 100px;
 }
 
-.item-warp-imageId{
-    width: 220px;
+.item-warp-imageId {
+  width: 220px;
 }
-.item-warp-dataDisk-diskSize{
-    width: 80px;
-    margin: 0 10px 0 15px;
+.item-warp-dataDisk-diskSize {
+  width: 120px;
+  margin: 0 10px 0 15px;
 }
-.item-warp-dataDisk-diskType{
-    width: 200px;
+.item-warp-dataDisk-diskType {
+  width: 200px;
 }
 .item-warp-imageId {
   width: 400px;
@@ -69,7 +76,7 @@
   }
 }
 .width-400 {
-    width: 400px;
+  width: 400px;
 }
 .bill-filter-form {
   display: flex;
@@ -78,13 +85,43 @@
   margin: 15px 0;
   padding: 10px;
   & > div {
-      margin-bottom: 10px;
+    margin-bottom: 10px;
   }
   .bill-form-btn {
-      display: flex;
-      align-items: center;
-      .bk-button+.bk-button {
-          margin-left: 10px;
-      }
+    display: flex;
+    align-items: center;
+    .bk-button + .bk-button {
+      margin-left: 10px;
+    }
   }
+}
+.tabselect {
+  display: flex;
+  align-items: center;
+  width: 240px;
+  height: 40px;
+  margin: 15px 5px 0 0;
+  .label {
+    width: 50px;
+  }
+  .tbkselect {
+    margin: 0 10px;
+  }
+  .bkbutton {
+    margin-right: 10px;
+  }
+}
+.loading-table-container {
+  height: calc(100% - 48px);
+  width: 100%;
+  .table-container {
+    max-height: 100%;
+
+    .table-new-row td {
+      background-color: #f2fff4 !important;
+    }
+  }
+}
+.common-sideslider-content {
+  padding: 0 30px;
 }
