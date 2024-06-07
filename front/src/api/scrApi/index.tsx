@@ -77,29 +77,43 @@ const getAntiAffinityLevels = async (resourceType: any, hasZone: any, config: an
   );
   return data;
 };
-const getRecyclableHosts = async ({ bk_biz_id, ips, asset_ids, bk_host_ids }: any, config: any) => {
-  const { data } = await http.post(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/recycle/recyclability`,
-    {
-      bk_biz_id,
-      ips,
-      asset_ids,
-      bk_host_ids,
-    },
-    config,
-  );
+/**
+ * 获取回收单据中的主机
+ * @returns {Promise}
+ */
+const getRecycleHosts = async (params) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/task/findmany/recycle/host`, params, {
+    transformFields: true,
+    removeEmptyFields: true,
+  });
   return data;
 };
+/** 资源回收单据预览 */
+const getPreRecycleList = async ({ ips, remark, returnPlan: { cvm, pm, skipConfirm } }) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/preview/recycle/order`, {
+    ips,
+    remark,
+    return_plan: { cvm, pm },
+    skip_confirm: skipConfirm,
+  });
+  return data;
+};
+const getRecyclableHosts = async ({ bk_biz_id, ips, asset_ids, bk_host_ids }: any) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/recycle/recyclability`, {
+    bk_biz_id,
+    ips,
+    asset_ids,
+    bk_host_ids,
+  });
+  return data;
+};
+
 /** 业务待回收主机列表查询接口 */
-const getRecycleList = async ({ bkBizId, page }, config) => {
-  const { data } = await http.post(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/recycle/biz/host`,
-    {
-      bk_biz_id: bkBizId,
-      page,
-    },
-    config,
-  );
+const getRecycleList = async ({ bkBizId, page }) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/recycle/biz/host`, {
+    bk_biz_id: bkBizId,
+    page,
+  });
   return data;
 };
 /**
@@ -231,4 +245,6 @@ export default {
   getOsTypes,
   getIsps,
   getRestrict,
+  getRecycleHosts,
+  getPreRecycleList,
 };

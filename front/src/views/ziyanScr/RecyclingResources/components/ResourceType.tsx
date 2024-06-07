@@ -12,7 +12,7 @@ export default defineComponent({
       default: () => ({
         cvm: '',
         pm: '',
-        skipConfirm: false,
+        skipConfirm: true,
       }),
     },
   },

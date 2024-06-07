@@ -1,6 +1,5 @@
 import { defineComponent, ref, watch } from 'vue';
 import './index.scss';
-import { useTable } from '@/hooks/useTable/useTable';
 import apiService from '../../../../api/scrApi';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 export default defineComponent({
@@ -34,41 +33,8 @@ export default defineComponent({
   emits: ['updateHosts', 'updateSelectedHosts', 'updateRemark', 'Drawer'],
   setup(props, { emit }) {
     const { columns: RRcolumns } = useColumns('RecyclingResources');
-
-    const { CommonTable: RRCommonTable } = useTable({
-      tableOptions: {
-        columns: RRcolumns,
-      },
-      requestOption: {
-        dataPath: 'data.info',
-      },
-      scrConfig: () => {
-        return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
-          payload: {
-            filter: {
-              condition: 'AND',
-              rules: [
-                {
-                  field: 'require_type',
-                  operator: 'equal',
-                  value: 1,
-                },
-                {
-                  field: 'label.device_group',
-                  operator: 'in',
-                  value: ['标准型'],
-                },
-              ],
-            },
-            page: { limit: 0, count: 0 },
-          },
-          filter: { simpleConditions: true, requestId: 'devices' },
-        };
-      },
-    });
-
     const count = ref(0);
+    const TableData = ref([]);
     const allRecycleHostIps = ref([]);
     const recycleFailedHostIps = ref([]);
     const localRemark = ref('');
@@ -80,17 +46,15 @@ export default defineComponent({
       },
     );
     /** 刷新可回收状态 */
-    const refresh = () => {
+    const refresh = async () => {
       const ips = props.tableHosts.map((item) => item.ip);
-      apiService
-        .getRecyclableHosts({
-          ips,
-        })
-        .then((res) => {
-          const list = res.data?.info || [];
-          emit('updateHosts', list);
-          //   this.$message.success('刷新成功');
-        });
+      const { info } = await apiService.getRecyclableHosts({
+        ips,
+      });
+
+      const list = info || [];
+      emit('updateHosts', list);
+      //   this.$message.success('刷新成功');
     };
     /** 清空列表 */
     const handleClear = () => {
@@ -114,39 +78,34 @@ export default defineComponent({
             ),
           }}
         </bk-alert>
-        <RRCommonTable>
-          {{
-            tabselect: () => (
-              <div class='CommonTable'>
-                <bk-button class='bk-button' theme='primary' onClick={handleCleardrawer}>
-                  选择服务器
-                </bk-button>
-                <bk-button class='bk-button' onClick={refresh}>
-                  刷新状态
-                </bk-button>
-                <bk-button class='bk-button' disabled={allRecycleHostIps.value.length === 0}>
-                  复制所有IP{count.value}
-                </bk-button>
-                <bk-button class='bk-button' theme='danger' disabled={recycleFailedHostIps.value.length === 0}>
-                  复制不可回收IP{count.value}
-                </bk-button>
-                <bk-button class='bk-button' theme='primary' onClick={handleClear}>
-                  清空列表
-                </bk-button>
-                <div class='displayflex'>
-                  <div class='displayflex-test'>备注</div>
-                  <bk-input
-                    type='textarea'
-                    v-model={localRemark.value}
-                    text
-                    placeholder='回收备注,256 字以内'
-                    rows={1}
-                    maxlength={255}></bk-input>
-                </div>
-              </div>
-            ),
-          }}
-        </RRCommonTable>
+        <div class='CommonTable'>
+          <bk-button class='bk-button' theme='primary' onClick={handleCleardrawer}>
+            选择服务器
+          </bk-button>
+          <bk-button class='bk-button' onClick={refresh}>
+            刷新状态
+          </bk-button>
+          <bk-button class='bk-button' disabled={allRecycleHostIps.value.length === 0}>
+            复制所有IP{count.value}
+          </bk-button>
+          <bk-button class='bk-button' theme='danger' disabled={recycleFailedHostIps.value.length === 0}>
+            复制不可回收IP{count.value}
+          </bk-button>
+          <bk-button class='bk-button' theme='primary' onClick={handleClear}>
+            清空列表
+          </bk-button>
+          <div class='displayflex'>
+            <div class='displayflex-test'>备注</div>
+            <bk-input
+              type='textarea'
+              v-model={localRemark.value}
+              text
+              placeholder='回收备注,256 字以内'
+              rows={1}
+              maxlength={255}></bk-input>
+          </div>
+        </div>
+        <bk-table align='left' row-hover='auto' columns={RRcolumns} data={TableData.value} show-overflow-tooltip />
       </div>
     );
   },

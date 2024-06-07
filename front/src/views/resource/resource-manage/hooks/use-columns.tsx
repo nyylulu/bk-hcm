@@ -1928,12 +1928,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_name',
-      sort: true,
     },
     {
       label: '所属模块',
       field: 'topo_module',
-      sort: true,
     },
     {
       label: '维护人',
@@ -1946,12 +1944,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '机型',
       field: 'device_type',
-      sort: true,
     },
     {
       label: '主机状态',
       field: 'state',
-      sort: true,
     },
     {
       label: '入库时间',
@@ -1980,42 +1976,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '园区',
       field: 'sub_zone',
-    },
-  ];
-  const DBColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-    },
-    {
-      label: '业务',
-      field: 'bk_biz_name',
-    },
-    {
-      label: '资源类型',
-      field: 'resource_type)',
-    },
-    {
-      label: '回收类型',
-      field: 'recycle_type',
-    },
-    {
-      label: '回收选项',
-      field: 'resource_type',
-    },
-    {
-      label: '资源总数',
-      field: 'total_num',
-    },
-    {
-      label: '回收成本',
-      field: 'cost_concerned',
-    },
-    {
-      label: '备注',
-      field: 'remark',
     },
   ];
   const RTColumns = [
@@ -2824,7 +2784,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     PhysicalMachine: PMColumns,
     RecyclingResources: RRColumns,
     BusinessSelection: BSAColumns,
-    DetermineBusiness: DBColumns,
     ResourcesTotal: RTColumns,
     hostRecycle: recycleOrderColumns,
     deviceQuery: deviceQueryColumns,
