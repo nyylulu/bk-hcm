@@ -50,6 +50,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao"
 	"hcm/pkg/handler"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
@@ -67,6 +68,7 @@ import (
 // Service do all the woa server's work
 type Service struct {
 	client *client.ClientSet
+	dao    dao.Set
 	// EsbClient 调用接入ESB的第三方系统API集合
 	esbClient esb.Client
 	// authorizer 鉴权所需接口集合
@@ -103,6 +105,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 	apiClientSet := client.NewClientSet(restCli, dis)
+
+	// init db client
+	dao, err := dao.NewDaoSet(cc.WoaServer().Database)
+	if err != nil {
+		return nil, err
+	}
 
 	// 创建ESB Client
 	esbConfig := cc.WoaServer().Esb
@@ -191,6 +199,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 
 	return &Service{
 		client:         apiClientSet,
+		dao:            dao,
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,

@@ -405,6 +405,7 @@ func (s TaskServerSetting) Validate() error {
 type WoaServerSetting struct {
 	Network      Network   `yaml:"network"`
 	Service      Service   `yaml:"service"`
+	Database     DataBase  `yaml:"database"`
 	Log          LogOption `yaml:"log"`
 	Esb          Esb       `yaml:"esb"`
 	MongoDB      MongoDB   `yaml:"mongodb"`

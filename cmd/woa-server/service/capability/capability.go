@@ -28,6 +28,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
+	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 
 	"github.com/emicklei/go-restful/v3"
@@ -35,6 +36,7 @@ import (
 
 // Capability defines the service's capability
 type Capability struct {
+	Dao         dao.Set
 	WebService  *restful.WebService
 	EsbClient   esb.Client
 	ThirdCli    *thirdparty.Client
