@@ -21,8 +21,8 @@ POST /api/v1/woa/plan/resource/ticket/create
 |---------------|--------|----|-----------------------------------|
 | obs_project   | string | 是  | OBS项目类型                           |
 | expect_time   | string | 是  | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01 |
-| region        | string | 是  | 城市                                |
-| zone          | string | 是  | 可用区                               |
+| region_id     | string | 是  | 地区/城市ID                           |
+| zone_id       | string | 否  | 可用区ID                             |
 | demand_source | string | 是  | 需求分类/变更原因                         |
 | remark        | string | 否  | 需求备注                              |
 | cvm           | object | 否  | 申请的CVM信息                          |
@@ -43,21 +43,21 @@ POST /api/v1/woa/plan/resource/ticket/create
 | 参数名称      | 参数类型   | 必选 | 描述                                                |
 |-----------|--------|----|---------------------------------------------------|
 | disk_type | string | 是  | 云盘类型(枚举值：CLOUD_PREMIUM(高性能云硬盘)、CLOUD_SSD(SSD云硬盘)) |
-| disk_io   | float  | 是  | 磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260         |
-| disk_size | float  | 是  | 云盘大小，单位：GB                                        |
+| disk_io   | int    | 是  | 磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260         |
+| disk_size | int    | 是  | 云盘大小，单位：GB                                        |
 
 ### 调用示例
 
 ```json
 {
   "bk_biz_id": 639,
-  "demand_class": "cvm",
+  "demand_class": "CVM",
   "demands": [
     {
       "obs_project": "常规项目",
       "expect_time": "2024-11-12",
-      "region": "上海",
-      "zone": "上海二区",
+      "region_id": "ap-shanghai",
+      "zone_id": "ap-shanghai-2",
       "demand_source": "指标变化",
       "remark": "这里是需求备注",
       "cvm": {
@@ -69,12 +69,12 @@ POST /api/v1/woa/plan/resource/ticket/create
       },
       "cbs": {
         "disk_type": "CLOUD_PREMIUM",
-        "disk_io": 123.456,
-        "disk_size": 1024.23
+        "disk_io": 123,
+        "disk_size": 1024
       }
     }
   ],
-  "remark": "这是一个备注"
+  "remark": "这是一个备注，这是一个备注，这是一个备注"
 }
 ```
 

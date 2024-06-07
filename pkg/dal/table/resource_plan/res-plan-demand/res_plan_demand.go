@@ -77,7 +77,7 @@ type ResPlanDemandTable struct {
 	// AreaName 地域名称
 	AreaName string `db:"area_name" json:"area_name" validate:"lte=64"`
 	// DemandSource 需求分类/变更原因
-	DemandSource string `db:"demand_source" json:"demand_source" validate:"lte=64"`
+	DemandSource enumor.DemandSource `db:"demand_source" json:"demand_source" validate:"lte=64"`
 	// Remark 需求备注
 	Remark string `db:"remark" json:"remark" validate:"lte=255"`
 	// Cvm cvm信息
@@ -92,6 +92,26 @@ type ResPlanDemandTable struct {
 	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
 	// UpdatedAt 更新时间
 	UpdatedAt types.Time `db:"updated_at" validate:"isdefault" json:"updated_at"`
+}
+
+// Cvm is struct of ResPlanDemandTable's Cvm.
+type Cvm struct {
+	ResMode      string `json:"res_mode"`
+	DeviceType   string `json:"device_type"`
+	DeviceClass  string `db:"device_class" json:"device_class" validate:"lte=64"`
+	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
+	CoreType     string `db:"core_type" json:"core_type" validate:"lte=64"`
+	Os           int64  `json:"os"`
+	CpuCore      int64  `json:"cpu_core"`
+	Memory       int64  `json:"memory"`
+}
+
+// Cbs is struct of ResPlanDemandTable's Cbs.
+type Cbs struct {
+	DiskType     enumor.DiskType `json:"disk_type"`
+	DiskTypeName string          `json:"disk_type_name"`
+	DiskIo       int64           `json:"disk_io"`
+	DiskSize     int64           `json:"disk_size"`
 }
 
 // TableName is the recycleRecord's database table name.
@@ -121,13 +141,7 @@ func (r ResPlanDemandTable) InsertValidate() error {
 		return errors.New("expect time can not be empty")
 	}
 
-	if len(r.ZoneID) == 0 {
-		return errors.New("zone id can not be empty")
-	}
-
-	if len(r.ZoneName) == 0 {
-		return errors.New("zone name can not be empty")
-	}
+	// NOTE: zone can be empty.
 
 	if len(r.RegionID) == 0 {
 		return errors.New("region id can not be empty")

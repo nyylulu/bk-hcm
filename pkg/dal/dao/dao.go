@@ -59,6 +59,7 @@ import (
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
+	"hcm/pkg/dal/dao/resource-plan"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -136,6 +137,12 @@ type Set interface {
 
 	TCloudZiyanRegion() region.TCloudZiyanRegion
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
+
+	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanDemand() resplan.ResPlanDemandInterface
+	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
+	WoaZone() resplan.WoaZoneInterface
+	WoaDeviceType() resplan.WoaDeviceTypeInterface
 
 	Txn() *Txn
 }
@@ -718,6 +725,51 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 // TCloudZiyanRegion 腾讯自研云region dao.
 func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
 	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
+}
+
+// ResPlanTicket resource plan ticket dao.
+func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
+	return &resplan.ResPlanTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanDemand resource plan demand dao.
+func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
+	return &resplan.ResPlanDemandDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTicketStatus resource plan ticket status dao.
+func (s *set) ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface {
+	return &resplan.ResPlanTicketStatusDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaZone woa zone status dao.
+func (s *set) WoaZone() resplan.WoaZoneInterface {
+	return &resplan.WoaZoneDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaDeviceType woa device type dao.
+func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
+	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
 }
 
 // MainAccount return mainaccount dao

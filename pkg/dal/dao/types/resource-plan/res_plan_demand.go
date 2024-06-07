@@ -17,12 +17,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package meta
+package resplan
 
-import "hcm/pkg/criteria/enumor"
+import (
+	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
+)
 
-// DiskTypeItem defines disk type item.
-type DiskTypeItem struct {
-	DiskType     enumor.DiskType `json:"disk_type"`
-	DiskTypeName string          `json:"disk_type_name"`
+// ResPlanDemandListResult list resource plan demand result.
+type ResPlanDemandListResult struct {
+	Count   uint64                   `json:"count"`
+	Details []rpd.ResPlanDemandTable `json:"details"`
 }

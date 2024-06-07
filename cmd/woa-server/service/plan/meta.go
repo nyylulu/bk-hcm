@@ -23,6 +23,11 @@ func (s *service) ListDemandClass(_ *rest.Contexts) (interface{}, error) {
 	return &core.ListResultT[enumor.DemandClass]{Details: enumor.GetDemandClassMembers()}, nil
 }
 
+// ListResMode lists resource mode.
+func (s *service) ListResMode(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.ResMode]{Details: enumor.GetResModeMembers()}, nil
+}
+
 // ListDemandSource lists demand source.
 func (s *service) ListDemandSource(_ *rest.Contexts) (interface{}, error) {
 	return &core.ListResultT[enumor.DemandSource]{Details: enumor.GetDemandSourceMembers()}, nil

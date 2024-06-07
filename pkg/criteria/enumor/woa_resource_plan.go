@@ -26,13 +26,16 @@ type RPTicketStatus string
 
 // TODO 其它状态待补充
 const (
-	// RPTicketStatusPass is demand class cvm.
+	// RPTicketStatusPending is resource plan ticket status pending.
+	RPTicketStatusPending RPTicketStatus = "pending"
+	// RPTicketStatusPass is resource plan ticket status pass.
 	RPTicketStatusPass RPTicketStatus = "pass"
 )
 
 // Validate RPTicketStatus.
 func (s RPTicketStatus) Validate() error {
 	switch s {
+	case RPTicketStatusPending:
 	case RPTicketStatusPass:
 	default:
 		return fmt.Errorf("unsupported resource plan status: %s", s)
@@ -43,7 +46,8 @@ func (s RPTicketStatus) Validate() error {
 
 // rdTicketStatusNameMap records RPTicketStatus's name.
 var rdTicketStatusNameMap = map[RPTicketStatus]string{
-	RPTicketStatusPass: "通过",
+	RPTicketStatusPending: "审核中",
+	RPTicketStatusPass:    "通过",
 }
 
 // Name return RPTicketStatus's name.
@@ -76,6 +80,33 @@ func (c DemandClass) Validate() error {
 // GetDemandClassMembers get DemandClass's members.
 func GetDemandClassMembers() []DemandClass {
 	return []DemandClass{DemandClassCVM, DemandClassCA}
+}
+
+// ResMode is resource plan resource mode.
+type ResMode string
+
+const (
+	// ResModeByDeviceType is resource mode of by device type.
+	ResModeByDeviceType ResMode = "按机型"
+	// ResModeByDeviceFamily is resource mode of by device family.
+	ResModeByDeviceFamily ResMode = "按机型族"
+)
+
+// Validate ResMode.
+func (r ResMode) Validate() error {
+	switch r {
+	case ResModeByDeviceType:
+	case ResModeByDeviceFamily:
+	default:
+		return fmt.Errorf("unsupported res mode: %s", r)
+	}
+
+	return nil
+}
+
+// GetResModeMembers get ResMode's members.
+func GetResModeMembers() []ResMode {
+	return []ResMode{ResModeByDeviceType, ResModeByDeviceFamily}
 }
 
 // ObsProject is obs project.

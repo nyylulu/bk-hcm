@@ -15,8 +15,8 @@ package plan
 
 // BizOrgRel is GetBizOrgRel result.
 type BizOrgRel struct {
-	BizID           int64  `json:"bk_biz_id"`
-	BizName         string `json:"bk_biz_name"`
+	BkBizID         int64  `json:"bk_biz_id"`
+	BkBizName       string `json:"bk_biz_name"`
 	BkProductID     int64  `json:"bk_product_id"`
 	BkProductName   string `json:"bk_product_name"`
 	PlanProductID   int64  `json:"plan_product_id"`

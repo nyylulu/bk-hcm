@@ -13,11 +13,12 @@
 package plan
 
 import (
-	"fmt"
+	"errors"
 
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/types/plan"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -30,29 +31,40 @@ func (s *service) GetBizOrgRel(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	if bkBizID <= 0 {
-		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("bk biz id should be > 0"))
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("bk biz id should be > 0"))
 	}
 
+	rst, err := s.getBizOrgRel(cts.Kit, bkBizID)
+	if err != nil {
+		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return rst, nil
+}
+
+// getBizOrgRel get biz org relation.
+func (s *service) getBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, error) {
 	// search cmdb business belonging.
 	req := &cmdb.SearchBizBelongingParams{
 		BizIDs: []int64{bkBizID},
 	}
 	resp, err := s.esbClient.Cmdb().SearchBizBelonging(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
+		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	if resp == nil || len(resp.Data) != 1 {
-		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
+		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
+		return nil, errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
 	// convert search biz belonging response to biz org relation response.
 	bizBelong := resp.Data[0]
-	rst := &plan.BizOrgRel{
-		BizID:           bizBelong.BizID,
-		BizName:         bizBelong.BizName,
+	rst := &ptypes.BizOrgRel{
+		BkBizID:         bizBelong.BizID,
+		BkBizName:       bizBelong.BizName,
 		BkProductID:     bizBelong.BkProductID,
 		BkProductName:   bizBelong.BkProductName,
 		PlanProductID:   bizBelong.PlanProductID,

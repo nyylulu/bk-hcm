@@ -80,7 +80,7 @@ type ResPlanTicketTable struct {
 	// VirtualDeptName 虚拟部门名称
 	VirtualDeptName string `db:"virtual_dept_name" json:"virtual_dept_name" validate:"lte=64"`
 	// DemandClass 预测的需求类型
-	DemandClass string `db:"demand_class" json:"demand_class" validate:"lte=16"`
+	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
 	// OS OS数，单位：台
 	OS int64 `db:"os" json:"os"`
 	// CpuCore CPU核心数，单位：台
@@ -96,7 +96,7 @@ type ResPlanTicketTable struct {
 	// Reviser 更新者
 	Reviser string `db:"reviser" validate:"max=64" json:"reviser"`
 	// SubmittedAt 提单或改单的时间
-	SubmittedAt types.Time `db:"submitted_at" json:"submitted_at"`
+	SubmittedAt string `db:"submitted_at" json:"submitted_at"`
 	// CreatedAt 创建时间
 	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
 	// UpdatedAt 更新时间

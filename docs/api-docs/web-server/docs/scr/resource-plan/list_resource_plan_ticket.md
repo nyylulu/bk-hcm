@@ -11,14 +11,12 @@ POST /api/v1/woa/plan/resource/ticket/list
 | 参数名称              | 参数类型         | 必选 | 描述                          |
 |-------------------|--------------|----|-----------------------------|
 | bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部              |
-| expect_time_range | object       | 否  | 期望交付时间范围                    |
-| obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，最多传20个    |
 | ticket_ids        | string array | 否  | 资源预测需求单据ID列表，不传时查询全部，最多传20个 |
 | applicants        | string array | 否  | 申请人列表，不传时查询全部，最多传20个        |
 | submit_time_range | object       | 否  | 提单时间范围                      |
 | page              | object       | 是  | 分页设置                        |
 
-### expect_time_range & submit_time_range
+### submit_time_range
 
 | 参数名称  | 参数类型   | 必选 | 描述                                          |
 |-------|--------|----|---------------------------------------------|
@@ -41,13 +39,6 @@ POST /api/v1/woa/plan/resource/ticket/list
 {
   "bk_biz_id": [
     639
-  ],
-  "expect_time_range": {
-    "start": "2023-03-01",
-    "end": "2023-06-01"
-  },
-  "obs_projects": [
-    "常规项目"
   ],
   "ticket_ids": [
     "00000001"
@@ -77,7 +68,6 @@ POST /api/v1/woa/plan/resource/ticket/list
     "details": [
       {
         "id": "00000001",
-        "expect_time": "2024-01-01",
         "bk_biz_id": 111,
         "bk_biz_name": "业务",
         "bk_product_id": 222,
@@ -118,24 +108,23 @@ POST /api/v1/woa/plan/resource/ticket/list
 
 #### data.details[n]
 
-| 参数名称              | 参数类型   | 描述                                |
-|-------------------|--------|-----------------------------------|
-| id                | string | 资源预测需求单据ID                        |
-| expect_time       | string | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01 |
-| bk_biz_id         | int    | 业务ID                              |
-| bk_biz_name       | string | 业务名称                              |
-| bk_product_id     | int    | 运营产品ID                            |
-| bk_product_name   | string | 运营产品名称                            |
-| plan_product_id   | int    | 规划产品ID                            |
-| plan_product_name | string | 规划产品名称                            |
-| demand_class      | string | 预测的需求类型                           |
-| cpu_core          | int    | 总CPU核心数，单位：核                      |
-| memory            | int    | 总内存大小，单位：GB                       |
-| disk_size         | int    | 总云盘大小，单位：GB                       |
-| demand_week       | string | 13周需求类型，由CRP系统定义                  |
-| demand_week_name  | string | 13周需求类型名称                         |
-| remark            | string | 预测说明                              |
-| applicant         | string | 申请人                               |
-| submitted_at      | string | 提单时间                              |
-| created_at        | string | 创建时间                              |
-| updated_at        | string | 更新时间                              |
+| 参数名称              | 参数类型   | 描述               |
+|-------------------|--------|------------------|
+| id                | string | 资源预测需求单据ID       |
+| bk_biz_id         | int    | 业务ID             |
+| bk_biz_name       | string | 业务名称             |
+| bk_product_id     | int    | 运营产品ID           |
+| bk_product_name   | string | 运营产品名称           |
+| plan_product_id   | int    | 规划产品ID           |
+| plan_product_name | string | 规划产品名称           |
+| demand_class      | string | 预测的需求类型          |
+| cpu_core          | int    | 总CPU核心数，单位：核     |
+| memory            | int    | 总内存大小，单位：GB      |
+| disk_size         | int    | 总云盘大小，单位：GB      |
+| demand_week       | string | 13周需求类型，由CRP系统定义 |
+| demand_week_name  | string | 13周需求类型名称        |
+| remark            | string | 预测说明             |
+| applicant         | string | 申请人              |
+| submitted_at      | string | 提单时间             |
+| created_at        | string | 创建时间             |
+| updated_at        | string | 更新时间             |

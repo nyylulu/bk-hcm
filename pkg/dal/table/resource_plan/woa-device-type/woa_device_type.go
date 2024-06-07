@@ -55,6 +55,8 @@ type WoaDeviceTypeTable struct {
 	DeviceClass string `db:"device_class" json:"device_class" validate:"lte=64"`
 	// DeviceFamily 机型族
 	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
+	// CoreType 核心类型
+	CoreType string `db:"core_type" json:"core_type" validate:"lte=64"`
 	// CpuCore CPU核心数，单位：核
 	CpuCore int64 `db:"cpu_core" json:"cpu_core"`
 	// Memory 内存大小，单位：GB
@@ -90,6 +92,10 @@ func (t WoaDeviceTypeTable) InsertValidate() error {
 
 	if len(t.DeviceFamily) == 0 {
 		return errors.New("device family can not be empty")
+	}
+
+	if len(t.CoreType) == 0 {
+		return errors.New("core type can not be empty")
 	}
 
 	if t.CpuCore < 0 {

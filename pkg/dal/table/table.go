@@ -304,6 +304,12 @@ var TableMap = map[Name]struct{}{
 	ResourceFlowRelTable:            {},
 	ResourceFlowLockTable:           {},
 
+	ResPlanTicketTable:       {},
+	ResPlanDemandTable:       {},
+	ResPlanTicketStatusTable: {},
+	WoaZoneTable:             {},
+	WoaDeviceTypeTable:       {},
+
 	MainAccountTable: {},
 	RootAccountTable: {},
 }

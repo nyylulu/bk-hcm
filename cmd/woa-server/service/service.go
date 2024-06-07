@@ -107,7 +107,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	apiClientSet := client.NewClientSet(restCli, dis)
 
 	// init db client
-	dao, err := dao.NewDaoSet(cc.WoaServer().Database)
+	daoSet, err := dao.NewDaoSet(cc.WoaServer().Database)
 	if err != nil {
 		return nil, err
 	}
@@ -199,7 +199,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 
 	return &Service{
 		client:         apiClientSet,
-		dao:            dao,
+		dao:            daoSet,
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
@@ -275,6 +275,7 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	c := &capability.Capability{
+		Dao:         s.dao,
 		WebService:  ws,
 		Authorizer:  s.authorizer,
 		EsbClient:   s.esbClient,

@@ -14,13 +14,9 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 
 ### 调用示例
 
-#### 获取详细信息请求参数示例
-
 无
 
 ### 响应示例
-
-#### 获取详细信息返回结果示例
 
 ```json
 {
@@ -38,7 +34,9 @@ GET /api/v1/woa/plan/resource/ticket/{id}
       "plan_product_name": "规划产品",
       "virtual_dept_id": 2,
       "virtual_dept_name": "部门",
-      "demand_class": "CVM"
+      "demand_class": "CVM",
+      "remark": "这里是预测说明",
+      "submitted_at": "2019-07-29 11:57:20"
     },
     "status_info": {
       "status": "AUDIT",
@@ -65,6 +63,7 @@ GET /api/v1/woa/plan/resource/ticket/{id}
           "res_mode": "按机型",
           "device_family": "标准型",
           "device_type": "S5.2XLARGE16",
+          "device_class": "标准型S5",
           "cpu_core": 123,
           "memory": 123,
           "res_pool": "自研池",
@@ -113,6 +112,8 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 | virtual_dept_id   | int    | 虚拟部门ID  |
 | virtual_dept_name | string | 虚拟部门名称  |
 | demand_class      | string | 预测的需求类型 |
+| remark            | string | 预测说明    |
+| submitted_at      | string | 提单时间    |
 
 #### data.status_info
 
@@ -133,9 +134,12 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 | expect_time      | string | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01 |
 | demand_week      | string | 13周需求类型，由CRP系统定义                  |
 | demand_week_name | string | 13周需求类型名称                         |
-| area             | string | 区域                                |
-| region           | string | 城市                                |
-| zone             | string | 可用区                               |
+| area_id          | string | 区域ID                              |
+| area_name        | string | 区域名称                              |
+| region_id        | string | 地区/城市ID                           |
+| region_name      | string | 地区/城市名称                           |
+| zone_id          | string | 可用区ID                             |
+| zone_name        | string | 可用区名称                             |
 | demand_source    | string | 需求分类/变更原因                         |
 | remark           | string | 需求备注                              |
 | cvm              | object | 申请的CVM信息                          |
@@ -148,6 +152,7 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 | res_mode      | string | 资源模式(枚举值：按机型、按机型族) |
 | device_family | string | 机型族                |
 | device_type   | string | 机型规格               |
+| device_class  | string | 机型分类               |
 | cpu_core      | int    | CPU核心数，单位：核        |
 | memory        | int    | 内存大小，单位：GB         |
 | res_pool      | string | 资源池(枚举值：自研池、公有池)   |

@@ -17,37 +17,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package meta
+package resplan
 
 import (
-	"net/http"
-
-	"hcm/cmd/woa-server/service/capability"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/rest"
+	wdt "hcm/pkg/dal/table/resource_plan/woa-device-type"
 )
 
-// InitService initial the meta service.
-func InitService(c *capability.Capability) {
-	s := &service{
-		dao: c.Dao,
-	}
-	h := rest.NewHandler()
-
-	s.initMetaService(h)
-
-	h.Load(c.WebService)
-}
-
-type service struct {
-	dao dao.Set
-}
-
-func (s *service) initMetaService(h *rest.Handler) {
-	h.Add("ListDiskType", http.MethodGet, "/meta/disk_type/list", s.ListDiskType)
-	h.Add("ListObsProject", http.MethodGet, "/meta/obs_project/list", s.ListObsProject)
-	h.Add("ListRegion", http.MethodGet, "/meta/region/list", s.ListRegion)
-	h.Add("ListZone", http.MethodPost, "/meta/zone/list", s.ListZone)
-	h.Add("ListDeviceClass", http.MethodGet, "/meta/device_class/list", s.ListDeviceClass)
-	h.Add("ListDeviceType", http.MethodPost, "/meta/device_type/list", s.ListDeviceType)
+// WoaDeviceTypeListResult list woa device type result.
+type WoaDeviceTypeListResult struct {
+	Count   uint64                   `json:"count"`
+	Details []wdt.WoaDeviceTypeTable `json:"details"`
 }

@@ -17,37 +17,34 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package meta
+package resplan
 
 import (
-	"net/http"
-
-	"hcm/cmd/woa-server/service/capability"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/rest"
+	wz "hcm/pkg/dal/table/resource_plan/woa-zone"
 )
 
-// InitService initial the meta service.
-func InitService(c *capability.Capability) {
-	s := &service{
-		dao: c.Dao,
-	}
-	h := rest.NewHandler()
-
-	s.initMetaService(h)
-
-	h.Load(c.WebService)
+// WoaZoneListResult is list woa zone result.
+type WoaZoneListResult struct {
+	Count   uint64            `json:"count"`
+	Details []wz.WoaZoneTable `json:"details"`
 }
 
-type service struct {
-	dao dao.Set
+// RegionArea is region and area struct.
+type RegionArea struct {
+	RegionID   string `db:"region_id" json:"region_id"`
+	RegionName string `db:"region_name" json:"region_name"`
+	AreaID     string `db:"area_id" json:"area_id"`
+	AreaName   string `db:"area_name" json:"area_name"`
 }
 
-func (s *service) initMetaService(h *rest.Handler) {
-	h.Add("ListDiskType", http.MethodGet, "/meta/disk_type/list", s.ListDiskType)
-	h.Add("ListObsProject", http.MethodGet, "/meta/obs_project/list", s.ListObsProject)
-	h.Add("ListRegion", http.MethodGet, "/meta/region/list", s.ListRegion)
-	h.Add("ListZone", http.MethodPost, "/meta/zone/list", s.ListZone)
-	h.Add("ListDeviceClass", http.MethodGet, "/meta/device_class/list", s.ListDeviceClass)
-	h.Add("ListDeviceType", http.MethodPost, "/meta/device_type/list", s.ListDeviceType)
+// ZoneElem is zone id and name element.
+type ZoneElem struct {
+	ZoneID   string `db:"zone_id" json:"zone_id"`
+	ZoneName string `db:"zone_name" json:"zone_name"`
+}
+
+// RegionElem is region id and name element.
+type RegionElem struct {
+	RegionID   string `db:"region_id" json:"region_id"`
+	RegionName string `db:"region_name" json:"region_name"`
 }

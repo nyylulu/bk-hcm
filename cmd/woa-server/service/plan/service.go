@@ -24,13 +24,17 @@ import (
 
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
 
 // InitService initial the plan service.
 func InitService(c *capability.Capability) {
 	s := &service{
-		esbClient: c.EsbClient,
+		dao:        c.Dao,
+		esbClient:  c.EsbClient,
+		authorizer: c.Authorizer,
 	}
 	h := rest.NewHandler()
 
@@ -40,7 +44,9 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	esbClient esb.Client
+	dao        dao.Set
+	esbClient  esb.Client
+	authorizer auth.Authorizer
 }
 
 func (s *service) initPlanService(h *rest.Handler) {
@@ -49,6 +55,11 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// meta
 	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
+	h.Add("ListResMode", http.MethodGet, "/plan/res_mode/list", s.ListResMode)
 	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)
 
+	// ticket
+	h.Add("ListResPlanTicket", http.MethodPost, "/plan/resource/ticket/list", s.ListResPlanTicket)
+	h.Add("CreateResPlanTicket", http.MethodPost, "/plan/resource/ticket/create", s.CreateResPlanTicket)
+	h.Add("GetResPlanTicket", http.MethodGet, "/plan/resource/ticket/{id}", s.GetResPlanTicket)
 }

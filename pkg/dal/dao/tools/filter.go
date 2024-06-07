@@ -21,8 +21,11 @@ package tools
 
 import (
 	"fmt"
+	"time"
 
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/times"
 )
 
 // EqualExpression 生成资源字段等于查询的过滤条件，即fieldName=value
@@ -55,6 +58,34 @@ func ContainersExpression[T any](fieldName string, values []T) *filter.Expressio
 			filter.AtomRule{Field: fieldName, Op: filter.In.Factory(), Value: values},
 		},
 	}
+}
+
+// DateRangeExpression is fieldName DateRange expression.
+func DateRangeExpression(fieldName string, dr *times.DateRange) (*filter.Expression, error) {
+	start, err := time.Parse(constant.DateLayout, dr.Start)
+	if err != nil {
+		return nil, err
+	}
+	end, err := time.Parse(constant.DateLayout, dr.End)
+	if err != nil {
+		return nil, err
+	}
+
+	return &filter.Expression{
+		Op: filter.And,
+		Rules: []filter.RuleFactory{
+			filter.AtomRule{
+				Field: fieldName,
+				Op:    filter.GreaterThanEqual.Factory(),
+				Value: start.Format(constant.TimeStdFormat),
+			},
+			filter.AtomRule{
+				Field: fieldName,
+				Op:    filter.LessThan.Factory(),
+				Value: end.AddDate(0, 0, 1).Format(constant.TimeStdFormat),
+			},
+		},
+	}, nil
 }
 
 // AllExpression 生成全量查询filter。
