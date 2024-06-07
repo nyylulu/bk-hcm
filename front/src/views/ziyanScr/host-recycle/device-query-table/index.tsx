@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
 import { useAccountStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -17,20 +17,24 @@ export default defineComponent({
   setup(props, { emit }) {
     const defaultDeviceForm = () => ({
       bk_biz_id: [],
+      order_id: [],
+      suborder_id: [],
+      ip: [],
       device_type: [],
       bk_zone_name: [],
       sub_zone: [],
       stage: [],
       bk_username: [],
     });
-    const defaultPartForm = () => ({
-      handlerTime: [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()],
-      order_id: '',
-      suborder_id: '',
-      ip: '',
-    });
+    const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());
-    const partForm = ref(defaultPartForm());
+    const timeForm = ref(defaultTime());
+    const timeObj = computed(() => {
+      return {
+        start: dayjs(timeForm.value[0]).format('YYYY-MM-DD'),
+        end: dayjs(timeForm.value[1]).format('YYYY-MM-DD'),
+      };
+    });
     const accountStore = useAccountStore();
     const bussinessList = ref([]);
     const getBusinesses = async () => {
@@ -66,6 +70,7 @@ export default defineComponent({
       enable_count: false,
     });
     const requestListParams = ref({
+      ...timeObj.value,
       page: pageInfo.value,
     });
     const { CommonTable, getListData } = useTable({
@@ -88,15 +93,7 @@ export default defineComponent({
       pageInfo.value.enable_count = enableCount;
       const params = {
         ...deviceForm.value,
-        start: dayjs(partForm.value.handlerTime[0]).format('YYYY-MM-DD'),
-        end: dayjs(partForm.value.handlerTime[1]).format('YYYY-MM-DD'),
-        order_id:
-          partForm.value.order_id
-            .trim()
-            .split('|')
-            .map((item) => Number(item)) || [],
-        suborder_id: partForm.value.suborder_id.trim().split('|'),
-        ip: partForm.value.suborder_id.trim().split('|'),
+        ...timeObj.value,
         page: enableCount ? Object.assign(pageInfo.value, { limit: 0 }) : pageInfo.value,
       };
       params.order_id = params.order_id.map((item) => Number(item));
@@ -110,7 +107,7 @@ export default defineComponent({
     };
     const clearFilter = () => {
       deviceForm.value = defaultDeviceForm();
-      partForm.value = defaultPartForm();
+      timeForm.value = defaultTime();
       filterOrders();
     };
     const fetchDeviceTypeList = async () => {
@@ -151,21 +148,23 @@ export default defineComponent({
                   </bk-select>
                 </bk-form-item>
                 <bk-form-item label='单号'>
-                  {/* TODO 旧float-input*/}
-                  <bk-input
-                    class='order-width'
-                    v-model={partForm.value.order_id}
-                    clearable
-                    placeholder='请输入单号，多个用"|"分割'
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={deviceForm.value.order_id}
+                    placeholder='请输入单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
                   />
                 </bk-form-item>
                 <bk-form-item label='子单号'>
-                  {/* TODO 旧float-input*/}
-                  <bk-input
-                    class='order-width'
-                    v-model={partForm.value.suborder_id}
-                    clearable
-                    placeholder='请输入单号，多个用"|"分割'
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={deviceForm.value.suborder_id}
+                    placeholder='请输入子单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
                   />
                 </bk-form-item>
                 <bk-form-item label='机型'>
@@ -197,12 +196,13 @@ export default defineComponent({
                   </bk-select>
                 </bk-form-item>
                 <bk-form-item label='回收IP'>
-                  {/* TODO 旧float-input*/}
-                  <bk-input
-                    class='order-width'
-                    v-model={partForm.value.ip}
-                    clearable
-                    placeholder='请输入IP，多个用"|"分割'
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={deviceForm.value.ip}
+                    placeholder='请输入IP'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
                   />
                 </bk-form-item>
                 <bk-form-item label='回收人'>
@@ -215,7 +215,7 @@ export default defineComponent({
                   />
                 </bk-form-item>
                 <bk-form-item label='完成时间'>
-                  <bk-date-picker v-model={partForm.value.handlerTime} type='daterange' />
+                  <bk-date-picker v-model={timeForm.value} type='daterange' />
                 </bk-form-item>
                 <bk-form-item class='bill-form-btn' label-width='20'>
                   <bk-button theme='primary' onClick={filterOrders}>

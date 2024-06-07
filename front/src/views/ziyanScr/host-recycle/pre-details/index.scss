@@ -1,12 +1,26 @@
-.tabselect{
+.precheck-operation {
   display: flex;
   align-items: center;
-  height: 40px;
-  margin: 10px  10px 0;
-  .tbkselect{
-    margin: 0 10px;
+  background-color: #fff;
+  width: 100%;
+  margin: 15px 0;
+  padding: 10px;
+  .precheck-input{
+    display: flex;
+    align-items: center;
+    & > span{
+      display: inline-block;
+      width: 80px;
+      text-align: right;
+    }
+    .bk-tag-input{
+      margin: 0 10px;
+    }
+    .bk-button+.bk-button{
+      margin-left: 10px;
+    }
   }
-  .bkbutton{
-    margin-right: 10px;
-  }
+}
+.execute-record-top {
+  margin-bottom: 15px;
 }

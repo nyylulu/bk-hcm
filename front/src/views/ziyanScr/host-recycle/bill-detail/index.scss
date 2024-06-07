@@ -7,6 +7,13 @@
     h2{
         padding: 15px 0;
     }
+    .back-cls {
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+        cursor: pointer;
+        padding-top: 20px;
+    }
     .base-info {
         padding-bottom: 20px;
         border-bottom: 1px solid #dcdfe6;
@@ -15,6 +22,15 @@
             grid-template-columns: 1fr 1fr 1fr;
             & > div {
                 margin-bottom: 10px;
+                span{
+                    margin-left: 20px;
+                }
+            }
+            .c-success {
+                color: #67c23a ;
+            }
+            .c-danger {
+                color: #f56c6c ;
             }
         }
     }

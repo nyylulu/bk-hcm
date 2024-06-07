@@ -30,8 +30,9 @@ import {
   getRecycleTaskStatusLabel,
   getBusinessNameById,
   dateTimeTransform,
+  getPrecheckStatusLabel,
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
-import { Spinner } from 'bkui-vue/lib/icon';
+import { Spinner, Share } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 
 interface LinkFieldOptions {
@@ -2150,26 +2151,125 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       },
     },
   ];
+  // 预检详情状态 render
+  const getPrecheckStatusView = (value: string) => {
+    const label = getPrecheckStatusLabel(value);
+    if (value === 'SUCCESS') {
+      return <span class='c-success'>{label}</span>;
+    }
+    if (value === 'RUNNING') {
+      return (
+        <>
+          <Spinner />
+          <span>{label}</span>
+        </>
+      );
+    }
+    if (value === 'FAILED') {
+      return (
+        <div>
+          <div class='c-danger fail-flex'>
+            <span>{label}</span>
+            <a
+              target='_blank'
+              href='https://iwiki.woa.com/pages/viewpage.action?pageId=349178371'
+              v-bk-tooltips={{
+                content:
+                  '请查看解决方案，根据提示处理完成后，请返回“回收单据列表”或者跳转到“单据详情”进行“重试”或者“去除预检失败IP提交”',
+              }}>
+              <Share />
+            </a>
+          </div>
+        </div>
+      );
+    }
+    return <span>{label}</span>;
+  };
   const ERcolumns = [
     {
       label: '步骤',
-      field: 'stepDesc',
+      field: 'step_desc',
     },
     {
       label: '状态',
       field: 'status',
+      render: ({ row }) => {
+        return getPrecheckStatusView(row.status);
+      },
     },
     {
       label: '开始时间',
-      field: 'createAt',
+      field: 'create_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.create_at)}</span>;
+      },
     },
     {
       label: '结束时间',
-      field: 'endAt',
+      field: 'end_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.end_at)}</span>;
+      },
     },
     {
       label: '执行日志',
       field: 'log',
+    },
+  ];
+  const PDcolumns = [
+    {
+      label: '单号',
+      field: 'order_id',
+      width: 80,
+    },
+    {
+      label: '子单号',
+      field: 'suborder_id',
+      width: 80,
+    },
+    {
+      label: '状态',
+      field: 'status',
+      render: ({ row }) => {
+        return getPrecheckStatusView(row.status);
+      },
+      exportFormatter: (row) => getPrecheckStatusLabel(row.status),
+    },
+    {
+      label: '已执行/总数',
+      field: 'mem',
+      render: ({ row }) => {
+        return (
+          <div>
+            <span class={row.success_num > 0 ? 'c-success' : ''}>{row.success_num}</span>
+            <span>/</span>
+            <span>{row.total_num}</span>
+          </div>
+        );
+      },
+      exportFormatter: (row) => {
+        return `${row.success_num}/${row.total_num}`;
+      },
+    },
+    {
+      label: '更新时间',
+      field: 'update_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.update_at)}</span>;
+      },
+      formatter: ({ update_at }) => {
+        return dateTimeTransform(update_at);
+      },
+    },
+    {
+      label: '创建时间',
+      field: 'create_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.create_at)}</span>;
+      },
+      formatter: ({ create_at }) => {
+        return dateTimeTransform(create_at);
+      },
     },
   ];
   const getRecycleTaskStatusView = (value: string) => {
@@ -2260,11 +2360,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '当前处理人',
       field: 'handler',
+      width: 100,
       render: ({ row }) => {
-        return (
+        return row.handler !== 'AUTO' ? (
           <a href={`wxwork://message?username=${row.handler}`} class='username'>
             {row.handler}
           </a>
+        ) : (
+          <span class='username'>{row.handler}</span>
         );
       },
     },
@@ -2405,10 +2508,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '固资号',
       field: 'asset_id',
-    },
-    {
-      label: '内网IP',
-      field: 'ip',
     },
     {
       label: '实例ID',
@@ -2731,6 +2830,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     deviceQuery: deviceQueryColumns,
     deviceDestroy: deviceDestroyColumns,
     DeviceQuerycolumns: DQcolumns,
+    pdExecutecolumns: PDcolumns,
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
