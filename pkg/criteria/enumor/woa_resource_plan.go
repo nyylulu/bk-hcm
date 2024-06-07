@@ -21,6 +21,36 @@ package enumor
 
 import "fmt"
 
+// RPTicketStatus is resource plan ticket status.
+type RPTicketStatus string
+
+// TODO 其它状态待补充
+const (
+	// RPTicketStatusPass is demand class cvm.
+	RPTicketStatusPass RPTicketStatus = "pass"
+)
+
+// Validate RPTicketStatus.
+func (s RPTicketStatus) Validate() error {
+	switch s {
+	case RPTicketStatusPass:
+	default:
+		return fmt.Errorf("unsupported resource plan status: %s", s)
+	}
+
+	return nil
+}
+
+// rdTicketStatusNameMap records RPTicketStatus's name.
+var rdTicketStatusNameMap = map[RPTicketStatus]string{
+	RPTicketStatusPass: "通过",
+}
+
+// Name return RPTicketStatus's name.
+func (s RPTicketStatus) Name() string {
+	return rdTicketStatusNameMap[s]
+}
+
 // DemandClass is resource plan demand class.
 type DemandClass string
 

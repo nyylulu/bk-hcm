@@ -1,0 +1,121 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+package woadevicetype
+
+import (
+	"errors"
+
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	"hcm/pkg/dal/table"
+	"hcm/pkg/dal/table/types"
+	"hcm/pkg/dal/table/utils"
+)
+
+// WoaDeviceTypeColumns defines all the woa device type status table's columns.
+var WoaDeviceTypeColumns = utils.MergeColumns(nil, WoaDeviceTypeColumnDescriptor)
+
+// WoaDeviceTypeColumnDescriptor is WoaDeviceTypeTable's column descriptors.
+var WoaDeviceTypeColumnDescriptor = utils.ColumnDescriptors{
+	{Column: "id", NamedC: "id", Type: enumor.String},
+	{Column: "device_type", NamedC: "device_type", Type: enumor.String},
+	{Column: "device_class", NamedC: "device_class", Type: enumor.String},
+	{Column: "device_family", NamedC: "device_family", Type: enumor.String},
+	{Column: "core_type", NamedC: "core_type", Type: enumor.String},
+	{Column: "cpu_core", NamedC: "cpu_core", Type: enumor.Numeric},
+	{Column: "memory", NamedC: "memory", Type: enumor.Numeric},
+	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
+	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
+}
+
+// WoaDeviceTypeTable is used to save resource's woa device type status information.
+type WoaDeviceTypeTable struct {
+	// ID 唯一ID
+	ID string `db:"id" json:"id" validate:"lte=64"`
+	// DeviceType 机型
+	DeviceType string `db:"device_type" json:"device_type" validate:"lte=64"`
+	// DeviceClass 机型分类
+	DeviceClass string `db:"device_class" json:"device_class" validate:"lte=64"`
+	// DeviceFamily 机型族
+	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
+	// CpuCore CPU核心数，单位：核
+	CpuCore int64 `db:"cpu_core" json:"cpu_core"`
+	// Memory 内存大小，单位：GB
+	Memory int64 `db:"memory" json:"memory"`
+	// CreatedAt 创建时间
+	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
+	// UpdatedAt 更新时间
+	UpdatedAt types.Time `db:"updated_at" validate:"isdefault" json:"updated_at"`
+}
+
+// TableName is the recycleRecord's database table name.
+func (t WoaDeviceTypeTable) TableName() table.Name {
+	return table.WoaDeviceTypeTable
+}
+
+// InsertValidate validate woa device type status on insertion.
+func (t WoaDeviceTypeTable) InsertValidate() error {
+	if err := validator.Validate.Struct(t); err != nil {
+		return err
+	}
+
+	if len(t.ID) == 0 {
+		return errors.New("id can not be empty")
+	}
+
+	if len(t.DeviceType) == 0 {
+		return errors.New("device type can not be empty")
+	}
+
+	if len(t.DeviceClass) == 0 {
+		return errors.New("device class can not be empty")
+	}
+
+	if len(t.DeviceFamily) == 0 {
+		return errors.New("device family can not be empty")
+	}
+
+	if t.CpuCore < 0 {
+		return errors.New("cpu core should be >= 0")
+	}
+
+	if t.Memory < 0 {
+		return errors.New("memory should be >= 0")
+	}
+
+	return nil
+}
+
+// UpdateValidate validate woa device type status on update.
+func (t WoaDeviceTypeTable) UpdateValidate() error {
+	if err := validator.Validate.Struct(t); err != nil {
+		return err
+	}
+
+	if t.CpuCore < 0 {
+		return errors.New("cpu core should be >= 0")
+	}
+
+	if t.Memory < 0 {
+		return errors.New("memory should be >= 0")
+	}
+
+	return nil
+}
