@@ -1,0 +1,21 @@
+.home {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: 1fr 1fr;
+
+  .span-2 {
+    grid-column-start: span 2;
+  }
+
+  :global(.bk-form-item) {
+    margin-bottom: 0 !important;
+  }
+
+  :global(.bk-radio-group) {
+    width: 100%;
+  }
+
+  :global(.bk-radio-button) {
+    width: 50%;
+  }
+}

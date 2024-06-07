@@ -1,0 +1,38 @@
+.home {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr;
+
+  .span-6 {
+    grid-column-start: span 6;
+  }
+
+  .span-3 {
+    grid-column-start: span 3;
+  }
+
+  .span-2 {
+    grid-column-start: span 2;
+  }
+
+  .number {
+    background: #f5f7fa;
+    border-radius: 2px;
+    width: 200px;
+    line-height: 32px;
+    display: inline-block;
+    padding: 0 10px;
+  }
+
+  :global(.bk-form-item) {
+    margin-bottom: 0 !important;
+  }
+
+  :global(.bk-radio-group) {
+    width: 192px
+  }
+
+  :global(.bk-radio-button) {
+    width: 96px;
+  }
+}
