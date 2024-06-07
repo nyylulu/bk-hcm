@@ -113,6 +113,17 @@ const ziyanScr: RouteRecordRaw[] = [
               activeKey: 'scr-resource-manage',
             },
           },
+          {
+            path: 'create',
+            name: 'scrResourceManageCreate',
+            component: () => import('@/views/ziyanScr/resource-manage/create'),
+            props(route) {
+              return { ...route.query };
+            },
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
         ],
         meta: {
           activeKey: 'scr-resource-manage',

@@ -2586,6 +2586,70 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const scrResourceOnlineCreateColumns = [
+    {
+      label: '固资号',
+      field: 'asset_id',
+    },
+    {
+      label: '内网 IP',
+      field: 'ip',
+      render: ({ data }: any) => data?.labels?.bk_asset_id,
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: '操作系统',
+      field: 'os_type',
+    },
+    {
+      label: '机架号',
+      field: 'equipment',
+    },
+    {
+      label: '园区',
+      field: 'zone',
+    },
+    {
+      label: '模块',
+      field: 'module',
+    },
+    {
+      label: 'IDC 单元',
+      field: 'idc_unit',
+    },
+    {
+      label: '逻辑区域',
+      field: 'idc_logic_area',
+    },
+    {
+      label: '入库时间',
+      field: 'input_time',
+      render: ({ cell }: any) => timeFormatter(cell),
+    },
+  ];
+
+  const scrResourceOfflineCreateColumns = [
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: '地域',
+      field: 'region',
+    },
+    {
+      label: '园区',
+      field: 'zone',
+    },
+    {
+      label: '数量',
+      field: 'amount',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2623,6 +2687,8 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrResourceOffline: scrResourceOfflineColumns,
     scrResourceOnlineHost: scrResourceOnlineHostColumns,
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
+    scrResourceOnlineCreate: scrResourceOnlineCreateColumns,
+    scrResourceOfflineCreate: scrResourceOfflineCreateColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

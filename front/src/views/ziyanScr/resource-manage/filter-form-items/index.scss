@@ -1,0 +1,11 @@
+.filter-container {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+
+  .filter-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+}

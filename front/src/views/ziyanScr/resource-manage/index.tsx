@@ -1,8 +1,9 @@
 import { defineComponent, onMounted, reactive, ref, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { Button, DatePicker, Select, Tab, TagInput } from 'bkui-vue';
-import { Plus, Search } from 'bkui-vue/lib/icon';
+import { Plus } from 'bkui-vue/lib/icon';
 import MemberSelect from '@/components/MemberSelect';
+import FilterFormItems from './filter-form-items';
 import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -38,9 +39,8 @@ export default defineComponent({
       getListData: reloadScrResourceOnlineTable,
       pagination: scrResourceOnlinePagination,
     } = useTable({
-      tableOptions: {
-        columns: scrResourceOnlineColumns,
-      },
+      tableOptions: { columns: scrResourceOnlineColumns },
+      requestOption: { dataPath: 'data.info' },
       scrConfig: () => ({
         url: '/api/v1/woa/pool/findmany/launch/task',
         payload: {
@@ -96,10 +96,16 @@ export default defineComponent({
 
     const activeType = ref(route.query.type || 'online');
 
-    watch(activeType, (val) => {
-      router.push({ query: { type: val } });
-      reloadDataList();
-    });
+    watch(
+      activeType,
+      (val) => {
+        router.push({ query: { type: val } });
+        reloadDataList();
+      },
+      {
+        immediate: true,
+      },
+    );
 
     const getDefaultFilter = (): ResourceManageFilterType => ({
       id: [],
@@ -109,6 +115,55 @@ export default defineComponent({
       end: getDate('yyyy-MM-dd', 0),
     });
     const filter = reactive(getDefaultFilter());
+    // 路由跳转至资源上/下架页面
+    const gotoCreatePage = () => {
+      router.push({ name: 'scrResourceManageCreate', query: { type: activeType.value } });
+    };
+    const filterFormItems = [
+      {
+        render: () => (
+          <Button theme='primary' onClick={gotoCreatePage}>
+            <Plus /> 发起{activeType.value === 'online' ? '上架' : '下架'}
+          </Button>
+        ),
+      },
+      {
+        label: '单号',
+        render: () => (
+          <TagInput
+            v-model={filter.id}
+            class='w200'
+            allow-create
+            collapse-tags
+            createTagValidator={(tag) => /^[1-9]\d*$/.test(tag)}
+          />
+        ),
+      },
+      {
+        label: '创建人',
+        render: () => <MemberSelect class='w200' v-model={filter.bk_username} />,
+      },
+      {
+        label: '创建时间',
+        render: () => (
+          <>
+            <DatePicker class='w150' v-model={filter.start} />
+            <span class='m4'>-</span>
+            <DatePicker class='w150' v-model={filter.end} />
+          </>
+        ),
+      },
+      {
+        label: '单据状态',
+        render: () => (
+          <Select v-model={filter.phase} multiple>
+            {phaseList.value.map(({ description, status }) => (
+              <Select.Option key={status} id={status} name={description} />
+            ))}
+          </Select>
+        ),
+      },
+    ];
 
     const phaseList = ref([]);
     onMounted(() => {
@@ -133,50 +188,7 @@ export default defineComponent({
           {types.map(({ label, value, Component }) => (
             <TabPanel key={value} label={label} name={value} renderDirective='if'>
               <div class='manage-container'>
-                <div class='filter-container'>
-                  <div class='filter-item mr8'>
-                    <Button theme='primary'>
-                      <Plus /> 发起{activeType.value === 'online' ? '上架' : '下架'}
-                    </Button>
-                  </div>
-                  <div class='filter-item mr8'>
-                    <span class='mr8'>单号</span>
-                    <TagInput
-                      v-model={filter.id}
-                      class='w200'
-                      allow-create
-                      collapse-tags
-                      createTagValidator={(tag) => /^[1-9]\d*$/.test(tag)}
-                    />
-                  </div>
-                  <div class='filter-item mr8'>
-                    <span class='mr8'>创建人</span>
-                    <MemberSelect class='w200' v-model={filter.bk_username} />
-                  </div>
-                  <div class='filter-item mr8'>
-                    <span class='mr8'>创建时间</span>
-                    <DatePicker class='w150' v-model={filter.start} />
-                    <span class='m4'>-</span>
-                    <DatePicker class='w150' v-model={filter.end} />
-                  </div>
-                  <div class='filter-item mr8'>
-                    <span class='mr8'>单据状态</span>
-                    <Select v-model={filter.phase} multiple>
-                      {phaseList.value.map(({ description, status }) => (
-                        <Select.Option key={status} id={status} name={description} />
-                      ))}
-                    </Select>
-                  </div>
-                  <div class='filter-item mr8'>
-                    <Button onClick={reloadDataList}>
-                      <Search />
-                      查询
-                    </Button>
-                  </div>
-                  <div class='filter-item'>
-                    <Button onClick={clearFilter}>清空</Button>
-                  </div>
-                </div>
+                <FilterFormItems config={filterFormItems} handleSearch={reloadDataList} handleClear={clearFilter} />
                 <Component />
               </div>
             </TabPanel>
