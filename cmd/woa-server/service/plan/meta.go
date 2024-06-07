@@ -10,31 +10,20 @@
  * limitations under the License.
  */
 
-package meta
+package plan
 
 import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/rest"
 )
 
-// ListDiskType lists disk type.
-func (s *service) ListDiskType(_ *rest.Contexts) (interface{}, error) {
-	// get disk type members.
-	diskTypes := enumor.GetDiskTypeMembers()
-	// convert to meta.DiskTypeItem slice.
-	details := make([]meta.DiskTypeItem, 0, len(diskTypes))
-	for _, diskType := range diskTypes {
-		details = append(details, meta.DiskTypeItem{
-			DiskType:     diskType,
-			DiskTypeName: diskType.Name(),
-		})
-	}
-	return &core.ListResultT[meta.DiskTypeItem]{Details: details}, nil
+// ListDemandClass lists demand class.
+func (s *service) ListDemandClass(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.DemandClass]{Details: enumor.GetDemandClassMembers()}, nil
 }
 
-// ListObsProject lists obs project.
-func (s *service) ListObsProject(_ *rest.Contexts) (interface{}, error) {
-	return &core.ListResultT[enumor.ObsProject]{Details: enumor.GetObsProjectMembers()}, nil
+// ListDemandSource lists demand source.
+func (s *service) ListDemandSource(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.DemandSource]{Details: enumor.GetDemandSourceMembers()}, nil
 }

@@ -36,6 +36,7 @@ import (
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/cvm"
 	"hcm/cmd/woa-server/service/meta"
+	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
@@ -281,6 +282,7 @@ func (s *Service) apiSet() *restful.Container {
 	cvm.InitService(c)
 	task.InitService(c)
 	meta.InitService(c)
+	plan.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

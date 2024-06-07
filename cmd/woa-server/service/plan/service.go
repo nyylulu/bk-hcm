@@ -17,29 +17,38 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package meta
+package plan
 
 import (
 	"net/http"
 
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/rest"
 )
 
-// InitService initial the meta service.
+// InitService initial the plan service.
 func InitService(c *capability.Capability) {
-	s := &service{}
+	s := &service{
+		esbClient: c.EsbClient,
+	}
 	h := rest.NewHandler()
 
-	s.initMetaService(h)
+	s.initPlanService(h)
 
 	h.Load(c.WebService)
 }
 
 type service struct {
+	esbClient esb.Client
 }
 
-func (s *service) initMetaService(h *rest.Handler) {
-	h.Add("ListDiskType", http.MethodGet, "/meta/disk_type/list", s.ListDiskType)
-	h.Add("ListObsProject", http.MethodGet, "/meta/obs_project/list", s.ListObsProject)
+func (s *service) initPlanService(h *rest.Handler) {
+	// biz
+	h.Add("GetBizOrgRel", http.MethodGet, "/bizs/{bk_biz_id}/org/relation", s.GetBizOrgRel)
+
+	// meta
+	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
+	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)
+
 }

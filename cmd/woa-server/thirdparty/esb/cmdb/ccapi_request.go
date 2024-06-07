@@ -139,3 +139,16 @@ type CrTransitIdleReq struct {
 	BkBizId  int64    `json:"bk_biz_id"`
 	AssetIDs []string `json:"asset_ids"`
 }
+
+// SearchBizBelongingParams is search cmdb business belonging parameter.
+type SearchBizBelongingParams struct {
+	BizIDs   []int64                `json:"bk_biz_ids,omitempty"`
+	BizNames []string               `json:"bk_biz_names,omitempty"`
+	Page     SearchBizBelongingPage `json:"page,omitempty"`
+}
+
+// SearchBizBelongingPage is search cmdb business belonging paging info.
+type SearchBizBelongingPage struct {
+	Limit int `json:"limit"`
+	Start int `json:"start"`
+}

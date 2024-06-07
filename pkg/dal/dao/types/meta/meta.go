@@ -19,8 +19,10 @@
 
 package meta
 
-// CodeNameItem defines the code name item.
-type CodeNameItem struct {
-	Code interface{} `json:"code"`
-	Name string      `json:"name"`
+import "hcm/pkg/criteria/enumor"
+
+// DiskTypeItem defines disk type item.
+type DiskTypeItem struct {
+	DiskType     enumor.DiskType `json:"disk_type"`
+	DiskTypeName string          `json:"disk_type_name"`
 }
