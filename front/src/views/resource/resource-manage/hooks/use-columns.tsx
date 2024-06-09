@@ -3282,44 +3282,63 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   // 预测清单
   const forecastListColums = [
     {
-      label: '项目类型',
-      field: 'project_type',
+      label: '机型规格',
+      field: 'cvm.device_type',
       isDefaultShow: true,
     },
     {
       label: 'CPU总核数',
-      field: 'total_cpu_cores',
+      field: 'cvm.cpu_core',
       isDefaultShow: true,
     },
     {
-      label: '内存总量',
-      field: 'total_memory',
+      label: '内存总量(G)',
+      field: 'cvm.memory',
       isDefaultShow: true,
     },
     {
-      label: '云盘总量',
-      field: 'total_cloud_disk',
+      label: '云盘总量(G)',
+      field: 'cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
       isDefaultShow: true,
     },
     {
       label: '期望到货时间',
-      field: 'expected_delivery_time',
+      field: 'expect_time',
+      isDefaultShow: true,
     },
     {
-      label: '区域',
+      label: '云地域',
       field: 'region',
+      isDefaultShow: true,
     },
     {
-      label: '城市',
-      field: 'city',
+      label: '可用区',
+      field: 'zone',
+      isDefaultShow: true,
     },
     {
       label: '资源模式',
-      field: 'resource_model',
+      field: 'cvm.res_mode',
+      isDefaultShow: true,
     },
     {
-      label: '项目类型',
-      field: 'project_type',
+      label: '机型类型',
+      field: 'cvm.device_class',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'cbs.disk_io',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'cbs.disk_type',
+      isDefaultShow: true,
     },
   ];
 

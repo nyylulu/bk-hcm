@@ -1,19 +1,60 @@
-import { defineComponent } from 'vue';
+import { defineComponent, ref, provide } from 'vue';
 import cssModule from './index.module.scss';
+import Header from './header';
 import Basic from './basic';
 import List from './list';
 import Memo from './memo';
+import Button from './button';
 import Add from './add';
+
+import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 
 export default defineComponent({
   setup() {
+    const basicRef = ref();
+    const listRef = ref();
+    const memoRef = ref();
+    const isShowAdd = ref(false);
+    const initDemand = ref();
+    const planTicket = ref<IPlanTicket>({
+      bk_biz_id: undefined,
+      demand_class: '',
+      remark: '',
+      demands: [],
+    });
+
+    const handleShowAdd = () => {
+      initDemand.value = undefined;
+      isShowAdd.value = true;
+    };
+
+    const handleShowModify = (data: IPlanTicketDemand) => {
+      initDemand.value = data;
+      isShowAdd.value = true;
+    };
+
+    const validate = () => {
+      return Promise.all([basicRef.value.validate(), listRef.value.validate(), memoRef.value.validate()]);
+    };
+
+    provide('validate', validate);
+
     return () => (
-      <section class={cssModule.home}>
-        <Basic></Basic>
-        <List></List>
-        <Memo></Memo>
-        <Add></Add>
-      </section>
+      <>
+        <Header></Header>
+        <section class={cssModule.home}>
+          <Basic v-model={planTicket.value} ref={basicRef}></Basic>
+          <List
+            class={cssModule['mt-16']}
+            ref={listRef}
+            v-model={planTicket.value}
+            onShow-add={handleShowAdd}
+            onShow-modify={handleShowModify}></List>
+          <Memo class={cssModule['mt-16']} ref={memoRef} v-model={planTicket.value}></Memo>
+          <Button class={cssModule['mt-16']} v-model={planTicket.value}></Button>
+        </section>
+        <Add v-model:isShow={isShowAdd.value} v-model={planTicket.value} initDemand={initDemand.value}></Add>
+      </>
     );
   },
 });

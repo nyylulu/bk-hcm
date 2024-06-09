@@ -11,7 +11,7 @@ export const headRouteConfig = [
   {
     id: 'resource-plan',
     name: '服务请求',
-    path: '/resource-plan/manage',
+    path: '/resource-plan/list',
   },
   {
     id: 'service',

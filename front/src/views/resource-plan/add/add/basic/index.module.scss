@@ -11,6 +11,10 @@
     margin-bottom: 0 !important;
   }
 
+  :global(.bk-date-picker) {
+    width: 100%;
+  }
+
   :global(.bk-radio-group) {
     width: 100%;
   }

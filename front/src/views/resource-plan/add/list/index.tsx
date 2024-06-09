@@ -1,91 +1,143 @@
-import { defineComponent, computed } from 'vue';
-import Panel from '@/components/panel';
-import cssModule from '../index.module.scss';
+import { defineComponent, computed, type PropType, ref } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
-import { Button } from 'bkui-vue';
-import { useTable } from '@/hooks/useTable/useTable';
+import Panel from '@/components/panel';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
-import { getTableNewRowClass } from '@/common/util';
+import cssModule from './index.module.scss';
+
+import type { IPlanTicket } from '@/typings/resourcePlan';
 
 export default defineComponent({
-  setup() {
-    const totalList = [
-      {
-        key: 'total_cpu_cores',
-        label: 'CPU总核数：',
-        value: '123',
-      },
-      {
-        key: 'total_memory',
-        label: '内存总量：',
-        value: '123',
-      },
-      {
-        key: 'total_cloud_disk',
-        label: '云盘总量：',
-        value: '123',
-      },
-    ];
-    const renderTableData = [
-      {
-        project_type: '项目1',
-        total_cpu_cores: '123',
-      },
-    ];
+  props: {
+    modelValue: Object as PropType<IPlanTicket>,
+  },
 
+  emits: ['show-add', 'show-modify', 'update:modelValue'],
+
+  setup(props, { emit, expose }) {
+    const { t } = useI18n();
     const { columns, settings } = useColumns('forecastList');
+
+    const isValidateError = ref(false);
+
+    const totalData = computed(() => {
+      const totalData = [
+        {
+          label: t('CPU总核数：'),
+          value: 0,
+        },
+        {
+          label: t('内存总量：'),
+          value: 0,
+          unit: 'GB',
+        },
+        {
+          label: t('云盘总量：'),
+          value: 0,
+          unit: 'GB',
+        },
+      ];
+
+      props.modelValue.demands.forEach((demand) => {
+        totalData[0].value += demand.cvm.cpu_core;
+        totalData[1].value += demand.cvm.memory;
+        totalData[2].value += demand.cbs.disk_size;
+      });
+
+      return totalData;
+    });
     const tableColumns = computed(() => {
       return [
         ...columns,
         {
-          label: '操作',
+          label: t('操作'),
           width: 120,
-          render: () => (
-            <div>
-              <Button text theme={'primary'} onClick={() => handleToCopy()}>
-                克隆
-              </Button>
-            </div>
+          render: ({ index }: { index: number }) => (
+            <>
+              <bk-button text theme={'primary'} onClick={() => handleCopy(index)} class={cssModule['mr-5']}>
+                {t('克隆')}
+              </bk-button>
+              <bk-button text theme={'primary'} onClick={() => handleModify(index)} class={cssModule['mr-5']}>
+                {t('修改')}
+              </bk-button>
+              <bk-button text theme={'primary'} onClick={() => handleDelete(index)}>
+                {t('移除')}
+              </bk-button>
+            </>
           ),
         },
       ];
     });
-    const { CommonTable } = useTable({
-      searchOptions: {
-        disabled: true,
-      },
-      tableOptions: {
-        columns: tableColumns.value,
-        reviewData: renderTableData,
-        extra: {
-          rowClass: getTableNewRowClass(),
-          settings: settings.value,
-        },
-      },
-      requestOption: {
-        type: '',
-      },
+
+    const handleToAdd = () => {
+      emit('show-add');
+    };
+
+    const handleModify = (index: number) => {
+      emit('show-modify', props.modelValue.demands[index]);
+    };
+
+    const handleCopy = (index: number) => {
+      const demand = JSON.parse(JSON.stringify(props.modelValue.demands[index]));
+      emit('update:modelValue', {
+        ...props.modelValue,
+        demands: [
+          ...props.modelValue.demands.slice(0, index + 1),
+          demand,
+          ...props.modelValue.demands.slice(index + 1),
+        ],
+      });
+    };
+
+    const handleDelete = (index: number) => {
+      emit('update:modelValue', {
+        ...props.modelValue,
+        demands: [...props.modelValue.demands.slice(0, index), ...props.modelValue.demands.slice(index + 1)],
+      });
+    };
+
+    const validate = () => {
+      isValidateError.value = props.modelValue.demands.length <= 0;
+      if (props.modelValue.demands.length > 0) {
+        return Promise.resolve();
+      }
+      return Promise.reject(t('预测清单不能为空'));
+    };
+
+    expose({
+      validate,
     });
 
-    const handleToAdd = () => {};
-    const handleToCopy = () => {};
     return () => (
       // 预测清单
-      <Panel title='预测清单'>
-        <div class={cssModule.flex}>
-          <Button theme='primary' outline onClick={() => handleToAdd()} class={cssModule['btn-margin']}>
-            <PlusIcon class={cssModule['add-font']} />
-            添加
-          </Button>
-          {totalList.map((item) => {
+      <Panel title={t('预测清单')}>
+        <section class={cssModule.header}>
+          <bk-button theme='primary' outline onClick={handleToAdd} class={cssModule.button}>
+            <PlusIcon class={cssModule['plus-icon']} />
+            {t('添加')}
+          </bk-button>
+          {totalData.value.map((item) => {
             return (
-              <div class={cssModule['ml-24']}>
-                <span>{item.label}</span> <span class={cssModule['total-color']}>{item.value}</span>
-              </div>
+              <>
+                <span>{item.label}</span>
+                <span class={cssModule['total-number']}>{item.value || '--'}</span>
+                <span class={cssModule['total-unit']}>{item.unit}</span>
+              </>
             );
           })}
-        </div>
-        <CommonTable></CommonTable>
+        </section>
+        <bk-table
+          class='table-container'
+          showOverflowTooltip
+          data={props.modelValue.demands}
+          columns={tableColumns.value}
+          settings={settings.value}
+        />
+        {isValidateError.value && props.modelValue.demands.length <= 0 ? (
+          <span class={cssModule['error-txt']}>{t('预测清单不能为空')}</span>
+        ) : (
+          ''
+        )}
       </Panel>
     );
   },
