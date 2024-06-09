@@ -1,0 +1,264 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+package es
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
+	"time"
+
+	"hcm/pkg/cc"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/logs"
+	"hcm/pkg/tools/ssl"
+
+	"github.com/olivere/elastic/v7"
+)
+
+// EsCli elasticsearch client
+type EsCli struct {
+	client    *elastic.Client
+	blacklist []interface{}
+}
+
+// NewEsClient create es client
+func NewEsClient(esConf cc.Es, blacklist string) (*EsCli, error) {
+	httpClient := &http.Client{}
+	if esConf.TLS.Enable() {
+		tlsC, err := ssl.ClientTLSConfVerify(esConf.TLS.InsecureSkipVerify, esConf.TLS.CAFile, esConf.TLS.CertFile,
+			esConf.TLS.KeyFile, esConf.TLS.Password)
+		if err != nil {
+			return nil, fmt.Errorf("init es tls config failed, err: %v", err)
+		}
+
+		httpClient.Transport = &http.Transport{TLSClientConfig: tlsC}
+	}
+
+	client, err := elastic.NewClient(
+		elastic.SetHttpClient(httpClient),
+		elastic.SetURL(esConf.Url),
+		elastic.SetSniff(false),
+		elastic.SetBasicAuth(esConf.User, esConf.Password))
+	if err != nil {
+		logs.Errorf("create new es client error, err: %v", err)
+		return nil, err
+	}
+
+	list := make([]interface{}, 0)
+	if len(blacklist) != 0 {
+		for _, v := range strings.Split(blacklist, ",") {
+			list = append(list, v)
+		}
+	}
+
+	return &EsCli{client: client, blacklist: list}, nil
+}
+
+// SearchWithCond search with condition
+func (es *EsCli) SearchWithCond(ctx context.Context, cond map[string][]interface{}, index string, start, limit int,
+	sort string) ([]Host, error) {
+
+	query, err := es.buildQuery(cond)
+	if err != nil {
+		return nil, err
+	}
+	search, err := es.search(ctx, query, index, start, limit, sort)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]Host, len(search.Hits.Hits))
+	for idx, hit := range search.Hits.Hits {
+		var data Host
+		err = json.Unmarshal(hit.Source, &data)
+		if err != nil {
+			return nil, err
+		}
+
+		data.AppName = cutCCPrefix(data.AppName)
+		data.Module = cutCCPrefix(data.Module)
+		result[idx] = data
+	}
+
+	return result, nil
+}
+
+// CountWithCond count with condition
+func (es *EsCli) CountWithCond(ctx context.Context, cond map[string][]interface{}, index string) (int64, error) {
+	query, err := es.buildQuery(cond)
+	if err != nil {
+		return 0, err
+	}
+	count, err := es.count(ctx, query, index)
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error) {
+	query := elastic.NewBoolQuery()
+	query.Must(elastic.NewTermsQuery("cluster_id", 0))
+	for k, v := range cond {
+		// 当查询条件为组织架构时，需要将里面的字段按照层级进行切分，拼接成条件
+		if k == Organization {
+			subQuery := elastic.NewBoolQuery()
+			for _, subVal := range v {
+				orgVal, ok := subVal.(string)
+				if !ok {
+					return nil, fmt.Errorf("organization: %v is invalid", subVal)
+				}
+
+				org, err := getOrganization(orgVal)
+				if err != nil {
+					return nil, err
+				}
+
+				orgQuery := elastic.NewBoolQuery()
+				orgQuery.Must(elastic.NewTermsQuery(department, org.department))
+
+				if len(org.center) != 0 {
+					orgQuery.Must(elastic.NewTermsQuery(center, org.center))
+				}
+
+				if len(org.group) != 0 {
+					orgQuery.Must(elastic.NewTermsQuery(groupName, org.group))
+				}
+
+				subQuery.Should(orgQuery)
+			}
+
+			query.Must(subQuery)
+			continue
+		}
+
+		// 当查询条件为操作人时，可以对主维护人或者备份维护人进行匹配
+		if k == Operator {
+			subQuery := elastic.NewBoolQuery()
+			subQuery.Should(elastic.NewTermsQuery(serverOperator, v...), elastic.NewTermsQuery(serverBakOperator, v...))
+			query.Must(subQuery)
+			continue
+		}
+
+		if k == NotInCCIPs {
+			query.MustNot(elastic.NewTermsQuery(innerIP, v...))
+			continue
+		}
+
+		query.Must(elastic.NewTermsQuery(k, v...))
+	}
+
+	if len(es.blacklist) != 0 {
+		query.MustNot(elastic.NewTermsQuery(AppName, es.blacklist...))
+	}
+
+	return query, nil
+}
+
+func (es *EsCli) search(ctx context.Context, query elastic.Query, index string, start, limit int, sort string) (
+	*elastic.SearchResult, error) {
+
+	searchSource := elastic.NewSearchSource()
+	searchSource.From(start)
+	searchSource.Size(limit)
+	searchSource.Sort(sort, true)
+
+	searchResult, err := es.client.Search().
+		Index(index).
+		SearchSource(searchSource).
+		Query(query).
+		Pretty(true).
+		Do(ctx)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return searchResult, nil
+}
+
+// Count data in elastic with target conditions.
+func (es *EsCli) count(ctx context.Context, query elastic.Query, index string) (int64, error) {
+	count, err := es.client.Count().
+		Index(index).
+		Query(query).
+		Pretty(true).
+		Do(ctx)
+
+	if err != nil {
+		return 0, err
+	}
+
+	return count, nil
+}
+
+// GetLatestIndex get elasticsearch lastest index
+func GetLatestIndex() string {
+	syncDate := time.Now().AddDate(0, 0, -1).Format(constant.DateLayout)
+	return GetIndex(strings.Replace(syncDate, "-", "", -1))
+}
+
+// GetIndex get elasticsearch index
+func GetIndex(date string) string {
+	return indexPrefix + date
+}
+
+// cutCCPrefix cut off CC_ prefix
+func cutCCPrefix(val string) string {
+	val, _ = strings.CutPrefix(val, "CC_")
+	return val
+}
+
+// AddCCPrefix add CC_ prefix
+func AddCCPrefix(val string) string {
+	return fmt.Sprintf("CC_%s", val)
+}
+
+type organization struct {
+	department string
+	center     string
+	group      string
+}
+
+// getOrganization 根据传入的组织架构字符串，切割成对应组织架构的字段
+// 如：A公司/B事业群/C部门/D中心/F组 会根据"/"进行拆分
+// 要求切割的至少有3段，到“部门”纬度；最多有5段，到“组”纬度
+func getOrganization(val string) (*organization, error) {
+	arr := strings.Split(val, "/")
+	if len(arr) < 3 || len(arr) > 5 {
+		return nil, fmt.Errorf("organization: %v is invalid", val)
+	}
+
+	result := &organization{department: arr[2]}
+
+	if len(arr) >= 4 {
+		result.center = arr[3]
+	}
+
+	if len(arr) == 5 {
+		result.group = arr[4]
+	}
+
+	return result, nil
+}

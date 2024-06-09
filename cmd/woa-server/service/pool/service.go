@@ -33,7 +33,7 @@ import (
 func InitService(c *capability.Capability) {
 	s := &service{
 		authorizer: c.Authorizer,
-		logics:     pool.New(context.Background(), c.ClientConf, c.ThirdCli, c.EsbClient),
+		logics:     pool.New(context.Background(), c.Conf.ClientConfig, c.ThirdCli, c.EsbClient),
 	}
 	h := rest.NewHandler()
 

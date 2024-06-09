@@ -1312,6 +1312,19 @@ func (i ItsmFlow) validate() error {
 	return nil
 }
 
+// ResourceDissolve resource dissolve config
+type ResourceDissolve struct {
+	OriginDate string `yaml:"originDate"`
+}
+
+func (r ResourceDissolve) validate() error {
+	if len(r.OriginDate) == 0 {
+		return errors.New("resourceDissolve.originDate is not set")
+	}
+
+	return nil
+}
+
 // StateNode defines the itsm state node related runtime.
 type StateNode struct {
 	ID          int64  `yaml:"id"`
@@ -1337,6 +1350,34 @@ func (i StateNode) validate() error {
 
 	if len(i.RemarkKey) == 0 {
 		return errors.New("state node remark key is not set")
+	}
+
+	return nil
+}
+
+// Es elasticsearch config
+type Es struct {
+	Url      string    `json:"url"`
+	User     string    `json:"user"`
+	Password string    `json:"password"`
+	TLS      TLSConfig `yaml:"tls"`
+}
+
+func (e Es) validate() error {
+	if len(e.Url) == 0 {
+		return errors.New("elasticsearch.url is not set")
+	}
+
+	if len(e.User) == 0 {
+		return errors.New("elasticsearch.user is not set")
+	}
+
+	if len(e.Password) == 0 {
+		return errors.New("elasticsearch.password is not set")
+	}
+
+	if err := e.TLS.validate(); err != nil {
+		return fmt.Errorf("validate tls failed, err: %v", err)
 	}
 
 	return nil

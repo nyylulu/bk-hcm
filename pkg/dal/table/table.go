@@ -207,6 +207,11 @@ const (
 	AccountBillPullerTable = "account_bill_puller"
 	// AccountBillDailyPullTaskTable 日账单拉取任务表
 	AccountBillDailyPullTaskTable = "account_bill_daily_pull_task"
+
+	// RecycleModuleInfo 裁撤模块表
+	RecycleModuleInfo = "recycle_module_info"
+	// RecycleHostInfo  裁撤主机表
+	RecycleHostInfo = "recycle_host_info"
 )
 
 // Validate whether the table name is valid or not.
@@ -312,6 +317,9 @@ var TableMap = map[Name]struct{}{
 
 	MainAccountTable: {},
 	RootAccountTable: {},
+
+	RecycleModuleInfo: {},
+	RecycleHostInfo:   {},
 }
 
 // Register 注册表名

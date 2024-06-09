@@ -27,6 +27,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
 	"hcm/pkg/dal/dao"
@@ -45,9 +46,10 @@ type Capability struct {
 	ItsmClient     itsm.Client
 	ThirdCli       *thirdparty.Client
 	Authorizer     auth.Authorizer
-	ClientConf     cc.ClientConfig
+	Conf           cc.WoaServerSetting
 	SchedulerIf    scheduler.Interface
 	InformerIf     informer.Interface
 	RecyclerIf     recycler.Interface
 	OperationIf    operation.Interface
+	EsCli          *es.EsCli
 }

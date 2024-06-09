@@ -36,6 +36,7 @@ import (
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/cvm"
+	"hcm/cmd/woa-server/service/dissolve"
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
@@ -47,6 +48,7 @@ import (
 	redisCli "hcm/cmd/woa-server/storage/driver/redis"
 	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
@@ -76,16 +78,14 @@ type Service struct {
 	esbClient esb.Client
 	itsmCli   itsm.Client
 	// authorizer 鉴权所需接口集合
-	authorizer     auth.Authorizer
-	thirdCli       *thirdparty.Client
-	mongoConf      *mongo.Config
-	mongoWatchConf *mongo.Config
-	serviceState   serviced.State
-	clientConf     cc.ClientConfig
-	schedulerIf    scheduler.Interface
-	informerIf     informer.Interface
-	recyclerIf     recycler.Interface
-	operationIf    operation.Interface
+	authorizer  auth.Authorizer
+	thirdCli    *thirdparty.Client
+	clientConf  cc.WoaServerSetting
+	schedulerIf scheduler.Interface
+	informerIf  informer.Interface
+	recyclerIf  recycler.Interface
+	operationIf operation.Interface
+	esCli       *es.EsCli
 }
 
 // NewService create a service instance.
@@ -213,6 +213,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	// init elasticsearch client
+	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Service{
 		client:         apiClientSet,
 		dao:            daoSet,
@@ -220,14 +226,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
-		mongoConf:      mongoConf,
-		mongoWatchConf: watchConf,
-		serviceState:   sd,
-		clientConf:     cc.WoaServer().ClientConfig,
+		clientConf:     cc.WoaServer(),
 		informerIf:     informerIf,
 		schedulerIf:    schedulerIf,
 		recyclerIf:     recyclerIf,
 		operationIf:    operationIf,
+		esCli:          esCli,
 	}, nil
 }
 
@@ -298,11 +302,12 @@ func (s *Service) apiSet() *restful.Container {
 		PlanController: s.planController,
 		EsbClient:      s.esbClient,
 		ThirdCli:       s.thirdCli,
-		ClientConf:     s.clientConf,
+		Conf:           s.clientConf,
 		SchedulerIf:    s.schedulerIf,
 		InformerIf:     s.informerIf,
 		RecyclerIf:     s.recyclerIf,
 		OperationIf:    s.operationIf,
+		EsCli:          s.esCli,
 	}
 
 	config.InitService(c)
@@ -311,6 +316,7 @@ func (s *Service) apiSet() *restful.Container {
 	task.InitService(c)
 	meta.InitService(c)
 	plan.InitService(c)
+	dissolve.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }
