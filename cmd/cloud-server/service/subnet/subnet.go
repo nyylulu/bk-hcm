@@ -436,9 +436,15 @@ func (svc *subnetSvc) getSubnet(cts *rest.Contexts, validHandler handler.ValidWi
 			return nil, err
 		}
 		return subnet, err
+	case enumor.TCloudZiyan:
+		subnet, err := svc.client.DataService().TCloudZiyan.Subnet.Get(cts.Kit.Ctx, cts.Kit.Header(), id)
+		if err != nil {
+			return nil, err
+		}
+		return subnet, err
+	default:
+		return nil, errf.New(errf.InvalidParameter, "vendor is invalid")
 	}
-
-	return nil, nil
 }
 
 // ListSubnet list subnet.

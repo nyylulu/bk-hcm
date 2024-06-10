@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package subnet query the count and list of available IP addresses in the subnet
 package subnet
 
 import (
@@ -123,6 +124,17 @@ func (svc *subnetSvc) countSubnetAvailableIPs(cts *rest.Contexts, validHandler h
 			IDs:               []string{id},
 		}
 		idIPMap, err := svc.client.HCService().Azure.Subnet.ListCountIP(cts.Kit.Ctx, cts.Kit.Header(), req)
+		if err != nil {
+			return nil, err
+		}
+		return getCountIPResultFromList(id, idIPMap)
+	case enumor.TCloudZiyan:
+		req := &hcsubnet.ListCountIPReq{
+			Region:    basicInfo.Region,
+			AccountID: basicInfo.AccountID,
+			IDs:       []string{id},
+		}
+		idIPMap, err := svc.client.HCService().TCloudZiyan.Subnet.ListCountIP(cts.Kit.Ctx, cts.Kit.Header(), req)
 		if err != nil {
 			return nil, err
 		}
