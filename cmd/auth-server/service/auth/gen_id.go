@@ -724,3 +724,27 @@ func genRootAccountRuleResource(a *meta.ResourceAttribute) (client.ActionID, []c
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}
 }
+
+// genZiYanResource 自研云资源-业务鉴权
+func genZiYanResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	res := client.Resource{
+		System: sys.SystemIDCMDB,
+		Type:   sys.Biz,
+	}
+
+	// compatible for authorize any
+	if a.BizID > 0 {
+		res.ID = strconv.FormatInt(a.BizID, 10)
+	}
+
+	switch a.Basic.Action {
+	case meta.Find:
+		return sys.BizAccess, []client.Resource{res}, nil
+	case meta.Create: // 主机申领-业务粒度
+		return sys.BizZiyanResCreate, []client.Resource{res}, nil
+	case meta.Recycle: // 主机回收-业务粒度
+		return sys.BizZiyanResRecycle, []client.Resource{res}, nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}
