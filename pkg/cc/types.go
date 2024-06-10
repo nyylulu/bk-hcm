@@ -671,10 +671,10 @@ type ApiGateway struct {
 	// BkTicket is the BlueKing access ticket of hcm to request api gateway.
 	BkTicket string `yaml:"bkTicket"`
 	// BkToken is the BlueKing access token of hcm to request api gateway.
-	BkToken      string    `yaml:"bkToken"`
-	ServiceID    int64     `yaml:"serviceID"`
-	ApplyLinkFmt string    `yaml:"applyLinkFmt"`
-	TLS          TLSConfig `yaml:"tls"`
+	BkToken         string    `yaml:"bkToken"`
+	ServiceID       int64     `yaml:"serviceID"`
+	ApplyLinkFormat string    `yaml:"applyLinkFormat"`
+	TLS             TLSConfig `yaml:"tls"`
 }
 
 // validate hcm runtime.

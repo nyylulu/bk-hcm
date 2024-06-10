@@ -98,7 +98,7 @@ func (c *itsmCli) CreateTicket(ctx context.Context, header http.Header, user str
 			},
 			{
 				Key:   TicketKeyApplyLink,
-				Value: fmt.Sprintf(c.opts.ApplyLinkFmt, orderId),
+				Value: fmt.Sprintf(c.opts.ApplyLinkFormat, orderId),
 			},
 			{
 				Key:   TicketKeyNeedSysAudit,
