@@ -1,42 +1,25 @@
-import { defineComponent, computed, PropType, watch } from 'vue';
-import { Button } from 'bkui-vue';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
-import { useTable } from '@/hooks/useTable/useTable';
-// import { useResourcePlanStore } from '@/store';
+import { defineComponent, computed, onBeforeMount } from 'vue';
 
+import { Button } from 'bkui-vue';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
-import cssModule from '../index.module.scss';
-import Panel from '@/components/panel';
+
 import { useRouter } from 'vue-router';
+import { useTable } from '@/hooks/useResourcePlanTable';
+import { useResourcePlanStore } from '@/store';
+
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import Panel from '@/components/panel';
+
+import cssModule from './index.module.scss';
+
+import type { IListTicketsParam, IListTicketsResult } from '@/typings/resourcePlan';
+import type { IPageQuery } from '@/typings';
 
 export default defineComponent({
-  props: {
-    searchData: {
-      type: Object as PropType<{
-        bk_biz_ids: number[];
-        obs_projects: string[];
-        ticket_ids: string;
-        applicants: string[];
-        submit_time_range: {
-          start: string;
-          end: string;
-        };
-      }>,
-    },
-  },
-  setup(props) {
-    const renderTableData = [
-      {
-        id: '999',
-        forecast_order: '12123',
-        demand_year_month: '2022-12-09',
-        business: '业务名称',
-        operation_product: '互娱运营支撑产品',
-        creation_time: '2023-09-11',
-      },
-    ];
+  setup(_, { expose }) {
+    let searchModel: Partial<IListTicketsParam> = undefined;
 
-    // const resourcePlanStore = useResourcePlanStore();
+    const resourcePlanStore = useResourcePlanStore();
     const { columns, settings } = useColumns('forecastDemand');
     const router = useRouter();
 
@@ -46,83 +29,76 @@ export default defineComponent({
           label: '预测单号',
           field: 'forecast_order',
           isFormItem: true,
-          render: ({ data }) => (
+          render: ({ data }: { data: IListTicketsResult['detail'][0] }) => (
             <Button text theme='primary' onClick={() => handleToDetail(data)}>
-              {data.forecast_order}
+              {data.id}
             </Button>
           ),
         },
         ...columns,
-        {
-          label: '操作',
-          width: 120,
-          render: () => (
-            <div>
-              <Button text theme={'primary'}>
-                调整需求
-              </Button>
-            </div>
-          ),
-        },
       ];
     });
 
-    const { CommonTable } = useTable({
-      searchOptions: {
-        disabled: true,
-      },
-      tableOptions: {
-        columns: tableColumns.value,
-        reviewData: renderTableData,
-        extra: {
-          settings: settings.value,
-        },
-      },
-      requestOption: {
-        type: '',
-      },
-    });
+    const getData = (page: IPageQuery) => {
+      return resourcePlanStore.reqListTickets({
+        page,
+        ...searchModel,
+      });
+    };
 
-    // const formItemBase = tableColumns.value.filter((item) => item.isFormItem);
+    const {
+      tableData,
+      pagination,
+      isLoading,
+      handlePageChange,
+      handlePageSizeChange,
+      handleSort,
+      triggerApi,
+      resetPagination,
+    } = useTable(getData);
 
     const handleToAdd = () => {
       router.push({ path: '/resource-plan/add' });
     };
 
-    const handleToDetail = (data) => {
+    const handleToDetail = (data: IListTicketsResult['detail'][0]) => {
       router.push({
         path: '/resource-plan/detail',
         query: { id: data.id },
       });
     };
 
-    const getTableData = async () => {
-      try {
-        // const res = await resourcePlanStore.reqListTickets({
-        //   ...props.searchData,
-        // });
-      } catch (error) {
-        console.error(error, 'error'); // eslint-disable-line no-console
-      }
+    const searchTableData = (data: Partial<IListTicketsParam>) => {
+      searchModel = data;
+      resetPagination();
+      triggerApi();
     };
 
-    watch(
-      () => props.searchData,
-      () => {
-        getTableData();
-      },
-      {
-        deep: true,
-      },
-    );
+    onBeforeMount(triggerApi);
+
+    expose({
+      searchTableData,
+    });
+
     return () => (
       <Panel>
-        <Button theme='primary' onClick={() => handleToAdd()}>
-          <PlusIcon class={cssModule['add-font']} />
+        <Button theme='primary' onClick={handleToAdd} class={cssModule.button}>
+          <PlusIcon class={cssModule['plus-icon']} />
           新增
         </Button>
-        {/* 资源预测表格 */}
-        <CommonTable></CommonTable>
+        <bk-loading loading={isLoading.value}>
+          <bk-table
+            remote-pagination
+            show-overflow-tooltip
+            data={tableData.value}
+            pagination={pagination.value}
+            columns={tableColumns.value}
+            settings={settings.value}
+            onPageLimitChange={handlePageSizeChange}
+            onPageValueChange={handlePageChange}
+            onColumnSort={handleSort}
+          />
+        </bk-loading>
       </Panel>
     );
   },

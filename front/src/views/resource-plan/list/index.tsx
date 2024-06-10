@@ -1,26 +1,22 @@
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref } from 'vue';
 import Search from './search';
 import Table from './table';
 import cssModule from './index.module.scss';
 
+import type { IListTicketsParam } from '@/typings/resourcePlan';
+
 export default defineComponent({
   setup() {
-    const searchRef = ref(null);
-    const searchData = ref();
+    const tableRef = ref(null);
 
-    watch(
-      () => searchRef.value?.searchData,
-      (newVal) => {
-        if (newVal) {
-          searchData.value = { ...newVal };
-        }
-      },
-      { deep: true },
-    );
+    const handleSearch = (searchModel: Partial<IListTicketsParam>) => {
+      tableRef.value.searchTableData(searchModel);
+    };
+
     return () => (
       <section class={cssModule.home}>
-        <Search ref={searchRef}></Search>
-        <Table searchData={searchData.value}></Table>
+        <Search onSearch={handleSearch}></Search>
+        <Table ref={tableRef}></Table>
       </section>
     );
   },

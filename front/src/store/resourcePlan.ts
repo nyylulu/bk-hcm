@@ -43,8 +43,8 @@ export const useResourcePlanStore = defineStore({
     getRegions() {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/region/list`);
     },
-    getZones() {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/zone/list`);
+    getZones(region_ids: string[]) {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/zone/list`, { region_ids });
     },
     getSources() {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/demand_source/list`);
@@ -54,6 +54,14 @@ export const useResourcePlanStore = defineStore({
     },
     getDeviceTypes(device_classes: string[]) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/device_type/list`, { device_classes });
+    },
+    // 查询资源预测单据。
+    reqListTickets(data: IListTicketsParam): Promise<ResourcePlanIListTicketsResult> {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/list`, data);
+    },
+    // 获取资源预测申请单据详情。
+    getTicketById(id: string): Promise<ResourcePlanTicketByIdResult> {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/${id}`);
     },
   },
 });

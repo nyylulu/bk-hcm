@@ -18,7 +18,7 @@ export interface IListTicketsParam {
 
 export type ResourcePlanIListTicketsResult = IQueryResData<IListTicketsResult>;
 
-interface IListTicketsResult {
+export interface IListTicketsResult {
   count?: number;
   detail?: {
     id: string;
@@ -45,7 +45,7 @@ interface IListTicketsResult {
 
 export type ResourcePlanTicketByIdResult = IQueryResData<TicketByIdResult>;
 
-interface TicketByIdResult {
+export interface TicketByIdResult {
   id: string;
   base_info: TicketBaseInfo;
   status_info: {
@@ -62,11 +62,13 @@ interface TicketByIdResult {
 export interface TicketDemands {
   obs_project: string;
   expect_time: string;
-  demand_week: string;
-  demand_week_name: string;
-  area: string;
-  region: string;
-  zone: string;
+  area_id: string;
+  area_name: string;
+  region_id: string;
+  region_name: string;
+  zone_id: string;
+  zone_name: string;
+  res_mode: string;
   demand_source: string;
   remark: string;
   cvm: {
@@ -97,6 +99,9 @@ export interface TicketBaseInfo {
   virtual_dept_id: number;
   virtual_dept_name: string;
   demand_class: string;
+  created_at: string;
+  submitted_at: string;
+  remark: string;
 }
 export interface IPlanTicket {
   bk_biz_id: number;
@@ -108,8 +113,10 @@ export interface IPlanTicket {
 export interface IPlanTicketDemand {
   obs_project: string;
   expect_time: string;
-  region: string;
-  zone: string;
+  region_id: string;
+  region_name: string;
+  zone_id: string;
+  zone_name: string;
   demand_source: string;
   remark?: string;
   cvm?: {

@@ -36,8 +36,8 @@ export default defineComponent({
       isLoadingDemandClasses.value = true;
       resourcePlanStore
         .getDemandClasses()
-        .then((data: { details: string[] }) => {
-          demandClasses.value = data.details || [];
+        .then((data: { data: { details: string[] } }) => {
+          demandClasses.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingDemandClasses.value = false;
@@ -52,10 +52,10 @@ export default defineComponent({
       () => props.modelValue.bk_biz_id,
       () => {
         if (props.modelValue.bk_biz_id) {
-          resourcePlanStore.getBizOrgRelation(props.modelValue.bk_biz_id).then((data: IBizOrgRelation) => {
-            productName.value = data.bk_product_name;
-            planProductName.value = data.plan_product_name;
-            deptName.value = data.virtual_dept_name;
+          resourcePlanStore.getBizOrgRelation(props.modelValue.bk_biz_id).then((data: { data: IBizOrgRelation }) => {
+            productName.value = data?.data?.bk_product_name;
+            planProductName.value = data?.data.plan_product_name;
+            deptName.value = data?.data?.virtual_dept_name;
           });
         } else {
           productName.value = '';
@@ -79,6 +79,7 @@ export default defineComponent({
         <bk-form form-type='vertical' ref={formRef} model={props.modelValue} class={cssModule.home}>
           <bk-form-item label={t('业务')} property='bk_biz_id' required>
             <BusinessSelector
+              authed={true}
               modelValue={props.modelValue.bk_biz_id}
               onUpdate:modelValue={(biz: number) => handleUpdateModelValue('bk_biz_id', biz)}></BusinessSelector>
           </bk-form-item>
@@ -91,7 +92,7 @@ export default defineComponent({
           <bk-form-item label={t('部门')}>
             <span class={cssModule.text}>{deptName.value || '--'}</span>
           </bk-form-item>
-          <bk-form-item label={t('预测类型')} property='name' required>
+          <bk-form-item label={t('预测类型')} property='demand_class' required>
             <bk-select
               clearable
               loading={isLoadingDemandClasses.value}

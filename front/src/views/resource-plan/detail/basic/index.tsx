@@ -1,71 +1,63 @@
-import { defineComponent, PropType, ref, watch } from 'vue';
+import { defineComponent, type PropType, computed } from 'vue';
+import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel';
-import cssModule from '../index.module.scss';
+import { timeFormatter } from '@/common/util';
+import cssModule from './index.module.scss';
+
 import { TicketBaseInfo } from '@/typings/resourcePlan';
 export default defineComponent({
   props: {
-    baseData: {
+    baseInfo: {
       type: Object as PropType<TicketBaseInfo>,
     },
   },
   setup(props) {
-    const baseList = ref([
+    const { t } = useI18n();
+
+    const baseList = computed(() => [
       {
-        label: '业务名称：',
-        id: 'bk_biz_name',
-        value: '1111',
+        label: t('业务名称'),
+        value: props.baseInfo?.bk_biz_name,
       },
       {
-        label: '部门：',
-        id: 'plan_product_name',
-        value: '1111',
+        label: t('部门'),
+        value: props.baseInfo?.virtual_dept_name,
       },
       {
-        label: '运营产品：',
-        id: 'bk_product_name',
-        value: '1111',
+        label: t('运营产品'),
+        value: props.baseInfo?.bk_product_name,
       },
       {
-        label: '预测类型：',
-        id: 'demand_class',
-        value: '1111',
+        label: t('规划产品'),
+        value: props.baseInfo?.plan_product_name,
       },
       {
-        label: '规划产品：',
-        id: 'plan_product_name',
-        value: '1111',
+        label: t('预测类型'),
+        value: props.baseInfo?.demand_class,
       },
       {
-        label: '创建时间：',
-        id: '',
-        value: '1111',
+        label: t('提单时间'),
+        value: timeFormatter(props.baseInfo?.submitted_at, 'YYYY-MM-DD'),
+      },
+      {
+        label: t('预测说明'),
+        value: props.baseInfo?.remark,
+        class: 'span-2',
       },
     ]);
 
-    const setBaseListVal = () => {
-      baseList.value = baseList.value.map((item) => {
-        if (item.id in props.baseData) {
-          item.value = props.baseData[item.id];
-        }
-        return item;
-      });
-    };
-
-    watch(
-      () => props.baseData,
-      () => {
-        setBaseListVal();
-      },
-    );
     return () => (
-      <Panel title='基本信息' class={cssModule['mb-16']}>
-        <div class={cssModule['base-grid']}>
+      <Panel title={t('基本信息')}>
+        <ul class={cssModule.home}>
           {baseList.value.map((item) => (
-            <div>
-              {item.label} <span class={cssModule['base-text']}>{item.value}</span>
-            </div>
+            <li class={item.class}>
+              <span class={cssModule.label}>{item.label}：</span>
+              <span class={cssModule.value} title={item.value}>
+                {item.value || '--'}
+              </span>
+            </li>
           ))}
-        </div>
+        </ul>
       </Panel>
     );
   },

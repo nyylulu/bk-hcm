@@ -1,5 +1,5 @@
 import dayjs from 'dayjs';
-import { defineComponent, type PropType, onBeforeMount, ref } from 'vue';
+import { defineComponent, type PropType, onBeforeMount, ref, watch, nextTick } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel';
 import { useResourcePlanStore } from '@/store';
@@ -40,12 +40,34 @@ export default defineComponent({
       emit('update:resourceType', value);
     };
 
+    const handleChooseZone = (id: string) => {
+      const zone = zones.value.find((zone) => zone.zone_id === id);
+      nextTick(() => {
+        handleUpdatePlanTicketDemand('zone_id', zone.zone_id);
+
+        nextTick(() => {
+          handleUpdatePlanTicketDemand('zone_name', zone.zone_name);
+        });
+      });
+    };
+
+    const handleChooseRegion = (id: string) => {
+      const region = regions.value.find((region) => region.region_id === id);
+      nextTick(() => {
+        handleUpdatePlanTicketDemand('region_id', region.region_id);
+
+        nextTick(() => {
+          handleUpdatePlanTicketDemand('region_name', region.region_name);
+        });
+      });
+    };
+
     const getProjectTypes = () => {
       isLoadingProjectType.value = true;
       resourcePlanStore
         .getProjectTypes()
-        .then((data: { details: string[] }) => {
-          projectTypes.value = data.details || [];
+        .then((data: { data: { details: string[] } }) => {
+          projectTypes.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingProjectType.value = false;
@@ -56,8 +78,8 @@ export default defineComponent({
       isLoadingRegion.value = true;
       resourcePlanStore
         .getRegions()
-        .then((data: { details: IRegion[] }) => {
-          regions.value = data.details || [];
+        .then((data: { data: { details: IRegion[] } }) => {
+          regions.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingRegion.value = false;
@@ -65,23 +87,27 @@ export default defineComponent({
     };
 
     const getZones = () => {
-      isLoadingZone.value = true;
-      resourcePlanStore
-        .getZones()
-        .then((data: { details: IZone[] }) => {
-          zones.value = data.details || [];
-        })
-        .finally(() => {
-          isLoadingZone.value = false;
-        });
+      if (props.planTicketDemand.region_id) {
+        isLoadingZone.value = true;
+        resourcePlanStore
+          .getZones([props.planTicketDemand.region_id])
+          .then((data: { data: { details: IZone[] } }) => {
+            zones.value = data?.data?.details || [];
+          })
+          .finally(() => {
+            isLoadingZone.value = false;
+          });
+      } else {
+        zones.value = [];
+      }
     };
 
     const getSources = () => {
       isLoadingSource.value = true;
       resourcePlanStore
         .getSources()
-        .then((data: { details: string[] }) => {
-          sources.value = data.details || [];
+        .then((data: { data: { details: string[] } }) => {
+          sources.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingSource.value = false;
@@ -96,10 +122,18 @@ export default defineComponent({
       return formRef.value.validate();
     };
 
+    watch(
+      () => props.planTicketDemand.region_id,
+      () => {
+        handleUpdatePlanTicketDemand('zone_id', '');
+        getZones();
+      },
+    );
+
     onBeforeMount(() => {
       getProjectTypes();
-      getRegions();
       getZones();
+      getRegions();
       getSources();
     });
 
@@ -127,23 +161,23 @@ export default defineComponent({
               ))}
             </bk-select>
           </bk-form-item>
-          <bk-form-item label={t('云地域')} property='region' required>
+          <bk-form-item label={t('云地域')} property='region_id' required>
             <bk-select
               clearable
               loading={isLoadingRegion.value}
-              modelValue={props.planTicketDemand.region}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('region', val)}>
+              modelValue={props.planTicketDemand.region_id}
+              onChange={(val: string) => handleChooseRegion(val)}>
               {regions.value.map((region) => (
                 <bk-option id={region.region_id} name={region.region_name}></bk-option>
               ))}
             </bk-select>
           </bk-form-item>
-          <bk-form-item label={t('可用区')} property='zone'>
+          <bk-form-item label={t('可用区')} property='zone_id'>
             <bk-select
               clearable
               loading={isLoadingZone.value}
-              modelValue={props.planTicketDemand.zone}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('zone', val)}>
+              modelValue={props.planTicketDemand.zone_id}
+              onChange={(val: string) => handleChooseZone(val)}>
               {zones.value.map((zone) => (
                 <bk-option id={zone.zone_id} name={zone.zone_name}></bk-option>
               ))}

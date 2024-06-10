@@ -37,8 +37,8 @@ export default defineComponent({
       planTicketDemand.value = {
         obs_project: '',
         expect_time: dayjs().format('YYYY-MM-DD'),
-        region: '',
-        zone: '',
+        region_id: '',
+        zone_id: '',
         demand_source: '',
         remark: '',
         cvm: {

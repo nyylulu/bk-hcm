@@ -1,4 +1,4 @@
-import { defineComponent, ref, onBeforeMount, type PropType, watch } from 'vue';
+import { defineComponent, ref, onBeforeMount, type PropType, watch, nextTick } from 'vue';
 import Panel from '@/components/panel';
 import { useI18n } from 'vue-i18n';
 import { useResourcePlanStore } from '@/store';
@@ -23,6 +23,7 @@ export default defineComponent({
     const deviceTypes = ref<IDeviceType[]>([]);
     const isLoadingDeviceClasses = ref(false);
     const isLoadingDeviceTypes = ref(false);
+    const deviceTypeInfo = ref('');
 
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
       emit('update:planTicketDemand', {
@@ -38,8 +39,8 @@ export default defineComponent({
       isLoadingDeviceClasses.value = true;
       resourcePlanStore
         .getDeviceClasses()
-        .then((data: { details: string[] }) => {
-          deviceClasses.value = data.details || [];
+        .then((data: { data: { details: string[] } }) => {
+          deviceClasses.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingDeviceClasses.value = false;
@@ -54,8 +55,8 @@ export default defineComponent({
         isLoadingDeviceTypes.value = true;
         resourcePlanStore
           .getDeviceTypes([props.planTicketDemand.cvm.device_class])
-          .then((data: { details: IDeviceType[] }) => {
-            deviceTypes.value = data.details || [];
+          .then((data: { data: { details: IDeviceType[] } }) => {
+            deviceTypes.value = data?.data?.details || [];
           })
           .finally(() => {
             isLoadingDeviceTypes.value = false;
@@ -69,8 +70,21 @@ export default defineComponent({
       const deviceType = deviceTypes.value.find(
         (deviceType) => deviceType.device_type === props.planTicketDemand.cvm.device_type,
       );
-      handleUpdatePlanTicketDemand('cpu_core', (deviceType?.cpu_core || 0) * props.planTicketDemand.cvm.os);
-      handleUpdatePlanTicketDemand('memory', (deviceType?.memory || 0) * props.planTicketDemand.cvm.os);
+      deviceTypeInfo.value = deviceType
+        ? t('所选机型为{0}，CPU为{1}核，内存为{2}G', [deviceType.core_type, deviceType.cpu_core, deviceType.memory])
+        : '';
+
+      const perCpuCore = deviceType?.cpu_core || 0;
+      const perMemory = deviceType?.memory || 0;
+      const osNum = +props.planTicketDemand.cvm.os;
+
+      nextTick(() => {
+        handleUpdatePlanTicketDemand('cpu_core', perCpuCore * osNum);
+
+        nextTick(() => {
+          handleUpdatePlanTicketDemand('memory', perMemory * osNum);
+        });
+      });
     };
 
     const validate = () => {
@@ -81,7 +95,9 @@ export default defineComponent({
       immediate: true,
     });
 
-    watch([() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os], calcCpuAndMemory);
+    watch([() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os], calcCpuAndMemory, {
+      immediate: true,
+    });
 
     onBeforeMount(() => {
       getDeviceClasses();
@@ -119,9 +135,10 @@ export default defineComponent({
                 modelValue={props.planTicketDemand.cvm.device_type}
                 onChange={(val: string) => handleUpdatePlanTicketDemand('device_type', val)}>
                 {deviceTypes.value.map((deviceType) => (
-                  <bk-option id={deviceType.device_type} name={deviceType.core_type}></bk-option>
+                  <bk-option id={deviceType.device_type} name={deviceType.device_type}></bk-option>
                 ))}
               </bk-select>
+              <span class={cssModule.info}>{deviceTypeInfo.value}</span>
             </bk-form-item>
             <bk-form-item label={t('实例数量')} property='os' class={cssModule['span-2']}>
               <bk-input

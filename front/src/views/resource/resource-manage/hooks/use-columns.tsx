@@ -3141,141 +3141,135 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   // 服务请求 - 资源预测
   const forecastDemandColumns = [
     {
-      label: '预测单号',
-      field: 'forecast_order_number',
-      isDefaultShow: true,
-    },
-    {
-      label: '需求年月',
-      field: 'demand_year_month',
-    },
-    {
-      label: '期望到货时间',
-      field: 'expected_delivery_time',
-      isDefaultShow: true,
-    },
-    {
       label: '业务',
-      field: 'business',
-      isFormItem: true,
+      field: 'bk_biz_name',
       isDefaultShow: true,
     },
     {
       label: '运营产品',
-      field: 'operation_product',
-      isFormItem: true,
+      field: 'bk_product_name',
     },
     {
       label: '规划产品',
-      field: 'planning_product',
-      isFormItem: true,
-    },
-    {
-      label: '项目类型',
-      field: 'project_type',
-      isDefaultShow: true,
+      field: 'plan_product_name',
     },
     {
       label: 'CPU总核心数',
-      field: 'total_cpu_cores',
+      field: 'cpu_core',
       isDefaultShow: true,
     },
     {
-      label: '13周需求类型',
-      field: '13_week_demand_type',
+      label: '内存总量(GB)',
+      field: 'memory',
+      isFormItem: true,
+    },
+    {
+      label: '云硬盘总量(GB)',
+      field: 'disk_size',
       isDefaultShow: true,
     },
     {
       label: '提单人',
-      field: 'submitter',
+      field: 'applicant',
       isDefaultShow: true,
     },
     {
       label: '备注',
-      field: 'remarks',
+      field: 'remark',
     },
     {
       label: '创建时间',
-      field: 'creation_time',
-      isFormItem: true,
+      field: 'created_at',
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
     },
     {
       label: '提单时间',
-      field: 'submission_time',
+      field: 'submitted_at',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
     },
   ];
 
   // 资源预测详情
   const forecastDemandDetailColums = [
     {
-      label: '地域',
-      field: 'region',
-    },
-    {
-      label: '城市',
-      field: 'city',
-    },
-    {
-      label: '地域',
-      field: 'resource_model',
-      isDefaultShow: true,
-    },
-    {
-      label: '机型',
-      field: 'model_family',
-      isDefaultShow: true,
-    },
-    {
-      label: '机型类型',
-      field: 'model_type',
-    },
-    {
-      label: '机型代次',
-      field: 'model_generation',
-    },
-    {
       label: '机型规格',
-      field: 'model_specification',
-    },
-    {
-      label: '资源池',
-      field: 'resource_pool',
-    },
-    {
-      label: '核心类型',
-      field: 'core_type',
+      field: 'cvm.device_type',
       isDefaultShow: true,
-    },
-    {
-      label: '实例数',
-      field: 'number_of_instances',
     },
     {
       label: '总CPU核数',
-      field: 'total_cpu_cores',
+      field: 'cvm.cpu_core',
+      isDefaultShow: true,
     },
     {
       label: '总内存(G)',
-      field: 'total_memory_gb',
+      field: 'cvm.memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '总云盘大小(G)',
+      field: 'cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '地域',
+      field: 'area_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源模式',
+      field: 'cvm.res_mode',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型族',
+      field: 'cvm.device_family',
+    },
+    {
+      label: '机型类型',
+      field: 'cvm.device_class',
+    },
+    {
+      label: '资源池',
+      field: 'cvm.res_pool',
+    },
+    {
+      label: '核心类型',
+      field: 'cvm.core_type',
+    },
+    {
+      label: '实例数',
+      field: 'total_cpu_cores',
     },
     {
       label: '单例磁盘IO(MB/s)',
-      field: 'single_instance_disk_io',
+      field: 'cbs.disk_io',
       isDefaultShow: true,
     },
     {
       label: '云磁盘类型',
-      field: 'cloud_disk_type',
+      field: 'cbs.disk_type_name',
       isDefaultShow: true,
     },
     {
-      label: '总云盘大小',
-      field: 'total_cloud_disk_size',
-    },
-    {
       label: '备注',
-      field: 'remarks',
+      field: 'remark',
     },
   ];
 
@@ -3313,12 +3307,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '云地域',
-      field: 'region',
+      field: 'region_name',
       isDefaultShow: true,
     },
     {
       label: '可用区',
-      field: 'zone',
+      field: 'zone_name',
       isDefaultShow: true,
     },
     {

@@ -4,7 +4,13 @@ import cssModule from './index.module.scss';
 import { useRouter } from 'vue-router';
 
 export default defineComponent({
-  setup() {
+  props: {
+    id: {
+      type: String,
+    },
+  },
+
+  setup(props) {
     const { t } = useI18n();
     const router = useRouter();
 
@@ -17,7 +23,8 @@ export default defineComponent({
     return () => (
       <span class={cssModule.home}>
         <i class={`${cssModule.arrow} hcm-icon bkhcm-icon-arrows--left-line`} onClick={handleClick}></i>
-        {t('新增资源预测')}
+        {t('申请单详情')}
+        <span class={cssModule.id}> - {props.id}</span>
       </span>
     );
   },

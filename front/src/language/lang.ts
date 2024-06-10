@@ -2963,6 +2963,7 @@ const lang: ILANG = {
   原始CPU: ['Raw CPUs'],
   当前数量: ['Current number'],
   当前CPU: ['Current CPUs'],
+  '所选机型为{0}，CPU为{1}核，内存为{2}G': ['The selected model is {0}, CPU is {1} core, RAM is {2}G'],
   //   '111': ['111'],
   //   '111': ['111'],
   //   '111': ['111'],

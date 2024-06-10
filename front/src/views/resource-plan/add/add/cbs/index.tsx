@@ -40,8 +40,8 @@ export default defineComponent({
       isLoadingDiskTypes.value = true;
       resourcePlanStore
         .getDiskTypes()
-        .then((data: { details: IDiskType[] }) => {
-          diskTypes.value = data.details || [];
+        .then((data: { data: { details: IDiskType[] } }) => {
+          diskTypes.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingDiskTypes.value = false;
@@ -98,11 +98,19 @@ export default defineComponent({
               clearable
             />
           </bk-form-item>
-          <bk-form-item label={t('云盘总量')} property='name'>
+          <bk-form-item
+            label={t('云盘总量')}
+            description={props.resourceType === 'cbs' ? t('需要的云磁盘总量') : t('所有实例的系统盘，数据盘总容量')}
+            property='name'>
             <span class={cssModule.number}>{props.planTicketDemand.cbs.disk_size} GB</span>
           </bk-form-item>
           {props.resourceType === 'cbs' ? (
-            <bk-form-item label={t('所需数量')} property='disk_num' required class={cssModule['span-line']}>
+            <bk-form-item
+              label={t('所需数量')}
+              description={t('需要的云磁盘块数')}
+              property='disk_num'
+              required
+              class={cssModule['span-line']}>
               <bk-input
                 type='number'
                 suffix={t('块')}
@@ -114,7 +122,11 @@ export default defineComponent({
           ) : (
             ''
           )}
-          <bk-form-item label={t('单实例磁盘IO')} property='disk_io' class={cssModule['span-line']}>
+          <bk-form-item
+            label={t('单实例磁盘IO')}
+            description={t('磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260')}
+            property='disk_io'
+            class={cssModule['span-line']}>
             <bk-input
               type='number'
               modelValue={props.planTicketDemand.cbs.disk_io}
