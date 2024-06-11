@@ -23,3 +23,5 @@ export const fetchData = async (params: any) => {
 
   return [detailsRes, countRes];
 };
+
+export type FetchDataType = typeof fetchData;
