@@ -73,7 +73,7 @@ export default defineComponent({
       ...timeObj.value,
       page: pageInfo.value,
     });
-    const { CommonTable, getListData } = useTable({
+    const { CommonTable, getListData, dataList } = useTable({
       tableOptions: {
         columns: tableColumns,
       },
@@ -133,10 +133,9 @@ export default defineComponent({
       fetchStageList();
       getBusinesses();
     });
-    const deviceRef = ref(null);
     return () => (
       <div>
-        <CommonTable ref={deviceRef}>
+        <CommonTable>
           {{
             tabselect: () => (
               <bk-form label-width='110' class='bill-filter-form' model={deviceForm}>
@@ -223,11 +222,7 @@ export default defineComponent({
                     查询
                   </bk-button>
                   <bk-button onClick={clearFilter}>清空</bk-button>
-                  <export-to-excel-button
-                    data={deviceRef.value?.dataList}
-                    columns={tableColumns}
-                    filename='回收设备列表'
-                  />
+                  <export-to-excel-button data={dataList} columns={tableColumns} filename='回收设备列表' />
                 </bk-form-item>
               </bk-form>
             ),

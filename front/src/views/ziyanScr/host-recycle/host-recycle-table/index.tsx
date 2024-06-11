@@ -226,7 +226,7 @@ export default defineComponent({
       },
     });
     const tableColumns = [...columns, ...operateColList];
-    const { CommonTable, getListData } = useTable({
+    const { CommonTable, getListData, dataList } = useTable({
       tableOptions: {
         columns: tableColumns,
         extra: {
@@ -268,12 +268,11 @@ export default defineComponent({
       hostRecyclePage.value = val;
       // TODO 单据列表 是否初始化
     };
-    const recycleRef = ref(null);
     const renderNodes = () => {
       if (hostRecyclePage.value === 0) {
         // eslint-disable-next-line no-nested-ternary
         return switchPage.value === 'HostRecycling' ? (
-          <CommonTable ref={recycleRef}>
+          <CommonTable>
             {{
               tabselect: () => (
                 <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
@@ -354,11 +353,7 @@ export default defineComponent({
                       查询
                     </bk-button>
                     <bk-button onClick={() => clearFilter()}>清空</bk-button>
-                    <export-to-excel-button
-                      data={recycleRef.value?.dataList}
-                      columns={tableColumns}
-                      filename='回收单据列表'
-                    />
+                    <export-to-excel-button data={dataList} columns={tableColumns} filename='回收单据列表' />
                     <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
                       批量查看预检详情
                     </bk-button>

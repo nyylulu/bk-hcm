@@ -174,7 +174,7 @@ export const useTable = (props: IProp) => {
   };
 
   const CommonTable = defineComponent({
-    setup(_props, { slots, expose }) {
+    setup(_props, { slots }) {
       const searchData = computed(() => {
         return (
           (typeof props.searchOptions.searchData === 'function'
@@ -182,8 +182,6 @@ export const useTable = (props: IProp) => {
             : props.searchOptions.searchData) || []
         );
       });
-      // 暴露出表格数据
-      expose({ dataList });
       return () => (
         <div class={`remote-table-container${props?.searchOptions?.disabled ? ' no-search' : ''}`}>
           {typeof props?.scrConfig === 'function' ? (
