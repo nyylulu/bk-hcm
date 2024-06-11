@@ -53,7 +53,7 @@ defineExpose({
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" multiple filterable :loading="loading">
+  <bk-select v-model="selectedValue" :multiple="multiple" filterable :loading="loading">
     <bk-option v-for="(item, index) in businessList" :key="index" :value="item.id" :label="item.name" />
   </bk-select>
 </template>
