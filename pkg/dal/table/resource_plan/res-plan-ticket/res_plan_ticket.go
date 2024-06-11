@@ -52,7 +52,7 @@ var ResPlanTicketColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "remark", NamedC: "remark", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},
-	{Column: "submitted_at", NamedC: "submitted_at", Type: enumor.Time},
+	{Column: "submitted_at", NamedC: "submitted_at", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
 }
@@ -180,6 +180,10 @@ func (r ResPlanTicketTable) InsertValidate() error {
 
 	if len(r.Creator) == 0 {
 		return errors.New("creator can not be empty")
+	}
+
+	if len(r.SubmittedAt) == 0 {
+		return errors.New("submitted can not be empty")
 	}
 
 	return nil

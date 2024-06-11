@@ -30,7 +30,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/resource-plan"
+	mtypes "hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/dal/table"
 	wz "hcm/pkg/dal/table/resource_plan/woa-zone"
 	"hcm/pkg/dal/table/utils"
@@ -45,16 +45,16 @@ import (
 type WoaZoneInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []wz.WoaZoneTable) ([]string, error)
 	Update(kt *kit.Kit, expr *filter.Expression, model *wz.WoaZoneTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.WoaZoneListResult, error)
+	List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaZoneListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 	// GetZoneMap get zone id name mapping.
 	GetZoneMap(kt *kit.Kit) (map[string]string, error)
 	// GetRegionAreaMap get region area mapping.
-	GetRegionAreaMap(kt *kit.Kit) (map[string]rtypes.RegionArea, error)
+	GetRegionAreaMap(kt *kit.Kit) (map[string]mtypes.RegionArea, error)
 	// GetZoneList get zone id and name list.
-	GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.ZoneElem, error)
+	GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]mtypes.ZoneElem, error)
 	// GetRegionList get region id and name list.
-	GetRegionList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.RegionElem, error)
+	GetRegionList(kt *kit.Kit, expr *filter.Expression) ([]mtypes.RegionElem, error)
 }
 
 var _ WoaZoneInterface = new(WoaZoneDao)
@@ -140,7 +140,7 @@ func (d WoaZoneDao) Update(kt *kit.Kit, filterExpr *filter.Expression, model *wz
 }
 
 // List get woa zone list.
-func (d WoaZoneDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.WoaZoneListResult, error) {
+func (d WoaZoneDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaZoneListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list woa zone options is nil")
 	}
@@ -165,7 +165,7 @@ func (d WoaZoneDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.WoaZoneLis
 			return nil, err
 		}
 
-		return &rtypes.WoaZoneListResult{Count: count}, nil
+		return &mtypes.WoaZoneListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -181,7 +181,7 @@ func (d WoaZoneDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.WoaZoneLis
 		return nil, err
 	}
 
-	return &rtypes.WoaZoneListResult{Count: 0, Details: details}, nil
+	return &mtypes.WoaZoneListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete woa zone with tx.
@@ -222,16 +222,16 @@ func (d WoaZoneDao) GetZoneMap(kt *kit.Kit) (map[string]string, error) {
 }
 
 // GetRegionAreaMap get region area mapping.
-func (d WoaZoneDao) GetRegionAreaMap(kt *kit.Kit) (map[string]rtypes.RegionArea, error) {
+func (d WoaZoneDao) GetRegionAreaMap(kt *kit.Kit) (map[string]mtypes.RegionArea, error) {
 	sql := fmt.Sprintf(`SELECT DISTINCT region_id, region_name, area_id, area_name FROM %s`, table.WoaZoneTable)
 	details := make([]wz.WoaZoneTable, 0)
 	if err := d.Orm.Do().Select(kt.Ctx, &details, sql, nil); err != nil {
 		return nil, err
 	}
 
-	regionMap := make(map[string]rtypes.RegionArea)
+	regionMap := make(map[string]mtypes.RegionArea)
 	for _, detail := range details {
-		regionMap[detail.RegionID] = rtypes.RegionArea{
+		regionMap[detail.RegionID] = mtypes.RegionArea{
 			RegionID:   detail.RegionID,
 			RegionName: detail.RegionName,
 			AreaID:     detail.AreaID,
@@ -243,7 +243,7 @@ func (d WoaZoneDao) GetRegionAreaMap(kt *kit.Kit) (map[string]rtypes.RegionArea,
 }
 
 // GetZoneList get zone id and name list.
-func (d WoaZoneDao) GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.ZoneElem, error) {
+func (d WoaZoneDao) GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]mtypes.ZoneElem, error) {
 	if expr == nil {
 		return nil, errf.New(errf.InvalidParameter, "filter expr is required")
 	}
@@ -254,7 +254,7 @@ func (d WoaZoneDao) GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.
 	}
 
 	sql := fmt.Sprintf(`SELECT DISTINCT zone_id, zone_name FROM %s %s`, table.WoaZoneTable, whereExpr)
-	details := make([]rtypes.ZoneElem, 0)
+	details := make([]mtypes.ZoneElem, 0)
 	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}
@@ -263,7 +263,7 @@ func (d WoaZoneDao) GetZoneList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.
 }
 
 // GetRegionList get region id and name list.
-func (d WoaZoneDao) GetRegionList(kt *kit.Kit, expr *filter.Expression) ([]rtypes.RegionElem, error) {
+func (d WoaZoneDao) GetRegionList(kt *kit.Kit, expr *filter.Expression) ([]mtypes.RegionElem, error) {
 	if expr == nil {
 		return nil, errf.New(errf.InvalidParameter, "filter expr is required")
 	}
@@ -274,7 +274,7 @@ func (d WoaZoneDao) GetRegionList(kt *kit.Kit, expr *filter.Expression) ([]rtype
 	}
 
 	sql := fmt.Sprintf(`SELECT DISTINCT region_id, region_name FROM %s %s`, table.WoaZoneTable, whereExpr)
-	details := make([]rtypes.RegionElem, 0)
+	details := make([]mtypes.RegionElem, 0)
 	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}

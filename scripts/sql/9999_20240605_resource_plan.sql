@@ -49,7 +49,7 @@ create table if not exists `res_plan_ticket`
     `remark`            varchar(1024) not null comment '预测说明，最少20字，最多1024字',
     `creator`           varchar(64)   not null comment '创建人',
     `reviser`           varchar(64)   not null comment '更新人',
-    `submitted_at`      timestamp     not null default current_timestamp comment '提单或改单的时间',
+    `submitted_at`      datetime      not null comment '提单或改单的时间',
     `created_at`        timestamp     not null default current_timestamp comment '该记录创建的时间',
     `updated_at`        timestamp     not null default current_timestamp on update current_timestamp comment '该记录更新的时间',
     primary key (`id`)

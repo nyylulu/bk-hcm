@@ -15,12 +15,8 @@ package plan
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
-	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
@@ -29,7 +25,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/resource-plan"
+	mtypes "hcm/pkg/dal/dao/types/meta"
 	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
 	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
@@ -60,7 +56,7 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// default request bkBizIDs is authorized bizs.
-	bkBizIDs, err := s.listAuthorizedBiz(cts)
+	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -89,55 +85,6 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 	return rst, nil
-}
-
-// listAuthorizedBiz list authorized biz with biz access permission from cmdb.
-func (s *service) listAuthorizedBiz(cts *rest.Contexts) ([]int64, error) {
-	authReq := &meta.ListAuthResInput{Type: meta.Biz, Action: meta.Access}
-	authResp, err := s.authorizer.ListAuthorizedInstances(cts.Kit, authReq)
-	if err != nil {
-		logs.Errorf("failed to list authorized instance, err: %v, rid: %d", err, cts.Kit.Rid)
-		return nil, err
-	}
-
-	// search cmdb biz with biz access permission.
-	cmdbReq := &cmdb.SearchBizReq{
-		Fields: []string{"bk_biz_id", "bk_biz_name"},
-	}
-	if !authResp.IsAny {
-		ids := make([]int64, 0, len(authResp.IDs))
-		for _, id := range authResp.IDs {
-			intID, err := strconv.ParseInt(id, 10, 64)
-			if err != nil {
-				return nil, fmt.Errorf("parse id %s failed, err: %v", id, err)
-			}
-			ids = append(ids, intID)
-		}
-
-		cmdbReq.Filter = &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
-						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorIn,
-						Value:    ids,
-					},
-				},
-			},
-		}
-	}
-	resp, err := s.esbClient.Cmdb().SearchBiz(cts.Kit.Ctx, nil, cmdbReq)
-	if err != nil {
-		return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)
-	}
-
-	bkBizIDs := make([]int64, 0, len(resp.Data.Info))
-	for _, info := range resp.Data.Info {
-		bkBizIDs = append(bkBizIDs, info.BkBizId)
-	}
-
-	return bkBizIDs, nil
 }
 
 // convert request parameters to ListOption.
@@ -206,8 +153,7 @@ func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// authorize biz resource plan operation.
-	// TODO 修改为业务-资源预测操作。
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: req.BkBizID}
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ResPlan, Action: meta.Create}, BizID: req.BkBizID}
 	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
 		return nil, err
 	}
@@ -231,13 +177,6 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 		return "", err
 	}
 
-	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
-	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
-	if err != nil {
-		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
-
 	ticketID, err := s.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		ticketIDs, err := s.dao.ResPlanTicket().CreateWithTx(kt, txn, tickets)
 		if err != nil {
@@ -251,6 +190,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 
 		ticketID := ticketIDs[0]
 
+		// create resource plan ticket status.
 		statuses := []rpts.ResPlanTicketStatusTable{
 			{
 				TicketID: ticketID,
@@ -262,52 +202,13 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 			return "", err
 		}
 
-		demands := make([]rpd.ResPlanDemandTable, 0, len(req.Demands))
-		for _, demand := range req.Demands {
-			deviceType := demand.Cvm.DeviceType
-			cvm, tmpErr := dtypes.NewJsonField(rpd.Cvm{
-				ResMode:      demand.Cvm.ResMode,
-				DeviceType:   deviceType,
-				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-				CoreType:     deviceTypeMap[deviceType].CoreType,
-				Os:           *demand.Cvm.Os,
-				CpuCore:      *demand.Cvm.CpuCore,
-				Memory:       *demand.Cvm.Memory,
-			})
-			if tmpErr != nil {
-				logs.Errorf("cvm new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
-				return "", tmpErr
-			}
-			cbs, tmpErr := dtypes.NewJsonField(rpd.Cbs{
-				DiskType:     demand.Cbs.DiskType,
-				DiskTypeName: demand.Cbs.DiskType.Name(),
-				DiskIo:       *demand.Cbs.DiskIo,
-				DiskSize:     *demand.Cbs.DiskSize,
-			})
-			if tmpErr != nil {
-				logs.Errorf("cbs new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
-				return "", tmpErr
-			}
-
-			demands = append(demands, rpd.ResPlanDemandTable{
-				TicketID:     ticketID,
-				ObsProject:   demand.ObsProject,
-				ExpectTime:   demand.ExpectTime,
-				ZoneID:       demand.ZoneID,
-				ZoneName:     zoneMap[demand.RegionID],
-				RegionID:     demand.RegionID,
-				RegionName:   regionAreaMap[demand.RegionID].RegionName,
-				AreaID:       regionAreaMap[demand.RegionID].AreaID,
-				AreaName:     regionAreaMap[demand.RegionID].AreaName,
-				DemandSource: demand.DemandSource,
-				Remark:       demand.Remark,
-				Cvm:          cvm,
-				Cbs:          cbs,
-				Creator:      kt.User,
-				Reviser:      kt.User,
-			})
+		// create resource plan demands.
+		demands, err := s.convToRPDemandTableSlice(kt, ticketID, req.Demands)
+		if err != nil {
+			logs.Errorf("convert to resource plan demand table slice failed, err: %v, rid: %s", err, kt.Rid)
+			return "", err
 		}
+
 		if _, err = s.dao.ResPlanDemand().CreateWithTx(kt, txn, demands); err != nil {
 			logs.Errorf("create resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
 			return "", err
@@ -324,7 +225,7 @@ func (s *service) convToRPTicketTableSlice(kt *kit.Kit, req *ptypes.CreateResPla
 	[]rpt.ResPlanTicketTable, error) {
 
 	// get biz org relation.
-	bizOrgRel, err := s.getBizOrgRel(kt, req.BkBizID)
+	bizOrgRel, err := s.logics.GetBizOrgRel(kt, req.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -365,8 +266,8 @@ func (s *service) convToRPTicketTableSlice(kt *kit.Kit, req *ptypes.CreateResPla
 	return tickets, nil
 }
 
-// getMetaMaps get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
-func (s *service) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]rtypes.RegionArea,
+// getMetaMaps get create resource plan demand needed zoneMap, regionAreaMap and deviceTypeMap.
+func (s *service) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]mtypes.RegionArea,
 	map[string]wdt.WoaDeviceTypeTable, error) {
 
 	// get zone id name mapping.
@@ -391,6 +292,68 @@ func (s *service) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]rtypes
 	}
 
 	return zoneMap, regionAreaMap, deviceTypeMap, nil
+}
+
+// convert CreateResPlanDemandReq slice to ResPlanTicketTable slice.
+func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, requests []ptypes.CreateResPlanDemandReq) (
+	[]rpd.ResPlanDemandTable, error) {
+
+	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
+	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
+	if err != nil {
+		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	demands := make([]rpd.ResPlanDemandTable, 0, len(requests))
+	for _, req := range requests {
+		deviceType := req.Cvm.DeviceType
+		cvm, tmpErr := dtypes.NewJsonField(rpd.Cvm{
+			ResMode:      req.Cvm.ResMode,
+			DeviceType:   deviceType,
+			DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
+			DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
+			CoreType:     deviceTypeMap[deviceType].CoreType,
+			Os:           *req.Cvm.Os,
+			CpuCore:      *req.Cvm.CpuCore,
+			Memory:       *req.Cvm.Memory,
+		})
+		if tmpErr != nil {
+			logs.Errorf("cvm new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
+			return nil, tmpErr
+		}
+
+		cbs, tmpErr := dtypes.NewJsonField(rpd.Cbs{
+			DiskType:     req.Cbs.DiskType,
+			DiskTypeName: req.Cbs.DiskType.Name(),
+			DiskIo:       *req.Cbs.DiskIo,
+			DiskSize:     *req.Cbs.DiskSize,
+		})
+		if tmpErr != nil {
+			logs.Errorf("cbs new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
+			return nil, tmpErr
+		}
+
+		demands = append(demands, rpd.ResPlanDemandTable{
+			TicketID:     ticketID,
+			ObsProject:   req.ObsProject,
+			ExpectTime:   req.ExpectTime,
+			ZoneID:       req.ZoneID,
+			ZoneName:     zoneMap[req.RegionID],
+			RegionID:     req.RegionID,
+			RegionName:   regionAreaMap[req.RegionID].RegionName,
+			AreaID:       regionAreaMap[req.RegionID].AreaID,
+			AreaName:     regionAreaMap[req.RegionID].AreaName,
+			DemandSource: req.DemandSource,
+			Remark:       req.Remark,
+			Cvm:          cvm,
+			Cbs:          cbs,
+			Creator:      kt.User,
+			Reviser:      kt.User,
+		})
+	}
+
+	return demands, nil
 }
 
 // GetResPlanTicket get resource plan ticket detail.

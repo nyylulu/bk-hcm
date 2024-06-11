@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package resplan
+package meta
 
 import (
 	wz "hcm/pkg/dal/table/resource_plan/woa-zone"

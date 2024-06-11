@@ -19,7 +19,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
-	rtypes "hcm/pkg/dal/dao/types/resource-plan"
+	dtypes "hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -52,7 +52,7 @@ func (s *service) ListRegion(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	return &core.ListResultT[rtypes.RegionElem]{Details: details}, nil
+	return &core.ListResultT[dtypes.RegionElem]{Details: details}, nil
 }
 
 // ListZone lists zone.
@@ -78,7 +78,7 @@ func (s *service) ListZone(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	return &core.ListResultT[rtypes.ZoneElem]{Details: details}, nil
+	return &core.ListResultT[dtypes.ZoneElem]{Details: details}, nil
 }
 
 // ListDeviceClass lists region.
