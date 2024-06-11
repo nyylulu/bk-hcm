@@ -233,7 +233,7 @@ func (svc *clbSvc) TCloudZiyanUpdateCLB(cts *rest.Contexts) (any, error) {
 func (svc *clbSvc) tcloudZiyanLbSync(kt *kit.Kit, tcloud ziyan.TCloudZiyan, accountID string, region string,
 	lbIDs []string) error {
 
-	syncClient := syncziyan.NewClient(svc.dataCli, tcloud)
+	syncClient := syncziyan.NewClient(svc.dataCli, tcloud, svc.esb)
 	params := &syncziyan.SyncBaseParams{
 		AccountID: accountID,
 		Region:    region,
@@ -247,7 +247,7 @@ func (svc *clbSvc) tcloudZiyanLbSync(kt *kit.Kit, tcloud ziyan.TCloudZiyan, acco
 	return nil
 }
 
-// CreateTCloudListener 创建监听器
+// CreateTCloudZiyanListener 创建监听器
 func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, error) {
 	req := new(protolb.ListenerWithRuleCreateReq)
 	if err := cts.DecodeInto(req); err != nil {

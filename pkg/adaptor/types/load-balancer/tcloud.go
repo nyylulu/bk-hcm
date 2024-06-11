@@ -137,6 +137,8 @@ func (opt TCloudListOption) Validate() error {
 
 // TCloudClb for clb Instance
 type TCloudClb struct {
+	BkBizID   int64
+	Bs2NameID int64
 	*tclb.LoadBalancer
 }
 

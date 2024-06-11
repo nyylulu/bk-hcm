@@ -42,3 +42,6 @@ const (
 	// BatchModifyTargetWeightCloudMaxLimit 公有云上批量修改RS权重的最大限制数量
 	BatchModifyTargetWeightCloudMaxLimit = 100
 )
+
+// SyncConcurrencyZiyanMaxLimit 自研云同步并发最大限制
+const SyncConcurrencyZiyanMaxLimit = 5

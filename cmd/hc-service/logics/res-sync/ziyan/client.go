@@ -23,6 +23,7 @@ import (
 	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Interface support resource sync.
@@ -72,6 +73,8 @@ type client struct {
 	accountID string
 	cloudCli  ziyan.TCloudZiyan
 	dbCli     *dataservice.Client
+	// 引入esb 是为了同步时是去cc查询业务信息，后期考虑将clb 业务同步改到CloudServer中异步执行
+	esb esb.Client
 }
 
 // CloudCli return tcloud client.
@@ -80,9 +83,11 @@ func (cli *client) CloudCli() ziyan.TCloudZiyan {
 }
 
 // NewClient new sync client.
-func NewClient(dbCli *dataservice.Client, cloudCli ziyan.TCloudZiyan) Interface {
+func NewClient(dbCli *dataservice.Client, cloudCli ziyan.TCloudZiyan, esbCli esb.Client) Interface {
+	// 获取 cmdb
 	return &client{
-		dbCli:    dbCli,
 		cloudCli: cloudCli,
+		dbCli:    dbCli,
+		esb:      esbCli,
 	}
 }

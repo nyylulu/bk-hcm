@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/hc-service/logics/cloud-adaptor"
 	"hcm/cmd/hc-service/service/capability"
 	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitLoadBalancerService initial the clb service.
@@ -31,6 +32,7 @@ func InitLoadBalancerService(cap *capability.Capability) {
 	svc := &clbSvc{
 		ad:      cap.CloudAdaptor,
 		dataCli: cap.ClientSet.DataService(),
+		esb:     cap.EsbCli,
 	}
 
 	svc.initTCloudClbService(cap)
@@ -40,4 +42,5 @@ func InitLoadBalancerService(cap *capability.Capability) {
 type clbSvc struct {
 	ad      *cloudadaptor.CloudAdaptorClient
 	dataCli *dataservice.Client
+	esb     esb.Client
 }

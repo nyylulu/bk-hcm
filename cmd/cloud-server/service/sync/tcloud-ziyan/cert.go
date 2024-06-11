@@ -36,7 +36,8 @@ func SyncCert(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions [
 	kt = kt.NewSubKit()
 
 	start := time.Now()
-	logs.V(3).Infof("tcloud account[%s] sync cert start, time: %v, rid: %s", accountID, start, kt.Rid)
+	logs.V(3).Infof("%s account[%s] sync cert start, time: %v, rid: %s",
+		enumor.TCloudZiyan, accountID, start, kt.Rid)
 
 	// 同步中
 	if err := sd.ResSyncStatusSyncing(enumor.CertCloudResType); err != nil {
@@ -44,7 +45,8 @@ func SyncCert(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions [
 	}
 
 	defer func() {
-		logs.V(3).Infof("tcloud account[%s] sync cert end, cost: %v, rid: %s", accountID, time.Since(start), kt.Rid)
+		logs.V(3).Infof("%s account[%s] sync cert end, cost: %v, rid: %s",
+			enumor.TCloudZiyan, accountID, time.Since(start), kt.Rid)
 	}()
 
 	if len(regions) > 0 {
@@ -53,7 +55,7 @@ func SyncCert(kt *kit.Kit, cliSet *client.ClientSet, accountID string, regions [
 			Region:    regions[0],
 		}
 		if err := cliSet.HCService().TCloudZiyan.Cert.SyncCert(kt.Ctx, kt.Header(), req); err != nil {
-			logs.Errorf("sync tcloud ziyan cert failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+			logs.Errorf("%s sync cert failed, req: %+v, err: %v, rid: %s", enumor.TCloudZiyan, req, err, kt.Rid)
 			return err
 		}
 	}

@@ -69,7 +69,7 @@ func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
 		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
-			Limit:  constant.TCloudLoadBalancerQueryMax,
+			Limit:  constant.CloudResourceSyncMaxLimit,
 		},
 	}
 
@@ -88,7 +88,7 @@ func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
 		cloudIDs = append(cloudIDs, converter.PtrToVal(one.LoadBalancerId))
 	}
 
-	hd.offset += constant.TCloudLoadBalancerQueryMax
+	hd.offset += uint64(len(cloudIDs))
 	return cloudIDs, nil
 }
 

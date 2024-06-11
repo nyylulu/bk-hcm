@@ -47,10 +47,10 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_inst_id", req.CloudInstIDs))
 	}
 	if len(req.CloudVpcIDs) != 0 {
-		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_vpc_ids", req.CloudVpcIDs))
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_vpc_id", req.CloudVpcIDs))
 	}
 	if len(req.CloudSubnetIDs) != 0 {
-		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_subnet_ids", req.CloudSubnetIDs))
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_cloud_subnet_id", req.CloudSubnetIDs))
 	}
 	params := &cmdb.ListBizHostParams{
 		BizID:              req.BkBizID,

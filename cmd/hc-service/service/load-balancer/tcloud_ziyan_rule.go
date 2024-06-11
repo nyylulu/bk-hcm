@@ -305,7 +305,7 @@ func (svc *clbSvc) TCloudZiyanBatchDeleteUrlRuleByDomain(cts *rest.Contexts) (an
 func (svc *clbSvc) ziyanLblSync(kt *kit.Kit, adaptor ziyan.TCloudZiyan, lb *corelb.BaseLoadBalancer,
 	cloudIDs []string) error {
 
-	syncClient := syncZiyan.NewClient(svc.dataCli, adaptor)
+	syncClient := syncZiyan.NewClient(svc.dataCli, adaptor, svc.esb)
 	opt := &syncZiyan.SyncListenerOption{
 		BizID:     lb.BkBizID,
 		LBID:      lb.ID,

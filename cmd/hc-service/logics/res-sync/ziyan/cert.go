@@ -379,7 +379,7 @@ func (cli *client) RemoveCertDeleteFromCloud(kt *kit.Kit, accountID, region stri
 func convTCloudTimeStd(t string) string {
 	parse, err := time.Parse(constant.DateTimeLayout, t)
 	if err != nil {
-		logs.Errorf("[%s] parse time failed, time: %s, err: %v", enumor.TCloud, t, err)
+		logs.Errorf("[%s] parse time failed, time: %s, err: %v", enumor.TCloudZiyan, t, err)
 		return ""
 	}
 	return parse.Format(constant.TimeStdFormat)

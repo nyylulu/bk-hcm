@@ -21,8 +21,10 @@
 package ziyan
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"hcm/cmd/hc-service/logics/res-sync/common"
 	typecore "hcm/pkg/adaptor/types/core"
@@ -37,6 +39,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
@@ -48,8 +51,8 @@ import (
 // 1. 同步该负载均衡自身属性，同步关联安全组信息
 // 2. 同步该负载均衡下的监听器
 // 3. 同步监听器下的规则
-func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult,
-	error) {
+func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (
+	*SyncResult, error) {
 
 	_, err := cli.LoadBalancer(kt, params, opt)
 	if err != nil {
@@ -58,8 +61,6 @@ func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams,
 	}
 	// 同步下属监听器
 	requiredLBCloudIds := params.CloudIDs
-	// 获取同步后的lb数据
-	params.CloudIDs = nil
 	lbList, err := cli.listLBFromDB(kt, params)
 	if err != nil {
 		logs.Errorf("fail to get lb from db after lb layer sync, before listener sync, err: %v, rid: %s", err, kt.Rid)
@@ -111,8 +112,14 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 		return new(SyncResult), nil
 	}
 
+	// 从云上Tag获取二级业务id，再从cc获取cc业务id，后续关联资源同步都会同步到这个业务下
+	if err := cli.fillBkBizId(kt, lbFromCloud); err != nil {
+		logs.Errorf("fail to fill bk biz id, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	addSlice, updateMap, delCloudIDs := common.Diff[typeslb.TCloudClb, corelb.TCloudLoadBalancer](
-		lbFromCloud, lbFromDB, isLBChange)
+		lbFromCloud, lbFromDB, isZiyanLBChange)
 
 	// 删除云上已经删除的负载均衡实例
 	if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
@@ -393,7 +400,7 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 		Name:             cvt.PtrToVal(cloud.LoadBalancerName),
 		Vendor:           enumor.TCloudZiyan,
 		AccountID:        accountID,
-		BkBizID:          constant.UnassignedBiz,
+		BkBizID:          cloud.BkBizID,
 		LoadBalancerType: cvt.PtrToVal(cloud.LoadBalancerType),
 		IPVersion:        cloud.GetIPVersion(),
 		Region:           region,
@@ -487,6 +494,7 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 	cloudSubnetID := cvt.PtrToVal(cloud.SubnetId)
 	lb := protocloud.LoadBalancerExtUpdateReq[corelb.TCloudClbExtension]{
 		ID:               id,
+		BkBizID:          cloud.BkBizID,
 		Name:             cvt.PtrToVal(cloud.LoadBalancerName),
 		Domain:           cvt.PtrToVal(cloud.LoadBalancerDomain),
 		IPVersion:        cloud.GetIPVersion(),
@@ -559,9 +567,13 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 	return &lb
 }
 
-func isLBChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) bool {
+func isZiyanLBChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) bool {
 
 	if db.Name != cvt.PtrToVal(cloud.LoadBalancerName) {
+		return true
+	}
+
+	if cloud.BkBizID != db.BkBizID {
 		return true
 	}
 
@@ -733,4 +745,75 @@ type SyncLBOption struct {
 // Validate ...
 func (o *SyncLBOption) Validate() error {
 	return validator.Validate.Struct(o)
+}
+
+// 从cc处根据二级业务id查询到对应cc业务id, 并填充对应数据
+func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) error {
+	// 赋值业务id
+	bs2NameIds := make([]int64, 0, len(lbFromCloud))
+	for i, clb := range lbFromCloud {
+		// 从tag解析二级业务id
+		bs2NameId, err := getZiyanBs2NameIDByTag(clb)
+		if err != nil {
+			logs.Errorf("fail to get bs2NameId of load balancer %s, err: %v, rid: %s", clb.GetCloudID(), err, kt.Rid)
+			// 没有找到不报错，fallback 到 -1
+			bs2NameId = -1
+		}
+		lbFromCloud[i].Bs2NameID = bs2NameId
+		if bs2NameId > 0 {
+			bs2NameIds = append(bs2NameIds, bs2NameId)
+		}
+	}
+	bs2bkBizIDMap := make(map[int64]int64, len(slice.Unique(bs2NameIds)))
+	if len(bs2NameIds) > 0 {
+		param := &cmdb.SearchBizParams{
+			Page: cmdb.BasePage{},
+			BizPropertyFilter: &cmdb.QueryFilter{
+				Rule: cmdb.Combined(cmdb.ConditionAnd, cmdb.In("bs2_name_id", bs2NameIds)),
+			},
+		}
+		business, err := cli.esb.Cmdb().SearchBusiness(kt, param)
+		if err != nil {
+			logs.Errorf("fail to search cmdb business, err:%v,bs2_name_id list: %v, rid: %s", err, bs2NameIds, kt.Rid)
+			return err
+		}
+
+		for _, biz := range business.Info {
+			bs2bkBizIDMap[biz.BsName2ID] = biz.BizID
+		}
+	}
+
+	for i, clb := range lbFromCloud {
+		// 对没有解析到标签的业务，fallback到未分配
+		lbFromCloud[i].BkBizID = constant.UnassignedBiz
+		if bkBizID, ok := bs2bkBizIDMap[clb.Bs2NameID]; ok {
+			lbFromCloud[i].BkBizID = bkBizID
+		}
+	}
+	return nil
+}
+
+// 解析标签中的二级业务id
+func getZiyanBs2NameIDByTag(lb typeslb.TCloudClb) (int64, error) {
+	for _, tag := range lb.Tags {
+		switch cvt.PtrToVal(tag.TagKey) {
+		case "二级业务":
+			// FORMAT: CC_BizName_Bs2NameID
+			v := cvt.PtrToVal(tag.TagValue)
+			if !strings.HasPrefix(v, "CC_") {
+				return -1, fmt.Errorf("tag value %s is not started with CC_", v)
+			}
+			parts := strings.Split(v, "_")
+			if len(parts) < 3 {
+				return -1, fmt.Errorf("tag value %s format mismatch CC_xxx_123", v)
+			}
+			bs2NameIDStr := parts[len(parts)-1]
+			bs2NameID, err := strconv.ParseInt(bs2NameIDStr, 10, 64)
+			if err != nil {
+				return -1, fmt.Errorf("fail to parse bs2NameId into int64, tag value: %s, err: %w", v, err)
+			}
+			return bs2NameID, nil
+		}
+	}
+	return -1, errors.New("二级业务 tag not found")
 }
