@@ -86,3 +86,19 @@ export const auditOrder = ({ suborderId, approval, remark }, config) => {
     config,
   );
 };
+
+/** 根据回收单号查询预检任务列表 */
+export const getPrecheckList = (params, config) => {
+  return http.post(getEntirePath('task/findmany/recycle/detect'), params, config);
+};
+
+/** 资源回收预检任务主机列表查询接口 */
+export const getPrecheckIpList = async (params, config) => {
+  const { data } = await http.post(getEntirePath('task/list/recycle/detect/host'), params, config);
+  return data;
+};
+
+/** 资源回收预检任务状态列表查询接口 */
+export const getPrecheckStatusList = () => {
+  return http.get(getEntirePath('task/find/config/recycle/detect/status'));
+};

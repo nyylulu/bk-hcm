@@ -1,88 +1,64 @@
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import { getPrecheckIpList, getPrecheckList } from '@/api/host/recycle';
+import { exportTableToExcel } from '@/utils';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
-import { Button, Sideslider } from 'bkui-vue';
+import { Button } from 'bkui-vue';
+import ExecuteRecord from '../execute-record';
 import './index.scss';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 export default defineComponent({
-  setup() {
-    const { columns } = useColumns('ExecutionRecords');
-    const PDcolumns = [
-      {
-        label: '单号',
-        field: 'orderId',
+  components: {
+    ExecuteRecord,
+  },
+  props: {
+    dataInfo: {
+      type: Object,
+      default: () => {
+        return {};
       },
-      {
-        label: '子单号',
-        field: 'suborderId',
-      },
-      {
-        label: 'IP',
-        field: 'ip',
-        render: ({ row }) => {
-          return (
-            <div onClick={Detailslist(row)}>
-              <span>{row.ip}</span>
-            </div>
-          );
-        },
-      },
-      {
-        label: '状态',
-        field: 'status',
-      },
-      {
-        label: '已执行/总数',
-        field: 'mem',
-        render: ({ row }) => {
-          // return <w-name username={operator} />;
-          return (
-            <div>
-              <span class={row.successNum > 0 ? 'c-success' : ''}>{row.successNum}</span>
-              <span>/</span>
-              <span>{row.totalNum}</span>
-            </div>
-          );
-        },
-      },
-      {
-        label: '更新时间',
-        field: 'updateAt',
-      },
-      {
-        label: '创建时间',
-        field: 'createAt',
-      },
-    ];
-    const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
-    const application = () => {};
-    const filter = ref({
-      require_type: '',
-      region: [],
-      zone: [],
-      device_type: [],
-      device_group: '',
-      cpu: '',
-      mem: '',
-      disk: '',
+    },
+  },
+  setup(props) {
+    const defaultFilter = () => ({
+      order_id: [],
+      suborder_id: props.dataInfo?.suborder_id || [],
+      ip: props.dataInfo?.ip || [],
     });
-    const options = ref({
-      require_types: [],
-      device_groups: deviceGroups,
-      device_types: [],
-      regions: [],
-      zones: [],
-      cpu: [],
-      mem: [],
-    });
-    const querying = ref(false);
+    const filter = ref(defaultFilter());
     const page = ref({
       limit: 50,
       start: 0,
-      sort: '-capacity_flag',
+      enable_count: false,
     });
-    const handleRequireTypeChange = () => {};
-    const { CommonTable } = useTable({
+    const requestParams = computed(() => {
+      return (data) => {
+        return {
+          ...data,
+          page: page.value,
+        };
+      };
+    });
+    const getDyParams = ref(requestParams.value(props.dataInfo));
+    const querying = ref(false);
+    const { columns } = useColumns('pdExecutecolumns');
+    const PDcolumns = [...columns];
+    PDcolumns.splice(2, 0, {
+      label: 'IP',
+      field: 'ip',
+      render: ({ row }) => {
+        return (
+          <Button
+            text
+            theme='primary'
+            disabled={row.listener_num > 0 || row.delete_protect}
+            onClick={() => application(row)}>
+            {row.ip}
+          </Button>
+        );
+      },
+    });
+    const { CommonTable, getListData } = useTable({
       tableOptions: {
         columns: [
           ...PDcolumns,
@@ -94,8 +70,8 @@ export default defineComponent({
                 <Button
                   text
                   theme='primary'
-                  disabled={data.listenerNum > 0 || data.delete_protect}
-                  onClick={() => application()}>
+                  disabled={data.listener_num > 0 || data.delete_protect}
+                  onClick={() => application(data)}>
                   详情
                 </Button>
               );
@@ -108,152 +84,130 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
           payload: {
-            filter: {
-              condition: 'AND',
-              rules: [
-                {
-                  field: 'require_type',
-                  operator: 'equal',
-                  value: 1,
-                },
-                {
-                  field: 'label.device_group',
-                  operator: 'in',
-                  value: ['标准型'],
-                },
-              ],
-            },
-            page: page.value,
+            ...getDyParams.value,
           },
-          filter: { simpleConditions: true, requestId: 'devices' },
+          url: '/api/v1/woa/task/findmany/recycle/detect',
         };
       },
     });
-    const { CommonTable: ExecutionRecordsCommonTable } = useTable({
-      tableOptions: {
-        columns,
-      },
-      requestOption: {
-        type: 'load_balancers/with/delete_protection',
-        sortOption: { sort: 'created_at', order: 'DESC' },
-      },
-      scrConfig: () => {
-        return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
-          payload: {
-            filter: {
-              condition: 'AND',
-              rules: [
-                {
-                  field: 'require_type',
-                  operator: 'equal',
-                  value: 1,
-                },
-                {
-                  field: 'label.device_group',
-                  operator: 'in',
-                  value: ['标准型'],
-                },
-              ],
-            },
-            page: page.value,
-          },
-          filter: { simpleConditions: true, requestId: 'devices' },
-        };
-      },
-    });
-    const openDetails = ref(false);
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const Detailslist = (row) => {
-      openDetails.value = true;
+    const getPdList = (enableCount = false) => {
+      page.value.enable_count = enableCount;
+      page.value = enableCount ? Object.assign(page.value, { limit: 0 }) : page.value;
+      const params = {
+        ...filter.value,
+        order_id: filter.value.order_id.map((item) => Number(item)),
+      };
+      getDyParams.value = requestParams.value(params);
+      getListData();
+      getIpList();
     };
+    const failIpList = ref([]);
+    const allIpList = ref([]);
+    const getIpList = async () => {
+      const params = {
+        ...requestParams.value(filter.value),
+        order_id: filter.value.order_id.map((item) => Number(item)),
+        page: { start: 0, limit: 500 },
+      };
+      const [failIpData, allIpData] = await Promise.all([
+        getPrecheckIpList(Object.assign(params, { status: ['FAILED'] }), {}),
+        getPrecheckIpList(params, {}),
+      ]);
+      failIpList.value = failIpData?.info || [];
+      allIpList.value = allIpData?.info || [];
+    };
+    const filterOrders = () => {
+      page.value.start = 0;
+      getPdList();
+    };
+    const clearFilter = () => {
+      filter.value = defaultFilter();
+      filterOrders();
+    };
+    const exportToExcel = () => {
+      getPrecheckList(Object.assign(requestParams.value(filter.value), { page: { start: 0, limit: 500 } }), {})
+        .then((res) => {
+          const totalList = res.data?.info || [];
+          exportTableToExcel(totalList, columns, '预检详情列表');
+        })
+        .finally(() => {});
+    };
+    const openDetails = ref(false);
+    const transferData = ref({});
+    const application = (row) => {
+      openDetails.value = true;
+      transferData.value = {
+        suborderId: row.suborder_id,
+        ip: row.ip,
+        page: {
+          start: 0,
+          limit: 10,
+          enable_count: true,
+        },
+      };
+    };
+    onMounted(() => {
+      getIpList();
+    });
     return () => (
       <div class='common-card-wrap has-selection'>
         <CommonTable>
           {{
             tabselect: () => (
-              <>
-                <div class='tabselect'>
+              <div class='precheck-operation'>
+                <div class='precheck-input'>
                   <span>单号</span>
-                  <bk-select class='tbkselect' v-model={filter.value.require_type} onChange={handleRequireTypeChange}>
-                    {options.value.require_types.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
-                    ))}
-                  </bk-select>
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={filter.value.order_id}
+                    placeholder='请输入单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
+                  />
                 </div>
-                <div class='tabselect'>
+                <div class='precheck-input'>
                   <span>子单号</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.region}
-                    filterable
-                    show-select-all
-                    multiple-mode='tag'
-                    collapse-tags>
-                    {options.value.regions.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
-                    ))}
-                  </bk-select>
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={filter.value.suborder_id}
+                    placeholder='请输入子单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
+                  />
                 </div>
-                <div class='tabselect'>
+                <div class='precheck-input'>
                   <span>IP</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.zone}
-                    filterable
-                    show-select-all
-                    multiple-mode='tag'
-                    collapse-tags>
-                    {options.value.zones.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_name}
-                        label={item.require_type}></bk-option>
-                    ))}
-                  </bk-select>
+                  <bk-tag-input
+                    class='tag-input-width'
+                    v-model={filter.value.ip}
+                    placeholder='请输入IP'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
+                  />
                 </div>
-                <div class='tabselect'>
-                  <bk-button icon='bk-icon-search' theme='primary' class='bkbutton' loading={querying.value}>
+                <div class='precheck-input'>
+                  <bk-button theme='primary' onClick={filterOrders} loading={querying.value}>
                     <Search></Search>
                     查询
                   </bk-button>
-                  <bk-button class='bkbutton' icon='bk-icon-refresh'>
-                    清空
+                  <bk-button onClick={clearFilter}>清空</bk-button>
+                  <bk-button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
+                    复制所有主机IP <span>({allIpList.value.length})</span>
                   </bk-button>
-                  <bk-button class='bkbutton' icon='bk-icon-refresh'>
-                    复制所有主机IP
+                  <bk-button disabled={failIpList.value.length === 0} v-clipboard={failIpList.value.join('\n')}>
+                    复制失败主机IP <span>({failIpList.value.length})</span>
                   </bk-button>
-                  <bk-button class='bkbutton' icon='bk-icon-refresh'>
-                    复制失败主机IP
-                  </bk-button>
-                  <bk-button class='bkbutton' icon='bk-icon-refresh'>
-                    导出全部
-                  </bk-button>
+                  <bk-button onClick={exportToExcel}>导出全部</bk-button>
                 </div>
-              </>
-            ),
-          }}
-        </CommonTable>
-        <Sideslider class='common-sideslider' width='700' isShow={openDetails.value} title='回收预检详情'>
-          {{
-            default: () => (
-              <div class='common-sideslider-content'>
-                <div>
-                  IP : {} 云梯回收单号: {}
-                </div>
-                <ExecutionRecordsCommonTable></ExecutionRecordsCommonTable>
               </div>
             ),
           }}
-        </Sideslider>
+        </CommonTable>
+        <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
       </div>
     );
   },

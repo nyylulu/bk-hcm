@@ -64,3 +64,17 @@
  .c-warning {
   color: #e6a23c !important;
 }
+.fail-flex {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  & > span {
+    margin-right: 5px;
+  }
+  a {
+    font-size: 0;
+    & > span {
+      font-size: 12px;
+    }
+  }
+}

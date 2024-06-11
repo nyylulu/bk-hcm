@@ -37,12 +37,7 @@ export default defineComponent({
       fetchOptions();
     });
     return () => (
-      <bk-select
-        modelValue={selectedValue}
-        onUpdate:modelValue={updateSelectedValue}
-        v-bind={attrs}
-        // :loading="$isLoading(optionsRequestId)"
-      >
+      <bk-select modelValue={selectedValue} onUpdate:modelValue={updateSelectedValue} v-bind={attrs}>
         {options.value.map(({ value, label }) => {
           return <bk-option key={value} label={label} value={value} />;
         })}

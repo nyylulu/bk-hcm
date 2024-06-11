@@ -182,7 +182,6 @@ export const useTable = (props: IProp) => {
             : props.searchOptions.searchData) || []
         );
       });
-
       return () => (
         <div class={`remote-table-container${props?.searchOptions?.disabled ? ' no-search' : ''}`}>
           {typeof props?.scrConfig === 'function' ? (
