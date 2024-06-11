@@ -64,6 +64,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genRecycleBinResource(a)
 	case meta.Audit:
 		return genAuditResource(a)
+	case meta.ResPlan:
+		return genResPlanResource(a)
 	case meta.Cvm:
 		return genCvmResource(a)
 	case meta.NetworkInterface:
