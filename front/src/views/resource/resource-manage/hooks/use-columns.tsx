@@ -3255,7 +3255,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '实例数',
-      field: 'total_cpu_cores',
+      field: 'cvm.os',
     },
     {
       label: '单例磁盘IO(MB/s)',
