@@ -49,23 +49,24 @@ func NewSopsClientInterface(opts cc.SopsCli, reg prometheus.Registerer) (SopsCli
 		MetricOpts: client.MetricOption{Register: reg},
 	}
 
-	client := &sopsApi{
+	sopsCli := &sopsApi{
 		client: rest.NewClient(c, ""),
+		opts:   opts,
 	}
 
-	return client, nil
+	return sopsCli, nil
 }
 
 // sopsApi sops api interface implementation
 type sopsApi struct {
 	client rest.ClientInterface
-	opts   *ClientOptions
+	opts   cc.SopsCli
 }
 
 func (c *sopsApi) getAuthHeader() (string, string) {
 	key := "X-Bkapi-Authorization"
 	val := fmt.Sprintf("{\"bk_app_code\": \"%s\", \"bk_app_secret\": \"%s\", \"bk_username\":\"%s\"}", c.opts.AppCode,
-		c.opts.AppSecret, c.opts.User)
+		c.opts.AppSecret, c.opts.Operator)
 
 	return key, val
 }

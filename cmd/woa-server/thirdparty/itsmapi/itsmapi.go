@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package itsmapi itsm api
 package itsmapi
 
 import (
@@ -37,8 +38,8 @@ type ITSMClientInterface interface {
 	GetTicketLog(ctx context.Context, header http.Header, id string) (*GetTicketLogResp, error)
 }
 
-// NewIAMClientInterface creates iam api instance
-func NewIAMClientInterface(opts cc.ApiGateway, reg prometheus.Registerer) (ITSMClientInterface, error) {
+// NewITSMClientInterface creates iam api instance
+func NewITSMClientInterface(opts cc.ApiGateway, reg prometheus.Registerer) (ITSMClientInterface, error) {
 	cli, err := client.NewClient(nil)
 	if err != nil {
 		return nil, err
@@ -55,6 +56,7 @@ func NewIAMClientInterface(opts cc.ApiGateway, reg prometheus.Registerer) (ITSMC
 
 	itsmClient := &itsmCli{
 		client: rest.NewClient(c, ""),
+		opts:   &opts,
 	}
 
 	return itsmClient, nil

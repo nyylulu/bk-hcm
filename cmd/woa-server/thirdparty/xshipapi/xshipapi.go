@@ -16,12 +16,12 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
-	"hcm/pkg/rest"
 	"net/http"
 	"strconv"
 	"time"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,10 +53,10 @@ func NewXshipClientInterface(opts cc.XshipCli, reg prometheus.Registerer) (Xship
 
 	xship := &xshipApi{
 		client: rest.NewClient(c, ""),
+		opts:   &opts,
 	}
 
 	return xship, nil
-
 }
 
 // xshipApi Xship api interface implementation

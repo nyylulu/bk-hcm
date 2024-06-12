@@ -196,7 +196,7 @@ func newThirdClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Cli
 	}
 	client.BkChat = bkchat
 
-	itsm, err := itsmapi.NewIAMClientInterface(opts.ITSM, reg)
+	itsm, err := itsmapi.NewITSMClientInterface(opts.ITSM, reg)
 	if err != nil {
 		logs.Errorf("failed to new itsm api client, err: %v", err)
 		return nil, err
