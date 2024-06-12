@@ -32,7 +32,8 @@ export default defineComponent({
     const resourceType = ref('cvm');
     const planTicketDemand = ref<IPlanTicketDemand>();
 
-    const initPlanTicketDemand = () => {
+    const initData = () => {
+      resourceType.value = props.initDemand?.demand_res_types.length < 2 ? 'cbs' : 'cvm';
       planTicketDemand.value = {
         obs_project: '',
         expect_time: '2024-10-01',
@@ -102,7 +103,7 @@ export default defineComponent({
       () => props.isShow,
       () => {
         if (props.isShow) {
-          initPlanTicketDemand();
+          initData();
         }
       },
     );
