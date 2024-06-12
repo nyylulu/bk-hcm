@@ -1,5 +1,11 @@
 .application-detail-container {
   .detail-wrapper {
     margin: 76px 24px;
+    .timeline-container {
+      padding-top: 10px;
+      .timeline-content-txt {
+        color: #979BA5;
+      }
+    }
   }
 }

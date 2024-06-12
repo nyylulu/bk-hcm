@@ -2,7 +2,7 @@ import { defineComponent, ref } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { Button, Form, Input, Table } from 'bkui-vue';
+import { Button, Form, Input, Message, Table } from 'bkui-vue';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import ApplicationStatusSelector from '@/components/scr/application-status-selector';
@@ -20,6 +20,7 @@ import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import CommonSideslider from '@/components/common-sideslider';
 import { timeFormatter } from '@/common/util';
 import http from '@/http';
+import { useZiyanScrStore } from '@/store';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -29,6 +30,7 @@ export default defineComponent({
     const { transformRequireTypes } = useRequireTypes();
     const isSidesliderShow = ref(false);
     const machineDetails = ref([]);
+    const scrStore = useZiyanScrStore();
     const { formModel, resetForm } = useFormModel({
       bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
       requireType: [],
@@ -172,6 +174,52 @@ export default defineComponent({
             },
           },
           ...columns,
+          {
+            label: '操作',
+            fixed: 'right',
+            width: 200,
+            render: ({ data }: any) => {
+              return (
+                <div>
+                  <Button size='small' text theme={'primary'} class='mr8'>
+                    再次申请
+                  </Button>
+                  {data.stage !== 'DONE' ? (
+                    <span>
+                      <Button
+                        size='small'
+                        text
+                        theme={'primary'}
+                        class='mr8'
+                        onClick={async () => {
+                          await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
+                          Message({
+                            theme: 'success',
+                            message: '重试成功',
+                          });
+                        }}>
+                        重试
+                      </Button>
+                      <Button
+                        size='small'
+                        text
+                        theme={'primary'}
+                        class='mr8'
+                        onClick={async () => {
+                          await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
+                          Message({
+                            theme: 'success',
+                            message: '终止成功',
+                          });
+                        }}>
+                        终止
+                      </Button>
+                    </span>
+                  ) : null}
+                </div>
+              );
+            },
+          },
         ],
         extra: {
           border: ['row', 'col', 'outer'],

@@ -54,6 +54,22 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/recycled_module/list`, { page });
   };
 
+  /**
+   * 资源申请单据执行接口
+   * @returns {Promise}
+   */
+  const retryOrder = (data: any) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/start/apply`, data);
+  };
+
+  /**
+   * 资源申请单据终止接口
+   * @returns {Promise}
+   */
+  const stopOrder = (data: any) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/terminate/apply`, data);
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -63,5 +79,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getIdcRegionList,
     queryIdcZoneList,
     getRecycleAreas,
+    retryOrder,
+    stopOrder,
   };
 });

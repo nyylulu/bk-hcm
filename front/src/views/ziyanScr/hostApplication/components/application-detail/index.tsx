@@ -1,19 +1,30 @@
-import { defineComponent, onMounted, reactive, ref } from 'vue';
+import { Ref, defineComponent, onMounted, ref } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import CommonCard from '@/components/CommonCard';
-import { Button, Form, Table } from 'bkui-vue';
+import { Button, Table, Timeline } from 'bkui-vue';
 import http from '@/http';
 import { useRoute } from 'vue-router';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 import { Share } from 'bkui-vue/lib/icon';
+import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
+import { timeFormatter } from '@/common/util';
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 export default defineComponent({
   setup() {
     const route = useRoute();
-    const detail = ref({});
-
+    const detail: Ref<{
+      suborders: [
+        {
+          resource_type: string;
+        },
+      ];
+    }> = ref({});
+    const { transformRequireTypes } = useRequireTypes();
+    const { columns: CloudHostcolumns } = useColumns('CloudHost');
+    const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
     const applyRecord = ref({
       order_id: 0,
       itsm_ticket_id: '',
@@ -45,7 +56,7 @@ export default defineComponent({
     onMounted(async () => {
       const { data } = await getOrderDetail(route.params.id as string);
       detail.value = data;
-      const {data: auditData} = await getOrderAuditRecords(route.params.id as string);
+      const { data: auditData } = await getOrderAuditRecords(route.params.id as string);
       applyRecord.value = auditData;
     });
     return () => (
@@ -67,6 +78,9 @@ export default defineComponent({
                 {
                   name: '创建时间',
                   prop: 'create_at',
+                  render() {
+                    return timeFormatter(detail.value.create_at, 'YYYY-MM-DD');
+                  },
                 },
               ]}
             />
@@ -82,10 +96,16 @@ export default defineComponent({
                 {
                   name: '需求类型',
                   prop: 'require_type',
+                  render() {
+                    return transformRequireTypes(detail.value.requireType);
+                  },
                 },
                 {
                   name: '期望交付时间',
                   prop: 'expect_time',
+                  render() {
+                    return timeFormatter(detail.value.expect_time, 'YYYY-MM-DD');
+                  },
                 },
                 {
                   name: '关注人',
@@ -98,12 +118,39 @@ export default defineComponent({
               ]}
             />
           </CommonCard>
+          <CommonCard title={() => '需求子单'} class={'mt24'}>
+            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
+              <>
+                <p class={'mt16 mb8'}>云主机</p>
+                <Table data={detail.value.suborders} columns={CloudHostcolumns} />
+              </>
+            )}
+            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'IDCDVM') && (
+              <>
+                <p class={'mt16 mb8'}>物理机</p>
+                <Table data={detail.value.suborders} columns={PhysicalMachinecolumns} />
+              </>
+            )}
+          </CommonCard>
           <CommonCard title={() => '审批流程'} class={'mt24'}>
-            <Button theme='primary' text onClick={() => {
-              window.open(applyRecord.value.itsm_ticket_link, '_blank');
-            }}>
-              <Share width={12} height={12} class={'mr4'} fill='#3A84FF'/>跳转到 ITSM 查看审批详情
+            <Button
+              theme='primary'
+              text
+              onClick={() => {
+                window.open(applyRecord.value.itsm_ticket_link, '_blank');
+              }}>
+              <Share width={12} height={12} class={'mr4'} fill='#3A84FF' />
+              跳转到 ITSM 查看审批详情
             </Button>
+            <div class={'timeline-container'}>
+              <Timeline
+                list={applyRecord.value.logs.map(({ message, operate_at }) => ({
+                  tag: message,
+                  content: <span class={'timeline-content-txt'}>{operate_at}</span>,
+                  nodeType: 'vnode',
+                }))}
+              />
+            </div>
           </CommonCard>
         </div>
       </div>

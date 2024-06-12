@@ -1838,7 +1838,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const CHColumns = [
     {
       label: '机型',
-      field: 'spec.deviceType',
+      field: 'spec.device_type',
       width: 180,
     },
     {
@@ -1856,16 +1856,16 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '镜像',
-      field: 'spec.imageId',
+      field: 'spec.image_id',
     },
     {
       label: '数据盘大小',
-      field: 'spec.diskSize',
+      field: 'spec.disk_size',
       width: 180,
     },
     {
       label: '数据盘类型',
-      field: 'spec.diskType',
+      field: 'spec.disk_type',
     },
     {
       label: '私有网络',
@@ -1877,7 +1877,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '网络类型',
-      field: 'spec.networkType',
+      field: 'spec.network_type',
     },
     {
       label: '备注',
@@ -1887,7 +1887,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const PMColumns = [
     {
       label: '机型',
-      field: 'deviceType',
+      field: 'device_type',
       width: 150,
     },
     {
@@ -1905,11 +1905,11 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: 'RAID 类型',
-      field: 'raidType',
+      field: 'raid_type',
     },
     {
       label: '操作系统',
-      field: 'osType',
+      field: 'os_type',
     },
     {
       label: '备注',
@@ -2873,30 +2873,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           {data.remark}
         </div>
       ),
-    },
-    {
-      label: '操作',
-      fixed: 'right',
-      width: 200,
-      render: ({ data }: any) => {
-        return (
-          <div>
-            <Button size='small' text theme={'primary'} class='mr8'>
-              再次申请
-            </Button>
-            {data.stage !== 'DONE' ? (
-              <span>
-                <Button size='small' text theme={'primary'} class='mr8'>
-                  重试
-                </Button>
-                <Button size='small' text theme={'primary'} class='mr8'>
-                  终止
-                </Button>
-              </span>
-            ) : null}
-          </div>
-        );
-      },
     },
   ];
 
