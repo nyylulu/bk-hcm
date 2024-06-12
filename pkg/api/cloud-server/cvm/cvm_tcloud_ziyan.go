@@ -57,5 +57,9 @@ type CmdbHostQueryReq struct {
 	CloudInstIDs   []string      `json:"inst_ids" validate:"omitempty"`
 	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
 	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
+	InnerIP        []string      `json:"inner_ip" validate:"omitempty"`
+	OuterIP        []string      `json:"outer_ip" validate:"omitempty"`
+	InnerIPv6      []string      `json:"inner_ipv6" validate:"omitempty"`
+	OuterIPv6      []string      `json:"outer_ipv6" validate:"omitempty"`
 	Page           cmdb.BasePage `json:"page" validate:"required"`
 }
