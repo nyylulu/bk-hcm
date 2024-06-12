@@ -54,11 +54,11 @@ func (s RPTicketStatus) Validate() error {
 
 // rdTicketStatusNameMap records RPTicketStatus's name.
 var rdTicketStatusNameMap = map[RPTicketStatus]string{
-	RPTicketStatusInit:     "未审批",
+	RPTicketStatusInit:     "待审批",
 	RPTicketStatusAuditing: "审批中",
-	RPTicketStatusRejected: "已拒绝",
-	RPTicketStatusDone:     "通过",
-	RPTicketStatusFailed:   "失败",
+	RPTicketStatusRejected: "审批拒绝",
+	RPTicketStatusDone:     "审批通过",
+	RPTicketStatusFailed:   "审批失败",
 }
 
 // Name return RPTicketStatus's name.
