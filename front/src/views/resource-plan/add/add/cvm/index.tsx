@@ -115,9 +115,13 @@ export default defineComponent({
       },
     );
 
-    watch([() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os], calcCpuAndMemory, {
-      immediate: true,
-    });
+    watch(
+      [() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os, () => deviceTypes.value],
+      calcCpuAndMemory,
+      {
+        immediate: true,
+      },
+    );
 
     onBeforeMount(() => {
       getDeviceClasses();
