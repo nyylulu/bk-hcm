@@ -115,7 +115,7 @@ export default defineComponent({
         width='960'
         class={cssModule.home}
         isShow={props.isShow}
-        title={t('增加预测类型')}
+        title={props.initDemand ? t('修改预测需求') : t('增加预测需求')}
         handleClose={handleClose}
         onUpdate:isShow={handleClose}
         onHandleSubmit={handleSubmit}

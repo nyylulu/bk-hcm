@@ -60,8 +60,6 @@ export default defineComponent({
     };
 
     const getDeviceTypes = () => {
-      // 重置机型规格
-      handleUpdatePlanTicketDemand('device_type', '');
       // 重置机型规格列表
       if (props.planTicketDemand.cvm.device_class) {
         isLoadingDeviceTypes.value = true;
@@ -107,9 +105,15 @@ export default defineComponent({
       return formRef.value?.clearValidate();
     };
 
-    watch(() => props.planTicketDemand.cvm.device_class, getDeviceTypes, {
-      immediate: true,
-    });
+    watch(
+      () => props.planTicketDemand.cvm.device_class,
+      () => {
+        // 重置机型规格
+        handleUpdatePlanTicketDemand('device_type', '');
+        // 更新数据
+        getDeviceTypes();
+      },
+    );
 
     watch([() => props.planTicketDemand.cvm.device_type, () => props.planTicketDemand.cvm.os], calcCpuAndMemory, {
       immediate: true,
@@ -117,6 +121,7 @@ export default defineComponent({
 
     onBeforeMount(() => {
       getDeviceClasses();
+      getDeviceTypes();
     });
 
     expose({

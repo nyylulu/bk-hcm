@@ -36,13 +36,16 @@ export default defineComponent({
         value: props.baseInfo?.demand_class,
       },
       {
+        label: t('提单人'),
+        value: props.baseInfo?.applicant,
+      },
+      {
         label: t('提单时间'),
         value: timeFormatter(props.baseInfo?.submitted_at, 'YYYY-MM-DD'),
       },
       {
         label: t('预测说明'),
         value: props.baseInfo?.remark,
-        class: 'span-2',
       },
     ]);
 

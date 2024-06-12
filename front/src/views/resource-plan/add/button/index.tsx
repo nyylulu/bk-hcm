@@ -25,9 +25,12 @@ export default defineComponent({
       try {
         isLoading.value = true;
         await validate();
-        await resourcePlanStore.createPlan(props.modelValue);
+        const data = await resourcePlanStore.createPlan(props.modelValue);
         router.push({
-          path: '/resource-plan/list',
+          path: '/resource-plan/detail',
+          query: {
+            id: data.data.id,
+          },
         });
       } catch (error: any) {
         Message({

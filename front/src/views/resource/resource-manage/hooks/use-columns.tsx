@@ -3228,6 +3228,11 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
+      label: '可用区',
+      field: 'zone_name',
+      isDefaultShow: true,
+    },
+    {
       label: '资源模式',
       field: 'cvm.res_mode',
       isDefaultShow: true,
