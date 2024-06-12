@@ -98,8 +98,8 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/cvmzw',
-
         name: 'CVM子网',
+        component: () => import('@/views/ziyanScr/cvm-web'),
         children: [],
         meta: {
           activeKey: 'cvmzw',

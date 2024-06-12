@@ -32,6 +32,7 @@ import {
   dateTimeTransform,
   getPrecheckStatusLabel,
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
@@ -2781,6 +2782,60 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'amount',
     },
   ];
+  // 资源配置管理-CVM子网
+  const cvmWebColumns = [
+    {
+      type: 'selection',
+    },
+    {
+      label: 'VPC',
+      field: 'vpc_name',
+      render: ({ row }) => {
+        return (
+          <div class='cvm-cell-height'>
+            <div>{row.vpc_name}</div>
+            <div>{row.vpc_id}</div>
+          </div>
+        );
+      },
+    },
+    {
+      label: 'Subnet',
+      field: 'subnet_name',
+      render: ({ row }) => {
+        return (
+          <div class='cvm-cell-height'>
+            <div>{row.subnet_name}</div>
+            <div>{row.subnet_id}</div>
+          </div>
+        );
+      },
+    },
+    {
+      label: '地域',
+      field: 'region',
+      render: ({ row }) => {
+        return (
+          <div class='cvm-cell-height'>
+            <div> {getRegionCn(row.region)}</div>
+            <div>{row.region}</div>
+          </div>
+        );
+      },
+    },
+    {
+      label: '园区',
+      field: 'zone',
+      render: ({ row }) => {
+        return (
+          <div class='cvm-cell-height'>
+            <div> {getZoneCn(row.zone)}</div>
+            <div>{row.zone}</div>
+          </div>
+        );
+      },
+    },
+  ];
 
   const ApplicationListColumns = [
     {
@@ -2916,6 +2971,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
     scrResourceOnlineCreate: scrResourceOnlineCreateColumns,
     scrResourceOfflineCreate: scrResourceOfflineCreateColumns,
+    cvmWebQuery: cvmWebColumns,
     applicationList: ApplicationListColumns,
   };
 

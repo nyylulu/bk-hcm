@@ -78,3 +78,9 @@
     }
   }
 }
+.cvm-cell-height{
+  line-height: 1.6;
+  & > div:last-child {
+    color: #909399;
+  }
+}

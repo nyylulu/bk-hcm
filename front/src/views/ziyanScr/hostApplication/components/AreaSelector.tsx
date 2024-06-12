@@ -19,7 +19,7 @@ export default defineComponent({
     },
   },
   emits: ['change'],
-  setup(props, { emit }) {
+  setup(props, { attrs, emit }) {
     const loading = ref(false);
     const selectedValue = ref();
     const options = ref([]);
@@ -78,6 +78,7 @@ export default defineComponent({
 
     return () => (
       <bk-select
+        v-bind={attrs}
         filterable
         default-first-option
         v-model={props.value}

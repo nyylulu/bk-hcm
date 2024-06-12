@@ -24,7 +24,7 @@ export default defineComponent({
     },
   },
   emits: ['change'],
-  setup(props, { emit }) {
+  setup(props, { attrs, emit }) {
     const options = ref<{ label: string; value: string }[]>([]);
     const optionsRequestId = ref();
     const selectedValue = ref();
@@ -107,7 +107,7 @@ export default defineComponent({
       { immediate: true },
     );
     return () => (
-      <bk-select filterable default-first-option v-model={props.value} onChange={handleSelectorChange}>
+      <bk-select v-bind={attrs} filterable default-first-option v-model={props.value} onChange={handleSelectorChange}>
         {options.value.map((item, index) => (
           <bk-option key={index} value={item.value} label={item.label}></bk-option>
         ))}

@@ -1,0 +1,37 @@
+.filter-form {
+    display: flex;
+    flex-wrap: wrap;
+    background-color: #fff;
+    margin: 15px 0;
+    padding: 10px;
+    & > div {
+        margin-bottom: 10px;
+    }
+    .form-btn {
+        .bk-form-content {
+            display: flex;
+            align-items: center;
+            .bk-button+.bk-button {
+                margin-left: 10px;
+            }
+        }
+    }
+}
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding-right: 5px;
+    margin: -1px 0 -1px -1px;
+    border: 1px solid #c4c6cc;
+    background-color: #f5f7fa;
+    & span:first-child {
+        display: inline-block;
+        margin: 0 5px;
+        height: 30px;
+    }
+}
+.dialog-footer-btn {
+    .bk-button+.bk-button {
+        margin-left: 10px;
+    }
+}
