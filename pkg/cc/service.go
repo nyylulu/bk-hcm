@@ -462,11 +462,9 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
-	Network Network    `yaml:"network"`
-	Service Service    `yaml:"service"`
-	Log     LogOption  `yaml:"log"`
-	Crypto  Crypto     `yaml:"crypto"`
-	Itsm    ApiGateway `yaml:"itsm"`
+	Network Network   `yaml:"network"`
+	Service Service   `yaml:"service"`
+	Log     LogOption `yaml:"log"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -491,14 +489,6 @@ func (s AccountServerSetting) Validate() error {
 	}
 
 	if err := s.Service.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Crypto.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Itsm.validate(); err != nil {
 		return err
 	}
 

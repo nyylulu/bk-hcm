@@ -26,6 +26,7 @@ import (
 	"time"
 
 	"hcm/pkg/cc"
+	accountset "hcm/pkg/dal/dao/account-set"
 	"hcm/pkg/dal/dao/application"
 	daoasync "hcm/pkg/dal/dao/async"
 	"hcm/pkg/dal/dao/audit"
@@ -42,11 +43,11 @@ import (
 	"hcm/pkg/dal/dao/cloud/eip"
 	eipcvmrel "hcm/pkg/dal/dao/cloud/eip-cvm-rel"
 	cimage "hcm/pkg/dal/dao/cloud/image"
-	"hcm/pkg/dal/dao/cloud/load-balancer"
+	loadbalancer "hcm/pkg/dal/dao/cloud/load-balancer"
 	networkinterface "hcm/pkg/dal/dao/cloud/network-interface"
 	nicvmrel "hcm/pkg/dal/dao/cloud/network-interface-cvm-rel"
 	"hcm/pkg/dal/dao/cloud/region"
-	"hcm/pkg/dal/dao/cloud/resource-flow"
+	resflow "hcm/pkg/dal/dao/cloud/resource-flow"
 	resourcegroup "hcm/pkg/dal/dao/cloud/resource-group"
 	routetable "hcm/pkg/dal/dao/cloud/route-table"
 	securitygroup "hcm/pkg/dal/dao/cloud/security-group"
@@ -130,6 +131,8 @@ type Set interface {
 	ResourceFlowRel() resflow.ResourceFlowRelInterface
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
+	MainAccount() accountset.MainAccount
+	RootAccount() accountset.RootAccount
 
 	TCloudZiyanRegion() region.TCloudZiyanRegion
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
@@ -715,4 +718,22 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 // TCloudZiyanRegion 腾讯自研云region dao.
 func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
 	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
+}
+
+// MainAccount return mainaccount dao
+func (s *set) MainAccount() accountset.MainAccount {
+	return &accountset.MainAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RootAccount return rootaccount dao
+func (s *set) RootAccount() accountset.RootAccount {
+	return &accountset.RootAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
 }

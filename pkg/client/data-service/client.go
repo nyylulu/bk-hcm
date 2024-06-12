@@ -27,7 +27,9 @@ import (
 	"hcm/pkg/client/data-service/gcp"
 	"hcm/pkg/client/data-service/global"
 	"hcm/pkg/client/data-service/huawei"
+	"hcm/pkg/client/data-service/kaopu"
 	"hcm/pkg/client/data-service/tcloud"
+	"hcm/pkg/client/data-service/zenlayer"
 	ziyan "hcm/pkg/client/data-service/tcloud-ziyan"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/rest"
@@ -36,12 +38,14 @@ import (
 
 // Client is data-service api client.
 type Client struct {
-	Global      *global.Client
-	TCloud      *tcloud.Client
-	Aws         *aws.Client
-	HuaWei      *huawei.Client
-	Gcp         *gcp.Client
-	Azure       *azure.Client
+	Global   *global.Client
+	TCloud   *tcloud.Client
+	Aws      *aws.Client
+	HuaWei   *huawei.Client
+	Gcp      *gcp.Client
+	Azure    *azure.Client
+	Zenlayer *zenlayer.Client
+	Kaopu    *kaopu.Client
 	TCloudZiyan *ziyan.Client
 }
 
@@ -67,6 +71,12 @@ func NewClient(c *client.Capability, version string) *Client {
 		),
 		Azure: azure.NewClient(
 			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Azure)),
+		),
+		Zenlayer: zenlayer.NewClient(
+			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Zenlayer)),
+		),
+		Kaopu: kaopu.NewClient(
+			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Kaopu)),
 		),
 		TCloudZiyan: ziyan.NewClient(
 			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.TCloudZiyan)),

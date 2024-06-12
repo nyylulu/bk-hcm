@@ -177,6 +177,11 @@ const (
 	// TCloudZiyanSecurityGroupRuleTable 腾讯自研云安全组规则表名
 	TCloudZiyanSecurityGroupRuleTable = "tcloud_ziyan_security_group_rule"
 
+	// MainAccountTable is main_account table's name
+	MainAccountTable Name = "main_account"
+	// RootAccountTable is main_account table's name
+	RootAccountTable Name = "root_account"
+
 	// AccountBillSummaryTable 月度汇总账单
 	AccountBillSummaryTable = "account_bill_summary"
 	// AccountBillSummaryVersionTable 月度汇总账单版本
@@ -287,6 +292,9 @@ var TableMap = map[Name]struct{}{
 	TargetGroupListenerRuleRelTable: {},
 	ResourceFlowRelTable:            {},
 	ResourceFlowLockTable:           {},
+
+	MainAccountTable: {},
+	RootAccountTable: {},
 }
 
 // Register 注册表名
