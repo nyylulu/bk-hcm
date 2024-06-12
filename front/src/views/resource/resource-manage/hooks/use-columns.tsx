@@ -3331,7 +3331,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '云磁盘类型',
-      field: 'cbs.disk_type',
+      field: 'cbs.disk_type_name',
       isDefaultShow: true,
     },
   ];

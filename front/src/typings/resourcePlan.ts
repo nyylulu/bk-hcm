@@ -119,6 +119,7 @@ export interface IPlanTicketDemand {
   zone_name: string;
   demand_source: string;
   remark?: string;
+  demand_res_types: string[];
   cvm?: {
     res_mode: string;
     device_class: string;
@@ -129,6 +130,7 @@ export interface IPlanTicketDemand {
   };
   cbs?: {
     disk_type: string;
+    disk_type_name: string;
     disk_io: number;
     disk_size: number;
     disk_num: number;

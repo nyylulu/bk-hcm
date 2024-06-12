@@ -1,4 +1,4 @@
-import { defineComponent, ref, type PropType, onBeforeMount, watch, computed } from 'vue';
+import { defineComponent, ref, type PropType, onBeforeMount, watch, computed, nextTick } from 'vue';
 import Panel from '@/components/panel';
 import { useI18n } from 'vue-i18n';
 import { useResourcePlanStore } from '@/store';
@@ -30,7 +30,7 @@ export default defineComponent({
           validator: (value: number) => {
             return value > 0;
           },
-          message: t('单实例磁盘IO 数量应大于0'),
+          message: t('单实例磁盘IO应大于0'),
           trigger: 'change',
         },
       ],
@@ -39,7 +39,7 @@ export default defineComponent({
           validator: (value: number) => {
             return value > 0;
           },
-          message: isCVM.value ? t('云磁盘容量/实例 数量应大于0') : t('云磁盘容量/块 数量应大于0'),
+          message: isCVM.value ? t('云磁盘容量/实例应大于0') : t('云磁盘容量/块应大于0'),
           trigger: 'change',
         },
       ],
@@ -52,6 +52,18 @@ export default defineComponent({
           ...props.planTicketDemand.cbs,
           [key]: value,
         },
+      });
+    };
+
+    const handleUpdateDiskType = (val: string) => {
+      const diskType = diskTypes.value.find((diskType) => diskType.disk_type === val);
+      handleUpdatePlanTicketDemand('disk_type', diskType.disk_type);
+      nextTick(() => {
+        handleUpdatePlanTicketDemand('disk_type_name', diskType.disk_type_name);
+
+        nextTick(() => {
+          handleUpdatePlanTicketDemand('disk_io', 15);
+        });
       });
     };
 
@@ -112,7 +124,7 @@ export default defineComponent({
               clearable
               loading={isLoadingDiskTypes.value}
               modelValue={props.planTicketDemand.cbs.disk_type}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('disk_type', val)}>
+              onChange={(val: string) => handleUpdateDiskType(val)}>
               {diskTypes.value.map((diskType) => (
                 <bk-option id={diskType.disk_type} name={diskType.disk_type_name}></bk-option>
               ))}

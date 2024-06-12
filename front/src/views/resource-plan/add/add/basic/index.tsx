@@ -37,6 +37,7 @@ export default defineComponent({
     };
 
     const handleUpdateResourceType = (value: string) => {
+      handleUpdatePlanTicketDemand('demand_res_types', value === 'cvm' ? ['CVM', 'CBS'] : ['CBS']);
       emit('update:resourceType', value);
     };
 
@@ -115,7 +116,6 @@ export default defineComponent({
     };
 
     const getDisabledDate = (date: string) => {
-      // return dayjs(date).isBefore(dayjs().add(13, 'weeks'));
       return dayjs(date).isBefore('2024-10-01');
     };
 

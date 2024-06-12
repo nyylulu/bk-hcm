@@ -18,6 +18,18 @@ export default defineComponent({
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
 
+    const rules = {
+      os: [
+        {
+          validator: (value: number) => {
+            return value > 0;
+          },
+          message: t('实例数量应大于0'),
+          trigger: 'change',
+        },
+      ],
+    };
+
     const formRef = ref();
     const deviceClasses = ref<string[]>([]);
     const deviceTypes = ref<IDeviceType[]>([]);
@@ -115,7 +127,12 @@ export default defineComponent({
     return () =>
       props.resourceType === 'cvm' ? (
         <Panel title={t('CVM云主机信息')}>
-          <bk-form form-type='vertical' model={props.planTicketDemand.cvm} ref={formRef} class={cssModule.home}>
+          <bk-form
+            form-type='vertical'
+            model={props.planTicketDemand.cvm}
+            rules={rules}
+            ref={formRef}
+            class={cssModule.home}>
             <bk-form-item label={t('资源模式')} class={cssModule['span-6']}>
               <bk-radio-group modelValue={props.planTicketDemand.cvm.res_mode}>
                 <bk-radio-button label='按机型' />

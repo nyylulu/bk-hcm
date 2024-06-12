@@ -1,4 +1,4 @@
-import { defineComponent, type PropType, ref, watch, nextTick } from 'vue';
+import { defineComponent, type PropType, ref, watch } from 'vue';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
 import CVM from './cvm';
@@ -40,6 +40,7 @@ export default defineComponent({
         zone_id: '',
         demand_source: '指标变化',
         remark: '',
+        demand_res_types: ['CVM', 'CBS'],
         cvm: {
           res_mode: '按机型',
           device_class: '',
@@ -50,6 +51,7 @@ export default defineComponent({
         },
         cbs: {
           disk_type: '',
+          disk_type_name: '',
           disk_io: 15,
           disk_size: 0,
           disk_num: 0,
@@ -63,20 +65,37 @@ export default defineComponent({
       emit('update:isShow', false);
     };
 
-    const handleSubmit = () => {
-      Promise.all([basicRef.value.validate(), cvmRef.value.validate(), cbsRef.value.validate()]).then(() => {
+    const handleSubmit = async () => {
+      await validate();
+      if (props.initDemand) {
+        const demandIndex = props.modelValue.demands.findIndex((demand) => demand === props.initDemand);
+        emit('update:modelValue', {
+          ...props.modelValue,
+          demands: [
+            ...props.modelValue.demands.slice(0, demandIndex),
+            planTicketDemand.value,
+            ...props.modelValue.demands.slice(demandIndex + 1),
+          ],
+        });
+      } else {
         emit('update:modelValue', {
           ...props.modelValue,
           demands: [...props.modelValue.demands, planTicketDemand.value],
         });
-        handleClose();
-      });
+      }
+      handleClose();
     };
 
-    const clearAllValidate = () => {
-      nextTick(() => {
-        Promise.all([basicRef.value?.clearValidate(), cvmRef.value?.clearValidate(), cbsRef.value?.clearValidate()]);
-      });
+    const validate = () => {
+      return Promise.all([basicRef.value.validate(), cvmRef.value.validate(), cbsRef.value.validate()]);
+    };
+
+    const clearValidate = () => {
+      Promise.all([basicRef.value.clearValidate(), cvmRef.value.clearValidate(), cbsRef.value.clearValidate()]);
+    };
+
+    const handleShown = () => {
+      clearValidate();
     };
 
     watch(
@@ -84,20 +103,11 @@ export default defineComponent({
       () => {
         if (props.isShow) {
           initPlanTicketDemand();
-          clearAllValidate();
         }
       },
     );
 
-    watch(() => resourceType.value, clearAllValidate);
-
-    watch(
-      () => planTicketDemand.value?.cbs.disk_type,
-      () => {
-        // 切换云盘类型时 ，默认 单实例磁盘IO 数量
-        planTicketDemand.value.cbs.disk_io = 15;
-      },
-    );
+    watch(() => resourceType.value, clearValidate);
 
     return () => (
       <CommonSideslider
@@ -107,7 +117,8 @@ export default defineComponent({
         title={t('增加预测类型')}
         handleClose={handleClose}
         onUpdate:isShow={handleClose}
-        onHandleSubmit={handleSubmit}>
+        onHandleSubmit={handleSubmit}
+        onHandleShown={handleShown}>
         <Basic
           ref={basicRef}
           v-model:planTicketDemand={planTicketDemand.value}
