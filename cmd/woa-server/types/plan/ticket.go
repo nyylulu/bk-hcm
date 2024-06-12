@@ -96,18 +96,18 @@ type CreateResPlanDemandReq struct {
 	ZoneID       string              `json:"zone_id" validate:"omitempty"`
 	DemandSource enumor.DemandSource `json:"demand_source" validate:"required"`
 	Remark       string              `json:"remark" validate:"omitempty"`
-	Cvm          struct {
+	Cvm          *struct {
 		ResMode    string `json:"res_mode" validate:"required"`
 		DeviceType string `json:"device_type" validate:"required"`
 		Os         *int64 `json:"os" validate:"required"`
 		CpuCore    *int64 `json:"cpu_core" validate:"required"`
 		Memory     *int64 `json:"memory" validate:"required"`
-	} `json:"cvm"`
-	Cbs struct {
+	} `json:"cvm" validate:"omitempty"`
+	Cbs *struct {
 		DiskType enumor.DiskType `json:"disk_type" validate:"required"`
 		DiskIo   *int64          `json:"disk_io" validate:"required"`
 		DiskSize *int64          `json:"disk_size" validate:"required"`
-	} `json:"cbs"`
+	} `json:"cbs" validate:"omitempty"`
 }
 
 // Validate whether CreateResPlanDemandReq is valid.
@@ -128,28 +128,32 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		return err
 	}
 
-	if *r.Cvm.Os < 0 {
-		return errors.New("os should be >= 0")
+	if r.Cvm != nil {
+		if *r.Cvm.Os < 0 {
+			return errors.New("os should be >= 0")
+		}
+
+		if *r.Cvm.CpuCore < 0 {
+			return errors.New("cpu core should be >= 0")
+		}
+
+		if *r.Cvm.Memory < 0 {
+			return errors.New("memory should be >= 0")
+		}
 	}
 
-	if *r.Cvm.CpuCore < 0 {
-		return errors.New("cpu core should be >= 0")
-	}
+	if r.Cbs != nil {
+		if err := r.Cbs.DiskType.Validate(); err != nil {
+			return err
+		}
 
-	if *r.Cvm.Memory < 0 {
-		return errors.New("memory should be >= 0")
-	}
+		if *r.Cbs.DiskIo < 0 {
+			return errors.New("disk io should be >= 0")
+		}
 
-	if err := r.Cbs.DiskType.Validate(); err != nil {
-		return err
-	}
-
-	if *r.Cbs.DiskIo < 0 {
-		return errors.New("disk io should be >= 0")
-	}
-
-	if *r.Cbs.DiskSize < 0 {
-		return errors.New("disk size should be >= 0")
+		if *r.Cbs.DiskSize < 0 {
+			return errors.New("disk size should be >= 0")
+		}
 	}
 
 	return nil

@@ -234,10 +234,15 @@ func (s *service) convToRPTicketTableSlice(kt *kit.Kit, req *ptypes.CreateResPla
 	// calculate total os, cpu_core, memory and disk_size.
 	var os, cpuCore, memory, diskSize int64
 	for _, demand := range req.Demands {
-		os += *demand.Cvm.Os
-		cpuCore += *demand.Cvm.CpuCore
-		memory += *demand.Cvm.Memory
-		diskSize += *demand.Cbs.DiskSize
+		if demand.Cvm != nil {
+			os += *demand.Cvm.Os
+			cpuCore += *demand.Cvm.CpuCore
+			memory += *demand.Cvm.Memory
+		}
+
+		if demand.Cbs != nil {
+			diskSize += *demand.Cbs.DiskSize
+		}
 	}
 
 	tickets := []rpt.ResPlanTicketTable{
@@ -307,31 +312,36 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 
 	demands := make([]rpd.ResPlanDemandTable, 0, len(requests))
 	for _, req := range requests {
-		deviceType := req.Cvm.DeviceType
-		cvm, tmpErr := dtypes.NewJsonField(rpd.Cvm{
-			ResMode:      req.Cvm.ResMode,
-			DeviceType:   deviceType,
-			DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-			DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-			CoreType:     deviceTypeMap[deviceType].CoreType,
-			Os:           *req.Cvm.Os,
-			CpuCore:      *req.Cvm.CpuCore,
-			Memory:       *req.Cvm.Memory,
-		})
-		if tmpErr != nil {
-			logs.Errorf("cvm new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
-			return nil, tmpErr
+		var cvm, cbs dtypes.JsonField
+		if req.Cvm != nil {
+			deviceType := req.Cvm.DeviceType
+			cvm, err = dtypes.NewJsonField(rpd.Cvm{
+				ResMode:      req.Cvm.ResMode,
+				DeviceType:   deviceType,
+				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
+				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
+				CoreType:     deviceTypeMap[deviceType].CoreType,
+				Os:           *req.Cvm.Os,
+				CpuCore:      *req.Cvm.CpuCore,
+				Memory:       *req.Cvm.Memory,
+			})
+			if err != nil {
+				logs.Errorf("cvm new json field failed, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
+			}
 		}
 
-		cbs, tmpErr := dtypes.NewJsonField(rpd.Cbs{
-			DiskType:     req.Cbs.DiskType,
-			DiskTypeName: req.Cbs.DiskType.Name(),
-			DiskIo:       *req.Cbs.DiskIo,
-			DiskSize:     *req.Cbs.DiskSize,
-		})
-		if tmpErr != nil {
-			logs.Errorf("cbs new json field failed, err: %v, rid: %s", tmpErr, kt.Rid)
-			return nil, tmpErr
+		if req.Cbs != nil {
+			cbs, err = dtypes.NewJsonField(rpd.Cbs{
+				DiskType:     req.Cbs.DiskType,
+				DiskTypeName: req.Cbs.DiskType.Name(),
+				DiskIo:       *req.Cbs.DiskIo,
+				DiskSize:     *req.Cbs.DiskSize,
+			})
+			if err != nil {
+				logs.Errorf("cbs new json field failed, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
+			}
 		}
 
 		demands = append(demands, rpd.ResPlanDemandTable{
