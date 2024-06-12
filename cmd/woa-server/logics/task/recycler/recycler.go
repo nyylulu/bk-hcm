@@ -1440,7 +1440,13 @@ func (r *recycler) GetRecycleRecordRegion(kit *kit.Kit) (*types.GetRecycleRecord
 	}
 
 	rst := &types.GetRecycleRecordRegionRst{
-		Info: insts,
+		Info: make([]interface{}, 0),
+	}
+	for _, tmpZoneName := range insts {
+		if len(metadata.GetString(tmpZoneName)) == 0 {
+			continue
+		}
+		rst.Info = append(rst.Info, tmpZoneName)
 	}
 
 	return rst, nil
@@ -1455,7 +1461,14 @@ func (r *recycler) GetRecycleRecordZone(kit *kit.Kit) (*types.GetRecycleRecordZo
 	}
 
 	rst := &types.GetRecycleRecordZoneRst{
-		Info: insts,
+		Info: make([]interface{}, 0),
+	}
+
+	for _, tmpSubZone := range insts {
+		if len(metadata.GetString(tmpSubZone)) == 0 {
+			continue
+		}
+		rst.Info = append(rst.Info, tmpSubZone)
 	}
 
 	return rst, nil

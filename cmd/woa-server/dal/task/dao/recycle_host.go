@@ -37,7 +37,7 @@ type RecycleHost interface {
 		[]*table.RecycleHost, error)
 	// UpdateRecycleHost updates recycle host by filter and doc in db
 	UpdateRecycleHost(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
-	// DeleteApplyHost deletes recycle host from db
+	// DeleteRecycleHost deletes recycle host from db
 	DeleteRecycleHost(ctx context.Context, filter map[string]interface{}) (uint64, error)
 	// Distinct gets recycle record distinct result from db
 	Distinct(ctx context.Context, field string, filter map[string]interface{}) ([]interface{}, error)
@@ -105,7 +105,7 @@ func (rh *recycleHostDao) UpdateRecycleHost(ctx context.Context, filter *mapstr.
 	return mongodb.Client().Table(table.RecycleHostTable).Update(ctx, filter, doc)
 }
 
-// DeleteApplyHost deletes recycle host from db
+// DeleteRecycleHost deletes recycle host from db
 func (rh *recycleHostDao) DeleteRecycleHost(ctx context.Context, filter map[string]interface{}) (uint64, error) {
 	return mongodb.Client().Table(table.RecycleHostTable).DeleteMany(ctx, filter)
 }

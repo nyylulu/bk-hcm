@@ -839,15 +839,15 @@ func parseFloatOption(ctx context.Context, val interface{}) FloatOption {
 		floatOption.Min = gjson.Get(option, "min").Raw
 		floatOption.Max = gjson.Get(option, "max").Raw
 	case map[string]interface{}:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
+		floatOption.Min = GetString(option["min"])
+		floatOption.Max = GetString(option["max"])
 	case bson.M:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
+		floatOption.Min = GetString(option["min"])
+		floatOption.Max = GetString(option["max"])
 	case bson.D:
 		opt := option.Map()
-		floatOption.Min = getString(opt["min"])
-		floatOption.Max = getString(opt["max"])
+		floatOption.Min = GetString(opt["min"])
+		floatOption.Max = GetString(opt["max"])
 	default:
 		logs.Warnf("unknow val type: %#v, rid: %s", val, rid)
 	}
@@ -866,15 +866,15 @@ func ParseIntOption(ctx context.Context, val interface{}) IntOption {
 		intOption.Min = gjson.Get(option, "min").Raw
 		intOption.Max = gjson.Get(option, "max").Raw
 	case map[string]interface{}:
-		intOption.Min = getString(option["min"])
-		intOption.Max = getString(option["max"])
+		intOption.Min = GetString(option["min"])
+		intOption.Max = GetString(option["max"])
 	case bson.M:
-		intOption.Min = getString(option["min"])
-		intOption.Max = getString(option["max"])
+		intOption.Min = GetString(option["min"])
+		intOption.Max = GetString(option["max"])
 	case bson.D:
 		opt := option.Map()
-		intOption.Min = getString(opt["min"])
-		intOption.Max = getString(opt["max"])
+		intOption.Min = GetString(opt["min"])
+		intOption.Max = GetString(opt["max"])
 	default:
 		logs.Warnf("unknow val type: %#v, rid: %s", val, rid)
 	}
@@ -896,7 +896,8 @@ type FloatOption struct {
 	Max string `bson:"max" json:"max"`
 }
 
-func getString(val interface{}) string {
+// GetString get string by interface
+func GetString(val interface{}) string {
 	if val == nil {
 		return ""
 	}
@@ -971,9 +972,9 @@ func parseEnumOption(options []interface{}, enumOptions *[]EnumVal) error {
 	for _, optionVal := range options {
 		if option, ok := optionVal.(map[string]interface{}); ok {
 			enumOption := EnumVal{}
-			enumOption.ID = getString(option["id"])
-			enumOption.Name = getString(option["name"])
-			enumOption.Type = getString(option["type"])
+			enumOption.ID = GetString(option["id"])
+			enumOption.Name = GetString(option["name"])
+			enumOption.Type = GetString(option["type"])
 			enumOption.IsDefault = getBool(option["is_default"])
 			if enumOption.ID == "" || enumOption.Name == "" || enumOption.Type != "text" {
 				return fmt.Errorf("operation %#v id, name empty or not string, or type not text", option)
@@ -981,9 +982,9 @@ func parseEnumOption(options []interface{}, enumOptions *[]EnumVal) error {
 			*enumOptions = append(*enumOptions, enumOption)
 		} else if option, ok := optionVal.(bson.M); ok {
 			enumOption := EnumVal{}
-			enumOption.ID = getString(option["id"])
-			enumOption.Name = getString(option["name"])
-			enumOption.Type = getString(option["type"])
+			enumOption.ID = GetString(option["id"])
+			enumOption.Name = GetString(option["name"])
+			enumOption.Type = GetString(option["type"])
 			enumOption.IsDefault = getBool(option["is_default"])
 			if enumOption.ID == "" || enumOption.Name == "" || enumOption.Type != "text" {
 				return fmt.Errorf("operation %#v id, name empty or not string, or type not text", option)
@@ -992,9 +993,9 @@ func parseEnumOption(options []interface{}, enumOptions *[]EnumVal) error {
 		} else if option, ok := optionVal.(bson.D); ok {
 			opt := option.Map()
 			enumOption := EnumVal{}
-			enumOption.ID = getString(opt["id"])
-			enumOption.Name = getString(opt["name"])
-			enumOption.Type = getString(opt["type"])
+			enumOption.ID = GetString(opt["id"])
+			enumOption.Name = GetString(opt["name"])
+			enumOption.Type = GetString(opt["type"])
 			enumOption.IsDefault = getBool(opt["is_default"])
 			if enumOption.ID == "" || enumOption.Name == "" || enumOption.Type != "text" {
 				return fmt.Errorf("operation %#v id, name empty or not string, or type not text", option)
@@ -1019,15 +1020,15 @@ func ParseFloatOption(ctx context.Context, val interface{}) FloatOption {
 		floatOption.Min = gjson.Get(option, "min").Raw
 		floatOption.Max = gjson.Get(option, "max").Raw
 	case map[string]interface{}:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
+		floatOption.Min = GetString(option["min"])
+		floatOption.Max = GetString(option["max"])
 	case bson.M:
-		floatOption.Min = getString(option["min"])
-		floatOption.Max = getString(option["max"])
+		floatOption.Min = GetString(option["min"])
+		floatOption.Max = GetString(option["max"])
 	case bson.D:
 		opt := option.Map()
-		floatOption.Min = getString(opt["min"])
-		floatOption.Max = getString(opt["max"])
+		floatOption.Min = GetString(opt["min"])
+		floatOption.Max = GetString(opt["max"])
 	default:
 		logs.Warnf("unknow val type: %#v, rid: %s", val, rid)
 	}
@@ -1276,18 +1277,18 @@ func parseSubAttribute(options []interface{}) ([]SubAttribute, error) {
 func parseSubAttr(options map[string]interface{}) SubAttribute {
 	subAttr := SubAttribute{}
 
-	subAttr.PropertyID = getString(options["bk_property_id"])
-	subAttr.PropertyName = getString(options["bk_property_name"])
-	subAttr.PropertyGroup = getString(options["bk_property_group"])
-	subAttr.Placeholder = getString(options["placeholder"])
-	subAttr.PropertyType = getString(options["bk_property_type"])
+	subAttr.PropertyID = GetString(options["bk_property_id"])
+	subAttr.PropertyName = GetString(options["bk_property_name"])
+	subAttr.PropertyGroup = GetString(options["bk_property_group"])
+	subAttr.Placeholder = GetString(options["placeholder"])
+	subAttr.PropertyType = GetString(options["bk_property_type"])
 	subAttr.IsAPI = getBool(options["bk_isapi"])
 	subAttr.IsEditable = getBool(options["editable"])
 	subAttr.IsReadOnly = getBool(options["isreadonly"])
 	subAttr.IsRequired = getBool(options["isrequired"])
 	subAttr.IsSystem = getBool(options["bk_issystem"])
 	subAttr.Option = options["option"]
-	subAttr.Description = getString(options["description"])
+	subAttr.Description = GetString(options["description"])
 
 	return subAttr
 }
