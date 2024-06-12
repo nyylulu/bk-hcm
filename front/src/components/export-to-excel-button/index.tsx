@@ -15,6 +15,10 @@ export default defineComponent({
       type: String,
       default: `导出文件`,
     },
+    text: {
+      type: String,
+      default: `导出`,
+    },
   },
   emits: ['update:modelValue'],
   setup(props, { attrs }) {
@@ -23,7 +27,7 @@ export default defineComponent({
     };
     return () => (
       <bk-button v-bind={attrs} disabled={!props.data.length} onClick={exportToExcel}>
-        导出
+        {props.text}
       </bk-button>
     );
   },

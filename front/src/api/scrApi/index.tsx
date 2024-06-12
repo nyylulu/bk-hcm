@@ -252,6 +252,21 @@ const startRecycleList = async ({ orderId }) => {
   });
   return data;
 };
+/**
+ * 获取申请单据详情
+ */
+const getOrderDetail = async (orderId) => {
+  const { data } = await http.post(
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket`,
+    {
+      order_id: orderId,
+    },
+    {
+      transformFields: true,
+    },
+  );
+  return data;
+};
 export default {
   getAreas,
   getZones,
@@ -275,6 +290,7 @@ export default {
   getRecycleHosts,
   getPreRecycleList,
   updateCvmDeviceTypeConfigs,
+  getOrderDetail,
   startRecycleList,
   createCvmDevice,
 };

@@ -1,4 +1,4 @@
-import { defineComponent } from 'vue';
+import { defineComponent, computed } from 'vue';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -9,14 +9,18 @@ import MemberSelect from '@/components/MemberSelect';
 import useFormModel from '@/hooks/useFormModel';
 import { timeFormatter } from '@/common/util';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import ExportToExcelButton from '@/components/export-to-excel-button';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
-
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
     const { columns } = useColumns('DeviceQuerycolumns');
     const businessMapStore = useBusinessMapStore();
-
+    const { selections, handleSelectionChange } = useSelection();
+    const clipHostIp = computed(() => {
+      return selections.value.map((item) => item.ip).join('\n');
+    });
     const { formModel, resetForm } = useFormModel({
       orderId: '',
       bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
@@ -27,9 +31,17 @@ export default defineComponent({
       dateRange: [],
     });
 
-    const { CommonTable, getListData, isLoading } = useTable({
+    const { CommonTable, getListData, isLoading, dataList } = useTable({
       tableOptions: {
         columns,
+        extra: {
+          onSelect: (selections: any) => {
+            handleSelectionChange(selections, () => true, false);
+          },
+          onSelectAll: (selections: any) => {
+            handleSelectionChange(selections, () => true, true);
+          },
+        },
       },
       requestOption: {
         dataPath: 'data.info',
@@ -106,9 +118,19 @@ export default defineComponent({
                     }}>
                     清空
                   </Button>
-                  <Button class={'mr8'}>导出</Button>
-                  <Button class={'mr8'}>导出全部</Button>
-                  <Button class={'mr8'}>复制</Button>
+
+                  <ExportToExcelButton class={'mr8'} data={selections.value} columns={columns} filename='设备列表' />
+                  <ExportToExcelButton
+                    class={'mr8'}
+                    data={dataList.value}
+                    columns={columns}
+                    filename='设备列表'
+                    text='导出全部'
+                  />
+                  {/* <Button class={'mr8'}>导出全部</Button> */}
+                  <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
+                    复制
+                  </Button>
                 </Form>
               </>
             ),

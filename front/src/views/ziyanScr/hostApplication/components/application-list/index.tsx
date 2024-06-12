@@ -39,6 +39,12 @@ export default defineComponent({
       dateRange: [],
       user: [],
     });
+    const reapply = (data: any) => {
+      router.push({
+        path: '/ziyanScr/hostApplication/apply',
+        query: { order_id: data.order_id },
+      });
+    };
     const { columns } = useColumns('applicationList');
     const router = useRouter();
     const route = useRoute();
@@ -181,7 +187,7 @@ export default defineComponent({
             render: ({ data }: any) => {
               return (
                 <div>
-                  <Button size='small' text theme={'primary'} class='mr8'>
+                  <Button size='small' onClick={() => reapply(data)} text theme={'primary'} class='mr8'>
                     再次申请
                   </Button>
                   {data.stage !== 'DONE' ? (
@@ -242,7 +248,6 @@ export default defineComponent({
           stage: formModel.stage,
           start: formModel.dateRange[0],
           end: formModel.dateRange[1],
-          // page: formModel.page,
           require_type: formModel.requireType,
         }),
       }),

@@ -3,7 +3,6 @@ import { Input, Button, Sideslider, Form, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import { useTable } from '@/hooks/useTable/useTable';
 import './index.scss';
-// import '../application-list/index.scss';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import AreaSelector from '../AreaSelector';
@@ -15,18 +14,19 @@ import apiService from '@/api/scrApi';
 import { useAccountStore, useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import http from '@/http';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import { timeFormatter } from '@/common/util';
-// import { CVM_RESOURCE_TYPES } from './constants';
+import { cloneDeep } from 'lodash';
 import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
-
 export default defineComponent({
   setup() {
     const router = useRouter();
+    const route = useRoute();
     const addResourceRequirements = ref(false);
     const isLoading = ref(false);
+    const title = ref('增加资源需求');
     const CVMapplication = ref(false);
     const accountStore = useAccountStore();
     const order = ref({
@@ -133,16 +133,16 @@ export default defineComponent({
     const PhysicalMachineoperation = ref({
       label: '操作',
       width: 200,
-      render: () => {
+      render: ({ row, index }) => {
         return (
           <div>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => clonelist(row, 'IDCPM')} class={'mr8'}>
               克隆
             </Button>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => modifylist(row, index, 'IDCPM')} class={'mr8'}>
               修改
             </Button>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => deletelist(index, 'IDCPM')} class={'mr8'}>
               删除
             </Button>
           </div>
@@ -152,16 +152,16 @@ export default defineComponent({
     const CloudHostoperation = ref({
       label: '操作',
       width: 200,
-      render: () => {
+      render: ({ row, index }) => {
         return (
           <>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => clonelist(row, 'QCLOUDCVM')} class={'mr8'}>
               克隆
             </Button>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => modifylist(row, index, 'QCLOUDCVM')} class={'mr8'}>
               修改
             </Button>
-            <Button text theme='primary' class={'mr8'}>
+            <Button text theme='primary' onClick={() => deletelist(index, 'QCLOUDCVM')} class={'mr8'}>
               删除
             </Button>
           </>
@@ -184,7 +184,7 @@ export default defineComponent({
         subnet: '', //  子网
         imageId: '', // 镜像
         diskType: '', // 数据盘tyle
-        diskSize: 10, // 数据盘size
+        diskSize: 0, // 数据盘size
         networkType: '万兆',
       },
     });
@@ -208,8 +208,7 @@ export default defineComponent({
     const zoneTypes = ref([]);
     // 子网列表
     const subnetTypes = ref([]);
-    // 反亲和性
-    const antiAffinityLevel = ref('');
+
     // 侧边栏物理机CVM
     const pmForm = ref({
       spec: {
@@ -219,13 +218,14 @@ export default defineComponent({
         region: '', // 地域
         zone: '', // 园区
         isp: '', // 经营商
+        antiAffinityLevel: '',
       },
       rules: {
         'spec.deviceType': [{ required: true, message: '请选择机型', trigger: 'blur' }],
         'spec.region': [{ required: true, message: '请选择地域', trigger: 'blur' }],
         replicas: [{ required: true, message: '请选择需求数量', trigger: 'blur' }],
         'spec.osType': [{ required: true, message: '请选择操作系统', trigger: 'blur' }],
-        antiAffinityLevel: [{ required: true, message: '请选择反亲和性', trigger: 'blur' }],
+        'spec.antiAffinityLevel': [{ required: true, message: '请选择反亲和性', trigger: 'blur' }],
       },
       options: {
         deviceTypes: [],
@@ -372,10 +372,85 @@ export default defineComponent({
       const { data } = await accountStore.getBizListWithAuth();
       businessList.value = data;
     };
-
+    const clonelist = (row: any, resourceType: string) => {
+      resourceType === 'QCLOUDCVM'
+        ? cloudTableData.value.push(cloneDeep(row))
+        : physicalTableData.value.push(cloneDeep(row));
+    };
+    const modifyindex = ref(0);
+    const modifyresourceType = ref('');
+    const modifylist = (row, index, resourceType) => {
+      CVMapplication.value = false;
+      if (resourceType === 'QCLOUDCVM') {
+        QCLOUDCVMForm.value.spec = cloudTableData.value[index].spec;
+      } else {
+        pmForm.value.spec = physicalTableData.value[index];
+      }
+      resourceForm.value.resourceType = resourceType;
+      modifyresourceType.value = resourceType;
+      resourceForm.value.remark = row.remark;
+      resourceForm.value.replicas = row.replicas;
+      title.value = '修改资源需求';
+      modifyindex.value = index;
+      addResourceRequirements.value = true;
+    };
+    const deletelist = (index, resourceType) => {
+      if (resourceType === 'QCLOUDCVM') {
+        cloudTableData.value.splice(index, 1);
+      } else {
+        physicalTableData.value.splice(index, 1);
+      }
+    };
+    const unReapply = async () => {
+      if (route?.query?.order_id) {
+        const data = await apiService.getOrderDetail(+route?.query?.order_id);
+        order.value.model = {
+          bkBizId: data.bk_biz_id,
+          bkUsername: data.bk_username,
+          requireType: data.require_type,
+          enableNotice: data.enable_notice,
+          expectTime: data.expect_time,
+          remark: data.remark,
+          follower: data.follower,
+          suborders: data.suborders,
+        };
+        order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }) => {
+          resource_type === 'QCLOUDCVM'
+            ? cloudTableData.value.push({
+                remark,
+                replicas,
+                spec: {
+                  deviceType: spec.device_type,
+                  region: spec.region,
+                  zone: spec.zone,
+                  vpc: spec.vpc,
+                  diskSize: spec.disk_size,
+                  diskType: spec.disk_type,
+                  imageId: spec.image_id,
+                  subnet: spec.subnet,
+                  networkType: spec.network_type,
+                },
+              })
+            : physicalTableData.value.push({
+                remark,
+                replicas,
+                spec: {
+                  deviceType: spec.device_type,
+                  region: spec.region,
+                  zone: spec.zone,
+                  raidType: spec.raid_type,
+                  isp: spec.isp,
+                  osType: spec.os_type,
+                  antiAffinityLevel: spec.anti_affinity_level,
+                },
+              });
+        });
+      }
+    };
     onMounted(() => {
       getBusinessesList();
       getfetchOptionslist();
+      unReapply();
     });
     watch(
       () => order.value.model.requireType,
@@ -478,64 +553,97 @@ export default defineComponent({
         subnet: '', //  子网
         imageId: 'img-fjxtfi0n', // 镜像
         diskType: 'CLOUD_PREMIUM', // 数据盘tyle
-        diskSize: 10, // 数据盘size
+        diskSize: 0, // 数据盘size
         networkType: '万兆',
       };
+
+      title.value = '增加资源需求';
       addResourceRequirements.value = true;
     };
     const ARtriggerShow = (isShow: boolean) => {
+      emptyform();
       addResourceRequirements.value = isShow;
     };
     const CAtriggerShow = (isShow: boolean) => {
       CVMapplication.value = isShow;
     };
-    const handleSubmit = () => {
-      if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-        cloudTableData.value.push({
-          ...resourceForm.value,
-          ...QCLOUDCVMForm.value,
-        });
-        resourceForm.value = {
-          resourceType: '',
-          replicas: 1,
-          remark: '',
-        };
-        QCLOUDCVMForm.value = {
-          spec: {
-            deviceType: '', // 机型
-            region: '', // 地域
-            zone: '', // 园区
-            vpc: '', //  vpc
-            subnet: '', //  子网
-            imageId: '', // 镜像
-            diskType: '', // 数据盘tyle
-            diskSize: 10, // 数据盘size
-            networkType: '',
-          },
-        };
-      } else {
-        physicalTableData.value.push({
-          ...resourceForm.value,
-          ...pmForm.value.spec,
-        });
-        resourceForm.value = {
-          resourceType: '',
-          replicas: 1,
-          remark: '',
-        };
-        pmForm.value.spec = {
+    const emptyform = () => {
+      resourceForm.value = {
+        resourceType: '',
+        replicas: 1,
+        remark: '',
+      };
+      QCLOUDCVMForm.value = {
+        spec: {
           deviceType: '', // 机型
-          raidType: '', // RAID 类型
-          osType: '', // 操作系统
           region: '', // 地域
           zone: '', // 园区
-          isp: '', // 经营商
-        };
+          vpc: '', //  vpc
+          subnet: '', //  子网
+          imageId: '', // 镜像
+          diskType: '', // 数据盘tyle
+          diskSize: 0, // 数据盘size
+          networkType: '万兆',
+        },
+      };
+      pmForm.value.spec = {
+        deviceType: '', // 机型
+        raidType: '', // RAID 类型
+        osType: '', // 操作系统
+        region: '', // 地域
+        zone: '', // 园区
+        isp: '', // 经营商
+        antiAffinityLevel: '', // 反亲和性
+      };
+    };
+    const handleSubmit = () => {
+      if (title.value === '增加资源需求') {
+        if (resourceForm.value.resourceType === 'QCLOUDCVM') {
+          cloudTableData.value.push({
+            ...resourceForm.value,
+            ...QCLOUDCVMForm.value,
+          });
+        } else {
+          physicalTableData.value.push({
+            ...resourceForm.value,
+            ...pmForm.value.spec,
+          });
+        }
+        emptyform();
+      } else {
+        if (modifyresourceType.value === 'QCLOUDCVM') {
+          if (modifyresourceType.value === resourceForm.value.resourceType) {
+            cloudTableData.value[modifyindex.value] = {
+              ...resourceForm.value,
+              ...QCLOUDCVMForm.value,
+            };
+          } else {
+            cloudTableData.value.splice(modifyindex.value, 1);
+            physicalTableData.value.push({
+              ...resourceForm.value,
+              ...pmForm.value.spec,
+            });
+          }
+          emptyform();
+        } else {
+          if (modifyresourceType.value === resourceForm.value.resourceType) {
+            physicalTableData.value[modifyindex.value] = {
+              ...resourceForm.value,
+              ...pmForm.value.spec,
+            };
+          } else {
+            physicalTableData.value.splice(modifyindex.value, 1);
+            cloudTableData.value.push({
+              ...resourceForm.value,
+              ...QCLOUDCVMForm.value,
+            });
+          }
+          emptyform();
+        }
       }
-      // order.value.model.suborders.push();
+      modifyindex.value = 0;
       addResourceRequirements.value = false;
     };
-
     const handleSaveOrSubmit = async (type: 'save' | 'submit') => {
       isLoading.value = true;
       try {
@@ -616,6 +724,7 @@ export default defineComponent({
                 theme='primary'
                 onClick={() => {
                   addResourceRequirements.value = true;
+                  title.value = '增加资源需求';
                 }}>
                 添加
               </Button>
@@ -699,7 +808,7 @@ export default defineComponent({
             class='common-sideslider'
             width={1000}
             isShow={addResourceRequirements.value}
-            title='增加资源需求'
+            title={title.value}
             onClosed={() => {
               ARtriggerShow(false);
             }}>
@@ -956,7 +1065,7 @@ export default defineComponent({
                               </bk-form-item>
                               <bk-form-item label='反亲和性' required>
                                 <AntiAffinityLevelSelect
-                                  v-model={antiAffinityLevel.value}
+                                  v-model={pmForm.value.spec.antiAffinityLevel}
                                   params={{
                                     resourceType: resourceForm.value.resourceType,
                                     hasZone: pmForm.value.spec.zone !== '',

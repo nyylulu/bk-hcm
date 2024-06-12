@@ -10,6 +10,7 @@ import { Share } from 'bkui-vue/lib/icon';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { timeFormatter } from '@/common/util';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 export default defineComponent({
@@ -24,7 +25,7 @@ export default defineComponent({
     }> = ref({});
     const { transformRequireTypes } = useRequireTypes();
     const { columns: CloudHostcolumns } = useColumns('CloudHost');
-    const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
+    const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');    const { selections } = useSelection();
     const applyRecord = ref({
       order_id: 0,
       itsm_ticket_id: '',
@@ -40,7 +41,17 @@ export default defineComponent({
         },
       ],
     });
-
+    // extra: {
+    //   onSelect: (selections: any) => {
+    //     handleSelectionChange(selections, () => true, false);
+    //   },
+    //   onSelectAll: (selections: any) => {
+    //     handleSelectionChange(selections, () => true, true);
+    //   },
+    // },
+    const clipHostIp = computed(() => {
+      return selections.value.map((item) => item.ip).join('\n');
+    });
     // 获取单据详情
     const getOrderDetail = (orderId: string) => {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket`, {
@@ -117,6 +128,9 @@ export default defineComponent({
                 },
               ]}
             />
+            <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
+              批量复制IP
+            </Button>
           </CommonCard>
           <CommonCard title={() => '需求子单'} class={'mt24'}>
             {detail.value.suborders?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (

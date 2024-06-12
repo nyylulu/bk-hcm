@@ -1897,12 +1897,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '地域',
-      field: 'device_type',
+      field: 'region',
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
-      field: 'cpu',
+      field: 'zone',
     },
     {
       label: 'RAID 类型',
