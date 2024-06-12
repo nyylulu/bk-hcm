@@ -368,7 +368,7 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 			ObsProject:   req.ObsProject,
 			ExpectTime:   req.ExpectTime,
 			ZoneID:       req.ZoneID,
-			ZoneName:     zoneMap[req.RegionID],
+			ZoneName:     zoneMap[req.ZoneID],
 			RegionID:     req.RegionID,
 			RegionName:   regionAreaMap[req.RegionID].RegionName,
 			AreaID:       regionAreaMap[req.RegionID].AreaID,
