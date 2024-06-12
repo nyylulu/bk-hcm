@@ -17,37 +17,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+package plan
 
 import (
-	"hcm/cmd/woa-server/logics/plan"
-	"hcm/cmd/woa-server/logics/task/informer"
-	"hcm/cmd/woa-server/logics/task/operation"
-	"hcm/cmd/woa-server/logics/task/recycler"
-	"hcm/cmd/woa-server/logics/task/scheduler"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/pkg/cc"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
-
-	"github.com/emicklei/go-restful/v3"
+	"hcm/pkg/criteria/enumor"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	Dao            dao.Set
-	WebService     *restful.WebService
-	PlanController *plan.Controller
-	EsbClient      esb.Client
-	ItsmClient     itsm.Client
-	ThirdCli       *thirdparty.Client
-	Authorizer     auth.Authorizer
-	ClientConf     cc.ClientConfig
-	SchedulerIf    scheduler.Interface
-	InformerIf     informer.Interface
-	RecyclerIf     recycler.Interface
-	OperationIf    operation.Interface
+// TicketBriefInfo resource plan ticket brief info
+type TicketBriefInfo struct {
+	ID            string                `json:"id"`
+	Applicant     string                `json:"applicant"`
+	BkBizID       int64                 `json:"bk_biz_id"`
+	BkBizName     string                `json:"bk_biz_name"`
+	BkProductName string                `json:"bk_product_name"`
+	DemandClass   enumor.DemandClass    `json:"demand_class"`
+	CpuCore       int64                 `json:"cpu_core"`
+	Memory        int64                 `json:"memory"`
+	DiskSize      int64                 `json:"disk_size"`
+	SubmittedAt   string                `json:"submitted_at"`
+	Status        enumor.RPTicketStatus `json:"status"`
+	ItsmSn        string                `json:"itsm_sn"`
+	ItsmUrl       string                `json:"itsm_url"`
+	CrpSn         string                `json:"crp_sn"`
+	CrpUrl        string                `json:"crp_url"`
 }

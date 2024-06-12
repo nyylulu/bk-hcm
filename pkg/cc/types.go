@@ -1286,3 +1286,58 @@ func (c SopsCli) validate() error {
 
 	return nil
 }
+
+// ItsmFlow defines the itsm flow related runtime.
+type ItsmFlow struct {
+	// ServiceName is the itsm service name.
+	ServiceName string `yaml:"serviceName"`
+	// ServiceID is the itsm service id.
+	ServiceID int64 `yaml:"serviceID"`
+	// StateNodes is the itsm state nodes.
+	StateNodes []StateNode `yaml:"stateNodes"`
+}
+
+// validate ItsmFlow runtime.
+func (i ItsmFlow) validate() error {
+	if i.ServiceID == 0 {
+		return errors.New("itsm service id is not set")
+	}
+
+	for _, stateNode := range i.StateNodes {
+		if err := stateNode.validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// StateNode defines the itsm state node related runtime.
+type StateNode struct {
+	ID          int64  `yaml:"id"`
+	NodeName    string `yaml:"nodeName"`
+	Approver    string `json:"approver"`
+	ApprovalKey string `yaml:"approvalKey"`
+	RemarkKey   string `yaml:"remarkKey"`
+}
+
+// validate StateNode runtime.
+func (i StateNode) validate() error {
+	if i.ID == 0 {
+		return errors.New("state node id is not set")
+	}
+
+	if len(i.NodeName) == 0 {
+		return errors.New("state node name is not set")
+	}
+
+	if len(i.ApprovalKey) == 0 {
+		return errors.New("state node approval key is not set")
+	}
+
+	if len(i.RemarkKey) == 0 {
+		return errors.New("state node remark key is not set")
+	}
+
+	return nil
+}

@@ -24,19 +24,27 @@ import "fmt"
 // RPTicketStatus is resource plan ticket status.
 type RPTicketStatus string
 
-// TODO 其它状态待补充
 const (
-	// RPTicketStatusPending is resource plan ticket status pending.
-	RPTicketStatusPending RPTicketStatus = "pending"
-	// RPTicketStatusPass is resource plan ticket status pass.
-	RPTicketStatusPass RPTicketStatus = "pass"
+	// RPTicketStatusInit is resource plan ticket status init.
+	RPTicketStatusInit RPTicketStatus = "init"
+	// RPTicketStatusAuditing is resource plan ticket status auditing.
+	RPTicketStatusAuditing RPTicketStatus = "auditing"
+	// RPTicketStatusRejected is resource plan ticket status rejected.
+	RPTicketStatusRejected RPTicketStatus = "rejected"
+	// RPTicketStatusDone is resource plan ticket status done.
+	RPTicketStatusDone RPTicketStatus = "done"
+	// RPTicketStatusFailed is resource plan ticket status failed.
+	RPTicketStatusFailed RPTicketStatus = "failed"
 )
 
 // Validate RPTicketStatus.
 func (s RPTicketStatus) Validate() error {
 	switch s {
-	case RPTicketStatusPending:
-	case RPTicketStatusPass:
+	case RPTicketStatusInit:
+	case RPTicketStatusAuditing:
+	case RPTicketStatusRejected:
+	case RPTicketStatusDone:
+	case RPTicketStatusFailed:
 	default:
 		return fmt.Errorf("unsupported resource plan status: %s", s)
 	}
@@ -46,8 +54,11 @@ func (s RPTicketStatus) Validate() error {
 
 // rdTicketStatusNameMap records RPTicketStatus's name.
 var rdTicketStatusNameMap = map[RPTicketStatus]string{
-	RPTicketStatusPending: "审核中",
-	RPTicketStatusPass:    "通过",
+	RPTicketStatusInit:     "未审批",
+	RPTicketStatusAuditing: "审批中",
+	RPTicketStatusRejected: "已拒绝",
+	RPTicketStatusDone:     "通过",
+	RPTicketStatusFailed:   "失败",
 }
 
 // Name return RPTicketStatus's name.

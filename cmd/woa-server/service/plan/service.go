@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"hcm/cmd/woa-server/logics/biz"
+	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/dal/dao"
@@ -33,10 +34,11 @@ import (
 // InitService initial the plan service.
 func InitService(c *capability.Capability) {
 	s := &service{
-		dao:        c.Dao,
-		esbClient:  c.EsbClient,
-		authorizer: c.Authorizer,
-		logics:     biz.New(c.EsbClient, c.Authorizer),
+		dao:            c.Dao,
+		planController: c.PlanController,
+		esbClient:      c.EsbClient,
+		authorizer:     c.Authorizer,
+		logics:         biz.New(c.EsbClient, c.Authorizer),
 	}
 	h := rest.NewHandler()
 
@@ -46,10 +48,11 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	dao        dao.Set
-	esbClient  esb.Client
-	authorizer auth.Authorizer
-	logics     biz.Logics
+	dao            dao.Set
+	esbClient      esb.Client
+	planController *plan.Controller
+	authorizer     auth.Authorizer
+	logics         biz.Logics
 }
 
 func (s *service) initPlanService(h *rest.Handler) {

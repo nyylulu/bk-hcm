@@ -17,37 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+package itsm
 
-import (
-	"hcm/cmd/woa-server/logics/plan"
-	"hcm/cmd/woa-server/logics/task/informer"
-	"hcm/cmd/woa-server/logics/task/operation"
-	"hcm/cmd/woa-server/logics/task/recycler"
-	"hcm/cmd/woa-server/logics/task/scheduler"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/pkg/cc"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
+type Status string
 
-	"github.com/emicklei/go-restful/v3"
+const (
+	// StatusRunning 处理中
+	StatusRunning Status = "RUNNING"
+	// StatusFinished 已结束
+	StatusFinished Status = "FINISHED"
+	// StatusTerminated 被终止
+	StatusTerminated Status = "TERMINATED"
+	// StatusSuspended 被挂起
+	StatusSuspended Status = "SUSPENDED"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	Dao            dao.Set
-	WebService     *restful.WebService
-	PlanController *plan.Controller
-	EsbClient      esb.Client
-	ItsmClient     itsm.Client
-	ThirdCli       *thirdparty.Client
-	Authorizer     auth.Authorizer
-	ClientConf     cc.ClientConfig
-	SchedulerIf    scheduler.Interface
-	InformerIf     informer.Interface
-	RecyclerIf     recycler.Interface
-	OperationIf    operation.Interface
+// GetTicketStatusResp get itsm ticket status response
+type GetTicketStatusResp struct {
+	CurrentStatus Status        `json:"current_status"`
+	TicketUrl     string        `json:"ticket_url"`
+	CurrentSteps  []*TicketStep `json:"current_steps"`
+}
+
+// TicketStep itsm ticket step
+type TicketStep struct {
+	Name       string `json:"name"`
+	Processors string `json:"processors"`
+	StateID    int64  `json:"state_id"`
 }

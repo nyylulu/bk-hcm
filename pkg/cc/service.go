@@ -412,6 +412,7 @@ type WoaServerSetting struct {
 	Watch        MongoDB   `yaml:"watch"`
 	Redis        Redis     `yaml:"redis"`
 	ClientConfig `yaml:",inline"`
+	ItsmFlows    []ItsmFlow `yaml:"itsmFlows"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

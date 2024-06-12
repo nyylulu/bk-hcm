@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"time"
 
+	planctrl "hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recycler"
@@ -60,6 +61,7 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -67,10 +69,12 @@ import (
 
 // Service do all the woa server's work
 type Service struct {
-	client *client.ClientSet
-	dao    dao.Set
+	client         *client.ClientSet
+	dao            dao.Set
+	planController *planctrl.Controller
 	// EsbClient 调用接入ESB的第三方系统API集合
 	esbClient esb.Client
+	itsmCli   itsm.Client
 	// authorizer 鉴权所需接口集合
 	authorizer     auth.Authorizer
 	thirdCli       *thirdparty.Client
@@ -115,6 +119,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	// 创建ESB Client
 	esbConfig := cc.WoaServer().Esb
 	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
+	itsmCfg := cc.WoaServer().ITSM
+	itsmCli, err := itsm.NewClient(&itsmCfg, metrics.Register())
 	if err != nil {
 		return nil, err
 	}
@@ -197,9 +207,16 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	planCtrl, err := planctrl.New(sd, daoSet, itsmCli, thirdCli.CVM)
+	if err != nil {
+		logs.Errorf("new plan controller failed, err: %v", err)
+		return nil, err
+	}
+
 	return &Service{
 		client:         apiClientSet,
 		dao:            daoSet,
+		planController: planCtrl,
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
@@ -275,16 +292,17 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	c := &capability.Capability{
-		Dao:         s.dao,
-		WebService:  ws,
-		Authorizer:  s.authorizer,
-		EsbClient:   s.esbClient,
-		ThirdCli:    s.thirdCli,
-		ClientConf:  s.clientConf,
-		SchedulerIf: s.schedulerIf,
-		InformerIf:  s.informerIf,
-		RecyclerIf:  s.recyclerIf,
-		OperationIf: s.operationIf,
+		Dao:            s.dao,
+		WebService:     ws,
+		Authorizer:     s.authorizer,
+		PlanController: s.planController,
+		EsbClient:      s.esbClient,
+		ThirdCli:       s.thirdCli,
+		ClientConf:     s.clientConf,
+		SchedulerIf:    s.schedulerIf,
+		InformerIf:     s.informerIf,
+		RecyclerIf:     s.recyclerIf,
+		OperationIf:    s.operationIf,
 	}
 
 	config.InitService(c)

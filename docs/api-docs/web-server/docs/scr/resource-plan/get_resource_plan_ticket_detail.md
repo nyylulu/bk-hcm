@@ -117,14 +117,14 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 
 #### data.status_info
 
-| 参数名称        | 参数类型   | 描述                                       |
-|-------------|--------|------------------------------------------|
-| status      | string | 单据状态（枚举值：todo, auditing, rejected, done） |
-| status_name | string | 单据状态名称                                   |
-| itsm_sn     | string | ITSM流程单号                                 |
-| itsm_url    | string | ITSM流程单链接                                |
-| crp_sn      | string | CRP系统需求单号                                |
-| crp_url     | string | CRP系统需求单链接                               |
+| 参数名称        | 参数类型   | 描述                                               |
+|-------------|--------|--------------------------------------------------|
+| status      | string | 单据状态（枚举值：init, auditing, rejected, done, failed） |
+| status_name | string | 单据状态名称                                           |
+| itsm_sn     | string | ITSM流程单号                                         |
+| itsm_url    | string | ITSM流程单链接                                        |
+| crp_sn      | string | CRP系统需求单号                                        |
+| crp_url     | string | CRP系统需求单链接                                       |
 
 #### data.demands[i]
 

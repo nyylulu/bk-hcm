@@ -267,6 +267,20 @@ itsm:
     # the password to decrypt the certificate.
     password:
 
+# defines itsm flows related configuration
+itsmFlows:
+  # itsm service name
+  - serviceName:
+    # itsm service id
+    serviceID:
+    # itsm state nodes
+    stateNodes:
+      - id:
+        nodeName:
+        approver:
+        approvalKey:
+        remarkKey:
+
 bkchat:
   host: http://bkchat.ied.com:8000
   notify_format: |

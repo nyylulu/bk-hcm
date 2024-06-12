@@ -15,6 +15,7 @@ package plan
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 	"time"
 
@@ -165,12 +166,17 @@ func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
+	if err := s.planController.CreateAuditFlow(cts.Kit, ticketID); err != nil {
+		// TODO: debug
+		logs.Errorf("failed to create resource plan ticket audit flow, err: %v, rid: %s", err, cts.Kit.Rid)
+		//return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
 	return map[string]interface{}{"id": ticketID}, nil
 }
 
 // createResPlanTicket create resource plan ticket.
-// TODO: 待补充增加状态表，待补充提ITSM单据&CRP单据。
-func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTicketReq) (interface{}, error) {
+func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTicketReq) (string, error) {
 	// convert request to resource plan ticket table slice.
 	tickets, err := s.convToRPTicketTableSlice(kt, req)
 	if err != nil {
@@ -195,7 +201,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 		statuses := []rpts.ResPlanTicketStatusTable{
 			{
 				TicketID: ticketID,
-				Status:   enumor.RPTicketStatusPending,
+				Status:   enumor.RPTicketStatusInit,
 			},
 		}
 		if err = s.dao.ResPlanTicketStatus().CreateWithTx(kt, txn, statuses); err != nil {
@@ -218,7 +224,19 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 		return ticketID, nil
 	})
 
-	return ticketID, nil
+	if err != nil {
+		logs.Errorf("create resource plan ticket failed, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	ticketIDStr, ok := ticketID.(string)
+	if !ok {
+		logs.Errorf("convert resource plan ticket id %v from interface to string failed, err: %v, rid: %s", ticketID,
+			err, kt.Rid)
+		return "", fmt.Errorf("convert resource plan ticket id %v from interface to string failed", ticketID)
+	}
+
+	return ticketIDStr, nil
 }
 
 // convert request to ResPlanTicketTable slice.
