@@ -32,7 +32,7 @@ import {
   dateTimeTransform,
   getPrecheckStatusLabel,
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
-import { Spinner, Share } from 'bkui-vue/lib/icon';
+import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
 
@@ -2788,24 +2788,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ data }: any) => businessMapStore.getNameFromBusinessMap(data.bk_biz_id) || data.bk_biz_id || '--',
     },
     {
-      label: '需求类型',
-      field: 'require_type',
-      // render: ({ data }: any) => this.$requireTypeTransform(data.requireType),
-    },
-    {
-      label: '需求摘要',
-      minWidth: 200,
-      render: ({ data }: any) => {
-        return (
-          <div>
-            {/* <cr-property-item k="resourceType" v={data.resourceType} />
-            <cr-property-item k="deviceType" v={data.spec?.deviceType} />
-            <cr-property-item k="zone" v={data.spec?.zone} /> */}
-          </div>
-        );
-      },
-    },
-    {
       label: '申请人',
       render: ({ data }: any) => {
         return <WName name={data.bk_username}></WName>;
@@ -2818,17 +2800,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '交付情况-待交付',
       field: 'pending_num',
-      render: ({ data }: any) => {
-        if (data.pendingNum > 0 && this.isRoot) {
-          return (
-            <Button text theme='primary'>
-              {data.pendingNum}
-            </Button>
-          );
-        }
-
-        return <span>{data.pendingNum}</span>;
-      },
     },
     {
       label: '交付情况-已交付',
@@ -2843,16 +2814,36 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           };
 
           return (
-            <div>
+            <div class={'flex-row align-item-center'}>
               {data.success_num}
-              <Button text theme={'primary'} class='mr8' v-clipboard:copy={ips.join('\n')}>
-                复制 IP
+              <Button
+                text
+                theme={'primary'}
+                class='ml8 mr8'
+                v-clipboard:copy={ips.join('\n')}
+                v-bk-tooltips={{
+                  content: '复制 IP',
+                }}>
+                <Copy />
               </Button>
-              <Button text theme={'primary'} class='mr8' v-clipboard:copy={assetIds.join('\n')}>
-                复制固资号
+              <Button
+                text
+                theme={'primary'}
+                class='mr8'
+                v-clipboard:copy={assetIds.join('\n')}
+                v-bk-tooltips={{
+                  content: '复制固资号',
+                }}>
+                <Copy />
               </Button>
-              <Button text theme={'primary'} onClick={() => goToCmdb(ips)}>
-                去蓝鲸配置平台管理资源
+              <Button
+                text
+                theme={'primary'}
+                onClick={() => goToCmdb(ips)}
+                v-bk-tooltips={{
+                  content: '去蓝鲸配置平台管理资源',
+                }}>
+                <DataShape />
               </Button>
             </div>
           );
