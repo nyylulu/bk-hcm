@@ -2,22 +2,26 @@ import { defineComponent, ref, watch, onMounted } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
-import { Dialog, Tab } from 'bkui-vue';
+import { Dialog, Tab, Button } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import CommonSideslider from '@/components/common-sideslider';
 import { useAccountStore } from '@/store';
 import apiService from '@/api/scrApi';
+import { useRouter } from 'vue-router';
 import './index.scss';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 export default defineComponent({
   name: 'RecyclingResources',
   setup() {
     const accountStore = useAccountStore();
     const active = ref(1);
+    const router = useRouter();
     const objectSteps = ref([{ title: '输入IP/固资' }, { title: '确认回收类型' }, { title: '信息确认与提交' }]);
     const tableHosts = ref([]);
     const bkBizId = ref();
+    const checked = ref(false);
     const tableSelectedHosts = ref([]);
     const recycleForm = ref({
       ips: [],
@@ -206,102 +210,136 @@ export default defineComponent({
       updateTableHosts(drawerHosts);
       drawer.value = false;
     };
+    const handleConfirm = async () => {
+      const orderId = selectedHosts.value.map((item) => item.order_id);
+      const { result } = await apiService.startRecycleList(orderId);
+      if (result) {
+        takeSnapshot();
+        router.push({
+          path: '/ziyanScr/hostRecycling/resources',
+        });
+      }
+      checked.value = false;
+      dialogVisible.value = false;
+    };
+    const takeSnapshot = () => {
+      recycleForm.value = {
+        ips: [],
+        remark: '',
+      };
+    };
+    const triggerShow = (val: boolean) => {
+      checked.value = val;
+      dialogVisible.value = val;
+    };
     onMounted(() => {
       getBusinessesList();
     });
     return () => (
       <div class='div-RecyclingResources'>
-        <div class='div-title'>回收资源</div>
-        <div class='div-components'>
-          <bk-steps class='div-steps' cur-step={active.value} steps={objectSteps.value} />
-          {active.value === 1 && (
-            <ResourceSelect
-              class='div-ResourceSelect'
-              table-hosts={tableHosts.value}
-              table-selected-hosts={tableSelectedHosts.value}
-              remark={recycleForm.value.remark}
-              onUpdateHosts={updateHosts}
-              onDrawer={upDrawer}
-              onUpdateSelectedHosts={updateSelectedHosts}
-              onUpdateRemark={updateRemark}></ResourceSelect>
-          )}
-          {active.value === 2 && (
-            <ResourceType ref='resourceType' returnPlan={returnPlan.value} updateTypes={updateTypes}></ResourceType>
-          )}
-          {active.value === 3 && (
-            <ResourceConfirm
-              recycleForm={recycleForm.value}
-              returnPlan={returnPlan.value}
-              updateConfirm={updateConfirm}></ResourceConfirm>
-          )}
-        </div>
-        <div class='div-Button'>
-          {renderButton()}
-          {active.value < 3 && (
-            <bk-button
-              theme='primary'
-              class='mr10'
-              size='small'
-              disabled={active.value === 0 && !tableSelectedHosts.value.length}
-              onClick={handleNext}>
-              下一步
-            </bk-button>
-          )}
-          {active.value === 3 && (
-            <span class='ml-10'>
-              <bk-button
-                theme='primary'
-                size='small'
-                disabled={!selectedHosts.value.length}
-                onClick={() => {
-                  dialogVisible.value = true;
-                }}>
-                提 交
-              </bk-button>
-            </span>
-          )}
+        <DetailHeader>
+          <span class='header-title-prefix'>主机回收</span>
+        </DetailHeader>
+        <div class='common-sub-main-container'>
+          <div class='sub-main-content'>
+            <div class='div-title'>回收资源</div>
+            <div class='div-components'>
+              <bk-steps class='div-steps' cur-step={active.value} steps={objectSteps.value} />
+              {active.value === 1 && (
+                <ResourceSelect
+                  class='div-ResourceSelect'
+                  table-hosts={tableHosts.value}
+                  table-selected-hosts={tableSelectedHosts.value}
+                  onUpdateHosts={updateHosts}
+                  onDrawer={upDrawer}
+                  onUpdateSelectedHosts={updateSelectedHosts}
+                  onUpdateRemark={updateRemark}></ResourceSelect>
+              )}
+              {active.value === 2 && (
+                <ResourceType ref='resourceType' returnPlan={returnPlan.value} updateTypes={updateTypes}></ResourceType>
+              )}
+              {active.value === 3 && (
+                <ResourceConfirm
+                  recycleForm={recycleForm.value}
+                  returnPlan={returnPlan.value}
+                  onUpdateConfirm={updateConfirm}></ResourceConfirm>
+              )}
+            </div>
+            <div class='div-Button'>
+              {renderButton()}
+              {active.value < 3 && (
+                <bk-button
+                  theme='primary'
+                  class='mr10'
+                  size='small'
+                  disabled={active.value === 0 && !tableSelectedHosts.value.length}
+                  onClick={handleNext}>
+                  下一步
+                </bk-button>
+              )}
+              {active.value === 3 && (
+                <span class='ml-10'>
+                  <bk-button
+                    theme='primary'
+                    size='small'
+                    // disabled={!selectedHosts.value.length}
+                    onClick={() => {
+                      dialogVisible.value = true;
+                    }}>
+                    提 交
+                  </bk-button>
+                </span>
+              )}
+            </div>
+          </div>
         </div>
         <Dialog title='注意' is-show={dialogVisible.value} custom-class='notice' width='520px'>
-          <p>
-            1. 销毁后所有数据<span class='main'>将被清除且不可恢复</span>，CVM会同时<span class='main'>销毁</span>
-            挂载在实例上的包年包月数据盘；
-          </p>
-          <p>
-            2. 非立即销毁, 隔离期间费用会<span class='main'>继续核算至业务下</span>；
-          </p>
-          <p>
-            3. 计划外回收，公司会核算给回收<span class='main'>业务35天的滞留成本</span>；
-          </p>
-          <p>
-            4. CVM存量机型回收后，公司会核算给回收<span class='main'>业务20%的成本</span>；
-          </p>
-          <p>
-            5. 物理机未退役设备的回收，回收业务需要<span class='main'>承担60%的滞留成本</span>；
-          </p>
-          <p>
-            6. <span class='main'>请提前录入 </span>
-            <a href='https://yunti.woa.com/plans/return' target='_blank'>
-              回收计划
-            </a>
-          </p>
-          <p>
-            7. 更多信息，请查看
-            <a href='https://yunti.woa.com/news/15' target='_blank'>
-              公司资源退回管理策略
-            </a>
-          </p>
-          <br />
-          {/* <el-checkbox v-model="checked">
-        我已知悉以上须知内容和风险
-      </el-checkbox> */}
-          {/* <span slot='footer' class='dialog-footer'> */}
-          {/* <el-button @click="dialogVisible = false">取 消</el-button>
-        <el-button
-          type="primary"
-          :disabled="!checked"
-          @click="handleConfirm"
-        >确 定</el-button> */}
-          {/* </span> */}
+          {{
+            default: () => (
+              <>
+                <p>
+                  1. 销毁后所有数据<span class='main'>将被清除且不可恢复</span>，CVM会同时<span class='main'>销毁</span>
+                  挂载在实例上的包年包月数据盘；
+                </p>
+                <p>
+                  2. 非立即销毁, 隔离期间费用会<span class='main'>继续核算至业务下</span>；
+                </p>
+                <p>
+                  3. 计划外回收，公司会核算给回收<span class='main'>业务35天的滞留成本</span>；
+                </p>
+                <p>
+                  4. CVM存量机型回收后，公司会核算给回收<span class='main'>业务20%的成本</span>；
+                </p>
+                <p>
+                  5. 物理机未退役设备的回收，回收业务需要<span class='main'>承担60%的滞留成本</span>；
+                </p>
+                <p>
+                  6. <span class='main'>请提前录入 </span>
+                  <a href='https://yunti.woa.com/plans/return' target='_blank'>
+                    回收计划
+                  </a>
+                </p>
+                <p>
+                  7. 更多信息，请查看
+                  <a href='https://yunti.woa.com/news/15' target='_blank'>
+                    公司资源退回管理策略
+                  </a>
+                </p>
+                <br />
+                <bk-checkbox v-model={checked.value}>我已知悉以上须知内容和风险</bk-checkbox>
+              </>
+            ),
+            footer: () => (
+              <>
+                <Button theme='primary' onClick={handleConfirm} disabled={!checked.value}>
+                  确定
+                </Button>
+                <Button class='dialog-cancel' onClick={() => triggerShow(false)}>
+                  取消
+                </Button>
+              </>
+            ),
+          }}
         </Dialog>
         <CommonSideslider v-model:isShow={drawer.value} title='选择服务器' width={1150} onHandleSubmit={handleSubmit}>
           <Tab v-model:active={activetab.value} type='unborder-card'>

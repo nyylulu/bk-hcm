@@ -126,13 +126,10 @@ export default defineComponent({
       tableList.value = info || [];
     };
     const getList = async (enableCount = false) => {
-      if (enableCount) {
-      }
       const data = await apiService.getRecycleHosts({
         suborderId,
         page: page.value,
       });
-
       if (enableCount) page.value.total = data?.count;
       hostList.value = data?.info || [];
     };
@@ -147,7 +144,7 @@ export default defineComponent({
     });
     return () => (
       <div class='div-ResourceSelect'>
-        <bk-table align='left' row-hover='auto' columns={columns} data={hostList.value} show-overflow-tooltip />
+        <bk-table align='left' row-hover='auto' columns={columns.value} data={hostList.value} show-overflow-tooltip />
         <bk-pagination
           style='float: right;margin: 20px 0;'
           v-model={page.value.start}

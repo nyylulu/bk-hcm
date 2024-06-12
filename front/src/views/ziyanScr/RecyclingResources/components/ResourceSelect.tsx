@@ -5,10 +5,6 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 export default defineComponent({
   name: 'ResourceSelect',
   props: {
-    remark: {
-      type: String,
-      default: '',
-    },
     tableHosts: {
       type: Array,
       default: () => [],
@@ -86,10 +82,10 @@ export default defineComponent({
             刷新状态
           </bk-button>
           <bk-button class='bk-button' disabled={allRecycleHostIps.value.length === 0}>
-            复制所有IP{count.value}
+            复制所有IP({count.value})
           </bk-button>
           <bk-button class='bk-button' theme='danger' disabled={recycleFailedHostIps.value.length === 0}>
-            复制不可回收IP{count.value}
+            复制不可回收IP({count.value})
           </bk-button>
           <bk-button class='bk-button' theme='primary' onClick={handleClear}>
             清空列表

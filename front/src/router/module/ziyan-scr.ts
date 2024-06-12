@@ -47,8 +47,35 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/hostRecycling',
         name: '主机回收',
-        component: () => import('@/views/ziyanScr/host-recycle'),
-        children: [],
+        children: [
+          {
+            path: '',
+            name: 'hostRecycle',
+            component: () => import('@/views/ziyanScr/host-recycle'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+          {
+            path: 'resources',
+            name: 'resources',
+            component: () => import('@/views/ziyanScr/RecyclingResources'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+          {
+            path: 'preDetail',
+            name: 'PreDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/pre-details'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+        ],
         meta: {
           activeKey: 'zjhs',
           breadcrumb: ['资源', '主机'],

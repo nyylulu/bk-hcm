@@ -5,6 +5,7 @@ import { exportTableToExcel } from '@/utils';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import { Button } from 'bkui-vue';
+import { useRoute } from 'vue-router';
 import ExecuteRecord from '../execute-record';
 import './index.scss';
 export default defineComponent({
@@ -20,9 +21,10 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const route = useRoute();
     const defaultFilter = () => ({
       order_id: [],
-      suborder_id: props.dataInfo?.suborder_id || [],
+      suborder_id: route?.query?.suborder_id || [],
       ip: props.dataInfo?.ip || [],
     });
     const filter = ref(defaultFilter());

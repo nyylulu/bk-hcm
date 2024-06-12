@@ -7,11 +7,10 @@ import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import { Search, ArrowsLeft } from 'bkui-vue/lib/icon';
+import { Search } from 'bkui-vue/lib/icon';
 import BillDetail from '../bill-detail';
-import PreDetail from '../pre-details';
-import RecyclingResources from '../../RecyclingResources/index';
 import './index.scss';
+import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 
 export default defineComponent({
@@ -20,8 +19,6 @@ export default defineComponent({
     MemberSelect,
     ExportToExcelButton,
     BillDetail,
-    PreDetail,
-    RecyclingResources,
   },
   props: {
     pageIndex: {
@@ -33,6 +30,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const router = useRouter();
     const defaultRecycleForm = () => ({
       bk_biz_id: [],
       order_id: [],
@@ -117,10 +115,12 @@ export default defineComponent({
       filterOrders();
     };
     const goToPrecheck = () => {
-      switchPage.value = 'PreDetails';
-      preCheckData.value = {
-        suborder_id: getBatchSuborderId(),
-      };
+      router.push({
+        path: '/ziyanScr/hostRecycling/preDetail',
+        query: {
+          suborder_id: getBatchSuborderId(),
+        },
+      });
     };
     const getBatchSuborderId = () => {
       return selections.value.map((item) => {
@@ -250,19 +250,18 @@ export default defineComponent({
         };
       },
     });
-    const switchPage = ref('HostRecycling');
-    const preCheckData = ref({});
-    const returnPreDetails = (row) => {
-      switchPage.value = 'PreDetails';
-      preCheckData.value = {
-        suborder_id: [row.suborder_id],
-      };
-    };
-    const returnMain = () => {
-      switchPage.value = 'HostRecycling';
+    const returnPreDetails = (row: { suborder_id: any }) => {
+      router.push({
+        path: '/ziyanScr/hostRecycling/preDetail',
+        query: {
+          suborder_id: [row.suborder_id],
+        },
+      });
     };
     const returnRecyclingResources = () => {
-      switchPage.value = 'RecyclingResources';
+      router.push({
+        path: '/ziyanScr/hostRecycling/resources',
+      });
     };
     const backRecyclePage = (val: number) => {
       hostRecyclePage.value = val;
@@ -271,7 +270,7 @@ export default defineComponent({
     const renderNodes = () => {
       if (hostRecyclePage.value === 0) {
         // eslint-disable-next-line no-nested-ternary
-        return switchPage.value === 'HostRecycling' ? (
+        return (
           <CommonTable>
             {{
               tabselect: () => (
@@ -368,22 +367,6 @@ export default defineComponent({
               ),
             }}
           </CommonTable>
-        ) : switchPage.value === 'PreDetails' ? (
-          <>
-            <div class='displayflex' onClick={returnMain}>
-              <ArrowsLeft />
-              预检详情
-            </div>
-            <PreDetail dataInfo={preCheckData.value}></PreDetail>
-          </>
-        ) : (
-          <>
-            <div class='displayflex' onClick={returnMain}>
-              <ArrowsLeft />
-              回收资源
-            </div>
-            <RecyclingResources></RecyclingResources>
-          </>
         );
       }
       if (hostRecyclePage.value === 1) {
