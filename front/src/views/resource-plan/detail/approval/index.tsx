@@ -39,11 +39,21 @@ export default defineComponent({
             <span>{props.statusInfo?.status_name}</span>
           </span>
           <span class={cssModule.links}>
-            <bk-link theme='primary' target='_blank' class={cssModule.link} href={props.statusInfo?.itsm_url}>
+            <bk-link
+              theme='primary'
+              target='_blank'
+              class={cssModule.link}
+              disabled={!props.statusInfo?.itsm_url}
+              href={props.statusInfo?.itsm_url}>
               {t('ITSM单据')}
               <Share />
             </bk-link>
-            <bk-link theme='primary' target='_blank' class={cssModule.link} href={props.statusInfo?.crp_url}>
+            <bk-link
+              theme='primary'
+              target='_blank'
+              class={cssModule.link}
+              disabled={!props.statusInfo?.crp_url}
+              href={props.statusInfo?.crp_url}>
               {t('CRP单据')}
               <Share />
             </bk-link>

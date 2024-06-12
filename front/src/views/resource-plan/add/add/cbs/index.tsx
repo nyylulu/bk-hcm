@@ -57,9 +57,9 @@ export default defineComponent({
 
     const handleUpdateDiskType = (val: string) => {
       const diskType = diskTypes.value.find((diskType) => diskType.disk_type === val);
-      handleUpdatePlanTicketDemand('disk_type', diskType.disk_type);
+      handleUpdatePlanTicketDemand('disk_type', diskType?.disk_type || '');
       nextTick(() => {
-        handleUpdatePlanTicketDemand('disk_type_name', diskType.disk_type_name);
+        handleUpdatePlanTicketDemand('disk_type_name', diskType.disk_type_name || '');
 
         nextTick(() => {
           handleUpdatePlanTicketDemand('disk_io', 15);

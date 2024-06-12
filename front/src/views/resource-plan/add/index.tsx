@@ -1,4 +1,5 @@
 import { defineComponent, ref, provide } from 'vue';
+import planRemark from './plan-remark.js';
 import cssModule from './index.module.scss';
 import Header from './header';
 import Basic from './basic';
@@ -19,7 +20,7 @@ export default defineComponent({
     const planTicket = ref<IPlanTicket>({
       bk_biz_id: undefined,
       demand_class: 'CVM',
-      remark: '',
+      remark: planRemark,
       demands: [],
     });
 

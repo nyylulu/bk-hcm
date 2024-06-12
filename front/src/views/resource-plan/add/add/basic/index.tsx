@@ -44,10 +44,10 @@ export default defineComponent({
     const handleChooseZone = (id: string) => {
       const zone = zones.value.find((zone) => zone.zone_id === id);
       nextTick(() => {
-        handleUpdatePlanTicketDemand('zone_id', zone.zone_id);
+        handleUpdatePlanTicketDemand('zone_id', zone?.zone_id || '');
 
         nextTick(() => {
-          handleUpdatePlanTicketDemand('zone_name', zone.zone_name);
+          handleUpdatePlanTicketDemand('zone_name', zone?.zone_name || '');
         });
       });
     };
@@ -55,10 +55,10 @@ export default defineComponent({
     const handleChooseRegion = (id: string) => {
       const region = regions.value.find((region) => region.region_id === id);
       nextTick(() => {
-        handleUpdatePlanTicketDemand('region_id', region.region_id);
+        handleUpdatePlanTicketDemand('region_id', region?.region_id || '');
 
         nextTick(() => {
-          handleUpdatePlanTicketDemand('region_name', region.region_name);
+          handleUpdatePlanTicketDemand('region_name', region?.region_name || '');
         });
       });
     };
@@ -214,7 +214,6 @@ export default defineComponent({
               type='textarea'
               maxlength={100}
               showWordLimit
-              rows={5}
               modelValue={props.planTicketDemand.remark}
               onChange={(val: string) => handleUpdatePlanTicketDemand('remark', val)}
             />
