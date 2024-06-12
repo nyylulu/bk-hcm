@@ -18,12 +18,30 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/hostApplication',
         name: '主机申请',
-        component: () => import('@/views/ziyanScr/hostApplication/index'),
+        component: () => import('@/views/ziyanScr/hostApplication'),
         meta: {
           activeKey: 'zjsq',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+      {
+        path: '/ziyanScr/hostApplication/detail/:id',
+        name: 'host-application-detail',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/ziyanScr/hostApplication/apply',
+        name: '提交主机申请',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-form/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
         },
       },
       {

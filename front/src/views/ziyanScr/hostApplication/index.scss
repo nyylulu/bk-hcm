@@ -78,23 +78,7 @@
 .width-400 {
   width: 400px;
 }
-.bill-filter-form {
-  display: flex;
-  flex-wrap: wrap;
-  background-color: #fff;
-  margin: 15px 0;
-  padding: 10px;
-  & > div {
-    margin-bottom: 10px;
-  }
-  .bill-form-btn {
-    display: flex;
-    align-items: center;
-    .bk-button + .bk-button {
-      margin-left: 10px;
-    }
-  }
-}
+
 .tabselect {
   display: flex;
   align-items: center;
@@ -124,4 +108,11 @@
 }
 .common-sideslider-content {
   padding: 0 30px;
+}
+
+.host-application-container {
+  .tab-wrapper {
+    margin: 24px;
+    min-height: calc(100vh - 150px);
+  }
 }

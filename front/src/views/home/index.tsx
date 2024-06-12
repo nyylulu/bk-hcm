@@ -43,7 +43,7 @@ export default defineComponent({
     const router = useRouter();
     const userStore = useUserStore();
     const accountStore = useAccountStore();
-    const { fetchBusinessMap } = useBusinessMapStore();
+    const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
     const { fetchAllCloudAreas } = useCloudAreaStore();
     const { whereAmI } = useWhereAmI();
 
@@ -212,6 +212,7 @@ export default defineComponent({
       fetchRegions(VendorEnum.HUAWEI);
       fetchBusinessMap();
       fetchAllCloudAreas();
+      fetchAuthedBusinessList();
     });
 
     if (!hasPagePermission) return () => <NoPermission message={permissionMsg} />;
@@ -481,11 +482,8 @@ export default defineComponent({
             window.open(url, '_blank');
             accountStore.updateSecurityConfirmMessage('');
           }}
-          isShow={!!accountStore.securityConfirmMessage.length}
-        >
-          <span>
-            当前配置已提交，查看审批流程关注进度
-          </span>
+          isShow={!!accountStore.securityConfirmMessage.length}>
+          <span>当前配置已提交，查看审批流程关注进度</span>
         </Dialog>
       </main>
     );

@@ -34,6 +34,7 @@ import {
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { Spinner, Share } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
+import WName from '@/components/w-name';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -1838,6 +1839,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '机型',
       field: 'spec.deviceType',
+      width: 180,
     },
     {
       label: '需求数量',
@@ -1859,6 +1861,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '数据盘大小',
       field: 'spec.diskSize',
+      width: 180,
     },
     {
       label: '数据盘类型',
@@ -1885,6 +1888,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '机型',
       field: 'deviceType',
+      width: 150,
     },
     {
       label: '需求数量',
@@ -2014,16 +2018,24 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '业务',
-      field: 'bkBiz_id',
+      field: 'bk_biz_id',
+      render({ cell }: any) {
+        return businessMapStore.getNameFromBusinessMap(cell);
+      },
     },
     {
       label: '单号',
       field: 'order_id',
-      render: (row: { order_id: any }) => {
+      render: ({ cell }: any) => {
         return (
-          // <router-link class='link-type' to={{ name: 'cr-resource-apply-detail', params: { billId: row.order_id } }}>
-          row.order_id
-          // </router-link>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              // 跳转到单据申请详情页
+            }}>
+            {cell}
+          </Button>
         );
       },
     },
@@ -2038,6 +2050,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '申请人',
       field: 'bk_username',
+      render({ cell }: any) {
+        return <WName name={cell} />;
+      },
     },
     {
       label: '内网IP',
@@ -2062,14 +2077,19 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '交付时间',
       field: 'update_at',
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '申请时间',
       field: 'create_at',
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '备注信息',
-      field: 'message',
+      field: 'remark',
+      render({ data }: any) {
+        return `${data.description}${data.description && data.remark && '/'}${data.remark}` || '--';
+      },
     },
   ];
   const CAcolumns = [
@@ -2595,7 +2615,11 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '单号',
       field: 'id',
-      render: () => <Button text>id</Button>,
+      render: () => (
+        <Button text theme={'primary'}>
+          id
+        </Button>
+      ),
     },
     {
       label: '创建人',
@@ -2758,6 +2782,133 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const ApplicationListColumns = [
+    {
+      label: '业务',
+      render: ({ data }: any) => businessMapStore.getNameFromBusinessMap(data.bk_biz_id) || data.bk_biz_id || '--',
+    },
+    {
+      label: '需求类型',
+      field: 'require_type',
+      // render: ({ data }: any) => this.$requireTypeTransform(data.requireType),
+    },
+    {
+      label: '需求摘要',
+      minWidth: 200,
+      render: ({ data }: any) => {
+        return (
+          <div>
+            {/* <cr-property-item k="resourceType" v={data.resourceType} />
+            <cr-property-item k="deviceType" v={data.spec?.deviceType} />
+            <cr-property-item k="zone" v={data.spec?.zone} /> */}
+          </div>
+        );
+      },
+    },
+    {
+      label: '申请人',
+      render: ({ data }: any) => {
+        return <WName name={data.bk_username}></WName>;
+      },
+    },
+    {
+      label: '交付情况-总数',
+      field: 'total_num',
+    },
+    {
+      label: '交付情况-待交付',
+      field: 'pending_num',
+      render: ({ data }: any) => {
+        if (data.pendingNum > 0 && this.isRoot) {
+          return (
+            <Button text theme='primary'>
+              {data.pendingNum}
+            </Button>
+          );
+        }
+
+        return <span>{data.pendingNum}</span>;
+      },
+    },
+    {
+      label: '交付情况-已交付',
+      field: 'success_num',
+      width: 180,
+      render: ({ data }: any) => {
+        if (data.success_num > 0) {
+          const ips: any[] = [];
+          const assetIds: any[] = [];
+          const goToCmdb = (ips: string[]) => {
+            window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
+          };
+
+          return (
+            <div>
+              {data.success_num}
+              <Button text theme={'primary'} class='mr8' v-clipboard:copy={ips.join('\n')}>
+                复制 IP
+              </Button>
+              <Button text theme={'primary'} class='mr8' v-clipboard:copy={assetIds.join('\n')}>
+                复制固资号
+              </Button>
+              <Button text theme={'primary'} onClick={() => goToCmdb(ips)}>
+                去蓝鲸配置平台管理资源
+              </Button>
+            </div>
+          );
+        }
+
+        return <span>{data.success_num}</span>;
+      },
+    },
+    {
+      label: '申请时间',
+      field: 'create_at',
+      render: ({ data }: any) => timeFormatter(data.create_at, 'YYYY-MM-DD'),
+    },
+    {
+      label: '期望交付时间',
+      field: 'expect_time',
+      render: ({ data }: any) => timeFormatter(data.expect_time, 'YYYY-MM-DD'),
+    },
+    {
+      label: '备注信息',
+      field: 'remark',
+      width: '150',
+      render: ({ data }: any) => (
+        <div>
+          {data.description}
+          {data.description && data.remark && '/'}
+          {data.remark}
+        </div>
+      ),
+    },
+    {
+      label: '操作',
+      fixed: 'right',
+      width: 200,
+      render: ({ data }: any) => {
+        return (
+          <div>
+            <Button size='small' text theme={'primary'} class='mr8'>
+              再次申请
+            </Button>
+            {data.stage !== 'DONE' ? (
+              <span>
+                <Button size='small' text theme={'primary'} class='mr8'>
+                  重试
+                </Button>
+                <Button size='small' text theme={'primary'} class='mr8'>
+                  终止
+                </Button>
+              </span>
+            ) : null}
+          </div>
+        );
+      },
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2798,6 +2949,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
     scrResourceOnlineCreate: scrResourceOnlineCreateColumns,
     scrResourceOfflineCreate: scrResourceOfflineCreateColumns,
+    applicationList: ApplicationListColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

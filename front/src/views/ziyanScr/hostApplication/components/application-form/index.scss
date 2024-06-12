@@ -1,0 +1,21 @@
+.wid100 {
+  .apply-form-wrapper {
+    margin-top: 52px;
+    padding: 0 40px;
+  }
+  .flexrow {
+    display: flex;
+    align-items: center;
+  }
+  
+}
+
+.scr-form-wrapper {
+  margin: 0 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  .bk-form-item {
+    margin: 8px 0;
+  }
+}

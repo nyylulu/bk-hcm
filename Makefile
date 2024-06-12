@@ -69,7 +69,7 @@ docker: pre ui ver
 # 编译前端
 ui: pre
 	@echo -e "\033[34;1mBuilding Front...\033[0m"
-	@cd ${PRO_DIR}/front && npm i && npm run build
+	@cd ${PRO_DIR}/front && npm i && npm run build:bcc
 	@mv ${PRO_DIR}/front/dist ${OUTPUT_DIR}/front
 	@echo -e "\033[32;1mBuild Front Success!\n\033[0m"
 

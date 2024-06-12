@@ -1,0 +1,28 @@
+.apply-list-container {
+  .filter-container {
+    margin-bottom: 8px;
+  }
+  .table-container {
+    margin-top: 8px;
+    .sub-order-txt {
+      font-size: 10px;
+      color: #C4C6CC;
+    }
+  }
+}
+
+.scr-form-wrapper {
+  margin: 0 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  .bk-form-item {
+    margin: 8px 0;
+    .bk-form-content, .bk-date-picker {
+      width: 280px;
+    }
+    .bk-button {
+      margin-right: 8px!important;
+    }
+  }
+}

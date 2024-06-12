@@ -407,5 +407,6 @@ export const useTable = (props: IProp) => {
     dataList,
     getListData,
     pagination,
+    isLoading,
   };
 };

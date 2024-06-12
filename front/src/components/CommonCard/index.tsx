@@ -1,11 +1,11 @@
 import { Card } from 'bkui-vue';
-import { PropType, defineComponent } from 'vue';
+import { PropType, VNode, defineComponent } from 'vue';
 import './index.scss';
 
 export default defineComponent({
   props: {
     title: {
-      type: Function as PropType<() => string | HTMLElement>,
+      type: Function as PropType<() => string | HTMLElement | VNode>,
       required: true,
     },
     layout: {
@@ -18,7 +18,7 @@ export default defineComponent({
       <Card class={'common-card'} border={false} showHeader={false} showFooter={false}>
         <p class={'common-card-title'}>{props.title?.()}</p>
         <div class={`common-card-content ${props.layout === 'grid' ? 'common-card-content-grid-layout' : ''}`}>
-          {slots.default()}
+          {slots.default?.()}
         </div>
       </Card>
     );

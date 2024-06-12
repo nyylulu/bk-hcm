@@ -53,8 +53,8 @@ export function deepMerge(...objectArray: any) {
  * @param format 格式
  * @returns 格式化后的时间
  */
-export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss') {
-  return val ? dayjs(val).format(format) : '--';
+export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
 }
 /**
  * 相对当前的时间

@@ -123,6 +123,7 @@ export default defineComponent({
         tagTpl={tpl}
         clearable={props.clearable}
         allowCreate={props.allowCreate}
+        class={'minw320'}
         popoverProps={popoverProps}>
         {{
           suffix: () =>
