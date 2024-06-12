@@ -101,16 +101,16 @@ type CreateResPlanDemandReq struct {
 	Remark         *string                `json:"remark" validate:"required"`
 	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
 	Cvm            *struct {
-		ResMode    string `json:"res_mode" validate:"required"`
-		DeviceType string `json:"device_type" validate:"required"`
-		Os         *int64 `json:"os" validate:"required"`
-		CpuCore    *int64 `json:"cpu_core" validate:"required"`
-		Memory     *int64 `json:"memory" validate:"required"`
+		ResMode    string `json:"res_mode"`
+		DeviceType string `json:"device_type"`
+		Os         *int64 `json:"os"`
+		CpuCore    *int64 `json:"cpu_core"`
+		Memory     *int64 `json:"memory"`
 	} `json:"cvm" validate:"omitempty"`
 	Cbs *struct {
-		DiskType enumor.DiskType `json:"disk_type" validate:"required"`
-		DiskIo   *int64          `json:"disk_io" validate:"required"`
-		DiskSize *int64          `json:"disk_size" validate:"required"`
+		DiskType enumor.DiskType `json:"disk_type"`
+		DiskIo   *int64          `json:"disk_io"`
+		DiskSize *int64          `json:"disk_size"`
 	} `json:"cbs" validate:"omitempty"`
 }
 
@@ -134,7 +134,7 @@ func (r *CreateResPlanDemandReq) Validate() error {
 
 	lenRemark := utf8.RuneCountInString(*r.Remark)
 	if lenRemark > 255 {
-		return errors.New("len remark should < 255")
+		return errors.New("len remark should <= 255")
 	}
 
 	for _, demandResType := range r.DemandResTypes {
@@ -143,11 +143,19 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		}
 	}
 
-	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCVM) && r.Cvm == nil {
-		return errors.New("demand includes cvm, cvm should not be nil")
-	}
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCVM) {
+		if r.Cvm == nil {
+			return errors.New("demand includes cvm, cvm should not be nil")
+		}
 
-	if r.Cvm != nil {
+		if len(r.Cvm.ResMode) == 0 {
+			return errors.New("cvm res mode should not be empty")
+		}
+
+		if len(r.Cvm.DeviceType) == 0 {
+			return errors.New("cvm device type should not be empty")
+		}
+
 		if *r.Cvm.Os < 0 {
 			return errors.New("os should be >= 0")
 		}
@@ -161,11 +169,11 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		}
 	}
 
-	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCBS) && r.Cbs == nil {
-		return errors.New("demand includes cbs, cbs should not be nil")
-	}
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCBS) {
+		if r.Cbs == nil {
+			return errors.New("demand includes cbs, cbs should not be nil")
+		}
 
-	if r.Cbs != nil {
 		if err := r.Cbs.DiskType.Validate(); err != nil {
 			return err
 		}
