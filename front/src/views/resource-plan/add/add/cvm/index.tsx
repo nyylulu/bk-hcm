@@ -150,6 +150,7 @@ export default defineComponent({
               <bk-input
                 type='number'
                 suffix={t('台')}
+                min={0}
                 modelValue={props.planTicketDemand.cvm.os}
                 onChange={(val: number) => handleUpdatePlanTicketDemand('os', val || 0)}
                 clearable

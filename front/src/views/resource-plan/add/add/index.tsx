@@ -73,19 +73,29 @@ export default defineComponent({
       });
     };
 
+    const clearAllValidate = () => {
+      nextTick(() => {
+        Promise.all([basicRef.value?.clearValidate(), cvmRef.value?.clearValidate(), cbsRef.value?.clearValidate()]);
+      });
+    };
+
     watch(
       () => props.isShow,
       () => {
         if (props.isShow) {
           initPlanTicketDemand();
-          nextTick(() => {
-            Promise.all([
-              basicRef.value?.clearValidate(),
-              cvmRef.value?.clearValidate(),
-              cbsRef.value?.clearValidate(),
-            ]);
-          });
+          clearAllValidate();
         }
+      },
+    );
+
+    watch(() => resourceType.value, clearAllValidate);
+
+    watch(
+      () => planTicketDemand.value?.cbs.disk_type,
+      () => {
+        // 切换云盘类型时 ，清空 单实例磁盘IO 数量
+        planTicketDemand.value.cbs.disk_io = 0;
       },
     );
 

@@ -1,4 +1,4 @@
-import { defineComponent, ref, type PropType, onBeforeMount, watch } from 'vue';
+import { defineComponent, ref, type PropType, onBeforeMount, watch, computed } from 'vue';
 import Panel from '@/components/panel';
 import { useI18n } from 'vue-i18n';
 import { useResourcePlanStore } from '@/store';
@@ -22,26 +22,15 @@ export default defineComponent({
     const isLoadingDiskTypes = ref(false);
     const diskTypes = ref<IDiskType[]>([]);
 
-    const rules = {
+    const isCVM = computed(() => props.resourceType === 'cvm');
+
+    const rules = computed(() => ({
       disk_io: [
-        {
-          validator: (value: number) => {
-            const cloundType = props.planTicketDemand.cbs.disk_type;
-            if (cloundType === 'CLOUD_PREMIUM') {
-              return value <= 150;
-            }
-            if (cloundType === 'CLOUD_SSD') {
-              return value <= 260;
-            }
-          },
-          message: t('高性能云盘上限150，SSD云硬盘上限260'),
-          trigger: 'change',
-        },
         {
           validator: (value: number) => {
             return value > 0;
           },
-          message: t('云硬盘 数量应大于0'),
+          message: t('单实例磁盘IO 数量应大于0'),
           trigger: 'change',
         },
       ],
@@ -50,11 +39,11 @@ export default defineComponent({
           validator: (value: number) => {
             return value > 0;
           },
-          message: t('云磁盘容量/实例 数量应大于0'),
+          message: isCVM.value ? t('云磁盘容量/实例 数量应大于0') : t('云磁盘容量/块 数量应大于0'),
           trigger: 'change',
         },
       ],
-    };
+    }));
 
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
       emit('update:planTicketDemand', {
@@ -115,7 +104,7 @@ export default defineComponent({
         <bk-form
           form-type='vertical'
           ref={formRef}
-          rules={rules}
+          rules={rules.value}
           model={props.planTicketDemand.cbs}
           class={cssModule.home}>
           <bk-form-item label={t('云盘类型')} property='disk_type' required class={cssModule['span-line']}>
@@ -130,13 +119,14 @@ export default defineComponent({
             </bk-select>
           </bk-form-item>
           <bk-form-item
-            label={t('云磁盘容量/实例')}
+            label={isCVM.value ? t('云磁盘容量/实例') : t('云磁盘容量/块')}
             property='disk_per_size'
             required
             class={cssModule['span-half-line']}>
             <bk-input
               type='number'
               suffix={'GB'}
+              min={0}
               modelValue={props.planTicketDemand.cbs.disk_per_size}
               onChange={(val: number) => handleUpdatePlanTicketDemand('disk_per_size', val || 0)}
               clearable
@@ -157,6 +147,7 @@ export default defineComponent({
               class={cssModule['span-line']}>
               <bk-input
                 type='number'
+                min={0}
                 suffix={t('块')}
                 modelValue={props.planTicketDemand.cbs.disk_num}
                 onChange={(val: number) => handleUpdatePlanTicketDemand('disk_num', val || 0)}
@@ -173,6 +164,8 @@ export default defineComponent({
             class={cssModule['span-line']}>
             <bk-input
               type='number'
+              min={0}
+              max={props.planTicketDemand.cbs.disk_type === 'CLOUD_PREMIUM' ? 150 : 260}
               disabled={!props.planTicketDemand.cbs.disk_type}
               modelValue={props.planTicketDemand.cbs.disk_io}
               onChange={(val: number) => handleUpdatePlanTicketDemand('disk_io', val || 0)}
