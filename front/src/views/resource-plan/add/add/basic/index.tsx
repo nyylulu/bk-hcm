@@ -115,11 +115,16 @@ export default defineComponent({
     };
 
     const getDisabledDate = (date: string) => {
-      return dayjs(date).isBefore(dayjs().subtract(1, 'days'));
+      // return dayjs(date).isBefore(dayjs().add(13, 'weeks'));
+      return dayjs(date).isBefore('2024-10-01');
     };
 
     const validate = () => {
       return formRef.value.validate();
+    };
+
+    const clearValidate = () => {
+      return formRef.value?.clearValidate();
     };
 
     watch(
@@ -139,6 +144,7 @@ export default defineComponent({
 
     expose({
       validate,
+      clearValidate,
     });
 
     return () => (
@@ -161,7 +167,7 @@ export default defineComponent({
               ))}
             </bk-select>
           </bk-form-item>
-          <bk-form-item label={t('云地域')} property='region_id' required>
+          <bk-form-item label={t('城市')} property='region_id' required>
             <bk-select
               clearable
               loading={isLoadingRegion.value}

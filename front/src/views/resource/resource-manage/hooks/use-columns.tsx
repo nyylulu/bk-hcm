@@ -3161,7 +3161,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '内存总量(GB)',
       field: 'memory',
-      isFormItem: true,
+      isDefaultShow: true,
     },
     {
       label: '云硬盘总量(GB)',
@@ -3306,7 +3306,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
-      label: '云地域',
+      label: '城市',
       field: 'region_name',
       isDefaultShow: true,
     },

@@ -6,7 +6,7 @@ import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import { useRouter } from 'vue-router';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useResourcePlanStore } from '@/store';
-
+import { useI18n } from 'vue-i18n';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import Panel from '@/components/panel';
 
@@ -19,6 +19,7 @@ export default defineComponent({
   setup(_, { expose }) {
     let searchModel: Partial<IListTicketsParam> = undefined;
 
+    const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
     const { columns, settings } = useColumns('forecastDemand');
     const router = useRouter();
@@ -26,7 +27,7 @@ export default defineComponent({
     const tableColumns = computed(() => {
       return [
         {
-          label: '预测单号',
+          label: t('预测单号'),
           field: 'forecast_order',
           isFormItem: true,
           render: ({ data }: { data: IListTicketsResult['detail'][0] }) => (
@@ -84,7 +85,7 @@ export default defineComponent({
       <Panel>
         <Button theme='primary' onClick={handleToAdd} class={cssModule.button}>
           <PlusIcon class={cssModule['plus-icon']} />
-          新增
+          {t('新增')}
         </Button>
         <bk-loading loading={isLoading.value}>
           <bk-table

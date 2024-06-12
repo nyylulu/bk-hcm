@@ -7,12 +7,14 @@ import { useResourcePlanStore } from '@/store';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import { timeFormatter } from '@/common/util';
 import type { IListTicketsParam } from '@/typings/resourcePlan';
+import { useI18n } from 'vue-i18n';
 
 export default defineComponent({
   emits: ['search'],
 
   setup(_, { emit }) {
     const { Option } = Select;
+    const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
 
     const initialSearchModel: Partial<IListTicketsParam> = {
@@ -20,7 +22,6 @@ export default defineComponent({
       obs_projects: [],
       ticket_ids: [],
       applicants: [],
-      expect_time_range: undefined,
       submit_time_range: undefined,
     };
     const projects = ref<string[]>([]);
@@ -41,6 +42,7 @@ export default defineComponent({
 
     const handleReset = () => {
       searchModel.value = JSON.parse(JSON.stringify(initialSearchModel));
+      emit('search', undefined);
     };
 
     const handleInputTicket = (val: string) => {
@@ -64,11 +66,11 @@ export default defineComponent({
       <Panel class={cssModule['mb-16']}>
         <div class={cssModule['search-grid']}>
           <div>
-            <div class={cssModule['search-label']}>业务</div>
+            <div class={cssModule['search-label']}>{t('业务')}</div>
             <BusinessSelector v-model={searchModel.value.bk_biz_ids} multiple={true} authed={true} />
           </div>
           <div>
-            <div class={cssModule['search-label']}>项目类型</div>
+            <div class={cssModule['search-label']}>{t('项目类型')}</div>
             <Select multiple v-model={searchModel.value.obs_projects}>
               {projects.value.map((item) => (
                 <Option key={item} name={item} id={item}>
@@ -78,36 +80,31 @@ export default defineComponent({
             </Select>
           </div>
           <div>
-            <div class={cssModule['search-label']}>预测单号</div>
+            <div class={cssModule['search-label']}>{t('预测单号')}</div>
             <Input
               modelValue={searchModel.value.ticket_ids.join(';')}
-              placeholder='请输入预测单号，多个预测单号可使用分号分隔'
-              onChange={handleInputTicket}></Input>
+              placeholder={t('请输入预测单号，多个预测单号可使用分号分隔')}
+              onChange={handleInputTicket}
+            />
           </div>
           <div>
-            <div class={cssModule['search-label']}>期望到货时间</div>
-            <DatePicker
-              modelValue={[searchModel.value.expect_time_range?.start, searchModel.value.expect_time_range?.end]}
-              onChange={(val: string[]) => handleChangeDate('expect_time_range', val)}
-              type='daterange'></DatePicker>
-          </div>
-          <div>
-            <div class={cssModule['search-label']}>提单人</div>
+            <div class={cssModule['search-label']}>{t('提单人')}</div>
             <MemberSelect v-model={searchModel.value.applicants} />
           </div>
           <div>
-            <div class={cssModule['search-label']}>提单时间</div>
+            <div class={cssModule['search-label']}>{t('提单时间')}</div>
             <DatePicker
               modelValue={[searchModel.value.submit_time_range?.start, searchModel.value.submit_time_range?.end]}
               onChange={(val: string[]) => handleChangeDate('submit_time_range', val)}
-              type='daterange'></DatePicker>
+              type='daterange'
+            />
           </div>
         </div>
         <Button theme='primary' class={cssModule['search-button']} onClick={handleSearch}>
-          查询
+          {t('查询')}
         </Button>
         <Button onClick={handleReset} class={cssModule['search-button']}>
-          重置
+          {t('重置')}
         </Button>
       </Panel>
     );

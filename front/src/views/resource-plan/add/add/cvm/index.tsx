@@ -91,6 +91,10 @@ export default defineComponent({
       return formRef.value?.validate();
     };
 
+    const clearValidate = () => {
+      return formRef.value?.clearValidate();
+    };
+
     watch(() => props.planTicketDemand.cvm.device_class, getDeviceTypes, {
       immediate: true,
     });
@@ -105,6 +109,7 @@ export default defineComponent({
 
     expose({
       validate,
+      clearValidate,
     });
 
     return () =>
@@ -116,6 +121,7 @@ export default defineComponent({
                 <bk-radio-button label='按机型' />
                 <bk-radio-button label='按机型族' disabled />
               </bk-radio-group>
+              <span class={cssModule['ml-8']}>{t('暂不支持按机型族选择')}</span>
             </bk-form-item>
             <bk-form-item label={t('机型类型')} property='device_class' required class={cssModule['span-3']}>
               <bk-select

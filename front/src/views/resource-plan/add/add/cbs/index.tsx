@@ -22,6 +22,40 @@ export default defineComponent({
     const isLoadingDiskTypes = ref(false);
     const diskTypes = ref<IDiskType[]>([]);
 
+    const rules = {
+      disk_io: [
+        {
+          validator: (value: number) => {
+            const cloundType = props.planTicketDemand.cbs.disk_type;
+            if (cloundType === 'CLOUD_PREMIUM') {
+              return value <= 150;
+            }
+            if (cloundType === 'CLOUD_SSD') {
+              return value <= 260;
+            }
+          },
+          message: t('高性能云盘上限150，SSD云硬盘上限260'),
+          trigger: 'change',
+        },
+        {
+          validator: (value: number) => {
+            return value > 0;
+          },
+          message: t('云硬盘 数量应大于0'),
+          trigger: 'change',
+        },
+      ],
+      disk_per_size: [
+        {
+          validator: (value: number) => {
+            return value > 0;
+          },
+          message: t('云磁盘容量/实例 数量应大于0'),
+          trigger: 'change',
+        },
+      ],
+    };
+
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
       emit('update:planTicketDemand', {
         ...props.planTicketDemand,
@@ -34,6 +68,10 @@ export default defineComponent({
 
     const validate = () => {
       return formRef.value.validate();
+    };
+
+    const clearValidate = () => {
+      return formRef.value?.clearValidate();
     };
 
     const getDiskTypes = () => {
@@ -69,11 +107,17 @@ export default defineComponent({
 
     expose({
       validate,
+      clearValidate,
     });
 
     return () => (
       <Panel title={t('CBS云磁盘信息')}>
-        <bk-form form-type='vertical' ref={formRef} model={props.planTicketDemand.cbs} class={cssModule.home}>
+        <bk-form
+          form-type='vertical'
+          ref={formRef}
+          rules={rules}
+          model={props.planTicketDemand.cbs}
+          class={cssModule.home}>
           <bk-form-item label={t('云盘类型')} property='disk_type' required class={cssModule['span-line']}>
             <bk-select
               clearable
@@ -86,7 +130,7 @@ export default defineComponent({
             </bk-select>
           </bk-form-item>
           <bk-form-item
-            label={t('云磁盘容量/块')}
+            label={t('云磁盘容量/实例')}
             property='disk_per_size'
             required
             class={cssModule['span-half-line']}>
@@ -129,6 +173,7 @@ export default defineComponent({
             class={cssModule['span-line']}>
             <bk-input
               type='number'
+              disabled={!props.planTicketDemand.cbs.disk_type}
               modelValue={props.planTicketDemand.cbs.disk_io}
               onChange={(val: number) => handleUpdatePlanTicketDemand('disk_io', val || 0)}
               clearable

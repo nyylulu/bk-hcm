@@ -1,11 +1,10 @@
-import { defineComponent, type PropType, ref, watch } from 'vue';
+import { defineComponent, type PropType, ref, watch, nextTick } from 'vue';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
 import CVM from './cvm';
 import CBS from './cbs';
 import cssModule from './index.module.scss';
 import { useI18n } from 'vue-i18n';
-import dayjs from 'dayjs';
 
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 
@@ -36,10 +35,10 @@ export default defineComponent({
     const initPlanTicketDemand = () => {
       planTicketDemand.value = {
         obs_project: '',
-        expect_time: dayjs().format('YYYY-MM-DD'),
+        expect_time: '2024-10-01',
         region_id: '',
         zone_id: '',
-        demand_source: '',
+        demand_source: '指标变化',
         remark: '',
         cvm: {
           res_mode: '按机型',
@@ -79,6 +78,13 @@ export default defineComponent({
       () => {
         if (props.isShow) {
           initPlanTicketDemand();
+          nextTick(() => {
+            Promise.all([
+              basicRef.value?.clearValidate(),
+              cvmRef.value?.clearValidate(),
+              cbsRef.value?.clearValidate(),
+            ]);
+          });
         }
       },
     );
