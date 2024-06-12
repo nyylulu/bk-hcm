@@ -15,6 +15,8 @@ package plan
 
 import (
 	"errors"
+	"slices"
+	"unicode/utf8"
 
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
@@ -81,7 +83,8 @@ func (r *CreateResPlanTicketReq) Validate() error {
 		}
 	}
 
-	if len(r.Remark) < 20 || len(r.Remark) > 1024 {
+	lenRemark := utf8.RuneCountInString(r.Remark)
+	if lenRemark < 20 || lenRemark > 1024 {
 		return errors.New("len remark should be >= 20 and < 1024")
 	}
 
@@ -90,13 +93,14 @@ func (r *CreateResPlanTicketReq) Validate() error {
 
 // CreateResPlanDemandReq is create resource plan demand request.
 type CreateResPlanDemandReq struct {
-	ObsProject   enumor.ObsProject   `json:"obs_project" validate:"required"`
-	ExpectTime   string              `json:"expect_time" validate:"required"`
-	RegionID     string              `json:"region_id" validate:"required"`
-	ZoneID       string              `json:"zone_id" validate:"omitempty"`
-	DemandSource enumor.DemandSource `json:"demand_source" validate:"required"`
-	Remark       string              `json:"remark" validate:"omitempty"`
-	Cvm          *struct {
+	ObsProject     enumor.ObsProject      `json:"obs_project" validate:"required"`
+	ExpectTime     string                 `json:"expect_time" validate:"required"`
+	RegionID       string                 `json:"region_id" validate:"required"`
+	ZoneID         string                 `json:"zone_id" validate:"omitempty"`
+	DemandSource   enumor.DemandSource    `json:"demand_source" validate:"required"`
+	Remark         *string                `json:"remark" validate:"required"`
+	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
+	Cvm            *struct {
 		ResMode    string `json:"res_mode" validate:"required"`
 		DeviceType string `json:"device_type" validate:"required"`
 		Os         *int64 `json:"os" validate:"required"`
@@ -128,6 +132,21 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		return err
 	}
 
+	lenRemark := utf8.RuneCountInString(*r.Remark)
+	if lenRemark > 255 {
+		return errors.New("len remark should < 255")
+	}
+
+	for _, demandResType := range r.DemandResTypes {
+		if err := demandResType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCVM) && r.Cvm == nil {
+		return errors.New("demand includes cvm, cvm should not be nil")
+	}
+
 	if r.Cvm != nil {
 		if *r.Cvm.Os < 0 {
 			return errors.New("os should be >= 0")
@@ -140,6 +159,10 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		if *r.Cvm.Memory < 0 {
 			return errors.New("memory should be >= 0")
 		}
+	}
+
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCBS) && r.Cbs == nil {
+		return errors.New("demand includes cbs, cbs should not be nil")
 	}
 
 	if r.Cbs != nil {

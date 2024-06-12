@@ -15,6 +15,7 @@ package plan
 import (
 	"encoding/json"
 	"errors"
+	"slices"
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
@@ -313,7 +314,7 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 	demands := make([]rpd.ResPlanDemandTable, 0, len(requests))
 	for _, req := range requests {
 		var cvm, cbs dtypes.JsonField
-		if req.Cvm != nil {
+		if slices.Contains(req.DemandResTypes, enumor.DemandResTypeCVM) {
 			deviceType := req.Cvm.DeviceType
 			cvm, err = dtypes.NewJsonField(rpd.Cvm{
 				ResMode:      req.Cvm.ResMode,
@@ -331,7 +332,7 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 			}
 		}
 
-		if req.Cbs != nil {
+		if slices.Contains(req.DemandResTypes, enumor.DemandResTypeCBS) {
 			cbs, err = dtypes.NewJsonField(rpd.Cbs{
 				DiskType:     req.Cbs.DiskType,
 				DiskTypeName: req.Cbs.DiskType.Name(),
@@ -355,7 +356,7 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 			AreaID:       regionAreaMap[req.RegionID].AreaID,
 			AreaName:     regionAreaMap[req.RegionID].AreaName,
 			DemandSource: req.DemandSource,
-			Remark:       req.Remark,
+			Remark:       *req.Remark,
 			Cvm:          cvm,
 			Cbs:          cbs,
 			Creator:      kt.User,

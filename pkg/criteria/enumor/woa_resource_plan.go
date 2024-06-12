@@ -82,6 +82,28 @@ func GetDemandClassMembers() []DemandClass {
 	return []DemandClass{DemandClassCVM, DemandClassCA}
 }
 
+// DemandResType is resource plan demand resource type.
+type DemandResType string
+
+const (
+	// DemandResTypeCVM is demand resource type cvm.
+	DemandResTypeCVM DemandResType = "CVM"
+	// DemandResTypeCBS is demand resource type cbs.
+	DemandResTypeCBS DemandResType = "CBS"
+)
+
+// Validate DemandResType.
+func (t DemandResType) Validate() error {
+	switch t {
+	case DemandResTypeCVM:
+	case DemandResTypeCBS:
+	default:
+		return fmt.Errorf("unsupported demand resource type: %s", t)
+	}
+
+	return nil
+}
+
 // ResMode is resource plan resource mode.
 type ResMode string
 

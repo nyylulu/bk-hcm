@@ -17,16 +17,17 @@ POST /api/v1/woa/plan/resource/ticket/create
 
 #### demands[i]
 
-| 参数名称          | 参数类型   | 必选 | 描述                                |
-|---------------|--------|----|-----------------------------------|
-| obs_project   | string | 是  | OBS项目类型                           |
-| expect_time   | string | 是  | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01 |
-| region_id     | string | 是  | 地区/城市ID                           |
-| zone_id       | string | 否  | 可用区ID                             |
-| demand_source | string | 是  | 需求分类/变更原因                         |
-| remark        | string | 否  | 需求备注                              |
-| cvm           | object | 否  | 申请的CVM信息                          |
-| cbs           | object | 否  | 申请的CBS信息                          |
+| 参数名称             | 参数类型         | 必选 | 描述                                                |
+|------------------|--------------|----|---------------------------------------------------|
+| obs_project      | string       | 是  | OBS项目类型                                           |
+| expect_time      | string       | 是  | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01                 |
+| region_id        | string       | 是  | 地区/城市ID                                           |
+| zone_id          | string       | 否  | 可用区ID                                             |
+| demand_source    | string       | 是  | 需求分类/变更原因                                         |
+| remark           | string       | 否  | 需求备注                                              |
+| demand_res_types | string array | 是  | 预测资源类型列表(枚举值：CVM、CBS)，需求包含CVM时，传递CVM，包含CBS时，传递CBS |
+| cvm              | object       | 否  | 申请的CVM信息                                          |
+| cbs              | object       | 否  | 申请的CBS信息                                          |
 
 #### demands[i].cvm
 
@@ -60,6 +61,10 @@ POST /api/v1/woa/plan/resource/ticket/create
       "zone_id": "ap-shanghai-2",
       "demand_source": "指标变化",
       "remark": "这里是需求备注",
+      "demand_res_types": [
+        "CVM",
+        "CBS"
+      ],
       "cvm": {
         "res_mode": "按机型",
         "device_type": "S5.2XLARGE16",

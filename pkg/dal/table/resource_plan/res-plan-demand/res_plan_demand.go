@@ -163,10 +163,6 @@ func (r ResPlanDemandTable) InsertValidate() error {
 		return errors.New("demand source can not be empty")
 	}
 
-	if len(r.Remark) == 0 {
-		return errors.New("remark can not be empty")
-	}
-
 	if len(r.Creator) == 0 {
 		return errors.New("creator can not be empty")
 	}
