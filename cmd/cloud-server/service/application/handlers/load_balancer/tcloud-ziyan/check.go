@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package loadbalancer ...
-package loadbalancer
+package ziyan
 
 import (
-	"hcm/cmd/hc-service/logics/cloud-adaptor"
-	ressync "hcm/cmd/hc-service/logics/res-sync"
-	"hcm/cmd/hc-service/service/capability"
-	dataservice "hcm/pkg/client/data-service"
+	logicsaccount "hcm/cmd/cloud-server/logics/account"
 )
 
-// InitLoadBalancerService initial the clb service.
-func InitLoadBalancerService(cap *capability.Capability) {
-	svc := &clbSvc{
-		ad:      cap.CloudAdaptor,
-		dataCli: cap.ClientSet.DataService(),
-		syncCli: cap.ResSyncCli,
+// CheckReq 检查申请单的数据是否正确
+func (a *ApplicationOfCreateZiyanLB) CheckReq() error {
+	if err := a.req.Validate(true); err != nil {
+		return err
 	}
 
-	svc.initTCloudClbService(cap)
-	svc.initTCloudZiyanClbService(cap)
-}
+	if err := logicsaccount.IsResourceAccount(a.Cts.Kit, a.Client.DataService(), a.req.AccountID); err != nil {
+		return err
+	}
 
-type clbSvc struct {
-	ad      *cloudadaptor.CloudAdaptorClient
-	dataCli *dataservice.Client
-	syncCli ressync.Interface
+	return nil
 }

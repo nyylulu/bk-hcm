@@ -441,6 +441,9 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		SnatPro:                  cloud.SnatPro,
 		MixIpTarget:              cloud.MixIpTarget,
 		ChargeType:               cloud.ChargeType,
+		ClusterTag:               cloud.ClusterTag,
+		ClusterIds:               cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds)),
+		Tags:                     cvt.ValToPtr(cloud.GetTags()),
 		// 该接口无法获取下列字段
 		BandwidthPackageId: nil,
 	}
@@ -475,6 +478,13 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		ext.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
 	}
 
+	// 独占集群
+	if cloud.ExclusiveCluster != nil {
+		ext.L4Clusters = convClusterItemList(cloud.ExclusiveCluster.L4Clusters)
+		ext.L7Clusters = convClusterItemList(cloud.ExclusiveCluster.L7Clusters)
+		ext.ClassicalCluster = convClusterItem(cloud.ExclusiveCluster.ClassicalCluster)
+	}
+
 	return ext
 }
 
@@ -496,64 +506,9 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 		CloudVpcID:       cloudVpcID,
 		SubnetID:         subnetMap[cloudSubnetID],
 		CloudSubnetID:    cloudSubnetID,
-		Extension: &corelb.TCloudClbExtension{
-			SlaType:                  cloud.SlaType,
-			VipIsp:                   cloud.VipIsp,
-			LoadBalancerPassToTarget: cloud.LoadBalancerPassToTarget,
-			ChargeType:               cloud.ChargeType,
-
-			IPv6Mode: cloud.IPv6Mode,
-			Snat:     cloud.Snat,
-			SnatPro:  cloud.SnatPro,
-		},
-	}
-	if cloud.NetworkAttributes != nil {
-		lb.Extension.InternetMaxBandwidthOut = cloud.NetworkAttributes.InternetMaxBandwidthOut
-		lb.Extension.InternetChargeType = cloud.NetworkAttributes.InternetChargeType
-		lb.Extension.BandwidthpkgSubType = cloud.NetworkAttributes.BandwidthpkgSubType
-	}
-	if cloud.SnatIps != nil {
-		ipList := make([]corelb.SnatIp, 0, len(cloud.SnatIps))
-		for _, snatIP := range cloud.SnatIps {
-			if snatIP == nil {
-				continue
-			}
-			ipList = append(ipList, corelb.SnatIp{SubnetId: snatIP.SubnetId, Ip: snatIP.Ip})
-		}
-		lb.Extension.SnatIps = cvt.ValToPtr(ipList)
+		Extension:        convertTCloudExtension(cloud, region),
 	}
 
-	if len(cloud.LoadBalancerVips) != 0 {
-		switch typeslb.TCloudLoadBalancerType(cvt.PtrToVal(cloud.LoadBalancerType)) {
-		case typeslb.InternalLoadBalancerType:
-			lb.PrivateIPv4Addresses = cvt.PtrToSlice(cloud.LoadBalancerVips)
-		case typeslb.OpenLoadBalancerType:
-			lb.PublicIPv4Addresses = cvt.PtrToSlice(cloud.LoadBalancerVips)
-		}
-	}
-	if ipv6 := cvt.PtrToVal(cloud.AddressIPv6); len(ipv6) > 0 {
-		lb.PublicIPv6Addresses = []string{ipv6}
-	}
-
-	// AttributeFlags
-	flagMap := make(map[string]bool)
-	// 没有碰到的则默认是false
-	for _, flag := range cloud.AttributeFlags {
-		flagMap[cvt.PtrToVal(flag)] = true
-	}
-	// 逐个赋值flag
-	lb.Extension.DeleteProtect = cvt.ValToPtr(flagMap[constant.TCLBDeleteProtect])
-
-	if cloud.Egress != nil {
-		lb.Extension.Egress = cloud.Egress
-	}
-
-	// 跨域1.0 信息
-	if cvt.PtrToVal(cloud.TargetRegionInfo.Region) != region ||
-		!assert.IsPtrStringEqual(cloud.TargetRegionInfo.VpcId, cloud.VpcId) {
-		lb.Extension.TargetRegion = cloud.TargetRegionInfo.Region
-		lb.Extension.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
-	}
 	return &lb
 }
 
@@ -722,6 +677,24 @@ func hashCloudSnatIP(ip *tclb.SnatIp) string {
 		return ","
 	}
 	return cvt.PtrToVal(ip.SubnetId) + "," + cvt.PtrToVal(ip.Ip)
+}
+
+func convClusterItemList(clusters []*tclb.ClusterItem) *[]*corelb.ClusterItem {
+	var localList []*corelb.ClusterItem
+	for _, cluster := range clusters {
+		localList = append(localList, convClusterItem(cluster))
+	}
+	return cvt.ValToPtr(localList)
+}
+func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
+	if cluster == nil {
+		return nil
+	}
+	return &corelb.ClusterItem{
+		ClusterId:   cvt.PtrToVal(cluster.ClusterId),
+		ClusterName: cvt.PtrToVal(cluster.ClusterName),
+		Zone:        cvt.PtrToVal(cluster.Zone),
+	}
 }
 
 // SyncLBOption ...

@@ -59,6 +59,9 @@ func InitService(c *capability.Capability) {
 		"/load_balancers/{id}/lock/status", svc.GetLoadBalancerLockStatus)
 	h.Add("ListResLoadBalancerQuotas", http.MethodPost, "/load_balancers/quotas", svc.ListResLoadBalancerQuotas)
 
+	h.Add("TCloudDescribeExclusiveCluster", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/exclusive_clusters/describe", svc.TCloudDescribeExclusiveCluster)
+
 	bizH := rest.NewHandler()
 	bizH.Path("/bizs/{bk_biz_id}")
 	bizService(bizH, svc)

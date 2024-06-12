@@ -72,7 +72,7 @@ func (svc *lbSvc) BatchCreateLB(cts *rest.Contexts) (any, error) {
 	case enumor.TCloud:
 		return svc.batchCreateTCloudLB(cts.Kit, req.Data)
 	case enumor.TCloudZiyan:
-		return svc.batchCreateTCloudZiyanLB(cts.Kit, req.Data)
+		return nil, errors.New("ziyan account does not support create clb directly")
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -92,7 +92,7 @@ func (svc *lbSvc) batchCreateTCloudLB(kt *kit.Kit, rawReq json.RawMessage) (any,
 }
 
 func (svc *lbSvc) batchCreateTCloudZiyanLB(kt *kit.Kit, rawReq json.RawMessage) (any, error) {
-	req := new(hcproto.TCloudLoadBalancerCreateReq)
+	req := new(hcproto.TCloudZiyanLoadBalancerCreateReq)
 	if err := json.Unmarshal(rawReq, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}

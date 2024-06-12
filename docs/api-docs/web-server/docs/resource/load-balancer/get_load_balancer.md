@@ -103,14 +103,14 @@ POST /api/v1/cloud/load_balancers/{id}
 | created_at             | string       | 创建时间，标准格式：2006-01-02T15:04:05Z       |
 | updated_at             | string       | 修改时间，标准格式：2006-01-02T15:04:05Z       |
 
-#### data.extension[tcloud]
-
 status 状态含义：
 
 | 状态值 | 含义   |
 |-----|------|
 | 0   | 创建中  |
 | 1   | 正常运行 |
+
+#### data.extension[tcloud]
 
 腾讯云拓展字段
 
@@ -130,4 +130,35 @@ status 状态含义：
 | delete_protect               | string | 删除保护                                        |
 | egress                       | string | 网络出口                                        |
 | mix_ip_target                | string | 双栈混绑                                        |
+
+#### data.extension[tcloud-ziyan]
+
+腾讯自研云拓展字段：全部腾讯云字段，并包含下列值：
+
+| 参数名称              | 参数类型              | 描述        |
+|-------------------|-------------------|-----------|
+| tags              | tag array         | 标签数组。     |
+| zhi_tong          | bool              | 是否支持直通    |
+| tgw_group_name    | string            | Tgw独占集群标签 |
+| cluster_id        | string            | 集群id      |
+| classical_cluster | ClusterItem       | vpcgw集群   |
+| l4_clusters       | ClusterItem array | 4层独占集群列表  |
+| l7_clusters       | ClusterItem array | 7层独占集群列表  |
+
+##### tag
+
+| 参数名称  | 参数类型   | 描述    |
+|-------|--------|-------|
+| key   | string | 标签key |
+| value | string | 标签值   |
+
+##### ClusterItem
+
+| 参数名称         | 参数类型   | 描述      |
+|--------------|--------|---------|
+| cluster_id   | string | 集群id    |
+| cluster_name | string | 集群名     |
+| zone         | string | 集群所在可用区 |
+
+
 

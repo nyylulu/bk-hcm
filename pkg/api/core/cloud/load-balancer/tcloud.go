@@ -118,6 +118,29 @@ type TCloudClbExtension struct {
 	TargetRegion *string `json:"target_region,omitempty"`
 	// 跨域1.0 为0表示基础网络
 	TargetCloudVpcID *string `json:"target_vpc,omitempty"`
+
+	Tags *[]TagPair `json:"tags"`
+
+	// Stgw独占集群的标签。
+	ClusterTag *string `json:"cluster_id,omitempty"`
+	// 集群ID，集群标识，在需要配置公有云独占集群或本地专有集群时使用。
+	ClusterIds *[]string `json:"cluster_ids,omitempty"`
+	// vpcgw集群
+	ClassicalCluster *ClusterItem `json:"classical_cluster"`
+	// 4层独占集群列表
+	L4Clusters *[]*ClusterItem `json:"l4_clusters"`
+	// 7层独占集群列表
+	L7Clusters *[]*ClusterItem `json:"l7_clusters"`
+	// 直通
+	ZhiTong *bool `json:"zhi_tong"`
+	// 独占集群
+	TgwGroupName *string `json:"tgw_group_name"`
+}
+
+// TagPair Key Value Pair
+type TagPair struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
 }
 
 // SnatIp ...
@@ -207,3 +230,10 @@ type TCloudListenerExtension struct {
 
 // TCloudListener ...
 type TCloudListener = Listener[TCloudListenerExtension]
+
+// ClusterItem ...
+type ClusterItem struct {
+	ClusterId   string `json:"cluster_id"`
+	ClusterName string `json:"cluster_name"`
+	Zone        string `json:"zone"`
+}

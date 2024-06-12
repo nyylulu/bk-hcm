@@ -45,6 +45,7 @@ type TCloudLoadBalancerCreateReq struct {
 
 	// 公网	单可用区		传递zones（单元素数组）
 	// 公网	主备可用区	传递zones（单元素数组），以及backup_zones
+	// 内网  多可用区 	传递zones（多元素数组）
 	Zones                   []string `json:"zones" validate:"omitempty"`
 	BackupZones             []string `json:"backup_zones" validate:"omitempty"`
 	CloudVpcID              *string  `json:"cloud_vpc_id" validate:"required"`
@@ -61,7 +62,9 @@ type TCloudLoadBalancerCreateReq struct {
 	RequireCount *uint64 `json:"require_count" validate:"omitempty"`
 	Memo         string  `json:"memo" validate:"omitempty"`
 
-	InternetChargeType *typelb.TCloudLoadBalancerChargeType `json:"internet_charge_type" validate:"omitempty"`
+	InternetChargeType *typelb.TCloudLoadBalancerNetworkChargeType `json:"internet_charge_type" validate:"omitempty"`
+
+	Tags []*corelb.TagPair `json:"tags" validate:"dive,required"`
 }
 
 // Validate request.
@@ -526,5 +529,39 @@ type TCloudDeleteSnatIpReq struct {
 
 // Validate ...
 func (r *TCloudDeleteSnatIpReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// TCloudDescribeExclusiveClusterReq ...
+type TCloudDescribeExclusiveClusterReq struct {
+	AccountID string `json:"account_id" validate:"required"`
+	Region    string `json:"region" validate:"required"`
+
+	// 按照 集群 的类型过滤，包括"TGW","STGW","VPCGW"
+	ClusterType []string `json:"cluster_type" validate:"omitempty"`
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照 集群 的名称过滤。
+	ClusterName []string `json:"cluster_name" validate:"omitempty"`
+	// 按照 集群 的标签过滤。（只有TGW/STGW集群有集群标签）
+	ClusterTag []string `json:"cluster_tag" validate:"omitempty"`
+	// 按照 集群 内的vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+
+	// 按照 集群 内的负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照 集群 的网络类型过滤，如："Public","Private"。
+	Network []string `json:"network" validate:"omitempty"`
+	// 按照 集群 所在可用区过滤，如："ap-guangzhou-1"（广州一区）。
+	Zone []string `json:"zone" validate:"omitempty"`
+	// 按照TGW集群的 Isp 类型过滤，如："BGP","CMCC","CUCC","CTCC","INTERNAL"。
+	Isp []string `json:"isp" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate ...
+func (r *TCloudDescribeExclusiveClusterReq) Validate() error {
 	return validator.Validate.Struct(r)
 }

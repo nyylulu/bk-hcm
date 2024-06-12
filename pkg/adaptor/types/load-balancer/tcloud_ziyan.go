@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package loadbalancer ...
 package loadbalancer
 
 import (
-	"hcm/cmd/hc-service/logics/cloud-adaptor"
-	ressync "hcm/cmd/hc-service/logics/res-sync"
-	"hcm/cmd/hc-service/service/capability"
-	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/validator"
 )
 
-// InitLoadBalancerService initial the clb service.
-func InitLoadBalancerService(cap *capability.Capability) {
-	svc := &clbSvc{
-		ad:      cap.CloudAdaptor,
-		dataCli: cap.ClientSet.DataService(),
-		syncCli: cap.ResSyncCli,
-	}
+// ClbZiyanMianliuTgwGroupName 免流参数指定的Tgw 集群名参数
+const ClbZiyanMianliuTgwGroupName = "ziyan_mianliu"
 
-	svc.initTCloudClbService(cap)
-	svc.initTCloudZiyanClbService(cap)
+// TCloudZiyanCreateClbOption 自研云负载均衡创建参数
+type TCloudZiyanCreateClbOption struct {
+	TCloudCreateClbOption `json:",inline"`
+	// 直通参数
+	ZhiTong *bool `json:"zhi_tong"`
+	// 内网多可用区
+	Zones []string `json:"zones"`
+	// 免流时使用 TgwGroupName='ziyan_mianliu'
+	TgwGroupName *string `json:"tgw_group_name"`
 }
 
-type clbSvc struct {
-	ad      *cloudadaptor.CloudAdaptorClient
-	dataCli *dataservice.Client
-	syncCli ressync.Interface
+// Validate tcloud clb create option.
+func (opt TCloudZiyanCreateClbOption) Validate() error {
+	return validator.Validate.Struct(opt)
 }

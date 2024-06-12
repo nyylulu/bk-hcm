@@ -54,6 +54,31 @@ func (a *BaseApplicationHandler) GetTCloudRegion(region string) (*corecloudregio
 	return &resp.Details[0], nil
 }
 
+// GetTCloudZiyanRegion 查询云地域信息
+func (a *BaseApplicationHandler) GetTCloudZiyanRegion(region string) (*corecloudregion.TCloudRegion, error) {
+	reqFilter := &filter.Expression{
+		Op: filter.And,
+		Rules: []filter.RuleFactory{
+			filter.AtomRule{Field: "region_id", Op: filter.Equal.Factory(), Value: region},
+		},
+	}
+	// 查询
+	resp, err := a.Client.DataService().TCloudZiyan.Region.ListRegion(a.Cts.Kit,
+		&core.ListReq{
+			Filter: reqFilter,
+			Page:   a.getPageOfOneLimit(),
+		},
+	)
+	if err != nil {
+		return nil, err
+	}
+	if resp == nil || len(resp.Details) == 0 {
+		return nil, fmt.Errorf("not found tcloud region by region_id(%s)", region)
+	}
+
+	return &resp.Details[0], nil
+}
+
 // GetAwsRegion 查询云地域信息
 func (a *BaseApplicationHandler) GetAwsRegion(region string) (*corecloudregion.AwsRegion, error) {
 	reqFilter := &filter.Expression{

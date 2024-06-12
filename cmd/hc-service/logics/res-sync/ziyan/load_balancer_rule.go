@@ -108,7 +108,6 @@ func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, lbID string, l4Listeners 
 	// 新增实例应该在同步监听器的时候附带创建，云上已删除的规则应该在监听器同步时被删除
 	_, updateMap, _ := common.Diff[typeslb.TCloudListener, corelb.TCloudLbUrlRule](
 		l4Listeners, dbRules, isLayer4RuleChange)
-
 	// 更新变更监听器，更新对应四层/七层 规则
 	if err = cli.updateLayer4Rule(kt, updateMap); err != nil {
 		return nil, err

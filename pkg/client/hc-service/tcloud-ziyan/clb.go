@@ -60,10 +60,10 @@ func (c *ClbClient) DescribeResources(kt *kit.Kit, req *hcproto.TCloudDescribeRe
 }
 
 // BatchCreate ...
-func (c *ClbClient) BatchCreate(kt *kit.Kit, req *hcproto.TCloudLoadBalancerCreateReq) (
+func (c *ClbClient) BatchCreate(kt *kit.Kit, req *hcproto.TCloudZiyanLoadBalancerCreateReq) (
 	*hcproto.BatchCreateResult, error) {
 
-	return common.Request[hcproto.TCloudLoadBalancerCreateReq, hcproto.BatchCreateResult](
+	return common.Request[hcproto.TCloudZiyanLoadBalancerCreateReq, hcproto.BatchCreateResult](
 		c.client, http.MethodPost, kt, req, "/load_balancers/batch/create")
 }
 
@@ -224,4 +224,11 @@ func (c *ClbClient) CreateSnatIp(kt *kit.Kit, req *hcproto.TCloudCreateSnatIpReq
 func (c *ClbClient) DeleteSnatIp(kt *kit.Kit, req *hcproto.TCloudDeleteSnatIpReq) error {
 	return common.RequestNoResp[hcproto.TCloudDeleteSnatIpReq](c.client, http.MethodDelete, kt, req,
 		"/load_balancers/snat_ips")
+}
+
+func (c *ClbClient) DescribeExclusiveCluster(kt *kit.Kit, req *hcproto.TCloudDescribeExclusiveClusterReq) (
+	*tclb.DescribeExclusiveClustersResponseParams, error) {
+
+	return common.Request[hcproto.TCloudDescribeExclusiveClusterReq, tclb.DescribeExclusiveClustersResponseParams](
+		c.client, http.MethodPost, kt, req, "/load_balancers/exclusive_clusters/describe")
 }

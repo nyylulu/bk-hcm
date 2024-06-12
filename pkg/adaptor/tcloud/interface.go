@@ -187,4 +187,7 @@ type TCloud interface {
 
 	CreateLoadBalancerSnatIps(kt *kit.Kit, opt *typelb.TCloudCreateSnatIpOpt) error
 	DeleteLoadBalancerSnatIps(kt *kit.Kit, opt *typelb.TCloudDeleteSnatIpOpt) error
+
+	DescribeExclusiveClusters(kt *kit.Kit, opt *typelb.TCloudDescribeExclusiveClustersOption) (
+		*tclb.DescribeExclusiveClustersResponseParams, error)
 }

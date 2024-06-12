@@ -65,6 +65,9 @@ func (hd *lbHandler) Prepare(cts *rest.Contexts) error {
 
 // Next ...
 func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
+	if len(hd.request.CloudIds) > 0 {
+		return hd.request.CloudIds, nil
+	}
 	listOpt := &typeclb.TCloudListOption{
 		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
@@ -100,7 +103,7 @@ func (hd *lbHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 		CloudIDs:  cloudIDs,
 	}
 	if _, err := hd.syncCli.LoadBalancerWithListener(kt, params, new(ziyan.SyncLBOption)); err != nil {
-		logs.Errorf("sync tcloud load balancer with rel failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
+		logs.Errorf("sync tcloud ziyan load balancer with rel failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
 		return err
 	}
 
@@ -109,6 +112,9 @@ func (hd *lbHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 
 // RemoveDeleteFromCloud ...
 func (hd *lbHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
+	if len(hd.request.CloudIds) > 0 {
+		return nil
+	}
 	if err := hd.syncCli.RemoveLoadBalancerDeleteFromCloud(kt, hd.request.AccountID, hd.request.Region); err != nil {
 		logs.Errorf("remove load balancer delete from cloud failed, err: %v, accountID: %s, region: %s, rid: %s", err,
 			hd.request.AccountID, hd.request.Region, kt.Rid)

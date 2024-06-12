@@ -111,6 +111,18 @@ const (
 	Postpaid TCloudLoadBalancerChargeType = "POSTPAID"
 )
 
+// TCloudLoadBalancerNetworkChargeType 腾讯云网络计费类型
+type TCloudLoadBalancerNetworkChargeType string
+
+const (
+	// TrafficPostPaidByHour  按流量按小时后计费
+	TrafficPostPaidByHour TCloudLoadBalancerNetworkChargeType = `TRAFFIC_POSTPAID_BY_HOUR`
+	// BandwidthPostpaidByHour 按带宽按小时后计费
+	BandwidthPostpaidByHour TCloudLoadBalancerNetworkChargeType = `BANDWIDTH_POSTPAID_BY_HOUR`
+	// BandwidthPackage 带宽包计费
+	BandwidthPackage TCloudLoadBalancerNetworkChargeType = `BANDWIDTH_PACKAGE`
+)
+
 // -------------------------- List Clb--------------------------
 
 // TCloudListOption defines options to list tcloud clb instances.
@@ -165,6 +177,17 @@ func (clb TCloudClb) GetIPVersion() enumor.IPAddressType {
 	return enumor.IPAddressType(ver)
 }
 
+// GetTags 返回Tag信息
+func (clb TCloudClb) GetTags() (tags []corelb.TagPair) {
+	for _, tag := range clb.Tags {
+		tags = append(tags, corelb.TagPair{
+			Key:   cvt.PtrToVal(tag.TagKey),
+			Value: cvt.PtrToVal(tag.TagValue),
+		})
+	}
+	return tags
+}
+
 // -------------------------- List Listeners--------------------------
 
 // TCloudListListenersOption defines options to list tcloud listeners instances.
@@ -198,6 +221,11 @@ func (clb TCloudListener) GetCloudID() string {
 // GetProtocol ...
 func (clb TCloudListener) GetProtocol() enumor.ProtocolType {
 	return cvt.PtrToVal((*enumor.ProtocolType)(clb.Protocol))
+}
+
+func (clb TCloudListener) String() string {
+	return fmt.Sprintf("{id:%s,name:%s,port:%d}",
+		cvt.PtrToVal(clb.ListenerId), cvt.PtrToVal(clb.ListenerName), cvt.PtrToVal(clb.Port))
 }
 
 // -------------------------- List Targets--------------------------
@@ -246,7 +274,7 @@ type TCloudCreateClbOption struct {
 	MasterZoneID             *string                    `json:"master_zone_id" validate:"omitempty"`
 	ZoneID                   *string                    `json:"zone_id" validate:"omitempty"`
 	VipIsp                   *string                    `json:"vip_isp" validate:"omitempty"`
-	Tags                     []*tclb.TagInfo            `json:"tags" validate:"omitempty"`
+	Tags                     []*corelb.TagPair          `json:"tags" validate:"omitempty,dive,required"`
 	Vip                      *string                    `json:"vip" validate:"omitempty"`
 	BandwidthPackageID       *string                    `json:"bandwidth_package_id" validate:"omitempty"`
 	ExclusiveCluster         *tclb.ExclusiveCluster     `json:"exclusive_cluster" validate:"omitempty"`
@@ -262,9 +290,9 @@ type TCloudCreateClbOption struct {
 	DynamicVip               *bool                      `json:"dynamic_vip" validate:"omitempty"`
 	Egress                   *string                    `json:"egress" validate:"omitempty"`
 
-	InternetChargeType      *TCloudLoadBalancerChargeType `json:"internet_charge_type"`
-	InternetMaxBandwidthOut *int64                        `json:"internet_max_bandwidth_out" `
-	BandwidthpkgSubType     *string                       `json:"bandwidthpkg_sub_type" validate:"omitempty"`
+	InternetChargeType      *TCloudLoadBalancerNetworkChargeType `json:"internet_charge_type"`
+	InternetMaxBandwidthOut *int64                               `json:"internet_max_bandwidth_out" `
+	BandwidthpkgSubType     *string                              `json:"bandwidthpkg_sub_type" validate:"omitempty"`
 
 	// 不填默认按量付费
 	LoadBalancerChargeType TCloudLoadBalancerChargeType `json:"load_balancer_charge_type"`
@@ -854,5 +882,37 @@ type TCloudDeleteSnatIpOpt struct {
 
 // Validate ...
 func (opt *TCloudDeleteSnatIpOpt) Validate() error {
+	return validator.Validate.Struct(opt)
+}
+
+// TCloudDescribeExclusiveClustersOption defines options to query clb  exclusive cluster.
+type TCloudDescribeExclusiveClustersOption struct {
+	Region string `json:"region" validate:"required"`
+	// 按照 集群 的类型过滤，包括"TGW","STGW","VPCGW"
+	ClusterType []string `json:"cluster_type" validate:"omitempty"`
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照 集群 的名称过滤。
+	ClusterName []string `json:"cluster_name" validate:"omitempty"`
+	// 按照 集群 的标签过滤。（只有TGW/STGW集群有集群标签）
+	ClusterTag []string `json:"cluster_tag" validate:"omitempty"`
+	// 按照 集群 内的vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+
+	// 按照 集群 内的负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照 集群 的网络类型过滤，如："Public","Private"。
+	Network []string `json:"network" validate:"omitempty"`
+	// 按照 集群 所在可用区过滤，如："ap-guangzhou-1"（广州一区）。
+	Zone []string `json:"zone" validate:"omitempty"`
+	// 按照TGW集群的 Isp 类型过滤，如："BGP","CMCC","CUCC","CTCC","INTERNAL"。
+	Isp []string `json:"isp" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate tcloud listeners list option.
+func (opt TCloudDescribeExclusiveClustersOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }

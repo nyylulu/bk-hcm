@@ -23,7 +23,6 @@ import (
 	"fmt"
 
 	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
-	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	adcore "hcm/pkg/adaptor/types/core"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/core"
@@ -41,8 +40,9 @@ import (
 )
 
 // BatchCreateTCloudZiyanClb ...
-func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (interface{}, error) {
-	req := new(protolb.TCloudLoadBalancerCreateReq)
+func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (any, error) {
+
+	req := new(protolb.TCloudZiyanLoadBalancerCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -56,23 +56,30 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (interface{}, e
 		return nil, err
 	}
 
-	createOpt := &typelb.TCloudCreateClbOption{
-		Region:           req.Region,
-		LoadBalancerType: req.LoadBalancerType,
-		LoadBalancerName: req.Name,
-		VpcID:            req.CloudVpcID,
-		SubnetID:         req.CloudSubnetID,
-		Vip:              req.Vip,
-		VipIsp:           req.VipIsp,
+	createOpt := &typelb.TCloudZiyanCreateClbOption{
+		TCloudCreateClbOption: typelb.TCloudCreateClbOption{
+			Region:           req.Region,
+			LoadBalancerType: req.LoadBalancerType,
+			LoadBalancerName: req.Name,
+			VpcID:            req.CloudVpcID,
+			SubnetID:         req.CloudSubnetID,
+			Vip:              req.Vip,
+			VipIsp:           req.VipIsp,
 
-		InternetChargeType:      req.InternetChargeType,
-		InternetMaxBandwidthOut: req.InternetMaxBandwidthOut,
+			InternetChargeType:      req.InternetChargeType,
+			InternetMaxBandwidthOut: req.InternetMaxBandwidthOut,
 
-		BandwidthPackageID: req.BandwidthPackageID,
-		SlaType:            req.SlaType,
-		Number:             req.RequireCount,
-		ClientToken:        cvt.StrNilPtr(cts.Kit.Rid),
+			BandwidthPackageID: req.BandwidthPackageID,
+			SlaType:            req.SlaType,
+			Number:             req.RequireCount,
+			ClientToken:        cvt.StrNilPtr(cts.Kit.Rid),
+			Tags:               req.Tags,
+		},
+		ZhiTong:      req.ZhiTong,
+		Zones:        req.Zones,
+		TgwGroupName: req.TgwGroupName,
 	}
+
 	if cvt.PtrToVal(req.CloudEipID) != "" {
 		createOpt.EipAddressID = req.CloudEipID
 	}
@@ -96,8 +103,12 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (interface{}, e
 			createOpt.ZoneID = cvt.ValToPtr(req.Zones[0])
 		}
 	}
+	// TODO: 指定ip 待确认
+	if len(req.ClusterIDs) > 0 {
+		createOpt.ClusterIds = cvt.SliceToPtr(req.ClusterIDs)
+	}
 
-	result, err := tcloudAdpt.CreateLoadBalancer(cts.Kit, createOpt)
+	result, err := tcloudAdpt.CreateZiyanLoadBalancer(cts.Kit, createOpt)
 	if err != nil {
 		logs.Errorf("create tcloud clb failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -115,9 +126,10 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (interface{}, e
 	}
 
 	// 数据库创建失败也继续同步
-	_ = svc.createTCloudDBLoadBalancer(cts, req, result.SuccessCloudIDs)
+	_ = svc.createTCloudZiyanDBLoadBalancer(cts, req, result.SuccessCloudIDs)
 
-	if err := svc.lbSync(cts.Kit, tcloudAdpt, req.AccountID, req.Region, result.SuccessCloudIDs); err != nil {
+	err = svc.tcloudZiyanLbSync(cts.Kit, req.AccountID, req.Region, result.SuccessCloudIDs)
+	if err != nil {
 		return nil, err
 	}
 	return respData, nil
@@ -155,6 +167,33 @@ func (svc *clbSvc) ListTCloudZiyanClb(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return result, nil
+}
+
+func (svc *clbSvc) createTCloudZiyanDBLoadBalancer(cts *rest.Contexts, req *protolb.TCloudZiyanLoadBalancerCreateReq,
+	cloudIDs []string) (err error) {
+
+	dataReq := &dataproto.TCloudCLBCreateReq{Lbs: make([]dataproto.TCloudCLBCreate, len(cloudIDs))}
+	for i, cloudID := range cloudIDs {
+		dataReq.Lbs[i].CloudID = cloudID
+		dataReq.Lbs[i].Vendor = enumor.TCloud
+		dataReq.Lbs[i].BkBizID = req.BkBizID
+
+		dataReq.Lbs[i].Name = fmt.Sprintf("%s-%d", cvt.PtrToVal(req.Name), i)
+		dataReq.Lbs[i].AccountID = req.AccountID
+		dataReq.Lbs[i].Region = req.Region
+		dataReq.Lbs[i].LoadBalancerType = string(req.LoadBalancerType)
+		dataReq.Lbs[i].IPVersion = req.AddressIPVersion.Convert()
+		dataReq.Lbs[i].Zones = req.Zones
+		dataReq.Lbs[i].BackupZones = req.BackupZones
+
+	}
+	// 创建本地数据，保存业务信息
+	_, err = svc.dataCli.TCloud.LoadBalancer.BatchCreateTCloudClb(cts.Kit, dataReq)
+	if err != nil {
+		logs.Errorf("fail to create db load balancer after cloud create, err: %v, rid: %s", err, cts.Kit.Rid)
+		// 	失败也继续尝试同步
+	}
+	return err
 }
 
 // TCloudZiyanDescribeResources 查询clb地域下可用资源
@@ -218,6 +257,11 @@ func (svc *clbSvc) TCloudZiyanUpdateCLB(cts *rest.Contexts) (any, error) {
 		ModifyClassicDomain:      req.ModifyClassicDomain,
 	}
 
+	if req.TargetRegion != nil || req.TargetCloudVpcID != nil {
+		adtOpt.TargetRegionInfo.Region = req.TargetRegion
+		adtOpt.TargetRegionInfo.VpcId = req.TargetCloudVpcID
+	}
+
 	_, err = client.UpdateLoadBalancer(cts.Kit, adtOpt)
 	if err != nil {
 		logs.Errorf("fail to call tcloud update load balancer(id:%s),err: %v, rid: %s", lbID, err, cts.Kit.Rid)
@@ -225,21 +269,25 @@ func (svc *clbSvc) TCloudZiyanUpdateCLB(cts *rest.Contexts) (any, error) {
 	}
 
 	// 同步云上变更信息
-	return nil, svc.tcloudZiyanLbSync(cts.Kit, client, lb.AccountID, lb.Region, []string{lb.CloudID})
+	return nil, svc.tcloudZiyanLbSync(cts.Kit, lb.AccountID, lb.Region, []string{lb.CloudID})
 
 }
 
 // 同步云上资源
-func (svc *clbSvc) tcloudZiyanLbSync(kt *kit.Kit, tcloud ziyan.TCloudZiyan, accountID string, region string,
+func (svc *clbSvc) tcloudZiyanLbSync(kt *kit.Kit, accountID string, region string,
 	lbIDs []string) error {
 
-	syncClient := syncziyan.NewClient(svc.dataCli, tcloud, svc.esb)
+	syncCli, err := svc.syncCli.TCloudZiyan(kt, accountID)
+	if err != nil {
+		logs.Errorf("fail to init tcloud ziyan sync client, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
 	params := &syncziyan.SyncBaseParams{
 		AccountID: accountID,
 		Region:    region,
 		CloudIDs:  lbIDs,
 	}
-	_, err := syncClient.LoadBalancer(kt, params, &syncziyan.SyncLBOption{})
+	_, err = syncCli.LoadBalancer(kt, params, &syncziyan.SyncLBOption{})
 	if err != nil {
 		logs.Errorf("sync load  balancer failed, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -501,7 +549,7 @@ func (svc *clbSvc) UpdateTCloudZiyanListener(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	if err := svc.ziyanLblSync(cts.Kit, client, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for update listener(%s), rid: %s", lblInfo.ID, cts.Kit.Rid)
 		return nil, err
@@ -561,7 +609,7 @@ func (svc *clbSvc) UpdateTCloudZiyanListenerHealthCheck(cts *rest.Contexts) (any
 		logs.Errorf("fail to call tcloud update listener(id:%s), err: %v, rid: %s", lblID, err, cts.Kit.Rid)
 		return nil, err
 	}
-	if err := svc.ziyanLblSync(cts.Kit, client, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for update listener(%s), rid: %s", lblInfo.ID, cts.Kit.Rid)
 		return nil, err
@@ -798,7 +846,7 @@ func (svc *clbSvc) updateTCloudZiyanDomainAttr(kt *kit.Kit, req *protolb.DomainA
 		logs.Errorf("fail to call tcloud update domain attr, err: %v, lblID: %s, rid: %s", err, lblInfo.ID, kt.Rid)
 		return err
 	}
-	if err := svc.ziyanLblSync(kt, client, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
+	if err := svc.ziyanLblSync(kt, &lbInfo.BaseLoadBalancer, []string{lblInfo.CloudID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for update domain(%s), lblID: %s, rid: %s",
 			domainOpt.Domain, lblInfo.ID, kt.Rid)
@@ -949,5 +997,43 @@ func (svc *clbSvc) ListTCloudZiyanLBQuota(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
+	return result, nil
+}
+
+// DescribeZiyanExclusiveCluster ...
+func (svc *clbSvc) DescribeZiyanExclusiveCluster(cts *rest.Contexts) (any, error) {
+
+	req := new(protolb.TCloudDescribeExclusiveClusterReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := client.DescribeExclusiveClusters(cts.Kit, &typelb.TCloudDescribeExclusiveClustersOption{
+		Region:         req.Region,
+		ClusterType:    req.ClusterType,
+		ClusterID:      req.ClusterID,
+		ClusterName:    req.ClusterName,
+		ClusterTag:     req.ClusterTag,
+		Vip:            req.Vip,
+		LoadBalancerID: req.LoadBalancerID,
+		Network:        req.Network,
+		Zone:           req.Zone,
+		Isp:            req.Isp,
+		Limit:          req.Limit,
+		Offset:         req.Offset,
+	})
+	if err != nil {
+		logs.Errorf("list tcloud ziyan load balancer exclusive cluster failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
 	return result, nil
 }

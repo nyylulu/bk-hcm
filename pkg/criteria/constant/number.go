@@ -44,4 +44,4 @@ const (
 )
 
 // SyncConcurrencyZiyanMaxLimit 自研云同步并发最大限制
-const SyncConcurrencyZiyanMaxLimit = 5
+const SyncConcurrencyZiyanMaxLimit = 3

@@ -113,7 +113,7 @@ func (hd *lblHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 		CloudLBID: hd.request.LoadBalancerCloudID,
 	}
 	if _, err := hd.syncCli.Listener(kt, params, opt); err != nil {
-		logs.Errorf("sync tcloud load balancer with rel failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
+		logs.Errorf("sync tcloud ziyan load balancer with rel failed, err: %v, opt: %v, rid: %s", err, params, kt.Rid)
 		return err
 	}
 

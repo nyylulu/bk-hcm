@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package tcloud
+package ziyan
 
 import (
 	"fmt"
@@ -31,13 +31,17 @@ type formItem struct {
 	Value string
 }
 
+func (i formItem) String() string {
+	return fmt.Sprintf("%s=%s", i.Label, i.Value)
+}
+
 // RenderItsmTitle 渲染ITSM单据标题
-func (a *ApplicationOfCreateTCloudLB) RenderItsmTitle() (string, error) {
+func (a *ApplicationOfCreateZiyanLB) RenderItsmTitle() (string, error) {
 	return fmt.Sprintf("申请新增[%s]负载均衡(%s)", a.Vendor().GetNameZh(), cvt.PtrToVal(a.req.Name)), nil
 }
 
 // RenderItsmForm 渲染ITSM表单
-func (a *ApplicationOfCreateTCloudLB) RenderItsmForm() (string, error) {
+func (a *ApplicationOfCreateZiyanLB) RenderItsmForm() (string, error) {
 	req := a.req
 
 	formItems := make([]formItem, 0)
@@ -79,7 +83,7 @@ func (a *ApplicationOfCreateTCloudLB) RenderItsmForm() (string, error) {
 	return strings.Join(content, "\n"), nil
 }
 
-func (a *ApplicationOfCreateTCloudLB) renderBaseInfo() ([]formItem, error) {
+func (a *ApplicationOfCreateZiyanLB) renderBaseInfo() ([]formItem, error) {
 	req := a.req
 	formItems := make([]formItem, 0)
 
@@ -88,7 +92,7 @@ func (a *ApplicationOfCreateTCloudLB) renderBaseInfo() ([]formItem, error) {
 	if err != nil {
 		return formItems, err
 	}
-	formItems = append(formItems, formItem{Label: "业务", Value: bizName})
+	formItems = append(formItems, formItem{Label: "业务", Value: fmt.Sprintf("%s(%d)", bizName, req.BkBizID)})
 
 	// 云账号
 	accountInfo, err := a.GetAccount(req.AccountID)
@@ -101,7 +105,7 @@ func (a *ApplicationOfCreateTCloudLB) renderBaseInfo() ([]formItem, error) {
 	formItems = append(formItems, formItem{Label: "云厂商", Value: a.Vendor().GetNameZh()})
 
 	// 云地域
-	regionInfo, err := a.GetTCloudRegion(req.Region)
+	regionInfo, err := a.GetTCloudZiyanRegion(req.Region)
 	if err != nil {
 		return formItems, err
 	}
@@ -146,10 +150,15 @@ func (a *ApplicationOfCreateTCloudLB) renderBaseInfo() ([]formItem, error) {
 	}
 	formItems = append(formItems, formItem{Label: "运营商", Value: isp})
 
+	// 标签信息
+	for _, tag := range req.Tags {
+		formItems = append(formItems, formItem{Label: "标签/" + tag.Key, Value: tag.Value})
+	}
+
 	return formItems, nil
 }
 
-func (a *ApplicationOfCreateTCloudLB) renderNetwork() ([]formItem, error) {
+func (a *ApplicationOfCreateZiyanLB) renderNetwork() ([]formItem, error) {
 	req := a.req
 	formItems := make([]formItem, 0)
 
@@ -194,10 +203,30 @@ func (a *ApplicationOfCreateTCloudLB) renderNetwork() ([]formItem, error) {
 		})
 	}
 
+	// 直通
+	if cvt.PtrToVal(req.ZhiTong) {
+		formItems = append(formItems, formItem{
+			Label: "直通",
+			Value: "是",
+		})
+	}
+	// 免流
+	if req.TgwGroupName != nil {
+		tgwGroupName := cvt.PtrToVal(req.TgwGroupName)
+		if tgwGroupName == "ziyan_mianliu" {
+			tgwGroupName = tgwGroupName + " (免流)"
+		}
+		formItems = append(formItems, formItem{
+			Label: "TGW Group",
+			Value: tgwGroupName,
+		})
+	}
+	// TODO 独占集群信息
+
 	return formItems, nil
 }
 
-func (a *ApplicationOfCreateTCloudLB) renderInstanceChargeForm() []formItem {
+func (a *ApplicationOfCreateZiyanLB) renderInstanceChargeForm() []formItem {
 	req := a.req
 	formItems := make([]formItem, 0)
 

@@ -279,8 +279,14 @@ func (t *TCloudImpl) formatCreateClbRequest(opt *typelb.TCloudCreateClbOption) *
 	req.MasterZoneId = opt.MasterZoneID
 
 	req.BandwidthPackageId = opt.BandwidthPackageID
-	req.Tags = opt.Tags
 	req.SnatIps = opt.SnatIps
+
+	for _, tag := range opt.Tags {
+		req.Tags = append(req.Tags, &clb.TagInfo{
+			TagKey:   cvt.ValToPtr(tag.Key),
+			TagValue: cvt.ValToPtr(tag.Value),
+		})
+	}
 
 	// 使用默认ISP时传递空即可
 	ispVal := cvt.PtrToVal(opt.VipIsp)
@@ -303,7 +309,6 @@ func (t *TCloudImpl) formatCreateClbRequest(opt *typelb.TCloudCreateClbOption) *
 			ClassicalCluster: opt.ExclusiveCluster.ClassicalCluster,
 		}
 	}
-
 	return req
 }
 
@@ -712,4 +717,92 @@ func (t *TCloudImpl) DeleteLoadBalancerSnatIps(kt *kit.Kit, opt *typelb.TCloudDe
 	}
 
 	return nil
+}
+
+// DescribeExclusiveClusters 查询负载均衡集群列表
+// https://cloud.tencent.com/document/product/214/49278
+func (t *TCloudImpl) DescribeExclusiveClusters(kt *kit.Kit, opt *typelb.TCloudDescribeExclusiveClustersOption) (
+	*clb.DescribeExclusiveClustersResponseParams, error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "describe exclusive clusters  option can not be nil")
+	}
+
+	if err := opt.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := t.clientSet.ClbClient(opt.Region)
+	if err != nil {
+		return nil, fmt.Errorf("init tencent cloud clb client failed, region: %s, err: %v", opt.Region, err)
+	}
+	req := clb.NewDescribeExclusiveClustersRequest()
+
+	if len(opt.ClusterType) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-type"),
+			Values: common.StringPtrs(opt.ClusterType),
+		})
+	}
+	if len(opt.ClusterID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-id"),
+			Values: common.StringPtrs(opt.ClusterID),
+		})
+	}
+	if len(opt.ClusterName) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-name"),
+			Values: common.StringPtrs(opt.ClusterName),
+		})
+	}
+	if len(opt.ClusterTag) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-tag"),
+			Values: common.StringPtrs(opt.ClusterTag),
+		})
+	}
+
+	if len(opt.Vip) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("vip"),
+			Values: common.StringPtrs(opt.Vip),
+		})
+	}
+
+	if len(opt.LoadBalancerID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("loadblancer-id"),
+			Values: common.StringPtrs(opt.LoadBalancerID),
+		})
+	}
+	if len(opt.Network) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("network"),
+			Values: common.StringPtrs(opt.Network),
+		})
+	}
+	if len(opt.Zone) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("zone"),
+			Values: common.StringPtrs(opt.Zone),
+		})
+	}
+
+	if len(opt.Isp) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("isp"),
+			Values: common.StringPtrs(opt.Isp),
+		})
+	}
+
+	req.Limit = opt.Limit
+	req.Offset = opt.Offset
+
+	resp, err := client.DescribeExclusiveClustersWithContext(kt.Ctx, req)
+	if err != nil {
+		logs.Errorf("tencent cloud describe resources failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+	return resp.Response, nil
 }

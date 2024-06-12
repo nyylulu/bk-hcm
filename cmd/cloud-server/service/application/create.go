@@ -20,6 +20,7 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 
 	"hcm/cmd/cloud-server/service/application/handlers"
@@ -35,6 +36,7 @@ import (
 	huaweidiskhandler "hcm/cmd/cloud-server/service/application/handlers/disk/huawei"
 	tclouddiskhandler "hcm/cmd/cloud-server/service/application/handlers/disk/tcloud"
 	lbtcloud "hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud"
+	lbziyan "hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud-ziyan"
 	awsvpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/aws"
 	azurevpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/azure"
 	gcpvpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/gcp"
@@ -397,7 +399,14 @@ func (a *applicationSvc) CreateForCreateLB(cts *rest.Contexts) (interface{}, err
 		}
 		handler := lbtcloud.NewApplicationOfCreateTCloudLB(opt, req)
 		return a.create(cts, commReq, handler)
+	case enumor.TCloudZiyan:
+		req, err := parseReqFromRequestBody[hclb.TCloudZiyanLoadBalancerCreateReq](cts)
+		if err != nil {
+			return nil, err
+		}
+		handler := lbziyan.NewApplicationOfCreateZiyanLB(opt, req)
+		return a.create(cts, commReq, handler)
 	}
 
-	return nil, nil
+	return nil, errors.New("unsupported vendor: " + string(vendor))
 }

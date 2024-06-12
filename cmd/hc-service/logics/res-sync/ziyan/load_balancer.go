@@ -85,7 +85,7 @@ func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams,
 	}
 
 	if _, err = cli.listenerByLbBatch(kt, lblParams); err != nil {
-		logs.Errorf("fail to sync listener of lbs(ids: %v), err: %v, rid: %s", requiredLBCloudIds, err, kt.Rid)
+		logs.Errorf("fail to sync listener of lbs, err: %v, ids: %v, rid: %s", err, requiredLBCloudIds, kt.Rid)
 		return nil, err
 	}
 
@@ -147,9 +147,10 @@ func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID stri
 		),
 		Page: &core.BasePage{
 			Start: 0,
-			Limit: constant.TCLBDescribeMax,
+			Limit: constant.BatchOperationMaxLimit,
 		},
 	}
+
 	for {
 		lbFromDB, err := cli.dbCli.Global.LoadBalancer.ListLoadBalancer(kt, req)
 		if err != nil {
@@ -433,6 +434,9 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 	//  可用区判断
 	if typeslb.TCloudLoadBalancerType(lb.LoadBalancerType) == typeslb.OpenLoadBalancerType && cloud.MasterZone != nil {
 		lb.Zones = []string{cvt.PtrToVal(cloud.MasterZone.Zone)}
+	} else {
+		// 自研云 内网多可用区
+		lb.Zones = cvt.PtrToSlice(cloud.Zones)
 	}
 
 	lb.Extension = convertTCloudExtension(cloud, region)
@@ -450,6 +454,9 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		SnatPro:                  cloud.SnatPro,
 		MixIpTarget:              cloud.MixIpTarget,
 		ChargeType:               cloud.ChargeType,
+		Tags:                     cvt.ValToPtr(cloud.GetTags()),
+		ClusterTag:               cloud.ClusterTag,
+		Egress:                   cloud.Egress,
 		// 该接口无法获取下列字段
 		BandwidthPackageId: nil,
 	}
@@ -484,7 +491,39 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		ext.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
 	}
 
+	if cloud.ExtraInfo != nil {
+		// 直通
+		ext.ZhiTong = cloud.ExtraInfo.ZhiTong
+		// 免流
+		ext.TgwGroupName = cloud.ExtraInfo.TgwGroupName
+	}
+	if len(cloud.ClusterIds) > 0 {
+		ext.ClusterIds = cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds))
+	}
+	// 独占集群
+	if cloud.ExclusiveCluster != nil {
+		ext.L4Clusters = cvt.ValToPtr(convClusterItemList(cloud.ExclusiveCluster.L4Clusters))
+		ext.L7Clusters = cvt.ValToPtr(convClusterItemList(cloud.ExclusiveCluster.L7Clusters))
+		ext.ClassicalCluster = convClusterItem(cloud.ExclusiveCluster.ClassicalCluster)
+	}
 	return ext
+}
+
+func convClusterItemList(clusters []*tclb.ClusterItem) (localList []*corelb.ClusterItem) {
+	for _, cluster := range clusters {
+		localList = append(localList, convClusterItem(cluster))
+	}
+	return localList
+}
+func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
+	if cluster == nil {
+		return nil
+	}
+	return &corelb.ClusterItem{
+		ClusterId:   cvt.PtrToVal(cluster.ClusterId),
+		ClusterName: cvt.PtrToVal(cluster.ClusterName),
+		Zone:        cvt.PtrToVal(cluster.Zone),
+	}
 }
 
 func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*common.VpcDB,
@@ -512,10 +551,16 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 			LoadBalancerPassToTarget: cloud.LoadBalancerPassToTarget,
 			ChargeType:               cloud.ChargeType,
 
-			IPv6Mode: cloud.IPv6Mode,
-			Snat:     cloud.Snat,
-			SnatPro:  cloud.SnatPro,
+			IPv6Mode:   cloud.IPv6Mode,
+			Snat:       cloud.Snat,
+			SnatPro:    cloud.SnatPro,
+			ClusterTag: cloud.ClusterTag,
+			Tags:       cvt.ValToPtr(cloud.GetTags()),
+			Egress:     cloud.Egress,
 		},
+	}
+	if len(cloud.ClusterIds) > 0 {
+		lb.Extension.ClusterIds = cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds))
 	}
 	if cloud.NetworkAttributes != nil {
 		lb.Extension.InternetMaxBandwidthOut = cloud.NetworkAttributes.InternetMaxBandwidthOut
@@ -692,10 +737,12 @@ func isLBExtensionChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) 
 	}
 
 	// 跨域1.0 信息
-	if !assert.IsPtrStringEqual(db.Extension.TargetRegion, cloud.TargetRegionInfo.Region) {
+	if cvt.PtrToVal(cloud.TargetRegionInfo.Region) != db.Region &&
+		!assert.IsPtrStringEqual(db.Extension.TargetRegion, cloud.TargetRegionInfo.Region) {
 		return true
 	}
-	if !assert.IsPtrStringEqual(db.Extension.TargetCloudVpcID, cloud.TargetRegionInfo.VpcId) {
+	if cvt.PtrToVal(cloud.TargetRegionInfo.VpcId) != db.CloudVpcID &&
+		!assert.IsPtrStringEqual(db.Extension.TargetCloudVpcID, cloud.TargetRegionInfo.VpcId) {
 		return true
 	}
 

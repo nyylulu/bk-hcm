@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +17,21 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package loadbalancer ...
-package loadbalancer
+package ziyan
 
 import (
-	"hcm/cmd/hc-service/logics/cloud-adaptor"
-	ressync "hcm/cmd/hc-service/logics/res-sync"
-	"hcm/cmd/hc-service/service/capability"
-	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/enumor"
 )
 
-// InitLoadBalancerService initial the clb service.
-func InitLoadBalancerService(cap *capability.Capability) {
-	svc := &clbSvc{
-		ad:      cap.CloudAdaptor,
-		dataCli: cap.ClientSet.DataService(),
-		syncCli: cap.ResSyncCli,
+// Deliver 执行资源交付
+func (a *ApplicationOfCreateZiyanLB) Deliver() (enumor.ApplicationStatus, map[string]interface{}, error) {
+
+	// 创建 负载均衡
+	// 改成调用logics
+	result, err := a.Client.HCService().TCloudZiyan.Clb.BatchCreate(a.Cts.Kit, a.req)
+	if err != nil {
+		return enumor.DeliverError, map[string]interface{}{"error": err.Error()}, err
 	}
+	return enumor.Completed, map[string]interface{}{"load_balancer_id": result.SuccessCloudIDs}, nil
 
-	svc.initTCloudClbService(cap)
-	svc.initTCloudZiyanClbService(cap)
-}
-
-type clbSvc struct {
-	ad      *cloudadaptor.CloudAdaptorClient
-	dataCli *dataservice.Client
-	syncCli ressync.Interface
 }

@@ -96,6 +96,10 @@ func (svc *lbSvc) getTCloudUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID string,
 		return nil, err
 	}
 
+	if len(listenerList.Details) == 0 {
+		return nil, nil
+	}
+
 	baseLblList := listenerList.Details
 	lblInfoList := make([]*cslb.ListenerListInfo, 0, len(baseLblList))
 	lblIDs := make([]string, 0)
@@ -157,6 +161,9 @@ func (svc *lbSvc) getTCloudZiyanUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID strin
 	if err != nil {
 		logs.Errorf("list listener failed, lbID: %s, err: %v, rid: %s", lbID, err, kt.Rid)
 		return nil, err
+	}
+	if len(listenerList.Details) == 0 {
+		return nil, nil
 	}
 
 	baseLblList := listenerList.Details
