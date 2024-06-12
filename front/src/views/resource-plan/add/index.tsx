@@ -18,7 +18,7 @@ export default defineComponent({
     const initDemand = ref();
     const planTicket = ref<IPlanTicket>({
       bk_biz_id: undefined,
-      demand_class: '',
+      demand_class: 'CVM',
       remark: '',
       demands: [],
     });

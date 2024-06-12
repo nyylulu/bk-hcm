@@ -22,4 +22,7 @@
   :global(.bk-radio-button) {
     width: 50%;
   }
+  :global(.bk-textarea textarea){
+    height: 100%;
+  }
 }

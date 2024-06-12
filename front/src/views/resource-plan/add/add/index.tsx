@@ -50,7 +50,7 @@ export default defineComponent({
         },
         cbs: {
           disk_type: '',
-          disk_io: 0,
+          disk_io: 15,
           disk_size: 0,
           disk_num: 0,
           disk_per_size: 0,
@@ -94,8 +94,8 @@ export default defineComponent({
     watch(
       () => planTicketDemand.value?.cbs.disk_type,
       () => {
-        // 切换云盘类型时 ，清空 单实例磁盘IO 数量
-        planTicketDemand.value.cbs.disk_io = 0;
+        // 切换云盘类型时 ，默认 单实例磁盘IO 数量
+        planTicketDemand.value.cbs.disk_io = 15;
       },
     );
 

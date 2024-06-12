@@ -212,6 +212,9 @@ export default defineComponent({
             <bk-input
               clearable
               type='textarea'
+              maxlength={100}
+              showWordLimit
+              rows={5}
               modelValue={props.planTicketDemand.remark}
               onChange={(val: string) => handleUpdatePlanTicketDemand('remark', val)}
             />
