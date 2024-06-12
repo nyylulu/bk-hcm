@@ -67,7 +67,7 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/jfcc',
         name: '机房裁撤',
-        component: () => import('@/views/ziyanScr/recycle-host'),
+        component: () => import('@/views/ziyanScr/recycle-server-room'),
         children: [],
         meta: {
           activeKey: 'jfcc',

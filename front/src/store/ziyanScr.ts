@@ -1,6 +1,9 @@
 import http from '@/http';
 import { defineStore } from 'pinia';
 
+import type { IPageQuery } from '@/typings/common';
+import type { IRecycleArea } from '@/typings/ziyanScr';
+
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 export const useZiyanScrStore = defineStore('ziyanScr', () => {
@@ -47,6 +50,10 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/idc/zone`, data);
   };
 
+  const getRecycleAreas = (page: IPageQuery): Promise<{ data: { detail: IRecycleArea[] } }> => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/recycled_module/list`, { page });
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -55,5 +62,6 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getIdcpmOsTypeList,
     getIdcRegionList,
     queryIdcZoneList,
+    getRecycleAreas,
   };
 });
