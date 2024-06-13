@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/errf"
 )
 
 // ConvStdTimeFormat 转为HCM标准时间格式
@@ -47,3 +48,44 @@ func ParseToStdTime(layout, t string) (string, error) {
 
 // Day 24 hours
 const Day = time.Hour * 24
+
+// DateRange define a date range that includes the start and end parameters.
+// The date can be year, month or day.
+type DateRange struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+// Validate validates the date range.
+func (r *DateRange) Validate() error {
+	start, err := ParseDay(r.Start)
+	if err != nil {
+		return err
+	}
+
+	end, err := ParseDay(r.End)
+	if err != nil {
+		return err
+	}
+
+	if start.After(end) {
+		return errf.New(errf.InvalidParameter, "start should be no later than end")
+	}
+
+	return nil
+}
+
+// ParseDay parse day from string.
+func ParseDay(formattedDay string) (time.Time, error) {
+	if len(formattedDay) == 0 {
+		return time.Time{}, errf.New(errf.InvalidParameter, "empty date time")
+	}
+
+	d, err := time.Parse(constant.DateLayout, formattedDay)
+	if err != nil {
+		return time.Time{}, errf.Newf(errf.InvalidParameter, "invalid date time format, should be like %s, err: %v",
+			constant.DateLayout, err)
+	}
+
+	return d, nil
+}

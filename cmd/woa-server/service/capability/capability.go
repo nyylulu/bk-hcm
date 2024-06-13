@@ -21,6 +21,7 @@
 package capability
 
 import (
+	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recycler"
@@ -28,20 +29,25 @@ import (
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
+	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
 
 	"github.com/emicklei/go-restful/v3"
 )
 
 // Capability defines the service's capability
 type Capability struct {
-	WebService  *restful.WebService
-	EsbClient   esb.Client
-	ThirdCli    *thirdparty.Client
-	Authorizer  auth.Authorizer
-	ClientConf  cc.ClientConfig
-	SchedulerIf scheduler.Interface
-	InformerIf  informer.Interface
-	RecyclerIf  recycler.Interface
-	OperationIf operation.Interface
+	Dao            dao.Set
+	WebService     *restful.WebService
+	PlanController *plan.Controller
+	EsbClient      esb.Client
+	ItsmClient     itsm.Client
+	ThirdCli       *thirdparty.Client
+	Authorizer     auth.Authorizer
+	ClientConf     cc.ClientConfig
+	SchedulerIf    scheduler.Interface
+	InformerIf     informer.Interface
+	RecyclerIf     recycler.Interface
+	OperationIf    operation.Interface
 }

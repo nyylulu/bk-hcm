@@ -1,12 +1,14 @@
 <script lang="ts" setup>
 import { computed, ref, watchEffect, defineExpose, PropType } from 'vue';
 import { useAccountStore } from '@/store';
+import { isEmpty } from '@/common/util';
 
 const props = defineProps({
-  modelValue: Number as PropType<number>,
+  modelValue: [Number, Array] as PropType<number | number[]>,
   authed: Boolean as PropType<boolean>,
   autoSelect: Boolean as PropType<boolean>,
   isAudit: Boolean as PropType<boolean>,
+  multiple: Boolean as PropType<boolean>,
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -28,15 +30,17 @@ watchEffect(async () => {
 
 const selectedValue = computed({
   get() {
-    if (props.modelValue) {
+    if (!isEmpty(props.modelValue)) {
       return props.modelValue;
     }
     if (props.autoSelect) {
-      const val = businessList.value.at(0)?.id ?? null;
+      const id = businessList.value.at(0)?.id ?? null;
+      const val = props.multiple ? [id].filter((v) => v) : id;
+
       emit('update:modelValue', val);
       return val;
     }
-    return null;
+    return props.multiple ? [] : null;
   },
   set(val) {
     emit('update:modelValue', val);
@@ -49,7 +53,7 @@ defineExpose({
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" filterable :loading="loading">
+  <bk-select v-model="selectedValue" :multiple="multiple" filterable :loading="loading">
     <bk-option v-for="(item, index) in businessList" :key="index" :value="item.id" :label="item.name" />
   </bk-select>
 </template>

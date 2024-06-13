@@ -177,6 +177,17 @@ const (
 	// TCloudZiyanSecurityGroupRuleTable 腾讯自研云安全组规则表名
 	TCloudZiyanSecurityGroupRuleTable = "tcloud_ziyan_security_group_rule"
 
+	// ResPlanTicketTable is res_plan_ticket table's name.
+	ResPlanTicketTable = "res_plan_ticket"
+	// ResPlanDemandTable is res_plan_demand table's name.
+	ResPlanDemandTable = "res_plan_demand"
+	// ResPlanTicketStatusTable is res_plan_ticket_status table's name.
+	ResPlanTicketStatusTable = "res_plan_ticket_status"
+	// WoaZoneTable is woa_zone table's name.
+	WoaZoneTable = "woa_zone"
+	// WoaDeviceTypeTable is woa_device_type table's name.
+	WoaDeviceTypeTable = "woa_device_type"
+
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
 	// RootAccountTable is main_account table's name
@@ -292,6 +303,12 @@ var TableMap = map[Name]struct{}{
 	TargetGroupListenerRuleRelTable: {},
 	ResourceFlowRelTable:            {},
 	ResourceFlowLockTable:           {},
+
+	ResPlanTicketTable:       {},
+	ResPlanDemandTable:       {},
+	ResPlanTicketStatusTable: {},
+	WoaZoneTable:             {},
+	WoaDeviceTypeTable:       {},
 
 	MainAccountTable: {},
 	RootAccountTable: {},

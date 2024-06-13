@@ -1,0 +1,29 @@
+.home {
+  display: grid;
+  grid-template-columns: 500px 500px;
+  padding: 0 81px 8px;
+
+  li {
+    line-height: 40px;
+    display: flex;
+    align-items: center;
+
+    .label {
+      width: 70px;
+      text-align: right;
+    }
+
+    .value {
+      color: #313238;
+      display: inline-block;
+      max-width: calc(100% - 100px);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+  }
+
+  :global(.span-2) {
+    grid-column-start: span 2;
+  }
+}

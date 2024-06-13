@@ -9,6 +9,7 @@ import common from './module/common';
 import workbench from './module/workbench';
 import resource from './module/resource';
 import resourceInside from './module/resource-inside';
+import resourcePlan from './module/resource-plan';
 import service from './module/service';
 import serviceInside from './module/service-inside';
 import business from './module/business';
@@ -25,6 +26,7 @@ const routes: RouteRecordRaw[] = [
   ...workbench,
   ...resource,
   ...resourceInside,
+  ...resourcePlan,
   ...service,
   ...serviceInside,
   ...business,

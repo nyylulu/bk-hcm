@@ -8,6 +8,7 @@ export * from './departments';
 export * from './business';
 export * from './ziyanScr';
 export * from './resource';
+export * from './resourcePlan';
 export * from './common';
 export * from './host';
 export * from './scheme';

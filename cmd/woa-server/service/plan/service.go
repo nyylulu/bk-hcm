@@ -1,0 +1,72 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+package plan
+
+import (
+	"net/http"
+
+	"hcm/cmd/woa-server/logics/biz"
+	"hcm/cmd/woa-server/logics/plan"
+	"hcm/cmd/woa-server/service/capability"
+	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/iam/auth"
+	"hcm/pkg/rest"
+)
+
+// InitService initial the plan service.
+func InitService(c *capability.Capability) {
+	s := &service{
+		dao:            c.Dao,
+		planController: c.PlanController,
+		esbClient:      c.EsbClient,
+		authorizer:     c.Authorizer,
+		logics:         biz.New(c.EsbClient, c.Authorizer),
+	}
+	h := rest.NewHandler()
+
+	s.initPlanService(h)
+
+	h.Load(c.WebService)
+}
+
+type service struct {
+	dao            dao.Set
+	esbClient      esb.Client
+	planController *plan.Controller
+	authorizer     auth.Authorizer
+	logics         biz.Logics
+}
+
+func (s *service) initPlanService(h *rest.Handler) {
+	// biz
+	h.Add("GetBizOrgRel", http.MethodGet, "/bizs/{bk_biz_id}/org/relation", s.GetBizOrgRel)
+
+	// meta
+	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
+	h.Add("ListResMode", http.MethodGet, "/plan/res_mode/list", s.ListResMode)
+	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)
+	h.Add("ListResPlanTicketStatus", http.MethodGet, "/plan/res_plan_ticket_status/list", s.ListRPTicketStatus)
+
+	// ticket
+	h.Add("ListResPlanTicket", http.MethodPost, "/plan/resource/ticket/list", s.ListResPlanTicket)
+	h.Add("CreateResPlanTicket", http.MethodPost, "/plan/resource/ticket/create", s.CreateResPlanTicket)
+	h.Add("GetResPlanTicket", http.MethodGet, "/plan/resource/ticket/{id}", s.GetResPlanTicket)
+}

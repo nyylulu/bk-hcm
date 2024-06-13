@@ -57,6 +57,9 @@ type Client interface {
 	Hosts2CrTransit(ctx context.Context, header http.Header, req *CrTransitReq) (*CrTransitResp, error)
 	// HostsCrTransit2Idle transfer hosts to given business's idle module in CMDB
 	HostsCrTransit2Idle(ctx context.Context, header http.Header, req *CrTransitIdleReq) (*CrTransitResp, error)
+	// SearchBizBelonging search cmdb business belonging.
+	SearchBizBelonging(ctx context.Context, header http.Header, params *SearchBizBelongingParams) (
+		*SearchBizBelongingRst, error)
 }
 
 // ccCli cc api interface implementation
@@ -482,6 +485,29 @@ func (c *ccCli) HostsCrTransit2Idle(ctx context.Context, header http.Header, req
 	header.Set(key, val)
 
 	resp := new(CrTransitResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// SearchBizBelonging search cmdb business belonging.
+func (c *ccCli) SearchBizBelonging(ctx context.Context, header http.Header, req *SearchBizBelongingParams) (
+	*SearchBizBelongingRst, error) {
+
+	subPath := "/api/c/compapi/v2/cc/search_cost_info_relation"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+
+	resp := new(SearchBizBelongingRst)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

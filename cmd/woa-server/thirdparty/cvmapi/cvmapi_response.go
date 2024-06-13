@@ -212,15 +212,30 @@ type PlanOrderData struct {
 	BaseInfo *PlanOrderBaseInfo `json:"baseInfo"`
 }
 
+type PlanOrderStatus int
+
+const (
+	// PlanOrderStatusDeptAdmin 部门管理员审批
+	PlanOrderStatusDeptAdmin PlanOrderStatus = 1
+	// PlanOrderStatusPlanManager 规划经理审批
+	PlanOrderStatusPlanManager PlanOrderStatus = 2
+	// PlanOrderStatusResManager 资源经理审批
+	PlanOrderStatusResManager PlanOrderStatus = 3
+	// PlanOrderStatusFinished 申请结束
+	PlanOrderStatusFinished PlanOrderStatus = 4
+	// PlanOrderStatusArchPlat 架平审批
+	PlanOrderStatusArchPlat PlanOrderStatus = 6
+	// PlanOrderStatusResGM 资源总监审批
+	PlanOrderStatusResGM PlanOrderStatus = 10
+	// PlanOrderStatusRejected 审批驳回
+	PlanOrderStatusRejected PlanOrderStatus = 127
+	// PlanOrderStatusApproved 审批通过
+	PlanOrderStatusApproved PlanOrderStatus = 20
+)
+
 // PlanOrderBaseInfo query cvm and cbs plan order base info
 type PlanOrderBaseInfo struct {
-	// plan order status:
-	// 1	部门管理员审批
-	// 2	规划经理审批
-	// 3	资源经理审批
-	// 4	申请结束
-	// 其他  失败
-	Status int `json:"status"`
+	Status PlanOrderStatus `json:"status"`
 }
 
 // CapacityResp cvm apply capacity query response

@@ -3138,6 +3138,250 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  // 服务请求 - 资源预测
+  const forecastDemandColumns = [
+    {
+      label: '业务',
+      field: 'bk_biz_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '单据状态',
+      field: 'status_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '运营产品',
+      field: 'bk_product_name',
+    },
+    {
+      label: '规划产品',
+      field: 'plan_product_name',
+    },
+    {
+      label: 'CPU总核心数',
+      field: 'cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(GB)',
+      field: 'memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云硬盘总量(GB)',
+      field: 'disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '提单人',
+      field: 'applicant',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+    {
+      label: '创建时间',
+      field: 'created_at',
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '提单时间',
+      field: 'submitted_at',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+  ];
+
+  // 资源预测详情
+  const forecastDemandDetailColums = [
+    {
+      label: '机型规格',
+      field: 'cvm.device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '总CPU核数',
+      field: 'cvm.cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '总内存(G)',
+      field: 'cvm.memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '总云盘大小(G)',
+      field: 'cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '地域',
+      field: 'area_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源模式',
+      field: 'cvm.res_mode',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型族',
+      field: 'cvm.device_family',
+    },
+    {
+      label: '机型类型',
+      field: 'cvm.device_class',
+    },
+    {
+      label: '资源池',
+      field: 'cvm.res_pool',
+    },
+    {
+      label: '核心类型',
+      field: 'cvm.core_type',
+    },
+    {
+      label: '实例数',
+      field: 'cvm.os',
+    },
+    {
+      label: '单例磁盘IO(MB/s)',
+      field: 'cbs.disk_io',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'cbs.disk_type_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+  ];
+
+  // 预测清单
+  const forecastListColums = [
+    {
+      label: '机型规格',
+      field: 'cvm.device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核数',
+      field: 'cvm.cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(G)',
+      field: 'cvm.memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云盘总量(G)',
+      field: 'cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源模式',
+      field: 'cvm.res_mode',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型类型',
+      field: 'cvm.device_class',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'cbs.disk_io',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'cbs.disk_type_name',
+      isDefaultShow: true,
+    },
+  ];
+
+  // 单据管理 - 账号
+  const accountColums = [
+    {
+      label: '单号',
+      field: 'order_number',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源类型',
+      field: 'resource_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '单据状态',
+      field: 'document_status',
+      isDefaultShow: true,
+    },
+    {
+      label: '申请人',
+      field: 'applicant',
+      isDefaultShow: true,
+    },
+    {
+      label: '申请时间',
+      field: 'application_time',
+    },
+    {
+      label: ' 结束时间',
+      field: 'end_time',
+    },
+    {
+      label: '备注',
+      field: 'remarks',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -3173,6 +3417,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
+    forecastDemand: forecastDemandColumns,
+    forecastDemandDetail: forecastDemandDetailColums,
+    forecastList: forecastListColums,
+    account: accountColums,
     CVMApplication: CAcolumns,
     scrResourceOnlineHost: scrResourceOnlineHostColumns,
     scrResourceOfflineHost: scrResourceOfflineHostColumns,

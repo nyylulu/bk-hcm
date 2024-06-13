@@ -405,12 +405,14 @@ func (s TaskServerSetting) Validate() error {
 type WoaServerSetting struct {
 	Network      Network   `yaml:"network"`
 	Service      Service   `yaml:"service"`
+	Database     DataBase  `yaml:"database"`
 	Log          LogOption `yaml:"log"`
 	Esb          Esb       `yaml:"esb"`
 	MongoDB      MongoDB   `yaml:"mongodb"`
 	Watch        MongoDB   `yaml:"watch"`
 	Redis        Redis     `yaml:"redis"`
 	ClientConfig `yaml:",inline"`
+	ItsmFlows    []ItsmFlow `yaml:"itsmFlows"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -441,17 +443,17 @@ func (s WoaServerSetting) Validate() error {
 		return err
 	}
 
-	if err := s.MongoDB.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Watch.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Redis.validate(); err != nil {
-		return err
-	}
+	//if err := s.MongoDB.validate(); err != nil {
+	//	return err
+	//}
+	//
+	//if err := s.Watch.validate(); err != nil {
+	//	return err
+	//}
+	//
+	//if err := s.Redis.validate(); err != nil {
+	//	return err
+	//}
 
 	if err := s.ClientConfig.validate(); err != nil {
 		return err
