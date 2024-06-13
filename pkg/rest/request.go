@@ -474,7 +474,7 @@ func (r *Request) getRequest(url string, contentType ContentType) (*http.Request
 
 	req.Header.Del("Accept-Encoding")
 	req.Header.Set("Content-Type", string(contentType))
-	req.Header.Set("Accept", "application/json")
+	//req.Header.Set("Accept", "application/json")
 	return req, nil
 }
 

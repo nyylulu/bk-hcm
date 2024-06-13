@@ -14,10 +14,10 @@
 package matcher
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
+	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/common/utils"
 	"hcm/cmd/woa-server/thirdparty/sojobapi"
 )
@@ -64,12 +64,7 @@ func (m *Matcher) createSoJob(jobName string, ips []string) (int, error) {
 		return 0, fmt.Errorf("object is not a create job response: %+v", createResp)
 	}
 
-	jobId, ok := resp.Data.(json.Number)
-	if !ok {
-		return 0, fmt.Errorf("create sojob failed, for response data invalid: %+v", resp.Data)
-	}
-
-	id, err := jobId.Int64()
+	id, err := util.GetInt64ByInterface(resp.Data)
 	if err != nil {
 		return 0, fmt.Errorf("create sojob failed, for response data invalid: %+v", resp.Data)
 	}

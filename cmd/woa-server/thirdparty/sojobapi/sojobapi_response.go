@@ -16,7 +16,7 @@ package sojobapi
 type RespMeta struct {
 	// return 0 if success
 	Code    int    `json:"code"`
-	Message string `json:"success"`
+	Message string `json:"message"`
 }
 
 // CreateJobResp create so job response
