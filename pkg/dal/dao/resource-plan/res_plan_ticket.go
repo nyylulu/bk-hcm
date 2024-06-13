@@ -22,6 +22,7 @@ package resplan
 
 import (
 	"fmt"
+	"strings"
 
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
@@ -34,6 +35,7 @@ import (
 	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/dal/table"
 	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
+	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -46,8 +48,10 @@ import (
 type ResPlanTicketInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpt.ResPlanTicketTable) ([]string, error)
 	Update(kt *kit.Kit, expr *filter.Expression, model *rpt.ResPlanTicketTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanTicketListResult, error)
+	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	// ListWithStatus list resource plan ticket with corresponding status.
+	ListWithStatus(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketWithStatusListRst, error)
 }
 
 var _ ResPlanTicketInterface = new(ResPlanTicketDao)
@@ -135,7 +139,7 @@ func (d ResPlanTicketDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 }
 
 // List get resource plan ticket list.
-func (d ResPlanTicketDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanTicketListResult, error) {
+func (d ResPlanTicketDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list res plan ticket options is nil")
 	}
@@ -164,7 +168,7 @@ func (d ResPlanTicketDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 			return nil, err
 		}
 
-		return &rtypes.ResPlanTicketListResult{Count: count}, nil
+		return &rtypes.RPTicketListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -180,7 +184,7 @@ func (d ResPlanTicketDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 		return nil, err
 	}
 
-	return &rtypes.ResPlanTicketListResult{Count: 0, Details: details}, nil
+	return &rtypes.RPTicketListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete resource plan ticket with tx.
@@ -202,4 +206,71 @@ func (d ResPlanTicketDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 	}
 
 	return nil
+}
+
+// ListWithStatus list resource plan ticket with corresponding status.
+func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
+	*rtypes.RPTicketWithStatusListRst, error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "list res plan ticket options is nil")
+	}
+
+	// append status col type to col types.
+	colTypes := rpt.ResPlanTicketColumns.ColumnTypes()
+	statusColType := rpts.ResPlanTicketStatusColumns.ColumnTypes()["status"]
+	colTypes["status"] = statusColType
+
+	exprOpt := filter.NewExprOption(
+		filter.RuleFields(colTypes),
+		filter.MaxInLimit(constant.BkBizIDMaxLimit),
+	)
+
+	if err := opt.Validate(exprOpt, core.NewDefaultPageOption()); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Page.Count {
+		// this is a count request, then do count operation only.
+		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s`,
+			table.ResPlanTicketTable, table.ResPlanTicketStatusTable, whereExpr)
+
+		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			return nil, err
+		}
+
+		return &rtypes.RPTicketWithStatusListRst{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	// convert resource plan ticket columns to rpt.column.
+	columns := make([]string, 0, len(rpt.ResPlanTicketColumns.Columns()))
+	for _, col := range rpt.ResPlanTicketColumns.Columns() {
+		columns = append(columns, "rpt."+col)
+	}
+	sql := fmt.Sprintf(`SELECT %s, rpts.status FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s %s`,
+		strings.Join(columns, ","), table.ResPlanTicketTable, table.ResPlanTicketStatusTable, whereExpr, pageExpr)
+
+	details := make([]rtypes.RPTicketWithStatus, 0)
+	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		return nil, err
+	}
+
+	// set status name.
+	for idx, detail := range details {
+		details[idx].StatusName = detail.Status.Name()
+	}
+
+	return &rtypes.RPTicketWithStatusListRst{Count: 0, Details: details}, nil
 }

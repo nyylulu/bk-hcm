@@ -75,29 +75,32 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// convert request to filter expression.
-	opt, err := convToListOption(bkBizIDs, req.TicketIDs, req.Applicants, req.SubmitTimeRange, req.Page)
+	opt, err := convToListOption(bkBizIDs, req.TicketIDs, req.Applicants, req.Statuses, req.SubmitTimeRange, req.Page)
 	if err != nil {
 		logs.Errorf("failed to convert to list option, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	rst, err := s.dao.ResPlanTicket().List(cts.Kit, opt)
+	rst, err := s.dao.ResPlanTicket().ListWithStatus(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("failed to list resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to list resource plan ticket with status, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 	return rst, nil
 }
 
 // convert request parameters to ListOption.
-func convToListOption(bkBizIDs []int64, ticketIDs []string, applicants []string, submitTimeRange *times.DateRange,
-	page *core.BasePage) (*types.ListOption, error) {
+func convToListOption(bkBizIDs []int64, ticketIDs, applicants []string, statuses []enumor.RPTicketStatus,
+	submitTimeRange *times.DateRange, page *core.BasePage) (*types.ListOption, error) {
 
 	rules := []filter.RuleFactory{
 		tools.ContainersExpression("bk_biz_id", bkBizIDs),
 	}
 	if len(ticketIDs) > 0 {
 		rules = append(rules, tools.ContainersExpression("id", ticketIDs))
+	}
+	if len(statuses) > 0 {
+		rules = append(rules, tools.ContainersExpression("status", statuses))
 	}
 	if len(applicants) > 0 {
 		rules = append(rules, tools.ContainersExpression("applicant", applicants))

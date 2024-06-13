@@ -20,11 +20,25 @@
 package resplan
 
 import (
+	"hcm/pkg/criteria/enumor"
 	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
 )
 
-// ResPlanTicketListResult list resource plan ticket result.
-type ResPlanTicketListResult struct {
+// RPTicketListResult list resource plan ticket result.
+type RPTicketListResult struct {
 	Count   uint64                   `json:"count"`
 	Details []rpt.ResPlanTicketTable `json:"details"`
+}
+
+// RPTicketWithStatusListRst list resource plan ticket with status result.
+type RPTicketWithStatusListRst struct {
+	Count   uint64               `json:"count"`
+	Details []RPTicketWithStatus `json:"details"`
+}
+
+// RPTicketWithStatus resource plan ticket with status.
+type RPTicketWithStatus struct {
+	rpt.ResPlanTicketTable
+	Status     enumor.RPTicketStatus `json:"status"`
+	StatusName string                `json:"status_name"`
 }

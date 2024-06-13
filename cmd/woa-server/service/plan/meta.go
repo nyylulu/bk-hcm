@@ -13,6 +13,7 @@
 package plan
 
 import (
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/rest"
@@ -31,4 +32,19 @@ func (s *service) ListResMode(_ *rest.Contexts) (interface{}, error) {
 // ListDemandSource lists demand source.
 func (s *service) ListDemandSource(_ *rest.Contexts) (interface{}, error) {
 	return &core.ListResultT[enumor.DemandSource]{Details: enumor.GetDemandSourceMembers()}, nil
+}
+
+// ListRPTicketStatus lists resource plan ticket status.
+func (s *service) ListRPTicketStatus(_ *rest.Contexts) (interface{}, error) {
+	// get resource plan ticket status members.
+	statuses := enumor.GetRPTicketStatusMembers()
+	// convert to ptypes.RPTicketStatusItem slice.
+	details := make([]ptypes.RPTicketStatusItem, 0, len(statuses))
+	for _, status := range statuses {
+		details = append(details, ptypes.RPTicketStatusItem{
+			Status:     status,
+			StatusName: status.Name(),
+		})
+	}
+	return &core.ListResultT[ptypes.RPTicketStatusItem]{Details: details}, nil
 }

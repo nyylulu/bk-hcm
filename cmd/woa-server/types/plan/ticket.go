@@ -27,11 +27,12 @@ import (
 
 // ListResPlanTicketReq is list resource plan ticket request.
 type ListResPlanTicketReq struct {
-	BkBizIDs        []int64          `json:"bk_biz_ids" validate:"omitempty"`
-	TicketIDs       []string         `json:"ticket_ids" validate:"omitempty"`
-	Applicants      []string         `json:"applicants" validate:"omitempty"`
-	SubmitTimeRange *times.DateRange `json:"submit_time_range" validate:"omitempty"`
-	Page            *core.BasePage   `json:"page" validate:"required"`
+	BkBizIDs        []int64                 `json:"bk_biz_ids" validate:"omitempty"`
+	TicketIDs       []string                `json:"ticket_ids" validate:"omitempty"`
+	Statuses        []enumor.RPTicketStatus `json:"statuses" validate:"omitempty"`
+	Applicants      []string                `json:"applicants" validate:"omitempty"`
+	SubmitTimeRange *times.DateRange        `json:"submit_time_range" validate:"omitempty"`
+	Page            *core.BasePage          `json:"page" validate:"required"`
 }
 
 // Validate whether ListResPlanTicketReq is valid.
@@ -43,6 +44,12 @@ func (r *ListResPlanTicketReq) Validate() error {
 	for _, bkBizID := range r.BkBizIDs {
 		if bkBizID <= 0 {
 			return errors.New("bk biz id should be > 0")
+		}
+	}
+
+	for _, status := range r.Statuses {
+		if err := status.Validate(); err != nil {
+			return err
 		}
 	}
 

@@ -66,6 +66,17 @@ func (s RPTicketStatus) Name() string {
 	return rdTicketStatusNameMap[s]
 }
 
+// GetRPTicketStatusMembers get RPTicketStatus's members.
+func GetRPTicketStatusMembers() []RPTicketStatus {
+	return []RPTicketStatus{
+		RPTicketStatusInit,
+		RPTicketStatusAuditing,
+		RPTicketStatusRejected,
+		RPTicketStatusDone,
+		RPTicketStatusFailed,
+	}
+}
+
 // DemandClass is resource plan demand class.
 type DemandClass string
 
