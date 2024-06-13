@@ -71,3 +71,7 @@ data:
       {{- toYaml .Values.dvm | nindent 6 }}
     bkchat:
       {{- toYaml .Values.bkchat | nindent 6 }}
+    itsm:
+      {{- toYaml .Values.itsm | nindent 6 }}
+    itsmFlows:
+      {{- toYaml .Values.itsmFlows | nindent 6 }}
