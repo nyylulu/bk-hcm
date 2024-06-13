@@ -443,17 +443,17 @@ func (s WoaServerSetting) Validate() error {
 		return err
 	}
 
-	if err := s.MongoDB.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Watch.validate(); err != nil {
-		return err
-	}
-
-	if err := s.Redis.validate(); err != nil {
-		return err
-	}
+	//if err := s.MongoDB.validate(); err != nil {
+	//	return err
+	//}
+	//
+	//if err := s.Watch.validate(); err != nil {
+	//	return err
+	//}
+	//
+	//if err := s.Redis.validate(); err != nil {
+	//	return err
+	//}
 
 	if err := s.ClientConfig.validate(); err != nil {
 		return err
