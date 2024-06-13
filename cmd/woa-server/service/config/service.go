@@ -49,6 +49,7 @@ func InitService(c *capability.Capability) {
 	s.initSubnet(h)
 	s.initVpc(h)
 	s.initZone(h)
+	s.initCapacity(h)
 
 	h.Load(c.WebService)
 }
@@ -174,4 +175,9 @@ func (s *service) initZone(h *rest.Handler) {
 	h.Add("DeleteQcloudZone", http.MethodDelete, "/config/delete/config/qcloud/zone/{id}", s.DeleteQcloudZone)
 	h.Add("GetIdcZone", http.MethodPost, "/config/findmany/config/idc/zone", s.GetIdcZone)
 	h.Add("CreateIdcZone", http.MethodPost, "/config/create/config/idc/zone", s.CreateIdcZone)
+}
+
+func (s *service) initCapacity(h *rest.Handler) {
+	h.Add("GetCapacity", http.MethodPost, "/config/find/cvm/capacity", s.GetCapacity)
+	h.Add("UpdateCapacity", http.MethodPost, "/config/sync/cvm/capacity", s.UpdateCapacity)
 }

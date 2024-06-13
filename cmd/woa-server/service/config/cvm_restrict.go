@@ -15,11 +15,13 @@ package config
 
 import (
 	"hcm/cmd/woa-server/common/mapstr"
+	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
 // GetCvmDiskType gets cvm disk type config list
-func (s *service) GetCvmDiskType(cts *rest.Contexts) (interface{}, error) {
+func (s *service) GetCvmDiskType(_ *rest.Contexts) (interface{}, error) {
 	// TODO: store in db
 	rst := mapstr.MapStr{
 		"count": 2,
@@ -36,4 +38,48 @@ func (s *service) GetCvmDiskType(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return rst, nil
+}
+
+// GetCapacity get cvm capacity list
+func (s *service) GetCapacity(cts *rest.Contexts) (interface{}, error) {
+	input := new(types.GetCapacityParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if _, err := input.Validate(); err != nil {
+		logs.Errorf("failed to get resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	rst, err := s.logics.Capacity().GetCapacity(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get resource apply capacity, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// UpdateCapacity update cvm capacity
+func (s *service) UpdateCapacity(cts *rest.Contexts) (interface{}, error) {
+	input := new(types.UpdateCapacityParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to update resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if _, err := input.Validate(); err != nil {
+		logs.Errorf("failed to update resource apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err := s.logics.Capacity().UpdateCapacity(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to update resource apply capacity, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
 }

@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package config config
 package config
 
 import (
@@ -56,20 +57,20 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	if input.Zone != "" && input.Zone != cvmapi.CvmSeparateCampus {
 		filter["zone"] = input.Zone
 	}
-	vpc := input.Vpc
-	if vpc == "" {
+	vpcID := input.Vpc
+	if vpcID == "" {
 		dftVpc, err := GetDftCvmVpc(input.Region)
 		if err != nil {
 			return nil, err
 		}
-		vpc = dftVpc
+		vpcID = dftVpc
 	}
-	filter["vpc_id"] = vpc
+	filter["vpc_id"] = vpcID
 
 	if input.Subnet != "" {
 		filter["subnet_id"] = input.Subnet
 	} else {
-		if IsDftCvmVpc(vpc) {
+		if IsDftCvmVpc(vpcID) {
 			// filter subnet with name prefix cvm_use_
 			filter["subnet_name"] = mapstr.MapStr{
 				common.BKDBLIKE: "^cvm_use_",
@@ -94,18 +95,18 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	zoneToVpc := make(map[string][]string)
 	vpcToSubnet := make(map[string][]string)
 
-	for _, subnet := range subnetList {
-		zoneToVpc[subnet.Zone] = append(zoneToVpc[subnet.Zone], subnet.VpcId)
-		vpcToSubnet[subnet.VpcId] = append(vpcToSubnet[subnet.VpcId], subnet.SubnetId)
+	for _, subnetItem := range subnetList {
+		zoneToVpc[subnetItem.Zone] = append(zoneToVpc[subnetItem.Zone], subnetItem.VpcId)
+		vpcToSubnet[subnetItem.VpcId] = append(vpcToSubnet[subnetItem.VpcId], subnetItem.SubnetId)
 	}
 
 	// 2. query apply capacity
 	zoneToCapacity := make(map[string]*types.CapacityInfo)
-	for zone, vpcList := range zoneToVpc {
+	for zoneID, vpcList := range zoneToVpc {
 		vpcUniq := arrayutil.StrArrayUnique(vpcList)
-		cap := c.getZoneCapacity(kt, input.RequireType, input.DeviceType, input.Region, zone, vpcUniq, vpcToSubnet)
-		if cap != nil {
-			zoneToCapacity[zone] = cap
+		capa := c.getZoneCapacity(kt, input.RequireType, input.DeviceType, input.Region, zoneID, vpcUniq, vpcToSubnet)
+		if capa != nil {
+			zoneToCapacity[zoneID] = capa
 		}
 	}
 
@@ -175,7 +176,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 
 	// 1. query cvm capacity
 	if len(vpcList) == 0 {
-		capacity := &types.CapacityInfo{
+		capacityInfo := &types.CapacityInfo{
 			Region:  region,
 			Zone:    zone,
 			Vpc:     "",
@@ -184,10 +185,10 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 			MaxInfo: make([]*types.CapacityMaxInfo, 0),
 		}
 
-		return capacity
+		return capacityInfo
 	}
 
-	req := c.createCapacityReq(requireType, deviceType, region, zone, vpcList, vpcToSubnet)
+	req := c.createCapacityReq(requireType, deviceType, zone, vpcList, vpcToSubnet)
 
 	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
@@ -222,14 +223,14 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 
 	// 2. query all subnet info for left ip number
 	subnetToLeftIp := make(map[string]*cvmapi.SubnetInfo)
-	for _, vpc := range vpcList {
-		subnetList, err := c.querySubnet(kt, region, zone, vpc)
+	for _, vpcItem := range vpcList {
+		subnetList, err := c.querySubnet(kt, region, zone, vpcItem)
 		if err != nil {
 			logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 			return nil
 		}
-		for _, subnet := range subnetList {
-			subnetToLeftIp[subnet.Id] = subnet
+		for _, subnetItem := range subnetList {
+			subnetToLeftIp[subnetItem.Id] = subnetItem
 		}
 	}
 
@@ -242,7 +243,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 	return capacityItem
 }
 
-func (c *capacity) createCapacityReq(requireType int64, deviceType, region, zone string, vpcList []string,
+func (c *capacity) createCapacityReq(requireType int64, deviceType, zone string, vpcList []string,
 	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
 
 	projectName := cvmapi.GetObsProject(requireType)

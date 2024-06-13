@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package config config
 package config
 
 import "fmt"
@@ -35,12 +36,12 @@ var regionToVpc = map[string]string{
 
 // GetDftCvmVpc gets the default vpc of a region
 func GetDftCvmVpc(region string) (string, error) {
-	vpc, ok := regionToVpc[region]
+	vpcID, ok := regionToVpc[region]
 	if !ok {
-		return "", fmt.Errorf("found no vpc with region %s", region)
+		return "", fmt.Errorf("found no vpc with region: %s", region)
 	}
 
-	return vpc, nil
+	return vpcID, nil
 }
 
 // IsDftCvmVpc check if given vpc is the default vpc of a region
