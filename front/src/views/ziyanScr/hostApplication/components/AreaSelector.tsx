@@ -11,7 +11,6 @@ export default defineComponent({
     valueKey: {
       type: String,
       default: '',
-      // validator: (val) => ['cmdbRegionName', ''].includes(val),
     },
     params: {
       type: Object,

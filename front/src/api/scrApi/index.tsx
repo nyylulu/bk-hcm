@@ -225,6 +225,26 @@ const getSubnets = async ({ region, zone, vpc }) => {
   });
   return data;
 };
+const updateCvmDeviceTypeConfigs = async ({ ids, properties }) => {
+  const { data } = await http.post(
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/updatemany/config/cvm/device/property`,
+    { ids, properties },
+  );
+  return data;
+};
+/**
+ * CVM机型配置信息创建接口
+ * @returns {Promise}
+ */
+const createCvmDevice = async ({ requireType, deviceGroup, deviceType, ...restParams }) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/createmany/config/cvm/device`, {
+    ...restParams,
+    require_type: requireType,
+    device_group: deviceGroup,
+    device_type: deviceType,
+  });
+  return data;
+};
 /** 资源回收单据执行接口 */
 const startRecycleList = async ({ orderId }) => {
   const data = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/start/recycle/order`, {
@@ -254,5 +274,7 @@ export default {
   getRestrict,
   getRecycleHosts,
   getPreRecycleList,
+  updateCvmDeviceTypeConfigs,
   startRecycleList,
+  createCvmDevice,
 };

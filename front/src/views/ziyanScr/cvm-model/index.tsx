@@ -1,0 +1,405 @@
+import { defineComponent, ref, onMounted } from 'vue';
+import { useTable } from '@/hooks/useTable/useTable';
+import { Search } from 'bkui-vue/lib/icon';
+import { Dialog } from 'bkui-vue';
+import apiService from '@/api/scrApi';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import AreaSelector from '../hostApplication/components/AreaSelector';
+import ZoneSelector from '../hostApplication/components/ZoneSelector';
+import CreateDevice from './CreateDevice/index';
+import './index.scss';
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+export default defineComponent({
+  name: 'AllhostInventoryManager',
+  setup() {
+    const { columns } = useColumns('cvmModel');
+    const { selections, handleSelectionChange } = useSelection();
+    const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
+    const enableCapacitys = [
+      { label: '是', value: true },
+      { label: '否', value: false },
+    ];
+    const enableApplys = [
+      { label: '是', value: true },
+      { label: '否', value: false },
+    ];
+    const filter = ref({
+      require_type: 1,
+      region: [],
+      zone: [],
+      device_type: [],
+      device_group: deviceGroups && [deviceGroups[0]],
+      cpu: '',
+      mem: '',
+      disk: '',
+      enableCapacity: '',
+      enableApply: '',
+    });
+    const options = ref({
+      require_types: [],
+      device_groups: deviceGroups,
+      device_types: [],
+      regions: [],
+      zones: [],
+      cpu: [],
+      mem: [],
+      enableCapacitys,
+      enableApplys,
+    });
+    const deviceConfigDisabled = ref(false);
+    const deviceTypeDisabled = ref(false);
+    const batchEditDialogVisible = ref(false);
+    const createVisible = ref(false);
+    const batchEditForm = ref({
+      comment: '',
+      enableCapacity: '' as any,
+      enableApply: '' as any,
+    });
+    const whetherlist = ref([
+      {
+        value: 0,
+        label: '保持不变',
+      },
+      {
+        value: 1,
+        label: '是',
+      },
+      {
+        value: 2,
+        label: '否',
+      },
+    ]);
+    const page = ref({
+      limit: 50,
+      start: 0,
+      sort: '-capacity_flag',
+    });
+    const queryrules = ref(
+      [
+        filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
+        filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
+        filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
+        filter.value.device_group && { field: 'label.device_group', operator: 'in', value: filter.value.device_group },
+        filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
+        filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
+        filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
+        filter.value.enableCapacity && {
+          field: 'enable_capacity',
+          operator: 'equal',
+          value: filter.value.enableCapacity,
+        },
+        filter.value.enableApply && { field: 'enable_apply', operator: 'equal', value: filter.value.enableApply },
+      ].filter(Boolean),
+    );
+    const loadResources = () => {
+      getListData();
+    };
+    const handleDeviceConfigChange = () => {
+      filter.value.device_type = [];
+      const { cpu, mem } = filter.value;
+      deviceTypeDisabled.value = Boolean(cpu || mem);
+    };
+    const clearFilter = () => {
+      filter.value = {
+        require_type: 1,
+        region: [],
+        zone: [],
+        device_type: [],
+        device_group: deviceGroups && [deviceGroups[0]],
+        cpu: '',
+        mem: '',
+        disk: '',
+        enableCapacity: '' as any,
+        enableApply: '' as any,
+      };
+      deviceConfigDisabled.value = false;
+      deviceTypeDisabled.value = false;
+      filterDevices();
+    };
+    const handleDeviceGroupChange = () => {
+      filter.value.cpu = '';
+      filter.value.mem = '';
+      filter.value.device_type = [];
+      loadDeviceTypes();
+    };
+    const batchUpdates = () => {
+      batchEditDialogVisible.value = true;
+    };
+    const createNewModel = () => {
+      createVisible.value = true;
+    };
+    const triggerShow = (val: boolean) => {
+      batchEditDialogVisible.value = val;
+    };
+    const handleConfirm = () => {
+      const properties = serializeBatchEditForm();
+      const ids = selections.value.map((row) => row.id);
+      apiService.updateCvmDeviceTypeConfigs({
+        ids,
+        properties,
+      });
+
+      batchEditDialogVisible.value = false;
+      getListData();
+    };
+    const serializeBatchEditForm = () => {
+      const { comment, enableApply, enableCapacity } = batchEditForm.value;
+      return {
+        comment: comment.trim() !== '' ? comment : '',
+        enable_apply: enableApply !== '' && enableApply !== 0 ? enableApply : undefined,
+        enable_capacity: enableCapacity !== '' && enableCapacity !== 0 ? enableCapacity : undefined,
+      };
+    };
+    const filterDevices = () => {
+      queryrules.value = [
+        filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
+        filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
+        filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
+        filter.value.device_group && {
+          field: 'label.device_group',
+          operator: 'in',
+          value: filter.value.device_group,
+        },
+        filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
+        filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
+        filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
+        filter.value.enableCapacity && {
+          field: 'enable_capacity',
+          operator: 'equal',
+          value: filter.value.enableCapacity,
+        },
+        filter.value.enableApply && { field: 'enable_apply', operator: 'equal', value: filter.value.enableApply },
+      ].filter(Boolean);
+
+      page.value.start = 0;
+      loadResources();
+    };
+    const handleDeviceTypeChange = () => {
+      filter.value.cpu = '';
+      filter.value.mem = '';
+      deviceConfigDisabled.value = filter.value.device_type.length > 0;
+    };
+    const loadDeviceTypes = async () => {
+      const { info } = await apiService.getDeviceTypes(filter.value);
+      options.value.device_types = info || [];
+    };
+    const loadRestrict = async () => {
+      const { cpu, mem } = await apiService.getRestrict();
+      options.value.cpu = cpu || [];
+      options.value.mem = mem || [];
+    };
+    const getfetchOptionslist = async () => {
+      const { info } = await apiService.getRequireTypes();
+      options.value.require_types = info;
+    };
+    onMounted(() => {
+      loadRestrict();
+      loadDeviceTypes();
+      getfetchOptionslist();
+    });
+
+    const { CommonTable, getListData } = useTable({
+      tableOptions: {
+        columns,
+        extra: {
+          onSelect: (selections: any) => {
+            handleSelectionChange(selections, () => true, false);
+          },
+          onSelectAll: (selections: any) => {
+            handleSelectionChange(selections, () => true, true);
+          },
+        },
+      },
+      requestOption: {
+        dataPath: 'data.info',
+      },
+      scrConfig: () => {
+        return {
+          url: '/api/v1/woa/config/findmany/config/cvm/device',
+          payload: {
+            filter: {
+              condition: 'AND',
+              rules: [...queryrules.value],
+            },
+            page: page.value,
+          },
+          filter: { simpleConditions: true, requestId: 'devices' },
+        };
+      },
+    });
+    return () => (
+      <div class='common-card-wrap has-selection'>
+        <CommonTable>
+          {{
+            tabselect: () => (
+              <>
+                <div class='tabselect'>
+                  <span>需求类型</span>
+                  <bk-select class='tbkselect' v-model={filter.value.require_type}>
+                    {options.value.require_types.map((item) => (
+                      <bk-option
+                        key={item.require_type}
+                        value={item.require_type}
+                        label={item.require_name}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>地域</span>
+                  <AreaSelector
+                    ref='areaSelector'
+                    class='tbkselect'
+                    v-model={filter.value.region}
+                    multiple
+                    clearable
+                    filterable
+                    params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
+                </div>
+                <div class='tabselect'>
+                  <span>园区</span>
+                  <ZoneSelector
+                    ref='zoneSelector'
+                    v-model={filter.value.zone}
+                    class='tbkselect'
+                    multiple
+                    params={{
+                      resourceType: 'QCLOUDCVM',
+                      region: filter.value.region,
+                    }}></ZoneSelector>
+                </div>
+                <div class='tabselect'>
+                  <span>实例族</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.device_group}
+                    multiple
+                    clearable
+                    collapse-tags
+                    onChange={handleDeviceGroupChange}>
+                    {options.value.device_groups.map((item) => (
+                      <bk-option key={item} value={item} label={item}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>机型</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.device_type}
+                    clearable
+                    multiple
+                    disabled={deviceTypeDisabled.value}
+                    filterable
+                    onChange={handleDeviceTypeChange}>
+                    {options.value.device_types.map((item) => (
+                      <bk-option key={item} value={item} label={item}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>CPU(核)</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.cpu}
+                    clearable
+                    disabled={deviceConfigDisabled.value}
+                    filterable
+                    onChange={handleDeviceConfigChange}>
+                    {options.value.cpu.map((item) => (
+                      <bk-option key={item} value={item} label={item}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>内存(G)</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.mem}
+                    clearable
+                    disabled={deviceConfigDisabled.value}
+                    filterable
+                    onChange={handleDeviceConfigChange}>
+                    {options.value.mem.map((item) => (
+                      <bk-option key={item} value={item} label={item}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>可查询容量</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.enableCapacity}
+                    clearable
+                    disabled={deviceConfigDisabled.value}
+                    filterable
+                    onChange={handleDeviceConfigChange}>
+                    {options.value.enableCapacitys.map((item) => (
+                      <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <span>可申请</span>
+                  <bk-select
+                    class='tbkselect'
+                    v-model={filter.value.enableApply}
+                    clearable
+                    disabled={deviceConfigDisabled.value}
+                    filterable
+                    onChange={handleDeviceConfigChange}>
+                    {options.value.enableApplys.map((item) => (
+                      <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
+                    ))}
+                  </bk-select>
+                </div>
+                <div class='tabselect'>
+                  <bk-button icon='bk-icon-search' theme='primary' class='bkbutton' onClick={filterDevices}>
+                    <Search></Search>
+                    查询
+                  </bk-button>
+                  <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
+                    清空
+                  </bk-button>
+                  <bk-button icon='bk-icon-refresh' disabled={!selections.value.length} onClick={batchUpdates}>
+                    批量更新
+                  </bk-button>
+                  <bk-button icon='bk-icon-refresh' onClick={createNewModel}>
+                    创建新机型
+                  </bk-button>
+                </div>
+              </>
+            ),
+          }}
+        </CommonTable>
+        <Dialog
+          class='common-dialog'
+          isShow={batchEditDialogVisible.value}
+          title='批量更新'
+          width={600}
+          onConfirm={handleConfirm}
+          onClosed={() => triggerShow(false)}>
+          <bk-form v-loading='$isLoading(deviceTypeConfigs.updateRequestId)'>
+            <bk-form-item label='可查询容量'>
+              <bk-select v-model={batchEditForm.value.enableCapacity} class='w-100p'>
+                {whetherlist.value.map(({ label, value }) => {
+                  return <bk-option key={value} label={label} value={value}></bk-option>;
+                })}
+              </bk-select>
+            </bk-form-item>
+            <bk-form-item label='可申请'>
+              <bk-select v-model={batchEditForm.value.enableApply} class='w-100p'>
+                {whetherlist.value.map(({ label, value }) => {
+                  return <bk-option key={value} label={label} value={value}></bk-option>;
+                })}
+              </bk-select>
+            </bk-form-item>
+            <bk-form-item label='备注'>
+              <remark-textarea v-model={batchEditForm.value.comment} type='textarea' maxlength='128' show-limit />
+            </bk-form-item>
+          </bk-form>
+        </Dialog>
+        <CreateDevice visible={createVisible.value} onQueryList={getListData} />
+      </div>
+    );
+  },
+});

@@ -112,8 +112,8 @@ const ziyanScr: RouteRecordRaw[] = [
     path: '/ziyanScr',
     children: [
       {
-        path: '/ziyanScr/cvmjx',
-
+        path: '/ziyanScr/cvm-model',
+        component: () => import('@/views/ziyanScr/cvm-model'),
         name: 'CVM机型',
         children: [],
         meta: {

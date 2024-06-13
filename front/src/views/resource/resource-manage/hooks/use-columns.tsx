@@ -2930,7 +2930,64 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       ),
     },
   ];
-
+  const cvmModelColumns = [
+    {
+      type: 'selection',
+    },
+    {
+      label: '机型',
+      field: 'device_type',
+    },
+    {
+      label: '需求类型',
+      field: 'require_type',
+    },
+    {
+      label: '地域',
+      field: 'region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+    },
+    {
+      label: '园区',
+      field: 'zone',
+    },
+    {
+      label: '实例族',
+      field: 'label.device_group',
+    },
+    {
+      label: 'CPU(核)',
+      field: 'cpu',
+    },
+    {
+      label: '内存(G)',
+      field: 'mem',
+    },
+    {
+      label: '其他信息',
+      field: 'remark',
+      render: ({ cell }) => cell || '--',
+    },
+    {
+      label: '可查询容量',
+      field: 'enable_capacity',
+      render: ({ cell }) => (cell ? '是' : '否'),
+    },
+    {
+      label: '可申请',
+      field: 'enable_apply',
+      render: ({ cell }) => (cell ? '是' : '否'),
+    },
+    {
+      label: '推荐分数',
+      field: 'score',
+    },
+    {
+      label: '备注',
+      field: 'comment',
+      render: ({ comment }) => comment || '--',
+    },
+  ];
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -2971,6 +3028,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrResourceOfflineHost: scrResourceOfflineHostColumns,
     scrResourceOnlineCreate: scrResourceOnlineCreateColumns,
     scrResourceOfflineCreate: scrResourceOfflineCreateColumns,
+    cvmModel: cvmModelColumns,
     cvmWebQuery: cvmWebColumns,
     applicationList: ApplicationListColumns,
   };
