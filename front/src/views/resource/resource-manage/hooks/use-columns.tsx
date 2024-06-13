@@ -2384,6 +2384,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '回收时间',
       field: 'create_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.create_at)}</span>;
+      },
       formatter: ({ create_at }) => {
         return dateTimeTransform(create_at);
       },
@@ -2468,6 +2471,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '创建时间',
       field: 'create_at',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.create_at)}</span>;
+      },
       formatter: ({ create_at }) => {
         return dateTimeTransform(create_at);
       },
@@ -2554,6 +2560,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '上架时间',
       field: 'input_time',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.input_time)}</span>;
+      },
       formatter: ({ input_time }) => {
         return dateTimeTransform(input_time);
       },
@@ -2561,6 +2570,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '销毁时间',
       field: 'return_time',
+      render: ({ row }) => {
+        return <span>{dateTimeTransform(row.return_time)}</span>;
+      },
       formatter: ({ return_time }) => {
         return dateTimeTransform(return_time);
       },

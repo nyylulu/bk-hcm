@@ -2,7 +2,7 @@ import { useAccountStore } from '@/store';
 let businesses: any[] = [];
 const getBusiness = async () => {
   const accountStore = useAccountStore();
-  const { data } = await accountStore.getBizListWithAuth();
+  const { data } = await accountStore.getBizList();
   businesses = data || [];
 };
 

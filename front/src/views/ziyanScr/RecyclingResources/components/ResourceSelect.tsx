@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, ref, computed, watch } from 'vue';
 import './index.scss';
 import apiService from '../../../../api/scrApi';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -31,8 +31,19 @@ export default defineComponent({
     const { columns: RRcolumns } = useColumns('RecyclingResources');
     const count = ref(0);
     const TableData = ref([]);
-    const allRecycleHostIps = ref([]);
-    const recycleFailedHostIps = ref([]);
+    const allRecycleHostIps = computed(() => {
+      return props.tableHosts.map((item) => item.ip).join('\n');
+    });
+    const recycleFailedHostIps = computed(() => {
+      return props.tableHosts
+        .map((item) => {
+          if (!item.recyclable) {
+            return item.ip;
+          }
+          return null;
+        })
+        .join('\n');
+    });
     const localRemark = ref('');
 
     watch(
@@ -81,11 +92,18 @@ export default defineComponent({
           <bk-button class='bk-button' onClick={refresh}>
             刷新状态
           </bk-button>
-          <bk-button class='bk-button' disabled={allRecycleHostIps.value.length === 0}>
-            复制所有IP({count.value})
+          <bk-button
+            class='bk-button'
+            v-clipboard={allRecycleHostIps.value}
+            disabled={allRecycleHostIps.value.length === 0}>
+            复制所有IP{count.value}
           </bk-button>
-          <bk-button class='bk-button' theme='danger' disabled={recycleFailedHostIps.value.length === 0}>
-            复制不可回收IP({count.value})
+          <bk-button
+            class='bk-button'
+            theme='danger'
+            v-clipboard={recycleFailedHostIps.value}
+            disabled={recycleFailedHostIps.value.length === 0}>
+            复制不可回收IP{count.value}
           </bk-button>
           <bk-button class='bk-button' theme='primary' onClick={handleClear}>
             清空列表

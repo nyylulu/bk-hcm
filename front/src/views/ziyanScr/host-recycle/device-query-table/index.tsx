@@ -4,12 +4,14 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { Search } from 'bkui-vue/lib/icon';
+import BusinessSelector from '@/components/business-selector';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import dayjs from 'dayjs';
 
 export default defineComponent({
   components: {
+    BusinessSelector,
     MemberSelect,
     ExportToExcelButton,
   },
@@ -29,10 +31,11 @@ export default defineComponent({
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());
     const timeForm = ref(defaultTime());
+    const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
       return {
-        start: dayjs(timeForm.value[0]).format('YYYY-MM-DD'),
-        end: dayjs(timeForm.value[1]).format('YYYY-MM-DD'),
+        start: handleTime(timeForm.value[0]),
+        end: handleTime(timeForm.value[1]),
       };
     });
     const accountStore = useAccountStore();
@@ -97,7 +100,7 @@ export default defineComponent({
         page: enableCount ? Object.assign(pageInfo.value, { limit: 0 }) : pageInfo.value,
       };
       params.order_id = params.order_id.map((item) => Number(item));
-
+      params.bk_biz_id = [Number(params.bk_biz_id)];
       requestListParams.value = { ...params };
       getListData();
     };
@@ -140,11 +143,7 @@ export default defineComponent({
             tabselect: () => (
               <bk-form label-width='110' class='bill-filter-form' model={deviceForm}>
                 <bk-form-item label='业务'>
-                  <bk-select v-model={deviceForm.value.bk_biz_id} multiple clearable placeholder='请选择业务'>
-                    {bussinessList.value.map(({ key, value }) => {
-                      return <bk-option key={key} label={value} value={key}></bk-option>;
-                    })}
-                  </bk-select>
+                  <business-selector v-model={deviceForm.value.bk_biz_id} placeholder='请选择业务' />
                 </bk-form-item>
                 <bk-form-item label='单号'>
                   <bk-tag-input

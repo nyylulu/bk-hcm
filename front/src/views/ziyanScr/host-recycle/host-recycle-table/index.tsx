@@ -1,9 +1,9 @@
 import { defineComponent, ref, computed, watch, onMounted } from 'vue';
-import { useAccountStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import BusinessSelector from '@/components/business-selector';
 import RequireNameSelect from './require-name-select';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -15,6 +15,7 @@ import dayjs from 'dayjs';
 
 export default defineComponent({
   components: {
+    BusinessSelector,
     RequireNameSelect,
     MemberSelect,
     ExportToExcelButton,
@@ -44,10 +45,11 @@ export default defineComponent({
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const recycleForm = ref(defaultRecycleForm());
     const timeForm = ref(defaultTime());
+    const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
       return {
-        start: dayjs(timeForm.value[0]).format('YYYY-MM-DD'),
-        end: dayjs(timeForm.value[1]).format('YYYY-MM-DD'),
+        start: handleTime(timeForm.value[0]),
+        end: handleTime(timeForm.value[1]),
       };
     });
     const pageInfo = ref({
@@ -59,12 +61,6 @@ export default defineComponent({
       ...timeObj.value,
       page: pageInfo.value,
     });
-    const accountStore = useAccountStore();
-    const bussinessList = ref([]);
-    const getBusinesses = async () => {
-      const { data } = await accountStore.getBizListWithAuth();
-      bussinessList.value = data || [];
-    };
     const resourceTypeList = [
       {
         key: 'QCLOUDCVM',
@@ -102,6 +98,7 @@ export default defineComponent({
         page: enableCount ? Object.assign(pageInfo.value, { limit: 0 }) : pageInfo.value,
       };
       params.order_id = params.order_id.map((item) => Number(item));
+      params.bk_biz_id = [Number(params.bk_biz_id)];
       requestListParams.value = { ...params };
       getListData();
     };
@@ -281,11 +278,7 @@ export default defineComponent({
                     </bk-button>
                   </bk-form-item>
                   <bk-form-item label='业务'>
-                    <bk-select v-model={recycleForm.value.bk_biz_id} multiple clearable placeholder='请选择业务'>
-                      {bussinessList.value.map(({ key, value }) => {
-                        return <bk-option key={key} label={value} value={key}></bk-option>;
-                      })}
-                    </bk-select>
+                    <business-selector v-model={recycleForm.value.bk_biz_id} placeholder='请选择业务' />
                   </bk-form-item>
                   <bk-form-item label='OBS项目类型'>
                     <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
@@ -307,6 +300,7 @@ export default defineComponent({
                       placeholder='请输入子单号'
                       allow-create
                       has-delete-icon
+                      allow-auto-match
                     />
                   </bk-form-item>
                   <bk-form-item label='资源类型'>
@@ -375,7 +369,6 @@ export default defineComponent({
       return null;
     };
     onMounted(() => {
-      getBusinesses();
       fetchStageList();
     });
     return renderNodes;
