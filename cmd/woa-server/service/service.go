@@ -34,9 +34,18 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/cmd/woa-server/service/config"
+	"hcm/cmd/woa-server/service/cvm"
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
+	"hcm/cmd/woa-server/service/pool"
+	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
+	"hcm/cmd/woa-server/storage/dal/mongo/local"
+	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/cmd/woa-server/storage/driver/mongodb"
+	redisCli "hcm/cmd/woa-server/storage/driver/redis"
+	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
@@ -45,6 +54,7 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/handler"
 	"hcm/pkg/iam/auth"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
 	"hcm/pkg/rest"
@@ -131,71 +141,71 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	//// init mongodb client
-	//mConf := cc.WoaServer().MongoDB
-	//mongoConf, err := mongo.NewConf(&mConf)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err = mongodb.InitClient("", mongoConf); err != nil {
-	//	return nil, err
-	//}
-	//wConf := cc.WoaServer().Watch
-	//watchConf, err := mongo.NewConf(&wConf)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err = mongodb.InitClient("", watchConf); err != nil {
-	//	return nil, err
-	//}
-	//
-	//// init redis client
-	//rConf := cc.WoaServer().Redis
-	//redisConf, err := redis.NewConf(&rConf)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//if err = redisCli.InitClient("redis", redisConf); err != nil {
-	//	return nil, err
-	//}
+	// init mongodb client
+	mConf := cc.WoaServer().MongoDB
+	mongoConf, err := mongo.NewConf(&mConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = mongodb.InitClient("", mongoConf); err != nil {
+		return nil, err
+	}
+	wConf := cc.WoaServer().Watch
+	watchConf, err := mongo.NewConf(&wConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = mongodb.InitClient("", watchConf); err != nil {
+		return nil, err
+	}
+
+	// init redis client
+	rConf := cc.WoaServer().Redis
+	redisConf, err := redis.NewConf(&rConf)
+	if err != nil {
+		return nil, err
+	}
+	if err = redisCli.InitClient("redis", redisConf); err != nil {
+		return nil, err
+	}
 
 	// init task service logics
-	//loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
-	//if err != nil {
-	//	logs.Errorf("new loop stream failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
-	//if err != nil {
-	//	logs.Errorf("new watch mongo client failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//informerIf, err := informer.New(loopW, watchDB)
-	//if err != nil {
-	//	logs.Errorf("new informer failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//kt := kit.New()
-	//schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
-	//if err != nil {
-	//	logs.Errorf("new scheduler failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient)
-	//if err != nil {
-	//	logs.Errorf("new recycler failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//operationIf, err := operation.New(kt.Ctx)
-	//if err != nil {
-	//	logs.Errorf("new operation failed, err: %v", err)
-	//	return nil, err
-	//}
+	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+	if err != nil {
+		logs.Errorf("new loop stream failed, err: %v", err)
+		return nil, err
+	}
+
+	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+	if err != nil {
+		logs.Errorf("new watch mongo client failed, err: %v", err)
+		return nil, err
+	}
+
+	informerIf, err := informer.New(loopW, watchDB)
+	if err != nil {
+		logs.Errorf("new informer failed, err: %v", err)
+		return nil, err
+	}
+
+	kt := kit.New()
+	schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+	if err != nil {
+		logs.Errorf("new scheduler failed, err: %v", err)
+		return nil, err
+	}
+
+	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient)
+	if err != nil {
+		logs.Errorf("new recycler failed, err: %v", err)
+		return nil, err
+	}
+
+	operationIf, err := operation.New(kt.Ctx)
+	if err != nil {
+		logs.Errorf("new operation failed, err: %v", err)
+		return nil, err
+	}
 
 	planCtrl, err := planctrl.New(sd, daoSet, itsmCli, thirdCli.CVM)
 	if err != nil {
@@ -210,14 +220,14 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		esbClient:      esbClient,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
-		//mongoConf:      mongoConf,
-		//mongoWatchConf: watchConf,
-		serviceState: sd,
-		clientConf:   cc.WoaServer().ClientConfig,
-		//informerIf:     informerIf,
-		//schedulerIf:    schedulerIf,
-		//recyclerIf:     recyclerIf,
-		//operationIf:    operationIf,
+		mongoConf:      mongoConf,
+		mongoWatchConf: watchConf,
+		serviceState:   sd,
+		clientConf:     cc.WoaServer().ClientConfig,
+		informerIf:     informerIf,
+		schedulerIf:    schedulerIf,
+		recyclerIf:     recyclerIf,
+		operationIf:    operationIf,
 	}, nil
 }
 
@@ -295,10 +305,10 @@ func (s *Service) apiSet() *restful.Container {
 		OperationIf:    s.operationIf,
 	}
 
-	//config.InitService(c)
-	//pool.InitService(c)
-	//cvm.InitService(c)
-	//task.InitService(c)
+	config.InitService(c)
+	pool.InitService(c)
+	cvm.InitService(c)
+	task.InitService(c)
 	meta.InitService(c)
 	plan.InitService(c)
 
