@@ -47,7 +47,7 @@ func NewTcaplusClientInterface(opts cc.TcaplusCli, reg prometheus.Registerer) (T
 	}
 
 	client := &tcaplusApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

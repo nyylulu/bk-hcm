@@ -50,7 +50,7 @@ func NewTMPClientInterface(opts cc.TmpCli, reg prometheus.Registerer) (TMPClient
 	}
 
 	tmp := &tmpApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return tmp, nil

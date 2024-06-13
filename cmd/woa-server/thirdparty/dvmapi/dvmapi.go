@@ -57,7 +57,7 @@ func NewDVMClientInterface(opts cc.DVMCli, reg prometheus.Registerer) (DVMClient
 	}
 
 	client := &dvmApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

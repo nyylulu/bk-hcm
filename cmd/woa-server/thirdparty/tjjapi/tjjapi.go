@@ -49,7 +49,7 @@ func NewTjjClientInterface(opts cc.TjjCli, reg prometheus.Registerer) (TjjClient
 	}
 
 	tjj := &tjjApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

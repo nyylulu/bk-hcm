@@ -49,7 +49,7 @@ func NewErpClientInterface(opts cc.ErpCli, reg prometheus.Registerer) (ErpClient
 	}
 
 	erp := &erpApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return erp, nil

@@ -53,7 +53,7 @@ func NewSojobClientInterface(opts cc.SojobCli, reg prometheus.Registerer) (Sojob
 	}
 
 	sojob := &sojobApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

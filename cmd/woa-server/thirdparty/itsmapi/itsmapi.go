@@ -55,7 +55,7 @@ func NewITSMClientInterface(opts cc.ApiGateway, reg prometheus.Registerer) (ITSM
 	}
 
 	itsmClient := &itsmCli{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

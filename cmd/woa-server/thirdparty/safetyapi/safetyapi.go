@@ -57,7 +57,7 @@ func NewSafetyClientInterface(opts cc.SafetyCli, reg prometheus.Registerer) (Saf
 	}
 
 	client := &safetyApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

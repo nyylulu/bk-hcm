@@ -50,7 +50,7 @@ func NewTgwClientInterface(opts cc.TGWCli, reg prometheus.Registerer) (TgwClient
 	}
 
 	client := &tgwApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

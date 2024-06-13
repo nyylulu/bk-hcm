@@ -47,7 +47,7 @@ func NewL5ClientInterface(opts cc.L5Cli, reg prometheus.Registerer) (L5ClientInt
 	}
 
 	client := &l5Api{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

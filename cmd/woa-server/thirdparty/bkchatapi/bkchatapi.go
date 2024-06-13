@@ -49,7 +49,7 @@ func NewBkChatClientInterface(opts cc.BkChatCli, reg prometheus.Registerer) (BkC
 	}
 
 	client := &bkchatApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

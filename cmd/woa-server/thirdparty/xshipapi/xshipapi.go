@@ -52,7 +52,7 @@ func NewXshipClientInterface(opts cc.XshipCli, reg prometheus.Registerer) (Xship
 	}
 
 	xship := &xshipApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

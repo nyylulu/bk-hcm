@@ -49,7 +49,7 @@ func NewUworkClientInterface(opts cc.UworkCli, reg prometheus.Registerer) (Uwork
 	}
 
 	client := &uworkApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return client, nil

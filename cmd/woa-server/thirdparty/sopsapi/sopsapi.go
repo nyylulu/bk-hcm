@@ -50,7 +50,7 @@ func NewSopsClientInterface(opts cc.SopsCli, reg prometheus.Registerer) (SopsCli
 	}
 
 	sopsCli := &sopsApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   opts,
 	}
 

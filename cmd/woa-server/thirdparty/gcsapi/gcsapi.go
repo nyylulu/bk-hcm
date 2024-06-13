@@ -49,7 +49,7 @@ func NewGcsClientInterface(opts cc.GCSCli, reg prometheus.Registerer) (GcsClient
 	}
 
 	client := &gcsApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 		opts:   &opts,
 	}
 

@@ -55,7 +55,7 @@ func NewClient(cfg *cc.Esb, reg prometheus.Registerer) (Client, error) {
 		},
 		MetricOpts: client.MetricOption{Register: reg},
 	}
-	restCli := rest.NewClient(c, "")
+	restCli := rest.NewClient(c, "/")
 	return &esbCli{
 		cc: cmdb.NewClient(restCli, cfg),
 	}, nil

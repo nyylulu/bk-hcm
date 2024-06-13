@@ -74,7 +74,7 @@ func NewCVMClientInterface(opts cc.CVMCli, reg prometheus.Registerer) (CVMClient
 	}
 
 	cvm := &cvmApi{
-		client: rest.NewClient(c, ""),
+		client: rest.NewClient(c, "/"),
 	}
 
 	return cvm, nil
