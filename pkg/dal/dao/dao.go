@@ -26,26 +26,28 @@ import (
 	"time"
 
 	"hcm/pkg/cc"
+	accountset "hcm/pkg/dal/dao/account-set"
 	"hcm/pkg/dal/dao/application"
 	daoasync "hcm/pkg/dal/dao/async"
 	"hcm/pkg/dal/dao/audit"
 	"hcm/pkg/dal/dao/auth"
+	"hcm/pkg/dal/dao/bill"
 	"hcm/pkg/dal/dao/cloud"
 	daoselection "hcm/pkg/dal/dao/cloud-selection"
 	argstpl "hcm/pkg/dal/dao/cloud/argument-template"
-	"hcm/pkg/dal/dao/cloud/bill"
 	"hcm/pkg/dal/dao/cloud/cert"
+	cloudbill "hcm/pkg/dal/dao/cloud/bill"
 	"hcm/pkg/dal/dao/cloud/cvm"
 	"hcm/pkg/dal/dao/cloud/disk"
 	diskcvmrel "hcm/pkg/dal/dao/cloud/disk-cvm-rel"
 	"hcm/pkg/dal/dao/cloud/eip"
 	eipcvmrel "hcm/pkg/dal/dao/cloud/eip-cvm-rel"
 	cimage "hcm/pkg/dal/dao/cloud/image"
-	"hcm/pkg/dal/dao/cloud/load-balancer"
+	loadbalancer "hcm/pkg/dal/dao/cloud/load-balancer"
 	networkinterface "hcm/pkg/dal/dao/cloud/network-interface"
 	nicvmrel "hcm/pkg/dal/dao/cloud/network-interface-cvm-rel"
 	"hcm/pkg/dal/dao/cloud/region"
-	"hcm/pkg/dal/dao/cloud/resource-flow"
+	resflow "hcm/pkg/dal/dao/cloud/resource-flow"
 	resourcegroup "hcm/pkg/dal/dao/cloud/resource-group"
 	routetable "hcm/pkg/dal/dao/cloud/route-table"
 	securitygroup "hcm/pkg/dal/dao/cloud/security-group"
@@ -103,7 +105,14 @@ type Set interface {
 	Image() cimage.Image
 	DiskCvmRel() diskcvmrel.DiskCvmRel
 	EipCvmRel() eipcvmrel.EipCvmRel
-	AccountBillConfig() bill.Interface
+	AccountBillConfig() cloudbill.Interface
+	AccountBillDailyPullTask() bill.AccountBillDailyPullTask
+	AccountBillPuller() bill.AccountBillPuller
+	AccountBillSummary() bill.AccountBillSummary
+	AccountBillSummaryDaily() bill.AccountBillSummaryDaily
+	AccountBillSummaryVersion() bill.AccountBillSummaryVersion
+	AccountBillItem() bill.AccountBillItem
+	AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem
 	AsyncFlow() daoasync.AsyncFlow
 	AsyncFlowTask() daoasync.AsyncFlowTask
 	UserCollection() daouser.Interface
@@ -122,6 +131,8 @@ type Set interface {
 	ResourceFlowRel() resflow.ResourceFlowRelInterface
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
+	MainAccount() accountset.MainAccount
+	RootAccount() accountset.RootAccount
 
 	TCloudZiyanRegion() region.TCloudZiyanRegion
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
@@ -478,11 +489,67 @@ func (s *set) Txn() *Txn {
 }
 
 // AccountBillConfig returns account bill config dao.
-func (s *set) AccountBillConfig() bill.Interface {
-	return &bill.AccountBillConfigDao{
+func (s *set) AccountBillConfig() cloudbill.Interface {
+	return &cloudbill.AccountBillConfigDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,
+	}
+}
+
+// AccountBillDailyPullTask returns AccountBillDailyPullTask dao.
+func (s *set) AccountBillDailyPullTask() bill.AccountBillDailyPullTask {
+	return &bill.AccountBillDailyPullTaskDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillPuller returns AccountBillPuller dao.
+func (s *set) AccountBillPuller() bill.AccountBillPuller {
+	return &bill.AccountBillPullerDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummary returns AccountBillSummary dao.
+func (s *set) AccountBillSummary() bill.AccountBillSummary {
+	return &bill.AccountBillSummaryDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryVersion returns AccountBillSummaryVersion dao.
+func (s *set) AccountBillSummaryVersion() bill.AccountBillSummaryVersion {
+	return &bill.AccountBillSummaryVersionDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryDaily returns AccountBillSummaryDaily dao.
+func (s *set) AccountBillSummaryDaily() bill.AccountBillSummaryDaily {
+	return &bill.AccountBillSummaryDailyDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillItem returns AccountBillItem dao.
+func (s *set) AccountBillItem() bill.AccountBillItem {
+	return &bill.AccountBillItemDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillAdjustmentItem returns AccountBillAdjustmentItem dao.
+func (s *set) AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem {
+	return &bill.AccountBillAdjustmentItemDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
 	}
 }
 
@@ -651,4 +718,22 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 // TCloudZiyanRegion 腾讯自研云region dao.
 func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
 	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
+}
+
+// MainAccount return mainaccount dao
+func (s *set) MainAccount() accountset.MainAccount {
+	return &accountset.MainAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RootAccount return rootaccount dao
+func (s *set) RootAccount() accountset.RootAccount {
+	return &accountset.RootAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
 }

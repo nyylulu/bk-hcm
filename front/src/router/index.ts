@@ -14,6 +14,7 @@ import serviceInside from './module/service-inside';
 import business from './module/business';
 import scheme from './module/scheme';
 import ziyanScr from './module/ziyan-scr';
+import bill from './module/bill';
 import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
 import { useVerify } from '@/hooks';
@@ -29,6 +30,7 @@ const routes: RouteRecordRaw[] = [
   ...business,
   ...scheme,
   ...ziyanScr,
+  ...bill,
   {
     // path: '/',
     // name: 'index',

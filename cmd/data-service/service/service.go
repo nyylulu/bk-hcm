@@ -28,9 +28,18 @@ import (
 	"strconv"
 	"time"
 
+	mainaccount "hcm/cmd/data-service/service/account-set/main-account"
+	rootaccount "hcm/cmd/data-service/service/account-set/root-account"
 	"hcm/cmd/data-service/service/application"
 	"hcm/cmd/data-service/service/audit"
 	"hcm/cmd/data-service/service/auth"
+	"hcm/cmd/data-service/service/bill/billadjustmentitem"
+	"hcm/cmd/data-service/service/bill/billdailytask"
+	"hcm/cmd/data-service/service/bill/billitem"
+	"hcm/cmd/data-service/service/bill/billpuller"
+	"hcm/cmd/data-service/service/bill/billsummary"
+	"hcm/cmd/data-service/service/bill/billsummaryversion"
+	"hcm/cmd/data-service/service/bill/rawbill"
 	"hcm/cmd/data-service/service/capability"
 	"hcm/cmd/data-service/service/cloud"
 	cloudselection "hcm/cmd/data-service/service/cloud-selection"
@@ -45,14 +54,14 @@ import (
 	"hcm/cmd/data-service/service/cloud/eip"
 	eipcvmrel "hcm/cmd/data-service/service/cloud/eip-cvm-rel"
 	"hcm/cmd/data-service/service/cloud/image"
-	"hcm/cmd/data-service/service/cloud/load-balancer"
+	loadbalancer "hcm/cmd/data-service/service/cloud/load-balancer"
 	networkinterface "hcm/cmd/data-service/service/cloud/network-interface"
 	networkcvmrel "hcm/cmd/data-service/service/cloud/network-interface-cvm-rel"
 	"hcm/cmd/data-service/service/cloud/region"
 	resourcegroup "hcm/cmd/data-service/service/cloud/resource-group"
 	routetable "hcm/cmd/data-service/service/cloud/route-table"
+	securitygroup "hcm/cmd/data-service/service/cloud/security-group"
 	sgcomrel "hcm/cmd/data-service/service/cloud/security-group-common-rel"
-	"hcm/cmd/data-service/service/cloud/security-group"
 	sgcvmrel "hcm/cmd/data-service/service/cloud/security-group-cvm-rel"
 	subaccount "hcm/cmd/data-service/service/cloud/sub-account"
 	sync "hcm/cmd/data-service/service/cloud/sync"
@@ -63,6 +72,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/cryptography"
 	"hcm/pkg/dal/dao"
+	"hcm/pkg/dal/objectstore"
 	"hcm/pkg/handler"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
@@ -77,10 +87,11 @@ import (
 
 // Service do all the data service's work
 type Service struct {
-	serve     *http.Server
-	dao       dao.Set
-	cipher    cryptography.Crypto
-	esbClient esb.Client
+	serve       *http.Server
+	dao         dao.Set
+	cipher      cryptography.Crypto
+	esbClient   esb.Client
+	objectStore objectstore.Storage
 }
 
 // NewService create a service instance.
@@ -103,10 +114,17 @@ func NewService() (*Service, error) {
 		return nil, err
 	}
 
+	// create object store
+	oStore, err := objectstore.GetObjectStoreFromEnv()
+	if err != nil {
+		return nil, err
+	}
+
 	svr := &Service{
-		dao:       dao,
-		cipher:    cipher,
-		esbClient: esbClient,
+		dao:         dao,
+		cipher:      cipher,
+		esbClient:   esbClient,
+		objectStore: oStore,
 	}
 
 	return svr, nil
@@ -182,10 +200,11 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	capability := &capability.Capability{
-		WebService: ws,
-		Dao:        s.dao,
-		Cipher:     s.cipher,
-		EsbClient:  s.esbClient,
+		WebService:  ws,
+		Dao:         s.dao,
+		Cipher:      s.cipher,
+		EsbClient:   s.esbClient,
+		ObjectStore: s.objectStore,
 	}
 
 	account.InitService(capability)
@@ -219,6 +238,21 @@ func (s *Service) apiSet() *restful.Container {
 	user.InitService(capability)
 	cloudselection.InitService(capability)
 	argstpl.InitService(capability)
+	cert.InitService(capability)
+	loadbalancer.InitService(capability)
+	sgcomrel.InitService(capability)
+	mainaccount.InitService(capability)
+	rootaccount.InitService(capability)
+
+	billpuller.InitService(capability)
+	billsummary.InitService(capability)
+	billsummaryversion.InitService(capability)
+	billitem.InitService(capability)
+	billdailytask.InitService(capability)
+	billadjustmentitem.InitService(capability)
+	if capability.ObjectStore != nil {
+		rawbill.InitService(capability)
+	}
 	cert.InitService(capability)
 	loadbalancer.InitService(capability)
 	sgcomrel.InitService(capability)

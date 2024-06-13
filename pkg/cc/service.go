@@ -66,6 +66,8 @@ const (
 	TaskServerName Name = "task-server"
 	// WoaServerName is woa server's name
 	WoaServerName Name = "woa-server"
+	// AccountServerName is account server's name
+	AccountServerName Name = "account-server"
 )
 
 // Setting defines all service Setting interface.
@@ -452,6 +454,41 @@ func (s WoaServerSetting) Validate() error {
 	}
 
 	if err := s.ClientConfig.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AccountServerSetting defines task server used setting options.
+type AccountServerSetting struct {
+	Network Network   `yaml:"network"`
+	Service Service   `yaml:"service"`
+	Log     LogOption `yaml:"log"`
+}
+
+// trySetFlagBindIP try set flag bind ip.
+func (s *AccountServerSetting) trySetFlagBindIP(ip net.IP) error {
+	return s.Network.trySetFlagBindIP(ip)
+}
+
+// trySetDefault set the TaskServerSetting default value if user not configured.
+func (s *AccountServerSetting) trySetDefault() {
+	s.Network.trySetDefault()
+	s.Service.trySetDefault()
+	s.Log.trySetDefault()
+
+	return
+}
+
+// Validate TaskServerSetting option.
+func (s AccountServerSetting) Validate() error {
+
+	if err := s.Network.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Service.validate(); err != nil {
 		return err
 	}
 
