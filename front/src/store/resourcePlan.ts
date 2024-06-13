@@ -4,6 +4,7 @@ import {
   IListTicketsParam,
   ResourcePlanIListTicketsResult,
   ResourcePlanTicketByIdResult,
+  IResPlanTicketStatusListResult,
   IPlanTicket,
 } from '@/typings/resourcePlan';
 
@@ -62,6 +63,10 @@ export const useResourcePlanStore = defineStore({
     // 获取资源预测申请单据详情。
     getTicketById(id: string): Promise<ResourcePlanTicketByIdResult> {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/${id}`);
+    },
+    // 查询资源预测单据状态列表。
+    getStatusList(): Promise<IResPlanTicketStatusListResult> {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/res_plan_ticket_status/list`);
     },
   },
 });

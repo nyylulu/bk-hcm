@@ -1,6 +1,6 @@
 import { defineComponent, onBeforeMount, ref } from 'vue';
 import Panel from '@/components/panel';
-import { Input, Select, Button, DatePicker } from 'bkui-vue';
+import { Input, Select, Button, DatePicker, Message } from 'bkui-vue';
 import cssModule from './index.module.scss';
 import MemberSelect from '@/components/MemberSelect';
 import { useResourcePlanStore } from '@/store';
@@ -19,20 +19,23 @@ export default defineComponent({
 
     const initialSearchModel: Partial<IListTicketsParam> = {
       bk_biz_ids: [],
-      obs_projects: [],
+      statuses: [],
       ticket_ids: [],
       applicants: [],
       submit_time_range: undefined,
     };
-    const projects = ref<string[]>([]);
+    const statues = ref<{ status: string; status_name: string }[]>([]);
     const searchModel = ref(JSON.parse(JSON.stringify(initialSearchModel)));
 
-    const getProjects = async () => {
+    const getStatues = async () => {
       try {
-        const res = await resourcePlanStore.getProjectTypes();
-        projects.value = res?.data?.details || [];
-      } catch (error) {
-        console.error(error, 'error'); // eslint-disable-line no-console
+        const res = await resourcePlanStore.getStatusList();
+        statues.value = res?.data?.details || [];
+      } catch (error: any) {
+        Message({
+          message: error?.message || error,
+          theme: 'error',
+        });
       }
     };
 
@@ -60,7 +63,7 @@ export default defineComponent({
       }
     };
 
-    onBeforeMount(getProjects);
+    onBeforeMount(getStatues);
 
     return () => (
       <Panel class={cssModule['mb-16']}>
@@ -70,11 +73,11 @@ export default defineComponent({
             <BusinessSelector v-model={searchModel.value.bk_biz_ids} multiple={true} authed={true} />
           </div>
           <div>
-            <div class={cssModule['search-label']}>{t('项目类型')}</div>
-            <Select multiple v-model={searchModel.value.obs_projects}>
-              {projects.value.map((item) => (
-                <Option key={item} name={item} id={item}>
-                  {item}
+            <div class={cssModule['search-label']}>{t('单据状态')}</div>
+            <Select multiple v-model={searchModel.value.statuses}>
+              {statues.value.map((item) => (
+                <Option key={item.status} name={item.status_name} id={item.status}>
+                  {item.status_name}
                 </Option>
               ))}
             </Select>

@@ -3146,6 +3146,11 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
+      label: '单据状态',
+      field: 'status_name',
+      isDefaultShow: true,
+    },
+    {
       label: '运营产品',
       field: 'bk_product_name',
     },

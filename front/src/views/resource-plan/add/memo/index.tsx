@@ -55,7 +55,8 @@ export default defineComponent({
             <bk-input
               type='textarea'
               clearable
-              maxlength={1200}
+              maxlength={1024}
+              showWordLimit
               placeholder={planRemark}
               modelValue={props.modelValue.remark}
               onChange={updateModelValue}

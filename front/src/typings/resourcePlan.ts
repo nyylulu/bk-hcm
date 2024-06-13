@@ -13,6 +13,7 @@ export interface IListTicketsParam {
     start: string;
     end: string;
   };
+  statuses?: string[];
   page: IPageQuery;
 }
 
@@ -170,3 +171,12 @@ export interface IDiskType {
   disk_type: string;
   disk_type_name: string;
 }
+
+interface StatusListResult {
+  details: {
+    status: 'init' | 'auditing' | 'rejected' | 'done' | 'failed';
+    status_name: string;
+  }[];
+}
+
+export type IResPlanTicketStatusListResult = IQueryResData<StatusListResult>;
