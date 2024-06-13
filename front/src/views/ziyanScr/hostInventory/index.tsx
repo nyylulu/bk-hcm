@@ -46,7 +46,11 @@ export default defineComponent({
         filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
         filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
         filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
-        filter.value.device_group && { field: 'label.device_group', operator: 'in', value: filter.value.device_group },
+        filter.value.device_group.length && {
+          field: 'label.device_group',
+          operator: 'in',
+          value: filter.value.device_group,
+        },
         filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
         filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
         filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
@@ -60,12 +64,26 @@ export default defineComponent({
     const loadResources = () => {
       getListData();
     };
+    const emptyform = () => {
+      filter.value = {
+        require_type: 1,
+        region: [],
+        zone: [],
+        device_type: [],
+        device_group: deviceGroups && [deviceGroups[0]],
+        cpu: '',
+        mem: '',
+        disk: '',
+        enable_capacity: true,
+      };
+    };
     const handleDeviceConfigChange = () => {
       filter.value.device_type = [];
       const { cpu, mem } = filter.value;
       deviceTypeDisabled.value = Boolean(cpu || mem);
     };
     const clearFilter = () => {
+      emptyform();
       deviceConfigDisabled.value = false;
       deviceTypeDisabled.value = false;
       filterDevices();
@@ -81,7 +99,7 @@ export default defineComponent({
         filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
         filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
         filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
-        filter.value.device_group && {
+        filter.value.device_group.length && {
           field: 'label.device_group',
           operator: 'in',
           value: filter.value.device_group,
@@ -92,6 +110,7 @@ export default defineComponent({
       ].filter(Boolean);
 
       page.value.start = 0;
+
       loadResources();
     };
     const handleDeviceTypeChange = () => {
@@ -198,6 +217,7 @@ export default defineComponent({
                     ref='zoneSelector'
                     v-model={filter.value.zone}
                     class='tbkselect'
+                    separateCampus={false}
                     multiple
                     params={{
                       resourceType: 'QCLOUDCVM',

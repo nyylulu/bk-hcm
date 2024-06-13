@@ -6,6 +6,7 @@ import apiService from '@/api/scrApi';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
+import CreateDevice from './CreateDevice/index';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 export default defineComponent({
@@ -124,7 +125,9 @@ export default defineComponent({
     const batchUpdates = () => {
       batchEditDialogVisible.value = true;
     };
-    const createNewModel = () => {};
+    const createNewModel = () => {
+      createVisible.value = true;
+    };
     const triggerShow = (val: boolean) => {
       batchEditDialogVisible.value = val;
     };
