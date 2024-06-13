@@ -111,8 +111,8 @@ func (c *Controller) Run() {
 
 	// TODO: get worker num from config
 	for i := 0; i < 10; i++ {
-		// get and handle tickets every 10 minutes
-		go wait.JitterUntil(c.runWorker, 10*time.Minute, 0.5, true, c.ctx)
+		// get and handle tickets every 5 minutes
+		go wait.JitterUntil(c.runWorker, 5*time.Minute, 0.5, true, c.ctx)
 	}
 
 	select {
