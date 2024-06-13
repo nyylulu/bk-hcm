@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0019,HCMVER=v1.5.1
 
     Notes:
     1. 添加资源预测需求表。
@@ -138,6 +138,6 @@ values ('res_plan_ticket', '0'),
        ('woa_device_type', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' AS `hcm_ver`, '9999' AS `sql_ver`;
+SELECT 'v1.5.1' AS `hcm_ver`, '0019' AS `sql_ver`;
 
 COMMIT
