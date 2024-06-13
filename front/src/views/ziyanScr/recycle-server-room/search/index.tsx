@@ -1,7 +1,11 @@
-import { defineComponent, ref, onBeforeMount } from 'vue';
+import { defineComponent, ref, onBeforeMount, type PropType } from 'vue';
+
+import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 
 import Panel from '@/components/panel';
+
+import cssModule from './index.module.scss';
 
 import type { IRecycleArea } from '@/typings/ziyanScr';
 
@@ -13,11 +17,61 @@ type RecycleArea = {
 };
 
 export default defineComponent({
-  setup() {
+  props: {
+    moduleNames: Array as PropType<string[]>,
+  },
+
+  emits: {
+    'update:moduleNames'(moduleNames: string[]) {
+      return moduleNames;
+    },
+  },
+
+  setup(props, { emit }) {
+    const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
 
     const recycleAreaGroups = ref<RecycleArea[]>([]);
     const loading = ref(false);
+
+    // 选择
+    const handleCheck = (moduleName: string) => {
+      const moduleIndex = props.moduleNames.findIndex((item) => item === moduleName);
+      const moduleNames = [...props.moduleNames];
+      if (moduleIndex > -1) {
+        moduleNames.splice(moduleIndex, 1);
+      } else {
+        moduleNames.push(moduleName);
+      }
+
+      emit('update:moduleNames', moduleNames);
+    };
+
+    // 选择所有
+    const handleCheckAll = (isChecked: boolean) => {
+      const moduleNames = isChecked
+        ? recycleAreaGroups.value.reduce((acc, cur) => {
+            acc.push(...cur.children.map((item) => item.name));
+            return acc;
+          }, [])
+        : [];
+      emit('update:moduleNames', moduleNames);
+    };
+
+    // 选择区间所有
+    const handleCheckGroupAll = (recycleAreaGroup: RecycleArea, isChecked: boolean) => {
+      const moduleNames = [...props.moduleNames];
+      recycleAreaGroup.children.forEach((item) => {
+        const index = moduleNames.findIndex((moduleName) => moduleName === item.name);
+        if (index > -1 && !isChecked) {
+          moduleNames.splice(index, 1);
+        }
+        if (index < 0 && isChecked) {
+          moduleNames.push(item.name);
+        }
+      });
+      emit('update:moduleNames', moduleNames);
+    };
 
     const handleInitRecycleArea = async () => {
       try {
@@ -58,15 +112,32 @@ export default defineComponent({
     onBeforeMount(handleInitRecycleArea);
 
     return () => (
-      <>
-        <Panel>
-          <bk-checkbox>全选所有区间</bk-checkbox>
+      <bk-loading loading={loading.value}>
+        <Panel class={cssModule.gap}>
+          <bk-checkbox onChange={handleCheckAll}>{t('全选所有区间')}</bk-checkbox>
         </Panel>
 
-        <Panel>
-          <bk-checkbox>全选所有区间</bk-checkbox>
-        </Panel>
-      </>
+        {recycleAreaGroups.value.map((recycleAreaGroup) => (
+          <Panel class={cssModule.gap}>
+            <section class={cssModule.title}>
+              {t('日期区间')}：{recycleAreaGroup.start_time} {t('至')} {recycleAreaGroup.end_time}
+              <bk-checkbox
+                class={cssModule.chooseAll}
+                onChange={(isChecked: boolean) => handleCheckGroupAll(recycleAreaGroup, isChecked)}>
+                {t('全选')}
+              </bk-checkbox>
+            </section>
+            {recycleAreaGroup.children.map((recycleArea) => (
+              <bk-checkbox
+                class={cssModule.choose}
+                modelValue={props.moduleNames.includes(recycleArea.name)}
+                onChange={() => handleCheck(recycleArea.name)}>
+                {recycleArea.name}
+              </bk-checkbox>
+            ))}
+          </Panel>
+        ))}
+      </bk-loading>
     );
   },
 });

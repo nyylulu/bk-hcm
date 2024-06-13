@@ -2,7 +2,7 @@ import http from '@/http';
 import { defineStore } from 'pinia';
 
 import type { IPageQuery } from '@/typings/common';
-import type { IRecycleArea } from '@/typings/ziyanScr';
+import type { IRecycleArea, IQueryDissolveList, IDissolveList } from '@/typings/ziyanScr';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -54,6 +54,10 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/recycled_module/list`, { page });
   };
 
+  const getDissolveList = (data: IQueryDissolveList): Promise<IDissolveList> => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/table/list`, data);
+  };
+
   /**
    * 资源申请单据执行接口
    * @returns {Promise}
@@ -79,6 +83,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getIdcRegionList,
     queryIdcZoneList,
     getRecycleAreas,
+    getDissolveList,
     retryOrder,
     stopOrder,
   };
