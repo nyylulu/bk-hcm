@@ -3017,6 +3017,7 @@ const lang: ILANG = {
   实例数量应大于0: ['The number of instances should be greater than 0'],
   '云磁盘容量/块': ['Cloud Disk Capacity/Block'],
   需要对预测说明进行修改: ['Changes required to the forecasting statement'],
+  所需数量应大于0: ['Required quantity should be greater than 0'],
   //   '111': ['111'],
   //   '111': ['111'],
   //   '111': ['111'],

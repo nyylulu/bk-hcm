@@ -43,6 +43,15 @@ export default defineComponent({
           trigger: 'change',
         },
       ],
+      disk_num: [
+        {
+          validator: (value: number) => {
+            return props.resourceType === 'cbs' ? value > 0 : true;
+          },
+          message: t('所需数量应大于0'),
+          trigger: 'change',
+        },
+      ],
     }));
 
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
