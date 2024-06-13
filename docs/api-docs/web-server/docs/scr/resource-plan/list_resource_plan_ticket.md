@@ -12,6 +12,7 @@ POST /api/v1/woa/plan/resource/ticket/list
 |-------------------|--------------|----|-----------------------------|
 | bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部              |
 | ticket_ids        | string array | 否  | 资源预测需求单据ID列表，不传时查询全部，最多传20个 |
+| statuses          | string array | 否  | 单据状态列表，不传时查询全部，最多传20个       |
 | applicants        | string array | 否  | 申请人列表，不传时查询全部，最多传20个        |
 | submit_time_range | object       | 否  | 提单时间范围                      |
 | page              | object       | 是  | 分页设置                        |
@@ -42,6 +43,9 @@ POST /api/v1/woa/plan/resource/ticket/list
   ],
   "ticket_ids": [
     "00000001"
+  ],
+  "statuses": [
+    "init"
   ],
   "applicants": [
     "shuotan"
@@ -75,6 +79,8 @@ POST /api/v1/woa/plan/resource/ticket/list
         "plan_product_id": 333,
         "plan_product_name": "规划产品",
         "demand_class": "CVM",
+        "status": "init",
+        "status_name": "待审批",
         "cpu_core": 123,
         "memory": 123,
         "disk_size": 123,
@@ -108,23 +114,25 @@ POST /api/v1/woa/plan/resource/ticket/list
 
 #### data.details[n]
 
-| 参数名称              | 参数类型   | 描述               |
-|-------------------|--------|------------------|
-| id                | string | 资源预测需求单据ID       |
-| bk_biz_id         | int    | 业务ID             |
-| bk_biz_name       | string | 业务名称             |
-| bk_product_id     | int    | 运营产品ID           |
-| bk_product_name   | string | 运营产品名称           |
-| plan_product_id   | int    | 规划产品ID           |
-| plan_product_name | string | 规划产品名称           |
-| demand_class      | string | 预测的需求类型          |
-| cpu_core          | int    | 总CPU核心数，单位：核     |
-| memory            | int    | 总内存大小，单位：GB      |
-| disk_size         | int    | 总云盘大小，单位：GB      |
-| demand_week       | string | 13周需求类型，由CRP系统定义 |
-| demand_week_name  | string | 13周需求类型名称        |
-| remark            | string | 预测说明             |
-| applicant         | string | 申请人              |
-| submitted_at      | string | 提单时间             |
-| created_at        | string | 创建时间             |
-| updated_at        | string | 更新时间             |
+| 参数名称              | 参数类型   | 描述                                               |
+|-------------------|--------|--------------------------------------------------|
+| id                | string | 资源预测需求单据ID                                       |
+| bk_biz_id         | int    | 业务ID                                             |
+| bk_biz_name       | string | 业务名称                                             |
+| bk_product_id     | int    | 运营产品ID                                           |
+| bk_product_name   | string | 运营产品名称                                           |
+| plan_product_id   | int    | 规划产品ID                                           |
+| plan_product_name | string | 规划产品名称                                           |
+| demand_class      | string | 预测的需求类型                                          |
+| status            | string | 单据状态（枚举值：init, auditing, rejected, done, failed） |
+| status_name       | string | 单据状态名称                                           |
+| cpu_core          | int    | 总CPU核心数，单位：核                                     |
+| memory            | int    | 总内存大小，单位：GB                                      |
+| disk_size         | int    | 总云盘大小，单位：GB                                      |
+| demand_week       | string | 13周需求类型，由CRP系统定义                                 |
+| demand_week_name  | string | 13周需求类型名称                                        |
+| remark            | string | 预测说明                                             |
+| applicant         | string | 申请人                                              |
+| submitted_at      | string | 提单时间                                             |
+| created_at        | string | 创建时间                                             |
+| updated_at        | string | 更新时间                                             |
