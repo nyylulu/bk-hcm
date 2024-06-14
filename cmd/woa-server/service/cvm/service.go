@@ -25,13 +25,15 @@ import (
 	"hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/logics/cvm"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
 
 // InitService initial the service
 func InitService(c *capability.Capability) {
 	s := &service{
-		logics: cvm.New(c.ThirdCli, c.ClientConf, config.New(c.ThirdCli)),
+		authorizer: c.Authorizer,
+		logics:     cvm.New(c.ThirdCli, c.ClientConf, config.New(c.ThirdCli)),
 	}
 	h := rest.NewHandler()
 
@@ -41,7 +43,8 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	logics cvm.Logics
+	logics     cvm.Logics
+	authorizer auth.Authorizer
 }
 
 func (s *service) initCvmService(h *rest.Handler) {

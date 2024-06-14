@@ -17,7 +17,7 @@ import (
 
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
 
@@ -25,8 +25,8 @@ import (
 func InitService(c *capability.Capability) {
 	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
-		logics: logics,
-		Cc:     c.EsbClient.Cmdb(),
+		logics:     logics,
+		authorizer: c.Authorizer,
 	}
 	h := rest.NewHandler()
 	h.Path("/task")
@@ -39,8 +39,8 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	logics taskLogics.Logics
-	Cc     cmdb.Client
+	logics     taskLogics.Logics
+	authorizer auth.Authorizer
 }
 
 func (s *service) initOperationService(h *rest.Handler) {

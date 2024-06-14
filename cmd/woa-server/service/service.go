@@ -136,7 +136,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	}
 
 	// create authorizer
-	authorizer, err := auth.NewAuthorizer(dis, cc.WoaServer().Network.TLS)
+	authorizer, err := auth.NewAuthorizer(dis, tls)
 	if err != nil {
 		return nil, err
 	}
@@ -195,7 +195,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient)
+	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient, authorizer)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v", err)
 		return nil, err

@@ -25,13 +25,15 @@ import (
 
 	"hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
 
 // InitService initial the service
 func InitService(c *capability.Capability) {
 	s := &service{
-		logics: config.New(c.ThirdCli),
+		authorizer: c.Authorizer,
+		logics:     config.New(c.ThirdCli),
 	}
 	h := rest.NewHandler()
 
@@ -55,7 +57,8 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	logics config.Logics
+	logics     config.Logics
+	authorizer auth.Authorizer
 }
 
 func (s *service) initCommonRestrict(h *rest.Handler) {

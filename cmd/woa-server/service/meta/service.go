@@ -24,13 +24,15 @@ import (
 
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/dal/dao"
+	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
 
 // InitService initial the meta service.
 func InitService(c *capability.Capability) {
 	s := &service{
-		dao: c.Dao,
+		dao:        c.Dao,
+		authorizer: c.Authorizer,
 	}
 	h := rest.NewHandler()
 
@@ -40,7 +42,8 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	dao dao.Set
+	dao        dao.Set
+	authorizer auth.Authorizer
 }
 
 func (s *service) initMetaService(h *rest.Handler) {

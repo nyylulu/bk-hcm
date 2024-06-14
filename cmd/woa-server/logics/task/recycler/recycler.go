@@ -39,6 +39,8 @@ import (
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/auth"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -99,10 +101,13 @@ type recycler struct {
 	cvm cvmapi.CVMClientInterface
 
 	dispatcher *dispatcher.Dispatcher
+	authorizer auth.Authorizer
 }
 
 // New create a recycler
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*recycler, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
+	authorizer auth.Authorizer) (*recycler, error) {
+
 	// new detector
 	moduleDetector, err := detector.New(ctx, thirdCli, esbCli)
 	if err != nil {
@@ -132,22 +137,23 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 		cc:         esbCli.Cmdb(),
 		cvm:        thirdCli.CVM,
 		dispatcher: dispatch,
+		authorizer: authorizer,
 	}
 
 	return recycler, nil
 }
 
 // RecycleCheck check whether hosts can be recycled or not
-func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*types.RecycleCheckRst, error) {
-	if kit.User == "" {
-		logs.Errorf("failed to recycle check, for invalid user is empty, rid: %s", kit.Rid)
+func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq) (*types.RecycleCheckRst, error) {
+	if kt.User == "" {
+		logs.Errorf("failed to recycle check, for invalid user is empty, rid: %s", kt.Rid)
 		return nil, errors.New("failed to recycle check, for invalid user is empty")
 	}
 
 	// 1. get host base info
 	hostBase, err := r.getHostBaseInfo(param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
-		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -163,7 +169,7 @@ func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*ty
 	// 2. get host topo info
 	relations, err := r.getHostTopoInfo(hostIds)
 	if err != nil {
-		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -182,7 +188,7 @@ func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*ty
 
 	bizList, err := r.getBizInfo(bizIds)
 	if err != nil {
-		logs.Errorf("failed to recycle check, for get business info err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to recycle check, for get business info err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -194,9 +200,9 @@ func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*ty
 	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
 	for bizId, moduleIds := range mapBizToModule {
 		moduleIdUniq := util.IntArrayUnique(moduleIds)
-		moduleList, err := r.getModuleInfo(kit, bizId, moduleIdUniq)
+		moduleList, err := r.getModuleInfo(kt, bizId, moduleIdUniq)
 		if err != nil {
-			logs.Errorf("failed to recycle check, for get module info err: %v, rid: %s", err, kit.Rid)
+			logs.Errorf("failed to recycle check, for get module info err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 		for _, module := range moduleList {
@@ -207,12 +213,15 @@ func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*ty
 	// 3. check recycle permissions
 	mapBizPermission := make(map[int64]bool)
 	for _, bizId := range bizIds {
-		hasPermission, err := r.hasRecyclePermission(kit, bizId)
+		err = r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
 		if err != nil {
-			logs.Warnf("failed to check recycle permission, err: %v", err)
+			logs.Warnf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
+			mapBizPermission[bizId] = false
 			continue
 		}
-		mapBizPermission[bizId] = hasPermission
+		mapBizPermission[bizId] = true
 	}
 
 	// 4. check recyclability and create check result
@@ -252,7 +261,7 @@ func (r *recycler) RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*ty
 			State:       host.SvrStatus,
 			InputTime:   host.SvrInputTime,
 		}
-		r.fillCheckInfo(checkInfo, kit.User, hasPermission)
+		r.fillCheckInfo(checkInfo, kt.User, hasPermission)
 		checkInfos = append(checkInfos, checkInfo)
 	}
 
@@ -773,13 +782,13 @@ func (r *recycler) AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq)
 }
 
 // CreateRecycleOrder create resource recycle order
-func (r *recycler) CreateRecycleOrder(kit *kit.Kit, param *types.CreateRecycleReq) (*types.CreateRecycleOrderRst,
+func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq) (*types.CreateRecycleOrderRst,
 	error) {
 
 	// 1. get hosts info
 	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
-		logs.Errorf("failed to create recycle order, for list host err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to create recycle order, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -796,29 +805,26 @@ func (r *recycler) CreateRecycleOrder(kit *kit.Kit, param *types.CreateRecycleRe
 	bizIds = util.IntArrayUnique(bizIds)
 
 	for _, bizId := range bizIds {
-		hasPermission, err := r.hasRecyclePermission(kit, bizId)
+		err = r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
 		if err != nil {
-			logs.Errorf("failed to check recycle permission, err: %v", err)
+			logs.Errorf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
 			return nil, err
-		}
-
-		if !hasPermission {
-			logs.Errorf("has no permission to recycle resource in biz %d", bizId)
-			return nil, fmt.Errorf("has no permission to recycle resource in biz %d", bizId)
 		}
 	}
 
 	// 3. classify hosts into groups with different recycle strategies
 	groups, err := classifier.ClassifyRecycleGroups(hosts, param.ReturnPlan)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// 4. init and save recycle orders
-	orders, err := r.initAndSaveRecycleOrders(kit, param.SkipConfirm, param.Remark, groups)
+	orders, err := r.initAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1568,50 +1574,4 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 	}
 
 	return rst, nil
-}
-
-// TODO 需要替换为海垒的权限Auth模型
-func (r *recycler) hasRecyclePermission(kit *kit.Kit, bizId int64) (bool, error) {
-	user := kit.User
-	if user == "" {
-		logs.Errorf("failed to check permission, for invalid user is empty, rid: %s", kit.Rid)
-		return false, errors.New("failed to check permission, for invalid user is empty")
-	}
-
-	// TODO 临时测试使用，后续需要删除
-	if bizId != types.AuthorizedBizID {
-		return false, fmt.Errorf("不能操作业务id: %d下的机器", bizId)
-	}
-	//req := &iamapi.AuthVerifyReq{
-	//	System: "bk_cr",
-	//	Subject: &iamapi.Subject{
-	//		Type: "user",
-	//		ID:   user,
-	//	},
-	//	Action: &iamapi.Action{
-	//		ID: "resource_recycle",
-	//	},
-	//	Resources: []*iamapi.Resource{
-	//		&iamapi.Resource{
-	//			System: "bk_cmdb",
-	//			Type:   "biz",
-	//			ID:     strconv.Itoa(int(bizId)),
-	//		},
-	//	},
-	//}
-	//resp, err := r.iam.AuthVerify(nil, nil, req)
-	//if err != nil {
-	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, kit.Rid)
-	//	return false, err
-	//}
-	//if resp.Code != 0 {
-	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, kit.Rid)
-	//	return false, fmt.Errorf("failed to auth verify, err: %s", resp.Message)
-	//}
-	//
-	//if resp.Data.Allowed != true {
-	//	return false, nil
-	//}
-
-	return true, nil
 }

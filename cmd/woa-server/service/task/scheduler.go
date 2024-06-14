@@ -26,10 +26,10 @@ import (
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	cvt "hcm/pkg/tools/converter"
 )
 
 // UpdateApplyTicket create or update apply ticket
@@ -267,6 +267,14 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
+	// 主机申领-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
 	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, input)
 	if err != nil {
 		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -291,13 +299,12 @@ func (s *service) GetBizApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	// check permission
-	authResp, err := s.checkPermission(cts.Kit, input.BkBizID, IamOpTypeAccessBusiness)
-	if errors.Is(err, common.NoAuthorizeError) {
-		logs.Errorf("no permission to get biz apply order, authResp: %+v, err: %v, rid: %s",
-			cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-		return authResp, nil
-	} else if err != nil {
-		logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+	})
+	if err != nil {
+		logs.Errorf("no permission to get biz apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizID, err, cts.Kit.Rid)
 		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 	}
 
@@ -310,7 +317,7 @@ func (s *service) GetBizApplyOrder(cts *rest.Contexts) (any, error) {
 
 	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, param)
 	if err != nil {
-		logs.Errorf("failed to get biz apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get biz apply order, param: %+v, err: %v, rid: %s", param, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -672,19 +679,18 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceApply)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to start apply order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to start apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+				bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Scheduler().StartApplyOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to start recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Scheduler().StartApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to start recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -720,19 +726,18 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceApply)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to terminate apply order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Scheduler().TerminateApplyOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to terminate recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Scheduler().TerminateApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to terminate recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -769,19 +774,18 @@ func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceApply)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to modify apply order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to modify apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+				bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Scheduler().ModifyApplyOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to modify recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Scheduler().ModifyApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to modify recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -818,19 +822,19 @@ func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceApply)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to terminate apply order, rid: %s", cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
 	rst, err := s.logics.Scheduler().RecommendApplyOrder(cts.Kit, input)
 	if err != nil {
-		logs.Errorf("failed to recommend recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to recommend recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 

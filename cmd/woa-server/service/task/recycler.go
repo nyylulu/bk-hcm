@@ -24,10 +24,10 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	cvt "hcm/pkg/tools/converter"
 )
 
 // GetRecyclability check whether hosts can be recycled or not
@@ -166,13 +166,12 @@ func (s *service) GetBizRecycleOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	// check permission
-	authResp, err := s.checkPermission(cts.Kit, input.BkBizID, IamOpTypeAccessBusiness)
-	if errors.Is(err, common.NoAuthorizeError) {
-		logs.Errorf("no permission to get biz recycle order, authResp: %+v, err: %v, rid: %s",
-			cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-		return authResp, nil
-	} else if err != nil {
-		logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+	})
+	if err != nil {
+		logs.Errorf("no permission to get biz recycle order, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizID, err, cts.Kit.Rid)
 		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 	}
 
@@ -185,7 +184,7 @@ func (s *service) GetBizRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	rst, err := s.logics.Recycler().GetRecycleOrder(cts.Kit, param)
 	if err != nil {
-		logs.Errorf("failed to get biz recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get biz recycle order, param: %+v, err: %v, rid: %s", param, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -369,19 +368,18 @@ func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceRecycle)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to start recycle order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to start recycle order, failed to check permission, bizID: %d, err: %v, rid: %s",
+				bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Recycler().StartRecycleOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to start recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Recycler().StartRecycleOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to start recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -451,19 +449,18 @@ func (s *service) StartRecycleDetect(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceRecycle)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to start recycle detection task, authResp: %+v, rid: %s",
-				cvt.PtrToVal(authResp), cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to start recycle detection task, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Recycler().StartDetectTask(cts.Kit, input); err != nil {
-		logs.Errorf("failed to start detection task, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Recycler().StartDetectTask(cts.Kit, input); err != nil {
+		logs.Errorf("failed to start detection task, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -499,19 +496,18 @@ func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceRecycle)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to revise recycle order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to revise recycle order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Recycler().ReviseRecycleOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to revise recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Recycler().ReviseRecycleOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to revise recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -553,19 +549,18 @@ func (s *service) ResumeRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceRecycle)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to terminate recycle order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate recycle order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Recycler().ResumeRecycleOrder(cts.Kit, input); err != nil {
-		logs.Errorf("failed to resume recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Recycler().ResumeRecycleOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to resume recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -601,18 +596,17 @@ func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
-		authResp, err := s.checkPermission(cts.Kit, bizId, IamOpTypeResourceRecycle)
-		if errors.Is(err, common.NoAuthorizeError) {
-			logs.Errorf("no permission to terminate recycle order, authResp: %+v, err: %v, rid: %s",
-				cvt.PtrToVal(authResp), err, cts.Kit.Rid)
-			return authResp, nil
-		} else if err != nil {
-			logs.Errorf("failed to check permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate recycle order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
 			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
 		}
 	}
 
-	if err := s.logics.Recycler().TerminateRecycleOrder(cts.Kit, input); err != nil {
+	if err = s.logics.Recycler().TerminateRecycleOrder(cts.Kit, input); err != nil {
 		logs.Errorf("failed to terminate recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
