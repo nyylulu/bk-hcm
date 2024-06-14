@@ -21,6 +21,8 @@ import CommonSideslider from '@/components/common-sideslider';
 import { timeFormatter, applicationTime } from '@/common/util';
 import http from '@/http';
 import { useZiyanScrStore } from '@/store';
+import SuborderDetail from '../suborder-detail';
+import CommonDialog from '@/components/common-dialog';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -30,6 +32,12 @@ export default defineComponent({
     const { transformRequireTypes } = useRequireTypes();
     const isSidesliderShow = ref(false);
     const machineDetails = ref([]);
+    const isDialogShow = ref(false);
+    const curSuborder = ref({
+      step_name: '',
+      step_id: 1,
+      suborder_id: 0,
+    });
     const scrStore = useZiyanScrStore();
     const { formModel, resetForm } = useFormModel({
       bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
@@ -395,8 +403,34 @@ export default defineComponent({
                 width: 160,
                 render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
               },
+              {
+                field: 'operation',
+                label: '操作',
+                render: ({ data }: any) => (
+                  <div>
+                    {data.step_id > 1 ? (
+                      <Button
+                        text
+                        theme='primary'
+                        onClick={() => {
+                          isDialogShow.value = true;
+                          curSuborder.value = data;
+                        }}>
+                        查看详情
+                      </Button>
+                    ) : (
+                      '--'
+                    )}
+                  </div>
+                ),
+                fixed: 'right',
+              },
             ]}></Table>
         </CommonSideslider>
+
+        <CommonDialog v-model:isShow={isDialogShow.value} title={`资源${curSuborder.value.step_name}详情`} width={800}>
+          <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
+        </CommonDialog>
       </div>
     );
   },

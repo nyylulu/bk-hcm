@@ -23,11 +23,11 @@ export const headRouteConfig = [
     name: '资源接入',
     path: '/resource/resource',
   },
-  // {
-  //   id: 'ziyanScr',
-  //   name: '自研云资源',
-  //   path: '/ziyanScr/hostInventory',
-  // },
+  {
+    id: 'ziyanScr',
+    name: '自研云资源',
+    path: '/ziyanScr/hostInventory',
+  },
   {
     id: 'scheme',
     name: '资源选型',

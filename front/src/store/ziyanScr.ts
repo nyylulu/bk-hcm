@@ -3,6 +3,7 @@ import { defineStore } from 'pinia';
 
 import type { IPageQuery } from '@/typings/common';
 import type { IRecycleArea, IQueryDissolveList, IDissolveList } from '@/typings/ziyanScr';
+import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -74,6 +75,47 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/terminate/apply`, data);
   };
 
+  // 资源生产详情
+  const getProductionDetails = (subOrderId: any, page: any, status: any) =>
+    http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/generate`, {
+      suborder_id: subOrderId,
+      page,
+      filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
+    });
+
+  // 资源初始化详情
+  const getInitializationDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+    http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/init`, {
+      suborder_id: subOrderId,
+      page,
+      filter:
+        status || status === 0
+          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
+          : undefined,
+    });
+
+  // 本地盘性能压测
+  const getDiskCheckDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+    http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/disk_check`, {
+      suborder_id: subOrderId,
+      page,
+      filter:
+        status || status === 0
+          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
+          : undefined,
+    });
+
+  // 资源交付详情
+  const getDeliveryDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+    http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/deliver`, {
+      suborder_id: subOrderId,
+      page,
+      filter:
+        status || status === 0
+          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
+          : undefined,
+    });
+
   return {
     listVpc,
     listSubnet,
@@ -86,5 +128,9 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getDissolveList,
     retryOrder,
     stopOrder,
+    getProductionDetails,
+    getInitializationDetails,
+    getDiskCheckDetails,
+    getDeliveryDetails,
   };
 });

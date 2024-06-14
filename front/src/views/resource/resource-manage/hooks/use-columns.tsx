@@ -3509,6 +3509,170 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const producingColumns = [
+    {
+      field: 'task_id',
+      label: '任务ID',
+      render: ({ data }: any) => {
+        return (
+          <Button
+            theme='primary'
+            text
+            onClick={() => {
+              window.open(data.task_link, '_blank');
+            }}>
+            {data.generate_id}
+          </Button>
+        );
+      },
+    },
+    {
+      field: 'message',
+      label: '状态说明',
+    },
+    {
+      field: 'start_at',
+      label: '开始时间',
+      render: ({ data }: any) => (data.status === -1 ? '-' : timeFormatter(data.start_at)),
+    },
+    {
+      field: 'end_at',
+      label: '结束时间',
+      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+    },
+  ];
+
+  const initialColumns = [
+    {
+      field: 'ip',
+      label: '内网 IP',
+    },
+    {
+      field: 'status',
+      label: '状态',
+      width: 80,
+      render: ({ data }: any) => {
+        if (data.status === -1) return <span class='c-disabled'>未执行</span>;
+        if (data.status === 0) return <span class='c-success'>成功</span>;
+        if (data.status === 1)
+          return (
+            <span>
+              <i class='el-icon-loading mr-2'></i>执行中
+            </span>
+          );
+        return <span class='c-danger'>失败</span>;
+      },
+    },
+    {
+      field: 'message',
+      label: '状态说明',
+    },
+    {
+      field: 'task_id',
+      label: '关联初始化单',
+      render: ({ data }: any) => {
+        return (
+          <Button
+            theme='primary'
+            text
+            onClick={() => {
+              window.open(data.task_link, '_blank');
+            }}>
+            {data.task_id}
+          </Button>
+        );
+      },
+    },
+    {
+      field: 'start_at',
+      label: '开始时间',
+      render: ({ data }: any) => (data.status === -1 ? '-' : timeFormatter(data.start_at)),
+    },
+    {
+      field: 'end_at',
+      label: '结束时间',
+      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+    },
+  ];
+
+  const deliveryColumns = [
+    {
+      field: 'ip',
+      label: '内网 IP',
+    },
+    {
+      field: 'asset_id',
+      label: '固资号',
+    },
+    {
+      field: 'status',
+      label: '状态',
+      width: 80,
+      render: ({ data }: any) => {
+        if (data.status === -1) return <span class='c-disabled'>未执行</span>;
+        if (data.status === 0) return <span class='c-success'>成功</span>;
+        if (data.status === 1)
+          return (
+            <span>
+              <i class='el-icon-loading mr-2'></i>执行中
+            </span>
+          );
+        return <span class='c-danger'>失败</span>;
+      },
+    },
+    {
+      field: 'message',
+      label: '状态说明',
+    },
+    {
+      field: 'deliverer',
+      label: '匹配人',
+      render: ({ data }: any) => <WName name={data.deliverer}></WName>,
+    },
+    {
+      field: 'generate_task_id',
+      label: '关联生产单',
+      render: ({ data }: any) => {
+        return (
+          <Button
+            theme='primary'
+            text
+            onClick={() => {
+              window.open(data.generate_task_link, '_blank');
+            }}>
+            {data.generate_task_id}
+          </Button>
+        );
+      },
+    },
+    {
+      field: 'init_task_id',
+      label: '关联初始化单',
+      render: ({ data }: any) => {
+        return (
+          <Button
+            theme='primary'
+            text
+            onClick={() => {
+              window.open(data.init_task_link, '_blank');
+            }}>
+            {data.init_task_id}
+          </Button>
+        );
+      },
+    },
+    {
+      field: 'start_at',
+      label: '开始时间',
+      render: ({ data }: any) => (data.status === -1 ? '-' : timeFormatter(data.start_at)),
+    },
+    {
+      field: 'end_at',
+      label: '结束时间',
+      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -3561,6 +3725,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     firstAccount: firstAccountColumns,
     secondaryAccount: secondaryAccountColumns,
     myApply: myApplyColumns,
+    scrProduction: producingColumns,
+    scrInitial: initialColumns,
+    scrDelivery: deliveryColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
