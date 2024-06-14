@@ -13,7 +13,7 @@ export const fetchData: FetchDataType = async (params: any) => {
       [false, true].map((isCount) =>
         http.post(
           BK_HCM_AJAX_URL_PREFIX + url,
-          Object.assign(payload, {
+          Object.assign(payload?.filter?.rules.length === 0 ? {} : payload, {
             page: {
               start: isCount ? 0 : pagination.start,
               limit: isCount ? 0 : pagination.limit,

@@ -15,7 +15,7 @@ import { useAccountStore, useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import http from '@/http';
 import { useRouter, useRoute } from 'vue-router';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
 import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -38,7 +38,7 @@ export default defineComponent({
         bkUsername: '',
         requireType: 1,
         enableNotice: false,
-        expectTime: '',
+        expectTime: expectedDeliveryTime(),
         remark: '',
         follower: [] as any,
         suborders: [] as any,
@@ -177,15 +177,15 @@ export default defineComponent({
     // 侧边栏腾讯云CVM
     const QCLOUDCVMForm = ref({
       spec: {
-        deviceType: '', // 机型
+        device_type: '', // 机型
         region: '', // 地域
         zone: '', // 园区
         vpc: '', //  vpc
         subnet: '', //  子网
-        imageId: '', // 镜像
-        diskType: '', // 数据盘tyle
-        diskSize: 0, // 数据盘size
-        networkType: '万兆',
+        image_id: '', // 镜像
+        disk_type: '', // 数据盘tyle
+        disk_size: 0, // 数据盘size
+        network_type: '万兆',
       },
     });
     // 主机类型列表
@@ -212,19 +212,19 @@ export default defineComponent({
     // 侧边栏物理机CVM
     const pmForm = ref({
       spec: {
-        deviceType: '', // 机型
-        raidType: '', // RAID 类型
-        osType: '', // 操作系统
+        device_type: '', // 机型
+        raid_type: '', // RAID 类型
+        os_type: '', // 操作系统
         region: '', // 地域
         zone: '', // 园区
         isp: '', // 经营商
         antiAffinityLevel: '',
       },
       rules: {
-        'spec.deviceType': [{ required: true, message: '请选择机型', trigger: 'blur' }],
+        'spec.device_type': [{ required: true, message: '请选择机型', trigger: 'blur' }],
         'spec.region': [{ required: true, message: '请选择地域', trigger: 'blur' }],
         replicas: [{ required: true, message: '请选择需求数量', trigger: 'blur' }],
-        'spec.osType': [{ required: true, message: '请选择操作系统', trigger: 'blur' }],
+        'spec.os_type': [{ required: true, message: '请选择操作系统', trigger: 'blur' }],
         'spec.antiAffinityLevel': [{ required: true, message: '请选择反亲和性', trigger: 'blur' }],
       },
       options: {
@@ -260,7 +260,7 @@ export default defineComponent({
       loadImages();
       loadVpcs();
       QCLOUDCVMForm.value.spec.zone = '';
-      QCLOUDCVMForm.value.spec.deviceType = '';
+      QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
     };
     const onQcloudVpcChange = () => {
@@ -269,21 +269,21 @@ export default defineComponent({
     };
     // QCLOUDCVM可用区变化
     const onQcloudZoneChange = () => {
-      QCLOUDCVMForm.value.spec.deviceType = '';
+      QCLOUDCVMForm.value.spec.device_type = '';
       loadDeviceTypes();
       loadSubnets();
     };
     // IDCPM云地域变化
     const onIdcpmRegionChange = () => {
       pmForm.value.spec.zone = '';
-      pmForm.value.spec.deviceType = '';
+      pmForm.value.spec.device_type = '';
     };
     // 获取QCLOUDCVM镜像列表
     const loadImages = async () => {
       const { info } = await apiService.getImages([QCLOUDCVMForm.value.spec.region]);
       images.value = info;
-      if (QCLOUDCVMForm.value.spec.imageId === '') {
-        QCLOUDCVMForm.value.spec.imageId = 'img-fjxtfi0n';
+      if (QCLOUDCVMForm.value.spec.image_id === '') {
+        QCLOUDCVMForm.value.spec.image_id = 'img-fjxtfi0n';
       }
     };
     // 获取 IDCPM机型列表
@@ -304,8 +304,9 @@ export default defineComponent({
 
     // RAID 类型
     const handleDeviceTypeChange = () => {
-      pmForm.value.spec.raidType =
-        pmForm.value.options.deviceTypes?.find((item) => item.device_type === pmForm.value.spec.deviceType)?.raid || '';
+      pmForm.value.spec.raid_type =
+        pmForm.value.options.deviceTypes?.find((item) => item.device_type === pmForm.value.spec.device_type)?.raid ||
+        '';
     };
     // 地域有数据时禁用cpu 和内存
     const handleCVMDeviceTypeChange = () => {
@@ -328,7 +329,7 @@ export default defineComponent({
     );
     // 监听物理机机型变化
     watch(
-      () => pmForm.value.spec.deviceType,
+      () => pmForm.value.spec.device_type,
       () => {
         handleDeviceTypeChange();
       },
@@ -338,6 +339,7 @@ export default defineComponent({
       const {
         spec: { zone, region },
       } = QCLOUDCVMForm.value;
+
       const params = {
         region: [region],
         zone: zone !== 'cvm_separate_campus' ? [zone] : undefined,
@@ -419,32 +421,19 @@ export default defineComponent({
             ? cloudTableData.value.push({
                 remark,
                 replicas,
-                spec: {
-                  deviceType: spec.device_type,
-                  region: spec.region,
-                  zone: spec.zone,
-                  vpc: spec.vpc,
-                  diskSize: spec.disk_size,
-                  diskType: spec.disk_type,
-                  imageId: spec.image_id,
-                  subnet: spec.subnet,
-                  networkType: spec.network_type,
-                },
+                spec,
               })
             : physicalTableData.value.push({
                 remark,
                 replicas,
-                spec: {
-                  deviceType: spec.device_type,
-                  region: spec.region,
-                  zone: spec.zone,
-                  raidType: spec.raid_type,
-                  isp: spec.isp,
-                  osType: spec.os_type,
-                  antiAffinityLevel: spec.anti_affinity_level,
-                },
+                spec,
               });
         });
+      }
+      if (route?.query?.id) {
+        assignment(route?.query);
+
+        addResourceRequirements.value = true;
       }
     };
     onMounted(() => {
@@ -542,21 +531,24 @@ export default defineComponent({
     const loadResources = () => {
       CVMApplicationGetListData();
     };
-    const OneClickApplication = (row: { device_type: any; region: any; zone: any }) => {
-      CVMapplication.value = false;
+    const assignment = (data) => {
       resourceForm.value.resourceType = 'QCLOUDCVM';
       QCLOUDCVMForm.value.spec = {
-        deviceType: row.device_type, // 机型
-        region: row.region, // 地域
-        zone: row.zone, // 园区
+        device_type: data.device_type, // 机型
+        region: data.region, // 地域
+        zone: data.zone, // 园区
         vpc: '', //  vpc
         subnet: '', //  子网
-        imageId: 'img-fjxtfi0n', // 镜像
-        diskType: 'CLOUD_PREMIUM', // 数据盘tyle
-        diskSize: 0, // 数据盘size
-        networkType: '万兆',
+        image_id: 'img-fjxtfi0n', // 镜像
+        disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
+        disk_size: 0, // 数据盘size
+        network_type: '万兆',
       };
+    };
+    const OneClickApplication = (row: { device_type: any; region: any; zone: any }) => {
+      CVMapplication.value = false;
 
+      assignment(row);
       title.value = '增加资源需求';
       addResourceRequirements.value = true;
     };
@@ -575,21 +567,21 @@ export default defineComponent({
       };
       QCLOUDCVMForm.value = {
         spec: {
-          deviceType: '', // 机型
+          device_type: '', // 机型
           region: '', // 地域
           zone: '', // 园区
           vpc: '', //  vpc
           subnet: '', //  子网
-          imageId: '', // 镜像
-          diskType: '', // 数据盘tyle
-          diskSize: 0, // 数据盘size
-          networkType: '万兆',
+          image_id: '', // 镜像
+          disk_type: '', // 数据盘tyle
+          disk_size: 0, // 数据盘size
+          network_type: '万兆',
         },
       };
       pmForm.value.spec = {
-        deviceType: '', // 机型
-        raidType: '', // RAID 类型
-        osType: '', // 操作系统
+        device_type: '', // 机型
+        raid_type: '', // RAID 类型
+        os_type: '', // 操作系统
         region: '', // 地域
         zone: '', // 园区
         isp: '', // 经营商
@@ -969,7 +961,7 @@ export default defineComponent({
                             ref='formRef'>
                             <bk-form-item label='机型' required>
                               <bk-select
-                                v-model={QCLOUDCVMForm.value.spec.deviceType}
+                                v-model={QCLOUDCVMForm.value.spec.device_type}
                                 disabled={QCLOUDCVMForm.value.spec.zone === ''}
                                 placeholder={QCLOUDCVMForm.value.spec.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 filterable>
@@ -980,7 +972,7 @@ export default defineComponent({
                             </bk-form-item>
                             <bk-form-item label='镜像' required>
                               <bk-select
-                                v-model={QCLOUDCVMForm.value.spec.imageId}
+                                v-model={QCLOUDCVMForm.value.spec.image_id}
                                 disabled={QCLOUDCVMForm.value.spec.region === ''}
                                 filterable>
                                 {images.value.map((item) => (
@@ -994,11 +986,11 @@ export default defineComponent({
                                   display: 'flex',
                                   alignItems: 'center',
                                 }}>
-                                <DiskTypeSelect v-model={QCLOUDCVMForm.value.spec.diskType}></DiskTypeSelect>
+                                <DiskTypeSelect v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
                                 <Input
                                   class={'ml8'}
                                   type='number'
-                                  v-model={QCLOUDCVMForm.value.spec.diskSize}
+                                  v-model={QCLOUDCVMForm.value.spec.disk_size}
                                   min={1}></Input>
                                 <span class={'ml8'}>G</span>
                               </div>
@@ -1025,7 +1017,7 @@ export default defineComponent({
                             <div>
                               <bk-form-item label='机型' required>
                                 <bk-select
-                                  v-model={pmForm.value.spec.deviceType}
+                                  v-model={pmForm.value.spec.device_type}
                                   default-first-option
                                   class='width-300 mr16'
                                   filterable>
@@ -1037,12 +1029,12 @@ export default defineComponent({
                                   ))}
                                 </bk-select>
                               </bk-form-item>
-                              <bk-form-item label='RAID 类型' prop='spec.raidType'>
-                                <span> {pmForm.value.spec.raidType || '-'}</span>
+                              <bk-form-item label='RAID 类型' prop='spec.raid_type'>
+                                <span> {pmForm.value.spec.raid_type || '-'}</span>
                               </bk-form-item>
                             </div>
                             <bk-form-item label='操作系统' required>
-                              <bk-select class='width-400' v-model={pmForm.value.spec.osType}>
+                              <bk-select class='width-400' v-model={pmForm.value.spec.os_type}>
                                 {pmForm.value.options.osTypes.map((osType) => (
                                   <bk-option key={osType} value={osType} label={osType}></bk-option>
                                 ))}

@@ -18,7 +18,7 @@ import { HelpDocumentFill } from 'bkui-vue/lib/icon';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import CommonSideslider from '@/components/common-sideslider';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, applicationTime } from '@/common/util';
 import http from '@/http';
 import { useZiyanScrStore } from '@/store';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -36,7 +36,7 @@ export default defineComponent({
       requireType: [],
       stage: [],
       orderId: [],
-      dateRange: [],
+      dateRange: applicationTime(),
       user: [],
     });
     const reapply = (data: any) => {
@@ -74,6 +74,11 @@ export default defineComponent({
                 </div>
               );
             },
+          },
+          {
+            label: '业务',
+            render: ({ data }: any) =>
+              businessMapStore.getNameFromBusinessMap(data.bk_biz_id) || data.bk_biz_id || '--',
           },
           {
             label: '单据状态',

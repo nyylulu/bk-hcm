@@ -8,6 +8,7 @@ import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import CommonSideslider from '@/components/common-sideslider';
 import { useAccountStore } from '@/store';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import apiService from '@/api/scrApi';
 import { useRouter } from 'vue-router';
 import './index.scss';
@@ -16,6 +17,7 @@ export default defineComponent({
   name: 'RecyclingResources',
   setup() {
     const accountStore = useAccountStore();
+    const { selections, handleSelectionChange } = useSelection();
     const active = ref(1);
     const router = useRouter();
     const objectSteps = ref([{ title: '输入IP/固资' }, { title: '确认回收类型' }, { title: '信息确认与提交' }]);
@@ -34,7 +36,6 @@ export default defineComponent({
       pm: '',
       skipConfirm: true,
     });
-    const drawerSelectedHosts = ref([]);
     const drawer = ref(false);
     const ResourcesTotal = ref(false);
     const lips = ref();
@@ -163,6 +164,7 @@ export default defineComponent({
     /** 更新选中的资源 */
     const updateTableHosts = (hosts: any) => {
       const obj = {};
+      tableHosts.value = [];
       tableHosts.value = tableHosts.value.concat(hosts).reduce((prev, cur) => {
         if (!obj[cur.ip]) {
           obj[cur.ip] = true;
@@ -172,11 +174,10 @@ export default defineComponent({
       }, []);
     };
     const handleSubmit = async () => {
-      if (activetab.value === 1) {
+      if (activetab.value === 0) {
         const { info } = await apiService.getRecyclableHosts({
-          ips: drawerSelectedHosts.value,
+          ips: selections.value.map((item: { ip: any }) => item.ip),
         });
-
         const hosts = info || [];
         updateTableHosts(hosts);
         drawer.value = false;
@@ -190,12 +191,17 @@ export default defineComponent({
       const ipv6 = /^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$/;
       const ips: any[] = [];
       const assetIds: any[] = [];
-      const ipsList: any[] = [];
-      if (ipsList.length > 500) {
+      const ipArray = lips.value
+        .split(/\r?\n/)
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0);
+
+      if (ipArray.length > 500) {
         // this.$message.error(`最多添加500台主机,请删除${ipsList.length - 500}台后重试`)
         return;
       }
-      ipsList.forEach((item) => {
+
+      ipArray.forEach((item) => {
         if (ipv4.test(item) || ipv6.test(item)) {
           ips.push(item);
         } else {
@@ -228,6 +234,7 @@ export default defineComponent({
         remark: '',
       };
     };
+
     const triggerShow = (val: boolean) => {
       checked.value = val;
       dialogVisible.value = val;
@@ -362,6 +369,9 @@ export default defineComponent({
                 columns={BScolumns}
                 data={serverTableData.value}
                 show-overflow-tooltip
+                {...{
+                  onSelectionChange: (selections: any) => handleSelectionChange(selections),
+                }}
               />
               <bk-pagination
                 style='float: right;margin: 20px 0;'

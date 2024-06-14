@@ -133,7 +133,7 @@ export default defineComponent({
     };
     const application = (row: any) => {
       router.push({
-        path: '/ziyanScr/hostApplication',
+        path: '/ziyanScr/hostApplication/apply',
         query: {
           ...row,
         },

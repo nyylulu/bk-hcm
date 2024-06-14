@@ -154,8 +154,8 @@ const getRegions = async (vendor: string): Promise<any> => {
  */
 const getDeviceTypes = async ({ region, zone, require_type, device_group, enable_capacity }) => {
   const rules = [
-    region.length && { field: 'region', operator: 'in', value: region },
-    zone.length && { field: 'zone', operator: 'in', value: zone },
+    region?.length && { field: 'region', operator: 'in', value: region },
+    zone?.length && { field: 'zone', operator: 'in', value: zone },
     require_type && { field: 'require_type', operator: 'equal', value: require_type },
     device_group && { field: 'label.device_group', operator: 'in', value: device_group },
     enable_capacity && { field: 'enable_capacity', operator: 'equal', value: enable_capacity },

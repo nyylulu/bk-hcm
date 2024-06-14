@@ -37,7 +37,6 @@ import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
-import { Spinner } from 'bkui-vue/lib/icon';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -1838,6 +1837,131 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       },
     },
   ];
+  const CRSOcolumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+    },
+    {
+      label: '机型',
+      field: 'spec.device_type',
+      width: 180,
+    },
+    {
+      label: '交付情况总数',
+      field: 'total_num',
+    },
+    {
+      label: '交付情况待支付',
+      field: 'pending_num',
+    },
+    {
+      label: '交付情况已支付',
+      field: 'success_num',
+    },
+    {
+      label: '地域',
+      field: 'spec.region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+    },
+    {
+      label: '园区',
+      field: 'spec.zone',
+    },
+    {
+      label: '反亲和性',
+      field: 'anti_affinity_level',
+      render: ({ cell }: { cell: string }) => cell || '无要求',
+    },
+    {
+      label: '镜像',
+      field: 'spec.image_id',
+    },
+    {
+      label: '数据盘大小',
+      field: 'spec.disk_size',
+    },
+    {
+      label: '数据盘类型',
+      field: 'spec.disk_type',
+    },
+    {
+      label: '网络类型',
+      field: 'spec.network_type',
+    },
+    {
+      label: '备注',
+      field: 'remark',
+      render: ({ cell }: { cell: string }) => cell || '--',
+    },
+    {
+      label: '状态',
+      field: 'stage',
+      width: 180,
+    },
+  ];
+  const PRSOcolumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+    },
+    {
+      label: '机型',
+      field: 'spec.device_type',
+      width: 180,
+    },
+    {
+      label: '交付情况总数',
+      field: 'total_num',
+    },
+    {
+      label: '交付情况待支付',
+      field: 'pending_num',
+    },
+    {
+      label: '交付情况已支付',
+      field: 'success_num',
+    },
+    {
+      label: '地域',
+      field: 'spec.region',
+      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+    },
+    {
+      label: '园区',
+      field: 'spec.zone',
+    },
+    {
+      label: '反亲和性',
+      field: 'anti_affinity_level',
+    },
+    {
+      label: '操作系统',
+      field: 'spec.os_type',
+    },
+    {
+      label: '数据盘大小',
+      field: 'spec.zone',
+    },
+    {
+      label: 'RAID类型',
+      field: 'spec.raid_type',
+    },
+    {
+      label: '备注',
+      field: 'remark',
+      render: ({ cell }: { cell: string }) => cell || '--',
+    },
+    {
+      label: '状态',
+      field: 'stage',
+      width: 180,
+    },
+  ];
   const CHColumns = [
     {
       label: '机型',
@@ -1920,6 +2044,13 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
   const RRColumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+      align: 'right',
+    },
     {
       label: '状态',
       field: 'recyclable',
@@ -2853,10 +2984,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
 
   const ApplicationListColumns = [
     {
-      label: '业务',
-      render: ({ data }: any) => businessMapStore.getNameFromBusinessMap(data.bk_biz_id) || data.bk_biz_id || '--',
-    },
-    {
       label: '申请人',
       render: ({ data }: any) => {
         return <WName name={data.bk_username}></WName>;
@@ -3405,6 +3532,8 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     cert: certColumns,
     hostInventor: hIColumns,
     CloudHost: CHColumns,
+    cloudRequirementSubOrder: CRSOcolumns,
+    physicalRequirementSubOrder: PRSOcolumns,
     PhysicalMachine: PMColumns,
     RecyclingResources: RRColumns,
     BusinessSelection: BSAColumns,

@@ -30,7 +30,6 @@ export default defineComponent({
   setup(props, { emit }) {
     const { columns: RRcolumns } = useColumns('RecyclingResources');
     const count = ref(0);
-    const TableData = ref([]);
     const allRecycleHostIps = computed(() => {
       return props.tableHosts.map((item) => item.ip).join('\n');
     });
@@ -62,6 +61,9 @@ export default defineComponent({
       const list = info || [];
       emit('updateHosts', list);
       //   this.$message.success('刷新成功');
+    };
+    const isRowSelectEnable = ({ row }) => {
+      if (row.recyclable) return !!row.recyclable;
     };
     /** 清空列表 */
     const handleClear = () => {
@@ -119,7 +121,14 @@ export default defineComponent({
               maxlength={255}></bk-input>
           </div>
         </div>
-        <bk-table align='left' row-hover='auto' columns={RRcolumns} data={TableData.value} show-overflow-tooltip />
+        <bk-table
+          align='left'
+          row-hover='auto'
+          columns={RRcolumns}
+          is-row-select-enable={isRowSelectEnable}
+          data={props.tableHosts}
+          show-overflow-tooltip
+        />
       </div>
     );
   },

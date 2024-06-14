@@ -1,4 +1,4 @@
-import { Ref, defineComponent, onMounted, ref } from 'vue';
+import { Ref, defineComponent, onMounted, ref, computed } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import CommonCard from '@/components/CommonCard';
@@ -16,16 +16,42 @@ const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
   setup() {
     const route = useRoute();
+    const ips = ref({});
     const detail: Ref<{
-      suborders: [
-        {
-          resource_type: string;
-        },
-      ];
+      info: any;
     }> = ref({});
     const { transformRequireTypes } = useRequireTypes();
-    const { columns: CloudHostcolumns } = useColumns('CloudHost');
-    const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');    const { selections } = useSelection();
+    const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
+    const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
+    const { selections, handleSelectionChange } = useSelection();
+    const Hostcolumns = [
+      ...cloudcolumns,
+      {
+        label: '操作',
+        width: 120,
+        render: () => {
+          return (
+            <Button text theme='primary' onClick={() => {}}>
+              查看变更记录
+            </Button>
+          );
+        },
+      },
+    ];
+    const Machinecolumns = [
+      ...physicalcolumns,
+      {
+        label: '操作',
+        width: 120,
+        render: () => {
+          return (
+            <Button text theme='primary' onClick={() => {}}>
+              查看变更记录
+            </Button>
+          );
+        },
+      },
+    ];
     const applyRecord = ref({
       order_id: 0,
       itsm_ticket_id: '',
@@ -41,21 +67,18 @@ export default defineComponent({
         },
       ],
     });
-    // extra: {
-    //   onSelect: (selections: any) => {
-    //     handleSelectionChange(selections, () => true, false);
-    //   },
-    //   onSelectAll: (selections: any) => {
-    //     handleSelectionChange(selections, () => true, true);
-    //   },
-    // },
     const clipHostIp = computed(() => {
-      return selections.value.map((item) => item.ip).join('\n');
+      let batchCopyIps: any[] = [];
+
+      return selections.value.map((item) => {
+        batchCopyIps = batchCopyIps.concat(ips.value[item.suborderId]);
+      });
     });
     // 获取单据详情
     const getOrderDetail = (orderId: string) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket`, {
-        order_id: +orderId,
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
+        order_id: [+orderId],
+        page: { start: 0, limit: 50 },
       });
     };
     // 获取单据审核记录
@@ -64,6 +87,7 @@ export default defineComponent({
         order_id: +orderId,
       });
     };
+
     onMounted(async () => {
       const { data } = await getOrderDetail(route.params.id as string);
       detail.value = data;
@@ -128,21 +152,44 @@ export default defineComponent({
                 },
               ]}
             />
-            <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
+          </CommonCard>
+
+          <CommonCard title={() => '需求子单'} class={'mt24'}>
+            <Button class={'mr8'} v-clipboard={clipHostIp.value.join('\n')} disabled={selections.value.length === 0}>
               批量复制IP
             </Button>
-          </CommonCard>
-          <CommonCard title={() => '需求子单'} class={'mt24'}>
-            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
+            {detail.value.info?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
               <>
                 <p class={'mt16 mb8'}>云主机</p>
-                <Table data={detail.value.suborders} columns={CloudHostcolumns} />
+                <Table
+                  data={detail.value.info}
+                  columns={Hostcolumns}
+                  {...{
+                    onSelect: (selections: any) => {
+                      handleSelectionChange(selections, () => true, false);
+                    },
+                    onSelectAll: (selections: any) => {
+                      handleSelectionChange(selections, () => true, true);
+                    },
+                  }}
+                />
               </>
             )}
             {detail.value.suborders?.some(({ resource_type }) => resource_type === 'IDCDVM') && (
               <>
                 <p class={'mt16 mb8'}>物理机</p>
-                <Table data={detail.value.suborders} columns={PhysicalMachinecolumns} />
+                <Table
+                  {...{
+                    onSelect: (selections: any) => {
+                      handleSelectionChange(selections, () => true, false);
+                    },
+                    onSelectAll: (selections: any) => {
+                      handleSelectionChange(selections, () => true, true);
+                    },
+                  }}
+                  data={detail.value.suborders}
+                  columns={Machinecolumns}
+                />
               </>
             )}
           </CommonCard>
