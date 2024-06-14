@@ -1037,3 +1037,36 @@ func (svc *clbSvc) DescribeZiyanExclusiveCluster(cts *rest.Contexts) (any, error
 	}
 	return result, nil
 }
+
+// DescribeClusterResources 查询负载均衡集群中资源列表
+func (svc *clbSvc) DescribeClusterResources(cts *rest.Contexts) (any, error) {
+	req := new(protolb.TCloudDescribeClusterResourcesReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	result, err := client.DescribeClusterResources(cts.Kit, &typelb.TCloudDescribeClusterResourcesOption{
+		Region:         req.Region,
+		ClusterID:      req.ClusterID,
+		Vip:            req.Vip,
+		LoadBalancerID: req.LoadBalancerID,
+		Idle:           req.Idle,
+		Limit:          req.Limit,
+		Offset:         req.Offset,
+	})
+	if err != nil {
+		logs.Errorf("describe cluster resources failed, err: %v, rid:%s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
+}

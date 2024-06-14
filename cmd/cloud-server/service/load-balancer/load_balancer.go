@@ -62,6 +62,9 @@ func InitService(c *capability.Capability) {
 	h.Add("TCloudDescribeExclusiveCluster", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/exclusive_clusters/describe", svc.TCloudDescribeExclusiveCluster)
 
+	h.Add("TCloudDescribeClusterResources", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/cluster_resources/describe", svc.TCloudDescribeClusterResources)
+
 	bizH := rest.NewHandler()
 	bizH.Path("/bizs/{bk_biz_id}")
 	bizService(bizH, svc)

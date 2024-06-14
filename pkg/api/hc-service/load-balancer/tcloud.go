@@ -565,3 +565,26 @@ type TCloudDescribeExclusiveClusterReq struct {
 func (r *TCloudDescribeExclusiveClusterReq) Validate() error {
 	return validator.Validate.Struct(r)
 }
+
+// TCloudDescribeClusterResourcesReq ...
+type TCloudDescribeClusterResourcesReq struct {
+	AccountID string `json:"account_id" validate:"required"`
+	Region    string `json:"region" validate:"required"`
+
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+	// 按照负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照是否闲置过滤，如"True","False"。
+	Idle *bool `json:"idle,omitempty" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate ...
+func (r *TCloudDescribeClusterResourcesReq) Validate() error {
+	return validator.Validate.Struct(r)
+}

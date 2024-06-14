@@ -232,3 +232,11 @@ func (c *ClbClient) DescribeExclusiveCluster(kt *kit.Kit, req *hcproto.TCloudDes
 	return common.Request[hcproto.TCloudDescribeExclusiveClusterReq, tclb.DescribeExclusiveClustersResponseParams](
 		c.client, http.MethodPost, kt, req, "/load_balancers/exclusive_clusters/describe")
 }
+
+// DescribeClusterResources 查询负载均衡集群中资源列表
+func (c *ClbClient) DescribeClusterResources(kt *kit.Kit, req *hcproto.TCloudDescribeClusterResourcesReq) (
+	*tclb.DescribeClusterResourcesResponseParams, error) {
+
+	return common.Request[hcproto.TCloudDescribeClusterResourcesReq, tclb.DescribeClusterResourcesResponseParams](
+		c.client, http.MethodPost, kt, req, "/load_balancers/cluster_resources/describe")
+}

@@ -97,3 +97,39 @@ func (svc *lbSvc) TCloudDescribeExclusiveCluster(cts *rest.Contexts) (any, error
 		return nil, fmt.Errorf("unsupport vendor %s", account.Vendor)
 	}
 }
+
+// TCloudDescribeClusterResources 查询负载均衡集群中资源列表
+func (svc *lbSvc) TCloudDescribeClusterResources(cts *rest.Contexts) (any, error) {
+	req := new(protolb.TCloudDescribeClusterResourcesReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	authRes := meta.ResourceAttribute{
+		Basic: &meta.Basic{
+			Type:       meta.Account,
+			Action:     meta.Find,
+			ResourceID: req.AccountID,
+		},
+	}
+	if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		logs.Errorf("describe cluster resources failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	account, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	switch account.Vendor {
+	case enumor.TCloudZiyan:
+		return svc.client.HCService().TCloudZiyan.Clb.DescribeClusterResources(cts.Kit, req)
+	default:
+		return nil, fmt.Errorf("unsupport vendor %s", account.Vendor)
+	}
+}

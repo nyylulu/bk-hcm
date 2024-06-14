@@ -190,4 +190,5 @@ type TCloud interface {
 
 	DescribeExclusiveClusters(kt *kit.Kit, opt *typelb.TCloudDescribeExclusiveClustersOption) (
 		*tclb.DescribeExclusiveClustersResponseParams, error)
+	DescribeClusterResources(kt *kit.Kit, opt *typelb.TCloudDescribeClusterResourcesOption) (*tclb.DescribeClusterResourcesResponseParams, error)
 }

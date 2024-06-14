@@ -65,7 +65,7 @@ func BizOperateAuth(cts *rest.Contexts, opt *ValidWithAuthOption) error {
 	}
 
 	// 如果是对自研云的vpc或subnet资源的查询操作，则取消业务ID的相等检查，表示自研云的这两种资源对所有业务都可见，为临时解决方案，后期需去除
-	if opt.BasicInfo.Vendor == enumor.TCloudZiyan && opt.Action == meta.Find && (opt.ResType == meta.Vpc || opt.ResType == meta.Subnet) {
+	if opt.Action == meta.Find && (opt.ResType == meta.Vpc || opt.ResType == meta.Subnet) && opt.BasicInfo != nil && opt.BasicInfo.Vendor == enumor.TCloudZiyan {
 		opt.DisableBizIDEqual = true
 	}
 	if !opt.DisableBizIDEqual && len(notMatchedIDs) > 0 {
