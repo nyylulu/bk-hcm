@@ -2015,7 +2015,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const PMColumns = [
     {
       label: '机型',
-      field: 'device_type',
+      field: 'spec.device_type',
       width: 150,
     },
     {
@@ -2024,20 +2024,20 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '地域',
-      field: 'region',
+      field: 'spec.region',
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
-      field: 'zone',
+      field: 'spec.zone',
     },
     {
       label: 'RAID 类型',
-      field: 'raid_type',
+      field: 'spec.raid_type',
     },
     {
       label: '操作系统',
-      field: 'os_type',
+      field: 'spec.os_type',
     },
     {
       label: '备注',
@@ -2120,27 +2120,27 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const RTColumns = [
     {
       label: '固资号',
-      field: 'bk_biz_name',
+      field: 'asset_id',
     },
     {
       label: '内网IP',
-      field: 'resource_type)',
+      field: 'ip',
     },
     {
       label: '机型',
-      field: 'recycle_type',
+      field: 'device_type',
     },
     {
       label: '园区',
-      field: 'resource_type',
+      field: 'sub_zone',
     },
     {
       label: '维护人',
-      field: 'total_num',
+      field: 'operator',
     },
     {
       label: '备份维护人',
-      field: 'cost_concerned',
+      field: 'bak_operator',
     },
   ];
   const DQcolumns = [

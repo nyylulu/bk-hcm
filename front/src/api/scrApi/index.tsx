@@ -82,7 +82,7 @@ const getAntiAffinityLevels = async (resourceType: any, hasZone: any, config: an
  * @returns {Promise}
  */
 const getRecycleHosts = async (params) => {
-  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/task/findmany/recycle/host`, params, {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/recycle/host`, params, {
     transformFields: true,
     removeEmptyFields: true,
   });
@@ -226,10 +226,10 @@ const getSubnets = async ({ region, zone, vpc }) => {
   return data;
 };
 const updateCvmDeviceTypeConfigs = async ({ ids, properties }) => {
-  const { data } = await http.post(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/updatemany/config/cvm/device/property`,
-    { ids, properties },
-  );
+  const { data } = await http.put(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/updatemany/config/cvm/device/property`, {
+    ids,
+    properties,
+  });
   return data;
 };
 /**
@@ -246,7 +246,7 @@ const createCvmDevice = async ({ requireType, deviceGroup, deviceType, ...restPa
   return data;
 };
 /** 资源回收单据执行接口 */
-const startRecycleList = async ({ orderId }) => {
+const startRecycleList = async (orderId) => {
   const data = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/start/recycle/order`, {
     order_id: orderId,
   });

@@ -2,9 +2,9 @@ import { defineComponent, ref, watch, onMounted } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
-import { Dialog, Tab, Button } from 'bkui-vue';
+import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
-import { useTable } from '@/hooks/useTable/useTable';
+import usePagination from '@/hooks/usePagination';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import CommonSideslider from '@/components/common-sideslider';
 import { useAccountStore } from '@/store';
@@ -16,6 +16,12 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 export default defineComponent({
   name: 'RecyclingResources',
   setup() {
+    const {
+      pagination: RecycleListpagination,
+      handlePageLimitChange: RlhandlePageLimitChange,
+      handlePageValueChange: RlhandlePageValueChange,
+    } = usePagination(() => getListData());
+    const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => {});
     const accountStore = useAccountStore();
     const { selections, handleSelectionChange } = useSelection();
     const active = ref(1);
@@ -37,6 +43,8 @@ export default defineComponent({
       skipConfirm: true,
     });
     const drawer = ref(false);
+    const ResourcesTitle = ref('');
+    const ResourcesTable = ref([]);
     const ResourcesTotal = ref(false);
     const lips = ref();
     const activetab = ref(0);
@@ -44,39 +52,6 @@ export default defineComponent({
     const businessList = ref([]);
     const { columns: BScolumns } = useColumns('BusinessSelection');
     const { columns: RTcolumns } = useColumns('ResourcesTotal');
-    const { CommonTable: RTCommonTable } = useTable({
-      tableOptions: {
-        columns: RTcolumns,
-      },
-      requestOption: {
-        type: 'load_balancers/with/delete_protection',
-        sortOption: { sort: 'created_at', order: 'DESC' },
-      },
-      scrConfig: () => {
-        return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
-          payload: {
-            filter: {
-              condition: 'AND',
-              rules: [
-                {
-                  field: 'require_type',
-                  operator: 'equal',
-                  value: 1,
-                },
-                {
-                  field: 'label.device_group',
-                  operator: 'in',
-                  value: ['标准型'],
-                },
-              ],
-            },
-            page: { limit: 0, count: 0 },
-          },
-          filter: { simpleConditions: true, requestId: 'devices' },
-        };
-      },
-    });
     const updateRemark = (remark: string) => {
       recycleForm.value.remark = remark;
     };
@@ -90,8 +65,14 @@ export default defineComponent({
     const updateTypes = (returnPlan: { value: any }) => {
       returnPlan.value = returnPlan;
     };
-    const updateConfirm = (selectedList: any[]) => {
+    const updateConfirm = (selectedList: any[], title: string, drawer: boolean) => {
       selectedHosts.value = selectedList;
+      ResourcesTitle.value = title;
+      ResourcesTotal.value = drawer;
+    };
+    const Tablehosts = (table, page) => {
+      ResourcesTable.value = table;
+      pagination.count = page.count;
     };
     const getBusinessesList = async () => {
       const { data } = await accountStore.getBizListWithAuth();
@@ -99,7 +80,11 @@ export default defineComponent({
     };
     const handleNext = () => {
       const { cvm, pm } = returnPlan.value;
-      if (active.value === 1 && (!cvm || !pm)) {
+      if (active.value === 1 && recycleForm.value.ips.length === 0) {
+        return;
+      }
+
+      if (active.value === 2 && (!cvm || !pm)) {
         // $refs.resourceType?.$refs?.recycleForm?.validate();
         return;
       }
@@ -108,19 +93,16 @@ export default defineComponent({
     const upDrawer = (val: boolean) => {
       drawer.value = val;
     };
-    const page = ref({
-      start: 0,
-      limit: 10,
-      enable_count: false,
-    });
     const initPage = () => {
-      page.value.start = 0;
-      page.value.limit = 10;
-      page.value.enable_count = false;
+      RecycleListpagination.start = 0;
+      RecycleListpagination.limit = 10;
     };
-    const total = ref(0);
     const getListData = async (getCount?: boolean) => {
-      let pageObj = page.value;
+      let pageObj = {
+        start: RecycleListpagination.start,
+        limit: RecycleListpagination.limit,
+        enable_count: false,
+      };
       if (getCount) {
         pageObj = {
           start: 0,
@@ -133,7 +115,7 @@ export default defineComponent({
         page: pageObj,
       });
       if (getCount) {
-        total.value = data?.count;
+        RecycleListpagination.count = data?.count;
       } else {
         serverTableData.value = data?.info || [];
       }
@@ -173,18 +155,6 @@ export default defineComponent({
         return prev;
       }, []);
     };
-    const handleSubmit = async () => {
-      if (activetab.value === 0) {
-        const { info } = await apiService.getRecyclableHosts({
-          ips: selections.value.map((item: { ip: any }) => item.ip),
-        });
-        const hosts = info || [];
-        updateTableHosts(hosts);
-        drawer.value = false;
-      } else {
-        checkHostRecyclableStatus();
-      }
-    };
     /** 手动输入查询可回收状态 */
     const checkHostRecyclableStatus = async () => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
@@ -216,13 +186,29 @@ export default defineComponent({
       updateTableHosts(drawerHosts);
       drawer.value = false;
     };
+    const handleSubmit = async () => {
+      if (activetab.value === 0) {
+        const { info } = await apiService.getRecyclableHosts({
+          ips: selections.value.map((item: { ip: any }) => item.ip),
+        });
+        const hosts = info || [];
+        updateTableHosts(hosts);
+        drawer.value = false;
+      } else {
+        checkHostRecyclableStatus();
+      }
+    };
     const handleConfirm = async () => {
       const orderId = selectedHosts.value.map((item) => item.order_id);
+      const { suborder_id } = selectedHosts.value.map[0];
       const { result } = await apiService.startRecycleList(orderId);
       if (result) {
         takeSnapshot();
         router.push({
-          path: '/ziyanScr/hostRecycling/resources',
+          path: '/ziyanScr/hostRecycling',
+          query: {
+            suborder_id,
+          },
         });
       }
       checked.value = false;
@@ -269,6 +255,8 @@ export default defineComponent({
                 <ResourceConfirm
                   recycleForm={recycleForm.value}
                   returnPlan={returnPlan.value}
+                  pagination={pagination}
+                  onTablehosts={Tablehosts}
                   onUpdateConfirm={updateConfirm}></ResourceConfirm>
               )}
             </div>
@@ -289,7 +277,7 @@ export default defineComponent({
                   <bk-button
                     theme='primary'
                     size='small'
-                    // disabled={!selectedHosts.value.length}
+                    disabled={!selectedHosts.value.length}
                     onClick={() => {
                       dialogVisible.value = true;
                     }}>
@@ -305,7 +293,8 @@ export default defineComponent({
             default: () => (
               <>
                 <p>
-                  1. 销毁后所有数据<span class='main'>将被清除且不可恢复</span>，CVM会同时<span class='main'>销毁</span>
+                  1. 销毁后所有数据<span class='main'>将被清除且不可恢复</span>，CVM会同时
+                  <span class='main'>销毁</span>
                   挂载在实例上的包年包月数据盘；
                 </p>
                 <p>
@@ -362,22 +351,16 @@ export default defineComponent({
                 </div>
                 {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
               </div>
-
-              <bk-table
-                align='left'
-                row-hover='auto'
-                columns={BScolumns}
+              <Table
                 data={serverTableData.value}
-                show-overflow-tooltip
+                columns={BScolumns}
+                pagination={RecycleListpagination}
+                showOverflowTooltip
                 {...{
                   onSelectionChange: (selections: any) => handleSelectionChange(selections),
                 }}
-              />
-              <bk-pagination
-                style='float: right;margin: 20px 0;'
-                v-model={page.value.start}
-                count={total.value}
-                limit={page.value.limit}
+                onPageLimitChange={RlhandlePageLimitChange}
+                onPageValueChange={RlhandlePageValueChange}
               />
             </BkTabPanel>
             <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
@@ -391,9 +374,18 @@ export default defineComponent({
             </BkTabPanel>
           </Tab>
         </CommonSideslider>
-        <CommonSideslider v-model:isShow={ResourcesTotal.value} title='互娱作业管理平台ijabs' width={1150}>
-          <RTCommonTable></RTCommonTable>
-        </CommonSideslider>
+        <Sideslider v-model:isShow={ResourcesTotal.value} title={ResourcesTitle.value} width={1150}>
+          <Table
+            class='table-container'
+            data={ResourcesTable.value}
+            rowKey='id'
+            columns={RTcolumns}
+            remotePagination
+            pagination={pagination}
+            onPageLimitChange={handlePageLimitChange}
+            onPageValueChange={handlePageValueChange}
+            showOverflowTooltip></Table>
+        </Sideslider>
       </div>
     );
   },

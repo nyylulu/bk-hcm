@@ -173,6 +173,8 @@ export default defineComponent({
       resourceType: '', // 主机类型
       replicas: 1, // 需求数量
       remark: '', // 备注
+      anti_affinity_level: 'ANTI_NONE',
+      enable_disk_check: false,
     });
     // 侧边栏腾讯云CVM
     const QCLOUDCVMForm = ref({
@@ -185,7 +187,7 @@ export default defineComponent({
         image_id: '', // 镜像
         disk_type: '', // 数据盘tyle
         disk_size: 0, // 数据盘size
-        network_type: '万兆',
+        network_type: 'TENTHOUSAND',
       },
     });
     // 主机类型列表
@@ -218,14 +220,13 @@ export default defineComponent({
         region: '', // 地域
         zone: '', // 园区
         isp: '', // 经营商
-        antiAffinityLevel: '',
+        network_type: 'TENTHOUSAND',
       },
       rules: {
         'spec.device_type': [{ required: true, message: '请选择机型', trigger: 'blur' }],
         'spec.region': [{ required: true, message: '请选择地域', trigger: 'blur' }],
         replicas: [{ required: true, message: '请选择需求数量', trigger: 'blur' }],
         'spec.os_type': [{ required: true, message: '请选择操作系统', trigger: 'blur' }],
-        'spec.antiAffinityLevel': [{ required: true, message: '请选择反亲和性', trigger: 'blur' }],
       },
       options: {
         deviceTypes: [],
@@ -420,11 +421,13 @@ export default defineComponent({
           resource_type === 'QCLOUDCVM'
             ? cloudTableData.value.push({
                 remark,
+                resource_type: 'QCLOUDCVM',
                 replicas,
                 spec,
               })
             : physicalTableData.value.push({
                 remark,
+                resource_type: 'IDCPM',
                 replicas,
                 spec,
               });
@@ -542,7 +545,7 @@ export default defineComponent({
         image_id: 'img-fjxtfi0n', // 镜像
         disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
         disk_size: 0, // 数据盘size
-        network_type: '万兆',
+        network_type: 'TENTHOUSAND',
       };
     };
     const OneClickApplication = (row: { device_type: any; region: any; zone: any }) => {
@@ -564,6 +567,8 @@ export default defineComponent({
         resourceType: '',
         replicas: 1,
         remark: '',
+        anti_affinity_level: 'ANTI_NONE',
+        enable_disk_check: false,
       };
       QCLOUDCVMForm.value = {
         spec: {
@@ -575,7 +580,7 @@ export default defineComponent({
           image_id: '', // 镜像
           disk_type: '', // 数据盘tyle
           disk_size: 0, // 数据盘size
-          network_type: '万兆',
+          network_type: 'TENTHOUSAND',
         },
       };
       pmForm.value.spec = {
@@ -584,51 +589,54 @@ export default defineComponent({
         os_type: '', // 操作系统
         region: '', // 地域
         zone: '', // 园区
-        isp: '', // 经营商
-        antiAffinityLevel: '', // 反亲和性
+        isp: '', // 运营商
+        network_type: 'TENTHOUSAND',
+      };
+    };
+    const cloudResourceForm = () => {
+      return {
+        resource_type: resourceForm.value.resourceType,
+        remark: resourceForm.value.remark,
+        enable_disk_check: resourceForm.value.enable_disk_check,
+        anti_affinity_level: resourceForm.value.anti_affinity_level,
+        replicas: resourceForm.value.replicas,
+        ...QCLOUDCVMForm.value,
+      };
+    };
+    const PMResourceForm = () => {
+      return {
+        resource_type: resourceForm.value.resourceType,
+        remark: resourceForm.value.remark,
+        anti_affinity_level: resourceForm.value.anti_affinity_level,
+        replicas: resourceForm.value.replicas,
+        spec: {
+          ...pmForm.value.spec,
+        },
       };
     };
     const handleSubmit = () => {
       if (title.value === '增加资源需求') {
         if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-          cloudTableData.value.push({
-            ...resourceForm.value,
-            ...QCLOUDCVMForm.value,
-          });
+          cloudTableData.value.push(cloudResourceForm());
         } else {
-          physicalTableData.value.push({
-            ...resourceForm.value,
-            ...pmForm.value.spec,
-          });
+          physicalTableData.value.push(PMResourceForm());
         }
         emptyform();
       } else {
         if (modifyresourceType.value === 'QCLOUDCVM') {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
-            cloudTableData.value[modifyindex.value] = {
-              ...resourceForm.value,
-              ...QCLOUDCVMForm.value,
-            };
+            cloudTableData.value.push(cloudResourceForm());
           } else {
             cloudTableData.value.splice(modifyindex.value, 1);
-            physicalTableData.value.push({
-              ...resourceForm.value,
-              ...pmForm.value.spec,
-            });
+            physicalTableData.value.push(PMResourceForm());
           }
           emptyform();
         } else {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
-            physicalTableData.value[modifyindex.value] = {
-              ...resourceForm.value,
-              ...pmForm.value.spec,
-            };
+            physicalTableData.value.push(PMResourceForm());
           } else {
             physicalTableData.value.splice(modifyindex.value, 1);
-            cloudTableData.value.push({
-              ...resourceForm.value,
-              ...QCLOUDCVMForm.value,
-            });
+            cloudTableData.value.push(cloudResourceForm());
           }
           emptyform();
         }
@@ -1040,8 +1048,9 @@ export default defineComponent({
                                 ))}
                               </bk-select>
                             </bk-form-item>
-                            <bk-form-item label='经营商' required>
+                            <bk-form-item label='运营商'>
                               <bk-select class='width-300' v-model={pmForm.value.spec.isp}>
+                                <bk-option key='无' value='' label='无'></bk-option>
                                 {pmForm.value.options.isps.map((isp) => (
                                   <bk-option key={isp} value={isp} label={isp}></bk-option>
                                 ))}
@@ -1057,7 +1066,7 @@ export default defineComponent({
                               </bk-form-item>
                               <bk-form-item label='反亲和性' required>
                                 <AntiAffinityLevelSelect
-                                  v-model={pmForm.value.spec.antiAffinityLevel}
+                                  v-model={resourceForm.value.anti_affinity_level}
                                   params={{
                                     resourceType: resourceForm.value.resourceType,
                                     hasZone: pmForm.value.spec.zone !== '',

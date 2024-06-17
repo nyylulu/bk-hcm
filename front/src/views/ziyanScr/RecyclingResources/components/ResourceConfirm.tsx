@@ -1,6 +1,8 @@
 import { defineComponent, onMounted, ref, watch } from 'vue';
 import './index.scss';
+import { Table } from 'bkui-vue';
 import apiService from '../../../../api/scrApi';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 export default defineComponent({
   name: 'ResourceConfirm',
   props: {
@@ -8,9 +10,9 @@ export default defineComponent({
       type: Object,
       default: () => ({}),
     },
-    updateConfirm: {
-      type: Function,
-      default: () => {},
+    pagination: {
+      type: Object,
+      default: () => ({}),
     },
     returnPlan: {
       type: Object,
@@ -21,8 +23,9 @@ export default defineComponent({
       }),
     },
   },
-  emits: ['updateConfirm'],
+  emits: ['updateConfirm', 'Tablehosts'],
   setup(props, { emit }) {
+    const { selections, handleSelectionChange } = useSelection();
     const hostList = ref([]);
     const tableList = ref([]);
     const suborderId = ref();
@@ -51,6 +54,24 @@ export default defineComponent({
       };
       return resourceTypeMap[resourceType];
     };
+    watch(
+      () => props.pagination.limit,
+      () => {
+        getList(false);
+      },
+    );
+    watch(
+      () => props.pagination.start,
+      () => {
+        getList(false);
+      },
+    );
+    watch(
+      () => selections.value.length,
+      () => {
+        emit('updateConfirm', selections.value, drawerTitle.value, false);
+      },
+    );
     const columns = ref([
       {
         type: 'selection',
@@ -65,8 +86,8 @@ export default defineComponent({
       {
         label: '资源类型',
         field: 'resource_type',
-        render: (row: { resource_type: any }) => {
-          return <span>{getResourceTypeName(row.resource_type)}</span>;
+        render: ({ cell }) => {
+          return <span>{getResourceTypeName(cell)}</span>;
         },
       },
       {
@@ -75,21 +96,20 @@ export default defineComponent({
       },
       {
         label: '回收选项',
-        render: (row: { return_plan: any; resource_type: any }) => {
-          return <span>{getReturnPlanName(row.return_plan, row.resource_type)}</span>;
+        render: ({ data }) => {
+          return <span>{getReturnPlanName(data.return_plan, data.resource_type)}</span>;
         },
       },
       {
         label: '资源总数',
         field: 'total_num',
-        render: (row: { total_num: any }) => {
+        render: ({ data, cell }) => {
           return (
             <>
-              <span>{row.total_num}</span>&nbsp;&nbsp;&nbsp;&nbsp;
-              <bk-button type='text' size='small' onClick={handleRowClick(scope.row)}>
+              <span>{cell}</span>&nbsp;&nbsp;&nbsp;&nbsp;
+              <bk-button type='text' size='small' onClick={() => handleRowClick(data)}>
                 详情
               </bk-button>
-              ;
             </>
           );
         },
@@ -97,26 +117,36 @@ export default defineComponent({
       {
         label: '回收成本',
         field: 'cost_concerned',
+        render: ({ cell }) => {
+          return (
+            <>
+              <span>{cell ? '涉及' : '不涉及'}</span>
+            </>
+          );
+        },
       },
       {
         label: '备注',
         field: 'remark',
+        render: ({ cell }) => {
+          return (
+            <>
+              <span>{cell ? cell : '--'}</span>
+            </>
+          );
+        },
       },
     ]);
-    const page = ref({
-      start: 0,
-      limit: 10,
-      total: 0,
-    });
     const handleRowClick = (row: { bk_biz_name: string; suborder_id: any }) => {
       drawer.value = true;
       drawerTitle.value = row.bk_biz_name;
       suborderId.value = [row.suborder_id];
-      getList(true);
+      emit('updateConfirm', selections.value, drawerTitle.value, drawer.value);
+      getList(false);
     };
     /** 获取资源回收单据预览列表 */
     const getPreRecycleList = async () => {
-      emit('updateConfirm', []);
+      emit('updateConfirm', [], '', drawer.value);
 
       const {
         returnPlan,
@@ -126,12 +156,22 @@ export default defineComponent({
       tableList.value = info || [];
     };
     const getList = async (enableCount = false) => {
+      const page = {
+        limit: props.pagination.limit,
+        start: props.pagination.start,
+        enable_count: enableCount,
+      };
       const data = await apiService.getRecycleHosts({
-        suborderId,
-        page: page.value,
+        suborder_id: suborderId.value,
+        page,
       });
-      if (enableCount) page.value.total = data?.count;
+      const obj = props.pagination;
+      if (enableCount) obj.count = data?.count;
+      else {
+        obj.count = data?.info.length;
+      }
       hostList.value = data?.info || [];
+      emit('Tablehosts', hostList.value, obj);
     };
     watch(
       () => props.recycleForm,
@@ -144,13 +184,18 @@ export default defineComponent({
     });
     return () => (
       <div class='div-ResourceSelect'>
-        <bk-table align='left' row-hover='auto' columns={columns.value} data={hostList.value} show-overflow-tooltip />
-        <bk-pagination
-          style='float: right;margin: 20px 0;'
-          v-model={page.value.start}
-          count={page.value.total}
-          limit={page.value.limit}
-        />
+        <Table
+          align='left'
+          row-hover='auto'
+          data={tableList.value}
+          rowKey='id'
+          columns={columns.value}
+          remotePagination
+          showOverflowTooltip
+          {...{
+            onSelectionChange: (selections: any) => handleSelectionChange(selections),
+            onSelectAll: (selections: any) => handleSelectionChange(selections),
+          }}></Table>
       </div>
     );
   },

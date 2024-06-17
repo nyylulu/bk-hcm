@@ -74,25 +74,32 @@ export default defineComponent({
         batchCopyIps = batchCopyIps.concat(ips.value[item.suborderId]);
       });
     });
-    // 获取单据详情
-    const getOrderDetail = (orderId: string) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
+    // 获取需求子单
+    const getdemandDetail = async (orderId: string) => {
+      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
         order_id: [+orderId],
         page: { start: 0, limit: 50 },
       });
+      detail.value.info = data.info;
     };
-    // 获取单据审核记录
-    const getOrderAuditRecords = (orderId: string) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket/audit`, {
+    // 获取单据详情
+    const getOrderDetail = async (orderId: string) => {
+      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket`, {
         order_id: +orderId,
       });
-    };
-
-    onMounted(async () => {
-      const { data } = await getOrderDetail(route.params.id as string);
       detail.value = data;
-      const { data: auditData } = await getOrderAuditRecords(route.params.id as string);
-      applyRecord.value = auditData;
+    };
+    // 获取单据审核记录
+    const getOrderAuditRecords = async (orderId: string) => {
+      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket/audit`, {
+        order_id: +orderId,
+      });
+      applyRecord.value = data;
+    };
+    onMounted(() => {
+      getOrderDetail(route.params.id as string);
+      getOrderAuditRecords(route.params.id as string);
+      getdemandDetail(route.params.id as string);
     });
     return () => (
       <div class={'application-detail-container'}>

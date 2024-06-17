@@ -2,6 +2,7 @@ import { defineComponent, ref, computed, watch } from 'vue';
 import './index.scss';
 import apiService from '../../../../api/scrApi';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 export default defineComponent({
   name: 'ResourceSelect',
   props: {
@@ -28,6 +29,7 @@ export default defineComponent({
   },
   emits: ['updateHosts', 'updateSelectedHosts', 'updateRemark', 'Drawer'],
   setup(props, { emit }) {
+    const { selections, handleSelectionChange } = useSelection();
     const { columns: RRcolumns } = useColumns('RecyclingResources');
     const count = ref(0);
     const allRecycleHostIps = computed(() => {
@@ -62,6 +64,12 @@ export default defineComponent({
       emit('updateHosts', list);
       //   this.$message.success('刷新成功');
     };
+    watch(
+      () => selections.value.length,
+      () => {
+        emit('updateSelectedHosts', selections.value);
+      },
+    );
     const isRowSelectEnable = ({ row }) => {
       if (row.recyclable) return !!row.recyclable;
     };
@@ -125,6 +133,9 @@ export default defineComponent({
           align='left'
           row-hover='auto'
           columns={RRcolumns}
+          {...{
+            onSelectionChange: (selections: any) => handleSelectionChange(selections),
+          }}
           is-row-select-enable={isRowSelectEnable}
           data={props.tableHosts}
           show-overflow-tooltip
