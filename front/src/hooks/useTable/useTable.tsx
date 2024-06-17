@@ -225,6 +225,7 @@ export const useTable = (props: IProp) => {
               onColumnSort={handleSort}
               onColumnFilter={() => {}}>
               {{
+                expandRow: (row) => slots.expandRow?.(row),
                 empty: () => {
                   if (isLoading.value) return null;
                   return <Empty />;
