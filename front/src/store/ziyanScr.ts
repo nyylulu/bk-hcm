@@ -2,7 +2,15 @@ import http from '@/http';
 import { defineStore } from 'pinia';
 
 import type { IPageQuery } from '@/typings/common';
-import type { IRecycleArea, IQueryDissolveList, IDissolveList } from '@/typings/ziyanScr';
+import type {
+  IRecycleArea,
+  IQueryDissolveList,
+  IDissolveList,
+  IDissolveHostCurrentListResult,
+  IDissolveHostCurrentListParam,
+  IDissolveHostOriginListResult,
+  IDissolveHostOriginListParam,
+} from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -116,6 +124,16 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
           : undefined,
     });
 
+  // 查询裁撤数据中当前主机信息。
+  const dissolveHostCurrentList = (data: IDissolveHostCurrentListParam): Promise<IDissolveHostCurrentListResult> => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/host/current/list`, data);
+  };
+
+  // 查询裁撤数据中原始主机信息。
+  const dissolveHostOriginList = (data: IDissolveHostOriginListParam): Promise<IDissolveHostOriginListResult> => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/host/origin/list`, data);
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -132,5 +150,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getInitializationDetails,
     getDiskCheckDetails,
     getDeliveryDetails,
+    dissolveHostCurrentList,
+    dissolveHostOriginList,
   };
 });

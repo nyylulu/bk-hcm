@@ -7,7 +7,9 @@ import Panel from '@/components/panel';
 import OrganizationSelect from '@/components/OrganizationSelect/index';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
-
+import CurrentDialog from '../current-dialog';
+import ModuleDialog from '../module-dialog';
+import OriginDialog from '../origin-dialog';
 import cssModule from './index.module.scss';
 
 import type { IDissolve } from '@/typings/ziyanScr';
@@ -27,9 +29,49 @@ export default defineComponent({
     const bkBizIds = ref([]);
     const operators = ref([]);
     const dissloveList = ref<IDissolve[]>([]);
+    const currentDialogShow = ref(false);
+    const moduleDialogShow = ref(false);
+    const originDialogShow = ref(false);
+    const searchParams = ref();
 
     const handleSearch = async () => {
       isLoading.value = true;
+      // dissloveList.value = [
+      //   {
+      //     bk_biz_name: 'biz',
+      //     module_host_count: {
+      //       module: 8,
+      //     },
+      //     total: {
+      //       origin: {
+      //         host_count: 8,
+      //         cpu_count: 640,
+      //       },
+      //       current: {
+      //         host_count: 0,
+      //         cpu_count: 0,
+      //       },
+      //     },
+      //     progress: '100.00%',
+      //   },
+      //   {
+      //     bk_biz_name: '总数',
+      //     module_host_count: {
+      //       module: 8,
+      //     },
+      //     total: {
+      //       origin: {
+      //         host_count: 8,
+      //         cpu_count: 640,
+      //       },
+      //       current: {
+      //         host_count: 0,
+      //         cpu_count: 0,
+      //       },
+      //     },
+      //     progress: '',
+      //   },
+      // ];
       ziyanScrStore
         .getDissolveList({
           organizations: organizations.value,
@@ -53,19 +95,28 @@ export default defineComponent({
 
     const handleDownload = () => {};
 
+    const setSearchParams = (row: IDissolve) => {
+      searchParams.value = {
+        organizations: organizations.value,
+        bk_biz_names: [row.bk_biz_name],
+        module_names: Object.keys(row.module_host_count),
+        operators: operators.value,
+      };
+    };
+
     const handleShowOriginDialog = (row: IDissolve) => {
-      return row;
-      // console.log(row);
+      originDialogShow.value = true;
+      setSearchParams(row);
     };
 
     const handleShowCurrentDialog = (row: IDissolve) => {
-      return row;
-      // console.log(row);
+      currentDialogShow.value = true;
+      setSearchParams(row);
     };
 
     const handleShowModuleDialog = (row: IDissolve) => {
-      return row;
-      // console.log(row);
+      moduleDialogShow.value = true;
+      setSearchParams(row);
     };
 
     return () => (
@@ -126,6 +177,9 @@ export default defineComponent({
             ))}
           </bk-table>
         </bk-loading>
+        <CurrentDialog v-model:isShow={currentDialogShow.value} searchParams={searchParams.value}></CurrentDialog>
+        <ModuleDialog v-model:isShow={moduleDialogShow.value} searchParams={searchParams.value}></ModuleDialog>
+        <OriginDialog v-model:isShow={originDialogShow.value} searchParams={searchParams.value}></OriginDialog>
       </Panel>
     );
   },

@@ -3673,6 +3673,149 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  const decommissionDetailsColumns = [
+    {
+      label: '固资号',
+      field: 'server_asset_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '内网IP',
+      field: 'ip',
+      isDefaultShow: true,
+      render({ cell }: any) {
+        return (
+          <Button text theme='primary'>
+            {cell}
+          </Button>
+        );
+      },
+    },
+    {
+      label: '公网IP',
+      field: 'bk_host_outerip',
+      isDefaultShow: true,
+    },
+    {
+      label: '业务名称',
+      field: 'app_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '业务模块',
+      field: 'module',
+      isDefaultShow: true,
+    },
+    {
+      label: 'SCM设备类型',
+      field: 'device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '裁撤模块名称',
+      field: 'module_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '存放机房管理单元',
+      field: 'idc_unit_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '操作系统',
+      field: 'sfw_name_version',
+      isDefaultShow: true,
+    },
+    {
+      label: '上架时间',
+      field: 'go_up_date',
+      isDefaultShow: true,
+    },
+    {
+      label: 'RAID结构',
+      field: 'raid_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '逻辑区域',
+      field: 'logic_area',
+      isDefaultShow: true,
+    },
+    {
+      label: '维护人',
+      field: 'server_operator',
+      isDefaultShow: true,
+    },
+    {
+      label: '备份维护人',
+      field: 'server_bak_operator',
+    },
+    {
+      label: '设备技术分类',
+      field: 'device_layer',
+    },
+    {
+      label: 'CPU得分',
+      field: 'cpu_score',
+    },
+    {
+      label: '内存得分',
+      field: 'mem_score',
+    },
+    {
+      label: '内网流量得分',
+      field: 'inner_net_traffic_score',
+    },
+    {
+      label: '磁盘IO得分',
+      field: 'disk_io_score',
+    },
+    {
+      label: '磁盘IO使用率得分',
+      field: 'disk_util_score',
+    },
+    {
+      label: '是否达标',
+      field: 'is_pass',
+    },
+    {
+      label: '内存使用量(G)',
+      field: 'mem4linux',
+    },
+    {
+      label: '内网流量(Mb/s)',
+      field: 'inner_net_traffic',
+    },
+    {
+      label: '外网流量(Mb/s)',
+      field: 'outer_net_traffic',
+    },
+    {
+      label: '磁盘IO(Blocks/s)',
+      field: 'disk_io',
+    },
+    {
+      label: '磁盘IO使用率',
+      field: 'disk_util',
+    },
+    {
+      label: '磁盘总量(G)',
+      field: 'disk_total',
+    },
+    {
+      label: 'CPU核数',
+      field: 'max_cpu_core_amount',
+    },
+    {
+      label: '运维小组',
+      field: 'group_name',
+    },
+    {
+      label: '业务中心',
+      field: 'center',
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -3728,6 +3871,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrProduction: producingColumns,
     scrInitial: initialColumns,
     scrDelivery: deliveryColumns,
+    decommissionDetails: decommissionDetailsColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
