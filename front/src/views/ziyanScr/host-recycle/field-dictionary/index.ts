@@ -1,4 +1,7 @@
+import { useBusiness } from './bkBizId';
+
 export * from './recycleStatus';
-export * from './bkBizId';
 export * from './dateTime';
 export * from './precheckStatus';
+
+export const { getBusinessNameById } = useBusiness();
