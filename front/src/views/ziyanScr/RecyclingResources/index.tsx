@@ -6,7 +6,6 @@ import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import usePagination from '@/hooks/usePagination';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
-import CommonSideslider from '@/components/common-sideslider';
 import { useAccountStore } from '@/store';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import apiService from '@/api/scrApi';
@@ -188,6 +187,7 @@ export default defineComponent({
     };
     const handleSubmit = async () => {
       if (activetab.value === 0) {
+        if (selections.value.length === 0) return;
         const { info } = await apiService.getRecyclableHosts({
           ips: selections.value.map((item: { ip: any }) => item.ip),
         });
@@ -200,15 +200,11 @@ export default defineComponent({
     };
     const handleConfirm = async () => {
       const orderId = selectedHosts.value.map((item) => item.order_id);
-      const { suborder_id } = selectedHosts.value.map[0];
       const { result } = await apiService.startRecycleList(orderId);
       if (result) {
         takeSnapshot();
         router.push({
-          path: '/ziyanScr/hostRecycling',
-          query: {
-            suborder_id,
-          },
+          name: 'hostRecycle',
         });
       }
       checked.value = false;
@@ -337,43 +333,60 @@ export default defineComponent({
             ),
           }}
         </Dialog>
-        <CommonSideslider v-model:isShow={drawer.value} title='选择服务器' width={1150} onHandleSubmit={handleSubmit}>
-          <Tab v-model:active={activetab.value} type='unborder-card'>
-            <BkTabPanel key={0} name={0} label='根据业务选择(单业务回收场景)'>
-              <div class='displayflex' style='margin: 20px 0;'>
-                <div class='displayflex'>
-                  <div class='mr-10'>业务</div>
-                  <bk-select class='item-warp-component' v-model={bkBizId.value}>
-                    {businessList.value.map((item) => (
-                      <bk-option key={item.id} value={item.id} label={item.name}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
+        <Sideslider v-model:isShow={drawer.value} title='选择服务器' width={1150}>
+          {{
+            default: () => (
+              <div class='common-sideslider-content'>
+                <Tab v-model:active={activetab.value} type='unborder-card'>
+                  <BkTabPanel key={0} name={0} label='根据业务选择(单业务回收场景)'>
+                    <div class='displayflex' style='margin: 20px 0;'>
+                      <div class='displayflex'>
+                        <div class='mr-10'>业务</div>
+                        <bk-select class='item-warp-component' v-model={bkBizId.value}>
+                          {businessList.value.map((item) => (
+                            <bk-option key={item.id} value={item.id} label={item.name}></bk-option>
+                          ))}
+                        </bk-select>
+                      </div>
+                      {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
+                    </div>
+                    <Table
+                      data={serverTableData.value}
+                      columns={BScolumns}
+                      pagination={RecycleListpagination}
+                      showOverflowTooltip
+                      {...{
+                        onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
+                        onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
+                      }}
+                      onPageLimitChange={RlhandlePageLimitChange}
+                      onPageValueChange={RlhandlePageValueChange}
+                    />
+                  </BkTabPanel>
+                  <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
+                    <bk-input
+                      type='textarea'
+                      style='width:520px'
+                      v-model={lips.value}
+                      text
+                      placeholder='请输入 IP地址/固资号，多个换行分割，最多支持500个'
+                      rows={1}></bk-input>
+                  </BkTabPanel>
+                </Tab>
               </div>
-              <Table
-                data={serverTableData.value}
-                columns={BScolumns}
-                pagination={RecycleListpagination}
-                showOverflowTooltip
-                {...{
-                  onSelectionChange: (selections: any) => handleSelectionChange(selections),
-                }}
-                onPageLimitChange={RlhandlePageLimitChange}
-                onPageValueChange={RlhandlePageValueChange}
-              />
-            </BkTabPanel>
-            <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
-              <bk-input
-                type='textarea'
-                style='width:520px'
-                v-model={lips.value}
-                text
-                placeholder='请输入 IP地址/固资号，多个换行分割，最多支持500个'
-                rows={1}></bk-input>
-            </BkTabPanel>
-          </Tab>
-        </CommonSideslider>
+            ),
+            footer: () => (
+              <>
+                <Button theme='primary' onClick={handleSubmit} disabled={selections.value.length === 0}>
+                  提交
+                </Button>
+                <Button class={'ml15'} onClick={() => triggerShow(false)}>
+                  取消
+                </Button>
+              </>
+            ),
+          }}
+        </Sideslider>
         <Sideslider v-model:isShow={ResourcesTotal.value} title={ResourcesTitle.value} width={1150}>
           <Table
             class='table-container'

@@ -1,34 +1,37 @@
-.div-RecyclingResources{
-    .div-title {
-        font-size: 18px;
-        height: 60px;
-        line-height: 40px;
-        padding: 10px 0 10px 20px;
-        color: #000;
-        border: #e1e4ea 2px solid;
-    }
-    .div-components{
-        border: 2px solid #e1e4ea;
-        border-top: 0;
-        .div-steps{
-            width: 70%;
-            margin: 0 auto;
-            padding-top: 30px;
-            padding-bottom: 30px;
-        }
-    }
-}
-.div-ResourceSelect{
-    width: 97%;
-    margin: 0 auto;
-}
-.div-Button{
-    height: 70px;
-    line-height: 70px;
+.div-RecyclingResources {
+  .div-title {
+    font-size: 18px;
+    height: 60px;
+    line-height: 40px;
+    padding: 10px 0 10px 20px;
+    color: #000;
+    border: #e1e4ea 2px solid;
+  }
+  .div-components {
     border: 2px solid #e1e4ea;
     border-top: 0;
-    padding-left: 20px;
+    .div-steps {
+      width: 70%;
+      margin: 0 auto;
+      padding-top: 30px;
+      padding-bottom: 30px;
+    }
+  }
 }
-.dialog-cancel{
-    margin-left: 10px;
+.div-ResourceSelect {
+  width: 97%;
+  margin: 0 auto;
+}
+.div-Button {
+  height: 70px;
+  line-height: 70px;
+  border: 2px solid #e1e4ea;
+  border-top: 0;
+  padding-left: 20px;
+}
+.dialog-cancel {
+  margin-left: 10px;
+}
+.ml15 {
+  margin-left: 15px;
 }

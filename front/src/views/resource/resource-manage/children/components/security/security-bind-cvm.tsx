@@ -30,7 +30,7 @@ export default defineComponent({
     sgCloudId: {
       type: String,
       required: true,
-    }
+    },
   },
   setup(props) {
     const businessMapStore = useBusinessMapStore();
@@ -39,7 +39,7 @@ export default defineComponent({
     const isBindDialogLoading = ref(false);
     const isUnbindDialogLoading = ref(false);
     const regionsStore = useRegionsStore();
-    const {generateColumnsSettings} = useColumns('cvms');
+    const { generateColumnsSettings } = useColumns('cvms');
     const { whereAmI } = useWhereAmI();
     const tableColumns = [
       {
@@ -50,16 +50,14 @@ export default defineComponent({
       {
         label: '内网IP',
         field: 'private_ipv4_addresses',
-        render: ({ data }: any) => data.private_ipv4_addresses?.join(',')
-          || data.private_ipv6_addresses?.join(',')
-          || '--',
+        render: ({ data }: any) =>
+          data.private_ipv4_addresses?.join(',') || data.private_ipv6_addresses?.join(',') || '--',
       },
       {
         label: '公网IP',
         field: 'public_ipv4_addresses',
-        render: ({ data }: any) => data.public_ipv4_addresses?.join(',')
-          || data.public_ipv6_addresses?.join(',')
-          || '--',
+        render: ({ data }: any) =>
+          data.public_ipv4_addresses?.join(',') || data.public_ipv6_addresses?.join(',') || '--',
       },
       {
         label: '云厂商',
@@ -68,7 +66,7 @@ export default defineComponent({
       {
         label: '地域',
         field: 'region',
-        render: ({ cell, row }: any) => regionsStore.getRegionName(row.vendor, cell), 
+        render: ({ cell, row }: any) => regionsStore.getRegionName(row.vendor, cell),
       },
       {
         label: '名称',
@@ -81,23 +79,11 @@ export default defineComponent({
           return (
             <div class={'cvm-status-container'}>
               {HOST_SHUTDOWN_STATUS.includes(data.status) ? (
-                <img
-                  src={StatusAbnormal}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusAbnormal} class={'mr6'} width={13} height={13}></img>
               ) : HOST_RUNNING_STATUS.includes(data.status) ? (
-                <img
-                  src={StatusNormal}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusNormal} class={'mr6'} width={13} height={13}></img>
               ) : (
-                <img
-                  src={StatusUnknown}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusUnknown} class={'mr6'} width={13} height={13}></img>
               )}
               <span>{CLOUD_HOST_STATUS[data.status] || data.status}</span>
             </div>
@@ -107,13 +93,7 @@ export default defineComponent({
       {
         label: '是否分配',
         field: 'bk_biz_id',
-        render: ({
-          data,
-          cell,
-        }: {
-          data: { bk_biz_id: number };
-          cell: number;
-        }) => (
+        render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
           <bk-tag
             v-bk-tooltips={{
               content: businessMapStore.businessMap.get(cell),
@@ -128,34 +108,43 @@ export default defineComponent({
         label: '操作',
         field: 'operation',
         render: ({ data }: any) => (
-          <Button text theme='primary' onClick={() => {
-            InfoBox({
-              title: '请确认是否解绑',
-              subTitle: `将解绑【${data.private_ipv6_addresses?.join(',') || data.private_ipv4_addresses?.join(',')}】`,
-              theme: 'danger',
-              headerAlign: 'center',
-              footerAlign: 'center',
-              contentAlign: 'center',
-              extCls: 'delete-resource-infobox',
-              onConfirm: async () => {
-                selections.value = [data];
-                try {
-                  await handleUnBind();
-                }
-                finally {
-                  selections.value = [];
-                }
-              }
-            });
-          }} disabled={data.extension?.cloud_security_group_ids.length < 2} v-bk-tooltips={{
-            content: '绑定的安全组少于2条,不能解绑',
-            disabled: data.extension?.cloud_security_group_ids.length > 1,
-          }}>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              InfoBox({
+                title: '请确认是否解绑',
+                subTitle: `将解绑【${
+                  data.private_ipv6_addresses?.join(',') || data.private_ipv4_addresses?.join(',')
+                }】`,
+                theme: 'danger',
+                headerAlign: 'center',
+                footerAlign: 'center',
+                contentAlign: 'center',
+                extCls: 'delete-resource-infobox',
+                onConfirm: async () => {
+                  selections.value = [data];
+                  try {
+                    await handleUnBind();
+                  } finally {
+                    selections.value = [];
+                  }
+                },
+              });
+            }}
+            disabled={data.extension?.cloud_security_group_ids.length < 2}
+            v-bk-tooltips={{
+              content: '绑定的安全组少于2条,不能解绑',
+              disabled: data.extension?.cloud_security_group_ids.length > 1,
+            }}>
             解绑
           </Button>
         ),
       },
-    ].filter(({field}) => (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business);
+    ].filter(
+      ({ field }) =>
+        (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business,
+    );
     const toBindCvmsListColumns = [
       {
         type: 'selection',
@@ -169,17 +158,15 @@ export default defineComponent({
       {
         label: '内网IP',
         field: 'private_ipv4_addresses',
-        render: ({ data }: any) => data.private_ipv4_addresses?.join(',')
-          || data.private_ipv6_addresses?.join(',')
-          || '--',
+        render: ({ data }: any) =>
+          data.private_ipv4_addresses?.join(',') || data.private_ipv6_addresses?.join(',') || '--',
         isDefaultShow: true,
       },
       {
         label: '公网IP',
         field: 'public_ipv4_addresses',
-        render: ({ data }: any) => data.public_ipv4_addresses?.join(',')
-          || data.public_ipv6_addresses?.join(',')
-          || '--',
+        render: ({ data }: any) =>
+          data.public_ipv4_addresses?.join(',') || data.public_ipv6_addresses?.join(',') || '--',
         isDefaultShow: true,
       },
       {
@@ -201,23 +188,11 @@ export default defineComponent({
           return (
             <div class={'cvm-status-container'}>
               {HOST_SHUTDOWN_STATUS.includes(data.status) ? (
-                <img
-                  src={StatusAbnormal}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusAbnormal} class={'mr6'} width={13} height={13}></img>
               ) : HOST_RUNNING_STATUS.includes(data.status) ? (
-                <img
-                  src={StatusNormal}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusNormal} class={'mr6'} width={13} height={13}></img>
               ) : (
-                <img
-                  src={StatusUnknown}
-                  class={'mr6'}
-                  width={13}
-                  height={13}></img>
+                <img src={StatusUnknown} class={'mr6'} width={13} height={13}></img>
               )}
               <span>{CLOUD_HOST_STATUS[data.status] || data.status}</span>
             </div>
@@ -229,12 +204,8 @@ export default defineComponent({
         field: 'cloud_security_group_ids',
         isDefaultShow: true,
         render: ({ data }: any) => (
-          <div
-            v-bk-tooltips={{ content: data.extension.security_group_names.join(',') }}
-          >
-            {
-              data.extension.cloud_security_group_ids.join(',') || '--'
-            }
+          <div v-bk-tooltips={{ content: data.extension.security_group_names.join(',') }}>
+            {data.extension.cloud_security_group_ids.join(',') || '--'}
           </div>
         ),
       },
@@ -258,15 +229,10 @@ export default defineComponent({
     const isTableLoading = ref(false);
     const isToBindCvmsTableLoading = ref(false);
     const accountStore = useAccountStore();
-    const {
-      selections,
-      handleSelectionChange,
-    } = useSelection();
+    const { selections, handleSelectionChange } = useSelection();
 
-    const {
-      selections: toBindCvmsListSelections,
-      handleSelectionChange: handleToBindCvmsListSelectionChange,
-    } = useSelection();
+    const { selections: toBindCvmsListSelections, handleSelectionChange: handleToBindCvmsListSelectionChange } =
+      useSelection();
 
     const isRowSelectEnable = ({ row, isCheckAll }: DoublePlainObject) => {
       if (isCheckAll) return true;
@@ -286,9 +252,10 @@ export default defineComponent({
 
     const getTableList = async () => {
       isTableLoading.value = true;
-      const url = whereAmI.value === Senarios.business
-        ? `/api/v1/cloud/bizs/${accountStore.bizs}/cvms/security_groups/${props.sgId}`
-        : `/api/v1/cloud/cvms/security_groups/${props.sgId}`;
+      const url =
+        whereAmI.value === Senarios.business
+          ? `/api/v1/cloud/bizs/${accountStore.bizs}/cvms/security_groups/${props.sgId}`
+          : `/api/v1/cloud/cvms/security_groups/${props.sgId}`;
       const res = await http.get(`${BK_HCM_AJAX_URL_PREFIX}${url}`);
       tableData.value = res?.data?.details || [];
       totalCount.value = res?.data?.count || 0;
@@ -390,27 +357,17 @@ export default defineComponent({
           <Button selected={true}>云主机({totalCount.value})</Button>
         </BkButtonGroup>
         <div>
-          {
-            whereAmI.value === Senarios.business
-              ? (
-                <div class={'mb8'}>
-                  <Button
-                    theme='primary'
-                    class={'mr8'}
-                    onClick={() => (isBindDialogShow.value = true)}>
-                    绑定
-                  </Button>
-                  <Button onClick={() => (isUnBindDialogShow.value = true)} disabled={isDisassociateDisabled.value}>
-                    批量解绑
-                  </Button>
-                </div>
-              ) : null
-          }
-          <Loading
-            loading={isTableLoading.value}
-            opacity={1}
-            zIndex={99}
-            color='#fff'>
+          {whereAmI.value === Senarios.business ? (
+            <div class={'mb8'}>
+              <Button theme='primary' class={'mr8'} onClick={() => (isBindDialogShow.value = true)}>
+                绑定
+              </Button>
+              <Button onClick={() => (isUnBindDialogShow.value = true)} disabled={isDisassociateDisabled.value}>
+                批量解绑
+              </Button>
+            </div>
+          ) : null}
+          <Loading loading={isTableLoading.value} opacity={1} zIndex={99} color='#fff'>
             <Table
               columns={tableColumns}
               data={tableData.value}
@@ -423,8 +380,7 @@ export default defineComponent({
               onPageValueChange={handlePageChange}
               isRowSelectEnable={isRowSelectEnable}
               onSelectionChange={(selections: any) => handleSelectionChange(selections, isCurRowSelectEnable)}
-              onSelectAll={(selections: any) => handleSelectionChange(selections, isCurRowSelectEnable, true)}
-            ></Table>
+              onSelectAll={(selections: any) => handleSelectionChange(selections, isCurRowSelectEnable, true)}></Table>
           </Loading>
         </div>
 
@@ -433,25 +389,26 @@ export default defineComponent({
           onClosed={() => (isBindDialogShow.value = false)}
           isLoading={isBindDialogLoading.value}
           width={1500}
-          title='绑定主机'
-        >
+          title='绑定主机'>
           {{
             default: () => (
               <Loading loading={isToBindCvmsTableLoading.value}>
                 <Alert
                   theme='info'
                   class={'mb12'}
-                  title='新绑定的安全组为最高优先级，如主机上已绑定的安全组名为“安全组1”，新绑定的安全组名为“安全组2”，则依次生效的安全组顺序为“安全组2”、“安全组1”'
-                >
-                </Alert>
+                  title='新绑定的安全组为最高优先级，如主机上已绑定的安全组名为“安全组1”，新绑定的安全组名为“安全组2”，则依次生效的安全组顺序为“安全组2”、“安全组1”'></Alert>
                 <Table
                   columns={toBindCvmsListColumns}
                   data={toBindCvmsList.value}
                   settings={toBindCvmsSetting.value}
                   remotePagination
                   isRowSelectEnable={isToBindCvmsRowSelectEnable}
-                  onSelectionChange={(selections: any) => handleToBindCvmsListSelectionChange(selections, isToBindCvmsCurRowSelectEnable)}
-                  onSelectAll={(selections: any) => handleToBindCvmsListSelectionChange(selections, isToBindCvmsRowSelectEnable, true)}
+                  onSelectionChange={(selections: any) =>
+                    handleToBindCvmsListSelectionChange(selections, isToBindCvmsCurRowSelectEnable)
+                  }
+                  onSelectAll={(selections: any) =>
+                    handleToBindCvmsListSelectionChange(selections, isToBindCvmsRowSelectEnable, true)
+                  }
                   onPageLimitChange={handleToBindListPageLimitChange}
                   onPageValueChange={handleToBindListPageChange}
                   pagination={{
@@ -462,10 +419,14 @@ export default defineComponent({
             ),
             footer: () => (
               <div>
-                <Button theme='primary' disabled={!toBindCvmsListSelections.value.length} onClick={handleBind}>确定</Button>
-                <Button class={'ml8'} onClick={() => (isBindDialogShow.value = false)}>取消</Button>
+                <Button theme='primary' disabled={!toBindCvmsListSelections.value.length} onClick={handleBind}>
+                  确定
+                </Button>
+                <Button class={'ml8'} onClick={() => (isBindDialogShow.value = false)}>
+                  取消
+                </Button>
               </div>
-            )
+            ),
           }}
         </Dialog>
 
@@ -477,7 +438,9 @@ export default defineComponent({
           onClosed={() => (isUnBindDialogShow.value = false)}
           onConfirm={handleUnBind}>
           <BkButtonGroup>
-            <Table columns={tableColumns.filter(({ field }) => !['selection', 'operation'].includes(field))} data={selections.value}></Table>
+            <Table
+              columns={tableColumns.filter(({ field }) => !['selection', 'operation'].includes(field))}
+              data={selections.value}></Table>
           </BkButtonGroup>
         </Dialog>
       </div>

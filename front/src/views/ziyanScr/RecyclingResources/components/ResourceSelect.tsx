@@ -99,7 +99,10 @@ export default defineComponent({
           <bk-button class='bk-button' theme='primary' onClick={handleCleardrawer}>
             选择服务器
           </bk-button>
-          <bk-button class='bk-button' onClick={refresh}>
+          <bk-button
+            disabled={props.tableHosts.length > 0 || allRecycleHostIps.value.length === 0}
+            class='bk-button'
+            onClick={refresh}>
             刷新状态
           </bk-button>
           <bk-button

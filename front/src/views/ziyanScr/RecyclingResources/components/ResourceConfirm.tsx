@@ -193,8 +193,8 @@ export default defineComponent({
           remotePagination
           showOverflowTooltip
           {...{
-            onSelectionChange: (selections: any) => handleSelectionChange(selections),
-            onSelectAll: (selections: any) => handleSelectionChange(selections),
+            onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
+            onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
           }}></Table>
       </div>
     );

@@ -37,7 +37,6 @@ import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
-import { SCR_RECALL_DETAIL_STATUS_MAP, SCR_POOL_PHASE_MAP } from '@/constants';
 
 interface LinkFieldOptions {
   type: string; // 资源类型

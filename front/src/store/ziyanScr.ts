@@ -149,7 +149,6 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
   const dissolveHostOriginList = (data: IDissolveHostOriginListParam): Promise<IDissolveHostOriginListResult> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/host/origin/list`, data);
   };
-
   return {
     listVpc,
     listSubnet,

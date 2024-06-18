@@ -2,9 +2,10 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
+import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import BusinessSelector from '@/components/business-selector';
 import RequireNameSelect from './require-name-select';
+import { Form } from 'bkui-vue';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import { Search } from 'bkui-vue/lib/icon';
@@ -12,10 +13,9 @@ import BillDetail from '../bill-detail';
 import './index.scss';
 import { useRouter } from 'vue-router';
 import dayjs from 'dayjs';
-
+const { FormItem } = Form;
 export default defineComponent({
   components: {
-    BusinessSelector,
     RequireNameSelect,
     MemberSelect,
     ExportToExcelButton,
@@ -268,99 +268,98 @@ export default defineComponent({
       if (hostRecyclePage.value === 0) {
         // eslint-disable-next-line no-nested-ternary
         return (
-          <CommonTable>
-            {{
-              tabselect: () => (
-                <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
-                  <bk-form-item label-width='0'>
-                    <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
-                      回收资源
-                    </bk-button>
-                  </bk-form-item>
-                  <bk-form-item label='业务'>
-                    <business-selector v-model={recycleForm.value.bk_biz_id} placeholder='请选择业务' />
-                  </bk-form-item>
-                  <bk-form-item label='OBS项目类型'>
-                    <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
-                  </bk-form-item>
-                  <bk-form-item label='单号'>
-                    <bk-tag-input
-                      class='tag-input-width'
-                      v-model={recycleForm.value.order_id}
-                      placeholder='请输入单号'
-                      allow-create
-                      has-delete-icon
-                      allow-auto-match
-                    />
-                  </bk-form-item>
-                  <bk-form-item label='子单号'>
-                    <bk-tag-input
-                      class='tag-input-width'
-                      v-model={recycleForm.value.suborder_id}
-                      placeholder='请输入子单号'
-                      allow-create
-                      has-delete-icon
-                      allow-auto-match
-                    />
-                  </bk-form-item>
-                  <bk-form-item label='资源类型'>
-                    <bk-select
-                      v-model={recycleForm.value.resource_type}
-                      multiple
-                      clearable
-                      placeholder='请选择资源类型'>
-                      {resourceTypeList.map(({ key, value }) => {
-                        return <bk-option key={key} label={value} value={key}></bk-option>;
-                      })}
-                    </bk-select>
-                  </bk-form-item>
-                  <bk-form-item label='回收类型'>
-                    <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
-                      {returnPlanList.map(({ key, value }) => {
-                        return <bk-option key={key} label={value} value={key}></bk-option>;
-                      })}
-                    </bk-select>
-                  </bk-form-item>
-                  <bk-form-item label='状态'>
-                    <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
-                      {stageList.value.map(({ stage, description }) => {
-                        return <bk-option key={stage} label={description} value={stage}></bk-option>;
-                      })}
-                    </bk-select>
-                  </bk-form-item>
-                  <bk-form-item label='回收人'>
-                    <member-select
-                      class='tag-input-width'
-                      v-model={recycleForm.value.bk_username}
-                      multiple
-                      clearable
-                      placeholder='请输入企业微信名'
-                    />
-                  </bk-form-item>
-                  <bk-form-item label='回收时间'>
-                    <bk-date-picker v-model={timeForm.value} type='daterange' />
-                  </bk-form-item>
-                  <bk-form-item label-width='0' class='bill-form-btn'>
-                    <bk-button theme='primary' onClick={filterOrders}>
-                      <Search />
-                      查询
-                    </bk-button>
-                    <bk-button onClick={() => clearFilter()}>清空</bk-button>
-                    <export-to-excel-button data={dataList} columns={tableColumns} filename='回收单据列表' />
-                    <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
-                      批量查看预检详情
-                    </bk-button>
-                    <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
-                      批量重试
-                    </bk-button>
-                    <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
-                      批量去除预检失败IP提交
-                    </bk-button>
-                  </bk-form-item>
-                </bk-form>
-              ),
-            }}
-          </CommonTable>
+          <div class={'apply-list-container'}>
+            <div class={'filter-container'}>
+              <Form model={recycleForm} class={'scr-form-wrapper'}>
+                <FormItem label='业务'>
+                  <BusinessSelector v-model={recycleForm.value.bk_biz_id} authed />
+                </FormItem>
+                <FormItem label='OBS项目类型'>
+                  <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
+                </FormItem>
+                <FormItem label='单号'>
+                  <bk-tag-input
+                    v-model={recycleForm.value.order_id}
+                    placeholder='请输入单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
+                  />
+                </FormItem>
+                <FormItem label='子单号'>
+                  <bk-tag-input
+                    v-model={recycleForm.value.suborder_id}
+                    placeholder='请输入子单号'
+                    allow-create
+                    has-delete-icon
+                    allow-auto-match
+                  />
+                </FormItem>
+                <FormItem label='资源类型'>
+                  <bk-select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
+                    {resourceTypeList.map(({ key, value }) => {
+                      return <bk-option key={key} label={value} value={key}></bk-option>;
+                    })}
+                  </bk-select>
+                </FormItem>
+                <FormItem label='回收类型'>
+                  <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
+                    {returnPlanList.map(({ key, value }) => {
+                      return <bk-option key={key} label={value} value={key}></bk-option>;
+                    })}
+                  </bk-select>
+                </FormItem>
+                <FormItem label='状态'>
+                  <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
+                    {stageList.value.map(({ stage, description }) => {
+                      return <bk-option key={stage} label={description} value={stage}></bk-option>;
+                    })}
+                  </bk-select>
+                </FormItem>
+                <FormItem label='回收人'>
+                  <member-select
+                    v-model={recycleForm.value.bk_username}
+                    multiple
+                    clearable
+                    placeholder='请输入企业微信名'
+                  />
+                </FormItem>
+                <FormItem label='回收时间'>
+                  <bk-date-picker v-model={timeForm.value} type='daterange' />
+                </FormItem>
+              </Form>
+            </div>
+            <div>
+              <CommonTable>
+                {{
+                  tabselect: () => (
+                    <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
+                      <bk-form-item label-width='0' class='bill-form-btn'>
+                        <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
+                          回收资源
+                        </bk-button>
+                        <bk-button theme='primary' onClick={filterOrders}>
+                          <Search />
+                          查询
+                        </bk-button>
+                        <bk-button onClick={() => clearFilter()}>清空</bk-button>
+                        <export-to-excel-button data={dataList} columns={tableColumns} filename='回收单据列表' />
+                        <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
+                          批量查看预检详情
+                        </bk-button>
+                        <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
+                          批量重试
+                        </bk-button>
+                        <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
+                          批量去除预检失败IP提交
+                        </bk-button>
+                      </bk-form-item>
+                    </bk-form>
+                  ),
+                }}
+              </CommonTable>
+            </div>
+          </div>
         );
       }
       if (hostRecyclePage.value === 1) {
