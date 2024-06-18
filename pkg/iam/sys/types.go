@@ -211,6 +211,9 @@ const (
 	// RootAccountManage root account manage action id to register iam.
 	RootAccountManage client.ActionID = "root_account_manage"
 
+	// AccountBillManage account bill manage action id to register iam.
+	AccountBillManage client.ActionID = "account_bill_manage"
+
 	// Skip is an action that no need to auth
 	Skip client.ActionID = "skip"
 )
@@ -277,6 +280,7 @@ var ActionIDNameMap = map[client.ActionID]string{
 	ZiyanResDissolveManage: "平台-机房裁撤管理",
 	GlobalConfiguration:    "平台-全局配置",
 	RootAccountManage:      "云账号-一级账号管理",
+	AccountBillManage:      "云账单-云账单管理",
 
 	MainAccountFind:   "账号-二级账号查看",
 	MainAccountCreate: "账号-二级账号创建",

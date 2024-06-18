@@ -34,7 +34,21 @@ func InitService(cap *capability.Capability) {
 		ostore: cap.ObjectStore,
 	}
 	h := rest.NewHandler()
-	h.Add("CreateRawBill", http.MethodPost, "bills/rawbills", svc.CreateRawBill)
+	h.Add(
+		"CreateRawBill",
+		http.MethodPost,
+		"bills/rawbills",
+		svc.CreateRawBill)
+	h.Add(
+		"ListRawBill",
+		http.MethodGet,
+		"bills/rawbills/{vendor}/{root_account_id}/{account_id}/{bill_year}/{bill_month}/{version}/{bill_date}",
+		svc.ListRawBill)
+	h.Add(
+		"QueryRawBillDetail",
+		http.MethodGet,
+		"bills/rawbills/{vendor}/{root_account_id}/{account_id}/{bill_year}/{bill_month}/{version}/{bill_date}/{bill_name}",
+		svc.QueryRawBillDetail)
 
 	h.Load(cap.WebService)
 }
