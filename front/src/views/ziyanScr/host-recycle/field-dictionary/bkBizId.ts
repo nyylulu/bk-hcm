@@ -1,13 +1,16 @@
+import { ref } from 'vue';
 import { useAccountStore } from '@/store';
-let businesses: any[] = [];
-const getBusiness = async () => {
-  const accountStore = useAccountStore();
-  const { data } = await accountStore.getBizList();
-  businesses = data || [];
-};
 
-getBusiness();
-
-export const getBusinessNameById = (bkBizId) => {
-  return businesses?.find((biz) => biz.id === bkBizId)?.name || bkBizId;
+export const useBusiness = () => {
+  const businesses = ref([]);
+  const getBusiness = async () => {
+    const accountStore = useAccountStore();
+    const { data } = await accountStore.getBizList();
+    businesses.value = data || [];
+  };
+  getBusiness();
+  const getBusinessNameById = (bkBizId) => {
+    return businesses.value?.find((biz) => biz.id === bkBizId)?.name || bkBizId;
+  };
+  return { getBusinessNameById };
 };

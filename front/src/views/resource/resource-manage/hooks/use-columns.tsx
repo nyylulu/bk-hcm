@@ -34,6 +34,7 @@ import {
   getPrecheckStatusLabel,
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
@@ -3941,6 +3942,194 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
   ];
 
+  // CVM虚拟机 - CVM生产
+  const cvmProduceColumns = [
+    {
+      type: 'expand',
+    },
+    {
+      label: '单号',
+      field: 'order_id',
+      width: 60,
+    },
+    {
+      label: '云梯单号',
+      field: 'task_id',
+      showOverflowTooltip: () => ({
+        theme: 'light',
+      }),
+      render: ({ row }) => {
+        if (row.task_id)
+          return (
+            <a class='link-type' href={row.task_link} target='_blank'>
+              {row.task_id}
+            </a>
+          );
+        return '-';
+      },
+    },
+    {
+      label: '需求类型',
+      field: 'require_type',
+      width: 100,
+      render: ({ row }) => getTypeCn(row.require_type),
+    },
+    {
+      label: '状态',
+      field: 'status',
+      width: 80,
+      render: ({ row }) => {
+        const desc = getCvmProduceStatus(row.status);
+
+        if (row.status === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (row.status === 'RUNNING')
+          return (
+            <span>
+              <i class='el-icon-loading mr-2'></i>
+              {desc}
+            </span>
+          );
+        if (row.status === 'SUCCESS') return <span class='c-success'>{desc}</span>;
+        if (row.status === 'FAILED') return <span class='c-danger'>{desc}</span>;
+
+        return row.status;
+      },
+    },
+    {
+      label: '状态描述',
+      field: 'message',
+      showOverflowTooltip: true,
+    },
+    {
+      label: '地域',
+      field: 'spec.region',
+      render: ({ row }) => getRegionCn(row.spec.region),
+    },
+    {
+      label: '园区',
+      field: 'spec.zone',
+      render: ({ row }) => getZoneCn(row.spec.zone),
+    },
+    {
+      label: '机型',
+      field: 'spec.device_type',
+    },
+    {
+      label: '生产情况-待交付',
+      field: 'pending_num',
+      width: 150,
+    },
+    {
+      label: '生产情况-失败',
+      field: 'failed_num',
+      width: 150,
+      render: ({ row }) => <span class='c-danger'>{row.failed_num}</span>,
+    },
+    {
+      label: '生产情况-总数',
+      field: 'total_num',
+      width: 150,
+    },
+    {
+      label: '创建人',
+      field: 'bk_username',
+      width: 100,
+      showOverflowTooltip: true,
+    },
+    {
+      label: '创建时间',
+      field: 'create_at',
+      sort: {
+        value: 'desc',
+      },
+      width: 99,
+      render: ({ row }) => dateTimeTransform(row.create_at),
+    },
+    {
+      label: '结束时间',
+      field: 'update_at',
+      width: 90,
+      render: ({ row }) => dateTimeTransform(row.update_at),
+    },
+    {
+      label: '备注',
+      field: 'remark',
+      showOverflowTooltip: true,
+    },
+  ];
+
+  // CVM虚拟机 - CVM生产 - 快速生产
+  const cvmFastProduceColumns = [
+    {
+      field: 'require_type',
+      label: '需求类型',
+      width: 100,
+      render: ({ row }) => getTypeCn(row.require_type),
+    },
+    {
+      field: 'label.device_group',
+      label: '实例族',
+      width: 120,
+    },
+    {
+      field: 'device_type',
+      label: '机型',
+    },
+    {
+      field: 'cpu',
+      label: 'CPU(核)',
+      sort: true,
+      width: 100,
+    },
+    {
+      field: 'mem',
+      label: '内存(G)',
+      sort: true,
+      width: 100,
+    },
+    {
+      field: 'region',
+      label: '地域',
+      render: ({ row }) => getRegionCn(row.region),
+    },
+    {
+      field: 'zone',
+      label: '园区',
+      render: ({ row }) => getZoneCn(row.zone),
+    },
+    {
+      field: 'capacity_flag',
+      label: '库存情况',
+      width: 140,
+      sort: { value: 'desc' },
+      render: ({ row }) => {
+        const { class: theClass, text } = capacityLevel(row.capacity_flag);
+        return <span class={theClass}>{text}</span>;
+      },
+    },
+  ];
+
+  // CVM虚拟机 - CVM生产 - 详情
+  const cvmProduceDetailColumns = [
+    {
+      label: '固资号',
+      field: 'asset_id',
+    },
+    {
+      label: '内网 IP',
+      field: 'ip',
+    },
+    {
+      label: '实例 ID',
+      field: 'cvm_inst_id',
+    },
+    {
+      label: '生产时间',
+      field: 'update_at',
+      render: ({ row }) => dateTimeTransform(row.update_at),
+    },
+  ];
+
   const columnsMap = {
     vpc: vpcColumns,
     subnet: subnetColumns,
@@ -3997,6 +4186,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     scrInitial: initialColumns,
     scrDelivery: deliveryColumns,
     decommissionDetails: decommissionDetailsColumns,
+    cvmProduceQuery: cvmProduceColumns,
+    cvmFastProduceQuery: cvmFastProduceColumns,
+    cvmProduceDetailQuery: cvmProduceDetailColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

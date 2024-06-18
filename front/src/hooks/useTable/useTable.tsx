@@ -110,7 +110,6 @@ export const useTable = (props: IProp) => {
 
   // 钩子 - 表头排序时
   const handleSort = ({ column, type }: any) => {
-    pagination.start = 0;
     sort.value = column.field;
     order.value = type === 'asc' ? 'ASC' : 'DESC';
     // 如果type为null，则默认排序
@@ -416,6 +415,8 @@ export const useTable = (props: IProp) => {
     dataList,
     getListData,
     pagination,
+    sort,
+    order,
     isLoading,
   };
 };

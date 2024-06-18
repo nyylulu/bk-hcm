@@ -1,8 +1,9 @@
 import { App } from 'vue';
 import permissionDialog from '@/components/permission-dialog/install-permission';
 import editItem from './edit-item/install';
+import propertyList from './property-list/install';
 
-const components = [permissionDialog, editItem];
+const components = [permissionDialog, editItem, propertyList];
 export default {
   install(app: App) {
     // eslint-disable-next-line array-callback-return
