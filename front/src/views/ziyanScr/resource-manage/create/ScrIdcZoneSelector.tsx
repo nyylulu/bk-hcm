@@ -12,15 +12,17 @@ interface IdcZone {
 
 export default defineComponent({
   name: 'ScrIdcZoneSelector',
-  props: { cmdbRegionName: Array as PropType<string[]> },
+  props: { cmdbRegionName: [Array, String] as PropType<string[] | string>, multiple: { type: Boolean, default: true } },
   setup(props) {
     const ziyanScrStore = useZiyanScrStore();
 
     const list = ref([]);
-    const selected = ref('');
+    const selected = ref(props.multiple ? [] : '');
 
-    const queryIdcZoneList = async (cmdb_region_name: string[]) => {
-      const res = await ziyanScrStore.queryIdcZoneList({ cmdb_region_name });
+    const queryIdcZoneList = async (cmdb_region_name: string[] | string) => {
+      const res = await ziyanScrStore.queryIdcZoneList({
+        cmdb_region_name: Array.isArray(cmdb_region_name) ? cmdb_region_name : [cmdb_region_name],
+      });
       list.value = res.data.info || [];
     };
 
@@ -39,7 +41,11 @@ export default defineComponent({
     );
 
     return () => (
-      <Select v-model={selected.value} multiple multipleMode='tag' collapseTags>
+      <Select
+        v-model={selected.value}
+        multiple={props.multiple}
+        multipleMode={props.multiple ? 'tag' : null}
+        collapseTags>
         {list.value.map(({ id, cmdb_zone_name }: IdcZone) => (
           <Select.Option key={id} id={cmdb_zone_name} name={cmdb_zone_name} />
         ))}

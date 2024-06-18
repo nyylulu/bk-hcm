@@ -1,10 +1,11 @@
 import { PropType, defineComponent, ref } from 'vue';
-import { Button, Checkbox, TagInput } from 'bkui-vue';
+import { Button, Checkbox, Message, TagInput } from 'bkui-vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import FilterFormItems from '../filter-form-items';
 import InputNumber from '@/components/input-number';
 import ScrIdcZoneSelector from './ScrIdcZoneSelector';
 import ScrCreateFilterSelector from './ScrCreateFilterSelector';
+import CreateRecallTaskDialog from './CreateRecallTaskDialog';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useZiyanScrStore } from '@/store';
@@ -80,12 +81,28 @@ export default defineComponent({
       },
       {
         label: '内网 IP',
-        render: () => <TagInput v-model={filter.value.ips} class='w200' allow-create collapse-tags />,
+        render: () => (
+          <TagInput
+            v-model={filter.value.ips}
+            class='w200'
+            allow-create
+            collapse-tags
+            pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
+          />
+        ),
         hidden: props.type === 'offline',
       },
       {
         label: '固资号',
-        render: () => <TagInput v-model={filter.value.asset_ids} class='w200' allow-create collapse-tags />,
+        render: () => (
+          <TagInput
+            v-model={filter.value.asset_ids}
+            class='w200'
+            allow-create
+            collapse-tags
+            pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
+          />
+        ),
         hidden: props.type === 'offline',
       },
     ];
@@ -97,9 +114,25 @@ export default defineComponent({
         : '/api/v1/woa/pool/findmany/recall/match/device';
     const { columns } = useColumns(columnName);
 
-    const { CommonTable, getListData, pagination } = useTable({
+    props.type === 'offline' &&
+      columns.push({
+        label: '操作',
+        render: ({ data }: any) => (
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              const { amount, ...rest } = data;
+              createRecallTaskDialogRef.value.triggerShow(true, { ...rest, replicas: amount });
+            }}>
+            发起下架
+          </Button>
+        ),
+      });
+
+    const { CommonTable, dataList, getListData, pagination } = useTable({
       tableOptions: { columns },
-      requestOption: { dataPath: 'data.info' },
+      requestOption: { dataPath: 'data.info', full: true },
       scrConfig: () => ({
         url,
         payload: filter.value,
@@ -116,6 +149,25 @@ export default defineComponent({
       reloadTableDataList();
     };
 
+    const createRecallTaskDialogRef = ref();
+    const commonTableRef = ref();
+    const selectNumber = ref(0);
+
+    const handleCheck = (value: boolean) => {
+      if (value) {
+        for (let i = 0; i < selectNumber.value; i++) {
+          commonTableRef.value.tableRef.toggleRowSelection(dataList.value[i]);
+        }
+      } else {
+        commonTableRef.value.tableRef.clearSelection();
+      }
+    };
+    const handleOnline = async () => {
+      const ids = commonTableRef.value.tableRef.getSelection().map((item: any) => item.bk_host_id);
+      await ziyanScrStore.createOnlineTask({ bk_host_ids: ids });
+      Message({ type: 'success', message: '提交成功' });
+    };
+
     return () => (
       <div class='scr-resource-manage-create-page'>
         <DetailHeader>
@@ -124,19 +176,44 @@ export default defineComponent({
         <div class='common-sub-main-container'>
           <div class='sub-main-content'>
             <div class='operation-bar'>
-              <FilterFormItems config={filterFormItems} handleSearch={reloadTableDataList} handleClear={clearFilter} />
+              <FilterFormItems config={filterFormItems} handleSearch={reloadTableDataList} handleClear={clearFilter}>
+                {/* 资源下架 */}
+                {(function () {
+                  if (props.type === 'offline') {
+                    return {
+                      end: () => (
+                        <div class='filter-item'>
+                          <Button theme='primary' onClick={() => createRecallTaskDialogRef.value.triggerShow(true)}>
+                            发起下架
+                          </Button>
+                        </div>
+                      ),
+                    };
+                  }
+                })()}
+              </FilterFormItems>
+              {/* 资源上架 */}
               {props.type === 'online' && (
                 <div class='table-operation-bar'>
                   <span class='mr8'>数量</span>
-                  <InputNumber class='mr8' />
-                  <Checkbox class='mr8'>一键勾选</Checkbox>
-                  <Button theme='primary'>提交上架</Button>
+                  <InputNumber v-model={selectNumber.value} class='mr8' min={0} max={500} />
+                  <Checkbox class='mr8' onChange={handleCheck}>
+                    一键勾选
+                  </Checkbox>
+                  <Button theme='primary' onClick={handleOnline}>
+                    提交上架
+                  </Button>
                 </div>
               )}
-              <CommonTable />
             </div>
+            <CommonTable
+              ref={commonTableRef}
+              style={{ height: props.type === 'online' ? 'calc(100% - 132px)' : 'calc(100% - 44px)' }}
+            />
           </div>
         </div>
+        {/* 资源下架 */}
+        {props.type === 'offline' && <CreateRecallTaskDialog ref={createRecallTaskDialogRef} />}
       </div>
     );
   },

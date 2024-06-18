@@ -16,7 +16,7 @@ export default defineComponent({
     handleSearch: Function as PropType<() => void>,
     handleClear: Function as PropType<() => void>,
   },
-  setup(props) {
+  setup(props, { slots }) {
     const renderFilterItems: FilterItemConfig[] = [
       ...props.config,
       {
@@ -43,6 +43,7 @@ export default defineComponent({
               </div>
             ),
         )}
+        {slots.end?.()}
       </div>
     );
   },

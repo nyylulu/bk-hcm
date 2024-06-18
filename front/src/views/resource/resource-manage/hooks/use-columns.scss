@@ -55,13 +55,18 @@
     color: #63656e;
   }
 }
+
+// scr 样式
+.c-info {
+  color: #909399 !important;
+}
 .c-success {
   color: #67c23a !important;
 }
- .c-danger {
+.c-danger {
   color: #f56c6c !important;
 }
- .c-warning {
+.c-warning {
   color: #e6a23c !important;
 }
 .fail-flex {
@@ -78,9 +83,14 @@
     }
   }
 }
-.cvm-cell-height{
+.cvm-cell-height {
   line-height: 1.6;
   & > div:last-child {
     color: #909399;
   }
+}
+.link-type,
+.link-type:focus {
+  color: #409eff;
+  cursor: pointer;
 }

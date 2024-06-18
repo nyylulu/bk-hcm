@@ -1,4 +1,5 @@
 import http from '@/http';
+import { CreateRecallTaskModal } from '@/typings/scr';
 import { defineStore } from 'pinia';
 
 import type { IPageQuery } from '@/typings/common';
@@ -83,6 +84,21 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/terminate/apply`, data);
   };
 
+  /**
+   * 资源从资源池下架
+   */
+  const createRecallTask = (data: CreateRecallTaskModal) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/create/recall/task`, data);
+  };
+
+  /**
+   * 资源上架到资源池
+   * @param data 要上架的CC主机ID，数量最大500
+   */
+  const createOnlineTask = (data: { bk_host_ids: string[] }) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/create/launch/task`, data);
+  };
+
   // 资源生产详情
   const getProductionDetails = (subOrderId: any, page: any, status: any) =>
     http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/generate`, {
@@ -146,6 +162,8 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getDissolveList,
     retryOrder,
     stopOrder,
+    createRecallTask,
+    createOnlineTask,
     getProductionDetails,
     getInitializationDetails,
     getDiskCheckDetails,

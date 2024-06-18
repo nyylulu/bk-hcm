@@ -1,4 +1,4 @@
-import { PropType, defineComponent, reactive, computed, onMounted } from 'vue';
+import { PropType, defineComponent, reactive, onMounted } from 'vue';
 import { Button, Dropdown, Message, TagInput } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import { AngleDownLine, Copy, Search } from 'bkui-vue/lib/icon';
@@ -21,47 +21,19 @@ export default defineComponent({
   setup(props) {
     const { toClipboard } = useClipboard();
 
-    const { columns: scrResourceOnlineHostColumns } = useColumns('scrResourceOnlineHost');
-    const { columns: scrResourceOfflineHostColumns } = useColumns('scrResourceOfflineHost');
+    const columnName = props.type === 'online' ? 'scrResourceOnlineHost' : 'scrResourceOfflineHost';
+    const url =
+      props.type === 'online' ? '/api/v1/woa/pool/findmany/launch/host' : '/api/v1/woa/pool/findmany/recall/detail';
 
-    const {
-      CommonTable: ScrResourceOnlineHostTable,
-      getListData: reloadScrResourceOnlineHostTable,
-      dataList: scrResourceOnlineHostDataList,
-      pagination: scrResourceOnlineHostPagination,
-    } = useTable({
-      tableOptions: { columns: scrResourceOnlineHostColumns },
+    const { columns } = useColumns(columnName);
+
+    const { CommonTable, getListData, dataList, pagination } = useTable({
+      tableOptions: { columns },
       requestOption: { dataPath: 'data.info' },
       scrConfig: () => ({
-        url: '/api/v1/woa/pool/findmany/launch/host',
-        payload: {
-          ...getPayload(),
-        },
+        url,
+        payload: getPayload(),
       }),
-    });
-
-    const {
-      CommonTable: ScrResourceOfflineHostTable,
-      getListData: reloadScrResourceOfflineHostTable,
-      pagination: scrResourceOfflineHostPagination,
-      dataList: scrResourceOfflineHostDataList,
-    } = useTable({
-      tableOptions: { columns: scrResourceOfflineHostColumns },
-      requestOption: { dataPath: 'data.info' },
-      scrConfig: () => ({
-        url: '/api/v1/woa/pool/findmany/recall/detail',
-        payload: {
-          ...getPayload(),
-        },
-      }),
-    });
-
-    const renderDataList = computed(() => {
-      return props.type === 'online' ? scrResourceOnlineHostDataList.value : scrResourceOfflineHostDataList.value;
-    });
-
-    const renderColumns = computed(() => {
-      return props.type === 'online' ? scrResourceOnlineHostColumns : scrResourceOfflineHostColumns;
     });
 
     const getDefaultFilter = (): ResourceManageDetailFilterType => ({
@@ -89,18 +61,13 @@ export default defineComponent({
     };
 
     const reloadDataList = () => {
-      if (props.type === 'online') {
-        scrResourceOnlineHostPagination.start = 0;
-        reloadScrResourceOnlineHostTable();
-      } else {
-        scrResourceOfflineHostPagination.start = 0;
-        reloadScrResourceOfflineHostTable();
-      }
+      pagination.start = 0;
+      getListData();
     };
 
     const copyIps = async () => {
       try {
-        await toClipboard(renderDataList.value.map((item: any) => item.labels.ip).join('\n'));
+        await toClipboard(dataList.value.map((item: any) => item.labels.ip).join('\n'));
         Message({ theme: 'success', message: '复制成功' });
       } catch (error) {
         Message({ theme: 'success', message: '复制失败: ', error });
@@ -108,7 +75,7 @@ export default defineComponent({
     };
     const copyAssetIds = async () => {
       try {
-        await toClipboard(renderDataList.value.map((item: any) => item.labels.bk_asset_id).join('\n'));
+        await toClipboard(dataList.value.map((item: any) => item.labels.bk_asset_id).join('\n'));
         Message({ theme: 'success', message: '复制成功' });
       } catch (error) {
         Message({ theme: 'success', message: '复制失败: ', error });
@@ -122,7 +89,7 @@ export default defineComponent({
     return () => (
       <div class='scr-resource-manage-detail-page'>
         <DetailHeader>
-          <span class='header-title-prefix'>资源上架详情</span>
+          <span class='header-title-prefix'>资源{props.type === 'online' ? '上架' : '下架'}详情</span>
           <span class='header-title-content'>&nbsp;- ID {props.id}</span>
         </DetailHeader>
         <div class='common-sub-main-container'>
@@ -142,6 +109,7 @@ export default defineComponent({
                     allow-create
                     collapse-tags
                     placeholder='请输入内网 IP'
+                    pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
                   />
                   <TagInput
                     class='w200 mr8'
@@ -149,6 +117,7 @@ export default defineComponent({
                     allow-create
                     collapse-tags
                     placeholder='请输入固资号'
+                    pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
                   />
                   <Button class='mr8' onClick={reloadDataList}>
                     <Search />
@@ -156,7 +125,12 @@ export default defineComponent({
                   </Button>
                 </>
               )}
-              <ExportToExcelButton data={renderDataList.value} columns={renderColumns.value} class='mr8' />
+              <ExportToExcelButton
+                data={dataList.value}
+                columns={columns}
+                filename={props.type === 'online' ? '资源上架详情' : '资源下架详情'}
+                class='mr8'
+              />
               <Dropdown>
                 {{
                   default: () => (
@@ -176,7 +150,7 @@ export default defineComponent({
               </Dropdown>
             </div>
             <div class='table-container'>
-              {props.type === 'online' ? <ScrResourceOnlineHostTable /> : <ScrResourceOfflineHostTable />}
+              <CommonTable />
             </div>
           </div>
         </div>

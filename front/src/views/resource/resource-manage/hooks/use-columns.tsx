@@ -37,6 +37,7 @@ import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
+import { SCR_RECALL_DETAIL_STATUS_MAP, SCR_POOL_PHASE_MAP } from '@/constants';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -2730,62 +2731,124 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const scrResourceOnlineColumns = [
-    {
+    getLinkField({
+      type: 'scrResourceOnlineTask',
       label: '单号',
       field: 'id',
-      render: () => <Button text>id</Button>,
-    },
+      render: ({ id }) => (
+        <Button
+          text
+          theme='primary'
+          onClick={renderFieldPushState({
+            name: 'scrResourceManageDetail',
+            params: { id },
+            query: { type: 'online' },
+          })}>
+          {id}
+        </Button>
+      ),
+    }),
     {
       label: '创建人',
       field: 'bk_username',
+      render: ({ cell }: any) => <WName name={cell} />,
     },
     {
       label: '创建时间',
-      field: 'createAt',
+      field: 'create_at',
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '上架数量',
-      field: 'totalNum',
+      field: 'total_num',
+      render: ({ data }: any) => data?.status?.total_num || 0,
     },
     {
       label: '完成数量',
-      field: 'successNum',
+      field: 'success_num',
+      render: ({ data }: any) => data?.status?.success_num || 0,
     },
     {
       label: '单据状态',
       field: 'phase',
+      render: ({ data }: any) => {
+        const phase = data?.status?.phase;
+        const desc = SCR_POOL_PHASE_MAP[phase];
+
+        if (phase === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (phase === 'RUNNING')
+          return (
+            <span class='status-column-cell'>
+              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+              {desc}
+            </span>
+          );
+        if (phase === 'SUCCESS') return <span class='c-success'>{desc}</span>;
+        if (phase === 'FAILED') return <span class='c-danger'>{desc}</span>;
+
+        return phase;
+      },
     },
   ];
 
   const scrResourceOfflineColumns = [
-    {
+    getLinkField({
+      type: 'scrResourceOnlineTask',
       label: '单号',
       field: 'id',
-      render: () => (
-        <Button text theme={'primary'}>
-          id
+      render: ({ id }) => (
+        <Button
+          text
+          theme='primary'
+          onClick={renderFieldPushState({
+            name: 'scrResourceManageDetail',
+            params: { id },
+            query: { type: 'offline' },
+          })}>
+          {id}
         </Button>
       ),
-    },
+    }),
     {
       label: '创建人',
       field: 'bk_username',
+      render: ({ cell }: any) => <WName name={cell} />,
     },
     {
       label: '创建时间',
-      field: 'createAt',
+      field: 'create_at',
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '下架数量',
-      field: 'totalNum',
+      field: 'total_num',
+      render: ({ data }: any) => data?.status?.total_num || 0,
     },
     {
       label: '完成数量',
-      field: 'successNum',
+      field: 'success_num',
+      render: ({ data }: any) => data?.status?.success_num || 0,
     },
     {
       label: '单据状态',
       field: 'phase',
+      render: ({ data }: any) => {
+        const phase = data?.status?.phase;
+        const desc = SCR_POOL_PHASE_MAP[phase];
+
+        if (phase === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (phase === 'RUNNING')
+          return (
+            <span class='status-column-cell'>
+              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+              {desc}
+            </span>
+          );
+        if (phase === 'SUCCESS') return <span class='c-success'>{desc}</span>;
+        if (phase === 'FAILED') return <span class='c-danger'>{desc}</span>;
+
+        return phase;
+      },
     },
   ];
 
@@ -2794,34 +2857,57 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '内网IP',
       field: 'ip',
       render: ({ data }: any) => data?.labels?.ip,
+      exportFormatter: (data: any) => data?.labels?.ip,
     },
     {
       label: '固资号',
       field: 'bk_asset_id',
       render: ({ data }: any) => data?.labels?.bk_asset_id,
+      exportFormatter: (data: any) => data?.labels?.bk_asset_id,
     },
     {
       label: '设备类型',
       field: 'device_type',
       render: ({ data }: any) => data?.labels?.device_type,
+      exportFormatter: (data: any) => data?.labels?.device_type,
     },
     {
       label: '状态',
       field: 'phase',
+      render: ({ cell }: any) => {
+        const desc = SCR_POOL_PHASE_MAP[cell];
+
+        if (cell === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (cell === 'RUNNING')
+          return (
+            <span class='status-column-cell'>
+              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+              {desc}
+            </span>
+          );
+        if (cell === 'SUCCESS') return <span class='c-success'>{desc}</span>;
+        if (cell === 'FAILED') return <span class='c-danger'>{desc}</span>;
+
+        return cell;
+      },
+      exportFormatter: ({ phase }: any) => SCR_POOL_PHASE_MAP[phase],
     },
     {
       label: '开始时间',
       field: 'create_at',
       render: ({ cell }: any) => timeFormatter(cell),
+      exportFormatter: ({ create_at }: any) => timeFormatter(create_at),
     },
     {
       label: '结束时间',
       field: 'update_at',
       render: ({ cell }: any) => timeFormatter(cell),
+      exportFormatter: ({ update_at }: any) => timeFormatter(update_at),
     },
     {
       label: '信息',
       field: 'message',
+      render: ({ cell }: any) => cell || '--',
     },
   ];
 
@@ -2830,41 +2916,82 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '内网IP',
       field: 'ip',
       render: ({ data }: any) => data?.labels?.ip,
+      exportFormatter: (data: any) => data?.labels?.ip,
     },
     {
       label: '固资号',
       field: 'bk_asset_id',
       render: ({ data }: any) => data?.labels?.bk_asset_id,
+      exportFormatter: (data: any) => data?.labels?.bk_asset_id,
     },
     {
       label: '系统重装任务',
       field: 'reinstall_link',
+      render: ({ data }: any) => (
+        <a class='link-type' href={data.reinstall_link} target='_blank'>
+          {data.reinstall_id}
+        </a>
+      ),
+      exportFormatter: ({ reinstall_id }: any) => reinstall_id,
     },
     {
       label: '配置检查任务',
       field: 'conf_check_link',
+      render: ({ data }: any) => (
+        <a class='link-type' href={data.conf_check_link} target='_blank'>
+          {data.conf_check_id}
+        </a>
+      ),
+      exportFormatter: ({ conf_check_id }: any) => conf_check_id,
     },
     {
       label: '状态',
       field: 'status',
+      render: ({ cell }: any) => {
+        const desc = SCR_RECALL_DETAIL_STATUS_MAP[cell];
+
+        if (cell === 'TERMINATE') return <span class='c-info'>{desc}</span>;
+        if (cell === 'REINSTALLING') {
+          return (
+            <span class='status-column-cell'>
+              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+              {desc}
+            </span>
+          );
+        }
+        if (cell === 'RETURNED' || cell === 'DONE') return <span class='c-success'>{desc}</span>;
+        if (cell === 'REINSTALL_FAILED') return <span class='c-danger'>{desc}</span>;
+
+        return cell;
+      },
+      exportFormatter: ({ status }: any) => SCR_RECALL_DETAIL_STATUS_MAP[status],
     },
     {
       label: '开始时间',
       field: 'create_at',
       render: ({ cell }: any) => timeFormatter(cell),
+      exportFormatter: ({ create_at }: any) => timeFormatter(create_at),
     },
     {
       label: '结束时间',
       field: 'update_at',
       render: ({ cell }: any) => timeFormatter(cell),
+      exportFormatter: ({ update_at }: any) => timeFormatter(update_at),
     },
     {
       label: '信息',
       field: 'message',
+      render: ({ cell }: any) => cell || '--',
     },
   ];
 
   const scrResourceOnlineCreateColumns = [
+    {
+      type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
+    },
     {
       label: '固资号',
       field: 'asset_id',
@@ -2872,7 +2999,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '内网 IP',
       field: 'ip',
-      render: ({ data }: any) => data?.labels?.bk_asset_id,
     },
     {
       label: '机型',

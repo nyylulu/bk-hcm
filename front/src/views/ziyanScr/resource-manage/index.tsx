@@ -60,6 +60,7 @@ export default defineComponent({
       tableOptions: {
         columns: scrResourceOfflineColumns,
       },
+      requestOption: { dataPath: 'data.info' },
       scrConfig: () => ({
         url: '/api/v1/woa/pool/findmany/recall/task',
         payload: {
@@ -136,6 +137,7 @@ export default defineComponent({
             allow-create
             collapse-tags
             createTagValidator={(tag) => /^[1-9]\d*$/.test(tag)}
+            pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
           />
         ),
       },
