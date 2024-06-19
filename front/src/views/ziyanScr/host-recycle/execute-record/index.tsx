@@ -69,13 +69,13 @@ export default defineComponent({
       <bk-sideslider
         class='common-sideslider'
         v-bind={attrs}
-        width='700'
+        width='1000'
         v-model:isShow={isDisplay.value}
         title={props.title}
         before-close={updateShowValue}>
         {{
           default: () => (
-            <div class='common-sideslider-content'>
+            <div class='common-sideslider-content' style={{ padding: '24px' }}>
               <div class='execute-record-top'>IP : {props.dataInfo.ip}</div>
               <CommonTable />
             </div>

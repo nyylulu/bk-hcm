@@ -2056,6 +2056,13 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '状态',
       field: 'recyclable',
+      render: ({ cell, data }: any) => (
+        <span
+          class={cell ? 'c-success' : 'c-danger'}
+          v-bk-tooltips={{ content: data.message, disabled: cell, placement: 'right', theme: 'light' }}>
+          {cell ? t('可回收') : t('不可回收')}
+        </span>
+      ),
     },
     {
       label: '固资号',
@@ -2305,10 +2312,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '步骤',
       field: 'step_desc',
+      width: 300,
     },
     {
       label: '状态',
       field: 'status',
+      width: 80,
       render: ({ row }: any) => {
         return getPrecheckStatusView(row.status);
       },
@@ -2316,6 +2325,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '开始时间',
       field: 'create_at',
+      width: 180,
       render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.create_at)}</span>;
       },
@@ -2323,6 +2333,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '结束时间',
       field: 'end_at',
+      width: 180,
       render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.end_at)}</span>;
       },
