@@ -2,7 +2,7 @@ import { defineComponent, type PropType, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-
+import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
 import OrganizationSelect from '@/components/OrganizationSelect/index';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -15,10 +15,12 @@ import cssModule from './index.module.scss';
 import type { IDissolve } from '@/typings/ziyanScr';
 
 export default defineComponent({
+  components: {
+    ExportToExcelButton,
+  },
   props: {
     moduleNames: Array as PropType<string[]>,
   },
-
   setup(props) {
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
@@ -33,50 +35,48 @@ export default defineComponent({
     const moduleDialogShow = ref(false);
     const originDialogShow = ref(false);
     const searchParams = ref();
+    const columns = [
+      {
+        label: '业务',
+        field: 'bk_biz_name',
+      },
+      {
+        label: '裁撤进度',
+        field: 'progress',
+      },
+      {
+        label: '原始数量',
+        field: 'total.origin.host_count',
+      },
+      {
+        label: '原始CPU',
+        field: 'total.origin.cpu_count',
+      },
+      {
+        label: '当前数量',
+        field: 'total.current.host_count',
+      },
+      {
+        label: '当前CPU',
+        field: 'total.current.cpu_count',
+      },
+    ];
+    const moduleNames = ref<string[]>([]);
+    const tableColumns = ref(columns);
 
     const handleSearch = async () => {
       isLoading.value = true;
-      // dissloveList.value = [
-      //   {
-      //     bk_biz_name: 'biz',
-      //     module_host_count: {
-      //       module: 8,
-      //     },
-      //     total: {
-      //       origin: {
-      //         host_count: 8,
-      //         cpu_count: 640,
-      //       },
-      //       current: {
-      //         host_count: 0,
-      //         cpu_count: 0,
-      //       },
-      //     },
-      //     progress: '100.00%',
-      //   },
-      //   {
-      //     bk_biz_name: '总数',
-      //     module_host_count: {
-      //       module: 8,
-      //     },
-      //     total: {
-      //       origin: {
-      //         host_count: 8,
-      //         cpu_count: 640,
-      //       },
-      //       current: {
-      //         host_count: 0,
-      //         cpu_count: 0,
-      //       },
-      //     },
-      //     progress: '',
-      //   },
-      // ];
+
+      tableColumns.value = columns.concat(
+        props.moduleNames.map((moduleName) => ({ label: moduleName, field: `module_host_count.${moduleName}` })),
+      );
+
+      moduleNames.value = [...props.moduleNames];
       ziyanScrStore
         .getDissolveList({
           organizations: organizations.value,
           bk_biz_names: bkBizIds.value.map(businessMapStore.getNameFromBusinessMap),
-          module_names: props.moduleNames,
+          module_names: moduleNames.value,
           operators: operators.value,
         })
         .then((data) => {
@@ -93,13 +93,11 @@ export default defineComponent({
       operators.value = [];
     };
 
-    const handleDownload = () => {};
-
     const setSearchParams = (row: IDissolve) => {
       searchParams.value = {
         organizations: organizations.value,
         bk_biz_names: [row.bk_biz_name],
-        module_names: Object.keys(row.module_host_count),
+        module_names: Object.keys(row?.module_host_count || {}),
         operators: operators.value,
       };
     };
@@ -135,14 +133,18 @@ export default defineComponent({
           <bk-button class={cssModule['search-button']} onClick={handleReset}>
             {t('重置')}
           </bk-button>
-          <bk-button class={cssModule['search-button']} onClick={handleDownload}>
-            {t('导出')}
-          </bk-button>
+          <export-to-excel-button
+            data={dissloveList.value}
+            text={t('导出')}
+            columns={tableColumns.value}
+            theme='primary'
+            filename={t('整体裁撤信息')}
+          />
         </section>
 
         <bk-loading loading={isLoading.value}>
           <bk-table show-overflow-tooltip data={dissloveList.value} class={cssModule.table}>
-            <bk-table-column label={t('业务')} field='bk_biz_name'></bk-table-column>
+            <bk-table-column label={t('业务')} field='bk_biz_name' fixed='left'></bk-table-column>
             <bk-table-column label={t('裁撤进度')} field='progress'></bk-table-column>
             <bk-table-column label={t('原始数量')} field='total.origin.host_count'>
               {{
@@ -164,7 +166,7 @@ export default defineComponent({
               }}
             </bk-table-column>
             <bk-table-column label={t('当前CPU')} field='total.current.cpu_count'></bk-table-column>
-            {props.moduleNames.map((moduleName) => (
+            {moduleNames.value.map((moduleName: string) => (
               <bk-table-column label={moduleName} field={moduleName}>
                 {{
                   default: ({ row }: { row: IDissolve }) => (

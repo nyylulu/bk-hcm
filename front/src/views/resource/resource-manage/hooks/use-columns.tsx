@@ -3812,7 +3812,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
       render({ cell }: any) {
         return (
-          <Button text theme='primary'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(`https://tmp.woa.com/host/home/${cell}`, '_blank');
+            }}>
             {cell}
           </Button>
         );
@@ -3820,7 +3825,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '公网IP',
-      field: 'bk_host_outerip',
+      field: 'outer_ip',
       isDefaultShow: true,
     },
     {
@@ -3860,7 +3865,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: 'RAID结构',
-      field: 'raid_id',
+      field: 'raid_name',
       isDefaultShow: true,
     },
     {

@@ -26,7 +26,7 @@ export default defineComponent({
     const { columns, settings } = useColumns('decommissionDetails');
     const ziyanScrStore = useZiyanScrStore();
 
-    const title = computed(() => t('{title}设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }));
+    const title = computed(() => t('{title}_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }));
 
     const handleClose = () => {
       emit('update:is-show', false);
@@ -62,8 +62,10 @@ export default defineComponent({
         isShow={props.isShow}
         onClosed={() => handleClose()}>
         <div class={cssModule.title}>
-          <export-to-excel-button data={[]} columns={[]} filename='' />
-          <span class={cssModule['total-num']}>{t('总条数：')}</span>
+          <export-to-excel-button data={tableData.value} columns={columns} filename={title.value} theme='primary' />
+          <span class={cssModule['total-num']}>
+            {t('总条数：')} {pagination.value.count}
+          </span>
         </div>
         <bk-loading loading={isLoading.value}>
           <bk-table

@@ -77,12 +77,15 @@ export default defineComponent({
       try {
         loading.value = true;
         const data = await ziyanScrStore.getRecycleAreas({
-          count: false,
-          start: 0,
-          limit: 500,
+          page: {
+            count: false,
+            start: 0,
+            limit: 500,
+          },
         });
+
         recycleAreaGroups.value =
-          data?.data?.detail?.reduce((acc, cur) => {
+          data?.data?.details?.reduce((acc, cur) => {
             let currentRecycleAreaGroup = acc.find(
               (recycleAreaGroup) => recycleAreaGroup.which_stages === cur.which_stages,
             );

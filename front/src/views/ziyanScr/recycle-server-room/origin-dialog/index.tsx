@@ -28,7 +28,7 @@ export default defineComponent({
     const ziyanScrStore = useZiyanScrStore();
 
     const title = computed(() =>
-      t('{title}_总数（原始）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
+      t('{title}（原始）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
     );
 
     const getData = (page: IPageQuery) => {
@@ -63,8 +63,10 @@ export default defineComponent({
         isShow={props.isShow}
         onClosed={() => handleClose()}>
         <div class={cssModule.title}>
-          <export-to-excel-button data={[]} columns={[]} filename='' />
-          <span class={cssModule['total-num']}>{t('总条数：')}</span>
+          <export-to-excel-button data={tableData.value} columns={columns} filename={title.value} theme='primary' />
+          <span class={cssModule['total-num']}>
+            {t('总条数：')} {pagination.value.count}
+          </span>
         </div>
         <bk-loading loading={isLoading.value}>
           <bk-table

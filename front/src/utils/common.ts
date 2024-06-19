@@ -63,9 +63,17 @@ const exportTableToExcel = (list, columns, filename) => {
           return col.exportFormatter(item);
         }
 
+        if (col.field.includes('.')) {
+          return getNestedProperty(item, col.field);
+        }
         return item[col.field];
       }),
     );
+
+    function getNestedProperty(obj: Object, path: String) {
+      return path.split('.').reduce((acc, part) => acc?.[part], obj);
+    }
+
     excel.export_json_to_excel({
       header,
       data,

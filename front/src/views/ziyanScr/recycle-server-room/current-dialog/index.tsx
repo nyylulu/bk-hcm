@@ -44,7 +44,7 @@ export default defineComponent({
     };
 
     const title = computed(() =>
-      t('{title}_总数（当前）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
+      t('{title}（当前）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
     );
     const tableCoumn = computed(() => {
       return [
@@ -93,8 +93,10 @@ export default defineComponent({
         isShow={props.isShow}
         onClosed={() => handleClose()}>
         <div class={cssModule.title}>
-          <export-to-excel-button data={[]} columns={[]} filename='' />
-          <span class={cssModule['total-num']}>{t('总条数：')}</span>
+          <export-to-excel-button data={tableData.value} columns={columns} filename={title.value} theme='primary' />
+          <span class={cssModule['total-num']}>
+            {t('总条数：')} {pagination.value.count}
+          </span>
         </div>
         <bk-loading loading={isLoading.value}>
           <bk-table
@@ -114,7 +116,8 @@ export default defineComponent({
                     {Object.keys(expandMap).map((item) => {
                       return (
                         <div class={cssModule['expand-item']}>
-                          <span>{expandMap[item] || '--'}</span> {row[item] || '--'}
+                          <span>{expandMap[item] || '--'}</span>
+                          {item === 'is_pass' ? t(row[item] ? '达标' : '不达标') : row[item]}
                         </div>
                       );
                     })}

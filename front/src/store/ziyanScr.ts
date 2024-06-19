@@ -11,6 +11,7 @@ import type {
   IDissolveHostCurrentListParam,
   IDissolveHostOriginListResult,
   IDissolveHostOriginListParam,
+  IDissolveRecycledModuleListParam,
 } from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 
@@ -60,8 +61,11 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/idc/zone`, data);
   };
 
-  const getRecycleAreas = (page: IPageQuery): Promise<{ data: { detail: IRecycleArea[] } }> => {
-    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/recycled_module/list`, { page });
+  const getRecycleAreas = (data: {
+    page: IPageQuery;
+    filter?: IDissolveRecycledModuleListParam;
+  }): Promise<{ data: { details: IRecycleArea[] } }> => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/recycled_module/list`, data);
   };
 
   const getDissolveList = (data: IQueryDissolveList): Promise<IDissolveList> => {

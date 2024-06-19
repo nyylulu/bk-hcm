@@ -123,3 +123,12 @@ export interface CurrentListParam {
 }
 
 export type IDissolveHostCurrentListResult = IListResData<CurrentListParam[]>;
+
+export interface IDissolveRecycledModuleListParam {
+  op: 'and' | 'or';
+  rules: {
+    field: string;
+    op: 'eq' | 'neq' | 'gt' | 'gte' | 'lt' | 'lte' | 'in' | 'nin' | 'cs' | 'cis';
+    value: boolean | number | string | (boolean | number | string)[];
+  }[];
+}
