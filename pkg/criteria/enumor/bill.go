@@ -73,3 +73,19 @@ func (b BillDayNumber) Validate() error {
 	}
 	return nil
 }
+
+const (
+	// ActionPullDailyBill action for pull daily bill
+	ActionPullDailyBill = "pulldailybill"
+	// ActionBillSummary action for calculate bill summary
+	ActionBillSummary = "billsummary"
+	// ActionDailySummary action for calculate daily summary
+	ActionDailySummary = "dailysummary"
+)
+
+const (
+	// CurrencyUSD usd currency
+	CurrencyUSD = "USD"
+	// CurrencyRMB rmb currency
+	CurrencyRMB = "RMB"
+)

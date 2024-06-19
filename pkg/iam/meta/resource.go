@@ -113,4 +113,7 @@ const (
 	ZiyanResDissolveManage ResourceType = "ziyan_resource_dissolve_manage"
 	// ZiYanResource 自研云资源-业务粒度
 	ZiYanResource ResourceType = "ziyan_resource"
+
+	// AccountBill 云账单管理
+	AccountBill ResourceType = "account_bill"
 )

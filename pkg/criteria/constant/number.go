@@ -44,4 +44,6 @@ const (
 
 	// BkBizIDMaxLimit 业务ID参数的最大限制数量
 	BkBizIDMaxLimit = uint(3000)
+	// ExcelExportLimit two hundred thousands 二十万
+	ExcelExportLimit = 20_0000
 )

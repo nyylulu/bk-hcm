@@ -207,6 +207,10 @@ const (
 	AccountBillPullerTable = "account_bill_puller"
 	// AccountBillDailyPullTaskTable 日账单拉取任务表
 	AccountBillDailyPullTaskTable = "account_bill_daily_pull_task"
+	// AccountBillSummaryRootTable 一级账号账单汇总信息
+	AccountBillSummaryRootTable = "account_bill_summary_root"
+	// AccountBillSummaryMainTable 月度汇总账单
+	AccountBillSummaryMainTable = "account_bill_summary_main"
 
 	// RecycleModuleInfo 裁撤模块表
 	RecycleModuleInfo = "recycle_module_info"
@@ -294,10 +298,12 @@ var TableMap = map[Name]struct{}{
 	AccountBillPullerTable:          {},
 	AccountBillDailyPullTaskTable:   {},
 	AccountBillSummaryTable:         {},
+	AccountBillSummaryMainTable:     {},
 	AccountBillSummaryVersionTable:  {},
 	AccountBillSummaryDailyTable:    {},
 	AccountBillItemTable:            {},
 	AccountBillAdjustmentItemTable:  {},
+	AccountBillSummaryRootTable:     {},
 	LoadBalancerTable:               {},
 	SecurityGroupCommonRelTable:     {},
 	LoadBalancerListenerTable:       {},

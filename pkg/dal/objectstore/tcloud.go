@@ -22,20 +22,14 @@ package objectstore
 import (
 	"context"
 	"fmt"
+	"hcm/pkg/cc"
 	"io"
 	"net/http"
 	"net/url"
-	"os"
 	"path/filepath"
 
 	cos "github.com/tencentyun/cos-go-sdk-v5"
-)
-
-const (
-	envTCloudCOSPrefix    = "TCLOUD_COS_PREFIX"
-	envTCloudCOSSecretID  = "TCLOUD_COS_SECRET_ID"
-	envTCloudCOSSecretKey = "TCLOUD_COS_SECRET_KEY"
-	envTCloudCOSBucketURL = "TCLOUD_COS_BUCKET_URL"
+	"github.com/tencentyun/cos-go-sdk-v5/debug"
 )
 
 // TCloudCOS tcloud cos client
@@ -45,25 +39,33 @@ type TCloudCOS struct {
 }
 
 // NewTCloudCOS create cos client
-func NewTCloudCOS() (*TCloudCOS, error) {
-	prefix := os.Getenv(envTCloudCOSPrefix)
-	id := os.Getenv(envTCloudCOSSecretID)
-	key := os.Getenv(envTCloudCOSSecretKey)
-	bucketURL := os.Getenv(envTCloudCOSBucketURL)
-	if len(id) == 0 || len(key) == 0 || len(bucketURL) == 0 {
-		return nil, fmt.Errorf("any of env %s, %s, %s cannot be empty",
-			envTCloudCOSSecretID, envTCloudCOSSecretKey, envTCloudCOSBucketURL)
+func NewTCloudCOS(config cc.ObjectStoreTCloud) (*TCloudCOS, error) {
+	if err := config.Validate(); err != nil {
+		return nil, err
 	}
+	prefix := config.COSPrefix
+	id := config.COSSecretID
+	key := config.COSSecretKey
+	bucketURL := config.COSBucketURL
 	u, err := url.Parse(bucketURL)
 	if err != nil {
 		return nil, fmt.Errorf("parse bucket url %s failed, err %s", bucketURL, err.Error())
 	}
 	b := &cos.BaseURL{BucketURL: u}
+	transport := &cos.AuthorizationTransport{
+		SecretID:  id,
+		SecretKey: key,
+	}
+	if config.COSIsDebug {
+		transport.Transport = &debug.DebugRequestTransport{
+			RequestHeader:  true,
+			RequestBody:    true,
+			ResponseHeader: true,
+			ResponseBody:   true,
+		}
+	}
 	client := cos.NewClient(b, &http.Client{
-		Transport: &cos.AuthorizationTransport{
-			SecretID:  id,
-			SecretKey: key,
-		},
+		Transport: transport,
 	})
 	_, err = client.Bucket.Head(context.Background())
 	if err != nil {
@@ -112,7 +114,8 @@ func (t *TCloudCOS) Download(ctx context.Context, downloadPath string, w io.Writ
 func (t *TCloudCOS) ListItems(ctx context.Context, folderPath string) ([]string, error) {
 	folderPath = filepath.Join(t.prefix, folderPath)
 	opt := &cos.BucketGetOptions{
-		Prefix:    folderPath,
+		// filepath join之后，最后的斜杠会被去掉，这里需要加上，不然查不出来
+		Prefix:    folderPath + "/",
 		Delimiter: "/",
 		MaxKeys:   1000,
 	}

@@ -122,6 +122,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return sys.ZiyanResDissolveManage, make([]client.Resource, 0), nil
 	case meta.ZiYanResource: // 自研云资源的操作-业务粒度
 		return genZiYanResource(a)
+	case meta.AccountBill:
+		return genAccountBillResource(a)
 
 	default:
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm auth type: %s", a.Basic.Type)

@@ -111,11 +111,12 @@ type Set interface {
 	AccountBillConfig() cloudbill.Interface
 	AccountBillDailyPullTask() bill.AccountBillDailyPullTask
 	AccountBillPuller() bill.AccountBillPuller
-	AccountBillSummary() bill.AccountBillSummary
+	AccountBillSummaryMain() bill.AccountBillSummaryMain
 	AccountBillSummaryDaily() bill.AccountBillSummaryDaily
 	AccountBillSummaryVersion() bill.AccountBillSummaryVersion
 	AccountBillItem() bill.AccountBillItem
 	AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem
+	AccountBillSummaryRoot() bill.AccountBillSummaryRoot
 	AsyncFlow() daoasync.AsyncFlow
 	AsyncFlowTask() daoasync.AsyncFlowTask
 	UserCollection() daouser.Interface
@@ -525,9 +526,9 @@ func (s *set) AccountBillPuller() bill.AccountBillPuller {
 	}
 }
 
-// AccountBillSummary returns AccountBillSummary dao.
-func (s *set) AccountBillSummary() bill.AccountBillSummary {
-	return &bill.AccountBillSummaryDao{
+// AccountBillSummaryMain returns AccountBillSummaryMain dao.
+func (s *set) AccountBillSummaryMain() bill.AccountBillSummaryMain {
+	return &bill.AccountBillSummaryMainDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
@@ -560,6 +561,14 @@ func (s *set) AccountBillItem() bill.AccountBillItem {
 // AccountBillAdjustmentItem returns AccountBillAdjustmentItem dao.
 func (s *set) AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem {
 	return &bill.AccountBillAdjustmentItemDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryRoot returns AccountBillSummaryRoot dao.
+func (s *set) AccountBillSummaryRoot() bill.AccountBillSummaryRoot {
+	return &bill.AccountBillSummaryRootDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
