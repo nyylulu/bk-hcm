@@ -173,12 +173,6 @@ export default defineComponent({
       hostList.value = data?.info || [];
       emit('Tablehosts', hostList.value, obj);
     };
-    watch(
-      () => props.recycleForm,
-      () => {
-        getPreRecycleList();
-      },
-    );
     onMounted(() => {
       getPreRecycleList();
     });

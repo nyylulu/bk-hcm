@@ -325,7 +325,7 @@ export default defineComponent({
       if (resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec = cloudTableData.value[index].spec;
       } else {
-        pmForm.value.spec = physicalTableData.value[index];
+        pmForm.value.spec = physicalTableData.value[index].spec;
       }
       resourceForm.value.resourceType = resourceType;
       modifyresourceType.value = resourceType;
@@ -423,15 +423,7 @@ export default defineComponent({
     // 一键申请按钮点击事件
     const clickApplication = () => {
       CVMapplication.value = true;
-      loadRestrict();
     };
-    // 获取一键申请侧边栏cpu
-    const loadRestrict = async () => {
-      const { cpu, mem } = await apiService.getRestrict();
-      device.value.options.cpu = cpu || [];
-      device.value.options.mem = mem || [];
-    };
-
     const assignment = (data) => {
       resourceForm.value.resourceType = 'QCLOUDCVM';
       QCLOUDCVMForm.value.spec = {
@@ -523,7 +515,7 @@ export default defineComponent({
       } else {
         if (modifyresourceType.value === 'QCLOUDCVM') {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
-            cloudTableData.value.push(cloudResourceForm());
+            cloudTableData.value[modifyindex.value] = cloudResourceForm();
           } else {
             cloudTableData.value.splice(modifyindex.value, 1);
             physicalTableData.value.push(PMResourceForm());
@@ -531,7 +523,7 @@ export default defineComponent({
           emptyform();
         } else {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
-            physicalTableData.value.push(PMResourceForm());
+            physicalTableData.value[modifyindex.value] = PMResourceForm();
           } else {
             physicalTableData.value.splice(modifyindex.value, 1);
             cloudTableData.value.push(cloudResourceForm());

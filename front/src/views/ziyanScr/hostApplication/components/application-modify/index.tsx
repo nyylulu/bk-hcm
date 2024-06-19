@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref } from 'vue';
+import { defineComponent, onMounted, ref, watch } from 'vue';
 import { Input, Button, Sideslider } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import './index.scss';
@@ -145,6 +145,7 @@ export default defineComponent({
     });
     const applyCpu = ref('');
     const applyMem = ref('');
+    const applyRegion = ref([]);
     const deviceGroup = ref('');
     const handleSearchAvailable = async () => {
       const { zone, device_type } = order.value.model.spec;
@@ -164,11 +165,53 @@ export default defineComponent({
         filter.zone = [zone];
       }
       const { info } = await apiService.getAvailDevices({ filter, page });
-      applyCpu.value = info[0]?.cpu;
-      applyMem.value = info[0]?.mem;
+      applyCpu.value = String(info[0]?.cpu || '');
+      applyMem.value = String(info[0]?.mem || '');
+      applyRegion.value = region ? [region] : [];
       cvmOneKeyApplyVisible.value = true;
     };
-    const CVMapplication = () => {};
+    const CVMapplication = (data, val) => {
+      order.value.model.spec.device_type = data.device_type;
+      order.value.model.spec.zone = data.zone;
+      cvmOneKeyApplyVisible.value = val;
+    };
+    watch(
+      () => order.value.model.spec.zone,
+      () => {
+        loadDeviceTypes();
+        loadVpcs();
+      },
+    );
+    const handleSubmit = async () => {
+      const { device_type, zone, replicas, subnet, vpc } = order.value.model.spec;
+      const {
+        suborder_id,
+        bk_username,
+        spec: { region, image_id, disk_size, disk_type, network_type },
+      } = rawOrder.value;
+      const params = {
+        replicas: Number(replicas) + Number(rawOrder.value.success_num),
+        bk_username,
+        suborder_id,
+        spec: {
+          region,
+          device_type,
+          zone,
+          subnet,
+          vpc,
+          image_id,
+          disk_size,
+          disk_type,
+          network_type,
+        },
+      };
+      const { code } = await apiService.modifyOrder(params);
+      if (code === 0) {
+        router.push({
+          path: '/ziyanScr/hostApplication',
+        });
+      }
+    };
     return () => (
       <div class='wid100'>
         <DetailHeader>修改申请</DetailHeader>
@@ -314,7 +357,7 @@ export default defineComponent({
             )}
           </>
           <div>
-            <Button class='mr16' theme='primary'>
+            <Button class='mr16' onClick={handleSubmit} theme='primary'>
               确定修改
             </Button>
             <Button
@@ -334,7 +377,13 @@ export default defineComponent({
             onClosed={() => {
               ARtriggerShow(false);
             }}>
-            <applicationSideslider onOneApplication={CVMapplication} cpu={applyCpu.value} mem={applyMem.value} />
+            <applicationSideslider
+              onOneApplication={CVMapplication}
+              getform={cvmOneKeyApplyVisible.value}
+              cpu={applyCpu.value}
+              mem={applyMem.value}
+              region={applyRegion.value}
+            />
           </Sideslider>
         </div>
       </div>

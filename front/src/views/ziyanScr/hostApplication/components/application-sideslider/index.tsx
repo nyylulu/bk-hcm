@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import { Button, Form } from 'bkui-vue';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
@@ -12,65 +12,24 @@ export default defineComponent({
   name: 'Sideslider',
   props: {
     cpu: {
-      type: Number,
+      type: String,
+      default: '',
     },
     mem: {
-      type: Number,
+      type: String,
+      default: '',
+    },
+    region: {
+      type: Array,
+      default: () => [],
+    },
+    getform: {
+      type: Boolean,
+      default: false,
     },
   },
   emits: ['oneApplication'],
   setup(props, { emit }) {
-    const { columns: CVMApplicationcolumns } = useColumns('CVMApplication');
-    const { CommonTable: CVMApplicationTable, getListData: CVMApplicationGetListData } = useTable({
-      tableOptions: {
-        columns: [
-          ...CVMApplicationcolumns,
-          {
-            label: '操作',
-            width: 120,
-            render: ({ data }) => {
-              return (
-                <Button text theme='primary' onClick={() => OneClickApplication(data)}>
-                  一键申请
-                </Button>
-              );
-            },
-          },
-        ],
-      },
-      requestOption: {
-        dataPath: 'data.info',
-      },
-      scrConfig: () => {
-        return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
-          payload: requestListParams.value,
-        };
-      },
-    });
-    const pageInfo = ref({
-      limit: 10,
-      start: 0,
-      sort: '-capacity_flag',
-    });
-    const requestListParams = ref({
-      filter: {
-        condition: 'AND',
-        rules: [
-          {
-            field: 'require_type',
-            operator: 'equal',
-            value: 1,
-          },
-          {
-            field: 'label.device_group',
-            operator: 'in',
-            value: ['标准型'],
-          },
-        ],
-      },
-      page: pageInfo.value,
-    });
     const deviceTypeDisabled = ref(false);
     const deviceConfigDisabled = ref(false);
     const device = ref({
@@ -147,6 +106,74 @@ export default defineComponent({
         requireTypes: [],
       },
     });
+    const { columns: CVMApplicationcolumns } = useColumns('CVMApplication');
+    const { CommonTable: CVMApplicationTable, getListData: CVMApplicationGetListData } = useTable({
+      tableOptions: {
+        columns: [
+          ...CVMApplicationcolumns,
+          {
+            label: '操作',
+            width: 120,
+            render: ({ data }) => {
+              return (
+                <Button text theme='primary' onClick={() => OneClickApplication(data)}>
+                  一键申请
+                </Button>
+              );
+            },
+          },
+        ],
+      },
+      requestOption: {
+        dataPath: 'data.info',
+      },
+      scrConfig: () => {
+        return {
+          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
+          payload: { ...requestListParams() },
+        };
+      },
+    });
+    const pageInfo = ref({
+      limit: 10,
+      start: 0,
+      sort: '-capacity_flag',
+    });
+    const requestListParams = () => {
+      const rules = [
+        device.value.filter.region?.length && {
+          field: 'region',
+          operator: 'in',
+          value: device.value.filter.region,
+        },
+        device.value.filter.zone?.length && { field: 'zone', operator: 'in', value: device.value.filter.zone },
+        device.value.filter.require_type && {
+          field: 'require_type',
+          operator: 'equal',
+          value: device.value.filter.require_type,
+        },
+        device.value.filter.device_type.length && {
+          field: 'device_type',
+          operator: 'in',
+          value: device.value.filter.device_type,
+        },
+        device.value.filter.cpu && { field: 'cpu', operator: 'equal', value: device.value.filter.cpu },
+        device.value.filter.mem && { field: 'mem', operator: 'equal', value: device.value.filter.mem },
+        device.value.filter.device_group && {
+          field: 'label.device_group',
+          operator: typeof device.value.filter.device_group === 'string' ? '=' : 'in',
+          value: device.value.filter.device_group,
+        },
+      ].filter(Boolean);
+      return {
+        filter: {
+          condition: 'AND',
+          rules,
+        },
+        page: pageInfo.value,
+      };
+    };
+
     const OneClickApplication = (data) => {
       emit('oneApplication', data, false);
       // title.value = '增加资源需求';
@@ -204,13 +231,31 @@ export default defineComponent({
       const { info } = await apiService.getRequireTypes();
       order.value.options.requireTypes = info;
     };
+    // 获取一键申请侧边栏cpu
+    const loadRestrict = async () => {
+      const { cpu, mem } = await apiService.getRestrict();
+      device.value.options.cpu = cpu || [];
+      device.value.options.mem = mem || [];
+    };
+    const getviewapplication = () => {
+      if (props.getform && (props.cpu || props.mem)) {
+        device.value.filter.cpu = props.cpu;
+        device.value.filter.mem = props.mem;
+      }
+      device.value.filter.region = props.region;
+      CVMApplicationGetListData();
+    };
+    watch(
+      () => props.getform,
+      () => {
+        getviewapplication();
+      },
+    );
     onMounted(() => {
       getfetchOptionslist();
       CVMapplicationDeviceTypes();
-      if (props.cpu || props.mem) {
-        device.value.filter.cpu = String(props.cpu);
-        device.value.filter.mem = String(props.mem);
-      }
+      loadRestrict();
+      getviewapplication();
     });
     return () => (
       <>

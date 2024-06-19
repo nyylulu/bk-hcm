@@ -318,6 +318,16 @@ const getAvailDevices = async ({ filter, page }) => {
   );
   return data;
 };
+/**
+ * 修改资源申请单据接口
+ * @returns {Promise}
+ */
+const modifyOrder = async (params) => {
+  return await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/modify/apply`, params, {
+    removeEmptyFields: true,
+    transformFields: true,
+  });
+};
 export default {
   getAreas,
   getZones,
@@ -346,4 +356,5 @@ export default {
   createCvmDevice,
   getOrders,
   getAvailDevices,
+  modifyOrder,
 };
