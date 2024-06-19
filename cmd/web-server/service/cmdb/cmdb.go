@@ -121,8 +121,19 @@ func (c *cmdbSvc) listAuthorizedBiz(cts *rest.Contexts, typ meta.ResourceType,
 }
 
 func (c *cmdbSvc) listBiz(kt *kit.Kit, filter *cmdb.QueryFilter) (interface{}, error) {
+	iegRule := &cmdb.AtomRule{
+		Field:    "bk_operate_dept_id",
+		Operator: "equal",
+		Value:    3,
+	}
+
+	newFilter := &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{iegRule}}}
+	if filter != nil {
+		newFilter = &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{filter, iegRule}}}
+	}
+
 	params := &cmdb.SearchBizParams{
-		BizPropertyFilter: filter,
+		BizPropertyFilter: newFilter,
 		Fields:            []string{"bk_biz_id", "bk_biz_name"},
 	}
 	resp, err := c.esbClient.Cmdb().SearchBusiness(kt, params)

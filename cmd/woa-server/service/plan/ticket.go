@@ -169,10 +169,9 @@ func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	if err := s.planController.CreateAuditFlow(cts.Kit, ticketID); err != nil {
-		// TODO: debug
+	if err = s.planController.CreateAuditFlow(cts.Kit, ticketID); err != nil {
 		logs.Errorf("failed to create resource plan ticket audit flow, err: %v, rid: %s", err, cts.Kit.Rid)
-		//return nil, errf.NewFromErr(errf.Aborted, err)
+		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
 	return map[string]interface{}{"id": ticketID}, nil

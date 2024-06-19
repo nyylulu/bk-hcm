@@ -53,7 +53,7 @@ type Controller struct {
 	itsmFlow     cc.ItsmFlow
 	crpAuditNode cc.StateNode
 	crpCli       cvmapi.CVMClientInterface
-	workqueue    *UniQueue
+	workQueue    *UniQueue
 	ctx          context.Context
 }
 
@@ -94,7 +94,7 @@ func New(sd serviced.State, dao dao.Set, itsmCli itsm.Client, crpCli cvmapi.CVMC
 		itsmFlow:     itsmFlowCfg,
 		crpAuditNode: crpAuditNode,
 		crpCli:       crpCli,
-		workqueue:    q,
+		workQueue:    q,
 		ctx:          context.Background(),
 	}
 
@@ -125,7 +125,7 @@ func (c *Controller) listAndWatchTickets() error {
 	logs.Infof("ready to list and watch tickets")
 	if !c.sd.IsMaster() {
 		// pop all pending orders
-		c.workqueue.Clear()
+		c.workQueue.Clear()
 		return nil
 	}
 
@@ -139,7 +139,7 @@ func (c *Controller) listAndWatchTickets() error {
 
 	// enqueue pending orders
 	for _, tkID := range pendingTkIDs {
-		c.workqueue.Enqueue(tkID)
+		c.workQueue.Enqueue(tkID)
 	}
 
 	return nil
@@ -208,7 +208,7 @@ func (c *Controller) runWorker() error {
 	}
 
 	// get one ticket from the work queue
-	tkID, ok := c.workqueue.Pop()
+	tkID, ok := c.workQueue.Pop()
 	if !ok {
 		return nil
 	}
@@ -339,7 +339,7 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketBriefInfo) error
 		return c.checkTicketTimeout(kt, ticket)
 	}
 
-	if err := c.updateTicketStatus(kt, update); err != nil {
+	if err = c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -449,7 +449,7 @@ func (c *Controller) CreateAuditFlow(kt *kit.Kit, ticketID string) error {
 		ItsmUrl:  itsmStatus.TicketUrl,
 	}
 
-	if err := c.updateTicketStatus(kt, update); err != nil {
+	if err = c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -471,21 +471,22 @@ func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketBriefIn
 	}
 
 	brief := &TicketBriefInfo{
-		ID:            ticketID,
-		Applicant:     base.Applicant,
-		BkBizID:       base.BkBizID,
-		BkBizName:     base.BkBizName,
-		BkProductName: base.BkProductName,
-		DemandClass:   base.DemandClass,
-		CpuCore:       base.CpuCore,
-		Memory:        base.Memory,
-		DiskSize:      base.DiskSize,
-		SubmittedAt:   base.SubmittedAt,
-		Status:        status.Status,
-		ItsmSn:        status.ItsmSn,
-		ItsmUrl:       status.ItsmUrl,
-		CrpSn:         status.CrpSn,
-		CrpUrl:        status.CrpUrl,
+		ID:              ticketID,
+		Applicant:       base.Applicant,
+		BkBizID:         base.BkBizID,
+		BkBizName:       base.BkBizName,
+		BkProductName:   base.BkProductName,
+		PlanProductName: base.PlanProductName,
+		DemandClass:     base.DemandClass,
+		CpuCore:         base.CpuCore,
+		Memory:          base.Memory,
+		DiskSize:        base.DiskSize,
+		SubmittedAt:     base.SubmittedAt,
+		Status:          status.Status,
+		ItsmSn:          status.ItsmSn,
+		ItsmUrl:         status.ItsmUrl,
+		CrpSn:           status.CrpSn,
+		CrpUrl:          status.CrpUrl,
 	}
 
 	return brief, nil
@@ -661,7 +662,7 @@ func (c *Controller) buildPlanReq(kt *kit.Kit, ticket *TicketBriefInfo) (*cvmapi
 		planItem := &cvmapi.AddPlanItem{
 			UseTime:         demand.ExpectTime,
 			ProjectName:     string(demand.ObsProject),
-			PlanProductName: cvmapi.DefaultPlanProductName,
+			PlanProductName: ticket.PlanProductName,
 			CityName:        demand.RegionName,
 			ZoneName:        demand.ZoneName,
 			CoreTypeName:    cvm.CoreType,

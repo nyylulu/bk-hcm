@@ -40,43 +40,43 @@ func NewUniQueue() *UniQueue {
 }
 
 // Enqueue add the value to the end if the value is not already in the queue.
-func (c *UniQueue) Enqueue(value string) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (q *UniQueue) Enqueue(value string) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
-	if _, ok := c.cache[value]; ok {
+	if _, ok := q.cache[value]; ok {
 		return
 	}
 
-	c.queue.PushBack(value)
-	c.cache[value] = value
+	q.queue.PushBack(value)
+	q.cache[value] = value
 }
 
 // Pop gets and removes the front item in the queue.
-func (c *UniQueue) Pop() (string, bool) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (q *UniQueue) Pop() (string, bool) {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
-	if c.queue.Len() == 0 {
+	if q.queue.Len() == 0 {
 		return "", false
 	}
 
-	front := c.queue.Front()
+	front := q.queue.Front()
 	id := front.Value.(string)
-	c.queue.Remove(front)
-	delete(c.cache, id)
+	q.queue.Remove(front)
+	delete(q.cache, id)
 
 	return id, true
 }
 
 // Clear removes all the item in the queue.
-func (c *UniQueue) Clear() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
+func (q *UniQueue) Clear() {
+	q.mu.Lock()
+	defer q.mu.Unlock()
 
-	for c.queue.Len() > 0 {
-		front := c.queue.Front()
-		c.queue.Remove(front)
-		delete(c.cache, front.Value.(string))
+	for q.queue.Len() > 0 {
+		front := q.queue.Front()
+		q.queue.Remove(front)
+		delete(q.cache, front.Value.(string))
 	}
 }

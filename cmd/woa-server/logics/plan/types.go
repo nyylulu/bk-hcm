@@ -25,19 +25,20 @@ import (
 
 // TicketBriefInfo resource plan ticket brief info
 type TicketBriefInfo struct {
-	ID            string                `json:"id"`
-	Applicant     string                `json:"applicant"`
-	BkBizID       int64                 `json:"bk_biz_id"`
-	BkBizName     string                `json:"bk_biz_name"`
-	BkProductName string                `json:"bk_product_name"`
-	DemandClass   enumor.DemandClass    `json:"demand_class"`
-	CpuCore       int64                 `json:"cpu_core"`
-	Memory        int64                 `json:"memory"`
-	DiskSize      int64                 `json:"disk_size"`
-	SubmittedAt   string                `json:"submitted_at"`
-	Status        enumor.RPTicketStatus `json:"status"`
-	ItsmSn        string                `json:"itsm_sn"`
-	ItsmUrl       string                `json:"itsm_url"`
-	CrpSn         string                `json:"crp_sn"`
-	CrpUrl        string                `json:"crp_url"`
+	ID              string                `json:"id"`
+	Applicant       string                `json:"applicant"`
+	BkBizID         int64                 `json:"bk_biz_id"`
+	BkBizName       string                `json:"bk_biz_name"`
+	BkProductName   string                `json:"bk_product_name"`
+	PlanProductName string                `json:"plan_product_name"`
+	DemandClass     enumor.DemandClass    `json:"demand_class"`
+	CpuCore         int64                 `json:"cpu_core"`
+	Memory          int64                 `json:"memory"`
+	DiskSize        int64                 `json:"disk_size"`
+	SubmittedAt     string                `json:"submitted_at"`
+	Status          enumor.RPTicketStatus `json:"status"`
+	ItsmSn          string                `json:"itsm_sn"`
+	ItsmUrl         string                `json:"itsm_url"`
+	CrpSn           string                `json:"crp_sn"`
+	CrpUrl          string                `json:"crp_url"`
 }
