@@ -1,6 +1,7 @@
 import { defineComponent, onMounted, ref, watch } from 'vue';
 import { Input, Button, Sideslider, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
+import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -10,7 +11,7 @@ import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import { RightShape, DownShape } from 'bkui-vue/lib/icon';
 import apiService from '@/api/scrApi';
-import { useAccountStore, useUserStore } from '@/store';
+import { useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import http from '@/http';
 import applicationSideslider from '../application-sideslider';
@@ -30,7 +31,6 @@ export default defineComponent({
     const isLoading = ref(false);
     const title = ref('增加资源需求');
     const CVMapplication = ref(false);
-    const accountStore = useAccountStore();
     const order = ref({
       loading: false,
       submitting: false,
@@ -193,8 +193,6 @@ export default defineComponent({
     // 物理机table
     const physicalTableData = ref([]);
     const resourceFormRules = ref({});
-    // const dateRange = ref();
-    const businessList = ref([]);
     // 网络信息开关
     const NIswitch = ref(true);
     watch(
@@ -309,10 +307,6 @@ export default defineComponent({
 
       subnetTypes.value = info || [];
     };
-    const getBusinessesList = async () => {
-      const { data } = await accountStore.getBizListWithAuth();
-      businessList.value = data;
-    };
     const clonelist = (row: any, resourceType: string) => {
       resourceType === 'QCLOUDCVM'
         ? cloudTableData.value.push(cloneDeep(row))
@@ -382,7 +376,6 @@ export default defineComponent({
       order.value.options.requireTypes = info;
     };
     onMounted(() => {
-      getBusinessesList();
       getfetchOptionslist();
       unReapply();
     });
@@ -575,11 +568,7 @@ export default defineComponent({
               ref='formRef'>
               <div class='displayflex'>
                 <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
-                  <bk-select class='item-warp-component' v-model={order.value.model.bkBizId}>
-                    {businessList.value.map((item) => (
-                      <bk-option key={item.id} value={item.id} label={item.name}></bk-option>
-                    ))}
-                  </bk-select>
+                  <BusinessSelector v-model={order.value.model.bkBizId} autoSelect authed />
                 </bk-form-item>
                 <bk-form-item label='需求类型' class='item-warp' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>

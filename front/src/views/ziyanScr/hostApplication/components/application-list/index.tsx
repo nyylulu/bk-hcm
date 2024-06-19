@@ -1,4 +1,4 @@
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -253,6 +253,7 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        immediate: false,
       },
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
@@ -279,13 +280,20 @@ export default defineComponent({
         suborder_id: subOrderId,
       });
     };
-
+    watch(
+      () => formModel.bkBizId,
+      (newVal, oldVal) => {
+        if (!oldVal) {
+          getListData();
+        }
+      },
+    );
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
           <Form model={formModel} class={'scr-form-wrapper'}>
             <FormItem label='业务'>
-              <BusinessSelector v-model={formModel.bkBizId} authed />
+              <BusinessSelector autoSelect v-model={formModel.bkBizId} authed />
             </FormItem>
             <FormItem label='需求类型'>
               <RequirementTypeSelector v-model={formModel.requireType} multiple />

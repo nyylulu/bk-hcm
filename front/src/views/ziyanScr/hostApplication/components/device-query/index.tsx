@@ -45,6 +45,7 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -74,7 +75,7 @@ export default defineComponent({
               <>
                 <Form label-width='110' class='scr-form-wrapper' model={formModel}>
                   <FormItem label='业务'>
-                    <BusinessSelector v-model={formModel.bkBizId} authed />
+                    <BusinessSelector autoSelect v-model={formModel.bkBizId} authed />
                   </FormItem>
                   <FormItem label='需求类型'>
                     <RequirementTypeSelector v-model={formModel.requireType} />
