@@ -1,7 +1,6 @@
 import { defineComponent, onMounted, ref, watch } from 'vue';
-import { Input, Button, Sideslider, Form, Message } from 'bkui-vue';
+import { Input, Button, Sideslider, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
-import { useTable } from '@/hooks/useTable/useTable';
 import './index.scss';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -9,18 +8,21 @@ import AreaSelector from '../AreaSelector';
 import ZoneSelector from '../ZoneSelector';
 import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import { RightShape, DownShape, Search } from 'bkui-vue/lib/icon';
+import { RightShape, DownShape } from 'bkui-vue/lib/icon';
 import apiService from '@/api/scrApi';
 import { useAccountStore, useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import http from '@/http';
+import applicationSideslider from '../application-sideslider';
 import { useRouter, useRoute } from 'vue-router';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
 import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
-const { FormItem } = Form;
 export default defineComponent({
+  components: {
+    applicationSideslider,
+  },
   setup() {
     const router = useRouter();
     const route = useRoute();
@@ -78,58 +80,6 @@ export default defineComponent({
     });
     const { columns: CloudHostcolumns } = useColumns('CloudHost');
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
-    const { columns: CVMApplicationcolumns } = useColumns('CVMApplication');
-
-    const pageInfo = ref({
-      limit: 10,
-      start: 0,
-      sort: '-capacity_flag',
-    });
-    const requestListParams = ref({
-      filter: {
-        condition: 'AND',
-        rules: [
-          {
-            field: 'require_type',
-            operator: 'equal',
-            value: 1,
-          },
-          {
-            field: 'label.device_group',
-            operator: 'in',
-            value: ['标准型'],
-          },
-        ],
-      },
-      page: pageInfo.value,
-    });
-    const { CommonTable: CVMApplicationTable, getListData: CVMApplicationGetListData } = useTable({
-      tableOptions: {
-        columns: [
-          ...CVMApplicationcolumns,
-          {
-            label: '操作',
-            width: 120,
-            render: ({ row }) => {
-              return (
-                <Button text theme='primary' onClick={() => OneClickApplication(row)}>
-                  一键申请
-                </Button>
-              );
-            },
-          },
-        ],
-      },
-      requestOption: {
-        dataPath: 'data.info',
-      },
-      scrConfig: () => {
-        return {
-          url: '/api/v1/woa/config/findmany/config/cvm/device/detail',
-          payload: requestListParams.value,
-        };
-      },
-    });
     const PhysicalMachineoperation = ref({
       label: '操作',
       width: 200,
@@ -309,12 +259,6 @@ export default defineComponent({
         pmForm.value.options.deviceTypes?.find((item) => item.device_type === pmForm.value.spec.device_type)?.raid ||
         '';
     };
-    // 地域有数据时禁用cpu 和内存
-    const handleCVMDeviceTypeChange = () => {
-      device.value.filter.cpu = '';
-      device.value.filter.mem = '';
-      deviceConfigDisabled.value = device.value.filter.device_type.length > 0;
-    };
     // 获取可用的IDCPM列表
     const IDCPMlist = () => {
       IDCPMDeviceTypes();
@@ -364,12 +308,6 @@ export default defineComponent({
       });
 
       subnetTypes.value = info || [];
-    };
-    const deviceTypeDisabled = ref(false);
-    const deviceConfigDisabled = ref(false);
-    const getfetchOptionslist = async () => {
-      const { info } = await apiService.getRequireTypes();
-      order.value.options.requireTypes = info;
     };
     const getBusinessesList = async () => {
       const { data } = await accountStore.getBizListWithAuth();
@@ -439,6 +377,10 @@ export default defineComponent({
         addResourceRequirements.value = true;
       }
     };
+    const getfetchOptionslist = async () => {
+      const { info } = await apiService.getRequireTypes();
+      order.value.options.requireTypes = info;
+    };
     onMounted(() => {
       getBusinessesList();
       getfetchOptionslist();
@@ -481,21 +423,7 @@ export default defineComponent({
     // 一键申请按钮点击事件
     const clickApplication = () => {
       CVMapplication.value = true;
-      CVMapplicationDeviceTypes();
       loadRestrict();
-      CVMApplicationGetListData();
-    };
-    // 一键申请侧边栏 改变实例族
-    const handleDeviceGroupChange = () => {
-      device.value.filter.cpu = '';
-      device.value.filter.mem = '';
-      device.value.filter.device_type = [];
-      CVMapplicationDeviceTypes();
-    };
-    // 获取一键申请侧边栏地域
-    const CVMapplicationDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(device.value.filter);
-      device.value.options.device_types = info || [];
     };
     // 获取一键申请侧边栏cpu
     const loadRestrict = async () => {
@@ -503,37 +431,7 @@ export default defineComponent({
       device.value.options.cpu = cpu || [];
       device.value.options.mem = mem || [];
     };
-    // cpu 和内存有数据时禁用地域
-    const handleDeviceConfigChange = () => {
-      device.value.filter.device_type = [];
-      const { cpu, mem } = device.value.filter;
-      deviceTypeDisabled.value = Boolean(cpu || mem);
-    };
-    // 一键申请取消按钮
-    const CVMclearFilter = () => {
-      device.value.filter = {
-        require_type: 1,
-        region: [],
-        zone: [],
-        device_type: [],
-        device_group: ['标准型'],
-        cpu: '',
-        mem: '',
-        enable_capacity: true,
-      };
-      deviceConfigDisabled.value = false;
-      deviceTypeDisabled.value = false;
-      filterDevices();
-    };
-    // 一键申请提交按钮
-    const filterDevices = () => {
-      device.value.page.start = 0;
-      loadResources();
-    };
 
-    const loadResources = () => {
-      CVMApplicationGetListData();
-    };
     const assignment = (data) => {
       resourceForm.value.resourceType = 'QCLOUDCVM';
       QCLOUDCVMForm.value.spec = {
@@ -548,8 +446,8 @@ export default defineComponent({
         network_type: 'TENTHOUSAND',
       };
     };
-    const OneClickApplication = (row: { device_type: any; region: any; zone: any }) => {
-      CVMapplication.value = false;
+    const OneClickApplication = (row, val) => {
+      CVMapplication.value = val;
 
       assignment(row);
       title.value = '增加资源需求';
@@ -671,7 +569,6 @@ export default defineComponent({
         isLoading.value = false;
       }
     };
-
     return () => (
       <div class='wid100'>
         <DetailHeader>新增申请</DetailHeader>
@@ -1112,103 +1009,7 @@ export default defineComponent({
             onClosed={() => {
               CAtriggerShow(false);
             }}>
-            <Form class={'scr-form-wrapper'}>
-              <FormItem label='需求类型'>
-                <bk-select class='tbkselect' disabled v-model={device.value.filter.require_type} filterable>
-                  {order.value.options.requireTypes.map((item) => (
-                    <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-                  ))}
-                </bk-select>
-              </FormItem>
-
-              <FormItem label='地域'>
-                <AreaSelector
-                  ref='areaSelector'
-                  class='tbkselect'
-                  v-model={device.value.filter.region}
-                  multiple
-                  clearable
-                  filterable
-                  params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
-              </FormItem>
-
-              <FormItem label='园区'>
-                <ZoneSelector
-                  ref='zoneSelector'
-                  v-model={device.value.filter.zone}
-                  class='tbkselect'
-                  params={{
-                    resourceType: 'QCLOUDCVM',
-                    region: device.value.filter.region,
-                  }}></ZoneSelector>
-              </FormItem>
-
-              <FormItem label='实例族'>
-                <bk-select
-                  class='tbkselect'
-                  v-model={device.value.filter.device_group}
-                  multiple
-                  clearable
-                  collapse-tags
-                  onChange={handleDeviceGroupChange}>
-                  {device.value.options.device_groups.map((item) => (
-                    <bk-option key={item} value={item} label={item}></bk-option>
-                  ))}
-                </bk-select>
-              </FormItem>
-
-              <FormItem label='机型'>
-                <bk-select
-                  class='tbkselect'
-                  v-model={device.value.filter.device_type}
-                  clearable
-                  disabled={deviceTypeDisabled.value}
-                  multiple
-                  filterable
-                  onChange={handleCVMDeviceTypeChange}>
-                  {device.value.options.device_types.map((item) => (
-                    <bk-option key={item} value={item} label={item}></bk-option>
-                  ))}
-                </bk-select>
-              </FormItem>
-
-              <FormItem label='CPU(核)'>
-                <bk-select
-                  class='tbkselect'
-                  v-model={device.value.filter.cpu}
-                  clearable
-                  disabled={deviceConfigDisabled.value}
-                  filterable
-                  onChange={handleDeviceConfigChange}>
-                  {device.value.options.cpu.map((item) => (
-                    <bk-option key={item} value={item} label={item}></bk-option>
-                  ))}
-                </bk-select>
-              </FormItem>
-
-              <FormItem label='内存 (G)'>
-                <bk-select
-                  class='tbkselect'
-                  v-model={device.value.filter.mem}
-                  clearable
-                  disabled={deviceConfigDisabled.value}
-                  filterable
-                  onChange={handleDeviceConfigChange}>
-                  {device.value.options.mem.map((item) => (
-                    <bk-option key={item} value={item} label={item}></bk-option>
-                  ))}
-                </bk-select>
-              </FormItem>
-              <Button class={'ml24 mr8'} theme='primary' onClick={filterDevices}>
-                <Search></Search>
-                查询
-              </Button>
-              <Button onClick={CVMclearFilter}>清空</Button>
-            </Form>
-            {/* <div style={{width: 100}}> */}
-            <div>
-              <CVMApplicationTable class={'mt16 ml16 mr16'} />
-            </div>
+            <applicationSideslider onOneApplication={OneClickApplication} />
           </Sideslider>
         </div>
       </div>

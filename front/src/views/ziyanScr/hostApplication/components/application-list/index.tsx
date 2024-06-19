@@ -53,6 +53,13 @@ export default defineComponent({
         query: { order_id: data.order_id },
       });
     };
+    const modify = (data: any) => {
+      router.push({
+        path: '/ziyanScr/hostApplication/modify',
+        query: { ...data },
+      });
+    };
+
     const { columns } = useColumns('applicationList');
     const router = useRouter();
     const route = useRoute();
@@ -139,7 +146,7 @@ export default defineComponent({
 
               const modifyButton = () => {
                 return (
-                  <Button size='small' text theme={'primary'} class={'ml8'}>
+                  <Button size='small' onClick={() => modify(data)} text theme={'primary'} class={'ml8'}>
                     修改需求重试
                   </Button>
                 );

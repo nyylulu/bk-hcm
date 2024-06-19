@@ -198,6 +198,12 @@ export default defineComponent({
         checkHostRecyclableStatus();
       }
     };
+    const takeSnapshot = () => {
+      recycleForm.value = {
+        ips: [],
+        remark: '',
+      };
+    };
     const handleConfirm = async () => {
       const orderId = selectedHosts.value.map((item) => item.order_id);
       const { result } = await apiService.startRecycleList(orderId);
@@ -210,13 +216,6 @@ export default defineComponent({
       checked.value = false;
       dialogVisible.value = false;
     };
-    const takeSnapshot = () => {
-      recycleForm.value = {
-        ips: [],
-        remark: '',
-      };
-    };
-
     const triggerShow = (val: boolean) => {
       checked.value = val;
       dialogVisible.value = val;

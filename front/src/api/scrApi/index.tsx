@@ -267,6 +267,57 @@ const getOrderDetail = async (orderId) => {
   );
   return data;
 };
+
+/**
+ * 获取申请单据列表
+ */
+const getOrders = async ({ bk_biz_id, suborder_id }) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
+    bk_biz_id,
+    suborder_id,
+  });
+  return data;
+};
+/**
+ * cpu、内存默认值的查询接口
+ * @param {*} param0
+ * @param {*} config
+ * @returns
+ */
+const getAvailDevices = async ({ filter, page }) => {
+  const rules = [
+    filter.region?.length && { field: 'region', operator: 'in', value: filter.region },
+    filter.zone?.length && { field: 'zone', operator: 'in', value: filter.zone },
+    filter.require_type && { field: 'require_type', operator: 'equal', value: filter.require_type },
+    filter.device_type && { field: 'device_type', operator: 'in', value: filter.device_type },
+    filter.cpu && { field: 'cpu', operator: 'equal', value: filter.cpu },
+    filter.mem && { field: 'mem', operator: 'equal', value: filter.mem },
+    filter.disk && { field: 'disk', operator: 'equal', value: filter.disk },
+    filter.device_group && {
+      field: 'label.device_group',
+      operator: typeof filter.device_group === 'string' ? '=' : 'in',
+      value: filter.device_group,
+    },
+  ].filter(Boolean);
+  const { data } = await http.post(
+    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/device/detail/avail`,
+    {
+      filter: {
+        condition: 'AND',
+        rules,
+      },
+      page: {
+        start: page.start,
+        limit: page.limit,
+        sort: page.sort,
+      },
+    },
+    {
+      simpleConditions: true,
+    },
+  );
+  return data;
+};
 export default {
   getAreas,
   getZones,
@@ -293,4 +344,6 @@ export default {
   getOrderDetail,
   startRecycleList,
   createCvmDevice,
+  getOrders,
+  getAvailDevices,
 };

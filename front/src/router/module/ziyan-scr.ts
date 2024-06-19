@@ -45,6 +45,15 @@ const ziyanScr: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/ziyanScr/hostApplication/modify',
+        name: '修改主机申请',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
+        },
+      },
+      {
         path: '/ziyanScr/hostRecycling',
         name: '主机回收',
         children: [
