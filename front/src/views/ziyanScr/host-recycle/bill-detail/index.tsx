@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store';
 import { getResourceTypeName, getReturnPlanName, exportTableToExcel } from '@/utils';
 import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
@@ -19,6 +19,12 @@ export default defineComponent({
       type: String,
       default: '',
     },
+    bkBizId: {
+      type: Array,
+      default: () => {
+        return [];
+      },
+    },
   },
   emits: ['goBack'],
   setup(props, { emit }) {
@@ -33,6 +39,7 @@ export default defineComponent({
     });
     const requestParams = computed(() => {
       return {
+        bk_biz_id: props.bkBizId,
         suborder_id: props.suborderIdStr.split('|') || [],
         page: page.value,
       };
@@ -178,6 +185,10 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'ip',
+          order: 'ASC',
+        },
       },
       scrConfig: () => {
         return {
@@ -194,6 +205,7 @@ export default defineComponent({
     const exportToExcel = () => {
       getRecycleHosts(
         {
+          bk_biz_id: requestParams.value.bk_biz_id,
           suborder_id: requestParams.value.suborder_id,
           page: {
             start: 0,
@@ -223,7 +235,6 @@ export default defineComponent({
         page: {
           start: 0,
           limit: 10,
-          enable_count: true,
         },
       };
     };
@@ -231,6 +242,9 @@ export default defineComponent({
       loadOrders();
       if (pollObj.value) clearInterval(pollObj.value);
       pollObj.value = setInterval(pollOrders, 5000);
+    });
+    onUnmounted(() => {
+      clearInterval(pollObj.value);
     });
     const userStore = useUserStore();
     return () => (

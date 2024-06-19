@@ -71,6 +71,7 @@ export interface IProp {
     dataPath?: string;
     // 是否为全量数据
     full?: boolean;
+    immediate?: boolean;
   };
   // 资源下筛选业务功能相关的 prop
   bizFilter?: FilterType;
@@ -86,6 +87,7 @@ export interface IProp {
 export const useTable = (props: IProp) => {
   defaults(props, { requestOption: {} });
   defaults(props.requestOption, { dataPath: 'data.details' });
+  defaults(props.requestOption, { immediate: true });
 
   const { whereAmI } = useWhereAmI();
   const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -371,7 +373,7 @@ export const useTable = (props: IProp) => {
       getListData();
     },
     {
-      immediate: true,
+      immediate: props.requestOption.immediate,
     },
   );
 

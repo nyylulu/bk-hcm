@@ -5,6 +5,15 @@
   width: 100%;
   margin: 15px 0;
   padding: 10px;
+}
+.execute-record-top {
+  margin-bottom: 15px;
+}
+
+.apply-list-container {
+  .filter-container {
+    margin-bottom: 8px;
+  }
   .precheck-input{
     display: flex;
     align-items: center;
@@ -21,6 +30,19 @@
     }
   }
 }
-.execute-record-top {
-  margin-bottom: 15px;
+
+.scr-form-wrapper {
+  margin: 0 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  .bk-form-item {
+    margin: 8px 0;
+    .bk-form-content, .bk-date-picker {
+      width: 280px;
+    }
+    .bk-button {
+      margin-right: 8px!important;
+    }
+  }
 }

@@ -28,6 +28,7 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -52,6 +53,7 @@ export default defineComponent({
       () => props.dataInfo,
       () => {
         requestParams.value = {
+          bk_biz_id: props.dataInfo.bk_biz_id,
           suborder_id: [props.dataInfo.suborderId],
           ip: [props.dataInfo.ip],
           page: props.dataInfo.page,

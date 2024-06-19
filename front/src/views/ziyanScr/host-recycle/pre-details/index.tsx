@@ -2,46 +2,44 @@ import { defineComponent, ref, computed, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { getPrecheckIpList, getPrecheckList } from '@/api/host/recycle';
 import { exportTableToExcel } from '@/utils';
+import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
-import { Button } from 'bkui-vue';
+import { Button, Form } from 'bkui-vue';
 import { useRoute } from 'vue-router';
 import ExecuteRecord from '../execute-record';
+import FloatInput from '@/components/float-input';
 import './index.scss';
+const { FormItem } = Form;
 export default defineComponent({
   components: {
     ExecuteRecord,
+    FloatInput,
   },
-  props: {
-    dataInfo: {
-      type: Object,
-      default: () => {
-        return {};
-      },
-    },
-  },
-  setup(props) {
+  setup() {
     const route = useRoute();
     const defaultFilter = () => ({
       order_id: [],
-      suborder_id: route?.query?.suborder_id || [],
-      ip: props.dataInfo?.ip || [],
+      suborder_id: route?.query?.suborder_id?.split('\n') || [],
+      ip: [],
     });
     const filter = ref(defaultFilter());
     const page = ref({
-      limit: 50,
+      limit: 10,
       start: 0,
-      enable_count: false,
     });
     const requestParams = computed(() => {
       return (data) => {
-        return {
+        const params = {
           ...data,
-          page: page.value,
+          page,
         };
+        params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
+        removeEmptyFields(params);
+        return params;
       };
     });
-    const getDyParams = ref(requestParams.value(props.dataInfo));
+    const getDyParams = ref(requestParams.value(filter.value));
     const querying = ref(false);
     const { columns } = useColumns('pdExecutecolumns');
     const PDcolumns = [...columns];
@@ -83,6 +81,10 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'create_at',
+          order: 'DESC',
+        },
       },
       scrConfig: () => {
         return {
@@ -93,12 +95,9 @@ export default defineComponent({
         };
       },
     });
-    const getPdList = (enableCount = false) => {
-      page.value.enable_count = enableCount;
-      page.value = enableCount ? Object.assign(page.value, { limit: 0 }) : page.value;
+    const getPdList = () => {
       const params = {
         ...filter.value,
-        order_id: filter.value.order_id.map((item) => Number(item)),
       };
       getDyParams.value = requestParams.value(params);
       getListData();
@@ -109,7 +108,6 @@ export default defineComponent({
     const getIpList = async () => {
       const params = {
         ...requestParams.value(filter.value),
-        order_id: filter.value.order_id.map((item) => Number(item)),
         page: { start: 0, limit: 500 },
       };
       const [failIpData, allIpData] = await Promise.all([
@@ -139,15 +137,14 @@ export default defineComponent({
     const transferData = ref({});
     const application = (row) => {
       openDetails.value = true;
-      transferData.value = {
+      Object.assign(transferData.value, {
         suborderId: row.suborder_id,
         ip: row.ip,
         page: {
           start: 0,
           limit: 10,
-          enable_count: true,
         },
-      };
+      });
     };
     onMounted(() => {
       getIpList();
@@ -157,53 +154,33 @@ export default defineComponent({
         <CommonTable>
           {{
             tabselect: () => (
-              <div class='precheck-operation'>
-                <div class='precheck-input'>
-                  <span>单号</span>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={filter.value.order_id}
-                    placeholder='请输入单号'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </div>
-                <div class='precheck-input'>
-                  <span>子单号</span>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={filter.value.suborder_id}
-                    placeholder='请输入子单号'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </div>
-                <div class='precheck-input'>
-                  <span>IP</span>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={filter.value.ip}
-                    placeholder='请输入IP'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </div>
-                <div class='precheck-input'>
-                  <bk-button theme='primary' onClick={filterOrders} loading={querying.value}>
-                    <Search></Search>
-                    查询
-                  </bk-button>
-                  <bk-button onClick={clearFilter}>清空</bk-button>
-                  <bk-button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
-                    复制所有主机IP <span>({allIpList.value.length})</span>
-                  </bk-button>
-                  <bk-button disabled={failIpList.value.length === 0} v-clipboard={failIpList.value.join('\n')}>
-                    复制失败主机IP <span>({failIpList.value.length})</span>
-                  </bk-button>
-                  <bk-button onClick={exportToExcel}>导出全部</bk-button>
+              <div class={'apply-list-container'}>
+                <div class={'filter-container'}>
+                  <Form model={filter.value} class={'scr-form-wrapper'}>
+                    <FormItem label='单号'>
+                      <FloatInput v-model={filter.value.order_id} placeholder='请输入单号，多个换行分割' />
+                    </FormItem>
+                    <FormItem label='子单号'>
+                      <FloatInput v-model={filter.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
+                    </FormItem>
+                    <FormItem label='IP'>
+                      <FloatInput v-model={filter.value.ip} placeholder='请输入IP，多个换行分割' />
+                    </FormItem>
+                  </Form>
+                  <div class='precheck-input'>
+                    <bk-button theme='primary' onClick={filterOrders} loading={querying.value}>
+                      <Search></Search>
+                      查询
+                    </bk-button>
+                    <bk-button onClick={clearFilter}>清空</bk-button>
+                    <bk-button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
+                      复制所有主机IP <span>({allIpList.value.length})</span>
+                    </bk-button>
+                    <bk-button disabled={failIpList.value.length === 0} v-clipboard={failIpList.value.join('\n')}>
+                      复制失败主机IP <span>({failIpList.value.length})</span>
+                    </bk-button>
+                    <bk-button onClick={exportToExcel}>导出全部</bk-button>
+                  </div>
                 </div>
               </div>
             ),

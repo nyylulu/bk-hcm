@@ -1,12 +1,13 @@
-import { defineComponent, ref, computed, onMounted } from 'vue';
-import { useAccountStore } from '@/store';
+import { defineComponent, ref, computed, onMounted, watch } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
+import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { Search } from 'bkui-vue/lib/icon';
-import BusinessSelector from '@/components/business-selector';
+import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
+import FloatInput from '@/components/float-input';
 import dayjs from 'dayjs';
 
 export default defineComponent({
@@ -14,6 +15,7 @@ export default defineComponent({
     BusinessSelector,
     MemberSelect,
     ExportToExcelButton,
+    FloatInput,
   },
   emits: ['goBillDetailPage'],
   setup(props, { emit }) {
@@ -30,6 +32,14 @@ export default defineComponent({
     });
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());
+    watch(
+      () => deviceForm.value.bk_biz_id,
+      (newVal, oldVal) => {
+        if (!oldVal.length) {
+          getListData();
+        }
+      },
+    );
     const timeForm = ref(defaultTime());
     const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
@@ -38,12 +48,6 @@ export default defineComponent({
         end: handleTime(timeForm.value[1]),
       };
     });
-    const accountStore = useAccountStore();
-    const bussinessList = ref([]);
-    const getBusinesses = async () => {
-      const { data } = await accountStore.getBizListWithAuth();
-      bussinessList.value = data || [];
-    };
     const deviceTypeList = ref([]);
     const bkZoneNameList = ref([]);
     const subZoneList = ref([]);
@@ -60,7 +64,7 @@ export default defineComponent({
       render: ({ row }) => {
         return (
           // 单据详情
-          <span class='sub-order-num' onClick={() => routeBillDetail({ pageIndex: 1, params: row.suborder_id })}>
+          <span class='sub-order-num' onClick={() => routeBillDetail({ pageIndex: 1, params: row })}>
             {row.suborder_id}
           </span>
         );
@@ -72,9 +76,15 @@ export default defineComponent({
       limit: 10,
       enable_count: false,
     });
-    const requestListParams = ref({
-      ...timeObj.value,
-      page: pageInfo.value,
+    const requestListParams = computed(() => {
+      const params = {
+        ...deviceForm.value,
+        ...timeObj.value,
+        page: pageInfo.value,
+      };
+      params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
+      removeEmptyFields(params);
+      return params;
     });
     const { CommonTable, getListData, dataList } = useTable({
       tableOptions: {
@@ -82,6 +92,11 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'ip',
+          order: 'ASC',
+        },
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -92,24 +107,17 @@ export default defineComponent({
         };
       },
     });
-    const getDevicelist = (enableCount = false) => {
-      pageInfo.value.enable_count = enableCount;
-      const params = {
-        ...deviceForm.value,
-        ...timeObj.value,
-        page: enableCount ? Object.assign(pageInfo.value, { limit: 0 }) : pageInfo.value,
-      };
-      params.order_id = params.order_id.map((item) => Number(item));
-      params.bk_biz_id = [Number(params.bk_biz_id)];
-      requestListParams.value = { ...params };
+    const getDevicelist = () => {
       getListData();
     };
     const filterOrders = () => {
       pageInfo.value.start = 0;
-      getDevicelist(true);
+      getDevicelist();
     };
     const clearFilter = () => {
-      deviceForm.value = defaultDeviceForm();
+      const initForm = defaultDeviceForm();
+      initForm.bk_biz_id = businessRef.value.defaultBusiness;
+      deviceForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
     };
@@ -129,101 +137,91 @@ export default defineComponent({
       const data = await getRecycleStageOpts();
       stageList.value = data?.info || [];
     };
+    const businessRef = ref(null);
     onMounted(() => {
       fetchDeviceTypeList();
       fetchRegionList();
       fetchZoneList();
       fetchStageList();
-      getBusinesses();
     });
     return () => (
       <div>
         <CommonTable>
           {{
             tabselect: () => (
-              <bk-form label-width='110' class='bill-filter-form' model={deviceForm}>
-                <bk-form-item label='业务'>
-                  <business-selector v-model={deviceForm.value.bk_biz_id} placeholder='请选择业务' />
-                </bk-form-item>
-                <bk-form-item label='单号'>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={deviceForm.value.order_id}
-                    placeholder='请输入单号'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </bk-form-item>
-                <bk-form-item label='子单号'>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={deviceForm.value.suborder_id}
-                    placeholder='请输入子单号'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </bk-form-item>
-                <bk-form-item label='机型'>
-                  <bk-select v-model={deviceForm.value.device_type} multiple clearable placeholder='请选择机型'>
-                    {deviceTypeList.value.map((item) => {
-                      return <bk-option key={item} label={item} value={item}></bk-option>;
-                    })}
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item label='地域'>
-                  <bk-select v-model={deviceForm.value.bk_zone_name} multiple clearable placeholder='请选择地域'>
-                    {bkZoneNameList.value.map((item) => {
-                      return <bk-option key={item} label={item} value={item}></bk-option>;
-                    })}
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item label='园区'>
-                  <bk-select v-model={deviceForm.value.sub_zone} multiple clearable placeholder='请选择园区'>
-                    {subZoneList.value.map((item) => {
-                      return <bk-option key={item} label={item} value={item}></bk-option>;
-                    })}
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item label='状态'>
-                  <bk-select v-model={deviceForm.value.stage} multiple clearable placeholder='请选择状态'>
-                    {stageList.value.map(({ stage, description }) => {
-                      return <bk-option key={stage} label={description} value={stage}></bk-option>;
-                    })}
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item label='回收IP'>
-                  <bk-tag-input
-                    class='tag-input-width'
-                    v-model={deviceForm.value.ip}
-                    placeholder='请输入IP'
-                    allow-create
-                    has-delete-icon
-                    allow-auto-match
-                  />
-                </bk-form-item>
-                <bk-form-item label='回收人'>
-                  <member-select
-                    class='tag-input-width'
-                    v-model={deviceForm.value.bk_username}
-                    multiple
-                    clearable
-                    placeholder='请输入企业微信名'
-                  />
-                </bk-form-item>
-                <bk-form-item label='完成时间'>
-                  <bk-date-picker v-model={timeForm.value} type='daterange' />
-                </bk-form-item>
-                <bk-form-item class='bill-form-btn' label-width='20'>
-                  <bk-button theme='primary' onClick={filterOrders}>
-                    <Search />
-                    查询
-                  </bk-button>
-                  <bk-button onClick={clearFilter}>清空</bk-button>
-                  <export-to-excel-button data={dataList} columns={tableColumns} filename='回收设备列表' />
-                </bk-form-item>
-              </bk-form>
+              <div class={'apply-list-container'}>
+                <div class={'filter-container'}>
+                  <bk-form label-width='110' class={'scr-form-wrapper'} model={deviceForm}>
+                    <bk-form-item label='业务'>
+                      <business-selector
+                        ref={businessRef}
+                        v-model={deviceForm.value.bk_biz_id}
+                        placeholder='请选择业务'
+                        authed
+                        autoSelect
+                        multiple
+                        clearable={false}
+                      />
+                    </bk-form-item>
+                    <bk-form-item label='单号'>
+                      <FloatInput v-model={deviceForm.value.order_id} placeholder='请输入单号，多个换行分割' />
+                    </bk-form-item>
+                    <bk-form-item label='子单号'>
+                      <FloatInput v-model={deviceForm.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
+                    </bk-form-item>
+                    <bk-form-item label='机型'>
+                      <bk-select v-model={deviceForm.value.device_type} multiple clearable placeholder='请选择机型'>
+                        {deviceTypeList.value.map((item) => {
+                          return <bk-option key={item} label={item} value={item}></bk-option>;
+                        })}
+                      </bk-select>
+                    </bk-form-item>
+                    <bk-form-item label='地域'>
+                      <bk-select v-model={deviceForm.value.bk_zone_name} multiple clearable placeholder='请选择地域'>
+                        {bkZoneNameList.value.map((item) => {
+                          return <bk-option key={item} label={item} value={item}></bk-option>;
+                        })}
+                      </bk-select>
+                    </bk-form-item>
+                    <bk-form-item label='园区'>
+                      <bk-select v-model={deviceForm.value.sub_zone} multiple clearable placeholder='请选择园区'>
+                        {subZoneList.value.map((item) => {
+                          return <bk-option key={item} label={item} value={item}></bk-option>;
+                        })}
+                      </bk-select>
+                    </bk-form-item>
+                    <bk-form-item label='状态'>
+                      <bk-select v-model={deviceForm.value.stage} multiple clearable placeholder='请选择状态'>
+                        {stageList.value.map(({ stage, description }) => {
+                          return <bk-option key={stage} label={description} value={stage}></bk-option>;
+                        })}
+                      </bk-select>
+                    </bk-form-item>
+                    <bk-form-item label='回收IP'>
+                      <FloatInput v-model={deviceForm.value.ip} placeholder='请输入IP，多个换行分割' />
+                    </bk-form-item>
+                    <bk-form-item label='回收人'>
+                      <member-select
+                        v-model={deviceForm.value.bk_username}
+                        multiple
+                        clearable
+                        placeholder='请输入企业微信名'
+                      />
+                    </bk-form-item>
+                    <bk-form-item label='完成时间'>
+                      <bk-date-picker v-model={timeForm.value} type='daterange' />
+                    </bk-form-item>
+                  </bk-form>
+                  <div class='bill-form-btn'>
+                    <bk-button theme='primary' onClick={filterOrders}>
+                      <Search />
+                      查询
+                    </bk-button>
+                    <bk-button onClick={clearFilter}>清空</bk-button>
+                    <export-to-excel-button data={dataList} columns={tableColumns} filename='回收设备列表' />
+                  </div>
+                </div>
+              </div>
             ),
           }}
         </CommonTable>
