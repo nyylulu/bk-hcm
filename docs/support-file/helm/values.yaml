@@ -754,3 +754,13 @@ egress:
     - 11.0.0.0/8
     - 30.0.0.0/8
   yuntiDomain: ""
+
+resourceDissolve:
+  originDate: "20240105"
+
+elasticsearch:
+  url:
+  user:
+  password:
+
+blacklist:

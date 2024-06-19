@@ -56,6 +56,8 @@ import (
 	daosubaccount "hcm/pkg/dal/dao/cloud/sub-account"
 	daosync "hcm/pkg/dal/dao/cloud/sync"
 	"hcm/pkg/dal/dao/cloud/zone"
+	"hcm/pkg/dal/dao/dissolve/host"
+	"hcm/pkg/dal/dao/dissolve/module"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
@@ -144,6 +146,9 @@ type Set interface {
 	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
+
+	RecycleModule() module.RecycleModule
+	RecycleHost() host.RecycleHost
 
 	Txn() *Txn
 }
@@ -797,4 +802,14 @@ func (s *set) RootAccount() accountset.RootAccount {
 		IDGen: s.idGen,
 		Audit: s.audit,
 	}
+}
+
+// RecycleModule return recycle module dao.
+func (s *set) RecycleModule() module.RecycleModule {
+	return module.NewRecycleModuleDao(s.orm, s.idGen, s.audit)
+}
+
+// RecycleHost return recycle host dao.
+func (s *set) RecycleHost() host.RecycleHost {
+	return host.NewRecycleHostDao(s.orm, s.idGen, s.audit)
 }

@@ -413,7 +413,10 @@ type WoaServerSetting struct {
 	Watch        MongoDB   `yaml:"watch"`
 	Redis        Redis     `yaml:"redis"`
 	ClientConfig `yaml:",inline"`
-	ItsmFlows    []ItsmFlow `yaml:"itsmFlows"`
+	ItsmFlows    []ItsmFlow       `yaml:"itsmFlows"`
+	ResDissolve  ResourceDissolve `yaml:"resourceDissolve"`
+	Es           Es               `yaml:"elasticsearch"`
+	Blacklist    string           `yaml:"blacklist"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -456,7 +459,19 @@ func (s WoaServerSetting) Validate() error {
 		return err
 	}
 
+	if err := s.Database.validate(); err != nil {
+		return err
+	}
+
 	if err := s.ClientConfig.validate(); err != nil {
+		return err
+	}
+
+	if err := s.ResDissolve.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Es.validate(); err != nil {
 		return err
 	}
 

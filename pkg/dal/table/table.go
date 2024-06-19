@@ -211,6 +211,11 @@ const (
 	AccountBillSummaryRootTable = "account_bill_summary_root"
 	// AccountBillSummaryMainTable 月度汇总账单
 	AccountBillSummaryMainTable = "account_bill_summary_main"
+
+	// RecycleModuleInfo 裁撤模块表
+	RecycleModuleInfo = "recycle_module_info"
+	// RecycleHostInfo  裁撤主机表
+	RecycleHostInfo = "recycle_host_info"
 )
 
 // Validate whether the table name is valid or not.
@@ -318,6 +323,9 @@ var TableMap = map[Name]struct{}{
 
 	MainAccountTable: {},
 	RootAccountTable: {},
+
+	RecycleModuleInfo: {},
+	RecycleHostInfo:   {},
 }
 
 // Register 注册表名
