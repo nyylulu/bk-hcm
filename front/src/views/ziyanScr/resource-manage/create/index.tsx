@@ -130,6 +130,8 @@ export default defineComponent({
         ),
       });
 
+    const isAutoCheck = ref(false);
+
     const { CommonTable, dataList, getListData, pagination } = useTable({
       tableOptions: { columns },
       requestOption: { dataPath: 'data.info', full: true },
@@ -142,6 +144,7 @@ export default defineComponent({
     const reloadTableDataList = () => {
       pagination.start = 0;
       getListData();
+      isAutoCheck.value = false;
     };
 
     const clearFilter = () => {
@@ -165,7 +168,8 @@ export default defineComponent({
     const handleOnline = async () => {
       const ids = commonTableRef.value.tableRef.getSelection().map((item: any) => item.bk_host_id);
       await ziyanScrStore.createOnlineTask({ bk_host_ids: ids });
-      Message({ type: 'success', message: '提交成功' });
+      Message({ theme: 'success', message: '提交成功' });
+      reloadTableDataList();
     };
 
     return () => (
@@ -197,7 +201,7 @@ export default defineComponent({
                 <div class='table-operation-bar'>
                   <span class='mr8'>数量</span>
                   <InputNumber v-model={selectNumber.value} class='mr8' min={0} max={500} />
-                  <Checkbox class='mr8' onChange={handleCheck}>
+                  <Checkbox v-model={isAutoCheck.value} class='mr8' onChange={handleCheck}>
                     一键勾选
                   </Checkbox>
                   <Button theme='primary' onClick={handleOnline}>
@@ -213,7 +217,9 @@ export default defineComponent({
           </div>
         </div>
         {/* 资源下架 */}
-        {props.type === 'offline' && <CreateRecallTaskDialog ref={createRecallTaskDialogRef} />}
+        {props.type === 'offline' && (
+          <CreateRecallTaskDialog ref={createRecallTaskDialogRef} onReloadTable={reloadTableDataList} />
+        )}
       </div>
     );
   },

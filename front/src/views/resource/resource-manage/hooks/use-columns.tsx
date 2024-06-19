@@ -38,6 +38,7 @@ import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/tra
 import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
+import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -2308,21 +2309,21 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '状态',
       field: 'status',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return getPrecheckStatusView(row.status);
       },
     },
     {
       label: '开始时间',
       field: 'create_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.create_at)}</span>;
       },
     },
     {
       label: '结束时间',
       field: 'end_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.end_at)}</span>;
       },
     },
@@ -2345,15 +2346,15 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '状态',
       field: 'status',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return getPrecheckStatusView(row.status);
       },
-      exportFormatter: (row) => getPrecheckStatusLabel(row.status),
+      exportFormatter: (row: any) => getPrecheckStatusLabel(row.status),
     },
     {
       label: '已执行/总数',
       field: 'mem',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div>
             <span class={row.success_num > 0 ? 'c-success' : ''}>{row.success_num}</span>
@@ -2362,27 +2363,27 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           </div>
         );
       },
-      exportFormatter: (row) => {
+      exportFormatter: (row: any) => {
         return `${row.success_num}/${row.total_num}`;
       },
     },
     {
       label: '更新时间',
       field: 'update_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.update_at)}</span>;
       },
-      formatter: ({ update_at }) => {
+      formatter: ({ update_at }: any) => {
         return dateTimeTransform(update_at);
       },
     },
     {
       label: '创建时间',
       field: 'create_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.create_at)}</span>;
       },
-      formatter: ({ create_at }) => {
+      formatter: ({ create_at }: any) => {
         return dateTimeTransform(create_at);
       },
     },
@@ -2428,7 +2429,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '业务',
       field: 'bk_biz_id',
-      formatter: ({ bk_biz_id }) => {
+      formatter: ({ bk_biz_id }: any) => {
         return getBusinessNameById(bk_biz_id);
       },
     },
@@ -2436,30 +2437,30 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '资源类型',
       field: 'resource_type',
       width: 120,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{getResourceTypeName(row.resource_type)}</span>;
       },
-      formatter: ({ resource_type }) => {
+      formatter: ({ resource_type }: any) => {
         return getResourceTypeName(resource_type);
       },
     },
     {
       label: '回收类型',
       field: 'return_plan',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{getReturnPlanName(row.return_plan, row.resource_type)}</span>;
       },
-      formatter: ({ return_plan, resource_type }) => {
+      formatter: ({ return_plan, resource_type }: any) => {
         return getReturnPlanName(return_plan, resource_type);
       },
     },
     {
       label: '回收成本',
       field: 'cost_concerned',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{row.cost_concerned ? '涉及' : '不涉及'}</span>;
       },
-      formatter: ({ cost_concerned }) => {
+      formatter: ({ cost_concerned }: any) => {
         return cost_concerned ? '涉及' : '不涉及';
       },
     },
@@ -2467,16 +2468,16 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '状态',
       field: 'status',
       width: 100,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return getRecycleTaskStatusView(row.status);
       },
-      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
+      exportFormatter: (row: any) => getRecycleTaskStatusLabel(row.status),
     },
     {
       label: '当前处理人',
       field: 'handler',
       width: 100,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return row.handler !== 'AUTO' ? (
           <a href={`wxwork://message?username=${row.handler}`} class='username'>
             {row.handler}
@@ -2489,7 +2490,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '总数/成功/失败',
       width: 120,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div>
             <span>{row.total_num}</span>
@@ -2500,14 +2501,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           </div>
         );
       },
-      exportFormatter: (row) => {
+      exportFormatter: (row: any) => {
         return `${row.success_num}/${row.failed_num}/${row.total_num}`;
       },
     },
     {
       label: '回收人',
       field: 'bk_username',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
             {row.bk_username}
@@ -2518,10 +2519,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '回收时间',
       field: 'create_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.create_at)}</span>;
       },
-      formatter: ({ create_at }) => {
+      formatter: ({ create_at }: any) => {
         return dateTimeTransform(create_at);
       },
     },
@@ -2558,7 +2559,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '回收业务',
       field: 'bk_biz_id',
-      formatter: ({ bk_biz_id }) => {
+      formatter: ({ bk_biz_id }: any) => {
         return getBusinessNameById(bk_biz_id);
       },
     },
@@ -2581,20 +2582,20 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '成本分摊比例',
       field: 'return_cost_rate',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return row.return_cost_rate ? `${Math.ceil(row.return_cost_rate * 100)}%` : '-';
       },
     },
     {
       label: '状态',
       field: 'status',
-      render: ({ row }) => getRecycleTaskStatusView(row.status),
-      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
+      render: ({ row }: any) => getRecycleTaskStatusView(row.status),
+      exportFormatter: (row: any) => getRecycleTaskStatusLabel(row.status),
     },
     {
       label: '回收人',
       field: 'bk_username',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
             {row.bk_username}
@@ -2605,10 +2606,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '创建时间',
       field: 'create_at',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.create_at)}</span>;
       },
-      formatter: ({ create_at }) => {
+      formatter: ({ create_at }: any) => {
         return dateTimeTransform(create_at);
       },
     },
@@ -2649,7 +2650,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '维护人',
       field: 'operator',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <a href={`wxwork://message?username=${row.operator}`} class='username'>
             {row.operator}
@@ -2660,7 +2661,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '备份维护人',
       field: 'bak_operator',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <a href={`wxwork://message?username=${row.bak_operator}`} class='username'>
             {row.bak_operator}
@@ -2675,7 +2676,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '成本分摊比例',
       field: 'return_cost_rate',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return row.return_cost_rate ? `${Math.ceil(row.return_cost_rate * 100)}%` : '-';
       },
     },
@@ -2683,7 +2684,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '校验结果',
       field: 'return_plan_msg',
       showOverflowTooltip: true,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <bk-link type='info' v-clipboard={row.return_plan_msg} underline={false}>
             {row.return_plan_msg}
@@ -2694,27 +2695,27 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '上架时间',
       field: 'input_time',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.input_time)}</span>;
       },
-      formatter: ({ input_time }) => {
+      formatter: ({ input_time }: any) => {
         return dateTimeTransform(input_time);
       },
     },
     {
       label: '销毁时间',
       field: 'return_time',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return <span>{dateTimeTransform(row.return_time)}</span>;
       },
-      formatter: ({ return_time }) => {
+      formatter: ({ return_time }: any) => {
         return dateTimeTransform(return_time);
       },
     },
     {
       label: '回收单号',
       field: 'return_id',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <bk-link type='primary' underline={false} href={row.return_link} target='_blank'>
             {row.return_id}
@@ -2725,8 +2726,8 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '状态',
       field: 'status',
-      render: ({ row }) => getRecycleTaskStatusView(row.status),
-      exportFormatter: (row) => getRecycleTaskStatusLabel(row.status),
+      render: ({ row }: any) => getRecycleTaskStatusView(row.status),
+      exportFormatter: (row: any) => getRecycleTaskStatusLabel(row.status),
     },
   ];
 
@@ -3061,7 +3062,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: 'VPC',
       field: 'vpc_name',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div class='cvm-cell-height'>
             <div>{row.vpc_name}</div>
@@ -3073,7 +3074,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: 'Subnet',
       field: 'subnet_name',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div class='cvm-cell-height'>
             <div>{row.subnet_name}</div>
@@ -3085,7 +3086,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '地域',
       field: 'region',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div class='cvm-cell-height'>
             <div> {getRegionCn(row.region)}</div>
@@ -3097,7 +3098,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '园区',
       field: 'zone',
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         return (
           <div class='cvm-cell-height'>
             <div> {getZoneCn(row.zone)}</div>
@@ -3233,17 +3234,17 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '其他信息',
       field: 'remark',
-      render: ({ cell }) => cell || '--',
+      render: ({ cell }: any) => cell || '--',
     },
     {
       label: '可查询容量',
       field: 'enable_capacity',
-      render: ({ cell }) => (cell ? '是' : '否'),
+      render: ({ cell }: any) => (cell ? '是' : '否'),
     },
     {
       label: '可申请',
       field: 'enable_apply',
-      render: ({ cell }) => (cell ? '是' : '否'),
+      render: ({ cell }: any) => (cell ? '是' : '否'),
     },
     {
       label: '推荐分数',
@@ -3252,7 +3253,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '备注',
       field: 'comment',
-      render: ({ comment }) => comment || '--',
+      render: ({ comment }: any) => comment || '--',
     },
   ];
   const firstAccountColumns = [
@@ -3958,7 +3959,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       showOverflowTooltip: () => ({
         theme: 'light',
       }),
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         if (row.task_id)
           return (
             <a class='link-type' href={row.task_link} target='_blank'>
@@ -3972,13 +3973,13 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '需求类型',
       field: 'require_type',
       width: 100,
-      render: ({ row }) => getTypeCn(row.require_type),
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       label: '状态',
       field: 'status',
       width: 80,
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         const desc = getCvmProduceStatus(row.status);
 
         if (row.status === 'INIT') return <span class='c-info'>{desc}</span>;
@@ -4003,12 +4004,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '地域',
       field: 'spec.region',
-      render: ({ row }) => getRegionCn(row.spec.region),
+      render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
       label: '园区',
       field: 'spec.zone',
-      render: ({ row }) => getZoneCn(row.spec.zone),
+      render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
       label: '机型',
@@ -4023,7 +4024,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '生产情况-失败',
       field: 'failed_num',
       width: 150,
-      render: ({ row }) => <span class='c-danger'>{row.failed_num}</span>,
+      render: ({ row }: any) => <span class='c-danger'>{row.failed_num}</span>,
     },
     {
       label: '生产情况-总数',
@@ -4043,13 +4044,13 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
         value: 'desc',
       },
       width: 99,
-      render: ({ row }) => dateTimeTransform(row.create_at),
+      render: ({ row }: any) => dateTimeTransform(row.create_at),
     },
     {
       label: '结束时间',
       field: 'update_at',
       width: 90,
-      render: ({ row }) => dateTimeTransform(row.update_at),
+      render: ({ row }: any) => dateTimeTransform(row.update_at),
     },
     {
       label: '备注',
@@ -4064,7 +4065,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'require_type',
       label: '需求类型',
       width: 100,
-      render: ({ row }) => getTypeCn(row.require_type),
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       field: 'label.device_group',
@@ -4090,19 +4091,19 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       field: 'region',
       label: '地域',
-      render: ({ row }) => getRegionCn(row.region),
+      render: ({ row }: any) => getRegionCn(row.region),
     },
     {
       field: 'zone',
       label: '园区',
-      render: ({ row }) => getZoneCn(row.zone),
+      render: ({ row }: any) => getZoneCn(row.zone),
     },
     {
       field: 'capacity_flag',
       label: '库存情况',
       width: 140,
       sort: { value: 'desc' },
-      render: ({ row }) => {
+      render: ({ row }: any) => {
         const { class: theClass, text } = capacityLevel(row.capacity_flag);
         return <span class={theClass}>{text}</span>;
       },
@@ -4126,7 +4127,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '生产时间',
       field: 'update_at',
-      render: ({ row }) => dateTimeTransform(row.update_at),
+      render: ({ row }: any) => dateTimeTransform(row.update_at),
     },
   ];
 

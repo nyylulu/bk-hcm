@@ -9,8 +9,8 @@ import { useI18n } from 'vue-i18n';
 
 export default defineComponent({
   name: 'CreateRecallTaskDialog',
-  props: { getListData: Function },
-  setup(props, { expose }) {
+  emits: ['reloadTable'],
+  setup(_, { emit, expose }) {
     const ziyanScrStore = useZiyanScrStore();
 
     const { t } = useI18n();
@@ -33,8 +33,8 @@ export default defineComponent({
       isLoading.value = true;
       try {
         await ziyanScrStore.createRecallTask(data);
-        Message({ theme: 'success', message: '资源下架成功' });
-        props.getListData();
+        Message({ theme: 'success', message: '提交成功' });
+        emit('reloadTable');
       } finally {
         isLoading.value = false;
       }
