@@ -39,7 +39,6 @@ export default defineComponent({
     const page = ref({
       limit: 50,
       start: 0,
-      sort: '-capacity_flag',
     });
     const queryrules = ref(
       [
@@ -168,6 +167,10 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'capacity_flag',
+          order: 'DESC',
+        },
       },
       scrConfig: () => {
         return {

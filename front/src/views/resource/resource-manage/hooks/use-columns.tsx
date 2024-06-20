@@ -1802,6 +1802,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '需求类型',
       field: 'require_type',
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       label: '实例族',
@@ -1829,10 +1830,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '园区',
       field: 'zone',
+      render: ({ row }: any) => getZoneCn(row.zone),
     },
     {
       label: '库存情况',
       field: 'capacity_flag',
+      sort: { value: 'desc' },
       render({ cell }: { cell: string }) {
         const { class: theClass, text } = capacityLevel(cell);
         return <span class={theClass}>{text}</span>;
