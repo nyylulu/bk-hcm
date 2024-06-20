@@ -35,7 +35,7 @@ import {
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
-import { Spinner, Share, Copy, DataShape } from 'bkui-vue/lib/icon';
+import { Spinner, Share } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
@@ -3109,55 +3109,18 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
 
   const ApplicationListColumns = [
     {
-      label: '已交付数',
-      field: 'success_num',
-      width: 150,
+      label: '申请人',
       render: ({ data }: any) => {
-        if (data.success_num > 0) {
-          const ips: any[] = [];
-          const assetIds: any[] = [];
-          const goToCmdb = (ips: string[]) => {
-            window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
-          };
-
-          return (
-            <div class={'flex-row align-item-center'}>
-              {data.success_num}
-              <Button
-                text
-                theme={'primary'}
-                class='ml8 mr8'
-                v-clipboard:copy={ips.join('\n')}
-                v-bk-tooltips={{
-                  content: '复制 IP',
-                }}>
-                <Copy />
-              </Button>
-              <Button
-                text
-                theme={'primary'}
-                class='mr8'
-                v-clipboard:copy={assetIds.join('\n')}
-                v-bk-tooltips={{
-                  content: '复制固资号',
-                }}>
-                <Copy />
-              </Button>
-              <Button
-                text
-                theme={'primary'}
-                onClick={() => goToCmdb(ips)}
-                v-bk-tooltips={{
-                  content: '去蓝鲸配置平台管理资源',
-                }}>
-                <DataShape />
-              </Button>
-            </div>
-          );
-        }
-
-        return <span>{data.success_num}</span>;
+        return <WName name={data.bk_username}></WName>;
       },
+    },
+    {
+      label: '交付情况-总数',
+      field: 'total_num',
+    },
+    {
+      label: '交付情况-待交付',
+      field: 'pending_num',
     },
     {
       label: '申请时间',

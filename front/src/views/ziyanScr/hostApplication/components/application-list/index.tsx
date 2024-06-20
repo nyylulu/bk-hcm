@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch } from 'vue';
+import { defineComponent, onMounted, ref, computed } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -14,7 +14,7 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useRoute, useRouter } from 'vue-router';
 import moment from 'moment';
 import WName from '@/components/w-name';
-import { HelpDocumentFill } from 'bkui-vue/lib/icon';
+import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import CommonSideslider from '@/components/common-sideslider';
@@ -23,6 +23,7 @@ import http from '@/http';
 import { useZiyanScrStore } from '@/store';
 import SuborderDetail from '../suborder-detail';
 import CommonDialog from '@/components/common-dialog';
+import { throttle } from 'lodash';
 import MatchPanel from '../match-panel';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
@@ -66,6 +67,84 @@ export default defineComponent({
     const { columns } = useColumns('applicationList');
     const router = useRouter();
     const route = useRoute();
+    const orderClipboard = ref({});
+    columns.splice(3, 0, {
+      label: '交付情况-已交付',
+      field: 'success_num',
+      width: 180,
+      render: ({ data }: any) => {
+        if (data.success_num > 0) {
+          const ips = orderClipboard.value?.[data.suborder_id]?.ips || [];
+          const assetIds = orderClipboard.value?.[data.suborder_id]?.assetIds || [];
+          const goToCmdb = (ips: string[]) => {
+            window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
+          };
+
+          return (
+            <div class={'flex-row align-item-center'}>
+              {data.success_num}
+              <Button
+                text
+                theme={'primary'}
+                class='ml8 mr8'
+                v-clipboard:copy={ips.join('\n')}
+                v-bk-tooltips={{
+                  content: '复制 IP',
+                }}>
+                <Copy />
+              </Button>
+              <Button
+                text
+                theme={'primary'}
+                class='mr8'
+                v-clipboard:copy={assetIds.join('\n')}
+                v-bk-tooltips={{
+                  content: '复制固资号',
+                }}>
+                <Copy />
+              </Button>
+              <Button
+                text
+                theme={'primary'}
+                onClick={() => goToCmdb(ips)}
+                v-bk-tooltips={{
+                  content: '去蓝鲸配置平台管理资源',
+                }}>
+                <DataShape />
+              </Button>
+            </div>
+          );
+        }
+
+        return <span>{data.success_num}</span>;
+      },
+    });
+    const opBtnDisabled = computed(() => {
+      return (row) => {
+        if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
+          return true;
+        }
+        if (
+          ['wait', 'MATCHED_SOME', 'MATCHING'].includes(row.status) ||
+          (row.stage === 'SUSPEND' && row.status === 'TERMINATE')
+        ) {
+          return false;
+        }
+        if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
+          return true;
+        }
+        if (row.stage === 'TERMINATE' && row.status === 'TERMINATE') {
+          return true;
+        }
+        if (row.stage === 'DONE' && row.status === 'DONE') {
+          return true;
+        }
+        if (row.stage === 'AUDIT' && !row.status) {
+          return true;
+        }
+        return false;
+      };
+    });
     const { CommonTable, getListData, isLoading } = useTable({
       tableOptions: {
         columns: [
@@ -74,25 +153,25 @@ export default defineComponent({
             width: 100,
             render: ({ data }: any) => {
               return (
-                <div>
-                  <div>
-                    <Button
-                      theme='primary'
-                      text
-                      onClick={() => {
-                        router.push({
-                          name: 'host-application-detail',
-                          params: {
-                            id: data.order_id,
-                          },
-                        });
-                      }}>
-                      {data.order_id}
-                    </Button>
-                  </div>
-                  <div>
-                    <p>{data.suborder_id || '无'}</p>
-                  </div>
+                <div class={'flex-row align-item-center'}>
+                  <Button
+                    theme='primary'
+                    text
+                    onClick={() => {
+                      router.push({
+                        name: 'host-application-detail',
+                        query: {
+                          bk_biz_id: data.bk_biz_id,
+                        },
+                        params: {
+                          id: data.order_id,
+                        },
+                      });
+                    }}>
+                    {data.order_id}
+                  </Button>
+                  <br />
+                  <p class={'ml8 sub-order-txt'}>子单号: {data.suborder_id || '无'}</p>
                 </div>
               );
             },
@@ -247,41 +326,45 @@ export default defineComponent({
             render: ({ data }: any) => {
               return (
                 <div>
-                  <Button size='small' onClick={() => reapply(data)} text theme={'primary'} class='mr8'>
+                  <Button
+                    disabled={data.status === 'UNCOMMIT'}
+                    size='small'
+                    onClick={() => reapply(data)}
+                    text
+                    theme={'primary'}
+                    class='mr8'>
                     再次申请
                   </Button>
-                  {data.stage !== 'DONE' ? (
-                    <span>
-                      <Button
-                        size='small'
-                        text
-                        theme={'primary'}
-                        class='mr8'
-                        onClick={async () => {
-                          await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
-                          Message({
-                            theme: 'success',
-                            message: '重试成功',
-                          });
-                        }}>
-                        重试
-                      </Button>
-                      <Button
-                        size='small'
-                        text
-                        theme={'primary'}
-                        class='mr8'
-                        onClick={async () => {
-                          await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
-                          Message({
-                            theme: 'success',
-                            message: '终止成功',
-                          });
-                        }}>
-                        终止
-                      </Button>
-                    </span>
-                  ) : null}
+                  <Button
+                    size='small'
+                    text
+                    theme={'primary'}
+                    class='mr8'
+                    disabled={opBtnDisabled.value(data)}
+                    onClick={async () => {
+                      await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
+                      Message({
+                        theme: 'success',
+                        message: '重试成功',
+                      });
+                    }}>
+                    重试
+                  </Button>
+                  <Button
+                    size='small'
+                    text
+                    theme={'primary'}
+                    class='mr8'
+                    disabled={opBtnDisabled.value(data)}
+                    onClick={async () => {
+                      await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
+                      Message({
+                        theme: 'success',
+                        message: '终止成功',
+                      });
+                    }}>
+                    终止
+                  </Button>
                 </div>
               );
             },
@@ -289,6 +372,9 @@ export default defineComponent({
         ],
         extra: {
           border: ['row', 'col', 'outer'],
+          onRowMouseEnter: (e, row) => {
+            handleCellMouseEnter(row);
+          },
         },
       },
       requestOption: {
@@ -320,14 +406,55 @@ export default defineComponent({
         suborder_id: subOrderId,
       });
     };
-    watch(
-      () => formModel.bkBizId,
-      (newVal, oldVal) => {
-        if (!oldVal) {
-          getListData();
-        }
-      },
-    );
+    // 已交付设备
+    const getDeliveredDevices = (params) => {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/device`, params);
+    };
+    // 查询交付IP和固号IP
+    const getDeliveredHostField = (row, fieldKey) => {
+      const params = {
+        filter: {
+          condition: 'AND',
+          rules: [
+            {
+              field: 'suborder_id',
+              operator: 'equal',
+              value: row.suborder_id,
+            },
+            {
+              field: 'bk_biz_id',
+              operator: 'equal',
+              value: row.bk_biz_id,
+            },
+          ],
+        },
+      };
+      return getDeliveredDevices(params).then((res) => {
+        const value = res?.data?.info?.map((item) => item[fieldKey]) || [];
+        return value;
+      });
+    };
+    const throttleInfo = ref(null);
+    const throttleDeliveredHostField = () => {
+      throttleInfo.value = throttle(async (row) => {
+        const [ips, assetIds] = await Promise.all([
+          getDeliveredHostField(row, 'ip'),
+          getDeliveredHostField(row, 'assetId'),
+        ]);
+        orderClipboard.value[row.suborder_id] = {
+          ips,
+          assetIds,
+        };
+      }, 200);
+    };
+    const handleCellMouseEnter = (row) => {
+      if (row.success_num > 0) {
+        throttleInfo.value(row);
+      }
+    };
+    onMounted(() => {
+      throttleDeliveredHostField();
+    });
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>

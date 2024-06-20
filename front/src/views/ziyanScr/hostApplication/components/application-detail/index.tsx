@@ -2,7 +2,7 @@ import { Ref, defineComponent, onMounted, ref, computed } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import CommonCard from '@/components/CommonCard';
-import { Button, Table, Timeline } from 'bkui-vue';
+import { Button, Table, Timeline, Message } from 'bkui-vue';
 import http from '@/http';
 import { useRoute } from 'vue-router';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
@@ -11,8 +11,9 @@ import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { timeFormatter } from '@/common/util';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
+import { isEqual } from 'lodash';
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
   setup() {
     const route = useRoute();
@@ -106,11 +107,20 @@ export default defineComponent({
     });
     const clipHostIp = computed(() => {
       let batchCopyIps: any[] = [];
-
-      return selections.value.map((item) => {
-        batchCopyIps = batchCopyIps.concat(ips.value[item.suborderId]);
+      selections.value.forEach((item) => {
+        batchCopyIps = batchCopyIps.concat(ips.value?.[item.suborder_id] || []);
       });
+      return batchCopyIps;
     });
+    const batchMessage = () => {
+      const message = !clipHostIp.value.length ? '仅复制已交付IP' : '已复制';
+      Message({
+        message,
+        theme: 'success',
+        duration: 1500,
+      });
+    };
+    const suborders = ref([]);
     // 获取需求子单
     const getdemandDetail = async (orderId: string) => {
       const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
@@ -118,6 +128,17 @@ export default defineComponent({
         page: { start: 0, limit: 50 },
       });
       detail.value.info = data.info;
+      const list = data?.info || [];
+      list.forEach((item) => {
+        if (item.enableDiskCheck) item.spec.enableDiskCheck = '是';
+      });
+      if (!isEqual(suborders.value, list)) {
+        suborders.value = list;
+        suborders.value.forEach(async (item) => {
+          const { suborder_id } = item;
+          if (suborder_id) ips.value[suborder_id] = await getDeliveredHostField(suborder_id);
+        });
+      }
     };
     // 获取单据详情
     const getOrderDetail = async (orderId: string) => {
@@ -125,6 +146,7 @@ export default defineComponent({
         order_id: +orderId,
       });
       detail.value = data;
+      suborders.value = data?.suborders || [];
     };
     // 获取单据审核记录
     const getOrderAuditRecords = async (orderId: string) => {
@@ -132,6 +154,30 @@ export default defineComponent({
         order_id: +orderId,
       });
       applyRecord.value = data;
+    };
+    const getDeliveredHostField = async (suborderId) => {
+      const params = {
+        filter: {
+          condition: 'AND',
+          rules: [
+            {
+              field: 'suborder_id',
+              operator: 'equal',
+              value: suborderId,
+            },
+            {
+              field: 'bk_biz_id',
+              operator: 'equal',
+              value: Number(route?.query?.bk_biz_id),
+            },
+          ],
+        },
+      };
+      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/device`, params);
+      return Promise.resolve().then(() => {
+        const value = data?.info?.map((item) => item.ip);
+        return value;
+      });
     };
     onMounted(() => {
       getOrderDetail(route.params.id as string);
@@ -199,14 +245,18 @@ export default defineComponent({
           </CommonCard>
 
           <CommonCard title={() => '需求子单'} class={'mt24'}>
-            <Button class={'mr8'} v-clipboard={clipHostIp.value.join('\n')} disabled={selections.value.length === 0}>
+            <Button
+              class={'mr8'}
+              v-clipboard:copy={clipHostIp.value.join('\n')}
+              v-clipboard:success={batchMessage}
+              disabled={selections.value.length === 0}>
               批量复制IP
             </Button>
-            {detail.value.info?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
+            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
               <>
                 <p class={'mt16 mb8'}>云主机</p>
                 <Table
-                  data={detail.value.info}
+                  data={suborders.value}
                   columns={Hostcolumns}
                   {...{
                     onSelect: (selections: any) => {
@@ -231,7 +281,7 @@ export default defineComponent({
                       handleSelectionChange(selections, () => true, true);
                     },
                   }}
-                  data={detail.value.suborders}
+                  data={suborders.value}
                   columns={Machinecolumns}
                 />
               </>
