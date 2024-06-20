@@ -479,8 +479,7 @@ export default defineComponent({
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
 
-        <CommonSideslider isShow={isMatchPanelShow.value} title='待匹配' width={1200} noFooter>
-          
+        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1200} noFooter>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
         </CommonSideslider>
       </div>
