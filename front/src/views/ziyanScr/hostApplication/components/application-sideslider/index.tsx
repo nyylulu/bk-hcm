@@ -176,8 +176,6 @@ export default defineComponent({
 
     const OneClickApplication = (data) => {
       emit('oneApplication', data, false);
-      // title.value = '增加资源需求';
-      // addResourceRequirements.value = true;
     };
     // 一键申请侧边栏 改变实例族
     const handleDeviceGroupChange = () => {

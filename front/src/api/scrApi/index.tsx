@@ -348,7 +348,30 @@ const modifyOrder = async (params) => {
     transformFields: true,
   });
 };
+/**
+ * 获取资源最大申领量
+ * @param {Object} params 参数
+ * @param {String} params.bk_biz_id CC 业务 ID
+ * @param {String} params.require_type 申领类型
+ * @param {String} params.region 地域
+ * @param {String} params.zone 园区
+ * @param {String} params.vpc VPC
+ * @param {String} params.subnet 子网
+ * @returns {Promise}
+ */
+const getCapacity = async ({ require_type, region, zone, device_type, vpc, subnet }) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/cvm/capacity`, {
+    require_type,
+    region,
+    zone,
+    device_type,
+    vpc,
+    subnet,
+  });
+  return data;
+};
 export default {
+  getCapacity,
   getAreas,
   getZones,
   getCvmTypes,

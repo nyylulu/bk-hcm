@@ -7,7 +7,6 @@
     display: flex;
     align-items: center;
   }
-  
 }
 
 .scr-form-wrapper {
@@ -18,4 +17,18 @@
   .bk-form-item {
     margin: 8px 0;
   }
+}
+.tooltips {
+  height: 60px;
+  line-height: 60px;
+  text-align: right;
+  .content {
+    text-align: left;
+    .application {
+      font-size: 14px;
+    }
+  }
+}
+.volumetip {
+  color: #e6a23c;
 }

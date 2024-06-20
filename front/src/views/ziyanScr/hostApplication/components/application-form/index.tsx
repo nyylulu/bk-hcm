@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch } from 'vue';
-import { Input, Button, Sideslider, Message } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -433,10 +433,10 @@ export default defineComponent({
     };
     const OneClickApplication = (row, val) => {
       CVMapplication.value = val;
-
       assignment(row);
       title.value = '增加资源需求';
       addResourceRequirements.value = true;
+      onQcloudDeviceTypeChange();
     };
     const ARtriggerShow = (isShow: boolean) => {
       emptyform();
@@ -553,6 +553,20 @@ export default defineComponent({
       } finally {
         isLoading.value = false;
       }
+    };
+    const cvmCapacity = ref([]);
+    const onQcloudDeviceTypeChange = async () => {
+      const { region, zone, device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
+      const params = {
+        require_type: 1,
+        region,
+        zone,
+        device_type,
+        vpc,
+        subnet,
+      };
+      const { info } = await apiService.getCapacity(params);
+      cvmCapacity.value = info || [];
     };
     return () => (
       <div class='wid100'>
@@ -849,6 +863,7 @@ export default defineComponent({
                               <bk-select
                                 v-model={QCLOUDCVMForm.value.spec.device_type}
                                 disabled={QCLOUDCVMForm.value.spec.zone === ''}
+                                onChange={onQcloudDeviceTypeChange}
                                 placeholder={QCLOUDCVMForm.value.spec.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 filterable>
                                 {deviceTypes.value.map((deviceType) => (
@@ -892,6 +907,32 @@ export default defineComponent({
                                 resize={false}></Input>
                             </bk-form-item>
                           </bk-form>
+                          {resourceForm.value.resourceType === 'QCLOUDCVM' && (
+                            <>
+                              <div class={'tooltips'}>
+                                <span>{cvmCapacity.value[0]?.zone || ''}最大可申请量 </span>
+                                <span class={'volumetip'}>{cvmCapacity.value[0]?.max_num || 0}</span>
+                                <Popover trigger='click' theme='light' disableTeleport={true} arrow={false}>
+                                  {{
+                                    default: () => (
+                                      <span>{cvmCapacity.value[0]?.max_info.length && <span>(计算明细)</span>}</span>
+                                    ),
+                                    content: () => (
+                                      <div class={'content'}>
+                                        {cvmCapacity.value[0]?.max_info.length &&
+                                          cvmCapacity.value[0]?.max_info.map((item) => (
+                                            <div>
+                                              <span class={'application'}> {item.key}</span>
+                                              <span class={'volumetip'}> {item.value}</span>
+                                            </div>
+                                          ))}
+                                      </div>
+                                    ),
+                                  }}
+                                </Popover>
+                              </div>
+                            </>
+                          )}
                         </>
                       ) : (
                         <>
