@@ -18,7 +18,7 @@ export const getRecycleOrders = async (params, config) => {
 /** 资源回收预检任务重试接口 */
 export const retryOrder = ({ suborderId }: any, config: any) => {
   return http.post(
-    getEntirePath('task/start/recycle/detect'),
+    getEntirePath('task/start/recycle/order'),
     {
       suborder_id: suborderId,
     },
