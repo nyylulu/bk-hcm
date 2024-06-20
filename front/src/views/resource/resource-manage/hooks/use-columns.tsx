@@ -1906,29 +1906,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
   const PRSOcolumns = [
     {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-    },
-    {
-      label: '机型',
-      field: 'spec.device_type',
-      width: 180,
-    },
-    {
-      label: '交付情况总数',
-      field: 'total_num',
-    },
-    {
-      label: '交付情况待支付',
-      field: 'pending_num',
-    },
-    {
-      label: '交付情况已支付',
-      field: 'success_num',
-    },
-    {
       label: '地域',
       field: 'spec.region',
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
@@ -1957,11 +1934,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '备注',
       field: 'remark',
       render: ({ cell }: { cell: string }) => cell || '--',
-    },
-    {
-      label: '状态',
-      field: 'stage',
-      width: 180,
     },
   ];
   const CHColumns = [
@@ -2169,13 +2141,18 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '单号',
       field: 'order_id',
-      render: ({ cell }: any) => {
+      render: ({ data, cell }: any) => {
         return (
           <Button
             text
             theme='primary'
             onClick={() => {
-              // 跳转到单据申请详情页
+              router.push({
+                name: 'host-application-detail',
+                params: {
+                  id: data.order_id,
+                },
+              });
             }}>
             {cell}
           </Button>
@@ -3121,20 +3098,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const ApplicationListColumns = [
-    {
-      label: '申请人',
-      render: ({ data }: any) => {
-        return <WName name={data.bk_username}></WName>;
-      },
-    },
-    {
-      label: '交付情况-总数',
-      field: 'total_num',
-    },
-    {
-      label: '交付情况-待交付',
-      field: 'pending_num',
-    },
     {
       label: '交付情况-已交付',
       field: 'success_num',

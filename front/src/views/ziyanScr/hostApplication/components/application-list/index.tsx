@@ -23,6 +23,7 @@ import http from '@/http';
 import { useZiyanScrStore } from '@/store';
 import SuborderDetail from '../suborder-detail';
 import CommonDialog from '@/components/common-dialog';
+import MatchPanel from '../match-panel';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -32,7 +33,9 @@ export default defineComponent({
     const { transformRequireTypes } = useRequireTypes();
     const isSidesliderShow = ref(false);
     const machineDetails = ref([]);
+    const isMatchPanelShow = ref(false);
     const isDialogShow = ref(false);
+    const curRow = ref({});
     const curSuborder = ref({
       step_name: '',
       step_id: 1,
@@ -196,6 +199,35 @@ export default defineComponent({
                   <p>机型：{data.spec?.device_type || '--'}</p>
                   <p>园区：{data.spec?.zone || '--'}</p>
                 </div>
+              );
+            },
+          },
+          {
+            label: '申请人',
+            render: ({ data }: any) => {
+              return <WName name={data.bk_username}></WName>;
+            },
+          },
+          {
+            label: '交付情况-总数',
+            field: 'total_num',
+          },
+          {
+            label: '交付情况-待交付',
+            field: 'pending_num',
+            render({ cell, data }: any) {
+              return cell ? (
+                <Button
+                  theme='primary'
+                  text
+                  onClick={() => {
+                    curRow.value = data;
+                    isMatchPanelShow.value = true;
+                  }}>
+                  {cell}
+                </Button>
+              ) : (
+                cell
               );
             },
           },
@@ -446,6 +478,10 @@ export default defineComponent({
         <CommonDialog v-model:isShow={isDialogShow.value} title={`资源${curSuborder.value.step_name}详情`} width={800}>
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
+
+        <CommonSideslider isShow={isMatchPanelShow.value} title='待匹配' width={1200} noFooter>
+          <MatchPanel data={curRow.value} />
+        </CommonSideslider>
       </div>
     );
   },

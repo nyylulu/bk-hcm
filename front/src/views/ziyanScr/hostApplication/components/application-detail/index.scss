@@ -7,5 +7,15 @@
         color: #979BA5;
       }
     }
+    .copy-wrapper {
+      display: flex;
+      align-items: center;
+      .copy-icon {
+        cursor: pointer;
+        &:hover {
+          color: #3A84FF;
+        }
+      }
+    }
   }
 }

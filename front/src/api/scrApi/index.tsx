@@ -152,7 +152,7 @@ const getRegions = async (vendor: string): Promise<any> => {
  * 获取设备类型
  * @returns {Promise}
  */
-const getDeviceTypes = async ({ region, zone, require_type, device_group, enable_capacity }) => {
+const getDeviceTypes = async ({ region, zone, require_type = '', device_group = '', enable_capacity = true }) => {
   const rules = [
     region?.length && { field: 'region', operator: 'in', value: region },
     zone?.length && { field: 'zone', operator: 'in', value: zone },
@@ -319,6 +319,26 @@ const getAvailDevices = async ({ filter, page }) => {
   return data;
 };
 /**
+ * 下架匹配设备查询接口
+ * @returns {Promise}
+ */
+const getOfflineMatch = async (params) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/findmany/recall/match/device`, params, {
+    removeEmptyFields: true,
+  });
+  return data;
+};
+/**
+ * 匹配资源池设备执行接口
+ * @returns {Promise}
+ */
+const matchPools = async (params) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/commit/apply/pool/match`, params, {
+    removeEmptyFields: true,
+  });
+  return data;
+};
+/*
  * 修改资源申请单据接口
  * @returns {Promise}
  */
@@ -356,5 +376,7 @@ export default {
   createCvmDevice,
   getOrders,
   getAvailDevices,
+  getOfflineMatch,
+  matchPools,
   modifyOrder,
 };

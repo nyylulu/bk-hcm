@@ -6,7 +6,7 @@ import { Button, Table, Timeline } from 'bkui-vue';
 import http from '@/http';
 import { useRoute } from 'vue-router';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
-import { Share } from 'bkui-vue/lib/icon';
+import { Copy, Share } from 'bkui-vue/lib/icon';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { timeFormatter } from '@/common/util';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -26,31 +26,68 @@ export default defineComponent({
     const { selections, handleSelectionChange } = useSelection();
     const Hostcolumns = [
       ...cloudcolumns,
-      {
-        label: '操作',
-        width: 120,
-        render: () => {
-          return (
-            <Button text theme='primary' onClick={() => {}}>
-              查看变更记录
-            </Button>
-          );
-        },
-      },
+      // {
+      //   label: '操作',
+      //   width: 120,
+      //   render: () => {
+      //     return (
+      //       <Button text theme='primary' onClick={() => {}}>
+      //         查看变更记录
+      //       </Button>
+      //     );
+      //   },
+      // },
     ];
     const Machinecolumns = [
+      {
+        type: 'selection',
+        width: 32,
+        minWidth: 32,
+        onlyShowOnList: true,
+      },
+      {
+        label: '机型',
+        field: 'spec.device_type',
+        width: 180,
+      },
+      {
+        label: '交付情况-总数',
+        field: 'total_num',
+        render: ({ index }: any) => detail.value.info?.[index]?.total_num,
+      },
+      {
+        label: '交付情况-待交付',
+        field: 'pending_num',
+        render: ({ index }: any) => detail.value.info?.[index]?.pending_num,
+      },
+      {
+        label: '交付情况-已交付',
+        field: 'success_num',
+        render: ({ index }: any) => (
+          <span class={'copy-wrapper'}>
+            {detail.value.info?.[index]?.success_num}
+            <Copy class={'copy-icon ml4'} v-clipboard:copy={detail.value.info?.index?.success_num} />
+          </span>
+        ),
+      },
       ...physicalcolumns,
       {
-        label: '操作',
-        width: 120,
-        render: () => {
-          return (
-            <Button text theme='primary' onClick={() => {}}>
-              查看变更记录
-            </Button>
-          );
-        },
+        label: '状态',
+        field: 'stage',
+        width: 180,
+        render: ({ index }: any) => detail.value.info?.[index]?.status,
       },
+      // {
+      //   label: '操作',
+      //   width: 120,
+      //   render: () => {
+      //     return (
+      //       <Button text theme='primary' onClick={() => {}}>
+      //         查看变更记录
+      //       </Button>
+      //     );
+      //   },
+      // },
     ];
     const applyRecord = ref({
       order_id: 0,
@@ -182,7 +219,7 @@ export default defineComponent({
                 />
               </>
             )}
-            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'IDCDVM') && (
+            {detail.value.suborders?.some(({ resource_type }) => ['IDCPM', 'IDCDVM'].includes(resource_type)) && (
               <>
                 <p class={'mt16 mb8'}>物理机</p>
                 <Table
