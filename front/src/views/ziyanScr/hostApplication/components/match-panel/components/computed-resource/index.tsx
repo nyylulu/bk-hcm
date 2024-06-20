@@ -64,16 +64,8 @@ export default defineComponent({
           {
             label: '匹配数量',
             width: 250,
-            render: ({ data }: any) => {
-              return (
-                <bk-input
-                  size='mini'
-                  type='number'
-                  min={0}
-                  max={500}
-                  controls={false}
-                  v-model={data.replicas}></bk-input>
-              );
+            render: ({ row }: any) => {
+              return <bk-input size='mini' type='number' min={1} max={500} v-model={row.replicas}></bk-input>;
             },
           },
         ],
@@ -103,17 +95,27 @@ export default defineComponent({
     });
     const onRegionChange = () => {
       formModel.spec.zone = [];
+      loadDeviceTypes();
     };
     const onResourceTypeChange = () => {
       formModel.spec.region = [];
       formModel.spec.zone = [];
+      loadDeviceTypes();
     };
     const onZoneChange = () => {
       formModel.spec.device_type = [];
+      loadDeviceTypes();
     };
     const loadDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(formModel.spec);
-      device_types.value = info || [];
+      if (formModel.resource_type === 'QCLOUDCVM') {
+        const { info } = await apiService.getDeviceTypes(formModel.spec);
+        device_types.value = info || [];
+      } else {
+        const { info } = await apiService.getIDCPMDeviceTypes();
+        device_types.value = info.map((item) => {
+          return item.device_type;
+        });
+      }
     };
     onMounted(() => {
       loadDeviceTypes();

@@ -44,9 +44,15 @@ export default defineComponent({
         region: [region],
         zone: zone !== 'cvm_separate_campus' ? [zone] : undefined,
       };
-
-      const { info } = await apiService.getDeviceTypes(params);
-      deviceTypes.value = info || [];
+      if (rawOrder.value.require_type === 'QCLOUDCVM') {
+        const { info } = await apiService.getDeviceTypes(params);
+        deviceTypes.value = info || [];
+      } else {
+        const { info } = await apiService.getIDCPMDeviceTypes();
+        deviceTypes.value = info.map((item) => {
+          return item.device_type;
+        });
+      }
     };
     const loadVpcs = async () => {
       const { info } = await apiService.getVpcs(rawOrder.value.spec.region);
@@ -252,8 +258,8 @@ export default defineComponent({
                     disabled={order.value.model.spec.zone === ''}
                     placeholder={order.value.model.spec.zone === '' ? '请先选择园区' : '请选择机型'}
                     filterable>
-                    {deviceTypes.value.map((deviceType) => (
-                      <bk-option key={deviceType} label={deviceType} value={deviceType} />
+                    {deviceTypes.value.map((device_type) => (
+                      <bk-option key={device_type} label={device_type} value={device_type} />
                     ))}
                   </bk-select>
                   <Button class='preview-btn' onClick={handleSearchAvailable}>
