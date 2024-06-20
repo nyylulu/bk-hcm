@@ -480,9 +480,10 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
-	Network Network   `yaml:"network"`
-	Service Service   `yaml:"service"`
-	Log     LogOption `yaml:"log"`
+	Network Network    `yaml:"network"`
+	Service Service    `yaml:"service"`
+	Log     LogOption  `yaml:"log"`
+	FinOps  ApiGateway `yaml:"finops"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

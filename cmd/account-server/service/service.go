@@ -36,6 +36,7 @@ import (
 	"hcm/cmd/account-server/service/bill/billsummarymain"
 	"hcm/cmd/account-server/service/bill/billsummaryroot"
 	"hcm/cmd/account-server/service/capability"
+	"hcm/cmd/account-server/service/finops"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
@@ -43,10 +44,12 @@ import (
 	"hcm/pkg/handler"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/logs"
+	"hcm/pkg/metrics"
 	"hcm/pkg/rest"
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -59,6 +62,9 @@ type Service struct {
 	authorizer  auth.Authorizer
 	audit       logicaudit.Interface
 	billManager *bill.BillManager
+
+	// finOps  Finops client
+	finOps pkgfinops.Client
 }
 
 // NewService create a service instance.
@@ -99,11 +105,18 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		CurrentControllers: make(map[string]*bill.MainAccountController),
 	}
 
+	finOpsCfg := cc.AccountServer().FinOps
+	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
 	svr := &Service{
 		clientSet:   apiClientSet,
 		authorizer:  authorizer,
 		audit:       logicaudit.NewAudit(apiClientSet.DataService()),
 		billManager: newBillManager,
+		finOps:      finOpsCli,
 	}
 
 	return svr, nil
@@ -185,6 +198,7 @@ func (s *Service) apiSet() *restful.Container {
 		ApiClient:  s.clientSet,
 		Authorizer: s.authorizer,
 		Audit:      s.audit,
+		Finops:     s.finOps,
 	}
 
 	mainaccount.InitService(c)
@@ -193,6 +207,7 @@ func (s *Service) apiSet() *restful.Container {
 	billsummarymain.InitService(c)
 
 	billitem.InitBillItemService(c)
+	finops.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,27 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability 公共参数。
-package capability
+package accountserver
 
 import (
-	"hcm/cmd/account-server/logics/audit"
-	"hcm/pkg/client"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/finops"
-
-	"github.com/emicklei/go-restful/v3"
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/validator"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService *restful.WebService
-	ApiClient  *client.ClientSet
-	Authorizer auth.Authorizer
-	Audit      audit.Interface
-	Finops     finops.Client
+// ListOpProductReq ...
+type ListOpProductReq struct {
+	// 筛选事业群id列表，不传筛选全部
+	BgIds []int64 `json:"bg_ids"`
+	// 要查询部门 id 列表(不传则筛选全部)
+	DeptIds []int64 `json:"dept_ids"`
+	// 要查询运营产品 id 列表(不传则筛选全部)
+	OpProductIds []int64 `json:"op_product_ids"`
+	// 要查询运营产品名称(支持全模糊匹配，不传则筛选全部)
+	OpProductName string        `json:"op_product_name"`
+	Page          core.BasePage `json:"page"`
+}
+
+// Validate ...
+func (r *ListOpProductReq) Validate() error {
+	return validator.Validate.Struct(r)
 }

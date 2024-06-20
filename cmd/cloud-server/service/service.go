@@ -76,6 +76,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/bkbase"
+	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/ssl"
@@ -95,6 +96,8 @@ type Service struct {
 	// itsmCli itsm client.
 	itsmCli   itsm.Client
 	bkBaseCli bkbase.Client
+	// finOps  Finops client
+	finOps pkgfinops.Client
 }
 
 // NewService create a service instance.
@@ -180,6 +183,11 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		logs.Errorf("failed to create bkbase client, err: %v", err)
 		return nil, nil, nil, err
 	}
+	finOpsCfg := cc.AccountServer().FinOps
+	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	svr := &Service{
 		client:     apiClientSet,
@@ -189,6 +197,7 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		esbClient:  esbClient,
 		itsmCli:    itsmCli,
 		bkBaseCli:  bkbaseCli,
+		finOps:     finOpsCli,
 	}
 
 	return apiClientSet, esbClient, svr, nil
@@ -273,6 +282,7 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 		Logics:     logics.NewLogics(s.client, s.esbClient),
 		ItsmCli:    s.itsmCli,
 		BKBaseCli:  s.bkBaseCli,
+		Finops:     s.finOps,
 	}
 
 	account.InitAccountService(c)

@@ -599,24 +599,14 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedActions:       nil,
 		Version:              1,
 	}, {
-		ID:                   RootAccountManage,
-		Name:                 ActionIDNameMap[RootAccountManage],
-		NameEn:               "Root Account Manage",
+		ID:                   AccountBillManage,
+		Name:                 ActionIDNameMap[AccountBillManage],
+		NameEn:               "Account Bill Manage",
 		Type:                 View,
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
-	},
-		{
-			ID:                   AccountBillManage,
-			Name:                 ActionIDNameMap[AccountBillManage],
-			NameEn:               "Account Bill Manage",
-			Type:                 View,
-			RelatedResourceTypes: nil,
-			RelatedActions:       nil,
-			Version:              1,
-		},
-	}
+	}}
 }
 
 func genAccountManageActions() []client.ResourceAction {
