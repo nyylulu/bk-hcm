@@ -84,6 +84,15 @@ const ziyanScr: RouteRecordRaw[] = [
               breadcrumb: ['资源', '主机'],
             },
           },
+          {
+            path: 'docDetail',
+            name: 'docDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/bill-detail'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
         ],
         meta: {
           activeKey: 'zjhs',

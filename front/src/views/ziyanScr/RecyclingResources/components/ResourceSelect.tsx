@@ -31,7 +31,22 @@ export default defineComponent({
   setup(props, { emit }) {
     const { selections, handleSelectionChange } = useSelection();
     const { columns: RRcolumns } = useColumns('RecyclingResources');
-    const count = ref(0);
+    const impossibleCount = computed(() => {
+      let coumt = 0;
+
+      props.tableHosts.forEach((item) => {
+        if (!item.recyclable) coumt = coumt + 1;
+      });
+      return coumt;
+    });
+    const allCount = computed(() => {
+      let coumt = 0;
+
+      props.tableHosts.forEach(() => {
+        coumt = coumt + 1;
+      });
+      return coumt;
+    });
     const allRecycleHostIps = computed(() => {
       return props.tableHosts.map((item) => item.ip).join('\n');
     });
@@ -109,14 +124,14 @@ export default defineComponent({
             class='bk-button'
             v-clipboard={allRecycleHostIps.value}
             disabled={allRecycleHostIps.value.length === 0}>
-            复制所有IP{count.value}
+            复制所有IP ({allCount.value})
           </bk-button>
           <bk-button
             class='bk-button'
             theme='danger'
             v-clipboard={recycleFailedHostIps.value}
             disabled={recycleFailedHostIps.value.length === 0}>
-            复制不可回收IP{count.value}
+            复制不可回收IP ({impossibleCount.value})
           </bk-button>
           <bk-button class='bk-button' theme='primary' onClick={handleClear}>
             清空列表

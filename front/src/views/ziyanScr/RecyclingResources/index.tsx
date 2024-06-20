@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, onMounted } from 'vue';
+import { defineComponent, ref, watch, onMounted, computed } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
@@ -45,7 +45,7 @@ export default defineComponent({
     const ResourcesTitle = ref('');
     const ResourcesTable = ref([]);
     const ResourcesTotal = ref(false);
-    const lips = ref();
+    const lips = ref('');
     const activetab = ref(0);
     const serverTableData = ref([]);
     const businessList = ref([]);
@@ -154,23 +154,25 @@ export default defineComponent({
         return prev;
       }, []);
     };
+    // const ipArray =
     /** 手动输入查询可回收状态 */
+    const ipArray = computed(() => {
+      return lips.value
+        .split(/\r?\n/)
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0);
+    });
     const checkHostRecyclableStatus = async () => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ipv6 = /^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$/;
       const ips: any[] = [];
       const assetIds: any[] = [];
-      const ipArray = lips.value
-        .split(/\r?\n/)
-        .map((ip) => ip.trim())
-        .filter((ip) => ip.length > 0);
-
-      if (ipArray.length > 500) {
+      if (ipArray.value.length > 500) {
         // this.$message.error(`最多添加500台主机,请删除${ipsList.length - 500}台后重试`)
         return;
       }
 
-      ipArray.forEach((item) => {
+      ipArray.value.forEach((item) => {
         if (ipv4.test(item) || ipv6.test(item)) {
           ips.push(item);
         } else {
@@ -376,7 +378,10 @@ export default defineComponent({
             ),
             footer: () => (
               <>
-                <Button theme='primary' onClick={handleSubmit} disabled={selections.value.length === 0}>
+                <Button
+                  theme='primary'
+                  onClick={handleSubmit}
+                  disabled={selections.value.length === 0 && !ipArray.value.length}>
                   提交
                 </Button>
                 <Button class={'ml15'} onClick={() => triggerShow(false)}>

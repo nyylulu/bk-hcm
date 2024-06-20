@@ -21,6 +21,9 @@ export default defineComponent({
     const clipHostIp = computed(() => {
       return selections.value.map((item) => item.ip).join('\n');
     });
+    const clipHostAssetId = computed(() => {
+      return selections.value.map((item) => item.asset_id).join('\n');
+    });
     const { formModel, resetForm } = useFormModel({
       orderId: '',
       bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
@@ -58,7 +61,7 @@ export default defineComponent({
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],
               ['bk_username', 'in', formModel.bkUsername],
-              ['ip', 'in', formModel.ip],
+              ['ip', 'in', ipArray.value],
               ['update_at', 'd>=', timeFormatter(formModel.dateRange[0], 'YYYY-MM-DD')],
               ['update_at', 'd<=', timeFormatter(formModel.dateRange[1], 'YYYY-MM-DD')],
             ]),
@@ -66,6 +69,20 @@ export default defineComponent({
           },
         };
       },
+    });
+    const ipArray = computed(() => {
+      const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+      const ips = [];
+      formModel.ip
+        .split(/\r?\n/)
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0)
+        .forEach((item) => {
+          if (ipv4.test(item)) {
+            ips.push(item);
+          }
+        });
+      return ips;
     });
     return () => (
       <div class={'device-query-container'}>
@@ -130,7 +147,10 @@ export default defineComponent({
                   />
                   {/* <Button class={'mr8'}>导出全部</Button> */}
                   <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
-                    复制
+                    复制IP
+                  </Button>
+                  <Button class={'mr8'} v-clipboard={clipHostAssetId.value} disabled={selections.value.length === 0}>
+                    复制固单号
                   </Button>
                 </Form>
               </>

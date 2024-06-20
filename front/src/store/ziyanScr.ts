@@ -112,36 +112,27 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     });
 
   // 资源初始化详情
-  const getInitializationDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+  const getInitializationDetails = (subOrderId: any, page: any, status: any) =>
     http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/init`, {
       suborder_id: subOrderId,
       page,
-      filter:
-        status || status === 0
-          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
-          : undefined,
+      filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
     });
 
   // 本地盘性能压测
-  const getDiskCheckDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+  const getDiskCheckDetails = (subOrderId: any, page: any, status: any) =>
     http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/disk_check`, {
       suborder_id: subOrderId,
       page,
-      filter:
-        status || status === 0
-          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
-          : undefined,
+      filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
     });
 
   // 资源交付详情
-  const getDeliveryDetails = (subOrderId: any, page: any, keyword: any, status: any) =>
+  const getDeliveryDetails = (subOrderId: any, page: any, status: any) =>
     http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/record/deliver`, {
       suborder_id: subOrderId,
       page,
-      filter:
-        status || status === 0
-          ? transferSimpleConditions(['AND', ['ip', 'contains', keyword], ['status', '=', status]])
-          : undefined,
+      filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
     });
 
   // 查询裁撤数据中当前主机信息。

@@ -3109,9 +3109,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
 
   const ApplicationListColumns = [
     {
-      label: '交付情况-已交付',
+      label: '已交付数',
       field: 'success_num',
-      width: 180,
+      width: 150,
       render: ({ data }: any) => {
         if (data.success_num > 0) {
           const ips: any[] = [];
@@ -3162,17 +3162,19 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '申请时间',
       field: 'create_at',
+      width: 120,
       render: ({ data }: any) => timeFormatter(data.create_at, 'YYYY-MM-DD'),
     },
     {
       label: '期望交付时间',
       field: 'expect_time',
+      width: 120,
       render: ({ data }: any) => timeFormatter(data.expect_time, 'YYYY-MM-DD'),
     },
     {
       label: '备注信息',
       field: 'remark',
-      width: '150',
+      width: 300,
       render: ({ data }: any) => (
         <div>
           {data.description}

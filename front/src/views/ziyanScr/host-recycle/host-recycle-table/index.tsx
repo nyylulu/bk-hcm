@@ -177,14 +177,14 @@ export default defineComponent({
     };
     const { selections, handleSelectionChange } = useSelection();
     const { columns } = useColumns('hostRecycle');
-    // 0 表示单据列表，1 表示单据详情
-    const hostRecyclePage = ref(0);
-    const suborderId = ref('');
-    const bkBizId = ref([]);
-    const enterDetail = (pageFlag, row) => {
-      hostRecyclePage.value = pageFlag;
-      suborderId.value = row.suborder_id;
-      bkBizId.value = [row.bk_biz_id];
+    const enterDetail = (row) => {
+      router.push({
+        path: '/ziyanScr/hostRecycling/docDetail',
+        query: {
+          suborderId: row.suborder_id,
+          bkBizId: row.bk_biz_id,
+        },
+      });
     };
     watch(
       () => props.subBizBillNum,
@@ -202,7 +202,7 @@ export default defineComponent({
               <bk-button size='small' theme='primary' text onClick={() => returnPreDetails(row)}>
                 预检详情
               </bk-button>
-              <bk-button size='small' theme='primary' text onClick={() => enterDetail(1, row)}>
+              <bk-button size='small' theme='primary' text onClick={() => enterDetail(row)}>
                 单据详情
               </bk-button>
               {!['DONE', 'TERMINATE'].includes(row.status) ? (
@@ -280,107 +280,97 @@ export default defineComponent({
         path: '/ziyanScr/hostRecycling/resources',
       });
     };
-    const backRecyclePage = (val: number) => {
-      hostRecyclePage.value = val;
-    };
     const businessRef = ref(null);
     const renderNodes = () => {
-      if (hostRecyclePage.value === 0) {
-        // eslint-disable-next-line no-nested-ternary
-        return (
-          <div class={'apply-list-container'}>
-            <div class={'filter-container'}>
-              <Form model={recycleForm} class={'scr-form-wrapper'}>
-                <FormItem label='业务'>
-                  <BusinessSelector
-                    ref={businessRef}
-                    v-model={recycleForm.value.bk_biz_id}
-                    autoSelect
-                    authed
-                    multiple
-                    clearable={false}
-                  />
-                </FormItem>
-                <FormItem label='OBS项目类型'>
-                  <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
-                </FormItem>
-                <FormItem label='单号'>
-                  <FloatInput v-model={recycleForm.value.order_id} placeholder='请输入单号，多个换行分割' />
-                </FormItem>
-                <FormItem label='子单号'>
-                  <FloatInput v-model={recycleForm.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
-                </FormItem>
-                <FormItem label='资源类型'>
-                  <bk-select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
-                    {resourceTypeList.map(({ key, value }) => {
-                      return <bk-option key={key} label={value} value={key}></bk-option>;
-                    })}
-                  </bk-select>
-                </FormItem>
-                <FormItem label='回收类型'>
-                  <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
-                    {returnPlanList.map(({ key, value }) => {
-                      return <bk-option key={key} label={value} value={key}></bk-option>;
-                    })}
-                  </bk-select>
-                </FormItem>
-                <FormItem label='状态'>
-                  <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
-                    {stageList.value.map(({ stage, description }) => {
-                      return <bk-option key={stage} label={description} value={stage}></bk-option>;
-                    })}
-                  </bk-select>
-                </FormItem>
-                <FormItem label='回收人'>
-                  <member-select
-                    v-model={recycleForm.value.bk_username}
-                    multiple
-                    clearable
-                    placeholder='请输入企业微信名'
-                  />
-                </FormItem>
-                <FormItem label='回收时间'>
-                  <bk-date-picker v-model={timeForm.value} type='daterange' />
-                </FormItem>
-              </Form>
-            </div>
-            <div>
-              <CommonTable>
-                {{
-                  tabselect: () => (
-                    <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
-                      <bk-form-item label-width='0' class='bill-form-btn'>
-                        <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
-                          回收资源
-                        </bk-button>
-                        <bk-button theme='primary' onClick={filterOrders}>
-                          <Search />
-                          查询
-                        </bk-button>
-                        <bk-button onClick={() => clearFilter()}>清空</bk-button>
-                        <export-to-excel-button data={dataList.value} columns={tableColumns} filename='回收单据列表' />
-                        <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
-                          批量查看预检详情
-                        </bk-button>
-                        <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
-                          批量重试
-                        </bk-button>
-                        <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
-                          批量去除预检失败IP提交
-                        </bk-button>
-                      </bk-form-item>
-                    </bk-form>
-                  ),
-                }}
-              </CommonTable>
-            </div>
+      return (
+        <div class={'apply-list-container'}>
+          <div class={'filter-container'}>
+            <Form model={recycleForm} class={'scr-form-wrapper'}>
+              <FormItem label='业务'>
+                <BusinessSelector
+                  ref={businessRef}
+                  v-model={recycleForm.value.bk_biz_id}
+                  autoSelect
+                  authed
+                  multiple
+                  clearable={false}
+                />
+              </FormItem>
+              <FormItem label='OBS项目类型'>
+                <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
+              </FormItem>
+              <FormItem label='单号'>
+                <FloatInput v-model={recycleForm.value.order_id} placeholder='请输入单号，多个换行分割' />
+              </FormItem>
+              <FormItem label='子单号'>
+                <FloatInput v-model={recycleForm.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
+              </FormItem>
+              <FormItem label='资源类型'>
+                <bk-select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
+                  {resourceTypeList.map(({ key, value }) => {
+                    return <bk-option key={key} label={value} value={key}></bk-option>;
+                  })}
+                </bk-select>
+              </FormItem>
+              <FormItem label='回收类型'>
+                <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
+                  {returnPlanList.map(({ key, value }) => {
+                    return <bk-option key={key} label={value} value={key}></bk-option>;
+                  })}
+                </bk-select>
+              </FormItem>
+              <FormItem label='状态'>
+                <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
+                  {stageList.value.map(({ stage, description }) => {
+                    return <bk-option key={stage} label={description} value={stage}></bk-option>;
+                  })}
+                </bk-select>
+              </FormItem>
+              <FormItem label='回收人'>
+                <member-select
+                  v-model={recycleForm.value.bk_username}
+                  multiple
+                  clearable
+                  placeholder='请输入企业微信名'
+                />
+              </FormItem>
+              <FormItem label='回收时间'>
+                <bk-date-picker v-model={timeForm.value} type='daterange' />
+              </FormItem>
+            </Form>
           </div>
-        );
-      }
-      if (hostRecyclePage.value === 1) {
-        return <BillDetail suborderIdStr={suborderId.value} bkBizId={bkBizId.value} onGoBack={backRecyclePage} />;
-      }
-      return null;
+          <div>
+            <CommonTable>
+              {{
+                tabselect: () => (
+                  <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
+                    <bk-form-item label-width='0' class='bill-form-btn'>
+                      <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
+                        回收资源
+                      </bk-button>
+                      <bk-button theme='primary' onClick={filterOrders}>
+                        <Search />
+                        查询
+                      </bk-button>
+                      <bk-button onClick={() => clearFilter()}>清空</bk-button>
+                      <export-to-excel-button data={dataList.value} columns={tableColumns} filename='回收单据列表' />
+                      <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
+                        批量查看预检详情
+                      </bk-button>
+                      <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
+                        批量重试
+                      </bk-button>
+                      <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
+                        批量去除预检失败IP提交
+                      </bk-button>
+                    </bk-form-item>
+                  </bk-form>
+                ),
+              }}
+            </CommonTable>
+          </div>
+        </div>
+      );
     };
     onMounted(() => {
       fetchStageList();

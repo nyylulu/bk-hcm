@@ -1,4 +1,5 @@
 import { defineComponent, ref, computed, onMounted } from 'vue';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { getPrecheckIpList, getPrecheckList } from '@/api/host/recycle';
 import { exportTableToExcel } from '@/utils';
@@ -150,43 +151,46 @@ export default defineComponent({
       getIpList();
     });
     return () => (
-      <div class='common-card-wrap has-selection'>
-        <CommonTable>
-          {{
-            tabselect: () => (
-              <div class={'apply-list-container'}>
-                <div class={'filter-container'}>
-                  <Form model={filter.value} class={'scr-form-wrapper'}>
-                    <FormItem label='单号'>
-                      <FloatInput v-model={filter.value.order_id} placeholder='请输入单号，多个换行分割' />
-                    </FormItem>
-                    <FormItem label='子单号'>
-                      <FloatInput v-model={filter.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
-                    </FormItem>
-                    <FormItem label='IP'>
-                      <FloatInput v-model={filter.value.ip} placeholder='请输入IP，多个换行分割' />
-                    </FormItem>
-                  </Form>
-                  <div class='precheck-input'>
-                    <bk-button theme='primary' onClick={filterOrders} loading={querying.value}>
-                      <Search></Search>
-                      查询
-                    </bk-button>
-                    <bk-button onClick={clearFilter}>清空</bk-button>
-                    <bk-button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
-                      复制所有主机IP <span>({allIpList.value.length})</span>
-                    </bk-button>
-                    <bk-button disabled={failIpList.value.length === 0} v-clipboard={failIpList.value.join('\n')}>
-                      复制失败主机IP <span>({failIpList.value.length})</span>
-                    </bk-button>
-                    <bk-button onClick={exportToExcel}>导出全部</bk-button>
+      <div class={'application-detail-container'}>
+        <DetailHeader>预检详情</DetailHeader>
+        <div class={'detail-wrapper'}>
+          <CommonTable>
+            {{
+              tabselect: () => (
+                <div class={'apply-list-container'}>
+                  <div class={'filter-container'}>
+                    <Form model={filter.value} class={'scr-form-wrapper'}>
+                      <FormItem label='单号'>
+                        <FloatInput v-model={filter.value.order_id} placeholder='请输入单号，多个换行分割' />
+                      </FormItem>
+                      <FormItem label='子单号'>
+                        <FloatInput v-model={filter.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
+                      </FormItem>
+                      <FormItem label='IP'>
+                        <FloatInput v-model={filter.value.ip} placeholder='请输入IP，多个换行分割' />
+                      </FormItem>
+                    </Form>
+                    <div class='precheck-input'>
+                      <bk-button theme='primary' onClick={filterOrders} loading={querying.value}>
+                        <Search></Search>
+                        查询
+                      </bk-button>
+                      <bk-button onClick={clearFilter}>清空</bk-button>
+                      <bk-button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
+                        复制所有主机IP <span>({allIpList.value.length})</span>
+                      </bk-button>
+                      <bk-button disabled={failIpList.value.length === 0} v-clipboard={failIpList.value.join('\n')}>
+                        复制失败主机IP <span>({failIpList.value.length})</span>
+                      </bk-button>
+                      <bk-button onClick={exportToExcel}>导出全部</bk-button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ),
-          }}
-        </CommonTable>
-        <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
+              ),
+            }}
+          </CommonTable>
+          <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
+        </div>
       </div>
     );
   },

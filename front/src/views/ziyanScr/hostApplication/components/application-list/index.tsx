@@ -71,24 +71,28 @@ export default defineComponent({
         columns: [
           {
             label: '单号/子单号',
+            width: 100,
             render: ({ data }: any) => {
               return (
-                <div class={'flex-row align-item-center'}>
-                  <Button
-                    theme='primary'
-                    text
-                    onClick={() => {
-                      router.push({
-                        name: 'host-application-detail',
-                        params: {
-                          id: data.order_id,
-                        },
-                      });
-                    }}>
-                    {data.order_id}
-                  </Button>
-                  <br />
-                  <p class={'ml8 sub-order-txt'}>子单号: {data.suborder_id || '无'}</p>
+                <div>
+                  <div>
+                    <Button
+                      theme='primary'
+                      text
+                      onClick={() => {
+                        router.push({
+                          name: 'host-application-detail',
+                          params: {
+                            id: data.order_id,
+                          },
+                        });
+                      }}>
+                      {data.order_id}
+                    </Button>
+                  </div>
+                  <div>
+                    <p>{data.suborder_id || '无'}</p>
+                  </div>
                 </div>
               );
             },
@@ -101,7 +105,7 @@ export default defineComponent({
           {
             label: '单据状态',
             field: 'stage',
-            width: 250,
+            width: 200,
             render: ({ data }: any) => {
               const { stage, createAt, modify_time: modifyTime } = data;
               const diffHours = moment(new Date()).diff(moment(createAt), 'hours');
@@ -149,7 +153,7 @@ export default defineComponent({
 
               const modifyButton = () => {
                 return (
-                  <Button size='small' onClick={() => modify(data)} text theme={'primary'} class={'ml8'}>
+                  <Button size='small' onClick={() => modify(data)} text theme={'primary'}>
                     修改需求重试
                   </Button>
                 );
@@ -161,7 +165,7 @@ export default defineComponent({
                     size='small'
                     text
                     theme={'primary'}
-                    class={'ml8'}
+                    class={{ ml8: stage === 'SUSPEND' && modifyTime < 2 }}
                     onClick={async () => {
                       isSidesliderShow.value = true;
                       const { data: list } = await getMatchDetails(data.suborder_id);
@@ -178,8 +182,10 @@ export default defineComponent({
                     {stage !== 'SUSPEND' && transformApplyStages(stage)}
                     {abnormalStatus()}
                   </p>
-                  {stage === 'SUSPEND' && modifyTime < 2 ? modifyButton() : null}
-                  {['RUNNING', 'DONE', 'SUSPEND'].includes(stage) ? progressButton() : null}
+                  <p>
+                    {stage === 'SUSPEND' && modifyTime < 2 ? modifyButton() : null}
+                    {['RUNNING', 'DONE', 'SUSPEND'].includes(stage) ? progressButton() : null}
+                  </p>
                 </div>
               );
             },
@@ -209,11 +215,13 @@ export default defineComponent({
             },
           },
           {
-            label: '交付情况-总数',
+            label: `需求数`,
+            width: 90,
             field: 'total_num',
           },
           {
-            label: '交付情况-待交付',
+            label: '待交付数',
+            width: 90,
             field: 'pending_num',
             render({ cell, data }: any) {
               return cell ? (

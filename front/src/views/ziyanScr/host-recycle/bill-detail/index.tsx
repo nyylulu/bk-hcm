@@ -1,5 +1,6 @@
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { getResourceTypeName, getReturnPlanName, exportTableToExcel } from '@/utils';
 import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
 import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary/dateTime';
@@ -7,30 +8,16 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { getRecycleHosts, getRecycleOrders, retryOrder, submitOrder, stopOrder, auditOrder } from '@/api/host/recycle';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';
-import { Loading, ArrowsLeft } from 'bkui-vue/lib/icon';
+import { Loading } from 'bkui-vue/lib/icon';
 import ExecuteRecord from '../execute-record';
+import { useRoute } from 'vue-router';
 import './index.scss';
 export default defineComponent({
   components: {
     ExecuteRecord,
   },
-  props: {
-    suborderIdStr: {
-      type: String,
-      default: '',
-    },
-    bkBizId: {
-      type: Array,
-      default: () => {
-        return [];
-      },
-    },
-  },
-  emits: ['goBack'],
-  setup(props, { emit }) {
-    const goBack = () => {
-      emit('goBack', 0);
-    };
+  setup() {
+    const route = useRoute();
     const billBaseInfo = ref({});
     const page = ref({
       start: 0,
@@ -39,8 +26,8 @@ export default defineComponent({
     });
     const requestParams = computed(() => {
       return {
-        bk_biz_id: props.bkBizId,
-        suborder_id: props.suborderIdStr.split('|') || [],
+        bk_biz_id: [+route.query.bkBizId],
+        suborder_id: [route.query.suborderId],
         page: page.value,
       };
     });
@@ -249,109 +236,116 @@ export default defineComponent({
     const userStore = useUserStore();
     return () => (
       <>
-        <div class='bill-detail'>
-          <div class='back-cls' onClick={goBack}>
-            <ArrowsLeft />
-            单据详情
-          </div>
-          <div class='base-info'>
-            <h2>基本信息</h2>
-            <div class='base-info-top'>
-              <div>
-                <label>主单号:</label>
-                <span>{billBaseInfo.value.order_id}</span>
-              </div>
-              <div>
-                <label>子单号:</label>
-                <span>{billBaseInfo.value.suborder_id}</span>
-              </div>
-              <div>
-                <label>业务:</label>
-                <span>{billBaseInfo.value.bk_biz_name}</span>
-              </div>
-              <div>
-                <label>资源类型:</label>
-                <span>{getResourceTypeName(billBaseInfo.value.resource_type)}</span>
-              </div>
-              <div>
-                <label>退回策略:</label>
-                <span>{getReturnPlanName(billBaseInfo.value.return_plan, billBaseInfo.value.resource_type)}</span>
-              </div>
-              <div>
-                <label>单据状态:</label>
-                <span class={{ 'c-danger': billStatus.value === 'error', 'c-success': billStatus.value === 'success' }}>
-                  {billStatus.value === 'process' ? <Loading /> : ''}
-                  {getRecycleTaskStatusLabel(billBaseInfo.value.status)}
-                </span>
-              </div>
-              <div>
-                <label>设备总数/销毁完成数量:</label>
-                <span>
-                  {billBaseInfo.value.total_num}/{billBaseInfo.value.success_num}
-                </span>
-              </div>
-              <div>
-                <label>处理人:</label>
-                <span>{billBaseInfo.value.handler}</span>
-              </div>
-              <div>
-                <label>回收人:</label>
-                <span>{billBaseInfo.value.bk_username}</span>
-              </div>
-              <div>
-                <label>提单时间:</label>
-                <span>{dateTimeTransform(billBaseInfo.value.create_at)}</span>
-              </div>
-            </div>
-            <div class='base-info-bottom'>
-              <bk-button onClick={fetchRetryOrder}>重试</bk-button>
-              <bk-button onClick={fetchStopOrder}>终止</bk-button>
-              <bk-button onClick={fetchSubmitOrder}>去除预检失败IP提交</bk-button>
-            </div>
-          </div>
-          <div class='handle-process'>
-            <h2>处理流程</h2>
-            <bk-steps line-type='solid' status={billStatus.value} cur-step={activeStep.value} steps={stepArr.value} />
-            {admins.value.includes(userStore.username) && billBaseInfo.value.status === 'FOR_AUDIT' ? (
-              <div class='check-export'>
-                <div class='check-export-man'>
-                  <span>当前审批步骤：BG管理员审核</span>
-                  <span>审核人：</span>
-                  {admins.value.map((item) => {
-                    return (
-                      <a href={`wxwork://message?username=${item}`} class='username'>
-                        {item}
-                      </a>
-                    );
-                  })}
-                </div>
-                <div>
-                  <bk-input v-model={remark} type='textarea' rows={2} placeholder='请输入审核意见' />
-
-                  <div class='check-export-trigger'>
-                    <bk-button theme='primary' onClick={() => fetchAuditOrder(true)}>
-                      审核通过
-                    </bk-button>
-                    <bk-button theme='danger' onClick={() => fetchAuditOrder(false)}>
-                      驳回
-                    </bk-button>
+        <div class={'application-detail-container'}>
+          <DetailHeader>单据详情</DetailHeader>
+          <div class={'detail-wrapper'}>
+            <div class='bill-detail'>
+              <div class='base-info'>
+                <h2>基本信息</h2>
+                <div class='base-info-top'>
+                  <div>
+                    <label>主单号:</label>
+                    <span>{billBaseInfo.value.order_id}</span>
+                  </div>
+                  <div>
+                    <label>子单号:</label>
+                    <span>{billBaseInfo.value.suborder_id}</span>
+                  </div>
+                  <div>
+                    <label>业务:</label>
+                    <span>{billBaseInfo.value.bk_biz_name}</span>
+                  </div>
+                  <div>
+                    <label>资源类型:</label>
+                    <span>{getResourceTypeName(billBaseInfo.value.resource_type)}</span>
+                  </div>
+                  <div>
+                    <label>退回策略:</label>
+                    <span>{getReturnPlanName(billBaseInfo.value.return_plan, billBaseInfo.value.resource_type)}</span>
+                  </div>
+                  <div>
+                    <label>单据状态:</label>
+                    <span
+                      class={{ 'c-danger': billStatus.value === 'error', 'c-success': billStatus.value === 'success' }}>
+                      {billStatus.value === 'process' ? <Loading /> : ''}
+                      {getRecycleTaskStatusLabel(billBaseInfo.value.status)}
+                    </span>
+                  </div>
+                  <div>
+                    <label>设备总数/销毁完成数量:</label>
+                    <span>
+                      {billBaseInfo.value.total_num}/{billBaseInfo.value.success_num}
+                    </span>
+                  </div>
+                  <div>
+                    <label>处理人:</label>
+                    <span>{billBaseInfo.value.handler}</span>
+                  </div>
+                  <div>
+                    <label>回收人:</label>
+                    <span>{billBaseInfo.value.bk_username}</span>
+                  </div>
+                  <div>
+                    <label>提单时间:</label>
+                    <span>{dateTimeTransform(billBaseInfo.value.create_at)}</span>
                   </div>
                 </div>
+                <div class='base-info-bottom'>
+                  <bk-button onClick={fetchRetryOrder}>重试</bk-button>
+                  <bk-button onClick={fetchStopOrder}>终止</bk-button>
+                  <bk-button onClick={fetchSubmitOrder}>去除预检失败IP提交</bk-button>
+                </div>
               </div>
-            ) : null}
-          </div>
-          <div class='device-destroy'>
-            <h2>设备销毁详情</h2>
-            <div class='device-destroy-top'>
-              <bk-button v-clipboard={clipHostIp.value} disabled={!selections.value.length}>
-                复制选中IP
-              </bk-button>
-              <bk-button onClick={exportToExcel}>导出全部</bk-button>
+              <div class='handle-process'>
+                <h2>处理流程</h2>
+                <bk-steps
+                  line-type='solid'
+                  status={billStatus.value}
+                  cur-step={activeStep.value}
+                  steps={stepArr.value}
+                />
+                {admins.value.includes(userStore.username) && billBaseInfo.value.status === 'FOR_AUDIT' ? (
+                  <div class='check-export'>
+                    <div class='check-export-man'>
+                      <span>当前审批步骤：BG管理员审核</span>
+                      <span>审核人：</span>
+                      {admins.value.map((item) => {
+                        return (
+                          <a href={`wxwork://message?username=${item}`} class='username'>
+                            {item}
+                          </a>
+                        );
+                      })}
+                    </div>
+                    <div>
+                      <bk-input v-model={remark} type='textarea' rows={2} placeholder='请输入审核意见' />
+
+                      <div class='check-export-trigger'>
+                        <bk-button theme='primary' onClick={() => fetchAuditOrder(true)}>
+                          审核通过
+                        </bk-button>
+                        <bk-button theme='danger' onClick={() => fetchAuditOrder(false)}>
+                          驳回
+                        </bk-button>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+              <div class='device-destroy'>
+                <h2>设备销毁详情</h2>
+                <div class='device-destroy-top'>
+                  <bk-button v-clipboard={clipHostIp.value} disabled={!selections.value.length}>
+                    复制选中IP
+                  </bk-button>
+                  <bk-button onClick={exportToExcel}>导出全部</bk-button>
+                </div>
+                <CommonTable></CommonTable>
+              </div>
             </div>
-            <CommonTable></CommonTable>
+            <execute-record v-model={preCheckDetail.value} dataInfo={transferData.value} />
           </div>
         </div>
-        <execute-record v-model={preCheckDetail.value} dataInfo={transferData.value} />
       </>
     );
   },

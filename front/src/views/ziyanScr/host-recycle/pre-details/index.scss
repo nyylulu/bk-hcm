@@ -14,18 +14,18 @@
   .filter-container {
     margin-bottom: 8px;
   }
-  .precheck-input{
+  .precheck-input {
     display: flex;
     align-items: center;
-    & > span{
+    & > span {
       display: inline-block;
       width: 80px;
       text-align: right;
     }
-    .bk-tag-input{
+    .bk-tag-input {
       margin: 0 10px;
     }
-    .bk-button+.bk-button{
+    .bk-button + .bk-button {
       margin-left: 10px;
     }
   }
@@ -38,11 +38,17 @@
   flex-wrap: wrap;
   .bk-form-item {
     margin: 8px 0;
-    .bk-form-content, .bk-date-picker {
+    .bk-form-content,
+    .bk-date-picker {
       width: 280px;
     }
     .bk-button {
-      margin-right: 8px!important;
+      margin-right: 8px !important;
     }
+  }
+}
+.application-detail-container {
+  .detail-wrapper {
+    margin: 76px 0px;
   }
 }
