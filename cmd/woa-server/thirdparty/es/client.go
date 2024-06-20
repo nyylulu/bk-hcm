@@ -188,6 +188,7 @@ func (es *EsCli) search(ctx context.Context, query elastic.Query, index string, 
 		Index(index).
 		SearchSource(searchSource).
 		Query(query).
+		Collapse(elastic.NewCollapseBuilder("server_asset_id")). // 通过固资号去重，确保只返回同一台主机的一条数据
 		Pretty(true).
 		Do(ctx)
 
@@ -200,17 +201,22 @@ func (es *EsCli) search(ctx context.Context, query elastic.Query, index string, 
 
 // Count data in elastic with target conditions.
 func (es *EsCli) count(ctx context.Context, query elastic.Query, index string) (int64, error) {
-	count, err := es.client.Count().
+	searchResult, err := es.client.Search().
 		Index(index).
 		Query(query).
-		Pretty(true).
+		Collapse(elastic.NewCollapseBuilder("server_asset_id")). // 通过固资号去重，确保只返回同一台主机的一条数据
+		Aggregation("count", elastic.NewCardinalityAggregation().Field("server_asset_id")).
 		Do(ctx)
-
 	if err != nil {
 		return 0, err
 	}
 
-	return count, nil
+	count, found := searchResult.Aggregations.Cardinality("count")
+	if !found {
+		return 0, nil
+	}
+
+	return int64(*count.Value), nil
 }
 
 // GetLatestIndex get elasticsearch lastest index

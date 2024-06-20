@@ -100,7 +100,18 @@ func (l *logics) findHost(kt *kit.Kit, cond map[string][]interface{}, index stri
 		return nil, err
 	}
 
-	return &dissolve.ListHostDetails{Details: hosts}, nil
+	details := make([]dissolve.Host, len(hosts))
+	for i, host := range hosts {
+		detail, err := dissolve.ConvertHost(&host)
+		if err != nil {
+			logs.Errorf("convert host failed, err: %v, host: %v, rid: %s", err, host, kt.Rid)
+			return nil, err
+		}
+
+		details[i] = *detail
+	}
+
+	return &dissolve.ListHostDetails{Details: details}, nil
 }
 
 // ListResDissolveTable list resource dissolve table
@@ -221,11 +232,11 @@ func (l *logics) addCondNotInCCIP(kt *kit.Kit, cond map[string][]interface{}) (m
 	return cond, nil
 }
 
-func (l *logics) getAllHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string) ([]es.Host, error) {
+func (l *logics) getAllHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string) ([]dissolve.Host, error) {
 	var pageLimit uint = 1000
 	page := &core.BasePage{Start: 0, Limit: pageLimit}
 
-	result := make([]es.Host, 0)
+	result := make([]dissolve.Host, 0)
 	for {
 		hosts, err := l.findHost(kt, cond, index, page)
 		if err != nil {

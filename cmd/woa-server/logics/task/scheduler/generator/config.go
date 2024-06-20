@@ -97,7 +97,7 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 	// if input region is empty list, return all zone info
 	if len(region) > 0 {
 		cond["region"] = mapstr.MapStr{
-			common.BKDBIN: region,
+			common.BKDBIN: []string{region},
 		}
 	}
 	zoneResp, err := g.configLogics.Zone().GetZone(kt, &cond)

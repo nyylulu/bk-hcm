@@ -90,6 +90,10 @@ func (s *service) ListResDissolveTable(cts *rest.Contexts) (interface{}, error) 
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
 	moduleAssetIDMap, err := s.getAssetIDByModule(cts.Kit, req.ModuleNames)
 	if err != nil {
 		logs.Errorf("get host asset id by module name failed, err: %v, req: %v, rid: %s", err, req, cts.Kit.Rid)

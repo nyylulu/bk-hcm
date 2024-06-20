@@ -94,7 +94,7 @@ POST /api/v1/woa/dissolve/host/current/list
         "inner_net_traffic_score": 1,
         "disk_io_score": 1,
         "disk_util_score": 1,
-        "is_pass": "is_pass",
+        "is_pass": true,
         "mem4linux": 1,
         "inner_net_traffic": 1,
         "outer_net_traffic": 1,
@@ -161,7 +161,7 @@ POST /api/v1/woa/dissolve/host/current/list
 |inner_net_traffic_score| int    |  内网流量得分       |
 |disk_io_score| int    |  磁盘IO得分       |
 |disk_util_score| int    |  磁盘IO使用率得分       |
-|is_pass| string |   是否达标      |
+|is_pass| bool   |   是否达标      |
 |mem4linux| int    |  内存使用量(G)        |
 |inner_net_traffic| int    | 内网流量(Mb/s)        |
 |outer_net_traffic| int    | 外网流量(Mb/s)        |

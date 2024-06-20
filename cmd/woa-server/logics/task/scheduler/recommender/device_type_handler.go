@@ -312,7 +312,7 @@ func (dh *DeviceTypeHandler) getZoneList(kt *kit.Kit, region string) ([]*cfgtype
 	// if input region is empty list, return all zone info
 	if len(region) > 0 {
 		cond["region"] = mapstr.MapStr{
-			common.BKDBIN: region,
+			common.BKDBIN: []string{region},
 		}
 	}
 	zoneResp, err := dh.configLogics.Zone().GetZone(kt, &cond)

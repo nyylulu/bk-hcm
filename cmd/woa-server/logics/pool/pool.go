@@ -1464,16 +1464,16 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 			}
 		} else {
 			if len(param.Spec.Zone) > 0 {
-				filter := mapstr.MapStr{}
-				filter["zone"] = mapstr.MapStr{
+				zoneFilter := mapstr.MapStr{}
+				zoneFilter["zone"] = mapstr.MapStr{
 					common.BKDBIN: param.Spec.Zone,
 				}
 				if len(param.Spec.Region) > 0 {
-					filter["region"] = mapstr.MapStr{
+					zoneFilter["region"] = mapstr.MapStr{
 						common.BKDBIN: param.Spec.Region,
 					}
 				}
-				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &filter)
+				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
 				if err != nil {
 					return nil, err
 				}
@@ -1486,11 +1486,11 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 					common.BKDBIN: cmdbZoneNames,
 				}
 			} else if len(param.Spec.Region) != 0 {
-				filter := mapstr.MapStr{}
-				filter["region"] = mapstr.MapStr{
+				zoneFilter := mapstr.MapStr{}
+				zoneFilter["region"] = mapstr.MapStr{
 					common.BKDBIN: param.Spec.Region,
 				}
-				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &filter)
+				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
 				if err != nil {
 					return nil, err
 				}

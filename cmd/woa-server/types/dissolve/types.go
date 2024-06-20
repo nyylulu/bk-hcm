@@ -22,10 +22,12 @@ package dissolve
 import (
 	"errors"
 	"fmt"
+	"strconv"
 
 	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
 	hostdefine "hcm/pkg/dal/table/dissolve/host"
 	moduledefine "hcm/pkg/dal/table/dissolve/module"
@@ -172,7 +174,7 @@ type HostListReq struct {
 
 // Validate host list request.
 func (req *HostListReq) Validate() error {
-	if err := validator.Validate.Struct(req); err != nil {
+	if err := req.ResDissolveReq.Validate(); err != nil {
 		return err
 	}
 
@@ -192,14 +194,14 @@ func (req *HostListReq) Validate() error {
 type ResDissolveReq struct {
 	Organizations []string `json:"organizations"`
 	BizNames      []string `json:"bk_biz_names"`
-	ModuleNames   []string `json:"module_names" validate:"required"`
+	ModuleNames   []string `json:"module_names"`
 	Operators     []string `json:"operators"`
 }
 
 // Validate table list request.
 func (req *ResDissolveReq) Validate() error {
-	if err := validator.Validate.Struct(req); err != nil {
-		return err
+	if len(req.ModuleNames) == 0 {
+		return errf.Newf(errf.InvalidParameter, "module_names is required")
 	}
 
 	return nil
@@ -238,8 +240,87 @@ func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string) map[s
 
 // ListHostDetails list elasticsearch host details.
 type ListHostDetails struct {
-	Count   int64     `json:"count,omitempty"`
-	Details []es.Host `json:"details,omitempty"`
+	Count   int64  `json:"count,omitempty"`
+	Details []Host `json:"details,omitempty"`
+}
+
+// Host host data
+type Host struct {
+	ServerAssetID        string  `json:"server_asset_id"`
+	InnerIP              string  `json:"ip"`
+	OuterIP              string  `json:"outer_ip"`
+	AppName              string  `json:"app_name"`
+	Module               string  `json:"module"`
+	DeviceType           string  `json:"device_type"`
+	ModuleName           string  `json:"module_name"`
+	IdcUnitName          string  `json:"idc_unit_name"`
+	SfwNameVersion       string  `json:"sfw_name_version"`
+	GoUpDate             string  `json:"go_up_date"`
+	RaidName             string  `json:"raid_name"`
+	LogicArea            string  `json:"logic_area"`
+	ServerBakOperator    string  `json:"server_bak_operator"`
+	ServerOperator       string  `json:"server_operator"`
+	DeviceLayer          string  `json:"device_layer"`
+	CPUScore             float64 `json:"cpu_score"`
+	MemScore             float64 `json:"mem_score"`
+	InnerNetTrafficScore float64 `json:"inner_net_traffic_score"`
+	DiskIoScore          float64 `json:"disk_io_score"`
+	DiskUtilScore        float64 `json:"disk_util_score"`
+	IsPass               bool    `json:"is_pass"`
+	Mem4linux            float64 `json:"mem4linux"`
+	InnerNetTraffic      float64 `json:"inner_net_traffic"`
+	OuterNetTraffic      float64 `json:"outer_net_traffic"`
+	DiskIo               float64 `json:"disk_io"`
+	DiskUtil             float64 `json:"disk_util"`
+	DiskTotal            float64 `json:"disk_total"`
+	MaxCPUCoreAmount     int64   `json:"max_cpu_core_amount"`
+	GroupName            string  `json:"group_name"`
+	Center               string  `json:"center"`
+}
+
+// ConvertHost convert host
+func ConvertHost(origin *es.Host) (*Host, error) {
+	if origin == nil {
+		return nil, nil
+	}
+
+	isPass, err := strconv.ParseBool(origin.IsPass)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Host{
+		ServerAssetID:        origin.ServerAssetID,
+		InnerIP:              origin.InnerIP,
+		OuterIP:              origin.OuterIP,
+		AppName:              origin.AppName,
+		Module:               origin.Module,
+		DeviceType:           origin.DeviceType,
+		ModuleName:           origin.ModuleName,
+		IdcUnitName:          origin.IdcUnitName,
+		SfwNameVersion:       origin.SfwNameVersion,
+		GoUpDate:             origin.GoUpDate,
+		RaidName:             origin.RaidName,
+		LogicArea:            origin.LogicArea,
+		ServerBakOperator:    origin.ServerBakOperator,
+		ServerOperator:       origin.ServerOperator,
+		DeviceLayer:          origin.DeviceLayer,
+		CPUScore:             origin.CPUScore,
+		MemScore:             origin.MemScore,
+		InnerNetTrafficScore: origin.InnerNetTrafficScore,
+		DiskIoScore:          origin.DiskIoScore,
+		DiskUtilScore:        origin.DiskUtilScore,
+		IsPass:               isPass,
+		Mem4linux:            origin.Mem4linux,
+		InnerNetTraffic:      origin.InnerNetTraffic,
+		OuterNetTraffic:      origin.OuterNetTraffic,
+		DiskIo:               origin.DiskIo,
+		DiskUtil:             origin.DiskUtil,
+		DiskTotal:            origin.DiskTotal,
+		MaxCPUCoreAmount:     origin.MaxCPUCoreAmount,
+		GroupName:            origin.GroupName,
+		Center:               origin.Center,
+	}, nil
 }
 
 // ResDissolveTable resource dissolve table

@@ -93,7 +93,7 @@ POST /api/v1/woa/dissolve/host/origin/list
         "inner_net_traffic_score": 1,
         "disk_io_score": 1,
         "disk_util_score": 1,
-        "is_pass": "is_pass",
+        "is_pass": true,
         "mem4linux": 1,
         "inner_net_traffic": 1,
         "outer_net_traffic": 1,
@@ -144,29 +144,29 @@ POST /api/v1/woa/dissolve/host/origin/list
 |ip| string | 内网IP    |
 |outer_ip| string | 公网IP    |
 |app_name| string | 业务名称    |
-|module|   string     | 业务模块    |
-|device_type|  string      | SCM设备类型 |
-|module_name|    string    | 裁撤模块名称  |
-|idc_unit_name|     string   | 存放机房管理单元        |
-|sfw_name_version|    string    | 操作系统        |
-|go_up_date| string       |   上架时间      |
+|module| string | 业务模块    |
+|device_type| string | SCM设备类型 |
+|module_name| string | 裁撤模块名称  |
+|idc_unit_name| string | 存放机房管理单元        |
+|sfw_name_version| string | 操作系统        |
+|go_up_date| string |   上架时间      |
 |raid_name| string |  RAID结构       |
-|logic_area|   string     |  逻辑区域       |
-|server_operator|      string  |  维护人       |
-|server_bak_operator|   string     |   备份维护人      |
-|device_layer|  string      |   设备技术分类      |
-|cpu_score|  int      |  CPU 得分       |
-|mem_score|  int      |  内存得分       |
-|inner_net_traffic_score|    int    |  内网流量得分       |
-|disk_io_score|   int     |  磁盘IO得分       |
-|disk_util_score|    int    |  磁盘IO使用率得分       |
-|is_pass|   string     |   是否达标      |
-|mem4linux|   int     |  内存使用量(G)        |
-|inner_net_traffic| int       | 内网流量(Mb/s)        |
-|outer_net_traffic|  int      | 外网流量(Mb/s)        |
-|disk_io	|  int      |  磁盘IO(Blocks/s)        |
-|disk_util|   int     | 磁盘IO使用率        |
-|disk_total|   int     | 磁盘总量(G)        |
-|max_cpu_core_amount|   int     | CPU核数        |
-|group_name|  string      | 运维小组        |
-|center	|   string     | 业务中心        |
+|logic_area| string |  逻辑区域       |
+|server_operator| string |  维护人       |
+|server_bak_operator| string |   备份维护人      |
+|device_layer| string |   设备技术分类      |
+|cpu_score| int    |  CPU 得分       |
+|mem_score| int    |  内存得分       |
+|inner_net_traffic_score| int    |  内网流量得分       |
+|disk_io_score| int    |  磁盘IO得分       |
+|disk_util_score| int    |  磁盘IO使用率得分       |
+|is_pass| bool   |   是否达标      |
+|mem4linux| int    |  内存使用量(G)        |
+|inner_net_traffic| int    | 内网流量(Mb/s)        |
+|outer_net_traffic| int    | 外网流量(Mb/s)        |
+|disk_io	| int    |  磁盘IO(Blocks/s)        |
+|disk_util| int    | 磁盘IO使用率        |
+|disk_total| int    | 磁盘总量(G)        |
+|max_cpu_core_amount| int    | CPU核数        |
+|group_name| string | 运维小组        |
+|center	| string | 业务中心        |
