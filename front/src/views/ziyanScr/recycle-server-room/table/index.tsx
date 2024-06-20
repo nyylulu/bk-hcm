@@ -1,4 +1,4 @@
-import { defineComponent, type PropType, ref } from 'vue';
+import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -63,6 +63,19 @@ export default defineComponent({
     ];
     const moduleNames = ref<string[]>([]);
     const tableColumns = ref(columns);
+    const content = (
+      <>
+        {t('请勾选相关参数后查询，')}
+        <br />
+        {t('1.裁撤的机房模块，至少选一个模块，')}
+        <br />
+        {t('2.组织架构、业务、人员至少选择一个')}
+      </>
+    );
+
+    const isMeetSearchConditions = computed(
+      () => props.moduleNames.length && (organizations.value.length || bkBizIds.value.length || operators.value.length),
+    );
 
     const handleSearch = async () => {
       isLoading.value = true;
@@ -127,7 +140,15 @@ export default defineComponent({
             isAudit={true}
             v-model={bkBizIds.value}></BusinessSelector>
           <MemberSelect class={cssModule['search-item']} v-model={operators.value}></MemberSelect>
-          <bk-button theme='primary' class={cssModule['search-button']} onClick={handleSearch}>
+          <bk-button
+            theme='primary'
+            class={cssModule['search-button']}
+            onClick={handleSearch}
+            v-bk-tooltips={{
+              content,
+              disabled: isMeetSearchConditions.value,
+            }}
+            disabled={!isMeetSearchConditions.value}>
             {t('查询')}
           </bk-button>
           <bk-button class={cssModule['search-button']} onClick={handleReset}>

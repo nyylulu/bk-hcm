@@ -1,4 +1,4 @@
-import { defineComponent, computed, PropType, watch } from 'vue';
+import { defineComponent, computed, PropType, watch, ref } from 'vue';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import cssModule from '../dialog.module.scss';
@@ -6,8 +6,6 @@ import { useI18n } from 'vue-i18n';
 
 import type { IDissolveHostOriginListParam } from '@/typings/ziyanScr';
 import { useZiyanScrStore } from '@/store/ziyanScr';
-import type { IPageQuery } from '@/typings';
-import { useTable } from '@/hooks/useResourcePlanTable';
 
 export default defineComponent({
   components: {
@@ -43,6 +41,14 @@ export default defineComponent({
       disk_total: t('磁盘总量(G)'),
     };
 
+    const isLoading = ref(false);
+    const tableData = ref();
+    const pagination = ref({
+      current: 1,
+      limit: 10,
+      count: 0,
+    });
+
     const title = computed(() =>
       t('{title}（当前）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
     );
@@ -63,21 +69,31 @@ export default defineComponent({
       emit('update:is-show', false);
     };
 
-    const getData = (page: IPageQuery) => {
-      return ziyanScrStore.dissolveHostCurrentList({
-        page,
-        ...props.searchParams,
-      });
+    const getData = async () => {
+      try {
+        isLoading.value = true;
+        const res = await ziyanScrStore.dissolveHostCurrentList({
+          page: {
+            count: false,
+            start: 0,
+            limit: 10000,
+          },
+          ...props.searchParams,
+        });
+        tableData.value = res.data.details;
+        pagination.value.count = tableData.value?.length || 0;
+      } catch (error) {
+        console.error(error, 'error'); // eslint-disable-line no-console
+      } finally {
+        isLoading.value = false;
+      }
     };
-
-    const { tableData, pagination, isLoading, handlePageChange, handlePageSizeChange, handleSort, triggerApi } =
-      useTable(getData, 'details');
 
     watch(
       () => props.searchParams,
       () => {
         if (props.isShow) {
-          triggerApi();
+          getData();
         }
       },
     );
@@ -101,14 +117,10 @@ export default defineComponent({
         <bk-loading loading={isLoading.value}>
           <bk-table
             show-overflow-tooltip
-            remote-pagination
             data={tableData.value}
             columns={tableCoumn.value}
             pagination={pagination.value}
-            settings={settings.value}
-            onPageLimitChange={handlePageSizeChange}
-            onPageValueChange={handlePageChange}
-            onColumnSort={handleSort}>
+            settings={settings.value}>
             {{
               expandRow: (row: any) => {
                 return (
