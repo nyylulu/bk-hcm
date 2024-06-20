@@ -52,9 +52,10 @@ const cleanPayload = (payload: any) => {
  */
 const exportTableToExcel = (list, columns, filename) => {
   import('@/vendor/Export2Excel').then((excel) => {
-    const header = columns.map((col) => col.label);
+    const header = columns.map((col) => col.label).filter((label) => label);
+    const newColumns = columns.filter((item) => !item.type);
     const data = list.map((item) =>
-      columns.map((col) => {
+      newColumns.map((col) => {
         if (col.formatter) {
           return col.formatter({ [col.field]: item[col.field] });
         }
@@ -63,7 +64,7 @@ const exportTableToExcel = (list, columns, filename) => {
           return col.exportFormatter(item);
         }
 
-        if (col.field.includes('.')) {
+        if (col.field?.includes('.')) {
           return getNestedProperty(item, col.field);
         }
         return item[col.field];

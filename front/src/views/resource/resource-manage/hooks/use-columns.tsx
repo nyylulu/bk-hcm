@@ -2300,6 +2300,10 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       },
     },
     {
+      label: '状态描述',
+      field: 'message',
+    },
+    {
       label: '开始时间',
       field: 'create_at',
       width: 180,
@@ -2417,6 +2421,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '业务',
       field: 'bk_biz_id',
+      render: ({ row }: any) => {
+        return getBusinessNameById(row.bk_biz_id);
+      },
       formatter: ({ bk_biz_id }: any) => {
         return getBusinessNameById(bk_biz_id);
       },
