@@ -11,6 +11,7 @@ export default defineComponent({
       type: Object,
       require: true,
     },
+    handleClose: Function,
   },
   setup(props) {
     const activeName = ref('ApplicationList');
@@ -18,12 +19,12 @@ export default defineComponent({
       {
         key: 'common',
         label: '常规资源池',
-        component: () => <CommonResource />,
+        component: () => <CommonResource formModelData={props.data} handleClose={props.handleClose} />,
       },
       {
         key: 'computed',
         label: '算力资源池',
-        component: () => <ComputedResource formModelData={props.data} />,
+        component: () => <ComputedResource formModelData={props.data} handleClose={props.handleClose} />,
       },
     ];
 

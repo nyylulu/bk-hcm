@@ -480,7 +480,8 @@ export default defineComponent({
         </CommonDialog>
 
         <CommonSideslider isShow={isMatchPanelShow.value} title='待匹配' width={1200} noFooter>
-          <MatchPanel data={curRow.value} />
+          
+          <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
         </CommonSideslider>
       </div>
     );

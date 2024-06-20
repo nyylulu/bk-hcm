@@ -192,7 +192,7 @@ export default defineComponent({
           }}>
           清空
         </Button>
-        <Button theme='danger' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
+        <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
           手工匹配资源
         </Button>
         <div class={'table-container'}>
