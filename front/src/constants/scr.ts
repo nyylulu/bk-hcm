@@ -16,3 +16,23 @@ export const SCR_RECALL_DETAIL_STATUS_MAP = {
   DONE: '完成',
   TERMINATE: '终止',
 };
+
+/**
+ * @const {String} IDCDVM IDC 富容器
+ */
+export const IDCDVM = 'IDCDVM';
+
+/**
+ * @const {String} IDCPM IDC 物理机
+ */
+export const IDCPM = 'IDCPM';
+
+/**
+ * @const {String} QCLOUDCVM 腾讯云云虚拟机
+ */
+export const QCLOUDCVM = 'QCLOUDCVM';
+
+/**
+ * @const {String} QCLOUDDVM 腾讯云富容器
+ */
+export const QCLOUDDVM = 'QCLOUDDVM';

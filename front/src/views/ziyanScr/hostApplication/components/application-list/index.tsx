@@ -26,6 +26,7 @@ import CommonDialog from '@/components/common-dialog';
 import { throttle } from 'lodash';
 import MatchPanel from '../match-panel';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import { getResourceTypeName } from '../transform';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -134,13 +135,10 @@ export default defineComponent({
         if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
           return true;
         }
-        if (row.stage === 'TERMINATE' && row.status === 'TERMINATE') {
+        if (['TERMINATE', 'AUDIT'].includes(row.stage) && !row.status) {
           return true;
         }
         if (row.stage === 'DONE' && row.status === 'DONE') {
-          return true;
-        }
-        if (row.stage === 'AUDIT' && !row.status) {
           return true;
         }
         return false;
@@ -281,7 +279,7 @@ export default defineComponent({
             render: ({ data }: any) => {
               return (
                 <div>
-                  <p>资源类型：{data.resource_type || '--'}</p>
+                  <p>资源类型：{getResourceTypeName(data?.resource_type)}</p>
                   <p>机型：{data.spec?.device_type || '--'}</p>
                   <p>园区：{getZoneCn(data.spec?.zone)}</p>
                 </div>

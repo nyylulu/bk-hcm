@@ -896,7 +896,7 @@ export default defineComponent({
                                 <span class={'ml8'}>G</span>
                               </div>
                             </bk-form-item>
-                            <bk-form-item label='需求数量' required property='resourceType'>
+                            <bk-form-item label='需求数量' required>
                               <Input type='number' v-model={resourceForm.value.replicas} min={1}></Input>
                             </bk-form-item>
                             <bk-form-item label='备注' property='remark'>

@@ -35,6 +35,7 @@ import {
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
+import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 import { Spinner, Share } from 'bkui-vue/lib/icon';
 import dayjs from 'dayjs';
 import WName from '@/components/w-name';
@@ -1957,10 +1958,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '园区',
       field: 'spec.zone',
+      render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
       label: '镜像',
       field: 'spec.image_id',
+      render: ({ row }: any) => getImageName(row.spec.image_id),
     },
     {
       label: '数据盘大小',
@@ -1970,6 +1973,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
+      render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
     },
     {
       label: '私有网络',
@@ -1978,10 +1982,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '私有子网',
       field: 'spec.subnet',
-    },
-    {
-      label: '网络类型',
-      field: 'spec.network_type',
     },
     {
       label: '备注',
