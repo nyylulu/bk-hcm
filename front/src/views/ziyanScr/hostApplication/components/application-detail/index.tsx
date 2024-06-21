@@ -1,8 +1,9 @@
 import { Ref, defineComponent, onMounted, ref, computed } from 'vue';
+import { useUserStore } from '@/store';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import CommonCard from '@/components/CommonCard';
-import { Button, Table, Timeline, Message } from 'bkui-vue';
+import { Button, Table, Timeline, Message, Input } from 'bkui-vue';
 import http from '@/http';
 import { useRoute } from 'vue-router';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
@@ -11,10 +12,13 @@ import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { timeFormatter } from '@/common/util';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-
+import WName from '@/components/w-name';
 import { isEqual } from 'lodash';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
+  components: {
+    WName,
+  },
   setup() {
     const route = useRoute();
     const ips = ref({});
@@ -149,11 +153,37 @@ export default defineComponent({
       suborders.value = data?.suborders || [];
     };
     // 获取单据审核记录
-    const getOrderAuditRecords = async (orderId: string) => {
+    const getOrderAuditRecords = async () => {
+      const orderId = route.params.id;
       const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket/audit`, {
         order_id: +orderId,
       });
       applyRecord.value = data;
+    };
+    const userStore = useUserStore();
+    const currentAuditStep = computed(() => {
+      return {
+        name: applyRecord.value.currentSteps?.[0]?.name || '',
+        processors: applyRecord.value.currentSteps?.[0]?.processors || '',
+        stateId: applyRecord.value.currentSteps?.[0]?.stateId || '',
+      };
+    });
+    const auditRemark = ref('');
+    const approvalOrder = (params: Object) =>
+      http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/audit/apply/ticket`, params);
+    const approval = (resolve) => {
+      const { itsmTicketId } = applyRecord.value;
+      approvalOrder({
+        orderId: +route.params.id,
+        itsmTicketId,
+        stateId: +currentAuditStep.value.stateId,
+        operator: userStore.username,
+        approval: resolve,
+        remark: auditRemark.value,
+      }).then(() => {
+        getOrderAuditRecords();
+        auditRemark.value = '';
+      });
     };
     const getDeliveredHostField = async (suborderId) => {
       const params = {
@@ -181,7 +211,7 @@ export default defineComponent({
     };
     onMounted(() => {
       getOrderDetail(route.params.id as string);
-      getOrderAuditRecords(route.params.id as string);
+      getOrderAuditRecords();
       getdemandDetail(route.params.id as string);
     });
     return () => (
@@ -297,6 +327,25 @@ export default defineComponent({
               <Share width={12} height={12} class={'mr4'} fill='#3A84FF' />
               跳转到 ITSM 查看审批详情
             </Button>
+            {currentAuditStep.value.name ? (
+              <div class='apply-human'>
+                当前审批步骤：{currentAuditStep.value.name} 审核人：
+                <WName name={currentAuditStep.value.processors} />
+              </div>
+            ) : null}
+            {currentAuditStep.value.processors.includes(userStore.username) ? (
+              <div>
+                <Input v-model={auditRemark.value} type='textarea' placeholder='请输入审核意见' />
+                <div class='apply-operate'>
+                  <Button theme='primary' onClick={() => approval(true)}>
+                    审核通过
+                  </Button>
+                  <Button theme='danger' onClick={() => approval(false)}>
+                    驳回
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             <div class={'timeline-container'}>
               <Timeline
                 list={applyRecord.value.logs.map(({ message, operate_at }) => ({

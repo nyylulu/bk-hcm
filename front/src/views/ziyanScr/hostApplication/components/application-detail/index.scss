@@ -18,4 +18,13 @@
       }
     }
   }
+  .apply-human {
+    margin-bottom: 10px;
+  }
+  .apply-operate {
+    margin-top: 10px;
+    .bk-button+.bk-button{
+      margin-left: 10px;
+    }
+  }
 }

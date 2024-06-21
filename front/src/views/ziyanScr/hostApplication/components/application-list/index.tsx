@@ -25,6 +25,7 @@ import SuborderDetail from '../suborder-detail';
 import CommonDialog from '@/components/common-dialog';
 import { throttle } from 'lodash';
 import MatchPanel from '../match-panel';
+import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -282,7 +283,7 @@ export default defineComponent({
                 <div>
                   <p>资源类型：{data.resource_type || '--'}</p>
                   <p>机型：{data.spec?.device_type || '--'}</p>
-                  <p>园区：{data.spec?.zone || '--'}</p>
+                  <p>园区：{getZoneCn(data.spec?.zone)}</p>
                 </div>
               );
             },

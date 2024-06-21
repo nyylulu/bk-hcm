@@ -56,7 +56,6 @@ export default defineComponent({
         limit: 50,
         start: 0,
         total: 0,
-        sort: '-capacity_flag',
       },
     });
     const order = ref({
@@ -126,6 +125,10 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'capacity_flag',
+          order: 'DESC',
+        },
       },
       scrConfig: () => {
         return {

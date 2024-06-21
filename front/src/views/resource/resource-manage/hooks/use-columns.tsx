@@ -2152,6 +2152,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
             onClick={() => {
               router.push({
                 name: 'host-application-detail',
+                query: {
+                  bk_biz_id: data.bk_biz_id,
+                },
                 params: {
                   id: data.order_id,
                 },
@@ -2169,6 +2172,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '需求类型',
       field: 'require_type',
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       label: '申请人',
@@ -2195,7 +2199,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     },
     {
       label: '园区',
-      field: 'zone_id',
+      field: 'zone_name',
     },
     {
       label: '交付时间',
@@ -2219,6 +2223,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '需求类型',
       field: 'require_type',
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       label: '实例族',
@@ -2231,10 +2236,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: 'CPU核',
       field: 'cpu',
+      sort: true,
     },
     {
       label: '内存(G)',
       field: 'mem',
+      sort: true,
     },
     {
       label: '地域',
@@ -2244,10 +2251,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '园区',
       field: 'zone',
+      render: ({ row }: any) => getZoneCn(row.zone),
     },
     {
       label: '库存情况',
       field: 'capacity_flag',
+      sort: {
+        value: 'desc',
+      },
       render({ cell }: { cell: string }) {
         const { class: theClass, text } = capacityLevel(cell);
         return <span class={theClass}>{text}</span>;

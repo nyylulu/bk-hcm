@@ -7,7 +7,8 @@ import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { Button, Form, Input } from 'bkui-vue';
 import MemberSelect from '@/components/MemberSelect';
 import useFormModel from '@/hooks/useFormModel';
-import { timeFormatter } from '@/common/util';
+import { useUserStore } from '@/store';
+import { timeFormatter, applicationTime } from '@/common/util';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
@@ -24,16 +25,16 @@ export default defineComponent({
     const clipHostAssetId = computed(() => {
       return selections.value.map((item) => item.asset_id).join('\n');
     });
+    const userStore = useUserStore();
     const { formModel, resetForm } = useFormModel({
       orderId: '',
       bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
-      bkUsername: [],
+      bkUsername: [userStore.username],
       ip: '',
       requireType: '',
       suborderId: '',
-      dateRange: [],
+      dateRange: applicationTime(),
     });
-
     const { CommonTable, getListData, isLoading, dataList } = useTable({
       tableOptions: {
         columns,
@@ -101,7 +102,17 @@ export default defineComponent({
                     <bk-input v-model={formModel.orderId} clearable type='number' placeholder='请输入单号'></bk-input>
                   </FormItem>
                   <FormItem label='申请人'>
-                    <MemberSelect v-model={formModel.bkUsername} multiple clearable />
+                    <MemberSelect
+                      v-model={formModel.bkUsername}
+                      multiple
+                      clearable
+                      defaultUserlist={[
+                        {
+                          username: userStore.username,
+                          display_name: userStore.username,
+                        },
+                      ]}
+                    />
                   </FormItem>
                   <FormItem label='交付时间'>
                     <bk-date-picker type='daterange' v-model={formModel.dateRange} />

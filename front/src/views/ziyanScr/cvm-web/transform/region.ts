@@ -4,10 +4,7 @@ export const useRegions = () => {
   const regionList = ref([]);
   const fetchRegions = async () => {
     const [qcloud, idc] = await Promise.all(['qcloud', 'idc'].map((item) => getRegions(item, {})));
-    regionList.value = Object.assign(
-      qcloud?.info || [],
-      idc?.info?.map((item) => ({ region_cn: item, region: item })),
-    );
+    regionList.value = [...(qcloud?.info || []), ...idc?.info?.map((item) => ({ region_cn: item, region: item }))];
   };
   fetchRegions();
   const findRegion = (someValue) => {
