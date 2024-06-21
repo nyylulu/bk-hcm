@@ -25,7 +25,6 @@ import (
 	"net"
 	"strconv"
 
-	"hcm/cmd/cloud-server/service/sync/lock"
 	"hcm/cmd/woa-server/options"
 	"hcm/cmd/woa-server/service"
 	"hcm/pkg/cc"
@@ -117,7 +116,6 @@ func (s *woaServer) register() error {
 }
 
 func (s *woaServer) finalizer() {
-	lock.Manager.Close()
 
 	if err := s.sd.Deregister(); err != nil {
 		logs.Errorf("process service shutdown, but deregister failed, err: %v", err)
