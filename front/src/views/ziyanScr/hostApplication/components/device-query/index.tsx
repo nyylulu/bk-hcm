@@ -57,7 +57,7 @@ export default defineComponent({
           payload: {
             filter: transferSimpleConditions([
               'AND',
-              ['bk_biz_id', '=', formModel.bkBizId],
+              ['bk_biz_id', '=', formModel.bkBizId === 'all' ? '' : formModel.bkBizId],
               ['require_type', '=', formModel.requireType],
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],

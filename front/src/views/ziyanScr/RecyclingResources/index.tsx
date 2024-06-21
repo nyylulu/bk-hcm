@@ -96,9 +96,7 @@ export default defineComponent({
       RecycleListpagination.start = 0;
       RecycleListpagination.limit = 10;
     };
-    const isTableLoading = ref(false);
     const getListData = async (getCount?: boolean) => {
-      isTableLoading.value = true;
       let pageObj = {
         start: RecycleListpagination.start,
         limit: RecycleListpagination.limit,
@@ -120,7 +118,6 @@ export default defineComponent({
       } else {
         serverTableData.value = data?.info || [];
       }
-      isTableLoading.value = false;
     };
     watch(
       () => bkBizId.value,

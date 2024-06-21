@@ -1,4 +1,5 @@
 import { defineComponent, ref, computed, watch } from 'vue';
+import { Loading } from 'bkui-vue';
 import './index.scss';
 import apiService from '../../../../api/scrApi';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -68,8 +69,10 @@ export default defineComponent({
         emit('updateRemark', val);
       },
     );
+    const isTableLoading = ref(false);
     /** 刷新可回收状态 */
     const refresh = async () => {
+      isTableLoading.value = true;
       const ips = props.tableHosts.map((item) => item.ip);
       const { info } = await apiService.getRecyclableHosts({
         ips,
@@ -77,6 +80,7 @@ export default defineComponent({
 
       const list = info || [];
       emit('updateHosts', list);
+      isTableLoading.value = false;
       //   this.$message.success('刷新成功');
     };
     watch(
@@ -85,7 +89,8 @@ export default defineComponent({
         emit('updateSelectedHosts', selections.value);
       },
     );
-    const isRowSelectEnable = ({ row }) => {
+    const isRowSelectEnable = ({ row, isCheckAll }) => {
+      if (isCheckAll) return true;
       if (row.recyclable) return !!row.recyclable;
     };
     /** 清空列表 */
@@ -115,7 +120,7 @@ export default defineComponent({
             选择服务器
           </bk-button>
           <bk-button
-            disabled={props.tableHosts.length > 0 || allRecycleHostIps.value.length === 0}
+            disabled={props.tableHosts.length === 0 && allRecycleHostIps.value.length === 0}
             class='bk-button'
             onClick={refresh}>
             刷新状态
@@ -147,17 +152,20 @@ export default defineComponent({
               maxlength={255}></bk-input>
           </div>
         </div>
-        <bk-table
-          align='left'
-          row-hover='auto'
-          columns={RRcolumns}
-          {...{
-            onSelectionChange: (selections: any) => handleSelectionChange(selections),
-          }}
-          is-row-select-enable={isRowSelectEnable}
-          data={props.tableHosts}
-          show-overflow-tooltip
-        />
+        <Loading class='loading-container' loading={isTableLoading.value}>
+          <bk-table
+            align='left'
+            row-hover='auto'
+            columns={RRcolumns}
+            {...{
+              onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
+              onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
+            }}
+            is-row-select-enable={isRowSelectEnable}
+            data={props.tableHosts}
+            show-overflow-tooltip
+          />
+        </Loading>
       </div>
     );
   },

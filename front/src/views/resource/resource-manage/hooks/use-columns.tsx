@@ -2025,8 +2025,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       type: 'selection',
       width: 32,
       minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
+      align: 'center',
     },
     {
       label: '状态',

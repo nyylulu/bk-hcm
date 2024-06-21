@@ -120,7 +120,7 @@ export default defineComponent({
     });
     // 添加按钮侧边栏公共表单对象
     const resourceForm = ref({
-      resourceType: '', // 主机类型
+      resourceType: 'QCLOUDCVM', // 主机类型
       replicas: 1, // 需求数量
       remark: '', // 备注
       anti_affinity_level: 'ANTI_NONE',
@@ -135,7 +135,7 @@ export default defineComponent({
         vpc: '', //  vpc
         subnet: '', //  子网
         image_id: '', // 镜像
-        disk_type: '', // 数据盘tyle
+        disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
         disk_size: 0, // 数据盘size
         network_type: 'TENTHOUSAND',
       },
@@ -447,7 +447,7 @@ export default defineComponent({
     };
     const emptyform = () => {
       resourceForm.value = {
-        resourceType: '',
+        resourceType: 'QCLOUDCVM',
         replicas: 1,
         remark: '',
         anti_affinity_level: 'ANTI_NONE',
@@ -461,7 +461,7 @@ export default defineComponent({
           vpc: '', //  vpc
           subnet: '', //  子网
           image_id: '', // 镜像
-          disk_type: '', // 数据盘tyle
+          disk_type: 'CLOUD_PREMIUM', // 数据盘tyle
           disk_size: 0, // 数据盘size
           network_type: 'TENTHOUSAND',
         },
@@ -534,7 +534,7 @@ export default defineComponent({
           type === 'submit' ? 'task/create/apply' : 'task/update/apply/ticket'
         }`;
         await http.post(url, {
-          bk_biz_id: order.value.model.bkBizId,
+          bk_biz_id: order.value.model.bkBizId === 'all' ? '' : order.value.model.bkBizId,
           bk_username: useUserStore().username,
           require_type: order.value.model.requireType,
           // enable_notice: order.value.model.enableNotice,
@@ -909,28 +909,39 @@ export default defineComponent({
                           </bk-form>
                           {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                             <>
-                              <div class={'tooltips'}>
-                                <span>{cvmCapacity.value[0]?.zone || ''}最大可申请量 </span>
-                                <span class={'volumetip'}>{cvmCapacity.value[0]?.max_num || 0}</span>
-                                <Popover trigger='click' theme='light' disableTeleport={true} arrow={false}>
-                                  {{
-                                    default: () => (
-                                      <span>{cvmCapacity.value[0]?.max_info.length && <span>(计算明细)</span>}</span>
-                                    ),
-                                    content: () => (
-                                      <div class={'content'}>
-                                        {cvmCapacity.value[0]?.max_info.length &&
-                                          cvmCapacity.value[0]?.max_info.map((item) => (
-                                            <div>
-                                              <span class={'application'}> {item.key}</span>
-                                              <span class={'volumetip'}> {item.value}</span>
+                              {cvmCapacity.value.length ? (
+                                <>
+                                  {cvmCapacity.value.map((item) => (
+                                    <div class={'tooltips'}>
+                                      <span>{item?.zone || ''}最大可申请量 </span>
+                                      <span class={'volumetip'}>{item?.max_num || 0}</span>
+                                      <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
+                                        {{
+                                          default: () => (
+                                            <span>{item?.max_info.length && <span>(计算明细)</span>}</span>
+                                          ),
+                                          content: () => (
+                                            <div class={'content'}>
+                                              {item?.max_info.length &&
+                                                item?.max_info.map((val) => (
+                                                  <div>
+                                                    <span class={'application'}> {val.key}</span>
+                                                    <span class={'volumetip'}> {val.value}</span>
+                                                  </div>
+                                                ))}
                                             </div>
-                                          ))}
-                                      </div>
-                                    ),
-                                  }}
-                                </Popover>
-                              </div>
+                                          ),
+                                        }}
+                                      </Popover>
+                                    </div>
+                                  ))}
+                                </>
+                              ) : (
+                                <div class={'tooltips'}>
+                                  <span>最大可申请量 </span>
+                                  <span class={'volumetip'}>0</span>
+                                </div>
+                              )}
                             </>
                           )}
                         </>

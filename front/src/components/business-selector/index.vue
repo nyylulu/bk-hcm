@@ -27,7 +27,7 @@ watchEffect(async () => {
 
   const res = await req();
   loading.value = false;
-  businessList.value = res?.data;
+  businessList.value = [{ id: 'all', name: '全部' }, ...res?.data];
   if (props.autoSelect) {
     const id = businessList.value?.[0]?.id ?? null;
     const val = props.multiple ? [id].filter((v) => v) : id;

@@ -1,7 +1,7 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
-import { Button, Form } from 'bkui-vue';
+import { Button, Form, Message } from 'bkui-vue';
 import apiService from '@/api/scrApi';
 import { useTable } from '@/hooks/useTable/useTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
@@ -15,6 +15,7 @@ export default defineComponent({
     formModelData: {
       type: Object,
     },
+    handleClose: Function,
   },
   setup(props) {
     const { selections, handleSelectionChange } = useSelection();
@@ -143,6 +144,11 @@ export default defineComponent({
         suborder_id,
         spec,
       });
+      Message({
+        message: '匹配成功',
+        theme: 'success',
+      });
+      props.handleClose();
     };
     return () => (
       <div class={'apply-list-container'}>

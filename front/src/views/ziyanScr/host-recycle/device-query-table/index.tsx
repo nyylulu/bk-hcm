@@ -9,7 +9,6 @@ import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import FloatInput from '@/components/float-input';
 import dayjs from 'dayjs';
-
 export default defineComponent({
   components: {
     BusinessSelector,
@@ -20,7 +19,7 @@ export default defineComponent({
   emits: ['goBillDetailPage'],
   setup(props, { emit }) {
     const defaultDeviceForm = () => ({
-      bk_biz_id: [],
+      bk_biz_id: '',
       order_id: [],
       suborder_id: [],
       ip: [],
@@ -82,6 +81,7 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
+      params.bk_biz_id = params.bk_biz_id === 'all' ? '' : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -159,7 +159,6 @@ export default defineComponent({
                         placeholder='请选择业务'
                         authed
                         autoSelect
-                        multiple
                         clearable={false}
                       />
                     </bk-form-item>

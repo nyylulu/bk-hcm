@@ -55,8 +55,6 @@ export default defineComponent({
           {
             field: 'match_tag',
             label: '星标',
-            fixed: true,
-            width: 50,
             render: ({ data }: any) => {
               if (data.matchTag) {
                 return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
@@ -68,14 +66,13 @@ export default defineComponent({
             field: 'asset_id',
             label: '固资号',
             fixed: true,
-            width: 180,
           },
           {
             field: 'ip',
             label: '内网 IP',
           },
           {
-            field: 'device_yype',
+            field: 'device_type',
             label: '机型',
           },
           {
@@ -126,7 +123,6 @@ export default defineComponent({
           {
             prop: 'match_score',
             label: '匹配得分',
-            width: 80,
           },
         ],
         extra: {

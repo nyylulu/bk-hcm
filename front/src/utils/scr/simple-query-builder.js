@@ -7,9 +7,7 @@ const DEBUG_PREFIX = '[simple-query-builder]';
 const throwError = (msg) => {
   throw new Error(`${DEBUG_PREFIX} ${msg}`);
 };
-const consoleLog = (msg) => {
-  console.log(`${DEBUG_PREFIX} ${msg}`);
-};
+const consoleLog = () => {};
 
 /**
  * 操作符
@@ -115,13 +113,13 @@ export const transferSimpleConditions = (simpleConditions) => {
 
           if (!allOperators.includes(operator) && !abbrOperators.has(operator))
             throwError(`operator '${operator}' is not a valid operator, must one of '${allOperators.join(',')}'`);
-
           if (
-            value === undefined ||
-            value === null ||
-            (isString(value) && value.trim() === '') ||
-            (isArray(value) && value.length === 0) ||
-            (isNumber(value) && isNaN(value))
+            field !== 'bk_biz_id' &&
+            (value === undefined ||
+              value === null ||
+              (isString(value) && value.trim() === '') ||
+              (isArray(value) && value.length === 0) ||
+              (isNumber(value) && isNaN(value)))
           ) {
             emptyFields.push(field);
             return false;

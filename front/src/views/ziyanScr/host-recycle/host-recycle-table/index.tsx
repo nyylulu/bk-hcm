@@ -38,7 +38,7 @@ export default defineComponent({
     const router = useRouter();
     const defaultRecycleForm = () => {
       return {
-        bk_biz_id: [],
+        bk_biz_id: '',
         order_id: [],
         suborder_id: [],
         resource_type: [],
@@ -77,6 +77,7 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
+      params.bk_biz_id = params.bk_biz_id === 'all' ? '' : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -292,7 +293,6 @@ export default defineComponent({
                   v-model={recycleForm.value.bk_biz_id}
                   autoSelect
                   authed
-                  multiple
                   clearable={false}
                 />
               </FormItem>

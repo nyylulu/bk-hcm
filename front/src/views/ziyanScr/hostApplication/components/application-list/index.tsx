@@ -385,7 +385,7 @@ export default defineComponent({
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
         payload: removeEmptyFields({
-          bk_biz_id: formModel.bkBizId,
+          bk_biz_id: formModel.bkBizId === 'all' ? '' : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)
                 .split('\n')
@@ -484,22 +484,6 @@ export default defineComponent({
             <FormItem label='申请人'>
               <MemberSelect v-model={formModel.user} />
             </FormItem>
-            <Button
-              theme={'primary'}
-              onClick={() => {
-                getListData();
-              }}
-              class={'ml24 mr8'}
-              loading={isLoading.value}>
-              查询
-            </Button>
-            <Button
-              onClick={() => {
-                resetForm();
-                getListData();
-              }}>
-              清空
-            </Button>
           </Form>
         </div>
         <Button
@@ -512,6 +496,22 @@ export default defineComponent({
           }}
           class={'ml24'}>
           新增申请
+        </Button>
+        <Button
+          theme={'primary'}
+          onClick={() => {
+            getListData();
+          }}
+          class={'ml24 mr8'}
+          loading={isLoading.value}>
+          查询
+        </Button>
+        <Button
+          onClick={() => {
+            resetForm();
+            getListData();
+          }}>
+          清空
         </Button>
         <div class={'table-container'}>
           <CommonTable />
