@@ -96,7 +96,9 @@ export default defineComponent({
       RecycleListpagination.start = 0;
       RecycleListpagination.limit = 10;
     };
+    const isTableLoading = ref(false);
     const getListData = async (getCount?: boolean) => {
+      isTableLoading.value = true;
       let pageObj = {
         start: RecycleListpagination.start,
         limit: RecycleListpagination.limit,
@@ -118,6 +120,7 @@ export default defineComponent({
       } else {
         serverTableData.value = data?.info || [];
       }
+      isTableLoading.value = false;
     };
     watch(
       () => bkBizId.value,
@@ -199,6 +202,9 @@ export default defineComponent({
       } else {
         checkHostRecyclableStatus();
       }
+    };
+    const rlTriggerShow = () => {
+      drawer.value = false;
     };
     const takeSnapshot = () => {
       recycleForm.value = {
@@ -354,14 +360,15 @@ export default defineComponent({
                     <Table
                       data={serverTableData.value}
                       columns={BScolumns}
+                      remotePagination
                       pagination={RecycleListpagination}
+                      onPageLimitChange={RlhandlePageLimitChange}
+                      onPageValueChange={RlhandlePageValueChange}
                       showOverflowTooltip
                       {...{
                         onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
                         onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
                       }}
-                      onPageLimitChange={RlhandlePageLimitChange}
-                      onPageValueChange={RlhandlePageValueChange}
                     />
                   </BkTabPanel>
                   <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
@@ -384,7 +391,7 @@ export default defineComponent({
                   disabled={selections.value.length === 0 && !ipArray.value.length}>
                   提交
                 </Button>
-                <Button class={'ml15'} onClick={() => triggerShow(false)}>
+                <Button class={'ml15'} onClick={() => rlTriggerShow(false)}>
                   取消
                 </Button>
               </>

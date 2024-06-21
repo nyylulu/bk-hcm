@@ -52,8 +52,8 @@ export default defineComponent({
     const createVisible = ref(false);
     const batchEditForm = ref({
       comment: '',
-      enableCapacity: '' as any,
-      enableApply: '' as any,
+      enableCapacity: 0,
+      enableApply: 0,
     });
     const whetherlist = ref([
       {
@@ -192,6 +192,10 @@ export default defineComponent({
       const { info } = await apiService.getRequireTypes();
       options.value.require_types = info;
     };
+    const createHandleConfirm = async () => {
+      await createRef.value.handleConfirm();
+      createVisible.value = false;
+    };
     onMounted(() => {
       loadRestrict();
       loadDeviceTypes();
@@ -227,6 +231,10 @@ export default defineComponent({
         };
       },
     });
+    const createRef = ref();
+    const createTriggerShow = () => {
+      createVisible.value = false;
+    };
     return () => (
       <div class='common-card-wrap has-selection'>
         <CommonTable>
@@ -261,6 +269,7 @@ export default defineComponent({
                     ref='zoneSelector'
                     v-model={filter.value.zone}
                     class='tbkselect'
+                    separateCampus={false}
                     multiple
                     params={{
                       resourceType: 'QCLOUDCVM',
@@ -357,10 +366,14 @@ export default defineComponent({
                     <Search></Search>
                     查询
                   </bk-button>
-                  <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
+                  <bk-button icon='bk-icon-refresh' class='bkbutton' onClick={clearFilter}>
                     清空
                   </bk-button>
-                  <bk-button icon='bk-icon-refresh' disabled={!selections.value.length} onClick={batchUpdates}>
+                  <bk-button
+                    icon='bk-icon-refresh'
+                    class='bkbutton'
+                    disabled={!selections.value.length}
+                    onClick={batchUpdates}>
                     批量更新
                   </bk-button>
                   <bk-button icon='bk-icon-refresh' onClick={createNewModel}>
@@ -373,6 +386,7 @@ export default defineComponent({
         </CommonTable>
         <Dialog
           class='common-dialog'
+          close-icon={false}
           isShow={batchEditDialogVisible.value}
           title='批量更新'
           width={600}
@@ -380,25 +394,40 @@ export default defineComponent({
           onClosed={() => triggerShow(false)}>
           <bk-form v-loading='$isLoading(deviceTypeConfigs.updateRequestId)'>
             <bk-form-item label='可查询容量'>
-              <bk-select v-model={batchEditForm.value.enableCapacity} class='w-100p'>
+              <bk-select v-model={batchEditForm.value.enableCapacity} style='width: 250px'>
                 {whetherlist.value.map(({ label, value }) => {
                   return <bk-option key={value} label={label} value={value}></bk-option>;
                 })}
               </bk-select>
             </bk-form-item>
             <bk-form-item label='可申请'>
-              <bk-select v-model={batchEditForm.value.enableApply} class='w-100p'>
+              <bk-select v-model={batchEditForm.value.enableApply} style='width: 250px'>
                 {whetherlist.value.map(({ label, value }) => {
                   return <bk-option key={value} label={label} value={value}></bk-option>;
                 })}
               </bk-select>
             </bk-form-item>
             <bk-form-item label='备注'>
-              <remark-textarea v-model={batchEditForm.value.comment} type='textarea' maxlength='128' show-limit />
+              <bk-input
+                v-model={batchEditForm.value.comment}
+                style='width: 250px'
+                autosize
+                type='textarea'
+                maxlength={128}
+              />
             </bk-form-item>
           </bk-form>
         </Dialog>
-        <CreateDevice visible={createVisible.value} onQueryList={getListData} />
+        <Dialog
+          class='common-dialog'
+          close-icon={false}
+          isShow={createVisible.value}
+          title='创建新机型'
+          width={600}
+          onConfirm={createHandleConfirm}
+          onClosed={() => createTriggerShow()}>
+          <CreateDevice onQueryList={getListData} ref={createRef} />
+        </Dialog>
       </div>
     );
   },

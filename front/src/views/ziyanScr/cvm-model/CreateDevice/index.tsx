@@ -1,27 +1,16 @@
 import { defineComponent, ref, onMounted } from 'vue';
-import { Dialog } from 'bkui-vue';
 import './index.scss';
 import AreaSelector from '../../hostApplication/components/AreaSelector';
 import ZoneSelector from '../../hostApplication/components/ZoneSelector';
 import apiService from '@/api/scrApi';
 export default defineComponent({
   name: 'AllhostInventoryManager',
-  props: {
-    visible: {
-      type: Boolean,
-      default: false,
-    },
-  },
-  emits: ['update:visible', 'query-list'],
-  setup(props, { emit }) {
+  emits: ['queryList'],
+  setup(props, { emit, expose }) {
     const handleConfirm = async () => {
+      await formInstance.value.validate();
       await apiService.createCvmDevice(EditForm.value);
-      emit('update:visible', false);
-      emit('query-list');
-    };
-    const triggerShow = (val) => {
-      emit('update:visible', val);
-      emit('query-list');
+      emit('queryList');
     };
     const EditForm = ref({
       remark: '',
@@ -42,65 +31,76 @@ export default defineComponent({
     onMounted(() => {
       getrequireTypes();
     });
+    const formInstance = ref({});
+    const formRules = ref({
+      requireType: [{ required: true, message: '请选择需求类型', trigger: 'change' }],
+      region: [{ required: true, message: '请选择地域', trigger: 'change' }],
+      zone: [{ required: true, message: '请选择园区', trigger: 'change' }],
+      deviceGroup: [{ required: true, message: '请输入实例族', trigger: 'change' }],
+      deviceType: [{ required: true, message: '请输入机型', trigger: 'change' }],
+      cpu: [{ required: true, message: '请输入CPU', trigger: 'change' }],
+      mem: [{ required: true, message: '请输入内存', trigger: 'change' }],
+    });
     const getrequireTypes = async () => {
       const { info } = await apiService.getRequireTypes();
       order.value.requireTypes = info;
     };
+    expose({ handleConfirm });
     return () => (
       <div>
-        <Dialog
-          class='common-dialog'
-          isShow={props.visible}
-          title='批量更新'
-          width={600}
-          onConfirm={handleConfirm}
-          onClosed={() => triggerShow(false)}>
-          <bk-form v-loading='$isLoading(deviceTypeConfigs.updateRequestId)'>
-            <bk-form-item label='需求类型' required property='requireType'>
-              <bk-select v-model={EditForm.value.requireType} style='width: 192px'>
-                {order.value.requireTypes.map((item: { require_type: any; require_name: any }) => (
-                  <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-                ))}
-              </bk-select>
-            </bk-form-item>
-            <bk-form-item class='mr16' label='地域' required>
-              <AreaSelector
-                ref='areaSelector'
-                multiple
-                style='width: 192px'
-                v-model={EditForm.value.region}
-                params={{ resourceType: 'QCLOUDCVM' }}
-                onChange={onEditFormRegionChange}></AreaSelector>
-            </bk-form-item>
-            <bk-form-item label='园区' property='zone'>
-              <ZoneSelector
-                ref='zoneSelector'
-                multiple
-                style='width: 192px'
-                v-model={EditForm.value.zone}
-                params={{
-                  resourceType: 'QCLOUDCVM',
-                  region: EditForm.value.region,
-                }}
-              />
-            </bk-form-item>
-            <bk-form-item label='实例族' prop='deviceGroup'>
-              <bk-input v-model={EditForm.value.deviceGroup} style='width: 192px' />
-            </bk-form-item>
-            <bk-form-item label='机型' prop='deviceType'>
-              <bk-input v-model={EditForm.value.deviceType} style='width: 192px' />
-            </bk-form-item>
-            <bk-form-item label='CPU(核)' prop='cpu'>
-              <bk-input type='number' v-model={EditForm.value.cpu} min={0} style='width: 192px' />
-            </bk-form-item>
-            <bk-form-item label='内存(G)' prop='mem'>
-              <bk-input type='number' v-model={EditForm.value.mem} min={0} style='width: 192px' />
-            </bk-form-item>
-            <bk-form-item labbk='其他信息'>
-              <remark-textarea v-model={EditForm.value.remark} type='textarea' maxlength='128' show-limit />
-            </bk-form-item>
-          </bk-form>
-        </Dialog>
+        <bk-form model={EditForm.value} ref={formInstance} rules={formRules.value}>
+          <bk-form-item label='需求类型' required property='requireType'>
+            <bk-select v-model={EditForm.value.requireType} multiple style='width: 250px'>
+              {order.value.requireTypes.map((item: { require_type: any; require_name: any }) => (
+                <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
+              ))}
+            </bk-select>
+          </bk-form-item>
+          <bk-form-item class='mr16' label='地域' required property='region'>
+            <AreaSelector
+              ref='areaSelector'
+              multiple
+              style='width: 250px'
+              v-model={EditForm.value.region}
+              params={{ resourceType: 'QCLOUDCVM' }}
+              onChange={onEditFormRegionChange}></AreaSelector>
+          </bk-form-item>
+          <bk-form-item label='园区' required property='zone'>
+            <ZoneSelector
+              ref='zoneSelector'
+              multiple
+              style='width: 250px'
+              separateCampus={false}
+              v-model={EditForm.value.zone}
+              params={{
+                resourceType: 'QCLOUDCVM',
+                region: EditForm.value.region,
+              }}
+            />
+          </bk-form-item>
+          <bk-form-item label='实例族' required prop='deviceGroup'>
+            <bk-input v-model={EditForm.value.deviceGroup} style='width: 250px' />
+          </bk-form-item>
+          <bk-form-item label='机型' required prop='deviceType'>
+            <bk-input v-model={EditForm.value.deviceType} style='width: 250px' />
+          </bk-form-item>
+          <bk-form-item label='CPU(核)' required prop='cpu'>
+            <bk-input type='number' v-model={EditForm.value.cpu} min={0} style='width: 250px' />
+          </bk-form-item>
+          <bk-form-item label='内存(G)' required prop='mem'>
+            <bk-input type='number' v-model={EditForm.value.mem} min={0} style='width: 250px' />
+          </bk-form-item>
+          <bk-form-item label='其他信息'>
+            <bk-input
+              v-model={EditForm.value.remark}
+              class='mb8'
+              autosize
+              style='width: 250px'
+              type='textarea'
+              maxlength={128}
+            />
+          </bk-form-item>
+        </bk-form>
       </div>
     );
   },
