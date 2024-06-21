@@ -2990,7 +2990,6 @@ const lang: ILANG = {
   机型类型: ['Type of machine'],
   机型规格: ['Model Specification'],
   实例数量: ['Number of instances'],
-  业务: ['professional work'],
   运营产品: ['Operational Products'],
   规划产品: ['Planning Products'],
   预测类型: ['Type of forecast'],

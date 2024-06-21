@@ -68,14 +68,10 @@ export default defineComponent({
         {t('请勾选相关参数后查询，')}
         <br />
         {t('1.裁撤的机房模块，至少选一个模块，')}
-        <br />
-        {t('2.组织架构、业务、人员至少选择一个')}
       </>
     );
 
-    const isMeetSearchConditions = computed(
-      () => props.moduleNames.length && (organizations.value.length || bkBizIds.value.length || operators.value.length),
-    );
+    const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
     const handleSearch = async () => {
       isLoading.value = true;
@@ -109,8 +105,8 @@ export default defineComponent({
     const setSearchParams = (row: IDissolve) => {
       searchParams.value = {
         organizations: organizations.value,
-        bk_biz_names: [row.bk_biz_name],
-        module_names: Object.keys(row?.module_host_count || {}),
+        bk_biz_names: [row.bk_biz_name].filter((v) => v),
+        module_names: moduleNames.value,
         operators: operators.value,
       };
     };
@@ -138,6 +134,8 @@ export default defineComponent({
             class={cssModule['search-item']}
             multiple
             isAudit={true}
+            isShowAll={true}
+            autoSelect={true}
             v-model={bkBizIds.value}></BusinessSelector>
           <MemberSelect class={cssModule['search-item']} v-model={operators.value}></MemberSelect>
           <bk-button
@@ -164,10 +162,10 @@ export default defineComponent({
         </section>
 
         <bk-loading loading={isLoading.value}>
-          <bk-table show-overflow-tooltip data={dissloveList.value} class={cssModule.table}>
-            <bk-table-column label={t('业务')} field='bk_biz_name' fixed='left'></bk-table-column>
-            <bk-table-column label={t('裁撤进度')} field='progress'></bk-table-column>
-            <bk-table-column label={t('原始数量')} field='total.origin.host_count'>
+          <bk-table show-overflow-tooltip virtual-enabled={true} data={dissloveList.value} class={cssModule.table}>
+            <bk-table-column label={t('业务')} field='bk_biz_name' min-width='150px' fixed='left'></bk-table-column>
+            <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px'></bk-table-column>
+            <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
                   <bk-button text theme='primary' onClick={() => handleShowOriginDialog(row)}>
@@ -176,8 +174,8 @@ export default defineComponent({
                 ),
               }}
             </bk-table-column>
-            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count'></bk-table-column>
-            <bk-table-column label={t('当前数量')} field='total.current.host_count'>
+            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'></bk-table-column>
+            <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
                   <bk-button text theme='primary' onClick={() => handleShowCurrentDialog(row)}>
@@ -186,9 +184,9 @@ export default defineComponent({
                 ),
               }}
             </bk-table-column>
-            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count'></bk-table-column>
+            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'></bk-table-column>
             {moduleNames.value.map((moduleName: string) => (
-              <bk-table-column label={moduleName} field={moduleName}>
+              <bk-table-column label={moduleName} field={moduleName} width={`${moduleName.length * 15}px`}>
                 {{
                   default: ({ row }: { row: IDissolve }) => (
                     <bk-button text theme='primary' onClick={() => handleShowModuleDialog(row)}>
