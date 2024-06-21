@@ -70,57 +70,7 @@ export default defineComponent({
     const router = useRouter();
     const route = useRoute();
     const orderClipboard = ref({});
-    columns.splice(3, 0, {
-      label: '交付情况-已交付',
-      field: 'success_num',
-      width: 180,
-      render: ({ data }: any) => {
-        if (data.success_num > 0) {
-          const ips = orderClipboard.value?.[data.suborder_id]?.ips || [];
-          const assetIds = orderClipboard.value?.[data.suborder_id]?.assetIds || [];
-          const goToCmdb = (ips: string[]) => {
-            window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
-          };
-
-          return (
-            <div class={'flex-row align-item-center'}>
-              {data.success_num}
-              <Button
-                text
-                theme={'primary'}
-                class='ml8 mr8'
-                v-clipboard:copy={ips.join('\n')}
-                v-bk-tooltips={{
-                  content: '复制 IP',
-                }}>
-                <Copy />
-              </Button>
-              <Button
-                text
-                theme={'primary'}
-                class='mr8'
-                v-clipboard:copy={assetIds.join('\n')}
-                v-bk-tooltips={{
-                  content: '复制固资号',
-                }}>
-                <Copy />
-              </Button>
-              <Button
-                text
-                theme={'primary'}
-                onClick={() => goToCmdb(ips)}
-                v-bk-tooltips={{
-                  content: '去蓝鲸配置平台管理资源',
-                }}>
-                <DataShape />
-              </Button>
-            </div>
-          );
-        }
-
-        return <span>{data.success_num}</span>;
-      },
-    });
+    columns.splice(3, 0);
     const opBtnDisabled = computed(() => {
       return (row) => {
         if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
@@ -317,6 +267,57 @@ export default defineComponent({
               );
             },
           },
+          {
+            label: '已交付数',
+            field: 'success_num',
+            width: 180,
+            render: ({ data }: any) => {
+              if (data.success_num > 0) {
+                const ips = orderClipboard.value?.[data.suborder_id]?.ips || [];
+                const assetIds = orderClipboard.value?.[data.suborder_id]?.assetIds || [];
+                const goToCmdb = (ips: string[]) => {
+                  window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
+                };
+
+                return (
+                  <div class={'flex-row align-item-center'}>
+                    {data.success_num}
+                    <Button
+                      text
+                      theme={'primary'}
+                      class='ml8 mr8'
+                      v-clipboard:copy={ips.join('\n')}
+                      v-bk-tooltips={{
+                        content: '复制 IP',
+                      }}>
+                      <Copy />
+                    </Button>
+                    <Button
+                      text
+                      theme={'primary'}
+                      class='mr8'
+                      v-clipboard:copy={assetIds.join('\n')}
+                      v-bk-tooltips={{
+                        content: '复制固资号',
+                      }}>
+                      <Copy />
+                    </Button>
+                    <Button
+                      text
+                      theme={'primary'}
+                      onClick={() => goToCmdb(ips)}
+                      v-bk-tooltips={{
+                        content: '去蓝鲸配置平台管理资源',
+                      }}>
+                      <DataShape />
+                    </Button>
+                  </div>
+                );
+              }
+
+              return <span>{data.success_num}</span>;
+            },
+          },
           ...columns,
           {
             label: '操作',
@@ -383,7 +384,7 @@ export default defineComponent({
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
         payload: removeEmptyFields({
-          bk_biz_id: formModel.bkBizId === 'all' ? '' : formModel.bkBizId,
+          bk_biz_id: formModel.bkBizId === 'all' ? 0 : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)
                 .split('\n')

@@ -270,7 +270,12 @@ export default defineComponent({
               </bk-form-item>
 
               <bk-form-item label='剩余可申请数量' property='resourceType'>
-                <Input class={'w200px'} type='number' v-model={order.value.model.spec.replicas} min={0}></Input>
+                <Input
+                  class={'w200px'}
+                  type='number'
+                  v-model={order.value.model.spec.replicas}
+                  min={1}
+                  max={rawOrder.value.total_num - rawOrder.value.success_num}></Input>
                 <div>
                   原始值：{rawOrder.value.total_num}, 已交付数量：{rawOrder.value.success_num}, 可申请数量：
                   {rawOrder.value.total_num - rawOrder.value.success_num}

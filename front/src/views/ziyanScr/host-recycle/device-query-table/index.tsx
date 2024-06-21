@@ -81,7 +81,7 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
-      params.bk_biz_id = params.bk_biz_id === 'all' ? '' : params.bk_biz_id;
+      params.bk_biz_id = params.bk_biz_id === 'all' ? 0 : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;

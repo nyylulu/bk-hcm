@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Input, Message } from 'bkui-vue';
@@ -141,6 +141,7 @@ export default defineComponent({
         url: '/api/v1/woa/task/findmany/apply/match/device',
         payload: removeEmptyFields({
           resource_type: formModel.resource_type,
+          ips: ipArray.value,
           spec: {
             device_type: formModel.spec.device_type,
             region: formModel.spec.region,
@@ -149,6 +150,20 @@ export default defineComponent({
           },
         }),
       }),
+    });
+    const ipArray = computed(() => {
+      const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
+      const ips = [];
+      formModel.ips
+        .split(/\r?\n/)
+        .map((ip) => ip.trim())
+        .filter((ip) => ip.length > 0)
+        .forEach((item) => {
+          if (ipv4.test(item)) {
+            ips.push(item);
+          }
+        });
+      return ips;
     });
     const onRegionChange = () => {
       formModel.spec.zone = [];

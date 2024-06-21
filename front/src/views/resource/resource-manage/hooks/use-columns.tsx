@@ -3119,20 +3119,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
 
   const ApplicationListColumns = [
     {
-      label: '申请人',
-      render: ({ data }: any) => {
-        return <WName name={data.bk_username}></WName>;
-      },
-    },
-    {
-      label: '交付情况-总数',
-      field: 'total_num',
-    },
-    {
-      label: '交付情况-待交付',
-      field: 'pending_num',
-    },
-    {
       label: '申请时间',
       field: 'create_at',
       width: 120,

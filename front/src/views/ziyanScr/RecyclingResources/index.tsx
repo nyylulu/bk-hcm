@@ -371,7 +371,8 @@ export default defineComponent({
                   <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
                     <bk-input
                       type='textarea'
-                      style='width:520px'
+                      style='width:520px; max-height: 500px;'
+                      autosize
                       v-model={lips.value}
                       text
                       placeholder='请输入 IP地址/固资号，多个换行分割，最多支持500个'

@@ -25,6 +25,8 @@ export default defineComponent({
     applicationSideslider,
   },
   setup() {
+    const IDCPMformRef = ref();
+    const QCLOUDCVMformRef = ref();
     const router = useRouter();
     const route = useRoute();
     const addResourceRequirements = ref(false);
@@ -582,7 +584,7 @@ export default defineComponent({
               ref='formRef'>
               <div class='displayflex'>
                 <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
-                  <BusinessSelector v-model={order.value.model.bkBizId} autoSelect authed />
+                  <BusinessSelector v-model={order.value.model.bkBizId} autoSelect authed selectAll />
                 </bk-form-item>
                 <bk-form-item label='需求类型' class='item-warp' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>
@@ -652,13 +654,8 @@ export default defineComponent({
             </div>
           </CommonCard>
           <CommonCard title={() => '备注'}>
-            <bk-form
-              form-type='vertical'
-              label-width='150'
-              model={order.value.model}
-              rules={order.value.rules}
-              ref='formRef'>
-              <bk-form-item label='申请备注' class='item-warp' property='bkBizId'>
+            <bk-form form-type='vertical' label-width='150' model={order.value.model}>
+              <bk-form-item label='申请备注' class='item-warp'>
                 <Input
                   type='textarea'
                   v-model={order.value.model.remark}
@@ -711,7 +708,7 @@ export default defineComponent({
                     <bk-form
                       model={resourceForm.value}
                       class={'scr-form-wrapper'}
-                      rules={resourceFormRules.value}
+                      rules={order.value.rules}
                       ref='formRef'>
                       <bk-form-item label='主机类型' required>
                         <bk-select v-model={resourceForm.value.resourceType}>
@@ -858,7 +855,7 @@ export default defineComponent({
                             class={'scr-form-wrapper'}
                             model={QCLOUDCVMForm.value.spec}
                             rules={resourceFormRules.value}
-                            ref='formRef'>
+                            ref={QCLOUDCVMformRef}>
                             <bk-form-item label='机型' required>
                               <bk-select
                                 v-model={QCLOUDCVMForm.value.spec.device_type}
@@ -881,7 +878,7 @@ export default defineComponent({
                                 ))}
                               </bk-select>
                             </bk-form-item>
-                            <bk-form-item label='数据盘' required>
+                            <bk-form-item label='数据盘'>
                               <div
                                 style={{
                                   display: 'flex',
@@ -951,7 +948,7 @@ export default defineComponent({
                             model={pmForm.value.spec}
                             rules={resourceFormRules.value}
                             class={'scr-form-wrapper'}
-                            ref='formRef'>
+                            ref={IDCPMformRef}>
                             <div>
                               <bk-form-item label='机型' required>
                                 <bk-select
