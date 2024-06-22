@@ -9,6 +9,11 @@ import { useRouter, useRoute } from 'vue-router';
 import WName from '@/components/w-name';
 import apiService from '@/api/scrApi';
 import applicationSideslider from '../application-sideslider/index';
+import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
+import { getResourceTypeName } from '../transform';
+import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 export default defineComponent({
   components: {
     applicationSideslider,
@@ -109,14 +114,14 @@ export default defineComponent({
         } = rawOrder.value;
         const informationList = [
           suborder_id,
-          bk_biz_id,
-          require_type,
+          getBusinessNameById(bk_biz_id),
+          getTypeCn(require_type),
           expect_time,
           bk_username,
-          resource_type,
-          region,
-          disk_type,
-          image_id,
+          getResourceTypeName(resource_type),
+          getRegionCn(region),
+          getDiskTypesName(disk_type),
+          getImageName(image_id),
           remark,
         ];
         informationList.forEach((item, index) => {
@@ -247,7 +252,7 @@ export default defineComponent({
                   }}
                   onChange={onZoneChange}
                 />
-                <div>原始值：{rawOrder.value.spec.zone}</div>
+                <div>原始值：{getZoneCn(rawOrder.value.spec.zone)}</div>
               </bk-form-item>
 
               <bk-form-item label='机型'>

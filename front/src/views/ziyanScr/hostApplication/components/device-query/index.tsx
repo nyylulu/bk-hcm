@@ -49,6 +49,11 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        sortOption: {
+          sort: 'create_at',
+          order: 'DESC',
+        },
+        immediate: false,
       },
       scrConfig: () => {
         return {

@@ -1,4 +1,4 @@
-import { Ref, defineComponent, onMounted, ref, computed } from 'vue';
+import { Ref, defineComponent, onMounted, ref, computed, onUnmounted } from 'vue';
 import { useUserStore } from '@/store';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -13,11 +13,13 @@ import { timeFormatter } from '@/common/util';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import WName from '@/components/w-name';
+import ModifyRecord from './modify-record';
 import { isEqual } from 'lodash';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
   components: {
     WName,
+    ModifyRecord,
   },
   setup() {
     const route = useRoute();
@@ -29,19 +31,33 @@ export default defineComponent({
     const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
     const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
+    cloudcolumns.splice(4, 0, {
+      label: '交付情况-已支付',
+      field: 'success_num',
+      render: ({ row }: any) => (
+        <span class={'copy-wrapper'}>
+          {row.success_num}
+          {row.success_num > 0 ? (
+            <Button text theme='primary'>
+              <Copy class={'copy-icon'} v-clipboard:copy={(ips[row.suborder_id] || []).join('\n')} />
+            </Button>
+          ) : null}
+        </span>
+      ),
+    });
     const Hostcolumns = [
       ...cloudcolumns,
-      // {
-      //   label: '操作',
-      //   width: 120,
-      //   render: () => {
-      //     return (
-      //       <Button text theme='primary' onClick={() => {}}>
-      //         查看变更记录
-      //       </Button>
-      //     );
-      //   },
-      // },
+      {
+        label: '操作',
+        width: 120,
+        render: ({ row }: any) => {
+          return (
+            <Button text theme='primary' onClick={() => showRecord(row)}>
+              查看变更记录
+            </Button>
+          );
+        },
+      },
     ];
     const Machinecolumns = [
       {
@@ -58,20 +74,22 @@ export default defineComponent({
       {
         label: '交付情况-总数',
         field: 'total_num',
-        render: ({ index }: any) => detail.value.info?.[index]?.total_num,
       },
       {
         label: '交付情况-待交付',
         field: 'pending_num',
-        render: ({ index }: any) => detail.value.info?.[index]?.pending_num,
       },
       {
         label: '交付情况-已交付',
         field: 'success_num',
-        render: ({ index }: any) => (
+        render: ({ row }: any) => (
           <span class={'copy-wrapper'}>
-            {detail.value.info?.[index]?.success_num}
-            <Copy class={'copy-icon ml4'} v-clipboard:copy={detail.value.info?.index?.success_num} />
+            {row.success_num}
+            {row.success_num > 0 ? (
+              <Button text theme='primary'>
+                <Copy class={'copy-icon'} v-clipboard:copy={(ips[row.suborder_id] || []).join('\n')} />
+              </Button>
+            ) : null}
           </span>
         ),
       },
@@ -79,21 +97,28 @@ export default defineComponent({
       {
         label: '状态',
         field: 'stage',
-        width: 180,
-        render: ({ index }: any) => detail.value.info?.[index]?.status,
       },
-      // {
-      //   label: '操作',
-      //   width: 120,
-      //   render: () => {
-      //     return (
-      //       <Button text theme='primary' onClick={() => {}}>
-      //         查看变更记录
-      //       </Button>
-      //     );
-      //   },
-      // },
+      {
+        label: '操作',
+        width: 120,
+        render: ({ row }: any) => {
+          return (
+            <Button text theme='primary' onClick={() => showRecord(row)}>
+              查看变更记录
+            </Button>
+          );
+        },
+      },
     ];
+    const showRecordSlider = ref(false);
+    const recordParams = ref({});
+    const showRecord = (row) => {
+      showRecordSlider.value = true;
+      recordParams.value = {
+        suborderId: row.suborder_id,
+        bkBizId: row.bk_biz_id,
+      };
+    };
     const applyRecord = ref({
       order_id: 0,
       itsm_ticket_id: '',
@@ -125,8 +150,20 @@ export default defineComponent({
       });
     };
     const suborders = ref([]);
+    const cloundMachineList = computed(() => {
+      return suborders.value.filter((item) => {
+        return item.resource_type === 'QCLOUDCVM';
+      });
+    });
+    const physicMachineList = computed(() => {
+      return suborders.value.filter((item) => {
+        return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
+      });
+    });
     // 获取需求子单
-    const getdemandDetail = async (orderId: string) => {
+    const getdemandDetail = async () => {
+      if (detail.value.stage === 'AUDIT') return;
+      const orderId = route.params.id;
       const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
         order_id: [+orderId],
         page: { start: 0, limit: 50 },
@@ -209,10 +246,19 @@ export default defineComponent({
         return value;
       });
     };
-    onMounted(() => {
-      getOrderDetail(route.params.id as string);
+    const refreshTimer = ref(null);
+    onMounted(async () => {
+      await getOrderDetail(route.params.id as string);
+      await getdemandDetail();
       getOrderAuditRecords();
-      getdemandDetail(route.params.id as string);
+      if (refreshTimer.value) clearInterval(refreshTimer.value);
+      refreshTimer.value = setInterval(() => {
+        getOrderAuditRecords();
+        getdemandDetail();
+      }, 5000);
+    });
+    onUnmounted(() => {
+      clearInterval(refreshTimer.value);
     });
     return () => (
       <div class={'application-detail-container'}>
@@ -282,11 +328,11 @@ export default defineComponent({
               disabled={selections.value.length === 0}>
               批量复制IP
             </Button>
-            {detail.value.suborders?.some(({ resource_type }) => resource_type === 'QCLOUDCVM') && (
+            {cloundMachineList.value.length > 0 && (
               <>
                 <p class={'mt16 mb8'}>云主机</p>
                 <Table
-                  data={suborders.value}
+                  data={cloundMachineList.value}
                   columns={Hostcolumns}
                   {...{
                     onSelect: (selections: any) => {
@@ -299,7 +345,7 @@ export default defineComponent({
                 />
               </>
             )}
-            {detail.value.suborders?.some(({ resource_type }) => ['IDCPM', 'IDCDVM'].includes(resource_type)) && (
+            {physicMachineList.value.length > 0 && (
               <>
                 <p class={'mt16 mb8'}>物理机</p>
                 <Table
@@ -311,7 +357,7 @@ export default defineComponent({
                       handleSelectionChange(selections, () => true, true);
                     },
                   }}
-                  data={suborders.value}
+                  data={physicMachineList.value}
                   columns={Machinecolumns}
                 />
               </>
@@ -357,6 +403,7 @@ export default defineComponent({
             </div>
           </CommonCard>
         </div>
+        <ModifyRecord v-model={showRecordSlider.value} showObj={recordParams.value} />
       </div>
     );
   },

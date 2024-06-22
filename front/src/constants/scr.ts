@@ -36,3 +36,13 @@ export const QCLOUDCVM = 'QCLOUDCVM';
  * @const {String} QCLOUDDVM 腾讯云富容器
  */
 export const QCLOUDDVM = 'QCLOUDDVM';
+
+/**
+ * @const {String} TENTHOUSAND 万兆
+ */
+export const TENTHOUSAND = 'TENTHOUSAND';
+
+/**
+ * @const {String} ONETHOUSAND 千兆
+ */
+export const ONETHOUSAND = 'ONETHOUSAND';

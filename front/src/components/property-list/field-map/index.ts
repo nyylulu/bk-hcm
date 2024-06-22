@@ -21,11 +21,17 @@ export const useFieldVal = () => {
     }, []);
     fieldList = new Map([...fieldList, ...fieldModuleMap]);
   });
+
+  const convertToCamelCase = (str) => {
+    return str.toLowerCase().replace(/_(.)/g, (match, group1) => {
+      return group1.toUpperCase();
+    });
+  };
   const getFieldCn = (fieldKey) => {
-    return fieldList.get(fieldKey)?.cn || fieldKey;
+    return fieldList.get(convertToCamelCase(fieldKey))?.cn || fieldKey;
   };
   const getFieldCnVal = (fieldKey, fieldValue) => {
-    const field = fieldList.get(fieldKey);
+    const field = fieldList.get(convertToCamelCase(fieldKey));
     let formattedField = fieldValue;
     if (has(field, 'transformer')) {
       return field.transformer(fieldValue) || '-';
