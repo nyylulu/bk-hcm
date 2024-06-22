@@ -2,7 +2,6 @@ import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
 import { useUserStore } from '@/store';
 import { getRequireTypes } from '@/api/host/task';
 import { createCvmProduceOrder } from '@/api/host/cvm';
-import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import CvmForm from './cvm-form';
 import { Dialog, Form, Select } from 'bkui-vue';
 import './index.scss';
@@ -141,7 +140,7 @@ export default defineComponent({
               <Form label-width='80' ref={topModelFormRef} model={topModelForm.value} rules={topRulesForm.value}>
                 <div class='form-item-container'>
                   <FormItem label='业务' required>
-                    {getBusinessNameById(topModelForm.value.bk_biz_id)}
+                    {`资源运营服务`}
                   </FormItem>
                   <FormItem label='模块' required>
                     SA云化池

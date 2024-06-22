@@ -1486,15 +1486,17 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '需求类型',
       field: 'require_type',
+      render: ({ row }: any) => getTypeCn(row.require_type),
     },
     {
       label: '地域',
       field: 'region',
-      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      render: ({ row }: any) => getRegionCn(row.region),
     },
     {
       label: '园区',
       field: 'zone',
+      render: ({ row }: any) => getZoneCn(row.zone),
     },
     {
       label: '实例族',
