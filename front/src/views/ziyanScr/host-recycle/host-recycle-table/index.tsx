@@ -34,7 +34,7 @@ export default defineComponent({
     const router = useRouter();
     const defaultRecycleForm = () => {
       return {
-        bk_biz_id: '',
+        bk_biz_id: [],
         order_id: [],
         suborder_id: [],
         resource_type: [],
@@ -73,7 +73,6 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
-      params.bk_biz_id = params.bk_biz_id === 'all' ? undefined : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -309,6 +308,7 @@ export default defineComponent({
                   authed
                   clearable={false}
                   isShowAll
+                  multiple
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>

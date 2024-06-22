@@ -19,7 +19,7 @@ export default defineComponent({
   emits: ['goBillDetailPage'],
   setup(props, { emit }) {
     const defaultDeviceForm = () => ({
-      bk_biz_id: '',
+      bk_biz_id: [],
       order_id: [],
       suborder_id: [],
       ip: [],
@@ -81,7 +81,6 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
-      params.bk_biz_id = params.bk_biz_id === 'all' ? undefined : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -160,6 +159,7 @@ export default defineComponent({
                         autoSelect
                         clearable={false}
                         isShowAll
+                        multiple
                       />
                     </bk-form-item>
                     <bk-form-item label='单号'>
