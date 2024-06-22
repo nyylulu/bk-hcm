@@ -126,6 +126,7 @@ type CloudServerSetting struct {
 	Itsm           ApiGateway     `yaml:"itsm"`
 	Cmdb           ApiGateway     `yaml:"cmdb"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
+	FinOps         ApiGateway     `yaml:"finops"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

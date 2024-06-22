@@ -183,7 +183,8 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		logs.Errorf("failed to create bkbase client, err: %v", err)
 		return nil, nil, nil, err
 	}
-	finOpsCfg := cc.AccountServer().FinOps
+
+	finOpsCfg := cc.CloudServer().FinOps
 	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
 	if err != nil {
 		return nil, nil, nil, err
