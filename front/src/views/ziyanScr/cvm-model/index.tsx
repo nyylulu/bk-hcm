@@ -234,6 +234,7 @@ export default defineComponent({
     const createRef = ref();
     const createTriggerShow = () => {
       createVisible.value = false;
+      createRef.value.clearValidate();
     };
     return () => (
       <div class='common-card-wrap has-selection'>

@@ -81,7 +81,7 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
-      params.bk_biz_id = params.bk_biz_id === 'all' ? 0 : params.bk_biz_id;
+      params.bk_biz_id = params.bk_biz_id === 'all' ? undefined : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -96,7 +96,6 @@ export default defineComponent({
           sort: 'ip',
           order: 'ASC',
         },
-        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -160,6 +159,7 @@ export default defineComponent({
                         authed
                         autoSelect
                         clearable={false}
+                        isShowAll
                       />
                     </bk-form-item>
                     <bk-form-item label='单号'>

@@ -379,12 +379,11 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
-        immediate: false,
       },
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
         payload: removeEmptyFields({
-          bk_biz_id: formModel.bkBizId === 'all' ? 0 : formModel.bkBizId,
+          bk_biz_id: formModel.bkBizId === 'all' ? undefined : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)
                 .split('\n')
@@ -460,7 +459,7 @@ export default defineComponent({
         <div class={'filter-container'}>
           <Form model={formModel} class={'scr-form-wrapper'}>
             <FormItem label='业务'>
-              <BusinessSelector autoSelect v-model={formModel.bkBizId} authed />
+              <BusinessSelector autoSelect v-model={formModel.bkBizId} authed isShowAll />
             </FormItem>
             <FormItem label='需求类型'>
               <RequirementTypeSelector v-model={formModel.requireType} multiple />

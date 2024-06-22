@@ -89,7 +89,6 @@ export const transferSimpleConditions = (simpleConditions) => {
 
         targetCondition.condition = item;
       }
-
       if (index > 0) {
         if (!isArray(item)) throwError(`'${JSON.stringify(item)}' is not an array, rule item must be a array`);
 
@@ -99,7 +98,6 @@ export const transferSimpleConditions = (simpleConditions) => {
             condition: item[0],
             rules: [],
           };
-
           buildQueryConditions(newConditions, item);
 
           targetCondition.rules.push(newConditions);
@@ -113,13 +111,13 @@ export const transferSimpleConditions = (simpleConditions) => {
 
           if (!allOperators.includes(operator) && !abbrOperators.has(operator))
             throwError(`operator '${operator}' is not a valid operator, must one of '${allOperators.join(',')}'`);
+
           if (
-            field !== 'bk_biz_id' &&
-            (value === undefined ||
-              value === null ||
-              (isString(value) && value.trim() === '') ||
-              (isArray(value) && value.length === 0) ||
-              (isNumber(value) && isNaN(value)))
+            value === undefined ||
+            value === null ||
+            (isString(value) && value.trim() === '') ||
+            (isArray(value) && value.length === 0) ||
+            (isNumber(value) && isNaN(value))
           ) {
             emptyFields.push(field);
             return false;

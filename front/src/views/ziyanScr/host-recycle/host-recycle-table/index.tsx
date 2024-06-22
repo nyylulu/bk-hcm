@@ -73,7 +73,7 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
       };
-      params.bk_biz_id = params.bk_biz_id === 'all' ? 0 : params.bk_biz_id;
+      params.bk_biz_id = params.bk_biz_id === 'all' ? undefined : params.bk_biz_id;
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
@@ -272,7 +272,6 @@ export default defineComponent({
           sort: 'create_at',
           order: 'DESC',
         },
-        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -309,6 +308,7 @@ export default defineComponent({
                   autoSelect
                   authed
                   clearable={false}
+                  isShowAll
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>

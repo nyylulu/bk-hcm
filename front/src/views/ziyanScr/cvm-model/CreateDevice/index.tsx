@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, nextTick } from 'vue';
 import './index.scss';
 import AreaSelector from '../../hostApplication/components/AreaSelector';
 import ZoneSelector from '../../hostApplication/components/ZoneSelector';
@@ -11,6 +11,12 @@ export default defineComponent({
       await formInstance.value.validate();
       await apiService.createCvmDevice(EditForm.value);
       emit('queryList');
+      clearValidate();
+    };
+    const clearValidate = () => {
+      nextTick(() => {
+        formInstance.value.clearValidate();
+      });
     };
     const EditForm = ref({
       remark: '',
@@ -31,7 +37,7 @@ export default defineComponent({
     onMounted(() => {
       getrequireTypes();
     });
-    const formInstance = ref({});
+    const formInstance = ref();
     const formRules = ref({
       requireType: [{ required: true, message: '请选择需求类型', trigger: 'change' }],
       region: [{ required: true, message: '请选择地域', trigger: 'change' }],
@@ -45,7 +51,7 @@ export default defineComponent({
       const { info } = await apiService.getRequireTypes();
       order.value.requireTypes = info;
     };
-    expose({ handleConfirm });
+    expose({ handleConfirm, clearValidate });
     return () => (
       <div>
         <bk-form model={EditForm.value} ref={formInstance} rules={formRules.value}>

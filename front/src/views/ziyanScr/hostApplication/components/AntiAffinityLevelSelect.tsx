@@ -1,10 +1,10 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import apiService from '../../../../api/scrApi';
-
+import isEqual from 'lodash/isEqual';
 export default defineComponent({
   name: 'AntiAffinityLevelSelect',
   props: {
-    value: {
+    modelValue: {
       type: [String, Array],
       default: '',
     },
@@ -13,11 +13,17 @@ export default defineComponent({
       default: () => ({}),
     },
   },
-  emits: ['value-change'],
-  setup(props) {
-    const options = ref<{ value: string; label: string }[]>([]);
+  emits: ['affinitychange'],
+  setup(props, { emit }) {
+    const options = ref([]);
     const optionsRequestId = Symbol();
-
+    const selectedValue = ref();
+    const handleSelectorChange = (value: string) => {
+      emit('affinitychange', value);
+    };
+    const initValue = (newVal) => {
+      selectedValue.value = newVal;
+    };
     const fetchOptions = async () => {
       const { resourceType, hasZone } = props.params;
 
@@ -34,13 +40,34 @@ export default defineComponent({
         options.value = [];
       }
     };
-    onMounted(() => {
-      fetchOptions();
-    });
-
+    watch(
+      () => props.modelValue,
+      (newVal) => {
+        initValue(newVal);
+      },
+      { immediate: true },
+    );
+    watch(
+      () => props.params.resourceType,
+      (newVal, oldVal) => {
+        if (!isEqual(newVal, oldVal)) {
+          fetchOptions();
+        }
+      },
+      { immediate: true },
+    );
+    watch(
+      () => props.params.hasZone,
+      (newVal, oldVal) => {
+        if (!isEqual(newVal, oldVal)) {
+          fetchOptions();
+        }
+      },
+      { immediate: true },
+    );
     return () => (
       <div>
-        <bk-select v-model={props.value}>
+        <bk-select v-model={selectedValue.value} onChange={handleSelectorChange}>
           {options.value.map((opt) => (
             <bk-option key={opt.value} label={opt.label} value={opt.value} />
           ))}

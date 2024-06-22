@@ -394,6 +394,11 @@ export default defineComponent({
               cpu={applyCpu.value}
               mem={applyMem.value}
               region={applyRegion.value}
+              device={{
+                filter: {
+                  require_type: rawOrder.value.require_type,
+                },
+              }}
             />
           </Sideslider>
         </div>

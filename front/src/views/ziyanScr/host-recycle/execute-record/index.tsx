@@ -28,7 +28,6 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
-        immediate: false,
       },
       scrConfig: () => {
         return {

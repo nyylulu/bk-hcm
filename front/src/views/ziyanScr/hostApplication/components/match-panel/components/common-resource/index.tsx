@@ -24,7 +24,7 @@ export default defineComponent({
   setup(props) {
     const { selections, handleSelectionChange } = useSelection();
     const userStore = useUserStore();
-    const { formModel, resetForm } = useFormModel({
+    const { formModel, forceClear } = useFormModel({
       resource_type: props.formModelData.resource_type,
       ips: '',
       spec: {
@@ -257,7 +257,7 @@ export default defineComponent({
         </Button>
         <Button
           onClick={() => {
-            resetForm();
+            forceClear();
             getListData();
           }}>
           清空

@@ -19,7 +19,7 @@ export default defineComponent({
   },
   setup(props) {
     const { selections, handleSelectionChange } = useSelection();
-    const { formModel, resetForm } = useFormModel({
+    const Modelform = ref({
       resource_type: props.formModelData.resource_type,
       spec: {
         region: [props.formModelData.spec.region],
@@ -27,6 +27,7 @@ export default defineComponent({
         device_type: [props.formModelData.spec.device_type],
       },
     });
+    const { formModel, forceClear } = useFormModel({ ...Modelform.value });
     const options = ref([
       {
         value: 'IDCPM',
@@ -195,7 +196,7 @@ export default defineComponent({
         </Button>
         <Button
           onClick={() => {
-            resetForm();
+            forceClear();
             getListData();
           }}>
           清空

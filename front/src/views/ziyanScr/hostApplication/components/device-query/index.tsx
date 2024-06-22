@@ -49,7 +49,6 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
-        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -57,7 +56,7 @@ export default defineComponent({
           payload: {
             filter: transferSimpleConditions([
               'AND',
-              ['bk_biz_id', '=', formModel.bkBizId === 'all' ? 0 : formModel.bkBizId],
+              ['bk_biz_id', '=', formModel.bkBizId === 'all' ? undefined : formModel.bkBizId],
               ['require_type', '=', formModel.requireType],
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],
@@ -93,7 +92,7 @@ export default defineComponent({
               <>
                 <Form label-width='110' class='scr-form-wrapper' model={formModel}>
                   <FormItem label='业务'>
-                    <BusinessSelector autoSelect v-model={formModel.bkBizId} authed />
+                    <BusinessSelector autoSelect v-model={formModel.bkBizId} authed isShowAll />
                   </FormItem>
                   <FormItem label='需求类型'>
                     <RequirementTypeSelector v-model={formModel.requireType} />
