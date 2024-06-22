@@ -1826,7 +1826,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '地域',
       field: 'region',
-      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      render: ({ row }: any) => getRegionCn(row.region),
     },
     {
       label: '园区',

@@ -63,7 +63,7 @@ export default defineComponent({
       render: ({ row }) => {
         return (
           // 单据详情
-          <span class='sub-order-num' onClick={() => routeBillDetail({ pageIndex: 1, params: row })}>
+          <span class='sub-order-num' onClick={() => routeBillDetail(row)}>
             {row.suborder_id}
           </span>
         );

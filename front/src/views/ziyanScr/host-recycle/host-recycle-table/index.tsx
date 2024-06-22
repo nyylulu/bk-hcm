@@ -6,10 +6,10 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
-import { Form } from 'bkui-vue';
+import { Button, Form, Popover } from 'bkui-vue';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import { Search } from 'bkui-vue/lib/icon';
+import { GragFill, Search } from 'bkui-vue/lib/icon';
 import BillDetail from '../bill-detail';
 import FloatInput from '@/components/float-input';
 import './index.scss';
@@ -25,10 +25,6 @@ export default defineComponent({
     FloatInput,
   },
   props: {
-    pageIndex: {
-      type: Number,
-      default: 0,
-    },
     subBizBillNum: {
       type: Object,
       default: () => {},
@@ -190,13 +186,13 @@ export default defineComponent({
     watch(
       () => props.subBizBillNum,
       (newVal) => {
-        enterDetail(props.pageIndex, newVal);
+        enterDetail(newVal);
       },
     );
     const operateColList = [
       {
         label: '操作',
-        width: 320,
+        width: '150px',
         render: ({ row }) => {
           return (
             <div class='recycle-operation'>
@@ -208,15 +204,34 @@ export default defineComponent({
               </bk-button>
               {!['DONE', 'TERMINATE'].includes(row.status) ? (
                 <>
-                  <bk-button onClick={() => retryOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                    重试
-                  </bk-button>
-                  <bk-button onClick={() => stopOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                    终止
-                  </bk-button>
-                  <bk-button onClick={() => submitOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                    去除预检失败IP提交
-                  </bk-button>
+                  <Popover theme='light'>
+                    {{
+                      default: () => (
+                        <Button size='small' theme='primary' text>
+                          <GragFill />
+                        </Button>
+                      ),
+                      content: () => (
+                        <>
+                          <div>
+                            <Button onClick={() => retryOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                              重试
+                            </Button>
+                          </div>
+                          <div>
+                            <Button onClick={() => stopOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                              终止
+                            </Button>
+                          </div>
+                          <div>
+                            <Button onClick={() => submitOrderFunc(row.suborder_id)} size='small' theme='primary' text>
+                              去除预检失败IP提交
+                            </Button>
+                          </div>
+                        </>
+                      ),
+                    }}
+                  </Popover>
                 </>
               ) : null}
             </div>
@@ -232,7 +247,7 @@ export default defineComponent({
       render: ({ row }) => {
         return (
           // 单据详情
-          <span class='sub-order-num' onClick={() => enterDetail(1, row)}>
+          <span class='sub-order-num' onClick={() => enterDetail(row)}>
             {row.suborder_id}
           </span>
         );

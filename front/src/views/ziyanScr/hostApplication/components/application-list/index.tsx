@@ -439,7 +439,7 @@ export default defineComponent({
       throttleInfo.value = throttle(async (row) => {
         const [ips, assetIds] = await Promise.all([
           getDeliveredHostField(row, 'ip'),
-          getDeliveredHostField(row, 'assetId'),
+          getDeliveredHostField(row, 'asset_id'),
         ]);
         orderClipboard.value[row.suborder_id] = {
           ips,

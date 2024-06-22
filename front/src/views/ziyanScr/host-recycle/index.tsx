@@ -6,18 +6,16 @@ export default defineComponent({
   },
   setup() {
     const activeName = ref('HostRecycleTable');
-    const recyclePageIndex = ref(0);
     const recycleSubBizId = ref({});
     const getDetailPage = (paramObj) => {
       activeName.value = 'HostRecycleTable';
-      recyclePageIndex.value = paramObj.pageIndex;
-      recycleSubBizId.value = paramObj.params;
+      recycleSubBizId.value = paramObj;
     };
     const pagePanel = ref([
       {
         name: 'HostRecycleTable',
         label: '主机回收',
-        tranferProps: { pageIndex: recyclePageIndex, subBizBillNum: recycleSubBizId },
+        tranferProps: { subBizBillNum: recycleSubBizId },
       },
       {
         name: 'DeviceQueryTable',
