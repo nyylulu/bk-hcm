@@ -3,7 +3,7 @@ import { Table } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import { defineComponent, ref, watch } from 'vue';
 import { DETAIL_STATUS } from './constants';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 
 export default defineComponent({
   props: {

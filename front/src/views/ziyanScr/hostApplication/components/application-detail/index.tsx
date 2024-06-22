@@ -10,7 +10,7 @@ import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info
 import { Copy, Share } from 'bkui-vue/lib/icon';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { timeFormatter } from '@/common/util';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import WName from '@/components/w-name';
 import ModifyRecord from './modify-record';

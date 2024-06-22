@@ -4,7 +4,7 @@ import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
 import MemberSelect from '@/components/MemberSelect';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
 import ZoneSelector from '../ZoneSelector';
 import DiskTypeSelect from '../DiskTypeSelect';

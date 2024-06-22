@@ -1,5 +1,5 @@
 import { defineComponent, ref, computed, onMounted, watch } from 'vue';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';

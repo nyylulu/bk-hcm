@@ -5,7 +5,7 @@ import { Plus } from 'bkui-vue/lib/icon';
 import MemberSelect from '@/components/MemberSelect';
 import FilterFormItems from './filter-form-items';
 import { useZiyanScrStore } from '@/store';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { cleanPayload, getDate } from '@/utils';
 import { timeFormatter } from '@/common/util';

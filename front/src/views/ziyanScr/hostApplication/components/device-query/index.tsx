@@ -1,6 +1,6 @@
-import { defineComponent, computed } from 'vue';
+import { defineComponent, computed, onMounted } from 'vue';
 import './index.scss';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
@@ -88,6 +88,9 @@ export default defineComponent({
           }
         });
       return ips;
+    });
+    onMounted(() => {
+      getListData();
     });
     return () => (
       <div class={'device-query-container'}>

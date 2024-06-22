@@ -1,6 +1,6 @@
 import { defineComponent, ref, watch } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 export default defineComponent({
   props: {
     modelValue: {

@@ -1,5 +1,5 @@
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRequireTypes } from '@/api/host/task';
 import { getDeviceTypes, getCvmProduceOrderList, getCvmProducedResources } from '@/api/host/cvm';

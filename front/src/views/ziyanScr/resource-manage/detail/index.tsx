@@ -5,7 +5,7 @@ import { AngleDownLine, Copy, Search } from 'bkui-vue/lib/icon';
 import useClipboard from 'vue-clipboard3';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import './index.scss';
 

@@ -147,7 +147,7 @@ export default defineComponent({
                     SA云化池
                   </FormItem>
                 </div>
-                <FormItem label='模块' required property='require_type'>
+                <FormItem label='需求类型' required property='require_type'>
                   <Select v-model={topModelForm.value.require_type} clearable placeholder='请选择'>
                     {requireTypeList.value.map(({ label, value }) => {
                       return <Select.Option key={value} name={label} id={value} />;

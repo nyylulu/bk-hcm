@@ -8,7 +8,7 @@ import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import CreateDevice from './CreateDevice/index';
 import './index.scss';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {
@@ -61,11 +61,11 @@ export default defineComponent({
         label: '保持不变',
       },
       {
-        value: 1,
+        value: true,
         label: '是',
       },
       {
-        value: 2,
+        value: false,
         label: '否',
       },
     ]);
@@ -145,7 +145,7 @@ export default defineComponent({
     const serializeBatchEditForm = () => {
       const { comment, enableApply, enableCapacity } = batchEditForm.value;
       return {
-        comment: comment.trim() !== '' ? comment : '',
+        comment: comment.trim() !== '' ? comment : undefined,
         enable_apply: enableApply !== '' && enableApply !== 0 ? enableApply : undefined,
         enable_capacity: enableCapacity !== '' && enableCapacity !== 0 ? enableCapacity : undefined,
       };

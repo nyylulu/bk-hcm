@@ -9,7 +9,7 @@ import ApplicationStatusSelector from '@/components/scr/application-status-selec
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 import MemberSelect from '@/components/MemberSelect';
 import { useTable } from '@/hooks/useTable/useTable';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useRoute, useRouter } from 'vue-router';
 import moment from 'moment';

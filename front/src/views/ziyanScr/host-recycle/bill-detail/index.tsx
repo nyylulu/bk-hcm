@@ -4,7 +4,7 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 import { getResourceTypeName, getReturnPlanName, exportTableToExcel } from '@/utils';
 import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
 import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary/dateTime';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { getRecycleHosts, getRecycleOrders, retryOrder, submitOrder, stopOrder, auditOrder } from '@/api/host/recycle';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';

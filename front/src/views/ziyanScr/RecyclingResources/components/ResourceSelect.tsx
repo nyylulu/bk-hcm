@@ -2,7 +2,7 @@ import { defineComponent, ref, computed, watch } from 'vue';
 import { Loading } from 'bkui-vue';
 import './index.scss';
 import apiService from '../../../../api/scrApi';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 export default defineComponent({
   name: 'ResourceSelect',

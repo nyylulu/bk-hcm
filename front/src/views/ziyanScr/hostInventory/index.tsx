@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import './index.scss';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {

@@ -1,5 +1,5 @@
 import { defineComponent, ref, watch } from 'vue';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { Dialog, Table } from 'bkui-vue';
 export default defineComponent({
   props: {

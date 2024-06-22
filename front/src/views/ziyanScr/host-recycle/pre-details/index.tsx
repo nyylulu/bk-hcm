@@ -1,6 +1,6 @@
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { getPrecheckIpList, getPrecheckList } from '@/api/host/recycle';
 import { exportTableToExcel } from '@/utils';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';

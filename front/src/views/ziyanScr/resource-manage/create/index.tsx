@@ -7,7 +7,7 @@ import ScrIdcZoneSelector from './ScrIdcZoneSelector';
 import ScrCreateFilterSelector from './ScrCreateFilterSelector';
 import CreateRecallTaskDialog from './CreateRecallTaskDialog';
 import { useTable } from '@/hooks/useTable/useTable';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useZiyanScrStore } from '@/store';
 import './index.scss';
 

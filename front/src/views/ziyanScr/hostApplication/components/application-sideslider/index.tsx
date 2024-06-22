@@ -4,7 +4,7 @@ import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelect
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import apiService from '@/api/scrApi';
 import { expectedDeliveryTime } from '@/common/util';
 const { FormItem } = Form;

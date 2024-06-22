@@ -218,6 +218,7 @@ export default defineComponent({
       loadZoneRelationOpts();
     };
     const loadVpcRelationOpts = () => {
+      modelForm.value.spec.subnet = '';
       loadSubnets();
     };
     const loadDeviceTypeDetail = () => {
@@ -396,10 +397,11 @@ export default defineComponent({
                 <Select
                   v-model={modelForm.value.spec.vpc}
                   clearable
+                  onChange={loadVpcRelationOpts}
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.region}
                   placeholder={!modelForm.value.spec.region ? '请先选择地域' : '请选择 VPC'}>
                   {options.value.vpcs.map(({ vpc_id, vpc_name }) => {
-                    return <Select.Option key={vpc_id} name={vpc_id || vpc_name} id={vpc_id} />;
+                    return <Select.Option key={vpc_id} name={vpc_name} id={vpc_id} />;
                   })}
                 </Select>
                 <Select
@@ -408,7 +410,7 @@ export default defineComponent({
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.vpc}
                   placeholder={!modelForm.value.spec.vpc ? '请先选择 VPC' : '请选择子网'}>
                   {options.value.subnets.map(({ subnet_id, subnet_name }) => {
-                    return <Select.Option key={subnet_id} name={subnet_id || subnet_name} id={subnet_id} />;
+                    return <Select.Option key={subnet_id} name={subnet_name} id={subnet_id} />;
                   })}
                 </Select>
               </div>

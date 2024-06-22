@@ -5,7 +5,7 @@ import ResourceConfirm from './components/ResourceConfirm';
 import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import usePagination from '@/hooks/usePagination';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useAccountStore } from '@/store';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import apiService from '@/api/scrApi';

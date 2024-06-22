@@ -1,6 +1,6 @@
 import { defineComponent, computed, PropType, watch, ref } from 'vue';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import cssModule from '../dialog.module.scss';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';

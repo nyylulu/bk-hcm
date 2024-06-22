@@ -1,6 +1,6 @@
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
