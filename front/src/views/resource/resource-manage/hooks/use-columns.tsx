@@ -3146,10 +3146,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const cvmModelColumns = [
     {
       type: 'selection',
+      width: 32,
+      minWidth: 32,
+      onlyShowOnList: true,
     },
     {
       label: '机型',
       field: 'device_type',
+      width: 200,
     },
     {
       label: '需求类型',
@@ -3171,10 +3175,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: 'CPU(核)',
       field: 'cpu',
+      width: 50,
     },
     {
       label: '内存(G)',
       field: 'mem',
+      width: 50,
     },
     {
       label: '其他信息',
@@ -3189,7 +3195,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '可申请',
       field: 'enable_apply',
-      render: ({ cell }: any) => (cell ? '是' : '否'),
+      render: ({ cell }: any) => (cell ? <span style={'color:#67c23a'}>是</span> : <span>否</span>),
     },
     {
       label: '推荐分数',

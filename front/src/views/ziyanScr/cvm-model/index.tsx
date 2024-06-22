@@ -155,7 +155,7 @@ export default defineComponent({
         filter.value.region.length && { field: 'region', operator: 'in', value: filter.value.region },
         filter.value.zone.length && { field: 'zone', operator: 'in', value: filter.value.zone },
         filter.value.require_type && { field: 'require_type', operator: 'equal', value: filter.value.require_type },
-        filter.value.device_group && {
+        filter.value.device_group.length && {
           field: 'label.device_group',
           operator: 'in',
           value: filter.value.device_group,
@@ -163,12 +163,16 @@ export default defineComponent({
         filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
         filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
         filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
-        filter.value.enableCapacity && {
+        filter.value.enableCapacity !== '' && {
           field: 'enable_capacity',
           operator: 'equal',
           value: filter.value.enableCapacity,
         },
-        filter.value.enableApply && { field: 'enable_apply', operator: 'equal', value: filter.value.enableApply },
+        filter.value.enableApply !== '' && {
+          field: 'enable_apply',
+          operator: 'equal',
+          value: filter.value.enableApply,
+        },
       ].filter(Boolean);
 
       page.value.start = 0;
@@ -237,132 +241,134 @@ export default defineComponent({
       createRef.value.clearValidate();
     };
     return () => (
-      <div class='common-card-wrap has-selection'>
-        <CommonTable>
+      <div class='scr-resource'>
+        <CommonTable class={'cvmModel-CommonTable'}>
           {{
             tabselect: () => (
               <>
-                <div class='tabselect'>
-                  <span>需求类型</span>
-                  <bk-select class='tbkselect' v-model={filter.value.require_type}>
-                    {options.value.require_types.map((item) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_type}
-                        label={item.require_name}></bk-option>
-                    ))}
-                  </bk-select>
+                <div class={'cvmModel-displayflex'}>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>需求类型</div>
+                    <bk-select class='tbkselect' v-model={filter.value.require_type}>
+                      {options.value.require_types.map((item) => (
+                        <bk-option
+                          key={item.require_type}
+                          value={item.require_type}
+                          label={item.require_name}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>地域</div>
+                    <AreaSelector
+                      ref='areaSelector'
+                      class='tbkselect'
+                      v-model={filter.value.region}
+                      multiple
+                      clearable
+                      filterable
+                      params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>园区</div>
+                    <ZoneSelector
+                      ref='zoneSelector'
+                      v-model={filter.value.zone}
+                      class='tbkselect'
+                      separateCampus={false}
+                      multiple
+                      params={{
+                        resourceType: 'QCLOUDCVM',
+                        region: filter.value.region,
+                      }}></ZoneSelector>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>实例族</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.device_group}
+                      multiple
+                      clearable
+                      collapse-tags
+                      onChange={handleDeviceGroupChange}>
+                      {options.value.device_groups.map((item) => (
+                        <bk-option key={item} value={item} label={item}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>机型</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.device_type}
+                      clearable
+                      multiple
+                      disabled={deviceTypeDisabled.value}
+                      filterable
+                      onChange={handleDeviceTypeChange}>
+                      {options.value.device_types.map((item) => (
+                        <bk-option key={item} value={item} label={item}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>CPU(核)</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.cpu}
+                      clearable
+                      disabled={deviceConfigDisabled.value}
+                      filterable
+                      onChange={handleDeviceConfigChange}>
+                      {options.value.cpu.map((item) => (
+                        <bk-option key={item} value={item} label={item}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>内存(G)</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.mem}
+                      clearable
+                      disabled={deviceConfigDisabled.value}
+                      filterable
+                      onChange={handleDeviceConfigChange}>
+                      {options.value.mem.map((item) => (
+                        <bk-option key={item} value={item} label={item}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>可查询容量</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.enableCapacity}
+                      clearable
+                      disabled={deviceConfigDisabled.value}
+                      filterable
+                      onChange={handleDeviceConfigChange}>
+                      {options.value.enableCapacitys.map((item) => (
+                        <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
+                  <div class='cvmModel-tabselect'>
+                    <div class='cvmModel-div'>可申请</div>
+                    <bk-select
+                      class='tbkselect'
+                      v-model={filter.value.enableApply}
+                      clearable
+                      disabled={deviceConfigDisabled.value}
+                      filterable
+                      onChange={handleDeviceConfigChange}>
+                      {options.value.enableApplys.map((item) => (
+                        <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
+                      ))}
+                    </bk-select>
+                  </div>
                 </div>
-                <div class='tabselect'>
-                  <span>地域</span>
-                  <AreaSelector
-                    ref='areaSelector'
-                    class='tbkselect'
-                    v-model={filter.value.region}
-                    multiple
-                    clearable
-                    filterable
-                    params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
-                </div>
-                <div class='tabselect'>
-                  <span>园区</span>
-                  <ZoneSelector
-                    ref='zoneSelector'
-                    v-model={filter.value.zone}
-                    class='tbkselect'
-                    separateCampus={false}
-                    multiple
-                    params={{
-                      resourceType: 'QCLOUDCVM',
-                      region: filter.value.region,
-                    }}></ZoneSelector>
-                </div>
-                <div class='tabselect'>
-                  <span>实例族</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.device_group}
-                    multiple
-                    clearable
-                    collapse-tags
-                    onChange={handleDeviceGroupChange}>
-                    {options.value.device_groups.map((item) => (
-                      <bk-option key={item} value={item} label={item}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
-                  <span>机型</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.device_type}
-                    clearable
-                    multiple
-                    disabled={deviceTypeDisabled.value}
-                    filterable
-                    onChange={handleDeviceTypeChange}>
-                    {options.value.device_types.map((item) => (
-                      <bk-option key={item} value={item} label={item}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
-                  <span>CPU(核)</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.cpu}
-                    clearable
-                    disabled={deviceConfigDisabled.value}
-                    filterable
-                    onChange={handleDeviceConfigChange}>
-                    {options.value.cpu.map((item) => (
-                      <bk-option key={item} value={item} label={item}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
-                  <span>内存(G)</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.mem}
-                    clearable
-                    disabled={deviceConfigDisabled.value}
-                    filterable
-                    onChange={handleDeviceConfigChange}>
-                    {options.value.mem.map((item) => (
-                      <bk-option key={item} value={item} label={item}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
-                  <span>可查询容量</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.enableCapacity}
-                    clearable
-                    disabled={deviceConfigDisabled.value}
-                    filterable
-                    onChange={handleDeviceConfigChange}>
-                    {options.value.enableCapacitys.map((item) => (
-                      <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
-                  <span>可申请</span>
-                  <bk-select
-                    class='tbkselect'
-                    v-model={filter.value.enableApply}
-                    clearable
-                    disabled={deviceConfigDisabled.value}
-                    filterable
-                    onChange={handleDeviceConfigChange}>
-                    {options.value.enableApplys.map((item) => (
-                      <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
-                    ))}
-                  </bk-select>
-                </div>
-                <div class='tabselect'>
+                <div class='cvmModel-displaybutton'>
                   <bk-button icon='bk-icon-search' theme='primary' class='bkbutton' onClick={filterDevices}>
                     <Search></Search>
                     查询

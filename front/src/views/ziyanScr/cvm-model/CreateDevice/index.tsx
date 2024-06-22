@@ -1,7 +1,8 @@
-import { defineComponent, ref, onMounted, nextTick } from 'vue';
+import { defineComponent, ref, nextTick } from 'vue';
 import './index.scss';
 import AreaSelector from '../../hostApplication/components/AreaSelector';
 import ZoneSelector from '../../hostApplication/components/ZoneSelector';
+import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import apiService from '@/api/scrApi';
 export default defineComponent({
   name: 'AllhostInventoryManager',
@@ -20,7 +21,7 @@ export default defineComponent({
     };
     const EditForm = ref({
       remark: '',
-      requireType: '',
+      requireType: [],
       region: [],
       zone: [],
       deviceGroup: '',
@@ -28,15 +29,9 @@ export default defineComponent({
       cpu: 0,
       mem: 1,
     });
-    const order = ref({
-      requireTypes: [],
-    });
     const onEditFormRegionChange = () => {
       EditForm.value.zone = [];
     };
-    onMounted(() => {
-      getrequireTypes();
-    });
     const formInstance = ref();
     const formRules = ref({
       requireType: [{ required: true, message: '请选择需求类型', trigger: 'change' }],
@@ -47,20 +42,12 @@ export default defineComponent({
       cpu: [{ required: true, message: '请输入CPU', trigger: 'change' }],
       mem: [{ required: true, message: '请输入内存', trigger: 'change' }],
     });
-    const getrequireTypes = async () => {
-      const { info } = await apiService.getRequireTypes();
-      order.value.requireTypes = info;
-    };
     expose({ handleConfirm, clearValidate });
     return () => (
       <div>
         <bk-form model={EditForm.value} ref={formInstance} rules={formRules.value}>
           <bk-form-item label='需求类型' required property='requireType'>
-            <bk-select v-model={EditForm.value.requireType} multiple style='width: 250px'>
-              {order.value.requireTypes.map((item: { require_type: any; require_name: any }) => (
-                <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-              ))}
-            </bk-select>
+            <RequirementTypeSelector style='width: 250px' v-model={EditForm.value.requireType} multiple />
           </bk-form-item>
           <bk-form-item class='mr16' label='地域' required property='region'>
             <AreaSelector

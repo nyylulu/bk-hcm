@@ -560,6 +560,7 @@ export default defineComponent({
         }
       }
       modifyindex.value = 0;
+      cvmCapacity.value = [];
       addResourceRequirements.value = false;
       nextTick(() => {
         resourceFormRef.value.clearValidate();
