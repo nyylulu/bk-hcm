@@ -23,6 +23,9 @@ export const useFieldVal = () => {
   });
 
   const convertToCamelCase = (str) => {
+    if (!str.includes('_')) {
+      return str;
+    }
     return str.toLowerCase().replace(/_(.)/g, (match, group1) => {
       return group1.toUpperCase();
     });

@@ -274,107 +274,110 @@ export default defineComponent({
               <CommonTable>
                 {{
                   tabselect: () => (
-                    <Form label-width='110' class='cvm-produce-form' model={filterForm}>
-                      <FormItem label='需求类型'>
-                        <Select
-                          v-model={filterForm.value.require_type}
-                          clearable
-                          placeholder='请选择'
-                          onChange={handleRequireTypeChange}>
-                          {requireTypeList.value.map(({ label, value }) => {
-                            return <Select.Option key={value} name={label} id={value} />;
-                          })}
-                        </Select>
-                      </FormItem>
-                      <FormItem label='地域'>
-                        <area-selector
-                          multiple
-                          v-model={filterForm.value.region}
-                          params={{ resourceType: 'QCLOUDCVM' }}
-                        />
-                      </FormItem>
-                      <FormItem label='园区'>
-                        <zone-selector
-                          multiple
-                          v-model={filterForm.value.zone}
-                          params={{ resourceType: 'QCLOUDCVM', region: filterForm.value.region }}
-                          onChange={handleZoneChange}
-                        />
-                      </FormItem>
-                      <FormItem label='实例族'>
-                        <Select
-                          v-model={filterForm.value.device_group}
-                          multiple
-                          clearable
-                          placeholder='请选择'
-                          onChange={handleDeviceGroupChange}>
-                          {instanceList.map((item) => {
-                            return <Select.Option key={item} name={item} id={item} />;
-                          })}
-                        </Select>
-                        <div
-                          v-bk-tooltips={{
-                            theme: 'light',
-                            content: (
-                              <div>
-                                实例族相关概念请
-                                <a
-                                  class='link-type'
-                                  href='https://cloud.tencent.com/document/product/213/11518'
-                                  target='_blank'>
-                                  查看文档
-                                </a>
-                              </div>
-                            ),
-                          }}>
-                          <HelpFill />
-                        </div>
-                      </FormItem>
-                      <FormItem label='机型'>
-                        <Select
-                          v-model={filterForm.value.device_type}
-                          multiple
-                          clearable
-                          placeholder='请选择'
-                          disabled={deviceTypeDisabled.value}
-                          onChange={handleDeviceTypeChange}>
-                          {cvmDeviceTypeList.value.map((item) => {
-                            return <Select.Option key={item} name={item} id={item} />;
-                          })}
-                        </Select>
-                      </FormItem>
-                      <FormItem label='CPU(核)'>
-                        <Select
-                          v-model={filterForm.value.cpu}
-                          clearable
-                          placeholder='请选择'
-                          disabled={deviceConfigDisabled.value}
-                          onChange={handleDeviceConfigChange}>
-                          {cpuList.value.map((item) => {
-                            return <Select.Option key={item} name={item} id={item} />;
-                          })}
-                        </Select>
-                      </FormItem>
-                      <FormItem label='内存(G)'>
-                        <Select
-                          v-model={filterForm.value.mem}
-                          clearable
-                          placeholder='请选择'
-                          disabled={deviceConfigDisabled.value}
-                          onChange={handleDeviceConfigChange}>
-                          {memList.value.map((item) => {
-                            return <Select.Option key={item} name={item} id={item} />;
-                          })}
-                        </Select>
-                      </FormItem>
-                      <FormItem label-width='0' class='cvm-produce-form-btn'>
+                    <div>
+                      <Form label-width='110' class='scr-form-wrapper' model={filterForm}>
+                        <FormItem label='需求类型'>
+                          <Select
+                            v-model={filterForm.value.require_type}
+                            clearable
+                            placeholder='请选择'
+                            onChange={handleRequireTypeChange}>
+                            {requireTypeList.value.map(({ label, value }) => {
+                              return <Select.Option key={value} name={label} id={value} />;
+                            })}
+                          </Select>
+                        </FormItem>
+                        <FormItem label='地域'>
+                          <area-selector
+                            multiple
+                            v-model={filterForm.value.region}
+                            params={{ resourceType: 'QCLOUDCVM' }}
+                          />
+                        </FormItem>
+                        <FormItem label='园区'>
+                          <zone-selector
+                            multiple
+                            v-model={filterForm.value.zone}
+                            params={{ resourceType: 'QCLOUDCVM', region: filterForm.value.region }}
+                            onChange={handleZoneChange}
+                          />
+                        </FormItem>
+                        <FormItem label='实例族'>
+                          <Select
+                            v-model={filterForm.value.device_group}
+                            multiple
+                            clearable
+                            placeholder='请选择'
+                            onChange={handleDeviceGroupChange}>
+                            {instanceList.map((item) => {
+                              return <Select.Option key={item} name={item} id={item} />;
+                            })}
+                          </Select>
+                          <div
+                            class='tool-pos'
+                            v-bk-tooltips={{
+                              theme: 'light',
+                              content: (
+                                <div>
+                                  实例族相关概念请
+                                  <a
+                                    class='link-type'
+                                    href='https://cloud.tencent.com/document/product/213/11518'
+                                    target='_blank'>
+                                    查看文档
+                                  </a>
+                                </div>
+                              ),
+                            }}>
+                            <HelpFill />
+                          </div>
+                        </FormItem>
+                        <FormItem label='机型'>
+                          <Select
+                            v-model={filterForm.value.device_type}
+                            multiple
+                            clearable
+                            placeholder='请选择'
+                            disabled={deviceTypeDisabled.value}
+                            onChange={handleDeviceTypeChange}>
+                            {cvmDeviceTypeList.value.map((item) => {
+                              return <Select.Option key={item} name={item} id={item} />;
+                            })}
+                          </Select>
+                        </FormItem>
+                        <FormItem label='CPU(核)'>
+                          <Select
+                            v-model={filterForm.value.cpu}
+                            clearable
+                            placeholder='请选择'
+                            disabled={deviceConfigDisabled.value}
+                            onChange={handleDeviceConfigChange}>
+                            {cpuList.value.map((item) => {
+                              return <Select.Option key={item} name={item} id={item} />;
+                            })}
+                          </Select>
+                        </FormItem>
+                        <FormItem label='内存(G)'>
+                          <Select
+                            v-model={filterForm.value.mem}
+                            clearable
+                            placeholder='请选择'
+                            disabled={deviceConfigDisabled.value}
+                            onChange={handleDeviceConfigChange}>
+                            {memList.value.map((item) => {
+                              return <Select.Option key={item} name={item} id={item} />;
+                            })}
+                          </Select>
+                        </FormItem>
+                      </Form>
+                      <div class='cvm-produce-form-btn'>
                         <Button theme='primary' onClick={filterOrders}>
                           <Search />
                           查询
                         </Button>
                         <Button onClick={() => clearFilter()}>清空</Button>
-                      </FormItem>
-                    </Form>
+                      </div>
+                    </div>
                   ),
                 }}
               </CommonTable>

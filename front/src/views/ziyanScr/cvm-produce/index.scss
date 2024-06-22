@@ -1,18 +1,32 @@
 .cvm-produce-form {
-    display: flex;
-    flex-wrap: wrap;
+    margin: 10px 0;
     background-color: #fff;
-    margin: 15px 0;
-    padding: 10px;
-    & > div {
-        margin-bottom: 10px;
+}
+.scr-form-wrapper {
+    margin: 0 24px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    .bk-form-item {
+      margin: 8px 0;
+      .bk-form-content, .bk-date-picker {
+        position: relative;
+        width: 280px;
+      }
     }
-    .bk-form-content {
-        display: flex;
-        align-items: center;
-        .bk-button {
-            margin-left: 10px;
-        }
+    .tool-pos {
+        position: absolute;
+        top: 0;
+        right: -22px;
+    }
+  }
+.cvm-produce-form-btn {
+    display: flex;
+    align-items: center;
+    padding-bottom: 10px;
+    margin-left: 24px;
+    .bk-button + .bk-button {
+        margin-left: 10px;
     }
 }
 .sub-order-num,.username {
