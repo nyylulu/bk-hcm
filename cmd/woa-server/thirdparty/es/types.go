@@ -20,13 +20,14 @@
 package es
 
 const (
-	// Organization field of the request
-	Organization = "organization"
-	// Operator field of the request
+	// GroupID 运维小组id
+	GroupID = "bk_oper_grp_name_id"
+	// Operator 主机主备维护人
 	Operator = "operator"
-	// NotInCCIPs 在es中，但是不在cc中的ip数组的条件
-	NotInCCIPs = "not_in_cc_ips"
-
+	// BlackList 不进行查询主机的业务列表
+	BlackList = "black_list"
+	// BizID field of the host
+	BizID = "bk_biz_id"
 	// AppName field of the host
 	AppName = "app_name"
 	// ModuleName field of the host
@@ -49,6 +50,7 @@ type Host struct {
 	InnerIP              string  `json:"ip"`
 	OuterIP              string  `json:"outer_ip"`
 	AppName              string  `json:"app_name"`
+	BizID                int64   `json:"bk_biz_id"`
 	Module               string  `json:"module"`
 	DeviceType           string  `json:"device_type"`
 	ModuleName           string  `json:"module_name"`

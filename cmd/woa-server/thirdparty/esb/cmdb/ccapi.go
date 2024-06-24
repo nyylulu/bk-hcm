@@ -36,8 +36,8 @@ type Client interface {
 	GetHostId(ctx context.Context, header http.Header, ip string) (int64, error)
 	// UpdateHosts update host info in cc 3.0
 	UpdateHosts(ctx context.Context, header http.Header, req *UpdateHostsReq) (*UpdateHostsResp, error)
-	// GetHostBizId gets host biz id by host id in cc 3.0
-	GetHostBizId(ctx context.Context, header http.Header, hostId int64) (int64, error)
+	// GetHostBizIds gets host biz id by host id in cc 3.0
+	GetHostBizIds(ctx context.Context, header http.Header, hostId []int64) (map[int64]int64, error)
 	// ListBizHost gets certain business host info in cc 3.0
 	ListBizHost(ctx context.Context, header http.Header, req *ListBizHostReq) (*ListBizHostResp, error)
 	// ListHost gets hosts info in cc 3.0
@@ -210,8 +210,8 @@ func (c *ccCli) UpdateHosts(ctx context.Context, header http.Header, req *Update
 	return resp, err
 }
 
-// GetHostBizId gets host biz id by host id in cc 3.0
-func (c *ccCli) GetHostBizId(ctx context.Context, header http.Header, hostId int64) (int64, error) {
+// GetHostBizIds gets host biz id by host id in cc 3.0
+func (c *ccCli) GetHostBizIds(ctx context.Context, header http.Header, hostIds []int64) (map[int64]int64, error) {
 	subPath := "/api/c/compapi/v2/cc/find_host_biz_relations"
 	key, val := c.getAuthHeader()
 	if header == nil {
@@ -219,33 +219,56 @@ func (c *ccCli) GetHostBizId(ctx context.Context, header http.Header, hostId int
 	}
 	header.Set(key, val)
 
-	req := &HostModuleRelationParameter{
-		HostID: []int64{hostId},
+	result := make(map[int64]int64)
+	start := 0
+	end := len(hostIds)
+	if len(hostIds) > common.BKMaxInstanceLimit {
+		end = common.BKMaxInstanceLimit
 	}
 
-	resp := new(HostModuleResp)
-	err := c.client.Post().
-		WithContext(ctx).
-		Body(req).
-		SubResourcef(subPath).
-		WithHeaders(header).
-		Do().
-		Into(resp)
+	for {
+		req := &HostModuleRelationParameter{
+			HostID: hostIds[start:end],
+		}
+		resp := new(HostModuleResp)
+		err := c.client.Post().
+			WithContext(ctx).
+			Body(req).
+			SubResourcef(subPath).
+			WithHeaders(header).
+			Do().
+			Into(resp)
 
-	if err != nil {
-		return -1, err
+		if err != nil {
+			return nil, err
+		}
+
+		if !resp.Result || resp.Code != 0 {
+			return nil, fmt.Errorf("failed to get host biz id, err: %s", resp.ErrMsg)
+		}
+
+		if len(resp.Data) == 0 {
+			return nil, fmt.Errorf("failed to get host biz id, for return data size 0")
+		}
+
+		for _, data := range resp.Data {
+			result[data.HostID] = data.AppID
+		}
+
+		if len(resp.Data) < common.BKMaxInstanceLimit {
+			break
+		}
+
+		start = end
+		if end+common.BKMaxInstanceLimit > len(hostIds) {
+			end = len(hostIds)
+			continue
+		}
+
+		end += common.BKMaxInstanceLimit
 	}
 
-	if !resp.Result || resp.Code != 0 {
-		return -1, fmt.Errorf("failed to get host biz id, hostId: %d, errCode: %d, errMsg: %s",
-			hostId, resp.Code, resp.ErrMsg)
-	}
-
-	if len(resp.Data) == 0 {
-		return -1, fmt.Errorf("failed to get host biz id, hostId: %d, for return data size 0", hostId)
-	}
-
-	return resp.Data[0].AppID, nil
+	return result, nil
 }
 
 // ListBizHost gets certain business host info in cc 3.0, limit 500

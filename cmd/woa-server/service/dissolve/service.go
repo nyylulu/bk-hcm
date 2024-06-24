@@ -24,13 +24,15 @@ import (
 
 	"hcm/cmd/woa-server/logics/dissolve"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/rest"
 )
 
 // InitService initial the service
 func InitService(c *capability.Capability) {
 	s := &service{
-		logics: dissolve.New(c.Dao, c.EsbClient, c.EsCli, c.Conf.ResDissolve.OriginDate),
+		logics:    dissolve.New(c.Dao, c.EsbClient, c.EsCli, c.Conf),
+		esbClient: c.EsbClient,
 	}
 	h := rest.NewHandler()
 
@@ -40,7 +42,8 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
-	logics dissolve.Logics
+	logics    dissolve.Logics
+	esbClient esb.Client
 }
 
 func (s *service) initDissolveService(h *rest.Handler) {

@@ -48,13 +48,15 @@ type ListHostReq struct {
 	HostPropertyFilter *querybuilder.QueryFilter `json:"host_property_filter"`
 	Fields             []string                  `json:"fields"`
 	Page               BasePage                  `json:"page"`
+	EnableCount        bool                      `json:"enable_count,omitempty" mapstructure:"enable_count,omitempty"`
 }
 
 // BasePage for paging query
 type BasePage struct {
-	Sort  string `json:"sort,omitempty" mapstructure:"sort"`
-	Limit int    `json:"limit,omitempty" mapstructure:"limit"`
-	Start int    `json:"start" mapstructure:"start"`
+	Sort        string `json:"sort,omitempty" mapstructure:"sort"`
+	Limit       int    `json:"limit,omitempty" mapstructure:"limit"`
+	Start       int    `json:"start" mapstructure:"start"`
+	EnableCount bool   `json:"enable_count,omitempty" mapstructure:"enable_count,omitempty"`
 }
 
 // UpdateHostsReq update hosts request

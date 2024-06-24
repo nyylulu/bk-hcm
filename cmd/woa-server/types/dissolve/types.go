@@ -24,6 +24,8 @@ import (
 	"fmt"
 	"strconv"
 
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
@@ -192,10 +194,10 @@ func (req *HostListReq) Validate() error {
 
 // ResDissolveReq resource dissolve request.
 type ResDissolveReq struct {
-	Organizations []string `json:"organizations"`
-	BizNames      []string `json:"bk_biz_names"`
-	ModuleNames   []string `json:"module_names"`
-	Operators     []string `json:"operators"`
+	GroupIDs    []string `json:"group_ids"`
+	BizNames    []string `json:"bk_biz_names"`
+	ModuleNames []string `json:"module_names"`
+	Operators   []string `json:"operators"`
 }
 
 // Validate table list request.
@@ -208,15 +210,26 @@ func (req *ResDissolveReq) Validate() error {
 }
 
 // GetESCond get elasticsearch condition
-func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string) map[string][]interface{} {
+func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string,
+	bizIDName, blackBizIDName map[int64]string) (map[string][]interface{}, error) {
+
 	cond := make(map[string][]interface{})
 
-	for _, v := range req.Organizations {
-		cond[es.Organization] = append(cond[es.Organization], v)
+	for _, v := range req.GroupIDs {
+		id, err := strconv.ParseInt(v, 10, 64)
+		if err != nil {
+			return nil, fmt.Errorf("group id:%s is invalid, err: %v", v, err)
+		}
+
+		cond[es.GroupID] = append(cond[es.GroupID], id)
 	}
 
-	for _, v := range req.BizNames {
-		cond[es.AppName] = append(cond[es.AppName], es.AddCCPrefix(v))
+	for id := range bizIDName {
+		cond[es.BizID] = append(cond[es.BizID], id)
+	}
+
+	for id := range blackBizIDName {
+		cond[es.BlackList] = append(cond[es.BlackList], id)
 	}
 
 	for _, v := range req.Operators {
@@ -235,7 +248,83 @@ func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string) map[s
 		}
 	}
 
-	return cond
+	return cond, nil
+}
+
+// GetCCHostCond get cc host condition
+func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *querybuilder.QueryFilter {
+	andRules := make([]querybuilder.Rule, 0)
+
+	cloudIDRule := querybuilder.AtomRule{
+		Field:    common.BKCloudIDField,
+		Operator: querybuilder.OperatorEqual,
+		Value:    0, // 只需要查询管控区域为0的公司的机器
+	}
+	andRules = append(andRules, cloudIDRule)
+
+	moduleNames := make([]string, 0)
+	assetIDs := make([]string, 0)
+	for _, moduleName := range req.ModuleNames {
+		ids, ok := moduleAssetIDMap[moduleName]
+		if !ok {
+			moduleNames = append(moduleNames, moduleName)
+			continue
+		}
+
+		assetIDs = append(assetIDs, ids...)
+	}
+
+	if len(moduleNames) != 0 {
+		moduleNameRule := querybuilder.AtomRule{
+			Field:    "module_name",
+			Operator: querybuilder.OperatorIn,
+			Value:    moduleNames,
+		}
+		andRules = append(andRules, moduleNameRule)
+	}
+
+	if len(assetIDs) != 0 {
+		assetIDRule := querybuilder.AtomRule{
+			Field:    common.BKAssetIDField,
+			Operator: querybuilder.OperatorIn,
+			Value:    assetIDs,
+		}
+		andRules = append(andRules, assetIDRule)
+	}
+
+	if len(req.Operators) != 0 {
+		operatorRule := querybuilder.CombinedRule{
+			Condition: querybuilder.ConditionOr,
+			Rules: []querybuilder.Rule{
+				querybuilder.AtomRule{
+					Field:    common.BKOperatorField,
+					Operator: querybuilder.OperatorIn,
+					Value:    req.Operators,
+				},
+				querybuilder.AtomRule{
+					Field:    common.BKBakOperatorField,
+					Operator: querybuilder.OperatorIn,
+					Value:    req.Operators,
+				},
+			},
+		}
+		andRules = append(andRules, operatorRule)
+	}
+
+	return &querybuilder.QueryFilter{
+		Rule: querybuilder.CombinedRule{
+			Condition: querybuilder.ConditionAnd,
+			Rules:     andRules,
+		},
+	}
+}
+
+// ListCurHostCond list current host condition
+type ListCurHostCond struct {
+	Organizations []string `json:"organizations"`
+	BizIDs        []int    `json:"bk_biz_ids"`
+	ModuleNames   []string `json:"module_names"`
+	Operators     []string `json:"operators"`
 }
 
 // ListHostDetails list elasticsearch host details.
@@ -250,6 +339,7 @@ type Host struct {
 	InnerIP              string  `json:"ip"`
 	OuterIP              string  `json:"outer_ip"`
 	AppName              string  `json:"app_name"`
+	BizID                int64   `json:"bk_biz_id"`
 	Module               string  `json:"module"`
 	DeviceType           string  `json:"device_type"`
 	ModuleName           string  `json:"module_name"`
@@ -294,6 +384,7 @@ func ConvertHost(origin *es.Host) (*Host, error) {
 		InnerIP:              origin.InnerIP,
 		OuterIP:              origin.OuterIP,
 		AppName:              origin.AppName,
+		BizID:                origin.BizID,
 		Module:               origin.Module,
 		DeviceType:           origin.DeviceType,
 		ModuleName:           origin.ModuleName,
@@ -330,6 +421,7 @@ type ResDissolveTable struct {
 
 // BizDetail business detail
 type BizDetail struct {
+	BizID           int64          `json:"bk_biz_id"`
 	BizName         string         `json:"bk_biz_name"`
 	ModuleHostCount map[string]int `json:"module_host_count"`
 	Total           Total          `json:"total"`

@@ -141,6 +141,10 @@ type HostInfo struct {
 	BakOperator string `json:"bk_bak_operator"`
 	// 状态
 	SvrStatus string `json:"srv_status"`
+	// 磁盘容量
+	BkDisk float64 `json:"bk_disk"`
+	// CPU逻辑核心数
+	BkCpu int64 `json:"bk_cpu"`
 }
 
 // GetUniqIp get CC host unique inner ip
@@ -184,8 +188,9 @@ type SearchBizRst struct {
 
 // BizInfo business info
 type BizInfo struct {
-	BkBizId   int64  `json:"bk_biz_id"`
-	BkBizName string `json:"bk_biz_name"`
+	BkBizId         int64  `json:"bk_biz_id"`
+	BkBizName       string `json:"bk_biz_name"`
+	BkOperGrpNameID int64  `json:"bk_oper_grp_name_id"`
 }
 
 // SearchModuleResp search module response

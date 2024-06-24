@@ -20,11 +20,12 @@
 package dissolve
 
 import (
-	"hcm/cmd/woa-server/logics/dissolve/es"
 	"hcm/cmd/woa-server/logics/dissolve/host"
 	"hcm/cmd/woa-server/logics/dissolve/module"
+	dissolvetable "hcm/cmd/woa-server/logics/dissolve/table"
 	esCli "hcm/cmd/woa-server/thirdparty/es"
 	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg/cc"
 	"hcm/pkg/dal/dao"
 )
 
@@ -32,21 +33,26 @@ import (
 type Logics interface {
 	RecycledModule() module.RecycledModule
 	RecycledHost() host.RecycledHost
-	ES() es.ES
+	Table() dissolvetable.Table
 }
 
 type logics struct {
 	recycledModule module.RecycledModule
 	recycledHost   host.RecycledHost
-	es             es.ES
+	table          dissolvetable.Table
 }
 
 // New create a logics manager
-func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, originDate string) Logics {
+func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, conf cc.WoaServerSetting) Logics {
+	recycledModule := module.New(dao)
+	recycledHost := host.New(dao)
+	originDate := conf.ResDissolve.OriginDate
+	blacklist := conf.Blacklist
+
 	return &logics{
-		recycledModule: module.New(dao),
-		recycledHost:   host.New(dao),
-		es:             es.New(esbCli, esCli, originDate),
+		recycledModule: recycledModule,
+		recycledHost:   recycledHost,
+		table:          dissolvetable.New(recycledModule, recycledHost, esbCli, esCli, originDate, blacklist),
 	}
 }
 
@@ -60,7 +66,7 @@ func (l *logics) RecycledHost() host.RecycledHost {
 	return l.recycledHost
 }
 
-// ES elasticsearch interface
-func (l *logics) ES() es.ES {
-	return l.es
+// Table resource dissolve table interface
+func (l *logics) Table() dissolvetable.Table {
+	return l.table
 }

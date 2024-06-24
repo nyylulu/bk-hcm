@@ -12,7 +12,7 @@ POST /api/v1/woa/dissolve/host/origin/list
 
 | 参数名称         | 参数类型         | 必选 | 描述     |
 |--------------|--------------|----|--------|
-| organizations      | string array | 否  | 组织架构，以“/”分割，至少包含三级，最多包含五级，如："A公司/B事业群/C部门/D中心/F组" |
+| group_ids      | string array | 否  | 运维小组id |
 | bk_biz_names | string array | 否  | 业务名称   |
 | module_names | string array | 是  | 裁撤模块名称 |
 | operators    | string array | 否  | 人员名称   |
@@ -30,11 +30,11 @@ POST /api/v1/woa/dissolve/host/origin/list
 
 #### 获取详细信息请求参数示例
 
-查询裁撤数据中组织架构路径为“A公司/B事业群/C部门/D中心/F组”, 业务名称为test, 裁撤模块名称为test, operator为test的当前主机信息。
+查询裁撤数据中运维小组id为“1111”, 业务名称为test, 裁撤模块名称为test, operator为test的当前主机信息。
 
 ```json
 {
-  "organizations": ["A公司/B事业群/C部门/D中心/F组"],
+  "group_ids": ["1111"],
   "bk_biz_names": ["test"],
   "module_names": ["test"],
   "operators": ["test"],
@@ -48,11 +48,11 @@ POST /api/v1/woa/dissolve/host/origin/list
 
 #### 获取数量请求参数示例
 
-查询裁撤数据中组织架构路径为“A公司/B事业群/C部门/D中心/F组”, 业务名称为test, 裁撤模块名称为test, operator为test的当前主机数量。
+查询裁撤数据中运维小组id为“1111”, 业务名称为test, 裁撤模块名称为test, operator为test的当前主机数量。
 
 ```json
 {
-  "organizations": ["A公司/B事业群/C部门/D中心/F组"],
+  "group_ids": ["1111"],
   "bk_biz_names": ["test"],
   "module_names": ["test"],
   "operators": ["test"],

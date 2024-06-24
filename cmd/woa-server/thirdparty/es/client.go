@@ -121,38 +121,6 @@ func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error
 	query := elastic.NewBoolQuery()
 	query.Must(elastic.NewTermsQuery("cluster_id", 0))
 	for k, v := range cond {
-		// 当查询条件为组织架构时，需要将里面的字段按照层级进行切分，拼接成条件
-		if k == Organization {
-			subQuery := elastic.NewBoolQuery()
-			for _, subVal := range v {
-				orgVal, ok := subVal.(string)
-				if !ok {
-					return nil, fmt.Errorf("organization: %v is invalid", subVal)
-				}
-
-				org, err := getOrganization(orgVal)
-				if err != nil {
-					return nil, err
-				}
-
-				orgQuery := elastic.NewBoolQuery()
-				orgQuery.Must(elastic.NewTermsQuery(department, org.department))
-
-				if len(org.center) != 0 {
-					orgQuery.Must(elastic.NewTermsQuery(center, org.center))
-				}
-
-				if len(org.group) != 0 {
-					orgQuery.Must(elastic.NewTermsQuery(groupName, org.group))
-				}
-
-				subQuery.Should(orgQuery)
-			}
-
-			query.Must(subQuery)
-			continue
-		}
-
 		// 当查询条件为操作人时，可以对主维护人或者备份维护人进行匹配
 		if k == Operator {
 			subQuery := elastic.NewBoolQuery()
@@ -161,16 +129,12 @@ func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error
 			continue
 		}
 
-		if k == NotInCCIPs {
-			query.MustNot(elastic.NewTermsQuery(innerIP, v...))
+		if k == BlackList {
+			query.MustNot(elastic.NewTermsQuery(BizID, v...))
 			continue
 		}
 
 		query.Must(elastic.NewTermsQuery(k, v...))
-	}
-
-	if len(es.blacklist) != 0 {
-		query.MustNot(elastic.NewTermsQuery(AppName, es.blacklist...))
 	}
 
 	return query, nil

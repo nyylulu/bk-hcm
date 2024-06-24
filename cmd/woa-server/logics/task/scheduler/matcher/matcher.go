@@ -450,11 +450,16 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizID, err := m.cc.GetHostBizId(m.kt.Ctx, m.kt.Header(), hostInfo.BkHostId)
+	bkBizIDs, err := m.cc.GetHostBizIds(m.kt.Ctx, m.kt.Header(), []int64{hostInfo.BkHostId})
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, infoBkBizID: %d, "+
 			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostId, err)
 		return err
+	}
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	if !ok {
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
 	}
 
 	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType)

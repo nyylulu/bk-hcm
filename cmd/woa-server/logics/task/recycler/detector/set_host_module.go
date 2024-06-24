@@ -53,10 +53,16 @@ func (d *Detector) transferHost(ip string) error {
 		return err
 	}
 
-	srcBiz, err := d.cc.GetHostBizId(nil, nil, hostId)
+	srcBizMap, err := d.cc.GetHostBizIds(nil, nil, []int64{hostId})
 	if err != nil {
 		logs.Errorf("failed to get host id by ip: %s, err: %v", ip, err)
 		return err
+	}
+
+	srcBiz, ok := srcBizMap[hostId]
+	if !ok {
+		logs.Errorf("can not find host bizID from cc ip: %s", ip)
+		return fmt.Errorf("can not find host bizID from cc ip: %s", ip)
 	}
 
 	destBiz := 213
