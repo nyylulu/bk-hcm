@@ -2,7 +2,6 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { useUserStore } from '@/store/user';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
 import OrganizationSelect from '@/components/OrganizationSelect/index';
@@ -26,12 +25,11 @@ export default defineComponent({
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
     const businessMapStore = useBusinessMapStore();
-    const userStore = useUserStore();
 
     const isLoading = ref(false);
     const organizations = ref([]);
     const bkBizIds = ref([]);
-    const operators = ref([userStore.username]);
+    const operators = ref([]);
     const dissloveList = ref<IDissolve[]>([]);
     const currentDialogShow = ref(false);
     const moduleDialogShow = ref(false);
@@ -131,9 +129,9 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          <span class={cssModule['search-label']}>{t('组织')}</span>：
+          <span class={cssModule['search-label']}>{t('组织')}：</span>
           <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect>
-          <span class={cssModule['search-label']}>{t('业务')}</span>：
+          <span class={cssModule['search-label']}>{t('业务')}：</span>
           <BusinessSelector
             class={cssModule['search-item']}
             multiple
@@ -141,7 +139,7 @@ export default defineComponent({
             isShowAll={true}
             autoSelect={true}
             v-model={bkBizIds.value}></BusinessSelector>
-          <span class={cssModule['search-label']}>{t('人员')}</span>：
+          <span class={cssModule['search-label']}>{t('人员')}：</span>
           <MemberSelect class={cssModule['search-item']} v-model={operators.value}></MemberSelect>
           <bk-button
             theme='primary'
@@ -170,7 +168,7 @@ export default defineComponent({
           <bk-table
             show-overflow-tooltip
             virtual-enabled={true}
-            max-height={500}
+            height='500px'
             data={dissloveList.value}
             class={cssModule.table}>
             <bk-table-column label={t('业务')} field='bk_biz_name' min-width='150px' fixed='left'></bk-table-column>
