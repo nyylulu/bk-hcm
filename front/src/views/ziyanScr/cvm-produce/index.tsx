@@ -11,7 +11,7 @@ import CreateOrder from './component/create-order';
 import { useUserStore } from '@/store';
 import SuccessProduceDetail from './component/success-produce-detail';
 import { Button, Form, Select } from 'bkui-vue';
-import { Copy, Search } from 'bkui-vue/lib/icon';
+import { Copy, Plus, Search } from 'bkui-vue/lib/icon';
 import FloatInput from '@/components/float-input';
 import { statusList } from './transform';
 import { merge, throttle } from 'lodash';
@@ -238,7 +238,81 @@ export default defineComponent({
       clearInterval(poller.value);
     });
     return () => (
-      <>
+      <div class='apply-list-container cvm-produce-wrapper'>
+        <div class={'filter-container'}>
+          <Form formType='vertical' class='scr-form-wrapper' model={cvmProduceForm}>
+            <FormItem label='需求类型'>
+              <Select v-model={cvmProduceForm.value.require_type} multiple clearable placeholder='请选择'>
+                {requireTypeList.value.map(({ label, value }) => {
+                  return <Select.Option key={value} name={label} id={value} />;
+                })}
+              </Select>
+            </FormItem>
+            <FormItem label='地域'>
+              <area-selector multiple v-model={cvmProduceForm.value.region} params={{ resourceType: 'QCLOUDCVM' }} />
+            </FormItem>
+            <FormItem label='园区'>
+              <zone-selector
+                multiple
+                v-model={cvmProduceForm.value.zone}
+                params={{ resourceType: 'QCLOUDCVM', region: cvmProduceForm.value.region }}
+              />
+            </FormItem>
+            <FormItem label='机型'>
+              <Select v-model={cvmProduceForm.value.device_type} multiple clearable placeholder='请选择'>
+                {cvmDeviceTypeList.value.map(({ value, label }) => {
+                  return <Select.Option key={value} name={label} id={value} />;
+                })}
+              </Select>
+            </FormItem>
+            <FormItem label='单号'>
+              <FloatInput v-model={cvmProduceForm.value.order_id} placeholder='请输入单号，多个换行分割' />
+            </FormItem>
+            <FormItem label='云梯单号'>
+              <FloatInput v-model={cvmProduceForm.value.task_id} placeholder='请输入云梯单号，多个换行分割' />
+            </FormItem>
+            <FormItem label='状态'>
+              <Select v-model={cvmProduceForm.value.status} multiple clearable placeholder='请选择状态'>
+                {statusList.value.map(({ status, description }) => {
+                  return <Select.Option key={status} name={description} id={status} />;
+                })}
+              </Select>
+            </FormItem>
+            <FormItem label='创建人'>
+              <member-select
+                v-model={cvmProduceForm.value.bk_username}
+                multiple
+                clearable
+                defaultUserlist={[
+                  {
+                    username: userStore.username,
+                    display_name: userStore.username,
+                  },
+                ]}
+                placeholder='请输入企业微信名'
+              />
+            </FormItem>
+            <FormItem label='回收时间'>
+              <bk-date-picker v-model={timeForm.value} type='daterange' />
+            </FormItem>
+          </Form>
+          <div class='btn-container'>
+            <Button theme='primary' onClick={filterOrders}>
+              <Search />
+              查询
+            </Button>
+            <Button onClick={() => clearFilter()}>重置</Button>
+          </div>
+        </div>
+        <div class='btn-container oper-btn-pad'>
+          <Button theme='primary' onClick={() => handleOrderCreate(false)}>
+            <Plus />
+            创建单据
+          </Button>
+          <Button theme='primary' onClick={handleFastCvmProduce}>
+            快速生产
+          </Button>
+        </div>
         <CommonTable>
           {{
             expandRow: (row) => {
@@ -256,83 +330,6 @@ export default defineComponent({
                 />
               );
             },
-            tabselect: () => (
-              <div class='cvm-produce-form'>
-                <Form label-width='110' class='scr-form-wrapper' model={cvmProduceForm}>
-                  <FormItem label='需求类型'>
-                    <Select v-model={cvmProduceForm.value.require_type} multiple clearable placeholder='请选择'>
-                      {requireTypeList.value.map(({ label, value }) => {
-                        return <Select.Option key={value} name={label} id={value} />;
-                      })}
-                    </Select>
-                  </FormItem>
-                  <FormItem label='地域'>
-                    <area-selector
-                      multiple
-                      v-model={cvmProduceForm.value.region}
-                      params={{ resourceType: 'QCLOUDCVM' }}
-                    />
-                  </FormItem>
-                  <FormItem label='园区'>
-                    <zone-selector
-                      multiple
-                      v-model={cvmProduceForm.value.zone}
-                      params={{ resourceType: 'QCLOUDCVM', region: cvmProduceForm.value.region }}
-                    />
-                  </FormItem>
-                  <FormItem label='机型'>
-                    <Select v-model={cvmProduceForm.value.device_type} multiple clearable placeholder='请选择'>
-                      {cvmDeviceTypeList.value.map(({ value, label }) => {
-                        return <Select.Option key={value} name={label} id={value} />;
-                      })}
-                    </Select>
-                  </FormItem>
-                  <FormItem label='单号'>
-                    <FloatInput v-model={cvmProduceForm.value.order_id} placeholder='请输入单号，多个换行分割' />
-                  </FormItem>
-                  <FormItem label='云梯单号'>
-                    <FloatInput v-model={cvmProduceForm.value.task_id} placeholder='请输入云梯单号，多个换行分割' />
-                  </FormItem>
-                  <FormItem label='状态'>
-                    <Select v-model={cvmProduceForm.value.status} multiple clearable placeholder='请选择状态'>
-                      {statusList.value.map(({ status, description }) => {
-                        return <Select.Option key={status} name={description} id={status} />;
-                      })}
-                    </Select>
-                  </FormItem>
-                  <FormItem label='创建人'>
-                    <member-select
-                      v-model={cvmProduceForm.value.bk_username}
-                      multiple
-                      clearable
-                      defaultUserlist={[
-                        {
-                          username: userStore.username,
-                          display_name: userStore.username,
-                        },
-                      ]}
-                      placeholder='请输入企业微信名'
-                    />
-                  </FormItem>
-                  <FormItem label='回收时间'>
-                    <bk-date-picker v-model={timeForm.value} type='daterange' />
-                  </FormItem>
-                </Form>
-                <div class='cvm-produce-form-btn'>
-                  <Button theme='primary' onClick={() => handleOrderCreate(false)}>
-                    创建单据
-                  </Button>
-                  <Button theme='primary' onClick={handleFastCvmProduce}>
-                    快速生产
-                  </Button>
-                  <Button theme='primary' onClick={filterOrders}>
-                    <Search />
-                    查询
-                  </Button>
-                  <Button onClick={() => clearFilter()}>清空</Button>
-                </div>
-              </div>
-            ),
           }}
         </CommonTable>
         <create-order
@@ -343,7 +340,7 @@ export default defineComponent({
         />
         <fast-cvm-produce v-model={isFastProVisible.value} onOneKeyApply={handleOrderCreate} />
         <success-produce-detail v-model={isShowProduceDetail.value} tableData={producedDetail.value} />
-      </>
+      </div>
     );
   },
 });

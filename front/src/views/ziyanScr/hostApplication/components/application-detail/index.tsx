@@ -14,6 +14,7 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import WName from '@/components/w-name';
 import ModifyRecord from './modify-record';
+import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { isEqual } from 'lodash';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
@@ -39,7 +40,7 @@ export default defineComponent({
           {row.success_num}
           {row.success_num > 0 ? (
             <Button text theme='primary'>
-              <Copy class={'copy-icon'} v-clipboard:copy={(ips[row.suborder_id] || []).join('\n')} />
+              <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
             </Button>
           ) : null}
         </span>
@@ -87,7 +88,7 @@ export default defineComponent({
             {row.success_num}
             {row.success_num > 0 ? (
               <Button text theme='primary'>
-                <Copy class={'copy-icon'} v-clipboard:copy={(ips[row.suborder_id] || []).join('\n')} />
+                <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
               </Button>
             ) : null}
           </span>
@@ -293,6 +294,9 @@ export default defineComponent({
                 {
                   name: '业务',
                   prop: 'bk_biz_id',
+                  render() {
+                    return getBusinessNameById(detail.value.bk_biz_id);
+                  },
                 },
                 {
                   name: '需求类型',

@@ -1,9 +1,3 @@
-
-.bill-form-btn {
-  .bk-button+.bk-button {
-      margin-left: 10px;
-  }
-}
 .sub-order-num,.username {
     color: #409eff;
     cursor: pointer;
@@ -12,6 +6,8 @@
     width: 180px;
 }
 .recycle-operation {
+    display: flex;
+    align-items: center;
     .bk-button+.bk-button {
         margin-left: 10px;
     }
@@ -22,31 +18,9 @@
     cursor: pointer;
     font-size: 16px;
 }
-.apply-list-container {
-    .filter-container {
-      margin-bottom: 8px;
-    }
-    .table-container {
-      margin-top: 8px;
-      .sub-order-txt {
-        font-size: 10px;
-        color: #C4C6CC;
-      }
-    }
-  }
-  
-  .scr-form-wrapper {
-    margin: 0 24px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    .bk-form-item {
-      margin: 8px 0;
-      .bk-form-content, .bk-date-picker {
-        width: 280px;
-      }
-      .bk-button {
-        margin-right: 8px!important;
-      }
-    }
-  }
+
+.pop-btn {
+    margin-top: 10px;
+}
+
+@import url(../../css/form.scss);

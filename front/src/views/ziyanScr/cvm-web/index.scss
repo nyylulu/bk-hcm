@@ -1,21 +1,6 @@
-.filter-form {
-    display: flex;
-    flex-wrap: wrap;
-    background-color: #fff;
-    margin: 15px 0;
-    padding: 10px;
-    & > div {
-        margin-bottom: 10px;
-    }
-    .form-btn {
-        .bk-form-content {
-            display: flex;
-            align-items: center;
-            .bk-button+.bk-button {
-                margin-left: 10px;
-            }
-        }
-    }
+@import url(../css/form.scss);
+.cvm-web-wrapper {
+    margin: 20px 10px 0;
 }
 .menu-item {
     display: flex;

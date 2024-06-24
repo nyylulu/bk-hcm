@@ -277,7 +277,7 @@ export default defineComponent({
                 const ips = orderClipboard.value?.[data.suborder_id]?.ips || [];
                 const assetIds = orderClipboard.value?.[data.suborder_id]?.assetIds || [];
                 const goToCmdb = (ips: string[]) => {
-                  window.open(`http://bkcc.oa.com/#/business/${data.bkBizId}/index?ip=text=${ips.join(',')}`);
+                  window.open(`http://bkcc.oa.com/#/business/${data.bk_biz_id}/index?ip=text=${ips.join(',')}`);
                 };
 
                 return (

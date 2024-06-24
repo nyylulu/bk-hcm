@@ -333,17 +333,19 @@ export default defineComponent({
               </div>
             </FormItem>
           </div>
-          <FormItem label='镜像' required property='spec.image_id'>
-            <Select
-              v-model={modelForm.value.spec.image_id}
-              clearable
-              disabled={!modelForm.value.spec.region}
-              placeholder={!modelForm.value.spec.region ? '请先选择地域' : '请选择镜像'}>
-              {options.value.images.map(({ image_id, image_name }) => {
-                return <Select.Option key={image_id} name={image_name} id={image_id} />;
-              })}
-            </Select>
-          </FormItem>
+          <div class='form-item-container'>
+            <FormItem label='镜像' required property='spec.image_id'>
+              <Select
+                v-model={modelForm.value.spec.image_id}
+                clearable
+                disabled={!modelForm.value.spec.region}
+                placeholder={!modelForm.value.spec.region ? '请先选择地域' : '请选择镜像'}>
+                {options.value.images.map(({ image_id, image_name }) => {
+                  return <Select.Option key={image_id} name={image_name} id={image_id} />;
+                })}
+              </Select>
+            </FormItem>
+          </div>
           <div class='form-item-container'>
             <FormItem label='数据盘'>
               <div class='data-item-flex'>

@@ -1,34 +1,14 @@
-.cvm-produce-form {
-    margin: 10px 0;
-    background-color: #fff;
+@import url(../css/form.scss);
+.cvm-produce-wrapper {
+    margin: 20px 10px 0;
 }
 .scr-form-wrapper {
-    margin: 0 24px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    .bk-form-item {
-      margin: 8px 0;
-      .bk-form-content, .bk-date-picker {
-        position: relative;
-        width: 280px;
-      }
-    }
     .tool-pos {
         position: absolute;
         top: 0;
         right: -22px;
     }
   }
-.cvm-produce-form-btn {
-    display: flex;
-    align-items: center;
-    padding-bottom: 10px;
-    margin-left: 24px;
-    .bk-button + .bk-button {
-        margin-left: 10px;
-    }
-}
 .sub-order-num,.username {
     color: #409eff;
     cursor: pointer;
@@ -42,5 +22,11 @@
 .recycle-operation {
     .bk-button+.bk-button {
         margin-left: 10px;
+    }
+}
+.common-sideslider-content {
+    margin: 20px 10px 0;
+    .filter-container {
+        margin-bottom: 0;
     }
 }

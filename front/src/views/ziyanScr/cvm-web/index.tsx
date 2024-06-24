@@ -233,100 +233,99 @@ export default defineComponent({
     };
     onMounted(() => {});
     return () => (
-      <div>
-        <CommonTable>
-          {{
-            tabselect: () => (
-              <bk-form label-width='110' class='filter-form' model={cvmWebForm}>
-                <bk-form-item label='地域'>
-                  <area-selector multiple v-model={cvmWebForm.value.region} params={{ resourceType: 'QCLOUDCVM' }} />
-                </bk-form-item>
-                <bk-form-item label='园区'>
-                  <zone-selector
-                    multiple
-                    v-model={cvmWebForm.value.zone}
-                    params={{ resourceType: 'QCLOUDCVM', region: cvmWebForm.value.region }}
-                  />
-                </bk-form-item>
-                <bk-form-item label='VPC'>
-                  <bk-input v-model={cvmWebForm.value[vpcFilterType.value]} placeholder='支持模糊匹配'>
-                    {{
-                      prefix: () => (
-                        <bk-dropdown>
-                          {{
-                            default: () => (
-                              <div class='menu-item'>
-                                <span>{vpcLabel.value}</span>
-                                <AngleDown />
-                              </div>
-                            ),
-                            content: () => (
-                              <bk-dropdown-menu>
-                                {vpcList.map((item) => {
-                                  return (
-                                    <bk-dropdown-item key={item.value} onClick={() => getPrefix('vpc', item)}>
-                                      {item.label}
-                                    </bk-dropdown-item>
-                                  );
-                                })}
-                              </bk-dropdown-menu>
-                            ),
-                          }}
-                        </bk-dropdown>
-                      ),
-                    }}
-                  </bk-input>
-                </bk-form-item>
-                <bk-form-item label='Subnet'>
-                  <bk-input v-model={cvmWebForm.value[subnetFilterType.value]} placeholder='支持模糊匹配'>
-                    {{
-                      prefix: () => (
-                        <bk-dropdown popover-options={{ boundary: 'body' }}>
-                          {{
-                            default: () => (
-                              <div class='menu-item'>
-                                <span>{subnetLabel.value}</span>
-                                <AngleDown />
-                              </div>
-                            ),
-                            content: () => (
-                              <bk-dropdown-menu>
-                                {subnetList.map((item) => {
-                                  return (
-                                    <bk-dropdown-item key={item.value} onClick={() => getPrefix('subnet', item)}>
-                                      {item.label}
-                                    </bk-dropdown-item>
-                                  );
-                                })}
-                              </bk-dropdown-menu>
-                            ),
-                          }}
-                        </bk-dropdown>
-                      ),
-                    }}
-                  </bk-input>
-                </bk-form-item>
-                <bk-form-item label='启用'>
-                  <bk-select v-model={cvmWebForm.value.enable} clearable>
-                    {useList.map(({ label, value }) => {
-                      return <bk-option key={value} name={label} id={value}></bk-option>;
-                    })}
-                  </bk-select>
-                </bk-form-item>
-                <bk-form-item class='form-btn' label-width='20'>
-                  <bk-button theme='primary' onClick={filterOrders}>
-                    <Search />
-                    查询
-                  </bk-button>
-                  <bk-button onClick={clearFilter}>清空</bk-button>
-                  <bk-button disabled={!selections.value.length} onClick={handleBatchEdit}>
-                    批量更新
-                  </bk-button>
-                </bk-form-item>
-              </bk-form>
-            ),
-          }}
-        </CommonTable>
+      <div class='apply-list-container cvm-web-wrapper'>
+        <div class={'filter-container'}>
+          <bk-form formType='vertical' class={'scr-form-wrapper'} model={cvmWebForm}>
+            <bk-form-item label='地域'>
+              <area-selector multiple v-model={cvmWebForm.value.region} params={{ resourceType: 'QCLOUDCVM' }} />
+            </bk-form-item>
+            <bk-form-item label='园区'>
+              <zone-selector
+                multiple
+                v-model={cvmWebForm.value.zone}
+                params={{ resourceType: 'QCLOUDCVM', region: cvmWebForm.value.region }}
+              />
+            </bk-form-item>
+            <bk-form-item label='VPC'>
+              <bk-input v-model={cvmWebForm.value[vpcFilterType.value]} placeholder='支持模糊匹配'>
+                {{
+                  prefix: () => (
+                    <bk-dropdown>
+                      {{
+                        default: () => (
+                          <div class='menu-item'>
+                            <span>{vpcLabel.value}</span>
+                            <AngleDown />
+                          </div>
+                        ),
+                        content: () => (
+                          <bk-dropdown-menu>
+                            {vpcList.map((item) => {
+                              return (
+                                <bk-dropdown-item key={item.value} onClick={() => getPrefix('vpc', item)}>
+                                  {item.label}
+                                </bk-dropdown-item>
+                              );
+                            })}
+                          </bk-dropdown-menu>
+                        ),
+                      }}
+                    </bk-dropdown>
+                  ),
+                }}
+              </bk-input>
+            </bk-form-item>
+            <bk-form-item label='Subnet'>
+              <bk-input v-model={cvmWebForm.value[subnetFilterType.value]} placeholder='支持模糊匹配'>
+                {{
+                  prefix: () => (
+                    <bk-dropdown popover-options={{ boundary: 'body' }}>
+                      {{
+                        default: () => (
+                          <div class='menu-item'>
+                            <span>{subnetLabel.value}</span>
+                            <AngleDown />
+                          </div>
+                        ),
+                        content: () => (
+                          <bk-dropdown-menu>
+                            {subnetList.map((item) => {
+                              return (
+                                <bk-dropdown-item key={item.value} onClick={() => getPrefix('subnet', item)}>
+                                  {item.label}
+                                </bk-dropdown-item>
+                              );
+                            })}
+                          </bk-dropdown-menu>
+                        ),
+                      }}
+                    </bk-dropdown>
+                  ),
+                }}
+              </bk-input>
+            </bk-form-item>
+            <bk-form-item label='启用'>
+              <bk-select v-model={cvmWebForm.value.enable} clearable>
+                {useList.map(({ label, value }) => {
+                  return <bk-option key={value} name={label} id={value}></bk-option>;
+                })}
+              </bk-select>
+            </bk-form-item>
+          </bk-form>
+          <div class='btn-container'>
+            <bk-button theme='primary' onClick={filterOrders}>
+              <Search />
+              查询
+            </bk-button>
+            <bk-button onClick={clearFilter}>清空</bk-button>
+          </div>
+        </div>
+        <div class='btn-container oper-btn-pad'>
+          <bk-button disabled={!selections.value.length} onClick={handleBatchEdit}>
+            批量更新
+          </bk-button>
+        </div>
+        <CommonTable />
         <bk-dialog v-model:is-show={isShow.value} width='600' title='批量更新'>
           {{
             default: () => (

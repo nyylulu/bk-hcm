@@ -115,6 +115,16 @@ export default defineComponent({
             ),
           }}
         </bk-alert>
+        <div class='displayflex'>
+          <div class='displayflex-test'>备注</div>
+          <bk-input
+            type='textarea'
+            v-model={localRemark.value}
+            text
+            placeholder='回收备注,256 字以内'
+            rows={1}
+            maxlength={255}></bk-input>
+        </div>
         <div class='CommonTable'>
           <bk-button class='bk-button' theme='primary' onClick={handleCleardrawer}>
             选择服务器
@@ -141,16 +151,6 @@ export default defineComponent({
           <bk-button class='bk-button' theme='primary' onClick={handleClear}>
             清空列表
           </bk-button>
-          <div class='displayflex'>
-            <div class='displayflex-test'>备注</div>
-            <bk-input
-              type='textarea'
-              v-model={localRemark.value}
-              text
-              placeholder='回收备注,256 字以内'
-              rows={1}
-              maxlength={255}></bk-input>
-          </div>
         </div>
         <Loading class='loading-container' loading={isTableLoading.value}>
           <bk-table

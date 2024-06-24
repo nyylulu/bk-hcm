@@ -1,6 +1,7 @@
 import { Button, Input, Popover, Select } from 'bkui-vue';
 import { defineComponent, ref, watch, onMounted } from 'vue';
 import './index.scss';
+import { EditLine } from 'bkui-vue/lib/icon';
 export default defineComponent({
   name: 'EditItem',
   props: {
@@ -64,11 +65,11 @@ export default defineComponent({
         {{
           default: () => (
             <div class='pop-btn'>
-              {props.type === 'boolean' ? <div>{props.modelValue ? '是' : '否'}</div> : null}
+              {props.type === 'boolean' ? <div class='bool-color'>{props.modelValue ? '是' : '否'}</div> : null}
               {props.type === 'number' ? <div>{props.modelValue}</div> : null}
               {!['boolean', 'number'].includes(props.type) ? <div>{props.modelValue || '-'}</div> : null}
               <Button text theme='primary' onClick={handleEdit}>
-                编辑
+                <EditLine />
               </Button>
             </div>
           ),

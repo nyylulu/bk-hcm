@@ -130,7 +130,7 @@ export default defineComponent({
     return () => (
       <Dialog
         v-bind={attrs}
-        width='1080'
+        width='900'
         v-model:isShow={isDisplay.value}
         title={props.title}
         onClosed={handleOrderFormCancel}>
@@ -146,13 +146,15 @@ export default defineComponent({
                     SA云化池
                   </FormItem>
                 </div>
-                <FormItem label='需求类型' required property='require_type'>
-                  <Select v-model={topModelForm.value.require_type} clearable placeholder='请选择'>
-                    {requireTypeList.value.map(({ label, value }) => {
-                      return <Select.Option key={value} name={label} id={value} />;
-                    })}
-                  </Select>
-                </FormItem>
+                <div class='form-item-container'>
+                  <FormItem label='需求类型' required property='require_type'>
+                    <Select v-model={topModelForm.value.require_type} clearable placeholder='请选择'>
+                      {requireTypeList.value.map(({ label, value }) => {
+                        return <Select.Option key={value} name={label} id={value} />;
+                      })}
+                    </Select>
+                  </FormItem>
+                </div>
               </Form>
               <cvm-form
                 ref={bottomModelFormRef}

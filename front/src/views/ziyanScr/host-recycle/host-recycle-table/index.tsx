@@ -6,11 +6,11 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
-import { Button, Form, Popover } from 'bkui-vue';
+import { Button, Form, Popover, Select } from 'bkui-vue';
 import { useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import { GragFill, Search } from 'bkui-vue/lib/icon';
+import { Plus, Search } from 'bkui-vue/lib/icon';
 import BillDetail from '../bill-detail';
 import FloatInput from '@/components/float-input';
 import './index.scss';
@@ -187,51 +187,77 @@ export default defineComponent({
         enterDetail(newVal);
       },
     );
+    const opBtnDisabled = computed(() => {
+      return (status) => {
+        if (
+          ['UNCOMMIT', 'COMMITTED', 'DETECTING', 'FOR_AUDIT', 'TRANSITING', 'RETURNING', 'DONE', 'TERMINATE'].includes(
+            status,
+          )
+        ) {
+          return true;
+        }
+        return false;
+      };
+    });
     const operateColList = [
       {
         label: '操作',
-        width: '150px',
+        width: 100,
+        showOverflowTooltip: false,
         render: ({ row }) => {
           return (
             <div class='recycle-operation'>
-              <bk-button size='small' theme='primary' text onClick={() => returnPreDetails(row)}>
+              <Button size='small' theme='primary' text onClick={() => returnPreDetails(row)}>
                 预检详情
-              </bk-button>
-              <bk-button size='small' theme='primary' text onClick={() => enterDetail(row)}>
-                单据详情
-              </bk-button>
-              {!['DONE', 'TERMINATE'].includes(row.status) ? (
-                <>
-                  <Popover theme='light'>
-                    {{
-                      default: () => (
-                        <Button size='small' theme='primary' text>
-                          <GragFill />
+              </Button>
+              <Popover theme='light'>
+                {{
+                  default: () => (
+                    <Button size='small' theme='primary' text>
+                      <i class='hcm-icon bkhcm-icon-more-fill' />
+                    </Button>
+                  ),
+                  content: () => (
+                    <>
+                      <div>
+                        <Button size='small' theme='primary' text onClick={() => enterDetail(row)}>
+                          单据详情
                         </Button>
-                      ),
-                      content: () => (
-                        <>
-                          <div>
-                            <Button onClick={() => retryOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                              重试
-                            </Button>
-                          </div>
-                          <div>
-                            <Button onClick={() => stopOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                              终止
-                            </Button>
-                          </div>
-                          <div>
-                            <Button onClick={() => submitOrderFunc(row.suborder_id)} size='small' theme='primary' text>
-                              去除预检失败IP提交
-                            </Button>
-                          </div>
-                        </>
-                      ),
-                    }}
-                  </Popover>
-                </>
-              ) : null}
+                      </div>
+                      <div class='pop-btn'>
+                        <Button
+                          disabled={opBtnDisabled.value(row.status)}
+                          onClick={() => retryOrderFunc(row.suborder_id)}
+                          size='small'
+                          theme='primary'
+                          text>
+                          重试
+                        </Button>
+                      </div>
+                      <div class='pop-btn'>
+                        <Button
+                          disabled={opBtnDisabled.value(row.status)}
+                          onClick={() => stopOrderFunc(row.suborder_id)}
+                          size='small'
+                          theme='primary'
+                          text>
+                          终止
+                        </Button>
+                      </div>
+                      <div class='pop-btn'>
+                        <Button
+                          disabled={opBtnDisabled.value(row.status)}
+                          onClick={() => submitOrderFunc(row.suborder_id)}
+                          size='small'
+                          theme='primary'
+                          text>
+                          去除预检失败IP提交
+                        </Button>
+                      </div>
+                    </>
+                  ),
+                }}
+              </Popover>
             </div>
           );
         },
@@ -298,7 +324,7 @@ export default defineComponent({
       return (
         <div class={'apply-list-container'}>
           <div class={'filter-container'}>
-            <Form model={recycleForm} class={'scr-form-wrapper'}>
+            <Form model={recycleForm} formType='vertical' class={'scr-form-wrapper'}>
               <FormItem label='业务'>
                 <BusinessSelector
                   ref={businessRef}
@@ -320,25 +346,25 @@ export default defineComponent({
                 <FloatInput v-model={recycleForm.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
               </FormItem>
               <FormItem label='资源类型'>
-                <bk-select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
+                <Select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
                   {resourceTypeList.map(({ key, value }) => {
-                    return <bk-option key={key} label={value} value={key}></bk-option>;
+                    return <Select.Option key={key} name={value} id={key} />;
                   })}
-                </bk-select>
+                </Select>
               </FormItem>
               <FormItem label='回收类型'>
-                <bk-select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
+                <Select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
                   {returnPlanList.map(({ key, value }) => {
-                    return <bk-option key={key} label={value} value={key}></bk-option>;
+                    return <Select.Option key={key} name={value} id={key}></Select.Option>;
                   })}
-                </bk-select>
+                </Select>
               </FormItem>
               <FormItem label='状态'>
-                <bk-select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
+                <Select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
                   {stageList.value.map(({ stage, description }) => {
-                    return <bk-option key={stage} label={description} value={stage}></bk-option>;
+                    return <Select.Option key={stage} name={description} id={stage}></Select.Option>;
                   })}
-                </bk-select>
+                </Select>
               </FormItem>
               <FormItem label='回收人'>
                 <member-select
@@ -358,37 +384,31 @@ export default defineComponent({
                 <bk-date-picker v-model={timeForm.value} type='daterange' />
               </FormItem>
             </Form>
+            <div class='btn-container'>
+              <Button theme='primary' onClick={filterOrders}>
+                <Search />
+                查询
+              </Button>
+              <Button onClick={() => clearFilter()}>重置</Button>
+            </div>
           </div>
-          <div>
-            <CommonTable>
-              {{
-                tabselect: () => (
-                  <bk-form label-width='110' class='bill-filter-form' model={recycleForm}>
-                    <bk-form-item label-width='0' class='bill-form-btn'>
-                      <bk-button theme='primary' onClick={returnRecyclingResources} icon='el-icon-plus'>
-                        回收资源
-                      </bk-button>
-                      <bk-button theme='primary' onClick={filterOrders}>
-                        <Search />
-                        查询
-                      </bk-button>
-                      <bk-button onClick={() => clearFilter()}>清空</bk-button>
-                      <export-to-excel-button data={dataList.value} columns={tableColumns} filename='回收单据列表' />
-                      <bk-button disabled={!selections.value.length} onClick={goToPrecheck}>
-                        批量查看预检详情
-                      </bk-button>
-                      <bk-button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
-                        批量重试
-                      </bk-button>
-                      <bk-button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
-                        批量去除预检失败IP提交
-                      </bk-button>
-                    </bk-form-item>
-                  </bk-form>
-                ),
-              }}
-            </CommonTable>
+          <div class='btn-container oper-btn-pad'>
+            <Button theme='primary' onClick={returnRecyclingResources}>
+              <Plus />
+              回收资源
+            </Button>
+            <export-to-excel-button data={dataList.value} columns={tableColumns} filename='回收单据列表' />
+            <Button disabled={!selections.value.length} onClick={goToPrecheck}>
+              批量查看预检详情
+            </Button>
+            <Button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
+              批量重试
+            </Button>
+            <Button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
+              批量去除预检失败IP提交
+            </Button>
           </div>
+          <CommonTable />
         </div>
       );
     };

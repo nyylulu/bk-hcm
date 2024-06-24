@@ -15,7 +15,7 @@ import StatusAbnormal from '@/assets/image/Status-abnormal.png';
 import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
 import StatusFailure from '@/assets/image/failed-account.png';
-import './use-columns.scss';
+import './use-scr-columns.scss';
 import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
@@ -29,6 +29,8 @@ import {
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
+import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
+import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
 import { Spinner, Share } from 'bkui-vue/lib/icon';
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
@@ -52,6 +54,7 @@ export default (type: string, isSimpleShow = false) => {
   const { getRegionName } = useRegionsStore();
   const { whereAmI } = useWhereAmI();
   const businessMapStore = useBusinessMapStore();
+  const { transformApplyStages } = useApplyStages();
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
     defaults(options, {
@@ -184,34 +187,36 @@ export default (type: string, isSimpleShow = false) => {
       width: 180,
     },
     {
-      label: '交付情况总数',
+      label: '交付情况-总数',
       field: 'total_num',
     },
     {
-      label: '交付情况待支付',
+      label: '交付情况-待支付',
       field: 'pending_num',
     },
     {
-      label: '交付情况已支付',
+      label: '交付情况-已支付',
       field: 'success_num',
     },
     {
       label: '地域',
       field: 'spec.region',
-      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
       label: '园区',
       field: 'spec.zone',
+      render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
       label: '反亲和性',
       field: 'anti_affinity_level',
-      render: ({ cell }: { cell: string }) => cell || '无要求',
+      render: ({ row }: any) => transformAntiAffinityLevels(row.anti_affinity_level),
     },
     {
       label: '镜像',
       field: 'spec.image_id',
+      render: ({ row }: any) => getImageName(row.spec.image_id),
     },
     {
       label: '数据盘大小',
@@ -220,10 +225,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
-    },
-    {
-      label: '网络类型',
-      field: 'spec.network_type',
+      render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
     },
     {
       label: '备注',
@@ -234,21 +236,24 @@ export default (type: string, isSimpleShow = false) => {
       label: '状态',
       field: 'stage',
       width: 180,
+      render: ({ row }: any) => transformApplyStages(row.stage),
     },
   ];
   const PRSOcolumns = [
     {
       label: '地域',
       field: 'spec.region',
-      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
       label: '园区',
       field: 'spec.zone',
+      render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
       label: '反亲和性',
       field: 'anti_affinity_level',
+      render: ({ row }: any) => transformAntiAffinityLevels(row.anti_affinity_level),
     },
     {
       label: '操作系统',
@@ -256,7 +261,7 @@ export default (type: string, isSimpleShow = false) => {
     },
     {
       label: '数据盘大小',
-      field: 'spec.zone',
+      field: 'spec.disk_size',
     },
     {
       label: 'RAID类型',
@@ -1927,8 +1932,38 @@ export default (type: string, isSimpleShow = false) => {
       },
     },
     {
+      field: 'status',
+      label: '状态',
+      render: ({ row }: any) => {
+        if (row.status === -1) return <span class='c-disabled'>未执行</span>;
+        if (row.status === 0) return <span class='c-success'>成功</span>;
+        if (row.status === 1)
+          return (
+            <span>
+              <Spinner />
+              执行中
+            </span>
+          );
+        return <span class='c-danger'>失败</span>;
+      },
+    },
+    {
+      label: '成功台数/总台数',
+      width: '150',
+      render: ({ row }: any) => {
+        return (
+          <div>
+            <span class='c-success'>{row.success_num}</span>
+            <span>/</span>
+            <span>{row.total_num}</span>
+          </div>
+        );
+      },
+    },
+    {
       field: 'message',
       label: '状态说明',
+      showOverflowTooltip: true,
     },
     {
       field: 'start_at',
@@ -1938,7 +1973,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'end_at',
       label: '结束时间',
-      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+      render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
     },
   ];
 
@@ -1966,6 +2001,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
+      showOverflowTooltip: true,
     },
     {
       field: 'task_id',
