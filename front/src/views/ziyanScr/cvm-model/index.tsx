@@ -140,6 +140,7 @@ export default defineComponent({
       });
 
       batchEditDialogVisible.value = false;
+      selections.value = [];
       getListData();
     };
     const serializeBatchEditForm = () => {

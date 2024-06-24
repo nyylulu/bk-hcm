@@ -1530,7 +1530,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '备注',
       field: 'comment',
-      render: ({ comment }: any) => comment || '--',
+      render: ({ cell }: any) => cell || '--',
     },
   ];
   const firstAccountColumns = [

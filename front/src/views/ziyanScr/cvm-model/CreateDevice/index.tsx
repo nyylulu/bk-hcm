@@ -71,16 +71,16 @@ export default defineComponent({
               }}
             />
           </bk-form-item>
-          <bk-form-item label='实例族' required prop='deviceGroup'>
+          <bk-form-item label='实例族' required property='deviceGroup'>
             <bk-input v-model={EditForm.value.deviceGroup} style='width: 250px' />
           </bk-form-item>
-          <bk-form-item label='机型' required prop='deviceType'>
+          <bk-form-item label='机型' required property='deviceType'>
             <bk-input v-model={EditForm.value.deviceType} style='width: 250px' />
           </bk-form-item>
-          <bk-form-item label='CPU(核)' required prop='cpu'>
+          <bk-form-item label='CPU(核)' required property='cpu'>
             <bk-input type='number' v-model={EditForm.value.cpu} min={0} style='width: 250px' />
           </bk-form-item>
-          <bk-form-item label='内存(G)' required prop='mem'>
+          <bk-form-item label='内存(G)' required property='mem'>
             <bk-input type='number' v-model={EditForm.value.mem} min={0} style='width: 250px' />
           </bk-form-item>
           <bk-form-item label='其他信息'>
