@@ -1,0 +1,33 @@
+.filter-container {
+  margin-bottom: 16px;
+
+  .filter-items-wrapper {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    grid-gap: 24px;
+    row-gap: 16px;
+    margin-bottom: 16px;
+
+    .filter-item {
+      .label {
+        margin-bottom: 8px;
+      }
+      .value {
+        width: 100%;
+      }
+    }
+  }
+
+  .operation-btn-wrapper {
+    display: flex;
+    align-items: center;
+
+    :global(.bk-button) {
+      min-width: 88px;
+
+      + :global(.bk-button) {
+        margin-left: 8px;
+      }
+    }
+  }
+}

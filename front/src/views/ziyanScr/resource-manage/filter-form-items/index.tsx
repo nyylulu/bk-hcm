@@ -1,7 +1,6 @@
 import { PropType, VNode, defineComponent } from 'vue';
 import { Button } from 'bkui-vue';
-import { Search } from 'bkui-vue/lib/icon';
-import './index.scss';
+import cssModule from './index.module.scss';
 
 type FilterItemConfig = {
   label?: string;
@@ -16,35 +15,29 @@ export default defineComponent({
     handleSearch: Function as PropType<() => void>,
     handleClear: Function as PropType<() => void>,
   },
-  setup(props, { slots }) {
-    const renderFilterItems: FilterItemConfig[] = [
-      ...props.config,
-      {
-        render: () => (
-          <Button theme='primary' onClick={props.handleSearch}>
-            <Search />
-            查询
-          </Button>
-        ),
-      },
-      {
-        render: () => <Button onClick={props.handleClear}>清空</Button>,
-      },
-    ];
-
+  setup(props) {
     return () => (
-      <div class='filter-container'>
-        {renderFilterItems.map(
-          ({ label, render, hidden }) =>
-            !hidden && (
-              <div class='filter-item mr8'>
-                {label && <span class='mr8'>{label}</span>}
-                {render()}
-              </div>
-            ),
-        )}
-        {slots.end?.()}
-      </div>
+      <>
+        <div class={cssModule['filter-container']}>
+          <div class={cssModule['filter-items-wrapper']}>
+            {props.config.map(
+              ({ label, render, hidden }) =>
+                !hidden && (
+                  <div class={cssModule['filter-item']}>
+                    <div class={cssModule.label}>{label}</div>
+                    <div class={cssModule.value}>{render()}</div>
+                  </div>
+                ),
+            )}
+          </div>
+          <div class={cssModule['operation-btn-wrapper']}>
+            <Button theme='primary' onClick={props.handleSearch}>
+              查询
+            </Button>
+            <Button onClick={props.handleClear}>重置</Button>
+          </div>
+        </div>
+      </>
     );
   },
 });

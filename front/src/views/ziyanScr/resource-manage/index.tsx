@@ -8,7 +8,7 @@ import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { cleanPayload, getDate } from '@/utils';
-import { timeFormatter } from '@/common/util';
+import { getTableNewRowClass, timeFormatter } from '@/common/util';
 import './index.scss';
 
 const { TabPanel } = Tab;
@@ -39,8 +39,8 @@ export default defineComponent({
       getListData: reloadScrResourceOnlineTable,
       pagination: scrResourceOnlinePagination,
     } = useTable({
-      tableOptions: { columns: scrResourceOnlineColumns },
-      requestOption: { dataPath: 'data.info' },
+      tableOptions: { columns: scrResourceOnlineColumns, extra: { rowClass: getTableNewRowClass() } },
+      requestOption: { dataPath: 'data.info', sortOption: { sort: 'update_at', order: 'DESC' } },
       scrConfig: () => ({
         url: '/api/v1/woa/pool/findmany/launch/task',
         payload: {
@@ -57,10 +57,8 @@ export default defineComponent({
       getListData: reloadScrResourceOfflineTable,
       pagination: scrResourceOfflinePagination,
     } = useTable({
-      tableOptions: {
-        columns: scrResourceOfflineColumns,
-      },
-      requestOption: { dataPath: 'data.info' },
+      tableOptions: { columns: scrResourceOfflineColumns, extra: { rowClass: getTableNewRowClass() } },
+      requestOption: { dataPath: 'data.info', sortOption: { sort: 'update_at', order: 'DESC' } },
       scrConfig: () => ({
         url: '/api/v1/woa/pool/findmany/recall/task',
         payload: {
@@ -122,18 +120,10 @@ export default defineComponent({
     };
     const filterFormItems = [
       {
-        render: () => (
-          <Button theme='primary' onClick={gotoCreatePage}>
-            <Plus /> 发起{activeType.value === 'online' ? '上架' : '下架'}
-          </Button>
-        ),
-      },
-      {
         label: '单号',
         render: () => (
           <TagInput
             v-model={filter.id}
-            class='w200'
             allow-create
             collapse-tags
             createTagValidator={(tag) => /^[1-9]\d*$/.test(tag)}
@@ -143,16 +133,16 @@ export default defineComponent({
       },
       {
         label: '创建人',
-        render: () => <MemberSelect class='w200' v-model={filter.bk_username} />,
+        render: () => <MemberSelect v-model={filter.bk_username} />,
       },
       {
         label: '创建时间',
         render: () => (
-          <>
-            <DatePicker class='w150' v-model={filter.start} />
+          <div class='flex-row'>
+            <DatePicker v-model={filter.start} />
             <span class='m4'>-</span>
-            <DatePicker class='w150' v-model={filter.end} />
-          </>
+            <DatePicker v-model={filter.end} />
+          </div>
         ),
       },
       {
@@ -191,7 +181,10 @@ export default defineComponent({
             <TabPanel key={value} label={label} name={value} renderDirective='if'>
               <div class='manage-container'>
                 <FilterFormItems config={filterFormItems} handleSearch={reloadDataList} handleClear={clearFilter} />
-                <Component />
+                <Button theme='primary' onClick={gotoCreatePage} class='mb16'>
+                  <Plus class='f22' /> 发起{activeType.value === 'online' ? '上架' : '下架'}
+                </Button>
+                <Component style={{ height: 'calc(100% - 250px)' }} />
               </div>
             </TabPanel>
           ))}

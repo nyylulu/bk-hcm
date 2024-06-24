@@ -1,7 +1,7 @@
 import { PropType, defineComponent, reactive, onMounted } from 'vue';
 import { Button, Dropdown, Message, TagInput } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
-import { AngleDownLine, Copy, Search } from 'bkui-vue/lib/icon';
+import { AngleDownLine, Copy } from 'bkui-vue/lib/icon';
 import useClipboard from 'vue-clipboard3';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -119,8 +119,7 @@ export default defineComponent({
                     placeholder='请输入固资号'
                     pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
                   />
-                  <Button class='mr8' onClick={reloadDataList}>
-                    <Search />
+                  <Button class='mr8 mw88' onClick={reloadDataList}>
                     查询
                   </Button>
                 </>
@@ -129,12 +128,12 @@ export default defineComponent({
                 data={dataList.value}
                 columns={columns}
                 filename={props.type === 'online' ? '资源上架详情' : '资源下架详情'}
-                class='mr8'
+                class='mr8 mw88'
               />
               <Dropdown>
                 {{
                   default: () => (
-                    <Button theme='primary' outline>
+                    <Button theme='primary' outline class='mw88'>
                       <Copy />
                       复制
                       <AngleDownLine />

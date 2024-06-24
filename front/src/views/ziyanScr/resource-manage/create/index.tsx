@@ -1,4 +1,5 @@
 import { PropType, defineComponent, ref } from 'vue';
+import { useRouter } from 'vue-router';
 import { Button, Checkbox, Message, TagInput } from 'bkui-vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import FilterFormItems from '../filter-form-items';
@@ -28,6 +29,7 @@ export default defineComponent({
   name: 'ScrResourceManageCreate',
   props: { type: String as PropType<'online' | 'offline'> },
   setup(props) {
+    const router = useRouter();
     const ziyanScrStore = useZiyanScrStore();
 
     const getDefaultFilter = (): ScrResourceManageCreateFilterType => ({
@@ -45,46 +47,31 @@ export default defineComponent({
       {
         label: '机型',
         render: () => (
-          <ScrCreateFilterSelector
-            v-model={filter.value.spec.device_type}
-            api={ziyanScrStore.getDeviceTypeList}
-            class='w200'
-          />
+          <ScrCreateFilterSelector v-model={filter.value.spec.device_type} api={ziyanScrStore.getDeviceTypeList} />
         ),
       },
       {
         label: '操作系统',
         render: () => (
-          <ScrCreateFilterSelector
-            v-model={filter.value.spec.os_type}
-            api={ziyanScrStore.getIdcpmOsTypeList}
-            class='w200'
-          />
+          <ScrCreateFilterSelector v-model={filter.value.spec.os_type} api={ziyanScrStore.getIdcpmOsTypeList} />
         ),
         hidden: props.type === 'offline',
       },
       {
         label: '地域',
         render: () => (
-          <ScrCreateFilterSelector
-            v-model={filter.value.spec.region}
-            api={ziyanScrStore.getIdcRegionList}
-            class='w200'
-          />
+          <ScrCreateFilterSelector v-model={filter.value.spec.region} api={ziyanScrStore.getIdcRegionList} />
         ),
       },
       {
         label: '园区',
-        render: () => (
-          <ScrIdcZoneSelector v-model={filter.value.spec.zone} cmdbRegionName={filter.value.spec.region} class='w200' />
-        ),
+        render: () => <ScrIdcZoneSelector v-model={filter.value.spec.zone} cmdbRegionName={filter.value.spec.region} />,
       },
       {
         label: '内网 IP',
         render: () => (
           <TagInput
             v-model={filter.value.ips}
-            class='w200'
             allow-create
             collapse-tags
             pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
@@ -97,7 +84,6 @@ export default defineComponent({
         render: () => (
           <TagInput
             v-model={filter.value.asset_ids}
-            class='w200'
             allow-create
             collapse-tags
             pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
@@ -167,9 +153,12 @@ export default defineComponent({
     };
     const handleOnline = async () => {
       const ids = commonTableRef.value.tableRef.getSelection().map((item: any) => item.bk_host_id);
-      await ziyanScrStore.createOnlineTask({ bk_host_ids: ids });
+      const {
+        data: { id },
+      } = await ziyanScrStore.createOnlineTask({ bk_host_ids: ids });
       Message({ theme: 'success', message: '提交成功' });
-      reloadTableDataList();
+      // 跳转至资源上架详情
+      router.push({ name: 'scrResourceManageDetail', params: { id }, query: { type: 'online' } });
     };
 
     return () => (
@@ -212,7 +201,7 @@ export default defineComponent({
             </div>
             <CommonTable
               ref={commonTableRef}
-              style={{ height: props.type === 'online' ? 'calc(100% - 132px)' : 'calc(100% - 44px)' }}
+              style={{ height: props.type === 'online' ? 'calc(100% - 250px)' : 'calc(100% - 125px)' }}
             />
           </div>
         </div>

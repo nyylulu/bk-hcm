@@ -3,7 +3,7 @@
 import i18n from '@/language/i18n';
 import { CloudType, SecurityRuleEnum, HuaweiSecurityRuleEnum, AzureSecurityRuleEnum } from '@/typings';
 import { useAccountStore, useLoadBalancerStore } from '@/store';
-import { Button, Loading } from 'bkui-vue';
+import { Button } from 'bkui-vue';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { h, ref } from 'vue';
 import type { Ref } from 'vue';
@@ -47,7 +47,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const { whereAmI } = useWhereAmI();
   const businessMapStore = useBusinessMapStore();
   const cloudAreaStore = useCloudAreaStore();
-  const { transformApplyStages } = useApplyStages();
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
     defaults(options, {
