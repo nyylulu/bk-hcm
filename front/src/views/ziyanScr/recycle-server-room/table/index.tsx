@@ -2,6 +2,7 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import { useUserStore } from '@/store';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
 import OrganizationSelect from '@/components/OrganizationSelect/index';
@@ -25,16 +26,8 @@ export default defineComponent({
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
     const businessMapStore = useBusinessMapStore();
+    const userStore = useUserStore();
 
-    const isLoading = ref(false);
-    const organizations = ref([]);
-    const bkBizIds = ref([]);
-    const operators = ref([]);
-    const dissloveList = ref<IDissolve[]>([]);
-    const currentDialogShow = ref(false);
-    const moduleDialogShow = ref(false);
-    const originDialogShow = ref(false);
-    const searchParams = ref();
     const columns = [
       {
         label: '业务',
@@ -61,8 +54,6 @@ export default defineComponent({
         field: 'total.current.cpu_count',
       },
     ];
-    const moduleNames = ref<string[]>([]);
-    const tableColumns = ref(columns);
     const content = (
       <>
         {t('请勾选相关参数后查询，')}
@@ -70,6 +61,17 @@ export default defineComponent({
         {t('1.裁撤的机房模块，至少选一个模块，')}
       </>
     );
+    const isLoading = ref(false);
+    const organizations = ref([]);
+    const operators = ref([userStore.username]);
+    const bkBizIds = ref([]);
+    const dissloveList = ref<IDissolve[]>([]);
+    const currentDialogShow = ref(false);
+    const moduleDialogShow = ref(false);
+    const originDialogShow = ref(false);
+    const searchParams = ref();
+    const moduleNames = ref<string[]>([]);
+    const tableColumns = ref(columns);
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
@@ -102,28 +104,28 @@ export default defineComponent({
       operators.value = [];
     };
 
-    const setSearchParams = (row: IDissolve) => {
+    const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
       searchParams.value = {
         organizations: organizations.value,
-        bk_biz_names: [row.bk_biz_name].filter((v) => v),
-        module_names: moduleNames.value,
+        bk_biz_names: bkBizNames,
+        module_names: moduleNames,
         operators: operators.value,
       };
     };
 
-    const handleShowOriginDialog = (row: IDissolve) => {
+    const handleShowOriginDialog = (bkBizNames: string[]) => {
       originDialogShow.value = true;
-      setSearchParams(row);
+      setSearchParams(bkBizNames, moduleNames.value);
     };
 
-    const handleShowCurrentDialog = (row: IDissolve) => {
+    const handleShowCurrentDialog = (bkBizNames: string[]) => {
       currentDialogShow.value = true;
-      setSearchParams(row);
+      setSearchParams(bkBizNames, moduleNames.value);
     };
 
-    const handleShowModuleDialog = (row: IDissolve) => {
+    const handleShowModuleDialog = (bkBizNames: string[], moduleName: string) => {
       moduleDialogShow.value = true;
-      setSearchParams(row);
+      setSearchParams(bkBizNames, [moduleName]);
     };
 
     return () => (
@@ -140,7 +142,15 @@ export default defineComponent({
             autoSelect={true}
             v-model={bkBizIds.value}></BusinessSelector>
           <span class={cssModule['search-label']}>{t('人员')}：</span>
-          <MemberSelect class={cssModule['search-item']} v-model={operators.value}></MemberSelect>
+          <MemberSelect
+            class={cssModule['search-item']}
+            v-model={operators.value}
+            defaultUserlist={[
+              {
+                username: userStore.username,
+                display_name: userStore.username,
+              },
+            ]}></MemberSelect>
           <bk-button
             theme='primary'
             class={cssModule['search-button']}
@@ -176,7 +186,12 @@ export default defineComponent({
             <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
-                  <bk-button text theme='primary' onClick={() => handleShowOriginDialog(row)}>
+                  <bk-button
+                    text
+                    theme='primary'
+                    onClick={() =>
+                      handleShowOriginDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
+                    }>
                     {row?.total?.origin?.host_count}
                   </bk-button>
                 ),
@@ -186,7 +201,12 @@ export default defineComponent({
             <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
-                  <bk-button text theme='primary' onClick={() => handleShowCurrentDialog(row)}>
+                  <bk-button
+                    text
+                    theme='primary'
+                    onClick={() =>
+                      handleShowCurrentDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
+                    }>
                     {row?.total?.current?.host_count}
                   </bk-button>
                 ),
@@ -197,7 +217,15 @@ export default defineComponent({
               <bk-table-column label={moduleName} field={moduleName} width={`${moduleName.length * 15}px`}>
                 {{
                   default: ({ row }: { row: IDissolve }) => (
-                    <bk-button text theme='primary' onClick={() => handleShowModuleDialog(row)}>
+                    <bk-button
+                      text
+                      theme='primary'
+                      onClick={() =>
+                        handleShowModuleDialog(
+                          ['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name],
+                          moduleName,
+                        )
+                      }>
                       {row?.module_host_count?.[moduleName]}
                     </bk-button>
                   ),
