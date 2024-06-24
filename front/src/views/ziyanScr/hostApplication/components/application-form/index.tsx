@@ -277,6 +277,12 @@ export default defineComponent({
         handleDeviceTypeChange();
       },
     );
+    watch(
+      () => QCLOUDCVMForm.value.spec.device_type,
+      () => {
+        onQcloudDeviceTypeChange();
+      },
+    );
     // 获取 QCLOUDCVM机型列表
     const loadDeviceTypes = async () => {
       const { zone, region } = resourceForm.value;
@@ -342,6 +348,13 @@ export default defineComponent({
         physicalTableData.value.splice(index, 1);
       }
     };
+    watch(
+      () => resourceForm.value.zone,
+      () => {
+        loadDeviceTypes();
+        loadImages();
+      },
+    );
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
@@ -895,7 +908,6 @@ export default defineComponent({
                               <bk-select
                                 v-model={QCLOUDCVMForm.value.spec.device_type}
                                 disabled={resourceForm.value.zone === ''}
-                                onChange={onQcloudDeviceTypeChange}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 filterable>
                                 {deviceTypes.value.map((deviceType) => (

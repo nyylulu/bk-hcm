@@ -4,7 +4,7 @@ import { Button, DatePicker, Select, Tab, TagInput } from 'bkui-vue';
 import { Plus } from 'bkui-vue/lib/icon';
 import MemberSelect from '@/components/MemberSelect';
 import FilterFormItems from './filter-form-items';
-import { useZiyanScrStore } from '@/store';
+import { useZiyanScrStore, useUserStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { cleanPayload, getDate } from '@/utils';
@@ -27,6 +27,7 @@ interface ResourceManageFilterType {
 export default defineComponent({
   name: 'ScrResourceManage',
   setup() {
+    const userStore = useUserStore();
     const router = useRouter();
     const route = useRoute();
     const ziyanScrStore = useZiyanScrStore();
@@ -108,7 +109,7 @@ export default defineComponent({
 
     const getDefaultFilter = (): ResourceManageFilterType => ({
       id: [],
-      bk_username: [],
+      bk_username: [userStore.username],
       phase: [],
       start: getDate('yyyy-MM-dd', -30),
       end: getDate('yyyy-MM-dd', 0),
@@ -133,7 +134,17 @@ export default defineComponent({
       },
       {
         label: '创建人',
-        render: () => <MemberSelect v-model={filter.bk_username} />,
+        render: () => (
+          <MemberSelect
+            v-model={filter.bk_username}
+            defaultUserlist={[
+              {
+                username: userStore.username,
+                display_name: userStore.username,
+              },
+            ]}
+          />
+        ),
       },
       {
         label: '创建时间',

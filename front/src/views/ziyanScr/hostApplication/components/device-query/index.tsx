@@ -9,7 +9,6 @@ import MemberSelect from '@/components/MemberSelect';
 import useFormModel from '@/hooks/useFormModel';
 import { useUserStore } from '@/store';
 import { timeFormatter, applicationTime } from '@/common/util';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -17,7 +16,6 @@ const { FormItem } = Form;
 export default defineComponent({
   setup() {
     const { columns } = useColumns('DeviceQuerycolumns');
-    const businessMapStore = useBusinessMapStore();
     const { selections, handleSelectionChange } = useSelection();
     const clipHostIp = computed(() => {
       return selections.value.map((item) => item.ip).join('\n');
@@ -28,7 +26,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const { formModel, resetForm } = useFormModel({
       orderId: '',
-      bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
+      bkBizId: ['all'],
       bkUsername: [userStore.username],
       ip: '',
       requireType: '',
@@ -61,7 +59,11 @@ export default defineComponent({
           payload: {
             filter: transferSimpleConditions([
               'AND',
-              ['bk_biz_id', '=', formModel.bkBizId === 'all' ? undefined : formModel.bkBizId],
+              [
+                'bk_biz_id',
+                'in',
+                formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? undefined : formModel.bkBizId,
+              ],
               ['require_type', '=', formModel.requireType],
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],
@@ -100,7 +102,7 @@ export default defineComponent({
               <>
                 <Form label-width='110' class='scr-form-wrapper' model={formModel}>
                   <FormItem label='业务'>
-                    <BusinessSelector autoSelect v-model={formModel.bkBizId} authed isShowAll />
+                    <BusinessSelector autoSelect multiple v-model={formModel.bkBizId} authed isShowAll />
                   </FormItem>
                   <FormItem label='需求类型'>
                     <RequirementTypeSelector v-model={formModel.requireType} />
@@ -163,7 +165,6 @@ export default defineComponent({
                     filename='设备列表'
                     text='导出全部'
                   />
-                  {/* <Button class={'mr8'}>导出全部</Button> */}
                   <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
                     复制IP
                   </Button>

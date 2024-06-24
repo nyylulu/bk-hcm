@@ -1,9 +1,11 @@
-import { defineComponent, ref, computed, onMounted, watch } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { Search } from 'bkui-vue/lib/icon';
+import { useUserStore } from '@/store';
+import { useBusinessMapStore } from '@/store/useBusinessMap';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -18,8 +20,10 @@ export default defineComponent({
   },
   emits: ['goBillDetailPage'],
   setup(props, { emit }) {
+    const businessMapStore = useBusinessMapStore();
+    const userStore = useUserStore();
     const defaultDeviceForm = () => ({
-      bk_biz_id: [],
+      bk_biz_id: [businessMapStore.authedBusinessList?.[0]?.id],
       order_id: [],
       suborder_id: [],
       ip: [],
@@ -27,18 +31,10 @@ export default defineComponent({
       bk_zone_name: [],
       sub_zone: [],
       stage: [],
-      bk_username: [],
+      bk_username: [userStore.username],
     });
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());
-    watch(
-      () => deviceForm.value.bk_biz_id,
-      (newVal, oldVal) => {
-        if (!oldVal.length) {
-          getListData();
-        }
-      },
-    );
     const timeForm = ref(defaultTime());
     const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
@@ -105,12 +101,13 @@ export default defineComponent({
         };
       },
     });
-    const getDevicelist = () => {
-      getListData();
-    };
     const filterOrders = () => {
+      deviceForm.value.bk_biz_id =
+        deviceForm.value.bk_biz_id.length === 1 && deviceForm.value.bk_biz_id[0] === 'all'
+          ? undefined
+          : deviceForm.value.bk_biz_id;
       pageInfo.value.start = 0;
-      getDevicelist();
+      getListData();
     };
     const clearFilter = () => {
       const initForm = defaultDeviceForm();
@@ -118,6 +115,7 @@ export default defineComponent({
       deviceForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
+      deviceForm.value.bk_biz_id = ['all'];
     };
     const fetchDeviceTypeList = async () => {
       const data = await getDeviceTypeList();
@@ -204,6 +202,12 @@ export default defineComponent({
                         v-model={deviceForm.value.bk_username}
                         multiple
                         clearable
+                        defaultUserlist={[
+                          {
+                            username: userStore.username,
+                            display_name: userStore.username,
+                          },
+                        ]}
                         placeholder='请输入企业微信名'
                       />
                     </bk-form-item>

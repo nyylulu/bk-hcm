@@ -1,6 +1,6 @@
 import { defineComponent, onMounted, ref, watch } from 'vue';
+import { Loading, Table } from 'bkui-vue';
 import './index.scss';
-import { Table } from 'bkui-vue';
 import apiService from '../../../../api/scrApi';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 export default defineComponent({
@@ -27,6 +27,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const { selections, handleSelectionChange } = useSelection();
     const hostList = ref([]);
+    const loading = ref(false);
     const tableList = ref([]);
     const suborderId = ref();
     const drawer = ref(false);
@@ -146,6 +147,7 @@ export default defineComponent({
     };
     /** 获取资源回收单据预览列表 */
     const getPreRecycleList = async () => {
+      loading.value = true;
       emit('updateConfirm', [], '', drawer.value);
 
       const {
@@ -154,6 +156,7 @@ export default defineComponent({
       } = props;
       const { info } = await apiService.getPreRecycleList({ ips, remark, returnPlan });
       tableList.value = info || [];
+      loading.value = false;
     };
     const getList = async (enableCount = false) => {
       const page = {
@@ -178,18 +181,20 @@ export default defineComponent({
     });
     return () => (
       <div class='div-ResourceSelect'>
-        <Table
-          align='left'
-          row-hover='auto'
-          data={tableList.value}
-          rowKey='id'
-          columns={columns.value}
-          remotePagination
-          showOverflowTooltip
-          {...{
-            onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
-            onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
-          }}></Table>
+        <Loading class='loading-container' loading={loading.value}>
+          <Table
+            align='left'
+            row-hover='auto'
+            data={tableList.value}
+            rowKey='id'
+            columns={columns.value}
+            remotePagination
+            showOverflowTooltip
+            {...{
+              onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
+              onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
+            }}></Table>
+        </Loading>
       </div>
     );
   },

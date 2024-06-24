@@ -7,6 +7,7 @@ import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
 import { Button, Form, Popover } from 'bkui-vue';
+import { useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import { GragFill, Search } from 'bkui-vue/lib/icon';
@@ -31,6 +32,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const userStore = useUserStore();
     const router = useRouter();
     const defaultRecycleForm = () => {
       return {
@@ -41,19 +43,11 @@ export default defineComponent({
         recycle_type: [],
         return_plan: [],
         stage: [],
-        bk_username: [],
+        bk_username: [userStore.username],
       };
     };
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const recycleForm = ref(defaultRecycleForm());
-    watch(
-      () => recycleForm.value.bk_biz_id,
-      (newVal, oldVal) => {
-        if (!oldVal.length) {
-          getListData();
-        }
-      },
-    );
     const timeForm = ref(defaultTime());
     const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
     const timeObj = computed(() => {
@@ -107,11 +101,15 @@ export default defineComponent({
       stageList.value = data?.info || [];
     };
     const loadOrders = () => {
-      getListData();
+      recycleForm.value.bk_biz_id = ['all'];
     };
     const filterOrders = () => {
       pageInfo.value.start = 0;
-      loadOrders();
+      recycleForm.value.bk_biz_id =
+        recycleForm.value.bk_biz_id.length === 1 && recycleForm.value.bk_biz_id[0] === 'all'
+          ? undefined
+          : recycleForm.value.bk_biz_id;
+      getListData();
     };
     const clearFilter = () => {
       const initForm = defaultRecycleForm();
@@ -119,6 +117,7 @@ export default defineComponent({
       recycleForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
+      loadOrders();
     };
     const goToPrecheck = () => {
       router.push({
@@ -346,6 +345,12 @@ export default defineComponent({
                   v-model={recycleForm.value.bk_username}
                   multiple
                   clearable
+                  defaultUserlist={[
+                    {
+                      username: userStore.username,
+                      display_name: userStore.username,
+                    },
+                  ]}
                   placeholder='请输入企业微信名'
                 />
               </FormItem>

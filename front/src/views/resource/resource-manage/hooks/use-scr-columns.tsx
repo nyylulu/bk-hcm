@@ -2,6 +2,7 @@
 // table 字段相关信息
 import { useAccountStore } from '@/store';
 import { Button } from 'bkui-vue';
+import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
@@ -46,6 +47,7 @@ interface LinkFieldOptions {
 export default (type: string, isSimpleShow = false) => {
   const router = useRouter();
   const route = useRoute();
+  const { t } = i18n.global;
   const accountStore = useAccountStore();
   const { getRegionName } = useRegionsStore();
   const { whereAmI } = useWhereAmI();

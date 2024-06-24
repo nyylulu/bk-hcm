@@ -8,6 +8,7 @@ import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import FastCvmProduce from './component/fast-cvm-produce';
 import CreateOrder from './component/create-order';
+import { useUserStore } from '@/store';
 import SuccessProduceDetail from './component/success-produce-detail';
 import { Button, Form, Select } from 'bkui-vue';
 import { Copy, Search } from 'bkui-vue/lib/icon';
@@ -28,6 +29,7 @@ export default defineComponent({
     FloatInput,
   },
   setup() {
+    const userStore = useUserStore();
     const defaultCvmProduceForm = () => ({
       require_type: [],
       region: [],
@@ -36,7 +38,7 @@ export default defineComponent({
       order_id: [],
       task_id: [],
       status: [],
-      bk_username: [],
+      bk_username: [userStore.username],
     });
     const defaultTime = () => [new Date(dayjs().subtract(1, 'week').format('YYYY-MM-DD')), new Date()];
     const cvmProduceForm = ref(defaultCvmProduceForm());
@@ -303,6 +305,12 @@ export default defineComponent({
                       v-model={cvmProduceForm.value.bk_username}
                       multiple
                       clearable
+                      defaultUserlist={[
+                        {
+                          username: userStore.username,
+                          display_name: userStore.username,
+                        },
+                      ]}
                       placeholder='请输入企业微信名'
                     />
                   </FormItem>

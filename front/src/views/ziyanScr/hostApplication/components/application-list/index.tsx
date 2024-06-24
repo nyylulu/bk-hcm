@@ -20,7 +20,7 @@ import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import CommonSideslider from '@/components/common-sideslider';
 import { timeFormatter, applicationTime } from '@/common/util';
 import http from '@/http';
-import { useZiyanScrStore } from '@/store';
+import { useZiyanScrStore, useUserStore } from '@/store';
 import SuborderDetail from '../suborder-detail';
 import CommonDialog from '@/components/common-dialog';
 import { throttle } from 'lodash';
@@ -31,6 +31,7 @@ const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
+    const userStore = useUserStore();
     const businessMapStore = useBusinessMapStore();
     const { transformApplyStages } = useApplyStages();
     const { transformRequireTypes } = useRequireTypes();
@@ -46,12 +47,12 @@ export default defineComponent({
     });
     const scrStore = useZiyanScrStore();
     const { formModel, resetForm } = useFormModel({
-      bkBizId: businessMapStore.authedBusinessList?.[0]?.id,
+      bkBizId: ['all'],
       requireType: [],
       stage: [],
       orderId: [],
       dateRange: applicationTime(),
-      user: [],
+      user: [userStore.username],
     });
     const reapply = (data: any) => {
       router.push({
@@ -383,7 +384,7 @@ export default defineComponent({
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
         payload: removeEmptyFields({
-          bk_biz_id: formModel.bkBizId === 'all' ? undefined : formModel.bkBizId,
+          bk_biz_id: formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? undefined : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)
                 .split('\n')
@@ -459,7 +460,7 @@ export default defineComponent({
         <div class={'filter-container'}>
           <Form model={formModel} class={'scr-form-wrapper'}>
             <FormItem label='业务'>
-              <BusinessSelector autoSelect v-model={formModel.bkBizId} authed isShowAll />
+              <BusinessSelector autoSelect v-model={formModel.bkBizId} multiple authed isShowAll />
             </FormItem>
             <FormItem label='需求类型'>
               <RequirementTypeSelector v-model={formModel.requireType} multiple />
@@ -480,7 +481,16 @@ export default defineComponent({
               <ScrDatePicker v-model={formModel.dateRange} />
             </FormItem>
             <FormItem label='申请人'>
-              <MemberSelect v-model={formModel.user} />
+              <MemberSelect
+                v-model={formModel.user}
+                clearable
+                defaultUserlist={[
+                  {
+                    username: userStore.username,
+                    display_name: userStore.username,
+                  },
+                ]}
+              />
             </FormItem>
           </Form>
         </div>
