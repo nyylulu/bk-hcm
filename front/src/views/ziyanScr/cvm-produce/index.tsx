@@ -56,6 +56,7 @@ export default defineComponent({
     });
     const requestListParams = ref({
       ...timeObj.value,
+      bk_username: [userStore.username],
       page: pageInfo.value,
     });
     const loadOrders = () => {
