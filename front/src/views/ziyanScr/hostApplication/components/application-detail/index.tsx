@@ -167,6 +167,7 @@ export default defineComponent({
       const orderId = route.params.id;
       const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
         order_id: [+orderId],
+        bk_biz_id: [detail.value.bk_biz_id],
         page: { start: 0, limit: 50 },
       });
       detail.value.info = data.info;
@@ -235,8 +236,8 @@ export default defineComponent({
             },
             {
               field: 'bk_biz_id',
-              operator: 'equal',
-              value: Number(route?.query?.bk_biz_id),
+              operator: 'in',
+              value: [detail.value.bk_biz_id],
             },
           ],
         },

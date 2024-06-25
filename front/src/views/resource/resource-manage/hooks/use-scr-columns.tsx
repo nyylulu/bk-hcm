@@ -484,9 +484,6 @@ export default (type: string, isSimpleShow = false) => {
             onClick={() => {
               router.push({
                 name: 'host-application-detail',
-                query: {
-                  bk_biz_id: data.bk_biz_id,
-                },
                 params: {
                   id: data.order_id,
                 },

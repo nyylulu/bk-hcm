@@ -110,9 +110,6 @@ export default defineComponent({
                     onClick={() => {
                       router.push({
                         name: 'host-application-detail',
-                        query: {
-                          bk_biz_id: data.bk_biz_id,
-                        },
                         params: {
                           id: data.order_id,
                         },
@@ -423,8 +420,8 @@ export default defineComponent({
             },
             {
               field: 'bk_biz_id',
-              operator: 'equal',
-              value: row.bk_biz_id,
+              operator: 'in',
+              value: [row.bk_biz_id],
             },
           ],
         },
