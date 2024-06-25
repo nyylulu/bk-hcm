@@ -22,6 +22,7 @@ package mainaccount
 import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"strings"
 )
 
 // PrepareReq 预处理申请单数据
@@ -69,10 +70,12 @@ func (a *ApplicationOfUpdateMainAccount) GetItsmApprover(managers []string) []it
 		return approvers
 	}
 
-	if opManager != "" {
+	opManagers := strings.Split(opManager, ";")
+
+	if len(opManagers) != 0 {
 		approvers = append(approvers, itsm.VariableApprover{
 			Variable:  "op_product_manager",
-			Approvers: []string{opManager},
+			Approvers: opManagers,
 		})
 	}
 
