@@ -95,87 +95,76 @@ export default defineComponent({
       getListData();
     });
     return () => (
-      <div class={'device-query-container'}>
-        <CommonTable>
-          {{
-            tabselect: () => (
-              <>
-                <Form label-width='110' class='scr-form-wrapper' model={formModel}>
-                  <FormItem label='业务'>
-                    <BusinessSelector autoSelect multiple v-model={formModel.bkBizId} authed isShowAll />
-                  </FormItem>
-                  <FormItem label='需求类型'>
-                    <RequirementTypeSelector v-model={formModel.requireType} />
-                  </FormItem>
-                  <FormItem label='单号'>
-                    <bk-input v-model={formModel.orderId} clearable type='number' placeholder='请输入单号'></bk-input>
-                  </FormItem>
-                  <FormItem label='申请人'>
-                    <MemberSelect
-                      v-model={formModel.bkUsername}
-                      multiple
-                      clearable
-                      defaultUserlist={[
-                        {
-                          username: userStore.username,
-                          display_name: userStore.username,
-                        },
-                      ]}
-                    />
-                  </FormItem>
-                  <FormItem label='交付时间'>
-                    <bk-date-picker type='daterange' v-model={formModel.dateRange} />
-                  </FormItem>
-                  <FormItem label='内网 IP'>
-                    <Input
-                      class={'filte-item'}
-                      type='textarea'
-                      clearable
-                      placeholder='请输入IP地址，多行换行分割'
-                      v-model={formModel.ip}
-                      autosize
-                      resize={false}
-                    />
-                  </FormItem>
-
-                  <Button
-                    class={'ml24 mr8'}
-                    theme='primary'
-                    native-type='submit'
-                    loading={isLoading.value}
-                    onClick={() => {
-                      getListData();
-                    }}>
-                    查询
-                  </Button>
-                  <Button
-                    class={'mr8'}
-                    onClick={() => {
-                      resetForm();
-                      getListData();
-                    }}>
-                    清空
-                  </Button>
-
-                  <ExportToExcelButton class={'mr8'} data={selections.value} columns={columns} filename='设备列表' />
-                  <ExportToExcelButton
-                    class={'mr8'}
-                    data={dataList.value}
-                    columns={columns}
-                    filename='设备列表'
-                    text='导出全部'
-                  />
-                  <Button class={'mr8'} v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
-                    复制IP
-                  </Button>
-                  <Button class={'mr8'} v-clipboard={clipHostAssetId.value} disabled={selections.value.length === 0}>
-                    复制固单号
-                  </Button>
-                </Form>
-              </>
-            ),
-          }}
-        </CommonTable>
+      <div class={'apply-list-container'}>
+        <div class={'filter-container'}>
+          <Form label-width='110' formType='vertical' class='scr-form-wrapper' model={formModel}>
+            <FormItem label='业务'>
+              <BusinessSelector autoSelect multiple v-model={formModel.bkBizId} authed isShowAll />
+            </FormItem>
+            <FormItem label='需求类型'>
+              <RequirementTypeSelector v-model={formModel.requireType} />
+            </FormItem>
+            <FormItem label='单号'>
+              <bk-input v-model={formModel.orderId} clearable type='number' placeholder='请输入单号'></bk-input>
+            </FormItem>
+            <FormItem label='申请人'>
+              <MemberSelect
+                v-model={formModel.bkUsername}
+                multiple
+                clearable
+                defaultUserlist={[
+                  {
+                    username: userStore.username,
+                    display_name: userStore.username,
+                  },
+                ]}
+              />
+            </FormItem>
+            <FormItem label='交付时间'>
+              <bk-date-picker type='daterange' v-model={formModel.dateRange} />
+            </FormItem>
+            <FormItem label='内网 IP'>
+              <Input
+                class={'filte-item'}
+                type='textarea'
+                clearable
+                placeholder='请输入IP地址，多行换行分割'
+                v-model={formModel.ip}
+                autosize
+                resize={false}
+              />
+            </FormItem>
+          </Form>
+          <div class='btn-container'>
+            <Button
+              theme='primary'
+              native-type='submit'
+              loading={isLoading.value}
+              onClick={() => {
+                getListData();
+              }}>
+              查询
+            </Button>
+            <Button
+              onClick={() => {
+                resetForm();
+                getListData();
+              }}>
+              清空
+            </Button>
+          </div>
+        </div>
+        <div class='btn-container oper-btn-pad'>
+          <ExportToExcelButton data={selections.value} columns={columns} filename='设备列表' />
+          <ExportToExcelButton data={dataList.value} columns={columns} filename='设备列表' text='导出全部' />
+          <Button v-clipboard={clipHostIp.value} disabled={selections.value.length === 0}>
+            复制IP
+          </Button>
+          <Button v-clipboard={clipHostAssetId.value} disabled={selections.value.length === 0}>
+            复制固单号
+          </Button>
+        </div>
+        <CommonTable />
       </div>
     );
   },

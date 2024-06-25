@@ -103,22 +103,28 @@ export default defineComponent({
             width: 100,
             render: ({ data }: any) => {
               return (
-                <div class={'flex-row align-item-center'}>
-                  <Button
-                    theme='primary'
-                    text
-                    onClick={() => {
-                      router.push({
-                        name: 'host-application-detail',
-                        params: {
-                          id: data.order_id,
-                        },
-                      });
-                    }}>
-                    {data.order_id}
-                  </Button>
-                  <br />
-                  <p class={'ml8 sub-order-txt'}>子单号: {data.suborder_id || '无'}</p>
+                <div>
+                  <div>
+                    <Button
+                      theme='primary'
+                      text
+                      onClick={() => {
+                        router.push({
+                          name: 'host-application-detail',
+                          query: {
+                            bk_biz_id: data.bk_biz_id,
+                          },
+                          params: {
+                            id: data.order_id,
+                          },
+                        });
+                      }}>
+                      {data.order_id}
+                    </Button>
+                  </div>
+                  <div>
+                    <p>{data.suborder_id || '无'}</p>
+                  </div>
                 </div>
               );
             },
@@ -455,7 +461,7 @@ export default defineComponent({
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
-          <Form model={formModel} class={'scr-form-wrapper'}>
+          <Form model={formModel} formType='vertical' class={'scr-form-wrapper'}>
             <FormItem label='业务'>
               <BusinessSelector autoSelect v-model={formModel.bkBizId} multiple authed isShowAll />
             </FormItem>
@@ -490,39 +496,38 @@ export default defineComponent({
               />
             </FormItem>
           </Form>
+          <div class='btn-container'>
+            <Button
+              theme={'primary'}
+              onClick={() => {
+                getListData();
+              }}
+              loading={isLoading.value}>
+              查询
+            </Button>
+            <Button
+              onClick={() => {
+                resetForm();
+                getListData();
+              }}>
+              清空
+            </Button>
+          </div>
         </div>
-        <Button
-          theme='primary'
-          onClick={() => {
-            router.push({
-              path: '/ziyanScr/hostApplication/apply',
-              query: route.query,
-            });
-          }}
-          class={'ml24'}>
-          新增申请
-        </Button>
-        <Button
-          theme={'primary'}
-          onClick={() => {
-            getListData();
-          }}
-          class={'ml24 mr8'}
-          loading={isLoading.value}>
-          查询
-        </Button>
-        <Button
-          onClick={() => {
-            resetForm();
-            getListData();
-          }}>
-          清空
-        </Button>
-        <div class={'table-container'}>
-          <CommonTable />
+        <div class='btn-container oper-btn-pad'>
+          <Button
+            theme='primary'
+            onClick={() => {
+              router.push({
+                path: '/ziyanScr/hostApplication/apply',
+                query: route.query,
+              });
+            }}>
+            新增申请
+          </Button>
         </div>
-
-        <CommonSideslider v-model:isShow={isSidesliderShow.value} title='资源匹配详情' width={1000} noFooter>
+        <CommonTable />
+        <CommonSideslider v-model:isShow={isSidesliderShow.value} title='资源匹配详情' width={1100} noFooter>
           <Table
             showOverflowTooltip
             border={['outer', 'col', 'row']}
@@ -531,7 +536,7 @@ export default defineComponent({
               {
                 field: 'step_id',
                 label: 'ID',
-                width: '60',
+                width: 40,
               },
               {
                 field: 'step_name',
@@ -552,6 +557,7 @@ export default defineComponent({
               {
                 field: 'message',
                 label: '状态说明',
+                width: 100,
               },
               {
                 label: '概要',
@@ -611,7 +617,6 @@ export default defineComponent({
                     )}
                   </div>
                 ),
-                fixed: 'right',
               },
             ]}></Table>
         </CommonSideslider>

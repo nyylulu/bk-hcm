@@ -1,4 +1,5 @@
 import { defineComponent, ref, defineAsyncComponent, h, resolveComponent } from 'vue';
+import './index.scss';
 export default defineComponent({
   components: {
     HostRecycleTable: defineAsyncComponent(() => import('./host-recycle-table')),
@@ -25,7 +26,7 @@ export default defineComponent({
     ]);
 
     return () => (
-      <bk-tab v-model:active={activeName.value} type='unborder-card'>
+      <bk-tab v-model:active={activeName.value} type='card-grid' class='tab-wrapper'>
         {pagePanel.value.map(({ name, label, tranferProps }) => {
           return (
             <bk-tab-panel key={name} name={name} label={label}>

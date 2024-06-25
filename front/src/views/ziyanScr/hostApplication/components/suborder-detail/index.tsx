@@ -4,7 +4,7 @@ import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import { defineComponent, ref, watch } from 'vue';
 import { DETAIL_STATUS } from './constants';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-
+import usePagination from '@/hooks/usePagination';
 export default defineComponent({
   props: {
     suborderId: {
@@ -26,10 +26,23 @@ export default defineComponent({
 
     const fetchData = ref<Function>();
     const tableColumns = ref([]);
-
+    const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => getListData());
+    const getListData = async () => {
+      const { data } = await fetchData.value(
+        props.suborderId,
+        {
+          limit: pagination.limit,
+          start: pagination.start,
+          total: 0,
+        },
+        curStatus.value,
+      );
+      list.value = data.info;
+      pagination.count = data?.count;
+    };
     watch(
       () => [props.suborderId, props.stepId, curStatus.value],
-      async () => {
+      () => {
         switch (props.stepId) {
           case 2: {
             fetchData.value = scrStore.getProductionDetails;
@@ -47,16 +60,7 @@ export default defineComponent({
             break;
           }
         }
-        const { data } = await fetchData.value(
-          props.suborderId,
-          {
-            limit: 10,
-            start: 0,
-            total: 2,
-          },
-          curStatus.value,
-        );
-        list.value = data.info;
+        getListData();
       },
       {
         immediate: true,
@@ -71,7 +75,14 @@ export default defineComponent({
             <BkRadioButton label={label}>{name}</BkRadioButton>
           ))}
         </BkRadioGroup>
-        <Table data={list.value} columns={tableColumns.value} class={'mt16'} />
+        <Table
+          data={list.value}
+          pagination={pagination}
+          columns={tableColumns.value}
+          onPageLimitChange={handlePageLimitChange}
+          onPageValueChange={handlePageValueChange}
+          class={'mt16'}
+        />
       </div>
     );
   },

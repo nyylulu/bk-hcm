@@ -187,15 +187,17 @@ export default defineComponent({
 
     return () => (
       <div class='scr-resource-manage-page'>
-        <Tab v-model:active={activeType.value} type='card-grid'>
+        <Tab v-model:active={activeType.value} type='card-grid' class='tab-wrapper'>
           {types.map(({ label, value, Component }) => (
             <TabPanel key={value} label={label} name={value} renderDirective='if'>
               <div class='manage-container'>
                 <FilterFormItems config={filterFormItems} handleSearch={reloadDataList} handleClear={clearFilter} />
-                <Button theme='primary' onClick={gotoCreatePage} class='mb16'>
-                  <Plus class='f22' /> 发起{activeType.value === 'online' ? '上架' : '下架'}
-                </Button>
-                <Component style={{ height: 'calc(100% - 250px)' }} />
+                <div class={'manage-com'}>
+                  <Button class={'manage-com-button'} theme='primary' onClick={gotoCreatePage}>
+                    <Plus class='f22' /> 发起{activeType.value === 'online' ? '上架' : '下架'}
+                  </Button>
+                  <Component style={{ height: 'calc(100% - 250px)' }} />
+                </div>
               </div>
             </TabPanel>
           ))}

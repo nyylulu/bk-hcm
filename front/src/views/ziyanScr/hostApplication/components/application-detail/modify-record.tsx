@@ -111,7 +111,7 @@ export default defineComponent({
     return () => (
       <Sideslider
         v-bind={attrs}
-        width='800'
+        width='1000'
         v-model:isShow={isDisplay.value}
         title={props.title}
         before-close={updateShowValue}>

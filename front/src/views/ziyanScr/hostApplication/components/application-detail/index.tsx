@@ -32,20 +32,6 @@ export default defineComponent({
     const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
     const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
-    cloudcolumns.splice(4, 0, {
-      label: '交付情况-已支付',
-      field: 'success_num',
-      render: ({ row }: any) => (
-        <span class={'copy-wrapper'}>
-          {row.success_num}
-          {row.success_num > 0 ? (
-            <Button text theme='primary'>
-              <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
-            </Button>
-          ) : null}
-        </span>
-      ),
-    });
     const Hostcolumns = [
       ...cloudcolumns,
       {
@@ -63,26 +49,28 @@ export default defineComponent({
     const Machinecolumns = [
       {
         type: 'selection',
+        align: 'center',
         width: 32,
-        minWidth: 32,
-        onlyShowOnList: true,
       },
       {
         label: '机型',
         field: 'spec.device_type',
-        width: 180,
+        width: 140,
       },
       {
-        label: '交付情况-总数',
+        label: '总数',
         field: 'total_num',
+        width: 40,
       },
       {
-        label: '交付情况-待交付',
+        label: '待交付',
         field: 'pending_num',
+        width: 50,
       },
       {
-        label: '交付情况-已交付',
+        label: '已交付',
         field: 'success_num',
+        width: 50,
         render: ({ row }: any) => (
           <span class={'copy-wrapper'}>
             {row.success_num}
@@ -95,10 +83,6 @@ export default defineComponent({
         ),
       },
       ...physicalcolumns,
-      {
-        label: '状态',
-        field: 'stage',
-      },
       {
         label: '操作',
         width: 120,
@@ -337,6 +321,7 @@ export default defineComponent({
               <>
                 <p class={'mt16 mb8'}>云主机</p>
                 <Table
+                  showOverflowTooltip
                   data={cloundMachineList.value}
                   columns={Hostcolumns}
                   {...{
@@ -354,6 +339,7 @@ export default defineComponent({
               <>
                 <p class={'mt16 mb8'}>物理机</p>
                 <Table
+                  showOverflowTooltip
                   {...{
                     onSelect: (selections: any) => {
                       handleSelectionChange(selections, () => true, false);

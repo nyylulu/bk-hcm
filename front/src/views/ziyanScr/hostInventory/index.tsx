@@ -2,12 +2,13 @@ import { defineComponent, ref, onMounted } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import apiService from '@/api/scrApi';
-import { Button } from 'bkui-vue';
+import { Button, Form } from 'bkui-vue';
 import { useRouter } from 'vue-router';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+const { FormItem } = Form;
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {
@@ -187,108 +188,103 @@ export default defineComponent({
       },
     });
     return () => (
-      <div class={'scr-resource'}>
-        <div class={'displayflex'}>
-          <div class='tabselect'>
-            <span>需求类型</span>
-            <bk-select class='tbkselect' v-model={filter.value.require_type}>
-              {options.value.require_types.map((item) => (
-                <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-              ))}
-            </bk-select>
-          </div>
-          <div class='tabselect'>
-            <span>地域</span>
-            <AreaSelector
-              ref='areaSelector'
-              class='tbkselect'
-              v-model={filter.value.region}
-              multiple
-              clearable
-              filterable
-              params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
-          </div>
-          <div class='tabselect'>
-            <span>园区</span>
-            <ZoneSelector
-              ref='zoneSelector'
-              v-model={filter.value.zone}
-              class='tbkselect'
-              separateCampus={false}
-              multiple
-              params={{
-                resourceType: 'QCLOUDCVM',
-                region: filter.value.region,
-              }}></ZoneSelector>
-          </div>
-          <div class='tabselect'>
-            <span>实例族</span>
-            <bk-select
-              class='tbkselect'
-              v-model={filter.value.device_group}
-              multiple
-              clearable
-              collapse-tags
-              onChange={handleDeviceGroupChange}>
-              {options.value.device_groups.map((item) => (
-                <bk-option key={item} value={item} label={item}></bk-option>
-              ))}
-            </bk-select>
-          </div>
-          <div class='tabselect'>
-            <span>机型</span>
-            <bk-select
-              class='tbkselect'
-              v-model={filter.value.device_type}
-              clearable
-              multiple
-              disabled={deviceTypeDisabled.value}
-              filterable
-              onChange={handleDeviceTypeChange}>
-              {options.value.device_types.map((item) => (
-                <bk-option key={item} value={item} label={item}></bk-option>
-              ))}
-            </bk-select>
-          </div>
-          <div class='tabselect'>
-            <span>CPU(核)</span>
-            <bk-select
-              class='tbkselect'
-              v-model={filter.value.cpu}
-              clearable
-              disabled={deviceConfigDisabled.value}
-              filterable
-              onChange={handleDeviceConfigChange}>
-              {options.value.cpu.map((item) => (
-                <bk-option key={item} value={item} label={item}></bk-option>
-              ))}
-            </bk-select>
-          </div>
-          <div class='tabselect'>
-            <span>内存(G)</span>
-            <bk-select
-              class='tbkselect'
-              v-model={filter.value.mem}
-              clearable
-              disabled={deviceConfigDisabled.value}
-              filterable
-              onChange={handleDeviceConfigChange}>
-              {options.value.mem.map((item) => (
-                <bk-option key={item} value={item} label={item}></bk-option>
-              ))}
-            </bk-select>
+      <div class={'apply-list-container cvm-web-wrapper'}>
+        <div class={'filter-container'}>
+          <Form model={filter.value} formType='vertical' class={'scr-form-wrapper'}>
+            <FormItem label='需求类型'>
+              <bk-select class='tbkselect' v-model={filter.value.require_type}>
+                {options.value.require_types.map((item) => (
+                  <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
+                ))}
+              </bk-select>
+            </FormItem>
+            <FormItem label='地域'>
+              <AreaSelector
+                ref='areaSelector'
+                class='tbkselect'
+                v-model={filter.value.region}
+                multiple
+                clearable
+                filterable
+                params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
+            </FormItem>
+            <FormItem label='园区'>
+              <ZoneSelector
+                ref='zoneSelector'
+                v-model={filter.value.zone}
+                class='tbkselect'
+                separateCampus={false}
+                multiple
+                params={{
+                  resourceType: 'QCLOUDCVM',
+                  region: filter.value.region,
+                }}></ZoneSelector>
+            </FormItem>
+            <FormItem label='实例族'>
+              <bk-select
+                class='tbkselect'
+                v-model={filter.value.device_group}
+                multiple
+                clearable
+                collapse-tags
+                onChange={handleDeviceGroupChange}>
+                {options.value.device_groups.map((item) => (
+                  <bk-option key={item} value={item} label={item}></bk-option>
+                ))}
+              </bk-select>
+            </FormItem>
+            <FormItem label='机型'>
+              <bk-select
+                class='tbkselect'
+                v-model={filter.value.device_type}
+                clearable
+                multiple
+                disabled={deviceTypeDisabled.value}
+                filterable
+                onChange={handleDeviceTypeChange}>
+                {options.value.device_types.map((item) => (
+                  <bk-option key={item} value={item} label={item}></bk-option>
+                ))}
+              </bk-select>
+            </FormItem>
+            <FormItem label='CPU(核)'>
+              <bk-select
+                class='tbkselect'
+                v-model={filter.value.cpu}
+                clearable
+                disabled={deviceConfigDisabled.value}
+                filterable
+                onChange={handleDeviceConfigChange}>
+                {options.value.cpu.map((item) => (
+                  <bk-option key={item} value={item} label={item}></bk-option>
+                ))}
+              </bk-select>
+            </FormItem>
+            <FormItem label='内存(G)'>
+              <bk-select
+                class='tbkselect'
+                v-model={filter.value.mem}
+                clearable
+                disabled={deviceConfigDisabled.value}
+                filterable
+                onChange={handleDeviceConfigChange}>
+                {options.value.mem.map((item) => (
+                  <bk-option key={item} value={item} label={item}></bk-option>
+                ))}
+              </bk-select>
+            </FormItem>
+          </Form>
+          <div class='btn-container'>
+            <bk-button icon='bk-icon-search' theme='primary' onClick={filterDevices}>
+              <Search></Search>
+              查询
+            </bk-button>
+            <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
+              清空
+            </bk-button>
           </div>
         </div>
-        <div>
-          <bk-button icon='bk-icon-search' theme='primary' class='bkbutton' onClick={filterDevices}>
-            <Search></Search>
-            查询
-          </bk-button>
-          <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
-            清空
-          </bk-button>
-        </div>
-        <CommonTable class={'host-CommonTable'}></CommonTable>
+        <CommonTable class={'filter-CommonTable'}></CommonTable>
       </div>
     );
   },

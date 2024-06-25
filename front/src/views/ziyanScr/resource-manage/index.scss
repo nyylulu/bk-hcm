@@ -1,11 +1,9 @@
 .scr-resource-manage-page {
   height: 100%;
-  padding: 24px;
 
   .manage-container {
     height: 100%;
-    padding: 24px;
-
+    
     .w150 {
       width: 150px;
     }
@@ -18,7 +16,12 @@
       font-size: 22px;
     }
   }
-
+.manage-com{
+  background-color: #fff;
+  .manage-com-button{
+    margin: 10px 25px;
+  }
+}
   .bk-tab--card-grid {
     height: 100%;
 
@@ -27,4 +30,8 @@
       padding: 0;
     }
   }
+}
+.tab-wrapper {
+  margin: 24px;
+  min-height: calc(100vh - 150px);
 }

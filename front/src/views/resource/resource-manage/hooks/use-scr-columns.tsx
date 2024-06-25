@@ -177,26 +177,28 @@ export default (type: string, isSimpleShow = false) => {
   const CRSOcolumns = [
     {
       type: 'selection',
+      align: 'center',
       width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
     },
     {
       label: '机型',
       field: 'spec.device_type',
-      width: 180,
+      width: 140,
     },
     {
-      label: '交付情况-总数',
+      label: '总数',
       field: 'total_num',
+      width: 40,
     },
     {
-      label: '交付情况-待支付',
+      label: '待支付',
       field: 'pending_num',
+      width: 50,
     },
     {
-      label: '交付情况-已支付',
+      label: '已支付',
       field: 'success_num',
+      width: 50,
     },
     {
       label: '地域',
@@ -211,6 +213,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '反亲和性',
       field: 'anti_affinity_level',
+      width: 90,
       render: ({ row }: any) => transformAntiAffinityLevels(row.anti_affinity_level),
     },
     {
@@ -221,10 +224,12 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '数据盘大小',
       field: 'spec.disk_size',
+      width: 100,
     },
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
+      width: 100,
       render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
     },
     {
@@ -235,7 +240,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '状态',
       field: 'stage',
-      width: 180,
       render: ({ row }: any) => transformApplyStages(row.stage),
     },
   ];
@@ -253,6 +257,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '反亲和性',
       field: 'anti_affinity_level',
+      width: 90,
       render: ({ row }: any) => transformAntiAffinityLevels(row.anti_affinity_level),
     },
     {
@@ -262,35 +267,45 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '数据盘大小',
       field: 'spec.disk_size',
+      width: 100,
     },
     {
       label: 'RAID类型',
       field: 'spec.raid_type',
+      width: 100,
     },
     {
       label: '备注',
       field: 'remark',
       render: ({ cell }: { cell: string }) => cell || '--',
     },
+    {
+      label: '状态',
+      field: 'stage',
+      render: ({ row }: any) => transformApplyStages(row.stage),
+    },
   ];
   const CHColumns = [
     {
       label: '机型',
       field: 'spec.device_type',
-      width: 180,
+      width: 150,
     },
     {
       label: '需求数量',
       field: 'replicas',
+      width: 90,
     },
     {
       label: '地域',
       field: 'spec.region',
+      width: 150,
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
       field: 'spec.zone',
+      width: 150,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
@@ -301,11 +316,12 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '数据盘大小',
       field: 'spec.disk_size',
-      width: 180,
+      width: 95,
     },
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
+      width: 95,
       render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
     },
     {
@@ -330,19 +346,23 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '需求数量',
       field: 'replicas',
+      width: 90,
     },
     {
       label: '地域',
       field: 'spec.region',
+      width: 150,
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
     },
     {
       label: '园区',
       field: 'spec.zone',
+      width: 150,
     },
     {
       label: 'RAID 类型',
       field: 'spec.raid_type',
+      width: 110,
     },
     {
       label: '操作系统',

@@ -1,23 +1,29 @@
-.tabselect {
+.sub-order-num,.username {
+  color: #409eff;
+  cursor: pointer;
+}
+.order-width {
+  width: 180px;
+}
+.cvm-web-wrapper {
+  margin: 20px 10px 0;
+}
+.recycle-operation {
   display: flex;
   align-items: center;
-  height: 40px;
-  margin: 10px 10px 0;
-  .tbkselect {
-    margin: 0 10px;
+  .bk-button+.bk-button {
+      margin-left: 10px;
   }
-}
-.bkbutton {
-  margin-right: 10px;
-}
-.scr-resource {
-  margin: 24px;
-  background-color: #fff;
 }
 .displayflex {
   display: flex;
-  padding: 6px 14px 30px;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
 }
-.host-CommonTable {
-  padding: 15px;
+
+.pop-btn {
+  margin-top: 10px;
 }
+
+@import url(../css/form.scss);

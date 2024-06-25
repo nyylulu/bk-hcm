@@ -98,7 +98,7 @@ export default defineComponent({
       if (route?.query?.suborder_id) {
         originalDocumentslist.value = [];
         const { info } = await apiService.getOrders({
-          bk_biz_id: +route?.query?.bk_biz_id,
+          bk_biz_id: [+route?.query?.bk_biz_id],
           suborder_id: [route?.query?.suborder_id],
         });
         rawOrder.value = info[0] || { spec: {} };
