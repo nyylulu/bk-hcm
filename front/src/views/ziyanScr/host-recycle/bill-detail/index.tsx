@@ -12,6 +12,7 @@ import { Loading } from 'bkui-vue/lib/icon';
 import ExecuteRecord from '../execute-record';
 import { useRoute } from 'vue-router';
 import './index.scss';
+import { Message } from 'bkui-vue';
 export default defineComponent({
   components: {
     ExecuteRecord,
@@ -46,6 +47,17 @@ export default defineComponent({
         billBaseInfo.value = {};
       }
     };
+    const textTip = (text, theme) => {
+      const themeDes = {
+        error: '失败',
+        success: '成功',
+      };
+      Message({
+        message: `${text}${themeDes[theme]}`,
+        theme,
+        duration: 1500,
+      });
+    };
     const fetchRetryOrder = () => {
       retryOrder(
         {
@@ -54,6 +66,7 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
+          textTip('重试', 'success');
           loadOrders();
         }
       });
@@ -66,6 +79,7 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
+          textTip('终止', 'success');
           loadOrders();
         }
       });
@@ -78,6 +92,7 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
+          textTip('去除预检失败IP提交', 'success');
           loadOrders();
         }
       });

@@ -6,7 +6,7 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
-import { Button, Form, Popover, Select } from 'bkui-vue';
+import { Button, Form, Message, Popover, Select } from 'bkui-vue';
 import { useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -132,6 +132,20 @@ export default defineComponent({
         return item.suborder_id;
       });
     };
+    const loadHostRecycle = () => {
+      getListData();
+    };
+    const textTip = (text, theme) => {
+      const themeDes = {
+        error: '失败',
+        success: '成功',
+      };
+      Message({
+        message: `${text}${themeDes[theme]}`,
+        theme,
+        duration: 1500,
+      });
+    };
     const retryOrderFunc = (id: string) => {
       const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
       retryOrder(
@@ -141,7 +155,8 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
-          loadOrders();
+          textTip('重试', 'success');
+          loadHostRecycle();
         }
       });
     };
@@ -153,7 +168,8 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
-          loadOrders();
+          textTip('终止', 'success');
+          loadHostRecycle();
         }
       });
     };
@@ -166,7 +182,8 @@ export default defineComponent({
         {},
       ).then((res) => {
         if (res.code === 0) {
-          loadOrders();
+          textTip('去除预检失败IP提交', 'success');
+          loadHostRecycle();
         }
       });
     };
@@ -408,7 +425,7 @@ export default defineComponent({
               批量去除预检失败IP提交
             </Button>
           </div>
-          <CommonTable />
+          <CommonTable class={'filter-CommonTable'} />
         </div>
       );
     };

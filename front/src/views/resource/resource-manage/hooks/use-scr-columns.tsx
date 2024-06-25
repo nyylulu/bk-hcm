@@ -1396,6 +1396,8 @@ export default (type: string, isSimpleShow = false) => {
   const cvmWebColumns = [
     {
       type: 'selection',
+      width: 32,
+      minWidth: 32,
     },
     {
       label: 'VPC',
