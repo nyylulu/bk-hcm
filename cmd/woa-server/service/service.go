@@ -141,24 +141,6 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	// init mongodb client
-	mConf := cc.WoaServer().MongoDB
-	mongoConf, err := mongo.NewConf(&mConf)
-	if err != nil {
-		return nil, err
-	}
-	if err = mongodb.InitClient("", mongoConf); err != nil {
-		return nil, err
-	}
-	wConf := cc.WoaServer().Watch
-	watchConf, err := mongo.NewConf(&wConf)
-	if err != nil {
-		return nil, err
-	}
-	if err = mongodb.InitClient("", watchConf); err != nil {
-		return nil, err
-	}
-
 	// init redis client
 	rConf := cc.WoaServer().Redis
 	redisConf, err := redis.NewConf(&rConf)
@@ -169,30 +151,57 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	// init task service logics
-	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
-	if err != nil {
-		logs.Errorf("new loop stream failed, err: %v", err)
-		return nil, err
-	}
-
-	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
-	if err != nil {
-		logs.Errorf("new watch mongo client failed, err: %v", err)
-		return nil, err
-	}
-
-	informerIf, err := informer.New(loopW, watchDB)
-	if err != nil {
-		logs.Errorf("new informer failed, err: %v", err)
-		return nil, err
-	}
-
 	kt := kit.New()
-	schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
-	if err != nil {
-		logs.Errorf("new scheduler failed, err: %v", err)
-		return nil, err
+	// Mongo开关打开才生成Client链接
+	var informerIf informer.Interface
+	var schedulerIf scheduler.Interface
+
+	// Mongo开关打开才进行Init检测
+	if cc.WoaServer().UseMongo {
+		// init mongodb client
+		mConf := cc.WoaServer().MongoDB
+		mongoConf, err := mongo.NewConf(&mConf)
+		if err != nil {
+			return nil, err
+		}
+		if err = mongodb.InitClient("", mongoConf); err != nil {
+			return nil, err
+		}
+
+		wConf := cc.WoaServer().Watch
+		watchConf, err := mongo.NewConf(&wConf)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = mongodb.InitClient("", watchConf); err != nil {
+			return nil, err
+		}
+
+		// init task service logics
+		loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+		if err != nil {
+			logs.Errorf("new loop stream failed, err: %v", err)
+			return nil, err
+		}
+
+		watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+		if err != nil {
+			logs.Errorf("new watch mongo client failed, err: %v", err)
+			return nil, err
+		}
+
+		informerIf, err = informer.New(loopW, watchDB)
+		if err != nil {
+			logs.Errorf("new informer failed, err: %v", err)
+			return nil, err
+		}
+
+		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+		if err != nil {
+			logs.Errorf("new scheduler failed, err: %v", err)
+			return nil, err
+		}
 	}
 
 	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient, authorizer)

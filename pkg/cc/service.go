@@ -418,6 +418,7 @@ type WoaServerSetting struct {
 	ResDissolve  ResourceDissolve `yaml:"resourceDissolve"`
 	Es           Es               `yaml:"elasticsearch"`
 	Blacklist    string           `yaml:"blacklist"`
+	UseMongo     bool             `yaml:"useMongo"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -448,12 +449,15 @@ func (s WoaServerSetting) Validate() error {
 		return err
 	}
 
-	if err := s.MongoDB.validate(); err != nil {
-		return err
-	}
+	// 开启Mongo之后才校验参数
+	if s.UseMongo {
+		if err := s.MongoDB.validate(); err != nil {
+			return err
+		}
 
-	if err := s.Watch.validate(); err != nil {
-		return err
+		if err := s.Watch.validate(); err != nil {
+			return err
+		}
 	}
 
 	if err := s.Redis.validate(); err != nil {

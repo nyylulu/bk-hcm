@@ -127,6 +127,8 @@ esb:
     # the password to decrypt the certificate.
     password:
 
+useMongo: true
+
 mongodb:
   host: 127.0.0.1:27017
   port: 27017

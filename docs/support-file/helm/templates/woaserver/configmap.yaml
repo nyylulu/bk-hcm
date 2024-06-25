@@ -33,6 +33,7 @@ data:
         keyFile:
         caFile:
         password:
+    useMongo: {{ .Values.useMongo }}
     mongodb:
       {{- toYaml .Values.mongodb | nindent 6 }}
     watch:
