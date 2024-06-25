@@ -52,7 +52,7 @@ export default defineComponent({
       { label: '是', value: true },
       { label: '否', value: false },
     ];
-    const { selections, handleSelectionChange } = useSelection();
+    const { selections, handleSelectionChange, resetSelections } = useSelection();
     const { columns } = useColumns('cvmWebQuery');
     const tableColumns = [
       ...columns,
@@ -176,6 +176,7 @@ export default defineComponent({
         };
       }
       requestParams.value = { ...params };
+      resetSelections();
       getListData();
     };
     const filterOrders = () => {
@@ -189,7 +190,7 @@ export default defineComponent({
     const isShow = ref(false);
     const updateForm = ref({
       enable: '',
-      remark: '',
+      comment: '',
     });
     const handleBatchEdit = () => {
       isShow.value = true;
@@ -199,9 +200,9 @@ export default defineComponent({
         ids: selections.value.map((item) => item.id),
       };
       const properties = {};
-      const { enable, remark } = updateForm.value;
-      if (enable) properties.enable = enable;
-      if (remark) properties.remark = remark;
+      const { enable, comment } = updateForm.value;
+      if (String(enable)) properties.enable = enable;
+      if (comment) properties.comment = comment;
       updateSubnetProperties({ ...params, properties }, {}).then(() => {
         handleCancel();
         filterOrders();
@@ -211,7 +212,7 @@ export default defineComponent({
       isShow.value = false;
       updateForm.value = {
         enable: '',
-        remark: '',
+        comment: '',
       };
     };
     const updateSubnetProperty = (params) => {
@@ -339,7 +340,7 @@ export default defineComponent({
                   </bk-select>
                 </bk-form-item>
                 <bk-form-item label='备注'>
-                  <bk-input v-model={updateForm.value.remark} placeholder='请输入备注' type='textarea' />
+                  <bk-input v-model={updateForm.value.comment} placeholder='请输入备注' type='textarea' />
                 </bk-form-item>
               </bk-form>
             ),
