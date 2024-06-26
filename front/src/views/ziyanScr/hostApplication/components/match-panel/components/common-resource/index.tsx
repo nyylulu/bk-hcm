@@ -55,6 +55,7 @@ export default defineComponent({
           {
             field: 'match_tag',
             label: '星标',
+            width: 32,
             render: ({ data }: any) => {
               if (data.matchTag) {
                 return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
@@ -76,14 +77,6 @@ export default defineComponent({
             label: '机型',
           },
           {
-            field: 'outer_ip',
-            label: '外网IP',
-          },
-          {
-            field: 'isp',
-            label: '外网运营商',
-          },
-          {
             field: 'os_type',
             label: '操作系统',
           },
@@ -98,15 +91,6 @@ export default defineComponent({
           {
             field: 'module',
             label: '模块',
-          },
-          {
-            field: 'hardMemo',
-            label: '硬件描述',
-            showOverflowTooltip: true,
-          },
-          {
-            field: 'raid_type',
-            label: 'RAID 类型',
           },
           {
             field: 'idc_unit',

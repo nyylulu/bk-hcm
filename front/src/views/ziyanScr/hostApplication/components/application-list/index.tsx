@@ -187,7 +187,16 @@ export default defineComponent({
 
               const modifyButton = () => {
                 return (
-                  <Button size='small' onClick={() => modify(data)} text theme={'primary'}>
+                  <Button
+                    size='small'
+                    onClick={() => modify(data)}
+                    disabled={data.resource_type === 'IDCPM'}
+                    v-bk-tooltips={{
+                      content: 'IDC物理机不支持修改,请联系ICR(IEG资源服务助手)',
+                      disabled: data.resource_type !== 'IDCPM',
+                    }}
+                    text
+                    theme={'primary'}>
                     修改需求重试
                   </Button>
                 );
@@ -650,7 +659,7 @@ export default defineComponent({
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
 
-        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1200} noFooter>
+        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1250} noFooter>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
         </CommonSideslider>
       </div>

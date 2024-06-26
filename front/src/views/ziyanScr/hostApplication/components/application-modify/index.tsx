@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, watch } from 'vue';
+import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
 import { Input, Button, Sideslider } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import './index.scss';
@@ -49,7 +49,7 @@ export default defineComponent({
         region: [region],
         zone: zone !== 'cvm_separate_campus' ? [zone] : undefined,
       };
-      if (rawOrder.value.require_type === 'QCLOUDCVM') {
+      if (rawOrder.value.resource_type === 'QCLOUDCVM') {
         const { info } = await apiService.getDeviceTypes(params);
         deviceTypes.value = info || [];
       } else {
@@ -194,6 +194,7 @@ export default defineComponent({
       },
     );
     const handleSubmit = async () => {
+      await formRef.value.validate();
       const { device_type, zone, replicas, subnet, vpc } = order.value.model.spec;
       const {
         suborder_id,
@@ -222,7 +223,16 @@ export default defineComponent({
           path: '/ziyanScr/hostApplication',
         });
       }
+      nextTick(() => {
+        formRef.value.clearValidate();
+      });
     };
+    const formRef = ref();
+    const rules = ref({
+      zone: [{ required: true, message: '请选择园区', trigger: 'change' }],
+      device_type: [{ required: true, message: '请选择机型', trigger: 'change' }],
+      replicas: [{ required: true, message: '输入申请数量', trigger: 'blur' }],
+    });
     return () => (
       <div class='wid100'>
         <DetailHeader>修改申请</DetailHeader>
@@ -230,18 +240,32 @@ export default defineComponent({
           {/* 原始单据 */}
           <CommonCard class='mt15' title={() => '原始单据'}>
             <div class={'display'}>
-              {originalDocumentslist.value.map((item: { name: any; value: any }) => (
-                <div>
-                  <span>{item.name}:</span>
-                  {item.name === '提单人' ? <WName name={item.value} /> : <span>{item.value}</span>}
-                </div>
-              ))}
+              {originalDocumentslist.value.map(
+                (item, index) =>
+                  index <= 4 && (
+                    <div style={'width:250px'}>
+                      <span style={'width:60px'}>{item.name}:</span>
+                      {item.name === '提单人' ? <WName name={item.value} /> : <span>{item.value}</span>}
+                    </div>
+                  ),
+              )}
+            </div>
+            <div class={'display'}>
+              {originalDocumentslist.value.map(
+                (item, index) =>
+                  index > 4 && (
+                    <div style={'width:250px'}>
+                      <span style={'width:60px'}>{item.name}:</span>
+                      {item.name === '提单人' ? <WName name={item.value} /> : <span>{item.value}</span>}
+                    </div>
+                  ),
+              )}
             </div>
           </CommonCard>
           {/* 推荐修改 */}
           <CommonCard class='mt15' title={() => '推荐修改'}>
-            <bk-form model={order.value.model} ref='formRef' class={'form'}>
-              <bk-form-item label='园区'>
+            <bk-form model={order.value.model.spec} rules={rules.value} ref={formRef} class={'form'}>
+              <bk-form-item label='园区' required property='zone'>
                 <ZoneSelector
                   ref='zoneSelector'
                   class={'w200px'}
@@ -252,10 +276,10 @@ export default defineComponent({
                   }}
                   onChange={onZoneChange}
                 />
-                <div>原始值：{getZoneCn(rawOrder.value.spec.zone)}</div>
+                <div>原始值：{getZoneCn(rawOrder.value.spec.device_type)}</div>
               </bk-form-item>
 
-              <bk-form-item label='机型'>
+              <bk-form-item label='机型' required property='device_type'>
                 <div class='component-with-preview'>
                   <bk-select
                     class={'w200px'}
@@ -274,7 +298,7 @@ export default defineComponent({
                 <div>原始值：{rawOrder.value.spec.device_type}</div>
               </bk-form-item>
 
-              <bk-form-item label='剩余可申请数量' property='resourceType'>
+              <bk-form-item label='剩余可申请数量' required property='replicas'>
                 <Input
                   class={'w200px'}
                   type='number'
@@ -328,7 +352,7 @@ export default defineComponent({
                   )}
                   layout='grid'>
                   <>
-                    <bk-form form-type='vertical' label-width='150' model={order.value.model.spec} ref='formRef'>
+                    <bk-form form-type='vertical' label-width='150' model={order.value.model.spec}>
                       <bk-form-item label='VPC'>
                         <div class='component-with-detail-container'>
                           <bk-select
