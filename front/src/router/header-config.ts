@@ -9,8 +9,13 @@ export const headRouteConfig = [
     path: '/business/host',
   },
   {
+    id: 'ziyanScr',
+    name: '自研云资源',
+    path: '/ziyanScr/hostInventory',
+  },
+  {
     id: 'resource-plan',
-    name: '服务请求',
+    name: '资源预测',
     path: '/resource-plan/list',
   },
   {
@@ -19,24 +24,19 @@ export const headRouteConfig = [
     path: '/service/my-apply',
   },
   {
+    id: 'bill',
+    name: '账号管理',
+    path: '/bill/account-manage',
+  },
+  {
     id: 'resource',
     name: '资源接入',
     path: '/resource/resource',
   },
   {
-    id: 'ziyanScr',
-    name: '自研云资源',
-    path: '/ziyanScr/hostInventory',
-  },
-  {
     id: 'scheme',
     name: '资源选型',
     path: '/scheme/recommendation',
-  },
-  {
-    id: 'bill',
-    name: '账号管理',
-    path: '/bill/account-manage',
   },
 
   // 接下来是 资源选型、平台管理

@@ -18,6 +18,7 @@ import StatusNormal from '@/assets/image/Status-normal.png';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
 import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
+import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import './use-columns.scss';
 import { defaults } from 'lodash';
@@ -1846,7 +1847,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: any) => cell.join(','),
     },
     {
-      label: '业务',
+      label: '运营产品',
       field: 'op_product_id',
     },
     {
@@ -2010,7 +2011,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
-      label: '业务名称',
+      label: '运营产品名称',
       field: 'product_name',
       isDefaultShow: true,
     },

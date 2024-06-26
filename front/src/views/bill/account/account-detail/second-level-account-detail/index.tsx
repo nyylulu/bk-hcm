@@ -5,6 +5,7 @@ import useBillStore, { IMainAccountDetail } from '@/store/useBillStore';
 import { Message } from 'bkui-vue';
 import { BILL_VENDORS_MAP } from '../../account-manage/constants';
 import { SITE_TYPE_MAP } from '@/common/constant';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 export default defineComponent({
   props: {
@@ -20,10 +21,13 @@ export default defineComponent({
       const { data } = await billStore.main_account_detail(props.accountId);
       detail.value = data;
     };
+    const translatorMap = ref(new Map());
+    const { getTranslatorMap } = useOperationProducts();
     watch(
       () => props.accountId,
       async () => {
         await getDetail();
+        translatorMap.value = await getTranslatorMap([detail.value.op_product_id]);
       },
       {
         immediate: true,
@@ -68,7 +72,8 @@ export default defineComponent({
             // { prop: 'dept_id', name: '组织架构', edit: true },
             {
               prop: 'op_product_id',
-              name: '业务',
+              name: '运营产品',
+              render: () => translatorMap.value.get(detail.value.op_product_id) || '--',
             },
             // { prop: 'status', name: '账号状态' },
             { prop: 'memo', name: '备注', edit: true },

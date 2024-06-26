@@ -9,11 +9,13 @@ import CommonSideslider from '@/components/common-sideslider';
 import FirstLevelAccountDetail from '../account-detail/first-level-account-detail';
 import SecondLevelAccountDetail from '../account-detail/second-level-account-detail';
 import { useRoute, useRouter } from 'vue-router';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 export default defineComponent({
   setup() {
     const router = useRouter();
     const route = useRoute();
+    const { getTranslatorMap } = useOperationProducts();
 
     const accountLevel = ref(AccountLevelEnum.FirstLevel);
     const { columns: firstAccountColumns } = useColumns(AccountLevelEnum.FirstLevel);
@@ -85,6 +87,18 @@ export default defineComponent({
         type: 'account/main_accounts',
         dataPath: 'data.details',
         sortOption: { sort: 'created_at', order: 'DESC' },
+        async resolveDataListCb(dataList: any) {
+          if (!dataList.length) return;
+          const ids = dataList.map((item: { op_product_id: number }) => item.op_product_id);
+          const map = await getTranslatorMap(ids);
+          return dataList.map((data: { op_product_id: number }) => {
+            const { op_product_id } = data;
+            return {
+              ...data,
+              op_product_id: map.get(op_product_id),
+            };
+          });
+        },
       },
     });
 

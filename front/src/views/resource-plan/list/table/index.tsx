@@ -7,7 +7,7 @@ import { useRouter } from 'vue-router';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useResourcePlanStore } from '@/store';
 import { useI18n } from 'vue-i18n';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import Panel from '@/components/panel';
 
 import cssModule from './index.module.scss';

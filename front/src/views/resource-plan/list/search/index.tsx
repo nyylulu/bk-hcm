@@ -70,7 +70,13 @@ export default defineComponent({
         <div class={cssModule['search-grid']}>
           <div>
             <div class={cssModule['search-label']}>{t('业务')}</div>
-            <BusinessSelector v-model={searchModel.value.bk_biz_ids} multiple={true} authed={true} />
+            <BusinessSelector
+              v-model={searchModel.value.bk_biz_ids}
+              multiple={true}
+              authed={true}
+              autoSelect={true}
+              isShowAll={true}
+            />
           </div>
           <div>
             <div class={cssModule['search-label']}>{t('单据状态')}</div>

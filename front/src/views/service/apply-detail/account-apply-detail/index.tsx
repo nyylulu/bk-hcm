@@ -9,6 +9,7 @@ import useBillStore from '@/store/useBillStore';
 import useFormModel from '@/hooks/useFormModel';
 import { BILL_VENDORS_MAP } from '@/views/bill/account/account-manage/constants';
 import { SITE_TYPE_MAP } from '@/common/constant';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -56,6 +57,8 @@ export default defineComponent({
     const rootAccountList = ref([]);
     const billStore = useBillStore();
     const isSubmitLoading = ref(false);
+    const { getTranslatorMap } = useOperationProducts();
+    const translatorMap = ref(new Map());
     const computedExtension = computed(() => {
       let extension = {}; // aws\gcp
       switch (info.value.vendor) {
@@ -87,6 +90,7 @@ export default defineComponent({
     const { formModel } = useFormModel({
       root_account_id: '', // 一级账号ID
       extension: computedExtension.value, // 不同云厂商的信息
+      dept_id: -1,
     });
 
     onMounted(async () => {
@@ -105,7 +109,9 @@ export default defineComponent({
         name: v.name,
         id: v.id,
         key: v.id,
+        vendor: v.vendor,
       }));
+      translatorMap.value = await getTranslatorMap([info.value.op_product_id]);
     });
 
     return () => (
@@ -157,7 +163,8 @@ export default defineComponent({
               },
               {
                 prop: 'op_product_id',
-                name: '业务',
+                name: '运营产品',
+                render: () => translatorMap.value.get(info.value.op_product_id) || '--',
               },
               {
                 prop: 'site',

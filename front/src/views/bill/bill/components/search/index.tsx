@@ -12,7 +12,8 @@ import { useI18n } from 'vue-i18n';
 import { VendorEnum } from '@/common/constant';
 import { QueryRuleOPEnum } from '@/typings';
 import dayjs from 'dayjs';
-import BusinessSelector from '@/components/business-selector/index.vue';
+// import BusinessSelector from '@/components/business-selector/index.vue';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 interface ISearchModal {
   vendor: VendorEnum[];
   root_account_id: string[];
@@ -26,6 +27,7 @@ export default defineComponent({
   setup(_, { emit, expose }) {
     const { t } = useI18n();
     const route = useRoute();
+    const { OperationProductsSelector } = useOperationProducts();
 
     const getDefaultModal = (): ISearchModal => ({
       vendor: [],
@@ -90,8 +92,8 @@ export default defineComponent({
             </div>
           )}
           <div>
-            <div class={cssModule['search-label']}>{'业务'}</div>
-            <BusinessSelector v-model={modal.value.product_id} />
+            <div class={cssModule['search-label']}>{'运营产品'}</div>
+            <OperationProductsSelector v-model={modal.value.product_id} multiple />
           </div>
           {['billDetail', 'billAdjust'].includes(route.name as string) && (
             <div>

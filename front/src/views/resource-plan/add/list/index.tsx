@@ -2,7 +2,7 @@ import { defineComponent, computed, type PropType, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import Panel from '@/components/panel';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import cssModule from './index.module.scss';
 
 import type { IPlanTicket } from '@/typings/resourcePlan';

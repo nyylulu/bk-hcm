@@ -473,9 +473,9 @@ export default defineComponent({
       emptyform();
       addResourceRequirements.value = isShow;
       nextTick(() => {
-        resourceFormRef.value.clearValidate();
-        QCLOUDCVMformRef.value.clearValidate();
-        IDCPMformRef.value.clearValidate();
+        resourceFormRef.value?.clearValidate();
+        QCLOUDCVMformRef.value?.clearValidate();
+        IDCPMformRef.value?.clearValidate();
       });
     };
     const CAtriggerShow = (isShow: boolean) => {
@@ -586,9 +586,9 @@ export default defineComponent({
       cvmCapacity.value = [];
       addResourceRequirements.value = false;
       nextTick(() => {
-        resourceFormRef.value.clearValidate();
-        QCLOUDCVMformRef.value.clearValidate();
-        IDCPMformRef.value.clearValidate();
+        resourceFormRef.value?.clearValidate();
+        QCLOUDCVMformRef.value?.clearValidate();
+        IDCPMformRef.value?.clearValidate();
       });
     };
     const handleSaveOrSubmit = async (type: 'save' | 'submit') => {

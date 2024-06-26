@@ -6,7 +6,7 @@ import { useDepartment } from '@/hooks';
 import { useUserStore } from '@/store';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-import OrganizationSelect from '@/components/OrganizationSelect/index';
+// import OrganizationSelect from '@/components/OrganizationSelect/index';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import CurrentDialog from '../current-dialog';
@@ -164,8 +164,8 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect>
+          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
+          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect> */}
           <span class={cssModule['search-label']}>{t('业务')}：</span>
           <BusinessSelector
             class={cssModule['search-item']}
