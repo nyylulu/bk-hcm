@@ -1,4 +1,4 @@
-import { defineComponent, computed, onMounted } from 'vue';
+import { defineComponent, computed, watch, ref } from 'vue';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -33,6 +33,8 @@ export default defineComponent({
       suborderId: '',
       dateRange: applicationTime(),
     });
+
+    const businessSelectorRef = ref();
     const { CommonTable, getListData, isLoading, dataList } = useTable({
       tableOptions: {
         columns,
@@ -62,7 +64,9 @@ export default defineComponent({
               [
                 'bk_biz_id',
                 'in',
-                formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? undefined : formModel.bkBizId,
+                formModel.bkBizId.length === 0
+                  ? businessSelectorRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+                  : formModel.bkBizId,
               ],
               ['require_type', '=', formModel.requireType],
               ['order_id', '=', formModel.orderId],
@@ -77,6 +81,7 @@ export default defineComponent({
         };
       },
     });
+
     const ipArray = computed(() => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ips = [];
@@ -91,15 +96,32 @@ export default defineComponent({
         });
       return ips;
     });
-    onMounted(() => {
-      getListData();
-    });
+
+    watch(
+      () => businessSelectorRef.value?.businessList,
+      (val) => {
+        if (!val?.length) return;
+        getListData();
+      },
+      { deep: true },
+    );
+
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
           <Form label-width='110' formType='vertical' class='scr-form-wrapper' model={formModel}>
             <FormItem label='业务'>
-              <BusinessSelector autoSelect multiple v-model={formModel.bkBizId} authed isShowAll />
+              <BusinessSelector
+                ref={businessSelectorRef}
+                autoSelect
+                multiple
+                v-model={formModel.bkBizId}
+                authed
+                isShowAll
+                notAutoSelectAll
+                saveBizs
+                bizsKey='host_apply_bizs'
+              />
             </FormItem>
             <FormItem label='需求类型'>
               <RequirementTypeSelector v-model={formModel.requireType} />

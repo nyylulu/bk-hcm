@@ -66,6 +66,10 @@ export default defineComponent({
         ...recycleForm.value,
         ...timeObj.value,
         page: pageInfo.value,
+        bk_biz_id:
+          recycleForm.value.bk_biz_id.length === 0
+            ? businessRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+            : recycleForm.value.bk_biz_id,
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
@@ -313,6 +317,7 @@ export default defineComponent({
           sort: 'create_at',
           order: 'DESC',
         },
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -350,7 +355,10 @@ export default defineComponent({
                   authed
                   clearable={false}
                   isShowAll
+                  notAutoSelectAll
                   multiple
+                  saveBizs
+                  bizsKey='host_recycle_bizs'
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>
@@ -432,6 +440,16 @@ export default defineComponent({
     onMounted(() => {
       fetchStageList();
     });
+
+    watch(
+      () => businessRef.value?.businessList,
+      (val) => {
+        if (!val?.length) return;
+        getListData();
+      },
+      { deep: true },
+    );
+
     return renderNodes;
   },
 });

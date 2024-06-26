@@ -1,5 +1,6 @@
 <script lang="ts" setup>
 import { computed, ref, watchEffect, defineExpose, PropType } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAccountStore } from '@/store';
 import { isEmpty } from '@/common/util';
 import { useI18n } from 'vue-i18n';
@@ -12,9 +13,14 @@ const props = defineProps({
   multiple: Boolean as PropType<boolean>,
   clearable: Boolean as PropType<boolean>,
   isShowAll: Boolean as PropType<boolean>,
+  notAutoSelectAll: Boolean as PropType<boolean>,
+  saveBizs: Boolean as PropType<boolean>,
+  bizsKey: String as PropType<string>,
 });
 const emit = defineEmits(['update:modelValue']);
 
+const router = useRouter();
+const route = useRoute();
 const { t } = useI18n();
 const accountStore = useAccountStore();
 const businessList = ref([]);
@@ -37,12 +43,22 @@ watchEffect(async () => {
       id: 'all',
     });
   }
-  if (props.autoSelect) {
-    const id = businessList.value?.[0]?.id ?? null;
-    const val = props.multiple ? [id].filter((v) => v) : id;
-    defaultBusiness.value = val;
-    selectedValue.value = val;
+
+  let id = null;
+  if (props.autoSelect && !isEmpty(businessList.value)) {
+    id = props.notAutoSelectAll && businessList.value[1] ? businessList.value[1].id : businessList.value[0]?.id;
   }
+  if (props.saveBizs) {
+    id = route.query?.[props.bizsKey]
+      ? JSON.parse(atob(route.query?.[props.bizsKey] as string))
+      : businessList.value?.[1]?.id;
+  }
+  if (props.multiple) {
+    id = route.query?.[props.bizsKey] ? id : [id];
+  }
+  defaultBusiness.value = id;
+  selectedValue.value = id;
+  handleChange(id);
 });
 
 const selectedValue = computed({
@@ -79,6 +95,19 @@ const selectedValue = computed({
   },
 });
 
+const handleChange = (val: string | string[]) => {
+  if (props.saveBizs) {
+    const hasAll = Array.isArray(val) && val.includes('all');
+    const customBizs = btoa(JSON.stringify(val));
+    router.push({
+      query: {
+        ...route.query,
+        [props.bizsKey]: hasAll ? undefined : customBizs,
+      },
+    });
+  }
+};
+
 defineExpose({
   businessList,
   defaultBusiness,
@@ -86,7 +115,14 @@ defineExpose({
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" :multiple="multiple" filterable :loading="loading" :clearable="clearable">
+  <bk-select
+    v-model="selectedValue"
+    :multiple="multiple"
+    filterable
+    :loading="loading"
+    :clearable="clearable"
+    @change="handleChange"
+  >
     <bk-option v-for="item in businessList" :key="item.id" :value="item.id" :label="item.name" />
   </bk-select>
 </template>

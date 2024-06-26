@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, computed } from 'vue';
+import { defineComponent, onMounted, ref, computed, watch } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -47,7 +47,7 @@ export default defineComponent({
     });
     const scrStore = useZiyanScrStore();
     const { formModel, resetForm } = useFormModel({
-      bkBizId: ['all'],
+      bkBizId: [],
       requireType: [],
       stage: [],
       orderId: [],
@@ -95,6 +95,8 @@ export default defineComponent({
         return false;
       };
     });
+
+    const businessSelectorRef = ref();
     const { CommonTable, getListData, isLoading } = useTable({
       tableOptions: {
         columns: [
@@ -383,11 +385,15 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        immediate: false,
       },
       scrConfig: () => ({
         url: '/api/v1/woa/task/findmany/apply',
         payload: removeEmptyFields({
-          bk_biz_id: formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? undefined : formModel.bkBizId,
+          bk_biz_id:
+            formModel.bkBizId.length === 0
+              ? businessSelectorRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+              : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)
                 .split('\n')
@@ -402,6 +408,15 @@ export default defineComponent({
         }),
       }),
     });
+
+    watch(
+      () => businessSelectorRef.value?.businessList,
+      (val) => {
+        if (!val?.length) return;
+        getListData();
+      },
+      { deep: true },
+    );
 
     // 获取匹配详情
     const getMatchDetails = async (subOrderId: number) => {
@@ -463,7 +478,17 @@ export default defineComponent({
         <div class={'filter-container'}>
           <Form model={formModel} formType='vertical' class={'scr-form-wrapper'}>
             <FormItem label='业务'>
-              <BusinessSelector autoSelect v-model={formModel.bkBizId} multiple authed isShowAll />
+              <BusinessSelector
+                ref={businessSelectorRef}
+                autoSelect
+                v-model={formModel.bkBizId}
+                multiple
+                authed
+                isShowAll
+                notAutoSelectAll
+                saveBizs
+                bizsKey='host_apply_bizs'
+              />
             </FormItem>
             <FormItem label='需求类型'>
               <RequirementTypeSelector v-model={formModel.requireType} multiple />

@@ -29,7 +29,7 @@ export default defineComponent({
       <bk-tab v-model:active={activeName.value} type='card-grid' class='tab-wrapper'>
         {pagePanel.value.map(({ name, label, tranferProps }) => {
           return (
-            <bk-tab-panel key={name} name={name} label={label}>
+            <bk-tab-panel key={name} name={name} label={label} renderDirective='if'>
               {/* 注意 tsx 内置组件 component 不能直接使用 */}
               {h(resolveComponent(name), tranferProps)}
             </bk-tab-panel>

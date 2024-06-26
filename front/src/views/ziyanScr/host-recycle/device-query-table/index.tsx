@@ -1,11 +1,10 @@
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, ref, computed, onMounted, watch } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { Search } from 'bkui-vue/lib/icon';
 import { useUserStore } from '@/store';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -21,11 +20,10 @@ export default defineComponent({
     FloatInput,
   },
   emits: ['goBillDetailPage'],
-  setup(props, { emit }) {
-    const businessMapStore = useBusinessMapStore();
+  setup(_, { emit }) {
     const userStore = useUserStore();
     const defaultDeviceForm = () => ({
-      bk_biz_id: [businessMapStore.authedBusinessList?.[0]?.id],
+      bk_biz_id: [],
       order_id: [],
       suborder_id: [],
       ip: [],
@@ -78,6 +76,10 @@ export default defineComponent({
         ...deviceForm.value,
         ...timeObj.value,
         page: pageInfo.value,
+        bk_biz_id:
+          deviceForm.value.bk_biz_id.length === 0
+            ? businessRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+            : deviceForm.value.bk_biz_id,
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
@@ -93,6 +95,7 @@ export default defineComponent({
           sort: 'ip',
           order: 'ASC',
         },
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -142,6 +145,16 @@ export default defineComponent({
       fetchZoneList();
       fetchStageList();
     });
+
+    watch(
+      () => businessRef.value?.businessList,
+      (val) => {
+        if (!val?.length) return;
+        getListData();
+      },
+      { deep: true },
+    );
+
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
@@ -155,7 +168,10 @@ export default defineComponent({
                 autoSelect
                 clearable={false}
                 isShowAll
+                notAutoSelectAll
                 multiple
+                saveBizs
+                bizsKey='host_recycle_bizs'
               />
             </FormItem>
             <FormItem label='单号'>
