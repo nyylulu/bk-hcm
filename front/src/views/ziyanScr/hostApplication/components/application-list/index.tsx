@@ -496,7 +496,7 @@ export default defineComponent({
                 isShowAll
                 notAutoSelectAll
                 saveBizs
-                bizsKey='host_apply_bizs'
+                bizsKey='scr_host_bizs'
               />
             </FormItem>
             <FormItem label='需求类型'>

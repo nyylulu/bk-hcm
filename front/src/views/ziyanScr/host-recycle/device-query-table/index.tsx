@@ -171,7 +171,7 @@ export default defineComponent({
                 notAutoSelectAll
                 multiple
                 saveBizs
-                bizsKey='host_recycle_bizs'
+                bizsKey='scr_host_bizs'
               />
             </FormItem>
             <FormItem label='单号'>

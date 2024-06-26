@@ -14,7 +14,7 @@ import { Plus, Search } from 'bkui-vue/lib/icon';
 import BillDetail from '../bill-detail';
 import FloatInput from '@/components/float-input';
 import './index.scss';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 const { FormItem } = Form;
 export default defineComponent({
@@ -34,6 +34,7 @@ export default defineComponent({
   setup(props) {
     const userStore = useUserStore();
     const router = useRouter();
+    const route = useRoute();
     const defaultRecycleForm = () => {
       return {
         bk_biz_id: [],
@@ -341,6 +342,7 @@ export default defineComponent({
     const returnRecyclingResources = () => {
       router.push({
         path: '/ziyanScr/hostRecycling/resources',
+        query: { ...route.query },
       });
     };
     const businessRef = ref(null);
@@ -360,7 +362,7 @@ export default defineComponent({
                   notAutoSelectAll
                   multiple
                   saveBizs
-                  bizsKey='host_recycle_bizs'
+                  bizsKey='scr_host_bizs'
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>

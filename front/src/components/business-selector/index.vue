@@ -46,12 +46,13 @@ watchEffect(async () => {
 
   let id = null;
   if (props.autoSelect && !isEmpty(businessList.value)) {
-    id = props.notAutoSelectAll && businessList.value[1] ? businessList.value[1].id : businessList.value[0]?.id;
+    id =
+      props.isShowAll && props.notAutoSelectAll && businessList.value[1]
+        ? businessList.value[1].id
+        : businessList.value[0]?.id;
   }
   if (props.saveBizs) {
-    id = route.query?.[props.bizsKey]
-      ? JSON.parse(atob(route.query?.[props.bizsKey] as string))
-      : businessList.value?.[1]?.id;
+    id = route.query?.[props.bizsKey] ? JSON.parse(atob(route.query?.[props.bizsKey] as string)) : id;
   }
   if (props.multiple) {
     id = route.query?.[props.bizsKey] ? id : [id];

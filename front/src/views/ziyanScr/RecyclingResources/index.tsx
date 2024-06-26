@@ -12,6 +12,8 @@ import apiService from '@/api/scrApi';
 import { useRouter } from 'vue-router';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
+import BusinessSelector from '@/components/business-selector/index.vue';
+
 export default defineComponent({
   name: 'RecyclingResources',
   setup() {
@@ -230,7 +232,7 @@ export default defineComponent({
     });
     return () => (
       <div class='div-RecyclingResources'>
-        <DetailHeader>
+        <DetailHeader backRouteName='hostRecycle'>
           <span class='header-title-prefix'>主机回收</span>
         </DetailHeader>
         <div class='common-sub-main-container'>
@@ -346,11 +348,13 @@ export default defineComponent({
                     <div class='displayflex' style='margin: 20px 0;'>
                       <div class='displayflex'>
                         <div class='mr-10'>业务</div>
-                        <bk-select class='item-warp-component' v-model={bkBizId.value}>
-                          {businessList.value.map((item) => (
-                            <bk-option key={item.id} value={item.id} label={item.name}></bk-option>
-                          ))}
-                        </bk-select>
+                        <BusinessSelector
+                          autoSelect
+                          v-model={bkBizId.value}
+                          authed
+                          saveBizs
+                          bizsKey='scr_recycle_bizs'
+                        />
                       </div>
                       {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
                     </div>
