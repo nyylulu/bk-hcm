@@ -81,6 +81,8 @@ func (svc *zoneSvc) BatchCreateZone(cts *rest.Contexts) (interface{}, error) {
 		return batchCreateZone[zone.HuaWeiZoneExtension](vendor, svc, cts)
 	case enumor.Gcp:
 		return batchCreateZone[zone.GcpZoneExtension](vendor, svc, cts)
+	case enumor.TCloudZiyan:
+		return batchCreateZone[zone.TCloudZoneExtension](vendor, svc, cts)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
@@ -102,6 +104,8 @@ func (svc *zoneSvc) BatchUpdateZone(cts *rest.Contexts) (interface{}, error) {
 		return batchUpdateZone[zone.HuaWeiZoneExtension](cts, svc)
 	case enumor.Azure:
 		return batchUpdateZone[zone.GcpZoneExtension](cts, svc)
+	case enumor.TCloudZiyan:
+		return batchUpdateZone[zone.TCloudZoneExtension](cts, svc)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}

@@ -217,6 +217,8 @@ func (svc *subnetSvc) listCountSubnetAvailIPs(cts *rest.Contexts, authHandler ha
 		switch vendor {
 		case enumor.TCloud:
 			tmp, err = svc.listTCloudAvailIP(cts.Kit, subnets)
+		case enumor.TCloudZiyan:
+			tmp, err = svc.listTCloudZiyanAvailIP(cts.Kit, subnets)
 		case enumor.Aws:
 			tmp, err = svc.listAwsAvailIP(cts.Kit, subnets)
 		case enumor.Azure:
@@ -225,6 +227,7 @@ func (svc *subnetSvc) listCountSubnetAvailIPs(cts *rest.Contexts, authHandler ha
 			tmp, err = svc.listHuaWeiAvailIP(cts.Kit, subnets)
 		case enumor.Gcp:
 			tmp, err = svc.listGcpAvailIP(cts.Kit, subnets)
+
 		default:
 			// 如果这个云没有获取可用IP的能力的话，则返回接口不包括这个云的数据，避免造成误解。
 			continue
@@ -293,6 +296,37 @@ func (svc *subnetSvc) listTCloudAvailIP(kt *kit.Kit, subnets []cloud.BaseSubnet)
 	return result, nil
 }
 
+func (svc *subnetSvc) listTCloudZiyanAvailIP(kt *kit.Kit, subnets []cloud.BaseSubnet) (
+	map[string]cloudserver.SubnetCountIPResult, error) {
+
+	classSubnets := classSubnet(subnets)
+
+	result := make(map[string]cloudserver.SubnetCountIPResult)
+	for accountID, regionMap := range classSubnets {
+		for region, ids := range regionMap {
+			req := &hcsubnet.ListCountIPReq{
+				Region:    region,
+				AccountID: accountID,
+				IDs:       ids,
+			}
+			respData, err := svc.client.HCService().TCloudZiyan.Subnet.ListCountIP(kt.Ctx, kt.Header(), req)
+			if err != nil {
+				logs.Errorf("list tcloud ziyan count ip failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
+				return nil, err
+			}
+
+			for id, ipResult := range respData {
+				result[id] = cloudserver.SubnetCountIPResult{
+					AvailableIPCount: ipResult.AvailableIPCount,
+					TotalIPCount:     ipResult.TotalIPCount,
+					UsedIPCount:      ipResult.UsedIPCount,
+				}
+			}
+		}
+	}
+
+	return result, nil
+}
 func (svc *subnetSvc) listGcpAvailIP(kt *kit.Kit, subnets []cloud.BaseSubnet) (
 	map[string]cloudserver.SubnetCountIPResult, error) {
 

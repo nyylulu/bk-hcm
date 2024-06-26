@@ -54,7 +54,8 @@ func (svc *lbSvc) BatchUpdateLoadBalancer(cts *rest.Contexts) (any, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return batchUpdateLoadBalancer[corelb.TCloudClbExtension](cts, svc)
-
+	case enumor.TCloudZiyan:
+		return batchUpdateLoadBalancer[corelb.TCloudClbExtension](cts, svc)
 	default:
 		return nil, fmt.Errorf("unsupport  vendor %s", vendor)
 	}
@@ -381,6 +382,8 @@ func (svc *lbSvc) BatchUpdateListener(cts *rest.Contexts) (any, error) {
 
 	switch vendor {
 	case enumor.TCloud:
+		return batchUpdateListener[corelb.TCloudListenerExtension](cts)
+	case enumor.TCloudZiyan:
 		return batchUpdateListener[corelb.TCloudListenerExtension](cts)
 	default:
 		return nil, errf.New(errf.InvalidParameter, "unsupported vendor: "+string(vendor))

@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/cryptography"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	itsm2 "hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
 )
@@ -40,6 +41,7 @@ type HandlerOption struct {
 	Cipher    cryptography.Crypto
 	Audit     audit.Interface
 	ItsmCli   itsm2.Client
+	FinOpsCli finops.Client
 }
 
 // BaseApplicationHandler 基础的Handler 一些公共函数和属性处理，可以给到其他具体Handler组合
@@ -52,6 +54,7 @@ type BaseApplicationHandler struct {
 	EsbClient esb.Client
 	Cipher    cryptography.Crypto
 	Audit     audit.Interface
+	FinOpsCli finops.Client
 }
 
 // NewBaseApplicationHandler ...
@@ -66,6 +69,7 @@ func NewBaseApplicationHandler(
 		EsbClient:       opt.EsbClient,
 		Cipher:          opt.Cipher,
 		Audit:           opt.Audit,
+		FinOpsCli:       opt.FinOpsCli,
 	}
 }
 

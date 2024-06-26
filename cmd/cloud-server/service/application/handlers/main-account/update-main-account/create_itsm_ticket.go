@@ -95,6 +95,31 @@ func (a *ApplicationOfUpdateMainAccount) RenderItsmForm() (string, error) {
 		)
 	}
 
+	// 运营产品变更
+	if req.OpProductID != oldAccount.OpProductID {
+		// 获取运营产品名字
+		opName, err := a.GetOperationProductName(req.OpProductID)
+		if err != nil {
+			return "", fmt.Errorf("get operation product name failed, op_product_id: %v, err: %w", req.OpProductID, err)
+		}
+
+		oldOpName, err := a.GetOperationProductName(oldAccount.OpProductID)
+		if err != nil {
+			return "", fmt.Errorf("get old operation product name failed, op_product_id: %v, err: %w", req.OpProductID, err)
+		}
+
+		formItems = append(formItems,
+			formItem{
+				Label: "运营产品变更前",
+				Value: oldOpName,
+			},
+			formItem{
+				Label: "运营产品变更后",
+				Value: opName,
+			},
+		)
+	}
+
 	// 业务变更
 	if req.BkBizID != oldAccount.BkBizID {
 		// 获取业务名字

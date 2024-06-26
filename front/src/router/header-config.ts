@@ -9,6 +9,11 @@ export const headRouteConfig = [
     path: '/business/host',
   },
   {
+    id: 'resource-plan',
+    name: '服务请求',
+    path: '/resource-plan/list',
+  },
+  {
     id: 'service',
     name: '服务请求',
     path: '/service/my-apply',
@@ -17,6 +22,11 @@ export const headRouteConfig = [
     id: 'resource',
     name: '资源接入',
     path: '/resource/resource',
+  },
+  {
+    id: 'ziyanScr',
+    name: '自研云资源',
+    path: '/ziyanScr/hostInventory',
   },
   {
     id: 'scheme',

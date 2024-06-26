@@ -1,0 +1,118 @@
+.mt15 {
+  margin-top: 15px;
+}
+.CloudbkTable {
+  margin-top: 15px;
+  width: 100%;
+}
+.displayflex {
+  display: flex;
+  align-items: center;
+  .item-warp {
+    margin-right: 50px;
+    height: 45px;
+    .item-warp-component {
+      width: 300px;
+    }
+  }
+  .fontsize {
+    font-size: 14px;
+    margin-left: 5px;
+  }
+}
+.mr16 {
+  margin-right: 16px;
+}
+.mb16 {
+  margin-bottom: 16px;
+}
+.mt16 {
+  margin-top: 16px;
+  width: 1550px;
+}
+.item-warp-resourceType {
+  width: 400px;
+}
+.item-warp-qcloudRegionId {
+  width: 240px;
+}
+.item-warp-qcloudZoneId {
+  width: 200px;
+}
+.item-warp-replicas {
+  width: 100px;
+}
+
+.item-warp-imageId {
+  width: 220px;
+}
+.item-warp-dataDisk-diskSize {
+  width: 120px;
+  margin: 0 10px 0 15px;
+}
+.item-warp-dataDisk-diskType {
+  width: 200px;
+}
+.item-warp-imageId {
+  width: 400px;
+}
+
+.ml16 {
+  margin-left: 16px;
+}
+.wid100 {
+  width: 98%;
+}
+.fontweight {
+  font-weight: 400;
+  margin-left: 30px;
+}
+.component-with-detail-container {
+  display: flex;
+  align-items: center;
+  .component-with-detail {
+    flex: 1;
+    margin-right: 10px;
+  }
+}
+.width-400 {
+  width: 400px;
+}
+
+.tabselect {
+  display: flex;
+  align-items: center;
+  width: 240px;
+  height: 40px;
+  margin: 15px 5px 0 0;
+  .label {
+    width: 50px;
+  }
+  .tbkselect {
+    margin: 0 10px;
+  }
+  .bkbutton {
+    margin-right: 10px;
+  }
+}
+.loading-table-container {
+  height: calc(100% - 48px);
+  width: 100%;
+  .table-container {
+    max-height: 100%;
+
+    .table-new-row td {
+      background-color: #f2fff4 !important;
+    }
+  }
+}
+.common-sideslider-content {
+  padding: 0 30px;
+}
+
+.host-application-container {
+  .tab-wrapper {
+    margin: 24px;
+    min-height: calc(100vh - 150px);
+  }
+}

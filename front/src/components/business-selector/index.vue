@@ -1,17 +1,30 @@
 <script lang="ts" setup>
 import { computed, ref, watchEffect, defineExpose, PropType } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAccountStore } from '@/store';
+import { isEmpty } from '@/common/util';
+import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
-  modelValue: Number as PropType<number>,
+  modelValue: [Number, String, Array] as PropType<number | string | Array<number | string>>,
   authed: Boolean as PropType<boolean>,
   autoSelect: Boolean as PropType<boolean>,
   isAudit: Boolean as PropType<boolean>,
+  multiple: Boolean as PropType<boolean>,
+  clearable: Boolean as PropType<boolean>,
+  isShowAll: Boolean as PropType<boolean>,
+  notAutoSelectAll: Boolean as PropType<boolean>,
+  saveBizs: Boolean as PropType<boolean>,
+  bizsKey: String as PropType<string>,
 });
 const emit = defineEmits(['update:modelValue']);
 
+const router = useRouter();
+const route = useRoute();
+const { t } = useI18n();
 const accountStore = useAccountStore();
 const businessList = ref([]);
+const defaultBusiness = ref();
 const loading = ref(null);
 
 watchEffect(async () => {
@@ -24,32 +37,93 @@ watchEffect(async () => {
   const res = await req();
   loading.value = false;
   businessList.value = res?.data;
+  if (props.isShowAll) {
+    businessList.value.unshift({
+      name: t('全部'),
+      id: 'all',
+    });
+  }
+
+  let id = null;
+  if (props.autoSelect && !isEmpty(businessList.value)) {
+    id =
+      props.isShowAll && props.notAutoSelectAll && businessList.value[1]
+        ? businessList.value[1].id
+        : businessList.value[0]?.id;
+  }
+  if (props.saveBizs) {
+    id = route.query?.[props.bizsKey] ? JSON.parse(atob(route.query?.[props.bizsKey] as string)) : id;
+  }
+  if (props.multiple) {
+    id = route.query?.[props.bizsKey] ? id : [id];
+  }
+  defaultBusiness.value = id;
+  selectedValue.value = id;
+  handleChange(id);
 });
 
 const selectedValue = computed({
   get() {
-    if (props.modelValue) {
+    if (!isEmpty(props.modelValue)) {
       return props.modelValue;
     }
-    if (props.autoSelect) {
-      const val = businessList.value.at(0)?.id ?? null;
-      emit('update:modelValue', val);
-      return val;
+    if (props.isShowAll) {
+      if (props.multiple && Array.isArray(props.modelValue) && props.modelValue.length === 0) {
+        return ['all'];
+      }
+      if (!props.multiple && props.modelValue === '') {
+        return 'all';
+      }
     }
-    return null;
+    return props.multiple ? [] : null;
   },
   set(val) {
-    emit('update:modelValue', val);
+    let selectedValue = val;
+    if (props.isShowAll) {
+      if (props.multiple && Array.isArray(selectedValue)) {
+        if (selectedValue[selectedValue.length - 1] === 'all') {
+          selectedValue = [];
+        } else if (selectedValue.includes('all')) {
+          const index = selectedValue.findIndex((val) => val === 'all');
+          selectedValue.splice(index, 1);
+        }
+      }
+      if (!props.multiple && selectedValue === 'all') {
+        selectedValue = '';
+      }
+    }
+    emit('update:modelValue', selectedValue);
   },
 });
 
+const handleChange = (val: string | string[]) => {
+  if (props.saveBizs) {
+    const hasAll = Array.isArray(val) && val.includes('all');
+    const customBizs = btoa(JSON.stringify(val));
+    router.push({
+      query: {
+        ...route.query,
+        [props.bizsKey]: hasAll ? undefined : customBizs,
+      },
+    });
+  }
+};
+
 defineExpose({
   businessList,
+  defaultBusiness,
 });
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" filterable :loading="loading">
-    <bk-option v-for="(item, index) in businessList" :key="index" :value="item.id" :label="item.name" />
+  <bk-select
+    v-model="selectedValue"
+    :multiple="multiple"
+    filterable
+    :loading="loading"
+    :clearable="clearable"
+    @change="handleChange"
+  >
+    <bk-option v-for="item in businessList" :key="item.id" :value="item.id" :label="item.name" />
   </bk-select>
 </template>

@@ -79,6 +79,13 @@ export interface IProp {
   };
   // 资源下筛选业务功能相关的 prop
   bizFilter?: FilterType;
+  // scr配置开关
+  scrConfig?: () => {
+    // 请求接口路径
+    url?: string;
+    // 请求接口参数data
+    payload?: Object;
+  };
 }
 
 export const useTable = (props: IProp) => {
@@ -86,7 +93,7 @@ export const useTable = (props: IProp) => {
   defaults(props.requestOption, { dataPath: 'data.details', immediate: true });
 
   const { whereAmI } = useWhereAmI();
-
+  const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
   const regionsStore = useRegionsStore();
   const resourceStore = useResourceStore();
   const businessStore = useBusinessStore();
@@ -140,7 +147,17 @@ export const useTable = (props: IProp) => {
       // 判断是业务下, 还是资源下
       let api = whereAmI.value === Senarios.business ? businessStore.list : resourceStore.list;
       if (whereAmI.value === Senarios.bill) api = useBillStore().list;
-      const [detailsRes, countRes] = await fetchData({ api, pagination, sort, order, filter, props, type });
+
+      const [detailsRes, countRes] = await fetchData({
+        api,
+        pagination,
+        sort,
+        order,
+        filter,
+        props,
+        type,
+        BK_HCM_AJAX_URL_PREFIX,
+      });
 
       // 更新数据
       dataList.value = lodash_get(detailsRes, props.requestOption.dataPath, []) || [];
@@ -201,10 +218,12 @@ export const useTable = (props: IProp) => {
             [cssModule['remote-table-container']]: true,
             [cssModule['no-search']]: props.searchOptions?.disabled,
           }}>
-          {hasTopBar.value && (
+          {typeof props.scrConfig === 'function' ? (
+            <div class={cssModule.slotstabselect}>{slots.tabselect?.()}</div>
+          ) : hasTopBar.value ? (
             <section class={cssModule['top-bar']}>
               {slots.operation && <div class={cssModule['operate-btn-groups']}>{slots.operation?.()}</div>}
-              {!props.searchOptions.disabled && (
+              {!props.searchOptions?.disabled && (
                 <SearchSelect
                   class={cssModule['table-search-selector']}
                   style={props.searchOptions?.extra?.searchSelectExtStyle}
@@ -216,7 +235,7 @@ export const useTable = (props: IProp) => {
               )}
               {slots.operationBarEnd && <div class={cssModule['operation-bar-end']}>{slots.operationBarEnd()}</div>}
             </section>
-          )}
+          ) : null}
           {slots.tableToolbar?.()}
           <Loading loading={isLoading.value} class={cssModule['loading-wrapper']} style={{ height: getTableHeight() }}>
             <Table
@@ -438,3 +457,4 @@ export const useTable = (props: IProp) => {
     clearFilter,
   };
 };
+

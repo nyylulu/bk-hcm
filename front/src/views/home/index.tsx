@@ -43,7 +43,7 @@ export default defineComponent({
     const route = useRoute();
     const userStore = useUserStore();
     const accountStore = useAccountStore();
-    const { fetchBusinessMap } = useBusinessMapStore();
+    const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
     const { fetchAllCloudAreas } = useCloudAreaStore();
     const { fetchRegions } = useRegionsStore();
     const { whereAmI } = useWhereAmI();
@@ -107,6 +107,7 @@ export default defineComponent({
       fetchRegions(VendorEnum.HUAWEI);
       fetchBusinessMap();
       fetchAllCloudAreas();
+      fetchAuthedBusinessList();
     });
 
     watch(
@@ -253,13 +254,19 @@ export default defineComponent({
                       activeKey={route.meta.activeKey as string}>
                       {menus.value.map((menuItem) =>
                         Array.isArray(menuItem.children) && !menuItem.meta?.hasPageRoute ? (
-                          <Menu.Group key={menuItem.path as string} name={menuItem.name as string}>
+                          <Menu.Group
+                            key={menuItem.path as string}
+                            name={(menuItem.name as string) || (menuItem.meta.menuName as string)}>
                             {{
                               default: () =>
                                 menuItem.children
                                   .filter((child) => !child.meta?.notMenu)
                                   .map((child) => (
-                                    <RouterLink to={{ path: `${child.path}`, query: { bizs: accountStore.bizs } }}>
+                                    <RouterLink
+                                      to={{
+                                        path: `${child.path}`,
+                                        query: { ...route.query, bizs: accountStore.bizs },
+                                      }}>
                                       <Menu.Item key={child.meta?.activeKey as string}>
                                         {/* {route.meta.activeKey} */}
                                         {{
@@ -310,3 +317,4 @@ export default defineComponent({
     );
   },
 });
+

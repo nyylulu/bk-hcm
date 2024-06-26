@@ -32,7 +32,7 @@ export default defineComponent({
       default: false,
     }, // 是否不需要footer
   },
-  emits: ['update:isShow', 'handleSubmit'],
+  emits: ['update:isShow', 'handleSubmit', 'handleShown'],
   setup(props, ctx) {
     // use hooks
     const { t } = useI18n();
@@ -45,6 +45,10 @@ export default defineComponent({
       ctx.emit('handleSubmit');
     };
 
+    const handleShown = () => {
+      ctx.emit('handleShown');
+    };
+
     return () => (
       <Sideslider
         class={cssModule.sideslider}
@@ -54,7 +58,8 @@ export default defineComponent({
         onClosed={() => {
           triggerShow(false);
           props.handleClose?.();
-        }}>
+        }}
+        onShown={handleShown}>
         {{
           default: () => <div class={cssModule.content}>{ctx.slots.default?.()}</div>,
           footer: !props.noFooter

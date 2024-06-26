@@ -50,13 +50,22 @@ func (a *ApplicationOfCreateMainAccount) RenderItsmForm() (string, error) {
 	}
 
 	// 业务
-	if req.BkBizID != 0 {
+	if req.BkBizID != 0 && req.BkBizID != -1 {
 		// 获取业务名字
 		bkName, err := a.GetBizName(req.BkBizID)
 		if err != nil {
 			return "", fmt.Errorf("list biz name failed, bk_biz_ids: %v, err: %w", req.BkBizID, err)
 		}
 		formItems = append(formItems, formItem{Label: "使用业务", Value: bkName})
+	}
+
+	// 运营产品
+	if req.OpProductID != 0 && req.OpProductID != -1 {
+		opProductName, err := a.GetOperationProductName(req.OpProductID)
+		if err != nil {
+			return "", fmt.Errorf("get operation product name failed, op_product_id: %v, err: %w", req.OpProductID, err)
+		}
+		formItems = append(formItems, formItem{Label: "运营产品", Value: opProductName})
 	}
 
 	// 备注

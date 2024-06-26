@@ -18,8 +18,6 @@ import StatusNormal from '@/assets/image/Status-normal.png';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
 import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
-import StatusFailure from '@/assets/image/failed-account.png';
-
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import './use-columns.scss';
 import { defaults } from 'lodash';
@@ -53,7 +51,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const { whereAmI } = useWhereAmI();
   const businessMapStore = useBusinessMapStore();
   const cloudAreaStore = useCloudAreaStore();
-
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
     defaults(options, {

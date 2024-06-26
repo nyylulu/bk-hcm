@@ -19,8 +19,19 @@
 
 package account
 
-import "hcm/pkg/rest"
+import (
+	"net/http"
+
+	"hcm/pkg/rest"
+)
 
 func initAccountServiceHooks(svc *service, h *rest.Handler) {
+	h.Add("TCloudZiyanGetInfoBySecret", http.MethodPost,
+		"/vendors/tcloud-ziyan/accounts/secret", svc.TCloudZiyanGetInfoBySecret)
+	h.Add("TCloudZiyanAccountCheck", http.MethodPost,
+		"/vendors/tcloud-ziyan/accounts/check", svc.TCloudZiyanAccountCheck)
 
+	// 获取腾讯云账号用户网络类型
+	h.Add("GetTCloudNetworkAccountType", http.MethodGet,
+		"/vendors/tcloud-ziyan/accounts/{account_id}/network_type", svc.GetTCloudNetworkAccountType)
 }

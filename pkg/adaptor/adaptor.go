@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/adaptor/gcp"
 	"hcm/pkg/adaptor/huawei"
 	"hcm/pkg/adaptor/tcloud"
+	"hcm/pkg/adaptor/tcloud-ziyan"
 	"hcm/pkg/adaptor/types"
 )
 
@@ -63,4 +64,9 @@ func (a *Adaptor) Azure(credential *types.AzureCredential) (*azure.Azure, error)
 // HuaWei returns HuaWei operations.
 func (a *Adaptor) HuaWei(s *types.BaseSecret) (*huawei.HuaWei, error) {
 	return huawei.NewHuaWei(s)
+}
+
+// TCloudZiyan 腾讯自研云
+func (a *Adaptor) TCloudZiyan(s *types.BaseSecret) (ziyan.TCloudZiyan, error) {
+	return ziyan.NewZiyanCloud(s)
 }

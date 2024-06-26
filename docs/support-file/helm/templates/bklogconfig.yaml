@@ -20,6 +20,8 @@ spec:
     - {{ .Values.dataservice.log.logDir }}/*
     - {{ .Values.hcservice.log.logDir }}/*
     - {{ .Values.cloudserver.log.logDir }}/*
+    - {{ .Values.taskserver.log.logDir }}/*
+    - {{ .Values.woaserver.log.logDir }}/*
 {{- end }}
 {{- if .Values.bkLogConfig.std.enabled }}
 ---

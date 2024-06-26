@@ -3,8 +3,10 @@ import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router';
 // import routes
 import workbench from '@/router/module/workbench';
 import resource from '@/router/module/resource';
+import resourcePlan from '@/router/module/resource-plan';
 import service from '@/router/module/service';
 import business from '@/router/module/business';
+import ziyanScr from '@/router/module/ziyan-scr';
 import scheme from '@/router/module/scheme';
 import bill from '@/router/module/bill';
 // import stores
@@ -41,12 +43,18 @@ export default () => {
     // 更新当前 active header-tab
     topMenuActiveItem.value = id;
     switch (id) {
+      case 'ziyanScr':
+        menus.value = ziyanScr;
+        break;
       case 'business':
         menus.value = business;
         break;
       case 'resource':
         menus.value = resource;
         accountStore.updateBizsId(0); // 初始化业务ID
+        break;
+      case 'resource-plan':
+        menus.value = resourcePlan;
         break;
       case 'service':
         menus.value = service;

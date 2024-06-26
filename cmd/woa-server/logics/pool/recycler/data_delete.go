@@ -1,0 +1,157 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package recycler
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"time"
+
+	"hcm/cmd/woa-server/dal/pool/dao"
+	"hcm/cmd/woa-server/dal/pool/table"
+	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/pkg/logs"
+)
+
+func (r *Recycler) dealDataDeleteTask(task *table.RecallDetail) error {
+	if task.DataDeleteID == "" {
+		return r.createDataDeleteTask(task)
+	}
+
+	return r.checkDataDeleteStatus(task)
+}
+
+func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
+	// create job
+	ip, ok := task.Labels[table.IPKey]
+	if !ok || ip == "" {
+		err := errors.New("get no ip from task label")
+		logs.Errorf("failed to create data delete task, err: %v", err)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return err
+	}
+
+	taskID, err := r.createSoJob("delete_data", []string{ip})
+	if err != nil {
+		logs.Errorf("host %s failed to data delete, err: %v", ip, err)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("host %s failed to data delete, err: %v", ip, err)
+	}
+
+	// update task status
+	if err := r.updateTaskDataDeleteStatus(task, strconv.Itoa(taskID), "", table.RecallStatusDataDeleting); err != nil {
+		logs.Errorf("failed to update recall task status, err: %v", err)
+		return err
+	}
+
+	go func() {
+		// query every 5 minutes
+		time.Sleep(time.Minute * 5)
+		r.Add(task.ID)
+	}()
+
+	return nil
+}
+
+func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
+	ip, ok := task.Labels[table.IPKey]
+	if !ok {
+		err := errors.New("get no ip from task label")
+		logs.Errorf("failed to create data delete task, err: %v", err)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return err
+	}
+
+	taskID, err := strconv.Atoi(task.DataDeleteID)
+	if err != nil {
+		logs.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
+
+		msg := fmt.Sprintf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", msg, table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
+	}
+
+	if err := r.checkJobStatus(taskID); err != nil {
+		logs.Infof("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
+	}
+
+	// update task status
+	if err := r.updateTaskDataDeleteStatus(task, "", "", table.RecallStatusConfChecking); err != nil {
+		logs.Errorf("failed to update recall task status, err: %v", err)
+
+		return err
+	}
+
+	go func() {
+		r.Add(task.ID)
+	}()
+
+	return nil
+}
+
+func (r *Recycler) updateTaskDataDeleteStatus(task *table.RecallDetail, id, msg string,
+	status table.RecallStatus) error {
+
+	filter := map[string]interface{}{
+		"id": task.ID,
+	}
+
+	now := time.Now()
+	update := map[string]interface{}{
+		"status":    status,
+		"update_at": now,
+	}
+
+	if id != "" {
+		update["data_delete_id"] = id
+		update["data_delete_link"] = sojobapi.TaskLinkPrefix + id
+	}
+
+	if msg != "" {
+		update["message"] = msg
+	}
+
+	if err := dao.Set().RecallDetail().UpdateRecallDetail(context.Background(), filter, update); err != nil {
+		return err
+	}
+
+	return nil
+}

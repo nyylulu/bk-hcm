@@ -50,6 +50,9 @@ const (
 	UrlRuleDomainAuditResType     AuditResourceType = "url_rule_domain"
 	MainAccountAuditResType       AuditResourceType = "main_account"
 	RootAccountAuditResType       AuditResourceType = "root_account"
+
+	// 自研云-云上主机
+	CloudCvmAuditResType AuditResourceType = "cloud_cvm"
 )
 
 // AuditResourceTypeEnums resource type map.

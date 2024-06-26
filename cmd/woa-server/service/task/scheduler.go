@@ -1,0 +1,894 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package task scheduler
+package task
+
+import (
+	"errors"
+	"fmt"
+	"strconv"
+
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/cmd/woa-server/common/util"
+	"hcm/cmd/woa-server/model/task"
+	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/rest"
+)
+
+// UpdateApplyTicket create or update apply ticket
+func (s *service) UpdateApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to update apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().UpdateApplyTicket(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyTicket get apply ticket
+func (s *service) GetApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyTicketReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyAudit get apply ticket audit info
+func (s *service) GetApplyAudit(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyAuditReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyAudit(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// AuditApplyTicket audit apply ticket
+func (s *service) AuditApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyAuditReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	if err := s.logics.Scheduler().AuditTicket(cts.Kit, input); err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// AutoAuditApplyTicket system automatic audit apply ticket
+func (s *service) AutoAuditApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyAutoAuditReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to auto audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to auto audit apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().AutoAuditTicket(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to auto audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// ApproveApplyTicket approve or reject apply ticket
+func (s *service) ApproveApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.ApproveApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to approve apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to approve apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	if err := s.logics.Scheduler().ApproveTicket(cts.Kit, input); err != nil {
+		logs.Errorf("failed to approve apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// CreateApplyOrder creates apply order
+func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to create apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// TODO 需要替换为海垒的权限Auth模型
+	// TODO 临时测试使用，后续需要删除
+	if input.BkBizId != types.AuthorizedBizID {
+		return nil, fmt.Errorf("不能操作业务id: %d下的机器", input.BkBizId)
+	}
+
+	//req := &iamapi.AuthVerifyReq{
+	//	System: "bk_cr",
+	//	Subject: &iamapi.Subject{
+	//		Type: "user",
+	//		ID:   input.User,
+	//	},
+	//	Action: &iamapi.Action{
+	//		ID: "resource_apply",
+	//	},
+	//	Resources: []*iamapi.Resource{
+	//		{
+	//			System: "bk_cmdb",
+	//			Type:   "biz",
+	//			ID:     strconv.Itoa(int(input.BkBizId)),
+	//		},
+	//	},
+	//}
+	//resp, err := s.Iam.AuthVerify(nil, nil, req)
+	//if err != nil {
+	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, cts.Kit.Rid)
+	//	return nil, err
+	//}
+	//if resp.Code != 0 {
+	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, cts.Kit.Rid)
+	//	return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to auth verify, err: %s", resp.Message)
+	//}
+	//
+	//bizName := s.getBizName(cts.Kit, input.BkBizId)
+	//if resp.Data.Allowed != true {
+	//	permission := &metadata.IamPermission{
+	//		SystemID: "bk_cr",
+	//		Actions: []metadata.IamAction{
+	//			{
+	//				ID: "resource_apply",
+	//				RelatedResourceTypes: []metadata.IamResourceType{
+	//					{
+	//						SystemID: "bk_cmdb",
+	//						Type:     "biz",
+	//						Instances: [][]metadata.IamResourceInstance{
+	//							{
+	//								metadata.IamResourceInstance{
+	//									Type: "biz",
+	//									ID:   strconv.Itoa(int(input.BkBizId)),
+	//									Name: bizName,
+	//								},
+	//							},
+	//						},
+	//					},
+	//				},
+	//			},
+	//		},
+	//	}
+	//	authResp := metadata.NewNoPermissionResp(permission)
+	//	return authResp, nil
+	//}
+
+	rst, err := s.logics.Scheduler().CreateApplyOrder(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyOrder gets apply order info
+func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机申领-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetBizApplyOrder gets given business's apply order info
+func (s *service) GetBizApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.GetBizApplyParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get biz apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get biz apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// check permission
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+	})
+	if err != nil {
+		logs.Errorf("no permission to get biz apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizID, err, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+	}
+
+	param := &types.GetApplyParam{
+		BkBizID: input.BkBizID,
+		Start:   input.Start,
+		End:     input.End,
+		Page:    input.Page,
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, param)
+	if err != nil {
+		logs.Errorf("failed to get biz apply order, param: %+v, err: %v, rid: %s", param, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyStatus gets apply order status
+func (s *service) GetApplyStatus(cts *rest.Contexts) (any, error) {
+	orderId, err := strconv.Atoi(cts.Request.PathParameter("order_id"))
+	if err != nil {
+		logs.Errorf("failed to get apply order status, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if orderId <= 0 {
+		logs.Errorf("failed to get apply order status, for invalid order id %d <= 0, rid: %s", orderId, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "order_id")
+	}
+
+	input := &types.GetApplyParam{
+		OrderID: []uint64{uint64(orderId)},
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply order status, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyDetail gets apply order detail info
+func (s *service) GetApplyDetail(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyDetailReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply detail, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyDetail(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply detail, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyGenerate gets apply order generate records
+func (s *service) GetApplyGenerate(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyGenerateReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply generate record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply generate record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyGenerate(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply generate record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyInit gets apply order init records
+func (s *service) GetApplyInit(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyInitReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply init record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply init record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyInit(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply init record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyDiskCheck gets apply order disk check records
+func (s *service) GetApplyDiskCheck(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyInitReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply disk check record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply disk check record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyDiskCheck(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply disk check record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyDeliver gets apply order deliver records
+func (s *service) GetApplyDeliver(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyDeliverReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply deliver record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply deliver record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyDeliver(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply deliver record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyDevice get apply order delivered devices
+func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyDevice(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetDeliverDeviceByOrder get delivered devices by order id
+func (s *service) GetDeliverDeviceByOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.GetDeliverDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply delivered device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply delivered device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rule := querybuilder.CombinedRule{
+		Condition: querybuilder.ConditionAnd,
+		Rules: []querybuilder.Rule{
+			querybuilder.AtomRule{
+				Field:    "order_id",
+				Operator: querybuilder.OperatorEqual,
+				Value:    input.OrderId,
+			}},
+	}
+	if len(input.SuborderId) > 0 {
+		rule.Rules = append(rule.Rules, querybuilder.AtomRule{
+			Field:    "suborder_id",
+			Operator: querybuilder.OperatorEqual,
+			Value:    input.SuborderId,
+		})
+	}
+	param := &types.GetApplyDeviceReq{
+		Filter: &querybuilder.QueryFilter{
+			Rule: rule,
+		},
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyDevice(cts.Kit, param)
+	if err != nil {
+		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	type deviceBriefInfo struct {
+		Ip      string `json:"ip" bson:"ip"`
+		AssetId string `json:"asset_id" bson:"asset_id"`
+	}
+	type getDeviceBriefRst struct {
+		Count int64              `json:"count"`
+		Info  []*deviceBriefInfo `json:"info"`
+	}
+
+	briefRst := &getDeviceBriefRst{
+		Count: rst.Count,
+		Info:  make([]*deviceBriefInfo, 0),
+	}
+	for _, device := range rst.Info {
+		briefRst.Info = append(briefRst.Info, &deviceBriefInfo{
+			Ip:      device.Ip,
+			AssetId: device.AssetId,
+		})
+	}
+
+	return briefRst, nil
+}
+
+// ExportDeliverDevice export delivered devices
+func (s *service) ExportDeliverDevice(cts *rest.Contexts) (any, error) {
+	input := new(types.ExportDeliverDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to export apply delivered device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to export apply delivered device info, err: %v, errKey: %s, rid: %s",
+			err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().ExportDeliverDevice(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to export apply delivered device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetMatchDevice get apply order match devices
+func (s *service) GetMatchDevice(cts *rest.Contexts) (any, error) {
+	input := new(types.GetMatchDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply match device info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetMatchDevice(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply match device info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// MatchDevice execute apply order match devices
+func (s *service) MatchDevice(cts *rest.Contexts) (any, error) {
+	input := new(types.MatchDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to match devices, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to match devices, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	if err := s.logics.Scheduler().MatchDevice(cts.Kit, input); err != nil {
+		logs.Errorf("failed to match devices, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// MatchPoolDevice execute apply order match devices from resource pool
+func (s *service) MatchPoolDevice(cts *rest.Contexts) (any, error) {
+	input := new(types.MatchPoolDeviceReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to match pool devices, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to match pool devices, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	if err := s.logics.Scheduler().MatchPoolDevice(cts.Kit, input); err != nil {
+		logs.Errorf("failed to match devices, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// PauseApplyOrder pauses apply order
+func (s *service) PauseApplyOrder(_ *rest.Contexts) (any, error) {
+	// TODO
+	return nil, nil
+}
+
+// ResumeApplyOrder resumes apply order
+func (s *service) ResumeApplyOrder(_ *rest.Contexts) (any, error) {
+	// TODO
+	return nil, nil
+}
+
+// StartApplyOrder start apply order
+func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.StartApplyOrderReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to start apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// get orders' biz id list
+	bizIds, err := s.getApplyOrderBizIds(cts.Kit, input.SuborderID)
+	if err != nil {
+		logs.Errorf("failed to start apply order, for get order biz id err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "get order biz id err: %v", err)
+	}
+
+	if len(bizIds) == 0 {
+		err := errors.New("biz id list is empty")
+		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// check permission
+	for _, bizId := range bizIds {
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to start apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+				bizId, err, cts.Kit.Rid)
+			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		}
+	}
+
+	if err = s.logics.Scheduler().StartApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to start recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// TerminateApplyOrder terminate apply order
+func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.TerminateApplyOrderReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to terminate apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to terminate apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// get orders' biz id list
+	bizIds, err := s.getApplyOrderBizIds(cts.Kit, input.SuborderID)
+	if err != nil {
+		logs.Errorf("failed to terminate apply order, for get order biz id err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "get order biz id err: %v", err)
+	}
+
+	if len(bizIds) == 0 {
+		err := errors.New("biz id list is empty")
+		logs.Errorf("failed to terminate apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// check permission
+	for _, bizId := range bizIds {
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
+			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		}
+	}
+
+	if err = s.logics.Scheduler().TerminateApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to terminate recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// ModifyApplyOrder modify apply order
+func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.ModifyApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to modify apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// get orders' biz id list
+	suborderIDs := []string{input.SuborderID}
+	bizIds, err := s.getApplyOrderBizIds(cts.Kit, suborderIDs)
+	if err != nil {
+		logs.Errorf("failed to modify apply order, for get order biz id err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "get order biz id err: %v", err)
+	}
+
+	if len(bizIds) == 0 {
+		err := errors.New("biz id list is empty")
+		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// check permission
+	for _, bizId := range bizIds {
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to modify apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+				bizId, err, cts.Kit.Rid)
+			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		}
+	}
+
+	if err = s.logics.Scheduler().ModifyApplyOrder(cts.Kit, input); err != nil {
+		logs.Errorf("failed to modify recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// RecommendApplyOrder get apply order modification recommendation
+func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.RecommendApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to recommend apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to recommend apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// get orders' biz id list
+	suborderIDs := []string{input.SuborderID}
+	bizIds, err := s.getApplyOrderBizIds(cts.Kit, suborderIDs)
+	if err != nil {
+		logs.Errorf("failed to recommend apply order, for get order biz id err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "get order biz id err: %v", err)
+	}
+
+	if len(bizIds) == 0 {
+		err := errors.New("biz id list is empty")
+		logs.Errorf("failed to recommend apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// check permission
+	for _, bizId := range bizIds {
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
+				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
+			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		}
+	}
+
+	rst, err := s.logics.Scheduler().RecommendApplyOrder(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to recommend recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// GetApplyModify get apply order modification records
+func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyModifyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply order modify record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply order modify record, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().GetApplyModify(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply order modify record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int64, error) {
+	filter := map[string]interface{}{}
+
+	if len(suborderIds) > 0 {
+		filter["suborder_id"] = mapstr.MapStr{
+			common.BKDBIN: suborderIds,
+		}
+	}
+
+	bizIds := make([]int64, 0)
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: 500,
+	}
+	insts, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle order, err: %v, rid: %s", err, kit.Rid)
+		return bizIds, err
+	}
+
+	for _, inst := range insts {
+		bizIds = append(bizIds, inst.BkBizId)
+	}
+
+	bizIds = util.IntArrayUnique(bizIds)
+
+	return bizIds, nil
+}

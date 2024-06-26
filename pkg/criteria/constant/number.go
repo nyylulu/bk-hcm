@@ -42,6 +42,8 @@ const (
 	// BatchModifyTargetWeightCloudMaxLimit 公有云上批量修改RS权重的最大限制数量
 	BatchModifyTargetWeightCloudMaxLimit = 100
 
+	// BkBizIDMaxLimit 业务ID参数的最大限制数量
+	BkBizIDMaxLimit = uint(3000)
 	// ExcelExportLimit two hundred thousands 二十万
 	ExcelExportLimit = 20_0000
 )

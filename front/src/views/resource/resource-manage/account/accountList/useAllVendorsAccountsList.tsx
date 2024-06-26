@@ -59,6 +59,15 @@ export const useAllVendorsAccounts = () => {
       isExpand: false,
       hasNext: true,
     },
+    {
+      vendor: VendorEnum.ZIYAN,
+      count: 0,
+      name: '自研云',
+      icon: tcloudVendor,
+      accounts: [] as any[],
+      isExpand: false,
+      hasNext: true,
+    },
   ]);
 
   const pageOptions = reactive({
@@ -77,6 +86,9 @@ export const useAllVendorsAccounts = () => {
     [VendorEnum.GCP]: {
       start: 0,
     },
+    [VendorEnum.ZIYAN]: {
+      start: 0,
+    },
   });
 
   const vendorAccountMatrixMap = {
@@ -85,6 +97,7 @@ export const useAllVendorsAccounts = () => {
     [VendorEnum.AZURE]: accountsMatrix[2],
     [VendorEnum.GCP]: accountsMatrix[3],
     [VendorEnum.HUAWEI]: accountsMatrix[4],
+    [VendorEnum.ZIYAN]: accountsMatrix[5],
   };
 
   const checkIsExpand = (vendorName: VendorEnum) => accountsMatrix.find((item) => item.vendor === vendorName)?.isExpand;
@@ -99,8 +112,15 @@ export const useAllVendorsAccounts = () => {
 
   const getAllVendorsAccountsList = debounce(async (accountName = '') => {
     isLoading.value = true;
-    const payloads = [VendorEnum.TCLOUD, VendorEnum.AWS, VendorEnum.AZURE, VendorEnum.GCP, VendorEnum.HUAWEI]
-      .map((vendor) => ({
+    const payloads = [
+      VendorEnum.TCLOUD,
+      VendorEnum.AWS,
+      VendorEnum.AZURE,
+      VendorEnum.GCP,
+      VendorEnum.HUAWEI,
+      VendorEnum.ZIYAN,
+    ]
+      .map(vendor => ({
         op: 'and',
         rules: accountName.length
           ? [

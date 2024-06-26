@@ -97,7 +97,9 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{ResourceAssign},
 		Version:              1,
-	}, {
+	}}
+	actions = append(actions, genZiyanResManActions()...)
+	actions = append(actions, []client.ResourceAction{{
 		ID:                   BizIaaSResCreate,
 		Name:                 ActionIDNameMap[BizIaaSResCreate],
 		NameEn:               "Create Biz IaaS Resource",
@@ -121,7 +123,7 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
-	}}
+	}}...)
 
 	actions = append(actions, genCLBResManActions()...)
 
@@ -155,9 +157,56 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
+	}, {
+		ID:                   BizResPlanOperate,
+		Name:                 ActionIDNameMap[BizResPlanOperate],
+		NameEn:               "Operate Biz ResourcePlan",
+		Type:                 Edit,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
+		Version:              1,
 	}}...)
 
 	return actions
+}
+
+// genZiyanResManActions 业务下-自研云资源的权限Action列表
+func genZiyanResManActions() []client.ResourceAction {
+	return []client.ResourceAction{
+		{
+			ID:                   BizZiyanResCreate, // 主机申领-业务粒度
+			Name:                 ActionIDNameMap[BizZiyanResCreate],
+			NameEn:               "Create Biz ZiYan",
+			Type:                 Create,
+			RelatedResourceTypes: bizResource,
+			RelatedActions:       []client.ActionID{BizAccess},
+			Version:              1,
+		}, {
+			ID:                   BizZiyanResInventory, // 主机库存-菜单粒度
+			Name:                 ActionIDNameMap[BizZiyanResInventory],
+			NameEn:               "View Biz ZiYan Inventory",
+			Type:                 Edit,
+			RelatedResourceTypes: nil,
+			RelatedActions:       nil,
+			Version:              1,
+		}, {
+			ID:                   BizZiyanResRecycle, // 主机回收-业务粒度
+			Name:                 ActionIDNameMap[BizZiyanResRecycle],
+			NameEn:               "Recycle Biz ZiYan",
+			Type:                 Edit,
+			RelatedResourceTypes: bizResource,
+			RelatedActions:       []client.ActionID{BizAccess},
+			Version:              1,
+		}, {
+			ID:                   BizZiyanResDissolve, // 机房裁撤-菜单粒度
+			Name:                 ActionIDNameMap[BizZiyanResDissolve],
+			NameEn:               "View Biz ZiYan Dissolve",
+			Type:                 Edit,
+			RelatedResourceTypes: nil,
+			RelatedActions:       nil,
+			Version:              1,
+		},
+	}
 }
 
 func genCLBResManActions() []client.ResourceAction {
@@ -465,8 +514,9 @@ func genCertResAccessActions() []client.ResourceAction {
 	}
 }
 
+// genPlatformManageActions 平台管理的Action列表
 func genPlatformManageActions() []client.ResourceAction {
-	return []client.ResourceAction{{
+	actions := []client.ResourceAction{{
 		ID:                   CostManage,
 		Name:                 ActionIDNameMap[CostManage],
 		NameEn:               "Cost Manage",
@@ -482,11 +532,61 @@ func genPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: accountResource,
 		RelatedActions:       nil,
 		Version:              1,
+	}}
+	actions = append(actions, genZiYanPlatformManageActions()...)
+	actions = append(actions, []client.ResourceAction{
+		{
+			ID:                   GlobalConfiguration,
+			Name:                 ActionIDNameMap[GlobalConfiguration],
+			NameEn:               "Global Configuration",
+			Type:                 View,
+			RelatedResourceTypes: nil,
+			RelatedActions:       nil,
+			Version:              1,
+		},
+	}...)
+	return actions
+}
+
+// genZiYanPlatformManageActions 平台管理-自研云资源的权限Action列表
+func genZiYanPlatformManageActions() []client.ResourceAction {
+	return []client.ResourceAction{{
+		ID:                   ZiyanCvmType, // CVM机型-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmType],
+		NameEn:               "ZiYan Cvm Type",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
 	}, {
-		ID:                   GlobalConfiguration,
-		Name:                 ActionIDNameMap[GlobalConfiguration],
-		NameEn:               "Global Configuration",
-		Type:                 View,
+		ID:                   ZiyanCvmSubnet, // CVM子网-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmSubnet],
+		NameEn:               "ZiYan Cvm Subnet",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResShelves, // 资源上下架-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResShelves],
+		NameEn:               "ZiYan Res Shelves",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanCvmCreate, // CVM生产-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmCreate],
+		NameEn:               "ZiYan Cvm Create",
+		Type:                 Create,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResDissolveManage, // 机房裁撤管理-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResDissolveManage],
+		NameEn:               "ZiYan Cvm Dissolve Manage",
+		Type:                 Edit,
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,

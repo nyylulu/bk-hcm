@@ -54,3 +54,5 @@ export const fetchData = async (params: any) => {
     fetchApi({ count: true }),
   ]);
 };
+
+export type FetchDataType = typeof fetchData;

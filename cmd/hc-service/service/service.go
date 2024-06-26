@@ -31,6 +31,7 @@ import (
 	cloudadaptor "hcm/cmd/hc-service/logics/cloud-adaptor"
 	ressync "hcm/cmd/hc-service/logics/res-sync"
 	"hcm/cmd/hc-service/service/account"
+	"hcm/cmd/hc-service/service/application"
 	argstpl "hcm/cmd/hc-service/service/argument-template"
 	bwpkg "hcm/cmd/hc-service/service/bandwidth-package"
 	"hcm/cmd/hc-service/service/bill"
@@ -174,6 +175,8 @@ func (s *Service) apiSet() *restful.Container {
 	cert.InitCertService(c)
 	bwpkg.InitBwPkgService(c)
 	mainaccount.InitService(c)
+
+	application.InitApplicationService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

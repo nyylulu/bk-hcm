@@ -1,0 +1,22 @@
+@import url(../css/form.scss);
+.cvm-web-wrapper {
+    margin: 20px 10px 0;
+}
+.menu-item {
+    display: flex;
+    align-items: center;
+    padding-right: 5px;
+    margin: -1px 0 -1px -1px;
+    border: 1px solid #c4c6cc;
+    background-color: #f5f7fa;
+    & span:first-child {
+        display: inline-block;
+        margin: 0 5px;
+        height: 30px;
+    }
+}
+.dialog-footer-btn {
+    .bk-button+.bk-button {
+        margin-left: 10px;
+    }
+}

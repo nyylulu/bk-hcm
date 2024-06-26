@@ -1,0 +1,248 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package plan ...
+package plan
+
+import (
+	"errors"
+	"slices"
+	"unicode/utf8"
+
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
+	"hcm/pkg/tools/times"
+)
+
+// ListResPlanTicketReq is list resource plan ticket request.
+type ListResPlanTicketReq struct {
+	BkBizIDs        []int64                 `json:"bk_biz_ids" validate:"omitempty"`
+	TicketIDs       []string                `json:"ticket_ids" validate:"omitempty"`
+	Statuses        []enumor.RPTicketStatus `json:"statuses" validate:"omitempty"`
+	Applicants      []string                `json:"applicants" validate:"omitempty"`
+	SubmitTimeRange *times.DateRange        `json:"submit_time_range" validate:"omitempty"`
+	Page            *core.BasePage          `json:"page" validate:"required"`
+}
+
+// Validate whether ListResPlanTicketReq is valid.
+func (r *ListResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, bkBizID := range r.BkBizIDs {
+		if bkBizID <= 0 {
+			return errors.New("bk biz id should be > 0")
+		}
+	}
+
+	for _, status := range r.Statuses {
+		if err := status.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if r.SubmitTimeRange != nil {
+		if err := r.SubmitTimeRange.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// CreateResPlanTicketReq is create resource plan ticket request.
+type CreateResPlanTicketReq struct {
+	BkBizID     int64                    `json:"bk_biz_id" validate:"required"`
+	DemandClass enumor.DemandClass       `json:"demand_class" validate:"required"`
+	Demands     []CreateResPlanDemandReq `json:"demands" validate:"required"`
+	Remark      string                   `json:"remark" validate:"required"`
+}
+
+// Validate whether CreateResPlanTicketReq is valid.
+func (r *CreateResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if r.BkBizID <= 0 {
+		return errors.New("bk biz id should be > 0")
+	}
+
+	if err := r.DemandClass.Validate(); err != nil {
+		return err
+	}
+
+	for _, demand := range r.Demands {
+		if err := demand.Validate(); err != nil {
+			return err
+		}
+	}
+
+	lenRemark := utf8.RuneCountInString(r.Remark)
+	if lenRemark < 20 || lenRemark > 1024 {
+		return errors.New("len remark should be >= 20 and < 1024")
+	}
+
+	return nil
+}
+
+// CreateResPlanDemandReq is create resource plan demand request.
+type CreateResPlanDemandReq struct {
+	ObsProject     enumor.ObsProject      `json:"obs_project" validate:"required"`
+	ExpectTime     string                 `json:"expect_time" validate:"required"`
+	RegionID       string                 `json:"region_id" validate:"required"`
+	ZoneID         string                 `json:"zone_id" validate:"omitempty"`
+	DemandSource   enumor.DemandSource    `json:"demand_source" validate:"required"`
+	Remark         *string                `json:"remark" validate:"required"`
+	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
+	Cvm            *struct {
+		ResMode    string `json:"res_mode"`
+		DeviceType string `json:"device_type"`
+		Os         *int64 `json:"os"`
+		CpuCore    *int64 `json:"cpu_core"`
+		Memory     *int64 `json:"memory"`
+	} `json:"cvm" validate:"omitempty"`
+	Cbs *struct {
+		DiskType enumor.DiskType `json:"disk_type"`
+		DiskIo   *int64          `json:"disk_io"`
+		DiskSize *int64          `json:"disk_size"`
+	} `json:"cbs" validate:"omitempty"`
+}
+
+// Validate whether CreateResPlanDemandReq is valid.
+func (r *CreateResPlanDemandReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if err := r.ObsProject.Validate(); err != nil {
+		return err
+	}
+
+	if _, err := times.ParseDay(r.ExpectTime); err != nil {
+		return err
+	}
+
+	if err := r.DemandSource.Validate(); err != nil {
+		return err
+	}
+
+	lenRemark := utf8.RuneCountInString(*r.Remark)
+	if lenRemark > 255 {
+		return errors.New("len remark should <= 255")
+	}
+
+	for _, demandResType := range r.DemandResTypes {
+		if err := demandResType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCVM) {
+		if r.Cvm == nil {
+			return errors.New("demand includes cvm, cvm should not be nil")
+		}
+
+		if len(r.Cvm.ResMode) == 0 {
+			return errors.New("cvm res mode should not be empty")
+		}
+
+		if len(r.Cvm.DeviceType) == 0 {
+			return errors.New("cvm device type should not be empty")
+		}
+
+		if *r.Cvm.Os < 0 {
+			return errors.New("os should be >= 0")
+		}
+
+		if *r.Cvm.CpuCore < 0 {
+			return errors.New("cpu core should be >= 0")
+		}
+
+		if *r.Cvm.Memory < 0 {
+			return errors.New("memory should be >= 0")
+		}
+	}
+
+	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCBS) {
+		if r.Cbs == nil {
+			return errors.New("demand includes cbs, cbs should not be nil")
+		}
+
+		if err := r.Cbs.DiskType.Validate(); err != nil {
+			return err
+		}
+
+		if *r.Cbs.DiskIo < 0 {
+			return errors.New("disk io should be >= 0")
+		}
+
+		if *r.Cbs.DiskSize < 0 {
+			return errors.New("disk size should be >= 0")
+		}
+	}
+
+	return nil
+}
+
+// GetResPlanTicketResp is get resource plan ticket response.
+type GetResPlanTicketResp struct {
+	ID         string                 `json:"id"`
+	BaseInfo   *GetRPTicketBaseInfo   `json:"base_info"`
+	StatusInfo *GetRPTicketStatusInfo `json:"status_info"`
+	Demands    []GetRPTicketDemand    `json:"demands"`
+}
+
+// GetRPTicketBaseInfo get resource plan ticket base info.
+type GetRPTicketBaseInfo struct {
+	Applicant       string             `json:"applicant"`
+	BkBizID         int64              `json:"bk_biz_id"`
+	BkBizName       string             `json:"bk_biz_name"`
+	BkProductID     int64              `json:"bk_product_id"`
+	BkProductName   string             `json:"bk_product_name"`
+	PlanProductID   int64              `json:"plan_product_id"`
+	PlanProductName string             `json:"plan_product_name"`
+	VirtualDeptID   int64              `json:"virtual_dept_id"`
+	VirtualDeptName string             `json:"virtual_dept_name"`
+	DemandClass     enumor.DemandClass `json:"demand_class"`
+	Remark          string             `json:"remark"`
+	SubmittedAt     string             `json:"submitted_at"`
+}
+
+// GetRPTicketStatusInfo get resource plan ticket status info.
+type GetRPTicketStatusInfo struct {
+	Status     enumor.RPTicketStatus `json:"status"`
+	StatusName string                `json:"status_name"`
+	ItsmSn     string                `json:"itsm_sn"`
+	ItsmUrl    string                `json:"itsm_url"`
+	CrpSn      string                `json:"crp_sn"`
+	CrpUrl     string                `json:"crp_url"`
+}
+
+// GetRPTicketDemand get resource plan ticket demand.
+type GetRPTicketDemand struct {
+	ObsProject   enumor.ObsProject   `json:"obs_project"`
+	ExpectTime   string              `json:"expect_time"`
+	ZoneID       string              `json:"zone_id"`
+	ZoneName     string              `json:"zone_name"`
+	RegionID     string              `json:"region_id"`
+	RegionName   string              `json:"region_name"`
+	AreaID       string              `json:"area_id"`
+	AreaName     string              `json:"area_name"`
+	DemandSource enumor.DemandSource `json:"demand_source"`
+	Remark       string              `json:"remark"`
+	Cvm          *rpd.Cvm            `json:"cvm"`
+	Cbs          *rpd.Cbs            `json:"cbs"`
+}

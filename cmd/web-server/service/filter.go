@@ -48,10 +48,20 @@ type loginVerifyRespData struct {
 }
 
 func isITSMCallbackRequest(req *restful.Request) bool {
-	if strings.HasSuffix(req.Request.RequestURI, "/api/v1/cloud/applications/approve") &&
+	uri := req.Request.RequestURI
+	if strings.HasSuffix(uri, "/api/v1/cloud/applications/approve") &&
 		req.Request.Method == http.MethodPost {
 		return true
 	}
+
+	if strings.HasSuffix(uri, "/api/v1/woa/task/approve/apply/ticket") && req.Request.Method == http.MethodPost {
+		return true
+	}
+
+	if strings.HasSuffix(uri, "/api/v1/woa/task/autoaudit/apply/ticket") && req.Request.Method == http.MethodPost {
+		return true
+	}
+
 	return false
 }
 

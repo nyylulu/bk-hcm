@@ -1,0 +1,17 @@
+
+.virtual-input {
+    .num-style{
+        background-color: #fff;
+        padding: 0 5px;
+    }
+}
+.real-input {
+    position: relative;
+    height: 32px;
+    .bk-textarea {
+        position: absolute;
+        top: 0;
+        width: 100%;
+        z-index: 999;
+    }
+}

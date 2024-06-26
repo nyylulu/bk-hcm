@@ -73,9 +73,9 @@ export default defineComponent({
       isShowNoDataTips: false,
     });
 
-    const handleChange = (id: Record<string, number>) => {
-      state = Object.assign(state, { currentActive: id });
-      emit('on-change', id);
+    const handleChange = (data: Record<string, number>) => {
+      state = Object.assign(state, { currentActive: data.id });
+      emit('on-change', data);
     };
 
     const handleSelectChange = (payload: Record<string, number | string>) => {

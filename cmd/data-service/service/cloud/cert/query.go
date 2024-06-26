@@ -139,6 +139,8 @@ func (svc *certSvc) ListCertExt(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return convCertListResult[corecert.TCloudCertExtension](cts.Kit, data.Details)
+	case enumor.TCloudZiyan:
+		return convCertListResult[corecert.TCloudCertExtension](cts.Kit, data.Details)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)
 	}

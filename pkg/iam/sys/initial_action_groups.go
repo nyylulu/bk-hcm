@@ -42,6 +42,16 @@ func genResManagementActionGroups() []client.ActionGroup {
 			},
 			SubGroups: []client.ActionGroup{
 				{
+					Name:   "自研云资源",
+					NameEn: "ZiYan Resource Management",
+					Actions: []client.ActionWithID{
+						{ID: BizZiyanResCreate},
+						{ID: BizZiyanResInventory},
+						{ID: BizZiyanResRecycle},
+						{ID: BizZiyanResDissolve},
+					},
+				},
+				{
 					Name:   "IaaS资源",
 					NameEn: "Biz IaaS Resource Management",
 					Actions: []client.ActionWithID{
@@ -88,6 +98,13 @@ func genResManagementActionGroups() []client.ActionGroup {
 					NameEn: "Biz Operation Record",
 					Actions: []client.ActionWithID{
 						{ID: BizOperationRecordFind},
+					},
+				},
+				{
+					Name:   "资源预测",
+					NameEn: "Biz Resource Plan",
+					Actions: []client.ActionWithID{
+						{ID: BizResPlanOperate},
 					},
 				},
 			},
@@ -201,6 +218,17 @@ func genPlatformManageActionGroups() client.ActionGroup {
 				Actions: []client.ActionWithID{
 					{ID: CostManage},
 					{ID: AccountKeyAccess},
+				},
+			},
+			{
+				Name:   "自研云资源",
+				NameEn: "ZiYan Resource Management",
+				Actions: []client.ActionWithID{
+					{ID: ZiyanCvmType},
+					{ID: ZiyanCvmSubnet},
+					{ID: ZiyanResShelves},
+					{ID: ZiyanCvmCreate},
+					{ID: ZiyanResDissolveManage},
 				},
 			},
 			{

@@ -94,6 +94,7 @@ export enum CloudType {
   azure = '微软云',
   gcp = '谷歌云',
   huawei = '华为云',
+  'tcloud-ziyan' = '自研云',
 }
 
 export enum AccountType {

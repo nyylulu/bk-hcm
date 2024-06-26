@@ -1,0 +1,40 @@
+.wid100 {
+  .apply-form-wrapper {
+    margin-top: 52px;
+    padding: 0 40px;
+  }
+  .flexrow {
+    display: flex;
+    align-items: center;
+  }
+}
+
+.scr-form-wrapper {
+  margin: 0 24px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  .bk-form-item {
+    margin: 8px 0;
+  }
+}
+.tooltips {
+  height: 60px;
+  line-height: 30px;
+  text-align: right;
+  margin-top: 10px;
+  .content {
+    text-align: left;
+    .application {
+      font-size: 14px;
+    }
+  }
+  .calculationDetails {
+    text-decoration: underline;
+    color: #909399;
+    font-size: 12px;
+  }
+}
+.volumetip {
+  color: #e6a23c;
+}

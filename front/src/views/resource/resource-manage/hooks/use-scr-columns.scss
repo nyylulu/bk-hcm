@@ -1,0 +1,110 @@
+.cvm-status-container {
+    display: flex;
+    align-items: center;
+  }
+  
+  .url-sync-partial-success-status {
+    border-bottom: 1px dashed rgb(151, 155, 165);
+  }
+  
+  .status-column-cell {
+    display: flex;
+    align-items: center;
+  
+    .status-icon {
+      margin-right: 7px;
+      width: 14px;
+      height: 14px;
+    }
+  
+    .partial-success-status-text {
+      border-bottom: 1px dashed rgb(151, 155, 165);
+    }
+  }
+  
+  .port-status-col {
+    display: flex;
+    align-items: center;
+  
+    span {
+      width: 14px;
+      height: 16px;
+      line-height: 16px;
+      border-radius: 2px;
+      text-align: center;
+    }
+  
+    .un-health,
+    .health {
+      margin-right: 3px;
+      height: 16px;
+      font-size: 10px;
+    }
+  
+    .un-health {
+      background-color: #ffeeee;
+      color: #ea3536;
+    }
+  
+    .health {
+      background-color: #e4faf0;
+      color: #14a568;
+    }
+    .special-health {
+      background-color: #e4faf0;
+      color: #63656e;
+    }
+  }
+  
+  // scr 样式
+  .c-info {
+    color: #909399 !important;
+  }
+  .c-success {
+    color: #67c23a !important;
+  }
+  .c-danger {
+    color: #f56c6c !important;
+  }
+  .c-warning {
+    color: #e6a23c !important;
+  }
+  .c-disabled {
+    color: #c8c9cc;
+  }
+  .fail-flex {
+    display: flex;
+    align-items: center;
+    line-height: 1;
+    & > span {
+      margin-right: 5px;
+    }
+    a {
+      font-size: 0;
+      & > span {
+        font-size: 12px;
+      }
+    }
+  }
+  .cvm-cell-height {
+    line-height: 1.6;
+    & > div:last-child {
+      color: #909399;
+    }
+  }
+  .link-type,
+  .link-type:focus {
+    color: #409eff;
+    cursor: pointer;
+  }
+  
+  .success-container{
+    display: flex;
+    div+div{
+      margin-left: 5px;
+    }
+  }
+  
+  .bk-badge-main {
+    line-height: 1.5;
+  }

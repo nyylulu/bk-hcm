@@ -160,6 +160,8 @@ const (
 	LoadBalancerListenerTable Name = "load_balancer_listener"
 	// TCloudLbUrlRuleTable is tcloud_lb_url_rule table's name.
 	TCloudLbUrlRuleTable Name = "tcloud_lb_url_rule"
+	// TCloudZiyanLbUrlRuleTable is tcloud_ziyan_lb_url_rule table's name.
+	TCloudZiyanLbUrlRuleTable Name = "tcloud_ziyan_lb_url_rule"
 	// LoadBalancerTargetTable is load_balancer_target table's name.
 	LoadBalancerTargetTable Name = "load_balancer_target"
 	// LoadBalancerTargetGroupTable is load_balancer_target_group table's name.
@@ -170,12 +172,29 @@ const (
 	ResourceFlowRelTable Name = "resource_flow_rel"
 	// ResourceFlowLockTable is resource_flow_lock table's name.
 	ResourceFlowLockTable Name = "resource_flow_lock"
+	// TCloudZiyanRegionTable 腾讯自研云地域表名
+	TCloudZiyanRegionTable Name = "tcloud_ziyan_region"
+	// TCloudZiyanSecurityGroupRuleTable 腾讯自研云安全组规则表名
+	TCloudZiyanSecurityGroupRuleTable = "tcloud_ziyan_security_group_rule"
+
+	// ResPlanTicketTable is res_plan_ticket table's name.
+	ResPlanTicketTable = "res_plan_ticket"
+	// ResPlanDemandTable is res_plan_demand table's name.
+	ResPlanDemandTable = "res_plan_demand"
+	// ResPlanTicketStatusTable is res_plan_ticket_status table's name.
+	ResPlanTicketStatusTable = "res_plan_ticket_status"
+	// WoaZoneTable is woa_zone table's name.
+	WoaZoneTable = "woa_zone"
+	// WoaDeviceTypeTable is woa_device_type table's name.
+	WoaDeviceTypeTable = "woa_device_type"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
 	// RootAccountTable is main_account table's name
 	RootAccountTable Name = "root_account"
 
+	// AccountBillSummaryTable 月度汇总账单
+	AccountBillSummaryTable = "account_bill_summary"
 	// AccountBillSummaryVersionTable 月度汇总账单版本
 	AccountBillSummaryVersionTable = "account_bill_summary_version"
 	// AccountBillSummaryDailyTable 每天汇总账单版本
@@ -198,6 +217,11 @@ const (
 	AccountBillExchangeRateTable = "account_bill_exchange_rate"
 	// AccountBillSyncRecordTable 账单同步记录
 	AccountBillSyncRecordTable = "account_bill_sync_record"
+
+	// RecycleModuleInfo 裁撤模块表
+	RecycleModuleInfo = "recycle_module_info"
+	// RecycleHostInfo  裁撤主机表
+	RecycleHostInfo = "recycle_host_info"
 )
 
 // Validate whether the table name is valid or not.
@@ -266,6 +290,9 @@ var TableMap = map[Name]struct{}{
 	CloudSelectionIdcTable:       {},
 	SslCertTable:                 {},
 
+	TCloudZiyanSecurityGroupRuleTable: {},
+	TCloudZiyanRegionTable:            {},
+
 	// TODO: 临时方案
 	RecycleRecordTableTaskID: {},
 
@@ -276,6 +303,7 @@ var TableMap = map[Name]struct{}{
 
 	AccountBillPullerTable:          {},
 	AccountBillDailyPullTaskTable:   {},
+	AccountBillSummaryTable:         {},
 	AccountBillSummaryMainTable:     {},
 	AccountBillSummaryVersionTable:  {},
 	AccountBillSummaryDailyTable:    {},
@@ -289,14 +317,24 @@ var TableMap = map[Name]struct{}{
 	SecurityGroupCommonRelTable:     {},
 	LoadBalancerListenerTable:       {},
 	TCloudLbUrlRuleTable:            {},
+	TCloudZiyanLbUrlRuleTable:       {},
 	LoadBalancerTargetTable:         {},
 	LoadBalancerTargetGroupTable:    {},
 	TargetGroupListenerRuleRelTable: {},
 	ResourceFlowRelTable:            {},
 	ResourceFlowLockTable:           {},
 
+	ResPlanTicketTable:       {},
+	ResPlanDemandTable:       {},
+	ResPlanTicketStatusTable: {},
+	WoaZoneTable:             {},
+	WoaDeviceTypeTable:       {},
+
 	MainAccountTable: {},
 	RootAccountTable: {},
+
+	RecycleModuleInfo: {},
+	RecycleHostInfo:   {},
 }
 
 // Register 注册表名

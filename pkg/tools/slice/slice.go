@@ -102,3 +102,21 @@ func FilterMap[V any, O any](s []V, filter func(V) bool, mapFunc func(V) O) []O 
 	}
 	return subSlice
 }
+
+// Intersect get intersection of slice A and B.
+func Intersect[S ~[]E, E comparable](sliceA, sliceB S) S {
+	intersect := make([]E, 0)
+	existMap := make(map[E]struct{})
+	// record elements in sliceA
+	for _, ele := range sliceA {
+		existMap[ele] = struct{}{}
+	}
+
+	for _, ele := range sliceB {
+		if _, ok := existMap[ele]; ok {
+			intersect = append(intersect, ele)
+		}
+	}
+
+	return intersect
+}

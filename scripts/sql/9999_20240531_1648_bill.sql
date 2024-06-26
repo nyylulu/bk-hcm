@@ -16,12 +16,14 @@
  *
  * to the current version of the project delivered to anyone in the future.
  */
+
 /*
- SQLVER=9999,HCMVER=v9.9.9
- 
- Notes:
- 1. 支持云账单
- */
+    SQLVER=9999,HCMVER=v9.9.9
+
+    Notes:
+    1. 支持云账单
+*/
+
 START TRANSACTION;
 
 -- 账单同步器表

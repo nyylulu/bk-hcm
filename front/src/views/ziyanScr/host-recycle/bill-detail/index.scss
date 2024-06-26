@@ -1,0 +1,57 @@
+.bill-detail {
+    margin: 0 10px;
+    margin-top: 72px;
+    padding: 0 15px;
+    background-color: #fff;
+    .bk-button+.bk-button {
+        margin-left: 10px;
+    }
+    h2{
+        padding: 15px 0;
+    }
+    .back-cls {
+        display: flex;
+        align-items: center;
+        font-size: 16px;
+        cursor: pointer;
+        padding-top: 20px;
+    }
+    .base-info {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #dcdfe6;
+        &-top {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            & > div {
+                margin-bottom: 10px;
+                span{
+                    margin-left: 20px;
+                }
+            }
+            .c-success {
+                color: #67c23a ;
+            }
+            .c-danger {
+                color: #f56c6c ;
+            }
+        }
+    }
+    .handle-process {
+        padding-bottom: 20px;
+        border-bottom: 1px solid #dcdfe6;
+        .check-export {
+            &-man {
+                margin: 10px 0;
+            }
+            &-trigger {
+                margin-top: 15px;
+            }
+        }
+    }
+    .device-destroy {
+        &-top{
+            margin-bottom: 15px;
+        }
+    }
+
+}

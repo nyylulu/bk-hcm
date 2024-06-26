@@ -92,7 +92,8 @@ func (svc *securityGroupSvc) deleteSGRule(cts *rest.Contexts, validHandler handl
 	case enumor.Azure:
 		return nil, svc.client.HCService().Azure.SecurityGroup.DeleteSecurityGroupRule(cts.Kit.Ctx,
 			cts.Kit.Header(), sgID, id)
-
+	case enumor.TCloudZiyan:
+		return nil, svc.client.HCService().TCloudZiyan.SecurityGroup.DeleteSecurityGroupRule(cts.Kit, sgID, id)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}

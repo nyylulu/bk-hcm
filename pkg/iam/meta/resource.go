@@ -55,6 +55,8 @@ const (
 	Route ResourceType = "route"
 	// RecycleBin defines recycle bin's hcm auth resource type
 	RecycleBin ResourceType = "recycle_bin"
+	// ResPlan defines resource plan's hcm auth resource type
+	ResPlan ResourceType = "resource_plan"
 	// NetworkInterface defines eip hcm network_interface resource type
 	NetworkInterface ResourceType = "network_interface"
 	// Audit defines audit log's hcm auth resource type
@@ -95,6 +97,22 @@ const (
 	MainAccount ResourceType = "main_account"
 	// RootAccount defines main cloud account resource's hcm auth resource type
 	RootAccount ResourceType = "root_account"
+	// ZiyanResInventory 自研云资源-主机库存-菜单粒度
+	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
+	// ZiyanResDissolve 自研云资源-机房裁撤-菜单粒度
+	ZiyanResDissolve ResourceType = "ziyan_resource_dissolve"
+	// ZiyanCvmType 自研云资源-CVM机型-菜单粒度
+	ZiyanCvmType ResourceType = "ziyan_cvm_type"
+	// ZiyanCvmSubnet 自研云资源-CVM子网-菜单粒度
+	ZiyanCvmSubnet ResourceType = "ziyan_cvm_subnet"
+	// ZiyanResShelves 自研云资源-资源上下架-菜单粒度
+	ZiyanResShelves ResourceType = "ziyan_res_shelves"
+	// ZiyanCvmCreate 自研云资源-CVM生产-菜单粒度
+	ZiyanCvmCreate ResourceType = "ziyan_cvm_create"
+	// ZiyanResDissolveManage 自研云资源-机房裁撤管理-菜单粒度
+	ZiyanResDissolveManage ResourceType = "ziyan_resource_dissolve_manage"
+	// ZiYanResource 自研云资源-业务粒度
+	ZiYanResource ResourceType = "ziyan_resource"
 
 	// AccountBill 云账单管理
 	AccountBill ResourceType = "account_bill"

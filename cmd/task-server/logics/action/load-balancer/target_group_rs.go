@@ -56,7 +56,7 @@ type OperateRsOption struct {
 func (opt OperateRsOption) MarshalJSON() ([]byte, error) {
 	var req interface{}
 	switch opt.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		req = struct {
 			Vendor                           enumor.Vendor `json:"vendor" validate:"required"`
 			hclb.TCloudBatchOperateTargetReq `json:",inline"`
@@ -77,7 +77,7 @@ func (opt *OperateRsOption) UnmarshalJSON(raw []byte) (err error) {
 	opt.Vendor = enumor.Vendor(gjson.GetBytes(raw, "vendor").String())
 
 	switch opt.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		err = json.Unmarshal(raw, &opt.TCloudBatchOperateTargetReq)
 	default:
 		return fmt.Errorf("vendor: %s not support", opt.Vendor)
@@ -94,7 +94,7 @@ func (opt OperateRsOption) Validate() error {
 
 	var req validator.Interface
 	switch opt.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		req = &opt.TCloudBatchOperateTargetReq
 	default:
 		return fmt.Errorf("vendor: %s not support", opt.Vendor)
@@ -130,11 +130,14 @@ func (act AddTargetToGroupAction) Run(kt run.ExecuteKit, params interface{}) (in
 	case enumor.TCloud:
 		result, err = actcli.GetHCService().TCloud.Clb.BatchAddRs(
 			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
+	case enumor.TCloudZiyan:
+		result, err = actcli.GetHCService().TCloudZiyan.Clb.BatchAddRs(
+			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", opt.Vendor)
 	}
 	if err != nil {
-		logs.Errorf("batch add rs failed, err: %v, result: %+v, rid: %s", err, result, kt.Kit().Rid)
+		logs.Errorf("[%s] batch add rs failed, err: %v, result: %+v, rid: %s", opt.Vendor, err, result, kt.Kit().Rid)
 		return result, err
 	}
 
@@ -188,11 +191,14 @@ func (act RemoveTargetAction) Run(kt run.ExecuteKit, params interface{}) (interf
 	case enumor.TCloud:
 		_, err = actcli.GetHCService().TCloud.Clb.BatchRemoveTarget(
 			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
+	case enumor.TCloudZiyan:
+		_, err = actcli.GetHCService().TCloudZiyan.Clb.BatchRemoveTarget(
+			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", opt.Vendor)
 	}
 	if err != nil {
-		logs.Errorf("batch remove rs failed, err: %v, rid: %s", err, kt.Kit().Rid)
+		logs.Errorf("[%s] batch remove rs failed, err: %v, rid: %s", opt.Vendor, err, kt.Kit().Rid)
 		return result, err
 	}
 
@@ -236,11 +242,14 @@ func (act ModifyTargetPortAction) Run(kt run.ExecuteKit, params interface{}) (in
 	case enumor.TCloud:
 		err = actcli.GetHCService().TCloud.Clb.BatchModifyTargetPort(
 			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
+	case enumor.TCloudZiyan:
+		err = actcli.GetHCService().TCloudZiyan.Clb.BatchModifyTargetPort(
+			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", opt.Vendor)
 	}
 	if err != nil {
-		logs.Errorf("batch modify target port failed, err: %v, rid: %s", err, kt.Kit().Rid)
+		logs.Errorf("[%s] batch modify target port failed, err: %v, rid: %s", opt.Vendor, err, kt.Kit().Rid)
 		return result, err
 	}
 
@@ -284,11 +293,14 @@ func (act ModifyTargetWeightAction) Run(kt run.ExecuteKit, params interface{}) (
 	case enumor.TCloud:
 		err = actcli.GetHCService().TCloud.Clb.BatchModifyTargetWeight(
 			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
+	case enumor.TCloudZiyan:
+		err = actcli.GetHCService().TCloudZiyan.Clb.BatchModifyTargetWeight(
+			kt.Kit(), opt.TargetGroupID, &opt.TCloudBatchOperateTargetReq)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", opt.Vendor)
 	}
 	if err != nil {
-		logs.Errorf("batch modify target weight failed, err: %v, rid: %s", err, kt.Kit().Rid)
+		logs.Errorf("[%s] batch modify target weight failed, err: %v, rid: %s", opt.Vendor, err, kt.Kit().Rid)
 		return result, err
 	}
 

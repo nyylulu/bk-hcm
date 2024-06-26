@@ -57,6 +57,7 @@ export default defineComponent({
         bk_biz_id: number;
         id: string;
         account_id: string;
+        vendor: VendorEnum;
       }>,
     },
   },
@@ -73,7 +74,7 @@ export default defineComponent({
     const formData = ref({
       name: props.payload?.name || '',
       type: props.payload?.type || TemplateType.IP,
-      vendor: VendorEnum.TCLOUD,
+      vendor: props.payload.vendor || '',
       account_id: resourceAccountStore.resourceAccount?.id || '',
       templates: props.payload?.templates || [],
       group_templates: props.payload?.group_templates || [],
@@ -93,6 +94,7 @@ export default defineComponent({
       },
     ]);
     const portGroupData = ref([]);
+    const accountVendorMap = ref(new Map());
 
     const ipGroupList = ref([]);
     const portGroupList = ref([]);
@@ -214,7 +216,7 @@ export default defineComponent({
         formData.value = {
           name: props.payload?.name || '',
           type: props.payload?.type || TemplateType.IP,
-          vendor: VendorEnum.TCLOUD,
+          vendor: props.payload.vendor || '',
           account_id: props.payload?.account_id || resourceAccountStore.resourceAccount?.id || '',
           templates: props.payload?.templates || [],
           group_templates: props.payload?.group_templates || [],
@@ -362,33 +364,35 @@ export default defineComponent({
       const isResource = whereAmI.value === Senarios.resource;
       const payload = isResource
         ? {
-            page: {
-              count: false,
-              limit: 100,
-              start: 0,
-            },
-            filter: {
-              op: 'and',
-              rules: [
-                {
-                  field: 'vendor',
-                  op: 'eq',
-                  value: VendorEnum.TCLOUD,
-                },
-              ],
-            },
-          }
+          page: {
+            count: false,
+            limit: 100,
+            start: 0,
+          },
+          filter: {
+            op: 'and',
+            rules: [
+              {
+                field: 'vendor',
+                op: 'in',
+                value: [VendorEnum.TCLOUD, VendorEnum.ZIYAN],
+              },
+            ],
+          },
+        }
         : {
             params: {
               account_type: 'resource',
             },
           };
       const res = await accountStore.getAccountList(payload, accountStore.bizs);
-      if (resourceAccountStore.resourceAccount?.id) {
-        accountList.value = res.data?.details.filter(({ id }) => id === resourceAccountStore.resourceAccount?.id);
-        return;
-      }
       accountList.value = isResource ? res?.data?.details : res?.data;
+      if (resourceAccountStore.resourceAccount?.id) {
+        accountList.value = accountList.value.filter(({ id }) => id === resourceAccountStore.resourceAccount?.id);
+      }
+      for (const item of accountList.value) {
+        accountVendorMap.value.set(item.id, item.vendor);
+      }
     };
 
     return () => (

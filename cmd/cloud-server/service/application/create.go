@@ -414,9 +414,6 @@ func (a *applicationSvc) CreateForCreateMainAccount(cts *rest.Contexts) (interfa
 	commReq := new(proto.CreateCommonReq)
 	commReq.Remark = req.Memo
 
-	// 组织架构信息暂时不需要用户填写，待需要这部分功能后，再删除组织架构的特殊设置
-	req.DeptID = -1
-
 	handler := createmainaccount.NewApplicationOfCreateMainAccount(a.getHandlerOption(cts), a.authorizer, req, nil)
 
 	// 申请创建账号无需鉴权，由审批流程确认是否可以完成创建，如需对创建账号进行鉴权，可放开以下注释

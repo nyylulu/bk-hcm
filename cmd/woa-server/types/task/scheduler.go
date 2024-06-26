@@ -1,0 +1,1349 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package task ...
+package task
+
+import (
+	"errors"
+	"fmt"
+	"time"
+
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/cmd/woa-server/common/util"
+	"hcm/cmd/woa-server/dal/task/table"
+)
+
+// ApplyOrder resource apply order
+type ApplyOrder struct {
+	OrderId           uint64        `json:"order_id" bson:"order_id"`
+	SubOrderId        string        `json:"suborder_id" bson:"suborder_id"`
+	BkBizId           int64         `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string        `json:"bk_username" bson:"bk_username"`
+	Follower          []string      `json:"follower" bson:"follower"`
+	Auditor           string        `json:"auditor" bson:"auditor"`
+	RequireType       int64         `json:"require_type" bson:"require_type"`
+	ExpectTime        string        `json:"expect_time" bson:"expect_time"`
+	ResourceType      ResourceType  `json:"resource_type" bson:"resource_type"`
+	Spec              *ResourceSpec `json:"spec" bson:"spec"`
+	AntiAffinityLevel string        `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
+	Description       string        `json:"description" bson:"description"`
+	Remark            string        `json:"remark" bson:"remark"`
+	Stage             TicketStage   `json:"stage" bson:"stage"`
+	Status            ApplyStatus   `json:"status" bson:"status"`
+	Total             uint          `json:"total_num" bson:"total_num"`
+	SuccessNum        uint          `json:"success_num" bson:"success_num"`
+	PendingNum        uint          `json:"pending_num" bson:"pending_num"`
+	RetryTime         uint          `json:"retry_time" bson:"retry_time"`
+	ModifyTime        uint          `json:"modify_time" bson:"modify_time"`
+	CreateAt          time.Time     `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time     `json:"update_at" bson:"update_at"`
+}
+
+// ResourceType resource type
+type ResourceType string
+
+// ResourceType resource type
+const (
+	ResourceTypePm          ResourceType = "IDCPM"
+	ResourceTypeCvm         ResourceType = "QCLOUDCVM"
+	ResourceTypeIdcDvm      ResourceType = "IDCDVM"
+	ResourceTypeQcloudDvm   ResourceType = "QCLOUDDVM"
+	ResourceTypePool        ResourceType = "POOL"
+	ResourceTypeOthers      ResourceType = "OTHERS"
+	ResourceTypeUnsupported ResourceType = "UNSUPPORTED"
+
+	ApplyLimit = 1000
+)
+
+// AllResourceType all resource type
+var AllResourceType = []ResourceType{
+	ResourceTypePm,
+	ResourceTypeCvm,
+	ResourceTypeIdcDvm,
+	ResourceTypeQcloudDvm,
+}
+
+// ApplyStatus apply status
+type ApplyStatus string
+
+/*
+	apply status:
+
+WaitForMatch	待匹配。初始状态
+Matching		匹配执行中
+MatchedSome		已完成部分资源匹配
+Paused			已暂停
+Done			终止
+*/
+const (
+	ApplyStatusWaitForMatch ApplyStatus = "WAIT"
+	ApplyStatusMatching     ApplyStatus = "MATCHING"
+	ApplyStatusMatchedSome  ApplyStatus = "MATCHED_SOME"
+	ApplyStatusPaused       ApplyStatus = "PAUSED"
+	ApplyStatusDone         ApplyStatus = "DONE"
+	ApplyStatusTerminate    ApplyStatus = "TERMINATE"
+)
+
+// GenerateRecord apply order vm generate record
+type GenerateRecord struct {
+	SubOrderId   string `json:"suborder_id" bson:"suborder_id"`
+	GenerateId   uint64 `json:"generate_id" bson:"generate_id"`
+	GenerateType string `json:"generate_type" bson:"generate_type"`
+	TaskId       string `json:"task_id" bson:"task_id"`
+	TaskLink     string `json:"task_link" bson:"task_link"`
+	RequestInfo  string `json:"request_info" bson:"request_info"`
+	// 0: success, 1: handling, 2: failed
+	Status      GenerateStepStatus `json:"status" bson:"status"`
+	IsMatched   bool               `json:"is_matched" bson:"is_matched"`
+	Message     string             `json:"message" bson:"message"`
+	TotalNum    uint               `json:"total_num" bson:"total_num"`
+	SuccessNum  uint               `json:"success_num" bson:"success_num"`
+	SuccessList []string           `json:"success_list" bson:"success_list"`
+	CreateAt    time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt    time.Time          `json:"update_at" bson:"update_at"`
+	StartAt     time.Time          `json:"start_at" bson:"start_at"`
+	EndAt       time.Time          `json:"end_at" bson:"end_at"`
+}
+
+// GenerateStepStatus generate step status
+type GenerateStepStatus int
+
+// GenerateStepStatus generate step status
+const (
+	GenerateStatusInit     GenerateStepStatus = -1
+	GenerateStatusSuccess  GenerateStepStatus = 0
+	GenerateStatusHandling GenerateStepStatus = 1
+	GenerateStatusFailed   GenerateStepStatus = 2
+)
+
+// GetApplyDeviceReq get resource apply delivered devices request
+type GetApplyDeviceReq struct {
+	Filter *querybuilder.QueryFilter `json:"filter" bson:"filter"`
+	Page   metadata.BasePage         `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyDeviceReq) Validate() (errKey string, err error) {
+	if key, err := req.Page.Validate(true); err != nil {
+		return fmt.Sprintf("page.%s", key), err
+	}
+
+	if req.Filter != nil {
+		if key, err := req.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if req.Filter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
+				querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req GetApplyDeviceReq) GetFilter() (map[string]interface{}, error) {
+	if req.Filter != nil {
+		mgoFilter, key, err := req.Filter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:filter.%s, err: %s", key, err)
+		}
+		return mgoFilter, nil
+	}
+	return make(map[string]interface{}), nil
+}
+
+// GetApplyDeviceRst get resource apply delivered devices result
+type GetApplyDeviceRst struct {
+	Count int64         `json:"count"`
+	Info  []*DeviceInfo `json:"info"`
+}
+
+// GetDeliverDeviceReq get resource apply delivered devices request
+type GetDeliverDeviceReq struct {
+	OrderId    uint64 `json:"order_id" bson:"order_id"`
+	SuborderId string `json:"suborder_id" bson:"suborder_id"`
+}
+
+// Validate whether GetDeliverDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetDeliverDeviceReq) Validate() (errKey string, err error) {
+	if req.OrderId <= 0 {
+		return "order_id", errors.New("invalid order_id <= 0")
+	}
+	return "", nil
+}
+
+// ExportDeliverDeviceReq export resource apply delivered devices request
+type ExportDeliverDeviceReq struct {
+	BkBizId int64                     `json:"bk_biz_id" bson:"bk_biz_id"`
+	Filter  *querybuilder.QueryFilter `json:"filter" bson:"filter"`
+}
+
+// Validate whether ExportDeliverDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *ExportDeliverDeviceReq) Validate() (errKey string, err error) {
+	if req.BkBizId <= 0 {
+		return "bk_biz_id", errors.New("invalid bk_biz_id <= 0")
+	}
+
+	if req.Filter != nil {
+		if key, err := req.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if req.Filter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
+				querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req ExportDeliverDeviceReq) GetFilter() (map[string]interface{}, error) {
+	if req.Filter != nil {
+		mgoFilter, key, err := req.Filter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:filter.%s, err: %s", key, err)
+		}
+		mgoFilter["bk_biz_id"] = req.BkBizId
+		return mgoFilter, nil
+	}
+
+	filter := map[string]interface{}{
+		"bk_biz_id": req.BkBizId,
+	}
+
+	return filter, nil
+}
+
+// GetMatchDeviceReq get resource apply match devices request
+type GetMatchDeviceReq struct {
+	ResourceType      ResourceType `json:"resource_type"`
+	Ips               []string     `json:"ips"`
+	Spec              *MatchSpec   `json:"spec"`
+	AntiAffinityLevel string       `json:"anti_affinity_level"`
+	TotalNum          int64        `json:"total_num"`
+	PendingNum        int64        `json:"pending_num"`
+}
+
+// MatchSpec resource apply match specification
+type MatchSpec struct {
+	Region      []string `json:"region"`
+	Zone        []string `json:"zone"`
+	DeviceType  []string `json:"device_type"`
+	Image       []string `json:"image"`
+	OsType      []string `json:"os_type"`
+	RaidType    []string `json:"raid_type"`
+	DiskType    []string `json:"disk_type"`
+	NetworkType []string `json:"network_type"`
+	Isp         []string `json:"isp"`
+}
+
+// Validate whether GetMatchDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetMatchDeviceReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// GetMatchDeviceRst get resource apply match devices result
+type GetMatchDeviceRst struct {
+	Count int64          `json:"count"`
+	Info  []*MatchDevice `json:"info"`
+}
+
+// MatchDevice resource apply match device info
+type MatchDevice struct {
+	BkHostId     int64   `json:"bk_host_id"`
+	AssetId      string  `json:"asset_id"`
+	Ip           string  `json:"ip"`
+	OuterIp      string  `json:"outer_ip"`
+	Isp          string  `json:"isp"`
+	DeviceType   string  `json:"device_type"`
+	OsType       string  `json:"os_type"`
+	Region       string  `json:"region"`
+	Zone         string  `json:"zone"`
+	Module       string  `json:"module"`
+	Equipment    int64   `json:"equipment"`
+	IdcUnit      string  `json:"idc_unit"`
+	IdcLogicArea string  `json:"idc_logic_area"`
+	RaidType     string  `json:"raid_type"`
+	InputTime    string  `json:"input_time"`
+	MatchScore   float64 `json:"match_score"`
+	MatchTag     bool    `json:"match_tag"`
+}
+
+// MatchDeviceReq resource apply manual match devices request
+type MatchDeviceReq struct {
+	SuborderId string              `json:"suborder_id"`
+	Operator   string              `json:"operator"`
+	Device     []*MatchDeviceBrief `json:"device"`
+}
+
+// MatchDeviceBrief match device brief info
+type MatchDeviceBrief struct {
+	BkHostId int64  `json:"bk_host_id"`
+	AssetId  string `json:"asset_id"`
+	Ip       string `json:"ip"`
+}
+
+// Validate whether MatchDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *MatchDeviceReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// MatchPoolDeviceReq match pool device request
+type MatchPoolDeviceReq struct {
+	SuborderId string           `json:"suborder_id"`
+	Spec       []*MatchPoolSpec `json:"spec"`
+}
+
+// MatchPoolSpec resource apply pool device match specification
+type MatchPoolSpec struct {
+	Region     string `json:"region"`
+	Zone       string `json:"zone"`
+	DeviceType string `json:"device_type"`
+	ImageID    string `json:"image_id"`
+	OsType     string `json:"os_type"`
+	Replicas   int64  `json:"replicas"`
+}
+
+// Validate whether MatchPoolDeviceReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
+	if param.SuborderId == "" {
+		return "suborder_id", errors.New("cannot be empty")
+	}
+
+	if len(param.Spec) == 0 {
+		return "spec", errors.New("cannot be empty")
+	}
+
+	for index, spec := range param.Spec {
+		if spec == nil {
+			return fmt.Sprintf("spec[%d]", index), errors.New("cannot be empty")
+		}
+
+		if spec.Region == "" {
+			return fmt.Sprintf("spec[%d].region", index), errors.New("cannot be empty")
+		}
+
+		if spec.Zone == "" {
+			return fmt.Sprintf("spec[%d].zone", index), errors.New("cannot be empty")
+		}
+
+		if spec.DeviceType == "" {
+			return fmt.Sprintf("spec[%d].device_type", index), errors.New("cannot be empty")
+		}
+
+		if spec.ImageID == "" && spec.OsType == "" {
+			return fmt.Sprintf("spec[%d].image_id/os_type", index), errors.New("cannot be empty")
+		}
+
+		if spec.Replicas <= 0 {
+			return fmt.Sprintf("spec[%d].replicas", index), errors.New("should be positive")
+		}
+
+		if spec.Replicas > common.BKMaxInstanceLimit {
+			return fmt.Sprintf("spec[%d].replicas", index), fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		}
+	}
+
+	return "", nil
+}
+
+// DeviceInfo device info
+type DeviceInfo struct {
+	OrderId           uint64       `json:"order_id" bson:"order_id"`
+	SubOrderId        string       `json:"suborder_id" bson:"suborder_id"`
+	GenerateId        uint64       `json:"generate_id" bson:"generate_id"`
+	BkBizId           int          `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string       `json:"bk_username" bson:"bk_username"`
+	BkHostId          int64        `json:"bk_host_id" bson:"bk_host_id"`
+	Ip                string       `json:"ip" bson:"ip"`
+	AssetId           string       `json:"asset_id" bson:"asset_id"`
+	RequireType       int64        `json:"require_type" bson:"require_type"`
+	ResourceType      ResourceType `json:"resource_type" bson:"resource_type"`
+	DeviceType        string       `json:"device_type" bson:"device_type"`
+	Description       string       `json:"description" bson:"description"`
+	Remark            string       `json:"remark" bson:"remark"`
+	ZoneName          string       `json:"zone_name" bson:"zone_name"`
+	ZoneID            int          `json:"zone_id" bson:"zone_id"`
+	ModuleName        string       `json:"module_name" bson:"module_name"`
+	Equipment         string       `json:"rack_id" bson:"rack_id"`
+	IsMatched         bool         `json:"is_matched" bson:"is_matched"`
+	IsChecked         bool         `json:"is_checked" bson:"is_checked"`
+	IsInited          bool         `json:"is_inited" bson:"is_inited"`
+	IsDiskChecked     bool         `json:"is_disk_checked" bson:"is_disk_checked"`
+	IsDelivered       bool         `json:"is_delivered" bson:"is_delivered"`
+	Deliverer         string       `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId    string       `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink  string       `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId        string       `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink      string       `json:"init_task_link" bson:"init_task_link"`
+	DiskCheckTaskId   string       `json:"disk_check_task_id" bson:"disk_check_task_id"`
+	DiskCheckTaskLink string       `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	CreateAt          time.Time    `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time    `json:"update_at" bson:"update_at"`
+}
+
+// ApplyTicket resource apply ticket
+type ApplyTicket struct {
+	OrderId      uint64      `json:"order_id" bson:"order_id"`
+	ItsmTicketId string      `json:"itsm_ticket_id" bson:"itsm_ticket_id"`
+	Stage        TicketStage `json:"stage" bson:"stage"`
+	BkBizId      int64       `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string      `json:"bk_username" bson:"bk_username"`
+	Follower     []string    `json:"follower" bson:"follower"`
+	EnableNotice bool        `json:"enable_notice" bson:"enable_notice"`
+	RequireType  int64       `json:"require_type" bson:"require_type"`
+	ExpectTime   string      `json:"expect_time" bson:"expect_time"`
+	Remark       string      `json:"remark" bson:"remark"`
+	Suborders    []*Suborder `json:"suborders" bson:"suborders"`
+	CreateAt     time.Time   `json:"create_at" bson:"create_at"`
+	UpdateAt     time.Time   `json:"update_at" bson:"update_at"`
+}
+
+// TicketStage resource apply ticket stage
+type TicketStage string
+
+// TicketStage resource apply ticket stage
+const (
+	TicketStageUncommit  TicketStage = "UNCOMMIT"
+	TicketStageAudit     TicketStage = "AUDIT"
+	TicketStageTerminate TicketStage = "TERMINATE"
+	TicketStageRunning   TicketStage = "RUNNING"
+	TicketStageSuspend   TicketStage = "SUSPEND"
+	TicketStageDone      TicketStage = "DONE"
+)
+
+// GetApplyTicketReq get apply ticket request parameter
+type GetApplyTicketReq struct {
+	OrderId uint64 `json:"order_id"`
+}
+
+// Validate whether GetApplyTicketReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyTicketReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// GetApplyTicketRst get apply order result
+type GetApplyTicketRst struct {
+	*ApplyTicket `json:",inline"`
+}
+
+// ApplyAudit resource apply ticket audit info
+type ApplyAudit struct {
+	OrderId        uint64            `json:"order_id"`
+	ItsmTicketId   string            `json:"itsm_ticket_id"`
+	ItsmTicketLink string            `json:"itsm_ticket_link"`
+	Status         string            `json:"status"`
+	CurrentSteps   []*ApplyAuditStep `json:"current_steps"`
+	Logs           []*ApplyAuditLog  `json:"logs"`
+}
+
+// ApplyAuditStep resource apply ticket current audit step
+type ApplyAuditStep struct {
+	Name       string `json:"name"`
+	Processors string `json:"processors"`
+	StateId    int64  `json:"state_id"`
+}
+
+// ApplyAuditLog resource apply ticket audit log
+type ApplyAuditLog struct {
+	Operator  string `json:"operator"`
+	OperateAt string `json:"operate_at"`
+	Message   string `json:"message"`
+	Source    string `json:"source"`
+}
+
+// GetApplyAuditReq get apply ticket audit info request parameter
+type GetApplyAuditReq struct {
+	OrderId uint64 `json:"order_id"`
+}
+
+// Validate whether GetApplyAuditReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyAuditReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// GetApplyAuditRst get apply ticket audit info result
+type GetApplyAuditRst struct {
+	*ApplyAudit `json:",inline"`
+}
+
+// ApplyAuditReq audit apply ticket request parameter
+type ApplyAuditReq struct {
+	OrderId      uint64 `json:"order_id"`
+	ItsmTicketId string `json:"itsm_ticket_id"`
+	StateId      int64  `json:"state_id"`
+	Operator     string `json:"operator"`
+	Approval     bool   `json:"approval"`
+	Remark       string `json:"remark"`
+}
+
+// Validate whether ApplyAuditReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *ApplyAuditReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// ApproveApplyReq audit apply ticket request parameter
+type ApproveApplyReq struct {
+	OrderId  uint64 `json:"order_id"`
+	Operator string `json:"operator"`
+	Approval bool   `json:"approval"`
+	Remark   string `json:"remark"`
+}
+
+// Validate whether ApproveApplyReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *ApproveApplyReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// ApplyAutoAuditReq automatic audit apply ticket request parameter
+type ApplyAutoAuditReq struct {
+	OrderId uint64 `json:"order_id"`
+}
+
+// Validate whether ApplyAutoAuditReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *ApplyAutoAuditReq) Validate() (errKey string, err error) {
+	// TODO
+	return "", nil
+}
+
+// ApplyAutoAuditRst automatic audit apply ticket result
+type ApplyAutoAuditRst struct {
+	Operator string `json:"operator"`
+	Approval int    `json:"approval"`
+	Remark   string `json:"remark"`
+}
+
+// ApplyReq resource apply request
+type ApplyReq struct {
+	OrderId      uint64      `json:"order_id" bson:"order_id"`
+	BkBizId      int64       `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string      `json:"bk_username" bson:"bk_username"`
+	Follower     []string    `json:"follower" bson:"follower"`
+	EnableNotice bool        `json:"enable_notice" bson:"enable_notice"`
+	RequireType  int64       `json:"require_type" bson:"require_type"`
+	ExpectTime   string      `json:"expect_time" bson:"expect_time"`
+	Remark       string      `json:"remark" bson:"remark"`
+	Suborders    []*Suborder `json:"suborders" bson:"suborders"`
+}
+
+// Validate whether ApplyRequest is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *ApplyReq) Validate() (errKey string, err error) {
+	if req.BkBizId <= 0 {
+		return "bk_biz_id", fmt.Errorf("invalid bk_biz_id <= 0")
+	}
+
+	if len(req.User) == 0 {
+		return "bk_username", fmt.Errorf("bk_username cannot be empty")
+	}
+
+	if req.RequireType <= 0 {
+		return "require_type", fmt.Errorf("invalid require_type <= 0")
+	}
+
+	if _, err := time.Parse(datetimeLayout, req.ExpectTime); err != nil {
+		return "expect_time", fmt.Errorf("expect_time should be in format like \"%s\"", datetimeLayout)
+	}
+
+	remarkLimit := 256
+	if len(req.Remark) > remarkLimit {
+		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+	}
+
+	if len(req.Suborders) <= 0 {
+		return "suborders", fmt.Errorf("suborders cannot be empty")
+	}
+
+	suborderLimit := 100
+	if len(req.Suborders) > suborderLimit {
+		return "suborders", fmt.Errorf("exceed max suborders %d", suborderLimit)
+	}
+
+	for idx, suborder := range req.Suborders {
+		if key, err := suborder.Validate(); err != nil {
+			return fmt.Sprintf("suborders[%d].%s", idx, key), err
+		}
+	}
+
+	return "", nil
+}
+
+// Suborder resource apply suborder info
+type Suborder struct {
+	ResourceType      ResourceType  `json:"resource_type" bson:"resource_type"`
+	Replicas          uint          `json:"replicas" bson:"replicas"`
+	AntiAffinityLevel string        `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
+	Remark            string        `json:"remark" bson:"remark"`
+	Spec              *ResourceSpec `json:"spec" bson:"spec"`
+}
+
+// Validate whether Suborder is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (s *Suborder) Validate() (errKey string, err error) {
+	if util.InArray(s.ResourceType, AllResourceType) != true {
+		return "resource_type", fmt.Errorf("unkown resource_type")
+	}
+
+	if s.Replicas <= 0 {
+		return "replicas", fmt.Errorf("invalid replicas <= 0")
+	}
+	// replicas limit 1000
+	if s.Replicas > ApplyLimit {
+		return "replicas", fmt.Errorf("exceed apply limit: %d", ApplyLimit)
+	}
+
+	remarkLimit := 256
+	if len(s.Remark) > remarkLimit {
+		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+	}
+
+	if key, err := s.Spec.Validate(s.ResourceType); err != nil {
+		return fmt.Sprintf("spec.%s", key), err
+	}
+
+	return "", nil
+}
+
+// ResourceSpec resource specifications
+type ResourceSpec struct {
+	Region      string `json:"region" bson:"region"`
+	Zone        string `json:"zone" bson:"zone"`
+	DeviceGroup string `json:"device_group" bson:"device_group"`
+	DeviceType  string `json:"device_type" bson:"device_type"`
+	ImageId     string `json:"image_id" bson:"image_id"`
+	Image       string `json:"image" bson:"image"`
+	DiskSize    int64  `json:"disk_size" bson:"disk_size"`
+	DiskType    string `json:"disk_type" bson:"disk_type"`
+	NetworkType string `json:"network_type" bson:"network_type"`
+	Vpc         string `json:"vpc" bson:"vpc"`
+	Subnet      string `json:"subnet" bson:"subnet"`
+	OsType      string `json:"os_type" bson:"os_type"`
+	RaidType    string `json:"raid_type" bson:"raid_type"`
+	// 外网运营商: "电信","联通","移动","CAP"
+	Isp string `json:"isp" bson:"isp"`
+	// 数据盘挂载点
+	MountPath   string `json:"mount_path" bson:"mount_path"`
+	CpuProvider string `json:"cpu_provider" bson:"cpu_provider"`
+	Kernel      string `json:"kernel" bson:"kernel"`
+}
+
+// Validate whether ResourceSpec is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error) {
+	if len(s.Region) == 0 {
+		return "region", fmt.Errorf("cannot be empty")
+	}
+
+	if len(s.Vpc) > 0 && len(s.Subnet) == 0 {
+		return "subnet", fmt.Errorf("cannot be empty while vpc is set")
+	}
+
+	if len(s.DeviceType) == 0 {
+		return "device_type", fmt.Errorf("cannot be empty")
+	}
+
+	if s.DiskSize < 0 {
+		return "disk_size", fmt.Errorf("invalid value < 0")
+	}
+
+	diskLimit := int64(16000)
+	if s.DiskSize > diskLimit {
+		return "disk_size", fmt.Errorf("exceed limit %d", diskLimit)
+	}
+
+	// 规格为 10 的倍数
+	diskUnit := int64(10)
+	modDisk := s.DiskSize % diskUnit
+	if modDisk != 0 {
+		return "disk_size", fmt.Errorf("must be in multiples of %d", diskUnit)
+	}
+
+	switch resType {
+	case ResourceTypeCvm:
+		if len(s.ImageId) == 0 {
+			return "image_id", fmt.Errorf("cannot be empty")
+		}
+	}
+
+	return "", nil
+}
+
+// CreateApplyOrderResult result of create apply order
+type CreateApplyOrderResult struct {
+	OrderId uint64 `json:"order_id"`
+}
+
+// UnifyOrderList list of unify order
+type UnifyOrderList []*UnifyOrder
+
+// Len returns list length
+func (m UnifyOrderList) Len() int {
+	return len(m)
+}
+
+// Swap swaps two items in the list
+func (m UnifyOrderList) Swap(i, j int) {
+	m[i], m[j] = m[j], m[i]
+}
+
+// Less compares two items
+func (m UnifyOrderList) Less(i, j int) bool {
+	return m[i].CreateAt.Before(m[j].CreateAt)
+}
+
+// UnifyOrder get apply order result object, including apply ticket and order
+type UnifyOrder struct {
+	OrderId           uint64        `json:"order_id" bson:"order_id"`
+	SubOrderId        string        `json:"suborder_id" bson:"suborder_id"`
+	BkBizId           int64         `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string        `json:"bk_username" bson:"bk_username"`
+	RequireType       int64         `json:"require_type" bson:"require_type"`
+	ResourceType      ResourceType  `json:"resource_type" bson:"resource_type"`
+	ExpectTime        string        `json:"expect_time" bson:"expect_time"`
+	Description       string        `json:"description" bson:"description"`
+	Remark            string        `json:"remark" bson:"remark"`
+	Spec              *ResourceSpec `json:"spec" bson:"spec"`
+	AntiAffinityLevel string        `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
+	Stage             TicketStage   `json:"stage" bson:"stage"`
+	Status            ApplyStatus   `json:"status" bson:"status"`
+	Total             uint          `json:"total_num" bson:"total_num"`
+	SuccessNum        uint          `json:"success_num" bson:"success_num"`
+	PendingNum        uint          `json:"pending_num" bson:"pending_num"`
+	ModifyTime        uint          `json:"modify_time" bson:"modify_time"`
+	CreateAt          time.Time     `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time     `json:"update_at" bson:"update_at"`
+}
+
+// GetApplyParam get apply order request parameter
+type GetApplyParam struct {
+	BkBizID     int64             `json:"bk_biz_id" bson:"bk_biz_id"`
+	OrderID     []uint64          `json:"order_id" bson:"order_id"`
+	SuborderID  []string          `json:"suborder_id" bson:"suborder_id"`
+	User        []string          `json:"bk_username" bson:"bk_username"`
+	RequireType []int64           `json:"require_type" bson:"require_type"`
+	Stage       []TicketStage     `json:"stage" bson:"stage"`
+	Start       string            `json:"start" bson:"start"`
+	End         string            `json:"end" bson:"end"`
+	Page        metadata.BasePage `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyParam is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *GetApplyParam) Validate() (errKey string, err error) {
+	arrayLimit := 20
+	if len(param.OrderID) > arrayLimit {
+		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	if len(param.SuborderID) > arrayLimit {
+		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	if len(param.User) > arrayLimit {
+		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	if len(param.RequireType) > arrayLimit {
+		return "require_type", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	if len(param.Stage) > arrayLimit {
+		return "stage", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	return "", nil
+}
+
+const (
+	dateLayout     = "2006-01-02"
+	datetimeLayout = "2006-01-02 15:04:05"
+)
+
+// GetFilter get mgo filter
+func (param *GetApplyParam) GetFilter(isTicket bool) map[string]interface{} {
+	filter := make(map[string]interface{})
+	if param.BkBizID > 0 {
+		filter["bk_biz_id"] = param.BkBizID
+	}
+	if len(param.OrderID) > 0 {
+		filter["order_id"] = mapstr.MapStr{
+			common.BKDBIN: param.OrderID,
+		}
+	}
+	if len(param.SuborderID) > 0 {
+		filter["suborder_id"] = mapstr.MapStr{
+			common.BKDBIN: param.SuborderID,
+		}
+	}
+	if len(param.User) > 0 {
+		filter["bk_username"] = mapstr.MapStr{
+			common.BKDBIN: param.User,
+		}
+	}
+	if len(param.RequireType) > 0 {
+		filter["require_type"] = mapstr.MapStr{
+			common.BKDBIN: param.RequireType,
+		}
+	}
+	if isTicket {
+		// get UNCOMMIT and AUDIT tickets only
+		ticketStageList := make([]TicketStage, 0)
+		if util.InArray(TicketStageUncommit, param.Stage) || len(param.Stage) == 0 {
+			ticketStageList = append(ticketStageList, TicketStageUncommit)
+		}
+		if util.InArray(TicketStageAudit, param.Stage) || len(param.Stage) == 0 {
+			ticketStageList = append(ticketStageList, TicketStageAudit)
+		}
+		if util.InArray(TicketStageTerminate, param.Stage) || len(param.Stage) == 0 {
+			ticketStageList = append(ticketStageList, TicketStageTerminate)
+		}
+		filter["stage"] = mapstr.MapStr{
+			common.BKDBIN: ticketStageList,
+		}
+	} else {
+		if len(param.Stage) > 0 {
+			filter["stage"] = mapstr.MapStr{
+				common.BKDBIN: param.Stage,
+			}
+		}
+	}
+	timeCond := make(map[string]interface{})
+	if len(param.Start) != 0 {
+		startTime, err := time.Parse(dateLayout, param.Start)
+		if err == nil {
+			timeCond[common.BKDBGTE] = startTime
+		}
+	}
+	if len(param.End) != 0 {
+		endTime, err := time.Parse(dateLayout, param.End)
+		if err == nil {
+			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
+			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+		}
+	}
+	if len(timeCond) != 0 {
+		filter["create_at"] = timeCond
+	}
+
+	return filter
+}
+
+// GetApplyOrderRst get apply order result
+type GetApplyOrderRst struct {
+	Count int64         `json:"count"`
+	Info  []*UnifyOrder `json:"info"`
+}
+
+// GetBizApplyParam get business apply order request parameter
+type GetBizApplyParam struct {
+	BkBizID int64             `json:"bk_biz_id" bson:"bk_biz_id"`
+	Start   string            `json:"start" bson:"start"`
+	End     string            `json:"end" bson:"end"`
+	Page    metadata.BasePage `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyParam is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *GetBizApplyParam) Validate() (errKey string, err error) {
+	if param.BkBizID <= 0 {
+		return "bk_biz_id", errors.New("invalid bk_biz_id <= 0")
+	}
+
+	if param.Start != "" {
+		if _, err := time.Parse(dateLayout, param.Start); err != nil {
+			return "start", fmt.Errorf("start should be in format like \"%s\"", dateLayout)
+		}
+	}
+
+	if param.End != "" {
+		if _, err := time.Parse(dateLayout, param.End); err != nil {
+			return "end", fmt.Errorf("end should be in format like \"%s\"", dateLayout)
+		}
+	}
+
+	if key, err := param.Page.Validate(false); err != nil {
+		return key, err
+	}
+
+	if param.Page.Start < 0 {
+		return "page.start", fmt.Errorf("invalid start < 0")
+	}
+
+	if param.Page.Limit <= 0 {
+		return "page.limit", fmt.Errorf("invalid limit <= 0")
+	}
+
+	if param.Page.Limit > 100 {
+		return "page.limit", fmt.Errorf("exceed limit 100")
+	}
+
+	return "", nil
+}
+
+// GetApplyDetailReq get apply order detail request
+type GetApplyDetailReq struct {
+	SuborderId string `json:"suborder_id"`
+}
+
+// GetApplyDetailRst get apply order detail result
+type GetApplyDetailRst struct {
+	Count int64        `json:"count"`
+	Info  []*ApplyStep `json:"info"`
+}
+
+// GetApplyGenerateReq get apply order generate record request
+type GetApplyGenerateReq struct {
+	SuborderId string                    `json:"suborder_id"`
+	Filter     *querybuilder.QueryFilter `json:"filter" bson:"filter"`
+	Page       metadata.BasePage         `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyGenerateReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyGenerateReq) Validate() (errKey string, err error) {
+	if key, err := req.Page.Validate(true); err != nil {
+		return fmt.Sprintf("page.%s", key), err
+	}
+
+	if req.Filter != nil {
+		if key, err := req.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if req.Filter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
+				querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req *GetApplyGenerateReq) GetFilter() (map[string]interface{}, error) {
+	if req.Filter != nil {
+		mgoFilter, key, err := req.Filter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:filter.%s, err: %s", key, err)
+		}
+		return mgoFilter, nil
+	}
+	return make(map[string]interface{}), nil
+}
+
+// GetApplyGenerateRst get apply order generate record result
+type GetApplyGenerateRst struct {
+	Count int64             `json:"count"`
+	Info  []*GenerateRecord `json:"info"`
+}
+
+// GetApplyInitReq get apply order init record request
+type GetApplyInitReq struct {
+	SuborderId string                    `json:"suborder_id"`
+	Filter     *querybuilder.QueryFilter `json:"filter" bson:"filter"`
+	Page       metadata.BasePage         `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyInitReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyInitReq) Validate() (errKey string, err error) {
+	if key, err := req.Page.Validate(false); err != nil {
+		return fmt.Sprintf("page.%s", key), err
+	}
+
+	if req.Filter != nil {
+		if key, err := req.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if req.Filter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
+				querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req GetApplyInitReq) GetFilter() (map[string]interface{}, error) {
+	if req.Filter != nil {
+		mgoFilter, key, err := req.Filter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:filter.%s, err: %s", key, err)
+		}
+		return mgoFilter, nil
+	}
+	return make(map[string]interface{}), nil
+}
+
+// GetApplyInitRst get apply order init record result
+type GetApplyInitRst struct {
+	Count int64         `json:"count"`
+	Info  []*InitRecord `json:"info"`
+}
+
+// GetApplyDiskCheckRst get apply order disk check record result
+type GetApplyDiskCheckRst struct {
+	Count int64              `json:"count"`
+	Info  []*DiskCheckRecord `json:"info"`
+}
+
+// GetApplyDeliverReq get apply order deliver record request
+type GetApplyDeliverReq struct {
+	SuborderId string                    `json:"suborder_id"`
+	Filter     *querybuilder.QueryFilter `json:"filter" bson:"filter"`
+	Page       metadata.BasePage         `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyDeliverReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (req *GetApplyDeliverReq) Validate() (errKey string, err error) {
+	if key, err := req.Page.Validate(false); err != nil {
+		return fmt.Sprintf("page.%s", key), err
+	}
+
+	if req.Filter != nil {
+		if key, err := req.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return fmt.Sprintf("filter.%s", key), err
+		}
+		if req.Filter.GetDeep() > querybuilder.MaxDeep {
+			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
+				querybuilder.MaxDeep)
+		}
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (req GetApplyDeliverReq) GetFilter() (map[string]interface{}, error) {
+	if req.Filter != nil {
+		mgoFilter, key, err := req.Filter.ToMgo()
+		if err != nil {
+			return nil, fmt.Errorf("invalid key:filter.%s, err: %s", key, err)
+		}
+		return mgoFilter, nil
+	}
+	return make(map[string]interface{}), nil
+}
+
+// GetApplyDeliverRst get apply order deliver record result
+type GetApplyDeliverRst struct {
+	Count int64            `json:"count"`
+	Info  []*DeliverRecord `json:"info"`
+}
+
+// ApplyStep apply order detail step info
+type ApplyStep struct {
+	SubOrderId string         `json:"suborder_id" bson:"suborder_id"`
+	StepId     int            `json:"step_id" bson:"step_id"`
+	StepName   string         `json:"step_name" bson:"step_name"`
+	Status     StepStatusType `json:"status" bson:"status"`
+	Message    string         `json:"message" bson:"message"`
+	TotalNum   uint           `json:"total_num" bson:"total_num"`
+	SuccessNum uint           `json:"success_num" bson:"success_num"`
+	FailedNum  uint           `json:"failed_num" bson:"failed_num"`
+	RunningNum uint           `json:"running_num" bson:"running_num"`
+	CreateAt   time.Time      `json:"create_at" bson:"create_at"`
+	UpdateAt   time.Time      `json:"update_at" bson:"update_at"`
+	StartAt    time.Time      `json:"start_at" bson:"start_at"`
+	EndAt      time.Time      `json:"end_at" bson:"end_at"`
+}
+
+// StepIdType step id
+type StepIdType int
+
+// StepStatusType step status
+type StepStatusType int
+
+// StepIdType step id type
+const (
+	StepIdCommit      StepIdType = 1
+	StepIdGenerate    StepIdType = 2
+	StepIdInit        StepIdType = 3
+	StepIdDiskCheck   StepIdType = 4
+	StepIdDeliver     StepIdType = 5
+	StepNameCommit    string     = "下单"
+	StepNameGenerate  string     = "生产"
+	StepNameInit      string     = "初始化"
+	StepNameDiskCheck string     = "本地盘性能压测"
+	StepNameDeliver   string     = "交付"
+
+	StepStatusInit     StepStatusType = -1
+	StepStatusSuccess  StepStatusType = 0
+	StepStatusHandling StepStatusType = 1
+	StepStatusFailed   StepStatusType = 2
+
+	StepMsgInit     string = "init"
+	StepMsgSuccess  string = "success"
+	StepMsgHandling string = "handling"
+)
+
+// InitRecord apply order init record
+type InitRecord struct {
+	SubOrderId string         `json:"suborder_id" bson:"suborder_id"`
+	Ip         string         `json:"ip" bson:"ip"`
+	TaskId     string         `json:"task_id" bson:"task_id"`
+	TaskLink   string         `json:"task_link" bson:"task_link"`
+	Status     InitStepStatus `json:"status" bson:"status"`
+	Message    string         `json:"message" bson:"message"`
+	CreateAt   time.Time      `json:"create_at" bson:"create_at"`
+	UpdateAt   time.Time      `json:"update_at" bson:"update_at"`
+	StartAt    time.Time      `json:"start_at" bson:"start_at"`
+	EndAt      time.Time      `json:"end_at" bson:"end_at"`
+}
+
+// InitStepStatus init step status
+type InitStepStatus int
+
+// InitStepStatus init step status
+const (
+	InitStatusInit     InitStepStatus = -1
+	InitStatusSuccess  InitStepStatus = 0
+	InitStatusHandling InitStepStatus = 1
+	InitStatusFailed   InitStepStatus = 2
+)
+
+// DiskCheckRecord apply order disk check record
+type DiskCheckRecord struct {
+	SubOrderId string              `json:"suborder_id" bson:"suborder_id"`
+	Ip         string              `json:"ip" bson:"ip"`
+	TaskId     string              `json:"task_id" bson:"task_id"`
+	TaskLink   string              `json:"task_link" bson:"task_link"`
+	Status     DiskCheckStepStatus `json:"status" bson:"status"`
+	Message    string              `json:"message" bson:"message"`
+	CreateAt   time.Time           `json:"create_at" bson:"create_at"`
+	UpdateAt   time.Time           `json:"update_at" bson:"update_at"`
+	StartAt    time.Time           `json:"start_at" bson:"start_at"`
+	EndAt      time.Time           `json:"end_at" bson:"end_at"`
+}
+
+// DiskCheckStepStatus disk check step status
+type DiskCheckStepStatus int
+
+// DiskCheckStepStatus disk check step status
+const (
+	DiskCheckStatusInit     DiskCheckStepStatus = -1
+	DiskCheckStatusSuccess  DiskCheckStepStatus = 0
+	DiskCheckStatusHandling DiskCheckStepStatus = 1
+	DiskCheckStatusFailed   DiskCheckStepStatus = 2
+)
+
+// DeliverRecord apply order deliver record
+type DeliverRecord struct {
+	SubOrderId       string            `json:"suborder_id" bson:"suborder_id"`
+	Ip               string            `json:"ip" bson:"ip"`
+	AssetId          string            `json:"asset_id" bson:"asset_id"`
+	Status           DeliverStepStatus `json:"status" bson:"status"`
+	Message          string            `json:"message" bson:"message"`
+	Deliverer        string            `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId   string            `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink string            `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId       string            `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink     string            `json:"init_task_link" bson:"init_task_link"`
+	CreateAt         time.Time         `json:"create_at" bson:"create_at"`
+	UpdateAt         time.Time         `json:"update_at" bson:"update_at"`
+	StartAt          time.Time         `json:"start_at" bson:"start_at"`
+	EndAt            time.Time         `json:"end_at" bson:"end_at"`
+}
+
+// DeliverStepStatus deliver step status
+type DeliverStepStatus int
+
+// DeliverStepStatus deliver step status
+const (
+	DeliverStatusInit     DeliverStepStatus = -1
+	DeliverStatusSuccess  DeliverStepStatus = 0
+	DeliverStatusHandling DeliverStepStatus = 1
+	DeliverStatusFailed   DeliverStepStatus = 2
+)
+
+// StartApplyOrderReq start apply order request
+type StartApplyOrderReq struct {
+	SuborderID []string `json:"suborder_id"`
+}
+
+// Validate whether StartApplyOrderReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *StartApplyOrderReq) Validate() (errKey string, err error) {
+	if len(param.SuborderID) == 0 {
+		return "suborder_id", fmt.Errorf("suborder_id should be set")
+	}
+
+	arrayLimit := 20
+
+	if len(param.SuborderID) > arrayLimit {
+		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	return "", nil
+}
+
+// TerminateApplyOrderReq terminate apply order request
+type TerminateApplyOrderReq struct {
+	SuborderID []string `json:"suborder_id"`
+}
+
+// Validate whether TerminateApplyOrderReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *TerminateApplyOrderReq) Validate() (errKey string, err error) {
+	if len(param.SuborderID) == 0 {
+		return "suborder_id", fmt.Errorf("suborder_id should be set")
+	}
+
+	arrayLimit := 20
+
+	if len(param.SuborderID) > arrayLimit {
+		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	}
+
+	return "", nil
+}
+
+// ModifyApplyReq modify apply order request
+type ModifyApplyReq struct {
+	SuborderID string        `json:"suborder_id" bson:"suborder_id"`
+	User       string        `json:"bk_username" bson:"bk_username"`
+	Replicas   uint          `json:"replicas" bson:"replicas"`
+	Spec       *ResourceSpec `json:"spec" bson:"spec"`
+}
+
+// Validate whether ModifyApplyReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *ModifyApplyReq) Validate() (errKey string, err error) {
+	if len(param.SuborderID) == 0 {
+		return "suborder_id", fmt.Errorf("suborder_id should be set")
+	}
+
+	if key, err := param.Spec.Validate(ResourceTypeCvm); err != nil {
+		return fmt.Sprintf("spec.%s", key), err
+	}
+
+	return "", nil
+}
+
+// RecommendApplyReq get apply order modification recommendation request
+type RecommendApplyReq struct {
+	SuborderID string `json:"suborder_id" bson:"suborder_id"`
+}
+
+// Validate whether RecommendApplyReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *RecommendApplyReq) Validate() (errKey string, err error) {
+	if len(param.SuborderID) == 0 {
+		return "suborder_id", fmt.Errorf("suborder_id should be set")
+	}
+
+	return "", nil
+}
+
+// RecommendApplyRst get apply order modification recommendation result
+type RecommendApplyRst struct {
+	SuborderID string        `json:"suborder_id" bson:"suborder_id"`
+	Replicas   uint          `json:"replicas" bson:"replicas"`
+	Spec       *ResourceSpec `json:"spec" bson:"spec"`
+}
+
+// GetApplyModifyReq get apply order modify record request
+type GetApplyModifyReq struct {
+	SuborderID []string          `json:"suborder_id"`
+	Page       metadata.BasePage `json:"page" bson:"page"`
+}
+
+// Validate whether GetApplyModifyReq is valid
+// errKey: invalid key
+// err: detail reason why errKey is invalid
+func (param *GetApplyModifyReq) Validate() (errKey string, err error) {
+	if key, err := param.Page.Validate(false); err != nil {
+		return key, err
+	}
+
+	if param.Page.Start < 0 {
+		return "page.start", fmt.Errorf("invalid start < 0")
+	}
+
+	if param.Page.Limit < 0 {
+		return "page.limit", fmt.Errorf("invalid limit < 0")
+	}
+
+	if param.Page.Limit > 200 {
+		return "page.limit", fmt.Errorf("exceed limit 200")
+	}
+
+	return "", nil
+}
+
+// GetFilter get mgo filter
+func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
+	filter := make(map[string]interface{})
+	if len(param.SuborderID) > 0 {
+		filter["suborder_id"] = mapstr.MapStr{
+			common.BKDBIN: param.SuborderID,
+		}
+	}
+
+	return filter, nil
+}
+
+// GetApplyModifyRst get apply order modify record result
+type GetApplyModifyRst struct {
+	Count int64                 `json:"count"`
+	Info  []*table.ModifyRecord `json:"info"`
+}

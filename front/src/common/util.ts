@@ -46,17 +46,35 @@ export function deepMerge(...objectArray: any) {
     return acc;
   }, {});
 }
+/**
+ * 期望交付时间
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
 
+export function expectedDeliveryTime() {
+  return dayjs().add(91, 'day').format('YYYY-MM-DD HH:mm:ss');
+}
+/**
+ * 申请时间默认一个周
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
+
+export function applicationTime() {
+  return [dayjs().subtract(7, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
+}
 /**
  * 时间格式化
  * @param val 待格式化时间
  * @param format 格式
  * @returns 格式化后的时间
  */
-export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss') {
-  return val ? dayjs(val).format(format) : '--';
+export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
 }
-
 /**
  * 相对当前的时间
  * @param val 待比较的时间
@@ -256,4 +274,22 @@ export const getQueryStringParams = (param: string, url = window.location.href) 
   }
 
   return queryParams.get(param);
+};
+
+/**
+ * 判断值是否为空
+ * @param { string | array | object | null | undefined } value 值
+ * @returns boolean
+ */
+export const isEmpty = (value: unknown) => {
+  if (value === '' || value === null || value === undefined) {
+    return true;
+  }
+  if (Array.isArray(value) && value.length < 1) {
+    return true;
+  }
+  if (Object.prototype.toString.call(value) === '[object Object]' && Object.keys(value).length < 1) {
+    return true;
+  }
+  return false;
 };

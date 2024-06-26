@@ -9,26 +9,29 @@ import common from './module/common';
 import workbench from './module/workbench';
 import resource from './module/resource';
 import resourceInside from './module/resource-inside';
+import resourcePlan from './module/resource-plan';
 import service from './module/service';
 import serviceInside from './module/service-inside';
 import business from './module/business';
 import scheme from './module/scheme';
+import ziyanScr from './module/ziyan-scr';
 import bill from './module/bill';
 import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
 import { useVerify } from '@/hooks';
 
 const { t } = i18n.global;
-
 const routes: RouteRecordRaw[] = [
   ...common,
   ...workbench,
   ...resource,
   ...resourceInside,
+  ...resourcePlan,
   ...service,
   ...serviceInside,
   ...business,
   ...scheme,
+  ...ziyanScr,
   ...bill,
   {
     // path: '/',

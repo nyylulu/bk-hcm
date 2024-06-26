@@ -19,7 +19,11 @@
 
 package mainaccount
 
-import "hcm/pkg/thirdparty/api-gateway/itsm"
+import (
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"strings"
+)
 
 // PrepareReq 预处理申请单数据
 func (a *ApplicationOfCreateMainAccount) PrepareReq() error {
@@ -39,10 +43,28 @@ func (a *ApplicationOfCreateMainAccount) PrepareReqFromContent() error {
 
 // GetItsmApprover 获取itsm审批人信息
 func (a *ApplicationOfCreateMainAccount) GetItsmApprover(managers []string) []itsm.VariableApprover {
-	return []itsm.VariableApprover{
+	approvers := []itsm.VariableApprover{
 		{
 			Variable:  "platform_manager",
 			Approvers: managers,
 		},
 	}
+
+	// 无运营产品负责人时，在itsm侧控制是否必须运营产品负责人审批
+	opManager, err := a.GetOperationProductManager(a.req.OpProductID)
+	if err != nil {
+		logs.Errorf("get operation product manager failed, err: %s, rid: %s", err, a.Cts.Kit.Rid)
+		return approvers
+	}
+
+	opManagers := strings.Split(opManager, ";")
+
+	if len(opManagers) != 0 {
+		approvers = append(approvers, itsm.VariableApprover{
+			Variable:  "op_product_manager",
+			Approvers: opManagers,
+		})
+	}
+
+	return approvers
 }

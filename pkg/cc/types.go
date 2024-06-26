@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package cc ...
 package cc
 
 import (
@@ -670,8 +671,10 @@ type ApiGateway struct {
 	// BkTicket is the BlueKing access ticket of hcm to request api gateway.
 	BkTicket string `yaml:"bkTicket"`
 	// BkToken is the BlueKing access token of hcm to request api gateway.
-	BkToken string    `yaml:"bkToken"`
-	TLS     TLSConfig `yaml:"tls"`
+	BkToken         string    `yaml:"bkToken"`
+	ServiceID       int64     `yaml:"serviceID"`
+	ApplyLinkFormat string    `yaml:"applyLinkFormat"`
+	TLS             TLSConfig `yaml:"tls"`
 }
 
 // validate hcm runtime.
@@ -782,6 +785,575 @@ type ThreshHoldRanges struct {
 	Range []int `yaml:"range" json:"range"`
 }
 
+// MongoDB mongodb config
+type MongoDB struct {
+	Host                 string `yaml:"host"`
+	Port                 string `yaml:"port"`
+	Usr                  string `yaml:"usr"`
+	Pwd                  string `yaml:"pwd"`
+	Database             string `yaml:"database"`
+	MaxOpenConns         uint64 `yaml:"maxOpenConns"`
+	MaxIdleConns         uint64 `yaml:"maxIdleConns"`
+	Mechanism            string `yaml:"mechanism"`
+	RsName               string `yaml:"rsName"`
+	SocketTimeoutSeconds int    `yaml:"socketTimeoutSeconds"`
+}
+
+// validate mongodb.
+func (m MongoDB) validate() error {
+	if len(m.Host) == 0 {
+		return errors.New("mongodb host is not set")
+	}
+	if len(m.Usr) == 0 {
+		return errors.New("mongodb usr is not set")
+	}
+	if len(m.Pwd) == 0 {
+		return errors.New("mongodb pwd is not set")
+	}
+	if len(m.Database) == 0 {
+		return errors.New("mongodb database is not set")
+	}
+	if len(m.RsName) == 0 {
+		return errors.New("mongodb rsName is not set")
+	}
+
+	return nil
+}
+
+// Redis config
+type Redis struct {
+	Host         string `yaml:"host"`
+	Pwd          string `yaml:"pwd"`
+	SentinelPwd  string `yaml:"sentinelPwd"`
+	Database     string `yaml:"database"`
+	MaxOpenConns int    `yaml:"maxOpenConns"`
+	MasterName   string `yaml:"masterName"`
+}
+
+// validate redis.
+func (r Redis) validate() error {
+	if len(r.Host) == 0 {
+		return errors.New("redis host is not set")
+	}
+	if len(r.Pwd) == 0 {
+		return errors.New("redis pwd is not set")
+	}
+	if len(r.Database) == 0 {
+		return errors.New("redis database is not set")
+	}
+
+	return nil
+}
+
+// ClientConfig third-party api client config set
+type ClientConfig struct {
+	CvmOpt    CVMCli     `yaml:"cvm"`
+	TjjOpt    TjjCli     `yaml:"tjj"`
+	SojobOpt  SojobCli   `yaml:"sojob"`
+	XshipOpt  XshipCli   `yaml:"xship"`
+	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
+	DvmOpt    DVMCli     `yaml:"dvm"`
+	ErpOpt    ErpCli     `yaml:"erp"`
+	TmpOpt    TmpCli     `yaml:"tmp"`
+	Uwork     UworkCli   `yaml:"uwork"`
+	GCS       GCSCli     `yaml:"gcs"`
+	Tcaplus   TcaplusCli `yaml:"tcaplus"`
+	TGW       TGWCli     `yaml:"tgw"`
+	L5        L5Cli      `yaml:"l5"`
+	Safety    SafetyCli  `yaml:"safety"`
+	BkChat    BkChatCli  `yaml:"bkchat"`
+	Sops      SopsCli    `yaml:"sops"`
+	ITSM      ApiGateway `yaml:"itsm"`
+}
+
+func (c ClientConfig) validate() error {
+	if err := c.CvmOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TjjOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.SojobOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.XshipOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TCloudOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.DvmOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.ErpOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TmpOpt.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Uwork.validate(); err != nil {
+		return err
+	}
+
+	if err := c.GCS.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Tcaplus.validate(); err != nil {
+		return err
+	}
+
+	if err := c.TGW.validate(); err != nil {
+		return err
+	}
+
+	if err := c.L5.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Safety.validate(); err != nil {
+		return err
+	}
+
+	if err := c.BkChat.validate(); err != nil {
+		return err
+	}
+
+	if err := c.Sops.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// CVMCli yunti client options
+type CVMCli struct {
+	// yunti api address
+	CvmApiAddr        string `yaml:"host"`
+	CvmLaunchPassword string `yaml:"launch_password"`
+}
+
+func (c CVMCli) validate() error {
+	if len(c.CvmApiAddr) == 0 {
+		return errors.New("cvm.host is not set")
+	}
+
+	if len(c.CvmLaunchPassword) == 0 {
+		return errors.New("cvm.launch_password is not set")
+	}
+
+	return nil
+}
+
+// TjjCli tjj client options
+type TjjCli struct {
+	// tjj api address
+	TjjApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (t TjjCli) validate() error {
+	if len(t.TjjApiAddr) == 0 {
+		return errors.New("tjj.host is not set")
+	}
+
+	if len(t.SecretID) == 0 {
+		return errors.New("tjj.secret_id is not set")
+	}
+
+	if len(t.SecretKey) == 0 {
+		return errors.New("tjj.secret_key is not set")
+	}
+
+	if len(t.Operator) == 0 {
+		return errors.New("tjj.operator is not set")
+	}
+
+	return nil
+}
+
+// SojobCli sojob client options
+type SojobCli struct {
+	// sojob api address
+	SojobApiAddr string `yaml:"host"`
+	SecretID     string `yaml:"secret_id"`
+	SecretKey    string `yaml:"secret_key"`
+	Operator     string `yaml:"operator"`
+}
+
+func (s SojobCli) validate() error {
+	if len(s.SojobApiAddr) == 0 {
+		return errors.New("sojob.host is not set")
+	}
+
+	if len(s.SecretID) == 0 {
+		return errors.New("sojob.secret_id is not set")
+	}
+
+	if len(s.SecretKey) == 0 {
+		return errors.New("sojob.secret_key is not set")
+	}
+
+	if len(s.Operator) == 0 {
+		return errors.New("sojob.operator is not set")
+	}
+
+	return nil
+}
+
+// XshipCli xship client options
+type XshipCli struct {
+	// Xship api address
+	XshipApiAddr string `yaml:"host"`
+	ClientID     string `yaml:"client_id"`
+	SecretKey    string `yaml:"secret_key"`
+}
+
+func (x XshipCli) validate() error {
+	if len(x.XshipApiAddr) == 0 {
+		return errors.New("xship.host is not set")
+	}
+
+	if len(x.ClientID) == 0 {
+		return errors.New("xship.client_id is not set")
+	}
+
+	if len(x.SecretKey) == 0 {
+		return errors.New("xship.secret_key is not set")
+	}
+
+	return nil
+}
+
+// TCloudCli  tencent cloud client options
+type TCloudCli struct {
+	Endpoints  TCloudEndpoints  `yaml:"endpoints"`
+	Credential TCloudCredential `yaml:"credential"`
+}
+
+func (t TCloudCli) validate() error {
+	if err := t.Endpoints.validate(); err != nil {
+		return err
+	}
+
+	if err := t.Credential.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// TCloudEndpoints tencent cloud endpoints
+type TCloudEndpoints struct {
+	Cvm string `yaml:"cvm"`
+	Vpc string `yaml:"vpc"`
+	Clb string `yaml:"clb"`
+}
+
+func (e TCloudEndpoints) validate() error {
+	if len(e.Cvm) == 0 {
+		return errors.New("tencentcloud.endpoints.cvm is not set")
+	}
+
+	if len(e.Vpc) == 0 {
+		return errors.New("tencentcloud.endpoints.vpc is not set")
+	}
+
+	if len(e.Clb) == 0 {
+		return errors.New("tencentcloud.endpoints.clb is not set")
+	}
+
+	return nil
+}
+
+// TCloudCredential tencent cloud credential
+type TCloudCredential struct {
+	ID  string `yaml:"id"`
+	Key string `yaml:"key"`
+}
+
+func (e TCloudCredential) validate() error {
+	if len(e.ID) == 0 {
+		return errors.New("tencentcloud.credential.id is not set")
+	}
+
+	if len(e.Key) == 0 {
+		return errors.New("tencentcloud.credential.key is not set")
+	}
+
+	return nil
+}
+
+// ErpCli erp client options
+type ErpCli struct {
+	// erp api address
+	ErpApiAddr string `yaml:"host"`
+}
+
+func (c ErpCli) validate() error {
+	if len(c.ErpApiAddr) == 0 {
+		return errors.New("erp.host is not set")
+	}
+
+	return nil
+}
+
+// TmpCli tmp client options
+type TmpCli struct {
+	// tmp api address
+	TMPApiAddr string `yaml:"host"`
+}
+
+func (c TmpCli) validate() error {
+	if len(c.TMPApiAddr) == 0 {
+		return errors.New("tmp.host is not set")
+	}
+
+	return nil
+}
+
+// UworkCli Uwork client options
+type UworkCli struct {
+	// Uwork api address
+	UworkApiAddr string `yaml:"host"`
+}
+
+func (c UworkCli) validate() error {
+	if len(c.UworkApiAddr) == 0 {
+		return errors.New("uwork.host is not set")
+	}
+
+	return nil
+}
+
+// GCSCli gcs client options
+type GCSCli struct {
+	// gcs api address
+	GcsApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (c GCSCli) validate() error {
+	if len(c.GcsApiAddr) == 0 {
+		return errors.New("gcs.host is not set")
+	}
+
+	if len(c.SecretID) == 0 {
+		return errors.New("gcs.secret_id is not set")
+	}
+
+	if len(c.SecretKey) == 0 {
+		return errors.New("gcs.secret_key is not set")
+	}
+
+	if len(c.Operator) == 0 {
+		return errors.New("gcs.operator is not set")
+	}
+
+	return nil
+}
+
+// TcaplusCli tcaplus client options
+type TcaplusCli struct {
+	// tcaplus api address
+	TcaplusApiAddr string `yaml:"host"`
+}
+
+func (c TcaplusCli) validate() error {
+	if len(c.TcaplusApiAddr) == 0 {
+		return errors.New("tcaplus.host is not set")
+	}
+
+	return nil
+}
+
+// TGWCli tgw client options
+type TGWCli struct {
+	// tgw api address
+	TgwApiAddr string `yaml:"host"`
+}
+
+func (c TGWCli) validate() error {
+	if len(c.TgwApiAddr) == 0 {
+		return errors.New("tgw.host is not set")
+	}
+
+	return nil
+}
+
+// L5Cli l5 client options
+type L5Cli struct {
+	// l5 api address
+	L5ApiAddr string `yaml:"host"`
+}
+
+func (c L5Cli) validate() error {
+	if len(c.L5ApiAddr) == 0 {
+		return errors.New("l5.host is not set")
+	}
+
+	return nil
+}
+
+// SafetyCli Safety client options
+type SafetyCli struct {
+	// safety api address
+	SafetyApiAddr string `yaml:"host"`
+}
+
+func (c SafetyCli) validate() error {
+	if len(c.SafetyApiAddr) == 0 {
+		return errors.New("safety.host is not set")
+	}
+
+	return nil
+}
+
+// DVMCli dvm client options
+type DVMCli struct {
+	DvmApiAddr string `yaml:"host"`
+	SecretID   string `yaml:"secret_id"`
+	SecretKey  string `yaml:"secret_key"`
+	Operator   string `yaml:"operator"`
+}
+
+func (c DVMCli) validate() error {
+	if len(c.DvmApiAddr) == 0 {
+		return errors.New("dvm.host is not set")
+	}
+
+	if len(c.SecretID) == 0 {
+		return errors.New("dvm.secret_id is not set")
+	}
+
+	if len(c.SecretKey) == 0 {
+		return errors.New("dvm.secret_key is not set")
+	}
+
+	if len(c.Operator) == 0 {
+		return errors.New("dvm.operator is not set")
+	}
+
+	return nil
+}
+
+// BkChatCli bkchat client options
+type BkChatCli struct {
+	BkChatApiAddr string `yaml:"host"`
+	NoticeFmt     string `yaml:"notice_fmt"`
+}
+
+func (c BkChatCli) validate() error {
+	if len(c.BkChatApiAddr) == 0 {
+		return errors.New("bkchat.host is not set")
+	}
+
+	return nil
+}
+
+// SopsCli sops client options
+type SopsCli struct {
+	SopsApiAddr string `yaml:"host"`
+	AppCode     string `yaml:"app_code"`
+	AppSecret   string `yaml:"app_secret"`
+	Operator    string `yaml:"operator"`
+}
+
+func (c SopsCli) validate() error {
+	if len(c.SopsApiAddr) == 0 {
+		return errors.New("sops.host is not set")
+	}
+
+	if len(c.AppCode) == 0 {
+		return errors.New("sops.app_code is not set")
+	}
+
+	if len(c.AppSecret) == 0 {
+		return errors.New("sops.app_secret is not set")
+	}
+
+	return nil
+}
+
+// ItsmFlow defines the itsm flow related runtime.
+type ItsmFlow struct {
+	// ServiceName is the itsm service name.
+	ServiceName string `yaml:"serviceName"`
+	// ServiceID is the itsm service id.
+	ServiceID int64 `yaml:"serviceID"`
+	// StateNodes is the itsm state nodes.
+	StateNodes []StateNode `yaml:"stateNodes"`
+}
+
+// validate ItsmFlow runtime.
+func (i ItsmFlow) validate() error {
+	if i.ServiceID == 0 {
+		return errors.New("itsm service id is not set")
+	}
+
+	for _, stateNode := range i.StateNodes {
+		if err := stateNode.validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ResourceDissolve resource dissolve config
+type ResourceDissolve struct {
+	OriginDate string `yaml:"originDate"`
+}
+
+func (r ResourceDissolve) validate() error {
+	if len(r.OriginDate) == 0 {
+		return errors.New("resourceDissolve.originDate is not set")
+	}
+
+	return nil
+}
+
+// StateNode defines the itsm state node related runtime.
+type StateNode struct {
+	ID          int64  `yaml:"id"`
+	NodeName    string `yaml:"nodeName"`
+	Approver    string `json:"approver"`
+	ApprovalKey string `yaml:"approvalKey"`
+	RemarkKey   string `yaml:"remarkKey"`
+}
+
+// validate StateNode runtime.
+func (i StateNode) validate() error {
+	if i.ID == 0 {
+		return errors.New("state node id is not set")
+	}
+
+	if len(i.NodeName) == 0 {
+		return errors.New("state node name is not set")
+	}
+
+	if len(i.ApprovalKey) == 0 {
+		return errors.New("state node approval key is not set")
+	}
+
+	if len(i.RemarkKey) == 0 {
+		return errors.New("state node remark key is not set")
+	}
+	return nil
+}
+
 // ObjectStore object store config
 type ObjectStore struct {
 	Type              string `yaml:"type"`
@@ -808,5 +1380,33 @@ func (ost ObjectStoreTCloud) Validate() error {
 	if len(ost.COSBucketURL) == 0 {
 		return errors.New("cos_bucket_url cannot be empty")
 	}
+	return nil
+}
+
+// Es elasticsearch config
+type Es struct {
+	Url      string    `json:"url"`
+	User     string    `json:"user"`
+	Password string    `json:"password"`
+	TLS      TLSConfig `yaml:"tls"`
+}
+
+func (e Es) validate() error {
+	if len(e.Url) == 0 {
+		return errors.New("elasticsearch.url is not set")
+	}
+
+	if len(e.User) == 0 {
+		return errors.New("elasticsearch.user is not set")
+	}
+
+	if len(e.Password) == 0 {
+		return errors.New("elasticsearch.password is not set")
+	}
+
+	if err := e.TLS.validate(); err != nil {
+		return fmt.Errorf("validate tls failed, err: %v", err)
+	}
+
 	return nil
 }

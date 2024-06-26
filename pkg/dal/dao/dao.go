@@ -56,9 +56,12 @@ import (
 	daosubaccount "hcm/pkg/dal/dao/cloud/sub-account"
 	daosync "hcm/pkg/dal/dao/cloud/sync"
 	"hcm/pkg/dal/dao/cloud/zone"
+	"hcm/pkg/dal/dao/dissolve/host"
+	"hcm/pkg/dal/dao/dissolve/module"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
+	"hcm/pkg/dal/dao/resource-plan"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -131,11 +134,24 @@ type Set interface {
 	LoadBalancerTargetGroup() loadbalancer.TargetGroupInterface
 	LoadBalancerTargetGroupListenerRuleRel() loadbalancer.TargetGroupListenerRuleRelInterface
 	LoadBalancerTCloudUrlRule() loadbalancer.LbTCloudUrlRuleInterface
+	LoadBalancerTCloudZiyanUrlRule() loadbalancer.LbTCloudZiyanUrlRuleInterface
 	ResourceFlowRel() resflow.ResourceFlowRelInterface
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
 	MainAccount() accountset.MainAccount
 	RootAccount() accountset.RootAccount
+
+	TCloudZiyanRegion() region.TCloudZiyanRegion
+	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
+
+	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanDemand() resplan.ResPlanDemandInterface
+	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
+	WoaZone() resplan.WoaZoneInterface
+	WoaDeviceType() resplan.WoaDeviceTypeInterface
+
+	RecycleModule() module.RecycleModule
+	RecycleHost() host.RecycleHost
 
 	Txn() *Txn
 }
@@ -652,6 +668,15 @@ func (s *set) Cert() cert.Interface {
 	}
 }
 
+// TCloudZiyanSGRule 腾讯自研云安全组规则dao.
+func (s *set) TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule {
+	return &securitygroup.TCloudZiyanSGRuleDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // LoadBalancer return load balancer dao.
 func (s *set) LoadBalancer() loadbalancer.LoadBalancerInterface {
 	return &loadbalancer.LoadBalancerDao{
@@ -706,6 +731,14 @@ func (s *set) LoadBalancerTCloudUrlRule() loadbalancer.LbTCloudUrlRuleInterface 
 	}
 }
 
+func (s *set) LoadBalancerTCloudZiyanUrlRule() loadbalancer.LbTCloudZiyanUrlRuleInterface {
+	return &loadbalancer.LbTCloudZiyanUrlRuleDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // ResourceFlowRel return resource flow rel dao.
 func (s *set) ResourceFlowRel() resflow.ResourceFlowRelInterface {
 	return &resflow.ResourceFlowRelDao{
@@ -731,6 +764,56 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 	}
 }
 
+// TCloudZiyanRegion 腾讯自研云region dao.
+func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
+	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
+}
+
+// ResPlanTicket resource plan ticket dao.
+func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
+	return &resplan.ResPlanTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanDemand resource plan demand dao.
+func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
+	return &resplan.ResPlanDemandDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTicketStatus resource plan ticket status dao.
+func (s *set) ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface {
+	return &resplan.ResPlanTicketStatusDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaZone woa zone status dao.
+func (s *set) WoaZone() resplan.WoaZoneInterface {
+	return &resplan.WoaZoneDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaDeviceType woa device type dao.
+func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
+	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // MainAccount return mainaccount dao
 func (s *set) MainAccount() accountset.MainAccount {
 	return &accountset.MainAccountDao{
@@ -747,4 +830,14 @@ func (s *set) RootAccount() accountset.RootAccount {
 		IDGen: s.idGen,
 		Audit: s.audit,
 	}
+}
+
+// RecycleModule return recycle module dao.
+func (s *set) RecycleModule() module.RecycleModule {
+	return module.NewRecycleModuleDao(s.orm, s.idGen, s.audit)
+}
+
+// RecycleHost return recycle host dao.
+func (s *set) RecycleHost() host.RecycleHost {
+	return host.NewRecycleHostDao(s.orm, s.idGen, s.audit)
 }

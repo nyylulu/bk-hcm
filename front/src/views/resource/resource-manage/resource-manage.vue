@@ -47,6 +47,7 @@ const headerExtensionMap = computed(() => {
   const map = { firstLabel: '', firstField: '', secondLabel: '', secondField: '' };
   switch (resourceAccountStore.resourceAccount.vendor) {
     case VendorEnum.TCLOUD:
+    case VendorEnum.ZIYAN:
       Object.assign(map, {
         firstLabel: '主账号ID',
         firstField: 'cloud_main_account_id',
@@ -158,14 +159,16 @@ const componentMap = {
 };
 
 // 标签相关数据
-const tabs = RESOURCE_TYPES.map((type) => {
-  return {
-    name: type.type,
-    type: t(type.name),
-    component: componentMap[type.type],
-  };
-});
-const activeTab = ref((route.query.type as string) || tabs[0].type);
+const tabs = ref(
+  RESOURCE_TYPES.map((type) => {
+    return {
+      name: type.type,
+      type: t(type.name),
+      component: componentMap[type.type],
+    };
+  }),
+);
+const activeTab = ref((route.query.type as string) || tabs.value[0].type);
 
 const filterData = (key: string, val: string | number) => {
   if (!filter.value.rules.length) {
@@ -352,6 +355,21 @@ watch(
 );
 
 watch(
+  [() => resourceAccountStore.currentAccountVendor, () => resourceAccountStore.currentVendor],
+  ([currentAccountVendor, currentVendor]) => {
+    // 自研云，只展示自研资源
+    const baseTypes = [VendorEnum.ZIYAN].includes(currentAccountVendor || currentVendor)
+      ? RESOURCE_TYPES.filter((type) => ['vpc', 'subnet', 'security', 'clb'].includes(type.type))
+      : RESOURCE_TYPES;
+
+    tabs.value = baseTypes.map((type) => ({ name: type.type, type: t(type.name), component: componentMap[type.type] }));
+  },
+  {
+    deep: true,
+  },
+);
+
+watch(
   () => activeResourceTab.value,
   (val) => {
     router.push({
@@ -466,7 +484,12 @@ onMounted(() => {
           {{ resourceAccountStore?.resourceAccount?.sync_failed_reason }}
         </template>
       </bk-alert>
-      <bk-tab v-model:active="activeTab" type="card-grid" class="resource-main g-scroller">
+      <bk-tab
+        v-model:active="activeTab"
+        type="card-grid"
+        class="resource-main g-scroller"
+        :class="resourceAccountStore?.resourceAccount?.sync_failed_reason?.length ? 'has-error' : ''"
+      >
         <template #setting>
           <div style="margin: 0 10px">
             <bk-select v-model="status" :clearable="false" class="w80">
@@ -560,14 +583,21 @@ onMounted(() => {
               <bk-button
                 theme="primary"
                 class="new-button"
-                :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.iaas_resource_create }"
-                @click="() => {
-                  if (!authVerifyData?.permissionAction?.iaas_resource_create) {
-                    handleAuth('iaas_resource_create');
-                  } else {
-                    handleAdd();
-                  }
+                :class="{
+                  'hcm-no-permision-btn':
+                    !authVerifyData?.permissionAction?.iaas_resource_create,
                 }"
+                @click="
+                  () => {
+                    if (
+                      !authVerifyData?.permissionAction?.iaas_resource_create
+                    ) {
+                      handleAuth('iaas_resource_create');
+                    } else {
+                      handleAdd();
+                    }
+                  }
+                "
               >
                 {{ ['host', 'clb'].includes(activeTab) ? '购买' : '新建' }}
               </bk-button>
@@ -647,6 +677,10 @@ onMounted(() => {
   // margin-top: 20px;
   box-shadow: 1px 2px 3px 0 rgb(0 0 0 / 5%);
   height: calc(100vh - 200px);
+
+  &.has-error {
+    height: calc(100vh - 242px);
+  }
 
   :deep(.bk-tab-header) {
     line-height: normal !important;

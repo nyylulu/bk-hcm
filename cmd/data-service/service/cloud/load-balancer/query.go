@@ -178,6 +178,8 @@ func (svc *lbSvc) ListLoadBalancerExt(cts *rest.Contexts) (interface{}, error) {
 	switch vendor {
 	case enumor.TCloud:
 		return convLbListResult[corelb.TCloudClbExtension](data.Details)
+	case enumor.TCloudZiyan:
+		return convLbListResult[corelb.TCloudClbExtension](data.Details)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", vendor)
 	}
@@ -211,7 +213,7 @@ func (svc *lbSvc) GetLoadBalancer(cts *rest.Contexts) (any, error) {
 
 	lbTable := result.Details[0]
 	switch lbTable.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return convLoadBalancerWithExt(&lbTable)
 	default:
 		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
@@ -291,6 +293,12 @@ func (svc *lbSvc) ListListener(cts *rest.Contexts) (interface{}, error) {
 
 // ListListenerExt list listener with extension.
 func (svc *lbSvc) ListListenerExt(cts *rest.Contexts) (any, error) {
+
+	vendor := enumor.Vendor(cts.PathParameter("vendor").String())
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
 	req := new(core.ListReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
@@ -315,16 +323,21 @@ func (svc *lbSvc) ListListenerExt(cts *rest.Contexts) (any, error) {
 		return &protocloud.ListenerListResult{Count: result.Count}, nil
 	}
 
-	details := make([]corelb.Listener[corelb.TCloudListenerExtension], 0, len(result.Details))
-	for _, one := range result.Details {
-		tmpOne, err := convTableToListener[corelb.TCloudListenerExtension](&one)
-		if err != nil {
-			logs.Errorf("fail to conv listener with extension, err: %v, rid: %s", err, cts.Kit.Rid)
+	switch vendor {
+	case enumor.TCloud, enumor.TCloudZiyan:
+		details := make([]corelb.Listener[corelb.TCloudListenerExtension], 0, len(result.Details))
+		for _, one := range result.Details {
+			tmpOne, err := convTableToListener[corelb.TCloudListenerExtension](&one)
+			if err != nil {
+				logs.Errorf("[%s]fail to conv listener with extension, err: %v, rid: %s", vendor, err, cts.Kit.Rid)
+			}
+			details = append(details, *tmpOne)
 		}
-		details = append(details, *tmpOne)
-	}
 
-	return &protocloud.TCloudListenerListResult{Details: details}, nil
+		return &protocloud.TCloudListenerListResult{Details: details}, nil
+	default:
+		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
+	}
 }
 
 func convTableToBaseListener(one *tablelb.LoadBalancerListenerTable) *corelb.BaseListener {
@@ -578,7 +591,7 @@ func (svc *lbSvc) GetTargetGroup(cts *rest.Contexts) (any, error) {
 
 	tgInfo := result.Details[0]
 	switch tgInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return convTableToBaseTargetGroup(cts.Kit, &tgInfo)
 	default:
 		return nil, fmt.Errorf("unsupport vendor: %s", vendor)
@@ -655,6 +668,14 @@ func (svc *lbSvc) GetListener(cts *rest.Contexts) (any, error) {
 		newLblInfo, err := convTableToListener[corelb.TCloudListenerExtension](&lblInfo)
 		if err != nil {
 			logs.Errorf("fail to conv listener with extension, lblID: %s, err: %v, rid: %s", id, err, cts.Kit.Rid)
+			return nil, err
+		}
+		return newLblInfo, nil
+	case enumor.TCloudZiyan:
+		newLblInfo, err := convTableToListener[corelb.TCloudListenerExtension](&lblInfo)
+		if err != nil {
+			logs.Errorf("fail to conv listener with extension in tcloud-ziyan, lblID: %s, err: %v, rid: %s", id, err,
+				cts.Kit.Rid)
 			return nil, err
 		}
 		return newLblInfo, nil
