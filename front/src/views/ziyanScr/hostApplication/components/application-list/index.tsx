@@ -107,20 +107,7 @@ export default defineComponent({
               return (
                 <div>
                   <div>
-                    <Button
-                      theme='primary'
-                      text
-                      onClick={() => {
-                        router.push({
-                          name: 'host-application-detail',
-                          query: {
-                            bk_biz_id: data.bk_biz_id,
-                          },
-                          params: {
-                            id: data.order_id,
-                          },
-                        });
-                      }}>
+                    <Button theme='primary' text onClick={() => getOrderRoute(data)}>
                       {data.order_id}
                     </Button>
                   </div>
@@ -428,7 +415,21 @@ export default defineComponent({
       },
       { deep: true },
     );
-
+    const getOrderRoute = (row) => {
+      let routeParams: any = {
+        name: 'host-application-detail',
+        params: {
+          id: row.order_id,
+        },
+      };
+      if (row.stage === 'UNCOMMIT') {
+        routeParams = {
+          path: '/ziyanScr/hostApplication/apply',
+          query: { order_id: row.order_id },
+        };
+      }
+      router.push(routeParams);
+    };
     // 获取匹配详情
     const getMatchDetails = async (subOrderId: number) => {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/detail`, {

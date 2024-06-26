@@ -196,11 +196,6 @@ export default (type: string, isSimpleShow = false) => {
       width: 50,
     },
     {
-      label: '已支付',
-      field: 'success_num',
-      width: 50,
-    },
-    {
       label: '地域',
       field: 'spec.region',
       render: ({ row }: any) => getRegionCn(row.spec.region),

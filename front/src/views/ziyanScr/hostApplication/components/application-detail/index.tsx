@@ -32,6 +32,21 @@ export default defineComponent({
     const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
     const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
+    cloudcolumns.splice(4, 0, {
+      label: '已支付',
+      field: 'success_num',
+      width: 50,
+      render: ({ row }: any) => (
+        <span class={'copy-wrapper'}>
+          {row.success_num}
+          {row.success_num > 0 ? (
+            <Button text theme='primary'>
+              <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
+            </Button>
+          ) : null}
+        </span>
+      ),
+    });
     const Hostcolumns = [
       ...cloudcolumns,
       {
