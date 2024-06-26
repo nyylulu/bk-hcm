@@ -285,16 +285,18 @@ export default defineComponent({
       },
     ];
     // 在第三个加子单号，需要跳转到单据详情，未用到路由
-    columns.splice(2, 0, {
-      label: '子单号',
-      field: 'suborder_id',
-      width: 80,
+    columns.splice(1, 0, {
+      label: '单号/子单号',
+      width: 100,
       render: ({ row }) => {
         return (
-          // 单据详情
-          <span class='sub-order-num' onClick={() => enterDetail(row)}>
-            {row.suborder_id}
-          </span>
+          <div class='cvm-cell-height'>
+            <div>{row.order_id}</div>
+            {/* // 单据详情 */}
+            <span class='sub-order-num' onClick={() => enterDetail(row)}>
+              {row.suborder_id}
+            </span>
+          </div>
         );
       },
     });

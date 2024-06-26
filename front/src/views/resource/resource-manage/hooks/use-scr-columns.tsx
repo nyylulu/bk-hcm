@@ -775,11 +775,8 @@ export default (type: string, isSimpleShow = false) => {
   const recycleOrderColumns = [
     {
       type: 'selection',
-    },
-    {
-      label: '单号',
-      field: 'order_id',
-      width: 80,
+      width: 32,
+      minWidth: 32,
     },
     {
       label: '业务',
