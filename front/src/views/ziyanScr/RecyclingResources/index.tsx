@@ -1,4 +1,4 @@
-import { defineComponent, ref, watch, onMounted, computed } from 'vue';
+import { defineComponent, ref, watch, computed } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
@@ -6,7 +6,6 @@ import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import usePagination from '@/hooks/usePagination';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import { useAccountStore } from '@/store';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import apiService from '@/api/scrApi';
 import { useRouter } from 'vue-router';
@@ -23,7 +22,6 @@ export default defineComponent({
       handlePageValueChange: RlhandlePageValueChange,
     } = usePagination(() => getListData());
     const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => {});
-    const accountStore = useAccountStore();
     const { selections, handleSelectionChange } = useSelection();
     const active = ref(1);
     const router = useRouter();
@@ -50,7 +48,6 @@ export default defineComponent({
     const lips = ref('');
     const activetab = ref(0);
     const serverTableData = ref([]);
-    const businessList = ref([]);
     const { columns: BScolumns } = useColumns('BusinessSelection');
     const { columns: RTcolumns } = useColumns('ResourcesTotal');
     const updateRemark = (remark: string) => {
@@ -74,10 +71,6 @@ export default defineComponent({
     const Tablehosts = (table, page) => {
       ResourcesTable.value = table;
       pagination.count = page.count;
-    };
-    const getBusinessesList = async () => {
-      const { data } = await accountStore.getBizListWithAuth();
-      businessList.value = data;
     };
     const handleNext = () => {
       const { cvm, pm } = returnPlan.value;
@@ -227,9 +220,6 @@ export default defineComponent({
       checked.value = val;
       dialogVisible.value = val;
     };
-    onMounted(() => {
-      getBusinessesList();
-    });
     return () => (
       <div class='div-RecyclingResources'>
         <DetailHeader backRouteName='hostRecycle'>
@@ -259,7 +249,8 @@ export default defineComponent({
                   returnPlan={returnPlan.value}
                   pagination={pagination}
                   onTablehosts={Tablehosts}
-                  onUpdateConfirm={updateConfirm}></ResourceConfirm>
+                  onUpdateConfirm={updateConfirm}
+                  bizs={bkBizId.value}></ResourceConfirm>
               )}
             </div>
             <div class='div-Button'>

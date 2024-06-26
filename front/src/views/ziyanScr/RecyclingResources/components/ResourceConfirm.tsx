@@ -22,6 +22,7 @@ export default defineComponent({
         skipConfirm: '',
       }),
     },
+    bizs: String,
   },
   emits: ['updateConfirm', 'Tablehosts'],
   setup(props, { emit }) {
@@ -144,6 +145,7 @@ export default defineComponent({
       suborderId.value = [row.suborder_id];
       emit('updateConfirm', selections.value, drawerTitle.value, drawer.value);
       getList(false);
+      getList(true);
     };
     /** 获取资源回收单据预览列表 */
     const getPreRecycleList = async () => {
@@ -160,20 +162,20 @@ export default defineComponent({
     };
     const getList = async (enableCount = false) => {
       const page = {
-        limit: props.pagination.limit,
-        start: props.pagination.start,
+        limit: enableCount ? undefined : props.pagination.limit,
+        start: enableCount ? undefined : props.pagination.start,
         enable_count: enableCount,
       };
       const data = await apiService.getRecycleHosts({
         suborder_id: suborderId.value,
         page,
+        bk_biz_id: Array.isArray(props.bizs) ? props.bizs : [props.bizs],
       });
       const obj = props.pagination;
       if (enableCount) obj.count = data?.count;
       else {
-        obj.count = data?.info.length;
+        hostList.value = data?.info || [];
       }
-      hostList.value = data?.info || [];
       emit('Tablehosts', hostList.value, obj);
     };
     onMounted(() => {
