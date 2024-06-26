@@ -746,13 +746,17 @@ export default (type: string, isSimpleShow = false) => {
   const getRecycleTaskStatusView = (value: string) => {
     const label = getRecycleTaskStatusLabel(value);
     if (value === 'DONE') {
-      return <span class='c-success'>{label}</span>;
+      return (
+        <>
+          <span class='c-success'>{label}</span>
+        </>
+      );
     }
     if (value.includes('ING')) {
       return (
         <>
-          <Spinner />
           <span>{label}</span>
+          <Spinner />
         </>
       );
     }

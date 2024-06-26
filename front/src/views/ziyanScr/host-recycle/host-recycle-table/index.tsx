@@ -291,12 +291,15 @@ export default defineComponent({
       width: 100,
       render: ({ row }) => {
         return (
-          <div class='cvm-cell-height'>
-            <div>{row.order_id}</div>
-            {/* // 单据详情 */}
-            <span class='sub-order-num' onClick={() => enterDetail(row)}>
-              {row.suborder_id}
-            </span>
+          <div>
+            <div>
+              <p>{row.order_id}</p>
+            </div>
+            <div onClick={() => enterDetail(row)}>
+              <Button theme='primary' text>
+                {row.suborder_id}
+              </Button>
+            </div>
           </div>
         );
       },

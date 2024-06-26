@@ -150,6 +150,8 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
+    const vpcName = ref('');
+    const subnetName = ref('');
     // 机型列表
     const deviceTypes = ref([]);
     // 镜像列表
@@ -202,12 +204,20 @@ export default defineComponent({
       QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
     };
-    const onQcloudVpcChange = () => {
+    const onQcloudVpcChange = (val) => {
       QCLOUDCVMForm.value.spec.subnet = '';
+      const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
+      if (matchingItem) {
+        vpcName.value = matchingItem.vpc_name;
+      }
       loadSubnets();
       onQcloudDeviceTypeChange();
     };
-    const onQcloudSubnetChange = () => {
+    const onQcloudSubnetChange = (val) => {
+      const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
+      if (matchingItem) {
+        subnetName.value = matchingItem.subnet_name;
+      }
       onQcloudDeviceTypeChange();
     };
     // QCLOUDCVM可用区变化
@@ -816,15 +826,21 @@ export default defineComponent({
                           <CommonCard
                             title={() => (
                               <>
-                                <div class='displayflex'>
-                                  <RightShape
-                                    onClick={() => {
-                                      NIswitch.value = false;
-                                    }}
-                                  />
-                                  <span class='fontsize'>网络信息</span>
-                                  <span class='fontweight'>VPC : {QCLOUDCVMForm.value.spec.vpc}</span>
-                                  <span class='fontweight'>子网 : {QCLOUDCVMForm.value.spec.subnet}</span>
+                                <div
+                                  onClick={() => {
+                                    NIswitch.value = false;
+                                  }}
+                                  class='QCLOUDCVM-displayflex'>
+                                  <RightShape />
+                                  <span class='QCLOUDCVM-fontsize'>网络信息</span>
+                                  <span class='QCLOUDCVM-fontweight'>
+                                    VPC : {vpcName.value}
+                                    {QCLOUDCVMForm.value.spec.vpc && `(${QCLOUDCVMForm.value.spec.vpc})`}
+                                  </span>
+                                  <span class='QCLOUDCVM-fontweight'>
+                                    子网 : {subnetName.value}
+                                    {QCLOUDCVMForm.value.spec.subnet && `(${QCLOUDCVMForm.value.spec.subnet})`}
+                                  </span>
                                 </div>
                               </>
                             )}
@@ -837,12 +853,12 @@ export default defineComponent({
                           <CommonCard
                             title={() => (
                               <>
-                                <div class='displayflex'>
-                                  <DownShape
-                                    onClick={() => {
-                                      NIswitch.value = true;
-                                    }}
-                                  />
+                                <div
+                                  onClick={() => {
+                                    NIswitch.value = true;
+                                  }}
+                                  class='QCLOUDCVM-displayflex'>
+                                  <DownShape />
                                   <span class='fontsize'>网络信息</span>
                                 </div>
                               </>

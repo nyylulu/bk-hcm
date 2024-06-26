@@ -345,17 +345,18 @@ export default defineComponent({
               <div class='common-sideslider-content'>
                 <Tab v-model:active={activetab.value} type='unborder-card'>
                   <BkTabPanel key={0} name={0} label='根据业务选择(单业务回收场景)'>
-                    <div class='displayflex' style='margin: 20px 0;'>
-                      <div class='displayflex'>
-                        <div class='mr-10'>业务</div>
-                        <BusinessSelector
-                          autoSelect
-                          v-model={bkBizId.value}
-                          authed
-                          saveBizs
-                          bizsKey='scr_recycle_bizs'
-                        />
+                    <div class='bkBizId-displayflex'>
+                      <div class='mr-10' style='width:40px'>
+                        业务
                       </div>
+                      <BusinessSelector
+                        autoSelect
+                        v-model={bkBizId.value}
+                        class='mr-10'
+                        authed
+                        saveBizs
+                        bizsKey='scr_recycle_bizs'
+                      />
                       {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
                     </div>
                     <Table

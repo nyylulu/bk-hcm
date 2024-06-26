@@ -244,9 +244,11 @@ export default defineComponent({
             render: ({ data }: any) => {
               return (
                 <div>
-                  <p>资源类型：{getResourceTypeName(data?.resource_type)}</p>
-                  <p>机型：{data.spec?.device_type || '--'}</p>
-                  <p>园区：{getZoneCn(data.spec?.zone)}</p>
+                  <div style={'height: 30px!important;line-height: 30px;'}>
+                    资源类型：{getResourceTypeName(data?.resource_type)}
+                  </div>
+                  <div style={'height: 20px!important;line-height: 20px;'}>机型：{data.spec?.device_type || '--'}</div>
+                  <div style={'height: 30px!important;line-height: 30px;'}>园区：{getZoneCn(data.spec?.zone)}</div>
                 </div>
               );
             },
