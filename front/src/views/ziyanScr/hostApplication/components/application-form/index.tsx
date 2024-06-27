@@ -605,6 +605,7 @@ export default defineComponent({
           type === 'submit' ? 'task/create/apply' : 'task/update/apply/ticket'
         }`;
         await http.post(url, {
+          order_id: route?.query?.order_id ? +route?.query.order_id : undefined,
           bk_biz_id: order.value.model.bkBizId === 'all' ? undefined : order.value.model.bkBizId,
           bk_username: useUserStore().username,
           require_type: order.value.model.requireType,
@@ -613,9 +614,10 @@ export default defineComponent({
           follower: order.value.model.follower,
           suborders,
         });
+        const message = `${type === 'submit' ? '申请成功' : '保存成功'}`;
         Message({
           theme: 'success',
-          message: '申请成功',
+          message,
         });
         router.go(-1);
       } finally {

@@ -1933,6 +1933,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'task_id',
       label: '任务ID',
+      width: 60,
       render: ({ data }: any) => {
         return (
           <Button
@@ -1949,6 +1950,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'status',
       label: '状态',
+      width: 60,
       render: ({ row }: any) => {
         if (row.status === -1) return <span class='c-disabled'>未执行</span>;
         if (row.status === 0) return <span class='c-success'>成功</span>;
@@ -1996,6 +1998,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'ip',
       label: '内网 IP',
+      width: 150,
     },
     {
       field: 'status',
@@ -2016,6 +2019,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
+      width: 120,
       showOverflowTooltip: true,
     },
     {
@@ -2042,7 +2046,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'end_at',
       label: '结束时间',
-      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+      render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
     },
   ];
 
@@ -2058,7 +2062,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'status',
       label: '状态',
-      width: 80,
+      width: 60,
       render: ({ data }: any) => {
         if (data.status === -1) return <span class='c-disabled'>未执行</span>;
         if (data.status === 0) return <span class='c-success'>成功</span>;
@@ -2078,6 +2082,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'deliverer',
       label: '匹配人',
+      width: 60,
       render: ({ data }: any) => <WName name={data.deliverer}></WName>,
     },
     {
@@ -2120,7 +2125,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'end_at',
       label: '结束时间',
-      formatter: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
+      render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
     },
   ];
 

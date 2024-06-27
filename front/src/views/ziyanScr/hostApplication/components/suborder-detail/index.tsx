@@ -3,6 +3,7 @@ import { Table } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import { defineComponent, ref, watch } from 'vue';
 import { DETAIL_STATUS } from './constants';
+import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
 export default defineComponent({
@@ -33,7 +34,6 @@ export default defineComponent({
         {
           limit: pagination.limit,
           start: pagination.start,
-          total: 0,
         },
         curStatus.value,
       );
@@ -77,11 +77,12 @@ export default defineComponent({
         </BkRadioGroup>
         <Table
           data={list.value}
+          remotePagination
           pagination={pagination}
           columns={tableColumns.value}
           onPageLimitChange={handlePageLimitChange}
           onPageValueChange={handlePageValueChange}
-          class={'mt16'}
+          class={'mt16 maxheigth'}
         />
       </div>
     );

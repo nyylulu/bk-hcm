@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted, watch, computed } from 'vue';
+import { defineComponent, ref, onMounted, watch } from 'vue';
 import { Button, Form } from 'bkui-vue';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
@@ -36,33 +36,31 @@ export default defineComponent({
   setup(props, { emit }) {
     const deviceTypeDisabled = ref(false);
     const deviceConfigDisabled = ref(false);
-    const device = computed(() => {
-      return {
-        filter: {
-          require_type: props?.device?.filter.require_type ? props?.device?.filter.require_type : 1,
-          region: [],
-          zone: [],
-          device_type: [],
-          device_group: ['标准型'],
-          cpu: '',
-          mem: '',
-          enable_capacity: true,
-        },
-        options: {
-          require_types: [],
-          regions: [],
-          zones: [],
-          device_groups: ['标准型', '高IO型', '大数据型', '计算型'],
-          device_types: [],
-          cpu: [],
-          mem: [],
-        },
-        page: {
-          limit: 50,
-          start: 0,
-          total: 0,
-        },
-      };
+    const device = ref({
+      filter: {
+        require_type: props?.device?.filter.require_type ? props?.device?.filter.require_type : 1,
+        region: [],
+        zone: [],
+        device_type: [],
+        device_group: ['标准型'],
+        cpu: '',
+        mem: '',
+        enable_capacity: true,
+      },
+      options: {
+        require_types: [],
+        regions: [],
+        zones: [],
+        device_groups: ['标准型', '高IO型', '大数据型', '计算型'],
+        device_types: [],
+        cpu: [],
+        mem: [],
+      },
+      page: {
+        limit: 50,
+        start: 0,
+        total: 0,
+      },
     });
     const order = ref({
       loading: false,

@@ -276,7 +276,7 @@ export default defineComponent({
                   }}
                   onChange={onZoneChange}
                 />
-                <div>原始值：{getZoneCn(rawOrder.value.spec.device_type)}</div>
+                <div>原始值：{getZoneCn(rawOrder.value.spec.zone)}</div>
               </bk-form-item>
 
               <bk-form-item label='机型' required property='device_type'>

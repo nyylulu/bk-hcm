@@ -658,7 +658,7 @@ export default defineComponent({
             ]}></Table>
         </CommonSideslider>
 
-        <CommonDialog v-model:isShow={isDialogShow.value} title={`资源${curSuborder.value.step_name}详情`} width={800}>
+        <CommonDialog v-model:isShow={isDialogShow.value} title={`资源${curSuborder.value.step_name}详情`} width={1200}>
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
 
