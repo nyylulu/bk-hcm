@@ -2,6 +2,7 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import { useDepartment } from '@/hooks';
 import { useUserStore } from '@/store';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
@@ -14,6 +15,13 @@ import OriginDialog from '../origin-dialog';
 import cssModule from './index.module.scss';
 
 import type { IDissolve } from '@/typings/ziyanScr';
+import type { Department } from '@/typings';
+
+interface IDepartmentWithExtras extends Department {
+  extras?: {
+    code: string;
+  };
+}
 
 export default defineComponent({
   components: {
@@ -27,6 +35,8 @@ export default defineComponent({
     const ziyanScrStore = useZiyanScrStore();
     const businessMapStore = useBusinessMapStore();
     const userStore = useUserStore();
+
+    const { departmentMap } = useDepartment();
 
     const columns = [
       {
@@ -75,6 +85,29 @@ export default defineComponent({
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
+    const groupIds = computed(() => {
+      const leafIds = new Set<string>();
+
+      const collectLeafCodes = (dept: IDepartmentWithExtras) => {
+        if (!dept?.has_children && dept?.extras?.code) {
+          leafIds.add(dept.extras.code);
+        }
+        if (dept?.has_children && dept?.children) {
+          dept.children.forEach((child) => collectLeafCodes(child));
+        }
+      };
+
+      // 收集所选节点下的所有叶子节点的code数据
+      organizations.value.forEach((orgId) => {
+        const dept = departmentMap.value?.get(orgId);
+        if (dept) {
+          collectLeafCodes(dept);
+        }
+      });
+
+      return [...leafIds];
+    });
+
     const handleSearch = async () => {
       isLoading.value = true;
 
@@ -85,7 +118,7 @@ export default defineComponent({
       moduleNames.value = [...props.moduleNames];
       ziyanScrStore
         .getDissolveList({
-          organizations: organizations.value,
+          group_ids: groupIds.value,
           bk_biz_names: bkBizIds.value.map(businessMapStore.getNameFromBusinessMap),
           module_names: moduleNames.value,
           operators: operators.value,
@@ -106,7 +139,7 @@ export default defineComponent({
 
     const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
       searchParams.value = {
-        organizations: organizations.value,
+        group_ids: groupIds.value,
         bk_biz_names: bkBizNames,
         module_names: moduleNames,
         operators: operators.value,

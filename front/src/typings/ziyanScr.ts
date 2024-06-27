@@ -13,7 +13,7 @@ export interface IRecycleArea {
 }
 
 export interface IQueryDissolveList {
-  organizations: string[];
+  group_ids: string[];
   bk_biz_names: string[];
   module_names: string[];
   operators: string[];
