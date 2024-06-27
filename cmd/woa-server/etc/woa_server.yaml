@@ -170,12 +170,6 @@ tjj:
   secret_key: test
   operator: admin
 
-sojob:
-  host: http://127.0.0.1
-  secret_id: test
-  secret_key: test
-  operator: admin
-
 xship:
   host: http://127.0.0.1
   client_id: test
@@ -228,6 +222,7 @@ sops:
   app_code: test
   app_secret: test
   operator: admin
+  devnet_download_ip: 127.0.0.1
 
 dvm:
   host: http://127.0.0.1

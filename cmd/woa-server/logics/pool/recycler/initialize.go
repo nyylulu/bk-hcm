@@ -22,7 +22,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/pkg/logs"
 )
 
@@ -41,7 +41,7 @@ func (r *Recycler) createInitializeTask(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create initialize task, err: %v", err)
 
-		errUpdate := r.updateTaskInitializeStatus(task, "", err.Error(), table.RecallStatusInitializeFailed)
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", err.Error(), table.RecallStatusInitializeFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -49,21 +49,40 @@ func (r *Recycler) createInitializeTask(task *table.RecallDetail) error {
 		return err
 	}
 
-	taskID, err := r.createSoJob("ieod_init", []string{ip})
+	// 根据IP获取主机信息
+	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
 	if err != nil {
-		logs.Errorf("host %s failed to initialize, err: %v", ip, err)
+		logs.Errorf("sops:process:check:recycler:ieod init, get host info by host id failed, ip: %s, err: %v", ip, err)
+		return err
+	}
 
-		errUpdate := r.updateTaskInitializeStatus(task, "", err.Error(), table.RecallStatusInitializeFailed)
+	// 根据bkHostID去cmdb获取bkBizID
+	bkBizID, err := r.esbCli.Cmdb().GetHostBizId(r.kt.Ctx, r.kt.Header(), hostInfo.BkHostId)
+	if err != nil {
+		logs.Errorf("sops:process:check:recycler:ieod init, get host info by host id failed, ip: %s, bkHostID: %d, "+
+			"err: %v", ip, hostInfo.BkHostId, err)
+		return err
+	}
+
+	// 创建标准运维-初始化任务
+	taskID, jobUrl, err := sops.CreateInitSopsTask(r.kt, r.sops, ip, r.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType)
+	if err != nil {
+		logs.Errorf("sops:process:check:recycler:ieod init, host %s failed to initialize, hostID: %d, bkBizID: %d, "+
+			"err: %v", ip, task.HostID, bkBizID, err)
+
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", err.Error(), table.RecallStatusInitializeFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
-		return fmt.Errorf("host %s failed to initialize, err: %v", ip, err)
+		return fmt.Errorf("host %s failed to initialize, hostID: %d, err: %v", ip, task.HostID, err)
 	}
 
 	// update task status
-	if err := r.updateTaskInitializeStatus(task, strconv.Itoa(taskID), "", table.RecallStatusInitializing); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskInitializeStatus(task, strconv.FormatInt(taskID, 10), strconv.FormatInt(bkBizID, 10),
+		jobUrl, "", table.RecallStatusInitializing); err != nil {
+		logs.Errorf("failed to update recall task status, ip: %s, bkBizID: %d, taskID: %d, jobUrl: %s, hostID: %d, "+
+			"err: %v", ip, bkBizID, taskID, jobUrl, task.HostID, err)
 		return err
 	}
 
@@ -82,7 +101,7 @@ func (r *Recycler) checkInitializeStatus(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create initialize task, err: %v", err)
 
-		errUpdate := r.updateTaskInitializeStatus(task, "", err.Error(), table.RecallStatusInitializeFailed)
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", err.Error(), table.RecallStatusInitializeFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -95,7 +114,7 @@ func (r *Recycler) checkInitializeStatus(task *table.RecallDetail) error {
 		logs.Errorf("failed to convert initialize id %s to int, err: %v", task.InitializeID, err)
 
 		msg := fmt.Sprintf("failed to convert initialize id %s to int, err: %v", task.InitializeID, err)
-		errUpdate := r.updateTaskInitializeStatus(task, "", msg, table.RecallStatusInitializeFailed)
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", msg, table.RecallStatusInitializeFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -103,20 +122,35 @@ func (r *Recycler) checkInitializeStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert initialize id %s to int, err: %v", task.InitializeID, err)
 	}
 
-	if err := r.checkJobStatus(taskID); err != nil {
-		logs.Infof("host %s failed to initialize, job id: %d, err: %v", ip, taskID, err)
+	bkBizID, err := strconv.Atoi(task.InitializeBizID)
+	if err != nil {
+		logs.Errorf("sops:process:check:ieod init status, failed to convert conf initial biz id %s to int, err: %v",
+			task.InitializeBizID, err)
 
-		errUpdate := r.updateTaskInitializeStatus(task, "", err.Error(), table.RecallStatusInitializeFailed)
+		msg := fmt.Sprintf("failed to convert initial biz id %s to int, err: %v", task.InitializeBizID, err)
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", msg, table.RecallStatusInitializeFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
-		return fmt.Errorf("host %s failed to initialize, job id: %d, err: %v", ip, taskID, err)
+		return fmt.Errorf("failed to convert initial biz id %s to int, err: %v", task.InitializeBizID, err)
+	}
+
+	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, job id: %d, "+
+			"bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
+
+		errUpdate := r.updateTaskInitializeStatus(task, "", "", "", err.Error(), table.RecallStatusInitializeFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("host %s failed to initialize, job id: %d, bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
 	}
 
 	// update task status
-	if err := r.updateTaskInitializeStatus(task, "", "", table.RecallStatusDataDeleting); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskInitializeStatus(task, "", "", "", "", table.RecallStatusDataDeleting); err != nil {
+		logs.Errorf("recycler:failed to update recall task status, err: %v", err)
 
 		return err
 	}
@@ -128,7 +162,7 @@ func (r *Recycler) checkInitializeStatus(task *table.RecallDetail) error {
 	return nil
 }
 
-func (r *Recycler) updateTaskInitializeStatus(task *table.RecallDetail, id, msg string,
+func (r *Recycler) updateTaskInitializeStatus(task *table.RecallDetail, id, bkBizID, jobUrl, msg string,
 	status table.RecallStatus) error {
 
 	filter := map[string]interface{}{
@@ -143,7 +177,8 @@ func (r *Recycler) updateTaskInitializeStatus(task *table.RecallDetail, id, msg 
 
 	if id != "" {
 		update["initialize_id"] = id
-		update["initialize_link"] = sojobapi.TaskLinkPrefix + id
+		update["initialize_biz_id"] = bkBizID
+		update["initialize_link"] = jobUrl
 	}
 
 	if msg != "" {

@@ -849,7 +849,6 @@ func (r Redis) validate() error {
 type ClientConfig struct {
 	CvmOpt    CVMCli     `yaml:"cvm"`
 	TjjOpt    TjjCli     `yaml:"tjj"`
-	SojobOpt  SojobCli   `yaml:"sojob"`
 	XshipOpt  XshipCli   `yaml:"xship"`
 	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
 	DvmOpt    DVMCli     `yaml:"dvm"`
@@ -872,10 +871,6 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.TjjOpt.validate(); err != nil {
-		return err
-	}
-
-	if err := c.SojobOpt.validate(); err != nil {
 		return err
 	}
 
@@ -977,35 +972,6 @@ func (t TjjCli) validate() error {
 
 	if len(t.Operator) == 0 {
 		return errors.New("tjj.operator is not set")
-	}
-
-	return nil
-}
-
-// SojobCli sojob client options
-type SojobCli struct {
-	// sojob api address
-	SojobApiAddr string `yaml:"host"`
-	SecretID     string `yaml:"secret_id"`
-	SecretKey    string `yaml:"secret_key"`
-	Operator     string `yaml:"operator"`
-}
-
-func (s SojobCli) validate() error {
-	if len(s.SojobApiAddr) == 0 {
-		return errors.New("sojob.host is not set")
-	}
-
-	if len(s.SecretID) == 0 {
-		return errors.New("sojob.secret_id is not set")
-	}
-
-	if len(s.SecretKey) == 0 {
-		return errors.New("sojob.secret_key is not set")
-	}
-
-	if len(s.Operator) == 0 {
-		return errors.New("sojob.operator is not set")
 	}
 
 	return nil
@@ -1269,6 +1235,7 @@ type SopsCli struct {
 	AppCode     string `yaml:"app_code"`
 	AppSecret   string `yaml:"app_secret"`
 	Operator    string `yaml:"operator"`
+	DevnetIP    string `yaml:"devnet_download_ip"`
 }
 
 func (c SopsCli) validate() error {
@@ -1282,6 +1249,10 @@ func (c SopsCli) validate() error {
 
 	if len(c.AppSecret) == 0 {
 		return errors.New("sops.app_secret is not set")
+	}
+
+	if len(c.DevnetIP) == 0 {
+		return errors.New("sops.devnet_download_ip is not set")
 	}
 
 	return nil

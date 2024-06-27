@@ -10,8 +10,12 @@
  * limitations under the License.
  */
 
+// Package sopsapi sops api
 package sopsapi
 
 // CreateTaskReq create sops task request
 type CreateTaskReq struct {
+	TemplateSource string                 `json:"template_source"`
+	Name           string                 `json:"name"`
+	Constants      map[string]interface{} `json:"constants"`
 }

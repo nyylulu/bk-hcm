@@ -35,9 +35,9 @@ type Logics interface {
 	GetApplyOrderById(kt *kit.Kit, param *types.CvmOrderReq) (*types.CvmOrderResult, error)
 	// GetApplyOrder get cvm apply order info
 	GetApplyOrder(kt *kit.Kit, param *types.GetApplyParam) (*types.CvmOrderResult, error)
-	// GetApplyInstance get cvm apply order launched instances
+	// GetApplyDevice get cvm apply order launched instances
 	GetApplyDevice(kt *kit.Kit, param *types.CvmDeviceReq) (*types.CvmDeviceResult, error)
-	// GetApplyOrder get cvm apply capacity
+	// GetCapacity get cvm apply capacity
 	GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.CvmCapacityResult, error)
 }
 
@@ -170,7 +170,7 @@ func (l *logics) GetApplyDevice(kt *kit.Kit, param *types.CvmDeviceReq) (*types.
 	return rst, nil
 }
 
-// GetApplyOrder get cvm apply capacity
+// GetCapacity get cvm apply capacity
 func (l *logics) GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.CvmCapacityResult, error) {
 	req := &cvmapi.CapacityReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -193,7 +193,7 @@ func (l *logics) GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.C
 
 	resp, err := l.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cvm apply capacity, err: %v", err)
+		logs.Errorf("failed to get cvm apply capacity, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 

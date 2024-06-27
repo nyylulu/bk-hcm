@@ -32,13 +32,15 @@ import (
 	"hcm/cmd/woa-server/thirdparty/gcsapi"
 	"hcm/cmd/woa-server/thirdparty/l5api"
 	"hcm/cmd/woa-server/thirdparty/safetyapi"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/cmd/woa-server/thirdparty/tcaplusapi"
 	"hcm/cmd/woa-server/thirdparty/tgwapi"
 	"hcm/cmd/woa-server/thirdparty/tmpapi"
 	"hcm/cmd/woa-server/thirdparty/uworkapi"
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/uuid"
 )
 
 // Detector detects rejected device for recycle
@@ -50,12 +52,13 @@ type Detector struct {
 	tcaplus tcaplusapi.TcaplusClientInterface
 	tgw     tgwapi.TgwClientInterface
 	l5      l5api.L5ClientInterface
-	sojob   sojobapi.SojobClientInterface
 	safety  safetyapi.SafetyClientInterface
 	cvm     cvmapi.CVMClientInterface
 	tcOpt   cc.TCloudCli
+	sops    sopsapi.SopsClientInterface
 
 	ctx context.Context
+	kt  *kit.Kit
 }
 
 // New creates a detector
@@ -68,11 +71,12 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 		tcaplus: thirdCli.Tcaplus,
 		tgw:     thirdCli.TGW,
 		l5:      thirdCli.L5,
-		sojob:   thirdCli.SoJob,
 		safety:  thirdCli.Safety,
 		cvm:     thirdCli.CVM,
 		tcOpt:   thirdCli.TencentCloudOpt,
+		sops:    thirdCli.Sops,
 		ctx:     ctx,
+		kt:      &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
 	}
 
 	return detector, nil
@@ -246,7 +250,7 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 	}
 
 	// update step status to running
-	if err := d.updateRecycleStep(step, table.DetectStatusRunning, 0, "running", ""); err != nil {
+	if err = d.updateRecycleStep(step, table.DetectStatusRunning, 0, "running", ""); err != nil {
 		logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
 		return err
 	}
@@ -261,12 +265,12 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 
 	// update step status
 	if errExec != nil {
-		if err := d.updateRecycleStep(step, table.DetectStatusFailed, attempt, errExec.Error(), exeInfo); err != nil {
+		if err = d.updateRecycleStep(step, table.DetectStatusFailed, attempt, errExec.Error(), exeInfo); err != nil {
 			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
 			return err
 		}
 	} else {
-		if err := d.updateRecycleStep(step, table.DetectStatusSuccess, attempt, "success", exeInfo); err != nil {
+		if err = d.updateRecycleStep(step, table.DetectStatusSuccess, attempt, "success", exeInfo); err != nil {
 			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
 			return err
 		}

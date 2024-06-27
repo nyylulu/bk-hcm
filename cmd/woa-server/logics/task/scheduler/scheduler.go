@@ -129,7 +129,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, in
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, thirdCli, esbCli, informerIf)
+	match, err := matcher.New(ctx, thirdCli, esbCli, clientConf, informerIf)
 	if err != nil {
 		return nil, err
 	}

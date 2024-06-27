@@ -38,42 +38,6 @@ type logics struct {
 func New(schedulerIf scheduler.Interface, recyclerIf recycler.Interface,
 	informerIf informer.Interface, operationIf operation.Interface) Logics {
 
-	//loopW, err := stream.NewLoopStream(config.Mongo.GetMongoConf(), dis)
-	//if err != nil {
-	//	logs.Errorf("new loop stream failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//watchDB, err := local.NewMgo(config.WatchMongo.GetMongoConf(), time.Minute)
-	//if err != nil {
-	//	logs.Errorf("new watch mongo client failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//informerIf, err := informer.New(loopW, watchDB)
-	//if err != nil {
-	//	logs.Errorf("new informer failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//schedulerIf, err := scheduler.New(ctx, thirdCli, esbCli, informerIf, config.ClientConf)
-	//if err != nil {
-	//	logs.Errorf("new scheduler failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//recyclerIf, err := recycler.New(ctx, thirdCli, esbCli)
-	//if err != nil {
-	//	logs.Errorf("new recycler failed, err: %v", err)
-	//	return nil, err
-	//}
-	//
-	//operationIf, err := operation.New(ctx)
-	//if err != nil {
-	//	logs.Errorf("new operation failed, err: %v", err)
-	//	return nil, err
-	//}
-
 	return &logics{
 		scheduler: schedulerIf,
 		recycler:  recyclerIf,

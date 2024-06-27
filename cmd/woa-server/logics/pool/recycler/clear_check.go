@@ -20,10 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/utils"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/pkg/logs"
 )
 
@@ -42,7 +41,7 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create clear check task, err: %v", err)
 
-		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
+		errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", err.Error(), table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -50,12 +49,28 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 		return err
 	}
 
-	ips := []string{ip}
-	taskID, err := r.createSoJob("isclear", ips)
+	// 根据HostID获取主机信息
+	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByHostID(r.kt.Ctx, r.kt.Header(), task.HostID)
 	if err != nil {
-		logs.Errorf("host %s failed to create clear check task, err: %v", ip, err)
+		logs.Errorf("sops:process:check:idle check, get host info by host id failed, bkHostID: %d, err: %v",
+			task.HostID, err)
+		return err
+	}
 
-		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
+	// 根据bk_host_id，获取bk_biz_id
+	bkBizID, err := r.esbCli.Cmdb().GetHostBizId(r.kt.Ctx, r.kt.Header(), hostInfo.BkHostId)
+	if err != nil {
+		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
+			"err: %v", ip, hostInfo.BkHostId, err)
+		return err
+	}
+
+	// 创建空闲检查任务
+	taskID, jobUrl, err := sops.CreateIdleCheckSopsTask(r.kt, r.sops, ip, bkBizID, hostInfo.BkOsType)
+	if err != nil {
+		logs.Errorf("sops:process:check:idle check, host %s failed to create clear check task, err: %v", ip, err)
+
+		errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", err.Error(), table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -64,8 +79,8 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	}
 
 	// update task status
-	if err := r.updateTaskClearCheckStatus(task, strconv.Itoa(taskID), "",
-		table.RecallStatusClearChecking); err != nil {
+	if err = r.updateTaskClearCheckStatus(task, strconv.FormatInt(taskID, 10), strconv.FormatInt(bkBizID, 10),
+		jobUrl, "", table.RecallStatusClearChecking); err != nil {
 		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
 	}
@@ -85,7 +100,7 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 		logs.Errorf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
 
 		msg := fmt.Sprintf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
-		errUpdate := r.updateTaskClearCheckStatus(task, "", msg, table.RecallStatusClearCheckFailed)
+		errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", msg, table.RecallStatusClearCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -93,25 +108,43 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert clear check id %s to int, err: %v", task.ClearCheckID, err)
 	}
 
-	if err := r.checkClearJobStatus(taskID); err != nil {
+	// 获取业务ID
+	bkBizID, err := strconv.Atoi(task.ClearCheckBizID)
+	if err != nil {
+		logs.Errorf("sops:process:check:clear check status, failed to convert clear check biz id %s to int, err: %v",
+			task.ClearCheckBizID, err)
+
+		msg := fmt.Sprintf("failed to convert clear check biz id %s to int, err: %v", task.ClearCheckBizID, err)
+		errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", msg, table.RecallStatusClearCheckFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("failed to convert clear check biz id %s to int, err: %v", task.ClearCheckBizID, err)
+	}
+
+	// 检查标准运维的任务状态
+	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
-			logs.Infof("task %s ping death, skip clear check step", taskID)
+			logs.Infof("task %s ping death, bkBizID: %d, skip clear check step", taskID, bkBizID)
 		} else {
-			logs.Infof("failed to clear check, job id: %d, err: %v", taskID, err)
+			logs.Infof("sops:process:check:clear check status, failed to clear check, job id: %d, bkBizID: %d, "+
+				"err: %v", taskID, bkBizID, err)
 
-			errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusClearCheckFailed)
+			errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", err.Error(), table.RecallStatusClearCheckFailed)
 			if errUpdate != nil {
-				logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+				logs.Warnf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v",
+					taskID, bkBizID, errUpdate)
 			}
 
-			return fmt.Errorf("failed to clear check, job id: %d, err: %v", taskID, err)
+			return fmt.Errorf("failed to clear check, job id: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
 		}
 	}
 
 	// update task status
-	if err := r.updateTaskClearCheckStatus(task, "", "", table.RecallStatusReinstalling); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskClearCheckStatus(task, "", "", "", "", table.RecallStatusReinstalling); err != nil {
+		logs.Errorf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
 
 		return err
 	}
@@ -119,68 +152,6 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 	go func() {
 		r.Add(task.ID)
 	}()
-
-	return nil
-}
-
-// checkClearJobStatus check so clear check job status
-func (r *Recycler) checkClearJobStatus(jobId int) error {
-	checkFunc := func(obj interface{}, err error) (bool, error) {
-		if err != nil {
-			return false, fmt.Errorf("failed to get so job status by id %d, err: %v", jobId, err)
-		}
-		if obj == nil {
-			return false, fmt.Errorf("so job %d not found", jobId)
-		}
-		resp, ok := obj.(*sojobapi.GetJobStatusDetailResp)
-		if !ok {
-			return false, fmt.Errorf("object with job id %d is not a job response: %+v", jobId, resp)
-		}
-
-		if resp.Code != 0 {
-			return false, fmt.Errorf("so job %d failed, err: %s", jobId, resp.Message)
-		}
-
-		if resp.Data == nil {
-			return false, fmt.Errorf("object with job id %d is not a job response: %+v", jobId, resp)
-		}
-
-		if resp.Data.SubJobNum == 0 || len(resp.Data.SubJob) == 0 {
-			return false, fmt.Errorf("subjob %d count is 0, retry it", jobId)
-		}
-
-		if resp.Data.Status == sojobapi.JobDetailStatusTodo || resp.Data.Status == sojobapi.JobDetailStatusStart ||
-			resp.Data.Status == sojobapi.JobDetailStatusDoing {
-			return false, fmt.Errorf("so job %d handling", jobId)
-		}
-
-		if resp.Data.SubJob[0].Status == sojobapi.JobDetailStatusTodo ||
-			resp.Data.SubJob[0].Status == sojobapi.JobDetailStatusStart ||
-			resp.Data.SubJob[0].Status == sojobapi.JobDetailStatusDoing {
-			return false, fmt.Errorf("so job %d handling", jobId)
-		}
-
-		// not pass process check
-		if resp.Data.SubJobSucc == 0 {
-			msg := resp.Data.SubJob[0].Comment
-			if strings.HasPrefix(msg, "dity") {
-				msg = r.removeUnusedComment(resp.Data.SubJob[0].CommentMore)
-			}
-			return true, fmt.Errorf("check process not pass: %s", msg)
-		}
-
-		return true, nil
-	}
-
-	doFunc := func() (interface{}, error) {
-		return r.sojob.GetJobStatusDetail(nil, nil, jobId)
-	}
-
-	// timeout 20 minutes
-	_, err := utils.Retry(doFunc, checkFunc, 1200, 30)
-	if err != nil {
-		return err
-	}
 
 	return nil
 }
@@ -197,7 +168,7 @@ func (r *Recycler) removeUnusedComment(comment string) string {
 	return strings.Join(msg, "\n")
 }
 
-func (r *Recycler) updateTaskClearCheckStatus(task *table.RecallDetail, id, msg string,
+func (r *Recycler) updateTaskClearCheckStatus(task *table.RecallDetail, id, bkBizID, jobUrl, msg string,
 	status table.RecallStatus) error {
 
 	filter := map[string]interface{}{
@@ -212,7 +183,8 @@ func (r *Recycler) updateTaskClearCheckStatus(task *table.RecallDetail, id, msg 
 
 	if id != "" {
 		update["clear_check_id"] = id
-		update["clear_check_link"] = sojobapi.TaskLinkPrefix + id
+		update["clear_check_biz_id"] = bkBizID
+		update["clear_check_link"] = jobUrl
 	}
 
 	if msg != "" {

@@ -29,7 +29,6 @@ import (
 	"hcm/cmd/woa-server/thirdparty/itsmapi"
 	"hcm/cmd/woa-server/thirdparty/l5api"
 	"hcm/cmd/woa-server/thirdparty/safetyapi"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
 	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/cmd/woa-server/thirdparty/tcaplusapi"
 	"hcm/cmd/woa-server/thirdparty/tgwapi"
@@ -47,7 +46,6 @@ import (
 type Client struct {
 	CVM             cvmapi.CVMClientInterface
 	DVM             dvmapi.DVMClientInterface
-	SoJob           sojobapi.SojobClientInterface
 	Tjj             tjjapi.TjjClientInterface
 	Xship           xshipapi.XshipClientInterface
 	Erp             erpapi.ErpClientInterface
@@ -78,12 +76,6 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 		return nil, err
 	}
 
-	sojob, err := sojobapi.NewSojobClientInterface(opts.SojobOpt, reg)
-	if err != nil {
-		logs.Errorf("failed to new sojob api client, err: %v", err)
-		return nil, err
-	}
-
 	tjj, err := tjjapi.NewTjjClientInterface(opts.TjjOpt, reg)
 	if err != nil {
 		logs.Errorf("failed to new tjj api client, err: %v", err)
@@ -99,7 +91,6 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 	client := &Client{
 		CVM:   cvm,
 		DVM:   dvm,
-		SoJob: sojob,
 		Tjj:   tjj,
 		Xship: xship,
 	}

@@ -26,38 +26,44 @@ import (
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/cmd/woa-server/thirdparty/tjjapi"
 	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/uuid"
 
 	"k8s.io/client-go/util/workqueue"
 )
 
 // Recycler dispatch and deal recycle task
 type Recycler struct {
-	esbCli esb.Client
-	cvm    cvmapi.CVMClientInterface
-	sojob  sojobapi.SojobClientInterface
-	tjj    tjjapi.TjjClientInterface
-	xship  xshipapi.XshipClientInterface
-	tcOpt  cc.TCloudCli
-	queue  workqueue.RateLimitingInterface
-	ctx    context.Context
+	esbCli  esb.Client
+	cvm     cvmapi.CVMClientInterface
+	tjj     tjjapi.TjjClientInterface
+	xship   xshipapi.XshipClientInterface
+	tcOpt   cc.TCloudCli
+	queue   workqueue.RateLimitingInterface
+	sops    sopsapi.SopsClientInterface
+	sopsOpt cc.SopsCli
+	ctx     context.Context
+	kt      *kit.Kit
 }
 
 // New create a dispatcher
 func New(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, esbCli esb.Client) *Recycler {
 	dispatcher := &Recycler{
-		esbCli: esbCli,
-		cvm:    thirdCli.CVM,
-		sojob:  thirdCli.SoJob,
-		tjj:    thirdCli.Tjj,
-		xship:  thirdCli.Xship,
-		tcOpt:  cliConf.TCloudOpt,
-		queue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recaller"),
-		ctx:    ctx,
+		esbCli:  esbCli,
+		cvm:     thirdCli.CVM,
+		tjj:     thirdCli.Tjj,
+		xship:   thirdCli.Xship,
+		tcOpt:   cliConf.TCloudOpt,
+		sops:    thirdCli.Sops,
+		sopsOpt: cliConf.Sops,
+		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recaller"),
+		ctx:     ctx,
+		kt:      &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
 	}
 
 	// TODO: get worker num from config
@@ -179,8 +185,8 @@ func (r *Recycler) dispatchHandler(id string) error {
 		}
 	default:
 		{
-			logs.Warnf("recall task %s unsupported recall task status %s, cannot handle", task.ID, task.Status)
-			err = fmt.Errorf("recall task %s unsupported recall task status %s, cannot handle", task.ID, task.Status)
+			logs.Warnf("recall taskID:%s, unsupported recall task status:%s, cannot handle", task.ID, task.Status)
+			err = fmt.Errorf("recall taskID:%s unsupported recall task status:%s, cannot handle", task.ID, task.Status)
 		}
 	}
 

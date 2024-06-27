@@ -21,7 +21,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/pkg/logs"
 )
 
@@ -40,7 +40,7 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create data delete task, err: %v", err)
 
-		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -48,21 +48,39 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 		return err
 	}
 
-	taskID, err := r.createSoJob("delete_data", []string{ip})
+	// 根据IP获取主机信息
+	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
 	if err != nil {
-		logs.Errorf("host %s failed to data delete, err: %v", ip, err)
+		logs.Errorf("sops:process:check:data clear, get host info by host id failed, ip: %s, err: %v", ip, err)
+		return err
+	}
 
-		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+	// 根据bk_host_id，获取bk_biz_id
+	bkBizID, err := r.esbCli.Cmdb().GetHostBizId(r.kt.Ctx, r.kt.Header(), hostInfo.BkHostId)
+	if err != nil {
+		logs.Errorf("sops:process:check:data clear, get host biz id failed, ip: %s, bkHostId: %d, err: %v",
+			ip, hostInfo.BkHostId, err)
+		return err
+	}
+
+	// 创建数据清理任务-只有Linux任务
+	taskID, jobUrl, err := sops.CreateDataClearSopsTask(r.kt, r.sops, ip, bkBizID, hostInfo.BkOsType)
+	if err != nil {
+		logs.Errorf("sops:process:check:data clear, host %s failed to data delete, bkBizID: %d, err: %v, task: %+v",
+			ip, bkBizID, err, task)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
-			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, ip: %s, bkBizID: %d, err: %v", ip, bkBizID, errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to data delete, err: %v", ip, err)
 	}
 
 	// update task status
-	if err := r.updateTaskDataDeleteStatus(task, strconv.Itoa(taskID), "", table.RecallStatusDataDeleting); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskDataDeleteStatus(task, strconv.FormatInt(taskID, 10), strconv.FormatInt(bkBizID, 10),
+		jobUrl, "", table.RecallStatusDataDeleting); err != nil {
+		logs.Errorf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
 		return err
 	}
 
@@ -81,7 +99,7 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create data delete task, err: %v", err)
 
-		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", err.Error(), table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -94,7 +112,7 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 		logs.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
 
 		msg := fmt.Sprintf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
-		errUpdate := r.updateTaskDataDeleteStatus(task, "", msg, table.RecallStatusDataDeleteFailed)
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", msg, table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -102,20 +120,36 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert data delete id %s to int, err: %v", task.DataDeleteID, err)
 	}
 
-	if err := r.checkJobStatus(taskID); err != nil {
-		logs.Infof("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
+	// 获取业务ID
+	bkBizID, err := strconv.Atoi(task.DataDeleteBizID)
+	if err != nil {
+		logs.Errorf("sops:process:check:data delete status, failed to convert data delete biz id %s to int, err: %v",
+			task.DataDeleteBizID, err)
 
-		errUpdate := r.updateTaskDataDeleteStatus(task, "", err.Error(), table.RecallStatusDataDeleteFailed)
+		msg := fmt.Sprintf("failed to convert data delete biz id %s to int, err: %v", task.DataDeleteBizID, err)
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", msg, table.RecallStatusDataDeleteFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
-		return fmt.Errorf("host %s failed to data delete, job id: %d, err: %v", ip, taskID, err)
+		return fmt.Errorf("failed to convert data delete biz id %s to int, err: %v", task.DataDeleteBizID, err)
+	}
+
+	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+		logs.Infof("host %s failed to data delete, job id: %d, bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
+
+		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", err.Error(), table.RecallStatusDataDeleteFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("host %s failed to data delete, job id: %d, bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
 	}
 
 	// update task status
-	if err := r.updateTaskDataDeleteStatus(task, "", "", table.RecallStatusConfChecking); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskDataDeleteStatus(task, "", "", "", "", table.RecallStatusConfChecking); err != nil {
+		logs.Errorf("failed to update recall task status, ip: %s, taskID: %d, bkBizID: %d, err: %v",
+			ip, taskID, bkBizID, err)
 
 		return err
 	}
@@ -127,7 +161,7 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 	return nil
 }
 
-func (r *Recycler) updateTaskDataDeleteStatus(task *table.RecallDetail, id, msg string,
+func (r *Recycler) updateTaskDataDeleteStatus(task *table.RecallDetail, id, bkBizID, jobUrl, msg string,
 	status table.RecallStatus) error {
 
 	filter := map[string]interface{}{
@@ -142,7 +176,8 @@ func (r *Recycler) updateTaskDataDeleteStatus(task *table.RecallDetail, id, msg 
 
 	if id != "" {
 		update["data_delete_id"] = id
-		update["data_delete_link"] = sojobapi.TaskLinkPrefix + id
+		update["data_delete_biz_id"] = bkBizID
+		update["data_delete_link"] = jobUrl
 	}
 
 	if msg != "" {

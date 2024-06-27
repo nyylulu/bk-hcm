@@ -36,18 +36,18 @@ func Retry(op func() (interface{}, error), checker func(interface{}, error) (boo
 		times = times + 1
 		select {
 		case <-tm:
-			err = fmt.Errorf("Retry (#%d) %s timeout!", times, callerName)
+			err = fmt.Errorf("WoaServerRetry (#%d) %s timeout! lastErr: %v", times, callerName, err)
 			return
 		default:
 		}
 		ret, err = op()
 		if ok, message := checker(ret, err); ok {
 			err = message
-			logs.Infof("Retry (#%d) %s succ, message: %v", times, callerName, message)
+			logs.Infof("WoaServerRetry (#%d) %s succ, message: %v", times, callerName, message)
 			return
 		} else {
 			// retry again if checker return false
-			logs.Infof("Retry (#%d) %s again, message: %v", times, callerName, message)
+			logs.Infof("WoaServerRetry (#%d) %s again, message: %v", times, callerName, message)
 		}
 
 		time.Sleep(time.Duration(interval) * time.Second)

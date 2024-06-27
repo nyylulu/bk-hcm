@@ -91,9 +91,20 @@ type ListBizHostResult struct {
 	Info  []*HostInfo `json:"info"`
 }
 
+// OsType 操作系统类型
+type OsType string
+
+const (
+	// LinuxOsType 操作系统类型-Linux
+	LinuxOsType OsType = "1"
+	// WindowsOsType 操作系统类型-Windows
+	WindowsOsType OsType = "2"
+)
+
 // HostInfo host info
 type HostInfo struct {
 	BkHostId      int64  `json:"bk_host_id"`
+	BkCloudId     int64  `json:"bk_cloud_id"`
 	BkAssetId     string `json:"bk_asset_id"`
 	BkHostInnerIp string `json:"bk_host_innerip"`
 	BkHostOuterIp string `json:"bk_host_outerip"`
@@ -103,6 +114,8 @@ type HostInfo struct {
 	SvrDeviceClass string `json:"svr_device_class"`
 	// 操作系统名称
 	BkOsName string `json:"bk_os_name"`
+	// 操作系统类型
+	BkOsType OsType `json:"bk_os_type"`
 	// 操作系统版本
 	BkOsVersion string `json:"bk_os_version"`
 	// IDC区域

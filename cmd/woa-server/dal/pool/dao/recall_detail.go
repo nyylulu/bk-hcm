@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package dao ...
 package dao
 
 import (
@@ -25,11 +26,11 @@ import (
 type RecallDetail interface {
 	// CreateRecallDetail creates resource recall task in db
 	CreateRecallDetail(ctx context.Context, inst *table.RecallDetail) error
-	// GetRecycleOrder gets resource recall task by filter from db
+	// GetRecallDetail gets resource recall task by filter from db
 	GetRecallDetail(ctx context.Context, filter *mapstr.MapStr) (*table.RecallDetail, error)
-	// CountRecycleOrder gets resource recall task count by filter from db
+	// CountRecallDetail gets resource recall task count by filter from db
 	CountRecallDetail(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleOrder gets resource recall task list by filter from db
+	// FindManyRecallDetail gets resource recall task list by filter from db
 	FindManyRecallDetail(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) (
 		[]*table.RecallDetail, error)
 	// UpdateRecallDetail updates resource recall task by filter and doc in db

@@ -19,7 +19,6 @@ import (
 
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
 )
@@ -61,7 +60,7 @@ func CreateInitRecord(suborderId, ip string) error {
 }
 
 // UpdateInitRecord update resource apply init record
-func UpdateInitRecord(suborderId, ip, taskId, message string, status types.InitStepStatus) error {
+func UpdateInitRecord(suborderId, ip, taskId, taskUrl, message string, status types.InitStepStatus) error {
 	filter := mapstr.MapStr{
 		"suborder_id": suborderId,
 		"ip":          ip,
@@ -77,7 +76,7 @@ func UpdateInitRecord(suborderId, ip, taskId, message string, status types.InitS
 
 	if taskId != "" {
 		doc["task_id"] = taskId
-		doc["task_link"] = sojobapi.InitTaskLinkPrefix + taskId
+		doc["task_link"] = taskUrl
 	}
 
 	if err := model.Operation().InitRecord().UpdateInitRecord(context.Background(), &filter, &doc); err != nil {
@@ -118,34 +117,6 @@ func CreateDiskCheckRecord(suborderId, ip string) error {
 	}
 	if err := model.Operation().DiskCheckRecord().CreateDiskCheckRecord(context.Background(), record); err != nil {
 		logs.Errorf("failed to create disk check record, err: %v", err)
-		return err
-	}
-
-	return nil
-}
-
-// UpdateDiskCheckRecord update resource apply disk check record
-func UpdateDiskCheckRecord(suborderId, ip, taskId, message string, status types.DiskCheckStepStatus) error {
-	filter := mapstr.MapStr{
-		"suborder_id": suborderId,
-		"ip":          ip,
-	}
-
-	now := time.Now()
-	doc := mapstr.MapStr{
-		"status":    status,
-		"message":   message,
-		"update_at": now,
-		"end_at":    now,
-	}
-
-	if taskId != "" {
-		doc["task_id"] = taskId
-		doc["task_link"] = sojobapi.InitTaskLinkPrefix + taskId
-	}
-
-	if err := model.Operation().DiskCheckRecord().UpdateDiskCheckRecord(context.Background(), &filter, &doc); err != nil {
-		logs.Errorf("failed to update disk check record, err: %v", err)
 		return err
 	}
 

@@ -43,8 +43,6 @@ data:
       {{- toYaml .Values.cvm | nindent 6 }}
     tjj:
       {{- toYaml .Values.tjj | nindent 6 }}
-    sojob:
-      {{- toYaml .Values.sojob | nindent 6 }}
     xship:
       {{- toYaml .Values.xship | nindent 6 }}
     tencentcloud:

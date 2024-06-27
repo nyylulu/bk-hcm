@@ -24,18 +24,18 @@ import (
 
 // DetectStep supplies all the recycle detection step related operations.
 type DetectStep interface {
-	// CreateRecycleStep creates recycle detection step in db
+	// CreateDetectStep creates recycle detection step in db
 	CreateDetectStep(ctx context.Context, inst *table.DetectStep) error
-	// GetRecycleStep gets recycle detection step by filter from db
+	// GetDetectStep gets recycle detection step by filter from db
 	GetDetectStep(ctx context.Context, filter *mapstr.MapStr) (*table.DetectStep, error)
-	// CountRecycleTask gets recycle detection step count by filter from db
+	// CountDetectStep gets recycle detection step count by filter from db
 	CountDetectStep(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleOrder gets recycle detection step list by filter from db
+	// FindManyDetectStep gets recycle detection step list by filter from db
 	FindManyDetectStep(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) (
 		[]*table.DetectStep, error)
-	// UpdateRecycleStep updates recycle detection step by filter and doc in db
+	// UpdateDetectStep updates recycle detection step by filter and doc in db
 	UpdateDetectStep(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
-	// DeleteRecycleStep deletes recycle detection step from db
+	// DeleteDetectStep deletes recycle detection step from db
 	DeleteDetectStep(ctx context.Context, filter map[string]interface{}) (uint64, error)
 }
 
@@ -60,7 +60,7 @@ func (ds *detectStepDao) GetDetectStep(ctx context.Context, filter *mapstr.MapSt
 	return inst, nil
 }
 
-// CountRecycleTask gets recycle detection step count by filter from db
+// CountDetectStep gets recycle detection step count by filter from db
 func (ds *detectStepDao) CountDetectStep(ctx context.Context, filter map[string]interface{}) (uint64, error) {
 	total, err := mongodb.Client().Table(table.DetectStepTable).Find(filter).Count(ctx)
 	if err != nil {
@@ -70,7 +70,7 @@ func (ds *detectStepDao) CountDetectStep(ctx context.Context, filter map[string]
 	return total, nil
 }
 
-// FindManyRecycleOrder gets recycle detection step list by filter from db
+// FindManyDetectStep gets recycle detection step list by filter from db
 func (ds *detectStepDao) FindManyDetectStep(ctx context.Context, page metadata.BasePage,
 	filter map[string]interface{}) ([]*table.DetectStep, error) {
 

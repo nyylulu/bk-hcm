@@ -50,7 +50,7 @@ func (r *Recycler) createReinstallTask(task *table.RecallDetail) error {
 		err := errors.New("get no resource type from task label")
 		logs.Errorf("failed to create reinstall task, err: %v", err)
 
-		errUpdate := r.updateTaskClearCheckStatus(task, "", err.Error(), table.RecallStatusReinstallFailed)
+		errUpdate := r.updateTaskReinstallStatus(task, "", "", err.Error(), table.RecallStatusReinstallFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -66,8 +66,6 @@ func (r *Recycler) createReinstallTask(task *table.RecallDetail) error {
 	default:
 		return fmt.Errorf("unsupported resource type %s, cannot reinstall", resType)
 	}
-
-	return nil
 }
 
 func (r *Recycler) checkReinstallStatus(task *table.RecallDetail) error {
@@ -80,8 +78,6 @@ func (r *Recycler) checkReinstallStatus(task *table.RecallDetail) error {
 	default:
 		return fmt.Errorf("unsupported resource type %s, cannot reinstall", resType)
 	}
-
-	return nil
 }
 
 func (r *Recycler) getPwd(hostID int64) (string, error) {

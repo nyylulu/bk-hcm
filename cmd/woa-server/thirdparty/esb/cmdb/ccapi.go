@@ -22,6 +22,7 @@ import (
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/pkg/cc"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -60,6 +61,10 @@ type Client interface {
 	// SearchBizBelonging search cmdb business belonging.
 	SearchBizBelonging(ctx context.Context, header http.Header, params *SearchBizBelongingParams) (
 		*SearchBizBelongingRst, error)
+	// GetHostInfoByIP get host info by ip in CMDB
+	GetHostInfoByIP(ctx context.Context, header http.Header, ip string, bkCloudID int) (*HostInfo, error)
+	// GetHostInfoByHostID get host info by host id in CMDB
+	GetHostInfoByHostID(ctx context.Context, header http.Header, bkHostID int64) (*HostInfo, error)
 }
 
 // ccCli cc api interface implementation
@@ -173,7 +178,7 @@ func (c *ccCli) GetHostId(ctx context.Context, header http.Header, ip string) (i
 		return -1, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
+	if !resp.Result || resp.Code != 0 {
 		return -1, fmt.Errorf("failed to get host id, err: %s", resp.ErrMsg)
 	}
 
@@ -231,12 +236,13 @@ func (c *ccCli) GetHostBizId(ctx context.Context, header http.Header, hostId int
 		return -1, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		return -1, fmt.Errorf("failed to get host biz id, err: %s", resp.ErrMsg)
+	if !resp.Result || resp.Code != 0 {
+		return -1, fmt.Errorf("failed to get host biz id, hostId: %d, errCode: %d, errMsg: %s",
+			hostId, resp.Code, resp.ErrMsg)
 	}
 
 	if len(resp.Data) == 0 {
-		return -1, fmt.Errorf("failed to get host biz id, for return data size 0")
+		return -1, fmt.Errorf("failed to get host biz id, hostId: %d, for return data size 0", hostId)
 	}
 
 	return resp.Data[0].AppID, nil
@@ -517,4 +523,114 @@ func (c *ccCli) SearchBizBelonging(ctx context.Context, header http.Header, req 
 		Into(resp)
 
 	return resp, err
+}
+
+// GetHostInfoByIP get host info by ip in cc 3.0(bkCloudID是管控区ID)
+func (c *ccCli) GetHostInfoByIP(ctx context.Context, header http.Header, ip string, bkCloudID int) (*HostInfo, error) {
+	subPath := "/api/c/compapi/v2/cc/list_hosts_without_biz"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+
+	req := &ListHostReq{
+		HostPropertyFilter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    common.BKHostInnerIPField,
+						Operator: querybuilder.OperatorEqual,
+						Value:    ip,
+					},
+					querybuilder.AtomRule{
+						Field:    common.BKCloudIDField,
+						Operator: querybuilder.OperatorEqual,
+						Value:    bkCloudID,
+					},
+				},
+			},
+		},
+		Page: BasePage{Start: 0, Limit: 1},
+	}
+
+	resp := new(ListHostResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to get host info by ip, ip: %s, bkCloudID: %d, err: %v, subPath: %s",
+			ip, bkCloudID, err, subPath)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to get host info, ip: %s, bkCloudID: %d, errCode: %d, errMsg: %s",
+			ip, bkCloudID, resp.Code, resp.ErrMsg)
+	}
+
+	if len(resp.Data.Info) != 1 {
+		return nil, fmt.Errorf("failed to get host info by ip, ip: %s, bkCloudID: %d, for return "+
+			"data size %d not equal 1", ip, bkCloudID, len(resp.Data.Info))
+	}
+
+	return resp.Data.Info[0], nil
+}
+
+// GetHostInfoByHostID get hosts info by host id in cc 3.0
+func (c *ccCli) GetHostInfoByHostID(ctx context.Context, header http.Header, bkHostID int64) (*HostInfo, error) {
+	subPath := "/api/c/compapi/v2/cc/list_hosts_without_biz"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+
+	req := &ListHostReq{
+		HostPropertyFilter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    common.BKHostIDField,
+						Operator: querybuilder.OperatorEqual,
+						Value:    bkHostID,
+					},
+				},
+			},
+		},
+		Page: BasePage{Start: 0, Limit: 1},
+	}
+
+	resp := new(ListHostResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to get host info by host id, bkHostID: %d, err: %v, subPath: %s", bkHostID, err, subPath)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to get host info by host id, bkHostID: %d, errCode: %d, errMsg: %s, subPath: %s",
+			bkHostID, resp.Code, resp.ErrMsg, subPath)
+	}
+
+	if len(resp.Data.Info) != 1 {
+		return nil, fmt.Errorf("failed to get host info by host id, bkHostID: %d, for return data size %d not equal 1",
+			bkHostID, len(resp.Data.Info))
+	}
+
+	return resp.Data.Info[0], nil
 }

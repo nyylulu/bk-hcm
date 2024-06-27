@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 
@@ -27,10 +28,18 @@ import (
 // SopsClientInterface sops api interface
 type SopsClientInterface interface {
 	// CreateTask create sops task
-	CreateTask(ctx context.Context, header http.Header, templateId, bkBizId string, req *CreateTaskReq) (
+	CreateTask(ctx context.Context, header http.Header, templateID, bkBizID int64, req *CreateTaskReq) (
 		*CreateTaskResp, error)
+	// StartTask start sops task
+	StartTask(ctx context.Context, header http.Header, taskID, bkBizID int64) (*StartTaskResp, error)
 	// GetTaskStatus get sops task status
-	GetTaskStatus(ctx context.Context, header http.Header, taskId, bkBizId string) (*GetTaskStatusResp, error)
+	GetTaskStatus(ctx context.Context, header http.Header, taskID, bkBizID int64) (*GetTaskStatusResp, error)
+	// GetTaskNodeDetail get sops task node detail
+	GetTaskNodeDetail(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
+		*GetTaskNodeDetailResp, error)
+	// GetTaskNodeData get sops task node data
+	GetTaskNodeData(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
+		*GetTaskNodeDataResp, error)
 }
 
 // NewSopsClientInterface creates a sops api instance
@@ -72,10 +81,10 @@ func (c *sopsApi) getAuthHeader() (string, string) {
 }
 
 // CreateTask create sops task
-func (c *sopsApi) CreateTask(ctx context.Context, header http.Header, templateId, bkBizId string, req *CreateTaskReq) (
+func (c *sopsApi) CreateTask(ctx context.Context, header http.Header, templateID, bkBizID int64, req *CreateTaskReq) (
 	*CreateTaskResp, error) {
 
-	subPath := "/create_task/%s/%s"
+	subPath := "/create_task/%d/%d"
 	key, val := c.getAuthHeader()
 	if header == nil {
 		header = http.Header{}
@@ -85,19 +94,60 @@ func (c *sopsApi) CreateTask(ctx context.Context, header http.Header, templateId
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).
-		SubResourcef(subPath, templateId, bkBizId).
+		SubResourcef(subPath, templateID, bkBizID).
 		WithHeaders(header).
 		Do().
 		Into(resp)
 
-	return resp, err
+	if err != nil {
+		logs.Errorf("failed to send create task api, templateID: %d, bkBizID: %d, err: %v, req: %+v",
+			templateID, bkBizID, err, req)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse create task api, templateID: %d, bkBizID: %d, errCode: %d, "+
+			"errMsg: %s, req: %+v", templateID, bkBizID, resp.Code, resp.Message, req)
+	}
+
+	return resp, nil
+}
+
+// StartTask start sops task
+func (c *sopsApi) StartTask(ctx context.Context, header http.Header, taskID, bkBizID int64) (*StartTaskResp, error) {
+	subPath := "/start_task/%d/%d"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	resp := new(StartTaskResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(map[string]string{}).
+		SubResourcef(subPath, taskID, bkBizID).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to send start task api, taskID: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse start task api, taskID: %d, bkBizID: %d, errCode: %d, errMsg: %s",
+			taskID, bkBizID, resp.Code, resp.Message)
+	}
+
+	return resp, nil
 }
 
 // GetTaskStatus get sops task status
-func (c *sopsApi) GetTaskStatus(ctx context.Context, header http.Header, taskId, bkBizId string) (*GetTaskStatusResp,
-	error) {
+func (c *sopsApi) GetTaskStatus(ctx context.Context, header http.Header, taskID, bkBizID int64) (
+	*GetTaskStatusResp, error) {
 
-	subPath := "/get_task_status/%s/%s"
+	subPath := "/get_task_status/%d/%d"
 	key, val := c.getAuthHeader()
 	if header == nil {
 		header = http.Header{}
@@ -106,10 +156,86 @@ func (c *sopsApi) GetTaskStatus(ctx context.Context, header http.Header, taskId,
 	resp := new(GetTaskStatusResp)
 	err := c.client.Get().
 		WithContext(ctx).
-		SubResourcef(subPath, taskId, bkBizId).
+		SubResourcef(subPath, taskID, bkBizID).
 		WithHeaders(header).
 		Do().
 		Into(resp)
 
-	return resp, err
+	if err != nil {
+		logs.Errorf("failed to send get task status api, taskID: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse get task status api, taskID: %d, bkBizID: %d, errCode: %d, errMsg: %s",
+			taskID, bkBizID, resp.Code, resp.Message)
+	}
+
+	return resp, nil
+}
+
+// GetTaskNodeDetail get sops task node detail
+func (c *sopsApi) GetTaskNodeDetail(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
+	*GetTaskNodeDetailResp, error) {
+
+	subPath := "/get_task_node_detail/%d/%d"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	resp := new(GetTaskNodeDetailResp)
+	err := c.client.Get().
+		WithContext(ctx).
+		SubResourcef(subPath, taskID, bkBizID).
+		WithHeaders(header).
+		WithParam("node_id", nodeID).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to send get task node detail api, taskID: %d, bkBizID: %d, nodeID: %s, err: %v",
+			taskID, bkBizID, nodeID, err)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse get task node detail api, taskID: %d, bkBizID: %d, nodeID: %s, "+
+			"errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, resp.Code, resp.Message)
+	}
+
+	return resp, nil
+}
+
+// GetTaskNodeData get sops task node data
+func (c *sopsApi) GetTaskNodeData(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
+	*GetTaskNodeDataResp, error) {
+
+	subPath := "/get_task_node_data/%d/%d"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	resp := new(GetTaskNodeDataResp)
+	err := c.client.Get().
+		WithContext(ctx).
+		SubResourcef(subPath, bkBizID, taskID).
+		WithHeaders(header).
+		WithParam("node_id", nodeID).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to send get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, err: %v",
+			taskID, bkBizID, nodeID, err)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, "+
+			"errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, resp.Code, resp.Message)
+	}
+
+	return resp, nil
 }

@@ -27,38 +27,43 @@ import (
 	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
+	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/bkchatapi"
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
 	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/uuid"
 )
 
 // Matcher matches devices for apply order
 type Matcher struct {
 	informer informer.Interface
-	sojob    sojobapi.SojobClientInterface
 	sops     sopsapi.SopsClientInterface
+	sopsOpt  cc.SopsCli
 	cc       cmdb.Client
 	bkchat   bkchatapi.BkChatClientInterface
 	ctx      context.Context
+	kt       *kit.Kit
 }
 
 // New create a matcher
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, informer informer.Interface) (
-	*Matcher, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, clientConf cc.ClientConfig,
+	informer informer.Interface) (*Matcher, error) {
 
 	matcher := &Matcher{
 		informer: informer,
-		sojob:    thirdCli.SoJob,
 		sops:     thirdCli.Sops,
+		sopsOpt:  clientConf.Sops,
 		cc:       esbCli.Cmdb(),
 		bkchat:   thirdCli.BkChat,
 		ctx:      ctx,
+		kt:       &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
 	}
 
 	// TODO: get worker num from config
@@ -198,10 +203,10 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	hasGenRecordMatching := false
-	for _, record := range genRecords {
-		if record.Status == types.GenerateStatusInit ||
-			record.Status == types.GenerateStatusHandling ||
-			record.Status == types.GenerateStatusSuccess && record.IsMatched == false {
+	for _, recordItem := range genRecords {
+		if recordItem.Status == types.GenerateStatusInit ||
+			recordItem.Status == types.GenerateStatusHandling ||
+			recordItem.Status == types.GenerateStatusSuccess && recordItem.IsMatched == false {
 			hasGenRecordMatching = true
 			break
 		}
@@ -244,13 +249,13 @@ func (m *Matcher) getGenerateRecord(id uint64) (*types.GenerateRecord, error) {
 	filter := &mapstr.MapStr{
 		"generate_id": id,
 	}
-	record, err := model.Operation().GenerateRecord().GetGenerateRecord(context.Background(), filter)
+	recordInfo, err := model.Operation().GenerateRecord().GetGenerateRecord(context.Background(), filter)
 	if err != nil {
 		logs.Errorf("failed to get generate record by id: %d", id)
 		return nil, err
 	}
 
-	return record, nil
+	return recordInfo, nil
 }
 
 // getOrderGenRecords gets all generate records related to given order
@@ -422,37 +427,6 @@ func (m *Matcher) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, erro
 	return devices, nil
 }
 
-// checkDevice executes device quality check task
-func (m *Matcher) checkDevice(info *types.DeviceInfo) error {
-	if info.IsChecked {
-		logs.Infof("host %s is checked, need not check", info.Ip)
-		return nil
-	}
-
-	// 1. create job
-	ips := []string{info.Ip}
-	// TODO: ieod_check not support yet
-	jobId, err := m.createSoJob("ieod_check", ips)
-	if err != nil {
-		logs.Errorf("host %s failed to check, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to check, err: %v", info.Ip, err)
-	}
-
-	// 2. get job status
-	if err := m.checkJobStatus(jobId); err != nil {
-		logs.Errorf("host %s failed to check, job id: %d, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to check, job id: %d, err: %v", info.Ip, jobId, err)
-	}
-
-	// 3. update device status
-	if err := m.setDeviceChecked(info); err != nil {
-		logs.Errorf("host %s failed to check, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to check, err: %v", info.Ip, err)
-	}
-
-	return nil
-}
-
 // initDevice executes device initialization task
 func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	if info.IsInited {
@@ -467,52 +441,74 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	}
 
 	// 1. create job
-	ips := []string{info.Ip}
-	jobId, err := m.createSoJob("ieod_init", ips)
+	// 根据IP获取主机信息
+	hostInfo, err := m.cc.GetHostInfoByIP(m.kt.Ctx, m.kt.Header(), info.Ip, 0)
 	if err != nil {
-		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+		logs.Errorf("sops:process:check:matcher:ieod init, get host info by ip failed, ip: %s, infoBkBizID: %d, "+
+			"err: %v", info.Ip, info.BkBizId, err)
+		return err
+	}
+
+	// 根据bkHostID去cmdb获取bkBizID
+	bkBizID, err := m.cc.GetHostBizId(m.kt.Ctx, m.kt.Header(), hostInfo.BkHostId)
+	if err != nil {
+		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, infoBkBizID: %d, "+
+			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostId, err)
+		return err
+	}
+
+	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType)
+	if err != nil {
+		logs.Errorf("sops:process:check:matcher:ieod init device, host %s failed to initialize, infoBkBizID: %d, "+
+			"bkBizID: %d, bkHostID: %d, err: %v", info.Ip, info.BkBizId, bkBizID, info.BkHostId, err)
 		// update init record
-		errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, "", err.Error(), types.InitStatusFailed)
+		errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, "", "", err.Error(), types.InitStatusFailed)
 		if errRecord != nil {
-			logs.Errorf("host %s failed to initialize, err: %v", info.Ip, errRecord)
+			logs.Errorf("host %s failed to initialize, bkBidID: %d, bkHostID: %d, err: %v",
+				info.Ip, info.BkBizId, info.BkHostId, errRecord)
 			return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, errRecord)
 		}
 		return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
 	}
 
+	jobIDStr := strconv.FormatInt(jobId, 10)
 	// update init record
-	errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), "handling",
-		types.InitStatusHandling)
+	errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl,
+		"handling", types.InitStatusHandling)
 	if errRecord != nil {
-		logs.Warnf("host %s failed to update initialize record, err: %v", info.Ip, errRecord)
+		logs.Warnf("host %s failed to update initialize record, jobID: %d, jobUrl: %s, bkBizID: %s, err: %v",
+			info.Ip, jobId, jobUrl, bkBizID, errRecord)
 	}
 
 	// 2. get job status
-	if err := m.checkJobStatus(jobId); err != nil {
-		logs.Infof("host %s failed to initialize, job id: %d, err: %v", info.Ip, jobId, err)
+	if err = sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
+		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, jobID: %d, "+
+			"jobUrl: %s, bkBizID: %d, err: %v", info.Ip, jobId, jobUrl, bkBizID, err)
 		// update init record
-		errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), err.Error(),
-			types.InitStatusFailed)
+		errRecord = record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl,
+			err.Error(), types.InitStatusFailed)
 		if errRecord != nil {
-			logs.Errorf("host %s failed to initialize, err: %v", info.Ip, errRecord)
+			logs.Errorf("host %s failed to initialize, bkBizID: %d, jobID: %d, jobUrl: %s, err: %v",
+				info.Ip, bkBizID, jobId, jobUrl, errRecord)
 			return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, errRecord)
 		}
-		return fmt.Errorf("host %s failed to initialize, job id: %d, err: %v", info.Ip, jobId, err)
+		return fmt.Errorf("host %s failed to initialize, jobID: %d, err: %v", info.Ip, jobId, err)
 	}
 
 	// 3. update device status
-	info.InitTaskId = strconv.Itoa(jobId)
-	info.InitTaskLink = sojobapi.InitTaskLinkPrefix + info.InitTaskId
-	if err := m.setDeviceInited(info); err != nil {
-		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+	info.InitTaskId = strconv.FormatInt(jobId, 10)
+	info.InitTaskLink = jobUrl
+	if err = m.setDeviceInited(info); err != nil {
+		logs.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
+		return fmt.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
 	}
 
 	// update init record
-	if err := record.UpdateInitRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), "success",
+	if err = record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl, "success",
 		types.InitStatusSuccess); err != nil {
-		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+		logs.Errorf("host %s failed to initialize, bkBizID: %d, jobId: %d, jobUrl: %s, err: %v",
+			info.Ip, bkBizID, jobId, jobUrl, err)
+		return fmt.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
 	}
 
 	return nil
@@ -523,63 +519,6 @@ func (m *Matcher) checkDeviceDisk(info *types.DeviceInfo) error {
 	if info.IsDiskChecked {
 		logs.Infof("host %s is disk-checked, need not disk check", info.Ip)
 		return nil
-	}
-
-	// create disk check record
-	if err := record.CreateDiskCheckRecord(info.SubOrderId, info.Ip); err != nil {
-		logs.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-	}
-
-	// 1. create job
-	ips := []string{info.Ip}
-
-	jobId, err := m.createSoJob("benchmark", ips)
-	if err != nil {
-		logs.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-		// update init record
-		errRecord := record.UpdateDiskCheckRecord(info.SubOrderId, info.Ip, "", err.Error(),
-			types.DiskCheckStatusFailed)
-		if errRecord != nil {
-			logs.Errorf("host %s failed to disk check, err: %v", info.Ip, errRecord)
-			return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, errRecord)
-		}
-		return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-	}
-
-	// update init record
-	errRecord := record.UpdateDiskCheckRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), "handling",
-		types.DiskCheckStatusHandling)
-	if errRecord != nil {
-		logs.Warnf("host %s failed to update disk check record, err: %v", info.Ip, errRecord)
-	}
-
-	// 2. get job status
-	if err := m.checkJobStatusDetail(jobId); err != nil {
-		logs.Infof("host %s failed to disk check, job id: %d, err: %v", info.Ip, jobId, err)
-		// update init record
-		errRecord := record.UpdateDiskCheckRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), err.Error(),
-			types.DiskCheckStatusFailed)
-		if errRecord != nil {
-			logs.Errorf("host %s failed to disk check, err: %v", info.Ip, errRecord)
-			return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, errRecord)
-		}
-		return fmt.Errorf("host %s failed to disk check, job id: %d, err: %v", info.Ip, jobId, err)
-	}
-
-	// 3. update device status
-	info.DiskCheckTaskId = strconv.Itoa(jobId)
-	info.DiskCheckTaskLink = sojobapi.InitTaskLinkPrefix + info.DiskCheckTaskId
-	if err := m.setDeviceDiskChecked(info); err != nil {
-		logs.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-	}
-
-	// update disk check record
-	if err := record.UpdateDiskCheckRecord(info.SubOrderId, info.Ip, strconv.Itoa(jobId), "success",
-		types.DiskCheckStatusSuccess); err != nil {
-		logs.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to disk check, err: %v", info.Ip, err)
 	}
 
 	return nil

@@ -22,7 +22,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/sojobapi"
+	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/pkg/logs"
 )
 
@@ -41,7 +41,7 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create conf check task, err: %v", err)
 
-		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -49,21 +49,40 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 		return err
 	}
 
-	taskID, err := r.createSoJob("confcheck", []string{ip})
+	// 根据IP获取主机信息
+	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
 	if err != nil {
-		logs.Errorf("host %s failed to conf check, err: %v", ip, err)
+		logs.Errorf("sops:process:check:recycler:config check, get host info by ip failed, ip: %s, hostID: %d, "+
+			"err: %v", ip, task.HostID, err)
+		return err
+	}
 
-		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
+	// 根据bkHostID去cmdb获取bkBizID
+	bkBizID, err := r.esbCli.Cmdb().GetHostBizId(r.kt.Ctx, r.kt.Header(), hostInfo.BkHostId)
+	if err != nil {
+		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, taskHostID: %d, "+
+			"bkHostID: %d, err: %v", ip, task.HostID, hostInfo.BkHostId, err)
+		return err
+	}
+
+	// 创建配置检查任务-只有Linux任务
+	taskID, jobUrl, err := sops.CreateConfigCheckSopsTask(r.kt, r.sops, r.esbCli.Cmdb(), ip, bkBizID)
+	if err != nil {
+		logs.Errorf("sops:process:check:config check, host %s failed to conf check, bkBizID: %d, err: %v",
+			ip, bkBizID, err)
+
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
-			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+			logs.Warnf("failed to update recall task status, bkBizID: %d, err: %v", bkBizID, errUpdate)
 		}
 
 		return fmt.Errorf("host %s failed to conf check, err: %v", ip, err)
 	}
 
 	// update task status
-	if err := r.updateTaskConfCheckStatus(task, strconv.Itoa(taskID), "", table.RecallStatusConfChecking); err != nil {
-		logs.Errorf("failed to update recall task status, err: %v", err)
+	if err = r.updateTaskConfCheckStatus(task, strconv.FormatInt(taskID, 10), strconv.FormatInt(bkBizID, 10),
+		jobUrl, "", table.RecallStatusConfChecking); err != nil {
+		logs.Errorf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
 		return err
 	}
 
@@ -82,7 +101,7 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 		err := errors.New("get no ip from task label")
 		logs.Errorf("failed to create conf check task, err: %v", err)
 
-		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", err.Error(), table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -92,10 +111,11 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 
 	taskID, err := strconv.Atoi(task.ConfCheckID)
 	if err != nil {
-		logs.Errorf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
+		logs.Errorf("sops:process:check:config check status, failed to convert conf check id %s to int, err: %v",
+			task.ConfCheckID, err)
 
 		msg := fmt.Sprintf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
-		errUpdate := r.updateTaskConfCheckStatus(task, "", msg, table.RecallStatusConfCheckFailed)
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", msg, table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
@@ -103,19 +123,35 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert conf check id %s to int, err: %v", task.ConfCheckID, err)
 	}
 
-	if err := r.checkJobStatus(taskID); err != nil {
-		logs.Infof("host %s failed to conf check, job id: %d, err: %v", ip, taskID, err)
+	// 获取业务ID
+	bkBizID, err := strconv.Atoi(task.ConfCheckBizID)
+	if err != nil {
+		logs.Infof("sops:process:check:config check status, failed to convert conf check biz id %s to int, err: %v",
+			task.ConfCheckBizID, err)
 
-		errUpdate := r.updateTaskConfCheckStatus(task, "", err.Error(), table.RecallStatusConfCheckFailed)
+		msg := fmt.Sprintf("failed to convert conf check biz id %s to int, err: %v", task.ConfCheckBizID, err)
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", msg, table.RecallStatusConfCheckFailed)
 		if errUpdate != nil {
 			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
 		}
 
-		return fmt.Errorf("host %s failed to conf check, job id: %d, err: %v", ip, taskID, err)
+		return fmt.Errorf("failed to convert conf check biz id %s to int, err: %v", task.ConfCheckBizID, err)
+	}
+
+	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+		logs.Errorf("sops:process:check:config check status, host %s failed to conf check, job id: %d, bkBizID: %d, "+
+			"err: %v", ip, taskID, bkBizID, err)
+
+		errUpdate := r.updateTaskConfCheckStatus(task, "", "", "", err.Error(), table.RecallStatusConfCheckFailed)
+		if errUpdate != nil {
+			logs.Warnf("failed to update recall task status, err: %v", errUpdate)
+		}
+
+		return fmt.Errorf("host %s failed to conf check, job id: %d, bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
 	}
 
 	// update task status
-	if err := r.updateTaskConfCheckStatus(task, "", "", table.RecallStatusTransiting); err != nil {
+	if err = r.updateTaskConfCheckStatus(task, "", "", "", "", table.RecallStatusTransiting); err != nil {
 		logs.Errorf("failed to update recall task status, err: %v", err)
 
 		return err
@@ -128,7 +164,7 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 	return nil
 }
 
-func (r *Recycler) updateTaskConfCheckStatus(task *table.RecallDetail, id, msg string,
+func (r *Recycler) updateTaskConfCheckStatus(task *table.RecallDetail, id, bkBizID, jobUrl, msg string,
 	status table.RecallStatus) error {
 
 	filter := map[string]interface{}{
@@ -143,7 +179,8 @@ func (r *Recycler) updateTaskConfCheckStatus(task *table.RecallDetail, id, msg s
 
 	if id != "" {
 		update["conf_check_id"] = id
-		update["conf_check_link"] = sojobapi.TaskLinkPrefix + id
+		update["conf_check_biz_id"] = bkBizID
+		update["conf_check_link"] = jobUrl
 	}
 
 	if msg != "" {
