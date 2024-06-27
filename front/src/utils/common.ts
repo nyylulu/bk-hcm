@@ -118,4 +118,14 @@ const getEntirePath = (tailPath: string, interfacePrefix = '/api/v1/woa/') => {
   return `${BK_HCM_AJAX_URL_PREFIX + interfacePrefix + tailPath}`;
 };
 
-export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload, getDate };
+const getDisplayText = (value: any, placeholder = '--') => {
+  if (value === null || value === undefined || value === '') {
+    return placeholder;
+  }
+  if (Array.isArray(value) && !value.length) {
+    return placeholder;
+  }
+  return value;
+};
+
+export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload, getDate, getDisplayText };

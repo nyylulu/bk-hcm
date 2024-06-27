@@ -4,6 +4,7 @@ import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { useDepartment } from '@/hooks';
 import { useUserStore } from '@/store';
+import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
 // import OrganizationSelect from '@/components/OrganizationSelect/index';
@@ -123,8 +124,13 @@ export default defineComponent({
           module_names: moduleNames.value,
           operators: operators.value,
         })
-        .then((data) => {
-          dissloveList.value = data?.data?.items || [];
+        .then((result) => {
+          const list = result?.data?.items || [];
+          dissloveList.value = list.sort((a, b) => {
+            const countA = (a?.total?.current?.host_count || 0) as number;
+            const countB = (b?.total?.current?.host_count || 0) as number;
+            return countB - countA;
+          });
         })
         .finally(() => {
           isLoading.value = false;
@@ -215,7 +221,11 @@ export default defineComponent({
             data={dissloveList.value}
             class={cssModule.table}>
             <bk-table-column label={t('业务')} field='bk_biz_name' min-width='150px' fixed='left'></bk-table-column>
-            <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px'></bk-table-column>
+            <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px'>
+              {{
+                default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.progress)}</>,
+              }}
+            </bk-table-column>
             <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
@@ -225,12 +235,16 @@ export default defineComponent({
                     onClick={() =>
                       handleShowOriginDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
                     }>
-                    {row?.total?.origin?.host_count}
+                    {getDisplayText(row?.total?.origin?.host_count)}
                   </bk-button>
                 ),
               }}
             </bk-table-column>
-            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'></bk-table-column>
+            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'>
+              {{
+                default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.origin?.cpu_count)}</>,
+              }}
+            </bk-table-column>
             <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
               {{
                 default: ({ row }: { row: IDissolve }) => (
@@ -240,12 +254,16 @@ export default defineComponent({
                     onClick={() =>
                       handleShowCurrentDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
                     }>
-                    {row?.total?.current?.host_count}
+                    {getDisplayText(row?.total?.current?.host_count)}
                   </bk-button>
                 ),
               }}
             </bk-table-column>
-            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'></bk-table-column>
+            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'>
+              {{
+                default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.current?.cpu_count)}</>,
+              }}
+            </bk-table-column>
             {moduleNames.value.map((moduleName: string) => (
               <bk-table-column label={moduleName} field={moduleName} width={`${moduleName.length * 15}px`}>
                 {{
@@ -259,7 +277,7 @@ export default defineComponent({
                           moduleName,
                         )
                       }>
-                      {row?.module_host_count?.[moduleName]}
+                      {getDisplayText(row?.module_host_count?.[moduleName])}
                     </bk-button>
                   ),
                 }}
