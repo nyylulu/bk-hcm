@@ -947,14 +947,15 @@ func (g *Generator) updateGeneratedDevice(order *types.ApplyOrder, generateId ui
 	}
 
 	// 2. get cc host detail info
-	ccHosts, err := g.getHostDetail(ips)
+	// 由于会存在主机在cc，但是此时机器还没有ip, 所以需要通过固资号进行查询
+	ccHosts, err := g.getHostDetail(assetIds)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, order id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
-	mapIpToHost := make(map[string]*cmdb.HostInfo)
+	mapAssetIDToHost := make(map[string]*cmdb.HostInfo)
 	for _, host := range ccHosts {
-		mapIpToHost[host.GetUniqIp()] = host
+		mapAssetIDToHost[host.BkAssetId] = host
 	}
 
 	// 3. save device info to db
@@ -993,8 +994,8 @@ func (g *Generator) updateGeneratedDevice(order *types.ApplyOrder, generateId ui
 			UpdateAt:          now,
 		}
 		// add device detail info from cc
-		if host, ok := mapIpToHost[item.Ip]; !ok {
-			logs.Warnf("failed to get %s detail info in cc", item.Ip)
+		if host, ok := mapAssetIDToHost[item.AssetId]; !ok {
+			logs.Warnf("failed to get %s detail info in cc", item.AssetId)
 		} else {
 			device.AssetId = host.BkAssetId
 			// update device type from cc
@@ -1041,7 +1042,7 @@ func (g *Generator) isDuplicateHost(suborderId, ip string) (bool, error) {
 	return false, nil
 }
 
-func (g *Generator) getHostDetail(ips []string) ([]*cmdb.HostInfo, error) {
+func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.HostInfo, error) {
 	req := &cmdb.ListBizHostReq{
 		BkBizId: 931,
 		BkModuleIds: []int64{
@@ -1057,15 +1058,9 @@ func (g *Generator) getHostDetail(ips []string) ([]*cmdb.HostInfo, error) {
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
-						Field:    "bk_host_innerip",
+						Field:    "bk_asset_id",
 						Operator: querybuilder.OperatorIn,
-						Value:    ips,
-					},
-					// support bk_cloud_id 0 only
-					querybuilder.AtomRule{
-						Field:    "bk_cloud_id",
-						Operator: querybuilder.OperatorEqual,
-						Value:    0,
+						Value:    assetIds,
 					},
 				},
 			},
