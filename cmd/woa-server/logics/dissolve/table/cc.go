@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
@@ -282,38 +283,70 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.HostI
 		return nil, fmt.Errorf("call cc req is nil")
 	}
 
-	limit := req.Page.Limit
-	if limit > common.BKMaxInstanceLimit {
+	count := req.Page.Limit
+	if count > common.BKMaxInstanceLimit {
 		req.Page.Limit = common.BKMaxInstanceLimit
 	}
 
 	result := make([]cmdb.HostInfo, 0)
-	for {
-		hosts, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
-		if err != nil {
-			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-			return nil, err
-		}
-
-		for _, host := range hosts.Data.Info {
-			result = append(result, *host)
-		}
-
-		// 小于单页大小表示查至最后一页，可返回
-		if len(hosts.Data.Info) < req.Page.Limit {
-			break
-		}
-
-		if len(result) >= limit {
-			break
-		}
-
-		req.Page.Start += common.BKMaxInstanceLimit
-
-		if req.Page.Start+req.Page.Limit > limit {
-			req.Page.Limit = limit - req.Page.Start
-		}
+	req.Page.Sort = common.BKHostIDField
+	hosts, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
 	}
+	for _, host := range hosts.Data.Info {
+		result = append(result, *host)
+	}
+
+	if len(hosts.Data.Info) < req.Page.Limit {
+		return result, nil
+	}
+
+	if count > hosts.Data.Count {
+		count = hosts.Data.Count
+	}
+
+	req.Page.Start += common.BKMaxInstanceLimit
+	wg := sync.WaitGroup{}
+	pipe := make(chan struct{}, 50)
+	var firstErr error
+	var lock sync.Mutex
+	for start := req.Page.Start; start < count && firstErr == nil; start += common.BKMaxInstanceLimit {
+		wg.Add(1)
+		pipe <- struct{}{}
+
+		pageLimit := common.BKMaxInstanceLimit
+		if start+common.BKMaxInstanceLimit > count {
+			pageLimit = count - start
+		}
+
+		go func(req cmdb.ListHostReq, start, pageLimit int) {
+			defer func() {
+				<-pipe
+				wg.Done()
+			}()
+
+			req.Page.Start = start
+			req.Page.Limit = pageLimit
+
+			hosts, err = l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), &req)
+			if err != nil {
+				logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+				firstErr = err
+				return
+			}
+
+			lock.Lock()
+			for _, host := range hosts.Data.Info {
+				result = append(result, *host)
+			}
+			lock.Unlock()
+
+		}(*req, start, pageLimit)
+	}
+
+	wg.Wait()
 
 	return result, nil
 }
