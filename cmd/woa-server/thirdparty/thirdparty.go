@@ -89,10 +89,12 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 	}
 
 	client := &Client{
-		CVM:   cvm,
-		DVM:   dvm,
-		Tjj:   tjj,
-		Xship: xship,
+		CVM:             cvm,
+		DVM:             dvm,
+
+		Tjj:             tjj,
+		Xship:           xship,
+		TencentCloudOpt: opts.TCloudOpt,
 	}
 
 	// 实例化API网关client

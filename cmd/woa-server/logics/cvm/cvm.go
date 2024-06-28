@@ -28,6 +28,7 @@ import (
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // CVM create cvm request param
@@ -55,18 +56,21 @@ type CVM struct {
 func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	// 0. update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
-		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
+			order.OrderId, err, kt.Rid)
 		return
 	}
 
 	// 1. launch cvm request
 	request, err := l.buildCvmReq(kt, order)
 	if err != nil {
-		logs.Errorf("failed to launch cvm when build cvm request, err: %v, order id: %d", err, order.OrderId)
+		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to launch cvm when build cvm request, "+
+			"err: %v, order id: %d, rid: %s", err, order.OrderId, kt.Rid)
 
 		// update generate record status to failed
-		if err := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
+				order.OrderId, err, kt.Rid)
 			return
 		}
 
@@ -76,11 +80,13 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	// 2. launch cvm request
 	taskId, err := l.createCVM(request)
 	if err != nil {
-		logs.Errorf("failed to create cvm when launch generate task, order id: %d, err: %v", order.OrderId, err)
+		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when launch generate task, "+
+			"order id: %d, err: %v, rid: %s", order.OrderId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
+				order.OrderId, err, kt.Rid)
 			return
 		}
 
@@ -88,19 +94,21 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	}
 
 	// 3. update generate record status to running
-	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", taskId, 0); err != nil {
-		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+	if err = l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", taskId, 0); err != nil {
+		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
+			order.OrderId, taskId, err, kt.Rid)
 		return
 	}
 
 	// 4. check cvm task result
 	if err = l.checkCVM(taskId); err != nil {
-		logs.Errorf("failed to create cvm when check generate task, order id: %s, task id: %s, err: %v",
-			order.OrderId, taskId, err)
+		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when check generate task, "+
+			"order id: %s, task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
+				order.OrderId, taskId, err, kt.Rid)
 			return
 		}
 
@@ -110,11 +118,13 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	// 5. get generated cvm instances
 	hosts, err := l.listCVM(taskId)
 	if err != nil {
-		logs.Errorf("failed to list created cvm, order id: %s, task id: %s, err: %v", order.OrderId, taskId, err)
+		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to list created cvm, order id: %s, "+
+			"task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
+				order.OrderId, taskId, err, kt.Rid)
 			return
 		}
 
@@ -122,12 +132,14 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	}
 
 	// 6. save generated cvm instances info
-	if err := l.updateGeneratedDevice(order, hosts, taskId); err != nil {
-		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.OrderId, err)
+	if err = l.updateGeneratedDevice(order, hosts, taskId); err != nil {
+		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to update generated device, "+
+			"order id: %s, taskId: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
+				order.OrderId, taskId, err, kt.Rid)
 			return
 		}
 
@@ -135,8 +147,9 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	}
 
 	// 7. update generate record status to success
-	if err := l.updateApplyOrder(order, types.ApplyStatusSuccess, "success", "", uint(len(hosts))); err != nil {
-		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v", order.OrderId, err)
+	if err = l.updateApplyOrder(order, types.ApplyStatusSuccess, "success", "", uint(len(hosts))); err != nil {
+		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
+			order.OrderId, taskId, err, kt.Rid)
 		return
 	}
 
@@ -210,10 +223,12 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 	// call cvm api to launchCvm cvm order
 	createResp, err := l.cvm.CreateCvmOrder(nil, nil, createReq)
 	if err != nil {
+		logs.Errorf("scheduler:logics:create:cvm:failed, err: %v, req: %+v", err, createReq)
 		return "", err
 	}
 
-	logs.Infof("create cvm req: %+v, resp: %+v", createReq, createResp)
+	// 记录cvm创建成功的日志，方便排查问题
+	logs.Infof("scheduler:logics:create:cvm:success, req: %+v, resp: %+v", createReq, cvt.PtrToVal(createResp))
 
 	if createResp.Error.Code != 0 {
 		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s", createResp.Error.Code,
@@ -327,7 +342,7 @@ func (l *logics) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 		return nil, fmt.Errorf("object with order id %s is not a cvm instance response: %+v", orderId, obj)
 	}
 
-	logs.Infof("get cvm instance resp: %+v", resp)
+	logs.Infof("scheduler:logics:cvm:list:success, orderId: %s, get cvm instance resp: %+v", orderId, resp)
 
 	if resp.Error.Code != 0 {
 		return nil, fmt.Errorf("list cvm instance failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
@@ -402,6 +417,10 @@ func (l *logics) updateApplyOrder(order *types.ApplyOrder, status types.ApplySta
 
 // buildCvmReq construct a cvm creating task request
 func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error) {
+	kt = kt.NewSubKit()
+	kt.Ctx = context.Background()
+	// 记录cvm请求日志，方便排查问题
+	logs.Infof("scheduler:logics:build:cvm:request:start, order: %+v, rid: %s", cvt.PtrToVal(order), kt.Rid)
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &CVM{
@@ -427,6 +446,8 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	} else {
 		vpc, err := l.getCvmVpc(order.Spec.Region)
 		if err != nil {
+			logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm vpc failed, err: %v, "+
+				"order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
 			return nil, err
 		}
 		req.VPCId = vpc
@@ -436,6 +457,8 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	} else {
 		subnet, leftIp, err := l.getCvmSubnet(kt, order.Spec.Region, order.Spec.Zone, req.VPCId)
 		if err != nil {
+			logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get subnet failed, err: %v, "+
+				"req: %+v, order: %+v, rid: %s", err, req, cvt.PtrToVal(order), kt.Rid)
 			return nil, err
 		}
 		req.SubnetId = subnet
@@ -449,12 +472,16 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	// security group
 	sg, err := l.getCvmDftSecGroup(order.Spec.Region)
 	if err != nil {
+		logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm drg secGroup failed, "+
+			"err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
 		return nil, err
 	}
 	req.SecurityGroupId = sg.SecurityGroupId
 	req.SecurityGroupName = sg.SecurityGroupName
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
+	logs.Infof("scheduler:logics:build:cvm:request:end, order: %+v, req: %+v, rid: %s",
+		cvt.PtrToVal(order), req, kt.Rid)
 	return req, nil
 }
 
@@ -501,9 +528,10 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 		},
 	}
 
-	resp, err := l.cvm.QueryCvmSubnet(nil, nil, req)
+	resp, err := l.cvm.QueryCvmSubnet(kt.Ctx, kt.Header(), req)
 	if err != nil {
-		logs.Errorf("failed to get cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+			err, region, zone, vpc, kt.Rid)
 		return "", 0, err
 	}
 
@@ -516,7 +544,7 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	}
 	cfgSubnets, err := l.confLogic.Subnet().GetSubnet(kt, cond)
 	if err != nil {
-		logs.Errorf("failed to get config cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get config cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return "", 0, err
 	}
 	mapIdTosubnet := make(map[string]*cfgtypes.Subnet)

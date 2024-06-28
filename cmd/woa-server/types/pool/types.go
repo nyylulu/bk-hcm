@@ -67,16 +67,16 @@ type MatchSpec struct {
 // Validate whether GetLaunchMatchDeviceReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetLaunchMatchDeviceReq) Validate() (errKey string, err error) {
+func (param *GetLaunchMatchDeviceReq) Validate() error {
 	if len(param.Ips) > common.BKMaxInstanceLimit {
-		return "ips", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetLaunchMatchDeviceRst get resource launch match devices result
@@ -113,23 +113,23 @@ type GetRecallMatchDeviceReq struct {
 // Validate whether GetRecallMatchDeviceReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecallMatchDeviceReq) Validate() (errKey string, err error) {
+func (param *GetRecallMatchDeviceReq) Validate() error {
 	arrayLimit := 20
 	if param.Spec != nil {
 		if len(param.Spec.DeviceType) > arrayLimit {
-			return "spec.device_type", fmt.Errorf("exceed limit %d", arrayLimit)
+			return fmt.Errorf("spec.device_type exceed limit %d", arrayLimit)
 		}
 
 		if len(param.Spec.Region) > arrayLimit {
-			return "spec.region", fmt.Errorf("exceed limit %d", arrayLimit)
+			return fmt.Errorf("spec.region exceed limit %d", arrayLimit)
 		}
 
 		if len(param.Spec.Zone) > arrayLimit {
-			return "spec.zone", fmt.Errorf("exceed limit %d", arrayLimit)
+			return fmt.Errorf("spec.zone exceed limit %d", arrayLimit)
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecallMatchDeviceRst get resource recall match devices result
@@ -154,16 +154,16 @@ type LaunchReq struct {
 // Validate whether LaunchReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *LaunchReq) Validate() (errKey string, err error) {
+func (param *LaunchReq) Validate() error {
 	if len(param.HostIDs) == 0 {
-		return "bk_host_ids", errors.New("cannot be empty")
+		return errors.New("bk_host_ids cannot be empty")
 	}
 
 	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // RecallReq create resource recall task request
@@ -178,24 +178,24 @@ type RecallReq struct {
 // Validate whether RecallReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *RecallReq) Validate() (errKey string, err error) {
+func (param *RecallReq) Validate() error {
 	if param.DeviceType == "" {
-		return "device_type", errors.New("cannot be empty")
+		return errors.New("device_type cannot be empty")
 	}
 
 	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if param.Replicas <= 0 {
-		return "replicas", errors.New("should be positive")
+		return errors.New("replicas should be positive")
 	}
 
 	if param.Replicas > common.BKMaxInstanceLimit {
-		return "replicas", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("replicas exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetLaunchTaskReq get resource launch task request
@@ -211,51 +211,51 @@ type GetLaunchTaskReq struct {
 // Validate whether GetLaunchTaskReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetLaunchTaskReq) Validate() (errKey string, err error) {
+func (param *GetLaunchTaskReq) Validate() error {
 	arrayLimit := 20
 	if len(param.ID) > arrayLimit {
-		return "id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Phase) > arrayLimit {
-		return "phase", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("phase exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 200 {
-		return "page.limit", errors.New("exceed limit 200")
+		return errors.New("exceed page.limit 200")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -321,51 +321,51 @@ type GetRecallTaskReq struct {
 // Validate whether GetRecallTaskReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecallTaskReq) Validate() (errKey string, err error) {
+func (param *GetRecallTaskReq) Validate() error {
 	arrayLimit := 20
 	if len(param.ID) > arrayLimit {
-		return "id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Phase) > arrayLimit {
-		return "phase", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("phase exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 200 {
-		return "page.limit", errors.New("exceed limit 200")
+		return errors.New("exceed page.limit 200")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -428,38 +428,37 @@ type GetLaunchHostReq struct {
 // Validate whether GetLaunchHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetLaunchHostReq) Validate() (errKey string, err error) {
+func (param *GetLaunchHostReq) Validate() error {
 	if param.ID <= 0 {
-		return "id", errors.New("should be positive")
+		return errors.New("id should be positive")
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return "page.limit", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if param.Filter != nil {
-		if key, err := param.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
-			return fmt.Sprintf("filter.%s", key), err
+		if _, err := param.Filter.Validate(&querybuilder.RuleOption{NeedSameSliceElementType: true}); err != nil {
+			return err
 		}
 		if param.Filter.GetDeep() > querybuilder.MaxDeep {
-			return "filter.rules", fmt.Errorf("exceed max query condition deepth: %d",
-				querybuilder.MaxDeep)
+			return fmt.Errorf("exceed max query condition deepth: %d", querybuilder.MaxDeep)
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -497,28 +496,28 @@ type GetRecallHostReq struct {
 // Validate whether GetRecallHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecallHostReq) Validate() (errKey string, err error) {
+func (param *GetRecallHostReq) Validate() error {
 	if param.ID < 0 {
-		return "id", errors.New("cannot be negative")
+		return errors.New("id can not be negative")
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return "page.limit", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecallHostRst get pool launch host result
@@ -537,30 +536,30 @@ type GetPoolHostReq struct {
 // Validate whether GetPoolHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetPoolHostReq) Validate() (errKey string, err error) {
-	for idx, selector := range param.Selector {
-		if key, err := selector.Validate(); err != nil {
-			return fmt.Sprintf("selector[%d].%s", idx, key), err
+func (param *GetPoolHostReq) Validate() error {
+	for _, selector := range param.Selector {
+		if _, err := selector.Validate(); err != nil {
+			return err
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return "page.limit", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -602,20 +601,20 @@ type DrawHostReq struct {
 // Validate whether DrawHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *DrawHostReq) Validate() (errKey string, err error) {
+func (param *DrawHostReq) Validate() error {
 	if len(param.HostIDs) == 0 {
-		return "bk_host_ids", errors.New("cannot be empty")
+		return errors.New("bk_host_ids cannot be empty")
 	}
 
 	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if param.ToBizID <= 0 {
-		return "bk_biz_id", errors.New("should be positive")
+		return errors.New("bk_biz_id should be positive")
 	}
 
-	return "", nil
+	return nil
 }
 
 // ReturnHostReq return hosts from resource pool request
@@ -628,24 +627,24 @@ type ReturnHostReq struct {
 // Validate whether ReturnHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ReturnHostReq) Validate() (errKey string, err error) {
+func (param *ReturnHostReq) Validate() error {
 	if param.RecallID <= 0 {
-		return "recall_id", errors.New("should be positive")
+		return errors.New("recall_id should be positive")
 	}
 
 	if param.FromBizID <= 0 {
-		return "bk_biz_id", errors.New("should be positive")
+		return errors.New("bk_biz_id should be positive")
 	}
 
 	if len(param.HostIDs) == 0 {
-		return "bk_host_ids", errors.New("cannot be empty")
+		return errors.New("bk_host_ids cannot be empty")
 	}
 
 	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // CreateRecallOrderReq create resource recall order request
@@ -662,24 +661,24 @@ type CreateRecallOrderReq struct {
 // Validate whether CreateRecallOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *CreateRecallOrderReq) Validate() (errKey string, err error) {
+func (param *CreateRecallOrderReq) Validate() error {
 	if param.DeviceType == "" {
-		return "device_type", errors.New("cannot be empty")
+		return errors.New("device_type cannot be empty")
 	}
 
 	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if param.Replicas <= 0 {
-		return "replicas", errors.New("should be positive")
+		return errors.New("replicas should be positive")
 	}
 
 	if param.Replicas > common.BKMaxInstanceLimit {
-		return "replicas", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("replicas exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecallOrderReq get resource recall order request
@@ -690,12 +689,12 @@ type GetRecallOrderReq struct {
 // Validate whether GetRecallOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecallOrderReq) Validate() (errKey string, err error) {
+func (param *GetRecallOrderReq) Validate() error {
 	if param.ID <= 0 {
-		return "id", errors.New("should be positive")
+		return errors.New("id should be positive")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecallOrderRst get pool recall order result
@@ -712,12 +711,12 @@ type GetRecalledInstReq struct {
 // Validate whether GetRecalledInstReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecalledInstReq) Validate() (errKey string, err error) {
+func (param *GetRecalledInstReq) Validate() error {
 	if param.ID <= 0 {
-		return "id", errors.New("should be positive")
+		return errors.New("id should be positive")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecalledInstRst get pool recalled instance result
@@ -735,28 +734,28 @@ type GetRecallDetailReq struct {
 // Validate whether GetRecallDetailReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecallDetailReq) Validate() (errKey string, err error) {
+func (param *GetRecallDetailReq) Validate() error {
 	if param.ID <= 0 {
-		return "id", errors.New("should be positive")
+		return errors.New("id should be positive")
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", errors.New("invalid start < 0")
+		return errors.New("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", errors.New("invalid limit < 0")
+		return errors.New("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return "page.limit", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecallDetailRst get pool recall task detail info result
@@ -773,16 +772,16 @@ type ResumeRecycleTaskReq struct {
 // Validate whether ResumeRecycleTaskReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ResumeRecycleTaskReq) Validate() (errKey string, err error) {
+func (param *ResumeRecycleTaskReq) Validate() error {
 	if len(param.ID) == 0 {
-		return "id", fmt.Errorf("id should be set")
+		return fmt.Errorf("id should be set")
 	}
 
 	if len(param.ID) > common.BKMaxInstanceLimit {
-		return "id", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("id exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetGradeCfgRst get pool grade config result

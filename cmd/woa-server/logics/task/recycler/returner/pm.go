@@ -93,7 +93,7 @@ func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) 
 
 	resp, err := r.erp.CreateDeviceReturnOrder(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to create device return order, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:returnPm:failed, failed to create device return order, err: %v", err)
 		return "", err
 	}
 
@@ -102,7 +102,7 @@ func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) 
 		respStr = string(b)
 	}
 
-	logs.Infof("return pm resp: %s", respStr)
+	logs.Infof("recycler:logics:cvm:returnPm:success, return pm resp: %s", respStr)
 
 	return r.parseReturnPmResp(resp)
 }

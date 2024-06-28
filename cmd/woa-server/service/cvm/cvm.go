@@ -16,6 +16,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -28,10 +29,17 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed tocreate apply order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// CVM生产-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmCreate, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.CreateApplyOrder(cts.Kit, input)
@@ -48,6 +56,13 @@ func (s *service) GetApplyOrderById(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.CvmOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// CVM生产-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmCreate, Action: meta.Find}})
+	if err != nil {
 		return nil, err
 	}
 
@@ -68,6 +83,18 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
+	if err := input.Validate(); err != nil {
+		logs.Errorf("failed to validate get apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// CVM生产-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmCreate, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	rst, err := s.logics.GetApplyOrder(cts.Kit, input)
 	if err != nil {
 		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -82,6 +109,13 @@ func (s *service) GetApplyDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.CvmDeviceReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to get apply order launched devices, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// CVM生产-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmCreate, Action: meta.Find}})
+	if err != nil {
 		return nil, err
 	}
 
@@ -102,6 +136,13 @@ func (s *service) GetCapacity(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
+	// CVM生产-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmCreate, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	rst, err := s.logics.GetCapacity(cts.Kit, input)
 	if err != nil {
 		logs.Errorf("failed to get cvm apply capacity, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -112,7 +153,7 @@ func (s *service) GetCapacity(cts *rest.Contexts) (interface{}, error) {
 }
 
 // GetApplyStatusCfg get apply status config
-func (s *service) GetApplyStatusCfg(cts *rest.Contexts) (interface{}, error) {
+func (s *service) GetApplyStatusCfg(_ *rest.Contexts) (interface{}, error) {
 	// TODO: store in db
 	rst := mapstr.MapStr{
 		"info": []mapstr.MapStr{

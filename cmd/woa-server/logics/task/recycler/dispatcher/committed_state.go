@@ -50,6 +50,9 @@ func (cs *CommittedState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:CommittedState:start, orderID: %s", orderId)
+
 	ev := cs.dealCommitTask(taskCtx.Order)
 
 	// set next state
@@ -66,6 +69,9 @@ func (cs *CommittedState) Execute(ctx EventContext) error {
 	}
 
 	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:CommittedState:end, orderID: %s", orderId)
 
 	return nil
 }

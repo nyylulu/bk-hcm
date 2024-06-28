@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package task task
 package task
 
 import (
@@ -61,9 +62,9 @@ func (s *service) PreviewRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to preview recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -112,9 +113,9 @@ func (s *service) CreateRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to create recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -135,10 +136,23 @@ func (s *service) GetRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机回收-业务粒度
+	authAttrs := make([]meta.ResourceAttribute, 0)
+	for _, bizID := range input.BizID {
+		authAttrs = append(authAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bizID,
+		})
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	if err != nil {
+		logs.Errorf("no permission to get recycle order, bizIDs: %v, err: %v, rid: %s", input.BizID, err, cts.Kit.Rid)
+		return nil, err
 	}
 
 	rst, err := s.logics.Recycler().GetRecycleOrder(cts.Kit, input)
@@ -167,12 +181,12 @@ func (s *service) GetBizRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: input.BkBizID,
 	})
 	if err != nil {
 		logs.Errorf("no permission to get biz recycle order, failed to check permission, bizID: %d, err: %v, rid: %s",
 			input.BkBizID, err, cts.Kit.Rid)
-		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		return nil, err
 	}
 
 	param := &types.GetRecycleOrderReq{
@@ -199,9 +213,9 @@ func (s *service) GetRecycleDetect(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get recycle detection task info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle detection task info, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -222,9 +236,9 @@ func (s *service) ListDetectHost(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to list recycle detection host, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to list recycle detection host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -245,9 +259,9 @@ func (s *service) GetRecycleDetectStep(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get recycle detection step info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle detection step info, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -268,10 +282,24 @@ func (s *service) GetRecycleOrderHost(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get recycle host info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle host info, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机回收-业务粒度
+	authAttrs := make([]meta.ResourceAttribute, 0)
+	for _, bizID := range input.BizID {
+		authAttrs = append(authAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bizID,
+		})
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	if err != nil {
+		logs.Errorf("no permission to get recycle order host, bizIDs: %v, err: %v, rid: %s",
+			input.BizID, err, cts.Kit.Rid)
+		return nil, err
 	}
 
 	rst, err := s.logics.Recycler().GetRecycleHost(cts.Kit, input)
@@ -324,10 +352,20 @@ func (s *service) GetBizHostToRecycle(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get biz host to recycle, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get biz host to recycle, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机回收-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: input.BizID,
+	})
+	if err != nil {
+		logs.Errorf("no permission to get biz host to recycle, bizID: %d, err: %v, rid: %s",
+			input.BizID, err, cts.Kit.Rid)
+		return nil, err
 	}
 
 	rst, err := s.logics.Recycler().GetRecycleBizHost(cts.Kit, input)
@@ -347,9 +385,9 @@ func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to start recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to start recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -361,8 +399,8 @@ func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
-		logs.Errorf("failed to start recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+		err = errors.New("biz id list is empty")
+		logs.Errorf("failed to start recycle order, input: %+v, err: %v, rid: %s", input, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -374,7 +412,7 @@ func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to start recycle order, failed to check permission, bizID: %d, err: %v, rid: %s",
 				bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -428,9 +466,9 @@ func (s *service) StartRecycleDetect(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to start recycle detection task, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to start recycle detection task, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -442,7 +480,7 @@ func (s *service) StartRecycleDetect(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to start recycle detection task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -455,7 +493,7 @@ func (s *service) StartRecycleDetect(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to start recycle detection task, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -475,9 +513,9 @@ func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to revise recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to revise recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -489,7 +527,7 @@ func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to revise recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -502,7 +540,7 @@ func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to revise recycle order, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -528,9 +566,9 @@ func (s *service) ResumeRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to resumes recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to resumes recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -542,7 +580,7 @@ func (s *service) ResumeRecycleOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to resumes recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -555,7 +593,7 @@ func (s *service) ResumeRecycleOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to terminate recycle order, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -575,9 +613,9 @@ func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to terminate recycle order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to terminate recycle order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -589,7 +627,7 @@ func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to terminate recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -602,7 +640,7 @@ func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to terminate recycle order, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 

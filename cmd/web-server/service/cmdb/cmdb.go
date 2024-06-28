@@ -49,6 +49,8 @@ func InitCmdbService(c *capability.Capability) {
 	h.Add("ListBiz", "POST", "/bk_bizs/list", svr.ListBiz)
 	h.Add("ListAuthorizedBiz", "POST", "/authorized/bizs/list", svr.ListAuthorizedBiz)
 	h.Add("ListAuthorizedBizAudit", "POST", "/authorized/audit/bizs/list", svr.ListAuthorizedBizAudit)
+	h.Add("ListAuthorizedBizCvmApply", "POST", "/authorized/cvm/apply/bizs/list", svr.ListAuthorizedBizCvmApply)
+	h.Add("ListAuthorizedBizCvmRecycle", "POST", "/authorized/cvm/recycle/bizs/list", svr.ListAuthorizedBizCvmRecycle)
 	h.Add("ListCloudArea", "POST", "/cloud_areas/list", svr.ListCloudArea)
 	h.Add("ListAllCloudArea", "POST", "/all/cloud_areas/list", svr.ListAllCloudArea)
 	h.Add("GetBizBriefCacheTopo", "GET", "/bizs/{bk_biz_id}/brief/cache/topo", svr.GetBizBriefCacheTopo)
@@ -76,6 +78,16 @@ func (c *cmdbSvc) ListAuthorizedBiz(cts *rest.Contexts) (interface{}, error) {
 // ListAuthorizedBizAudit list authorized biz audit with biz access permission from cmdb
 func (c *cmdbSvc) ListAuthorizedBizAudit(cts *rest.Contexts) (interface{}, error) {
 	return c.listAuthorizedBiz(cts, meta.Audit, meta.Find)
+}
+
+// ListAuthorizedBizCvmApply list authorized biz cvm apply with biz access permission from cmdb
+func (c *cmdbSvc) ListAuthorizedBizCvmApply(cts *rest.Contexts) (any, error) {
+	return c.listAuthorizedBiz(cts, meta.ZiYanResource, meta.Create)
+}
+
+// ListAuthorizedBizCvmRecycle list authorized biz cvm recycle with biz access permission from cmdb
+func (c *cmdbSvc) ListAuthorizedBizCvmRecycle(cts *rest.Contexts) (any, error) {
+	return c.listAuthorizedBiz(cts, meta.ZiYanResource, meta.Recycle)
 }
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb

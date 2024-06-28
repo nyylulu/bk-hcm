@@ -19,6 +19,7 @@ import (
 	"hcm/cmd/woa-server/common"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -149,8 +150,8 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
-		logs.Errorf("failed to create device in batch, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
+		logs.Errorf("failed to create device in batch, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -171,7 +172,14 @@ func (s *service) UpdateDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	if err := s.logics.Device().UpdateDevice(cts.Kit, instId, input); err != nil {
+	// CVM机型-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmType, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.Device().UpdateDevice(cts.Kit, instId, input); err != nil {
 		logs.Errorf("failed to update device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -187,10 +195,17 @@ func (s *service) UpdateDeviceProperty(cts *rest.Contexts) (interface{}, error) 
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to update cvm device config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// CVM机型-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmType, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	cond := map[string]interface{}{
@@ -203,7 +218,7 @@ func (s *service) UpdateDeviceProperty(cts *rest.Contexts) (interface{}, error) 
 	// cannot update device id
 	delete(data, "id")
 
-	if err := s.logics.Device().UpdateDeviceBatch(cts.Kit, cond, input.Property); err != nil {
+	if err = s.logics.Device().UpdateDeviceBatch(cts.Kit, cond, input.Property); err != nil {
 		logs.Errorf("failed to update cvm device config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -219,7 +234,14 @@ func (s *service) DeleteDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	if err := s.logics.Device().DeleteDevice(cts.Kit, instId); err != nil {
+	// CVM机型-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmType, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.Device().DeleteDevice(cts.Kit, instId); err != nil {
 		logs.Errorf("failed to delete device, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -251,6 +273,13 @@ func (s *service) CreateDvmDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.DvmDeviceInfo)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to create dvm device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// CVM机型-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmType, Action: meta.Find}})
+	if err != nil {
 		return nil, err
 	}
 
@@ -287,6 +316,13 @@ func (s *service) CreatePmDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.PmDeviceInfo)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to create physical machine device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// CVM机型-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanCvmType, Action: meta.Find}})
+	if err != nil {
 		return nil, err
 	}
 

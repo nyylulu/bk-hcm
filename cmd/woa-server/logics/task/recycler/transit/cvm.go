@@ -38,7 +38,8 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	}
 
 	if len(hostIds) == 0 || len(assetIds) == 0 || len(ips) == 0 {
-		logs.Errorf("failed to run transit task, for host id list, asset id list or ip list is empty")
+		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to run transit task, " +
+			"for host id list, asset id list or ip list is empty")
 		ev := &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to run transit task, for host id list, asset id list or ip list is empty"),
@@ -49,7 +50,8 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	// get biz's module "待回收"
 	moduleID, err := t.cc.GetBizRecycleModuleID(nil, nil, order.BizID)
 	if err != nil {
-		logs.Errorf("failed to get biz %d recycle module id, err: %v", order.BizID, err)
+		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to get biz %d recycle module id, "+
+			"err: %v", order.BizID, err)
 		if errUpdate := t.updateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
@@ -68,8 +70,9 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	}
 
 	// transfer hosts to module CR_IEG_资源服务系统专用退回中转勿改勿删 in the origin biz
-	if err := t.transferHost2BizTransit(assetIds, order.BizID, moduleID, order.BizID); err != nil {
-		logs.Errorf("failed to transfer host to biz's CR transit module in CMDB, err: %v", err)
+	if err = t.transferHost2BizTransit(assetIds, order.BizID, moduleID, order.BizID); err != nil {
+		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to transfer host "+
+			"to biz's CR transit module in CMDB, err: %v", err)
 		if errUpdate := t.updateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
 			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
@@ -88,9 +91,10 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	}
 
 	// shield TMP alarms
-	if err := t.shieldTMPAlarm(ips); err != nil {
+	if err = t.shieldTMPAlarm(ips); err != nil {
 		// add shield config may fail, ignore it
-		logs.Warnf("failed to add shield TMP alarm config, err: %v", err)
+		logs.Warnf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to add shield TMP alarm config, "+
+			"err: %v, ips: %v", err, ips)
 	}
 
 	// close network or shutdown

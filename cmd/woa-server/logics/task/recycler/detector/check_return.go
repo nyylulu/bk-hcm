@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 func (d *Detector) checkReturn(step *table.DetectStep, retry int) (int, string, error) {
@@ -95,7 +96,8 @@ func (d *Detector) checkCvmReturn(assetId string) (string, error) {
 
 	resp, err := d.cvm.GetCvmProcess(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to check cvm return process, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:checkCvmReturn:failed, failed to check cvm return process, "+
+			"err: %v, assetId: %s, req: %+v", err, assetId, cvt.PtrToVal(req))
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check cvm return process, err: %v", err)
 	}
 
@@ -104,7 +106,8 @@ func (d *Detector) checkCvmReturn(assetId string) (string, error) {
 	exeInfos = append(exeInfos, exeInfo)
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to check cvm return process, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("recycler:logics:cvm:checkCvmReturn:failed, failed to check cvm return process, code: %d, msg: %s",
+			resp.Error.Code, resp.Error.Message)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("check return process api return err: %s", resp.Error.Message)
 	}
 
@@ -144,7 +147,8 @@ func (d *Detector) checkErpReturn(assetId string) (string, error) {
 
 	resp, err := d.cvm.GetErpProcess(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to check erp return process, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:checkErpReturn:failed, failed to check erp return process, "+
+			"err: %v, assetId: %s, req: %+v", err, assetId, cvt.PtrToVal(req))
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check erp return process, err: %v", err)
 	}
 
@@ -153,7 +157,8 @@ func (d *Detector) checkErpReturn(assetId string) (string, error) {
 	exeInfos = append(exeInfos, exeInfo)
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to check erp return process, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("recycler:logics:cvm:checkErpReturn:failed, failed to check erp return process, code: %d, msg: %s",
+			resp.Error.Code, resp.Error.Message)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("check return process api return err: %s", resp.Error.Message)
 	}
 

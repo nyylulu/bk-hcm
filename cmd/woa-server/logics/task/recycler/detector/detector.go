@@ -197,19 +197,22 @@ func (d *Detector) runRecycleTask(task *table.DetectTask) {
 			success++
 		}
 
-		if err := d.updateTaskProgress(task, total, success, failed); err != nil {
-			logs.Warnf("failed to update recycle task status, task id: %s, err: %v", task.TaskID, err)
+		if err = d.updateTaskProgress(task, total, success, failed); err != nil {
+			logs.Warnf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
+				"task id: %s, subOrderID: %s, err: %v", task.TaskID, task.SuborderID, err)
 		}
 	}
 
 	// update task status
-	if err := d.updateRecycleTask(task, lastErr); err != nil {
-		logs.Errorf("failed to update recycle task status, task id: %s, err: %v", task.TaskID, err)
+	if err = d.updateRecycleTask(task, lastErr); err != nil {
+		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
+			"task id: %s, err: %v", task.TaskID, err)
 	}
 
 	// update recycle task
-	if err := d.updateRecycleHost(task.SuborderID, task.IP, lastErr); err != nil {
-		logs.Errorf("failed to update recycle host %s, err: %v", task.IP, err)
+	if err = d.updateRecycleHost(task.SuborderID, task.IP, lastErr); err != nil {
+		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle host %s, subOrderID: %s, "+
+			"err: %v", task.IP, task.SuborderID, err)
 	}
 
 	return
@@ -227,7 +230,8 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 	step := new(table.DetectStep)
 	cnt := len(steps)
 	if cnt > 1 {
-		logs.Errorf("failed to get recycle step, for invalid count > 1, step id: %s", stepId)
+		logs.Errorf("recycler:logics:cvm:runRecycleStep:failed, failed to get recycle step, for invalid count > 1, "+
+			"step id: %s, taskID: %s, subOrderID: %s, IP: %s", stepId, task.TaskID, task.SuborderID, task.IP)
 		return fmt.Errorf("failed to get recycle step, for invalid count > 1, step id: %s", stepId)
 	} else if cnt == 1 {
 		step = steps[0]
@@ -242,10 +246,10 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 
 	// can not skip pre-check step
 	if step.Status == table.DetectStatusSuccess && step.StepName != table.StepPreCheck {
-		logs.Infof("step %s already success, skip", stepId)
+		logs.Infof("recycler:logics:cvm:runRecycleStep:has success, step %s already success, skip", stepId)
 		return nil
 	} else if step.Status == table.DetectStatusRunning {
-		logs.Errorf("step %s is running, can not execute again", stepId)
+		logs.Errorf("recycler:logics:cvm:runRecycleStep:running, step %s is running, can not execute again", stepId)
 		return fmt.Errorf("step %s is running, can not execute again", stepId)
 	}
 
@@ -258,9 +262,11 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 	// execute step
 	attempt, exeInfo, errExec := d.executeRecycleStep(step, stepCfg.Retry)
 	if errExec != nil {
-		logs.Infof("failed to execute recycle step, step id: %s, err: %v", step.ID, errExec)
+		logs.Errorf("recycler:logics:cvm:runRecycleStep:failed, failed to execute recycle step, step id: %s, "+
+			"err: %v, subOrderID: %s, IP: %s", step.ID, errExec, task.SuborderID, task.IP)
 	} else {
-		logs.Infof("success to execute recycle step, step id: %s", step.ID)
+		logs.Infof("recycler:logics:cvm:runRecycleStep:success, success to execute recycle step, "+
+			"step id: %s, subOrderID: %s, IP: %s", step.ID, task.SuborderID, task.IP)
 	}
 
 	// update step status

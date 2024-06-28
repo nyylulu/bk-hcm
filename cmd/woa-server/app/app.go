@@ -116,7 +116,6 @@ func (s *woaServer) register() error {
 }
 
 func (s *woaServer) finalizer() {
-
 	if err := s.sd.Deregister(); err != nil {
 		logs.Errorf("process service shutdown, but deregister failed, err: %v", err)
 		return

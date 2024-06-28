@@ -17,6 +17,7 @@ import (
 	"hcm/cmd/woa-server/dal/pool/table"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -29,10 +30,17 @@ func (s *service) CreateLaunchTask(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool launch task, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().CreateLaunchTask(cts.Kit, input)
@@ -52,10 +60,17 @@ func (s *service) CreateRecallTask(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall task, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().CreateRecallTask(cts.Kit, input)
@@ -75,10 +90,17 @@ func (s *service) GetLaunchTask(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool launch task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch task, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetLaunchTask(cts.Kit, input)
@@ -98,10 +120,17 @@ func (s *service) GetRecallTask(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool recall task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall task, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallTask(cts.Kit, input)
@@ -121,10 +150,17 @@ func (s *service) GetLaunchHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool launch host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool launch host, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetLaunchHost(cts.Kit, input)
@@ -144,10 +180,17 @@ func (s *service) GetRecallHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool recall host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall host, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallHost(cts.Kit, input)
@@ -170,10 +213,17 @@ func (s *service) GetIdleHost(cts *rest.Contexts) (interface{}, error) {
 	// set phase filter to IDLE to retrieve idle host only
 	input.Phase = []table.PoolHostPhase{table.PoolHostPhaseIdle}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool idle host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool idle host, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetPoolHost(cts.Kit, input)
@@ -193,13 +243,20 @@ func (s *service) DrawHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to draw host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to draw host, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := s.logics.Pool().DrawHost(cts.Kit, input); err != nil {
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.Pool().DrawHost(cts.Kit, input); err != nil {
 		logs.Errorf("failed to draw host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -215,13 +272,20 @@ func (s *service) ReturnHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to return host, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := s.logics.Pool().ReturnHost(cts.Kit, input); err != nil {
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.Pool().ReturnHost(cts.Kit, input); err != nil {
 		logs.Errorf("failed to return host, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -237,10 +301,17 @@ func (s *service) CreateRecallOrder(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().CreateRecallOrder(cts.Kit, input)
@@ -260,10 +331,17 @@ func (s *service) GetRecallOrder(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool recall order, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recall order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallOrder(cts.Kit, input)
@@ -283,10 +361,17 @@ func (s *service) GetRecalledInstance(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get pool recalled instances, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get pool recalled instances, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecalledInstance(cts.Kit, input)
@@ -306,10 +391,17 @@ func (s *service) GetRecallDetail(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get get recall task detail info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get get recall task detail info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallDetail(cts.Kit, input)
@@ -329,10 +421,17 @@ func (s *service) GetLaunchMatchDevice(cts *rest.Contexts) (interface{}, error) 
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get launch match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get launch match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetLaunchMatchDevice(cts.Kit, input)
@@ -352,10 +451,17 @@ func (s *service) GetRecallMatchDevice(cts *rest.Contexts) (interface{}, error) 
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get recall match device info, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallMatchDevice(cts.Kit, input)
@@ -375,13 +481,20 @@ func (s *service) ResumeRecycleTask(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to resumes recycle task, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to resumes recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := s.logics.Pool().ResumeRecycleTask(cts.Kit, input); err != nil {
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.Pool().ResumeRecycleTask(cts.Kit, input); err != nil {
 		logs.Errorf("failed to resume recycle task, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -397,10 +510,17 @@ func (s *service) CreateGradeCfg(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create pool grade config, key: %s, err: %v, rid: %s", errKey, err, cts.Kit.Rid)
+		logs.Errorf("failed to create pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 资源上下架-菜单粒度鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Pool().CreateGradeCfg(cts.Kit, input)
@@ -414,6 +534,13 @@ func (s *service) CreateGradeCfg(cts *rest.Contexts) (interface{}, error) {
 
 // GetGradeCfg get pool grade config
 func (s *service) GetGradeCfg(cts *rest.Contexts) (interface{}, error) {
+	// 资源上下架-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	rst, err := s.logics.Pool().GetGradeCfg(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to get pool grade config, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -425,6 +552,13 @@ func (s *service) GetGradeCfg(cts *rest.Contexts) (interface{}, error) {
 
 // GetRecallStatusCfg get recall status config
 func (s *service) GetRecallStatusCfg(cts *rest.Contexts) (interface{}, error) {
+	// 资源上下架-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	// TODO: store in db
 	rst := mapstr.MapStr{
 		"info": []mapstr.MapStr{
@@ -504,6 +638,13 @@ func (s *service) GetRecallStatusCfg(cts *rest.Contexts) (interface{}, error) {
 
 // GetTaskStatusCfg get task status config
 func (s *service) GetTaskStatusCfg(cts *rest.Contexts) (interface{}, error) {
+	// 资源上下架-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	// TODO: store in db
 	rst := mapstr.MapStr{
 		"info": []mapstr.MapStr{
@@ -531,6 +672,13 @@ func (s *service) GetTaskStatusCfg(cts *rest.Contexts) (interface{}, error) {
 
 // GetDeviceType get supported device type list
 func (s *service) GetDeviceType(cts *rest.Contexts) (interface{}, error) {
+	// 资源上下架-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	rst, err := s.logics.Pool().GetDeviceType(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to get pool supported device type, err: %v, rid: %s", err, cts.Kit.Rid)

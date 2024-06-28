@@ -37,6 +37,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/uuid"
 )
@@ -695,18 +696,28 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	noticeFmt := m.bkchat.GetNoticeFmt()
 	bizName := m.getBizName(ticket.BkBizId)
 	requireName := m.getRequireName(ticket.RequireType)
-	createTime := ticket.CreateAt.Local().Format("2006-01-02 15:04:05")
+	createTime := ticket.CreateAt.Local().Format(constant.DateTimeLayout)
+	if ticket.CreateAt.Location() == time.UTC {
+		location, err := time.LoadLocation("Asia/Shanghai")
+		if err != nil {
+			logs.Warnf("scheduler:logics:bkchat:notifyApplyDone:failed, orderId: %d, err: %v, createAt: %+v",
+				orderId, err, ticket.CreateAt)
+			return err
+		}
+		createTime = ticket.CreateAt.In(location).Format(constant.DateTimeLayout)
+	}
 	content := fmt.Sprintf(noticeFmt, orderId, orderId, ticket.User, bizName, requireName, createTime, ticket.Remark,
 		orderId)
 
 	for _, user := range users {
 		resp, err := m.bkchat.SendApplyDoneMsg(nil, nil, user, content)
 		if err != nil {
-			logs.Warnf("failed to send bkchat message, err: %v", err)
+			logs.Warnf("scheduler:logics:bkchat:notifyApplyDone:failed, failed to send bkchat message, err: %v", err)
 			continue
 		}
 		if resp.Code != 0 {
-			logs.Warnf("failed to send bkchat message, code: %d, msg: %s", resp.Code, resp.Msg)
+			logs.Warnf("scheduler:logics:bkchat:notifyApplyDone:failed, failed to send bkchat message, "+
+				"code: %d, msg: %s", resp.Code, resp.Msg)
 			continue
 		}
 	}

@@ -69,14 +69,16 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 
 	cnt := len(hostBase)
 	if cnt != 1 {
-		logs.Errorf("failed to recycle check, for get invalid host num %d != 1", cnt)
+		logs.Errorf("recycler:logics:cvm:checkRecyclability:failed, failed to recycle check, "+
+			"for get invalid host num %d != 1", cnt)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to recycle check, for get invalid host num %d != 1",
 			cnt)
 	}
 
 	if strings.Contains(hostBase[0].Operator, step.User) == false &&
 		strings.Contains(hostBase[0].BakOperator, step.User) == false {
-		logs.Errorf("failed to recycle check, for %s is not operator or bak operator of host %s", step.User, step.IP)
+		logs.Errorf("recycler:logics:cvm:checkRecyclability:failed, failed to recycle check, for %s is not "+
+			"operator or bak operator of host %s", step.User, step.IP)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to recycle check, for %s is not operator or bak "+
 			"operator of host %s", step.User, step.IP)
 	}
@@ -133,7 +135,8 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	}
 
 	if moduleName != "待回收" && moduleName != "待回收模块" {
-		logs.Errorf("failed to recycle check, for host %s module name %s is not 待回收", step.IP, moduleName)
+		logs.Errorf("recycler:logics:cvm:checkRecyclability:failed, failed to recycle check, "+
+			"for host %s module name %s is not 待回收", step.IP, moduleName)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to recycle check, for host %s module name %s is not "+
 			"待回收", step.IP, moduleName)
 	}

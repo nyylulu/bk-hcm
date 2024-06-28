@@ -176,13 +176,13 @@ type UpdateSubnetPropertyParam struct {
 // Validate whether UpdateSubnetPropertyParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *UpdateSubnetPropertyParam) Validate() (errKey string, err error) {
+func (param *UpdateSubnetPropertyParam) Validate() error {
 	limit := 200
 	if len(param.Ids) > limit {
-		return "ids", fmt.Errorf("exceed limit %d", limit)
+		return fmt.Errorf("ids exceed limit %d", limit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetIdcZoneParam get idc zone list request param
@@ -397,13 +397,13 @@ type UpdateDevicePropertyParam struct {
 // Validate whether UpdateDevicePropertyParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *UpdateDevicePropertyParam) Validate() (errKey string, err error) {
+func (param *UpdateDevicePropertyParam) Validate() error {
 	limit := 200
 	if len(param.Ids) > limit {
-		return "ids", fmt.Errorf("exceed limit %d", limit)
+		return fmt.Errorf("ids exceed limit %d", limit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // DvmDeviceInfo dvm device info
@@ -554,6 +554,7 @@ type AffinityInfo struct {
 	Description string `json:"description" bson:"description"`
 }
 
+// 资源类型
 const (
 	ResourceTypePm        string = "IDCPM"
 	ResourceTypeCvm       string = "QCLOUDCVM"
@@ -561,6 +562,7 @@ const (
 	ResourceTypeQcloudDvm string = "QCLOUDDVM"
 )
 
+// Anti类型
 const (
 	AntiNone   string = "ANTI_NONE"   //无要求
 	AntiRack   string = "ANTI_RACK"   //分机架

@@ -34,6 +34,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // Returner deal with device return tasks
@@ -108,7 +109,7 @@ func (r *Returner) initReturnTask(order *table.RecycleOrder) (*table.ReturnTask,
 			UpdateAt:     now,
 		}
 
-		if err := dao.Set().ReturnTask().CreateReturnTask(context.Background(), newTask); err != nil {
+		if err = dao.Set().ReturnTask().CreateReturnTask(context.Background(), newTask); err != nil {
 			logs.Errorf("failed to create return task for order %s, err: %v", order.SuborderID, err)
 			return nil, err
 		}
@@ -126,6 +127,9 @@ func (r *Returner) dealReturnTask(task *table.ReturnTask) *event.Event {
 		logs.Errorf("failed to get recycle hosts by order id: %d, err: %v", task.SuborderID, err)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:dealReturnTask:start, task: %+v", cvt.PtrToVal(task))
 
 	switch task.Status {
 	case table.ReturnStatusInit:
@@ -181,7 +185,8 @@ func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHos
 	if err != nil {
 		if errUpdate := r.updateOrderInfo(task.SuborderID, "dommyzhang;forestchen", 0, uint(len(hosts)), 0,
 			err.Error()); errUpdate != nil {
-			logs.Errorf("failed to update recycle order %s info, err: %v", task.SuborderID, errUpdate)
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
+				task.SuborderID, errUpdate)
 			return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
 		}
 
@@ -189,19 +194,22 @@ func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHos
 	}
 
 	if errUpdate := r.updateOrderInfo(task.SuborderID, "AUTO", 0, 0, uint(len(hosts)), ""); errUpdate != nil {
-		logs.Errorf("failed to update recycle order %s info, err: %v", task.SuborderID, errUpdate)
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
+			task.SuborderID, errUpdate)
 		return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
 	}
 
 	// update return task info
 	if err := r.updateTaskInfo(task, taskId, table.ReturnStatusRunning, ""); err != nil {
-		logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, order id: %s, err: %v",
+			task.SuborderID, err)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
 	// update recycle host info
 	if err := r.updateHostInfo(task, taskId); err != nil {
-		logs.Errorf("failed to update recycle host info, order id: %s, err: %v", task.SuborderID, err)
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, order id: %s, err: %v",
+			task.SuborderID, err)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
@@ -378,13 +386,13 @@ func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) erro
 	maxNum := 10
 	begin := 0
 	end := begin
-	len := len(assetIds)
+	length := len(assetIds)
 
 	// transfer hosts from destBiz-CR_IEG_资源服务系统专用退回中转勿改勿删 back to destBiz-空闲机
-	for begin < len {
+	for begin < length {
 		end += maxNum
-		if end > len {
-			end = len
+		if end > length {
+			end = length
 		}
 
 		req := &cmdb.CrTransitIdleReq{

@@ -17,6 +17,7 @@ import (
 
 	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
 )
 
 // transferHost2Pool transfer hosts to CR pool module
@@ -52,6 +53,7 @@ func (l *Launcher) transferHost(hostIds []int64, srcBizId, destBizId, destModule
 	}
 
 	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("scheduler:cvm:launcher:transferHost:failed, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		return fmt.Errorf("failed to transfer host to target business, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 	}
 	return nil

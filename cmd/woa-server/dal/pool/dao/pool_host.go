@@ -26,11 +26,11 @@ type PoolHost interface {
 	NextSequence(ctx context.Context) (uint64, error)
 	// CreatePoolHost creates pool host in db
 	CreatePoolHost(ctx context.Context, inst *table.PoolHost) error
-	// GetRecycleOrder gets pool host by filter from db
+	// GetPoolHost gets pool host by filter from db
 	GetPoolHost(ctx context.Context, filter map[string]interface{}) (*table.PoolHost, error)
-	// CountRecycleOrder gets pool host count by filter from db
+	// CountPoolHost gets pool host count by filter from db
 	CountPoolHost(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleOrder gets pool host list by filter from db
+	// FindManyPoolHost gets pool host list by filter from db
 	FindManyPoolHost(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*table.PoolHost,
 		error)
 	// UpdatePoolHost updates pool host by filter and doc in db

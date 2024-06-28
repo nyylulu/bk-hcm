@@ -345,6 +345,7 @@ func (d *Detector) checkDockerSecurityGroup(clients *tencentCloudClients, host *
 	})
 	resp, err := clients.cvmClient.DescribeInstances(request)
 	if err != nil {
+		logs.Errorf("recycler:logics:cvm:checkDockerSecurityGroup:failed, ip: %s, err: %v", ip, err)
 		return "", fmt.Errorf("get instances failed: %s", err)
 	}
 
@@ -374,6 +375,7 @@ func (d *Detector) checkIsDefaultSG(clients *tencentCloudClients, sgId string) e
 	})
 	resp, err := clients.vpcClient.DescribeSecurityGroups(req)
 	if err != nil {
+		logs.Errorf("recycler:logics:cvm:checkIsDefaultSG:failed, err: %v, sgID: %s", err, sgId)
 		return fmt.Errorf("get sg failed: %v", err)
 	}
 	if len(resp.Response.SecurityGroupSet) == 0 {
@@ -404,6 +406,7 @@ func (d *Detector) checkVmSecurityGroup(clients *tencentCloudClients, host *cmdb
 
 	resp, err := clients.vpcClient.DescribeNetworkInterfaces(request)
 	if err != nil {
+		logs.Errorf("recycler:logics:cvm:checkVmSecurityGroup:failed, err: %v, ip: %s", err, host.GetUniqIp())
 		return "", fmt.Errorf("failed to check vpc: %v", err)
 	}
 
@@ -441,6 +444,7 @@ func (d *Detector) checkCLB(clients *tencentCloudClients, host *cmdb.HostInfo) (
 	}
 	resp := NewDescribeLoadBalancersResponse()
 	if err := clients.clbClient.Send(request, resp); err != nil {
+		logs.Errorf("recycler:logics:cvm:checkCLB:failed, ip: %s, vpcId: %s, err: %v", host.GetUniqIp(), vpcId, err)
 		return "", fmt.Errorf("failed to check clb, err: %v", err)
 	}
 

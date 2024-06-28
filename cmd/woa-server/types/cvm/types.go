@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package cvm cvm types
 package cvm
 
 import (
@@ -22,6 +23,7 @@ import (
 )
 
 const (
+	// ApplyLimit 申请配额限制
 	ApplyLimit = 1000
 )
 
@@ -39,26 +41,26 @@ type CvmCreateReq struct {
 // Validate whether CvmCreateReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *CvmCreateReq) Validate() (errKey string, err error) {
+func (s *CvmCreateReq) Validate() error {
 
 	if s.Replicas <= 0 {
-		return "replicas", fmt.Errorf("invalid replicas <= 0")
+		return fmt.Errorf("replicas invalid replicas <= 0")
 	}
 	// replicas limit 1000
 	if s.Replicas > ApplyLimit {
-		return "replicas", fmt.Errorf("exceed apply limit: %d", ApplyLimit)
+		return fmt.Errorf("replicas exceed apply limit: %d", ApplyLimit)
 	}
 
 	remarkLimit := 256
 	if len(s.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
-	if key, err := s.Spec.Validate(); err != nil {
-		return fmt.Sprintf("spec.%s", key), err
+	if err := s.Spec.Validate(); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // OrderSpec cvm apply order specification
@@ -77,32 +79,32 @@ type OrderSpec struct {
 // Validate whether OrderSpec is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (s *OrderSpec) Validate() (errKey string, err error) {
+func (s *OrderSpec) Validate() error {
 	if len(s.Region) == 0 {
-		return "region", fmt.Errorf("cannot be empty")
+		return fmt.Errorf("region cannot be empty")
 	}
 
 	if len(s.Vpc) > 0 && len(s.Subnet) == 0 {
-		return "subnet", fmt.Errorf("cannot be empty while vpc is set")
+		return fmt.Errorf("subnet cannot be empty while vpc is set")
 	}
 
 	if s.DiskSize < 0 {
-		return "disk_size", fmt.Errorf("invalid value < 0")
+		return fmt.Errorf("disk_size invalid value < 0")
 	}
 
 	diskLimit := int64(16000)
 	if s.DiskSize > diskLimit {
-		return "disk_size", fmt.Errorf("exceed limit %d", diskLimit)
+		return fmt.Errorf("disk_size exceed limit %d", diskLimit)
 	}
 
 	// 规格为 10 的倍数
 	diskUnit := int64(10)
 	modDisk := s.DiskSize % diskUnit
 	if modDisk != 0 {
-		return "disk_size", fmt.Errorf("must be in multiples of %d", diskUnit)
+		return fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // CvmCreateResult result of create cvm order
@@ -131,8 +133,10 @@ type ApplyOrder struct {
 	UpdateAt    time.Time   `json:"update_at" bson:"update_at"`
 }
 
+// ApplyStatus cvm apply order status
 type ApplyStatus string
 
+// ApplyStatus cvm apply order status
 const (
 	ApplyStatusInit     ApplyStatus = "INIT"
 	ApplyStatusRunning  ApplyStatus = "RUNNING"
@@ -160,41 +164,41 @@ type GetApplyParam struct {
 // Validate whether GetApplyParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetApplyParam) Validate() (errKey string, err error) {
+func (param *GetApplyParam) Validate() error {
 	arrayLimit := 20
 	if len(param.OrderId) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.TaskId) > arrayLimit {
-		return "task_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("task_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.RequireType) > arrayLimit {
-		return "require_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("require_type exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
-		return "status", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("status exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Region) > arrayLimit {
-		return "region", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("region exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Zone) > arrayLimit {
-		return "zone", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("zone exceed limit %d", arrayLimit)
 	}
 
 	if len(param.DeviceType) > arrayLimit {
-		return "device_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("device_type exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 const (

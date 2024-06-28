@@ -48,6 +48,9 @@ func (rs *ReturningState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:ReturningState:start, orderID: %s", orderId)
+
 	// run return tasks
 	ev := taskCtx.Dispatcher.returner.DealRecycleOrder(taskCtx.Order)
 
@@ -71,6 +74,9 @@ func (rs *ReturningState) Execute(ctx EventContext) error {
 			taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
 		}()
 	}
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:ReturningState:end, orderID: %s", orderId)
 
 	return nil
 }

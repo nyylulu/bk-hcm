@@ -134,12 +134,13 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.HostInfo, error) {
 	ccLimiter.Take()
 	resp, err := d.cc.ListHost(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cc host info, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, code: %d, msg: %s",
+			resp.Code, resp.ErrMsg)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 

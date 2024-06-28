@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package model ...
 package model
 
 import (
@@ -64,7 +65,7 @@ type ApplyOrder interface {
 	CreateApplyOrder(ctx context.Context, inst *types.ApplyOrder) error
 	// GetApplyOrder gets apply order by filter from db
 	GetApplyOrder(ctx context.Context, filter *mapstr.MapStr) (*types.ApplyOrder, error)
-	// CountRecycleOrder gets apply order count by filter from db
+	// CountApplyOrder gets apply order count by filter from db
 	CountApplyOrder(ctx context.Context, filter map[string]interface{}) (uint64, error)
 	// FindManyApplyOrder gets apply order list by filter from db
 	FindManyApplyOrder(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) (

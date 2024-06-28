@@ -79,14 +79,15 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	for try := 0; try < maxRetry; try++ {
 		resp, err = r.cvm.CreateCvmReturnOrder(nil, nil, req)
 		if err != nil {
-			logs.Errorf("failed to create cvm return order, err: %v", err)
+			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, err: %v", err)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
 		}
 
 		if resp.Error.Code != 0 {
-			logs.Errorf("failed to create cvm return order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, code: %d, msg: %s",
+				resp.Error.Code, resp.Error.Message)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
@@ -96,7 +97,7 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	}
 
 	if err != nil {
-		logs.Errorf("failed to create cvm return order, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, err: %v", err)
 		return "", err
 	}
 
@@ -105,7 +106,7 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 		respStr = string(b)
 	}
 
-	logs.Infof("return cvm resp: %s", respStr)
+	logs.Infof("recycler:logics:cvm:returnCvm:success, return cvm resp: %s", respStr)
 
 	if resp.Error.Code != 0 {
 		return "", fmt.Errorf("cvm return task failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)

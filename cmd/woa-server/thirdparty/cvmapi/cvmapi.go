@@ -17,6 +17,7 @@ import (
 	"net/http"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 
@@ -100,7 +101,12 @@ func (c *cvmApi) CreateCvmOrder(ctx context.Context, header http.Header, req *Or
 		Do().
 		Into(resp)
 
-	return resp, err
+	if err != nil {
+		logs.Errorf("scheduler:cvm:create:order:failed, err: %v, subPath: %s, req: %+v", err, subPath, req)
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // QueryCvmOrders query cvm orders
@@ -116,7 +122,12 @@ func (c *cvmApi) QueryCvmOrders(ctx context.Context, header http.Header, req *Or
 		Do().
 		Into(resp)
 
-	return resp, err
+	if err != nil {
+		logs.Errorf("scheduler:cvm:query:order:failed, err: %v, subPath: %s, req: %+v", err, subPath, req)
+		return nil, err
+	}
+
+	return resp, nil
 }
 
 // QueryCvmInstances query cvm instances
@@ -326,6 +337,11 @@ func (c *cvmApi) GetCvmProcess(ctx context.Context, header http.Header, req *Get
 		Do().
 		Into(resp)
 
+	if err != nil {
+		logs.Errorf("recycle:cvm:get:GetCvmProcess:failed, err: %v, subPath: %s, req: %+v", err, subPath, req)
+		return nil, err
+	}
+
 	return resp, err
 }
 
@@ -343,6 +359,11 @@ func (c *cvmApi) GetErpProcess(ctx context.Context, header http.Header, req *Get
 		WithHeaders(header).
 		Do().
 		Into(resp)
+
+	if err != nil {
+		logs.Errorf("recycle:cvm:get:GetErpProcess:failed, err: %v, subPath: %s, req: %+v", err, subPath, req)
+		return nil, err
+	}
 
 	return resp, err
 }

@@ -50,6 +50,7 @@ func NewBkChatClientInterface(opts cc.BkChatCli, reg prometheus.Registerer) (BkC
 
 	client := &bkchatApi{
 		client: rest.NewClient(c, "/"),
+		opts:   &opts,
 	}
 
 	return client, nil
@@ -58,7 +59,7 @@ func NewBkChatClientInterface(opts cc.BkChatCli, reg prometheus.Registerer) (BkC
 // bkchatApi bkchat api interface implementation
 type bkchatApi struct {
 	client rest.ClientInterface
-	opts   *ClientOptions
+	opts   *cc.BkChatCli
 }
 
 // SendApplyDoneMsg create itsm ticket

@@ -583,15 +583,16 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string,
 	// 1. init generate record
 	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
 	if err != nil {
-		logs.Errorf("failed to launch cvm when init generate record, order id: %s, err: %v", order.SubOrderId,
-			err)
+		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to launch cvm when init generate record, "+
+			"order id: %s, err: %v", order.SubOrderId, err)
 		return 0, fmt.Errorf("failed to launch cvm, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
 	// 2. launch cvm request
 	request, err := g.buildCvmReq(kt, order, zone, replicas)
 	if err != nil {
-		logs.Errorf("failed to launch cvm when build cvm request, err: %v, order id: %s", err, order.SubOrderId)
+		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to launch cvm when build cvm request, "+
+			"err: %v, order id: %s", err, order.SubOrderId)
 
 		// update generate record status to Done
 		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
@@ -606,8 +607,8 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string,
 
 	taskId, err := g.createCVM(request)
 	if err != nil {
-		logs.Errorf("failed to launch cvm when create generate task, order id: %s, err: %v", order.SubOrderId,
-			err)
+		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to launch cvm when create generate task, "+
+			"order id: %s, err: %v", order.SubOrderId, err)
 
 		// update generate record status to Done
 		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
@@ -622,17 +623,17 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string,
 	}
 
 	// 3. update generate record status to Query
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusHandling, "handling", taskId,
+	if err = g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusHandling, "handling", taskId,
 		nil); err != nil {
-		logs.Errorf("failed to launch cvm when update generate record, order id: %s, err: %v", order.SubOrderId,
-			err)
+		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to launch cvm when update generate record, "+
+			"order id: %s, err: %v", order.SubOrderId, err)
 		return generateId, fmt.Errorf("failed to launch cvm, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
 	// 4. check cvm task result
 	if err = g.checkCVM(taskId); err != nil {
-		logs.Errorf("failed to create cvm when check generate task, order id: %s, task id: %s, err: %v",
-			order.SubOrderId, taskId, err)
+		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to create cvm when check generate task, "+
+			"order id: %s, task id: %s, err: %v", order.SubOrderId, taskId, err)
 
 		// update generate record status to Done
 		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),

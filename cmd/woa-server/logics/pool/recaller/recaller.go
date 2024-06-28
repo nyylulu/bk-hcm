@@ -103,16 +103,18 @@ func (r *Recaller) Add(id uint64) {
 func (r *Recaller) runWorker() error {
 	orderId, err := r.Pop()
 	if err != nil {
-		logs.Errorf("failed to deal recall task, for get recall task from informer err: %v", err)
+		logs.Errorf("scheduler:cvm:recaller:runWorker:failed, failed to deal recall task, for get recall task "+
+			"from informer err: %v", err)
 		return err
 	}
 
-	if err := r.dispatchHandler(orderId); err != nil {
-		logs.Errorf("failed to dispatch recall task, err: %v, order id: %d", err, orderId)
+	if err = r.dispatchHandler(orderId); err != nil {
+		logs.Errorf("scheduler:cvm:recaller:runWorker:failed, failed to dispatch recall task, err: %v, order id: %d",
+			err, orderId)
 		return err
 	}
 
-	logs.Infof("Successfully dispatch recall task %d", orderId)
+	logs.Infof("scheduler:cvm:recaller:runWorker:success, Successfully dispatch recall task %d", orderId)
 
 	return nil
 }
@@ -169,28 +171,28 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 
 	for _, host := range hosts {
 		// transfer hosts from 资源运营服务-CR资源池 to 资源运营服务-CR资源下架中
-		if err := r.transferHost(host.HostID, types.BizIDPool, types.BizIDPool,
+		if err = r.transferHost(host.HostID, types.BizIDPool, types.BizIDPool,
 			types.ModuleIDPoolRecalling); err != nil {
-			logs.Errorf("failed to transfer host %d, err: %v", host.HostID, err)
+			logs.Errorf("scheduler:cvm:recaller:returnHost:failed, transfer host %d, err: %v", host.HostID, err)
 			return err
 		}
 
 		// update pool host status
-		if err := r.updateHostStatus(host.HostID, table.PoolHostPhaseForRecall); err != nil {
-			logs.Errorf("failed to update host %d status, err: %v", host.HostID, err)
+		if err = r.updateHostStatus(host.HostID, table.PoolHostPhaseForRecall); err != nil {
+			logs.Errorf("scheduler:cvm:recaller:returnHost:failed, update host %d status, err: %v", host.HostID, err)
 			return err
 		}
 	}
 
 	// update op record
-	if err := r.createRecallOpRecords(task, hosts); err != nil {
-		logs.Errorf("failed to create recall op record, err: %v", err)
+	if err = r.createRecallOpRecords(task, hosts); err != nil {
+		logs.Errorf("scheduler:cvm:recaller:returnHost:failed, failed to create recall op record, err: %v", err)
 		return err
 	}
 
 	// update recall detail
-	if err := r.createRecallDetail(task, hosts); err != nil {
-		logs.Errorf("failed to create recall detail, err: %v", err)
+	if err = r.createRecallDetail(task, hosts); err != nil {
+		logs.Errorf("scheduler:cvm:recaller:returnHost:failed, failed to create recall detail, err: %v", err)
 		return err
 	}
 
@@ -203,8 +205,9 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 		task.Status.Phase = table.OpTaskPhaseSuccess
 	}
 
-	if err := r.updateRecallTaskStatus(task); err != nil {
-		logs.Errorf("failed to update recall task status, id: %d, err: %v", task.ID, err)
+	if err = r.updateRecallTaskStatus(task); err != nil {
+		logs.Errorf("scheduler:cvm:recaller:returnHost:failed, failed to update recall task status, "+
+			"id: %d, err: %v", task.ID, err)
 		return err
 	}
 
@@ -275,10 +278,13 @@ func (r *Recaller) transferHost(hostID, fromBizID, toBizID, toModuleId int64) er
 
 	resp, err := r.esbCli.Cmdb().TransferHost(nil, nil, transferReq)
 	if err != nil {
+		logs.Errorf("scheduler:cvm:recaller:transferHost:failed, err: %v, req: %+v", err, transferReq)
 		return err
 	}
 
 	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("scheduler:cvm:recaller:transferHost:failed, %d to %d, hostID: %d, code: %d, msg: %s",
+			fromBizID, toBizID, resp.Code, resp.ErrMsg)
 		return fmt.Errorf("failed to transfer host from biz %d to %d, host id: %d, code: %d, msg: %s", fromBizID,
 			toBizID, hostID, resp.Code, resp.ErrMsg)
 	}
@@ -325,8 +331,9 @@ func (r *Recaller) createRecallOpRecords(task *table.RecallTask, hosts []*table.
 			UpdateAt: now,
 		}
 
-		if err := dao.Set().OpRecord().CreateOpRecord(context.Background(), record); err != nil {
-			logs.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
+		if err = dao.Set().OpRecord().CreateOpRecord(context.Background(), record); err != nil {
+			logs.Errorf("scheduler:cvm:recaller:createRecallOpRecords:failed, failed to save op record, "+
+				"host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save op record, host id: %d, err: %v", host.HostID, err)
 		}
 	}
@@ -354,7 +361,8 @@ func (r *Recaller) createRecallDetail(task *table.RecallTask, hosts []*table.Poo
 		}
 
 		if err := dao.Set().RecallDetail().CreateRecallDetail(context.Background(), detail); err != nil {
-			logs.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
+			logs.Errorf("scheduler:cvm:recaller:createRecallDetail:failed, failed to save recall detail, "+
+				"host id: %d, err: %v", host.HostID, err)
 			return fmt.Errorf("failed to save recall detail, host id: %d, err: %v", host.HostID, err)
 		}
 

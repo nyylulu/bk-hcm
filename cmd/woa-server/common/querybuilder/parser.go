@@ -10,6 +10,7 @@
  * limitations under the License.
  */
 
+// Package querybuilder parse the rule into query filter
 package querybuilder
 
 import (
@@ -22,11 +23,13 @@ import (
 	"github.com/mitchellh/mapstructure"
 )
 
+// RuleGroup rule group
 type RuleGroup struct {
 	Condition Condition                `json:"condition" field:"condition"`
 	Rules     []map[string]interface{} `json:"rules" field:"rules"`
 }
 
+// ParseRule parse the rule into query filter
 func ParseRule(data map[string]interface{}) (queryFilter Rule, errKey string, err error) {
 	if data == nil {
 		return nil, "", nil
@@ -64,6 +67,7 @@ func ParseRule(data map[string]interface{}) (queryFilter Rule, errKey string, er
 	return queryFilter, "", nil
 }
 
+// ParseRuleFromBytes parses query filter from bytes.
 func ParseRuleFromBytes(bs []byte) (queryFilter Rule, errKey string, err error) {
 	data := make(map[string]interface{})
 	if err := json.Unmarshal(bs, &data); err != nil {
@@ -90,6 +94,7 @@ func (qf *QueryFilter) Validate(option *RuleOption) (string, error) {
 	return qf.Rule.Validate(option)
 }
 
+// MarshalJSON marshals query filter to json.
 func (qf *QueryFilter) MarshalJSON() ([]byte, error) {
 	if qf.Rule != nil {
 		return json.Marshal(qf.Rule)
@@ -97,6 +102,7 @@ func (qf *QueryFilter) MarshalJSON() ([]byte, error) {
 	return make([]byte, 0), nil
 }
 
+// UnmarshalJSON unmarshals query filter from json.
 func (qf *QueryFilter) UnmarshalJSON(raw []byte) error {
 	rule, errKey, err := ParseRuleFromBytes(raw)
 	if err != nil {
@@ -106,6 +112,7 @@ func (qf *QueryFilter) UnmarshalJSON(raw []byte) error {
 	return nil
 }
 
+// MapToQueryFilterHookFunc returns a mapstructure.DecodeHookFunc that converts
 func MapToQueryFilterHookFunc() mapstructure.DecodeHookFunc {
 	return func(f reflect.Type, t reflect.Type, data interface{}) (interface{}, error) {
 		if t != reflect.TypeOf(QueryFilter{}) {

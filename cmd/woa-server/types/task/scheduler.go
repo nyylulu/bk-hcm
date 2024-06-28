@@ -573,44 +573,44 @@ type ApplyReq struct {
 // Validate whether ApplyRequest is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (req *ApplyReq) Validate() (errKey string, err error) {
+func (req *ApplyReq) Validate() error {
 	if req.BkBizId <= 0 {
-		return "bk_biz_id", fmt.Errorf("invalid bk_biz_id <= 0")
+		return fmt.Errorf("invalid bk_biz_id <= 0")
 	}
 
 	if len(req.User) == 0 {
-		return "bk_username", fmt.Errorf("bk_username cannot be empty")
+		return fmt.Errorf("bk_username cannot be empty")
 	}
 
 	if req.RequireType <= 0 {
-		return "require_type", fmt.Errorf("invalid require_type <= 0")
+		return fmt.Errorf("invalid require_type <= 0")
 	}
 
 	if _, err := time.Parse(datetimeLayout, req.ExpectTime); err != nil {
-		return "expect_time", fmt.Errorf("expect_time should be in format like \"%s\"", datetimeLayout)
+		return fmt.Errorf("expect_time should be in format like \"%s\"", datetimeLayout)
 	}
 
 	remarkLimit := 256
 	if len(req.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
 	if len(req.Suborders) <= 0 {
-		return "suborders", fmt.Errorf("suborders cannot be empty")
+		return fmt.Errorf("suborders cannot be empty")
 	}
 
 	suborderLimit := 100
 	if len(req.Suborders) > suborderLimit {
-		return "suborders", fmt.Errorf("exceed max suborders %d", suborderLimit)
+		return fmt.Errorf("suborders exceed max suborders %d", suborderLimit)
 	}
 
-	for idx, suborder := range req.Suborders {
-		if key, err := suborder.Validate(); err != nil {
-			return fmt.Sprintf("suborders[%d].%s", idx, key), err
+	for _, suborder := range req.Suborders {
+		if _, err := suborder.Validate(); err != nil {
+			return err
 		}
 	}
 
-	return "", nil
+	return nil
 }
 
 // Suborder resource apply suborder info
@@ -765,7 +765,7 @@ type UnifyOrder struct {
 
 // GetApplyParam get apply order request parameter
 type GetApplyParam struct {
-	BkBizID     int64             `json:"bk_biz_id" bson:"bk_biz_id"`
+	BkBizID     []int64           `json:"bk_biz_id" bson:"bk_biz_id"`
 	OrderID     []uint64          `json:"order_id" bson:"order_id"`
 	SuborderID  []string          `json:"suborder_id" bson:"suborder_id"`
 	User        []string          `json:"bk_username" bson:"bk_username"`
@@ -779,29 +779,32 @@ type GetApplyParam struct {
 // Validate whether GetApplyParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetApplyParam) Validate() (errKey string, err error) {
+func (param *GetApplyParam) Validate() error {
 	arrayLimit := 20
+	if len(param.BkBizID) == 0 {
+		return fmt.Errorf("bk_biz_id is required")
+	}
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.RequireType) > arrayLimit {
-		return "require_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("require_type exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Stage) > arrayLimit {
-		return "stage", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("stage exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 const (
@@ -812,8 +815,10 @@ const (
 // GetFilter get mgo filter
 func (param *GetApplyParam) GetFilter(isTicket bool) map[string]interface{} {
 	filter := make(map[string]interface{})
-	if param.BkBizID > 0 {
-		filter["bk_biz_id"] = param.BkBizID
+	if len(param.BkBizID) > 0 {
+		filter["bk_biz_id"] = mapstr.MapStr{
+			common.BKDBIN: param.BkBizID,
+		}
 	}
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
@@ -1219,18 +1224,24 @@ type StartApplyOrderReq struct {
 // Validate whether StartApplyOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *StartApplyOrderReq) Validate() (errKey string, err error) {
+func (param *StartApplyOrderReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id should not be empty")
+		}
 	}
 
 	arrayLimit := 20
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // TerminateApplyOrderReq terminate apply order request
@@ -1241,18 +1252,24 @@ type TerminateApplyOrderReq struct {
 // Validate whether TerminateApplyOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *TerminateApplyOrderReq) Validate() (errKey string, err error) {
+func (param *TerminateApplyOrderReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id is not empty")
+		}
 	}
 
 	arrayLimit := 20
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // ModifyApplyReq modify apply order request

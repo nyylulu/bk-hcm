@@ -48,23 +48,30 @@ func (ts *TransitingState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:TransitingState:start, orderID: %s", orderId)
+
 	// run transit tasks
 	ev := taskCtx.Dispatcher.transit.DealRecycleOrder(taskCtx.Order)
 
 	// set next state
 	if errUpdate := ts.setNextState(taskCtx.Order, ev); errUpdate != nil {
-		logs.Errorf("failed to update recycle order %s state, err: %v", orderId, errUpdate)
+		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to update recycle order %s state, err: %v",
+			orderId, errUpdate)
 		return errUpdate
 	}
 
 	if taskCtx.Dispatcher == nil {
-		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s", orderId,
-			ts.Name())
+		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to add order to dispatch, "+
+			"for dispatcher is nil, order id: %s, state: %s", orderId, ts.Name())
 		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s",
 			orderId, ts.Name())
 	}
 
 	taskCtx.Dispatcher.Add(orderId)
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:TransitingState:end, orderID: %s", orderId)
 
 	return nil
 }

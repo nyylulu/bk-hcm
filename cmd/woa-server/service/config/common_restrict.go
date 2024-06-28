@@ -44,108 +44,90 @@ func (s *service) GetAffinity(cts *rest.Contexts) (interface{}, error) {
 // getIdcAffinity gets idc anti affinity level config list
 func (s *service) getIdcAffinity(hasZone bool) []*types.AffinityInfo {
 	if hasZone {
-		return []*types.AffinityInfo{
-			&types.AffinityInfo{
-				Level:       types.AntiNone,
-				Description: types.Description[types.AntiNone],
-			},
-			&types.AffinityInfo{
-				Level:       types.AntiModule,
-				Description: types.Description[types.AntiModule],
-			},
-			&types.AffinityInfo{
-				Level:       types.AntiRack,
-				Description: types.Description[types.AntiRack],
-			},
+		return []*types.AffinityInfo{{
+			Level:       types.AntiNone,
+			Description: types.Description[types.AntiNone],
+		}, {
+			Level:       types.AntiModule,
+			Description: types.Description[types.AntiModule],
+		}, {
+			Level:       types.AntiRack,
+			Description: types.Description[types.AntiRack],
+		},
 		}
 	}
 
-	return []*types.AffinityInfo{
-		&types.AffinityInfo{
-			Level:       types.AntiNone,
-			Description: types.Description[types.AntiNone],
-		},
-		&types.AffinityInfo{
-			Level:       types.AntiCampus,
-			Description: types.Description[types.AntiCampus],
-		},
+	return []*types.AffinityInfo{{
+		Level:       types.AntiNone,
+		Description: types.Description[types.AntiNone],
+	}, {
+		Level:       types.AntiCampus,
+		Description: types.Description[types.AntiCampus],
+	},
 	}
 }
 
 // getQcloudAffinity gets qcloud anti affinity level config list
 func (s *service) getQcloudAffinity(hasZone bool) []*types.AffinityInfo {
 	if hasZone {
-		return []*types.AffinityInfo{
-			&types.AffinityInfo{
-				Level:       types.AntiNone,
-				Description: types.Description[types.AntiNone],
-			},
-		}
-	}
-
-	return []*types.AffinityInfo{
-		&types.AffinityInfo{
+		return []*types.AffinityInfo{{
 			Level:       types.AntiNone,
 			Description: types.Description[types.AntiNone],
 		},
-		&types.AffinityInfo{
-			Level:       types.AntiCampus,
-			Description: types.Description[types.AntiCampus],
-		},
+		}
+	}
+
+	return []*types.AffinityInfo{{
+		Level:       types.AntiNone,
+		Description: types.Description[types.AntiNone],
+	}, {
+		Level:       types.AntiCampus,
+		Description: types.Description[types.AntiCampus],
+	},
 	}
 }
 
 // getAllAffinity gets all anti affinity level config list
 func (s *service) getAllAffinity() []*types.AffinityInfo {
-	return []*types.AffinityInfo{
-		&types.AffinityInfo{
-			Level:       types.AntiNone,
-			Description: types.Description[types.AntiNone],
-		},
-		&types.AffinityInfo{
-			Level:       types.AntiCampus,
-			Description: types.Description[types.AntiCampus],
-		},
-		&types.AffinityInfo{
-			Level:       types.AntiModule,
-			Description: types.Description[types.AntiModule],
-		},
-		&types.AffinityInfo{
-			Level:       types.AntiRack,
-			Description: types.Description[types.AntiRack],
-		},
+	return []*types.AffinityInfo{{
+		Level:       types.AntiNone,
+		Description: types.Description[types.AntiNone],
+	}, {
+		Level:       types.AntiCampus,
+		Description: types.Description[types.AntiCampus],
+	}, {
+		Level:       types.AntiModule,
+		Description: types.Description[types.AntiModule],
+	}, {
+		Level:       types.AntiRack,
+		Description: types.Description[types.AntiRack],
+	},
 	}
 }
 
 // GetApplyStage gets apply stage config list
-func (s *service) GetApplyStage(cts *rest.Contexts) (interface{}, error) {
+func (s *service) GetApplyStage(_ *rest.Contexts) (interface{}, error) {
 	// TODO: store in db
 	rst := mapstr.MapStr{
-		"info": []mapstr.MapStr{
-			mapstr.MapStr{
-				"stage":       "UNCOMMIT",
-				"description": "未提交",
-			},
-			mapstr.MapStr{
-				"stage":       "AUDIT",
-				"description": "待审核",
-			},
-			mapstr.MapStr{
-				"stage":       "TERMINATE",
-				"description": "终止",
-			},
-			mapstr.MapStr{
-				"stage":       "RUNNING",
-				"description": "备货中",
-			},
-			mapstr.MapStr{
-				"stage":       "SUSPEND",
-				"description": "备货异常",
-			},
-			mapstr.MapStr{
-				"stage":       "DONE",
-				"description": "完成",
-			},
+		"info": []mapstr.MapStr{{
+			"stage":       "UNCOMMIT",
+			"description": "未提交",
+		}, {
+			"stage":       "AUDIT",
+			"description": "待审核",
+		}, {
+			"stage":       "TERMINATE",
+			"description": "终止",
+		}, {
+			"stage":       "RUNNING",
+			"description": "备货中",
+		}, {
+			"stage":       "SUSPEND",
+			"description": "备货异常",
+		}, {
+			"stage":       "DONE",
+			"description": "完成",
+		},
 		},
 	}
 

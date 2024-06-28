@@ -46,7 +46,7 @@ func (a *applyOrder) GetApplyOrder(ctx context.Context, filter *mapstr.MapStr) (
 	return inst, nil
 }
 
-// CountRecycleOrder gets apply order count by filter from db
+// CountApplyOrder gets apply order count by filter from db
 func (a *applyOrder) CountApplyOrder(ctx context.Context, filter map[string]interface{}) (uint64, error) {
 	total, err := mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Find(filter).Count(ctx)
 	if err != nil {

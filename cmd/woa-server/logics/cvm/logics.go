@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association
@@ -85,10 +86,13 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 		UpdateAt:    now,
 	}
 
-	if err := model.Operation().ApplyOrder().CreateApplyOrder(kt.Ctx, order); err != nil {
+	if err = model.Operation().ApplyOrder().CreateApplyOrder(kt.Ctx, order); err != nil {
 		logs.Errorf("failed to create cvm apply order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+
+	logs.Infof("scheduler:logics:cvm:create:apply:order:init, orderId: %s, param: %+v, rid: %s",
+		id, cvt.PtrToVal(param), kt.Rid)
 
 	// execute cvm apply order
 	go l.executeApplyOrder(kt, order)
@@ -193,7 +197,7 @@ func (l *logics) GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.C
 
 	resp, err := l.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cvm apply capacity, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("scheduler:logics:cvm:capacity:failed, failed to get cvm apply capacity, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 

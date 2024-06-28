@@ -14,8 +14,9 @@
 package task
 
 import (
+	"encoding/json"
 	"errors"
-	"fmt"
+	"reflect"
 	"strconv"
 
 	"hcm/cmd/woa-server/common"
@@ -40,10 +41,20 @@ func (s *service) UpdateApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to update apply ticket, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机申领-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: input.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("no permission to save apply ticket, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizId, err, cts.Kit.Rid)
+		return nil, err
 	}
 
 	rst, err := s.logics.Scheduler().UpdateApplyTicket(cts.Kit, input)
@@ -176,73 +187,20 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to create apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to create apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	// TODO 需要替换为海垒的权限Auth模型
-	// TODO 临时测试使用，后续需要删除
-	if input.BkBizId != types.AuthorizedBizID {
-		return nil, fmt.Errorf("不能操作业务id: %d下的机器", input.BkBizId)
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: input.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("no permission to create apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizId, err, cts.Kit.Rid)
+		return nil, err
 	}
-
-	//req := &iamapi.AuthVerifyReq{
-	//	System: "bk_cr",
-	//	Subject: &iamapi.Subject{
-	//		Type: "user",
-	//		ID:   input.User,
-	//	},
-	//	Action: &iamapi.Action{
-	//		ID: "resource_apply",
-	//	},
-	//	Resources: []*iamapi.Resource{
-	//		{
-	//			System: "bk_cmdb",
-	//			Type:   "biz",
-	//			ID:     strconv.Itoa(int(input.BkBizId)),
-	//		},
-	//	},
-	//}
-	//resp, err := s.Iam.AuthVerify(nil, nil, req)
-	//if err != nil {
-	//	logs.Errorf("failed to auth verify, err: %v, rid: %s", err, cts.Kit.Rid)
-	//	return nil, err
-	//}
-	//if resp.Code != 0 {
-	//	logs.Errorf("failed to auth verify, code: %d, msg: %s, rid: %s", resp.Code, resp.Message, cts.Kit.Rid)
-	//	return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to auth verify, err: %s", resp.Message)
-	//}
-	//
-	//bizName := s.getBizName(cts.Kit, input.BkBizId)
-	//if resp.Data.Allowed != true {
-	//	permission := &metadata.IamPermission{
-	//		SystemID: "bk_cr",
-	//		Actions: []metadata.IamAction{
-	//			{
-	//				ID: "resource_apply",
-	//				RelatedResourceTypes: []metadata.IamResourceType{
-	//					{
-	//						SystemID: "bk_cmdb",
-	//						Type:     "biz",
-	//						Instances: [][]metadata.IamResourceInstance{
-	//							{
-	//								metadata.IamResourceInstance{
-	//									Type: "biz",
-	//									ID:   strconv.Itoa(int(input.BkBizId)),
-	//									Name: bizName,
-	//								},
-	//							},
-	//						},
-	//					},
-	//				},
-	//			},
-	//		},
-	//	}
-	//	authResp := metadata.NewNoPermissionResp(permission)
-	//	return authResp, nil
-	//}
 
 	rst, err := s.logics.Scheduler().CreateApplyOrder(cts.Kit, input)
 	if err != nil {
@@ -261,17 +219,23 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to get apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to get apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
 	// 主机申领-业务粒度
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
-	})
+	authAttrs := make([]meta.ResourceAttribute, 0)
+	for _, bkBizID := range input.BkBizID {
+		authAttrs = append(authAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bkBizID,
+		})
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
 	if err != nil {
+		logs.Errorf("no permission to get apply order, inputBizIDs: %v, err: %v, rid: %s",
+			input.BkBizID, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -300,16 +264,16 @@ func (s *service) GetBizApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: input.BkBizID,
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: input.BkBizID,
 	})
 	if err != nil {
 		logs.Errorf("no permission to get biz apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
 			input.BkBizID, err, cts.Kit.Rid)
-		return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+		return nil, err
 	}
 
 	param := &types.GetApplyParam{
-		BkBizID: input.BkBizID,
+		BkBizID: []int64{input.BkBizID},
 		Start:   input.Start,
 		End:     input.End,
 		Page:    input.Page,
@@ -473,6 +437,26 @@ func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
+	// 解析参数里的业务ID，用于鉴权，是必传参数
+	bkBizIDs, err := s.parseInputForBkBizID(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to parse input for bizID, err: %+v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 主机申领-业务粒度
+	authAttrs := make([]meta.ResourceAttribute, 0)
+	for _, bkBizID := range bkBizIDs {
+		authAttrs = append(authAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bkBizID,
+		})
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	if err != nil {
+		logs.Errorf("no permission to get apply device, bizIDs: %v, err: %v, rid: %s", bkBizIDs, err, cts.Kit.Rid)
+		return nil, err
+	}
+
 	rst, err := s.logics.Scheduler().GetApplyDevice(cts.Kit, input)
 	if err != nil {
 		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -480,6 +464,60 @@ func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+func (s *service) parseInputForBkBizID(kt *kit.Kit, input *types.GetApplyDeviceReq) ([]int64, error) {
+	filterMap, err := input.GetFilter()
+	if err != nil {
+		logs.Errorf("failed to parse input filter, err: %v, input: %+v, rid: %s", err, input, kt.Rid)
+		return nil, err
+	}
+
+	var bkBizIDs []int64
+	paramMap, ok := filterMap["$and"].([]map[string]interface{})
+	if !ok {
+		return nil, errf.Newf(errf.InvalidParameter, "filter is illegal")
+	}
+
+	for _, paramItem := range paramMap {
+		condMap, ok := paramItem["bk_biz_id"]
+		if !ok {
+			continue
+		}
+		// 如果找到了业务ID，但解析失败则break
+		fieldMap, ok := condMap.(map[string]interface{})
+		if !ok {
+			break
+		}
+		numbers, ok := fieldMap["$in"].([]interface{})
+		if !ok {
+			logs.Errorf("bk_biz_id value is not []interface, fieldMap: %+v, rid: %s", fieldMap, kt.Rid)
+			return nil, errf.Newf(errf.InvalidParameter, "bk_biz_id is illegal")
+		}
+
+		for _, val := range numbers {
+			number, ok := val.(json.Number)
+			if !ok {
+				logs.Errorf("bk_biz_id value is not json.Number, val: %+v, valType: %+v, rid: %s",
+					val, reflect.TypeOf(val), kt.Rid)
+				return nil, errf.Newf(errf.InvalidParameter, "bk_biz_id value is not json.Number")
+			}
+			bkBizID, err := number.Int64()
+			if err != nil {
+				logs.Errorf("bk_biz_id value is not int64, number: %+v, valType: %+v, err: %v, rid: %s",
+					number, reflect.TypeOf(number), err, kt.Rid)
+				return nil, err
+			}
+			bkBizIDs = append(bkBizIDs, bkBizID)
+		}
+		break
+	}
+
+	if len(bkBizIDs) <= 0 {
+		return nil, errf.Newf(errf.InvalidParameter, "bk_biz_id is required")
+	}
+
+	return bkBizIDs, nil
 }
 
 // GetDeliverDeviceByOrder get delivered devices by order id
@@ -560,6 +598,14 @@ func (s *service) ExportDeliverDevice(cts *rest.Contexts) (any, error) {
 		logs.Errorf("failed to export apply delivered device info, err: %v, errKey: %s, rid: %s",
 			err, errKey, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机申领-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: input.BkBizId,
+	})
+	if err != nil {
+		return nil, err
 	}
 
 	rst, err := s.logics.Scheduler().ExportDeliverDevice(cts.Kit, input)
@@ -658,9 +704,9 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to start apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to start apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -672,7 +718,7 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -685,7 +731,7 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to start apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
 				bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -705,9 +751,9 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
+	err := input.Validate()
 	if err != nil {
-		logs.Errorf("failed to terminate apply order, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		logs.Errorf("failed to terminate apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
@@ -719,7 +765,7 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to terminate apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -732,7 +778,7 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -767,7 +813,7 @@ func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -780,7 +826,7 @@ func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to modify apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
 				bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 
@@ -815,7 +861,7 @@ func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	if len(bizIds) == 0 {
-		err := errors.New("biz id list is empty")
+		err = errors.New("biz id list is empty")
 		logs.Errorf("failed to recommend apply order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -828,7 +874,7 @@ func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
 		if err != nil {
 			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
 				"err: %v, rid: %s", bizId, err, cts.Kit.Rid)
-			return nil, errf.Newf(common.CCErrCommParamsIsInvalid, "failed to check permission, err: %v", err)
+			return nil, err
 		}
 	}
 

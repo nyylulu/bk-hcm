@@ -76,7 +76,7 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	// 1. create job
 	jobId, jobUrl, err := sops.CreateIdleCheckSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
 	if err != nil {
-		logs.Errorf("sops:process:check:host %s failed to check process, bkBizID: %d, err: %v", ip, bkBizID, err)
+		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, host %s failed to check process, bkBizID: %d, err: %v", ip, bkBizID, err)
 		return "", fmt.Errorf("failed to check process, err: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 				"err: %v", ip, jobId, bkBizID, err)
 			return "", nil
 		}
-		logs.Infof("sops:process:check:host %s failed to check process, job id: %d, bkBizID: %d, err: %v",
+		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, check job status, host: %s, jobId: %d, bkBizID: %d, err: %v",
 			ip, jobId, bkBizID, err)
 		return "", fmt.Errorf("host %s failed to check process, job id: %d, bkBizID: %d, err: %v",
 			ip, jobId, bkBizID, err)

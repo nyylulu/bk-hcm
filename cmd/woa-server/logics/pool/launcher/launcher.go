@@ -93,16 +93,18 @@ func (l *Launcher) Add(id uint64) {
 func (l *Launcher) runWorker() error {
 	id, err := l.Pop()
 	if err != nil {
-		logs.Errorf("failed to deal launch task, for get launch task from informer err: %v", err)
+		logs.Errorf("scheduler:cvm:launcher:runWorker:failed, failed to deal launch task, "+
+			"for get launch task from informer err: %v", err)
 		return err
 	}
 
-	if err := l.dispatchHandler(id); err != nil {
-		logs.Errorf("failed to dispatch launch task, err: %v, task id: %d", err, id)
+	if err = l.dispatchHandler(id); err != nil {
+		logs.Errorf("scheduler:cvm:launcher:runWorker:failed, failed to dispatch launch task, "+
+			"err: %v, task id: %d", err, id)
 		return err
 	}
 
-	logs.Infof("Successfully dispatch launch task %d", id)
+	logs.Infof("scheduler:cvm:launcher:runWorker:success, Successfully dispatch launch task %d", id)
 
 	return nil
 }
@@ -127,24 +129,27 @@ func (l *Launcher) dispatchHandler(id uint64) error {
 	}
 
 	if len(hostIDs) == 0 {
-		logs.Errorf("failed to deal launch task, for get no hosts")
+		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, id: %dfailed to deal launch task, "+
+			"for get no hosts", id)
 		return errors.New("failed to deal launch task, for get no hosts")
 	}
 
-	if err := l.transferHost2Pool(hostIDs, 931); err != nil {
-		logs.Errorf("failed to transfer hosts to pool, err: %v", err)
+	if err = l.transferHost2Pool(hostIDs, 931); err != nil {
+		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, failed to transfer hosts to pool, id: %d, err: %v",
+			id, err)
 		return err
 	}
 
 	// add host to pool
-	if err := l.updatePoolHost(records); err != nil {
-		logs.Errorf("failed to update pool host, err: %v", err)
+	if err = l.updatePoolHost(records); err != nil {
+		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, failed to update pool host, id: %d, "+
+			"records: %+v, err: %v", id, records, err)
 		return err
 	}
 
 	// update records status
-	if err := l.updateOpRecordStatus(id, table.OpTaskPhaseSuccess); err != nil {
-		logs.Errorf("failed to update op record status, err: %v, err")
+	if err = l.updateOpRecordStatus(id, table.OpTaskPhaseSuccess); err != nil {
+		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, failed to update op record status, err: %v", err)
 		return err
 	}
 
@@ -153,8 +158,9 @@ func (l *Launcher) dispatchHandler(id uint64) error {
 	task.Status.PendingNum = 0
 	task.Status.FailedNum = 0
 	// update task status
-	if err := l.updateTaskStatus(task); err != nil {
-		logs.Errorf("failed to update launch task status, id: %s, err: %v", task.ID, err)
+	if err = l.updateTaskStatus(task); err != nil {
+		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, failed to update launch task status, "+
+			"id: %s, err: %v", task.ID, err)
 		return err
 	}
 

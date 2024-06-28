@@ -1218,7 +1218,7 @@ func (c DVMCli) validate() error {
 // BkChatCli bkchat client options
 type BkChatCli struct {
 	BkChatApiAddr string `yaml:"host"`
-	NoticeFmt     string `yaml:"notice_fmt"`
+	NoticeFmt     string `yaml:"notify_format"`
 }
 
 func (c BkChatCli) validate() error {

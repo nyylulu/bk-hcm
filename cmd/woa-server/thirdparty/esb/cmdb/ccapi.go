@@ -24,6 +24,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // Client cc api interface
@@ -130,6 +131,11 @@ func (c *ccCli) TransferHost(ctx context.Context, header http.Header, req *Trans
 		WithHeaders(header).
 		Do().
 		Into(resp)
+
+	if err != nil {
+		logs.Errorf("scheduler:cmdb:TransferHost:failed, err: %v, req: %+v", err, cvt.PtrToVal(req))
+		return nil, err
+	}
 
 	return resp, err
 }
@@ -446,6 +452,7 @@ func (c *ccCli) GetBizInternalModule(ctx context.Context, header http.Header, re
 		Into(resp)
 
 	if err != nil {
+		logs.Errorf("recycler:cvm:get:biz:intetnal:module:failed, req: %+v, err: %v", cvt.PtrToVal(req), err)
 		return nil, err
 	}
 

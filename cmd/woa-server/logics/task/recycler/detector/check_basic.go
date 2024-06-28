@@ -85,7 +85,7 @@ func (d *Detector) checkTmp(ip string) (string, error) {
 
 	respTmp, err := d.tmp.CheckTMP(nil, nil, ip)
 	if err != nil {
-		logs.Errorf("failed to check gcs, ip: %s, err: %v", ip, err)
+		logs.Errorf("recycler:logics:cvm:checkTmp:failed, failed to check gcs, ip: %s, err: %v", ip, err)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tmp, err: %v", err)
 	}
 
@@ -116,7 +116,7 @@ func (d *Detector) checkTgw(ip string) (string, error) {
 
 	respTgw, err := d.tgw.CheckTgw(nil, nil, ip)
 	if err != nil {
-		logs.Errorf("failed to check tgw, ip: %s, err: %v", ip, err)
+		logs.Errorf("recycler:logics:cvm:checkTgw:failed, failed to check tgw, ip: %s, err: %v", ip, err)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw, err: %v", err)
 	}
 
@@ -125,7 +125,8 @@ func (d *Detector) checkTgw(ip string) (string, error) {
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respTgw.Errno != 0 {
-		logs.Errorf("%s failed to check tgw, errno: %d, err: %s", ip, respTgw.Errno, respTgw.Error)
+		logs.Errorf("recycler:logics:cvm:checkTgw:failed, %s failed to check tgw, errno: %d, err: %s",
+			ip, respTgw.Errno, respTgw.Error)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw, errno: %d, err: %s", respTgw.Errno,
 			respTgw.Error)
 	}
@@ -148,7 +149,7 @@ func (d *Detector) checkTgwNat(ip string) (string, error) {
 
 	respTgwNat, err := d.tgw.CheckTgwNat(nil, nil, ip)
 	if err != nil {
-		logs.Errorf("failed to check tgw nat, ip: %s, err: %v", ip, err)
+		logs.Errorf("recycler:logics:cvm:checkTgwNat:failed, failed to check tgw nat, ip: %s, err: %v", ip, err)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw nat, err: %v", err)
 	}
 
@@ -157,7 +158,8 @@ func (d *Detector) checkTgwNat(ip string) (string, error) {
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respTgwNat.Errno != 0 {
-		logs.Errorf("%s failed to check tgw nat, errno: %d, err: %s", ip, respTgwNat.Errno, respTgwNat.Error)
+		logs.Errorf("recycler:logics:cvm:checkTgwNat:failed, %s failed to check tgw nat, errno: %d, err: %s",
+			ip, respTgwNat.Errno, respTgwNat.Error)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tgw nat, errno: %d, err: %s", respTgwNat.Errno,
 			respTgwNat.Error)
 	}
@@ -175,7 +177,7 @@ func (d *Detector) checkL5(ip string) (string, error) {
 
 	respL5, err := d.l5.CheckL5(nil, nil, ip)
 	if err != nil {
-		logs.Errorf("failed to check l5, ip: %s, err: %v", ip, err)
+		logs.Errorf("recycler:logics:cvm:checkL5:failed, failed to check l5, ip: %s, err: %v", ip, err)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check l5, err: %v", err)
 	}
 
@@ -184,7 +186,8 @@ func (d *Detector) checkL5(ip string) (string, error) {
 	exeInfos = append(exeInfos, exeInfo)
 
 	if respL5.ReturnCode != 0 {
-		logs.Errorf("%s failed to check l5, code: %d, msg: %s", ip, respL5.ReturnCode, respL5.ReturnMessage)
+		logs.Errorf("recycler:logics:cvm:checkL5:failed, %s failed to check l5, code: %d, msg: %s",
+			ip, respL5.ReturnCode, respL5.ReturnMessage)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check l5, code: %d, msg: %s", respL5.ReturnCode,
 			respL5.ReturnMessage)
 	}

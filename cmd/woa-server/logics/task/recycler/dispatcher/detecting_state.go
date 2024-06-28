@@ -49,6 +49,9 @@ func (ds *DetectingState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s", orderId)
+
 	ev := ds.dealDetectTask(taskCtx)
 
 	// set next state
@@ -71,6 +74,9 @@ func (ds *DetectingState) Execute(ctx EventContext) error {
 	}
 
 	taskCtx.Dispatcher.Add(orderId)
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:DetectingState:end, orderID: %s", orderId)
 
 	return nil
 }

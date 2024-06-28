@@ -10,7 +10,7 @@
  * limitations under the License.
  */
 
-// Package
+// Package detector ...
 package detector
 
 import (
@@ -73,7 +73,8 @@ func (d *Detector) checkLog4j(ip string) error {
 	// check log4j for container
 	parentIp, err := d.getContainerParentIp(hostBase[0])
 	if err != nil {
-		logs.Errorf("failed to check log4j, for get container parent ip err: %v", err)
+		logs.Errorf("recycler:logics:cvm:checkLog4j:failed, failed to check log4j, for get container "+
+			"parent ip: %s, err: %v", ip, err)
 		return fmt.Errorf("failed to check log4j, for get container parent ip err: %v", err)
 	}
 

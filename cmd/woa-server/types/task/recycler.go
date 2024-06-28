@@ -117,37 +117,37 @@ type PreviewRecycleReq struct {
 // Validate whether PreviewRecycleReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (req *PreviewRecycleReq) Validate() (errKey string, err error) {
+func (req *PreviewRecycleReq) Validate() error {
 	if len(req.IPs) == 0 && len(req.AssetIDs) == 0 && len(req.HostIDs) == 0 {
-		return "ips", fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
+		return fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
 	}
 
 	if len(req.IPs) > common.BKMaxInstanceLimit {
-		return "ips", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(req.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(req.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	remarkLimit := 256
 	if len(req.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
 	if req.ReturnPlan == nil {
-		return "return_plan", fmt.Errorf("return_plan should be set")
+		return fmt.Errorf("return_plan should be set")
 	}
 
-	if key, err := req.ReturnPlan.Validate(); err != nil {
-		return fmt.Sprintf("return_plan.%s", key), err
+	if _, err := req.ReturnPlan.Validate(); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // PreviewRecycleOrderRst preview recycle order result
@@ -201,37 +201,37 @@ type CreateRecycleReq struct {
 // Validate whether CreateRecycleReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (req *CreateRecycleReq) Validate() (errKey string, err error) {
+func (req *CreateRecycleReq) Validate() error {
 	if len(req.IPs) == 0 && len(req.AssetIDs) == 0 && len(req.HostIDs) == 0 {
-		return "ips", fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
+		return fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
 	}
 
 	if len(req.IPs) > common.BKMaxInstanceLimit {
-		return "ips", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(req.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(req.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	remarkLimit := 256
 	if len(req.Remark) > remarkLimit {
-		return "remark", fmt.Errorf("exceed size limit %d", remarkLimit)
+		return fmt.Errorf("remark exceed size limit %d", remarkLimit)
 	}
 
 	if req.ReturnPlan == nil {
-		return "return_plan", fmt.Errorf("return_plan should be set")
+		return fmt.Errorf("return_plan should be set")
 	}
 
-	if key, err := req.ReturnPlan.Validate(); err != nil {
-		return fmt.Sprintf("return_plan.%s", key), err
+	if _, err := req.ReturnPlan.Validate(); err != nil {
+		return err
 	}
 
-	return "", nil
+	return nil
 }
 
 // CreateRecycleOrderRst create recycle order result
@@ -257,71 +257,71 @@ type GetRecycleOrderReq struct {
 // Validate whether GetRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecycleOrderReq) Validate() (errKey string, err error) {
+func (param *GetRecycleOrderReq) Validate() error {
 	arrayLimit := 20
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	if len(param.BizID) > arrayLimit {
-		return "bk_biz_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	if len(param.BizID) <= 0 {
+		return fmt.Errorf("bk_biz_id is required")
 	}
 
 	if len(param.ResourceType) > arrayLimit {
-		return "resource_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("resource_type exceed limit %d", arrayLimit)
 	}
 
 	if len(param.RecycleType) > arrayLimit {
-		return "recycle_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("recycle_type exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Stage) > arrayLimit {
-		return "stage", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("stage exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
-		return "status", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("status exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", fmt.Errorf("invalid start < 0")
+		return fmt.Errorf("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", fmt.Errorf("invalid limit < 0")
+		return fmt.Errorf("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 200 {
-		return "page.limit", fmt.Errorf("exceed limit 200")
+		return fmt.Errorf("exceed page.limit 200")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -478,63 +478,63 @@ type GetRecycleDetectReq struct {
 // Validate whether GetRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecycleDetectReq) Validate() (errKey string, err error) {
+func (param *GetRecycleDetectReq) Validate() error {
 	arrayLimit := 20
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.BizID) > arrayLimit {
-		return "bk_biz_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_biz_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.IP) > common.BKMaxInstanceLimit {
-		return "ip", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
-		return "status", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("status exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", fmt.Errorf("invalid start < 0")
+		return fmt.Errorf("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", fmt.Errorf("invalid limit < 0")
+		return fmt.Errorf("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 500 {
-		return "page.limit", fmt.Errorf("exceed limit 500")
+		return fmt.Errorf("exceed page.limit 500")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -627,67 +627,67 @@ type GetDetectStepReq struct {
 // Validate whether GetDetectStepReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetDetectStepReq) Validate() (errKey string, err error) {
+func (param *GetDetectStepReq) Validate() error {
 	arrayLimit := 20
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.BizID) > arrayLimit {
-		return "bk_biz_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_biz_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.IP) > common.BKMaxInstanceLimit {
-		return "ip", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(param.StepName) > arrayLimit {
-		return "step_name", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("step_name exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
-		return "status", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("status exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", fmt.Errorf("invalid start < 0")
+		return fmt.Errorf("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", fmt.Errorf("invalid limit < 0")
+		return fmt.Errorf("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 200 {
-		return "page.limit", fmt.Errorf("exceed limit 200")
+		return fmt.Errorf("exceed page.limit 200")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -784,79 +784,79 @@ type GetRecycleHostReq struct {
 // Validate whether GetRecycleHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecycleHostReq) Validate() (errKey string, err error) {
+func (param *GetRecycleHostReq) Validate() error {
 	arrayLimit := 20
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	if len(param.BizID) > arrayLimit {
-		return "bk_biz_id", fmt.Errorf("exceed limit %d", arrayLimit)
+	if len(param.BizID) == 0 {
+		return errors.New("bk_biz_id is required")
 	}
 
 	if len(param.DeviceType) > arrayLimit {
-		return "device_type", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("device_type exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Zone) > arrayLimit {
-		return "bk_zone_name", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_zone_name exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SubZone) > arrayLimit {
-		return "sub_zone", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("sub_zone exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Stage) > arrayLimit {
-		return "stage", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("stage exceed limit %d", arrayLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
-		return "status", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("status exceed limit %d", arrayLimit)
 	}
 
 	if len(param.User) > arrayLimit {
-		return "bk_username", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
 	if len(param.IP) > common.BKMaxInstanceLimit {
-		return "ip", fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
 	}
 
 	if len(param.Start) > 0 {
 		_, err := time.Parse(dateLayout, param.Start)
 		if err != nil {
-			return "start", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("start date format should be like %s", dateLayout)
 		}
 	}
 
 	if len(param.End) > 0 {
 		_, err := time.Parse(dateLayout, param.End)
 		if err != nil {
-			return "end", fmt.Errorf("date format should be like %s", dateLayout)
+			return fmt.Errorf("end date format should be like %s", dateLayout)
 		}
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 
 	if param.Page.Start < 0 {
-		return "page.start", fmt.Errorf("invalid start < 0")
+		return fmt.Errorf("invalid page.start < 0")
 	}
 
 	if param.Page.Limit < 0 {
-		return "page.limit", fmt.Errorf("invalid limit < 0")
+		return fmt.Errorf("invalid page.limit < 0")
 	}
 
 	if param.Page.Limit > 500 {
-		return "page.limit", fmt.Errorf("exceed limit 500")
+		return fmt.Errorf("exceed page.limit 500")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetFilter get mgo filter
@@ -965,25 +965,41 @@ type StartRecycleOrderReq struct {
 // Validate whether StartRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *StartRecycleOrderReq) Validate() (errKey string, err error) {
+func (param *StartRecycleOrderReq) Validate() error {
 	if len(param.OrderID) == 0 && len(param.SuborderID) == 0 {
-		return "order_id", fmt.Errorf("order_id or suborder_id should be set")
+		return fmt.Errorf("order_id or suborder_id should be set")
 	}
 
 	if len(param.OrderID) > 0 && len(param.SuborderID) > 0 {
-		return "order_id", fmt.Errorf("order_id and suborder_id cannot be set as input at the same time")
+		return fmt.Errorf("order_id and suborder_id cannot be set as input at the same time")
+	}
+
+	if len(param.OrderID) > 0 {
+		for _, orderID := range param.OrderID {
+			if orderID == 0 {
+				return fmt.Errorf("order_id should not be empty")
+			}
+		}
+	}
+
+	if len(param.SuborderID) > 0 {
+		for _, subOrderID := range param.SuborderID {
+			if len(subOrderID) == 0 {
+				return fmt.Errorf("suborder_id should not be empty")
+			}
+		}
 	}
 
 	arrayLimit := 20
 	if len(param.OrderID) > arrayLimit {
-		return "order_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("order_id exceed limit %d", arrayLimit)
 	}
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // TerminateRecycleOrderReq terminate recycle order request
@@ -995,18 +1011,24 @@ type TerminateRecycleOrderReq struct {
 // Validate whether TerminateRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *TerminateRecycleOrderReq) Validate() (errKey string, err error) {
+func (param *TerminateRecycleOrderReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id should not be empty")
+		}
 	}
 
 	arrayLimit := 20
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // ResumeRecycleOrderReq resume recycle order request
@@ -1017,18 +1039,24 @@ type ResumeRecycleOrderReq struct {
 // Validate whether ResumeRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ResumeRecycleOrderReq) Validate() (errKey string, err error) {
+func (param *ResumeRecycleOrderReq) Validate() error {
 	if len(param.SuborderID) == 0 {
-		return "suborder_id", fmt.Errorf("suborder_id should be set")
+		return fmt.Errorf("suborder_id should be set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id should not be empty")
+		}
 	}
 
 	arrayLimit := 20
 
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // StartDetectTaskReq start recycle detection task request
@@ -1039,17 +1067,23 @@ type StartDetectTaskReq struct {
 // Validate whether StartDetectTaskReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *StartDetectTaskReq) Validate() (errKey string, err error) {
+func (param *StartDetectTaskReq) Validate() error {
 	if len(param.SuborderID) <= 0 {
-		return "suborder_id", fmt.Errorf("suborder_id empty or not set")
+		return fmt.Errorf("suborder_id empty or not set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id should not be empty")
+		}
 	}
 
 	arrayLimit := 20
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // ReviseRecycleOrderReq revise recycle order request
@@ -1060,17 +1094,23 @@ type ReviseRecycleOrderReq struct {
 // Validate whether ReviseRecycleOrderReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *ReviseRecycleOrderReq) Validate() (errKey string, err error) {
+func (param *ReviseRecycleOrderReq) Validate() error {
 	if len(param.SuborderID) <= 0 {
-		return "suborder_id", fmt.Errorf("suborder_id empty or not set")
+		return fmt.Errorf("suborder_id empty or not set")
+	}
+
+	for _, subOrderID := range param.SuborderID {
+		if len(subOrderID) == 0 {
+			return fmt.Errorf("suborder_id should not be empty")
+		}
 	}
 
 	arrayLimit := 20
 	if len(param.SuborderID) > arrayLimit {
-		return "suborder_id", fmt.Errorf("exceed limit %d", arrayLimit)
+		return fmt.Errorf("suborder_id exceed limit %d", arrayLimit)
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecycleRecordDevTypeRst get recycle record device type list result
@@ -1097,25 +1137,25 @@ type GetRecycleBizHostReq struct {
 // Validate whether GetRecycleBizHostReq is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GetRecycleBizHostReq) Validate() (errKey string, err error) {
+func (param *GetRecycleBizHostReq) Validate() error {
 	if param.BizID <= 0 {
-		return "bk_biz_id", fmt.Errorf("invalid bk_biz_id %d <= 0", param.BizID)
+		return fmt.Errorf("invalid bk_biz_id %d <= 0", param.BizID)
 	}
 
-	if key, err := param.Page.Validate(false); err != nil {
-		return key, err
+	if _, err := param.Page.Validate(false); err != nil {
+		return err
 	}
 	if param.Page.Start < 0 {
-		return "page.start", fmt.Errorf("invalid start < 0")
+		return fmt.Errorf("invalid page.start < 0")
 	}
 	if param.Page.Limit < 0 {
-		return "page.limit", fmt.Errorf("invalid limit < 0")
+		return fmt.Errorf("invalid page.limit < 0")
 	}
 	if param.Page.Limit > 500 {
-		return "page.limit", fmt.Errorf("exceed limit 500")
+		return fmt.Errorf("exceed page.limit 500")
 	}
 
-	return "", nil
+	return nil
 }
 
 // GetRecycleBizHostRst get business hosts in recycle module result

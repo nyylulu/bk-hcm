@@ -31,18 +31,18 @@ type GradeCfg struct {
 // Validate whether GradeCfg is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *GradeCfg) Validate() (errKey string, err error) {
+func (param *GradeCfg) Validate() error {
 	if len(param.ResourceType) == 0 {
-		return "resource_type", errors.New("cannot be empty")
+		return errors.New("resource_type cannot be empty")
 	}
 
 	if len(param.DeviceType) == 0 {
-		return "device_type", errors.New("cannot be empty")
+		return errors.New("device_type cannot be empty")
 	}
 
 	if len(param.GradeTag) == 0 {
-		return "grade_tag", errors.New("cannot be empty")
+		return errors.New("grade_tag cannot be empty")
 	}
 
-	return "", nil
+	return nil
 }

@@ -48,6 +48,9 @@ func (as *AuditingState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:AuditingState:start, orderID: %s", orderId)
+
 	ev := as.dealAuditTask(taskCtx.Order, taskCtx.Approval, taskCtx.Remark)
 
 	// set next state
@@ -64,6 +67,9 @@ func (as *AuditingState) Execute(ctx EventContext) error {
 	}
 
 	taskCtx.Dispatcher.Add(orderId)
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:AuditingState:end, orderID: %s", orderId)
 
 	return nil
 }
