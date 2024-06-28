@@ -291,15 +291,11 @@ export default defineComponent({
       width: 100,
       render: ({ row }) => {
         return (
-          <div>
-            <div>
-              <p>{row.order_id}</p>
-            </div>
-            <div onClick={() => enterDetail(row)}>
-              <Button theme='primary' text>
-                {row.suborder_id}
-              </Button>
-            </div>
+          <div class='cvm-cell-height'>
+            <div>{row.order_id}</div>
+            <span class='sub-order-num' onClick={() => enterDetail(row)}>
+              {row.suborder_id}
+            </span>
           </div>
         );
       },

@@ -2,7 +2,7 @@ import { defineComponent, type PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import Panel from '@/components/panel';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 
 import type { TicketDemands } from '@/typings/resourcePlan';
 
