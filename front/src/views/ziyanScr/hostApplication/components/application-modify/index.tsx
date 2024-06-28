@@ -396,8 +396,8 @@ export default defineComponent({
               </>
             )}
           </>
-          <div>
-            <Button class='mr16' onClick={handleSubmit} theme='primary'>
+          <div class={'buttonSubmit'}>
+            <Button class='mr8' onClick={handleSubmit} theme='primary'>
               确定修改
             </Button>
             <Button

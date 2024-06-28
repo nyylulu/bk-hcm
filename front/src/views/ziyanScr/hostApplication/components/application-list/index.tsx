@@ -2,7 +2,7 @@ import { defineComponent, onMounted, ref, computed, watch } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { Button, Form, Input, Message, Table } from 'bkui-vue';
+import { Button, Form, Input, Message, Table, Sideslider } from 'bkui-vue';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import ApplicationStatusSelector from '@/components/scr/application-status-selector';
@@ -662,9 +662,9 @@ export default defineComponent({
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
 
-        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1250} noFooter>
+        <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600}>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
-        </CommonSideslider>
+        </Sideslider>
       </div>
     );
   },

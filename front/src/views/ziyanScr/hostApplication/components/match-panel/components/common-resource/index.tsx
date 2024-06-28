@@ -3,6 +3,7 @@ import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Input, Message } from 'bkui-vue';
 import apiService from '@/api/scrApi';
+import { timeFormatter } from '@/common/util';
 import { useTable } from '@/hooks/useTable/useTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
@@ -50,12 +51,14 @@ export default defineComponent({
         columns: [
           {
             type: 'selection',
-            width: 32,
+            width: 40,
+            minWidth: 40,
           },
           {
             field: 'match_tag',
             label: '星标',
-            width: 32,
+            width: 60,
+            minWidth: 60,
             render: ({ data }: any) => {
               if (data.matchTag) {
                 return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
@@ -67,10 +70,12 @@ export default defineComponent({
             field: 'asset_id',
             label: '固资号',
             fixed: true,
+            width: 130,
           },
           {
             field: 'ip',
             label: '内网 IP',
+            width: 120,
           },
           {
             field: 'device_type',
@@ -79,10 +84,12 @@ export default defineComponent({
           {
             field: 'os_type',
             label: '操作系统',
+            width: 250,
           },
           {
             field: 'equipment',
             label: '机架号',
+            width: 80,
           },
           {
             field: 'zone',
@@ -103,10 +110,12 @@ export default defineComponent({
           {
             field: 'input_time',
             label: '入库时间',
+            render: ({ cell }: any) => timeFormatter(cell),
           },
           {
             prop: 'match_score',
             label: '匹配得分',
+            width: 90,
           },
         ],
         extra: {
@@ -249,7 +258,7 @@ export default defineComponent({
         <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
           手工匹配资源
         </Button>
-        <div class={'table-container'}>
+        <div class={'Devices-CommonTable'}>
           <CommonTable />
         </div>
       </div>

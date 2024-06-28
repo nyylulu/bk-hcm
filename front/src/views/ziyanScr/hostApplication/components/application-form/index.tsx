@@ -482,6 +482,8 @@ export default defineComponent({
       CVMapplication.value = isShow;
     };
     const emptyform = () => {
+      vpcName.value = '';
+      subnetName.value = '';
       resourceForm.value = {
         resourceType: 'QCLOUDCVM',
         region: '', // 地域
@@ -703,7 +705,6 @@ export default defineComponent({
                   columns={[...CloudHostcolumns, CloudHostoperation.value]}
                   data={cloudTableData.value}
                   show-overflow-tooltip
-                  border={['outer', 'row', 'col']}
                 />
               </div>
               {physicalTableData.value.length ? (
@@ -716,7 +717,6 @@ export default defineComponent({
                       columns={[...PhysicalMachinecolumns, PhysicalMachineoperation.value]}
                       data={physicalTableData.value}
                       show-overflow-tooltip
-                      border={['outer', 'row', 'col']}
                     />
                   </div>
                 </>
@@ -868,42 +868,36 @@ export default defineComponent({
                             layout='grid'>
                             <>
                               <bk-form
-                                form-type='vertical'
-                                label-width='150'
+                                class={'scr-form-wrapper'}
                                 model={QCLOUDCVMForm.value.spec}
-                                rules={resourceFormRules.value}
-                                ref='formRef'>
+                                rules={resourceFormRules.value}>
                                 <bk-form-item label='VPC'>
-                                  <div class='component-with-detail-container'>
-                                    <bk-select
-                                      class='item-warp-resourceType component-with-detail'
-                                      disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                      v-model={QCLOUDCVMForm.value.spec.vpc}
-                                      onChange={onQcloudVpcChange}>
-                                      {zoneTypes.value.map((vpc) => (
-                                        <bk-option
-                                          key={vpc.vpc_id}
-                                          value={vpc.vpc_id}
-                                          label={`${vpc.vpc_id} | ${vpc.vpc_name}`}></bk-option>
-                                      ))}
-                                    </bk-select>
-                                  </div>
+                                  <bk-select
+                                    style={'width:300px'}
+                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
+                                    v-model={QCLOUDCVMForm.value.spec.vpc}
+                                    onChange={onQcloudVpcChange}>
+                                    {zoneTypes.value.map((vpc) => (
+                                      <bk-option
+                                        key={vpc.vpc_id}
+                                        value={vpc.vpc_id}
+                                        label={`${vpc.vpc_id} | ${vpc.vpc_name}`}></bk-option>
+                                    ))}
+                                  </bk-select>
                                 </bk-form-item>
                                 <bk-form-item label='子网'>
-                                  <div class='component-with-detail-container'>
-                                    <bk-select
-                                      class='item-warp-resourceType component-with-detail'
-                                      disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                      v-model={QCLOUDCVMForm.value.spec.subnet}
-                                      onChange={onQcloudSubnetChange}>
-                                      {subnetTypes.value.map((subnet) => (
-                                        <bk-option
-                                          key={subnet.subnet_id}
-                                          value={subnet.subnet_id}
-                                          label={`${subnet.subnet_id} | ${subnet.subnet_name}`}></bk-option>
-                                      ))}
-                                    </bk-select>
-                                  </div>
+                                  <bk-select
+                                    style={'width:300px'}
+                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
+                                    v-model={QCLOUDCVMForm.value.spec.subnet}
+                                    onChange={onQcloudSubnetChange}>
+                                    {subnetTypes.value.map((subnet) => (
+                                      <bk-option
+                                        key={subnet.subnet_id}
+                                        value={subnet.subnet_id}
+                                        label={`${subnet.subnet_id} | ${subnet.subnet_name}`}></bk-option>
+                                    ))}
+                                  </bk-select>
                                 </bk-form-item>
                               </bk-form>
                             </>
