@@ -13,6 +13,8 @@ export default defineComponent({
   setup() {
     const bill_year = inject<Ref<number>>('bill_year');
     const bill_month = inject<Ref<number>>('bill_month');
+
+    const searchRef = ref();
     const amountRef = ref();
     const { getTranslatorMap } = useOperationProducts();
 
@@ -23,6 +25,10 @@ export default defineComponent({
         columns,
       },
       requestOption: {
+        sortOption: {
+          sort: 'current_month_rmb_cost',
+          order: 'DESC',
+        },
         apiMethod: reqBillsMainAccountSummaryList,
         extension: () => ({
           bill_year: bill_year.value,
@@ -40,6 +46,7 @@ export default defineComponent({
             };
           });
         },
+        immediate: false,
       },
     });
 
@@ -49,8 +56,7 @@ export default defineComponent({
     };
 
     watch([bill_year, bill_month], () => {
-      getListData();
-      amountRef.value.refreshAmountInfo();
+      searchRef.value.handleSearch();
     });
 
     watch(filter, () => {
@@ -59,8 +65,13 @@ export default defineComponent({
 
     return () => (
       <>
-        <Search onSearch={reloadTable} />
-        <div class='p24' style={{ height: 'calc(100% - 162px)' }}>
+        <Search
+          ref={searchRef}
+          searchKeys={['vendor', 'root_account_id', 'product_id', 'main_account_id']}
+          onSearch={reloadTable}
+          autoSelectMainAccount
+        />
+        <div class='p24' style={{ height: 'calc(100% - 238px)' }}>
           <CommonTable>
             {{
               operation: () => <Button noSyncBtn />,

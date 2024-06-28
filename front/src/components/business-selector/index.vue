@@ -2,7 +2,7 @@
 import { computed, ref, watchEffect, defineExpose, PropType } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAccountStore } from '@/store';
-import { isEmpty } from '@/common/util';
+import { isEmpty, localStorageActions } from '@/common/util';
 import { useI18n } from 'vue-i18n';
 
 const props = defineProps({
@@ -16,6 +16,7 @@ const props = defineProps({
   notAutoSelectAll: Boolean as PropType<boolean>,
   saveBizs: Boolean as PropType<boolean>,
   bizsKey: String as PropType<string>,
+  apiMethod: Function as PropType<(...args: any) => Promise<any>>,
 });
 const emit = defineEmits(['update:modelValue']);
 
@@ -30,6 +31,7 @@ const loading = ref(null);
 watchEffect(async () => {
   loading.value = true;
   let req = props.authed ? accountStore.getBizListWithAuth : accountStore.getBizList;
+  req = props.apiMethod || req;
   if (props.isAudit) {
     req = accountStore.getBizAuditListWithAuth;
   }
@@ -37,28 +39,36 @@ watchEffect(async () => {
   const res = await req();
   loading.value = false;
   businessList.value = res?.data;
+
+  // 支持全选
   if (props.isShowAll) {
-    businessList.value.unshift({
-      name: t('全部'),
-      id: 'all',
-    });
+    businessList.value.unshift({ name: t('全部'), id: 'all' });
   }
 
   let id = null;
+  // 自动选中的默认值
   if (props.autoSelect && !isEmpty(businessList.value)) {
+    // 支持全选, 若开启 notAutoSelectAll 则选中第一个业务; 若未开启, 则选中"全选"
     id =
       props.isShowAll && props.notAutoSelectAll && businessList.value[1]
         ? businessList.value[1].id
         : businessList.value[0]?.id;
   }
+  // 开启 saveBizs, 则自动选中上一次选中的业务
   if (props.saveBizs) {
-    id = route.query?.[props.bizsKey] ? JSON.parse(atob(route.query?.[props.bizsKey] as string)) : id;
+    const urlBizs = route.query[props.bizsKey] as string;
+
+    // 优先使用 url 中的业务id, 其次是持久化的, 最后是默认值
+    // 如果是取默认值, 则多选时需要转为数组
+    id = urlBizs
+      ? JSON.parse(atob(urlBizs))
+      : localStorageActions.get(props.bizsKey, (value) => JSON.parse(atob(value))) || (props.multiple ? [id] : id);
   }
-  if (props.multiple) {
-    id = route.query?.[props.bizsKey] ? id : [id];
-  }
+
+  // 设置选中的值
   defaultBusiness.value = id;
   selectedValue.value = id;
+  // 记录业务id 到 url 上
   handleChange(id);
 });
 
@@ -97,16 +107,26 @@ const selectedValue = computed({
 });
 
 const handleChange = (val: string | string[]) => {
-  if (props.saveBizs) {
-    const hasAll = Array.isArray(val) && val.includes('all');
-    const customBizs = btoa(JSON.stringify(val));
-    router.push({
-      query: {
-        ...route.query,
-        [props.bizsKey]: hasAll ? undefined : customBizs,
-      },
-    });
+  if (!props.saveBizs) return;
+
+  const query = { ...route.query };
+  const encodedBizs = btoa(JSON.stringify(val));
+
+  // 多选
+  if (props.multiple) {
+    // 全选时/未选时, 不用存业务id
+    const isSave = !(props.isShowAll && val.includes('all')) && val.length > 0;
+    query[props.bizsKey] = isSave ? encodedBizs : undefined;
   }
+  // 单选
+  else {
+    query[props.bizsKey] = encodedBizs || undefined;
+  }
+
+  // 持久化
+  localStorageActions.set(props.bizsKey, query[props.bizsKey]);
+  // 记录业务id 到 url 上
+  router.push({ query });
 };
 
 defineExpose({

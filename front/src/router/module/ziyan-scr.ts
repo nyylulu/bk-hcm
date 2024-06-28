@@ -17,7 +17,7 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/hostApplication',
-        name: '主机申请',
+        name: '主机申领',
         component: () => import('@/views/ziyanScr/hostApplication'),
         meta: {
           activeKey: 'zjsq',

@@ -51,15 +51,17 @@ export const useOperationProducts = () => {
       isShowManagers: Boolean,
       multiple: Boolean,
     },
+    emits: ['update:modelValue'],
     setup(props, { emit }) {
       const selectedVal = ref(props.modelValue);
       const isScrollLoading = ref(false);
 
+      watch(selectedVal, (val) => emit('update:modelValue', val), { deep: true });
+
       watch(
-        () => selectedVal.value,
-        (val) => {
-          emit('update:modelValue', val);
-        },
+        () => props.modelValue,
+        (val) => (selectedVal.value = val),
+        { deep: true },
       );
 
       return () => (
