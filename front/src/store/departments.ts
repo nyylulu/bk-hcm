@@ -1,5 +1,5 @@
 import http from '@/http';
-// import { Department } from '@/typings';
+import type { Department } from '@/typings';
 import { defineStore } from 'pinia';
 import QueryString from 'qs';
 const { BK_COMPONENT_API_URL } = window.PROJECT_CONFIG;
@@ -7,7 +7,7 @@ const { BK_COMPONENT_API_URL } = window.PROJECT_CONFIG;
 export const useDepartmentStore = defineStore({
   id: 'departmentStore',
   state: () => ({
-    departmentMap: new Map(),
+    departmentMap: new Map<number, Department>(),
   }),
   actions: {
     async fetchDepartMents(field: string, lookups: number) {
@@ -25,14 +25,14 @@ export const useDepartmentStore = defineStore({
 
       const headTag = document.getElementsByTagName('head')[0];
       // @ts-ignore
-      window[params.callback] = ({ data, result }: { data: Staff[]; result: boolean }) => {
+      window[params.callback] = ({ data, result }: { data: Department[]; result: boolean }) => {
         if (result) {
           if (field === 'level') {
-            data.forEach((item: any) => {
+            data.forEach((item) => {
               this.departmentMap.set(item.id, item);
             });
           } else {
-            data.forEach((item: any) => {
+            data.forEach((item) => {
               this.departmentMap.set(item.id, {
                 ...item,
                 parent: lookups,
@@ -44,7 +44,6 @@ export const useDepartmentStore = defineStore({
               loading: false,
             });
           }
-          // return data;
         }
         headTag.removeChild(scriptTag);
         // @ts-ignore

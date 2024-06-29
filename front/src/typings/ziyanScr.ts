@@ -20,6 +20,7 @@ export interface IQueryDissolveList {
 }
 
 export interface IDissolve {
+  bk_biz_id: number | string;
   bk_biz_name: string;
   module_host_count: { [key: string]: number };
   total: {

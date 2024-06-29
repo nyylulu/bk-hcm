@@ -7,7 +7,7 @@ import { useUserStore } from '@/store';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-// import OrganizationSelect from '@/components/OrganizationSelect/index';
+import OrganizationSelect from '@/components/OrganizationSelect/index';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import CurrentDialog from '../current-dialog';
@@ -126,9 +126,13 @@ export default defineComponent({
         })
         .then((result) => {
           const list = result?.data?.items || [];
+          const fixedBizIds = ['total', 'recycle-progress'];
           dissloveList.value = list.sort((a, b) => {
             const countA = (a?.total?.current?.host_count || 0) as number;
             const countB = (b?.total?.current?.host_count || 0) as number;
+            if (fixedBizIds.includes(a.bk_biz_id as string) || fixedBizIds.includes(b.bk_biz_id as string)) {
+              return 0;
+            }
             return countB - countA;
           });
         })
@@ -170,8 +174,8 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect> */}
+          <span class={cssModule['search-label']}>{t('组织')}：</span>
+          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect>
           <span class={cssModule['search-label']}>{t('业务')}：</span>
           <BusinessSelector
             class={cssModule['search-item']}

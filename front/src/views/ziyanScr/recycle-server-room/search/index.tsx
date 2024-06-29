@@ -1,4 +1,4 @@
-import { defineComponent, ref, onBeforeMount, type PropType } from 'vue';
+import { defineComponent, ref, onBeforeMount, type PropType, computed } from 'vue';
 
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
@@ -33,6 +33,19 @@ export default defineComponent({
 
     const recycleAreaGroups = ref<RecycleArea[]>([]);
     const loading = ref(false);
+
+    const isGroupChecked = (areaGroup: RecycleArea) => {
+      return areaGroup.children.every((group) => props.moduleNames.includes(group.name));
+    };
+    const isGroupHalfChecked = (areaGroup: RecycleArea) => {
+      return areaGroup.children.some((group) => props.moduleNames.includes(group.name));
+    };
+
+    const isAllChecked = computed(() => {
+      const total = recycleAreaGroups.value.reduce((acc, cur) => acc + cur.children.length, 0);
+      return props.moduleNames.length === total;
+    });
+    const isAllHalfChecked = computed(() => props.moduleNames.length > 0);
 
     // 选择
     const handleCheck = (moduleName: string) => {
@@ -117,7 +130,13 @@ export default defineComponent({
     return () => (
       <bk-loading loading={loading.value}>
         <Panel class={cssModule.gap}>
-          <bk-checkbox onChange={handleCheckAll}>{t('全选所有区间')}</bk-checkbox>
+          <bk-checkbox
+            onChange={handleCheckAll}
+            checked={isAllChecked.value}
+            indeterminate={!isAllChecked.value && isAllHalfChecked.value}
+            immediateEmitChange={false}>
+            {t('全选所有区间')}
+          </bk-checkbox>
         </Panel>
 
         {recycleAreaGroups.value.map((recycleAreaGroup) => (
@@ -126,6 +145,9 @@ export default defineComponent({
               {t('日期区间')}：{recycleAreaGroup.start_time} {t('至')} {recycleAreaGroup.end_time}
               <bk-checkbox
                 class={cssModule.chooseAll}
+                checked={isGroupChecked(recycleAreaGroup)}
+                indeterminate={!isGroupChecked(recycleAreaGroup) && isGroupHalfChecked(recycleAreaGroup)}
+                immediateEmitChange={false}
                 onChange={(isChecked: boolean) => handleCheckGroupAll(recycleAreaGroup, isChecked)}>
                 {t('全选')}
               </bk-checkbox>

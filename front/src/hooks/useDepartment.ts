@@ -11,10 +11,6 @@ export function useDepartment() {
   );
   const checkedDept = computed(() => getCheckedDept(organizationTree.value));
 
-  if (departmentStore.departmentMap.size === 0) {
-    departmentStore.getRootDept();
-  }
-
   watch(
     () => departmentStore.departmentMap,
     (deptMap) => {
@@ -24,6 +20,12 @@ export function useDepartment() {
       deep: true,
     },
   );
+
+  function fetchDepartments() {
+    if (departmentStore.departmentMap.size === 0) {
+      departmentStore.getRootDept();
+    }
+  }
 
   function generateDeptTreeMap(deptMap?: Map<number, Department>) {
     const originDepartmentMap = deptMap ?? departmentStore.departmentMap;
@@ -138,6 +140,7 @@ export function useDepartment() {
   }
 
   return {
+    fetchDepartments,
     getParentIds: departmentStore.getParentIds,
     organizationTree,
     departmentMap,

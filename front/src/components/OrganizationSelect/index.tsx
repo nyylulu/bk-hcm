@@ -1,7 +1,7 @@
 import { useDepartment } from '@/hooks';
 import { Department } from '@/typings';
 import { Checkbox, Select, Tree } from 'bkui-vue';
-import { computed, defineComponent, PropType, watch } from 'vue';
+import { computed, defineComponent, onMounted, PropType, watch } from 'vue';
 
 import './organization-select.scss';
 
@@ -18,6 +18,7 @@ export default defineComponent({
   emits: ['input', 'change', 'update:modelValue'],
   setup(props, ctx) {
     const {
+      fetchDepartments,
       organizationTree,
       // getParentIds,
       expandDepartment,
@@ -27,6 +28,7 @@ export default defineComponent({
       updateDepartment,
       checkedDept,
     } = useDepartment();
+
     const isLoading = computed(() => !props.modelValue.every((id) => isAllLoaded(id)));
     const dispalyValue = computed(() => {
       if (!isLoading.value) {
@@ -54,6 +56,10 @@ export default defineComponent({
         }
       },
     );
+
+    onMounted(() => {
+      fetchDepartments();
+    });
 
     function isAllLoaded(id: number): boolean {
       if (!id) return true;
