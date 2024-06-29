@@ -228,6 +228,9 @@ func (l *logics) ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq)
 		logs.Errorf("fill current host data failed, err: %v, cond: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+	if len(bizMap) == 0 {
+		return make([]dissolve.BizDetail, 0), nil
+	}
 
 	// 3.计算总数以及裁撤进度
 	result, err := calculateBizData(bizMap)
@@ -338,6 +341,7 @@ func calculateBizData(bizMap map[int64]dissolve.BizDetail) ([]dissolve.BizDetail
 	}
 
 	total := dissolve.BizDetail{
+		BizID:           "total",
 		BizName:         "总数",
 		ModuleHostCount: moduleHostCount,
 		Total: dissolve.Total{
@@ -349,6 +353,7 @@ func calculateBizData(bizMap map[int64]dissolve.BizDetail) ([]dissolve.BizDetail
 
 	val := getProgress(originHostNum, curHostNum)
 	progress := dissolve.BizDetail{
+		BizID:   "recycle-progress",
 		BizName: "裁撤进度",
 		Total: dissolve.Total{
 			Origin:  dissolve.TotalData{HostCount: val},

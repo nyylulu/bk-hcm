@@ -421,7 +421,7 @@ type ResDissolveTable struct {
 
 // BizDetail business detail
 type BizDetail struct {
-	BizID           int64          `json:"bk_biz_id"`
+	BizID           interface{}    `json:"bk_biz_id"`
 	BizName         string         `json:"bk_biz_name"`
 	ModuleHostCount map[string]int `json:"module_host_count"`
 	Total           Total          `json:"total"`
