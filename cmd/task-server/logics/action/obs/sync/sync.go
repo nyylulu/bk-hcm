@@ -91,8 +91,17 @@ func (act SyncAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, e
 			return nil, err
 		}
 		return nil, nil
+	case enumor.Aws:
+		mainAccount, err := act.getAwsMainAccount(kt.Kit(), opt.MainAccountID)
+		if err != nil {
+			return nil, fmt.Errorf("get main account failed, err %s", err.Error())
+		}
+		if err := act.doBatchSyncAwsBillitem(kt.Kit(), mainAccount, opt); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	default:
-		return nil, fmt.Errorf("unsupported vendor %s", opt.Vendor)
+		return nil, fmt.Errorf("unsupported obs vendor %s", opt.Vendor)
 	}
 }
 

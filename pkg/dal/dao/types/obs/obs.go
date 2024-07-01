@@ -20,6 +20,7 @@
 package obs
 
 import (
+	"hcm/pkg/api/core"
 	tableobs "hcm/pkg/dal/table/obs"
 )
 
@@ -28,3 +29,6 @@ type ListOBSBillItemHuaweiDetails struct {
 	Count   *uint64                      `json:"count,omitempty"`
 	Details []tableobs.OBSBillItemHuawei `json:"details,omitempty"`
 }
+
+// ListOBSBillItemAwsDetails Obs aws bill item
+type ListOBSBillItemAwsDetails = core.ListResultT[tableobs.OBSBillItemAws]

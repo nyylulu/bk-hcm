@@ -83,6 +83,11 @@ func (act CleanAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, 
 			return nil, err
 		}
 		return nil, nil
+	case enumor.Aws:
+		if err := act.doAwsClean(kt.Kit(), filter); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported vendor %s", opt.Vendor)
 	}
@@ -106,17 +111,52 @@ func (act CleanAction) doHuaweiClean(kt *kit.Kit, filter *filter.Expression) err
 		}
 		logs.Infof("found huawei obs bill item count %d", *result.Count)
 		if *result.Count > 0 {
-			_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-				if err := actcli.GetObsDaoSet().OBSBillItemHuawei().DeleteWithTx(
-					kt, txn, filter, uint64(core.DefaultMaxPageLimit)); err != nil {
-					logs.Warnf("delete huawei obs bill item by filter %s failed, err %s, rid: %s", filter, kt.Rid)
-				}
-				return nil, nil
-			})
+			_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt,
+				func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+					if err := actcli.GetObsDaoSet().OBSBillItemHuawei().DeleteWithTx(
+						kt, txn, filter, uint64(core.DefaultMaxPageLimit)); err != nil {
+						logs.Warnf("delete huawei obs bill item by filter %s failed, err %s, rid: %s", filter, kt.Rid)
+					}
+					return nil, nil
+				})
 			if err != nil {
 				return err
 			}
 			logs.Infof("successfully clean huawei obs bill item count %d", core.DefaultMaxPageLimit)
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+func (act CleanAction) doAwsClean(kt *kit.Kit, filter *filter.Expression) error {
+	for {
+		result, err := actcli.GetObsDaoSet().OBSBillItemAws().List(kt, &daotypes.ListOption{
+			Filter: filter,
+			Page: &core.BasePage{
+				Count: true,
+			},
+		})
+		if err != nil {
+			logs.Warnf("count aws obs bill item failed, err %s, rid: %s", err.Error(), kt.Rid)
+			return fmt.Errorf("count aws obs bill item failed, err %s", err.Error())
+		}
+
+		logs.Infof("found aws obs bill item count %d, rid: %s", result.Count, kt.Rid)
+		if result.Count > 0 {
+			_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt,
+				func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+					if err := actcli.GetObsDaoSet().OBSBillItemAws().DeleteWithTx(
+						kt, txn, filter, uint64(core.DefaultMaxPageLimit)); err != nil {
+						logs.Warnf("delete aws obs bill item by filter %s failed, err %s, rid: %s", filter, kt.Rid)
+					}
+					return nil, nil
+				})
+			if err != nil {
+				return err
+			}
+			logs.Infof("successfully clean aws obs bill item count %d", core.DefaultMaxPageLimit)
 			continue
 		}
 		break
