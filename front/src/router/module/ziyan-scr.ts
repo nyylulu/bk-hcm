@@ -139,6 +139,7 @@ const ziyanScr: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_type_find',
         },
       },
       {
@@ -151,6 +152,7 @@ const ziyanScr: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_subnet_find',
         },
       },
       {
@@ -192,6 +194,7 @@ const ziyanScr: RouteRecordRaw[] = [
           activeKey: 'scr-resource-manage',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_res_shelves_find',
         },
       },
       {
@@ -204,6 +207,7 @@ const ziyanScr: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_create_find',
         },
       },
     ],

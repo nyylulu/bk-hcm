@@ -59,10 +59,12 @@ watchEffect(async () => {
     const urlBizs = route.query[props.bizsKey] as string;
 
     // 优先使用 url 中的业务id, 其次是持久化的, 最后是默认值
-    // 如果是取默认值, 则多选时需要转为数组
+    // 如果是取默认值, 则多选时需要转为数组, 注意默认值可能为 null, 此时需要转为空数组
     id = urlBizs
       ? JSON.parse(atob(urlBizs))
-      : localStorageActions.get(props.bizsKey, (value) => JSON.parse(atob(value))) || (props.multiple ? [id] : id);
+      : localStorageActions.get(props.bizsKey, (value) => JSON.parse(atob(value))) ||
+        // eslint-disable-next-line no-nested-ternary
+        (props.multiple ? (id ? [id] : []) : id);
   }
 
   // 设置选中的值
@@ -114,17 +116,20 @@ const handleChange = (val: string | string[]) => {
 
   // 多选
   if (props.multiple) {
-    // 全选时/未选时, 不用存业务id
-    const isSave = !(props.isShowAll && val.includes('all')) && val.length > 0;
-    query[props.bizsKey] = isSave ? encodedBizs : undefined;
+    // 未选时, 不用存业务id
+    query[props.bizsKey] = val.length > 0 ? encodedBizs : undefined;
   }
   // 单选
   else {
     query[props.bizsKey] = encodedBizs || undefined;
   }
 
-  // 持久化
-  localStorageActions.set(props.bizsKey, query[props.bizsKey]);
+  // 持久化处理
+  if (query[props.bizsKey]) {
+    localStorageActions.set(props.bizsKey, query[props.bizsKey]);
+  } else {
+    localStorageActions.remove(props.bizsKey);
+  }
   // 记录业务id 到 url 上
   router.push({ query });
 };

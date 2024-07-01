@@ -8,10 +8,17 @@ import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+import { useVerify } from '@/hooks';
+import ErrorPage from '@/views/error-pages/403';
+
 const { FormItem } = Form;
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {
+    const { authVerifyData } = useVerify();
+    if (!authVerifyData.value.permissionAction.ziyan_resource_inventory_find)
+      return () => <ErrorPage urlKeyId='biz_ziyan_resource_inventory' />;
+
     const { columns } = useColumns('hostInventor');
     const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
     const router = useRouter();

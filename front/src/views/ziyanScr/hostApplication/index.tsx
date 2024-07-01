@@ -1,6 +1,8 @@
 import { defineComponent, ref } from 'vue';
 import { Tab } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
+import { useVerify } from '@/hooks';
+import ErrorPage from '@/views/error-pages/403';
 
 import './index.scss';
 
@@ -9,6 +11,9 @@ import ApplicationList from './components/application-list';
 import { HostApplicationTabEnum } from './constants';
 export default defineComponent({
   setup() {
+    const { authVerifyData } = useVerify();
+    if (!authVerifyData.value.permissionAction.biz_access) return () => <ErrorPage urlKeyId='biz_access' />;
+
     const activeName = ref('ApplicationList');
     const tabs = [
       {

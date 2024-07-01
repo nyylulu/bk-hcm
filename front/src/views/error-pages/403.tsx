@@ -22,7 +22,6 @@ export default defineComponent({
     // 根据urlKey获取权限链接
     const getAuthActionUrl = async () => {
       const { authVerifyData } = commonStore;
-      console.log(authVerifyData.urlParams, urlKey.value);
       if (authVerifyData) {
         // 权限矩阵数据
         const params = authVerifyData.urlParams[urlKey.value]; // 获取权限链接需要的参数
@@ -65,7 +64,6 @@ export default defineComponent({
     watch(
       () => props.urlKeyId,
       (key: any, oldKey: any) => {
-        console.log(key, oldKey);
         if (key === oldKey) return;
         urlKey.value = key;
         getAuthActionUrl();
@@ -78,12 +76,36 @@ export default defineComponent({
       window.open(authUrl.value);
     };
 
+    // scr权限申请说明
+    const renderScrApplyTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('当前无"业务-主机库存"的权限。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return <p class='mt5 sub-describe'>{t('当前无"业务-机房裁撤"的权限。')}</p>;
+      }
+    };
+
+    // scr功能说明
+    const renderScrFunctionTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('查询主机的库存信息。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return (
+            <p class='mt5 sub-describe'>{t('机房裁撤，一般是由业务运维、SRE等角色管理，一般用户无需申请该功能。')}</p>
+          );
+      }
+    };
+
     return {
       handlePermissionJump,
       authUrl,
       urlLoading,
       urlKey,
       t,
+      renderScrApplyTips,
+      renderScrFunctionTips,
     };
   },
 
@@ -158,6 +180,7 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrApplyTips()}
 
           <h2 class='mt20'>功能说明：</h2>
           {this.urlKey === 'cloud_selection_recommend' && (
@@ -227,6 +250,7 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrFunctionTips()}
         </div>
         <div class='btn-warp'>
           <Button class='mt20' theme='primary' loading={this.urlLoading} onClick={this.handlePermissionJump}>

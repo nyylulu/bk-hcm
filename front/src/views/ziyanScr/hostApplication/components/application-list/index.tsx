@@ -390,7 +390,7 @@ export default defineComponent({
         payload: removeEmptyFields({
           bk_biz_id:
             formModel.bkBizId.length === 0
-              ? businessSelectorRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+              ? businessSelectorRef.value.businessList.slice(1).map((item: any) => item.id)
               : formModel.bkBizId,
           order_id: formModel.orderId.length
             ? String(formModel.orderId)

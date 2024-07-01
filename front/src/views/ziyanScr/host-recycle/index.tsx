@@ -1,11 +1,17 @@
 import { defineComponent, ref, defineAsyncComponent, h, resolveComponent } from 'vue';
 import './index.scss';
+import { useVerify } from '@/hooks';
+import ErrorPage from '@/views/error-pages/403';
+
 export default defineComponent({
   components: {
     HostRecycleTable: defineAsyncComponent(() => import('./host-recycle-table')),
     DeviceQueryTable: defineAsyncComponent(() => import('./device-query-table')),
   },
   setup() {
+    const { authVerifyData } = useVerify();
+    if (!authVerifyData.value.permissionAction.biz_access) return () => <ErrorPage urlKeyId='biz_access' />;
+
     const activeName = ref('HostRecycleTable');
     const recycleSubBizId = ref({});
     const getDetailPage = (paramObj) => {

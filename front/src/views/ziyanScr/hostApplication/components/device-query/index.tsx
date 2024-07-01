@@ -65,7 +65,7 @@ export default defineComponent({
                 'bk_biz_id',
                 'in',
                 formModel.bkBizId.length === 0
-                  ? businessSelectorRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+                  ? businessSelectorRef.value.businessList.slice(1).map((item: any) => item.id)
                   : formModel.bkBizId,
               ],
               ['require_type', '=', formModel.requireType],

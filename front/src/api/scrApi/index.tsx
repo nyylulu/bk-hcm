@@ -370,6 +370,17 @@ const getCapacity = async ({ require_type, region, zone, device_type, vpc, subne
   });
   return data;
 };
+
+// 主机申请业务列表拉取接口
+const getCvmApplyAuthBizList = async () => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/web/authorized/cvm/apply/bizs/list`);
+};
+
+// 主机回收业务列表拉取接口
+const getCvmRecycleAuthBizList = async () => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/web/authorized/cvm/recycle/bizs/list`);
+};
+
 export default {
   getCapacity,
   getAreas,
@@ -402,4 +413,6 @@ export default {
   getOfflineMatch,
   matchPools,
   modifyOrder,
+  getCvmApplyAuthBizList,
+  getCvmRecycleAuthBizList,
 };

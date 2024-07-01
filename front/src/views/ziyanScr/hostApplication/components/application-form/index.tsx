@@ -648,7 +648,7 @@ export default defineComponent({
     };
     return () => (
       <div class='wid100'>
-        <DetailHeader>新增申请</DetailHeader>
+        <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>
         <div class={'apply-form-wrapper'}>
           {/* 申请单据表单 */}
           <CommonCard class='mt15' title={() => '基本信息'} layout='grid'>
@@ -660,7 +660,15 @@ export default defineComponent({
               ref={formRef}>
               <div class='QCLOUDCVM-displayflex'>
                 <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
-                  <BusinessSelector class='item-warp-component' v-model={order.value.model.bkBizId} autoSelect authed />
+                  <BusinessSelector
+                    class='item-warp-component'
+                    v-model={order.value.model.bkBizId}
+                    autoSelect
+                    authed
+                    saveBizs
+                    bizsKey='scr_apply_host_bizs'
+                    apiMethod={apiService.getCvmApplyAuthBizList}
+                  />
                 </bk-form-item>
                 <bk-form-item label='需求类型' class='item-warp' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>
