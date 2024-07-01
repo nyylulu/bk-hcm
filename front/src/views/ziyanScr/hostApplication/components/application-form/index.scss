@@ -9,6 +9,17 @@
     height: 30px !important;
   }
 }
+.QCLOUDCVM-displayflex {
+  display: flex;
+  align-content: center;
+  .item-warp {
+    margin-right: 50px;
+    height: 45px;
+    .item-warp-component {
+      width: 300px;
+    }
+  }
+}
 .QCLOUDCVM-fontweight {
   margin-left: 40px;
   text-align: center;
@@ -20,7 +31,7 @@
 }
 .QCLOUDCVM-displayflex {
   display: flex;
-  cursor: pointer
+  cursor: pointer;
 }
 .scr-form-wrapper {
   margin: 0 24px;

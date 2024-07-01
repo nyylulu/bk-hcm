@@ -30,8 +30,21 @@ export default defineComponent({
     const subnetTypes = ref([]);
     // 网络信息开关
     const NIswitch = ref(true);
-    const handleVpcChange = () => {
+    const vpcName = ref('');
+    const subnetName = ref('');
+    const handleVpcChange = (val) => {
+      const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
+      if (matchingItem) {
+        vpcName.value = matchingItem.vpc_name;
+      }
+      order.value.model.spec.subnet = '';
       loadSubnets();
+    };
+    const handleSubnetChange = (val) => {
+      const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
+      if (matchingItem) {
+        subnetName.value = matchingItem.subnet_name;
+      }
     };
     const onZoneChange = () => {
       order.value.model.spec.device_type = '';
@@ -64,8 +77,12 @@ export default defineComponent({
       zoneTypes.value = info;
     };
 
-    const loadSubnets = async () => {
-      const { zone, vpc } = order.value.model.spec;
+    const loadSubnets = async (Zone = '', Vpc = '') => {
+      let { zone, vpc } = order.value.model.spec;
+      if (Zone && Vpc) {
+        zone = Zone;
+        vpc = Vpc;
+      }
       const { info } = await apiService.getSubnets({
         region: rawOrder.value.spec.region,
         zone,
@@ -110,8 +127,20 @@ export default defineComponent({
           bk_username,
           resource_type,
           remark,
-          spec: { region, disk_type, image_id },
+          spec: { region, disk_type, image_id, vpc, subnet, zone },
         } = rawOrder.value;
+        await loadVpcs();
+        await loadSubnets(zone, vpc);
+        order.value.model.spec.vpc = vpc;
+        order.value.model.spec.subnet = subnet;
+        const matchingVpcItem = zoneTypes.value.find((item) => item.vpc_id === vpc);
+        if (matchingVpcItem) {
+          vpcName.value = matchingVpcItem.vpc_name;
+        }
+        const matchingSubnetItem = subnetTypes.value.find((item) => item.subnet_id === subnet);
+        if (matchingSubnetItem) {
+          subnetName.value = matchingSubnetItem.subnet_name;
+        }
         const informationList = [
           suborder_id,
           getBusinessNameById(bk_biz_id),
@@ -319,15 +348,21 @@ export default defineComponent({
                 <CommonCard
                   title={() => (
                     <>
-                      <div class='displayflex'>
-                        <RightShape
-                          onClick={() => {
-                            NIswitch.value = false;
-                          }}
-                        />
-                        <span class='fontsize'>网络信息</span>
-                        <span class='fontweight'>VPC : {order.value.model.spec.vpc}</span>
-                        <span class='fontweight'>子网 : {order.value.model.spec.subnet}</span>
+                      <div
+                        onClick={() => {
+                          NIswitch.value = false;
+                        }}
+                        class='order-displayflex'>
+                        <RightShape />
+                        <span class='order-fontsize'>网络信息</span>
+                        <span class='order-fontweight'>
+                          VPC : {vpcName.value}
+                          {order.value.model.spec.vpc && `(${order.value.model.spec.vpc})`}
+                        </span>
+                        <span class='order-fontweight'>
+                          子网 : {subnetName.value}
+                          {order.value.model.spec.subnet && `(${order.value.model.spec.subnet})`}
+                        </span>
                       </div>
                     </>
                   )}
@@ -374,7 +409,8 @@ export default defineComponent({
                           <bk-select
                             class='item-warp-resourceType component-with-detail'
                             disabled={order.value.model.spec.zone === 'cvm_separate_campus'}
-                            v-model={order.value.model.spec.subnet}>
+                            v-model={order.value.model.spec.subnet}
+                            onChange={handleSubnetChange}>
                             {subnetTypes.value.map((subnet) => (
                               <bk-option
                                 key={subnet.subnet_id}

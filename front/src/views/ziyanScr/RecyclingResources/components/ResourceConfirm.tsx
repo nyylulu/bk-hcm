@@ -31,6 +31,7 @@ export default defineComponent({
     const loading = ref(false);
     const tableList = ref([]);
     const suborderId = ref();
+    const bkBizId = ref();
     const drawer = ref(false);
     const drawerTitle = ref('');
     const getReturnPlanName = (returnPlan: string, resourceType: string) => {
@@ -139,10 +140,11 @@ export default defineComponent({
         },
       },
     ]);
-    const handleRowClick = (row: { bk_biz_name: string; suborder_id: any }) => {
+    const handleRowClick = (row: { bk_biz_name: string; suborder_id: any; bk_biz_id: any }) => {
       drawer.value = true;
       drawerTitle.value = row.bk_biz_name;
       suborderId.value = [row.suborder_id];
+      bkBizId.value = [row.bk_biz_id];
       emit('updateConfirm', selections.value, drawerTitle.value, drawer.value);
       getList(false);
       getList(true);
@@ -169,7 +171,7 @@ export default defineComponent({
       const data = await apiService.getRecycleHosts({
         suborder_id: suborderId.value,
         page,
-        bk_biz_id: Array.isArray(props.bizs) ? props.bizs : [props.bizs],
+        bk_biz_id: bkBizId.value,
       });
       const obj = props.pagination;
       if (enableCount) obj.count = data?.count;

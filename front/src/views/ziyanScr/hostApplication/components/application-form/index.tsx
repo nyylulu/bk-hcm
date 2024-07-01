@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
-import { Input, Button, Sideslider, Message, Popover } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Loading } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -627,6 +627,7 @@ export default defineComponent({
       }
     };
     const cvmCapacity = ref([]);
+    const loading = ref(false);
     const onQcloudDeviceTypeChange = async () => {
       const { device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
       const { region, zone } = resourceForm.value;
@@ -639,8 +640,10 @@ export default defineComponent({
         subnet,
       };
       if (params.device_type) {
+        loading.value = true;
         const { info } = await apiService.getCapacity(params);
         cvmCapacity.value = info || [];
+        loading.value = false;
       }
     };
     return () => (
@@ -655,9 +658,9 @@ export default defineComponent({
               model={order.value.model}
               rules={order.value.rules}
               ref={formRef}>
-              <div class='displayflex'>
+              <div class='QCLOUDCVM-displayflex'>
                 <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
-                  <BusinessSelector v-model={order.value.model.bkBizId} autoSelect authed />
+                  <BusinessSelector class='item-warp-component' v-model={order.value.model.bkBizId} autoSelect authed />
                 </bk-form-item>
                 <bk-form-item label='需求类型' class='item-warp' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>
@@ -670,7 +673,7 @@ export default defineComponent({
                   </bk-select>
                 </bk-form-item>
               </div>
-              <div class='displayflex'>
+              <div class='QCLOUDCVM-displayflex'>
                 <bk-form-item label='期望交付时间' class='item-warp' required property='expectTime'>
                   <bk-date-picker
                     class='item-warp-component'
@@ -968,32 +971,34 @@ export default defineComponent({
                               {cvmCapacity.value.length ? (
                                 <>
                                   {cvmCapacity.value.map((item) => (
-                                    <div class={'tooltips'}>
-                                      <span>{item?.zone || ''}最大可申请量 </span>
-                                      <span class={'volumetip'}>{item?.max_num || 0}</span>
-                                      <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
-                                        {{
-                                          default: () => (
-                                            <span>
-                                              {item?.max_info.length && (
-                                                <span class={'calculationDetails'}>( 计算明细 )</span>
-                                              )}
-                                            </span>
-                                          ),
-                                          content: () => (
-                                            <div class={'content'}>
-                                              {item?.max_info.length &&
-                                                item?.max_info.map((val: { key: any; value: any }) => (
-                                                  <div>
-                                                    <span class={'application'}> {val.key}</span>
-                                                    <span class={'volumetip'}> {val.value}</span>
-                                                  </div>
-                                                ))}
-                                            </div>
-                                          ),
-                                        }}
-                                      </Popover>
-                                    </div>
+                                    <Loading loading={loading.value}>
+                                      <div class={'tooltips'}>
+                                        <span>{item?.zone || ''}最大可申请量 </span>
+                                        <span class={'volumetip'}>{item?.max_num || 0}</span>
+                                        <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
+                                          {{
+                                            default: () => (
+                                              <span>
+                                                {item?.max_info.length && (
+                                                  <span class={'calculationDetails'}>( 计算明细 )</span>
+                                                )}
+                                              </span>
+                                            ),
+                                            content: () => (
+                                              <div class={'content'}>
+                                                {item?.max_info.length &&
+                                                  item?.max_info.map((val: { key: any; value: any }) => (
+                                                    <div>
+                                                      <span class={'application'}> {val.key}</span>
+                                                      <span class={'volumetip'}> {val.value}</span>
+                                                    </div>
+                                                  ))}
+                                              </div>
+                                            ),
+                                          }}
+                                        </Popover>
+                                      </div>
+                                    </Loading>
                                   ))}
                                 </>
                               ) : (

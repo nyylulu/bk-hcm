@@ -217,6 +217,14 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ row }: any) => getImageName(row.spec.image_id),
     },
     {
+      label: 'VPC',
+      field: 'spec.vpc',
+    },
+    {
+      label: '子网',
+      field: 'spec.subnet',
+    },
+    {
       label: '数据盘大小',
       field: 'spec.disk_size',
       width: 100,

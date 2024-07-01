@@ -69,7 +69,7 @@ export default defineComponent({
     );
 
     return () => (
-      <div class={'suborder-detail-container'}>
+      <div>
         <BkRadioGroup v-model={curStatus.value}>
           {DETAIL_STATUS.map(({ label, name }) => (
             <BkRadioButton label={label}>{name}</BkRadioButton>

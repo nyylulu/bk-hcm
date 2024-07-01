@@ -130,7 +130,7 @@ export default defineComponent({
       getPrecheckList(Object.assign(requestParams.value(filter.value), { page: { start: 0, limit: 500 } }), {})
         .then((res) => {
           const totalList = res.data?.info || [];
-          exportTableToExcel(totalList, columns, '预检详情列表');
+          exportTableToExcel(totalList, [{ label: 'IP', field: 'ip', width: 80 }, ...columns], '预检详情列表');
         })
         .finally(() => {});
     };

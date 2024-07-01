@@ -2,7 +2,7 @@ import { defineComponent, ref, watch, computed } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
-import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
+import { Dialog, Tab, Button, Table, Sideslider, Message } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import usePagination from '@/hooks/usePagination';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -57,7 +57,8 @@ export default defineComponent({
       tableHosts.value = hosts;
     };
     const updateSelectedHosts = (hosts: any[]) => {
-      tableSelectedHosts.value = hosts;
+      // 将筛选结果赋值给 tableSelectedHosts 表单
+      tableSelectedHosts.value = hosts.filter((host) => host.recyclable);
       recycleForm.value.ips = hosts.map((item) => item.ip);
     };
     const updateTypes = (returnPlan: { value: any }) => {
@@ -163,10 +164,12 @@ export default defineComponent({
       const ips: any[] = [];
       const assetIds: any[] = [];
       if (ipArray.value.length > 500) {
-        // this.$message.error(`最多添加500台主机,请删除${ipsList.length - 500}台后重试`)
+        Message({
+          message: `最多添加500台主机,请删除${ipArray.value.length - 500}台后重试`,
+          theme: 'error',
+        });
         return;
       }
-
       ipArray.value.forEach((item) => {
         if (ipv4.test(item) || ipv6.test(item)) {
           ips.push(item);
@@ -260,7 +263,7 @@ export default defineComponent({
                   theme='primary'
                   class='mr10'
                   size='small'
-                  disabled={active.value === 0 && !tableSelectedHosts.value.length}
+                  disabled={active.value === 1 && !tableSelectedHosts.value.length}
                   onClick={handleNext}>
                   下一步
                 </bk-button>
