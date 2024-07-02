@@ -356,12 +356,24 @@ export default defineComponent({
                         <RightShape />
                         <span class='order-fontsize'>网络信息</span>
                         <span class='order-fontweight'>
-                          VPC : {vpcName.value}
-                          {order.value.model.spec.vpc && `(${order.value.model.spec.vpc})`}
+                          {vpcName.value ? (
+                            <>
+                              VPC : {vpcName.value}
+                              {order.value.model.spec.vpc && `(${order.value.model.spec.vpc})`}
+                            </>
+                          ) : (
+                            <> VPC :系统自动分配</>
+                          )}
                         </span>
                         <span class='order-fontweight'>
-                          子网 : {subnetName.value}
-                          {order.value.model.spec.subnet && `(${order.value.model.spec.subnet})`}
+                          {subnetName.value ? (
+                            <>
+                              子网 : {subnetName.value}
+                              {order.value.model.spec.subnet && `(${order.value.model.spec.subnet})`}
+                            </>
+                          ) : (
+                            <> 子网 :系统自动分配</>
+                          )}
                         </span>
                       </div>
                     </>

@@ -69,7 +69,7 @@ export default defineComponent({
     );
 
     return () => (
-      <div>
+      <div style={'width: 100%;'}>
         <BkRadioGroup v-model={curStatus.value}>
           {DETAIL_STATUS.map(({ label, name }) => (
             <BkRadioButton label={label}>{name}</BkRadioButton>
@@ -82,7 +82,7 @@ export default defineComponent({
           columns={tableColumns.value}
           onPageLimitChange={handlePageLimitChange}
           onPageValueChange={handlePageValueChange}
-          class={'mt16 maxheigth'}
+          class={'maxheigth tablelist'}
         />
       </div>
     );

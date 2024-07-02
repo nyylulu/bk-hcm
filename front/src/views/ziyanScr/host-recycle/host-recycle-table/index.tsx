@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, watch, onMounted } from 'vue';
+import { defineComponent, ref, computed, watch, onMounted, h, withDirectives } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
@@ -6,7 +6,7 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import RequireNameSelect from './require-name-select';
-import { Button, Form, Message, Popover, Select } from 'bkui-vue';
+import { Button, Form, Message, Select, Dropdown } from 'bkui-vue';
 import { useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
@@ -17,6 +17,7 @@ import './index.scss';
 import { useRoute, useRouter } from 'vue-router';
 import dayjs from 'dayjs';
 const { FormItem } = Form;
+const { DropdownMenu, DropdownItem } = Dropdown;
 export default defineComponent({
   components: {
     RequireNameSelect,
@@ -32,6 +33,7 @@ export default defineComponent({
     },
   },
   setup(props) {
+    const currentOperateRowIndex = ref(-1);
     const userStore = useUserStore();
     const router = useRouter();
     const route = useRoute();
@@ -151,7 +153,8 @@ export default defineComponent({
         duration: 1500,
       });
     };
-    const retryOrderFunc = (id: string) => {
+    const retryOrderFunc = (id: string, disabled) => {
+      if (disabled) return;
       const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
       retryOrder(
         {
@@ -165,7 +168,8 @@ export default defineComponent({
         }
       });
     };
-    const stopOrderFunc = (id: string) => {
+    const stopOrderFunc = (id: string, disabled) => {
+      if (disabled) return;
       stopOrder(
         {
           suborderId: [id],
@@ -178,7 +182,8 @@ export default defineComponent({
         }
       });
     };
-    const submitOrderFunc = (id: string) => {
+    const submitOrderFunc = (id: string, disabled) => {
+      if (disabled) return;
       const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
       submitOrder(
         {
@@ -224,64 +229,89 @@ export default defineComponent({
     const operateColList = [
       {
         label: '操作',
-        width: 100,
+        width: 120,
         showOverflowTooltip: false,
-        render: ({ row }) => {
-          return (
-            <div class='recycle-operation'>
-              <Button size='small' theme='primary' text onClick={() => returnPreDetails(row)}>
-                预检详情
-              </Button>
-              <Popover theme='light'>
-                {{
-                  default: () => (
-                    <Button size='small' theme='primary' text>
-                      <i class='hcm-icon bkhcm-icon-more-fill' />
-                    </Button>
-                  ),
-                  content: () => (
-                    <>
-                      <div>
-                        <Button size='small' theme='primary' text onClick={() => enterDetail(row)}>
-                          单据详情
-                        </Button>
-                      </div>
-                      <div class='pop-btn'>
-                        <Button
-                          disabled={opBtnDisabled.value(row.status)}
-                          onClick={() => retryOrderFunc(row.suborder_id)}
-                          size='small'
-                          theme='primary'
-                          text>
-                          重试
-                        </Button>
-                      </div>
-                      <div class='pop-btn'>
-                        <Button
-                          disabled={opBtnDisabled.value(row.status)}
-                          onClick={() => stopOrderFunc(row.suborder_id)}
-                          size='small'
-                          theme='primary'
-                          text>
-                          终止
-                        </Button>
-                      </div>
-                      <div class='pop-btn'>
-                        <Button
-                          disabled={opBtnDisabled.value(row.status)}
-                          onClick={() => submitOrderFunc(row.suborder_id)}
-                          size='small'
-                          theme='primary'
-                          text>
-                          去除预检失败IP提交
-                        </Button>
-                      </div>
-                    </>
-                  ),
-                }}
-              </Popover>
-            </div>
-          );
+        render: ({ row, index }) => {
+          return h('div', { class: 'operation-column' }, [
+            withDirectives(
+              h(
+                Button,
+                {
+                  text: true,
+                  theme: 'primary',
+                  class: 'mr10',
+                  onClick: () => {
+                    returnPreDetails(row);
+                  },
+                },
+                '预检详情',
+              ),
+              [],
+            ),
+            withDirectives(
+              h(
+                Dropdown,
+                {
+                  trigger: 'click',
+                  popoverOptions: {
+                    renderType: 'shown',
+                    onAfterShow: () => (currentOperateRowIndex.value = index),
+                    onAfterHidden: () => (currentOperateRowIndex.value = -1),
+                  },
+                },
+                {
+                  default: () =>
+                    h(
+                      'div',
+                      {
+                        class: [`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`],
+                      },
+                      h('i', { class: 'hcm-icon bkhcm-icon-more-fill' }),
+                    ),
+                  content: () =>
+                    h(DropdownMenu, null, [
+                      withDirectives(
+                        h(
+                          DropdownItem,
+                          {
+                            key: 'retry',
+                            onClick: () => retryOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
+                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
+                          },
+                          '全部重试',
+                        ),
+                        [],
+                      ),
+                      withDirectives(
+                        h(
+                          DropdownItem,
+                          {
+                            key: 'stop',
+                            onClick: () => stopOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
+                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
+                          },
+                          '全部终止',
+                        ),
+                        [],
+                      ),
+                      withDirectives(
+                        h(
+                          DropdownItem,
+                          {
+                            key: 'submit',
+                            onClick: () => submitOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
+                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
+                          },
+                          '剔除预检失败IP重试',
+                        ),
+                        [],
+                      ),
+                    ]),
+                },
+              ),
+              [],
+            ),
+          ]);
         },
       },
     ];
@@ -291,11 +321,15 @@ export default defineComponent({
       width: 100,
       render: ({ row }) => {
         return (
-          <div class='cvm-cell-height'>
-            <div>{row.order_id}</div>
-            <span class='sub-order-num' onClick={() => enterDetail(row)}>
-              {row.suborder_id}
-            </span>
+          <div>
+            <div>
+              <p>{row.order_id}</p>
+            </div>
+            <div>
+              <Button theme='primary' text onClick={() => enterDetail(row)}>
+                {row.suborder_id}
+              </Button>
+            </div>
           </div>
         );
       },
@@ -429,14 +463,16 @@ export default defineComponent({
             <Button disabled={!selections.value.length} onClick={goToPrecheck}>
               批量查看预检详情
             </Button>
-            <Button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch')}>
+            <Button disabled={!selections.value.length} onClick={() => retryOrderFunc('isBatch', false)}>
               批量重试
             </Button>
-            <Button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch')}>
+            <Button disabled={!selections.value.length} onClick={() => submitOrderFunc('isBatch', false)}>
               批量去除预检失败IP提交
             </Button>
           </div>
-          <CommonTable class={'filter-CommonTable'} />
+          <div class={'has-selection'}>
+            <CommonTable class={'filter-CommonTable'} />
+          </div>
         </div>
       );
     };

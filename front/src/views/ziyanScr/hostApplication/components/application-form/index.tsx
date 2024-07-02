@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Loading } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Card } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -7,9 +7,11 @@ import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
 import ZoneSelector from '../ZoneSelector';
+import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import { Spinner, RightShape, DownShape } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import { RightShape, DownShape } from 'bkui-vue/lib/icon';
+
 import apiService from '@/api/scrApi';
 import { useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -204,6 +206,10 @@ export default defineComponent({
       QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
     };
+    const onVpcNameClear = () => {
+      vpcName.value = '';
+      subnetName.value = '';
+    };
     const onQcloudVpcChange = (val) => {
       QCLOUDCVMForm.value.spec.subnet = '';
       const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
@@ -212,6 +218,9 @@ export default defineComponent({
       }
       loadSubnets();
       onQcloudDeviceTypeChange();
+    };
+    const onSubnetNameClear = () => {
+      subnetName.value = '';
     };
     const onQcloudSubnetChange = (val) => {
       const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
@@ -522,9 +531,9 @@ export default defineComponent({
         anti_affinity_level: QCLOUDCVMForm.value.spec.anti_affinity_level,
         replicas: QCLOUDCVMForm.value.spec.replicas,
         spec: {
+          ...QCLOUDCVMForm.value.spec,
           region: resourceForm.value.region,
           zone: resourceForm.value.zone,
-          ...QCLOUDCVMForm.value.spec,
         },
       };
     };
@@ -695,47 +704,50 @@ export default defineComponent({
               </div>
             </bk-form>
           </CommonCard>
-          <CommonCard class='mt15' title={() => '配置清单'}>
-            <div>
-              <Button
-                class='mr16'
-                theme='primary'
-                onClick={() => {
-                  addResourceRequirements.value = true;
-                  title.value = '增加资源需求';
-                  IDCPMlist();
-                }}>
-                添加
-              </Button>
-              <Button onClick={clickApplication}>一键申请</Button>
-              <div class='mt15'>云主机</div>
-              <div class='mt15'>
-                <bk-table
-                  align='left'
-                  row-hover='auto'
-                  columns={[...CloudHostcolumns, CloudHostoperation.value]}
-                  data={cloudTableData.value}
-                  show-overflow-tooltip
-                />
+          <Card class={'mt15'} border={false} showHeader={false} showFooter={false}>
+            <p class={'QCLOUDCVM-card-title'}>配置清单</p>
+            <div class={`QCLOUDCVM-card-content`}>
+              <div>
+                <Button
+                  class='mr16'
+                  theme='primary'
+                  onClick={() => {
+                    addResourceRequirements.value = true;
+                    title.value = '增加资源需求';
+                    IDCPMlist();
+                  }}>
+                  添加
+                </Button>
+                <Button onClick={clickApplication}>一键申请</Button>
+                <div class='mt15'>云主机</div>
+                <div class='mt15'>
+                  <bk-table
+                    align='left'
+                    row-hover='auto'
+                    columns={[...CloudHostcolumns, CloudHostoperation.value]}
+                    data={cloudTableData.value}
+                    show-overflow-tooltip
+                  />
+                </div>
+                {physicalTableData.value.length ? (
+                  <>
+                    <div class='mt15'>物理机</div>
+                    <div class='mt15'>
+                      <bk-table
+                        align='left'
+                        row-hover='auto'
+                        columns={[...PhysicalMachinecolumns, PhysicalMachineoperation.value]}
+                        data={physicalTableData.value}
+                        show-overflow-tooltip
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <></>
+                )}
               </div>
-              {physicalTableData.value.length ? (
-                <>
-                  <div class='mt15'>物理机</div>
-                  <div class='mt15'>
-                    <bk-table
-                      align='left'
-                      row-hover='auto'
-                      columns={[...PhysicalMachinecolumns, PhysicalMachineoperation.value]}
-                      data={physicalTableData.value}
-                      show-overflow-tooltip
-                    />
-                  </div>
-                </>
-              ) : (
-                <></>
-              )}
             </div>
-          </CommonCard>
+          </Card>
           <CommonCard title={() => '备注'}>
             <bk-form form-type='vertical' label-width='150' model={order.value.model}>
               <bk-form-item label='申请备注' class='item-warp'>
@@ -787,8 +799,7 @@ export default defineComponent({
 
           {/* 增加资源需求 */}
           <Sideslider
-            class='common-sideslider'
-            width={1000}
+            width={900}
             isShow={addResourceRequirements.value}
             title={title.value}
             onClosed={() => {
@@ -796,15 +807,18 @@ export default defineComponent({
             }}>
             {{
               default: () => (
-                <div class='common-sideslider-content'>
+                <div>
                   <CommonCard title={() => '基本信息'}>
                     <bk-form
                       model={resourceForm.value}
-                      class={'scr-form-wrapper'}
+                      class={'QCLOUDCVM-form-wrapper'}
                       rules={resourceFormrules}
                       ref={resourceFormRef}>
                       <bk-form-item label='主机类型' required property='resourceType'>
-                        <bk-select v-model={resourceForm.value.resourceType} onChange={onResourceTypeChange}>
+                        <bk-select
+                          style={'width:300px'}
+                          v-model={resourceForm.value.resourceType}
+                          onChange={onResourceTypeChange}>
                           {resourceTypes.value.map((resType: { value: any; label: any }) => (
                             <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
                           ))}
@@ -814,6 +828,7 @@ export default defineComponent({
                       <bk-form-item class='mr16' label='云地域' required property='region'>
                         <AreaSelector
                           ref='areaSelector'
+                          style={'width:300px'}
                           v-model={resourceForm.value.region}
                           params={{ resourceType: resourceForm.value.resourceType }}
                           onChange={onRegionChange}></AreaSelector>
@@ -821,6 +836,7 @@ export default defineComponent({
                       <bk-form-item label='可用区' required property='zone'>
                         <ZoneSelector
                           ref='zoneSelector'
+                          style={'width:300px'}
                           v-model={resourceForm.value.zone}
                           params={{
                             resourceType: resourceForm.value.resourceType,
@@ -847,12 +863,24 @@ export default defineComponent({
                                   <RightShape />
                                   <span class='QCLOUDCVM-fontsize'>网络信息</span>
                                   <span class='QCLOUDCVM-fontweight'>
-                                    VPC : {vpcName.value}
-                                    {QCLOUDCVMForm.value.spec.vpc && `(${QCLOUDCVMForm.value.spec.vpc})`}
+                                    {vpcName.value ? (
+                                      <>
+                                        VPC : {vpcName.value}
+                                        {QCLOUDCVMForm.value.spec.vpc && `(${QCLOUDCVMForm.value.spec.vpc})`}
+                                      </>
+                                    ) : (
+                                      <> VPC :系统自动分配</>
+                                    )}
                                   </span>
                                   <span class='QCLOUDCVM-fontweight'>
-                                    子网 : {subnetName.value}
-                                    {QCLOUDCVMForm.value.spec.subnet && `(${QCLOUDCVMForm.value.spec.subnet})`}
+                                    {subnetName.value ? (
+                                      <>
+                                        子网 : {subnetName.value}
+                                        {QCLOUDCVMForm.value.spec.subnet && `(${QCLOUDCVMForm.value.spec.subnet})`}
+                                      </>
+                                    ) : (
+                                      <> 子网 : 系统自动分配</>
+                                    )}
                                   </span>
                                 </div>
                               </>
@@ -879,7 +907,7 @@ export default defineComponent({
                             layout='grid'>
                             <>
                               <bk-form
-                                class={'scr-form-wrapper'}
+                                class={'QCLOUDCVM-form-wrapper'}
                                 model={QCLOUDCVMForm.value.spec}
                                 rules={resourceFormRules.value}>
                                 <bk-form-item label='VPC'>
@@ -887,7 +915,8 @@ export default defineComponent({
                                     style={'width:300px'}
                                     disabled={resourceForm.value.zone === 'cvm_separate_campus'}
                                     v-model={QCLOUDCVMForm.value.spec.vpc}
-                                    onChange={onQcloudVpcChange}>
+                                    onChange={onQcloudVpcChange}
+                                    onClear={onVpcNameClear}>
                                     {zoneTypes.value.map((vpc) => (
                                       <bk-option
                                         key={vpc.vpc_id}
@@ -901,7 +930,8 @@ export default defineComponent({
                                     style={'width:300px'}
                                     disabled={resourceForm.value.zone === 'cvm_separate_campus'}
                                     v-model={QCLOUDCVMForm.value.spec.subnet}
-                                    onChange={onQcloudSubnetChange}>
+                                    onChange={onQcloudSubnetChange}
+                                    onClear={onSubnetNameClear}>
                                     {subnetTypes.value.map((subnet) => (
                                       <bk-option
                                         key={subnet.subnet_id}
@@ -923,12 +953,13 @@ export default defineComponent({
                       {resourceForm.value.resourceType !== 'IDCPM' ? (
                         <>
                           <bk-form
-                            class={'scr-form-wrapper'}
+                            class={'QCLOUDCVM-form-wrapper'}
                             model={QCLOUDCVMForm.value.spec}
                             rules={QCLOUDCVMformRules.value}
                             ref={QCLOUDCVMformRef}>
                             <bk-form-item label='机型' required property='device_type'>
                               <bk-select
+                                style={'width:300px'}
                                 v-model={QCLOUDCVMForm.value.spec.device_type}
                                 disabled={resourceForm.value.zone === ''}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
@@ -940,6 +971,7 @@ export default defineComponent({
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <bk-select
+                                style={'width:300px'}
                                 v-model={QCLOUDCVMForm.value.spec.image_id}
                                 disabled={resourceForm.value.region === ''}
                                 filterable>
@@ -954,21 +986,29 @@ export default defineComponent({
                                   display: 'flex',
                                   alignItems: 'center',
                                 }}>
-                                <DiskTypeSelect v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
+                                <DiskTypeSelect
+                                  style={'width:190px'}
+                                  v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
                                 <Input
                                   class={'ml8'}
                                   type='number'
+                                  style={'width:90px'}
                                   v-model={QCLOUDCVMForm.value.spec.disk_size}
                                   min={1}></Input>
                                 <span class={'ml8'}>G</span>
                               </div>
                             </bk-form-item>
                             <bk-form-item label='需求数量' required property='replicas'>
-                              <Input type='number' v-model={QCLOUDCVMForm.value.spec.replicas} min={1}></Input>
+                              <Input
+                                type='number'
+                                style={'width:300px'}
+                                v-model={QCLOUDCVMForm.value.spec.replicas}
+                                min={1}></Input>
                             </bk-form-item>
                             <bk-form-item label='备注'>
                               <Input
                                 type='textarea'
+                                style={'width:300px'}
                                 v-model={resourceForm.value.remark}
                                 autosize
                                 resize={false}></Input>
@@ -979,40 +1019,40 @@ export default defineComponent({
                               {cvmCapacity.value.length ? (
                                 <>
                                   {cvmCapacity.value.map((item) => (
-                                    <Loading loading={loading.value}>
-                                      <div class={'tooltips'}>
-                                        <span>{item?.zone || ''}最大可申请量 </span>
-                                        <span class={'volumetip'}>{item?.max_num || 0}</span>
-                                        <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
-                                          {{
-                                            default: () => (
-                                              <span>
-                                                {item?.max_info.length && (
-                                                  <span class={'calculationDetails'}>( 计算明细 )</span>
-                                                )}
-                                              </span>
-                                            ),
-                                            content: () => (
-                                              <div class={'content'}>
-                                                {item?.max_info.length &&
-                                                  item?.max_info.map((val: { key: any; value: any }) => (
-                                                    <div>
-                                                      <span class={'application'}> {val.key}</span>
-                                                      <span class={'volumetip'}> {val.value}</span>
-                                                    </div>
-                                                  ))}
-                                              </div>
-                                            ),
-                                          }}
-                                        </Popover>
-                                      </div>
-                                    </Loading>
+                                    <div class={'tooltips'}>
+                                      <span>{getZoneCn(item?.zone)}最大可申请量 </span>
+                                      <span class={'volumetip'}>{item?.max_num || 0}</span>
+                                      {loading.value ? <Spinner class={'mr10'} /> : <></>}
+                                      <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
+                                        {{
+                                          default: () => (
+                                            <span>
+                                              {item?.max_info.length && (
+                                                <span class={'calculationDetails'}>( 计算明细 )</span>
+                                              )}
+                                            </span>
+                                          ),
+                                          content: () => (
+                                            <div class={'content'}>
+                                              {item?.max_info.length &&
+                                                item?.max_info.map((val: { key: any; value: any }) => (
+                                                  <div>
+                                                    <span class={'application'}> {val.key}</span>
+                                                    <span class={'volumetip'}> {val.value}</span>
+                                                  </div>
+                                                ))}
+                                            </div>
+                                          ),
+                                        }}
+                                      </Popover>
+                                    </div>
                                   ))}
                                 </>
                               ) : (
                                 <div class={'tooltips'}>
                                   <span>最大可申请量 </span>
                                   <span class={'volumetip'}>0</span>
+                                  {loading.value ? <Spinner class={'mr10'} /> : <></>}
                                 </div>
                               )}
                             </>
@@ -1023,7 +1063,7 @@ export default defineComponent({
                           <bk-form
                             model={pmForm.value.spec}
                             rules={pmForm.value.rules}
-                            class={'scr-form-wrapper'}
+                            class={'QCLOUDCVM-form-wrapper'}
                             ref={IDCPMformRef}>
                             <bk-form-item label='机型' required property='device_type'>
                               <bk-select

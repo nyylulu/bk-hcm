@@ -177,8 +177,9 @@ export default (type: string, isSimpleShow = false) => {
   const CRSOcolumns = [
     {
       type: 'selection',
-      align: 'center',
+      align: 'right',
       width: 32,
+      minWidth: 32,
     },
     {
       label: '机型',
@@ -186,23 +187,32 @@ export default (type: string, isSimpleShow = false) => {
       width: 140,
     },
     {
+      label: '状态',
+      field: 'stage',
+      render: ({ row }: any) => transformApplyStages(row.stage),
+    },
+    {
       label: '总数',
       field: 'total_num',
-      width: 40,
+      width: 70,
+      minWidth: 70,
     },
     {
       label: '待支付',
       field: 'pending_num',
-      width: 50,
+      width: 70,
+      minWidth: 70,
     },
     {
       label: '地域',
       field: 'spec.region',
+      width: 160,
       render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
       label: '园区',
       field: 'spec.zone',
+      width: 160,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
     },
     {
@@ -239,11 +249,6 @@ export default (type: string, isSimpleShow = false) => {
       label: '备注',
       field: 'remark',
       render: ({ cell }: { cell: string }) => cell || '--',
-    },
-    {
-      label: '状态',
-      field: 'stage',
-      render: ({ row }: any) => transformApplyStages(row.stage),
     },
   ];
   const PRSOcolumns = [
@@ -784,6 +789,7 @@ export default (type: string, isSimpleShow = false) => {
       type: 'selection',
       width: 32,
       minWidth: 32,
+      align: 'right',
     },
     {
       label: '业务',
@@ -1988,6 +1994,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
+      width: '160',
       showOverflowTooltip: true,
     },
     {
@@ -2033,6 +2040,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'task_id',
       label: '关联初始化单',
+      width: 150,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2062,15 +2070,20 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'ip',
       label: '内网 IP',
+      minwidth: 120,
+      width: 120,
     },
     {
       field: 'asset_id',
       label: '固资号',
+      minwidth: 135,
+      width: 135,
     },
     {
       field: 'status',
       label: '状态',
-      width: 60,
+      minwidth: 32,
+      width: 32,
       render: ({ data }: any) => {
         if (data.status === -1) return <span class='c-disabled'>未执行</span>;
         if (data.status === 0) return <span class='c-success'>成功</span>;
@@ -2086,16 +2099,20 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
+      width: 90,
+      minwidth: 90,
     },
     {
       field: 'deliverer',
       label: '匹配人',
-      width: 60,
+      width: 50,
+      minwidth: 50,
       render: ({ data }: any) => <WName name={data.deliverer}></WName>,
     },
     {
       field: 'generate_task_id',
       label: '关联生产单',
+      width: 205,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2112,6 +2129,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'init_task_id',
       label: '关联初始化单',
+      width: 110,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2128,11 +2146,13 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'start_at',
       label: '开始时间',
+      width: 160,
       render: ({ data }: any) => (data.status === -1 ? '-' : timeFormatter(data.start_at)),
     },
     {
       field: 'end_at',
       label: '结束时间',
+      width: 160,
       render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
     },
   ];

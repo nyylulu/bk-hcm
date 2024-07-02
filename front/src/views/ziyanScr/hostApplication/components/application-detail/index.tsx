@@ -3,7 +3,7 @@ import { useUserStore } from '@/store';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import CommonCard from '@/components/CommonCard';
-import { Button, Table, Timeline, Message, Input } from 'bkui-vue';
+import { Button, Table, Timeline, Message, Input, Card } from 'bkui-vue';
 import http from '@/http';
 import { useRoute } from 'vue-router';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
@@ -323,52 +323,55 @@ export default defineComponent({
               ]}
             />
           </CommonCard>
+          <Card class={'mt24'} border={false} showHeader={false} showFooter={false}>
+            <p class={'common-card-title'}>需求子单</p>
+            <div class={`common-card-content`}>
+              <Button
+                class={'mr8'}
+                v-clipboard:copy={clipHostIp.value.join('\n')}
+                v-clipboard:success={batchMessage}
+                disabled={selections.value.length === 0}>
+                批量复制IP
+              </Button>
+              {cloundMachineList.value.length > 0 && (
+                <>
+                  <p class={'mt16 mb8'}>云主机</p>
+                  <Table
+                    showOverflowTooltip
+                    data={cloundMachineList.value}
+                    columns={Hostcolumns}
+                    {...{
+                      onSelect: (selections: any) => {
+                        handleSelectionChange(selections, () => true, false);
+                      },
+                      onSelectAll: (selections: any) => {
+                        handleSelectionChange(selections, () => true, true);
+                      },
+                    }}
+                  />
+                </>
+              )}
+              {physicMachineList.value.length > 0 && (
+                <>
+                  <p class={'mt16 mb8'}>物理机</p>
+                  <Table
+                    showOverflowTooltip
+                    {...{
+                      onSelect: (selections: any) => {
+                        handleSelectionChange(selections, () => true, false);
+                      },
+                      onSelectAll: (selections: any) => {
+                        handleSelectionChange(selections, () => true, true);
+                      },
+                    }}
+                    data={physicMachineList.value}
+                    columns={Machinecolumns}
+                  />
+                </>
+              )}
+            </div>
+          </Card>
 
-          <CommonCard title={() => '需求子单'} class={'mt24'}>
-            <Button
-              class={'mr8'}
-              v-clipboard:copy={clipHostIp.value.join('\n')}
-              v-clipboard:success={batchMessage}
-              disabled={selections.value.length === 0}>
-              批量复制IP
-            </Button>
-            {cloundMachineList.value.length > 0 && (
-              <>
-                <p class={'mt16 mb8'}>云主机</p>
-                <Table
-                  showOverflowTooltip
-                  data={cloundMachineList.value}
-                  columns={Hostcolumns}
-                  {...{
-                    onSelect: (selections: any) => {
-                      handleSelectionChange(selections, () => true, false);
-                    },
-                    onSelectAll: (selections: any) => {
-                      handleSelectionChange(selections, () => true, true);
-                    },
-                  }}
-                />
-              </>
-            )}
-            {physicMachineList.value.length > 0 && (
-              <>
-                <p class={'mt16 mb8'}>物理机</p>
-                <Table
-                  showOverflowTooltip
-                  {...{
-                    onSelect: (selections: any) => {
-                      handleSelectionChange(selections, () => true, false);
-                    },
-                    onSelectAll: (selections: any) => {
-                      handleSelectionChange(selections, () => true, true);
-                    },
-                  }}
-                  data={physicMachineList.value}
-                  columns={Machinecolumns}
-                />
-              </>
-            )}
-          </CommonCard>
           <CommonCard title={() => '审批流程'} class={'mt24'}>
             <Button
               theme='primary'

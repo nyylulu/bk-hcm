@@ -77,6 +77,9 @@ export default defineComponent({
         if (row.stage === 'RUNNING' && row.status === 'MATCHING') {
           return true;
         }
+        if (!row.suborder_id) {
+          return true;
+        }
         if (
           ['wait', 'MATCHED_SOME', 'MATCHING'].includes(row.status) ||
           (row.stage === 'SUSPEND' && row.status === 'TERMINATE')
@@ -86,7 +89,10 @@ export default defineComponent({
         if (['UNCOMMIT', 'PAUSED'].includes(row.status)) {
           return true;
         }
-        if (['TERMINATE', 'AUDIT'].includes(row.stage) && !row.status) {
+        if (['AUDIT'].includes(row.stage) && !row.status) {
+          return true;
+        }
+        if (['TERMINATE'].includes(row.stage)) {
           return true;
         }
         if (row.stage === 'DONE' && row.status === 'DONE') {

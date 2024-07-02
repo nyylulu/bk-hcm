@@ -2,7 +2,7 @@ import { defineComponent, ref, watch, computed } from 'vue';
 import ResourceSelect from './components/ResourceSelect';
 import ResourceType from './components/ResourceType';
 import ResourceConfirm from './components/ResourceConfirm';
-import { Dialog, Tab, Button, Table, Sideslider, Message } from 'bkui-vue';
+import { Dialog, Tab, Button, Table, Sideslider } from 'bkui-vue';
 import { BkTabPanel } from 'bkui-vue/lib/tab';
 import usePagination from '@/hooks/usePagination';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -150,6 +150,7 @@ export default defineComponent({
         return prev;
       }, []);
     };
+    const Messagetext = ref('');
     // const ipArray =
     /** 手动输入查询可回收状态 */
     const ipArray = computed(() => {
@@ -158,18 +159,22 @@ export default defineComponent({
         .map((ip) => ip.trim())
         .filter((ip) => ip.length > 0);
     });
+    watch(
+      () => ipArray.value.length,
+      () => {
+        if (ipArray.value.length > 500) {
+          Messagetext.value = `单次回收的IP不能超过500个,已填写${ipArray.value.length}个`;
+        } else {
+          Messagetext.value = '';
+        }
+      },
+    );
     const checkHostRecyclableStatus = async () => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ipv6 = /^([\da-fA-F]{1,4}:){7}[\da-fA-F]{1,4}$/;
       const ips: any[] = [];
       const assetIds: any[] = [];
-      if (ipArray.value.length > 500) {
-        Message({
-          message: `最多添加500台主机,请删除${ipArray.value.length - 500}台后重试`,
-          theme: 'error',
-        });
-        return;
-      }
+
       ipArray.value.forEach((item) => {
         if (ipv4.test(item) || ipv6.test(item)) {
           ips.push(item);
@@ -197,8 +202,10 @@ export default defineComponent({
       } else {
         checkHostRecyclableStatus();
       }
+      lips.value = '';
     };
     const rlTriggerShow = () => {
+      lips.value = '';
       drawer.value = false;
     };
     const takeSnapshot = () => {
@@ -377,6 +384,7 @@ export default defineComponent({
                       text
                       placeholder='请输入 IP地址/固资号，多个换行分割，最多支持500个'
                       rows={1}></bk-input>
+                    <div style={'color:#f67474'}>{Messagetext.value}</div>
                   </BkTabPanel>
                 </Tab>
               </div>
@@ -386,10 +394,10 @@ export default defineComponent({
                 <Button
                   theme='primary'
                   onClick={handleSubmit}
-                  disabled={selections.value.length === 0 && !ipArray.value.length}>
+                  disabled={selections.value.length === 0 && (!ipArray.value.length || ipArray.value.length > 500)}>
                   提交
                 </Button>
-                <Button class={'ml15'} onClick={() => rlTriggerShow(false)}>
+                <Button class={'ml15'} onClick={() => rlTriggerShow()}>
                   取消
                 </Button>
               </>

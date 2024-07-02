@@ -6,6 +6,7 @@ import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import apiService from '@/api/scrApi';
+import './index.scss';
 import { expectedDeliveryTime } from '@/common/util';
 const { FormItem } = Form;
 export default defineComponent({
@@ -266,7 +267,7 @@ export default defineComponent({
       <>
         <Form class={'scr-form-wrapper'}>
           <FormItem label='需求类型'>
-            <bk-select class='tbkselect' disabled v-model={device.value.filter.require_type} filterable>
+            <bk-select class='bk-form-content' disabled v-model={device.value.filter.require_type} filterable>
               {order.value.options.requireTypes.map((item) => (
                 <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
               ))}
@@ -276,7 +277,7 @@ export default defineComponent({
           <FormItem label='地域'>
             <AreaSelector
               ref='areaSelector'
-              class='tbkselect'
+              class='bk-form-content'
               v-model={device.value.filter.region}
               multiple
               clearable
@@ -289,7 +290,7 @@ export default defineComponent({
               ref='zoneSelector'
               multiple
               v-model={device.value.filter.zone}
-              class='tbkselect'
+              class='bk-form-content'
               params={{
                 resourceType: 'QCLOUDCVM',
                 region: device.value.filter.region,
@@ -298,7 +299,7 @@ export default defineComponent({
 
           <FormItem label='实例族'>
             <bk-select
-              class='tbkselect'
+              class='bk-form-content'
               v-model={device.value.filter.device_group}
               multiple
               clearable
@@ -312,7 +313,7 @@ export default defineComponent({
 
           <FormItem label='机型'>
             <bk-select
-              class='tbkselect'
+              class='bk-form-content'
               v-model={device.value.filter.device_type}
               clearable
               disabled={deviceTypeDisabled.value}
@@ -327,7 +328,7 @@ export default defineComponent({
 
           <FormItem label='CPU(核)'>
             <bk-select
-              class='tbkselect'
+              class='bk-form-content'
               v-model={device.value.filter.cpu}
               clearable
               disabled={deviceConfigDisabled.value}
@@ -341,7 +342,7 @@ export default defineComponent({
 
           <FormItem label='内存 (G)'>
             <bk-select
-              class='tbkselect'
+              class='bk-form-content'
               v-model={device.value.filter.mem}
               clearable
               disabled={deviceConfigDisabled.value}
@@ -359,7 +360,7 @@ export default defineComponent({
           <Button onClick={CVMclearFilter}>清空</Button>
         </Form>
         {/* <div style={{width: 100}}> */}
-        <div>
+        <div class={'margin20'}>
           <CVMApplicationTable />
         </div>
       </>

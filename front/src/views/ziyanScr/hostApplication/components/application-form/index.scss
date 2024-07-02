@@ -20,9 +20,14 @@
     }
   }
 }
+.mr10 {
+  margin-right: 10px;
+}
 .QCLOUDCVM-fontweight {
   margin-left: 40px;
   text-align: center;
+  color: #313238;
+  font-weight: 400;
   font-size: 14px;
 }
 .QCLOUDCVM-fontsize {
@@ -61,4 +66,21 @@
 }
 .volumetip {
   color: #e6a23c;
+}
+.QCLOUDCVM-card-content {
+  padding: 0 28px;
+}
+.QCLOUDCVM-card-title {
+  font-weight: 700;
+  font-size: 14px;
+  color: #313238;
+  letter-spacing: 0;
+  margin-right: 16px;
+  margin-bottom: 16px;
+  margin-top: 16px;
+}
+.QCLOUDCVM-card-content-grid-layout {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  column-gap: 24px;
 }
