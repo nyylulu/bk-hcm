@@ -37,3 +37,8 @@ type GetReinstallStatusReq struct {
 	Page     int      `json:"page"`
 	PageSize int      `json:"pageSize"`
 }
+
+// GetXServerProcessReq get X-Server process request
+type GetXServerProcessReq struct {
+	AssetID string `json:"serverAssetId"`
+}

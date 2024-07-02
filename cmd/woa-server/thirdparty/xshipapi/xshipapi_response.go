@@ -69,3 +69,22 @@ type ReinstallStatus struct {
 	CreateTime string       `json:"createTime"`
 	EndTime    string       `json:"endTime"`
 }
+
+// XServerProcessResp get X-Server process response.
+type XServerProcessResp struct {
+	RespMeta `json:",inline"`
+	Data     *XServerProcessRst `json:"data"`
+}
+
+// XServerProcessRst get X-Server process result.
+type XServerProcessRst struct {
+	IsExist   bool             `json:"isExist"`
+	Processes []XServerProcess `json:"processList"`
+}
+
+// XServerProcess X-Server process info.
+type XServerProcess struct {
+	ID      int    `json:"instanceId"`
+	Name    string `json:"processName"`
+	AssetID string `json:"serverAssetId"`
+}

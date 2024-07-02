@@ -23,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	"hcm/pkg/logs"
 )
 
@@ -89,7 +90,7 @@ func (d *Detector) checkUworkPass(step *table.DetectStep) (string, error) {
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to get host asset id: err: %s", err.Error())
 	}
 
-	respProcess, err := d.uwork.CheckUworkProcess(nil, nil, host.AssetID)
+	respProcess, err := d.xship.GetXServerProcess(nil, nil, host.AssetID)
 	if err != nil {
 		logs.Errorf("failed to check uwork process, err: %v, step id: %s", err, step.ID)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork process, err: %v", err)
@@ -99,16 +100,16 @@ func (d *Detector) checkUworkPass(step *table.DetectStep) (string, error) {
 	exeInfoProcess := fmt.Sprintf("uwork process response: %s", processRespStr)
 	exeInfos = append(exeInfos, exeInfoProcess)
 
-	if respProcess.Return != 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("check uwork process api return err: %s", respProcess.Detail)
+	if respProcess.Code != xshipapi.CodeSuccess {
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("check uwork process api return err: %s", respProcess.Message)
 	}
 
-	if len(respProcess.Data) != 1 {
-		return strings.Join(exeInfos, "\n"), errors.New("check uwork process api return err, for data size is not 1")
+	if respProcess.Data == nil {
+		return strings.Join(exeInfos, "\n"), errors.New("check uwork process api return data is nil")
 	}
 
 	processes := make([]string, 0)
-	for _, process := range respProcess.Data[0].ProcessList {
+	for _, process := range respProcess.Data.Processes {
 		processes = append(processes, fmt.Sprintf("%d(%s)", process.ID, process.Name))
 	}
 

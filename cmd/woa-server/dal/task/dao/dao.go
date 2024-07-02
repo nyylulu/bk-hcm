@@ -23,6 +23,7 @@ type DaoSet interface {
 	DetectStepCfg() DetectStepCfg
 	ReturnTask() ReturnTask
 	DissolvePlan() DissolvePlan
+	DissolveAsset() DissolveAsset
 }
 
 type set struct {
@@ -34,6 +35,7 @@ type set struct {
 	detectStepCfg DetectStepCfg
 	returnTask    ReturnTask
 	dissolvePlan  DissolvePlan
+	dissolveAsset DissolveAsset
 }
 
 var daoSet *set
@@ -48,6 +50,7 @@ func init() {
 		detectStepCfg: &detectStepCfgDao{},
 		returnTask:    &returnTaskDao{},
 		dissolvePlan:  &dissolvePlanDao{},
+		dissolveAsset: &dissolveAssetDao{},
 	}
 }
 
@@ -91,7 +94,12 @@ func (s *set) ReturnTask() ReturnTask {
 	return s.returnTask
 }
 
-// DissolvePlan get resource dissolve plan operation interface
+// DissolvePlan get resource dissolve module operation interface
 func (s *set) DissolvePlan() DissolvePlan {
 	return s.dissolvePlan
+}
+
+// DissolveAsset get resource dissolve asset plan operation interface
+func (s *set) DissolveAsset() DissolveAsset {
+	return s.dissolveAsset
 }

@@ -37,6 +37,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/tgwapi"
 	"hcm/cmd/woa-server/thirdparty/tmpapi"
 	"hcm/cmd/woa-server/thirdparty/uworkapi"
+	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -47,6 +48,7 @@ import (
 type Detector struct {
 	cc      cmdb.Client
 	uwork   uworkapi.UworkClientInterface
+	xship   xshipapi.XshipClientInterface
 	tmp     tmpapi.TMPClientInterface
 	gcs     gcsapi.GcsClientInterface
 	tcaplus tcaplusapi.TcaplusClientInterface
@@ -66,6 +68,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 	detector := &Detector{
 		cc:      esbCli.Cmdb(),
 		uwork:   thirdCli.Uwork,
+		xship:   thirdCli.Xship,
 		tmp:     thirdCli.Tmp,
 		gcs:     thirdCli.GCS,
 		tcaplus: thirdCli.Tcaplus,
@@ -239,7 +242,8 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 		// init step status
 		step, err = d.initRecycleStep(task, stepCfg)
 		if err != nil {
-			logs.Errorf("failed to init recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name, err)
+			logs.Errorf("failed to init recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name,
+				err)
 			return err
 		}
 	}

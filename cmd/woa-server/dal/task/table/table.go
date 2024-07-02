@@ -62,6 +62,8 @@ const (
 	DetectStepCfgTable = "cr_DetectStepCfg"
 	// ReturnTaskTable the table name of resource recycle return task
 	ReturnTaskTable = "cr_ReturnTask"
-	// DissolvePlanTable the table name of resource dissolve plan
+	// DissolvePlanTable the table name of modules in resource dissolve plan
 	DissolvePlanTable = "cr_DissolvePlan"
+	// DissolveAssetTable the table name of assets in resource dissolve plan
+	DissolveAssetTable = "cr_DissolveAsset"
 )

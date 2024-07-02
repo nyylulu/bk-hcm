@@ -387,13 +387,35 @@ func getRecycleType(host *table.RecycleHost) table.RecycleType {
 
 // isDissolveDevice verify if given host is in dissolve plan
 func isDissolveDevice(host *table.RecycleHost) bool {
+	return isDissolveModule(host.ModuleName) || isDissolveAsset(host.AssetID)
+}
+
+func isDissolveModule(moduleName string) bool {
 	filter := map[string]interface{}{
-		"module_name": host.ModuleName,
+		"module_name": moduleName,
 	}
 
 	cnt, err := dao.Set().DissolvePlan().CountDissolvePlan(context.Background(), filter)
 	if err != nil {
 		logs.Warnf("failed to count dissolve plan, err: %v", err)
+		return false
+	}
+
+	if cnt > 0 {
+		return true
+	}
+
+	return false
+}
+
+func isDissolveAsset(assetID string) bool {
+	filter := map[string]interface{}{
+		"asset_id": assetID,
+	}
+
+	cnt, err := dao.Set().DissolveAsset().CountDissolveAsset(context.Background(), filter)
+	if err != nil {
+		logs.Errorf("failed to count dissolve asset, err: %v", err)
 		return false
 	}
 

@@ -33,6 +33,8 @@ type XshipClientInterface interface {
 	CreateReinstallTask(ctx context.Context, header http.Header, req *ReinstallReq) (*ReinstallResp, error)
 	// GetReinstallTaskStatus get host reinstall task status
 	GetReinstallTaskStatus(ctx context.Context, header http.Header, orderID string) (*ReinstallStatusResp, error)
+	// GetXServerProcess get server processes in X-Server.
+	GetXServerProcess(ctx context.Context, header http.Header, assetID string) (*XServerProcessResp, error)
 }
 
 // NewXshipClientInterface creates a Xship api instance
@@ -129,6 +131,40 @@ func (x *xshipApi) GetReinstallTaskStatus(ctx context.Context, header http.Heade
 	}
 
 	resp := new(ReinstallStatusResp)
+	err := x.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return resp, nil
+}
+
+// GetXServerProcess get server processes in X-Server.
+func (x *xshipApi) GetXServerProcess(ctx context.Context, header http.Header, assetID string) (
+	*XServerProcessResp, error) {
+
+	subPath := "xwing-service-security/queryServerInXserverProcess"
+
+	key, val := x.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	header.Set("Content-Type", "application/json")
+	header.Set("x-client-id", x.opts.ClientID)
+
+	req := &GetXServerProcessReq{
+		AssetID: assetID,
+	}
+
+	resp := new(XServerProcessResp)
 	err := x.client.Post().
 		WithContext(ctx).
 		Body(req).
