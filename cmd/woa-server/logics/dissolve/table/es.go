@@ -93,27 +93,8 @@ func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, inde
 	return &dissolve.ListHostDetails{Details: details}, nil
 }
 
-func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, hostBizIDMap map[int64]int64) (
-	[]dissolve.Host, error) {
-
-	cond := make(map[string][]interface{})
-	hostMap := make(map[string]cmdb.HostInfo)
-	for _, host := range ccHosts {
-		cond[es.AssetID] = append(cond[es.AssetID], host.BkAssetId)
-		hostMap[host.BkAssetId] = host
-	}
-
-	page := &core.BasePage{Start: 0, Limit: uint(len(ccHosts))}
-	data, err := l.findHostFromES(kt, cond, es.GetLatestIndex(), page)
-	if err != nil {
-		logs.Errorf("find host failed, err: %v, req: %+v, page: %+v, rid: %s", err, cond, page, kt.Rid)
-		return nil, err
-	}
-
-	esHostMap := make(map[string]dissolve.Host)
-	for _, host := range data.Details {
-		esHostMap[host.ServerAssetID] = host
-	}
+func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMap map[string]dissolve.Host,
+	hostBizIDMap map[int64]int64) ([]dissolve.Host, error) {
 
 	bizIDs := make([]int64, 0)
 	for _, bizID := range hostBizIDMap {

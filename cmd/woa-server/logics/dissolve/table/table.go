@@ -22,11 +22,13 @@ package table
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	logicshost "hcm/cmd/woa-server/logics/dissolve/host"
 	logicsmodule "hcm/cmd/woa-server/logics/dissolve/module"
 	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
@@ -163,28 +165,31 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 		return nil, err
 	}
 
-	// 1. 由于有些条件值不在cc的主机字段上，所以先根据主机上有的字段，查出host id
+	// 1.由于有些条件值不在cc的主机字段上，所以先根据主机上有的字段，查出host id
 	cond := req.GetCCHostCond(moduleAssetIDMap)
 	originHostIDs, err := l.getAllHostIDFromCC(kt, cond)
 	if err != nil {
 		logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
 		return nil, err
 	}
+
 	if len(originHostIDs) == 0 {
 		return &dissolve.ListHostDetails{Details: []dissolve.Host{}}, nil
 	}
 
-	// 2. 根据业务条件筛选host id
+	// 2.根据业务条件筛选host id
 	bizIDName, err := l.getBizIDNameByName(kt, req.BizNames, req.GroupIDs)
 	if err != nil {
 		logs.Errorf("get biz id and name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+
 	blackBizIDName, err := l.getBlackBizIDName(kt)
 	if err != nil {
 		logs.Errorf("get black biz ids failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+
 	hostIDs, hostBizIDMap, err := l.getHostIDByBizCond(kt, originHostIDs, bizIDName, blackBizIDName)
 	if err != nil {
 		logs.Errorf("get host id by biz cond failed, err: %v, hostIDs: %v, bizIDName: %v, blackBizIDName: %v, rid: %s",
@@ -192,21 +197,68 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 		return nil, err
 	}
 
-	// 3. 根据过滤出来的hostIDs查询cc中的主机
-	hosts, count, err := l.getHostByIDFromCC(kt, hostIDs, req.Page)
-	if err != nil {
-		logs.Errorf("get host from cc failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
-		return nil, err
+	var firstErr error
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	// 3.根据过滤出来的hostIDs查询cc中的主机
+	var ccHosts []cmdb.HostInfo
+	var count int64
+	go func() {
+		defer func() {
+			wg.Done()
+		}()
+
+		ccHosts, count, err = l.getHostByIDFromCC(kt, hostIDs, req.Page)
+		if err != nil {
+			logs.Errorf("get host from cc failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
+			firstErr = err
+		}
+	}()
+
+	// 4.根据条件查询es主机数据
+	esHostMap := make(map[string]dissolve.Host)
+	go func() {
+		defer func() {
+			wg.Done()
+		}()
+
+		if req.Page.Count {
+			return
+		}
+
+		cond, err := req.GetESCond(moduleAssetIDMap, bizIDName, blackBizIDName)
+		if err != nil {
+			logs.Errorf("get es cond failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			firstErr = err
+			return
+		}
+		res, err := l.findHostFromES(kt, cond, l.getOriginHostIndex(), &core.BasePage{Limit: noLimit})
+		if err != nil {
+			logs.Errorf("find host from es failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
+			firstErr = err
+			return
+		}
+
+		for _, host := range res.Details {
+			esHostMap[host.ServerAssetID] = host
+		}
+	}()
+
+	wg.Wait()
+	if firstErr != nil {
+		logs.Errorf("find current host data failed, err: %v, req: %v, rid: %s", firstErr, req, kt.Rid)
+		return nil, firstErr
 	}
 
 	if req.Page.Count {
 		return &dissolve.ListHostDetails{Count: count}, nil
 	}
 
-	// 4. 从es中填充主机缺少的字段
-	data, err := l.fillHostDataByES(kt, hosts, hostBizIDMap)
+	// 5.从es中填充主机缺少的字段
+	data, err := l.fillHostDataByES(kt, ccHosts, esHostMap, hostBizIDMap)
 	if err != nil {
-		logs.Errorf("fill host data by es failed, err: %v, host: %+v, rid: %s", err, hosts, kt.Rid)
+		logs.Errorf("fill host data by es failed, err: %v, host: %+v, rid: %s", err, ccHosts, kt.Rid)
 		return nil, err
 	}
 
@@ -215,15 +267,49 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 
 // ListResDissolveTable list resource dissolve table
 func (l *logics) ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq) ([]dissolve.BizDetail, error) {
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	var firstErr error
+
 	// 1.获取原始业务和主机数据
-	bizMap, err := l.getOriginBizData(kt, req)
-	if err != nil {
-		logs.Errorf("get origin business data failed, err: %v, cond: %v, rid: %s", err, req, kt.Rid)
-		return nil, err
+	var bizMap map[int64]dissolve.BizDetail
+	go func() {
+		defer func() {
+			wg.Done()
+		}()
+
+		var err error
+		bizMap, err = l.getOriginBizData(kt, req)
+		if err != nil {
+			logs.Errorf("get origin business data failed, err: %v, cond: %v, rid: %s", err, req, kt.Rid)
+			firstErr = err
+		}
+	}()
+
+	// 2.获取当前主机数据
+	var res *dissolve.ListHostDetails
+	go func() {
+		defer func() {
+			wg.Done()
+		}()
+
+		cond := &dissolve.HostListReq{ResDissolveReq: *req, Page: &core.BasePage{Limit: noLimit}}
+		var err error
+		res, err = l.FindCurHost(kt, cond)
+		if err != nil {
+			logs.Errorf("find current host failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
+			firstErr = err
+		}
+	}()
+
+	wg.Wait()
+	if firstErr != nil {
+		logs.Errorf("find host data failed, err: %v, req: %v, rid: %s", firstErr, req, kt.Rid)
+		return nil, firstErr
 	}
 
-	// 2.补充当前的主机相关数据
-	bizMap, err = l.fillCurHostData(kt, req, bizMap)
+	// 3.补充当前的主机相关数据到原始数据中
+	bizMap, err := l.fillCurHostData(res, bizMap)
 	if err != nil {
 		logs.Errorf("fill current host data failed, err: %v, cond: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
@@ -232,7 +318,7 @@ func (l *logics) ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq)
 		return make([]dissolve.BizDetail, 0), nil
 	}
 
-	// 3.计算总数以及裁撤进度
+	// 4.计算总数以及裁撤进度
 	result, err := calculateBizData(bizMap)
 	if err != nil {
 		logs.Errorf("calculate business data failed, err: %v, rid: %s", err, kt.Rid)
@@ -272,14 +358,11 @@ func (l *logics) getOriginBizData(kt *kit.Kit, cond *dissolve.ResDissolveReq) (m
 	return bizMap, nil
 }
 
-func (l *logics) fillCurHostData(kt *kit.Kit, cond *dissolve.ResDissolveReq, bizMap map[int64]dissolve.BizDetail) (
+func (l *logics) fillCurHostData(res *dissolve.ListHostDetails, bizMap map[int64]dissolve.BizDetail) (
 	map[int64]dissolve.BizDetail, error) {
 
-	req := &dissolve.HostListReq{ResDissolveReq: *cond, Page: &core.BasePage{Limit: noLimit}}
-	res, err := l.FindCurHost(kt, req)
-	if err != nil {
-		logs.Errorf("find current host failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
-		return nil, err
+	if res == nil {
+		return nil, fmt.Errorf("res param is nil")
 	}
 
 	for _, host := range res.Details {

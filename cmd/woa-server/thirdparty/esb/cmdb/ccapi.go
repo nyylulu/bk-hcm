@@ -261,7 +261,7 @@ func (c *ccCli) GetHostBizIds(ctx context.Context, header http.Header, hostIds [
 			result[data.HostID] = data.AppID
 		}
 
-		if len(resp.Data) < common.BKMaxInstanceLimit {
+		if end == len(hostIds) {
 			break
 		}
 
