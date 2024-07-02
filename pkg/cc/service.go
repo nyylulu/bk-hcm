@@ -363,11 +363,12 @@ func (s WebServerSetting) Validate() error {
 
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
-	Network  Network   `yaml:"network"`
-	Service  Service   `yaml:"service"`
-	Database DataBase  `yaml:"database"`
-	Log      LogOption `yaml:"log"`
-	Async    Async     `yaml:"async"`
+	Network     Network   `yaml:"network"`
+	Service     Service   `yaml:"service"`
+	Database    DataBase  `yaml:"database"`
+	OBSDatabase *DataBase `yaml:"obs_database,omitempty"`
+	Log         LogOption `yaml:"log"`
+	Async       Async     `yaml:"async"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -380,9 +381,10 @@ func (s *TaskServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Database.trySetDefault()
+	if s.OBSDatabase != nil {
+		s.OBSDatabase.trySetDefault()
+	}
 	s.Log.trySetDefault()
-
-	return
 }
 
 // Validate TaskServerSetting option.
@@ -398,6 +400,12 @@ func (s TaskServerSetting) Validate() error {
 
 	if err := s.Database.validate(); err != nil {
 		return err
+	}
+
+	if s.OBSDatabase != nil {
+		if err := s.OBSDatabase.validate(); err != nil {
+			return err
+		}
 	}
 
 	return nil

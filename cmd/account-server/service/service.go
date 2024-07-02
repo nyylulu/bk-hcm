@@ -59,11 +59,12 @@ import (
 
 // Service do all the account server's work
 type Service struct {
-	clientSet   *client.ClientSet
-	serve       *http.Server
-	authorizer  auth.Authorizer
-	audit       logicaudit.Interface
-	billManager *bill.BillManager
+	clientSet     *client.ClientSet
+	serve         *http.Server
+	authorizer    auth.Authorizer
+	audit         logicaudit.Interface
+	billManager   *bill.BillManager
+	obsController *bill.SyncController
 
 	// finOps  Finops client
 	finOps pkgfinops.Client
@@ -108,6 +109,16 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		CurrentRootControllers: make(map[string]*bill.RootAccountController),
 	}
 
+	// start ob manager
+	newObsControllerOption := &bill.SyncControllerOption{
+		Sd:     sd,
+		Client: apiClientSet,
+	}
+	newObsController, err := bill.NewSyncController(newObsControllerOption)
+	if err != nil {
+		return nil, err
+	}
+
 	finOpsCfg := cc.AccountServer().FinOps
 	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
 	if err != nil {
@@ -115,11 +126,12 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	}
 
 	svr := &Service{
-		clientSet:   apiClientSet,
-		authorizer:  authorizer,
-		audit:       logicaudit.NewAudit(apiClientSet.DataService()),
-		billManager: newBillManager,
-		finOps:      finOpsCli,
+		clientSet:     apiClientSet,
+		authorizer:    authorizer,
+		audit:         logicaudit.NewAudit(apiClientSet.DataService()),
+		billManager:   newBillManager,
+		obsController: newObsController,
+		finOps:        finOpsCli,
 	}
 
 	return svr, nil
@@ -158,6 +170,9 @@ func (s *Service) ListenAndServeRest() error {
 
 	logs.Infof("start bill manager")
 	go s.billManager.Run(context.Background())
+
+	logs.Infof("start sync controller")
+	go s.obsController.Run()
 
 	logs.Infof("listen restful server on %s with secure(%v) now.", server.Addr, network.TLS.Enable())
 
@@ -213,7 +228,6 @@ func (s *Service) apiSet() *restful.Container {
 	billsyncrecord.InitService(c)
 
 	finops.InitService(c)
-
 
 	return restful.NewContainer().Add(c.WebService)
 }

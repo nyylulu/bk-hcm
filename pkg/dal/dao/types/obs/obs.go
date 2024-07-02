@@ -17,52 +17,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package actcli
+package obs
 
 import (
-	"hcm/pkg/client"
-	dataservice "hcm/pkg/client/data-service"
-	hcservice "hcm/pkg/client/hc-service"
-	"hcm/pkg/dal/dao"
+	tableobs "hcm/pkg/dal/table/obs"
 )
 
-var (
-	cliSet    *client.ClientSet
-	daoSet    dao.Set
-	obsDaoSet dao.Set
-)
-
-// SetClientSet set client set.
-func SetClientSet(cli *client.ClientSet) {
-	cliSet = cli
-}
-
-// GetHCService get hc service.
-func GetHCService() *hcservice.Client {
-	return cliSet.HCService()
-}
-
-// GetDataService get data service.
-func GetDataService() *dataservice.Client {
-	return cliSet.DataService()
-}
-
-// SetDaoSet set dao set.
-func SetDaoSet(cli dao.Set) {
-	daoSet = cli
-}
-
-// GetDaoSet get dao set.
-func GetDaoSet() dao.Set {
-	return daoSet
-}
-
-// SetObsDaoSet set dao set.
-func SetObsDaoSet(cli dao.Set) {
-	obsDaoSet = cli
-}
-
-// GetObsDaoSet get dao set.
-func GetObsDaoSet() dao.Set {
-	return obsDaoSet
+// ListOBSBillItemHuaweiDetails list account bill summary daily details.
+type ListOBSBillItemHuaweiDetails struct {
+	Count   *uint64                      `json:"count,omitempty"`
+	Details []tableobs.OBSBillItemHuawei `json:"details,omitempty"`
 }

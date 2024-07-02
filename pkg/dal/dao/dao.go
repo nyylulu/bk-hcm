@@ -59,9 +59,10 @@ import (
 	"hcm/pkg/dal/dao/dissolve/host"
 	"hcm/pkg/dal/dao/dissolve/module"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
+	"hcm/pkg/dal/dao/obs"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
-	"hcm/pkg/dal/dao/resource-plan"
+	resplan "hcm/pkg/dal/dao/resource-plan"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -117,6 +118,7 @@ type Set interface {
 	AccountBillItem() bill.AccountBillItem
 	AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem
 	AccountBillSummaryRoot() bill.AccountBillSummaryRoot
+	OBSBillItemHuawei() obs.OBSBillItemHuawei
 	RootAccountBillConfig() bill.RootAccountBillConfig
 	AccountBillExchangeRate() bill.AccountBillExchangeRate
 	AccountBillSyncRecord() bill.AccountBillSyncRecord
@@ -572,6 +574,14 @@ func (s *set) AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem {
 // AccountBillSummaryRoot returns AccountBillSummaryRoot dao.
 func (s *set) AccountBillSummaryRoot() bill.AccountBillSummaryRoot {
 	return &bill.AccountBillSummaryRootDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// OBSBillItemHuawei returns OBSBillItemHuawei dao.
+func (s *set) OBSBillItemHuawei() obs.OBSBillItemHuawei {
+	return &obs.OBSBillItemHuaweiDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}

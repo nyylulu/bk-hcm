@@ -58,6 +58,8 @@ var defaultFlowNameMap = map[FlowName]struct{}{
 	FlowBillDailySummary:       {},
 	FlowBillMainAccountSummary: {},
 	FlowBillRootAccountSummary: {},
+	FlowObsClean:               {},
+	FlowObsSync:                {},
 }
 
 // ValidateDefault validate default FlowName.
@@ -153,4 +155,10 @@ const (
 	FlowBillDailySummary       FlowName = "bill_daily_summary"
 	FlowBillMainAccountSummary FlowName = "bill_main_account_summary"
 	FlowBillRootAccountSummary FlowName = "bill_root_account_summary"
+)
+
+// OBS相关Flow
+const (
+	FlowObsClean FlowName = "obs_clean"
+	FlowObsSync  FlowName = "obs_sync"
 )

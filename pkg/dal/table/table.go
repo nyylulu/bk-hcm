@@ -211,6 +211,9 @@ const (
 	AccountBillSummaryRootTable = "account_bill_summary_root"
 	// AccountBillSummaryMainTable 月度汇总账单
 	AccountBillSummaryMainTable = "account_bill_summary_main"
+
+	// OBSBillHuaweiItemTable OBS华为账单表
+	OBSBillHuaweiItemTable = "obs_huawei_bills"
 	// RootAccountBillConfigTable 一级账号账单配置表
 	RootAccountBillConfigTable = "root_account_bill_config"
 	// AccountBillExchangeRateTable 账单汇率换算表
@@ -333,8 +336,9 @@ var TableMap = map[Name]struct{}{
 	MainAccountTable: {},
 	RootAccountTable: {},
 
-	RecycleModuleInfo: {},
-	RecycleHostInfo:   {},
+	OBSBillHuaweiItemTable: {},
+	RecycleModuleInfo:      {},
+	RecycleHostInfo:        {},
 }
 
 // Register 注册表名
