@@ -22,6 +22,7 @@ package dissolve
 import (
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -35,6 +36,13 @@ func (s *service) ListOriginHost(cts *rest.Contexts) (interface{}, error) {
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 自研云资源-业务-机房裁撤-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	result, err := s.logics.Table().FindOriginHost(cts.Kit, req)
@@ -57,6 +65,13 @@ func (s *service) ListCurHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 自研云资源-业务-机房裁撤-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
 	result, err := s.logics.Table().FindCurHost(cts.Kit, req)
 	if err != nil {
 		logs.Errorf("find current host failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
@@ -74,6 +89,13 @@ func (s *service) ListResDissolveTable(cts *rest.Contexts) (interface{}, error) 
 	}
 
 	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 自研云资源-业务-机房裁撤-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+	if err != nil {
 		return nil, err
 	}
 

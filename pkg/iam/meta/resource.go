@@ -99,7 +99,7 @@ const (
 	RootAccount ResourceType = "root_account"
 	// ZiyanResInventory 自研云资源-主机库存-菜单粒度
 	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
-	// ZiyanResDissolve 自研云资源-机房裁撤-菜单粒度
+	// ZiyanResDissolve 自研云资源-业务-机房裁撤-菜单粒度
 	ZiyanResDissolve ResourceType = "ziyan_resource_dissolve"
 	// ZiyanCvmType 自研云资源-CVM机型-菜单粒度
 	ZiyanCvmType ResourceType = "ziyan_cvm_type"

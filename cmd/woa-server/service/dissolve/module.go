@@ -24,6 +24,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -37,6 +38,13 @@ func (s *service) CreateRecycledModule(cts *rest.Contexts) (interface{}, error) 
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 自研云资源-机房裁撤管理-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolveManage, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	ids, err := s.logics.RecycledModule().Create(cts.Kit, req.Modules)
@@ -57,6 +65,13 @@ func (s *service) UpdateRecycledModule(cts *rest.Contexts) (interface{}, error) 
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 自研云资源-机房裁撤管理-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolveManage, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	if err := s.logics.RecycledModule().Update(cts.Kit, &req.RecycleModuleTable); err != nil {
@@ -96,6 +111,13 @@ func (s *service) DeleteRecycledModule(cts *rest.Contexts) (interface{}, error) 
 	req := new(model.RecycleModuleDeleteReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	// 自研云资源-机房裁撤管理-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolveManage, Action: meta.Find}})
+	if err != nil {
+		return nil, err
 	}
 
 	if err := req.Validate(); err != nil {
