@@ -240,16 +240,15 @@ export default defineComponent({
             <div class='div-title'>回收资源</div>
             <div class='div-components'>
               <bk-steps class='div-steps' cur-step={active.value} steps={objectSteps.value} />
-              {active.value === 1 && (
-                <ResourceSelect
-                  class='div-ResourceSelect'
-                  table-hosts={tableHosts.value}
-                  table-selected-hosts={tableSelectedHosts.value}
-                  onUpdateHosts={updateHosts}
-                  onDrawer={upDrawer}
-                  onUpdateSelectedHosts={updateSelectedHosts}
-                  onUpdateRemark={updateRemark}></ResourceSelect>
-              )}
+              <ResourceSelect
+                v-show={active.value === 1}
+                class='div-ResourceSelect'
+                table-hosts={tableHosts.value}
+                table-selected-hosts={tableSelectedHosts.value}
+                onUpdateHosts={updateHosts}
+                onDrawer={upDrawer}
+                onUpdateSelectedHosts={updateSelectedHosts}
+                onUpdateRemark={updateRemark}></ResourceSelect>
               {active.value === 2 && (
                 <ResourceType ref='resourceType' returnPlan={returnPlan.value} updateTypes={updateTypes}></ResourceType>
               )}

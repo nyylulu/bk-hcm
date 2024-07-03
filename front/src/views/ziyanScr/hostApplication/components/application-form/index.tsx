@@ -630,7 +630,9 @@ export default defineComponent({
           theme: 'success',
           message,
         });
-        router.go(-1);
+        router.push({
+          path: '/ziyanScr/hostApplication',
+        });
       } finally {
         isLoading.value = false;
       }

@@ -131,6 +131,11 @@ export default defineComponent({
     };
     const triggerShow = (val: boolean) => {
       batchEditDialogVisible.value = val;
+      batchEditForm.value = {
+        comment: '',
+        enableCapacity: 0,
+        enableApply: 0,
+      };
     };
     const handleConfirm = () => {
       const properties = serializeBatchEditForm();
@@ -142,7 +147,14 @@ export default defineComponent({
 
       batchEditDialogVisible.value = false;
       selections.value = [];
-      getListData();
+      batchEditForm.value = {
+        comment: '',
+        enableCapacity: 0,
+        enableApply: 0,
+      };
+      setTimeout(() => {
+        getListData();
+      }, 1000);
     };
     const serializeBatchEditForm = () => {
       const { comment, enableApply, enableCapacity } = batchEditForm.value;
@@ -408,7 +420,7 @@ export default defineComponent({
           width={600}
           onConfirm={createHandleConfirm}
           onClosed={() => createTriggerShow()}>
-          <CreateDevice onQueryList={getListData} ref={createRef} />
+          <CreateDevice onQueryList={loadResources} ref={createRef} />
         </Dialog>
       </div>
     );
