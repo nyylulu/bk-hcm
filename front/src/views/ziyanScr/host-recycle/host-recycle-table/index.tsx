@@ -208,12 +208,21 @@ export default defineComponent({
         },
       });
     };
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        recycleForm.value.bk_username = [username];
+      },
+    );
+
     watch(
       () => props.subBizBillNum,
       (newVal) => {
         enterDetail(newVal);
       },
     );
+
     const opBtnDisabled = computed(() => {
       return (status) => {
         if (

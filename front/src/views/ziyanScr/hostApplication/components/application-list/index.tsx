@@ -414,6 +414,13 @@ export default defineComponent({
     });
 
     watch(
+      () => userStore.username,
+      (username) => {
+        formModel.user = [username];
+      },
+    );
+
+    watch(
       () => businessSelectorRef.value?.businessList,
       (val) => {
         if (!val?.length) return;
@@ -421,6 +428,7 @@ export default defineComponent({
       },
       { deep: true },
     );
+
     const getOrderRoute = (row) => {
       let routeParams: any = {
         name: 'host-application-detail',
@@ -550,7 +558,7 @@ export default defineComponent({
             </Button>
             <Button
               onClick={() => {
-                resetForm();
+                resetForm({ user: [userStore.username] });
                 getListData();
               }}>
               清空

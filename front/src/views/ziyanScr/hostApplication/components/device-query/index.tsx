@@ -26,7 +26,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const { formModel, resetForm } = useFormModel({
       orderId: '',
-      bkBizId: ['all'],
+      bkBizId: [],
       bkUsername: [userStore.username],
       ip: '',
       requireType: '',

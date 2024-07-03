@@ -115,6 +115,14 @@ export default defineComponent({
       end: getDate('yyyy-MM-dd', 0),
     });
     const filter = reactive(getDefaultFilter());
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        filter.bk_username = [username];
+      },
+    );
+
     // 路由跳转至资源上/下架页面
     const gotoCreatePage = () => {
       router.push({ name: 'scrResourceManageCreate', query: { type: activeType.value } });

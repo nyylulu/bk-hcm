@@ -1,4 +1,4 @@
-import { defineComponent, type PropType, ref, computed } from 'vue';
+import { defineComponent, type PropType, ref, computed, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -7,7 +7,7 @@ import { useUserStore } from '@/store';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-import OrganizationSelect from '@/components/OrganizationSelect/index';
+// import OrganizationSelect from '@/components/OrganizationSelect/index';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import MemberSelect from '@/components/MemberSelect';
 import CurrentDialog from '../current-dialog';
@@ -83,6 +83,13 @@ export default defineComponent({
     const searchParams = ref();
     const moduleNames = ref<string[]>([]);
     const tableColumns = ref(columns);
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        operators.value = [username];
+      },
+    );
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
@@ -174,13 +181,13 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect>
+          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
+          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect> */}
           <span class={cssModule['search-label']}>{t('业务')}：</span>
           <BusinessSelector
             class={cssModule['search-item']}
             multiple
-            isAudit={true}
+            authed={true}
             isShowAll={true}
             autoSelect={true}
             v-model={bkBizIds.value}></BusinessSelector>

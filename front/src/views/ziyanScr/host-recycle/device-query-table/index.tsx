@@ -147,6 +147,13 @@ export default defineComponent({
     });
 
     watch(
+      () => userStore.username,
+      (username) => {
+        deviceForm.value.bk_username = [username];
+      },
+    );
+
+    watch(
       () => businessRef.value?.businessList,
       (val) => {
         if (!val?.length) return;

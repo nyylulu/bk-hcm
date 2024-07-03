@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
+import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRequireTypes } from '@/api/host/task';
@@ -44,6 +44,7 @@ export default defineComponent({
     const cvmProduceForm = ref(defaultCvmProduceForm());
     const timeForm = ref(defaultTime());
     const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
+
     const timeObj = computed(() => {
       return {
         start: handleTime(timeForm.value[0]),
@@ -59,6 +60,15 @@ export default defineComponent({
       bk_username: [userStore.username],
       page: pageInfo.value,
     });
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        cvmProduceForm.value.bk_username = [username];
+        requestListParams.value.bk_username = [username];
+      },
+    );
+
     const loadOrders = () => {
       const params = {
         ...cvmProduceForm.value,

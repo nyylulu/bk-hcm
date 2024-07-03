@@ -3,8 +3,8 @@ import { reactive, UnwrapRef } from 'vue';
 function useFormModel<T extends object>(initialState: T) {
   const formModel = reactive({ ...initialState }) as UnwrapRef<T>;
 
-  function resetForm() {
-    Object.assign(formModel, initialState);
+  function resetForm(defaults = {}) {
+    Object.assign(formModel, initialState, defaults);
   }
   function deepClear(obj: any, skipKey: string) {
     if (Array.isArray(obj)) {
