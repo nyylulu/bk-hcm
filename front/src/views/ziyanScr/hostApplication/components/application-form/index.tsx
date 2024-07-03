@@ -1071,7 +1071,7 @@ export default defineComponent({
                               <bk-select
                                 v-model={pmForm.value.spec.device_type}
                                 default-first-option
-                                class='width-300 mr16'
+                                style={'width:300px'}
                                 filterable>
                                 {pmForm.value.options.deviceTypes.map((deviceType: { device_type: any }) => (
                                   <bk-option
@@ -1084,32 +1084,32 @@ export default defineComponent({
                             <bk-form-item label='RAID 类型'>
                               <span> {pmForm.value.spec.raid_type || '-'}</span>
                             </bk-form-item>
-
                             <bk-form-item label='操作系统' required property='os_type'>
-                              <bk-select class='width-400' v-model={pmForm.value.spec.os_type}>
+                              <bk-select style={'width:300px'} v-model={pmForm.value.spec.os_type}>
                                 {pmForm.value.options.osTypes.map((osType) => (
                                   <bk-option key={osType} value={osType} label={osType}></bk-option>
                                 ))}
                               </bk-select>
                             </bk-form-item>
                             <bk-form-item label='运营商'>
-                              <bk-select class='width-300' v-model={pmForm.value.spec.isp}>
+                              <bk-select style={'width:300px'} v-model={pmForm.value.spec.isp}>
                                 <bk-option key='无' value='' label='无'></bk-option>
                                 {pmForm.value.options.isps.map((isp) => (
                                   <bk-option key={isp} value={isp} label={isp}></bk-option>
                                 ))}
                               </bk-select>
                             </bk-form-item>
-                            <div class='displayflex'>
+                            <div class='QCLOUDCVM-displayflex'>
                               <bk-form-item label='需求数量' required property='replicas'>
                                 <Input
-                                  class='item-warp-replicas mr16'
+                                  style={'width:80px'}
                                   type='number'
                                   v-model={pmForm.value.spec.replicas}
                                   min={1}></Input>
                               </bk-form-item>
-                              <bk-form-item label='反亲和性' required property='antiAffinityLevel'>
+                              <bk-form-item label='反亲和性' required label-width='90' property='antiAffinityLevel'>
                                 <AntiAffinityLevelSelect
+                                  style={'width:130px'}
                                   v-model={pmForm.value.spec.antiAffinityLevel}
                                   params={{
                                     resourceType: resourceForm.value.resourceType,
@@ -1120,7 +1120,7 @@ export default defineComponent({
                             </div>
                             <bk-form-item label='备注' property='remark'>
                               <Input
-                                class='width-300'
+                                style={'width:300px'}
                                 type='textarea'
                                 v-model={resourceForm.value.remark}
                                 rows={3}

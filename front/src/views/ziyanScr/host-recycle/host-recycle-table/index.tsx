@@ -470,9 +470,7 @@ export default defineComponent({
               批量去除预检失败IP提交
             </Button>
           </div>
-          <div class={'has-selection'}>
-            <CommonTable class={'filter-CommonTable'} />
-          </div>
+          <CommonTable class={'filter-CommonTable'} />
         </div>
       );
     };

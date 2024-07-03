@@ -1,5 +1,5 @@
 import { defineComponent, ref, computed, watch } from 'vue';
-import { Loading } from 'bkui-vue';
+import { Loading, Message } from 'bkui-vue';
 import './index.scss';
 import apiService from '../../../../api/scrApi';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -77,17 +77,28 @@ export default defineComponent({
       const { info } = await apiService.getRecyclableHosts({
         ips,
       });
-
-      const list = info || [];
+      const obj = {};
+      const list = info.concat(info).reduce((prev, cur) => {
+        if (!obj[cur.ip]) {
+          obj[cur.ip] = true;
+          cur.recyclable ? prev.push(cur) : prev.unshift(cur);
+        }
+        return prev;
+      }, []);
+      emit('updateSelectedHosts', []);
       emit('updateHosts', list);
       isTableLoading.value = false;
-      //   this.$message.success('刷新成功');
+      Message({
+        message: '刷新成功',
+        theme: 'success',
+      });
     };
     watch(
-      () => selections.value.length,
+      () => selections.value,
       () => {
         emit('updateSelectedHosts', selections.value);
       },
+      { deep: true },
     );
     const isRowSelectEnable = ({ row, isCheckAll }) => {
       if (isCheckAll) return true;

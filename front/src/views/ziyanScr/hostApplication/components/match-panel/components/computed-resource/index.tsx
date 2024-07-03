@@ -1,14 +1,15 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import './index.scss';
+import http from '@/http';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Message } from 'bkui-vue';
 import apiService from '@/api/scrApi';
-import { useTable } from '@/hooks/useTable/useTable';
+import CommonLocalTable from '@/components/CommonLocalTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
   props: {
@@ -27,6 +28,38 @@ export default defineComponent({
         device_type: [props.formModelData.spec.device_type],
       },
     });
+    const tableColumns = ref([
+      {
+        type: 'selection',
+        width: 30,
+        minWidth: 30,
+        align: 'center',
+      },
+      {
+        label: '机型',
+        field: 'device_type',
+      },
+      {
+        label: '地域',
+        field: 'region',
+      },
+      {
+        label: '园区',
+        field: 'zone',
+      },
+      {
+        label: '数量',
+        field: 'amount',
+      },
+      {
+        label: '匹配数量',
+        width: 250,
+        render: ({ row }: any) => {
+          return <bk-input size='mini' type='number' min={1} max={500} v-model={row.replicas}></bk-input>;
+        },
+      },
+    ]);
+    const domainList = ref([]);
     const { formModel, forceClear } = useFormModel({ ...Modelform.value });
     const options = ref([
       {
@@ -39,53 +72,10 @@ export default defineComponent({
       },
     ]);
     const device_types = ref([]);
-    const { CommonTable, getListData, isLoading } = useTable({
-      tableOptions: {
-        columns: [
-          {
-            type: 'selection',
-            width: 32,
-            align: 'centre',
-          },
-          {
-            label: '机型',
-            field: 'device_type',
-          },
-          {
-            label: '地域',
-            field: 'region',
-          },
-          {
-            label: '园区',
-            field: 'zone',
-          },
-          {
-            label: '数量',
-            field: 'amount',
-          },
-          {
-            label: '匹配数量',
-            width: 250,
-            render: ({ row }: any) => {
-              return <bk-input size='mini' type='number' min={1} max={500} v-model={row.replicas}></bk-input>;
-            },
-          },
-        ],
-        extra: {
-          onSelect: (selections: any) => {
-            handleSelectionChange(selections, () => true, false);
-          },
-          onSelectAll: (selections: any) => {
-            handleSelectionChange(selections, () => true, true);
-          },
-        },
-      },
-      requestOption: {
-        dataPath: 'data.info',
-      },
-      scrConfig: () => ({
-        url: '/api/v1/woa/pool/findmany/recall/match/device',
-        payload: removeEmptyFields({
+    const getDomainList = () => {
+      return http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/findmany/recall/match/device`,
+        removeEmptyFields({
           resource_type: formModel.resource_type,
           spec: {
             device_type: formModel.spec.device_type,
@@ -93,8 +83,8 @@ export default defineComponent({
             zone: formModel.spec.zone,
           },
         }),
-      }),
-    });
+      );
+    };
     const onRegionChange = () => {
       formModel.spec.zone = [];
       loadDeviceTypes();
@@ -122,6 +112,16 @@ export default defineComponent({
     onMounted(() => {
       loadDeviceTypes();
     });
+    const isLoading = ref(false);
+    const getListData = async () => {
+      isLoading.value = true;
+      try {
+        const { data } = await getDomainList();
+        domainList.value = data.info || [];
+      } finally {
+        isLoading.value = false;
+      }
+    };
     const loadResource = async () => {
       getListData();
     };
@@ -205,7 +205,24 @@ export default defineComponent({
           手工匹配资源
         </Button>
         <div class={'table-container'}>
-          <CommonTable />
+          {/* <CommonTable /> */}
+          <CommonLocalTable
+            loading={isLoading.value}
+            hasSearch={false}
+            tableOptions={{
+              rowKey: 'domain',
+              columns: tableColumns.value,
+              extra: {
+                onSelect: (selections: any) => {
+                  handleSelectionChange(selections, () => true, false);
+                },
+                onSelectAll: (selections: any) => {
+                  handleSelectionChange(selections, () => true, true);
+                },
+              },
+            }}
+            tableData={domainList.value}
+          />
         </div>
       </div>
     );

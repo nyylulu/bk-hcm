@@ -29,6 +29,7 @@ export default defineComponent({
     const tableHosts = ref([]);
     const bkBizId = ref();
     const checked = ref(false);
+    const resourceType = ref();
     const tableSelectedHosts = ref([]);
     const recycleForm = ref({
       ips: [],
@@ -59,7 +60,7 @@ export default defineComponent({
     const updateSelectedHosts = (hosts: any[]) => {
       // 将筛选结果赋值给 tableSelectedHosts 表单
       tableSelectedHosts.value = hosts.filter((host) => host.recyclable);
-      recycleForm.value.ips = hosts.map((item) => item.ip);
+      recycleForm.value.ips = hosts.filter((item) => item.recyclable !== false).map((item) => item.ip);
     };
     const updateTypes = (returnPlan: { value: any }) => {
       returnPlan.value = returnPlan;
@@ -80,10 +81,11 @@ export default defineComponent({
       }
 
       if (active.value === 2 && (!cvm || !pm)) {
-        // $refs.resourceType?.$refs?.recycleForm?.validate();
+        resourceType.value.handleConfirm();
         return;
       }
       active.value += 1;
+      resourceType.value.clearValidate();
     };
     const upDrawer = (val: boolean) => {
       drawer.value = val;
@@ -250,7 +252,7 @@ export default defineComponent({
                 onUpdateSelectedHosts={updateSelectedHosts}
                 onUpdateRemark={updateRemark}></ResourceSelect>
               {active.value === 2 && (
-                <ResourceType ref='resourceType' returnPlan={returnPlan.value} updateTypes={updateTypes}></ResourceType>
+                <ResourceType ref={resourceType} returnPlan={returnPlan.value} updateTypes={updateTypes}></ResourceType>
               )}
               {active.value === 3 && (
                 <ResourceConfirm
@@ -269,7 +271,10 @@ export default defineComponent({
                   theme='primary'
                   class='mr10'
                   size='small'
-                  disabled={active.value === 1 && !tableSelectedHosts.value.length}
+                  disabled={
+                    (active.value === 1 && !tableSelectedHosts.value.length) ||
+                    (active.value === 2 && (!returnPlan.value || !returnPlan.value.cvm || !returnPlan.value.pm))
+                  }
                   onClick={handleNext}>
                   下一步
                 </bk-button>
@@ -360,19 +365,21 @@ export default defineComponent({
                       />
                       {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
                     </div>
-                    <Table
-                      data={serverTableData.value}
-                      columns={BScolumns}
-                      remotePagination
-                      pagination={RecycleListpagination}
-                      onPageLimitChange={RlhandlePageLimitChange}
-                      onPageValueChange={RlhandlePageValueChange}
-                      showOverflowTooltip
-                      {...{
-                        onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
-                        onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
-                      }}
-                    />
+                    <div class={'Business-Table'}>
+                      <Table
+                        data={serverTableData.value}
+                        columns={BScolumns}
+                        remotePagination
+                        pagination={RecycleListpagination}
+                        onPageLimitChange={RlhandlePageLimitChange}
+                        onPageValueChange={RlhandlePageValueChange}
+                        showOverflowTooltip
+                        {...{
+                          onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),
+                          onSelectAll: (selections: any) => handleSelectionChange(selections, () => true, true),
+                        }}
+                      />
+                    </div>
                   </BkTabPanel>
                   <BkTabPanel key={1} name={1} label='手动输入(多业务回收场景)'>
                     <bk-input
@@ -404,16 +411,17 @@ export default defineComponent({
           }}
         </Sideslider>
         <Sideslider v-model:isShow={ResourcesTotal.value} title={ResourcesTitle.value} width={1150}>
-          <Table
-            class='table-container'
-            data={ResourcesTable.value}
-            rowKey='id'
-            columns={RTcolumns}
-            remotePagination
-            pagination={pagination}
-            onPageLimitChange={handlePageLimitChange}
-            onPageValueChange={handlePageValueChange}
-            showOverflowTooltip></Table>
+          <div class='Resources-Table'>
+            <Table
+              data={ResourcesTable.value}
+              rowKey='id'
+              columns={RTcolumns}
+              remotePagination
+              pagination={pagination}
+              onPageLimitChange={handlePageLimitChange}
+              onPageValueChange={handlePageValueChange}
+              showOverflowTooltip></Table>
+          </div>
         </Sideslider>
       </div>
     );

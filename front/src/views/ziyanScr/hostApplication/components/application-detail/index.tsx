@@ -65,7 +65,8 @@ export default defineComponent({
       {
         type: 'selection',
         align: 'center',
-        width: 32,
+        width: 30,
+        minWidth: 32,
       },
       {
         label: '机型',

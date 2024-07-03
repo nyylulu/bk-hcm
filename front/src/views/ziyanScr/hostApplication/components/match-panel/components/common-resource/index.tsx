@@ -3,17 +3,16 @@ import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Input, Message } from 'bkui-vue';
 import apiService from '@/api/scrApi';
+import http from '@/http';
 import { timeFormatter } from '@/common/util';
-import { useTable } from '@/hooks/useTable/useTable';
+import CommonLocalTable from '@/components/CommonLocalTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import DiskTypeSelect from '../../../DiskTypeSelect';
-import http from '@/http';
 import { useUserStore } from '@/store';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
-
 const { FormItem } = Form;
 export default defineComponent({
   props: {
@@ -46,93 +45,21 @@ export default defineComponent({
       },
     ]);
     const device_types = ref([]);
-    const { CommonTable, getListData, isLoading } = useTable({
-      tableOptions: {
-        columns: [
-          {
-            type: 'selection',
-            width: 40,
-            minWidth: 40,
-          },
-          {
-            field: 'match_tag',
-            label: '星标',
-            width: 60,
-            minWidth: 60,
-            render: ({ data }: any) => {
-              if (data.matchTag) {
-                return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
-              }
-              return <span>-</span>;
-            },
-          },
-          {
-            field: 'asset_id',
-            label: '固资号',
-            fixed: true,
-            width: 130,
-          },
-          {
-            field: 'ip',
-            label: '内网 IP',
-            width: 120,
-          },
-          {
-            field: 'device_type',
-            label: '机型',
-          },
-          {
-            field: 'os_type',
-            label: '操作系统',
-            width: 250,
-          },
-          {
-            field: 'equipment',
-            label: '机架号',
-            width: 80,
-          },
-          {
-            field: 'zone',
-            label: '园区',
-          },
-          {
-            field: 'module',
-            label: '模块',
-          },
-          {
-            field: 'idc_unit',
-            label: 'IDC 单元',
-          },
-          {
-            field: 'idc_logic_area',
-            label: '逻辑区域',
-          },
-          {
-            field: 'input_time',
-            label: '入库时间',
-            render: ({ cell }: any) => timeFormatter(cell),
-          },
-          {
-            prop: 'match_score',
-            label: '匹配得分',
-            width: 90,
-          },
-        ],
-        extra: {
-          onSelect: (selections: any) => {
-            handleSelectionChange(selections, () => true, false);
-          },
-          onSelectAll: (selections: any) => {
-            handleSelectionChange(selections, () => true, true);
-          },
-        },
-      },
-      requestOption: {
-        dataPath: 'data.info',
-      },
-      scrConfig: () => ({
-        url: '/api/v1/woa/task/findmany/apply/match/device',
-        payload: removeEmptyFields({
+    const domainList = ref([]);
+    const isLoading = ref(false);
+    const getListData = async () => {
+      isLoading.value = true;
+      try {
+        const { data } = await getDomainList();
+        domainList.value = data.info || [];
+      } finally {
+        isLoading.value = false;
+      }
+    };
+    const getDomainList = () => {
+      return http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/match/device`,
+        removeEmptyFields({
           resource_type: formModel.resource_type,
           ips: ipArray.value,
           spec: {
@@ -142,8 +69,79 @@ export default defineComponent({
             disk_type: formModel.spec.disk_type,
           },
         }),
-      }),
-    });
+      );
+    };
+    const tableColumns = ref([
+      {
+        type: 'selection',
+        width: 30,
+        minWidth: 30,
+        align: 'center',
+      },
+      {
+        field: 'match_tag',
+        label: '星标',
+        width: 60,
+        minWidth: 60,
+        render: ({ data }: any) => {
+          if (data.matchTag) {
+            return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
+          }
+          return <span>-</span>;
+        },
+      },
+      {
+        field: 'asset_id',
+        label: '固资号',
+        fixed: true,
+        width: 130,
+      },
+      {
+        field: 'ip',
+        label: '内网 IP',
+        width: 120,
+      },
+      {
+        field: 'device_type',
+        label: '机型',
+      },
+      {
+        field: 'os_type',
+        label: '操作系统',
+        width: 250,
+      },
+      {
+        field: 'equipment',
+        label: '机架号',
+        width: 80,
+      },
+      {
+        field: 'zone',
+        label: '园区',
+      },
+      {
+        field: 'module',
+        label: '模块',
+      },
+      {
+        field: 'idc_unit',
+        label: 'IDC 单元',
+      },
+      {
+        field: 'idc_logic_area',
+        label: '逻辑区域',
+      },
+      {
+        field: 'input_time',
+        label: '入库时间',
+        render: ({ cell }: any) => timeFormatter(cell),
+      },
+      {
+        prop: 'match_score',
+        label: '匹配得分',
+        width: 90,
+      },
+    ]);
     const ipArray = computed(() => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ips = [];
@@ -259,7 +257,23 @@ export default defineComponent({
           手工匹配资源
         </Button>
         <div class={'Devices-CommonTable'}>
-          <CommonTable />
+          <CommonLocalTable
+            loading={isLoading.value}
+            hasSearch={false}
+            tableOptions={{
+              rowKey: 'domain',
+              columns: tableColumns.value,
+              extra: {
+                onSelect: (selections: any) => {
+                  handleSelectionChange(selections, () => true, false);
+                },
+                onSelectAll: (selections: any) => {
+                  handleSelectionChange(selections, () => true, true);
+                },
+              },
+            }}
+            tableData={domainList.value}
+          />
         </div>
       </div>
     );

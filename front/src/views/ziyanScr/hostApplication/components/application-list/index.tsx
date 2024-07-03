@@ -229,6 +229,7 @@ export default defineComponent({
           {
             label: '需求类型',
             field: 'require_type',
+            width: 100,
             render: ({ data }: any) => transformRequireTypes(data.requireType),
           },
           {
@@ -381,7 +382,6 @@ export default defineComponent({
           },
         ],
         extra: {
-          border: ['row', 'col', 'outer'],
           onRowMouseEnter: (e, row) => {
             handleCellMouseEnter(row);
           },

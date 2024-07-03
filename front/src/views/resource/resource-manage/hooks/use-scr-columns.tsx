@@ -178,8 +178,8 @@ export default (type: string, isSimpleShow = false) => {
     {
       type: 'selection',
       align: 'right',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
     },
     {
       label: '机型',
@@ -384,8 +384,8 @@ export default (type: string, isSimpleShow = false) => {
   const RRColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
       align: 'center',
     },
     {
@@ -439,8 +439,8 @@ export default (type: string, isSimpleShow = false) => {
   const BSAColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
       onlyShowOnList: true,
     },
     {
@@ -489,8 +489,8 @@ export default (type: string, isSimpleShow = false) => {
   const DQcolumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
       onlyShowOnList: true,
       align: 'center',
     },
@@ -787,9 +787,9 @@ export default (type: string, isSimpleShow = false) => {
   const recycleOrderColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
-      align: 'right',
+      width: 30,
+      minWidth: 30,
+      align: 'center',
     },
     {
       label: '业务',
@@ -994,6 +994,9 @@ export default (type: string, isSimpleShow = false) => {
   const deviceDestroyColumns = [
     {
       type: 'selection',
+      width: 30,
+      minWidth: 30,
+      align: 'center',
     },
     {
       label: '固资号',
@@ -1357,9 +1360,9 @@ export default (type: string, isSimpleShow = false) => {
   const scrResourceOnlineCreateColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
+      width: 30,
+      minWidth: 30,
+      align: 'center',
     },
     {
       label: '固资号',
@@ -1426,8 +1429,9 @@ export default (type: string, isSimpleShow = false) => {
   const cvmWebColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
+      align: 'center',
     },
     {
       label: 'VPC',
@@ -1508,8 +1512,9 @@ export default (type: string, isSimpleShow = false) => {
   const cvmModelColumns = [
     {
       type: 'selection',
-      width: 32,
-      minWidth: 32,
+      width: 30,
+      minWidth: 30,
+      align: 'center',
       onlyShowOnList: true,
     },
     {

@@ -78,9 +78,9 @@ export default defineComponent({
     const columns = ref([
       {
         type: 'selection',
-        width: 32,
-        minWidth: 32,
-        onlyShowOnList: true,
+        width: 30,
+        minWidth: 30,
+        align: 'center',
       },
       {
         label: '业务',
