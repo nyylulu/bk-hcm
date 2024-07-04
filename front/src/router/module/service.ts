@@ -24,6 +24,7 @@ const serviceMenus: RouteRecordRaw[] = [
       activeKey: 'myApply',
       breadcrumb: [t('服务'), t('我的申请')],
       isShowBreadcrumb: true,
+      icon: 'hcm-icon bkhcm-icon-ticket',
     },
   },
   {
@@ -42,6 +43,31 @@ const serviceMenus: RouteRecordRaw[] = [
     meta: {
       breadcrumb: [t('服务'), t('我的审批')],
       isShowBreadcrumb: true,
+      notMenu: true,
+    },
+  },
+  {
+    path: '/service/resource-plan/list',
+    name: t('资源预测'),
+    component: () => import('@/views/resource-plan/list/index'),
+    meta: {
+      activeKey: 'planlist',
+      icon: 'hcm-icon bkhcm-icon-template-orchestration',
+    },
+  },
+  {
+    path: '/service/resource-plan/detail',
+    component: () => import('@/views/resource-plan/detail/index'),
+    meta: {
+      activeKey: 'planlist',
+      notMenu: true,
+    },
+  },
+  {
+    path: '/service/resource-plan/add',
+    component: () => import('@/views/resource-plan/add/index'),
+    meta: {
+      activeKey: 'planlist',
       notMenu: true,
     },
   },

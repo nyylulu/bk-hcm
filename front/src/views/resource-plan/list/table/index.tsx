@@ -59,12 +59,12 @@ export default defineComponent({
     } = useTable(getData);
 
     const handleToAdd = () => {
-      router.push({ path: '/resource-plan/add' });
+      router.push({ path: '/service/resource-plan/add' });
     };
 
     const handleToDetail = (data: IListTicketsResult['detail'][0]) => {
       router.push({
-        path: '/resource-plan/detail',
+        path: '/service/resource-plan/detail',
         query: { id: data.id },
       });
     };

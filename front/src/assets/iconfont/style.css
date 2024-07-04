@@ -137,6 +137,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-yuyanqiehuanriwen:before {
 	content: "\e10f";
 }
+.bkhcm-icon-ticket:before {
+	content: "\e15c";
+}
 .bkhcm-icon-not-favorited:before {
 	content: "\e10b";
 }

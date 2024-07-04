@@ -16,7 +16,7 @@ export default defineComponent({
 
     const handleClick = () => {
       router.push({
-        path: '/resource-plan/list',
+        path: '/service/resource-plan/list',
       });
     };
 
