@@ -377,7 +377,7 @@ export default defineComponent({
             创建新机型
           </bk-button>
         </div>
-        <CommonTable class={'filter-CommonTable'} />
+        <CommonTable class={'filter-common-table'} />
         <Dialog
           class='common-dialog'
           close-icon={false}

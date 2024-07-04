@@ -291,7 +291,7 @@ export default defineComponent({
             </bk-button>
           </div>
         </div>
-        <CommonTable class={'filter-CommonTable'}></CommonTable>
+        <CommonTable class={'filter-common-table'}></CommonTable>
       </div>
     );
   },

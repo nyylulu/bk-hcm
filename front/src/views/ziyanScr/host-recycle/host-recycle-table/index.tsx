@@ -479,7 +479,7 @@ export default defineComponent({
               批量去除预检失败IP提交
             </Button>
           </div>
-          <CommonTable class={'filter-CommonTable'} />
+          <CommonTable class={'filter-common-table'} />
         </div>
       );
     };
