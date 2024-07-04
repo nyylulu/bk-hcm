@@ -103,7 +103,7 @@ export default defineComponent({
     });
 
     const businessSelectorRef = ref();
-    const { CommonTable, getListData, isLoading } = useTable({
+    const { CommonTable, getListData, isLoading, pagination } = useTable({
       tableOptions: {
         columns: [
           {
@@ -496,6 +496,11 @@ export default defineComponent({
         throttleInfo.value(row);
       }
     };
+    const filterOrders = () => {
+      pagination.start = 0;
+      formModel.bkBizId = formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? [] : formModel.bkBizId;
+      getListData();
+    };
     onMounted(() => {
       throttleDeliveredHostField();
     });
@@ -548,20 +553,18 @@ export default defineComponent({
             </FormItem>
           </Form>
           <div class='btn-container'>
-            <Button
-              theme={'primary'}
-              onClick={() => {
-                getListData();
-              }}
-              loading={isLoading.value}>
+            <Button theme={'primary'} onClick={filterOrders} loading={isLoading.value}>
               查询
             </Button>
             <Button
               onClick={() => {
                 resetForm({ user: [userStore.username] });
-                getListData();
+                // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
+                // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
+                formModel.bkBizId = businessSelectorRef.value.defaultBusiness;
+                filterOrders();
               }}>
-              清空
+              重置
             </Button>
           </div>
         </div>

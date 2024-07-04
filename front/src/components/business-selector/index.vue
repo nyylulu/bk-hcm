@@ -1,5 +1,5 @@
 <script lang="ts" setup>
-import { computed, ref, watchEffect, defineExpose, PropType } from 'vue';
+import { computed, ref, watchEffect, defineExpose, PropType, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAccountStore } from '@/store';
 import { isEmpty, localStorageActions } from '@/common/util';
@@ -74,8 +74,6 @@ watchEffect(async () => {
   // 设置选中的值
   defaultBusiness.value = id;
   selectedValue.value = id;
-  // 记录业务id 到 url 上
-  handleChange(id);
 });
 
 const selectedValue = computed({
@@ -112,31 +110,36 @@ const selectedValue = computed({
   },
 });
 
-const handleChange = (val: string | string[]) => {
-  if (!props.saveBizs) return;
+// 记录业务id
+watch(
+  selectedValue,
+  (val) => {
+    if (!props.saveBizs) return;
 
-  const query = { ...route.query };
-  const encodedBizs = btoa(JSON.stringify(val));
+    const query = { ...route.query };
+    const encodedBizs = btoa(JSON.stringify(val));
 
-  // 多选
-  if (props.multiple) {
-    // 未选时, 不用存业务id
-    query[props.bizsKey] = val.length > 0 ? encodedBizs : undefined;
-  }
-  // 单选
-  else {
-    query[props.bizsKey] = encodedBizs || undefined;
-  }
+    // 多选
+    if (props.multiple) {
+      // 未选时, 不用存业务id
+      query[props.bizsKey] = val.length > 0 ? encodedBizs : undefined;
+    }
+    // 单选
+    else {
+      query[props.bizsKey] = encodedBizs || undefined;
+    }
 
-  // 持久化处理
-  if (query[props.bizsKey]) {
-    localStorageActions.set(props.bizsKey, query[props.bizsKey]);
-  } else {
-    localStorageActions.remove(props.bizsKey);
-  }
-  // 记录业务id 到 url 上
-  router.push({ query });
-};
+    // 持久化处理
+    if (query[props.bizsKey]) {
+      localStorageActions.set(props.bizsKey, query[props.bizsKey]);
+    } else {
+      localStorageActions.remove(props.bizsKey);
+    }
+    // 记录业务id 到 url 上
+    router.push({ query });
+  },
+  { deep: true },
+);
 
 defineExpose({
   businessList,
@@ -145,14 +148,7 @@ defineExpose({
 </script>
 
 <template>
-  <bk-select
-    v-model="selectedValue"
-    :multiple="multiple"
-    filterable
-    :loading="loading"
-    :clearable="clearable"
-    @change="handleChange"
-  >
+  <bk-select v-model="selectedValue" :multiple="multiple" filterable :loading="loading" :clearable="clearable">
     <bk-option v-for="item in businessList" :key="item.id" :value="item.id" :label="item.name" />
   </bk-select>
 </template>

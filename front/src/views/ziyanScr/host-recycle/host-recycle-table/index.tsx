@@ -71,7 +71,7 @@ export default defineComponent({
         page: pageInfo.value,
         bk_biz_id:
           recycleForm.value.bk_biz_id.length === 0
-            ? businessRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+            ? businessRef.value.businessList.slice(1).map((item: any) => item.id)
             : recycleForm.value.bk_biz_id,
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
@@ -107,24 +107,22 @@ export default defineComponent({
       const data = await getRecycleStageOpts();
       stageList.value = data?.info || [];
     };
-    const loadOrders = () => {
-      recycleForm.value.bk_biz_id = ['all'];
-    };
     const filterOrders = () => {
-      pageInfo.value.start = 0;
+      pagination.start = 0;
       recycleForm.value.bk_biz_id =
         recycleForm.value.bk_biz_id.length === 1 && recycleForm.value.bk_biz_id[0] === 'all'
-          ? undefined
+          ? []
           : recycleForm.value.bk_biz_id;
       getListData();
     };
     const clearFilter = () => {
       const initForm = defaultRecycleForm();
+      // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
+      // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
       initForm.bk_biz_id = businessRef.value.defaultBusiness;
       recycleForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
-      loadOrders();
     };
     const goToPrecheck = () => {
       router.push({
@@ -344,7 +342,7 @@ export default defineComponent({
       },
     });
     const tableColumns = [...columns, ...operateColList];
-    const { CommonTable, getListData, dataList } = useTable({
+    const { CommonTable, getListData, dataList, pagination } = useTable({
       tableOptions: {
         columns: tableColumns,
         extra: {

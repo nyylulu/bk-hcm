@@ -78,14 +78,14 @@ export default defineComponent({
         page: pageInfo.value,
         bk_biz_id:
           deviceForm.value.bk_biz_id.length === 0
-            ? businessRef.value.businessList.slice(1, -1).map((item: any) => item.id)
+            ? businessRef.value.businessList.slice(1).map((item: any) => item.id)
             : deviceForm.value.bk_biz_id,
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
       return params;
     });
-    const { CommonTable, getListData, dataList } = useTable({
+    const { CommonTable, getListData, dataList, pagination } = useTable({
       tableOptions: {
         columns: tableColumns,
       },
@@ -107,20 +107,21 @@ export default defineComponent({
       },
     });
     const filterOrders = () => {
+      pagination.start = 0;
       deviceForm.value.bk_biz_id =
         deviceForm.value.bk_biz_id.length === 1 && deviceForm.value.bk_biz_id[0] === 'all'
-          ? undefined
+          ? []
           : deviceForm.value.bk_biz_id;
-      pageInfo.value.start = 0;
       getListData();
     };
     const clearFilter = () => {
       const initForm = defaultDeviceForm();
+      // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
+      // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
       initForm.bk_biz_id = businessRef.value.defaultBusiness;
       deviceForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
-      deviceForm.value.bk_biz_id = ['all'];
     };
     const fetchDeviceTypeList = async () => {
       const data = await getDeviceTypeList();
