@@ -1,9 +1,10 @@
+{{- if .Values.egress.enabled }}
 apiVersion: bkbcs.tencent.com/v1alpha1
 kind: Egress
 metadata:
   name: hcm-egress
 spec:
-  replicas: 2 # 创建的statefulset，副本数
+  replicas: {{ .Values.egress.replicasNum }} # 创建的statefulset，副本数
   gateImage: "mirrors.tencent.com/bcs/gate:latest"
   podIPImage: "mirrors.tencent.com/bcs/podip:latest"
   podDefaultDisabled: false # 默认true,处于关闭状态表示该pod不做转发，待pod ready之后
@@ -37,3 +38,4 @@ spec:
       protocol: TCP
       sport: 80
       service: api.process.tencent-cloud.com
+{{- end }}
