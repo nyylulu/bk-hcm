@@ -56,8 +56,8 @@ export default defineComponent({
       return [
         {
           type: 'expand',
-          width: 32,
-          minWidth: 32,
+          width: 52,
+          minWidth: 52,
           colspan: 1,
           resizable: false,
         },

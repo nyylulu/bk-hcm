@@ -151,7 +151,7 @@ export default defineComponent({
     const handleReset = () => {
       organizations.value = [];
       bkBizIds.value = [];
-      operators.value = [];
+      operators.value = [userStore.username];
     };
 
     const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
