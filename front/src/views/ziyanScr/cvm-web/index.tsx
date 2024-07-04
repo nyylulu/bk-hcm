@@ -318,7 +318,7 @@ export default defineComponent({
               <Search />
               查询
             </bk-button>
-            <bk-button onClick={clearFilter}>清空</bk-button>
+            <bk-button onClick={clearFilter}>重置</bk-button>
           </div>
         </div>
         <div class='btn-container oper-btn-pad'>

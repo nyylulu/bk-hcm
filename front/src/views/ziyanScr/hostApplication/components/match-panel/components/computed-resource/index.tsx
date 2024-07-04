@@ -199,7 +199,7 @@ export default defineComponent({
             forceClear();
             getListData();
           }}>
-          清空
+          重置
         </Button>
         <Button theme='success' disabled={selections.value.length === 0} onClick={submitSelectedDevices} class={'ml24'}>
           手工匹配资源

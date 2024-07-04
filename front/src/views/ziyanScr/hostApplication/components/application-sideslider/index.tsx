@@ -357,7 +357,7 @@ export default defineComponent({
             <Search></Search>
             查询
           </Button>
-          <Button onClick={CVMclearFilter}>清空</Button>
+          <Button onClick={CVMclearFilter}>重置</Button>
         </Form>
         {/* <div style={{width: 100}}> */}
         <div class={'margin20'}>

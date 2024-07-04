@@ -200,8 +200,6 @@ export default defineComponent({
     const NIswitch = ref(true);
     // QCLOUDCVM云地域变化
     const onQcloudRegionChange = () => {
-      loadImages();
-      loadVpcs();
       resourceForm.value.zone = '';
       QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
@@ -455,6 +453,15 @@ export default defineComponent({
     const clickApplication = () => {
       CVMapplication.value = true;
     };
+    watch(
+      () => resourceForm.value.region,
+      () => {
+        if (resourceForm.value.resourceType === 'QCLOUDCVM') {
+          loadVpcs();
+          loadImages();
+        }
+      },
+    );
     const assignment = (data: any) => {
       resourceForm.value.resourceType = 'QCLOUDCVM';
       QCLOUDCVMForm.value.spec = {

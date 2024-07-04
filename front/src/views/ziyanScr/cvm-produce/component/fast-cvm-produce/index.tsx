@@ -368,7 +368,7 @@ export default defineComponent({
                     <Search />
                     查询
                   </Button>
-                  <Button onClick={() => clearFilter()}>清空</Button>
+                  <Button onClick={() => clearFilter()}>重置</Button>
                 </div>
               </div>
               <CommonTable />

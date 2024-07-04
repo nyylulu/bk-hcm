@@ -365,7 +365,7 @@ export default defineComponent({
               查询
             </bk-button>
             <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
-              清空
+              重置
             </bk-button>
           </div>
         </div>
