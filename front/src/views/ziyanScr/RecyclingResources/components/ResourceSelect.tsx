@@ -11,22 +11,6 @@ export default defineComponent({
       type: Array,
       default: () => [],
     },
-    tableSelectedHosts: {
-      type: Array,
-      default: () => [],
-    },
-    updateRemark: {
-      type: Function,
-      default: () => {},
-    },
-    updateHosts: {
-      type: Function,
-      default: () => {},
-    },
-    updateSelectedHosts: {
-      type: Function,
-      default: () => {},
-    },
   },
   emits: ['updateHosts', 'updateSelectedHosts', 'updateRemark', 'Drawer'],
   setup(props, { emit }) {
@@ -34,7 +18,6 @@ export default defineComponent({
     const { columns: RRcolumns } = useColumns('RecyclingResources');
     const impossibleCount = computed(() => {
       let coumt = 0;
-
       props.tableHosts.forEach((item) => {
         if (!item.recyclable) coumt = coumt + 1;
       });
@@ -87,7 +70,7 @@ export default defineComponent({
         }
         return prev;
       }, []);
-      emit('updateSelectedHosts', []);
+      selections.value = [];
       emit('updateHosts', list);
       isTableLoading.value = false;
       Message({
@@ -96,7 +79,7 @@ export default defineComponent({
       });
     };
     watch(
-      () => selections.value,
+      () => selections.value.length,
       () => {
         emit('updateSelectedHosts', selections.value);
       },

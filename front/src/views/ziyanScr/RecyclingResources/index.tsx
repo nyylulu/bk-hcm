@@ -246,7 +246,6 @@ export default defineComponent({
                 v-show={active.value === 1}
                 class='div-ResourceSelect'
                 table-hosts={tableHosts.value}
-                table-selected-hosts={tableSelectedHosts.value}
                 onUpdateHosts={updateHosts}
                 onDrawer={upDrawer}
                 onUpdateSelectedHosts={updateSelectedHosts}
