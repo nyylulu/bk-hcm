@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/cryptography"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	itsm2 "hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
@@ -42,6 +43,7 @@ type HandlerOption struct {
 	Audit     audit.Interface
 	ItsmCli   itsm2.Client
 	FinOpsCli finops.Client
+	CmsiCli   cmsi.Client
 }
 
 // BaseApplicationHandler 基础的Handler 一些公共函数和属性处理，可以给到其他具体Handler组合
@@ -49,12 +51,13 @@ type BaseApplicationHandler struct {
 	applicationType enumor.ApplicationType
 	vendor          enumor.Vendor
 
-	Cts       *rest.Contexts
-	Client    *client.ClientSet
-	EsbClient esb.Client
-	Cipher    cryptography.Crypto
-	Audit     audit.Interface
-	FinOpsCli finops.Client
+	Cts        *rest.Contexts
+	Client     *client.ClientSet
+	EsbClient  esb.Client
+	Cipher     cryptography.Crypto
+	Audit      audit.Interface
+	FinOpsCli  finops.Client
+	CmsiClient cmsi.Client
 }
 
 // NewBaseApplicationHandler ...
@@ -69,6 +72,7 @@ func NewBaseApplicationHandler(
 		EsbClient:       opt.EsbClient,
 		Cipher:          opt.Cipher,
 		Audit:           opt.Audit,
+		CmsiClient:      opt.CmsiCli,
 		FinOpsCli:       opt.FinOpsCli,
 	}
 }
@@ -121,6 +125,8 @@ func (a *BaseApplicationHandler) GetItsmPlatformAndAccountApprover(managers []st
 }
 
 // Complete complete the application by manual.
-func (a *BaseApplicationHandler) Complete() (status enumor.ApplicationStatus, deliverDetail map[string]interface{}, err error) {
+func (a *BaseApplicationHandler) Complete() (
+	status enumor.ApplicationStatus, deliverDetail map[string]interface{}, err error) {
+
 	return enumor.DeliverError, map[string]interface{}{}, fmt.Errorf("not implemented")
 }

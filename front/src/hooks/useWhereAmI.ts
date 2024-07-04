@@ -22,6 +22,7 @@ export const useWhereAmI = (): {
     if (/^\/scheme\/.+$/.test(route.path)) return Senarios.scheme;
     if (/^\/ziyanscr\/.+$/.test(route.path)) return Senarios.ziyanscr;
     if (/^\/bill\/.+$/.test(route.path)) return Senarios.bill;
+    if (/^\/403\/.+$/.test(route.path)) return Senarios.unauthorized;
     return Senarios.unknown;
   });
 
@@ -54,4 +55,5 @@ export enum Senarios {
   ziyanscr = 'ziyanscr',
   bill = 'bill',
   unknown = 'unknown',
+  unauthorized = 'unauthorized',
 }

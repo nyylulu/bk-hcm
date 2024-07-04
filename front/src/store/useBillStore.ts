@@ -1,3 +1,4 @@
+import { VendorEnum } from '@/common/constant';
 import http from '@/http';
 import { defineStore } from 'pinia';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -183,6 +184,24 @@ export default defineStore('billStore', () => {
   const get_operation_product = (op_product_id: string) => {
     return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/operation_products/${op_product_id}`);
   };
+  /**
+   * 批量创建调账明细
+   * @param data
+   * @returns
+   */
+  const create_adjustment_items = (data: CreateAdjustmentItemsParams) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/adjustment_items/create`, data);
+  };
+
+  /**
+   * 编辑调账明细
+   * @param id 调账明细ID
+   * @param data
+   * @returns
+   */
+  const update_adjustment_item = (id: string, data: UpdateAdjustmentItemParams) => {
+    return http.patch(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/adjustment_items/${id}`, data);
+  };
 
   return {
     // 一级账号
@@ -202,6 +221,9 @@ export default defineStore('billStore', () => {
     // 运营产品
     list_operation_products,
     get_operation_product,
+    // 调账
+    create_adjustment_items,
+    update_adjustment_item,
     // 通用list方法
     list,
   };
@@ -396,6 +418,8 @@ export interface IMainAccountDetail {
   op_product_id?: number;
   status?: string;
   memo?: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface IRootAccountDetailExtension {
@@ -439,4 +463,43 @@ export interface IRootAccountDetail {
   created_at?: string;
   updated_at?: string;
   extension?: IRootAccountDetailExtension;
+}
+
+// 调账明细项类型
+export interface AdjustmentItem {
+  main_account_id: string; // 所属主账号id
+  product_id: number; // 产品id
+  bk_biz_id?: number; // 业务id
+  bill_year: number; // 所属年份
+  bill_month: number; // 所属月份
+  bill_day?: number; // 所属日期
+  type: 'increase' | 'decrease'; // 调账类型
+  currency: string; // 币种
+  cost: string; // 金额
+  memo?: string; // 备注信息
+}
+
+// 批量创建调账明细参数类型
+interface CreateAdjustmentItemsParams {
+  root_account_id: string; // 所属根账号id
+  vendor: string; // 所属厂商
+  items: AdjustmentItem[]; // 调账明细列表
+}
+
+// 编辑调账明细参数类型
+export interface UpdateAdjustmentItemParams {
+  id: string;
+  root_account_id?: string; // 所属根账号id
+  main_account_id?: string; // 所属主账号id
+  product_id?: number; // 产品id
+  bk_biz_id?: number; // 业务id
+  bill_year?: number; // 所属年份
+  bill_month?: number; // 所属月份
+  bill_day?: number; // 所属日期
+  type?: 'increase' | 'decrease'; // 调账类型
+  currency?: string; // 币种
+  cost?: string; // 金额
+  rmb_cost?: string; // 对应人民币金额
+  memo?: string; // 备注信息
+  vendor: VendorEnum;
 }

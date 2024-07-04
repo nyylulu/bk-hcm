@@ -10,6 +10,7 @@ import useFormModel from '@/hooks/useFormModel';
 import { BILL_VENDORS_MAP } from '@/views/bill/account/account-manage/constants';
 import { SITE_TYPE_MAP } from '@/common/constant';
 import { useOperationProducts } from '@/hooks/useOperationProducts';
+import { VendorAccountNameMap } from './constants';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -139,6 +140,11 @@ export default defineComponent({
                 prop: 'vendor',
                 name: '云厂商',
                 render: () => BILL_VENDORS_MAP[info.value.vendor],
+              },
+              {
+                prop: 'name',
+                name: '账号名称',
+                render: () => info.value.extension?.[VendorAccountNameMap[info.value.vendor]] || '--',
               },
               // {
               //   prop: 'bk_biz_id',

@@ -40,6 +40,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
@@ -55,6 +56,7 @@ func InitApplicationService(c *capability.Capability, bkHcmUrl string) {
 		itsmCli:    c.ItsmCli,
 		esbCli:     c.EsbClient,
 		bkHcmUrl:   bkHcmUrl,
+		cmsiCli:    c.CmsiCli,
 		finOpsCli:  c.Finops,
 	}
 	h := rest.NewHandler()
@@ -70,9 +72,12 @@ func InitApplicationService(c *capability.Capability, bkHcmUrl string) {
 	h.Add("CreateForCreateLB", "POST",
 		"/vendors/{vendor}/applications/types/create_load_balancer", svc.CreateForCreateLB)
 
-	h.Add("CreateForCreateMainAccount", "POST", "/applications/types/create_main_account", svc.CreateForCreateMainAccount)
-	h.Add("CompleteForCreateMainAccount", "POST", "/applications/types/complete_main_account", svc.CompleteForCreateMainAccount)
-	h.Add("CreateForUpdateMainAccount", "POST", "/applications/types/update_main_account", svc.CreateForUpdateMainAccount)
+	h.Add("CreateForCreateMainAccount", "POST", "/applications/types/create_main_account",
+		svc.CreateForCreateMainAccount)
+	h.Add("CompleteForCreateMainAccount", "POST", "/applications/types/complete_main_account",
+		svc.CompleteForCreateMainAccount)
+	h.Add("CreateForUpdateMainAccount", "POST", "/applications/types/update_main_account",
+		svc.CreateForUpdateMainAccount)
 
 	initApplicationServiceHooks(svc, h)
 	h.Load(c.WebService)
@@ -86,6 +91,7 @@ type applicationSvc struct {
 	itsmCli    itsm.Client
 	esbCli     esb.Client
 	bkHcmUrl   string
+	cmsiCli    cmsi.Client
 	finOpsCli  finops.Client
 }
 
@@ -101,6 +107,7 @@ func (a *applicationSvc) getHandlerOption(cts *rest.Contexts) *handlers.HandlerO
 		EsbClient: a.esbCli,
 		Cipher:    a.cipher,
 		Audit:     a.audit,
+		CmsiCli:   a.cmsiCli,
 		FinOpsCli: a.finOpsCli,
 	}
 }
@@ -200,7 +207,9 @@ func (a *applicationSvc) checkApplyResPermission(cts *rest.Contexts, resType met
 	return nil
 }
 
-func (a *applicationSvc) checkActionPermission(cts *rest.Contexts, resType meta.ResourceType, action meta.Action) error {
+func (a *applicationSvc) checkActionPermission(cts *rest.Contexts, resType meta.ResourceType,
+	action meta.Action) error {
+
 	resources := make([]meta.ResourceAttribute, 0)
 	resources = append(resources, meta.ResourceAttribute{
 		Basic: &meta.Basic{
@@ -218,7 +227,8 @@ func (a *applicationSvc) checkActionPermission(cts *rest.Contexts, resType meta.
 	}
 
 	if !authorized {
-		return errf.NewFromErr(errf.PermissionDenied, fmt.Errorf("you have not permission of resourceType: %s, action: %s", resType, action))
+		return errf.NewFromErr(errf.PermissionDenied,
+			fmt.Errorf("you have not permission of resourceType: %s, action: %s", resType, action))
 	}
 
 	return nil
