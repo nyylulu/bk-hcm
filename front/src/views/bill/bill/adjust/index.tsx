@@ -11,11 +11,12 @@ import BatchOperation from './batch-operation';
 
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash';
+import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { deleteBillsAdjustment, reqBillsAdjustmentList } from '@/api/bill';
 import { timeFormatter } from '@/common/util';
-import { BILL_ADJUSTMENT_STATE__MAP, BILL_ADJUSTMENT_TYPE__MAP } from '@/constants';
+import { BILL_ADJUSTMENT_STATE__MAP, BILL_ADJUSTMENT_TYPE__MAP, CURRENCY_MAP } from '@/constants';
 import { DoublePlainObject, QueryRuleOPEnum, RulesItem } from '@/typings';
 
 export default defineComponent({
@@ -24,8 +25,12 @@ export default defineComponent({
     const { t } = useI18n();
     const bill_year = inject<Ref<number>>('bill_year');
     const bill_month = inject<Ref<number>>('bill_month');
+    const businessMapStore = useBusinessMapStore();
+
     const searchRef = ref();
     const createAdjustSideSliderRef = ref();
+    const isEdit = ref(false);
+    const editData = ref({});
 
     const isRowSelectEnable = ({ row, isCheckAll }: DoublePlainObject) => {
       if (isCheckAll) return true;
@@ -62,6 +67,7 @@ export default defineComponent({
       {
         label: t('运营产品'),
         field: 'product_id',
+        render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
       },
       {
         label: t('二级账号名称'),
@@ -79,12 +85,21 @@ export default defineComponent({
         field: 'operator',
       },
       {
-        label: t('人民币（元）'),
-        field: 'rmb_cost',
+        label: t('金额'),
+        field: 'cost',
       },
       {
-        label: t('美金（美元）'),
-        field: 'cost',
+        label: t('币种'),
+        field: 'currency',
+        render: ({ cell }: any) => CURRENCY_MAP[cell] || '--',
+      },
+      {
+        label: t('调账状态'),
+        field: 'state',
+        width: 100,
+        render: ({ cell }: any) => (
+          <bk-tag theme={cell === 'confirmed' ? 'success' : undefined}>{BILL_ADJUSTMENT_STATE__MAP[cell]}</bk-tag>
+        ),
       },
       {
         label: t('调账状态'),
@@ -102,7 +117,11 @@ export default defineComponent({
               text
               theme='primary'
               class='mr8'
-              onClick={() => createAdjustSideSliderRef.value.triggerShow(true)}
+              onClick={() => {
+                createAdjustSideSliderRef.value.triggerShow(true);
+                isEdit.value = true;
+                editData.value = data;
+              }}
               disabled={data.state !== 'unconfirmed'}
               v-bk-tooltips={{ content: t('当前调账单已确认，无法编辑'), disabled: data.state === 'unconfirmed' }}>
               {t('编辑')}
@@ -181,7 +200,11 @@ export default defineComponent({
             {{
               operation: () => (
                 <>
-                  <Button onClick={() => createAdjustSideSliderRef.value.triggerShow(true)}>
+                  <Button
+                    onClick={() => {
+                      createAdjustSideSliderRef.value.triggerShow(true);
+                      isEdit.value = false;
+                    }}>
                     <Plus style={{ fontSize: '22px' }} />
                     {t('新增调账')}
                   </Button>
@@ -195,11 +218,17 @@ export default defineComponent({
                   </Button>
                 </>
               ),
-              operationBarEnd: () => <Amount isAdjust />,
+              operationBarEnd: () => <Amount />,
             }}
           </CommonTable>
         </Panel>
-        <CreateAdjustSideSlider ref={createAdjustSideSliderRef} />
+        <CreateAdjustSideSlider
+          ref={createAdjustSideSliderRef}
+          onUpdate={getListData}
+          edit={isEdit.value}
+          editData={editData.value}
+          onClearEdit={() => (editData.value = undefined)}
+        />
         <BatchOperation
           ref={batchOperationRef}
           action={action.value}

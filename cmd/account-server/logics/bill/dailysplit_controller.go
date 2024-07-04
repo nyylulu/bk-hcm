@@ -22,6 +22,7 @@ package bill
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"hcm/cmd/account-server/logics/bill/puller"
@@ -29,6 +30,7 @@ import (
 	"hcm/pkg/api/core"
 	dsbillapi "hcm/pkg/api/data-service/bill"
 	taskserver "hcm/pkg/api/task-server"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -105,7 +107,7 @@ func (msdc *MainDailySplitController) runBillDailySplitLoop(kt *kit.Kit) {
 	if err := msdc.doSync(kt); err != nil {
 		logs.Warnf("sync daily split failed, err %s, rid: %s", err.Error(), kt.Rid)
 	}
-	ticker := time.NewTicker(defaultDailySplitDuration)
+	ticker := time.NewTicker(*cc.AccountServer().Controller.ControllerSyncDuration)
 	for {
 		select {
 		case <-ticker.C:
@@ -155,7 +157,7 @@ func (msdc *MainDailySplitController) getBillSummary(
 		return nil, fmt.Errorf("get main account bill summary failed, err %s", err.Error())
 	}
 	if len(result.Details) != 1 {
-		return nil, fmt.Errorf("get invalid main account bill summary resp %v", result)
+		return nil, fmt.Errorf("get invalid main account bill summary resp %d", result.Count)
 	}
 	return result.Details[0], nil
 }
@@ -179,6 +181,7 @@ func (msdc *MainDailySplitController) syncDailySplit(kt *kit.Kit, billYear, bill
 		return err
 	}
 	for _, task := range pullTaskList {
+		time.Sleep(time.Millisecond * time.Duration(rand.Intn(defaultSleepMillisecond)))
 		if task.State == constant.MainAccountRawBillPullStatePulled {
 			if len(task.SplitFlowID) == 0 {
 				logs.Infof("split task of day %d main account %v bill should be create", task.BillDay, summary)
@@ -204,13 +207,16 @@ func (msdc *MainDailySplitController) syncDailySplit(kt *kit.Kit, billYear, bill
 					return fmt.Errorf("failed to get flow by id %s, err %s", task.SplitFlowID, err.Error())
 				}
 				if flow.State == enumor.FlowFailed ||
+					flow.State == enumor.FlowCancel ||
 					(flow.State == enumor.FlowScheduled &&
 						flow.Worker != nil &&
 						!slice.IsItemInSlice[string](taskServerNameList, *flow.Worker)) {
 
-					if err := msdc.Client.TaskServer().CancelFlow(kt, flow.ID); err != nil {
-						logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), kt.Rid)
-						continue
+					if flow.State == enumor.FlowScheduled {
+						if err := msdc.Client.TaskServer().CancelFlow(kt, flow.ID); err != nil {
+							logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), kt.Rid)
+							continue
+						}
 					}
 					flowID, err := msdc.createDailySplitTask(kt, summary, billYear, billMonth, task.BillDay)
 					if err != nil {

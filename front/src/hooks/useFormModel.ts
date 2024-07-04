@@ -32,10 +32,15 @@ function useFormModel<T extends object>(initialState: T) {
     }
   }
 
+  function setFormValues(values: Partial<T>) {
+    Object.assign(formModel, values);
+  }
+
   return {
     formModel,
     resetForm,
     forceClear,
+    setFormValues,
   };
 }
 

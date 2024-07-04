@@ -111,7 +111,7 @@ export default defineComponent({
 
   render() {
     return (
-      <div>
+      <div class='error-page-container'>
         <div class='forbid-layout'>
           <img src={permissions} alt='403' />
           <h2>{this.t('抱歉，您暂无该功能的权限')}</h2>

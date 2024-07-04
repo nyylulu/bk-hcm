@@ -149,9 +149,6 @@ export default defineComponent({
                   />
                 </FormItem>
               </div>
-              {/* <FormItem label='所属组织架构' required property='dept_id'>
-                <OrganizationSelect />
-              </FormItem> */}
               <FormItem label='备注' property='memo'>
                 <Input type='textarea' rows={5} maxlength={100} v-model={formModel.memo} />
               </FormItem>
@@ -226,7 +223,7 @@ export default defineComponent({
 
         <Button
           theme='primary'
-          class={'mr8 ml24'}
+          class={'mr8 ml24 mw88'}
           disabled={curExtension.value.validatedStatus !== ValidateStatus.YES}
           v-bk-tooltips={{
             disabled: !(curExtension.value.validatedStatus !== ValidateStatus.YES),
@@ -238,6 +235,7 @@ export default defineComponent({
           提交
         </Button>
         <Button
+          class='mw88'
           onClick={() => {
             router.back();
           }}>

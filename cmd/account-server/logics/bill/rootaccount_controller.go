@@ -22,6 +22,7 @@ package bill
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"hcm/cmd/task-server/logics/action/bill/rootsummary"
@@ -29,6 +30,7 @@ import (
 	"hcm/pkg/api/data-service/bill"
 	dsbillapi "hcm/pkg/api/data-service/bill"
 	taskserver "hcm/pkg/api/task-server"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -73,6 +75,7 @@ func NewRootAccountController(opt *RootAccountControllerOption) (*RootAccountCon
 	}, nil
 }
 
+// RootAccountController ...
 type RootAccountController struct {
 	Client        *client.ClientSet
 	Sd            serviced.ServiceDiscover
@@ -103,7 +106,7 @@ func (rac *RootAccountController) runBillSummaryLoop(kt *kit.Kit) {
 		logs.Warnf("sync bill summary for account (%s, %s) failed, err %s, rid: %s",
 			rac.RootAccountID, rac.Vendor, err.Error(), kt.Rid)
 	}
-	ticker := time.NewTicker(defaultControllerSummaryDuration)
+	ticker := time.NewTicker(*cc.AccountServer().Controller.RootAccountSummarySyncDuration)
 	for {
 		select {
 		case <-ticker.C:
@@ -120,7 +123,7 @@ func (rac *RootAccountController) runBillSummaryLoop(kt *kit.Kit) {
 }
 
 func (rac *RootAccountController) runCalculateBillSummaryLoop(kt *kit.Kit) {
-	ticker := time.NewTicker(defaultControllerSummaryDuration)
+	ticker := time.NewTicker(*cc.AccountServer().Controller.RootAccountSummarySyncDuration)
 	curMonthflowID := ""
 	lastMonthflowID := ""
 	for {
@@ -141,6 +144,7 @@ func (rac *RootAccountController) runCalculateBillSummaryLoop(kt *kit.Kit) {
 }
 
 func (rac *RootAccountController) pollRootSummaryTask(subKit *kit.Kit, flowID string, billYear, billMonth int) string {
+	time.Sleep(time.Millisecond * time.Duration(rand.Intn(defaultSleepMillisecond)))
 	summary, err := rac.getBillSummary(subKit, billYear, billMonth)
 	if err != nil {
 		logs.Warnf("get root account bill summary failed, err %s, rid: %s", err.Error(), subKit.Rid)
@@ -174,14 +178,18 @@ func (rac *RootAccountController) pollRootSummaryTask(subKit *kit.Kit, flowID st
 	}
 	if flow.State == enumor.FlowSuccess ||
 		flow.State == enumor.FlowFailed ||
+		flow.State == enumor.FlowCancel ||
 		(flow.State == enumor.FlowScheduled &&
 			flow.Worker != nil &&
 			!slice.IsItemInSlice[string](taskServerNameList, *flow.Worker)) {
 
-		if err := rac.Client.TaskServer().CancelFlow(subKit, flow.ID); err != nil {
-			logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), subKit.Rid)
-			return flowID
+		if flow.State == enumor.FlowScheduled {
+			if err := rac.Client.TaskServer().CancelFlow(subKit, flow.ID); err != nil {
+				logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), subKit.Rid)
+				return flowID
+			}
 		}
+
 		result, err := rac.createRootSummaryTask(subKit, billYear, billMonth)
 		if err != nil {
 			logs.Warnf("create new root summary task for %s/%s %d-%d failed, err %s, rid: %s",

@@ -1,7 +1,8 @@
 <script lang="ts" setup>
-import { computed, ref, watchEffect, defineExpose, PropType, watch } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { computed, ref, watchEffect, defineExpose, PropType, reactive, watch } from 'vue';
 import { useAccountStore } from '@/store';
+import { SelectColumn } from '@blueking/ediatable';
+import { useRouter, useRoute } from 'vue-router';
 import { isEmpty, localStorageActions } from '@/common/util';
 import { useI18n } from 'vue-i18n';
 
@@ -10,6 +11,7 @@ const props = defineProps({
   authed: Boolean as PropType<boolean>,
   autoSelect: Boolean as PropType<boolean>,
   isAudit: Boolean as PropType<boolean>,
+  isEditable: Boolean as PropType<boolean>,
   multiple: Boolean as PropType<boolean>,
   clearable: Boolean as PropType<boolean>,
   isShowAll: Boolean as PropType<boolean>,
@@ -65,7 +67,6 @@ watchEffect(async () => {
     const urlBizs = route.query[props.bizsKey] as string;
 
     // 优先使用 url 中的业务id, 其次是持久化的, 最后是默认值
-    // 如果是取默认值, 则多选时需要转为数组, 注意默认值可能为 null, 此时需要转为空数组
     id = urlBizs
       ? JSON.parse(atob(urlBizs))
       : localStorageActions.get(props.bizsKey, (value) => JSON.parse(atob(value))) || id;
@@ -74,6 +75,13 @@ watchEffect(async () => {
   // 设置选中的值
   defaultBusiness.value = id;
   selectedValue.value = id;
+});
+
+const computedBuinessList = computed(() => {
+  return businessList.value.map(({ name, id }) => ({
+    value: id,
+    label: name,
+  }));
 });
 
 const selectedValue = computed({
@@ -141,14 +149,31 @@ watch(
   { deep: true },
 );
 
+const rules = reactive([
+  {
+    validator: (value: string) => Boolean(value),
+    message: '请选择业务',
+  },
+]);
+
 defineExpose({
   businessList,
   defaultBusiness,
+  rules,
 });
 </script>
 
 <template>
-  <bk-select v-model="selectedValue" :multiple="multiple" filterable :loading="loading" :clearable="clearable">
+  <select-column
+    v-model="selectedValue"
+    v-if="isEditable"
+    :list="computedBuinessList"
+    filterable
+    :loading="loading"
+    :rules="rules"
+  ></select-column>
+
+  <bk-select v-else v-model="selectedValue" :multiple="multiple" filterable :loading="loading" :clearable="clearable">
     <bk-option v-for="item in businessList" :key="item.id" :value="item.id" :label="item.name" />
   </bk-select>
 </template>

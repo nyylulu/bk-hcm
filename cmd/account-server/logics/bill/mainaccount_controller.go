@@ -22,6 +22,7 @@ package bill
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"time"
 
 	"hcm/cmd/account-server/logics/bill/puller"
@@ -29,6 +30,7 @@ import (
 	"hcm/pkg/api/core"
 	dsbillapi "hcm/pkg/api/data-service/bill"
 	taskserver "hcm/pkg/api/task-server"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -156,7 +158,7 @@ func (mac *MainAccountController) runBillSummaryLoop(kt *kit.Kit) {
 		logs.Warnf("sync bill summary for account (%s, %s, %s) failed, err %s, rid: %s",
 			mac.RootAccountID, mac.MainAccountID, mac.Vendor, err.Error(), kt.Rid)
 	}
-	ticker := time.NewTicker(defaultControllerSummaryDuration)
+	ticker := time.NewTicker(*cc.AccountServer().Controller.MainAccountSummarySyncDuration)
 	for {
 		select {
 		case <-ticker.C:
@@ -173,7 +175,7 @@ func (mac *MainAccountController) runBillSummaryLoop(kt *kit.Kit) {
 }
 
 func (mac *MainAccountController) runCalculateBillSummaryLoop(kt *kit.Kit) {
-	ticker := time.NewTicker(defaultControllerSummaryDuration)
+	ticker := time.NewTicker(*cc.AccountServer().Controller.MainAccountSummarySyncDuration)
 	curMonthflowID := ""
 	lastMonthflowID := ""
 	for {
@@ -194,6 +196,7 @@ func (mac *MainAccountController) runCalculateBillSummaryLoop(kt *kit.Kit) {
 }
 
 func (mac *MainAccountController) pollMainSummaryTask(subKit *kit.Kit, flowID string, billYear, billMonth int) string {
+	time.Sleep(time.Millisecond * time.Duration(rand.Intn(defaultSleepMillisecond)))
 	taskServerNameList, err := getTaskServerKeyList(mac.Sd)
 	if err != nil {
 		logs.Warnf("get task server name list failed, err %s", err.Error())
@@ -204,12 +207,12 @@ func (mac *MainAccountController) pollMainSummaryTask(subKit *kit.Kit, flowID st
 		if err != nil {
 			logs.Warnf("create new main summary task for %s/%s/%s %d-%d failed, err %s, rid: %s",
 				mac.RootAccountID, mac.MainAccountID, mac.Vendor,
-				billYear, billMonth, err.Error(), subKit)
+				billYear, billMonth, err.Error(), subKit.Rid)
 			return flowID
 		}
 		logs.Infof("create main summary task for %s/%s/%s %d-%d successfully, flow id %s, rid: %s",
 			mac.RootAccountID, mac.MainAccountID, mac.Vendor,
-			billYear, billMonth, flowID, subKit)
+			billYear, billMonth, result.ID, subKit.Rid)
 		return result.ID
 
 	}
@@ -222,25 +225,28 @@ func (mac *MainAccountController) pollMainSummaryTask(subKit *kit.Kit, flowID st
 	// 此处需要进行判断，如果flow的worker不在当前task 列表中，并且处于scheduled状态，则需要重新创建flow
 	if flow.State == enumor.FlowSuccess ||
 		flow.State == enumor.FlowFailed ||
+		flow.State == enumor.FlowCancel ||
 		(flow.State == enumor.FlowScheduled &&
 			flow.Worker != nil &&
 			!slice.IsItemInSlice[string](taskServerNameList, *flow.Worker)) {
 
-		if err := mac.Client.TaskServer().CancelFlow(subKit, flow.ID); err != nil {
-			logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), subKit.Rid)
-			return flowID
+		if flow.State == enumor.FlowScheduled {
+			if err := mac.Client.TaskServer().CancelFlow(subKit, flow.ID); err != nil {
+				logs.Warnf("cancel flow %v failed, err %s, rid: %s", flow, err.Error(), subKit.Rid)
+				return flowID
+			}
 		}
 		result, err := mac.createMainSummaryTask(subKit, billYear, billMonth)
 		if err != nil {
 			logs.Warnf("create new main summary task for %s/%s/%s %d-%d failed, err %s, rid: %s",
 				mac.RootAccountID, mac.MainAccountID, mac.Vendor,
-				billYear, billMonth, err.Error(), subKit)
+				billYear, billMonth, err.Error(), subKit.Rid)
 			return flowID
 		}
 
 		logs.Infof("create main summary task for %s/%s/%s %d-%d successfully, flow id %s, rid: %s",
 			mac.RootAccountID, mac.MainAccountID, mac.Vendor,
-			billYear, billMonth, flowID, subKit)
+			billYear, billMonth, flowID, subKit.Rid)
 		return result.ID
 	}
 	return flowID

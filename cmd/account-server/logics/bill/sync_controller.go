@@ -23,6 +23,8 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"time"
+
 	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
 	syncaction "hcm/cmd/task-server/logics/action/obs/sync"
 	"hcm/pkg/api/core"
@@ -39,7 +41,6 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/serviced"
 	"hcm/pkg/tools/slice"
-	"time"
 )
 
 const (
@@ -203,7 +204,7 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 		return err
 	}
 	var mainSummaryList []*bill.BillSummaryMainResult
-	for offset := uint64(0); offset < *result.Count; offset = offset + uint64(core.DefaultMaxPageLimit) {
+	for offset := uint64(0); offset < result.Count; offset = offset + uint64(core.DefaultMaxPageLimit) {
 		tmpResult, err := sc.Client.DataService().Global.Bill.ListBillSummaryMain(kt, &dsbillapi.BillSummaryMainListReq{
 			Filter: tools.ExpressionAnd(expressions...),
 			Page: &core.BasePage{

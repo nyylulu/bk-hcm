@@ -2018,12 +2018,17 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const billsMainAccountSummaryColumns = [
     {
       label: '二级账号ID',
-      field: 'main_account_id',
+      field: 'main_account_cloud_id',
       isDefaultShow: true,
     },
     {
       label: '二级账号名称',
-      field: 'main_account_name',
+      field: 'main_account_cloud_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '一级账号名称',
+      field: 'root_account_name',
       isDefaultShow: true,
     },
     {
@@ -2035,6 +2040,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '运营产品名称',
       field: 'product_name',
       isDefaultShow: true,
+      render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
       label: '已确认账单人民币（元）',
