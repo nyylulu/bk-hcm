@@ -6,7 +6,6 @@ import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { reqBillsMainAccountSummaryList, reqBillsMainAccountSummarySum } from '@/api/bill';
 import { RulesItem } from '@/typings';
-import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 export default defineComponent({
   name: 'SubAccountTabPanel',
@@ -16,7 +15,6 @@ export default defineComponent({
 
     const searchRef = ref();
     const amountRef = ref();
-    const { getTranslatorMap } = useOperationProducts();
 
     const { columns } = useColumns('billsMainAccountSummary');
     const { CommonTable, getListData, clearFilter, filter } = useTable({
@@ -34,18 +32,6 @@ export default defineComponent({
           bill_year: bill_year.value,
           bill_month: bill_month.value,
         }),
-        async resolveDataListCb(dataList: any) {
-          if (!dataList.length) return;
-          const ids = dataList.map((item: { product_id: number }) => item.product_id);
-          const map = await getTranslatorMap(ids);
-          return dataList.map((data: { product_id: number }) => {
-            const { product_id } = data;
-            return {
-              ...data,
-              product_name: map.get(product_id),
-            };
-          });
-        },
         immediate: false,
       },
     });
