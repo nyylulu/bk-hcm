@@ -70,9 +70,11 @@ export default defineComponent({
       },
     );
     const isTableLoading = ref(false);
+    const RRTable = ref();
     /** 刷新可回收状态 */
     const refresh = async () => {
       isTableLoading.value = true;
+      RRTable.value.clearSelection();
       const ips = props.tableHosts.map((item) => item.ip);
       const { info } = await apiService.getRecyclableHosts({
         ips,
@@ -167,6 +169,7 @@ export default defineComponent({
           <bk-table
             align='left'
             row-hover='auto'
+            ref={RRTable}
             columns={RRcolumns}
             {...{
               onSelectionChange: (selections: any) => handleSelectionChange(selections, () => true),

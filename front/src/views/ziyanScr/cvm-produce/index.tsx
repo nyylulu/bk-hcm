@@ -324,7 +324,7 @@ export default defineComponent({
             快速生产
           </Button>
         </div>
-        <CommonTable>
+        <CommonTable class={'filter-CommonTable'}>
           {{
             expandRow: (row) => {
               return (

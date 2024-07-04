@@ -326,7 +326,7 @@ export default defineComponent({
             批量更新
           </bk-button>
         </div>
-        <CommonTable />
+        <CommonTable class={'filter-CommonTable'} />
         <bk-dialog v-model:is-show={isShow.value} width='600' title='批量更新'>
           {{
             default: () => (
