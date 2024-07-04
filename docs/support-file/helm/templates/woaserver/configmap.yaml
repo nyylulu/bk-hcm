@@ -23,7 +23,7 @@ data:
       {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.databaseConfig" .) "context" $) | nindent 6 }}
     esb:
       endpoints:
-        - {{ .Values.bkComponentApiUrl }}
+        - {{ .Values.bkEsbApiUrl }}
       appCode: {{ .Values.appCode }}
       appSecret: {{ .Values.appSecret }}
       user: admin

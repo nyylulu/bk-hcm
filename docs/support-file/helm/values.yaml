@@ -518,6 +518,8 @@ bkIamApiUrl: http://bkiam-web
 ## @param bkComponentApiUrl esb url
 ##
 bkComponentApiUrl: http://bkapi.paas.example.com
+## 蓝鲸 ESB 正式环境地址
+bkEsbApiUrl: https://api.esb.example.com
 ## 蓝鲸 Login url（浏览器跳转登录用的URL前缀）
 bkLoginUrl: http://example.com/login
 ## 蓝鲸 Login 校验的登录票据名称
