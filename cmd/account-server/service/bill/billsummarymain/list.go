@@ -28,6 +28,8 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/tools/slice"
 )
 
 // ListMainAccountSummary list root account summary with options
@@ -74,6 +76,25 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 		Details: make([]*asbillapi.MainAccountSummaryResult, 0, len(summary.Details)),
 	}
 
+	productIDs := make([]int64, 0, len(summary.Details))
+	for _, detail := range summary.Details {
+		productIDs = append(productIDs, detail.ProductID)
+	}
+
+	// 补全 product_name
+	param := &finops.ListOpProductParam{
+		OpProductIds: slice.Unique(productIDs),
+		Page:         *core.NewDefaultBasePage(),
+	}
+	productResult, err := s.finops.ListOpProduct(cts.Kit, param)
+	if err != nil {
+		return nil, err
+	}
+	productMap := make(map[int64]string)
+	for _, product := range productResult.Items {
+		productMap[product.OpProductId] = product.OpProductName
+	}
+
 	accountIDs := make([]string, 0, len(summary.Details))
 	for _, detail := range summary.Details {
 		accountIDs = append(accountIDs, detail.MainAccountID)
@@ -97,6 +118,7 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 	}
 
 	for _, detail := range summary.Details {
+		detail.ProductName = productMap[detail.ProductID]
 		account := accountMap[detail.MainAccountID]
 
 		tmp := &asbillapi.MainAccountSummaryResult{
