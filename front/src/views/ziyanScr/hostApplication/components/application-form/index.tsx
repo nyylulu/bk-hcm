@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
+import { defineComponent, onMounted, ref, watch, nextTick, computed } from 'vue';
 import { Input, Button, Sideslider, Message, Popover, Card } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -488,6 +488,7 @@ export default defineComponent({
     const ARtriggerShow = (isShow: boolean) => {
       emptyform();
       addResourceRequirements.value = isShow;
+      NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
@@ -603,12 +604,16 @@ export default defineComponent({
       modifyindex.value = 0;
       cvmCapacity.value = [];
       addResourceRequirements.value = false;
+      NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
         IDCPMformRef.value?.clearValidate();
       });
     };
+    const isUncommit = computed(() => {
+      return route?.query?.order_id && +route?.query?.unsubmitted === 1;
+    });
     const handleSaveOrSubmit = async (type: 'save' | 'submit') => {
       await formRef.value.validate();
       const suborders = [...cloudTableData.value, ...physicalTableData.value].map((v) => {
@@ -623,7 +628,7 @@ export default defineComponent({
           type === 'submit' ? 'task/create/apply' : 'task/update/apply/ticket'
         }`;
         await http.post(url, {
-          order_id: route?.query?.order_id ? +route?.query.order_id : undefined,
+          order_id: isUncommit.value ? +route?.query.order_id : undefined,
           bk_biz_id: order.value.model.bkBizId === 'all' ? undefined : order.value.model.bkBizId,
           bk_username: useUserStore().username,
           require_type: order.value.model.requireType,

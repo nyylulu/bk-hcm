@@ -57,7 +57,7 @@ export default defineComponent({
     const reapply = (data: any) => {
       router.push({
         path: '/ziyanScr/hostApplication/apply',
-        query: { order_id: data.order_id },
+        query: { order_id: data.order_id, unsubmitted: 0 },
       });
     };
     const modify = (data: any) => {
@@ -439,7 +439,7 @@ export default defineComponent({
       if (row.stage === 'UNCOMMIT') {
         routeParams = {
           path: '/ziyanScr/hostApplication/apply',
-          query: { order_id: row.order_id },
+          query: { order_id: row.order_id, unsubmitted: 1 },
         };
       }
       router.push(routeParams);
