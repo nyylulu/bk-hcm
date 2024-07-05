@@ -2040,7 +2040,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '运营产品名称',
       field: 'product_name',
       isDefaultShow: true,
-      render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
       label: '已确认账单人民币（元）',

@@ -13,6 +13,7 @@ export default defineComponent({
     modelValue: String as PropType<string>,
     vendor: Array as PropType<VendorEnum[]>,
     rootAccountId: Array as PropType<string[]>,
+    productId: Array as PropType<string[]>,
     autoSelect: Boolean,
     // 是否用于 ediatable
     isEditable: {
@@ -32,6 +33,8 @@ export default defineComponent({
       if (props.vendor?.length) rules.push({ field: 'vendor', op: QueryRuleOPEnum.IN, value: props.vendor });
       if (props.rootAccountId?.length)
         rules.push({ field: 'parent_account_id', op: QueryRuleOPEnum.IN, value: props.rootAccountId });
+      if (props.productId?.length)
+        rules.push({ field: 'op_product_id', op: QueryRuleOPEnum.IN, value: props.productId });
       return rules;
     });
 
@@ -52,13 +55,13 @@ export default defineComponent({
 
     watch(
       () => props.modelValue,
-      (val) => {
-        selectedValue.value = val;
-      },
+      (val) => (selectedValue.value = val),
+      { deep: true },
     );
 
-    watch(selectedValue, (val) => {
-      router.push({
+    watch(selectedValue, async (val) => {
+      // async/await 避免因异步路由跳转导致取值错误
+      await router.push({
         query: { ...route.query, [BILL_MAIN_ACCOUNTS_KEY]: val.length ? btoa(JSON.stringify(val)) : undefined },
       });
       emit('update:modelValue', val);
