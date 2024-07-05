@@ -76,12 +76,7 @@ export default defineComponent({
       },
     );
     const columns = ref([
-      {
-        type: 'selection',
-        width: 30,
-        minWidth: 30,
-        align: 'center',
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         label: '业务',
         field: 'bk_biz_name',

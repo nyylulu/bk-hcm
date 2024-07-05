@@ -42,11 +42,7 @@ export default defineComponent({
     const { generateColumnsSettings } = useColumns('cvms');
     const { whereAmI } = useWhereAmI();
     const tableColumns = [
-      {
-        field: 'selection',
-        type: 'selection',
-        width: '50',
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         label: '内网IP',
         field: 'private_ipv4_addresses',
@@ -146,11 +142,7 @@ export default defineComponent({
         (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business,
     );
     const toBindCvmsListColumns = [
-      {
-        type: 'selection',
-        width: '50',
-        isDefaultShow: true,
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         label: '主机ID',
         field: 'cloud_id',

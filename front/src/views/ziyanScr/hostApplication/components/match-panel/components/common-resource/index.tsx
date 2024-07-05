@@ -72,12 +72,7 @@ export default defineComponent({
       );
     };
     const tableColumns = ref([
-      {
-        type: 'selection',
-        width: 30,
-        minWidth: 30,
-        align: 'center',
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         field: 'match_tag',
         label: '星标',

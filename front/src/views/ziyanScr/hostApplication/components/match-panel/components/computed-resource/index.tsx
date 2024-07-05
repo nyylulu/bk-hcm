@@ -29,12 +29,7 @@ export default defineComponent({
       },
     });
     const tableColumns = ref([
-      {
-        type: 'selection',
-        width: 30,
-        minWidth: 30,
-        align: 'center',
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         label: '机型',
         field: 'device_type',

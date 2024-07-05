@@ -62,12 +62,7 @@ export default defineComponent({
       },
     ];
     const Machinecolumns = [
-      {
-        type: 'selection',
-        align: 'center',
-        width: 30,
-        minWidth: 32,
-      },
+      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
       {
         label: '机型',
         field: 'spec.device_type',

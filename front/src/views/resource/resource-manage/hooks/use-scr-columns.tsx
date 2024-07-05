@@ -175,12 +175,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const CRSOcolumns = [
-    {
-      type: 'selection',
-      align: 'right',
-      width: 30,
-      minWidth: 30,
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '机型',
       field: 'spec.device_type',
@@ -382,12 +377,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const RRColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '状态',
       field: 'recyclable',
@@ -437,12 +427,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const BSAColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      onlyShowOnList: true,
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '固资号',
       field: 'asset_id',
@@ -487,13 +472,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const DQcolumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      onlyShowOnList: true,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
       field: 'bk_biz_id',
@@ -785,12 +764,7 @@ export default (type: string, isSimpleShow = false) => {
   };
   // 资源 - 主机回收列表
   const recycleOrderColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
       field: 'bk_biz_id',
@@ -992,12 +966,7 @@ export default (type: string, isSimpleShow = false) => {
   ];
   // 资源 - 主机回收 - 单据详情 设备销毁列表
   const deviceDestroyColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '固资号',
       field: 'asset_id',
@@ -1358,12 +1327,7 @@ export default (type: string, isSimpleShow = false) => {
   ];
 
   const scrResourceOnlineCreateColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '固资号',
       field: 'asset_id',
@@ -1427,12 +1391,7 @@ export default (type: string, isSimpleShow = false) => {
   ];
   // 资源配置管理-CVM子网
   const cvmWebColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: 'VPC',
       field: 'vpc_name',
@@ -1510,13 +1469,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const cvmModelColumns = [
-    {
-      type: 'selection',
-      width: 30,
-      minWidth: 30,
-      align: 'center',
-      onlyShowOnList: true,
-    },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '机型',
       field: 'device_type',

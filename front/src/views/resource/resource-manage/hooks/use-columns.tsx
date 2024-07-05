@@ -128,13 +128,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   };
 
   const vpcColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'vpc', label: 'VPC ID', field: 'cloud_id' }),
     // {
     //   label: '资源 ID',
@@ -220,13 +214,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const subnetColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'subnet', label: '子网 ID', field: 'cloud_id', idFiled: 'id', onlyShowOnList: false }),
     // {
     //   label: '资源 ID',
@@ -334,13 +322,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const groupColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'subnet' }),
     {
       label: '资源 ID',
@@ -370,13 +352,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const gcpColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'subnet' }),
     {
       label: '资源 ID',
@@ -415,13 +391,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const driveColumns: any[] = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'drive', label: '云硬盘ID', field: 'cloud_id' }),
     // {
     //   label: '资源 ID',
@@ -745,13 +715,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const cvmsColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     //   移除 ID 搜索条件
     // {
     //   label: 'ID',
@@ -972,13 +936,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const eipColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({ type: 'eips', label: 'IP资源ID', field: 'cloud_id', idFiled: 'id' }),
     // {
     //   label: '资源 ID',
@@ -1136,13 +1094,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const lbColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({
       type: 'lb',
       label: '负载均衡名称',
@@ -1372,13 +1324,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const targetGroupColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     getLinkField({
       type: 'name',
       label: '目标组名称',
@@ -1657,13 +1603,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   ];
 
   const urlColumns = [
-    {
-      type: 'selection',
-      width: 32,
-      minWidth: 32,
-      onlyShowOnList: true,
-      align: 'right',
-    },
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     {
       label: 'URL路径',
       field: 'url',

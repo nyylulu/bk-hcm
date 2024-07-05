@@ -97,7 +97,7 @@ export default defineComponent({
     });
 
     return () => (
-      <Loading loading={isLoading.value} class='remote-table has-selection'>
+      <Loading loading={isLoading.value} class='remote-table'>
         <Table
           class='table-container'
           data={dataList.value}
