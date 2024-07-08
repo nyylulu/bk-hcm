@@ -758,6 +758,7 @@ egress:
     - 11.0.0.0/8
     - 30.0.0.0/8
   yuntiDomain: ""
+  cl5Domain: ""
 
 resourceDissolve:
   originDate: "20240105"

@@ -1,12 +1,12 @@
 ### 描述
 
-- 该接口提供版本：v9.9.9+。
+- 该接口提供版本：v1.6.0+。
 - 该接口所需权限：业务访问。
 - 该接口功能描述：资源回收单据列表查询。
 
 ### URL
 
-POST /api/v1/woa/findmany/recycle/order
+POST /api/v1/woa/task/findmany/recycle/order
 
 ### 输入参数
 

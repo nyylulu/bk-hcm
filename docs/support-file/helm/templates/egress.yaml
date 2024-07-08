@@ -38,4 +38,9 @@ spec:
       protocol: TCP
       sport: 80
       service: api.process.tencent-cloud.com
+    - dport: 80
+      host: {{ .Values.egress.cl5Domain }} # cl5
+      protocol: TCP
+      sport: 80
+      service: {{ .Values.egress.cl5Domain }}
 {{- end }}

@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0020,HCMVER=v1.6.0
 
     Notes:
     1. 添加裁撤服务的裁撤模块表
@@ -69,6 +69,6 @@ values ('recycle_module_info', '0'),
        ('recycle_host_info', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.6.0' as `hcm_ver`, '0020' as `sql_ver`;
 
 COMMIT
