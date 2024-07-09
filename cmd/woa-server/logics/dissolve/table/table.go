@@ -75,11 +75,13 @@ func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq) (
 		return nil, err
 	}
 
-	// 注意：请求参数中可以不传业务条件，所以这里的bizIDName可能会是空
 	bizIDName, err := l.getBizIDNameByName(kt, req.BizNames, make([]string, 0))
 	if err != nil {
 		logs.Errorf("get biz id and name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
+	}
+	if len(bizIDName) == 0 {
+		return &dissolve.ListHostDetails{}, nil
 	}
 
 	blackBizIDName, err := l.getBlackBizIDName(kt)
@@ -182,6 +184,9 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 	if err != nil {
 		logs.Errorf("get biz id and name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
+	}
+	if len(bizIDName) == 0 {
+		return &dissolve.ListHostDetails{}, nil
 	}
 
 	blackBizIDName, err := l.getBlackBizIDName(kt)

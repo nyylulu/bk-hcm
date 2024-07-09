@@ -73,6 +73,11 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 						Operator: querybuilder.OperatorIn,
 						Value:    names[start:end],
 					},
+					querybuilder.AtomRule{
+						Field:    "bk_operate_dept_id",
+						Operator: querybuilder.OperatorEqual,
+						Value:    3, // 只需要查询ieg的数据
+					},
 				},
 			},
 		}
@@ -144,6 +149,11 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 						Operator: querybuilder.OperatorIn,
 						Value:    ids[start:end],
 					},
+					querybuilder.AtomRule{
+						Field:    "bk_operate_dept_id",
+						Operator: querybuilder.OperatorEqual,
+						Value:    3, // 只需要查询ieg的数据
+					},
 				},
 			},
 		}
@@ -186,6 +196,18 @@ func (l *logics) getAllBizIDName(kt *kit.Kit, groupIDMap map[int64]struct{}) (ma
 	req := &cmdb.SearchBizReq{
 		Fields: []string{"bk_biz_id", "bk_biz_name", "bk_oper_grp_name_id"},
 		Page:   cmdb.BasePage{Start: 0, Limit: noLimit},
+		Filter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "bk_operate_dept_id",
+						Operator: querybuilder.OperatorEqual,
+						Value:    3, // 只需要查询ieg的数据
+					},
+				},
+			},
+		},
 	}
 
 	resp, err := l.esbCli.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
