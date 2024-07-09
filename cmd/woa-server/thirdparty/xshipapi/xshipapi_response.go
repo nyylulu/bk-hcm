@@ -10,8 +10,10 @@
  * limitations under the License.
  */
 
+// Package xshipapi xship api
 package xshipapi
 
+// AcceptStatus xship accept status
 type AcceptStatus int
 
 // RespMeta xship response meta info
@@ -78,7 +80,7 @@ type XServerProcessResp struct {
 
 // XServerProcessRst get X-Server process result.
 type XServerProcessRst struct {
-	IsExist   bool             `json:"isExist"`
+	IsExist   int              `json:"isExist"`
 	Processes []XServerProcess `json:"processList"`
 }
 
