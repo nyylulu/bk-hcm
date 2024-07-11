@@ -20,6 +20,7 @@
 package billsummarymain
 
 import (
+	"hcm/pkg/api/core"
 	dataproto "hcm/pkg/api/data-service/bill"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/types"
@@ -85,5 +86,48 @@ func toProtoPullerResult(m *tablebill.AccountBillSummaryMain) *dataproto.BillSum
 		State:                     m.State,
 		CreatedAt:                 m.CreatedAt,
 		UpdatedAt:                 m.UpdatedAt,
+	}
+}
+
+// ListBillSummaryProduct list account bill summary product with options
+func (svc *service) ListBillSummaryProduct(cts *rest.Contexts) (interface{}, error) {
+	req := new(core.ListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+	data, err := svc.dao.AccountBillSummaryMain().ListGroupByProduct(cts.Kit, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	details := make([]*dataproto.BillSummaryProductResult, len(data.Details))
+	for indx, d := range data.Details {
+		details[indx] = toProductResult(&d)
+	}
+
+	return &dataproto.BillSummaryProductListResult{Details: details, Count: data.Count}, nil
+}
+
+func toProductResult(m *tablebill.AccountBillSummaryMain) *dataproto.BillSummaryProductResult {
+	return &dataproto.BillSummaryProductResult{
+		ProductID:                 m.ProductID,
+		ProductName:               m.ProductName,
+		LastMonthCostSynced:       m.LastMonthCostSynced.Decimal,
+		LastMonthRMBCostSynced:    m.LastMonthRMBCostSynced.Decimal,
+		CurrentMonthCostSynced:    m.CurrentMonthCostSynced.Decimal,
+		CurrentMonthRMBCostSynced: m.CurrentMonthRMBCostSynced.Decimal,
+		CurrentMonthCost:          m.CurrentMonthCost.Decimal,
+		CurrentMonthRMBCost:       m.CurrentMonthRMBCost.Decimal,
+		AdjustmentCost:            m.AjustmentCost.Decimal,
+		AdjustmentRMBCost:         m.AjustmentRMBCost.Decimal,
 	}
 }

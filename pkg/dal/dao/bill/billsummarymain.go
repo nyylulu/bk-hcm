@@ -46,7 +46,10 @@ type AccountBillSummaryMain interface {
 	List(kt *kit.Kit, opt *types.ListOption) (*typesbill.ListAccountBillSummaryMainDetails, error)
 	UpdateByIDWithTx(kt *kit.Kit, tx *sqlx.Tx, billID string, updateData *tablebill.AccountBillSummaryMain) error
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression) error
+	ListGroupByProduct(kt *kit.Kit, opt *types.ListOption) (*typesbill.ListAccountBillSummaryMainDetails, error)
 }
+
+var _ AccountBillSummaryMain = (*AccountBillSummaryMainDao)(nil)
 
 // AccountBillSummaryMainDao account bill summary main dao
 type AccountBillSummaryMainDao struct {
@@ -176,4 +179,76 @@ func (a AccountBillSummaryMainDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *
 	}
 
 	return nil
+}
+
+// ListGroupByProduct 根据ProductID分组查询账单汇总信息
+func (a AccountBillSummaryMainDao) ListGroupByProduct(kt *kit.Kit, opt *types.ListOption) (*typesbill.ListAccountBillSummaryMainDetails, error) {
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "list account bill summary main options is nil")
+	}
+
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablebill.AccountBillSummaryMainColumns.ColumnTypes())),
+		core.NewDefaultPageOption()); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Page.Count {
+		sql := fmt.Sprintf(`SELECT COUNT(distinct product_id) FROM %s %s`, table.AccountBillSummaryMainTable, whereExpr)
+		count, err := a.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.ErrorJson("count account bill summary main failed, err: %v, filter: %s, rid: %s",
+				err, opt.Filter, kt.Rid)
+			return nil, err
+		}
+
+		return &typesbill.ListAccountBillSummaryMainDetails{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	/**
+	create table account_bill_summary_main
+	(
+	    product_id                    bigint                              null,
+	    last_synced_version           bigint                              not null,
+	    current_version               bigint                              not null,
+	    currency                      varchar(64)                         not null,
+	    last_month_cost_synced        decimal(38, 10)                     not null,
+	    last_month_rmb_cost_synced    decimal(38, 10)                     not null,
+	    current_month_cost_synced     decimal(38, 10)                     not null,
+	    current_month_rmb_cost_synced decimal(38, 10)                     not null,
+	    month_on_month_value          float                               null,
+	    current_month_cost            decimal(38, 10)                     not null,
+	    current_month_rmb_cost        decimal(38, 10)                     not null,
+	    rate                          float                               null,
+	    adjustment_cost               decimal(38, 10)                     not null,
+	    adjustment_rmb_cost           decimal(38, 10)                     not null
+	);
+
+	*/
+
+	fieldExpr := "product_id, SUM(last_month_cost_synced) as last_month_cost_synced, " +
+		"SUM(last_month_rmb_cost_synced) as last_month_rmb_cost_synced, " +
+		"SUM(current_month_cost_synced) as current_month_cost_synced, " +
+		"SUM(current_month_rmb_cost_synced) as current_month_rmb_cost_synced, " +
+		"SUM(current_month_cost) as current_month_cost, " +
+		"SUM(current_month_rmb_cost) as current_month_rmb_cost," +
+		" SUM(adjustment_cost) as adjustment_cost, SUM(adjustment_rmb_cost) as adjustment_rmb_cost"
+
+	sql := fmt.Sprintf(`SELECT %s FROM %s %s group by product_id %s`, fieldExpr,
+		table.AccountBillSummaryMainTable, whereExpr, pageExpr)
+
+	details := make([]tablebill.AccountBillSummaryMain, 0)
+	if err = a.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		return nil, err
+	}
+	return &typesbill.ListAccountBillSummaryMainDetails{Details: details}, nil
 }
