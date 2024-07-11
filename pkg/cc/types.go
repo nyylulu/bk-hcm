@@ -1391,10 +1391,10 @@ var (
 
 // BillControllerOption bill controller option
 type BillControllerOption struct {
-	ControllerSyncDuration         *time.Duration `yaml:"controller_sync_duration,omitempty"`
-	MainAccountSummarySyncDuration *time.Duration `yaml:"main_account_summary_sync_duration,omitempty"`
-	RootAccountSummarySyncDuration *time.Duration `yaml:"root_account_summary_sync_duration,omitempty"`
-	DailySummarySyncDuration       *time.Duration `yaml:"daily_summary_sync_duration,omitempty"`
+	ControllerSyncDuration         *time.Duration `yaml:"controllerSyncDuration,omitempty"`
+	MainAccountSummarySyncDuration *time.Duration `yaml:"mainAccountSummarySyncDuration,omitempty"`
+	RootAccountSummarySyncDuration *time.Duration `yaml:"rootAccountSummarySyncDuration,omitempty"`
+	DailySummarySyncDuration       *time.Duration `yaml:"dailySummarySyncDuration,omitempty"`
 }
 
 func (bco *BillControllerOption) trySetDefault() {
@@ -1434,4 +1434,37 @@ func (c *CMSI) validate() error {
 	}
 
 	return nil
+}
+
+// Jarvis 财务侧api配置
+type Jarvis struct {
+	AppID     string    `yaml:"appID"`
+	AppKey    string    `yaml:"appKey"`
+	Endpoints []string  `yaml:"endpoints"`
+	TLS       TLSConfig `yaml:"tls"`
+}
+
+// validate do validate
+func (c *Jarvis) validate() error {
+	if len(c.Endpoints) == 0 {
+		return errors.New("jarvis endpoints is empty")
+	}
+	return nil
+}
+
+// ExchangeRate ...
+type ExchangeRate struct {
+	EnablePull      bool                  `yaml:"enablePull"`
+	PullIntervalMin uint64                `yaml:"pullIntervalMin"`
+	ToCurrency      []enumor.CurrencyCode `yaml:"toCurrency"`
+	FromCurrency    []enumor.CurrencyCode `yaml:"fromCurrency"`
+}
+
+func (r *ExchangeRate) trySetDefault() {
+	if r.PullIntervalMin == 0 {
+		r.PullIntervalMin = 120
+	}
+	if len(r.ToCurrency) == 0 {
+		r.ToCurrency = []enumor.CurrencyCode{enumor.CurrencyCNY}
+	}
 }

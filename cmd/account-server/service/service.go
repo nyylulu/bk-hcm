@@ -54,6 +54,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/jarvis"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -61,15 +62,19 @@ import (
 
 // Service do all the account server's work
 type Service struct {
-	clientSet     *client.ClientSet
-	serve         *http.Server
-	authorizer    auth.Authorizer
-	audit         logicaudit.Interface
-	billManager   *bill.BillManager
-	obsController *bill.SyncController
+	clientSet              *client.ClientSet
+	serve                  *http.Server
+	authorizer             auth.Authorizer
+	audit                  logicaudit.Interface
+	billManager            *bill.BillManager
+	obsController          *bill.SyncController
+	exchangeRateController *bill.ExchangeRateController
 
 	// finOps  Finops client
 	finOps pkgfinops.Client
+
+	// jarvis api
+	jarvis jarvis.Client
 }
 
 // NewService create a service instance.
@@ -100,6 +105,12 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		return nil, err
 	}
 
+	jarvisCfg := cc.AccountServer().Jarvis
+	jarvisCli, err := jarvis.NewJarvis(&jarvisCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
 	// start bill manager
 	newBillManager := &bill.BillManager{
 		Sd:     sd,
@@ -121,6 +132,24 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		return nil, err
 	}
 
+	exchangeRate := cc.AccountServer().ExchangeRate
+	var rateCtrl *bill.ExchangeRateController
+	if exchangeRate.EnablePull {
+		rateOpt := &bill.ExchangeRateOpt{
+			FromCurrencyCodes: exchangeRate.FromCurrency,
+			ToCurrencyCodes:   exchangeRate.ToCurrency,
+			Jarvis:            jarvisCli,
+			DataCli:           apiClientSet.DataService(),
+			LoopInterval:      time.Duration(exchangeRate.PullIntervalMin) * time.Minute,
+			Sd:                sd,
+		}
+		var err error
+		rateCtrl, err = bill.NewExchangeRateController(rateOpt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	finOpsCfg := cc.AccountServer().FinOps
 	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
 	if err != nil {
@@ -128,12 +157,14 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	}
 
 	svr := &Service{
-		clientSet:     apiClientSet,
-		authorizer:    authorizer,
-		audit:         logicaudit.NewAudit(apiClientSet.DataService()),
-		billManager:   newBillManager,
-		obsController: newObsController,
-		finOps:        finOpsCli,
+		clientSet:              apiClientSet,
+		authorizer:             authorizer,
+		audit:                  logicaudit.NewAudit(apiClientSet.DataService()),
+		billManager:            newBillManager,
+		obsController:          newObsController,
+		finOps:                 finOpsCli,
+		jarvis:                 jarvisCli,
+		exchangeRateController: rateCtrl,
 	}
 
 	return svr, nil
@@ -168,6 +199,11 @@ func (s *Service) ListenAndServeRest() error {
 		}
 
 		server.TLSConfig = tlsC
+	}
+
+	if s.exchangeRateController != nil {
+		logs.Infof("start exchange rate controller")
+		go s.exchangeRateController.Run()
 	}
 
 	logs.Infof("start bill manager")
@@ -219,6 +255,7 @@ func (s *Service) apiSet() *restful.Container {
 		Authorizer: s.authorizer,
 		Audit:      s.audit,
 		Finops:     s.finOps,
+		Jarvis:     s.jarvis,
 	}
 
 	mainaccount.InitService(c)

@@ -2,6 +2,7 @@ package obs
 
 import (
 	"fmt"
+
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -92,7 +93,7 @@ func NewIEGObs(opt *IEGObsOption, reg prometheus.Registerer) (*IEGObs, error) {
 	}, nil
 }
 
-// NotifyObsPullIegBill
+// NotifyObsPullIegBill ...
 func (io *IEGObs) NotifyObsPullIegBill(kt *kit.Kit, req *BaseRequest) error {
 	url := "/obs-api?api_key=%s"
 	resp := new(BaseResponse)

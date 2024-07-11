@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/jarvis"
 
 	"github.com/emicklei/go-restful/v3"
 )
@@ -36,4 +37,5 @@ type Capability struct {
 	Authorizer auth.Authorizer
 	Audit      audit.Interface
 	Finops     finops.Client
+	Jarvis     jarvis.Client
 }

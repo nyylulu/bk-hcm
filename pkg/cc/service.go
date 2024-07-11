@@ -498,11 +498,13 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
-	Network    Network              `yaml:"network"`
-	Service    Service              `yaml:"service"`
-	Controller BillControllerOption `yaml:"contorller"`
-	Log        LogOption            `yaml:"log"`
-	FinOps     ApiGateway           `yaml:"finops"`
+	Network      Network              `yaml:"network"`
+	Service      Service              `yaml:"service"`
+	Controller   BillControllerOption `yaml:"controller"`
+	Log          LogOption            `yaml:"log"`
+	FinOps       ApiGateway           `yaml:"finops"`
+	Jarvis       Jarvis               `yaml:"jarvis"`
+	ExchangeRate ExchangeRate         `yaml:"exchangeRate"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -516,6 +518,7 @@ func (s *AccountServerSetting) trySetDefault() {
 	s.Service.trySetDefault()
 	s.Controller.trySetDefault()
 	s.Log.trySetDefault()
+	s.ExchangeRate.trySetDefault()
 }
 
 // Validate TaskServerSetting option.
@@ -529,5 +532,8 @@ func (s AccountServerSetting) Validate() error {
 		return err
 	}
 
+	if err := s.Jarvis.validate(); err != nil {
+		return err
+	}
 	return nil
 }
