@@ -196,7 +196,9 @@ export const useTable = (props: IProp) => {
       });
 
       const hasTopBar = computed(() => {
-        return slots.tableToolbar || slots.operation || slots.operationBarEnd;
+        return typeof props.scrConfig === 'function'
+          ? false
+          : slots.tableToolbar || slots.operation || slots.operationBarEnd || !props.searchOptions?.disabled;
       });
 
       const getTableHeight = () => {

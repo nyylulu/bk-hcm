@@ -467,6 +467,40 @@ const businesseMenus: RouteRecordRaw[] = [
           icon: 'hcm-icon bkhcm-icon-operation-record',
         },
       },
+      {
+        path: '/business/applications',
+        name: '单据',
+        children: [
+          {
+            path: '',
+            name: 'ApplicationsManage',
+            component: () => import('@/views/business/applications/index'),
+          },
+          {
+            path: 'host-application/detail/:id',
+            name: 'HostApplicationsDetail',
+            component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-application/modify',
+            name: 'HostApplicationsModify',
+            component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+        ],
+        meta: {
+          activeKey: 'applications',
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-operation-record',
+        },
+      },
     ],
     meta: {
       groupTitle: '其他',

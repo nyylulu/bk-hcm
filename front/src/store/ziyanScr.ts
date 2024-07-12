@@ -144,6 +144,21 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
   const dissolveHostOriginList = (data: IDissolveHostOriginListParam): Promise<IDissolveHostOriginListResult> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/host/origin/list`, data);
   };
+
+  /**
+   * @returns 主机申请-需求类型列表
+   */
+  const getRequirementList = () => {
+    return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/requirement`);
+  };
+
+  /**
+   * @returns 主机申请-单据状态列表
+   */
+  const getApplyStageList = () => {
+    return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/apply/stage`);
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -164,5 +179,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getDeliveryDetails,
     dissolveHostCurrentList,
     dissolveHostOriginList,
+    getRequirementList,
+    getApplyStageList,
   };
 });

@@ -1905,7 +1905,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'task_id',
       label: '任务ID',
-      width: 60,
       render: ({ data }: any) => {
         return (
           <Button
@@ -1922,7 +1921,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'status',
       label: '状态',
-      width: 60,
       render: ({ row }: any) => {
         if (row.status === -1) return <span class='c-disabled'>未执行</span>;
         if (row.status === 0) return <span class='c-success'>成功</span>;
@@ -1938,7 +1936,6 @@ export default (type: string, isSimpleShow = false) => {
     },
     {
       label: '成功台数/总台数',
-      width: '150',
       render: ({ row }: any) => {
         return (
           <div>
@@ -1952,7 +1949,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
-      width: '160',
       showOverflowTooltip: true,
     },
     {
@@ -1971,12 +1967,10 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'ip',
       label: '内网 IP',
-      width: 150,
     },
     {
       field: 'status',
       label: '状态',
-      width: 80,
       render: ({ data }: any) => {
         if (data.status === -1) return <span class='c-disabled'>未执行</span>;
         if (data.status === 0) return <span class='c-success'>成功</span>;
@@ -1992,13 +1986,11 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
-      width: 120,
       showOverflowTooltip: true,
     },
     {
       field: 'task_id',
       label: '关联初始化单',
-      width: 150,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2028,20 +2020,14 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'ip',
       label: '内网 IP',
-      minwidth: 120,
-      width: 120,
     },
     {
       field: 'asset_id',
       label: '固资号',
-      minwidth: 135,
-      width: 135,
     },
     {
       field: 'status',
       label: '状态',
-      minwidth: 32,
-      width: 32,
       render: ({ data }: any) => {
         if (data.status === -1) return <span class='c-disabled'>未执行</span>;
         if (data.status === 0) return <span class='c-success'>成功</span>;
@@ -2057,20 +2043,15 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'message',
       label: '状态说明',
-      width: 90,
-      minwidth: 90,
     },
     {
       field: 'deliverer',
       label: '匹配人',
-      width: 50,
-      minwidth: 50,
       render: ({ data }: any) => <WName name={data.deliverer}></WName>,
     },
     {
       field: 'generate_task_id',
       label: '关联生产单',
-      width: 205,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2087,7 +2068,6 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'init_task_id',
       label: '关联初始化单',
-      width: 110,
       render: ({ data }: any) => {
         return (
           <Button
@@ -2104,13 +2084,11 @@ export default (type: string, isSimpleShow = false) => {
     {
       field: 'start_at',
       label: '开始时间',
-      width: 160,
       render: ({ data }: any) => (data.status === -1 ? '-' : timeFormatter(data.start_at)),
     },
     {
       field: 'end_at',
       label: '结束时间',
-      width: 160,
       render: ({ data }: any) => (![0, 2].includes(data.status) ? '-' : timeFormatter(data.end_at)),
     },
   ];
