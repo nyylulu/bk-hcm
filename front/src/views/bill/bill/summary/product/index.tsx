@@ -1,4 +1,4 @@
-import { Ref, defineComponent, inject, ref, watch } from 'vue';
+import { Ref, defineComponent, inject, onMounted, ref, watch } from 'vue';
 
 import Button from '../../components/button';
 import Amount from '../../components/amount';
@@ -6,7 +6,7 @@ import Search from '../../components/search';
 
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
-import { reqBillsMainAccountSummaryList, reqBillsMainAccountSummarySum } from '@/api/bill';
+import { reqBillsMainAccountSummarySum, reqBillsProductSummaryList } from '@/api/bill';
 import { RulesItem } from '@/typings';
 
 export default defineComponent({
@@ -18,27 +18,30 @@ export default defineComponent({
     const searchRef = ref();
     const amountRef = ref();
 
-    const { columns } = useColumns('billsMainAccountSummary');
+    const op_product_ids = ref<number[]>([]);
+    const { columns } = useColumns('billsProductSummary');
     const { CommonTable, getListData, clearFilter, filter } = useTable({
       searchOptions: { disabled: true },
-      tableOptions: {
-        columns: columns.slice(2, -1),
-      },
+      tableOptions: { columns },
       requestOption: {
         sortOption: {
           sort: 'current_month_rmb_cost',
           order: 'DESC',
         },
-        apiMethod: reqBillsMainAccountSummaryList,
+        apiMethod: reqBillsProductSummaryList,
         extension: () => ({
           bill_year: bill_year.value,
           bill_month: bill_month.value,
+          op_product_ids: op_product_ids.value,
+          filter: undefined,
         }),
         immediate: false,
       },
     });
 
     const reloadTable = (rules: RulesItem[]) => {
+      // 运营产品这里 rules 只会有一个搜索条件, 直接按索引取就行
+      op_product_ids.value = rules.length > 0 ? (rules[0].value as number[]) : [];
       clearFilter();
       getListData(rules);
     };
@@ -51,9 +54,13 @@ export default defineComponent({
       amountRef.value.refreshAmountInfo();
     });
 
+    onMounted(() => {
+      reloadTable([]);
+    });
+
     return () => (
       <>
-        <Search ref={searchRef} searchKeys={['product_id']} onSearch={reloadTable} autoSelectMainAccount />
+        <Search ref={searchRef} searchKeys={['product_id']} onSearch={reloadTable} />
         <div class='p24' style={{ height: 'calc(100% - 162px)' }}>
           <CommonTable>
             {{

@@ -1,4 +1,4 @@
-import { defineComponent, ref, inject, watch, Ref } from 'vue';
+import { defineComponent, ref, inject, watch, Ref, onMounted } from 'vue';
 
 import { Button, Message } from 'bkui-vue';
 import { Plus } from 'bkui-vue/lib/icon';
@@ -11,21 +11,31 @@ import BatchOperation from './batch-operation';
 
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { deleteBillsAdjustment, reqBillsAdjustmentList } from '@/api/bill';
 import { timeFormatter } from '@/common/util';
-import { BILL_ADJUSTMENT_STATE__MAP, BILL_ADJUSTMENT_TYPE__MAP, CURRENCY_MAP } from '@/constants';
+import {
+  BILL_ADJUSTMENT_STATE__MAP,
+  BILL_ADJUSTMENT_TYPE__MAP,
+  BILL_MAIN_ACCOUNTS_KEY,
+  CURRENCY_MAP,
+} from '@/constants';
 import { DoublePlainObject, QueryRuleOPEnum, RulesItem } from '@/typings';
+import useBillStore from '@/store/useBillStore';
+import { computed } from '@vue/reactivity';
+import { formatBillCost } from '@/utils';
+import { useRoute } from 'vue-router';
 
 export default defineComponent({
   name: 'BillAdjust',
   setup() {
+    const route = useRoute();
     const { t } = useI18n();
     const bill_year = inject<Ref<number>>('bill_year');
     const bill_month = inject<Ref<number>>('bill_month');
-    const businessMapStore = useBusinessMapStore();
+    const billStore = useBillStore();
+    const amountRef = ref();
 
     const searchRef = ref();
     const createAdjustSideSliderRef = ref();
@@ -61,8 +71,7 @@ export default defineComponent({
       },
       {
         label: t('运营产品'),
-        field: 'product_id',
-        render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
+        field: 'product_name',
       },
       {
         label: t('二级账号名称'),
@@ -82,6 +91,7 @@ export default defineComponent({
       {
         label: t('金额'),
         field: 'cost',
+        render: ({ cell }: any) => formatBillCost(cell),
       },
       {
         label: t('币种'),
@@ -142,7 +152,7 @@ export default defineComponent({
       batchOperationRef.value.triggerShow(true);
     };
 
-    const { CommonTable, getListData, clearFilter } = useTable({
+    const { CommonTable, getListData, clearFilter, filter } = useTable({
       searchOptions: {
         disabled: true,
       },
@@ -166,6 +176,13 @@ export default defineComponent({
       },
     });
 
+    const amountFilter = computed(() => ({
+      filter: {
+        op: 'and',
+        rules: filter.rules,
+      },
+    }));
+
     const reloadTable = (rules: RulesItem[]) => {
       clearFilter();
       getListData(() => [
@@ -179,6 +196,23 @@ export default defineComponent({
       searchRef.value.handleSearch();
     });
 
+    watch(filter, () => {
+      amountRef.value.refreshAmountInfo();
+    });
+
+    onMounted(() => {
+      // 只有二级账号有保存的需求
+      const rules = [];
+      if (route.query[BILL_MAIN_ACCOUNTS_KEY]) {
+        rules.push({
+          field: 'main_account_id',
+          op: QueryRuleOPEnum.IN,
+          value: JSON.parse(atob(route.query[BILL_MAIN_ACCOUNTS_KEY] as string)),
+        });
+      }
+      reloadTable(rules);
+    });
+
     return () => (
       <div class='bill-adjust-module'>
         <Panel>
@@ -190,7 +224,7 @@ export default defineComponent({
             style={{ padding: 0, boxShadow: 'none' }}
           />
         </Panel>
-        <Panel class='mt12'>
+        <Panel class='mt12' style={{ height: 'calc(100% - 159px)' }}>
           <CommonTable>
             {{
               operation: () => (
@@ -213,7 +247,9 @@ export default defineComponent({
                   </Button>
                 </>
               ),
-              operationBarEnd: () => <Amount />,
+              operationBarEnd: () => (
+                <Amount isAdjust api={billStore.sum_adjust_items} payload={() => amountFilter.value} ref={amountRef} />
+              ),
             }}
           </CommonTable>
         </Panel>

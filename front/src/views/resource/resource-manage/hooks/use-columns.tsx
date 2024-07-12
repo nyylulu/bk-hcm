@@ -1972,8 +1972,44 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
-      label: '一级账号名称',
-      field: 'root_account_name',
+      label: '运营产品名称',
+      field: 'product_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '已确认账单人民币（元）',
+      field: 'current_month_rmb_cost_synced',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '已确认账单美金（美元）',
+      field: 'current_month_cost_synced',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '当前账单人民币（元）',
+      field: 'current_month_rmb_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '当前账单美金（美元）',
+      field: 'current_month_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+  ];
+
+  const billsProductSummaryColumns = [
+    {
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
     },
     {
@@ -2485,6 +2521,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     myApply: myApplyColumns,
     billsRootAccountSummary: billsRootAccountSummaryColumns,
     billsMainAccountSummary: billsMainAccountSummaryColumns,
+    billsProductSummary: billsProductSummaryColumns,
     billDetailAws: billDetailAwsColumns,
     billDetailAzure: billDetailAzureColumns,
     billDetailGcp: billDetailGcpColumns,

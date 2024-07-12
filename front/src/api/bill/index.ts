@@ -59,6 +59,17 @@ export const reqBillsMainAccountSummaryList = async (data: {
   return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/main-account-summarys/list`, data);
 };
 
+// 拉取当月运营产品账单汇总
+export const reqBillsProductSummaryList = async (data: {
+  bill_year: number;
+  bill_month: number;
+  op_product_ids: number[];
+  filter: FilterType;
+  page: IPageQuery;
+}): Promise<BillsMainAccountSummaryResData> => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/list`, data);
+};
+
 // 确认某个一级账号下所有账单数据
 export const confirmBillsRootAccountSummary = async (data: {
   bill_year: number;

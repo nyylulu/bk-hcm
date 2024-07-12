@@ -7,6 +7,13 @@ export default defineComponent({
   },
   setup(props, { slots }) {
     const { t } = useI18n();
+    // const OpColumn = computed(() =>
+    //   props.edit ? null : (
+    //     <HeadColumn minWidth={120} width={450}>
+    //       {t('操作')}
+    //     </HeadColumn>
+    //   ),
+    // );
     return () => (
       <Ediatable>
         {{
@@ -16,7 +23,7 @@ export default defineComponent({
                 {t('调整方式')}
               </HeadColumn>
               <HeadColumn required minWidth={120} width={450}>
-                {t('业务')}
+                {t('运营产品')}
               </HeadColumn>
               <HeadColumn required minWidth={120} width={450}>
                 {t('二级账号')}
@@ -30,6 +37,7 @@ export default defineComponent({
               <HeadColumn minWidth={120} width={450}>
                 {t('备注')}
               </HeadColumn>
+              {/* {OpColumn.value} */}
               {!props.edit && (
                 <HeadColumn minWidth={120} width={450}>
                   {t('操作')}

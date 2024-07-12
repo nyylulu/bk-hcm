@@ -17,6 +17,7 @@ interface ISearchModal {
   root_account_id: string[];
   main_account_id: string[];
   product_id: string[];
+  bk_biz_id: number[];
   updated_at: Date[];
 }
 
@@ -53,16 +54,18 @@ export default defineComponent({
       root_account_id: [],
       main_account_id: [],
       product_id: [],
+      bk_biz_id: [],
       updated_at: [],
     });
     const modal = ref(getDefaultModal());
     const rules = computed<RulesItem[]>(() => {
-      const { vendor, root_account_id, main_account_id, product_id, updated_at } = modal.value;
+      const { vendor, root_account_id, main_account_id, product_id, bk_biz_id, updated_at } = modal.value;
       const rules = [
         { field: 'vendor', op: QueryRuleOPEnum.IN, value: vendor },
         { field: 'root_account_id', op: QueryRuleOPEnum.IN, value: root_account_id },
         { field: 'main_account_id', op: QueryRuleOPEnum.IN, value: main_account_id },
         { field: 'product_id', op: QueryRuleOPEnum.IN, value: product_id },
+        { field: 'bk_biz_id', op: QueryRuleOPEnum.IN, value: bk_biz_id },
         {
           field: 'updated_at',
           op: QueryRuleOPEnum.GTE,

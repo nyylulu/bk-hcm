@@ -23,11 +23,11 @@ export const headRouteConfig = [
     name: '服务请求',
     path: '/service/my-apply',
   },
-  // {
-  //   id: 'bill',
-  //   name: '账号管理',
-  //   path: '/bill/account-manage',
-  // },
+  {
+    id: 'bill',
+    name: '账号管理',
+    path: '/bill/account-manage',
+  },
   {
     id: 'resource',
     name: '资源接入',

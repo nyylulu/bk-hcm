@@ -2,9 +2,10 @@ import useBillStore from '@/store/useBillStore';
 import { Select } from 'bkui-vue';
 import { defineComponent, onMounted, reactive, ref, watch } from 'vue';
 import './index.scss';
+import { SelectColumn } from '@blueking/ediatable';
 const { Option } = Select;
 
-export const useOperationProducts = () => {
+export const useOperationProducts = (immediate = true) => {
   const billStore = useBillStore();
   const list = ref([]);
   const pagination = reactive({
@@ -20,7 +21,7 @@ export const useOperationProducts = () => {
           op_product_name,
           op_product_ids,
           page: {
-            start: op_product_name === undefined && op_product_ids === undefined ? pagination.start : 0,
+            start: op_product_name === undefined && op_product_ids === undefined && !isCount ? pagination.start : 0,
             limit: isCount ? 0 : pagination.limit,
             count: isCount,
           },
@@ -41,8 +42,22 @@ export const useOperationProducts = () => {
     return map;
   };
 
+  const getAppendixList = async (id?: number) => {
+    if (list.value.findIndex((v) => v.op_product_id === id) !== -1) return;
+    await getList();
+    const detailRes = await billStore.list_operation_products({
+      op_product_ids: [id],
+      page: {
+        start: 0,
+        limit: pagination.limit,
+        count: false,
+      },
+    });
+    list.value = list.value.concat(detailRes.data.details);
+  };
+
   onMounted(() => {
-    getList();
+    immediate && getList();
   });
 
   const OperationProductsSelector = defineComponent({
@@ -50,11 +65,32 @@ export const useOperationProducts = () => {
       modelValue: String,
       isShowManagers: Boolean,
       multiple: Boolean,
+      isEdiatable: Boolean,
     },
     emits: ['update:modelValue'],
-    setup(props, { emit }) {
+    setup(props, { emit, expose }) {
       const selectedVal = ref(props.modelValue);
       const isScrollLoading = ref(false);
+      const selectRef = ref();
+
+      const getValue = () => {
+        return selectRef.value.getValue().then(() => selectedVal.value);
+      };
+
+      const handleScrollEnd = async () => {
+        if (list.value.length >= allCounts.value || isScrollLoading.value) return;
+        isScrollLoading.value = true;
+        pagination.start += pagination.limit;
+        const { data } = await billStore.list_operation_products({
+          page: {
+            start: pagination.start,
+            count: false,
+            limit: pagination.limit,
+          },
+        });
+        list.value.push(...data.details);
+        isScrollLoading.value = false;
+      };
 
       watch(selectedVal, (val) => emit('update:modelValue', val), { deep: true });
 
@@ -63,6 +99,35 @@ export const useOperationProducts = () => {
         (val) => (selectedVal.value = val),
         { deep: true },
       );
+
+      expose({
+        getValue,
+      });
+
+      if (props.isEdiatable)
+        return () => (
+          <SelectColumn
+            v-model={selectedVal.value}
+            ref={selectRef}
+            scrollLoading={isScrollLoading.value}
+            filterable
+            list={list.value.map((v) => ({
+              label: v.op_product_name,
+              key: v.op_product_id,
+              value: v.op_product_id,
+            }))}
+            multiple={props.multiple}
+            multipleMode={props.multiple ? 'tag' : undefined}
+            remoteMethod={(val) => getList(val)}
+            onScroll-end={handleScrollEnd}
+            rules={[
+              {
+                validator: (value: string) => Boolean(value),
+                message: '运营产品不能为空',
+              },
+            ]}
+          />
+        );
 
       return () => (
         <div class={'selector-wrapper'}>
@@ -73,20 +138,7 @@ export const useOperationProducts = () => {
             multiple={props.multiple}
             multipleMode={props.multiple ? 'tag' : undefined}
             remoteMethod={(val) => getList(val)}
-            onScroll-end={async () => {
-              if (list.value.length >= allCounts.value || isScrollLoading.value) return;
-              isScrollLoading.value = true;
-              pagination.start += pagination.limit;
-              const { data } = await billStore.list_operation_products({
-                page: {
-                  start: pagination.start,
-                  count: false,
-                  limit: pagination.limit,
-                },
-              });
-              list.value.push(...data.details);
-              isScrollLoading.value = false;
-            }}>
+            onScroll-end={handleScrollEnd}>
             {list.value.map(({ op_product_name, op_product_id, op_product_managers }) => (
               <Option name={op_product_name} id={op_product_id} key={op_product_id}>
                 <span>
@@ -106,5 +158,6 @@ export const useOperationProducts = () => {
   return {
     OperationProductsSelector,
     getTranslatorMap,
+    getAppendixList,
   };
 };
