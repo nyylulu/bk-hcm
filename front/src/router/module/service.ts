@@ -50,9 +50,10 @@ const serviceMenus: RouteRecordRaw[] = [
   },
   {
     path: '/service/resource-plan/list',
-    name: t('资源预测'),
+    name: 'planlist',
     component: () => import('@/views/resource-plan/list/index'),
     meta: {
+      title: t('资源预测'),
       activeKey: 'planlist',
       icon: 'hcm-icon bkhcm-icon-template-orchestration',
     },
