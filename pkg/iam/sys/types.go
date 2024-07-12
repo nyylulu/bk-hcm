@@ -83,15 +83,6 @@ const (
 	// BizAccess biz resource access action id to register iam.
 	BizAccess client.ActionID = "biz_access"
 
-	// BizZiyanResCreate 业务-主机申领-业务粒度
-	BizZiyanResCreate client.ActionID = "biz_ziyan_resource_create"
-	// BizZiyanResInventory 业务-主机库存-菜单粒度
-	BizZiyanResInventory client.ActionID = "biz_ziyan_resource_inventory"
-	// BizZiyanResRecycle 业务-主机回收-业务粒度
-	BizZiyanResRecycle client.ActionID = "biz_ziyan_resource_recycle"
-	// BizZiyanResDissolve 业务-机房裁撤-菜单粒度
-	BizZiyanResDissolve client.ActionID = "biz_ziyan_resource_dissolve"
-
 	// BizIaaSResCreate biz iaas resource create action id to register iam.
 	BizIaaSResCreate client.ActionID = "biz_iaas_resource_create"
 	// BizIaaSResOperate biz iaas resource operate action id to register iam.
@@ -173,6 +164,9 @@ const (
 	// OperationRecordFind operation record find action id to register iam.
 	OperationRecordFind client.ActionID = "operation_record_find"
 
+	// ServiceResDissolve 服务请求-服务-机房裁撤-菜单粒度
+	ServiceResDissolve client.ActionID = "service_resource_dissolve"
+
 	// CostManage bill manage action id to register iam.
 	CostManage client.ActionID = "cost_manage"
 	// AccountKeyAccess account secret key access action id to register iam.
@@ -188,6 +182,12 @@ const (
 	ZiyanCvmCreate client.ActionID = "ziyan_cvm_create"
 	// ZiyanResDissolveManage 机房裁撤管理-菜单粒度
 	ZiyanResDissolveManage client.ActionID = "ziyan_resource_dissolve_manage"
+	// ZiyanResInventory 主机库存-菜单粒度
+	ZiyanResInventory client.ActionID = "ziyan_resource_inventory"
+	// ZiyanResCreate 主机申领-业务粒度
+	ZiyanResCreate client.ActionID = "ziyan_resource_create"
+	// ZiyanResRecycle 主机回收-业务粒度
+	ZiyanResRecycle client.ActionID = "ziyan_resource_recycle"
 
 	// GlobalConfiguration global configuration action id to register iam.
 	GlobalConfiguration client.ActionID = "global_configuration"
@@ -223,14 +223,10 @@ const (
 
 // ActionIDNameMap is action id type map.
 var ActionIDNameMap = map[client.ActionID]string{
-	BizAccess:            "业务访问",
-	BizZiyanResCreate:    "业务-主机申领",
-	BizZiyanResInventory: "业务-主机库存",
-	BizZiyanResRecycle:   "业务-主机回收",
-	BizZiyanResDissolve:  "业务-机房裁撤",
-	BizIaaSResCreate:     "业务-IaaS资源创建",
-	BizIaaSResOperate:    "业务-IaaS资源操作",
-	BizIaaSResDelete:     "业务-IaaS资源删除",
+	BizAccess:         "业务访问",
+	BizIaaSResCreate:  "业务-IaaS资源创建",
+	BizIaaSResOperate: "业务-IaaS资源操作",
+	BizIaaSResDelete:  "业务-IaaS资源删除",
 
 	BizCLBResCreate:  "业务-负载均衡创建",
 	BizCLBResOperate: "业务-负载均衡操作",
@@ -246,6 +242,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	BizOperationRecordFind: "业务-操作记录查看",
 
 	BizResPlanOperate: "业务-资源预测操作",
+
+	ServiceResDissolve: "服务-机房裁撤",
 
 	AccountFind:    "资源-账号查看",
 	AccountImport:  "资源-账号录入",
@@ -276,11 +274,14 @@ var ActionIDNameMap = map[client.ActionID]string{
 
 	CostManage:             "平台-云成本管理",
 	AccountKeyAccess:       "平台-账号密钥访问",
-	ZiyanCvmType:           "平台-CVM机型",
-	ZiyanCvmSubnet:         "平台-CVM子网",
-	ZiyanResShelves:        "平台-资源上下架",
-	ZiyanCvmCreate:         "平台-CVM生产",
-	ZiyanResDissolveManage: "平台-机房裁撤管理",
+	ZiyanCvmType:           "CVM机型",
+	ZiyanCvmSubnet:         "CVM子网",
+	ZiyanResShelves:        "资源上下架",
+	ZiyanCvmCreate:         "CVM生产",
+	ZiyanResDissolveManage: "机房裁撤管理",
+	ZiyanResInventory:      "主机库存",
+	ZiyanResCreate:         "主机申领",
+	ZiyanResRecycle:        "主机回收",
 	GlobalConfiguration:    "平台-全局配置",
 	RootAccountManage:      "云账号-一级账号管理",
 	AccountBillManage:      "云账单-云账单管理",
