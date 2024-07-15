@@ -48,13 +48,16 @@ import (
 // Interface recycler interface
 type Interface interface {
 	// RecycleCheck check whether hosts can be recycled or not
-	RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq) (*types.RecycleCheckRst, error)
+	RecycleCheck(kit *kit.Kit, param *types.RecycleCheckReq, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+		action meta.Action) (*types.RecycleCheckRst, error)
 	// PreviewRecycleOrder preview resource recycle order
-	PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq) (*types.PreviewRecycleOrderRst, error)
+	PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq, bkBizIDMap map[int64]struct{}) (
+		*types.PreviewRecycleOrderRst, error)
 	// AuditRecycleOrder audit resource recycle orders
 	AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq) error
 	// CreateRecycleOrder create resource recycle order
-	CreateRecycleOrder(kit *kit.Kit, param *types.CreateRecycleReq) (*types.CreateRecycleOrderRst, error)
+	CreateRecycleOrder(kit *kit.Kit, param *types.CreateRecycleReq, bkBizIDMap map[int64]struct{},
+		resType meta.ResourceType, action meta.Action) (*types.CreateRecycleOrderRst, error)
 	// GetRecycleOrder gets resource recycle order info
 	GetRecycleOrder(kit *kit.Kit, param *types.GetRecycleOrderReq) (*types.GetRecycleOrderRst, error)
 	// GetRecycleDetect gets resource recycle detection task info
@@ -144,7 +147,9 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
 }
 
 // RecycleCheck check whether hosts can be recycled or not
-func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq) (*types.RecycleCheckRst, error) {
+func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (*types.RecycleCheckRst, error) {
+
 	if kt.User == "" {
 		logs.Errorf("failed to recycle check, for invalid user is empty, rid: %s", kt.Rid)
 		return nil, errors.New("failed to recycle check, for invalid user is empty")
@@ -177,6 +182,12 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq) (*typ
 	mapBizToModule := make(map[int64][]int64)
 	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
 	for _, rel := range relations {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[rel.BkBizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
+				"the bizIDMap:%+v passed in", rel.BkBizId, rel.BkHostId, bkBizIDMap)
+		}
+
 		mapHostToRel[rel.BkHostId] = rel
 		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
 			mapBizToModule[rel.BkBizId] = []int64{rel.BkModuleId}
@@ -214,7 +225,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq) (*typ
 	mapBizPermission := make(map[int64]bool)
 	for _, bizId := range bizIds {
 		err = r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Warnf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
@@ -249,17 +260,18 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq) (*typ
 			hasPermission = permission
 		}
 		checkInfo := &types.RecycleCheckInfo{
-			HostID:      host.BkHostId,
-			AssetID:     host.BkAssetId,
-			IP:          host.GetUniqIp(),
-			BizID:       bizId,
-			BizName:     bizName,
-			TopoModule:  moduleName,
-			Operator:    host.Operator,
-			BakOperator: host.BakOperator,
-			DeviceType:  host.SvrDeviceClass,
-			State:       host.SvrStatus,
-			InputTime:   host.SvrInputTime,
+			HostID:        host.BkHostId,
+			AssetID:       host.BkAssetId,
+			IP:            host.GetUniqIp(),
+			BkHostOuterIP: host.GetUniqOuterIp(),
+			BizID:         bizId,
+			BizName:       bizName,
+			TopoModule:    moduleName,
+			Operator:      host.Operator,
+			BakOperator:   host.BakOperator,
+			DeviceType:    host.SvrDeviceClass,
+			State:         host.SvrStatus,
+			InputTime:     host.SvrInputTime,
 		}
 		r.fillCheckInfo(checkInfo, kt.User, hasPermission)
 		checkInfos = append(checkInfos, checkInfo)
@@ -294,9 +306,7 @@ func (r *recycler) fillCheckInfo(host *types.RecycleCheckInfo, user string, hasP
 }
 
 // getHostBaseInfo get host detail info for recycle
-func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*table.RecycleHost,
-	error) {
-
+func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*table.RecycleHost, error) {
 	// 1. get host base info
 	hostBase, err := r.getHostBaseInfo(ips, assetIds, hostIds)
 	if err != nil {
@@ -356,18 +366,19 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 		}
 
 		hostDetail := &table.RecycleHost{
-			BizID:       bizId,
-			BizName:     bizName,
-			HostID:      host.BkHostId,
-			AssetID:     host.BkAssetId,
-			IP:          host.GetUniqIp(),
-			DeviceType:  host.SvrDeviceClass,
-			Zone:        host.BkZoneName,
-			SubZone:     host.SubZone,
-			ModuleName:  host.ModuleName,
-			Operator:    host.Operator,
-			BakOperator: host.BakOperator,
-			InputTime:   host.SvrInputTime,
+			BizID:         bizId,
+			BizName:       bizName,
+			HostID:        host.BkHostId,
+			AssetID:       host.BkAssetId,
+			IP:            host.GetUniqIp(),
+			BkHostOuterIP: host.GetUniqOuterIp(),
+			DeviceType:    host.SvrDeviceClass,
+			Zone:          host.BkZoneName,
+			SubZone:       host.SubZone,
+			ModuleName:    host.ModuleName,
+			Operator:      host.Operator,
+			BakOperator:   host.BakOperator,
+			InputTime:     host.SvrInputTime,
 		}
 
 		hostDetails = append(hostDetails, hostDetail)
@@ -378,7 +389,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 	}
 
 	// fill cvm info
-	if err := r.fillCvmInfo(cvmHosts); err != nil {
+	if err = r.fillCvmInfo(cvmHosts); err != nil {
 		logs.Errorf("failed to fill cvm info, err: %v", err)
 		return nil, err
 	}
@@ -433,6 +444,7 @@ func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*
 			"bk_host_id",
 			"bk_asset_id",
 			"bk_host_innerip",
+			"bk_host_outerip",
 			// 机型
 			"svr_device_class",
 			// 逻辑区域
@@ -553,14 +565,22 @@ func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) (
 }
 
 // PreviewRecycleOrder preview resource recycle order
-func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq) (*types.PreviewRecycleOrderRst,
-	error) {
+func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq, bkBizIDMap map[int64]struct{}) (
+	*types.PreviewRecycleOrderRst, error) {
 
 	// 1. get hosts info
 	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, for list host err: %v, rid: %s", err, kit.Rid)
 		return nil, err
+	}
+
+	for _, host := range hosts {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[host.BizID]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
+				"the bizIDMap:%+v passed in", host.BizID, host.HostID, bkBizIDMap)
+		}
 	}
 
 	// 2. classify hosts into groups with different recycle strategies
@@ -630,13 +650,13 @@ func (r *recycler) initAndSaveRecycleOrders(kit *kit.Kit, skipConfirm bool, rema
 			}
 
 			// 2. create and save recycle hosts
-			if err := r.initAndSaveHosts(order, group); err != nil {
+			if err = r.initAndSaveHosts(order, group); err != nil {
 				logs.Errorf("failed to create recycle order for save recycle host err: %v, rid: %s", err, kit.Rid)
 				return nil, fmt.Errorf("failed to create recycle order for save recycle host err: %v", err)
 			}
 
 			// 3. save recycle order
-			if err := dao.Set().RecycleOrder().CreateRecycleOrder(kit.Ctx, order); err != nil {
+			if err = dao.Set().RecycleOrder().CreateRecycleOrder(kit.Ctx, order); err != nil {
 				logs.Errorf("failed to create recycle order for save recycle order err: %v, rid: %s", err, kit.Rid)
 				return nil, fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
 			}
@@ -782,8 +802,8 @@ func (r *recycler) AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq)
 }
 
 // CreateRecycleOrder create resource recycle order
-func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq) (*types.CreateRecycleOrderRst,
-	error) {
+func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq, bkBizIDMap map[int64]struct{},
+	resType meta.ResourceType, action meta.Action) (*types.CreateRecycleOrderRst, error) {
 
 	// 1. get hosts info
 	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
@@ -800,16 +820,23 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 	// 2. check permission
 	bizIds := make([]int64, 0)
 	for _, host := range hosts {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[host.BizID]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
+				"the bizIDMap:%+v passed in", host.BizID, host.HostID, bkBizIDMap)
+		}
+
 		bizIds = append(bizIds, host.BizID)
 	}
 	bizIds = util.IntArrayUnique(bizIds)
 
 	for _, bizId := range bizIds {
 		err = r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
-			logs.Errorf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
+			logs.Errorf("failed to check recycle permission, bizID: %d, bkBizIDMap: %+v, err: %v",
+				bizId, bkBizIDMap, err)
 			return nil, err
 		}
 	}

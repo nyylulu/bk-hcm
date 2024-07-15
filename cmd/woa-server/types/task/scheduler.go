@@ -445,6 +445,7 @@ const (
 // GetApplyTicketReq get apply ticket request parameter
 type GetApplyTicketReq struct {
 	OrderId uint64 `json:"order_id"`
+	BkBizID int64  `json:"bk_biz_id"`
 }
 
 // Validate whether GetApplyTicketReq is valid
@@ -488,6 +489,7 @@ type ApplyAuditLog struct {
 // GetApplyAuditReq get apply ticket audit info request parameter
 type GetApplyAuditReq struct {
 	OrderId uint64 `json:"order_id"`
+	BkBizID int64  `json:"bk_biz_id"`
 }
 
 // Validate whether GetApplyAuditReq is valid

@@ -62,19 +62,20 @@ type RecycleCheckRst struct {
 
 // RecycleCheckInfo resource recycle check info
 type RecycleCheckInfo struct {
-	HostID      int64  `json:"bk_host_id"`
-	AssetID     string `json:"asset_id"`
-	IP          string `json:"ip"`
-	BizID       int64  `json:"bk_biz_id"`
-	BizName     string `json:"bk_biz_name"`
-	TopoModule  string `json:"topo_module"`
-	Operator    string `json:"operator"`
-	BakOperator string `json:"bak_operator"`
-	DeviceType  string `json:"device_type"`
-	State       string `json:"state"`
-	InputTime   string `json:"input_time"`
-	Recyclable  bool   `json:"recyclable"`
-	Message     string `json:"message"`
+	HostID        int64  `json:"bk_host_id"`
+	AssetID       string `json:"asset_id"`
+	IP            string `json:"ip"`
+	BkHostOuterIP string `json:"bk_host_outerip"`
+	BizID         int64  `json:"bk_biz_id"`
+	BizName       string `json:"bk_biz_name"`
+	TopoModule    string `json:"topo_module"`
+	Operator      string `json:"operator"`
+	BakOperator   string `json:"bak_operator"`
+	DeviceType    string `json:"device_type"`
+	State         string `json:"state"`
+	InputTime     string `json:"input_time"`
+	Recyclable    bool   `json:"recyclable"`
+	Message       string `json:"message"`
 }
 
 // ReturnPlan resource return plan specification
