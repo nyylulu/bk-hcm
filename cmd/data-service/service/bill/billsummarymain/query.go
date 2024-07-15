@@ -81,8 +81,8 @@ func toProtoPullerResult(m *tablebill.AccountBillSummaryMain) *dataproto.BillSum
 		CurrentMonthCost:          m.CurrentMonthCost.Decimal,
 		CurrentMonthRMBCost:       m.CurrentMonthRMBCost.Decimal,
 		Rate:                      m.Rate,
-		AjustmentCost:             m.AjustmentCost.Decimal,
-		AjustmentRMBCost:          m.AjustmentRMBCost.Decimal,
+		AdjustmentCost:            m.AdjustmentCost.Decimal,
+		AdjustmentRMBCost:         m.AdjustmentRMBCost.Decimal,
 		State:                     m.State,
 		CreatedAt:                 m.CreatedAt,
 		UpdatedAt:                 m.UpdatedAt,
@@ -127,7 +127,7 @@ func toProductResult(m *tablebill.AccountBillSummaryMain) *dataproto.BillSummary
 		CurrentMonthRMBCostSynced: m.CurrentMonthRMBCostSynced.Decimal,
 		CurrentMonthCost:          m.CurrentMonthCost.Decimal,
 		CurrentMonthRMBCost:       m.CurrentMonthRMBCost.Decimal,
-		AdjustmentCost:            m.AjustmentCost.Decimal,
-		AdjustmentRMBCost:         m.AjustmentRMBCost.Decimal,
+		AdjustmentCost:            m.AdjustmentCost.Decimal,
+		AdjustmentRMBCost:         m.AdjustmentRMBCost.Decimal,
 	}
 }

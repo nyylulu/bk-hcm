@@ -118,9 +118,8 @@ export default defineComponent({
                           {MAIN_ACCOUNT_VENDORS.map(({ vendor, name, icon }) =>
                             vendor !== VendorEnum.TCLOUD ? (
                               <div
-                                class={`account-vendor-option ${
-                                  vendor === formModel.vendor ? 'account-vendor-option-active' : ''
-                                }`}
+                                class={`account-vendor-option ${vendor === formModel.vendor ? 'account-vendor-option-active' : ''
+                                  }`}
                                 onClick={() => (formModel.vendor = vendor)}>
                                 <img src={icon} alt={name} class={'account-vendor-option-icon'} />
                                 <p class={'account-vendor-option-text'}>{name}</p>
@@ -183,8 +182,9 @@ export default defineComponent({
                                 [VendorEnum.AWS, VendorEnum.AZURE, VendorEnum.HUAWEI].includes(
                                   formModel.vendor as VendorEnum,
                                 )
-                              )
+                              ) {
                                 return /^[a-zA-Z][a-zA-Z0-9_]{5,19}$/.test(val);
+                              }
                               return /^[a-zA-Z][a-zA-Z0-9-]{5,19}$/.test(val);
                             },
                           },
