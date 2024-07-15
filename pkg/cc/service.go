@@ -390,6 +390,8 @@ func (s *TaskServerSetting) trySetDefault() {
 		s.OBSDatabase.trySetDefault()
 	}
 	s.Log.trySetDefault()
+
+	return
 }
 
 // Validate TaskServerSetting option.

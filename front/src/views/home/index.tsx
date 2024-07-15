@@ -276,7 +276,7 @@ export default defineComponent({
                                         icon: () => <i class={child.meta?.icon} />,
                                         default: () => (
                                           <p class='flex-row flex-1 justify-content-between align-items-center pr16'>
-                                            <span class='flex-1 text-ov'>{child.name as string}</span>
+                                            <span class='flex-1 text-ov'>{child.meta?.title}</span>
                                           </p>
                                         ),
                                       }}
@@ -291,9 +291,7 @@ export default defineComponent({
                             if (!children.length) return null;
 
                             return (
-                              <Menu.Group
-                                key={menuItem.path as string}
-                                name={(menuItem.name as string) || (menuItem.meta?.menuName as string)}>
+                              <Menu.Group key={menuItem.path as string} name={menuItem.meta?.groupTitle as string}>
                                 {{ default: () => children }}
                               </Menu.Group>
                             );
@@ -314,7 +312,7 @@ export default defineComponent({
                               <Menu.Item key={menuItem.meta.activeKey as string}>
                                 {{
                                   icon: () => <i class={menuItem.meta.icon} />,
-                                  default: () => menuItem.name as string,
+                                  default: () => menuItem.meta?.title,
                                 }}
                               </Menu.Item>
                             </RouterLink>

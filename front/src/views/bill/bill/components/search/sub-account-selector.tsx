@@ -1,5 +1,4 @@
 import { VendorEnum } from '@/common/constant';
-import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
 import { useSingleList } from '@/hooks/useSingleList';
 import { QueryRuleOPEnum } from '@/typings';
 import { SelectColumn } from '@blueking/ediatable';
@@ -15,11 +14,10 @@ export default defineComponent({
     rootAccountId: Array as PropType<string[]>,
     productId: Array as PropType<string[]>,
     autoSelect: Boolean,
+    // 保存至 url 上的 key
+    urlKey: String,
     // 是否用于 ediatable
-    isEditable: {
-      type: Boolean,
-      default: false,
-    },
+    isEditable: { type: Boolean, default: false },
   },
   emits: ['update:modelValue'],
   setup(props, { emit, expose }) {
@@ -61,9 +59,11 @@ export default defineComponent({
 
     watch(selectedValue, async (val) => {
       // async/await 避免因异步路由跳转导致取值错误
-      await router.push({
-        query: { ...route.query, [BILL_MAIN_ACCOUNTS_KEY]: val.length ? btoa(JSON.stringify(val)) : undefined },
-      });
+      if (props.urlKey) {
+        await router.push({
+          query: { ...route.query, [props.urlKey]: val.length ? btoa(JSON.stringify(val)) : undefined },
+        });
+      }
       emit('update:modelValue', val);
     });
 
@@ -79,8 +79,8 @@ export default defineComponent({
     const unwatch = watch(
       dataList,
       () => {
-        if (props.autoSelect && route.query[BILL_MAIN_ACCOUNTS_KEY]) {
-          selectedValue.value = JSON.parse(atob(route.query[BILL_MAIN_ACCOUNTS_KEY] as string));
+        if (props.autoSelect && props.urlKey && route.query[props.urlKey]) {
+          selectedValue.value = JSON.parse(atob(route.query[props.urlKey] as string));
           unwatch();
         }
       },

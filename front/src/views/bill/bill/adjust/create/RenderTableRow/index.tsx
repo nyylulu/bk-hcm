@@ -130,6 +130,7 @@ export default defineComponent({
           <td>
             <InputColumn
               type='number'
+              min={0}
               precision={3}
               ref={costRef}
               v-model={formModel.cost}
