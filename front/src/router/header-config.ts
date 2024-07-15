@@ -8,11 +8,11 @@ export const headRouteConfig = [
     name: '资源管理',
     path: '/business/host',
   },
-  {
-    id: 'ziyanScr',
-    name: '自研云资源',
-    path: '/ziyanScr/hostInventory',
-  },
+  // {
+  //   id: 'ziyanScr',
+  //   name: '自研云资源',
+  //   path: '/ziyanScr/hostInventory',
+  // },
   // {
   //   id: 'resource-plan',
   //   name: '资源预测',

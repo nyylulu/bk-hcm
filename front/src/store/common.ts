@@ -64,12 +64,12 @@ export const useCommonStore = defineStore({
       { type: 'cert', action: 'delete', id: 'biz_cert_resource_delete', bk_biz_id: 0 }, // 业务 证书删除
 
       // scr菜单权限
-      { type: 'ziyan_resource_inventory', action: 'find', id: 'ziyan_resource_inventory_find' }, // scr 主机库存
-      { type: 'ziyan_resource_dissolve', action: 'find', id: 'ziyan_resource_dissolve_find' }, // scr 机房裁撤
-      { type: 'ziyan_cvm_type', action: 'find', id: 'ziyan_cvm_type_find' }, // scr CVM机型
-      { type: 'ziyan_cvm_subnet', action: 'find', id: 'ziyan_cvm_subnet_find' }, // scr CVM子网
-      { type: 'ziyan_res_shelves', action: 'find', id: 'ziyan_res_shelves_find' }, // scr 资源上下架
-      { type: 'ziyan_cvm_create', action: 'find', id: 'ziyan_cvm_create_find' }, // scr CVM生产
+      // { type: 'ziyan_resource_inventory', action: 'find', id: 'ziyan_resource_inventory_find' }, // scr 主机库存
+      // { type: 'ziyan_resource_dissolve', action: 'find', id: 'ziyan_resource_dissolve_find' }, // scr 机房裁撤
+      // { type: 'ziyan_cvm_type', action: 'find', id: 'ziyan_cvm_type_find' }, // scr CVM机型
+      // { type: 'ziyan_cvm_subnet', action: 'find', id: 'ziyan_cvm_subnet_find' }, // scr CVM子网
+      // { type: 'ziyan_res_shelves', action: 'find', id: 'ziyan_res_shelves_find' }, // scr 资源上下架
+      // { type: 'ziyan_cvm_create', action: 'find', id: 'ziyan_cvm_create_find' }, // scr CVM生产
       // 账号管理
       { type: 'root_account', action: 'find', id: 'root_account_find' }, // 云账号管理 - 一级账号
       { type: 'main_account', action: 'find', id: 'main_account_find' }, // 云账号管理 - 二级账号

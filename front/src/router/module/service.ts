@@ -53,6 +53,7 @@ const serviceMenus: RouteRecordRaw[] = [
     name: t('资源预测'),
     component: () => import('@/views/resource-plan/list/index'),
     meta: {
+      title: t('资源预测'),
       activeKey: 'planlist',
       icon: 'hcm-icon bkhcm-icon-template-orchestration',
     },
