@@ -82,7 +82,7 @@ export default defineComponent({
         {{
           default: () => (
             <>
-              <Alert theme='warning'>{t('账单同步必须在 每个月的1号 操作，其余时间不允许同步')}</Alert>
+              <Alert theme='warning'>{t('账单同步,会将当前云厂商的数据同步给公司OBS平台')}</Alert>
               <section class={cssModule['vendor-wrapper']}>
                 <div class={cssModule.title}>{t('云厂商')}</div>
                 <VendorRadioGroup v-model={vendor.value} size='small' />
@@ -105,11 +105,11 @@ export default defineComponent({
               <Alert theme='info' class={cssModule.mb12}>
                 {t('在操作前，请确保当前账单核对无误后，再进行同步操作。检查的步骤如下：')}
                 <br />
-                {t('1.检查XX步骤')}
+                {t('1.一级账号的本地金额和一级账号的云上金额核对')}
                 <br />
-                {t('2.检查XX步骤')}
+                {t('2.一级账号总金额和二级账号总金额核对')}
                 <br />
-                {t('3.检查XX步骤')}
+                {t('3.一级账号当月金额和一级账号上月金额环比')}
               </Alert>
               <Checkbox v-model={isChecked.value}>{t('已确认所有步骤正确，可以触发同步操作')}</Checkbox>
             </>
