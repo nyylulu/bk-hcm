@@ -55,6 +55,7 @@ import (
 	"hcm/pkg/serviced"
 	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/jarvis"
+	"hcm/pkg/thirdparty/obs"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -121,11 +122,17 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		CurrentMainControllers: make(map[string]*bill.MainAccountController),
 		CurrentRootControllers: make(map[string]*bill.RootAccountController),
 	}
+	obsCfg := cc.AccountServer().IEGObsOption
+	obsCli, err := obs.NewIEGObs(&obsCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
 
 	// start ob manager
 	newObsControllerOption := &bill.SyncControllerOption{
 		Sd:     sd,
 		Client: apiClientSet,
+		Obs:    obsCli,
 	}
 	newObsController, err := bill.NewSyncController(newObsControllerOption)
 	if err != nil {

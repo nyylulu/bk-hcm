@@ -39,6 +39,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/obs"
 	"hcm/pkg/tools/slice"
 )
 
@@ -51,8 +52,8 @@ const (
 	batchSize = uint64(50000)
 )
 
-// SyncRecordDeltailItem
-type SyncRecordDeltailItem struct {
+// SyncRecordDetailItem ...
+type SyncRecordDetailItem struct {
 	RootAccountID string `json:"root_account_id"`
 	MainAccountID string `json:"main_account_id"`
 	Vendor        string `json:"vendor"`
@@ -77,6 +78,7 @@ func NewSyncController(opt *SyncControllerOption) (*SyncController, error) {
 	return &SyncController{
 		Client: opt.Client,
 		Sd:     opt.Sd,
+		obs:    opt.Obs,
 	}, nil
 }
 
@@ -84,15 +86,17 @@ func NewSyncController(opt *SyncControllerOption) (*SyncController, error) {
 type SyncControllerOption struct {
 	Client *client.ClientSet
 	Sd     serviced.ServiceDiscover
+	Obs    obs.Client
 }
 
 // SyncController bill sync controller
 type SyncController struct {
 	Client *client.ClientSet
 	Sd     serviced.ServiceDiscover
+	obs    obs.Client
 }
 
-// Start run controller
+// Run controller
 func (sc *SyncController) Run() {
 	go sc.syncLoop(getInternalKit())
 }
@@ -158,29 +162,82 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 		if item.State == stateSynced {
 			continue
 		}
-		afterItem, err := sc.handleSyncRecordDeltailItem(kt, item)
+		afterItem, err := sc.handleSyncRecordDetailItem(kt, item)
 		if err != nil {
 			return err
 		}
 		itemList[index] = afterItem
-		newDetaiData, err := json.Marshal(itemList)
+		newDetailData, err := json.Marshal(itemList)
 		if err != nil {
 			return err
 		}
 		if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 			ID:     syncRecord.ID,
-			Detail: string(newDetaiData),
+			Detail: string(newDetailData),
 		}); err != nil {
 			logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 			return err
 		}
 		return nil
 	}
+
+	if err := sc.notifyObs(kt, syncRecord); err != nil {
+		logs.Errorf("fail notify obs for bill item synced, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
 	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 		ID:    syncRecord.ID,
 		State: enumor.BillSyncRecordStateSynced,
 	}); err != nil {
 		logs.Warnf("update bill sync record state to synced failed, err %s, rid: %s", err.Error(), kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+func (sc *SyncController) notifyObs(kt *kit.Kit, syncRecord *billcore.SyncRecord) error {
+
+	var obsAccountType obs.OBSAccountType
+	var costColumn string
+	var totalCount uint64
+	switch syncRecord.Vendor {
+	case enumor.Aws:
+		obsAccountType = obs.AccountTypeAws
+		costColumn = "cost"
+	case enumor.HuaWei:
+		obsAccountType = obs.AccountTypeHuawei
+		costColumn = "real_cost"
+	case enumor.Gcp:
+		obsAccountType = obs.AccountTypeGCP
+		costColumn = "cost"
+
+	default:
+		return fmt.Errorf("unsupport vendor %s for obs notify repull", syncRecord.Vendor)
+	}
+
+	records, err := sc.getItemListFromDetail(kt, syncRecord)
+	if err != nil {
+		logs.Errorf("fail to unmarshal sync detail, err %s, rid: %s", err, kt.Rid)
+		return err
+	}
+	for _, record := range records {
+		totalCount += record.Total
+	}
+
+	// 通知 OBS 同步完成
+	err = sc.obs.NotifyRePull(kt, &obs.NotifyObsPullReq{
+		// 组装为OBS侧要求的格式, 202406
+		YearMonth: int64(syncRecord.BillYear*100 + syncRecord.BillMonth),
+		AccountInfoList: []obs.AccountInfo{{
+			AccountType: obsAccountType,
+			Total:       totalCount,
+			Column:      costColumn,
+			SumColValue: syncRecord.RMBCost,
+		}},
+	})
+	if err != nil {
+		logs.Errorf("fail to notify obs to repull account bill after bill synced, err %s, rid: %v", err, kt.Rid)
 		return err
 	}
 	return nil
@@ -217,9 +274,9 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 		}
 		mainSummaryList = append(mainSummaryList, tmpResult.Details...)
 	}
-	var itemList []*SyncRecordDeltailItem
+	var itemList []*SyncRecordDetailItem
 	for _, mainSummary := range mainSummaryList {
-		itemList = append(itemList, &SyncRecordDeltailItem{
+		itemList = append(itemList, &SyncRecordDetailItem{
 			RootAccountID: mainSummary.RootAccountID,
 			MainAccountID: mainSummary.MainAccountID,
 			BillYear:      mainSummary.BillYear,
@@ -233,13 +290,13 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 			State:         stateNew,
 		})
 	}
-	newDetaiData, err := json.Marshal(itemList)
+	newDetailData, err := json.Marshal(itemList)
 	if err != nil {
 		return err
 	}
 	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 		ID:     syncRecord.ID,
-		Detail: string(newDetaiData),
+		Detail: string(newDetailData),
 	}); err != nil {
 		logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 		return err
@@ -249,9 +306,9 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 }
 
 func (sc *SyncController) getItemListFromDetail(
-	kt *kit.Kit, syncRecord *billcore.SyncRecord) ([]*SyncRecordDeltailItem, error) {
+	kt *kit.Kit, syncRecord *billcore.SyncRecord) ([]*SyncRecordDetailItem, error) {
 
-	var itemList []*SyncRecordDeltailItem
+	var itemList []*SyncRecordDetailItem
 	if err := json.Unmarshal([]byte(syncRecord.Detail), &itemList); err != nil {
 		logs.Warnf("decode sync record detail %s failed, err %s, rid: %s", syncRecord.Detail, err.Error(), kt.Rid)
 		return nil, fmt.Errorf("decode sync record detail %s failed, err %s", syncRecord.Detail, err.Error())
@@ -259,8 +316,8 @@ func (sc *SyncController) getItemListFromDetail(
 	return itemList, nil
 }
 
-func (sc *SyncController) handleSyncRecordDeltailItem(kt *kit.Kit, syncRecordItem *SyncRecordDeltailItem) (
-	*SyncRecordDeltailItem, error) {
+func (sc *SyncController) handleSyncRecordDetailItem(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
+	*SyncRecordDetailItem, error) {
 
 	taskServerNameList, err := getTaskServerKeyList(sc.Sd)
 	if err != nil {
@@ -281,7 +338,7 @@ func (sc *SyncController) handleSyncRecordDeltailItem(kt *kit.Kit, syncRecordIte
 	}
 }
 
-func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDeltailItem) (*SyncRecordDeltailItem, error) {
+func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (*SyncRecordDetailItem, error) {
 	expressions := []*filter.AtomRule{
 		tools.RuleEqual("root_account_id", syncRecordItem.RootAccountID),
 		tools.RuleEqual("main_account_id", syncRecordItem.MainAccountID),
@@ -304,8 +361,8 @@ func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDeltai
 }
 
 func (sc *SyncController) doSubCleanTask(kt *kit.Kit,
-	syncRecordItem *SyncRecordDeltailItem, taskServerNameList []string) (
-	*SyncRecordDeltailItem, error) {
+	syncRecordItem *SyncRecordDetailItem, taskServerNameList []string) (
+	*SyncRecordDetailItem, error) {
 
 	if len(syncRecordItem.FlowID) == 0 {
 		id, err := sc.createCleanTask(kt, syncRecordItem)
@@ -342,7 +399,7 @@ func (sc *SyncController) doSubCleanTask(kt *kit.Kit,
 	return syncRecordItem, nil
 }
 
-func (sc *SyncController) createCleanTask(kt *kit.Kit, syncRecordItem *SyncRecordDeltailItem) (string, error) {
+func (sc *SyncController) createCleanTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (string, error) {
 	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, &taskserver.AddCustomFlowReq{
 		Name: enumor.FlowObsClean,
 		Memo: "do sub clean task",
@@ -360,8 +417,8 @@ func (sc *SyncController) createCleanTask(kt *kit.Kit, syncRecordItem *SyncRecor
 }
 
 func (sc *SyncController) doSubSyncTask(
-	kt *kit.Kit, syncRecordItem *SyncRecordDeltailItem, taskServerNameList []string) (
-	*SyncRecordDeltailItem, error) {
+	kt *kit.Kit, syncRecordItem *SyncRecordDetailItem, taskServerNameList []string) (
+	*SyncRecordDetailItem, error) {
 
 	if len(syncRecordItem.FlowID) == 0 {
 		// create custom sync flow
@@ -404,7 +461,7 @@ func (sc *SyncController) doSubSyncTask(
 	return syncRecordItem, nil
 }
 
-func (sc *SyncController) createSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordDeltailItem) (string, error) {
+func (sc *SyncController) createSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (string, error) {
 	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, &taskserver.AddCustomFlowReq{
 		Name: enumor.FlowObsSync,
 		Memo: "do sub sync task",

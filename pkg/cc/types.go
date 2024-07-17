@@ -1452,7 +1452,7 @@ func (c *Jarvis) validate() error {
 	return nil
 }
 
-// ExchangeRate ...
+// ExchangeRate 汇率自动拉取配置
 type ExchangeRate struct {
 	EnablePull      bool                  `yaml:"enablePull"`
 	PullIntervalMin uint64                `yaml:"pullIntervalMin"`
@@ -1467,4 +1467,26 @@ func (r *ExchangeRate) trySetDefault() {
 	if len(r.ToCurrency) == 0 {
 		r.ToCurrency = []enumor.CurrencyCode{enumor.CurrencyCNY}
 	}
+}
+
+// IEGObsOption OBS 账单拉取配置
+type IEGObsOption struct {
+	Endpoints []string  `yaml:"endpoints"`
+	APIKey    string    `yaml:"apiKey"`
+	TLS       TLSConfig `yaml:"tls"`
+}
+
+// validate hcm runtime.
+func (gt IEGObsOption) validate() error {
+	if len(gt.Endpoints) == 0 {
+		return errors.New("obs endpoints is not set")
+	}
+	if len(gt.APIKey) == 0 {
+		return errors.New("obs api key is not set")
+	}
+
+	if err := gt.TLS.validate(); err != nil {
+		return fmt.Errorf("validate obs tls failed, err: %v", err)
+	}
+	return nil
 }

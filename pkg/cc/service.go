@@ -507,6 +507,7 @@ type AccountServerSetting struct {
 	FinOps       ApiGateway           `yaml:"finops"`
 	Jarvis       Jarvis               `yaml:"jarvis"`
 	ExchangeRate ExchangeRate         `yaml:"exchangeRate"`
+	IEGObsOption IEGObsOption         `yaml:"obs"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -535,6 +536,10 @@ func (s AccountServerSetting) Validate() error {
 	}
 
 	if err := s.Jarvis.validate(); err != nil {
+		return err
+	}
+
+	if err := s.IEGObsOption.validate(); err != nil {
 		return err
 	}
 	return nil

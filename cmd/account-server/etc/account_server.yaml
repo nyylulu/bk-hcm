@@ -129,3 +129,23 @@ exchangeRate:
   fromCurrency:
     - USD
     - EUR
+
+# [内部版] OBS侧接口配置
+obs:
+  # 通知obs的api地址
+  endpoints:
+    - http://127.0.0.1:8888
+  # api秘钥
+  apiKey: abcd
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
