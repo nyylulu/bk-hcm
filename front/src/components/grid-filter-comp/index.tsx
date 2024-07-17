@@ -14,12 +14,13 @@ export default defineComponent({
       required: true,
     },
     loading: Boolean,
+    col: { type: Number, default: 3 },
   },
   emits: ['search', 'reset'],
   setup(props, { emit }) {
     return () => (
       <section class={cssModule.filter}>
-        <div class={cssModule.rules}>
+        <div class={cssModule.rules} style={{ gridTemplateColumns: `repeat(${props.col}, 1fr)` }}>
           {props.rules.map(({ title, content }) => (
             <div class={cssModule.item}>
               <div class={cssModule.title}>{title}</div>

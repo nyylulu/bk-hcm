@@ -12,8 +12,8 @@ export default defineComponent({
     const { t } = useI18n();
 
     const cloudTypes = ref([
-      { label: t('自研云'), value: 'ziyan' },
-      { label: t('公有云'), value: 'public' },
+      { label: t('自研云'), value: 'ziyan', disabled: false },
+      { label: t('公有云'), value: 'public', disabled: true },
     ]);
     const activeCloudType = ref(cloudTypes.value[0].value);
 
@@ -27,17 +27,25 @@ export default defineComponent({
       <>
         <section class={cssModule['scene-wrapper']}>
           <BkRadioGroup v-model={activeCloudType.value} class={cssModule.mr24}>
-            {cloudTypes.value.map((item) => (
-              <BkRadioButton class={cssModule['radio-button']} key={item.value} label={item.value}>
-                {item.label}
+            {cloudTypes.value.map(({ label, value, disabled }) => (
+              <BkRadioButton
+                class={cssModule['radio-button']}
+                key={value}
+                label={value}
+                disabled={disabled}
+                v-bk-tooltips={{
+                  content: t('公有云无回收单据，主机回收后，请到回收站查看回收的主机'),
+                  disabled: !disabled,
+                }}>
+                {label}
               </BkRadioButton>
             ))}
           </BkRadioGroup>
           {activeCloudType.value === 'ziyan' && (
             <BkRadioGroup v-model={activeScene.value}>
-              {scenes.value.map((item) => (
-                <BkRadioButton class={cssModule['radio-button']} key={item.value} label={item.value}>
-                  {item.label}
+              {scenes.value.map(({ label, value }) => (
+                <BkRadioButton class={cssModule['radio-button']} key={value} label={value}>
+                  {label}
                 </BkRadioButton>
               ))}
             </BkRadioGroup>

@@ -469,7 +469,6 @@ const businesseMenus: RouteRecordRaw[] = [
       },
       {
         path: '/business/applications',
-        name: '单据',
         children: [
           {
             path: '',
@@ -494,8 +493,27 @@ const businesseMenus: RouteRecordRaw[] = [
               notMenu: true,
             },
           },
+          {
+            path: 'host-recycle/pre-detail',
+            name: 'HostRecyclePreDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/pre-details'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-recycle/doc-detail',
+            name: 'HostRecycleDocDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/bill-detail'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
         ],
         meta: {
+          title: '单据',
           activeKey: 'applications',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-operation-record',
