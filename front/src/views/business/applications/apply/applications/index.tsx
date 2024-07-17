@@ -4,16 +4,19 @@ import cssModule from './index.module.scss';
 
 import { Button, Message, TagInput } from 'bkui-vue';
 import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
+import GridFilterComp from '@/components/grid-filter-comp';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
 import MemberSelect from '@/components/MemberSelect';
 import WName from '@/components/w-name';
 import StageDetailSideslider from './stage-detail';
+import MatchSideslider from './match';
 
 import moment from 'moment';
 import { useI18n } from 'vue-i18n';
 import { throttle } from 'lodash';
 import { useAccountStore, useUserStore, useZiyanScrStore } from '@/store';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useFormModel from '@/hooks/useFormModel';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -24,7 +27,6 @@ import { getResourceTypeName } from '@/views/ziyanScr/hostApplication/components
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import http from '@/http';
-import GridFilterComp from '@/components/grid-filter-comp';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -35,11 +37,13 @@ export default defineComponent({
     const accountStore = useAccountStore();
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
+    const { getBusinessApiPath } = useWhereAmI();
 
     const { transformApplyStages } = useApplyStages();
     const { transformRequireTypes } = useRequireTypes();
 
     const stageDetailSidesliderRef = ref();
+    const matchSidesliderRef = ref();
 
     const { formModel, resetForm } = useFormModel({
       bkBizId: [],
@@ -51,7 +55,6 @@ export default defineComponent({
     });
     const curRow = ref({});
 
-    const isMatchPanelShow = ref(false);
     const orderClipboard = ref<any>({});
     const machineDetails = ref([]);
 
@@ -112,7 +115,10 @@ export default defineComponent({
     const throttleInfo = ref(null);
     // 已交付设备
     const getDeliveredDevices = (params: any) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/device`, params);
+      return http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/apply/device`,
+        params,
+      );
     };
     // 查询交付IP和固号IP
     const getDeliveredHostField = (row: any, fieldKey: any) => {
@@ -120,16 +126,8 @@ export default defineComponent({
         filter: {
           condition: 'AND',
           rules: [
-            {
-              field: 'suborder_id',
-              operator: 'equal',
-              value: row.suborder_id,
-            },
-            {
-              field: 'bk_biz_id',
-              operator: 'in',
-              value: [row.bk_biz_id],
-            },
+            { field: 'suborder_id', operator: 'equal', value: row.suborder_id },
+            { field: 'bk_biz_id', operator: 'in', value: [row.bk_biz_id] },
           ],
         },
       };
@@ -157,7 +155,7 @@ export default defineComponent({
     };
     // 获取匹配详情
     const getMatchDetails = async (subOrderId: number) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/detail`, {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/find/apply/detail`, {
         suborder_id: subOrderId,
       });
     };
@@ -166,7 +164,7 @@ export default defineComponent({
       tableOptions: {
         columns: [
           {
-            label: '单号/子单号',
+            label: t('单号/子单号'),
             width: 100,
             render: ({ data }: any) => {
               return (
@@ -184,7 +182,7 @@ export default defineComponent({
             },
           },
           {
-            label: '单据状态',
+            label: t('单据状态'),
             field: 'stage',
             width: 200,
             render: ({ data }: any) => {
@@ -212,20 +210,20 @@ export default defineComponent({
                           <span>
                             {modifyTime < 2 ? (
                               <span>
-                                建议
+                                {t('建议')}
                                 <Button size='small' text theme={'primary'} class={'ml8'}>
-                                  修改需求重试
+                                  {t('修改需求重试')}
                                 </Button>
                               </span>
                             ) : (
                               <span>
-                                请查看详情后联系 <WName name={'BK助手'} class={'ml8'}></WName> 进行处理
+                                {t('请查看详情后联系')} <WName name={'BK助手'} class={'ml8'}></WName> {t('进行处理')}
                               </span>
                             )}
                           </span>
                         ),
                       }}>
-                      备货状态异常 <HelpDocumentFill fill='#ffbb00' width={12} height={12} class={'ml4'} />
+                      {t('备货状态异常')} <HelpDocumentFill fill='#ffbb00' width={12} height={12} class={'ml4'} />
                     </div>
                   );
                 }
@@ -239,12 +237,12 @@ export default defineComponent({
                     onClick={() => modify(data)}
                     disabled={data.resource_type === 'IDCPM'}
                     v-bk-tooltips={{
-                      content: 'IDC物理机不支持修改,请联系ICR(IEG资源服务助手)',
+                      content: t('IDC物理机不支持修改,请联系ICR(IEG资源服务助手)'),
                       disabled: data.resource_type !== 'IDCPM',
                     }}
                     text
                     theme={'primary'}>
-                    修改需求重试
+                    {t('修改需求重试')}
                   </Button>
                 );
               };
@@ -261,7 +259,7 @@ export default defineComponent({
                       machineDetails.value = list.info;
                       stageDetailSidesliderRef.value.triggerShow(true);
                     }}>
-                    查看详情
+                    {t('查看详情')}
                   </Button>
                 );
               };
@@ -281,38 +279,42 @@ export default defineComponent({
             },
           },
           {
-            label: '需求类型',
+            label: t('需求类型'),
             field: 'require_type',
             width: 100,
             render: ({ data }: any) => transformRequireTypes(data.requireType),
           },
           {
-            label: '需求摘要',
+            label: t('需求摘要'),
             width: 250,
             render: ({ data }: any) => {
               return (
                 <div>
                   <div style={'height: 30px!important;line-height: 30px;'}>
-                    资源类型：{getResourceTypeName(data?.resource_type)}
+                    {t('资源类型')}：{getResourceTypeName(data?.resource_type)}
                   </div>
-                  <div style={'height: 20px!important;line-height: 20px;'}>机型：{data.spec?.device_type || '--'}</div>
-                  <div style={'height: 30px!important;line-height: 30px;'}>园区：{getZoneCn(data.spec?.zone)}</div>
+                  <div style={'height: 20px!important;line-height: 20px;'}>
+                    {t('机型')}：{data.spec?.device_type || '--'}
+                  </div>
+                  <div style={'height: 30px!important;line-height: 30px;'}>
+                    {t('园区')}：{getZoneCn(data.spec?.zone)}
+                  </div>
                 </div>
               );
             },
           },
           {
-            label: '申请人',
+            label: t('申请人'),
             render: ({ data }: any) => {
               return <WName name={data.bk_username}></WName>;
             },
           },
           {
-            label: `需求数`,
+            label: t('需求数'),
             field: 'total_num',
           },
           {
-            label: '待交付数',
+            label: t('待交付数'),
             field: 'pending_num',
             render({ cell, data }: any) {
               return cell ? (
@@ -321,7 +323,7 @@ export default defineComponent({
                   text
                   onClick={() => {
                     curRow.value = data;
-                    isMatchPanelShow.value = true;
+                    matchSidesliderRef.value.triggerShow(true);
                   }}>
                   {cell}
                 </Button>
@@ -331,7 +333,7 @@ export default defineComponent({
             },
           },
           {
-            label: '已交付数',
+            label: t('已交付数'),
             field: 'success_num',
             width: 120,
             render: ({ data }: any) => {
@@ -350,9 +352,7 @@ export default defineComponent({
                       theme={'primary'}
                       class='ml8 mr8'
                       v-clipboard:copy={ips.join('\n')}
-                      v-bk-tooltips={{
-                        content: '复制 IP',
-                      }}>
+                      v-bk-tooltips={{ content: t('复制 IP') }}>
                       <Copy />
                     </Button>
                     <Button
@@ -360,18 +360,14 @@ export default defineComponent({
                       theme={'primary'}
                       class='mr8'
                       v-clipboard:copy={assetIds.join('\n')}
-                      v-bk-tooltips={{
-                        content: '复制固资号',
-                      }}>
+                      v-bk-tooltips={{ content: t('复制固资号') }}>
                       <Copy />
                     </Button>
                     <Button
                       text
                       theme={'primary'}
                       onClick={() => goToCmdb(ips)}
-                      v-bk-tooltips={{
-                        content: '去蓝鲸配置平台管理资源',
-                      }}>
+                      v-bk-tooltips={{ content: t('去蓝鲸配置平台管理资源') }}>
                       <DataShape />
                     </Button>
                   </div>
@@ -383,7 +379,7 @@ export default defineComponent({
           },
           ...columns,
           {
-            label: '操作',
+            label: t('操作'),
             fixed: 'right',
             width: 200,
             render: ({ data }: any) => {
@@ -396,7 +392,7 @@ export default defineComponent({
                     text
                     theme={'primary'}
                     class='mr8'>
-                    再次申请
+                    {t('再次申请')}
                   </Button>
                   <Button
                     size='small'
@@ -406,9 +402,10 @@ export default defineComponent({
                     disabled={opBtnDisabled.value(data)}
                     onClick={async () => {
                       await scrStore.retryOrder({ suborder_id: [data.suborder_id] });
-                      Message({ theme: 'success', message: '重试成功' });
+                      Message({ theme: 'success', message: t('重试成功') });
+                      getListData();
                     }}>
-                    重试
+                    {t('重试')}
                   </Button>
                   <Button
                     size='small'
@@ -418,9 +415,10 @@ export default defineComponent({
                     disabled={opBtnDisabled.value(data)}
                     onClick={async () => {
                       await scrStore.stopOrder({ suborder_id: [data.suborder_id] });
-                      Message({ theme: 'success', message: '终止成功' });
+                      Message({ theme: 'success', message: t('终止成功') });
+                      getListData();
                     }}>
-                    终止
+                    {t('终止')}
                   </Button>
                 </div>
               );
@@ -438,7 +436,7 @@ export default defineComponent({
         immediate: false,
       },
       scrConfig: () => ({
-        url: '/api/v1/woa/task/findmany/apply',
+        url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`,
         payload: removeEmptyFields({
           bk_biz_id: [accountStore.bizs],
           order_id: formModel.orderId.map((v) => Number(v)),
@@ -505,7 +503,7 @@ export default defineComponent({
                   collapse-tags
                   allow-auto-match
                   pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
-                  placeholder='请输入单号'
+                  placeholder={t('请输入单号')}
                 />
               ),
             },
@@ -519,12 +517,8 @@ export default defineComponent({
                 <MemberSelect
                   v-model={formModel.user}
                   clearable
-                  defaultUserlist={[
-                    {
-                      username: userStore.username,
-                      display_name: userStore.username,
-                    },
-                  ]}
+                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  placeholder={t('请输入企业微信名')}
                 />
               ),
             },
@@ -536,11 +530,13 @@ export default defineComponent({
             filterOrders();
           }}
           loading={isLoading.value}
+          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <CommonTable />
         </section>
         <StageDetailSideslider ref={stageDetailSidesliderRef} details={machineDetails.value} />
+        <MatchSideslider ref={matchSidesliderRef} data={curRow.value} />
       </>
     );
   },

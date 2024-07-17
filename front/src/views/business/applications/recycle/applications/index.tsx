@@ -16,7 +16,10 @@ import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
-import { getRecycleStageOpts, retryOrder, stopOrder, submitOrder } from '@/api/host/recycle';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import http from '@/http';
+import { getEntirePath } from '@/utils';
+import { getRecycleStageOpts } from '@/api/host/recycle';
 
 export default defineComponent({
   setup() {
@@ -25,6 +28,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const accountStore = useAccountStore();
     const scrStore = useZiyanScrStore();
+    const { getBusinessApiPath } = useWhereAmI();
     const { t } = useI18n();
 
     const resourceTypeList = [
@@ -184,7 +188,7 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          url: '/api/v1/woa/task/findmany/recycle/order',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/order`,
           payload: { ...requestListParams.value },
         };
       },
@@ -210,34 +214,40 @@ export default defineComponent({
       const themeDes = { error: t('失败'), success: t('成功') };
       Message({ message: `${text}${themeDes[theme]}`, theme, duration: 1500 });
     };
-    const retryOrderFunc = (id: string, disabled: boolean) => {
+    const retryOrderFunc = async (id: string, disabled: boolean) => {
       if (disabled) return;
       const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
-      retryOrder({ suborderId }, {}).then((res: any) => {
-        if (res.code === 0) {
-          textTip(t('重试'), 'success');
-          getListData();
-        }
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/start/recycle/order`), {
+        suborder_id: suborderId,
       });
+
+      if (res.code === 0) {
+        textTip(t('重试'), 'success');
+        getListData();
+      }
     };
-    const stopOrderFunc = (id: string, disabled: boolean) => {
+    const stopOrderFunc = async (id: string, disabled: boolean) => {
       if (disabled) return;
-      stopOrder({ suborderId: [id] }, {}).then((res) => {
-        if (res.code === 0) {
-          textTip(t('终止'), 'success');
-          getListData();
-        }
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/terminate/recycle/order`), {
+        suborder_id: [id],
       });
+
+      if (res.code === 0) {
+        textTip(t('终止'), 'success');
+        getListData();
+      }
     };
-    const submitOrderFunc = (id: string, disabled: boolean) => {
+    const submitOrderFunc = async (id: string, disabled: boolean) => {
       if (disabled) return;
       const suborderId = id === 'isBatch' ? getBatchSuborderId() : [id];
-      submitOrder({ suborderId }, {}).then((res: any) => {
-        if (res.code === 0) {
-          textTip(t('去除预检失败IP提交'), 'success');
-          getListData();
-        }
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/revise/recycle/order`), {
+        suborder_id: suborderId,
       });
+
+      if (res.code === 0) {
+        textTip(t('去除预检失败IP提交'), 'success');
+        getListData();
+      }
     };
 
     const stageList = ref([]);
@@ -347,6 +357,7 @@ export default defineComponent({
           onReset={clearFilter}
           loading={isLoading.value}
           col={4}
+          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

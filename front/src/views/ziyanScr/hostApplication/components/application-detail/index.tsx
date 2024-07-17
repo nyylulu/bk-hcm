@@ -16,7 +16,10 @@ import WName from '@/components/w-name';
 import ModifyRecord from './modify-record';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { isEqual } from 'lodash';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+
 export default defineComponent({
   components: {
     WName,
@@ -24,6 +27,7 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
+    const { getBusinessApiPath } = useWhereAmI();
     const ips = ref({});
     const detail: Ref<{
       info: any;
@@ -160,11 +164,14 @@ export default defineComponent({
     const getdemandDetail = async () => {
       if (detail.value.stage === 'AUDIT') return;
       const orderId = route.params.id;
-      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply`, {
-        order_id: [+orderId],
-        bk_biz_id: [detail.value.bk_biz_id],
-        page: { start: 0, limit: 50 },
-      });
+      const { data } = await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`,
+        {
+          order_id: [+orderId],
+          bk_biz_id: [detail.value.bk_biz_id],
+          page: { start: 0, limit: 50 },
+        },
+      );
       detail.value.info = data.info;
       const list = data?.info || [];
       list.forEach((item) => {
@@ -180,18 +187,20 @@ export default defineComponent({
     };
     // 获取单据详情
     const getOrderDetail = async (orderId: string) => {
-      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket`, {
-        order_id: +orderId,
-      });
+      const { data } = await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/get/apply/ticket`,
+        { order_id: +orderId },
+      );
       detail.value = data;
       suborders.value = data?.suborders || [];
     };
     // 获取单据审核记录
     const getOrderAuditRecords = async () => {
       const orderId = route.params.id;
-      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/get/apply/ticket/audit`, {
-        order_id: +orderId,
-      });
+      const { data } = await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/get/apply/ticket/audit`,
+        { order_id: +orderId },
+      );
       applyRecord.value = data;
     };
     const userStore = useUserStore();
@@ -204,7 +213,7 @@ export default defineComponent({
     });
     const auditRemark = ref('');
     const approvalOrder = (params: Object) =>
-      http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/audit/apply/ticket`, params);
+      http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/audit/apply/ticket`, params);
     const approval = (resolve) => {
       const { itsmTicketId } = applyRecord.value;
       approvalOrder({
@@ -237,7 +246,10 @@ export default defineComponent({
           ],
         },
       };
-      const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/device`, params);
+      const { data } = await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/apply/device`,
+        params,
+      );
       return Promise.resolve().then(() => {
         const value = data?.info?.map((item) => item.ip);
         return value;

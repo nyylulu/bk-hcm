@@ -1,11 +1,10 @@
 import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
 import { useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import { getResourceTypeName, getReturnPlanName, exportTableToExcel } from '@/utils';
+import { getResourceTypeName, getReturnPlanName, exportTableToExcel, getEntirePath } from '@/utils';
 import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
 import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary/dateTime';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import { getRecycleHosts, getRecycleOrders, retryOrder, submitOrder, stopOrder, auditOrder } from '@/api/host/recycle';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Loading } from 'bkui-vue/lib/icon';
@@ -13,12 +12,16 @@ import ExecuteRecord from '../execute-record';
 import { useRoute } from 'vue-router';
 import './index.scss';
 import { Message } from 'bkui-vue';
+import http from '@/http';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
 export default defineComponent({
   components: {
     ExecuteRecord,
   },
   setup() {
     const route = useRoute();
+    const { getBusinessApiPath } = useWhereAmI();
     const billBaseInfo = ref({});
     const page = ref({
       start: 0,
@@ -34,12 +37,10 @@ export default defineComponent({
     });
     const loadOrders = async () => {
       try {
-        const data = await getRecycleOrders(
-          {
-            ...requestParams.value,
-          },
-          {},
-        );
+        const data = await http
+          .post(getEntirePath(`${getBusinessApiPath()}task/findmany/recycle/order`), requestParams.value)
+          .then((res: any) => res.data);
+
         const orders = data?.info || [{}];
         const [order = {}] = orders;
         billBaseInfo.value = order;
@@ -58,44 +59,35 @@ export default defineComponent({
         duration: 1500,
       });
     };
-    const fetchRetryOrder = () => {
-      retryOrder(
-        {
-          suborderId: requestParams.value.suborder_id,
-        },
-        {},
-      ).then((res) => {
-        if (res.code === 0) {
-          textTip('重试', 'success');
-          loadOrders();
-        }
+    const fetchRetryOrder = async () => {
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/start/recycle/order`), {
+        suborder_id: requestParams.value.suborder_id,
       });
+
+      if (res.code === 0) {
+        textTip('重试', 'success');
+        loadOrders();
+      }
     };
-    const fetchStopOrder = () => {
-      stopOrder(
-        {
-          suborderId: requestParams.value.suborder_id,
-        },
-        {},
-      ).then((res) => {
-        if (res.code === 0) {
-          textTip('终止', 'success');
-          loadOrders();
-        }
+    const fetchStopOrder = async () => {
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/terminate/recycle/order`), {
+        suborder_id: requestParams.value.suborder_id,
       });
+
+      if (res.code === 0) {
+        textTip('终止', 'success');
+        loadOrders();
+      }
     };
-    const fetchSubmitOrder = () => {
-      submitOrder(
-        {
-          suborderId: requestParams.value.suborder_id,
-        },
-        {},
-      ).then((res) => {
-        if (res.code === 0) {
-          textTip('去除预检失败IP提交', 'success');
-          loadOrders();
-        }
+    const fetchSubmitOrder = async () => {
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/revise/recycle/order`), {
+        suborder_id: requestParams.value.suborder_id,
       });
+
+      if (res.code === 0) {
+        textTip('去除预检失败IP提交', 'success');
+        loadOrders();
+      }
     };
 
     const activeStep = computed(() => {
@@ -129,19 +121,16 @@ export default defineComponent({
 
     const remark = ref('');
     const admins = ref(['dommyzhang', 'forestchen']);
-    const fetchAuditOrder = (approval) => {
-      auditOrder(
-        {
-          suborderId: requestParams.value.suborder_id,
-          approval,
-          remark,
-        },
-        {},
-      ).then((res) => {
-        if (res.code === 0) {
-          loadOrders();
-        }
+    const fetchAuditOrder = async (approval) => {
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/audit/recycle/order`), {
+        suborder_id: requestParams.value.suborder_id,
+        approval,
+        remark,
       });
+
+      if (res.code === 0) {
+        loadOrders();
+      }
     };
 
     const { selections, handleSelectionChange } = useSelection();
@@ -194,7 +183,7 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          url: '/api/v1/woa/task/findmany/recycle/host',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/host`,
           payload: {
             ...requestParams.value,
           },
@@ -204,24 +193,19 @@ export default defineComponent({
     const clipHostIp = computed(() => {
       return selections.value.map((item) => item.ip).join('\n');
     });
-    const exportToExcel = () => {
-      getRecycleHosts(
-        {
-          bk_biz_id: requestParams.value.bk_biz_id,
-          suborder_id: requestParams.value.suborder_id,
-          page: {
-            start: 0,
-            limit: 500,
-            enable_count: false,
-          },
+    const exportToExcel = async () => {
+      const res = await http.post(getEntirePath(`${getBusinessApiPath()}task/findmany/recycle/host`), {
+        bk_biz_id: requestParams.value.bk_biz_id,
+        suborder_id: requestParams.value.suborder_id,
+        page: {
+          start: 0,
+          limit: 500,
+          enable_count: false,
         },
-        {},
-      )
-        .then((res) => {
-          const totalList = res.data?.info || [];
-          exportTableToExcel(totalList, tableColumns, '设备销毁详情');
-        })
-        .finally(() => {});
+      });
+
+      const totalList = res.data?.info || [];
+      exportTableToExcel(totalList, tableColumns, '设备销毁详情');
     };
     const pollObj = ref(null);
     const pollOrders = () => {

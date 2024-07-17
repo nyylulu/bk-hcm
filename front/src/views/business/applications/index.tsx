@@ -40,7 +40,7 @@ export default defineComponent({
         label: t('VPC'),
         name: 'vpc',
         Component: PublicCloudApplications,
-        rules: [{ field: 'type', op: QueryRuleOPEnum.IN, value: ['create_disk'] }],
+        rules: [{ field: 'type', op: QueryRuleOPEnum.IN, value: ['create_vpc'] }],
       },
       {
         label: t('安全组'),

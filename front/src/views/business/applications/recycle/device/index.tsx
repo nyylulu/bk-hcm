@@ -15,6 +15,7 @@ import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-column
 import { useTable } from '@/hooks/useTable/useTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { getDeviceTypeList, getRecycleStageOpts, getRegionList, getZoneList } from '@/api/host/recycle';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 export default defineComponent({
   setup() {
@@ -22,6 +23,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const accountStore = useAccountStore();
     const { t } = useI18n();
+    const { getBusinessApiPath } = useWhereAmI();
 
     const defaultDeviceForm = () => ({
       bk_biz_id: [] as number[],
@@ -89,7 +91,7 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          url: '/api/v1/woa/task/findmany/recycle/host',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/host`,
           payload: {
             ...requestListParams.value,
           },
@@ -223,6 +225,7 @@ export default defineComponent({
           onReset={clearFilter}
           loading={isLoading.value}
           col={5}
+          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

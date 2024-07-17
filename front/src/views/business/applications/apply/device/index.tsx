@@ -5,6 +5,8 @@ import { Button, DatePicker, Input, TagInput } from 'bkui-vue';
 import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
+import WName from '@/components/w-name';
+import GridFilterComp from '@/components/grid-filter-comp';
 
 import { useI18n } from 'vue-i18n';
 import { useAccountStore, useUserStore, useZiyanScrStore } from '@/store';
@@ -15,12 +17,12 @@ import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { applicationTime, timeFormatter } from '@/common/util';
 import { useRouter } from 'vue-router';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
-import WName from '@/components/w-name';
-import GridFilterComp from '@/components/grid-filter-comp';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 export default defineComponent({
   setup() {
     const router = useRouter();
+    const { getBusinessApiPath } = useWhereAmI();
     const { t } = useI18n();
     const accountStore = useAccountStore();
     const userStore = useUserStore();
@@ -114,7 +116,7 @@ export default defineComponent({
       },
       scrConfig: () => {
         return {
-          url: '/api/v1/woa/task/findmany/apply/device',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/apply/device`,
           payload: {
             filter: transferSimpleConditions([
               'AND',
@@ -166,12 +168,8 @@ export default defineComponent({
                   v-model={formModel.bkUsername}
                   multiple
                   clearable
-                  defaultUserlist={[
-                    {
-                      username: userStore.username,
-                      display_name: userStore.username,
-                    },
-                  ]}
+                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  placeholder={t('请输入企业微信名')}
                 />
               ),
             },
@@ -203,6 +201,7 @@ export default defineComponent({
             filterOrders();
           }}
           loading={isLoading.value}
+          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

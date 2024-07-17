@@ -1,6 +1,7 @@
 import { defineComponent, ref, watch } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 export default defineComponent({
   props: {
     modelValue: {
@@ -20,6 +21,7 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
+    const { getBusinessApiPath } = useWhereAmI();
     const { columns } = useColumns('ExecutionRecords');
     const requestParams = ref({});
     const { CommonTable, getListData } = useTable({
@@ -34,7 +36,7 @@ export default defineComponent({
           payload: {
             ...requestParams.value,
           },
-          url: '/api/v1/woa/task/findmany/recycle/detect/step',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/detect/step`,
         };
       },
     });
