@@ -107,14 +107,6 @@ export default defineComponent({
         ),
       },
       {
-        label: t('调账状态'),
-        field: 'state',
-        width: 100,
-        render: ({ cell }: any) => (
-          <bk-tag theme={cell === 'confirmed' ? 'success' : undefined}>{BILL_ADJUSTMENT_STATE__MAP[cell]}</bk-tag>
-        ),
-      },
-      {
         label: t('操作'),
         render: ({ data }: any) => (
           <>
