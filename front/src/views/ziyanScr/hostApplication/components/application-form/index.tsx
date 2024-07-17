@@ -643,7 +643,7 @@ export default defineComponent({
           message,
         });
         router.push({
-          path: '/ziyanScr/hostApplication',
+          path: '/service/hostApplication',
         });
       } finally {
         isLoading.value = false;

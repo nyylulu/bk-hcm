@@ -140,7 +140,7 @@ export default defineComponent({
     };
     const application = (row: any) => {
       router.push({
-        path: '/ziyanScr/hostApplication/apply',
+        path: '/service/hostApplication/apply',
         query: {
           ...row,
         },

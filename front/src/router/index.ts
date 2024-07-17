@@ -14,7 +14,7 @@ import service from './module/service';
 import serviceInside from './module/service-inside';
 import business from './module/business';
 import scheme from './module/scheme';
-import ziyanScr from './module/ziyan-scr';
+// import ziyanScr from './module/ziyan-scr';
 import bill from './module/bill';
 import i18n from '@/language/i18n';
 import { useCommonStore } from '@/store';
@@ -32,7 +32,7 @@ const routes: RouteRecordRaw[] = [
   ...serviceInside,
   ...business,
   ...scheme,
-  ...ziyanScr,
+  // ...ziyanScr,
   ...bill,
   {
     // path: '/',

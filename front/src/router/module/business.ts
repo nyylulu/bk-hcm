@@ -1,7 +1,9 @@
 // import { CogShape } from 'bkui-vue/lib/icon';
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
+import i18n from '@/language/i18n';
 
+const { t } = i18n.global;
 const businesseMenus: RouteRecordRaw[] = [
   {
     path: '/business',
@@ -436,6 +438,18 @@ const businesseMenus: RouteRecordRaw[] = [
     path: '/business',
     children: [
       {
+        path: '/business/hostInventory',
+        name: '主机库存 ',
+        component: () => import('@/views/ziyanScr/hostInventory/index'),
+        meta: {
+          activeKey: 'zzkc',
+          title: t('主机库存'),
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+      {
         path: '/business/record',
         name: 'businessRecord',
         children: [
@@ -513,7 +527,7 @@ const businesseMenus: RouteRecordRaw[] = [
           },
         ],
         meta: {
-          title: '单据',
+          title: t('单据'),
           activeKey: 'applications',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-operation-record',

@@ -5,73 +5,287 @@ const { t } = i18n.global;
 
 const serviceMenus: RouteRecordRaw[] = [
   {
-    path: '/service/service-apply',
-    name: 'serviceApply',
-    component: () => import('@/views/service/service-apply/index.vue'),
+    path: '/service',
+    children: [
+      {
+        path: '/service/service-apply',
+        name: 'serviceApply',
+        component: () => import('@/views/service/service-apply/index.vue'),
+        meta: {
+          title: t('服务申请'),
+          activeKey: 'serviceApply',
+          // breadcrumb: [t('服务'), t('服务申请')],
+          notMenu: true,
+          isShowBreadcrumb: true,
+        },
+      },
+      {
+        path: '/service/my-apply',
+        name: 'myApply',
+        component: () => import('@/views/service/apply-list/index'),
+        // component: () => import('@/views/service/my-apply/index.vue'),
+        meta: {
+          activeKey: 'myApply',
+          title: t('单据管理'),
+          // breadcrumb: [t('服务'), t('我的申请')],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-ticket',
+        },
+      },
+      {
+        path: '/service/my-apply/detail',
+        name: '申请单据详情',
+        component: () => import('@/views/service/apply-detail/index'),
+        meta: {
+          activeKey: 'myApply',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/my-approval',
+        name: t('我的审批'),
+        component: () => import('@/views/service/my-approval/page'),
+        meta: {
+          // breadcrumb: [t('服务'), t('我的审批')],
+          isShowBreadcrumb: true,
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/resource-plan/list',
+        name: 'planlist',
+        component: () => import('@/views/resource-plan/list/index'),
+        meta: {
+          title: t('资源预测'),
+          activeKey: 'planlist',
+          icon: 'hcm-icon bkhcm-icon-template-orchestration',
+        },
+      },
+      {
+        path: '/service/resource-plan/detail',
+        component: () => import('@/views/resource-plan/detail/index'),
+        meta: {
+          activeKey: 'planlist',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/resource-plan/add',
+        component: () => import('@/views/resource-plan/add/index'),
+        meta: {
+          activeKey: 'planlist',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/jfcc',
+        name: '机房裁撤',
+        component: () => import('@/views/ziyanScr/recycle-server-room'),
+        children: [],
+        meta: {
+          title: t('机房裁撤'),
+          activeKey: 'jfcc',
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+    ],
     meta: {
-      title: t('服务申请'),
-      activeKey: 'serviceApply',
-      // breadcrumb: [t('服务'), t('服务申请')],
-      notMenu: true,
-      isShowBreadcrumb: true,
+      groupTitle: '资源',
     },
   },
   {
-    path: '/service/my-apply',
-    name: 'myApply',
-    component: () => import('@/views/service/apply-list/index'),
-    // component: () => import('@/views/service/my-apply/index.vue'),
+    path: '/service',
+    children: [
+      {
+        path: '/service/hostInventory',
+        name: '主机库存',
+        component: () => import('@/views/ziyanScr/hostInventory/index'),
+        meta: {
+          title: t('主机库存'),
+          activeKey: 'zzkc',
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+      {
+        path: '/service/hostApplication',
+        name: '主机申领',
+        component: () => import('@/views/ziyanScr/hostApplication'),
+        meta: {
+          title: t('主机申领'),
+          activeKey: 'zjsq',
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+      {
+        path: '/service/hostApplication/detail/:id',
+        name: 'host-application-detail',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/hostApplication/apply',
+        name: '提交主机申请',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-form/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/hostApplication/modify',
+        name: '修改主机申请',
+        component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+        meta: {
+          activeKey: 'zjsq',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/hostRecycling',
+        name: '主机回收',
+        children: [
+          {
+            path: '',
+            name: 'hostRecycle',
+            component: () => import('@/views/ziyanScr/host-recycle'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+          {
+            path: 'resources',
+            name: 'resources',
+            component: () => import('@/views/ziyanScr/RecyclingResources'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+          {
+            path: 'preDetail',
+            name: 'PreDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/pre-details'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+          {
+            path: 'docDetail',
+            name: 'docDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/bill-detail'),
+            meta: {
+              activeKey: 'zjhs',
+              breadcrumb: ['资源', '主机'],
+            },
+          },
+        ],
+        meta: {
+          activeKey: 'zjhs',
+          title: t('主机回收'),
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+        },
+      },
+      {
+        path: '/service/cvm-model',
+        component: () => import('@/views/ziyanScr/cvm-model'),
+        name: 'CVM机型',
+        children: [],
+        meta: {
+          activeKey: 'cvmjx',
+          title: t('CVM机型'),
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_type_find',
+        },
+      },
+      {
+        path: '/service/cvmzw',
+        name: 'CVM子网',
+        component: () => import('@/views/ziyanScr/cvm-web'),
+        children: [],
+        meta: {
+          activeKey: 'cvmzw',
+          title: t('CVM子网'),
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_subnet_find',
+        },
+      },
+      {
+        path: '/service/resource-manage',
+        name: '资源上下架',
+        children: [
+          {
+            path: '',
+            name: 'resourceManage',
+            component: () => import('@/views/ziyanScr/resource-manage'),
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
+          {
+            path: 'detail/:id',
+            name: 'scrResourceManageDetail',
+            component: () => import('@/views/ziyanScr/resource-manage/detail'),
+            props(route) {
+              return { ...route.params, ...route.query };
+            },
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
+          {
+            path: 'create',
+            name: 'scrResourceManageCreate',
+            component: () => import('@/views/ziyanScr/resource-manage/create'),
+            props(route) {
+              return { ...route.query };
+            },
+            meta: {
+              activeKey: 'scr-resource-manage',
+            },
+          },
+        ],
+        meta: {
+          title: t('资源上下架'),
+          activeKey: 'scr-resource-manage',
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_res_shelves_find',
+        },
+      },
+      {
+        path: '/service/cvmsc',
+        name: 'CVM生产',
+        component: () => import('@/views/ziyanScr/cvm-produce'),
+        children: [],
+        meta: {
+          activeKey: 'cvmsc',
+          title: t('CVM生产'),
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_cvm_create_find',
+        },
+      },
+    ],
     meta: {
-      title: t('单据管理'),
-      activeKey: 'myApply',
-      // breadcrumb: [t('服务'), t('我的申请')],
-      isShowBreadcrumb: true,
-      icon: 'hcm-icon bkhcm-icon-ticket',
-    },
-  },
-  {
-    path: '/service/my-apply/detail',
-    name: '申请单据详情',
-    component: () => import('@/views/service/apply-detail/index'),
-    meta: {
-      activeKey: 'myApply',
-      notMenu: true,
-    },
-  },
-  {
-    path: '/service/my-approval',
-    name: t('我的审批'),
-    component: () => import('@/views/service/my-approval/page'),
-    meta: {
-      // breadcrumb: [t('服务'), t('我的审批')],
-      isShowBreadcrumb: true,
-      notMenu: true,
-    },
-  },
-  {
-    path: '/service/resource-plan/list',
-    name: 'planlist',
-    component: () => import('@/views/resource-plan/list/index'),
-    meta: {
-      title: t('资源预测'),
-      activeKey: 'planlist',
-      icon: 'hcm-icon bkhcm-icon-template-orchestration',
-    },
-  },
-  {
-    path: '/service/resource-plan/detail',
-    component: () => import('@/views/resource-plan/detail/index'),
-    meta: {
-      activeKey: 'planlist',
-      notMenu: true,
-    },
-  },
-  {
-    path: '/service/resource-plan/add',
-    component: () => import('@/views/resource-plan/add/index'),
-    meta: {
-      activeKey: 'planlist',
-      notMenu: true,
+      groupTitle: '管理',
     },
   },
 ];

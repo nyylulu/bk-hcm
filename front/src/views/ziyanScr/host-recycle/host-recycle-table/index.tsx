@@ -26,13 +26,7 @@ export default defineComponent({
     BillDetail,
     FloatInput,
   },
-  props: {
-    subBizBillNum: {
-      type: Object,
-      default: () => {},
-    },
-  },
-  setup(props) {
+  setup() {
     const currentOperateRowIndex = ref(-1);
     const userStore = useUserStore();
     const router = useRouter();
@@ -126,7 +120,7 @@ export default defineComponent({
     };
     const goToPrecheck = () => {
       router.push({
-        path: '/ziyanScr/hostRecycling/preDetail',
+        path: '/service/hostRecycling/preDetail',
         query: {
           suborder_id: getBatchSuborderId().join('\n'),
         },
@@ -199,7 +193,7 @@ export default defineComponent({
     const { columns } = useColumns('hostRecycle');
     const enterDetail = (row) => {
       router.push({
-        path: '/ziyanScr/hostRecycling/docDetail',
+        path: '/service/hostRecycling/docDetail',
         query: {
           suborderId: row.suborder_id,
           bkBizId: row.bk_biz_id,
@@ -211,13 +205,6 @@ export default defineComponent({
       () => userStore.username,
       (username) => {
         recycleForm.value.bk_username = [username];
-      },
-    );
-
-    watch(
-      () => props.subBizBillNum,
-      (newVal) => {
-        enterDetail(newVal);
       },
     );
 
@@ -373,7 +360,7 @@ export default defineComponent({
     });
     const returnPreDetails = (row: { suborder_id: any; bk_biz_id: any }) => {
       router.push({
-        path: '/ziyanScr/hostRecycling/preDetail',
+        path: '/service/hostRecycling/preDetail',
         query: {
           suborder_id: row.suborder_id,
         },
@@ -381,7 +368,7 @@ export default defineComponent({
     };
     const returnRecyclingResources = () => {
       router.push({
-        path: '/ziyanScr/hostRecycling/resources',
+        path: '/service/hostRecycling/resources',
         query: { ...route.query },
       });
     };

@@ -249,7 +249,7 @@ export default defineComponent({
       const { code } = await apiService.modifyOrder(params);
       if (code === 0) {
         router.push({
-          path: '/ziyanScr/hostApplication',
+          path: '/service/hostApplication',
         });
       }
       nextTick(() => {
