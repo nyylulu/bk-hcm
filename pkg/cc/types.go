@@ -1472,3 +1472,9 @@ func (r *ExchangeRate) trySetDefault() {
 		r.ToCurrency = []enumor.CurrencyCode{enumor.CurrencyCNY}
 	}
 }
+
+// SyncCCRes sync cc resource
+type SyncCCRes struct {
+	Enable          bool   `yaml:"enable"`
+	SyncIntervalMin uint64 `yaml:"syncIntervalMin"`
+}

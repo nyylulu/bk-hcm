@@ -48,19 +48,24 @@ import (
 	securitygroup "hcm/cmd/hc-service/service/security-group"
 	"hcm/cmd/hc-service/service/subnet"
 	"hcm/cmd/hc-service/service/sync"
+	"hcm/cmd/hc-service/service/sync/bkcc"
 	"hcm/cmd/hc-service/service/vpc"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/handler"
 	"hcm/pkg/logs"
+	"hcm/pkg/metrics"
 	"hcm/pkg/rest"
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/esb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
+	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 // Service do all the hc service's work
@@ -71,15 +76,38 @@ type Service struct {
 }
 
 // NewService create a service instance.
-func NewService(dis serviced.Discover) (*Service, error) {
+func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	cli, err := restcli.NewClient(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	cliSet := client.NewClientSet(cli, dis)
+	cliSet := client.NewClientSet(cli, sd)
 
 	cloudAdaptor := cloudadaptor.NewCloudAdaptorClient(cliSet.DataService())
+	esbCli, err := esb.NewClient(cvt.ValToPtr(cc.HCService().Esb), metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
+	if cc.HCService().SyncCCRes.Enable {
+		etcdOpt, err := cc.HCService().Service.Etcd.ToConfig()
+		if err != nil {
+			return nil, fmt.Errorf("get etcd config failed, err: %v", err)
+		}
+		etcdCli, err := etcd3.New(etcdOpt)
+		if err != nil {
+			return nil, fmt.Errorf("new etcd client failed, err: %v", err)
+		}
+		syncer, err := bkcc.NewSyncer(cliSet, esbCli, etcdCli)
+		if err != nil {
+			return nil, fmt.Errorf("new cc syncer failed, err: %v", err)
+		}
+		interval := time.Duration(cc.HCService().SyncCCRes.SyncIntervalMin) * time.Minute
+		go syncer.FullSyncHost(interval, sd)
+		go syncer.WatchHostEvent(sd)
+		go syncer.WatchHostRelationEvent(sd)
+	}
 
 	svr := &Service{
 		clientSet:    cliSet,

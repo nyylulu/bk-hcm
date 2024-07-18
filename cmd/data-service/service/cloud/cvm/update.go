@@ -58,6 +58,9 @@ func (svc *cvmSvc) BatchUpdateCvm(cts *rest.Contexts) (interface{}, error) {
 		return batchUpdateCvm[corecvm.AzureCvmExtension](cts, svc, vendor)
 	case enumor.Gcp:
 		return batchUpdateCvm[corecvm.GcpCvmExtension](cts, svc, vendor)
+	case enumor.TCloudZiyan:
+		return batchUpdateCvm[corecvm.TCloudZiyanHostExtension](cts, svc, vendor)
+
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
