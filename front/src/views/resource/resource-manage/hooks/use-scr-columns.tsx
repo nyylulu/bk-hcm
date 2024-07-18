@@ -6,15 +6,20 @@ import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
+import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { VendorEnum } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import { useCloudAreaStore } from '@/store/useCloudAreaStore';
 import StatusAbnormal from '@/assets/image/Status-abnormal.png';
+import StatusNormal from '@/assets/image/Status-normal.png';
+import StatusUnknown from '@/assets/image/Status-unknown.png';
 import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
 import StatusFailure from '@/assets/image/failed-account.png';
+import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import './use-scr-columns.scss';
 import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
@@ -54,6 +59,7 @@ export default (type: string, isSimpleShow = false) => {
   const { getRegionName } = useRegionsStore();
   const { whereAmI } = useWhereAmI();
   const businessMapStore = useBusinessMapStore();
+  const cloudAreaStore = useCloudAreaStore();
   const { transformApplyStages } = useApplyStages();
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
@@ -78,8 +84,9 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
       render({ data }: { cell: string; data: any }) {
         if (data[idFiled] < 0 || !data[idFiled]) return '--';
-        // 如果设置了onLinkInBusiness=true, 则只在业务下可以链接至指定路由
-        if (onLinkInBusiness && whereAmI.value !== Senarios.business) return data[field] || '--';
+        const onlyLinkInBusiness = onLinkInBusiness && whereAmI.value !== Senarios.business;
+        const isZiyan = data.vendor === VendorEnum.ZIYAN;
+        if (onlyLinkInBusiness || isZiyan) return data[field] || '--';
         return (
           <Button
             text
@@ -2546,6 +2553,116 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
 
+  const businessHostColumns = [
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+    {
+      label: '主机ID',
+      field: 'cloud_id',
+      isDefaultShow: false,
+      onlyShowOnList: true,
+    },
+    getLinkField({
+      type: 'host',
+      label: '内网IP',
+      field: 'private_ipv4_addresses',
+      idFiled: 'id',
+      onlyShowOnList: false,
+      render: (data) =>
+        [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--',
+      sort: false,
+    }),
+    {
+      label: '公网IP',
+      field: 'vendor',
+      isDefaultShow: true,
+      onlyShowOnList: true,
+      render: ({ data }: any) =>
+        [...(data.public_ipv4_addresses || []), ...(data.public_ipv6_addresses || [])].join(',') || '--',
+    },
+    {
+      label: '所属VPC',
+      field: 'cloud_vpc_ids',
+      isDefaultShow: true,
+      onlyShowOnList: true,
+      render: ({ data }: any) => data.cloud_vpc_ids?.join(',') || '--',
+    },
+    {
+      label: '云厂商',
+      field: 'vendor',
+      sort: true,
+      onlyShowOnList: true,
+      isDefaultShow: true,
+      render: ({ data }: any) => <span>{CloudType[data.vendor]}</span>,
+    },
+    {
+      label: '地域',
+      onlyShowOnList: true,
+      field: 'region',
+      sort: true,
+      isDefaultShow: true,
+      render: ({ cell, row }: { cell: string; row: { vendor: VendorEnum } }) => getRegionName(row.vendor, cell) || '--',
+    },
+    {
+      label: '主机名称',
+      field: 'name',
+      sort: true,
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => cell || '--',
+    },
+    {
+      label: '主机状态',
+      field: 'status',
+      sort: true,
+      isDefaultShow: true,
+      render({ data }: any) {
+        return (
+          <div class={'cvm-status-container'}>
+            {HOST_SHUTDOWN_STATUS.includes(data.status) ? (
+              data.status.toLowerCase() === 'stopped' ? (
+                <img src={StatusUnknown} class={'mr6'} width={14} height={14}></img>
+              ) : (
+                <img src={StatusAbnormal} class={'mr6'} width={14} height={14}></img>
+              )
+            ) : HOST_RUNNING_STATUS.includes(data.status) ? (
+              <img src={StatusNormal} class={'mr6'} width={14} height={14}></img>
+            ) : (
+              <img src={StatusUnknown} class={'mr6'} width={14} height={14}></img>
+            )}
+            <span>{CLOUD_HOST_STATUS[data.status] || data.status || t('未获取')}</span>
+          </div>
+        );
+      },
+    },
+    {
+      label: '管控区域',
+      field: 'bk_cloud_id',
+      sort: true,
+      render({ cell }: { cell: number }) {
+        if (cell !== -1) {
+          return `[${cell}] ${cloudAreaStore.getNameFromCloudAreaMap(cell)}`;
+        }
+        return '--';
+      },
+    },
+    {
+      label: '操作系统',
+      field: 'os_name',
+      render: ({ data }: any) => <span>{data.os_name || '--'}</span>,
+    },
+    {
+      label: '创建时间',
+      field: 'created_at',
+      sort: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '更新时间',
+      field: 'updated_at',
+      sort: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+  ];
+
   const columnsMap = {
     hostInventor: hIColumns,
     CloudHost: CHColumns,
@@ -2588,6 +2705,7 @@ export default (type: string, isSimpleShow = false) => {
     billsRootAccountSummary: billsRootAccountSummaryColumns,
     billsMainAccountSummary: billsMainAccountSummaryColumns,
     billsSummaryOperationRecord: billsSummaryOperationRecordColumns,
+    businessHostColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
