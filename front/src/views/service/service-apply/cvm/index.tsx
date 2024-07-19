@@ -23,7 +23,7 @@ import useCondtion from '../hooks/use-condtion';
 import useCvmFormData, { getDataDiskDefaults, getGcpDataDiskDefaults } from '../hooks/use-cvm-form-data';
 // import { useHostStore } from '@/store/host';
 
-import { useAccountStore } from '@/store';
+import { useAccountStore, useResourceStore } from '@/store';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useRouter } from 'vue-router';
@@ -32,7 +32,6 @@ import SubnetPreviewDialog, { ISubnetItem } from './children/SubnetPreviewDialog
 import http from '@/http';
 import { debounce } from 'lodash';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
-// import SelectCvmBlock from './children/SelectCvmBlock';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 const accountStore = useAccountStore();
@@ -62,6 +61,7 @@ export default defineComponent({
     const usageNum = ref(0);
     const limitNum = ref(-1);
     const refreshVpcList = ref(() => {});
+    const resourceStore = useResourceStore();
     const onRefreshVpcList = (callback: () => {}) => {
       refreshVpcList.value = callback;
     };
@@ -113,12 +113,6 @@ export default defineComponent({
       };
       dialogState.gcpDataDisk.isShow = false;
     };
-    /* const handleEditGcpDataDisk = (index: number) => {
-      dialogState.gcpDataDisk.isShow = true;
-      dialogState.gcpDataDisk.isEdit = true;
-      dialogState.gcpDataDisk.editDataIndex = index;
-      dialogState.gcpDataDisk.formData = formData.data_disk[index];
-    };*/
 
     const handleRemoveDataDisk = (index: number) => {
       formData.data_disk.splice(index, 1);
@@ -266,38 +260,6 @@ export default defineComponent({
         [VendorEnum.GCP]: {
           content: () => (
             <div class='form-content-list data-disk-wrap'>
-              {/* {formData.data_disk.map((item: IDiskOption, index: number) => (
-                <div class='flex-row'>
-
-                  {item.disk_name}, 空白, {item.disk_size_gb}GB,{' '}
-                  {dataDiskTypes.value.find((disk: IOption) => disk.id === item.disk_type)?.name || '--'}
-                  <div class='btns'>
-                    <Button
-                      class='btn'
-                      outline
-                      size='small'
-                      onClick={() => handleEditGcpDataDisk(index)}>
-                      <EditIcon />
-                    </Button>
-                    <Button
-                      class='btn'
-                      outline
-                      size='small'
-                      onClick={() => handleRemoveDataDisk(index)}>
-                      <CloseLineIcon />
-                    </Button>
-                    {index === formData.data_disk.length - 1 && (
-                      <Button
-                        class='btn'
-                        outline
-                        size='small'
-                        onClick={handleCreateGcpDataDisk}>
-                        <PlusIcon />
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              ))}*/}
               {formData.data_disk.map((item: IDiskOption, index: number) => (
                 <div class='flex-row'>
                   <FormItem property={`data_disk[${index}].disk_type`} rules={[]}>
@@ -367,23 +329,12 @@ export default defineComponent({
       return diffs[cond.vendor] || {};
     });
 
-    // const formConfigPublicIpAssignedDiff = computed(() => {
-    //   const diffs = {
-    //     [VendorEnum.HUAWEI]: {
-    //       label: '弹性公网IP',
-    //       content: () => '暂不支持购买，请到EIP中绑定',
-    //     },
-    //   };
-    //   return diffs[cond.vendor] || {};
-    // });
-
     // 当前 vpc下是否有子网列表
     const subnetLength = ref(0);
     watch(
       () => formData.cloud_vpc_id,
       (val) => {
         !val && (cloudId.value = null);
-        console.log('subnetSelectorRef.value', subnetSelectorRef.value.subnetList);
         subnetLength.value = subnetSelectorRef.value.subnetList?.length || 0;
       },
     );
@@ -417,7 +368,8 @@ export default defineComponent({
           return;
         await formRef.value.validate();
         isSubmitBtnLoading.value = true;
-        const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
+        const res = await resourceStore.inqury({
+          // const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
           ...saveData,
           instance_type:
             cond.vendor !== VendorEnum.HUAWEI
@@ -484,31 +436,7 @@ export default defineComponent({
       },
     );
 
-    // const curRegionName = computed(() => {
-    //   return hostStore.regionList?.find(region => region.region_id === cond.region) || {};
-    // });
-
     const formConfig = computed(() => [
-      // {
-      //   id: 'region',
-      //   title: '地域',
-      //   children: [
-      //     {
-      //       label: '可用区',
-      //       required: cond.vendor === VendorEnum.AZURE ? zoneSelectorRef.value.list?.length > 0 : true,
-      //       property: 'zone',
-      //       rules: [{
-      //         trigger: 'change',
-      //       }],
-      //       content: () => <ZoneSelector
-      //         ref={zoneSelectorRef}
-      //         v-model={formData.zone}
-      //         vendor={cond.vendor}
-      //         region={cond.region}
-      //         onChange={handleZoneChange} />,
-      //     },
-      //   ],
-      // },
       {
         id: 'network',
         title: '网络信息',

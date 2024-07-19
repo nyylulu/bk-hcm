@@ -490,6 +490,15 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/applications/index'),
           },
           {
+            path: '/business/applications/detail',
+            name: '申请单据详情',
+            component: () => import('@/views/service/apply-detail/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
             path: 'host-application/detail/:id',
             name: 'HostApplicationsDetail',
             component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),

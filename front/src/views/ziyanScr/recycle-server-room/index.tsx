@@ -9,7 +9,7 @@ import ErrorPage from '@/views/error-pages/403';
 export default defineComponent({
   setup() {
     const { authVerifyData } = useVerify();
-    if (!authVerifyData.value.permissionAction.ziyan_resource_dissolve_find)
+    if (!authVerifyData.value.permissionAction.service_resource_dissolve_find)
       return () => <ErrorPage urlKeyId='biz_ziyan_resource_dissolve' />;
 
     const moduleNames = ref<string[]>([]);

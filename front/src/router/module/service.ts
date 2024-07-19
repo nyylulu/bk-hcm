@@ -108,6 +108,7 @@ const serviceMenus: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_resource_inventory_find',
         },
       },
       {
@@ -120,6 +121,7 @@ const serviceMenus: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_resource_create',
         },
       },
       {
@@ -196,6 +198,7 @@ const serviceMenus: RouteRecordRaw[] = [
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
+          checkAuth: 'ziyan_resource_recycle',
         },
       },
       {

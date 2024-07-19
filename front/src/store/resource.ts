@@ -60,6 +60,9 @@ export const useResourceStore = defineStore({
     bindVPCWithCloudArea(data: any) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}vpcs/bind/cloud_areas`, data);
     },
+    inqury(data: any) {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}cvms/prices/inquiry`, data);
+    },
     getCloudAreas(data: any) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/web/cloud_areas/list`, data);
     },

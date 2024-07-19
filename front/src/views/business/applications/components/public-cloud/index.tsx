@@ -36,7 +36,7 @@ export default defineComponent({
                 theme='primary'
                 onClick={() => {
                   router.push({
-                    path: '/service/my-apply/detail',
+                    path: '/business/applications/detail',
                     query: { ...route.query, id: data.id },
                   });
                 }}>
