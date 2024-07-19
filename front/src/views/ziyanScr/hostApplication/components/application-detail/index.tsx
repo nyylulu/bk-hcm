@@ -37,7 +37,7 @@ export default defineComponent({
     const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
     cloudcolumns.splice(4, 0, {
-      label: '已支付',
+      label: '已交付',
       field: 'success_num',
       width: 50,
       render: ({ row }: any) => (
@@ -160,6 +160,8 @@ export default defineComponent({
         return ['IDCPM', 'IDCDVM'].includes(item.resource_type);
       });
     });
+
+    const demandDetailTimer: any = { id: null, count: 0 };
     // 获取需求子单
     const getdemandDetail = async () => {
       if (detail.value.stage === 'AUDIT') return;
@@ -184,6 +186,13 @@ export default defineComponent({
           if (suborder_id) ips.value[suborder_id] = await getDeliveredHostField(suborder_id);
         });
       }
+      // 如果需求子单中存在待交付云主机, 创建定时任务(30s刷新一次, 最多刷新60次)
+      if (demandDetailTimer.count < 60 && list.some((item: any) => item.pending_num !== 0)) {
+        demandDetailTimer.count += 1;
+        demandDetailTimer.id = setTimeout(() => {
+          getdemandDetail();
+        }, 30000);
+      }
     };
     // 获取单据详情
     const getOrderDetail = async (orderId: string) => {
@@ -194,6 +203,8 @@ export default defineComponent({
       detail.value = data;
       suborders.value = data?.suborders || [];
     };
+
+    const orderAuditTimer: any = { id: null, count: 0 };
     // 获取单据审核记录
     const getOrderAuditRecords = async () => {
       const orderId = route.params.id;
@@ -202,6 +213,13 @@ export default defineComponent({
         { order_id: +orderId },
       );
       applyRecord.value = data;
+      // 如果单据处于处理中(RUNNING)状态, 创建定时任务(30s刷新一次, 最多刷新60次)
+      if (orderAuditTimer.count < 60 && data.status === 'RUNNING') {
+        orderAuditTimer.count += 1;
+        orderAuditTimer.id = setTimeout(() => {
+          getOrderAuditRecords();
+        }, 30000);
+      }
     };
     const userStore = useUserStore();
     const currentAuditStep = computed(() => {
@@ -255,20 +273,18 @@ export default defineComponent({
         return value;
       });
     };
-    const refreshTimer = ref(null);
     onMounted(async () => {
       await getOrderDetail(route.params.id as string);
       await getdemandDetail();
       getOrderAuditRecords();
-      if (refreshTimer.value) clearInterval(refreshTimer.value);
-      refreshTimer.value = setInterval(() => {
-        getOrderAuditRecords();
-        getdemandDetail();
-      }, 5000);
     });
+
     onUnmounted(() => {
-      clearInterval(refreshTimer.value);
+      // 清除定时任务
+      clearTimeout(demandDetailTimer.id);
+      clearTimeout(orderAuditTimer.id);
     });
+
     return () => (
       <div class={'application-detail-container'}>
         <DetailHeader>单据详情</DetailHeader>

@@ -1,5 +1,5 @@
 import { computed, defineComponent, onMounted, ref, watch } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
 import { Button, DatePicker, Dropdown, Message, Select } from 'bkui-vue';
@@ -11,7 +11,7 @@ import ExportToExcelButton from '@/components/export-to-excel-button';
 
 import dayjs from 'dayjs';
 import { useI18n } from 'vue-i18n';
-import { useAccountStore, useUserStore, useZiyanScrStore } from '@/store';
+import { useUserStore, useZiyanScrStore } from '@/store';
 import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -24,11 +24,9 @@ import { getRecycleStageOpts } from '@/api/host/recycle';
 export default defineComponent({
   setup() {
     const router = useRouter();
-    const route = useRoute();
     const userStore = useUserStore();
-    const accountStore = useAccountStore();
     const scrStore = useZiyanScrStore();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
 
     const resourceTypeList = [
@@ -77,7 +75,7 @@ export default defineComponent({
         ...recycleForm.value,
         ...timeObj.value,
         page: pageInfo.value,
-        bk_biz_id: [accountStore.bizs],
+        bk_biz_id: [getBizsId()],
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
@@ -194,17 +192,10 @@ export default defineComponent({
       },
     });
     const enterDetail = (row: any) => {
-      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: accountStore.bizs } });
+      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: getBizsId() } });
     };
     const returnPreDetails = (row: any) => {
       router.push({ name: 'HostRecyclePreDetail', query: { suborder_id: row.suborder_id } });
-    };
-    const returnRecyclingResources = () => {
-      router.push({
-        // todo
-        name: '/ziyanScr/hostRecycling/resources',
-        query: { ...route.query },
-      });
     };
     const getBatchSuborderId = () => selections.value.map((item) => item.suborder_id);
     const goToPrecheck = () => {
@@ -258,12 +249,12 @@ export default defineComponent({
 
     const filterOrders = () => {
       pagination.start = 0;
-      recycleForm.value.bk_biz_id = [accountStore.bizs];
+      recycleForm.value.bk_biz_id = [getBizsId()];
       getListData();
     };
     const clearFilter = () => {
       const initForm = defaultRecycleForm();
-      initForm.bk_biz_id = [accountStore.bizs];
+      initForm.bk_biz_id = [getBizsId()];
       recycleForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
@@ -361,9 +352,6 @@ export default defineComponent({
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>
-            <Button class={cssModule.button} theme='primary' onClick={returnRecyclingResources}>
-              {t('回收资源')}
-            </Button>
             <ExportToExcelButton
               class={cssModule.button}
               data={dataList.value}

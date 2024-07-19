@@ -15,7 +15,7 @@ import MatchSideslider from './match';
 import moment from 'moment';
 import { useI18n } from 'vue-i18n';
 import { throttle } from 'lodash';
-import { useAccountStore, useUserStore, useZiyanScrStore } from '@/store';
+import { useUserStore, useZiyanScrStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useFormModel from '@/hooks/useFormModel';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -34,10 +34,9 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const { t } = useI18n();
-    const accountStore = useAccountStore();
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, getBizsId } = useWhereAmI();
 
     const { transformApplyStages } = useApplyStages();
     const { transformRequireTypes } = useRequireTypes();
@@ -97,8 +96,7 @@ export default defineComponent({
         params: { id: row.order_id },
       };
       if (row.stage === 'UNCOMMIT') {
-        // todo: 需要更换指业务下主机申请的路由
-        routeParams = { name: '提交主机申请', query: { order_id: row.order_id, unsubmitted: 1 } };
+        routeParams = { name: 'applyCvm', query: { order_id: row.order_id, unsubmitted: 1 } };
       }
       router.push(routeParams);
     };
@@ -108,8 +106,7 @@ export default defineComponent({
     };
 
     const reapply = (data: any) => {
-      // todo: 需要更换指业务下主机申请的路由
-      router.push({ name: '提交主机申请', query: { order_id: data.order_id, unsubmitted: 0 } });
+      router.push({ name: 'applyCvm', query: { order_id: data.order_id, unsubmitted: 0 } });
     };
 
     const throttleInfo = ref(null);
@@ -438,7 +435,7 @@ export default defineComponent({
       scrConfig: () => ({
         url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`,
         payload: removeEmptyFields({
-          bk_biz_id: [accountStore.bizs],
+          bk_biz_id: [getBizsId()],
           order_id: formModel.orderId.map((v) => Number(v)),
           bk_username: formModel.user,
           stage: formModel.stage,
@@ -451,7 +448,7 @@ export default defineComponent({
 
     const filterOrders = () => {
       pagination.start = 0;
-      formModel.bkBizId = [accountStore.bizs];
+      formModel.bkBizId = [getBizsId()];
       getListData();
     };
 
@@ -526,7 +523,7 @@ export default defineComponent({
           onSearch={filterOrders}
           onReset={() => {
             resetForm({ user: [userStore.username] });
-            formModel.bkBizId = [accountStore.bizs];
+            formModel.bkBizId = [getBizsId()];
             filterOrders();
           }}
           loading={isLoading.value}

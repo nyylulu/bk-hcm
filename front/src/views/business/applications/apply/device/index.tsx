@@ -9,7 +9,7 @@ import WName from '@/components/w-name';
 import GridFilterComp from '@/components/grid-filter-comp';
 
 import { useI18n } from 'vue-i18n';
-import { useAccountStore, useUserStore, useZiyanScrStore } from '@/store';
+import { useUserStore, useZiyanScrStore } from '@/store';
 import useFormModel from '@/hooks/useFormModel';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -22,9 +22,8 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 export default defineComponent({
   setup() {
     const router = useRouter();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
-    const accountStore = useAccountStore();
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
 
@@ -120,7 +119,7 @@ export default defineComponent({
           payload: {
             filter: transferSimpleConditions([
               'AND',
-              ['bk_biz_id', 'in', [accountStore.bizs]],
+              ['bk_biz_id', 'in', [getBizsId()]],
               ['require_type', '=', formModel.requireType],
               ['order_id', '=', formModel.orderId],
               ['suborder_id', '=', formModel.suborderId],
@@ -137,7 +136,7 @@ export default defineComponent({
 
     const filterOrders = () => {
       pagination.start = 0;
-      formModel.bkBizId = [accountStore.bizs];
+      formModel.bkBizId = [getBizsId()];
       getListData();
     };
 
@@ -197,7 +196,7 @@ export default defineComponent({
           onSearch={filterOrders}
           onReset={() => {
             resetForm({ user: [userStore.username] });
-            formModel.bkBizId = [accountStore.bizs];
+            formModel.bkBizId = [getBizsId()];
             filterOrders();
           }}
           loading={isLoading.value}

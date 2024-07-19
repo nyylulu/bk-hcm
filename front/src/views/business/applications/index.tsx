@@ -1,4 +1,5 @@
 import { defineComponent, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
 import { Tab } from 'bkui-vue';
@@ -18,6 +19,8 @@ interface ApplicationsType {
 
 export default defineComponent({
   setup() {
+    const router = useRouter();
+    const route = useRoute();
     const { t } = useI18n();
     const types = ref<ApplicationsType[]>([
       {
@@ -71,11 +74,15 @@ export default defineComponent({
         rules: [{ field: 'type', op: QueryRuleOPEnum.IN, value: ['create_load_balancer'] }],
       },
     ]);
-    const activeType = ref(types.value[0].name);
+    const activeType = ref(route.query?.type || types.value[0].name);
+
+    const saveActiveType = (val: string) => {
+      router.replace({ query: { bizs: route.query.bizs, type: val } });
+    };
 
     return () => (
       <div class={cssModule.container}>
-        <Tab v-model:active={activeType.value} type='card-grid'>
+        <Tab v-model:active={activeType.value} type='card-grid' onUpdate:active={saveActiveType}>
           {types.value.map(({ name, label, Component, rules }) => (
             <Tab.TabPanel key={name} name={name} label={label} renderDirective='if'>
               <Component rules={rules} />

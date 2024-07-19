@@ -13,7 +13,6 @@ import type { PropsType } from '@/hooks/useTableListQuery';
 import Confirm, { confirmInstance } from '@/components/confirm';
 import type { PluginHandlerType } from '../business-host-manage';
 
-const { t } = useI18n();
 const { DropdownMenu, DropdownItem } = Dropdown;
 const resourceStore = useResourceStore();
 
@@ -28,6 +27,7 @@ type UseColumnsParams = {
 };
 
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
+  const { t } = useI18n();
   const currentOperateRowIndex = ref(-1);
 
   // 回收参数「云硬盘/EIP 随主机回收」

@@ -200,7 +200,7 @@ export default (type: string, isSimpleShow = false) => {
       minWidth: 70,
     },
     {
-      label: '待支付',
+      label: '待交付',
       field: 'pending_num',
       width: 70,
       minWidth: 70,

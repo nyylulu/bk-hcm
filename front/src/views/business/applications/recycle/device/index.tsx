@@ -10,7 +10,7 @@ import MemberSelect from '@/components/MemberSelect';
 
 import dayjs from 'dayjs';
 import { useI18n } from 'vue-i18n';
-import { useAccountStore, useUserStore } from '@/store';
+import { useUserStore } from '@/store';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
@@ -21,9 +21,8 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const userStore = useUserStore();
-    const accountStore = useAccountStore();
     const { t } = useI18n();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { getBusinessApiPath, getBizsId } = useWhereAmI();
 
     const defaultDeviceForm = () => ({
       bk_biz_id: [] as number[],
@@ -59,7 +58,7 @@ export default defineComponent({
         ...deviceForm.value,
         ...timeObj.value,
         page: pageInfo.value,
-        bk_biz_id: [accountStore.bizs],
+        bk_biz_id: [getBizsId()],
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
       removeEmptyFields(params);
@@ -99,17 +98,17 @@ export default defineComponent({
       },
     });
     const enterDetail = (row: any) => {
-      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: accountStore.bizs } });
+      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: getBizsId() } });
     };
 
     const filterOrders = () => {
       pagination.start = 0;
-      deviceForm.value.bk_biz_id = [accountStore.bizs];
+      deviceForm.value.bk_biz_id = [getBizsId()];
       getListData();
     };
     const clearFilter = () => {
       const initForm = defaultDeviceForm();
-      initForm.bk_biz_id = [accountStore.bizs];
+      initForm.bk_biz_id = [getBizsId()];
       deviceForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();

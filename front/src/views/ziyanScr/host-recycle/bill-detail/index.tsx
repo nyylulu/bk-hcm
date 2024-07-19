@@ -35,6 +35,8 @@ export default defineComponent({
         page: page.value,
       };
     });
+
+    const loadOrdersTimer: any = { id: null, count: 0 };
     const loadOrders = async () => {
       try {
         const data = await http
@@ -44,6 +46,14 @@ export default defineComponent({
         const orders = data?.info || [{}];
         const [order = {}] = orders;
         billBaseInfo.value = order;
+
+        // 定时任务(30s刷新一次, 最多刷新60次)
+        if (loadOrdersTimer.count < 60 && !['DONE', 'TERMINATE'].includes(order.stage)) {
+          loadOrdersTimer.count += 1;
+          loadOrdersTimer.id = setTimeout(() => {
+            loadOrders();
+          }, 30000);
+        }
       } catch (error) {
         billBaseInfo.value = {};
       }
@@ -207,10 +217,6 @@ export default defineComponent({
       const totalList = res.data?.info || [];
       exportTableToExcel(totalList, tableColumns, '设备销毁详情');
     };
-    const pollObj = ref(null);
-    const pollOrders = () => {
-      loadOrders();
-    };
     const preCheckDetail = ref(false);
     const transferData = ref({});
     const application = (row) => {
@@ -226,12 +232,12 @@ export default defineComponent({
     };
     onMounted(() => {
       loadOrders();
-      if (pollObj.value) clearInterval(pollObj.value);
-      pollObj.value = setInterval(pollOrders, 5000);
     });
+
     onUnmounted(() => {
-      clearInterval(pollObj.value);
+      clearTimeout(loadOrdersTimer.id);
     });
+
     const userStore = useUserStore();
     return () => (
       <>
