@@ -2,7 +2,6 @@
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
 import i18n from '@/language/i18n';
-
 const { t } = i18n.global;
 const businesseMenus: RouteRecordRaw[] = [
   {
@@ -439,11 +438,11 @@ const businesseMenus: RouteRecordRaw[] = [
     children: [
       {
         path: '/business/hostInventory',
-        name: '主机库存 ',
-        component: () => import('@/views/ziyanScr/hostInventory/index'),
+        name: 'hostInventory',
+        component: () => import('@/views/business/host-inventory/index'),
         meta: {
-          activeKey: 'zzkc',
           title: t('主机库存'),
+          activeKey: 'zzkc',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',

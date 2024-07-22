@@ -1,21 +1,28 @@
 import { defineComponent, ref, onMounted } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
-import { Search } from 'bkui-vue/lib/icon';
 import apiService from '@/api/scrApi';
-import { Button, Form } from 'bkui-vue';
+import { Button } from 'bkui-vue';
 import { useRouter } from 'vue-router';
-import AreaSelector from '../hostApplication/components/AreaSelector';
-import ZoneSelector from '../hostApplication/components/ZoneSelector';
-import './index.scss';
+import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
+import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
+import { useI18n } from 'vue-i18n';
+import cssModule from './index.module.scss';
+import GridFilterComp from '@/components/grid-filter-comp';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+// import { useVerify } from '@/hooks';
+// import ErrorPage from '@/views/error-pages/403';
 
-const { FormItem } = Form;
 export default defineComponent({
-  name: 'AllhostInventoryManager',
+  name: 'BusinessHostInventory',
   setup() {
+    // const { authVerifyData } = useVerify();
+    // if (!authVerifyData.value.permissionAction.ziyan_resource_inventory_find)
+    //   return () => <ErrorPage urlKeyId='biz_ziyan_resource_inventory' />;
+
     const { columns } = useColumns('hostInventor');
     const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
     const router = useRouter();
+    const { t } = useI18n();
     const filter = ref({
       require_type: 1,
       region: [],
@@ -134,7 +141,7 @@ export default defineComponent({
     };
     const application = (row: any) => {
       router.push({
-        path: '/service/hostApplication/apply',
+        path: '/business/service/service-apply/cvm',
         query: {
           ...row,
         },
@@ -146,7 +153,7 @@ export default defineComponent({
       getfetchOptionslist();
     });
 
-    const { CommonTable, getListData } = useTable({
+    const { CommonTable, getListData, isLoading } = useTable({
       tableOptions: {
         columns: [
           ...columns,
@@ -189,98 +196,116 @@ export default defineComponent({
       },
     });
     return () => (
-      <div class={'apply-list-container cvm-web-wrapper'}>
-        <div class={'filter-container'}>
-          <Form model={filter.value} formType='vertical' class={'scr-form-wrapper'}>
-            <FormItem label='需求类型'>
-              <bk-select v-model={filter.value.require_type}>
-                {options.value.require_types.map((item) => (
-                  <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-                ))}
-              </bk-select>
-            </FormItem>
-            <FormItem label='地域'>
-              <AreaSelector
-                ref='areaSelector'
-                v-model={filter.value.region}
-                multiple
-                clearable
-                filterable
-                params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
-            </FormItem>
-            <FormItem label='园区'>
-              <ZoneSelector
-                ref='zoneSelector'
-                v-model={filter.value.zone}
-                separateCampus={false}
-                multiple
-                params={{
-                  resourceType: 'QCLOUDCVM',
-                  region: filter.value.region,
-                }}></ZoneSelector>
-            </FormItem>
-            <FormItem label='实例族'>
-              <bk-select
-                v-model={filter.value.device_group}
-                multiple
-                clearable
-                collapse-tags
-                onChange={handleDeviceGroupChange}>
-                {options.value.device_groups.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
-            </FormItem>
-            <FormItem label='机型'>
-              <bk-select
-                v-model={filter.value.device_type}
-                clearable
-                multiple
-                disabled={deviceTypeDisabled.value}
-                filterable
-                onChange={handleDeviceTypeChange}>
-                {options.value.device_types.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
-            </FormItem>
-            <FormItem label='CPU(核)'>
-              <bk-select
-                v-model={filter.value.cpu}
-                clearable
-                disabled={deviceConfigDisabled.value}
-                filterable
-                onChange={handleDeviceConfigChange}>
-                {options.value.cpu.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
-            </FormItem>
-            <FormItem label='内存(G)'>
-              <bk-select
-                v-model={filter.value.mem}
-                clearable
-                disabled={deviceConfigDisabled.value}
-                filterable
-                onChange={handleDeviceConfigChange}>
-                {options.value.mem.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
-            </FormItem>
-          </Form>
-          <div class='btn-container'>
-            <bk-button icon='bk-icon-search' theme='primary' onClick={filterDevices}>
-              <Search></Search>
-              查询
-            </bk-button>
-            <bk-button icon='bk-icon-refresh' onClick={clearFilter}>
-              重置
-            </bk-button>
-          </div>
-        </div>
-        <CommonTable class={'filter-common-table'}></CommonTable>
-      </div>
+      <>
+        <GridFilterComp
+          rules={[
+            {
+              title: t('需求类型'),
+              content: (
+                <bk-select v-model={filter.value.require_type}>
+                  {options.value.require_types.map((item) => (
+                    <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
+                  ))}
+                </bk-select>
+              ),
+            },
+            {
+              title: t('地域'),
+              content: (
+                <AreaSelector
+                  ref='areaSelector'
+                  v-model={filter.value.region}
+                  multiple
+                  clearable
+                  filterable
+                  params={{ resourceType: 'QCLOUDCVM' }}></AreaSelector>
+              ),
+            },
+            {
+              title: t('园区'),
+              content: (
+                <ZoneSelector
+                  ref='zoneSelector'
+                  v-model={filter.value.zone}
+                  separateCampus={false}
+                  multiple
+                  params={{
+                    resourceType: 'QCLOUDCVM',
+                    region: filter.value.region,
+                  }}></ZoneSelector>
+              ),
+            },
+            {
+              title: t('实例族'),
+              content: (
+                <bk-select
+                  v-model={filter.value.device_group}
+                  multiple
+                  clearable
+                  collapse-tags
+                  onChange={handleDeviceGroupChange}>
+                  {options.value.device_groups.map((item) => (
+                    <bk-option key={item} value={item} label={item}></bk-option>
+                  ))}
+                </bk-select>
+              ),
+            },
+            {
+              title: t('机型'),
+              content: (
+                <bk-select
+                  v-model={filter.value.device_type}
+                  clearable
+                  multiple
+                  disabled={deviceTypeDisabled.value}
+                  filterable
+                  onChange={handleDeviceTypeChange}>
+                  {options.value.device_types.map((item) => (
+                    <bk-option key={item} value={item} label={item}></bk-option>
+                  ))}
+                </bk-select>
+              ),
+            },
+            {
+              title: t('CPU(核)'),
+              content: (
+                <bk-select
+                  v-model={filter.value.cpu}
+                  clearable
+                  disabled={deviceConfigDisabled.value}
+                  filterable
+                  onChange={handleDeviceConfigChange}>
+                  {options.value.cpu.map((item) => (
+                    <bk-option key={item} value={item} label={item}></bk-option>
+                  ))}
+                </bk-select>
+              ),
+            },
+            {
+              title: t('内存(G)'),
+              content: (
+                <bk-select
+                  v-model={filter.value.mem}
+                  clearable
+                  disabled={deviceConfigDisabled.value}
+                  filterable
+                  onChange={handleDeviceConfigChange}>
+                  {options.value.mem.map((item) => (
+                    <bk-option key={item} value={item} label={item}></bk-option>
+                  ))}
+                </bk-select>
+              ),
+            },
+          ]}
+          onSearch={filterDevices}
+          onReset={clearFilter}
+          loading={isLoading.value}
+          col={5}
+        />
+        <section class={cssModule['table-wrapper']}>
+          <CommonTable style={{ height: 'calc(100% - 48px)' }} />
+        </section>
+      </>
     );
   },
 });

@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, watch, onMounted, h, withDirectives } from 'vue';
+import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
@@ -226,86 +226,50 @@ export default defineComponent({
         width: 120,
         showOverflowTooltip: false,
         render: ({ row, index }) => {
-          return h('div', { class: 'operation-column' }, [
-            withDirectives(
-              h(
-                Button,
-                {
-                  text: true,
-                  theme: 'primary',
-                  class: 'mr10',
-                  onClick: () => {
-                    returnPreDetails(row);
-                  },
-                },
-                '预检详情',
-              ),
-              [],
-            ),
-            withDirectives(
-              h(
-                Dropdown,
-                {
-                  trigger: 'click',
-                  popoverOptions: {
-                    renderType: 'shown',
-                    onAfterShow: () => (currentOperateRowIndex.value = index),
-                    onAfterHidden: () => (currentOperateRowIndex.value = -1),
-                  },
-                },
-                {
-                  default: () =>
-                    h(
-                      'div',
-                      {
-                        class: [`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`],
-                      },
-                      h('i', { class: 'hcm-icon bkhcm-icon-more-fill' }),
-                    ),
-                  content: () =>
-                    h(DropdownMenu, null, [
-                      withDirectives(
-                        h(
-                          DropdownItem,
-                          {
-                            key: 'retry',
-                            onClick: () => retryOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
-                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
-                          },
-                          '全部重试',
-                        ),
-                        [],
-                      ),
-                      withDirectives(
-                        h(
-                          DropdownItem,
-                          {
-                            key: 'stop',
-                            onClick: () => stopOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
-                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
-                          },
-                          '全部终止',
-                        ),
-                        [],
-                      ),
-                      withDirectives(
-                        h(
-                          DropdownItem,
-                          {
-                            key: 'submit',
-                            onClick: () => submitOrderFunc(row.suborder_id, opBtnDisabled.value(row.status)),
-                            extCls: `more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`,
-                          },
-                          '剔除预检失败IP重试',
-                        ),
-                        [],
-                      ),
-                    ]),
-                },
-              ),
-              [],
-            ),
-          ]);
+          return (
+            <div class='operation-column'>
+              <Button text theme='primary' class='mr10' onClick={() => returnPreDetails(row)}>
+                预检详情
+              </Button>
+              <Dropdown
+                trigger='click'
+                popoverOptions={{
+                  renderType: 'shown',
+                  onAfterShow: () => (currentOperateRowIndex.value = index),
+                  onAfterHidden: () => (currentOperateRowIndex.value = -1),
+                }}>
+                {{
+                  default: () => (
+                    <div class={`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`}>
+                      <i class='hcm-icon bkhcm-icon-more-fill' />
+                    </div>
+                  ),
+                  content: () => (
+                    <DropdownMenu>
+                      <DropdownItem
+                        key='retry'
+                        onClick={() => retryOrderFunc(row.suborder_id, opBtnDisabled.value(row.status))}
+                        extCls={`more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`}>
+                        全部重试
+                      </DropdownItem>
+                      <DropdownItem
+                        key='stop'
+                        onClick={() => stopOrderFunc(row.suborder_id, opBtnDisabled.value(row.status))}
+                        extCls={`more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`}>
+                        全部终止
+                      </DropdownItem>
+                      <DropdownItem
+                        key='submit'
+                        onClick={() => submitOrderFunc(row.suborder_id, opBtnDisabled.value(row.status))}
+                        extCls={`more-action-item${opBtnDisabled.value(row.status) ? ' disabled' : ''}`}>
+                        剔除预检失败IP重试
+                      </DropdownItem>
+                    </DropdownMenu>
+                  ),
+                }}
+              </Dropdown>
+            </div>
+          );
         },
       },
     ];
