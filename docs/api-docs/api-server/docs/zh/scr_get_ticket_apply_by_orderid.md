@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.6.0+。
+- 该接口提供版本：v1.6.1+。
 - 该接口所需权限：无。
 - 该接口功能描述：获取资源申请单据内容。
 
@@ -20,7 +20,7 @@ POST /api/v1/woa/task/get/apply/ticket
 
 ```json
 {
-"order_id":1001
+    "order_id":1001
 }
 ```
 
@@ -30,88 +30,86 @@ POST /api/v1/woa/task/get/apply/ticket
 
 ```json
 {
-"result":true,
-"code":0,
-"message":"success",
-"permission":null,
-"request_id":"f5a6331d4bc2433587a63390c76ba7bf",
-"data":{
-"order_id":1001,
-"stage":"UNCOMMIT",
-"bk_biz_id":3,
-"bk_username":"xx",
-"follower":"",
-"enable_notice":true,
-"require_type":1,
-"expect_time":"2022-05-01 20:00:00",
-"remark":"",
-"suborders":[
-{
-"resource_type":"QCLOUDCVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"ap-shanghai",
-"zone":"ap-shanghai-2",
-"device_type":"S3.LARGE8",
-"image_id":"img-r5igp4bv",
-"disk_size":200,
-"disk_type":"CLOUD_PREMIUM",
-"network_type":"TENTHOUSAND",
-"vpc":"",
-"subnet":""
-}
-},
-{
-"resource_type":"IDCPM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"东莞",
-"zone":"东莞-大朗",
-"device_type":"B7",
-"os_type":"XServer V16_64",
-"raid_type":"RAID1",
-"network_type":"TENTHOUSAND",
-"isp":""
-}
-},
-{
-"resource_type":"QCLOUDDVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"ap-shanghai",
-"zone":"ap-shanghai-2",
-"device_group":"GAMESERVER",
-"device_type":"D4-8-200-10",
-"image":"hub.oa.com/library/tlinux2.2:v1.6",
-"mount_path":"/data1",
-"network_type":"TENTHOUSAND",
-"cpu_provider":"Intel"
-}
-},
-{
-"resource_type":"IDCDVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"上海",
-"zone":"上海-青浦",
-"device_group":"GAMESERVER",
-"device_type":"D4-8-200-10",
-"image":"hub.oa.com/library/tlinux2.2:v1.6",
-"kernel":"",
-"mount_path":"/data1",
-"network_type":"TENTHOUSAND"
-}
-}
-]
-}
+    "result":true,
+    "code":0,
+    "message":"success",
+    "data":{
+        "order_id":1001,
+        "stage":"UNCOMMIT",
+        "bk_biz_id":3,
+        "bk_username":"xx",
+        "follower":"",
+        "enable_notice":true,
+        "require_type":1,
+        "expect_time":"2022-05-01 20:00:00",
+        "remark":"",
+        "suborders":[
+            {
+                "resource_type":"QCLOUDCVM",
+                "replicas":2,
+                "anti_affinity_level":"ANTI_NONE",
+                "remark":"",
+                "spec":{
+                    "region":"ap-shanghai",
+                    "zone":"ap-shanghai-2",
+                    "device_type":"S3.LARGE8",
+                    "image_id":"img-r5igp4bv",
+                    "disk_size":200,
+                    "disk_type":"CLOUD_PREMIUM",
+                    "network_type":"TENTHOUSAND",
+                    "vpc":"",
+                    "subnet":""
+                }
+            },
+            {
+                "resource_type":"IDCPM",
+                "replicas":2,
+                "anti_affinity_level":"ANTI_NONE",
+                "remark":"",
+                "spec":{
+                    "region":"东莞",
+                    "zone":"东莞-大朗",
+                    "device_type":"B7",
+                    "os_type":"XServer V16_64",
+                    "raid_type":"RAID1",
+                    "network_type":"TENTHOUSAND",
+                    "isp":""
+                }
+            },
+            {
+                "resource_type":"QCLOUDDVM",
+                "replicas":2,
+                "anti_affinity_level":"ANTI_NONE",
+                "remark":"",
+                "spec":{
+                    "region":"ap-shanghai",
+                    "zone":"ap-shanghai-2",
+                    "device_group":"GAMESERVER",
+                    "device_type":"D4-8-200-10",
+                    "image":"hub.oa.com/library/tlinux2.2:v1.6",
+                    "mount_path":"/data1",
+                    "network_type":"TENTHOUSAND",
+                    "cpu_provider":"Intel"
+                }
+            },
+            {
+                "resource_type":"IDCDVM",
+                "replicas":2,
+                "anti_affinity_level":"ANTI_NONE",
+                "remark":"",
+                "spec":{
+                    "region":"上海",
+                    "zone":"上海-青浦",
+                    "device_group":"GAMESERVER",
+                    "device_type":"D4-8-200-10",
+                    "image":"hub.oa.com/library/tlinux2.2:v1.6",
+                    "kernel":"",
+                    "mount_path":"/data1",
+                    "network_type":"TENTHOUSAND"
+                }
+            }
+        ]
+    }
 }
 ```
 
@@ -122,8 +120,6 @@ POST /api/v1/woa/task/get/apply/ticket
 | result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
 | code       | int          | 错误编码。 0表示success，>0表示失败错误  |
 | message    | string       | 请求失败返回的错误信息 |
-| permission | object       | 权限信息             |
-| request_id | string       | 请求链ID             |
 | data	     | object array | 响应数据             |
 
 #### data
