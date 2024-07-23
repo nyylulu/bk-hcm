@@ -162,6 +162,38 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/apply/stage`);
   };
 
+  // 资源可回收状态检查
+  const getRecyclableHosts = (data: { ips?: string[]; asset_ids?: string[]; bk_host_ids?: number[] }) => {
+    return http.post(
+      `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/recyclability`,
+      data,
+    );
+  };
+
+  // 回收单据预览
+  const getPreRecycleList = (data: {
+    ips: string[];
+    remark?: string;
+    return_plan: { cvm: string; pm: string };
+    skip_confirm: boolean;
+  }) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/preview/recycle/order`, data);
+  };
+
+  // 获取回收单据中的主机
+  const getRecycleOrderHost = (data: {
+    suborder_id: string[];
+    page: { limit?: number; start?: number; enable_count: boolean };
+    bk_biz_id: number[];
+  }) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/host`, data);
+  };
+
+  // 资源回收单据执行接口
+  const startRecycleOrder = (data: { order_id: number[] }) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/start/recycle/order`, data);
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -184,5 +216,9 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     dissolveHostOriginList,
     getRequirementList,
     getApplyStageList,
+    getRecyclableHosts,
+    getPreRecycleList,
+    getRecycleOrderHost,
+    startRecycleOrder,
   };
 });

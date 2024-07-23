@@ -1,20 +1,19 @@
-import { h, ref, withDirectives, Ref } from 'vue';
-import { Button, Dropdown, Message, Checkbox, bkTooltips } from 'bkui-vue';
+import { withDirectives, Ref } from 'vue';
+import { Button, Dropdown, Message, bkTooltips } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
-import { useResourceStore } from '@/store';
-import { CLOUD_HOST_STATUS, VendorEnum } from '@/common/constant';
+import { VendorEnum } from '@/common/constant';
 import defaultUseColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import HostOperations, {
-  HOST_RUNNING_STATUS,
-  HOST_SHUTDOWN_STATUS,
-} from '@/views/business/host/children/host-operations';
+  OperationActions,
+  operationMap,
+} from '@/views/business/host/children/host-operations/internal/index';
+import useSingleOperation from '@/views/business/host/children/host-operations/internal/use-single-operation';
+import defaultUseSingleOperation from '@/views/business/host/children/host-operations/use-single-operation';
 import defaultUseTableListQuery from '@/hooks/useTableListQuery';
 import type { PropsType } from '@/hooks/useTableListQuery';
-import Confirm, { confirmInstance } from '@/components/confirm';
 import type { PluginHandlerType } from '../business-host-manage';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
-const resourceStore = useResourceStore();
 
 type UseColumnsParams = {
   type?: string;
@@ -23,126 +22,45 @@ type UseColumnsParams = {
   extra?: {
     isLoading: Ref<boolean>;
     triggerApi: () => void;
+    getHostOperationRef: () => any;
+    getTableRef: () => any;
   };
 };
 
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
   const { t } = useI18n();
-  const currentOperateRowIndex = ref(-1);
-
-  // 回收参数「云硬盘/EIP 随主机回收」
-  const isRecycleDiskWithCvm = ref(false);
-  const isRecycleEipWithCvm = ref(false);
-
-  // 重置回收参数
-  const resetRecycleSingleCvmParams = () => {
-    isRecycleDiskWithCvm.value = false;
-    isRecycleEipWithCvm.value = false;
-  };
-
-  const operationDropdownList = [
-    { label: '开机', type: 'start' },
-    { label: '关机', type: 'stop' },
-    { label: '重启', type: 'reboot' },
-  ];
-
-  // 操作的相关信息
-  const cvmInfo = ref({
-    start: { op: '开机', loading: false, status: HOST_RUNNING_STATUS },
-    stop: {
-      op: '关机',
-      loading: false,
-      status: HOST_SHUTDOWN_STATUS,
+  const { isOperateDisabled, getMenuTooltipsOption, currentOperateRowIndex } = useSingleOperation();
+  const { handleOperate: defaultHandleOperate } = defaultUseSingleOperation({
+    beforeConfirm() {
+      extra.isLoading.value = true;
     },
-    reboot: { op: '重启', loading: false, status: HOST_SHUTDOWN_STATUS },
-    recycle: { op: '回收', loading: false, status: HOST_SHUTDOWN_STATUS },
+    confirmSuccess() {
+      Message({ message: t('操作成功'), theme: 'success' });
+      extra.triggerApi();
+    },
+    confirmComplete() {
+      extra.isLoading.value = false;
+    },
   });
 
-  const getRecycleToolTipsOption = (data: any) => {
-    return {
-      content: `当前主机处于 ${CLOUD_HOST_STATUS[data.status]} 状态`,
-      disabled: !cvmInfo.value.stop.status.includes(data.status),
-    };
-  };
+  const handleOperate = async (type: OperationActions, data: any) => {
+    if (isOperateDisabled(type, data)) return;
 
-  const getDropdownMenuDisabled = (type: string, data: any) => {
     if (data.vendor === VendorEnum.ZIYAN) {
-      return true;
-    }
-    return cvmInfo.value[type].status.includes(data.status);
-  };
-  const getDropdownMenuToolTipsOption = (type: string, data: any) => {
-    if (data.vendor === VendorEnum.ZIYAN) {
-      return {
-        disabled: true,
-      };
-    }
-    return {
-      content: `当前主机处于 ${CLOUD_HOST_STATUS[data.status]} 状态`,
-      disabled: !getDropdownMenuDisabled(type, data),
-    };
-  };
-
-  // 主机相关操作 - 单个操作
-  const handleCvmOperate = async (label: string, type: string, data: any) => {
-    // 判断当前主机是否可以执行对应操作
-    if (getDropdownMenuDisabled(type, data)) return;
-
-    resetRecycleSingleCvmParams();
-
-    let infoboxContent;
-    if (type === 'recycle') {
-      // 请求 cvm 所关联的资源(硬盘, eip)个数
-      const {
-        data: [target],
-      } = await resourceStore.getRelResByCvmIds({ ids: [data.id] });
-      const { disk_count, eip_count, eip } = target;
-      infoboxContent = h('div', { style: { textAlign: 'justify' } }, [
-        h('div', { style: { marginBottom: '10px' } }, [
-          `当前操作主机为：${data.name}`,
-          h('br'),
-          `共关联 ${disk_count - 1} 个数据盘，${eip_count} 个弹性 IP${eip ? '('.concat(eip.join(','), ')') : ''}`,
-        ]),
-        h('div', null, [
-          h(
-            Checkbox,
-            {
-              checked: isRecycleDiskWithCvm.value,
-              onChange: (checked: boolean) => (isRecycleDiskWithCvm.value = checked),
-            },
-            '云硬盘随主机回收',
-          ),
-          h(
-            Checkbox,
-            {
-              checked: isRecycleEipWithCvm.value,
-              onChange: (checked: boolean) => (isRecycleEipWithCvm.value = checked),
-            },
-            '弹性 IP 随主机回收',
-          ),
-        ]),
-      ]);
+      // 使用批量回收操作
+      extra.getTableRef()?.value?.clearSelection?.();
+      extra.getHostOperationRef()?.value?.handleSingleZiyanRecycle?.(data);
     } else {
-      infoboxContent = `当前操作主机为：${data.name}`;
+      defaultHandleOperate(type, data);
     }
-    Confirm(`确定${label}`, infoboxContent, async () => {
-      confirmInstance.hide();
-      extra.isLoading.value = true;
-      try {
-        if (type === 'recycle') {
-          await resourceStore.recycledCvmsData({
-            infos: [{ id: data.id, with_disk: isRecycleDiskWithCvm.value, with_eip: isRecycleEipWithCvm.value }],
-          });
-        } else {
-          await resourceStore.cvmOperate(type, { ids: [data.id] });
-        }
-        Message({ message: t('操作成功'), theme: 'success' });
-        extra.triggerApi();
-      } finally {
-        extra.isLoading.value = false;
-      }
-    });
   };
+
+  const operationDropdownList = Object.entries(operationMap)
+    .filter(([type]) => ![OperationActions.RECYCLE, OperationActions.NONE].includes(type as OperationActions))
+    .map(([type, value]) => ({
+      type,
+      label: value.label,
+    }));
 
   const { columns, generateColumnsSettings } = defaultUseColumns(type, isSimpleShow);
 
@@ -154,65 +72,56 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
         width: 120,
         showOverflowTooltip: false,
         render: ({ data, index }: { data: any; index: number }) => {
-          return h('div', { class: 'operation-column' }, [
-            withDirectives(
-              h(
-                Button,
-                {
-                  text: true,
-                  theme: 'primary',
-                  class: 'mr10',
-                  onClick: () => {
-                    handleCvmOperate('回收', 'recycle', data);
-                  },
-                  // TODO: 权限
-                  disabled: cvmInfo.value.stop.status.includes(data.status),
-                },
-                '回收',
-              ),
-              [[bkTooltips, getRecycleToolTipsOption(data)]],
-            ),
-            h(
-              Dropdown,
-              {
-                trigger: 'click',
-                popoverOptions: {
-                  renderType: 'shown',
-                  onAfterShow: () => (currentOperateRowIndex.value = index),
-                  onAfterHidden: () => (currentOperateRowIndex.value = -1),
-                },
-              },
-              {
-                default: () =>
-                  h(
-                    'div',
-                    {
-                      class: [`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`],
-                    },
-                    h('i', { class: 'hcm-icon bkhcm-icon-more-fill' }),
-                  ),
-                content: () =>
-                  h(
-                    DropdownMenu,
-                    null,
-                    operationDropdownList.map(({ label, type }) => {
-                      return withDirectives(
-                        h(
-                          DropdownItem,
-                          {
-                            key: type,
-                            onClick: () => handleCvmOperate(label, type, data),
-                            extCls: `more-action-item${getDropdownMenuDisabled(type, data) ? ' disabled' : ''}`,
-                          },
-                          label,
-                        ),
-                        [[bkTooltips, getDropdownMenuToolTipsOption(type, data)]],
-                      );
-                    }),
-                  ),
-              },
-            ),
-          ]);
+          return (
+            <div class={'operation-column'}>
+              {[
+                withDirectives(
+                  <Button
+                    text
+                    theme={'primary'}
+                    class={'mr10'}
+                    onClick={() => handleOperate(OperationActions.RECYCLE, data)}
+                    disabled={isOperateDisabled(OperationActions.RECYCLE, data)}>
+                    {operationMap[OperationActions.RECYCLE].label}
+                  </Button>,
+                  [[bkTooltips, getMenuTooltipsOption(OperationActions.RECYCLE, data)]],
+                ),
+                <Dropdown
+                  trigger='click'
+                  popoverOptions={{
+                    renderType: 'shown',
+                    onAfterShow: () => (currentOperateRowIndex.value = index),
+                    onAfterHidden: () => (currentOperateRowIndex.value = -1),
+                  }}>
+                  {{
+                    default: () => (
+                      <div
+                        class={[`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`]}>
+                        <i class={'hcm-icon bkhcm-icon-more-fill'}></i>
+                      </div>
+                    ),
+                    content: () => (
+                      <DropdownMenu>
+                        {operationDropdownList.map(({ label, type }) => {
+                          return withDirectives(
+                            <DropdownItem
+                              key={type}
+                              onClick={() => handleOperate(type as OperationActions, data)}
+                              extCls={`more-action-item${
+                                isOperateDisabled(type as OperationActions, data) ? ' disabled' : ''
+                              }`}>
+                              {label}
+                            </DropdownItem>,
+                            [[bkTooltips, getMenuTooltipsOption(type as OperationActions, data)]],
+                          );
+                        })}
+                      </DropdownMenu>
+                    ),
+                  }}
+                </Dropdown>,
+              ]}
+            </div>
+          );
         },
       },
     ],
