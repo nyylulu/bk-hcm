@@ -16,32 +16,25 @@ export default defineComponent({
 
     const cloudTypes = ref([
       { label: t('自研云'), value: 'ziyan', disabled: false },
+      // 本期只支持自研云, 无需保存云类型至url
       { label: t('公有云'), value: 'public', disabled: true },
     ]);
-    const activeCloudType = ref(route.query?.cloud_type || cloudTypes.value[0].value);
+    const activeCloudType = ref(cloudTypes.value[0].value);
 
     const scenes = ref([
       { label: t('单据视角'), value: 'applications' },
       { label: t('设备视角'), value: 'device' },
     ]);
-    const activeScene = ref(route.query?.scene || scenes.value[0].value);
-
-    const saveActiveCloudType = (val: string) => {
-      activeScene.value = scenes.value[0].value;
-      router.replace({ query: { ...route.query, cloud_type: val, scene: undefined } });
-    };
+    const activeScene = ref(route.query?.scene_recycle || scenes.value[0].value);
 
     const saveActiveScene = (val: string) => {
-      router.replace({ query: { ...route.query, scene: val } });
+      router.replace({ query: { ...route.query, scene_recycle: val } });
     };
 
     return () => (
       <>
         <section class={cssModule['scene-wrapper']}>
-          <BkRadioGroup
-            v-model={activeCloudType.value}
-            class={cssModule.mr24}
-            onUpdate:modelValue={saveActiveCloudType}>
+          <BkRadioGroup v-model={activeCloudType.value} class={cssModule.mr24}>
             {cloudTypes.value.map(({ label, value, disabled }) => (
               <BkRadioButton
                 class={cssModule['radio-button']}
@@ -68,9 +61,6 @@ export default defineComponent({
         </section>
         <section class={cssModule['content-wrapper']}>
           {(function () {
-            if (activeCloudType.value === 'public') {
-              return <div>公有云-主机回收</div>;
-            }
             if (activeCloudType.value === 'ziyan') {
               if (activeScene.value === 'applications') {
                 return <Applications />;

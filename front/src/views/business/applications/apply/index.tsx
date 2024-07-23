@@ -26,15 +26,15 @@ export default defineComponent({
       { label: t('单据视角'), value: 'applications' },
       { label: t('设备视角'), value: 'device' },
     ]);
-    const activeScene = ref(route.query?.scene || scenes.value[0].value);
+    const activeScene = ref(route.query?.scene_apply || scenes.value[0].value);
 
     const saveActiveCloudType = (val: string) => {
       activeScene.value = scenes.value[0].value;
-      router.replace({ query: { ...route.query, cloud_type: val, scene: undefined } });
+      router.replace({ query: { ...route.query, cloud_type: val, scene_apply: undefined } });
     };
 
     const saveActiveScene = (val: string) => {
-      router.replace({ query: { ...route.query, scene: val } });
+      router.replace({ query: { ...route.query, scene_apply: val } });
     };
 
     return () => (
