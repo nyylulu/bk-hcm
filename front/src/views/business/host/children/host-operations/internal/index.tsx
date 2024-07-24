@@ -1,9 +1,11 @@
 import { PropType, defineComponent, ref, toRefs, withDirectives } from 'vue';
+import { useRouter } from 'vue-router';
 import { Button, Dialog, Dropdown, Loading, Message, bkTooltips } from 'bkui-vue';
 import cssModule from '../index.module.scss';
 import { AngleDown } from 'bkui-vue/lib/icon';
 import { BkDropdownItem, BkDropdownMenu } from 'bkui-vue/lib/dropdown';
 import { useZiyanScrStore } from '@/store';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import CommonLocalTable from '@/components/LocalTable';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
@@ -33,7 +35,9 @@ export default defineComponent({
     const dialogRef = ref(null);
     const recycleFlowRef = ref(null);
 
+    const router = useRouter();
     const scrStore = useZiyanScrStore();
+    const { getBizsId } = useWhereAmI();
     const { selections } = toRefs(props);
 
     const {
@@ -100,7 +104,7 @@ export default defineComponent({
         Message({
           message: `${computedTitle.value}中, 请不要操作`,
           theme: 'warning',
-          delay: 1000,
+          delay: 500,
         });
         const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
         const { result } = await scrStore.startRecycleOrder({ order_id: orderIds });
@@ -110,6 +114,9 @@ export default defineComponent({
             theme: 'success',
           });
           props.onFinished?.('confirm');
+
+          router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
+
           operationType.value = OperationActions.NONE;
         }
       } finally {

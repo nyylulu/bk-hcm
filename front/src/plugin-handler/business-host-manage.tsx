@@ -1,5 +1,6 @@
 import { withDirectives, Ref } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { Button, Dropdown, Message, bkTooltips } from 'bkui-vue';
 import { CLOUD_HOST_STATUS } from '@/common/constant';
 import defaultUseColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -24,13 +25,18 @@ type UseColumnsParams = {
 
 const useColumns = ({ columnType = 'cvms', isSimpleShow = false, vendor, extra }: UseColumnsParams) => {
   const { t } = useI18n();
+  const router = useRouter();
   const { handleOperate, isOperateDisabled, currentOperateRowIndex } = useSingleOperation({
     beforeConfirm() {
       extra.isLoading.value = true;
     },
-    confirmSuccess() {
+    confirmSuccess(type: string) {
       Message({ message: t('操作成功'), theme: 'success' });
-      extra.triggerApi();
+      if (type === OperationActions.RECYCLE) {
+        router.push({ name: 'businessRecyclebin' });
+      } else {
+        extra.triggerApi();
+      }
     },
     confirmComplete() {
       extra.isLoading.value = false;

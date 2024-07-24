@@ -1,6 +1,7 @@
 import { withDirectives, Ref } from 'vue';
 import { Button, Dropdown, Message, bkTooltips } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
+import { useRouter } from 'vue-router';
 import { VendorEnum } from '@/common/constant';
 import defaultUseColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import HostOperations, {
@@ -29,14 +30,20 @@ type UseColumnsParams = {
 
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
   const { t } = useI18n();
+  const router = useRouter();
   const { isOperateDisabled, getMenuTooltipsOption, currentOperateRowIndex } = useSingleOperation();
   const { handleOperate: defaultHandleOperate } = defaultUseSingleOperation({
     beforeConfirm() {
       extra.isLoading.value = true;
     },
-    confirmSuccess() {
+    confirmSuccess(type: string) {
       Message({ message: t('操作成功'), theme: 'success' });
       extra.triggerApi();
+      if (type === OperationActions.RECYCLE) {
+        router.push({ name: 'businessRecyclebin' });
+      } else {
+        extra.triggerApi();
+      }
     },
     confirmComplete() {
       extra.isLoading.value = false;

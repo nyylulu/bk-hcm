@@ -33,7 +33,7 @@ const useSingleOperation = ({
   const handleOperate = async (type: OperationActions, data: any) => {
     if (isOperateDisabled(type, data.status)) return;
 
-    const { label } = operationMap[OperationActions.RECYCLE];
+    const { label } = operationMap[type];
 
     resetRecycleSingleCvmParams();
 
@@ -77,7 +77,7 @@ const useSingleOperation = ({
         } else {
           await businessStore.cvmOperate(type, { ids: [data.id] });
         }
-        confirmSuccess();
+        confirmSuccess(type);
       } finally {
         confirmComplete();
       }

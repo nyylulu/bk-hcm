@@ -1,4 +1,5 @@
 import { computed, ref, type Ref, watch, reactive, VNode } from 'vue';
+import { useRouter } from 'vue-router';
 import { Message, Checkbox } from 'bkui-vue';
 import { usePreviousState } from '@/hooks/usePreviousState';
 import { useBusinessStore } from '@/store';
@@ -19,6 +20,7 @@ export type Params = {
 };
 
 const useBatchOperation = ({ selections, onFinished }: Params) => {
+  const router = useRouter();
   const operationType = ref<OperationActions>(OperationActions.NONE);
 
   const isConfirmDisabled = ref(true);
@@ -231,14 +233,15 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
   });
 
   const handleConfirm = async () => {
+    const isRecycle = operationType.value === OperationActions.RECYCLE;
     try {
       isLoading.value = true;
       Message({
         message: `${computedTitle.value}中, 请不要操作`,
         theme: 'warning',
-        delay: 1000,
+        delay: 500,
       });
-      if (operationType.value === OperationActions.RECYCLE) {
+      if (isRecycle) {
         const hostIds = targetHost.value.map((v) => ({
           id: v.id,
           with_disk: withDiskSet.value.has(v.id),
@@ -254,6 +257,9 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
         theme: 'success',
       });
       onFinished?.('confirm');
+      if (isRecycle) {
+        router.push({ name: 'businessRecyclebin' });
+      }
     } finally {
       isLoading.value = false;
       operationType.value = OperationActions.NONE;
