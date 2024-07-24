@@ -847,7 +847,7 @@ func (r Redis) validate() error {
 
 // ClientConfig third-party api client config set
 type ClientConfig struct {
-	CvmOpt    CVMCli     `yaml:"cvm"`
+	CvmOpt    CVMCliConf `yaml:"cvm"`
 	TjjOpt    TjjCli     `yaml:"tjj"`
 	XshipOpt  XshipCli   `yaml:"xship"`
 	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
@@ -929,16 +929,20 @@ func (c ClientConfig) validate() error {
 	return nil
 }
 
-// CVMCli yunti client options
-type CVMCli struct {
-	// yunti api address
+// CVMCliConf yunti client config
+type CVMCliConf struct {
 	CvmApiAddr        string `yaml:"host"`
+	CvmOldApiAddr     string `yaml:"old_host"`
 	CvmLaunchPassword string `yaml:"launch_password"`
 }
 
-func (c CVMCli) validate() error {
+func (c CVMCliConf) validate() error {
 	if len(c.CvmApiAddr) == 0 {
 		return errors.New("cvm.host is not set")
+	}
+
+	if len(c.CvmOldApiAddr) == 0 {
+		return errors.New("cvm.old_host is not set")
 	}
 
 	if len(c.CvmLaunchPassword) == 0 {

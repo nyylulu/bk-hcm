@@ -43,7 +43,7 @@ type VpcIf interface {
 // NewVpcOp creates a vpc interface
 func NewVpcOp(thirdCli *thirdparty.Client) VpcIf {
 	return &vpc{
-		cvm: thirdCli.CVM,
+		cvm: thirdCli.OldCVM,
 	}
 }
 

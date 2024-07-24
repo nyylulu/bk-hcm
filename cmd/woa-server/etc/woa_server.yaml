@@ -163,6 +163,7 @@ redis:
   masterName:
 
 cvm:
+  old_host: http://127.0.0.1
   host: http://127.0.0.1
   launch_password: test
 
