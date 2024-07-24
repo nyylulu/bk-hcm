@@ -25,6 +25,7 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAccountStore } from '@/store/account';
 import { InfoBox } from 'bkui-vue';
+import GlobalPermissionDialog from '@/components/global-permission-dialog';
 
 const isShowSideSlider = ref(false);
 const isShowGcpAdd = ref(false);
@@ -317,6 +318,8 @@ const {
           }
         "
       />
+
+      <GlobalPermissionDialog />
     </div>
   </div>
 </template>

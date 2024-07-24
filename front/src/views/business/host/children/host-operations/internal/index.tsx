@@ -11,6 +11,8 @@ import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
 import { OperationActions, operationMap } from '../index';
 import RecycleFlow from './recycle-flow.vue';
+import { useVerify } from '@/hooks';
+import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
 export { OperationActions, operationMap } from '../index';
 
@@ -39,6 +41,9 @@ export default defineComponent({
     const scrStore = useZiyanScrStore();
     const { getBizsId } = useWhereAmI();
     const { selections } = toRefs(props);
+
+    const { authVerifyData, handleAuth } = useVerify();
+    const globalPermissionDialog = useGlobalPermissionDialog();
 
     const {
       operationType,
@@ -172,9 +177,18 @@ export default defineComponent({
                     .map(([opType, opData]) => {
                       return withDirectives(
                         <BkDropdownItem
-                          onClick={() => handleClickMenu(opType as OperationActions)}
+                          onClick={() => {
+                            if (!authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete) {
+                              handleAuth('biz_iaas_resource_delete');
+                              globalPermissionDialog.setShow(true);
+                            } else handleClickMenu(opType as OperationActions);
+                          }}
                           extCls={`more-action-item${
-                            !operationDisabledTips(opType as OperationActions).disabled ? ' disabled' : ''
+                            !operationDisabledTips(opType as OperationActions).disabled ||
+                            (opType === OperationActions.RECYCLE &&
+                              !authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete)
+                              ? ' disabled'
+                              : ''
                           }`}>
                           批量{opData.label}
                         </BkDropdownItem>,

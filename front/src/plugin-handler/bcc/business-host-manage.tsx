@@ -13,6 +13,8 @@ import defaultUseSingleOperation from '@/views/business/host/children/host-opera
 import defaultUseTableListQuery from '@/hooks/useTableListQuery';
 import type { PropsType } from '@/hooks/useTableListQuery';
 import type { PluginHandlerType } from '../business-host-manage';
+import { useVerify } from '@/hooks';
+import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 
@@ -29,6 +31,8 @@ type UseColumnsParams = {
 };
 
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
+  const { authVerifyData, handleAuth } = useVerify();
+  const globalPermissionDialogStore = useGlobalPermissionDialog();
   const { t } = useI18n();
   const router = useRouter();
   const { isOperateDisabled, getMenuTooltipsOption, currentOperateRowIndex } = useSingleOperation();
@@ -86,9 +90,23 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
                   <Button
                     text
                     theme={'primary'}
-                    class={'mr10'}
-                    onClick={() => handleOperate(OperationActions.RECYCLE, data)}
-                    disabled={isOperateDisabled(OperationActions.RECYCLE, data)}>
+                    class={`mr10 ${
+                      !authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete
+                        ? 'hcm-no-permision-text-btn'
+                        : ''
+                    }`}
+                    onClick={() => {
+                      if (authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete) {
+                        handleOperate(OperationActions.RECYCLE, data);
+                      } else {
+                        handleAuth('biz_iaas_resource_delete');
+                        globalPermissionDialogStore.setShow(true);
+                      }
+                    }}
+                    disabled={
+                      authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete &&
+                      isOperateDisabled(OperationActions.RECYCLE, data)
+                    }>
                     {operationMap[OperationActions.RECYCLE].label}
                   </Button>,
                   [[bkTooltips, getMenuTooltipsOption(OperationActions.RECYCLE, data)]],
