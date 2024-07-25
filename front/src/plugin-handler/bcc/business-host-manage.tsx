@@ -157,12 +157,13 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
 const useTableListQuery = (
   props: PropsType,
   type = 'cvms',
+  completeCallback: () => void,
   apiMethod?: Function,
   apiName = 'list',
   args: any = {},
   extraResolveData?: (...args: any) => Promise<any>,
 ) => {
-  return defaultUseTableListQuery(props, type, apiMethod, apiName, args, extraResolveData);
+  return defaultUseTableListQuery(props, type, completeCallback, apiMethod, apiName, args, extraResolveData);
 };
 
 const pluginHandler: PluginHandlerType = {
