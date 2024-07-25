@@ -65,7 +65,6 @@ const selectedCloudAccountId = computed({
     selectedRegion.value = '';
   },
 });
-
 const selectedVendor = computed({
   get() {
     return props.vendor;
@@ -115,7 +114,10 @@ defineExpose({ handleChangeAccount });
  */
 const { isResourcePage } = useWhereAmI();
 const resourceAccountStore = useResourceAccountStore();
-
+const isOptionDisabled = (accountItem: { vendor: VendorEnum }) => {
+  const validTypes = [ResourceTypeEnum.VPC, ResourceTypeEnum.DISK, ResourceTypeEnum.SUBNET];
+  return validTypes.includes(props.type) && accountItem?.vendor === VendorEnum.ZIYAN;
+};
 watch(
   () => resourceAccountStore.resourceAccount?.id,
   (id) => {
@@ -147,6 +149,7 @@ watch(
         :disabled="!!resourceAccountStore?.resourceAccount?.id"
         :must-biz="!isResourcePage"
         :biz-id="selectedBizId"
+        :option-disabled="isOptionDisabled"
         @change="handleChangeAccount"
         :type="'resource'"
       ></account-selector>
