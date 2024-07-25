@@ -34,7 +34,7 @@ const serviceMenus: RouteRecordRaw[] = [
       },
       {
         path: '/service/my-apply/detail',
-        name: '申请单据详情',
+        name: 'serviceMyApplyDetail',
         component: () => import('@/views/service/apply-detail/index'),
         meta: {
           activeKey: 'myApply',
