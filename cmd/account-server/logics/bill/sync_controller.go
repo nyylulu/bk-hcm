@@ -22,7 +22,6 @@ package bill
 import (
 	"encoding/json"
 	"fmt"
-
 	"time"
 
 	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
@@ -339,16 +338,22 @@ func (sc *SyncController) handleSyncRecordDetailItem(kt *kit.Kit, syncRecordItem
 }
 
 func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (*SyncRecordDetailItem, error) {
-	expressions := []*filter.AtomRule{
+	flt := tools.ExpressionAnd(
 		tools.RuleEqual("root_account_id", syncRecordItem.RootAccountID),
 		tools.RuleEqual("main_account_id", syncRecordItem.MainAccountID),
 		tools.RuleEqual("bill_year", syncRecordItem.BillYear),
 		tools.RuleEqual("bill_month", syncRecordItem.BillMonth),
+	)
+	comOpt := &bill.ItemCommonOpt{
+		Vendor: enumor.Vendor(syncRecordItem.Vendor),
+		Year:   syncRecordItem.BillYear,
+		Month:  syncRecordItem.BillMonth,
 	}
-	result, err := sc.Client.DataService().Global.Bill.ListBillItem(kt, &core.ListReq{
-		Filter: tools.ExpressionAnd(expressions...),
-		Page:   core.NewCountPage(),
-	})
+	listReq := &bill.BillItemListReq{
+		ItemCommonOpt: comOpt,
+		ListReq:       &core.ListReq{Filter: flt, Page: core.NewCountPage()},
+	}
+	result, err := sc.Client.DataService().Global.Bill.ListBillItem(kt, listReq)
 	if err != nil {
 		logs.Warnf("count bill item for %s %s %d %d failed, err %s, rid: %s",
 			syncRecordItem.RootAccountID, syncRecordItem.MainAccountID,

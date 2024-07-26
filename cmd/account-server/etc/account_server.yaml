@@ -97,6 +97,13 @@ controller:
   rootAccountSummarySyncDuration:
   dailySummarySyncDuration:
 
+billAllocation:
+  # aws saving plan allocation option
+  awsSavingPlans:
+#    - rootAccountId:
+#      spArnPrefix:
+#      SpPurchaseAccountCloudID:
+
 
 # [内部版] 财务侧接口 配置
 jarvis:

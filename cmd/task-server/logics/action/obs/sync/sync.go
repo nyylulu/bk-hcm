@@ -28,7 +28,7 @@ import (
 	"hcm/pkg/api/core"
 	accountsetcore "hcm/pkg/api/core/account-set"
 	accountsetproto "hcm/pkg/api/data-service/account-set"
-	billproto "hcm/pkg/api/data-service/bill"
+	databill "hcm/pkg/api/data-service/bill"
 	"hcm/pkg/async/action"
 	"hcm/pkg/async/action/run"
 	"hcm/pkg/criteria/enumor"
@@ -133,22 +133,23 @@ func (act SyncAction) doSyncHuaweiBillItem(
 	mainAccount *accountsetproto.MainAccountGetResult[accountsetcore.HuaWeiMainAccountExtension],
 	syncOpt *SyncOption, start, limit uint64) error {
 
-	expressions := []*filter.AtomRule{
+	flt := tools.ExpressionAnd(
 		tools.RuleEqual("vendor", syncOpt.Vendor),
 		tools.RuleEqual("bill_year", syncOpt.BillYear),
 		tools.RuleEqual("bill_month", syncOpt.BillMonth),
 		tools.RuleEqual("main_account_id", syncOpt.MainAccountID),
+	)
+	comOpt := &databill.ItemCommonOpt{
+		Vendor: syncOpt.Vendor,
+		Year:   syncOpt.BillYear,
+		Month:  syncOpt.BillMonth,
 	}
-	listFilter := tools.ExpressionAnd(expressions...)
-
+	listReq := &databill.BillItemListReq{
+		ItemCommonOpt: comOpt,
+		ListReq:       &core.ListReq{Filter: flt, Page: &core.BasePage{Start: uint32(start), Limit: uint(limit)}},
+	}
 	// 获取分账后的bill item
-	result, err := actcli.GetDataService().HuaWei.Bill.ListBillItem(kt, &core.ListReq{
-		Filter: listFilter,
-		Page: &core.BasePage{
-			Start: uint32(start),
-			Limit: uint(limit),
-		},
-	})
+	result, err := actcli.GetDataService().HuaWei.Bill.ListBillItem(kt, listReq)
 	if err != nil {
 		logs.Warnf("list huawei bill item by option %v failed, err %s, rid: %s", syncOpt, err.Error(), kt.Rid)
 		return err
@@ -215,7 +216,7 @@ func (act SyncAction) getHuaweiMainAccount(kt *kit.Kit, mainAccountID string) (
 }
 
 func (act SyncAction) convertHuaweiBill(
-	kt *kit.Kit, syncOpt *SyncOption, result *billproto.HuaweiBillItemListResult, setIndex string,
+	kt *kit.Kit, syncOpt *SyncOption, result *databill.HuaweiBillItemListResult, setIndex string,
 	mainAccount *accountsetproto.MainAccountGetResult[accountsetcore.HuaWeiMainAccountExtension]) (
 	[]*tableobs.OBSBillItemHuawei, error) {
 

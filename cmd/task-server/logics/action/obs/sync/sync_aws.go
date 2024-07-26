@@ -28,7 +28,7 @@ import (
 	"hcm/pkg/api/core"
 	accountsetcore "hcm/pkg/api/core/account-set"
 	asproto "hcm/pkg/api/data-service/account-set"
-	billproto "hcm/pkg/api/data-service/bill"
+	databill "hcm/pkg/api/data-service/bill"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -79,18 +79,23 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 	mainAccount *asproto.MainAccountGetResult[accountsetcore.AwsMainAccountExtension],
 	syncOpt *SyncOption, start, limit uint64) error {
 
-	expressions := []*filter.AtomRule{
+	flt := tools.ExpressionAnd(
 		tools.RuleEqual("vendor", syncOpt.Vendor),
 		tools.RuleEqual("bill_year", syncOpt.BillYear),
 		tools.RuleEqual("bill_month", syncOpt.BillMonth),
 		tools.RuleEqual("main_account_id", syncOpt.MainAccountID),
+	)
+	comOpt := &databill.ItemCommonOpt{
+		Vendor: syncOpt.Vendor,
+		Year:   syncOpt.BillYear,
+		Month:  syncOpt.BillMonth,
 	}
-	listFilter := tools.ExpressionAnd(expressions...)
-
+	listReq := &databill.BillItemListReq{
+		ItemCommonOpt: comOpt,
+		ListReq:       &core.ListReq{Filter: flt, Page: &core.BasePage{Start: uint32(start), Limit: uint(limit)}},
+	}
 	// 获取分账后的bill item
-	result, err := actcli.GetDataService().Aws.Bill.ListBillItem(kt, &core.ListReq{
-		Filter: listFilter,
-		Page:   &core.BasePage{Start: uint32(start), Limit: uint(limit)}})
+	result, err := actcli.GetDataService().Aws.Bill.ListBillItem(kt, listReq)
 	if err != nil {
 		logs.Warnf("list aws bill item by option %v failed, err %s, rid: %s", syncOpt, err.Error(), kt.Rid)
 		return err
@@ -145,7 +150,7 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 	return nil
 }
 
-func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *billproto.AwsBillItemListResult,
+func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *databill.AwsBillItemListResult,
 	setIndex string, mainAccount *asproto.MainAccountGetResult[accountsetcore.AwsMainAccountExtension]) (
 	[]*tableobs.OBSBillItemAws, error) {
 
