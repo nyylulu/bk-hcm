@@ -48,7 +48,7 @@ type SubnetIf interface {
 // NewSubnetOp creates a subnet interface
 func NewSubnetOp(thirdCli *thirdparty.Client) SubnetIf {
 	return &subnet{
-		cvm: thirdCli.CVM,
+		cvm: thirdCli.OldCVM,
 	}
 }
 

@@ -77,15 +77,8 @@ export default defineComponent({
 
     const subIpv4cidr = ref([10, 0, 28]);
 
-    // const handleChange = (data: BusinessFormFilter) => {
-    //   formModel.account_id = data.account_id as string;
-    //   formModel.vendor = data.vendor as VendorEnum;
-    //   formModel.region = data.region as string;
-    // };
-
     const getVpcDetail = async (vpc: { id: string }) => {
       const vpcId = vpc.id;
-      console.log('vpcId', vpcId);
       if (!vpcId) return;
       const res = await resourceStore.detail('vpcs', vpcId);
       const arr = res.data?.extension?.cidr || [];
@@ -95,7 +88,6 @@ export default defineComponent({
         const ipArr = ip.split('.');
         subIpv4cidr.value = [ipArr[0], ipArr[1], mask];
       }
-      console.log(subIpv4cidr.value);
     };
 
     const handleSubmit = async () => {
@@ -105,14 +97,24 @@ export default defineComponent({
       }
       submitLoading.value = true;
       try {
-        await businessStore.createSubnet(accountStore.bizs, formModel, whereAmI.value === Senarios.resource);
+        const { data } = await businessStore.createSubnet(
+          accountStore.bizs,
+          formModel,
+          whereAmI.value === Senarios.resource,
+        );
         Message({
           theme: 'success',
           message: '创建成功',
         });
-        handleCancel();
+        if (whereAmI.value === Senarios.business) {
+          router.push({
+            path: '/business/applications/detail',
+            query: { id: data.id },
+          });
+        } else {
+          handleCancel();
+        }
       } catch (error) {
-        console.log(error);
       } finally {
         submitLoading.value = false;
       }

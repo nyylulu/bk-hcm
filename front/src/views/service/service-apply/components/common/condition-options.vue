@@ -23,6 +23,10 @@ const props = defineProps({
   vendor: String as PropType<string>,
   region: String as PropType<string>,
   resourceGroup: String as PropType<string>,
+  isbusiness: {
+    type: Boolean,
+    default: false, // 设置默认值
+  },
 });
 
 const emit = defineEmits([
@@ -61,7 +65,6 @@ const selectedCloudAccountId = computed({
     selectedRegion.value = '';
   },
 });
-
 const selectedVendor = computed({
   get() {
     return props.vendor;
@@ -94,7 +97,6 @@ const selectedResourceGroup = computed({
 });
 
 const handleChangeAccount = (account: any) => {
-  console.log(account);
   vendorList.value = [
     {
       id: account?.vendor,
@@ -106,13 +108,16 @@ const handleChangeAccount = (account: any) => {
   selectedVendor.value = vendorList.value?.[0]?.id ?? '';
   selectedRegion.value = '';
 };
-
+defineExpose({ handleChangeAccount });
 /**
  * 资源下申请主机、VPC、硬盘时无需选择业务，且无需走审批流程
  */
 const { isResourcePage } = useWhereAmI();
 const resourceAccountStore = useResourceAccountStore();
-
+const isOptionDisabled = (accountItem: { vendor: VendorEnum }) => {
+  const validTypes = [ResourceTypeEnum.VPC, ResourceTypeEnum.DISK, ResourceTypeEnum.SUBNET];
+  return validTypes.includes(props.type) && accountItem?.vendor === VendorEnum.ZIYAN;
+};
 watch(
   () => resourceAccountStore.resourceAccount?.id,
   (id) => {
@@ -136,6 +141,7 @@ watch(
     <FormItem
       label="云账号"
       required
+      v-if="!props.isbusiness"
       :property="[ResourceTypeEnum.SUBNET, ResourceTypeEnum.CLB].includes(type) ? 'account_id' : 'cloudAccountId'"
     >
       <account-selector
@@ -143,6 +149,7 @@ watch(
         :disabled="!!resourceAccountStore?.resourceAccount?.id"
         :must-biz="!isResourcePage"
         :biz-id="selectedBizId"
+        :option-disabled="isOptionDisabled"
         @change="handleChangeAccount"
         :type="'resource'"
       ></account-selector>

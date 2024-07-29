@@ -57,14 +57,14 @@ export function expectedDeliveryTime() {
   return dayjs().add(91, 'day').format('YYYY-MM-DD HH:mm:ss');
 }
 /**
- * 申请时间默认一个周
+ * 申请时间默认一个月
  * @param val 待格式化时间
  * @param format 格式
  * @returns 格式化后的时间
  */
 
 export function applicationTime() {
-  return [dayjs().subtract(7, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
+  return [dayjs().subtract(30, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
 }
 /**
  * 时间格式化

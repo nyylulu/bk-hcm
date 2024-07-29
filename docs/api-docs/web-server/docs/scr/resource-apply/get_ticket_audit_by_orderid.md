@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.6.0+。
+- 该接口提供版本：v1.6.1+。
 - 该接口所需权限：无。
 - 该接口功能描述：获取资源申请单据审核信息。
 
@@ -33,8 +33,6 @@ POST /api/v1/woa/task/get/apply/ticket/audit
   "result":true,
   "code":0,
   "message":"success",
-  "permission":null,
-  "request_id":"f5a6331d4bc2433587a63390c76ba7bf",
   "data":{
     "order_id":1001,
     "itsm_ticket_id":"INC20220421000001",
@@ -84,8 +82,6 @@ POST /api/v1/woa/task/get/apply/ticket/audit
 | result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
 | code       | int          | 错误编码。 0表示success，>0表示失败错误  |
 | message    | string       | 请求失败返回的错误信息 |
-| permission | object       | 权限信息             |
-| request_id | string       | 请求链ID             |
 | data	     | object array | 响应数据             |
 
 #### data

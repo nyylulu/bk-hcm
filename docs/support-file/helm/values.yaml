@@ -359,6 +359,9 @@ hcservice:
         targetPort: 80
         nodePort:
   port: 80
+  syncCCRes:
+    enable: true
+    syncIntervalMin: 360
 
 webserver:
   ## 镜像

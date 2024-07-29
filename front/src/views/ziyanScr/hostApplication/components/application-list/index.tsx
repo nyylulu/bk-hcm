@@ -56,13 +56,13 @@ export default defineComponent({
     });
     const reapply = (data: any) => {
       router.push({
-        path: '/ziyanScr/hostApplication/apply',
+        path: '/service/hostApplication/apply',
         query: { order_id: data.order_id, unsubmitted: 0 },
       });
     };
     const modify = (data: any) => {
       router.push({
-        path: '/ziyanScr/hostApplication/modify',
+        path: '/service/hostApplication/modify',
         query: { ...data },
       });
     };
@@ -438,7 +438,7 @@ export default defineComponent({
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = {
-          path: '/ziyanScr/hostApplication/apply',
+          path: '/service/hostApplication/apply',
           query: { order_id: row.order_id, unsubmitted: 1 },
         };
       }
@@ -573,7 +573,7 @@ export default defineComponent({
             theme='primary'
             onClick={() => {
               router.push({
-                path: '/ziyanScr/hostApplication/apply',
+                path: '/service/hostApplication/apply',
                 query: route.query,
               });
             }}>

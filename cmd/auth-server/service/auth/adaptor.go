@@ -106,10 +106,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genMainAccountRuleResource(a)
 	case meta.RootAccount:
 		return genRootAccountRuleResource(a)
-	case meta.ZiyanResInventory: // 主机库存-菜单粒度
-		return sys.BizZiyanResInventory, make([]client.Resource, 0), nil
-	case meta.ZiyanResDissolve: // 机房裁撤-菜单粒度
-		return sys.BizZiyanResDissolve, make([]client.Resource, 0), nil
+	case meta.ServiceResDissolve: // 服务请求-服务-机房裁撤-菜单粒度
+		return sys.ServiceResDissolve, make([]client.Resource, 0), nil
 	case meta.ZiyanCvmType: // CVM机型-菜单粒度
 		return sys.ZiyanCvmType, make([]client.Resource, 0), nil
 	case meta.ZiyanCvmSubnet: // CVM子网-菜单粒度
@@ -120,6 +118,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return sys.ZiyanCvmCreate, make([]client.Resource, 0), nil
 	case meta.ZiyanResDissolveManage: // 机房裁撤管理-菜单粒度
 		return sys.ZiyanResDissolveManage, make([]client.Resource, 0), nil
+	case meta.ZiyanResInventory: // 主机库存-菜单粒度
+		return sys.ZiyanResInventory, make([]client.Resource, 0), nil
 	case meta.ZiYanResource: // 自研云资源的操作-业务粒度
 		return genZiYanResource(a)
 	case meta.AccountBill:

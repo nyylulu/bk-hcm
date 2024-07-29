@@ -97,10 +97,8 @@ const (
 	MainAccount ResourceType = "main_account"
 	// RootAccount defines main cloud account resource's hcm auth resource type
 	RootAccount ResourceType = "root_account"
-	// ZiyanResInventory 自研云资源-主机库存-菜单粒度
-	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
-	// ZiyanResDissolve 自研云资源-业务-机房裁撤-菜单粒度
-	ZiyanResDissolve ResourceType = "ziyan_resource_dissolve"
+	// ServiceResDissolve 服务请求-机房裁撤-菜单粒度
+	ServiceResDissolve ResourceType = "service_resource_dissolve"
 	// ZiyanCvmType 自研云资源-CVM机型-菜单粒度
 	ZiyanCvmType ResourceType = "ziyan_cvm_type"
 	// ZiyanCvmSubnet 自研云资源-CVM子网-菜单粒度
@@ -111,7 +109,9 @@ const (
 	ZiyanCvmCreate ResourceType = "ziyan_cvm_create"
 	// ZiyanResDissolveManage 自研云资源-机房裁撤管理-菜单粒度
 	ZiyanResDissolveManage ResourceType = "ziyan_resource_dissolve_manage"
-	// ZiYanResource 自研云资源-业务粒度
+	// ZiyanResInventory 自研云资源-主机库存-菜单粒度
+	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
+	// ZiYanResource 自研云资源-平台管理-业务粒度
 	ZiYanResource ResourceType = "ziyan_resource"
 
 	// AccountBill 云账单管理

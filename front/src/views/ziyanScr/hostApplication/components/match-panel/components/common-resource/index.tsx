@@ -12,8 +12,11 @@ import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelect
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import DiskTypeSelect from '../../../DiskTypeSelect';
 import { useUserStore } from '@/store';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
+
 export default defineComponent({
   props: {
     formModelData: {
@@ -22,6 +25,7 @@ export default defineComponent({
     handleClose: Function,
   },
   setup(props) {
+    const { getBusinessApiPath } = useWhereAmI();
     const { selections, handleSelectionChange } = useSelection();
     const userStore = useUserStore();
     const { formModel, forceClear } = useFormModel({
@@ -58,7 +62,7 @@ export default defineComponent({
     };
     const getDomainList = () => {
       return http.post(
-        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/match/device`,
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/apply/match/device`,
         removeEmptyFields({
           resource_type: formModel.resource_type,
           ips: ipArray.value,
@@ -181,7 +185,7 @@ export default defineComponent({
           ip,
         };
       });
-      await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/commit/apply/match`, {
+      await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/commit/apply/match`, {
         suborder_id,
         operator: userStore.username,
         device,

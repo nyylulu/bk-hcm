@@ -14,6 +14,10 @@ import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { getResourceTypeName } from '../transform';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
+import http from '@/http';
+import { getEntirePath } from '@/utils';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
 export default defineComponent({
   components: {
     applicationSideslider,
@@ -21,6 +25,7 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const route = useRoute();
+    const { getBusinessApiPath } = useWhereAmI();
     const cvmOneKeyApplyVisible = ref(false);
     // 机型列表
     const deviceTypes = ref([]);
@@ -114,10 +119,13 @@ export default defineComponent({
     const getOrders = async () => {
       if (route?.query?.suborder_id) {
         originalDocumentslist.value = [];
-        const { info } = await apiService.getOrders({
-          bk_biz_id: [+route?.query?.bk_biz_id],
-          suborder_id: [route?.query?.suborder_id],
-        });
+        const { info } = await http
+          .post(getEntirePath(`${getBusinessApiPath()}task/findmany/apply`), {
+            bk_biz_id: [+route?.query?.bk_biz_id],
+            suborder_id: [route?.query?.suborder_id],
+          })
+          .then((res: any) => res.data);
+
         rawOrder.value = info[0] || { spec: {} };
         const {
           suborder_id,
@@ -246,10 +254,13 @@ export default defineComponent({
           network_type,
         },
       };
-      const { code } = await apiService.modifyOrder(params);
+      const { code } = await http.post(getEntirePath(`${getBusinessApiPath()}task/modify/apply`), params, {
+        removeEmptyFields: true,
+        transformFields: true,
+      });
       if (code === 0) {
         router.push({
-          path: '/ziyanScr/hostApplication',
+          path: '/service/hostApplication',
         });
       }
       nextTick(() => {

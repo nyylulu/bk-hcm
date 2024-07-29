@@ -33,7 +33,43 @@ import (
 	"hcm/pkg/rest"
 )
 
-// UpdateApplyTicket create or update apply ticket
+// UpdateBizApplyTicket update biz apply order
+func (s *service) UpdateBizApplyTicket(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to update biz apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+	input.BkBizId = bkBizID
+
+	err = input.Validate()
+	if err != nil {
+		logs.Errorf("failed to update biz apply ticket, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	// 主机申领-业务粒度
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Create}, BizID: input.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("no permission to save apply ticket, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizId, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.updateApplyTicket(cts.Kit, input)
+}
+
+// UpdateApplyTicket update apply order
 func (s *service) UpdateApplyTicket(cts *rest.Contexts) (any, error) {
 	input := new(types.ApplyReq)
 	if err := cts.DecodeInto(input); err != nil {
@@ -57,13 +93,53 @@ func (s *service) UpdateApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	rst, err := s.logics.Scheduler().UpdateApplyTicket(cts.Kit, input)
+	return s.updateApplyTicket(cts.Kit, input)
+}
+
+// updateApplyTicket create or update apply ticket
+func (s *service) updateApplyTicket(kt *kit.Kit, input *types.ApplyReq) (any, error) {
+	rst, err := s.logics.Scheduler().UpdateApplyTicket(kt, input)
 	if err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to update apply ticket, err: %v, bkBizID: %d, rid: %s", err, input.BkBizId, kt.Rid)
 		return nil, err
 	}
 
 	return rst, nil
+}
+
+// GetBizApplyTicket get biz apply ticket
+func (s *service) GetBizApplyTicket(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply ticket permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	input := new(types.GetApplyTicketReq)
+	if err = cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	input.BkBizID = bkBizID
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	return s.getApplyTicket(cts.Kit, input)
 }
 
 // GetApplyTicket get apply ticket
@@ -80,16 +156,56 @@ func (s *service) GetApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
+	return s.getApplyTicket(cts.Kit, input)
+}
+
+// getApplyTicket get apply ticket
+func (s *service) getApplyTicket(kt *kit.Kit, input *types.GetApplyTicketReq) (any, error) {
+	rst, err := s.logics.Scheduler().GetApplyTicket(kt, input)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	return rst, nil
 }
 
-// GetApplyAudit get apply ticket audit info
+// GetBizApplyAudit get biz apply audit
+func (s *service) GetBizApplyAudit(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply audit permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	input := new(types.GetApplyAuditReq)
+	if err = cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	input.BkBizID = bkBizID
+
+	errKey, err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	return s.getApplyAudit(cts.Kit, input)
+}
+
+// GetApplyAudit get apply audit
 func (s *service) GetApplyAudit(cts *rest.Contexts) (any, error) {
 	input := new(types.GetApplyAuditReq)
 	if err := cts.DecodeInto(input); err != nil {
@@ -103,9 +219,14 @@ func (s *service) GetApplyAudit(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	rst, err := s.logics.Scheduler().GetApplyAudit(cts.Kit, input)
+	return s.getApplyAudit(cts.Kit, input)
+}
+
+// getApplyAudit get apply ticket audit info
+func (s *service) getApplyAudit(kt *kit.Kit, input *types.GetApplyAuditReq) (any, error) {
+	rst, err := s.logics.Scheduler().GetApplyAudit(kt, input)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -179,6 +300,41 @@ func (s *service) ApproveApplyTicket(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
+// CreateBizApplyOrder create biz apply order
+func (s *service) CreateBizApplyOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.ApplyReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to create biz apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+	input.BkBizId = bkBizID
+
+	err = input.Validate()
+	if err != nil {
+		logs.Errorf("failed to create biz apply ticket, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Create}, BizID: input.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("no permission to create apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
+			input.BkBizId, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.createApplyOrder(cts.Kit, input)
+}
+
 // CreateApplyOrder creates apply order
 func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 	input := new(types.ApplyReq)
@@ -202,16 +358,47 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	rst, err := s.logics.Scheduler().CreateApplyOrder(cts.Kit, input)
+	return s.createApplyOrder(cts.Kit, input)
+}
+
+// createApplyOrder creates apply order
+func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
+	rst, err := s.logics.Scheduler().CreateApplyOrder(kt, input)
 	if err != nil {
-		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	return rst, nil
 }
 
-// GetApplyOrder gets apply order info
+// GetApplyBizOrder get biz apply order
+func (s *service) GetApplyBizOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.GetApplyParam)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get biz apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+	input.BkBizID = []int64{bkBizID}
+
+	err = input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get biz apply order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	return s.getApplyOrder(cts.Kit, input)
+}
+
+// GetApplyOrder get apply order
 func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 	input := new(types.GetApplyParam)
 	if err := cts.DecodeInto(input); err != nil {
@@ -225,6 +412,11 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
+	return s.getApplyOrder(cts.Kit, input)
+}
+
+// getApplyOrder gets apply order info
+func (s *service) getApplyOrder(kt *kit.Kit, input *types.GetApplyParam) (any, error) {
 	// 主机申领-业务粒度
 	authAttrs := make([]meta.ResourceAttribute, 0)
 	for _, bkBizID := range input.BkBizID {
@@ -232,16 +424,16 @@ func (s *service) GetApplyOrder(cts *rest.Contexts) (any, error) {
 			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bkBizID,
 		})
 	}
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	err := s.authorizer.AuthorizeWithPerm(kt, authAttrs...)
 	if err != nil {
 		logs.Errorf("no permission to get apply order, inputBizIDs: %v, err: %v, rid: %s",
-			input.BkBizID, err, cts.Kit.Rid)
+			input.BkBizID, err, kt.Rid)
 		return nil, err
 	}
 
-	rst, err := s.logics.Scheduler().GetApplyOrder(cts.Kit, input)
+	rst, err := s.logics.Scheduler().GetApplyOrder(kt, input)
 	if err != nil {
-		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -314,6 +506,28 @@ func (s *service) GetApplyStatus(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizApplyDetail get biz apply detail
+func (s *service) GetBizApplyDetail(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply detail permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetApplyDetail(cts)
+}
+
 // GetApplyDetail gets apply order detail info
 func (s *service) GetApplyDetail(cts *rest.Contexts) (any, error) {
 	input := new(types.GetApplyDetailReq)
@@ -329,6 +543,28 @@ func (s *service) GetApplyDetail(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// GetBizApplyGenerate get biz apply generate
+func (s *service) GetBizApplyGenerate(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply generate permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetApplyGenerate(cts)
 }
 
 // GetApplyGenerate gets apply order generate records
@@ -352,6 +588,28 @@ func (s *service) GetApplyGenerate(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// GetBizApplyInit get biz apply init
+func (s *service) GetBizApplyInit(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply init permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetApplyInit(cts)
 }
 
 // GetApplyInit gets apply order init records
@@ -400,6 +658,28 @@ func (s *service) GetApplyDiskCheck(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizApplyDeliver get biz apply deliver
+func (s *service) GetBizApplyDeliver(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply deliver permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetApplyDeliver(cts)
+}
+
 // GetApplyDeliver gets apply order deliver records
 func (s *service) GetApplyDeliver(cts *rest.Contexts) (any, error) {
 	input := new(types.GetApplyDeliverReq)
@@ -423,8 +703,28 @@ func (s *service) GetApplyDeliver(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizApplyDevice create biz apply device
+func (s *service) GetBizApplyDevice(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.getApplyDevice(cts, bkBizIDMap)
+}
+
 // GetApplyDevice get apply order delivered devices
 func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
+	return s.getApplyDevice(cts, make(map[int64]struct{}))
+}
+
+// getApplyDevice get apply order delivered devices
+func (s *service) getApplyDevice(cts *rest.Contexts, bkBizIDMap map[int64]struct{}) (any, error) {
 	input := new(types.GetApplyDeviceReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to get apply device info, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -446,9 +746,15 @@ func (s *service) GetApplyDevice(cts *rest.Contexts) (any, error) {
 
 	// 主机申领-业务粒度
 	authAttrs := make([]meta.ResourceAttribute, 0)
-	for _, bkBizID := range bkBizIDs {
+	for _, bizID := range bkBizIDs {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizID]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizID, bkBizIDMap)
+		}
+
 		authAttrs = append(authAttrs, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bkBizID,
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bizID,
 		})
 	}
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
@@ -617,6 +923,28 @@ func (s *service) ExportDeliverDevice(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizMatchDevice get biz match device
+func (s *service) GetBizMatchDevice(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check get biz match device permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetMatchDevice(cts)
+}
+
 // GetMatchDevice get apply order match devices
 func (s *service) GetMatchDevice(cts *rest.Contexts) (any, error) {
 	input := new(types.GetMatchDeviceReq)
@@ -640,6 +968,28 @@ func (s *service) GetMatchDevice(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// MatchBizDevice match biz device
+func (s *service) MatchBizDevice(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check match biz device permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.MatchDevice(cts)
+}
+
 // MatchDevice execute apply order match devices
 func (s *service) MatchDevice(cts *rest.Contexts) (any, error) {
 	input := new(types.MatchDeviceReq)
@@ -660,6 +1010,28 @@ func (s *service) MatchDevice(cts *rest.Contexts) (any, error) {
 	}
 
 	return nil, nil
+}
+
+// MatchBizPoolDevice match biz pool device
+func (s *service) MatchBizPoolDevice(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check match biz pool device permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.MatchPoolDevice(cts)
 }
 
 // MatchPoolDevice execute apply order match devices from resource pool
@@ -696,8 +1068,30 @@ func (s *service) ResumeApplyOrder(_ *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
+// StartBizApplyOrder start biz apply order
+func (s *service) StartBizApplyOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.startApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
+}
+
 // StartApplyOrder start apply order
 func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
+	return s.startApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
+}
+
+// startApplyOrder start apply order
+func (s *service) startApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.StartApplyOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -725,8 +1119,14 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to start apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
@@ -743,8 +1143,30 @@ func (s *service) StartApplyOrder(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
+// TerminateBizApplyOrder terminate biz apply order
+func (s *service) TerminateBizApplyOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.terminateApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
+}
+
 // TerminateApplyOrder terminate apply order
 func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
+	return s.terminateApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
+}
+
+// terminateApplyOrder terminate apply order
+func (s *service) terminateApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.TerminateApplyOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to terminate apply order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -772,8 +1194,14 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to terminate apply order, failed to check permission, bizID: %d, "+
@@ -790,8 +1218,31 @@ func (s *service) TerminateApplyOrder(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
+// ModifyBizApplyOrder modify biz apply order
+func (s *service) ModifyBizApplyOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.modifyApplyOrder(cts, bkBizIDMap, meta.Biz, meta.Create)
+}
+
 // ModifyApplyOrder modify apply order
 func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
+	return s.modifyApplyOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Create)
+}
+
+// modifyApplyOrder modify apply order
+func (s *service) modifyApplyOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.ModifyApplyReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -820,8 +1271,14 @@ func (s *service) ModifyApplyOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to modify apply order, failed to check permission, bizID: %d, err: %v, rid: %s",
@@ -885,6 +1342,28 @@ func (s *service) RecommendApplyOrder(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// GetBizApplyModify get biz apply modify
+func (s *service) GetBizApplyModify(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check get biz apply modify permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetApplyModify(cts)
 }
 
 // GetApplyModify get apply order modification records

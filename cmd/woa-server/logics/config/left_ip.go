@@ -45,7 +45,7 @@ type LeftIPIf interface {
 // NewLeftIPOp creates a left ip interface
 func NewLeftIPOp(thirdCli *thirdparty.Client) LeftIPIf {
 	return &leftIP{
-		cvm: thirdCli.CVM,
+		cvm: thirdCli.OldCVM,
 	}
 }
 

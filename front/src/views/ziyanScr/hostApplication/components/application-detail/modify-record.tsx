@@ -1,8 +1,12 @@
-import { defineComponent, ref, watch, onMounted } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 import { Sideslider, Table } from 'bkui-vue';
-import { modifyRecord } from '@/api/host/task';
 import { useFieldVal } from '@/components/property-list/field-map';
 import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import http from '@/http';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+
 export default defineComponent({
   props: {
     modelValue: {
@@ -20,6 +24,7 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { attrs, emit }) {
+    const { getBusinessApiPath } = useWhereAmI();
     const { getFieldCn, getFieldCnVal } = useFieldVal();
     const isDisplay = ref(false);
     watch(
@@ -96,18 +101,18 @@ export default defineComponent({
         return prev;
       }, []);
     };
-    const fetchRecord = () => {
-      modifyRecord({ suborder_id: [props.showObj.suborderId] })
-        .then((res) => {
-          const list = res.data?.info || [];
-          list.forEach((item) => {
-            item.detailList = handleDetail(item.details);
-          });
-          recordList.value = list;
-        })
-        .finally(() => {});
+    const fetchRecord = async () => {
+      const res = await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/find/apply/record/modify`,
+        { suborder_id: [props.showObj.suborderId] },
+      );
+      const list = res.data?.info || [];
+      list.forEach((item) => {
+        item.detailList = handleDetail(item.details);
+      });
+      recordList.value = list;
     };
-    onMounted(() => {});
+
     return () => (
       <Sideslider
         v-bind={attrs}

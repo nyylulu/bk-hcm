@@ -31,8 +31,30 @@ import (
 	"hcm/pkg/rest"
 )
 
+// GetBizRecyclability get biz recyclability
+func (s *service) GetBizRecyclability(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.getRecyclability(cts, bkBizIDMap, meta.Biz, meta.Recycle)
+}
+
 // GetRecyclability check whether hosts can be recycled or not
 func (s *service) GetRecyclability(cts *rest.Contexts) (any, error) {
+	return s.getRecyclability(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
+}
+
+// getRecyclability check whether hosts can be recycled or not
+func (s *service) getRecyclability(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.RecycleCheckReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to check resource recyclability, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -45,7 +67,7 @@ func (s *service) GetRecyclability(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	rst, err := s.logics.Recycler().RecycleCheck(cts.Kit, input)
+	rst, err := s.logics.Recycler().RecycleCheck(cts.Kit, input, bkBizIDMap, resType, action)
 	if err != nil {
 		logs.Errorf("failed to check resource recyclability, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -54,8 +76,37 @@ func (s *service) GetRecyclability(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
-// PreviewRecycleOrder get preview recycle orders before commit
+// PreviewBizRecycleOrder preview biz recycle order
+func (s *service) PreviewBizRecycleOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check preview biz recycle order permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.previewRecycleOrder(cts, bkBizIDMap)
+}
+
+// PreviewRecycleOrder preview recycle order
 func (s *service) PreviewRecycleOrder(cts *rest.Contexts) (any, error) {
+	return s.previewRecycleOrder(cts, make(map[int64]struct{}))
+}
+
+// previewRecycleOrder get preview recycle orders before commit
+func (s *service) previewRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}) (any, error) {
 	input := new(types.PreviewRecycleReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to preview recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -68,7 +119,7 @@ func (s *service) PreviewRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	rst, err := s.logics.Recycler().PreviewRecycleOrder(cts.Kit, input)
+	rst, err := s.logics.Recycler().PreviewRecycleOrder(cts.Kit, input, bkBizIDMap)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -105,8 +156,30 @@ func (s *service) AuditRecycleOrder(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
-// CreateRecycleOrder create and start recycle orders
+// CreateBizRecycleOrder create biz recycle order
+func (s *service) CreateBizRecycleOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.createRecycleOrder(cts, bkBizIDMap, meta.Biz, meta.Recycle)
+}
+
+// CreateRecycleOrder create recycle order
 func (s *service) CreateRecycleOrder(cts *rest.Contexts) (any, error) {
+	return s.createRecycleOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
+}
+
+// createRecycleOrder create and start recycle orders
+func (s *service) createRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.CreateRecycleReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to create recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -119,7 +192,7 @@ func (s *service) CreateRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
-	rst, err := s.logics.Recycler().CreateRecycleOrder(cts.Kit, input)
+	rst, err := s.logics.Recycler().CreateRecycleOrder(cts.Kit, input, bkBizIDMap, resType, action)
 	if err != nil {
 		logs.Errorf("failed to create recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -128,7 +201,33 @@ func (s *service) CreateRecycleOrder(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
-// GetRecycleOrder gets recycle order info
+// GetRecycleBizOrder get recycle biz order
+func (s *service) GetRecycleBizOrder(cts *rest.Contexts) (any, error) {
+	input := new(types.GetRecycleOrderReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get recycle biz order, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+	input.BizID = []int64{bkBizID}
+
+	err = input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get recycle biz order, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	return s.getRecycleOrder(cts.Kit, input)
+}
+
+// GetRecycleOrder get recycle order
 func (s *service) GetRecycleOrder(cts *rest.Contexts) (any, error) {
 	input := new(types.GetRecycleOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
@@ -142,6 +241,11 @@ func (s *service) GetRecycleOrder(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
+	return s.getRecycleOrder(cts.Kit, input)
+}
+
+// getRecycleOrder gets recycle order info
+func (s *service) getRecycleOrder(kt *kit.Kit, input *types.GetRecycleOrderReq) (any, error) {
 	// 主机回收-业务粒度
 	authAttrs := make([]meta.ResourceAttribute, 0)
 	for _, bizID := range input.BizID {
@@ -149,15 +253,15 @@ func (s *service) GetRecycleOrder(cts *rest.Contexts) (any, error) {
 			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bizID,
 		})
 	}
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	err := s.authorizer.AuthorizeWithPerm(kt, authAttrs...)
 	if err != nil {
-		logs.Errorf("no permission to get recycle order, bizIDs: %v, err: %v, rid: %s", input.BizID, err, cts.Kit.Rid)
+		logs.Errorf("no permission to get recycle order, bizIDs: %v, err: %v, rid: %s", input.BizID, err, kt.Rid)
 		return nil, err
 	}
 
-	rst, err := s.logics.Recycler().GetRecycleOrder(cts.Kit, input)
+	rst, err := s.logics.Recycler().GetRecycleOrder(kt, input)
 	if err != nil {
-		logs.Errorf("failed to get recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle order, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -205,6 +309,28 @@ func (s *service) GetBizRecycleOrder(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizRecycleDetect get biz recycle detect
+func (s *service) GetBizRecycleDetect(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz recycle detect permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetRecycleDetect(cts)
+}
+
 // GetRecycleDetect gets recycle detection task info
 func (s *service) GetRecycleDetect(cts *rest.Contexts) (any, error) {
 	input := new(types.GetRecycleDetectReq)
@@ -224,8 +350,29 @@ func (s *service) GetRecycleDetect(cts *rest.Contexts) (any, error) {
 		logs.Errorf("failed to get recycle detection task info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-
 	return rst, nil
+}
+
+// ListBizDetectHost list biz detect host
+func (s *service) ListBizDetectHost(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check list biz detect host permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.ListDetectHost(cts)
 }
 
 // ListDetectHost gets recycle detection host list
@@ -251,6 +398,28 @@ func (s *service) ListDetectHost(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// GetBizRecycleDetectStep get biz recycle detect step
+func (s *service) GetBizRecycleDetectStep(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check list biz detect host permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.GetRecycleDetectStep(cts)
+}
+
 // GetRecycleDetectStep gets recycle detection step info
 func (s *service) GetRecycleDetectStep(cts *rest.Contexts) (any, error) {
 	input := new(types.GetDetectStepReq)
@@ -274,7 +443,33 @@ func (s *service) GetRecycleDetectStep(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
-// GetRecycleOrderHost gets recycle host info in certain order
+// GetBizRecycleOrderHost get biz recycle order host
+func (s *service) GetBizRecycleOrderHost(cts *rest.Contexts) (any, error) {
+	input := new(types.GetRecycleHostReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get biz recycle host info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+	input.BizID = []int64{bkBizID}
+
+	err = input.Validate()
+	if err != nil {
+		logs.Errorf("failed to get biz recycle host info, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	return s.getRecycleOrderHost(cts.Kit, input)
+}
+
+// GetRecycleOrderHost get recycle order host
 func (s *service) GetRecycleOrderHost(cts *rest.Contexts) (any, error) {
 	input := new(types.GetRecycleHostReq)
 	if err := cts.DecodeInto(input); err != nil {
@@ -288,6 +483,11 @@ func (s *service) GetRecycleOrderHost(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
 	}
 
+	return s.getRecycleOrderHost(cts.Kit, input)
+}
+
+// getRecycleOrderHost gets recycle host info in certain order
+func (s *service) getRecycleOrderHost(kt *kit.Kit, input *types.GetRecycleHostReq) (any, error) {
 	// 主机回收-业务粒度
 	authAttrs := make([]meta.ResourceAttribute, 0)
 	for _, bizID := range input.BizID {
@@ -295,16 +495,16 @@ func (s *service) GetRecycleOrderHost(cts *rest.Contexts) (any, error) {
 			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: bizID,
 		})
 	}
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, authAttrs...)
+	err := s.authorizer.AuthorizeWithPerm(kt, authAttrs...)
 	if err != nil {
 		logs.Errorf("no permission to get recycle order host, bizIDs: %v, err: %v, rid: %s",
-			input.BizID, err, cts.Kit.Rid)
+			input.BizID, err, kt.Rid)
 		return nil, err
 	}
 
-	rst, err := s.logics.Recycler().GetRecycleHost(cts.Kit, input)
+	rst, err := s.logics.Recycler().GetRecycleHost(kt, input)
 	if err != nil {
-		logs.Errorf("failed to get recycle host info, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get recycle host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -377,8 +577,30 @@ func (s *service) GetBizHostToRecycle(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
-// StartRecycleOrder starts recycle order
+// StartBizRecycleOrder start biz recycle order
+func (s *service) StartBizRecycleOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.startRecycleOrder(cts, bkBizIDMap, meta.Biz, meta.Recycle)
+}
+
+// StartRecycleOrder start recycle order
 func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
+	return s.startRecycleOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
+}
+
+// startRecycleOrder start recycle order
+func (s *service) startRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.StartRecycleOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to start recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -406,8 +628,14 @@ func (s *service) StartRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to start recycle order, failed to check permission, bizID: %d, err: %v, rid: %s",
@@ -505,8 +733,30 @@ func (s *service) StartRecycleDetect(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
-// ReviseRecycleOrder revise recycle orders to remove detection failed hosts
+// ReviseBizRecycleOrder revise biz recycle order
+func (s *service) ReviseBizRecycleOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.reviseRecycleOrder(cts, bkBizIDMap, meta.Biz, meta.Recycle)
+}
+
+// ReviseRecycleOrder revise recycle order
 func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
+	return s.reviseRecycleOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
+}
+
+// reviseRecycleOrder revise recycle orders to remove detection failed hosts
+func (s *service) reviseRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.ReviseRecycleOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to revise recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -534,8 +784,14 @@ func (s *service) ReviseRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to revise recycle order, failed to check permission, bizID: %d, "+
@@ -605,8 +861,30 @@ func (s *service) ResumeRecycleOrder(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
-// TerminateRecycleOrder terminates recycle order
+// TerminateBizRecycleOrder terminate biz recycle order
+func (s *service) TerminateBizRecycleOrder(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	bkBizIDMap := make(map[int64]struct{})
+	bkBizIDMap[bkBizID] = struct{}{}
+	return s.terminateRecycleOrder(cts, bkBizIDMap, meta.Biz, meta.Recycle)
+}
+
+// TerminateRecycleOrder terminate recycle order
 func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
+	return s.terminateRecycleOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
+}
+
+// terminateRecycleOrder terminates recycle order
+func (s *service) terminateRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	input := new(types.TerminateRecycleOrderReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to terminate recycle order, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -634,8 +912,14 @@ func (s *service) TerminateRecycleOrder(cts *rest.Contexts) (any, error) {
 
 	// check permission
 	for _, bizId := range bizIds {
+		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
+		if _, ok := bkBizIDMap[bizId]; !ok && len(bkBizIDMap) > 0 {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID is located is not in "+
+				"the bizIDMap:%+v passed in", bizId, bkBizIDMap)
+		}
+
 		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Recycle}, BizID: bizId,
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
 		})
 		if err != nil {
 			logs.Errorf("no permission to terminate recycle order, failed to check permission, bizID: %d, "+

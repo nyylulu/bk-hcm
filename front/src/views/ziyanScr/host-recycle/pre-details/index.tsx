@@ -1,8 +1,7 @@
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import { getPrecheckIpList, getPrecheckList } from '@/api/host/recycle';
-import { exportTableToExcel } from '@/utils';
+import { exportTableToExcel, getEntirePath } from '@/utils';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
@@ -11,7 +10,11 @@ import { useRoute } from 'vue-router';
 import ExecuteRecord from '../execute-record';
 import FloatInput from '@/components/float-input';
 import './index.scss';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import http from '@/http';
+
 const { FormItem } = Form;
+
 export default defineComponent({
   components: {
     ExecuteRecord,
@@ -19,6 +22,7 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
+    const { getBusinessApiPath } = useWhereAmI();
     const defaultFilter = () => ({
       order_id: [],
       suborder_id: route?.query?.suborder_id?.split('\n') || [],
@@ -92,7 +96,7 @@ export default defineComponent({
           payload: {
             ...getDyParams.value,
           },
-          url: '/api/v1/woa/task/findmany/recycle/detect',
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/detect`,
         };
       },
     });
@@ -112,8 +116,15 @@ export default defineComponent({
         page: { start: 0, limit: 500 },
       };
       const [failIpData, allIpData] = await Promise.all([
-        getPrecheckIpList({ ...params, status: ['FAILED'] }, {}),
-        getPrecheckIpList(params, {}),
+        http
+          .post(getEntirePath(`${getBusinessApiPath()}task/list/recycle/detect/host`), {
+            ...params,
+            status: ['FAILED'],
+          })
+          .then((res: any) => res.data),
+        http
+          .post(getEntirePath(`${getBusinessApiPath()}task/list/recycle/detect/host`), params)
+          .then((res: any) => res.data),
       ]);
       failIpList.value = failIpData?.info || [];
       allIpList.value = allIpData?.info || [];
@@ -126,13 +137,14 @@ export default defineComponent({
       filter.value = defaultFilter();
       filterOrders();
     };
-    const exportToExcel = () => {
-      getPrecheckList(Object.assign(requestParams.value(filter.value), { page: { start: 0, limit: 500 } }), {})
-        .then((res) => {
-          const totalList = res.data?.info || [];
-          exportTableToExcel(totalList, [{ label: 'IP', field: 'ip', width: 80 }, ...columns], '预检详情列表');
-        })
-        .finally(() => {});
+    const exportToExcel = async () => {
+      const res = await http.post(
+        getEntirePath(`${getBusinessApiPath()}task/findmany/recycle/detect`),
+        Object.assign(requestParams.value(filter.value), { page: { start: 0, limit: 500 } }),
+      );
+
+      const totalList = res.data?.info || [];
+      exportTableToExcel(totalList, [{ label: 'IP', field: 'ip', width: 80 }, ...columns], '预检详情列表');
     };
     const openDetails = ref(false);
     const transferData = ref({});

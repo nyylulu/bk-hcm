@@ -46,6 +46,7 @@ import (
 	configtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -254,9 +255,15 @@ func (s *scheduler) updateApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage
 }
 
 // GetApplyTicket gets resource apply ticket
-func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq) (*types.GetApplyTicketRst, error) {
+func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq) (
+	*types.GetApplyTicketRst, error) {
+
 	filter := mapstr.MapStr{
 		"order_id": param.OrderId,
+	}
+	// 业务下查询时，只查询传入业务对应的单据
+	if param.BkBizID > 0 && param.BkBizID != constant.UnassignedBiz {
+		filter["bk_biz_id"] = param.BkBizID
 	}
 
 	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
@@ -273,9 +280,15 @@ func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq)
 }
 
 // GetApplyAudit gets resource apply ticket audit info
-func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (*types.GetApplyAuditRst, error) {
+func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
+	*types.GetApplyAuditRst, error) {
+
 	filter := mapstr.MapStr{
 		"order_id": param.OrderId,
+	}
+	// 业务下查询时，只查询传入业务对应的单据
+	if param.BkBizID > 0 && param.BkBizID != constant.UnassignedBiz {
+		filter["bk_biz_id"] = param.BkBizID
 	}
 
 	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
@@ -285,13 +298,13 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 	}
 
 	if inst.ItsmTicketId == "" {
-		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty", kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty, rid: %s", kit.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty")
 	}
 
 	statusResp, err := s.itsm.GetTicketStatus(nil, nil, inst.ItsmTicketId)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
 	}
 

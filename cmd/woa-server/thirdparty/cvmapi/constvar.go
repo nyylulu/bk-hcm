@@ -171,3 +171,10 @@ const (
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"
 )
+
+// CVMCli yunti client options
+type CVMCli struct {
+	// CvmApiAddr yunti api address
+	CvmApiAddr        string `yaml:"host"`
+	CvmLaunchPassword string `yaml:"launch_password"`
+}
