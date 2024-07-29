@@ -26,9 +26,6 @@ import logo from '@/assets/image/logo.png';
 import './index.scss';
 
 const { ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } = window.PROJECT_CONFIG;
-// import { CogShape } from 'bkui-vue/lib/icon';
-// import { useProjectList } from '@/hooks';
-// import AddProjectDialog from '@/components/AddProjectDialog';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { VERSION } = window.PROJECT_CONFIG;
@@ -145,7 +142,6 @@ export default defineComponent({
 
     return () => (
       <main class='flex-column full-page home-page'>
-        {/* <Header></Header> */}
         <div class='flex-1'>
           {
             <Navigation
@@ -338,7 +334,6 @@ export default defineComponent({
             </Navigation>
           }
         </div>
-        {/* <AddProjectDialog isShow={showAddProjectDialog.value} onClose={toggleAddProjectDialog} /> */}
       </main>
     );
   },

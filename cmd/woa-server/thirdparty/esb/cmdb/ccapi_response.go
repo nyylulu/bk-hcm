@@ -159,6 +159,18 @@ func (h *HostInfo) GetUniqIp() string {
 	return multiIps[0]
 }
 
+// GetUniqOuterIp get CC host unique outer ip
+func (h *HostInfo) GetUniqOuterIp() string {
+	// when CC host has multiple outer ips, bk_host_outerip is like "10.0.0.1,10.0.0.2"
+	// return the first ip as host unique ip
+	multiIps := strings.Split(h.BkHostOuterIp, ",")
+	if len(multiIps) == 0 {
+		return ""
+	}
+
+	return multiIps[0]
+}
+
 // HostBizRelResp find host business relation response
 type HostBizRelResp struct {
 	RespMeta `json:",inline"`

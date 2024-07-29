@@ -40,7 +40,7 @@ type CapacityIf interface {
 // NewCapacityOp creates a capacity interface
 func NewCapacityOp(thirdCli *thirdparty.Client) CapacityIf {
 	return &capacity{
-		cvm: thirdCli.CVM,
+		cvm: thirdCli.OldCVM,
 	}
 }
 

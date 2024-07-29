@@ -36,6 +36,13 @@ func InitService(c *capability.Capability) {
 	s.initSchedulerService(h)
 
 	h.Load(c.WebService)
+
+	// 业务下的接口
+	bizH := rest.NewHandler()
+	bizH.Path("/bizs/{bk_biz_id}/task")
+	bizService(bizH, s)
+
+	bizH.Load(c.WebService)
 }
 
 type service struct {
@@ -81,7 +88,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("GetApplyTicket", http.MethodPost, "/get/apply/ticket", s.GetApplyTicket)
 	h.Add("GetApplyAudit", http.MethodPost, "/get/apply/ticket/audit", s.GetApplyAudit)
 	h.Add("AuditApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditApplyTicket)
-	h.Add("UpdateApplyTicket", http.MethodPost, "/autoaudit/apply/ticket", s.AutoAuditApplyTicket)
+	h.Add("AutoAuditApplyTicket", http.MethodPost, "/autoaudit/apply/ticket", s.AutoAuditApplyTicket)
 	h.Add("AutoAuditApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
 	h.Add("CreateApplyOrder", http.MethodPost, "/create/apply", s.CreateApplyOrder)
 	h.Add("GetApplyOrder", http.MethodPost, "/findmany/apply", s.GetApplyOrder)
@@ -105,4 +112,36 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("ModifyApplyOrder", http.MethodPost, "/modify/apply", s.ModifyApplyOrder)
 	h.Add("RecommendApplyOrder", http.MethodPost, "/recommend/apply", s.RecommendApplyOrder)
 	h.Add("GetApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetApplyModify)
+}
+
+// bizService 业务下的接口
+func bizService(h *rest.Handler, s *service) {
+	h.Add("CreateBizApplyOrder", http.MethodPost, "/create/apply", s.CreateBizApplyOrder)
+	h.Add("UpdateBizApplyTicket", http.MethodPost, "/update/apply/ticket", s.UpdateBizApplyTicket)
+	h.Add("StartBizApplyOrder", http.MethodPost, "/start/apply", s.StartBizApplyOrder)
+	h.Add("TerminateBizApplyOrder", http.MethodPost, "/terminate/apply", s.TerminateBizApplyOrder)
+	h.Add("ModifyBizApplyOrder", http.MethodPost, "/modify/apply", s.ModifyBizApplyOrder)
+	h.Add("GetBizApplyOrder", http.MethodPost, "/findmany/apply", s.GetApplyBizOrder)
+	h.Add("GetBizApplyTicket", http.MethodPost, "/get/apply/ticket", s.GetBizApplyTicket)
+	h.Add("GetBizApplyAudit", http.MethodPost, "/get/apply/ticket/audit", s.GetBizApplyAudit)
+	h.Add("GetBizApplyDetail", http.MethodPost, "/find/apply/detail", s.GetBizApplyDetail)
+	h.Add("GetBizApplyGenerate", http.MethodPost, "/find/apply/record/generate", s.GetBizApplyGenerate)
+	h.Add("GetBizApplyDevice", http.MethodPost, "/findmany/apply/device", s.GetBizApplyDevice)
+	h.Add("GetBizApplyInit", http.MethodPost, "/find/apply/record/init", s.GetBizApplyInit)
+	h.Add("GetBizApplyDeliver", http.MethodPost, "/find/apply/record/deliver", s.GetBizApplyDeliver)
+	h.Add("GetBizMatchDevice", http.MethodPost, "/findmany/apply/match/device", s.GetBizMatchDevice)
+	h.Add("MatchBizDevice", http.MethodPost, "/commit/apply/match", s.MatchBizDevice)
+	h.Add("MatchBizPoolDevice", http.MethodPost, "/commit/apply/pool/match", s.MatchBizPoolDevice)
+	h.Add("GetBizApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetBizApplyModify)
+	h.Add("CreateBizRecycleOrder", http.MethodPost, "/create/recycle/order", s.CreateBizRecycleOrder)
+	h.Add("PreviewBizRecycleOrder", http.MethodPost, "/preview/recycle/order", s.PreviewBizRecycleOrder)
+	h.Add("TerminateBizRecycleOrder", http.MethodPost, "/terminate/recycle/order", s.TerminateBizRecycleOrder)
+	h.Add("GetBizRecycleOrderHost", http.MethodPost, "/findmany/recycle/host", s.GetBizRecycleOrderHost)
+	h.Add("GetRecycleBizOrder", http.MethodPost, "/findmany/recycle/order", s.GetRecycleBizOrder)
+	h.Add("GetBizRecyclability", http.MethodPost, "/findmany/recycle/recyclability", s.GetBizRecyclability)
+	h.Add("ReviseBizRecycleOrder", http.MethodPost, "/revise/recycle/order", s.ReviseBizRecycleOrder)
+	h.Add("StartBizRecycleOrder", http.MethodPost, "/start/recycle/order", s.StartBizRecycleOrder)
+	h.Add("GetBizRecycleDetect", http.MethodPost, "/findmany/recycle/detect", s.GetBizRecycleDetect)
+	h.Add("ListBizDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListBizDetectHost)
+	h.Add("GetBizRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetBizRecycleDetectStep)
 }

@@ -38,9 +38,9 @@ func (s *service) ListOriginHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// 自研云资源-业务-机房裁撤-菜单粒度
+	// 服务请求-机房裁撤-菜单粒度
 	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+		Basic: &meta.Basic{Type: meta.ServiceResDissolve, Action: meta.Find}})
 	if err != nil {
 		return nil, err
 	}
@@ -65,9 +65,9 @@ func (s *service) ListCurHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// 自研云资源-业务-机房裁撤-菜单粒度
+	// 服务请求-机房裁撤-菜单粒度
 	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+		Basic: &meta.Basic{Type: meta.ServiceResDissolve, Action: meta.Find}})
 	if err != nil {
 		return nil, err
 	}
@@ -92,9 +92,9 @@ func (s *service) ListResDissolveTable(cts *rest.Contexts) (interface{}, error) 
 		return nil, err
 	}
 
-	// 自研云资源-业务-机房裁撤-菜单粒度
+	// 服务请求-机房裁撤-菜单粒度
 	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiyanResDissolve, Action: meta.Find}})
+		Basic: &meta.Basic{Type: meta.ServiceResDissolve, Action: meta.Find}})
 	if err != nil {
 		return nil, err
 	}

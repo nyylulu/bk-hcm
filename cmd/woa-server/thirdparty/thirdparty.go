@@ -45,6 +45,7 @@ import (
 // Client third party client
 type Client struct {
 	CVM             cvmapi.CVMClientInterface
+	OldCVM          cvmapi.CVMClientInterface
 	DVM             dvmapi.DVMClientInterface
 	Tjj             tjjapi.TjjClientInterface
 	Xship           xshipapi.XshipClientInterface
@@ -64,9 +65,17 @@ type Client struct {
 
 // NewClient new third party client
 func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error) {
-	cvm, err := cvmapi.NewCVMClientInterface(opts.CvmOpt, reg)
+	cvmConf := cvmapi.CVMCli{CvmApiAddr: opts.CvmOpt.CvmApiAddr, CvmLaunchPassword: opts.CvmOpt.CvmLaunchPassword}
+	cvm, err := cvmapi.NewCVMClientInterface(cvmConf, reg)
 	if err != nil {
-		logs.Errorf("failed to new cvm api client, err: %v", err)
+		logs.Errorf("failed to new cvm api client, conf: %v, err: %v", cvmConf, err)
+		return nil, err
+	}
+
+	oldCvmConf := cvmapi.CVMCli{CvmApiAddr: opts.CvmOpt.CvmOldApiAddr, CvmLaunchPassword: opts.CvmOpt.CvmLaunchPassword}
+	oldCvm, err := cvmapi.NewCVMClientInterface(oldCvmConf, reg)
+	if err != nil {
+		logs.Errorf("failed to new cvm api client, conf: %v, err: %v", oldCvmConf, err)
 		return nil, err
 	}
 
@@ -90,8 +99,8 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 
 	client := &Client{
 		CVM:             cvm,
+		OldCVM:          oldCvm,
 		DVM:             dvm,
-
 		Tjj:             tjj,
 		Xship:           xship,
 		TencentCloudOpt: opts.TCloudOpt,

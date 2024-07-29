@@ -443,8 +443,44 @@ func (s *service) GetLaunchMatchDevice(cts *rest.Contexts) (interface{}, error) 
 	return rst, nil
 }
 
+// GetBizRecallMatchDevice get biz recall match device
+func (s *service) GetBizRecallMatchDevice(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	// 业务访问鉴权
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz recall match device permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getRecallMatchDevice(cts)
+}
+
 // GetRecallMatchDevice get resource recall match devices
 func (s *service) GetRecallMatchDevice(cts *rest.Contexts) (interface{}, error) {
+	// 资源上下架-菜单粒度鉴权
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
+	if err != nil {
+		logs.Errorf("failed to check recall match device permission, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getRecallMatchDevice(cts)
+}
+
+// getRecallMatchDevice get resource recall match devices
+func (s *service) getRecallMatchDevice(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.GetRecallMatchDeviceReq)
 	if err := cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -455,13 +491,6 @@ func (s *service) GetRecallMatchDevice(cts *rest.Contexts) (interface{}, error) 
 	if err != nil {
 		logs.Errorf("failed to get recall match device info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	// 资源上下架-菜单粒度鉴权
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiyanResShelves, Action: meta.Find}})
-	if err != nil {
-		return nil, err
 	}
 
 	rst, err := s.logics.Pool().GetRecallMatchDevice(cts.Kit, input)

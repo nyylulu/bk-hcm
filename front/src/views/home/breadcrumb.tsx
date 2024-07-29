@@ -2,7 +2,6 @@ import { computed, defineComponent } from 'vue';
 import { useRoute } from 'vue-router';
 import businesseMenus from '@/router/module/business';
 import serviceMenus from '@/router/module/service';
-import ziyanScreMenus from '@/router/module/ziyan-scr';
 // import { Breadcrumb } from 'bkui-vue';
 import './breadcrumb.scss';
 
@@ -12,7 +11,7 @@ export default defineComponent({
     // const router = useRouter();
     const route = useRoute();
     const breadcrumbText = computed(() => {
-      return [...businesseMenus, ...serviceMenus, ...ziyanScreMenus]
+      return [...businesseMenus, ...serviceMenus]
         .reduce((prev, item) => {
           if (item.children) prev.push(...item.children);
           else prev.push(item);

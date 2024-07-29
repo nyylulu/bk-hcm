@@ -27,6 +27,7 @@ type RecycleHost struct {
 	HostID         int64         `json:"bk_host_id" bson:"bk_host_id"`
 	AssetID        string        `json:"asset_id" bson:"asset_id"`
 	IP             string        `json:"ip" bson:"ip"`
+	BkHostOuterIP  string        `json:"bk_host_outerip" bson:"bk_host_outerip"`
 	InstID         string        `json:"instance_id" bson:"instance_id"`
 	DeviceType     string        `json:"device_type" bson:"device_type"`
 	Zone           string        `json:"bk_zone_name" bson:"bk_zone_name"`

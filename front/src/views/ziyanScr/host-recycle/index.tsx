@@ -2,7 +2,7 @@ import { defineComponent, ref, defineAsyncComponent, h, resolveComponent } from 
 import './index.scss';
 import { useVerify } from '@/hooks';
 import ErrorPage from '@/views/error-pages/403';
-
+import { useRouter } from 'vue-router';
 export default defineComponent({
   components: {
     HostRecycleTable: defineAsyncComponent(() => import('./host-recycle-table')),
@@ -11,18 +11,24 @@ export default defineComponent({
   setup() {
     const { authVerifyData } = useVerify();
     if (!authVerifyData.value.permissionAction.biz_access) return () => <ErrorPage urlKeyId='biz_access' />;
-
+    const router = useRouter();
     const activeName = ref('HostRecycleTable');
     const recycleSubBizId = ref({});
     const getDetailPage = (paramObj) => {
       activeName.value = 'HostRecycleTable';
       recycleSubBizId.value = paramObj;
+      router.push({
+        path: '/service/hostRecycling/docDetail',
+        query: {
+          suborderId: paramObj.suborder_id,
+          bkBizId: paramObj.bk_biz_id,
+        },
+      });
     };
     const pagePanel = ref([
       {
         name: 'HostRecycleTable',
         label: '主机回收',
-        tranferProps: { subBizBillNum: recycleSubBizId },
       },
       {
         name: 'DeviceQueryTable',

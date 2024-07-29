@@ -42,16 +42,6 @@ func genResManagementActionGroups() []client.ActionGroup {
 			},
 			SubGroups: []client.ActionGroup{
 				{
-					Name:   "自研云资源",
-					NameEn: "ZiYan Resource Management",
-					Actions: []client.ActionWithID{
-						{ID: BizZiyanResCreate},
-						{ID: BizZiyanResInventory},
-						{ID: BizZiyanResRecycle},
-						{ID: BizZiyanResDissolve},
-					},
-				},
-				{
 					Name:   "IaaS资源",
 					NameEn: "Biz IaaS Resource Management",
 					Actions: []client.ActionWithID{
@@ -111,6 +101,7 @@ func genResManagementActionGroups() []client.ActionGroup {
 		},
 	}
 
+	actionGroups = append(actionGroups, genServiceRequestActionGroups())
 	actionGroups = append(actionGroups, genResourceAccessActionGroups())
 	actionGroups = append(actionGroups, genCloudSelectionActionGroups())
 	actionGroups = append(actionGroups, genPlatformManageActionGroups())
@@ -138,6 +129,22 @@ func genCloudSelectionActionGroups() client.ActionGroup {
 					{ID: CloudSelectionSchemeFind},
 					{ID: CloudSelectionSchemeEdit},
 					{ID: CloudSelectionSchemeDelete},
+				},
+			},
+		},
+	}
+}
+
+func genServiceRequestActionGroups() client.ActionGroup {
+	return client.ActionGroup{
+		Name:   "服务请求",
+		NameEn: "Service Request",
+		SubGroups: []client.ActionGroup{
+			{
+				Name:   "服务",
+				NameEn: "Service List",
+				Actions: []client.ActionWithID{
+					{ID: ServiceResDissolve},
 				},
 			},
 		},
@@ -229,6 +236,9 @@ func genPlatformManageActionGroups() client.ActionGroup {
 					{ID: ZiyanResShelves},
 					{ID: ZiyanCvmCreate},
 					{ID: ZiyanResDissolveManage},
+					{ID: ZiyanResInventory},
+					{ID: ZiyanResCreate},
+					{ID: ZiyanResRecycle},
 				},
 			},
 			{

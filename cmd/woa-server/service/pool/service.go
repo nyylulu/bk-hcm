@@ -40,6 +40,13 @@ func InitService(c *capability.Capability) {
 	s.initPoolService(h)
 
 	h.Load(c.WebService)
+
+	// 业务下的接口
+	bizH := rest.NewHandler()
+	bizH.Path("/bizs/{bk_biz_id}")
+	bizService(bizH, s)
+
+	bizH.Load(c.WebService)
 }
 
 type service struct {
@@ -74,4 +81,9 @@ func (s *service) initPoolService(h *rest.Handler) {
 	h.Add("GetRecallStatusCfg", http.MethodGet, "/pool/find/config/recall/status", s.GetRecallStatusCfg)
 	h.Add("GetTaskStatusCfg", http.MethodGet, "/pool/find/config/task/status", s.GetTaskStatusCfg)
 	h.Add("GetDeviceType", http.MethodGet, "/pool/find/config/devicetype", s.GetDeviceType)
+}
+
+// bizService 业务下的接口
+func bizService(h *rest.Handler, s *service) {
+	h.Add("GetBizRecallMatchDevice", http.MethodPost, "/pool/findmany/recall/match/device", s.GetBizRecallMatchDevice)
 }

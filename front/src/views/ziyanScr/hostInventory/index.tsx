@@ -8,17 +8,11 @@ import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import { useVerify } from '@/hooks';
-import ErrorPage from '@/views/error-pages/403';
 
 const { FormItem } = Form;
 export default defineComponent({
   name: 'AllhostInventoryManager',
   setup() {
-    const { authVerifyData } = useVerify();
-    if (!authVerifyData.value.permissionAction.ziyan_resource_inventory_find)
-      return () => <ErrorPage urlKeyId='biz_ziyan_resource_inventory' />;
-
     const { columns } = useColumns('hostInventor');
     const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
     const router = useRouter();
@@ -140,7 +134,7 @@ export default defineComponent({
     };
     const application = (row: any) => {
       router.push({
-        path: '/ziyanScr/hostApplication/apply',
+        path: '/service/hostApplication/apply',
         query: {
           ...row,
         },
@@ -199,7 +193,7 @@ export default defineComponent({
         <div class={'filter-container'}>
           <Form model={filter.value} formType='vertical' class={'scr-form-wrapper'}>
             <FormItem label='需求类型'>
-              <bk-select class='tbkselect' v-model={filter.value.require_type}>
+              <bk-select v-model={filter.value.require_type}>
                 {options.value.require_types.map((item) => (
                   <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
                 ))}
@@ -208,7 +202,6 @@ export default defineComponent({
             <FormItem label='地域'>
               <AreaSelector
                 ref='areaSelector'
-                class='tbkselect'
                 v-model={filter.value.region}
                 multiple
                 clearable
@@ -219,7 +212,6 @@ export default defineComponent({
               <ZoneSelector
                 ref='zoneSelector'
                 v-model={filter.value.zone}
-                class='tbkselect'
                 separateCampus={false}
                 multiple
                 params={{
@@ -229,7 +221,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label='实例族'>
               <bk-select
-                class='tbkselect'
                 v-model={filter.value.device_group}
                 multiple
                 clearable
@@ -242,7 +233,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label='机型'>
               <bk-select
-                class='tbkselect'
                 v-model={filter.value.device_type}
                 clearable
                 multiple
@@ -256,7 +246,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label='CPU(核)'>
               <bk-select
-                class='tbkselect'
                 v-model={filter.value.cpu}
                 clearable
                 disabled={deviceConfigDisabled.value}
@@ -269,7 +258,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label='内存(G)'>
               <bk-select
-                class='tbkselect'
                 v-model={filter.value.mem}
                 clearable
                 disabled={deviceConfigDisabled.value}

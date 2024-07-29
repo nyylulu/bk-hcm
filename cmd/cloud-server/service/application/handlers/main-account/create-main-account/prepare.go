@@ -20,9 +20,10 @@
 package mainaccount
 
 import (
+	"strings"
+
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"strings"
 )
 
 // PrepareReq 预处理申请单数据
@@ -67,4 +68,9 @@ func (a *ApplicationOfCreateMainAccount) GetItsmApprover(managers []string) []it
 	}
 
 	return approvers
+}
+
+// GetBkBizIDs 获取当前的业务IDs
+func (a *ApplicationOfCreateMainAccount) GetBkBizIDs() []int64 {
+	return []int64{a.req.BkBizID}
 }

@@ -16,7 +16,6 @@ import (
 	"context"
 	"net/http"
 
-	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
@@ -59,7 +58,7 @@ type CVMClientInterface interface {
 }
 
 // NewCVMClientInterface creates a cvm api instance
-func NewCVMClientInterface(opts cc.CVMCli, reg prometheus.Registerer) (CVMClientInterface, error) {
+func NewCVMClientInterface(opts CVMCli, reg prometheus.Registerer) (CVMClientInterface, error) {
 	cli, err := client.NewClient(nil)
 	if err != nil {
 		return nil, err

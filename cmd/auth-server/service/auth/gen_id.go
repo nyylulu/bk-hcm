@@ -741,9 +741,9 @@ func genZiYanResource(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 	case meta.Find:
 		return sys.BizAccess, []client.Resource{res}, nil
 	case meta.Create: // 主机申领-业务粒度
-		return sys.BizZiyanResCreate, []client.Resource{res}, nil
+		return sys.ZiyanResCreate, []client.Resource{res}, nil
 	case meta.Recycle: // 主机回收-业务粒度
-		return sys.BizZiyanResRecycle, []client.Resource{res}, nil
+		return sys.ZiyanResRecycle, []client.Resource{res}, nil
 	default:
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}

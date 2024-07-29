@@ -9,7 +9,6 @@ import type {
 } from '@/typings/resource';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { filterAccountList } from '@pluginHandler/account-selector';
-
 const props = defineProps({
   bizId: Number as PropType<number>,
   filter: {
@@ -22,6 +21,10 @@ const props = defineProps({
   mustBiz: Boolean as PropType<boolean>,
   isResourcePage: Boolean as PropType<boolean>,
   disabled: Boolean,
+  optionDisabled: {
+    type: Function as PropType<(accountItem?: any) => boolean>,
+    default: () => false,
+  },
 });
 const emit = defineEmits(['input', 'change']);
 
@@ -125,6 +128,12 @@ defineExpose({
     v-bind="attrs"
     :disabled="props.disabled"
   >
-    <bk-option v-for="(item, index) in accountList" :key="index" :value="item.id" :label="item.name" />
+    <bk-option
+      v-for="(item, index) in accountList"
+      :disabled="optionDisabled(item)"
+      :key="index"
+      :value="item.id"
+      :label="item.name"
+    />
   </bk-select>
 </template>

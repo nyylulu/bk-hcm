@@ -79,10 +79,17 @@ var (
 func GenerateStaticActions() []client.ResourceAction {
 	resourceActionList := make([]client.ResourceAction, 0)
 
+	// 资源管理
 	resourceActionList = append(resourceActionList, genResManagementActions()...)
+	// 服务请求
+	resourceActionList = append(resourceActionList, genServiceRequestActions()...)
+	// 资源接入
 	resourceActionList = append(resourceActionList, genResourceAccessActions()...)
+	// 资源选型
 	resourceActionList = append(resourceActionList, genCloudSelectionActions()...)
+	// 平台管理
 	resourceActionList = append(resourceActionList, genPlatformManageActions()...)
+	// 云账号管理
 	resourceActionList = append(resourceActionList, genAccountManageActions()...)
 
 	return resourceActionList
@@ -98,7 +105,6 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedActions:       []client.ActionID{ResourceAssign},
 		Version:              1,
 	}}
-	actions = append(actions, genZiyanResManActions()...)
 	actions = append(actions, []client.ResourceAction{{
 		ID:                   BizIaaSResCreate,
 		Name:                 ActionIDNameMap[BizIaaSResCreate],
@@ -168,45 +174,6 @@ func genResManagementActions() []client.ResourceAction {
 	}}...)
 
 	return actions
-}
-
-// genZiyanResManActions 业务下-自研云资源的权限Action列表
-func genZiyanResManActions() []client.ResourceAction {
-	return []client.ResourceAction{
-		{
-			ID:                   BizZiyanResCreate, // 主机申领-业务粒度
-			Name:                 ActionIDNameMap[BizZiyanResCreate],
-			NameEn:               "Create Biz ZiYan",
-			Type:                 Create,
-			RelatedResourceTypes: bizResource,
-			RelatedActions:       []client.ActionID{BizAccess},
-			Version:              1,
-		}, {
-			ID:                   BizZiyanResInventory, // 主机库存-菜单粒度
-			Name:                 ActionIDNameMap[BizZiyanResInventory],
-			NameEn:               "View Biz ZiYan Inventory",
-			Type:                 Edit,
-			RelatedResourceTypes: nil,
-			RelatedActions:       nil,
-			Version:              1,
-		}, {
-			ID:                   BizZiyanResRecycle, // 主机回收-业务粒度
-			Name:                 ActionIDNameMap[BizZiyanResRecycle],
-			NameEn:               "Recycle Biz ZiYan",
-			Type:                 Edit,
-			RelatedResourceTypes: bizResource,
-			RelatedActions:       []client.ActionID{BizAccess},
-			Version:              1,
-		}, {
-			ID:                   BizZiyanResDissolve, // 机房裁撤-菜单粒度
-			Name:                 ActionIDNameMap[BizZiyanResDissolve],
-			NameEn:               "View Biz ZiYan Dissolve",
-			Type:                 Edit,
-			RelatedResourceTypes: nil,
-			RelatedActions:       nil,
-			Version:              1,
-		},
-	}
 }
 
 func genCLBResManActions() []client.ResourceAction {
@@ -293,6 +260,21 @@ func genArrangeResManActions() []client.ResourceAction {
 	}
 }
 */
+
+// genServiceRequestActions 服务请求的Actions
+func genServiceRequestActions() []client.ResourceAction {
+	actions := []client.ResourceAction{{
+		ID:                   ServiceResDissolve,
+		Name:                 ActionIDNameMap[ServiceResDissolve],
+		NameEn:               "Service Resource Dissolve",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}}
+
+	return actions
+}
 
 func genResourceAccessActions() []client.ResourceAction {
 	actions := []client.ResourceAction{{
@@ -589,6 +571,30 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		Type:                 Edit,
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResInventory, // 主机库存-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResInventory],
+		NameEn:               "ZiYan Inventory View",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResCreate, // 主机申领-业务粒度
+		Name:                 ActionIDNameMap[ZiyanResCreate],
+		NameEn:               "ZiYan Resource Create",
+		Type:                 Create,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
+		Version:              1,
+	}, {
+		ID:                   ZiyanResRecycle, // 主机回收-业务粒度
+		Name:                 ActionIDNameMap[ZiyanResRecycle],
+		NameEn:               "ZiYan Resource Recycle",
+		Type:                 Delete,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
 	}, {
 		ID:                   RootAccountManage,

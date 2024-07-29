@@ -1,0 +1,63 @@
+### 描述
+
+- 该接口提供版本：v1.6.1+。
+- 该接口所需权限：业务-IaaS资源删除。
+- 该接口功能描述：创建资源回收单据。
+
+### URL
+
+POST /api/v1/woa/bizs/{bk_biz_id}/task/create/recycle/order
+
+### 输入参数
+
+| 参数名称       | 参数类型       | 必选 | 描述             |
+|---------------|--------------|------|-----------------|
+| ips           | string array | 否	  | 回收资源ip列表     |
+| asset_ids	    | string array | 否	  | 回收资源固资号列表  |
+| bk_host_ids	| int array	   | 否	  | 回收资源CC主机ID   |
+| remark	    | string       | 否	  | 备注              |
+
+- 说明：ips、asset_ids和bk_host_ids不能同时为空
+
+### 调用示例
+
+#### 获取详细信息请求参数示例
+
+```json
+{
+    "ips": [
+        "10.0.0.1"
+    ],
+    "remark":""
+}
+```
+
+### 响应示例
+
+#### 获取详细信息返回结果示例
+
+```json
+{
+    "result":true,
+    "code":0,
+    "message":"success",
+    "data":{
+        "order_id": 1001
+    }
+}
+```
+
+### 响应参数说明
+
+| 参数名称    | 参数类型       | 描述               |
+|------------|--------------|--------------------|
+| result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
+| code       | int          | 错误编码。 0表示success，>0表示失败错误  |
+| message    | string       | 请求失败返回的错误信息 |
+| data	     | object array | 响应数据             |
+
+#### data
+
+| 参数名称  | 参数类型 | 描述   |
+|----------|--------|--------|
+| order_id | int    | 单据ID |

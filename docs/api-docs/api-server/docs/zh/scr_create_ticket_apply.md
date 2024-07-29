@@ -1,7 +1,7 @@
 ### 描述
 
-- 该接口提供版本：v1.6.0+。
-- 该接口所需权限：业务-主机申领。
+- 该接口提供版本：v1.6.1+。
+- 该接口所需权限：业务-IaaS资源创建。
 - 该接口功能描述：创建资源申请单据。
 
 ### URL
@@ -89,125 +89,125 @@ POST /api/v1/woa/task/create/apply
 #### CVM申请示例
 ```json
 {
-"bk_biz_id":3,
-"bk_username":"xx",
-"follower":[],
-"enable_notice":true,
-"require_type":1,
-"expect_time":"2022-05-01 20:00:00",
-"remark":"",
-"suborders":[
-{
-"resource_type":"QCLOUDCVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"enable_disk_check":false,
-"remark":"",
-"spec":{
-"region":"ap-shanghai",
-"zone":"ap-shanghai-2",
-"device_type":"S3.LARGE8",
-"image_id":"img-r5igp4bv",
-"disk_size":200,
-"disk_type":"CLOUD_PREMIUM",
-"network_type":"TENTHOUSAND",
-"vpc":"",
-"subnet":""
-}
-}
-]
+    "bk_biz_id":3,
+    "bk_username":"xx",
+    "follower":[],
+    "enable_notice":true,
+    "require_type":1,
+    "expect_time":"2022-05-01 20:00:00",
+    "remark":"",
+    "suborders":[
+        {
+            "resource_type":"QCLOUDCVM",
+            "replicas":2,
+            "anti_affinity_level":"ANTI_NONE",
+            "enable_disk_check":false,
+            "remark":"",
+            "spec":{
+                "region":"ap-shanghai",
+                "zone":"ap-shanghai-2",
+                "device_type":"S3.LARGE8",
+                "image_id":"img-r5igp4bv",
+                "disk_size":200,
+                "disk_type":"CLOUD_PREMIUM",
+                "network_type":"TENTHOUSAND",
+                "vpc":"",
+                "subnet":""
+            }
+        }
+    ]
 }
 ```
 
 #### PM申请示例
 ```json
 {
-"bk_biz_id":3,
-"bk_username":"xx",
-"follower":[],
-"enable_notice":true,
-"require_type":1,
-"expect_time":"2022-05-01 20:00:00",
-"remark":"",
-"suborders":[
-{
-"resource_type":"IDCPM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"东莞",
-"zone":"东莞-大朗",
-"device_type":"B7",
-"os_type":"XServer V16_64",
-"raid_type":"RAID1",
-"network_type":"TENTHOUSAND",
-"isp":""
-}
-}
-]
+    "bk_biz_id":3,
+    "bk_username":"xx",
+    "follower":[],
+    "enable_notice":true,
+    "require_type":1,
+    "expect_time":"2022-05-01 20:00:00",
+    "remark":"",
+    "suborders":[
+        {
+            "resource_type":"IDCPM",
+            "replicas":2,
+            "anti_affinity_level":"ANTI_NONE",
+            "remark":"",
+            "spec":{
+                "region":"东莞",
+                "zone":"东莞-大朗",
+                "device_type":"B7",
+                "os_type":"XServer V16_64",
+                "raid_type":"RAID1",
+                "network_type":"TENTHOUSAND",
+                "isp":""
+            }
+        }
+    ]
 }
 ```
 
 #### QCLOUDDVM申请示例
 ```json
 {
-"bk_biz_id":3,
-"bk_username":"xx",
-"follower":[],
-"enable_notice":true,
-"require_type":1,
-"expect_time":"2022-05-01 20:00:00",
-"remark":"",
-"suborders":[
-{
-"resource_type":"QCLOUDDVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"ap-shanghai",
-"zone":"ap-shanghai-2",
-"device_group":"GAMESERVER",
-"device_type":"D4-8-200-10",
-"image":"hub.oa.com/library/tlinux2.2:v1.6",
-"mount_path":"/data1",
-"network_type":"TENTHOUSAND",
-"cpu_provider":"Intel"
-}
-}
-]
+    "bk_biz_id":3,
+    "bk_username":"xx",
+    "follower":[],
+    "enable_notice":true,
+    "require_type":1,
+    "expect_time":"2022-05-01 20:00:00",
+    "remark":"",
+    "suborders":[
+        {
+            "resource_type":"QCLOUDDVM",
+            "replicas":2,
+            "anti_affinity_level":"ANTI_NONE",
+            "remark":"",
+            "spec":{
+                "region":"ap-shanghai",
+                "zone":"ap-shanghai-2",
+                "device_group":"GAMESERVER",
+                "device_type":"D4-8-200-10",
+                "image":"hub.oa.com/library/tlinux2.2:v1.6",
+                "mount_path":"/data1",
+                "network_type":"TENTHOUSAND",
+                "cpu_provider":"Intel"
+            }
+        }
+    ]
 }
 ```
 
 #### IDCDVM申请示例
 ```json
 {
-"bk_biz_id":3,
-"bk_username":"xx",
-"follower":[],
-"enable_notice":true,
-"require_type":1,
-"expect_time":"2022-05-01 20:00:00",
-"remark":"",
-"suborders":[
-{
-"resource_type":"IDCDVM",
-"replicas":2,
-"anti_affinity_level":"ANTI_NONE",
-"remark":"",
-"spec":{
-"region":"上海",
-"zone":"上海-青浦",
-"device_group":"GAMESERVER",
-"device_type":"D4-8-200-10",
-"image":"hub.oa.com/library/tlinux2.2:v1.6",
-"kernel":"",
-"mount_path":"/data1",
-"network_type":"TENTHOUSAND"
-}
-}
-]
+    "bk_biz_id":3,
+    "bk_username":"xx",
+    "follower":[],
+    "enable_notice":true,
+    "require_type":1,
+    "expect_time":"2022-05-01 20:00:00",
+    "remark":"",
+    "suborders":[
+        {
+            "resource_type":"IDCDVM",
+            "replicas":2,
+            "anti_affinity_level":"ANTI_NONE",
+            "remark":"",
+            "spec":{
+                "region":"上海",
+                "zone":"上海-青浦",
+                "device_group":"GAMESERVER",
+                "device_type":"D4-8-200-10",
+                "image":"hub.oa.com/library/tlinux2.2:v1.6",
+                "kernel":"",
+                "mount_path":"/data1",
+                "network_type":"TENTHOUSAND"
+            }
+        }
+    ]
 }
 ```
 
@@ -217,14 +217,12 @@ POST /api/v1/woa/task/create/apply
 
 ```json
 {
-"result":true,
-"code":0,
-"message":"success",
-"permission":null,
-"request_id":"f5a6331d4bc2433587a63390c76ba7bf",
-"data":{
-"order_id": 1001
-}
+    "result":true,
+    "code":0,
+    "message":"success",
+    "data":{
+        "order_id": 1001
+    }
 }
 ```
 
@@ -235,8 +233,6 @@ POST /api/v1/woa/task/create/apply
 | result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
 | code       | int          | 错误编码。 0表示success，>0表示失败错误  |
 | message    | string       | 请求失败返回的错误信息 |
-| permission | object       | 权限信息             |
-| request_id | string       | 请求链ID             |
 | data	     | object array | 响应数据             |
 
 #### data

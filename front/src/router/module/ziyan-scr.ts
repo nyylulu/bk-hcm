@@ -6,9 +6,9 @@ const ziyanScr: RouteRecordRaw[] = [
     children: [
       {
         path: '/ziyanScr/hostInventory',
-        name: '主机库存',
         component: () => import('@/views/ziyanScr/hostInventory/index'),
         meta: {
+          title: '主机库存',
           activeKey: 'zzkc',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
@@ -17,9 +17,9 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/hostApplication',
-        name: '主机申领',
         component: () => import('@/views/ziyanScr/hostApplication'),
         meta: {
+          title: '主机申领',
           activeKey: 'zjsq',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
@@ -55,7 +55,6 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/hostRecycling',
-        name: '主机回收',
         children: [
           {
             path: '',
@@ -95,6 +94,7 @@ const ziyanScr: RouteRecordRaw[] = [
           },
         ],
         meta: {
+          title: '主机回收',
           activeKey: 'zjhs',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
@@ -103,7 +103,7 @@ const ziyanScr: RouteRecordRaw[] = [
       },
     ],
     meta: {
-      menuName: '资源',
+      groupTitle: '资源',
     },
   },
   {
@@ -111,10 +111,10 @@ const ziyanScr: RouteRecordRaw[] = [
     children: [
       {
         path: '/ziyanScr/jfcc',
-        name: '机房裁撤',
         component: () => import('@/views/ziyanScr/recycle-server-room'),
         children: [],
         meta: {
+          title: '机房裁撤',
           activeKey: 'jfcc',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
@@ -123,7 +123,7 @@ const ziyanScr: RouteRecordRaw[] = [
       },
     ],
     meta: {
-      menuName: '服务',
+      groupTitle: '服务',
     },
   },
   {
@@ -132,11 +132,10 @@ const ziyanScr: RouteRecordRaw[] = [
       {
         path: '/ziyanScr/cvm-model',
         component: () => import('@/views/ziyanScr/cvm-model'),
-        name: 'CVM机型',
         children: [],
         meta: {
+          title: 'CVM机型',
           activeKey: 'cvmjx',
-          breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
           checkAuth: 'ziyan_cvm_type_find',
@@ -144,12 +143,11 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/cvmzw',
-        name: 'CVM子网',
         component: () => import('@/views/ziyanScr/cvm-web'),
         children: [],
         meta: {
+          title: 'CVM子网',
           activeKey: 'cvmzw',
-          breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
           checkAuth: 'ziyan_cvm_subnet_find',
@@ -157,7 +155,6 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/resource-manage',
-        name: '资源上下架',
         children: [
           {
             path: '',
@@ -191,6 +188,7 @@ const ziyanScr: RouteRecordRaw[] = [
           },
         ],
         meta: {
+          title: '资源上下架',
           activeKey: 'scr-resource-manage',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
@@ -199,12 +197,11 @@ const ziyanScr: RouteRecordRaw[] = [
       },
       {
         path: '/ziyanScr/cvmsc',
-        name: 'CVM生产',
         component: () => import('@/views/ziyanScr/cvm-produce'),
         children: [],
         meta: {
+          title: 'CVM生产',
           activeKey: 'cvmsc',
-          breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host',
           checkAuth: 'ziyan_cvm_create_find',
@@ -212,7 +209,7 @@ const ziyanScr: RouteRecordRaw[] = [
       },
     ],
     meta: {
-      menuName: '管理',
+      groupTitle: '管理',
     },
   },
 ];

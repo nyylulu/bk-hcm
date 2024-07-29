@@ -9,8 +9,11 @@ import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
+
 export default defineComponent({
   props: {
     formModelData: {
@@ -19,6 +22,7 @@ export default defineComponent({
     handleClose: Function,
   },
   setup(props) {
+    const { getBusinessApiPath } = useWhereAmI();
     const { selections, handleSelectionChange } = useSelection();
     const Modelform = ref({
       resource_type: props.formModelData.resource_type,
@@ -69,7 +73,7 @@ export default defineComponent({
     const device_types = ref([]);
     const getDomainList = () => {
       return http.post(
-        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/findmany/recall/match/device`,
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}pool/findmany/recall/match/device`,
         removeEmptyFields({
           resource_type: formModel.resource_type,
           spec: {
@@ -136,10 +140,11 @@ export default defineComponent({
           os_type,
         };
       });
-      await apiService.matchPools({
-        suborder_id,
-        spec,
-      });
+      await http.post(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/commit/apply/pool/match`,
+        { suborder_id, spec },
+        { removeEmptyFields: true },
+      );
       Message({
         message: '匹配成功',
         theme: 'success',

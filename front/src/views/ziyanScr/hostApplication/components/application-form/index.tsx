@@ -1,8 +1,9 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Card } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Card, Dropdown } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
+import { useAccountStore, useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
@@ -13,7 +14,7 @@ import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 
 import apiService from '@/api/scrApi';
-import { useUserStore } from '@/store';
+
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import http from '@/http';
 import applicationSideslider from '../application-sideslider';
@@ -22,11 +23,19 @@ import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
 import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+const { DropdownMenu, DropdownItem } = Dropdown;
 export default defineComponent({
   components: {
     applicationSideslider,
   },
-  setup() {
+  props: {
+    isbusiness: {
+      type: Boolean,
+      default: false,
+    },
+  },
+  setup(props) {
+    const accountStore = useAccountStore();
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
     const router = useRouter();
@@ -77,6 +86,8 @@ export default defineComponent({
       },
     });
     const formRef = ref();
+    const IDCPMIndex = ref(-1);
+    const QCLOUDCVMIndex = ref(-1);
     const resourceFormRef = ref();
     const { columns: CloudHostcolumns } = useColumns('CloudHost');
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
@@ -85,16 +96,35 @@ export default defineComponent({
       width: 200,
       render: ({ row, index }) => {
         return (
-          <div>
-            <Button text theme='primary' onClick={() => clonelist(row, 'IDCPM')} class={'mr8'}>
+          <div class='operation-column'>
+            <Button text theme='primary' class='mr10' onClick={() => clonelist(row, 'IDCPM')}>
               克隆
             </Button>
-            <Button text theme='primary' onClick={() => modifylist(row, index, 'IDCPM')} class={'mr8'}>
-              修改
-            </Button>
-            <Button text theme='primary' onClick={() => deletelist(index, 'IDCPM')} class={'mr8'}>
-              删除
-            </Button>
+            <Dropdown
+              trigger='click'
+              popoverOptions={{
+                renderType: 'shown',
+                onAfterShow: () => (IDCPMIndex.value = index),
+                onAfterHidden: () => (IDCPMIndex.value = -1),
+              }}>
+              {{
+                default: () => (
+                  <div class={`more-action${IDCPMIndex.value === index ? ' current-operate-row' : ''}`}>
+                    <i class='hcm-icon bkhcm-icon-more-fill' />
+                  </div>
+                ),
+                content: () => (
+                  <DropdownMenu>
+                    <DropdownItem key='retry' onClick={() => modifylist(row, index, 'IDCPM')}>
+                      修改
+                    </DropdownItem>
+                    <DropdownItem key='stop' onClick={() => deletelist(index, 'IDCPM')}>
+                      删除
+                    </DropdownItem>
+                  </DropdownMenu>
+                ),
+              }}
+            </Dropdown>
           </div>
         );
       },
@@ -104,17 +134,36 @@ export default defineComponent({
       width: 200,
       render: ({ row, index }) => {
         return (
-          <>
-            <Button text theme='primary' onClick={() => clonelist(row, 'QCLOUDCVM')} class={'mr8'}>
+          <div class='operation-column'>
+            <Button text theme='primary' class='mr10' onClick={() => clonelist(row, 'QCLOUDCVM')}>
               克隆
             </Button>
-            <Button text theme='primary' onClick={() => modifylist(row, index, 'QCLOUDCVM')} class={'mr8'}>
-              修改
-            </Button>
-            <Button text theme='primary' onClick={() => deletelist(index, 'QCLOUDCVM')} class={'mr8'}>
-              删除
-            </Button>
-          </>
+            <Dropdown
+              trigger='click'
+              popoverOptions={{
+                renderType: 'shown',
+                onAfterShow: () => (QCLOUDCVMIndex.value = index),
+                onAfterHidden: () => (QCLOUDCVMIndex.value = -1),
+              }}>
+              {{
+                default: () => (
+                  <div class={`more-action${QCLOUDCVMIndex.value === index ? ' current-operate-row' : ''}`}>
+                    <i class='hcm-icon bkhcm-icon-more-fill' />
+                  </div>
+                ),
+                content: () => (
+                  <DropdownMenu>
+                    <DropdownItem key='retry' onClick={() => modifylist(row, index, 'QCLOUDCVM')}>
+                      修改
+                    </DropdownItem>
+                    <DropdownItem key='stop' onClick={() => deletelist(index, 'QCLOUDCVM')}>
+                      删除
+                    </DropdownItem>
+                  </DropdownMenu>
+                ),
+              }}
+            </Dropdown>
+          </div>
         );
       },
     });
@@ -283,9 +332,13 @@ export default defineComponent({
       IDCPMOsTypes();
       IDCPMIsps();
     };
-    const onResourceTypeChange = () => {
+    const onResourceTypeChange = (resourceType: string) => {
       resourceForm.value.region = '';
       resourceForm.value.zone = '';
+      const { osTypes, deviceTypes, isps } = pmForm.value.options;
+      if (resourceType === 'IDCPM' && osTypes.length === 0 && deviceTypes.length === 0 && isps.length === 0) {
+        IDCPMlist();
+      }
     };
     // 监听物理机机型变化
     watch(
@@ -623,13 +676,22 @@ export default defineComponent({
         return;
       }
       isLoading.value = true;
+
       try {
-        const url = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${
-          type === 'submit' ? 'task/create/apply' : 'task/update/apply/ticket'
-        }`;
+        const basePath = `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa`;
+        const taskPath = type === 'submit' ? 'task/create/apply' : 'task/update/apply/ticket';
+        let url = null;
+        let bk_biz_id;
+        if (props.isbusiness) {
+          bk_biz_id = accountStore.bizs;
+          url = `${basePath}/bizs/${accountStore.bizs}/${taskPath}`;
+        } else {
+          bk_biz_id = order.value.model.bkBizId === 'all' ? undefined : order.value.model.bkBizId;
+          url = `${basePath}/${taskPath}`;
+        }
         await http.post(url, {
           order_id: isUncommit.value ? +route?.query.order_id : undefined,
-          bk_biz_id: order.value.model.bkBizId === 'all' ? undefined : order.value.model.bkBizId,
+          bk_biz_id,
           bk_username: useUserStore().username,
           require_type: order.value.model.requireType,
           expect_time: timeFormatter(order.value.model.expectTime),
@@ -642,11 +704,22 @@ export default defineComponent({
           theme: 'success',
           message,
         });
+        // 合代码之后完善跳转路由
+        const path = props.isbusiness ? '/business/applications' : '/service/hostApplication';
         router.push({
-          path: '/ziyanScr/hostApplication',
+          path,
         });
       } finally {
         isLoading.value = false;
+      }
+    };
+    const handleCancel = () => {
+      if (props.isbusiness) {
+        router.push({
+          name: 'hostBusinessList',
+        });
+      } else {
+        router.go(-1);
       }
     };
     const cvmCapacity = ref([]);
@@ -671,8 +744,8 @@ export default defineComponent({
     };
     return () => (
       <div class='wid100'>
-        <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>
-        <div class={'apply-form-wrapper'}>
+        {props.isbusiness ? <></> : <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
+        <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
           <CommonCard class='mt15' title={() => '基本信息'} layout='grid'>
             <bk-form
@@ -682,17 +755,22 @@ export default defineComponent({
               rules={order.value.rules}
               ref={formRef}>
               <div class='QCLOUDCVM-displayflex'>
-                <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
-                  <BusinessSelector
-                    class='item-warp-component'
-                    v-model={order.value.model.bkBizId}
-                    autoSelect
-                    authed
-                    saveBizs
-                    bizsKey='scr_apply_host_bizs'
-                    apiMethod={apiService.getCvmApplyAuthBizList}
-                  />
-                </bk-form-item>
+                {props.isbusiness ? (
+                  <></>
+                ) : (
+                  <bk-form-item label='所属业务' class='item-warp' required property='bkBizId'>
+                    <BusinessSelector
+                      class='item-warp-component'
+                      v-model={order.value.model.bkBizId}
+                      autoSelect
+                      authed
+                      saveBizs
+                      bizsKey='scr_apply_host_bizs'
+                      apiMethod={apiService.getCvmApplyAuthBizList}
+                    />
+                  </bk-form-item>
+                )}
+
                 <bk-form-item label='需求类型' class='item-warp' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>
                     {order.value.options.requireTypes.map((item: { require_type: any; require_name: any }) => (
@@ -803,7 +881,7 @@ export default defineComponent({
                 </Button>
                 <Button
                   onClick={() => {
-                    router.go(-1);
+                    handleCancel();
                   }}>
                   取消
                 </Button>

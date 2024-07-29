@@ -658,8 +658,8 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string,
 			"", nil); errRecord != nil {
 			logs.Errorf("failed to create cvm when update generate record, order id: %s, task id: %s, err: %v",
 				order.SubOrderId, taskId, errRecord)
-			return generateId, fmt.Errorf("failed to launch cvm, order id: %s, task id: %s, err: %v", order.SubOrderId,
-				taskId, errRecord)
+			return generateId, fmt.Errorf("failed to list created cvm, order id: %s, task id: %s, err: %v",
+				order.SubOrderId, taskId, errRecord)
 		}
 
 		return generateId, fmt.Errorf("failed to list created cvm, order id: %s, task id: %s, err: %v",
@@ -679,9 +679,22 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string,
 		successIps = append(successIps, host.LanIp)
 	}
 
+	// NOTE: sleep 15 seconds to wait for CMDB host sync.
+	time.Sleep(15 * time.Second)
+
 	// 6. save generated cvm instances info
 	if err := g.updateGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
+
+		// update generate record status to Done
+		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
+			"", nil); errRecord != nil {
+			logs.Errorf("failed to create cvm when update generate record, order id: %s, task id: %s, err: %v",
+				order.SubOrderId, taskId, errRecord)
+			return generateId, fmt.Errorf("failed to update generated device, order id: %s, task id: %s, err: %v",
+				order.SubOrderId, taskId, errRecord)
+		}
+
 		return generateId, fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
