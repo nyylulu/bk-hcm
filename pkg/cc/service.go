@@ -500,14 +500,16 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
-	Network      Network              `yaml:"network"`
-	Service      Service              `yaml:"service"`
-	Controller   BillControllerOption `yaml:"controller"`
-	Log          LogOption            `yaml:"log"`
-	FinOps       ApiGateway           `yaml:"finops"`
-	Jarvis       Jarvis               `yaml:"jarvis"`
-	ExchangeRate ExchangeRate         `yaml:"exchangeRate"`
-	IEGObsOption IEGObsOption         `yaml:"obs"`
+	Network        Network              `yaml:"network"`
+	Service        Service              `yaml:"service"`
+	Controller     BillControllerOption `yaml:"controller"`
+	Log            LogOption            `yaml:"log"`
+	BillAllocation BillAllocationOption `yaml:"billAllocation"`
+
+	FinOps       ApiGateway   `yaml:"finops"`
+	Jarvis       Jarvis       `yaml:"jarvis"`
+	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
+	IEGObsOption IEGObsOption `yaml:"obs"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

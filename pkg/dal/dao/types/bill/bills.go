@@ -20,6 +20,8 @@
 package bill
 
 import (
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	tablebill "hcm/pkg/dal/table/bill"
 )
 
@@ -47,10 +49,10 @@ type ListAccountBillItemDetails struct {
 	Details []tablebill.AccountBillItem `json:"details,omitempty"`
 }
 
-// ListAccountBillPullerDetails list account bill puller details
-type ListAccountBillPullerDetails struct {
-	Count   uint64                        `json:"count,omitempty"`
-	Details []tablebill.AccountBillPuller `json:"details,omitempty"`
+// ListAccountBillMonthPullTaskDetails list account bill month pull details
+type ListAccountBillMonthPullTaskDetails struct {
+	Count   uint64                           `json:"count,omitempty"`
+	Details []tablebill.AccountBillMonthTask `json:"details,omitempty"`
 }
 
 // ListAccountBillDailyPullTaskDetails list account bill daily pull task details
@@ -87,4 +89,31 @@ type ListAccountBillExchangeRateDetails struct {
 type ListAccountBillSyncRecordDetails struct {
 	Count   uint64                            `json:"count,omitempty"`
 	Details []tablebill.AccountBillSyncRecord `json:"details,omitempty"`
+}
+
+// ItemCommonOpt  bill item table partition parameters
+type ItemCommonOpt struct {
+	Vendor enumor.Vendor `json:"vendor" validate:"required"`
+	Year   int           `json:"year" validate:"required"`
+	Month  int           `json:"month" validate:"required,min=1,max=12"`
+}
+
+// Validate ...
+func (p *ItemCommonOpt) Validate() error {
+	if p == nil {
+		return errf.New(errf.InvalidParameter, "bill partition params is required")
+	}
+	if len(p.Vendor) == 0 {
+		return errf.New(errf.InvalidParameter, "vendor is required")
+	}
+	if p.Year == 0 {
+		return errf.New(errf.InvalidParameter, "year is required")
+	}
+	if p.Month == 0 {
+		return errf.New(errf.InvalidParameter, "month is required")
+	}
+	if p.Month > 12 || p.Month < 0 {
+		return errf.New(errf.InvalidParameter, "month must between 1 and 12")
+	}
+	return nil
 }

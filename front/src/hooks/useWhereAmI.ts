@@ -12,6 +12,7 @@ export const useWhereAmI = (): {
   isSchemePage: boolean;
   isZiyanscr: boolean;
   getBusinessApiPath: () => string;
+  getBizsId: () => number;
 } => {
   const route = useRoute();
   const senario = computed(() => {
@@ -27,15 +28,16 @@ export const useWhereAmI = (): {
     return Senarios.unknown;
   });
 
+  const getBizsId = () => {
+    const { bizs } = useAccountStore();
+    return Number(bizs || getQueryStringParams('bizs') || localStorageActions.get('bizs'));
+  };
+
   /**
    * @returns 业务下需要拼接的 API 路径
    */
   const getBusinessApiPath = () => {
-    const { bizs } = useAccountStore();
-
-    return senario.value === Senarios.business
-      ? `bizs/${bizs || getQueryStringParams('bizs') || localStorageActions.get('bizs')}/`
-      : '';
+    return senario.value === Senarios.business ? `bizs/${getBizsId()}/` : '';
   };
 
   return {
@@ -47,6 +49,7 @@ export const useWhereAmI = (): {
     isSchemePage: senario.value === Senarios.scheme,
     isZiyanscr: senario.value === Senarios.ziyanscr,
     getBusinessApiPath,
+    getBizsId,
   };
 };
 
