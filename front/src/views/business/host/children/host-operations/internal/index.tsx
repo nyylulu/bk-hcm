@@ -207,7 +207,8 @@ export default defineComponent({
           title={computedTitle.value}
           ref={dialogRef}
           width={1500}
-          closeIcon={!isLoading.value}>
+          closeIcon={!isLoading.value}
+          onClosed={handleCancelDialog}>
           {{
             default: () => (
               <Loading loading={isDialogLoading.value}>
