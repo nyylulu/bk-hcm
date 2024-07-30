@@ -1,121 +1,173 @@
-.wid100 {
+.host-application-form-wrapper {
   .apply-form-wrapper {
     margin-top: 52px;
     padding: 0 40px;
   }
-  .flexrow {
-    display: flex;
-    align-items: center;
-    height: 30px !important;
-  }
-}
-.QCLOUDCVM-displayflex {
-  display: flex;
-  align-content: center;
-  .item-warp {
-    margin-right: 50px;
+
+  .form-item-warp {
+    margin: 0 50px 40px 0;
     height: 45px;
-    margin-bottom: 40px;
-    .item-warp-component {
-      width: 300px;
-    }
   }
-}
-.mr10 {
-  margin-right: 10px;
-}
-.QCLOUDCVM-fontweight {
-  margin-left: 40px;
-  text-align: center;
-  color: #313238;
-  font-weight: 400;
-  font-size: 14px;
-}
-.QCLOUDCVM-fontsize {
-  font-size: 14px;
-  margin-left: 5px;
-}
-.QCLOUDCVM-displayflex {
-  display: flex;
-  cursor: pointer;
-}
-.QCLOUDCVM-form-wrapper {
-  margin: 0 24px;
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  .bk-form-item {
-    margin: 8px 0;
-  }
-}
-.tooltips {
-  height: 60px;
-  line-height: 30px;
-  text-align: right;
-  margin-top: 10px;
-  .content {
-    text-align: left;
-    .application {
-      font-size: 14px;
-    }
-  }
-  .calculationDetails {
-    text-decoration: underline;
-    color: #909399;
-    font-size: 12px;
-  }
-}
-.volumetip {
-  color: #e6a23c;
-}
-.QCLOUDCVM-card-content {
-  padding: 0 28px;
-}
-.QCLOUDCVM-card-title {
-  font-weight: 700;
-  font-size: 14px;
-  color: #313238;
-  letter-spacing: 0;
-  margin-right: 16px;
-  margin-bottom: 16px;
-  margin-top: 16px;
-}
-.QCLOUDCVM-card-content-grid-layout {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  column-gap: 24px;
-}
-.operation-column{
-  height: 100%;
-  display: flex;
-  align-items: center;
 
-  .more-action {
-    position: relative;
+  .item-warp-component {
+    width: 300px;
+  }
+
+  .card-title {
+    font-weight: 700;
+    font-size: 14px;
+    color: #313238;
+    letter-spacing: 0;
+    margin-right: 16px;
+    margin-bottom: 16px;
+    margin-top: 16px;
+  }
+
+  .card-content {
+    padding: 0 28px;
+  }
+
+  .operation-column {
+    height: 100%;
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    cursor: pointer;
 
-    & > i {
-      position: absolute;
+    .more-action {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+
+      & > i {
+        position: absolute;
+      }
+
+      &:hover {
+        background-color: #f0f1f5;
+      }
+
+      &.current-operate-row {
+        background-color: #f0f1f5;
+      }
+
+      &.disabled {
+        background-color: #fff;
+        color: #dcdee5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  .mt15 {
+    margin-top: 15;
+  }
+}
+
+.add-resource-requirements-sideslider {
+  .sideslider-layer {
+    padding: 20px;
+    background-color: #f5f7fa;
+
+    .selection-box {
+      width: 600px;
+    }
+  }
+
+  .vpcOrSubnet-select {
+    width: 600px;
+  }
+
+  .commonCard-layer {
+    height: 180px;
+  }
+
+  .commonCard-form {
+    display: flex;
+    align-content: center;
+  }
+
+  .commonCard-text {
+    margin-left: 56px;
+    text-align: center;
+    color: #313238;
+    font-weight: 400;
+    font-size: 14px;
+  }
+
+  .commonCard-subnet-tag {
+    font-size: 14px;
+    color: #63656e;
+  }
+
+  .commonCard-network-title {
+    font-size: 14px;
+    margin-left: 5px;
+  }
+
+  .commonCard-form-select {
+    width: 600px;
+  }
+
+  .idcpm-card {
+    margin: 16px 0px 32px 0;
+  }
+
+  .not-idcpm-card {
+    margin-top: 15px;
+  }
+
+  .example-form {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+
+    .select-model {
+      width: 290px;
     }
 
-    &:hover {
-      background-color: #f0f1f5;
-    }
+    .form-item-raid {
+      margin-left: 15px !important;
+      width: 285px;
 
-    &.current-operate-row {
-      background-color: #f0f1f5;
+      .raidText {
+        background: #f5f7fa;
+        border-radius: 2px;
+        line-height: 32px;
+        display: inline-block;
+        padding: 0 10px;
+        width: 100%;
+      }
     }
+    .select-Affinity {
+      margin-left: 15px !important;
+      width: 295px;
+    }
+    .input-demand {
+      width: 290px;
+    }
+  }
 
-    &.disabled {
-      background-color: #fff;
-      color: #dcdee5;
-      cursor: not-allowed;
+  .tooltips {
+    color: #979ba5;
+    font-size: 12px;
+    .content {
+      text-align: left;
+      .application {
+        font-size: 14px;
+      }
+    }
+    .calculation-details {
+      text-decoration: underline;
+      color: #909399;
+      font-size: 12px;
+    }
+    .volumetip {
+      color: #3a84ff;
+      font-size: 12px;
     }
   }
 }
