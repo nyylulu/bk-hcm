@@ -515,7 +515,7 @@ accountserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-cloudserver
+    repository: bk-hcm-accountserver-oa
     tag:
   ## 日志配置
   ##
@@ -541,7 +541,56 @@ accountserver:
     #    - rootAccountId:
     #      spArnPrefix:
     #      SpPurchaseAccountCloudID:
-
+  # [内部版] 财务侧接口 配置
+  jarvis:
+    endpoints:
+      - http://demo.com
+    appID: 1234
+    appKey: abcd
+    # defines tls related options.
+    tls:
+      # server should be accessed without verifying the TLS certificate.
+      insecureSkipVerify:
+      # server requires TLS client certificate authentication.
+      certFile:
+      # server requires TLS client certificate authentication.
+      keyFile:
+      # trusted root certificates for server.
+      caFile:
+      # the password to decrypt the certificate.
+      password:
+  # 内部版自动拉取汇率
+  exchangeRate:
+    # 启动自动拉取汇率
+    enablePull: true
+    # 拉取间隔，单位分钟
+    pullIntervalMin: 120
+    # 转换目标汇率
+    toCurrency:
+      - CNY
+    # 转换原汇率。可留空，表示匹配全部。
+    fromCurrency:
+      - USD
+      - EUR
+  # [内部版] OBS侧接口配置
+  obs:
+    # 通知obs的api地址
+    endpoints:
+      - http://127.0.0.1:8888
+    # api秘钥
+    apiKey: abcd
+    # defines tls related options.
+    tls:
+      # server should be accessed without verifying the TLS certificate.
+      insecureSkipVerify:
+      # server requires TLS client certificate authentication.
+      certFile:
+      # server requires TLS client certificate authentication.
+      keyFile:
+      # trusted root certificates for server.
+      caFile:
+      # the password to decrypt the certificate.
+      password:
   ## pod配置
   ##
   replicas: 1
@@ -594,6 +643,8 @@ bkCmdbCreateBizUrl: "http://cmdb.bk.com/create_biz"
 bkCmdbCreateBizDocsUrl: "http://cmdb.bk.com/docs"
 # 是否启用云选型
 enableCloudSelection: true
+# 是否启用账单账号功能
+enableAccountBill: true
 
 ## 加密配置，Note: 首次部署后不可修改，否则数据将无法解密
 ##
