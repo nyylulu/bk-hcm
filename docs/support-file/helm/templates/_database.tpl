@@ -33,6 +33,9 @@ writeTimeoutSec: {{ .Values.dbConnConfig.writeTimeoutSec }}
 maxIdleTimeoutMin: {{ .Values.dbConnConfig.maxIdleTimeoutMin }}
 maxOpenConn: {{ .Values.dbConnConfig.maxOpenConn }}
 maxIdleConn: {{ .Values.dbConnConfig.maxIdleConn }}
+limiterQps: {{ .Values.dbConnConfig.limiterQps }}
+limiterBurst: {{ .Values.dbConnConfig.limiterBurst }}
+
 {{- end -}}
 
 {{- define "bk-hcm.databaseConfig" -}}

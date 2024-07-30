@@ -37,5 +37,5 @@ data:
       aesGcm:
         key: {{ .Values.crypto.aesGcm.key }}
         nonce: {{ .Values.crypto.aesGcm.nonce }}
-    objectstore：
+    objectstore:
       {{- toYaml .Values.objectstore | nindent 6 }}

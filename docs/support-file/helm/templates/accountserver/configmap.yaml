@@ -29,3 +29,7 @@ data:
       {{- toYaml .Values.accountserver.exchangeRate | nindent 6 }}
     obs:
       {{- toYaml .Values.accountserver.obs | nindent 6 }}
+    finops:
+      {{- toYaml .Values.finops | nindent 6 }}
+    cmsi:
+      {{- toYaml .Values.cmsi | nindent 6 }}
