@@ -141,7 +141,7 @@ objectstore:
   type: tcloud
   uin: 1234678
   prefix: hcm
-  secretId: abcd
-  secretKey: efgh
+  secretId: xxxx
+  secretKey: xxxx
   bucketUrl: https://1234678.com
   debug: false
