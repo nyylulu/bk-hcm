@@ -135,3 +135,13 @@ esb:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+# 对象存储配置
+objectstore:
+  type: tcloud
+  uin: 1234678
+  prefix: hcm
+  secretId: abcd
+  secretKey: efgh
+  bucketUrl: https://1234678.com
+  debug: false

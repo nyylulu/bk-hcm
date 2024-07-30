@@ -23,5 +23,6 @@ data:
       {{- toYaml .Values.taskserver.log | nindent 6 }}
     async:
       {{- toYaml .Values.taskserver.async | nindent 6 }}
-
+    obsDatabase:
+      {{- toYaml .Values.taskserver.obsDatabase | nindent 6 }}
 

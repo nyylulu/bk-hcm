@@ -57,8 +57,8 @@ resource:
     password:
 maxSlowLogLatencyMS: 200
 limiter:
-  qps: 500
-  burst: 500
+  qps: {{ $cfg.limiterQps }}
+  burst: {{ $cfg.limiterBurst }}
 {{- end -}}
 
 {{- define "bk-hcm.database.host" -}}

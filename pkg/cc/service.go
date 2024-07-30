@@ -373,7 +373,7 @@ type TaskServerSetting struct {
 	Network     Network   `yaml:"network"`
 	Service     Service   `yaml:"service"`
 	Database    DataBase  `yaml:"database"`
-	OBSDatabase *DataBase `yaml:"obs_database,omitempty"`
+	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
 	Log         LogOption `yaml:"log"`
 	Async       Async     `yaml:"async"`
 }
