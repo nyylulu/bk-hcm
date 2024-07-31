@@ -19,7 +19,7 @@ spec:
       - {{ . }}
   {{- end }}
   resources:
-    cpu: 500m
+    cpu: 50m
     memory: 512Mi
     tke.cloud.tencent.com/eni-ip: "1"
   rules:
