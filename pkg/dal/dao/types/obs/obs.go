@@ -32,3 +32,6 @@ type ListOBSBillItemHuaweiDetails struct {
 
 // ListOBSBillItemAwsDetails Obs aws bill item
 type ListOBSBillItemAwsDetails = core.ListResultT[tableobs.OBSBillItemAws]
+
+// ListOBSBillItemGcpDetails Obs gcp bill item
+type ListOBSBillItemGcpDetails = core.ListResultT[tableobs.OBSBillItemGcp]

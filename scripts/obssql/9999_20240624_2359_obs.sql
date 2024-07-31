@@ -153,6 +153,54 @@ CREATE TABLE obs_aws_bills
 insert into id_generator(`resource`, `max_id`)
 values ('obs_aws_bills', '0');
 
+CREATE TABLE obs_gcp_bills (
+    `id`                     varchar(64)  not null,
+    `vendor`                 varchar(64)  not null,
+    `main_account_id`        varchar(64)  not null,
+    `bill_year`              bigint(1)    not null,
+    `bill_month`             tinyint(1)   not null,
+    `set_index`              varchar(255) not null,
+ 
+    `BillingAccountId`       varchar(255) not null,
+    `ServiceId`              varchar(255) not null,
+    `ServiceDescription`     longtext     not null,
+    `SkuId`                  varchar(255) not null,
+    `SkuDescription`         varchar(255) not null,
+    `UsageStartTime`         varchar(255) not null,
+    `UsageEndTime`           varchar(255) not null,
+    `ProjectId`              varchar(255) not null,
+    `ProjectName`            varchar(255) not null,
+    `Cost`                   double       not null,
+    `Currency`               varchar(255) not null,
+    `CurrencyConversionRate` double       not null,
+    `UsageAmount`            double       not null,
+    `UsageUnit`              varchar(255) not null,
+    `CreditsAmount`          varchar(255) not null,
+    `ExportTime`             varchar(255) not null,
+    `Location`               varchar(255) not null,
+    `Country`                varchar(255) not null,
+    `Region`                 varchar(255) not null,
+    `Zone`                   varchar(255) not null,
+    `ProductId`              INT          not null,
+    `YearMonth`              INT          not null,
+    `FetchTime`              varchar(255) not null,
+    `Rate`                   double       not null,
+    `RealCost`               double       not null,
+    `ReturnCost`             double       not null,
+    `DispatchProjectId`      varchar(255) not null,
+
+    index `idx_bill_item` (`set_index`),
+    index `idx_bill_item_delete` (
+                                  `vendor`,
+                                  `bill_year`,
+                                  `bill_month`,
+                                  `main_account_id`
+        )
+);
+
+insert into id_generator(`resource`, `max_id`)
+values ('obs_gcp_bills', '0');
+
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
 SELECT 'v9.9.9' as `hcm_ver`,

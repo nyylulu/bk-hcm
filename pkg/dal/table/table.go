@@ -216,6 +216,8 @@ const (
 	OBSBillHuaweiItemTable = "obs_huawei_bills"
 	// OBSBillAwsItemTable OBS Aws 账单表
 	OBSBillAwsItemTable = "obs_aws_bills"
+	// OBSBillGcpItemTable OBS Gcp 账单表
+	OBSBillGcpItemTable = "obs_gcp_bills"
 
 	// RootAccountBillConfigTable 一级账号账单配置表
 	RootAccountBillConfigTable = "root_account_bill_config"
@@ -341,6 +343,7 @@ var TableMap = map[Name]struct{}{
 
 	OBSBillHuaweiItemTable: {},
 	OBSBillAwsItemTable:    {},
+	OBSBillGcpItemTable:    {},
 	RecycleModuleInfo:      {},
 	RecycleHostInfo:        {},
 }

@@ -83,6 +83,11 @@ func (act CleanAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, 
 			return nil, err
 		}
 		return nil, nil
+	case enumor.Gcp:
+		if err := act.doGcpClean(kt.Kit(), filter); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	case enumor.Aws:
 		if err := act.doAwsClean(kt.Kit(), filter); err != nil {
 			return nil, err
@@ -109,7 +114,7 @@ func (act CleanAction) doHuaweiClean(kt *kit.Kit, filter *filter.Expression) err
 			logs.Warnf("count huawei obs bill item failed, empty count, resp %v rid: %s", result, kt.Rid)
 			return fmt.Errorf("count huawei obs bill item failed, empty count, resp %v", result)
 		}
-		logs.Infof("found huawei obs bill item count %d", *result.Count)
+		logs.Infof("found huawei obs bill item count %d, rid: %s", *result.Count, kt.Rid)
 		if *result.Count > 0 {
 			_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt,
 				func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
@@ -122,7 +127,41 @@ func (act CleanAction) doHuaweiClean(kt *kit.Kit, filter *filter.Expression) err
 			if err != nil {
 				return err
 			}
-			logs.Infof("successfully clean huawei obs bill item count %d", core.DefaultMaxPageLimit)
+			logs.Infof("successfully clean huawei obs bill item count %d, rid: %s", core.DefaultMaxPageLimit, kt.Rid)
+			continue
+		}
+		break
+	}
+	return nil
+}
+
+func (act CleanAction) doGcpClean(kt *kit.Kit, filter *filter.Expression) error {
+	for {
+		result, err := actcli.GetObsDaoSet().OBSBillItemGcp().List(kt, &daotypes.ListOption{
+			Filter: filter,
+			Page: &core.BasePage{
+				Count: true,
+			},
+		})
+		if err != nil {
+			logs.Warnf("count gcp obs bill item failed, err %s, rid: %s", err.Error(), kt.Rid)
+			return fmt.Errorf("count gcp obs bill item failed, err %s", err.Error())
+		}
+
+		logs.Infof("found gcp obs bill item count %d, rid: %s", result.Count, kt.Rid)
+		if result.Count > 0 {
+			_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt,
+				func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+					if err := actcli.GetObsDaoSet().OBSBillItemGcp().DeleteWithTx(
+						kt, txn, filter, uint64(core.DefaultMaxPageLimit)); err != nil {
+						logs.Warnf("delete gcp obs bill item by filter %s failed, err %s, rid: %s", filter, kt.Rid)
+					}
+					return nil, nil
+				})
+			if err != nil {
+				return err
+			}
+			logs.Infof("successfully clean gcp obs bill item count %d, rid: %s", core.DefaultMaxPageLimit, kt.Rid)
 			continue
 		}
 		break
@@ -156,7 +195,7 @@ func (act CleanAction) doAwsClean(kt *kit.Kit, filter *filter.Expression) error 
 			if err != nil {
 				return err
 			}
-			logs.Infof("successfully clean aws obs bill item count %d", core.DefaultMaxPageLimit)
+			logs.Infof("successfully clean aws obs bill item count %d, rid: %s", core.DefaultMaxPageLimit, kt.Rid)
 			continue
 		}
 		break

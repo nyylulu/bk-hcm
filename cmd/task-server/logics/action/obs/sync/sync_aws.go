@@ -21,8 +21,6 @@ package sync
 
 import (
 	"fmt"
-	"math/rand"
-	"time"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	"hcm/pkg/api/core"
@@ -37,6 +35,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/retry"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/shopspring/decimal"
@@ -55,20 +54,14 @@ func (act SyncAction) getAwsMainAccount(kt *kit.Kit, mainAccountID string) (
 func (act SyncAction) doBatchSyncAwsBillitem(kt *kit.Kit,
 	mainAccount *asproto.MainAccountGetResult[accountsetcore.AwsMainAccountExtension],
 	syncOpt *SyncOption) error {
+	rty := retry.NewRetryPolicy(uint(defaultRetryTimes), [2]uint{10, 500})
 	for start := syncOpt.Start; start < syncOpt.Start+syncOpt.Limit; start = start + uint64(core.DefaultMaxPageLimit) {
-		var err error
-		for retry := 0; retry < defaultRetryTimes; retry++ {
-			if err = act.doSyncAwsBillItem(
-				kt, mainAccount, syncOpt, start, uint64(core.DefaultMaxPageLimit)); err != nil {
-
-				logs.Warnf("do sync aws bill %v, start %d, limit %d, retry %d, rid %s",
-					syncOpt, start, uint64(core.DefaultMaxPageLimit), retry+1, kt.Rid)
-				time.Sleep(time.Millisecond * time.Duration(rand.Intn(500)))
-				continue
-			}
-			break
-		}
+		err := rty.BaseExec(kt, func() error {
+			return act.doSyncAwsBillItem(kt, mainAccount, syncOpt, start, uint64(core.DefaultMaxPageLimit))
+		})
 		if err != nil {
+			logs.Warnf("do sync aws bill failed,  err: %v, opt: %v, start %d, limit %d, rid %s", err, syncOpt, start,
+				uint64(core.DefaultMaxPageLimit), kt.Rid)
 			return err
 		}
 	}

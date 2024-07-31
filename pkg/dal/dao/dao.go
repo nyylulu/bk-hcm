@@ -120,6 +120,7 @@ type Set interface {
 	AccountBillSummaryRoot() bill.AccountBillSummaryRoot
 	OBSBillItemHuawei() obs.OBSBillItemHuawei
 	OBSBillItemAws() obs.OBSBillItemAws
+	OBSBillItemGcp() obs.OBSBillItemGcp
 	RootAccountBillConfig() bill.RootAccountBillConfig
 	AccountBillExchangeRate() bill.AccountBillExchangeRate
 	AccountBillSyncRecord() bill.AccountBillSyncRecord
@@ -591,6 +592,14 @@ func (s *set) OBSBillItemHuawei() obs.OBSBillItemHuawei {
 // OBSBillItemAws returns OBSBillItemAws dao.
 func (s *set) OBSBillItemAws() obs.OBSBillItemAws {
 	return &obs.OBSBillItemAwsDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// OBSBillItemGcp returns OBSBillItemGcp dao.
+func (s *set) OBSBillItemGcp() obs.OBSBillItemGcp {
+	return &obs.OBSBillItemGcpDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
