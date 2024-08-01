@@ -3,6 +3,7 @@ import { Form } from 'bkui-vue';
 import { defineComponent, PropType, ref, watch, nextTick } from 'vue';
 import AccountSelector from '@/components/account-selector/index.vue';
 import { VendorEnum } from '@/common/constant';
+import { Senarios, useWhereAmI } from './useWhereAmI';
 
 const { FormItem } = Form;
 
@@ -18,6 +19,7 @@ export const useAccountSelectorCard = () => {
     emits: ['update:modelValue'],
     setup(props, { emit }) {
       const selectedVal = ref(props.modelVale);
+      const { whereAmI } = useWhereAmI();
       const AccountSelectorRef = ref();
       watch(
         () => selectedVal.value,
@@ -28,6 +30,7 @@ export const useAccountSelectorCard = () => {
       watch(
         () => AccountSelectorRef.value?.accountList,
         async (newAccountList) => {
+          if (whereAmI.value !== Senarios.business) return;
           if (newAccountList && Array.isArray(newAccountList)) {
             await nextTick(); // 等待下一次 DOM 更新周期
             const proxyArray = [...AccountSelectorRef.value.accountList];

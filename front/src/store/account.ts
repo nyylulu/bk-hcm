@@ -155,7 +155,7 @@ export const useAccountStore = defineStore({
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/types/add_account`, data);
     },
     /**
-     * @description: 查询申请账号列表
+     * @description: 查询单据列表
      * @param {number} data
      * @return {*}
      */
@@ -163,7 +163,7 @@ export const useAccountStore = defineStore({
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/list`, data);
     },
     /**
-     * @description: 查询申请账号列表
+     * @description: 查询单据详情
      * @param {number} data
      * @return {*}
      */
@@ -194,12 +194,10 @@ export const useAccountStore = defineStore({
     },
 
     async updateAccountList(data: any) {
-      console.log('data', data);
       this.accountList = data?.map(({ id, name }: { id: string; name: string }) => ({
         id,
         name,
       }));
-      console.log('this.accountList', this.accountList);
     },
 
     /**

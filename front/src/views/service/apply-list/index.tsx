@@ -35,6 +35,7 @@ export default defineComponent({
                     query: {
                       ...route.query,
                       id: data.id,
+                      source: data.source,
                     },
                   });
                 }}>

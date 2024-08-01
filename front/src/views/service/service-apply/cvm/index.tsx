@@ -908,20 +908,20 @@ export default defineComponent({
 
     return () => (
       <div>
-        <DetailHeader backRouteName='hostBusinessList'>
+        <DetailHeader backRouteName={whereAmI.value === Senarios.business ? 'hostBusinessList' : 'reosurceManagePage'}>
           <p class={'purchase-cvm-header-title'}>购买主机</p>
         </DetailHeader>
         <div
           class='create-form-container cvm-wrap'
           style={whereAmI.value === Senarios.resource && { padding: 0, marginBottom: '80px' }}>
           <Form model={formData} rules={formRules} ref={formRef} onSubmit={handleFormSubmit} formType='vertical'>
-            {
+            {whereAmI.value === Senarios.business && (
               <AccountSelectorCard
                 v-model={cond.cloudAccountId}
                 bkBizId={cond.bizId}
                 onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
               />
-            }
+            )}
             {isAccountShow.value ? (
               <ApplicationForm isbusiness={true}></ApplicationForm>
             ) : (

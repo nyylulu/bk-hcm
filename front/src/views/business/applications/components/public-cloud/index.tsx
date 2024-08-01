@@ -37,7 +37,7 @@ export default defineComponent({
                 onClick={() => {
                   router.push({
                     path: '/business/applications/detail',
-                    query: { ...route.query, id: data.id },
+                    query: { ...route.query, id: data.id, source: data.source },
                   });
                 }}>
                 {data.sn}

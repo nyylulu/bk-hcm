@@ -141,6 +141,19 @@ export const APPLY_TYPES = [
 // 二级账号管理单据类型
 export const ACCOUNT_TYPES = ['create_main_account', 'update_main_account'];
 
+// bpass单据
+export const BPASS_TYPES = ['bpass'];
+
+// 常规单据
+export const COMMON_TYPES = [
+  'add_account',
+  'service_apply',
+  'create_cvm',
+  'create_disk',
+  'create_vpc',
+  'create_load_balancer',
+];
+
 // 单据类型映射 (英中)
 export const APPLICATION_TYPE_MAP = {
   add_account: '新增账号',
