@@ -38,11 +38,11 @@ export const useAccountSelectorCard = () => {
         },
         { deep: true },
       );
-      const handleChange = (account: any) => {
+      const handleChange = async (account: any) => {
         isAccountShow.value = account?.vendor === VendorEnum.ZIYAN;
+        await nextTick();
         props.onAccountChange?.(account);
       };
-
       return () => (
         <div>
           <CommonCard class='mb16' title={() => '所属账号'} layout={'grid'}>
