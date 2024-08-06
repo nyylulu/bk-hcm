@@ -108,8 +108,8 @@ export default defineComponent({
     );
     return () => (
       <bk-select v-bind={attrs} filterable default-first-option v-model={props.value} onChange={handleSelectorChange}>
-        {options.value.map((item, index) => (
-          <bk-option key={index} value={item.value} label={item.label}></bk-option>
+        {options.value.map((item) => (
+          <bk-option key={item.value} value={item.value} label={item.label}></bk-option>
         ))}
         {props.separateCampus && !regionsIsEmpty.value && <bk-option label='分Campus' value='cvm_separate_campus' />}
       </bk-select>
