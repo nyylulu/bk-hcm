@@ -1338,11 +1338,14 @@ type ObjectStore struct {
 
 // ObjectStoreTCloud tencent cloud cos config
 type ObjectStoreTCloud struct {
-	COSPrefix    string `yaml:"prefix"`
-	COSSecretID  string `yaml:"secretId"`
-	COSSecretKey string `yaml:"secretKey"`
-	COSBucketURL string `yaml:"bucketUrl"`
-	COSIsDebug   bool   `yaml:"debug"`
+	UIN             string `yaml:"uin"`
+	COSPrefix       string `yaml:"prefix"`
+	COSSecretID     string `yaml:"secretId"`
+	COSSecretKey    string `yaml:"secretKey"`
+	COSBucketURL    string `yaml:"bucketUrl"`
+	CosBucketName   string `yaml:"bucketName"`
+	CosBucketRegion string `yaml:"bucketRegion"`
+	COSIsDebug      bool   `yaml:"isDebug"`
 }
 
 // Validate do validate
@@ -1355,6 +1358,15 @@ func (ost ObjectStoreTCloud) Validate() error {
 	}
 	if len(ost.COSBucketURL) == 0 {
 		return errors.New("cos bucket_url cannot be empty")
+	}
+	if len(ost.CosBucketName) == 0 {
+		return errors.New("cos bucket_name cannot be empty")
+	}
+	if len(ost.CosBucketRegion) == 0 {
+		return errors.New("cos bucket_region cannot be empty")
+	}
+	if len(ost.UIN) == 0 {
+		return errors.New("cos uin cannot be empty")
 	}
 	return nil
 }

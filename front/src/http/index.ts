@@ -239,13 +239,16 @@ function handleReject(error: any, config: any) {
     return Promise.reject(nextError);
   }
   handleCustomErrorCode(error);
-  if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
   if (error.code === 2000012 && error.message) {
     useAccountStore().updateSecurityConfirmMessage(error.message);
   }
   console.error(error.message);
   // bk_ticket失效后的登录弹框
-  if (error.code === 2000000 && (error.message === 'bk_ticket cookie don\'t exists' || error.message === 'bk_token cookie don\'t exists')) {    // 打开节流阀
+  if (
+    error.code === 2000000 &&
+    (error.message === "bk_ticket cookie don't exists" || error.message === "bk_token cookie don't exists")
+  ) {
+    // 打开节流阀
     isLoginValid = true;
     InvalidLogin();
   }
@@ -257,11 +260,13 @@ function handleReject(error: any, config: any) {
  * @param error 异常
  */
 function handleCustomErrorCode(error: any) {
-  switch (error.code) {
-    case 2000014:
-      Message({ message: '当前负载均衡正在变更中，云平台限制新的任务同时变更。', theme: 'error' });
-      return;
+  if (error.code === 2000014) {
+    Message({ message: '当前负载均衡正在变更中，云平台限制新的任务同时变更。', theme: 'error' });
+    return;
   }
+  // zenlayer 账单导入错误码
+  if ([2000015, 2000016, 2000017].includes(error.code)) return;
+
   if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
 }
 

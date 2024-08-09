@@ -108,3 +108,15 @@
 .bk-badge-main {
   line-height: 1.5;
 }
+
+.cell-private-ip,
+.cell-public-ip {
+  .copy-icon {
+    display: none;
+  }
+  &:hover {
+    .copy-icon {
+      display: inline-flex;
+    }
+  }
+}

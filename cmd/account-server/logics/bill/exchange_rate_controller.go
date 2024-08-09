@@ -34,6 +34,7 @@ import (
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/jarvis"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/times"
 )
 
 // ExchangeRateOpt ...
@@ -214,13 +215,13 @@ func (c *ExchangeRateController) listRateFromDB(kt *kit.Kit, year int, month int
 func (c *ExchangeRateController) sync(kt *kit.Kit) {
 
 	// 同步前两个月的汇率, 当月汇率需要等待下月才有
-	year, month := getLastBillMonth()
+	year, month := times.GetLastMonthUTC()
 	if err := c.syncMonth(kt, year, month); err != nil {
 		logs.Errorf("fail to sync exchange rate, err: %v, period: %d-%d, rid: %s",
 			err, year, month, kt.Rid)
 	}
 
-	year, month = getMonthOffset(-2)
+	year, month = times.GetRelativeMonthUTC(-2)
 	if err := c.syncMonth(kt, year, month); err != nil {
 		logs.Errorf("fail to sync exchange rate, err: %v, period: %d-%d, rid: %s",
 			err, year, month, kt.Rid)

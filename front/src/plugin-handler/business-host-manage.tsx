@@ -26,10 +26,10 @@ type UseColumnsParams = {
 };
 
 const useColumns = ({ columnType = 'cvms', isSimpleShow = false, vendor, extra }: UseColumnsParams) => {
-  const { authVerifyData, handleAuth } = useVerify();
-  const globalPermissionDialogStore = useGlobalPermissionDialog();
   const { t } = useI18n();
   const router = useRouter();
+  const { authVerifyData, handleAuth } = useVerify();
+  const globalPermissionDialogStore = useGlobalPermissionDialog();
   const { handleOperate, isOperateDisabled, currentOperateRowIndex } = useSingleOperation({
     beforeConfirm() {
       extra.isLoading.value = true;

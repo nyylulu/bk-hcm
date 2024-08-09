@@ -8,12 +8,13 @@ import CreateAdjustSideSlider from './create';
 import Amount from '../components/amount';
 import Confirm from '@/components/confirm';
 import BatchOperation from './batch-operation';
+import BillsExportButton from '../components/bills-export-button';
 
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import { deleteBillsAdjustment, reqBillsAdjustmentList } from '@/api/bill';
+import { deleteBillsAdjustment, exportBillsAdjustmentItems, reqBillsAdjustmentList } from '@/api/bill';
 import { timeFormatter } from '@/common/util';
 import {
   BILL_ADJUSTMENT_STATE__MAP,
@@ -24,7 +25,7 @@ import {
 import { DoublePlainObject, QueryRuleOPEnum, RulesItem } from '@/typings';
 import useBillStore from '@/store/useBillStore';
 import { computed } from '@vue/reactivity';
-import { formatBillCost } from '@/utils';
+import { BillSearchRules, formatBillCost } from '@/utils';
 import { useRoute } from 'vue-router';
 
 export default defineComponent({
@@ -193,16 +194,10 @@ export default defineComponent({
     });
 
     onMounted(() => {
-      // 只有二级账号有保存的需求
-      const rules = [];
-      if (route.query[BILL_MAIN_ACCOUNTS_KEY]) {
-        rules.push({
-          field: 'main_account_id',
-          op: QueryRuleOPEnum.IN,
-          value: JSON.parse(atob(route.query[BILL_MAIN_ACCOUNTS_KEY] as string)),
-        });
-      }
-      reloadTable(rules);
+      // 只有业务、二级账号有保存的需求
+      const billSearchRules = new BillSearchRules();
+      billSearchRules.addRule(route, BILL_MAIN_ACCOUNTS_KEY, 'main_account_id', QueryRuleOPEnum.IN);
+      reloadTable(billSearchRules.rules);
     });
 
     return () => (
@@ -230,7 +225,18 @@ export default defineComponent({
                     {t('新增调账')}
                   </Button>
                   <Button>{t('导入')}</Button>
-                  <Button>{t('导出')}</Button>
+                  <BillsExportButton
+                    cb={() =>
+                      exportBillsAdjustmentItems({
+                        bill_year: bill_year.value,
+                        bill_month: bill_month.value,
+                        export_limit: 200000,
+                        filter,
+                      })
+                    }
+                    title={t(`账单调整`)}
+                    content={t(`导出当月账单调整的数据`)}
+                  />
                   <Button onClick={() => handleBatchOperation('delete')} disabled={selections.value.length === 0}>
                     {t('批量删除')}
                   </Button>
