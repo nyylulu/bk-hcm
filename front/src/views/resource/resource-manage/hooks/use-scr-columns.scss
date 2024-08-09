@@ -114,3 +114,15 @@
   color: #409eff;
   cursor: pointer;
 }
+
+.cell-private-ip,
+.cell-public-ip {
+  .copy-icon {
+    display: none;
+  }
+  &:hover {
+    .copy-icon {
+      display: inline-flex;
+    }
+  }
+}

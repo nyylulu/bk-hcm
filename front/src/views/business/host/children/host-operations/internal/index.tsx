@@ -7,6 +7,7 @@ import { BkDropdownItem, BkDropdownMenu } from 'bkui-vue/lib/dropdown';
 import { useZiyanScrStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import CommonLocalTable from '@/components/LocalTable';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
 import { OperationActions, operationMap } from '../index';
@@ -63,6 +64,8 @@ export default defineComponent({
       isZiyanOnly,
       isZiyanRecycle,
       hostPrivateIP4s,
+      selectedRowPrivateIPs,
+      selectedRowPublicIPs,
       handleSwitch,
       handleConfirm,
       handleCancelDialog,
@@ -195,6 +198,16 @@ export default defineComponent({
                         [[bkTooltips, operationDisabledTips(opType as OperationActions)]],
                       );
                     })}
+                  <CopyToClipboard
+                    type='dropdown-item'
+                    text='复制内网IP'
+                    content={selectedRowPrivateIPs.value?.join?.(',')}
+                  />
+                  <CopyToClipboard
+                    type='dropdown-item'
+                    text='复制公网IP'
+                    content={selectedRowPublicIPs.value?.join?.(',')}
+                  />
                 </BkDropdownMenu>
               ),
             }}
