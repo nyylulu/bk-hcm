@@ -602,7 +602,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '地域',
       field: 'region',
-      render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      render: ({ cell }: { cell: string }) => getRegionCn(cell) || '--',
     },
     {
       label: '园区',
