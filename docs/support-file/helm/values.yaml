@@ -990,4 +990,6 @@ objectstore:
   secretId: xxxx
   secretKey: xxxx
   bucketUrl: https://1234678.com
-  debug: false
+  bucketName: bucket
+  bucketRegion: ap-xxx
+  isDebug: false

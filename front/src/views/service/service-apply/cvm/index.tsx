@@ -20,7 +20,6 @@ import { ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import useCvmOptions from '../hooks/use-cvm-options';
 import useCondtion from '../hooks/use-condtion';
 import useCvmFormData, { getDataDiskDefaults, getGcpDataDiskDefaults } from '../hooks/use-cvm-form-data';
-// import { useHostStore } from '@/store/host';
 
 import { useAccountStore, useResourceStore } from '@/store';
 import CommonCard from '@/components/CommonCard';

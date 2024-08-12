@@ -35,12 +35,12 @@ func (s *service) CreateRawBill(cts *rest.Contexts) (interface{}, error) {
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	uploadPath := generateFilePath(req)
+	uploadPath := generateFilePath(req.RawBillPathParam)
 	buffer, err := generateCSV(req.Items)
 	if err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	if err := s.ostore.Upload(cts.Request.Request.Context(), uploadPath, buffer); err != nil {
+	if err := s.ostore.Upload(cts.Kit, uploadPath, buffer); err != nil {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 	return &core.CreateResult{}, nil

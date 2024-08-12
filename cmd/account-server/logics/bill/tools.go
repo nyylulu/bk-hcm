@@ -45,24 +45,6 @@ func getInternalKit() *kit.Kit {
 	return newKit
 }
 
-func getCurrentBillMonth() (int, int) {
-	now := time.Now().UTC()
-	return now.Year(), int(now.Month())
-}
-
-func getLastBillMonth() (int, int) {
-	now := time.Now().UTC()
-	lastMonthNow := now.AddDate(0, -1, 0)
-	return lastMonthNow.Year(), int(lastMonthNow.Month())
-}
-func getMonthOffset(offset int) (int, int) {
-	date := time.Now().UTC()
-	if offset != 0 {
-		date = date.AddDate(0, offset, 0)
-	}
-	return date.Year(), int(date.Month())
-}
-
 func getTaskServerKeyList(sd serviced.ServiceDiscover) ([]string, error) {
 	taskServerNameList, err := sd.GetServiceAllNodeKeys(cc.TaskServerName)
 	if err != nil {
