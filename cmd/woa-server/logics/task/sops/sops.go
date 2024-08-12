@@ -39,10 +39,10 @@ func CreateInitSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ip, de
 
 	// 操作系统类型(Linux:1 Windows:2)
 	templateID := sopsapi.InitLinuxTemplateID
-	taskName := sopsapi.InitLinuxTaskNamePrefix + "ieod_init"
+	taskName := fmt.Sprintf(sopsapi.InitLinuxTaskNamePrefix, ip)
 	if bkOsType == cmdb.WindowsOsType {
 		templateID = sopsapi.InitWindowsTemplateID
-		taskName = sopsapi.InitWindowsTaskNamePrefix + "ieod_init"
+		taskName = fmt.Sprintf(sopsapi.InitWindowsTaskNamePrefix, ip)
 	}
 
 	params := map[string]interface{}{
@@ -72,10 +72,10 @@ func CreateIdleCheckSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, i
 
 	// 操作系统类型(Linux:1 Windows:2)
 	templateID := sopsapi.IdleCheckLinux
-	taskName := sopsapi.IdleCheckLinuxTaskNamePrefix + "isclear"
+	taskName := fmt.Sprintf(sopsapi.IdleCheckLinuxTaskNamePrefix, ip)
 	if bkOsType == cmdb.WindowsOsType {
 		templateID = sopsapi.IdleCheckWindows
-		taskName = sopsapi.IdleCheckWindowsTaskNamePrefix + "isclear"
+		taskName = fmt.Sprintf(sopsapi.IdleCheckWindowsTaskNamePrefix, ip)
 	}
 
 	params := map[string]interface{}{
@@ -108,7 +108,7 @@ func CreateConfigCheckSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface,
 
 	// 操作系统类型(Linux:1 Windows:2)
 	templateID := sopsapi.ConfigCheckLinux
-	taskName := sopsapi.ConfigCheckLinuxTaskNamePrefix + "confcheck"
+	taskName := fmt.Sprintf(sopsapi.ConfigCheckLinuxTaskNamePrefix, ip)
 
 	params := map[string]interface{}{
 		"${biz_cc_id}":   bkBizID,
@@ -134,7 +134,7 @@ func CreateDataClearSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, i
 
 	// 操作系统类型(Linux:1 Windows:2)
 	templateID := sopsapi.DataClearLinux
-	taskName := sopsapi.DataClearLinuxTaskNamePrefix + "delete_data"
+	taskName := fmt.Sprintf(sopsapi.DataClearLinuxTaskNamePrefix, ip)
 
 	params := map[string]interface{}{
 		"${biz_cc_id}":   bkBizID,

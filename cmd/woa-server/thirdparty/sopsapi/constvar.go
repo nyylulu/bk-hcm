@@ -35,25 +35,25 @@ const (
 	// InitLinuxTemplateID 初始化-Linux-的流程模版ID
 	InitLinuxTemplateID int64 = 10078
 	// InitLinuxTaskNamePrefix 初始化-Linux-新建任务名称的前缀
-	InitLinuxTaskNamePrefix = "【常用】【SA】【Linux】初始化-任务-"
+	InitLinuxTaskNamePrefix = "【常用】【SA】【Linux】初始化-%s"
 	// InitWindowsTemplateID 初始化-Windows-的流程模版ID
 	InitWindowsTemplateID int64 = 10082
 	// InitWindowsTaskNamePrefix 初始化-Windows-新建任务名称的前缀
-	InitWindowsTaskNamePrefix = "【常用】【SA】【Windows】初始化-任务-"
+	InitWindowsTaskNamePrefix = "【常用】【SA】【Windows】初始化-%s"
 	// ConfigCheckLinux 配置检查-Linux（已确认:不需要Windows）
 	ConfigCheckLinux int64 = 10069
 	// ConfigCheckLinuxTaskNamePrefix 配置检查-Linux-新建任务名称的前缀
-	ConfigCheckLinuxTaskNamePrefix = "【常用】【SA】【Linux】配置检查-任务-"
+	ConfigCheckLinuxTaskNamePrefix = "【常用】【SA】【Linux】配置检查-%s"
 	// DataClearLinux 数据清理-Linux（已确认:不需要Windows）
 	DataClearLinux int64 = 10201
 	// DataClearLinuxTaskNamePrefix 数据清理-Linux-新建任务名称的前缀
-	DataClearLinuxTaskNamePrefix = "【危险】【SA】【Linux】数据清理-任务-"
+	DataClearLinuxTaskNamePrefix = "【危险】【SA】【Linux】数据清理-%s"
 	// IdleCheckLinux 空闲检查-Linux
 	IdleCheckLinux int64 = 10102
 	// IdleCheckLinuxTaskNamePrefix 空闲检查-Linux-新建任务名称的前缀
-	IdleCheckLinuxTaskNamePrefix = "【回收接口调用】【SA】【Linux】空闲检查-任务-"
+	IdleCheckLinuxTaskNamePrefix = "【回收接口调用】【SA】【Linux】空闲检查-%s"
 	// IdleCheckWindows 空闲检查-Windows
 	IdleCheckWindows int64 = 10103
 	// IdleCheckWindowsTaskNamePrefix 空闲检查-Windows-新建任务名称的前缀
-	IdleCheckWindowsTaskNamePrefix = "【回收接口调用】【SA】【Windows】空闲检查-任务-"
+	IdleCheckWindowsTaskNamePrefix = "【回收接口调用】【SA】【Windows】空闲检查-%s"
 )
