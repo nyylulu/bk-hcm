@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, watch, nextTick, computed } from 'vue';
+import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
 import { Input, Button, Sideslider, Message, Popover, Card, Dropdown } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -89,6 +89,10 @@ export default defineComponent({
     const IDCPMIndex = ref(-1);
     const QCLOUDCVMIndex = ref(-1);
     const resourceFormRef = ref();
+    const dropdownMenuShowState = reactive({
+      idc: false,
+      cvm: false,
+    });
     const { columns: CloudHostcolumns } = useColumns('CloudHost');
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
     const PhysicalMachineoperation = ref({
@@ -101,24 +105,40 @@ export default defineComponent({
               克隆
             </Button>
             <Dropdown
-              trigger='click'
+              trigger='manual'
               popoverOptions={{
                 renderType: 'shown',
                 onAfterShow: () => (IDCPMIndex.value = index),
-                onAfterHidden: () => (IDCPMIndex.value = -1),
+                onAfterHidden: () => {
+                  IDCPMIndex.value = -1;
+                  dropdownMenuShowState.idc = false;
+                },
+                forceClickoutside: true,
               }}>
               {{
                 default: () => (
-                  <div class={`more-action${IDCPMIndex.value === index ? 'current-operate-row' : ''}`}>
+                  <div
+                    class={`more-action${IDCPMIndex.value === index ? ' current-operate-row' : ''}`}
+                    onClick={() => (dropdownMenuShowState.idc = true)}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
                 content: () => (
                   <DropdownMenu>
-                    <DropdownItem key='retry' onClick={() => modifylist(row, index, 'IDCPM')}>
+                    <DropdownItem
+                      key='retry'
+                      onClick={() => {
+                        modifylist(row, index, 'IDCPM');
+                        dropdownMenuShowState.idc = false;
+                      }}>
                       修改
                     </DropdownItem>
-                    <DropdownItem key='stop' onClick={() => deletelist(index, 'IDCPM')}>
+                    <DropdownItem
+                      key='stop'
+                      onClick={() => {
+                        deletelist(index, 'IDCPM');
+                        dropdownMenuShowState.idc = false;
+                      }}>
                       删除
                     </DropdownItem>
                   </DropdownMenu>
@@ -139,24 +159,41 @@ export default defineComponent({
               克隆
             </Button>
             <Dropdown
-              trigger='click'
+              trigger='manual'
+              isShow={dropdownMenuShowState.cvm}
               popoverOptions={{
                 renderType: 'shown',
                 onAfterShow: () => (QCLOUDCVMIndex.value = index),
-                onAfterHidden: () => (QCLOUDCVMIndex.value = -1),
+                onAfterHidden: () => {
+                  QCLOUDCVMIndex.value = -1;
+                  dropdownMenuShowState.cvm = false;
+                },
+                forceClickoutside: true,
               }}>
               {{
                 default: () => (
-                  <div class={`more-action${QCLOUDCVMIndex.value === index ? ' current-operate-row' : ''}`}>
+                  <div
+                    class={`more-action${QCLOUDCVMIndex.value === index ? ' current-operate-row' : ''}`}
+                    onClick={() => (dropdownMenuShowState.cvm = true)}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
                 content: () => (
                   <DropdownMenu>
-                    <DropdownItem key='retry' onClick={() => modifylist(row, index, 'QCLOUDCVM')}>
+                    <DropdownItem
+                      key='retry'
+                      onClick={() => {
+                        modifylist(row, index, 'QCLOUDCVM');
+                        dropdownMenuShowState.cvm = false;
+                      }}>
                       修改
                     </DropdownItem>
-                    <DropdownItem key='stop' onClick={() => deletelist(index, 'QCLOUDCVM')}>
+                    <DropdownItem
+                      key='stop'
+                      onClick={() => {
+                        deletelist(index, 'QCLOUDCVM');
+                        dropdownMenuShowState.cvm = false;
+                      }}>
                       删除
                     </DropdownItem>
                   </DropdownMenu>
