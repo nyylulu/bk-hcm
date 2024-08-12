@@ -11,6 +11,7 @@ import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { VendorEnum } from '@/common/constant';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
+import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
 
 interface ISearchModal {
   vendor: VendorEnum[];
@@ -152,6 +153,7 @@ export default defineComponent({
                 rootAccountId={modal.value.root_account_id}
                 productId={modal.value.product_id}
                 autoSelect={props.autoSelectMainAccount}
+                urlKey={BILL_MAIN_ACCOUNTS_KEY}
               />
             </div>
           )}

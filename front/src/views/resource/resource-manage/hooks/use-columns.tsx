@@ -2030,6 +2030,20 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: any) => formatBillCost(cell),
       sort: true,
     },
+    {
+      label: '调账人民币（元）',
+      field: 'adjustment_rmb_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '调账美金（美元）',
+      field: 'adjustment_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
   ];
 
   const billsProductSummaryColumns = [
@@ -2116,10 +2130,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2185,10 +2198,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2254,10 +2266,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2323,10 +2334,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2437,10 +2447,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',

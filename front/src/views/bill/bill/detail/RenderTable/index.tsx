@@ -8,7 +8,7 @@ import ImportBillDetailDialog from '../ImportBillDetailDialog';
 import { useI18n } from 'vue-i18n';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
-import { VendorEnum } from '@/common/constant';
+import { VendorEnum, VendorMap } from '@/common/constant';
 import { exportBillsItems, reqBillsItemList, reqBillsRootAccountSummaryList } from '@/api/bill';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 
@@ -113,8 +113,8 @@ export default defineComponent({
                       filter,
                     })
                   }
-                  title={t('账单汇总-一级账号')}
-                  content={t('导出当月一级账号的账单数据')}
+                  title={t(`账单明细-(${VendorMap[props.vendor]})`)}
+                  content={t(`导出当月${VendorMap[props.vendor]}的账单数据`)}
                 />
               </>
             ),

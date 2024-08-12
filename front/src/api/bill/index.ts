@@ -16,6 +16,8 @@ import {
   BillsSummaryListReqParamsWithBizs,
   BillsBizSummaryResData,
   BillsSummarySumResData,
+  BillsSummaryListReqParamsWithProductIds,
+  BillsExportReqParamsWithProductIds,
 } from '@/typings/bill';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -53,17 +55,6 @@ export const reqBillsMainAccountSummaryList = async (
   data: BillsSummaryListReqParams,
 ): Promise<BillsMainAccountSummaryResData> => {
   return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/main-account-summarys/list`, data);
-};
-
-// 拉取当月运营产品账单汇总
-export const reqBillsProductSummaryList = async (data: {
-  bill_year: number;
-  bill_month: number;
-  op_product_ids: number[];
-  filter: FilterType;
-  page: IPageQuery;
-}): Promise<BillsMainAccountSummaryResData> => {
-  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/list`, data);
 };
 
 // 拉取当月业务账单汇总
@@ -196,4 +187,23 @@ export const exportBillsItems = async (vendor: VendorEnum, data: BillsExportReqP
 // 导出账单调整数据
 export const exportBillsAdjustmentItems = async (data: BillsExportReqParams): Promise<BillsExportResData> => {
   return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/adjustment_items/export`, data);
+};
+
+// 账单同步(云厂商)
+export const syncRecordsBills = async (data: { bill_year: number; bill_month: number; vendor: VendorEnum }) => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/sync_records`, data);
+};
+
+// 拉取当月运营产品账单汇总
+export const reqBillsProductSummaryList = async (
+  data: BillsSummaryListReqParamsWithProductIds,
+): Promise<BillsMainAccountSummaryResData> => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/list`, data);
+};
+
+// 导出运营产品账单汇总数据
+export const exportBillsProductSummary = async (
+  data: BillsExportReqParamsWithProductIds,
+): Promise<BillsExportResData> => {
+  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/export`, data);
 };

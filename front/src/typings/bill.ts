@@ -199,3 +199,8 @@ type BillsExportBaseReqParams = { bill_year: number; bill_month: number; export_
 export type BillsExportReqParams = BillsExportBaseReqParams & { filter: FilterType };
 export type BillsExportReqParamsWithBizs = BillsExportBaseReqParams & { bk_biz_ids: number[] };
 export type BillsExportResData = IQueryResData<{ download_url: string }>;
+
+// 拉取当月运营产品账单汇总
+export type BillsSummaryListReqParamsWithProductIds = BillsSummaryListBaseReqParams & { op_product_ids: number[] };
+// 账单导出
+export type BillsExportReqParamsWithProductIds = BillsExportBaseReqParams & { op_product_ids: number[] };
