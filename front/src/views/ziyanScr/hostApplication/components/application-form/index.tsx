@@ -835,7 +835,21 @@ export default defineComponent({
             </bk-form>
           </CommonCard>
           <Card class={'mt15'} border={false} showHeader={false} showFooter={false}>
-            <p class={'card-title'}>配置清单</p>
+            <p class={'card-title'}>
+              <span class='mr5'>配置清单</span>
+              <i
+                class={'hcm-icon bkhcm-icon-info-line'}
+                v-bk-tooltips={{
+                  content: (
+                    <div>
+                      <div>自研云主机购买，经过以下步骤后交付给业务</div>
+                      <div>1.提交参数后，云梯生产主机</div>
+                      <div>2.资源平台对系统初始化，包括GSE agent安装，磁盘格式化等</div>
+                      <div>3.转交到业务</div>
+                    </div>
+                  ),
+                }}></i>
+            </p>
             <div class={`card-content`}>
               <div>
                 <Button
