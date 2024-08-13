@@ -12,6 +12,7 @@ import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, RightShape, DownShape } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
+import BcsSelectTips from './bcs-select-tips';
 
 import apiService from '@/api/scrApi';
 
@@ -1058,6 +1059,10 @@ export default defineComponent({
                                         label={`${vpc.vpc_id} | ${vpc.vpc_name}`}></bk-option>
                                     ))}
                                   </bk-select>
+                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
+                                  {/(BCS|OVERLAY)/.test(vpcName.value) && (
+                                    <BcsSelectTips desc='所选择的VPC为容器网络' />
+                                  )}
                                 </bk-form-item>
                                 <bk-form-item label='子网'>
                                   <bk-select
@@ -1073,6 +1078,10 @@ export default defineComponent({
                                         label={`${subnet.subnet_id} | ${subnet.subnet_name}`}></bk-option>
                                     ))}
                                   </bk-select>
+                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
+                                  {/(BCS|OVERLAY)/.test(subnetName.value) && (
+                                    <BcsSelectTips desc='所选择的子网为容器子网' />
+                                  )}
                                 </bk-form-item>
                               </bk-form>
                             </div>
