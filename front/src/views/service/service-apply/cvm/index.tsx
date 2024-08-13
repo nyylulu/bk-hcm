@@ -14,7 +14,7 @@ import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import GcpDataDiskFormDialog from './children/gcp-data-disk-form-dialog';
 import './index.scss';
 import { useI18n } from 'vue-i18n';
-import type { IOption } from '@/typings/common';
+import { QueryRuleOPEnum, type IOption } from '@/typings/common';
 import type { IDiskOption } from '../hooks/use-cvm-form-data';
 import { ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import useCvmOptions from '../hooks/use-cvm-options';
@@ -914,13 +914,19 @@ export default defineComponent({
           class='create-form-container cvm-wrap'
           style={whereAmI.value === Senarios.resource && { padding: 0, marginBottom: '80px' }}>
           <Form model={formData} rules={formRules} ref={formRef} onSubmit={handleFormSubmit} formType='vertical'>
-            {whereAmI.value === Senarios.business && (
-              <AccountSelectorCard
-                v-model={cond.cloudAccountId}
-                bkBizId={cond.bizId}
-                onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
-              />
-            )}
+            <AccountSelectorCard
+              v-model={cond.cloudAccountId}
+              bkBizId={cond.bizId}
+              onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
+              onVendorChange={(vendor: VendorEnum) => (cond.vendor = vendor)}
+              filter={{
+                op: QueryRuleOPEnum.AND,
+                rules:
+                  whereAmI.value === Senarios.business
+                    ? []
+                    : [{ op: QueryRuleOPEnum.NEQ, field: 'vendor', value: VendorEnum.ZIYAN }],
+              }}
+            />
             {isAccountShow.value ? (
               <ApplicationForm isbusiness={true}></ApplicationForm>
             ) : (
