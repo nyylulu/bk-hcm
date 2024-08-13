@@ -13,12 +13,15 @@ import useFormModel from '@/hooks/useFormModel';
 import useBillStore from '@/store/useBillStore';
 import { Extension_Name_Map } from './constants';
 import { useRoute, useRouter } from 'vue-router';
+import { PluginHandlerMailbox } from '@pluginHandler/create-account-mail-suffix';
+import EmailInput from './create-section-email';
 import { useOperationProducts } from '@/hooks/useOperationProducts';
 const { FormItem } = Form;
-
 export default defineComponent({
   setup() {
+    const { suffixText, emailRules, isMailValid } = PluginHandlerMailbox;
     const userStore = useUserStore();
+    const formModelRef = ref();
     const formInstance = ref();
     const isLoading = ref(false);
     const billStore = useBillStore();
@@ -55,15 +58,16 @@ export default defineComponent({
       formModel.managers = [currentUser];
       formModel.bak_managers = [currentUser];
     });
-
     const handleSubmit = async () => {
       try {
         isLoading.value = true;
         await formInstance.value.validate();
+        if ([null, false].includes(emailInputRef.value.emailCodeVerfiyResult)) return;
         const { data } = await billStore.create_main_account({
           ...formModel,
-          email: `${formModel.email}@tencent.com`,
+          email: `${formModel.email}${suffixText}`,
           business_type: formModel.site,
+          verify_code: emailInputRef.value.formModal.code,
           extension: {
             [Extension_Name_Map[formModel.vendor]]: formModel.name,
           },
@@ -94,6 +98,10 @@ export default defineComponent({
         }
       },
     );
+    const emailInputRef = ref();
+    const changeEmail = (value: string) => {
+      formModel.email = value;
+    };
 
     return () => (
       <div class={'create-second-account-wrapper'}>
@@ -118,8 +126,9 @@ export default defineComponent({
                           {MAIN_ACCOUNT_VENDORS.map(({ vendor, name, icon }) =>
                             vendor !== VendorEnum.TCLOUD ? (
                               <div
-                                class={`account-vendor-option ${vendor === formModel.vendor ? 'account-vendor-option-active' : ''
-                                  }`}
+                                class={`account-vendor-option ${
+                                  vendor === formModel.vendor ? 'account-vendor-option-active' : ''
+                                }`}
                                 onClick={() => (formModel.vendor = vendor)}>
                                 <img src={icon} alt={name} class={'account-vendor-option-icon'} />
                                 <p class={'account-vendor-option-text'}>{name}</p>
@@ -172,33 +181,37 @@ export default defineComponent({
                     <Form
                       formType='vertical'
                       model={formModel}
+                      ref={formModelRef}
                       rules={{
                         name: [
                           {
                             trigger: 'change',
                             message: nameTips.value,
                             validator: (val: string) => {
-                              if (
-                                [VendorEnum.AWS, VendorEnum.AZURE, VendorEnum.HUAWEI].includes(
-                                  formModel.vendor as VendorEnum,
-                                )
-                              ) {
-                                return /^[a-zA-Z][a-zA-Z0-9_]{5,19}$/.test(val);
-                              }
-                              return /^[a-zA-Z][a-zA-Z0-9-]{5,19}$/.test(val);
+                              const vendorList = [VendorEnum.AWS, VendorEnum.AZURE, VendorEnum.HUAWEI];
+                              const regex = vendorList.includes(formModel.vendor as VendorEnum)
+                                ? /^[a-zA-Z][a-zA-Z0-9_]{5,19}$/
+                                : /^[a-zA-Z][a-zA-Z0-9-]{5,19}$/;
+                              const isValid = regex.test(val);
+
+                              emailInputRef.value.changeNameValid(isValid);
+                              return isValid;
                             },
                           },
                         ],
+                        email: emailRules,
                       }}>
-                      <FormItem label='帐号名称' required property='name' description={nameTips.value}>
+                      <FormItem label='账号名称' required property='name' description={nameTips.value}>
                         <Input v-model={formModel.name} placeholder='请输入账号名称'></Input>
                       </FormItem>
-                      <FormItem label='帐号邮箱' required property='email'>
-                        <Input v-model={formModel.email} suffix='@tencent.com'></Input>
-                        <p class={'email-tip'}>
-                          <i class={'hcm-icon bkhcm-icon-alert email-tip-icon'}></i>
-                          请确保邮箱已按指引配置，否则后续帐号将无法创建
-                        </p>
+                      <FormItem label='账号邮箱' required property='email'>
+                        <EmailInput
+                          ref={emailInputRef}
+                          suffixText={suffixText}
+                          isMailValid={isMailValid.value}
+                          formModel={formModel}
+                          onChangeEmail={changeEmail}
+                        />
                       </FormItem>
                       {/* <FormItem label='成本评估' required property=''>
                         <div class={'evaluation-wrapper'}>
@@ -263,11 +276,7 @@ export default defineComponent({
                     </Form>
                   </div>
                 </CommonCard>
-                <Button
-                  theme='primary'
-                  class={'mr8 ml24 mw88'}
-                  onClick={() => handleSubmit()}
-                  loading={isLoading.value}>
+                <Button theme='primary' class={'mr8 ml24 mw88'} onClick={handleSubmit} loading={isLoading.value}>
                   提交
                 </Button>
                 <Button
