@@ -1141,22 +1141,24 @@ export default defineComponent({
                                 class='commonCard-form-select'
                                 v-model={QCLOUDCVMForm.value.spec.replicas}
                                 min={1}></Input>
-                              <div>
+                              <div class={'request-quantity-container'}>
                                 {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                                   <>
                                     {cvmCapacity.value.length ? (
                                       <>
                                         {cvmCapacity.value.map((item) => (
                                           <div class={'tooltips'}>
-                                            <span>{getZoneCn(item?.zone)}最大可申请量 </span>
-                                            <span class={'volumetip'}>{item?.max_num || 0}</span>
+                                            <span class={'request-quantity-text'}>
+                                              {getZoneCn(item?.zone)}最大可申请量
+                                            </span>
+                                            <span class={'max-request-hint'}>{item?.max_num || 0}</span>
                                             {loading.value ? <Spinner class={'mr10'} /> : <></>}
                                             <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
                                               {{
                                                 default: () => (
                                                   <span>
                                                     {item?.max_info.length && (
-                                                      <span class={'calculation-details'}>( 计算明细 )</span>
+                                                      <span class={'calculation-details'}>( 查看明细 )</span>
                                                     )}
                                                   </span>
                                                 ),
@@ -1166,7 +1168,7 @@ export default defineComponent({
                                                       item?.max_info.map((val: { key: any; value: any }) => (
                                                         <div>
                                                           <span class={'application'}> {val.key}</span>
-                                                          <span class={'volumetip'}> {val.value}</span>
+                                                          <span class={'max-request-hint'}> {val.value}</span>
                                                         </div>
                                                       ))}
                                                   </div>
@@ -1179,7 +1181,7 @@ export default defineComponent({
                                     ) : (
                                       <div class={'tooltips'}>
                                         <span>最大可申请量 </span>
-                                        <span class={'volumetip'}>0</span>
+                                        <span class={'max-request-hint'}>0</span>
                                         {loading.value ? <Spinner class={'mr10'} /> : <></>}
                                       </div>
                                     )}

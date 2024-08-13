@@ -150,24 +150,31 @@
       width: 290px;
     }
   }
-
-  .tooltips {
-    color: #979ba5;
-    font-size: 12px;
-    .content {
-      text-align: left;
-      .application {
-        font-size: 14px;
+  .request-quantity-container {
+    display: inline-block;
+    .tooltips {
+      height: 20px;
+      display: block;
+      color: #979ba5;
+      font-size: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 5px;
+      .calculation-details {
+        text-decoration: underline;
+        color: #909399;
+        font-size: 12px;
       }
-    }
-    .calculation-details {
-      text-decoration: underline;
-      color: #909399;
-      font-size: 12px;
-    }
-    .volumetip {
-      color: #3a84ff;
-      font-size: 12px;
+      .max-request-hint {
+        padding: 0px 2px;
+        color: #3a84ff;
+        font-size: 12px;
+      }
+      .request-quantity-text {
+        flex: 1;
+        text-align: right;
+      }
     }
   }
 }
