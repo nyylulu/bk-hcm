@@ -209,13 +209,7 @@ const isCurRowSelectEnable = (row: any) => {
 const { selections, handleSelectionChange, resetSelections } = useSelection();
 
 const groupColumns = [
-  {
-    type: 'selection',
-    width: 32,
-    minWidth: 32,
-    onlyShowOnList: true,
-    align: 'right',
-  },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
   {
     label: '安全组 ID',
     field: 'cloud_id',
@@ -366,54 +360,56 @@ const groupColumns = [
             },
           },
           [
-            withDirectives(h(
-              Button,
-              {
-                text: true,
-                disabled:
-                  !props.authVerifyData?.permissionAction[
-                    props.isResourcePage
-                      ? 'iaas_resource_operate'
-                      : 'biz_iaas_resource_operate'
-                  ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage)
-                  || (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
-                theme: 'primary',
-                onClick() {
-                  const routeInfo: any = {
-                    query: {
-                      ...route.query,
-                      activeTab: 'rule',
-                      id: data.id,
-                      vendor: data.vendor,
-                    },
-                  };
-                  // 业务下
-                  if (route.path.includes('business')) {
-                    Object.assign(routeInfo, {
-                      name: 'securityBusinessDetail',
-                    });
-                  } else {
-                    Object.assign(routeInfo, {
-                      name: 'resourceDetail',
-                      params: {
-                        type: 'security',
+            withDirectives(
+              h(
+                Button,
+                {
+                  text: true,
+                  disabled:
+                    !props.authVerifyData?.permissionAction[
+                      props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate'
+                    ] ||
+                    (data.bk_biz_id !== -1 && props.isResourcePage) ||
+                    (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  theme: 'primary',
+                  onClick() {
+                    const routeInfo: any = {
+                      query: {
+                        ...route.query,
+                        activeTab: 'rule',
+                        id: data.id,
+                        vendor: data.vendor,
                       },
-                    });
-                  }
-                  router.push(routeInfo);
+                    };
+                    // 业务下
+                    if (route.path.includes('business')) {
+                      Object.assign(routeInfo, {
+                        name: 'securityBusinessDetail',
+                      });
+                    } else {
+                      Object.assign(routeInfo, {
+                        name: 'resourceDetail',
+                        params: {
+                          type: 'security',
+                        },
+                      });
+                    }
+                    router.push(routeInfo);
+                  },
                 },
-              },
-              [t('配置规则')],
-            ), [
+                [t('配置规则')],
+              ),
               [
-                bkTooltips, {
-                  content: '自研云安全组只允许业务下操作',
-                  theme: 'light',
-                  disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
-                },
+                [
+                  bkTooltips,
+                  {
+                    content: '自研云安全组只允许业务下操作',
+                    theme: 'light',
+                    disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  },
+                ],
               ],
-            ]),
+            ),
           ],
         ),
         h(
@@ -430,13 +426,11 @@ const groupColumns = [
                 {
                   class: 'ml10',
                   disabled:
-                  !props.authVerifyData?.permissionAction[
-                    props.isResourcePage
-                      ? 'iaas_resource_delete'
-                      : 'biz_iaas_resource_delete'
-                  ]
-                  || (data.bk_biz_id !== -1 && props.isResourcePage)
-                  || (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                    !props.authVerifyData?.permissionAction[
+                      props.isResourcePage ? 'iaas_resource_delete' : 'biz_iaas_resource_delete'
+                    ] ||
+                    (data.bk_biz_id !== -1 && props.isResourcePage) ||
+                    (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
                   text: true,
                   theme: 'primary',
                   onClick() {
@@ -447,7 +441,8 @@ const groupColumns = [
               ),
               [
                 [
-                  bkTooltips, {
+                  bkTooltips,
+                  {
                     content: '自研云安全组只允许业务下操作',
                     theme: 'light',
                     disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
@@ -460,18 +455,16 @@ const groupColumns = [
       ]);
     },
   },
-].filter(({ field }) => (whereAmI.value === Senarios.business && !['bk_biz_id2', 'bk_biz_id'].includes(field)) || whereAmI.value !== Senarios.business);
+].filter(
+  ({ field }) =>
+    (whereAmI.value === Senarios.business && !['bk_biz_id2', 'bk_biz_id'].includes(field)) ||
+    whereAmI.value !== Senarios.business,
+);
 
 const groupSettings = generateColumnsSettings(groupColumns);
 
 const gcpColumns = [
-  {
-    type: 'selection',
-    width: 32,
-    minWidth: 32,
-    onlyShowOnList: true,
-    align: 'right',
-  },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
   {
     label: '防火墙 ID	',
     field: 'cloud_id',
@@ -697,12 +690,7 @@ const gcpColumns = [
 const gcpSettings = generateColumnsSettings(gcpColumns);
 
 const templateColumns = [
-  {
-    type: 'selection',
-    width: '100',
-    onlyShowOnList: true,
-    isDefaultShow: true,
-  },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
   {
     label: '模板ID',
     field: 'cloud_id',
@@ -833,8 +821,15 @@ const templateColumns = [
       ]);
     },
   },
-].filter(({ field }) => (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource)
-  .filter(({ field }) => (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business);
+]
+  .filter(
+    ({ field }) =>
+      (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource,
+  )
+  .filter(
+    ({ field }) =>
+      (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business,
+  );
 
 const templateSettings = generateColumnsSettings(templateColumns);
 
@@ -845,8 +840,10 @@ const isGcpVendor = computed(() => {
   return [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.GCP);
 });
 const isTcloudOrZiyanVendor = computed(() => {
-  return [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.TCLOUD)
-    || [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.ZIYAN);
+  return (
+    [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.TCLOUD) ||
+    [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.ZIYAN)
+  );
 });
 const types = computed(() => {
   const securityType = { name: 'group', label: t('安全组') };
@@ -969,11 +966,10 @@ const securityHandleShowDelete = (data: any) => {
       </section>
     </section>
 
-    <bk-loading :key="activeType" :loading="state.isLoading">
+    <bk-loading :key="activeType" :loading="state.isLoading" opacity="1">
       <bk-table
         v-if="activeType === 'group'"
         :settings="groupSettings"
-        class="has-selection"
         row-hover="auto"
         remote-pagination
         :pagination="state.pagination"
@@ -991,7 +987,6 @@ const securityHandleShowDelete = (data: any) => {
       <bk-table
         v-else-if="activeType === 'gcp'"
         :settings="gcpSettings"
-        class="has-selection"
         row-hover="auto"
         remote-pagination
         :pagination="state.pagination"
@@ -1009,7 +1004,6 @@ const securityHandleShowDelete = (data: any) => {
       <bk-table
         v-else-if="activeType === 'template'"
         :settings="templateSettings"
-        class="mt20"
         row-hover="auto"
         remote-pagination
         :pagination="state.pagination"

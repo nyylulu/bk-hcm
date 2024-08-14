@@ -1,0 +1,27 @@
+.search-grid {
+  display: grid;
+  grid-template-columns: 405px 405px 405px;
+  gap: 24px;
+  row-gap: 16px;
+  margin-bottom: 24px;
+
+  .search-label {
+    margin-bottom: 6px;
+  }
+
+  :global(.bk-date-picker) {
+    width: 100%;
+  }
+}
+
+.search-button {
+  width: 88px;
+
+  + .search-button {
+    margin-left: 8px;
+  }
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}

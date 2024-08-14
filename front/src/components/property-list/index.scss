@@ -1,0 +1,11 @@
+.property-list {
+    display: flex;
+    margin: 10px 0 10px 80px;
+}
+.property-item {
+    display: flex;
+    margin-right: 30px;
+    .property-value {
+        margin-left: 10px;
+    }
+}

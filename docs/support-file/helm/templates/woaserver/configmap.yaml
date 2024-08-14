@@ -1,0 +1,96 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "bk-hcm.fullname" . }}-woaserver-config
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  config.yaml: |-
+    network:
+      bindIP:
+      port: {{ .Values.woaserver.port}}
+      tls:
+        insecureSkipVerify:
+        certFile:
+        keyFile:
+        caFile:
+        password:
+    service:
+      etcd:
+        {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.etcdConfig" .) "context" $) | nindent 8 }}
+    log:
+      {{- toYaml .Values.woaserver.log | nindent 6 }}
+    database:
+      {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.databaseConfig" .) "context" $) | nindent 6 }}
+    esb:
+      endpoints:
+        - {{ .Values.bkEsbApiUrl }}
+      appCode: {{ .Values.appCode }}
+      appSecret: {{ .Values.appSecret }}
+      user: admin
+      tls:
+        insecureSkipVerify:
+        certFile:
+        keyFile:
+        caFile:
+        password:
+    useMongo: {{ .Values.useMongo }}
+    mongodb:
+      {{- toYaml .Values.mongodb | nindent 6 }}
+    watch:
+      {{- toYaml .Values.watch | nindent 6 }}
+    redis:
+      {{- toYaml .Values.redis | nindent 6 }}
+    cvm:
+      {{- toYaml .Values.cvm | nindent 6 }}
+    tjj:
+      {{- toYaml .Values.tjj | nindent 6 }}
+    xship:
+      {{- toYaml .Values.xship | nindent 6 }}
+    tencentcloud:
+      {{- toYaml .Values.tencentcloud | nindent 6 }}
+    erp:
+      {{- toYaml .Values.erp | nindent 6 }}
+    tmp:
+      {{- toYaml .Values.tmp | nindent 6 }}
+    uwork:
+      {{- toYaml .Values.uwork | nindent 6 }}
+    gcs:
+      {{- toYaml .Values.gcs | nindent 6 }}
+    tcaplus:
+      {{- toYaml .Values.tcaplus | nindent 6 }}
+    tgw:
+      {{- toYaml .Values.tgw | nindent 6 }}
+    l5:
+      {{- toYaml .Values.l5 | nindent 6 }}
+    safety:
+      {{- toYaml .Values.safety | nindent 6 }}
+    sops:
+      {{- toYaml .Values.sops | nindent 6 }}
+    dvm:
+      {{- toYaml .Values.dvm | nindent 6 }}
+    bkchat:
+      {{- toYaml .Values.bkchat | nindent 6 }}
+    itsm:
+      {{- toYaml .Values.itsm | nindent 6 }}
+    itsmFlows:
+      {{- toYaml .Values.itsmFlows | nindent 6 }}
+    resourceDissolve:
+      originDate: {{ .Values.resourceDissolve.originDate }}
+    elasticsearch:
+      url: {{ .Values.elasticsearch.url }}
+      user: {{ .Values.elasticsearch.user }}
+      password: {{ .Values.elasticsearch.password }}
+      # defines tls related options.
+      tls:
+        # server should be accessed without verifying the TLS certificate.
+        insecureSkipVerify:
+        # server requires TLS client certificate authentication.
+        certFile:
+        # server requires TLS client certificate authentication.
+        keyFile:
+        # trusted root certificates for server.
+        caFile:
+        # the password to decrypt the certificate.
+        password:
+    blacklist: {{ .Values.blacklist }}
+

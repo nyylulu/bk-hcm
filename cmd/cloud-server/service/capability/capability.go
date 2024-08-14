@@ -21,16 +21,18 @@
 package capability
 
 import (
-	"github.com/emicklei/go-restful/v3"
-
 	"hcm/cmd/cloud-server/logics"
 	"hcm/cmd/cloud-server/logics/audit"
 	"hcm/pkg/client"
 	"hcm/pkg/cryptography"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty/api-gateway/bkbase"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
+
+	"github.com/emicklei/go-restful/v3"
 )
 
 // Capability defines the service's capability
@@ -44,4 +46,6 @@ type Capability struct {
 	Logics     *logics.Logics
 	ItsmCli    itsm.Client
 	BKBaseCli  bkbase.Client
+	Finops     finops.Client
+	CmsiCli    cmsi.Client
 }

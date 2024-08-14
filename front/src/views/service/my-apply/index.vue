@@ -43,7 +43,7 @@ import moment from 'moment';
 export enum ApplyType {
   itsm = 'itsm',
   bpaas = 'bpaas',
-};
+}
 
 // 复杂数据结构先不按照泛型一个个定义，先从简
 export default defineComponent({
@@ -143,7 +143,7 @@ export default defineComponent({
           account_id: '',
           id: '',
           applicant: '',
-        }
+        },
       },
     });
 
@@ -183,12 +183,11 @@ export default defineComponent({
       };
     };
 
-
     const handleChange = (data: any) => {
-      if(data.source === ApplyType.itsm) getMyApplyDetail(data.id);
-      else if(data.source === ApplyType.bpaas) {
+      if (data.source === ApplyType.itsm) getMyApplyDetail(data.id);
+      else if (data.source === ApplyType.bpaas) {
         state.comInfo.bpaasPayload = {
-          bpaas_sn: +data.sn, 
+          bpaas_sn: +data.sn,
           account_id: JSON.parse(data.content).account_id,
           id: data.id,
           applicant: data.applicant,
@@ -231,10 +230,10 @@ export default defineComponent({
         id.value = res.data.details[0]?.id;
         if (res.data.details[0]?.source === ApplyType.bpaas) {
           state.comInfo.bpaasPayload = {
-            bpaas_sn: +res.data.details[0].sn, 
+            bpaas_sn: +res.data.details[0].sn,
             account_id: JSON.parse(res.data.details[0].content).account_id,
             id: id.value,
-            applicant: res.data.details[0].applicant
+            applicant: res.data.details[0].applicant,
           };
           getMyApplyDetail(id.value, true, state.comInfo.bpaasPayload);
         } else if (id.value) {
@@ -249,10 +248,14 @@ export default defineComponent({
     };
 
     // 获取我的申请详情
-    const getMyApplyDetail = async (id: string, isBpaas?: boolean, payload?: { bpaas_sn: number, account_id: string }) => {
+    const getMyApplyDetail = async (
+      id: string,
+      isBpaas?: boolean,
+      payload?: { bpaas_sn: number; account_id: string },
+    ) => {
       state.comInfo.loading = true;
       try {
-        const promise = isBpaas ? accountStore.getBpassDetail(payload) : accountStore.getApplyAccountDetail(id)
+        const promise = isBpaas ? accountStore.getBpassDetail(payload) : accountStore.getApplyAccountDetail(id);
         const res = await promise;
         state.comInfo.currentApplyData = res.data;
         state.comInfo.comKey = res.data.id;

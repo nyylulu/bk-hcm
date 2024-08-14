@@ -42,8 +42,8 @@ export interface IOption {
 // 列表接口分页参数
 export interface IPageQuery {
   count?: boolean;
-  start: number;
-  limit: number;
+  start?: number;
+  limit?: number;
   sort?: string;
   order?: string;
 }

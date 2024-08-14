@@ -33,6 +33,7 @@ type Client struct {
 	Zone          *ZoneClient
 	SecurityGroup *SecurityGroupClient
 	LoadBalancer  *LoadBalancerClient
+	Cvm           *CvmClient
 }
 
 type restClient struct {
@@ -50,5 +51,6 @@ func NewClient(client rest.ClientInterface) *Client {
 		Zone:          NewZoneClient(client),
 		SecurityGroup: NewCloudSecurityGroupClient(client),
 		LoadBalancer:  NewLoadBalancerClient(client),
+		Cvm:           NewCloudCvmClient(client),
 	}
 }

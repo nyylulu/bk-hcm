@@ -22,7 +22,6 @@ export default defineComponent({
     // 根据urlKey获取权限链接
     const getAuthActionUrl = async () => {
       const { authVerifyData } = commonStore;
-      console.log(authVerifyData.urlParams, urlKey.value);
       if (authVerifyData) {
         // 权限矩阵数据
         const params = authVerifyData.urlParams[urlKey.value]; // 获取权限链接需要的参数
@@ -65,7 +64,6 @@ export default defineComponent({
     watch(
       () => props.urlKeyId,
       (key: any, oldKey: any) => {
-        console.log(key, oldKey);
         if (key === oldKey) return;
         urlKey.value = key;
         getAuthActionUrl();
@@ -78,18 +76,42 @@ export default defineComponent({
       window.open(authUrl.value);
     };
 
+    // scr权限申请说明
+    const renderScrApplyTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('当前无"业务-主机库存"的权限。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return <p class='mt5 sub-describe'>{t('当前无"服务请求-机房裁撤"的权限。')}</p>;
+      }
+    };
+
+    // scr功能说明
+    const renderScrFunctionTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('查询主机的库存信息。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return (
+            <p class='mt5 sub-describe'>{t('机房裁撤，一般是由业务运维、SRE等角色管理，一般用户无需申请该功能。')}</p>
+          );
+      }
+    };
+
     return {
       handlePermissionJump,
       authUrl,
       urlLoading,
       urlKey,
       t,
+      renderScrApplyTips,
+      renderScrFunctionTips,
     };
   },
 
   render() {
     return (
-      <div>
+      <div class='error-page-container'>
         <div class='forbid-layout'>
           <img src={permissions} alt='403' />
           <h2>{this.t('抱歉，您暂无该功能的权限')}</h2>
@@ -97,6 +119,11 @@ export default defineComponent({
         </div>
         <div class='describe'>
           <h2 class='mt20'>权限申请说明：</h2>
+          {this.urlKey === 'main_account_find' && (
+            <>
+              <p class='mt5 sub-describe'>{'当前无"账号-二级账号查看"权限'}</p>
+            </>
+          )}
           {this.urlKey === 'cloud_selection_recommend' && (
             <>
               <p class='mt5 sub-describe'>{'当前无“资源选型-选型推荐”的权限'}</p>
@@ -119,7 +146,7 @@ export default defineComponent({
                 {this.t('该功能下的资源，由业务自行维护，IaaS资源的创建，一般是由业务运维、SRE等操作')}
               </p>
               <p class='mt5 sub-describe'>
-                {this.t('如果您需要在业务下维护云资源，可以申请业务-IaaS资源下对应业务的权限')}
+                {this.t('如果您需要在业务下维护云资源，可以申请"业务访问"下对应业务的权限')}
               </p>
             </>
           )}
@@ -158,8 +185,18 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrApplyTips()}
 
           <h2 class='mt20'>功能说明：</h2>
+          {this.urlKey === 'main_account_find' && (
+            <>
+              <p class='mt5 sub-describe'>
+                {
+                  '二级账号，是由公司和云厂商签订合同协议后，以公司为主体在云上申请独立的云账号，供业务使用。不同二级账号之间的资源是隔离的。'
+                }
+              </p>
+            </>
+          )}
           {this.urlKey === 'cloud_selection_recommend' && (
             <>
               <p class='mt5 sub-describe'>
@@ -227,6 +264,7 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrFunctionTips()}
         </div>
         <div class='btn-warp'>
           <Button class='mt20' theme='primary' loading={this.urlLoading} onClick={this.handlePermissionJump}>

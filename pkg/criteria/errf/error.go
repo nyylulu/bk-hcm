@@ -63,6 +63,7 @@ func (e *ErrorF) String() string {
 // Resp get the http response of the error.
 func (e ErrorF) Resp() *ErrorResp {
 	return &ErrorResp{
+		Result:      false,
 		Code:        e.Code,
 		Message:     e.Message,
 		Permissions: e.Permissions,
@@ -71,6 +72,7 @@ func (e ErrorF) Resp() *ErrorResp {
 
 // ErrorResp defines an error related http response.
 type ErrorResp struct {
+	Result bool `json:"result"` // 由于itsm要求接口的返回值需要带result字段，所以这里进行补充
 	// Code is hcm errCode
 	Code int32 `json:"code"`
 	// Message is error detail

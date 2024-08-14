@@ -70,3 +70,30 @@ func (i *itsm) GetTicketResult(kt *kit.Kit, sn string) (result TicketResult, err
 	}
 	return results[0], nil
 }
+
+// GetTicketStatus get itsm ticket status
+func (i *itsm) GetTicketStatus(kt *kit.Kit, sn string) (*GetTicketStatusResp, error) {
+	resp := &struct {
+		apigateway.BaseResponse `json:",inline"`
+		Data                    *GetTicketStatusResp `json:"data"`
+	}{}
+
+	param := map[string]string{
+		"sn": sn,
+	}
+	err := i.client.Get().
+		SubResourcef("/get_ticket_status/").
+		WithParams(param).
+		WithContext(kt.Ctx).
+		WithHeaders(i.header(kt)).
+		Do().Into(resp)
+	if err != nil {
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("get ticket status failed, code: %d, msg: %s", resp.Code, resp.Message)
+	}
+
+	return resp.Data, err
+}

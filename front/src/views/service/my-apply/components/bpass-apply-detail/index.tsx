@@ -1,6 +1,6 @@
 import { PropType, defineComponent, onUnmounted, ref, watch } from 'vue';
 import './index.scss';
-import { Loading, Tag } from 'bkui-vue';
+import { Tag } from 'bkui-vue';
 import { InfoLine, Spinner } from 'bkui-vue/lib/icon';
 export enum BpaasNodeType {
   approve = 1,
@@ -57,6 +57,7 @@ export const BpaasStatusMap = {
   [BpaasStatus.scfFailed]: 'scf执行失败',
   [BpaasStatus.scfSuccessed]: 'scf执行成功',
 };
+export const BpaasEndStatus = [BpaasStatus.approved, BpaasStatus.refused];
 export default defineComponent({
   props: {
     params: {
@@ -146,7 +147,7 @@ export default defineComponent({
       let tail = null;
       // 用于拓扑图节点去重
       const set = new Set();
-      for (let i = 0;i < props.params.Nodes.length;i++) {
+      for (let i = 0; i < props.params.Nodes.length; i++) {
         const node = props.params.Nodes[i];
         map.set(+node.NodeId, i);
         if (node.PrevNode === '0') head = node;
@@ -167,7 +168,7 @@ export default defineComponent({
             start = tmpNode.NextNode;
             end = tmpNode.NextNode;
           }
-          for (let j = +start;j <= +end;j++) {
+          for (let j = +start; j <= +end; j++) {
             if (!set.has(j)) {
               const idx = map.get(j);
               const tmp = props.params.Nodes[idx];
@@ -193,91 +194,82 @@ export default defineComponent({
 
     return () => (
       <div class={'bpass-apply-detail-container'}>
-        <Loading loading={isFirstLoading.value && props.loading}>
-          <div class={'detail-card'}>
-            <div class={'title'}>基本信息</div>
+        <div class={'detail-card'}>
+          <div class={'title'}>基本信息</div>
 
-            <div class={'item'}>
-              <label class={'label'}>单号:</label>
-              <div>{props.bpaasPayload.bpaas_sn}</div>
-            </div>
-            <div class={'item'}>
-              <label class={'label'}>类型:</label>
-              <div>{props.params.BpaasName}</div>
-            </div>
-            <div class={'item'}>
-              <label class={'label'}>操作人:</label>
-              <div>{props.bpaasPayload.applicant}</div>
-            </div>
-            <div class={'item'}>
-              <label class={'label'}>操作时间:</label>
-              <div>{props.params.ModifyTime}</div>
+          <div class={'item'}>
+            <label class={'label'}>单号:</label>
+            <div>{props.bpaasPayload.bpaas_sn}</div>
+          </div>
+          <div class={'item'}>
+            <label class={'label'}>类型:</label>
+            <div>{props.params.BpaasName}</div>
+          </div>
+          <div class={'item'}>
+            <label class={'label'}>操作人:</label>
+            <div>{props.bpaasPayload.applicant}</div>
+          </div>
+          <div class={'item'}>
+            <label class={'label'}>操作时间:</label>
+            <div>{props.params.ModifyTime}</div>
+          </div>
+        </div>
+
+        <div class={'detail-card'}>
+          <div class={'title'}>
+            申请状态
+            <div class={'tip'}>
+              {props.loading ? (
+                <>
+                  <Spinner />
+                  &nbsp;正在同步最新进度中...
+                </>
+              ) : (
+                <>
+                  <InfoLine />
+                  &nbsp;已是最新的进度数据。
+                </>
+              )}
             </div>
           </div>
+          <div>{renderStatus(props.params.Status)}</div>
+        </div>
 
-          <div class={'detail-card'}>
-            <div class={'title'}>
-              申请状态
-              <div class={'tip'}>
-                {props.loading ? (
-                  <>
-                    <Spinner />&nbsp;正在同步最新进度中...
-                  </>
-                ) : (
-                  <>
-                    <InfoLine />&nbsp;已是最新的进度数据。
-                  </>
-                )}
-              </div>
-            </div>
-            <div>{renderStatus(props.params.Status)}</div>
-          </div>
+        <div class={'detail-card'}>
+          <div class={'title'}>进度：</div>
 
-          <div class={'detail-card'}>
-            <div class={'title'}>进度：</div>
-
-            {bfsSortedNodes.value.map(({
-              CreateTime,
-              ScfName,
-              SubStatus,
-              NodeName,
-              NodeType,
-              ApprovedUin,
-            }: any) => (
-                <div class={'item ml16 mb8'}>
-                  <span class={'label'}>{NodeName}</span>
-                  <span class={'content ml16'}>{renderStatus(SubStatus)}</span>
-                  {![BpaasNodeStatus.unnecessaryApprove].includes(SubStatus) ? (
-                    <span>
-                      <span class={'content'}>
-                        {NodeType === BpaasNodeType.approve ? (
-                          <span>
-                            <span class={'label'}>审批人：</span>
-                            <span class={''}>
-                              {ApprovedUin?.join(',') || '--'}
-                            </span>
-                          </span>
-                        ) : (
-                          <span>
-                            <span class={'label'}>审批方式：</span>
-                            <span>{ScfName || '--'}</span>
-                          </span>
-                        )}
-                      </span>
+          {bfsSortedNodes.value.map(({ CreateTime, ScfName, SubStatus, NodeName, NodeType, ApprovedUin }: any) => (
+            <div class={'item ml16 mb8'}>
+              <span class={'label'}>{NodeName}</span>
+              <span class={'content ml16'}>{renderStatus(SubStatus)}</span>
+              {![BpaasNodeStatus.unnecessaryApprove].includes(SubStatus) ? (
+                <span>
+                  <span class={'content'}>
+                    {NodeType === BpaasNodeType.approve ? (
                       <span>
-                        {NodeType === BpaasNodeType.approve ? (
-                          <span class={'label'}>审批时间：</span>
-                        ) : (
-                          <span class={'label'}>执行时间：</span>
-                        )}
-                        <span class={'content'}>{CreateTime || '--'}</span>
+                        <span class={'label'}>审批人：</span>
+                        <span class={''}>{ApprovedUin?.join(',') || '--'}</span>
                       </span>
-                    </span>
-                  ) : null}
-                </div>
-            ))}
-          </div>
-        </Loading>
+                    ) : (
+                      <span>
+                        <span class={'label'}>审批方式：</span>
+                        <span>{ScfName || '--'}</span>
+                      </span>
+                    )}
+                  </span>
+                  <span>
+                    {NodeType === BpaasNodeType.approve ? (
+                      <span class={'label'}>审批时间：</span>
+                    ) : (
+                      <span class={'label'}>执行时间：</span>
+                    )}
+                    <span class={'content'}>{CreateTime || '--'}</span>
+                  </span>
+                </span>
+              ) : null}
+            </div>
+          ))}
+        </div>
       </div>
     );
   },

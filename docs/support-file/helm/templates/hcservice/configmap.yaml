@@ -19,3 +19,18 @@ data:
         {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.etcdConfig" .) "context" $) | nindent 8 }}
     log:
       {{- toYaml .Values.hcservice.log | nindent 6 }}
+    esb:
+      endpoints:
+        - {{ .Values.bkComponentApiUrl }}
+      appCode: {{ .Values.appCode }}
+      appSecret: {{ .Values.appSecret }}
+      user: admin
+      tls:
+        insecureSkipVerify:
+        certFile:
+        keyFile:
+        caFile:
+        password:
+    syncCCRes:
+      enable: {{ .Values.hcservice.syncCCRes.enable }}
+      syncIntervalMin: {{ .Values.hcservice.syncCCRes.syncIntervalMin }}

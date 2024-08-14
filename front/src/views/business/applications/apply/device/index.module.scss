@@ -1,0 +1,21 @@
+.table-wrapper {
+  height: calc(100% - 234px);
+  padding: 24px;
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+
+  .button {
+    min-width: 88px;
+
+    + .button {
+      margin-left: 8px;
+    }
+  }
+}
+
+.mb16 {
+  margin-bottom: 16px;
+}

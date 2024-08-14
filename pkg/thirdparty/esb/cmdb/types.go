@@ -290,6 +290,9 @@ type Host struct {
 	BkBakOperator   string  `json:"bk_bak_operator"`
 	BkHostName      string  `json:"bk_host_name"`
 	BkComment       *string `json:"bk_comment,omitempty"`
+	BkOSName        string  `json:"bk_os_name"`
+	SvrSourceTypeID string  `json:"svr_source_type_id"`
+	BkAssetID       string  `json:"bk_asset_id"`
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	BkCloudZone     string `json:"bk_cloud_zone"`
@@ -311,6 +314,11 @@ var HostFields = []string{
 	"bk_host_innerip_v6",
 	"bk_host_outerip_v6",
 	"bk_cloud_host_status",
+	"bk_host_name",
+	"bk_cloud_id",
+	"bk_os_name",
+	"svr_source_type_id",
+	"bk_asset_id",
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	"bk_cloud_vpc_id",
@@ -543,4 +551,108 @@ type CompanyCmdbInfo struct {
 	Bs2NameID        int64  `json:"bs2_name_id"`
 	VirtualDeptID    int64  `json:"virtual_dept_id"`
 	VirtualDeptName  string `json:"virtual_dept_name"`
+}
+
+// SearchBizBelongingParams is search cmdb business belonging parameter.
+type SearchBizBelongingParams struct {
+	BizIDs   []int64                `json:"bk_biz_ids,omitempty"`
+	BizNames []string               `json:"bk_biz_names,omitempty"`
+	Page     SearchBizBelongingPage `json:"page,omitempty"`
+}
+
+// SearchBizBelongingPage is search cmdb business belonging paging info.
+type SearchBizBelongingPage struct {
+	Limit int `json:"limit"`
+	Start int `json:"start"`
+}
+
+// SearchBizBelongingResult is search cmdb business belonging result.
+type SearchBizBelongingResult struct {
+	Data []SearchBizBelonging `json:"data"`
+}
+
+// SearchBizBelonging is search cmdb business belonging element of result.
+type SearchBizBelonging struct {
+	BizID            int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	BkProductID      int64  `json:"bsi_product_id"`
+	BkProductName    string `json:"bsi_product_name"`
+	PlanProductID    int64  `json:"plan_product_id"`
+	PlanProductName  string `json:"plan_product_name"`
+	BusinessDeptID   int64  `json:"business_dept_id"`
+	BusinessDeptName string `json:"business_dept_name"`
+	Bs1Name          string `json:"bs1_name"`
+	Bs1NameID        int64  `json:"bs1_name_id"`
+	Bs2Name          string `json:"bs2_name"`
+	Bs2NameID        int64  `json:"bs2_name_id"`
+	VirtualDeptID    int64  `json:"virtual_dept_id"`
+	VirtualDeptName  string `json:"virtual_dept_name"`
+}
+
+// EventType is cmdb watch event type.
+type EventType string
+
+const (
+	// Create is cmdb watch event create type.
+	Create EventType = "create"
+	// Update is cmdb watch event update type.
+	Update EventType = "update"
+	// Delete is cmdb watch event delete type.
+	Delete EventType = "delete"
+)
+
+// CursorType is cmdb watch event cursor type.
+type CursorType string
+
+const (
+	// HostType is cmdb watch event host cursor type.
+	HostType CursorType = "host"
+	// HostRelation is cmdb watch event host relation cursor type.
+	HostRelation CursorType = "host_relation"
+)
+
+// WatchEventParams is esb watch cmdb event parameter.
+type WatchEventParams struct {
+	// event types you want to care, empty means all.
+	EventTypes []EventType `json:"bk_event_types"`
+	// the fields you only care, if nil, means all.
+	Fields []string `json:"bk_fields"`
+	// unix seconds timesss to where you want to watch from.
+	// it's like Cursor, but StartFrom and Cursor can not use at the same time.
+	StartFrom int64 `json:"bk_start_from"`
+	// the cursor you hold previous, means you want to watch event form here.
+	Cursor string `json:"bk_cursor"`
+	// the resource kind you want to watch
+	Resource CursorType       `json:"bk_resource"`
+	Filter   WatchEventFilter `json:"bk_filter"`
+}
+
+// WatchEventFilter watch event filter
+type WatchEventFilter struct {
+	// SubResource the sub resource you want to watch, eg. object ID of the instance resource, watch all if not set
+	SubResource string `json:"bk_sub_resource,omitempty"`
+}
+
+// CCErrEventChainNodeNotExist 如果事件节点不存在，cc会返回该错误码
+var CCErrEventChainNodeNotExist = "1103007"
+
+// WatchEventResult is cmdb watch event result.
+type WatchEventResult struct {
+	// watched events or not
+	Watched bool               `json:"bk_watched"`
+	Events  []WatchEventDetail `json:"bk_events"`
+}
+
+// WatchEventDetail is cmdb watch event detail.
+type WatchEventDetail struct {
+	Cursor    string          `json:"bk_cursor"`
+	Resource  CursorType      `json:"bk_resource"`
+	EventType EventType       `json:"bk_event_type"`
+	Detail    json.RawMessage `json:"bk_detail"`
+}
+
+// HostModuleRelationParams get host and module relation parameter
+type HostModuleRelationParams struct {
+	BizID  int64   `json:"bk_biz_id,omitempty"`
+	HostID []int64 `json:"bk_host_id"`
 }

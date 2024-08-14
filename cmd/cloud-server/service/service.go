@@ -50,6 +50,7 @@ import (
 	"hcm/cmd/cloud-server/service/image"
 	instancetype "hcm/cmd/cloud-server/service/instance-type"
 	loadbalancer "hcm/cmd/cloud-server/service/load-balancer"
+	mailverify "hcm/cmd/cloud-server/service/mail-verify"
 	networkinterface "hcm/cmd/cloud-server/service/network-interface"
 	"hcm/cmd/cloud-server/service/recycle"
 	"hcm/cmd/cloud-server/service/region"
@@ -76,6 +77,8 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/bkbase"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
+	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/ssl"
@@ -95,6 +98,9 @@ type Service struct {
 	// itsmCli itsm client.
 	itsmCli   itsm.Client
 	bkBaseCli bkbase.Client
+	// finOps  Finops client
+	finOps pkgfinops.Client
+	cmsiCli   cmsi.Client
 }
 
 // NewService create a service instance.
@@ -181,6 +187,19 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		return nil, nil, nil, err
 	}
 
+	finOpsCfg := cc.CloudServer().FinOps
+	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	cmsiCfg := cc.CloudServer().Cmsi
+	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create cmsi client, err: %v", err)
+		return nil, nil, nil, err
+	}
+
 	svr := &Service{
 		client:     apiClientSet,
 		authorizer: authorizer,
@@ -189,6 +208,8 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		esbClient:  esbClient,
 		itsmCli:    itsmCli,
 		bkBaseCli:  bkbaseCli,
+		finOps:     finOpsCli,
+		cmsiCli:    cmsiCli,
 	}
 
 	return apiClientSet, esbClient, svr, nil
@@ -273,6 +294,8 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 		Logics:     logics.NewLogics(s.client, s.esbClient),
 		ItsmCli:    s.itsmCli,
 		BKBaseCli:  s.bkBaseCli,
+		Finops:     s.finOps,
+		CmsiCli:    s.cmsiCli,
 	}
 
 	account.InitAccountService(c)
@@ -308,6 +331,8 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 	asynctask.InitService(c)
 
 	bandwidthpackage.InitService(c)
+
+	mailverify.InitEmailService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

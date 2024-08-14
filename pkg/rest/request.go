@@ -281,6 +281,8 @@ func (r *Request) checkToleranceLatency(start *time.Time, url string, rid string
 // isToleranceLatencyExclusionURL judge url if need to checkToleranceLatency.
 func (r *Request) isToleranceLatencyExclusionURL(url string) bool {
 	exclusionURL := make([]string, 0)
+	// todo 后续需要支持可以在外面传入url
+	exclusionURL = append(exclusionURL, "/resource_watch/")
 
 	for _, eurl := range exclusionURL {
 		if strings.Contains(url, eurl) {
@@ -474,7 +476,7 @@ func (r *Request) getRequest(url string, contentType ContentType) (*http.Request
 
 	req.Header.Del("Accept-Encoding")
 	req.Header.Set("Content-Type", string(contentType))
-	req.Header.Set("Accept", "application/json")
+	//req.Header.Set("Accept", "application/json")
 	return req, nil
 }
 

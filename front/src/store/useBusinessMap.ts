@@ -6,6 +6,7 @@ export const useBusinessMapStore = defineStore('businessMapStore', () => {
   const businessMap = ref<Map<number, string>>(new Map());
   const businessMapSize = computed(() => businessMap.value.size);
   const businessList = ref([]);
+  const authedBusinessList = ref([]);
   // name 映射 id
   const businessNameToIDMap = computed(() => {
     const map = new Map();
@@ -29,6 +30,11 @@ export const useBusinessMapStore = defineStore('businessMapStore', () => {
     }
   };
 
+  const fetchAuthedBusinessList = async () => {
+    const { data } = await accountStore.getBizListWithAuth();
+    authedBusinessList.value = data;
+  };
+
   const getNameFromBusinessMap = (id: number) => {
     return businessMap.value.get(id) || '';
   };
@@ -37,8 +43,10 @@ export const useBusinessMapStore = defineStore('businessMapStore', () => {
     businessMap,
     businessNameToIDMap,
     businessList,
+    authedBusinessList,
     businessMapSize,
     fetchBusinessMap,
     getNameFromBusinessMap,
+    fetchAuthedBusinessList,
   };
 });

@@ -26,14 +26,16 @@ import (
 	"time"
 
 	"hcm/pkg/cc"
+	accountset "hcm/pkg/dal/dao/account-set"
 	"hcm/pkg/dal/dao/application"
 	daoasync "hcm/pkg/dal/dao/async"
 	"hcm/pkg/dal/dao/audit"
 	"hcm/pkg/dal/dao/auth"
+	"hcm/pkg/dal/dao/bill"
 	"hcm/pkg/dal/dao/cloud"
 	daoselection "hcm/pkg/dal/dao/cloud-selection"
 	argstpl "hcm/pkg/dal/dao/cloud/argument-template"
-	"hcm/pkg/dal/dao/cloud/bill"
+	cloudbill "hcm/pkg/dal/dao/cloud/bill"
 	"hcm/pkg/dal/dao/cloud/cert"
 	"hcm/pkg/dal/dao/cloud/cvm"
 	"hcm/pkg/dal/dao/cloud/disk"
@@ -41,11 +43,11 @@ import (
 	"hcm/pkg/dal/dao/cloud/eip"
 	eipcvmrel "hcm/pkg/dal/dao/cloud/eip-cvm-rel"
 	cimage "hcm/pkg/dal/dao/cloud/image"
-	"hcm/pkg/dal/dao/cloud/load-balancer"
+	loadbalancer "hcm/pkg/dal/dao/cloud/load-balancer"
 	networkinterface "hcm/pkg/dal/dao/cloud/network-interface"
 	nicvmrel "hcm/pkg/dal/dao/cloud/network-interface-cvm-rel"
 	"hcm/pkg/dal/dao/cloud/region"
-	"hcm/pkg/dal/dao/cloud/resource-flow"
+	resflow "hcm/pkg/dal/dao/cloud/resource-flow"
 	resourcegroup "hcm/pkg/dal/dao/cloud/resource-group"
 	routetable "hcm/pkg/dal/dao/cloud/route-table"
 	securitygroup "hcm/pkg/dal/dao/cloud/security-group"
@@ -54,9 +56,13 @@ import (
 	daosubaccount "hcm/pkg/dal/dao/cloud/sub-account"
 	daosync "hcm/pkg/dal/dao/cloud/sync"
 	"hcm/pkg/dal/dao/cloud/zone"
+	"hcm/pkg/dal/dao/dissolve/host"
+	"hcm/pkg/dal/dao/dissolve/module"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
+	"hcm/pkg/dal/dao/obs"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
+	resplan "hcm/pkg/dal/dao/resource-plan"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -103,7 +109,21 @@ type Set interface {
 	Image() cimage.Image
 	DiskCvmRel() diskcvmrel.DiskCvmRel
 	EipCvmRel() eipcvmrel.EipCvmRel
-	AccountBillConfig() bill.Interface
+	AccountBillConfig() cloudbill.Interface
+	AccountBillDailyPullTask() bill.AccountBillDailyPullTask
+	AccountBillMonthPullTask() bill.AccountBillMonthPullTask
+	AccountBillSummaryMain() bill.AccountBillSummaryMain
+	AccountBillSummaryDaily() bill.AccountBillSummaryDaily
+	AccountBillSummaryVersion() bill.AccountBillSummaryVersion
+	AccountBillItem() bill.AccountBillItem
+	AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem
+	AccountBillSummaryRoot() bill.AccountBillSummaryRoot
+	OBSBillItemHuawei() obs.OBSBillItemHuawei
+	OBSBillItemAws() obs.OBSBillItemAws
+	OBSBillItemGcp() obs.OBSBillItemGcp
+	RootAccountBillConfig() bill.RootAccountBillConfig
+	AccountBillExchangeRate() bill.AccountBillExchangeRate
+	AccountBillSyncRecord() bill.AccountBillSyncRecord
 	AsyncFlow() daoasync.AsyncFlow
 	AsyncFlowTask() daoasync.AsyncFlowTask
 	UserCollection() daouser.Interface
@@ -122,9 +142,20 @@ type Set interface {
 	ResourceFlowRel() resflow.ResourceFlowRelInterface
 	ResourceFlowLock() resflow.ResourceFlowLockInterface
 	SGCommonRel() sgcomrel.Interface
+	MainAccount() accountset.MainAccount
+	RootAccount() accountset.RootAccount
 
 	TCloudZiyanRegion() region.TCloudZiyanRegion
 	TCloudZiyanSGRule() securitygroup.TCloudZiyanSGRule
+
+	ResPlanTicket() resplan.ResPlanTicketInterface
+	ResPlanDemand() resplan.ResPlanDemandInterface
+	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
+	WoaZone() resplan.WoaZoneInterface
+	WoaDeviceType() resplan.WoaDeviceTypeInterface
+
+	RecycleModule() module.RecycleModule
+	RecycleHost() host.RecycleHost
 
 	Txn() *Txn
 }
@@ -478,11 +509,124 @@ func (s *set) Txn() *Txn {
 }
 
 // AccountBillConfig returns account bill config dao.
-func (s *set) AccountBillConfig() bill.Interface {
-	return &bill.AccountBillConfigDao{
+func (s *set) AccountBillConfig() cloudbill.Interface {
+	return &cloudbill.AccountBillConfigDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,
+	}
+}
+
+// AccountBillDailyPullTask returns AccountBillDailyPullTask dao.
+func (s *set) AccountBillDailyPullTask() bill.AccountBillDailyPullTask {
+	return &bill.AccountBillDailyPullTaskDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillMonthPullTask returns AccountBillMonthPullTask dao.
+func (s *set) AccountBillMonthPullTask() bill.AccountBillMonthPullTask {
+	return &bill.AccountBillMonthPullTaskDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryMain returns AccountBillSummaryMain dao.
+func (s *set) AccountBillSummaryMain() bill.AccountBillSummaryMain {
+	return &bill.AccountBillSummaryMainDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryVersion returns AccountBillSummaryVersion dao.
+func (s *set) AccountBillSummaryVersion() bill.AccountBillSummaryVersion {
+	return &bill.AccountBillSummaryVersionDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryDaily returns AccountBillSummaryDaily dao.
+func (s *set) AccountBillSummaryDaily() bill.AccountBillSummaryDaily {
+	return &bill.AccountBillSummaryDailyDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillItem returns AccountBillItem dao.
+func (s *set) AccountBillItem() bill.AccountBillItem {
+	return &bill.AccountBillItemDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillAdjustmentItem returns AccountBillAdjustmentItem dao.
+func (s *set) AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem {
+	return &bill.AccountBillAdjustmentItemDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSummaryRoot returns AccountBillSummaryRoot dao.
+func (s *set) AccountBillSummaryRoot() bill.AccountBillSummaryRoot {
+	return &bill.AccountBillSummaryRootDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// OBSBillItemHuawei returns OBSBillItemHuawei dao.
+func (s *set) OBSBillItemHuawei() obs.OBSBillItemHuawei {
+	return &obs.OBSBillItemHuaweiDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// OBSBillItemAws returns OBSBillItemAws dao.
+func (s *set) OBSBillItemAws() obs.OBSBillItemAws {
+	return &obs.OBSBillItemAwsDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// OBSBillItemGcp returns OBSBillItemGcp dao.
+func (s *set) OBSBillItemGcp() obs.OBSBillItemGcp {
+	return &obs.OBSBillItemGcpDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RootAccountBillConfig returns RootAccountBillConfig dao
+func (s *set) RootAccountBillConfig() bill.RootAccountBillConfig {
+	return &bill.RootAccountBillConfigDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// AccountBillExchangeRate return AccountBillExchangeRate dao
+func (s *set) AccountBillExchangeRate() bill.AccountBillExchangeRate {
+	return &bill.AccountBillExchangeRateDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// AccountBillSyncRecord return bill.AccountBillSyncRecord dao
+func (s *set) AccountBillSyncRecord() bill.AccountBillSyncRecord {
+	return &bill.AccountBillSyncRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
 	}
 }
 
@@ -651,4 +795,77 @@ func (s *set) SGCommonRel() sgcomrel.Interface {
 // TCloudZiyanRegion 腾讯自研云region dao.
 func (s *set) TCloudZiyanRegion() region.TCloudZiyanRegion {
 	return region.NewTCloudZiyanRegionDao(s.orm, s.idGen)
+}
+
+// ResPlanTicket resource plan ticket dao.
+func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
+	return &resplan.ResPlanTicketDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanDemand resource plan demand dao.
+func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
+	return &resplan.ResPlanDemandDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanTicketStatus resource plan ticket status dao.
+func (s *set) ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface {
+	return &resplan.ResPlanTicketStatusDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaZone woa zone status dao.
+func (s *set) WoaZone() resplan.WoaZoneInterface {
+	return &resplan.WoaZoneDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// WoaDeviceType woa device type dao.
+func (s *set) WoaDeviceType() resplan.WoaDeviceTypeInterface {
+	return &resplan.WoaDeviceTypeDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// MainAccount return mainaccount dao
+func (s *set) MainAccount() accountset.MainAccount {
+	return &accountset.MainAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RootAccount return rootaccount dao
+func (s *set) RootAccount() accountset.RootAccount {
+	return &accountset.RootAccountDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RecycleModule return recycle module dao.
+func (s *set) RecycleModule() module.RecycleModule {
+	return module.NewRecycleModuleDao(s.orm, s.idGen, s.audit)
+}
+
+// RecycleHost return recycle host dao.
+func (s *set) RecycleHost() host.RecycleHost {
+	return host.NewRecycleHostDao(s.orm, s.idGen, s.audit)
 }

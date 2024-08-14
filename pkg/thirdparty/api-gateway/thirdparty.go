@@ -90,20 +90,24 @@ func ApiGatewayCall[IT any, OT any](cli rest.ClientInterface, cfg *cc.ApiGateway
 	}
 
 	if !resp.Result || resp.Code != 0 {
-		logs.Errorf("api gateway returns error, err: %v, url: %s, code: %d, msg: %s, rid: %s",
-			err, url, resp.BKErrorCode, resp.BKErrorMessage, kt.Rid)
-		return nil, fmt.Errorf("api gateway returns err, code: %d, msg: %s", resp.BKErrorCode, resp.BKErrorMessage)
+		err := fmt.Errorf("failed to call api gateway, code: %d, msg: %s, bk_error_code: %d, bk_error_msg: %s",
+			resp.Code, resp.Message, resp.BKErrorCode, resp.BKErrorMessage)
+		logs.Errorf("api gateway returns error, url: %s, err: %v, rid: %s", url, err, kt.Rid)
+		return nil, err
 	}
 	return resp.Data, nil
 }
 
 func getCommonHeader(kt *kit.Kit, cfg *cc.ApiGateway) http.Header {
 	header := kt.Header()
-
+	// 如果配置了指定用户，使用指定用户调用
+	user := kt.User
+	if len(cfg.User) > 0 {
+		user = cfg.User
+	}
 	// TODO: 目前调用方式和itsm 不同，后期改成统一的ApiGateWay 客户端
-	bkAuth := fmt.Sprintf(
-		`{"bk_app_code": "%s", "bk_app_secret": "%s","bk_username":"%s"}`,
-		cfg.AppCode, cfg.AppSecret, kt.User)
+	bkAuth := fmt.Sprintf(`{"bk_app_code": "%s", "bk_app_secret": "%s","bk_username":"%s"}`,
+		cfg.AppCode, cfg.AppSecret, user)
 	header.Set(constant.BKGWAuthKey, bkAuth)
 	return header
 }

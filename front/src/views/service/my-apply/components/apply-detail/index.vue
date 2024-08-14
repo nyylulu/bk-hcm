@@ -9,13 +9,6 @@
           <bk-button :loading="cancelLoading" @click="handleCancel" :disabled="isShowRevoke">
             {{ t('撤销') }}
           </bk-button>
-          <!-- <bk-button
-          :disabled="isCloneDisabled"
-          :loading="loading"
-          @click="handleCancel"
-          style="margin-left: 20px">
-          {{ t('克隆') }}
-        </bk-button> -->
         </div>
       </template>
     </div>
@@ -52,7 +45,7 @@ export default defineComponent({
       default: false,
     },
   },
-  emits: ['on-cancel'],
+  emits: ['cancel'],
   setup(props, { emit }) {
     const { t } = useI18n();
 
@@ -61,12 +54,8 @@ export default defineComponent({
     const isShowPage = ref(true);
 
     const handleCancel = () => {
-      emit('on-cancel', basicInfo.value.id);
+      emit('cancel', basicInfo.value.id);
     };
-
-    // const handleClone = () => {
-    //   console.log('克隆');
-    // };
 
     watch(
       () => props.params,

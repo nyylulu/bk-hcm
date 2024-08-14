@@ -34,7 +34,7 @@ import (
 func upsertCmdbHosts[T corecvm.Extension](svc *cvmSvc, kt *kit.Kit, vendor enumor.Vendor, models []*cvm.Table) error {
 	bizHostMap := make(map[int64][]corecvm.Cvm[T])
 	for _, model := range models {
-		if model.BkBizID == constant.UnassignedBiz {
+		if model.BkBizID == constant.UnassignedBiz || vendor == enumor.TCloudZiyan {
 			// ignore unassigned host. TODO delete unassigned host from cmdb when transfer back to resource supported.
 			continue
 		}
@@ -65,7 +65,7 @@ func upsertCmdbHosts[T corecvm.Extension](svc *cvmSvc, kt *kit.Kit, vendor enumo
 func upsertBaseCmdbHosts(svc *cvmSvc, kt *kit.Kit, models []*cvm.Table) error {
 	bizHostMap := make(map[int64][]corecvm.BaseCvm)
 	for _, model := range models {
-		if model.BkBizID == constant.UnassignedBiz {
+		if model.BkBizID == constant.UnassignedBiz || model.Vendor == enumor.TCloudZiyan {
 			// ignore unassigned host. TODO delete unassigned host from cmdb when transfer back to resource supported.
 			continue
 		}
@@ -89,7 +89,7 @@ func upsertBaseCmdbHosts(svc *cvmSvc, kt *kit.Kit, models []*cvm.Table) error {
 func deleteCmdbHosts(svc *cvmSvc, kt *kit.Kit, models []cvm.Table) error {
 	delBizMap := make(map[int64]map[enumor.Vendor][]string)
 	for _, one := range models {
-		if one.BkBizID == constant.UnassignedBiz {
+		if one.BkBizID == constant.UnassignedBiz || one.Vendor == enumor.TCloudZiyan {
 			continue
 		}
 		vendorMap, exists := delBizMap[one.BkBizID]

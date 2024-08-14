@@ -1,0 +1,61 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package meta ...
+package meta
+
+import (
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+)
+
+// DiskTypeItem defines disk type item.
+type DiskTypeItem struct {
+	DiskType     enumor.DiskType `json:"disk_type"`
+	DiskTypeName string          `json:"disk_type_name"`
+}
+
+// ListZoneReq defines list zone request.
+type ListZoneReq struct {
+	RegionIDs []string `json:"region_ids"`
+}
+
+// Validate whether ListZoneReq is valid.
+func (r *ListZoneReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListDeviceTypeReq defines list device type request.
+type ListDeviceTypeReq struct {
+	DeviceClasses []string `json:"device_classes"`
+}
+
+// Validate whether ListDeviceTypeReq is valid.
+func (r *ListDeviceTypeReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ListDeviceTypeRst defines list device type result.
+type ListDeviceTypeRst struct {
+	DeviceType string `json:"device_type"`
+	CoreType   string `json:"core_type"`
+	CpuCore    int64  `json:"cpu_core"`
+	Memory     int64  `json:"memory"`
+}

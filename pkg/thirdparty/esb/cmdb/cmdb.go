@@ -38,6 +38,10 @@ type Client interface {
 	SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error)
 	// SearchBizCompanyCmdbInfo 返回cc业务在公司cmdb的信息
 	SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmdbInfoParams) (*[]CompanyCmdbInfo, error)
+	// SearchBizBelonging search cmdb business belonging.
+	SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*SearchBizBelongingResult, error)
+	ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error)
+	FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error)
 }
 
 // NewClient initialize a new cmdb client
@@ -113,4 +117,23 @@ func (c *cmdb) SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmd
 
 	return types.EsbCall[SearchBizCompanyCmdbInfoParams, []CompanyCmdbInfo](c.client, c.config, rest.POST, kt,
 		params, "/cc/search_cost_info_relation/")
+}
+
+// SearchBizBelonging search cmdb business belonging.
+func (c *cmdb) SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*SearchBizBelongingResult, error) {
+
+	return types.EsbCall[SearchBizBelongingParams, SearchBizBelongingResult](c.client, c.config, rest.POST, kt, params,
+		"/cc/search_cost_info_relation/")
+}
+
+// ResourceWatch watch cmdb resource event.
+func (c *cmdb) ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error) {
+	return types.EsbCall[WatchEventParams, WatchEventResult](c.client, c.config, rest.POST, kt, params,
+		"/cc/resource_watch/")
+}
+
+// FindHostBizRelations find host biz relations.
+func (c *cmdb) FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error) {
+	return types.EsbCall[HostModuleRelationParams, []HostTopoRelation](c.client, c.config, rest.POST, kt, params,
+		"/cc/find_host_biz_relations/")
 }

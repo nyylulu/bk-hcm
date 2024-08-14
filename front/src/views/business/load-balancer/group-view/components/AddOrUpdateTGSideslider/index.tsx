@@ -80,6 +80,7 @@ export default defineComponent({
         `vendors/tcloud/target_groups/${targetGroup.id}/rules`,
       );
       const listenerItem = rulesRes.data.details[0];
+      if (!listenerItem) return;
       // 请求监听器详情, 获取端口段信息
       const detailRes = await businessStore.detail('listeners', listenerItem.lbl_id);
       loadBalancerStore.setListenerDetailWithTargetGroup(detailRes.data);
@@ -126,8 +127,10 @@ export default defineComponent({
       cloud_vpc_id: formData.cloud_vpc_id,
       rs_list:
         formData.rs_list.length > 0
-          ? formData.rs_list.map(({ cloud_id, port, weight }) => ({
+          ? formData.rs_list.map(({ cloud_id, port, weight, private_ipv4_addresses }) => ({
+              // 当资源类型是CVM时, 默认传第1个内网ip以及CVM资源ID. 如果CVM有多个IP, 其他IP忽略(本期只支持CVM)
               inst_type: 'CVM',
+              ip: private_ipv4_addresses[0],
               cloud_inst_id: cloud_id,
               port,
               weight,
@@ -156,8 +159,9 @@ export default defineComponent({
             .filter(({ isNew }) => isNew)
             .map(({ cloud_id, port, weight, private_ipv4_addresses }) => {
               return {
+                // 当资源类型是CVM时, 默认传第1个内网ip以及CVM资源ID. 如果CVM有多个IP, 其他IP忽略(本期只支持CVM)
                 inst_type: lbDetail.value?.extension?.snat_pro ? 'ENI' : 'CVM',
-                ip: lbDetail.value?.extension?.snat_pro ? private_ipv4_addresses[0] : undefined,
+                ip: private_ipv4_addresses[0],
                 cloud_inst_id: lbDetail.value?.extension?.snat_pro ? undefined : cloud_id,
                 port,
                 weight,

@@ -52,19 +52,21 @@ func (cli *client) listenerByLbBatch(kt *kit.Kit, params *SyncListenerBatchOptio
 
 	// 并发同步多个负载均衡下的监听器
 	var syncResult *SyncResult
-	err := concurrence.BaseExec(constant.SyncConcurrencyDefaultMaxLimit, params.LbInfos,
+	err := concurrence.BaseExec(constant.CLBListenerSyncConcurrencyMaxLimit, params.LbInfos,
 		func(lb corelb.TCloudLoadBalancer) error {
+			newKit := kt.NewSubKit()
 			syncOpt := &SyncListenerOption{
-				BizID:     lb.BkBizID,
-				LBID:      lb.ID,
-				CloudLBID: lb.CloudID,
+				BizID:              lb.BkBizID,
+				LBID:               lb.ID,
+				CloudLBID:          lb.CloudID,
+				CachedLoadBalancer: cvt.ValToPtr(lb),
 			}
 			param := &SyncBaseParams{
 				AccountID: params.AccountID,
 				Region:    params.Region,
 			}
 			var err error
-			if syncResult, err = cli.listenerOfLoadBalancer(kt, param, syncOpt); err != nil {
+			if syncResult, err = cli.listenerOfLoadBalancer(newKit, param, syncOpt); err != nil {
 				logs.ErrorDepthf(1, "[%s] account: %s lb: %s sync listener failed, err: %v, rid: %s",
 					enumor.TCloud, params.AccountID, lb.CloudID, err, kt.Rid)
 				return err
@@ -618,6 +620,8 @@ type SyncListenerOption struct {
 	// 对应的负载均衡
 	LBID      string `json:"lbid" validate:"required"`
 	CloudLBID string `json:"cloud_lbid" validate:"required"`
+
+	CachedLoadBalancer *corelb.TCloudLoadBalancer
 }
 
 // Validate ...

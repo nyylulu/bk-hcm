@@ -64,6 +64,10 @@ const (
 	WebServerName Name = "web-server"
 	// TaskServerName is task server's name
 	TaskServerName Name = "task-server"
+	// WoaServerName is woa server's name
+	WoaServerName Name = "woa-server"
+	// AccountServerName is account server's name
+	AccountServerName Name = "account-server"
 )
 
 // Setting defines all service Setting interface.
@@ -122,6 +126,8 @@ type CloudServerSetting struct {
 	Itsm           ApiGateway     `yaml:"itsm"`
 	Cmdb           ApiGateway     `yaml:"cmdb"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
+	FinOps         ApiGateway     `yaml:"finops"`
+	Cmsi           CMSI           `yaml:"cmsi"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -172,17 +178,22 @@ func (s CloudServerSetting) Validate() error {
 		return err
 	}
 
+	if err := s.Cmsi.validate(); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 // DataServiceSetting defines data service used setting options.
 type DataServiceSetting struct {
-	Network  Network   `yaml:"network"`
-	Service  Service   `yaml:"service"`
-	Log      LogOption `yaml:"log"`
-	Database DataBase  `yaml:"database"`
-	Crypto   Crypto    `yaml:"crypto"`
-	Esb      Esb       `yaml:"esb"`
+	Network     Network     `yaml:"network"`
+	Service     Service     `yaml:"service"`
+	Log         LogOption   `yaml:"log"`
+	Database    DataBase    `yaml:"database"`
+	Objectstore ObjectStore `yaml:"objectstore"`
+	Crypto      Crypto      `yaml:"crypto"`
+	Esb         Esb         `yaml:"esb"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -232,6 +243,7 @@ type HCServiceSetting struct {
 	Log       LogOption  `yaml:"log"`
 	Esb       Esb        `yaml:"esb"`
 	CmdbApiGw ApiGateway `yaml:"cmdb"`
+	SyncCCRes SyncCCRes `yaml:"syncCCRes"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -359,11 +371,12 @@ func (s WebServerSetting) Validate() error {
 
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
-	Network  Network   `yaml:"network"`
-	Service  Service   `yaml:"service"`
-	Database DataBase  `yaml:"database"`
-	Log      LogOption `yaml:"log"`
-	Async    Async     `yaml:"async"`
+	Network     Network   `yaml:"network"`
+	Service     Service   `yaml:"service"`
+	Database    DataBase  `yaml:"database"`
+	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
+	Log         LogOption `yaml:"log"`
+	Async       Async     `yaml:"async"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -376,6 +389,9 @@ func (s *TaskServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Database.trySetDefault()
+	if s.OBSDatabase != nil {
+		s.OBSDatabase.trySetDefault()
+	}
 	s.Log.trySetDefault()
 
 	return
@@ -396,5 +412,140 @@ func (s TaskServerSetting) Validate() error {
 		return err
 	}
 
+	if s.OBSDatabase != nil {
+		if err := s.OBSDatabase.validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// WoaServerSetting defines woa server used setting options.
+type WoaServerSetting struct {
+	Network      Network   `yaml:"network"`
+	Service      Service   `yaml:"service"`
+	Database     DataBase  `yaml:"database"`
+	Log          LogOption `yaml:"log"`
+	Esb          Esb       `yaml:"esb"`
+	MongoDB      MongoDB   `yaml:"mongodb"`
+	Watch        MongoDB   `yaml:"watch"`
+	Redis        Redis     `yaml:"redis"`
+	ClientConfig `yaml:",inline"`
+	ItsmFlows    []ItsmFlow       `yaml:"itsmFlows"`
+	ResDissolve  ResourceDissolve `yaml:"resourceDissolve"`
+	Es           Es               `yaml:"elasticsearch"`
+	Blacklist    string           `yaml:"blacklist"`
+	UseMongo     bool             `yaml:"useMongo"`
+}
+
+// trySetFlagBindIP try set flag bind ip.
+func (s *WoaServerSetting) trySetFlagBindIP(ip net.IP) error {
+	return s.Network.trySetFlagBindIP(ip)
+}
+
+// trySetDefault set the WoaServerSetting default value if user not configured.
+func (s *WoaServerSetting) trySetDefault() {
+	s.Network.trySetDefault()
+	s.Service.trySetDefault()
+	s.Log.trySetDefault()
+
+	return
+}
+
+// Validate TaskServerSetting option.
+func (s WoaServerSetting) Validate() error {
+	if err := s.Network.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Service.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Esb.validate(); err != nil {
+		return err
+	}
+
+	// 开启Mongo之后才校验参数
+	if s.UseMongo {
+		if err := s.MongoDB.validate(); err != nil {
+			return err
+		}
+
+		if err := s.Watch.validate(); err != nil {
+			return err
+		}
+	}
+
+	if err := s.Redis.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Database.validate(); err != nil {
+		return err
+	}
+
+	if err := s.ClientConfig.validate(); err != nil {
+		return err
+	}
+
+	if err := s.ResDissolve.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Es.validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AccountServerSetting defines task server used setting options.
+type AccountServerSetting struct {
+	Network        Network              `yaml:"network"`
+	Service        Service              `yaml:"service"`
+	Controller     BillControllerOption `yaml:"controller"`
+	Log            LogOption            `yaml:"log"`
+	BillAllocation BillAllocationOption `yaml:"billAllocation"`
+
+	FinOps       ApiGateway   `yaml:"finops"`
+	Jarvis       Jarvis       `yaml:"jarvis"`
+	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
+	IEGObsOption IEGObsOption `yaml:"obs"`
+}
+
+// trySetFlagBindIP try set flag bind ip.
+func (s *AccountServerSetting) trySetFlagBindIP(ip net.IP) error {
+	return s.Network.trySetFlagBindIP(ip)
+}
+
+// trySetDefault set the TaskServerSetting default value if user not configured.
+func (s *AccountServerSetting) trySetDefault() {
+	s.Network.trySetDefault()
+	s.Service.trySetDefault()
+	s.Controller.trySetDefault()
+	s.Log.trySetDefault()
+	s.ExchangeRate.trySetDefault()
+}
+
+// Validate TaskServerSetting option.
+func (s AccountServerSetting) Validate() error {
+
+	if err := s.Network.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Service.validate(); err != nil {
+		return err
+	}
+
+	if err := s.Jarvis.validate(); err != nil {
+		return err
+	}
+
+	if err := s.IEGObsOption.validate(); err != nil {
+		return err
+	}
 	return nil
 }

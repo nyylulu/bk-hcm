@@ -37,6 +37,8 @@ import (
 	tclouddiskhandler "hcm/cmd/cloud-server/service/application/handlers/disk/tcloud"
 	"hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud"
 	ziyan "hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud-ziyan"
+	createmainaccount "hcm/cmd/cloud-server/service/application/handlers/main-account/create-main-account"
+	updatemainaccount "hcm/cmd/cloud-server/service/application/handlers/main-account/update-main-account"
 	awsvpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/aws"
 	azurevpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/azure"
 	gcpvpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/gcp"
@@ -312,6 +314,18 @@ func (a *applicationSvc) getHandlerByApplication(cts *rest.Contexts, application
 		return a.getHandlerOfCreateDisk(opt, vendor, application)
 	case enumor.CreateLoadBalancer:
 		return a.getHandlerOfCreateLoadBalancer(opt, vendor, application)
+	case enumor.CreateMainAccount:
+		req, err := parseReqFromApplicationContent[proto.MainAccountCreateReq](application.Content)
+		if err != nil {
+			return nil, err
+		}
+		return createmainaccount.NewApplicationOfCreateMainAccount(opt, a.authorizer, req, nil), nil
+	case enumor.UpdateMainAccount:
+		req, err := parseReqFromApplicationContent[proto.MainAccountUpdateReq](application.Content)
+		if err != nil {
+			return nil, err
+		}
+		return updatemainaccount.NewApplicationOfUpdateMainAccount(opt, a.authorizer, req), nil
 	}
 	return nil, errors.New("not handler to support")
 }
