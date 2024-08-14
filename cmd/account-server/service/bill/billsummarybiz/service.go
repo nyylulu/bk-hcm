@@ -17,9 +17,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package dailysummary
+package billsummarybiz
 
 import (
-	// register gcp puller
-	_ "hcm/cmd/account-server/logics/bill/puller/gcp"
+	"net/http"
+
+	"hcm/cmd/account-server/logics/audit"
+	"hcm/cmd/account-server/service/capability"
+	"hcm/pkg/client"
+	"hcm/pkg/iam/auth"
+	"hcm/pkg/rest"
 )
+
+// InitService initial the main account service
+func InitService(c *capability.Capability) {
+	svc := &service{
+		client:     c.ApiClient,
+		authorizer: c.Authorizer,
+		audit:      c.Audit,
+	}
+
+	h := rest.NewHandler()
+
+	// register handler
+	h.Add("ListBizSummary", http.MethodPost, "/bills/biz_summarys/list", svc.ListBizSummary)
+
+	h.Load(c.WebService)
+}
+
+type service struct {
+	client     *client.ClientSet
+	authorizer auth.Authorizer
+	audit      audit.Interface
+}
