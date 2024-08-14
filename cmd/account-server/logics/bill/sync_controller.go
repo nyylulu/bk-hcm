@@ -39,7 +39,6 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/obs"
-	"hcm/pkg/tools/slice"
 )
 
 const (
@@ -318,18 +317,13 @@ func (sc *SyncController) getItemListFromDetail(
 func (sc *SyncController) handleSyncRecordDetailItem(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
 	*SyncRecordDetailItem, error) {
 
-	taskServerNameList, err := getTaskServerKeyList(sc.Sd)
-	if err != nil {
-		logs.Warnf("get task server name list failed, err %s", err.Error())
-		return nil, err
-	}
 	switch syncRecordItem.State {
 	case stateNew:
 		return sc.setTotal(kt, syncRecordItem)
 	case stateCleaning:
-		return sc.doSubCleanTask(kt, syncRecordItem, taskServerNameList)
+		return sc.doSubCleanTask(kt, syncRecordItem)
 	case stateSyncing:
-		return sc.doSubSyncTask(kt, syncRecordItem, taskServerNameList)
+		return sc.doSubSyncTask(kt, syncRecordItem)
 	case stateSynced:
 		return syncRecordItem, nil
 	default:
@@ -365,8 +359,7 @@ func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDetail
 	return syncRecordItem, nil
 }
 
-func (sc *SyncController) doSubCleanTask(kt *kit.Kit,
-	syncRecordItem *SyncRecordDetailItem, taskServerNameList []string) (
+func (sc *SyncController) doSubCleanTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
 	*SyncRecordDetailItem, error) {
 
 	if len(syncRecordItem.FlowID) == 0 {
@@ -387,10 +380,7 @@ func (sc *SyncController) doSubCleanTask(kt *kit.Kit,
 		syncRecordItem.FlowID = ""
 		syncRecordItem.State = stateSyncing
 		return syncRecordItem, nil
-	} else if flow.State == enumor.FlowFailed ||
-		(flow.State == enumor.FlowScheduled &&
-			flow.Worker != nil &&
-			!slice.IsItemInSlice[string](taskServerNameList, *flow.Worker)) {
+	} else if flow.State == enumor.FlowFailed {
 
 		// create clean task
 		id, err := sc.createCleanTask(kt, syncRecordItem)
@@ -421,8 +411,7 @@ func (sc *SyncController) createCleanTask(kt *kit.Kit, syncRecordItem *SyncRecor
 	return result.ID, nil
 }
 
-func (sc *SyncController) doSubSyncTask(
-	kt *kit.Kit, syncRecordItem *SyncRecordDetailItem, taskServerNameList []string) (
+func (sc *SyncController) doSubSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
 	*SyncRecordDetailItem, error) {
 
 	if len(syncRecordItem.FlowID) == 0 {
@@ -450,10 +439,7 @@ func (sc *SyncController) doSubSyncTask(
 		syncRecordItem.CurrentIndex = syncRecordItem.CurrentIndex + syncRecordItem.BatchSize
 		syncRecordItem.State = stateSyncing
 		return syncRecordItem, nil
-	} else if flow.State == enumor.FlowFailed ||
-		(flow.State == enumor.FlowScheduled &&
-			flow.Worker != nil &&
-			!slice.IsItemInSlice[string](taskServerNameList, *flow.Worker)) {
+	} else if flow.State == enumor.FlowFailed {
 
 		id, err := sc.createSyncTask(kt, syncRecordItem)
 		if err != nil {

@@ -34,6 +34,7 @@ import (
 	rootaccount "hcm/cmd/account-server/service/account-set/root-account"
 	"hcm/cmd/account-server/service/bill/billadjustment"
 	"hcm/cmd/account-server/service/bill/billitem"
+	"hcm/cmd/account-server/service/bill/billsummarybiz"
 	"hcm/cmd/account-server/service/bill/billsummarymain"
 	"hcm/cmd/account-server/service/bill/billsummaryproduct"
 	"hcm/cmd/account-server/service/bill/billsummaryroot"
@@ -271,6 +272,7 @@ func (s *Service) apiSet() *restful.Container {
 	billsummarymain.InitService(c)
 	billsummaryproduct.InitService(c)
 	billitem.InitBillItemService(c)
+	billsummarybiz.InitService(c)
 	billadjustment.InitBillAdjustmentService(c)
 	billsyncrecord.InitService(c)
 	exchangerate.InitService(c)

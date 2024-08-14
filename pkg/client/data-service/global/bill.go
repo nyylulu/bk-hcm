@@ -245,6 +245,14 @@ func (b *BillClient) ListBillSummaryMain(kt *kit.Kit, req *billproto.BillSummary
 		b.client, rest.GET, kt, req, "/bills/summarymains")
 }
 
+// ListBillSummaryBiz list bill summary biz
+func (b *BillClient) ListBillSummaryBiz(kt *kit.Kit, req *core.ListReq) (
+	*billproto.BillSummaryBizListResult, error) {
+
+	return common.Request[core.ListReq, billproto.BillSummaryBizListResult](
+		b.client, rest.GET, kt, req, "/bills/summarybiz")
+}
+
 // ListBillSummaryProduct list bill summary product
 func (b *BillClient) ListBillSummaryProduct(kt *kit.Kit, req *core.ListReq) (
 	*billproto.BillSummaryProductListResult, error) {
