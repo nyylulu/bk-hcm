@@ -4,23 +4,17 @@
     padding: 0 40px;
   }
 
-  .form-item-warp {
-    margin: 0 50px 40px 0;
-    height: 45px;
-  }
-
   .item-warp-component {
     width: 300px;
   }
 
   .card-title {
+    margin: 16px 0;
+    display: flex;
+    align-items: center;
     font-weight: 700;
     font-size: 14px;
     color: #313238;
-    letter-spacing: 0;
-    margin-right: 16px;
-    margin-bottom: 16px;
-    margin-top: 16px;
   }
 
   .card-content {
@@ -61,10 +55,6 @@
       }
     }
   }
-
-  .mt15 {
-    margin-top: 15;
-  }
 }
 
 .add-resource-requirements-sideslider {
@@ -81,25 +71,20 @@
     width: 600px;
   }
 
-  .commonCard-layer {
-    height: 180px;
-  }
-
   .commonCard-form {
     display: flex;
     align-content: center;
   }
-
   .commonCard-text {
     margin-left: 56px;
     text-align: center;
-    color: #313238;
+    color: #63656e;
     font-weight: 400;
-    font-size: 14px;
+    font-size: 12px;
   }
 
   .commonCard-subnet-tag {
-    font-size: 14px;
+    font-size: 12px;
     color: #63656e;
   }
 
@@ -174,6 +159,9 @@
       .request-quantity-text {
         flex: 1;
         text-align: right;
+      }
+      .content{
+        line-height: 26px;
       }
     }
   }

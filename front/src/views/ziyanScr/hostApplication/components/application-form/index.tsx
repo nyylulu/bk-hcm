@@ -99,7 +99,7 @@ export default defineComponent({
     const PhysicalMachineoperation = ref({
       label: '操作',
       width: 200,
-      render: ({ row, index }) => {
+      render: ({ row, index }: any) => {
         return (
           <div class='operation-column'>
             <Button text theme='primary' class='mr10' onClick={() => clonelist(row, 'IDCPM')}>
@@ -153,7 +153,7 @@ export default defineComponent({
     const CloudHostoperation = ref({
       label: '操作',
       width: 200,
-      render: ({ row, index }) => {
+      render: ({ row, index }: any) => {
         return (
           <div class='operation-column'>
             <Button text theme='primary' class='mr10' onClick={() => clonelist(row, 'QCLOUDCVM')}>
@@ -295,7 +295,7 @@ export default defineComponent({
       vpcName.value = '';
       subnetName.value = '';
     };
-    const onQcloudVpcChange = (val) => {
+    const onQcloudVpcChange = (val: any) => {
       QCLOUDCVMForm.value.spec.subnet = '';
       const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
       if (matchingItem) {
@@ -307,7 +307,7 @@ export default defineComponent({
     const onSubnetNameClear = () => {
       subnetName.value = '';
     };
-    const onQcloudSubnetChange = (val) => {
+    const onQcloudSubnetChange = (val: any) => {
       const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
       if (matchingItem) {
         subnetName.value = matchingItem.subnet_name;
@@ -322,7 +322,7 @@ export default defineComponent({
         loadSubnets();
       }
     };
-    const onQcloudAffinityChange = (val) => {
+    const onQcloudAffinityChange = (val: any) => {
       pmForm.value.spec.antiAffinityLevel = val;
     };
     // IDCPM云地域变化
@@ -427,7 +427,7 @@ export default defineComponent({
     };
     const modifyindex = ref(0);
     const modifyresourceType = ref('');
-    const modifylist = (row, index, resourceType) => {
+    const modifylist = (row: any, index: number, resourceType: string) => {
       CVMapplication.value = false;
       resourceForm.value.resourceType = resourceType;
       modifyresourceType.value = resourceType;
@@ -449,7 +449,7 @@ export default defineComponent({
       modifyindex.value = index;
       addResourceRequirements.value = true;
     };
-    const deletelist = (index, resourceType) => {
+    const deletelist = (index: number, resourceType: string) => {
       if (resourceType === 'QCLOUDCVM') {
         cloudTableData.value.splice(index, 1);
       } else {
@@ -476,7 +476,7 @@ export default defineComponent({
           follower: data.follower,
           suborders: data.suborders,
         };
-        order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }) => {
+        order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }: any) => {
           resource_type === 'QCLOUDCVM'
             ? cloudTableData.value.push({
                 remark,
@@ -494,7 +494,6 @@ export default defineComponent({
       }
       if (route?.query?.id) {
         assignment(route?.query);
-
         addResourceRequirements.value = true;
       }
     };
@@ -782,10 +781,10 @@ export default defineComponent({
     };
     return () => (
       <div class='host-application-form-wrapper'>
-        {props.isbusiness ? <></> : <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
+        {!props.isbusiness && <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
         <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
-          <CommonCard class='mt15' title={() => '基本信息'} layout='grid'>
+          <CommonCard title={() => '基本信息'} layout='grid'>
             <bk-form
               form-type='vertical'
               label-width='150'
@@ -793,10 +792,8 @@ export default defineComponent({
               rules={order.value.rules}
               ref={formRef}>
               <div class='flex-row align-content-center'>
-                {props.isbusiness ? (
-                  <></>
-                ) : (
-                  <bk-form-item label='所属业务' class='form-item-warp' required property='bkBizId'>
+                {!props.isbusiness && (
+                  <bk-form-item label='所属业务' required property='bkBizId'>
                     <BusinessSelector
                       class='item-warp-component'
                       v-model={order.value.model.bkBizId}
@@ -809,7 +806,7 @@ export default defineComponent({
                   </bk-form-item>
                 )}
 
-                <bk-form-item label='需求类型' class='form-item-warp' required property='requireType'>
+                <bk-form-item label='需求类型' required property='requireType'>
                   <bk-select class='item-warp-component' v-model={order.value.model.requireType}>
                     {order.value.options.requireTypes.map((item: { require_type: any; require_name: any }) => (
                       <bk-option
@@ -821,14 +818,14 @@ export default defineComponent({
                 </bk-form-item>
               </div>
               <div class='flex-row align-content-center'>
-                <bk-form-item label='期望交付时间' class='form-item-warp' required property='expectTime'>
+                <bk-form-item label='期望交付时间' required property='expectTime' class='mr24'>
                   <bk-date-picker
                     class='item-warp-component'
                     v-model={order.value.model.expectTime}
                     clearable
                     type='datetime'></bk-date-picker>
                 </bk-form-item>
-                <bk-form-item label='关注人' class='form-item-warp'>
+                <bk-form-item label='关注人'>
                   <MemberSelect class='item-warp-component' multiple clearable v-model={order.value.model.follower} />
                 </bk-form-item>
               </div>
@@ -851,7 +848,7 @@ export default defineComponent({
                 }}></i>
             </p>
             <div class={`card-content`}>
-              <div>
+              <div class='mb12'>
                 <Button
                   class='mr16'
                   theme='primary'
@@ -863,36 +860,30 @@ export default defineComponent({
                   添加
                 </Button>
                 <Button onClick={handleApplication}>一键申请</Button>
-                <div class='mt15'>云主机</div>
-                <div class='mt15'>
+              </div>
+              <bk-form-item label='云主机'>
+                <bk-table
+                  align='left'
+                  row-hover='auto'
+                  columns={[...CloudHostcolumns, CloudHostoperation.value]}
+                  data={cloudTableData.value}
+                  show-overflow-tooltip
+                />
+              </bk-form-item>
+              {physicalTableData.value.length > 0 && (
+                <bk-form-item label='物理机'>
                   <bk-table
                     align='left'
                     row-hover='auto'
-                    columns={[...CloudHostcolumns, CloudHostoperation.value]}
-                    data={cloudTableData.value}
+                    columns={[...PhysicalMachinecolumns, PhysicalMachineoperation.value]}
+                    data={physicalTableData.value}
                     show-overflow-tooltip
                   />
-                </div>
-                {physicalTableData.value.length ? (
-                  <>
-                    <div class='mt15'>物理机</div>
-                    <div class='mt15'>
-                      <bk-table
-                        align='left'
-                        row-hover='auto'
-                        columns={[...PhysicalMachinecolumns, PhysicalMachineoperation.value]}
-                        data={physicalTableData.value}
-                        show-overflow-tooltip
-                      />
-                    </div>
-                  </>
-                ) : (
-                  <></>
-                )}
-              </div>
+                </bk-form-item>
+              )}
             </div>
           </Card>
-          <CommonCard title={() => '备注'}>
+          <CommonCard title={() => '备注'} class='mt12'>
             <bk-form form-type='vertical' label-width='150' model={order.value.model}>
               <bk-form-item label='申请备注'>
                 <Input
