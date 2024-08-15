@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Card, Dropdown } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -784,16 +784,16 @@ export default defineComponent({
         {!props.isbusiness && <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
         <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
-          <CommonCard title={() => '基本信息'} layout='grid'>
-            <bk-form
-              form-type='vertical'
-              label-width='150'
-              model={order.value.model}
-              rules={order.value.rules}
-              ref={formRef}>
+          <bk-form
+            form-type='vertical'
+            label-width='150'
+            model={order.value.model}
+            rules={order.value.rules}
+            ref={formRef}>
+            <CommonCard title={() => '基本信息'} class='mb12'>
               <div class='flex-row align-content-center'>
                 {!props.isbusiness && (
-                  <bk-form-item label='所属业务' required property='bkBizId'>
+                  <bk-form-item label='所属业务' required property='bkBizId' class='mr24'>
                     <BusinessSelector
                       class='item-warp-component'
                       v-model={order.value.model.bkBizId}
@@ -829,25 +829,26 @@ export default defineComponent({
                   <MemberSelect class='item-warp-component' multiple clearable v-model={order.value.model.follower} />
                 </bk-form-item>
               </div>
-            </bk-form>
-          </CommonCard>
-          <Card class={'mt15'} border={false} showHeader={false} showFooter={false}>
-            <p class={'card-title'}>
-              <span class='mr5'>配置清单</span>
-              <i
-                class={'hcm-icon bkhcm-icon-info-line'}
-                v-bk-tooltips={{
-                  content: (
-                    <div>
-                      <div>自研云主机购买，经过以下步骤后交付给业务</div>
-                      <div>1.提交参数后，云梯生产主机</div>
-                      <div>2.资源平台对系统初始化，包括GSE agent安装，磁盘格式化等</div>
-                      <div>3.转交到业务</div>
-                    </div>
-                  ),
-                }}></i>
-            </p>
-            <div class={`card-content`}>
+            </CommonCard>
+            <CommonCard
+              title={() => (
+                <div class='flex-row align-items-center'>
+                  <span class='mr5'>配置清单</span>
+                  <i
+                    class={'hcm-icon bkhcm-icon-info-line'}
+                    v-bk-tooltips={{
+                      content: (
+                        <div>
+                          <div>自研云主机购买，经过以下步骤后交付给业务</div>
+                          <div>1.提交参数后，云梯生产主机</div>
+                          <div>2.资源平台对系统初始化，包括GSE agent安装，磁盘格式化等</div>
+                          <div>3.转交到业务</div>
+                        </div>
+                      ),
+                    }}></i>
+                </div>
+              )}
+              class='mb12'>
               <div class='mb12'>
                 <Button
                   class='mr16'
@@ -881,10 +882,8 @@ export default defineComponent({
                   />
                 </bk-form-item>
               )}
-            </div>
-          </Card>
-          <CommonCard title={() => '备注'} class='mt12'>
-            <bk-form form-type='vertical' label-width='150' model={order.value.model}>
+            </CommonCard>
+            <CommonCard title={() => '备注'}>
               <bk-form-item label='申请备注'>
                 <Input
                   type='textarea'
@@ -894,7 +893,7 @@ export default defineComponent({
                   resize={false}
                   placeholder='请输入申请单备注'></Input>
               </bk-form-item>
-              <bk-form-item required property='bkBizId'>
+              <bk-form-item>
                 <Button
                   class='mr16'
                   theme='primary'
@@ -929,8 +928,8 @@ export default defineComponent({
                   取消
                 </Button>
               </bk-form-item>
-            </bk-form>
-          </CommonCard>
+            </CommonCard>
+          </bk-form>
 
           {/* 增加资源需求 */}
           <Sideslider
