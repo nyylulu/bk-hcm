@@ -1,0 +1,91 @@
+apiVersion: {{ template "common.capabilities.deployment.apiVersion" . }}
+kind: Deployment
+metadata:
+  name: {{ template "bk-hcm.fullname" . }}-woaserver
+  namespace: {{ .Release.Namespace | quote }}
+  labels:
+    {{- include "common.labels.standard" . | nindent 4 }}
+spec:
+  replicas: {{ .Values.woaserver.replicas }}
+  selector:
+    matchLabels:
+      {{- include "common.labels.matchLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "common.labels.standard" . | nindent 8 }}
+        component: woaserver
+      annotations:
+        checksum/configmap: {{ include (print $.Template.BasePath "/woaserver/configmap.yaml") . | sha256sum }}
+      {{- if .Values.woaserver.podAnnotations }}
+        {{ toYaml .Values.woaserver.podAnnotations | indent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ template "bk-hcm.serviceAccountName" . }}
+      {{- with .Values.woaserver.nodeSelector }}
+      nodeSelector:
+      {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.woaserver.affinity }}
+      affinity:
+        {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.woaserver.tolerations }}
+      tolerations:
+        {{ toYaml . | indent 8 }}
+      {{- end }}
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+          {{- toYaml . |nindent 8 }}
+      {{- end }}
+      initContainers:
+        {{- include "bk-hcm.wait-for-pod-init-container" (list . (printf "%s-authserver" (include "bk-hcm.fullname" .)) "-lcomponent=authserver") | nindent 8 }}
+      containers:
+        - name: woaserver
+          image:  {{ default .Values.global.imageRegistry .Values.image.registry}}/{{ .Values.woaserver.image.repository }}:v{{ default .Values.image.tag .Values.woaserver.image.tag }}
+          imagePullPolicy: {{ default .Values.global.imagePullPolicy .Values.image.pullPolicy | quote }}
+          command:
+            - /data/hcm/bk-hcm-woaserver
+            - --bind-ip=$(POD_IP)
+            - --config-file=/data/hcm/etc/config.yaml
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.woaserver.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: {{ .Values.woaserver.port }}
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          {{- if .Values.woaserver.resources }}
+          resources: {{ toYaml .Values.woaserver.resources | nindent 12 }}
+          {{- end }}
+          env:
+            - name: POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          {{- if .Values.woaserver.env -}}
+            {{ toYaml .Values.woaserver.env | indent 10 }}
+          {{- end }}
+          ports:
+            - containerPort: {{ .Values.woaserver.port }}
+          volumeMounts:
+            - mountPath: /data/hcm/etc
+              name: config
+            {{- if not .Values.etcd.enabled }}
+            - mountPath: /data/hcm/etc/certs
+              name:  etcd-certs
+            {{- end }}
+      volumes:
+        - name: config
+          configMap:
+            name: {{ template "bk-hcm.fullname" . }}-woaserver-config
+      {{- if not .Values.etcd.enabled }}
+        - name: etcd-certs
+          secret:
+            secretName: {{ template "bk-hcm.etcdSecretName" . }}
+      {{- end }}

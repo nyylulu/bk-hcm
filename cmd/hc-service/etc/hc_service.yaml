@@ -62,7 +62,6 @@ log:
   # log level.
   verbosity: 0
 
-
 # defines esb related settings. 内部版用于调用cc获取clb业务信息
 esb:
   # endpoints is a seed list of host:port addresses of esb nodes.
@@ -86,3 +85,7 @@ esb:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+syncCCRes:
+  enable: true
+  syncIntervalMin:

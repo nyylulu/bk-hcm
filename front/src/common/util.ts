@@ -46,17 +46,44 @@ export function deepMerge(...objectArray: any) {
     return acc;
   }, {});
 }
+/**
+ * 期望交付时间
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
 
+export function expectedDeliveryTime() {
+  return dayjs().add(91, 'day').format('YYYY-MM-DD HH:mm:ss');
+}
+/**
+ * 申请时间默认一个月
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
+
+export function applicationTime() {
+  return [dayjs().subtract(30, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
+}
 /**
  * 时间格式化
  * @param val 待格式化时间
  * @param format 格式
  * @returns 格式化后的时间
  */
-export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss') {
-  return val ? dayjs(val).format(format) : '--';
+export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
 }
-
+/**
+ * 时间格式化
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
+export function DateFormatter(val: any, format = 'YYYY-MM-DD', defaultVal = true) {
+  return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
+}
 /**
  * 相对当前的时间
  * @param val 待比较的时间
@@ -174,9 +201,11 @@ export function formatStorageSize(value: number, digits = 0) {
 export function getScoreColor(score: number) {
   if (score > 0 && score < 180) {
     return '#00A62B';
-  } else if (score >= 180 && score <= 360) {
+  }
+  if (score >= 180 && score <= 360) {
     return '#FF9D00';
-  } else if (score > 360) {
+  }
+  if (score > 360) {
     return '#EA3636';
   }
   return '#63656E';
@@ -213,9 +242,12 @@ export const localStorageActions = {
     }
     localStorage.setItem(key, value);
   },
-  get(key: string) {
+  get(key: string, parseFn?: (value: string) => any) {
     const value = localStorage.getItem(key);
     if (value) {
+      if (parseFn) {
+        return parseFn(value);
+      }
       return JSON.parse(value);
     }
     return null;
@@ -254,4 +286,22 @@ export const getQueryStringParams = (param: string, url = window.location.href) 
   }
 
   return queryParams.get(param);
+};
+
+/**
+ * 判断值是否为空
+ * @param { string | array | object | null | undefined } value 值
+ * @returns boolean
+ */
+export const isEmpty = (value: unknown) => {
+  if (value === '' || value === null || value === undefined) {
+    return true;
+  }
+  if (Array.isArray(value) && value.length < 1) {
+    return true;
+  }
+  if (Object.prototype.toString.call(value) === '[object Object]' && Object.keys(value).length < 1) {
+    return true;
+  }
+  return false;
 };

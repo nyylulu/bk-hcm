@@ -1,3 +1,5 @@
+import isIP from 'validator/es/lib/isIP';
+
 /**
  * 获取实例的ip地址
  * @param inst 实例
@@ -26,4 +28,147 @@ const getInstVip = (inst: any) => {
   return '--';
 };
 
-export { getInstVip };
+/**
+ * 清洗请求载荷，去除空值
+ * @param payload 请求载荷
+ * @returns 返回新的请求载荷
+ */
+const cleanPayload = (payload: any) => {
+  const newPayload = {};
+  Object.keys(payload).forEach((key) => {
+    if (Object.prototype.hasOwnProperty.call(payload, key)) {
+      const value = payload[key];
+      if (value !== '' && !(Array.isArray(value) && value.length === 0)) {
+        newPayload[key] = value;
+      }
+    }
+  });
+  return newPayload;
+};
+
+/**
+ * 导出表格数据为 Excel
+ * @param {Array} list 表格数据
+ * @param {Array} columns 表格列
+ * @param {String} filename 文件名，自动添加时间戳
+ */
+const exportTableToExcel = (list, columns, filename) => {
+  import('@/vendor/Export2Excel').then((excel) => {
+    const header = columns.map((col) => col.label).filter((label) => label);
+    const newColumns = columns.filter((item) => !item.type);
+    const data = list.map((item) =>
+      newColumns.map((col) => {
+        if (col.formatter) {
+          return col.formatter({ [col.field]: item[col.field] });
+        }
+
+        if (col.exportFormatter) {
+          return col.exportFormatter(item);
+        }
+
+        if (col.field?.includes('.')) {
+          return getNestedProperty(item, col.field);
+        }
+        return item[col.field];
+      }),
+    );
+
+    function getNestedProperty(obj: Object, path: String) {
+      return path.split('.').reduce((acc, part) => acc?.[part], obj);
+    }
+
+    excel.export_json_to_excel({
+      header,
+      data,
+      filename: `${filename}${getDate('yyyyMMddhhmmss')}`,
+    });
+  });
+};
+const getDate = (fmt, n) => {
+  let d;
+  if (n) {
+    let nd = Date.parse(new Date());
+    nd = nd + n * 86400000;
+    d = new Date(nd);
+  } else {
+    d = new Date();
+  }
+  const o = {
+    'M+': d.getMonth() + 1, // 月份
+    'd+': d.getDate(), // 日
+    'h+': d.getHours(), // 小时
+    'm+': d.getMinutes(), // 分
+    's+': d.getSeconds(), // 秒
+    'q+': Math.floor((d.getMonth() + 3) / 3), // 季度
+    S: d.getMilliseconds(), // 毫秒
+  };
+
+  if (/(y+)/.test(fmt)) {
+    fmt = fmt.replace(RegExp.$1, `${d.getFullYear()}`.substr(4 - RegExp.$1.length));
+  }
+  Object.keys(o).forEach((k) => {
+    if (new RegExp(`(${k})`).test(fmt)) {
+      fmt = fmt.replace(RegExp.$1, RegExp.$1.length === 1 ? o[k] : `00${o[k]}`.substr(`${o[k]}`.length));
+    }
+  });
+  return fmt;
+};
+
+// 拼接 接口 路径
+const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
+const getEntirePath = (tailPath: string, interfacePrefix = '/api/v1/woa/') => {
+  return `${BK_HCM_AJAX_URL_PREFIX + interfacePrefix + tailPath}`;
+};
+
+const getDisplayText = (value: any, placeholder = '--') => {
+  if (value === null || value === undefined || value === '') {
+    return placeholder;
+  }
+  if (Array.isArray(value) && !value.length) {
+    return placeholder;
+  }
+  return value;
+};
+
+/**
+ * 按内置分隔符切割IP文本
+ * @param raw 原始文本
+ * @returns 切割后的列表
+ */
+const splitIP = (raw: string): string[] => {
+  const list: string[] = [];
+  raw
+    .trim()
+    .split(/\n|;|；|,|，|\|/)
+    .forEach((text) => {
+      const ip = text.trim();
+      ip.length && list.push(ip);
+    });
+  return list;
+};
+
+/**
+ * 从文本中解析出IP地址
+ * @param text IP文本
+ * @returns IPv4与IPv6地址列表
+ */
+const parseIP = (text: string) => {
+  const list = splitIP(text);
+  const IPv4List: string[] = [];
+  const IPv6List: string[] = [];
+
+  list.forEach((text) => {
+    if (isIP(text, 4)) {
+      IPv4List.push(text);
+    } else if (isIP(text, 6)) {
+      IPv6List.push(text);
+    }
+  });
+
+  return {
+    IPv4List,
+    IPv6List,
+  };
+};
+
+export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload, getDate, getDisplayText, splitIP, parseIP };

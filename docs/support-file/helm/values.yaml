@@ -9,10 +9,11 @@ global:
 
 # configuration of hcm image registry, use global imageRegistry/imagePullPolicy if unset
 image:
-  registry: hub.bktencent.com
+  # 制品库旧域名，具体新域名为内部域名
+  registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.3.3
+  tag: 1.5.1-alpha.3
 
 serviceAccount:
   create: true
@@ -45,7 +46,7 @@ apiserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-apiserver
+    repository: bk-hcm-apiserver-oa
     tag:
   ## 日志配置
   ##
@@ -92,7 +93,7 @@ authserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-authserver
+    repository: bk-hcm-authserver-oa
     tag:
   ## 日志配置
   ##
@@ -134,7 +135,7 @@ cloudserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-cloudserver
+    repository: bk-hcm-cloudserver-oa
     tag:
   ## 日志配置
   ##
@@ -281,7 +282,7 @@ dataservice:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-dataservice
+    repository: bk-hcm-dataservice-oa
     tag:
   ## 日志配置
   ##
@@ -322,7 +323,7 @@ hcservice:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-hcservice
+    repository: bk-hcm-hcservice-oa
     tag: 
   ## 日志配置
   ##
@@ -358,12 +359,15 @@ hcservice:
         targetPort: 80
         nodePort:
   port: 80
+  syncCCRes:
+    enable: true
+    syncIntervalMin: 360
 
 webserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-webserver
+    repository: bk-hcm-webserver-oa
     tag:
   ## 日志配置
   ##
@@ -405,7 +409,7 @@ taskserver:
   ## 镜像
   ##
   image:
-    repository: blueking/bk-hcm-taskserver
+    repository: bk-hcm-taskserver-oa
     tag:
   ## 日志配置
   ##
@@ -465,6 +469,190 @@ taskserver:
       watchIntervalSec: 1
       # taskTimeoutSec 判断任务执行超时时间
       taskTimeoutSec: 300
+  # defines obs database related settings.
+  obsDatabase:
+    # defines resource database related settings.
+    resource:
+      # is a seed list of host:port addresses of database nodes.
+      endpoints:
+        - 127.0.0.1:3306
+      database: hcm
+      user: root
+      password: admin
+      # DialTimeoutSec is timeout in seconds to wait for a response from the db server
+      # all the timeout default value reference:
+      # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html.
+      dialTimeoutSec:
+      readTimeoutSec:
+      writeTimeoutSec:
+      maxIdleTimeoutMin:
+      maxOpenConn:
+      maxIdleConn:
+      # defines tls related options.
+      tls:
+        # server should be accessed without verifying the TLS certificate.
+        insecureSkipVerify:
+        # server requires TLS client certificate authentication.
+        certFile:
+        # server requires TLS client certificate authentication.
+        keyFile:
+        # trusted root certificates for server.
+        caFile:
+        # the password to decrypt the certificate.
+        password:
+    # maxSlowLogLatencyMS defines the max tolerance in millisecond to execute
+    # the database command, if the cost time of execute have >= the maxSlowLogLatencyMS
+    # then this request will be logged.
+    maxSlowLogLatencyMS: 200
+    # limiter limit the incoming request frequency to database for each sharding, and
+    # each sharding have the independent request limitation.
+    limiter:
+      qps: 500
+      burst: 500
+woaserver:
+  ## 镜像
+  ##
+  image:
+    repository: bk-hcm-woaserver-oa
+    tag:
+  ## 日志配置
+  ##
+  log:
+    alsoToStdErr: true
+    logDir: /data/hcm/logs
+    maxPerFileSizeMB: 1024
+    maxPerLineSizeKB: 2
+    maxFileNum: 5
+    logAppend: false
+    toStdErr: false
+    verbosity: 0
+  ## pod配置
+  ##
+  replicas: 1
+  podAnnotations: { }
+  affinity: { }
+  nodeSelector: { }
+  tolerations: [ ]
+  resources:
+    limits:
+      cpu: 200m
+      memory: 1024Mi
+    requests:
+      memory: 512Mi
+      cpu: 200m
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 80
+        nodePort:
+  port: 80
+
+accountserver:
+  ## 镜像
+  ##
+  image:
+    repository: bk-hcm-accountserver-oa
+    tag:
+  ## 日志配置
+  ##
+  log:
+    alsoToStdErr: true
+    logDir: /data/hcm/logs
+    maxPerFileSizeMB: 1024
+    maxPerLineSizeKB: 2
+    maxFileNum: 5
+    logAppend: false
+    toStdErr: false
+    verbosity: 0
+  # bill controller
+  controller:
+    controllerSyncDuration:
+    mainAccountSummarySyncDuration:
+    rootAccountSummarySyncDuration:
+    dailySummarySyncDuration:
+
+  billAllocation:
+    # aws saving plan allocation option
+    awsSavingPlans:
+    #    - rootAccountId:
+    #      spArnPrefix:
+    #      SpPurchaseAccountCloudID:
+  # [内部版] 财务侧接口 配置
+  jarvis:
+    endpoints:
+      - http://demo.com
+    appID: 1234
+    appKey: abcd
+    # defines tls related options.
+    tls:
+      # server should be accessed without verifying the TLS certificate.
+      insecureSkipVerify:
+      # server requires TLS client certificate authentication.
+      certFile:
+      # server requires TLS client certificate authentication.
+      keyFile:
+      # trusted root certificates for server.
+      caFile:
+      # the password to decrypt the certificate.
+      password:
+  # 内部版自动拉取汇率
+  exchangeRate:
+    # 启动自动拉取汇率
+    enablePull: true
+    # 拉取间隔，单位分钟
+    pullIntervalMin: 120
+    # 转换目标汇率
+    toCurrency:
+      - CNY
+    # 转换原汇率。可留空，表示匹配全部。
+    fromCurrency:
+      - USD
+      - EUR
+  # [内部版] OBS侧接口配置
+  obs:
+    # 通知obs的api地址
+    endpoints:
+      - http://127.0.0.1:8888
+    # api秘钥
+    apiKey: abcd
+    # defines tls related options.
+    tls:
+      # server should be accessed without verifying the TLS certificate.
+      insecureSkipVerify:
+      # server requires TLS client certificate authentication.
+      certFile:
+      # server requires TLS client certificate authentication.
+      keyFile:
+      # trusted root certificates for server.
+      caFile:
+      # the password to decrypt the certificate.
+      password:
+  ## pod配置
+  ##
+  replicas: 1
+  podAnnotations: { }
+  affinity: { }
+  nodeSelector: { }
+  tolerations: [ ]
+  resources:
+    limits:
+      cpu: 200m
+      memory: 1024Mi
+    requests:
+      memory: 512Mi
+      cpu: 200m
+  service:
+    type: "ClusterIP"
+    ports:
+      - name: http
+        protocol: TCP
+        port: 80
+        targetPort: 80
+        nodePort:
+  port: 80
 
 ## appCode
 appCode: bk-hcm
@@ -476,6 +664,8 @@ bkIamApiUrl: http://bkiam-web
 ## @param bkComponentApiUrl esb url
 ##
 bkComponentApiUrl: http://bkapi.paas.example.com
+## 蓝鲸 ESB 正式环境地址
+bkEsbApiUrl: https://api.esb.example.com
 ## 蓝鲸 Login url（浏览器跳转登录用的URL前缀）
 bkLoginUrl: http://example.com/login
 ## 蓝鲸 Login 校验的登录票据名称
@@ -492,6 +682,8 @@ bkCmdbCreateBizUrl: "http://cmdb.bk.com/create_biz"
 bkCmdbCreateBizDocsUrl: "http://cmdb.bk.com/docs"
 # 是否启用云选型
 enableCloudSelection: true
+# 是否启用账单账号功能
+enableAccountBill: true
 
 ## 加密配置，Note: 首次部署后不可修改，否则数据将无法解密
 ##
@@ -510,7 +702,7 @@ crypto:
 apigwSync:
   enabled: true
   image:
-    repository: blueking/bk-hcm-apigwsync
+    repository: bk-hcm-apigwsync
     tag: 1.0.2
   ## 需注册的网关名
   apigwName: "bk-hcm"
@@ -563,7 +755,7 @@ mariadb:
   enabled: true
   architecture: standalone
   auth:
-    rootPassword: "admin"
+    rootPassword: ""
     database: hcm
     username: hcm
     password: "admin"
@@ -589,7 +781,8 @@ dbConnConfig:
   maxIdleTimeoutMin: 10
   maxOpenConn: 500
   maxIdleConn: 100
-
+  limiterQps: 500
+  limiterBurst: 500
 ## 内置Etcd
 ##
 etcd:
@@ -704,3 +897,99 @@ itsm:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+egress:
+  enabled: true
+  replicasNum: 2
+  podCidrs:
+    - 9.0.0.0/8
+    - 10.0.0.0/8
+    - 11.0.0.0/8
+    - 30.0.0.0/8
+  yuntiDomain: ""
+  cl5Domain: ""
+
+resourceDissolve:
+  originDate: "20240105"
+
+elasticsearch:
+  url:
+  user:
+  password:
+
+# 是否启用Mongo
+useMongo: true
+
+blacklist:
+
+# defines cmsi related settings.
+cmsi:
+  cc:
+    - manager1@example.com
+    - manager2@example.com
+  sender: hcm@example.com
+  # endpoints is a seed list of host:port addresses of finops api gateway nodes.
+  endpoints:
+    - http://demo.com
+  # appCode is the BlueKing app code of hcm to request finops api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request finops api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request finops api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request finops api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request finops api gateway.
+  bkToken: xxxxxxxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+# defines finops related settings.
+finops:
+  # endpoints is a seed list of host:port addresses of finops api gateway nodes.
+  endpoints:
+    - http://demo.com
+  # appCode is the BlueKing app code of hcm to request finops api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request finops api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request finops api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request finops api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request finops api gateway.
+  bkToken: xxxxxxxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+# 对象存储配置
+objectstore:
+  type: tcloud
+  uin: 1234678
+  prefix: hcm
+  secretId: xxxx
+  secretKey: xxxx
+  bucketUrl: https://1234678.com
+  bucketName: bucket
+  bucketRegion: ap-xxx
+  isDebug: false

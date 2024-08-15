@@ -27,13 +27,19 @@ import (
 )
 
 var (
-	cliSet *client.ClientSet
-	daoSet dao.Set
+	cliSet    *client.ClientSet
+	daoSet    dao.Set
+	obsDaoSet dao.Set
 )
 
 // SetClientSet set client set.
 func SetClientSet(cli *client.ClientSet) {
 	cliSet = cli
+}
+
+// GetClientSet get client set.
+func GetClientSet() *client.ClientSet {
+	return cliSet
 }
 
 // GetHCService get hc service.
@@ -54,4 +60,14 @@ func SetDaoSet(cli dao.Set) {
 // GetDaoSet get dao set.
 func GetDaoSet() dao.Set {
 	return daoSet
+}
+
+// SetObsDaoSet set dao set.
+func SetObsDaoSet(cli dao.Set) {
+	obsDaoSet = cli
+}
+
+// GetObsDaoSet get dao set.
+func GetObsDaoSet() dao.Set {
+	return obsDaoSet
 }

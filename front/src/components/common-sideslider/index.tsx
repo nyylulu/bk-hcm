@@ -1,7 +1,7 @@
-import { defineComponent } from 'vue';
+import { PropType, defineComponent } from 'vue';
 import { Sideslider, Button } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
-import './index.scss';
+import cssModule from './index.module.scss';
 
 export default defineComponent({
   name: 'CommonSideslider',
@@ -27,8 +27,16 @@ export default defineComponent({
       default: false,
     },
     handleClose: Function,
+    noFooter: {
+      type: Boolean,
+      default: false,
+    }, // 是否不需要footer
+    renderType: {
+      type: String as PropType<'show' | 'if'>,
+      default: 'show',
+    },
   },
-  emits: ['update:isShow', 'handleSubmit'],
+  emits: ['update:isShow', 'handleSubmit', 'handleShown'],
   setup(props, ctx) {
     // use hooks
     const { t } = useI18n();
@@ -41,30 +49,38 @@ export default defineComponent({
       ctx.emit('handleSubmit');
     };
 
+    const handleShown = () => {
+      ctx.emit('handleShown');
+    };
+
     return () => (
       <Sideslider
-        class='common-sideslider'
+        renderDirective={props.renderType}
+        class={cssModule.sideslider}
         width={props.width}
         isShow={props.isShow}
         title={t(props.title)}
         onClosed={() => {
           triggerShow(false);
           props.handleClose?.();
-        }}>
+        }}
+        onShown={handleShown}>
         {{
-          default: () => <div class='common-sideslider-content'>{ctx.slots.default?.()}</div>,
-          footer: () => (
-            <>
-              <Button
-                theme='primary'
-                onClick={handleSubmit}
-                disabled={props.isSubmitDisabled}
-                loading={props.isSubmitLoading}>
-                {t('提交')}
-              </Button>
-              <Button onClick={() => triggerShow(false)}>{t('取消')}</Button>
-            </>
-          ),
+          default: () => <div class={cssModule.content}>{ctx.slots.default?.()}</div>,
+          footer: !props.noFooter
+            ? () => (
+                <div class={cssModule.footer}>
+                  <Button
+                    theme='primary'
+                    onClick={handleSubmit}
+                    disabled={props.isSubmitDisabled}
+                    loading={props.isSubmitLoading}>
+                    {t('提交')}
+                  </Button>
+                  <Button onClick={() => triggerShow(false)}>{t('取消')}</Button>
+                </div>
+              )
+            : undefined,
         }}
       </Sideslider>
     );

@@ -1,0 +1,30 @@
+.filter {
+  padding: 24px;
+  box-shadow: 0 2px 4px 0 #1919290d;
+
+  .rules {
+    display: grid;
+    grid-gap: 24px;
+    row-gap: 16px;
+    margin-bottom: 16px;
+
+    .item {
+      .title {
+        margin-bottom: 8px;
+      }
+    }
+  }
+}
+
+.buttons {
+  display: flex;
+  align-items: center;
+
+  .button {
+    min-width: 88px;
+
+    + .button {
+      margin-left: 8px;
+    }
+  }
+}

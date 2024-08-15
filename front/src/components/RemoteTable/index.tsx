@@ -2,9 +2,9 @@ import { PropType, computed, defineComponent, onMounted, ref } from 'vue';
 import { Table, Loading } from 'bkui-vue';
 import Empty from '../empty';
 import usePagination from '@/hooks/usePagination';
-import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import http from '@/http';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
+import { Column } from 'bkui-vue/lib/table/props';
 import './index.scss';
 
 type UrlType = string | (() => string);
@@ -14,11 +14,11 @@ interface RequestApi {
   // 请求url地址
   url: UrlType;
   // 请求载荷
-  payload: PayloadType;
+  payload?: PayloadType;
   // 请求过滤条件requestBody
-  rules: RulesType;
+  rules?: RulesType;
   // 是否取消本次请求
-  reject: (dataList: any[]) => boolean;
+  reject?: (dataList: any[]) => boolean;
 }
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -26,42 +26,50 @@ const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 export default defineComponent({
   name: 'RemoteTable',
   props: {
-    columnName: String,
+    columns: Array as PropType<Column[]>,
     noSort: { type: Boolean, default: false },
     apis: Array as PropType<RequestApi[]>,
+    path: {
+      type: Object as PropType<{
+        start: string;
+        limit: string;
+        count: string;
+        data: string;
+        total: string;
+      }>,
+      default: () => ({ start: 'start', limit: 'limit', count: 'count', data: 'details', total: 'count' }),
+    },
   },
   setup(props, { expose }) {
     const isLoading = ref(false);
     const dataList = ref([]);
     const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => getDataList());
 
-    const { columns, settings } = useColumns(props.columnName);
-
     const renderColumns = computed(() => {
       if (props.noSort) {
-        return columns.map((item: any) => ({ ...item, sort: false }));
+        return props.columns.map((item: any) => ({ ...item, sort: false }));
       }
-      return columns;
+      return props.columns;
     });
 
     const buildApiMethod = async (fetchUrl: string, rules: RulesItem[], payload: PayloadType) => {
       const [detailsRes, countRes] = await Promise.all(
         [false, true].map((isCount) =>
           http.post(BK_HCM_AJAX_URL_PREFIX + fetchUrl, {
-            ...(typeof payload === 'function' ? payload() : payload),
             filter: { op: QueryRuleOPEnum.AND, rules },
             page: {
-              limit: isCount ? 0 : pagination.limit,
-              start: isCount ? 0 : pagination.start,
+              [props.path.start]: isCount ? 0 : pagination.start,
+              [props.path.limit]: isCount ? 0 : pagination.limit,
               sort: isCount ? undefined : 'created_at',
               order: isCount ? undefined : 'DESC',
-              count: isCount,
+              [props.path.count]: isCount,
             },
+            ...payload,
           }),
         ),
       );
-      dataList.value = detailsRes.data.details || [];
-      pagination.count = countRes.data.count || 0;
+      dataList.value = detailsRes.data[props.path.data] || [];
+      pagination.count = countRes.data[props.path.total] || 0;
     };
 
     const getDataList = async () => {
@@ -82,20 +90,19 @@ export default defineComponent({
       return dataList.value;
     };
 
-    expose({ dataList, getDataList });
+    expose({ dataList, getDataList, pagination });
 
     onMounted(() => {
       getDataList();
     });
 
     return () => (
-      <Loading loading={isLoading.value} class='remote-table has-selection'>
+      <Loading loading={isLoading.value} class='remote-table'>
         <Table
           class='table-container'
           data={dataList.value}
           rowKey='id'
           columns={renderColumns.value}
-          settings={settings.value}
           pagination={pagination}
           remotePagination
           showOverflowTooltip

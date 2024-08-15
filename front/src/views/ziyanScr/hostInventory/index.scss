@@ -1,0 +1,29 @@
+.sub-order-num,.username {
+  color: #409eff;
+  cursor: pointer;
+}
+.order-width {
+  width: 180px;
+}
+.cvm-web-wrapper {
+  margin: 20px 10px 0;
+}
+.recycle-operation {
+  display: flex;
+  align-items: center;
+  .bk-button+.bk-button {
+      margin-left: 10px;
+  }
+}
+.displayflex {
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.pop-btn {
+  margin-top: 10px;
+}
+
+@import url(../css/form.scss);

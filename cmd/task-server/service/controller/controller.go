@@ -102,7 +102,7 @@ func (p service) CancelFlow(cts *rest.Contexts) (any, error) {
 		return nil, errf.New(errf.InvalidParameter, "flow_id is required")
 	}
 	if err := p.csm.CancelFlow(cts.Kit, flowId); err != nil {
-		logs.Errorf("task server terminate flow(%s) failed, err: %v, opt: %+v, rid: %s", flowId, err, cts.Kit.Rid)
+		logs.Errorf("task server terminate flow(%s) failed, err: %v, rid: %s", flowId, err, cts.Kit.Rid)
 		return nil, err
 	}
 

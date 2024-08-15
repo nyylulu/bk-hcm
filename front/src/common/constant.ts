@@ -4,7 +4,9 @@ export enum VendorEnum {
   AZURE = 'azure',
   GCP = 'gcp',
   HUAWEI = 'huawei',
+  ZENLAYER = 'zenlayer',
   ZIYAN = 'tcloud-ziyan',
+  KAOPU = 'kaopu',
 }
 
 export enum ResourceTypeEnum {
@@ -528,6 +530,8 @@ export const VendorMap = {
   [VendorEnum.HUAWEI]: '华为云',
   [VendorEnum.TCLOUD]: '腾讯云',
   [VendorEnum.ZIYAN]: '自研云',
+  [VendorEnum.ZENLAYER]: 'Zenlayer',
+  [VendorEnum.KAOPU]: '靠谱云',
 };
 
 export const VendorReverseMap = {
@@ -536,6 +540,8 @@ export const VendorReverseMap = {
   谷歌云: VendorEnum.GCP,
   华为云: VendorEnum.HUAWEI,
   腾讯云: VendorEnum.TCLOUD,
+  Zenlayer: VendorEnum.ZENLAYER,
+  靠谱云: VendorEnum.KAOPU,
 };
 
 export const SYNC_STAUS_MAP = {

@@ -47,3 +47,9 @@ type TCloudZiyanCvmExtension struct {
 	*TCloudCvmExtension `json:",inline"`
 	SecurityGroupNames  []string `json:"security_group_names"`
 }
+
+// TCloudZiyanHostExtension 内部版从cc同步的自研云的主机
+type TCloudZiyanHostExtension struct {
+	HostID          int64  `json:"bk_host_id"`
+	SvrSourceTypeID string `json:"svr_source_type_id"`
+}

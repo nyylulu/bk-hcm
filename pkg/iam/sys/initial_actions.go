@@ -60,16 +60,37 @@ var (
 			},
 		},
 	}
+
+	mainaccountResource = []client.RelateResourceType{
+		{
+			SystemID: SystemIDHCM,
+			ID:       MainAccount,
+			InstanceSelections: []client.RelatedInstanceSelection{
+				{
+					SystemID: SystemIDHCM,
+					ID:       MainAccountSelection,
+				},
+			},
+		},
+	}
 )
 
 // GenerateStaticActions return need to register action.
 func GenerateStaticActions() []client.ResourceAction {
 	resourceActionList := make([]client.ResourceAction, 0)
 
+	// 资源管理
 	resourceActionList = append(resourceActionList, genResManagementActions()...)
+	// 服务请求
+	resourceActionList = append(resourceActionList, genServiceRequestActions()...)
+	// 资源接入
 	resourceActionList = append(resourceActionList, genResourceAccessActions()...)
+	// 资源选型
 	resourceActionList = append(resourceActionList, genCloudSelectionActions()...)
+	// 平台管理
 	resourceActionList = append(resourceActionList, genPlatformManageActions()...)
+	// 云账号管理
+	resourceActionList = append(resourceActionList, genAccountManageActions()...)
 
 	return resourceActionList
 }
@@ -83,7 +104,8 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{ResourceAssign},
 		Version:              1,
-	}, {
+	}}
+	actions = append(actions, []client.ResourceAction{{
 		ID:                   BizIaaSResCreate,
 		Name:                 ActionIDNameMap[BizIaaSResCreate],
 		NameEn:               "Create Biz IaaS Resource",
@@ -107,7 +129,7 @@ func genResManagementActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
-	}}
+	}}...)
 
 	actions = append(actions, genCLBResManActions()...)
 
@@ -138,6 +160,14 @@ func genResManagementActions() []client.ResourceAction {
 		Name:                 ActionIDNameMap[BizOperationRecordFind],
 		NameEn:               "Find Biz OperationRecord",
 		Type:                 View,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
+		Version:              1,
+	}, {
+		ID:                   BizResPlanOperate,
+		Name:                 ActionIDNameMap[BizResPlanOperate],
+		NameEn:               "Operate Biz ResourcePlan",
+		Type:                 Edit,
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
@@ -230,6 +260,21 @@ func genArrangeResManActions() []client.ResourceAction {
 	}
 }
 */
+
+// genServiceRequestActions 服务请求的Actions
+func genServiceRequestActions() []client.ResourceAction {
+	actions := []client.ResourceAction{{
+		ID:                   ServiceResDissolve,
+		Name:                 ActionIDNameMap[ServiceResDissolve],
+		NameEn:               "Service Resource Dissolve",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}}
+
+	return actions
+}
 
 func genResourceAccessActions() []client.ResourceAction {
 	actions := []client.ResourceAction{{
@@ -451,8 +496,9 @@ func genCertResAccessActions() []client.ResourceAction {
 	}
 }
 
+// genPlatformManageActions 平台管理的Action列表
 func genPlatformManageActions() []client.ResourceAction {
-	return []client.ResourceAction{{
+	actions := []client.ResourceAction{{
 		ID:                   CostManage,
 		Name:                 ActionIDNameMap[CostManage],
 		NameEn:               "Cost Manage",
@@ -468,13 +514,144 @@ func genPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: accountResource,
 		RelatedActions:       nil,
 		Version:              1,
+	}}
+	actions = append(actions, genZiYanPlatformManageActions()...)
+	actions = append(actions, []client.ResourceAction{
+		{
+			ID:                   GlobalConfiguration,
+			Name:                 ActionIDNameMap[GlobalConfiguration],
+			NameEn:               "Global Configuration",
+			Type:                 View,
+			RelatedResourceTypes: nil,
+			RelatedActions:       nil,
+			Version:              1,
+		},
+	}...)
+	return actions
+}
+
+// genZiYanPlatformManageActions 平台管理-自研云资源的权限Action列表
+func genZiYanPlatformManageActions() []client.ResourceAction {
+	return []client.ResourceAction{{
+		ID:                   ZiyanCvmType, // CVM机型-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmType],
+		NameEn:               "ZiYan Cvm Type",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
 	}, {
-		ID:                   GlobalConfiguration,
-		Name:                 ActionIDNameMap[GlobalConfiguration],
-		NameEn:               "Global Configuration",
+		ID:                   ZiyanCvmSubnet, // CVM子网-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmSubnet],
+		NameEn:               "ZiYan Cvm Subnet",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResShelves, // 资源上下架-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResShelves],
+		NameEn:               "ZiYan Res Shelves",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanCvmCreate, // CVM生产-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanCvmCreate],
+		NameEn:               "ZiYan Cvm Create",
+		Type:                 Create,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResDissolveManage, // 机房裁撤管理-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResDissolveManage],
+		NameEn:               "ZiYan Cvm Dissolve Manage",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ZiyanResInventory, // 主机库存-菜单粒度
+		Name:                 ActionIDNameMap[ZiyanResInventory],
+		NameEn:               "ZiYan Inventory View",
 		Type:                 View,
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
-	}}
+	}, {
+		ID:                   ZiyanResCreate, // 主机申领-业务粒度
+		Name:                 ActionIDNameMap[ZiyanResCreate],
+		NameEn:               "ZiYan Resource Create",
+		Type:                 Create,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
+		Version:              1,
+	}, {
+		ID:                   ZiyanResRecycle, // 主机回收-业务粒度
+		Name:                 ActionIDNameMap[ZiyanResRecycle],
+		NameEn:               "ZiYan Resource Recycle",
+		Type:                 Delete,
+		RelatedResourceTypes: bizResource,
+		RelatedActions:       []client.ActionID{BizAccess},
+		Version:              1,
+	}, {
+		ID:                   RootAccountManage,
+		Name:                 ActionIDNameMap[RootAccountManage],
+		NameEn:               "Root Account Manage",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   AccountBillManage,
+		Name:                 ActionIDNameMap[AccountBillManage],
+		NameEn:               "Account Bill Manage",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   ApplicationManage,
+		Name:                 ActionIDNameMap[ApplicationManage],
+		NameEn:               "Application Manage",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	},
+	}
+}
+
+func genAccountManageActions() []client.ResourceAction {
+	// MainAccount
+	actions := []client.ResourceAction{{
+		ID:                   MainAccountFind,
+		Name:                 ActionIDNameMap[MainAccountFind],
+		NameEn:               "Find MainAccount",
+		Type:                 View,
+		RelatedResourceTypes: mainaccountResource,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   MainAccountCreate,
+		Name:                 ActionIDNameMap[MainAccountCreate],
+		NameEn:               "Create MainAccount",
+		Type:                 Create,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:                   MainAccountEdit,
+		Name:                 ActionIDNameMap[MainAccountEdit],
+		NameEn:               "Edit MainAccount",
+		Type:                 Edit,
+		RelatedResourceTypes: mainaccountResource,
+		RelatedActions:       nil,
+		Version:              1,
+	},
+	}
+
+	return actions
 }

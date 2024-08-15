@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/errf"
 )
 
 // ConvStdTimeFormat 转为HCM标准时间格式
@@ -47,3 +48,66 @@ func ParseToStdTime(layout, t string) (string, error) {
 
 // Day 24 hours
 const Day = time.Hour * 24
+
+// DateRange define a date range that includes the start and end parameters.
+// The date can be year, month or day.
+type DateRange struct {
+	Start string `json:"start"`
+	End   string `json:"end"`
+}
+
+// Validate validates the date range.
+func (r *DateRange) Validate() error {
+	start, err := ParseDay(r.Start)
+	if err != nil {
+		return err
+	}
+
+	end, err := ParseDay(r.End)
+	if err != nil {
+		return err
+	}
+
+	if start.After(end) {
+		return errf.New(errf.InvalidParameter, "start should be no later than end")
+	}
+
+	return nil
+}
+
+// ParseDay parse day from string.
+func ParseDay(formattedDay string) (time.Time, error) {
+	if len(formattedDay) == 0 {
+		return time.Time{}, errf.New(errf.InvalidParameter, "empty date time")
+	}
+
+	d, err := time.Parse(constant.DateLayout, formattedDay)
+	if err != nil {
+		return time.Time{}, errf.Newf(errf.InvalidParameter, "invalid date time format, should be like %s, err: %v",
+			constant.DateLayout, err)
+	}
+
+	return d, nil
+}
+
+// DaysInMonth 返回给定年份和月份的天数
+func DaysInMonth(year int, month time.Month) int {
+	// 获取下个月的第一天
+	firstOfNextMonth := time.Date(year, month+1, 1, 0, 0, 0, 0, time.UTC)
+
+	// 获取本月的最后一天
+	lastOfThisMonth := firstOfNextMonth.AddDate(0, 0, -1)
+
+	return lastOfThisMonth.Day()
+}
+
+// GetMonthDays 获取指定年月的天数列表
+func GetMonthDays(year int, month time.Month) []int {
+	lastDay := DaysInMonth(year, month)
+	// 创建日期列表
+	days := make([]int, lastDay)
+	for day := 1; day <= int(lastDay); day++ {
+		days[day-1] = day
+	}
+	return days
+}

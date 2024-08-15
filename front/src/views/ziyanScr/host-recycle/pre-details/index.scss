@@ -1,0 +1,19 @@
+.precheck-operation {
+  display: flex;
+  align-items: center;
+  background-color: #fff;
+  width: 100%;
+  margin: 15px 0;
+  padding: 10px;
+}
+.execute-record-top {
+  margin-bottom: 15px;
+}
+
+.application-detail-container {
+  .detail-wrapper {
+    margin: 76px 10px;
+  }
+}
+
+@import url(../../css/form.scss);

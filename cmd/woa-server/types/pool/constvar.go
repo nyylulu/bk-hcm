@@ -1,0 +1,27 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package pool pool server types
+package pool
+
+const (
+	// BizIDPool biz id of 资源运营服务
+	BizIDPool int64 = 931
+	// ModuleIDPool module id of CR资源池
+	ModuleIDPool int64 = 5077039
+	// ModuleIDPoolRecalling module id of CR资源下架中
+	ModuleIDPoolRecalling int64 = 5085334
+	// ModuleIDPoolRecallFailed module id of CR资源下架失败
+	ModuleIDPoolRecallFailed int64 = 5008422
+	// ModuleIDPoolMatch module id of SA云化池
+	ModuleIDPoolMatch int64 = 239149
+)

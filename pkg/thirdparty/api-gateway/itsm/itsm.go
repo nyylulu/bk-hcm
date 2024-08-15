@@ -40,6 +40,8 @@ type Client interface {
 	CreateTicket(kt *kit.Kit, params *CreateTicketParams) (string, error)
 	// GetTicketResult 获取单据结果。
 	GetTicketResult(kt *kit.Kit, sn string) (TicketResult, error)
+	// GetTicketStatus 获取单据状态。
+	GetTicketStatus(kt *kit.Kit, sn string) (*GetTicketStatusResp, error)
 	// WithdrawTicket 撤销单据。
 	WithdrawTicket(kt *kit.Kit, sn string, operator string) error
 	// VerifyToken 校验Token。

@@ -159,7 +159,9 @@ export default defineComponent({
         currentIndex.value = index;
         isRulesTableLoading.value = true;
         const res = await http.post(
-          `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/vendors/${props.vendor}/security_groups/${item.id}/rules/list`,
+          `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${
+            whereAmI.value === Senarios.business ? `bizs/${props.bizId}/` : ''
+          }vendors/${props.vendor}/security_groups/${item.id}/rules/list`,
           {
             filter: { op: 'and', rules: [] },
             page: { count: false, start: 0, limit: 500 },

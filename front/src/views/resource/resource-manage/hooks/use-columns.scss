@@ -55,3 +55,68 @@
     color: #63656e;
   }
 }
+
+// scr 样式
+.c-info {
+  color: #909399 !important;
+}
+.c-success {
+  color: #67c23a !important;
+}
+.c-danger {
+  color: #f56c6c !important;
+}
+.c-warning {
+  color: #e6a23c !important;
+}
+.c-disabled {
+  color: #c8c9cc;
+}
+.fail-flex {
+  display: flex;
+  align-items: center;
+  line-height: 1;
+  & > span {
+    margin-right: 5px;
+  }
+  a {
+    font-size: 0;
+    & > span {
+      font-size: 12px;
+    }
+  }
+}
+.cvm-cell-height {
+  line-height: 1.6;
+  & > div:last-child {
+    color: #909399;
+  }
+}
+.link-type,
+.link-type:focus {
+  color: #409eff;
+  cursor: pointer;
+}
+
+.success-container{
+  display: flex;
+  div+div{
+    margin-left: 5px;
+  }
+}
+
+.bk-badge-main {
+  line-height: 1.5;
+}
+
+.cell-private-ip,
+.cell-public-ip {
+  .copy-icon {
+    display: none;
+  }
+  &:hover {
+    .copy-icon {
+      display: inline-flex;
+    }
+  }
+}

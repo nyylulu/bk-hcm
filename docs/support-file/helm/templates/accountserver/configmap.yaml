@@ -1,0 +1,35 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ template "bk-hcm.fullname" . }}-accountserver-config
+  labels: {{- include "common.labels.standard" . | nindent 4 }}
+data:
+  config.yaml: |-
+    network:
+      bindIP:
+      port: {{ .Values.accountserver.port}}
+      tls:
+        insecureSkipVerify:
+        certFile:
+        keyFile:
+        caFile:
+        password:
+    service:
+      etcd:
+        {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.etcdConfig" .) "context" $) | nindent 8 }}
+    log:
+      {{- toYaml .Values.accountserver.log | nindent 6 }}
+    controller:
+      {{- toYaml .Values.accountserver.controller | nindent 6 }}
+    billAllocation:
+      {{- toYaml .Values.accountserver.billAllocation | nindent 6 }}
+    jarvis:
+      {{- toYaml .Values.accountserver.jarvis | nindent 6 }}
+    exchangeRate:
+      {{- toYaml .Values.accountserver.exchangeRate | nindent 6 }}
+    obs:
+      {{- toYaml .Values.accountserver.obs | nindent 6 }}
+    finops:
+      {{- toYaml .Values.finops | nindent 6 }}
+    cmsi:
+      {{- toYaml .Values.cmsi | nindent 6 }}

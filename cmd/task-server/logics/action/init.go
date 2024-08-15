@@ -20,24 +20,34 @@
 package logicsaction
 
 import (
+	actionbilldailypull "hcm/cmd/task-server/logics/action/bill/dailypull"
+	actionbillsplit "hcm/cmd/task-server/logics/action/bill/dailysplit"
+	actiondailysummary "hcm/cmd/task-server/logics/action/bill/dailysummary"
+	actionmainsummary "hcm/cmd/task-server/logics/action/bill/mainsummary"
+	actionmonthtask "hcm/cmd/task-server/logics/action/bill/monthtask"
+	actionrootsummary "hcm/cmd/task-server/logics/action/bill/rootsummary"
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	actioncvm "hcm/cmd/task-server/logics/action/cvm"
 	actioneip "hcm/cmd/task-server/logics/action/eip"
 	actionfirewall "hcm/cmd/task-server/logics/action/firewall"
 	actionlb "hcm/cmd/task-server/logics/action/load-balancer"
+	actionobsclean "hcm/cmd/task-server/logics/action/obs/clean"
+	actionobssync "hcm/cmd/task-server/logics/action/obs/sync"
 	actionsg "hcm/cmd/task-server/logics/action/security-group"
 	actionsubnet "hcm/cmd/task-server/logics/action/subnet"
-	"hcm/cmd/task-server/logics/flow"
+	actionflow "hcm/cmd/task-server/logics/flow"
 	"hcm/pkg/async/action"
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 )
 
 // Init init action.
-func Init(cli *client.ClientSet, dao dao.Set) {
+func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set) {
 	actcli.SetClientSet(cli)
 	actcli.SetDaoSet(dao)
-
+	if obsDao != nil {
+		actcli.SetObsDaoSet(obsDao)
+	}
 	register()
 }
 
@@ -65,4 +75,13 @@ func register() {
 
 	action.RegisterAction(actionlb.ListenerRuleAddTargetAction{})
 	action.RegisterAction(actionlb.DeleteLoadBalancerAction{})
+
+	action.RegisterAction(actionbilldailypull.PullDailyBillAction{})
+	action.RegisterAction(actionbillsplit.DailyAccountSplitAction{})
+	action.RegisterAction(actiondailysummary.DailySummaryAction{})
+	action.RegisterAction(actionmainsummary.MainAccountSummaryAction{})
+	action.RegisterAction(actionrootsummary.RootAccountSummaryAction{})
+	action.RegisterAction(actionmonthtask.MonthTaskAction{})
+	action.RegisterAction(actionobssync.SyncAction{})
+	action.RegisterAction(actionobsclean.CleanAction{})
 }

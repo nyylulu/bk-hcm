@@ -34,8 +34,33 @@ import (
 	"hcm/pkg/rest"
 )
 
+// InquiryBizPriceCvm inquiry biz price cvm.
+func (svc *cvmSvc) InquiryBizPriceCvm(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Cvm, Action: meta.Find}, BizID: bkBizID}
+	if err = svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		logs.Errorf("inquiry biz price cvm auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(cloudserver.ResourceCreateReq)
+	if err = cts.DecodeInto(req); err != nil {
+		logs.Errorf("inquiry biz price cvm request decode failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	return svc.inquiryPriceCvm(cts.Kit, req)
+}
+
 // InquiryPriceCvm inquiry price cvm.
-func (svc *cvmSvc) InquiryPriceCvm(cts *rest.Contexts) (interface{}, error) {
+func (svc *cvmSvc) InquiryPriceCvm(cts *rest.Contexts) (any, error) {
 	req := new(cloudserver.ResourceCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("inquiry price cvm request decode failed, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -49,18 +74,22 @@ func (svc *cvmSvc) InquiryPriceCvm(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	info, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit,
-		enumor.AccountCloudResType, req.AccountID)
+	return svc.inquiryPriceCvm(cts.Kit, req)
+}
+
+// inquiryPriceCvm inquiry price cvm.
+func (svc *cvmSvc) inquiryPriceCvm(kt *kit.Kit, req *cloudserver.ResourceCreateReq) (any, error) {
+	info, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(kt, enumor.AccountCloudResType, req.AccountID)
 	if err != nil {
-		logs.Errorf("get account basic info failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("get account basic info failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	switch info.Vendor {
 	case enumor.TCloud:
-		return svc.inquiryPriceTCloudCvm(cts.Kit, req.Data)
+		return svc.inquiryPriceTCloudCvm(kt, req.Data)
 	case enumor.HuaWei:
-		return svc.inquiryPriceHuaWeiCvm(cts.Kit, req.Data)
+		return svc.inquiryPriceHuaWeiCvm(kt, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}

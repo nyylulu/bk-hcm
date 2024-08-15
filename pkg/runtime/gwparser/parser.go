@@ -159,13 +159,14 @@ func (a *app) validate() error {
 type user struct {
 	Version  int64  `json:"version"`
 	UserName string `json:"username"`
-	Verified bool   `json:"verified"`
+	// Verified 用户是否通过认证，免用户认证的时候是false，其他情况下是true，因此我们目前不需要关注这个字段
+	Verified bool `json:"verified"`
 }
 
 // validate user.
 func (u *user) validate() error {
-	if !u.Verified {
-		return errf.New(errf.InvalidParameter, "user not verified")
+	if u.UserName == "" {
+		return errf.New(errf.InvalidParameter, "username is not set")
 	}
 	return nil
 }
