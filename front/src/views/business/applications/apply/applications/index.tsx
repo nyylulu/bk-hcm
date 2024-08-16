@@ -1,5 +1,5 @@
 import { computed, defineComponent, ref, watch, onMounted } from 'vue';
-import { RouteLocationRaw, useRouter } from 'vue-router';
+import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
 import { Button, Message, TagInput } from 'bkui-vue';
@@ -37,6 +37,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
+    const route = useRoute();
 
     const { transformApplyStages } = useApplyStages();
     const { transformRequireTypes } = useRequireTypes();
@@ -94,9 +95,10 @@ export default defineComponent({
       let routeParams: RouteLocationRaw = {
         name: 'HostApplicationsDetail',
         params: { id: row.order_id },
+        query: route.query,
       };
       if (row.stage === 'UNCOMMIT') {
-        routeParams = { name: 'applyCvm', query: { order_id: row.order_id, unsubmitted: 1 } };
+        routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };
       }
       router.push(routeParams);
     };

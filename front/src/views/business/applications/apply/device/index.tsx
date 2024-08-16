@@ -15,7 +15,7 @@ import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { applicationTime, timeFormatter } from '@/common/util';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 
@@ -26,6 +26,7 @@ export default defineComponent({
     const { t } = useI18n();
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
+    const route = useRoute();
 
     const { formModel, resetForm } = useFormModel({
       orderId: '',
@@ -61,6 +62,7 @@ export default defineComponent({
                 router.push({
                   name: 'HostApplicationsDetail',
                   params: { id: data.order_id },
+                  query: route.query,
                 });
               }}>
               {cell}

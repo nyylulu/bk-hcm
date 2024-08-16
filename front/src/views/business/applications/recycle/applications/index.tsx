@@ -1,5 +1,5 @@
 import { computed, defineComponent, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
 import { Button, DatePicker, Dropdown, Message, Select } from 'bkui-vue';
@@ -28,6 +28,7 @@ export default defineComponent({
     const scrStore = useZiyanScrStore();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
+    const route = useRoute();
 
     const resourceTypeList = [
       { key: 'QCLOUDCVM', value: '腾讯云虚拟机' },
@@ -192,7 +193,10 @@ export default defineComponent({
       },
     });
     const enterDetail = (row: any) => {
-      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: getBizsId() } });
+      router.push({
+        name: 'HostRecycleDocDetail',
+        query: { ...route.query, suborderId: row.suborder_id, bkBizId: getBizsId() },
+      });
     };
     const returnPreDetails = (row: any) => {
       router.push({ name: 'HostRecyclePreDetail', query: { suborder_id: row.suborder_id } });
