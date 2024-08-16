@@ -567,7 +567,9 @@ export default defineComponent({
       resourceForm.value.region = data.region;
       resourceForm.value.zone = data.zone;
     };
+    const isOneClickApplication = ref(false);
     const OneClickApplication = (row: any, val: boolean) => {
+      isOneClickApplication.value = true;
       CVMapplication.value = val;
       assignment(row);
       title.value = '增加资源需求';
@@ -575,8 +577,10 @@ export default defineComponent({
       onQcloudDeviceTypeChange();
     };
     const ARtriggerShow = (isShow: boolean) => {
-      emptyform();
+      emptyForm();
       addResourceRequirements.value = isShow;
+      CVMapplication.value = isOneClickApplication.value;
+      isOneClickApplication.value = false;
       NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
@@ -587,7 +591,7 @@ export default defineComponent({
     const CAtriggerShow = (isShow: boolean) => {
       CVMapplication.value = isShow;
     };
-    const emptyform = () => {
+    const emptyForm = () => {
       vpcName.value = '';
       subnetName.value = '';
       resourceForm.value = {
@@ -670,7 +674,7 @@ export default defineComponent({
         } else {
           physicalTableData.value.push(PMResourceForm());
         }
-        emptyform();
+        emptyForm();
       } else {
         if (modifyresourceType.value === 'QCLOUDCVM') {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
@@ -679,7 +683,7 @@ export default defineComponent({
             cloudTableData.value.splice(modifyindex.value, 1);
             physicalTableData.value.push(PMResourceForm());
           }
-          emptyform();
+          emptyForm();
         } else {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
             physicalTableData.value[modifyindex.value] = PMResourceForm();
@@ -687,7 +691,7 @@ export default defineComponent({
             physicalTableData.value.splice(modifyindex.value, 1);
             cloudTableData.value.push(cloudResourceForm());
           }
-          emptyform();
+          emptyForm();
         }
       }
       modifyindex.value = 0;
