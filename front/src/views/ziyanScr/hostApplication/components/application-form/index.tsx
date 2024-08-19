@@ -22,7 +22,6 @@ import applicationSideslider from '../application-sideslider';
 import { useRouter, useRoute } from 'vue-router';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
-import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
 export default defineComponent({
@@ -706,12 +705,7 @@ export default defineComponent({
     });
     const handleSaveOrSubmit = async (type: 'save' | 'submit') => {
       await formRef.value.validate();
-      const suborders = [...cloudTableData.value, ...physicalTableData.value].map((v) => {
-        return convertKeysToSnakeCase(v);
-      });
-      if (!suborders.length) {
-        return;
-      }
+      const suborders = [...cloudTableData.value, ...physicalTableData.value];
       isLoading.value = true;
 
       try {
