@@ -1,5 +1,6 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
 import { Input, Button, Sideslider, Message, Popover, Dropdown } from 'bkui-vue';
+import { VendorEnum } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -7,7 +8,7 @@ import { useAccountStore, useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
-import ZoneSelector from '../ZoneSelector';
+import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { Spinner, RightShape, DownShape } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
@@ -392,7 +393,7 @@ export default defineComponent({
     );
     // 获取 QCLOUDCVM机型列表
     const loadDeviceTypes = async () => {
-      const { zone, region } = resourceForm.value;
+      const { zone = '', region } = resourceForm.value;
 
       const params = {
         region: [region],
@@ -410,7 +411,7 @@ export default defineComponent({
     // 获取 QCLOUDCVM子网列表
     const loadSubnets = async () => {
       const { vpc } = QCLOUDCVMForm.value.spec;
-      const { region, zone } = resourceForm.value;
+      const { region, zone = '' } = resourceForm.value;
       const { info } = await apiService.getSubnets({
         region,
         zone,
@@ -966,13 +967,19 @@ export default defineComponent({
                             onChange={onRegionChange}></AreaSelector>
                         </bk-form-item>
                         <bk-form-item label='可用区' required property='zone'>
-                          <ZoneSelector
+                          <ZoneTagSelector
                             class={'selection-box'}
+                            key={resourceForm.value.region}
+                            style={{ width: '760px' }}
                             v-model={resourceForm.value.zone}
-                            params={{
-                              resourceType: resourceForm.value.resourceType,
-                              region: resourceForm.value.region,
-                            }}
+                            vendor={VendorEnum.ZIYAN}
+                            region={resourceForm.value.region}
+                            resourceType={resourceForm.value.resourceType}
+                            separateCampus={true}
+                            emptyText='请先选择云地域'
+                            minWidth={182}
+                            maxWidth={182}
+                            autoExpand={'selected'}
                             onChange={onQcloudZoneChange}
                           />
                         </bk-form-item>
