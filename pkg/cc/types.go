@@ -1519,9 +1519,3 @@ type AwsSavingPlanOption struct {
 type BillAllocationOption struct {
 	AwsSavingPlans []AwsSavingPlanOption `yaml:"awsSavingPlans"`
 }
-
-// SyncCCRes sync cc resource
-type SyncCCRes struct {
-	Enable          bool   `yaml:"enable"`
-	SyncIntervalMin uint64 `yaml:"syncIntervalMin"`
-}

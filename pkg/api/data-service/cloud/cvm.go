@@ -89,18 +89,23 @@ type CvmBatchUpdate[Extension corecvm.Extension] struct {
 	Name                 string     `json:"name"`
 	BkBizID              int64      `json:"bk_biz_id" validate:"required"`
 	BkCloudID            int64      `json:"bk_cloud_id" validate:"required"`
+	Region               string     `yaml:"region"`
+	Zone                 string     `yaml:"zone"`
 	CloudVpcIDs          []string   `json:"cloud_vpc_ids"`
 	VpcIDs               []string   `json:"vpc_ids"`
 	CloudSubnetIDs       []string   `json:"cloud_subnet_ids"`
 	SubnetIDs            []string   `json:"subnet_ids"`
 	CloudImageID         string     `json:"cloud_image_id"`
 	ImageID              string     `json:"image_id"`
+	OsName               string     `yaml:"os_name"`
 	Memo                 *string    `json:"memo"`
 	Status               string     `json:"status" validate:"required"`
 	PrivateIPv4Addresses []string   `json:"private_ipv4_addresses"`
 	PrivateIPv6Addresses []string   `json:"private_ipv6_addresses"`
 	PublicIPv4Addresses  []string   `json:"public_ipv4_addresses"`
 	PublicIPv6Addresses  []string   `json:"public_ipv6_addresses"`
+	MachineType          string     `yaml:"machine_type"`
+	CloudCreatedTime     string     `yaml:"cloud_created_time"`
 	CloudLaunchedTime    string     `json:"cloud_launched_time"`
 	CloudExpiredTime     string     `json:"cloud_expired_time"`
 	Extension            *Extension `json:"extension,omitempty"`

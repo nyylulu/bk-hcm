@@ -112,6 +112,7 @@ type CloudResType interface {
 		typescvm.AwsCvm |
 		typescvm.GcpCvm |
 		typescvm.AzureCvm |
+		corecvm.Cvm[corecvm.TCloudZiyanHostExtension] |
 
 		*typeseip.TCloudEip |
 		*typeseip.HuaWeiEip |
@@ -210,6 +211,7 @@ type DBResType interface {
 		corecvm.Cvm[corecvm.AwsCvmExtension] |
 		corecvm.Cvm[corecvm.GcpCvmExtension] |
 		corecvm.Cvm[corecvm.AzureCvmExtension] |
+		corecvm.Cvm[corecvm.TCloudZiyanHostExtension] |
 
 		*dataeip.EipExtResult[dataeip.TCloudEipExtensionResult] |
 		*dataeip.EipExtResult[dataeip.HuaWeiEipExtensionResult] |

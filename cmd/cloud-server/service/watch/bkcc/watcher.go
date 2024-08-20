@@ -20,31 +20,74 @@
 package bkcc
 
 import (
+	"fmt"
 	"sync"
 
-	clientv3 "go.etcd.io/etcd/client/v3"
-	"hcm/pkg/api/core/cloud/cvm"
-	"hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/esb/cmdb"
+
+	clientv3 "go.etcd.io/etcd/client/v3"
 )
 
-// Syncer sync cc host operator
-type Syncer struct {
+// Watcher sync cc host operator
+type Watcher struct {
 	CliSet  *client.ClientSet
-	EsbCli  esb.Client
 	EtcdCli *clientv3.Client
 	leaseOp *leaseOp
 }
 
-// NewSyncer create cc syncer
-func NewSyncer(cliSet *client.ClientSet, esbCli esb.Client, etcdCli *clientv3.Client) (Syncer, error) {
+// NewWatcher create cc Watcher
+func NewWatcher(cliSet *client.ClientSet, etcdCli *clientv3.Client) (Watcher, error) {
 	op := &leaseOp{cli: clientv3.NewLease(etcdCli), leaseMap: make(map[string]clientv3.LeaseID)}
 
-	return Syncer{CliSet: cliSet, EsbCli: esbCli, EtcdCli: etcdCli, leaseOp: op}, nil
+	return Watcher{CliSet: cliSet, EtcdCli: etcdCli, leaseOp: op}, nil
+}
+
+// Watch cc event
+func (w *Watcher) Watch(sd serviced.ServiceDiscover) {
+	go w.WatchHostEvent(sd)
+	go w.WatchHostRelationEvent(sd)
+}
+
+func getCursorKey(cursorType cmdb.CursorType) string {
+	return fmt.Sprintf("/hcm/event/cc/%s", cursorType)
+}
+
+func (w *Watcher) getEventCursor(kt *kit.Kit, cursorType cmdb.CursorType) (string, error) {
+	key := getCursorKey(cursorType)
+	resp, err := w.EtcdCli.Get(kt.Ctx, key)
+	if err != nil {
+		logs.Errorf("get cmdb event cursor from etcd fail, err: %v, key: %s, rid: %s", err, key, kt.Rid)
+		return "", err
+	}
+
+	// 从etcd里拿不到cursor，返回空字符串，从当前时间watch
+	if len(resp.Kvs) == 0 {
+		logs.Warnf("can not get cmdb event cursor from etcd, key: %s, rid: %s", key, kt.Rid)
+		return "", nil
+	}
+
+	return string(resp.Kvs[0].Value), nil
+}
+
+func (w *Watcher) setEventCursor(kt *kit.Kit, cursorType cmdb.CursorType, cursor string) error {
+	key := getCursorKey(cursorType)
+
+	leaseID, err := w.leaseOp.getLeaseID(kt, key)
+	if err != nil {
+		logs.Errorf("get lease id failed, err: %v, key: %s, rid: %s", err, key, kt.Rid)
+		return err
+	}
+
+	if _, err = w.EtcdCli.Put(kt.Ctx, key, cursor, clientv3.WithLease(leaseID)); err != nil {
+		logs.Errorf("set etcd error, err: %v, key: %s, val: %s, rid: %s", err, key, cursor, kt.Rid)
+		return err
+	}
+
+	return nil
 }
 
 type leaseOp struct {
@@ -77,25 +120,4 @@ func (l *leaseOp) getLeaseID(kt *kit.Kit, key string) (clientv3.LeaseID, error) 
 	}
 
 	return l.leaseMap[key], nil
-}
-
-type ccHostWithBiz struct {
-	cmdb.Host
-	bizID int64
-}
-
-// getHostWithBizID 由于cc的主机模型没有业务id,所以这里需要会给主机信息补充业务id
-func getHostWithBizID(bizID int64, hosts []cmdb.Host) []ccHostWithBiz {
-	result := make([]ccHostWithBiz, 0)
-	for _, host := range hosts {
-		result = append(result, ccHostWithBiz{host, bizID})
-	}
-
-	return result
-}
-
-type diffHost struct {
-	addHosts    []cloud.CvmBatchCreate[cvm.TCloudZiyanHostExtension]
-	updateHosts []cloud.CvmBatchUpdate[cvm.TCloudZiyanHostExtension]
-	deleteIDs   []string
 }

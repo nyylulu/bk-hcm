@@ -63,6 +63,7 @@ import (
 	"hcm/cmd/cloud-server/service/sync/lock"
 	"hcm/cmd/cloud-server/service/user"
 	"hcm/cmd/cloud-server/service/vpc"
+	"hcm/cmd/cloud-server/service/watch/bkcc"
 	"hcm/cmd/cloud-server/service/zone"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
@@ -84,6 +85,7 @@ import (
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
+	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 // Service do all the cloud server's work
@@ -99,8 +101,8 @@ type Service struct {
 	itsmCli   itsm.Client
 	bkBaseCli bkbase.Client
 	// finOps  Finops client
-	finOps pkgfinops.Client
-	cmsiCli   cmsi.Client
+	finOps  pkgfinops.Client
+	cmsiCli cmsi.Client
 }
 
 // NewService create a service instance.
@@ -122,6 +124,20 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	if cc.CloudServer().CloudResource.Sync.Enable {
 		interval := time.Duration(cc.CloudServer().CloudResource.Sync.SyncIntervalMin) * time.Minute
 		go sync.CloudResourceSync(interval, sd, apiClientSet)
+
+		etcdOpt, err := cc.CloudServer().Service.Etcd.ToConfig()
+		if err != nil {
+			return nil, fmt.Errorf("get etcd config failed, err: %v", err)
+		}
+		etcdCli, err := etcd3.New(etcdOpt)
+		if err != nil {
+			return nil, fmt.Errorf("new etcd client failed, err: %v", err)
+		}
+		watcher, err := bkcc.NewWatcher(apiClientSet, etcdCli)
+		if err != nil {
+			return nil, fmt.Errorf("new cc syncer failed, err: %v", err)
+		}
+		watcher.Watch(sd)
 	}
 
 	if cc.CloudServer().BillConfig.Enable {
@@ -168,8 +184,7 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 
 	// 创建ESB Client
 	esbConfig := cc.CloudServer().Esb
-	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
-	if err != nil {
+	if err = esb.InitEsbClient(&esbConfig, metrics.Register()); err != nil {
 		return nil, nil, nil, err
 	}
 
@@ -205,14 +220,14 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		authorizer: authorizer,
 		audit:      logicaudit.NewAudit(apiClientSet.DataService()),
 		cipher:     cipher,
-		esbClient:  esbClient,
+		esbClient:  esb.EsbClient(),
 		itsmCli:    itsmCli,
 		bkBaseCli:  bkbaseCli,
 		finOps:     finOpsCli,
 		cmsiCli:    cmsiCli,
 	}
 
-	return apiClientSet, esbClient, svr, nil
+	return apiClientSet, esb.EsbClient(), svr, nil
 }
 
 // newCipherFromConfig 根据配置文件里的加密配置，选择配置的算法并生成对应的加解密器

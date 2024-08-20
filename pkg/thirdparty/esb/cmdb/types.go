@@ -279,24 +279,41 @@ type Host struct {
 	BkCloudHostStatus CloudHostStatus `json:"bk_cloud_host_status"`
 	BkCloudID         int64           `json:"bk_cloud_id"`
 	// 云上地域，如 "ap-guangzhou"
-	BkCloudRegion   string  `json:"bk_cloud_region"`
-	BkHostInnerIP   string  `json:"bk_host_innerip"`
-	BkHostOuterIP   string  `json:"bk_host_outerip"`
-	BkHostInnerIPv6 string  `json:"bk_host_innerip_v6"`
-	BkHostOuterIPv6 string  `json:"bk_host_outerip_v6"`
-	Operator        string  `json:"operator"`
-	BkBakOperator   string  `json:"bk_bak_operator"`
-	BkHostName      string  `json:"bk_host_name"`
-	BkComment       *string `json:"bk_comment,omitempty"`
-	BkOSName        string  `json:"bk_os_name"`
-	SvrSourceTypeID string  `json:"svr_source_type_id"`
-	BkAssetID       string  `json:"bk_asset_id"`
+	BkCloudRegion      string  `json:"bk_cloud_region"`
+	BkHostInnerIP      string  `json:"bk_host_innerip"`
+	BkHostOuterIP      string  `json:"bk_host_outerip"`
+	BkHostInnerIPv6    string  `json:"bk_host_innerip_v6"`
+	BkHostOuterIPv6    string  `json:"bk_host_outerip_v6"`
+	Operator           string  `json:"operator"`
+	BkBakOperator      string  `json:"bk_bak_operator"`
+	BkHostName         string  `json:"bk_host_name"`
+	BkComment          *string `json:"bk_comment,omitempty"`
+	BkOSName           string  `json:"bk_os_name"`
+	SvrSourceTypeID    string  `json:"bk_svr_source_type_id"`
+	BkAssetID          string  `json:"bk_asset_id"`
+	SvrDeviceClassName string  `json:"bk_svr_device_cls_name"`
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	BkCloudZone     string `json:"bk_cloud_zone"`
 	BkCloudVpcID    string `json:"bk_cloud_vpc_id"`
 	BkCloudSubnetID string `json:"bk_cloud_subnet_id"`
 }
+
+// SvrSourceTypeID 服务器来源类型
+type SvrSourceTypeID string
+
+const (
+	// Own 自有, 物理机
+	Own SvrSourceTypeID = "1"
+	// Hosting 托管, 物理机
+	Hosting SvrSourceTypeID = "2"
+	// Rent 租用, 物理机
+	Rent = "3"
+	// CVM 虚拟机
+	CVM = "4"
+	// Container 容器
+	Container = "5"
+)
 
 // HostFields cmdb common fields
 var HostFields = []string{
@@ -315,8 +332,9 @@ var HostFields = []string{
 	"bk_host_name",
 	"bk_cloud_id",
 	"bk_os_name",
-	"svr_source_type_id",
+	"bk_svr_source_type_id",
 	"bk_asset_id",
+	"bk_svr_device_cls_name",
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	"bk_cloud_vpc_id",

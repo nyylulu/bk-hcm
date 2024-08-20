@@ -22,6 +22,7 @@ package ziyan
 import (
 	"fmt"
 
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/validator"
 )
@@ -37,7 +38,7 @@ type SyncBaseParams struct {
 func (opt SyncBaseParams) Validate() error {
 
 	if len(opt.CloudIDs) > constant.CloudResourceSyncMaxLimit {
-		return fmt.Errorf("cloudIDs shuold <= %d", constant.CloudResourceSyncMaxLimit)
+		return fmt.Errorf("cloudIDs should <= %d", constant.CloudResourceSyncMaxLimit)
 	}
 
 	return validator.Validate.Struct(opt)
@@ -46,4 +47,35 @@ func (opt SyncBaseParams) Validate() error {
 // SyncResult sync result.
 type SyncResult struct {
 	CreatedIds []string
+}
+
+// DelHostParams ...
+type DelHostParams struct {
+	BizID      int64   `json:"bk_biz_id" validate:"required"`
+	DelHostIDs []int64 `json:"delete_host_ids"`
+}
+
+// Validate ...
+func (opt DelHostParams) Validate() error {
+	if len(opt.DelHostIDs) > constant.CloudResourceSyncMaxLimit {
+		return fmt.Errorf("host ids should <= %d", constant.CloudResourceSyncMaxLimit)
+	}
+
+	return nil
+}
+
+// SyncHostParams ...
+type SyncHostParams struct {
+	AccountID string  `json:"account_id" validate:"required"`
+	BizID     int64   `json:"bk_biz_id" validate:"required"`
+	HostIDs   []int64 `json:"bk_host_ids"`
+}
+
+// Validate ...
+func (opt SyncHostParams) Validate() error {
+	if len(opt.HostIDs) > int(core.DefaultMaxPageLimit) {
+		return fmt.Errorf("host ids should <= %d", int(core.DefaultMaxPageLimit))
+	}
+
+	return validator.Validate.Struct(opt)
 }

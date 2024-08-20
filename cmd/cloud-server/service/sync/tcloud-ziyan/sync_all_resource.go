@@ -93,6 +93,10 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		Vendor:    string(enumor.TCloudZiyan),
 	}
 
+	if hitErr = SyncHost(kt, cliSet, opt.AccountID, sd); hitErr != nil {
+		return enumor.CvmCloudResType, hitErr
+	}
+
 	for _, syncer := range syncOrder {
 		if hitErr = syncer.ResSyncFunc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
 			return syncer.ResType, hitErr

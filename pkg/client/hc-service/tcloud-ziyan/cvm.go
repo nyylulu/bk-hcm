@@ -20,9 +20,14 @@
 package hcziyancli
 
 import (
+	"context"
+	"net/http"
+
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/cvm"
+	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/client/common"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
@@ -45,4 +50,76 @@ func (cli *CvmClient) QueryTCloudZiyanCVM(kt *kit.Kit, request *cvm.QueryCloudCv
 
 	return common.Request[cvm.QueryCloudCvmReq, core.ListResultT[cvm.Cvm[cvm.TCloudZiyanCvmExtension]]](cli.client,
 		rest.POST, kt, request, "/cvms/query")
+}
+
+// SyncHostWithRelResource sync host with rel resource.
+func (cli *CvmClient) SyncHostWithRelResource(ctx context.Context, h http.Header,
+	request *sync.TCloudZiyanSyncHostReq) error {
+
+	resp := new(core.SyncResp)
+
+	err := cli.client.Post().
+		WithContext(ctx).
+		Body(request).
+		SubResourcef("/hosts/with/relation_resources/sync").
+		WithHeaders(h).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}
+
+// SyncHostWithRelResByCond sync host with rel resource by conditon.
+func (cli *CvmClient) SyncHostWithRelResByCond(ctx context.Context, h http.Header,
+	request *sync.TCloudZiyanSyncHostByCondReq) error {
+
+	resp := new(core.SyncResp)
+
+	err := cli.client.Post().
+		WithContext(ctx).
+		Body(request).
+		SubResourcef("/hosts/with/relation_resources/by_condition/sync").
+		WithHeaders(h).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}
+
+// DeleteHostByCond delete host by condition.
+func (cli *CvmClient) DeleteHostByCond(ctx context.Context, h http.Header,
+	request *sync.TCloudZiyanDelHostByCondReq) error {
+
+	resp := new(core.SyncResp)
+
+	err := cli.client.Delete().
+		WithContext(ctx).
+		Body(request).
+		SubResourcef("/hosts/by_condition/delete").
+		WithHeaders(h).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
 }

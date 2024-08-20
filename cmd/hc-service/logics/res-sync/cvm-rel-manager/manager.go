@@ -329,6 +329,12 @@ func (mgr *CvmRelManger) validateSyncRelParams(vendor enumor.Vendor, resType enu
 		default:
 			return fmt.Errorf("vendor: %s cvm and %s are not associated", vendor, resType)
 		}
+	case enumor.TCloudZiyan:
+		switch resType {
+		case enumor.SecurityGroupCloudResType:
+		default:
+			return fmt.Errorf("vendor: %s cvm and %s are not associated", vendor, resType)
+		}
 	default:
 		return fmt.Errorf("vendor: %s not support", vendor)
 	}

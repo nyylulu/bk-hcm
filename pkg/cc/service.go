@@ -238,11 +238,10 @@ func (s DataServiceSetting) Validate() error {
 
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
-	Network   Network   `yaml:"network"`
-	Service   Service   `yaml:"service"`
-	Log       LogOption `yaml:"log"`
-	Esb       Esb       `yaml:"esb"`
-	SyncCCRes SyncCCRes `yaml:"syncCCRes"`
+	Network Network   `yaml:"network"`
+	Service Service   `yaml:"service"`
+	Log     LogOption `yaml:"log"`
+	Esb     Esb       `yaml:"esb"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
