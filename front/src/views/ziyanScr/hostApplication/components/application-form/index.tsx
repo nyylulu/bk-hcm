@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Dropdown } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio } from 'bkui-vue';
 import { VendorEnum } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -25,6 +25,7 @@ import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
+const { Group: RadioGroup, Button: RadioButton } = Radio;
 export default defineComponent({
   components: {
     applicationSideslider,
@@ -107,9 +108,9 @@ export default defineComponent({
             </Button>
             <Dropdown
               trigger='manual'
+              isShow={IDCPMIndex.value === index && dropdownMenuShowState.idc}
               popoverOptions={{
                 renderType: 'shown',
-                onAfterShow: () => (IDCPMIndex.value = index),
                 onAfterHidden: () => {
                   IDCPMIndex.value = -1;
                   dropdownMenuShowState.idc = false;
@@ -120,7 +121,10 @@ export default defineComponent({
                 default: () => (
                   <div
                     class={`more-action${IDCPMIndex.value === index ? ' current-operate-row' : ''}`}
-                    onClick={() => (dropdownMenuShowState.idc = true)}>
+                    onClick={() => {
+                      IDCPMIndex.value = index;
+                      dropdownMenuShowState.idc = true;
+                    }}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
@@ -161,10 +165,9 @@ export default defineComponent({
             </Button>
             <Dropdown
               trigger='manual'
-              isShow={dropdownMenuShowState.cvm}
+              isShow={QCLOUDCVMIndex.value === index && dropdownMenuShowState.cvm}
               popoverOptions={{
                 renderType: 'shown',
-                onAfterShow: () => (QCLOUDCVMIndex.value = index),
                 onAfterHidden: () => {
                   QCLOUDCVMIndex.value = -1;
                   dropdownMenuShowState.cvm = false;
@@ -175,7 +178,10 @@ export default defineComponent({
                 default: () => (
                   <div
                     class={`more-action${QCLOUDCVMIndex.value === index ? ' current-operate-row' : ''}`}
-                    onClick={() => (dropdownMenuShowState.cvm = true)}>
+                    onClick={() => {
+                      QCLOUDCVMIndex.value = index;
+                      dropdownMenuShowState.cvm = true;
+                    }}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
@@ -212,6 +218,8 @@ export default defineComponent({
       enable_disk_check: false,
       region: '', // 地域
       zone: '', // 园区
+      charge_type: 'PREPAID', // 计费模式 POSTPAID_BY_HOUR:按量计费
+      charge_months: 36, // 计费时长
     });
     // 侧边栏腾讯云CVM
     const QCLOUDCVMForm = ref({
@@ -239,6 +247,25 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
+
+    // cvm购买时长选项
+    const cvmChargeMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
+    const cvmChargeMonthOptions = cvmChargeMonths.map((month) => {
+      const getName = (m: number) => {
+        if (m === 6) {
+          return '半年';
+        }
+        if (m >= 12) {
+          return `${m / 12}年`;
+        }
+        return `${m}月`;
+      };
+      return {
+        id: month,
+        name: getName(month),
+      };
+    });
+
     const vpcName = ref('');
     const subnetName = ref('');
     // 机型列表
@@ -435,6 +462,8 @@ export default defineComponent({
         QCLOUDCVMForm.value.spec = cloudTableData.value[index].spec;
         resourceForm.value.region = cloudTableData.value[index].spec.region;
         resourceForm.value.zone = cloudTableData.value[index].spec.zone;
+        resourceForm.value.charge_type = cloudTableData.value[index].spec.charge_type;
+        resourceForm.value.charge_months = cloudTableData.value[index].spec.charge_months;
         QCLOUDCVMForm.value.spec.replicas = row.replicas;
         QCLOUDCVMForm.value.spec.anti_affinity_level = row.anti_affinity_level;
       } else {
@@ -461,6 +490,16 @@ export default defineComponent({
       () => {
         loadDeviceTypes();
         loadImages();
+      },
+    );
+    watch(
+      () => resourceForm.value.charge_type,
+      (chargeType) => {
+        if (chargeType === 'PREPAID') {
+          resourceForm.value.charge_months = 36;
+        } else {
+          resourceForm.value.charge_months = undefined;
+        }
       },
     );
     const unReapply = async () => {
@@ -567,6 +606,7 @@ export default defineComponent({
       };
       resourceForm.value.region = data.region;
       resourceForm.value.zone = data.zone;
+      resourceForm.value.charge_months = 36;
     };
     const isOneClickApplication = ref(false);
     const OneClickApplication = (row: any, val: boolean) => {
@@ -601,6 +641,8 @@ export default defineComponent({
         zone: '', // 园区
         remark: '',
         enable_disk_check: false,
+        charge_type: 'PREPAID',
+        charge_months: 36,
       };
       QCLOUDCVMForm.value = {
         spec: {
@@ -636,6 +678,8 @@ export default defineComponent({
           ...QCLOUDCVMForm.value.spec,
           region: resourceForm.value.region,
           zone: resourceForm.value.zone,
+          charge_type: resourceForm.value.charge_type,
+          charge_months: resourceForm.value.charge_months,
         },
       };
     };
@@ -948,42 +992,82 @@ export default defineComponent({
                       rules={resourceFormrules}
                       ref={resourceFormRef}
                       form-type='vertical'>
-                      <div class='flex-row align-content-center flex-wrap'>
-                        <bk-form-item label='主机类型' required property='resourceType'>
-                          <bk-select
-                            class={'selection-box'}
-                            v-model={resourceForm.value.resourceType}
-                            onChange={onResourceTypeChange}>
-                            {resourceTypes.value.map((resType: { value: any; label: any }) => (
-                              <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
-                            ))}
-                          </bk-select>
-                        </bk-form-item>
-                        <bk-form-item class='mr16' label='云地域' required property='region'>
-                          <AreaSelector
-                            class={'selection-box'}
-                            v-model={resourceForm.value.region}
-                            params={{ resourceType: resourceForm.value.resourceType }}
-                            onChange={onRegionChange}></AreaSelector>
-                        </bk-form-item>
-                        <bk-form-item label='可用区' required property='zone'>
-                          <ZoneTagSelector
-                            class={'selection-box'}
-                            key={resourceForm.value.region}
-                            style={{ width: '760px' }}
-                            v-model={resourceForm.value.zone}
-                            vendor={VendorEnum.ZIYAN}
-                            region={resourceForm.value.region}
-                            resourceType={resourceForm.value.resourceType}
-                            separateCampus={true}
-                            emptyText='请先选择云地域'
-                            minWidth={182}
-                            maxWidth={182}
-                            autoExpand={'selected'}
-                            onChange={onQcloudZoneChange}
-                          />
-                        </bk-form-item>
-                      </div>
+                      <bk-form-item label='主机类型' required property='resourceType'>
+                        <bk-select
+                          class={'selection-box'}
+                          v-model={resourceForm.value.resourceType}
+                          onChange={onResourceTypeChange}>
+                          {resourceTypes.value.map((resType: { value: any; label: any }) => (
+                            <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
+                          ))}
+                        </bk-select>
+                      </bk-form-item>
+                      <bk-form-item label='云地域' required property='region'>
+                        <AreaSelector
+                          class={'selection-box'}
+                          v-model={resourceForm.value.region}
+                          params={{ resourceType: resourceForm.value.resourceType }}
+                          onChange={onRegionChange}></AreaSelector>
+                      </bk-form-item>
+                      <bk-form-item label='可用区' required property='zone'>
+                        <ZoneTagSelector
+                          class={'selection-box'}
+                          key={resourceForm.value.region}
+                          style={{ width: '760px' }}
+                          v-model={resourceForm.value.zone}
+                          vendor={VendorEnum.ZIYAN}
+                          region={resourceForm.value.region}
+                          resourceType={resourceForm.value.resourceType}
+                          separateCampus={true}
+                          emptyText='请先选择云地域'
+                          minWidth={182}
+                          maxWidth={182}
+                          autoExpand={'selected'}
+                          onChange={onQcloudZoneChange}
+                        />
+                      </bk-form-item>
+                      {resourceForm.value.resourceType === 'QCLOUDCVM' && (
+                        <>
+                          <bk-form-item label='计费模式' required property='charge_type'>
+                            <RadioGroup v-model={resourceForm.value.charge_type} type='card' style={{ width: '260px' }}>
+                              <RadioButton label='PREPAID'>包年包月</RadioButton>
+                              <RadioButton label='POSTPAID_BY_HOUR'>按量计费</RadioButton>
+                            </RadioGroup>
+                            <div class={'form-item-tips'}>
+                              <bk-alert theme='info'>
+                                {resourceForm.value.charge_type === 'PREPAID' ? (
+                                  <>
+                                    默认为3年，按梯度折扣分别为1-3月150%，4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                  </>
+                                ) : (
+                                  <>
+                                    使用小于1月折扣为170%，在提交预测单后，满3月后可在腾讯云控制台转换为包年包月，无预测单不可转包年包月。计费折扣，使用1-3月150%，满3月后转4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                  </>
+                                )}
+                                <bk-link
+                                  href='https://crp.woa.com/crp-outside/yunti/news/20'
+                                  theme='primary'
+                                  target='_blank'>
+                                  计费模式说明
+                                </bk-link>
+                              </bk-alert>
+                            </div>
+                          </bk-form-item>
+                          {resourceForm.value.charge_type === 'PREPAID' && (
+                            <bk-form-item label='购买时长' required property='charge_months'>
+                              <bk-select
+                                v-model={resourceForm.value.charge_months}
+                                filterable={false}
+                                clearable={false}
+                                style={{ width: '260px' }}>
+                                {cvmChargeMonthOptions.map((option: { id: number; name: string }) => (
+                                  <bk-option key={option.id} value={option.id} label={option.name}></bk-option>
+                                ))}
+                              </bk-select>
+                            </bk-form-item>
+                          )}
+                        </>
+                      )}
                     </bk-form>
                   </CommonCard>
 
