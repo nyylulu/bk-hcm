@@ -21,7 +21,7 @@ import (
 	"hcm/pkg/rest"
 )
 
-// CreateApplyOrder creates apply order
+// CreateApplyOrder creates apply order(CVM生产-创建单据)
 func (s *service) CreateApplyOrder(cts *rest.Contexts) (interface{}, error) {
 	input := new(types.CvmCreateReq)
 	if err := cts.DecodeInto(input); err != nil {

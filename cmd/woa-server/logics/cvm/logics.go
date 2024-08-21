@@ -57,7 +57,7 @@ func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.
 	}
 }
 
-// CreateApplyOrder creates cvm apply order
+// CreateApplyOrder creates cvm apply order(CVM生产-创建单据)
 func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*types.CvmCreateResult, error) {
 	id, err := model.Operation().ApplyOrder().NextSequence(kt.Ctx)
 	if err != nil {

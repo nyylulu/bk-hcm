@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.6.1+。
+- 该接口提供版本：v1.6.2+。
 - 该接口所需权限：平台-CVM生产。
 - 该接口功能描述：创建CVM生产单据。
 
@@ -32,6 +32,8 @@ POST /api/v1/woa/cvm/create/apply/order
 | network_type  | string	| 是   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
 | vpc	        | string    | 否   | 私有网络，默认为空 |
 | subnet        | string    | 否   | 私有子网，默认为空 |
+| charge_type   | string    | 是   | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费) |
+| charge_months | int       | 否   | 计费时长，单位：月(计费模式为包年包月时，该字段必传) |
 
 ### 调用示例
 
@@ -55,7 +57,9 @@ POST /api/v1/woa/cvm/create/apply/order
     "disk_type":"CLOUD_PREMIUM",
     "network_type":"TENTHOUSAND",
     "vpc":"",
-    "subnet":""
+    "subnet":"",
+    "charge_type":"PREPAID",
+    "charge_months":1
   }
 }
 ```
