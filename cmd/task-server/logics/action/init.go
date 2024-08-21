@@ -84,4 +84,7 @@ func register() {
 	action.RegisterAction(actionmonthtask.MonthTaskAction{})
 	action.RegisterAction(actionobssync.SyncAction{})
 	action.RegisterAction(actionobsclean.CleanAction{})
+
+	action.RegisterAction(actionlb.DeleteURLRuleAction{})
+	action.RegisterAction(actionlb.DeleteListenerAction{})
 }

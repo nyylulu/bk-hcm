@@ -89,7 +89,7 @@ func (svc *lbSvc) batchModifyTargetWeight(cts *rest.Contexts, authHandler handle
 }
 
 func (svc *lbSvc) buildModifyTCloudTargetWeight(kt *kit.Kit, body json.RawMessage,
-	tgID, accountID string, vendor enumor.Vendor) (interface{}, error) {
+	tgID, accountID string, vendor enumor.Vendor) (*core.FlowStateResult, error) {
 
 	req := new(cslb.TCloudBatchModifyTargetWeightReq)
 	if err := json.Unmarshal(body, req); err != nil {
@@ -115,6 +115,8 @@ func (svc *lbSvc) buildModifyTCloudTargetWeight(kt *kit.Kit, body json.RawMessag
 	if len(ruleRelList.Details) == 0 {
 		err = svc.batchUpdateTargetWeightDb(kt, req)
 		if err != nil {
+			logs.Errorf("batch update target weight in database failed, req: %+v, err: %v, rid: %s",
+				req, err, kt.Rid)
 			return nil, err
 		}
 		return &core.FlowStateResult{State: enumor.FlowSuccess}, nil
@@ -155,30 +157,33 @@ func (svc *lbSvc) batchUpdateTargetWeightDb(kt *kit.Kit, req *cslb.TCloudBatchMo
 }
 
 func (svc *lbSvc) buildModifyTCloudTargetTasksWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq,
-	lbID, tgID, accountID string, vendor enumor.Vendor) (interface{}, error) {
+	lbID, tgID, accountID string, vendor enumor.Vendor) (*core.FlowStateResult, error) {
 
 	// 预检测
 	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
 	if err != nil {
+		logs.Errorf("check resource flow relation failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// 创建Flow跟Task的初始化数据
-	flowID, err := svc.initFlowTargetWeight(kt, req, lbID, tgID, accountID, vendor)
+	flowID, err := svc.initFlowModifyTargetWeight(kt, req, lbID, tgID, accountID, vendor)
 	if err != nil {
+		logs.Errorf("init flow batch modify target weigh failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// 锁定资源跟Flow的状态
 	err = svc.lockResFlowStatus(kt, lbID, enumor.LoadBalancerCloudResType, flowID, enumor.ModifyWeightTaskType)
 	if err != nil {
+		logs.Errorf("lock resource flow status failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	return &core.FlowStateResult{FlowID: flowID}, nil
 }
 
-func (svc *lbSvc) initFlowTargetWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq,
+func (svc *lbSvc) initFlowModifyTargetWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq,
 	lbID, tgID, accountID string, vendor enumor.Vendor) (string, error) {
 
 	tasks := make([]ts.CustomFlowTask, 0)
@@ -195,13 +200,13 @@ func (svc *lbSvc) initFlowTargetWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyT
 			ActionID:   actionID,
 			ActionName: enumor.ActionTargetGroupModifyWeight,
 			Params: &actionlb.OperateRsOption{
-				Vendor:                      vendor,
+				Vendor:                      enumor.TCloud,
 				TCloudBatchOperateTargetReq: *rsWeightParams,
 			},
 			Retry: &tableasync.Retry{
 				Enable: true,
 				Policy: &tableasync.RetryPolicy{
-					Count:        constant.FlowRetryMaxLimit,
+					Count:        500,
 					SleepRangeMS: [2]uint{100, 200},
 				},
 			},

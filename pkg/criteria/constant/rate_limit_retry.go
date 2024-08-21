@@ -17,25 +17,14 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package types
+// Package constant definition and assignment of various constants
+package constant
 
-import (
-	table "hcm/pkg/dal/table/account-set"
+const (
+	// MaxRetries maximum number of retries
+	MaxRetries = 300
+	// MinRetryInterval maximum retry interval
+	MinRetryInterval = 200
+	// MaxRetryInterval minimum retry interval
+	MaxRetryInterval = 800
 )
-
-// ListRootAccountDetails list account details.
-type ListRootAccountDetails struct {
-	Count   uint64                    `json:"count,omitempty"`
-	Details []*table.RootAccountTable `json:"details,omitempty"`
-}
-
-// AccountVendor ...
-type AccountVendor struct {
-	Vendor string `json:"vendor"`
-}
-
-// ListRootAccountVendorDetails list account vendor details.
-type ListRootAccountVendorDetails struct {
-	Count   uint64          `json:"count,omitempty"`
-	Details []AccountVendor `json:"details,omitempty"`
-}

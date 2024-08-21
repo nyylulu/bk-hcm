@@ -171,4 +171,20 @@ const parseIP = (text: string) => {
   };
 };
 
-export { getInstVip, exportTableToExcel, getEntirePath, cleanPayload, getDate, getDisplayText, splitIP, parseIP };
+// 将值进行btoa编码
+const encodeValueByBtoa = (v: any) => btoa(JSON.stringify(v));
+// 获取atob解码后的值
+const decodeValueByAtob = (v: string) => JSON.parse(atob(v));
+
+export {
+  getInstVip,
+  exportTableToExcel,
+  getEntirePath,
+  cleanPayload,
+  getDate,
+  getDisplayText,
+  splitIP,
+  parseIP,
+  encodeValueByBtoa,
+  decodeValueByAtob,
+};
