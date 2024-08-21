@@ -2,14 +2,13 @@ import { PropType, Ref, defineComponent, inject, onMounted, ref } from 'vue';
 import './index.scss';
 
 import { Button } from 'bkui-vue';
-import BillsExportButton from '../../components/bills-export-button';
 import ImportBillDetailDialog from '../ImportBillDetailDialog';
 
 import { useI18n } from 'vue-i18n';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useTable } from '@/hooks/useTable/useTable';
-import { VendorEnum, VendorMap } from '@/common/constant';
-import { exportBillsItems, reqBillsItemList, reqBillsRootAccountSummaryList } from '@/api/bill';
+import { VendorEnum } from '@/common/constant';
+import { reqBillsItemList, reqBillsRootAccountSummaryList } from '@/api/bill';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 
 export default defineComponent({
@@ -39,7 +38,7 @@ export default defineComponent({
 
     const { columns, settings } = useColumns(getColumnName());
 
-    const { CommonTable, getListData, clearFilter, filter } = useTable({
+    const { CommonTable, getListData, clearFilter } = useTable({
       tableOptions: {
         columns,
         extra: {
@@ -104,18 +103,6 @@ export default defineComponent({
                     {t('导入')}
                   </Button>
                 )}
-                <BillsExportButton
-                  cb={() =>
-                    exportBillsItems(props.vendor, {
-                      bill_year: bill_year.value,
-                      bill_month: bill_month.value,
-                      export_limit: 200000,
-                      filter,
-                    })
-                  }
-                  title={t(`账单明细-(${VendorMap[props.vendor]})`)}
-                  content={t(`导出当月${VendorMap[props.vendor]}的账单数据`)}
-                />
               </>
             ),
           }}
