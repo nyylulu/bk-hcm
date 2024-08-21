@@ -81,6 +81,7 @@ var loadBalancerFlowNameMap = map[FlowName]struct{}{
 	FlowLoadBalancerOperateWatch:       {},
 	FlowApplyTargetGroupToListenerRule: {},
 	FlowDeleteLoadBalancer:             {},
+	FlowLoadBalancerDeleteRule:         {},
 }
 
 // ValidateLoadBalancer validate load balancer FlowName.
@@ -147,6 +148,8 @@ const (
 	FlowApplyTargetGroupToListenerRule FlowName = "apply_tg_listener_rule"
 
 	FlowDeleteLoadBalancer FlowName = "delete_load_balancer"
+
+	FlowLoadBalancerDeleteRule FlowName = "load_balancer_delete_rule"
 )
 
 // 账单相关Flow

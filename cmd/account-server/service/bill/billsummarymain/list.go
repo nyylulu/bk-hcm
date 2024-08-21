@@ -34,7 +34,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/tools/maps"
-	"hcm/pkg/tools/slice"
 )
 
 // ListMainAccountSummary list main account summary with options
@@ -47,9 +46,8 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	err := s.authorizer.AuthorizeWithPerm(cts.Kit,
-		meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.AccountBill, Action: meta.Find}})
-	if err != nil {
+	authParam := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.AccountBill, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authParam); err != nil {
 		return nil, err
 	}
 
@@ -64,11 +62,8 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 			return nil, err
 		}
 	}
-
-	summary, err := s.client.DataService().Global.Bill.ListBillSummaryMain(cts.Kit, &dsbillapi.BillSummaryMainListReq{
-		Filter: expression,
-		Page:   req.Page,
-	})
+	listReq := &dsbillapi.BillSummaryMainListReq{Filter: expression, Page: req.Page}
+	summary, err := s.client.DataService().Global.Bill.ListBillSummaryMain(cts.Kit, listReq)
 	if err != nil {
 		return nil, err
 	}
@@ -81,49 +76,25 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 		Details: make([]*asbillapi.MainAccountSummaryResult, 0, len(summary.Details)),
 	}
 
-	mainAccountIDMap := make(map[string]struct{})
-	rootAccountIDMap := make(map[string]struct{})
-	for _, detail := range summary.Details {
-		mainAccountIDMap[detail.MainAccountID] = struct{}{}
-		rootAccountIDMap[detail.RootAccountID] = struct{}{}
-	}
-
-	mainAccountIDs := maps.Keys(mainAccountIDMap)
-	rootAccountIDs := maps.Keys(rootAccountIDMap)
-
+	mainAccountIDs, rootAccountIDs, productIds := s.getAccountIds(summary)
 	mainMap, err := s.listMainAccount(cts.Kit, mainAccountIDs)
 	if err != nil {
 		logs.Errorf("list main account for summary main failed, err: %v, main ids: %v, rid: %s",
 			err, mainAccountIDs, cts.Kit.Rid)
 		return nil, err
 	}
-
 	rootMap, err := s.listRootAccount(cts.Kit, rootAccountIDs)
 	if err != nil {
 		logs.Errorf("list root account for summary main failed, err: %v, root ids: %v, rid: %s",
 			err, rootAccountIDs, cts.Kit.Rid)
 		return nil, err
 	}
-
-	productIDs := make([]int64, 0, len(summary.Details))
-	for _, detail := range summary.Details {
-		productIDs = append(productIDs, detail.ProductID)
-	}
-
-	// 补全 product_name
-	param := &finops.ListOpProductParam{
-		OpProductIds: slice.Unique(productIDs),
-		Page:         *core.NewDefaultBasePage(),
-	}
-	productResult, err := s.finops.ListOpProduct(cts.Kit, param)
+	productNameMap, err := s.listProductName(cts.Kit, productIds)
 	if err != nil {
+		logs.Errorf("list product for summary main failed, err: %v, product ids: %v, rid: %s",
+			err, productIds, cts.Kit.Rid)
 		return nil, err
 	}
-	productMap := make(map[int64]string)
-	for _, product := range productResult.Items {
-		productMap[product.OpProductId] = product.OpProductName
-	}
-
 	for _, detail := range summary.Details {
 		mainAccount, ok := mainMap[detail.MainAccountID]
 		if !ok {
@@ -135,8 +106,8 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 			return nil, fmt.Errorf("root account: %s(%s) of summary main %s not found",
 				detail.RootAccountID, detail.RootAccountCloudID, detail.ID)
 		}
-		detail.ProductName = productMap[detail.ProductID]
-
+		// 补全 product_name
+		detail.ProductName = productNameMap[detail.ProductID]
 		tmp := &asbillapi.MainAccountSummaryResult{
 			BillSummaryMainResult: detail,
 			MainAccountName:       mainAccount.Name,
@@ -146,6 +117,25 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 	}
 
 	return ret, nil
+}
+
+func (s *service) getAccountIds(summary *dsbillapi.BillSummaryMainListResult) (
+	mainAccountIDs []string, rootAccountIDs []string, productIds []int64) {
+
+	mainAccountIDMap := make(map[string]struct{})
+	rootAccountIDMap := make(map[string]struct{})
+	productIDMap := make(map[int64]struct{}, len(summary.Details))
+
+	for _, detail := range summary.Details {
+		mainAccountIDMap[detail.MainAccountID] = struct{}{}
+		rootAccountIDMap[detail.RootAccountID] = struct{}{}
+		productIDMap[detail.ProductID] = struct{}{}
+	}
+
+	mainAccountIDs = maps.Keys(mainAccountIDMap)
+	rootAccountIDs = maps.Keys(rootAccountIDMap)
+	productIds = maps.Keys(productIDMap)
+	return mainAccountIDs, rootAccountIDs, productIds
 }
 
 func (s *service) listMainAccount(kt *kit.Kit, accountIDs []string) (map[string]*accountset.BaseMainAccount, error) {
@@ -197,4 +187,20 @@ func (s *service) listRootAccount(kt *kit.Kit, accountIDs []string) (map[string]
 		rootNameMap[account.ID] = account
 	}
 	return rootNameMap, nil
+}
+
+func (s *service) listProductName(kt *kit.Kit, productIds []int64) (map[int64]string, error) {
+	param := &finops.ListOpProductParam{
+		OpProductIds: productIds,
+		Page:         *core.NewDefaultBasePage(),
+	}
+	productResult, err := s.finops.ListOpProduct(kt, param)
+	if err != nil {
+		return nil, err
+	}
+	productNameMap := make(map[int64]string)
+	for _, product := range productResult.Items {
+		productNameMap[product.OpProductId] = product.OpProductName
+	}
+	return productNameMap, nil
 }
