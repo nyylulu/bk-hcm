@@ -9,6 +9,7 @@ import HostApply from './apply';
 import HostRecycle from './recycle';
 import PublicCloudApplications from './components/public-cloud';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 interface ApplicationsType {
   label: string;
@@ -77,7 +78,7 @@ export default defineComponent({
     const activeType = ref(route.query?.type || types.value[0].name);
 
     const saveActiveType = (val: string) => {
-      router.replace({ query: { bizs: route.query.bizs, type: val } });
+      router.replace({ query: { [GLOBAL_BIZS_KEY]: route.query[GLOBAL_BIZS_KEY], type: val } });
     };
 
     return () => (

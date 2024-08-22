@@ -352,8 +352,7 @@ export default defineComponent({
                   isShowAll
                   notAutoSelectAll
                   multiple
-                  saveBizs
-                  bizsKey='scr_host_bizs'
+                  url-key='scr_host_bizs'
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>

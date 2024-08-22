@@ -842,8 +842,7 @@ export default defineComponent({
                       v-model={order.value.model.bkBizId}
                       autoSelect
                       authed
-                      saveBizs
-                      bizsKey='scr_apply_host_bizs'
+                      url-key='scr_apply_host_bizs'
                       apiMethod={apiService.getCvmApplyAuthBizList}
                     />
                   </bk-form-item>
@@ -1020,8 +1019,8 @@ export default defineComponent({
                           resourceType={resourceForm.value.resourceType}
                           separateCampus={true}
                           emptyText='请先选择云地域'
-                          minWidth={182}
-                          maxWidth={182}
+                          minWidth={184}
+                          maxWidth={184}
                           autoExpand={'selected'}
                           onChange={onQcloudZoneChange}
                         />
@@ -1033,25 +1032,23 @@ export default defineComponent({
                               <RadioButton label='PREPAID'>包年包月</RadioButton>
                               <RadioButton label='POSTPAID_BY_HOUR'>按量计费</RadioButton>
                             </RadioGroup>
-                            <div class={'form-item-tips'}>
-                              <bk-alert theme='info'>
-                                {resourceForm.value.charge_type === 'PREPAID' ? (
-                                  <>
-                                    默认为3年，按梯度折扣分别为1-3月150%，4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
-                                  </>
-                                ) : (
-                                  <>
-                                    使用小于1月折扣为170%，在提交预测单后，满3月后可在腾讯云控制台转换为包年包月，无预测单不可转包年包月。计费折扣，使用1-3月150%，满3月后转4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
-                                  </>
-                                )}
-                                <bk-link
-                                  href='https://crp.woa.com/crp-outside/yunti/news/20'
-                                  theme='primary'
-                                  target='_blank'>
-                                  计费模式说明
-                                </bk-link>
-                              </bk-alert>
-                            </div>
+                            <bk-alert theme='info' class='form-item-tips'>
+                              {resourceForm.value.charge_type === 'PREPAID' ? (
+                                <>
+                                  默认为3年，按梯度折扣分别为1-3月150%，4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                </>
+                              ) : (
+                                <>
+                                  使用小于1月折扣为170%，在提交预测单后，满3月后可在腾讯云控制台转换为包年包月，无预测单不可转包年包月。计费折扣，使用1-3月150%，满3月后转4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                </>
+                              )}
+                              <bk-link
+                                href='https://crp.woa.com/crp-outside/yunti/news/20'
+                                theme='primary'
+                                target='_blank'>
+                                计费模式说明
+                              </bk-link>
+                            </bk-alert>
                           </bk-form-item>
                           {resourceForm.value.charge_type === 'PREPAID' && (
                             <bk-form-item label='购买时长' required property='charge_months'>

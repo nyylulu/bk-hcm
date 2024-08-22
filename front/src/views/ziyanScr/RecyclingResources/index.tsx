@@ -358,8 +358,7 @@ export default defineComponent({
                         v-model={bkBizId.value}
                         class='mr-10'
                         authed
-                        saveBizs
-                        bizsKey='scr_recycle_host_bizs'
+                        url-key='scr_recycle_host_bizs'
                         apiMethod={apiService.getCvmRecycleAuthBizList}
                       />
                       {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}
