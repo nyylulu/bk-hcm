@@ -111,6 +111,12 @@ func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHo
 	hostMap := make(map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension])
 	regionCloudIDMap := make(map[string][]string)
 	for _, ccHost := range ccHosts {
+		// cc中可能会存在连固资号都没有的脏数据，这里需要把他们剔除掉
+		if ccHost.BkCloudInstID == "" && ccHost.BkAssetID == "" {
+			logs.Errorf("host(%d) asset id is invalid, rid: %s", ccHost.BkHostID, kt.Rid)
+			continue
+		}
+
 		host := convertToHost(&ccHost, accountID, bizID)
 		hostMap[host.CloudID] = host
 
