@@ -16,7 +16,6 @@ import moment from 'moment';
 import WName from '@/components/w-name';
 import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
-import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import CommonSideslider from '@/components/common-sideslider';
 import { timeFormatter, applicationTime } from '@/common/util';
 import http from '@/http';
@@ -27,6 +26,7 @@ import { throttle } from 'lodash';
 import MatchPanel from '../match-panel';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getResourceTypeName } from '../transform';
+import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -34,7 +34,6 @@ export default defineComponent({
     const userStore = useUserStore();
     const businessMapStore = useBusinessMapStore();
     const { transformApplyStages } = useApplyStages();
-    const { transformRequireTypes } = useRequireTypes();
     const isSidesliderShow = ref(false);
     const machineDetails = ref([]);
     const isMatchPanelShow = ref(false);
@@ -230,7 +229,7 @@ export default defineComponent({
             label: '需求类型',
             field: 'require_type',
             width: 100,
-            render: ({ data }: any) => transformRequireTypes(data.requireType),
+            render: ({ data }: any) => getTypeCn(data.require_type),
           },
           {
             label: '需求摘要',

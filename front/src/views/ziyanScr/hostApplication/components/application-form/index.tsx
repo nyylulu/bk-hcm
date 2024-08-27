@@ -502,6 +502,7 @@ export default defineComponent({
         }
       },
     );
+    const defaultUserlist = ref([]);
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
@@ -515,6 +516,11 @@ export default defineComponent({
           follower: data.follower,
           suborders: data.suborders,
         };
+        defaultUserlist.value = order.value.model.follower.map((element: any) => ({
+          username: element,
+          display_name: element,
+        }));
+
         order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }: any) => {
           resource_type === 'QCLOUDCVM'
             ? cloudTableData.value.push({
@@ -877,7 +883,13 @@ export default defineComponent({
                     type='datetime'></bk-date-picker>
                 </bk-form-item>
                 <bk-form-item label='关注人'>
-                  <MemberSelect class='item-warp-component' multiple clearable v-model={order.value.model.follower} />
+                  <MemberSelect
+                    class='item-warp-component'
+                    multiple
+                    clearable
+                    v-model={order.value.model.follower}
+                    defaultUserlist={defaultUserlist.value}
+                  />
                 </bk-form-item>
               </div>
             </CommonCard>
