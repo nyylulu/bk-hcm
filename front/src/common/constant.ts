@@ -592,3 +592,7 @@ export const CLB_BINDING_STATUS = {
   success: '已绑定',
   failed: '未绑定',
 };
+export const CLOUD_CVM_DISKTYPE = {
+  SSD: 'CLOUD_SSD',
+  PREMIUM: 'CLOUD_PREMIUM',
+};

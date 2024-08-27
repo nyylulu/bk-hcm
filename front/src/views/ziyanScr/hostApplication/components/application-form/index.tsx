@@ -1,6 +1,6 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
 import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio } from 'bkui-vue';
-import { VendorEnum } from '@/common/constant';
+import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -464,14 +464,14 @@ export default defineComponent({
         resourceForm.value.zone = cloudTableData.value[index].spec.zone;
         resourceForm.value.charge_type = cloudTableData.value[index].spec.charge_type;
         resourceForm.value.charge_months = cloudTableData.value[index].spec.charge_months;
-        QCLOUDCVMForm.value.spec.replicas = row.replicas;
+        QCLOUDCVMForm.value.spec.replicas = +row.replicas;
         QCLOUDCVMForm.value.spec.anti_affinity_level = row.anti_affinity_level;
       } else {
         pmForm.value.spec = physicalTableData.value[index].spec;
         resourceForm.value.region = physicalTableData.value[index].spec.region;
         resourceForm.value.zone = physicalTableData.value[index].spec.zone;
         pmForm.value.spec.antiAffinityLevel = row.anti_affinity_level;
-        pmForm.value.spec.replicas = row.replicas;
+        pmForm.value.spec.replicas = +row.replicas;
       }
       resourceForm.value.remark = row.remark;
       title.value = '修改资源需求';
@@ -520,13 +520,13 @@ export default defineComponent({
             ? cloudTableData.value.push({
                 remark,
                 resource_type: 'QCLOUDCVM',
-                replicas,
+                replicas: +replicas,
                 spec,
               })
             : physicalTableData.value.push({
                 remark,
                 resource_type: 'IDCPM',
-                replicas,
+                replicas: +replicas,
                 spec,
               });
         });
@@ -673,7 +673,7 @@ export default defineComponent({
         remark: resourceForm.value.remark,
         enable_disk_check: resourceForm.value.enable_disk_check,
         anti_affinity_level: QCLOUDCVMForm.value.spec.anti_affinity_level,
-        replicas: QCLOUDCVMForm.value.spec.replicas,
+        replicas: +QCLOUDCVMForm.value.spec.replicas,
         spec: {
           ...QCLOUDCVMForm.value.spec,
           region: resourceForm.value.region,
@@ -688,7 +688,7 @@ export default defineComponent({
         resource_type: resourceForm.value.resourceType,
         remark: resourceForm.value.remark,
         anti_affinity_level: pmForm.value.spec.antiAffinityLevel,
-        replicas: pmForm.value.spec.replicas,
+        replicas: +pmForm.value.spec.replicas,
         spec: {
           region: resourceForm.value.region,
           zone: resourceForm.value.zone,
@@ -700,6 +700,15 @@ export default defineComponent({
       device_type: [{ required: true, message: '请选择机型', trigger: 'change' }],
       image_id: [{ required: true, message: '请选择镜像', trigger: 'change' }],
       replicas: [{ required: true, message: '请输入需求数量', trigger: 'blur' }],
+      disk_size: [
+        {
+          trigger: 'change',
+          message: '数据盘大小范围在0-16000GB之间，数值必须是10的整数倍',
+          validator: (val: number) => {
+            return /^(0|[1-9]\d{0,3}0{1,3})$/.test(String(val)) && val <= 16000;
+          },
+        },
+      ],
     });
     const resourceFormrules = ref({
       resourceType: [{ required: true, message: '请选择主机类型', trigger: 'change' }],
@@ -1215,14 +1224,14 @@ export default defineComponent({
                                 ))}
                               </bk-select>
                             </bk-form-item>
-                            <bk-form-item label='数据盘'>
+                            <bk-form-item label='数据盘' property='disk_size'>
                               <div
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
                                 }}>
                                 <DiskTypeSelect
-                                  style={'width:380px'}
+                                  style={'width:360px'}
                                   v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
                                 <Input
                                   class={'ml8'}
@@ -1231,8 +1240,17 @@ export default defineComponent({
                                   prefix='大小'
                                   suffix='GB'
                                   v-model={QCLOUDCVMForm.value.spec.disk_size}
-                                  min={1}></Input>
+                                  min={0}
+                                  max={16000}></Input>
+                                <i
+                                  class={'hcm-icon bkhcm-icon-question-circle-fill ml5'}
+                                  v-bk-tooltips={'最大为 16T(16000 G)，且必须为 10 的倍数'}></i>
                               </div>
+                              {[CLOUD_CVM_DISKTYPE.SSD].includes(QCLOUDCVMForm.value.spec.disk_type) && (
+                                <bk-alert theme='warning' class='form-item-tips' style='width:600px'>
+                                  <>SSD 云硬盘的运营成本约为高性能云盘的 4 倍，请合理评估使用。</>
+                                </bk-alert>
+                              )}
                             </bk-form-item>
                             <bk-form-item label='需求数量' required property='replicas'>
                               <Input
