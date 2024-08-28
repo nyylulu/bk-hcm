@@ -159,12 +159,6 @@ const handleSecrityType = (val: string) => {
   securityType.value = val;
 };
 
-const handleTemplateEdit = (payload: any) => {
-  isTemplateDialogShow.value = true;
-  isTemplateDialogEdit.value = true;
-  templateDialogPayload.value = payload;
-};
-
 // 新增修改防火墙规则
 const submit = async (data: any) => {
   const fetchType = 'vendors/gcp/firewalls/rules/create';
@@ -211,6 +205,22 @@ const {
   permissionParams,
   authVerifyData,
 } = useVerify();
+const computedSecurityText = computed(() => {
+  if (renderComponent.value !== SecurityManage) return '新建';
+  switch (securityType.value) {
+    case 'template':
+      return '新建模板';
+    case 'gcp':
+      return '新建GCP防火墙规则';
+    default:
+      return '新建安全组';
+  }
+});
+const handleEditTemplate = (payload: any) => {
+  isTemplateDialogShow.value = true;
+  isTemplateDialogEdit.value = true;
+  templateDialogPayload.value = payload;
+};
 </script>
 
 <template>
@@ -234,9 +244,9 @@ const {
           handleAuth(val)
         }"
           @handleSecrityType="handleSecrityType"
+          @editTemplate="handleEditTemplate"
           @edit="handleEdit"
           v-model:isFormDataChanged="isFormDataChanged"
-          @editTemplate="handleTemplateEdit"
         >
           <span>
             <bk-button
@@ -259,7 +269,7 @@ const {
                 renderComponent === SubnetManage ||
                 renderComponent === VpcManage
                   ? '申请'
-                  : '新增'
+                  : computedSecurityText
               }}
             </bk-button>
           </span>
