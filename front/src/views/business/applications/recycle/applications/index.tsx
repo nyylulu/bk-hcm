@@ -4,14 +4,14 @@ import cssModule from './index.module.scss';
 
 import { Button, DatePicker, Dropdown, Message, Select } from 'bkui-vue';
 import GridFilterComp from '@/components/grid-filter-comp';
-import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
+import RequireNameSelect from '@/views/ziyanScr/host-recycle/host-recycle-table/require-name-select';
 import FloatInput from '@/components/float-input';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 
 import dayjs from 'dayjs';
 import { useI18n } from 'vue-i18n';
-import { useUserStore, useZiyanScrStore } from '@/store';
+import { useUserStore } from '@/store';
 import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -25,7 +25,6 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const userStore = useUserStore();
-    const scrStore = useZiyanScrStore();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
     const route = useRoute();
@@ -281,15 +280,7 @@ export default defineComponent({
           rules={[
             {
               title: t('需求类型'),
-              content: (
-                <ScrCreateFilterSelector
-                  v-model={recycleForm.value.recycle_type}
-                  api={scrStore.getRequirementList}
-                  multiple
-                  optionIdPath='require_type'
-                  optionNamePath='require_name'
-                />
-              ),
+              content: <RequireNameSelect v-model={recycleForm.value.recycle_type} multiple clearable collapseTags />,
             },
             {
               title: t('单号'),
