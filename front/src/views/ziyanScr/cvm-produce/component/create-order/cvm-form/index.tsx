@@ -10,6 +10,7 @@ import { Alert, Checkbox, Form, Input, Select } from 'bkui-vue';
 import { HelpFill } from 'bkui-vue/lib/icon';
 import './index.scss';
 const { FormItem } = Form;
+const { Option } = Select;
 export default defineComponent({
   components: {
     AreaSelector,
@@ -398,22 +399,24 @@ export default defineComponent({
                 }}>
                 <Select
                   v-model={modelForm.value.spec.vpc}
+                  class={'vpc-select'}
                   clearable
                   onChange={loadVpcRelationOpts}
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.region}
                   placeholder={!modelForm.value.spec.region ? '请先选择地域' : '请选择 VPC'}>
-                  {options.value.vpcs.map(({ vpc_id, vpc_name }) => {
-                    return <Select.Option key={vpc_id} name={vpc_name} id={vpc_id} />;
-                  })}
+                  {options.value.vpcs.map(({ vpc_id, vpc_name }) => (
+                    <Option key={vpc_id} name={`${vpc_id} | ${vpc_name}`} id={vpc_id} />
+                  ))}
                 </Select>
                 <Select
                   v-model={modelForm.value.spec.subnet}
+                  class={'subnet-select'}
                   clearable
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.vpc}
                   placeholder={!modelForm.value.spec.vpc ? '请先选择 VPC' : '请选择子网'}>
-                  {options.value.subnets.map(({ subnet_id, subnet_name }) => {
-                    return <Select.Option key={subnet_id} name={subnet_name} id={subnet_id} />;
-                  })}
+                  {options.value.subnets.map(({ subnet_id, subnet_name }) => (
+                    <Option key={subnet_id} name={`${subnet_id} | ${subnet_name}`} id={subnet_id} />
+                  ))}
                 </Select>
               </div>
               <Alert
