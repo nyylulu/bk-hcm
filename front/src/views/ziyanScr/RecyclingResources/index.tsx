@@ -359,6 +359,7 @@ export default defineComponent({
                         class='mr-10'
                         authed
                         url-key='scr_recycle_host_bizs'
+                        base64Encode
                         apiMethod={apiService.getCvmRecycleAuthBizList}
                       />
                       {bkBizId.value && <span style='width:520px'> / 空闲机池 / 待回收</span>}

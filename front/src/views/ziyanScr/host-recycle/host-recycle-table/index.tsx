@@ -353,6 +353,7 @@ export default defineComponent({
                   notAutoSelectAll
                   multiple
                   url-key='scr_host_bizs'
+                  base64Encode
                 />
               </FormItem>
               <FormItem label='OBS项目类型'>

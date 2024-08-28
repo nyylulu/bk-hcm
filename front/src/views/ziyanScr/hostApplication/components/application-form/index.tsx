@@ -859,6 +859,7 @@ export default defineComponent({
                       authed
                       url-key='scr_apply_host_bizs'
                       apiMethod={apiService.getCvmApplyAuthBizList}
+                      base64Encode
                     />
                   </bk-form-item>
                 )}
