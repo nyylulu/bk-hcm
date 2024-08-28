@@ -20,7 +20,7 @@ import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
 import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
-import './use-scr-columns.scss';
+import cssModule from './index.module.scss';
 import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
@@ -92,13 +92,13 @@ export default (type: string, isSimpleShow = false) => {
         const isZiyan = data.vendor === VendorEnum.ZIYAN;
         if (onlyLinkInBusiness || isZiyan)
           return (
-            <div class={contentClass}>
+            <div class={cssModule[`${contentClass}`]}>
               {render ? render(data) : data[field] || '--'}
               {renderSuffix?.(data)}
             </div>
           );
         return (
-          <div class={contentClass}>
+          <div class={cssModule[`${contentClass}`]}>
             <Button
               text
               theme='primary'
@@ -190,7 +190,7 @@ export default (type: string, isSimpleShow = false) => {
       sort: { value: 'desc' },
       render({ cell }: { cell: string }) {
         const { class: theClass, text } = capacityLevel(cell);
-        return <span class={theClass}>{text}</span>;
+        return <span class={cssModule[`${theClass}`]}>{text}</span>;
       },
     },
   ];
@@ -403,7 +403,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'recyclable',
       render: ({ cell, data }: any) => (
         <span
-          class={cell ? 'c-success' : 'c-danger'}
+          class={cssModule[cell ? 'c-success' : 'c-danger']}
           v-bk-tooltips={{ content: data.message, disabled: cell, placement: 'right', theme: 'light' }}>
           {cell ? t('可回收') : t('不可回收')}
         </span>
@@ -617,7 +617,7 @@ export default (type: string, isSimpleShow = false) => {
       },
       render({ cell }: { cell: string }) {
         const { class: theClass, text } = capacityLevel(cell);
-        return <span class={theClass}>{text}</span>;
+        return <span class={cssModule[`${theClass}`]}>{text}</span>;
       },
     },
   ];
@@ -625,7 +625,7 @@ export default (type: string, isSimpleShow = false) => {
   const getPrecheckStatusView = (value: string) => {
     const label = getPrecheckStatusLabel(value);
     if (value === 'SUCCESS') {
-      return <span class='c-success'>{label}</span>;
+      return <span class={cssModule['c-success']}>{label}</span>;
     }
     if (value === 'RUNNING') {
       return (
@@ -638,7 +638,7 @@ export default (type: string, isSimpleShow = false) => {
     if (value === 'FAILED') {
       return (
         <div>
-          <div class='c-danger fail-flex'>
+          <div class={[cssModule['c-danger'], cssModule['fail-flex']]}>
             <span>{label}</span>
             <a
               target='_blank'
@@ -719,7 +719,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ row }: any) => {
         return (
           <div>
-            <span class={row.success_num > 0 ? 'c-success' : ''}>{row.success_num}</span>
+            <span class={cssModule[row.success_num > 0 ? 'c-success' : '']}>{row.success_num}</span>
             <span>/</span>
             <span>{row.total_num}</span>
           </div>
@@ -755,7 +755,7 @@ export default (type: string, isSimpleShow = false) => {
     if (value === 'DONE') {
       return (
         <>
-          <span class='c-success'>{label}</span>
+          <span class={cssModule['c-success']}>{label}</span>
         </>
       );
     }
@@ -770,7 +770,7 @@ export default (type: string, isSimpleShow = false) => {
     if (value === 'DETECT_FAILED') {
       return (
         <bk-badge
-          class='c-danger'
+          class={cssModule['c-danger']}
           v-bk-tooltips={{ content: '请到“预检详情”查看失败原因，或者点击“去除预检失败IP提交”' }}
           dot>
           {label}
@@ -778,7 +778,7 @@ export default (type: string, isSimpleShow = false) => {
       );
     }
     if (value.includes('FAILED')) {
-      return <span class='c-danger'>{label}</span>;
+      return <span class={cssModule['c-danger']}>{label}</span>;
     }
     return <span>{label}</span>;
   };
@@ -841,11 +841,16 @@ export default (type: string, isSimpleShow = false) => {
       width: 100,
       render: ({ row }: any) => {
         return row.handler !== 'AUTO' ? (
-          <a href={`wxwork://message?username=${row.handler}`} class='username'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(`wxwork://message?username=${row.handler}`);
+            }}>
             {row.handler}
-          </a>
+          </Button>
         ) : (
-          <span class='username'>{row.handler}</span>
+          <span class={cssModule['cell-font-color']}>{row.handler}</span>
         );
       },
     },
@@ -857,9 +862,9 @@ export default (type: string, isSimpleShow = false) => {
           <div>
             <span>{row.total_num}</span>
             <span>/</span>
-            <span class={row.success_num > 0 ? 'c-success' : ''}>{row.success_num}</span>
+            <span class={cssModule[row.success_num > 0 ? 'c-success' : '']}>{row.success_num}</span>
             <span>/</span>
-            <span class={row.failed_num > 0 ? 'c-danger' : ''}>{row.failed_num}</span>
+            <span class={cssModule[row.failed_num > 0 ? 'c-danger' : '']}>{row.failed_num}</span>
           </div>
         );
       },
@@ -872,9 +877,13 @@ export default (type: string, isSimpleShow = false) => {
       field: 'bk_username',
       render: ({ row }: any) => {
         return (
-          <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
+          <Button
+            text
+            onClick={() => {
+              window.open(`wxwork://message?username=${row.bk_username}`);
+            }}>
             {row.bk_username}
-          </a>
+          </Button>
         );
       },
     },
@@ -959,9 +968,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'bk_username',
       render: ({ row }: any) => {
         return (
-          <a href={`wxwork://message?username=${row.bk_username}`} class='username'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(`wxwork://message?username=${row.bk_username}`);
+            }}>
             {row.bk_username}
-          </a>
+          </Button>
         );
       },
     },
@@ -1012,9 +1026,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'operator',
       render: ({ row }: any) => {
         return (
-          <a href={`wxwork://message?username=${row.operator}`} class='username'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(`wxwork://message?username=${row.operator}`);
+            }}>
             {row.operator}
-          </a>
+          </Button>
         );
       },
     },
@@ -1023,9 +1042,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'bak_operator',
       render: ({ row }: any) => {
         return (
-          <a href={`wxwork://message?username=${row.bak_operator}`} class='username'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(`wxwork://message?username=${row.bak_operator}`);
+            }}>
             {row.bak_operator}
-          </a>
+          </Button>
         );
       },
     },
@@ -1077,9 +1101,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'return_id',
       render: ({ row }: any) => {
         return (
-          <bk-link type='primary' underline={false} href={row.return_link} target='_blank'>
+          <Button
+            text
+            theme='primary'
+            onClick={() => {
+              window.open(row.return_link);
+            }}>
             {row.return_id}
-          </bk-link>
+          </Button>
         );
       },
     },
@@ -1136,16 +1165,16 @@ export default (type: string, isSimpleShow = false) => {
         const phase = data?.status?.phase;
         const desc = SCR_POOL_PHASE_MAP[phase];
 
-        if (phase === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (phase === 'INIT') return <span class={cssModule['c-info']}>{desc}</span>;
         if (phase === 'RUNNING')
           return (
-            <span class='status-column-cell'>
-              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+            <span class={cssModule['status-column-cell']}>
+              <img class={[cssModule['status-icon'], cssModule['spin-icon']]} src={StatusLoading} alt='' />
               {desc}
             </span>
           );
-        if (phase === 'SUCCESS') return <span class='c-success'>{desc}</span>;
-        if (phase === 'FAILED') return <span class='c-danger'>{desc}</span>;
+        if (phase === 'SUCCESS') return <span class={cssModule['c-success']}>{desc}</span>;
+        if (phase === 'FAILED') return <span class={cssModule['c-danger']}>{desc}</span>;
 
         return phase;
       },
@@ -1197,16 +1226,16 @@ export default (type: string, isSimpleShow = false) => {
         const phase = data?.status?.phase;
         const desc = SCR_POOL_PHASE_MAP[phase];
 
-        if (phase === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (phase === 'INIT') return <span class={cssModule['c-info']}>{desc}</span>;
         if (phase === 'RUNNING')
           return (
-            <span class='status-column-cell'>
-              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+            <span class={cssModule['status-column-cell']}>
+              <img class={[cssModule['status-icon'], cssModule['spin-icon']]} src={StatusLoading} alt='' />
               {desc}
             </span>
           );
-        if (phase === 'SUCCESS') return <span class='c-success'>{desc}</span>;
-        if (phase === 'FAILED') return <span class='c-danger'>{desc}</span>;
+        if (phase === 'SUCCESS') return <span class={cssModule['c-success']}>{desc}</span>;
+        if (phase === 'FAILED') return <span class={cssModule['c-danger']}>{desc}</span>;
 
         return phase;
       },
@@ -1238,16 +1267,16 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ cell }: any) => {
         const desc = SCR_POOL_PHASE_MAP[cell];
 
-        if (cell === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (cell === 'INIT') return <span class={cssModule['c-info']}>{desc}</span>;
         if (cell === 'RUNNING')
           return (
-            <span class='status-column-cell'>
-              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+            <span class={cssModule['status-column-cell']}>
+              <img class={[cssModule['status-icon'], cssModule['spin-icon']]} src={StatusLoading} alt='' />
               {desc}
             </span>
           );
-        if (cell === 'SUCCESS') return <span class='c-success'>{desc}</span>;
-        if (cell === 'FAILED') return <span class='c-danger'>{desc}</span>;
+        if (cell === 'SUCCESS') return <span class={cssModule['c-success']}>{desc}</span>;
+        if (cell === 'FAILED') return <span class={cssModule['c-danger']}>{desc}</span>;
 
         return cell;
       },
@@ -1289,9 +1318,14 @@ export default (type: string, isSimpleShow = false) => {
       label: '系统重装任务',
       field: 'reinstall_link',
       render: ({ data }: any) => (
-        <a class='link-type' href={data.reinstall_link} target='_blank'>
+        <Button
+          text
+          theme='primary'
+          onClick={() => {
+            window.open(data.reinstall_link, '_blank');
+          }}>
           {data.reinstall_id}
-        </a>
+        </Button>
       ),
       exportFormatter: ({ reinstall_id }: any) => reinstall_id,
     },
@@ -1299,9 +1333,14 @@ export default (type: string, isSimpleShow = false) => {
       label: '配置检查任务',
       field: 'conf_check_link',
       render: ({ data }: any) => (
-        <a class='link-type' href={data.conf_check_link} target='_blank'>
+        <Button
+          text
+          theme='primary'
+          onClick={() => {
+            window.open(data.conf_check_link, '_blank');
+          }}>
           {data.conf_check_id}
-        </a>
+        </Button>
       ),
       exportFormatter: ({ conf_check_id }: any) => conf_check_id,
     },
@@ -1311,17 +1350,17 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ cell }: any) => {
         const desc = SCR_RECALL_DETAIL_STATUS_MAP[cell];
 
-        if (cell === 'TERMINATE') return <span class='c-info'>{desc}</span>;
+        if (cell === 'TERMINATE') return <span class={cssModule['c-info']}>{desc}</span>;
         if (cell === 'REINSTALLING') {
           return (
-            <span class='status-column-cell'>
-              <img class='status-icon spin-icon' src={StatusLoading} alt='' />
+            <span class={cssModule['status-column-cell']}>
+              <img class={[cssModule['status-icon'], cssModule['spin-icon']]} src={StatusLoading} alt='' />
               {desc}
             </span>
           );
         }
-        if (cell === 'RETURNED' || cell === 'DONE') return <span class='c-success'>{desc}</span>;
-        if (cell === 'REINSTALL_FAILED') return <span class='c-danger'>{desc}</span>;
+        if (cell === 'RETURNED' || cell === 'DONE') return <span class={cssModule['c-success']}>{desc}</span>;
+        if (cell === 'REINSTALL_FAILED') return <span class={cssModule['c-danger']}>{desc}</span>;
 
         return cell;
       },
@@ -1417,7 +1456,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'vpc_name',
       render: ({ row }: any) => {
         return (
-          <div class='cvm-cell-height'>
+          <div class={cssModule['cvm-cell-height']}>
             <div>{row.vpc_name}</div>
             <div>{row.vpc_id}</div>
           </div>
@@ -1429,7 +1468,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'subnet_name',
       render: ({ row }: any) => {
         return (
-          <div class='cvm-cell-height'>
+          <div class={cssModule['cvm-cell-height']}>
             <div>{row.subnet_name}</div>
             <div>{row.subnet_id}</div>
           </div>
@@ -1441,7 +1480,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'region',
       render: ({ row }: any) => {
         return (
-          <div class='cvm-cell-height'>
+          <div class={cssModule['cvm-cell-height']}>
             <div> {getRegionCn(row.region)}</div>
             <div>{row.region}</div>
           </div>
@@ -1453,7 +1492,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'zone',
       render: ({ row }: any) => {
         return (
-          <div class='cvm-cell-height'>
+          <div class={cssModule['cvm-cell-height']}>
             <div> {getZoneCn(row.zone)}</div>
             <div>{row.zone}</div>
           </div>
@@ -1638,7 +1677,7 @@ export default (type: string, isSimpleShow = false) => {
             break;
         }
         return (
-          <div class={'cvm-status-container'}>
+          <div class={cssModule['cvm-status-container']}>
             {txt === '审批中' ? (
               <Spinner fill='#3A84FF' class={'mr6'} width={14} height={14} />
             ) : (
@@ -1942,8 +1981,8 @@ export default (type: string, isSimpleShow = false) => {
       field: 'status',
       label: '状态',
       render: ({ row }: any) => {
-        if (row.status === -1) return <span class='c-disabled'>未执行</span>;
-        if (row.status === 0) return <span class='c-success'>成功</span>;
+        if (row.status === -1) return <span class={cssModule['c-disabled']}>未执行</span>;
+        if (row.status === 0) return <span class={cssModule['c-success']}>成功</span>;
         if (row.status === 1)
           return (
             <span>
@@ -1951,7 +1990,7 @@ export default (type: string, isSimpleShow = false) => {
               执行中
             </span>
           );
-        return <span class='c-danger'>失败</span>;
+        return <span class={cssModule['c-danger']}>失败</span>;
       },
     },
     {
@@ -1959,7 +1998,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ row }: any) => {
         return (
           <div>
-            <span class='c-success'>{row.success_num}</span>
+            <span class={cssModule['c-success']}>{row.success_num}</span>
             <span>/</span>
             <span>{row.total_num}</span>
           </div>
@@ -1992,15 +2031,15 @@ export default (type: string, isSimpleShow = false) => {
       field: 'status',
       label: '状态',
       render: ({ data }: any) => {
-        if (data.status === -1) return <span class='c-disabled'>未执行</span>;
-        if (data.status === 0) return <span class='c-success'>成功</span>;
+        if (data.status === -1) return <span class={cssModule['c-disabled']}>未执行</span>;
+        if (data.status === 0) return <span class={cssModule['c-success']}>成功</span>;
         if (data.status === 1)
           return (
             <span>
               <i class='el-icon-loading mr-2'></i>执行中
             </span>
           );
-        return <span class='c-danger'>失败</span>;
+        return <span class={cssModule['c-danger']}>失败</span>;
       },
     },
     {
@@ -2049,15 +2088,15 @@ export default (type: string, isSimpleShow = false) => {
       field: 'status',
       label: '状态',
       render: ({ data }: any) => {
-        if (data.status === -1) return <span class='c-disabled'>未执行</span>;
-        if (data.status === 0) return <span class='c-success'>成功</span>;
+        if (data.status === -1) return <span class={cssModule['c-disabled']}>未执行</span>;
+        if (data.status === 0) return <span class={cssModule['c-success']}>成功</span>;
         if (data.status === 1)
           return (
             <span>
               <i class='el-icon-loading mr-2'></i>执行中
             </span>
           );
-        return <span class='c-danger'>失败</span>;
+        return <span class={cssModule['c-danger']}>失败</span>;
       },
     },
     {
@@ -2280,9 +2319,14 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ row }: any) => {
         if (row.task_id)
           return (
-            <a class='link-type' href={row.task_link} target='_blank'>
+            <Button
+              text
+              theme='primary'
+              onClick={() => {
+                window.open(row.task_link, '_blank');
+              }}>
               {row.task_id}
-            </a>
+            </Button>
           );
         return '-';
       },
@@ -2300,7 +2344,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ row }: any) => {
         const desc = getCvmProduceStatus(row.status);
 
-        if (row.status === 'INIT') return <span class='c-info'>{desc}</span>;
+        if (row.status === 'INIT') return <span class={cssModule['c-info']}>{desc}</span>;
         if (row.status === 'RUNNING')
           return (
             <span>
@@ -2308,8 +2352,8 @@ export default (type: string, isSimpleShow = false) => {
               {desc}
             </span>
           );
-        if (row.status === 'SUCCESS') return <span class='c-success'>{desc}</span>;
-        if (row.status === 'FAILED') return <span class='c-danger'>{desc}</span>;
+        if (row.status === 'SUCCESS') return <span class={cssModule['c-success']}>{desc}</span>;
+        if (row.status === 'FAILED') return <span class={cssModule['c-danger']}>{desc}</span>;
 
         return row.status;
       },
@@ -2342,7 +2386,7 @@ export default (type: string, isSimpleShow = false) => {
       label: '生产情况-失败',
       field: 'failed_num',
       width: 150,
-      render: ({ row }: any) => <span class='c-danger'>{row.failed_num}</span>,
+      render: ({ row }: any) => <span class={cssModule['c-danger']}>{row.failed_num}</span>,
     },
     {
       label: '生产情况-总数',
@@ -2423,7 +2467,7 @@ export default (type: string, isSimpleShow = false) => {
       sort: { value: 'desc' },
       render: ({ row }: any) => {
         const { class: theClass, text } = capacityLevel(row.capacity_flag);
-        return <span class={theClass}>{text}</span>;
+        return <span class={cssModule[`${theClass}`]}>{text}</span>;
       },
     },
   ];
@@ -2584,7 +2628,7 @@ export default (type: string, isSimpleShow = false) => {
         [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--',
       renderSuffix: (data) => {
         const ips = [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--';
-        return <CopyToClipboard content={ips} class={['copy-icon', 'ml4']} />;
+        return <CopyToClipboard content={ips} class={[cssModule['copy-icon'], 'ml4']} />;
       },
       contentClass: 'cell-private-ip',
       sort: false,
@@ -2599,7 +2643,7 @@ export default (type: string, isSimpleShow = false) => {
         return (
           <div class={'cell-public-ip'}>
             <span>{ips}</span>
-            <CopyToClipboard content={ips} class={['copy-icon', 'ml4']} />
+            <CopyToClipboard content={ips} class={[cssModule['copy-icon'], 'ml4']} />
           </div>
         );
       },
@@ -2641,7 +2685,7 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
       render({ data }: any) {
         return (
-          <div class={'cvm-status-container'}>
+          <div class={cssModule['cvm-status-container']}>
             {HOST_SHUTDOWN_STATUS.includes(data.status) ? (
               data.status.toLowerCase() === 'stopped' ? (
                 <img src={StatusUnknown} class={'mr6'} width={14} height={14}></img>
