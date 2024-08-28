@@ -1,4 +1,4 @@
-import { defineComponent, ref, computed, onMounted } from 'vue';
+import { defineComponent, ref, computed, onMounted, onUnmounted } from 'vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { exportTableToExcel, getEntirePath } from '@/utils';
@@ -63,6 +63,8 @@ export default defineComponent({
         );
       },
     });
+    let timer: string | number | NodeJS.Timeout;
+    let counter = 0; // 初始化计数器
     const { CommonTable, getListData } = useTable({
       tableOptions: {
         columns: [
@@ -89,6 +91,22 @@ export default defineComponent({
         sortOption: {
           sort: 'create_at',
           order: 'DESC',
+        },
+        async resolveDataListCb(dataList: any[], getListData) {
+          if (dataList.length === 0) return;
+          const ongoingList = dataList.filter((item) => item.status === 'RUNNING');
+          if (ongoingList.length) {
+            timer = setTimeout(() => {
+              counter = counter + 1;
+              if (counter < 10) {
+                getListData();
+              } else {
+                counter = 0;
+                clearTimeout(timer);
+              }
+            }, 30000);
+          }
+          return dataList;
         },
       },
       scrConfig: () => {
@@ -161,6 +179,9 @@ export default defineComponent({
     };
     onMounted(() => {
       getIpList();
+    });
+    onUnmounted(() => {
+      clearTimeout(timer);
     });
     return () => (
       <div class={'application-detail-container'}>
