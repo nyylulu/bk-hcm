@@ -1,7 +1,7 @@
 import { defineComponent, computed, watch, ref, nextTick, onMounted } from 'vue';
 import { RouterLink, RouterView, useRoute } from 'vue-router';
 
-import { Menu, Navigation, Dropdown, Button } from 'bkui-vue';
+import { Menu, Navigation, Dropdown, Button, Dialog } from 'bkui-vue';
 import Breadcrumb from './breadcrumb';
 import BusinessSelector from './business-selector';
 import NoPermission from '@/views/resource/NoPermission';
@@ -334,6 +334,18 @@ export default defineComponent({
             </Navigation>
           }
           <GlobalPermissionDialog />
+
+          <Dialog
+            title='结果确认'
+            confirmText='查看审批流程'
+            onConfirm={() => {
+              const url = '/#/service/my-apply';
+              window.open(url, '_blank');
+              accountStore.updateSecurityConfirmMessage('');
+            }}
+            isShow={!!accountStore.securityConfirmMessage.length}>
+            <span>当前配置已提交，查看审批流程关注进度</span>
+          </Dialog>
         </div>
       </main>
     );
