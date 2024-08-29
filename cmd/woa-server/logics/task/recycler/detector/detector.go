@@ -31,6 +31,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/thirdparty/gcsapi"
 	"hcm/cmd/woa-server/thirdparty/l5api"
+	"hcm/cmd/woa-server/thirdparty/ngateapi"
 	"hcm/cmd/woa-server/thirdparty/safetyapi"
 	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/cmd/woa-server/thirdparty/tcaplusapi"
@@ -58,6 +59,7 @@ type Detector struct {
 	cvm     cvmapi.CVMClientInterface
 	tcOpt   cc.TCloudCli
 	sops    sopsapi.SopsClientInterface
+	ngate   ngateapi.NgateClientInterface
 
 	ctx context.Context
 	kt  *kit.Kit
@@ -78,6 +80,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 		cvm:     thirdCli.CVM,
 		tcOpt:   thirdCli.TencentCloudOpt,
 		sops:    thirdCli.Sops,
+		ngate:   thirdCli.Ngate,
 		ctx:     ctx,
 		kt:      &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
 	}
@@ -267,10 +270,10 @@ func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectS
 	attempt, exeInfo, errExec := d.executeRecycleStep(step, stepCfg.Retry)
 	if errExec != nil {
 		logs.Errorf("recycler:logics:cvm:runRecycleStep:failed, failed to execute recycle step, step id: %s, "+
-			"err: %v, subOrderID: %s, IP: %s", step.ID, errExec, task.SuborderID, task.IP)
+			"stepName: %s, err: %v, subOrderID: %s, IP: %s", step.ID, step.StepName, errExec, task.SuborderID, task.IP)
 	} else {
-		logs.Infof("recycler:logics:cvm:runRecycleStep:success, success to execute recycle step, "+
-			"step id: %s, subOrderID: %s, IP: %s", step.ID, task.SuborderID, task.IP)
+		logs.Infof("recycler:logics:cvm:runRecycleStep:success, success to execute recycle step, step id: %s, "+
+			"stepName: %s, subOrderID: %s, IP: %s", step.ID, step.StepName, task.SuborderID, task.IP)
 	}
 
 	// update step status
@@ -475,6 +478,8 @@ func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, s
 		attempt, exeInfo, err = d.checkReturn(step, retry)
 	case table.StepCheckProcess:
 		attempt, exeInfo, err = d.checkProcess(step, retry)
+	case table.StepCheckPmOuterIP: // 物理机外网IP回收及清理检查
+		attempt, exeInfo, err = d.checkPmOuterIP(step, retry)
 	default:
 		logs.Errorf("unknown recycle step %s", step.StepName)
 		err = fmt.Errorf("unknown recycle step %s", step.StepName)

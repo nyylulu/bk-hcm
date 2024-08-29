@@ -43,7 +43,7 @@ func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
 			hostInfos[0].BkHostId, hostID)
 	}
 
-	ip := r.getUniqIp(hostInfos[0].BkHostInnerIp)
+	ip := r.getUniqIp(hostInfos[0].BkHostInnerIP)
 
 	return ip, nil
 }

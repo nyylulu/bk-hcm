@@ -314,3 +314,8 @@ elasticsearch:
     password:
 
 blacklist:
+
+ngate:
+  host: https://127.0.0.1
+  app_code: test
+  app_secret: test

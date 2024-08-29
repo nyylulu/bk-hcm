@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/asset v1.19.0
 	cloud.google.com/go/bigquery v1.59.1
 	cloud.google.com/go/iam v1.1.7
+	git.woa.com/nops/ngate/ngate-sdk/ngate-go v0.0.0-20230505013247-70e8ab006353
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.2.0

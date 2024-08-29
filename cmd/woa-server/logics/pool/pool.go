@@ -1188,7 +1188,7 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 			BkHostId:     host.BkHostId,
 			AssetId:      host.BkAssetId,
 			Ip:           host.GetUniqIp(),
-			OuterIp:      host.BkHostOuterIp,
+			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
 			OsType:       host.BkOsName,

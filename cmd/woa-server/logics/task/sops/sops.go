@@ -147,6 +147,41 @@ func CreateDataClearSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, i
 	return jobId, jobUrl, err
 }
 
+// CreateRecycleOuterIPSopsTask 创建回收外网IP任务
+func CreateRecycleOuterIPSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ip string,
+	bkBizID int64, bkOsType cmdb.OsType) (int64, string, error) {
+
+	// 操作系统不是Linux、Windows的话，不处理
+	if bkOsType != cmdb.LinuxOsType && bkOsType != cmdb.WindowsOsType {
+		logs.Warnf("sops:process:check:recycle outer ip, host:%s bkOsType is not Linux or Windows, bkOsType: %s",
+			ip, bkOsType)
+		return 0, "", nil
+	}
+
+	// 操作系统类型(Linux:1 Windows:2)
+	templateID := sopsapi.RecycleOuterIPLinux
+	taskName := fmt.Sprintf(sopsapi.RecycleOuterIPLinuxTaskNamePrefix, ip)
+	if bkOsType == cmdb.WindowsOsType {
+		templateID = sopsapi.RecycleOuterIPWindows
+		taskName = fmt.Sprintf(sopsapi.RecycleOuterIPWindowsTaskNamePrefix, ip)
+	}
+
+	params := map[string]interface{}{
+		"${biz_cc_id}":   bkBizID,
+		"${bk_biz_id}":   bkBizID,
+		"${job_ip_list}": ip,
+	}
+
+	jobId, jobUrl, err := createSopsTask(kt, sopsCli, templateID, taskName, bkBizID, params)
+	if err != nil {
+		logs.Errorf("sops:process:check:recycle outer ip:create sops task failed, bkBizID: %d, taskName: %s, err: %v",
+			bkBizID, taskName, err)
+		return 0, "", err
+	}
+
+	return jobId, jobUrl, nil
+}
+
 // createSopsTask create a sops task
 func createSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, templateID int64, taskName string,
 	bkBizID int64, constants map[string]interface{}) (int64, string, error) {

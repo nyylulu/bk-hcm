@@ -864,6 +864,7 @@ type ClientConfig struct {
 	BkChat    BkChatCli  `yaml:"bkchat"`
 	Sops      SopsCli    `yaml:"sops"`
 	ITSM      ApiGateway `yaml:"itsm"`
+	Ngate     NgateCli   `yaml:"ngate"`
 }
 
 func (c ClientConfig) validate() error {
@@ -1518,4 +1519,27 @@ type AwsSavingPlanOption struct {
 // BillAllocationOption ...
 type BillAllocationOption struct {
 	AwsSavingPlans []AwsSavingPlanOption `yaml:"awsSavingPlans"`
+}
+
+// NgateCli sops client options
+type NgateCli struct {
+	Host      string `yaml:"host"`
+	AppCode   string `yaml:"app_code"`
+	AppSecret string `yaml:"app_secret"`
+}
+
+func (c NgateCli) validate() error {
+	if len(c.Host) == 0 {
+		return errors.New("ngate.host is not set")
+	}
+
+	if len(c.AppCode) == 0 {
+		return errors.New("ngate.app_code is not set")
+	}
+
+	if len(c.AppSecret) == 0 {
+		return errors.New("ngate.app_secret is not set")
+	}
+
+	return nil
 }

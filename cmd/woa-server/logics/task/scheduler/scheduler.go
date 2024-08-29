@@ -1132,7 +1132,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			BkHostId:     host.BkHostId,
 			AssetId:      host.BkAssetId,
 			Ip:           host.GetUniqIp(),
-			OuterIp:      host.BkHostOuterIp,
+			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
 			OsType:       host.BkOsName,

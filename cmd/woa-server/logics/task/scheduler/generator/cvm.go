@@ -376,7 +376,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 				req.VPCId, "")
 			capInfoStr, _ := json.Marshal(capInfo)
 			// 记录日志，方便排查线上资源申请问题
-			logs.Errorf("buildCvmReq:failed get empty subnet info, subnetNum: %d, applyNum: %d, zone: %s, "+
+			logs.Errorf("buildCvmReq:get empty subnet info failed, subnetNum: %d, applyNum: %d, zone: %s, "+
 				"reqVpcID: %s, subnetID: %s, orderInfo: %+v, capInfoStr: %s",
 				len(subnetList), applyNum, zone, req.VPCId, subnetID, cvt.PtrToVal(order), capInfoStr)
 			return nil, fmt.Errorf("no capacity: %s", capInfoStr)
@@ -386,6 +386,10 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 			// set apply number to min(replicas, leftIp)
 			req.ApplyNumber = applyNum
 		}
+		// 记录日志，方便排查线上资源申请问题
+		logs.Infof("buildCvmReq:get subnet info success, subnetNum: %d, applyNum: %d, replicas: %d, zone: %s, "+
+			"reqVpcID: %s, subnetID: %s, orderInfo: %+v, subnetList: %+v, req: %+v", len(subnetList), applyNum,
+			replicas, zone, req.VPCId, subnetID, cvt.PtrToVal(order), subnetList, cvt.PtrToVal(req))
 	}
 
 	// image

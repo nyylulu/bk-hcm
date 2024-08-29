@@ -1,6 +1,6 @@
 /*
  * Tencent is pleased to support the open source community by making 蓝鲸 available.
- * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License"); you may not use this file except
  * in compliance with the License. You may obtain a copy of the License at
  * http://opensource.org/licenses/MIT
@@ -10,20 +10,16 @@
  * limitations under the License.
  */
 
-// Package cmdb ...
-package cmdb
+// Package ngateapi ngate api
+package ngateapi
 
 const (
-	// DftModuleIdle "空闲机"模块
-	DftModuleIdle int = 1
-	// DftModuleFault "故障机"模块
-	DftModuleFault int = 2
-	// DftModuleRecycle "待回收"模块
-	DftModuleRecycle int = 3
-	// BkSvrSourceTypeIDSelf 服务器来源类型ID-自有
-	BkSvrSourceTypeIDSelf = "1"
-	// BkSvrSourceTypeIDDeposit 服务器来源类型ID-托管
-	BkSvrSourceTypeIDDeposit = "2"
-	// BkSvrSourceTypeIDLease 服务器来源类型ID-租用
-	BkSvrSourceTypeIDLease = "3"
+	// ServerDeviceType 设备类型-服务器
+	ServerDeviceType string = "SERVER"
+	// OuterIPType 网络类型-外网
+	OuterIPType string = "OUTER"
+	// IPv4Version ip版本-ipv4
+	IPv4Version string = "IPV4"
+	// IPv6Version ip版本-ipv6
+	IPv6Version string = "IPV6"
 )
