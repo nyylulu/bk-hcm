@@ -93,4 +93,4 @@ data:
         # the password to decrypt the certificate.
         password:
     blacklist: {{ .Values.blacklist }}
-
+    ngate: {{ .Values.ngate }}
