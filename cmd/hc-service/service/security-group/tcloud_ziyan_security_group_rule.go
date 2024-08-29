@@ -83,7 +83,7 @@ func (g *securityGroup) BatchCreateTCloudZiyanSGRule(cts *rest.Contexts) (any, e
 		berr := errf.GetBPassApprovalErrorf(err)
 		if berr != nil {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				sg.AccountID, enumor.CreateSecurityGroupRule, opt, berr)
+				sg.AccountID, sg.BkBizID, enumor.CreateSecurityGroupRule, opt, berr)
 		}
 
 		logs.Errorf("request adaptor to create tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
@@ -152,8 +152,14 @@ func (g *securityGroup) UpdateTCloudZiyanSGRule(cts *rest.Contexts) (any, error)
 	if err := client.UpdateSecurityGroupRule(cts.Kit, opt); err != nil {
 		berr := errf.GetBPassApprovalErrorf(err)
 		if berr != nil {
+			sg, err := g.getSecurityGroupByID(cts, sgID)
+			if err != nil {
+				logs.Errorf("request dataservice get tcloud ziyan security group failed, err: %v, id: %s, rid: %s",
+					err, sgID, cts.Kit.Rid)
+				return nil, err
+			}
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				rule.AccountID, enumor.UpdateSecurityGroupRule, opt, berr)
+				rule.AccountID, sg.BkBizID, enumor.UpdateSecurityGroupRule, opt, berr)
 		}
 
 		logs.Errorf("request adaptor to update tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
@@ -236,8 +242,14 @@ func (g *securityGroup) DeleteTCloudZiyanSGRule(cts *rest.Contexts) (any, error)
 
 		berr := errf.GetBPassApprovalErrorf(err)
 		if berr != nil {
+			sg, err := g.getSecurityGroupByID(cts, sgID)
+			if err != nil {
+				logs.Errorf("request dataservice get tcloud ziyan security group failed, err: %v, id: %s, rid: %s",
+					err, sgID, cts.Kit.Rid)
+				return nil, err
+			}
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				rule.AccountID, enumor.DeleteSecurityGroupRule, opt, berr)
+				rule.AccountID, sg.BkBizID, enumor.DeleteSecurityGroupRule, opt, berr)
 		}
 
 		logs.Errorf("request adaptor to delete tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
@@ -269,6 +281,25 @@ func (g *securityGroup) syncZiyanSGRule(kt *kit.Kit, syncParams *ziyan.SyncBaseP
 		return nil, syncErr
 	}
 	return syncResult.CreatedIds, nil
+}
+
+func (g *securityGroup) getSecurityGroupByID(cts *rest.Contexts, sgID string) (*corecloud.BaseSecurityGroup, error) {
+	sgReq := &protocloud.SecurityGroupListReq{
+		Filter: tools.EqualExpression("id", sgID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	sgResult, err := g.dataCli.Global.SecurityGroup.ListSecurityGroup(cts.Kit.Ctx, cts.Kit.Header(), sgReq)
+	if err != nil {
+		logs.Errorf("request dataservice list security group failed, err: %v, id: %s, rid: %s",
+			err, sgID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(sgResult.Details) == 0 {
+		return nil, errf.Newf(errf.RecordNotFound, "security group: %s not found", sgID)
+	}
+	sg := sgResult.Details[0]
+	return &sg, nil
 }
 
 func convertToTCloudAdaptorSGRuleCreate(rule hcservice.TCloudSGRuleCreate) adptsgrule.TCloud {

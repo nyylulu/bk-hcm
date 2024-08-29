@@ -29,7 +29,7 @@ import (
 	"hcm/pkg/tools/json"
 )
 
-func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountID string,
+func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountID string, bkBizID int64,
 	action enumor.ApplicationType, content any, bpaasErr *errf.ErrorF) error {
 
 	bpaasSN := bpaasErr.Message
@@ -58,6 +58,7 @@ func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountI
 		Content:        contentStr,
 		DeliveryDetail: "{}",
 		Memo:           nil,
+		BkBizIDs:       []int64{bkBizID},
 	}
 	_, err = dataCli.Global.Application.Create(kt.Ctx, kt.Header(), applicationReq)
 	if err != nil {
