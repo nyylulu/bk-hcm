@@ -39,6 +39,8 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/obs"
+
+	"github.com/shopspring/decimal"
 )
 
 const (
@@ -199,16 +201,21 @@ func (sc *SyncController) notifyObs(kt *kit.Kit, syncRecord *billcore.SyncRecord
 	var obsAccountType obs.OBSAccountType
 	var costColumn string
 	var totalCount uint64
+	var sum = decimal.Zero
 	switch syncRecord.Vendor {
 	case enumor.Aws:
 		obsAccountType = obs.AccountTypeAws
 		costColumn = "cost"
+		// OBS 侧要求aws 使用外币金额
+		sum = syncRecord.Cost
 	case enumor.HuaWei:
 		obsAccountType = obs.AccountTypeHuawei
 		costColumn = "real_cost"
+		sum = syncRecord.RMBCost
 	case enumor.Gcp:
 		obsAccountType = obs.AccountTypeGCP
 		costColumn = "cost"
+		sum = syncRecord.RMBCost
 
 	default:
 		return fmt.Errorf("unsupport vendor %s for obs notify repull", syncRecord.Vendor)
@@ -231,13 +238,18 @@ func (sc *SyncController) notifyObs(kt *kit.Kit, syncRecord *billcore.SyncRecord
 			AccountType: obsAccountType,
 			Total:       totalCount,
 			Column:      costColumn,
-			SumColValue: syncRecord.RMBCost,
+			SumColValue: sum,
 		}},
 	})
 	if err != nil {
-		logs.Errorf("fail to notify obs to repull account bill after bill synced, err %s, rid: %v", err, kt.Rid)
+		logs.Errorf("fail to notify obs to repull bill, "+
+			"err: %v, vendor: %s, year: %d, month: %d, sum: %s, count: %d, col: %s, rid: %v",
+			err, syncRecord.Vendor, syncRecord.BillYear, syncRecord.BillMonth, sum.String(), totalCount, costColumn,
+			kt.Rid)
 		return err
 	}
+	logs.Infof("notify obs to repull bill done, vendor: %s, year: %d, month: %d, sum: %s, count: %d, col: %s, rid: %s",
+		syncRecord.Vendor, syncRecord.BillYear, syncRecord.BillMonth, sum.String(), totalCount, costColumn, kt.Rid)
 	return nil
 }
 
@@ -431,7 +443,6 @@ func (sc *SyncController) doSubSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordD
 	}
 	if flow.State == enumor.FlowSuccess {
 		if syncRecordItem.CurrentIndex+syncRecordItem.BatchSize > syncRecordItem.Total {
-			syncRecordItem.FlowID = ""
 			syncRecordItem.State = stateSynced
 			return syncRecordItem, nil
 		}

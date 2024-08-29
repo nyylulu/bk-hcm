@@ -165,7 +165,7 @@ func (r *Request) WithTimeout(d time.Duration) *Request {
 	return r
 }
 
-// SubResourcef add subPath and subPath's args to request.
+// SubResourcef add subPath and subPath's args to request. Note: do not add query string here, use WithParam
 func (r *Request) SubResourcef(subPath string, args ...interface{}) *Request {
 	r.subPathArgs = args
 	return r.subResource(subPath)
@@ -476,7 +476,7 @@ func (r *Request) getRequest(url string, contentType ContentType) (*http.Request
 
 	req.Header.Del("Accept-Encoding")
 	req.Header.Set("Content-Type", string(contentType))
-	//req.Header.Set("Accept", "application/json")
+	// req.Header.Set("Accept", "application/json")
 	return req, nil
 }
 

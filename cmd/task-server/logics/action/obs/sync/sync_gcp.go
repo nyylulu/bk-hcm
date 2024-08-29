@@ -131,8 +131,7 @@ func (act SyncAction) doSyncGcpBillItem(kt *kit.Kit,
 	}
 	_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		if _, err := actcli.GetObsDaoSet().OBSBillItemGcp().CreateWithTx(kt, txn, finalItems); err != nil {
-			logs.Warnf("delete gcp obs bill item by filter %s failed, err %s, rid: %s",
-				deleteFilter, err.Error(), kt.Rid)
+			logs.Errorf("create gcp obs bill item failed of set %s, err: %v, rid: %s", setIndex, err, kt.Rid)
 			return nil, err
 		}
 		logs.Infof("create obs gcp bill for %s successfully", setIndex)
