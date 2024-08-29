@@ -170,7 +170,6 @@ const parseIP = (text: string) => {
     IPv6List,
   };
 };
-
 // 将值进行btoa编码
 const encodeValueByBtoa = (v: any) => btoa(JSON.stringify(v));
 // 获取atob解码后的值
@@ -197,6 +196,7 @@ const analysisIP = (text: string): AddressDescription[] => {
   });
   return list;
 };
+
 const isIpsValid = (text: string) => {
   // 全部行数
   const lines = text.split('\n').filter((element) => element !== '');
@@ -281,7 +281,7 @@ const analysisPort = (port: string) => {
     if (portArr.length === 2) {
       const [protocol, port] = portArr;
       if (protocolArray.includes(protocol)) {
-        if (isPortNumber(port) || port === 'ALL' || isDispersedPort(port) || isContinuityPort(port)) {
+        if (isPortNumber(port) || ['all', 'ALL'].includes(port) || isDispersedPort(port) || isContinuityPort(port)) {
           // 1. 单个端口   // 2. 多个离散端口  // 3. 连续端口  // 4. 所有端口
           list.push({
             address: parts[0],

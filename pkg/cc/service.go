@@ -545,5 +545,9 @@ func (s AccountServerSetting) Validate() error {
 	if err := s.IEGObsOption.validate(); err != nil {
 		return err
 	}
+	if err := s.BillAllocation.validate(); err != nil {
+		return err
+	}
+
 	return nil
 }

@@ -572,11 +572,14 @@ accountserver:
     dailySummarySyncDuration:
 
   billAllocation:
-    # aws saving plan allocation option
-    awsSavingPlans:
-    #    - rootAccountId:
-    #      spArnPrefix:
-    #      SpPurchaseAccountCloudID:
+    # aws savings plans allocation option
+    awsSavingsPlans:
+    #    - rootAccountCloudId: xxx
+    #      SpPurchaseAccountCloudID: xxx
+    #      spArnPrefix: arn:aws:savingsplans::xxxxx:savingsplan/
+    awsCommonExpense:
+      excludeAccountCloudIds:
+    #      - 123456789
   # [内部版] 财务侧接口 配置
   jarvis:
     endpoints:
