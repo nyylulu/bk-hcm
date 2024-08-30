@@ -109,9 +109,9 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 		// 补全 product_name
 		detail.ProductName = productNameMap[detail.ProductID]
 		tmp := &asbillapi.MainAccountSummaryResult{
-			BillSummaryMainResult: detail,
-			MainAccountName:       mainAccount.Name,
-			RootAccountName:       rootAccount.Name,
+			BillSummaryMain: detail,
+			MainAccountName: mainAccount.Name,
+			RootAccountName: rootAccount.Name,
 		}
 		ret.Details = append(ret.Details, tmp)
 	}

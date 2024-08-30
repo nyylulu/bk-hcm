@@ -269,7 +269,7 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 		logs.Warnf("count all summary main failed, err %s, rid %s", err.Error(), kt.Rid)
 		return err
 	}
-	var mainSummaryList []*bill.BillSummaryMainResult
+	var mainSummaryList []*bill.BillSummaryMain
 	for offset := uint64(0); offset < result.Count; offset = offset + uint64(core.DefaultMaxPageLimit) {
 		tmpResult, err := sc.Client.DataService().Global.Bill.ListBillSummaryMain(kt, &dsbillapi.BillSummaryMainListReq{
 			Filter: tools.ExpressionAnd(expressions...),
