@@ -749,6 +749,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'private_ipv4_addresses',
       idFiled: 'id',
       onlyShowOnList: false,
+      linkable: (data) => data.vendor !== VendorEnum.ZIYAN,
       render: (data) =>
         [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--',
       renderSuffix: (data) => {
