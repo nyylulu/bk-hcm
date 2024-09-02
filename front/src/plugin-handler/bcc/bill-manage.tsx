@@ -5,27 +5,16 @@ import BillsExportButton from '@/views/bill/bill/components/bills-export-button'
 import BccSyncButton from '@/views/bill/bill/summary/primary/bcc-sync-button';
 
 import { useI18n } from 'vue-i18n';
-import { reqBillsProductSummaryList, exportBillsRootAccountSummary, exportBillsProductSummary } from '@/api/bill';
-import { FilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
+import { reqBillsProductSummaryList, exportBillsProductSummary } from '@/api/bill';
+import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import { BillSearchRules } from '@/utils';
 import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
 import { PluginHandlerType } from '../bill-manage';
 
 // 账单汇总-一级账号
 const usePrimaryHandler = () => {
-  const renderOperation = (bill_year: number, bill_month: number, filter: FilterType) => {
-    const { t } = useI18n();
-
-    return (
-      <>
-        <BccSyncButton billYear={bill_year} billMonth={bill_month} />
-        <BillsExportButton
-          cb={() => exportBillsRootAccountSummary({ bill_year, bill_month, export_limit: 200000, filter })}
-          title={t('账单汇总-一级账号')}
-          content={t('导出当月一级账号的账单数据')}
-        />
-      </>
-    );
+  const renderOperation = (bill_year: number, bill_month: number) => {
+    return <BccSyncButton billYear={bill_year} billMonth={bill_month} />;
   };
 
   return {
