@@ -22,12 +22,18 @@ package mainaccount
 import (
 	"fmt"
 
+	accountset "hcm/pkg/api/account-server/account-set"
 	"hcm/pkg/api/core"
+	dataproto "hcm/pkg/api/data-service/account-set"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/tools/maps"
 )
 
 // List list main account with options
@@ -73,10 +79,27 @@ func (s *service) List(cts *rest.Contexts) (interface{}, error) {
 		},
 	)
 	if err != nil {
+		logs.Errorf("list main account failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if req.Page.Count {
+		return accounts, nil
+	}
+
+	productNameMap, err := s.listProductName(cts.Kit, s.getProductIds(accounts))
+	if err != nil {
+		logs.Errorf("list opProduct Name failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	return accounts, nil
+	result := &accountset.MainAccountListResp{}
+	for _, detail := range accounts.Details {
+		result.Details = append(result.Details, &accountset.MainAccountResult{
+			BaseMainAccount: detail,
+			OpProductName:   productNameMap[detail.OpProductID],
+		})
+	}
+	return result, nil
 }
 
 func (s *service) listAuthorized(cts *rest.Contexts, action meta.Action,
@@ -92,5 +115,29 @@ func (s *service) listAuthorized(cts *rest.Contexts, action meta.Action,
 	}
 
 	return resources.IDs, resources.IsAny, err
+}
 
+func (s *service) getProductIds(accountResult *dataproto.MainAccountListResult) (productIds []int64) {
+	productIDMap := make(map[int64]struct{}, len(accountResult.Details))
+	for _, detail := range accountResult.Details {
+		productIDMap[detail.OpProductID] = struct{}{}
+	}
+	productIds = maps.Keys(productIDMap)
+	return productIds
+}
+
+func (s *service) listProductName(kt *kit.Kit, productIds []int64) (map[int64]string, error) {
+	param := &finops.ListOpProductParam{
+		OpProductIds: productIds,
+		Page:         *core.NewDefaultBasePage(),
+	}
+	productResult, err := s.finops.ListOpProduct(kt, param)
+	if err != nil {
+		return nil, err
+	}
+	productNameMap := make(map[int64]string)
+	for _, product := range productResult.Items {
+		productNameMap[product.OpProductId] = product.OpProductName
+	}
+	return productNameMap, nil
 }
