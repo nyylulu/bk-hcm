@@ -28,7 +28,8 @@ export default defineComponent({
     const activeScene = ref(route.query?.scene_recycle || scenes.value[0].value);
 
     const saveActiveScene = (val: string) => {
-      router.replace({ query: { ...route.query, scene_recycle: val } });
+      const { bizs, type } = route.query;
+      router.replace({ query: { bizs, type, scene_recycle: val } });
     };
 
     return () => (

@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, PropType, VNode } from 'vue';
+import { defineComponent, PropType, VNode } from 'vue';
 import cssModule from './index.module.scss';
 import { Button } from 'bkui-vue';
 
@@ -15,14 +15,9 @@ export default defineComponent({
     },
     loading: Boolean,
     col: { type: Number, default: 3 },
-    immediate: Boolean,
   },
   emits: ['search', 'reset'],
   setup(props, { emit }) {
-    onMounted(() => {
-      props.immediate && emit('search');
-    });
-
     return () => (
       <section class={cssModule.filter}>
         <div class={cssModule.rules} style={{ gridTemplateColumns: `repeat(${props.col}, 1fr)` }}>

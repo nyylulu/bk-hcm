@@ -1,14 +1,15 @@
 import { computed, defineComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
+import scrCssModule from '@/views/resource/resource-manage/hooks/use-scr-columns.module.scss';
 
-import { DatePicker, Select } from 'bkui-vue';
+import { Select } from 'bkui-vue';
 import GridFilterComp from '@/components/grid-filter-comp';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import FloatInput from '@/components/float-input';
 import MemberSelect from '@/components/MemberSelect';
+import ScrDatePicker from '@/components/scr/scr-date-picker';
 
-import dayjs from 'dayjs';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/store';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -16,6 +17,9 @@ import { useTable } from '@/hooks/useTable/useTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { getDeviceTypeList, getRecycleStageOpts, getRegionList, getZoneList } from '@/api/host/recycle';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useSaveSearchRules } from '../../useSaveSearchRules';
+import useFormModel from '@/hooks/useFormModel';
+import { applicationTime } from '@/common/util';
 
 export default defineComponent({
   setup() {
@@ -35,33 +39,25 @@ export default defineComponent({
       sub_zone: [] as any[],
       stage: [] as any[],
       bk_username: [userStore.username],
+      dateRange: applicationTime(),
     });
-    const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
 
-    const deviceForm = ref(defaultDeviceForm());
-    const timeForm = ref(defaultTime());
-    const pageInfo = ref({ start: 0, limit: 10, enable_count: false });
+    const { formModel, resetForm } = useFormModel(defaultDeviceForm());
 
     const deviceTypeList = ref([]);
     const bkZoneNameList = ref([]);
     const subZoneList = ref([]);
     const stageList = ref([]);
 
-    const handleTime = (time: any) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
-    const timeObj = computed(() => {
-      return {
-        start: handleTime(timeForm.value[0]),
-        end: handleTime(timeForm.value[1]),
-      };
-    });
     const requestListParams = computed(() => {
       const params = {
-        ...deviceForm.value,
-        ...timeObj.value,
-        page: pageInfo.value,
+        ...formModel,
+        start: formModel.dateRange[0],
+        end: formModel.dateRange[1],
         bk_biz_id: [getBizsId()],
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
+      params.dateRange = undefined;
       removeEmptyFields(params);
       return params;
     });
@@ -74,7 +70,7 @@ export default defineComponent({
       render: ({ row }: any) => {
         return (
           // 单据详情
-          <span class='sub-order-num' onClick={() => enterDetail(row)}>
+          <span class={scrCssModule['sub-order-num']} onClick={() => enterDetail(row)}>
             {row.suborder_id}
           </span>
         );
@@ -105,19 +101,6 @@ export default defineComponent({
       });
     };
 
-    const filterOrders = () => {
-      pagination.start = 0;
-      deviceForm.value.bk_biz_id = [getBizsId()];
-      getListData();
-    };
-    const clearFilter = () => {
-      const initForm = defaultDeviceForm();
-      initForm.bk_biz_id = [getBizsId()];
-      deviceForm.value = initForm;
-      timeForm.value = defaultTime();
-      filterOrders();
-    };
-
     const fetchDeviceTypeList = async () => {
       const data = await getDeviceTypeList();
       deviceTypeList.value = data?.info || [];
@@ -142,31 +125,62 @@ export default defineComponent({
       fetchStageList();
     });
 
+    const searchRulesKey = 'host_recycle_device_rules';
+    const filterOrders = (searchRulesStr?: string) => {
+      // 回填
+      if (searchRulesStr) {
+        // 解决人员选择器搜索问题
+        formModel.bk_username.length > 0 &&
+          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bk_username])]);
+      }
+      formModel.bk_biz_id = [getBizsId()];
+      pagination.start = 0;
+      getListData();
+    };
+
+    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
+
+    const handleSearch = () => {
+      // update query
+      saveSearchRules();
+    };
+
+    const handleReset = () => {
+      resetForm(defaultDeviceForm());
+      formModel.bk_biz_id = [getBizsId()];
+      // update query
+      clearSearchRules();
+    };
+
     watch(
       () => userStore.username,
       (username) => {
-        deviceForm.value.bk_username = [username];
+        if (route.query[searchRulesKey]) return;
+        // 无搜索记录，设置申请人默认值
+        formModel.bk_username = [username];
       },
     );
 
     return () => (
       <>
         <GridFilterComp
+          onSearch={handleSearch}
+          onReset={handleReset}
+          loading={isLoading.value}
+          col={5}
           rules={[
             {
               title: t('单号'),
-              content: <FloatInput v-model={deviceForm.value.order_id} placeholder={t('请输入单号，多个换行分割')} />,
+              content: <FloatInput v-model={formModel.order_id} placeholder={t('请输入单号，多个换行分割')} />,
             },
             {
               title: t('子单号'),
-              content: (
-                <FloatInput v-model={deviceForm.value.suborder_id} placeholder={t('请输入子单号，多个换行分割')} />
-              ),
+              content: <FloatInput v-model={formModel.suborder_id} placeholder={t('请输入子单号，多个换行分割')} />,
             },
             {
               title: t('机型'),
               content: (
-                <Select v-model={deviceForm.value.device_type} multiple clearable placeholder={t('请选择机型')}>
+                <Select v-model={formModel.device_type} multiple clearable placeholder={t('请选择机型')}>
                   {deviceTypeList.value.map((item) => {
                     return <Select.Option key={item} name={item} id={item} />;
                   })}
@@ -176,7 +190,7 @@ export default defineComponent({
             {
               title: t('地域'),
               content: (
-                <Select v-model={deviceForm.value.bk_zone_name} multiple clearable placeholder={t('请选择地域')}>
+                <Select v-model={formModel.bk_zone_name} multiple clearable placeholder={t('请选择地域')}>
                   {bkZoneNameList.value.map((item) => {
                     return <Select.Option key={item} name={item} id={item} />;
                   })}
@@ -186,7 +200,7 @@ export default defineComponent({
             {
               title: t('园区'),
               content: (
-                <Select v-model={deviceForm.value.sub_zone} multiple clearable placeholder={t('请选择园区')}>
+                <Select v-model={formModel.sub_zone} multiple clearable placeholder={t('请选择园区')}>
                   {subZoneList.value.map((item) => {
                     return <Select.Option key={item} name={item} id={item} />;
                   })}
@@ -196,7 +210,7 @@ export default defineComponent({
             {
               title: t('状态'),
               content: (
-                <Select v-model={deviceForm.value.stage} multiple clearable placeholder={t('请选择状态')}>
+                <Select v-model={formModel.stage} multiple clearable placeholder={t('请选择状态')}>
                   {stageList.value.map(({ stage, description }) => {
                     return <Select.Option key={stage} name={description} id={stage} />;
                   })}
@@ -205,30 +219,28 @@ export default defineComponent({
             },
             {
               title: t('回收IP'),
-              content: <FloatInput v-model={deviceForm.value.ip} placeholder={t('请输入IP，多个换行分割')} />,
+              content: <FloatInput v-model={formModel.ip} placeholder={t('请输入IP，多个换行分割')} />,
             },
             {
               title: t('回收人'),
               content: (
                 <MemberSelect
-                  v-model={deviceForm.value.bk_username}
+                  v-model={formModel.bk_username}
                   multiple
                   clearable
                   placeholder={t('请输入企业微信名')}
-                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
+                    username,
+                    display_name: username,
+                  }))}
                 />
               ),
             },
             {
               title: t('完成时间'),
-              content: <DatePicker class='full-width' v-model={timeForm.value} type='daterange' />,
+              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
             },
           ]}
-          onSearch={filterOrders}
-          onReset={clearFilter}
-          loading={isLoading.value}
-          col={5}
-          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

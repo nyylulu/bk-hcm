@@ -171,9 +171,9 @@ const parseIP = (text: string) => {
   };
 };
 // 将值进行btoa编码
-const encodeValueByBtoa = (v: any) => btoa(JSON.stringify(v));
+const encodeValueByBtoa = (v: any) => btoa(encodeURIComponent(JSON.stringify(v)));
 // 获取atob解码后的值
-const decodeValueByAtob = (v: string) => JSON.parse(atob(v));
+const decodeValueByAtob = (v: string) => JSON.parse(decodeURIComponent(atob(v)));
 
 /**
  * 从文本（单个IP、CIDR 网段、连续地址段）中解析出IP地址和备注

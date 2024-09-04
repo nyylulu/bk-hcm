@@ -1,12 +1,13 @@
-import { computed, defineComponent } from 'vue';
+import { computed, defineComponent, watch } from 'vue';
 import cssModule from './index.module.scss';
 
-import { Button, DatePicker, Input, TagInput } from 'bkui-vue';
+import { Button, Input, TagInput } from 'bkui-vue';
 import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import WName from '@/components/w-name';
 import GridFilterComp from '@/components/grid-filter-comp';
+import ScrDatePicker from '@/components/scr/scr-date-picker';
 
 import { useI18n } from 'vue-i18n';
 import { useUserStore, useZiyanScrStore } from '@/store';
@@ -18,6 +19,7 @@ import { applicationTime, timeFormatter } from '@/common/util';
 import { useRoute, useRouter } from 'vue-router';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useSaveSearchRules } from '../../useSaveSearchRules';
 
 export default defineComponent({
   setup() {
@@ -127,8 +129,8 @@ export default defineComponent({
               ['suborder_id', '=', formModel.suborderId],
               ['bk_username', 'in', formModel.bkUsername],
               ['ip', 'in', formModel.ip],
-              ['update_at', 'd>=', timeFormatter(formModel.dateRange[0], 'YYYY-MM-DD')],
-              ['update_at', 'd<=', timeFormatter(formModel.dateRange[1], 'YYYY-MM-DD')],
+              ['update_at', 'd>=', formModel.dateRange[0]],
+              ['update_at', 'd<=', formModel.dateRange[1]],
             ]),
             page: { start: 0, limit: 10 },
           },
@@ -136,15 +138,44 @@ export default defineComponent({
       },
     });
 
-    const filterOrders = () => {
+    const searchRulesKey = 'host_apply_device_rules';
+    const filterOrders = (searchRulesStr?: string) => {
+      if (searchRulesStr) {
+        // 解决人员选择器搜索问题
+        formModel.bkUsername.length > 0 &&
+          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bkUsername])]);
+      }
       pagination.start = 0;
-      formModel.bkBizId = [getBizsId()];
       getListData();
     };
+    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
+
+    const handleSearch = () => {
+      // update query
+      saveSearchRules();
+    };
+
+    const handleReset = () => {
+      resetForm({ bkUsername: [userStore.username] });
+      // update query
+      clearSearchRules();
+    };
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        if (route.query[searchRulesKey]) return;
+        // 无搜索记录，设置申请人默认值
+        formModel.bkUsername = [username];
+      },
+    );
 
     return () => (
       <>
         <GridFilterComp
+          onSearch={handleSearch}
+          onReset={handleReset}
+          loading={isLoading.value}
           rules={[
             {
               title: t('需求类型'),
@@ -169,14 +200,17 @@ export default defineComponent({
                   v-model={formModel.bkUsername}
                   multiple
                   clearable
-                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
+                    username,
+                    display_name: username,
+                  }))}
                   placeholder={t('请输入企业微信名')}
                 />
               ),
             },
             {
               title: t('交付时间'),
-              content: <DatePicker class='full-width' type='daterange' v-model={formModel.dateRange} />,
+              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
             },
             {
               title: t('内网IP'),
@@ -195,14 +229,6 @@ export default defineComponent({
               ),
             },
           ]}
-          onSearch={filterOrders}
-          onReset={() => {
-            resetForm({ user: [userStore.username] });
-            formModel.bkBizId = [getBizsId()];
-            filterOrders();
-          }}
-          loading={isLoading.value}
-          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

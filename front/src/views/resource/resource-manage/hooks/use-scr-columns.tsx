@@ -20,7 +20,7 @@ import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
 import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
-import cssModule from './index.module.scss';
+import cssModule from './use-scr-columns.module.scss';
 import { defaults } from 'lodash';
 import { timeFormatter } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';

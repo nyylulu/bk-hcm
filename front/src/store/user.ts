@@ -6,11 +6,15 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     user: '',
     username: '',
+    memberDefaultList: [],
   }),
 
   actions: {
     setUser(user: string) {
       this.user = user;
+    },
+    setMemberDefaultList(list: string[]) {
+      this.memberDefaultList = list;
     },
 
     // 测试
@@ -23,6 +27,7 @@ export const useUserStore = defineStore('user', {
     async userInfo() {
       const res = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/web/users`);
       this.username = res.data.username;
+      this.memberDefaultList.push(res.data.username);
       return res;
     },
   },
