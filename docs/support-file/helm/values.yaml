@@ -906,8 +906,13 @@ egress:
     - 10.0.0.0/8
     - 11.0.0.0/8
     - 30.0.0.0/8
-  yuntiDomain: ""
-  cl5Domain: ""
+  rules:
+    - dport: 80
+      host: example.com
+      protocol: TCP
+      sport: 80
+      service: example.com
+
 
 resourceDissolve:
   originDate: "20240105"
