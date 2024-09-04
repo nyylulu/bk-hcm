@@ -633,6 +633,14 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedActions:       nil,
 		Version:              1,
 	}, {
+		ID:             AwsSavingsPlansCostQuery,
+		Name:           ActionIDNameMap[AwsSavingsPlansCostQuery],
+		NameEn:         "Aws Savings Plans Cost Query",
+		Type:           View,
+		RelatedActions: nil,
+		Version:        1,
+		Hidden:         true,
+	}, {
 		ID:                   ApplicationManage,
 		Name:                 ActionIDNameMap[ApplicationManage],
 		NameEn:               "Application Manage",

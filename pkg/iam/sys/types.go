@@ -224,6 +224,9 @@ const (
 	// ApplicationManage application manage action id to register iam.
 	ApplicationManage client.ActionID = "application_manage"
 
+	// AwsSavingsPlansCostQuery aws savings plans cost query action id to register iam.
+	AwsSavingsPlansCostQuery client.ActionID = "aws_savings_plans_cost_query"
+
 	// Skip is an action that no need to auth
 	Skip client.ActionID = "skip"
 )
@@ -298,4 +301,6 @@ var ActionIDNameMap = map[client.ActionID]string{
 	MainAccountFind:   "账号-二级账号查看",
 	MainAccountCreate: "账号-二级账号创建",
 	MainAccountEdit:   "账号-二级账号编辑",
+
+	AwsSavingsPlansCostQuery: "AWS-SavingsPlans成本查询",
 }

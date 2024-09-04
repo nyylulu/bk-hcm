@@ -20,6 +20,7 @@
 package aws
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 	"strings"
@@ -791,4 +792,140 @@ func (a *Aws) GetRootSpTotalUsage(kt *kit.Kit, billInfo *billcore.AwsRootBillCon
 	ret.SpNetCost = converter.ValToPtr(spNetCost)
 
 	return ret, nil
+}
+
+const (
+	// QuerySavingsPlansListSQL query saving plans sql
+	QuerySavingsPlansListSQL = `
+	SELECT line_item_usage_account_id,savings_plan_savings_plan_a_r_n,
+	SUM(line_item_unblended_cost) AS unblended_cost, 
+	SUM(savings_plan_savings_plan_effective_cost) AS sp_effective_cost,
+	SUM(savings_plan_net_savings_plan_effective_cost) AS sp_net_effective_cost,
+	SUM(line_item_unblended_cost)-SUM(savings_plan_savings_plan_effective_cost) AS sp_saved_cost
+	FROM %s.%s
+	WHERE line_item_line_item_type = 'SavingsPlanCoveredUsage'
+	AND year = '%d'
+	AND month = '%d'
+	AND date(line_item_usage_start_date) >= date '%s'
+	AND date(line_item_usage_start_date) <= date '%s'
+`
+
+	// CountSavingsPlansListSQL ...
+	CountSavingsPlansListSQL = `
+	SELECT COUNT(DISTINCT CONCAT(line_item_usage_account_id,savings_plan_savings_plan_a_r_n)) AS total
+	FROM %s.%s
+	WHERE line_item_line_item_type = 'SavingsPlanCoveredUsage'
+	AND year = '%d'
+	AND month = '%d'
+	AND date(line_item_usage_start_date) >= date '%s'
+	AND date(line_item_usage_start_date) <= date '%s'
+`
+)
+
+// QuerySavingsPlanCostsList get saving plains list
+func (a *Aws) QuerySavingsPlanCostsList(kt *kit.Kit, opt *typesBill.SPSavedCostListOption,
+	billInfo *billcore.RootAccountBillConfig[billcore.AwsBillConfigExtension]) (*typesBill.AwsSavingsPlansCostListResult,
+	error) {
+
+	if opt == nil {
+		return nil, errf.Newf(errf.InvalidParameter, "opt is required for aws sp cost query")
+	}
+	if billInfo == nil {
+		return nil, errf.Newf(errf.InvalidParameter, "billInfo is required for aws sp cost query")
+	}
+	if err := opt.Validate(); err != nil {
+		return nil, err
+	}
+
+	// TODO 需要count
+	if opt.Page.Count {
+		sql := a.buildCountSavingsPlanSQL(billInfo, opt)
+		queryResults, err := a.GetRootAccountAwsAthenaQuery(kt, sql, billInfo)
+		if err != nil {
+			logs.Errorf("aws cloud athena get query result err, sql: %s, err: %v, rid: %s", sql, err, kt.Rid)
+			return nil, err
+		}
+		if len(queryResults) == 0 {
+			return nil, errors.New("empty result from aws sp cost query")
+		}
+		total, err := strconv.ParseUint(queryResults[0]["total"], 10, 64)
+		if err != nil {
+			logs.Errorf("fail ot parse count from aws sp cost query, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		return &typesBill.AwsSavingsPlansCostListResult{Count: total}, nil
+	}
+	sql := a.buildQuerySavingsPlanSQL(billInfo, opt)
+	queryResults, err := a.GetRootAccountAwsAthenaQuery(kt, sql, billInfo)
+	if err != nil {
+		logs.Errorf("aws cloud athena get query result err, sql: %s, err: %v, rid: %s", sql, err, kt.Rid)
+		return nil, err
+	}
+
+	resp := new(typesBill.AwsSavingsPlansCostListResult)
+	for _, colMap := range queryResults {
+		resp.Details = append(resp.Details, typesBill.AwsSavingsPlansCost{
+			AccountCloudID:  colMap["line_item_usage_account_id"],
+			SpArn:           colMap["savings_plan_savings_plan_a_r_n"],
+			UnblendedCost:   colMap["unblended_cost"],
+			SPEffectiveCost: colMap["sp_effective_cost"],
+			SPNetCost:       colMap["sp_net_effective_cost"],
+			SPSavedCost:     colMap["sp_saved_cost"],
+		})
+	}
+	return resp, nil
+}
+
+func (a *Aws) buildCountSavingsPlanSQL(billInfo *billcore.RootAccountBillConfig[billcore.AwsBillConfigExtension],
+	opt *typesBill.SPSavedCostListOption) string {
+
+	sql := fmt.Sprintf(CountSavingsPlansListSQL, billInfo.CloudDatabaseName, billInfo.CloudTableName,
+		opt.Year, opt.Month,
+		fmt.Sprintf("%d-%02d-%02d", opt.Year, opt.Month, opt.StartDay),
+		fmt.Sprintf("%d-%02d-%02d", opt.Year, opt.Month, opt.EndDay),
+	)
+
+	if len(opt.BillPayerAccountID) > 0 {
+		sql += fmt.Sprintf(" AND bill_payer_account_id = '%s' \n", opt.BillPayerAccountID)
+	}
+	if len(opt.UsageAccountCloudIDs) > 0 {
+		sql += fmt.Sprintf(" AND line_item_usage_account_id IN ('%s') \n",
+			strings.Join(opt.UsageAccountCloudIDs, "','"))
+	}
+	if len(opt.SavingsPlansArn) > 0 {
+		sql += fmt.Sprintf(" AND savings_plan_savings_plan_a_r_n LIKE '%s' \n", opt.SavingsPlansArn+"%")
+	}
+	return sql
+}
+
+func (a *Aws) buildQuerySavingsPlanSQL(billInfo *billcore.RootAccountBillConfig[billcore.AwsBillConfigExtension],
+	opt *typesBill.SPSavedCostListOption) string {
+
+	sql := fmt.Sprintf(QuerySavingsPlansListSQL, billInfo.CloudDatabaseName, billInfo.CloudTableName,
+		opt.Year, opt.Month,
+		fmt.Sprintf("%d-%02d-%02d", opt.Year, opt.Month, opt.StartDay),
+		fmt.Sprintf("%d-%02d-%02d", opt.Year, opt.Month, opt.EndDay),
+	)
+
+	if len(opt.BillPayerAccountID) > 0 {
+		sql += fmt.Sprintf(" AND bill_payer_account_id = '%s' \n", opt.BillPayerAccountID)
+	}
+	if len(opt.UsageAccountCloudIDs) > 0 {
+		sql += fmt.Sprintf(" AND line_item_usage_account_id IN ('%s') \n",
+			strings.Join(opt.UsageAccountCloudIDs, "','"))
+	}
+	if len(opt.SavingsPlansArn) > 0 {
+		sql += fmt.Sprintf(" AND savings_plan_savings_plan_a_r_n LIKE '%s' \n", opt.SavingsPlansArn+"%")
+	}
+	sql += " GROUP BY line_item_usage_account_id,savings_plan_savings_plan_a_r_n \n"
+
+	if opt.Page.Sort == "" {
+		opt.Page.Sort = "line_item_usage_account_id,savings_plan_savings_plan_a_r_n"
+	}
+	sql += fmt.Sprintf(" ORDER BY %s ", opt.Page.Sort)
+	if len(opt.Page.Order) > 0 {
+		sql += fmt.Sprintf(` %s`, opt.Page.Order)
+	}
+	sql += fmt.Sprintf(` OFFSET  %d LIMIT %d`, opt.Page.Start, opt.Page.Limit)
+	return sql
 }

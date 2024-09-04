@@ -74,17 +74,13 @@ POST /api/v1/account/vendors/aws/savings_plans/saved_cost/query
         "main_account_managers": [],
         "main_account_bak_managers": [],
         "product_id": 123,
-        "sp_info_list": [
-          {
-            "sp_arn": "xxx",
-            "sp_managers": [],
-            "sp_bak_managers": [],
-            "unblended_cost": "15.55",
-            "sp_effective_cost": "10.11",
-            "sp_saved_cost": "5.44",
-            "sp_net_effective_cost": "10.55"
-          }
-        ]
+        "sp_arn": "xxx",
+        "sp_managers": [],
+        "sp_bak_managers": [],
+        "unblended_cost": "15.55",
+        "sp_effective_cost": "10.11",
+        "sp_saved_cost": "5.44",
+        "sp_net_effective_cost": "10.55"
       }
     ]
   }
@@ -108,23 +104,17 @@ POST /api/v1/account/vendors/aws/savings_plans/saved_cost/query
 
 ### details
 
-| 参数名称                      | 参数类型     | 描述        |
-|---------------------------|----------|-----------|
-| main_account_id           | string   | 二级账号云D    |
-| main_account_cloud_id     | string   | 二级账号云ID   |
-| main_account_managers     | []string | 二级账号负责人   |
-| main_account_bak_managers | []string | 二级账号备份负责人 |
-| product_id                | int64    | 运营产品ID    |
-| sp_info_list              | []object | sp信息列表    |
-
-### sp_info_list
-
-| 参数名称                  | 参数类型     | 描述                                                                                      |
-|-----------------------|----------|-----------------------------------------------------------------------------------------|
-| sp_arn                | string   | sp标识                                                                                    |
-| sp_managers           | []string | sp所属账号负责人                                                                               |
-| sp_bak_managers       | []string | sp所属账号备份负责人                                                                             |
-| unblended_cost        | string   | 对应云资源的未混合成本, 对应：sum(line_item_unblended_cost)                                           |
-| sp_effective_cost     | string   | sp有效成本，对应：sum(savings_plan_savings_plan_effective_cost)                                 |
-| sp_saved_cost         | string   | sp节省成本，对应：sum(line_item_unblended_cost) - sum(savings_plan_savings_plan_effective_cost) |
-| sp_net_effective_cost | string   | sp有效成本净值，对应：sum(savings_plan_net_savings_plan_effective_cost)                           |
+| 参数名称                      | 参数类型     | 描述                                                                                      |
+|---------------------------|----------|-----------------------------------------------------------------------------------------|
+| main_account_id           | string   | 二级账号云D                                                                                  |
+| main_account_cloud_id     | string   | 二级账号云ID                                                                                 |
+| main_account_managers     | []string | 二级账号负责人                                                                                 |
+| main_account_bak_managers | []string | 二级账号备份负责人                                                                               |
+| product_id                | int64    | 运营产品ID                                                                                  |
+| sp_arn                    | string   | sp标识                                                                                    |
+| sp_managers               | []string | sp所属账号负责人                                                                               |
+| sp_bak_managers           | []string | sp所属账号备份负责人                                                                             |
+| unblended_cost            | string   | 对应云资源的未混合成本, 对应：sum(line_item_unblended_cost)                                           |
+| sp_effective_cost         | string   | sp有效成本，对应：sum(savings_plan_savings_plan_effective_cost)                                 |
+| sp_saved_cost             | string   | sp节省成本，对应：sum(line_item_unblended_cost) - sum(savings_plan_savings_plan_effective_cost) |
+| sp_net_effective_cost     | string   | sp有效成本净值，对应：sum(savings_plan_net_savings_plan_effective_cost)                           |

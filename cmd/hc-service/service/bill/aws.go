@@ -870,3 +870,56 @@ func (b bill) AwsGetRootAccountSpTotalUsage(cts *rest.Contexts) (any, error) {
 	}
 	return result, nil
 }
+
+// AwsQuerySavingsPlansCostList aws get saving plains list (内部版接口）
+func (b bill) AwsQuerySavingsPlansCostList(cts *rest.Contexts) (any, error) {
+	req := new(hcbill.QueryAwsSavingsPlanCostReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	rootInfo, err := b.cs.DataService().Global.RootAccount.GetBasicInfo(cts.Kit, req.RootAccountID)
+	if err != nil {
+		logs.Errorf("fail to get root account info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	cli, err := b.ad.AwsRoot(cts.Kit, req.RootAccountID)
+	if err != nil {
+		logs.Errorf("get aws cloud client failed, req: %+v, err: %+v,rid: %s", req, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 查询aws账单基础表
+	billInfo, err := getRootAccountBillConfigInfo[billcore.AwsBillConfigExtension](
+		cts.Kit, req.RootAccountID, b.cs.DataService())
+	if err != nil {
+		logs.Errorf("aws bill config get base info db failed, accountID: %s, err: %+v, rid: %s",
+			req.RootAccountID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	if billInfo == nil {
+		return nil, errf.Newf(errf.RecordNotFound, "account_id: %s is not found", req.RootAccountID)
+	}
+
+	opt := &typesBill.SPSavedCostListOption{
+		BillPayerAccountID:   rootInfo.CloudID,
+		SavingsPlansArn:      req.SavingPlansArn,
+		UsageAccountCloudIDs: req.UsageAccountIDs,
+		Year:                 req.Year,
+		Month:                req.Month,
+		StartDay:             req.StartDay,
+		EndDay:               req.EndDay,
+		Page:                 req.Page,
+	}
+	spList, err := cli.QuerySavingsPlanCostsList(cts.Kit, opt, billInfo)
+	if err != nil {
+		logs.Errorf("request adaptor spList sp saved cost failed, req: %+v, err: %v, rid: %s", req, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return spList, nil
+}

@@ -776,3 +776,12 @@ func genAccountBillThirdPartyResource(a *meta.ResourceAttribute) (client.ActionI
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}
 }
+
+func genAwsSavingsPlansCostResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	switch a.Basic.Action {
+	case meta.Find:
+		return sys.AwsSavingsPlansCostQuery, make([]client.Resource, 0), nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}

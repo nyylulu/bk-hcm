@@ -261,6 +261,7 @@ func genPlatformManageActionGroups() client.ActionGroup {
 				Actions: []client.ActionWithID{
 					{ID: AccountBillPull},
 					{ID: AccountBillManage},
+					{ID: AwsSavingsPlansCostQuery},
 				},
 			},
 			{
