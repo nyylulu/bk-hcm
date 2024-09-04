@@ -1,7 +1,7 @@
 import { defineComponent, ref, watch } from 'vue';
 import { Sideslider, Table } from 'bkui-vue';
 import { useFieldVal } from '@/components/property-list/field-map';
-import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import { timeFormatter } from '@/common/util';
 import http from '@/http';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 
@@ -59,7 +59,7 @@ export default defineComponent({
         label: '操作时间',
         field: 'create_at',
         render: ({ row }: any) => {
-          return <span>{dateTimeTransform(row.create_at)}</span>;
+          return <span>{timeFormatter(row.create_at)}</span>;
         },
       },
     ];

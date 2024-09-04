@@ -86,8 +86,8 @@ export default defineComponent({
       { label: '资源类型', field: 'resource_type' },
       { label: '机型', field: 'device_type' },
       { label: '园区', field: 'zone_name' },
-      { label: '交付时间', field: 'update_at', render: ({ cell }: any) => timeFormatter(cell) },
-      { label: '申请时间', field: 'create_at', render: ({ cell }: any) => timeFormatter(cell) },
+      { label: '交付时间', field: 'update_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
+      { label: '申请时间', field: 'create_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
       {
         label: '备注信息',
         field: 'remark',

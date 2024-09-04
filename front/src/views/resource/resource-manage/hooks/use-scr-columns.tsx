@@ -28,7 +28,6 @@ import { getResourceTypeName, getReturnPlanName } from '@/utils';
 import {
   getRecycleTaskStatusLabel,
   getBusinessNameById,
-  dateTimeTransform,
   getPrecheckStatusLabel,
 } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getRegionCn, getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
@@ -560,11 +559,13 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '交付时间',
       field: 'update_at',
+      width: 160,
       render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '申请时间',
       field: 'create_at',
+      width: 160,
       render: ({ cell }: any) => timeFormatter(cell),
     },
     {
@@ -676,18 +677,14 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '开始时间',
       field: 'create_at',
-      width: 180,
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.create_at)}</span>;
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '结束时间',
       field: 'end_at',
-      width: 180,
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.end_at)}</span>;
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '执行日志',
@@ -732,22 +729,16 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '更新时间',
       field: 'update_at',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.update_at)}</span>;
-      },
-      formatter: ({ update_at }: any) => {
-        return dateTimeTransform(update_at);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ update_at }: any) => timeFormatter(update_at),
     },
     {
       label: '创建时间',
       field: 'create_at',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.create_at)}</span>;
-      },
-      formatter: ({ create_at }: any) => {
-        return dateTimeTransform(create_at);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ create_at }: any) => timeFormatter(create_at),
     },
   ];
   const getRecycleTaskStatusView = (value: string) => {
@@ -890,12 +881,9 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '回收时间',
       field: 'create_at',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.create_at)}</span>;
-      },
-      formatter: ({ create_at }: any) => {
-        return dateTimeTransform(create_at);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ create_at }: any) => timeFormatter(create_at),
     },
     {
       label: '描述',
@@ -929,10 +917,7 @@ export default (type: string, isSimpleShow = false) => {
     },
     {
       label: '回收业务',
-      field: 'bk_biz_id',
-      formatter: ({ bk_biz_id }: any) => {
-        return getBusinessNameById(bk_biz_id);
-      },
+      field: 'bk_biz_name',
     },
     {
       label: '地域',
@@ -982,16 +967,15 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '创建时间',
       field: 'create_at',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.create_at)}</span>;
-      },
-      formatter: ({ create_at }: any) => {
-        return dateTimeTransform(create_at);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ create_at }: any) => timeFormatter(create_at),
     },
     {
       label: '完成时间',
       field: 'return_time',
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '备注',
@@ -1079,22 +1063,16 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '上架时间',
       field: 'input_time',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.input_time)}</span>;
-      },
-      formatter: ({ input_time }: any) => {
-        return dateTimeTransform(input_time);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ input_time }: any) => timeFormatter(input_time),
     },
     {
       label: '销毁时间',
       field: 'return_time',
-      render: ({ row }: any) => {
-        return <span>{dateTimeTransform(row.return_time)}</span>;
-      },
-      formatter: ({ return_time }: any) => {
-        return dateTimeTransform(return_time);
-      },
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
+      formatter: ({ return_time }: any) => timeFormatter(return_time),
     },
     {
       label: '回收单号',
@@ -1505,14 +1483,14 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '申请时间',
       field: 'create_at',
-      width: 120,
-      render: ({ data }: any) => timeFormatter(data.create_at, 'YYYY-MM-DD'),
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '期望交付时间',
       field: 'expect_time',
-      width: 120,
-      render: ({ data }: any) => timeFormatter(data.expect_time, 'YYYY-MM-DD'),
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '备注信息',
@@ -2405,14 +2383,14 @@ export default (type: string, isSimpleShow = false) => {
       sort: {
         value: 'desc',
       },
-      width: 99,
-      render: ({ row }: any) => dateTimeTransform(row.create_at),
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '结束时间',
       field: 'update_at',
-      width: 90,
-      render: ({ row }: any) => dateTimeTransform(row.update_at),
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
     {
       label: '备注',
@@ -2489,7 +2467,8 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '生产时间',
       field: 'update_at',
-      render: ({ row }: any) => dateTimeTransform(row.update_at),
+      width: 160,
+      render: ({ cell }: any) => timeFormatter(cell),
     },
   ];
 
