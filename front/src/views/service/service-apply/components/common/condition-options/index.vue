@@ -20,6 +20,7 @@ const props = defineProps({
   vendor: String as PropType<string>,
   region: String as PropType<string>,
   resourceGroup: String as PropType<string>,
+  // 业务主机购买为ture，资源池购买为false，只与主机相关
   isbusiness: {
     type: Boolean,
     default: false, // 设置默认值
@@ -86,7 +87,7 @@ const { isResourcePage } = useWhereAmI();
 const resourceAccountStore = useResourceAccountStore();
 const isOptionDisabled = (accountItem: { vendor: VendorEnum }) => {
   const validTypes = [ResourceTypeEnum.VPC, ResourceTypeEnum.DISK, ResourceTypeEnum.SUBNET];
-  return validTypes.includes(props.type) && accountItem?.vendor === VendorEnum.ZIYAN;
+  return validTypes.includes(props.type as ResourceTypeEnum) && accountItem?.vendor === VendorEnum.ZIYAN;
 };
 watch(
   () => resourceAccountStore.resourceAccount?.id,
@@ -113,6 +114,7 @@ watch(
         :biz-id="isResourcePage ? undefined : props.bizs"
         :filter="accountFilter"
         :disabled="isResourcePage"
+        :option-disabled="isOptionDisabled"
         :placeholder="isResourcePage ? '请在左侧选择账号' : undefined"
         @change="handleChangeAccount"
       />

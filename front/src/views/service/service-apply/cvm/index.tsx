@@ -14,7 +14,7 @@ import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import GcpDataDiskFormDialog from './children/gcp-data-disk-form-dialog';
 import './index.scss';
 import { useI18n } from 'vue-i18n';
-import { QueryRuleOPEnum, type IOption } from '@/typings/common';
+import { type IOption } from '@/typings/common';
 import type { IDiskOption } from '../hooks/use-cvm-form-data';
 import { ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import useCvmOptions from '../hooks/use-cvm-options';
@@ -87,7 +87,7 @@ export default defineComponent({
     const isVpcPreviewDialogShow = ref(false);
     const isSubnetPreviewDialogShow = ref(false);
     const cost = ref('--');
-    const { whereAmI } = useWhereAmI();
+    const { whereAmI, getBizsId, isResourcePage } = useWhereAmI();
 
     const handleSubnetDataChange = (data: ISubnetItem) => {
       subnetData.value = data;
@@ -921,16 +921,11 @@ export default defineComponent({
           <Form model={formData} rules={formRules} ref={formRef} onSubmit={handleFormSubmit} formType='vertical'>
             <AccountSelectorCard
               v-model={cond.cloudAccountId}
-              bkBizId={cond.bizId}
+              bkBizId={whereAmI.value === Senarios.business && getBizsId()}
+              disabled={isResourcePage}
+              placeholder={isResourcePage && '请在左侧选择账号'}
               onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
               onVendorChange={(vendor: VendorEnum) => (cond.vendor = vendor)}
-              filter={{
-                op: QueryRuleOPEnum.AND,
-                rules:
-                  whereAmI.value === Senarios.business
-                    ? []
-                    : [{ op: QueryRuleOPEnum.NEQ, field: 'vendor', value: VendorEnum.ZIYAN }],
-              }}
             />
             {isAccountShow.value ? (
               <ApplicationForm isbusiness={true}></ApplicationForm>
