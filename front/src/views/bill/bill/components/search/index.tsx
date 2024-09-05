@@ -7,7 +7,6 @@ import PrimaryAccountSelector from './primary-account-selector';
 import SubAccountSelector from './sub-account-selector';
 
 import { useI18n } from 'vue-i18n';
-import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { VendorEnum } from '@/common/constant';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
@@ -49,7 +48,6 @@ export default defineComponent({
   emits: ['search'],
   setup(props, { emit, expose }) {
     const { t } = useI18n();
-    const { OperationProductsSelector } = useOperationProducts();
 
     const { useSearchCompHandler } = pluginHandler;
     const { productSearchLabel, renderProductComponent } = useSearchCompHandler();
@@ -144,8 +142,8 @@ export default defineComponent({
           )}
           {props.searchKeys.includes('product_id') && (
             <div>
-              <div class={cssModule['search-label']}>{t('运营产品')}</div>
-              <OperationProductsSelector v-model={modal.value.product_id} multiple />
+              <div class={cssModule['search-label']}>{productSearchLabel}</div>
+              {renderProductComponent(modal)}
             </div>
           )}
           {props.searchKeys.includes('main_account_id') && (

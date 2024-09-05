@@ -201,8 +201,6 @@ export const reqBillsProductSummaryList = async (
 };
 
 // 导出运营产品账单汇总数据
-export const exportBillsProductSummary = async (
-  data: BillsExportReqParamsWithProductIds,
-): Promise<BillsExportResData> => {
-  return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/export`, data);
+export const exportBillsProductSummary = async (data: BillsExportReqParamsWithProductIds) => {
+  return http.download({ url: `${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/bills/product_summarys/export`, data });
 };

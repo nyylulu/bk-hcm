@@ -3,18 +3,31 @@ import { RouteLocationNormalizedLoaded } from 'vue-router';
 
 import BillsExportButton from '@/views/bill/bill/components/bills-export-button';
 import BccSyncButton from '@/views/bill/bill/summary/primary/bcc-sync-button';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 import { useI18n } from 'vue-i18n';
-import { reqBillsProductSummaryList, exportBillsProductSummary } from '@/api/bill';
+import { reqBillsProductSummaryList, exportBillsProductSummary, exportBillsRootAccountSummary } from '@/api/bill';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import { BillSearchRules } from '@/utils';
 import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
 import { PluginHandlerType } from '../bill-manage';
+import { ISearchModal } from '@/views/bill/bill/components/search';
 
 // 账单汇总-一级账号
 const usePrimaryHandler = () => {
-  const renderOperation = (bill_year: number, bill_month: number) => {
-    return <BccSyncButton billYear={bill_year} billMonth={bill_month} />;
+  const renderOperation = (bill_year: number, bill_month: number, filter: FilterType) => {
+    const { t } = useI18n();
+
+    return (
+      <>
+        <BccSyncButton billYear={bill_year} billMonth={bill_month} />
+        <BillsExportButton
+          cb={() => exportBillsRootAccountSummary({ bill_year, bill_month, export_limit: 200000, filter })}
+          title={t('账单汇总-一级账号')}
+          content={t('导出当月一级账号的账单数据')}
+        />
+      </>
+    );
   };
 
   return {
@@ -104,11 +117,28 @@ const useAdjustHandler = () => {
   };
 };
 
+// 搜索组件
+const useSearchCompHandler = () => {
+  const { t } = useI18n();
+  const productSearchLabel = t('运营产品');
+  const { OperationProductsSelector } = useOperationProducts();
+
+  const renderProductComponent = (modal: Ref<ISearchModal>) => {
+    return <OperationProductsSelector v-model={modal.value.product_id} multiple />;
+  };
+
+  return {
+    productSearchLabel,
+    renderProductComponent,
+  };
+};
+
 const pluginHandler: PluginHandlerType = {
   usePrimaryHandler,
   useSubHandler,
   useProductHandler,
   useAdjustHandler,
+  useSearchCompHandler,
 };
 
 export default pluginHandler;

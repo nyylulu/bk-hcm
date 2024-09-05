@@ -21,8 +21,16 @@ export default defineComponent({
     const amountRef = ref();
 
     const { useProductHandler } = pluginHandler;
-    const { selectedIds, columnName, getColumns, extensionKey, apiMethod, reloadSelectedIds, mountedCallback } =
-      useProductHandler();
+    const {
+      selectedIds,
+      columnName,
+      getColumns,
+      extensionKey,
+      apiMethod,
+      reloadSelectedIds,
+      mountedCallback,
+      renderOperation,
+    } = useProductHandler();
 
     const { columns } = useColumns(columnName);
     const { CommonTable, getListData, clearFilter, filter } = useTable({
@@ -69,6 +77,7 @@ export default defineComponent({
         <div class='p24' style={{ height: 'calc(100% - 162px)' }}>
           <CommonTable>
             {{
+              operation: () => renderOperation(bill_year.value, bill_month.value, searchRef),
               operationBarEnd: () => (
                 <Amount
                   ref={amountRef}

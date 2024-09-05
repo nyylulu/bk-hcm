@@ -2,17 +2,24 @@ import { Ref, defineComponent, inject, onMounted, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 import Search from '../../components/search';
+import BillsExportButton from '../../components/bills-export-button';
 import Amount from '../../components/amount';
 
+import { useI18n } from 'vue-i18n';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
-import { reqBillsMainAccountSummaryList, reqBillsMainAccountSummarySum } from '@/api/bill';
+import {
+  exportBillsMainAccountSummary,
+  reqBillsMainAccountSummaryList,
+  reqBillsMainAccountSummarySum,
+} from '@/api/bill';
 import { RulesItem } from '@/typings';
 import pluginHandler from '@pluginHandler/bill-manage';
 
 export default defineComponent({
   name: 'SubAccountTabPanel',
   setup() {
+    const { t } = useI18n();
     const route = useRoute();
     const bill_year = inject<Ref<number>>('bill_year');
     const bill_month = inject<Ref<number>>('bill_month');
@@ -71,6 +78,20 @@ export default defineComponent({
         <div class='p24' style={{ height: 'calc(100% - 238px)' }}>
           <CommonTable>
             {{
+              operation: () => (
+                <BillsExportButton
+                  cb={() =>
+                    exportBillsMainAccountSummary({
+                      bill_year: bill_year.value,
+                      bill_month: bill_month.value,
+                      export_limit: 200000,
+                      filter,
+                    })
+                  }
+                  title={t('账单汇总-二级账号')}
+                  content={t('导出当月二级账号的账单数据')}
+                />
+              ),
               operationBarEnd: () => (
                 <Amount
                   ref={amountRef}
