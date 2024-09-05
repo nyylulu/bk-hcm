@@ -45,8 +45,8 @@ func InitService(c *capability.Capability) {
 	h := rest.NewHandler()
 
 	// register handler
-	h.Add("ListMainAccountSummary", http.MethodPost, "/bills/main-account-summarys/list", svc.ListMainAccountSummary)
-	h.Add("SumMainAccountSummary", http.MethodPost, "/bills/main-account-summarys/sum", svc.SumMainAccountSummary)
+	h.Add("ListMainAccountSummary", http.MethodPost, "/bills/main_account_summarys/list", svc.ListMainAccountSummary)
+	h.Add("SumMainAccountSummary", http.MethodPost, "/bills/main_account_summarys/sum", svc.SumMainAccountSummary)
 	h.Add("ExportMainAccountSummary", http.MethodPost,
 		"/bills/main_account_summarys/export", svc.ExportMainAccountSummary)
 

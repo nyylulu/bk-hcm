@@ -33,7 +33,6 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
@@ -226,20 +225,4 @@ func (s *service) listBiz(kt *kit.Kit, ids []int64) (map[int64]string, error) {
 	}
 
 	return data, nil
-}
-
-func (s *service) listProductName(kt *kit.Kit, productIds []int64) (map[int64]string, error) {
-	param := &finops.ListOpProductParam{
-		OpProductIds: productIds,
-		Page:         *core.NewDefaultBasePage(),
-	}
-	productResult, err := s.finops.ListOpProduct(kt, param)
-	if err != nil {
-		return nil, err
-	}
-	productNameMap := make(map[int64]string)
-	for _, product := range productResult.Items {
-		productNameMap[product.OpProductId] = product.OpProductName
-	}
-	return productNameMap, nil
 }

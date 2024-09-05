@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2024 THL A29 Limited,
+ * Copyright (C) 2022 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,23 +21,23 @@ package export
 
 import "hcm/pkg/logs"
 
-// BillSummaryBizTableHeader 账单调整导出表头
-var BillSummaryBizTableHeader []string
+// BillSummaryProductTableHeader 账单调整导出表头
+var BillSummaryProductTableHeader []string
 
-var _ Table = (*BillSummaryBizTable)(nil)
+var _ Table = (*BillSummaryProductTable)(nil)
 
 func init() {
 	var err error
-	BillSummaryBizTableHeader, err = BillSummaryBizTable{}.GetHeaders()
+	BillSummaryProductTableHeader, err = BillSummaryProductTable{}.GetHeaders()
 	if err != nil {
-		logs.Errorf("bill summary biz header init failed: %v", err)
+		logs.Errorf("bill summary product table header init failed: %v", err)
 	}
 }
 
-// BillSummaryBizTable 账单调整导出表头结构
-type BillSummaryBizTable struct {
-	BkBizID                   string `header:"业务ID"`
-	BkBizName                 string `header:"业务"`
+// BillSummaryProductTable 账单调整导出表头结构
+type BillSummaryProductTable struct {
+	ProductID                 string `header:"运营产品ID"`
+	ProductName               string `header:"运营产品名称"`
 	CurrentMonthRMBCostSynced string `header:"已确认账单人民币（元）"`
 	CurrentMonthCostSynced    string `header:"已确认账单美金（美元）"`
 	CurrentMonthRMBCost       string `header:"当前账单人民币（元）"`
@@ -45,11 +45,11 @@ type BillSummaryBizTable struct {
 }
 
 // GetHeaderValues ...
-func (b BillSummaryBizTable) GetHeaderValues() ([]string, error) {
+func (b BillSummaryProductTable) GetHeaderValues() ([]string, error) {
 	return parseHeaderFields(b)
 }
 
 // GetHeaders ...
-func (b BillSummaryBizTable) GetHeaders() ([]string, error) {
+func (b BillSummaryProductTable) GetHeaders() ([]string, error) {
 	return parseHeader(b)
 }

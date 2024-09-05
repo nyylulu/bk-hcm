@@ -559,5 +559,9 @@ func (s AccountServerSetting) Validate() error {
 		return err
 	}
 
+
+	if err := s.Esb.validate(); err != nil {
+		return err
+	}
 	return nil
 }

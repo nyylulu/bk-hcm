@@ -62,7 +62,7 @@ type OrderCreateParams struct {
 	BakOperator       string      `json:"bakOperator"`
 	ObsProject        string      `json:"obsProject"`
 	ChargeType        ChargeType  `json:"chargeType,omitempty"`
-	ChargeMonths      uint         `json:"chargeMonths,omitempty"`
+	ChargeMonths      uint        `json:"chargeMonths,omitempty"`
 }
 
 // ChargeType charge type

@@ -59,6 +59,8 @@ func InitBillAdjustmentService(c *capability.Capability) {
 		"/bills/adjustment_items/confirm", svc.BatchConfirmBillAdjustmentItem)
 	h.Add("SumBillAdjustmentItem", "POST",
 		"/bills/adjustment_items/sum", svc.SumBillAdjustmentItem)
+	h.Add("ExportBillAdjustmentItem", "POST",
+		"/bills/adjustment_items/export", svc.ExportBillAdjustmentItem)
 
 	h.Load(c.WebService)
 }

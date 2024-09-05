@@ -32,6 +32,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/tools/converter"
 
 	"github.com/TencentBlueKing/gopkg/conv"
@@ -41,7 +42,7 @@ import (
 func (b *billItemSvc) exportGcpBillItems(kt *kit.Kit, req *bill.ExportBillItemReq,
 	rate *decimal.Decimal) (any, error) {
 
-	rootAccountMap, mainAccountMap, bizNameMap, err := b.fetchAccountBizInfo(kt, enumor.Gcp)
+	rootAccountMap, mainAccountMap, productMap, err := b.fetchAccountProductInfo(kt, enumor.Gcp)
 	if err != nil {
 		logs.Errorf("[exportGcpBillItems] prepare related data failed: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -71,7 +72,7 @@ func (b *billItemSvc) exportGcpBillItems(kt *kit.Kit, req *bill.ExportBillItemRe
 		if len(items) == 0 {
 			return nil
 		}
-		table, err := convertGcpBillItem(kt, items, bizNameMap, mainAccountMap, rootAccountMap, regionMap, rate)
+		table, err := convertGcpBillItem(kt, items, productMap, mainAccountMap, rootAccountMap, regionMap, rate)
 		if err != nil {
 			logs.Errorf("[exportGcpBillItems] convert to raw data error: %v, rid: %s", err, kt.Rid)
 			return err
@@ -85,6 +86,7 @@ func (b *billItemSvc) exportGcpBillItems(kt *kit.Kit, req *bill.ExportBillItemRe
 	}
 	err = b.fetchGcpBillItems(kt, req, convFunc)
 	if err != nil {
+		logs.Errorf("fetchGcpBillItems failed: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -95,7 +97,7 @@ func (b *billItemSvc) exportGcpBillItems(kt *kit.Kit, req *bill.ExportBillItemRe
 	}, nil
 }
 
-func convertGcpBillItem(kt *kit.Kit, items []*billapi.GcpBillItem, bizNameMap map[int64]string,
+func convertGcpBillItem(kt *kit.Kit, items []*billapi.GcpBillItem, productMap map[int64]finops.OperationProduct,
 	mainAccountMap map[string]*protocore.BaseMainAccount, rootAccountMap map[string]*protocore.BaseRootAccount,
 	regionMap map[string]string, rate *decimal.Decimal) ([][]string, error) {
 
@@ -109,10 +111,6 @@ func convertGcpBillItem(kt *kit.Kit, items []*billapi.GcpBillItem, bizNameMap ma
 		if !ok {
 			return nil, fmt.Errorf("root account(%s) not found", item.RootAccountID)
 		}
-		bizName, ok := bizNameMap[item.BkBizID]
-		if !ok {
-			logs.Warnf("biz(%d) not found", item.BkBizID)
-		}
 		extension := item.Extension.GcpRawBillItem
 		if extension == nil {
 			extension = &billapi.GcpRawBillItem{}
@@ -121,8 +119,11 @@ func convertGcpBillItem(kt *kit.Kit, items []*billapi.GcpBillItem, bizNameMap ma
 		table := export.GcpBillItemTable{
 			Site:                       string(mainAccount.Site),
 			AccountDate:                converter.PtrToVal[string](extension.Month),
-			BizID:                      conv.ToString(item.BkBizID),
-			BizName:                    bizName,
+			BGName:                     productMap[item.ProductID].BgName,
+			DeptName:                   productMap[item.ProductID].DeptName,
+			PlProductName:              productMap[item.ProductID].PlProductName,
+			OpProductID:                conv.ToString(item.ProductID),
+			OpProductName:              productMap[item.ProductID].OpProductName,
 			RootAccountName:            rootAccount.Name,
 			MainAccountName:            mainAccount.Name,
 			Region:                     converter.PtrToVal[string](extension.Region),

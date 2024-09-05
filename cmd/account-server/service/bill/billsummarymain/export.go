@@ -66,16 +66,16 @@ func (s *service) ExportMainAccountSummary(cts *rest.Contexts) (interface{}, err
 	}
 
 	mainAccountIDMap := make(map[string]struct{})
-	bizIDMap := make(map[int64]struct{})
+	productIDMap := make(map[int64]struct{})
 	rootAccountIDMap := make(map[string]struct{})
 	for _, detail := range result {
 		mainAccountIDMap[detail.MainAccountID] = struct{}{}
-		bizIDMap[detail.BkBizID] = struct{}{}
+		productIDMap[detail.BkBizID] = struct{}{}
 		rootAccountIDMap[detail.RootAccountID] = struct{}{}
 	}
 	mainAccountIDs := converter.MapKeyToSlice(mainAccountIDMap)
 	rootAccountIDs := converter.MapKeyToSlice(rootAccountIDMap)
-	bizIDs := converter.MapKeyToSlice(bizIDMap)
+	productIDs := converter.MapKeyToSlice(productIDMap)
 
 	mainAccountMap, err := s.listMainAccount(cts.Kit, mainAccountIDs)
 	if err != nil {
@@ -87,9 +87,9 @@ func (s *service) ExportMainAccountSummary(cts *rest.Contexts) (interface{}, err
 		logs.Errorf("list root account error: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	bizMap, err := s.listBiz(cts.Kit, bizIDs)
+	productMap, err := s.listProductName(cts.Kit, productIDs)
 	if err != nil {
-		logs.Errorf("list biz, bizIDs: %v, error: %v, rid: %s", bizIDs, err, cts.Kit.Rid)
+		logs.Errorf("list product, productIDs: %v, error: %s, rid: %s", productIDs, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -109,7 +109,7 @@ func (s *service) ExportMainAccountSummary(cts *rest.Contexts) (interface{}, err
 		return nil, err
 	}
 
-	table, err := toRawData(cts.Kit, result, mainAccountMap, rootAccountMap, bizMap)
+	table, err := toRawData(cts.Kit, result, mainAccountMap, rootAccountMap, productMap)
 	if err != nil {
 		logs.Errorf("convert to raw data error: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -176,7 +176,7 @@ func (s *service) fetchMainAccountSummary(cts *rest.Contexts, req *asbillapi.Mai
 }
 
 func toRawData(kt *kit.Kit, details []*dsbillapi.BillSummaryMain, mainAccountMap map[string]*accountset.BaseMainAccount,
-	rootAccountMap map[string]*accountset.BaseRootAccount, bizMap map[int64]string) ([][]string, error) {
+	rootAccountMap map[string]*accountset.BaseRootAccount, productMap map[int64]string) ([][]string, error) {
 
 	data := make([][]string, 0, len(details))
 	for _, detail := range details {
@@ -189,17 +189,13 @@ func toRawData(kt *kit.Kit, details []*dsbillapi.BillSummaryMain, mainAccountMap
 		if !ok {
 			return nil, fmt.Errorf("root account(%s) not found", detail.RootAccountID)
 		}
-		bizName, ok := bizMap[detail.BkBizID]
-		if !ok {
-			logs.Warnf("biz(%d) not found", detail.BkBizID)
-		}
 		table := export.BillSummaryMainTable{
 			MainAccountID:             mainAccount.CloudID,
 			MainAccountName:           mainAccount.Name,
 			RootAccountID:             rootAccount.CloudID,
 			RootAccountName:           rootAccount.Name,
-			BKBizID:                   conv.ToString(detail.BkBizID),
-			BKBizName:                 bizName,
+			OpProductID:               conv.ToString(detail.ProductID),
+			OpProductName:             productMap[detail.ProductID],
 			CurrentMonthRMBCostSynced: detail.CurrentMonthRMBCostSynced.String(),
 			CurrentMonthCostSynced:    detail.CurrentMonthCostSynced.String(),
 			CurrentMonthRMBCost:       detail.CurrentMonthRMBCost.String(),

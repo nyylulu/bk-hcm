@@ -30,7 +30,7 @@ func init() {
 	var err error
 	BillSummaryRootTableHeader, err = BillSummaryRootTable{}.GetHeaders()
 	if err != nil {
-		logs.Errorf("bill adjustment table header init failed: %v", err)
+		logs.Errorf("bill summary root table header init failed: %v", err)
 	}
 }
 

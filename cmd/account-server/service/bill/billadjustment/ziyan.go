@@ -17,40 +17,32 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package billsummaryproduct
+package billadjustment
 
 import (
-	"net/http"
-
-	"hcm/cmd/account-server/logics/audit"
-	"hcm/cmd/account-server/service/capability"
-	"hcm/pkg/client"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/rest"
+	"hcm/pkg/api/core"
+	"hcm/pkg/kit"
 	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/tools/slice"
 )
 
-// InitService initial the main account service
-func InitService(c *capability.Capability) {
-	svc := &service{
-		client:     c.ApiClient,
-		authorizer: c.Authorizer,
-		audit:      c.Audit,
-		finops:     c.Finops,
+func (s *billAdjustmentSvc) listOpProduct(kt *kit.Kit, ids []int64) (map[int64]finops.OperationProduct, error) {
+	ids = slice.Unique(ids)
+	result := make(map[int64]finops.OperationProduct, len(ids))
+	for _, tmpIds := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		param := &finops.ListOpProductParam{
+			OpProductIds: tmpIds,
+			Page:         *core.NewDefaultBasePage(),
+		}
+
+		productResult, err := s.finops.ListOpProduct(kt, param)
+		if err != nil {
+			return nil, err
+		}
+		for _, product := range productResult.Items {
+			result[product.OpProductId] = product
+		}
 	}
 
-	h := rest.NewHandler()
-
-	// register handler
-	h.Add("ListProductSummary", http.MethodPost, "/bills/product_summarys/list", svc.ListProductSummary)
-	h.Add("ExportProductSummary", http.MethodPost, "/bills/product_summarys/export", svc.ExportProductSummary)
-
-	h.Load(c.WebService)
-}
-
-type service struct {
-	client     *client.ClientSet
-	authorizer auth.Authorizer
-	audit      audit.Interface
-	finops     finops.Client
+	return result, nil
 }
