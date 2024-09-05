@@ -369,12 +369,13 @@ func (s WebServerSetting) Validate() error {
 
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
-	Network     Network   `yaml:"network"`
-	Service     Service   `yaml:"service"`
-	Database    DataBase  `yaml:"database"`
 	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
-	Log         LogOption `yaml:"log"`
-	Async       Async     `yaml:"async"`
+
+	Network  Network   `yaml:"network"`
+	Service  Service   `yaml:"service"`
+	Database DataBase  `yaml:"database"`
+	Log      LogOption `yaml:"log"`
+	Async    Async     `yaml:"async"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -501,16 +502,18 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
+	FinOps       ApiGateway   `yaml:"finops"`
+	Jarvis       Jarvis       `yaml:"jarvis"`
+	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
+	IEGObsOption IEGObsOption `yaml:"obs"`
+
 	Network        Network              `yaml:"network"`
 	Service        Service              `yaml:"service"`
 	Controller     BillControllerOption `yaml:"controller"`
 	Log            LogOption            `yaml:"log"`
 	BillAllocation BillAllocationOption `yaml:"billAllocation"`
-
-	FinOps       ApiGateway   `yaml:"finops"`
-	Jarvis       Jarvis       `yaml:"jarvis"`
-	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
-	IEGObsOption IEGObsOption `yaml:"obs"`
+	Esb            Esb                  `yaml:"esb"`
+	TmpFileDir     string               `yaml:"tmpFileDir"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -520,10 +523,16 @@ func (s *AccountServerSetting) trySetFlagBindIP(ip net.IP) error {
 
 // trySetDefault set the TaskServerSetting default value if user not configured.
 func (s *AccountServerSetting) trySetDefault() {
+
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Controller.trySetDefault()
 	s.Log.trySetDefault()
+	if s.TmpFileDir == "" {
+		s.TmpFileDir = "/tmp"
+	}
+
+	//  内部版配置
 	s.ExchangeRate.trySetDefault()
 }
 
@@ -545,6 +554,7 @@ func (s AccountServerSetting) Validate() error {
 	if err := s.IEGObsOption.validate(); err != nil {
 		return err
 	}
+
 	if err := s.BillAllocation.validate(); err != nil {
 		return err
 	}

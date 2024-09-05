@@ -1,6 +1,6 @@
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import RouteTableSelector from '@/components/route-table-selector/index.vue';
-import ConditionOptions from '../components/common/condition-options.vue';
+import ConditionOptions from '../components/common/condition-options/index.vue';
 import VpcSelector from '@/views/service/service-apply/components/common/vpc-selector';
 import ZoneSelector from '@/components/zone-selector/index.vue';
 import { defineComponent, reactive, ref, watch } from 'vue';
@@ -115,6 +115,7 @@ export default defineComponent({
           handleCancel();
         }
       } catch (error) {
+        console.error(error);
       } finally {
         submitLoading.value = false;
       }

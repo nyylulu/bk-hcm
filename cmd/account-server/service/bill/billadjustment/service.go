@@ -27,15 +27,18 @@ import (
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitBillAdjustmentService 注册账单调调整服务
 func InitBillAdjustmentService(c *capability.Capability) {
 	svc := &billAdjustmentSvc{
+		finops: c.Finops,
+
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
-		finops:     c.Finops,
+		esbClient:  c.EsbClient,
 	}
 
 	h := rest.NewHandler()
@@ -62,8 +65,10 @@ func InitBillAdjustmentService(c *capability.Capability) {
 
 // 账单明细
 type billAdjustmentSvc struct {
+	finops finops.Client
+
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface
-	finops     finops.Client
+	esbClient  esb.Client
 }

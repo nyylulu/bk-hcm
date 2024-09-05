@@ -999,8 +999,12 @@ objectstore:
   bucketRegion: ap-xxx
   isDebug: false
 
+tmpFileDir: /tmp
+
 # ngate回收外网IP的配置
 ngate:
   host: https://1234678.com
   app_code: xxxx
   app_secret: xxxx
+
+

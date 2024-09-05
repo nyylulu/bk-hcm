@@ -29,7 +29,7 @@ const serviceMenus: RouteRecordRaw[] = [
           title: t('单据管理'),
           // breadcrumb: [t('服务'), t('我的申请')],
           isShowBreadcrumb: true,
-          icon: 'hcm-icon bkhcm-icon-ticket',
+          icon: 'hcm-icon bkhcm-icon-my-apply',
         },
       },
       {

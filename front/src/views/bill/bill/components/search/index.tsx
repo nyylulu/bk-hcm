@@ -12,8 +12,9 @@ import { VendorEnum } from '@/common/constant';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
 import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
+import pluginHandler from '@pluginHandler/bill-manage';
 
-interface ISearchModal {
+export interface ISearchModal {
   vendor: VendorEnum[];
   root_account_id: string[];
   main_account_id: string[];
@@ -49,6 +50,9 @@ export default defineComponent({
   setup(props, { emit, expose }) {
     const { t } = useI18n();
     const { OperationProductsSelector } = useOperationProducts();
+
+    const { useSearchCompHandler } = pluginHandler;
+    const { productSearchLabel, renderProductComponent } = useSearchCompHandler();
 
     const getDefaultModal = (): ISearchModal => ({
       vendor: props.vendor,
