@@ -230,7 +230,7 @@ function handleReject(error: any, config: any) {
     } else if (status === 500) {
       nextError.message = '系统出现异常';
       Message({ theme: 'error', message: nextError.message });
-    } else if (data?.message && error.code !== 0 && error.code !== 2000009) {
+    } else if (data?.message && error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) {
       nextError.message = data.message;
       Message({ theme: 'error', message: nextError.message });
     }
@@ -268,7 +268,7 @@ function handleCustomErrorCode(error: any) {
     InvalidLogin();
   }
 
-  if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
+  if (error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) Message({ theme: 'error', message: error.message });
 }
 
 /**

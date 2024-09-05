@@ -1,5 +1,5 @@
 import { defineComponent, computed, watch, ref, nextTick, onMounted } from 'vue';
-import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 
 import { Menu, Navigation, Dropdown, Button, Dialog } from 'bkui-vue';
 import Breadcrumb from './breadcrumb';
@@ -39,6 +39,7 @@ export default defineComponent({
 
     const { t } = useI18n();
     const route = useRoute();
+    const router = useRouter();
     const userStore = useUserStore();
     const accountStore = useAccountStore();
     const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
@@ -346,10 +347,11 @@ export default defineComponent({
             title='结果确认'
             confirmText='查看审批流程'
             onConfirm={() => {
-              const url = '/#/service/my-apply';
+              const url = `/#/business/applications/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
               window.open(url, '_blank');
               accountStore.updateSecurityConfirmMessage('');
             }}
+            onClosed={() => accountStore.updateSecurityConfirmMessage('')}
             isShow={!!accountStore.securityConfirmMessage.length}>
             <span>当前配置已提交，查看审批流程关注进度</span>
           </Dialog>
