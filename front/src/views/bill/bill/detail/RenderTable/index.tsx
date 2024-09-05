@@ -97,7 +97,7 @@ export default defineComponent({
                     onClick={() => importBillDetailDialogRef.value.triggerShow(true)}
                     disabled={disableImport.value}
                     v-bk-tooltips={{
-                      content: t('所有zenlayer账号都处在accounting 核算中的状态，才能进行导入'),
+                      content: t('所有zenlayer账号都处在 accounting 核算中的状态，才能进行导入'),
                       disabled: !disableImport.value,
                     }}>
                     {t('导入')}

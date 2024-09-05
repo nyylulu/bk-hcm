@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/jarvis"
 
 	"github.com/emicklei/go-restful/v3"
@@ -32,10 +33,12 @@ import (
 
 // Capability defines the service's capability
 type Capability struct {
+	Finops finops.Client
+	Jarvis jarvis.Client
+
 	WebService *restful.WebService
 	ApiClient  *client.ClientSet
 	Authorizer auth.Authorizer
 	Audit      audit.Interface
-	Finops     finops.Client
-	Jarvis     jarvis.Client
+	EsbClient  esb.Client
 }
