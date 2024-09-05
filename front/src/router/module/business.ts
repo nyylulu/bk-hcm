@@ -446,7 +446,7 @@ const businesseMenus: RouteRecordRaw[] = [
           activeKey: 'zzkc',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
-          icon: 'hcm-icon bkhcm-icon-host',
+          icon: 'hcm-icon bkhcm-icon-host-inventory',
         },
       },
       {
@@ -536,10 +536,10 @@ const businesseMenus: RouteRecordRaw[] = [
           },
         ],
         meta: {
-          title: t('单据'),
+          title: t('单据管理'),
           activeKey: 'applications',
           isShowBreadcrumb: true,
-          icon: 'hcm-icon bkhcm-icon-operation-record',
+          icon: 'hcm-icon bkhcm-icon-my-apply',
         },
       },
     ],
