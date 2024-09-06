@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form } from 'bkui-vue';
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -10,10 +10,10 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
-import { Spinner, RightShape, DownShape } from 'bkui-vue/lib/icon';
+import { Spinner } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import BcsSelectTips from './bcs-select-tips';
+import NetworkInfoPanel from '../network-info-panel/index.vue';
 
 import apiService from '@/api/scrApi';
 
@@ -266,16 +266,10 @@ export default defineComponent({
       };
     });
 
-    const vpcName = ref('');
-    const subnetName = ref('');
     // 机型列表
     const deviceTypes = ref([]);
     // 镜像列表
     const images = ref([]);
-    // VPC列表
-    const zoneTypes = ref([]);
-    // 子网列表
-    const subnetTypes = ref([]);
 
     // 侧边栏物理机CVM
     const pmForm = ref({
@@ -310,43 +304,18 @@ export default defineComponent({
     // 物理机table
     const physicalTableData = ref([]);
     const resourceFormRules = ref({});
-    // 网络信息开关
-    const NIswitch = ref(true);
     // QCLOUDCVM云地域变化
     const onQcloudRegionChange = () => {
       resourceForm.value.zone = '';
       QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
     };
-    const onVpcNameClear = () => {
-      vpcName.value = '';
-      subnetName.value = '';
-    };
-    const onQcloudVpcChange = (val: any) => {
-      QCLOUDCVMForm.value.spec.subnet = '';
-      const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
-      if (matchingItem) {
-        vpcName.value = matchingItem.vpc_name;
-      }
-      loadSubnets();
-      onQcloudDeviceTypeChange();
-    };
-    const onSubnetNameClear = () => {
-      subnetName.value = '';
-    };
-    const onQcloudSubnetChange = (val: any) => {
-      const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
-      if (matchingItem) {
-        subnetName.value = matchingItem.subnet_name;
-      }
-      onQcloudDeviceTypeChange();
-    };
+
     // QCLOUDCVM可用区变化
     const onQcloudZoneChange = () => {
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.device_type = '';
         loadDeviceTypes();
-        loadSubnets();
       }
     };
     const onQcloudAffinityChange = (val: any) => {
@@ -430,23 +399,7 @@ export default defineComponent({
       const { info } = await apiService.getDeviceTypes(params);
       deviceTypes.value = info || [];
     };
-    // 获取 QCLOUDCVM  VPC列表
-    const loadVpcs = async () => {
-      const { info } = await apiService.getVpcs(resourceForm.value.region);
-      zoneTypes.value = info;
-    };
-    // 获取 QCLOUDCVM子网列表
-    const loadSubnets = async () => {
-      const { vpc } = QCLOUDCVMForm.value.spec;
-      const { region, zone = '' } = resourceForm.value;
-      const { info } = await apiService.getSubnets({
-        region,
-        zone,
-        vpc,
-      });
 
-      subnetTypes.value = info || [];
-    };
     const clonelist = (row: any, resourceType: string) => {
       resourceType === 'QCLOUDCVM'
         ? cloudTableData.value.push(cloneDeep(row))
@@ -592,7 +545,6 @@ export default defineComponent({
       () => resourceForm.value.region,
       () => {
         if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-          loadVpcs();
           loadImages();
         }
       },
@@ -628,7 +580,6 @@ export default defineComponent({
       addResourceRequirements.value = isShow;
       CVMapplication.value = isOneClickApplication.value;
       isOneClickApplication.value = false;
-      NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
@@ -639,8 +590,6 @@ export default defineComponent({
       CVMapplication.value = isShow;
     };
     const emptyForm = () => {
-      vpcName.value = '';
-      subnetName.value = '';
       resourceForm.value = {
         resourceType: 'QCLOUDCVM',
         region: '', // 地域
@@ -757,7 +706,6 @@ export default defineComponent({
       modifyindex.value = 0;
       cvmCapacity.value = [];
       addResourceRequirements.value = false;
-      NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
@@ -1091,116 +1039,22 @@ export default defineComponent({
                   </CommonCard>
 
                   {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                    <>
-                      {NIswitch.value ? (
-                        <>
-                          <CommonCard
-                            class={'mt15'}
-                            title={() => (
-                              <>
-                                <div
-                                  onClick={() => {
-                                    NIswitch.value = false;
-                                  }}>
-                                  <RightShape />
-                                  <span class='commonCard-network-title'>网络信息</span>
-                                  <span class='commonCard-text'>
-                                    {vpcName.value ? (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> VPC </span>: {vpcName.value}
-                                        {QCLOUDCVMForm.value.spec.vpc && `(${QCLOUDCVMForm.value.spec.vpc})`}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> VPC </span> :系统自动分配
-                                      </>
-                                    )}
-                                  </span>
-                                  <span class='commonCard-text'>
-                                    {subnetName.value ? (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> 子网 </span> : {subnetName.value}
-                                        {QCLOUDCVMForm.value.spec.subnet && `(${QCLOUDCVMForm.value.spec.subnet})`}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> 子网 </span> : 系统自动分配
-                                      </>
-                                    )}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                            layout='grid'>
-                            <></>
-                          </CommonCard>
-                        </>
-                      ) : (
-                        <>
-                          <CommonCard
-                            class={'mt15'}
-                            title={() => (
-                              <>
-                                <div
-                                  onClick={() => {
-                                    NIswitch.value = true;
-                                  }}>
-                                  <DownShape />
-                                  <span>网络信息</span>
-                                </div>
-                              </>
-                            )}
-                            layout='grid'>
-                            <div class={'commonCard-layer'}>
-                              <bk-form
-                                class={'form-item-warp'}
-                                model={QCLOUDCVMForm.value.spec}
-                                rules={resourceFormRules.value}
-                                form-type='vertical'>
-                                <bk-form-item label='VPC'>
-                                  <bk-select
-                                    class={'vpcOrSubnet-select'}
-                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                    v-model={QCLOUDCVMForm.value.spec.vpc}
-                                    onChange={onQcloudVpcChange}
-                                    onClear={onVpcNameClear}>
-                                    {zoneTypes.value.map((vpc) => (
-                                      <bk-option
-                                        key={vpc.vpc_id}
-                                        value={vpc.vpc_id}
-                                        label={`${vpc.vpc_id} | ${vpc.vpc_name}`}></bk-option>
-                                    ))}
-                                  </bk-select>
-                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
-                                  {/(BCS|OVERLAY)/.test(vpcName.value) && (
-                                    <BcsSelectTips desc='所选择的VPC为容器网络' />
-                                  )}
-                                </bk-form-item>
-                                <bk-form-item label='子网'>
-                                  <bk-select
-                                    class={'vpcOrSubnet-select'}
-                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                    v-model={QCLOUDCVMForm.value.spec.subnet}
-                                    onChange={onQcloudSubnetChange}
-                                    onClear={onSubnetNameClear}>
-                                    {subnetTypes.value.map((subnet) => (
-                                      <bk-option
-                                        key={subnet.subnet_id}
-                                        value={subnet.subnet_id}
-                                        label={`${subnet.subnet_id} | ${subnet.subnet_name}`}></bk-option>
-                                    ))}
-                                  </bk-select>
-                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
-                                  {/(BCS|OVERLAY)/.test(subnetName.value) && (
-                                    <BcsSelectTips desc='所选择的子网为容器子网' />
-                                  )}
-                                </bk-form-item>
-                              </bk-form>
-                            </div>
-                          </CommonCard>
-                        </>
-                      )}
-                    </>
+                    <Form
+                      model={QCLOUDCVMForm.value.spec}
+                      rules={resourceFormRules.value}
+                      formType='vertical'
+                      class='mt15'>
+                      <NetworkInfoPanel
+                        v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
+                        v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
+                        region={resourceForm.value.region}
+                        zone={resourceForm.value.zone}
+                        disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
+                        disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
+                        onChangeVpc={onQcloudDeviceTypeChange}
+                        onChangeSubnet={onQcloudDeviceTypeChange}
+                      />
+                    </Form>
                   )}
 
                   <CommonCard

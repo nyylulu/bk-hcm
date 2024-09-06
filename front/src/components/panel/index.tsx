@@ -13,7 +13,7 @@ export default defineComponent({
     const renderTitle = computed(() => (typeof props?.title === 'function' ? props.title() : props.title));
     return () => (
       <section class={cssModule.home}>
-        <span class={cssModule.title}>{renderTitle.value}</span>
+        {slots.title ? slots.title() : <span class={cssModule.title}>{renderTitle.value}</span>}
         {slots.default()}
       </section>
     );
