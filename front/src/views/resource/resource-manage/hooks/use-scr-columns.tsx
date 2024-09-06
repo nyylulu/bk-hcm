@@ -918,6 +918,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '回收业务',
       field: 'bk_biz_name',
+      isOnlyShowInResource: true,
     },
     {
       label: '地域',
