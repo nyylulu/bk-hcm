@@ -26,6 +26,7 @@ import (
 	typecore "hcm/pkg/adaptor/types/core"
 	typeclb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/hc-service/sync"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -68,7 +69,7 @@ func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
 		Region: hd.request.Region,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
-			Limit:  typecore.TCloudQueryLimit,
+			Limit:  constant.TCloudLoadBalancerQueryMax,
 		},
 	}
 
@@ -87,7 +88,7 @@ func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
 		cloudIDs = append(cloudIDs, converter.PtrToVal(one.LoadBalancerId))
 	}
 
-	hd.offset += typecore.TCloudQueryLimit
+	hd.offset += uint64(len(lbResult))
 	return cloudIDs, nil
 }
 

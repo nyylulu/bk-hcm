@@ -140,7 +140,7 @@ export default defineComponent({
         id: '-1',
         name: 'ALL',
       });
-    } else if (props.vendor === 'tcloud') {
+    } else if (props.vendor === 'tcloud' || props.vendor === VendorEnum.ZIYAN) {
       protocolList.value.unshift({
         id: 'ALL',
         name: 'ALL',
@@ -335,7 +335,7 @@ export default defineComponent({
                   ) : (
                     ''
                   )}
-                  {props.vendor !== 'tcloud' && props.vendor !== 'aws' ? (
+                  {props.vendor !== 'tcloud' && props.vendor !== 'aws' && props.vendor !== VendorEnum.ZIYAN? (
                     <>
                       <FormItem
                         class='w150'
@@ -588,7 +588,7 @@ export default defineComponent({
         }
         let sourceAddressData: any[] = [];
         let targetAddressData: any[] = [];
-        if (props.vendor === 'tcloud' || props.vendor === 'aws') {
+        if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === VendorEnum.ZIYAN) {
           // 腾讯云、aws不需要优先级和类型
           securityGroupSource.value = [
             ...IP_TYPE_LIST,
@@ -599,7 +599,7 @@ export default defineComponent({
                 name: t('安全组'),
               },
             ],
-            ...(props.vendor === 'tcloud' ? TCLOUD_SOURCE_IP_TYPE_LIST : []),
+            ...([VendorEnum.ZIYAN, VendorEnum.TCLOUD].includes(props.vendor as VendorEnum) ? TCLOUD_SOURCE_IP_TYPE_LIST : []),
           ];
           sourceAddressData = securityGroupSource.value.filter((e: any) => resourceStore.securityRuleDetail[e.id]);
         } else if (props.vendor === 'azure') {

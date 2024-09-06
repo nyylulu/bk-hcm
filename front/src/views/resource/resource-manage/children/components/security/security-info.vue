@@ -10,6 +10,7 @@ import { PropType } from 'vue';
 import { Message } from 'bkui-vue';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { timeFormatter } from '@/common/util';
 
 const props = defineProps({
@@ -35,6 +36,7 @@ const { t } = useI18n();
 const resourceStore = useResourceStore();
 const { getRegionName } = useRegionsStore();
 const { getNameFromBusinessMap } = useBusinessMapStore();
+const { whereAmI } = useWhereAmI();
 
 const settingInfo: any[] = [
   {
@@ -83,7 +85,7 @@ const settingInfo: any[] = [
     prop: 'memo',
     edit: props.vendor !== 'aws',
   },
-];
+].filter(({ prop }) => (whereAmI.value === Senarios.business && !['bk_biz_id'].includes(prop)) || whereAmI.value !== Senarios.business);
 
 if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'huawei') {
   settingInfo.splice(8, 0, {

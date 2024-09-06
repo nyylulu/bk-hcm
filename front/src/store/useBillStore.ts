@@ -115,8 +115,7 @@ export default defineStore('billStore', () => {
     id: string; // 海曼单据编号
     vendor: 'aws' | 'gcp' | 'azure' | 'huawei' | 'zenlayer' | 'kaopu'; // 云厂商
     root_account_id: string; // 一级账号的id
-    // extension?: CompleteExtension; // 扩展信息，根据云厂商传递的参数不一致
-    extension: any;
+    extension?: CompleteExtension; // 扩展信息，根据云厂商传递的参数不一致
   }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/types/complete_main_account`, data);
   };
@@ -132,7 +131,7 @@ export default defineStore('billStore', () => {
     managers?: string[]; // 选填，要变更成为的管理员列表
     bak_managers?: string[]; // 选填，要变更成为的备份负责人列表
     dept_id?: number; // 选填，要变更成为的部门id
-    op_product_id?: number; // 选填，要变更成为的业务ID
+    op_product_id?: number; // 选填，要变更成为的运营产品id
     bk_biz_id?: number; // 选填，要变更成为的业务id
   }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/types/update_main_account`, data);
@@ -156,6 +155,35 @@ export default defineStore('billStore', () => {
     return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/applications/${application_id}`);
   };
 
+  /**
+   * 批量拉取运营产品列表
+   * @param data
+   * @returns
+   */
+  const list_operation_products = (data: {
+    op_product_ids?: number[]; // 运营产品ID列表
+    op_product_name?: string; // 运营产品名称，支持模糊搜索
+    dept_ids?: number[]; // 部门ID列表
+    bg_ids?: number[]; // 事业组ID列表
+    page: {
+      count: boolean; // 是否返回总记录数
+      start: number; // 记录开始位置
+      limit: number; // 每页限制条数，最大500，不能为0
+      sort?: string; // 排序字段
+      order?: 'ASC' | 'DESC'; // 排序顺序
+    };
+  }) => {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/operation_products/list`, data);
+  };
+
+  /**
+   * 获取运营产品详情
+   * @param op_product_id 运营产品ID
+   * @returns
+   */
+  const get_operation_product = (op_product_id: string) => {
+    return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/account/operation_products/${op_product_id}`);
+  };
   /**
    * 批量创建调账明细
    * @param data
@@ -208,6 +236,9 @@ export default defineStore('billStore', () => {
     // 单据
     list_applications,
     get_application,
+    // 运营产品
+    list_operation_products,
+    get_operation_product,
     // 调账
     create_adjustment_items,
     update_adjustment_item,

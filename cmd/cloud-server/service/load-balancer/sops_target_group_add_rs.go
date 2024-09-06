@@ -86,7 +86,9 @@ func (svc *lbSvc) batchAddTargetGroupRS(cts *rest.Contexts, authHandler handler.
 	}
 }
 
-func (svc *lbSvc) buildCreateTCloudTarget(kt *kit.Kit, body json.RawMessage, accountID string, vendor enumor.Vendor) (any, error) {
+func (svc *lbSvc) buildCreateTCloudTarget(kt *kit.Kit, body json.RawMessage, accountID string,
+	vendor enumor.Vendor) (any, error) {
+
 	req := new(cslb.TCloudSopsTargetBatchCreateReq)
 	if err := json.Unmarshal(body, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -152,7 +154,7 @@ func (svc *lbSvc) buildCreateTCloudTarget(kt *kit.Kit, body json.RawMessage, acc
 		logs.Infof("build sops tcloud add target params jsonmarshal success,"+
 			" lbID: %s, lbTgIDs: %v, addTargetJSON: %s, rid: %s",
 			lbID, lbTgIDs, addTargetJSON, kt.Rid)
-		result, err := svc.buildAddTCloudTarget(kt, addTargetJSON, accountID)
+		result, err := svc.buildAddTCloudTarget(kt, addTargetJSON, accountID, enumor.TCloud)
 		if err != nil {
 			return nil, err
 		}
@@ -705,7 +707,8 @@ func (svc *lbSvc) parseTargetGroupIDs(kt *kit.Kit, protocol enumor.ProtocolType,
 		if lblResult == nil {
 			continue
 		}
-		targetGroupResult, err := svc.client.DataService().TCloud.LoadBalancer.GetTargetGroup(kt, ruleItem.TargetGroupID)
+		targetGroupResult, err := svc.client.DataService().TCloud.LoadBalancer.GetTargetGroup(kt,
+			ruleItem.TargetGroupID)
 		if err != nil {
 			logs.Errorf("get target group failed, targetGroupID: %s, err: %v, rid: %s",
 				ruleItem.TargetGroupID, err, kt.Rid)
@@ -725,5 +728,4 @@ func (svc *lbSvc) parseTargetGroupIDs(kt *kit.Kit, protocol enumor.ProtocolType,
 		tgIDs = append(tgIDs, ruleItem.TargetGroupID)
 	}
 	return slice.Unique(tgIDs), nil
-
 }

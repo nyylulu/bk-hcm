@@ -48,6 +48,8 @@ const (
 	// BatchDeleteListenerCloudMaxLimit 公有云上批量删除负载均衡监听器的最大限制数量
 	BatchDeleteListenerCloudMaxLimit = 20
 
+	// BkBizIDMaxLimit 业务ID参数的最大限制数量
+	BkBizIDMaxLimit = uint(3000)
 	// ExcelExportLimit two hundred thousands 二十万
 	ExcelExportLimit = 20_0000
 )

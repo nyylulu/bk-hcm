@@ -22,5 +22,29 @@ package securitygroup
 import "hcm/pkg/rest"
 
 func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
+	h.Add("CreateTCloudZiyanSecurityGroup", "POST",
+		"/vendors/tcloud-ziyan/security_groups/create", svc.CreateTCloudZiyanSecurityGroup)
+	h.Add("DeleteTCloudZiyanSecurityGroup", "DELETE",
+		"/vendors/tcloud-ziyan/security_groups/{id}", svc.DeleteTCloudZiyanSecurityGroup)
+	h.Add("UpdateTCloudZiyanSecurityGroup", "PATCH",
+		"/vendors/tcloud-ziyan/security_groups/{id}", svc.UpdateTCloudZiyanSecurityGroup)
+	h.Add("BatchCreateTCloudZiyanSGRule", "POST",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/create",
+		svc.BatchCreateTCloudZiyanSGRule)
+	h.Add("UpdateTCloudZiyanSGRule", "PUT",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.UpdateTCloudZiyanSGRule)
+	h.Add("DeleteTCloudZiyanSGRule", "DELETE",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.DeleteTCloudZiyanSGRule)
+
+	h.Add("TZiyanSGBatchAssociateCloudCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/cloud_cvms/batch", svc.TZiyanSGBatchAssociateCloudCvm)
+	h.Add("TZiyanSGBatchDisassociateCloudCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/cloud_cvms/batch", svc.TZiyanSGBatchDisassociateCloudCvm)
+
+	h.Add("TCloudZiyanSecurityGroupAssociateLoadBalancer", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/load_balancers", svc.TCloudZiyanSecurityGroupAssociateLoadBalancer)
+	h.Add("TCloudZiyanSecurityGroupDisassociateLoadBalancer", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/load_balancers",
+		svc.TCloudZiyanSecurityGroupDisassociateLoadBalancer)
 
 }

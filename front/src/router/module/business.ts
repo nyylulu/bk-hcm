@@ -1,7 +1,8 @@
 // import { CogShape } from 'bkui-vue/lib/icon';
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
-
+import i18n from '@/language/i18n';
+const { t } = i18n.global;
 const businesseMenus: RouteRecordRaw[] = [
   {
     path: '/business',
@@ -437,6 +438,18 @@ const businesseMenus: RouteRecordRaw[] = [
     path: '/business',
     children: [
       {
+        path: '/business/hostInventory',
+        name: 'hostInventory',
+        component: () => import('@/views/business/host-inventory/index'),
+        meta: {
+          title: t('主机库存'),
+          activeKey: 'zzkc',
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host-inventory',
+        },
+      },
+      {
         path: '/business/record',
         name: 'businessRecord',
         children: [
@@ -466,6 +479,67 @@ const businesseMenus: RouteRecordRaw[] = [
           activeKey: 'businessRecord',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-operation-record',
+        },
+      },
+      {
+        path: '/business/applications',
+        children: [
+          {
+            path: '',
+            name: 'ApplicationsManage',
+            component: () => import('@/views/business/applications/index'),
+          },
+          {
+            path: '/business/applications/detail',
+            name: '申请单据详情',
+            component: () => import('@/views/service/apply-detail/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-application/detail/:id',
+            name: 'HostApplicationsDetail',
+            component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-application/modify',
+            name: 'HostApplicationsModify',
+            component: () => import('@/views/ziyanScr/hostApplication/components/application-modify/index'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-recycle/pre-detail',
+            name: 'HostRecyclePreDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/pre-details'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+          {
+            path: 'host-recycle/doc-detail',
+            name: 'HostRecycleDocDetail',
+            component: () => import('@/views/ziyanScr/host-recycle/bill-detail'),
+            meta: {
+              activeKey: 'applications',
+              notMenu: true,
+            },
+          },
+        ],
+        meta: {
+          title: t('单据管理'),
+          activeKey: 'applications',
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-my-apply',
         },
       },
     ],

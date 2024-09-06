@@ -1,4 +1,5 @@
 declare global {
+  var __IS_INTERNAL__: boolean; // eslint-disable-line
   interface Window {
     PROJECT_CONFIG: {
       [key: string]: any;

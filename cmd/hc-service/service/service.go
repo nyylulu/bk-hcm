@@ -31,6 +31,7 @@ import (
 	cloudadaptor "hcm/cmd/hc-service/logics/cloud-adaptor"
 	ressync "hcm/cmd/hc-service/logics/res-sync"
 	"hcm/cmd/hc-service/service/account"
+	"hcm/cmd/hc-service/service/application"
 	argstpl "hcm/cmd/hc-service/service/argument-template"
 	bwpkg "hcm/cmd/hc-service/service/bandwidth-package"
 	"hcm/cmd/hc-service/service/bill"
@@ -53,10 +54,13 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/handler"
 	"hcm/pkg/logs"
+	"hcm/pkg/metrics"
 	"hcm/pkg/rest"
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/esb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -70,15 +74,18 @@ type Service struct {
 }
 
 // NewService create a service instance.
-func NewService(dis serviced.Discover) (*Service, error) {
+func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	cli, err := restcli.NewClient(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	cliSet := client.NewClientSet(cli, dis)
+	cliSet := client.NewClientSet(cli, sd)
 
 	cloudAdaptor := cloudadaptor.NewCloudAdaptorClient(cliSet.DataService())
+	if err = esb.InitEsbClient(cvt.ValToPtr(cc.HCService().Esb), metrics.Register()); err != nil {
+		return nil, err
+	}
 
 	svr := &Service{
 		clientSet:    cliSet,
@@ -174,6 +181,8 @@ func (s *Service) apiSet() *restful.Container {
 	cert.InitCertService(c)
 	bwpkg.InitBwPkgService(c)
 	mainaccount.InitService(c)
+
+	application.InitApplicationService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

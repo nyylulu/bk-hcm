@@ -80,6 +80,41 @@ func (r CombinedRule) GetDeep() int {
 	return maxChildDeep + 1
 }
 
+// Combined ...
+func Combined(cond Condition, rules ...Rule) CombinedRule {
+	return CombinedRule{
+		Condition: cond,
+		Rules:     rules,
+	}
+}
+
+// Equal ...
+func Equal(field string, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: OperatorEqual,
+		Value:    value,
+	}
+}
+
+// In ...
+func In(field string, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: OperatorIn,
+		Value:    value,
+	}
+}
+
+// Atomic ...
+func Atomic(field string, op Operator, value any) AtomRule {
+	return AtomRule{
+		Field:    field,
+		Operator: op,
+		Value:    value,
+	}
+}
+
 // AtomRule is cmdb atomic query rule.
 type AtomRule struct {
 	Field    string      `json:"field"`
@@ -244,16 +279,41 @@ type Host struct {
 	BkCloudHostStatus CloudHostStatus `json:"bk_cloud_host_status"`
 	BkCloudID         int64           `json:"bk_cloud_id"`
 	// 云上地域，如 "ap-guangzhou"
-	BkCloudRegion   string  `json:"bk_cloud_region"`
-	BkHostInnerIP   string  `json:"bk_host_innerip"`
-	BkHostOuterIP   string  `json:"bk_host_outerip"`
-	BkHostInnerIPv6 string  `json:"bk_host_innerip_v6"`
-	BkHostOuterIPv6 string  `json:"bk_host_outerip_v6"`
-	Operator        string  `json:"operator"`
-	BkBakOperator   string  `json:"bk_bak_operator"`
-	BkHostName      string  `json:"bk_host_name"`
-	BkComment       *string `json:"bk_comment,omitempty"`
+	BkCloudRegion      string  `json:"bk_cloud_region"`
+	BkHostInnerIP      string  `json:"bk_host_innerip"`
+	BkHostOuterIP      string  `json:"bk_host_outerip"`
+	BkHostInnerIPv6    string  `json:"bk_host_innerip_v6"`
+	BkHostOuterIPv6    string  `json:"bk_host_outerip_v6"`
+	Operator           string  `json:"operator"`
+	BkBakOperator      string  `json:"bk_bak_operator"`
+	BkHostName         string  `json:"bk_host_name"`
+	BkComment          *string `json:"bk_comment,omitempty"`
+	BkOSName           string  `json:"bk_os_name"`
+	SvrSourceTypeID    string  `json:"bk_svr_source_type_id"`
+	BkAssetID          string  `json:"bk_asset_id"`
+	SvrDeviceClassName string  `json:"bk_svr_device_cls_name"`
+
+	// 以下字段仅内部版支持，由cc从云梯获取
+	BkCloudZone     string `json:"bk_cloud_zone"`
+	BkCloudVpcID    string `json:"bk_cloud_vpc_id"`
+	BkCloudSubnetID string `json:"bk_cloud_subnet_id"`
 }
+
+// SvrSourceTypeID 服务器来源类型
+type SvrSourceTypeID string
+
+const (
+	// Own 自有, 物理机
+	Own SvrSourceTypeID = "1"
+	// Hosting 托管, 物理机
+	Hosting SvrSourceTypeID = "2"
+	// Rent 租用, 物理机
+	Rent = "3"
+	// CVM 虚拟机
+	CVM = "4"
+	// Container 容器
+	Container = "5"
+)
 
 // HostFields cmdb common fields
 var HostFields = []string{
@@ -269,6 +329,17 @@ var HostFields = []string{
 	"bk_host_innerip_v6",
 	"bk_host_outerip_v6",
 	"bk_cloud_host_status",
+	"bk_host_name",
+	"bk_cloud_id",
+	"bk_os_name",
+	"bk_svr_source_type_id",
+	"bk_asset_id",
+	"bk_svr_device_cls_name",
+
+	// 以下字段仅内部版支持，由cc从云梯获取
+	"bk_cloud_vpc_id",
+	"bk_cloud_subnet_id",
+	"bk_cloud_zone",
 }
 
 type esbFindHostTopoRelationParams struct {
@@ -355,24 +426,28 @@ const (
 	AzureCloudVendor CloudVendor = "4"
 	// HuaWeiCloudVendor cmdb huawei vendor
 	HuaWeiCloudVendor CloudVendor = "15"
+	// TCloudZiyanCloudVendor 腾讯自研云厂商
+	TCloudZiyanCloudVendor CloudVendor = "17"
 )
 
 // HcmCmdbVendorMap is hcm vendor to cmdb cloud vendor map.
 var HcmCmdbVendorMap = map[enumor.Vendor]CloudVendor{
-	enumor.Aws:    AwsCloudVendor,
-	enumor.TCloud: TCloudCloudVendor,
-	enumor.Gcp:    GcpCloudVendor,
-	enumor.Azure:  AzureCloudVendor,
-	enumor.HuaWei: HuaWeiCloudVendor,
+	enumor.Aws:         AwsCloudVendor,
+	enumor.TCloud:      TCloudCloudVendor,
+	enumor.Gcp:         GcpCloudVendor,
+	enumor.Azure:       AzureCloudVendor,
+	enumor.HuaWei:      HuaWeiCloudVendor,
+	enumor.TCloudZiyan: TCloudZiyanCloudVendor,
 }
 
 // CmdbHcmVendorMap cmdb vendor to hcm vendor
 var CmdbHcmVendorMap = map[CloudVendor]enumor.Vendor{
-	AwsCloudVendor:    enumor.Aws,
-	TCloudCloudVendor: enumor.TCloud,
-	GcpCloudVendor:    enumor.Gcp,
-	AzureCloudVendor:  enumor.Azure,
-	HuaWeiCloudVendor: enumor.HuaWei,
+	AwsCloudVendor:         enumor.Aws,
+	TCloudCloudVendor:      enumor.TCloud,
+	GcpCloudVendor:         enumor.Gcp,
+	AzureCloudVendor:       enumor.Azure,
+	HuaWeiCloudVendor:      enumor.HuaWei,
+	TCloudZiyanCloudVendor: enumor.TCloudZiyan,
 }
 
 // CloudHostStatus defines cmdb cloud host status type.
@@ -462,6 +537,42 @@ var HuaWeiCmdbStatusMap = map[string]CloudHostStatus{
 	"SHELVED":           UnknownCloudHostStatus,
 	"SHELVED_OFFLOADED": UnknownCloudHostStatus,
 	"UNKNOWN":           UnknownCloudHostStatus,
+}
+
+// SearchBizBelongingParams is search cmdb business belonging parameter.
+type SearchBizBelongingParams struct {
+	BizIDs   []int64                `json:"bk_biz_ids,omitempty"`
+	BizNames []string               `json:"bk_biz_names,omitempty"`
+	Page     SearchBizBelongingPage `json:"page,omitempty"`
+}
+
+// SearchBizBelongingPage is search cmdb business belonging paging info.
+type SearchBizBelongingPage struct {
+	Limit int `json:"limit"`
+	Start int `json:"start"`
+}
+
+// SearchBizBelongingResult is search cmdb business belonging result.
+type SearchBizBelongingResult struct {
+	Data []SearchBizBelonging `json:"data"`
+}
+
+// SearchBizBelonging is search cmdb business belonging element of result.
+type SearchBizBelonging struct {
+	BizID            int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	BkProductID      int64  `json:"bsi_product_id"`
+	BkProductName    string `json:"bsi_product_name"`
+	PlanProductID    int64  `json:"plan_product_id"`
+	PlanProductName  string `json:"plan_product_name"`
+	BusinessDeptID   int64  `json:"business_dept_id"`
+	BusinessDeptName string `json:"business_dept_name"`
+	Bs1Name          string `json:"bs1_name"`
+	Bs1NameID        int64  `json:"bs1_name_id"`
+	Bs2Name          string `json:"bs2_name"`
+	Bs2NameID        int64  `json:"bs2_name_id"`
+	VirtualDeptID    int64  `json:"virtual_dept_id"`
+	VirtualDeptName  string `json:"virtual_dept_name"`
 }
 
 // EventType is cmdb watch event type.

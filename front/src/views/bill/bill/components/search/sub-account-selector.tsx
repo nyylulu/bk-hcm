@@ -13,6 +13,7 @@ export default defineComponent({
     modelValue: String as PropType<string>,
     vendor: Array as PropType<VendorEnum[]>,
     rootAccountId: Array as PropType<string[]>,
+    productId: Array as PropType<string[]>,
     autoSelect: Boolean,
     // 保存至 url 上的 key
     urlKey: String,
@@ -31,6 +32,8 @@ export default defineComponent({
       if (props.vendor?.length) rules.push({ field: 'vendor', op: QueryRuleOPEnum.IN, value: props.vendor });
       if (props.rootAccountId?.length)
         rules.push({ field: 'parent_account_id', op: QueryRuleOPEnum.IN, value: props.rootAccountId });
+      if (props.productId?.length)
+        rules.push({ field: 'op_product_id', op: QueryRuleOPEnum.IN, value: props.productId });
       return rules;
     });
 

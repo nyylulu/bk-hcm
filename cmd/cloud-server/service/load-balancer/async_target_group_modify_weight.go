@@ -80,14 +80,16 @@ func (svc *lbSvc) batchModifyTargetWeight(cts *rest.Contexts, authHandler handle
 
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
-		return svc.buildModifyTCloudTargetWeight(cts.Kit, req.Data, tgID, baseInfo.AccountID)
+		return svc.buildModifyTCloudTargetWeight(cts.Kit, req.Data, tgID, baseInfo.AccountID, baseInfo.Vendor)
+	case enumor.TCloudZiyan:
+		return svc.buildModifyTCloudTargetWeight(cts.Kit, req.Data, tgID, baseInfo.AccountID, baseInfo.Vendor)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
 	}
 }
 
 func (svc *lbSvc) buildModifyTCloudTargetWeight(kt *kit.Kit, body json.RawMessage,
-	tgID, accountID string) (*core.FlowStateResult, error) {
+	tgID, accountID string, vendor enumor.Vendor) (*core.FlowStateResult, error) {
 
 	req := new(cslb.TCloudBatchModifyTargetWeightReq)
 	if err := json.Unmarshal(body, req); err != nil {
@@ -120,7 +122,7 @@ func (svc *lbSvc) buildModifyTCloudTargetWeight(kt *kit.Kit, body json.RawMessag
 		return &core.FlowStateResult{State: enumor.FlowSuccess}, nil
 	}
 
-	return svc.buildModifyTCloudTargetTasksWeight(kt, req, ruleRelList.Details[0].LbID, tgID, accountID)
+	return svc.buildModifyTCloudTargetTasksWeight(kt, req, ruleRelList.Details[0].LbID, tgID, accountID, vendor)
 }
 
 func (svc *lbSvc) batchUpdateTargetWeightDb(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq) error {
@@ -155,7 +157,7 @@ func (svc *lbSvc) batchUpdateTargetWeightDb(kt *kit.Kit, req *cslb.TCloudBatchMo
 }
 
 func (svc *lbSvc) buildModifyTCloudTargetTasksWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq,
-	lbID, tgID, accountID string) (*core.FlowStateResult, error) {
+	lbID, tgID, accountID string, vendor enumor.Vendor) (*core.FlowStateResult, error) {
 
 	// 预检测
 	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
@@ -165,7 +167,7 @@ func (svc *lbSvc) buildModifyTCloudTargetTasksWeight(kt *kit.Kit, req *cslb.TClo
 	}
 
 	// 创建Flow跟Task的初始化数据
-	flowID, err := svc.initFlowModifyTargetWeight(kt, req, lbID, tgID, accountID)
+	flowID, err := svc.initFlowModifyTargetWeight(kt, req, lbID, tgID, accountID, vendor)
 	if err != nil {
 		logs.Errorf("init flow batch modify target weigh failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -182,7 +184,7 @@ func (svc *lbSvc) buildModifyTCloudTargetTasksWeight(kt *kit.Kit, req *cslb.TClo
 }
 
 func (svc *lbSvc) initFlowModifyTargetWeight(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetWeightReq,
-	lbID, tgID, accountID string) (string, error) {
+	lbID, tgID, accountID string, vendor enumor.Vendor) (string, error) {
 
 	tasks := make([]ts.CustomFlowTask, 0)
 	elems := slice.Split(req.TargetIDs, constant.BatchModifyTargetWeightCloudMaxLimit)

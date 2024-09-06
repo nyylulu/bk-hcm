@@ -79,6 +79,9 @@ func InitSubnetService(cap *capability.Capability) {
 	h.Add("HuaWeiSubnetCountIP", "POST", "/vendors/huawei/subnets/{id}/ips/count", s.HuaWeiSubnetCountIP)
 	h.Add("GcpSubnetCountIP", "POST", "/vendors/gcp/subnets/ips/count/list", s.GcpSubnetCountIP)
 
+	h.Add("TCloudZiyanListSubnetCountIP", "POST",
+		"/vendors/tcloud-ziyan/subnets/ips/count/list", s.TCloudZiyanListSubnetCountIP)
+
 	h.Load(cap.WebService)
 }
 

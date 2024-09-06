@@ -79,7 +79,7 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 		Details: make([]*asbillapi.MainAccountSummaryResult, 0, len(summary.Details)),
 	}
 
-	mainAccountIDs, rootAccountIDs := s.getAccountIds(summary)
+	mainAccountIDs, rootAccountIDs, productIds := s.getAccountIds(summary)
 	mainMap, err := s.listMainAccount(cts.Kit, mainAccountIDs)
 	if err != nil {
 		logs.Errorf("list main account for summary main failed, err: %v, main ids: %v, rid: %s",
@@ -92,7 +92,12 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 			err, rootAccountIDs, cts.Kit.Rid)
 		return nil, err
 	}
-
+	productNameMap, err := s.listProductName(cts.Kit, productIds)
+	if err != nil {
+		logs.Errorf("list product for summary main failed, err: %v, product ids: %v, rid: %s",
+			err, productIds, cts.Kit.Rid)
+		return nil, err
+	}
 	for _, detail := range summary.Details {
 		mainAccount, ok := mainMap[detail.MainAccountID]
 		if !ok {
@@ -104,6 +109,8 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 			return nil, fmt.Errorf("root account: %s(%s) of summary main %s not found",
 				detail.RootAccountID, detail.RootAccountCloudID, detail.ID)
 		}
+		// 补全 product_name
+		detail.ProductName = productNameMap[detail.ProductID]
 		tmp := &asbillapi.MainAccountSummaryResult{
 			BillSummaryMain: detail,
 			MainAccountName: mainAccount.Name,
@@ -116,18 +123,22 @@ func (s *service) ListMainAccountSummary(cts *rest.Contexts) (interface{}, error
 }
 
 func (s *service) getAccountIds(summary *dsbillapi.BillSummaryMainListResult) (
-	mainAccountIDs []string, rootAccountIDs []string) {
+	mainAccountIDs []string, rootAccountIDs []string, productIds []int64) {
 
 	mainAccountIDMap := make(map[string]struct{})
 	rootAccountIDMap := make(map[string]struct{})
+	productIDMap := make(map[int64]struct{}, len(summary.Details))
+
 	for _, detail := range summary.Details {
 		mainAccountIDMap[detail.MainAccountID] = struct{}{}
 		rootAccountIDMap[detail.RootAccountID] = struct{}{}
+		productIDMap[detail.ProductID] = struct{}{}
 	}
 
 	mainAccountIDs = maps.Keys(mainAccountIDMap)
 	rootAccountIDs = maps.Keys(rootAccountIDMap)
-	return mainAccountIDs, rootAccountIDs
+	productIds = maps.Keys(productIDMap)
+	return mainAccountIDs, rootAccountIDs, productIds
 }
 
 func (s *service) listMainAccount(kt *kit.Kit, accountIDs []string) (map[string]*accountset.BaseMainAccount, error) {

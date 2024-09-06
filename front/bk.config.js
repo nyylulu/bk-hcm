@@ -1,3 +1,4 @@
+const webpack = require('webpack')
 const CopyWebpackPlugin = require('copy-webpack-plugin')
 const { resolve } = require('path');
 const replaceStaticUrlPlugin = require('./replace-static-url-plugin')
@@ -54,6 +55,16 @@ module.exports = {
     webpackConfig = _webpackConfig;
     webpackConfig.plugins.push(
       new replaceStaticUrlPlugin(),
+      new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function(resource) {
+        resource.request = resource.request.replace(
+          /\.plugin/,
+          `${env.isInternal ? '-internal.plugin' : '.plugin'}`
+        );
+
+        if (resource.createData) {
+          resource.createData.request = resource.request;
+        }
+      }),
     )
     webpackConfig.plugins.push(
       new CopyWebpackPlugin({
@@ -75,7 +86,7 @@ module.exports = {
         ],
       })
     )
-    
+
     // webpackConfig.externals = {
     //   'axios':'axios',
     //   'dayjs':'dayjs',
@@ -92,7 +103,7 @@ module.exports = {
         '@charts': resolve(__dirname, './src/plugins/charts'),
         '@datasource': resolve(__dirname, './src/plugins/datasource'),
         '@modules': resolve(__dirname, './src/store/modules'),
-        '@pluginHandler': resolve(__dirname, './src/plugin-handler')
+        '@pluginHandler': resolve(__dirname, `./src/plugin-handler${env.isInternal ? '/bcc' : ''}`),
       },
     };
   },

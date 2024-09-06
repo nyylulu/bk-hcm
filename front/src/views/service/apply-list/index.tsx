@@ -9,7 +9,7 @@ import { useRoute, useRouter } from 'vue-router';
 const { TabPanel } = Tab;
 export default defineComponent({
   setup() {
-    const applyType = ref('all');
+    const applyType = ref('account');
     const { columns } = useColumns('myApply');
     const router = useRouter();
     const route = useRoute();
@@ -35,6 +35,7 @@ export default defineComponent({
                     query: {
                       ...route.query,
                       id: data.id,
+                      source: data.source,
                     },
                   });
                 }}>
@@ -47,6 +48,7 @@ export default defineComponent({
       },
       requestOption: {
         type: 'applications',
+        immediate: false,
       },
     });
     watch(
@@ -54,6 +56,7 @@ export default defineComponent({
       () => {
         getListData(applyType.value === 'all' ? [] : computedRules.value, 'applications', true);
       },
+      { immediate: true },
     );
     return () => (
       <div class={'apply-list-wrapper'}>

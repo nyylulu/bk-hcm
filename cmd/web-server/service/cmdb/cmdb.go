@@ -49,6 +49,8 @@ func InitCmdbService(c *capability.Capability) {
 	h.Add("ListBiz", "POST", "/bk_bizs/list", svr.ListBiz)
 	h.Add("ListAuthorizedBiz", "POST", "/authorized/bizs/list", svr.ListAuthorizedBiz)
 	h.Add("ListAuthorizedBizAudit", "POST", "/authorized/audit/bizs/list", svr.ListAuthorizedBizAudit)
+	h.Add("ListAuthorizedBizCvmApply", "POST", "/authorized/cvm/apply/bizs/list", svr.ListAuthorizedBizCvmApply)
+	h.Add("ListAuthorizedBizCvmRecycle", "POST", "/authorized/cvm/recycle/bizs/list", svr.ListAuthorizedBizCvmRecycle)
 	h.Add("ListCloudArea", "POST", "/cloud_areas/list", svr.ListCloudArea)
 	h.Add("ListAllCloudArea", "POST", "/all/cloud_areas/list", svr.ListAllCloudArea)
 	h.Add("GetBizBriefCacheTopo", "GET", "/bizs/{bk_biz_id}/brief/cache/topo", svr.GetBizBriefCacheTopo)
@@ -76,6 +78,16 @@ func (c *cmdbSvc) ListAuthorizedBiz(cts *rest.Contexts) (interface{}, error) {
 // ListAuthorizedBizAudit list authorized biz audit with biz access permission from cmdb
 func (c *cmdbSvc) ListAuthorizedBizAudit(cts *rest.Contexts) (interface{}, error) {
 	return c.listAuthorizedBiz(cts, meta.Audit, meta.Find)
+}
+
+// ListAuthorizedBizCvmApply list authorized biz cvm apply with biz access permission from cmdb
+func (c *cmdbSvc) ListAuthorizedBizCvmApply(cts *rest.Contexts) (any, error) {
+	return c.listAuthorizedBiz(cts, meta.ZiYanResource, meta.Create)
+}
+
+// ListAuthorizedBizCvmRecycle list authorized biz cvm recycle with biz access permission from cmdb
+func (c *cmdbSvc) ListAuthorizedBizCvmRecycle(cts *rest.Contexts) (any, error) {
+	return c.listAuthorizedBiz(cts, meta.ZiYanResource, meta.Recycle)
 }
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb
@@ -121,8 +133,19 @@ func (c *cmdbSvc) listAuthorizedBiz(cts *rest.Contexts, typ meta.ResourceType,
 }
 
 func (c *cmdbSvc) listBiz(kt *kit.Kit, filter *cmdb.QueryFilter) (interface{}, error) {
+	iegRule := &cmdb.AtomRule{
+		Field:    "bk_operate_dept_id",
+		Operator: "equal",
+		Value:    3,
+	}
+
+	newFilter := &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{iegRule}}}
+	if filter != nil {
+		newFilter = &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{filter, iegRule}}}
+	}
+
 	params := &cmdb.SearchBizParams{
-		BizPropertyFilter: filter,
+		BizPropertyFilter: newFilter,
 		Fields:            []string{"bk_biz_id", "bk_biz_name"},
 	}
 	resp, err := c.esbClient.Cmdb().SearchBusiness(kt, params)

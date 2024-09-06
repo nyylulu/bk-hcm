@@ -41,6 +41,8 @@ func InitService(cap *capability.Capability) {
 
 	h.Add("ListBillSummaryBiz", http.MethodGet, "/bills/summarybiz", svc.ListBillSummaryBiz)
 
+	h.Add("ListBillSummaryProduct", http.MethodGet, "/bills/summaryproducts", svc.ListBillSummaryProduct)
+
 	h.Load(cap.WebService)
 }
 

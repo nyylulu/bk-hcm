@@ -154,3 +154,20 @@ type BillSummaryBizResult struct {
 	AdjustmentCost            decimal.Decimal `json:"adjustment_cost" validate:"omitempty"`
 	AdjustmentRMBCost         decimal.Decimal `json:"adjustment_rmb_cost" validate:"omitempty"`
 }
+
+// BillSummaryProductListResult list result
+type BillSummaryProductListResult = core.ListResultT[*BillSummaryProductResult]
+
+// BillSummaryProductResult result
+type BillSummaryProductResult struct {
+	ProductID                 int64           `json:"product_id" validate:"omitempty"`
+	ProductName               string          `json:"product_name" validate:"omitempty"`
+	LastMonthCostSynced       decimal.Decimal `json:"last_month_cost_synced" validate:"omitempty"`
+	LastMonthRMBCostSynced    decimal.Decimal `json:"last_month_rmb_cost_synced" validate:"omitempty"`
+	CurrentMonthCostSynced    decimal.Decimal `json:"current_month_cost_synced" validate:"omitempty"`
+	CurrentMonthRMBCostSynced decimal.Decimal `json:"current_month_rmb_cost_synced" validate:"omitempty"`
+	CurrentMonthCost          decimal.Decimal `json:"current_month_cost" validate:"omitempty"`
+	CurrentMonthRMBCost       decimal.Decimal `json:"current_month_rmb_cost" validate:"omitempty"`
+	AdjustmentCost            decimal.Decimal `json:"adjustment_cost" validate:"omitempty"`
+	AdjustmentRMBCost         decimal.Decimal `json:"adjustment_rmb_cost" validate:"omitempty"`
+}

@@ -89,6 +89,9 @@ func (svc *RegionSvc) ListRegion(cts *rest.Contexts) (interface{}, error) {
 		return svc.client.DataService().Azure.Region.ListRegion(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	case enumor.Gcp:
 		return svc.client.DataService().Gcp.Region.ListRegion(cts.Kit.Ctx, cts.Kit.Header(), listReq)
+	case enumor.TCloudZiyan:
+		return svc.client.DataService().TCloudZiyan.Region.ListRegion(cts.Kit, listReq)
+
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}

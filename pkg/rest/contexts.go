@@ -210,6 +210,7 @@ func (c *Contexts) respEntity(data interface{}) {
 
 	c.resp.AddHeader(restful.HEADER_ContentType, restful.MIME_JSON)
 	resp := &Response{
+		Result:  true,
 		Code:    errf.OK,
 		Message: "",
 		Data:    data,
@@ -255,6 +256,7 @@ func (c *Contexts) respErrorWithEntity(data interface{}, err error) {
 
 	parsedErr := errf.Error(err)
 	resp := &Response{
+		Result:  false,
 		Code:    parsedErr.Code,
 		Message: parsedErr.Message,
 		Data:    data,

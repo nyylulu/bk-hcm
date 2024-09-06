@@ -22,7 +22,8 @@ spec:
     - {{ .Values.cloudserver.log.logDir }}/*
     - {{ .Values.taskserver.log.logDir }}/*
     - {{ .Values.accountserver.log.logDir }}/*
-  {{- end }}
+    - {{ .Values.woaserver.log.logDir }}/*
+{{- end }}
 {{- if .Values.bkLogConfig.std.enabled }}
 ---
 apiVersion: bk.tencent.com/v1alpha1

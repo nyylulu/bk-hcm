@@ -88,6 +88,8 @@ func (svc *argsTplSvc) createArgsTpl(cts *rest.Contexts, authHandler handler.Val
 	switch info.Vendor {
 	case enumor.TCloud:
 		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bkBizID)
+	case enumor.TCloudZiyan:
+		return svc.createTCloudArgumentTemplate(cts.Kit, req.Data, bkBizID)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", info.Vendor)
 	}

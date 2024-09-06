@@ -31,6 +31,8 @@ import (
 	actioneip "hcm/cmd/task-server/logics/action/eip"
 	actionfirewall "hcm/cmd/task-server/logics/action/firewall"
 	actionlb "hcm/cmd/task-server/logics/action/load-balancer"
+	actionobsclean "hcm/cmd/task-server/logics/action/obs/clean"
+	actionobssync "hcm/cmd/task-server/logics/action/obs/sync"
 	actionsg "hcm/cmd/task-server/logics/action/security-group"
 	actionsubnet "hcm/cmd/task-server/logics/action/subnet"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -40,10 +42,12 @@ import (
 )
 
 // Init init action.
-func Init(cli *client.ClientSet, dao dao.Set) {
+func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set) {
 	actcli.SetClientSet(cli)
 	actcli.SetDaoSet(dao)
-
+	if obsDao != nil {
+		actcli.SetObsDaoSet(obsDao)
+	}
 	register()
 }
 
@@ -78,6 +82,8 @@ func register() {
 	action.RegisterAction(actionmainsummary.MainAccountSummaryAction{})
 	action.RegisterAction(actionrootsummary.RootAccountSummaryAction{})
 	action.RegisterAction(actionmonthtask.MonthTaskAction{})
+	action.RegisterAction(actionobssync.SyncAction{})
+	action.RegisterAction(actionobsclean.CleanAction{})
 
 	action.RegisterAction(actionlb.DeleteURLRuleAction{})
 	action.RegisterAction(actionlb.DeleteListenerAction{})

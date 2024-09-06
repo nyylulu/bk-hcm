@@ -30,6 +30,7 @@ import (
 )
 
 // -------------------------- Create --------------------------
+
 // MainAccountExtensionCreateReq main account extension create req.
 type MainAccountExtensionCreateReq interface {
 	AwsMainAccountExtensionCreateReq | GcpMainAccountExtensionCreateReq |
@@ -151,7 +152,8 @@ func (u *MainAccountUpdateReq) Validate() error {
 }
 
 // -------------------------- Get --------------------------
-// MainAccountGetBaseResult
+
+// MainAccountGetBaseResult ...
 type MainAccountGetBaseResult struct {
 	protocore.BaseMainAccount `json:",inline"`
 }
@@ -174,6 +176,9 @@ type MainAccountGetResult[T MainAccountExtensionGetResp] struct {
 	protocore.BaseMainAccount `json:",inline"`
 	Extension                 *T `json:"extension"`
 }
+
+// HuaweiMainAccount ...
+type HuaweiMainAccount = MainAccountGetResult[protocore.HuaWeiMainAccountExtension]
 
 // MainAccountGetResp defines get main account response.
 type MainAccountGetResp[T MainAccountExtensionGetResp] struct {

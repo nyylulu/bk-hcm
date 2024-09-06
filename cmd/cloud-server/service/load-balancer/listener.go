@@ -78,6 +78,9 @@ func (svc *lbSvc) listListener(cts *rest.Contexts, authHandler handler.ListAuthR
 	case enumor.TCloud:
 		lblInfoList, err := svc.getTCloudUrlRuleAndTargetGroupMap(cts.Kit, lbID, req)
 		return &cslb.ListListenerResult{Details: lblInfoList}, err
+	case enumor.TCloudZiyan:
+		lblInfoList, err := svc.getTCloudZiyanUrlRuleAndTargetGroupMap(cts.Kit, lbID, req)
+		return &cslb.ListListenerResult{Details: lblInfoList}, err
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "lbID: %s vendor: %s not support", lbID, basicInfo.Vendor)
 	}
@@ -119,6 +122,69 @@ func (svc *lbSvc) getTCloudUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID string,
 	relMap, err := svc.listTgLblRelMap(kt, lbID, lblIDs)
 	if err != nil {
 		logs.Errorf("fail to list target group  listener rel, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	for _, lblInfo := range lblInfoList {
+		lblID := lblInfo.BaseListener.ID
+		rules := lblRuleMap[lblID]
+		if len(rules) == 0 {
+			continue
+		}
+		if lblInfo.Protocol.IsLayer7Protocol() {
+			// 7层监听器获取url规则数量和域名数量
+			domains := cvt.SliceToMap(rules,
+				func(r corelb.TCloudLbUrlRule) (string, struct{}) { return r.Domain, struct{}{} })
+			lblInfo.DomainNum = int64(len(domains))
+			lblInfo.UrlNum = int64(len(rules))
+		} else {
+			// 4层监听器
+			lblInfo.Scheduler = rules[0].Scheduler
+			lblInfo.SessionType = rules[0].SessionType
+			lblInfo.SessionExpire = rules[0].SessionExpire
+			lblInfo.HealthCheck = rules[0].HealthCheck
+			lblInfo.Certificate = rules[0].Certificate
+			// 获取同步状态和目标组id
+			lblInfo.TargetGroupID = relMap[lblID].TargetGroupID
+			lblInfo.BindingStatus = relMap[lblID].BindingStatus
+		}
+	}
+
+	return lblInfoList, nil
+}
+
+// 返回监听器信息， 域名数量和url数量，绑定目标组同步状态
+func (svc *lbSvc) getTCloudZiyanUrlRuleAndTargetGroupMap(kt *kit.Kit, lbID string,
+	req *core.ListReq) ([]*cslb.ListenerListInfo, error) {
+
+	listenerList, err := svc.client.DataService().TCloudZiyan.LoadBalancer.ListListener(kt, req)
+	if err != nil {
+		logs.Errorf("list listener failed, lbID: %s, err: %v, rid: %s", lbID, err, kt.Rid)
+		return nil, err
+	}
+
+	baseLblList := listenerList.Details
+	lblInfoList := make([]*cslb.ListenerListInfo, 0, len(baseLblList))
+	lblIDs := make([]string, 0)
+	for _, lbl := range baseLblList {
+		lblIDs = append(lblIDs, lbl.ID)
+		lblInfoList = append(lblInfoList, &cslb.ListenerListInfo{
+			BaseListener: *lbl.BaseListener,
+			EndPort:      lbl.Extension.EndPort,
+		})
+	}
+
+	// 2. 拼接规则信息到监听器表中，如果是4层监听器，拼接均衡方式和同步状态，7层监听器拼接域名数量和url数量
+	lblRuleMap, err := svc.listTCloudZiyanRuleMap(kt, lbID, lblIDs)
+	if err != nil {
+		logs.Errorf("fail to list tcloud-ziyan rule map, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	// 3. 根据lbID、lblID获取绑定的目标组ID列表
+	relMap, err := svc.listTgLblRelMap(kt, lbID, lblIDs)
+	if err != nil {
+		logs.Errorf("fail to list tcloud-ziyan target group  listener rel, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -193,6 +259,27 @@ func (svc *lbSvc) listTCloudRuleMap(kt *kit.Kit, lbID string, lblIDs []string) (
 	return lblRuleMap, nil
 }
 
+func (svc *lbSvc) listTCloudZiyanRuleMap(kt *kit.Kit, lbID string, lblIDs []string) (
+	map[string][]corelb.TCloudLbUrlRule, error) {
+
+	urlRuleReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("lb_id", lbID),
+			tools.RuleIn("lbl_id", lblIDs),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+	urlRuleList, err := svc.client.DataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, urlRuleReq)
+	if err != nil {
+		logs.Errorf("list tcloud-ziyan url rule failed, lbID: %s, lblIDs: %v, err: %v, rid: %s", lbID, lblIDs, err,
+			kt.Rid)
+		return nil, err
+	}
+	lblRuleMap := classifier.ClassifySlice(urlRuleList.Details,
+		func(r corelb.TCloudLbUrlRule) string { return r.LblID })
+	return lblRuleMap, nil
+}
+
 func (svc *lbSvc) listListenerMap(kt *kit.Kit, lblIDs []string) (map[string]corelb.BaseListener, error) {
 	if len(lblIDs) == 0 {
 		return nil, nil
@@ -258,6 +345,8 @@ func (svc *lbSvc) getListener(cts *rest.Contexts, validHandler handler.ListAuthR
 	switch basicInfo.Vendor {
 	case enumor.TCloud:
 		return svc.getTCloudListener(cts.Kit, id)
+	case enumor.TCloudZiyan:
+		return svc.getTCloudZiyanListener(cts.Kit, id)
 
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "id: %s vendor: %s not support", id, basicInfo.Vendor)
@@ -272,6 +361,63 @@ func (svc *lbSvc) getTCloudListener(kt *kit.Kit, lblID string) (*cslb.GetTCloudL
 	}
 
 	urlRuleMap, err := svc.listTCloudRuleMap(kt, listenerInfo.LbID, []string{lblID})
+	if err != nil {
+		return nil, err
+	}
+	rules := urlRuleMap[listenerInfo.ID]
+	if len(rules) == 0 {
+		logs.Errorf("fail to find related rule fo lbl(%s),rid: %s", lblID, kt.Rid)
+		return nil, errors.New("related rule not found")
+	}
+	rule := rules[0]
+	targetGroupID := rule.TargetGroupID
+	result := &cslb.GetTCloudListenerDetail{
+		TCloudListener: *listenerInfo,
+		LblID:          listenerInfo.ID,
+		LblName:        listenerInfo.Name,
+		CloudLblID:     listenerInfo.CloudID,
+		TargetGroupID:  targetGroupID,
+		EndPort:        listenerInfo.Extension.EndPort,
+		Scheduler:      rule.Scheduler,
+		SessionType:    rule.SessionType,
+		SessionExpire:  rule.SessionExpire,
+		HealthCheck:    rule.HealthCheck,
+	}
+	if listenerInfo.Protocol.IsLayer7Protocol() {
+		domains := cvt.SliceToMap(rules,
+			func(r corelb.TCloudLbUrlRule) (string, struct{}) { return r.Domain, struct{}{} })
+		result.DomainNum = int64(len(domains))
+		result.UrlNum = int64(len(rules))
+		// 只有SNI开启时，证书才会出现在域名上面，才需要返回Certificate字段
+		if listenerInfo.SniSwitch == enumor.SniTypeOpen {
+			result.Certificate = rule.Certificate
+			result.Extension.Certificate = nil
+		}
+	}
+
+	// 只有4层监听器才显示目标组信息
+	if !listenerInfo.Protocol.IsLayer7Protocol() {
+		tg, err := svc.getTargetGroupByID(kt, targetGroupID)
+		if err != nil {
+			return nil, err
+		}
+		if tg != nil {
+			result.TargetGroupName = tg.Name
+			result.CloudTargetGroupID = tg.CloudID
+		}
+	}
+
+	return result, nil
+}
+
+func (svc *lbSvc) getTCloudZiyanListener(kt *kit.Kit, lblID string) (*cslb.GetTCloudListenerDetail, error) {
+	listenerInfo, err := svc.client.DataService().TCloudZiyan.LoadBalancer.GetListener(kt, lblID)
+	if err != nil {
+		logs.Errorf("get tcloud listener detail failed, lblID: %s, err: %v, rid: %s", lblID, err, kt.Rid)
+		return nil, err
+	}
+
+	urlRuleMap, err := svc.listTCloudZiyanRuleMap(kt, listenerInfo.LbID, []string{lblID})
 	if err != nil {
 		return nil, err
 	}
@@ -374,10 +520,11 @@ func (svc *lbSvc) listListenerCountByLbIDs(cts *rest.Contexts,
 	}
 
 	switch basicInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		resList, err = svc.client.DataService().Global.LoadBalancer.CountLoadBalancerListener(cts.Kit, req)
 		if err != nil {
-			logs.Errorf("tcloud count load balancer listener failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+			logs.Errorf("[%s] count load balancer listener failed, err: %v, req: %+v, rid: %s",
+				basicInfo.Vendor, err, req, cts.Kit.Rid)
 			return nil, err
 		}
 		return resList, nil

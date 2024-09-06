@@ -32,6 +32,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/tools/converter"
 
 	"github.com/TencentBlueKing/gopkg/conv"
@@ -75,7 +76,7 @@ var (
 func (b *billItemSvc) exportHuaweiBillItems(kt *kit.Kit, req *bill.ExportBillItemReq,
 	rate *decimal.Decimal) (any, error) {
 
-	rootAccountMap, mainAccountMap, bizNameMap, err := b.fetchAccountBizInfo(kt, enumor.HuaWei)
+	rootAccountMap, mainAccountMap, productMap, err := b.fetchAccountProductInfo(kt, enumor.HuaWei)
 	if err != nil {
 		logs.Errorf("[exportHuaweiBillItems] prepare related data failed: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -100,7 +101,7 @@ func (b *billItemSvc) exportHuaweiBillItems(kt *kit.Kit, req *bill.ExportBillIte
 		if len(items) == 0 {
 			return nil
 		}
-		table, err := convertHuaweiBillItems(kt, items, bizNameMap, mainAccountMap, rootAccountMap, rate)
+		table, err := convertHuaweiBillItems(kt, items, productMap, mainAccountMap, rootAccountMap, rate)
 		if err != nil {
 			logs.Errorf("[exportHuaweiBillItems] convert to raw data error: %v, rid: %s", err, kt.Rid)
 			return err
@@ -125,7 +126,7 @@ func (b *billItemSvc) exportHuaweiBillItems(kt *kit.Kit, req *bill.ExportBillIte
 	}, nil
 }
 
-func convertHuaweiBillItems(kt *kit.Kit, items []*billapi.HuaweiBillItem, bizNameMap map[int64]string,
+func convertHuaweiBillItems(kt *kit.Kit, items []*billapi.HuaweiBillItem, productMap map[int64]finops.OperationProduct,
 	mainAccountMap map[string]*protocore.BaseMainAccount, rootAccountMap map[string]*protocore.BaseRootAccount,
 	rate *decimal.Decimal) ([][]string, error) {
 
@@ -139,10 +140,6 @@ func convertHuaweiBillItems(kt *kit.Kit, items []*billapi.HuaweiBillItem, bizNam
 		if !ok {
 			return nil, fmt.Errorf("root account(%s) not found", item.RootAccountID)
 		}
-		bizName, ok := bizNameMap[item.BkBizID]
-		if !ok {
-			logs.Warnf("biz(%d) not found", item.BkBizID)
-		}
 
 		extension := item.Extension.ResFeeRecordV2
 		if extension == nil {
@@ -152,8 +149,11 @@ func convertHuaweiBillItems(kt *kit.Kit, items []*billapi.HuaweiBillItem, bizNam
 		var table = export.HuaweiBillItemTable{
 			Site:                 string(mainAccount.Site),
 			AccountDate:          fmt.Sprintf("%d%02d", item.BillYear, item.BillMonth),
-			BizID:                conv.ToString(item.BkBizID),
-			BizName:              bizName,
+			BGName:               productMap[item.ProductID].BgName,
+			DeptName:             productMap[item.ProductID].DeptName,
+			PlProductName:        productMap[item.ProductID].PlProductName,
+			OpProductID:          conv.ToString(item.ProductID),
+			OpProductName:        productMap[item.ProductID].OpProductName,
 			RootAccountName:      rootAccount.Name,
 			MainAccountName:      mainAccount.Name,
 			RegionName:           converter.PtrToVal[string](extension.RegionName), // demo:华东-上海一

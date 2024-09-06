@@ -35,6 +35,8 @@ func InitArgsTplService(cap *capability.Capability) {
 	}
 
 	svc.initTCloudArgsTplService(cap)
+
+	svc.initTCloudZiyanArgsTplService(cap)
 }
 
 type argsTplSvc struct {

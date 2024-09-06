@@ -36,10 +36,13 @@ import (
 	"hcm/cmd/account-server/service/bill/billitem"
 	"hcm/cmd/account-server/service/bill/billsummarybiz"
 	"hcm/cmd/account-server/service/bill/billsummarymain"
+	"hcm/cmd/account-server/service/bill/billsummaryproduct"
 	"hcm/cmd/account-server/service/bill/billsummaryroot"
 	"hcm/cmd/account-server/service/bill/billsyncrecord"
 	exchangerate "hcm/cmd/account-server/service/bill/exchange-rate"
+	savingsplans "hcm/cmd/account-server/service/bill/savings-plans"
 	"hcm/cmd/account-server/service/capability"
+	"hcm/cmd/account-server/service/finops"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
@@ -52,7 +55,10 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/jarvis"
+	"hcm/pkg/thirdparty/obs"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -60,6 +66,13 @@ import (
 
 // Service do all the account server's work
 type Service struct {
+	obsController          *bill.SyncController
+	exchangeRateController *bill.ExchangeRateController
+	// finOps  Finops client
+	finOps pkgfinops.Client
+	// jarvis api
+	jarvis jarvis.Client
+
 	clientSet   *client.ClientSet
 	serve       *http.Server
 	authorizer  auth.Authorizer
@@ -96,6 +109,12 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		return nil, err
 	}
 
+	jarvisCfg := cc.AccountServer().Jarvis
+	jarvisCli, err := jarvis.NewJarvis(&jarvisCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
 	// 创建ESB Client
 	esbConfig := cc.AccountServer().Esb
 	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
@@ -113,8 +132,53 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		CurrentMainControllers: make(map[string]*bill.MainAccountController),
 		CurrentRootControllers: make(map[string]*bill.RootAccountController),
 	}
+	obsCfg := cc.AccountServer().IEGObsOption
+	obsCli, err := obs.NewIEGObs(&obsCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
+	// start ob manager
+	newObsControllerOption := &bill.SyncControllerOption{
+		Sd:     sd,
+		Client: apiClientSet,
+		Obs:    obsCli,
+	}
+	newObsController, err := bill.NewSyncController(newObsControllerOption)
+	if err != nil {
+		return nil, err
+	}
+
+	exchangeRate := cc.AccountServer().ExchangeRate
+	var rateCtrl *bill.ExchangeRateController
+	if exchangeRate.EnablePull {
+		rateOpt := &bill.ExchangeRateOpt{
+			FromCurrencyCodes: exchangeRate.FromCurrency,
+			ToCurrencyCodes:   exchangeRate.ToCurrency,
+			Jarvis:            jarvisCli,
+			DataCli:           apiClientSet.DataService(),
+			LoopInterval:      time.Duration(exchangeRate.PullIntervalMin) * time.Minute,
+			Sd:                sd,
+		}
+		var err error
+		rateCtrl, err = bill.NewExchangeRateController(rateOpt)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	finOpsCfg := cc.AccountServer().FinOps
+	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
 
 	svr := &Service{
+		obsController:          newObsController,
+		finOps:                 finOpsCli,
+		jarvis:                 jarvisCli,
+		exchangeRateController: rateCtrl,
+
 		clientSet:   apiClientSet,
 		authorizer:  authorizer,
 		audit:       logicaudit.NewAudit(apiClientSet.DataService()),
@@ -156,8 +220,16 @@ func (s *Service) ListenAndServeRest() error {
 		server.TLSConfig = tlsC
 	}
 
+	if s.exchangeRateController != nil {
+		logs.Infof("start exchange rate controller")
+		go s.exchangeRateController.Run()
+	}
+
 	logs.Infof("start bill manager")
 	go s.billManager.Run(context.Background())
+
+	logs.Infof("start sync controller")
+	go s.obsController.Run()
 
 	logs.Infof("listen restful server on %s with secure(%v) now.", server.Addr, network.TLS.Enable())
 
@@ -197,6 +269,9 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	c := &capability.Capability{
+		Finops: s.finOps,
+		Jarvis: s.jarvis,
+
 		WebService: ws,
 		ApiClient:  s.clientSet,
 		Authorizer: s.authorizer,
@@ -208,11 +283,15 @@ func (s *Service) apiSet() *restful.Container {
 	rootaccount.InitService(c)
 	billsummaryroot.InitService(c)
 	billsummarymain.InitService(c)
+	billsummaryproduct.InitService(c)
 	billitem.InitBillItemService(c)
 	billsummarybiz.InitService(c)
 	billadjustment.InitBillAdjustmentService(c)
 	billsyncrecord.InitService(c)
 	exchangerate.InitService(c)
+	savingsplans.InitService(c)
+
+	finops.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

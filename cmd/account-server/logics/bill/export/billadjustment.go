@@ -39,8 +39,8 @@ type BillAdjustmentTable struct {
 	UpdateTime string `header:"更新时间"`
 	BillID     string `header:"调账ID"`
 
-	BKBizID   string `header:"业务"`
-	BKBizName string `header:"业务名称"`
+	OpProductID   string `header:"运营产品ID"`
+	OpProductName string `header:"运营产品"`
 
 	MainAccountName string `header:"二级账号名称"`
 	AdjustType      string `header:"调账类型"`

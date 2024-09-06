@@ -58,22 +58,22 @@ export const searchData = [
 ];
 
 export const APPLY_TYPES = [
-  {
-    label: '全部',
-    name: 'all',
-    rules: [],
-  },
-  {
-    label: '云主机',
-    name: 'cloudMachines',
-    rules: [
-      {
-        field: 'type',
-        op: QueryRuleOPEnum.IN,
-        value: ['create_cvm'],
-      },
-    ],
-  },
+  // {
+  //   label: '全部',
+  //   name: 'all',
+  //   rules: [],
+  // },
+  // {
+  //   label: '云主机',
+  //   name: 'cloudMachines',
+  //   rules: [
+  //     {
+  //       field: 'type',
+  //       op: QueryRuleOPEnum.IN,
+  //       value: ['create_cvm'],
+  //     },
+  //   ],
+  // },
   {
     label: '账号',
     name: 'account',
@@ -85,57 +85,70 @@ export const APPLY_TYPES = [
       },
     ],
   },
-  {
-    label: '硬盘',
-    name: 'disk',
-    rules: [
-      {
-        field: 'type',
-        op: QueryRuleOPEnum.IN,
-        value: ['create_disk'],
-      },
-    ],
-  },
-  {
-    label: 'VPC',
-    name: 'vpc',
-    rules: [
-      {
-        field: 'type',
-        op: QueryRuleOPEnum.IN,
-        value: ['create_disk'],
-      },
-    ],
-  },
-  {
-    label: '安全组',
-    name: 'securityGroup',
-    rules: [
-      {
-        field: 'type',
-        op: QueryRuleOPEnum.IN,
-        value: [
-          'create_security_group',
-          'update_security_group',
-          'delete_security_group',
-          'associate_security_group',
-          'disassociate_security_group',
-          'create_security_group_rule',
-          'update_security_group_rule',
-          'delete_security_group_rule',
-        ],
-      },
-    ],
-  },
-  {
-    label: '负载均衡',
-    name: 'loadBalancer',
-    rules: [
-      {
-        field: 'type',
-        op: QueryRuleOPEnum.IN,
-        value: ['create_load_balancer'],
-      },
-    ],
-  },
+  // {
+  //   label: '硬盘',
+  //   name: 'disk',
+  //   rules: [
+  //     {
+  //       field: 'type',
+  //       op: QueryRuleOPEnum.IN,
+  //       value: ['create_disk'],
+  //     },
+  //   ],
+  // },
+  // {
+  //   label: 'VPC',
+  //   name: 'vpc',
+  //   rules: [
+  //     {
+  //       field: 'type',
+  //       op: QueryRuleOPEnum.IN,
+  //       value: ['create_disk'],
+  //     },
+  //   ],
+  // },
+  // {
+  //   label: '安全组',
+  //   name: 'securityGroup',
+  //   rules: [
+  //     {
+  //       field: 'type',
+  //       op: QueryRuleOPEnum.IN,
+  //       value: [
+  //         'create_security_group',
+  //         'update_security_group',
+  //         'delete_security_group',
+  //         'associate_security_group',
+  //         'disassociate_security_group',
+  //         'create_security_group_rule',
+  //         'update_security_group_rule',
+  //         'delete_security_group_rule',
+  //       ],
+  //     },
+  //   ],
+  // },
+  // {
+  //   label: '负载均衡',
+  //   name: 'loadBalancer',
+  //   rules: [
+  //     {
+  //       field: 'type',
+  //       op: QueryRuleOPEnum.IN,
+  //       value: ['create_load_balancer'],
+  //     },
+  //   ],
+  // },
+];
+
+// bpass单据
+export const BPASS_TYPES = ['bpass'];
+
+// 常规单据
+export const COMMON_TYPES = [
+  'add_account',
+  'service_apply',
+  'create_cvm',
+  'create_disk',
+  'create_vpc',
+  'create_load_balancer',
 ];

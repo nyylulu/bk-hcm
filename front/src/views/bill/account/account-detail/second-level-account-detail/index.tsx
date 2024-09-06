@@ -5,6 +5,7 @@ import useBillStore, { IMainAccountDetail } from '@/store/useBillStore';
 import { Message, Button } from 'bkui-vue';
 import { BILL_VENDORS_MAP } from '../../account-manage/constants';
 import { SITE_TYPE_MAP } from '@/common/constant';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { timeFormatter } from '@/common/util';
 import { useVerify } from '@/hooks';
 import PermissionDialog from '@/components/permission-dialog';
@@ -35,10 +36,13 @@ export default defineComponent({
       const { data } = await billStore.main_account_detail(props.accountId);
       detail.value = data;
     };
+    const translatorMap = ref(new Map());
+    const { getTranslatorMap } = useOperationProducts();
     watch(
       () => props.accountId,
       async () => {
         await getDetail();
+        translatorMap.value = await getTranslatorMap([detail.value.op_product_id]);
       },
       {
         immediate: true,
@@ -94,7 +98,8 @@ export default defineComponent({
             { prop: 'bak_managers', name: '备份负责人', edit: true, type: 'member' },
             {
               prop: 'op_product_id',
-              name: '业务',
+              name: '运营产品',
+              render: () => translatorMap.value.get(detail.value.op_product_id) || '--',
             },
             { prop: 'memo', name: '备注', edit: true },
             { prop: 'creator', name: '创建者' },

@@ -46,5 +46,7 @@ data:
       {{- toYaml .Values.itsm | nindent 6 }}    
     cmsi:
       {{- toYaml .Values.cmsi | nindent 6 }}
+    finops:
+      {{- toYaml .Values.finops | nindent 6 }}
     cloudSelection:
       {{- toYaml .Values.cloudserver.cloudSelection | nindent 6 }}

@@ -58,6 +58,9 @@ func (svc *cvmSvc) BatchUpdateCvm(cts *rest.Contexts) (interface{}, error) {
 		return batchUpdateCvm[corecvm.AzureCvmExtension](cts, svc, vendor)
 	case enumor.Gcp:
 		return batchUpdateCvm[corecvm.GcpCvmExtension](cts, svc, vendor)
+	case enumor.TCloudZiyan:
+		return batchUpdateCvm[corecvm.TCloudZiyanHostExtension](cts, svc, vendor)
+
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}
@@ -92,16 +95,21 @@ func batchUpdateCvm[T corecvm.Extension](cts *rest.Contexts, svc *cvmSvc, vendor
 				Name:                 one.Name,
 				BkBizID:              one.BkBizID,
 				BkCloudID:            one.BkCloudID,
+				Region:               one.Region,
+				Zone:                 one.Zone,
 				CloudVpcIDs:          one.CloudVpcIDs,
 				CloudSubnetIDs:       one.CloudSubnetIDs,
 				CloudImageID:         one.CloudImageID,
 				ImageID:              one.ImageID,
+				OsName:               one.OsName,
 				Memo:                 one.Memo,
 				Status:               one.Status,
 				PrivateIPv4Addresses: one.PrivateIPv4Addresses,
 				PrivateIPv6Addresses: one.PrivateIPv6Addresses,
 				PublicIPv4Addresses:  one.PublicIPv4Addresses,
 				PublicIPv6Addresses:  one.PublicIPv6Addresses,
+				MachineType:          one.MachineType,
+				CloudCreatedTime:     one.CloudCreatedTime,
 				CloudLaunchedTime:    one.CloudLaunchedTime,
 				CloudExpiredTime:     one.CloudExpiredTime,
 				Reviser:              cts.Kit.User,

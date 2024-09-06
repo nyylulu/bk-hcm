@@ -1,0 +1,327 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package config
+
+import (
+	"context"
+
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	types "hcm/cmd/woa-server/types/config"
+)
+
+type model struct {
+	requirement    Requirement
+	region         Region
+	zone           Zone
+	vpc            Vpc
+	subnet         Subnet
+	idcZone        IdcZone
+	deviceRestrict DeviceRestrict
+	cvmImage       CvmImage
+	cvmDevice      CvmDevice
+	dvmDevice      DvmDevice
+	pmDevice       PmDevice
+}
+
+// Requirement get requirement operation interface
+func (m *model) Requirement() Requirement {
+	return m.requirement
+}
+
+// Region get region operation interface
+func (m *model) Region() Region {
+	return m.region
+}
+
+// Zone get qcloud zone operation interface
+func (m *model) Zone() Zone {
+	return m.zone
+}
+
+// Vpc get vpc operation interface
+func (m *model) Vpc() Vpc {
+	return m.vpc
+}
+
+// Subnet get subnet operation interface
+func (m *model) Subnet() Subnet {
+	return m.subnet
+}
+
+// IdcZone get idc zone operation interface
+func (m *model) IdcZone() IdcZone {
+	return m.idcZone
+}
+
+// DeviceRestrict get device restrict operation interface
+func (m *model) DeviceRestrict() DeviceRestrict {
+	return m.deviceRestrict
+}
+
+// CvmImage get cvm image operation interface
+func (m *model) CvmImage() CvmImage {
+	return m.cvmImage
+}
+
+// CvmDevice get cvm device operation interface
+func (m *model) CvmDevice() CvmDevice {
+	return m.cvmDevice
+}
+
+// DvmDevice get dvm device operation interface
+func (m *model) DvmDevice() DvmDevice {
+	return m.dvmDevice
+}
+
+// PmDevice get physical machine device operation interface
+func (m *model) PmDevice() PmDevice {
+	return m.pmDevice
+}
+
+var operation *model
+
+func init() {
+	operation = &model{
+		requirement:    &requirement{},
+		region:         &region{},
+		zone:           &zone{},
+		vpc:            &vpc{},
+		subnet:         &subnet{},
+		idcZone:        &idcZone{},
+		deviceRestrict: &deviceRestrict{},
+		cvmImage:       &cvmImage{},
+		cvmDevice:      &cvmDevice{},
+		dvmDevice:      &dvmDevice{},
+		pmDevice:       &pmDevice{},
+	}
+}
+
+// Operation return all model operation interface
+func Operation() *model {
+	return operation
+}
+
+// Model provides storage interface for operations of models
+type Model interface {
+	Requirement() Requirement
+	Region() Region
+	Zone() Zone
+	Vpc() Vpc
+	Subnet() Subnet
+	IdcZone() IdcZone
+	DeviceRestrict() DeviceRestrict
+	CvmImage() CvmImage
+	CvmDevice() CvmDevice
+	DvmDevice() DvmDevice
+	PmDevice() PmDevice
+}
+
+// Requirement requirement operation interface
+type Requirement interface {
+	// NextSequence returns next resource requirement type config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateRequirement creates resource requirement type config in db
+	CreateRequirement(ctx context.Context, inst *types.Requirement) error
+	// GetRequirement gets resource requirement type config by filter from db
+	GetRequirement(ctx context.Context, filter *mapstr.MapStr) (*types.Requirement, error)
+	// FindManyRequirement gets resource requirement type config list by filter from db
+	FindManyRequirement(ctx context.Context, filter *mapstr.MapStr) ([]*types.Requirement, error)
+	// UpdateRequirement updates resource requirement type config by filter and doc in db
+	UpdateRequirement(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteRequirement deletes resource requirement type config from db
+	DeleteRequirement(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// Region qcloud region operation interface
+type Region interface {
+	// NextSequence returns next region config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateRegion creates region config in db
+	CreateRegion(ctx context.Context, inst *types.Region) error
+	// GetRegion gets resource region config by filter from db
+	GetRegion(ctx context.Context, filter *mapstr.MapStr) (*types.Region, error)
+	// FindManyRegion gets region config list by filter from db
+	FindManyRegion(ctx context.Context, filter *mapstr.MapStr) ([]*types.Region, error)
+	// UpdateRegion updates region config by filter and doc in db
+	UpdateRegion(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteRegion deletes region config from db
+	DeleteRegion(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// Zone qcloud zone operation interface
+type Zone interface {
+	// NextSequence returns next zone config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateZone creates zone config in db
+	CreateZone(ctx context.Context, inst *types.Zone) error
+	// GetZone gets resource zone config by filter from db
+	GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.Zone, error)
+	// FindManyZone gets zone config list by filter from db
+	FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*types.Zone, error)
+	// UpdateZone updates zone config by filter and doc in db
+	UpdateZone(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteZone deletes zone config from db
+	DeleteZone(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// Vpc vpc operation interface
+type Vpc interface {
+	// NextSequence returns next vpc config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateVpc creates vpc config in db
+	CreateVpc(ctx context.Context, inst *types.Vpc) error
+	// GetVpc gets vpc config by filter from db
+	GetVpc(ctx context.Context, filter *mapstr.MapStr) (*types.Vpc, error)
+	// CountVpc gets vpc count by filter from db
+	CountVpc(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	// FindManyVpc gets vpc config list by filter from db
+	FindManyVpc(ctx context.Context, filter *mapstr.MapStr) ([]*types.Vpc, error)
+	// FindManyVpcId gets vpc id list by filter from db
+	FindManyVpcId(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateVpc updates vpc config by filter and doc in db
+	UpdateVpc(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteVpc deletes vpc config from db
+	DeleteVpc(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// Subnet subnet operation interface
+type Subnet interface {
+	// NextSequence returns next subnet config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateSubnet creates subnet config in db
+	CreateSubnet(ctx context.Context, inst *types.Subnet) error
+	// GetSubnet gets subnet config by filter from db
+	GetSubnet(ctx context.Context, filter *mapstr.MapStr) (*types.Subnet, error)
+	// CountSubnet gets subnet count by filter from db
+	CountSubnet(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	// FindManySubnet gets subnet config list by filter from db
+	FindManySubnet(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*types.Subnet, error)
+	// UpdateSubnet updates subnet config by filter and doc in db
+	UpdateSubnet(ctx context.Context, filter, doc map[string]interface{}) error
+	// DeleteSubnet deletes subnet config from db
+	DeleteSubnet(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// IdcZone idc zone operation interface
+type IdcZone interface {
+	// NextSequence returns next zone config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateZone creates zone config in db
+	CreateZone(ctx context.Context, inst *types.IdcZone) error
+	// GetZone gets resource zone config by filter from db
+	GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.IdcZone, error)
+	// FindManyZone gets zone config list by filter from db
+	FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*types.IdcZone, error)
+	// GetRegionList gets region list by filter from db
+	GetRegionList(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateZone updates zone config by filter and doc in db
+	UpdateZone(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteZone deletes zone config from db
+	DeleteZone(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// DeviceRestrict device restrict operation interface
+type DeviceRestrict interface {
+	// NextSequence returns next device restrict config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateDeviceRestrict creates device restrict config in db
+	CreateDeviceRestrict(ctx context.Context, inst *types.DeviceRestrict) error
+	// GetDeviceRestrict gets resource device restrict config by filter from db
+	GetDeviceRestrict(ctx context.Context, filter *mapstr.MapStr) (*types.DeviceRestrict, error)
+	// FindManyDeviceRestrict gets device restrict list by filter from db
+	FindManyDeviceRestrict(ctx context.Context, filter *mapstr.MapStr) ([]*types.DeviceRestrict, error)
+	// UpdateDeviceRestrict updates device restrict config by filter and doc in db
+	UpdateDeviceRestrict(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteDeviceRestrict deletes device restrict config from db
+	DeleteDeviceRestrict(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// CvmImage cvm image operation interface
+type CvmImage interface {
+	// NextSequence returns next cvm image config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateCvmImage creates cvm image config in db
+	CreateCvmImage(ctx context.Context, inst *types.CvmImage) error
+	// GetCvmImage gets cvm image config by filter from db
+	GetCvmImage(ctx context.Context, filter *mapstr.MapStr) (*types.CvmImage, error)
+	// FindManyCvmImage gets cvm image config list by filter from db
+	FindManyCvmImage(ctx context.Context, filter *mapstr.MapStr) ([]*types.CvmImage, error)
+	// UpdateCvmImage updates cvm image config by filter and doc in db
+	UpdateCvmImage(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteCvmImage deletes cvm image config from db
+	DeleteCvmImage(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// CvmDevice cvm device operation interface
+type CvmDevice interface {
+	// NextSequence returns next device config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateDevice creates device config in db
+	CreateDevice(ctx context.Context, inst *types.DeviceInfo) error
+	// GetDevice gets device config by filter from db
+	GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types.DeviceInfo, error)
+	// CountDevice gets resource device count by filter from db
+	CountDevice(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	// FindManyDevice gets device list by filter from db
+	FindManyDevice(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*types.DeviceInfo,
+		error)
+	// FindManyDeviceType gets resource device type config list by filter from db
+	FindManyDeviceType(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateDevice updates device config by filter and doc in db
+	UpdateDevice(ctx context.Context, filter, doc map[string]interface{}) error
+	// DeleteDevice deletes device config from db
+	DeleteDevice(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// DvmDevice dvm device operation interface
+type DvmDevice interface {
+	// NextSequence returns next device config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateDevice creates device config in db
+	CreateDevice(ctx context.Context, inst *types.DvmDeviceInfo) error
+	// GetDevice gets device config by filter from db
+	GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types.DvmDeviceInfo, error)
+	// CountDevice gets resource device count by filter from db
+	CountDevice(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	// FindManyDevice gets device list by filter from db
+	FindManyDevice(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*types.DvmDeviceInfo,
+		error)
+	// FindManyDeviceType gets resource device type config list by filter from db
+	FindManyDeviceType(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateDevice updates device config by filter and doc in db
+	UpdateDevice(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteDevice deletes device config from db
+	DeleteDevice(ctx context.Context, filter *mapstr.MapStr) error
+}
+
+// PmDevice physical machine device operation interface
+type PmDevice interface {
+	// NextSequence returns next device config sequence id from db
+	NextSequence(ctx context.Context) (uint64, error)
+	// CreateDevice creates device config in db
+	CreateDevice(ctx context.Context, inst *types.PmDeviceInfo) error
+	// GetDevice gets device config by filter from db
+	GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types.PmDeviceInfo, error)
+	// CountDevice gets resource device count by filter from db
+	CountDevice(ctx context.Context, filter map[string]interface{}) (uint64, error)
+	// FindManyDevice gets device list by filter from db
+	FindManyDevice(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) ([]*types.PmDeviceInfo,
+		error)
+	// FindManyDeviceType gets resource device type config list by filter from db
+	FindManyDeviceType(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateDevice updates device config by filter and doc in db
+	UpdateDevice(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
+	// DeleteDevice deletes device config from db
+	DeleteDevice(ctx context.Context, filter *mapstr.MapStr) error
+}

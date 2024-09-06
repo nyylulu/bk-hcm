@@ -32,6 +32,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 
 	"github.com/TencentBlueKing/gopkg/conv"
 	"github.com/shopspring/decimal"
@@ -40,7 +41,7 @@ import (
 func (b *billItemSvc) exportAwsBillItems(kt *kit.Kit, req *bill.ExportBillItemReq,
 	rate *decimal.Decimal) (any, error) {
 
-	rootAccountMap, mainAccountMap, bizNameMap, err := b.fetchAccountBizInfo(kt, enumor.Aws)
+	rootAccountMap, mainAccountMap, productMap, err := b.fetchAccountProductInfo(kt, enumor.Aws)
 	if err != nil {
 		logs.Errorf("[exportAwsBillItems] fetch account and biz info failed: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -66,7 +67,7 @@ func (b *billItemSvc) exportAwsBillItems(kt *kit.Kit, req *bill.ExportBillItemRe
 		if len(items) == 0 {
 			return nil
 		}
-		table, err := convertAwsBillItems(kt, items, bizNameMap, mainAccountMap, rootAccountMap, rate)
+		table, err := convertAwsBillItems(kt, items, productMap, mainAccountMap, rootAccountMap, rate)
 		if err != nil {
 			logs.Errorf("[exportAwsBillItems] convert to raw data error: %v, rid: %s", err, kt.Rid)
 			return err
@@ -92,7 +93,7 @@ func (b *billItemSvc) exportAwsBillItems(kt *kit.Kit, req *bill.ExportBillItemRe
 	}, nil
 }
 
-func convertAwsBillItems(kt *kit.Kit, items []*billapi.AwsBillItem, bizNameMap map[int64]string,
+func convertAwsBillItems(kt *kit.Kit, items []*billapi.AwsBillItem, productMap map[int64]finops.OperationProduct,
 	mainAccountMap map[string]*protocore.BaseMainAccount, rootAccountMap map[string]*protocore.BaseRootAccount,
 	rate *decimal.Decimal) ([][]string, error) {
 
@@ -106,10 +107,6 @@ func convertAwsBillItems(kt *kit.Kit, items []*billapi.AwsBillItem, bizNameMap m
 		if !ok {
 			return nil, fmt.Errorf("root account(%s) not found", item.RootAccountID)
 		}
-		bizName, ok := bizNameMap[item.BkBizID]
-		if !ok {
-			logs.Warnf("biz(%d) not found", item.BkBizID)
-		}
 
 		extension := item.Extension.AwsRawBillItem
 		if extension == nil {
@@ -119,8 +116,11 @@ func convertAwsBillItems(kt *kit.Kit, items []*billapi.AwsBillItem, bizNameMap m
 		table := &export.AwsBillItemTable{
 			Site:                string(mainAccount.Site),
 			AccountDate:         fmt.Sprintf("%d-%02d", item.BillYear, item.BillMonth),
-			BizID:               conv.ToString(item.BkBizID),
-			BizName:             bizName,
+			BGName:              productMap[item.ProductID].BgName,
+			DeptName:            productMap[item.ProductID].DeptName,
+			PlProductName:       productMap[item.ProductID].PlProductName,
+			OpProductID:         conv.ToString(item.ProductID),
+			OpProductName:       productMap[item.ProductID].OpProductName,
 			RootAccountName:     rootAccount.Name,
 			MainAccountName:     mainAccount.Name,
 			Region:              extension.ProductToRegionCode,

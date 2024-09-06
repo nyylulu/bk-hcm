@@ -36,6 +36,7 @@ type BaseResp struct {
 
 // Response is a http standard response
 type Response struct {
+	Result      bool                `json:"result"` // 由于itsm要求接口的返回值需要带result字段，所以这里进行补充
 	Code        int32               `json:"code"`
 	Message     string              `json:"message"`
 	Permissions *meta.IamPermission `json:"permission,omitempty"`

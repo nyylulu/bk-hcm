@@ -10,6 +10,7 @@ export enum VendorEnum {
   GCP = 'gcp',
   HUAWEI = 'huawei',
   ZENLAYER = 'zenlayer',
+  ZIYAN = 'tcloud-ziyan',
   KAOPU = 'kaopu',
 }
 
@@ -90,6 +91,10 @@ export const VENDORS = [
   {
     id: 'huawei',
     name: '华为云',
+  },
+  {
+    id: 'tcloud-ziyan',
+    name: '自研云',
   },
 ];
 
@@ -529,6 +534,7 @@ export const VendorMap = {
   [VendorEnum.GCP]: '谷歌云',
   [VendorEnum.HUAWEI]: '华为云',
   [VendorEnum.TCLOUD]: '腾讯云',
+  [VendorEnum.ZIYAN]: '自研云',
   [VendorEnum.ZENLAYER]: 'Zenlayer',
   [VendorEnum.KAOPU]: '靠谱云',
 };
@@ -585,4 +591,8 @@ export const CLB_BINDING_STATUS = {
   binding: '绑定中',
   success: '已绑定',
   failed: '未绑定',
+};
+export const CLOUD_CVM_DISKTYPE = {
+  SSD: 'CLOUD_SSD',
+  PREMIUM: 'CLOUD_PREMIUM',
 };

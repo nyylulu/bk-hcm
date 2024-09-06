@@ -133,23 +133,24 @@ func (t Table) InsertValidate() error {
 		return errors.New("cloud_id is required")
 	}
 
-	if len(t.Region) == 0 {
+	// todo 目前自研云主机创建时从cc获取，不一定会有下面字段，待后续能拿到时候，再去掉t.Vendor != enumor.TCloudZiyan的判断逻辑
+	if len(t.Region) == 0 && t.Vendor != enumor.TCloudZiyan {
 		return errors.New("region is required")
 	}
 
-	if len(t.CloudVpcIDs) == 0 {
+	if len(t.CloudVpcIDs) == 0 && t.Vendor != enumor.TCloudZiyan {
 		return errors.New("cloud_vpc_id is required")
 	}
 
-	if len(t.CloudSubnetIDs) == 0 {
+	if len(t.CloudSubnetIDs) == 0 && t.Vendor != enumor.TCloudZiyan {
 		return errors.New("cloud_subnet_id is required")
 	}
 
-	if len(t.VpcIDs) == 0 {
+	if len(t.VpcIDs) == 0 && t.Vendor != enumor.TCloudZiyan {
 		return errors.New("vpc_id is required")
 	}
 
-	if len(t.SubnetIDs) == 0 {
+	if len(t.SubnetIDs) == 0 && t.Vendor != enumor.TCloudZiyan {
 		return errors.New("subnet_id is required")
 	}
 

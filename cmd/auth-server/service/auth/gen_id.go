@@ -328,6 +328,22 @@ func genResourceAuditResource(a *meta.ResourceAttribute) (client.ActionID, []cli
 	}
 }
 
+// genResPlanResource generate resource audit log related iam resource.
+func genResPlanResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	res := client.Resource{
+		System: sys.SystemIDCMDB,
+		Type:   sys.Biz,
+		ID:     strconv.FormatInt(a.BizID, 10),
+	}
+
+	switch a.Basic.Action {
+	case meta.Create, meta.Update, meta.Delete:
+		return sys.BizResPlanOperate, []client.Resource{res}, nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}
+
 func genCvmResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
 	res := client.Resource{
 		System: sys.SystemIDHCM,
@@ -709,6 +725,30 @@ func genRootAccountRuleResource(a *meta.ResourceAttribute) (client.ActionID, []c
 	}
 }
 
+// genZiYanResource 自研云资源-业务鉴权
+func genZiYanResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	res := client.Resource{
+		System: sys.SystemIDCMDB,
+		Type:   sys.Biz,
+	}
+
+	// compatible for authorize any
+	if a.BizID > 0 {
+		res.ID = strconv.FormatInt(a.BizID, 10)
+	}
+
+	switch a.Basic.Action {
+	case meta.Find:
+		return sys.BizAccess, []client.Resource{res}, nil
+	case meta.Create: // 主机申领-业务粒度
+		return sys.ZiyanResCreate, []client.Resource{res}, nil
+	case meta.Recycle: // 主机回收-业务粒度
+		return sys.ZiyanResRecycle, []client.Resource{res}, nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}
+
 // 生成账单账号权限映射
 func genAccountBillResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
 	switch a.Basic.Action {
@@ -732,6 +772,15 @@ func genAccountBillThirdPartyResource(a *meta.ResourceAttribute) (client.ActionI
 		}
 		res.ID = a.ResourceID
 		return sys.AccountBillPull, []client.Resource{res}, nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}
+
+func genAwsSavingsPlansCostResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	switch a.Basic.Action {
+	case meta.Find:
+		return sys.AwsSavingsPlansCostQuery, make([]client.Resource, 0), nil
 	default:
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}

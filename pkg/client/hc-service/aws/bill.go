@@ -23,6 +23,7 @@ import (
 	"context"
 	"net/http"
 
+	"hcm/pkg/adaptor/types/bill"
 	"hcm/pkg/api/core"
 	hcbill "hcm/pkg/api/hc-service/bill"
 	"hcm/pkg/client/common"
@@ -127,5 +128,14 @@ func (v *BillClient) GetRootAccountSpTotalUsage(kt *kit.Kit, req *hcbill.AwsRoot
 
 	return common.Request[hcbill.AwsRootSpUsageTotalReq, hcbill.AwsSpUsageTotalResult](
 		v.client, rest.GET, kt, req, "/root_account_bills/sp_usage_total")
+
+}
+
+// QuerySavingsPlanCostList query saving plans list
+func (v *BillClient) QuerySavingsPlanCostList(kt *kit.Kit,
+	req *hcbill.QueryAwsSavingsPlanCostReq) (*bill.AwsSavingsPlansCostListResult, error) {
+
+	return common.Request[hcbill.QueryAwsSavingsPlanCostReq, bill.AwsSavingsPlansCostListResult](
+		v.client, rest.POST, kt, req, "/savings_plans/cost/query")
 
 }

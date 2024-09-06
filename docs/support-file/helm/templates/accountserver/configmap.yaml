@@ -23,6 +23,14 @@ data:
       {{- toYaml .Values.accountserver.controller | nindent 6 }}
     billAllocation:
       {{- toYaml .Values.accountserver.billAllocation | nindent 6 }}
+    jarvis:
+      {{- toYaml .Values.accountserver.jarvis | nindent 6 }}
+    exchangeRate:
+      {{- toYaml .Values.accountserver.exchangeRate | nindent 6 }}
+    obs:
+      {{- toYaml .Values.accountserver.obs | nindent 6 }}
+    finops:
+      {{- toYaml .Values.finops | nindent 6 }}
     cmsi:
       {{- toYaml .Values.cmsi | nindent 6 }}
     tmpFileDir: {{ .Values.tmpFileDir }}

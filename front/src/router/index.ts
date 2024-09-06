@@ -9,6 +9,7 @@ import common from './module/common';
 import workbench from './module/workbench';
 import resource from './module/resource';
 import resourceInside from './module/resource-inside';
+import resourcePlan from './module/resource-plan';
 import service from './module/service';
 import serviceInside from './module/service-inside';
 import business from './module/business';
@@ -20,12 +21,12 @@ import { useVerify } from '@/hooks';
 import { isArray, isRegExp, isString } from 'lodash';
 
 const { t } = i18n.global;
-
 const routes: RouteRecordRaw[] = [
   ...common,
   ...workbench,
   ...resource,
   ...resourceInside,
+  ...resourcePlan,
   ...service,
   ...serviceInside,
   ...business,
@@ -96,11 +97,6 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     if (isArray(path)) return path.includes(to.path);
     if (isRegExp(path)) return path.test(to.path);
   });
-
-  // if (to.path === '/service/my-approval') {
-  //   window.open(`${BK_ITSM_URL}/#/workbench/ticket/approval`);
-  //   window.location.reload();
-  // }
   if (from.path === '/') {
     // 刷新或者首次进入请求权限接口
     const { getAuthVerifyData } = useVerify(); // 权限中心权限

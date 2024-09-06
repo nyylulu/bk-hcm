@@ -79,23 +79,20 @@ export default defineComponent({
             idx: 0,
             range: IP_RANGES[VendorEnum.GCP],
           };
-          subCIDR.value = IP_RANGES[VendorEnum.GCP][0];
+          [subCIDR.value] = IP_RANGES[VendorEnum.GCP];
         }
       },
       {
         immediate: true,
-      }
-    )
-
-    watch(
-      [() => resourceAccountStore.resourceAccount.id, whereAmI.value, ],
-      () => {
-        if (whereAmI.value === Senarios.resource) {
-          curIpRef.value?.reset();
-          subIpRef.value?.reset();
-        }
-      }
+      },
     );
+
+    watch([() => resourceAccountStore.resourceAccount.id, whereAmI.value], () => {
+      if (whereAmI.value === Senarios.resource) {
+        curIpRef.value?.reset();
+        subIpRef.value?.reset();
+      }
+    });
 
     const submitDisabled = computed(() => isEmptyCond.value);
 

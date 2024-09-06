@@ -357,41 +357,55 @@ const groupColumns = [
             },
           },
           [
-            h(
-              Button,
-              {
-                text: true,
-                disabled:
-                  !props.authVerifyData?.permissionAction[
-                    props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate'
-                  ] ||
-                  (data.bk_biz_id !== -1 && props.isResourcePage),
-                theme: 'primary',
-                onClick() {
-                  const routeInfo: any = {
-                    query: {
-                      activeTab: 'rule',
-                      id: data.id,
-                      vendor: data.vendor,
-                    },
-                  };
-                  // 业务下
-                  if (route.path.includes('business')) {
-                    Object.assign(routeInfo, {
-                      name: 'securityBusinessDetail',
-                    });
-                  } else {
-                    Object.assign(routeInfo, {
-                      name: 'resourceDetail',
-                      params: {
-                        type: 'security',
+            withDirectives(
+              h(
+                Button,
+                {
+                  text: true,
+                  disabled:
+                    !props.authVerifyData?.permissionAction[
+                      props.isResourcePage ? 'iaas_resource_operate' : 'biz_iaas_resource_operate'
+                    ] ||
+                    (data.bk_biz_id !== -1 && props.isResourcePage) ||
+                    (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  theme: 'primary',
+                  onClick() {
+                    const routeInfo: any = {
+                      query: {
+                        ...route.query,
+                        activeTab: 'rule',
+                        id: data.id,
+                        vendor: data.vendor,
                       },
-                    });
-                  }
-                  router.push(routeInfo);
+                    };
+                    // 业务下
+                    if (route.path.includes('business')) {
+                      Object.assign(routeInfo, {
+                        name: 'securityBusinessDetail',
+                      });
+                    } else {
+                      Object.assign(routeInfo, {
+                        name: 'resourceDetail',
+                        params: {
+                          type: 'security',
+                        },
+                      });
+                    }
+                    router.push(routeInfo);
+                  },
                 },
-              },
-              [t('配置规则')],
+                [t('配置规则')],
+              ),
+              [
+                [
+                  bkTooltips,
+                  {
+                    content: '自研云安全组只允许业务下操作',
+                    theme: 'light',
+                    disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  },
+                ],
+              ],
             ),
           ],
         ),
@@ -403,29 +417,46 @@ const groupColumns = [
             },
           },
           [
-            h(
-              Button,
-              {
-                class: 'ml10',
-                disabled:
-                  !props.authVerifyData?.permissionAction[
-                    props.isResourcePage ? 'iaas_resource_delete' : 'biz_iaas_resource_delete'
-                  ] ||
-                  (data.bk_biz_id !== -1 && props.isResourcePage),
-                text: true,
-                theme: 'primary',
-                onClick() {
-                  securityHandleShowDelete(data);
+            withDirectives(
+              h(
+                Button,
+                {
+                  class: 'ml10',
+                  disabled:
+                    !props.authVerifyData?.permissionAction[
+                      props.isResourcePage ? 'iaas_resource_delete' : 'biz_iaas_resource_delete'
+                    ] ||
+                    (data.bk_biz_id !== -1 && props.isResourcePage) ||
+                    (whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  text: true,
+                  theme: 'primary',
+                  onClick() {
+                    securityHandleShowDelete(data);
+                  },
                 },
-              },
-              [t('删除')],
+                [t('删除')],
+              ),
+              [
+                [
+                  bkTooltips,
+                  {
+                    content: '自研云安全组只允许业务下操作',
+                    theme: 'light',
+                    disabled: !(whereAmI.value === Senarios.resource && [VendorEnum.ZIYAN].includes(data.vendor)),
+                  },
+                ],
+              ],
             ),
           ],
         ),
       ]);
     },
   },
-];
+].filter(
+  ({ field }) =>
+    (whereAmI.value === Senarios.business && !['bk_biz_id2', 'bk_biz_id'].includes(field)) ||
+    whereAmI.value !== Senarios.business,
+);
 
 const groupSettings = generateColumnsSettings(groupColumns);
 
@@ -766,6 +797,7 @@ const templateColumns = [
                 bk_biz_id: data.bk_biz_id,
                 id: data.id,
                 account_id: data.account_id,
+                vendor: data.vendor,
               });
             },
           },
@@ -786,10 +818,15 @@ const templateColumns = [
       ]);
     },
   },
-].filter(
-  ({ field }) =>
-    (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource,
-);
+]
+  .filter(
+    ({ field }) =>
+      (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource,
+  )
+  .filter(
+    ({ field }) =>
+      (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business,
+  );
 
 const templateSettings = generateColumnsSettings(templateColumns);
 
@@ -799,8 +836,11 @@ const isAllVendor = computed(() => {
 const isGcpVendor = computed(() => {
   return [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.GCP);
 });
-const isTcloudVendor = computed(() => {
-  return [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.TCLOUD);
+const isTcloudOrZiyanVendor = computed(() => {
+  return (
+    [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.TCLOUD) ||
+    [currentVendor.value, currentAccountVendor.value].includes(VendorEnum.ZIYAN)
+  );
 });
 const types = computed(() => {
   const securityType = { name: 'group', label: t('安全组') };
@@ -812,7 +852,7 @@ const types = computed(() => {
   if (isGcpVendor.value) {
     return [gcpType];
   }
-  if (isTcloudVendor.value) {
+  if (isTcloudOrZiyanVendor.value) {
     return [securityType, templateType];
   }
   return [securityType];

@@ -12,7 +12,6 @@ import BillsExportButton from '../components/bills-export-button';
 
 import { useI18n } from 'vue-i18n';
 import { cloneDeep } from 'lodash';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { deleteBillsAdjustment, exportBillsAdjustmentItems, reqBillsAdjustmentList } from '@/api/bill';
@@ -32,7 +31,6 @@ export default defineComponent({
     const { t } = useI18n();
     const bill_year = inject<Ref<number>>('bill_year');
     const bill_month = inject<Ref<number>>('bill_month');
-    const businessMapStore = useBusinessMapStore();
     const billStore = useBillStore();
     const amountRef = ref();
 
@@ -72,9 +70,8 @@ export default defineComponent({
         field: 'id',
       },
       {
-        label: t('业务名称'),
-        field: 'product_id',
-        render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
+        label: t('运营产品'),
+        field: 'product_name',
       },
       {
         label: t('二级账号名称'),
@@ -223,7 +220,9 @@ export default defineComponent({
                     <Plus style={{ fontSize: '22px' }} />
                     {t('新增调账')}
                   </Button>
-                  <Button>{t('导入')}</Button>
+                  <Button disabled v-bk-tooltips={{ content: t('该功能暂不支持') }}>
+                    {t('导入')}
+                  </Button>
                   <BillsExportButton
                     cb={() =>
                       exportBillsAdjustmentItems({

@@ -1,7 +1,7 @@
 import { defineComponent, computed, watch, ref, nextTick, onMounted } from 'vue';
-import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 
-import { Menu, Navigation, Dropdown, Button } from 'bkui-vue';
+import { Menu, Navigation, Dropdown, Button, Dialog } from 'bkui-vue';
 import Breadcrumb from './breadcrumb';
 import BusinessSelector from './business-selector';
 import NoPermission from '@/views/resource/NoPermission';
@@ -27,9 +27,6 @@ import './index.scss';
 import GlobalPermissionDialog from '@/components/global-permission-dialog';
 
 const { ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } = window.PROJECT_CONFIG;
-// import { CogShape } from 'bkui-vue/lib/icon';
-// import { useProjectList } from '@/hooks';
-// import AddProjectDialog from '@/components/AddProjectDialog';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { VERSION } = window.PROJECT_CONFIG;
@@ -42,9 +39,10 @@ export default defineComponent({
 
     const { t } = useI18n();
     const route = useRoute();
+    const router = useRouter();
     const userStore = useUserStore();
     const accountStore = useAccountStore();
-    const { fetchBusinessMap } = useBusinessMapStore();
+    const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
     const { fetchAllCloudAreas } = useCloudAreaStore();
     const { fetchRegions } = useRegionsStore();
     const { whereAmI } = useWhereAmI();
@@ -111,6 +109,7 @@ export default defineComponent({
       fetchRegions(VendorEnum.HUAWEI);
       fetchBusinessMap();
       fetchAllCloudAreas();
+      fetchAuthedBusinessList();
     });
 
     watch(
@@ -145,7 +144,6 @@ export default defineComponent({
 
     return () => (
       <main class='flex-column full-page home-page'>
-        {/* <Header></Header> */}
         <div class='flex-1'>
           {
             <Navigation
@@ -344,6 +342,19 @@ export default defineComponent({
             </Navigation>
           }
           <GlobalPermissionDialog />
+
+          <Dialog
+            title='结果确认'
+            confirmText='查看审批流程'
+            onConfirm={() => {
+              const url = `/#/business/applications/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
+              window.open(url, '_blank');
+              accountStore.updateSecurityConfirmMessage('');
+            }}
+            onClosed={() => accountStore.updateSecurityConfirmMessage('')}
+            isShow={!!accountStore.securityConfirmMessage.length}>
+            <span>当前配置已提交，查看审批流程关注进度</span>
+          </Dialog>
         </div>
       </main>
     );

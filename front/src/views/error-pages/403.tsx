@@ -76,12 +76,36 @@ export default defineComponent({
       window.open(authUrl.value);
     };
 
+    // scr权限申请说明
+    const renderScrApplyTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('当前无"业务-主机库存"的权限。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return <p class='mt5 sub-describe'>{t('当前无"服务请求-机房裁撤"的权限。')}</p>;
+      }
+    };
+
+    // scr功能说明
+    const renderScrFunctionTips = () => {
+      switch (urlKey.value) {
+        case 'biz_ziyan_resource_inventory':
+          return <p class='mt5 sub-describe'>{t('查询主机的库存信息。')}</p>;
+        case 'biz_ziyan_resource_dissolve':
+          return (
+            <p class='mt5 sub-describe'>{t('机房裁撤，一般是由业务运维、SRE等角色管理，一般用户无需申请该功能。')}</p>
+          );
+      }
+    };
+
     return {
       handlePermissionJump,
       authUrl,
       urlLoading,
       urlKey,
       t,
+      renderScrApplyTips,
+      renderScrFunctionTips,
     };
   },
 
@@ -122,7 +146,7 @@ export default defineComponent({
                 {this.t('该功能下的资源，由业务自行维护，IaaS资源的创建，一般是由业务运维、SRE等操作')}
               </p>
               <p class='mt5 sub-describe'>
-                {this.t('如果您需要在业务下维护云资源，可以申请业务-IaaS资源下对应业务的权限')}
+                {this.t('如果您需要在业务下维护云资源，可以申请"业务访问"下对应业务的权限')}
               </p>
             </>
           )}
@@ -161,6 +185,7 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrApplyTips()}
 
           <h2 class='mt20'>功能说明：</h2>
           {this.urlKey === 'main_account_find' && (
@@ -239,6 +264,7 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.renderScrFunctionTips()}
         </div>
         <div class='btn-warp'>
           <Button class='mt20' theme='primary' loading={this.urlLoading} onClick={this.handlePermissionJump}>

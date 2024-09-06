@@ -1,0 +1,568 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2022 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+// Package returner implements device returner
+// which deals with resource return tasks.
+package returner
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"time"
+
+	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/cmd/woa-server/dal/task/dao"
+	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
+	daltypes "hcm/cmd/woa-server/storage/dal/types"
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/cmd/woa-server/thirdparty/erpapi"
+	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
+)
+
+// Returner deal with device return tasks
+type Returner struct {
+	esb esb.Client
+	cvm cvmapi.CVMClientInterface
+	erp erpapi.ErpClientInterface
+	ctx context.Context
+}
+
+// New creates a returner
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Returner, error) {
+	returner := &Returner{
+		esb: esbCli,
+		cvm: thirdCli.CVM,
+		erp: thirdCli.Erp,
+		ctx: ctx,
+	}
+
+	return returner, nil
+}
+
+// DealRecycleOrder deals with recycle order by running returning tasks
+func (r *Returner) DealRecycleOrder(order *table.RecycleOrder) *event.Event {
+	task, err := r.initReturnTask(order)
+	if err != nil {
+		logs.Errorf("failed to init return task for order %s, err: %v", order.SuborderID, err)
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	return r.dealReturnTask(task)
+}
+
+func (r *Returner) getRecycleHosts(orderId string) ([]*table.RecycleHost, error) {
+	filter := map[string]interface{}{
+		"suborder_id": orderId,
+	}
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: common.BKMaxInstanceLimit,
+	}
+
+	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle hosts, err: %v", err)
+		return nil, err
+	}
+
+	return insts, nil
+}
+
+func (r *Returner) initReturnTask(order *table.RecycleOrder) (*table.ReturnTask, error) {
+	filter := &mapstr.MapStr{
+		"suborder_id": order.SuborderID,
+	}
+
+	task, err := dao.Set().ReturnTask().GetReturnTask(context.Background(), filter)
+	if err == daltypes.ErrDocumentNotFound {
+		now := time.Now()
+		newTask := &table.ReturnTask{
+			OrderID:      order.OrderID,
+			SuborderID:   order.SuborderID,
+			ResourceType: order.ResourceType,
+			RecycleType:  order.RecycleType,
+			ReturnPlan:   order.ReturnPlan,
+			SkipConfirm:  order.SkipConfirm,
+			Status:       table.ReturnStatusInit,
+			TaskID:       "",
+			TaskLink:     "",
+			CreateAt:     now,
+			UpdateAt:     now,
+		}
+
+		if err = dao.Set().ReturnTask().CreateReturnTask(context.Background(), newTask); err != nil {
+			logs.Errorf("failed to create return task for order %s, err: %v", order.SuborderID, err)
+			return nil, err
+		}
+
+		return newTask, nil
+	}
+
+	return task, err
+}
+
+func (r *Returner) dealReturnTask(task *table.ReturnTask) *event.Event {
+	// get hosts by order id
+	hosts, err := r.getRecycleHosts(task.SuborderID)
+	if err != nil {
+		logs.Errorf("failed to get recycle hosts by order id: %d, err: %v", task.SuborderID, err)
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:dealReturnTask:start, task: %+v", cvt.PtrToVal(task))
+
+	switch task.Status {
+	case table.ReturnStatusInit:
+		return r.returnHosts(task, hosts)
+	case table.ReturnStatusRunning:
+		return r.queryReturnStatus(task, hosts)
+	case table.ReturnStatusSuccess:
+		ev := &event.Event{Type: event.ReturnSuccess, Error: nil}
+		return ev
+	case table.ReturnStatusFailed:
+		ev := &event.Event{
+			Type:  event.ReturnFailed,
+			Error: fmt.Errorf("return task is already failed, need not deal again"),
+		}
+		return ev
+	default:
+		logs.Warnf("failed to deal return task for order %s, for unknown status %s", task.SuborderID, task.Status)
+		ev := &event.Event{
+			Type: event.ReturnFailed,
+			Error: fmt.Errorf("failed to deal return task for order %s, for unknown status %s", task.SuborderID,
+				task.Status),
+		}
+		return ev
+	}
+}
+
+func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+	taskId := ""
+	var err error
+	switch task.ResourceType {
+	case table.ResourceTypeCvm:
+		// gap is the gap time between transit and return.
+		// sleep at lease 5 minutes before create cvm return order,
+		// to wait for YUNTI plan product information syncing.
+		// otherwise, return cost may belong to the wrong plan product.
+		gap := task.CreateAt.Add(time.Minute * 5).Sub(time.Now())
+		if gap > 0 {
+			time.Sleep(gap)
+		}
+
+		taskId, err = r.returnCvm(task, hosts)
+	case table.ResourceTypePm:
+		taskId, err = r.returnPm(task, hosts)
+	default:
+		err = fmt.Errorf("failed to return hosts, for unsupported resource type %s", task.ResourceType)
+	}
+
+	if err == nil && taskId == "" {
+		err = fmt.Errorf("failed to return hosts, for return order id is empty")
+	}
+
+	// update order info
+	if err != nil {
+		if errUpdate := r.updateOrderInfo(task.SuborderID, "dommyzhang;forestchen", 0, uint(len(hosts)), 0,
+			err.Error()); errUpdate != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
+				task.SuborderID, errUpdate)
+			return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
+		}
+
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	if errUpdate := r.updateOrderInfo(task.SuborderID, "AUTO", 0, 0, uint(len(hosts)), ""); errUpdate != nil {
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
+			task.SuborderID, errUpdate)
+		return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
+	}
+
+	// update return task info
+	if err := r.updateTaskInfo(task, taskId, table.ReturnStatusRunning, ""); err != nil {
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, order id: %s, err: %v",
+			task.SuborderID, err)
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	// update recycle host info
+	if err := r.updateHostInfo(task, taskId); err != nil {
+		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, order id: %s, err: %v",
+			task.SuborderID, err)
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	return &event.Event{Type: event.ReturnHandling, Error: nil}
+}
+
+func (r *Returner) queryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+	if task.TaskID == "" {
+		ev := &event.Event{
+			Type:  event.ReturnFailed,
+			Error: fmt.Errorf("failed to query return order, for order id is empty"),
+		}
+		return ev
+	}
+
+	// query timeout 2 weeks
+	timeout := task.CreateAt.AddDate(0, 0, 14)
+	if time.Now().After(timeout) {
+		ev := &event.Event{
+			Type:  event.ReturnFailed,
+			Error: fmt.Errorf("query return order %s timeout, exceeds 2 weeks", task.SuborderID),
+		}
+		return ev
+	}
+
+	switch task.ResourceType {
+	case table.ResourceTypeCvm:
+		return r.queryCvmOrder(task, hosts)
+	case table.ResourceTypePm:
+		return r.queryPmOrder(task, hosts)
+	default:
+		ev := &event.Event{
+			Type:  event.ReturnFailed,
+			Error: fmt.Errorf("failed to query return order, for unsupported resource type %s", task.ResourceType),
+		}
+		return ev
+	}
+}
+
+func (r *Returner) updateOrderInfo(orderId, handler string, success, failed, pending uint, msg string) error {
+	filter := mapstr.MapStr{
+		"suborder_id": orderId,
+	}
+
+	now := time.Now()
+	update := mapstr.MapStr{
+		"success_num": success,
+		"failed_num":  failed,
+		"pending_num": pending,
+		"message":     msg,
+		"update_at":   now,
+	}
+
+	if len(handler) > 0 {
+		update["handler"] = handler
+	}
+
+	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {
+		logs.Errorf("failed to update return task, order id: %s, err: %v", orderId, err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *Returner) updateTaskInfo(task *table.ReturnTask, taskId string, status table.ReturnStatus, msg string) error {
+	filter := mapstr.MapStr{
+		"suborder_id": task.SuborderID,
+	}
+
+	now := time.Now()
+	update := mapstr.MapStr{
+		"status":    status,
+		"update_at": now,
+	}
+
+	if len(taskId) > 0 {
+		link := ""
+		switch task.ResourceType {
+		case table.ResourceTypeCvm:
+			link = cvmapi.CvmReturnLinkPrefix + taskId
+		case table.ResourceTypePm:
+			link = erpapi.ReturnOrderLinkPrefix + taskId
+		}
+		update["task_id"] = taskId
+		update["task_link"] = link
+	}
+
+	if len(msg) > 0 {
+		update["message"] = msg
+	}
+
+	if err := dao.Set().ReturnTask().UpdateReturnTask(context.Background(), &filter, &update); err != nil {
+		logs.Errorf("failed to update return task, order id: %s, err: %v", task.SuborderID, err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *Returner) updateHostInfo(task *table.ReturnTask, taskId string) error {
+	now := time.Now()
+	link := ""
+	if len(taskId) != 0 {
+		switch task.ResourceType {
+		case table.ResourceTypeCvm:
+			link = cvmapi.CvmReturnLinkPrefix + taskId
+		case table.ResourceTypePm:
+			link = erpapi.ReturnOrderLinkPrefix + taskId
+		}
+	}
+
+	filter := mapstr.MapStr{
+		"suborder_id": task.SuborderID,
+	}
+
+	update := mapstr.MapStr{
+		"stage":       table.RecycleStageReturn,
+		"status":      table.RecycleStatusReturning,
+		"return_id":   taskId,
+		"return_link": link,
+		"update_at":   now,
+	}
+
+	if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), &filter, &update); err != nil {
+		logs.Errorf("failed to update recycle host, order id: %s, err: %v", task.SuborderID, err)
+		return err
+	}
+
+	return nil
+}
+
+func (r *Returner) rollbackTransit(hosts []*table.RecycleHost) {
+	if len(hosts) == 0 {
+		return
+	}
+
+	// 1. transit hosts from cr module back to idle module
+	assetIDs := make([]string, 0)
+	bizID := hosts[0].BizID
+	operator := hosts[0].Operator
+	for _, host := range hosts {
+		assetIDs = append(assetIDs, host.AssetID)
+	}
+	if err := r.transferHost2BizIdle(assetIDs, bizID); err != nil {
+		logs.Warnf("failed to transfer host from CR transit module back to idle module")
+		return
+	}
+
+	// 2. get new host IDs after transit hosts back to idle module
+	// note: host ID change after transit back to business idle module
+	hostIDs, err := r.getHostIDByAsset(assetIDs, bizID)
+	if err != nil {
+		logs.Warnf("failed to get host ID by asset, err: %v", err)
+		return
+	}
+
+	// 3. transit hosts from idle module to recycle module
+	if err := r.transferHost2BizRecycle(hostIDs, bizID); err != nil {
+		logs.Warnf("failed to transfer host to recycle module")
+		return
+	}
+
+	// 4. set hosts operator
+	if err := r.setHostOperator(hostIDs, operator); err != nil {
+		logs.Warnf("failed to set host operator, err: %v", err)
+		return
+	}
+}
+
+// transferHost2BizIdle transfer hosts from CR transit module back to idle module in CMDB
+func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) error {
+	// once 10 hosts at most
+	maxNum := 10
+	begin := 0
+	end := begin
+	length := len(assetIds)
+
+	// transfer hosts from destBiz-CR_IEG_资源服务系统专用退回中转勿改勿删 back to destBiz-空闲机
+	for begin < length {
+		end += maxNum
+		if end > length {
+			end = length
+		}
+
+		req := &cmdb.CrTransitIdleReq{
+			BkBizId:  destBizId,
+			AssetIDs: assetIds[begin:end],
+		}
+
+		resp, err := r.esb.Cmdb().HostsCrTransit2Idle(nil, nil, req)
+		begin = end
+		if err != nil {
+			logs.Errorf("failed to transfer host back to idle module, err: %v", err)
+			return err
+		}
+
+		if resp.Result == false || resp.Code != 0 {
+			logs.Warnf("failed to transfer host back to idle module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+			return fmt.Errorf("failed to transfer host back to idle module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		}
+
+		logs.Infof("transfer host back to idle module success, hosts: %v", req.AssetIDs)
+	}
+
+	return nil
+}
+
+// getHostIDByAsset get host ID by asset ID
+func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, error) {
+	hostIDs := make([]int64, 0)
+
+	req := &cmdb.ListBizHostReq{
+		BkBizId: bizID,
+		HostPropertyFilter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "bk_asset_id",
+						Operator: querybuilder.OperatorIn,
+						Value:    assetIDs,
+					},
+					// support bk_cloud_id 0 only
+					querybuilder.AtomRule{
+						Field:    "bk_cloud_id",
+						Operator: querybuilder.OperatorEqual,
+						Value:    0,
+					},
+				},
+			},
+		},
+		Fields: []string{
+			"bk_host_id",
+			"bk_asset_id",
+			"bk_host_innerip",
+		},
+		Page: cmdb.BasePage{
+			Start: 0,
+			Limit: common.BKMaxInstanceLimit,
+		},
+	}
+
+	resp, err := r.esb.Cmdb().ListBizHost(nil, nil, req)
+	if err != nil {
+		logs.Errorf("failed to get cc host info, err: %v", err)
+		return nil, err
+	}
+
+	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
+	}
+
+	for _, host := range resp.Data.Info {
+		hostIDs = append(hostIDs, host.BkHostId)
+	}
+
+	return hostIDs, nil
+}
+
+// transferHost2BizRecycle transfer hosts from business idle module to recycle module in CMDB
+func (r *Returner) transferHost2BizRecycle(hostIDs []int64, bizID int64) error {
+	// get business recycle module id
+	moduleID, err := r.getBizRecycleModuleID(bizID)
+	if err != nil {
+		logs.Errorf("failed to get biz %d recycle module ID, err: %v", bizID, err)
+		return err
+	}
+
+	// once 10 hosts at most
+	req := &cmdb.TransferHostReq{
+		From: cmdb.TransferHostSrcInfo{
+			FromBizID: bizID,
+			HostIDs:   hostIDs,
+		},
+		To: cmdb.TransferHostDstInfo{
+			ToBizID:    bizID,
+			ToModuleID: moduleID,
+		},
+	}
+
+	resp, err := r.esb.Cmdb().TransferHost(nil, nil, req)
+	if err != nil {
+		logs.Errorf("failed to transfer host to recycle module %d, err: %v", moduleID, err)
+		return err
+	}
+
+	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("failed to transfer host to recycle module %d, code: %d, msg: %s", moduleID, resp.Code, resp.ErrMsg)
+		return err
+	}
+
+	return nil
+}
+
+// getBizRecycleModuleID get business recycle module ID
+func (r *Returner) getBizRecycleModuleID(bizID int64) (int64, error) {
+	req := &cmdb.GetBizInternalModuleReq{
+		BkBizID: bizID,
+	}
+	resp, err := r.esb.Cmdb().GetBizInternalModule(nil, nil, req)
+	if err != nil {
+		logs.Errorf("failed to get biz internal module, err: %v", err)
+		return 0, fmt.Errorf("failed to get biz internal module, err: %v", err)
+	}
+
+	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("failed to get biz internal module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		return 0, fmt.Errorf("failed to get biz internal module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+	}
+
+	moduleID := int64(0)
+	for _, module := range resp.Data.Module {
+		if module.Default == cmdb.DftModuleRecycle {
+			moduleID = module.BkModuleId
+			break
+		}
+	}
+
+	if moduleID <= 0 {
+		logs.Errorf("get no biz recycle module ID")
+		return 0, errors.New("get no biz recycle module ID")
+	}
+
+	return moduleID, nil
+}
+
+// setHostOperator set host operator in cc 3.0
+func (r *Returner) setHostOperator(hostIDs []int64, operator string) error {
+	req := &cmdb.UpdateHostsReq{
+		Update: make([]*cmdb.UpdateHostProperty, 0),
+	}
+
+	for _, hostID := range hostIDs {
+		update := &cmdb.UpdateHostProperty{
+			HostID: hostID,
+			Properties: map[string]interface{}{
+				"operator":        operator,
+				"bk_bak_operator": operator,
+			},
+		}
+		req.Update = append(req.Update, update)
+	}
+
+	resp, err := r.esb.Cmdb().UpdateHosts(nil, nil, req)
+	if err != nil {
+		return err
+	}
+
+	if resp.Result == false || resp.Code != 0 {
+		return fmt.Errorf("failed to set host operator, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+	}
+
+	return nil
+}

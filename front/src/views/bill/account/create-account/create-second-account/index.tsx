@@ -13,9 +13,9 @@ import useFormModel from '@/hooks/useFormModel';
 import useBillStore from '@/store/useBillStore';
 import { Extension_Name_Map } from './constants';
 import { useRoute, useRouter } from 'vue-router';
-import BusinessSelector from '@/components/business-selector/index.vue';
-import { PluginHandlerMailbox } from '@/plugin-handler/create-account-mail-suffix';
+import { PluginHandlerMailbox } from '@pluginHandler/create-account-mail-suffix';
 import EmailInput from './create-section-email';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
@@ -27,6 +27,7 @@ export default defineComponent({
     const billStore = useBillStore();
     const router = useRouter();
     const route = useRoute();
+    const { OperationProductsSelector } = useOperationProducts();
     const { formModel } = useFormModel({
       name: '', // 名字
       vendor: VendorEnum.AZURE, // 云厂商
@@ -237,8 +238,8 @@ export default defineComponent({
                         <BusinessSelector authed autoSelect v-model={formModel.bk_biz_id} />
                       </FormItem> */}
 
-                      <FormItem label='业务' required property=''>
-                        <BusinessSelector v-model={formModel.op_product_id} />
+                      <FormItem label='运营产品' required property=''>
+                        <OperationProductsSelector isShowManagers v-model={formModel.op_product_id} />
                       </FormItem>
                       <div class={'account-manager-wrapper'}>
                         <FormItem label='主负责人' required property='managers' class={'account-manager'}>

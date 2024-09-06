@@ -1,9 +1,9 @@
 import { PropType, defineComponent, ref, watch } from 'vue';
 import { InputColumn, OperationColumn, TextPlainColumn } from '@blueking/ediatable';
 import AdjustTypeSelector, { AdjustTypeEnum } from './components/AdjustTypeSelector';
-import BusinessSelector from '@/components/business-selector/index.vue';
 import SubAccountSelector from '../../../components/search/sub-account-selector';
 import { VendorEnum } from '@/common/constant';
+import { useOperationProducts } from '@/hooks/useOperationProducts';
 import useFormModel from '@/hooks/useFormModel';
 
 export default defineComponent({
@@ -35,7 +35,7 @@ export default defineComponent({
   setup(props, { emit, expose }) {
     const { formModel, resetForm, setFormValues } = useFormModel({
       type: AdjustTypeEnum.Increase,
-      bk_biz_id: '',
+      product_id: '',
       main_account_id: '',
       cost: '',
       memo: '',
@@ -43,8 +43,10 @@ export default defineComponent({
 
     const costRef = ref();
     const memoRef = ref();
-    const bizIdRef = ref();
+    const productRef = ref();
     const mainAccountRef = ref();
+
+    const { OperationProductsSelector, getAppendixList } = useOperationProducts(!props.edit);
 
     const handleAdd = () => {
       emit('add');
@@ -61,6 +63,7 @@ export default defineComponent({
     watch(
       () => props.editData,
       (data) => {
+        if (data.product_id) getAppendixList(data.product_id);
         setFormValues(data);
       },
       {
@@ -91,6 +94,7 @@ export default defineComponent({
         return await Promise.all([
           costRef.value!.getValue(),
           memoRef.value!.getValue(),
+          productRef.value!.getValue(),
           mainAccountRef.value!.getValue(),
         ]).then(() => {
           return formModel;
@@ -109,7 +113,7 @@ export default defineComponent({
             <AdjustTypeSelector v-model={formModel.type} />
           </td>
           <td>
-            <BusinessSelector v-model={formModel.bk_biz_id} ref={bizIdRef} isEditable />
+            <OperationProductsSelector v-model={formModel.product_id} ref={productRef} isEdiatable />
           </td>
           <td>
             <SubAccountSelector

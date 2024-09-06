@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/esb"
 )
 
@@ -36,6 +37,7 @@ func InitBillItemService(c *capability.Capability) {
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
 		esbClient:  c.EsbClient,
+		finops:     c.Finops,
 	}
 
 	h := rest.NewHandler()
@@ -60,4 +62,5 @@ type billItemSvc struct {
 	authorizer auth.Authorizer
 	audit      audit.Interface
 	esbClient  esb.Client
+	finops     finops.Client
 }

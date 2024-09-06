@@ -36,7 +36,7 @@ export default defineComponent({
       default: 'show',
     },
   },
-  emits: ['update:isShow', 'handleSubmit'],
+  emits: ['update:isShow', 'handleSubmit', 'handleShown'],
   setup(props, ctx) {
     // use hooks
     const { t } = useI18n();
@@ -49,6 +49,10 @@ export default defineComponent({
       ctx.emit('handleSubmit');
     };
 
+    const handleShown = () => {
+      ctx.emit('handleShown');
+    };
+
     return () => (
       <Sideslider
         renderDirective={props.renderType}
@@ -59,7 +63,8 @@ export default defineComponent({
         onClosed={() => {
           triggerShow(false);
           props.handleClose?.();
-        }}>
+        }}
+        onShown={handleShown}>
         {{
           default: () => <div class={cssModule.content}>{ctx.slots.default?.()}</div>,
           footer: !props.noFooter

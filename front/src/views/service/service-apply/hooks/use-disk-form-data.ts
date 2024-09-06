@@ -122,7 +122,6 @@ export default (cond: Cond) => {
   });
 
   const getSaveData = () => {
-    console.log(formData, '---formData');
     const { purchase_duration, auto_renew, ...saveFormData } = formData;
     const saveData: IDiskSaveData = {
       ...saveFormData,
@@ -171,8 +170,7 @@ export default (cond: Cond) => {
       const url = isResourcePage
         ? `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/disks/create`
         : `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/vendors/${cond.vendor}/applications/types/create_disk`;
-      await http.post(url, saveData);
-
+      const { data } = await http.post(url, saveData);
       Message({
         theme: 'success',
         message: t('提交成功'),
@@ -181,7 +179,8 @@ export default (cond: Cond) => {
       if (isResourcePage) router.back();
       else {
         router.push({
-          path: '/service/my-apply',
+          path: '/business/applications/detail',
+          query: { id: data.id },
         });
       }
     } catch (err) {

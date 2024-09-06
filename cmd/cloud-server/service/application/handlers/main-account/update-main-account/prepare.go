@@ -20,6 +20,9 @@
 package mainaccount
 
 import (
+	"strings"
+
+	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 )
 
@@ -41,12 +44,43 @@ func (a *ApplicationOfUpdateMainAccount) PrepareReqFromContent() error {
 
 // GetItsmApprover 获取itsm审批人信息
 func (a *ApplicationOfUpdateMainAccount) GetItsmApprover(managers []string) []itsm.VariableApprover {
-	return []itsm.VariableApprover{
+	approvers := []itsm.VariableApprover{
 		{
 			Variable:  "platform_manager",
 			Approvers: managers,
 		},
 	}
+
+	// 如果需要变更运营产品，则是新的运营产品负责人审批，如果没有变更运营产品，则是原运营产品负责人审批
+	var productId int64
+	if a.req.OpProductID == 0 || a.req.OpProductID == -1 {
+		account, err := a.Client.DataService().Global.MainAccount.GetBasicInfo(a.Cts.Kit, a.req.ID)
+		if err != nil {
+			logs.Errorf("get main account failed when update main account ticket create, err: %s, rid: %s", err, a.Cts.Kit.Rid)
+			return approvers
+		}
+		productId = account.OpProductID
+	} else {
+		productId = a.req.OpProductID
+	}
+
+	// 无运营产品负责人时，在itsm侧控制是否必须运营产品负责人审批
+	opManager, err := a.GetOperationProductManager(productId)
+	if err != nil {
+		logs.Errorf("get operation product manager failed, err: %s, rid: %s", err, a.Cts.Kit.Rid)
+		return approvers
+	}
+
+	opManagers := strings.Split(opManager, ";")
+
+	if len(opManagers) != 0 {
+		approvers = append(approvers, itsm.VariableApprover{
+			Variable:  "op_product_manager",
+			Approvers: opManagers,
+		})
+	}
+
+	return approvers
 }
 
 // GetBkBizIDs 获取当前的业务IDs

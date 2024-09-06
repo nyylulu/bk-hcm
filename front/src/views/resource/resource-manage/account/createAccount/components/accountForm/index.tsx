@@ -45,6 +45,11 @@ export const VENDORS_INFO = [
     name: '华为云',
     icon: huaweiVendor,
   },
+  {
+    vendor: VendorEnum.ZIYAN,
+    name: '自研云',
+    icon: tcloudVendor,
+  },
 ];
 
 export default defineComponent({

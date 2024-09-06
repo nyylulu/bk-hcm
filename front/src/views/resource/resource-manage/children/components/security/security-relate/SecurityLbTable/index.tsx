@@ -1,6 +1,7 @@
 import { defineComponent } from 'vue';
 import { useRoute } from 'vue-router';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import RemoteTable from '@/components/RemoteTable';
 import { QueryRuleOPEnum } from '@/typings';
 
@@ -10,9 +11,11 @@ export default defineComponent({
     const route = useRoute();
     const { getBusinessApiPath } = useWhereAmI();
 
+    const { columns } = useColumns('lb');
+
     return () => (
       <RemoteTable
-        columnName='lb'
+        columns={columns}
         noSort={true}
         apis={[
           {

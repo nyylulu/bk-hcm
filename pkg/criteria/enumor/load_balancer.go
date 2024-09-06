@@ -134,6 +134,8 @@ const (
 	EniInstType InstType = "ENI"
 	// CcnInstType 实例类型-CCN 云联网
 	CcnInstType InstType = "CCN"
+	// GlobalRouteInstType 实例类型-GLOBALROUTE 自研云类型
+	GlobalRouteInstType InstType = "GLOBALROUTE"
 )
 
 // ResFlowStatus 资源跟Flow的状态类型

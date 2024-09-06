@@ -48,7 +48,7 @@ func (svc *lbSvc) BatchCreateTargetGroupWithRel(cts *rest.Contexts) (any, error)
 	}
 
 	switch vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return batchCreateTargetGroupWithRel[corelb.TCloudTargetGroupExtension](cts, svc, vendor)
 	default:
 		return nil, errf.New(errf.InvalidParameter, "unsupported vendor: "+string(vendor))
@@ -148,6 +148,17 @@ func createRel[T corelb.TargetGroupExtension](kt *kit.Kit, svc *lbSvc, txn *sqlx
 		err := svc.dao.LoadBalancerTCloudUrlRule().UpdateByIDWithTx(kt, txn, tgReq.ListenerRuleID, rule)
 		if err != nil {
 			logs.Errorf("fail to update rule while creating target group with rel, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	case enumor.TCloudZiyan:
+		rule := &tablelb.TCloudZiyanLbUrlRuleTable{
+			TargetGroupID:      tgID,
+			CloudTargetGroupID: tgID,
+			Reviser:            kt.User,
+		}
+		err := svc.dao.LoadBalancerTCloudZiyanUrlRule().UpdateByIDWithTx(kt, txn, tgReq.ListenerRuleID, rule)
+		if err != nil {
+			logs.Errorf("fail to update rule in tcloud-ziyan while creating target group with rel, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 	}

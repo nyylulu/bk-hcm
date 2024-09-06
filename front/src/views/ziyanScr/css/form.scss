@@ -1,0 +1,41 @@
+.apply-list-container {
+  .filter-container {
+    margin-bottom: 20px;
+    background-color: #fff;
+    border-radius: 2px;
+  }
+  .filter-common-table {
+    background-color: #fff;
+  }
+ 
+}
+
+.scr-form-wrapper {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 0 24px;
+  .bk-form-item {
+    flex: 0 0 25%;
+    margin: 8px 0;
+    .bk-form-content,
+    .bk-date-picker {
+      width: 280px;
+      margin-right: 8px;
+    }
+  }
+}
+
+.btn-container {
+  display: flex;
+  align-items: center;
+  padding: 8px 0 16px 24px;
+  .bk-button + .bk-button {
+    margin-left: 10px;
+  }
+}
+
+.oper-btn-pad {
+  padding-bottom: 10px;
+  background-color: #fff;
+}

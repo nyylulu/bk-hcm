@@ -42,6 +42,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao"
+	daopkg "hcm/pkg/dal/dao"
 	"hcm/pkg/handler"
 	"hcm/pkg/logs"
 	"hcm/pkg/metrics"
@@ -85,12 +86,20 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 	apiClientSet := client.NewClientSet(restCli, sd)
 
 	// init db client
-	dao, err := dao.NewDaoSet(cc.TaskServer().Database)
+	dao, err := daopkg.NewDaoSet(cc.TaskServer().Database)
 	if err != nil {
 		return nil, err
 	}
 
-	logicsaction.Init(apiClientSet, dao)
+	var obsDao daopkg.Set
+	if cc.TaskServer().OBSDatabase != nil {
+		obsDao, err = daopkg.NewDaoSet(*cc.TaskServer().OBSDatabase)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	logicsaction.Init(apiClientSet, dao, obsDao)
 	async, err := createAndStartAsync(sd, dao, shutdownWaitTimeSec)
 	if err != nil {
 		return nil, err

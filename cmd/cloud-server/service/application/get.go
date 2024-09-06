@@ -20,9 +20,12 @@
 package application
 
 import (
+	"errors"
 	"fmt"
 
 	proto "hcm/pkg/api/cloud-server/application"
+	hcservice "hcm/pkg/api/hc-service"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/rest"
@@ -51,15 +54,9 @@ func (a *applicationSvc) Get(cts *rest.Contexts) (interface{}, error) {
 				fmt.Errorf("you can not view other people's application"))
 		}
 	}
-
-	// 查询审批链接
-	ticket, err := a.itsmCli.GetTicketResult(cts.Kit, application.SN)
-	if err != nil {
-		return nil, fmt.Errorf("call itsm get ticket url failed, err: %v", err)
-	}
-
-	return &proto.ApplicationGetResp{
+	resp := &proto.ApplicationGetResp{
 		ID:             application.ID,
+		Source:         application.Source,
 		SN:             application.SN,
 		Type:           application.Type,
 		Status:         application.Status,
@@ -68,6 +65,34 @@ func (a *applicationSvc) Get(cts *rest.Contexts) (interface{}, error) {
 		DeliveryDetail: application.DeliveryDetail,
 		Memo:           application.Memo,
 		Revision:       application.Revision,
-		TicketUrl:      ticket.TicketURL,
-	}, nil
+	}
+	switch application.Source {
+	case enumor.ApplicationSourceITSM:
+		// 查询审批链接
+		ticket, err := a.itsmCli.GetTicketResult(cts.Kit, application.SN)
+		if err != nil {
+			return nil, fmt.Errorf("call itsm get ticket url failed, err: %v", err)
+		}
+
+		resp.TicketUrl = ticket.TicketURL
+	case enumor.ApplicationSourceBPaas:
+		// 仅返回通用信息，其他信息由前端调用 QueryBPaasApplication 查询
+	default:
+		return nil, errors.New("unknown application source: " + string(application.Source))
+	}
+	return resp, nil
+}
+
+// QueryBPaasApplication 查询bpaas申请单详情
+func (a *applicationSvc) QueryBPaasApplication(cts *rest.Contexts) (any, error) {
+	req := new(hcservice.GetBPaasApplicationReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return a.client.HCService().TCloudZiyan.Application.QueryTCloudZiyanBPaasApplicationDetail(cts.Kit, req)
 }

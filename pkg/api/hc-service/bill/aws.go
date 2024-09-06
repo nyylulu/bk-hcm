@@ -20,6 +20,7 @@
 package bill
 
 import (
+	apicore "hcm/pkg/api/core"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/rest"
 
@@ -67,4 +68,21 @@ type AwsSpUsageTotalResult struct {
 	UnblendedCost *decimal.Decimal `json:"unblended_cost"`
 	SPNetCost     *decimal.Decimal `json:"sp_net_cost"`
 	AccountCount  uint64           `json:"account_count"`
+}
+
+// QueryAwsSavingsPlanCostReq ...
+type QueryAwsSavingsPlanCostReq struct {
+	RootAccountID   string            `json:"root_account_id" validate:"required"`
+	SavingPlansArn  string            `json:"savings_plans_arn_prefix" validate:"omitempty"`
+	UsageAccountIDs []string          `json:"usage_account_ids" validate:"omitempty"`
+	Year            uint              `json:"year" validate:"required"`
+	Month           uint              `json:"month" validate:"required,min=1,max=12"`
+	StartDay        uint              `json:"start_day" validate:"required,min=1,max=31"`
+	EndDay          uint              `json:"end_day" validate:"required,min=1,max=31"`
+	Page            *apicore.BasePage `json:"page" validate:"required"`
+}
+
+// Validate ...
+func (s QueryAwsSavingsPlanCostReq) Validate() error {
+	return validator.Validate.Struct(s)
 }

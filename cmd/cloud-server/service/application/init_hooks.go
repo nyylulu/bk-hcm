@@ -22,5 +22,5 @@ package application
 import "hcm/pkg/rest"
 
 func initApplicationServiceHooks(svc *applicationSvc, h *rest.Handler) {
-
+	h.Add("QueryBPaasApplication", "POST", "/vendors/tcloud-ziyan/applications/bpaas/query", svc.QueryBPaasApplication)
 }

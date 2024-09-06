@@ -121,7 +121,6 @@ func createBillItem[E bill.BillItemExtension](cts *rest.Contexts, svc *service, 
 		}
 		return ids, nil
 	})
-
 	if err != nil {
 		return nil, err
 	}

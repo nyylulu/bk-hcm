@@ -5,7 +5,6 @@ import { Button, DatePicker } from 'bkui-vue';
 import VendorSelector from './vendor-selector';
 import PrimaryAccountSelector from './primary-account-selector';
 import SubAccountSelector from './sub-account-selector';
-// import OperationProductSelector from './operation-product-selector';
 
 import { useI18n } from 'vue-i18n';
 import { VendorEnum } from '@/common/constant';
@@ -117,6 +116,13 @@ export default defineComponent({
       { deep: true },
     );
 
+    // 运营产品变化, 重置二级账号
+    watch(
+      () => modal.value.product_id,
+      () => (modal.value.main_account_id = []),
+      { deep: true },
+    );
+
     expose({ handleSearch, rules });
 
     return () => (
@@ -147,6 +153,7 @@ export default defineComponent({
                 v-model={modal.value.main_account_id}
                 vendor={modal.value.vendor}
                 rootAccountId={modal.value.root_account_id}
+                productId={modal.value.product_id}
                 autoSelect={props.autoSelectMainAccount}
                 urlKey={BILL_MAIN_ACCOUNTS_KEY}
               />

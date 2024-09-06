@@ -1,4 +1,3 @@
-/* eslint-disable no-nested-ternary */
 import { Button, Dialog, Form, Input, Message, Select } from 'bkui-vue';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
 import AccountSelector from '@/components/account-selector/index.vue';
@@ -56,6 +55,7 @@ export default defineComponent({
         bk_biz_id: number;
         id: string;
         account_id: string;
+        vendor: VendorEnum;
       }>,
     },
   },
@@ -71,7 +71,7 @@ export default defineComponent({
     const formData = ref({
       name: props.payload?.name || '',
       type: props.payload?.type || TemplateType.IP,
-      vendor: VendorEnum.TCLOUD,
+      vendor: props.payload.vendor || '',
       account_id: resourceAccountStore.resourceAccount?.id || '',
       templates: props.payload?.templates || [],
       group_templates: props.payload?.group_templates || [],
@@ -271,7 +271,7 @@ export default defineComponent({
         formData.value = {
           name: props.payload?.name || '',
           type: props.payload?.type || TemplateType.IP,
-          vendor: VendorEnum.TCLOUD,
+          vendor: props.payload.vendor || '',
           account_id: props.payload?.account_id || resourceAccountStore.resourceAccount?.id || '',
           templates: props.payload?.templates || [],
           group_templates: props.payload?.group_templates || [],

@@ -37,6 +37,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
@@ -71,13 +72,13 @@ func (b *billAdjustmentSvc) ExportBillAdjustmentItem(cts *rest.Contexts) (any, e
 		return nil, err
 	}
 
-	bizIDMap := make(map[int64]struct{})
+	productIDMap := make(map[int64]struct{})
 	mainAccountIDMap := make(map[string]struct{})
 	for _, detail := range result {
-		bizIDMap[detail.BkBizID] = struct{}{}
+		productIDMap[detail.ProductID] = struct{}{}
 		mainAccountIDMap[detail.MainAccountID] = struct{}{}
 	}
-	bizIDs := converter.MapKeyToSlice(bizIDMap)
+	productIDs := converter.MapKeyToSlice(productIDMap)
 	mainAccountIDs := converter.MapKeyToSlice(mainAccountIDMap)
 
 	mainAccountMap, err := b.listMainAccount(cts.Kit, mainAccountIDs)
@@ -85,9 +86,9 @@ func (b *billAdjustmentSvc) ExportBillAdjustmentItem(cts *rest.Contexts) (any, e
 		logs.Errorf("list main account failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	bizMap, err := b.listBiz(cts.Kit, bizIDs)
+	productMap, err := b.listOpProduct(cts.Kit, productIDs)
 	if err != nil {
-		logs.Errorf("list biz failed, bizIDs: %v, err: %v, rid: %s", bizIDs, err, cts.Kit.Rid)
+		logs.Errorf("list product failed, productIDs: %v, err: %v, rid: %s", productIDs, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -107,7 +108,7 @@ func (b *billAdjustmentSvc) ExportBillAdjustmentItem(cts *rest.Contexts) (any, e
 		return nil, err
 	}
 
-	table, err := toRawData(cts.Kit, result, mainAccountMap, bizMap)
+	table, err := toRawData(cts.Kit, result, mainAccountMap, productMap)
 	if err != nil {
 		logs.Errorf("convert to raw data error: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -186,14 +187,10 @@ func (b *billAdjustmentSvc) fetchBillAdjustmentItemCount(kt *kit.Kit,
 }
 
 func toRawData(kt *kit.Kit, details []*billcore.AdjustmentItem, mainAccountMap map[string]*accountset.BaseMainAccount,
-	bizMap map[int64]string) ([][]string, error) {
+	productMap map[int64]finops.OperationProduct) ([][]string, error) {
 
 	data := make([][]string, 0, len(details))
 	for _, detail := range details {
-		bizName, ok := bizMap[detail.BkBizID]
-		if !ok {
-			logs.Warnf("biz(%d) not found", detail.BkBizID)
-		}
 		mainAccount, ok := mainAccountMap[detail.MainAccountID]
 		if !ok {
 			return nil, fmt.Errorf("main account(%s) not found", detail.MainAccountID)
@@ -202,8 +199,8 @@ func toRawData(kt *kit.Kit, details []*billcore.AdjustmentItem, mainAccountMap m
 		table := export.BillAdjustmentTable{
 			UpdateTime:      detail.UpdatedAt,
 			BillID:          detail.ID,
-			BKBizID:         conv.ToString(detail.BkBizID),
-			BKBizName:       bizName,
+			OpProductID:     conv.ToString(detail.ProductID),
+			OpProductName:   productMap[detail.ProductID].OpProductName,
 			MainAccountName: mainAccount.Name,
 			AdjustType:      enumor.BillAdjustmentTypeNameMap[detail.Type],
 			Operator:        detail.Operator,

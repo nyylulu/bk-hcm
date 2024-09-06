@@ -1,0 +1,41 @@
+@import url(../css/form.scss);
+.cvm-produce-wrapper {
+    margin: 20px 10px 0;
+}
+.scr-form-wrapper {
+    .tool-pos {
+        position: absolute;
+        top: 0;
+        right: -22px;
+    }
+  }
+  .success-container {
+    display: flex;
+    div + div {
+      margin-left: 5px;
+    }
+  }
+.sub-order-num,.username {
+    color: #409eff;
+    cursor: pointer;
+}
+.order-width {
+    width: 180px;
+}
+.tag-input-width {
+    width: 165px;
+}
+.recycle-operation {
+    .bk-button+.bk-button {
+        margin-left: 10px;
+    }
+}
+.common-sideslider-content {
+    margin: 20px 10px 0;
+    .filter-container {
+        margin-bottom: 0;
+    }
+}
+.filter-common-table {
+    background-color: #fff;
+  }

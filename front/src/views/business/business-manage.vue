@@ -228,109 +228,111 @@ const handleEditTemplate = (payload: any) => {
 </script>
 
 <template>
-  <div
-    class="business-manage-wrapper"
-    :class="[
-      route.path === '/business/host' ? 'is-host-page' : '',
-      route.path === '/business/recyclebin' ? 'is-recycle-page' : '',
-    ]"
-  >
-    <bk-loading class="common-card-wrap" :loading="!accountStore.bizs">
-      <component
-        v-if="accountStore.bizs"
-        ref="componentRef"
-        :is="renderComponent"
-        :filter="filter"
-        :is-resource-page="isResourcePage"
-        :auth-verify-data="authVerifyData"
-        @auth="(val: string) => {
+  <div>
+    <div
+      class="business-manage-wrapper"
+      :class="[
+        route.path === '/business/host' ? 'is-host-page' : '',
+        route.path === '/business/recyclebin' ? 'is-recycle-page' : '',
+      ]"
+    >
+      <bk-loading class="common-card-wrap" :loading="!accountStore.bizs">
+        <component
+          v-if="accountStore.bizs"
+          ref="componentRef"
+          :is="renderComponent"
+          :filter="filter"
+          :is-resource-page="isResourcePage"
+          :auth-verify-data="authVerifyData"
+          @auth="(val: string) => {
           handleAuth(val)
         }"
-        @handleSecrityType="handleSecrityType"
-        @editTemplate="handleEditTemplate"
-        @edit="handleEdit"
-        v-model:isFormDataChanged="isFormDataChanged"
-      >
-        <span>
-          <bk-button
-            theme="primary"
-            class="mw64 mr10"
-            :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.biz_iaas_resource_create }"
-            @click="
-              () => {
-                if (authVerifyData?.permissionAction?.biz_iaas_resource_create) {
-                  handleAdd();
-                } else {
-                  handleAuth('biz_iaas_resource_create');
+          @handleSecrityType="handleSecrityType"
+          @editTemplate="handleEditTemplate"
+          @edit="handleEdit"
+          v-model:isFormDataChanged="isFormDataChanged"
+        >
+          <span>
+            <bk-button
+              theme="primary"
+              class="mw64 mr10"
+              :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.biz_iaas_resource_create }"
+              @click="
+                () => {
+                  if (authVerifyData?.permissionAction?.biz_iaas_resource_create) {
+                    handleAdd();
+                  } else {
+                    handleAuth('biz_iaas_resource_create');
+                  }
                 }
-              }
-            "
-          >
-            {{
-              renderComponent === DriveManage ||
-              renderComponent === HostManage ||
-              renderComponent === SubnetManage ||
-              renderComponent === VpcManage
-                ? '申请'
-                : computedSecurityText
-            }}
-          </bk-button>
-        </span>
+              "
+            >
+              {{
+                renderComponent === DriveManage ||
+                renderComponent === HostManage ||
+                renderComponent === SubnetManage ||
+                renderComponent === VpcManage
+                  ? '申请'
+                  : computedSecurityText
+              }}
+            </bk-button>
+          </span>
 
-        <template #recycleHistory>
-          <!-- <bk-button class="f-right" theme="primary" @click="handleToPage">
+          <template #recycleHistory>
+            <!-- <bk-button class="f-right" theme="primary" @click="handleToPage">
             {{ '回收记录' }}
           </bk-button> -->
+          </template>
+        </component>
+      </bk-loading>
+      <bk-sideslider
+        v-model:isShow="isShowSideSlider"
+        width="800"
+        title="新增"
+        quick-close
+        :before-close="handleBeforeClose"
+      >
+        <template #default>
+          <component
+            :is="renderForm"
+            :filter="filter"
+            @cancel="handleCancel"
+            @success="handleSuccess"
+            :detail="formDetail"
+            :is-edit="isEdit"
+            v-model:isFormDataChanged="isFormDataChanged"
+          ></component>
         </template>
-      </component>
-    </bk-loading>
-    <bk-sideslider
-      v-model:isShow="isShowSideSlider"
-      width="800"
-      title="新增"
-      quick-close
-      :before-close="handleBeforeClose"
-    >
-      <template #default>
-        <component
-          :is="renderForm"
-          :filter="filter"
-          @cancel="handleCancel"
-          @success="handleSuccess"
-          :detail="formDetail"
-          :is-edit="isEdit"
-          v-model:isFormDataChanged="isFormDataChanged"
-        ></component>
-      </template>
-    </bk-sideslider>
-    <permission-dialog
-      v-model:is-show="showPermissionDialog"
-      :params="permissionParams"
-      @cancel="handlePermissionDialog"
-      @confirm="handlePermissionConfirm"
-    ></permission-dialog>
+      </bk-sideslider>
+      <permission-dialog
+        v-model:is-show="showPermissionDialog"
+        :params="permissionParams"
+        @cancel="handlePermissionDialog"
+        @confirm="handlePermissionConfirm"
+      ></permission-dialog>
 
-    <gcp-add
-      v-model:is-show="isShowGcpAdd"
-      :gcp-title="gcpTitle"
-      :is-add="isAdd"
-      :loading="isLoading"
-      :detail="{}"
-      @submit="submit"
-    ></gcp-add>
+      <gcp-add
+        v-model:is-show="isShowGcpAdd"
+        :gcp-title="gcpTitle"
+        :is-add="isAdd"
+        :loading="isLoading"
+        :detail="{}"
+        @submit="submit"
+      ></gcp-add>
 
-    <TemplateDialog
-      :is-show="isTemplateDialogShow"
-      :is-edit="isTemplateDialogEdit"
-      :payload="templateDialogPayload"
-      :handle-close="() => (isTemplateDialogShow = false)"
-      :handle-success="
-        () => {
-          isTemplateDialogShow = false;
-          handleSuccess();
-        }
-      "
-    />
+      <TemplateDialog
+        :is-show="isTemplateDialogShow"
+        :is-edit="isTemplateDialogEdit"
+        :payload="templateDialogPayload"
+        :handle-close="() => (isTemplateDialogShow = false)"
+        :handle-success="
+          () => {
+            isTemplateDialogShow = false;
+            handleSuccess();
+          }
+        "
+      />
+    </div>
   </div>
 </template>
 
@@ -347,6 +349,7 @@ const handleEditTemplate = (payload: any) => {
 
     & > :deep(.bk-nested-loading) {
       height: 100%;
+
       .bk-table {
         margin-top: 16px;
         max-height: calc(100% - 48px);
@@ -364,6 +367,7 @@ const handleEditTemplate = (payload: any) => {
 
     :deep(.recycle-manager-page) {
       height: 100%;
+
       .bk-tab {
         height: 100%;
       }
@@ -376,6 +380,7 @@ const handleEditTemplate = (payload: any) => {
 .mw64 {
   min-width: 64px;
 }
+
 .mw88 {
   min-width: 88px;
 }

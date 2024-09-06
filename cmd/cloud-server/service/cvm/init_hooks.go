@@ -19,8 +19,18 @@
 
 package cvm
 
-import "hcm/pkg/rest"
+import (
+	"net/http"
+
+	"hcm/pkg/rest"
+)
 
 func initCvmServiceHooks(svc *cvmSvc, h *rest.Handler) {
+
+	h.Add("QueryCvmBySGID", http.MethodGet, "/cvms/security_groups/{sg_id}", svc.QueryCvmBySGID)
+	h.Add("QueryBizCvmBySGID", http.MethodGet,
+		"/bizs/{bk_biz_id}/cvms/security_groups/{sg_id}", svc.QueryBizCvmBySGID)
+	h.Add("ListZiyanCmdbHost", http.MethodPost,
+		"/bizs/{bk_biz_id}/vendors/tcloud-ziyan/cmdb/hosts/list", svc.ListZiyanCmdbHost)
 
 }

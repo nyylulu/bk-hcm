@@ -30,7 +30,7 @@ func init() {
 	var err error
 	BillSummaryMainTableHeader, err = BillSummaryMainTable{}.GetHeaders()
 	if err != nil {
-		logs.Errorf("bill adjustment table header init failed: %v", err)
+		logs.Errorf("bill summary main table header init failed: %v", err)
 	}
 }
 
@@ -41,8 +41,8 @@ type BillSummaryMainTable struct {
 	RootAccountID   string `header:"一级账号ID"`
 	RootAccountName string `header:"一级账号名称"`
 
-	BKBizID   string `header:"业务"`
-	BKBizName string `header:"业务名称"`
+	OpProductID   string `header:"运营产品ID"`
+	OpProductName string `header:"运营产品"`
 
 	CurrentMonthRMBCostSynced string `header:"已确认账单人民币（元）"`
 	CurrentMonthCostSynced    string `header:"已确认账单美金（美元）"`

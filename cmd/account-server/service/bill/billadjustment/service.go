@@ -26,12 +26,15 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/esb"
 )
 
 // InitBillAdjustmentService 注册账单调调整服务
 func InitBillAdjustmentService(c *capability.Capability) {
 	svc := &billAdjustmentSvc{
+		finops: c.Finops,
+
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
@@ -56,7 +59,7 @@ func InitBillAdjustmentService(c *capability.Capability) {
 		"/bills/adjustment_items/confirm", svc.BatchConfirmBillAdjustmentItem)
 	h.Add("SumBillAdjustmentItem", "POST",
 		"/bills/adjustment_items/sum", svc.SumBillAdjustmentItem)
-	h.Add("ListBillAdjustmentItem", "POST",
+	h.Add("ExportBillAdjustmentItem", "POST",
 		"/bills/adjustment_items/export", svc.ExportBillAdjustmentItem)
 
 	h.Load(c.WebService)
@@ -64,6 +67,8 @@ func InitBillAdjustmentService(c *capability.Capability) {
 
 // 账单明细
 type billAdjustmentSvc struct {
+	finops finops.Client
+
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface

@@ -77,12 +77,6 @@ export default defineComponent({
 
     const subIpv4cidr = ref([10, 0, 28]);
 
-    // const handleChange = (data: BusinessFormFilter) => {
-    //   formModel.account_id = data.account_id as string;
-    //   formModel.vendor = data.vendor as VendorEnum;
-    //   formModel.region = data.region as string;
-    // };
-
     const getVpcDetail = async (vpc: { id: string }) => {
       const vpcId = vpc.id;
       if (!vpcId) return;
@@ -103,12 +97,23 @@ export default defineComponent({
       }
       submitLoading.value = true;
       try {
-        await businessStore.createSubnet(accountStore.bizs, formModel, whereAmI.value === Senarios.resource);
+        const { data } = await businessStore.createSubnet(
+          accountStore.bizs,
+          formModel,
+          whereAmI.value === Senarios.resource,
+        );
         Message({
           theme: 'success',
           message: '创建成功',
         });
-        handleCancel();
+        if (whereAmI.value === Senarios.business) {
+          router.push({
+            path: '/business/applications/detail',
+            query: { id: data.id },
+          });
+        } else {
+          handleCancel();
+        }
       } catch (error) {
         console.error(error);
       } finally {

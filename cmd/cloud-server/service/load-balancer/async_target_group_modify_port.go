@@ -83,14 +83,16 @@ func (svc *lbSvc) batchModifyTargetPort(cts *rest.Contexts,
 
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
-		return svc.buildModifyTCloudTargetPort(cts.Kit, req.Data, tgID, baseInfo.AccountID)
+		return svc.buildModifyTCloudTargetPort(cts.Kit, req.Data, tgID, baseInfo.AccountID, enumor.TCloud)
+	case enumor.TCloudZiyan:
+		return svc.buildModifyTCloudTargetPort(cts.Kit, req.Data, tgID, baseInfo.AccountID, enumor.TCloudZiyan)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", baseInfo.Vendor)
 	}
 }
 
 func (svc *lbSvc) buildModifyTCloudTargetPort(kt *kit.Kit, body json.RawMessage,
-	tgID, accountID string) (interface{}, error) {
+	tgID, accountID string, vendor enumor.Vendor) (interface{}, error) {
 
 	req := new(cslb.TCloudBatchModifyTargetPortReq)
 	if err := json.Unmarshal(body, req); err != nil {
@@ -120,7 +122,7 @@ func (svc *lbSvc) buildModifyTCloudTargetPort(kt *kit.Kit, body json.RawMessage,
 		return &core.FlowStateResult{State: enumor.FlowSuccess}, nil
 	}
 
-	return svc.buildModifyTCloudTargetTasksPort(kt, req, ruleRelList.Details[0].LbID, tgID, accountID)
+	return svc.buildModifyTCloudTargetTasksPort(kt, req, ruleRelList.Details[0].LbID, tgID, accountID, vendor)
 }
 
 func (svc *lbSvc) batchUpdateTargetPortDb(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetPortReq) error {
@@ -154,8 +156,8 @@ func (svc *lbSvc) batchUpdateTargetPortDb(kt *kit.Kit, req *cslb.TCloudBatchModi
 	return svc.client.DataService().Global.LoadBalancer.BatchUpdateTarget(kt, updateReq)
 }
 
-func (svc *lbSvc) buildModifyTCloudTargetTasksPort(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetPortReq, lbID, tgID,
-	accountID string) (interface{}, error) {
+func (svc *lbSvc) buildModifyTCloudTargetTasksPort(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetPortReq,
+	lbID, tgID, accountID string, vendor enumor.Vendor) (interface{}, error) {
 
 	// 预检测
 	_, err := svc.checkResFlowRel(kt, lbID, enumor.LoadBalancerCloudResType)
@@ -164,7 +166,7 @@ func (svc *lbSvc) buildModifyTCloudTargetTasksPort(kt *kit.Kit, req *cslb.TCloud
 	}
 
 	// 创建Flow跟Task的初始化数据
-	flowID, err := svc.initFlowTargetPort(kt, req, lbID, tgID, accountID)
+	flowID, err := svc.initFlowTargetPort(kt, req, lbID, tgID, accountID, vendor)
 	if err != nil {
 		return nil, err
 	}
@@ -179,7 +181,7 @@ func (svc *lbSvc) buildModifyTCloudTargetTasksPort(kt *kit.Kit, req *cslb.TCloud
 }
 
 func (svc *lbSvc) initFlowTargetPort(kt *kit.Kit, req *cslb.TCloudBatchModifyTargetPortReq,
-	lbID, tgID, accountID string) (string, error) {
+	lbID, tgID, accountID string, vendor enumor.Vendor) (string, error) {
 
 	tasks := make([]ts.CustomFlowTask, 0)
 	elems := slice.Split(req.TargetIDs, constant.BatchModifyTargetPortCloudMaxLimit)
@@ -196,7 +198,7 @@ func (svc *lbSvc) initFlowTargetPort(kt *kit.Kit, req *cslb.TCloudBatchModifyTar
 			ActionID:   actionID,
 			ActionName: enumor.ActionTargetGroupModifyPort,
 			Params: &actionlb.OperateRsOption{
-				Vendor:                      enumor.TCloud,
+				Vendor:                      vendor,
 				TCloudBatchOperateTargetReq: *rsPortParams,
 			},
 			Retry: &tableasync.Retry{

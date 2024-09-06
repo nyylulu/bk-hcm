@@ -29,6 +29,7 @@ import (
 	"hcm/pkg/cryptography"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 	itsm2 "hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb"
 )
@@ -41,6 +42,7 @@ type HandlerOption struct {
 	Cipher    cryptography.Crypto
 	Audit     audit.Interface
 	ItsmCli   itsm2.Client
+	FinOpsCli finops.Client
 	CmsiCli   cmsi.Client
 }
 
@@ -54,6 +56,7 @@ type BaseApplicationHandler struct {
 	EsbClient  esb.Client
 	Cipher     cryptography.Crypto
 	Audit      audit.Interface
+	FinOpsCli  finops.Client
 	CmsiClient cmsi.Client
 }
 
@@ -70,6 +73,7 @@ func NewBaseApplicationHandler(
 		Cipher:          opt.Cipher,
 		Audit:           opt.Audit,
 		CmsiClient:      opt.CmsiCli,
+		FinOpsCli:       opt.FinOpsCli,
 	}
 }
 
@@ -121,6 +125,8 @@ func (a *BaseApplicationHandler) GetItsmPlatformAndAccountApprover(managers []st
 }
 
 // Complete complete the application by manual.
-func (a *BaseApplicationHandler) Complete() (status enumor.ApplicationStatus, deliverDetail map[string]interface{}, err error) {
+func (a *BaseApplicationHandler) Complete() (
+	status enumor.ApplicationStatus, deliverDetail map[string]interface{}, err error) {
+
 	return enumor.DeliverError, map[string]interface{}{}, fmt.Errorf("not implemented")
 }

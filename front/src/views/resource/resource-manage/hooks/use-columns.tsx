@@ -19,11 +19,10 @@ import StatusUnknown from '@/assets/image/Status-unknown.png';
 import StatusSuccess from '@/assets/image/success-account.png';
 import StatusLoading from '@/assets/image/status_loading.png';
 import StatusFailure from '@/assets/image/failed-account.png';
-
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import './use-columns.scss';
 import { defaults } from 'lodash';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, timeUTCFormatter } from '@/common/util';
 import { IP_VERSION_MAP, LBRouteName, LB_NETWORK_TYPE_MAP, SCHEDULER_MAP } from '@/constants/clb';
 import { formatBillCost, getInstVip } from '@/utils';
 import { Spinner } from 'bkui-vue/lib/icon';
@@ -56,7 +55,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   const { whereAmI } = useWhereAmI();
   const businessMapStore = useBusinessMapStore();
   const cloudAreaStore = useCloudAreaStore();
-
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
     defaults(options, {
@@ -738,6 +736,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       field: 'private_ipv4_addresses',
       idFiled: 'id',
       onlyShowOnList: false,
+      linkable: (data) => data.vendor !== VendorEnum.ZIYAN,
       render: (data) =>
         [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--',
       renderSuffix: (data) => {
@@ -1802,10 +1801,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: any) => cell.join(','),
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
-      isDefaultShow: true,
-      render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
+      label: '运营产品',
+      field: 'op_product_id',
+      render: ({ data, cell }: any) => t(`${data.op_product_name}（${cell}）`),
     },
     {
       label: '备注',
@@ -1870,14 +1868,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '创建时间',
       field: 'created_at',
       render({ cell }: any) {
-        return timeFormatter(cell);
+        return timeUTCFormatter(cell);
       },
     },
     {
       label: '更新时间',
       field: 'updated_at',
       render({ cell }: any) {
-        return timeFormatter(cell);
+        return timeUTCFormatter(cell);
       },
     },
     {
@@ -1998,10 +1996,64 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品名称',
+      field: 'product_name',
       isDefaultShow: true,
-      render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
+    },
+    {
+      label: '已确认账单人民币（元）',
+      field: 'current_month_rmb_cost_synced',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '已确认账单美金（美元）',
+      field: 'current_month_cost_synced',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '当前账单人民币（元）',
+      field: 'current_month_rmb_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '当前账单美金（美元）',
+      field: 'current_month_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '调账人民币（元）',
+      field: 'adjustment_rmb_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+    {
+      label: '调账美金（美元）',
+      field: 'adjustment_cost',
+      isDefaultShow: true,
+      render: ({ cell }: any) => formatBillCost(cell),
+      sort: true,
+    },
+  ];
+
+  const billsProductSummaryColumns = [
+    {
+      label: '运营产品ID',
+      field: 'product_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '运营产品名称',
+      field: 'product_name',
+      isDefaultShow: true,
     },
     {
       label: '已确认账单人民币（元）',
@@ -2076,10 +2128,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2145,10 +2196,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2214,10 +2264,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2283,10 +2332,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2397,10 +2445,9 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
-      label: '业务名称',
-      field: 'bk_biz_id',
+      label: '运营产品ID',
+      field: 'product_id',
       isDefaultShow: true,
-      render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     {
       label: '币种',
@@ -2507,6 +2554,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     myApply: myApplyColumns,
     billsRootAccountSummary: billsRootAccountSummaryColumns,
     billsMainAccountSummary: billsMainAccountSummaryColumns,
+    billsProductSummary: billsProductSummaryColumns,
     billDetailAws: billDetailAwsColumns,
     billDetailAzure: billDetailAzureColumns,
     billDetailGcp: billDetailGcpColumns,

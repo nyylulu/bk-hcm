@@ -20,8 +20,12 @@
 package account
 
 import (
+	"hcm/pkg/api/core"
 	protocloud "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -33,7 +37,8 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 	if err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
-	return a.client.DataService().Global.Account.ListAccountBizRelWithAccount(
+
+	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(
 		cts.Kit.Ctx,
 		cts.Kit.Header(),
 		&protocloud.AccountBizRelWithAccountListReq{
@@ -41,4 +46,31 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 			AccountType: accountType,
 		},
 	)
+	if err != nil {
+		logs.Errorf("fail to query biz account, err: %v, bizID: %s, rid:%s", err, bkBizID, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 查询自研云账号
+	ziyanResp, err := a.client.DataService().Global.Account.List(cts.Kit.Ctx, cts.Kit.Header(),
+		&protocloud.AccountListReq{
+			Filter: tools.EqualExpression("vendor", enumor.TCloudZiyan),
+			Page:   core.NewDefaultBasePage(),
+		})
+	if err != nil {
+		logs.Errorf("fail to query ziyan account, err: %v, rid:%s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	combinedAccounts := make([]*protocloud.AccountBizRelWithAccount, 0, len(ziyanResp.Details)+len(accounts))
+	for _, ziyanAccount := range ziyanResp.Details {
+		combinedAccounts = append(combinedAccounts, &protocloud.AccountBizRelWithAccount{
+			BaseAccount:  *ziyanAccount,
+			BkBizID:      -1,
+			RelCreator:   "",
+			RelCreatedAt: "",
+		})
+	}
+	combinedAccounts = append(combinedAccounts, accounts...)
+	return combinedAccounts, err
 }

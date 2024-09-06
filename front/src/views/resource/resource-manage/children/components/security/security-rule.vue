@@ -8,11 +8,13 @@ import { Button, Message } from 'bkui-vue';
 import { useResourceStore } from '@/store';
 
 import { SecurityRuleEnum, HuaweiSecurityRuleEnum, AzureSecurityRuleEnum } from '@/typings';
+import { VendorEnum } from '@/common/constant';
 
 import UseSecurityRule from '@/views/resource/resource-manage/hooks/use-security-rule';
 import useQueryCommonList from '@/views/resource/resource-manage/hooks/use-query-list-common';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import bus from '@/common/bus';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { timeFormatter } from '@/common/util';
 const props = defineProps({
   filter: {
@@ -38,6 +40,7 @@ const { t } = useI18n();
 const { isShowSecurityRule, handleSecurityRule, SecurityRule } = UseSecurityRule();
 
 const resourceStore = useResourceStore();
+const { whereAmI } = useWhereAmI();
 
 const activeType = ref('ingress');
 const deleteDialogShow = ref(false);
@@ -189,7 +192,10 @@ const handleSubmitRule = async (tableData: any) => {
     });
     getList();
     isShowSecurityRule.value = false;
+  } catch (error) {
+    console.log(error);
   } finally {
+    isShowSecurityRule.value = false;
     securityRuleLoading.value = false;
   }
 };
@@ -330,7 +336,7 @@ const inColumns = [
       ]);
     },
   },
-];
+].filter(({ field }) => ([VendorEnum.ZIYAN].includes(props.vendor) && whereAmI.value === Senarios.resource && field !== 'operate') || !([VendorEnum.ZIYAN].includes(props.vendor) && whereAmI.value === Senarios.resource));
 
 const outColumns = [
   {
@@ -449,7 +455,7 @@ const outColumns = [
       ]);
     },
   },
-];
+].filter(({ field }) => ([VendorEnum.ZIYAN].includes(props.vendor) && whereAmI.value === Senarios.resource && field !== 'operate') || !([VendorEnum.ZIYAN].includes(props.vendor) && whereAmI.value === Senarios.resource));
 // tab 信息
 const types = [
   { name: 'ingress', label: t('入站规则') },
@@ -537,11 +543,11 @@ if (props.vendor === 'huawei') {
 
         <div @click="showAuthDialog(actionName)">
           <bk-button
-            :disabled="!authVerifyData?.permissionAction[actionName]"
-            theme="primary"
-            @click="handleSecurityRuleDialog({})"
-          >
-            {{ t('新增规则') }}
+            v-show="!([VendorEnum.ZIYAN].includes(props.vendor) && whereAmI === Senarios.resource)"
+            :disabled="!authVerifyData?.
+              permissionAction[actionName]"
+            theme="primary" @click="handleSecurityRuleDialog({})">
+            {{t('新增规则')}}
           </bk-button>
         </div>
       </section>

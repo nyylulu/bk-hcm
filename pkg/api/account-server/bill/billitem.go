@@ -190,6 +190,7 @@ func (r *BatchDeleteReq) Validate() error {
 type AdjustmentItemResult struct {
 	MainAccountCloudID string `json:"main_account_cloud_id"`
 	MainAccountEmail   string `json:"main_account_email"`
+	ProductName        string `json:"product_name"`
 	*bill.AdjustmentItem
 }
 

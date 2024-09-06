@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/client/data-service/kaopu"
 	"hcm/pkg/client/data-service/tcloud"
 	"hcm/pkg/client/data-service/zenlayer"
+	ziyan "hcm/pkg/client/data-service/tcloud-ziyan"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
@@ -45,6 +46,7 @@ type Client struct {
 	Azure    *azure.Client
 	Zenlayer *zenlayer.Client
 	Kaopu    *kaopu.Client
+	TCloudZiyan *ziyan.Client
 }
 
 // NewClient create a new data-service api client.
@@ -75,6 +77,9 @@ func NewClient(c *client.Capability, version string) *Client {
 		),
 		Kaopu: kaopu.NewClient(
 			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Kaopu)),
+		),
+		TCloudZiyan: ziyan.NewClient(
+			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.TCloudZiyan)),
 		),
 	}
 }

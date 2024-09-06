@@ -58,7 +58,7 @@ func (opt DeleteLoadBalancerOption) MarshalJSON() ([]byte, error) {
 
 	var req interface{}
 	switch opt.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		req = struct {
 			Vendor                                   enumor.Vendor `json:"vendor" validate:"required"`
 			hcproto.TCloudBatchDeleteLoadbalancerReq `json:",inline"`
@@ -78,7 +78,7 @@ func (opt *DeleteLoadBalancerOption) UnmarshalJSON(raw []byte) (err error) {
 	opt.Vendor = enumor.Vendor(gjson.GetBytes(raw, "vendor").String())
 
 	switch opt.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		err = json.Unmarshal(raw, &opt.TCloudBatchDeleteLoadbalancerReq)
 	default:
 		return fmt.Errorf("vendor: %s not support", opt.Vendor)
@@ -115,8 +115,16 @@ func (act DeleteLoadBalancerAction) Run(kt run.ExecuteKit, params any) (any, err
 	case enumor.TCloud:
 		err = actcli.GetHCService().TCloud.Clb.BatchDeleteLoadBalancer(kt.Kit(), &opt.TCloudBatchDeleteLoadbalancerReq)
 		if err != nil {
-			logs.Errorf("fail to delete tcloud load balancer, err: %v, opt: %+v rid: %s",
-				err, opt.TCloudBatchDeleteLoadbalancerReq, kt.Kit().Rid)
+			logs.Errorf("[%s] fail to delete tcloud load balancer, err: %v, opt: %+v rid: %s",
+				opt.Vendor, err, opt.TCloudBatchDeleteLoadbalancerReq, kt.Kit().Rid)
+			return nil, err
+		}
+	case enumor.TCloudZiyan:
+		err = actcli.GetHCService().TCloudZiyan.Clb.BatchDeleteLoadBalancer(
+			kt.Kit(), &opt.TCloudBatchDeleteLoadbalancerReq)
+		if err != nil {
+			logs.Errorf("[%s] fail to delete tcloud load balancer, err: %v, opt: %+v rid: %s",
+				opt.Vendor, err, opt.TCloudBatchDeleteLoadbalancerReq, kt.Kit().Rid)
 			return nil, err
 		}
 	default:

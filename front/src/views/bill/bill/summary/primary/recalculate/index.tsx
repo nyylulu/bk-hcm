@@ -60,7 +60,7 @@ export default defineComponent({
           <span>{timeFormatter(info.value.updated_at)}</span>
         </div>
         <div class={cssModule.item}>
-          <span>{t('业务数量')}</span>
+          <span>{t('运营产品数量')}</span>
           <span>{info.value.product_num}</span>
         </div>
         <div class={cssModule.item}>

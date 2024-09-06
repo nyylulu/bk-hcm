@@ -103,6 +103,8 @@ func (svc *cvmSvc) GetCvm(cts *rest.Contexts) (interface{}, error) {
 		return convCvmGetResult[corecvm.AzureCvmExtension](base, cvmTable.Extension)
 	case enumor.Gcp:
 		return convCvmGetResult[corecvm.GcpCvmExtension](base, cvmTable.Extension)
+	case enumor.TCloudZiyan:
+		return convCvmGetResult[corecvm.TCloudZiyanHostExtension](base, cvmTable.Extension)
 
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
@@ -225,6 +227,8 @@ func (svc *cvmSvc) ListCvmExt(cts *rest.Contexts) (interface{}, error) {
 		return convCvmListResult[corecvm.AzureCvmExtension](result.Details)
 	case enumor.Gcp:
 		return convCvmListResult[corecvm.GcpCvmExtension](result.Details)
+	case enumor.TCloudZiyan:
+		return convCvmListResult[corecvm.TCloudZiyanHostExtension](result.Details)
 
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)

@@ -12,7 +12,6 @@ export const useCommonStore = defineStore({
     authVerifyData: null as any,
     authVerifyParams: null as any,
     pageAuthData: [
-      // { type: 'cloud_selection_scheme', action: 'create', id: 'cloud_selection_recommend' },
       {
         type: 'cloud_selection_scheme',
         action: 'create',
@@ -41,11 +40,6 @@ export const useCommonStore = defineStore({
       { type: 'cvm', action: 'update', id: 'iaas_resource_operate' }, // iaas编辑更新
       { type: 'cvm', action: 'delete', id: 'iaas_resource_delete' }, // iaas删除
 
-      // // 安全组
-      // eslint-disable-next-line max-len
-      // { type: 'security_group', action: 'find',  id: 'resource_find_security', path: ['/business/security', '/resource/resource'] },    // 业务 资源对应的路径
-      // { type: 'security_group', action: 'delete', id: 'iaas_resource_delete_security' },    // iaas删除
-
       // 目前业务下主机、vpc、子网、安全组、云硬盘、网络接口、弹性IP、路由表、镜像等都当作iaas统一鉴权，为了方便，使用cvm当作整个业务iaas鉴权
       { type: 'cvm', action: 'find', id: 'biz_resource_find', bk_biz_id: 0 }, // 业务 资源对应的路径
       { type: 'cvm', action: 'create', id: 'biz_iaas_resource_create', bk_biz_id: 0 }, // 业务iaas创建
@@ -63,6 +57,15 @@ export const useCommonStore = defineStore({
       { type: 'cert', action: 'delete', id: 'cert_resource_delete' }, // 资源 证书删除
       { type: 'cert', action: 'delete', id: 'biz_cert_resource_delete', bk_biz_id: 0 }, // 业务 证书删除
 
+      // scr菜单权限
+      { type: 'ziyan_resource_inventory', action: 'find', id: 'ziyan_resource_inventory_find' }, // scr 主机库存
+      { type: 'ziyan_resource', action: 'create', id: 'ziyan_resource_create' }, // scr 主机申领
+      { type: 'ziyan_resource', action: 'recycle', id: 'ziyan_resource_recycle' }, // scr 主机申领
+      { type: 'service_resource_dissolve', action: 'find', id: 'service_resource_dissolve_find' }, // scr 机房裁撤
+      { type: 'ziyan_cvm_type', action: 'find', id: 'ziyan_cvm_type_find' }, // scr CVM机型
+      { type: 'ziyan_cvm_subnet', action: 'find', id: 'ziyan_cvm_subnet_find' }, // scr CVM子网
+      { type: 'ziyan_res_shelves', action: 'find', id: 'ziyan_res_shelves_find' }, // scr 资源上下架
+      { type: 'ziyan_cvm_create', action: 'find', id: 'ziyan_cvm_create_find' }, // scr CVM生产
       // 账号管理
       { type: 'root_account', action: 'find', id: 'root_account_find' }, // 云账号管理 - 一级账号
       { type: 'main_account', action: 'find', id: 'main_account_find' }, // 云账号管理 - 二级账号

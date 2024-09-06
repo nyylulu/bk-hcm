@@ -14,15 +14,14 @@ import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import GcpDataDiskFormDialog from './children/gcp-data-disk-form-dialog';
 import './index.scss';
 import { useI18n } from 'vue-i18n';
-
-import type { IOption } from '@/typings/common';
+import { type IOption } from '@/typings/common';
 import type { IDiskOption } from '../hooks/use-cvm-form-data';
 import { ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import useCvmOptions from '../hooks/use-cvm-options';
 import useCondtion from '../hooks/use-condtion';
 import useCvmFormData, { getDataDiskDefaults, getGcpDataDiskDefaults } from '../hooks/use-cvm-form-data';
 
-import { useAccountStore } from '@/store';
+import { useAccountStore, useResourceStore } from '@/store';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useRouter } from 'vue-router';
@@ -61,10 +60,10 @@ export default defineComponent({
     const usageNum = ref(0);
     const limitNum = ref(-1);
     const refreshVpcList = ref(() => {});
+    const resourceStore = useResourceStore();
     const onRefreshVpcList = (callback: () => {}) => {
       refreshVpcList.value = callback;
     };
-
     const { useAccountSelector, ApplicationForm } = pluginHandler;
 
     const { AccountSelectorCard, isAccountShow } = useAccountSelector();
@@ -88,7 +87,7 @@ export default defineComponent({
     const isVpcPreviewDialogShow = ref(false);
     const isSubnetPreviewDialogShow = ref(false);
     const cost = ref('--');
-    const { whereAmI } = useWhereAmI();
+    const { whereAmI, getBizsId, isResourcePage } = useWhereAmI();
 
     const handleSubnetDataChange = (data: ISubnetItem) => {
       subnetData.value = data;
@@ -371,7 +370,8 @@ export default defineComponent({
         await formRef.value.validate();
         isSubmitBtnLoading.value = true;
         try {
-          const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
+          const res = await resourceStore.inqury({
+            // const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
             ...saveData,
             instance_type:
               cond.vendor !== VendorEnum.HUAWEI
@@ -838,7 +838,6 @@ export default defineComponent({
         },
         {
           validator: (value: string) => {
-            // formRef.value.clearValidate('password');
             return formData.password.length && value === formData.password;
           },
           message: '两次输入的密码不一致',
@@ -913,20 +912,21 @@ export default defineComponent({
 
     return () => (
       <div>
-        <DetailHeader>
+        <DetailHeader backRouteName={whereAmI.value === Senarios.business ? 'hostBusinessList' : 'reosurceManagePage'}>
           <p class={'purchase-cvm-header-title'}>购买主机</p>
         </DetailHeader>
         <div
           class='create-form-container cvm-wrap'
           style={whereAmI.value === Senarios.resource && { padding: 0, marginBottom: '80px' }}>
           <Form model={formData} rules={formRules} ref={formRef} onSubmit={handleFormSubmit} formType='vertical'>
-            {
-              <AccountSelectorCard
-                v-model={cond.cloudAccountId}
-                bk_biz_id={cond.bizId}
-                onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
-              />
-            }
+            <AccountSelectorCard
+              v-model={cond.cloudAccountId}
+              bkBizId={whereAmI.value === Senarios.business && getBizsId()}
+              disabled={isResourcePage}
+              placeholder={isResourcePage && '请在左侧选择账号'}
+              onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
+              onVendorChange={(vendor: VendorEnum) => (cond.vendor = vendor)}
+            />
             {isAccountShow.value ? (
               <ApplicationForm isbusiness={true}></ApplicationForm>
             ) : (
@@ -938,7 +938,8 @@ export default defineComponent({
                   v-model:cloudAccountId={cond.cloudAccountId}
                   v-model:vendor={cond.vendor}
                   v-model:region={cond.region}
-                  v-model:resourceGroup={cond.resourceGroup}>
+                  v-model:resourceGroup={cond.resourceGroup}
+                  isbusiness={!isAccountShow.value}>
                   {{
                     default: () => (
                       <FormItem label={'可用区'} required property='zone'>

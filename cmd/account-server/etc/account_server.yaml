@@ -63,6 +63,7 @@ log:
   verbosity: 0
 
 
+
 # bill controller
 controller:
   controllerSyncDuration:
@@ -94,6 +95,87 @@ esb:
   appSecret:
   # user is the BlueKing user of hcm to request esb.
   user: admin
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+# --- 内部版配置 ---
+# defines finops related settings.
+finops:
+  # endpoints is a seed list of host:port addresses of finops api gateway nodes.
+  endpoints:
+    - http://demo.com
+  # appCode is the BlueKing app code of hcm to request finops api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request finops api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request finops api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request finops api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request finops api gateway.
+  bkToken: xxxxxxxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+# [内部版] 财务侧接口 配置
+jarvis:
+  endpoints:
+    - http://demo.com
+  appID: 1234
+  appKey: abcd
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+exchangeRate:
+  # 启动自动拉取汇率
+  enablePull: true
+  # 拉取间隔，单位分钟
+  pullIntervalMin: 120
+  # 转换目标汇率
+  toCurrency:
+    - CNY
+  # 转换原汇率。可留空，表示匹配全部。
+  fromCurrency:
+    - USD
+    - EUR
+
+# [内部版] OBS侧接口配置
+obs:
+  # 通知obs的api地址
+  endpoints:
+    - http://127.0.0.1:8888
+  # api秘钥
+  apiKey: abcd
   # defines tls related options.
   tls:
     # server should be accessed without verifying the TLS certificate.

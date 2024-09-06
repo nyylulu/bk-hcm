@@ -148,7 +148,7 @@ func (svc *lbSvc) buildDeleteTCloudTarget(kt *kit.Kit, body json.RawMessage, acc
 		logs.Infof(
 			"build sops tcloud remove target params success,lbID: %s tgIDs: %v, removeTargetJSON: %s, rid: %s",
 			lbID, lbTgIDs, removeTargetJSON, kt.Rid)
-		result, err := svc.buildRemoveTCloudTarget(kt, removeTargetJSON, accountID)
+		result, err := svc.buildRemoveTCloudTarget(kt, removeTargetJSON, accountID, enumor.TCloud)
 		if err != nil {
 			return nil, err
 		}
@@ -202,7 +202,8 @@ func (svc *lbSvc) iterateTargetGroupGroupByCLB(kt *kit.Kit,
 				Page:   core.NewDefaultBasePage(),
 			}
 			for {
-				listRuleRelResult, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroupListenerRel(kt, ruleRelReq)
+				listRuleRelResult, err := svc.client.DataService().Global.LoadBalancer.ListTargetGroupListenerRel(kt,
+					ruleRelReq)
 				if err != nil {
 					logs.Errorf("list tcloud listener url rule failed, tgID: %s, err: %v, rid: %s", tgID, err, kt.Rid)
 					return nil, err

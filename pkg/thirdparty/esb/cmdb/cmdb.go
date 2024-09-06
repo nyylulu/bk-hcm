@@ -36,6 +36,8 @@ type Client interface {
 	GetBizBriefCacheTopo(kt *kit.Kit, params *GetBizBriefCacheTopoParams) (*GetBizBriefCacheTopoResult, error)
 	FindHostTopoRelation(kt *kit.Kit, params *FindHostTopoRelationParams) (*HostTopoRelationResult, error)
 	SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error)
+	// SearchBizBelonging search cmdb business belonging.
+	SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*SearchBizBelongingResult, error)
 	ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error)
 	FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error)
 }
@@ -105,6 +107,13 @@ func (c *cmdb) SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInf
 
 	return types.EsbCall[SearchModuleParams, ModuleInfoResult](c.client, c.config, rest.POST, kt, params,
 		"/cc/search_module/")
+}
+
+// SearchBizBelonging search cmdb business belonging.
+func (c *cmdb) SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*SearchBizBelongingResult, error) {
+
+	return types.EsbCall[SearchBizBelongingParams, SearchBizBelongingResult](c.client, c.config, rest.POST, kt, params,
+		"/cc/search_cost_info_relation/")
 }
 
 // ResourceWatch watch cmdb resource event.

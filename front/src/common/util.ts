@@ -50,6 +50,26 @@ export function deepMerge(...objectArray: any) {
     return acc;
   }, {});
 }
+/**
+ * 期望交付时间
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
+
+export function expectedDeliveryTime() {
+  return dayjs().add(91, 'day').format('YYYY-MM-DD HH:mm:ss');
+}
+/**
+ * 申请时间默认一个月
+ * @param val 待格式化时间
+ * @param format 格式
+ * @returns 格式化后的时间
+ */
+
+export function applicationTime() {
+  return [dayjs().subtract(30, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
+}
 
 /**
  * 时间格式化
@@ -58,6 +78,7 @@ export function deepMerge(...objectArray: any) {
  * @returns 格式化后的时间
  */
 export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  // eslint-disable-next-line no-nested-ternary
   return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
 }
 
@@ -68,6 +89,7 @@ export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultV
  * @returns 格式化后的时间
  */
 export function timeUTCFormatter(val: string, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  // eslint-disable-next-line no-nested-ternary
   return val ? dayjs.utc(val).format(format) : defaultVal ? val : undefined;
 }
 

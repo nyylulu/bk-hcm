@@ -12,6 +12,7 @@ import { showLoginModal } from '@blueking/login-modal';
 import bus from '@/common/bus';
 import CachedPromise from './cached-promise';
 import RequestQueue from './request-queue';
+import { useAccountStore } from '@/store';
 import { defaults } from 'lodash';
 // import { bus } from '@/common/bus';
 // import { messageError } from '@/common/bkmagic';
@@ -264,7 +265,7 @@ function handleReject(error: any, config: any) {
     } else if (status === 500) {
       nextError.message = '系统出现异常';
       Message({ theme: 'error', message: nextError.message });
-    } else if (data?.message && error.code !== 0 && error.code !== 2000009) {
+    } else if (data?.message && error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) {
       nextError.message = data.message;
       Message({ theme: 'error', message: nextError.message });
     }
@@ -273,6 +274,9 @@ function handleReject(error: any, config: any) {
     return Promise.reject(nextError);
   }
   handleCustomErrorCode(error);
+  handleBccCustomErrorCode(error);
+
+  console.error(error.message);
 
   return Promise.reject(error);
 }
@@ -289,7 +293,27 @@ function handleCustomErrorCode(error: any) {
   // zenlayer 账单导入错误码
   if ([2000015, 2000016, 2000017].includes(error.code)) return;
 
-  if (error.code !== 0 && error.code !== 2000009) Message({ theme: 'error', message: error.message });
+  // bk_ticket失效后的登录弹框
+  if (
+    error.code === 2000000 &&
+    ["bk_ticket cookie don't exists", "bk_token cookie don't exists"].includes(error.message)
+  ) {
+    // 打开节流阀
+    isLoginValid = true;
+    InvalidLogin();
+  }
+
+  if (error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) Message({ theme: 'error', message: error.message });
+}
+
+/**
+ * 处理 bcc 自定义错误码
+ * @param error 异常
+ */
+function handleBccCustomErrorCode(error: any) {
+  if (error.code === 2000012 && error.message) {
+    useAccountStore().updateSecurityConfirmMessage(error.message);
+  }
 }
 
 /**

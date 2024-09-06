@@ -21,6 +21,8 @@
 package loadbalancer
 
 import (
+	"fmt"
+
 	protolb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -29,6 +31,7 @@ import (
 	"hcm/pkg/rest"
 )
 
+// TCloudDescribeResources ...
 func (svc *lbSvc) TCloudDescribeResources(cts *rest.Contexts) (any, error) {
 	req := new(protolb.TCloudDescribeResourcesOption)
 	if err := cts.DecodeInto(req); err != nil {
@@ -39,8 +42,6 @@ func (svc *lbSvc) TCloudDescribeResources(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// TODO: 权限校验
-
 	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Account, Action: meta.Find,
 		ResourceID: req.AccountID}}
 	if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
@@ -48,12 +49,20 @@ func (svc *lbSvc) TCloudDescribeResources(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	_, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType, req.AccountID)
+	account, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType,
+		req.AccountID)
 	if err != nil {
 		// 这里校验账号是否存在，出现错误大概率是账号不存在
 		logs.V(3).Errorf("fail to get account info, err: %s, account id: %s, rid: %s",
 			err, req.AccountID, cts.Kit.Rid)
 		return nil, err
 	}
-	return svc.client.HCService().TCloud.Clb.DescribeResources(cts.Kit, req)
+	switch account.Vendor {
+	case enumor.TCloud:
+		return svc.client.HCService().TCloud.Clb.DescribeResources(cts.Kit, req)
+	case enumor.TCloudZiyan:
+		return svc.client.HCService().TCloudZiyan.Clb.DescribeResources(cts.Kit, req)
+	default:
+		return nil, fmt.Errorf("unsupport vendor %s", account.Vendor)
+	}
 }
