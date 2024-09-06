@@ -1,6 +1,6 @@
 import CommonCard from '@/components/CommonCard';
 import { Form } from 'bkui-vue';
-import { defineComponent, PropType, ref, watch } from 'vue';
+import { defineComponent, PropType, ref, watch, nextTick } from 'vue';
 import AccountSelector from '@/components/account-selector/index-new.vue';
 import { VendorEnum } from '@/common/constant';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
@@ -45,7 +45,9 @@ export const useAccountSelectorCard = () => {
       );
       const handleChange = async (account: any) => {
         isAccountShow.value = account?.vendor === VendorEnum.ZIYAN;
-        props.onAccountChange?.(account);
+        nextTick(() => {
+          props.onAccountChange?.(account);
+        });
       };
 
       watch(
