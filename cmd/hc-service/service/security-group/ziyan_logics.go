@@ -30,9 +30,8 @@ import (
 )
 
 func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountID string, bkBizID int64,
-	action enumor.ApplicationType, content any, bpaasErr *errf.ErrorF) error {
+	action enumor.ApplicationType, content any, bpaasSN string) error {
 
-	bpaasSN := bpaasErr.Message
 	logs.Infof("bpaas approval triggered, action: %s, application id: %v, account id: %s, rid: %s",
 		action, bpaasSN, accountID, kt.Rid)
 	// 保存本地申请单
@@ -60,12 +59,12 @@ func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountI
 		Memo:           nil,
 		BkBizIDs:       []int64{bkBizID},
 	}
-	_, err = dataCli.Global.Application.Create(kt.Ctx, kt.Header(), applicationReq)
+	resp, err := dataCli.Global.Application.Create(kt.Ctx, kt.Header(), applicationReq)
 	if err != nil {
 		logs.Errorf("fail to create application for bpaas(id: %s), err: %v, action: %s, rid: %s",
 			bpaasSN, err, action, kt.Rid)
 		return err
 	}
-	// 重新返回bpaas错误以触发前端提示
-	return bpaasErr
+	// 重新返回bpaas错误以触发前端提示, 这里直接
+	return errf.New(errf.NeedBPassApproval, resp.ID)
 }

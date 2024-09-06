@@ -20,15 +20,16 @@
 package errf
 
 import (
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
-	v20170312 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"reflect"
 	"testing"
+
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
+	v20170312 "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 
 	"hcm/pkg/tools/uuid"
 )
 
-func TestGetBPassApprovalErrorf(t *testing.T) {
+func TestGetBPassSNFromErr(t *testing.T) {
 	type args struct {
 		err error
 	}
@@ -39,23 +40,23 @@ func TestGetBPassApprovalErrorf(t *testing.T) {
 	tests := []struct {
 		name string
 		args args
-		want *ErrorF
+		want string
 	}{
 		{
 			"正确",
 			args{err: tclouBPassdErr},
-			&ErrorF{Code: NeedBPassApproval, Message: "123456789"},
+			"123456789",
 		},
 		{
 			"错误",
 			args{err: tcloudErr},
-			nil,
+			"",
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetBPassApprovalErrorf(tt.args.err); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBPassApprovalErrorf() = %v, want %v", got, tt.want)
+			if got := GetBPassSNFromErr(tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetBPassSNFromErr() = %v, want %v", got, tt.want)
 			}
 		})
 	}

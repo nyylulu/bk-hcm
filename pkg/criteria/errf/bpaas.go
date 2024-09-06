@@ -33,21 +33,20 @@ func init() {
 	tcloudBPassIDRegexp = regexp.MustCompile("ApplicationId: `\\d+`")
 }
 
-// GetBPassApprovalErrorf 尝试转换为触发BPass审批错误，如果不符合条件将返回nil
-func GetBPassApprovalErrorf(err error) *ErrorF {
+// GetBPassSNFromErr 如果是BPaas错误，则返回对应sn，如果不符合条件将返回空串
+func GetBPassSNFromErr(err error) (bpaasID string) {
 
 	if terr := GetTypedError[*terrors.TencentCloudSDKError](err); terr != nil &&
 		(*terr).GetCode() == vpc.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED {
 
 		// 	获取审批单号
 		msg := (*terr).GetMessage()
-		var applicationID string
 		if appIDMsg := tcloudBPassIDRegexp.FindString(msg); len(appIDMsg) > 17 {
-			applicationID = appIDMsg[16 : len(appIDMsg)-1]
+			bpaasID = appIDMsg[16 : len(appIDMsg)-1]
 		}
-		return &ErrorF{Code: NeedBPassApproval, Message: applicationID}
+		return bpaasID
 	}
-	return nil
+	return ""
 }
 
 // NeedBPassApproval 触发BPass审批流程

@@ -78,10 +78,10 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	result, err := g.dataCli.TCloudZiyan.SecurityGroup.BatchCreateSecurityGroup(cts.Kit, createReq)
 	if err != nil {
 
-		berr := errf.GetBPassApprovalErrorf(err)
-		if berr != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, req.AccountID, req.BkBizID,
-				enumor.CreateSecurityGroup, opt, berr)
+				enumor.CreateSecurityGroup, opt, bpaasSN)
 		}
 
 		logs.Errorf("request dataservice to create tcloud ziyan security group failed, err: %v, rid: %s", err,
@@ -116,10 +116,10 @@ func (g *securityGroup) DeleteTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 		CloudID: sg.CloudID,
 	}
 	if err := client.DeleteSecurityGroup(cts.Kit, opt); err != nil {
-		berr := errf.GetBPassApprovalErrorf(err)
-		if berr != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, sg.AccountID, sg.BkBizID,
-				enumor.DeleteSecurityGroup, opt, berr)
+				enumor.DeleteSecurityGroup, opt, bpaasSN)
 		}
 
 		logs.Errorf("request adaptor to delete tcloud ziyan security group failed, err: %v, opt: %v, rid: %s",
@@ -175,10 +175,10 @@ func (g *securityGroup) UpdateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	}
 	if err := client.UpdateSecurityGroup(cts.Kit, opt); err != nil {
 
-		berr := errf.GetBPassApprovalErrorf(err)
-		if berr != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				sg.AccountID, sg.BkBizID, enumor.UpdateSecurityGroup, opt, berr)
+				sg.AccountID, sg.BkBizID, enumor.UpdateSecurityGroup, opt, bpaasSN)
 		}
 
 		logs.Errorf("request adaptor to UpdateSecurityGroup failed, err: %v, opt: %v, rid: %s",
@@ -232,10 +232,10 @@ func (g *securityGroup) TZiyanSGBatchAssociateCloudCvm(cts *rest.Contexts) (any,
 		CloudCvmIDs:          req.CloudCvmIDs,
 	}
 	if err = client.SecurityGroupCvmBatchAssociate(cts.Kit, opt); err != nil {
-		berr := errf.GetBPassApprovalErrorf(err)
-		if berr != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				sg.AccountID, sg.BkBizID, enumor.AssociateSecurityGroup, opt, berr)
+				sg.AccountID, sg.BkBizID, enumor.AssociateSecurityGroup, opt, bpaasSN)
 		}
 		logs.Errorf("request adaptor to tcloud ziyan security group associate cvm failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
@@ -274,10 +274,10 @@ func (g *securityGroup) TZiyanSGBatchDisassociateCloudCvm(cts *rest.Contexts) (a
 	}
 	if err = client.SecurityGroupCvmBatchDisassociate(cts.Kit, opt); err != nil {
 
-		berr := errf.GetBPassApprovalErrorf(err)
-		if berr != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
 			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				sg.AccountID, sg.BkBizID, enumor.DisassociateSecurityGroup, opt, berr)
+				sg.AccountID, sg.BkBizID, enumor.DisassociateSecurityGroup, opt, bpaasSN)
 		}
 		logs.Errorf("request adaptor to tcloud ziyan security group disassociate cvm failed, err: %v, opt: %v, rid: %s",
 			err, opt, cts.Kit.Rid)
