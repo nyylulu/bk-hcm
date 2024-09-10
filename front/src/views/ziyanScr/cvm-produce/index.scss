@@ -9,6 +9,12 @@
         right: -22px;
     }
   }
+  .success-container {
+    display: flex;
+    div + div {
+      margin-left: 5px;
+    }
+  }
 .sub-order-num,.username {
     color: #409eff;
     cursor: pointer;

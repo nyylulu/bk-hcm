@@ -20,6 +20,7 @@
 package ziyan
 
 import (
+	"hcm/pkg/adaptor/tcloud"
 	"hcm/pkg/adaptor/types"
 	"hcm/pkg/criteria/constant"
 	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
@@ -47,6 +48,13 @@ func newClientSet(s *types.BaseSecret, profile *profile.ClientProfile) *clientSe
 		profile:    profile,
 	}
 
+}
+
+// SetRateLimitRetryWithConstInterval ...
+func (c *clientSet) SetRateLimitRetryWithConstInterval() {
+	c.profile.RateLimitExceededMaxRetries = constant.MaxRetries
+	c.profile.RateLimitExceededRetryDuration = tcloud.RandomDurationFunc()
+	return
 }
 
 // CamServiceClient tcloud ziyan sdk cam client

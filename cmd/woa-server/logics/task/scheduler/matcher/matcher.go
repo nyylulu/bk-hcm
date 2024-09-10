@@ -36,8 +36,8 @@ import (
 	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
-	"hcm/pkg/kit"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/uuid"
 )
@@ -707,7 +707,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 		createTime = ticket.CreateAt.In(location).Format(constant.DateTimeLayout)
 	}
 	content := fmt.Sprintf(noticeFmt, orderId, orderId, ticket.User, bizName, requireName, createTime, ticket.Remark,
-		orderId)
+		orderId, ticket.BkBizId)
 
 	for _, user := range users {
 		resp, err := m.bkchat.SendApplyDoneMsg(nil, nil, user, content)

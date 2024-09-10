@@ -1,7 +1,7 @@
 .host-application-form-wrapper {
   .apply-form-wrapper {
     margin-top: 52px;
-    padding: 0 40px;
+    padding: 24px;
   }
 
   .item-warp-component {
@@ -15,10 +15,6 @@
     font-weight: 700;
     font-size: 14px;
     color: #313238;
-  }
-
-  .card-content {
-    padding: 0 28px;
   }
 
   .operation-column {
@@ -160,9 +156,19 @@
         flex: 1;
         text-align: right;
       }
-      .content{
+      .content {
         line-height: 26px;
       }
+    }
+  }
+
+  .form-item-tips {
+    width: 760px;
+    font-size: 12px;
+    line-height: 20px;
+    margin-top: 4px;
+    .bk-link {
+      font-size: 12px;
     }
   }
 }

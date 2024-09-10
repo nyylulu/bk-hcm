@@ -52,6 +52,10 @@ func InitService(cap *capability.Capability) {
 	h.Add("SyncLoadBalancer", "POST", "/load_balancers/sync", v.SyncLoadBalancer)
 	h.Add("SyncVpc", "POST", "/vpcs/sync", v.SyncVpc)
 	h.Add("SyncSubnet", "POST", "/subnets/sync", v.SyncSubnet)
+	h.Add("SyncHostWithRelRes", "POST", "/hosts/with/relation_resources/sync", v.SyncHostWithRelRes)
+	h.Add("SyncHostWithRelResByCond", "POST", "/hosts/with/relation_resources/by_condition/sync",
+		v.SyncHostWithRelResByCond)
+	h.Add("DeleteHost", "DELETE", "/hosts/by_condition/delete", v.DeleteHostByCond)
 
 	h.Load(cap.WebService)
 }

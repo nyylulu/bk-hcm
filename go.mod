@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/asset v1.19.0
 	cloud.google.com/go/bigquery v1.59.1
 	cloud.google.com/go/iam v1.1.7
+	git.woa.com/nops/ngate/ngate-sdk/ngate-go v0.0.0-20230505013247-70e8ab006353
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.9.1
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/compute/armcompute/v5 v5.2.0
@@ -53,6 +54,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.0.908
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc v1.0.908
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.48
+	github.com/tencentyun/qcloud-cos-sts-sdk v0.0.0-20240524051400-0402a4c50c2a
 	github.com/tidwall/gjson v1.14.4
 	github.com/xuri/excelize/v2 v2.8.1
 	go.etcd.io/etcd/api/v3 v3.5.13
@@ -138,7 +140,6 @@ require (
 	github.com/mozillazg/go-httpheader v0.2.1 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
 	github.com/richardlehane/msoleps v1.0.3 // indirect
-	github.com/tencentyun/qcloud-cos-sts-sdk v0.0.0-20240524051400-0402a4c50c2a // indirect
 	github.com/xuri/efp v0.0.0-20231025114914-d1ff6096ae53 // indirect
 	github.com/xuri/nfp v0.0.0-20230919160717-d98342af3f05 // indirect
 )

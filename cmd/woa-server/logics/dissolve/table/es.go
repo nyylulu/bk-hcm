@@ -133,8 +133,8 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMa
 
 		result[idx] = dissolve.Host{
 			ServerAssetID:     ccHost.BkAssetId,
-			InnerIP:           ccHost.BkHostInnerIp,
-			OuterIP:           ccHost.BkHostOuterIp,
+			InnerIP:           ccHost.BkHostInnerIP,
+			OuterIP:           ccHost.BkHostOuterIP,
 			AppName:           bizName,
 			BizID:             bizID,
 			DeviceType:        ccHost.SvrDeviceClass,

@@ -19,6 +19,8 @@
 
 package slice
 
+import "hcm/pkg/tools/maps"
+
 // Remove 移除首次匹配到的 item 元素
 func Remove[T comparable](l []T, item T) []T {
 	for i, other := range l {
@@ -37,6 +39,23 @@ func IsItemInSlice[T comparable](l []T, item T) bool {
 		}
 	}
 	return false
+}
+
+// Intersection 取交集
+func Intersection[T comparable](slice1 []T, slice2 []T) []T {
+	slice1Map := make(map[T]struct{})
+	for _, item := range slice1 {
+		slice1Map[item] = struct{}{}
+	}
+
+	intersectSlice := make([]T, 0)
+	for _, item := range slice2 {
+		if _, ok := slice1Map[item]; ok {
+			intersectSlice = append(intersectSlice, item)
+		}
+	}
+
+	return intersectSlice
 }
 
 // Unique 去重
@@ -119,4 +138,20 @@ func Intersect[S ~[]E, E comparable](sliceA, sliceB S) S {
 	}
 
 	return intersect
+}
+
+// NotIn get elements in slice A but not in slice B.
+func NotIn[S ~[]E, E comparable](sliceA, sliceB S) S {
+	diffs := make(map[E]struct{}, 0)
+	mapA := make(map[E]struct{})
+	// record elements in sliceA
+	for i := range sliceA {
+		mapA[sliceA[i]] = struct{}{}
+	}
+	for i := range sliceB {
+		if _, ok := mapA[sliceB[i]]; !ok {
+			diffs[sliceB[i]] = struct{}{}
+		}
+	}
+	return maps.Keys(diffs)
 }

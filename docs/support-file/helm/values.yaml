@@ -359,9 +359,6 @@ hcservice:
         targetPort: 80
         nodePort:
   port: 80
-  syncCCRes:
-    enable: true
-    syncIntervalMin: 360
 
 webserver:
   ## 镜像
@@ -575,11 +572,14 @@ accountserver:
     dailySummarySyncDuration:
 
   billAllocation:
-    # aws saving plan allocation option
-    awsSavingPlans:
-    #    - rootAccountId:
-    #      spArnPrefix:
-    #      SpPurchaseAccountCloudID:
+    # aws savings plans allocation option
+    awsSavingsPlans:
+    #    - rootAccountCloudId: xxx
+    #      SpPurchaseAccountCloudID: xxx
+    #      spArnPrefix: arn:aws:savingsplans::xxxxx:savingsplan/
+    awsCommonExpense:
+      excludeAccountCloudIds:
+    #      - 123456789
   # [内部版] 财务侧接口 配置
   jarvis:
     endpoints:
@@ -906,8 +906,13 @@ egress:
     - 10.0.0.0/8
     - 11.0.0.0/8
     - 30.0.0.0/8
-  yuntiDomain: ""
-  cl5Domain: ""
+  rules:
+    - dport: 80
+      host: example.com
+      protocol: TCP
+      sport: 80
+      service: example.com
+
 
 resourceDissolve:
   originDate: "20240105"
@@ -993,3 +998,13 @@ objectstore:
   bucketName: bucket
   bucketRegion: ap-xxx
   isDebug: false
+
+tmpFileDir: /tmp
+
+# ngate回收外网IP的配置
+ngate:
+  host: https://1234678.com
+  app_code: xxxx
+  app_secret: xxxx
+
+

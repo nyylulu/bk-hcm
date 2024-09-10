@@ -596,7 +596,7 @@ func (s *scheduler) CreateApplyOrder(kit *kit.Kit, param *types.ApplyReq) (*type
 		return nil, err
 	}
 
-	resp, err := s.itsm.CreateTicket(nil, nil, param.User, rst.OrderId)
+	resp, err := s.itsm.CreateTicket(nil, nil, param.User, rst.OrderId, param.BkBizId)
 	if err != nil {
 		logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s", err, kit.Rid)
 		return nil, fmt.Errorf("failed to create apply order, for create itsm ticket err: %v", err)
@@ -1132,7 +1132,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			BkHostId:     host.BkHostId,
 			AssetId:      host.BkAssetId,
 			Ip:           host.GetUniqIp(),
-			OuterIp:      host.BkHostOuterIp,
+			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
 			OsType:       host.BkOsName,

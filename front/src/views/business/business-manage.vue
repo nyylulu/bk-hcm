@@ -25,7 +25,6 @@ import { useRoute, useRouter } from 'vue-router';
 
 import { useAccountStore } from '@/store/account';
 import { InfoBox } from 'bkui-vue';
-import GlobalPermissionDialog from '@/components/global-permission-dialog';
 
 const isShowSideSlider = ref(false);
 const isShowGcpAdd = ref(false);
@@ -115,21 +114,26 @@ const handleAdd = () => {
     isTemplateDialogEdit.value = false;
     return;
   }
+  const { bizs } = route.query;
   if (renderComponent.value === DriveManage) {
     router.push({
       path: '/business/service/service-apply/disk',
+      query: { bizs },
     });
   } else if (renderComponent.value === HostManage) {
     router.push({
       path: '/business/service/service-apply/cvm',
+      query: { bizs },
     });
   } else if (renderComponent.value === VpcManage) {
     router.push({
       path: '/business/service/service-apply/vpc',
+      query: { bizs },
     });
   } else if (renderComponent.value === SubnetManage) {
     router.push({
       path: '/business/service/service-apply/subnet',
+      query: { bizs },
     });
   } else {
     isEdit.value = false;
@@ -157,12 +161,6 @@ const handleSuccess = () => {
 
 const handleSecrityType = (val: string) => {
   securityType.value = val;
-};
-
-const handleTemplateEdit = (payload: any) => {
-  isTemplateDialogShow.value = true;
-  isTemplateDialogEdit.value = true;
-  templateDialogPayload.value = payload;
 };
 
 // 新增修改防火墙规则
@@ -211,6 +209,22 @@ const {
   permissionParams,
   authVerifyData,
 } = useVerify();
+const computedSecurityText = computed(() => {
+  if (renderComponent.value !== SecurityManage) return '新建';
+  switch (securityType.value) {
+    case 'template':
+      return '新建模板';
+    case 'gcp':
+      return '新建GCP防火墙规则';
+    default:
+      return '新建安全组';
+  }
+});
+const handleEditTemplate = (payload: any) => {
+  isTemplateDialogShow.value = true;
+  isTemplateDialogEdit.value = true;
+  templateDialogPayload.value = payload;
+};
 </script>
 
 <template>
@@ -234,9 +248,9 @@ const {
           handleAuth(val)
         }"
           @handleSecrityType="handleSecrityType"
+          @editTemplate="handleEditTemplate"
           @edit="handleEdit"
           v-model:isFormDataChanged="isFormDataChanged"
-          @editTemplate="handleTemplateEdit"
         >
           <span>
             <bk-button
@@ -259,7 +273,7 @@ const {
                 renderComponent === SubnetManage ||
                 renderComponent === VpcManage
                   ? '申请'
-                  : '新增'
+                  : computedSecurityText
               }}
             </bk-button>
           </span>
@@ -318,8 +332,6 @@ const {
           }
         "
       />
-
-      <GlobalPermissionDialog />
     </div>
   </div>
 </template>

@@ -111,8 +111,8 @@ func (a AccountBillSummaryMainDao) List(kt *kit.Kit, opt *types.ListOption) (
 		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.AccountBillSummaryMainTable, whereExpr)
 		count, err := a.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count account bill summary main failed, err: %v, filter: %s, rid: %s",
-				err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count account bill summary main failed, filter: %v, err: %v, rid: %s",
+				opt.Filter, err, kt.Rid)
 			return nil, err
 		}
 
@@ -202,8 +202,8 @@ func (a AccountBillSummaryMainDao) ListGroupByBiz(kt *kit.Kit, opt *types.ListOp
 		sql := fmt.Sprintf(`SELECT COUNT(distinct bk_biz_id) FROM %s %s`, table.AccountBillSummaryMainTable, whereExpr)
 		count, err := a.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count account bill summary main failed, err: %v, filter: %v, rid: %s",
-				err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count account bill summary main failed, filter: %v, err: %v, rid: %s",
+				opt.Filter, err, kt.Rid)
 			return nil, err
 		}
 
@@ -233,8 +233,8 @@ func (a AccountBillSummaryMainDao) ListGroupByBiz(kt *kit.Kit, opt *types.ListOp
 
 	details := make([]tablebill.AccountBillSummaryMain, 0)
 	if err = a.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
-		logs.Errorf("list account bill summary main group by bk_biz_id failed, err: %v, sql: %s, rid: %s",
-			err, sql, kt.Rid)
+		logs.Errorf("list account bill summary main group by bk_biz_id failed, sql: %s, err: %v, rid: %s",
+			sql, err, kt.Rid)
 		return nil, err
 	}
 	return &typesbill.ListAccountBillSummaryMainDetails{Details: details}, nil
@@ -260,39 +260,22 @@ func (a AccountBillSummaryMainDao) ListGroupByProduct(kt *kit.Kit, opt *types.Li
 		sql := fmt.Sprintf(`SELECT COUNT(distinct product_id) FROM %s %s`, table.AccountBillSummaryMainTable, whereExpr)
 		count, err := a.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count account bill summary main failed, err: %v, filter: %s, rid: %s",
-				err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count account bill summary main failed, filter: %v, err: %v, rid: %s",
+				opt.Filter, err, kt.Rid)
 			return nil, err
 		}
 
 		return &typesbill.ListAccountBillSummaryMainDetails{Count: count}, nil
 	}
 
+	// 排序字段默认设置为product_id, 避免因为设置成根据id排序导致sql执行失败
+	if opt.Page.Sort == "" {
+		opt.Page.Sort = "product_id"
+	}
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
 	if err != nil {
 		return nil, err
 	}
-
-	/**
-	create table account_bill_summary_main
-	(
-	    product_id                    bigint                              null,
-	    last_synced_version           bigint                              not null,
-	    current_version               bigint                              not null,
-	    currency                      varchar(64)                         not null,
-	    last_month_cost_synced        decimal(38, 10)                     not null,
-	    last_month_rmb_cost_synced    decimal(38, 10)                     not null,
-	    current_month_cost_synced     decimal(38, 10)                     not null,
-	    current_month_rmb_cost_synced decimal(38, 10)                     not null,
-	    month_on_month_value          float                               null,
-	    current_month_cost            decimal(38, 10)                     not null,
-	    current_month_rmb_cost        decimal(38, 10)                     not null,
-	    rate                          float                               null,
-	    adjustment_cost               decimal(38, 10)                     not null,
-	    adjustment_rmb_cost           decimal(38, 10)                     not null
-	);
-
-	*/
 
 	fieldExpr := "product_id, SUM(last_month_cost_synced) as last_month_cost_synced, " +
 		"SUM(last_month_rmb_cost_synced) as last_month_rmb_cost_synced, " +
@@ -307,6 +290,8 @@ func (a AccountBillSummaryMainDao) ListGroupByProduct(kt *kit.Kit, opt *types.Li
 
 	details := make([]tablebill.AccountBillSummaryMain, 0)
 	if err = a.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		logs.Errorf("list account bill summary main group by product_id failed, sql: %s, err: %v, rid: %s",
+			sql, err, kt.Rid)
 		return nil, err
 	}
 	return &typesbill.ListAccountBillSummaryMainDetails{Details: details}, nil

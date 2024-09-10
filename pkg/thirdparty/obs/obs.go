@@ -71,6 +71,21 @@ type BaseResponse struct {
 	JSONRPC string              `json:"jsonrpc"`
 	ID      string              `json:"id"`
 	Result  *BaseResponseResult `json:"result,omitempty"`
+	Error   *BaseResponseError  `json:"error,omitempty"`
+}
+
+// BaseResponseError ...
+type BaseResponseError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// Error ...
+func (e *BaseResponseError) Error() string {
+	if e == nil {
+		return "<nil>"
+	}
+	return fmt.Sprintf("{\"code\":%d,\"message\":\"%s\"}", e.Code, e.Message)
 }
 
 // BaseResponseResult base response result
@@ -138,9 +153,8 @@ func (io *IEGObs) NotifyRePull(kt *kit.Kit, req *NotifyObsPullReq) error {
 	if err := req.Validate(); err != nil {
 		return err
 	}
-	url := "/obs-api?api_key=%s"
+	url := "/obs-api"
 	resp := new(BaseResponse)
-
 	// OBS侧要求`accountInfoList`参数作为格式化后的字符串传参，因此这里创建一个临时结构体行参数转换
 	type obsNotifyObsPullReq struct {
 		YearMonth       int64  `json:"yearMonth" `
@@ -155,9 +169,9 @@ func (io *IEGObs) NotifyRePull(kt *kit.Kit, req *NotifyObsPullReq) error {
 			AccountInfoList: formatAccountInfo(req),
 		},
 	}
-
 	err := io.Client.Verb(rest.POST).
-		SubResourcef(url, io.Option.APIKey).
+		SubResourcef(url).
+		WithParam("api_key", io.Option.APIKey).
 		WithContext(kt.Ctx).
 		WithHeaders(kt.Header()).
 		Body(baseReq).
@@ -168,6 +182,10 @@ func (io *IEGObs) NotifyRePull(kt *kit.Kit, req *NotifyObsPullReq) error {
 		return err
 	}
 
+	if resp.Error != nil {
+		logs.Errorf("obs api returns error: %v, rid: %s", resp.Error, kt.Rid)
+		return resp.Error
+	}
 	if resp.Result == nil || resp.Result.Status != 0 {
 		err := fmt.Errorf("failed to call obs api, resp %v", resp)
 		logs.Errorf("obs api returns error, url: %s, err: %v, rid: %s", url, err, kt.Rid)

@@ -20,6 +20,7 @@ import (
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
 )
 
 const (
@@ -74,6 +75,10 @@ type OrderSpec struct {
 	NetworkType string `json:"network_type" bson:"network_type"`
 	Vpc         string `json:"vpc" bson:"vpc"`
 	Subnet      string `json:"subnet" bson:"subnet"`
+	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
+	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
+	// 计费时长，单位：月
+	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
 }
 
 // Validate whether OrderSpec is valid
@@ -102,6 +107,16 @@ func (s *OrderSpec) Validate() error {
 	modDisk := s.DiskSize % diskUnit
 	if modDisk != 0 {
 		return fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
+	}
+
+	// 计费模式校验-该接口没有对外提供，可以为必传参数
+	if err := s.ChargeType.Validate(); err != nil {
+		return err
+	}
+
+	// 包年包月时，计费时长必传
+	if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
+		return fmt.Errorf("charge_months invalid value < 1")
 	}
 
 	return nil

@@ -40,6 +40,7 @@ import (
 	"hcm/cmd/account-server/service/bill/billsummaryroot"
 	"hcm/cmd/account-server/service/bill/billsyncrecord"
 	exchangerate "hcm/cmd/account-server/service/bill/exchange-rate"
+	savingsplans "hcm/cmd/account-server/service/bill/savings-plans"
 	"hcm/cmd/account-server/service/capability"
 	"hcm/cmd/account-server/service/finops"
 	"hcm/pkg/cc"
@@ -55,6 +56,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/jarvis"
 	"hcm/pkg/thirdparty/obs"
 	"hcm/pkg/tools/ssl"
@@ -64,19 +66,19 @@ import (
 
 // Service do all the account server's work
 type Service struct {
-	clientSet              *client.ClientSet
-	serve                  *http.Server
-	authorizer             auth.Authorizer
-	audit                  logicaudit.Interface
-	billManager            *bill.BillManager
 	obsController          *bill.SyncController
 	exchangeRateController *bill.ExchangeRateController
-
 	// finOps  Finops client
 	finOps pkgfinops.Client
-
 	// jarvis api
 	jarvis jarvis.Client
+
+	clientSet   *client.ClientSet
+	serve       *http.Server
+	authorizer  auth.Authorizer
+	audit       logicaudit.Interface
+	billManager *bill.BillManager
+	esbClient   esb.Client
 }
 
 // NewService create a service instance.
@@ -109,6 +111,13 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 
 	jarvisCfg := cc.AccountServer().Jarvis
 	jarvisCli, err := jarvis.NewJarvis(&jarvisCfg, metrics.Register())
+	if err != nil {
+		return nil, err
+	}
+
+	// 创建ESB Client
+	esbConfig := cc.AccountServer().Esb
+	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
 	if err != nil {
 		return nil, err
 	}
@@ -165,14 +174,16 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	}
 
 	svr := &Service{
-		clientSet:              apiClientSet,
-		authorizer:             authorizer,
-		audit:                  logicaudit.NewAudit(apiClientSet.DataService()),
-		billManager:            newBillManager,
 		obsController:          newObsController,
 		finOps:                 finOpsCli,
 		jarvis:                 jarvisCli,
 		exchangeRateController: rateCtrl,
+
+		clientSet:   apiClientSet,
+		authorizer:  authorizer,
+		audit:       logicaudit.NewAudit(apiClientSet.DataService()),
+		billManager: newBillManager,
+		esbClient:   esbClient,
 	}
 
 	return svr, nil
@@ -258,12 +269,14 @@ func (s *Service) apiSet() *restful.Container {
 	ws.Produces(restful.MIME_JSON)
 
 	c := &capability.Capability{
+		Finops: s.finOps,
+		Jarvis: s.jarvis,
+
 		WebService: ws,
 		ApiClient:  s.clientSet,
 		Authorizer: s.authorizer,
 		Audit:      s.audit,
-		Finops:     s.finOps,
-		Jarvis:     s.jarvis,
+		EsbClient:  s.esbClient,
 	}
 
 	mainaccount.InitService(c)
@@ -276,6 +289,7 @@ func (s *Service) apiSet() *restful.Container {
 	billadjustment.InitBillAdjustmentService(c)
 	billsyncrecord.InitService(c)
 	exchangerate.InitService(c)
+	savingsplans.InitService(c)
 
 	finops.InitService(c)
 

@@ -85,7 +85,3 @@ esb:
     caFile:
     # the password to decrypt the certificate.
     password:
-
-syncCCRes:
-  enable: true
-  syncIntervalMin:

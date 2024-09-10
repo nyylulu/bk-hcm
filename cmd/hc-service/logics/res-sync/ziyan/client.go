@@ -65,6 +65,9 @@ type Interface interface {
 
 	// Listener 同步指定负载均衡下的指定云id 负载均衡
 	Listener(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption) (*SyncResult, error)
+
+	RemoveHostFromCC(kt *kit.Kit, params *DelHostParams) error
+	HostWithRelRes(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error)
 }
 
 var _ Interface = new(client)

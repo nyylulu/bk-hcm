@@ -7,12 +7,13 @@ import PrimaryAccountSelector from './primary-account-selector';
 import SubAccountSelector from './sub-account-selector';
 
 import { useI18n } from 'vue-i18n';
-import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { VendorEnum } from '@/common/constant';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
+import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
+import pluginHandler from '@pluginHandler/bill-manage';
 
-interface ISearchModal {
+export interface ISearchModal {
   vendor: VendorEnum[];
   root_account_id: string[];
   main_account_id: string[];
@@ -47,7 +48,9 @@ export default defineComponent({
   emits: ['search'],
   setup(props, { emit, expose }) {
     const { t } = useI18n();
-    const { OperationProductsSelector } = useOperationProducts();
+
+    const { useSearchCompHandler } = pluginHandler;
+    const { productSearchLabel, renderProductComponent } = useSearchCompHandler();
 
     const getDefaultModal = (): ISearchModal => ({
       vendor: props.vendor,
@@ -139,8 +142,8 @@ export default defineComponent({
           )}
           {props.searchKeys.includes('product_id') && (
             <div>
-              <div class={cssModule['search-label']}>{t('运营产品')}</div>
-              <OperationProductsSelector v-model={modal.value.product_id} multiple />
+              <div class={cssModule['search-label']}>{productSearchLabel}</div>
+              {renderProductComponent(modal)}
             </div>
           )}
           {props.searchKeys.includes('main_account_id') && (
@@ -152,6 +155,7 @@ export default defineComponent({
                 rootAccountId={modal.value.root_account_id}
                 productId={modal.value.product_id}
                 autoSelect={props.autoSelectMainAccount}
+                urlKey={BILL_MAIN_ACCOUNTS_KEY}
               />
             </div>
           )}

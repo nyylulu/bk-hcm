@@ -23,24 +23,12 @@ spec:
     memory: 512Mi
     tke.cloud.tencent.com/eni-ip: "1"
   rules:
-    - dport: 80
-      host: {{ .Values.egress.yuntiDomain }} # 云梯
-      protocol: TCP
-      sport: 80
-      service: {{ .Values.egress.yuntiDomain }}
-    - dport: 80
-      host: alarm.nm.tencent-cloud.com # tmp
-      protocol: TCP
-      sport: 80
-      service: alarm.nm.tencent-cloud.com
-    - dport: 80
-      host: api.process.tencent-cloud.com # uwork
-      protocol: TCP
-      sport: 80
-      service: api.process.tencent-cloud.com
-    - dport: 80
-      host: {{ .Values.egress.cl5Domain }} # cl5
-      protocol: TCP
-      sport: 80
-      service: {{ .Values.egress.cl5Domain }}
+  {{- range  .Values.egress.rules }}
+    - dport: {{ .dport }}
+      host: {{ .host }}
+      protocol: {{ .protocol }}
+      service: {{ .service }}
+      sport: {{ .sport }}
+  {{- end }}
+
 {{- end }}

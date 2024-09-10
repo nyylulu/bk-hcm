@@ -28,29 +28,36 @@ import (
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/finops"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitService initial the main account service
 func InitService(c *capability.Capability) {
 	svc := &service{
+		finops: c.Finops,
+
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
-		finops:     c.Finops,
+		esbClient:  c.EsbClient,
 	}
 
 	h := rest.NewHandler()
 
 	// register handler
-	h.Add("ListMainAccountSummary", http.MethodPost, "/bills/main-account-summarys/list", svc.ListMainAccountSummary)
-	h.Add("SumMainAccountSummary", http.MethodPost, "/bills/main-account-summarys/sum", svc.SumMainAccountSummary)
+	h.Add("ListMainAccountSummary", http.MethodPost, "/bills/main_account_summarys/list", svc.ListMainAccountSummary)
+	h.Add("SumMainAccountSummary", http.MethodPost, "/bills/main_account_summarys/sum", svc.SumMainAccountSummary)
+	h.Add("ExportMainAccountSummary", http.MethodPost,
+		"/bills/main_account_summarys/export", svc.ExportMainAccountSummary)
 
 	h.Load(c.WebService)
 }
 
 type service struct {
+	finops finops.Client
+
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface
-	finops     finops.Client
+	esbClient  esb.Client
 }

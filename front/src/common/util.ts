@@ -1,4 +1,8 @@
 import dayjs, { OpUnitType, QUnitType } from 'dayjs';
+import utc from 'dayjs/plugin/utc';
+
+dayjs.extend(utc);
+
 // 获取 cookie object
 export function getCookies(strCookie = document.cookie): any {
   if (!strCookie) {
@@ -66,6 +70,7 @@ export function expectedDeliveryTime() {
 export function applicationTime() {
   return [dayjs().subtract(30, 'day').format('YYYY-MM-DD'), dayjs().format('YYYY-MM-DD')];
 }
+
 /**
  * 时间格式化
  * @param val 待格式化时间
@@ -73,17 +78,21 @@ export function applicationTime() {
  * @returns 格式化后的时间
  */
 export function timeFormatter(val: any, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  // eslint-disable-next-line no-nested-ternary
   return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
 }
+
 /**
- * 时间格式化
+ * 格式化 UTC时间
  * @param val 待格式化时间
  * @param format 格式
  * @returns 格式化后的时间
  */
-export function DateFormatter(val: any, format = 'YYYY-MM-DD', defaultVal = true) {
-  return val ? dayjs(val).format(format) : defaultVal ? val : undefined;
+export function timeUTCFormatter(val: string, format = 'YYYY-MM-DD HH:mm:ss', defaultVal = true) {
+  // eslint-disable-next-line no-nested-ternary
+  return val ? dayjs.utc(val).format(format) : defaultVal ? val : undefined;
 }
+
 /**
  * 相对当前的时间
  * @param val 待比较的时间

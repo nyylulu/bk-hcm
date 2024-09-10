@@ -73,6 +73,18 @@ var (
 			},
 		},
 	}
+	billCloudVendorResource = []client.RelateResourceType{
+		{
+			SystemID: SystemIDHCM,
+			ID:       BillCloudVendor,
+			InstanceSelections: []client.RelatedInstanceSelection{
+				{
+					SystemID: SystemIDHCM,
+					ID:       BillCloudVendorSelection,
+				},
+			},
+		},
+	}
 )
 
 // GenerateStaticActions return need to register action.
@@ -612,6 +624,22 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+	}, {
+		ID:                   AccountBillPull,
+		Name:                 ActionIDNameMap[AccountBillPull],
+		NameEn:               "Account Bill Pull",
+		Type:                 View,
+		RelatedResourceTypes: billCloudVendorResource,
+		RelatedActions:       nil,
+		Version:              1,
+	}, {
+		ID:             AwsSavingsPlansCostQuery,
+		Name:           ActionIDNameMap[AwsSavingsPlansCostQuery],
+		NameEn:         "Aws Savings Plans Cost Query",
+		Type:           View,
+		RelatedActions: nil,
+		Version:        1,
+		Hidden:         true,
 	}, {
 		ID:                   ApplicationManage,
 		Name:                 ActionIDNameMap[ApplicationManage],

@@ -38,7 +38,6 @@ import (
 	"hcm/pkg/tools/retry"
 
 	"github.com/jmoiron/sqlx"
-	"github.com/shopspring/decimal"
 )
 
 func (act SyncAction) getAwsMainAccount(kt *kit.Kit, mainAccountID string) (
@@ -46,7 +45,7 @@ func (act SyncAction) getAwsMainAccount(kt *kit.Kit, mainAccountID string) (
 
 	mainAccount, err := actcli.GetDataService().Aws.MainAccount.Get(kt, mainAccountID)
 	if err != nil {
-		logs.Warnf("get aws main account by id %s failed, err %s, rid: %s", mainAccountID, err.Error(), kt.Rid)
+		logs.Errorf("get aws main account by id %s failed, err: %s, rid: %s", mainAccountID, err.Error(), kt.Rid)
 		return nil, err
 	}
 	return mainAccount, nil
@@ -60,8 +59,8 @@ func (act SyncAction) doBatchSyncAwsBillitem(kt *kit.Kit,
 			return act.doSyncAwsBillItem(kt, mainAccount, syncOpt, start, uint64(core.DefaultMaxPageLimit))
 		})
 		if err != nil {
-			logs.Warnf("do sync aws bill failed,  err: %v, opt: %v, start %d, limit %d, rid %s", err, syncOpt, start,
-				uint64(core.DefaultMaxPageLimit), kt.Rid)
+			logs.Errorf("do sync aws bill failed,  err: %v, opt: %v, start %d, limit %d, rid %s",
+				err, syncOpt, start, uint64(core.DefaultMaxPageLimit), kt.Rid)
 			return err
 		}
 	}
@@ -90,7 +89,7 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 	// 获取分账后的bill item
 	result, err := actcli.GetDataService().Aws.Bill.ListBillItem(kt, listReq)
 	if err != nil {
-		logs.Warnf("list aws bill item by option %v failed, err %s, rid: %s", syncOpt, err.Error(), kt.Rid)
+		logs.Errorf("list aws bill item by option %v failed, err: %s, rid: %s", syncOpt, err.Error(), kt.Rid)
 		return err
 	}
 
@@ -110,8 +109,8 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 	_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		if err := actcli.GetObsDaoSet().OBSBillItemAws().DeleteWithTx(
 			kt, txn, deleteFilter, uint64(core.DefaultMaxPageLimit)); err != nil {
-			logs.Warnf("delete aws obs bill item by filter %v failed, err %s, rid: %s",
-				deleteFilter, err.Error(), kt.Rid)
+			logs.Errorf("delete aws obs bill item by filter %v failed, err: %s, setIndex:%s, rid: %s",
+				deleteFilter, err.Error(), setIndex, kt.Rid)
 			return nil, err
 		}
 		logs.Infof("delete previous obs data for %s successfully", setIndex)
@@ -129,15 +128,14 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 	}
 	_, err = actcli.GetObsDaoSet().Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		if _, err := actcli.GetObsDaoSet().OBSBillItemAws().CreateWithTx(kt, txn, finalItems); err != nil {
-			logs.Warnf("delete aws obs bill item by filter %s failed, err %s, rid: %s",
-				deleteFilter, err.Error(), kt.Rid)
+			logs.Errorf("create aws obs bill item failed of set %s, err: %s, rid: %s", setIndex, err, kt.Rid)
 			return nil, err
 		}
 		logs.Infof("create obs aws bill for %s successfully", setIndex)
 		return nil, nil
 	})
 	if err != nil {
-		return fmt.Errorf("create obs bill txn failed, err %s", err.Error())
+		return fmt.Errorf("create obs bill txn failed, err: %s", err.Error())
 	}
 
 	return nil
@@ -151,18 +149,18 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 	item := result.Details[0]
 	currency := item.Currency
 	if len(currency) == 0 {
-		logs.Warnf("empty currency for item %v, rid: %s", item, kt.Rid)
-		return nil, fmt.Errorf("empty currency for item %v, rid: %s", item, kt.Rid)
+		logs.Errorf("empty currency for item %v, rid: %s", item, kt.Rid)
+		return nil, fmt.Errorf("empty currency for item %v", item)
 	}
 	// 获取当月平均汇率
 	exchangeRate, err := act.getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
 	if err != nil {
-		logs.Warnf("failed to get exchange rate, err %s, rid %s", err.Error(), kt.Rid)
-		return nil, fmt.Errorf("failed to get exchange rate, err %s, rid %s", err.Error(), kt.Rid)
+		logs.Warnf("failed to get exchange rate, err: %v, rid: %s", err, kt.Rid)
+		return nil, fmt.Errorf("failed to get exchange rate, err: %v", err)
 	}
 	floatRate, _ := exchangeRate.Float64()
 
-	// 1 国内 2 国际
+	// OBS 要求数据格式 1 国内 2 国际
 	var regionCode = int32(2)
 	if mainAccount.Site == enumor.MainAccountChinaSite {
 		regionCode = 1
@@ -172,20 +170,16 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 	for _, item := range result.Details {
 		record := item.Extension
 
-		rawCost, err := decimal.NewFromString(record.LineItemNetUnblendedCost)
-		if err != nil {
-			logs.Errorf("fail create decimal cost (%s) from record, err %s, rid: %s",
-				record.LineItemNetUnblendedCost, err.Error(), kt.Rid)
-		}
 		newItem := &tableobs.OBSBillItemAws{
-			SetIndex:          setIndex,
-			MainAccountID:     syncOpt.MainAccountID,
-			BillYear:          int64(syncOpt.BillYear),
-			BillMonth:         int64(syncOpt.BillMonth),
-			Vendor:            string(syncOpt.Vendor),
-			YearMonth:         int32(yearM),
-			Rate:              floatRate,
-			Cost:              &types.Decimal{Decimal: rawCost.Mul(*exchangeRate)},
+			SetIndex:      setIndex,
+			MainAccountID: syncOpt.MainAccountID,
+			BillYear:      int64(syncOpt.BillYear),
+			BillMonth:     int64(syncOpt.BillMonth),
+			Vendor:        string(syncOpt.Vendor),
+			YearMonth:     int32(yearM),
+			Rate:          floatRate,
+			// OBS要求，aws账单独立配置，Cost保存原始数据即可
+			Cost:              &types.Decimal{Decimal: item.Cost},
 			ProductID:         int32(mainAccount.OpProductID),
 			LinkedAccountName: mainAccount.Extension.CloudMainAccountName,
 			Region:            regionCode,

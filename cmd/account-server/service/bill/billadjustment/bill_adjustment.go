@@ -37,9 +37,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/api-gateway/finops"
 	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/slice"
 
 	"github.com/xuri/excelize/v2"
 )
@@ -191,22 +189,11 @@ func (b *billAdjustmentSvc) ListBillAdjustmentItem(cts *rest.Contexts) (any, err
 		mainAccIDCloudIDMap[mainAccount.ID] = mainAccount
 	}
 	// list product name
-	param := &finops.ListOpProductParam{
-		OpProductIds: slice.Unique(productIDs),
-		Page:         *core.NewDefaultBasePage(),
-	}
-	productResult, err := b.finops.ListOpProduct(cts.Kit, param)
-	if err != nil {
-		return nil, err
-	}
-	productMap := make(map[int64]string)
-	for _, product := range productResult.Items {
-		productMap[product.OpProductId] = product.OpProductName
-	}
+	productMap, err := b.listOpProduct(cts.Kit, productIDs)
 
 	// 填充主账号云id、email和运营产品名称
 	for i, adjustmentItem := range resp.Details {
-		resp.Details[i].ProductName = productMap[adjustmentItem.ProductID]
+		resp.Details[i].ProductName = productMap[adjustmentItem.ProductID].OpProductName
 		mainAccount := mainAccIDCloudIDMap[adjustmentItem.MainAccountID]
 		if mainAccount == nil {
 			// Skip not found account info

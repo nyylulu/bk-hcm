@@ -93,4 +93,5 @@ data:
         # the password to decrypt the certificate.
         password:
     blacklist: {{ .Values.blacklist }}
-
+    ngate:
+      {{- toYaml .Values.ngate | nindent 6 }}

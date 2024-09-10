@@ -33,26 +33,29 @@ import (
 
 // CVM create cvm request param
 type CVM struct {
-	AppId             string `json:"appId"`
-	ApplyType         int64  `json:"applyType"`
-	AppModuleId       int64  `json:"appModuleId"`
-	Operator          string `json:"operator"`
-	ApplyNumber       uint   `json:"applyNumber"`
-	NoteInfo          string `json:"noteInfo"`
-	VPCId             string `json:"vpcId"`
-	SubnetId          string `json:"subnetId"`
-	Area              string `json:"area"`
-	Zone              string `json:"zone"`
-	ImageId           string `json:"image_id"`
-	ImageName         string `json:"image_name"`
-	InstanceType      string `json:"instanceType"`
-	DiskType          string `json:"disk_type"`
-	DiskSize          int64  `json:"disk_size"`
-	SecurityGroupId   string `json:"securityGroupId"`
-	SecurityGroupName string `json:"securityGroupName"`
-	SecurityGroupDesc string `json:"securityGroupDesc"`
+	AppId             string            `json:"appId"`
+	ApplyType         int64             `json:"applyType"`
+	AppModuleId       int64             `json:"appModuleId"`
+	Operator          string            `json:"operator"`
+	ApplyNumber       uint              `json:"applyNumber"`
+	NoteInfo          string            `json:"noteInfo"`
+	VPCId             string            `json:"vpcId"`
+	SubnetId          string            `json:"subnetId"`
+	Area              string            `json:"area"`
+	Zone              string            `json:"zone"`
+	ImageId           string            `json:"image_id"`
+	ImageName         string            `json:"image_name"`
+	InstanceType      string            `json:"instanceType"`
+	DiskType          string            `json:"disk_type"`
+	DiskSize          int64             `json:"disk_size"`
+	SecurityGroupId   string            `json:"securityGroupId"`
+	SecurityGroupName string            `json:"securityGroupName"`
+	SecurityGroupDesc string            `json:"securityGroupDesc"`
+	ChargeType        cvmapi.ChargeType `json:"chargeType"`
+	ChargeMonths      uint              `json:"chargeMonths"`
 }
 
+// executeApplyOrder CVM生产-创建单据
 func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	// 0. update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
@@ -156,7 +159,7 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	return
 }
 
-// createCVM starts a cvm creating task
+// createCVM starts a cvm creating task(CVM生产-创建单据)
 func (l *logics) createCVM(cvm *CVM) (string, error) {
 	// construct cvm launch request
 	createReq := &cvmapi.OrderCreateReq{
@@ -197,7 +200,13 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 			Memo:        cvm.NoteInfo,
 			Operator:    cvm.Operator,
 			BakOperator: cvm.Operator,
+			ChargeType:  cvm.ChargeType, // 计费模式
 		},
+	}
+
+	// 计费模式-包年包月时才需要设置计费时长
+	if cvm.ChargeType == cvmapi.ChargeTypePrePaid {
+		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
 
 	// set system disk parameters
@@ -228,7 +237,8 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 	}
 
 	// 记录cvm创建成功的日志，方便排查问题
-	logs.Infof("scheduler:logics:create:cvm:success, req: %+v, resp: %+v", createReq, cvt.PtrToVal(createResp))
+	logs.Infof("scheduler:logics:create:cvm:success, req: %+v, resp: %+v",
+		cvt.PtrToVal(createReq), cvt.PtrToVal(createResp))
 
 	if createResp.Error.Code != 0 {
 		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s", createResp.Error.Code,
@@ -415,7 +425,7 @@ func (l *logics) updateApplyOrder(order *types.ApplyOrder, status types.ApplySta
 	return nil
 }
 
-// buildCvmReq construct a cvm creating task request
+// buildCvmReq construct a cvm creating task request(CVM生产-创建单据)
 func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error) {
 	kt = kt.NewSubKit()
 	kt.Ctx = context.Background()
@@ -435,7 +445,14 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 		InstanceType: order.Spec.DeviceType,
 		DiskType:     order.Spec.DiskType,
 		DiskSize:     order.Spec.DiskSize,
+		ChargeType:   order.Spec.ChargeType, // 计费模式
 	}
+
+	// 计费模式-包年包月时才需要设置计费时长
+	if req.ChargeType == cvmapi.ChargeTypePrePaid {
+		req.ChargeMonths = order.Spec.ChargeMonths
+	}
+
 	// set disk type default value
 	if len(req.DiskType) == 0 {
 		req.DiskType = cvmapi.CvmLaunchSystemDiskTypePremium
@@ -481,7 +498,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
 	logs.Infof("scheduler:logics:build:cvm:request:end, order: %+v, req: %+v, rid: %s",
-		cvt.PtrToVal(order), req, kt.Rid)
+		cvt.PtrToVal(order), cvt.PtrToVal(req), kt.Rid)
 	return req, nil
 }
 

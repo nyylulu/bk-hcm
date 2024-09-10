@@ -46,6 +46,8 @@ POST /api/v1/woa/task/create/apply
 | network_type  | string	| 是   | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
 | vpc	        | string    | 否   | 私有网络，默认为空 |
 | subnet        | string    | 否   | 私有子网，默认为空 |
+| charge_type   | string    | 否   | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月 |
+| charge_months | int       | 否   | 计费时长，单位：月(计费模式为包年包月时，该字段必传) |
 
 #### spec for IDCPM
 | 参数名称      | 参数类型 | 必选 | 描述        |
@@ -112,7 +114,9 @@ POST /api/v1/woa/task/create/apply
                 "disk_type":"CLOUD_PREMIUM",
                 "network_type":"TENTHOUSAND",
                 "vpc":"",
-                "subnet":""
+                "subnet":"",
+                "charge_type":"PREPAID",
+                "charge_months":1
             }
         }
     ]

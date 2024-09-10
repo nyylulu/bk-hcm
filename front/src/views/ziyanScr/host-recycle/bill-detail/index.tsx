@@ -3,7 +3,6 @@ import { useUserStore } from '@/store';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { getResourceTypeName, getReturnPlanName, exportTableToExcel, getEntirePath } from '@/utils';
 import { getRecycleTaskStatusLabel } from '@/views/ziyanScr/host-recycle/field-dictionary/recycleStatus';
-import { dateTimeTransform } from '@/views/ziyanScr/host-recycle/field-dictionary/dateTime';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -14,6 +13,7 @@ import './index.scss';
 import { Message } from 'bkui-vue';
 import http from '@/http';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { timeFormatter } from '@/common/util';
 
 export default defineComponent({
   components: {
@@ -292,7 +292,7 @@ export default defineComponent({
                   </div>
                   <div>
                     <label>提单时间:</label>
-                    <span>{dateTimeTransform(billBaseInfo.value.create_at)}</span>
+                    <span>{timeFormatter(billBaseInfo.value.create_at)}</span>
                   </div>
                 </div>
                 <div class='base-info-bottom'>

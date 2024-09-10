@@ -103,11 +103,12 @@ const (
 
 // HostInfo host info
 type HostInfo struct {
-	BkHostId      int64  `json:"bk_host_id"`
-	BkCloudId     int64  `json:"bk_cloud_id"`
-	BkAssetId     string `json:"bk_asset_id"`
-	BkHostInnerIp string `json:"bk_host_innerip"`
-	BkHostOuterIp string `json:"bk_host_outerip"`
+	BkHostId        int64  `json:"bk_host_id"`
+	BkCloudId       int64  `json:"bk_cloud_id"`
+	BkAssetId       string `json:"bk_asset_id"`
+	BkHostInnerIP   string `json:"bk_host_innerip"`
+	BkHostOuterIP   string `json:"bk_host_outerip"`
+	BkHostOuterIPv6 string `json:"bk_host_outerip_v6"`
 	// 外网运营商
 	BkIpOerName string `json:"bk_ip_oper_name"`
 	// 机型
@@ -145,13 +146,15 @@ type HostInfo struct {
 	BkDisk float64 `json:"bk_disk"`
 	// CPU逻辑核心数
 	BkCpu int64 `json:"bk_cpu"`
+	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
+	BkSvrSourceTypeID string `json:"bk_svr_source_type_id"`
 }
 
 // GetUniqIp get CC host unique inner ip
 func (h *HostInfo) GetUniqIp() string {
 	// when CC host has multiple inner ips, bk_host_innerip is like "10.0.0.1,10.0.0.2"
 	// return the first ip as host unique ip
-	multiIps := strings.Split(h.BkHostInnerIp, ",")
+	multiIps := strings.Split(h.BkHostInnerIP, ",")
 	if len(multiIps) == 0 {
 		return ""
 	}
@@ -163,12 +166,27 @@ func (h *HostInfo) GetUniqIp() string {
 func (h *HostInfo) GetUniqOuterIp() string {
 	// when CC host has multiple outer ips, bk_host_outerip is like "10.0.0.1,10.0.0.2"
 	// return the first ip as host unique ip
-	multiIps := strings.Split(h.BkHostOuterIp, ",")
+	multiIps := strings.Split(h.BkHostOuterIP, ",")
 	if len(multiIps) == 0 {
 		return ""
 	}
 
 	return multiIps[0]
+}
+
+// IsPmAndOuterIPDevice 检查是否物理机，是否有外网IP
+func (h *HostInfo) IsPmAndOuterIPDevice() bool {
+	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
+	if h.BkSvrSourceTypeID != BkSvrSourceTypeIDSelf && h.BkSvrSourceTypeID != BkSvrSourceTypeIDDeposit &&
+		h.BkSvrSourceTypeID != BkSvrSourceTypeIDLease {
+		return false
+	}
+
+	if h.BkHostOuterIP == "" && h.BkHostOuterIPv6 == "" {
+		return false
+	}
+
+	return true
 }
 
 // HostBizRelResp find host business relation response

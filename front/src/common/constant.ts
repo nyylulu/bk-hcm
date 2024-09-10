@@ -1,3 +1,8 @@
+// 全局业务id
+export const GLOBAL_BIZS_KEY = 'bizs';
+export const GLOBAL_BIZS_VERSION = '1.6.3';
+export const GLOBAL_BIZS_VERSION_KEY = 'bizs_version';
+
 export enum VendorEnum {
   TCLOUD = 'tcloud',
   AWS = 'aws',
@@ -586,4 +591,8 @@ export const CLB_BINDING_STATUS = {
   binding: '绑定中',
   success: '已绑定',
   failed: '未绑定',
+};
+export const CLOUD_CVM_DISKTYPE = {
+  SSD: 'CLOUD_SSD',
+  PREMIUM: 'CLOUD_PREMIUM',
 };

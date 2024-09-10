@@ -30,11 +30,15 @@ export default defineComponent({
 
     const saveActiveCloudType = (val: string) => {
       activeScene.value = scenes.value[0].value;
-      router.replace({ query: { ...route.query, cloud_type: val, scene_apply: undefined } });
+      const { bizs, type } = route.query;
+      router.replace({ query: { bizs, type, cloud_type: val } });
     };
 
     const saveActiveScene = (val: string) => {
-      router.replace({ query: { ...route.query, scene_apply: val } });
+      const { bizs, type, cloud_type } = route.query;
+      router.replace({
+        query: { bizs, type, cloud_type, scene_apply: val },
+      });
     };
 
     return () => (

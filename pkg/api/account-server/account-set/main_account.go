@@ -19,3 +19,17 @@
 
 // Package accountset defines account-server api call protocols.
 package accountset
+
+import accountset "hcm/pkg/api/core/account-set"
+
+// MainAccountListResp defines query response.
+type MainAccountListResp struct {
+	Count   uint64               `json:"count,omitempty"`
+	Details []*MainAccountResult `json:"details"`
+}
+
+// MainAccountResult defines query result.
+type MainAccountResult struct {
+	*accountset.BaseMainAccount
+	OpProductName string `json:"op_product_name"`
+}

@@ -1,5 +1,6 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Card, Dropdown } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form } from 'bkui-vue';
+import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import './index.scss';
@@ -7,12 +8,12 @@ import { useAccountStore, useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
-import ZoneSelector from '../ZoneSelector';
+import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
-import { Spinner, RightShape, DownShape } from 'bkui-vue/lib/icon';
+import { Spinner } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import BcsSelectTips from './bcs-select-tips';
+import NetworkInfoPanel from '../network-info-panel/index.vue';
 
 import apiService from '@/api/scrApi';
 
@@ -22,9 +23,9 @@ import applicationSideslider from '../application-sideslider';
 import { useRouter, useRoute } from 'vue-router';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
-import { convertKeysToSnakeCase } from '@/utils/scr/test';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
+const { Group: RadioGroup, Button: RadioButton } = Radio;
 export default defineComponent({
   components: {
     applicationSideslider,
@@ -107,9 +108,9 @@ export default defineComponent({
             </Button>
             <Dropdown
               trigger='manual'
+              isShow={IDCPMIndex.value === index && dropdownMenuShowState.idc}
               popoverOptions={{
                 renderType: 'shown',
-                onAfterShow: () => (IDCPMIndex.value = index),
                 onAfterHidden: () => {
                   IDCPMIndex.value = -1;
                   dropdownMenuShowState.idc = false;
@@ -120,7 +121,10 @@ export default defineComponent({
                 default: () => (
                   <div
                     class={`more-action${IDCPMIndex.value === index ? ' current-operate-row' : ''}`}
-                    onClick={() => (dropdownMenuShowState.idc = true)}>
+                    onClick={() => {
+                      IDCPMIndex.value = index;
+                      dropdownMenuShowState.idc = true;
+                    }}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
@@ -161,10 +165,9 @@ export default defineComponent({
             </Button>
             <Dropdown
               trigger='manual'
-              isShow={dropdownMenuShowState.cvm}
+              isShow={QCLOUDCVMIndex.value === index && dropdownMenuShowState.cvm}
               popoverOptions={{
                 renderType: 'shown',
-                onAfterShow: () => (QCLOUDCVMIndex.value = index),
                 onAfterHidden: () => {
                   QCLOUDCVMIndex.value = -1;
                   dropdownMenuShowState.cvm = false;
@@ -175,7 +178,10 @@ export default defineComponent({
                 default: () => (
                   <div
                     class={`more-action${QCLOUDCVMIndex.value === index ? ' current-operate-row' : ''}`}
-                    onClick={() => (dropdownMenuShowState.cvm = true)}>
+                    onClick={() => {
+                      QCLOUDCVMIndex.value = index;
+                      dropdownMenuShowState.cvm = true;
+                    }}>
                     <i class='hcm-icon bkhcm-icon-more-fill' />
                   </div>
                 ),
@@ -212,6 +218,8 @@ export default defineComponent({
       enable_disk_check: false,
       region: '', // 地域
       zone: '', // 园区
+      charge_type: 'PREPAID', // 计费模式 POSTPAID_BY_HOUR:按量计费
+      charge_months: 36, // 计费时长
     });
     // 侧边栏腾讯云CVM
     const QCLOUDCVMForm = ref({
@@ -239,16 +247,29 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
-    const vpcName = ref('');
-    const subnetName = ref('');
+
+    // cvm购买时长选项
+    const cvmChargeMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
+    const cvmChargeMonthOptions = cvmChargeMonths.map((month) => {
+      const getName = (m: number) => {
+        if (m === 6) {
+          return '半年';
+        }
+        if (m >= 12) {
+          return `${m / 12}年`;
+        }
+        return `${m}月`;
+      };
+      return {
+        id: month,
+        name: getName(month),
+      };
+    });
+
     // 机型列表
     const deviceTypes = ref([]);
     // 镜像列表
     const images = ref([]);
-    // VPC列表
-    const zoneTypes = ref([]);
-    // 子网列表
-    const subnetTypes = ref([]);
 
     // 侧边栏物理机CVM
     const pmForm = ref({
@@ -283,43 +304,18 @@ export default defineComponent({
     // 物理机table
     const physicalTableData = ref([]);
     const resourceFormRules = ref({});
-    // 网络信息开关
-    const NIswitch = ref(true);
     // QCLOUDCVM云地域变化
     const onQcloudRegionChange = () => {
       resourceForm.value.zone = '';
       QCLOUDCVMForm.value.spec.device_type = '';
       QCLOUDCVMForm.value.spec.vpc = '';
     };
-    const onVpcNameClear = () => {
-      vpcName.value = '';
-      subnetName.value = '';
-    };
-    const onQcloudVpcChange = (val: any) => {
-      QCLOUDCVMForm.value.spec.subnet = '';
-      const matchingItem = zoneTypes.value.find((item) => item.vpc_id === val);
-      if (matchingItem) {
-        vpcName.value = matchingItem.vpc_name;
-      }
-      loadSubnets();
-      onQcloudDeviceTypeChange();
-    };
-    const onSubnetNameClear = () => {
-      subnetName.value = '';
-    };
-    const onQcloudSubnetChange = (val: any) => {
-      const matchingItem = subnetTypes.value.find((item) => item.subnet_id === val);
-      if (matchingItem) {
-        subnetName.value = matchingItem.subnet_name;
-      }
-      onQcloudDeviceTypeChange();
-    };
+
     // QCLOUDCVM可用区变化
     const onQcloudZoneChange = () => {
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.device_type = '';
         loadDeviceTypes();
-        loadSubnets();
       }
     };
     const onQcloudAffinityChange = (val: any) => {
@@ -393,7 +389,7 @@ export default defineComponent({
     );
     // 获取 QCLOUDCVM机型列表
     const loadDeviceTypes = async () => {
-      const { zone, region } = resourceForm.value;
+      const { zone = '', region } = resourceForm.value;
 
       const params = {
         region: [region],
@@ -403,23 +399,7 @@ export default defineComponent({
       const { info } = await apiService.getDeviceTypes(params);
       deviceTypes.value = info || [];
     };
-    // 获取 QCLOUDCVM  VPC列表
-    const loadVpcs = async () => {
-      const { info } = await apiService.getVpcs(resourceForm.value.region);
-      zoneTypes.value = info;
-    };
-    // 获取 QCLOUDCVM子网列表
-    const loadSubnets = async () => {
-      const { vpc } = QCLOUDCVMForm.value.spec;
-      const { region, zone } = resourceForm.value;
-      const { info } = await apiService.getSubnets({
-        region,
-        zone,
-        vpc,
-      });
 
-      subnetTypes.value = info || [];
-    };
     const clonelist = (row: any, resourceType: string) => {
       resourceType === 'QCLOUDCVM'
         ? cloudTableData.value.push(cloneDeep(row))
@@ -435,14 +415,16 @@ export default defineComponent({
         QCLOUDCVMForm.value.spec = cloudTableData.value[index].spec;
         resourceForm.value.region = cloudTableData.value[index].spec.region;
         resourceForm.value.zone = cloudTableData.value[index].spec.zone;
-        QCLOUDCVMForm.value.spec.replicas = row.replicas;
+        resourceForm.value.charge_type = cloudTableData.value[index].spec.charge_type;
+        resourceForm.value.charge_months = cloudTableData.value[index].spec.charge_months;
+        QCLOUDCVMForm.value.spec.replicas = +row.replicas;
         QCLOUDCVMForm.value.spec.anti_affinity_level = row.anti_affinity_level;
       } else {
         pmForm.value.spec = physicalTableData.value[index].spec;
         resourceForm.value.region = physicalTableData.value[index].spec.region;
         resourceForm.value.zone = physicalTableData.value[index].spec.zone;
         pmForm.value.spec.antiAffinityLevel = row.anti_affinity_level;
-        pmForm.value.spec.replicas = row.replicas;
+        pmForm.value.spec.replicas = +row.replicas;
       }
       resourceForm.value.remark = row.remark;
       title.value = '修改资源需求';
@@ -463,6 +445,17 @@ export default defineComponent({
         loadImages();
       },
     );
+    watch(
+      () => resourceForm.value.charge_type,
+      (chargeType) => {
+        if (chargeType === 'PREPAID') {
+          resourceForm.value.charge_months = 36;
+        } else {
+          resourceForm.value.charge_months = undefined;
+        }
+      },
+    );
+    const defaultUserlist = ref([]);
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
@@ -476,18 +469,23 @@ export default defineComponent({
           follower: data.follower,
           suborders: data.suborders,
         };
+        defaultUserlist.value = order.value.model.follower.map((element: any) => ({
+          username: element,
+          display_name: element,
+        }));
+
         order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }: any) => {
           resource_type === 'QCLOUDCVM'
             ? cloudTableData.value.push({
                 remark,
                 resource_type: 'QCLOUDCVM',
-                replicas,
+                replicas: +replicas,
                 spec,
               })
             : physicalTableData.value.push({
                 remark,
                 resource_type: 'IDCPM',
-                replicas,
+                replicas: +replicas,
                 spec,
               });
         });
@@ -547,7 +545,6 @@ export default defineComponent({
       () => resourceForm.value.region,
       () => {
         if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-          loadVpcs();
           loadImages();
         }
       },
@@ -567,8 +564,11 @@ export default defineComponent({
       };
       resourceForm.value.region = data.region;
       resourceForm.value.zone = data.zone;
+      resourceForm.value.charge_months = 36;
     };
+    const isOneClickApplication = ref(false);
     const OneClickApplication = (row: any, val: boolean) => {
+      isOneClickApplication.value = true;
       CVMapplication.value = val;
       assignment(row);
       title.value = '增加资源需求';
@@ -576,9 +576,10 @@ export default defineComponent({
       onQcloudDeviceTypeChange();
     };
     const ARtriggerShow = (isShow: boolean) => {
-      emptyform();
+      emptyForm();
       addResourceRequirements.value = isShow;
-      NIswitch.value = true;
+      CVMapplication.value = isOneClickApplication.value;
+      isOneClickApplication.value = false;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
@@ -588,15 +589,15 @@ export default defineComponent({
     const CAtriggerShow = (isShow: boolean) => {
       CVMapplication.value = isShow;
     };
-    const emptyform = () => {
-      vpcName.value = '';
-      subnetName.value = '';
+    const emptyForm = () => {
       resourceForm.value = {
         resourceType: 'QCLOUDCVM',
         region: '', // 地域
         zone: '', // 园区
         remark: '',
         enable_disk_check: false,
+        charge_type: 'PREPAID',
+        charge_months: 36,
       };
       QCLOUDCVMForm.value = {
         spec: {
@@ -627,11 +628,13 @@ export default defineComponent({
         remark: resourceForm.value.remark,
         enable_disk_check: resourceForm.value.enable_disk_check,
         anti_affinity_level: QCLOUDCVMForm.value.spec.anti_affinity_level,
-        replicas: QCLOUDCVMForm.value.spec.replicas,
+        replicas: +QCLOUDCVMForm.value.spec.replicas,
         spec: {
           ...QCLOUDCVMForm.value.spec,
           region: resourceForm.value.region,
           zone: resourceForm.value.zone,
+          charge_type: resourceForm.value.charge_type,
+          charge_months: resourceForm.value.charge_months,
         },
       };
     };
@@ -640,7 +643,7 @@ export default defineComponent({
         resource_type: resourceForm.value.resourceType,
         remark: resourceForm.value.remark,
         anti_affinity_level: pmForm.value.spec.antiAffinityLevel,
-        replicas: pmForm.value.spec.replicas,
+        replicas: +pmForm.value.spec.replicas,
         spec: {
           region: resourceForm.value.region,
           zone: resourceForm.value.zone,
@@ -652,6 +655,15 @@ export default defineComponent({
       device_type: [{ required: true, message: '请选择机型', trigger: 'change' }],
       image_id: [{ required: true, message: '请选择镜像', trigger: 'change' }],
       replicas: [{ required: true, message: '请输入需求数量', trigger: 'blur' }],
+      disk_size: [
+        {
+          trigger: 'change',
+          message: '数据盘大小范围在0-16000GB之间，数值必须是10的整数倍',
+          validator: (val: number) => {
+            return /^(0|[1-9]\d{0,3}0{1,3})$/.test(String(val)) && val <= 16000;
+          },
+        },
+      ],
     });
     const resourceFormrules = ref({
       resourceType: [{ required: true, message: '请选择主机类型', trigger: 'change' }],
@@ -671,7 +683,7 @@ export default defineComponent({
         } else {
           physicalTableData.value.push(PMResourceForm());
         }
-        emptyform();
+        emptyForm();
       } else {
         if (modifyresourceType.value === 'QCLOUDCVM') {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
@@ -680,7 +692,7 @@ export default defineComponent({
             cloudTableData.value.splice(modifyindex.value, 1);
             physicalTableData.value.push(PMResourceForm());
           }
-          emptyform();
+          emptyForm();
         } else {
           if (modifyresourceType.value === resourceForm.value.resourceType) {
             physicalTableData.value[modifyindex.value] = PMResourceForm();
@@ -688,13 +700,12 @@ export default defineComponent({
             physicalTableData.value.splice(modifyindex.value, 1);
             cloudTableData.value.push(cloudResourceForm());
           }
-          emptyform();
+          emptyForm();
         }
       }
       modifyindex.value = 0;
       cvmCapacity.value = [];
       addResourceRequirements.value = false;
-      NIswitch.value = true;
       nextTick(() => {
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
@@ -706,12 +717,7 @@ export default defineComponent({
     });
     const handleSaveOrSubmit = async (type: 'save' | 'submit') => {
       await formRef.value.validate();
-      const suborders = [...cloudTableData.value, ...physicalTableData.value].map((v) => {
-        return convertKeysToSnakeCase(v);
-      });
-      if (!suborders.length) {
-        return;
-      }
+      const suborders = [...cloudTableData.value, ...physicalTableData.value];
       isLoading.value = true;
 
       try {
@@ -784,24 +790,24 @@ export default defineComponent({
         {!props.isbusiness && <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
         <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
-          <CommonCard title={() => '基本信息'} layout='grid'>
-            <bk-form
-              form-type='vertical'
-              label-width='150'
-              model={order.value.model}
-              rules={order.value.rules}
-              ref={formRef}>
+          <bk-form
+            form-type='vertical'
+            label-width='150'
+            model={order.value.model}
+            rules={order.value.rules}
+            ref={formRef}>
+            <CommonCard title={() => '基本信息'} class='mb12'>
               <div class='flex-row align-content-center'>
                 {!props.isbusiness && (
-                  <bk-form-item label='所属业务' required property='bkBizId'>
+                  <bk-form-item label='所属业务' required property='bkBizId' class='mr24'>
                     <BusinessSelector
                       class='item-warp-component'
                       v-model={order.value.model.bkBizId}
                       autoSelect
                       authed
-                      saveBizs
-                      bizsKey='scr_apply_host_bizs'
+                      url-key='scr_apply_host_bizs'
                       apiMethod={apiService.getCvmApplyAuthBizList}
+                      base64Encode
                     />
                   </bk-form-item>
                 )}
@@ -826,28 +832,35 @@ export default defineComponent({
                     type='datetime'></bk-date-picker>
                 </bk-form-item>
                 <bk-form-item label='关注人'>
-                  <MemberSelect class='item-warp-component' multiple clearable v-model={order.value.model.follower} />
+                  <MemberSelect
+                    class='item-warp-component'
+                    multiple
+                    clearable
+                    v-model={order.value.model.follower}
+                    defaultUserlist={defaultUserlist.value}
+                  />
                 </bk-form-item>
               </div>
-            </bk-form>
-          </CommonCard>
-          <Card class={'mt15'} border={false} showHeader={false} showFooter={false}>
-            <p class={'card-title'}>
-              <span class='mr5'>配置清单</span>
-              <i
-                class={'hcm-icon bkhcm-icon-info-line'}
-                v-bk-tooltips={{
-                  content: (
-                    <div>
-                      <div>自研云主机购买，经过以下步骤后交付给业务</div>
-                      <div>1.提交参数后，云梯生产主机</div>
-                      <div>2.资源平台对系统初始化，包括GSE agent安装，磁盘格式化等</div>
-                      <div>3.转交到业务</div>
-                    </div>
-                  ),
-                }}></i>
-            </p>
-            <div class={`card-content`}>
+            </CommonCard>
+            <CommonCard
+              title={() => (
+                <div class='flex-row align-items-center'>
+                  <span class='mr5'>配置清单</span>
+                  <i
+                    class={'hcm-icon bkhcm-icon-info-line'}
+                    v-bk-tooltips={{
+                      content: (
+                        <div>
+                          <div>自研云主机购买，经过以下步骤后交付给业务</div>
+                          <div>1.提交参数后，云梯生产主机</div>
+                          <div>2.资源平台对系统初始化，包括GSE agent安装，磁盘格式化等</div>
+                          <div>3.转交到业务</div>
+                        </div>
+                      ),
+                    }}></i>
+                </div>
+              )}
+              class='mb12'>
               <div class='mb12'>
                 <Button
                   class='mr16'
@@ -881,10 +894,8 @@ export default defineComponent({
                   />
                 </bk-form-item>
               )}
-            </div>
-          </Card>
-          <CommonCard title={() => '备注'} class='mt12'>
-            <bk-form form-type='vertical' label-width='150' model={order.value.model}>
+            </CommonCard>
+            <CommonCard title={() => '备注'}>
               <bk-form-item label='申请备注'>
                 <Input
                   type='textarea'
@@ -894,7 +905,7 @@ export default defineComponent({
                   resize={false}
                   placeholder='请输入申请单备注'></Input>
               </bk-form-item>
-              <bk-form-item required property='bkBizId'>
+              <bk-form-item>
                 <Button
                   class='mr16'
                   theme='primary'
@@ -929,8 +940,8 @@ export default defineComponent({
                   取消
                 </Button>
               </bk-form-item>
-            </bk-form>
-          </CommonCard>
+            </CommonCard>
+          </bk-form>
 
           {/* 增加资源需求 */}
           <Sideslider
@@ -950,150 +961,100 @@ export default defineComponent({
                       rules={resourceFormrules}
                       ref={resourceFormRef}
                       form-type='vertical'>
-                      <div class='flex-row align-content-center flex-wrap'>
-                        <bk-form-item label='主机类型' required property='resourceType'>
-                          <bk-select
-                            class={'selection-box'}
-                            v-model={resourceForm.value.resourceType}
-                            onChange={onResourceTypeChange}>
-                            {resourceTypes.value.map((resType: { value: any; label: any }) => (
-                              <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
-                            ))}
-                          </bk-select>
-                        </bk-form-item>
-                        <bk-form-item class='mr16' label='云地域' required property='region'>
-                          <AreaSelector
-                            class={'selection-box'}
-                            v-model={resourceForm.value.region}
-                            params={{ resourceType: resourceForm.value.resourceType }}
-                            onChange={onRegionChange}></AreaSelector>
-                        </bk-form-item>
-                        <bk-form-item label='可用区' required property='zone'>
-                          <ZoneSelector
-                            class={'selection-box'}
-                            v-model={resourceForm.value.zone}
-                            params={{
-                              resourceType: resourceForm.value.resourceType,
-                              region: resourceForm.value.region,
-                            }}
-                            onChange={onQcloudZoneChange}
-                          />
-                        </bk-form-item>
-                      </div>
+                      <bk-form-item label='主机类型' required property='resourceType'>
+                        <bk-select
+                          class={'selection-box'}
+                          v-model={resourceForm.value.resourceType}
+                          onChange={onResourceTypeChange}>
+                          {resourceTypes.value.map((resType: { value: any; label: any }) => (
+                            <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
+                          ))}
+                        </bk-select>
+                      </bk-form-item>
+                      <bk-form-item label='云地域' required property='region'>
+                        <AreaSelector
+                          class={'selection-box'}
+                          v-model={resourceForm.value.region}
+                          params={{ resourceType: resourceForm.value.resourceType }}
+                          onChange={onRegionChange}></AreaSelector>
+                      </bk-form-item>
+                      <bk-form-item label='可用区' required property='zone'>
+                        <ZoneTagSelector
+                          class={'selection-box'}
+                          key={resourceForm.value.region}
+                          style={{ width: '760px' }}
+                          v-model={resourceForm.value.zone}
+                          vendor={VendorEnum.ZIYAN}
+                          region={resourceForm.value.region}
+                          resourceType={resourceForm.value.resourceType}
+                          separateCampus={true}
+                          emptyText='请先选择云地域'
+                          minWidth={184}
+                          maxWidth={184}
+                          autoExpand={'selected'}
+                          onChange={onQcloudZoneChange}
+                        />
+                      </bk-form-item>
+                      {resourceForm.value.resourceType === 'QCLOUDCVM' && (
+                        <>
+                          <bk-form-item label='计费模式' required property='charge_type'>
+                            <RadioGroup v-model={resourceForm.value.charge_type} type='card' style={{ width: '260px' }}>
+                              <RadioButton label='PREPAID'>包年包月</RadioButton>
+                              <RadioButton label='POSTPAID_BY_HOUR'>按量计费</RadioButton>
+                            </RadioGroup>
+                            <bk-alert theme='info' class='form-item-tips'>
+                              {resourceForm.value.charge_type === 'PREPAID' ? (
+                                <>
+                                  默认为3年，按梯度折扣分别为1-3月150%，4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                </>
+                              ) : (
+                                <>
+                                  使用小于1月折扣为170%，在提交预测单后，满3月后可在腾讯云控制台转换为包年包月，无预测单不可转包年包月。计费折扣，使用1-3月150%，满3月后转4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
+                                </>
+                              )}
+                              <bk-link
+                                href='https://crp.woa.com/crp-outside/yunti/news/20'
+                                theme='primary'
+                                target='_blank'>
+                                计费模式说明
+                              </bk-link>
+                            </bk-alert>
+                          </bk-form-item>
+                          {resourceForm.value.charge_type === 'PREPAID' && (
+                            <bk-form-item label='购买时长' required property='charge_months'>
+                              <bk-select
+                                v-model={resourceForm.value.charge_months}
+                                filterable={false}
+                                clearable={false}
+                                style={{ width: '260px' }}>
+                                {cvmChargeMonthOptions.map((option: { id: number; name: string }) => (
+                                  <bk-option key={option.id} value={option.id} label={option.name}></bk-option>
+                                ))}
+                              </bk-select>
+                            </bk-form-item>
+                          )}
+                        </>
+                      )}
                     </bk-form>
                   </CommonCard>
 
                   {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                    <>
-                      {NIswitch.value ? (
-                        <>
-                          <CommonCard
-                            class={'mt15'}
-                            title={() => (
-                              <>
-                                <div
-                                  onClick={() => {
-                                    NIswitch.value = false;
-                                  }}>
-                                  <RightShape />
-                                  <span class='commonCard-network-title'>网络信息</span>
-                                  <span class='commonCard-text'>
-                                    {vpcName.value ? (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> VPC </span>: {vpcName.value}
-                                        {QCLOUDCVMForm.value.spec.vpc && `(${QCLOUDCVMForm.value.spec.vpc})`}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> VPC </span> :系统自动分配
-                                      </>
-                                    )}
-                                  </span>
-                                  <span class='commonCard-text'>
-                                    {subnetName.value ? (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> 子网 </span> : {subnetName.value}
-                                        {QCLOUDCVMForm.value.spec.subnet && `(${QCLOUDCVMForm.value.spec.subnet})`}
-                                      </>
-                                    ) : (
-                                      <>
-                                        <span class={'commonCard-subnet-tag'}> 子网 </span> : 系统自动分配
-                                      </>
-                                    )}
-                                  </span>
-                                </div>
-                              </>
-                            )}
-                            layout='grid'>
-                            <></>
-                          </CommonCard>
-                        </>
-                      ) : (
-                        <>
-                          <CommonCard
-                            class={'mt15'}
-                            title={() => (
-                              <>
-                                <div
-                                  onClick={() => {
-                                    NIswitch.value = true;
-                                  }}>
-                                  <DownShape />
-                                  <span>网络信息</span>
-                                </div>
-                              </>
-                            )}
-                            layout='grid'>
-                            <div class={'commonCard-layer'}>
-                              <bk-form
-                                class={'form-item-warp'}
-                                model={QCLOUDCVMForm.value.spec}
-                                rules={resourceFormRules.value}
-                                form-type='vertical'>
-                                <bk-form-item label='VPC'>
-                                  <bk-select
-                                    class={'vpcOrSubnet-select'}
-                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                    v-model={QCLOUDCVMForm.value.spec.vpc}
-                                    onChange={onQcloudVpcChange}
-                                    onClear={onVpcNameClear}>
-                                    {zoneTypes.value.map((vpc) => (
-                                      <bk-option
-                                        key={vpc.vpc_id}
-                                        value={vpc.vpc_id}
-                                        label={`${vpc.vpc_id} | ${vpc.vpc_name}`}></bk-option>
-                                    ))}
-                                  </bk-select>
-                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
-                                  {/(BCS|OVERLAY)/.test(vpcName.value) && (
-                                    <BcsSelectTips desc='所选择的VPC为容器网络' />
-                                  )}
-                                </bk-form-item>
-                                <bk-form-item label='子网'>
-                                  <bk-select
-                                    class={'vpcOrSubnet-select'}
-                                    disabled={resourceForm.value.zone === 'cvm_separate_campus'}
-                                    v-model={QCLOUDCVMForm.value.spec.subnet}
-                                    onChange={onQcloudSubnetChange}
-                                    onClear={onSubnetNameClear}>
-                                    {subnetTypes.value.map((subnet) => (
-                                      <bk-option
-                                        key={subnet.subnet_id}
-                                        value={subnet.subnet_id}
-                                        label={`${subnet.subnet_id} | ${subnet.subnet_name}`}></bk-option>
-                                    ))}
-                                  </bk-select>
-                                  {/* 如果选择BSC集群的VPC，提供引导提示 */}
-                                  {/(BCS|OVERLAY)/.test(subnetName.value) && (
-                                    <BcsSelectTips desc='所选择的子网为容器子网' />
-                                  )}
-                                </bk-form-item>
-                              </bk-form>
-                            </div>
-                          </CommonCard>
-                        </>
-                      )}
-                    </>
+                    <Form
+                      model={QCLOUDCVMForm.value.spec}
+                      rules={resourceFormRules.value}
+                      formType='vertical'
+                      class='mt15'>
+                      <NetworkInfoPanel
+                        v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
+                        v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
+                        region={resourceForm.value.region}
+                        zone={resourceForm.value.zone}
+                        disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
+                        disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
+                        onChangeVpc={onQcloudDeviceTypeChange}
+                        onChangeSubnet={onQcloudDeviceTypeChange}
+                      />
+                    </Form>
                   )}
 
                   <CommonCard
@@ -1130,14 +1091,14 @@ export default defineComponent({
                                 ))}
                               </bk-select>
                             </bk-form-item>
-                            <bk-form-item label='数据盘'>
+                            <bk-form-item label='数据盘' property='disk_size'>
                               <div
                                 style={{
                                   display: 'flex',
                                   alignItems: 'center',
                                 }}>
                                 <DiskTypeSelect
-                                  style={'width:380px'}
+                                  style={'width:360px'}
                                   v-model={QCLOUDCVMForm.value.spec.disk_type}></DiskTypeSelect>
                                 <Input
                                   class={'ml8'}
@@ -1146,8 +1107,17 @@ export default defineComponent({
                                   prefix='大小'
                                   suffix='GB'
                                   v-model={QCLOUDCVMForm.value.spec.disk_size}
-                                  min={1}></Input>
+                                  min={0}
+                                  max={16000}></Input>
+                                <i
+                                  class={'hcm-icon bkhcm-icon-question-circle-fill ml5'}
+                                  v-bk-tooltips={'最大为 16T(16000 G)，且必须为 10 的倍数'}></i>
                               </div>
+                              {[CLOUD_CVM_DISKTYPE.SSD].includes(QCLOUDCVMForm.value.spec.disk_type) && (
+                                <bk-alert theme='warning' class='form-item-tips' style='width:600px'>
+                                  <>SSD 云硬盘的运营成本约为高性能云盘的 4 倍，请合理评估使用。</>
+                                </bk-alert>
+                              )}
                             </bk-form-item>
                             <bk-form-item label='需求数量' required property='replicas'>
                               <Input

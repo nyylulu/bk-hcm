@@ -41,7 +41,7 @@ func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
 	}
 
 	// update task status
-	err = r.updateTaskPreCheckStatus(task, host.BkHostInnerIp, host.BkAssetId, "", table.RecallStatusClearChecking)
+	err = r.updateTaskPreCheckStatus(task, host.BkHostInnerIP, host.BkAssetId, "", table.RecallStatusClearChecking)
 	if err != nil {
 		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err

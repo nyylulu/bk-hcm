@@ -13,24 +13,30 @@
 // Package task ...
 package task
 
+import (
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
+)
+
 // CVM create cvm request param
 type CVM struct {
-	AppId             string `json:"appId"`
-	ApplyType         int64  `json:"applyType"`
-	AppModuleId       int64  `json:"appModuleId"`
-	Operator          string `json:"operator"`
-	ApplyNumber       uint   `json:"applyNumber"`
-	NoteInfo          string `json:"noteInfo"`
-	VPCId             string `json:"vpcId"`
-	SubnetId          string `json:"subnetId"`
-	Area              string `json:"area"`
-	Zone              string `json:"zone"`
-	ImageId           string `json:"image_id"`
-	ImageName         string `json:"image_name"`
-	InstanceType      string `json:"instanceType"`
-	DiskType          string `json:"disk_type"`
-	DiskSize          int64  `json:"disk_size"`
-	SecurityGroupId   string `json:"securityGroupId"`
-	SecurityGroupName string `json:"securityGroupName"`
-	SecurityGroupDesc string `json:"securityGroupDesc"`
+	AppId             string            `json:"appId"`
+	ApplyType         int64             `json:"applyType"`
+	AppModuleId       int64             `json:"appModuleId"`
+	Operator          string            `json:"operator"`
+	ApplyNumber       uint              `json:"applyNumber"`
+	NoteInfo          string            `json:"noteInfo"`
+	VPCId             string            `json:"vpcId"`
+	SubnetId          string            `json:"subnetId"`
+	Area              string            `json:"area"`
+	Zone              string            `json:"zone"`
+	ImageId           string            `json:"image_id"`
+	ImageName         string            `json:"image_name"`
+	InstanceType      string            `json:"instanceType"`
+	DiskType          string            `json:"disk_type"`
+	DiskSize          int64             `json:"disk_size"`
+	SecurityGroupId   string            `json:"securityGroupId"`
+	SecurityGroupName string            `json:"securityGroupName"`
+	SecurityGroupDesc string            `json:"securityGroupDesc"`
+	ChargeType        cvmapi.ChargeType `json:"chargeType"`
+	ChargeMonths      uint              `json:"chargeMonths"`
 }

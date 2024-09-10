@@ -110,7 +110,25 @@ export default defineComponent({
 
     return () => (
       // 预测清单
-      <Panel title={t('预测清单')}>
+      <Panel
+        title={() => (
+          <div>
+            <span class='mr5'>{t('预测清单')}</span>
+            <i
+              class={'hcm-icon bkhcm-icon-info-line'}
+              v-bk-tooltips={{
+                content: (
+                  <div>
+                    <div>
+                      请按业务需求，评估合理的资源需求量，领取资源超出或低于预测额度20%，会产生资源量1个月的成本罚金。
+                    </div>
+                    <div>如实际领取/资源预测=130%，则产生10%的罚金</div>
+                    <div>如实际领取/资源预测=65%， 则产生15%的罚金</div>
+                  </div>
+                ),
+              }}></i>
+          </div>
+        )}>
         <section class={cssModule.header}>
           <bk-button theme='primary' outline onClick={handleToAdd} class={cssModule.button}>
             <PlusIcon class={cssModule['plus-icon']} />

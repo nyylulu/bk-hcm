@@ -8,7 +8,6 @@ import SecurityBindCvm from '../components/security/security-bind-cvm';
 import { useI18n } from 'vue-i18n';
 
 import { watch, ref, reactive } from 'vue';
-import { VendorEnum } from '@/common/constant';
 
 import { useRoute } from 'vue-router';
 import useDetail from '../../hooks/use-detail';
@@ -50,23 +49,6 @@ const tabs = ref([
     value: 'relate',
   },
 ]);
-
-watch(
-  () => route.query.vendor,
-  (vendorVal) => {
-    if (![VendorEnum.ZIYAN].includes(vendorVal as VendorEnum)) {
-      tabs.value = tabs.value.filter(({ value }) => value !== 'cvm');
-    } else {
-      tabs.value.push({
-        name: '绑定主机',
-        value: 'cvm',
-      });
-    }
-  },
-  {
-    immediate: true,
-  },
-);
 
 const handleTabsChange = (val: string) => {
   if (val === 'rule') getRelatedSecurityGroups(detail.value);
@@ -184,7 +166,7 @@ const getTemplateData = async (detail: { account_id: string }) => {
           :sg-id="(securityId as string)"
           :sg-cloud-id="detail.cloud_id"
         />
-        <security-relate v-else />
+        <security-relate v-else :detail="detail" :sg-id="(securityId as string)" :sg-cloud-id="detail.cloud_id" />
       </template>
     </detail-tab>
   </div>

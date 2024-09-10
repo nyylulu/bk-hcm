@@ -1,5 +1,5 @@
 import { computed, defineComponent, ref, watch, onMounted } from 'vue';
-import { RouteLocationRaw, useRouter } from 'vue-router';
+import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
 import { Button, Message, TagInput } from 'bkui-vue';
@@ -27,6 +27,7 @@ import { getResourceTypeName } from '@/views/ziyanScr/hostApplication/components
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import http from '@/http';
+import { useSaveSearchRules } from '../../useSaveSearchRules';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -37,6 +38,7 @@ export default defineComponent({
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
+    const route = useRoute();
 
     const { transformApplyStages } = useApplyStages();
     const { transformRequireTypes } = useRequireTypes();
@@ -50,7 +52,7 @@ export default defineComponent({
       stage: [],
       orderId: [],
       dateRange: applicationTime(),
-      user: [userStore.username],
+      bkUsername: [userStore.username],
     });
     const curRow = ref({});
 
@@ -94,9 +96,10 @@ export default defineComponent({
       let routeParams: RouteLocationRaw = {
         name: 'HostApplicationsDetail',
         params: { id: row.order_id },
+        query: route.query,
       };
       if (row.stage === 'UNCOMMIT') {
-        routeParams = { name: 'applyCvm', query: { order_id: row.order_id, unsubmitted: 1 } };
+        routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };
       }
       router.push(routeParams);
     };
@@ -437,7 +440,7 @@ export default defineComponent({
         payload: removeEmptyFields({
           bk_biz_id: [getBizsId()],
           order_id: formModel.orderId.map((v) => Number(v)),
-          bk_username: formModel.user,
+          bk_username: formModel.bkUsername,
           stage: formModel.stage,
           start: formModel.dateRange[0],
           end: formModel.dateRange[1],
@@ -446,10 +449,28 @@ export default defineComponent({
       }),
     });
 
-    const filterOrders = () => {
+    const searchRulesKey = 'host_apply_applications_rules';
+    const filterOrders = (searchRulesStr?: string) => {
+      // 回填
+      if (searchRulesStr) {
+        // 解决人员选择器搜索问题
+        formModel.bkUsername.length > 0 &&
+          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bkUsername])]);
+      }
       pagination.start = 0;
-      formModel.bkBizId = [getBizsId()];
       getListData();
+    };
+    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
+
+    const handleSearch = () => {
+      // update query
+      saveSearchRules();
+    };
+
+    const handleReset = () => {
+      resetForm({ bkUsername: [userStore.username] });
+      // update query
+      clearSearchRules();
     };
 
     onMounted(() => {
@@ -459,13 +480,18 @@ export default defineComponent({
     watch(
       () => userStore.username,
       (username) => {
-        formModel.user = [username];
+        if (route.query[searchRulesKey]) return;
+        // 无搜索记录，设置申请人默认值
+        formModel.bkUsername = [username];
       },
     );
 
     return () => (
       <>
         <GridFilterComp
+          onSearch={handleSearch}
+          onReset={handleReset}
+          loading={isLoading.value}
           rules={[
             {
               title: t('需求类型'),
@@ -512,22 +538,17 @@ export default defineComponent({
               title: t('申请人'),
               content: (
                 <MemberSelect
-                  v-model={formModel.user}
+                  v-model={formModel.bkUsername}
                   clearable
-                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
+                    username,
+                    display_name: username,
+                  }))}
                   placeholder={t('请输入企业微信名')}
                 />
               ),
             },
           ]}
-          onSearch={filterOrders}
-          onReset={() => {
-            resetForm({ user: [userStore.username] });
-            formModel.bkBizId = [getBizsId()];
-            filterOrders();
-          }}
-          loading={isLoading.value}
-          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <CommonTable />

@@ -31,6 +31,7 @@ type DetectStep struct {
 	RetryTime  uint32         `json:"retry_time" bson:"retry_time"`
 	Status     DetectStatus   `json:"status" bson:"status"`
 	Message    string         `json:"message" bson:"message"`
+	Skip       int            `json:"skip" bson:"skip"`
 	Log        string         `json:"log" bson:"log"`
 	StartAt    time.Time      `json:"start_at" bson:"start_at"`
 	EndAt      time.Time      `json:"end_at" bson:"end_at"`
