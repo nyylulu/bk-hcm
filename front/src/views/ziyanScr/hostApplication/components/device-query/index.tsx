@@ -125,8 +125,8 @@ export default defineComponent({
                 authed
                 isShowAll
                 notAutoSelectAll
-                saveBizs
-                bizsKey='scr_host_bizs'
+                url-key='scr_host_bizs'
+                base64Encode
               />
             </FormItem>
             <FormItem label='需求类型'>

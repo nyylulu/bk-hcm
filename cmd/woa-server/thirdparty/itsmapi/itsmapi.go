@@ -29,7 +29,8 @@ import (
 // ITSMClientInterface itsm api interface
 type ITSMClientInterface interface {
 	// CreateTicket create itsm ticket
-	CreateTicket(ctx context.Context, header http.Header, user string, orderId uint64) (*CreateTicketResp, error)
+	CreateTicket(ctx context.Context, header http.Header, user string, orderId uint64, bizID int64) (*CreateTicketResp,
+		error)
 	// OperateNode operate itsm ticket node
 	OperateNode(ctx context.Context, header http.Header, req *OperateNodeReq) (*OperateNodeResp, error)
 	// GetTicketStatus get itsm ticket status
@@ -77,7 +78,7 @@ func (c *itsmCli) getAuthHeader() (string, string) {
 }
 
 // CreateTicket create itsm ticket
-func (c *itsmCli) CreateTicket(ctx context.Context, header http.Header, user string, orderId uint64) (
+func (c *itsmCli) CreateTicket(ctx context.Context, header http.Header, user string, orderId uint64, bizID int64) (
 	*CreateTicketResp, error) {
 
 	subPath := "/v2/itsm/create_ticket"
@@ -100,7 +101,7 @@ func (c *itsmCli) CreateTicket(ctx context.Context, header http.Header, user str
 			},
 			{
 				Key:   TicketKeyApplyLink,
-				Value: fmt.Sprintf(c.opts.ApplyLinkFormat, orderId),
+				Value: fmt.Sprintf(c.opts.ApplyLinkFormat, orderId, bizID),
 			},
 			{
 				Key:   TicketKeyNeedSysAudit,

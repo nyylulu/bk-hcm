@@ -8,7 +8,7 @@ import optionFactory from './option-factory';
 defineOptions({ name: 'ResourceSearchSelect' });
 
 export interface IResourceSelectProps {
-  modelValue: ISearchValue;
+  modelValue: ISearchValue[];
   resourceType: ResourceTypeEnum;
   clearable?: boolean;
 }

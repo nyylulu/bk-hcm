@@ -61,12 +61,12 @@ func (d *Detector) isDockerVM(host *cmdb.HostInfo) bool {
 func (d *Detector) getContainerParentIp(host *cmdb.HostInfo) (string, error) {
 	dashIdx := strings.Index(host.BkAssetId, "-")
 	if dashIdx < 0 {
-		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIp)
+		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIP)
 	}
 
 	parentAssetId := host.BkAssetId[:dashIdx]
 	if len(parentAssetId) == 0 {
-		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIp)
+		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIP)
 	}
 
 	assetIds := []string{parentAssetId}
@@ -111,6 +111,8 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.HostInfo, error) {
 			"bk_host_id",
 			"bk_asset_id",
 			"bk_host_innerip",
+			"bk_host_outerip",
+			"bk_host_outerip_v6",
 			// 机型
 			"svr_device_class",
 			// 逻辑区域
@@ -123,6 +125,7 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.HostInfo, error) {
 			"operator",
 			"bk_bak_operator",
 			"srv_status",
+			"bk_svr_source_type_id",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,

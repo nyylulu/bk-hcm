@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/tools/slice"
@@ -73,22 +74,35 @@ func (s *service) ListProductSummary(cts *rest.Contexts) (interface{}, error) {
 	for _, detail := range summary.Details {
 		productIDs = append(productIDs, detail.ProductID)
 	}
-	param := &finops.ListOpProductParam{
-		OpProductIds: slice.Unique(productIDs),
-		Page:         *core.NewDefaultBasePage(),
-	}
-	productResult, err := s.finops.ListOpProduct(cts.Kit, param)
+	productMap, err := s.listOpProduct(cts.Kit, productIDs)
 	if err != nil {
 		return nil, err
 	}
-	productMap := make(map[int64]string)
-	for _, product := range productResult.Items {
-		productMap[product.OpProductId] = product.OpProductName
-	}
 
 	for _, detail := range summary.Details {
-		detail.ProductName = productMap[detail.ProductID]
+		detail.ProductName = productMap[detail.ProductID].OpProductName
 	}
 
 	return summary, nil
+}
+
+func (s *service) listOpProduct(kt *kit.Kit, ids []int64) (map[int64]finops.OperationProduct, error) {
+	ids = slice.Unique(ids)
+	result := make(map[int64]finops.OperationProduct, len(ids))
+	for _, tmpIds := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		param := &finops.ListOpProductParam{
+			OpProductIds: tmpIds,
+			Page:         *core.NewDefaultBasePage(),
+		}
+
+		productResult, err := s.finops.ListOpProduct(kt, param)
+		if err != nil {
+			return nil, err
+		}
+		for _, product := range productResult.Items {
+			result[product.OpProductId] = product
+		}
+	}
+
+	return result, nil
 }

@@ -12,6 +12,10 @@
 
 package cvmapi
 
+import (
+	"fmt"
+)
+
 // ReqMeta cvm request meta info
 type ReqMeta struct {
 	Id      string `json:"id"`
@@ -57,6 +61,29 @@ type OrderCreateParams struct {
 	Operator          string      `json:"operator"`
 	BakOperator       string      `json:"bakOperator"`
 	ObsProject        string      `json:"obsProject"`
+	ChargeType        ChargeType  `json:"chargeType,omitempty"`
+	ChargeMonths      uint        `json:"chargeMonths,omitempty"`
+}
+
+// ChargeType charge type
+type ChargeType string
+
+// ChargeType charge type
+const (
+	// ChargeTypePrePaid 计费模式:包年包月
+	ChargeTypePrePaid ChargeType = "PREPAID"
+	// ChargeTypePostPaidByHour 计费模式:按量计费
+	ChargeTypePostPaidByHour ChargeType = "POSTPAID_BY_HOUR"
+)
+
+// Validate 计费模式校验
+func (ct ChargeType) Validate() error {
+	switch ct {
+	case ChargeTypePrePaid, ChargeTypePostPaidByHour:
+		return nil
+	default:
+		return fmt.Errorf("charge_type invalid value: %s", ct)
+	}
 }
 
 // Image cvm image specification
@@ -161,14 +188,14 @@ type CvmCbsPlanAdjustParam struct {
 	UserName    string               `json:"userName"`
 }
 
-//  AdjustBaseInfo adjust base info for cvm and cbs plan info adjust params
+// AdjustBaseInfo adjust base info for cvm and cbs plan info adjust params
 type AdjustBaseInfo struct {
 	DeptId          int    `json:"deptId"`
 	DeptName        string `json:"deptName"`
 	PlanProductName string `json:"planProductName"`
 }
 
-//  AdjustSrcData adjust source data for cvm and cbs plan info adjust params
+// AdjustSrcData adjust source data for cvm and cbs plan info adjust params
 type AdjustSrcData struct {
 	CityId              int     `json:"cityId"`
 	CityName            string  `json:"cityName"`

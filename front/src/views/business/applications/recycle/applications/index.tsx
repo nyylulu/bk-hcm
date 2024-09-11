@@ -1,17 +1,17 @@
 import { computed, defineComponent, onMounted, ref, watch } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
-import { Button, DatePicker, Dropdown, Message, Select } from 'bkui-vue';
+import { Button, Dropdown, Message, Select } from 'bkui-vue';
 import GridFilterComp from '@/components/grid-filter-comp';
-import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
+import RequireNameSelect from '@/views/ziyanScr/host-recycle/host-recycle-table/require-name-select';
 import FloatInput from '@/components/float-input';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
+import ScrDatePicker from '@/components/scr/scr-date-picker';
 
-import dayjs from 'dayjs';
 import { useI18n } from 'vue-i18n';
-import { useUserStore, useZiyanScrStore } from '@/store';
+import { useUserStore } from '@/store';
 import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -20,14 +20,17 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { getRecycleStageOpts } from '@/api/host/recycle';
+import { useSaveSearchRules } from '../../useSaveSearchRules';
+import useFormModel from '@/hooks/useFormModel';
+import { applicationTime } from '@/common/util';
 
 export default defineComponent({
   setup() {
     const router = useRouter();
     const userStore = useUserStore();
-    const scrStore = useZiyanScrStore();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
+    const route = useRoute();
 
     const resourceTypeList = [
       { key: 'QCLOUDCVM', value: '腾讯云虚拟机' },
@@ -49,12 +52,10 @@ export default defineComponent({
         return_plan: [] as any[],
         stage: [] as any[],
         bk_username: [userStore.username],
+        dateRange: applicationTime(),
       };
     };
-    const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
-    const recycleForm = ref(defaultRecycleForm());
-    const timeForm = ref(defaultTime());
-    const pageInfo = ref({ start: 0, limit: 10, enable_count: false });
+    const { formModel, resetForm } = useFormModel(defaultRecycleForm());
     const currentOperateRowIndex = ref(-1);
 
     const opBtnDisabled = computed(() => {
@@ -63,21 +64,15 @@ export default defineComponent({
           status,
         );
     });
-    const handleTime = (time: any) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
-    const timeObj = computed(() => {
-      return {
-        start: handleTime(timeForm.value[0]),
-        end: handleTime(timeForm.value[1]),
-      };
-    });
     const requestListParams = computed(() => {
       const params = {
-        ...recycleForm.value,
-        ...timeObj.value,
-        page: pageInfo.value,
+        ...formModel,
+        start: formModel.dateRange[0],
+        end: formModel.dateRange[1],
         bk_biz_id: [getBizsId()],
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
+      params.dateRange = undefined;
       removeEmptyFields(params);
       return params;
     });
@@ -192,7 +187,10 @@ export default defineComponent({
       },
     });
     const enterDetail = (row: any) => {
-      router.push({ name: 'HostRecycleDocDetail', query: { suborderId: row.suborder_id, bkBizId: getBizsId() } });
+      router.push({
+        name: 'HostRecycleDocDetail',
+        query: { ...route.query, suborderId: row.suborder_id, bkBizId: getBizsId() },
+      });
     };
     const returnPreDetails = (row: any) => {
       router.push({ name: 'HostRecyclePreDetail', query: { suborder_id: row.suborder_id } });
@@ -247,60 +245,69 @@ export default defineComponent({
       stageList.value = data?.info || [];
     };
 
-    const filterOrders = () => {
+    const searchRulesKey = 'host_recycle_applications_rules';
+    const filterOrders = (searchRulesStr?: string) => {
+      // 回填
+      if (searchRulesStr) {
+        // 解决人员选择器搜索问题
+        formModel.bk_username.length > 0 &&
+          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bk_username])]);
+      }
+      formModel.bk_biz_id = [getBizsId()];
       pagination.start = 0;
-      recycleForm.value.bk_biz_id = [getBizsId()];
       getListData();
     };
-    const clearFilter = () => {
-      const initForm = defaultRecycleForm();
-      initForm.bk_biz_id = [getBizsId()];
-      recycleForm.value = initForm;
-      timeForm.value = defaultTime();
-      filterOrders();
+    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
+
+    const handleSearch = () => {
+      // update query
+      saveSearchRules();
     };
+
+    const handleReset = () => {
+      resetForm(defaultRecycleForm());
+      formModel.bk_biz_id = [getBizsId()];
+      // update query
+      clearSearchRules();
+    };
+
+    watch(
+      () => userStore.username,
+      (username) => {
+        if (route.query[searchRulesKey]) return;
+        // 无搜索记录，设置申请人默认值
+        formModel.bk_username = [username];
+      },
+    );
 
     onMounted(() => {
       fetchStageList();
     });
 
-    watch(
-      () => userStore.username,
-      (username) => {
-        recycleForm.value.bk_username = [username];
-      },
-    );
-
     return () => (
       <>
         <GridFilterComp
+          onSearch={handleSearch}
+          onReset={handleReset}
+          loading={isLoading.value}
+          col={4}
           rules={[
             {
               title: t('需求类型'),
-              content: (
-                <ScrCreateFilterSelector
-                  v-model={recycleForm.value.recycle_type}
-                  api={scrStore.getRequirementList}
-                  multiple
-                  optionIdPath='require_type'
-                  optionNamePath='require_name'
-                />
-              ),
+              content: <RequireNameSelect v-model={formModel.recycle_type} multiple clearable collapseTags />,
             },
             {
               title: t('单号'),
-              content: <FloatInput v-model={recycleForm.value.order_id} placeholder={t('请输入单号，多个换行分割')} />,
+              content: <FloatInput v-model={formModel.order_id} placeholder={t('请输入单号，多个换行分割')} />,
             },
             {
               title: t('子单号'),
-              content: (
-                <FloatInput v-model={recycleForm.value.suborder_id} placeholder={t('请输入子单号，多个换行分割')} />
-              ),
+              content: <FloatInput v-model={formModel.suborder_id} placeholder={t('请输入子单号，多个换行分割')} />,
             },
             {
               title: t('资源类型'),
               content: (
-                <Select v-model={recycleForm.value.resource_type} multiple clearable placeholder={t('请选择资源类型')}>
+                <Select v-model={formModel.resource_type} multiple clearable placeholder={t('请选择资源类型')}>
                   {resourceTypeList.map(({ key, value }) => {
                     return <Select.Option key={key} name={value} id={key} />;
                   })}
@@ -310,7 +317,7 @@ export default defineComponent({
             {
               title: t('回收类型'),
               content: (
-                <Select v-model={recycleForm.value.return_plan} multiple clearable placeholder={t('请选择回收类型')}>
+                <Select v-model={formModel.return_plan} multiple clearable placeholder={t('请选择回收类型')}>
                   {returnPlanList.map(({ key, value }) => {
                     return <Select.Option key={key} name={value} id={key}></Select.Option>;
                   })}
@@ -320,7 +327,7 @@ export default defineComponent({
             {
               title: t('状态'),
               content: (
-                <Select v-model={recycleForm.value.stage} multiple clearable placeholder={t('请选择状态')}>
+                <Select v-model={formModel.stage} multiple clearable placeholder={t('请选择状态')}>
                   {stageList.value.map(({ stage, description }) => {
                     return <Select.Option key={stage} name={description} id={stage}></Select.Option>;
                   })}
@@ -331,24 +338,22 @@ export default defineComponent({
               title: t('回收人'),
               content: (
                 <MemberSelect
-                  v-model={recycleForm.value.bk_username}
+                  v-model={formModel.bk_username}
                   multiple
                   clearable
                   placeholder={t('请输入企业微信名')}
-                  defaultUserlist={[{ username: userStore.username, display_name: userStore.username }]}
+                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
+                    username,
+                    display_name: username,
+                  }))}
                 />
               ),
             },
             {
               title: t('回收时间'),
-              content: <DatePicker class='full-width' v-model={timeForm.value} type='daterange' />,
+              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
             },
           ]}
-          onSearch={filterOrders}
-          onReset={clearFilter}
-          loading={isLoading.value}
-          col={4}
-          immediate
         />
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>

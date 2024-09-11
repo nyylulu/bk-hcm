@@ -88,10 +88,10 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 				"err: %v", ip, jobId, bkBizID, err)
 			return "", nil
 		}
-		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, check job status, host: %s, jobId: %d, bkBizID: %d, err: %v",
-			ip, jobId, bkBizID, err)
-		return "", fmt.Errorf("host %s failed to check process, job id: %d, bkBizID: %d, err: %v",
-			ip, jobId, bkBizID, err)
+		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, check job status, host: %s, jobId: %d, bkBizID: %d, "+
+			"jobUrl: %s, err: %v", ip, jobId, bkBizID, jobUrl, err)
+		return "", fmt.Errorf("host %s failed to check process, job id: %d, jobUrl: %s, bkBizID: %d, err: %v",
+			ip, jobId, jobUrl, bkBizID, err)
 	}
 	return jobUrl, nil
 }

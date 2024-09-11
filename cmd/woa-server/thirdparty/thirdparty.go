@@ -28,6 +28,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/gcsapi"
 	"hcm/cmd/woa-server/thirdparty/itsmapi"
 	"hcm/cmd/woa-server/thirdparty/l5api"
+	"hcm/cmd/woa-server/thirdparty/ngateapi"
 	"hcm/cmd/woa-server/thirdparty/safetyapi"
 	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/cmd/woa-server/thirdparty/tcaplusapi"
@@ -61,6 +62,7 @@ type Client struct {
 	BkChat          bkchatapi.BkChatClientInterface
 	Sops            sopsapi.SopsClientInterface
 	ITSM            itsmapi.ITSMClientInterface
+	Ngate           ngateapi.NgateClientInterface
 }
 
 // NewClient new third party client
@@ -98,9 +100,9 @@ func NewClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Client, error)
 	}
 
 	client := &Client{
-		CVM:             cvm,
+		CVM: cvm,
 		OldCVM:          oldCvm,
-		DVM:             dvm,
+		DVM: dvm,
 		Tjj:             tjj,
 		Xship:           xship,
 		TencentCloudOpt: opts.TCloudOpt,
@@ -204,6 +206,13 @@ func newThirdClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Cli
 		return nil, err
 	}
 	client.ITSM = itsm
+
+	ngateCli, err := ngateapi.NewNgateClientInterface(opts.Ngate, reg)
+	if err != nil {
+		logs.Errorf("failed to new ngate api client, err: %v", err)
+		return nil, err
+	}
+	client.Ngate = ngateCli
 
 	return client, nil
 }

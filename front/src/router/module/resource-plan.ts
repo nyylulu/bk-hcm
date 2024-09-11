@@ -27,7 +27,7 @@ const resourcePlanMenus: RouteRecordRaw[] = [
     component: () => import('@/views/resource-plan/list/index'),
     meta: {
       activeKey: 'planlist',
-      icon: 'hcm-icon bkhcm-icon-template-orchestration',
+      icon: 'hcm-icon bkhcm-icon-resource-plan',
     },
   },
   {

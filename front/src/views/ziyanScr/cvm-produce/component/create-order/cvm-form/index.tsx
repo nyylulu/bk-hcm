@@ -1,6 +1,6 @@
 import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import { merge, cloneDeep, isEqual } from 'lodash';
-import { getDeviceTypes, getVpcs, getImages, getSubnets, getDeviceTypesDetails } from '@/api/host/cvm';
+import { getDeviceTypes, getImages, getDeviceTypesDetails } from '@/api/host/cvm';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
@@ -8,8 +8,11 @@ import ImageDialog from './image-dialog';
 import CvmCapacity from './cvm-capacity';
 import { Alert, Checkbox, Form, Input, Select } from 'bkui-vue';
 import { HelpFill } from 'bkui-vue/lib/icon';
+import CvmVpcSelector from '@/views/ziyanScr/components/cvm-vpc-selector/index.vue';
+import CvmSubnetSelector from '@/views/ziyanScr/components/cvm-subnet-selector/index.vue';
 import './index.scss';
 const { FormItem } = Form;
+
 export default defineComponent({
   components: {
     AreaSelector,
@@ -128,15 +131,6 @@ export default defineComponent({
       modelForm.value.spec.image_id = '';
       modelForm.value.spec.device_type = '';
     };
-    const loadVpcs = () => {
-      getVpcs({ region: modelForm.value.spec.region })
-        .then((res) => {
-          options.value.vpcs = res.data.info;
-        })
-        .catch(() => {
-          options.value.vpcs = [];
-        });
-    };
     const loadImages = () => {
       getImages({
         region: [modelForm.value.spec.region],
@@ -182,7 +176,6 @@ export default defineComponent({
         });
     };
     const loadRegionRelationOpts = () => {
-      loadVpcs();
       loadImages();
       loadDeviceTypes();
     };
@@ -195,22 +188,8 @@ export default defineComponent({
       modelForm.value.spec.subnet = '';
       modelForm.value.spec.device_type = '';
     };
-    const loadSubnets = () => {
-      const { region, zone, vpc } = modelForm.value.spec;
-      getSubnets({
-        region,
-        zone,
-        vpc,
-      })
-        .then((res) => {
-          options.value.subnets = res.data?.info || [];
-        })
-        .catch(() => {
-          options.value.subnets = [];
-        });
-    };
+
     const loadZoneRelationOpts = () => {
-      loadSubnets();
       loadDeviceTypes();
     };
     const handleZoneChange = () => {
@@ -219,7 +198,6 @@ export default defineComponent({
     };
     const loadVpcRelationOpts = () => {
       modelForm.value.spec.subnet = '';
-      loadSubnets();
     };
     const loadDeviceTypeDetail = () => {
       const rules = [];
@@ -396,25 +374,19 @@ export default defineComponent({
                   disabled: modelForm.value.spec.zone !== 'cvm_separate_campus',
                   content: '园区分Campus 时无法指定子网',
                 }}>
-                <Select
+                <CvmVpcSelector
                   v-model={modelForm.value.spec.vpc}
-                  clearable
+                  region={modelForm.value.spec.region}
                   onChange={loadVpcRelationOpts}
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.region}
-                  placeholder={!modelForm.value.spec.region ? '请先选择地域' : '请选择 VPC'}>
-                  {options.value.vpcs.map(({ vpc_id, vpc_name }) => {
-                    return <Select.Option key={vpc_id} name={vpc_name} id={vpc_id} />;
-                  })}
-                </Select>
-                <Select
+                />
+                <CvmSubnetSelector
                   v-model={modelForm.value.spec.subnet}
-                  clearable
+                  region={modelForm.value.spec.region}
+                  zone={modelForm.value.spec.zone}
+                  vpc={modelForm.value.spec.vpc}
                   disabled={modelForm.value.spec.zone === 'cvm_separate_campus' || !modelForm.value.spec.vpc}
-                  placeholder={!modelForm.value.spec.vpc ? '请先选择 VPC' : '请选择子网'}>
-                  {options.value.subnets.map(({ subnet_id, subnet_name }) => {
-                    return <Select.Option key={subnet_id} name={subnet_name} id={subnet_id} />;
-                  })}
-                </Select>
+                />
               </div>
               <Alert
                 class='alert-container'

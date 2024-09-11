@@ -1,7 +1,7 @@
 import { defineComponent, computed, watch, ref, nextTick, onMounted } from 'vue';
-import { RouterLink, RouterView, useRoute } from 'vue-router';
+import { RouterLink, RouterView, useRoute, useRouter } from 'vue-router';
 
-import { Menu, Navigation, Dropdown, Button } from 'bkui-vue';
+import { Menu, Navigation, Dropdown, Button, Dialog } from 'bkui-vue';
 import Breadcrumb from './breadcrumb';
 import BusinessSelector from './business-selector';
 import NoPermission from '@/views/resource/NoPermission';
@@ -18,7 +18,7 @@ import usePagePermissionStore from '@/store/usePagePermissionStore';
 
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import useChangeHeaderTab from './hooks/useChangeHeaderTab';
-import { LANGUAGE_TYPE, VendorEnum } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, LANGUAGE_TYPE, VendorEnum } from '@/common/constant';
 import { classes } from '@/common/util';
 
 import { headRouteConfig } from '@/router/header-config';
@@ -39,6 +39,7 @@ export default defineComponent({
 
     const { t } = useI18n();
     const route = useRoute();
+    const router = useRouter();
     const userStore = useUserStore();
     const accountStore = useAccountStore();
     const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
@@ -269,7 +270,13 @@ export default defineComponent({
 
                                 return (
                                   <RouterLink
-                                    to={{ path: `${child.path}`, query: { ...route.query, bizs: accountStore.bizs } }}>
+                                    to={{
+                                      path: child.path,
+                                      query: {
+                                        [GLOBAL_BIZS_KEY]:
+                                          whereAmI.value === Senarios.business ? accountStore.bizs : undefined,
+                                      },
+                                    }}>
                                     <Menu.Item key={child.meta?.activeKey as string}>
                                       {{
                                         icon: () => <i class={child.meta?.icon} />,
@@ -335,6 +342,19 @@ export default defineComponent({
             </Navigation>
           }
           <GlobalPermissionDialog />
+
+          <Dialog
+            title='结果确认'
+            confirmText='查看审批流程'
+            onConfirm={() => {
+              const url = `/#/business/applications/detail?bizs=${accountStore.bizs}&type=security_group&id=${accountStore.securityConfirmMessage}&source=bpaas`;
+              window.open(url, '_blank');
+              accountStore.updateSecurityConfirmMessage('');
+            }}
+            onClosed={() => accountStore.updateSecurityConfirmMessage('')}
+            isShow={!!accountStore.securityConfirmMessage.length}>
+            <span>当前配置已提交，查看审批流程关注进度</span>
+          </Dialog>
         </div>
       </main>
     );

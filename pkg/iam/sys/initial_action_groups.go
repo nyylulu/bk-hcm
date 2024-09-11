@@ -259,7 +259,9 @@ func genPlatformManageActionGroups() client.ActionGroup {
 				Name:   "云账单管理",
 				NameEn: "Account Bill Management",
 				Actions: []client.ActionWithID{
+					{ID: AccountBillPull},
 					{ID: AccountBillManage},
+					{ID: AwsSavingsPlansCostQuery},
 				},
 			},
 			{

@@ -1,11 +1,11 @@
 import CommonCard from '@/components/CommonCard';
 import { Form } from 'bkui-vue';
-import { defineComponent, PropType, ref, watch, nextTick, computed } from 'vue';
-import AccountSelector from '@/components/account-selector/index.vue';
+import { defineComponent, PropType, ref, watch, nextTick } from 'vue';
+import AccountSelector from '@/components/account-selector/index-new.vue';
 import { VendorEnum } from '@/common/constant';
-import { Senarios, useWhereAmI } from './useWhereAmI';
-import { FilterType, QueryRuleOPEnum } from '@/typings';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
+import { useAccountSelectorStore } from '@/store/account-selector';
+import { useWhereAmI } from './useWhereAmI';
 
 const { FormItem } = Form;
 
@@ -15,27 +15,19 @@ export const useAccountSelectorCard = () => {
   const AccountSelectorCard = defineComponent({
     props: {
       modelVale: String,
-      bkBizId: String,
+      bkBizId: Number,
       onAccountChange: Function as PropType<(acount: any) => void>,
-      filter: {
-        type: Object as PropType<FilterType>,
-        default() {
-          return { op: QueryRuleOPEnum.AND, rules: [] };
-        },
-      },
+      disabled: Boolean,
+      placeholder: String,
     },
     emits: ['update:modelValue', 'vendorChange'],
     setup(props, { emit }) {
       const resourceAccountStore = useResourceAccountStore();
+      const accountSelectorStore = useAccountSelectorStore();
+
+      const { isBusinessPage } = useWhereAmI();
 
       const selectedVal = ref(props.modelVale);
-      const isDisabled = computed(() => {
-        return (
-          resourceAccountStore.resourceAccount?.id && resourceAccountStore.resourceAccount?.vendor !== VendorEnum.ZIYAN
-        );
-      });
-      const { whereAmI, isBusinessPage } = useWhereAmI();
-      const AccountSelectorRef = ref();
       watch(
         () => selectedVal.value,
         (val) => {
@@ -43,23 +35,19 @@ export const useAccountSelectorCard = () => {
         },
       );
       watch(
-        () => AccountSelectorRef.value?.accountList,
-        async (newAccountList) => {
-          if (whereAmI.value !== Senarios.business) return;
-          if (newAccountList && Array.isArray(newAccountList)) {
-            await nextTick(); // 等待下一次 DOM 更新周期
-            const proxyArray = [...AccountSelectorRef.value.accountList];
-            const selectedAccount = proxyArray.find((account) => account.vendor === 'tcloud-ziyan');
-            selectedVal.value = selectedAccount?.id;
-            isAccountShow.value = true;
-          }
+        () => accountSelectorStore.businessAccountList,
+        async (accountList) => {
+          const selectedAccount = accountList.find((account) => account.vendor === VendorEnum.ZIYAN);
+          selectedVal.value = selectedAccount?.id;
+          isAccountShow.value = true;
         },
         { deep: true },
       );
       const handleChange = async (account: any) => {
         isAccountShow.value = account?.vendor === VendorEnum.ZIYAN;
-        await nextTick();
-        props.onAccountChange?.(account);
+        nextTick(() => {
+          props.onAccountChange?.(account);
+        });
       };
 
       watch(
@@ -83,14 +71,12 @@ export const useAccountSelectorCard = () => {
             <Form formType='vertical'>
               <FormItem label={'云账号'} required>
                 <AccountSelector
-                  ref={AccountSelectorRef}
                   v-model={selectedVal.value}
-                  must-biz={isBusinessPage}
-                  biz-id={props.bkBizId}
+                  bizId={props.bkBizId}
+                  disabled={props.disabled}
+                  placeholder={props.placeholder}
                   onChange={handleChange}
-                  type={'resource'}
-                  filter={props.filter}
-                  disabled={isDisabled.value}
+                  style={isBusinessPage ? { width: '620px' } : {}}
                 />
               </FormItem>
             </Form>

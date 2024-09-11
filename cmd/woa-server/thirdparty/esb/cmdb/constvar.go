@@ -20,4 +20,10 @@ const (
 	DftModuleFault int = 2
 	// DftModuleRecycle "待回收"模块
 	DftModuleRecycle int = 3
+	// BkSvrSourceTypeIDSelf 服务器来源类型ID-自有
+	BkSvrSourceTypeIDSelf = "1"
+	// BkSvrSourceTypeIDDeposit 服务器来源类型ID-托管
+	BkSvrSourceTypeIDDeposit = "2"
+	// BkSvrSourceTypeIDLease 服务器来源类型ID-租用
+	BkSvrSourceTypeIDLease = "3"
 )

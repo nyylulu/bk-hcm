@@ -1,5 +1,12 @@
 # 版本历史
 
+## 1.0.17
+
+- 增加woa server的ngate配置
+- 增加account server的esb配置
+- 增加account server的账单导出临时目录的配置
+- egress支持配置rules列表
+
 ## 1.0.16
 
 - 增加account server配置

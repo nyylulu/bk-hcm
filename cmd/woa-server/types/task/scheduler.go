@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
 )
 
 // ApplyOrder resource apply order
@@ -674,6 +675,10 @@ type ResourceSpec struct {
 	MountPath   string `json:"mount_path" bson:"mount_path"`
 	CpuProvider string `json:"cpu_provider" bson:"cpu_provider"`
 	Kernel      string `json:"kernel" bson:"kernel"`
+	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
+	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
+	// 计费时长，单位：月
+	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
 }
 
 // Validate whether ResourceSpec is valid
@@ -681,37 +686,49 @@ type ResourceSpec struct {
 // err: detail reason why errKey is invalid
 func (s *ResourceSpec) Validate(resType ResourceType) (errKey string, err error) {
 	if len(s.Region) == 0 {
-		return "region", fmt.Errorf("cannot be empty")
+		return "region", fmt.Errorf("region cannot be empty")
 	}
 
 	if len(s.Vpc) > 0 && len(s.Subnet) == 0 {
-		return "subnet", fmt.Errorf("cannot be empty while vpc is set")
+		return "subnet", fmt.Errorf("subnet cannot be empty while vpc is set")
 	}
 
 	if len(s.DeviceType) == 0 {
-		return "device_type", fmt.Errorf("cannot be empty")
+		return "device_type", fmt.Errorf("device_type cannot be empty")
 	}
 
 	if s.DiskSize < 0 {
-		return "disk_size", fmt.Errorf("invalid value < 0")
+		return "disk_size", fmt.Errorf("disk_size invalid value < 0")
 	}
 
 	diskLimit := int64(16000)
 	if s.DiskSize > diskLimit {
-		return "disk_size", fmt.Errorf("exceed limit %d", diskLimit)
+		return "disk_size", fmt.Errorf("disk_size exceed limit %d", diskLimit)
 	}
 
 	// 规格为 10 的倍数
 	diskUnit := int64(10)
 	modDisk := s.DiskSize % diskUnit
 	if modDisk != 0 {
-		return "disk_size", fmt.Errorf("must be in multiples of %d", diskUnit)
+		return "disk_size", fmt.Errorf("disk_size must be in multiples of %d", diskUnit)
 	}
 
 	switch resType {
 	case ResourceTypeCvm:
 		if len(s.ImageId) == 0 {
-			return "image_id", fmt.Errorf("cannot be empty")
+			return "image_id", fmt.Errorf("image_id cannot be empty")
+		}
+	}
+
+	// 计费模式校验
+	if len(s.ChargeType) > 0 {
+		if err = s.ChargeType.Validate(); err != nil {
+			return "charge_type", err
+		}
+
+		// 包年包月时，计费时长必传
+		if s.ChargeType == cvmapi.ChargeTypePrePaid && s.ChargeMonths < 1 {
+			return "charge_months", fmt.Errorf("charge_months invalid value < 1")
 		}
 	}
 

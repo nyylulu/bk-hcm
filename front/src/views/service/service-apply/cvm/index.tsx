@@ -2,7 +2,7 @@
 // eslint-disable
 import { computed, defineComponent, reactive, ref, watch } from 'vue';
 import { Form, Input, Select, Checkbox, Button, Radio } from 'bkui-vue';
-import ConditionOptions from '../components/common/condition-options.vue';
+import ConditionOptions from '../components/common/condition-options/index.vue';
 import ZoneSelector from '@/components/zone-selector/index.vue';
 import MachineTypeSelector from '../components/common/machine-type-selector';
 import Imagelector from '../components/common/image-selector';
@@ -14,7 +14,7 @@ import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import GcpDataDiskFormDialog from './children/gcp-data-disk-form-dialog';
 import './index.scss';
 import { useI18n } from 'vue-i18n';
-import { QueryRuleOPEnum, type IOption } from '@/typings/common';
+import { type IOption } from '@/typings/common';
 import type { IDiskOption } from '../hooks/use-cvm-form-data';
 import { ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import useCvmOptions from '../hooks/use-cvm-options';
@@ -42,7 +42,7 @@ const { Group: RadioGroup, Button: RadioButton } = Radio;
 export default defineComponent({
   props: {},
   setup() {
-    const { cond, isEmptyCond } = useCondtion(ResourceTypeEnum.CVM);
+    const { cond, isEmptyCond } = useCondtion();
     const {
       formData,
       formRef,
@@ -87,7 +87,7 @@ export default defineComponent({
     const isVpcPreviewDialogShow = ref(false);
     const isSubnetPreviewDialogShow = ref(false);
     const cost = ref('--');
-    const { whereAmI } = useWhereAmI();
+    const { whereAmI, getBizsId, isResourcePage } = useWhereAmI();
 
     const handleSubnetDataChange = (data: ISubnetItem) => {
       subnetData.value = data;
@@ -369,16 +369,21 @@ export default defineComponent({
           return;
         await formRef.value.validate();
         isSubmitBtnLoading.value = true;
-        const res = await resourceStore.inqury({
-          // const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
-          ...saveData,
-          instance_type:
-            cond.vendor !== VendorEnum.HUAWEI
-              ? saveData.instance_type
-              : `${saveData.instance_type}.${opSystemType.value}`,
-        });
-        cost.value = res.data?.discount_price || '0';
-        isSubmitBtnLoading.value = false;
+        try {
+          const res = await resourceStore.inqury({
+            // const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/cvms/prices/inquiry`, {
+            ...saveData,
+            instance_type:
+              cond.vendor !== VendorEnum.HUAWEI
+                ? saveData.instance_type
+                : `${saveData.instance_type}.${opSystemType.value}`,
+          });
+          cost.value = res.data?.discount_price || '0';
+        } catch (error) {
+          cost.value = '--';
+        } finally {
+          isSubmitBtnLoading.value = false;
+        }
       }, 300),
       {
         immediate: true,
@@ -916,16 +921,11 @@ export default defineComponent({
           <Form model={formData} rules={formRules} ref={formRef} onSubmit={handleFormSubmit} formType='vertical'>
             <AccountSelectorCard
               v-model={cond.cloudAccountId}
-              bkBizId={cond.bizId}
+              bkBizId={whereAmI.value === Senarios.business && getBizsId()}
+              disabled={isResourcePage}
+              placeholder={isResourcePage && '请在左侧选择账号'}
               onAccountChange={(account: any) => conditionRef.value?.handleChangeAccount(account)}
               onVendorChange={(vendor: VendorEnum) => (cond.vendor = vendor)}
-              filter={{
-                op: QueryRuleOPEnum.AND,
-                rules:
-                  whereAmI.value === Senarios.business
-                    ? []
-                    : [{ op: QueryRuleOPEnum.NEQ, field: 'vendor', value: VendorEnum.ZIYAN }],
-              }}
             />
             {isAccountShow.value ? (
               <ApplicationForm isbusiness={true}></ApplicationForm>
@@ -934,7 +934,7 @@ export default defineComponent({
                 <ConditionOptions
                   ref={conditionRef}
                   type={ResourceTypeEnum.CVM}
-                  v-model:bizId={cond.bizId}
+                  bizs={cond.bizId}
                   v-model:cloudAccountId={cond.cloudAccountId}
                   v-model:vendor={cond.vendor}
                   v-model:region={cond.region}

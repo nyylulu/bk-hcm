@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 )
 
 // InitService initial the main account service
@@ -35,6 +36,7 @@ func InitService(c *capability.Capability) {
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
+		finops:     c.Finops,
 	}
 
 	h := rest.NewHandler()
@@ -50,4 +52,5 @@ type service struct {
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface
+	finops     finops.Client
 }

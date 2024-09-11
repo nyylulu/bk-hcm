@@ -188,15 +188,16 @@ type DetectStepName string
 
 // definition of various detection task step name
 const (
-	StepPreCheck     DetectStepName = "PRE_CHECK"
-	StepCheckUwork   DetectStepName = "CHECK_UWORK"
-	StepCheckGCS     DetectStepName = "CHECK_GCS"
-	StepBasicCheck   DetectStepName = "BASIC_CHECK"
-	StepCheckOwner   DetectStepName = "CHECK_OWNER"
-	StepCvmCheck     DetectStepName = "CVM_CHECK"
-	StepCheckSafety  DetectStepName = "CHECK_SAFETY"
-	StepCheckReturn  DetectStepName = "CHECK_RETURN"
-	StepCheckProcess DetectStepName = "CHECK_PROCESS"
+	StepPreCheck       DetectStepName = "PRE_CHECK"
+	StepCheckUwork     DetectStepName = "CHECK_UWORK"
+	StepCheckGCS       DetectStepName = "CHECK_GCS"
+	StepBasicCheck     DetectStepName = "BASIC_CHECK"
+	StepCheckOwner     DetectStepName = "CHECK_OWNER"
+	StepCvmCheck       DetectStepName = "CVM_CHECK"
+	StepCheckSafety    DetectStepName = "CHECK_SAFETY"
+	StepCheckReturn    DetectStepName = "CHECK_RETURN"
+	StepCheckProcess   DetectStepName = "CHECK_PROCESS"
+	StepCheckPmOuterIP DetectStepName = "CHECK_PM_OUTERIP" // 物理机外网IP检查
 )
 
 // ReturnStatus recycle detection status

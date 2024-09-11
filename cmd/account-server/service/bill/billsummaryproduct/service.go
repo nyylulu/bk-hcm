@@ -43,6 +43,7 @@ func InitService(c *capability.Capability) {
 
 	// register handler
 	h.Add("ListProductSummary", http.MethodPost, "/bills/product_summarys/list", svc.ListProductSummary)
+	h.Add("ExportProductSummary", http.MethodPost, "/bills/product_summarys/export", svc.ExportProductSummary)
 
 	h.Load(c.WebService)
 }

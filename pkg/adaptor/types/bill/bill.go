@@ -21,12 +21,17 @@
 package bill
 
 import (
+	"strings"
 	"time"
 
 	"hcm/pkg/adaptor/types/core"
+	apicore "hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
+
+	"github.com/shopspring/decimal"
 )
 
 // -------------------------- List --------------------------
@@ -571,3 +576,69 @@ func (opt AwsMainBillListOption) Validate() error {
 
 	return validator.Validate.Struct(opt)
 }
+
+// AwsRootSpUsageOption define aws root sp usage get option.
+type AwsRootSpUsageOption struct {
+	Year  uint `json:"year" validate:"required"`
+	Month uint `json:"month" validate:"required,min=1,max=12"`
+	// 起始日
+	StartDay uint `json:"start_day" validate:"required,min=1,max=31"`
+	// 截止日
+	EndDay uint `json:"end_day" validate:"required,min=1,max=31"`
+
+	PayerCloudID  string   `json:"payer_cloud_ids" validate:"required"`
+	UsageCloudIDs []string `json:"usage_cloud_ids" validate:"omitempty"`
+	SpArnPrefix   string   `json:"sp_arn_prefix" validate:"omitempty"`
+}
+
+// AwsSpUsageTotalResult ...
+type AwsSpUsageTotalResult struct {
+	AccountCount  uint64              `json:"account_count"`
+	Currency      enumor.CurrencyCode `json:"currency"`
+	UnblendedCost *decimal.Decimal    `json:"unblended_cost"`
+	SpCost        *decimal.Decimal    `json:"sp_cost"`
+	SpNetCost     *decimal.Decimal    `json:"sp_net_cost"`
+}
+
+// SPSavedCostListOption saving plains list option
+type SPSavedCostListOption struct {
+	SavingsPlansArn      string            `json:"savings_plans_arn" validate:"omitempty"`
+	BillPayerAccountID   string            `json:"bill_payer_account_id" validate:"omitempty"`
+	UsageAccountCloudIDs []string          `json:"usage_account_cloud_ids" validate:"omitempty,max=10"`
+	Year                 uint              `json:"year" validate:"required"`
+	Month                uint              `json:"month" validate:"required,min=1,max=12"`
+	StartDay             uint              `json:"start_day" validate:"required,min=1,max=31"`
+	EndDay               uint              `json:"end_day" validate:"required,min=1,max=31"`
+	Page                 *apicore.BasePage `json:"page" validate:"required"`
+}
+
+var awsPageOption = &apicore.PageOption{
+	EnableUnlimitedLimit: false,
+	MaxLimit:             999,
+	DisabledSort:         false,
+}
+
+// Validate saving plains list option
+func (opt SPSavedCostListOption) Validate() error {
+	if strings.ContainsAny(opt.SavingsPlansArn, "% ") {
+		return errf.New(errf.InvalidParameter, "saving_plans_arn can not contain % or space")
+	}
+
+	if err := opt.Page.Validate(awsPageOption); err != nil {
+		return err
+	}
+	return validator.Validate.Struct(opt)
+}
+
+// AwsSavingsPlansCost ...
+type AwsSavingsPlansCost struct {
+	AccountCloudID  string `json:"account_cloud_id"`
+	SpArn           string `json:"sp_arn"`
+	UnblendedCost   string `json:"unblended_cost"`
+	SPEffectiveCost string `json:"sp_effective_cost"`
+	SPNetCost       string `json:"sp_net_cost"`
+	SPSavedCost     string `json:"sp_saved_cost"`
+}
+
+// AwsSavingsPlansCostListResult ...
+type AwsSavingsPlansCostListResult = apicore.ListResultT[AwsSavingsPlansCost]

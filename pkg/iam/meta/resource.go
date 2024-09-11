@@ -119,4 +119,10 @@ const (
 
 	// Application 申请单据
 	Application ResourceType = "application"
+
+	// AccountBillThirdParty 第三方账单拉取
+	AccountBillThirdParty ResourceType = "account_bill_third_party"
+
+	// AwsSavingsPlansCost aws savings plans cost
+	AwsSavingsPlansCost ResourceType = "aws_savings_plans_cost"
 )

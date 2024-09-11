@@ -178,8 +178,8 @@ export default defineComponent({
                 isShowAll
                 notAutoSelectAll
                 multiple
-                saveBizs
-                bizsKey='scr_host_bizs'
+                url-key='scr_host_bizs'
+                base64Encode
               />
             </FormItem>
             <FormItem label='单号'>

@@ -345,9 +345,6 @@ export default defineComponent({
 
     return () => (
       <div>
-        <BkButtonGroup class={'mb8'}>
-          <Button selected={true}>云主机({totalCount.value})</Button>
-        </BkButtonGroup>
         <div>
           {whereAmI.value === Senarios.business ? (
             <div class={'mb8'}>

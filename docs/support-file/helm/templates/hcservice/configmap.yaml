@@ -31,6 +31,4 @@ data:
         keyFile:
         caFile:
         password:
-    syncCCRes:
-      enable: {{ .Values.hcservice.syncCCRes.enable }}
-      syncIntervalMin: {{ .Values.hcservice.syncCCRes.syncIntervalMin }}
+

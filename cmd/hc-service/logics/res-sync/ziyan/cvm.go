@@ -21,8 +21,13 @@ package ziyan
 
 import (
 	"hcm/cmd/hc-service/logics/res-sync/common"
+	adcore "hcm/pkg/adaptor/types/core"
+	typescvm "hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/slice"
 )
 
@@ -77,4 +82,60 @@ func (cli *client) getSubnetMap(kt *kit.Kit, accountID string, region string,
 	}
 
 	return subnetMap, nil
+}
+
+func (cli *client) getCVM(kt *kit.Kit, ccHosts []cmdb.Host) (map[string][]typescvm.TCloudCvm, error) {
+	if len(ccHosts) == 0 {
+		return map[string][]typescvm.TCloudCvm{}, nil
+	}
+
+	regionCloudIDMap := make(map[string][]string)
+	for _, ccHost := range ccHosts {
+		if ccHost.SvrSourceTypeID != cmdb.CVM {
+			continue
+		}
+
+		if ccHost.BkCloudRegion == "" {
+			logs.Warnf("host id(%d) region data is nil, rid: %s", ccHost.BkHostID, kt.Rid)
+			continue
+		}
+
+		if _, ok := regionCloudIDMap[ccHost.BkCloudRegion]; !ok {
+			regionCloudIDMap[ccHost.BkCloudRegion] = make([]string, 0)
+		}
+
+		regionCloudIDMap[ccHost.BkCloudRegion] = append(regionCloudIDMap[ccHost.BkCloudRegion],
+			ccHost.BkCloudInstID)
+	}
+
+	regionCVMap := make(map[string][]typescvm.TCloudCvm)
+	for region, cloudIDs := range regionCloudIDMap {
+		for _, batch := range slice.Split(cloudIDs, adcore.TCloudQueryLimit) {
+			opt := &typescvm.TCloudListOption{
+				Region:   region,
+				CloudIDs: batch,
+				Page:     &adcore.TCloudPage{Offset: 0, Limit: adcore.TCloudQueryLimit},
+			}
+
+			cvms, err := cli.cloudCli.ListCvm(kt, opt)
+			if err != nil {
+				logs.Errorf("[%s] list cvm from cloud failed, err: %v, opt: %v, rid: %s", enumor.TCloudZiyan, err, opt,
+					kt.Rid)
+				return nil, err
+			}
+
+			if len(cvms) == 0 {
+				logs.Warnf("can not find cvm, opt: %+v, rid: %s", *opt, kt.Rid)
+				continue
+			}
+
+			if _, ok := regionCVMap[region]; !ok {
+				regionCVMap[region] = make([]typescvm.TCloudCvm, 0)
+			}
+
+			regionCVMap[region] = append(regionCVMap[region], cvms...)
+		}
+	}
+
+	return regionCVMap, nil
 }
