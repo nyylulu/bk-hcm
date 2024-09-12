@@ -38,8 +38,8 @@ create table `obs_huawei_bills`
     `id`                          varchar(64)     not null,
     `vendor`                      varchar(64)     not null,
     `main_account_id`             varchar(64)     not null,
-    `bill_year`                   bigint(1)       not null,
-    `bill_month`                  tinyint(1)      not null,
+    `bill_year`                   bigint       not null,
+    `bill_month`                  tinyint      not null,
     `set_index`                   varchar(255)    not null,
     `effective_time`              longtext        not null,
     `expire_time`                 longtext        not null,
@@ -104,8 +104,8 @@ CREATE TABLE obs_aws_bills
     `id`                                         varchar(64)  not null,
     `vendor`                                     varchar(64)  not null,
     `main_account_id`                            varchar(64)  not null,
-    `bill_year`                                  bigint(1)    not null,
-    `bill_month`                                 tinyint(1)   not null,
+    `bill_year`                                  bigint    not null,
+    `bill_month`                                 tinyint   not null,
     `set_index`                                  varchar(255) not null,
 
     yearMonth                                    int,
@@ -158,10 +158,10 @@ CREATE TABLE obs_gcp_bills (
     `id`                     varchar(64)  not null,
     `vendor`                 varchar(64)  not null,
     `main_account_id`        varchar(64)  not null,
-    `bill_year`              bigint(1)    not null,
-    `bill_month`             tinyint(1)   not null,
+    `bill_year`              bigint       not null,
+    `bill_month`             tinyint      not null,
     `set_index`              varchar(255) not null,
- 
+
     `BillingAccountId`       varchar(255) not null,
     `ServiceId`              varchar(255) not null,
     `ServiceDescription`     longtext     not null,
@@ -201,7 +201,6 @@ CREATE TABLE obs_gcp_bills (
 
 insert into id_generator(`resource`, `max_id`)
 values ('obs_gcp_bills', '0');
-
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
 SELECT 'v1.6.1.0' as `hcm_ver`,

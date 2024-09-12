@@ -17,24 +17,9 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package obs
+package dailysummary
 
 import (
-	"hcm/pkg/api/core"
-	tableobs "hcm/pkg/dal/table/obs"
+	// register zenlayer puller
+	_ "hcm/cmd/account-server/logics/bill/puller/zenlayer"
 )
-
-// ListOBSBillItemHuaweiDetails list account bill summary daily details.
-type ListOBSBillItemHuaweiDetails struct {
-	Count   *uint64                      `json:"count,omitempty"`
-	Details []tableobs.OBSBillItemHuawei `json:"details,omitempty"`
-}
-
-// ListOBSBillItemAwsDetails Obs aws bill item
-type ListOBSBillItemAwsDetails = core.ListResultT[tableobs.OBSBillItemAws]
-
-// ListOBSBillItemGcpDetails Obs gcp bill item
-type ListOBSBillItemGcpDetails = core.ListResultT[tableobs.OBSBillItemGcp]
-
-// ListOBSBillItemZenlayerDetails Obs Zenlayer bill item
-type ListOBSBillItemZenlayerDetails = core.ListResultT[tableobs.OBSBillItemZenlayer]
