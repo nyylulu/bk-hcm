@@ -46,7 +46,7 @@ interface LinkFieldOptions {
   field?: string; // 字段
   idFiled?: string; // id字段
   onlyShowOnList?: boolean; // 只在列表中显示
-  onLinkInBusiness?: boolean; // 只在业务下可链接
+  linkable?: boolean | ((data: any) => boolean); // 可链接性
   render?: (data: any) => any; // 自定义渲染内容
   renderSuffix?: (data: any) => any; // 自定义后缀渲染内容
   contentClass?: string; // 内容class
@@ -70,13 +70,12 @@ export default (type: string, isSimpleShow = false) => {
       field: 'id',
       idFiled: 'id',
       onlyShowOnList: true,
-      onLinkInBusiness: false,
+      linkable: true,
       render: undefined,
       sort: true,
     });
 
-    const { type, label, field, idFiled, onlyShowOnList, onLinkInBusiness, render, renderSuffix, contentClass, sort } =
-      options;
+    const { type, label, field, idFiled, onlyShowOnList, linkable, render, renderSuffix, contentClass, sort } = options;
 
     return {
       label,
@@ -87,44 +86,31 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
       render({ data }: { cell: string; data: any }) {
         if (data[idFiled] < 0 || !data[idFiled]) return '--';
-        const onlyLinkInBusiness = onLinkInBusiness && whereAmI.value !== Senarios.business;
-        const isZiyan = data.vendor === VendorEnum.ZIYAN;
-        if (onlyLinkInBusiness || isZiyan)
+        // 是否可链接
+        if (!(typeof linkable === 'function' ? linkable(data) : linkable)) {
           return (
-            <div class={cssModule[`${contentClass}`]}>
-              {render ? render(data) : data[field] || '--'}
+            <div class={contentClass}>
+              {data[field] || '--'}
               {renderSuffix?.(data)}
             </div>
           );
+        }
+
+        const defaultClickHandler = () => {
+          const routeInfo: any = { query: { ...route.query, id: data[idFiled], type: data.vendor } };
+          // 业务下
+          if (route.path.includes('business')) {
+            routeInfo.query.bizs = accountStore.bizs;
+            Object.assign(routeInfo, { name: `${type}BusinessDetail` });
+          } else {
+            Object.assign(routeInfo, { name: 'resourceDetail', params: { type } });
+          }
+          router.push(routeInfo);
+        };
+
         return (
-          <div class={cssModule[`${contentClass}`]}>
-            <Button
-              text
-              theme='primary'
-              onClick={() => {
-                const routeInfo: any = {
-                  query: {
-                    ...route.query,
-                    id: data[idFiled],
-                    type: data.vendor,
-                  },
-                };
-                // 业务下
-                if (route.path.includes('business')) {
-                  routeInfo.query.bizs = accountStore.bizs;
-                  Object.assign(routeInfo, {
-                    name: `${type}BusinessDetail`,
-                  });
-                } else {
-                  Object.assign(routeInfo, {
-                    name: 'resourceDetail',
-                    params: {
-                      type,
-                    },
-                  });
-                }
-                router.push(routeInfo);
-              }}>
+          <div class={contentClass}>
+            <Button text theme='primary' onClick={defaultClickHandler}>
               {render ? render(data) : data[field] || '--'}
             </Button>
             {renderSuffix?.(data)}
@@ -490,7 +476,9 @@ export default (type: string, isSimpleShow = false) => {
       field: 'bak_operator',
     },
   ];
-  const DQcolumns = [
+
+  // 主机申请-设备视角
+  const HostApplyDeviceColumns = [
     { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
@@ -498,32 +486,31 @@ export default (type: string, isSimpleShow = false) => {
       render({ cell }: any) {
         return businessMapStore.getNameFromBusinessMap(cell);
       },
+      notDisplayedInBusiness: true,
     },
     {
       label: '单号',
       field: 'order_id',
+      width: 80,
       render: ({ data, cell }: any) => {
         return (
           <Button
             text
             theme='primary'
             onClick={() => {
-              router.push({
-                name: 'host-application-detail',
-                params: {
-                  id: data.order_id,
-                },
-              });
+              const to = { name: 'host-application-detail', params: { id: data.order_id } };
+              if (Senarios.business === whereAmI.value) {
+                // 业务下
+                Object.assign(to, { name: 'HostApplicationsDetail', query: route.query });
+              }
+              router.push(to);
             }}>
             {cell}
           </Button>
         );
       },
     },
-    {
-      label: '子单号',
-      field: 'suborder_id',
-    },
+    { label: '子单号', field: 'suborder_id', width: 80 },
     {
       label: '需求类型',
       field: 'require_type',
@@ -536,38 +523,13 @@ export default (type: string, isSimpleShow = false) => {
         return <WName name={cell} />;
       },
     },
-    {
-      label: '内网IP',
-      field: 'ip',
-    },
-    {
-      label: '固资号',
-      field: 'asset_id',
-    },
-    {
-      label: '资源类型',
-      field: 'resource_type',
-    },
-    {
-      label: '机型',
-      field: 'device_type',
-    },
-    {
-      label: '园区',
-      field: 'zone_name',
-    },
-    {
-      label: '交付时间',
-      field: 'update_at',
-      width: 160,
-      render: ({ cell }: any) => timeFormatter(cell),
-    },
-    {
-      label: '申请时间',
-      field: 'create_at',
-      width: 160,
-      render: ({ cell }: any) => timeFormatter(cell),
-    },
+    { label: '内网IP', field: 'ip' },
+    { label: '固资号', field: 'asset_id' },
+    { label: '资源类型', field: 'resource_type' },
+    { label: '机型', field: 'device_type' },
+    { label: '园区', field: 'zone_name' },
+    { label: '交付时间', field: 'update_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
+    { label: '申请时间', field: 'create_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
     {
       label: '备注信息',
       field: 'remark',
@@ -773,8 +735,9 @@ export default (type: string, isSimpleShow = false) => {
     }
     return <span>{label}</span>;
   };
-  // 资源 - 主机回收列表
-  const recycleOrderColumns = [
+
+  // 主机回收-单据视角
+  const HostRecycleApplicationColumns = [
     { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
@@ -785,6 +748,7 @@ export default (type: string, isSimpleShow = false) => {
       formatter: ({ bk_biz_id }: any) => {
         return getBusinessNameById(bk_biz_id);
       },
+      notDisplayedInBusiness: true,
     },
     {
       label: '资源类型',
@@ -896,8 +860,9 @@ export default (type: string, isSimpleShow = false) => {
       width: 120,
     },
   ];
-  // 资源- 设备查询
-  const deviceQueryColumns = [
+
+  // 主机回收-设备视角
+  const HostRecycleDeviceColumns = [
     {
       label: '单号',
       field: 'order_id',
@@ -2721,10 +2686,10 @@ export default (type: string, isSimpleShow = false) => {
     RecyclingResources: RRColumns,
     BusinessSelection: BSAColumns,
     ResourcesTotal: RTColumns,
-    hostRecycle: recycleOrderColumns,
-    deviceQuery: deviceQueryColumns,
+    hostRecycleApplication: HostRecycleApplicationColumns,
+    hostRecycleDevice: HostRecycleDeviceColumns,
     deviceDestroy: deviceDestroyColumns,
-    DeviceQuerycolumns: DQcolumns,
+    hostApplyDevice: HostApplyDeviceColumns,
     pdExecutecolumns: PDcolumns,
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
