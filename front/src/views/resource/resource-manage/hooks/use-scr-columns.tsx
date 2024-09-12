@@ -918,7 +918,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '回收业务',
       field: 'bk_biz_name',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
     },
     {
       label: '地域',
@@ -2758,7 +2758,7 @@ export default (type: string, isSimpleShow = false) => {
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
-  if (whereAmI.value !== Senarios.resource) columns = columns.filter((column: any) => !column.isOnlyShowInResource);
+  if (whereAmI.value === Senarios.business) columns = columns.filter((column: any) => !column.notDisplayedInBusiness);
 
   type ColumnsType = typeof columns;
   const generateColumnsSettings = (columns: ColumnsType) => {
@@ -2770,12 +2770,12 @@ export default (type: string, isSimpleShow = false) => {
           field: column.field,
           disabled: type !== 'cvms' && column.field === 'id',
           isDefaultShow: !!column.isDefaultShow,
-          isOnlyShowInResource: !!column.isOnlyShowInResource,
+          notDisplayedInBusiness: !!column.notDisplayedInBusiness,
         });
       }
     }
-    if (whereAmI.value !== Senarios.resource) {
-      fields = fields.filter((field) => !field.isOnlyShowInResource);
+    if (whereAmI.value === Senarios.business) {
+      fields = fields.filter((field) => !field.notDisplayedInBusiness);
     }
     const settings: Ref<Settings> = ref({
       fields,
