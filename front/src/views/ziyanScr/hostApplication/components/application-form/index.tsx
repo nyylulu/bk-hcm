@@ -18,6 +18,7 @@ import NetworkInfoPanel from '../network-info-panel/index.vue';
 import apiService from '@/api/scrApi';
 
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
+import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import http from '@/http';
 import applicationSideslider from '../application-sideslider';
 import { useRouter, useRoute } from 'vue-router';
@@ -97,6 +98,7 @@ export default defineComponent({
     });
     const { columns: CloudHostcolumns } = useColumns('CloudHost');
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
+    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, cvmChargeMonthOptions } = useCvmChargeType();
     const PhysicalMachineoperation = ref({
       label: '操作',
       width: 200,
@@ -218,7 +220,7 @@ export default defineComponent({
       enable_disk_check: false,
       region: '', // 地域
       zone: '', // 园区
-      charge_type: 'PREPAID', // 计费模式 POSTPAID_BY_HOUR:按量计费
+      charge_type: cvmChargeTypes.PREPAID,
       charge_months: 36, // 计费时长
     });
     // 侧边栏腾讯云CVM
@@ -247,24 +249,6 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
-
-    // cvm购买时长选项
-    const cvmChargeMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
-    const cvmChargeMonthOptions = cvmChargeMonths.map((month) => {
-      const getName = (m: number) => {
-        if (m === 6) {
-          return '半年';
-        }
-        if (m >= 12) {
-          return `${m / 12}年`;
-        }
-        return `${m}月`;
-      };
-      return {
-        id: month,
-        name: getName(month),
-      };
-    });
 
     // 机型列表
     const deviceTypes = ref([]);
@@ -448,7 +432,7 @@ export default defineComponent({
     watch(
       () => resourceForm.value.charge_type,
       (chargeType) => {
-        if (chargeType === 'PREPAID') {
+        if (chargeType === cvmChargeTypes.PREPAID) {
           resourceForm.value.charge_months = 36;
         } else {
           resourceForm.value.charge_months = undefined;
@@ -596,7 +580,7 @@ export default defineComponent({
         zone: '', // 园区
         remark: '',
         enable_disk_check: false,
-        charge_type: 'PREPAID',
+        charge_type: cvmChargeTypes.PREPAID,
         charge_months: 36,
       };
       QCLOUDCVMForm.value = {
@@ -999,28 +983,30 @@ export default defineComponent({
                         <>
                           <bk-form-item label='计费模式' required property='charge_type'>
                             <RadioGroup v-model={resourceForm.value.charge_type} type='card' style={{ width: '260px' }}>
-                              <RadioButton label='PREPAID'>包年包月</RadioButton>
-                              <RadioButton label='POSTPAID_BY_HOUR'>按量计费</RadioButton>
+                              <RadioButton label={cvmChargeTypes.PREPAID}>
+                                {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
+                              </RadioButton>
+                              <RadioButton label={cvmChargeTypes.POSTPAID_BY_HOUR}>
+                                {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
+                              </RadioButton>
                             </RadioGroup>
                             <bk-alert theme='info' class='form-item-tips'>
-                              {resourceForm.value.charge_type === 'PREPAID' ? (
-                                <>
-                                  默认为3年，按梯度折扣分别为1-3月150%，4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
-                                </>
-                              ) : (
-                                <>
-                                  使用小于1月折扣为170%，在提交预测单后，满3月后可在腾讯云控制台转换为包年包月，无预测单不可转包年包月。计费折扣，使用1-3月150%，满3月后转4-6月130%，7-11月120%，1年110%，2年105%，3年100%，4年95%，
-                                </>
-                              )}
-                              <bk-link
-                                href='https://crp.woa.com/crp-outside/yunti/news/20'
-                                theme='primary'
-                                target='_blank'>
-                                计费模式说明
-                              </bk-link>
+                              {{
+                                title: () => (
+                                  <>
+                                    {cvmChargeTypeTips[resourceForm.value.charge_type]}
+                                    <bk-link
+                                      href='https://crp.woa.com/crp-outside/yunti/news/20'
+                                      theme='primary'
+                                      target='_blank'>
+                                      计费模式说明
+                                    </bk-link>
+                                  </>
+                                ),
+                              }}
                             </bk-alert>
                           </bk-form-item>
-                          {resourceForm.value.charge_type === 'PREPAID' && (
+                          {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && (
                             <bk-form-item label='购买时长' required property='charge_months'>
                               <bk-select
                                 v-model={resourceForm.value.charge_months}

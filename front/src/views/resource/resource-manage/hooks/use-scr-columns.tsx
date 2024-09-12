@@ -2621,7 +2621,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ data }: any) => {
         const ips = [...(data.public_ipv4_addresses || []), ...(data.public_ipv6_addresses || [])].join(',') || '--';
         return (
-          <div class={'cell-public-ip'}>
+          <div class={cssModule['cell-public-ip']}>
             <span>{ips}</span>
             <CopyToClipboard content={ips} class={[cssModule['copy-icon'], 'ml4']} />
           </div>

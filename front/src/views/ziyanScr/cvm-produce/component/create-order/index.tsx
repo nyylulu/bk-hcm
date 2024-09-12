@@ -2,6 +2,7 @@ import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
 import { useUserStore } from '@/store';
 import { getRequireTypes } from '@/api/host/task';
 import { createCvmProduceOrder } from '@/api/host/cvm';
+import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import CvmForm from './cvm-form';
 import { Dialog, Form, Select } from 'bkui-vue';
 import './index.scss';
@@ -54,6 +55,7 @@ export default defineComponent({
       require_type: [{ required: true, message: '请选择需求类型' }],
     });
     const userStore = useUserStore();
+    const { cvmChargeTypes } = useCvmChargeType();
     const defaultBottomModel = () => {
       return {
         replicas: 1,
@@ -70,6 +72,8 @@ export default defineComponent({
           networkType: 'TENTHOUSAND', // 写成一个常量
           vpc: '',
           subnet: '',
+          charge_type: cvmChargeTypes.PREPAID,
+          charge_months: 36,
         },
       };
     };

@@ -6,10 +6,11 @@ import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelect
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
 import ImageDialog from './image-dialog';
 import CvmCapacity from './cvm-capacity';
-import { Alert, Checkbox, Form, Input, Select } from 'bkui-vue';
+import { Alert, Checkbox, Form, Input, Select, Radio } from 'bkui-vue';
 import { HelpFill } from 'bkui-vue/lib/icon';
 import CvmVpcSelector from '@/views/ziyanScr/components/cvm-vpc-selector/index.vue';
 import CvmSubnetSelector from '@/views/ziyanScr/components/cvm-subnet-selector/index.vue';
+import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import './index.scss';
 const { FormItem } = Form;
 
@@ -47,6 +48,8 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { emit, expose }) {
+    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, cvmChargeMonthOptions } = useCvmChargeType();
+
     const modelForm = ref({
       replicas: 1,
       antiAffinityLevel: 'ANTI_NONE',
@@ -62,6 +65,8 @@ export default defineComponent({
         networkType: 'TENTHOUSAND', // 写成一个常量
         vpc: '',
         subnet: '',
+        charge_type: cvmChargeTypes.PREPAID,
+        charge_months: 36,
       },
     });
     const advancedSettingVisible = ref(false);
@@ -97,6 +102,10 @@ export default defineComponent({
     watch(
       modelForm,
       () => {
+        modelForm.value.spec.charge_months =
+          modelForm.value.spec.charge_type === cvmChargeTypes.PREPAID
+            ? modelForm.value.spec.charge_months ?? 36
+            : undefined;
         emit('update:modelValue', cloneDeep(modelForm.value));
       },
       { deep: true },
@@ -352,9 +361,43 @@ export default defineComponent({
               <cvm-capacity params={cvmCapacityParams.value} />
             </FormItem>
           </div>
+          <FormItem label='计费模式' required property='spec.charge_type'>
+            <Radio.Group v-model={modelForm.value.spec.charge_type} type='card' style={{ width: '340px' }}>
+              <Radio.Button label={cvmChargeTypes.PREPAID}>{cvmChargeTypeNames[cvmChargeTypes.PREPAID]}</Radio.Button>
+              <Radio.Button label={cvmChargeTypes.POSTPAID_BY_HOUR}>
+                {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
+              </Radio.Button>
+            </Radio.Group>
+            <Alert theme='info' class='form-item-tips'>
+              {{
+                title: () => (
+                  <>
+                    {cvmChargeTypeTips[modelForm.value.spec.charge_type]}
+                    <bk-link href='https://crp.woa.com/crp-outside/yunti/news/20' theme='primary' target='_blank'>
+                      计费模式说明
+                    </bk-link>
+                  </>
+                ),
+              }}
+            </Alert>
+          </FormItem>
+          {modelForm.value.spec.charge_type === cvmChargeTypes.PREPAID && (
+            <FormItem label='购买时长' required property='spec.charge_months'>
+              <Select
+                v-model={modelForm.value.spec.charge_months}
+                filterable={false}
+                clearable={false}
+                style={{ width: '340px' }}>
+                {cvmChargeMonthOptions.map((option: { id: number; name: string }) => (
+                  <Select.Option key={option.id} id={option.id} name={option.name}></Select.Option>
+                ))}
+              </Select>
+            </FormItem>
+          )}
           <div class='form-item-container'>
             <FormItem label='备注' property='remark'>
               <Input
+                style={{ width: '340px' }}
                 placeholder='请输入备注'
                 show-word-limit
                 type='textarea'
