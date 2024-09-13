@@ -438,6 +438,50 @@ const businesseMenus: RouteRecordRaw[] = [
     path: '/business',
     children: [
       {
+        path: '/business/resource-plan',
+        name: 'BizResourcePlan',
+        meta: {
+          title: '资源预测',
+          activeKey: 'bizResourcePlan',
+          isShowBreadcrumb: true,
+          icon: '',
+        },
+        children: [
+          {
+            path: '',
+            name: 'bizResourcePlanList',
+            component: () => import('@/views/business/resource-plan/list'),
+            meta: {
+              activeKey: 'bizResourcePlan',
+            },
+          },
+          {
+            path: '/business/resource-plan/add',
+            name: 'BizResourcePlanAdd',
+            component: () => import('@/views/business/resource-plan/add'),
+            meta: {
+              activeKey: 'bizResourcePlanAdd',
+            },
+          },
+          {
+            path: '/business/resource-plan/detail',
+            name: 'BizResourcePlanDetail',
+            component: () => import('@/views/business/resource-plan/detail'),
+            meta: {
+              activeKey: 'bizResourcePlanDetail',
+            },
+          },
+        ],
+      },
+    ],
+    meta: {
+      groupTitle: '资源容量',
+    },
+  },
+  {
+    path: '/business',
+    children: [
+      {
         path: '/business/hostInventory',
         name: 'hostInventory',
         component: () => import('@/views/business/host-inventory/index'),
@@ -488,6 +532,16 @@ const businesseMenus: RouteRecordRaw[] = [
             path: '',
             name: 'ApplicationsManage',
             component: () => import('@/views/business/applications/index'),
+          },
+          // 资源管理下 单据管理 tab 资源预测详情
+          {
+            path: '/business/applications/resource-plan/detail',
+            name: 'BizInvoiceResourceDetail',
+            component: () => import('@/views/resource-plan/invoice-manage/detail/index'),
+            meta: {
+              activeKey: 'bizInvoiceResourceDetail',
+              notMenu: true,
+            },
           },
           {
             path: '/business/applications/detail',

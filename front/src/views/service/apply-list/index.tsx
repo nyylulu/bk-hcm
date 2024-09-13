@@ -5,6 +5,7 @@ import { APPLY_TYPES, searchData } from './constants';
 import { Button, Tab } from 'bkui-vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useRoute, useRouter } from 'vue-router';
+import ResourcePlanList from '../../resource-plan/invoice-manage/list';
 
 const { TabPanel } = Tab;
 export default defineComponent({
@@ -65,9 +66,13 @@ export default defineComponent({
             <TabPanel name={name} label={label} />
           ))}
         </Tab>
-        <div class={'table-wrapper'}>
-          <CommonTable />
-        </div>
+        {applyType.value === 'resourcePlan' ? (
+          <ResourcePlanList />
+        ) : (
+          <div class={'table-wrapper'}>
+            <CommonTable />
+          </div>
+        )}
       </div>
     );
   },

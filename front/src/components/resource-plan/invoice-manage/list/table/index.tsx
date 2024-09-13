@@ -1,0 +1,108 @@
+import { defineComponent, computed, onBeforeMount } from 'vue';
+
+import { Button } from 'bkui-vue';
+
+import { useRouter } from 'vue-router';
+import { useTable } from '@/hooks/useResourcePlanTable';
+import { useResourcePlanStore } from '@/store';
+import { useI18n } from 'vue-i18n';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+import Panel from '@/components/panel';
+
+import type { IListTicketsParam, IListTicketsResult } from '@/typings/resourcePlan';
+import type { IPageQuery } from '@/typings';
+
+export default defineComponent({
+  props: {
+    isBiz: {
+      type: Boolean,
+      required: true,
+    },
+  },
+  setup(props, { expose }) {
+    let searchModel: Partial<IListTicketsParam> = undefined;
+
+    const { t } = useI18n();
+    const resourcePlanStore = useResourcePlanStore();
+    const { columns, settings } = useColumns('forecastDemand');
+    const router = useRouter();
+
+    const tableColumns = computed(() => {
+      return [
+        {
+          label: t('预测单号'),
+          field: 'forecast_order',
+          isFormItem: true,
+          render: ({ data }: { data: IListTicketsResult['detail'][0] }) => (
+            <Button text theme='primary' onClick={() => handleToDetail(data)}>
+              {data.id}
+            </Button>
+          ),
+        },
+        ...columns,
+      ];
+    });
+
+    const getData = (page: IPageQuery) => {
+      return resourcePlanStore.reqListTickets({
+        page,
+        ...searchModel,
+      });
+    };
+
+    const {
+      tableData,
+      pagination,
+      isLoading,
+      handlePageChange,
+      handlePageSizeChange,
+      handleSort,
+      triggerApi,
+      resetPagination,
+    } = useTable(getData);
+
+    const handleToDetail = (data: IListTicketsResult['detail'][0]) => {
+      if (props.isBiz) {
+        router.push({
+          path: '/business/applications/resource-plan/detail',
+          query: { id: data.id },
+        });
+      } else {
+        router.push({
+          path: '/service/my-apply/resource-plan/detail',
+          query: { id: data.id },
+        });
+      }
+    };
+
+    const searchTableData = (data: Partial<IListTicketsParam>) => {
+      searchModel = data;
+      resetPagination();
+      triggerApi();
+    };
+
+    onBeforeMount(triggerApi);
+
+    expose({
+      searchTableData,
+    });
+
+    return () => (
+      <Panel>
+        <bk-loading loading={isLoading.value}>
+          <bk-table
+            remote-pagination
+            show-overflow-tooltip
+            data={tableData.value}
+            pagination={pagination.value}
+            columns={tableColumns.value}
+            settings={settings.value}
+            onPageLimitChange={handlePageSizeChange}
+            onPageValueChange={handlePageChange}
+            onColumnSort={handleSort}
+          />
+        </bk-loading>
+      </Panel>
+    );
+  },
+});
