@@ -120,6 +120,10 @@ type CvmCbsPlanQueryItem struct {
 	YearMonth             string  `json:"yearMonth"`
 	Year                  int     `json:"year"`
 	Month                 int     `json:"month"`
+	Week                  int     `json:"week"`
+	YearMonthWeek         string  `json:"yearMonthWeek"`
+	ExpectStartDate       string  `json:"expectStartDate"`
+	ExpectEndDate         string  `json:"expectEndDate"`
 	UseTime               string  `json:"useTime"`
 	BgId                  int     `json:"bgId"`
 	BgName                string  `json:"bgName"`
@@ -133,6 +137,9 @@ type CvmCbsPlanQueryItem struct {
 	CityName              string  `json:"cityName"`
 	ZoneId                int     `json:"zoneId"`
 	ZoneName              string  `json:"zoneName"`
+	InPlan                string  `json:"inPlan"`
+	PlanWeek              int     `json:"planWeek"`
+	ExpeditedPostponed    string  `json:"expeditedPostponed"`
 	CoreType              int     `json:"coreType"`
 	CoreTypeName          string  `json:"coreTypeName"`
 	InstanceType          string  `json:"instanceType"`
@@ -168,6 +175,11 @@ type CvmCbsPlanQueryItem struct {
 	IsInProcessing        int     `json:"isInProcessing"`
 	ProcessingOrderId     string  `json:"processingOrderId"`
 	DemandId              string  `json:"demandId"`
+	ResourcePoolType      int     `json:"resourcePoolType"`
+	ResourcePoolName      string  `json:"resourcePoolName"`
+	ResourceMode          string  `json:"resourceMode"`
+	StatisticalClass      string  `json:"statisticalClass"`
+	GenerationType        string  `json:"generation_type"`
 }
 
 // CvmCbsPlanAdjustResp cvm and cbs plan adjust response

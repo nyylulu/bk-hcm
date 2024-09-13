@@ -145,6 +145,8 @@ type CvmCbsPlanQueryParam struct {
 	Page            *Page    `json:"page"`
 	Period          *Period  `json:"period"`
 	UseTime         *UseTime `json:"useTime,omitempty"`
+	OrderIdList     []string `json:"orderIdList,omitempty"`
+	DemandIdList    []int64  `json:"demandIdList,omitempty"`
 	BgName          []string `json:"bgName"`
 	DeptName        []string `json:"deptName"`
 	InstanceType    []string `json:"instanceType,omitempty"`
@@ -197,6 +199,7 @@ type AdjustBaseInfo struct {
 
 // AdjustSrcData adjust source data for cvm and cbs plan info adjust params
 type AdjustSrcData struct {
+	AdjustType          string  `json:"adjustType"`
 	CityId              int     `json:"cityId"`
 	CityName            string  `json:"cityName"`
 	ZoneId              int     `json:"zoneId"`
@@ -228,7 +231,8 @@ type AdjustSrcData struct {
 
 // AdjustUpdatedData adjust target data for cvm and cbs plan info adjust params
 type AdjustUpdatedData struct {
-	ModifyType          string  `json:"modifyType"`
+	AdjustType          string  `json:"adjustType"`
+	TimeAdjustCvmAmount float32 `json:"timeAdjustCvmAmount"`
 	CityId              int     `json:"cityId"`
 	CityName            string  `json:"cityName"`
 	ZoneId              int     `json:"zoneId"`

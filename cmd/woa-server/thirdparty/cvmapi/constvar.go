@@ -150,7 +150,7 @@ const (
 	// CvmSubnetMethod CVM subnet信息查询方法
 	CvmSubnetMethod = "getSubNetInfo"
 	// CvmCbsPlanQueryMethod 需求预测首页查询接口
-	CvmCbsPlanQueryMethod = "queryCvmCbsInfo"
+	CvmCbsPlanQueryMethod = "queryCvmCbsInfoForIEG"
 	// CvmCbsPlanAdjustMethod 需求预测首页调整接口
 	CvmCbsPlanAdjustMethod = "adjustOrder"
 	// CvmCbsPlanAddMethod 需求预测追加接口
@@ -170,6 +170,13 @@ const (
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"
+
+	// AdjustTypeAdjust 预测调整类型-常规修改
+	AdjustTypeAdjust = "常规修改"
+	// AdjustTypeDelay 预测调整类型-加急延期
+	AdjustTypeDelay = "加急延期"
+	// AdjustTypeCancel 预测调整类型-需求取消
+	AdjustTypeCancel = "需求取消"
 )
 
 // CVMCli yunti client options
