@@ -36,7 +36,7 @@ const serviceMenus: RouteRecordRaw[] = [
       {
         path: '/service/my-apply/resource-plan/detail',
         name: 'OpInvoiceResourceDetail',
-        component: () => import('@/views/resource-plan/invoice-manage/detail/index'),
+        component: () => import('@/views/service/resource-plan/applications/detail/index'),
         meta: {
           activeKey: 'opInvoiceResourceDetail',
           notMenu: true,
@@ -84,7 +84,7 @@ const serviceMenus: RouteRecordRaw[] = [
       {
         path: '/service/resource-plan',
         name: 'opResourcePlan',
-        component: () => import('@/views/resource-plan/resource-manage/list'),
+        component: () => import('@/views/service/resource-plan/resource-manage/list'),
         meta: {
           activeKey: 'opResourcePlan',
           title: t('资源预测'),
@@ -95,7 +95,7 @@ const serviceMenus: RouteRecordRaw[] = [
       {
         path: '/service/resource-plan/detail',
         name: 'opResourcePlanDetail',
-        component: () => import('@/views/resource-plan/resource-manage/detail'),
+        component: () => import('@/views/service/resource-plan/resource-manage/detail'),
         meta: {
           activeKey: 'opResourcePlanDetail',
           notMenu: true,
