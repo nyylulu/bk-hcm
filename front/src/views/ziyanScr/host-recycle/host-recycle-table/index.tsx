@@ -190,7 +190,7 @@ export default defineComponent({
       });
     };
     const { selections, handleSelectionChange } = useSelection();
-    const { columns } = useColumns('hostRecycle');
+    const { columns } = useColumns('hostRecycleApplication');
     const enterDetail = (row) => {
       router.push({
         path: '/service/hostRecycling/docDetail',
