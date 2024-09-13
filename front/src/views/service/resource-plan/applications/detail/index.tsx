@@ -3,10 +3,10 @@ import { defineComponent, ref, onBeforeMount } from 'vue';
 import { useRoute } from 'vue-router';
 import { useResourcePlanStore } from '@/store';
 
-import Header from '@/components/resource-plan/invoice-manage/detail/header';
-import Approval from '@/components/resource-plan/invoice-manage/detail/approval';
-import Basic from '@/components/resource-plan/invoice-manage/detail/basic';
-import List from '@/components/resource-plan/invoice-manage/detail/list';
+import Header from '@/components/resource-plan/applications/detail/header';
+import Approval from '@/components/resource-plan/applications/detail/approval';
+import Basic from '@/components/resource-plan/applications/detail/basic';
+import List from '@/components/resource-plan/applications/detail/list';
 
 import type { TicketByIdResult } from '@/typings/resourcePlan';
 

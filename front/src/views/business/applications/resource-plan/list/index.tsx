@@ -1,8 +1,8 @@
 // 资源管理 (业务)下 单据管理 tab 资源预测
 
 import { defineComponent, ref } from 'vue';
-import Search from '@/components/resource-plan/invoice-manage/list/search';
-import Table from '@/components/resource-plan/invoice-manage/list/table';
+import Search from '@/components/resource-plan/applications/list/search';
+import Table from '@/components/resource-plan/applications/list/table';
 import cssModule from './index.module.scss';
 
 import type { IListTicketsParam } from '@/typings/resourcePlan';

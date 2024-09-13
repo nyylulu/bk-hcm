@@ -5,7 +5,7 @@ import { APPLY_TYPES, searchData } from './constants';
 import { Button, Tab } from 'bkui-vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
 import { useRoute, useRouter } from 'vue-router';
-import ResourcePlanList from '../../resource-plan/invoice-manage/list';
+import ResourcePlanList from '../resource-plan/applications/list';
 
 const { TabPanel } = Tab;
 export default defineComponent({
