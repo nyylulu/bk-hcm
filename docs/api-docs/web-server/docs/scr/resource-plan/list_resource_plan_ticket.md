@@ -74,8 +74,8 @@ POST /api/v1/woa/plan/resource/ticket/list
         "id": "00000001",
         "bk_biz_id": 111,
         "bk_biz_name": "业务",
-        "bk_product_id": 222,
-        "bk_product_name": "运营产品",
+        "op_product_id": 222,
+        "op_product_name": "运营产品",
         "plan_product_id": 333,
         "plan_product_name": "规划产品",
         "demand_class": "CVM",
@@ -119,8 +119,8 @@ POST /api/v1/woa/plan/resource/ticket/list
 | id                | string | 资源预测需求单据ID                                       |
 | bk_biz_id         | int    | 业务ID                                             |
 | bk_biz_name       | string | 业务名称                                             |
-| bk_product_id     | int    | 运营产品ID                                           |
-| bk_product_name   | string | 运营产品名称                                           |
+| op_product_id     | int    | 运营产品ID                                           |
+| op_product_name   | string | 运营产品名称                                           |
 | plan_product_id   | int    | 规划产品ID                                           |
 | plan_product_name | string | 规划产品名称                                           |
 | demand_class      | string | 预测的需求类型                                          |

@@ -28,8 +28,8 @@ GET /api/v1/woa/plan/resource/ticket/{id}
       "applicant": "abc",
       "bk_biz_id": 123,
       "bk_biz_name": "biz_test",
-      "bk_product_id": 1001,
-      "bk_product_name": "运营产品",
+      "op_product_id": 1001,
+      "op_product_name": "运营产品",
       "plan_product_id": 1,
       "plan_product_name": "规划产品",
       "virtual_dept_id": 2,
@@ -105,8 +105,8 @@ GET /api/v1/woa/plan/resource/ticket/{id}
 | applicant         | string | 申请人     |
 | bk_biz_id         | int	   | CC业务ID  |
 | bk_biz_name       | string | CC业务名   |
-| bk_product_id     | int    | 运营产品ID  |
-| bk_product_name   | string | 运营产品名称  |
+| op_product_id     | int    | 运营产品ID  |
+| op_product_name   | string | 运营产品名称  |
 | plan_product_id   | int    | 规划产品ID  |
 | plan_product_name | string | 规划产品名称  |
 | virtual_dept_id   | int    | 虚拟部门ID  |
