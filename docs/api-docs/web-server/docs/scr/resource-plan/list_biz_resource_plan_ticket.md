@@ -1,20 +1,17 @@
 ### 描述
 
 - 该接口提供版本：v1.7.1+。
-- 该接口所需权限：平台-资源预测。
-- 该接口功能描述：管理员查询资源预测单据。
+- 该接口所需权限：业务访问。
+- 该接口功能描述：业务视角查询资源预测单据。
 
 ### URL
 
-POST /api/v1/woa/plans/resources/tickets/list
+POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/list
 
 ### 输入参数
 
 | 参数名称              | 参数类型         | 必选 | 描述                    |
 |-------------------|--------------|----|-----------------------|
-| bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部        |
-| op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部      |
-| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部      |
 | ticket_id         | string       | 否  | 资源预测申请单据ID，精确匹配       |
 | statuses          | string array | 否  | 单据状态列表，不传时查询全部，最多传20个 |
 | obs_projects      | string array | 否  | 项目类型列表，不传时查询全部        |
@@ -44,15 +41,6 @@ POST /api/v1/woa/plans/resources/tickets/list
 
 ```json
 {
-  "bk_biz_ids": [
-    639
-  ],
-  "op_product_ids": [
-    41
-  ],
-  "plan_product_ids": [
-    34
-  ],
   "ticket_id": "0000000001",
   "statuses": [
     "init",
@@ -193,3 +181,4 @@ POST /api/v1/woa/plans/resources/tickets/list
 | 参数名称      | 参数类型 | 描述      |
 |-----------|------|---------|
 | disk_size | int  | 云盘总量（G） |
+
