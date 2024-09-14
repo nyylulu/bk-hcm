@@ -10,13 +10,14 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 
 | 参数名称              | 参数类型         | 必选 | 描述                                                |
 |-------------------|--------------|----|---------------------------------------------------|
-| obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部                                 |
-| demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部                                  |
-| device_classes    | string array | 否  | 机型分类列表，不传时查询全部                                    |
-| device_types      | string array | 否  | 机型规格列表，不传时查询全部                                    |
-| region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部                                 |
-| zone_ids          | string array | 否  | 可用区ID列表，不传时查询全部                                   |
-| plan_types        | string array | 否  | 计划类型列表，不传时查询全部                                    |
+| crp_demand_ids    | int array    | 否  | CRP需求ID列表，不传时查询全部，数量最大100                         |
+| obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                         |
+| demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                          |
+| device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                            |
+| device_types      | string array | 否  | 机型规格列表，不传时查询全部，数量最大100                            |
+| region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部，数量最大100                         |
+| zone_ids          | string array | 否  | 可用区ID列表，不传时查询全部，数量最大100                           |
+| plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                            |
 | expiring_only     | bool         | 否  | 是否包只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
 | expect_time_range | object       | 否  | 期望交付时间范围                                          |
 | page              | object       | 是  | 分页设置                                              |
@@ -42,6 +43,9 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 
 ```json
 {
+  "crp_demand_ids": [
+    1
+  ],
   "obs_projects": [
     "常规项目"
   ],

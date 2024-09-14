@@ -12,6 +12,7 @@ POST /api/v1/woa/plans/resources/demands/list
 |-------------------|--------------|----|---------------------------------------------------|
 | bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部，数量最大100                            |
 | op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部，数量最大100                          |
+| crp_demand_ids    | int array    | 否  | CRP需求ID列表，不传时查询全部，数量最大100                         |
 | obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                         |
 | demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                          |
 | device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                            |
@@ -49,6 +50,9 @@ POST /api/v1/woa/plans/resources/demands/list
   ],
   "op_product_ids": [
     902
+  ],
+  "crp_demand_ids": [
+    1
   ],
   "obs_projects": [
     "常规项目"
