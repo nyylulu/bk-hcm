@@ -4,10 +4,12 @@ import { TcloudRecord, TcloudRenderRow, tcloudTitles } from './tcloud';
 import { HuaweiRecord, HuaweiRenderRow, huaweiTitles } from './huawei';
 import { AwsRecord, AwsRenderRow, awsTitles } from './aws';
 import { AzureRecord, AzureRenderRow, azureTitles } from './azure';
+import { ZiyanRecord, ZiyanRenderRow, ziyanTitles } from './ziyan';
 import { tcloudHandler, tcloudPreHandler } from './tcloud/DataHandler';
 import { huaweiHandler, huaweiPreHandler } from './huawei/DataHandler';
 import { awsHandler, awsPreHandler } from './aws/DataHandler';
 import { azureHandler, azurePreHandler } from './azure/DataHandler';
+import { ziyanHandler, ZiyanPreHandler } from './ziyan/DataHandler';
 
 export interface IHead {
   minWidth?: number;
@@ -63,6 +65,14 @@ export const useVendorHandler = (vendor: VendorEnum, type: SecurityRuleType) => 
     Record: AzureRecord,
     handleData: azureHandler,
     preHandle: azurePreHandler,
+  });
+
+  map.set(VendorEnum.ZIYAN, {
+    titles: ziyanTitles(type),
+    row: ZiyanRenderRow,
+    Record: ZiyanRecord,
+    handleData: ziyanHandler,
+    preHandle: ZiyanPreHandler,
   });
 
   const handler = ref(map.get(VendorEnum.TCLOUD));

@@ -136,6 +136,7 @@ export const HuaweiRenderRow = defineComponent({
     const sourceAddressTypeRef = ref();
     const sourceAddressValRef = ref();
     const actionRef = ref();
+    const memoRef = ref();
 
     const handleAdd = () => {
       emit('add');
@@ -182,6 +183,7 @@ export const HuaweiRenderRow = defineComponent({
           sourceAddressTypeRef.value.getValue(),
           sourceAddressValRef.value.getValue(),
           actionRef.value.getValue(),
+          memoRef.value.getValue(),
         ]);
         return cleanObject(formModel);
       },
@@ -287,9 +289,10 @@ export const HuaweiRenderRow = defineComponent({
           <td>
             <InputColumn
               v-model={formModel.memo}
+              ref={memoRef}
               rules={[
                 {
-                  validator: (value: string) => value.length <= 256,
+                  validator: (value: string) => !Boolean(value) || value.length <= 256,
                   message: '备注长度不能超过256个字符',
                 },
               ]}

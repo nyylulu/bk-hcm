@@ -103,6 +103,7 @@ export const AwsRenderRow = defineComponent({
     const portRef = ref();
     const sourceAddressTypeRef = ref();
     const sourceAddressValRef = ref();
+    const memoRef = ref();
 
     const handleAdd = () => {
       emit('add');
@@ -146,6 +147,7 @@ export const AwsRenderRow = defineComponent({
           portRef.value.getValue(),
           sourceAddressTypeRef.value.getValue(),
           sourceAddressValRef.value.getValue(),
+          memoRef.value.getValue(),
         ]);
         return cleanObject(formModel);
       },
@@ -219,9 +221,10 @@ export const AwsRenderRow = defineComponent({
           <td>
             <InputColumn
               v-model={formModel.memo}
+              ref={memoRef}
               rules={[
                 {
-                  validator: (value: string) => value.length <= 256,
+                  validator: (value: string) => !Boolean(value) || value.length <= 256,
                   message: '备注长度不能超过256个字符',
                 },
               ]}
