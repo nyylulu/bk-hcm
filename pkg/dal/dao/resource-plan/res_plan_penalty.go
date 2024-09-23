@@ -32,7 +32,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/dal/table"
-	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+	rpp "hcm/pkg/dal/table/resource-plan/res-plan-penalty"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -41,27 +41,25 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// ResPlanDemandInterface only used for resource plan demand interface.
-type ResPlanDemandInterface interface {
-	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.ResPlanDemandTable) ([]string, error)
-	Update(kt *kit.Kit, expr *filter.Expression, model *rpd.ResPlanDemandTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanDemandListResult, error)
+// ResPlanPenaltyInterface only used for resource plan penalty interface.
+type ResPlanPenaltyInterface interface {
+	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpp.ResPlanPenaltyTable) ([]string, error)
+	Update(kt *kit.Kit, expr *filter.Expression, model *rpp.ResPlanPenaltyTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanPenaltyListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
-var _ ResPlanDemandInterface = new(ResPlanDemandDao)
+var _ ResPlanPenaltyInterface = new(ResPlanPenaltyDao)
 
-// ResPlanDemandDao resource plan demand ResPlanDemandDao.
-type ResPlanDemandDao struct {
+// ResPlanPenaltyDao resource plan penalty ResPlanPenaltyDao.
+type ResPlanPenaltyDao struct {
 	Orm   orm.Interface
 	IDGen idgenerator.IDGenInterface
 	Audit audit.Interface
 }
 
-// CreateWithTx create resource plan demand with tx.
-func (d ResPlanDemandDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.ResPlanDemandTable) (
-	[]string, error) {
-
+// CreateWithTx create resource plan penalty with tx.
+func (d ResPlanPenaltyDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpp.ResPlanPenaltyTable) ([]string, error) {
 	if len(models) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "models to create cannot be empty")
 	}
@@ -80,7 +78,7 @@ func (d ResPlanDemandDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.Re
 	}
 
 	sql := fmt.Sprintf(`INSERT INTO %s (%s)	VALUES(%s)`, models[0].TableName(),
-		rpd.ResPlanDemandColumns.ColumnExpr(), rpd.ResPlanDemandColumns.ColonNameExpr())
+		rpp.ResPlanPenaltyColumns.ColumnExpr(), rpp.ResPlanPenaltyColumns.ColonNameExpr())
 
 	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
 		logs.Errorf("insert %s failed, err: %v, rid: %s", models[0].TableName(), err, kt.Rid)
@@ -90,8 +88,8 @@ func (d ResPlanDemandDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.Re
 	return ids, nil
 }
 
-// Update update resource plan demand.
-func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, model *rpd.ResPlanDemandTable) error {
+// Update update resource plan penalty.
+func (d ResPlanPenaltyDao) Update(kt *kit.Kit, filterExpr *filter.Expression, model *rpp.ResPlanPenaltyTable) error {
 	if filterExpr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is nil")
 	}
@@ -116,12 +114,13 @@ func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.ErrorJson("update resource plan demand failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
+			logs.ErrorJson("update resource plan penalty failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
 			return nil, err
 		}
 
 		if effected == 0 {
-			logs.ErrorJson("update resource plan demand, but record not found, filter: %v, rid: %v", filterExpr, kt.Rid)
+			logs.ErrorJson("update resource plan penalty, but record not found, filter: %v, rid: %v",
+				filterExpr, kt.Rid)
 		}
 
 		return nil, nil
@@ -133,13 +132,13 @@ func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 	return nil
 }
 
-// List get resource plan demand list.
-func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanDemandListResult, error) {
+// List get resource plan penalty list.
+func (d ResPlanPenaltyDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanPenaltyListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list res plan demand options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(rpd.ResPlanDemandColumns.ColumnTypes())),
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(rpp.ResPlanPenaltyColumns.ColumnTypes())),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
@@ -151,7 +150,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 
 	if opt.Page.Count {
 		// this is a count request, then do count operation only.
-		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.ResPlanDemandTable, whereExpr)
+		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.ResPlanPenaltyTable, whereExpr)
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
@@ -159,7 +158,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 			return nil, err
 		}
 
-		return &rtypes.ResPlanDemandListResult{Count: count}, nil
+		return &rtypes.ResPlanPenaltyListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -167,19 +166,19 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 		return nil, err
 	}
 
-	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`, rpd.ResPlanDemandColumns.FieldsNamedExpr(opt.Fields),
-		table.ResPlanDemandTable, whereExpr, pageExpr)
+	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`, rpp.ResPlanPenaltyColumns.FieldsNamedExpr(opt.Fields),
+		table.ResPlanPenaltyTable, whereExpr, pageExpr)
 
-	details := make([]rpd.ResPlanDemandTable, 0)
+	details := make([]rpp.ResPlanPenaltyTable, 0)
 	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}
 
-	return &rtypes.ResPlanDemandListResult{Count: 0, Details: details}, nil
+	return &rtypes.ResPlanPenaltyListResult{Count: 0, Details: details}, nil
 }
 
-// DeleteWithTx delete resource plan demand with tx.
-func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error {
+// DeleteWithTx delete resource plan penalty with tx.
+func (d ResPlanPenaltyDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error {
 	if expr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is required")
 	}
@@ -189,10 +188,10 @@ func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 		return err
 	}
 
-	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResPlanDemandTable, whereExpr)
+	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResPlanPenaltyTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete resource plan demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete resource plan penalty failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 

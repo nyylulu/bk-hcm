@@ -187,6 +187,10 @@ const (
 	WoaZoneTable = "woa_zone"
 	// WoaDeviceTypeTable is woa_device_type table's name.
 	WoaDeviceTypeTable = "woa_device_type"
+	// ResPlanCrpDemandTable is res_plan_crp_demand table's name.
+	ResPlanCrpDemandTable = "res_plan_crp_demand"
+	// ResPlanPenaltyTable is res_plan_penalty table's name.
+	ResPlanPenaltyTable = "res_plan_penalty"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -337,6 +341,8 @@ var TableMap = map[Name]struct{}{
 	ResPlanTicketStatusTable: {},
 	WoaZoneTable:             {},
 	WoaDeviceTypeTable:       {},
+	ResPlanCrpDemandTable:    {},
+	ResPlanPenaltyTable:      {},
 
 	MainAccountTable: {},
 	RootAccountTable: {},

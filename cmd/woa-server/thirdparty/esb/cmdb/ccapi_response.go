@@ -275,8 +275,8 @@ type SearchBizBelongingRst struct {
 type SearchBizBelonging struct {
 	BizID            int64  `json:"bk_biz_id"`
 	BizName          string `json:"bk_biz_name"`
-	BkProductID      int64  `json:"bsi_product_id"`
-	BkProductName    string `json:"bsi_product_name"`
+	OpProductID      int64  `json:"bsi_product_id"`
+	OpProductName    string `json:"bsi_product_name"`
 	PlanProductID    int64  `json:"plan_product_id"`
 	PlanProductName  string `json:"plan_product_name"`
 	BusinessDeptID   int64  `json:"business_dept_id"`

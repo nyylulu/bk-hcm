@@ -21,7 +21,7 @@ package resplan
 
 import (
 	"hcm/pkg/criteria/enumor"
-	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 )
 
 // RPTicketListResult list resource plan ticket result.
