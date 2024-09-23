@@ -28,6 +28,8 @@ GET /api/v1/woa/plans/demands/{id}
     "expect_start_date": "2024-10-21",
     "expect_end_date": "2024-10-27",
     "expect_time": "2024-10-21",
+    "bk_biz_id": 111,
+    "bk_biz_name": "业务",
     "bg_id": 4,
     "bg_name": "IEG互动娱乐事业群",
     "dept_id": 1041,
@@ -37,9 +39,11 @@ GET /api/v1/woa/plans/demands/{id}
     "op_product_id": 41,
     "op_product_name": "运营产品",
     "obs_project": "常规项目",
-    "region_id": 73,
+    "area_id": "south",
+    "area_name": "华南地区",
+    "region_id": "guangzhou",
     "region_name": "广州",
-    "zone_id": 100003,
+    "zone_id": "guangzhou-3",
     "zone_name": "广州三区",
     "plan_type": "计划内",
     "plan_advance_week": 9,
@@ -49,9 +53,13 @@ GET /api/v1/woa/plans/demands/{id}
     "device_family": "标准型",
     "device_class": "标准型S5",
     "device_type": "S5.2XLARGE16",
+    "os": 0.125000,
+    "memory": 2.0,
+    "cpu_core": 1,
+    "disk_size": 1,
     "disk_io": 150,
-    "disk_type_id": 606,
-    "disk_type": "高性能云硬盘",
+    "disk_type": "CLOUD_PREMIUM",
+    "disk_type_name": "高性能云硬盘",
     "demand_week": "UNPLAN_9_13W",
     "res_pool_type": 0,
     "res_pool": "自研池",
@@ -78,6 +86,8 @@ GET /api/v1/woa/plans/demands/{id}
 | expect_start_date   | string  | 期望最早到货时间      |
 | expect_end_date     | string  | 期望最晚到货时间      |
 | expect_time         | string  | 期望到货时间        |
+| bk_biz_id           | int     | 业务ID          |
+| bk_biz_name         | string  | 业务            |
 | bg_id               | int     | 事业群ID         |
 | bg_name             | string  | 事业群           |
 | dept_id             | int     | 部门ID          |
@@ -87,9 +97,11 @@ GET /api/v1/woa/plans/demands/{id}
 | op_product_id       | int     | 运营产品ID        |
 | op_product_name     | string  | 运营产品          |
 | obs_project         | string  | 项目类型          |
-| region_id           | int     | 地区/城市ID       |
+| area_id             | string  | 区域ID          |
+| area_name           | string  | 区域名称          |
+| region_id           | string  | 地区/城市ID       |
 | region_name         | string  | 地区/城市         |
-| zone_id             | int     | 可用区ID         |
+| zone_id             | string  | 可用区ID         |
 | zone_name           | string  | 期望可用区         |
 | plan_type           | string  | 计划类型          |
 | plan_advance_week   | int     | 计划提前周         |
@@ -99,8 +111,13 @@ GET /api/v1/woa/plans/demands/{id}
 | device_family       | string  | 机型族           |
 | device_class        | string  | 机型类型          |
 | device_type         | string  | 机型规格          |
+| os                  | float32 | 实例数           |
+| memory              | float32 | 总内存（G）        |
+| cpu_core            | float32 | 总CPU（核）       |
+| disk_size           | float32 | 总云盘大小（G）      |
 | disk_io             | int     | 单实例磁盘IO(MB/s) |
 | disk_type           | string  | 云盘类型          |
+| disk_type_name      | string  | 云盘类型中文名       |
 | demand_week         | string  | 13周需求类型       |
 | res_pool_type       | int     | 资源池类型         |
 | res_pool            | string  | 资源池           |
