@@ -1,4 +1,5 @@
 import { IPageQuery, IQueryResData } from '@/typings';
+import { AdjustType } from './plan';
 
 export interface IListTicketsParam {
   bk_biz_ids?: number[];
@@ -137,6 +138,8 @@ export interface IPlanTicketDemand {
     disk_num: number;
     disk_per_size: number;
   };
+  adjustType: AdjustType;
+  crp_demand_id: number;
 }
 
 export interface IBizOrgRelation {

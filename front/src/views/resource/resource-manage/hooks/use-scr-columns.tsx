@@ -2712,6 +2712,71 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
 
+  const planDemandModColumns = [
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+    {
+      label: '预测ID',
+      field: 'crp_demand_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '类型',
+      field: 'demand_class',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型规格',
+      field: 'device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例总数',
+      field: 'total_os',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核数',
+      field: 'total_cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(GB)',
+      field: 'total_memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云盘总量(GB)',
+      field: 'total_disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'disk_type_name',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'disk_io',
+    },
+  ];
+
   const columnsMap = {
     hostInventor: hIColumns,
     CloudHost: CHColumns,
@@ -2755,6 +2820,7 @@ export default (type: string, isSimpleShow = false) => {
     billsMainAccountSummary: billsMainAccountSummaryColumns,
     billsSummaryOperationRecord: billsSummaryOperationRecordColumns,
     businessHostColumns,
+    planDemandModColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

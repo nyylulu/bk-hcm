@@ -102,6 +102,15 @@ const serviceMenus: RouteRecordRaw[] = [
         },
       },
       {
+        path: '/service/resource-plan/mod',
+        name: 'modPlanList',
+        component: () => import('@/views/service/resource-plan/resource-manage/mod'),
+        meta: {
+          activeKey: 'planlist',
+          notMenu: true,
+        },
+      },
+      {
         path: '/service/hostInventory',
         component: () => import('@/views/ziyanScr/hostInventory/index'),
         meta: {

@@ -672,6 +672,16 @@ const businesseMenus: RouteRecordRaw[] = [
           isFilterAccount: true,
         },
       },
+      {
+        path: '/business/service/resource-plan-mod',
+        name: 'bizModPlanList',
+        component: () => import('@/views/business/resource-plan/mod'),
+        meta: {
+          backRouter: -1,
+          activeKey: 'planList',
+          notMenu: true,
+        },
+      },
     ],
     meta: {
       groupTitle: '回收站',
