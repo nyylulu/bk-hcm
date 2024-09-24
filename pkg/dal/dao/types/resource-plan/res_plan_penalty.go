@@ -19,12 +19,10 @@
 
 package resplan
 
-import (
-	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
-)
+import rpp "hcm/pkg/dal/table/resource-plan/res-plan-penalty"
 
-// ResPlanTicketStatusListResult list resource plan ticket status result.
-type ResPlanTicketStatusListResult struct {
-	Count   uint64                          `json:"count"`
-	Details []rpts.ResPlanTicketStatusTable `json:"details"`
+// ResPlanPenaltyListResult list resource plan penalty result.
+type ResPlanPenaltyListResult struct {
+	Count   uint64                    `json:"count"`
+	Details []rpp.ResPlanPenaltyTable `json:"details"`
 }

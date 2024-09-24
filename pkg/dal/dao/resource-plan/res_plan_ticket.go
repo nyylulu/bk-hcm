@@ -34,8 +34,8 @@ import (
 	"hcm/pkg/dal/dao/types"
 	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/dal/table"
-	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
-	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -119,7 +119,7 @@ func (d ResPlanTicketDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.ErrorJson("update resource plan ticket failed, filter: %s, err: %v, rid: %v",
+			logs.ErrorJson("update resource plan ticket failed, filter: %v, err: %v, rid: %v",
 				filterExpr, err, kt.Rid)
 			return nil, err
 		}
@@ -164,7 +164,7 @@ func (d ResPlanTicketDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTi
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -201,7 +201,7 @@ func (d ResPlanTicketDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResPlanTicketTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete resource plan ticket failed, err: %v, filter: %s, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete resource plan ticket failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 
@@ -242,7 +242,7 @@ func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count res plan ticket failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 

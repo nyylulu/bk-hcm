@@ -1,12 +1,12 @@
 ### 描述
 
 - 该接口提供版本：v1.7.1+。
-- 该接口所需权限：平台-单据管理。
+- 该接口所需权限：业务访问。
 - 该接口功能描述：获取资源预测申请单据详情。
 
 ### URL
 
-GET /api/v1/woa/plans/resources/tickets/{id}
+GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{id}
 
 ### 输入参数
 

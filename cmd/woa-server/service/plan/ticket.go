@@ -28,10 +28,10 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
-	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
-	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
-	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
-	wdt "hcm/pkg/dal/table/resource_plan/woa-device-type"
+	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
@@ -271,17 +271,17 @@ func (s *service) convToRPTicketTableSlice(kt *kit.Kit, req *ptypes.CreateResPla
 			Applicant:       kt.User,
 			BkBizID:         req.BkBizID,
 			BkBizName:       bizOrgRel.BkBizName,
-			BkProductID:     bizOrgRel.BkProductID,
-			BkProductName:   bizOrgRel.BkProductName,
+			OpProductID:     bizOrgRel.OpProductID,
+			OpProductName:   bizOrgRel.OpProductName,
 			PlanProductID:   bizOrgRel.PlanProductID,
 			PlanProductName: bizOrgRel.PlanProductName,
 			VirtualDeptID:   bizOrgRel.VirtualDeptID,
 			VirtualDeptName: bizOrgRel.VirtualDeptName,
 			DemandClass:     req.DemandClass,
-			OS:              os,
-			CpuCore:         cpuCore,
-			Memory:          memory,
-			DiskSize:        diskSize,
+			UpdatedOS:       os,
+			UpdatedCpuCore:  cpuCore,
+			UpdatedMemory:   memory,
+			UpdatedDiskSize: diskSize,
 			Remark:          req.Remark,
 			Creator:         kt.User,
 			Reviser:         kt.User,
@@ -453,8 +453,8 @@ func (s *service) getRPTicketBaseInfo(kt *kit.Kit, ticketID string) (*ptypes.Get
 		Applicant:       detail.Applicant,
 		BkBizID:         detail.BkBizID,
 		BkBizName:       detail.BkBizName,
-		BkProductID:     detail.BkProductID,
-		BkProductName:   detail.BkProductName,
+		OpProductID:     detail.OpProductID,
+		OpProductName:   detail.OpProductName,
 		PlanProductID:   detail.PlanProductID,
 		PlanProductName: detail.PlanProductName,
 		VirtualDeptID:   detail.VirtualDeptID,

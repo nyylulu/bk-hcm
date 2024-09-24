@@ -96,8 +96,8 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, er
 	rst := &ptypes.BizOrgRel{
 		BkBizID:         bizBelong.BizID,
 		BkBizName:       bizBelong.BizName,
-		BkProductID:     bizBelong.BkProductID,
-		BkProductName:   bizBelong.BkProductName,
+		OpProductID:     bizBelong.OpProductID,
+		OpProductName:   bizBelong.OpProductName,
 		PlanProductID:   bizBelong.PlanProductID,
 		PlanProductName: bizBelong.PlanProductName,
 		VirtualDeptID:   bizBelong.VirtualDeptID,

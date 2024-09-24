@@ -21,6 +21,50 @@ package enumor
 
 import "fmt"
 
+// RPTicketType is resource plan ticket type.
+type RPTicketType string
+
+const (
+	// RPTicketTypeAdd is resource plan ticket status add.
+	RPTicketTypeAdd RPTicketType = "add"
+	// RPTicketTypeAdjust is resource plan ticket status adjust.
+	RPTicketTypeAdjust RPTicketType = "adjust"
+	// RPTicketTypeDelete is resource plan ticket status delete.
+	RPTicketTypeDelete RPTicketType = "delete"
+)
+
+// Validate RPTicketType.
+func (t RPTicketType) Validate() error {
+	switch t {
+	case RPTicketTypeAdd, RPTicketTypeAdjust, RPTicketTypeDelete:
+	default:
+		return fmt.Errorf("unsupported resource plan type: %s", t)
+	}
+
+	return nil
+}
+
+// rdTicketTypeNameMap records RPTicketType's name.
+var rdTicketTypeNameMap = map[RPTicketType]string{
+	RPTicketTypeAdd:    "新增",
+	RPTicketTypeAdjust: "调整",
+	RPTicketTypeDelete: "删除",
+}
+
+// Name return RPTicketType's name.
+func (t RPTicketType) Name() string {
+	return rdTicketTypeNameMap[t]
+}
+
+// GetRPTicketTypeMembers get RPTicketType's members.
+func GetRPTicketTypeMembers() []RPTicketType {
+	return []RPTicketType{
+		RPTicketTypeAdd,
+		RPTicketTypeAdjust,
+		RPTicketTypeDelete,
+	}
+}
+
 // RPTicketStatus is resource plan ticket status.
 type RPTicketStatus string
 
@@ -239,4 +283,26 @@ func GetDemandSourceMembers() []DemandSource {
 		DemandSourceSupply,
 		DemandSourceSysProcess,
 	}
+}
+
+// CrpDemandLockedStatus is resource plan crp demand locked.
+type CrpDemandLockedStatus int8
+
+const (
+	// CrpDemandUnLocked is resource plan crp demand locked false.
+	CrpDemandUnLocked CrpDemandLockedStatus = 0
+	// CrpDemandLocked is resource plan crp demand locked true.
+	CrpDemandLocked CrpDemandLockedStatus = 1
+)
+
+// Validate CrpDemandLockedStatus.
+func (c CrpDemandLockedStatus) Validate() error {
+	switch c {
+	case CrpDemandUnLocked:
+	case CrpDemandLocked:
+	default:
+		return fmt.Errorf("unsupported crp demand locked: %d", c)
+	}
+
+	return nil
 }

@@ -20,11 +20,11 @@
 package resplan
 
 import (
-	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
+	rpcd "hcm/pkg/dal/table/resource-plan/res-plan-crp-demand"
 )
 
-// ResPlanTicketStatusListResult list resource plan ticket status result.
-type ResPlanTicketStatusListResult struct {
-	Count   uint64                          `json:"count"`
-	Details []rpts.ResPlanTicketStatusTable `json:"details"`
+// ResPlanCrpDemandListResult list resource plan crp demand result.
+type ResPlanCrpDemandListResult struct {
+	Count   uint64                       `json:"count"`
+	Details []rpcd.ResPlanCrpDemandTable `json:"details"`
 }

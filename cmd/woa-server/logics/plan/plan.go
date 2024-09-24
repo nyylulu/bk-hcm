@@ -35,9 +35,9 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
-	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
-	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
+	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
@@ -475,12 +475,12 @@ func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketBriefIn
 		Applicant:       base.Applicant,
 		BkBizID:         base.BkBizID,
 		BkBizName:       base.BkBizName,
-		BkProductName:   base.BkProductName,
+		BkProductName:   base.OpProductName,
 		PlanProductName: base.PlanProductName,
 		DemandClass:     base.DemandClass,
-		CpuCore:         base.CpuCore,
-		Memory:          base.Memory,
-		DiskSize:        base.DiskSize,
+		CpuCore:         base.UpdatedCpuCore,
+		Memory:          base.UpdatedMemory,
+		DiskSize:        base.UpdatedDiskSize,
 		SubmittedAt:     base.SubmittedAt,
 		Status:          status.Status,
 		ItsmSn:          status.ItsmSn,
