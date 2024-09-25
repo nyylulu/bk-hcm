@@ -1,5 +1,7 @@
 .search-grid {
   display: grid;
+  overflow-x: auto;
+  padding-bottom: 8px;
   grid-template-columns: 405px 405px 405px;
   gap: 24px;
   row-gap: 16px;

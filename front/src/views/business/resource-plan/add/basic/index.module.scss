@@ -1,9 +1,23 @@
 .home {
   display: grid;
   padding: 0 28px 8px;
-  column-gap: 16px;
+  column-gap: 170px;
   row-gap: 24px;
-  grid-template-columns: 420px 200px 200px 200px;
+  grid-template-columns: 200px 400px 200px;
+  .op-relation{
+    width: 360px;
+    display: flex;
+      .warning-text{
+        color: #ff0000;
+      }
+  }
+  .biz-list{
+    width: 450px;
+    color: #ccc;
+  }
+  .forecast-type{
+    grid-column: 1 / 2; 
+  }
 
   .text {
     background: #f5f7fa;

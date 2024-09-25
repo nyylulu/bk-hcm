@@ -66,7 +66,7 @@ export default defineComponent({
     const getProjectTypes = () => {
       isLoadingProjectType.value = true;
       resourcePlanStore
-        .getProjectTypes()
+        .getObsProjects()
         .then((data: { data: { details: string[] } }) => {
           projectTypes.value = data?.data?.details || [];
         })

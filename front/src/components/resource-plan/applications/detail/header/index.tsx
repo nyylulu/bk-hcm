@@ -1,7 +1,7 @@
 import { defineComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import cssModule from './index.module.scss';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 
 export default defineComponent({
   props: {
@@ -17,10 +17,16 @@ export default defineComponent({
   setup(props) {
     const { t } = useI18n();
     const router = useRouter();
+    const route = useRoute();
 
     const handleClick = () => {
+      const path = props.isBiz ? '/business/applications' : '/service/my-apply';
       router.push({
-        path: '/service/my-apply',
+        path,
+        query: {
+          ...route.query,
+          type: 'resource_plan',
+        },
       });
     };
 

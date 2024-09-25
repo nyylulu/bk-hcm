@@ -1,14 +1,15 @@
 /* eslint-disable no-nested-ternary */
 // table 字段相关信息
 import { useAccountStore } from '@/store';
-import { Button } from 'bkui-vue';
+import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
+import { Button, Popover } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { CLOUD_HOST_STATUS, VendorEnum } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -22,7 +23,7 @@ import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import cssModule from './use-scr-columns.module.scss';
 import { defaults } from 'lodash';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, getValueByKey } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
 import { getResourceTypeName, getReturnPlanName } from '@/utils';
 import {
@@ -35,7 +36,7 @@ import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/tra
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
-import { Spinner, Share } from 'bkui-vue/lib/icon';
+
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
@@ -1698,36 +1699,41 @@ export default (type: string, isSimpleShow = false) => {
   // 服务请求 - 资源预测
   const forecastDemandColumns = [
     {
-      label: '业务',
-      field: 'bk_biz_name',
-      isDefaultShow: true,
-    },
-    {
-      label: '单据状态',
+      label: '审批状态',
       field: 'status_name',
       isDefaultShow: true,
+      render: ({ cell, data }: any) => {
+        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status];
+
+        return (
+          <span>
+            <i
+              class={`${className} ${cssModule['resource-plan-status-icon']}  ${
+                cssModule[`resource-plan-status-icon-${color}`]
+              }`}></i>
+            {cell}
+          </span>
+        );
+      },
     },
     {
-      label: '运营产品',
-      field: 'bk_product_name',
-    },
-    {
-      label: '规划产品',
-      field: 'plan_product_name',
+      label: '类型',
+      field: 'ticket_type_name',
+      isDefaultShow: true,
     },
     {
       label: 'CPU总核心数',
-      field: 'cpu_core',
+      field: 'updated_info.cvm.cpu_core',
       isDefaultShow: true,
     },
     {
       label: '内存总量(GB)',
-      field: 'memory',
+      field: 'updated_info.cvm.memory',
       isDefaultShow: true,
     },
     {
       label: '云硬盘总量(GB)',
-      field: 'disk_size',
+      field: 'updated_info.cbs.disk_size',
       isDefaultShow: true,
     },
     {
@@ -1750,93 +1756,148 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
       render: ({ cell }: { cell: string }) => timeFormatter(cell),
     },
+    {
+      label: '完成时间',
+      field: 'completed_at',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
   ];
+
+  // 资源预测 前后变化
+  const resourcePlanChangeingRender = ({
+    cell,
+    column,
+    data,
+  }: {
+    cell: string;
+    column: { field: string };
+    data: object;
+  }) => {
+    const updateId = column.field;
+    const originalId = updateId.replaceAll('updated_info', 'original_info');
+    const originalVal = getValueByKey(data, originalId);
+    const content = !!originalVal ? `修改前: ${originalVal}` : `暂无修改前数据`;
+    return (
+      <Popover content={content}>
+        <div class={cssModule['resource-plan-detail-cell']}>
+          {!!originalVal && (
+            <Info class={[cssModule['resource-plan-detail-info'], cssModule['resource-plan-detail-text']]} />
+          )}
+          <span class={!!originalVal && cssModule['resource-plan-detail-text']}>{cell}</span>
+        </div>
+      </Popover>
+    );
+  };
 
   // 资源预测详情
   const forecastDemandDetailColums = [
     {
       label: '机型规格',
-      field: 'cvm.device_type',
+      field: 'updated_info.cvm.device_type',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '总CPU核数',
-      field: 'cvm.cpu_core',
+      field: 'updated_info.cvm.cpu_core',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '预测类型',
+      field: 'demand_class',
       isDefaultShow: true,
     },
     {
       label: '总内存(G)',
-      field: 'cvm.memory',
+      field: 'updated_info.cvm.memory',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '总云盘大小(G)',
-      field: 'cbs.disk_size',
+      field: 'updated_info.cbs.disk_size',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '项目类型',
-      field: 'obs_project',
+      field: 'updated_info.obs_project',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '地域',
-      field: 'area_name',
+      field: 'updated_info.area_name',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '城市',
-      field: 'region_name',
+      field: 'updated_info.region_name',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '可用区',
-      field: 'zone_name',
+      field: 'updated_info.zone_name',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '资源模式',
-      field: 'cvm.res_mode',
+      field: 'updated_info.cvm.res_mode',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '期望到货时间',
-      field: 'expect_time',
+      field: 'updated_info.expect_time',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '机型族',
-      field: 'cvm.device_family',
+      field: 'updated_info.cvm.device_family',
+      render: resourcePlanChangeingRender,
     },
     {
       label: '机型类型',
-      field: 'cvm.device_class',
+      field: 'updated_info.cvm.device_class',
+      render: resourcePlanChangeingRender,
     },
     {
       label: '资源池',
-      field: 'cvm.res_pool',
+      field: 'updated_info.cvm.res_pool',
+      render: resourcePlanChangeingRender,
     },
     {
       label: '核心类型',
-      field: 'cvm.core_type',
+      field: 'updated_info.cvm.core_type',
+      render: resourcePlanChangeingRender,
     },
     {
       label: '实例数',
-      field: 'cvm.os',
+      field: 'updated_info.cvm.os',
+      render: resourcePlanChangeingRender,
     },
     {
       label: '单例磁盘IO(MB/s)',
-      field: 'cbs.disk_io',
+      field: 'updated_info.cbs.disk_io',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '云磁盘类型',
-      field: 'cbs.disk_type_name',
+      field: 'updated_info.cbs.disk_type_name',
+      render: resourcePlanChangeingRender,
       isDefaultShow: true,
     },
     {
       label: '备注',
-      field: 'remark',
+      field: 'updated_info.remark',
+      render: resourcePlanChangeingRender,
     },
   ];
 
