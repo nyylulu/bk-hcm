@@ -326,7 +326,7 @@ type WebServerSetting struct {
 	Esb           Esb           `yaml:"esb"`
 	Itsm          ApiGateway    `yaml:"itsm"`
 	ChangeLogPath ChangeLogPath `yaml:"changeLogPath"`
-	Notice  	  Notice     	`yaml:"notice"`
+	Notice        Notice        `yaml:"notice"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

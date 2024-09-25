@@ -22,6 +22,7 @@ package bill
 import (
 	"encoding/json"
 	"fmt"
+	"hcm/pkg/dal/table/types"
 	"time"
 
 	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
@@ -173,7 +174,7 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 		}
 		if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 			ID:     syncRecord.ID,
-			Detail: string(newDetailData),
+			Detail: types.JsonField(newDetailData),
 		}); err != nil {
 			logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 			return err
@@ -306,7 +307,7 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 	}
 	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 		ID:     syncRecord.ID,
-		Detail: string(newDetailData),
+		Detail: types.JsonField(newDetailData),
 	}); err != nil {
 		logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 		return err
