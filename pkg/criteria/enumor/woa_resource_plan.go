@@ -306,3 +306,102 @@ func (c CrpDemandLockedStatus) Validate() error {
 
 	return nil
 }
+
+// DemandStatus is resource plan demand status.
+type DemandStatus string
+
+const (
+	// DemandStatusCanApply 预测需求可申领.
+	DemandStatusCanApply DemandStatus = "can_apply"
+	// DemandStatusNotReady 预测需求未到申领时间.
+	DemandStatusNotReady DemandStatus = "not_ready"
+	// DemandStatusExpired 预测需求已过期.
+	DemandStatusExpired DemandStatus = "expired"
+	// DemandStatusSpentAll 预测需求已耗尽.
+	DemandStatusSpentAll DemandStatus = "spent_all"
+	// DemandStatusLocked 预测需求变更中.
+	DemandStatusLocked DemandStatus = "locked"
+)
+
+// Validate DemandStatus.
+func (d DemandStatus) Validate() error {
+	switch d {
+	case DemandStatusCanApply:
+	case DemandStatusNotReady:
+	case DemandStatusExpired:
+	case DemandStatusSpentAll:
+	case DemandStatusLocked:
+	default:
+		return fmt.Errorf("unsupported demand status: %s", d)
+	}
+
+	return nil
+}
+
+var demandStatusNameMaps = map[DemandStatus]string{
+	DemandStatusCanApply: "可申领",
+	DemandStatusNotReady: "未到申领时间",
+	DemandStatusExpired:  "已过期",
+	DemandStatusSpentAll: "已耗尽",
+	DemandStatusLocked:   "变更中",
+}
+
+// Name return the name of DemandStatus.
+func (d DemandStatus) Name() string {
+	return demandStatusNameMaps[d]
+}
+
+// PlanType is resource plan type.
+type PlanType string
+
+const (
+	// PlanTypeCrpInPlan is crp in plan.
+	PlanTypeCrpInPlan PlanType = "计划内"
+	// PlanTypeCrpOutPlan is crp out plan.
+	PlanTypeCrpOutPlan PlanType = "计划外"
+	// PlanTypeHcmInPlan is hcm in plan.
+	PlanTypeHcmInPlan PlanType = "预测内"
+	// PlanTypeHcmOutPlan is hcm out plan.
+	PlanTypeHcmOutPlan PlanType = "预测外"
+)
+
+// Validate PlanType.
+func (p PlanType) Validate() error {
+	switch p {
+	case PlanTypeCrpInPlan:
+	case PlanTypeCrpOutPlan:
+	case PlanTypeHcmInPlan:
+	case PlanTypeHcmOutPlan:
+	default:
+		return fmt.Errorf("unsupported plan type: %s", p)
+	}
+
+	return nil
+}
+
+// ToAnotherPlanType the plan type of crp to the plan type of hcm, or vice versa.
+func (p PlanType) ToAnotherPlanType() PlanType {
+	switch p {
+	case PlanTypeCrpInPlan:
+		return PlanTypeHcmInPlan
+	case PlanTypeCrpOutPlan:
+		return PlanTypeHcmOutPlan
+	case PlanTypeHcmInPlan:
+		return PlanTypeCrpInPlan
+	case PlanTypeHcmOutPlan:
+		return PlanTypeCrpOutPlan
+	}
+	return p
+}
+
+// InPlan return the plan type in plan or not.
+func (p PlanType) InPlan() bool {
+	switch p {
+	case PlanTypeCrpInPlan, PlanTypeHcmInPlan:
+		return true
+	case PlanTypeCrpOutPlan, PlanTypeHcmOutPlan:
+		return false
+	default:
+		return false
+	}
+}

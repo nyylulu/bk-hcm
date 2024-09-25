@@ -12,6 +12,7 @@ POST /api/v1/woa/plans/resources/demands/list
 |-------------------|--------------|----|---------------------------------------------------|
 | bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部，数量最大100                            |
 | op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部，数量最大100                          |
+| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部，数量最大100                          |
 | crp_demand_ids    | int array    | 否  | CRP需求ID列表，不传时查询全部，数量最大100                         |
 | obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                         |
 | demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                          |
@@ -50,6 +51,9 @@ POST /api/v1/woa/plans/resources/demands/list
   ],
   "op_product_ids": [
     902
+  ],
+  "plan_product_ids": [
+    20
   ],
   "crp_demand_ids": [
     1
@@ -111,6 +115,8 @@ POST /api/v1/woa/plans/resources/demands/list
         "bk_biz_name": "业务",
         "op_product_id": 222,
         "op_product_name": "运营产品",
+        "plan_product_id": 333,
+        "plan_product_name": "规划产品",
         "status": "locked",
         "status_name": "变更中",
         "demand_class": "CVM",
@@ -184,6 +190,8 @@ POST /api/v1/woa/plans/resources/demands/list
 | bk_biz_name          | string | 业务名称                                                                              |
 | op_product_id        | int    | 运营产品ID                                                                            |
 | op_product_name      | string | 运营产品名称                                                                            |
+| plan_product_id      | int    | 规划产品ID                                                                            |
+| plan_product_name    | string | 规划产品名称                                                                            |
 | status               | string | 需求状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中） |
 | status_name          | string | 需求状态名称                                                                            |
 | demand_class         | string | 预测的需求类型                                                                           |

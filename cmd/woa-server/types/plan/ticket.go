@@ -28,8 +28,12 @@ import (
 // ListResPlanTicketReq is list resource plan ticket request.
 type ListResPlanTicketReq struct {
 	BkBizIDs        []int64                 `json:"bk_biz_ids" validate:"omitempty"`
+	OpProductIDs    []int64                 `json:"op_product_ids" validate:"omitempty"`
+	PlanProductIDs  []int64                 `json:"plan_product_ids" validate:"omitempty"`
 	TicketIDs       []string                `json:"ticket_ids" validate:"omitempty"`
 	Statuses        []enumor.RPTicketStatus `json:"statuses" validate:"omitempty"`
+	ObsProjects     []string                `json:"obs_projects" validate:"omitempty"`
+	TicketTypes     []enumor.RPTicketType   `json:"ticket_types" validate:"omitempty"`
 	Applicants      []string                `json:"applicants" validate:"omitempty"`
 	SubmitTimeRange *times.DateRange        `json:"submit_time_range" validate:"omitempty"`
 	Page            *core.BasePage          `json:"page" validate:"required"`
@@ -46,9 +50,24 @@ func (r *ListResPlanTicketReq) Validate() error {
 			return errors.New("bk biz id should be > 0")
 		}
 	}
+	for _, opProductID := range r.OpProductIDs {
+		if opProductID <= 0 {
+			return errors.New("op product id should be > 0")
+		}
+	}
+	for _, planProductID := range r.PlanProductIDs {
+		if planProductID <= 0 {
+			return errors.New("plan product id should be > 0")
+		}
+	}
 
 	for _, status := range r.Statuses {
 		if err := status.Validate(); err != nil {
+			return err
+		}
+	}
+	for _, ticketType := range r.TicketTypes {
+		if err := ticketType.Validate(); err != nil {
 			return err
 		}
 	}
@@ -57,6 +76,9 @@ func (r *ListResPlanTicketReq) Validate() error {
 		if err := r.SubmitTimeRange.Validate(); err != nil {
 			return err
 		}
+	}
+	if err := r.Page.Validate(); err != nil {
+		return err
 	}
 
 	return nil

@@ -28,6 +28,7 @@ import (
 
 	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
@@ -239,6 +240,245 @@ func (c *Controller) runWorker() error {
 	}
 
 	return c.checkItsmTicket(kt, tkInfo)
+}
+
+func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.PlanDemandDetail {
+	rst := make([]*ptypes.PlanDemandDetail, 0, len(items))
+	for _, item := range items {
+		rstItem := &ptypes.PlanDemandDetail{
+			GetPlanDemandDetailResp: ptypes.GetPlanDemandDetailResp{
+				CrpDemandID:        item.DemandId,
+				YearMonthWeek:      item.YearMonthWeek,
+				ExpectStartDate:    item.ExpectStartDate,
+				ExpectEndDate:      item.ExpectEndDate,
+				ExpectTime:         item.UseTime,
+				BgID:               int64(item.BgId),
+				BgName:             item.BgName,
+				DeptID:             int64(item.DeptId),
+				DeptName:           item.DeptName,
+				PlanProductID:      int64(item.PlanProductId),
+				PlanProductName:    item.PlanProductName,
+				ObsProject:         item.ProjectName,
+				RegionName:         item.CityName,
+				ZoneName:           item.ZoneName,
+				PlanType:           enumor.PlanType(item.InPlan).ToAnotherPlanType(),
+				PlanAdvanceWeek:    item.PlanWeek,
+				ExpeditedPostponed: item.ExpeditedPostponed,
+				CoreTypeID:         item.CoreType,
+				CoreType:           item.CoreTypeName,
+				DeviceFamily:       item.InstanceFamily,
+				DeviceClass:        item.InstanceType,
+				DeviceType:         item.InstanceModel,
+				OS:                 item.PlanCvmAmount,
+				Memory:             item.PlanRamAmount,
+				CpuCore:            item.PlanCoreAmount,
+				DiskSize:           item.PlanDiskAmount,
+				DiskIO:             item.InstanceIO,
+				DiskTypeName:       item.DiskTypeName,
+				DemandWeek:         item.RequirementWeekType,
+				ResPoolType:        item.ResourcePoolType,
+				ResPool:            item.ResourcePoolName,
+				ResMode:            item.ResourceMode,
+				GenerationType:     item.GenerationType,
+			},
+			Year:             item.Year,
+			Month:            item.Month,
+			Week:             item.Week,
+			TotalOS:          item.PlanCvmAmount,
+			AppliedOS:        item.ApplyCvmAmount,
+			RemainedOS:       item.RealCvmAmount,
+			TotalCpuCore:     item.PlanCoreAmount,
+			AppliedCpuCore:   item.ApplyCoreAmount,
+			RemainedCpuCore:  item.RealCoreAmount,
+			ExpiredCpuCore:   item.ExpiredCoreAmount,
+			TotalMemory:      item.PlanRamAmount,
+			AppliedMemory:    item.ApplyRamAmount,
+			RemainedMemory:   item.RealRamAmount,
+			TotalDiskSize:    item.PlanDiskAmount,
+			AppliedDiskSize:  item.ApplyDiskAmount,
+			RemainedDiskSize: item.RealDiskAmount,
+		}
+		rst = append(rst, rstItem)
+	}
+	return rst
+}
+
+// ListCrpDemands 返回全量数据
+func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq, reqRegionNames, reqZoneNames []string) (
+	[]*ptypes.PlanDemandDetail, error) {
+
+	params := &cvmapi.CvmCbsPlanQueryParam{
+		UseTime: &cvmapi.UseTime{
+			Start: listReq.ExpectTimeRange.Start,
+			End:   listReq.ExpectTimeRange.End,
+		},
+		DemandIdList: listReq.CrpDemandIDs,
+		InstanceType: listReq.DeviceClasses,
+		ProjectName:  listReq.ObsProjects,
+		CityName:     reqRegionNames,
+		ZoneName:     reqZoneNames,
+	}
+	// 500条一组查询出全部结果
+	page := &cvmapi.Page{
+		Start: 0,
+		Size:  int(core.DefaultMaxPageLimit),
+	}
+
+	rst := make([]*ptypes.PlanDemandDetail, 0)
+	for {
+		resp, err := c.listCrpDemandsPage(kt, params, page)
+		if err != nil {
+			return nil, err
+		}
+
+		rst = append(rst, resp...)
+
+		if len(resp) < page.Size {
+			break
+		}
+		page.Start += page.Size
+	}
+	return rst, nil
+}
+
+// ListCrpDemandsPage 分页查询
+func (c *Controller) listCrpDemandsPage(kt *kit.Kit, params *cvmapi.CvmCbsPlanQueryParam, page *cvmapi.Page) (
+	[]*ptypes.PlanDemandDetail, error) {
+
+	params.Page = page
+	req := &cvmapi.CvmCbsPlanQueryReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmCbsPlanQueryMethod,
+		},
+		Params: params,
+	}
+
+	resp, err := c.crpCli.QueryCvmCbsPlans(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to list crp demand, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to list crp demand, code: %d, msg: %s, rid: %s, params: %+v", resp.Error.Code,
+			resp.Error.Message,
+			kt.Rid, req.Params)
+		return nil, fmt.Errorf("failed to list crp demand, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+	}
+
+	if resp.Result == nil {
+		logs.Errorf("failed to list crp demand, for result is empty, rid: %s, params: %+v", kt.Rid, req.Params)
+		return nil, errors.New("failed to list crp demand, for result is empty")
+	}
+
+	return convListResPlanDemandItem(resp.Result.Data), nil
+}
+
+func convListDemandChangeLogItem(items []*cvmapi.DemandChangeLogQueryLogItem) []*ptypes.ListDemandChangeLogItem {
+	rst := make([]*ptypes.ListDemandChangeLogItem, 0, len(items))
+	for _, item := range items {
+		rstItem := &ptypes.ListDemandChangeLogItem{
+			CrpDemandId:       int64(item.DemandId),
+			ExpectTime:        item.UseTime,
+			BgName:            item.BgName,
+			DeptName:          item.DeptName,
+			PlanProductName:   item.PlanProductName,
+			ObsProject:        item.ProjectName,
+			RegionName:        item.CityName,
+			ZoneName:          item.ZoneName,
+			DemandWeek:        item.RequirementWeekType,
+			ResPoolType:       item.ResourcePoolType,
+			DeviceClass:       item.InstanceType,
+			DeviceType:        item.InstanceModel,
+			ChangeCvmAmount:   item.ChangeCvmAmount,
+			AfterCvmAmount:    item.AfterCvmAmount,
+			ChangeCoreAmount:  item.ChangeCoreAmount,
+			AfterCoreAmount:   item.AfterCoreAmount,
+			ChangeRamAmount:   item.ChangeRamAmount,
+			AfterRamAmount:    item.AfterRamAmount,
+			DiskType:          item.DiskTypeName,
+			DiskIo:            item.InstanceIO,
+			ChangedDiskAmount: item.ChangedDiskAmount,
+			AfterDiskAmount:   item.AfterDiskAmount,
+			DemandSource:      item.SourceType,
+			CrpSn:             item.OrderId,
+			CreateTime:        item.CreateTime,
+			Remark:            item.Desc,
+			ResPool:           item.ResourcePoolName,
+		}
+		rst = append(rst, rstItem)
+	}
+	return rst
+}
+
+// ListCrpDemandChangeLog list crp demand change log by demand id, full query
+func (c *Controller) ListCrpDemandChangeLog(kt *kit.Kit, crpDemandId int64) (
+	[]*ptypes.ListDemandChangeLogItem, error) {
+
+	// 500条一组查询出全部结果
+	page := &cvmapi.Page{
+		Start: 0,
+		Size:  int(core.DefaultMaxPageLimit),
+	}
+
+	rst := make([]*ptypes.ListDemandChangeLogItem, 0)
+	for {
+		resp, err := c.listCrpDemandChangeLogPage(kt, crpDemandId, page)
+		if err != nil {
+			return nil, err
+		}
+
+		rst = append(rst, resp...)
+
+		if len(resp) < page.Size {
+			break
+		}
+		page.Start += page.Size
+	}
+	return rst, nil
+}
+
+// listCrpDemandChangeLogPage list crp demand change log by demand id, page query
+func (c *Controller) listCrpDemandChangeLogPage(kt *kit.Kit, crpDemandId int64, page *cvmapi.Page) (
+	[]*ptypes.ListDemandChangeLogItem, error) {
+
+	rst := make([]*ptypes.ListDemandChangeLogItem, 0)
+	req := &cvmapi.DemandChangeLogQueryReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmCbsDemandChangeLogQueryMethod,
+		},
+		Params: &cvmapi.DemandChangeLogQueryParam{
+			DemandIdList: []int64{crpDemandId},
+			Page:         page,
+		},
+	}
+	resp, err := c.crpCli.QueryDemandChangeLog(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to list crp demand change log, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to list crp demand change log, code: %d, msg: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, kt.Rid)
+		return nil, fmt.Errorf("failed to list crp demand change log, code: %d, msg: %s", resp.Error.Code,
+			resp.Error.Message)
+	}
+
+	if resp.Result == nil {
+		logs.Errorf("failed to list crp demand change log, for result is empty, rid: %s", kt.Rid)
+		return nil, errors.New("failed to list crp demand change log, for result is empty")
+	}
+
+	if len(resp.Result.Data) < 1 {
+		return rst, nil
+	}
+
+	return convListDemandChangeLogItem(resp.Result.Data[0].Info), nil
 }
 
 func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketBriefInfo) error {

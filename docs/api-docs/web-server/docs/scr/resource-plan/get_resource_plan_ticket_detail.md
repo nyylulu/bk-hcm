@@ -125,7 +125,7 @@ GET /api/v1/woa/plans/resources/tickets/{id}
 
 | 参数名称              | 参数类型   | 描述                            |
 |-------------------|--------|-------------------------------|
-| type              | string | 单据类型（枚举值：add, update, cancel） |
+| type              | string | 单据类型（枚举值：add, adjust, cancel） |
 | type_name         | string | 单据类型名称                        |
 | applicant         | string | 申请人                           |
 | bk_biz_id         | int    | CC业务ID                        |

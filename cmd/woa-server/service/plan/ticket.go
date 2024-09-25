@@ -39,7 +39,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/slice"
-	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -75,13 +74,13 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// convert request to filter expression.
-	opt, err := convToListOption(bkBizIDs, req.TicketIDs, req.Applicants, req.Statuses, req.SubmitTimeRange, req.Page)
+	opt, err := convToListTicketOption(bkBizIDs, req)
 	if err != nil {
 		logs.Errorf("failed to convert to list option, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	rst, err := s.dao.ResPlanTicket().ListWithStatus(cts.Kit, opt)
+	rst, err := s.dao.ResPlanTicket().ListWithStatusAndRes(cts.Kit, opt)
 	if err != nil {
 		logs.Errorf("failed to list resource plan ticket with status, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -89,24 +88,31 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	return rst, nil
 }
 
-// convert request parameters to ListOption.
-func convToListOption(bkBizIDs []int64, ticketIDs, applicants []string, statuses []enumor.RPTicketStatus,
-	submitTimeRange *times.DateRange, page *core.BasePage) (*types.ListOption, error) {
-
+// convToListTicketOption convert request parameters to ListOption.
+func convToListTicketOption(bkBizIDs []int64, req *ptypes.ListResPlanTicketReq) (*types.ListOption, error) {
 	rules := []filter.RuleFactory{
 		tools.ContainersExpression("bk_biz_id", bkBizIDs),
 	}
-	if len(ticketIDs) > 0 {
-		rules = append(rules, tools.ContainersExpression("id", ticketIDs))
+	if len(req.OpProductIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("op_product_id", req.OpProductIDs))
 	}
-	if len(statuses) > 0 {
-		rules = append(rules, tools.ContainersExpression("status", statuses))
+	if len(req.PlanProductIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("plan_product_id", req.PlanProductIDs))
 	}
-	if len(applicants) > 0 {
-		rules = append(rules, tools.ContainersExpression("applicant", applicants))
+	if len(req.TicketIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("id", req.TicketIDs))
 	}
-	if submitTimeRange != nil {
-		drOpt, err := tools.DateRangeExpression("submitted_at", submitTimeRange)
+	if len(req.Statuses) > 0 {
+		rules = append(rules, tools.ContainersExpression("status", req.Statuses))
+	}
+	if len(req.TicketTypes) > 0 {
+		rules = append(rules, tools.ContainersExpression("type", req.TicketTypes))
+	}
+	if len(req.Applicants) > 0 {
+		rules = append(rules, tools.ContainersExpression("applicant", req.Applicants))
+	}
+	if req.SubmitTimeRange != nil {
+		drOpt, err := tools.DateRangeExpression("submitted_at", req.SubmitTimeRange)
 		if err != nil {
 			return nil, err
 		}
@@ -116,11 +122,11 @@ func convToListOption(bkBizIDs []int64, ticketIDs, applicants []string, statuses
 
 	// copy page for modifying.
 	pageCopy := &core.BasePage{
-		Count: page.Count,
-		Start: page.Start,
-		Limit: page.Limit,
-		Sort:  page.Sort,
-		Order: page.Order,
+		Count: req.Page.Count,
+		Start: req.Page.Start,
+		Limit: req.Page.Limit,
+		Sort:  req.Page.Sort,
+		Order: req.Page.Order,
 	}
 
 	// if count == false, default sort by submitted_at desc.
@@ -318,6 +324,31 @@ func (s *service) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]mtypes
 	}
 
 	return zoneMap, regionAreaMap, deviceTypeMap, nil
+}
+
+// getMetaNameMaps get create resource plan demand needed zoneMap, regionAreaMap and deviceTypeMap. map key is name
+func (s *service) getMetaNameMaps(kt *kit.Kit) (map[string]string, map[string]mtypes.RegionArea, error) {
+	zoneMap, regionAreaMap, _, err := s.getMetaMaps(kt)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
+	return zoneNameMap, regionNameMap, nil
+}
+
+func getMetaNameMapsFromIDMap(zoneMap map[string]string, regionAreaMap map[string]mtypes.RegionArea) (
+	map[string]string, map[string]mtypes.RegionArea) {
+
+	zoneNameMap := make(map[string]string)
+	for id, name := range zoneMap {
+		zoneNameMap[name] = id
+	}
+	regionNameMap := make(map[string]mtypes.RegionArea)
+	for _, item := range regionAreaMap {
+		regionNameMap[item.RegionName] = item
+	}
+	return zoneNameMap, regionNameMap
 }
 
 // convert CreateResPlanDemandReq slice to ResPlanTicketTable slice.

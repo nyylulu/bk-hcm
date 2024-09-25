@@ -36,9 +36,64 @@ type RPTicketWithStatusListRst struct {
 	Details []RPTicketWithStatus `json:"details"`
 }
 
+// RPTicketWithStatusAndResListRst list resource plan ticket with status and resource result.
+type RPTicketWithStatusAndResListRst struct {
+	Count   uint64                     `json:"count"`
+	Details []RPTicketWithStatusAndRes `json:"details"`
+}
+
 // RPTicketWithStatus resource plan ticket with status.
 type RPTicketWithStatus struct {
 	rpt.ResPlanTicketTable
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
+}
+
+// RPTicketWithStatusAndRes resource plan ticket with status and resource.
+type RPTicketWithStatusAndRes struct {
+	RPTicketWithStatus
+	TicketTypeName string               `json:"ticket_type_name"`
+	OriginalInfo   RPTicketResourceInfo `json:"original_info"`
+	UpdatedInfo    RPTicketResourceInfo `json:"updated_info"`
+}
+
+// RPTicketResourceInfo resource plan ticket resource info.
+type RPTicketResourceInfo struct {
+	Cvm cvmInfo `json:"cvm"`
+	Cbs cbsInfo `json:"cbs"`
+}
+
+// NewResourceInfo new resource info.
+func NewResourceInfo(cpu, memory, diskSize int64) RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			Cpu:    &cpu,
+			Memory: &memory,
+		},
+		Cbs: cbsInfo{
+			DiskSize: &diskSize,
+		},
+	}
+}
+
+// NewNullResourceInfo new null resource info.
+func NewNullResourceInfo() RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			Cpu:    nil,
+			Memory: nil,
+		},
+		Cbs: cbsInfo{
+			DiskSize: nil,
+		},
+	}
+}
+
+type cvmInfo struct {
+	Cpu    *int64 `json:"cpu"`
+	Memory *int64 `json:"memory"`
+}
+
+type cbsInfo struct {
+	DiskSize *int64 `json:"disk_size"`
 }
