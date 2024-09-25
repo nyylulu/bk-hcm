@@ -86,13 +86,10 @@ create table `obs_huawei_bills`
     `total_count`                 int(11)         not null,
     `rate`                        double          not null,
     `real_cost`                   decimal(38, 10) not null,
-    index `idx_bill_item` (`set_index`),
-    index `idx_bill_item_delete` (
-                                  `vendor`,
-                                  `bill_year`,
-                                  `bill_month`,
-                                  `main_account_id`
-        )
+    PRIMARY KEY (`id`),
+    KEY `idx_bill_item` (`set_index`),
+    KEY `idx_yearMonth` (`yearMonth`),
+    KEY `idx_bill_item_delete` (`vendor`, `bill_year`, `bill_month`, `main_account_id` )
 );
 
 insert into id_generator(`resource`, `max_id`)
@@ -148,7 +145,11 @@ CREATE TABLE obs_aws_bills
     region                                       int,
     discount_private_rate_discount               longtext,
     discount_edp_discount                        longtext,
-    memo                                         longtext
+    memo                                         longtext,
+    PRIMARY KEY (`id`),
+    KEY `idx_set_index` (`set_index`),
+    KEY `idx_yearMonth` (`yearMonth`),
+    KEY `idx_vendor_bill_year_bill_month_main_account_id` (`vendor`,`bill_year`,`bill_month`,`main_account_id`)
 );
 
 insert into id_generator(`resource`, `max_id`)
@@ -189,14 +190,10 @@ CREATE TABLE obs_gcp_bills (
     `RealCost`               double       not null,
     `ReturnCost`             double       not null,
     `DispatchProjectId`      varchar(255) not null,
-
-    index `idx_bill_item` (`set_index`),
-    index `idx_bill_item_delete` (
-                                  `vendor`,
-                                  `bill_year`,
-                                  `bill_month`,
-                                  `main_account_id`
-        )
+    PRIMARY KEY (`id`),
+    KEY `idx_set_index` (`set_index`),
+    KEY `idx_yearMonth` (`yearMonth`),
+    KEY `idx_bill_item_delete` (`vendor`, `bill_year`, `bill_month`, `main_account_id`)
 );
 
 insert into id_generator(`resource`, `max_id`)
