@@ -170,7 +170,7 @@ func (s *service) listResPlanDemand(cts *rest.Contexts, req *ptypes.ListResPlanD
 // listResPlanCrpDemands list res plan crp demands, demandIDs length is unknown, page query
 func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int64]*rpcd.ResPlanCrpDemandTable, error) {
 	opt := &types.ListOption{
-		Filter: tools.ContainersExpression("id", demandIDs),
+		Filter: tools.ContainersExpression("crp_demand_id", demandIDs),
 		Page:   core.NewDefaultBasePage(),
 	}
 
