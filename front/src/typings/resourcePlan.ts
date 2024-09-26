@@ -200,6 +200,11 @@ export interface IDiskType {
   disk_type_name: string;
 }
 
+export interface IPlanProducts {
+  plan_product_id: number;
+  plan_product_name: string;
+}
+
 interface StatusListResult {
   details: {
     status: 'init' | 'auditing' | 'rejected' | 'done' | 'failed';
@@ -209,6 +214,168 @@ interface StatusListResult {
 
 export type IResPlanTicketStatusListResult = IQueryResData<StatusListResult>;
 
+export enum ResourcesDemandsStatus {
+  CAN_APPLY = 'can_apply',
+  NOT_READY = 'not_ready',
+  EXPIRED = 'expired',
+  SPENT_ALL = 'spent_all',
+  LOCKED = 'locked',
+}
+
+export interface IListResourcesDemandsParam {
+  bk_biz_ids?: number[];
+  op_product_ids?: string[];
+  plan_product_ids?: string[];
+  crp_demand_ids?: number[];
+  obs_projects?: string[];
+  demand_classes?: string[];
+  device_classes?: string[];
+  device_types?: string[];
+  region_ids?: string[];
+  zone_ids?: string[];
+  plan_types?: string[];
+  expiring_only?: boolean;
+  expect_time_range?: {
+    start: string;
+    end: string;
+  };
+  page: IPageQuery;
+}
+
+export interface IListResourcesDemandsResult {
+  count?: number;
+  overview: {
+    total_cpu_core: number;
+    total_applied_core: number;
+    in_plan_cpu_core: number;
+    in_plan_applied_cpu_core: number;
+    out_plan_cpu_core: number;
+    out_plan_applied_cpu_core: number;
+    expiring_cpu_core: number;
+  };
+  details: {
+    crp_demand_id: number;
+    bk_biz_id: number;
+    bk_biz_name: string;
+    op_product_id: number;
+    op_product_name: string;
+    status: ResourcesDemandsStatus;
+    status_name: string;
+    demand_class: string;
+    available_year_month: string;
+    expect_time: string;
+    device_class: string;
+    device_type: string;
+    total_os: number;
+    applied_os: number;
+    remained_os: number;
+    total_cpu_core: number;
+    applied_cpu_core: number;
+    remained_cpu_core: number;
+    total_memory: number;
+    applied_memory: number;
+    remained_memory: number;
+    total_disk_size: number;
+    applied_disk_size: number;
+    remained_disk_size: number;
+    region_id: string;
+    region_name: string;
+    zone_id: string;
+    zone_name: string;
+    plan_type: string;
+    obs_project: string;
+    generation_type: string;
+    device_family: string;
+    disk_type: string;
+    disk_type_name: string;
+    disk_io: number;
+  }[];
+}
+
+export type IListResourcesDemandsItem = IListResourcesDemandsResult['details'][number];
+
+export interface IPlanDemandResult {
+  crp_demand_id: string;
+  year_month_week: string;
+  expect_start_date: string;
+  expect_end_date: string;
+  expect_time: string;
+  bk_biz_id: number;
+  bk_biz_name: string;
+  bg_id: number;
+  bg_name: string;
+  dept_id: number;
+  dept_name: string;
+  plan_product_id: number;
+  plan_product_name: string;
+  op_product_id: number;
+  op_product_name: string;
+  obs_project: string;
+  area_id: string;
+  area_name: string;
+  region_id: string;
+  region_name: string;
+  zone_id: string;
+  zone_name: string;
+  plan_type: string;
+  plan_advance_week: number;
+  expedited_postponed: string;
+  core_type_id: number;
+  core_type: string;
+  device_family: string;
+  device_class: string;
+  device_type: string;
+  os: number;
+  memory: number;
+  cpu_core: number;
+  disk_size: number;
+  disk_io: number;
+  disk_type: string;
+  disk_type_name: string;
+  demand_week: string;
+  res_pool_type: number;
+  res_pool: string;
+  res_mode: string;
+  generation_type: string;
+}
+
+export interface IListChangeLogsParam {
+  crp_demand_id: number;
+  page: IPageQuery;
+}
+
+export interface IListChangeLogsResult {
+  details: {
+    crp_demand_id: number;
+    expect_time: string;
+    bg_name: string;
+    dept_name: string;
+    plan_product_name: string;
+    op_product_name: string;
+    obs_project: string;
+    region_name: string;
+    zone_name: string;
+    demand_week: string;
+    res_pool_type: number;
+    res_pool: string;
+    device_class: string;
+    device_type: string;
+    change_cvm_amount: number;
+    after_cvm_amount: number;
+    change_core_amount: number;
+    after_core_amount: number;
+    change_ram_amount: number;
+    after_ram_amount: number;
+    changed_disk_amount: number;
+    after_disk_amount: number;
+    disk_type: string;
+    disk_io: number;
+    demand_source: string;
+    crp_sn: string;
+    create_time: string;
+    remark: string;
+  }[];
+}
 interface TicketTypesResult {
   details: {
     ticket_type: string;
