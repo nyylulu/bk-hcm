@@ -1,6 +1,6 @@
 import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import { merge, cloneDeep, isEqual } from 'lodash';
-import { getDeviceTypes, getImages, getDeviceTypesDetails } from '@/api/host/cvm';
+import { getImages, getDeviceTypesDetails } from '@/api/host/cvm';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
@@ -11,6 +11,10 @@ import { HelpFill } from 'bkui-vue/lib/icon';
 import CvmVpcSelector from '@/views/ziyanScr/components/cvm-vpc-selector/index.vue';
 import CvmSubnetSelector from '@/views/ziyanScr/components/cvm-subnet-selector/index.vue';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import InheritPackageFormItem from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
+import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
+
 import './index.scss';
 const { FormItem } = Form;
 
@@ -48,7 +52,7 @@ export default defineComponent({
   },
   emits: ['update:modelValue'],
   setup(props, { emit, expose }) {
-    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, cvmChargeMonthOptions } = useCvmChargeType();
+    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, getMonthName } = useCvmChargeType();
 
     const modelForm = ref({
       replicas: 1,
@@ -67,7 +71,9 @@ export default defineComponent({
         subnet: '',
         charge_type: cvmChargeTypes.PREPAID,
         charge_months: 36,
+        inherit_instance_id: '',
       },
+      bk_asset_id: '',
     });
     const advancedSettingVisible = ref(false);
     const rulesForm = {
@@ -154,39 +160,8 @@ export default defineComponent({
           options.value.images = [];
         });
     };
-    const loadDeviceTypes = () => {
-      const { region, zone } = modelForm.value.spec;
-      const rules = [
-        {
-          field: 'region',
-          operator: 'in',
-          value: [region],
-        },
-      ];
-      if (zone && zone !== 'cvm_separate_campus') {
-        rules.push({
-          field: 'zone',
-          operator: 'in',
-          value: [zone],
-        });
-      }
-      const params = {
-        filter: {
-          condition: 'AND',
-          rules,
-        },
-      };
-      getDeviceTypes(params)
-        .then((res) => {
-          options.value.deviceTypes = res?.data?.info || [];
-        })
-        .catch(() => {
-          options.value.deviceTypes = [];
-        });
-    };
     const loadRegionRelationOpts = () => {
       loadImages();
-      loadDeviceTypes();
     };
     const handleRegionChange = () => {
       clearRegionRelationItems();
@@ -198,12 +173,8 @@ export default defineComponent({
       modelForm.value.spec.device_type = '';
     };
 
-    const loadZoneRelationOpts = () => {
-      loadDeviceTypes();
-    };
     const handleZoneChange = () => {
       clearZoneRelationItems();
-      loadZoneRelationOpts();
     };
     const loadVpcRelationOpts = () => {
       modelForm.value.spec.subnet = '';
@@ -245,7 +216,6 @@ export default defineComponent({
         if (isEqual(newVal, modelForm.value)) return;
         initModel();
         loadRegionRelationOpts();
-        loadZoneRelationOpts();
         loadVpcRelationOpts();
       },
       { immediate: true, deep: true },
@@ -267,16 +237,34 @@ export default defineComponent({
     const clearValidate = () => {
       modelFormRef.value.clearValidate();
     };
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone } = modelForm.value.spec;
+      return {
+        region,
+        zone: zone !== 'cvm_separate_campus' ? zone : undefined,
+      };
+    });
+
+    const isRollingServer = computed(() => props.requireType === 6);
+    watch(isRollingServer, (val) => {
+      if (!val) {
+        modelForm.value.bk_asset_id = '';
+        modelForm.value.spec.inherit_instance_id = '';
+        return;
+      }
+    });
+
     expose({ validate, clearValidate });
     onMounted(() => {
       initModel();
       loadRegionRelationOpts();
-      loadZoneRelationOpts();
       loadVpcRelationOpts();
     });
+
     return () => (
       <>
-        <Form label-width='80' ref={modelFormRef} model={modelForm.value} rules={rulesForm}>
+        <Form ref={modelFormRef} model={modelForm.value} rules={rulesForm}>
           <div class='form-item-container'>
             <FormItem label='地域' required property='spec.region'>
               <area-selector
@@ -298,15 +286,26 @@ export default defineComponent({
           <div class='form-item-container'>
             <FormItem label='机型' required property='spec.device_type'>
               <div class='device-type-cls'>
-                <Select
+                <DevicetypeSelector
                   v-model={modelForm.value.spec.device_type}
-                  clearable
+                  resourceType='cvm'
+                  params={cvmDevicetypeParams.value}
                   disabled={!modelForm.value.spec.zone}
-                  placeholder={!modelForm.value.spec.zone ? '请先选择园区' : '请选择机型'}>
-                  {options.value.deviceTypes.map((item) => {
-                    return <Select.Option key={item} name={item} id={item} />;
-                  })}
-                </Select>
+                  placeholder={!modelForm.value.spec.zone ? '请先选择园区' : '请选择机型'}
+                  optionDisabled={(option) => {
+                    if (!isRollingServer.value) return false;
+                    if ((option as CvmDeviceType).device_type_class === 'SpecialType') return true;
+                    return false;
+                  }}
+                  optionDisabledTipsContent={() => '当前机型不可用，只允许选择通用机型'}
+                  sort={(a, b) => {
+                    const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
+                    const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
+                    if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType') return -1;
+                    if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
+                    return 0;
+                  }}
+                />
                 {showDiskCheck.value ? (
                   <Checkbox v-model={modelForm.value.enableDiskCheck}>
                     <div class='device-type-check'>
@@ -361,8 +360,29 @@ export default defineComponent({
               <cvm-capacity params={cvmCapacityParams.value} />
             </FormItem>
           </div>
+          {/* 滚服项目-继承套餐 */}
+          {isRollingServer.value && (
+            <InheritPackageFormItem
+              v-model={modelForm.value.bk_asset_id}
+              onValidateSuccess={(host) => {
+                modelForm.value.spec.charge_type = host.instance_charge_type;
+                modelForm.value.spec.charge_months = host.charge_months;
+                modelForm.value.spec.inherit_instance_id = host.bk_cloud_inst_id;
+              }}
+              onValidateFailed={() => {
+                // 恢复默认值
+                modelForm.value.spec.charge_type = cvmChargeTypes.PREPAID;
+                modelForm.value.spec.charge_months = 36;
+              }}
+            />
+          )}
           <FormItem label='计费模式' required property='spec.charge_type'>
-            <Radio.Group v-model={modelForm.value.spec.charge_type} type='card' style={{ width: '340px' }}>
+            <Radio.Group
+              v-model={modelForm.value.spec.charge_type}
+              type='card'
+              style={{ width: '340px' }}
+              disabled={isRollingServer.value}
+              v-bk-tooltips={{ content: '继承原有套餐，计费模式不可选', disabled: !isRollingServer.value }}>
               <Radio.Button label={cvmChargeTypes.PREPAID}>{cvmChargeTypeNames[cvmChargeTypes.PREPAID]}</Radio.Button>
               <Radio.Button label={cvmChargeTypes.POSTPAID_BY_HOUR}>
                 {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
@@ -387,10 +407,18 @@ export default defineComponent({
                 v-model={modelForm.value.spec.charge_months}
                 filterable={false}
                 clearable={false}
-                style={{ width: '340px' }}>
-                {cvmChargeMonthOptions.map((option: { id: number; name: string }) => (
-                  <Select.Option key={option.id} id={option.id} name={option.name}></Select.Option>
-                ))}
+                style={{ width: '340px' }}
+                disabled={isRollingServer.value}
+                v-bk-tooltips={{
+                  content: '继承原有套餐包年包月时长，此处的购买时长为剩余时长',
+                  disabled: !isRollingServer.value,
+                }}>
+                {(function () {
+                  const options = isRollingServer.value
+                    ? Array.from({ length: 48 }, (v, i) => i + 1)
+                    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
+                  return options.map((option) => <bk-option key={option} value={option} name={getMonthName(option)} />);
+                })()}
               </Select>
             </FormItem>
           )}

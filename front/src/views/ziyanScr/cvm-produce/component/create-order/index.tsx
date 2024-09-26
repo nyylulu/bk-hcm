@@ -4,7 +4,7 @@ import { getRequireTypes } from '@/api/host/task';
 import { createCvmProduceOrder } from '@/api/host/cvm';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import CvmForm from './cvm-form';
-import { Dialog, Form, Select } from 'bkui-vue';
+import { Dialog, Form, Message, Select } from 'bkui-vue';
 import './index.scss';
 const { FormItem } = Form;
 export default defineComponent({
@@ -109,7 +109,7 @@ export default defineComponent({
         bk_username: userStore.username,
       })
         .then(() => {
-          // this.$message.success('创建成功');
+          Message({ theme: 'success', message: '提交成功' });
           emit('updateProduceData');
         })
         .catch(() => {});
@@ -134,14 +134,14 @@ export default defineComponent({
     return () => (
       <Dialog
         v-bind={attrs}
-        width='900'
+        width='1300'
         v-model:isShow={isDisplay.value}
         title={props.title}
         onClosed={handleOrderFormCancel}>
         {{
           default: () => (
             <div>
-              <Form label-width='80' ref={topModelFormRef} model={topModelForm.value} rules={topRulesForm.value}>
+              <Form ref={topModelFormRef} model={topModelForm.value} rules={topRulesForm.value}>
                 <div class='form-item-container'>
                   <FormItem label='业务' required>
                     {`资源运营服务`}

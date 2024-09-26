@@ -23,14 +23,12 @@ export const useRequireTypes = () => {
     }
   };
 
-  const findRequireType = (someValue: any) => {
-    return requireTypes.value.find((item) => {
-      return Object.values(item).some((value: any) => value.require_type === someValue);
-    });
+  const findRequireType = (require_type: any) => {
+    return requireTypes.value.find((item) => item.require_type === require_type);
   };
 
-  const getValueCn = (someValue: any) => {
-    return findRequireType(someValue)?.require_name || someValue;
+  const getValueCn = (require_type: any) => {
+    return findRequireType(require_type)?.require_name || require_type;
   };
 
   onMounted(() => {
@@ -38,6 +36,6 @@ export const useRequireTypes = () => {
   });
 
   return {
-    transformRequireTypes :getValueCn,
+    transformRequireTypes: getValueCn,
   };
 };

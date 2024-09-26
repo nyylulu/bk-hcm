@@ -17,22 +17,20 @@ export default function useCvmChargeType() {
   };
 
   // cvm购买时长选项
-  const cvmChargeMonths = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
   const getMonthName = (m: number) => {
     if (m === 6) {
       return '半年';
     }
-    if (m >= 12) {
+    if (m % 12 === 0) {
       return `${m / 12}年`;
     }
     return `${m}月`;
   };
-  const cvmChargeMonthOptions = cvmChargeMonths.map((month) => ({ id: month, name: getMonthName(month) }));
 
   return {
     cvmChargeTypes,
     cvmChargeTypeNames,
     cvmChargeTypeTips,
-    cvmChargeMonthOptions,
+    getMonthName,
   };
 }
