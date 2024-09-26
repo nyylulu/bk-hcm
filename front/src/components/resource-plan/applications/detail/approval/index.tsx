@@ -22,7 +22,6 @@ export default defineComponent({
 
     const renderIcon = () => {
       switch (props.statusInfo?.status) {
-        case 'todo':
         case 'auditing':
           return <i class='hcm-icon bkhcm-icon-jiazai'></i>;
         case 'rejected':

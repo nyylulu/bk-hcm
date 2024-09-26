@@ -72,7 +72,7 @@ type InstanceQueryResp struct {
 	Result   *InstanceQueryRst `json:"result"`
 }
 
-// InstanceQueryResp cvm instance query result
+// InstanceQueryRst cvm instance query result
 type InstanceQueryRst struct {
 	Total int             `json:"total"`
 	Data  []*InstanceItem `json:"data"`
@@ -95,6 +95,56 @@ type InstanceItem struct {
 	CreateTime      string `json:"createTime"`
 	Pool            int    `json:"pool"`
 	ObsProject      string `json:"obsProject"`
+}
+
+// DemandChangeLogQueryResp cvm demand change log query response
+type DemandChangeLogQueryResp struct {
+	RespMeta  `json:",inline"`
+	Result    *DemandChangeLogQueryRst `json:"result"`
+	Errorinfo interface{}              `json:"errorinfo"`
+}
+
+// DemandChangeLogQueryRst cvm demand change log query result
+type DemandChangeLogQueryRst struct {
+	Total int                               `json:"total"`
+	Data  []*DemandChangeLogQueryDemandItem `json:"data"`
+}
+
+// DemandChangeLogQueryDemandItem cvm demand change log query demand item
+type DemandChangeLogQueryDemandItem struct {
+	DemandId int                            `json:"demandId"`
+	Info     []*DemandChangeLogQueryLogItem `json:"info"`
+}
+
+// DemandChangeLogQueryLogItem cvm demand change log query log item
+type DemandChangeLogQueryLogItem struct {
+	DemandId            int     `json:"demandId"`
+	UseTime             string  `json:"useTime"`
+	BgName              string  `json:"bgName"`
+	DeptName            string  `json:"deptName"`
+	PlanProductName     string  `json:"planProductName"`
+	ProjectName         string  `json:"projectName"`
+	CityName            string  `json:"cityName"`
+	ZoneName            string  `json:"zoneName"`
+	RequirementWeekType string  `json:"requirementWeekType"`
+	ResourcePoolType    int     `json:"resourcePoolType"`
+	InstanceType        string  `json:"instanceType"`
+	InstanceModel       string  `json:"instanceModel"`
+	ChangeCvmAmount     float32 `json:"changeCvmAmount"`
+	AfterCvmAmount      float32 `json:"afterCvmAmount"`
+	ChangeCoreAmount    float32 `json:"changeCoreAmount"`
+	AfterCoreAmount     float32 `json:"afterCoreAmount"`
+	ChangeRamAmount     float32 `json:"changeRamAmount"`
+	AfterRamAmount      float32 `json:"afterRamAmount"`
+	DiskTypeName        string  `json:"diskTypeName"`
+	InstanceIO          int     `json:"instanceIO"`
+	ChangedDiskAmount   float32 `json:"changedDiskAmount"`
+	AfterDiskAmount     float32 `json:"afterDiskAmount"`
+	SourceType          string  `json:"sourceType"`
+	OrderId             string  `json:"orderId"`
+	CreateTime          string  `json:"createTime"`
+	Desc                string  `json:"desc"`
+	ResourcePoolName    string  `json:"resourcePoolName"`
 }
 
 // CvmCbsPlanQueryResp cvm and cbs plan query response
@@ -142,6 +192,7 @@ type CvmCbsPlanQueryItem struct {
 	ExpeditedPostponed    string  `json:"expeditedPostponed"`
 	CoreType              int     `json:"coreType"`
 	CoreTypeName          string  `json:"coreTypeName"`
+	InstanceFamily        string  `json:"instanceFamily"`
 	InstanceType          string  `json:"instanceType"`
 	InstanceModel         string  `json:"instanceModel"`
 	InstanceIO            int     `json:"instanceIO"`
@@ -213,7 +264,7 @@ type QueryPlanOrderResp struct {
 	Result   map[string]*QueryPlanOrderRst `json:"result"`
 }
 
-// AddCvmCbsPlanRst query cvm and cbs plan order result
+// QueryPlanOrderRst query cvm and cbs plan order result
 type QueryPlanOrderRst struct {
 	Code int            `json:"code"`
 	Data *PlanOrderData `json:"data"`
@@ -276,7 +327,7 @@ type VpcResp struct {
 	Result   []*VpcInfo `json:"result"`
 }
 
-// VpcRst cvm vpc query result
+// VpcInfo cvm vpc query result
 type VpcInfo struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
@@ -288,7 +339,7 @@ type SubnetResp struct {
 	Result   []*SubnetInfo `json:"result"`
 }
 
-// SubnetRst cvm subnet query result
+// SubnetInfo cvm subnet query result
 type SubnetInfo struct {
 	Id        string `json:"id"`
 	Name      string `json:"name"`

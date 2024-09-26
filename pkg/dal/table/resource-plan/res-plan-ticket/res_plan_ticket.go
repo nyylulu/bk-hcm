@@ -68,7 +68,7 @@ type ResPlanTicketTable struct {
 	// ID 唯一ID
 	ID string `db:"id" json:"id" validate:"lte=64"`
 	// Type 单据类型
-	Type enumor.RPTicketType `db:"type" json:"type" validate:"lte=64"`
+	Type enumor.RPTicketType `db:"type" json:"ticket_type" validate:"lte=64"`
 	// Demands 需求列表，每个需求包括：original、updated两个部分
 	Demands types.JsonField `db:"demands" json:"demands" validate:"lte=64"`
 	// Applicant 申请人

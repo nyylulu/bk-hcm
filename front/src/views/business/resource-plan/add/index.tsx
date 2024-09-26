@@ -7,18 +7,20 @@ import List from './list';
 import Memo from './memo';
 import Button from './button';
 import Add from './add';
-
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 
 export default defineComponent({
   setup() {
+    const { getBizsId } = useWhereAmI();
+
     const basicRef = ref();
     const listRef = ref();
     const memoRef = ref();
     const isShowAdd = ref(false);
     const initDemand = ref();
     const planTicket = ref<IPlanTicket>({
-      bk_biz_id: undefined,
+      bk_biz_id: getBizsId(),
       demand_class: 'CVM',
       remark: planRemark,
       demands: [],

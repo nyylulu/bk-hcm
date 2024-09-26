@@ -8,8 +8,8 @@ import { useResourcePlanStore } from '@/store';
 import { useI18n } from 'vue-i18n';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import Panel from '@/components/panel';
-
-import type { IListTicketsParam, IListTicketsResult } from '@/typings/resourcePlan';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import type { IBizResourcesTicketsParam, IOpResourcesTicketsParam, IResourcesTicketItem } from '@/typings/resourcePlan';
 import type { IPageQuery } from '@/typings';
 
 export default defineComponent({
@@ -20,31 +20,58 @@ export default defineComponent({
     },
   },
   setup(props, { expose }) {
-    let searchModel: Partial<IListTicketsParam> = undefined;
+    let searchModel: Partial<IBizResourcesTicketsParam | IOpResourcesTicketsParam>;
 
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
     const { columns, settings } = useColumns('forecastDemand');
     const router = useRouter();
+    const { getBizsId } = useWhereAmI();
 
     const tableColumns = computed(() => {
+      const orderItem = {
+        label: t('预测单号'),
+        field: 'id',
+        isFormItem: true,
+        render: ({ data }: { data: IResourcesTicketItem }) => (
+          <Button text theme='primary' onClick={() => handleToDetail(data)}>
+            {data.id}
+          </Button>
+        ),
+      };
+      if (props.isBiz) {
+        return [orderItem, ...columns];
+      }
       return [
+        orderItem,
         {
-          label: t('预测单号'),
-          field: 'forecast_order',
-          isFormItem: true,
-          render: ({ data }: { data: IListTicketsResult['detail'][0] }) => (
-            <Button text theme='primary' onClick={() => handleToDetail(data)}>
-              {data.id}
-            </Button>
-          ),
+          label: '业务',
+          field: 'bk_biz_name',
+          isDefaultShow: true,
+        },
+        {
+          label: t('运营产品'),
+          field: 'op_product_name',
+          isDefaultShow: true,
+        },
+        {
+          label: t('规划产品'),
+          field: 'plan_product_name',
+          isDefaultShow: true,
         },
         ...columns,
       ];
     });
 
     const getData = (page: IPageQuery) => {
-      return resourcePlanStore.reqListTickets({
+      if (props.isBiz) {
+        return resourcePlanStore.getBizResourcesTicketsList(getBizsId(), {
+          page,
+          ...searchModel,
+        });
+      }
+
+      return resourcePlanStore.getOpResourcesTicketsList({
         page,
         ...searchModel,
       });
@@ -61,7 +88,7 @@ export default defineComponent({
       resetPagination,
     } = useTable(getData);
 
-    const handleToDetail = (data: IListTicketsResult['detail'][0]) => {
+    const handleToDetail = (data: IResourcesTicketItem) => {
       if (props.isBiz) {
         router.push({
           path: '/business/applications/resource-plan/detail',
@@ -75,7 +102,7 @@ export default defineComponent({
       }
     };
 
-    const searchTableData = (data: Partial<IListTicketsParam>) => {
+    const searchTableData = (data: Partial<IBizResourcesTicketsParam | IOpResourcesTicketsParam>) => {
       searchModel = data;
       resetPagination();
       triggerApi();

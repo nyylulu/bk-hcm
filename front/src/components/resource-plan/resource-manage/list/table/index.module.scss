@@ -1,3 +1,63 @@
-.mb-16{
+.toolbar-buttons {
+  display: flex;
+  column-gap: 8px;
   margin-bottom: 16px;
+}
+
+.overview {
+  display: flex;
+  justify-content: flex-end;
+  column-gap: 32px;
+  margin-bottom: 16px;
+  font-size: 12px;
+
+  .cpu-stats {
+    display: flex;
+    column-gap: 16px;
+  }
+
+  .num {
+    color: #e6a23c;
+  }
+}
+
+.operation-column {
+  height: 100%;
+  display: flex;
+  align-items: center;
+
+  .more-action {
+    margin-left: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+
+    & > i {
+      position: absolute;
+    }
+
+    &:hover {
+      background-color: #f0f1f5;
+    }
+
+    &.current-operate-row {
+      background-color: #f0f1f5;
+    }
+
+    &.disabled {
+      background-color: #fff;
+      color: #dcdee5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.plus-icon {
+  font-size: 16px;
+  margin: 0 2px 0 -2px;
 }

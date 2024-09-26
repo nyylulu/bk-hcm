@@ -103,6 +103,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
         "bk_biz_name": "业务",
         "op_product_id": 222,
         "op_product_name": "运营产品",
+        "plan_product_id": 333,
+        "plan_product_name": "规划产品",
         "status": "locked",
         "status_name": "变更中",
         "demand_class": "CVM",
@@ -176,6 +178,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | bk_biz_name          | string | 业务名称                                                                              |
 | op_product_id        | int    | 运营产品ID                                                                            |
 | op_product_name      | string | 运营产品名称                                                                            |
+| plan_product_id      | int    | 规划产品ID                                                                            |
+| plan_product_name    | string | 规划产品名称                                                                            |
 | status               | string | 需求状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中） |
 | status_name          | string | 需求状态名称                                                                            |
 | demand_class         | string | 预测的需求类型                                                                           |

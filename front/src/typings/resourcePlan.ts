@@ -1,48 +1,75 @@
-import { IPageQuery, IQueryResData } from '@/typings';
+import { IPageQuery, IQueryResData, IListResData } from '@/typings';
+import { AdjustType } from './plan';
 
-export interface IListTicketsParam {
-  bk_biz_ids?: number[];
-  expect_time_range?: {
-    start: string;
-    end: string;
-  };
-  obs_projects?: string[];
+export interface IBizResourcesTicketsParam {
   ticket_ids?: string[];
+  statuses?: string[];
+  ticket_types?: string[];
   applicants?: string[];
   submit_time_range?: {
-    start: string;
-    end: string;
+    start?: string;
+    end?: string;
   };
+  page?: IPageQuery;
+}
+
+export interface IResourcesTicketItem {
+  id: string;
+  bk_biz_id: number;
+  bk_biz_name: string;
+  op_product_id: number;
+  op_product_name: string;
+  plan_product_id: number;
+  plan_product_name: string;
+  demand_class: string;
+  status: string;
+  status_name: string;
+  ticket_type: string;
+  ticket_type_name: string;
+  original_info: {
+    cvm: {
+      cpu_core: number;
+      memory: number;
+    };
+    cbs: {
+      disk_size: number;
+    };
+  };
+  updated_info: {
+    cvm: {
+      cpu_core: number;
+      memory: number;
+    };
+    cbs: {
+      disk_size: number;
+    };
+  };
+  applicant: string;
+  remark: string;
+  submitted_at: string;
+  completed_at: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type IBizResourcesTicketsResult = IListResData<IResourcesTicketItem>;
+
+export interface IOpResourcesTicketsParam {
+  bk_biz_ids?: number[];
+  op_product_ids?: number[];
+  plan_product_ids?: number[];
+  ticket_ids?: string[];
   statuses?: string[];
-  page: IPageQuery;
+  ticket_types?: string[];
+  applicants?: string[];
+  submit_time_range?: {
+    start?: string;
+    end?: string;
+  };
+  page?: IPageQuery;
 }
 
-export type ResourcePlanIListTicketsResult = IQueryResData<IListTicketsResult>;
-
-export interface IListTicketsResult {
-  count?: number;
-  detail?: {
-    id: string;
-    expect_time: string;
-    bk_biz_id: number;
-    bk_biz_name: string;
-    bk_product_id: number;
-    bk_product_name: string;
-    plan_product_id: number;
-    plan_product_name: string;
-    demand_class: string;
-    cpu_core: number;
-    memory: number;
-    disk_size: number;
-    demand_week: string;
-    demand_week_name: string;
-    remark: string;
-    applicant: string;
-    submitted_at: string;
-    created_at: string;
-    updated_at: string;
-  }[];
-}
+export type IOpResourcesTicketsResult = IListResData<IResourcesTicketItem>;
 
 export type ResourcePlanTicketByIdResult = IQueryResData<TicketByIdResult>;
 
@@ -50,32 +77,30 @@ export interface TicketByIdResult {
   id: string;
   base_info: TicketBaseInfo;
   status_info: {
-    status: 'todo' | 'auditing' | 'rejected' | 'done';
+    status: string;
     status_name: string;
     itsm_sn: string;
     itsm_url: string;
     crp_sn: string;
     crp_url: string;
   };
-  demands: TicketDemands[];
+  demands: {
+    original_info: TicketDemands;
+    updated_info: TicketDemands;
+  }[];
 }
 
 export interface TicketDemands {
   obs_project: string;
   expect_time: string;
-  area_id: string;
-  area_name: string;
   region_id: string;
-  region_name: string;
   zone_id: string;
-  zone_name: string;
-  res_mode: string;
-  demand_source: string;
-  remark: string;
+  demand_res_types: string[];
   cvm: {
     res_mode: string;
     device_family: string;
     device_type: string;
+    device_class: string;
     cpu_core: number;
     memory: number;
     res_pool: string;
@@ -90,20 +115,21 @@ export interface TicketDemands {
 }
 
 export interface TicketBaseInfo {
+  type: string;
+  type_name: string;
   applicant: string;
   bk_biz_id: number;
   bk_biz_name: string;
-  bk_product_id: number;
-  bk_product_name: string;
+  op_product_id: number;
+  op_product_name: string;
   plan_product_id: number;
   plan_product_name: string;
   virtual_dept_id: number;
   virtual_dept_name: string;
-  demand_class: string;
-  created_at: string;
-  submitted_at: string;
   remark: string;
+  submitted_at: string;
 }
+
 export interface IPlanTicket {
   bk_biz_id: number;
   demand_class: string;
@@ -137,6 +163,8 @@ export interface IPlanTicketDemand {
     disk_num: number;
     disk_per_size: number;
   };
+  adjustType: AdjustType;
+  crp_demand_id: number;
 }
 
 export interface IBizOrgRelation {
@@ -172,6 +200,11 @@ export interface IDiskType {
   disk_type_name: string;
 }
 
+export interface IPlanProducts {
+  plan_product_id: number;
+  plan_product_name: string;
+}
+
 interface StatusListResult {
   details: {
     status: 'init' | 'auditing' | 'rejected' | 'done' | 'failed';
@@ -180,3 +213,201 @@ interface StatusListResult {
 }
 
 export type IResPlanTicketStatusListResult = IQueryResData<StatusListResult>;
+
+export enum ResourcesDemandsStatus {
+  CAN_APPLY = 'can_apply',
+  NOT_READY = 'not_ready',
+  EXPIRED = 'expired',
+  SPENT_ALL = 'spent_all',
+  LOCKED = 'locked',
+}
+
+export interface IListResourcesDemandsParam {
+  bk_biz_ids?: number[];
+  op_product_ids?: string[];
+  plan_product_ids?: string[];
+  crp_demand_ids?: number[];
+  obs_projects?: string[];
+  demand_classes?: string[];
+  device_classes?: string[];
+  device_types?: string[];
+  region_ids?: string[];
+  zone_ids?: string[];
+  plan_types?: string[];
+  expiring_only?: boolean;
+  expect_time_range?: {
+    start: string;
+    end: string;
+  };
+  page: IPageQuery;
+}
+
+export interface IListResourcesDemandsResult {
+  count?: number;
+  overview: {
+    total_cpu_core: number;
+    total_applied_core: number;
+    in_plan_cpu_core: number;
+    in_plan_applied_cpu_core: number;
+    out_plan_cpu_core: number;
+    out_plan_applied_cpu_core: number;
+    expiring_cpu_core: number;
+  };
+  details: {
+    crp_demand_id: number;
+    bk_biz_id: number;
+    bk_biz_name: string;
+    op_product_id: number;
+    op_product_name: string;
+    status: ResourcesDemandsStatus;
+    status_name: string;
+    demand_class: string;
+    available_year_month: string;
+    expect_time: string;
+    device_class: string;
+    device_type: string;
+    total_os: number;
+    applied_os: number;
+    remained_os: number;
+    total_cpu_core: number;
+    applied_cpu_core: number;
+    remained_cpu_core: number;
+    total_memory: number;
+    applied_memory: number;
+    remained_memory: number;
+    total_disk_size: number;
+    applied_disk_size: number;
+    remained_disk_size: number;
+    region_id: string;
+    region_name: string;
+    zone_id: string;
+    zone_name: string;
+    plan_type: string;
+    obs_project: string;
+    generation_type: string;
+    device_family: string;
+    disk_type: string;
+    disk_type_name: string;
+    disk_io: number;
+  }[];
+}
+
+export type IListResourcesDemandsItem = IListResourcesDemandsResult['details'][number];
+
+export interface IPlanDemandResult {
+  crp_demand_id: string;
+  year_month_week: string;
+  expect_start_date: string;
+  expect_end_date: string;
+  expect_time: string;
+  bk_biz_id: number;
+  bk_biz_name: string;
+  bg_id: number;
+  bg_name: string;
+  dept_id: number;
+  dept_name: string;
+  plan_product_id: number;
+  plan_product_name: string;
+  op_product_id: number;
+  op_product_name: string;
+  obs_project: string;
+  area_id: string;
+  area_name: string;
+  region_id: string;
+  region_name: string;
+  zone_id: string;
+  zone_name: string;
+  plan_type: string;
+  plan_advance_week: number;
+  expedited_postponed: string;
+  core_type_id: number;
+  core_type: string;
+  device_family: string;
+  device_class: string;
+  device_type: string;
+  os: number;
+  memory: number;
+  cpu_core: number;
+  disk_size: number;
+  disk_io: number;
+  disk_type: string;
+  disk_type_name: string;
+  demand_week: string;
+  res_pool_type: number;
+  res_pool: string;
+  res_mode: string;
+  generation_type: string;
+}
+
+export interface IListChangeLogsParam {
+  crp_demand_id: number;
+  page: IPageQuery;
+}
+
+export interface IListChangeLogsResult {
+  details: {
+    crp_demand_id: number;
+    expect_time: string;
+    bg_name: string;
+    dept_name: string;
+    plan_product_name: string;
+    op_product_name: string;
+    obs_project: string;
+    region_name: string;
+    zone_name: string;
+    demand_week: string;
+    res_pool_type: number;
+    res_pool: string;
+    device_class: string;
+    device_type: string;
+    change_cvm_amount: number;
+    after_cvm_amount: number;
+    change_core_amount: number;
+    after_core_amount: number;
+    change_ram_amount: number;
+    after_ram_amount: number;
+    changed_disk_amount: number;
+    after_disk_amount: number;
+    disk_type: string;
+    disk_io: number;
+    demand_source: string;
+    crp_sn: string;
+    create_time: string;
+    remark: string;
+  }[];
+}
+interface TicketTypesResult {
+  details: {
+    ticket_type: string;
+    ticket_type_name: string;
+  }[];
+}
+
+export type ITicketTypesResult = IQueryResData<TicketTypesResult>;
+
+interface OpProductsResult {
+  details: {
+    op_product_id: number;
+    op_product_name: string;
+  }[];
+}
+
+export type IOpProductsResult = IQueryResData<OpProductsResult>;
+
+interface PlanProductsResult {
+  details: {
+    plan_product_id: number;
+    plan_product_name: string;
+  }[];
+}
+
+export type IPlanProductsResult = IQueryResData<PlanProductsResult>;
+
+interface BizsByOpProductResult {
+  details: Array<{
+    bk_biz_id: number;
+    bk_biz_name: string;
+  }>;
+}
+
+export type IBizsByOpProductResult = IQueryResData<BizsByOpProductResult>;

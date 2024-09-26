@@ -10,18 +10,17 @@ POST /api/v1/woa/plans/resources/tickets/list
 
 ### 输入参数
 
-| 参数名称              | 参数类型         | 必选 | 描述                    |
-|-------------------|--------------|----|-----------------------|
-| bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部        |
-| op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部      |
-| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部      |
-| ticket_id         | string       | 否  | 资源预测申请单据ID，精确匹配       |
-| statuses          | string array | 否  | 单据状态列表，不传时查询全部，最多传20个 |
-| obs_projects      | string array | 否  | 项目类型列表，不传时查询全部        |
-| ticket_types      | string array | 否  | 单据类型列表，不传时查询全部        |
-| applicant         | string       | 否  | 提单人，精确匹配              |
-| submit_time_range | object       | 否  | 提单时间范围                |
-| page              | object       | 是  | 分页设置                  |
+| 参数名称              | 参数类型         | 必选 | 描述                               |
+|-------------------|--------------|----|----------------------------------|
+| bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部                   |
+| op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部                 |
+| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部                 |
+| ticket_ids        | string array | 否  | 资源预测申请单据ID列表，精确匹配，不传时查询全部，最多传20个 |
+| statuses          | string array | 否  | 单据状态列表，不传时查询全部，最多传20个            |
+| ticket_types      | string array | 否  | 单据类型列表，不传时查询全部，最多传20个            |
+| applicants        | string array | 否  | 提单人，精确匹配，不传时查询全部，最多传20个          |
+| submit_time_range | object       | 否  | 提单时间范围                           |
+| page              | object       | 是  | 分页设置                             |
 
 #### submit_time_range
 
@@ -32,13 +31,13 @@ POST /api/v1/woa/plans/resources/tickets/list
 
 #### page
 
-| 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                                        |
-|-------|--------|----|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但不返回查询结果详情数据，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但不返回总记录条数 count                                 |
-| start | int    | 否  | 记录开始位置，start 起始值为0                                                                                                                                                        |
-| limit | int    | 否  | 每页限制条数，最大500，不能为0                                                                                                                                                         |
-| sort  | string | 否  | 排序字段，返回数据将按该字段进行排序，默认根据submitted_at(提单时间)倒序排序，枚举值为：cpu_core(CPU核心数)、memory(内存大小)、disk_size(云盘大小)、expect_time(期望交付时间)、submitted_at(提单时间)、created_at(创建时间)、updated_at(更新时间) |
-| order | string | 否  | 排序顺序，枚举值：ASC(升序)、DESC(降序)                                                                                                                                                 |
+| 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                                                                                                                                    |
+|-------|--------|----|-----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但不返回查询结果详情数据，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但不返回总记录条数 count                                                                                                                             |
+| start | int    | 否  | 记录开始位置，start 起始值为0                                                                                                                                                                                                                                                    |
+| limit | int    | 否  | 每页限制条数，最大500，不能为0                                                                                                                                                                                                                                                     |
+| sort  | string | 否  | 排序字段，返回数据将按该字段进行排序，默认根据submitted_at(提单时间)倒序排序，枚举值为：original_cpu_core(原始CPU核心数)、updated_cpu_core(变更后CPU核心数)、original_memory(原始内存大小)、updated_memory(变更后内存大小)、original_disk_size(原始云盘大小)、updated_disk_size(变更后云盘大小)、submitted_at(提单时间)、created_at(创建时间)、updated_at(更新时间) |
+| order | string | 否  | 排序顺序，枚举值：ASC(升序)、DESC(降序)                                                                                                                                                                                                                                             |
 
 ### 调用示例
 
@@ -53,24 +52,23 @@ POST /api/v1/woa/plans/resources/tickets/list
   "plan_product_ids": [
     34
   ],
-  "ticket_id": "0000000001",
+  "ticket_ids": [
+    "0000000001"
+  ],
   "statuses": [
     "init",
     "auditing",
     "done",
     "rejected"
   ],
-  "obs_projects": [
-    "常规项目",
-    "2024春节保障",
-    "2024机房裁撤"
-  ],
   "ticket_types": [
     "add",
-    "update",
+    "adjust",
     "cancel"
   ],
-  "applicant": "shuotan",
+  "applicants": [
+    "zhangsan"
+  ],
   "submit_time_range": {
     "start": "2023-03-01",
     "end": "2023-06-01"
@@ -122,7 +120,7 @@ POST /api/v1/woa/plans/resources/tickets/list
             "disk_size": 123
           }
         },
-        "applicant": "shuotan",
+        "applicant": "zhangsan",
         "remark": "这里是预测说明",
         "submitted_at": "2019-07-29 11:57:20",
         "completed_at": "2019-07-29 11:58:00",
@@ -163,7 +161,7 @@ POST /api/v1/woa/plans/resources/tickets/list
 | demand_class      | string | 预测的需求类型                                                    |
 | status            | string | 单据状态（枚举值：init, auditing, rejected, done, canceled, failed） |
 | status_name       | string | 单据状态名称                                                     |
-| ticket_type       | string | 单据类型（枚举值：add, update, cancel）                              |
+| ticket_type       | string | 单据类型（枚举值：add, adjust, cancel）                              |
 | ticket_type_name  | string | 单据类型名称                                                     |
 | original_info     | object | 调整前的需求信息                                                   |
 | updated_info      | object | 调整后的需求信息                                                   |

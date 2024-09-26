@@ -1,0 +1,11 @@
+.warning {
+  margin-bottom: 16px;
+}
+.statistics {
+  display: flex;
+  flex-direction: column;
+
+  .num {
+    color: #e6a23c;
+  }
+}

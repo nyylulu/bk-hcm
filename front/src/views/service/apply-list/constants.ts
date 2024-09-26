@@ -87,7 +87,7 @@ export const APPLY_TYPES = [
   },
   {
     label: '资源预测',
-    name: 'resourcePlan',
+    name: 'resource_plan',
     rules: [],
   },
   // {

@@ -20,6 +20,10 @@ export default defineComponent({
 
     const baseList = computed(() => [
       {
+        label: t('需求类型'),
+        value: props.baseInfo?.type_name,
+      },
+      {
         label: t('业务名称'),
         value: props.baseInfo?.bk_biz_name,
       },
@@ -29,15 +33,11 @@ export default defineComponent({
       },
       {
         label: t('运营产品'),
-        value: props.baseInfo?.bk_product_name,
+        value: props.baseInfo?.op_product_name,
       },
       {
         label: t('规划产品'),
         value: props.baseInfo?.plan_product_name,
-      },
-      {
-        label: t('预测类型'),
-        value: props.baseInfo?.demand_class,
       },
       {
         label: t('提单人'),

@@ -134,6 +134,17 @@ type InstanceQueryParam struct {
 	AssetId    []string `json:"instanceAssetId,omitempty"`
 }
 
+// DemandChangeLogQueryReq cvm and cbs demand change log query request
+type DemandChangeLogQueryReq struct {
+	ReqMeta `json:",inline"`
+	Params  *DemandChangeLogQueryParam `json:"params"`
+}
+
+type DemandChangeLogQueryParam struct {
+	Page         *Page   `json:"page"`
+	DemandIdList []int64 `json:"demandIdList,omitempty"`
+}
+
 // CvmCbsPlanQueryReq cvm and cbs plan info query request
 type CvmCbsPlanQueryReq struct {
 	ReqMeta `json:",inline"`
@@ -143,12 +154,12 @@ type CvmCbsPlanQueryReq struct {
 // CvmCbsPlanQueryParam cvm and cbs plan info query parameters
 type CvmCbsPlanQueryParam struct {
 	Page            *Page    `json:"page"`
-	Period          *Period  `json:"period"`
+	Period          *Period  `json:"period,omitempty"`
 	UseTime         *UseTime `json:"useTime,omitempty"`
 	OrderIdList     []string `json:"orderIdList,omitempty"`
 	DemandIdList    []int64  `json:"demandIdList,omitempty"`
-	BgName          []string `json:"bgName"`
-	DeptName        []string `json:"deptName"`
+	BgName          []string `json:"bgName,omitempty"`
+	DeptName        []string `json:"deptName,omitempty"`
 	InstanceType    []string `json:"instanceType,omitempty"`
 	PlanProductName []string `json:"planProductName,omitempty"`
 	ProjectName     []string `json:"projectName,omitempty"`

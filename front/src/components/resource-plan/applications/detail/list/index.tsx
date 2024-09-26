@@ -9,7 +9,12 @@ import type { TicketDemands } from '@/typings/resourcePlan';
 export default defineComponent({
   props: {
     demands: {
-      type: Array as PropType<TicketDemands[]>,
+      type: Array as PropType<
+        {
+          original_info: TicketDemands;
+          updated_info: TicketDemands;
+        }[]
+      >,
     },
     isBiz: {
       type: Boolean,
@@ -23,13 +28,7 @@ export default defineComponent({
 
     return () => (
       <Panel title={t('资源预测')}>
-        <bk-table
-          row-hover='auto'
-          show-overflow-tooltip
-          settings={settings.value}
-          columns={columns}
-          data={props.demands}
-        />
+        <bk-table row-hover='auto' settings={settings.value} columns={columns} data={props.demands} />
       </Panel>
     );
   },

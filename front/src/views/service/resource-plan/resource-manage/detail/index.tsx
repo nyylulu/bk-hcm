@@ -1,17 +1,38 @@
 // 服务管理 资源预测 详情
-
 import { defineComponent } from 'vue';
-import Table from '@/components/resource-plan/resource-manage/detail/list/index';
+import { useRoute, useRouter } from 'vue-router';
+import { Button } from 'bkui-vue';
 import Basic from '@/components/resource-plan/resource-manage/detail/basic/index';
+import Table from '@/components/resource-plan/resource-manage/detail/list/index';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import cssModule from './index.module.scss';
+import { useI18n } from 'vue-i18n';
 
 export default defineComponent({
   setup() {
+    const router = useRouter();
+    const route = useRoute();
+    const { t } = useI18n();
+
+    const handleAdjust = () => {
+      router.push({
+        path: '/service/resource-plan/list',
+        query: {
+          planIds: route.query.id,
+        },
+      });
+    };
+
     return () => (
       <>
-        <section class={cssModule.home}>资源管理 资源预测 详情</section>
-        <Basic isBiz={false}></Basic>
-        <Table isBiz={false}></Table>
+        <DetailHeader>{t('资源预测详情')}</DetailHeader>
+        <section class={cssModule['resource-forecast-details-section']}>
+          <Button class={cssModule.button} onClick={handleAdjust}>
+            {t('调整预测')}
+          </Button>
+          <Basic class={cssModule['mb-16']} isBiz={false}></Basic>
+          <Table isBiz={false}></Table>
+        </section>
       </>
     );
   },

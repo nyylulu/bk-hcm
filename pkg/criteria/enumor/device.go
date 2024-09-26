@@ -58,3 +58,13 @@ func (t DiskType) Name() string {
 func GetDiskTypeMembers() []DiskType {
 	return []DiskType{DiskPremium, DiskSSD}
 }
+
+// GetDiskTypeFromName get DiskType from name.
+func GetDiskTypeFromName(name string) (DiskType, error) {
+	for t, n := range diskTypeNameMap {
+		if n == name {
+			return t, nil
+		}
+	}
+	return "", fmt.Errorf("unsupported disk type: %s", name)
+}

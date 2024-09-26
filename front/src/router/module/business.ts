@@ -537,7 +537,7 @@ const businesseMenus: RouteRecordRaw[] = [
           {
             path: '/business/applications/resource-plan/detail',
             name: 'BizInvoiceResourceDetail',
-            component: () => import('@/views/service/resource-plan/applications/detail/index'),
+            component: () => import('@/views/business/applications/resource-plan/detail'),
             meta: {
               activeKey: 'bizInvoiceResourceDetail',
               notMenu: true,
@@ -670,6 +670,16 @@ const businesseMenus: RouteRecordRaw[] = [
           // breadcrumb: ['资源管理', '负载均衡'],
           notMenu: true,
           isFilterAccount: true,
+        },
+      },
+      {
+        path: '/business/service/resource-plan-mod',
+        name: 'bizModPlanList',
+        component: () => import('@/views/business/resource-plan/mod'),
+        meta: {
+          backRouter: -1,
+          activeKey: 'planList',
+          notMenu: true,
         },
       },
     ],

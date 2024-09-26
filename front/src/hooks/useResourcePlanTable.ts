@@ -1,10 +1,21 @@
 import { ref } from 'vue';
 import type { IPageQuery } from '@/typings';
 
-export const useTable = <T>(callBack: (arg: IPageQuery) => Promise<T>, key = 'details') => {
+type DefaultKey<T, K extends string> = K extends keyof T ? K : never;
+
+export const useTable = <
+  T,
+  K1 extends keyof T = DefaultKey<T, 'details'>,
+  K2 extends keyof T = DefaultKey<T, 'overview'>,
+>(
+  callBack: (arg: IPageQuery) => Promise<T>,
+  key: K1 = 'details' as K1,
+  key2: K2 = 'overview' as K2,
+) => {
   // 查询列表相关状态
   const isLoading = ref(false);
-  const tableData = ref<T>();
+  const tableData = ref<T[K1]>();
+  const overview = ref<T[K2]>();
   const pagination = ref({
     current: 1,
     limit: 10,
@@ -32,6 +43,7 @@ export const useTable = <T>(callBack: (arg: IPageQuery) => Promise<T>, key = 'de
     ])
       .then(([listResult, countResult]: [any, any]) => {
         tableData.value = listResult?.data?.[key] || ([] as T);
+        overview.value = listResult?.data?.[key2];
         pagination.value.count = countResult?.data?.count || 0;
       })
       .finally(() => {
@@ -69,6 +81,7 @@ export const useTable = <T>(callBack: (arg: IPageQuery) => Promise<T>, key = 'de
 
   return {
     tableData,
+    overview,
     pagination,
     isLoading,
     handlePageChange,

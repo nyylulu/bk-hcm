@@ -50,6 +50,7 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{id}
     },
     "demands": [
       {
+        "demand_class": "CVM",
         "original_info": {
           "obs_project": "常规项目",
           "expect_time": "2024-11-12",
@@ -125,7 +126,7 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{id}
 
 | 参数名称              | 参数类型   | 描述                            |
 |-------------------|--------|-------------------------------|
-| type              | string | 单据类型（枚举值：add, update, cancel） |
+| type              | string | 单据类型（枚举值：add, adjust, cancel） |
 | type_name         | string | 单据类型名称                        |
 | applicant         | string | 申请人                           |
 | bk_biz_id         | int    | CC业务ID                        |
@@ -155,6 +156,7 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{id}
 
 | 参数名称          | 参数类型   | 描述      |
 |---------------|--------|---------|
+| demand_class  | string | 预测的需求类型 |
 | original_info | object | 调整前需求信息 |
 | updated_info  | object | 调整后需求信息 |
 

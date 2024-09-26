@@ -1,5 +1,5 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive } from 'vue';
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert } from 'bkui-vue';
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -23,6 +23,11 @@ import applicationSideslider from '../application-sideslider';
 import { useRouter, useRoute } from 'vue-router';
 import { timeFormatter, expectedDeliveryTime } from '@/common/util';
 import { cloneDeep } from 'lodash';
+import { VerifyStatus, VerifyStatusMap } from './constants';
+import usePlanStore from '@/store/usePlanStore';
+import WName from '@/components/w-name';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import { ChargeType } from '@/typings/plan';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { Group: RadioGroup, Button: RadioButton } = Radio;
@@ -46,6 +51,10 @@ export default defineComponent({
     const isLoading = ref(false);
     const title = ref('增加资源需求');
     const CVMapplication = ref(false);
+    const { getBizsId, whereAmI } = useWhereAmI();
+    const planStore = usePlanStore();
+    const availablePrepaidSet = ref(new Set());
+    const availablePostpaidSet = ref(new Set());
     const order = ref({
       loading: false,
       submitting: false,
@@ -87,6 +96,9 @@ export default defineComponent({
         requireTypes: [],
       },
     });
+    const computedAvailableSet = computed(() =>
+      resourceForm.value.charge_type === ChargeType.PREPAID ? availablePrepaidSet.value : availablePostpaidSet.value,
+    );
     const formRef = ref();
     const IDCPMIndex = ref(-1);
     const QCLOUDCVMIndex = ref(-1);
@@ -211,6 +223,24 @@ export default defineComponent({
         );
       },
     });
+    const CVMVerifyColumns = [
+      {
+        field: 'verify_result',
+        label: '预检校验状态',
+        width: 110,
+        render({ cell }: { cell: VerifyStatus }) {
+          return <span class={`status-${cell}`}>{VerifyStatusMap[cell] || '待校验'}</span>;
+        },
+      },
+      {
+        field: 'reason',
+        label: '预检校验原因',
+        width: 120,
+        render({ cell }: { cell: string }) {
+          return cell || '--';
+        },
+      },
+    ];
     // 添加按钮侧边栏公共表单对象
     const resourceForm = ref({
       resourceType: 'QCLOUDCVM', // 主机类型
@@ -315,7 +345,7 @@ export default defineComponent({
     const onQcloudZoneChange = () => {
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.device_type = '';
-        loadDeviceTypes();
+        // loadDeviceTypes();
       }
     };
     const onQcloudAffinityChange = (val: any) => {
@@ -398,6 +428,8 @@ export default defineComponent({
 
       const { info } = await apiService.getDeviceTypes(params);
       deviceTypes.value = info || [];
+      const set = computedAvailableSet.value;
+      deviceTypes.value = deviceTypes.value.sort((a, b) => Number(set.has(b)) - Number(set.has(a)));
     };
 
     const clonelist = (row: any, resourceType: string) => {
@@ -441,7 +473,7 @@ export default defineComponent({
     watch(
       () => resourceForm.value.zone,
       () => {
-        loadDeviceTypes();
+        // loadDeviceTypes();
         loadImages();
       },
     );
@@ -756,6 +788,23 @@ export default defineComponent({
         isLoading.value = false;
       }
     };
+
+    const handleVerify = async () => {
+      await formRef.value.validate();
+      const suborders = cloudTableData.value;
+      isLoading.value = true;
+      try {
+        const res = await planStore.verify_resource_demand({
+          bk_biz_id: accountStore.bizs,
+          require_type: 1,
+          suborders,
+        });
+      }
+      finally {
+        isLoading.value = false;
+      }
+    };
+
     const handleCancel = () => {
       if (props.isbusiness) {
         router.push({
@@ -785,6 +834,53 @@ export default defineComponent({
         loading.value = false;
       }
     };
+    const computedBiz = computed(() => {
+      return whereAmI.value === Senarios.business ? getBizsId() : order.value.model.bkBizId;
+    });
+
+    watch(
+      [
+        () => computedBiz.value,
+        () => order.value.model.requireType,
+        () => resourceForm.value.region,
+        () => resourceForm.value.zone,
+      ],
+      async ([bk_biz_id, require_type, region, zone]) => {
+        if (!bk_biz_id || !require_type || !region || !zone) return;
+        const { data } = await planStore.list_config_cvm_charge_type_device_type({
+          bk_biz_id,
+          require_type,
+          region,
+          zone,
+        });
+        const { info } = data;
+        for (const item of info) {
+          const { charge_type, device_types } = item;
+          let set = availablePostpaidSet.value;
+          if (charge_type === ChargeType.PREPAID) {
+            set = availablePrepaidSet.value;
+          }
+          for (const device of device_types) {
+            const { device_type, available } = device;
+            if (available) set.add(device_type);
+          }
+        }
+        await loadDeviceTypes();
+      },
+      {
+        deep: true,
+      },
+    );
+
+    watch(
+      [() => resourceForm.value.charge_type, () => computedAvailableSet.value],
+      () => {
+        const set = computedAvailableSet.value;
+        deviceTypes.value = deviceTypes.value.sort((a, b) => Number(set.has(b)) - Number(set.has(a)));
+      },
+      { deep: true },
+    );
+
     return () => (
       <div class='host-application-form-wrapper'>
         {!props.isbusiness && <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
@@ -824,7 +920,18 @@ export default defineComponent({
                 </bk-form-item>
               </div>
               <div class='flex-row align-content-center'>
-                <bk-form-item label='期望交付时间' required property='expectTime' class='mr24'>
+                <bk-form-item
+                  label='期望交付时间'
+                  required
+                  property='expectTime'
+                  class='mr24'
+                  description={() => (
+                    <span>
+                      期望申领时间默认为当月，在资源预测额度充足时，过单后会立即申领。如希望审批时按指定时间过单后生产，请联系
+                      <WName name={'ICR'} />
+                      (IEG资源服务助手)确认{' '}
+                    </span>
+                  )}>
                   <bk-date-picker
                     class='item-warp-component'
                     v-model={order.value.model.expectTime}
@@ -875,10 +982,16 @@ export default defineComponent({
                 <Button onClick={handleApplication}>一键申请</Button>
               </div>
               <bk-form-item label='云主机'>
+                <p class={'statistics'}>
+                  <span class={'label'}>包年包月CPU总数：</span>
+                  <span class={'value'}>102核</span>
+                  <span class={'ml24 label'}>按量计费CPU总数：</span>
+                  <span class={'value'}>200核</span>
+                </p>
                 <bk-table
                   align='left'
                   row-hover='auto'
-                  columns={[...CloudHostcolumns, CloudHostoperation.value]}
+                  columns={[...CloudHostcolumns, ...CVMVerifyColumns, CloudHostoperation.value]}
                   data={cloudTableData.value}
                   show-overflow-tooltip
                 />
@@ -905,7 +1018,31 @@ export default defineComponent({
                   resize={false}
                   placeholder='请输入申请单备注'></Input>
               </bk-form-item>
-              <bk-form-item>
+            </CommonCard>
+
+            <CommonCard title={() => '需求预检'}>
+              <div>
+                <Alert theme='danger' showIcon={false} class={'mb24'}>
+                  <p class={'status-FAILED'}>
+                    前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
+                    <Button theme='primary' text>
+                      查看资源预测
+                    </Button>
+                  </p>
+                  <p class={'status-FAILED'}>
+                    资源需求中有使用按量计费模式，长期使用成本较高，建议提预测单13周后转包年包月，
+                    <Button theme='primary' text>
+                      去创建提预测单
+                    </Button>
+                  </p>
+                </Alert>
+
+                {!!cloudTableData.value.length && (
+                  <Button class='mr16' theme='primary' loading={isLoading.value} onClick={handleVerify}>
+                    需求校验
+                  </Button>
+                )}
+
                 <Button
                   class='mr16'
                   theme='primary'
@@ -939,7 +1076,7 @@ export default defineComponent({
                   }}>
                   取消
                 </Button>
-              </bk-form-item>
+              </div>
             </CommonCard>
           </bk-form>
 
@@ -995,12 +1132,21 @@ export default defineComponent({
                           onChange={onQcloudZoneChange}
                         />
                       </bk-form-item>
+                      <Alert class={'mb8'} theme='warning'>
+                        当前地域无资源预测，提预测单后再按量申请，<Button theme='primary' text>去创建提预测单</Button>
+                      </Alert>
                       {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                         <>
                           <bk-form-item label='计费模式' required property='charge_type'>
                             <RadioGroup v-model={resourceForm.value.charge_type} type='card' style={{ width: '260px' }}>
-                              <RadioButton label='PREPAID'>包年包月</RadioButton>
-                              <RadioButton label='POSTPAID_BY_HOUR'>按量计费</RadioButton>
+                              <RadioButton label='PREPAID' disabled={availablePrepaidSet.value.size === 0} v-bk-tooltips={{
+                                content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                disabled: availablePrepaidSet.value.size > 0
+                              }}>包年包月</RadioButton>
+                              <RadioButton label='POSTPAID_BY_HOUR' disabled={availablePostpaidSet.value.size === 0} v-bk-tooltips={{
+                                content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                disabled: availablePostpaidSet.value.size > 0
+                              }}>按量计费</RadioButton>
                             </RadioGroup>
                             <bk-alert theme='info' class='form-item-tips'>
                               {resourceForm.value.charge_type === 'PREPAID' ? (
@@ -1076,7 +1222,15 @@ export default defineComponent({
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 filterable>
                                 {deviceTypes.value.map((deviceType) => (
-                                  <bk-option key={deviceType} label={deviceType} value={deviceType} />
+                                  <bk-option
+                                    key={deviceType}
+                                    label={deviceType}
+                                    value={deviceType}
+                                    disabled={!computedAvailableSet.value.has(deviceType)}
+                                    v-bk-tooltips={{
+                                      content: '当前机型不在有效预测范围内',
+                                    }}
+                                  />
                                 ))}
                               </bk-select>
                             </bk-form-item>

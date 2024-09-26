@@ -52,4 +52,7 @@ const (
 	BkBizIDMaxLimit = uint(3000)
 	// ExcelExportLimit two hundred thousands 二十万
 	ExcelExportLimit = 20_0000
+
+	// SearchBizBelongingMaxLimit 调用CMDB API查询业务归属的最大限制数量
+	SearchBizBelongingMaxLimit = 20
 )
