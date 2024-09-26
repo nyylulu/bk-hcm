@@ -22,8 +22,9 @@ package bill
 import (
 	"encoding/json"
 	"fmt"
-	"hcm/pkg/dal/table/types"
 	"time"
+
+	"hcm/pkg/dal/table/types"
 
 	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
 	syncaction "hcm/cmd/task-server/logics/action/obs/sync"
@@ -124,13 +125,13 @@ func (sc *SyncController) syncLoop(kt *kit.Kit) {
 func (sc *SyncController) doSync(kt *kit.Kit) {
 	pendingSyncRecordList, err := sc.listSyncingRecord(kt)
 	if err != nil {
-		logs.Warnf("list syncing record failed, err %s", err.Error())
+		logs.Errorf("list syncing record failed, err %s", err.Error())
 		return
 	}
 	for _, record := range pendingSyncRecordList {
 		if err := sc.handleSyncRecord(kt, record); err != nil {
-			logs.Warnf("handle sync record of vendor %s %d-%d failed, err %s",
-				record.Vendor, record.BillYear, record.BillMonth)
+			logs.Errorf("handle sync record of vendor %s %d-%d failed, err %v, rid: %s",
+				record.Vendor, record.BillYear, record.BillMonth, err, kt.Rid)
 			continue
 		}
 	}
@@ -145,7 +146,7 @@ func (sc *SyncController) listSyncingRecord(kt *kit.Kit) ([]*billcore.SyncRecord
 		Page:   core.NewDefaultBasePage(),
 	})
 	if err != nil {
-		logs.Warnf("list pending bill sync record failed, err %s, rid: %s", err.Error(), kt.Rid)
+		logs.Errorf("list pending bill sync record failed, err %s, rid: %s", err.Error(), kt.Rid)
 		return nil, err
 	}
 	return pendingSyncRecordList.Details, nil
