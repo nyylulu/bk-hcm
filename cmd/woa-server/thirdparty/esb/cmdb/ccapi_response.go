@@ -13,7 +13,10 @@
 // Package cmdb CC API response
 package cmdb
 
-import "strings"
+import (
+	"strings"
+	"time"
+)
 
 // RespMeta cc response meta info
 type RespMeta struct {
@@ -148,6 +151,16 @@ type HostInfo struct {
 	BkCpu int64 `json:"bk_cpu"`
 	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
 	BkSvrSourceTypeID string `json:"bk_svr_source_type_id"`
+	// 标准设备类型(腾讯机型代号)
+	BkSvrDeviceClsName string `json:"bk_svr_device_cls_name"`
+	// 实例计费模式
+	InstanceChargeType string `json:"instance_charge_type"`
+	// 套餐计费起始时间
+	BillingStartTime time.Time `json:"billing_start_time"`
+	// 套餐计费过期时间
+	BillingExpireTime time.Time `json:"billing_expire_time"`
+	// 云主机实例ID
+	CloudInstID string `json:"bk_cloud_inst_id"`
 }
 
 // GetUniqIp get CC host unique inner ip

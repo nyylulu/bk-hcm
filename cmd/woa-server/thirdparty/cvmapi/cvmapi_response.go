@@ -396,3 +396,39 @@ type ErpProcessItem struct {
 	OrderId    string `json:"orderCode"`
 	ActionType string `json:"actionType"`
 }
+
+// QueryCvmInstanceTypeResp query cvm instance type response
+type QueryCvmInstanceTypeResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryCvmInstanceTypeRst `json:"result"`
+}
+
+// QueryCvmInstanceTypeRst query cvm instance type result
+type QueryCvmInstanceTypeRst struct {
+	Data []QueryCvmInstanceTypeItem `json:"data"`
+}
+
+// InstanceTypeClass 通/专用机型，SpecialType专用，CommonType通用
+type InstanceTypeClass string
+
+const (
+	// SpecialType 专用机型
+	SpecialType InstanceTypeClass = "SpecialType"
+	// CommonType 通用机型
+	CommonType InstanceTypeClass = "CommonType"
+)
+
+// QueryCvmInstanceTypeItem query cvm instance type item
+type QueryCvmInstanceTypeItem struct {
+	InstanceClassDesc     string            `json:"instanceClassDesc"`     // 实例类型
+	InstanceType          string            `json:"instanceType"`          // 实例规格
+	InstanceTypeClass     InstanceTypeClass `json:"instanceTypeClass"`     // 通/专用机型，SpecialType专用，CommonType通用
+	InstanceTypeClassDesc string            `json:"instanceTypeClassDesc"` // // 通/专用机型
+	RamAmount             float64           `json:"ramAmount"`             // 内存
+	GPUType               string            `json:"gpuType"`               // GPU类型
+	FirmName              string            `json:"firmName"`              // 厂商
+	InstanceGroup         string            `json:"instanceGroup"`         // 机型族
+	CPUAmount             float64           `json:"cpuAmount"`             // CPU数量
+	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
+	InstanceClass         string            `json:"instanceClass"`         //实例类型
+}

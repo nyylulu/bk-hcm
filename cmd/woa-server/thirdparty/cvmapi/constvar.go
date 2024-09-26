@@ -24,12 +24,13 @@ var mapObsProject = map[int64]string{
 	3: "机房裁撤",
 	4: "常规项目",
 	5: "短租项目",
+	6: "滚服项目",
 }
 
 // GetObsProject get OBS project by CR require type.
 func GetObsProject(requireType int64) string {
 	switch requireType {
-	case 1, 4, 5:
+	case 1, 4, 5, 6:
 		return mapObsProject[requireType]
 	case 2:
 		return getSpringObsProject()
@@ -167,6 +168,8 @@ const (
 	CvmReturnStatusMethod = "queryCvmReturnOrder"
 	// CvmReturnDetailMethod 根据单号查询退回CVM方法
 	CvmReturnDetailMethod = "queryReturnCvmByOrder"
+	// QueryCvmInstanceType 查询CVM机型信息
+	QueryCvmInstanceType = "queryCvmInstanceType"
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"

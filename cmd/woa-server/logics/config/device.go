@@ -17,7 +17,10 @@ import (
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/mapstr"
+	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
+	"hcm/cmd/woa-server/thirdparty"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -58,11 +61,14 @@ type DeviceIf interface {
 }
 
 // NewDeviceOp creates a device interface
-func NewDeviceOp() DeviceIf {
-	return &device{}
+func NewDeviceOp(thirdCli *thirdparty.Client) DeviceIf {
+	return &device{
+		cvm: thirdCli.CVM,
+	}
 }
 
 type device struct {
+	cvm cvmapi.CVMClientInterface
 }
 
 // GetDeviceWithCapacity get device config list with enable_capacity
@@ -167,10 +173,37 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	if err != nil {
 		return nil, err
 	}
+	instTypes := make([]string, 0)
+	for _, inst := range insts {
+		instTypes = append(instTypes, utils.GetStrByInterface(inst))
+	}
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: instTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+
+	infos := make([]types.DeviceTypeItem, 0)
+	for _, item := range resp.Result.Data {
+		infos = append(infos, types.DeviceTypeItem{
+			DeviceType:      item.InstanceType,
+			DeviceTypeClass: item.InstanceTypeClass,
+			CPUAmount:       item.CPUAmount,
+		})
+	}
 
 	rst := &types.GetDeviceTypeResult{
-		Count: int64(len(insts)),
-		Info:  insts,
+		Count: int64(len(infos)),
+		Info:  infos,
 	}
 
 	return rst, nil

@@ -63,6 +63,7 @@ type OrderCreateParams struct {
 	ObsProject        string      `json:"obsProject"`
 	ChargeType        ChargeType  `json:"chargeType,omitempty"`
 	ChargeMonths      uint        `json:"chargeMonths,omitempty"`
+	InheritInstanceId string      `json:"inheritInstanceId,omitempty"`
 }
 
 // ChargeType charge type
@@ -471,4 +472,17 @@ type ReturnDetailReq struct {
 type ReturnDetailParam struct {
 	OrderId string `json:"orderId"`
 	Page    *Page  `json:"page,omitempty"`
+}
+
+// QueryCvmInstanceTypeReq query cvm instance type request
+type QueryCvmInstanceTypeReq struct {
+	ReqMeta `json:",inline"`
+	Params  *QueryCvmInstanceTypeParams `json:"params"`
+}
+
+// QueryCvmInstanceTypeParams query cvm instance type parameters
+type QueryCvmInstanceTypeParams struct {
+	InstanceClass []string `json:"instanceClass,omitempty"`
+	InstanceType  []string `json:"instanceType,omitempty"`
+	InstanceGroup []string `json:"instanceGroup,omitempty"`
 }
