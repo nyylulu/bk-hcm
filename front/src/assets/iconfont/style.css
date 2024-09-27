@@ -269,6 +269,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-close:before {
 	content: "\e15d";
 }
+.bkhcm-icon-release-note:before {
+	content: "\e16d";
+}
 .bkhcm-icon-jiebang:before {
 	content: "\e156";
 }

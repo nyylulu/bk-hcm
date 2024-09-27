@@ -105,6 +105,10 @@ type Interface interface {
 	RecommendApplyOrder(kit *kit.Kit, param *types.RecommendApplyReq) (*types.RecommendApplyRst, error)
 	// GetApplyModify gets resource apply order modify records
 	GetApplyModify(kit *kit.Kit, param *types.GetApplyModifyReq) (*types.GetApplyModifyRst, error)
+
+	// CheckRollingServerHost check rolling server host
+	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*types.CheckRollingServerHostResp,
+		error)
 }
 
 // scheduler provides resource apply service
@@ -1637,4 +1641,91 @@ func (s *scheduler) GetApplyModify(kt *kit.Kit, param *types.GetApplyModifyReq) 
 	rst.Info = insts
 
 	return rst, nil
+}
+
+// CheckRollingServerHost check rolling server host
+func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
+	*types.CheckRollingServerHostResp, error) {
+
+	rule := querybuilder.CombinedRule{
+		Condition: querybuilder.ConditionOr,
+		Rules: []querybuilder.Rule{
+			querybuilder.AtomRule{
+				Field:    "bk_asset_id",
+				Operator: querybuilder.OperatorEqual,
+				Value:    param.AssetID,
+			},
+		},
+	}
+	fields := []string{"bk_svr_device_cls_name", "instance_charge_type", "billing_start_time", "billing_expire_time",
+		"bk_cloud_inst_id"}
+	page := cmdb.BasePage{Start: 0, Limit: 1}
+
+	var info []*cmdb.HostInfo
+	if param.BizID != 0 {
+		req := &cmdb.ListBizHostReq{
+			BkBizId:            param.BizID,
+			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+			Fields:             fields,
+			Page:               page,
+		}
+		resp, err := s.cc.ListBizHost(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+		info = resp.Data.Info
+
+	} else {
+		req := &cmdb.ListHostReq{
+			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+			Fields:             fields,
+			Page:               page,
+		}
+		resp, err := s.cc.ListHost(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+		info = resp.Data.Info
+	}
+
+	if len(info) != 1 {
+		logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(info), param, kt.Rid)
+		return nil, errors.New("host is invalid")
+	}
+
+	host := info[0]
+	chargeMonths := calculateMonths(time.Now(), host.BillingExpireTime)
+
+	// 兜底逻辑，如果当前时间加申请的月份数时间还是小于原来的套餐时间，那么就加上一个月
+	if time.Now().AddDate(0, chargeMonths, 0).Before(host.BillingExpireTime) {
+		chargeMonths++
+	}
+
+	return &types.CheckRollingServerHostResp{
+		DeviceType:           host.BkSvrDeviceClsName,
+		InstanceChargeType:   host.InstanceChargeType,
+		BillingStartTime:     host.BillingStartTime,
+		OldBillingExpireTime: host.BillingExpireTime,
+		NewBillingExpireTime: time.Now().AddDate(0, chargeMonths, 0),
+		ChargeMonths:         chargeMonths,
+		CloudInstID:          host.CloudInstID,
+	}, nil
+}
+
+func calculateMonths(startTime, endTime time.Time) int {
+	// 计算年份差和月份差
+	yearDiff := endTime.Year() - startTime.Year()
+	monthDiff := endTime.Month() - startTime.Month()
+
+	// 总月数 = 年份差 * 12 + 月份差
+	totalMonths := yearDiff*12 + int(monthDiff)
+
+	// 如果结束时间的日大于开始时间的日，则添加一个月
+	if endTime.Day() > startTime.Day() {
+		totalMonths++
+	}
+
+	return totalMonths
 }

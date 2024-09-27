@@ -152,6 +152,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	exchangeRate := cc.AccountServer().ExchangeRate
 	var rateCtrl *bill.ExchangeRateController
 	if exchangeRate.EnablePull {
+		logs.Infof("exchange rate controller enabled, config: %+v", exchangeRate)
 		rateOpt := &bill.ExchangeRateOpt{
 			FromCurrencyCodes: exchangeRate.FromCurrency,
 			ToCurrencyCodes:   exchangeRate.ToCurrency,
@@ -163,8 +164,10 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		var err error
 		rateCtrl, err = bill.NewExchangeRateController(rateOpt)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("fail to init exchange rate controller, err: %v", err)
 		}
+	} else {
+		logs.Infof("exchange rate controller disabled")
 	}
 
 	finOpsCfg := cc.AccountServer().FinOps

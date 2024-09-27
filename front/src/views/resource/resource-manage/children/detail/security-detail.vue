@@ -4,7 +4,7 @@ import DetailTab from '../../common/tab/detail-tab';
 import SecurityInfo from '../components/security/security-info.vue';
 import SecurityRelate from '../components/security/security-relate';
 import SecurityRule from '../components/security/security-rule.vue';
-import SecurityBindCvm from '../components/security/security-bind-cvm';
+import SecurityBindCvm from '../components/security/security-bind-cvm/index';
 import { useI18n } from 'vue-i18n';
 
 import { watch, ref, reactive } from 'vue';

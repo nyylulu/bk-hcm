@@ -735,6 +735,11 @@ func (m *Matcher) getRequireName(requireType int64) string {
 		return "机房裁撤"
 	case 4:
 		return "故障替换"
+	case 5:
+		return "短租项目"
+	case 6:
+		return "滚服项目"
+
 	default:
 		return ""
 	}

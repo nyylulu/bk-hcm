@@ -70,7 +70,7 @@ func (s *service) ExportMainAccountSummary(cts *rest.Contexts) (interface{}, err
 	rootAccountIDMap := make(map[string]struct{})
 	for _, detail := range result {
 		mainAccountIDMap[detail.MainAccountID] = struct{}{}
-		productIDMap[detail.BkBizID] = struct{}{}
+		productIDMap[detail.ProductID] = struct{}{}
 		rootAccountIDMap[detail.RootAccountID] = struct{}{}
 	}
 	mainAccountIDs := converter.MapKeyToSlice(mainAccountIDMap)

@@ -292,6 +292,8 @@ function handleCustomErrorCode(error: any) {
   }
   // zenlayer 账单导入错误码
   if ([2000015, 2000016, 2000017].includes(error.code)) return;
+  // 滚服项目-继承套餐校验
+  if (error.code === 2000000 && error.message === 'host is invalid') return;
 
   // bk_ticket失效后的登录弹框
   if (
@@ -303,7 +305,8 @@ function handleCustomErrorCode(error: any) {
     InvalidLogin();
   }
 
-  if (error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) Message({ theme: 'error', message: error.message });
+  if (error.code !== 0 && error.code !== 2000009 && error.code !== 2000012)
+    Message({ theme: 'error', message: error.message });
 }
 
 /**

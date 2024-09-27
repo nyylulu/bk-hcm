@@ -10,16 +10,16 @@ POST /api/v1/woa/task/findmany/apply
 
 ### 输入参数
 
-| 参数名称      | 参数类型       | 必选 | 描述        |
-|--------------|--------------|------|------------|
-| bk_biz_id    | int          | 否   | 业务ID      |
-| order_id	   | int	      | 否   | 资源申请单号 |
-| bk_username  | string	      | 否   | 提单人      |
-| require_type | int array    | 否   | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换 |
+| 参数名称      | 参数类型       | 必选 | 描述                                                                |
+|--------------|--------------|------|-------------------------------------------------------------------|
+| bk_biz_id    | int          | 否   | 业务ID                                                              |
+| order_id	   | int	      | 否   | 资源申请单号                                                            |
+| bk_username  | string	      | 否   | 提单人                                                               |
+| require_type | int array    | 否   | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换; 5: 短租项目; 6: 滚服项目                  |
 | stage        | string array | 否   | 单据执行阶段。"UNCOMMIT": 未提交, "AUDIT": 审核中, "RUNNING": 生产中, "DONE": 已完成 |
-| start        | string	      | 否   | 单据创建时间过滤条件起点日期，格式如"2022-05-01" |
-| end          | string	      | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01" |
-| page         | object	      | 是   | 分页信息     |
+| start        | string	      | 否   | 单据创建时间过滤条件起点日期，格式如"2022-05-01"                                    |
+| end          | string	      | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01"                                    |
+| page         | object	      | 是   | 分页信息                                                              |
 
 #### page
 
@@ -125,7 +125,7 @@ POST /api/v1/woa/task/findmany/apply
 | suborder_id         | string    | 资源申请子单号  |
 | bk_biz_id	          | int	      | 业务ID         |
 | bk_username         |	string    | 提单人         |
-| require_type        |	int	      | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤 |
+| require_type        |	int	      | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换; 5: 短租项目; 6: 滚服项目 |
 | resource_type       |	string    | 资源类型。"QCLOUDCVM": 腾讯云虚拟机, "IDCPM": IDC物理机, "QCLOUDDVM": Qcloud富容器, "IDCDVM": IDC富容器 |
 | expect_time         |	string    | 期望交付时间    |
 | remark	          | string    | 备注           |

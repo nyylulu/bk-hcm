@@ -1,7 +1,8 @@
-import { defineComponent, ref, onMounted, watch } from 'vue';
+import { defineComponent, ref, onMounted, watch, computed } from 'vue';
 import { Button, Form } from 'bkui-vue';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
@@ -190,13 +191,14 @@ export default defineComponent({
       device.value.filter.cpu = '';
       device.value.filter.mem = '';
       device.value.filter.device_type = [];
-      CVMapplicationDeviceTypes();
     };
-    // 获取一键申请侧边栏地域
-    const CVMapplicationDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(device.value.filter);
-      device.value.options.device_types = info || [];
-    };
+
+    // 一键申请侧边栏 - 机型过滤参数
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone, device_group, cpu, mem, enable_capacity } = device.value.filter;
+      return { region, zone, device_group, cpu, mem, enable_capacity };
+    });
+
     // 地域有数据时禁用cpu 和内存
     const handleCVMDeviceTypeChange = () => {
       device.value.filter.cpu = '';
@@ -259,7 +261,6 @@ export default defineComponent({
     );
     onMounted(() => {
       getfetchOptionslist();
-      CVMapplicationDeviceTypes();
       loadRestrict();
       getviewapplication();
     });
@@ -312,18 +313,15 @@ export default defineComponent({
           </FormItem>
 
           <FormItem label='机型'>
-            <bk-select
+            <DevicetypeSelector
               class='bk-form-content'
               v-model={device.value.filter.device_type}
-              clearable
-              disabled={deviceTypeDisabled.value}
+              resourceType='cvm'
+              params={cvmDevicetypeParams.value}
               multiple
-              filterable
-              onChange={handleCVMDeviceTypeChange}>
-              {device.value.options.device_types.map((item) => (
-                <bk-option key={item} value={item} label={item}></bk-option>
-              ))}
-            </bk-select>
+              disabled={deviceTypeDisabled.value}
+              onChange={handleCVMDeviceTypeChange}
+            />
           </FormItem>
 
           <FormItem label='CPU(核)'>

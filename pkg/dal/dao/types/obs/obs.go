@@ -35,3 +35,6 @@ type ListOBSBillItemAwsDetails = core.ListResultT[tableobs.OBSBillItemAws]
 
 // ListOBSBillItemGcpDetails Obs gcp bill item
 type ListOBSBillItemGcpDetails = core.ListResultT[tableobs.OBSBillItemGcp]
+
+// ListOBSBillItemZenlayerDetails Obs Zenlayer bill item
+type ListOBSBillItemZenlayerDetails = core.ListResultT[tableobs.OBSBillItemZenlayer]
