@@ -401,6 +401,11 @@ func (p PlanType) Validate() error {
 	return nil
 }
 
+// GetPlanTypeHcmMembers get hcm PlanType's members.
+func GetPlanTypeHcmMembers() []PlanType {
+	return []PlanType{PlanTypeHcmInPlan, PlanTypeHcmOutPlan}
+}
+
 // ToAnotherPlanType the plan type of crp to the plan type of hcm, or vice versa.
 func (p PlanType) ToAnotherPlanType() PlanType {
 	switch p {

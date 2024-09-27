@@ -26,6 +26,12 @@ type DiskTypeItem struct {
 	DiskTypeName string          `json:"disk_type_name"`
 }
 
+// TicketTypeItem defines ticket type item.
+type TicketTypeItem struct {
+	TicketType     enumor.RPTicketType `json:"ticket_type"`
+	TicketTypeName string              `json:"ticket_type_name"`
+}
+
 // ListZoneReq defines list zone request.
 type ListZoneReq struct {
 	RegionIDs []string `json:"region_ids"`

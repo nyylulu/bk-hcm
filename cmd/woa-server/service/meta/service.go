@@ -56,6 +56,8 @@ func (s *service) initMetaService(h *rest.Handler) {
 	h.Add("ListZone", http.MethodPost, "/meta/zone/list", s.ListZone)
 	h.Add("ListDeviceClass", http.MethodGet, "/meta/device_class/list", s.ListDeviceClass)
 	h.Add("ListDeviceType", http.MethodPost, "/meta/device_type/list", s.ListDeviceType)
+	h.Add("ListPlanType", http.MethodPost, "/metas/plan_types/list", s.ListPlanType)
+	h.Add("ListTicketType", http.MethodPost, "/metas/ticket_types/list", s.ListTicketType)
 	h.Add("ListBizsByOpProduct", http.MethodPost, "/metas/bizs/by/op_product/list", s.ListBizsByOpProduct)
 	h.Add("ListOpProducts", http.MethodPost, "/metas/op_products/list", s.ListOpProducts)
 	h.Add("ListPlanProducts", http.MethodPost, "/metas/plan_products/list", s.ListPlanProducts)
