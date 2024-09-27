@@ -64,6 +64,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("ListResMode", http.MethodGet, "/plan/res_mode/list", s.ListResMode)
 	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)
 	h.Add("ListResPlanTicketStatus", http.MethodGet, "/plan/res_plan_ticket_status/list", s.ListRPTicketStatus)
+	h.Add("GetDemandAvailableTime", http.MethodPost, "/plans/demands/available_times/get", s.GetDemandAvailableTime)
 
 	// ticket
 	h.Add("ListResPlanTicket", http.MethodPost, "/plans/resources/tickets/list", s.ListResPlanTicket)

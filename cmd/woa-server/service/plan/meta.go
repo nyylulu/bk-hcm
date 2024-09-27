@@ -16,6 +16,8 @@ import (
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -47,4 +49,30 @@ func (s *service) ListRPTicketStatus(_ *rest.Contexts) (interface{}, error) {
 		})
 	}
 	return &core.ListResultT[ptypes.RPTicketStatusItem]{Details: details}, nil
+}
+
+// GetDemandAvailableTime gets resource plan demand available time according to expect time.
+// docs: docs/api-docs/web-server/docs/scr/resource-plan/get_demand_available_time.md
+func (s *service) GetDemandAvailableTime(cts *rest.Contexts) (interface{}, error) {
+	req := new(ptypes.DemandAvailTimeReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to get demand available time, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	date, err := req.Validate()
+	if err != nil {
+		logs.Errorf("failed to validate get demand available time parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	yearMonthWeek := GetDemandYearMonthWeek(date)
+	drWeek := GetDemandDateRangeInWeek(date)
+	drMonth := GetDemandDateRangeInMonth(date)
+
+	return &ptypes.DemandAvailTimeResp{
+		YearMonthWeek: yearMonthWeek,
+		DRInWeek:      drWeek,
+		DRInMonth:     drMonth,
+	}, nil
 }

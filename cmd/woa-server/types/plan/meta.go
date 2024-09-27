@@ -14,11 +14,43 @@
 package plan
 
 import (
+	"time"
+
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	"hcm/pkg/tools/times"
 )
 
 // RPTicketStatusItem defines resource plan ticket status item.
 type RPTicketStatusItem struct {
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
+}
+
+// DemandAvailTimeReq is get resource plan demand available time request.
+type DemandAvailTimeReq struct {
+	ExpectTime string `json:"expect_time" validate:"required"`
+}
+
+// Validate whether DemandAvailTimeReq is valid.
+func (r *DemandAvailTimeReq) Validate() (time.Time, error) {
+	if err := validator.Validate.Struct(r); err != nil {
+		return time.Time{}, err
+	}
+
+	return times.ParseDay(r.ExpectTime)
+}
+
+// DemandYearMonthWeek is the year, month and week of the month from a demand perspective.
+type DemandYearMonthWeek struct {
+	Year  int        `json:"year"`
+	Month time.Month `json:"month"`
+	Week  int        `json:"week"`
+}
+
+// DemandAvailTimeResp is resource plan demand available time response.
+type DemandAvailTimeResp struct {
+	YearMonthWeek DemandYearMonthWeek `json:"year_month_week"`
+	DRInWeek      times.DateRange     `json:"date_range_in_week"`
+	DRInMonth     times.DateRange     `json:"date_range_in_month"`
 }
