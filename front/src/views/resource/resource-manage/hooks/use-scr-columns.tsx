@@ -2286,6 +2286,11 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
     },
     {
+      label: '预测类型',
+      field: 'demand_class',
+      isDefaultShow: true,
+    },
+    {
       label: '项目类型',
       field: 'updated_info.obs_project',
       render: resourcePlanChangeingRender,
