@@ -7,6 +7,8 @@ import cssModule from './index.module.scss';
 import { useI18n } from 'vue-i18n';
 
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
+import Type from './type';
+import { AdjustType } from '@/typings/plan';
 
 export default defineComponent({
   props: {
@@ -19,9 +21,12 @@ export default defineComponent({
     initDemand: {
       type: Object as PropType<IPlanTicketDemand>,
     },
+    isEdit: {
+      type: Boolean,
+    },
   },
 
-  emits: ['update:isShow', 'update:modelValue'],
+  emits: ['update:isShow', 'update:modelValue', 'updateDemand'],
 
   setup(props, { emit }) {
     const { t } = useI18n();
@@ -31,9 +36,12 @@ export default defineComponent({
     const cbsRef = ref(null);
     const resourceType = ref('cvm');
     const planTicketDemand = ref<IPlanTicketDemand>();
+    const adjustType = ref();
 
     const initData = () => {
       resourceType.value = props.initDemand?.demand_res_types.length < 2 ? 'cbs' : 'cvm';
+      adjustType.value =
+        props.initDemand && props.initDemand.adjustType === AdjustType.time ? AdjustType.time : AdjustType.config;
       planTicketDemand.value = {
         obs_project: '',
         expect_time: '2024-10-01',
@@ -87,6 +95,12 @@ export default defineComponent({
       handleClose();
     };
 
+    const handleUpdate = async () => {
+      await validate();
+      emit('updateDemand', { ...planTicketDemand.value, adjustType: adjustType.value });
+      handleClose();
+    };
+
     const validate = () => {
       return Promise.all([basicRef.value.validate(), cvmRef.value.validate(), cbsRef.value.validate()]);
     };
@@ -118,24 +132,28 @@ export default defineComponent({
         title={props.initDemand ? t('修改预测需求') : t('增加预测需求')}
         handleClose={handleClose}
         onUpdate:isShow={handleClose}
-        onHandleSubmit={handleSubmit}
+        onHandleSubmit={props.isEdit ? handleUpdate : handleSubmit}
         onHandleShown={handleShown}>
+        {props.initDemand && props.isEdit && <Type v-model={adjustType.value} type={props.initDemand.adjustType} />}
         <Basic
           ref={basicRef}
           v-model:planTicketDemand={planTicketDemand.value}
           v-model:resourceType={resourceType.value}
+          type={props.isEdit ? adjustType.value : AdjustType.none}
         />
         <CVM
           ref={cvmRef}
           v-model:planTicketDemand={planTicketDemand.value}
           resourceType={resourceType.value}
           class={cssModule.mt16}
+          type={props.isEdit ? adjustType.value : AdjustType.none}
         />
         <CBS
           ref={cbsRef}
           v-model:planTicketDemand={planTicketDemand.value}
           resourceType={resourceType.value}
           class={cssModule.mt16}
+          type={props.isEdit ? adjustType.value : AdjustType.none}
         />
       </CommonSideslider>
     );

@@ -12,6 +12,8 @@ import { IListResourcesDemandsItem, IListResourcesDemandsParam, ResourcesDemands
 import { IPageQuery } from '@/typings';
 import { useResourcePlanStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useVerify } from '@/hooks';
+import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 
@@ -40,6 +42,8 @@ export default defineComponent({
     const { getResourcesDemandsList, getResourcesDemandsListByOrg } = useResourcePlanStore();
     const { getBizsId } = useWhereAmI();
 
+    const { authVerifyData, handleAuth } = useVerify();
+    const globalPermissionDialog = useGlobalPermissionDialog();
     const operationMap = {
       [OperationActions.EDIT]: {
         label: t('修改'),
@@ -119,6 +123,11 @@ export default defineComponent({
                 <Button
                   text
                   theme={'primary'}
+                  class={`${
+                    !authVerifyData.value?.permissionAction?.biz_resource_plan_operate
+                      ? 'hcm-no-permision-text-btn'
+                      : undefined
+                  }`}
                   onClick={() => handleOperate(firstActions.type as OperationActions, data)}>
                   {firstActions.label}
                 </Button>
@@ -132,7 +141,14 @@ export default defineComponent({
                     content: () => (
                       <DropdownMenu>
                         {operationDropdownList.slice(1).map(({ label, type }) => (
-                          <DropdownItem key={type} onClick={() => handleOperate(type as OperationActions, data)}>
+                          <DropdownItem
+                            key={type}
+                            onClick={() => handleOperate(type as OperationActions, data)}
+                            class={`${
+                              !authVerifyData.value?.permissionAction?.biz_resource_plan_operate
+                                ? 'hcm-no-permision-text-btn'
+                                : undefined
+                            }`}>
                             {label}
                           </DropdownItem>
                         ))}
@@ -178,28 +194,51 @@ export default defineComponent({
     };
 
     const handleToAdd = () => {
-      router.push({
-        path: '/business/resource-plan/add',
-      });
+      // 无权限
+      if (!authVerifyData.value.permissionAction.biz_resource_plan_operate) {
+        handleAuth('biz_resource_plan_operate');
+        globalPermissionDialog.setShow(true);
+      } else {
+        router.push({
+          path: '/business/resource-plan/add',
+        });
+      }
     };
 
     const handleToEdit = (data: IListResourcesDemandsItem[]) => {
-      const planIds = data.map(({ crp_demand_id }) => crp_demand_id).join(',');
-      const path = props.isBiz ? '/business/service/resource-plan-mod' : '/service/resource-plan/mod';
-      router.push({
-        path,
-        query: {
-          planIds,
-        },
-      });
+      if (!authVerifyData.value.permissionAction.biz_resource_plan_operate) {
+        // 无权限
+        handleAuth('biz_resource_plan_operate');
+        globalPermissionDialog.setShow(true);
+      } else {
+        const planIds = data.map(({ crp_demand_id }) => crp_demand_id).join(',');
+        const path = props.isBiz ? '/business/service/resource-plan-mod' : '/service/resource-plan/mod';
+        router.push({
+          path,
+          query: {
+            planIds,
+          },
+        });
+      }
     };
 
     const handleCancel = () => {
-      currentRowsData.value = selection.value;
-      isShow.value = true;
+      if (!authVerifyData.value.permissionAction.resource_plan_update) {
+        handleAuth('resource_plan_update');
+        globalPermissionDialog.setShow(true);
+      } else {
+        currentRowsData.value = selection.value;
+        isShow.value = true;
+      }
     };
 
     const handleOperate = (type: OperationActions, data: IListResourcesDemandsItem) => {
+      if (!authVerifyData.value?.permissionAction?.biz_resource_plan_operate) {
+        // 无权限
+        handleAuth('biz_resource_plan_operate');
+        globalPermissionDialog.setShow(true);
+        return;
+      }
       if (type === OperationActions.CANCEL) {
         currentRowsData.value = [data];
         isShow.value = true;
@@ -224,17 +263,29 @@ export default defineComponent({
       <Panel>
         {props.isBiz && (
           <div class={cssModule['toolbar-buttons']}>
-            <Button class={cssModule.button} theme='primary' onClick={handleToAdd}>
+            <Button
+              class={`${cssModule.button} ${
+                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
+              }`}
+              theme='primary'
+              onClick={handleToAdd}>
               <PlusIcon class={cssModule['plus-icon']} />
               {t('新增预测')}
             </Button>
             <Button
-              class={cssModule.button}
+              class={`${cssModule.button} ${
+                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
+              }`}
               onClick={() => handleToEdit(selection.value)}
               disabled={!selection.value.length}>
               {t('批量调整')}
             </Button>
-            <Button class={cssModule.button} onClick={handleCancel} disabled={!selection.value.length}>
+            <Button
+              class={`${cssModule.button} ${
+                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
+              }`}
+              onClick={handleCancel}
+              disabled={!selection.value.length}>
               {t('批量取消')}
             </Button>
           </div>

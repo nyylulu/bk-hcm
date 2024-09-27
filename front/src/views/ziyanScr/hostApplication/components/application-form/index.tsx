@@ -28,6 +28,8 @@ import usePlanStore from '@/store/usePlanStore';
 import WName from '@/components/w-name';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { ChargeType } from '@/typings/plan';
+import { getDeviceTypes } from '@/api/host/cvm';
+import useFormModel from '@/hooks/useFormModel';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { Group: RadioGroup, Button: RadioButton } = Radio;
@@ -55,6 +57,15 @@ export default defineComponent({
     const planStore = usePlanStore();
     const availablePrepaidSet = ref(new Set());
     const availablePostpaidSet = ref(new Set());
+    const isNeedVerfiy = ref(true);
+    const {
+      formModel: cpuAmount,
+      setFormValues: setCpuAmount,
+      resetForm: resetCpuAmount,
+    } = useFormModel({
+      prepaid: 0,
+      postpaid: 0,
+    });
     const order = ref({
       loading: false,
       submitting: false,
@@ -794,13 +805,17 @@ export default defineComponent({
       const suborders = cloudTableData.value;
       isLoading.value = true;
       try {
-        const res = await planStore.verify_resource_demand({
+        const { data } = await planStore.verify_resource_demand({
           bk_biz_id: accountStore.bizs,
           require_type: 1,
           suborders,
         });
-      }
-      finally {
+        for (let i = 0; i < cloudTableData.value.length; i++) {
+          cloudTableData.value[i].verify_result = data.verifications[i].verify_result;
+          cloudTableData.value[i].reason = data.verifications[i].reason;
+        }
+        isNeedVerfiy.value = false;
+      } finally {
         isLoading.value = false;
       }
     };
@@ -879,6 +894,64 @@ export default defineComponent({
         deviceTypes.value = deviceTypes.value.sort((a, b) => Number(set.has(b)) - Number(set.has(a)));
       },
       { deep: true },
+    );
+
+    watch(
+      () => cloudTableData.value,
+      async (val) => {
+        const types = val.map((v) => v.spec.device_type);
+        const { data } = await getDeviceTypes({
+          filter: {
+            condition: 'AND',
+            rules: [
+              {
+                field: 'device_type',
+                operator: 'in',
+                value: types,
+              },
+            ],
+          },
+          page: {
+            count: false,
+            start: 0,
+          },
+        });
+        const map = new Map();
+        const arr = data.info || [];
+        for (const device of arr) {
+          map.set(device.device_type, device.cpu_amount);
+        }
+        resetCpuAmount();
+        for (const item of val) {
+          const deviceType = item.spec.device_type;
+          const chargeType = item.spec.charge_type;
+          if (ChargeType.POSTPAID_BY_HOUR === chargeType) {
+            setCpuAmount({
+              ...cpuAmount,
+              postpaid: cpuAmount.postpaid + map.get(deviceType),
+            });
+          }
+          if (ChargeType.PREPAID === chargeType) {
+            setCpuAmount({
+              ...cpuAmount,
+              prepaid: cpuAmount.prepaid + map.get(deviceType),
+            });
+          }
+        }
+      },
+      {
+        deep: true,
+      },
+    );
+
+    watch(
+      () => cpuAmount,
+      () => {
+        isNeedVerfiy.value = true;
+      },
+      {
+        deep: true,
+      },
     );
 
     return () => (
@@ -984,9 +1057,9 @@ export default defineComponent({
               <bk-form-item label='云主机'>
                 <p class={'statistics'}>
                   <span class={'label'}>包年包月CPU总数：</span>
-                  <span class={'value'}>102核</span>
+                  <span class={'value'}>{cpuAmount.prepaid}核</span>
                   <span class={'ml24 label'}>按量计费CPU总数：</span>
-                  <span class={'value'}>200核</span>
+                  <span class={'value'}>{cpuAmount.postpaid}核</span>
                 </p>
                 <bk-table
                   align='left'
@@ -1037,26 +1110,28 @@ export default defineComponent({
                   </p>
                 </Alert>
 
-                {!!cloudTableData.value.length && (
+                {!!cloudTableData.value.length && isNeedVerfiy.value && (
                   <Button class='mr16' theme='primary' loading={isLoading.value} onClick={handleVerify}>
                     需求校验
                   </Button>
                 )}
 
-                <Button
-                  class='mr16'
-                  theme='primary'
-                  disabled={!physicalTableData.value.length && !cloudTableData.value.length}
-                  loading={isLoading.value}
-                  v-bk-tooltips={{
-                    content: '资源需求不能为空',
-                    disabled: physicalTableData.value.length || cloudTableData.value.length,
-                  }}
-                  onClick={() => {
-                    handleSaveOrSubmit('submit');
-                  }}>
-                  提交
-                </Button>
+                {!isNeedVerfiy.value && (
+                  <Button
+                    class='mr16'
+                    theme='primary'
+                    disabled={!physicalTableData.value.length && !cloudTableData.value.length}
+                    loading={isLoading.value}
+                    v-bk-tooltips={{
+                      content: '资源需求不能为空',
+                      disabled: physicalTableData.value.length || cloudTableData.value.length,
+                    }}
+                    onClick={() => {
+                      handleSaveOrSubmit('submit');
+                    }}>
+                    提交
+                  </Button>
+                )}
                 <Button
                   loading={isLoading.value}
                   disabled={!physicalTableData.value.length && !cloudTableData.value.length}
@@ -1133,20 +1208,33 @@ export default defineComponent({
                         />
                       </bk-form-item>
                       <Alert class={'mb8'} theme='warning'>
-                        当前地域无资源预测，提预测单后再按量申请，<Button theme='primary' text>去创建提预测单</Button>
+                        当前地域无资源预测，提预测单后再按量申请，
+                        <Button theme='primary' text>
+                          去创建提预测单
+                        </Button>
                       </Alert>
                       {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                         <>
                           <bk-form-item label='计费模式' required property='charge_type'>
                             <RadioGroup v-model={resourceForm.value.charge_type} type='card' style={{ width: '260px' }}>
-                              <RadioButton label='PREPAID' disabled={availablePrepaidSet.value.size === 0} v-bk-tooltips={{
-                                content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                disabled: availablePrepaidSet.value.size > 0
-                              }}>包年包月</RadioButton>
-                              <RadioButton label='POSTPAID_BY_HOUR' disabled={availablePostpaidSet.value.size === 0} v-bk-tooltips={{
-                                content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                disabled: availablePostpaidSet.value.size > 0
-                              }}>按量计费</RadioButton>
+                              <RadioButton
+                                label='PREPAID'
+                                disabled={availablePrepaidSet.value.size === 0}
+                                v-bk-tooltips={{
+                                  content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                  disabled: availablePrepaidSet.value.size > 0,
+                                }}>
+                                包年包月
+                              </RadioButton>
+                              <RadioButton
+                                label='POSTPAID_BY_HOUR'
+                                disabled={availablePostpaidSet.value.size === 0}
+                                v-bk-tooltips={{
+                                  content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                  disabled: availablePostpaidSet.value.size > 0,
+                                }}>
+                                按量计费
+                              </RadioButton>
                             </RadioGroup>
                             <bk-alert theme='info' class='form-item-tips'>
                               {resourceForm.value.charge_type === 'PREPAID' ? (

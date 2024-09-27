@@ -90,6 +90,7 @@ const serviceMenus: RouteRecordRaw[] = [
           title: t('资源预测'),
           isShowBreadcrumb: true,
           icon: '',
+          // checkAuth: 'ziyan_resource_plan_manage', (后端还没加，先注释)
         },
       },
       {

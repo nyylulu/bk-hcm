@@ -6,9 +6,9 @@ import Basic from './basic';
 import List from './list';
 import Memo from './memo';
 import Button from './button';
-import Add from './add';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
+import Add from '@/components/resource-plan/add';
 
 export default defineComponent({
   setup() {

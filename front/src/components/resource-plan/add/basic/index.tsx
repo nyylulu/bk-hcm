@@ -6,11 +6,13 @@ import { useResourcePlanStore } from '@/store';
 import cssModule from './index.module.scss';
 
 import type { IPlanTicketDemand, IRegion, IZone } from '@/typings/resourcePlan';
+import { AdjustType } from '@/typings/plan';
 
 export default defineComponent({
   props: {
     planTicketDemand: Object as PropType<IPlanTicketDemand>,
     resourceType: String,
+    type: String as PropType<AdjustType>,
   },
 
   emits: ['update:planTicketDemand', 'update:resourceType'],
@@ -116,7 +118,7 @@ export default defineComponent({
     };
 
     const getDisabledDate = (date: string) => {
-      return dayjs(date).isBefore('2024-10-01');
+      return dayjs(date).isBefore(dayjs());
     };
 
     const validate = () => {
@@ -151,13 +153,17 @@ export default defineComponent({
       <Panel title={t('基础信息')}>
         <bk-form form-type='vertical' ref={formRef} model={props.planTicketDemand} class={cssModule.home}>
           <bk-form-item label={t('资源类型')}>
-            <bk-radio-group modelValue={props.resourceType} onChange={handleUpdateResourceType}>
+            <bk-radio-group
+              modelValue={props.resourceType}
+              onChange={handleUpdateResourceType}
+              disabled={props.type !== AdjustType.none}>
               <bk-radio-button label='cvm'>CVM</bk-radio-button>
               <bk-radio-button label='cbs'>CBS</bk-radio-button>
             </bk-radio-group>
           </bk-form-item>
           <bk-form-item label={t('项目类型')} property='obs_project' required>
             <bk-select
+              disabled={props.type === AdjustType.time}
               clearable
               loading={isLoadingProjectType.value}
               modelValue={props.planTicketDemand.obs_project}
@@ -169,6 +175,7 @@ export default defineComponent({
           </bk-form-item>
           <bk-form-item label={t('城市')} property='region_id' required>
             <bk-select
+              disabled={props.type === AdjustType.time}
               clearable
               loading={isLoadingRegion.value}
               modelValue={props.planTicketDemand.region_id}
@@ -180,6 +187,7 @@ export default defineComponent({
           </bk-form-item>
           <bk-form-item label={t('可用区')} property='zone_id'>
             <bk-select
+              disabled={props.type === AdjustType.time}
               clearable
               loading={isLoadingZone.value}
               modelValue={props.planTicketDemand.zone_id}
@@ -191,6 +199,7 @@ export default defineComponent({
           </bk-form-item>
           <bk-form-item label={t('期望到货日期')} property='expect_time' required>
             <bk-date-picker
+              disabled={props.type === AdjustType.config}
               clearable
               modelValue={props.planTicketDemand.expect_time}
               disabledDate={getDisabledDate}
@@ -199,6 +208,7 @@ export default defineComponent({
           </bk-form-item>
           <bk-form-item label={t('变更原因')} property='demand_source'>
             <bk-select
+              disabled={props.type === AdjustType.time}
               clearable
               loading={isLoadingSource.value}
               modelValue={props.planTicketDemand.demand_source}
@@ -210,6 +220,7 @@ export default defineComponent({
           </bk-form-item>
           <bk-form-item label={t('需求备注')} property='remark' class={cssModule['span-2']}>
             <bk-input
+              disabled={props.type === AdjustType.time}
               clearable
               type='textarea'
               maxlength={100}

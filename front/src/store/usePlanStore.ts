@@ -23,7 +23,7 @@ export default defineStore('planStore', () => {
    * 查询业务下资源预测需求列表
    */
   const list_biz_resource_plan_demand = async (
-    ids: string[], // 预测需求IDS
+    ids: number[], // 预测需求IDS
   ): Promise<{
     [key: string]: any;
     data: {
