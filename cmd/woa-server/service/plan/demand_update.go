@@ -257,7 +257,7 @@ func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPD
 		result[idx] = rpt.ResPlanDemand{
 			DemandClass: demandClass,
 			Original:    demandOriginMap[update.CrpDemandID],
-			Updated: &rpt.ResPlanDemandItem{
+			Updated: &rpt.UpdatedRPDemandItem{
 				ObsProject: update.UpdatedInfo.ObsProject,
 				ExpectTime: update.UpdatedInfo.ExpectTime,
 				ZoneID:     update.UpdatedInfo.ZoneID,
@@ -299,7 +299,7 @@ func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPD
 // constructOriginalDemandMap construct original demand map.
 // return crp demand id and demand class map, crp demand id and remain cpu core map.
 func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) (
-	map[int64]*rpt.ResPlanDemandItem, map[int64]int64, error) {
+	map[int64]*rpt.OriginalRPDemandItem, map[int64]int64, error) {
 
 	// call crp interface to search raw demands.
 	crpDemands, err := s.planController.QueryAllDemands(kt, &plan.QueryAllDemandsReq{CrpDemandIDs: crpDemandIDs})
@@ -322,7 +322,7 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 		return nil, nil, err
 	}
 
-	demandOriginMap := make(map[int64]*rpt.ResPlanDemandItem)
+	demandOriginMap := make(map[int64]*rpt.OriginalRPDemandItem)
 	demandRemainMap := make(map[int64]int64)
 	for _, crpDemand := range crpDemands {
 		demandID, err := strconv.ParseInt(crpDemand.DemandId, 10, 64)
@@ -338,30 +338,33 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 		}
 
 		deviceType := crpDemand.InstanceModel
-		demandOriginMap[demandID] = &rpt.ResPlanDemandItem{
-			ObsProject: enumor.ObsProject(crpDemand.ProjectName),
-			ExpectTime: crpDemand.UseTime,
-			ZoneID:     zoneNameMap[crpDemand.ZoneName],
-			ZoneName:   crpDemand.ZoneName,
-			RegionID:   regionAreaNameMap[crpDemand.CityName].RegionID,
-			RegionName: crpDemand.CityName,
-			AreaID:     regionAreaNameMap[crpDemand.CityName].AreaID,
-			AreaName:   regionAreaNameMap[crpDemand.CityName].AreaName,
-			Cvm: rpt.Cvm{
-				ResMode:      crpDemand.ResourceMode,
-				DeviceType:   deviceType,
-				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-				CoreType:     deviceTypeMap[deviceType].CoreType,
-				Os:           int64(crpDemand.PlanCvmAmount),
-				CpuCore:      int64(crpDemand.PlanCoreAmount),
-				Memory:       int64(crpDemand.PlanRamAmount),
-			},
-			Cbs: rpt.Cbs{
-				DiskType:     diskType,
-				DiskTypeName: crpDemand.DiskTypeName,
-				DiskIo:       int64(crpDemand.InstanceIO),
-				DiskSize:     int64(crpDemand.PlanDiskAmount),
+		demandOriginMap[demandID] = &rpt.OriginalRPDemandItem{
+			CrpDemandID: demandID,
+			UpdatedRPDemandItem: rpt.UpdatedRPDemandItem{
+				ObsProject: enumor.ObsProject(crpDemand.ProjectName),
+				ExpectTime: crpDemand.UseTime,
+				ZoneID:     zoneNameMap[crpDemand.ZoneName],
+				ZoneName:   crpDemand.ZoneName,
+				RegionID:   regionAreaNameMap[crpDemand.CityName].RegionID,
+				RegionName: crpDemand.CityName,
+				AreaID:     regionAreaNameMap[crpDemand.CityName].AreaID,
+				AreaName:   regionAreaNameMap[crpDemand.CityName].AreaName,
+				Cvm: rpt.Cvm{
+					ResMode:      crpDemand.ResourceMode,
+					DeviceType:   deviceType,
+					DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
+					DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
+					CoreType:     deviceTypeMap[deviceType].CoreType,
+					Os:           int64(crpDemand.PlanCvmAmount),
+					CpuCore:      int64(crpDemand.PlanCoreAmount),
+					Memory:       int64(crpDemand.PlanRamAmount),
+				},
+				Cbs: rpt.Cbs{
+					DiskType:     diskType,
+					DiskTypeName: crpDemand.DiskTypeName,
+					DiskIo:       int64(crpDemand.InstanceIO),
+					DiskSize:     int64(crpDemand.PlanDiskAmount),
+				},
 			},
 		}
 
@@ -395,7 +398,7 @@ func (s *service) constructDelayDemands(kt *kit.Kit, delays []ptypes.AdjustRPDem
 		}
 
 		// delay updated equals to original, except expect time.
-		result[idx].Updated = &rpt.ResPlanDemandItem{
+		result[idx].Updated = &rpt.UpdatedRPDemandItem{
 			ObsProject: result[idx].Original.ObsProject,
 			ExpectTime: delay.ExpectTime,
 			ZoneID:     result[idx].Original.ZoneID,
@@ -505,6 +508,7 @@ func (s *service) CancelBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	}
 
 	return map[string]interface{}{"id": ticketID}, nil
+
 }
 
 // constructCancelReq construct create resource plan ticket request of cancel.

@@ -329,6 +329,18 @@ func (t RPDemandAdjustType) Validate() error {
 	return nil
 }
 
+// CrpAdjustType crp adjust type.
+type CrpAdjustType string
+
+const (
+	// CrpAdjustTypeUpdate is crp adjust type update.
+	CrpAdjustTypeUpdate CrpAdjustType = "常规修改"
+	// CrpAdjustTypeDelay is crp adjust type delay.
+	CrpAdjustTypeDelay CrpAdjustType = "加急延期"
+	// CrpAdjustTypeCancel is crp adjust type cancel.
+	CrpAdjustTypeCancel CrpAdjustType = "需求取消"
+)
+
 // DemandStatus is resource plan demand status.
 type DemandStatus string
 

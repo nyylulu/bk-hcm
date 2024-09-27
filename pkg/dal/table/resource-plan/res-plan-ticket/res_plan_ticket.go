@@ -129,9 +129,9 @@ type ResPlanDemand struct {
 	// DemandClass 预测的需求类型
 	DemandClass enumor.DemandClass `json:"demand_class" validate:"lte=16"`
 	// Original 原始需求
-	Original *ResPlanDemandItem `json:"original"`
+	Original *OriginalRPDemandItem `json:"original"`
 	// Updated 更新需求
-	Updated *ResPlanDemandItem `json:"updated"`
+	Updated *UpdatedRPDemandItem `json:"updated"`
 }
 
 // Validate whether ResPlanDemand is valid.
@@ -159,8 +159,31 @@ func (d *ResPlanDemand) Validate() error {
 	return nil
 }
 
-// ResPlanDemandItem is resource plan demand item.
-type ResPlanDemandItem struct {
+// OriginalRPDemandItem is original resource plan demand item.
+type OriginalRPDemandItem struct {
+	CrpDemandID         int64 `json:"crp_demand_id"`
+	UpdatedRPDemandItem `json:",inline"`
+}
+
+// Validate whether OriginalRPDemandItem is valid.
+func (i *OriginalRPDemandItem) Validate() error {
+	if err := validator.Validate.Struct(i); err != nil {
+		return err
+	}
+
+	if i.CrpDemandID <= 0 {
+		return errors.New("crp demand id can not be empty")
+	}
+
+	if err := i.UpdatedRPDemandItem.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdatedRPDemandItem is updated resource plan demand item.
+type UpdatedRPDemandItem struct {
 	// ObsProject OBS项目类型
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
 	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
@@ -187,8 +210,8 @@ type ResPlanDemandItem struct {
 	Cbs Cbs `json:"cbs"`
 }
 
-// Validate whether ResPlanDemandItem is valid.
-func (i *ResPlanDemandItem) Validate() error {
+// Validate whether UpdatedRPDemandItem is valid.
+func (i *UpdatedRPDemandItem) Validate() error {
 	if err := validator.Validate.Struct(i); err != nil {
 		return err
 	}

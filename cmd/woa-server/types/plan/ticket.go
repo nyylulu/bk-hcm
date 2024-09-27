@@ -376,7 +376,7 @@ type GetRPTicketStatusInfo struct {
 
 // GetRPTicketDemand get resource plan ticket demand.
 type GetRPTicketDemand struct {
-	DemandClass  enumor.DemandClass     `json:"demand_class"`
-	OriginalInfo *rpt.ResPlanDemandItem `json:"original_info"`
-	UpdatedInfo  *rpt.ResPlanDemandItem `json:"updated_info"`
+	DemandClass  enumor.DemandClass        `json:"demand_class"`
+	OriginalInfo *rpt.OriginalRPDemandItem `json:"original_info"`
+	UpdatedInfo  *rpt.UpdatedRPDemandItem  `json:"updated_info"`
 }

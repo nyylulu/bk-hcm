@@ -54,6 +54,17 @@ func (t DiskType) Name() string {
 	return diskTypeNameMap[t]
 }
 
+// GetDiskTypeByName get DiskType by its name.
+func GetDiskTypeByName(diskTypeName string) DiskType {
+	for typ, name := range diskTypeNameMap {
+		if name == diskTypeName {
+			return typ
+		}
+	}
+
+	return ""
+}
+
 // GetDiskTypeMembers get DiskType's members.
 func GetDiskTypeMembers() []DiskType {
 	return []DiskType{DiskPremium, DiskSSD}

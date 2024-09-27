@@ -173,7 +173,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 	for idx, demand := range req.Demands {
 		demands[idx] = rpt.ResPlanDemand{
 			DemandClass: req.DemandClass,
-			Updated: &rpt.ResPlanDemandItem{
+			Updated: &rpt.UpdatedRPDemandItem{
 				ObsProject:   demand.ObsProject,
 				ExpectTime:   demand.ExpectTime,
 				ZoneID:       demand.ZoneID,

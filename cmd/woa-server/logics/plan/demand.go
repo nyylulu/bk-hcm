@@ -110,6 +110,36 @@ func (c *Controller) QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*c
 	return result, nil
 }
 
+// ExamineDemandClass examine whether all demands are the same demand class, and return the demand class.
+func (c *Controller) ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enumor.DemandClass, error) {
+	listOpt := &types.ListOption{
+		Fields: []string{"demand_class"},
+		Filter: tools.ContainersExpression("crp_demand_id", crpDemandIDs),
+		Page:   core.NewDefaultBasePage(),
+	}
+
+	rst, err := c.dao.ResPlanCrpDemand().List(kt, listOpt)
+	if err != nil {
+		logs.Errorf("failed to list resource plan demand, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	if len(rst.Details) == 0 {
+		logs.Errorf("list resource plan demand, but len detail is 0, rid: %s", kt.Rid)
+		return "", errors.New("list resource plan demand, but len detail is 0")
+	}
+
+	demandClass := rst.Details[0].DemandClass
+	for _, detail := range rst.Details {
+		if detail.DemandClass != demandClass {
+			logs.Errorf("not all demand classes are the same, rid: %s", kt.Rid)
+			return "", errors.New("not all demand classes are the same")
+		}
+	}
+
+	return demandClass, nil
+}
+
 // ExamineAndLockAllRPDemand examine all resource plan demand lock status and lock all resource plan demand.
 // TODO：目前此函数不在一个事务中，会有并发问题
 func (c *Controller) ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error {

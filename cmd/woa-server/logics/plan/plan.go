@@ -36,7 +36,6 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
@@ -54,6 +53,8 @@ type Logics interface {
 	CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketReq) (string, error)
 	// QueryAllDemands query all demands.
 	QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error)
+	// ExamineDemandClass examine whether all demands are the same demand class, and return the demand class.
+	ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enumor.DemandClass, error)
 	// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
 	ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error
 	// UnlockAllResPlanDemand unlock all resource plan demand.
@@ -495,7 +496,7 @@ func (c *Controller) listCrpDemandChangeLogPage(kt *kit.Kit, crpDemandId int64, 
 	return convListDemandChangeLogItem(resp.Result.Data[0].Info), nil
 }
 
-func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketBriefInfo) error {
+func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	logs.Infof("ready to check crp flow, sn: %s, id: %s", ticket.CrpSn, ticket.ID)
 
 	req := &cvmapi.QueryPlanOrderReq{
@@ -557,7 +558,7 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketBriefInfo) error 
 	return nil
 }
 
-func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketBriefInfo) error {
+func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	logs.Infof("ready to check itsm flow, sn: %s, id: %s", ticket.ItsmSn, ticket.ID)
 
 	resp, err := c.itsmCli.GetTicketStatus(kt, ticket.ItsmSn)
@@ -601,7 +602,7 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketBriefInfo) error
 	return nil
 }
 
-func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketBriefInfo) error {
+func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 	itsmStatus, err := c.itsmCli.GetTicketStatus(kt, ticket.ItsmSn)
 	if err != nil {
 		logs.Errorf("failed to get itsm ticket status, err: %v, id: %s, rid: %s", err, ticket.ID, kt.Rid)
@@ -646,7 +647,7 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketBriefInfo) error
 	return nil
 }
 
-func (c *Controller) checkTicketTimeout(kt *kit.Kit, ticket *TicketBriefInfo) error {
+func (c *Controller) checkTicketTimeout(kt *kit.Kit, ticket *TicketInfo) error {
 	submitTime, err := time.Parse(constant.TimeStdFormat, ticket.SubmittedAt)
 	if err != nil {
 		logs.Errorf("failed to parse ticket submit time %s, err: %v, rid: %s", ticket.SubmittedAt, err, kt.Rid)
@@ -711,10 +712,16 @@ func (c *Controller) CreateAuditFlow(kt *kit.Kit, ticketID string) error {
 	return nil
 }
 
-func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketBriefInfo, error) {
+func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketInfo, error) {
 	base, err := c.getTicketBaseInfo(kt, ticketID)
 	if err != nil {
 		logs.Errorf("failed to get ticket base info, err: %v", err)
+		return nil, err
+	}
+
+	var demands rpt.ResPlanDemands
+	if err = json.Unmarshal([]byte(base.Demands), &demands); err != nil {
+		logs.Errorf("failed to unmarshal demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -724,22 +731,32 @@ func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketBriefIn
 		return nil, err
 	}
 
-	brief := &TicketBriefInfo{
-		ID:              ticketID,
-		Applicant:       base.Applicant,
-		BkBizID:         base.BkBizID,
-		BkBizName:       base.BkBizName,
-		BkProductName:   base.OpProductName,
-		PlanProductName: base.PlanProductName,
-		CpuCore:         base.UpdatedCpuCore,
-		Memory:          base.UpdatedMemory,
-		DiskSize:        base.UpdatedDiskSize,
-		SubmittedAt:     base.SubmittedAt,
-		Status:          status.Status,
-		ItsmSn:          status.ItsmSn,
-		ItsmUrl:         status.ItsmUrl,
-		CrpSn:           status.CrpSn,
-		CrpUrl:          status.CrpUrl,
+	brief := &TicketInfo{
+		ID:               ticketID,
+		Type:             base.Type,
+		Applicant:        base.Applicant,
+		BkBizID:          base.BkBizID,
+		BkBizName:        base.BkBizName,
+		OpProductID:      base.OpProductID,
+		OpProductName:    base.OpProductName,
+		PlanProductID:    base.PlanProductID,
+		PlanProductName:  base.PlanProductName,
+		VirtualDeptID:    base.VirtualDeptID,
+		VirtualDeptName:  base.VirtualDeptName,
+		DemandClass:      base.DemandClass,
+		OriginalCpuCore:  base.OriginalCpuCore,
+		OriginalMemory:   base.OriginalMemory,
+		OriginalDiskSize: base.OriginalDiskSize,
+		UpdatedCpuCore:   base.UpdatedCpuCore,
+		UpdatedMemory:    base.UpdatedMemory,
+		UpdatedDiskSize:  base.UpdatedDiskSize,
+		Demands:          demands,
+		SubmittedAt:      base.SubmittedAt,
+		Status:           status.Status,
+		ItsmSn:           status.ItsmSn,
+		ItsmUrl:          status.ItsmUrl,
+		CrpSn:            status.CrpSn,
+		CrpUrl:           status.CrpUrl,
 	}
 
 	return brief, nil
@@ -786,30 +803,16 @@ func (c *Controller) getTicketStatusInfo(kt *kit.Kit, ticketID string) (*rpts.Re
 	return &rst.Details[0], nil
 }
 
-func (c *Controller) getPlanDemands(kt *kit.Kit, ticketID string) ([]rpd.ResPlanDemandTable, error) {
-	opt := &types.ListOption{
-		Filter: tools.EqualExpression("ticket_id", ticketID),
-		Page:   core.NewDefaultBasePage(),
-	}
-
-	rst, err := c.dao.ResPlanDemand().List(kt, opt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan demands, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	return rst.Details, nil
-}
-
-func (c *Controller) createItsmTicket(kt *kit.Kit, ticket *TicketBriefInfo) (string, error) {
+func (c *Controller) createItsmTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
+	// TODO：待修改
 	contentTemplate := `业务：%s(%d)
 预测类型：%s
 CPU总核数：%d
 内存总量(GB)：%d
 云盘总量(GB)：%d
 `
-	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.CpuCore,
-		ticket.Memory, ticket.DiskSize)
+	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.UpdatedCpuCore,
+		ticket.UpdatedMemory, ticket.UpdatedMemory)
 	createTicketReq := &itsm.CreateTicketParams{
 		ServiceID:      c.itsmFlow.ServiceID,
 		Creator:        ticket.Applicant,
@@ -834,102 +837,4 @@ func (c *Controller) updateTicketStatus(kt *kit.Kit, ticket *rpts.ResPlanTicketS
 	}
 
 	return nil
-}
-
-func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketBriefInfo) error {
-	req, err := c.buildPlanReq(kt, ticket)
-	if err != nil {
-		logs.Errorf("failed to build plan request, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	resp, err := c.crpCli.AddCvmCbsPlan(nil, nil, req)
-	if err != nil {
-		logs.Errorf("failed to add cvm & cbs plan order, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	if resp.Error.Code != 0 {
-		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
-		return fmt.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s", resp.Error.Code,
-			resp.Error.Message)
-	}
-
-	sn := resp.Result.OrderId
-	if sn == "" {
-		logs.Errorf("failed to add cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
-		return errors.New("failed to add cvm & cbs plan order, for return empty order id")
-	}
-
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusAuditing,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    sn,
-		CrpUrl:   cvmapi.CvmPlanLinkPrefix + sn,
-	}
-
-	if err := c.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
-func (c *Controller) buildPlanReq(kt *kit.Kit, ticket *TicketBriefInfo) (*cvmapi.AddCvmCbsPlanReq, error) {
-	req := &cvmapi.AddCvmCbsPlanReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanAddMethod,
-		},
-		Params: &cvmapi.AddCvmCbsPlanParam{
-			Operator: ticket.Applicant,
-			DeptName: cvmapi.CvmLaunchDeptName,
-			Items:    make([]*cvmapi.AddPlanItem, 0),
-		},
-	}
-
-	demands, err := c.getPlanDemands(kt, ticket.ID)
-	if err != nil {
-		logs.Errorf("failed to get plan demands, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	for _, demand := range demands {
-		var cvm *rpd.Cvm
-		var cbs *rpd.Cbs
-		if err = json.Unmarshal([]byte(demand.Cvm), &cvm); err != nil {
-			logs.Errorf("failed to unmarshal cvm, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		if err = json.Unmarshal([]byte(demand.Cbs), &cbs); err != nil {
-			logs.Errorf("failed to unmarshal cbs, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		planItem := &cvmapi.AddPlanItem{
-			UseTime:         demand.ExpectTime,
-			ProjectName:     string(demand.ObsProject),
-			PlanProductName: ticket.PlanProductName,
-			CityName:        demand.RegionName,
-			ZoneName:        demand.ZoneName,
-			CoreTypeName:    cvm.CoreType,
-			InstanceModel:   cvm.DeviceType,
-			CvmAmount:       float64(cvm.Os),
-			CoreAmount:      int(cvm.CpuCore),
-			Desc:            demand.Remark,
-			InstanceIO:      int(cbs.DiskIo),
-			DiskTypeName:    cbs.DiskTypeName,
-			DiskAmount:      int(cbs.DiskSize),
-		}
-
-		req.Params.Items = append(req.Params.Items, planItem)
-	}
-
-	return req, nil
 }

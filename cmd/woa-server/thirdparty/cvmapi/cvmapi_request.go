@@ -244,7 +244,7 @@ type AdjustSrcData struct {
 // AdjustUpdatedData adjust target data for cvm and cbs plan info adjust params
 type AdjustUpdatedData struct {
 	AdjustType          string  `json:"adjustType"`
-	TimeAdjustCvmAmount float32 `json:"timeAdjustCvmAmount"`
+	TimeAdjustCvmAmount float32 `json:"timeAdjustCvmAmount,omitempty"`
 	CityId              int     `json:"cityId"`
 	CityName            string  `json:"cityName"`
 	ZoneId              int     `json:"zoneId"`
