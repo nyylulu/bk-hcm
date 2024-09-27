@@ -68,8 +68,12 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// ticket
 	h.Add("ListResPlanTicket", http.MethodPost, "/plans/resources/tickets/list", s.ListResPlanTicket)
-	h.Add("CreateResPlanTicket", http.MethodPost, "/plan/resource/ticket/create", s.CreateResPlanTicket)
-	h.Add("GetResPlanTicket", http.MethodGet, "/plan/resource/ticket/{id}", s.GetResPlanTicket)
+	h.Add("ListBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/list",
+		s.ListBizResPlanTicket)
+	h.Add("CreateBizResPlanTicket", http.MethodPost, "/plan/resource/ticket/create", s.CreateBizResPlanTicket)
+	h.Add("GetResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetResPlanTicket)
+	h.Add("GetBizResPlanTicket", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{id}",
+		s.GetBizResPlanTicket)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)
@@ -78,4 +82,8 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("GetPlanDemandDetail", http.MethodGet, "/plans/demands/{id}", s.GetPlanDemandDetail)
 	h.Add("GetBizPlanDemandDetail", http.MethodGet, "/bizs/{bk_biz_id}/plans/demands/{id}", s.GetBizPlanDemandDetail)
 	h.Add("ListPlanDemandChangelog", http.MethodPost, "/plans/demands/change_logs/list", s.ListPlanDemandChangeLog)
+	h.Add("AdjustBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/adjust",
+		s.AdjustBizResPlanDemand)
+	h.Add("CancelBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/cancel",
+		s.CancelBizResPlanDemand)
 }

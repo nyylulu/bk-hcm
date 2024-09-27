@@ -285,23 +285,45 @@ func GetDemandSourceMembers() []DemandSource {
 	}
 }
 
-// CrpDemandLockedStatus is resource plan crp demand locked.
-type CrpDemandLockedStatus int8
+// CrpDemandLockStatus is resource plan crp demand lock status.
+type CrpDemandLockStatus int8
 
 const (
-	// CrpDemandUnLocked is resource plan crp demand locked false.
-	CrpDemandUnLocked CrpDemandLockedStatus = 0
-	// CrpDemandLocked is resource plan crp demand locked true.
-	CrpDemandLocked CrpDemandLockedStatus = 1
+	// CrpDemandUnLocked is resource plan crp demand unlocked.
+	CrpDemandUnLocked CrpDemandLockStatus = 0
+	// CrpDemandLocked is resource plan crp demand locked.
+	CrpDemandLocked CrpDemandLockStatus = 1
 )
 
-// Validate CrpDemandLockedStatus.
-func (c CrpDemandLockedStatus) Validate() error {
-	switch c {
+// Validate CrpDemandLockStatus.
+func (s CrpDemandLockStatus) Validate() error {
+	switch s {
 	case CrpDemandUnLocked:
 	case CrpDemandLocked:
 	default:
-		return fmt.Errorf("unsupported crp demand locked: %d", c)
+		return fmt.Errorf("unsupported crp demand lock status: %d", s)
+	}
+
+	return nil
+}
+
+// RPDemandAdjustType is resource plan demand adjust type.
+type RPDemandAdjustType string
+
+const (
+	// RPDemandAdjustTypeUpdate is resource plan demand adjust type update.
+	RPDemandAdjustTypeUpdate RPDemandAdjustType = "update"
+	// RPDemandAdjustTypeDelay is resource plan demand adjust type delay.
+	RPDemandAdjustTypeDelay RPDemandAdjustType = "delay"
+)
+
+// Validate RPDemandAdjustType.
+func (t RPDemandAdjustType) Validate() error {
+	switch t {
+	case RPDemandAdjustTypeUpdate:
+	case RPDemandAdjustTypeDelay:
+	default:
+		return fmt.Errorf("unsupported resource plan demand adjust type: %s", t)
 	}
 
 	return nil

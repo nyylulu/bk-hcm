@@ -46,6 +46,20 @@ import (
 	"hcm/pkg/tools/times"
 )
 
+// Logics provides management interface for resource plan.
+type Logics interface {
+	// CreateAuditFlow creates an audit flow for resource plan ticket.
+	CreateAuditFlow(kt *kit.Kit, ticketID string) error
+	// CreateResPlanTicket create resource plan ticket.
+	CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketReq) (string, error)
+	// QueryAllDemands query all demands.
+	QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error)
+	// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
+	ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error
+	// UnlockAllResPlanDemand unlock all resource plan demand.
+	UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error
+}
+
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
 	dao          dao.Set
@@ -717,7 +731,6 @@ func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketBriefIn
 		BkBizName:       base.BkBizName,
 		BkProductName:   base.OpProductName,
 		PlanProductName: base.PlanProductName,
-		DemandClass:     base.DemandClass,
 		CpuCore:         base.UpdatedCpuCore,
 		Memory:          base.UpdatedMemory,
 		DiskSize:        base.UpdatedDiskSize,

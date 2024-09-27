@@ -59,7 +59,7 @@ type ResPlanCrpDemandTable struct {
 	// CrpDemandID CRP需求ID
 	CrpDemandID int64 `db:"crp_demand_id" json:"crp_demand_id"`
 	// Locked 是否已锁定(枚举值：0(未锁定)、1(已锁定))
-	Locked *enumor.CrpDemandLockedStatus `db:"locked" json:"locked"`
+	Locked *enumor.CrpDemandLockStatus `db:"locked" json:"locked"`
 	// DemandClass 预测的需求类型
 	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
 	// BkBizID 业务ID
