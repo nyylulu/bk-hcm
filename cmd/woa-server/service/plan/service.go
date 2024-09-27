@@ -86,4 +86,9 @@ func (s *service) initPlanService(h *rest.Handler) {
 		s.AdjustBizResPlanDemand)
 	h.Add("CancelBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/cancel",
 		s.CancelBizResPlanDemand)
+
+	// verify
+	h.Add("VerifyResPlanDemand", http.MethodPost, "/plans/resources/demands/verify", s.VerifyResPlanDemand)
+	h.Add("GetCvmChargeTypeDeviceType", http.MethodPost, "/config/findmany/config/cvm/charge_type/device_type",
+		s.GetCvmChargeTypeDeviceType)
 }

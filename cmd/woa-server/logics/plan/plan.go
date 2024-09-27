@@ -59,6 +59,17 @@ type Logics interface {
 	ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error
 	// UnlockAllResPlanDemand unlock all resource plan demand.
 	UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error
+	// IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
+	IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error)
+	// GetProdResPlanPool get op product resource plan pool.
+	GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool, error)
+	// GetProdResConsumePool get op product resource consume pool.
+	GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error)
+	// GetProdResRemainPool get op product resource remain pool.
+	// NOTE: remain = plan * 120% - consume.
+	GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error)
+	// VerifyProdDemands verify whether the needs of op product can be satisfied.
+	VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) ([]bool, error)
 }
 
 // Controller motivates the resource plan ticket status flow.

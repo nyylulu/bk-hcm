@@ -57,7 +57,9 @@ type OrderItem struct {
 	// 8完成
 	// 0待部门管理员审批,1待业务总监审批,2待规划经理审批,3待资源审批,4待生成CDH宿主机,
 	// 5CDH宿主机生成中,6待生成CVM,7CVM生成中,127驳回,129下发生产失败
-	Status int `json:"status"`
+	Status      int    `json:"status"`
+	ProductId   int64  `json:"productId"`
+	ProductName string `json:"productName"`
 }
 
 const (

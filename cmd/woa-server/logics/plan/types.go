@@ -143,3 +143,97 @@ type QueryAllDemandsReq struct {
 	RegionNames     []string
 	ZoneNames       []string
 }
+
+// AvailableTime available time.
+type AvailableTime string
+
+// NewAvailableTime new an available time.
+// TODO: 目前只关注年和月，未来会添加周
+func NewAvailableTime(year, month int) AvailableTime {
+	return AvailableTime(fmt.Sprintf("%04d-%02d", year, month))
+}
+
+// VerifyResPlanElem verify resource plan element.
+type VerifyResPlanElem struct {
+	// IsAnyPlanType if IsAnyPlanType is true, it will examine both InPlan and OutPlan plan types.
+	IsAnyPlanType bool
+	PlanType      enumor.PlanType
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+	CpuCore       float64
+}
+
+// ResPlanElem resource plan element.
+type ResPlanElem struct {
+	PlanType      enumor.PlanType
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+	CpuCore       float64
+}
+
+// ResPlanPoolKey resource plan pool key.
+type ResPlanPoolKey struct {
+	PlanType      enumor.PlanType
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+}
+
+// ResPlanPool resource plan pool.
+type ResPlanPool map[ResPlanPoolKey]float64
+
+// StrUnionFind string union find struct.
+type StrUnionFind struct {
+	parent map[string]string
+}
+
+// NewStrUnionFind news a string union find.
+func NewStrUnionFind() *StrUnionFind {
+	return &StrUnionFind{parent: make(map[string]string)}
+}
+
+// Add adds a new element x.
+func (uf *StrUnionFind) Add(x string) {
+	uf.parent[x] = x
+}
+
+// Elements return all elements in StrUnionFind.
+func (uf *StrUnionFind) Elements() []string {
+	var res []string
+	for k := range uf.parent {
+		res = append(res, k)
+	}
+
+	return res
+}
+
+// Find finds the root parent of x.
+func (uf *StrUnionFind) Find(x string) string {
+	if uf.parent[x] != x {
+		uf.parent[x] = uf.Find(uf.parent[x])
+	}
+
+	return uf.parent[x]
+}
+
+// Union unions the unions where x and y are.
+func (uf *StrUnionFind) Union(x, y string) {
+	parentX := uf.Find(x)
+	parentY := uf.Find(y)
+	if parentX != parentY {
+		uf.parent[parentY] = parentX
+	}
+}
+
+// Connected judges whether x and y are connected.
+func (uf *StrUnionFind) Connected(x, y string) bool {
+	return uf.Find(x) == uf.Find(y)
+}
