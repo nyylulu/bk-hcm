@@ -376,6 +376,7 @@ export interface IListChangeLogsResult {
     remark: string;
   }[];
 }
+
 interface TicketTypesResult {
   details: {
     ticket_type: string;

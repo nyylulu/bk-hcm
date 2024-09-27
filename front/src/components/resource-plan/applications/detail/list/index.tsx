@@ -24,7 +24,7 @@ export default defineComponent({
 
   setup(props) {
     const { t } = useI18n();
-    const { columns, settings } = useColumns('forecastDemandDetail');
+    const { columns, settings } = useColumns('receiptForecastDemandDetail');
 
     return () => (
       <Panel title={t('资源预测')}>

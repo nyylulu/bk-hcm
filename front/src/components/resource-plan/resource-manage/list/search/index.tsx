@@ -7,7 +7,14 @@ import BusinessSelector from '@/components/business-selector/index.vue';
 import WName from '@/components/w-name';
 import { useI18n } from 'vue-i18n';
 import { timeFormatter } from '@/common/util';
-import { IDeviceType, IListResourcesDemandsParam, IPlanProducts, IRegion, IZone } from '@/typings/resourcePlan';
+import {
+  IDeviceType,
+  IListResourcesDemandsParam,
+  IOpProductsResult,
+  IPlanProducts,
+  IRegion,
+  IZone,
+} from '@/typings/resourcePlan';
 import { useResourcePlanStore } from '@/store';
 import dayjs from 'dayjs';
 
@@ -22,17 +29,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const { Option } = Select;
     const { t } = useI18n();
-    const {
-      getOpProducts,
-      getPlanProducts,
-      getProjectTypes,
-      getDemandClasses,
-      getDeviceClasses,
-      getDeviceTypes,
-      getRegions,
-      getZones,
-      getPlanTypes,
-    } = useResourcePlanStore();
+    const resourcePlanStore = useResourcePlanStore();
 
     const initialSearchModel: Partial<IListResourcesDemandsParam> = {
       bk_biz_ids: [], // 业务
@@ -52,7 +49,7 @@ export default defineComponent({
       }, // 期望交付时间范围
     };
 
-    const opProductList = ref<string[]>([]);
+    const opProductList = ref<{ op_product_id: number; op_product_name: string }[]>([]);
     const planProductsList = ref<IPlanProducts[]>([]);
     const projectTypesList = ref<string[]>([]);
     const demandClassList = ref<string[]>([]);
@@ -101,9 +98,10 @@ export default defineComponent({
 
     const getOpProductsList = () => {
       isLoadingOpProducts.value = true;
-      getOpProducts()
-        .then((data: { data: { details: string[] } }) => {
-          projectTypesList.value = data?.data?.details || [];
+      resourcePlanStore
+        .getOpProductsList()
+        .then((data: IOpProductsResult) => {
+          opProductList.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingOpProducts.value = false;
@@ -112,7 +110,8 @@ export default defineComponent({
 
     const getPlanProductsList = () => {
       isLoadingPlanProducts.value = true;
-      getPlanProducts()
+      resourcePlanStore
+        .getPlanProductsList()
         .then((data: { data: { details: IPlanProducts[] } }) => {
           planProductsList.value = data?.data?.details || [];
         })
@@ -123,7 +122,8 @@ export default defineComponent({
 
     const getObsProjectList = () => {
       isLoadingProjectsType.value = true;
-      getProjectTypes()
+      resourcePlanStore
+        .getObsProjects()
         .then((data: { data: { details: string[] } }) => {
           projectTypesList.value = data?.data?.details || [];
         })
@@ -134,7 +134,8 @@ export default defineComponent({
 
     const getDemandClassList = () => {
       isLoadingDemandClass.value = true;
-      getDemandClasses()
+      resourcePlanStore
+        .getDemandClasses()
         .then((data: { data: { details: string[] } }) => {
           demandClassList.value = data?.data?.details || [];
         })
@@ -145,7 +146,8 @@ export default defineComponent({
 
     const getDeviceClassList = () => {
       isLoadingDeviceClass.value = true;
-      getDeviceClasses()
+      resourcePlanStore
+        .getDeviceClasses()
         .then((data: { data: { details: string[] } }) => {
           deviceClassList.value = data?.data?.details || [];
         })
@@ -156,7 +158,8 @@ export default defineComponent({
 
     const getDeviceTypeList = () => {
       isLoadingDeviceType.value = true;
-      getDeviceTypes()
+      resourcePlanStore
+        .getDeviceTypes()
         .then((data: { data: { details: IDeviceType[] } }) => {
           deviceTypeList.value = data?.data?.details || [];
         })
@@ -167,7 +170,8 @@ export default defineComponent({
 
     const getPlanClassList = () => {
       isLoadingPlanClass.value = true;
-      getPlanTypes()
+      resourcePlanStore
+        .getPlanTypes()
         .then((data: { data: { details: string[] } }) => {
           planClassList.value = data?.data?.details || [];
         })
@@ -178,7 +182,8 @@ export default defineComponent({
 
     const getRegionList = () => {
       isLoadingRegion.value = true;
-      getRegions()
+      resourcePlanStore
+        .getRegions()
         .then((data: { data: { details: IRegion[] } }) => {
           regionList.value = data?.data?.details || [];
         })
@@ -189,7 +194,8 @@ export default defineComponent({
 
     const getZoneList = () => {
       isLoadingZone.value = true;
-      getZones()
+      resourcePlanStore
+        .getZones()
         .then((data: { data: { details: IZone[] } }) => {
           zoneList.value = data?.data?.details || [];
         })
@@ -243,7 +249,7 @@ export default defineComponent({
                       <div class={cssModule['search-label']}>{t('运营产品')}</div>
                       <Select multiple v-model={searchModel.value.op_product_ids} loading={isLoadingOpProducts.value}>
                         {opProductList.value.map((item) => (
-                          <Option name={item} id={item} />
+                          <Option name={item.op_product_name} id={item.op_product_id} />
                         ))}
                       </Select>
                     </div>

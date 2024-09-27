@@ -24,7 +24,7 @@ export default defineComponent({
 
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
-    const { columns, settings } = useColumns('forecastDemand');
+    const { columns, settings } = useColumns('receiptForecastDemand');
     const router = useRouter();
     const { getBizsId } = useWhereAmI();
 
