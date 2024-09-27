@@ -83,11 +83,11 @@ export const useResourcePlanStore = defineStore({
     },
     // 查询运营产品列表。
     getOpProductsList(): Promise<IOpProductsResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/op_products/list`);
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/op_products/list`);
     },
     // 查询规划产品列表。
     getPlanProductsList(): Promise<IPlanProductsResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/plan_products/list`);
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/plan_products/list`);
     },
     // 根据运营产品ID查询业务列表。
     getBizsByOpProductList(data: { op_product_id: number }): Promise<IBizsByOpProductResult> {

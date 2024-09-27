@@ -261,36 +261,44 @@ export default defineComponent({
 
     return () => (
       <Panel>
-        {props.isBiz && (
+        <div class={cssModule['table-header']}>
           <div class={cssModule['toolbar-buttons']}>
-            <Button
-              class={`${cssModule.button} ${
-                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
-              }`}
-              theme='primary'
-              onClick={handleToAdd}>
-              <PlusIcon class={cssModule['plus-icon']} />
-              {t('新增预测')}
-            </Button>
-            <Button
-              class={`${cssModule.button} ${
-                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
-              }`}
-              onClick={() => handleToEdit(selection.value)}
-              disabled={!selection.value.length}>
-              {t('批量调整')}
-            </Button>
-            <Button
-              class={`${cssModule.button} ${
-                !authVerifyData.value.permissionAction.biz_resource_plan_operate ? 'hcm-no-permision-btn' : undefined
-              }`}
-              onClick={handleCancel}
-              disabled={!selection.value.length}>
-              {t('批量取消')}
-            </Button>
+            {props.isBiz && (
+              <>
+                <Button
+                  class={`${cssModule.button} ${
+                    !authVerifyData.value.permissionAction.biz_resource_plan_operate
+                      ? 'hcm-no-permision-btn'
+                      : undefined
+                  }`}
+                  theme='primary'
+                  onClick={handleToAdd}>
+                  <PlusIcon class={cssModule['plus-icon']} />
+                  {t('新增预测')}
+                </Button>
+                <Button
+                  class={`${cssModule.button} ${
+                    !authVerifyData.value.permissionAction.biz_resource_plan_operate
+                      ? 'hcm-no-permision-btn'
+                      : undefined
+                  }`}
+                  onClick={() => handleToEdit(selection.value)}
+                  disabled={!selection.value.length}>
+                  {t('批量调整')}
+                </Button>
+                <Button
+                  class={`${cssModule.button} ${
+                    !authVerifyData.value.permissionAction.biz_resource_plan_operate
+                      ? 'hcm-no-permision-btn'
+                      : undefined
+                  }`}
+                  onClick={handleCancel}
+                  disabled={!selection.value.length}>
+                  {t('批量取消')}
+                </Button>
+              </>
+            )}
           </div>
-        )}
-        <bk-loading loading={isLoading.value}>
           <div class={cssModule.overview}>
             <div>
               <span>{`${t('本月即将过期 CPU ')}${overview.value?.expiring_cpu_core || '--'}${t('核')}`}</span>
@@ -316,6 +324,8 @@ export default defineComponent({
               </span>
             </div>
           </div>
+        </div>
+        <bk-loading loading={isLoading.value}>
           <bk-table
             ref={tableRef}
             row-hover='auto'
@@ -331,7 +341,6 @@ export default defineComponent({
             onColumnSort={handleSort}
           />
         </bk-loading>
-
         <BatchCancellationDialog v-model:isShow={isShow.value} data={currentRowsData.value} onRefresh={triggerApi} />
       </Panel>
     );
