@@ -16,9 +16,9 @@ export default defineComponent({
 
     const handleAdjust = () => {
       router.push({
-        path: '/service/resource-plan/list',
+        path: '/business/service/resource-plan-mod',
         query: {
-          planIds: route.query.id,
+          planIds: route.query.crpDemandId,
         },
       });
     };
