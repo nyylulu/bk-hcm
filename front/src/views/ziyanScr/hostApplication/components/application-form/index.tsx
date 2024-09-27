@@ -900,7 +900,6 @@ export default defineComponent({
     watch(
       () => cloudTableData.value,
       async (val) => {
-        console.log(123123123);
         resetCpuAmount();
         for (const item of val) {
           const { cpu, charge_type } = item.spec;
@@ -921,7 +920,6 @@ export default defineComponent({
           acc ||= cur.verify_result !== 'PASS';
           return acc;
         }, false)
-        console.log(1111, val);
       },
       {
         deep: true,
