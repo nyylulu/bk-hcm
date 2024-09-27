@@ -21,7 +21,10 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
-	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/dal/dao/types"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/times"
 )
 
@@ -50,11 +53,13 @@ func (r *ListResPlanTicketReq) Validate() error {
 			return errors.New("bk biz id should be > 0")
 		}
 	}
+
 	for _, opProductID := range r.OpProductIDs {
 		if opProductID <= 0 {
 			return errors.New("op product id should be > 0")
 		}
 	}
+
 	for _, planProductID := range r.PlanProductIDs {
 		if planProductID <= 0 {
 			return errors.New("plan product id should be > 0")
@@ -66,6 +71,7 @@ func (r *ListResPlanTicketReq) Validate() error {
 			return err
 		}
 	}
+
 	for _, ticketType := range r.TicketTypes {
 		if err := ticketType.Validate(); err != nil {
 			return err
@@ -77,6 +83,119 @@ func (r *ListResPlanTicketReq) Validate() error {
 			return err
 		}
 	}
+
+	if err := r.Page.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GenListOption generate list option by list resource plan ticket request.
+func (r *ListResPlanTicketReq) GenListOption() (*types.ListOption, error) {
+	rules := make([]filter.RuleFactory, 0)
+
+	if len(r.BkBizIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("bk_biz_id", r.BkBizIDs))
+	}
+
+	if len(r.OpProductIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("op_product_id", r.OpProductIDs))
+	}
+
+	if len(r.PlanProductIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("plan_product_id", r.PlanProductIDs))
+	}
+
+	if len(r.TicketIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("id", r.TicketIDs))
+	}
+
+	if len(r.Statuses) > 0 {
+		rules = append(rules, tools.ContainersExpression("status", r.Statuses))
+	}
+
+	if len(r.TicketTypes) > 0 {
+		rules = append(rules, tools.ContainersExpression("type", r.TicketTypes))
+	}
+
+	if len(r.Applicants) > 0 {
+		rules = append(rules, tools.ContainersExpression("applicant", r.Applicants))
+	}
+
+	if r.SubmitTimeRange != nil {
+		drOpt, err := tools.DateRangeExpression("submitted_at", r.SubmitTimeRange)
+		if err != nil {
+			return nil, err
+		}
+		rules = append(rules, drOpt)
+	}
+
+	// copy page for modifying.
+	pageCopy := &core.BasePage{
+		Count: r.Page.Count,
+		Start: r.Page.Start,
+		Limit: r.Page.Limit,
+		Sort:  r.Page.Sort,
+		Order: r.Page.Order,
+	}
+
+	// if count == false, default sort by submitted_at desc.
+	if !pageCopy.Count {
+		if pageCopy.Sort == "" {
+			pageCopy.Sort = "submitted_at"
+		}
+		if pageCopy.Order == "" {
+			pageCopy.Order = core.Descending
+		}
+	}
+
+	opt := &types.ListOption{
+		Filter: &filter.Expression{
+			Op:    filter.And,
+			Rules: rules,
+		},
+		Page: pageCopy,
+	}
+
+	return opt, nil
+}
+
+// ListBizResPlanTicketReq is list biz resource plan ticket request.
+type ListBizResPlanTicketReq struct {
+	TicketIDs       []string                `json:"ticket_ids" validate:"omitempty"`
+	Statuses        []enumor.RPTicketStatus `json:"statuses" validate:"omitempty"`
+	ObsProjects     []string                `json:"obs_projects" validate:"omitempty"`
+	TicketTypes     []enumor.RPTicketType   `json:"ticket_types" validate:"omitempty"`
+	Applicants      []string                `json:"applicants" validate:"omitempty"`
+	SubmitTimeRange *times.DateRange        `json:"submit_time_range" validate:"omitempty"`
+	Page            *core.BasePage          `json:"page" validate:"required"`
+}
+
+// Validate whether ListBizResPlanTicketReq is valid.
+func (r *ListBizResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, status := range r.Statuses {
+		if err := status.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, ticketType := range r.TicketTypes {
+		if err := ticketType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if r.SubmitTimeRange != nil {
+		if err := r.SubmitTimeRange.Validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := r.Page.Validate(); err != nil {
 		return err
 	}
@@ -229,18 +348,20 @@ type GetResPlanTicketResp struct {
 
 // GetRPTicketBaseInfo get resource plan ticket base info.
 type GetRPTicketBaseInfo struct {
-	Applicant       string             `json:"applicant"`
-	BkBizID         int64              `json:"bk_biz_id"`
-	BkBizName       string             `json:"bk_biz_name"`
-	OpProductID     int64              `json:"op_product_id"`
-	OpProductName   string             `json:"op_product_name"`
-	PlanProductID   int64              `json:"plan_product_id"`
-	PlanProductName string             `json:"plan_product_name"`
-	VirtualDeptID   int64              `json:"virtual_dept_id"`
-	VirtualDeptName string             `json:"virtual_dept_name"`
-	DemandClass     enumor.DemandClass `json:"demand_class"`
-	Remark          string             `json:"remark"`
-	SubmittedAt     string             `json:"submitted_at"`
+	Type            enumor.RPTicketType `json:"type"`
+	TypeName        string              `json:"type_name"`
+	Applicant       string              `json:"applicant"`
+	BkBizID         int64               `json:"bk_biz_id"`
+	BkBizName       string              `json:"bk_biz_name"`
+	OpProductID     int64               `json:"op_product_id"`
+	OpProductName   string              `json:"op_product_name"`
+	PlanProductID   int64               `json:"plan_product_id"`
+	PlanProductName string              `json:"plan_product_name"`
+	VirtualDeptID   int64               `json:"virtual_dept_id"`
+	VirtualDeptName string              `json:"virtual_dept_name"`
+	DemandClass     enumor.DemandClass  `json:"demand_class"`
+	Remark          string              `json:"remark"`
+	SubmittedAt     string              `json:"submitted_at"`
 }
 
 // GetRPTicketStatusInfo get resource plan ticket status info.
@@ -255,16 +376,7 @@ type GetRPTicketStatusInfo struct {
 
 // GetRPTicketDemand get resource plan ticket demand.
 type GetRPTicketDemand struct {
-	ObsProject   enumor.ObsProject   `json:"obs_project"`
-	ExpectTime   string              `json:"expect_time"`
-	ZoneID       string              `json:"zone_id"`
-	ZoneName     string              `json:"zone_name"`
-	RegionID     string              `json:"region_id"`
-	RegionName   string              `json:"region_name"`
-	AreaID       string              `json:"area_id"`
-	AreaName     string              `json:"area_name"`
-	DemandSource enumor.DemandSource `json:"demand_source"`
-	Remark       string              `json:"remark"`
-	Cvm          *rpd.Cvm            `json:"cvm"`
-	Cbs          *rpd.Cbs            `json:"cbs"`
+	DemandClass  enumor.DemandClass     `json:"demand_class"`
+	OriginalInfo *rpt.ResPlanDemandItem `json:"original_info"`
+	UpdatedInfo  *rpt.ResPlanDemandItem `json:"updated_info"`
 }

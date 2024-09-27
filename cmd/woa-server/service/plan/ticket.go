@@ -15,32 +15,24 @@ package plan
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"slices"
-	"time"
 
+	"hcm/cmd/woa-server/logics/plan"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
-	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/runtime/filter"
-	"hcm/pkg/tools/slice"
-
-	"github.com/jmoiron/sqlx"
 )
 
 // ListResPlanTicket list resource plan ticket.
@@ -56,28 +48,23 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// default request bkBizIDs is authorized bizs.
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
+	// authorize ticket resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Find}}
+	_, authorized, err := s.authorizer.Authorize(cts.Kit, authRes)
 	if err != nil {
-		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
+		return nil, err
 	}
 
-	// if len request bkBizIDs > 0, request bkBizIDs = the intersection of authorized bkBizIDs and request bkBizIDs.
-	if len(req.BkBizIDs) > 0 {
-		bkBizIDs = slice.Intersect(bkBizIDs, req.BkBizIDs)
-	}
-
-	// if len bkBizIDs == 0, return empty response.
-	if len(bkBizIDs) == 0 {
-		return core.ListResultT[any]{Details: make([]any, 0)}, nil
-	}
-
-	// convert request to filter expression.
-	opt, err := convToListTicketOption(bkBizIDs, req)
+	// convert request to list option.
+	opt, err := req.GenListOption()
 	if err != nil {
 		logs.Errorf("failed to convert to list option, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	if !authorized {
+		// 没有单据管理权限的只能查询自己的单据
+		opt.Filter.Rules = append(opt.Filter.Rules, tools.RuleEqual("applicant", cts.Kit.User))
 	}
 
 	rst, err := s.dao.ResPlanTicket().ListWithStatusAndRes(cts.Kit, opt)
@@ -88,70 +75,58 @@ func (s *service) ListResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	return rst, nil
 }
 
-// convToListTicketOption convert request parameters to ListOption.
-func convToListTicketOption(bkBizIDs []int64, req *ptypes.ListResPlanTicketReq) (*types.ListOption, error) {
-	rules := []filter.RuleFactory{
-		tools.ContainersExpression("bk_biz_id", bkBizIDs),
-	}
-	if len(req.OpProductIDs) > 0 {
-		rules = append(rules, tools.ContainersExpression("op_product_id", req.OpProductIDs))
-	}
-	if len(req.PlanProductIDs) > 0 {
-		rules = append(rules, tools.ContainersExpression("plan_product_id", req.PlanProductIDs))
-	}
-	if len(req.TicketIDs) > 0 {
-		rules = append(rules, tools.ContainersExpression("id", req.TicketIDs))
-	}
-	if len(req.Statuses) > 0 {
-		rules = append(rules, tools.ContainersExpression("status", req.Statuses))
-	}
-	if len(req.TicketTypes) > 0 {
-		rules = append(rules, tools.ContainersExpression("type", req.TicketTypes))
-	}
-	if len(req.Applicants) > 0 {
-		rules = append(rules, tools.ContainersExpression("applicant", req.Applicants))
-	}
-	if req.SubmitTimeRange != nil {
-		drOpt, err := tools.DateRangeExpression("submitted_at", req.SubmitTimeRange)
-		if err != nil {
-			return nil, err
-		}
-
-		rules = append(rules, drOpt)
+// ListBizResPlanTicket list biz resource plan ticket.
+func (s *service) ListBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// copy page for modifying.
-	pageCopy := &core.BasePage{
-		Count: req.Page.Count,
-		Start: req.Page.Start,
-		Limit: req.Page.Limit,
-		Sort:  req.Page.Sort,
-		Order: req.Page.Order,
+	req := new(ptypes.ListBizResPlanTicketReq)
+	if err = cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to list biz resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	// if count == false, default sort by submitted_at desc.
-	if !pageCopy.Count {
-		if pageCopy.Sort == "" {
-			pageCopy.Sort = "submitted_at"
-		}
-		if pageCopy.Order == "" {
-			pageCopy.Order = core.Descending
-		}
+	if err = req.Validate(); err != nil {
+		logs.Errorf("failed to validate list biz resource ticket parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	opt := &types.ListOption{
-		Filter: &filter.Expression{
-			Op:    filter.And,
-			Rules: rules,
-		},
-		Page: pageCopy,
+	// authorize biz resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
 	}
 
-	return opt, nil
+	// convert request to list option.
+	listResPlanTicketReq := &ptypes.ListResPlanTicketReq{
+		BkBizIDs:        []int64{bkBizID},
+		TicketIDs:       req.TicketIDs,
+		Statuses:        req.Statuses,
+		ObsProjects:     req.ObsProjects,
+		TicketTypes:     req.TicketTypes,
+		Applicants:      req.Applicants,
+		SubmitTimeRange: req.SubmitTimeRange,
+		Page:            req.Page,
+	}
+	opt, err := listResPlanTicketReq.GenListOption()
+	if err != nil {
+		logs.Errorf("failed to convert to list option, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	rst, err := s.dao.ResPlanTicket().ListWithStatusAndRes(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("failed to list biz resource plan ticket with status, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return rst, nil
 }
 
-// CreateResPlanTicket create resource plan ticket.
-func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
+// CreateBizResPlanTicket create biz resource plan ticket.
+func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	req := new(ptypes.CreateResPlanTicketReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -175,6 +150,7 @@ func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
+	// create resource plan ticket itsm audit flow.
 	if err = s.planController.CreateAuditFlow(cts.Kit, ticketID); err != nil {
 		logs.Errorf("failed to create resource plan ticket audit flow, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -185,117 +161,78 @@ func (s *service) CreateResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 
 // createResPlanTicket create resource plan ticket.
 func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTicketReq) (string, error) {
-	// convert request to resource plan ticket table slice.
-	tickets, err := s.convToRPTicketTableSlice(kt, req)
+	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
+	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
 	if err != nil {
-		logs.Errorf("convert to resource plan ticket table slice failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
-	ticketID, err := s.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		ticketIDs, err := s.dao.ResPlanTicket().CreateWithTx(kt, txn, tickets)
-		if err != nil {
-			logs.Errorf("create resource plan ticket failed, err: %v, rid: %s", err, kt.Rid)
-			return "", err
-		}
-		if len(ticketIDs) != 1 {
-			logs.Errorf("create resource plan ticket, but len ticketIDs != 1, rid: %s", kt.Rid)
-			return "", errors.New("create resource plan ticket, but len ticketIDs != 1")
-		}
-
-		ticketID := ticketIDs[0]
-
-		// create resource plan ticket status.
-		statuses := []rpts.ResPlanTicketStatusTable{
-			{
-				TicketID: ticketID,
-				Status:   enumor.RPTicketStatusInit,
+	// convert request demands to demands defined in resource plan ticket table.
+	demands := make(rpt.ResPlanDemands, len(req.Demands))
+	for idx, demand := range req.Demands {
+		demands[idx] = rpt.ResPlanDemand{
+			DemandClass: req.DemandClass,
+			Updated: &rpt.ResPlanDemandItem{
+				ObsProject:   demand.ObsProject,
+				ExpectTime:   demand.ExpectTime,
+				ZoneID:       demand.ZoneID,
+				ZoneName:     zoneMap[demand.ZoneID],
+				RegionID:     demand.RegionID,
+				RegionName:   regionAreaMap[demand.RegionID].RegionName,
+				AreaID:       regionAreaMap[demand.RegionID].AreaID,
+				AreaName:     regionAreaMap[demand.RegionID].AreaName,
+				DemandSource: demand.DemandSource,
+				Remark:       *demand.Remark,
 			},
 		}
-		if err = s.dao.ResPlanTicketStatus().CreateWithTx(kt, txn, statuses); err != nil {
-			logs.Errorf("create resource plan ticket status failed, err: %v, rid: %s", err, kt.Rid)
-			return "", err
+
+		if slices.Contains(demand.DemandResTypes, enumor.DemandResTypeCVM) {
+			deviceType := demand.Cvm.DeviceType
+			demands[idx].Updated.Cvm = rpt.Cvm{
+				ResMode:      demand.Cvm.ResMode,
+				DeviceType:   deviceType,
+				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
+				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
+				CoreType:     deviceTypeMap[deviceType].CoreType,
+				Os:           *demand.Cvm.Os,
+				CpuCore:      *demand.Cvm.CpuCore,
+				Memory:       *demand.Cvm.Memory,
+			}
 		}
 
-		// create resource plan demands.
-		demands, err := s.convToRPDemandTableSlice(kt, ticketID, req.Demands)
-		if err != nil {
-			logs.Errorf("convert to resource plan demand table slice failed, err: %v, rid: %s", err, kt.Rid)
-			return "", err
+		if slices.Contains(demand.DemandResTypes, enumor.DemandResTypeCBS) {
+			demands[idx].Updated.Cbs = rpt.Cbs{
+				DiskType:     demand.Cbs.DiskType,
+				DiskTypeName: demand.Cbs.DiskType.Name(),
+				DiskIo:       *demand.Cbs.DiskIo,
+				DiskSize:     *demand.Cbs.DiskSize,
+			}
 		}
-
-		if _, err = s.dao.ResPlanDemand().CreateWithTx(kt, txn, demands); err != nil {
-			logs.Errorf("create resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
-			return "", err
-		}
-
-		return ticketID, nil
-	})
-
-	if err != nil {
-		logs.Errorf("create resource plan ticket failed, err: %v, rid: %s", err, kt.Rid)
-		return "", err
 	}
-
-	ticketIDStr, ok := ticketID.(string)
-	if !ok {
-		logs.Errorf("convert resource plan ticket id %v from interface to string failed, err: %v, rid: %s", ticketID,
-			err, kt.Rid)
-		return "", fmt.Errorf("convert resource plan ticket id %v from interface to string failed", ticketID)
-	}
-
-	return ticketIDStr, nil
-}
-
-// convert request to ResPlanTicketTable slice.
-func (s *service) convToRPTicketTableSlice(kt *kit.Kit, req *ptypes.CreateResPlanTicketReq) (
-	[]rpt.ResPlanTicketTable, error) {
 
 	// get biz org relation.
 	bizOrgRel, err := s.logics.GetBizOrgRel(kt, req.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return "", err
 	}
 
-	// calculate total os, cpu_core, memory and disk_size.
-	var os, cpuCore, memory, diskSize int64
-	for _, demand := range req.Demands {
-		if demand.Cvm != nil {
-			os += *demand.Cvm.Os
-			cpuCore += *demand.Cvm.CpuCore
-			memory += *demand.Cvm.Memory
-		}
-
-		if demand.Cbs != nil {
-			diskSize += *demand.Cbs.DiskSize
-		}
+	logicsReq := &plan.CreateResPlanTicketReq{
+		TicketType:  enumor.RPTicketTypeAdd,
+		DemandClass: req.DemandClass,
+		BizOrgRel:   *bizOrgRel,
+		Demands:     demands,
+		Remark:      req.Remark,
 	}
 
-	tickets := []rpt.ResPlanTicketTable{
-		{
-			Applicant:       kt.User,
-			BkBizID:         req.BkBizID,
-			BkBizName:       bizOrgRel.BkBizName,
-			OpProductID:     bizOrgRel.OpProductID,
-			OpProductName:   bizOrgRel.OpProductName,
-			PlanProductID:   bizOrgRel.PlanProductID,
-			PlanProductName: bizOrgRel.PlanProductName,
-			VirtualDeptID:   bizOrgRel.VirtualDeptID,
-			VirtualDeptName: bizOrgRel.VirtualDeptName,
-			DemandClass:     req.DemandClass,
-			UpdatedOS:       os,
-			UpdatedCpuCore:  cpuCore,
-			UpdatedMemory:   memory,
-			UpdatedDiskSize: diskSize,
-			Remark:          req.Remark,
-			Creator:         kt.User,
-			Reviser:         kt.User,
-			SubmittedAt:     time.Now().Format(constant.DateTimeLayout),
-		},
+	ticketID, err := s.planController.CreateResPlanTicket(kt, logicsReq)
+	if err != nil {
+		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return "", err
 	}
 
-	return tickets, nil
+	return ticketID, nil
 }
 
 // getMetaMaps get create resource plan demand needed zoneMap, regionAreaMap and deviceTypeMap.
@@ -425,21 +362,29 @@ func (s *service) GetResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
 	}
 
+	// authorize ticket resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Find}}
+	_, authorized, err := s.authorizer.Authorize(cts.Kit, authRes)
+	if err != nil {
+		return nil, err
+	}
+
 	resp := new(ptypes.GetResPlanTicketResp)
 	resp.ID = ticketID
 
-	// get base info.
-	baseInfo, err := s.getRPTicketBaseInfo(cts.Kit, ticketID)
+	// get base info and demands.
+	baseInfo, demands, err := s.getRPTicketBaseInfoAndDemands(cts.Kit, ticketID)
 	if err != nil {
-		logs.Errorf("get resource plan ticket base info failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("get resource plan ticket base info and demands failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 	resp.BaseInfo = baseInfo
+	resp.Demands = demands
 
-	// authorize biz access.
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: baseInfo.BkBizID}
-	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
-		return nil, err
+	if !authorized {
+		if baseInfo.Applicant != cts.Kit.User {
+			return new(ptypes.GetResPlanTicketResp), nil
+		}
 	}
 
 	// get status info.
@@ -450,19 +395,13 @@ func (s *service) GetResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 	resp.StatusInfo = statusInfo
 
-	// get demands.
-	demands, err := s.getRPTicketDemands(cts.Kit, ticketID)
-	if err != nil {
-		logs.Errorf("get resource plan ticket demands failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-	resp.Demands = demands
-
 	return resp, nil
 }
 
-// getRPTicketBaseInfo get resource plan ticket base information.
-func (s *service) getRPTicketBaseInfo(kt *kit.Kit, ticketID string) (*ptypes.GetRPTicketBaseInfo, error) {
+// getRPTicketBaseInfoAndDemands get resource plan ticket base information and demands.
+func (s *service) getRPTicketBaseInfoAndDemands(kt *kit.Kit, ticketID string) (*ptypes.GetRPTicketBaseInfo,
+	[]ptypes.GetRPTicketDemand, error) {
+
 	// search resource plan ticket table.
 	opt := &types.ListOption{
 		Filter: tools.EqualExpression("id", ticketID),
@@ -471,16 +410,18 @@ func (s *service) getRPTicketBaseInfo(kt *kit.Kit, ticketID string) (*ptypes.Get
 	rst, err := s.dao.ResPlanTicket().List(kt, opt)
 	if err != nil {
 		logs.Errorf("failed to list resource plan ticket, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, err
 	}
 
 	if len(rst.Details) != 1 {
 		logs.Errorf("list resource plan ticket, but len details != 1, rid: %s", kt.Rid)
-		return nil, errors.New("list resource plan ticket, but len details != 1")
+		return nil, nil, errors.New("list resource plan ticket, but len details != 1")
 	}
 
 	detail := rst.Details[0]
-	result := &ptypes.GetRPTicketBaseInfo{
+	baseInfo := &ptypes.GetRPTicketBaseInfo{
+		Type:            detail.Type,
+		TypeName:        detail.Type.Name(),
 		Applicant:       detail.Applicant,
 		BkBizID:         detail.BkBizID,
 		BkBizName:       detail.BkBizName,
@@ -495,7 +436,22 @@ func (s *service) getRPTicketBaseInfo(kt *kit.Kit, ticketID string) (*ptypes.Get
 		SubmittedAt:     detail.SubmittedAt,
 	}
 
-	return result, nil
+	var demandsStruct rpt.ResPlanDemands
+	if err = json.Unmarshal([]byte(rst.Details[0].Demands), &demandsStruct); err != nil {
+		logs.Errorf("failed to unmarshal demands, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	demands := make([]ptypes.GetRPTicketDemand, len(demandsStruct))
+	for idx, demand := range demandsStruct {
+		demands[idx] = ptypes.GetRPTicketDemand{
+			DemandClass:  demand.DemandClass,
+			OriginalInfo: demand.Original,
+			UpdatedInfo:  demand.Updated,
+		}
+	}
+
+	return baseInfo, demands, nil
 }
 
 // getRPTicketStatusInfo get resource plan ticket status information.
@@ -529,48 +485,38 @@ func (s *service) getRPTicketStatusInfo(kt *kit.Kit, ticketID string) (*ptypes.G
 	return result, nil
 }
 
-// getRPTicketDemands get resource plan ticket demands.
-func (s *service) getRPTicketDemands(kt *kit.Kit, ticketID string) ([]ptypes.GetRPTicketDemand, error) {
-	// search resource plan demand table.
-	opt := &types.ListOption{
-		Filter: tools.EqualExpression("ticket_id", ticketID),
-		Page:   core.NewDefaultBasePage(),
+// GetBizResPlanTicket get biz resource plan ticket detail.
+func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
+	ticketID := cts.PathParameter("id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
 	}
-	rst, err := s.dao.ResPlanDemand().List(kt, opt)
+
+	resp := new(ptypes.GetResPlanTicketResp)
+	resp.ID = ticketID
+
+	// get base info and demands.
+	baseInfo, demands, err := s.getRPTicketBaseInfoAndDemands(cts.Kit, ticketID)
 	if err != nil {
-		logs.Errorf("failed to list resource plan demand, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get resource plan ticket base info and demands failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+	resp.BaseInfo = baseInfo
+	resp.Demands = demands
+
+	// authorize biz access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: baseInfo.BkBizID}
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
 		return nil, err
 	}
 
-	result := make([]ptypes.GetRPTicketDemand, 0, len(rst.Details))
-	for _, detail := range rst.Details {
-		var cvm *rpd.Cvm
-		var cbs *rpd.Cbs
-		if err = json.Unmarshal([]byte(detail.Cvm), &cvm); err != nil {
-			logs.Errorf("failed to unmarshal cvm, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		if err = json.Unmarshal([]byte(detail.Cbs), &cbs); err != nil {
-			logs.Errorf("failed to unmarshal cbs, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		result = append(result, ptypes.GetRPTicketDemand{
-			ObsProject:   detail.ObsProject,
-			ExpectTime:   detail.ExpectTime,
-			ZoneID:       detail.ZoneID,
-			ZoneName:     detail.ZoneName,
-			RegionID:     detail.RegionID,
-			RegionName:   detail.RegionName,
-			AreaID:       detail.AreaID,
-			AreaName:     detail.AreaName,
-			DemandSource: detail.DemandSource,
-			Remark:       detail.Remark,
-			Cvm:          cvm,
-			Cbs:          cbs,
-		})
+	// get status info.
+	statusInfo, err := s.getRPTicketStatusInfo(cts.Kit, ticketID)
+	if err != nil {
+		logs.Errorf("get resource plan ticket status info failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
+	resp.StatusInfo = statusInfo
 
-	return result, nil
+	return resp, nil
 }

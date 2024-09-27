@@ -128,6 +128,26 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 	return &core.ListResultT[mtypes.ListDeviceTypeRst]{Details: details}, nil
 }
 
+// ListPlanType lists plan type.
+func (s *service) ListPlanType(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.PlanType]{Details: enumor.GetPlanTypeHcmMembers()}, nil
+}
+
+// ListTicketType lists ticket type.
+func (s *service) ListTicketType(_ *rest.Contexts) (interface{}, error) {
+	// get ticket type members.
+	ticketTypes := enumor.GetRPTicketTypeMembers()
+	// convert to meta.DiskTypeItem slice.
+	details := make([]meta.TicketTypeItem, len(ticketTypes))
+	for idx, ticketType := range ticketTypes {
+		details[idx] = meta.TicketTypeItem{
+			TicketType:     ticketType,
+			TicketTypeName: ticketType.Name(),
+		}
+	}
+	return &core.ListResultT[meta.TicketTypeItem]{Details: details}, nil
+}
+
 // ListBizsByOpProduct lists bizs by op product.
 func (s *service) ListBizsByOpProduct(cts *rest.Contexts) (interface{}, error) {
 	req := new(mtypes.ListBizsByOpProdReq)

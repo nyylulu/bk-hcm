@@ -218,6 +218,16 @@ export default defineComponent({
             </div>
           )}
           <div>
+            <div class={cssModule['search-label']}>{t('类型')}</div>
+            <Select multiple v-model={searchModel.value.ticket_types} loading={typeLoading.value}>
+              {typeList.value.map((item) => (
+                <Option key={item.ticket_type} id={item.ticket_type} name={item.ticket_type_name}>
+                  {item.ticket_type_name}
+                </Option>
+              ))}
+            </Select>
+          </div>
+          <div>
             <div class={cssModule['search-label']}>{t('预测单号')}</div>
             <Input
               modelValue={searchModel.value.ticket_ids.join(';')}
@@ -246,16 +256,6 @@ export default defineComponent({
               onChange={(val: string[]) => handleChangeDate(val)}
               type='daterange'
             />
-          </div>
-          <div>
-            <div class={cssModule['search-label']}>{t('类型')}</div>
-            <Select multiple v-model={searchModel.value.ticket_types} loading={typeLoading.value}>
-              {typeList.value.map((item) => (
-                <Option key={item.ticket_type} id={item.ticket_type} name={item.ticket_type_name}>
-                  {item.ticket_type_name}
-                </Option>
-              ))}
-            </Select>
           </div>
         </div>
         <Button theme='primary' class={cssModule['search-button']} onClick={handleSearch}>

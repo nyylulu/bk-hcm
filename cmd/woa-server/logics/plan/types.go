@@ -20,12 +20,21 @@
 package plan
 
 import (
+	"errors"
+	"fmt"
+	"unicode/utf8"
+
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	"hcm/pkg/tools/times"
 )
 
 // TicketBriefInfo resource plan ticket brief info
 type TicketBriefInfo struct {
 	ID              string                `json:"id"`
+	Type            enumor.RPTicketType   `json:"type"`
 	Applicant       string                `json:"applicant"`
 	BkBizID         int64                 `json:"bk_biz_id"`
 	BkBizName       string                `json:"bk_biz_name"`
@@ -41,4 +50,88 @@ type TicketBriefInfo struct {
 	ItsmUrl         string                `json:"itsm_url"`
 	CrpSn           string                `json:"crp_sn"`
 	CrpUrl          string                `json:"crp_url"`
+}
+
+// CreateResPlanTicketReq is create resource plan ticket request.
+type CreateResPlanTicketReq struct {
+	TicketType  enumor.RPTicketType `json:"ticket_type" validate:"required"`
+	DemandClass enumor.DemandClass  `json:"demand_class" validate:"required"`
+	BizOrgRel   ptypes.BizOrgRel    `json:"biz_org_rel" validate:"required"`
+	Demands     rpt.ResPlanDemands  `json:"demands" validate:"required"`
+	Remark      string              `json:"remark" validate:"required"`
+}
+
+// Validate whether CreateResPlanTicketReq is valid.
+func (r *CreateResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if err := r.TicketType.Validate(); err != nil {
+		return err
+	}
+
+	switch r.TicketType {
+	case enumor.RPTicketTypeAdd:
+		for _, demand := range r.Demands {
+			if demand.Original != nil {
+				return errors.New("original demand of add ticket should be empty")
+			}
+
+			if demand.Updated == nil {
+				return errors.New("updated demand of add ticket can not be empty")
+			}
+		}
+	case enumor.RPTicketTypeAdjust:
+		for _, demand := range r.Demands {
+			if demand.Original == nil {
+				return errors.New("original demand of adjust ticket can not be empty")
+			}
+
+			if demand.Updated == nil {
+				return errors.New("updated demand of adjust ticket can not be empty")
+			}
+		}
+	case enumor.RPTicketTypeDelete:
+		for _, demand := range r.Demands {
+			if demand.Original == nil {
+				return errors.New("original demand of delete ticket can not be empty")
+			}
+
+			if demand.Updated != nil {
+				return errors.New("updated demand of delete ticket should be empty")
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported resource plan ticket type: %s", r.TicketType)
+	}
+
+	if err := r.DemandClass.Validate(); err != nil {
+		return err
+	}
+
+	for _, demand := range r.Demands {
+		if err := demand.Validate(); err != nil {
+			return err
+		}
+	}
+
+	lenRemark := utf8.RuneCountInString(r.Remark)
+	if lenRemark < 20 || lenRemark > 1024 {
+		return errors.New("len remark should be >= 20 and < 1024")
+	}
+
+	return nil
+}
+
+// QueryAllDemandsReq query all demands request.
+type QueryAllDemandsReq struct {
+	ExpectTimeRange *times.DateRange
+	CrpDemandIDs    []int64
+	CrpSns          []string
+	DeviceClasses   []string
+	PlanProdNames   []string
+	ObsProjects     []string
+	RegionNames     []string
+	ZoneNames       []string
 }

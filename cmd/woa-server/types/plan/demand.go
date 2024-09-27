@@ -17,6 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package plan ...
 package plan
 
 import (
@@ -438,4 +439,100 @@ type ListDemandChangeLogItem struct {
 	CreateTime        string  `json:"create_time"`
 	Remark            string  `json:"remark"`
 	ResPool           string  `json:"res_pool"`
+}
+
+// AdjustRPDemandReq is adjust resource plan demand request.
+type AdjustRPDemandReq struct {
+	Adjusts []AdjustRPDemandReqElem `json:"adjusts" validate:"required,max=100"`
+}
+
+// Validate whether AdjustRPDemandReq is valid.
+func (r *AdjustRPDemandReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, adjust := range r.Adjusts {
+		if err := adjust.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// AdjustRPDemandReqElem is adjust resource plan demand request element.
+type AdjustRPDemandReqElem struct {
+	CrpDemandID  int64                     `json:"crp_demand_id" validate:"required"`
+	AdjustType   enumor.RPDemandAdjustType `json:"adjust_type" validate:"required"`
+	DemandSource enumor.DemandSource       `json:"demand_source" validate:"omitempty"`
+	OriginalInfo *CreateResPlanDemandReq   `json:"original_info" validate:"omitempty"`
+	UpdatedInfo  *CreateResPlanDemandReq   `json:"updated_info" validate:"omitempty"`
+	ExpectTime   string                    `json:"expect_time" validate:"omitempty"`
+	// TODO: 目前DelayOs没有使用
+	DelayOs *int64 `json:"delay_os" validate:"omitempty"`
+}
+
+// Validate whether AdjustRPDemandReqElem is valid.
+func (e *AdjustRPDemandReqElem) Validate() error {
+	if err := validator.Validate.Struct(e); err != nil {
+		return err
+	}
+
+	if e.CrpDemandID <= 0 {
+		return errors.New("invalid crp demand id, should be > 0")
+	}
+
+	switch e.AdjustType {
+	case enumor.RPDemandAdjustTypeUpdate:
+		if err := e.DemandSource.Validate(); err != nil {
+			return err
+		}
+
+		if e.OriginalInfo == nil {
+			return errors.New("original info of update demand can not be empty")
+		}
+
+		if err := e.OriginalInfo.Validate(); err != nil {
+			return err
+		}
+
+		if e.UpdatedInfo == nil {
+			return errors.New("updated info of update demand can not be empty")
+		}
+
+		if err := e.UpdatedInfo.Validate(); err != nil {
+			return err
+		}
+	case enumor.RPDemandAdjustTypeDelay:
+		if len(e.ExpectTime) == 0 {
+			return errors.New("expect time of delay demand can not be empty")
+		}
+
+		// TODO：目前DelayOs没有使用，因此未做校验
+	default:
+		return fmt.Errorf("unsupported resource plan demand adjust type: %s", e.AdjustType)
+	}
+
+	return nil
+}
+
+// CancelRPDemandReq is cancel resource plan demand request.
+type CancelRPDemandReq struct {
+	CrpDemandIDs []int64 `json:"crp_demand_ids" validate:"required,max=100"`
+}
+
+// Validate whether CancelRPDemandReq is valid.
+func (r *CancelRPDemandReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, crpDemandID := range r.CrpDemandIDs {
+		if crpDemandID <= 0 {
+			return errors.New("invalid crp demand id, should be > 0")
+		}
+	}
+
+	return nil
 }

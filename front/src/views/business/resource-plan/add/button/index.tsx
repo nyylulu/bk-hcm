@@ -27,7 +27,7 @@ export default defineComponent({
         await validate();
         const data = await resourcePlanStore.createPlan(props.modelValue);
         router.push({
-          path: '/service/my-apply/resource-plan/detail',
+          path: '/business/applications/resource-plan/detail',
           query: {
             id: data.data.id,
           },
@@ -44,7 +44,7 @@ export default defineComponent({
 
     const handleCancel = () => {
       router.push({
-        path: '/service/my-apply',
+        path: '/business/resource-plan',
       });
     };
 
