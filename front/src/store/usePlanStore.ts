@@ -149,11 +149,11 @@ export default defineStore('planStore', () => {
             available: false,
             device_types: [
               {
-                device_type: 'C3.2XLARGE16',
+                device_type: 'S3.6XLARGE64',
                 available: true,
               },
               {
-                device_type: 'test_type',
+                device_type: 'S3.LARGE8',
                 available: true,
               },
             ],
@@ -191,7 +191,7 @@ export default defineStore('planStore', () => {
       data: {
         verifications: [
           {
-            verify_result: 'PASS',
+            verify_result: 'FAILED',
             reason: '',
           },
         ],

@@ -5,7 +5,6 @@ import { Button, Input, TagInput } from 'bkui-vue';
 import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import WName from '@/components/w-name';
 import GridFilterComp from '@/components/grid-filter-comp';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 
@@ -15,15 +14,14 @@ import useFormModel from '@/hooks/useFormModel';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
-import { applicationTime, timeFormatter } from '@/common/util';
-import { useRoute, useRouter } from 'vue-router';
-import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
+import { applicationTime } from '@/common/util';
+import { useRoute } from 'vue-router';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useSaveSearchRules } from '../../useSaveSearchRules';
+import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 
 export default defineComponent({
   setup() {
-    const router = useRouter();
     const { getBusinessApiPath, getBizsId } = useWhereAmI();
     const { t } = useI18n();
     const userStore = useUserStore();
@@ -49,53 +47,7 @@ export default defineComponent({
       return selections.value.map((item) => item.asset_id).join('\n');
     });
 
-    const columns = [
-      { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
-      {
-        label: '单号',
-        field: 'order_id',
-        width: 80,
-        render: ({ data, cell }: any) => {
-          return (
-            <Button
-              text
-              theme='primary'
-              onClick={() => {
-                router.push({
-                  name: 'HostApplicationsDetail',
-                  params: { id: data.order_id },
-                  query: route.query,
-                });
-              }}>
-              {cell}
-            </Button>
-          );
-        },
-      },
-      { label: '子单号', field: 'suborder_id', width: 80 },
-      { label: '需求类型', field: 'require_type', render: ({ row }: any) => getTypeCn(row.require_type) },
-      {
-        label: '申请人',
-        field: 'bk_username',
-        render({ cell }: any) {
-          return <WName name={cell} />;
-        },
-      },
-      { label: '内网IP', field: 'ip' },
-      { label: '固资号', field: 'asset_id' },
-      { label: '资源类型', field: 'resource_type' },
-      { label: '机型', field: 'device_type' },
-      { label: '园区', field: 'zone_name' },
-      { label: '交付时间', field: 'update_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
-      { label: '申请时间', field: 'create_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
-      {
-        label: '备注信息',
-        field: 'remark',
-        render({ data }: any) {
-          return `${data.description}${data.description && data.remark && '/'}${data.remark}` || '--';
-        },
-      },
-    ];
+    const { columns } = useScrColumns('hostApplyDevice');
 
     const { CommonTable, getListData, isLoading, dataList, pagination } = useTable({
       tableOptions: {

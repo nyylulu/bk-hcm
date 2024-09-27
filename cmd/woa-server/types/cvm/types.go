@@ -79,6 +79,8 @@ type OrderSpec struct {
 	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
 	// 计费时长，单位：月
 	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
+	// 被继承云主机实例ID
+	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
 }
 
 // Validate whether OrderSpec is valid

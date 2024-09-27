@@ -62,7 +62,7 @@ export default defineComponent({
       return params;
     });
 
-    const { columns } = useScrColumns('deviceQuery');
+    const { columns } = useScrColumns('hostRecycleDevice');
     columns.splice(1, 0, {
       label: t('子单号'),
       field: 'suborder_id',

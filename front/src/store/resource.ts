@@ -3,14 +3,16 @@ import { defineStore } from 'pinia';
 
 import { useAccountStore } from '@/store';
 import { VendorEnum } from '@/common/constant';
+import { getQueryStringParams } from '@/common/util';
 // import { json2Query } from '@/common/util';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 // 获取
 const getBusinessApiPath = (type?: string) => {
   const store = useAccountStore();
+  const bizs = getQueryStringParams('bizs');
   if (location.href.includes('business') && type !== 'images') {
-    return `bizs/${store.bizs}/`;
+    return `bizs/${store.bizs || bizs}/`;
   }
   return '';
 };

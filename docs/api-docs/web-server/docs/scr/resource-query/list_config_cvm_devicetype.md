@@ -81,8 +81,16 @@ POST /api/v1/woa/config/findmany/config/cvm/devicetype
   "data":{
     "count":2,
     "info":[
-      "SK1.LARGE16",
-      "S6t.4XLARGE32"
+      {
+        "device_type": "S3.MEDIUM4",
+        "device_type_class": "CommonType",
+        "cpu_amount": 2
+      },
+      {
+        "device_type": "S3.LARGE8",
+        "device_type_class": "CommonType",
+        "cpu_amount": 4
+      }
     ]
   }
 }
@@ -99,7 +107,15 @@ POST /api/v1/woa/config/findmany/config/cvm/devicetype
 
 #### data
 
-| 参数名称 | 参数类型       | 描述                     |
+| 参数名称 | 参数类型         | 描述                     |
 |---------|--------------|--------------------------|
 | count   | int          | 当前规则能匹配到的总记录条数 |
-| info    | string array | 机型列表                  |
+| info    | object array | 机型列表                  |
+
+#### info[0]
+
+| 参数名称 | 参数类型   | 描述                               |
+|---------|--------|----------------------------------|
+| device_type   | string | 机型                               |
+| device_type_class    | string | 通/专用机型，SpecialType专用，CommonType通用 |
+| cpu_amount    | int    | cpu核数                            |

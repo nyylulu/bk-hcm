@@ -15,7 +15,7 @@ export default defineComponent({
     expose({ triggerShow });
 
     return () => (
-      <CommonSideslider v-model:isShow={isSidesliderShow.value} title='待匹配' width={1600} noFooter>
+      <CommonSideslider v-model:isShow={isSidesliderShow.value} title='待匹配' width={1600} noFooter renderType='if'>
         <MatchPanel data={props.data} />
       </CommonSideslider>
     );

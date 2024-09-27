@@ -119,6 +119,7 @@ type Set interface {
 	AccountBillAdjustmentItem() bill.AccountBillAdjustmentItem
 	AccountBillSummaryRoot() bill.AccountBillSummaryRoot
 	OBSBillItemHuawei() obs.OBSBillItemHuawei
+	OBSBillItemZenlayer() obs.OBSBillItemZenlayer
 	OBSBillItemAws() obs.OBSBillItemAws
 	OBSBillItemGcp() obs.OBSBillItemGcp
 	RootAccountBillConfig() bill.RootAccountBillConfig
@@ -591,6 +592,14 @@ func (s *set) OBSBillItemHuawei() obs.OBSBillItemHuawei {
 	}
 }
 
+// OBSBillItemZenlayer returns OBSBillItemZenlayer dao.
+func (s *set) OBSBillItemZenlayer() obs.OBSBillItemZenlayer {
+	return &obs.OBSBillItemZenlayerDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
 // OBSBillItemAws returns OBSBillItemAws dao.
 func (s *set) OBSBillItemAws() obs.OBSBillItemAws {
 	return &obs.OBSBillItemAwsDao{
@@ -761,6 +770,7 @@ func (s *set) LoadBalancerTCloudUrlRule() loadbalancer.LbTCloudUrlRuleInterface 
 	}
 }
 
+// LoadBalancerTCloudZiyanUrlRule ...
 func (s *set) LoadBalancerTCloudZiyanUrlRule() loadbalancer.LbTCloudZiyanUrlRuleInterface {
 	return &loadbalancer.LbTCloudZiyanUrlRuleDao{
 		Orm:   s.orm,

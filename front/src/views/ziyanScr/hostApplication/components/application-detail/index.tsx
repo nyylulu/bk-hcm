@@ -326,7 +326,7 @@ export default defineComponent({
                   name: '需求类型',
                   prop: 'require_type',
                   render() {
-                    return transformRequireTypes(detail.value.requireType);
+                    return transformRequireTypes(detail.value.require_type);
                   },
                 },
                 {

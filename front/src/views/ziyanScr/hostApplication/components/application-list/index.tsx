@@ -337,7 +337,8 @@ export default defineComponent({
               return (
                 <div>
                   <Button
-                    disabled={data.status === 'UNCOMMIT'}
+                    // 滚服项目暂不支持再次申请
+                    disabled={data.status === 'UNCOMMIT' || data.require_type === 6}
                     size='small'
                     onClick={() => reapply(data)}
                     text
@@ -678,7 +679,7 @@ export default defineComponent({
           <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
         </CommonDialog>
 
-        <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600}>
+        <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderDirective='if'>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
         </Sideslider>
       </div>

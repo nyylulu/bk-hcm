@@ -13,7 +13,7 @@ image:
   registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.5.1-alpha.3
+  tag: 1.6.8.0-alpha.1
 
 serviceAccount:
   create: true
@@ -254,6 +254,7 @@ cloudserver:
         # the password to decrypt the certificate.
         password:
 
+
   ## pod配置
   ##
   replicas: 1
@@ -401,6 +402,38 @@ webserver:
         nodePort:
   ## Pod对应提供服务的port 与service里的targetPort必须一致
   port: 80
+  changeLogPath:
+    ch: /data/hcm/changelog/ch
+    en: /data/hcm/changelog/en
+  # defines notice related settings.
+  notice:
+    # enable is a flag to enable notice service.如果需要启用消息通知，需要申请bk-notice的api网关权限
+    enable: false
+    # endpoints is a seed list of host:port addresses of notice api gateway nodes.
+    endpoints:
+      - http://demo.com
+    # appCode is the BlueKing app code of hcm to request notice api gateway.
+    appCode: bk-hcm
+    # appSecret is the BlueKing app secret of hcm to request notice api gateway.
+    appSecret: xxxxxxxxx
+    # user is the BlueKing user of hcm to request notice api gateway.
+    user: bk-hcm
+    # bkTicket is the BlueKing access ticket of hcm to request notice api gateway.
+    bkTicket:
+    # bkToken is the BlueKing access token of hcm to request notice api gateway.
+    bkToken: xxxxxxxxx
+    # defines tls related options.
+    tls:
+      # server should be accessed without verifying the TLS certificate.
+      insecureSkipVerify:
+      # server requires TLS client certificate authentication.
+      certFile:
+      # server requires TLS client certificate authentication.
+      keyFile:
+      # trusted root certificates for server.
+      caFile:
+      # the password to decrypt the certificate.
+      password:
 
 taskserver:
   ## 镜像
@@ -566,6 +599,8 @@ accountserver:
     verbosity: 0
   # bill controller
   controller:
+    # 关闭账单拉取
+    disable: false
     controllerSyncDuration:
     mainAccountSummarySyncDuration:
     rootAccountSummarySyncDuration:
@@ -579,7 +614,17 @@ accountserver:
     #      spArnPrefix: arn:aws:savingsplans::xxxxx:savingsplan/
     awsCommonExpense:
       excludeAccountCloudIds:
-    #      - 123456789
+      #  - 123456789
+    gcpCredits:
+    #- rootAccountCloudID: gcp_support_account
+    #  returnConfigs:
+    #    - creditId: "some_credit_id"
+    #      creditName: "some_note"
+    #      accountCloudID: "gcp_credit_account"
+    gcpCommonExpense:
+      excludeAccountCloudIDs:
+      # - "account_do_not_share_common_expense"
+
   # [内部版] 财务侧接口 配置
   jarvis:
     endpoints:
@@ -989,15 +1034,15 @@ finops:
 
 # 对象存储配置
 objectstore:
-  type: tcloud
-  uin: 1234678
-  prefix: hcm
-  secretId: xxxx
-  secretKey: xxxx
-  bucketUrl: https://1234678.com
-  bucketName: bucket
-  bucketRegion: ap-xxx
-  isDebug: false
+  type:
+  uin:
+  prefix:
+  secretId:
+  secretKey:
+  bucketUrl:
+  bucketName:
+  bucketRegion:
+  isDebug:
 
 tmpFileDir: /tmp
 

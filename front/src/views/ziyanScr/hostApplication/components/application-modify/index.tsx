@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, watch, nextTick } from 'vue';
+import { computed, defineComponent, onMounted, ref, nextTick } from 'vue';
 import { Input, Button, Sideslider, Form, Alert, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import './index.scss';
@@ -17,6 +17,7 @@ import { getDiskTypesName, getImageName } from '@/components/property-list/trans
 import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 
 export default defineComponent({
   components: {
@@ -27,33 +28,9 @@ export default defineComponent({
     const route = useRoute();
     const { getBusinessApiPath } = useWhereAmI();
     const cvmOneKeyApplyVisible = ref(false);
-    // 机型列表
-    const deviceTypes = ref([]);
 
     const onZoneChange = () => {
       order.value.model.spec.device_type = '';
-      loadDeviceTypes();
-    };
-    const loadDeviceTypes = async () => {
-      const {
-        spec: { zone },
-      } = order.value.model;
-      const {
-        spec: { region },
-      } = rawOrder.value;
-      const params = {
-        region: [region],
-        zone: zone !== 'cvm_separate_campus' ? [zone] : undefined,
-      };
-      if (rawOrder.value.resource_type === 'QCLOUDCVM') {
-        const { info } = await apiService.getDeviceTypes(params);
-        deviceTypes.value = info || [];
-      } else {
-        const { info } = await apiService.getIDCPMDeviceTypes();
-        deviceTypes.value = info.map((item: any) => {
-          return item.device_type;
-        });
-      }
     };
 
     const ARtriggerShow = (isShow: boolean) => {
@@ -176,12 +153,14 @@ export default defineComponent({
       order.value.model.spec.zone = data.zone;
       cvmOneKeyApplyVisible.value = val;
     };
-    watch(
-      () => order.value.model.spec.zone,
-      () => {
-        loadDeviceTypes();
-      },
-    );
+
+    // 机型列表
+    const cvmDevicetypeParams = computed(() => {
+      const { zone } = order.value.model.spec;
+      const { region } = rawOrder.value.spec;
+      return { region, zone: zone !== 'cvm_separate_campus' ? zone : undefined };
+    });
+
     const handleSubmit = async () => {
       await formRef.value.validate();
       const { device_type, zone, replicas, subnet, vpc } = order.value.model.spec;
@@ -274,16 +253,14 @@ export default defineComponent({
 
               <bk-form-item label='机型' required property='device_type'>
                 <div class='component-with-preview'>
-                  <bk-select
-                    class={'w200px'}
+                  <DevicetypeSelector
+                    class='w200px'
                     v-model={order.value.model.spec.device_type}
+                    resourceType={rawOrder.value.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'}
+                    params={cvmDevicetypeParams.value}
                     disabled={order.value.model.spec.zone === ''}
                     placeholder={order.value.model.spec.zone === '' ? '请先选择园区' : '请选择机型'}
-                    filterable>
-                    {deviceTypes.value.map((device_type) => (
-                      <bk-option key={device_type} label={device_type} value={device_type} />
-                    ))}
-                  </bk-select>
+                  />
                   <Button class='preview-btn' onClick={handleSearchAvailable}>
                     查询可替代资源库存
                   </Button>

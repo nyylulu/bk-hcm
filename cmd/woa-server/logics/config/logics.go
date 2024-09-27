@@ -51,7 +51,7 @@ func New(thirdCli *thirdparty.Client) Logics {
 		subnet:         NewSubnetOp(thirdCli),
 		deviceRestrict: NewDeviceRestrictOp(),
 		cvmImage:       NewCvmImageOp(),
-		device:         NewDeviceOp(),
+		device:         NewDeviceOp(thirdCli),
 		capacity:       NewCapacityOp(thirdCli),
 		leftIP:         NewLeftIPOp(thirdCli),
 	}

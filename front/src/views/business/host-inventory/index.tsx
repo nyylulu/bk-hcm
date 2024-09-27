@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import apiService from '@/api/scrApi';
 import { Button } from 'bkui-vue';
@@ -9,6 +9,7 @@ import { useI18n } from 'vue-i18n';
 import cssModule from './index.module.scss';
 import GridFilterComp from '@/components/grid-filter-comp';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 // import { useVerify } from '@/hooks';
 // import ErrorPage from '@/views/error-pages/403';
 
@@ -100,7 +101,6 @@ export default defineComponent({
       filter.value.cpu = '';
       filter.value.mem = '';
       filter.value.device_type = [];
-      loadDeviceTypes();
     };
     const filterDevices = () => {
       queryrules.value = [
@@ -126,10 +126,6 @@ export default defineComponent({
       filter.value.mem = '';
       deviceConfigDisabled.value = filter.value.device_type.length > 0;
     };
-    const loadDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(filter.value);
-      options.value.device_types = info || [];
-    };
     const loadRestrict = async () => {
       const { cpu, mem } = await apiService.getRestrict();
       options.value.cpu = cpu || [];
@@ -149,7 +145,6 @@ export default defineComponent({
     };
     onMounted(() => {
       loadRestrict();
-      loadDeviceTypes();
       getfetchOptionslist();
     });
 
@@ -195,6 +190,12 @@ export default defineComponent({
         };
       },
     });
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone, device_group, cpu, mem, disk, enable_capacity } = filter.value;
+      return { region, zone, device_group, cpu, mem, disk, enable_capacity };
+    });
+
     return () => (
       <>
         <GridFilterComp
@@ -253,17 +254,14 @@ export default defineComponent({
             {
               title: t('机型'),
               content: (
-                <bk-select
+                <DevicetypeSelector
                   v-model={filter.value.device_type}
-                  clearable
+                  resourceType='cvm'
+                  params={cvmDevicetypeParams.value}
                   multiple
                   disabled={deviceTypeDisabled.value}
-                  filterable
-                  onChange={handleDeviceTypeChange}>
-                  {options.value.device_types.map((item) => (
-                    <bk-option key={item} value={item} label={item}></bk-option>
-                  ))}
-                </bk-select>
+                  onChange={handleDeviceTypeChange}
+                />
               ),
             },
             {

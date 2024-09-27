@@ -13,12 +13,12 @@ export function useSaveSearchRules(
 
   const saveSearchRules = () => {
     router.replace({
-      query: { ...route.query, [queryKey]: encodeValueByBtoa(formModel) },
+      query: { ...route.query, [queryKey]: encodeValueByBtoa(formModel), _t: Date.now() },
     });
   };
 
   const clearSearchRules = () => {
-    router.replace({ query: { ...route.query, [queryKey]: undefined } });
+    router.replace({ query: { ...route.query, [queryKey]: undefined, _t: Date.now() } });
   };
 
   const backfillSearchRules = (searchRulesStr: string) => {
@@ -26,9 +26,9 @@ export function useSaveSearchRules(
   };
 
   watch(
-    () => route.query[queryKey],
-    (val) => {
-      const searchRulesStr = val as string;
+    () => route.query,
+    () => {
+      const searchRulesStr = route.query[queryKey] as string;
       // 如果query中有搜索条件，则回填
       if (searchRulesStr) backfillSearchRules(searchRulesStr);
       // 请求数据

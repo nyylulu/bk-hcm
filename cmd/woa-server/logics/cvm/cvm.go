@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
@@ -53,6 +54,7 @@ type CVM struct {
 	SecurityGroupDesc string            `json:"securityGroupDesc"`
 	ChargeType        cvmapi.ChargeType `json:"chargeType"`
 	ChargeMonths      uint              `json:"chargeMonths"`
+	InheritInstanceId string            `json:"inherit_instance_id"`
 }
 
 // executeApplyOrder CVM生产-创建单据
@@ -196,11 +198,12 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 				SecurityGroupName: cvm.SecurityGroupName,
 				SecurityGroupDesc: cvm.SecurityGroupDesc,
 			},
-			UseTime:     time.Now().Format("2006-01-02 15:04:05"),
-			Memo:        cvm.NoteInfo,
-			Operator:    cvm.Operator,
-			BakOperator: cvm.Operator,
-			ChargeType:  cvm.ChargeType, // 计费模式
+			UseTime:           time.Now().Format(constant.DateTimeLayout),
+			Memo:              cvm.NoteInfo,
+			Operator:          cvm.Operator,
+			BakOperator:       cvm.Operator,
+			ChargeType:        cvm.ChargeType,        // 计费模式
+			InheritInstanceId: cvm.InheritInstanceId, // 被继承云主机的实例id
 		},
 	}
 
@@ -434,18 +437,19 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &CVM{
-		AppId:        "931",
-		ApplyType:    order.RequireType,
-		AppModuleId:  51524,
-		Operator:     order.User,
-		ApplyNumber:  order.Total,
-		NoteInfo:     order.Remark,
-		Area:         order.Spec.Region,
-		Zone:         order.Spec.Zone,
-		InstanceType: order.Spec.DeviceType,
-		DiskType:     order.Spec.DiskType,
-		DiskSize:     order.Spec.DiskSize,
-		ChargeType:   order.Spec.ChargeType, // 计费模式
+		AppId:             "931",
+		ApplyType:         order.RequireType,
+		AppModuleId:       51524,
+		Operator:          order.User,
+		ApplyNumber:       order.Total,
+		NoteInfo:          order.Remark,
+		Area:              order.Spec.Region,
+		Zone:              order.Spec.Zone,
+		InstanceType:      order.Spec.DeviceType,
+		DiskType:          order.Spec.DiskType,
+		DiskSize:          order.Spec.DiskSize,
+		ChargeType:        order.Spec.ChargeType, // 计费模式
+		InheritInstanceId: order.Spec.InheritInstanceId,
 	}
 
 	// 计费模式-包年包月时才需要设置计费时长

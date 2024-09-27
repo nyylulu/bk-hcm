@@ -17,7 +17,7 @@ POST /api/v1/woa/task/update/apply/ticket
 | bk_username   | string       | 是	  | 资源申请提单人     |
 | follower	    | string       | 否	  | 关注人，如果有多人，以","分隔，如："name1,name2" |
 | enable_notice	| bool	       | 否	  | 是否通知用户单据完成，默认为false |
-| require_type  | int	       | 是	  | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤 |
+| require_type  | int	       | 是	  | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换; 5: 短租项目; 6: 滚服项目 |
 | expect_time   | string       | 是	  | 期望交付时间       |
 | remark	    | string       | 否	  | 备注              |
 | suborders	    | object array | 是   | 资源申请子需求单信息 |
