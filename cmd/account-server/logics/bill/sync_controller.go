@@ -160,6 +160,9 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 	if err != nil {
 		return err
 	}
+	if len(itemList) == 0 {
+		return sc.initSyncItem(kt, syncRecord)
+	}
 	for index, item := range itemList {
 		if item.State == stateSynced {
 			continue
