@@ -79,7 +79,7 @@ export const useResourcePlanStore = defineStore({
     },
     // 查询单据类型列表。
     getTicketTypesList(): Promise<ITicketTypesResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/ticket_types/list`);
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/metas/ticket_types/list`);
     },
     // 查询运营产品列表。
     getOpProductsList(): Promise<IOpProductsResult> {
