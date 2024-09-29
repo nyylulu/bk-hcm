@@ -35,7 +35,7 @@ export default defineComponent({
     };
 
     return () => (
-      <Panel>
+      <Panel class={cssModule.title}>
         <section class={cssModule.home}>
           <span class={cssModule.status}>
             {renderIcon()}
