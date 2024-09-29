@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package plan
+package demandtime
 
 import (
 	"time"
@@ -66,25 +66,7 @@ func GetDemandDateRangeInWeek(t time.Time) times.DateRange {
 
 // GetDemandDateRangeInMonth get the date range of a month based on the input time from a demand perspective.
 func GetDemandDateRangeInMonth(t time.Time) times.DateRange {
-	year, month := GetDemandYearMonth(t)
-
-	firstDay := time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
-	lastDay := firstDay.AddDate(0, 1, -1)
-
-	weekdaysOfFirstDay := Weekdays(firstDay)
-	weekdaysOfLastDay := Weekdays(lastDay)
-
-	startDate := weekdaysOfFirstDay[0]
-	// 若自然月的第一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月起始时间往后推一周
-	if _, monthOfFirstDay := GetDemandYearMonth(firstDay); monthOfFirstDay != month {
-		startDate = startDate.AddDate(0, 0, 7)
-	}
-
-	endDate := weekdaysOfLastDay[6]
-	// 若自然月的最后一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月结束时间往前推一周
-	if _, monthOfLastDay := GetDemandYearMonth(lastDay); monthOfLastDay != month {
-		endDate = endDate.AddDate(0, 0, -7)
-	}
+	startDate, endDate := getDemandMonthStartEnd(t)
 
 	return times.DateRange{
 		Start: startDate.Format(constant.DateLayout),
@@ -118,40 +100,36 @@ func Weekdays(t time.Time) (week [7]time.Time) {
 	return
 }
 
-// getResPlanMonthStartAndEnd 获取当前月的第一天和最后一天
+// getDemandMonthStartEnd 获取给定时间的需求年月的第一天和最后一天
 // 当第一天所在周落在本月更多，则将当周的第一天当作本月的第一天，否则将下一周的第一天当作本月的第一天
 // 当最后一天所在周落在本月更多，则将当周的最后一天当作本月的最后一天，否则将上一周的最后一天当作本月的最后一天
-func getResPlanMonthStartAndEnd(expectTime time.Time) (time.Time, time.Time) {
-	// 获取本月的第一天和最后一天
-	currentYear, currentMonth, _ := expectTime.Date()
-	location := expectTime.Location()
-	firstDay := time.Date(currentYear, currentMonth, 1, 0, 0, 0, 0, location)
+func getDemandMonthStartEnd(t time.Time) (time.Time, time.Time) {
+	year, month := GetDemandYearMonth(t)
+
+	firstDay := time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
 	lastDay := firstDay.AddDate(0, 1, -1)
 
-	firstWeekday := firstDay.Weekday()
-	if firstWeekday >= 1 && firstWeekday <= 4 {
-		// 如果本月第一天的所在周落在本月更多，则将当周的第一天当作本月的第一天
-		firstDay = firstDay.AddDate(0, 0, -int(firstWeekday-1))
-	} else {
-		// 否则将下周的第一天当作本月的第一天
-		firstDay = firstDay.AddDate(0, 0, (8-int(firstWeekday))%7)
+	weekdaysOfFirstDay := Weekdays(firstDay)
+	weekdaysOfLastDay := Weekdays(lastDay)
+
+	startDate := weekdaysOfFirstDay[0]
+	// 若自然月的第一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月起始时间往后推一周
+	if _, monthOfFirstDay := GetDemandYearMonth(firstDay); monthOfFirstDay != month {
+		startDate = startDate.AddDate(0, 0, 7)
 	}
 
-	lastWeekday := lastDay.Weekday()
-	if lastWeekday >= 4 || lastWeekday == 0 {
-		// 如果本月最后一天的所在周落在本月更多，则将当周的最后一天当作本月的最后一天
-		lastDay = lastDay.AddDate(0, 0, (7-int(lastWeekday))%7)
-	} else {
-		// 否则将上周的最后一天当作本月的最后一天
-		lastDay = lastDay.AddDate(0, 0, -int(lastWeekday))
+	endDate := weekdaysOfLastDay[6]
+	// 若自然月的最后一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月结束时间往前推一周
+	if _, monthOfLastDay := GetDemandYearMonth(lastDay); monthOfLastDay != month {
+		endDate = endDate.AddDate(0, 0, -7)
 	}
 
-	return firstDay, lastDay
+	return startDate, endDate
 }
 
-// isAboutToExpire check whether the cvm and cbs plan is about to expire
-func isAboutToExpire(expectedTime *time.Time) bool {
-	monthStart, monthEnd := getResPlanMonthStartAndEnd(time.Now())
+// IsAboutToExpire check whether the cvm and cbs plan is about to expire
+func IsAboutToExpire(expectedTime *time.Time) bool {
+	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
 
 	// 如果期望时间早于本月（即已过期），是否还属于“即将”过期？
 	if expectedTime.Before(monthStart) || expectedTime.After(monthEnd) {
@@ -160,9 +138,9 @@ func isAboutToExpire(expectedTime *time.Time) bool {
 	return true
 }
 
-// getDemandStatus 获取需求状态
-func getDemandStatus(expectedStart, expectedEnd *time.Time) enumor.DemandStatus {
-	monthStart, monthEnd := getResPlanMonthStartAndEnd(time.Now())
+// GetDemandStatus 获取需求状态
+func GetDemandStatus(expectedStart, expectedEnd *time.Time) enumor.DemandStatus {
+	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
 
 	// 未到申领时间
 	if expectedStart.After(monthEnd) {
@@ -173,5 +151,6 @@ func getDemandStatus(expectedStart, expectedEnd *time.Time) enumor.DemandStatus 
 	if expectedEnd.Before(monthStart) {
 		return enumor.DemandStatusExpired
 	}
+
 	return enumor.DemandStatusCanApply
 }

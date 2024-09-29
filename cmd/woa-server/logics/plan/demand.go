@@ -207,7 +207,6 @@ func (c *Controller) ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64
 	return nil
 }
 
-
 // examineAllRPDemandLockStatus examine all resource plan demand lock status, return whether pass or not.
 func (c *Controller) examineAllRPDemandLockStatus(kt *kit.Kit, crpDemandIDs []int64) (bool, error) {
 	listOpt := &types.ListOption{
@@ -464,8 +463,7 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 					continue
 				}
 
-				mutex.Lock()
-				orderConsumeMap[changelog.OrderId] = ResPlanElem{
+				elem := ResPlanElem{
 					PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
 					AvailableTime: NewAvailableTime(demand.Year, demand.Month),
 					DeviceType:    demand.InstanceModel,
@@ -474,6 +472,8 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 					ZoneName:      demand.ZoneName,
 					CpuCore:       float64(changelog.ChangeCoreAmount),
 				}
+				mutex.Lock()
+				orderConsumeMap[changelog.OrderId] = elem
 				mutex.Unlock()
 			}
 		}(demand)

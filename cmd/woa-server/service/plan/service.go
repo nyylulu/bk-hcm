@@ -60,6 +60,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("GetBizOrgRel", http.MethodGet, "/bizs/{bk_biz_id}/org/relation", s.GetBizOrgRel)
 
 	// meta
+	// TODO: 这里的url跟meta包里的url边界划分不清晰
 	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
 	h.Add("ListResMode", http.MethodGet, "/plan/res_mode/list", s.ListResMode)
 	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)
@@ -81,6 +82,8 @@ func (s *service) initPlanService(h *rest.Handler) {
 		s.ListBizResPlanDemand)
 	h.Add("GetPlanDemandDetail", http.MethodGet, "/plans/demands/{id}", s.GetPlanDemandDetail)
 	h.Add("GetBizPlanDemandDetail", http.MethodGet, "/bizs/{bk_biz_id}/plans/demands/{id}", s.GetBizPlanDemandDetail)
+	h.Add("ListBizPlanDemandChangeLog", http.MethodPost, "/bizs/{bk_biz_id}/plans/demands/change_logs/list",
+		s.ListBizPlanDemandChangeLog)
 	h.Add("ListPlanDemandChangelog", http.MethodPost, "/plans/demands/change_logs/list", s.ListPlanDemandChangeLog)
 	h.Add("AdjustBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/adjust",
 		s.AdjustBizResPlanDemand)

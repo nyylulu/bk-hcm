@@ -50,6 +50,7 @@ type service struct {
 }
 
 func (s *service) initMetaService(h *rest.Handler) {
+	// TODO: 跟前端确认，是否统一进行url规范化调整
 	h.Add("ListDiskType", http.MethodGet, "/meta/disk_type/list", s.ListDiskType)
 	h.Add("ListObsProject", http.MethodGet, "/meta/obs_project/list", s.ListObsProject)
 	h.Add("ListRegion", http.MethodGet, "/meta/region/list", s.ListRegion)

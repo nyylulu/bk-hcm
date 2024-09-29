@@ -137,7 +137,7 @@ export default defineComponent({
 
     return () =>
       props.resourceType === 'cvm' ? (
-        <Panel title={t('CVM云主机信息')}>
+        <Panel title={t('CVM云主机信息')} noShadow>
           <bk-form
             form-type='vertical'
             model={props.planTicketDemand.cvm}
