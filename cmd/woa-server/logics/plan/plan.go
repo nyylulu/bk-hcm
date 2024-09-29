@@ -330,10 +330,12 @@ func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.Pl
 }
 
 // ListCrpDemands 返回全量数据
-func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq, reqRegionNames, reqZoneNames []string) (
+func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq,
+	reqRegionNames, reqZoneNames []string) (
 	[]*ptypes.PlanDemandDetail, error) {
 
 	params := &cvmapi.CvmCbsPlanQueryParam{
+		BgName:       []string{cvmapi.CvmCbsPlanQueryBgName}, // 强制仅查询IEG的预测需求
 		DemandIdList: listReq.CrpDemandIDs,
 		InstanceType: listReq.DeviceClasses,
 		ProjectName:  listReq.ObsProjects,

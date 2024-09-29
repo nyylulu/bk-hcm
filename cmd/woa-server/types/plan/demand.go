@@ -48,7 +48,7 @@ type ListResPlanDemandReq struct {
 	ZoneIDs         []string             `json:"zone_ids" validate:"omitempty,max=100"`
 	PlanTypes       []enumor.PlanType    `json:"plan_types" validate:"omitempty,max=100"`
 	ExpiringOnly    bool                 `json:"expiring_only" validate:"omitempty"`
-	ExpectTimeRange *times.DateRange     `json:"expect_time_range" validate:"omitempty"`
+	ExpectTimeRange *times.DateRange     `json:"expect_time_range" validate:"required"`
 	Page            *core.BasePage       `json:"page" validate:"required"`
 }
 
@@ -244,7 +244,9 @@ func (l *ListResPlanDemandItem) SetStatus(status enumor.DemandStatus) {
 }
 
 // SetRegionAndZoneID set region and zone id
-func (l *ListResPlanDemandItem) SetRegionAndZoneID(zoneNameMap map[string]string, regionNameMap map[string]mtypes.RegionArea) error {
+func (l *ListResPlanDemandItem) SetRegionAndZoneID(zoneNameMap map[string]string,
+	regionNameMap map[string]mtypes.RegionArea) error {
+
 	regionArea, exists := regionNameMap[l.RegionName]
 	if !exists {
 		return fmt.Errorf("region name: %s not found in woa_zone", l.RegionName)
@@ -349,7 +351,9 @@ func (g *GetPlanDemandDetailResp) SetDiskType() error {
 }
 
 // SetRegionAreaAndZoneID set region/area and zone id
-func (g *GetPlanDemandDetailResp) SetRegionAreaAndZoneID(zoneNameMap map[string]string, regionNameMap map[string]mtypes.RegionArea) error {
+func (g *GetPlanDemandDetailResp) SetRegionAreaAndZoneID(zoneNameMap map[string]string,
+	regionNameMap map[string]mtypes.RegionArea) error {
+
 	regionArea, exists := regionNameMap[g.RegionName]
 	if !exists {
 		return fmt.Errorf("region name: %s not found in woa_zone", g.RegionName)

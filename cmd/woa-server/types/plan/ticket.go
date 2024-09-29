@@ -245,8 +245,8 @@ type CreateResPlanDemandReq struct {
 	ExpectTime     string                 `json:"expect_time" validate:"required"`
 	RegionID       string                 `json:"region_id" validate:"required"`
 	ZoneID         string                 `json:"zone_id" validate:"omitempty"`
-	DemandSource   enumor.DemandSource    `json:"demand_source" validate:"required"`
-	Remark         *string                `json:"remark" validate:"required"`
+	DemandSource   enumor.DemandSource    `json:"demand_source" validate:"omitempty"`
+	Remark         string                 `json:"remark" validate:"omitempty"`
 	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
 	Cvm            *struct {
 		ResMode    string `json:"res_mode"`
@@ -276,11 +276,13 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		return err
 	}
 
-	if err := r.DemandSource.Validate(); err != nil {
-		return err
+	if r.DemandSource != "" {
+		if err := r.DemandSource.Validate(); err != nil {
+			return err
+		}
 	}
 
-	lenRemark := utf8.RuneCountInString(*r.Remark)
+	lenRemark := utf8.RuneCountInString(r.Remark)
 	if lenRemark > 255 {
 		return errors.New("len remark should <= 255")
 	}
@@ -292,47 +294,63 @@ func (r *CreateResPlanDemandReq) Validate() error {
 	}
 
 	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCVM) {
-		if r.Cvm == nil {
-			return errors.New("demand includes cvm, cvm should not be nil")
-		}
-
-		if len(r.Cvm.ResMode) == 0 {
-			return errors.New("cvm res mode should not be empty")
-		}
-
-		if len(r.Cvm.DeviceType) == 0 {
-			return errors.New("cvm device type should not be empty")
-		}
-
-		if *r.Cvm.Os < 0 {
-			return errors.New("os should be >= 0")
-		}
-
-		if *r.Cvm.CpuCore < 0 {
-			return errors.New("cpu core should be >= 0")
-		}
-
-		if *r.Cvm.Memory < 0 {
-			return errors.New("memory should be >= 0")
+		if err := r.cvmValidate(); err != nil {
+			return err
 		}
 	}
 
 	if slices.Contains(r.DemandResTypes, enumor.DemandResTypeCBS) {
-		if r.Cbs == nil {
-			return errors.New("demand includes cbs, cbs should not be nil")
-		}
-
-		if err := r.Cbs.DiskType.Validate(); err != nil {
+		if err := r.cbsValidate(); err != nil {
 			return err
 		}
+	}
 
-		if *r.Cbs.DiskIo < 0 {
-			return errors.New("disk io should be >= 0")
-		}
+	return nil
+}
 
-		if *r.Cbs.DiskSize < 0 {
-			return errors.New("disk size should be >= 0")
-		}
+func (r *CreateResPlanDemandReq) cvmValidate() error {
+	if r.Cvm == nil {
+		return errors.New("demand includes cvm, cvm should not be nil")
+	}
+
+	if len(r.Cvm.ResMode) == 0 {
+		return errors.New("cvm res mode should not be empty")
+	}
+
+	if len(r.Cvm.DeviceType) == 0 {
+		return errors.New("cvm device type should not be empty")
+	}
+
+	if *r.Cvm.Os < 0 {
+		return errors.New("os should be >= 0")
+	}
+
+	if *r.Cvm.CpuCore < 0 {
+		return errors.New("cpu core should be >= 0")
+	}
+
+	if *r.Cvm.Memory < 0 {
+		return errors.New("memory should be >= 0")
+	}
+
+	return nil
+}
+
+func (r *CreateResPlanDemandReq) cbsValidate() error {
+	if r.Cbs == nil {
+		return errors.New("demand includes cbs, cbs should not be nil")
+	}
+
+	if err := r.Cbs.DiskType.Validate(); err != nil {
+		return err
+	}
+
+	if *r.Cbs.DiskIo < 0 {
+		return errors.New("disk io should be >= 0")
+	}
+
+	if *r.Cbs.DiskSize < 0 {
+		return errors.New("disk size should be >= 0")
 	}
 
 	return nil
