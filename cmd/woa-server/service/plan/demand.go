@@ -23,11 +23,13 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"sync"
 
 	"hcm/cmd/woa-server/common/util"
 	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -37,6 +39,8 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/slice"
 )
 
@@ -170,33 +174,45 @@ func (s *service) listResPlanDemand(cts *rest.Contexts, req *ptypes.ListResPlanD
 
 // listResPlanCrpDemands list res plan crp demands, demandIDs length is unknown, page query
 func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int64]*rpcd.ResPlanCrpDemandTable, error) {
-	opt := &types.ListOption{
-		Filter: tools.ContainersExpression("crp_demand_id", demandIDs),
-		Page:   core.NewDefaultBasePage(),
-	}
-
+	var mapLock sync.Mutex
 	result := make(map[int64]*rpcd.ResPlanCrpDemandTable)
-	for {
-		list, err := s.dao.ResPlanCrpDemand().List(kt, opt)
-		if err != nil {
-			logs.Errorf("list res plan crp demands failed, err: %v, demand_ids: %v, rid: %ad", err, demandIDs, kt.Rid)
-			return nil, err
-		}
 
-		for _, one := range list.Details {
-			result[one.CrpDemandID] = &one
-		}
+	// 查询参数最多500条，超过的需要分组查询
+	batch := int(filter.DefaultMaxInLimit)
+	concurrentParams := slice.Split(demandIDs, batch)
 
-		if len(list.Details) < int(opt.Page.Limit) {
-			break
-		}
-		opt.Page.Start += uint32(opt.Page.Limit)
+	err := concurrence.BaseExec(constant.SyncConcurrencyDefaultMaxLimit, concurrentParams,
+		func(subDemandIDs []int64) error {
+			opt := &types.ListOption{
+				Filter: tools.ContainersExpression("crp_demand_id", subDemandIDs),
+				Page:   core.NewDefaultBasePage(),
+			}
+
+			list, err := s.dao.ResPlanCrpDemand().List(kt, opt)
+			if err != nil {
+				logs.Errorf("list res plan crp demands failed, err: %v, demand_ids: %v, rid: %s", err, demandIDs,
+					kt.Rid)
+				return err
+			}
+
+			mapLock.Lock()
+			for _, one := range list.Details {
+				result[one.CrpDemandID] = &one
+			}
+			mapLock.Unlock()
+
+			return nil
+		})
+	if err != nil {
+		return nil, err
 	}
 
 	return result, nil
 }
 
-func filterListResPlanDemandRespWithReqParams(req *ptypes.ListResPlanDemandReq, details []*ptypes.ListResPlanDemandItem) []*ptypes.ListResPlanDemandItem {
+func filterListResPlanDemandRespWithReqParams(req *ptypes.ListResPlanDemandReq,
+	details []*ptypes.ListResPlanDemandItem) []*ptypes.ListResPlanDemandItem {
+
 	rstDetails := make([]*ptypes.ListResPlanDemandItem, 0, len(details))
 	for _, item := range details {
 		// 业务无权限
@@ -224,7 +240,9 @@ func filterListResPlanDemandRespWithReqParams(req *ptypes.ListResPlanDemandReq, 
 	return rstDetails
 }
 
-func filterListResPlanDemandRespWithRegion(kt *kit.Kit, details []*ptypes.ListResPlanDemandItem, zoneNameMap map[string]string, regionNameMap map[string]mtypes.RegionArea) []*ptypes.ListResPlanDemandItem {
+func filterListResPlanDemandRespWithRegion(kt *kit.Kit, details []*ptypes.ListResPlanDemandItem,
+	zoneNameMap map[string]string, regionNameMap map[string]mtypes.RegionArea) []*ptypes.ListResPlanDemandItem {
+
 	rstDetails := make([]*ptypes.ListResPlanDemandItem, 0, len(details))
 	for _, item := range details {
 		if err := item.SetRegionAndZoneID(zoneNameMap, regionNameMap); err != nil {
@@ -238,8 +256,8 @@ func filterListResPlanDemandRespWithRegion(kt *kit.Kit, details []*ptypes.ListRe
 }
 
 // appendListResPlanDemandRespFieldWithTable 根据本地数据库 res_plan_crp_demand 中的字段过滤数据
-func (s *service) appendListResPlanDemandRespFieldWithTable(kt *kit.Kit, details []*ptypes.ListResPlanDemandItem, demandIDs []int64) (
-	[]*ptypes.ListResPlanDemandItem, error) {
+func (s *service) appendListResPlanDemandRespFieldWithTable(kt *kit.Kit, details []*ptypes.ListResPlanDemandItem,
+	demandIDs []int64) ([]*ptypes.ListResPlanDemandItem, error) {
 
 	resPlanCrpDemands, err := s.listResPlanCrpDemands(kt, demandIDs)
 	if err != nil {
@@ -553,8 +571,9 @@ func (s *service) getPlanDemandDetail(cts *rest.Contexts, demandID int64, bkBizI
 	return rst, nil
 }
 
-func (s *service) filterPlanDemandDetailRespByBkBizIDs(kt *kit.Kit, bkBizIDs []int64, src *ptypes.GetPlanDemandDetailResp, demandID int64, zoneNameMap map[string]string, regionNameMap map[string]mtypes.RegionArea) (
-	*ptypes.GetPlanDemandDetailResp, int32, error) {
+func (s *service) filterPlanDemandDetailRespByBkBizIDs(kt *kit.Kit, bkBizIDs []int64,
+	src *ptypes.GetPlanDemandDetailResp, demandID int64, zoneNameMap map[string]string,
+	regionNameMap map[string]mtypes.RegionArea) (*ptypes.GetPlanDemandDetailResp, int32, error) {
 
 	resPlanCrpDemands, err := s.listResPlanCrpDemands(kt, []int64{demandID})
 	if err != nil {
@@ -600,6 +619,39 @@ func convPlanDemandDetailResp(listDetails []*ptypes.PlanDemandDetail) (*ptypes.G
 	return resp, nil
 }
 
+// ListBizPlanDemandChangeLog list biz plan demand change log.
+func (s *service) ListBizPlanDemandChangeLog(cts *rest.Contexts) (interface{}, error) {
+	req := new(ptypes.ListDemandChangeLogReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to list demand change log, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate list demand change log parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
+	if err != nil {
+		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	// if bizID not in authorized bkBizIDs, return empty response.
+	if !slice.IsItemInSlice(bkBizIDs, bizID) {
+		return core.ListResultT[any]{Details: make([]any, 0)}, nil
+	}
+
+	return s.listPlanDemandChangeLog(cts, req, []int64{bizID})
+}
+
 // ListPlanDemandChangeLog list demand change log.
 func (s *service) ListPlanDemandChangeLog(cts *rest.Contexts) (interface{}, error) {
 	req := new(ptypes.ListDemandChangeLogReq)
@@ -623,6 +675,13 @@ func (s *service) ListPlanDemandChangeLog(cts *rest.Contexts) (interface{}, erro
 		return core.ListResultT[any]{Details: make([]any, 0)}, nil
 	}
 
+	return s.listPlanDemandChangeLog(cts, req, bkBizIDs)
+}
+
+// listPlanDemandChangeLog list demand change log primary logic.
+func (s *service) listPlanDemandChangeLog(cts *rest.Contexts, req *ptypes.ListDemandChangeLogReq, bkBizIDs []int64) (
+	interface{}, error) {
+
 	rst, err := s.planController.ListCrpDemandChangeLog(cts.Kit, req.CrpDemandId)
 	if err != nil {
 		logs.Errorf("failed to list demand change log by demand id: %d, err: %v, rid: %s,", req.CrpDemandId, err,
@@ -644,8 +703,8 @@ func (s *service) ListPlanDemandChangeLog(cts *rest.Contexts) (interface{}, erro
 	return resp, nil
 }
 
-func (s *service) convCrpDemandChangeLogResp(kt *kit.Kit, clogItems []*ptypes.ListDemandChangeLogItem, bkBizIDs []int64) (
-	*ptypes.ListDemandChangeLogResp, error) {
+func (s *service) convCrpDemandChangeLogResp(kt *kit.Kit, clogItems []*ptypes.ListDemandChangeLogItem,
+	bkBizIDs []int64) (*ptypes.ListDemandChangeLogResp, error) {
 
 	crpDemandIDs := make([]int64, 0, len(clogItems))
 	for _, item := range clogItems {

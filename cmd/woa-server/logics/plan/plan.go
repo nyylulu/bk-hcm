@@ -334,15 +334,17 @@ func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDema
 	[]*ptypes.PlanDemandDetail, error) {
 
 	params := &cvmapi.CvmCbsPlanQueryParam{
-		UseTime: &cvmapi.UseTime{
-			Start: listReq.ExpectTimeRange.Start,
-			End:   listReq.ExpectTimeRange.End,
-		},
 		DemandIdList: listReq.CrpDemandIDs,
 		InstanceType: listReq.DeviceClasses,
 		ProjectName:  listReq.ObsProjects,
 		CityName:     reqRegionNames,
 		ZoneName:     reqZoneNames,
+	}
+	if listReq.ExpectTimeRange != nil {
+		params.UseTime = &cvmapi.UseTime{
+			Start: listReq.ExpectTimeRange.Start,
+			End:   listReq.ExpectTimeRange.End,
+		}
 	}
 	// 500条一组查询出全部结果
 	page := &cvmapi.Page{
