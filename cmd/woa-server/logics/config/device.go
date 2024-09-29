@@ -176,7 +176,11 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	}
 	instTypes := make([]string, 0)
 	for _, inst := range insts {
-		instTypes = append(instTypes, utils.GetStrByInterface(inst))
+		instStr := utils.GetStrByInterface(inst)
+		if instStr == "ITA5.32XLARGE576" {
+			logs.Infof("DEBUG:WOA:GetDeviceType:Loop, instStr: %s, rid: %s", instStr, kt.Rid)
+		}
+		instTypes = append(instTypes, instStr)
 	}
 	req := &cvmapi.QueryCvmInstanceTypeReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -197,6 +201,10 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 
 	infos := make([]types.DeviceTypeItem, 0)
 	for _, item := range resp.Result.Data {
+		if item.InstanceType == "ITA5.32XLARGE576" {
+			logs.Infof("DEBUG:WOA:QueryCvmInstanceType:Loop, item: %+v, rid: %s", item, kt.Rid)
+		}
+
 		infos = append(infos, types.DeviceTypeItem{
 			DeviceType:      item.InstanceType,
 			DeviceTypeClass: item.InstanceTypeClass,
