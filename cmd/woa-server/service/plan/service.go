@@ -60,6 +60,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("GetBizOrgRel", http.MethodGet, "/bizs/{bk_biz_id}/org/relation", s.GetBizOrgRel)
 
 	// meta
+	// TODO: 这里的url跟meta包里的url边界划分不清晰
 	h.Add("ListDemandClass", http.MethodGet, "/plan/demand_class/list", s.ListDemandClass)
 	h.Add("ListResMode", http.MethodGet, "/plan/res_mode/list", s.ListResMode)
 	h.Add("ListDemandSource", http.MethodGet, "/plan/demand_source/list", s.ListDemandSource)

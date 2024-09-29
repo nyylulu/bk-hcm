@@ -25,6 +25,7 @@ import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common/util"
+	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
@@ -353,7 +354,7 @@ func filterResPlanDemandResp(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, deta
 			continue
 		}
 		if req.ExpiringOnly {
-			if !isAboutToExpire(expectTimeFmt) {
+			if !demandtime.IsAboutToExpire(expectTimeFmt) {
 				continue
 			}
 		}
@@ -377,7 +378,7 @@ func filterResPlanDemandResp(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, deta
 				item.CrpDemandID, kt.Rid)
 			continue
 		}
-		rstItem.SetStatus(getDemandStatus(expectStartFmt, expectEndFmt))
+		rstItem.SetStatus(demandtime.GetDemandStatus(expectStartFmt, expectEndFmt))
 
 		crpDemandIDs = append(crpDemandIDs, rstItem.CrpDemandID)
 		rstDetails = append(rstDetails, rstItem)

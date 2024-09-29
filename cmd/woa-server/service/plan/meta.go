@@ -13,6 +13,7 @@
 package plan
 
 import (
+	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
@@ -66,9 +67,9 @@ func (s *service) GetDemandAvailableTime(cts *rest.Contexts) (interface{}, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	yearMonthWeek := GetDemandYearMonthWeek(date)
-	drWeek := GetDemandDateRangeInWeek(date)
-	drMonth := GetDemandDateRangeInMonth(date)
+	yearMonthWeek := demandtime.GetDemandYearMonthWeek(date)
+	drWeek := demandtime.GetDemandDateRangeInWeek(date)
+	drMonth := demandtime.GetDemandDateRangeInMonth(date)
 
 	return &ptypes.DemandAvailTimeResp{
 		YearMonthWeek: yearMonthWeek,

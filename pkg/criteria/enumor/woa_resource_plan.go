@@ -48,7 +48,7 @@ func (t RPTicketType) Validate() error {
 var rdTicketTypeNameMap = map[RPTicketType]string{
 	RPTicketTypeAdd:    "新增",
 	RPTicketTypeAdjust: "调整",
-	RPTicketTypeDelete: "删除",
+	RPTicketTypeDelete: "取消",
 }
 
 // Name return RPTicketType's name.
@@ -422,6 +422,7 @@ func (d DemandStatus) Name() string {
 }
 
 // PlanType is resource plan type.
+// TODO: 考虑HCM和CRP的计划类型是否拆为2个类型
 type PlanType string
 
 const (
@@ -455,6 +456,7 @@ func GetPlanTypeHcmMembers() []PlanType {
 }
 
 // ToAnotherPlanType the plan type of crp to the plan type of hcm, or vice versa.
+// TODO: 这个方法的功能是不明确的，使用者难以确定什么情况下使用该方法
 func (p PlanType) ToAnotherPlanType() PlanType {
 	switch p {
 	case PlanTypeCrpInPlan:
@@ -465,8 +467,9 @@ func (p PlanType) ToAnotherPlanType() PlanType {
 		return PlanTypeCrpInPlan
 	case PlanTypeHcmOutPlan:
 		return PlanTypeCrpOutPlan
+	default:
+		return p
 	}
-	return p
 }
 
 // InPlan return the plan type in plan or not.
