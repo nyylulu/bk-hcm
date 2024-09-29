@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
@@ -66,10 +67,11 @@ func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
 				SecurityGroupName: cvm.SecurityGroupName,
 				SecurityGroupDesc: cvm.SecurityGroupDesc,
 			},
-			UseTime:     time.Now().Format("2006-01-02 15:04:05"),
-			Memo:        cvm.NoteInfo,
-			Operator:    cvm.Operator,
-			BakOperator: cvm.Operator,
+			UseTime:           time.Now().Format(constant.DateTimeLayout),
+			Memo:              cvm.NoteInfo,
+			Operator:          cvm.Operator,
+			BakOperator:       cvm.Operator,
+			InheritInstanceId: cvm.InheritInstanceId,
 		},
 	}
 
@@ -308,19 +310,20 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &types.CVM{
-		AppId:        "931",
-		ApplyType:    order.RequireType,
-		AppModuleId:  51524,
-		Operator:     "dommyzhang",
-		ApplyNumber:  replicas,
-		NoteInfo:     order.Remark,
-		Area:         order.Spec.Region,
-		Zone:         zone,
-		InstanceType: order.Spec.DeviceType,
-		DiskType:     order.Spec.DiskType,
-		DiskSize:     order.Spec.DiskSize,
-		ChargeType:   order.Spec.ChargeType,
-		ChargeMonths: order.Spec.ChargeMonths,
+		AppId:             "931",
+		ApplyType:         order.RequireType,
+		AppModuleId:       51524,
+		Operator:          "dommyzhang",
+		ApplyNumber:       replicas,
+		NoteInfo:          order.Remark,
+		Area:              order.Spec.Region,
+		Zone:              zone,
+		InstanceType:      order.Spec.DeviceType,
+		DiskType:          order.Spec.DiskType,
+		DiskSize:          order.Spec.DiskSize,
+		ChargeType:        order.Spec.ChargeType,
+		ChargeMonths:      order.Spec.ChargeMonths,
+		InheritInstanceId: order.Spec.InheritInstanceId,
 	}
 	// set disk type default value
 	if len(req.DiskType) == 0 {

@@ -43,3 +43,14 @@
     }
   }
 }
+
+.error-message {
+  margin-left: 13.5px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  color: #d9001b;
+  .error-message-color {
+    color: #d9001b !important;
+  }
+}

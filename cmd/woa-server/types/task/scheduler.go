@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/criteria/validator"
 )
 
 // ApplyOrder resource apply order
@@ -679,6 +680,8 @@ type ResourceSpec struct {
 	ChargeType cvmapi.ChargeType `json:"charge_type" bson:"charge_type"`
 	// 计费时长，单位：月
 	ChargeMonths uint `json:"charge_months" bson:"charge_months"`
+	// 被继承云主机实例ID
+	InheritInstanceId string `json:"inherit_instance_id" bson:"inherit_instance_id"`
 }
 
 // Validate whether ResourceSpec is valid
@@ -1382,4 +1385,26 @@ func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
 type GetApplyModifyRst struct {
 	Count int64                 `json:"count"`
 	Info  []*table.ModifyRecord `json:"info"`
+}
+
+// CheckRollingServerHostReq check rolling server host request
+type CheckRollingServerHostReq struct {
+	AssetID string `json:"bk_asset_id" validate:"required"`
+	BizID   int64  `json:"bk_biz_id"`
+}
+
+// Validate CheckRollingServerHostReq
+func (c *CheckRollingServerHostReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
+
+// CheckRollingServerHostResp check rolling server host response
+type CheckRollingServerHostResp struct {
+	DeviceType           string    `json:"device_type"`
+	InstanceChargeType   string    `json:"instance_charge_type"`
+	ChargeMonths         int       `json:"charge_months"`
+	BillingStartTime     time.Time `json:"billing_start_time"`
+	OldBillingExpireTime time.Time `json:"old_billing_expire_time"`
+	NewBillingExpireTime time.Time `json:"new_billing_expire_time"`
+	CloudInstID          string    `json:"bk_cloud_inst_id"`
 }

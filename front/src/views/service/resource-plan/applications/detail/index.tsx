@@ -19,11 +19,18 @@ export default defineComponent({
 
     const ticketDetail = ref<TicketByIdResult>();
     const isLoading = ref(false);
+    const errorMessage = ref();
 
     const getResultData = async () => {
       try {
         isLoading.value = true;
         const res = await resourcePlanStore.getOpResourcesTicketsById(route.query?.id as string);
+
+        if (res.code !== 0) {
+          errorMessage.value = res.message;
+        } else {
+          errorMessage.value = '';
+        }
         ticketDetail.value = res?.data;
       } catch (error) {
         console.error('error', error); // eslint-disable-line no-console
@@ -38,7 +45,11 @@ export default defineComponent({
       <bk-loading loading={isLoading.value}>
         <Header id={ticketDetail.value?.id} isBiz={false}></Header>
         <section class={cssModule.home}>
-          <Approval statusInfo={ticketDetail.value?.status_info} class={cssModule['mb-16']} isBiz={false}></Approval>
+          <Approval
+            statusInfo={ticketDetail.value?.status_info}
+            class={cssModule['mb-16']}
+            isBiz={false}
+            errorMessage={errorMessage.value}></Approval>
           <Basic baseInfo={ticketDetail.value?.base_info} class={cssModule['mb-16']} isBiz={false}></Basic>
           <List demands={ticketDetail.value?.demands} isBiz={false}></List>
         </section>

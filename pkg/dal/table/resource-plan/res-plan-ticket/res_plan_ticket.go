@@ -70,7 +70,7 @@ type ResPlanTicketTable struct {
 	// Type 单据类型
 	Type enumor.RPTicketType `db:"type" json:"ticket_type" validate:"lte=64"`
 	// Demands 需求列表，每个需求包括：original、updated两个部分
-	Demands types.JsonField `db:"demands" json:"demands" validate:"lte=64"`
+	Demands types.JsonField `db:"demands" json:"demands"`
 	// Applicant 申请人
 	Applicant string `db:"applicant" json:"applicant" validate:"lte=64"`
 	// BkBizID 业务ID
@@ -119,6 +119,200 @@ type ResPlanTicketTable struct {
 	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
 	// UpdatedAt 更新时间
 	UpdatedAt types.Time `db:"updated_at" validate:"isdefault" json:"updated_at"`
+}
+
+// ResPlanDemands is Demands struct of ResPlanTicketTable.
+type ResPlanDemands []ResPlanDemand
+
+// ResPlanDemand is used to save resource's resource plan demand information.
+type ResPlanDemand struct {
+	// DemandClass 预测的需求类型
+	DemandClass enumor.DemandClass `json:"demand_class" validate:"lte=16"`
+	// Original 原始需求
+	Original *OriginalRPDemandItem `json:"original"`
+	// Updated 更新需求
+	Updated *UpdatedRPDemandItem `json:"updated"`
+}
+
+// Validate whether ResPlanDemand is valid.
+func (d *ResPlanDemand) Validate() error {
+	if err := validator.Validate.Struct(d); err != nil {
+		return err
+	}
+
+	if err := d.DemandClass.Validate(); err != nil {
+		return err
+	}
+
+	if d.Original != nil {
+		if err := d.Original.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if d.Updated != nil {
+		if err := d.Updated.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// OriginalRPDemandItem is original resource plan demand item.
+type OriginalRPDemandItem struct {
+	CrpDemandID         int64 `json:"crp_demand_id"`
+	UpdatedRPDemandItem `json:",inline"`
+}
+
+// Validate whether OriginalRPDemandItem is valid.
+func (i *OriginalRPDemandItem) Validate() error {
+	if err := validator.Validate.Struct(i); err != nil {
+		return err
+	}
+
+	if i.CrpDemandID <= 0 {
+		return errors.New("crp demand id can not be empty")
+	}
+
+	if err := i.UpdatedRPDemandItem.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// UpdatedRPDemandItem is updated resource plan demand item.
+type UpdatedRPDemandItem struct {
+	// ObsProject OBS项目类型
+	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
+	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
+	ExpectTime string `json:"expect_time" validate:"lte=64"`
+	// ZoneID 可用区ID
+	ZoneID string `json:"zone_id" validate:"lte=64"`
+	// ZoneName 可用区名称
+	ZoneName string `json:"zone_name" validate:"lte=64"`
+	// RegionID 地区/城市ID
+	RegionID string `json:"region_id" validate:"lte=64"`
+	// RegionName 地区/城市名称
+	RegionName string `json:"region_name" validate:"lte=64"`
+	// AreaID 地域ID
+	AreaID string `json:"area_id" validate:"lte=64"`
+	// AreaName 地域名称
+	AreaName string `json:"area_name" validate:"lte=64"`
+	// DemandSource 需求分类/变更原因
+	DemandSource enumor.DemandSource `json:"demand_source" validate:"lte=64"`
+	// Remark 需求备注
+	Remark string `json:"remark" validate:"lte=255"`
+	// Cvm cvm信息
+	Cvm Cvm `json:"cvm"`
+	// Cbs cbs信息
+	Cbs Cbs `json:"cbs"`
+}
+
+// Validate whether UpdatedRPDemandItem is valid.
+func (i *UpdatedRPDemandItem) Validate() error {
+	if err := validator.Validate.Struct(i); err != nil {
+		return err
+	}
+
+	if err := i.ObsProject.Validate(); err != nil {
+		return err
+	}
+
+	if len(i.ExpectTime) == 0 {
+		return errors.New("expect time can not be empty")
+	}
+
+	// NOTE: zone can be empty.
+
+	if len(i.RegionID) == 0 {
+		return errors.New("region id can not be empty")
+	}
+
+	if len(i.RegionName) == 0 {
+		return errors.New("region name can not be empty")
+	}
+
+	if len(i.AreaID) == 0 {
+		return errors.New("area id can not be empty")
+	}
+
+	if len(i.AreaName) == 0 {
+		return errors.New("area name can not be empty")
+	}
+
+	if len(i.DemandSource) == 0 {
+		return errors.New("demand source can not be empty")
+	}
+
+	if err := i.Cvm.Validate(); err != nil {
+		return err
+	}
+
+	if err := i.Cbs.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Cvm is struct of ResPlanDemandTable's Cvm.
+type Cvm struct {
+	ResMode      string `json:"res_mode"`
+	DeviceType   string `json:"device_type"`
+	DeviceClass  string `json:"device_class" validate:"lte=64"`
+	DeviceFamily string `json:"device_family" validate:"lte=64"`
+	CoreType     string `json:"core_type" validate:"lte=64"`
+	Os           int64  `json:"os"`
+	CpuCore      int64  `json:"cpu_core"`
+	Memory       int64  `json:"memory"`
+}
+
+// Validate whether Cvm is valid.
+func (c *Cvm) Validate() error {
+	if err := validator.Validate.Struct(c); err != nil {
+		return err
+	}
+
+	if c.Os < 0 {
+		return errors.New("os should be >= 0")
+	}
+
+	if c.CpuCore < 0 {
+		return errors.New("cpu core should be >= 0")
+	}
+
+	if c.Memory < 0 {
+		return errors.New("memory should be >= 0")
+	}
+
+	return nil
+}
+
+// Cbs is struct of ResPlanDemandTable's Cbs.
+type Cbs struct {
+	DiskType     enumor.DiskType `json:"disk_type"`
+	DiskTypeName string          `json:"disk_type_name"`
+	DiskIo       int64           `json:"disk_io"`
+	DiskSize     int64           `json:"disk_size"`
+}
+
+// Validate whether Cbs is valid.
+func (c *Cbs) Validate() error {
+	if err := validator.Validate.Struct(c); err != nil {
+		return err
+	}
+
+	if c.DiskIo < 0 {
+		return errors.New("disk io should be >= 0")
+	}
+
+	if c.DiskSize < 0 {
+		return errors.New("disk size should be >= 0")
+	}
+
+	return nil
 }
 
 // TableName is the recycleRecord's database table name.
@@ -180,12 +374,12 @@ func (r ResPlanTicketTable) InsertValidate() error {
 		return errors.New("virtual dept name can not be empty")
 	}
 
-	if err := r.validateValue(); err != nil {
+	if err := r.DemandClass.Validate(); err != nil {
 		return err
 	}
 
-	if len(r.DemandClass) == 0 {
-		return errors.New("demand class can not be empty")
+	if err := r.validateValue(); err != nil {
+		return err
 	}
 
 	if len(r.Remark) < 20 {
@@ -259,6 +453,12 @@ func (r ResPlanTicketTable) UpdateValidate() error {
 
 	if r.VirtualDeptID < 0 {
 		return errors.New("virtual dept id should be >= 0")
+	}
+
+	if len(r.DemandClass) > 0 {
+		if err := r.DemandClass.Validate(); err != nil {
+			return err
+		}
 	}
 
 	if err := r.validateValue(); err != nil {

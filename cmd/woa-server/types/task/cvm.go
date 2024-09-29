@@ -39,4 +39,5 @@ type CVM struct {
 	SecurityGroupDesc string            `json:"securityGroupDesc"`
 	ChargeType        cvmapi.ChargeType `json:"chargeType"`
 	ChargeMonths      uint              `json:"chargeMonths"`
+	InheritInstanceId string            `json:"inherit_instance_id"`
 }

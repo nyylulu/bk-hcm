@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { computed, defineComponent, ref, onMounted } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import { Dialog, Form } from 'bkui-vue';
@@ -7,6 +7,7 @@ import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import CreateDevice from './CreateDevice/index';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 const { FormItem } = Form;
@@ -33,8 +34,8 @@ export default defineComponent({
       cpu: '',
       mem: '',
       disk: '',
-      enableCapacity: '',
-      enableApply: '',
+      enable_capacity: '',
+      enable_apply: '',
     });
     const options = ref({
       require_types: [],
@@ -84,12 +85,12 @@ export default defineComponent({
         filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
         filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
         filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
-        filter.value.enableCapacity && {
+        filter.value.enable_capacity && {
           field: 'enable_capacity',
           operator: 'equal',
-          value: filter.value.enableCapacity,
+          value: filter.value.enable_capacity,
         },
-        filter.value.enableApply && { field: 'enable_apply', operator: 'equal', value: filter.value.enableApply },
+        filter.value.enable_apply && { field: 'enable_apply', operator: 'equal', value: filter.value.enable_apply },
       ].filter(Boolean),
     );
     const loadResources = () => {
@@ -110,8 +111,8 @@ export default defineComponent({
         cpu: '',
         mem: '',
         disk: '',
-        enableCapacity: '' as any,
-        enableApply: '' as any,
+        enable_capacity: '',
+        enable_apply: '',
       };
       deviceConfigDisabled.value = false;
       deviceTypeDisabled.value = false;
@@ -121,7 +122,6 @@ export default defineComponent({
       filter.value.cpu = '';
       filter.value.mem = '';
       filter.value.device_type = [];
-      loadDeviceTypes();
     };
     const batchUpdates = () => {
       batchEditDialogVisible.value = true;
@@ -177,15 +177,15 @@ export default defineComponent({
         filter.value.device_type.length && { field: 'device_type', operator: 'in', value: filter.value.device_type },
         filter.value.cpu && { field: 'cpu', operator: 'equal', value: filter.value.cpu },
         filter.value.mem && { field: 'mem', operator: 'equal', value: filter.value.mem },
-        filter.value.enableCapacity !== '' && {
+        filter.value.enable_capacity !== '' && {
           field: 'enable_capacity',
           operator: 'equal',
-          value: filter.value.enableCapacity,
+          value: filter.value.enable_capacity,
         },
-        filter.value.enableApply !== '' && {
+        filter.value.enable_apply !== '' && {
           field: 'enable_apply',
           operator: 'equal',
-          value: filter.value.enableApply,
+          value: filter.value.enable_apply,
         },
       ].filter(Boolean);
 
@@ -196,10 +196,6 @@ export default defineComponent({
       filter.value.cpu = '';
       filter.value.mem = '';
       deviceConfigDisabled.value = filter.value.device_type.length > 0;
-    };
-    const loadDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(filter.value);
-      options.value.device_types = info || [];
     };
     const loadRestrict = async () => {
       const { cpu, mem } = await apiService.getRestrict();
@@ -216,7 +212,6 @@ export default defineComponent({
     };
     onMounted(() => {
       loadRestrict();
-      loadDeviceTypes();
       getfetchOptionslist();
     });
 
@@ -254,6 +249,12 @@ export default defineComponent({
       createVisible.value = false;
       createRef.value.clearValidate();
     };
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone, device_group, cpu, mem, disk, enable_capacity, enable_apply } = filter.value;
+      return { region, zone, device_group, cpu, mem, disk, enable_capacity, enable_apply };
+    });
+
     return () => (
       <div class={'apply-list-container cvm-web-wrapper'}>
         <div class={'filter-container'}>
@@ -298,17 +299,14 @@ export default defineComponent({
               </bk-select>
             </FormItem>
             <FormItem label='机型'>
-              <bk-select
+              <DevicetypeSelector
                 v-model={filter.value.device_type}
-                clearable
+                resourceType='cvm'
+                params={cvmDevicetypeParams.value}
                 multiple
                 disabled={deviceTypeDisabled.value}
-                filterable
-                onChange={handleDeviceTypeChange}>
-                {options.value.device_types.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
+                onChange={handleDeviceTypeChange}
+              />
             </FormItem>
             <FormItem label='CPU(核)'>
               <bk-select
@@ -336,7 +334,7 @@ export default defineComponent({
             </FormItem>
             <FormItem label='可查询容量'>
               <bk-select
-                v-model={filter.value.enableCapacity}
+                v-model={filter.value.enable_capacity}
                 clearable
                 disabled={deviceConfigDisabled.value}
                 filterable
@@ -348,7 +346,7 @@ export default defineComponent({
             </FormItem>
             <FormItem label='可申请'>
               <bk-select
-                v-model={filter.value.enableApply}
+                v-model={filter.value.enable_apply}
                 clearable
                 disabled={deviceConfigDisabled.value}
                 filterable

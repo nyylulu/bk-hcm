@@ -148,33 +148,6 @@ const getRegions = async (vendor: string): Promise<any> => {
   const { data } = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/${vendor}/region`);
   return data;
 };
-/**
- * 获取设备类型
- * @returns {Promise}
- */
-const getDeviceTypes = async ({ region, zone, require_type = '', device_group = '', enable_capacity = true }) => {
-  const rules = [
-    region?.length && { field: 'region', operator: 'in', value: region },
-    zone?.length && { field: 'zone', operator: 'in', value: zone },
-    require_type && { field: 'require_type', operator: 'equal', value: require_type },
-    device_group && { field: 'label.device_group', operator: 'in', value: device_group },
-    enable_capacity && { field: 'enable_capacity', operator: 'equal', value: enable_capacity },
-  ].filter(Boolean);
-  const { data } = await http.post(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/devicetype`,
-    {
-      filter: {
-        condition: 'AND',
-        rules,
-      },
-    },
-    {
-      simpleConditions: true,
-      removeEmptyFields: true,
-    },
-  );
-  return data;
-};
 
 /**
  * 获取 cpu mem disk 可选项
@@ -395,7 +368,6 @@ export default {
   getAuthApplyUrl,
   getRequireTypes,
   getRegions,
-  getDeviceTypes,
   getVpcs,
   getSubnets,
   getIDCPMDeviceTypes,

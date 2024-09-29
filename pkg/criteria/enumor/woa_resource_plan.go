@@ -48,7 +48,7 @@ func (t RPTicketType) Validate() error {
 var rdTicketTypeNameMap = map[RPTicketType]string{
 	RPTicketTypeAdd:    "新增",
 	RPTicketTypeAdjust: "调整",
-	RPTicketTypeDelete: "删除",
+	RPTicketTypeDelete: "取消",
 }
 
 // Name return RPTicketType's name.
@@ -234,6 +234,42 @@ func GetObsProjectMembers() []ObsProject {
 	return []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectCNY, ObsProjectDissolve, ObsProjectMigrate}
 }
 
+// RequireType is resource apply require type.
+type RequireType int64
+
+const (
+	// RequireTypeNormal is normal project.
+	RequireTypeNormal RequireType = 1
+	// RequireTypeChineseNewYear is project normal Chinese New Year project.
+	RequireTypeChineseNewYear RequireType = 2
+	// RequireTypeDissolve is dissolve project.
+	RequireTypeDissolve RequireType = 3
+)
+
+// Validate RequireType.
+func (t RequireType) Validate() error {
+	switch t {
+	case RequireTypeNormal:
+	case RequireTypeChineseNewYear:
+	case RequireTypeDissolve:
+	default:
+		return fmt.Errorf("unsupported require type: %d", t)
+	}
+
+	return nil
+}
+
+var requireTypeObsProjectMap = map[RequireType]ObsProject{
+	RequireTypeNormal:         ObsProjectNormal,
+	RequireTypeChineseNewYear: ObsProjectCNY,
+	RequireTypeDissolve:       ObsProjectDissolve,
+}
+
+// ToObsProject ObsProject.
+func (t RequireType) ToObsProject() ObsProject {
+	return requireTypeObsProjectMap[t]
+}
+
 // DemandSource is demand source.
 // TODO this enum will be changed to get from obs api.
 type DemandSource string
@@ -285,27 +321,61 @@ func GetDemandSourceMembers() []DemandSource {
 	}
 }
 
-// CrpDemandLockedStatus is resource plan crp demand locked.
-type CrpDemandLockedStatus int8
+// CrpDemandLockStatus is resource plan crp demand lock status.
+type CrpDemandLockStatus int8
 
 const (
-	// CrpDemandUnLocked is resource plan crp demand locked false.
-	CrpDemandUnLocked CrpDemandLockedStatus = 0
-	// CrpDemandLocked is resource plan crp demand locked true.
-	CrpDemandLocked CrpDemandLockedStatus = 1
+	// CrpDemandUnLocked is resource plan crp demand unlocked.
+	CrpDemandUnLocked CrpDemandLockStatus = 0
+	// CrpDemandLocked is resource plan crp demand locked.
+	CrpDemandLocked CrpDemandLockStatus = 1
 )
 
-// Validate CrpDemandLockedStatus.
-func (c CrpDemandLockedStatus) Validate() error {
-	switch c {
+// Validate CrpDemandLockStatus.
+func (s CrpDemandLockStatus) Validate() error {
+	switch s {
 	case CrpDemandUnLocked:
 	case CrpDemandLocked:
 	default:
-		return fmt.Errorf("unsupported crp demand locked: %d", c)
+		return fmt.Errorf("unsupported crp demand lock status: %d", s)
 	}
 
 	return nil
 }
+
+// RPDemandAdjustType is resource plan demand adjust type.
+type RPDemandAdjustType string
+
+const (
+	// RPDemandAdjustTypeUpdate is resource plan demand adjust type update.
+	RPDemandAdjustTypeUpdate RPDemandAdjustType = "update"
+	// RPDemandAdjustTypeDelay is resource plan demand adjust type delay.
+	RPDemandAdjustTypeDelay RPDemandAdjustType = "delay"
+)
+
+// Validate RPDemandAdjustType.
+func (t RPDemandAdjustType) Validate() error {
+	switch t {
+	case RPDemandAdjustTypeUpdate:
+	case RPDemandAdjustTypeDelay:
+	default:
+		return fmt.Errorf("unsupported resource plan demand adjust type: %s", t)
+	}
+
+	return nil
+}
+
+// CrpAdjustType crp adjust type.
+type CrpAdjustType string
+
+const (
+	// CrpAdjustTypeUpdate is crp adjust type update.
+	CrpAdjustTypeUpdate CrpAdjustType = "常规修改"
+	// CrpAdjustTypeDelay is crp adjust type delay.
+	CrpAdjustTypeDelay CrpAdjustType = "加急延期"
+	// CrpAdjustTypeCancel is crp adjust type cancel.
+	CrpAdjustTypeCancel CrpAdjustType = "需求取消"
+)
 
 // DemandStatus is resource plan demand status.
 type DemandStatus string
@@ -352,6 +422,7 @@ func (d DemandStatus) Name() string {
 }
 
 // PlanType is resource plan type.
+// TODO: 考虑HCM和CRP的计划类型是否拆为2个类型
 type PlanType string
 
 const (
@@ -379,7 +450,13 @@ func (p PlanType) Validate() error {
 	return nil
 }
 
+// GetPlanTypeHcmMembers get hcm PlanType's members.
+func GetPlanTypeHcmMembers() []PlanType {
+	return []PlanType{PlanTypeHcmInPlan, PlanTypeHcmOutPlan}
+}
+
 // ToAnotherPlanType the plan type of crp to the plan type of hcm, or vice versa.
+// TODO: 这个方法的功能是不明确的，使用者难以确定什么情况下使用该方法
 func (p PlanType) ToAnotherPlanType() PlanType {
 	switch p {
 	case PlanTypeCrpInPlan:
@@ -390,8 +467,9 @@ func (p PlanType) ToAnotherPlanType() PlanType {
 		return PlanTypeCrpInPlan
 	case PlanTypeHcmOutPlan:
 		return PlanTypeCrpOutPlan
+	default:
+		return p
 	}
-	return p
 }
 
 // InPlan return the plan type in plan or not.
@@ -404,4 +482,34 @@ func (p PlanType) InPlan() bool {
 	default:
 		return false
 	}
+}
+
+const (
+	// CrpOrderSourceTypeApply is crp order source type.
+	CrpOrderSourceTypeApply = "申领自动调整"
+)
+
+// VerifyResPlanRst is verify resource plan result.
+type VerifyResPlanRst string
+
+const (
+	// VerifyResPlanRstPass is resource plan result pass.
+	VerifyResPlanRstPass VerifyResPlanRst = "PASS"
+	// VerifyResPlanRstFailed is resource plan result failed.
+	VerifyResPlanRstFailed VerifyResPlanRst = "FAILED"
+	// VerifyResPlanRstNotInvolved is resource plan result not involved.
+	VerifyResPlanRstNotInvolved VerifyResPlanRst = "NOT_INVOLVED"
+)
+
+// Validate VerifyResPlanRst.
+func (r VerifyResPlanRst) Validate() error {
+	switch r {
+	case VerifyResPlanRstPass:
+	case VerifyResPlanRstFailed:
+	case VerifyResPlanRstNotInvolved:
+	default:
+		return fmt.Errorf("unsupported verify resource plan result: %s", r)
+	}
+
+	return nil
 }

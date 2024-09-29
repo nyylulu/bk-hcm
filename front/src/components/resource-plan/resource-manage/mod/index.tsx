@@ -10,7 +10,7 @@ import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import useFormModel from '@/hooks/useFormModel';
 import usePlanStore from '@/store/usePlanStore';
 import { IPlanTicketDemand } from '@/typings/resourcePlan';
-import EditPlan from './edit-plan';
+import EditPlan from '../../add';
 import { AdjustType, IExceptTimeRange } from '@/typings/plan';
 import { useModColumn } from './useModColumn';
 import { timeFormatter } from '@/common/util';
@@ -40,7 +40,7 @@ export default defineComponent({
     const tableRef = ref();
     const delayFormRef = ref();
     const { formModel } = useFormModel({
-      time: '',
+      time: dayjs().add(13, 'week').format('YYYY-MM-DD'),
     });
     const { formModel: timeRange, setFormValues: setTimeRange } = useFormModel<IExceptTimeRange>({});
     const tableColumns = [
@@ -140,7 +140,7 @@ export default defineComponent({
     onMounted(async () => {
       window.addEventListener('beforeunload', confirmLeave);
 
-      const planIds = (route.query.planIds as string)?.split(',') || [];
+      const planIds = (route.query.planIds as string)?.split(',').map((v) => +v) || [];
       const res = await planStore.list_biz_resource_plan_demand(planIds);
       const data = res.data.details;
       originData.value = data;
@@ -322,7 +322,6 @@ export default defineComponent({
             </FormItem>
             <FormItem label={t('期望到货日期：')} required property='time'>
               <div>
-                {/* 这里要改成比修改的时间后，editPlan也是 */}
                 <DatePicker
                   v-model={formModel.time}
                   appendToBody
@@ -350,6 +349,7 @@ export default defineComponent({
         </Dialog>
 
         <EditPlan
+          isEdit
           isShow={isPlanEditShow.value}
           initDemand={curEditData.value}
           v-model={curEditData.value}
@@ -357,7 +357,7 @@ export default defineComponent({
             isPlanEditShow.value = val;
             clearSelection();
           }}
-          onUpdate:demand={(val) => {
+          onUpdateDemand={(val) => {
             const idx = tableData.value.findIndex(({ crp_demand_id }) => crp_demand_id === val.crp_demand_id);
             const originItem = tableData.value[idx];
             const tmp = planStore.convertToDemandListDetail(val, originItem);

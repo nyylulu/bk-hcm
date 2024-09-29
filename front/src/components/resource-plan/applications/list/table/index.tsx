@@ -24,7 +24,7 @@ export default defineComponent({
 
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
-    const { columns, settings } = useColumns('forecastDemand');
+    const { columns, settings } = useColumns('receiptForecastDemand');
     const router = useRouter();
     const { getBizsId } = useWhereAmI();
 
@@ -44,6 +44,7 @@ export default defineComponent({
       }
       return [
         orderItem,
+        ...columns.slice(0, 2),
         {
           label: '业务',
           field: 'bk_biz_name',
@@ -59,7 +60,7 @@ export default defineComponent({
           field: 'plan_product_name',
           isDefaultShow: true,
         },
-        ...columns,
+        ...columns.slice(2),
       ];
     });
 

@@ -1,7 +1,7 @@
 /* eslint-disable no-nested-ternary */
 // table 字段相关信息
 import { useAccountStore } from '@/store';
-import { Info, Spinner, Share, Search } from 'bkui-vue/lib/icon';
+import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
 import { Button, Popover, Tag } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
@@ -36,6 +36,7 @@ import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/tra
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
+
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
@@ -47,7 +48,7 @@ interface LinkFieldOptions {
   field?: string; // 字段
   idFiled?: string; // id字段
   onlyShowOnList?: boolean; // 只在列表中显示
-  onLinkInBusiness?: boolean; // 只在业务下可链接
+  linkable?: boolean | ((data: any) => boolean); // 可链接性
   render?: (data: any) => any; // 自定义渲染内容
   renderSuffix?: (data: any) => any; // 自定义后缀渲染内容
   contentClass?: string; // 内容class
@@ -71,13 +72,12 @@ export default (type: string, isSimpleShow = false) => {
       field: 'id',
       idFiled: 'id',
       onlyShowOnList: true,
-      onLinkInBusiness: false,
+      linkable: true,
       render: undefined,
       sort: true,
     });
 
-    const { type, label, field, idFiled, onlyShowOnList, onLinkInBusiness, render, renderSuffix, contentClass, sort } =
-      options;
+    const { type, label, field, idFiled, onlyShowOnList, linkable, render, renderSuffix, contentClass, sort } = options;
 
     return {
       label,
@@ -88,44 +88,31 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
       render({ data }: { cell: string; data: any }) {
         if (data[idFiled] < 0 || !data[idFiled]) return '--';
-        const onlyLinkInBusiness = onLinkInBusiness && whereAmI.value !== Senarios.business;
-        const isZiyan = data.vendor === VendorEnum.ZIYAN;
-        if (onlyLinkInBusiness || isZiyan)
+        // 是否可链接
+        if (!(typeof linkable === 'function' ? linkable(data) : linkable)) {
           return (
-            <div class={cssModule[`${contentClass}`]}>
-              {render ? render(data) : data[field] || '--'}
+            <div class={contentClass}>
+              {data[field] || '--'}
               {renderSuffix?.(data)}
             </div>
           );
+        }
+
+        const defaultClickHandler = () => {
+          const routeInfo: any = { query: { ...route.query, id: data[idFiled], type: data.vendor } };
+          // 业务下
+          if (route.path.includes('business')) {
+            routeInfo.query.bizs = accountStore.bizs;
+            Object.assign(routeInfo, { name: `${type}BusinessDetail` });
+          } else {
+            Object.assign(routeInfo, { name: 'resourceDetail', params: { type } });
+          }
+          router.push(routeInfo);
+        };
+
         return (
-          <div class={cssModule[`${contentClass}`]}>
-            <Button
-              text
-              theme='primary'
-              onClick={() => {
-                const routeInfo: any = {
-                  query: {
-                    ...route.query,
-                    id: data[idFiled],
-                    type: data.vendor,
-                  },
-                };
-                // 业务下
-                if (route.path.includes('business')) {
-                  routeInfo.query.bizs = accountStore.bizs;
-                  Object.assign(routeInfo, {
-                    name: `${type}BusinessDetail`,
-                  });
-                } else {
-                  Object.assign(routeInfo, {
-                    name: 'resourceDetail',
-                    params: {
-                      type,
-                    },
-                  });
-                }
-                router.push(routeInfo);
-              }}>
+          <div class={contentClass}>
+            <Button text theme='primary' onClick={defaultClickHandler}>
               {render ? render(data) : data[field] || '--'}
             </Button>
             {renderSuffix?.(data)}
@@ -491,7 +478,9 @@ export default (type: string, isSimpleShow = false) => {
       field: 'bak_operator',
     },
   ];
-  const DQcolumns = [
+
+  // 主机申请-设备视角
+  const HostApplyDeviceColumns = [
     { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
@@ -499,32 +488,31 @@ export default (type: string, isSimpleShow = false) => {
       render({ cell }: any) {
         return businessMapStore.getNameFromBusinessMap(cell);
       },
+      notDisplayedInBusiness: true,
     },
     {
       label: '单号',
       field: 'order_id',
+      width: 80,
       render: ({ data, cell }: any) => {
         return (
           <Button
             text
             theme='primary'
             onClick={() => {
-              router.push({
-                name: 'host-application-detail',
-                params: {
-                  id: data.order_id,
-                },
-              });
+              const to = { name: 'host-application-detail', params: { id: data.order_id } };
+              if (Senarios.business === whereAmI.value) {
+                // 业务下
+                Object.assign(to, { name: 'HostApplicationsDetail', query: route.query });
+              }
+              router.push(to);
             }}>
             {cell}
           </Button>
         );
       },
     },
-    {
-      label: '子单号',
-      field: 'suborder_id',
-    },
+    { label: '子单号', field: 'suborder_id', width: 80 },
     {
       label: '需求类型',
       field: 'require_type',
@@ -537,38 +525,13 @@ export default (type: string, isSimpleShow = false) => {
         return <WName name={cell} />;
       },
     },
-    {
-      label: '内网IP',
-      field: 'ip',
-    },
-    {
-      label: '固资号',
-      field: 'asset_id',
-    },
-    {
-      label: '资源类型',
-      field: 'resource_type',
-    },
-    {
-      label: '机型',
-      field: 'device_type',
-    },
-    {
-      label: '园区',
-      field: 'zone_name',
-    },
-    {
-      label: '交付时间',
-      field: 'update_at',
-      width: 160,
-      render: ({ cell }: any) => timeFormatter(cell),
-    },
-    {
-      label: '申请时间',
-      field: 'create_at',
-      width: 160,
-      render: ({ cell }: any) => timeFormatter(cell),
-    },
+    { label: '内网IP', field: 'ip' },
+    { label: '固资号', field: 'asset_id' },
+    { label: '资源类型', field: 'resource_type' },
+    { label: '机型', field: 'device_type' },
+    { label: '园区', field: 'zone_name' },
+    { label: '交付时间', field: 'update_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
+    { label: '申请时间', field: 'create_at', width: 160, render: ({ cell }: any) => timeFormatter(cell) },
     {
       label: '备注信息',
       field: 'remark',
@@ -774,8 +737,9 @@ export default (type: string, isSimpleShow = false) => {
     }
     return <span>{label}</span>;
   };
-  // 资源 - 主机回收列表
-  const recycleOrderColumns = [
+
+  // 主机回收-单据视角
+  const HostRecycleApplicationColumns = [
     { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
     {
       label: '业务',
@@ -786,6 +750,7 @@ export default (type: string, isSimpleShow = false) => {
       formatter: ({ bk_biz_id }: any) => {
         return getBusinessNameById(bk_biz_id);
       },
+      notDisplayedInBusiness: true,
     },
     {
       label: '资源类型',
@@ -897,8 +862,9 @@ export default (type: string, isSimpleShow = false) => {
       width: 120,
     },
   ];
-  // 资源- 设备查询
-  const deviceQueryColumns = [
+
+  // 主机回收-设备视角
+  const HostRecycleDeviceColumns = [
     {
       label: '单号',
       field: 'order_id',
@@ -919,7 +885,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '回收业务',
       field: 'bk_biz_name',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
     },
     {
       label: '地域',
@@ -1919,6 +1885,63 @@ export default (type: string, isSimpleShow = false) => {
   // 服务请求 - 资源预测
   const forecastDemandColumns = [
     {
+      label: '业务',
+      field: 'bk_biz_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '单据状态',
+      field: 'status_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '运营产品',
+      field: 'bk_product_name',
+    },
+    {
+      label: '规划产品',
+      field: 'plan_product_name',
+    },
+    {
+      label: 'CPU总核心数',
+      field: 'cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(GB)',
+      field: 'memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云硬盘总量(GB)',
+      field: 'disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '提单人',
+      field: 'applicant',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+    {
+      label: '创建时间',
+      field: 'created_at',
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '提单时间',
+      field: 'submitted_at',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+  ];
+
+  // 单据下的资源预测
+  const receiptForecastDemandColumns = [
+    {
       label: '审批状态',
       field: 'status_name',
       isDefaultShow: true,
@@ -2017,12 +2040,6 @@ export default (type: string, isSimpleShow = false) => {
       field: 'expect_time',
       align: 'center',
       minWidth: 120,
-      render: ({ data }: any) => (
-        <>
-          <Search width={'20'} fill={'#409eff'} />
-          <span>{data.expect_time}</span>
-        </>
-      ),
     },
     {
       label: '部门',
@@ -2110,7 +2127,6 @@ export default (type: string, isSimpleShow = false) => {
       field: 'crp_sn',
       minWidth: 200,
       align: 'center',
-      render: ({ data }: any) => <span class={cssModule['sub-order-num']}>{data.crp_sn}</span>,
     },
     {
       label: '备注',
@@ -2124,6 +2140,94 @@ export default (type: string, isSimpleShow = false) => {
   const forecastDemandDetailColums = [
     {
       label: '机型规格',
+      field: 'cvm.device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '总CPU核数',
+      field: 'cvm.cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '总内存(G)',
+      field: 'cvm.memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '总云盘大小(G)',
+      field: 'cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '地域',
+      field: 'area_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '资源模式',
+      field: 'cvm.res_mode',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型族',
+      field: 'cvm.device_family',
+    },
+    {
+      label: '机型类型',
+      field: 'cvm.device_class',
+    },
+    {
+      label: '资源池',
+      field: 'cvm.res_pool',
+    },
+    {
+      label: '核心类型',
+      field: 'cvm.core_type',
+    },
+    {
+      label: '实例数',
+      field: 'cvm.os',
+    },
+    {
+      label: '单例磁盘IO(MB/s)',
+      field: 'cbs.disk_io',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'cbs.disk_type_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+  ];
+
+  // 单据资源预测详情
+  const receiptForecastDemandDetailColums = [
+    {
+      label: '机型规格',
       field: 'updated_info.cvm.device_type',
       render: resourcePlanChangeingRender,
       isDefaultShow: true,
@@ -2132,11 +2236,6 @@ export default (type: string, isSimpleShow = false) => {
       label: '总CPU核数',
       field: 'updated_info.cvm.cpu_core',
       render: resourcePlanChangeingRender,
-      isDefaultShow: true,
-    },
-    {
-      label: '预测类型',
-      field: 'demand_class',
       isDefaultShow: true,
     },
     {
@@ -2149,6 +2248,11 @@ export default (type: string, isSimpleShow = false) => {
       label: '总云盘大小(G)',
       field: 'updated_info.cbs.disk_size',
       render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '预测类型',
+      field: 'demand_class',
       isDefaultShow: true,
     },
     {
@@ -2995,13 +3099,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'private_ipv4_addresses',
       idFiled: 'id',
       onlyShowOnList: false,
+      linkable: (data) => data.vendor !== VendorEnum.ZIYAN,
       render: (data) =>
         [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--',
       renderSuffix: (data) => {
         const ips = [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--';
         return <CopyToClipboard content={ips} class={[cssModule['copy-icon'], 'ml4']} />;
       },
-      contentClass: 'cell-private-ip',
+      contentClass: cssModule['cell-private-ip'],
       sort: false,
     }),
     {
@@ -3012,7 +3117,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ data }: any) => {
         const ips = [...(data.public_ipv4_addresses || []), ...(data.public_ipv6_addresses || [])].join(',') || '--';
         return (
-          <div class={'cell-public-ip'}>
+          <div class={cssModule['cell-public-ip']}>
             <span>{ips}</span>
             <CopyToClipboard content={ips} class={[cssModule['copy-icon'], 'ml4']} />
           </div>
@@ -3177,19 +3282,21 @@ export default (type: string, isSimpleShow = false) => {
     RecyclingResources: RRColumns,
     BusinessSelection: BSAColumns,
     ResourcesTotal: RTColumns,
-    hostRecycle: recycleOrderColumns,
-    deviceQuery: deviceQueryColumns,
+    hostRecycleApplication: HostRecycleApplicationColumns,
+    hostRecycleDevice: HostRecycleDeviceColumns,
     deviceDestroy: deviceDestroyColumns,
-    DeviceQuerycolumns: DQcolumns,
+    hostApplyDevice: HostApplyDeviceColumns,
     pdExecutecolumns: PDcolumns,
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
     resourceForecast: resourceForecastColumns,
     resourceForecastBatchCancel: resourceForecastBatchCancelColumns,
+    receiptForecastDemand: receiptForecastDemandColumns,
     forecastDemand: forecastDemandColumns,
     adjustmentEntry: adjustmentEntryColums,
     forecastDemandDetail: forecastDemandDetailColums,
+    receiptForecastDemandDetail: receiptForecastDemandDetailColums,
     forecastList: forecastListColums,
     account: accountColums,
     CVMApplication: CAcolumns,
@@ -3218,7 +3325,7 @@ export default (type: string, isSimpleShow = false) => {
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
-  if (whereAmI.value !== Senarios.resource) columns = columns.filter((column: any) => !column.isOnlyShowInResource);
+  if (whereAmI.value === Senarios.business) columns = columns.filter((column: any) => !column.notDisplayedInBusiness);
 
   type ColumnsType = typeof columns;
   const generateColumnsSettings = (columns: ColumnsType) => {
@@ -3230,12 +3337,12 @@ export default (type: string, isSimpleShow = false) => {
           field: column.field,
           disabled: type !== 'cvms' && column.field === 'id',
           isDefaultShow: !!column.isDefaultShow,
-          isOnlyShowInResource: !!column.isOnlyShowInResource,
+          notDisplayedInBusiness: !!column.notDisplayedInBusiness,
         });
       }
     }
-    if (whereAmI.value !== Senarios.resource) {
-      fields = fields.filter((field) => !field.isOnlyShowInResource);
+    if (whereAmI.value === Senarios.business) {
+      fields = fields.filter((field) => !field.notDisplayedInBusiness);
     }
     const settings: Ref<Settings> = ref({
       fields,

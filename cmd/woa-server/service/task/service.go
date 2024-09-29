@@ -112,6 +112,8 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("ModifyApplyOrder", http.MethodPost, "/modify/apply", s.ModifyApplyOrder)
 	h.Add("RecommendApplyOrder", http.MethodPost, "/recommend/apply", s.RecommendApplyOrder)
 	h.Add("GetApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetApplyModify)
+
+	h.Add("CheckRollingServerHost", http.MethodPost, "/check/rolling_server/host", s.CheckRollingServerHost)
 }
 
 // bizService 业务下的接口

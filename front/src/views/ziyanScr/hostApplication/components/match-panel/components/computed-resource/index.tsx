@@ -1,13 +1,13 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import './index.scss';
 import http from '@/http';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Message } from 'bkui-vue';
-import apiService from '@/api/scrApi';
 import CommonLocalTable from '@/components/CommonLocalTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 
@@ -70,7 +70,6 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
-    const device_types = ref([]);
     const getDomainList = () => {
       return http.post(
         `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}pool/findmany/recall/match/device`,
@@ -86,31 +85,21 @@ export default defineComponent({
     };
     const onRegionChange = () => {
       formModel.spec.zone = [];
-      loadDeviceTypes();
     };
     const onResourceTypeChange = () => {
       formModel.spec.region = [];
       formModel.spec.zone = [];
-      loadDeviceTypes();
+      formModel.spec.device_type = [];
     };
     const onZoneChange = () => {
       formModel.spec.device_type = [];
-      loadDeviceTypes();
     };
-    const loadDeviceTypes = async () => {
-      if (formModel.resource_type === 'QCLOUDCVM') {
-        const { info } = await apiService.getDeviceTypes(formModel.spec);
-        device_types.value = info || [];
-      } else {
-        const { info } = await apiService.getIDCPMDeviceTypes();
-        device_types.value = info.map((item) => {
-          return item.device_type;
-        });
-      }
-    };
-    onMounted(() => {
-      loadDeviceTypes();
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone } = formModel.spec;
+      return { region, zone };
     });
+
     const isLoading = ref(false);
     const getListData = async () => {
       isLoading.value = true;
@@ -183,11 +172,13 @@ export default defineComponent({
               />
             </FormItem>
             <FormItem label='机型'>
-              <bk-select class='tbkselect' v-model={formModel.spec.device_type} clearable multiple>
-                {device_types.value.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
+              <DevicetypeSelector
+                class='tbkselect'
+                v-model={formModel.spec.device_type}
+                resourceType={formModel.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'}
+                params={cvmDevicetypeParams.value}
+                multiple
+              />
             </FormItem>
           </Form>
         </div>

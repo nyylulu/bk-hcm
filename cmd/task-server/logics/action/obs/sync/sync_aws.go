@@ -183,7 +183,7 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 			ProductID:         int32(mainAccount.OpProductID),
 			LinkedAccountName: mainAccount.Extension.CloudMainAccountName,
 			Region:            regionCode,
-			Memo:              "",
+			Memo:              "ieg上报",
 
 			BillPayerAccountID:                     record.BillPayerAccountId,
 			LineItemUsageAccountID:                 record.LineItemUsageAccountId,

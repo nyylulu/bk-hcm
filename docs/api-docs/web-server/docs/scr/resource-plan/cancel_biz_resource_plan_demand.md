@@ -8,9 +8,9 @@
 
 POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/cancel
 
-| 参数名称           | 参数类型      | 必选 | 描述        |
-|----------------|-----------|----|-----------|
-| crp_demand_ids | int array | 是  | CRP需求ID列表 |
+| 参数名称           | 参数类型      | 必选 | 描述                |
+|----------------|-----------|----|-------------------|
+| crp_demand_ids | int array | 是  | CRP需求ID列表，数量最大100 |
 
 ### 调用示例
 

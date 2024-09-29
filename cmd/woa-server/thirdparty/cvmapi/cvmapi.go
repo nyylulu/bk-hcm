@@ -58,6 +58,9 @@ type CVMClientInterface interface {
 	GetCvmProcess(ctx context.Context, header http.Header, req *GetCvmProcessReq) (*GetCvmProcessResp, error)
 	// GetErpProcess check if physical machine is in any process like "退回"
 	GetErpProcess(ctx context.Context, header http.Header, req *GetErpProcessReq) (*GetErpProcessResp, error)
+	// QueryCvmInstanceType query cvm instance type
+	QueryCvmInstanceType(ctx context.Context, header http.Header, req *QueryCvmInstanceTypeReq) (
+		*QueryCvmInstanceTypeResp, error)
 }
 
 // NewCVMClientInterface creates a cvm api instance
@@ -386,4 +389,27 @@ func (c *cvmApi) GetErpProcess(ctx context.Context, header http.Header, req *Get
 	}
 
 	return resp, err
+}
+
+// QueryCvmInstanceType query cvm instance type
+func (c *cvmApi) QueryCvmInstanceType(ctx context.Context, header http.Header, req *QueryCvmInstanceTypeReq) (
+	*QueryCvmInstanceTypeResp, error) {
+
+	subPath := "/apply/api/"
+	resp := new(QueryCvmInstanceTypeResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("query cvm instance type failed, err: %v, subPath: %s, req: %+v", err, subPath, req)
+		return nil, err
+	}
+
+	return resp, nil
 }

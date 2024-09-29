@@ -282,7 +282,7 @@ export default defineComponent({
             label: t('需求类型'),
             field: 'require_type',
             width: 100,
-            render: ({ data }: any) => transformRequireTypes(data.requireType),
+            render: ({ cell }: any) => transformRequireTypes(cell),
           },
           {
             label: t('需求摘要'),
@@ -386,7 +386,8 @@ export default defineComponent({
               return (
                 <div>
                   <Button
-                    disabled={data.status === 'UNCOMMIT'}
+                    // 滚服项目暂不支持再次申请
+                    disabled={data.status === 'UNCOMMIT' || data.require_type === 6}
                     size='small'
                     onClick={() => reapply(data)}
                     text

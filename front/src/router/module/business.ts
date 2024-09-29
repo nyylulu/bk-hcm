@@ -444,7 +444,7 @@ const businesseMenus: RouteRecordRaw[] = [
           title: '资源预测',
           activeKey: 'bizResourcePlan',
           isShowBreadcrumb: true,
-          icon: '',
+          icon: 'hcm-icon bkhcm-icon-resource-plan',
         },
         children: [
           {

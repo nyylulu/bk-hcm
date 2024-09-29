@@ -23,7 +23,7 @@ export default defineStore('planStore', () => {
    * 查询业务下资源预测需求列表
    */
   const list_biz_resource_plan_demand = async (
-    ids: string[], // 预测需求IDS
+    ids: number[], // 预测需求IDS
   ): Promise<{
     [key: string]: any;
     data: {
@@ -149,11 +149,11 @@ export default defineStore('planStore', () => {
             available: false,
             device_types: [
               {
-                device_type: 'C3.2XLARGE16',
+                device_type: 'S3.6XLARGE64',
                 available: true,
               },
               {
-                device_type: 'test_type',
+                device_type: 'S3.LARGE8',
                 available: true,
               },
             ],
@@ -191,7 +191,7 @@ export default defineStore('planStore', () => {
       data: {
         verifications: [
           {
-            verify_result: 'PASS',
+            verify_result: 'FAILED',
             reason: '',
           },
         ],

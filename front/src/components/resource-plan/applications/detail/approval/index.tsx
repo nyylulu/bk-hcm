@@ -16,6 +16,7 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    errorMessage: String,
   },
   setup(props) {
     const { t } = useI18n();
@@ -39,6 +40,12 @@ export default defineComponent({
           <span class={cssModule.status}>
             {renderIcon()}
             <span>{props.statusInfo?.status_name}</span>
+            {props.errorMessage && (
+              <div class={cssModule['error-message']}>
+                <i class={`hcm-icon bkhcm-icon-prompt ${cssModule['error-message-color']}`} />
+                <span>{props.errorMessage}</span>
+              </div>
+            )}
           </span>
           <span class={cssModule.links}>
             <bk-link

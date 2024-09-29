@@ -16,6 +16,7 @@ export interface IZoneTagSelectorProps {
   disabled?: boolean;
   maxWidth?: number;
   minWidth?: number;
+  autoExpand?: 'selected' | boolean;
   emptyText?: string;
 }
 
@@ -23,6 +24,7 @@ const props = withDefaults(defineProps<IZoneTagSelectorProps>(), {
   disabled: false,
   maxWidth: 200,
   minWidth: 200,
+  autoExpand: 'selected',
 });
 
 const emit = defineEmits<(e: 'change', value: string) => void>();
@@ -54,5 +56,6 @@ const { list } = useList(props);
     :empty-text="emptyText"
     :tag-max-width="maxWidth"
     :tag-min-width="minWidth"
+    :auto-expand="autoExpand"
   />
 </template>

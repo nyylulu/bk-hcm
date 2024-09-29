@@ -1,4 +1,4 @@
-import { defineComponent, onBeforeMount, ref } from 'vue';
+import { defineComponent, onBeforeMount, ref, watch } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -7,7 +7,14 @@ import BusinessSelector from '@/components/business-selector/index.vue';
 import WName from '@/components/w-name';
 import { useI18n } from 'vue-i18n';
 import { timeFormatter } from '@/common/util';
-import { IDeviceType, IListResourcesDemandsParam, IPlanProducts, IRegion, IZone } from '@/typings/resourcePlan';
+import {
+  IDeviceType,
+  IListResourcesDemandsParam,
+  IOpProductsResult,
+  IPlanProducts,
+  IRegion,
+  IZone,
+} from '@/typings/resourcePlan';
 import { useResourcePlanStore } from '@/store';
 import dayjs from 'dayjs';
 
@@ -22,18 +29,7 @@ export default defineComponent({
   setup(props, { emit }) {
     const { Option } = Select;
     const { t } = useI18n();
-    const {
-      getOpProducts,
-      getPlanProducts,
-      getProjectTypes,
-      getDemandClasses,
-      getDeviceClasses,
-      getDeviceTypes,
-      getRegions,
-      getZones,
-      getPlanTypes,
-    } = useResourcePlanStore();
-
+    const resourcePlanStore = useResourcePlanStore();
     const initialSearchModel: Partial<IListResourcesDemandsParam> = {
       bk_biz_ids: [], // 业务
       op_product_ids: [], // 产品
@@ -52,7 +48,7 @@ export default defineComponent({
       }, // 期望交付时间范围
     };
 
-    const opProductList = ref<string[]>([]);
+    const opProductList = ref<{ op_product_id: number; op_product_name: string }[]>([]);
     const planProductsList = ref<IPlanProducts[]>([]);
     const projectTypesList = ref<string[]>([]);
     const demandClassList = ref<string[]>([]);
@@ -75,8 +71,7 @@ export default defineComponent({
     const searchModel = ref(JSON.parse(JSON.stringify(initialSearchModel)));
 
     const disabledDate = (date: any) => {
-      const now = new Date();
-      return date && (date.getFullYear() !== now.getFullYear() || date.getMonth() !== now.getMonth());
+      return dayjs(date).isBefore(dayjs().startOf('month'));
     };
 
     const handleSearch = () => {
@@ -101,9 +96,10 @@ export default defineComponent({
 
     const getOpProductsList = () => {
       isLoadingOpProducts.value = true;
-      getOpProducts()
-        .then((data: { data: { details: string[] } }) => {
-          projectTypesList.value = data?.data?.details || [];
+      resourcePlanStore
+        .getOpProductsList()
+        .then((data: IOpProductsResult) => {
+          opProductList.value = data?.data?.details || [];
         })
         .finally(() => {
           isLoadingOpProducts.value = false;
@@ -112,7 +108,8 @@ export default defineComponent({
 
     const getPlanProductsList = () => {
       isLoadingPlanProducts.value = true;
-      getPlanProducts()
+      resourcePlanStore
+        .getPlanProductsList()
         .then((data: { data: { details: IPlanProducts[] } }) => {
           planProductsList.value = data?.data?.details || [];
         })
@@ -123,7 +120,8 @@ export default defineComponent({
 
     const getObsProjectList = () => {
       isLoadingProjectsType.value = true;
-      getProjectTypes()
+      resourcePlanStore
+        .getObsProjects()
         .then((data: { data: { details: string[] } }) => {
           projectTypesList.value = data?.data?.details || [];
         })
@@ -134,7 +132,8 @@ export default defineComponent({
 
     const getDemandClassList = () => {
       isLoadingDemandClass.value = true;
-      getDemandClasses()
+      resourcePlanStore
+        .getDemandClasses()
         .then((data: { data: { details: string[] } }) => {
           demandClassList.value = data?.data?.details || [];
         })
@@ -145,7 +144,8 @@ export default defineComponent({
 
     const getDeviceClassList = () => {
       isLoadingDeviceClass.value = true;
-      getDeviceClasses()
+      resourcePlanStore
+        .getDeviceClasses()
         .then((data: { data: { details: string[] } }) => {
           deviceClassList.value = data?.data?.details || [];
         })
@@ -156,7 +156,8 @@ export default defineComponent({
 
     const getDeviceTypeList = () => {
       isLoadingDeviceType.value = true;
-      getDeviceTypes()
+      resourcePlanStore
+        .getDeviceTypes()
         .then((data: { data: { details: IDeviceType[] } }) => {
           deviceTypeList.value = data?.data?.details || [];
         })
@@ -167,7 +168,8 @@ export default defineComponent({
 
     const getPlanClassList = () => {
       isLoadingPlanClass.value = true;
-      getPlanTypes()
+      resourcePlanStore
+        .getPlanTypes()
         .then((data: { data: { details: string[] } }) => {
           planClassList.value = data?.data?.details || [];
         })
@@ -178,7 +180,8 @@ export default defineComponent({
 
     const getRegionList = () => {
       isLoadingRegion.value = true;
-      getRegions()
+      resourcePlanStore
+        .getRegions()
         .then((data: { data: { details: IRegion[] } }) => {
           regionList.value = data?.data?.details || [];
         })
@@ -189,7 +192,8 @@ export default defineComponent({
 
     const getZoneList = () => {
       isLoadingZone.value = true;
-      getZones()
+      resourcePlanStore
+        .getZones(searchModel.value.region_ids)
         .then((data: { data: { details: IZone[] } }) => {
           zoneList.value = data?.data?.details || [];
         })
@@ -197,6 +201,14 @@ export default defineComponent({
           isLoadingZone.value = false;
         });
     };
+
+    watch(
+      () => searchModel.value.region_ids,
+      () => {
+        searchModel.value.zone_ids = [];
+        getZoneList();
+      },
+    );
 
     onBeforeMount(() => {
       if (!props.isBiz) {
@@ -243,7 +255,7 @@ export default defineComponent({
                       <div class={cssModule['search-label']}>{t('运营产品')}</div>
                       <Select multiple v-model={searchModel.value.op_product_ids} loading={isLoadingOpProducts.value}>
                         {opProductList.value.map((item) => (
-                          <Option name={item} id={item} />
+                          <Option name={item.op_product_name} id={item.op_product_id} />
                         ))}
                       </Select>
                     </div>

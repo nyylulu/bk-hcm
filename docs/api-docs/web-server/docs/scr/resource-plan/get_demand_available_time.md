@@ -16,7 +16,7 @@ POST /api/v1/woa/plans/demands/available_times/get
 
 ```json
 {
-  "expect_time": "2024-10-05"
+  "expect_time": "2024-09-01"
 }
 ```
 
@@ -29,16 +29,16 @@ POST /api/v1/woa/plans/demands/available_times/get
   "data": {
     "year_month_week": {
       "year": 2024,
-      "month": 9,
+      "month": 8,
       "week_of_month": 5
     },
     "date_range_in_week": {
-      "start": "2024-09-30",
-      "end": "2024-10-06"
+      "start": "2024-08-26",
+      "end": "2024-09-01"
     },
     "date_range_in_month": {
-      "start": "2024-10-28",
-      "end": "2024-11-03"
+      "start": "2024-07-29",
+      "end": "2024-09-01"
     }
   }
 }

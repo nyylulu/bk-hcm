@@ -1,8 +1,8 @@
-import Mod from "@/components/resource-plan/resource-manage/mod";
-import { defineComponent } from "vue";
+import Mod from '@/components/resource-plan/resource-manage/mod';
+import { defineComponent } from 'vue';
 
 export default defineComponent({
   setup() {
-    return () => <Mod isBiz={true}/>;
+    return () => <Mod isBiz={true} />;
   },
-})
+});

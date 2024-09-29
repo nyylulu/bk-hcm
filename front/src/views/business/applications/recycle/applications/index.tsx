@@ -77,22 +77,20 @@ export default defineComponent({
       return params;
     });
 
-    const { columns } = useScrColumns('hostRecycle');
-    columns.splice(1, 1, {
+    const { columns } = useScrColumns('hostRecycleApplication');
+    columns.splice(1, 0, {
       label: t('单号/子单号'),
       width: 100,
       render: ({ row }: any) => {
         return (
-          <div>
-            <div>
-              <p>{row.order_id}</p>
-            </div>
+          <>
+            <p>{row.order_id}</p>
             <div>
               <Button theme='primary' text onClick={() => enterDetail(row)}>
                 {row.suborder_id}
               </Button>
             </div>
-          </div>
+          </>
         );
       },
       exportFormatter: (data: any) => `${data.order_id}/${data.suborder_id}`,

@@ -15,7 +15,7 @@ import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
-    const { columns } = useColumns('DeviceQuerycolumns');
+    const { columns } = useColumns('hostApplyDevice');
     const { selections, handleSelectionChange } = useSelection();
     const clipHostIp = computed(() => {
       return selections.value.map((item) => item.ip).join('\n');

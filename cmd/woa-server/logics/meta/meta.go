@@ -46,10 +46,11 @@ func (l *logics) GetBizsByOpProd(kt *kit.Kit, prodID int64) ([]mtypes.Biz, error
 // getCmdbAllBizBelonging get cmdb all biz belonging.
 func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging, error) {
 	result := make([]cmdb.SearchBizBelonging, 0)
-	for start := 0; ; start += constant.SearchBizBelongingMaxLimit {
+	batch := constant.SearchBizBelongingMaxLimit
+	for start := 0; ; start += batch {
 		req := &cmdb.SearchBizBelongingParams{
 			Page: cmdb.SearchBizBelongingPage{
-				Limit: constant.SearchBizBelongingMaxLimit,
+				Limit: batch,
 				Start: start,
 			},
 		}
@@ -62,7 +63,7 @@ func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging,
 
 		result = append(result, resp.Data...)
 
-		if len(resp.Data) < constant.SearchBizBelongingMaxLimit {
+		if len(resp.Data) < batch {
 			break
 		}
 	}
