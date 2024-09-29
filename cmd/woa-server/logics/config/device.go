@@ -170,6 +170,7 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	filter["enable_apply"] = true
 
 	insts, err := config.Operation().CvmDevice().FindManyDeviceType(kt.Ctx, filter)
+	logs.Infof("DEBUG:WOA:GetDeviceType, insts: %+v, err; %+v, rid: %s", insts, err, kt.Rid)
 	if err != nil {
 		return nil, err
 	}
@@ -191,6 +192,8 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+	logs.Infof("DEBUG:WOA:QueryCvmInstanceType, instTypes: %+v, resp; %+v, rid: %s",
+		instTypes, resp.Result.Data, kt.Rid)
 
 	infos := make([]types.DeviceTypeItem, 0)
 	for _, item := range resp.Result.Data {
