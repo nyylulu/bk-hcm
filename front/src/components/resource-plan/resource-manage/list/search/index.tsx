@@ -1,4 +1,4 @@
-import { defineComponent, onBeforeMount, ref } from 'vue';
+import { defineComponent, onBeforeMount, ref, watch } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -30,7 +30,6 @@ export default defineComponent({
     const { Option } = Select;
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
-
     const initialSearchModel: Partial<IListResourcesDemandsParam> = {
       bk_biz_ids: [], // 业务
       op_product_ids: [], // 产品
@@ -72,8 +71,7 @@ export default defineComponent({
     const searchModel = ref(JSON.parse(JSON.stringify(initialSearchModel)));
 
     const disabledDate = (date: any) => {
-      const now = new Date();
-      return date && (date.getFullYear() !== now.getFullYear() || date.getMonth() !== now.getMonth());
+      return dayjs(date).isBefore(dayjs().startOf('month'));
     };
 
     const handleSearch = () => {
@@ -195,7 +193,7 @@ export default defineComponent({
     const getZoneList = () => {
       isLoadingZone.value = true;
       resourcePlanStore
-        .getZones()
+        .getZones(searchModel.value.region_ids)
         .then((data: { data: { details: IZone[] } }) => {
           zoneList.value = data?.data?.details || [];
         })
@@ -203,6 +201,14 @@ export default defineComponent({
           isLoadingZone.value = false;
         });
     };
+
+    watch(
+      () => searchModel.value.region_ids,
+      () => {
+        searchModel.value.zone_ids = [];
+        getZoneList();
+      },
+    );
 
     onBeforeMount(() => {
       if (!props.isBiz) {
