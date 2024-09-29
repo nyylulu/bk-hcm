@@ -34,8 +34,7 @@ import useFormModel from '@/hooks/useFormModel';
 import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
 import InheritPackageFormItem from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import CpuCorsLimits from '@/views/ziyanScr/rolling-server/cpu-cors-limits/index.vue';
-import { CvmDeviceType, IdcpmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
-import success from 'bkui-vue/lib/icon/success';
+import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
@@ -833,7 +832,7 @@ export default defineComponent({
         }, false);
         Message({
           theme: isNeedVerfiy.value ? 'warning' : 'success',
-          message: isNeedVerfiy.value ?  '校验不通过' : '校验通过'
+          message: isNeedVerfiy.value ? '校验不通过' : '校验通过',
         });
       } finally {
         isLoading.value = false;
@@ -919,7 +918,7 @@ export default defineComponent({
         isNeedVerfiy.value = val.reduce((acc, cur) => {
           acc ||= cur.verify_result !== 'PASS';
           return acc;
-        }, false)
+        }, false);
       },
       {
         deep: true,
@@ -1087,13 +1086,26 @@ export default defineComponent({
                 <Alert theme='danger' showIcon={false} class={'mb24'}>
                   <p class={'status-FAILED'}>
                     前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
-                    <Button theme='primary' text>
+                    <Button
+                      theme='primary'
+                      text
+                      onClick={() => {
+                        window.open(
+                          whereAmI.value === Senarios.business ? '#/business/resource-plan' : '#/service/resource-plan',
+                          '_blank',
+                        );
+                      }}>
                       查看资源预测
                     </Button>
                   </p>
                   <p class={'status-FAILED'}>
                     资源需求中有使用按量计费模式，长期使用成本较高，建议提预测单13周后转包年包月，
-                    <Button theme='primary' text>
+                    <Button
+                      theme='primary'
+                      text
+                      onClick={() => {
+                        window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
+                      }}>
                       去创建提预测单
                     </Button>
                   </p>
@@ -1270,7 +1282,12 @@ export default defineComponent({
                             当前地域无资源预测，提预测单后再按量申请，
                             {availablePostpaidSet.value.size}
                             {availablePrepaidSet.value.size}
-                            <Button theme='primary' text>
+                            <Button
+                              theme='primary'
+                              text
+                              onClick={() => {
+                                window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
+                              }}>
                               去创建提预测单
                             </Button>
                           </Alert>

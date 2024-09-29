@@ -123,7 +123,7 @@ export default defineComponent({
     });
 
     return () => (
-      <Panel title={t('CBS云磁盘信息')}>
+      <Panel title={t('CBS云磁盘信息')} noShadow>
         <bk-form
           form-type='vertical'
           ref={formRef}

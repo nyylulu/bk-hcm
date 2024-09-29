@@ -150,7 +150,7 @@ export default defineComponent({
     });
 
     return () => (
-      <Panel title={t('基础信息')}>
+      <Panel title={t('基础信息')} noShadow>
         <bk-form form-type='vertical' ref={formRef} model={props.planTicketDemand} class={cssModule.home}>
           <bk-form-item label={t('资源类型')}>
             <bk-radio-group

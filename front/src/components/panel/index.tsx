@@ -7,12 +7,13 @@ export default defineComponent({
       type: [Function, String] as PropType<(() => string | HTMLElement | VNode) | String>,
       default: () => '',
     },
+    noShadow: Boolean as PropType<boolean>,
   },
 
   setup(props, { slots }) {
     const renderTitle = computed(() => (typeof props?.title === 'function' ? props.title() : props.title));
     return () => (
-      <section class={cssModule.home}>
+      <section class={!props.noShadow ? cssModule.home : undefined}>
         {slots.title ? slots.title() : <span class={cssModule.title}>{renderTitle.value}</span>}
         {slots.default()}
       </section>

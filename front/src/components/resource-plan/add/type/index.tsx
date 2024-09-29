@@ -21,7 +21,7 @@ export default defineComponent({
     };
 
     return () => (
-      <Panel class={'mb16'} title={`${'调整类型'}`}>
+      <Panel class={'mb16'} title={`${'调整类型'}`} noShadow>
         <Form formType='vertical'>
           <FormItem label={t('调整方式')}>
             <BkRadioGroup modelValue={props.modelValue} onChange={triggerUpdate}>
