@@ -489,8 +489,10 @@ func (e *AdjustRPDemandReqElem) Validate() error {
 
 	switch e.AdjustType {
 	case enumor.RPDemandAdjustTypeUpdate:
-		if err := e.DemandSource.Validate(); err != nil {
-			return err
+		if e.DemandSource != "" {
+			if err := e.DemandSource.Validate(); err != nil {
+				return err
+			}
 		}
 
 		if e.OriginalInfo == nil {

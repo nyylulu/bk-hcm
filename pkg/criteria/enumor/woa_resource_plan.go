@@ -302,7 +302,7 @@ func (d DemandSource) Validate() error {
 	case DemandSourceSupply:
 	case DemandSourceSysProcess:
 	default:
-		return fmt.Errorf("unsupported obs project: %s", d)
+		return fmt.Errorf("unsupported demand source: %s", d)
 	}
 
 	return nil
