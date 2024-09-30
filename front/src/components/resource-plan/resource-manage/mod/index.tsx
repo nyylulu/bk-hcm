@@ -1,7 +1,7 @@
 import { computed, defineComponent, onBeforeUnmount, onMounted, PropType, Ref, ref, watch } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import { Button, DatePicker, Dialog, Form, InfoBox, PopConfirm, Table } from 'bkui-vue';
+import { Button, DatePicker, Dialog, Form, InfoBox, Message, PopConfirm, Table } from 'bkui-vue';
 import { cloneDeep } from 'lodash';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { onBeforeRouteLeave, useRoute, useRouter } from 'vue-router';
@@ -139,18 +139,27 @@ export default defineComponent({
 
     onMounted(async () => {
       window.addEventListener('beforeunload', confirmLeave);
-
-      const planIds = (route.query.planIds as string)?.split(',').map((v) => +v) || [];
-      const res = await planStore.list_biz_resource_plan_demand(planIds);
-      const data = res.data.details;
-      originData.value = data;
-      tableData.value = cloneDeep(data).map((v) => {
-        return {
-          ...v,
-          adjustType: AdjustType.none,
-        };
-      });
     });
+
+    watch(
+      () => route.query,
+      async () => {
+        const planIds = (route.query.planIds as string)?.split(',').map((v) => +v) || [];
+        const res = await planStore.list_biz_resource_plan_demand(planIds);
+        const data = res.data.details.map((v) => {
+          return {
+            ...v,
+            adjustType: AdjustType.none,
+            res_mode: '按机型',
+          };
+        });
+        originData.value = data;
+        tableData.value = cloneDeep(data);
+      },
+      {
+        immediate: true,
+      },
+    );
 
     // 提交
     const handleSubmit = async () => {
@@ -159,12 +168,17 @@ export default defineComponent({
       for (let i = 0; i < N; i++) {
         const originDetail = originData.value[i];
         const updatedDetail = tableData.value[i];
-        const info = planStore.convertToAdjust(originDetail, updatedDetail, AdjustType.config, '1');
+        const info = planStore.convertToAdjust(originDetail, updatedDetail);
         adjusts.push(info);
       }
       const { data } = await planStore.adjust_biz_resource_plan_demand({ adjusts });
+      if (!data.id) return;
+      Message({
+        message: t('提交成功'),
+        theme: 'success',
+      });
       router.push({
-        path: '/service/my-apply/detail',
+        path: '/service/my-apply/resource-plan/detail',
         query: {
           id: data.id,
         },
@@ -317,7 +331,7 @@ export default defineComponent({
             clearSelection();
           }}>
           <Form model={formModel} ref={delayFormRef}>
-            <FormItem label={t('已预测需求：')}>
+            <FormItem label={t('已选预测需求：')}>
               {selections.value.filter((v) => ![AdjustType.config].includes(v.adjustType)).length}
             </FormItem>
             <FormItem label={t('期望到货日期：')} required property='time'>
@@ -333,7 +347,7 @@ export default defineComponent({
                     注意：日期落在
                     <span class={'time-txt'}>
                       {timeRange.year_month_week.year}年{timeRange.year_month_week.month}月W
-                      {timeRange.year_month_week.week_of_month}
+                      {timeRange.year_month_week.week}
                     </span>
                     ,建议在
                     <span class={'time-txt'}>

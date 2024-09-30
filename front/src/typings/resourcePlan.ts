@@ -145,6 +145,7 @@ export interface IPlanTicketDemand {
   zone_id: string;
   zone_name: string;
   demand_source: string;
+  demand_class: string;
   remark?: string;
   demand_res_types: string[];
   cvm?: {

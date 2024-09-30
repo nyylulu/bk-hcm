@@ -35,12 +35,14 @@ export interface IDemandListDetail {
   disk_type_name: string; // 云盘类型名称
   disk_io: number; // 云盘IO
   adjustType: AdjustType;
+  demand_source: string; // 变更原因
+  res_mode: string; // 资源模式
 }
 
 export enum AdjustType {
   config = 'update', // 修改配置
-  time = 'delay',  // 修改时间
-  none = 'none',   // 未做修改
+  time = 'delay', // 修改时间
+  none = 'none', // 未做修改
 }
 
 export interface IListConfigCvmChargeTypeDeviceTypeParams {
@@ -131,6 +133,8 @@ export interface AdjustInfo {
   demand_res_types: string[]; // 预期资源类型列表 (枚举值: CVM, CBS)
   cvm?: CVMInfo; // 申请CVM的信息 (可选)
   cbs?: CBSInfo; // 申请CBS的信息 (可选)
+  demand_source: string; // 变更原因（默认为指标变化）
+  remark: string; // 备注
 }
 
 // 调整项
@@ -156,7 +160,7 @@ export interface IAdjustData {
 export interface IYearMonthWeek {
   year: number; // 需要年
   month: number; // 需要月
-  week_of_month: number; // 需要月内的第几周
+  week: number; // 需要月内的第几周
 }
 
 export interface IDateRange {
@@ -171,6 +175,6 @@ export interface IExceptTimeRange {
 }
 
 export enum ChargeType {
-  PREPAID = 'PREPAID', 
-  POSTPAID_BY_HOUR = 'POSTPAID_BY_HOUR'
+  PREPAID = 'PREPAID',
+  POSTPAID_BY_HOUR = 'POSTPAID_BY_HOUR',
 }
