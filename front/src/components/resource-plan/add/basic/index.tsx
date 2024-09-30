@@ -206,29 +206,32 @@ export default defineComponent({
               onChange={(val: string) => handleUpdatePlanTicketDemand('expect_time', val)}
             />
           </bk-form-item>
-          <bk-form-item label={t('变更原因')} property='demand_source'>
-            <bk-select
-              disabled={props.type === AdjustType.time}
-              clearable
-              loading={isLoadingSource.value}
-              modelValue={props.planTicketDemand.demand_source}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('demand_source', val)}>
-              {sources.value.map((source) => (
-                <bk-option id={source} name={source}></bk-option>
-              ))}
-            </bk-select>
-          </bk-form-item>
-          <bk-form-item label={t('需求备注')} property='remark' class={cssModule['span-2']}>
-            <bk-input
-              disabled={props.type === AdjustType.time}
-              clearable
-              type='textarea'
-              maxlength={100}
-              showWordLimit
-              modelValue={props.planTicketDemand.remark}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('remark', val)}
-            />
-          </bk-form-item>
+          {/* 变更原因、需求备注仅和单据绑定，编辑时无需更改 */}
+          {props.type === AdjustType.none && (
+            <>
+              <bk-form-item label={t('变更原因')} property='demand_source'>
+                <bk-select
+                  clearable={false}
+                  loading={isLoadingSource.value}
+                  modelValue={props.planTicketDemand.demand_source}
+                  onChange={(val: string) => handleUpdatePlanTicketDemand('demand_source', val)}>
+                  {sources.value.map((source) => (
+                    <bk-option id={source} name={source}></bk-option>
+                  ))}
+                </bk-select>
+              </bk-form-item>
+              <bk-form-item label={t('需求备注')} property='remark' class={cssModule['span-2']}>
+                <bk-input
+                  clearable
+                  type='textarea'
+                  maxlength={100}
+                  showWordLimit
+                  modelValue={props.planTicketDemand.remark}
+                  onChange={(val: string) => handleUpdatePlanTicketDemand('remark', val)}
+                />
+              </bk-form-item>
+            </>
+          )}
         </bk-form>
       </Panel>
     );

@@ -63,7 +63,8 @@ export default defineComponent({
     const planStore = usePlanStore();
     const availablePrepaidSet = ref(new Set());
     const availablePostpaidSet = ref(new Set());
-    const isNeedVerfiy = ref(true);
+    const isNeedVerfiy = ref(false);
+    const isVerifyFailed = ref(false);
     const {
       formModel: cpuAmount,
       setFormValues: setCpuAmount,
@@ -818,7 +819,7 @@ export default defineComponent({
       isLoading.value = true;
       try {
         const { data } = await planStore.verify_resource_demand({
-          bk_biz_id: accountStore.bizs,
+          bk_biz_id: +computedBiz.value,
           require_type: 1,
           suborders,
         });
@@ -917,6 +918,10 @@ export default defineComponent({
         }
         isNeedVerfiy.value = val.reduce((acc, cur) => {
           acc ||= cur.verify_result !== 'PASS';
+          return acc;
+        }, false);
+        isVerifyFailed.value = val.reduce((acc, cur) => {
+          acc ||= cur.verify_result === 'FAILED';
           return acc;
         }, false);
       },
@@ -1071,6 +1076,7 @@ export default defineComponent({
                 </bk-form-item>
               )}
             </CommonCard>
+
             <CommonCard title={() => '备注'}>
               <bk-form-item label='申请备注'>
                 <Input
@@ -1081,8 +1087,9 @@ export default defineComponent({
                   resize={false}
                   placeholder='请输入申请单备注'></Input>
               </bk-form-item>
-
-              {!isRollingServer.value && isNeedVerfiy.value && (
+            </CommonCard>
+            {!isRollingServer.value && isVerifyFailed.value && (
+              <CommonCard title={() => '需求预检'}>
                 <Alert theme='danger' showIcon={false} class={'mb24'}>
                   <p class={'status-FAILED'}>
                     前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
@@ -1110,115 +1117,115 @@ export default defineComponent({
                     </Button>
                   </p>
                 </Alert>
+              </CommonCard>
+            )}
+
+            <bk-form-item class={'mt16'}>
+              {/* 非滚服 */}
+              {!isRollingServer.value && (
+                <>
+                  {!!cloudTableData.value.length && isNeedVerfiy.value ? (
+                    <Button class='mr16' theme='primary' loading={isLoading.value} onClick={handleVerify}>
+                      需求校验
+                    </Button>
+                  ) : (
+                    <>
+                      <Button
+                        class='mr16'
+                        theme='primary'
+                        disabled={!physicalTableData.value.length && !cloudTableData.value.length}
+                        loading={isLoading.value}
+                        v-bk-tooltips={{
+                          content: '资源需求不能为空',
+                          disabled: physicalTableData.value.length || cloudTableData.value.length,
+                        }}
+                        onClick={() => {
+                          handleSaveOrSubmit('submit');
+                        }}>
+                        提交
+                      </Button>
+                      <Button
+                        loading={isLoading.value}
+                        disabled={!physicalTableData.value.length && !cloudTableData.value.length}
+                        v-bk-tooltips={{
+                          content: '资源需求不能为空',
+                          disabled: physicalTableData.value.length || cloudTableData.value.length,
+                        }}
+                        onClick={() => {
+                          handleSaveOrSubmit('save');
+                        }}
+                        class={'mr16'}>
+                        保存
+                      </Button>
+                    </>
+                  )}
+                </>
               )}
 
-              <bk-form-item>
-                {/* 非滚服 */}
-                {!isRollingServer.value && (
-                  <>
-                    {!!cloudTableData.value.length && isNeedVerfiy.value ? (
-                      <Button class='mr16' theme='primary' loading={isLoading.value} onClick={handleVerify}>
-                        需求校验
-                      </Button>
-                    ) : (
-                      <>
-                        <Button
-                          class='mr16'
-                          theme='primary'
-                          disabled={!physicalTableData.value.length && !cloudTableData.value.length}
-                          loading={isLoading.value}
-                          v-bk-tooltips={{
-                            content: '资源需求不能为空',
-                            disabled: physicalTableData.value.length || cloudTableData.value.length,
-                          }}
-                          onClick={() => {
-                            handleSaveOrSubmit('submit');
-                          }}>
-                          提交
-                        </Button>
-                        <Button
-                          loading={isLoading.value}
-                          disabled={!physicalTableData.value.length && !cloudTableData.value.length}
-                          v-bk-tooltips={{
-                            content: '资源需求不能为空',
-                            disabled: physicalTableData.value.length || cloudTableData.value.length,
-                          }}
-                          onClick={() => {
-                            handleSaveOrSubmit('save');
-                          }}
-                          class={'mr16'}>
-                          保存
-                        </Button>
-                      </>
-                    )}
-                  </>
-                )}
-
-                {/* 滚服 */}
-                {isRollingServer.value && (
-                  <>
-                    <Button
-                      class='mr16'
-                      theme='primary'
-                      disabled={
-                        (!physicalTableData.value.length && !cloudTableData.value.length) ||
-                        // todo：如果是滚服项目，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
-                        cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit
+              {/* 滚服 */}
+              {isRollingServer.value && (
+                <>
+                  <Button
+                    class='mr16'
+                    theme='primary'
+                    disabled={
+                      (!physicalTableData.value.length && !cloudTableData.value.length) ||
+                      // todo：如果是滚服项目，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
+                      cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit
+                    }
+                    loading={isLoading.value}
+                    v-bk-tooltips={(function () {
+                      let disabled = true;
+                      let content = '';
+                      if (!physicalTableData.value.length && !cloudTableData.value.length) {
+                        content = '资源需求不能为空';
+                        disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
                       }
-                      loading={isLoading.value}
-                      v-bk-tooltips={(function () {
-                        let disabled = true;
-                        let content = '';
-                        if (!physicalTableData.value.length && !cloudTableData.value.length) {
-                          content = '资源需求不能为空';
-                          disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
-                        }
-                        if (cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit) {
-                          content = '当前所需的CPU总核数超过滚服CPU限额，请调整后再重试。';
-                          disabled = !cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit;
-                        }
-                        return { content, disabled };
-                      })()}
-                      onClick={() => {
-                        handleSaveOrSubmit('submit');
-                      }}>
-                      提交
-                    </Button>
-                    <Button
-                      loading={isLoading.value}
-                      // 滚服项目暂不支持保存
-                      disabled={
-                        (!physicalTableData.value.length && !cloudTableData.value.length) || isRollingServer.value
+                      if (cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit) {
+                        content = '当前所需的CPU总核数超过滚服CPU限额，请调整后再重试。';
+                        disabled = !cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit;
                       }
-                      v-bk-tooltips={(function () {
-                        let disabled = true;
-                        let content = '';
-                        if (!physicalTableData.value.length && !cloudTableData.value.length) {
-                          content = '资源需求不能为空';
-                          disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
-                        }
-                        if (isRollingServer.value) {
-                          content = '滚服项目暂不支持保存';
-                          disabled = !isRollingServer.value;
-                        }
-                        return { content, disabled };
-                      })()}
-                      onClick={() => {
-                        handleSaveOrSubmit('save');
-                      }}
-                      class={'mr16'}>
-                      保存
-                    </Button>
-                  </>
-                )}
-                <Button
-                  onClick={() => {
-                    handleCancel();
-                  }}>
-                  取消
-                </Button>
-              </bk-form-item>
-            </CommonCard>
+                      return { content, disabled };
+                    })()}
+                    onClick={() => {
+                      handleSaveOrSubmit('submit');
+                    }}>
+                    提交
+                  </Button>
+                  <Button
+                    loading={isLoading.value}
+                    // 滚服项目暂不支持保存
+                    disabled={
+                      (!physicalTableData.value.length && !cloudTableData.value.length) || isRollingServer.value
+                    }
+                    v-bk-tooltips={(function () {
+                      let disabled = true;
+                      let content = '';
+                      if (!physicalTableData.value.length && !cloudTableData.value.length) {
+                        content = '资源需求不能为空';
+                        disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
+                      }
+                      if (isRollingServer.value) {
+                        content = '滚服项目暂不支持保存';
+                        disabled = !isRollingServer.value;
+                      }
+                      return { content, disabled };
+                    })()}
+                    onClick={() => {
+                      handleSaveOrSubmit('save');
+                    }}
+                    class={'mr16'}>
+                    保存
+                  </Button>
+                </>
+              )}
+              <Button
+                onClick={() => {
+                  handleCancel();
+                }}>
+                取消
+              </Button>
+            </bk-form-item>
           </bk-form>
 
           {/* 增加资源需求 */}
@@ -1280,8 +1287,6 @@ export default defineComponent({
                         !availablePrepaidSet.value.size && (
                           <Alert class={'mb8'} theme='warning'>
                             当前地域无资源预测，提预测单后再按量申请，
-                            {availablePostpaidSet.value.size}
-                            {availablePrepaidSet.value.size}
                             <Button
                               theme='primary'
                               text

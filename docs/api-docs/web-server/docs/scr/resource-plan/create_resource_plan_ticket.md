@@ -23,7 +23,7 @@ POST /api/v1/woa/plan/resource/ticket/create
 | expect_time      | string       | 是  | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01                 |
 | region_id        | string       | 是  | 地区/城市ID                                           |
 | zone_id          | string       | 否  | 可用区ID                                             |
-| demand_source    | string       | 是  | 需求分类/变更原因                                         |
+| demand_source    | string       | 否  | 需求分类/变更原因                                         |
 | remark           | string       | 否  | 需求备注                                              |
 | demand_res_types | string array | 是  | 预测资源类型列表(枚举值：CVM、CBS)，需求包含CVM时，传递CVM，包含CBS时，传递CBS |
 | cvm              | object       | 否  | 申请的CVM信息                                          |
