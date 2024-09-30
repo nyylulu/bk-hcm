@@ -69,9 +69,12 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 
 	// save crp sn and crp url to resource plan ticket status table.
 	update := &rpts.ResPlanTicketStatusTable{
-		Status: enumor.RPTicketStatusAuditing,
-		CrpSn:  sn,
-		CrpUrl: cvmapi.CvmPlanLinkPrefix + sn,
+		TicketID: ticket.ID,
+		Status:   enumor.RPTicketStatusAuditing,
+		ItsmSn:   ticket.ItsmSn,
+		ItsmUrl:  ticket.ItsmUrl,
+		CrpSn:    sn,
+		CrpUrl:   cvmapi.CvmPlanLinkPrefix + sn,
 	}
 
 	if err = c.updateTicketStatus(kt, update); err != nil {
