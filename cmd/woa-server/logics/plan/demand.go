@@ -274,7 +274,7 @@ func (c *Controller) UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) e
 func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool, error) {
 	// get op product all unlocked crp demand ids.
 	opt, err := tools.And(
-		tools.RuleEqual("locked", enumor.CrpDemandUnLocked),
+		tools.RuleEqual("locked", int8(enumor.CrpDemandUnLocked)),
 		tools.RuleEqual("op_product_id", prodID),
 	)
 	if err != nil {
