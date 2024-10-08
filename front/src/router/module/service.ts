@@ -102,7 +102,7 @@ const serviceMenus: RouteRecordRaw[] = [
           title: t('资源预测'),
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-resource-plan',
-          // checkAuth: 'ziyan_resource_plan_manage', (后端还没加，先注释)
+          checkAuth: 'ziyan_resource_plan_manage',
         },
       },
       {
