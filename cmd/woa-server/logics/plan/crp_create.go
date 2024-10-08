@@ -63,6 +63,8 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		return errors.New("unsupported ticket type")
 	}
 	if err != nil {
+		// 这里主要返回的error是crp ticket创建失败，且ticket状态更新失败的日志在函数内已打印，这里可以忽略该错误
+		_ = c.updateTicketStatusFailed(kt, ticket, err.Error())
 		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -82,10 +84,15 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		return err
 	}
 
+	return nil
+}
+
+// upsertCrpDemand crp tickets are approved and upsert hcm data.
+func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
 	// call crp api to get all crp demand ids.
-	demands, err := c.QueryAllDemands(kt, &QueryAllDemandsReq{CrpSns: []string{sn}})
+	demands, err := c.QueryAllDemands(kt, &QueryAllDemandsReq{CrpSns: []string{ticket.CrpSn}})
 	if err != nil {
-		logs.Errorf("failed to query all demands, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to query all demands, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
 		return err
 	}
 
@@ -93,7 +100,7 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	for idx, demand := range demands {
 		crpDemandID, err := strconv.ParseInt(demand.DemandId, 10, 64)
 		if err != nil {
-			logs.Errorf("failed to parse crp demand id, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to parse crp demand id, err: %v, demand_id: %s, rid: %s", err, demand.DemandId, kt.Rid)
 			return err
 		}
 		crpDemandIDs[idx] = crpDemandID
@@ -147,17 +154,49 @@ func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string
 	if resp.Error.Code != 0 {
 		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
 			resp.Error.Message, kt.Rid)
-		return "", fmt.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s", resp.Error.Code,
+		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}
 
 	sn := resp.Result.OrderId
 	if sn == "" {
 		logs.Errorf("failed to add cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
-		return "", errors.New("failed to add cvm & cbs plan order, for return empty order id")
+		return "", errors.New("failed to create crp ticket, for return empty order id")
 	}
 
 	return sn, nil
+}
+
+// updateTicketStatusFailed update ticket status to failed.
+func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, msg string) error {
+	update := &rpts.ResPlanTicketStatusTable{
+		TicketID: ticket.ID,
+		Status:   enumor.RPTicketStatusFailed,
+		ItsmSn:   ticket.ItsmSn,
+		ItsmUrl:  ticket.ItsmUrl,
+		CrpSn:    ticket.CrpSn,
+		CrpUrl:   ticket.CrpUrl,
+		Message:  msg,
+	}
+
+	if err := c.updateTicketStatus(kt, update); err != nil {
+		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 失败需要释放资源
+	allCrpDemandIDs := make([]int64, 0)
+	for _, demand := range ticket.Demands {
+		if demand.Original != nil {
+			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+		}
+	}
+	if err := c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
 }
 
 // constructAddReq construct cvm cbs plan add request.
@@ -221,14 +260,14 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 	if resp.Error.Code != 0 {
 		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
 			resp.Error.Message, kt.Rid)
-		return "", fmt.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s", resp.Error.Code,
+		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}
 
 	sn := resp.Result.OrderId
 	if sn == "" {
 		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
-		return "", errors.New("failed to adjust cvm & cbs plan order, for return empty order id")
+		return "", errors.New("failed to create crp ticket, for return empty order id")
 	}
 
 	return sn, nil
@@ -460,7 +499,8 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			VirtualDeptName: bizOrgRel.VirtualDeptName,
 			Reviser:         kt.User,
 		}
-		err = c.dao.ResPlanCrpDemand().Update(kt, tools.ContainersExpression("crp_demand_id", existCrpDemandIDs), update)
+		err = c.dao.ResPlanCrpDemand().Update(kt, tools.ContainersExpression("crp_demand_id", existCrpDemandIDs),
+			update)
 		if err != nil {
 			logs.Errorf("failed to update resource plan crp demand, err: %v, rid: %s", err, kt.Rid)
 			return err

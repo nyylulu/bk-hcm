@@ -64,11 +64,11 @@ type RPTicketResourceInfo struct {
 }
 
 // NewResourceInfo new resource info.
-func NewResourceInfo(cpu, memory, diskSize int64) RPTicketResourceInfo {
+func NewResourceInfo(cpuCore, memory, diskSize int64) RPTicketResourceInfo {
 	return RPTicketResourceInfo{
 		Cvm: cvmInfo{
-			Cpu:    &cpu,
-			Memory: &memory,
+			CpuCore: &cpuCore,
+			Memory:  &memory,
 		},
 		Cbs: cbsInfo{
 			DiskSize: &diskSize,
@@ -80,8 +80,8 @@ func NewResourceInfo(cpu, memory, diskSize int64) RPTicketResourceInfo {
 func NewNullResourceInfo() RPTicketResourceInfo {
 	return RPTicketResourceInfo{
 		Cvm: cvmInfo{
-			Cpu:    nil,
-			Memory: nil,
+			CpuCore: nil,
+			Memory:  nil,
 		},
 		Cbs: cbsInfo{
 			DiskSize: nil,
@@ -90,8 +90,8 @@ func NewNullResourceInfo() RPTicketResourceInfo {
 }
 
 type cvmInfo struct {
-	Cpu    *int64 `json:"cpu"`
-	Memory *int64 `json:"memory"`
+	CpuCore *int64 `json:"cpu_core"`
+	Memory  *int64 `json:"memory"`
 }
 
 type cbsInfo struct {
