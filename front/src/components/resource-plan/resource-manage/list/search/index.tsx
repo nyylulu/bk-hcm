@@ -1,4 +1,4 @@
-import { defineComponent, onBeforeMount, ref, watch } from 'vue';
+import { defineComponent, nextTick, onBeforeMount, ref, watch } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -80,7 +80,7 @@ export default defineComponent({
 
     const handleReset = () => {
       searchModel.value = JSON.parse(JSON.stringify(initialSearchModel));
-      emit('search', undefined);
+      emit('search', searchModel.value);
     };
 
     const handleChangeDate = (key: string, val: string[]) => {
@@ -222,6 +222,7 @@ export default defineComponent({
       getPlanClassList();
       getRegionList();
       getZoneList();
+      nextTick(() => handleSearch());
     });
 
     return () => (

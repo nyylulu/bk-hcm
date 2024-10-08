@@ -1,10 +1,9 @@
-import { defineComponent, computed, onBeforeMount, ref } from 'vue';
+import { defineComponent, computed, ref } from 'vue';
 import { Button, Dropdown } from 'bkui-vue';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useI18n } from 'vue-i18n';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import Panel from '@/components/panel';
 import BatchCancellationDialog from '@/components/resource-plan/resource-manage/list/table/components/batch-cancellation-dialog/batch-cancellation-dialog';
 import cssModule from './index.module.scss';
 import { useRoute, useRouter } from 'vue-router';
@@ -253,14 +252,12 @@ export default defineComponent({
       triggerApi();
     };
 
-    onBeforeMount(triggerApi);
-
     expose({
       searchTableData,
     });
 
     return () => (
-      <Panel>
+      <div class={cssModule['table-wrapper']}>
         <div class={cssModule['table-header']}>
           <div class={cssModule['toolbar-buttons']}>
             {props.isBiz && (
@@ -300,26 +297,24 @@ export default defineComponent({
             )}
           </div>
           <div class={cssModule.overview}>
-            <div>
-              <span>{`${t('本月即将过期 CPU ')}${overview.value?.expiring_cpu_core || '--'}${t('核')}`}</span>
-            </div>
+            <span>{`${t('本月即将过期 CPU ')}${overview.value?.expiring_cpu_core ?? '--'}${t('核')}`}</span>
             <div class={cssModule['cpu-stats']}>
               <span>
                 {t('CPU 总核数')}：
                 <span class={cssModule.num}>
-                  {overview.value?.total_cpu_core || '--'}/{overview.value?.total_applied_core || '--'}
+                  {overview.value?.total_cpu_core ?? '--'}/{overview.value?.total_applied_core ?? '--'}
                 </span>
               </span>
               <span>
                 {t('预测内')}：
                 <span class={cssModule.num}>
-                  {overview.value?.in_plan_cpu_core || '--'}/{overview.value?.in_plan_applied_cpu_core || '--'}
+                  {overview.value?.in_plan_cpu_core ?? '--'}/{overview.value?.in_plan_applied_cpu_core ?? '--'}
                 </span>
               </span>
               <span>
                 {t('预测外')}：
                 <span class={cssModule.num}>
-                  {overview.value?.out_plan_cpu_core || '--'}/{overview.value?.out_plan_applied_cpu_core || '--'}
+                  {overview.value?.out_plan_cpu_core ?? '--'}/{overview.value?.out_plan_applied_cpu_core ?? '--'}
                 </span>
               </span>
             </div>
@@ -342,7 +337,7 @@ export default defineComponent({
           />
         </bk-loading>
         <BatchCancellationDialog v-model:isShow={isShow.value} data={currentRowsData.value} onRefresh={triggerApi} />
-      </Panel>
+      </div>
     );
   },
 });
