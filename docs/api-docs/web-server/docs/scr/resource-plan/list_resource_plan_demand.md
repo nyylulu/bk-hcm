@@ -22,7 +22,7 @@ POST /api/v1/woa/plans/resources/demands/list
 | zone_ids          | string array | 否  | 可用区ID列表，不传时查询全部，数量最大100                           |
 | plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                            |
 | expiring_only     | bool         | 否  | 是否包只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
-| expect_time_range | object       | 否  | 期望交付时间范围                                          |
+| expect_time_range | object       | 是  | 期望交付时间范围                                          |
 | page              | object       | 是  | 分页设置                                              |
 
 ### expect_time_range

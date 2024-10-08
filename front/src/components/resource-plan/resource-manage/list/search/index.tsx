@@ -1,4 +1,4 @@
-import { defineComponent, onBeforeMount, ref, watch } from 'vue';
+import { defineComponent, nextTick, onBeforeMount, ref, watch } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -25,7 +25,7 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['search'],
+  emits: ['search', 'expectTimeRangeChange'],
   setup(props, { emit }) {
     const { Option } = Select;
     const { t } = useI18n();
@@ -80,15 +80,17 @@ export default defineComponent({
 
     const handleReset = () => {
       searchModel.value = JSON.parse(JSON.stringify(initialSearchModel));
-      emit('search', undefined);
+      emit('search', searchModel.value);
     };
 
     const handleChangeDate = (key: string, val: string[]) => {
       if (val[0] && val[1]) {
-        searchModel.value[key] = {
+        const range = {
           start: timeFormatter(val[0], 'YYYY-MM-DD'),
           end: timeFormatter(val[1], 'YYYY-MM-DD'),
         };
+        searchModel.value[key] = range;
+        emit('expectTimeRangeChange', range);
       } else {
         searchModel.value[key] = undefined;
       }
@@ -222,6 +224,7 @@ export default defineComponent({
       getPlanClassList();
       getRegionList();
       getZoneList();
+      nextTick(() => handleSearch());
     });
 
     return () => (

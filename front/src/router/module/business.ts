@@ -539,7 +539,7 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'BizInvoiceResourceDetail',
             component: () => import('@/views/business/applications/resource-plan/detail'),
             meta: {
-              activeKey: 'bizInvoiceResourceDetail',
+              activeKey: 'applications',
               notMenu: true,
             },
           },

@@ -330,19 +330,23 @@ func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.Pl
 }
 
 // ListCrpDemands 返回全量数据
-func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq, reqRegionNames, reqZoneNames []string) (
+func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq,
+	reqRegionNames, reqZoneNames []string) (
 	[]*ptypes.PlanDemandDetail, error) {
 
 	params := &cvmapi.CvmCbsPlanQueryParam{
-		UseTime: &cvmapi.UseTime{
-			Start: listReq.ExpectTimeRange.Start,
-			End:   listReq.ExpectTimeRange.End,
-		},
+		BgName:       []string{cvmapi.CvmCbsPlanQueryBgName}, // 强制仅查询IEG的预测需求
 		DemandIdList: listReq.CrpDemandIDs,
 		InstanceType: listReq.DeviceClasses,
 		ProjectName:  listReq.ObsProjects,
 		CityName:     reqRegionNames,
 		ZoneName:     reqZoneNames,
+	}
+	if listReq.ExpectTimeRange != nil {
+		params.UseTime = &cvmapi.UseTime{
+			Start: listReq.ExpectTimeRange.Start,
+			End:   listReq.ExpectTimeRange.End,
+		}
 	}
 	// 500条一组查询出全部结果
 	page := &cvmapi.Page{

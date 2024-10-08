@@ -82,6 +82,8 @@ func (s *service) initPlanService(h *rest.Handler) {
 		s.ListBizResPlanDemand)
 	h.Add("GetPlanDemandDetail", http.MethodGet, "/plans/demands/{id}", s.GetPlanDemandDetail)
 	h.Add("GetBizPlanDemandDetail", http.MethodGet, "/bizs/{bk_biz_id}/plans/demands/{id}", s.GetBizPlanDemandDetail)
+	h.Add("ListBizPlanDemandChangeLog", http.MethodPost, "/bizs/{bk_biz_id}/plans/demands/change_logs/list",
+		s.ListBizPlanDemandChangeLog)
 	h.Add("ListPlanDemandChangelog", http.MethodPost, "/plans/demands/change_logs/list", s.ListPlanDemandChangeLog)
 	h.Add("AdjustBizResPlanDemand", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/demands/adjust",
 		s.AdjustBizResPlanDemand)

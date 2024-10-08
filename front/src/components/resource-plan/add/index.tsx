@@ -106,7 +106,7 @@ export default defineComponent({
     };
 
     const clearValidate = () => {
-      Promise.all([basicRef.value.clearValidate(), cvmRef.value.clearValidate(), cbsRef.value.clearValidate()]);
+      Promise.all([basicRef.value?.clearValidate(), cvmRef.value?.clearValidate(), cbsRef.value?.clearValidate()]);
     };
 
     const handleShown = () => {

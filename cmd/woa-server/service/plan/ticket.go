@@ -183,7 +183,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 				AreaID:       regionAreaMap[demand.RegionID].AreaID,
 				AreaName:     regionAreaMap[demand.RegionID].AreaName,
 				DemandSource: demand.DemandSource,
-				Remark:       *demand.Remark,
+				Remark:       demand.Remark,
 			},
 		}
 
@@ -344,7 +344,7 @@ func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, request
 			AreaID:       regionAreaMap[req.RegionID].AreaID,
 			AreaName:     regionAreaMap[req.RegionID].AreaName,
 			DemandSource: req.DemandSource,
-			Remark:       *req.Remark,
+			Remark:       req.Remark,
 			Cvm:          cvm,
 			Cbs:          cbs,
 			Creator:      kt.User,

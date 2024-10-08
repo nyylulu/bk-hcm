@@ -41,6 +41,7 @@ import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus } from '@/typings/resourcePlan';
+import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -299,40 +300,55 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '机型',
       field: 'spec.device_type',
-      width: 150,
+      width: 120,
+      isDefaultShow: true,
+    },
+    {
+      label: '计费模式',
+      field: 'spec.charge_type',
+      width: 80,
+      isDefaultShow: true,
+      render: ({ cell }: any) => ChargeTypeMap[cell as ChargeType] || '--',
     },
     {
       label: '需求数量',
       field: 'replicas',
-      width: 90,
+      width: 50,
+      isDefaultShow: true,
     },
     {
       label: '地域',
       field: 'spec.region',
       width: 150,
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      isDefaultShow: true,
     },
     {
       label: '园区',
       field: 'spec.zone',
       width: 150,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
+      isDefaultShow: true,
     },
     {
       label: '镜像',
       field: 'spec.image_id',
       render: ({ row }: any) => getImageName(row.spec.image_id),
+      width: 150,
+      isDefaultShow: true,
     },
     {
-      label: '数据盘大小',
+      label: '数据盘(G)',
       field: 'spec.disk_size',
-      width: 95,
+      width: 70,
+      isDefaultShow: true,
     },
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
       width: 95,
       render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
+      isDefaultShow: true,
     },
     {
       label: '私有网络',
