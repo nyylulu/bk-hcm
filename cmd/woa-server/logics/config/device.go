@@ -170,12 +170,17 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	filter["enable_apply"] = true
 
 	insts, err := config.Operation().CvmDevice().FindManyDeviceType(kt.Ctx, filter)
+	logs.Infof("DEBUG:WOA:GetDeviceType, insts: %+v, err; %+v, rid: %s", insts, err, kt.Rid)
 	if err != nil {
 		return nil, err
 	}
 	instTypes := make([]string, 0)
 	for _, inst := range insts {
-		instTypes = append(instTypes, utils.GetStrByInterface(inst))
+		instStr := utils.GetStrByInterface(inst)
+		if instStr == "ITA5.32XLARGE576" {
+			logs.Infof("DEBUG:WOA:GetDeviceType:Loop, instStr: %s, rid: %s", instStr, kt.Rid)
+		}
+		instTypes = append(instTypes, instStr)
 	}
 	req := &cvmapi.QueryCvmInstanceTypeReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -191,9 +196,15 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+	logs.Infof("DEBUG:WOA:QueryCvmInstanceType, instTypes: %+v, resp; %+v, rid: %s",
+		instTypes, resp.Result.Data, kt.Rid)
 
 	infos := make([]types.DeviceTypeItem, 0)
 	for _, item := range resp.Result.Data {
+		if item.InstanceType == "ITA5.32XLARGE576" {
+			logs.Infof("DEBUG:WOA:QueryCvmInstanceType:Loop, item: %+v, rid: %s", item, kt.Rid)
+		}
+
 		infos = append(infos, types.DeviceTypeItem{
 			DeviceType:      item.InstanceType,
 			DeviceTypeClass: item.InstanceTypeClass,
