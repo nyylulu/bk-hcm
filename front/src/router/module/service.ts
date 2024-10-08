@@ -38,7 +38,7 @@ const serviceMenus: RouteRecordRaw[] = [
         name: 'OpInvoiceResourceDetail',
         component: () => import('@/views/service/resource-plan/applications/detail/index'),
         meta: {
-          activeKey: 'opInvoiceResourceDetail',
+          activeKey: 'myApply',
           notMenu: true,
         },
       },
