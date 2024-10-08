@@ -83,6 +83,18 @@ const serviceMenus: RouteRecordRaw[] = [
     children: [
       {
         path: '/service/resource-plan',
+        name: 'opResourcePlan-redirect',
+        redirect: '/business/resource-plan', // 前期宣传口径为该路由，产品希望继续保持该路由并将用户重定向到业务下的资源预测功能
+        meta: {
+          activeKey: 'opResourcePlan',
+          title: t('资源预测'),
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-resource-plan',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/resource-plan/home',
         name: 'opResourcePlan',
         component: () => import('@/views/service/resource-plan/resource-manage/list'),
         meta: {

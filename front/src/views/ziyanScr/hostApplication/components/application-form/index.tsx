@@ -107,7 +107,8 @@ export default defineComponent({
       idc: false,
       cvm: false,
     });
-    const { columns: CloudHostcolumns } = useColumns('CloudHost');
+    const { columns: CloudHostcolumns, generateColumnsSettings } = useColumns('CloudHost');
+    let cloudHostSetting = generateColumnsSettings(CloudHostcolumns);
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
     const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, getMonthName } = useCvmChargeType();
     const cloudTableColumns = ref([]);
@@ -115,7 +116,7 @@ export default defineComponent({
     const isRollingServer = computed(() => order.value.model.requireType === 6);
     const PhysicalMachineoperation = ref({
       label: '操作',
-      width: 200,
+      width: 100,
       render: ({ row, index }: any) => {
         return (
           <div class='operation-column'>
@@ -172,7 +173,7 @@ export default defineComponent({
     });
     const CloudHostoperation = ref({
       label: '操作',
-      width: 200,
+      width: 100,
       render: ({ row, index }: any) => {
         return (
           <div class='operation-column'>
@@ -230,8 +231,9 @@ export default defineComponent({
     const CVMVerifyColumns = [
       {
         field: 'verify_result',
-        label: '预检校验状态',
-        width: 110,
+        label: '预检状态',
+        width: 90,
+        isDefaultShow: true,
         render({ cell }: { cell: VerifyStatus }) {
           return <span class={`status-${cell}`}>{VerifyStatusMap[cell] || '待校验'}</span>;
         },
@@ -239,8 +241,8 @@ export default defineComponent({
       },
       {
         field: 'reason',
-        label: '预检校验原因',
-        width: 120,
+        label: '预检信息',
+        width: 110,
         render({ cell }: { cell: string }) {
           return cell || '--';
         },
@@ -876,12 +878,14 @@ export default defineComponent({
           resourceForm.value.bk_asset_id = '';
           QCLOUDCVMForm.value.spec.inherit_instance_id = '';
           cloudTableColumns.value = [...CloudHostcolumns, ...CVMVerifyColumns, CloudHostoperation.value];
+          cloudHostSetting = generateColumnsSettings(cloudTableColumns.value);
           return;
         }
         // 滚服项目, 默认为云主机, 禁用选择
         resourceForm.value.resourceType = 'QCLOUDCVM';
         // 动态更新云主机列字段
         cloudTableColumns.value = [...CloudHostcolumns, CloudHostoperation.value];
+        cloudHostSetting = generateColumnsSettings(cloudTableColumns.value);
       },
       {
         immediate: true,
@@ -1060,6 +1064,7 @@ export default defineComponent({
                   align='left'
                   row-hover='auto'
                   columns={cloudTableColumns.value}
+                  settings={cloudHostSetting.value}
                   data={cloudTableData.value}
                   show-overflow-tooltip
                 />
@@ -1091,31 +1096,37 @@ export default defineComponent({
             {!isRollingServer.value && isVerifyFailed.value && (
               <CommonCard title={() => '需求预检'}>
                 <Alert theme='danger' showIcon={false} class={'mb24'}>
-                  <p class={'status-FAILED'}>
-                    前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
-                    <Button
-                      theme='primary'
-                      text
-                      onClick={() => {
-                        window.open(
-                          whereAmI.value === Senarios.business ? '#/business/resource-plan' : '#/service/resource-plan',
-                          '_blank',
-                        );
-                      }}>
-                      查看资源预测
-                    </Button>
-                  </p>
-                  <p class={'status-FAILED'}>
-                    资源需求中有使用按量计费模式，长期使用成本较高，建议提预测单13周后转包年包月，
-                    <Button
-                      theme='primary'
-                      text
-                      onClick={() => {
-                        window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
-                      }}>
-                      去创建提预测单
-                    </Button>
-                  </p>
+                  {cpuAmount.prepaid > 0 && (
+                    <p class={'status-FAILED'}>
+                      前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
+                      <Button
+                        theme='primary'
+                        text
+                        onClick={() => {
+                          window.open(
+                            whereAmI.value === Senarios.business
+                              ? '#/business/resource-plan'
+                              : '#/service/resource-plan',
+                            '_blank',
+                          );
+                        }}>
+                        查看资源预测
+                      </Button>
+                    </p>
+                  )}
+                  {cpuAmount.postpaid > 0 && (
+                    <p class={'status-FAILED'}>
+                      资源需求中有使用按量计费模式，长期使用成本较高，建议提预测单13周后转包年包月，
+                      <Button
+                        theme='primary'
+                        text
+                        onClick={() => {
+                          window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
+                        }}>
+                        去创建提预测单
+                      </Button>
+                    </p>
+                  )}
                 </Alert>
               </CommonCard>
             )}
@@ -1282,7 +1293,8 @@ export default defineComponent({
                           onChange={onQcloudZoneChange}
                         />
                       </bk-form-item>
-                      {resourceForm.value.zone &&
+                      {!isRollingServer.value &&
+                        resourceForm.value.zone &&
                         !availablePostpaidSet.value.size &&
                         !availablePrepaidSet.value.size && (
                           <Alert class={'mb8'} theme='warning'>
@@ -1637,7 +1649,24 @@ export default defineComponent({
               ),
               footer: () => (
                 <>
-                  <Button theme='primary' onClick={handleSubmit}>
+                  <Button
+                    theme='primary'
+                    onClick={handleSubmit}
+                    v-bk-tooltips={{
+                      content: '当前地域无资源预测，提预测单后再按量申请',
+                      disabled: !(
+                        !isRollingServer.value &&
+                        resourceForm.value.zone &&
+                        !availablePostpaidSet.value.size &&
+                        !availablePrepaidSet.value.size
+                      ),
+                    }}
+                    disabled={
+                      !isRollingServer.value &&
+                      resourceForm.value.zone &&
+                      !availablePostpaidSet.value.size &&
+                      !availablePrepaidSet.value.size
+                    }>
                     保存需求
                   </Button>
                   <Button class='ml16' onClick={() => ARtriggerShow(false)}>

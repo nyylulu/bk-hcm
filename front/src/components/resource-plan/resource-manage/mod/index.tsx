@@ -16,6 +16,8 @@ import { useModColumn } from './useModColumn';
 import { timeFormatter } from '@/common/util';
 import dayjs from 'dayjs';
 import Panel from '@/components/panel';
+import { getDateRangeIntersectionWithMonth, isDateInRange } from '@/utils/plan';
+import CommonDialog from '@/components/common-dialog';
 
 const { FormItem } = Form;
 
@@ -39,6 +41,10 @@ export default defineComponent({
     const isPlanEditShow = ref(false);
     const tableRef = ref();
     const delayFormRef = ref();
+    const timeStrictRange = ref({
+      start: '',
+      end: '',
+    });
     const { formModel } = useFormModel({
       time: dayjs().add(13, 'week').format('YYYY-MM-DD'),
     });
@@ -145,7 +151,11 @@ export default defineComponent({
       () => route.query,
       async () => {
         const planIds = (route.query.planIds as string)?.split(',').map((v) => +v) || [];
-        const res = await planStore.list_biz_resource_plan_demand(planIds);
+        const timeRange = {
+          start: route.query.start as string,
+          end: route.query.end as string,
+        };
+        const res = await planStore.list_biz_resource_plan_demand(planIds, timeRange);
         const data = res.data.details.map((v) => {
           return {
             ...v,
@@ -211,9 +221,15 @@ export default defineComponent({
         const expect_time = timeFormatter(time, 'YYYY-MM-DD');
         const { data } = await planStore.get_demand_available_time(expect_time);
         setTimeRange(data);
+        timeStrictRange.value = getDateRangeIntersectionWithMonth(
+          timeRange.date_range_in_week.start,
+          timeRange.date_range_in_week.end,
+          timeRange.year_month_week.month,
+        );
       },
       {
         deep: true,
+        immediate: true,
       },
     );
 
@@ -305,62 +321,80 @@ export default defineComponent({
           </span>
         </Dialog>
 
-        <Dialog
-          title='批量延期'
-          width={680}
-          isShow={isDelayDialogShow.value}
-          onConfirm={async () => {
-            await delayFormRef.value.validate();
-            const ids = selections.value
-              .filter((v) => ![AdjustType.config].includes(v.adjustType))
-              .map((v) => v.crp_demand_id);
-            tableData.value = tableData.value.map((v) => {
-              if (ids.includes(v.crp_demand_id))
-                return {
-                  ...v,
-                  expect_time: timeFormatter(formModel.time, 'YYYY-MM-DD'),
-                  adjustType: AdjustType.time,
-                };
-              return v;
-            });
-            isDelayDialogShow.value = false;
-            clearSelection();
+        <CommonDialog title='批量延期' width={680} isShow={isDelayDialogShow.value}>
+          {{
+            default: () => (
+              <Form model={formModel} ref={delayFormRef}>
+                <FormItem label={t('已选预测需求：')}>
+                  {selections.value.filter((v) => ![AdjustType.config].includes(v.adjustType)).length}
+                </FormItem>
+                <FormItem label={t('期望到货日期：')} required property='time'>
+                  <div>
+                    <DatePicker
+                      v-model={formModel.time}
+                      appendToBody
+                      clearable
+                      disabledDate={(date) => dayjs(date).isBefore(dayjs())}
+                    />
+                    {!!Object.keys(timeRange).length && (
+                      <p class={'plan-mod-timepicker-tip'}>
+                        注意：日期落在
+                        <span class={'time-txt'}>
+                          {timeRange.year_month_week.year}年{timeRange.year_month_week.month}月W
+                          {timeRange.year_month_week.week}
+                        </span>
+                        ,需要在
+                        <span class={'time-txt'}>
+                          {timeStrictRange.value.start}~{timeStrictRange.value.end}
+                        </span>
+                        之间申领，超过
+                        <span class={'time-txt'}>{timeRange.date_range_in_month.end}</span>将无法申领
+                      </p>
+                    )}
+                  </div>
+                </FormItem>
+              </Form>
+            ),
+            footer: () => (
+              <>
+                <Button
+                  theme='primary'
+                  class={'mr8'}
+                  onClick={async () => {
+                    await delayFormRef.value.validate();
+                    const ids = selections.value
+                      .filter((v) => ![AdjustType.config].includes(v.adjustType))
+                      .map((v) => v.crp_demand_id);
+                    tableData.value = tableData.value.map((v) => {
+                      if (ids.includes(v.crp_demand_id))
+                        return {
+                          ...v,
+                          expect_time: timeFormatter(formModel.time, 'YYYY-MM-DD'),
+                          adjustType: AdjustType.time,
+                        };
+                      return v;
+                    });
+                    isDelayDialogShow.value = false;
+                    clearSelection();
+                  }}
+                  v-bk-tooltips={{
+                    content: `日期落在${timeRange.year_month_week?.year}年${timeRange.year_month_week?.month}月W${timeRange.year_month_week?.week},需要在${timeStrictRange.value.start}~${timeStrictRange.value.end}间申领`,
+                    disabled: isDateInRange(timeFormatter(formModel.time, 'YYYY-MM-DD'), timeStrictRange.value),
+                  }}
+                  disabled={!isDateInRange(timeFormatter(formModel.time, 'YYYY-MM-DD'), timeStrictRange.value)}>
+                  提交
+                </Button>
+                <Button
+                  onClick={() => {
+                    isDelayDialogShow.value = false;
+                    clearSelection();
+                  }}>
+                  取消
+                </Button>
+              </>
+            ),
           }}
-          onClosed={() => {
-            isDelayDialogShow.value = false;
-            clearSelection();
-          }}>
-          <Form model={formModel} ref={delayFormRef}>
-            <FormItem label={t('已选预测需求：')}>
-              {selections.value.filter((v) => ![AdjustType.config].includes(v.adjustType)).length}
-            </FormItem>
-            <FormItem label={t('期望到货日期：')} required property='time'>
-              <div>
-                <DatePicker
-                  v-model={formModel.time}
-                  appendToBody
-                  clearable
-                  disabledDate={(date) => dayjs(date).isBefore(dayjs())}
-                />
-                {!!Object.keys(timeRange).length && (
-                  <p class={'plan-mod-timepicker-tip'}>
-                    注意：日期落在
-                    <span class={'time-txt'}>
-                      {timeRange.year_month_week.year}年{timeRange.year_month_week.month}月W
-                      {timeRange.year_month_week.week}
-                    </span>
-                    ,建议在
-                    <span class={'time-txt'}>
-                      {timeRange.date_range_in_week.start}~{timeRange.date_range_in_week.end}
-                    </span>
-                    之间申领，超过
-                    <span class={'time-txt'}>{timeRange.date_range_in_month.end}</span>将无法申领
-                  </p>
-                )}
-              </div>
-            </FormItem>
-          </Form>
-        </Dialog>
+        </CommonDialog>
 
         <EditPlan
           isEdit

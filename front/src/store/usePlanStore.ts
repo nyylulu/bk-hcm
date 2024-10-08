@@ -10,6 +10,7 @@ import {
   IExceptTimeRange,
   IListConfigCvmChargeTypeDeviceTypeData,
   IListConfigCvmChargeTypeDeviceTypeParams,
+  ITimeRange,
   IVerifyResourceDemandData,
   IVerifyResourceDemandParams,
 } from '@/typings/plan';
@@ -25,6 +26,7 @@ export default defineStore('planStore', () => {
    */
   const list_biz_resource_plan_demand = async (
     ids: number[], // 预测需求IDS
+    expect_time_range: ITimeRange,
   ): Promise<{
     [key: string]: any;
     data: {
@@ -32,103 +34,15 @@ export default defineStore('planStore', () => {
       [key: string]: any;
     };
   }> => {
-    http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}plans/resources/demands/list`, {
+    return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}plans/resources/demands/list`, {
       crp_demand_ids: ids,
+      expect_time_range,
       page: {
         count: false,
         start: 0,
         limit: 500,
       },
     });
-    return {
-      data: {
-        overview: {
-          total_cpu_core: 1024,
-          total_applied_core: 1024,
-          in_plan_cpu_core: 512,
-          in_plan_applied_cpu_core: 512,
-          out_plan_cpu_core: 512,
-          out_plan_applied_cpu_core: 512,
-          expiring_cpu_core: 224,
-        },
-        details: [
-          {
-            crp_demand_id: 11111,
-            bk_biz_id: 111,
-            bk_biz_name: '业务',
-            op_product_id: 222,
-            op_product_name: '运营产品',
-            status: 'locked',
-            status_name: '变更中',
-            demand_class: 'CVM',
-            available_year_month: '2024-01',
-            expect_time: '2024-01-01',
-            device_class: '高IO型I6t',
-            device_type: 'I6t.33XMEDIUM198',
-            total_os: 56,
-            applied_os: 44,
-            remained_os: 12,
-            total_cpu_core: 560,
-            applied_cpu_core: 440,
-            remained_cpu_core: 120,
-            total_memory: 560,
-            applied_memory: 440,
-            remained_memory: 120,
-            total_disk_size: 560,
-            applied_disk_size: 440,
-            remained_disk_size: 120,
-            region_id: 'ap-shanghai',
-            region_name: '上海',
-            zone_id: 'ap-shanghai-2',
-            zone_name: '上海二区',
-            plan_type: '预测内',
-            obs_project: '常规项目',
-            generation_type: '采购',
-            device_family: '高IO型',
-            disk_type: 'CLOUD_PREMIUM',
-            disk_type_name: '高性能云硬盘',
-            disk_io: 15,
-          },
-          {
-            crp_demand_id: 222,
-            bk_biz_id: 111,
-            bk_biz_name: '业务',
-            op_product_id: 222,
-            op_product_name: '运营产品',
-            status: 'locked',
-            status_name: '变更中',
-            demand_class: 'CVM',
-            available_year_month: '2024-01',
-            expect_time: '2024-01-01',
-            device_class: '高IO型I6t',
-            device_type: 'I6t.33XMEDIUM198',
-            total_os: 56,
-            applied_os: 44,
-            remained_os: 12,
-            total_cpu_core: 560,
-            applied_cpu_core: 440,
-            remained_cpu_core: 120,
-            total_memory: 560,
-            applied_memory: 440,
-            remained_memory: 120,
-            total_disk_size: 560,
-            applied_disk_size: 440,
-            remained_disk_size: 120,
-            region_id: 'ap-shanghai',
-            region_name: '上海',
-            zone_id: 'ap-shanghai-2',
-            zone_name: '上海二区',
-            plan_type: '预测内',
-            obs_project: '常规项目',
-            generation_type: '采购',
-            device_family: '高IO型',
-            disk_type: 'CLOUD_PREMIUM',
-            disk_type_name: '高性能云硬盘',
-            disk_io: 15,
-          },
-        ],
-      },
-    };
   };
 
   /**
@@ -141,41 +55,6 @@ export default defineStore('planStore', () => {
     data: IListConfigCvmChargeTypeDeviceTypeData;
   }> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/charge_type/device_type`, data);
-    // return {
-    //   data: {
-    //     count: 2,
-    //     info: [
-    //       {
-    //         charge_type: 'PREPAID',
-    //         available: false,
-    //         device_types: [
-    //           {
-    //             device_type: 'S3.6XLARGE64',
-    //             available: true,
-    //           },
-    //           {
-    //             device_type: 'S3.LARGE8',
-    //             available: true,
-    //           },
-    //         ],
-    //       },
-    //       {
-    //         charge_type: 'POSTPAID_BY_HOUR',
-    //         available: true,
-    //         device_types: [
-    //           {
-    //             device_type: 'S5.SMALL2',
-    //             available: false,
-    //           },
-    //           {
-    //             device_type: 'S5.LARGE16',
-    //             available: false,
-    //           },
-    //         ],
-    //       },
-    //     ],
-    //   },
-    // };
   };
 
   /**
@@ -188,16 +67,6 @@ export default defineStore('planStore', () => {
     data: IVerifyResourceDemandData;
   }> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/resources/demands/verify`, data);
-    // return {
-    //   data: {
-    //     verifications: [
-    //       {
-    //         verify_result: 'PASS',
-    //         reason: '',
-    //       },
-    //     ],
-    //   },
-    // };
   };
 
   /**
@@ -213,11 +82,6 @@ export default defineStore('planStore', () => {
       `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}plans/resources/demands/adjust`,
       data,
     );
-    // return {
-    //   data: {
-    //     id: '00000001',
-    //   },
-    // };
   };
 
   /**
@@ -231,23 +95,6 @@ export default defineStore('planStore', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/demands/available_times/get`, {
       expect_time,
     });
-    // return {
-    //   data: {
-    //     year_month_week: {
-    //       year: 2024,
-    //       month: 9,
-    //       week_of_month: 5,
-    //     },
-    //     date_range_in_week: {
-    //       start: '2024-09-30',
-    //       end: '2024-10-06',
-    //     },
-    //     date_range_in_month: {
-    //       start: '2024-10-28',
-    //       end: '2024-11-03',
-    //     },
-    //   },
-    // };
   };
 
   /**
@@ -302,9 +149,8 @@ export default defineStore('planStore', () => {
    * IDemandListDetail 转换为 IPlanTicketDemand
    */
   function convertToPlanTicketDemand(detail: IDemandListDetail): IPlanTicketDemand {
-    const demand_res_types: string[] = [];
-    if (detail.total_os > 0) demand_res_types.push('cvm');
-    if (detail.total_disk_size > 0) demand_res_types.push('cbs');
+    const demand_res_types: string[] = ['cbs'];
+    if (detail.demand_class === 'CVM') demand_res_types.push('cvm');
 
     const cvm =
       detail.total_os > 0
@@ -325,9 +171,8 @@ export default defineStore('planStore', () => {
             disk_type_name: detail.disk_type_name,
             disk_io: detail.disk_io,
             disk_size: detail.total_disk_size,
-            // 后端仅保存了 total_disk_size，下面两个参数无法获得，等产品确定方案
-            disk_num: 0,
-            disk_per_size: 0,
+            disk_per_size:
+              detail.total_disk_size && detail.total_os ? Math.floor(detail.total_disk_size / detail.total_os) : 0,
           }
         : undefined;
 

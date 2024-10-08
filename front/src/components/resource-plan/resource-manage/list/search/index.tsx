@@ -25,7 +25,7 @@ export default defineComponent({
       required: true,
     },
   },
-  emits: ['search'],
+  emits: ['search', 'expectTimeRangeChange'],
   setup(props, { emit }) {
     const { Option } = Select;
     const { t } = useI18n();
@@ -85,10 +85,12 @@ export default defineComponent({
 
     const handleChangeDate = (key: string, val: string[]) => {
       if (val[0] && val[1]) {
-        searchModel.value[key] = {
+        const range = {
           start: timeFormatter(val[0], 'YYYY-MM-DD'),
           end: timeFormatter(val[1], 'YYYY-MM-DD'),
         };
+        searchModel.value[key] = range;
+        emit('expectTimeRangeChange', range);
       } else {
         searchModel.value[key] = undefined;
       }

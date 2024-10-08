@@ -1,4 +1,4 @@
-import { defineComponent, computed, ref } from 'vue';
+import { defineComponent, computed, ref, PropType } from 'vue';
 import { Button, Dropdown } from 'bkui-vue';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import { useTable } from '@/hooks/useResourcePlanTable';
@@ -13,6 +13,7 @@ import { useResourcePlanStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
+import { ITimeRange } from '@/typings/plan';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 
@@ -29,6 +30,9 @@ export default defineComponent({
     isBiz: {
       type: Boolean,
       default: true,
+    },
+    expectTimeRange: {
+      type: Object as PropType<ITimeRange>,
     },
   },
   setup(props, { expose }) {
@@ -216,6 +220,8 @@ export default defineComponent({
           path,
           query: {
             planIds,
+            start: props.expectTimeRange.start,
+            end: props.expectTimeRange.end,
           },
         });
       }

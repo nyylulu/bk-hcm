@@ -178,3 +178,13 @@ export enum ChargeType {
   PREPAID = 'PREPAID',
   POSTPAID_BY_HOUR = 'POSTPAID_BY_HOUR',
 }
+
+export const ChargeTypeMap = {
+  [ChargeType.PREPAID]: '包年包月',
+  [ChargeType.POSTPAID_BY_HOUR]: '按量计费',
+};
+
+export interface ITimeRange {
+  start: string;
+  end: string;
+}
