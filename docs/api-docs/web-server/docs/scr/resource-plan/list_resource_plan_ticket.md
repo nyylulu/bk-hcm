@@ -104,7 +104,7 @@ POST /api/v1/woa/plans/resources/tickets/list
         "ticket_type_name": "新增",
         "original_info": {
           "cvm": {
-            "cpu": null,
+            "cpu_core": null,
             "memory": null
           },
           "cbs": {

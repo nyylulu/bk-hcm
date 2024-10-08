@@ -543,8 +543,8 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 
 	planItem, ok := resp.Result[ticket.CrpSn]
 	if !ok {
-		logs.Errorf("query erp plan order return no result by sn: %s, rid: %s", ticket.CrpSn, kt.Rid)
-		return fmt.Errorf("query erp plan order return no result by sn: %s", ticket.CrpSn)
+		logs.Errorf("query crp plan order return no result by sn: %s, rid: %s", ticket.CrpSn, kt.Rid)
+		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSn)
 	}
 
 	update := &rpts.ResPlanTicketStatusTable{
@@ -567,6 +567,21 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 
 	if err := c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 单据被拒需要释放资源
+	if update.Status != enumor.RPTicketStatusRejected {
+		return nil
+	}
+	allCrpDemandIDs := make([]int64, 0)
+	for _, demand := range ticket.Demands {
+		if demand.Original != nil {
+			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+		}
+	}
+	if err = c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -611,6 +626,21 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 
 	if err = c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 单据被拒需要释放资源
+	if update.Status != enumor.RPTicketStatusRejected {
+		return nil
+	}
+	allCrpDemandIDs := make([]int64, 0)
+	for _, demand := range ticket.Demands {
+		if demand.Original != nil {
+			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+		}
+	}
+	if err = c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -659,6 +689,12 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 		return err
 	}
 
+	// crp单据通过后更新本地数据表
+	if err := c.upsertCrpDemand(kt, ticket); err != nil {
+		logs.Errorf("failed to upsert crp demand, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
 	return nil
 }
 
@@ -674,22 +710,7 @@ func (c *Controller) checkTicketTimeout(kt *kit.Kit, ticket *TicketInfo) error {
 		return nil
 	}
 
-	update := &rpts.ResPlanTicketStatusTable{
-		TicketID: ticket.ID,
-		Status:   enumor.RPTicketStatusFailed,
-		ItsmSn:   ticket.ItsmSn,
-		ItsmUrl:  ticket.ItsmUrl,
-		CrpSn:    ticket.CrpSn,
-		CrpUrl:   ticket.CrpUrl,
-		Message:  "audit flow timeout",
-	}
-
-	if err := c.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
+	return c.updateTicketStatusFailed(kt, ticket, "audit flow timeout")
 }
 
 // CreateAuditFlow creates an audit flow for resource plan ticket.
