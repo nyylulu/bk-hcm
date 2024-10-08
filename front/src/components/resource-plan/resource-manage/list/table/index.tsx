@@ -204,6 +204,7 @@ export default defineComponent({
       } else {
         router.push({
           path: '/business/resource-plan/add',
+          query: { ...route.query },
         });
       }
     };

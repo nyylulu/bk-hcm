@@ -313,6 +313,7 @@ export default defineComponent({
                     modelValue={[searchModel.value.expect_time_range?.start, searchModel.value.expect_time_range?.end]}
                     onChange={(val: string[]) => handleChangeDate('expect_time_range', val)}
                     type='daterange'
+                    clearable={false}
                     disabledDate={disabledDate}
                   />
                 </div>
