@@ -14,6 +14,7 @@
 package config
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -27,6 +28,7 @@ import (
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // CapacityIf provides management interface for operations of resource apply capacity
@@ -104,7 +106,7 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	zoneToCapacity := make(map[string]*types.CapacityInfo)
 	for zoneID, vpcList := range zoneToVpc {
 		vpcUniq := arrayutil.StrArrayUnique(vpcList)
-		capa := c.getZoneCapacity(kt, input.RequireType, input.DeviceType, input.Region, zoneID, vpcUniq, vpcToSubnet)
+		capa := c.getZoneCapacity(kt, input, zoneID, vpcUniq, vpcToSubnet)
 		if capa != nil {
 			zoneToCapacity[zoneID] = capa
 		}
@@ -115,6 +117,15 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 		rst.Info = append(rst.Info, capInfo)
 	}
 	rst.Count = int64(len(rst.Info))
+
+	// 为方便排查问题，增加日志记录
+	jsonRst, err := json.Marshal(rst)
+	if err != nil {
+		logs.Errorf("cvm apply order get capacity failed to marshal capacityRst, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	logs.Infof("cvm apply order get capacity, input: %+v, zoneInfo: %s, rid: %s",
+		cvt.PtrToVal(input), string(jsonRst), kt.Rid)
 
 	return rst, nil
 }
@@ -171,33 +182,31 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 	return nil
 }
 
-func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string, vpcList []string,
+func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, zone string, vpcList []string,
 	vpcToSubnet map[string][]string) *types.CapacityInfo {
 
 	// 1. query cvm capacity
 	if len(vpcList) == 0 {
 		capacityInfo := &types.CapacityInfo{
-			Region:  region,
+			Region:  input.Region,
 			Zone:    zone,
 			Vpc:     "",
 			Subnet:  "",
 			MaxNum:  0,
 			MaxInfo: make([]*types.CapacityMaxInfo, 0),
 		}
-
 		return capacityInfo
 	}
 
-	req := c.createCapacityReq(requireType, deviceType, zone, vpcList, vpcToSubnet)
-
+	req := c.createCapacityReq(input, zone, vpcList, vpcToSubnet)
 	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cvm apply capacity, err: %v, rid", err, kt.Rid)
+		logs.ErrorJson("failed to get cvm apply capacity, err: %v, req: %+v, rid", err, req, kt.Rid)
 		return nil
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid", resp.Error.Code, resp.Error.Message,
+		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid: %s", resp.Error.Code, resp.Error.Message,
 			kt.Rid)
 		return nil
 	}
@@ -208,7 +217,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 	}
 
 	capacityItem := &types.CapacityInfo{
-		Region:  region,
+		Region:  input.Region,
 		Zone:    zone,
 		MaxNum:  int64(resp.Result.MaxNum),
 		MaxInfo: make([]*types.CapacityMaxInfo, 0),
@@ -224,7 +233,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 	// 2. query all subnet info for left ip number
 	subnetToLeftIp := make(map[string]*cvmapi.SubnetInfo)
 	for _, vpcItem := range vpcList {
-		subnetList, err := c.querySubnet(kt, region, zone, vpcItem)
+		subnetList, err := c.querySubnet(kt, input.Region, zone, vpcItem)
 		if err != nil {
 			logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 			return nil
@@ -240,13 +249,27 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, requireType int64, deviceType, r
 	// 4. update max info
 	c.updateCapacityMaxInfo(capacityItem, totalLeftIp)
 
+	jsonReq, err := json.Marshal(req)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityReq, err: %v, rid: %s", err, kt.Rid)
+		return nil
+	}
+	jsonResp, err := json.Marshal(resp.Result)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityResp, err: %v, rid: %s", err, kt.Rid)
+		return nil
+	}
+	logs.Infof("get zone capacity info, input: %+v, capacityReq: %s, capacityResp: %s, capacityItem: %+v, "+
+		"vpcList: %v, rid: %s", cvt.PtrToVal(input), string(jsonReq), string(jsonResp),
+		cvt.ValToPtr(capacityItem), vpcList, kt.Rid)
+
 	return capacityItem
 }
 
-func (c *capacity) createCapacityReq(requireType int64, deviceType, zone string, vpcList []string,
+func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string, vpcList []string,
 	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
 
-	projectName := cvmapi.GetObsProject(requireType)
+	projectName := cvmapi.GetObsProject(input.RequireType)
 
 	req := &cvmapi.CapacityReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -258,11 +281,15 @@ func (c *capacity) createCapacityReq(requireType int64, deviceType, zone string,
 			DeptId:       cvmapi.CvmDeptId,
 			Business3Id:  cvmapi.CvmLaunchBiz3Id,
 			CloudCampus:  zone,
-			InstanceType: deviceType,
+			InstanceType: input.DeviceType,
 			VpcId:        vpcList[0],
 			SubnetId:     vpcToSubnet[vpcList[0]][0],
 			ProjectName:  projectName,
 		},
+	}
+	// 计费模式,默认包年包月
+	if len(input.ChargeType) > 0 {
+		req.Params.ChargeType = input.ChargeType
 	}
 
 	return req

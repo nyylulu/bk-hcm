@@ -82,14 +82,15 @@ func (dh *DeviceTypeHandler) Handle(order *types.ApplyOrder) (*Recommendation, b
 
 	// query capacity and pick satisfied candidate device
 	for _, candidate := range sortCandidates {
-		cap, err := dh.getCapacity(kt, candidate.RequireType, candidate.DeviceType, candidate.Region, candidate.Zone)
+		capNum, err := dh.getCapacity(kt, candidate.RequireType, candidate.DeviceType, candidate.Region,
+			candidate.Zone, order.Spec.ChargeType)
 		if err != nil {
 			logs.Warnf("failed to get device capacity, err: %v", err)
 			continue
 		}
 
-		if cap < int64(order.PendingNum) {
-			logs.Warnf("device capacity %d less than need %d", cap, order.PendingNum)
+		if capNum < int64(order.PendingNum) {
+			logs.Warnf("device capacity %d less than need %d", capNum, order.PendingNum)
 			continue
 		}
 
@@ -324,14 +325,18 @@ func (dh *DeviceTypeHandler) getZoneList(kt *kit.Kit, region string) ([]*cfgtype
 }
 
 // getCapacity get resource apply capacity info
-func (dh *DeviceTypeHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string) (
-	int64, error) {
+func (dh *DeviceTypeHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string,
+	chargeType cvmapi.ChargeType) (int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: requireType,
 		DeviceType:  deviceType,
 		Region:      region,
 		Zone:        zone,
+	}
+	// 计费模式,默认包年包月
+	if len(chargeType) > 0 {
+		param.ChargeType = chargeType
 	}
 
 	rst, err := dh.configLogics.Capacity().GetCapacity(kt, param)

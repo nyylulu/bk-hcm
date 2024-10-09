@@ -46,7 +46,7 @@ func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 
 	// 3. get capacity
 	zoneCapacity, err := zh.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region,
-		cvmapi.CvmSeparateCampus)
+		cvmapi.CvmSeparateCampus, order.Spec.ChargeType)
 	if err != nil {
 		logs.Errorf("failed to get zone capacity err: %v, order id: %s", err, order.SubOrderId)
 		return nil, false
@@ -75,14 +75,18 @@ func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 }
 
 // getCapacity get resource apply capacity info
-func (zh *ZoneHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string) (
-	map[string]int64, error) {
+func (zh *ZoneHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string,
+	chargeType cvmapi.ChargeType) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: requireType,
 		DeviceType:  deviceType,
 		Region:      region,
 		Zone:        zone,
+	}
+	// 计费模式,默认包年包月
+	if len(chargeType) > 0 {
+		param.ChargeType = chargeType
 	}
 
 	rst, err := zh.configLogics.Capacity().GetCapacity(kt, param)

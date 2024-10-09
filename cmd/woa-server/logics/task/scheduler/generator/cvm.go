@@ -352,7 +352,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		applyNum := uint(0)
 		for _, subnet := range subnetList {
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, subnet.Id)
+				req.VPCId, subnet.Id, order.Spec.ChargeType)
 			if err != nil {
 				logs.Errorf("failed to get capacity with subnet %s, subnetNum: %d, zone: %s, reqVpcID: %s, err: %v",
 					subnet.Id, len(subnetList), zone, req.VPCId, err)
@@ -376,7 +376,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		if subnetID == "" || applyNum <= 0 {
 			// get capacity detail as component of error message
 			capInfo, _ := g.getCapacityDetail(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, "")
+				req.VPCId, "", order.Spec.ChargeType)
 			capInfoStr, _ := json.Marshal(capInfo)
 			// 记录日志，方便排查线上资源申请问题
 			logs.Errorf("buildCvmReq:get empty subnet info failed, subnetNum: %d, applyNum: %d, zone: %s, "+

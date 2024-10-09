@@ -544,9 +544,12 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 		Params: &cvmapi.SubnetParam{
 			DeptId: cvmapi.CvmDeptId,
 			Region: region,
-			Zone:   zone,
 			VpcId:  vpc,
 		},
+	}
+	// 园区-分区Campus
+	if len(zone) > 0 && zone != cvmapi.CvmSeparateCampus {
+		req.Params.Zone = zone
 	}
 
 	resp, err := l.cvm.QueryCvmSubnet(kt.Ctx, kt.Header(), req)
@@ -558,10 +561,13 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 
 	cond := map[string]interface{}{
 		"region": region,
-		"zone":   zone,
 		"vpc_id": vpc,
 		// get subnet with enable flag only
 		"enable": true,
+	}
+	// 园区-分区Campus
+	if len(zone) > 0 && zone != cvmapi.CvmSeparateCampus {
+		cond["zone"] = zone
 	}
 	cfgSubnets, err := l.confLogic.Subnet().GetSubnet(kt, cond)
 	if err != nil {
@@ -591,11 +597,15 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	}
 
 	if subnetId == "" {
-		return "", 0, fmt.Errorf("found no subnet with region %s, zone %s, vpc %s", region, zone, vpc)
+		logs.Errorf("getCvmSubnet found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc,
+			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		return "", 0, fmt.Errorf("found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc)
 	}
 
 	if leftIp <= 0 {
-		return subnetId, leftIp, fmt.Errorf("found no subnet with left ip > 0, region: %s, zone %s, vpc %s", region,
+		logs.Errorf("getCvmSubnet found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region, zone, vpc,
+			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		return subnetId, leftIp, fmt.Errorf("found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region,
 			zone, vpc)
 	}
 

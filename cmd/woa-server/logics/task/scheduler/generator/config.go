@@ -20,6 +20,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 )
@@ -109,8 +110,8 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 }
 
 // getCapacity get resource apply capacity info
-func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string) (
-	map[string]int64, error) {
+func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string,
+	chargeType cvmapi.ChargeType) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: requireType,
@@ -119,6 +120,10 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, regi
 		Zone:        zone,
 		Vpc:         vpc,
 		Subnet:      subnet,
+	}
+	// 计费模式,默认包年包月
+	if len(chargeType) > 0 {
+		param.ChargeType = chargeType
 	}
 
 	rst, err := g.configLogics.Capacity().GetCapacity(kt, param)
@@ -135,8 +140,8 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, regi
 }
 
 // getCapacityDetail get resource apply capacity detail info
-func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string) (
-	*cfgtype.CapacityInfo, error) {
+func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string,
+	chargeType cvmapi.ChargeType) (*cfgtype.CapacityInfo, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: requireType,
@@ -145,6 +150,10 @@ func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType int64, deviceType
 		Zone:        zone,
 		Vpc:         vpc,
 		Subnet:      subnet,
+	}
+	// 计费模式,默认包年包月
+	if len(chargeType) > 0 {
+		param.ChargeType = chargeType
 	}
 
 	rst, err := g.configLogics.Capacity().GetCapacity(kt, param)

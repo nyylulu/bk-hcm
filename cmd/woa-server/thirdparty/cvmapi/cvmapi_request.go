@@ -372,6 +372,7 @@ type CapacityParam struct {
 	VpcId          string          `json:"vpcId"`
 	SubnetId       string          `json:"subnetId"`
 	ProjectName    string          `json:"projectName"`
+	ChargeType     ChargeType      `json:"chargeType"`
 	SystemDiskInfo *SysDiskInfo    `json:"systemDiskInfo,omitempty"`
 	DataDiskInfo   []*DataDiskInfo `json:"dataDiskInfo,omitempty"`
 }
