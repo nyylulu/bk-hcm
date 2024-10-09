@@ -352,12 +352,9 @@ export default defineComponent({
         handleDeviceTypeChange();
       },
     );
-    watch(
-      () => QCLOUDCVMForm.value.spec.device_type,
-      () => {
-        onQcloudDeviceTypeChange();
-      },
-    );
+    watch([() => QCLOUDCVMForm.value.spec.device_type, () => resourceForm.value.charge_type], () => {
+      onQcloudDeviceTypeChange();
+    });
     // 获取 QCLOUDCVM机型列表
     const cvmDevicetypeParams = computed(() => {
       const { region, zone } = resourceForm.value;
@@ -740,7 +737,7 @@ export default defineComponent({
     const loading = ref(false);
     const onQcloudDeviceTypeChange = async () => {
       const { device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
-      const { region, zone } = resourceForm.value;
+      const { region, zone, charge_type } = resourceForm.value;
       const params = {
         require_type: 1,
         region,
@@ -748,6 +745,7 @@ export default defineComponent({
         device_type,
         vpc,
         subnet,
+        charge_type,
       };
       if (params.device_type) {
         loading.value = true;

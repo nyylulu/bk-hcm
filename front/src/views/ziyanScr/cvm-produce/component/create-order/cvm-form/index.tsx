@@ -135,6 +135,7 @@ export default defineComponent({
         vpc: modelForm.value.spec.vpc,
         device_type: modelForm.value.spec.device_type,
         subnet: modelForm.value.spec.subnet,
+        charge_type: modelForm.value.spec.charge_type,
         require_type: props.requireType,
       };
     });

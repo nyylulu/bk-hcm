@@ -330,9 +330,10 @@ const modifyOrder = async (params) => {
  * @param {String} params.zone 园区
  * @param {String} params.vpc VPC
  * @param {String} params.subnet 子网
+ * @param {String} params.charge_type 计费模式
  * @returns {Promise}
  */
-const getCapacity = async ({ require_type, region, zone, device_type, vpc, subnet }) => {
+const getCapacity = async ({ require_type, region, zone, device_type, vpc, subnet, charge_type }) => {
   const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/cvm/capacity`, {
     require_type,
     region,
@@ -340,6 +341,7 @@ const getCapacity = async ({ require_type, region, zone, device_type, vpc, subne
     device_type,
     vpc,
     subnet,
+    charge_type,
   });
   return data;
 };
