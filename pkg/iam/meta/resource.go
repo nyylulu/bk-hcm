@@ -113,6 +113,8 @@ const (
 	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
 	// ZiYanResource 自研云资源-平台管理-业务粒度
 	ZiYanResource ResourceType = "ziyan_resource"
+	// ZiYanResPlan 平台-自研云资源-资源预测
+	ZiYanResPlan ResourceType = "ziyan_resource_plan"
 
 	// AccountBill 云账单管理
 	AccountBill ResourceType = "account_bill"

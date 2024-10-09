@@ -390,6 +390,7 @@ type GetRPTicketStatusInfo struct {
 	ItsmUrl    string                `json:"itsm_url"`
 	CrpSn      string                `json:"crp_sn"`
 	CrpUrl     string                `json:"crp_url"`
+	Message    string                `json:"message"`
 }
 
 // GetRPTicketDemand get resource plan ticket demand.

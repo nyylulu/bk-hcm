@@ -123,6 +123,8 @@ const (
 
 	// BizResPlanOperate biz resource plan operate action id to register iam.
 	BizResPlanOperate client.ActionID = "biz_resource_plan_operate"
+	// ZiyanResPlanManage ziyan resource plan manage action id to register iam.
+	ZiyanResPlanManage client.ActionID = "ziyan_resource_plan_manage"
 
 	// AccountFind account find action id to register iam.
 	AccountFind client.ActionID = "account_find"
@@ -251,7 +253,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	BizRecycleBinConfig:    "业务-回收站配置",
 	BizOperationRecordFind: "业务-操作记录查看",
 
-	BizResPlanOperate: "业务-资源预测操作",
+	BizResPlanOperate:  "业务-资源预测操作",
+	ZiyanResPlanManage: "平台-资源预测",
 
 	ServiceResDissolve: "服务-机房裁撤",
 

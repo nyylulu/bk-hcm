@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
 	rpcd "hcm/pkg/dal/table/resource-plan/res-plan-crp-demand"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -58,22 +59,10 @@ func (s *service) ListResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
-	if err != nil {
-		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
 	}
-
-	// if len request bkBizIDs > 0, request bkBizIDs = the intersection of authorized bkBizIDs and request bkBizIDs.
-	if len(req.BkBizIDs) > 0 {
-		bkBizIDs = slice.Intersect(bkBizIDs, req.BkBizIDs)
-	}
-
-	// if len bkBizIDs == 0, return empty response.
-	if len(bkBizIDs) == 0 {
-		return core.ListResultT[any]{Details: make([]any, 0)}, nil
-	}
-	req.BkBizIDs = bkBizIDs
 
 	return s.listResPlanDemand(cts, req)
 }
@@ -215,9 +204,10 @@ func filterListResPlanDemandRespWithReqParams(req *ptypes.ListResPlanDemandReq,
 
 	rstDetails := make([]*ptypes.ListResPlanDemandItem, 0, len(details))
 	for _, item := range details {
-		// 业务无权限
-		if !slice.IsItemInSlice(req.BkBizIDs, item.BkBizID) {
-			continue
+		if len(req.BkBizIDs) > 0 {
+			if !slice.IsItemInSlice(req.BkBizIDs, item.BkBizID) {
+				continue
+			}
 		}
 		if len(req.OpProductIDs) > 0 {
 			if !slice.IsItemInSlice(req.OpProductIDs, item.OpProductID) {
@@ -477,18 +467,12 @@ func (s *service) GetPlanDemandDetail(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
-	if err != nil {
-		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
 	}
 
-	if len(bkBizIDs) == 0 {
-		logs.Errorf("failed to get plan demand detail: no authorized, rid: %s", cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.PermissionDenied, errors.New("no authorized"))
-	}
-
-	return s.getPlanDemandDetail(cts, demandID, bkBizIDs)
+	return s.getPlanDemandDetail(cts, demandID, []int64{})
 }
 
 // GetBizPlanDemandDetail get biz plan demand detail.
@@ -586,8 +570,10 @@ func (s *service) filterPlanDemandDetailRespByBkBizIDs(kt *kit.Kit, bkBizIDs []i
 	}
 	// 业务无权限
 	bkBizID := resPlanCrpDemands[demandID].BkBizID
-	if !slice.IsItemInSlice(bkBizIDs, bkBizID) {
-		return nil, errf.PermissionDenied, fmt.Errorf("bk_biz_id: %d is not authorized", bkBizID)
+	if len(bkBizIDs) > 0 {
+		if !slice.IsItemInSlice(bkBizIDs, bkBizID) {
+			return nil, errf.PermissionDenied, fmt.Errorf("bk_biz_id: %d is not authorized", bkBizID)
+		}
 	}
 	if err = src.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap); err != nil {
 		return nil, errf.Aborted, err
@@ -666,16 +652,12 @@ func (s *service) ListPlanDemandChangeLog(cts *rest.Contexts) (interface{}, erro
 	}
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
-	if err != nil {
-		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-	if len(bkBizIDs) == 0 {
-		return core.ListResultT[any]{Details: make([]any, 0)}, nil
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
 	}
 
-	return s.listPlanDemandChangeLog(cts, req, bkBizIDs)
+	return s.listPlanDemandChangeLog(cts, req, []int64{})
 }
 
 // listPlanDemandChangeLog list demand change log primary logic.
@@ -723,8 +705,10 @@ func (s *service) convCrpDemandChangeLogResp(kt *kit.Kit, clogItems []*ptypes.Li
 			continue
 		}
 		itemBkBizID := resPlanCrpDemands[item.CrpDemandId].BkBizID
-		if !slice.IsItemInSlice(bkBizIDs, itemBkBizID) {
-			continue
+		if len(bkBizIDs) > 0 {
+			if !slice.IsItemInSlice(bkBizIDs, itemBkBizID) {
+				continue
+			}
 		}
 
 		item.OpProductName = resPlanCrpDemands[item.CrpDemandId].OpProductName

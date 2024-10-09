@@ -480,6 +480,7 @@ func (s *service) getRPTicketStatusInfo(kt *kit.Kit, ticketID string) (*ptypes.G
 		ItsmUrl:    detail.ItsmUrl,
 		CrpSn:      detail.CrpSn,
 		CrpUrl:     detail.CrpUrl,
+		Message:    detail.Message,
 	}
 
 	return result, nil

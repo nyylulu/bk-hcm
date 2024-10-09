@@ -46,7 +46,8 @@ GET /api/v1/woa/plans/resources/tickets/{id}
       "itsm_sn": "REQ000001",
       "itsm_url": "http://itsm/ticket/REQ000001",
       "crp_sn": "XQ000001",
-      "crp_url": "http://crp/ticket/XQ000001"
+      "crp_url": "http://crp/ticket/XQ000001",
+      "message": "如果单据失败，这里会提供原因"
     },
     "demands": [
       {
@@ -151,6 +152,7 @@ GET /api/v1/woa/plans/resources/tickets/{id}
 | itsm_url    | string | ITSM流程单链接                                        |
 | crp_sn      | string | CRP系统需求单号                                        |
 | crp_url     | string | CRP系统需求单链接                                       |
+| message     | string | 单据状态失败信息                                         |
 
 #### data.demands[i]
 

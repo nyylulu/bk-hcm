@@ -139,11 +139,11 @@ func (c *Controller) QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*c
 			return nil, err
 		}
 
+		result = append(result, rst.Result.Data...)
+
 		if len(rst.Result.Data) < int(core.DefaultMaxPageLimit) {
 			break
 		}
-
-		result = append(result, rst.Result.Data...)
 	}
 
 	return result, nil
