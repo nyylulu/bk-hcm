@@ -261,16 +261,6 @@ func (l *ListResPlanDemandItem) SetRegionAndZoneID(zoneNameMap map[string]string
 	return nil
 }
 
-// SetDiskType set disk type
-func (l *ListResPlanDemandItem) SetDiskType() error {
-	diskType, err := enumor.GetDiskTypeFromName(l.DiskTypeName)
-	if err != nil {
-		return err
-	}
-	l.DiskType = diskType
-	return nil
-}
-
 // PlanDemandDetail crp demand detail的本地格式化
 type PlanDemandDetail struct {
 	GetPlanDemandDetailResp `json:",inline"`

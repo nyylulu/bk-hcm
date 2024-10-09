@@ -260,10 +260,7 @@ func (s *service) appendListResPlanDemandRespFieldWithTable(kt *kit.Kit, details
 			// 本地没有的数据直接干掉，可能有一定风险
 			continue
 		}
-		if err = item.SetDiskType(); err != nil {
-			logs.Warnf("failed to set disk type, err: %v, demand_id: %d, rid: %s", err, item.CrpDemandID, kt.Rid)
-			continue
-		}
+
 		if err = item.ParseExpectTime(); err != nil {
 			logs.Warnf("failed to parse expect_time, err: %v, demand_id: %d, rid: %s", err, item.CrpDemandID, kt.Rid)
 			continue
@@ -403,6 +400,11 @@ func getListResPlanDemandItem(demandDetail *ptypes.PlanDemandDetail) (
 		return nil, fmt.Errorf("failed to convert crp demand id to int, err: %v", err)
 	}
 
+	diskType, err := enumor.GetDiskTypeFromCrpName(demandDetail.DiskTypeName)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get disk type from crp name, err: %v", err)
+	}
+
 	return &ptypes.ListResPlanDemandItem{
 		CrpDemandID:        demandIdInt,
 		AvailableYearMonth: fmt.Sprintf("%04d-%02d", demandDetail.Year, demandDetail.Month),
@@ -428,7 +430,8 @@ func getListResPlanDemandItem(demandDetail *ptypes.PlanDemandDetail) (
 		ObsProject:         demandDetail.ObsProject,
 		GenerationType:     demandDetail.GenerationType,
 		DeviceFamily:       demandDetail.DeviceFamily,
-		DiskTypeName:       demandDetail.DiskTypeName,
+		DiskType:           diskType,
+		DiskTypeName:       diskType.Name(),
 		DiskIO:             demandDetail.DiskIO,
 	}, nil
 }

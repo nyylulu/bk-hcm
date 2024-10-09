@@ -331,9 +331,9 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 			return nil, nil, err
 		}
 
-		diskType, err := enumor.GetDiskTypeFromName(crpDemand.DiskTypeName)
+		diskType, err := enumor.GetDiskTypeFromCrpName(crpDemand.DiskTypeName)
 		if err != nil {
-			logs.Errorf("failed to get disk type from name, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to get disk type from crp name, err: %v, rid: %s", err, kt.Rid)
 			return nil, nil, err
 		}
 
@@ -361,7 +361,7 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 				},
 				Cbs: rpt.Cbs{
 					DiskType:     diskType,
-					DiskTypeName: crpDemand.DiskTypeName,
+					DiskTypeName: diskType.Name(),
 					DiskIo:       int64(crpDemand.InstanceIO),
 					DiskSize:     int64(crpDemand.PlanDiskAmount),
 				},
