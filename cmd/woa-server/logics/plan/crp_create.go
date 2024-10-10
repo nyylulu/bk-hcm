@@ -117,7 +117,7 @@ func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
 		VirtualDeptID:   ticket.VirtualDeptID,
 		VirtualDeptName: ticket.VirtualDeptName,
 	}
-	if err = c.upsertCrpDemandBizRel(kt, crpDemandIDs, ticket.DemandClass, bizOrgRel); err != nil {
+	if err = c.upsertCrpDemandBizRel(kt, crpDemandIDs, ticket.DemandClass, bizOrgRel, ticket.Applicant); err != nil {
 		logs.Errorf("failed to upsert crp demand biz relation, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -454,7 +454,7 @@ func (c *Controller) constructAdjustSrcUpdatedData(kt *kit.Kit, adjustType enumo
 
 // upsertCrpDemandBizRel upsert crp demand biz rel.
 func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, demandClass enumor.DemandClass,
-	bizOrgRel plan.BizOrgRel) error {
+	bizOrgRel plan.BizOrgRel, reviser string) error {
 
 	if len(crpDemandIDs) == 0 {
 		logs.Errorf("crp demand ids is empty, rid: %s", kt.Rid)
@@ -497,7 +497,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			PlanProductName: bizOrgRel.PlanProductName,
 			VirtualDeptID:   bizOrgRel.VirtualDeptID,
 			VirtualDeptName: bizOrgRel.VirtualDeptName,
-			Reviser:         kt.User,
+			Reviser:         reviser,
 		}
 		err = c.dao.ResPlanCrpDemand().Update(kt, tools.ContainersExpression("crp_demand_id", existCrpDemandIDs),
 			update)
@@ -522,8 +522,8 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 				PlanProductName: bizOrgRel.PlanProductName,
 				VirtualDeptID:   bizOrgRel.VirtualDeptID,
 				VirtualDeptName: bizOrgRel.VirtualDeptName,
-				Creator:         kt.User,
-				Reviser:         kt.User,
+				Creator:         reviser,
+				Reviser:         reviser,
 			}
 		}
 		_, err = c.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
