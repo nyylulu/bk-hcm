@@ -29,6 +29,8 @@ export default defineComponent({
           return <i class='hcm-icon bkhcm-icon-38moxingshibai-01'></i>;
         case 'done':
           return <i class='hcm-icon bkhcm-icon-7chenggong-01'></i>;
+        case 'failed':
+          return <i class='hcm-icon bkhcm-icon-close-circle-fill'></i>;
         default:
           return <i class='hcm-icon bkhcm-icon-jiazai'></i>;
       }
@@ -42,7 +44,7 @@ export default defineComponent({
             <span>{props.statusInfo?.status_name}</span>
             {props.errorMessage && (
               <div class={cssModule['error-message']}>
-                <i class={`hcm-icon bkhcm-icon-prompt ${cssModule['error-message-color']}`} />
+                <i class={`hcm-icon bkhcm-icon-alert ${cssModule['error-message-color']}`} />
                 <span>{props.errorMessage}</span>
               </div>
             )}

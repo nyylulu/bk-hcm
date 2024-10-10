@@ -26,8 +26,8 @@ export default defineComponent({
         isLoading.value = true;
         const res = await resourcePlanStore.getOpResourcesTicketsById(route.query?.id as string);
 
-        if (res.code !== 0) {
-          errorMessage.value = res.message;
+        if (res.data?.status_info?.status === 'failed') {
+          errorMessage.value = res.data?.status_info?.message;
         } else {
           errorMessage.value = '';
         }

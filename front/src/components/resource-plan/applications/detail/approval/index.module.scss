@@ -19,7 +19,7 @@
       color: #2dcb56;
     }
 
-    :global(.bkhcm-icon-38moxingshibai-01) {
+    :global(.bkhcm-icon-38moxingshibai-01),:global(.bkhcm-icon-close-circle-fill) {
       color: #cc4053;
     }
   }
@@ -45,6 +45,7 @@
 }
 
 .error-message {
+  max-width: 1475px;
   margin-left: 13.5px;
   justify-content: center;
   display: flex;

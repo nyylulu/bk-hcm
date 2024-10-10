@@ -576,7 +576,7 @@ export default defineComponent({
         () => resourceForm.value.zone,
       ],
       async ([bk_biz_id, require_type, region, zone]) => {
-        if (!bk_biz_id || !require_type || !region || !zone) return;
+        if (!bk_biz_id || !require_type || !region || !zone || resourceForm.value.resourceType !== 'QCLOUDCVM') return;
         const { data } = await planStore.list_config_cvm_charge_type_device_type({
           bk_biz_id,
           require_type,
@@ -1295,6 +1295,7 @@ export default defineComponent({
                       </bk-form-item>
                       {!isRollingServer.value &&
                         resourceForm.value.zone &&
+                        resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !availablePostpaidSet.value.size &&
                         !availablePrepaidSet.value.size && (
                           <Alert class={'mb8'} theme='warning'>
@@ -1657,6 +1658,7 @@ export default defineComponent({
                       disabled: !(
                         !isRollingServer.value &&
                         resourceForm.value.zone &&
+                        resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !availablePostpaidSet.value.size &&
                         !availablePrepaidSet.value.size
                       ),
@@ -1664,6 +1666,7 @@ export default defineComponent({
                     disabled={
                       !isRollingServer.value &&
                       resourceForm.value.zone &&
+                      resourceForm.value.resourceType === 'QCLOUDCVM' &&
                       !availablePostpaidSet.value.size &&
                       !availablePrepaidSet.value.size
                     }>

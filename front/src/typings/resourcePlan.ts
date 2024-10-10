@@ -79,6 +79,7 @@ export interface TicketByIdResult {
   status_info: {
     status: string;
     status_name: string;
+    message: string;
     itsm_sn: string;
     itsm_url: string;
     crp_sn: string;
