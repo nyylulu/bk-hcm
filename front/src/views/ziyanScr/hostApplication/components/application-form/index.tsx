@@ -1,4 +1,4 @@
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Loading } from 'bkui-vue';
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
@@ -53,6 +53,7 @@ export default defineComponent({
     const accountStore = useAccountStore();
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
+    const isLoadingDeviceType = ref(false);
     const router = useRouter();
     const route = useRoute();
     const addResourceRequirements = ref(false);
@@ -577,6 +578,7 @@ export default defineComponent({
       ],
       async ([bk_biz_id, require_type, region, zone]) => {
         if (!bk_biz_id || !require_type || !region || !zone || resourceForm.value.resourceType !== 'QCLOUDCVM') return;
+        isLoadingDeviceType.value = true;
         const { data } = await planStore.list_config_cvm_charge_type_device_type({
           bk_biz_id,
           require_type,
@@ -595,6 +597,7 @@ export default defineComponent({
             if (available) set.add(device_type);
           }
         }
+        isLoadingDeviceType.value = false;
         if (availablePrepaidSet.value.size === 0) resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
       },
       {
@@ -1435,34 +1438,37 @@ export default defineComponent({
                             ref={QCLOUDCVMformRef}
                             form-type='vertical'>
                             <bk-form-item label='机型' required property='device_type'>
-                              <DevicetypeSelector
-                                class='commonCard-form-select'
-                                v-model={QCLOUDCVMForm.value.spec.device_type}
-                                resourceType='cvm'
-                                params={cvmDevicetypeParams.value}
-                                disabled={resourceForm.value.zone === ''}
-                                optionDisabled={
-                                  !isRollingServer.value
-                                    ? (v) => !computedAvailableSet.value.has(v.device_type)
-                                    : undefined
-                                }
-                                optionDisabledTipsContent={
-                                  !isRollingServer.value ? () => '当前机型不在有效预测范围内' : undefined
-                                }
-                                placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
-                                sort={(a, b) => {
-                                  if (!isRollingServer.value) return handleSortDemands(a, b);
-                                  const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
-                                  const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
-                                  if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
-                                    return -1;
-                                  if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
-                                  return 0;
-                                }}
-                                onChange={(result) => {
-                                  QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType).cpu_amount;
-                                }}
-                              />
+                              <Loading loading={isLoadingDeviceType.value}>
+                                <DevicetypeSelector
+                                  class='commonCard-form-select'
+                                  v-model={QCLOUDCVMForm.value.spec.device_type}
+                                  resourceType='cvm'
+                                  params={cvmDevicetypeParams.value}
+                                  disabled={resourceForm.value.zone === ''}
+                                  optionDisabled={
+                                    !isRollingServer.value
+                                      ? (v) => !computedAvailableSet.value.has(v.device_type)
+                                      : undefined
+                                  }
+                                  optionDisabledTipsContent={
+                                    !isRollingServer.value ? () => '当前机型不在有效预测范围内' : undefined
+                                  }
+                                  placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
+                                  sort={(a, b) => {
+                                    if (!isRollingServer.value) return handleSortDemands(a, b);
+                                    const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
+                                    const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
+                                    if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
+                                      return -1;
+                                    if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType')
+                                      return 1;
+                                    return 0;
+                                  }}
+                                  onChange={(result) => {
+                                    QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType).cpu_amount;
+                                  }}
+                                />
+                              </Loading>
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <bk-select
