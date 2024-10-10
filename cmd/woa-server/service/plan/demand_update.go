@@ -299,7 +299,7 @@ func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPD
 // constructOriginalDemandMap construct original demand map.
 // return crp demand id and demand class map, crp demand id and remain cpu core map.
 func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) (
-	map[int64]*rpt.OriginalRPDemandItem, map[int64]int64, error) {
+	map[int64]*rpt.OriginalRPDemandItem, map[int64]float64, error) {
 
 	// call crp interface to search raw demands.
 	crpDemands, err := s.planController.QueryAllDemands(kt, &plan.QueryAllDemandsReq{CrpDemandIDs: crpDemandIDs})
@@ -323,7 +323,7 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 	}
 
 	demandOriginMap := make(map[int64]*rpt.OriginalRPDemandItem)
-	demandRemainMap := make(map[int64]int64)
+	demandRemainMap := make(map[int64]float64)
 	for _, crpDemand := range crpDemands {
 		demandID, err := strconv.ParseInt(crpDemand.DemandId, 10, 64)
 		if err != nil {
@@ -355,21 +355,21 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 					DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
 					DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
 					CoreType:     deviceTypeMap[deviceType].CoreType,
-					Os:           int64(crpDemand.PlanCvmAmount),
-					CpuCore:      int64(crpDemand.PlanCoreAmount),
-					Memory:       int64(crpDemand.PlanRamAmount),
+					Os:           float64(crpDemand.PlanCvmAmount),
+					CpuCore:      float64(crpDemand.PlanCoreAmount),
+					Memory:       float64(crpDemand.PlanRamAmount),
 				},
 				Cbs: rpt.Cbs{
 					DiskType:     diskType,
 					DiskTypeName: diskType.Name(),
 					DiskIo:       int64(crpDemand.InstanceIO),
-					DiskSize:     int64(crpDemand.PlanDiskAmount),
+					DiskSize:     float64(crpDemand.PlanDiskAmount),
 				},
 			},
 		}
 
 		// crpDemand.CoreAmount is resource plan remained cpu core.
-		demandRemainMap[demandID] = int64(crpDemand.CoreAmount)
+		demandRemainMap[demandID] = float64(crpDemand.CoreAmount)
 	}
 
 	return demandOriginMap, demandRemainMap, nil

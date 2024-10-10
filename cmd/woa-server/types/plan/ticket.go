@@ -249,16 +249,16 @@ type CreateResPlanDemandReq struct {
 	Remark         string                 `json:"remark" validate:"omitempty"`
 	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
 	Cvm            *struct {
-		ResMode    string `json:"res_mode"`
-		DeviceType string `json:"device_type"`
-		Os         *int64 `json:"os"`
-		CpuCore    *int64 `json:"cpu_core"`
-		Memory     *int64 `json:"memory"`
+		ResMode    string   `json:"res_mode"`
+		DeviceType string   `json:"device_type"`
+		Os         *float64 `json:"os"`
+		CpuCore    *float64 `json:"cpu_core"`
+		Memory     *float64 `json:"memory"`
 	} `json:"cvm" validate:"omitempty"`
 	Cbs *struct {
 		DiskType enumor.DiskType `json:"disk_type"`
 		DiskIo   *int64          `json:"disk_io"`
-		DiskSize *int64          `json:"disk_size"`
+		DiskSize *float64        `json:"disk_size"`
 	} `json:"cbs" validate:"omitempty"`
 }
 

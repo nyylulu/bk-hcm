@@ -92,21 +92,21 @@ type ResPlanTicketTable struct {
 	// DemandClass 预测的需求类型
 	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
 	// OriginalOS 原始OS数，单位：台
-	OriginalOS int64 `db:"original_os" json:"original_os"`
+	OriginalOS float64 `db:"original_os" json:"original_os"`
 	// OriginalCpuCore 原始CPU核心数，单位：台
-	OriginalCpuCore int64 `db:"original_cpu_core" json:"original_cpu_core"`
+	OriginalCpuCore float64 `db:"original_cpu_core" json:"original_cpu_core"`
 	// OriginalMemory 原始内存大小，单位：GB
-	OriginalMemory int64 `db:"original_memory" json:"original_memory"`
+	OriginalMemory float64 `db:"original_memory" json:"original_memory"`
 	// OriginalDiskSize 原始云盘大小，单位：GB
-	OriginalDiskSize int64 `db:"original_disk_size" json:"original_disk_size"`
+	OriginalDiskSize float64 `db:"original_disk_size" json:"original_disk_size"`
 	// UpdatedOS 更新OS数，单位：台
-	UpdatedOS int64 `db:"updated_os" json:"updated_os"`
+	UpdatedOS float64 `db:"updated_os" json:"updated_os"`
 	// UpdatedCpuCore 更新CPU核心数，单位：台
-	UpdatedCpuCore int64 `db:"updated_cpu_core" json:"updated_cpu_core"`
+	UpdatedCpuCore float64 `db:"updated_cpu_core" json:"updated_cpu_core"`
 	// UpdatedMemory 更新内存大小，单位：GB
-	UpdatedMemory int64 `db:"updated_memory" json:"updated_memory"`
+	UpdatedMemory float64 `db:"updated_memory" json:"updated_memory"`
 	// UpdatedDiskSize 更新云盘大小，单位：GB
-	UpdatedDiskSize int64 `db:"updated_disk_size" json:"updated_disk_size"`
+	UpdatedDiskSize float64 `db:"updated_disk_size" json:"updated_disk_size"`
 	// Remark 预测说明，最短20，最长1024
 	Remark string `db:"remark" json:"remark" validate:"lte=1024"`
 	// Creator 创建者
@@ -259,14 +259,14 @@ func (i *UpdatedRPDemandItem) Validate() error {
 
 // Cvm is struct of ResPlanDemandTable's Cvm.
 type Cvm struct {
-	ResMode      string `json:"res_mode"`
-	DeviceType   string `json:"device_type"`
-	DeviceClass  string `json:"device_class" validate:"lte=64"`
-	DeviceFamily string `json:"device_family" validate:"lte=64"`
-	CoreType     string `json:"core_type" validate:"lte=64"`
-	Os           int64  `json:"os"`
-	CpuCore      int64  `json:"cpu_core"`
-	Memory       int64  `json:"memory"`
+	ResMode      string  `json:"res_mode"`
+	DeviceType   string  `json:"device_type"`
+	DeviceClass  string  `json:"device_class" validate:"lte=64"`
+	DeviceFamily string  `json:"device_family" validate:"lte=64"`
+	CoreType     string  `json:"core_type" validate:"lte=64"`
+	Os           float64 `json:"os"`
+	CpuCore      float64 `json:"cpu_core"`
+	Memory       float64 `json:"memory"`
 }
 
 // Validate whether Cvm is valid.
@@ -295,7 +295,7 @@ type Cbs struct {
 	DiskType     enumor.DiskType `json:"disk_type"`
 	DiskTypeName string          `json:"disk_type_name"`
 	DiskIo       int64           `json:"disk_io"`
-	DiskSize     int64           `json:"disk_size"`
+	DiskSize     float64         `json:"disk_size"`
 }
 
 // Validate whether Cbs is valid.

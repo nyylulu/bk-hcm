@@ -43,14 +43,14 @@ type TicketInfo struct {
 	PlanProductID    int64                 `json:"plan_product_id"`
 	PlanProductName  string                `json:"plan_product_name"`
 	VirtualDeptID    int64                 `json:"virtual_dept_id"`
-	VirtualDeptName  string                `json:"virtual_dept_name""`
+	VirtualDeptName  string                `json:"virtual_dept_name"`
 	DemandClass      enumor.DemandClass    `json:"demand_class"`
-	OriginalCpuCore  int64                 `json:"original_cpu_core"`
-	OriginalMemory   int64                 `json:"original_memory"`
-	OriginalDiskSize int64                 `json:"original_disk_size"`
-	UpdatedCpuCore   int64                 `json:"updated_cpu_core"`
-	UpdatedMemory    int64                 `json:"updated_memory"`
-	UpdatedDiskSize  int64                 `json:"updated_disk_size"`
+	OriginalCpuCore  float64               `json:"original_cpu_core"`
+	OriginalMemory   float64               `json:"original_memory"`
+	OriginalDiskSize float64               `json:"original_disk_size"`
+	UpdatedCpuCore   float64               `json:"updated_cpu_core"`
+	UpdatedMemory    float64               `json:"updated_memory"`
+	UpdatedDiskSize  float64               `json:"updated_disk_size"`
 	Demands          rpt.ResPlanDemands    `json:"demands"`
 	SubmittedAt      string                `json:"submitted_at"`
 	Status           enumor.RPTicketStatus `json:"status"`

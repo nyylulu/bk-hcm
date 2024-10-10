@@ -96,14 +96,14 @@ type ResPlanDemandTable struct {
 
 // Cvm is struct of ResPlanDemandTable's Cvm.
 type Cvm struct {
-	ResMode      string `json:"res_mode"`
-	DeviceType   string `json:"device_type"`
-	DeviceClass  string `db:"device_class" json:"device_class" validate:"lte=64"`
-	DeviceFamily string `db:"device_family" json:"device_family" validate:"lte=64"`
-	CoreType     string `db:"core_type" json:"core_type" validate:"lte=64"`
-	Os           int64  `json:"os"`
-	CpuCore      int64  `json:"cpu_core"`
-	Memory       int64  `json:"memory"`
+	ResMode      string  `json:"res_mode"`
+	DeviceType   string  `json:"device_type"`
+	DeviceClass  string  `db:"device_class" json:"device_class" validate:"lte=64"`
+	DeviceFamily string  `db:"device_family" json:"device_family" validate:"lte=64"`
+	CoreType     string  `db:"core_type" json:"core_type" validate:"lte=64"`
+	Os           float64 `json:"os"`
+	CpuCore      float64 `json:"cpu_core"`
+	Memory       float64 `json:"memory"`
 }
 
 // Cbs is struct of ResPlanDemandTable's Cbs.
@@ -111,7 +111,7 @@ type Cbs struct {
 	DiskType     enumor.DiskType `json:"disk_type"`
 	DiskTypeName string          `json:"disk_type_name"`
 	DiskIo       int64           `json:"disk_io"`
-	DiskSize     int64           `json:"disk_size"`
+	DiskSize     float64         `json:"disk_size"`
 }
 
 // TableName is the recycleRecord's database table name.

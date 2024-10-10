@@ -94,8 +94,8 @@ func (c *Controller) CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketRe
 
 // constructResPlanTicket construct resource plan ticket.
 func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt.ResPlanTicketTable, error) {
-	var originalOs, originalCpuCore, originalMemory, originalDiskSize int64
-	var updatedOs, updatedCpuCore, updatedMemory, updatedDiskSize int64
+	var originalOs, originalCpuCore, originalMemory, originalDiskSize float64
+	var updatedOs, updatedCpuCore, updatedMemory, updatedDiskSize float64
 	for _, demand := range req.Demands {
 		if demand.Original != nil {
 			originalOs += (*demand.Original).Cvm.Os

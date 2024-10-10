@@ -37,10 +37,14 @@ alter table res_plan_ticket
     rename column `disk_size` to `updated_disk_size`,
     add `type`               varchar(64) not null comment '单据类型(枚举值：add(新增)、adjust(修改)、cancel(取消))' after id,
     add `demands`            json        not null comment '需求列表，每个需求包括：original、updated两个部分' after type,
-    add `original_os`        bigint      not null comment '原始OS数，单位：台',
-    add `original_cpu_core`  bigint      not null comment '原始总CPU核心数，单位：核',
-    add `original_memory`    bigint      not null comment '原始总内存大小，单位：GB',
-    add `original_disk_size` bigint      not null comment '原始总云盘大小，单位：GB';
+    add `original_os`        double      not null comment '原始OS数，单位：台',
+    add `original_cpu_core`  double      not null comment '原始总CPU核心数，单位：核',
+    add `original_memory`    double      not null comment '原始总内存大小，单位：GB',
+    add `original_disk_size` double      not null comment '原始总云盘大小，单位：GB',
+    modify updated_os double not null comment '更新后OS数，单位：台',
+    modify updated_cpu_core double not null comment '更新后总CPU核心数，单位：核',
+    modify updated_memory double not null comment '更新后总内存大小，单位：GB',
+    modify updated_disk_size double not null comment '更新总云盘大小，单位：GB';
 
 # resource plan crp demand related table structure
 create table if not exists `res_plan_crp_demand`
