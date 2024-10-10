@@ -579,6 +579,8 @@ export default defineComponent({
       async ([bk_biz_id, require_type, region, zone]) => {
         if (!bk_biz_id || !require_type || !region || !zone || resourceForm.value.resourceType !== 'QCLOUDCVM') return;
         isLoadingDeviceType.value = true;
+        availablePrepaidSet.value.clear();
+        availablePostpaidSet.value.clear();
         const { data } = await planStore.list_config_cvm_charge_type_device_type({
           bk_biz_id,
           require_type,
