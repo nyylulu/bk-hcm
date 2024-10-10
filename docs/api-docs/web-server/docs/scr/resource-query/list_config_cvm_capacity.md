@@ -18,6 +18,7 @@ POST /api/v1/woa/config/find/cvm/capacity
 | device_type  | string	 | 是	| 机型   |
 | vpc	       | string	 | 否	| vpc。若vpc为空，则返回IEG默认vpc的最大可申领量 |
 | subnet	   | string	 | 否	| 子网。若vpc不为空且subnet为空，则返回vpc下所有子网的最大可申领量 |
+| charge_type  | string  | 否    | 计费模式 (PREPAID:包年包月，POSTPAID_BY_HOUR:按量计费)，默认:包年包月 |
 
 ### 调用示例
 
@@ -30,7 +31,8 @@ POST /api/v1/woa/config/find/cvm/capacity
   "zone":"ap-shanghai-2",
   "device_type":"S3ne.4XLARGE64",
   "vpc":"",
-  "subnet":""
+  "subnet":"",
+  "charge_type":"PREPAID"
 }
 ```
 

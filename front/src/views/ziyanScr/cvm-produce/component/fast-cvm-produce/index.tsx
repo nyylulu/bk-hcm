@@ -2,12 +2,13 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRequireTypes } from '@/api/host/task';
-import { getDeviceTypes, getRestrict } from '@/api/host/cvm';
+import { getRestrict } from '@/api/host/cvm';
 import MemberSelect from '@/components/MemberSelect';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import { HelpFill, Search } from 'bkui-vue/lib/icon';
 import { Button, Form, Select, Sideslider } from 'bkui-vue';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 const { FormItem } = Form;
 // import { statusList } from './transform';
 // import './index.scss';
@@ -193,54 +194,15 @@ export default defineComponent({
       memList.value = mem || [];
     };
     // CVM机型
-    const paramDeviceTypeRules = computed(() => {
-      const rules = [];
-      ['region', 'zone', 'device_group'].map((item) => {
-        if (Array.isArray(filterForm.value[item]) && filterForm.value[item].length) {
-          rules.push({
-            field: item === 'device_group' ? 'label.device_group' : item,
-            operator: 'in',
-            value: filterForm.value[item],
-          });
-        }
-        return null;
-      });
-      ['require_type', 'enable_capacity'].map((item) => {
-        if (String(filterForm.value[item])) {
-          rules.push({
-            field: item,
-            operator: 'equal',
-            value: filterForm.value[item],
-          });
-        }
-        return null;
-      });
-      return rules;
+    const cvmDevicetypeParams = computed(() => {
+      const { require_type, region, zone, device_group, cpu, mem, enable_capacity } = filterForm.value;
+      return { require_type, region, zone, device_group, cpu, mem, enable_capacity };
     });
-    const cvmDeviceTypeList = ref([]);
-    const loadDeviceTypes = async () => {
-      // const [, res] = await to(getDeviceTypes(this.device.filter));
-      let filter = {};
-      if (paramDeviceTypeRules.value.length) {
-        filter = {
-          condition: 'AND',
-          rules: paramDeviceTypeRules.value,
-        };
-      }
-      const res = await getDeviceTypes({ filter });
-      cvmDeviceTypeList.value = res?.data?.info || [];
-    };
-    const handleRequireTypeChange = () => {
-      loadDeviceTypes();
-    };
-    const handleZoneChange = () => {
-      loadDeviceTypes();
-    };
+
     const handleDeviceGroupChange = () => {
       filterForm.value.cpu = '';
       filterForm.value.mem = '';
       filterForm.value.device_type = [];
-      loadDeviceTypes();
     };
     const deviceConfigDisabled = ref(false);
     const handleDeviceTypeChange = () => {
@@ -258,7 +220,6 @@ export default defineComponent({
     onMounted(() => {
       fetchRequireType();
       fetchCpuOrMem();
-      loadDeviceTypes();
     });
     return () => (
       <Sideslider
@@ -274,11 +235,7 @@ export default defineComponent({
               <div class={'filter-container'}>
                 <Form formType='vertical' class='scr-form-wrapper' model={filterForm}>
                   <FormItem label='需求类型'>
-                    <Select
-                      v-model={filterForm.value.require_type}
-                      clearable
-                      placeholder='请选择'
-                      onChange={handleRequireTypeChange}>
+                    <Select v-model={filterForm.value.require_type} clearable placeholder='请选择'>
                       {requireTypeList.value.map(({ label, value }) => {
                         return <Select.Option key={value} name={label} id={value} />;
                       })}
@@ -292,7 +249,6 @@ export default defineComponent({
                       multiple
                       v-model={filterForm.value.zone}
                       params={{ resourceType: 'QCLOUDCVM', region: filterForm.value.region }}
-                      onChange={handleZoneChange}
                     />
                   </FormItem>
                   <FormItem label='实例族'>
@@ -326,17 +282,14 @@ export default defineComponent({
                     </div>
                   </FormItem>
                   <FormItem label='机型'>
-                    <Select
+                    <DevicetypeSelector
                       v-model={filterForm.value.device_type}
+                      resourceType='cvm'
+                      params={cvmDevicetypeParams.value}
                       multiple
-                      clearable
-                      placeholder='请选择'
                       disabled={deviceTypeDisabled.value}
-                      onChange={handleDeviceTypeChange}>
-                      {cvmDeviceTypeList.value.map((item) => {
-                        return <Select.Option key={item} name={item} id={item} />;
-                      })}
-                    </Select>
+                      onChange={handleDeviceTypeChange}
+                    />
                   </FormItem>
                   <FormItem label='CPU(核)'>
                     <Select

@@ -215,7 +215,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	// 3. get capacity
 	zoneCapacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region,
-		cvmapi.CvmSeparateCampus, "", "")
+		cvmapi.CvmSeparateCampus, "", "", order.Spec.ChargeType)
 	if err != nil {
 		logs.Errorf("failed to generate cvm, for get zone capacity err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to generate cvm, for get zone capacity err: %v", err)

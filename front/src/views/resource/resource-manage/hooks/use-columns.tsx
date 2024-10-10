@@ -169,7 +169,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '是否分配',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -186,7 +186,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id2',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
@@ -288,7 +288,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '是否分配',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -305,7 +305,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id2',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
@@ -472,7 +472,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '是否分配',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -641,7 +641,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '所属业务',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
@@ -697,7 +697,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       sort: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
@@ -821,7 +821,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '是否分配',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -839,7 +839,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id2',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
@@ -857,7 +857,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '实例规格',
       field: 'machine_type',
       sort: true,
-      isOnlyShowInResource: true,
     },
     {
       label: '操作系统',
@@ -1019,7 +1018,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '是否分配',
       field: 'bk_biz_id',
       sort: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -1036,7 +1035,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id2',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
@@ -1089,7 +1088,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '所属业务',
       field: 'bk_biz_id',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ cell }: { cell: number }) => businessMapStore.businessMap.get(cell) || '未分配',
     },
     // {
@@ -1170,7 +1169,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '分配状态',
       field: 'bk_biz_id',
       isDefaultShow: true,
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       render: ({ cell }: { cell: number }) => (
         <bk-tag
           v-bk-tooltips={{
@@ -1728,7 +1727,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '分配状态',
       field: 'bk_biz_id',
-      isOnlyShowInResource: true,
+      notDisplayedInBusiness: true,
       isDefaultShow: true,
       render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => (
         <bk-tag
@@ -2564,7 +2563,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);
-  if (whereAmI.value !== Senarios.resource) columns = columns.filter((column: any) => !column.isOnlyShowInResource);
+  if (whereAmI.value === Senarios.business) columns = columns.filter((column: any) => !column.notDisplayedInBusiness);
 
   type ColumnsType = typeof columns;
   const generateColumnsSettings = (columns: ColumnsType) => {
@@ -2576,12 +2575,12 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           field: column.field,
           disabled: type !== 'cvms' && column.field === 'id',
           isDefaultShow: !!column.isDefaultShow,
-          isOnlyShowInResource: !!column.isOnlyShowInResource,
+          notDisplayedInBusiness: !!column.notDisplayedInBusiness,
         });
       }
     }
-    if (whereAmI.value !== Senarios.resource) {
-      fields = fields.filter((field) => !field.isOnlyShowInResource);
+    if (whereAmI.value === Senarios.business) {
+      fields = fields.filter((field) => !field.notDisplayedInBusiness);
     }
     const settings: Ref<Settings> = ref({
       fields,

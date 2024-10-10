@@ -75,11 +75,12 @@ func NewExchangeRateController(opt *ExchangeRateOpt) (*ExchangeRateController, e
 	}
 
 	return &ExchangeRateController{
+		sd:           opt.Sd,
 		jarvis:       opt.Jarvis,
 		dataCli:      opt.DataCli,
 		fromCurrency: opt.FromCurrencyCodes,
 		toCurrency:   opt.ToCurrencyCodes,
-		sd:           opt.Sd,
+		loopInterval: opt.LoopInterval,
 	}, nil
 }
 
@@ -87,7 +88,6 @@ func NewExchangeRateController(opt *ExchangeRateOpt) (*ExchangeRateController, e
 func (c *ExchangeRateController) Run() {
 	kt := getInternalKit()
 	c.loop(kt)
-
 }
 func (c *ExchangeRateController) loop(kt *kit.Kit) {
 
@@ -113,11 +113,12 @@ func (c *ExchangeRateController) loop(kt *kit.Kit) {
 
 // syncMonth ...
 func (c *ExchangeRateController) syncMonth(kt *kit.Kit, year, month int) error {
+	logs.Infof("start sync exchange rate of %d-%02d, rid: %s", year, month, kt.Rid)
 	var wantedCurrMap map[enumor.CurrencyCode]bool
 	if len(c.fromCurrency) > 0 {
 		wantedCurrMap = make(map[enumor.CurrencyCode]bool, len(c.fromCurrency))
-		for _, c := range c.fromCurrency {
-			wantedCurrMap[c] = true
+		for i := range c.fromCurrency {
+			wantedCurrMap[c.fromCurrency[i]] = true
 		}
 	}
 	var addSlice []databill.ExchangeRateCreate
@@ -130,6 +131,7 @@ func (c *ExchangeRateController) syncMonth(kt *kit.Kit, year, month int) error {
 		if err != nil {
 			return err
 		}
+		logs.Infof("got %d %s exchange rate from jarvis, rid: %s", len(stdRateList), toCurrency, kt.Rid)
 		for _, stdRate := range stdRateList {
 			if len(c.fromCurrency) > 0 && !wantedCurrMap[stdRate.FromCurrency] {
 				// 跳过不需要的币种

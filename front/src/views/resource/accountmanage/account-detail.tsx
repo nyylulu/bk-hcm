@@ -362,7 +362,6 @@ export default defineComponent({
     };
 
     const check = (val: any): boolean => {
-      console.log('check', check);
       return /^[a-z][a-z-z0-9_-]*$/.test(val);
     };
 
@@ -398,7 +397,6 @@ export default defineComponent({
           theme: 'success',
         });
       } catch (error) {
-        console.log(error);
       } finally {
         isOrganizationDetail.value = true; // 改为详情展示态
         getDetail(); // 请求数据
@@ -452,7 +450,6 @@ export default defineComponent({
         projectModel.extension = extension;
         onClosed();
       } catch (error) {
-        console.log(error);
       } finally {
         buttonLoading.value = false;
       }
@@ -700,10 +697,8 @@ export default defineComponent({
     // ]);
 
     // const test = () => {
-    //   console.log('1111333');
     // };
 
-    // console.log('formBaseInfo', formBaseInfo);
 
     return () =>
       isLoading.value ? (

@@ -40,6 +40,7 @@ export interface maxResourceCapacity {
   zone: string;
   vpc?: string;
   subnet?: string;
+  charge_type?: string;
 }
 
 export interface deviceConfigDetail {

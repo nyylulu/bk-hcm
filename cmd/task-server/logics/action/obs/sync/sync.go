@@ -99,13 +99,23 @@ func (act SyncAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, e
 			return nil, err
 		}
 		return nil, nil
+	case enumor.Zenlayer:
+		mainAccount, err := act.getZenlayerMainAccount(kt.Kit(), opt.MainAccountID)
+		if err != nil {
+			return nil, fmt.Errorf("get main account failed, err %s", err.Error())
+		}
+		if err = act.doBatchSyncZenlayerBillitem(kt.Kit(), mainAccount, opt); err != nil {
+			return nil, err
+		}
+		return nil, nil
 	default:
 		return nil, fmt.Errorf("unsupported obs vendor %s", opt.Vendor)
 	}
 }
 
-func (act *SyncAction) getExchangeRate(
+func (act SyncAction) getExchangeRate(
 	kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode, billYear, billMonth int) (*decimal.Decimal, error) {
+
 	expressions := []*filter.AtomRule{
 		tools.RuleEqual("from_currency", fromCurrency),
 		tools.RuleEqual("to_currency", toCurrency),

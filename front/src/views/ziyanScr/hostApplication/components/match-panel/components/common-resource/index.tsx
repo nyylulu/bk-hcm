@@ -1,8 +1,7 @@
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, computed } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Input, Message } from 'bkui-vue';
-import apiService from '@/api/scrApi';
 import http from '@/http';
 import { timeFormatter } from '@/common/util';
 import CommonLocalTable from '@/components/CommonLocalTable';
@@ -13,6 +12,7 @@ import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import DiskTypeSelect from '../../../DiskTypeSelect';
 import { useUserStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
@@ -48,7 +48,6 @@ export default defineComponent({
         label: '腾讯云_CVM',
       },
     ]);
-    const device_types = ref([]);
     const domainList = ref([]);
     const isLoading = ref(false);
     const getListData = async () => {
@@ -161,17 +160,17 @@ export default defineComponent({
     const onResourceTypeChange = () => {
       formModel.spec.region = [];
       formModel.spec.zone = [];
+      formModel.spec.device_type = [];
     };
     const onZoneChange = () => {
       formModel.spec.device_type = [];
     };
-    const loadDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(formModel.spec);
-      device_types.value = info || [];
-    };
-    onMounted(() => {
-      loadDeviceTypes();
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone } = formModel.spec;
+      return { region, zone };
     });
+
     const loadResource = async () => {
       getListData();
     };
@@ -228,11 +227,13 @@ export default defineComponent({
               />
             </FormItem>
             <FormItem label='机型'>
-              <bk-select class='tbkselect' v-model={formModel.spec.device_type} clearable multiple>
-                {device_types.value.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
+              <DevicetypeSelector
+                class='tbkselect'
+                v-model={formModel.spec.device_type}
+                resourceType={formModel.resource_type === 'QCLOUDCVM' ? 'cvm' : 'idcpm'}
+                params={cvmDevicetypeParams.value}
+                multiple
+              />
             </FormItem>
             <FormItem label='数据盘类型'>
               <DiskTypeSelect v-model={formModel.spec.disk_type} />

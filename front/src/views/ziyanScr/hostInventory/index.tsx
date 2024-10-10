@@ -1,4 +1,4 @@
-import { defineComponent, ref, onMounted } from 'vue';
+import { defineComponent, ref, onMounted, computed } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import apiService from '@/api/scrApi';
@@ -6,6 +6,7 @@ import { Button, Form } from 'bkui-vue';
 import { useRouter } from 'vue-router';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 
@@ -93,7 +94,6 @@ export default defineComponent({
       filter.value.cpu = '';
       filter.value.mem = '';
       filter.value.device_type = [];
-      loadDeviceTypes();
     };
     const filterDevices = () => {
       queryrules.value = [
@@ -119,10 +119,12 @@ export default defineComponent({
       filter.value.mem = '';
       deviceConfigDisabled.value = filter.value.device_type.length > 0;
     };
-    const loadDeviceTypes = async () => {
-      const { info } = await apiService.getDeviceTypes(filter.value);
-      options.value.device_types = info || [];
-    };
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone, device_group, cpu, mem, disk, enable_capacity } = filter.value;
+      return { region, zone, device_group, cpu, mem, disk, enable_capacity };
+    });
+
     const loadRestrict = async () => {
       const { cpu, mem } = await apiService.getRestrict();
       options.value.cpu = cpu || [];
@@ -142,7 +144,6 @@ export default defineComponent({
     };
     onMounted(() => {
       loadRestrict();
-      loadDeviceTypes();
       getfetchOptionslist();
     });
 
@@ -232,17 +233,14 @@ export default defineComponent({
               </bk-select>
             </FormItem>
             <FormItem label='机型'>
-              <bk-select
+              <DevicetypeSelector
                 v-model={filter.value.device_type}
-                clearable
+                resourceType='cvm'
+                params={cvmDevicetypeParams.value}
                 multiple
                 disabled={deviceTypeDisabled.value}
-                filterable
-                onChange={handleDeviceTypeChange}>
-                {options.value.device_types.map((item) => (
-                  <bk-option key={item} value={item} label={item}></bk-option>
-                ))}
-              </bk-select>
+                onChange={handleDeviceTypeChange}
+              />
             </FormItem>
             <FormItem label='CPU(核)'>
               <bk-select

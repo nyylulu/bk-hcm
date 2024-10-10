@@ -12,6 +12,7 @@ import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { timeFormatter } from '@/common/util';
+import { FieldList } from '../../../common/info-list/types';
 
 const props = defineProps({
   id: {
@@ -38,7 +39,7 @@ const { getRegionName } = useRegionsStore();
 const { getNameFromBusinessMap } = useBusinessMapStore();
 const { whereAmI } = useWhereAmI();
 
-const settingInfo: any[] = [
+const settingInfo: FieldList = [
   {
     name: 'ID',
     prop: 'id',
@@ -91,7 +92,7 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
   settingInfo.splice(8, 0, {
     name: t('关联CVM实例数'),
     prop: 'cvm_count',
-    render(val: any) {
+    render(val: number) {
       return val;
     },
   });
@@ -102,14 +103,14 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
       {
         name: t('所属VPC'),
         prop: 'vpc_id',
-        render(val: any) {
+        render(val: string) {
           return val;
         },
       },
       {
         name: t('所属云VPC'),
         prop: 'cloud_vpc_id',
-        render(val: any) {
+        render(val: string) {
           return val;
         },
       },
@@ -122,14 +123,14 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
     {
       name: t('关联网络接口数'),
       prop: 'network_interface_count',
-      render(val: any) {
+      render(val: number) {
         return val;
       },
     },
     {
       name: t('关联子网数'),
       prop: 'subnet_count',
-      render(val: any) {
+      render(val: number) {
         return val;
       },
     },
@@ -137,7 +138,6 @@ if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'hua
 }
 
 const handleChange = async (val: any) => {
-  console.log(val);
   try {
     await resourceStore.updateSecurityInfo(props.id, val);
     Message({
@@ -151,6 +151,12 @@ const handleChange = async (val: any) => {
 
 <template>
   <bk-loading :loading="props.loading">
-    <detail-info :fields="settingInfo" :detail="props.detail" @change="handleChange"></detail-info>
+    <detail-info
+      :fields="settingInfo"
+      :detail="props.detail"
+      @change="handleChange"
+      label-width="130px"
+      global-copyable
+    />
   </bk-loading>
 </template>

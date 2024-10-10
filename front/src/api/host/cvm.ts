@@ -2,7 +2,6 @@ import http from '@/http';
 import { getEntirePath } from '@/utils';
 import type {
   cvmProduceQueryReq,
-  cvmDeviceTypeReq,
   cvmDeviceListReq,
   maxResourceCapacity,
   deviceConfigDetail,
@@ -21,15 +20,6 @@ export const getCvmProduceOrderStatusOpts = () => {
 // 注意： 不报错
 export const getCvmProduceOrderList = (params: cvmProduceQueryReq) => {
   return http.post(getEntirePath('cvm/findmany/apply/order'), params);
-};
-
-/**
- * 获取设备类型
- * @param {cvmDeviceTypeReq} params 参数
- * @returns {Promise}
- */
-export const getDeviceTypes = (params: cvmDeviceTypeReq) => {
-  return http.post(getEntirePath('config/findmany/config/cvm/devicetype'), params);
 };
 
 /**

@@ -20,6 +20,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/cmd/woa-server/thirdparty/cvmapi"
 )
 
 // Requirement resource requirement type config
@@ -322,8 +323,15 @@ type GetDeviceInfoResult struct {
 
 // GetDeviceTypeResult get device type result
 type GetDeviceTypeResult struct {
-	Count int64         `json:"count"`
-	Info  []interface{} `json:"info"`
+	Count int64            `json:"count"`
+	Info  []DeviceTypeItem `json:"info"`
+}
+
+// DeviceTypeItem device type item
+type DeviceTypeItem struct {
+	DeviceType      string                   `json:"device_type"`       // 机型
+	DeviceTypeClass cvmapi.InstanceTypeClass `json:"device_type_class"` // 通/专用机型，SpecialType专用，CommonType通用
+	CPUAmount       float64                  `json:"cpu_amount"`        // CPU数量
 }
 
 // DeviceTypeInfo cvm device type info
@@ -451,6 +459,8 @@ type GetCapacityParam struct {
 	Zone        string `json:"zone"`
 	Vpc         string `json:"vpc"`
 	Subnet      string `json:"subnet"`
+	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
+	ChargeType cvmapi.ChargeType `json:"charge_type"`
 }
 
 // Validate whether GetCapacityParam is valid

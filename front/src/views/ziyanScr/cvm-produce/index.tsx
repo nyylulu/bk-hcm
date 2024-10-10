@@ -2,7 +2,7 @@ import { defineComponent, ref, computed, onMounted, onUnmounted, watch } from 'v
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRequireTypes } from '@/api/host/task';
-import { getDeviceTypes, getCvmProduceOrderList, getCvmProducedResources } from '@/api/host/cvm';
+import { getCvmProduceOrderList, getCvmProducedResources } from '@/api/host/cvm';
 import MemberSelect from '@/components/MemberSelect';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
@@ -10,6 +10,7 @@ import FastCvmProduce from './component/fast-cvm-produce';
 import CreateOrder from './component/create-order';
 import { useUserStore } from '@/store';
 import SuccessProduceDetail from './component/success-produce-detail';
+import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import { Button, Form, Select } from 'bkui-vue';
 import { Copy, Plus, Search } from 'bkui-vue/lib/icon';
 import FloatInput from '@/components/float-input';
@@ -177,15 +178,6 @@ export default defineComponent({
         value: item.require_type,
       }));
     };
-    // CVM机型
-    const cvmDeviceTypeList = ref([]);
-    const fetchCvmDeviceType = async () => {
-      const res = await getDeviceTypes({});
-      cvmDeviceTypeList.value = res.data.info.map((item) => ({
-        label: item,
-        value: item,
-      }));
-    };
     const queryProduceOrder = () => {
       pageInfo.value.start = 0;
       loadOrders(true);
@@ -236,9 +228,14 @@ export default defineComponent({
         });
       });
     };
+
+    const cvmDevicetypeParams = computed(() => {
+      const { region, zone } = cvmProduceForm.value;
+      return { region, zone };
+    });
+
     onMounted(() => {
       fetchRequireType();
-      fetchCvmDeviceType();
       loadCvmProduceDetail();
       if (poller.value) clearInterval(poller.value);
       poller.value = setInterval(() => {
@@ -270,11 +267,12 @@ export default defineComponent({
               />
             </FormItem>
             <FormItem label='机型'>
-              <Select v-model={cvmProduceForm.value.device_type} multiple clearable placeholder='请选择'>
-                {cvmDeviceTypeList.value.map(({ value, label }) => {
-                  return <Select.Option key={value} name={label} id={value} />;
-                })}
-              </Select>
+              <DevicetypeSelector
+                v-model={cvmProduceForm.value.device_type}
+                resourceType='cvm'
+                params={cvmDevicetypeParams.value}
+                multiple
+              />
             </FormItem>
             <FormItem label='单号'>
               <FloatInput v-model={cvmProduceForm.value.order_id} placeholder='请输入单号，多个换行分割' />

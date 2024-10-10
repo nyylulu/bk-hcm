@@ -148,33 +148,6 @@ const getRegions = async (vendor: string): Promise<any> => {
   const { data } = await http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/config/${vendor}/region`);
   return data;
 };
-/**
- * 获取设备类型
- * @returns {Promise}
- */
-const getDeviceTypes = async ({ region, zone, require_type = '', device_group = '', enable_capacity = true }) => {
-  const rules = [
-    region?.length && { field: 'region', operator: 'in', value: region },
-    zone?.length && { field: 'zone', operator: 'in', value: zone },
-    require_type && { field: 'require_type', operator: 'equal', value: require_type },
-    device_group && { field: 'label.device_group', operator: 'in', value: device_group },
-    enable_capacity && { field: 'enable_capacity', operator: 'equal', value: enable_capacity },
-  ].filter(Boolean);
-  const { data } = await http.post(
-    `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/devicetype`,
-    {
-      filter: {
-        condition: 'AND',
-        rules,
-      },
-    },
-    {
-      simpleConditions: true,
-      removeEmptyFields: true,
-    },
-  );
-  return data;
-};
 
 /**
  * 获取 cpu mem disk 可选项
@@ -357,9 +330,10 @@ const modifyOrder = async (params) => {
  * @param {String} params.zone 园区
  * @param {String} params.vpc VPC
  * @param {String} params.subnet 子网
+ * @param {String} params.charge_type 计费模式
  * @returns {Promise}
  */
-const getCapacity = async ({ require_type, region, zone, device_type, vpc, subnet }) => {
+const getCapacity = async ({ require_type, region, zone, device_type, vpc, subnet, charge_type }) => {
   const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/find/cvm/capacity`, {
     require_type,
     region,
@@ -367,6 +341,7 @@ const getCapacity = async ({ require_type, region, zone, device_type, vpc, subne
     device_type,
     vpc,
     subnet,
+    charge_type,
   });
   return data;
 };
@@ -395,7 +370,6 @@ export default {
   getAuthApplyUrl,
   getRequireTypes,
   getRegions,
-  getDeviceTypes,
   getVpcs,
   getSubnets,
   getIDCPMDeviceTypes,

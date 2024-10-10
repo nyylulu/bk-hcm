@@ -216,6 +216,8 @@ const (
 	OBSBillHuaweiItemTable = "obs_huawei_bills"
 	// OBSBillAwsItemTable OBS Aws 账单表
 	OBSBillAwsItemTable = "obs_aws_bills"
+	// OBSBillZenlayerItemTable OBS Zenlayer 账单表
+	OBSBillZenlayerItemTable = "obs_zenlayer_bills"
 	// OBSBillGcpItemTable OBS Gcp 账单表
 	OBSBillGcpItemTable = "obs_gcp_bills"
 
@@ -341,11 +343,12 @@ var TableMap = map[Name]struct{}{
 	MainAccountTable: {},
 	RootAccountTable: {},
 
-	OBSBillHuaweiItemTable: {},
-	OBSBillAwsItemTable:    {},
-	OBSBillGcpItemTable:    {},
-	RecycleModuleInfo:      {},
-	RecycleHostInfo:        {},
+	OBSBillHuaweiItemTable:   {},
+	OBSBillAwsItemTable:      {},
+	OBSBillZenlayerItemTable: {},
+	OBSBillGcpItemTable:      {},
+	RecycleModuleInfo:        {},
+	RecycleHostInfo:          {},
 }
 
 // Register 注册表名

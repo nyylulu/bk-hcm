@@ -47,7 +47,7 @@ export default defineComponent({
     const bkZoneNameList = ref([]);
     const subZoneList = ref([]);
     const stageList = ref([]);
-    const { columns } = useColumns('deviceQuery');
+    const { columns } = useColumns('hostRecycleDevice');
     const routeBillDetail = (params) => {
       emit('goBillDetailPage', params);
     };

@@ -1417,3 +1417,25 @@ func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int
 
 	return bizIds, nil
 }
+
+// CheckRollingServerHost check rolling server host
+func (s *service) CheckRollingServerHost(cts *rest.Contexts) (any, error) {
+	input := new(types.CheckRollingServerHostReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to get apply order modify record, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := input.Validate(); err != nil {
+		logs.Errorf("check rolling server host failed, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+	}
+
+	rst, err := s.logics.Scheduler().CheckRollingServerHost(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("check rolling server host failed, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}

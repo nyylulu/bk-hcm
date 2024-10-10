@@ -283,7 +283,7 @@ const groupColumns = [
     label: '是否分配',
     field: 'bk_biz_id',
     sort: true,
-    isOnlyShowInResource: true,
+    notDisplayedInBusiness: true,
     isDefaultShow: true,
     render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => {
       return withDirectives(
@@ -310,7 +310,7 @@ const groupColumns = [
   {
     label: '所属业务',
     field: 'bk_biz_id2',
-    isOnlyShowInResource: true,
+    notDisplayedInBusiness: true,
     render({ data }: any) {
       return h('span', {}, [data.bk_biz_id === -1 ? t('未分配') : businessMapStore.businessMap.get(data.bk_biz_id)]);
     },
@@ -452,11 +452,10 @@ const groupColumns = [
       ]);
     },
   },
-].filter(
-  ({ field }) =>
-    (whereAmI.value === Senarios.business && !['bk_biz_id2', 'bk_biz_id'].includes(field)) ||
-    whereAmI.value !== Senarios.business,
-);
+].filter((item) => {
+  if (Senarios.business === whereAmI.value) return !item.notDisplayedInBusiness;
+  return true;
+});
 
 const groupSettings = generateColumnsSettings(groupColumns);
 
@@ -576,7 +575,7 @@ const gcpColumns = [
     label: '是否分配',
     field: 'bk_biz_id',
     sort: true,
-    isOnlyShowInResource: true,
+    notDisplayedInBusiness: true,
     isDefaultShow: true,
     render: ({ data, cell }: { data: { bk_biz_id: number }; cell: number }) => {
       return withDirectives(
@@ -603,7 +602,7 @@ const gcpColumns = [
   {
     label: '所属业务',
     field: 'bk_biz_id2',
-    isOnlyShowInResource: true,
+    notDisplayedInBusiness: true,
     render({ data }: any) {
       return h('span', {}, [data.bk_biz_id === -1 ? t('未分配') : businessMapStore.businessMap.get(data.bk_biz_id)]);
     },
@@ -682,7 +681,10 @@ const gcpColumns = [
       ]);
     },
   },
-];
+].filter((item) => {
+  if (Senarios.business === whereAmI.value) return !item.notDisplayedInBusiness;
+  return true;
+});
 
 const gcpSettings = generateColumnsSettings(gcpColumns);
 
@@ -755,6 +757,7 @@ const templateColumns = [
     label: '是否分配',
     field: 'bk_biz_id',
     isDefaultShow: true,
+    notDisplayedInBusiness: true,
     render: ({ data }: { data: { bk_biz_id: number }; cell: number }) => {
       return withDirectives(
         h(
@@ -823,10 +826,10 @@ const templateColumns = [
     ({ field }) =>
       (whereAmI.value === Senarios.resource && !['actions'].includes(field)) || whereAmI.value !== Senarios.resource,
   )
-  .filter(
-    ({ field }) =>
-      (whereAmI.value === Senarios.business && field !== 'bk_biz_id') || whereAmI.value !== Senarios.business,
-  );
+  .filter((item) => {
+    if (Senarios.business === whereAmI.value) return !item.notDisplayedInBusiness;
+    return true;
+  });
 
 const templateSettings = generateColumnsSettings(templateColumns);
 
