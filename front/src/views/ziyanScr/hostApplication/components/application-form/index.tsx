@@ -739,7 +739,7 @@ export default defineComponent({
       const { device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
       const { region, zone, charge_type } = resourceForm.value;
       const params = {
-        require_type: 1,
+        require_type: order.value.model.requireType,
         region,
         zone,
         device_type,
