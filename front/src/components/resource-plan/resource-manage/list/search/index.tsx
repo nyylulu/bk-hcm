@@ -1,4 +1,4 @@
-import { defineComponent, nextTick, onBeforeMount, ref, watch } from 'vue';
+import { defineComponent, nextTick, onBeforeMount, ref } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -17,6 +17,7 @@ import {
 } from '@/typings/resourcePlan';
 import { useResourcePlanStore } from '@/store';
 import dayjs from 'dayjs';
+import { useRoute, useRouter } from 'vue-router';
 
 export default defineComponent({
   props: {
@@ -28,6 +29,8 @@ export default defineComponent({
   emits: ['search', 'expectTimeRangeChange'],
   setup(props, { emit }) {
     const { Option } = Select;
+    const router = useRouter();
+    const route = useRoute();
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
     const initialSearchModel: Partial<IListResourcesDemandsParam> = {
@@ -75,12 +78,20 @@ export default defineComponent({
     };
 
     const handleSearch = () => {
+      storeSearchModelInQuery(JSON.stringify(searchModel.value));
       emit('search', searchModel.value);
     };
 
     const handleReset = () => {
+      storeSearchModelInQuery('');
       searchModel.value = JSON.parse(JSON.stringify(initialSearchModel));
       emit('search', searchModel.value);
+    };
+
+    const storeSearchModelInQuery = (searchModelStr: string) => {
+      router.replace({
+        query: { ...route.query, searchModel: searchModelStr },
+      });
     };
 
     const handleChangeDate = (key: string, val: string[]) => {
@@ -204,13 +215,10 @@ export default defineComponent({
         });
     };
 
-    watch(
-      () => searchModel.value.region_ids,
-      () => {
-        searchModel.value.zone_ids = [];
-        getZoneList();
-      },
-    );
+    const onChangeRegion = () => {
+      searchModel.value.zone_ids = [];
+      getZoneList();
+    };
 
     onBeforeMount(() => {
       if (!props.isBiz) {
@@ -224,7 +232,12 @@ export default defineComponent({
       getPlanClassList();
       getRegionList();
       getZoneList();
-      nextTick(() => handleSearch());
+      nextTick(() => {
+        if (route.query.searchModel) {
+          searchModel.value = JSON.parse(route.query.searchModel as string);
+        }
+        handleSearch();
+      });
     });
 
     return () => (
@@ -319,7 +332,11 @@ export default defineComponent({
                 </div>
                 <div>
                   <div class={cssModule['search-label']}>{t('城市')}</div>
-                  <Select multiple v-model={searchModel.value.region_ids} loading={isLoadingRegion.value}>
+                  <Select
+                    multiple
+                    v-model={searchModel.value.region_ids}
+                    loading={isLoadingRegion.value}
+                    onChange={onChangeRegion}>
                     {regionList.value.map((item) => (
                       <Option id={item.region_id} name={item.region_name} />
                     ))}

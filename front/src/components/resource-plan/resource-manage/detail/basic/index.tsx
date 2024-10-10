@@ -19,7 +19,7 @@ export default defineComponent({
     const route = useRoute();
     const { getPlanDemand, getPlanDemandByOrg } = useResourcePlanStore();
 
-    const baseInfo = ref<IPlanDemandResult>();
+    const baseInfo = ref<IPlanDemandResult['data']>();
     const isLoading = ref(false);
 
     const baseList = computed(() => [
@@ -49,9 +49,8 @@ export default defineComponent({
       const { bizs, crpDemandId } = route.query;
       isLoading.value = true;
       try {
-        baseInfo.value = props.isBiz
-          ? await getPlanDemand(+bizs, +crpDemandId)
-          : await getPlanDemandByOrg(+crpDemandId);
+        const result = props.isBiz ? await getPlanDemand(+bizs, +crpDemandId) : await getPlanDemandByOrg(+crpDemandId);
+        baseInfo.value = result.data;
       } catch (error) {
         console.error('Error fetching plan demand details:', error);
       } finally {

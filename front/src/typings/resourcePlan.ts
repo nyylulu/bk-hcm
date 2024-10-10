@@ -296,7 +296,7 @@ export interface IListResourcesDemandsResult {
 
 export type IListResourcesDemandsItem = IListResourcesDemandsResult['details'][number];
 
-export interface IPlanDemandResult {
+interface PlanDemandResult {
   crp_demand_id: string;
   year_month_week: string;
   expect_start_date: string;
@@ -340,6 +340,8 @@ export interface IPlanDemandResult {
   res_mode: string;
   generation_type: string;
 }
+
+export type IPlanDemandResult = IQueryResData<PlanDemandResult>;
 
 export interface IListChangeLogsParam {
   crp_demand_id: number;

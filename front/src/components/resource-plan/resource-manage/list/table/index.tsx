@@ -193,7 +193,7 @@ export default defineComponent({
     } = useTable(getData);
 
     const isRowSelectEnable = ({ row }: { row: IListResourcesDemandsItem }) => {
-      return row.status === ResourcesDemandsStatus.CAN_APPLY;
+      return row.status === ResourcesDemandsStatus.CAN_APPLY || row.status === ResourcesDemandsStatus.NOT_READY;
     };
 
     const handleToAdd = () => {
