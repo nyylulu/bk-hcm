@@ -40,4 +40,6 @@ type CVM struct {
 	ChargeType        cvmapi.ChargeType `json:"chargeType"`
 	ChargeMonths      uint              `json:"chargeMonths"`
 	InheritInstanceId string            `json:"inherit_instance_id"`
+	BkProductID       int64             `json:"bk_product_id"`
+	BkProductName     string            `json:"bk_product_name"`
 }

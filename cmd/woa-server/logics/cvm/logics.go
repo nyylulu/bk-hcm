@@ -21,6 +21,7 @@ import (
 	model "hcm/cmd/woa-server/model/cvm"
 	"hcm/cmd/woa-server/thirdparty"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/cmd/woa-server/thirdparty/esb"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
@@ -46,14 +47,16 @@ type logics struct {
 	cvm       cvmapi.CVMClientInterface
 	cliConf   cc.ClientConfig
 	confLogic config.Logics
+	esbClient esb.Client
 }
 
 // New create a logics manager
-func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics) Logics {
+func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics, esbClient esb.Client) Logics {
 	return &logics{
 		cvm:       thirdCli.CVM,
 		confLogic: confLogic,
 		cliConf:   cliConf,
+		esbClient: esbClient,
 	}
 }
 
@@ -197,7 +200,8 @@ func (l *logics) GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.C
 
 	resp, err := l.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		logs.Errorf("scheduler:logics:cvm:capacity:failed, failed to get cvm apply capacity, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("scheduler:logics:cvm:capacity:failed, failed to get cvm apply capacity, err: %v, rid: %s", err,
+			kt.Rid)
 		return nil, err
 	}
 

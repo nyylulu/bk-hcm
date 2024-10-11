@@ -24,7 +24,9 @@ import (
 
 	"hcm/cmd/woa-server/common/utils"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	cfgtypes "hcm/cmd/woa-server/types/config"
+	cvmtypes "hcm/cmd/woa-server/types/cvm"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
@@ -44,14 +46,14 @@ func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
 		Params: &cvmapi.OrderCreateParams{
 			Zone:          cvm.Zone,
 			DeptName:      cvmapi.CvmLaunchDeptName,
-			ProductName:   cvmapi.CvmLaunchProductName,
+			ProductName:   cvm.BkProductName,
 			Business1Id:   cvmapi.CvmLaunchBiz1Id,
 			Business1Name: cvmapi.CvmLaunchBiz1Name,
 			Business2Id:   cvmapi.CvmLaunchBiz2Id,
 			Business2Name: cvmapi.CvmLaunchBiz2Name,
 			Business3Id:   cvmapi.CvmLaunchBiz3Id,
 			Business3Name: cvmapi.CvmLaunchBiz3Name,
-			ProjectId:     cvmapi.CvmLaunchProjectId,
+			ProjectId:     int(cvm.BkProductID),
 			Image: &cvmapi.Image{
 				ImageId:   cvm.ImageId,
 				ImageName: cvm.ImageName,
@@ -407,7 +409,36 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	req.SecurityGroupName = sg.SecurityGroupName
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
+	productID, productName, err := g.getProductMsg(kt, order)
+	if err != nil {
+		logs.Errorf("get product message failed, err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
+		return nil, err
+	}
+
+	req.BkProductID = productID
+	req.BkProductName = productName
+
 	return req, nil
+}
+
+func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
+	if cvmtypes.RequireType(order.RequireType) == cvmtypes.RollingServer {
+		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
+	}
+
+	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
+	resp, err := g.cc.SearchBizBelonging(kt.Ctx, kt.Header(), param)
+	if err != nil {
+		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
+		return 0, "", err
+	}
+	if resp == nil || len(resp.Data) != 1 {
+		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
+		return 0, "", errors.New("search biz belonging, but resp is empty or len resp != 1")
+	}
+
+	bizBelong := resp.Data[0]
+	return bizBelong.BkProductID, bizBelong.BkProductName, nil
 }
 
 var regionToVpc = map[string]string{

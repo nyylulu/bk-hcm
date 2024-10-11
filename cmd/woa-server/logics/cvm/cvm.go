@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/woa-server/common/utils"
 	model "hcm/cmd/woa-server/model/cvm"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/constant"
@@ -55,6 +56,8 @@ type CVM struct {
 	ChargeType        cvmapi.ChargeType `json:"chargeType"`
 	ChargeMonths      uint              `json:"chargeMonths"`
 	InheritInstanceId string            `json:"inherit_instance_id"`
+	BkProductID       int64             `json:"bk_product_id"`
+	BkProductName     string            `json:"bk_product_name"`
 }
 
 // executeApplyOrder CVM生产-创建单据
@@ -173,7 +176,7 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 		Params: &cvmapi.OrderCreateParams{
 			Zone:          cvm.Zone,
 			DeptName:      cvmapi.CvmLaunchDeptName,
-			ProductName:   cvmapi.CvmLaunchProductName,
+			ProductName:   cvm.BkProductName,
 			Business1Id:   cvmapi.CvmLaunchBiz1Id,
 			Business1Name: cvmapi.CvmLaunchBiz1Name,
 			Business2Id:   cvmapi.CvmLaunchBiz2Id,
@@ -182,7 +185,7 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 			//Business3Name: cvmapi.CvmLaunchBiz3Name,
 			Business3Id:   662584,
 			Business3Name: "CC_SA云化池",
-			ProjectId:     cvmapi.CvmLaunchProjectId,
+			ProjectId:     int(cvm.BkProductID),
 			Image: &cvmapi.Image{
 				ImageId:   cvm.ImageId,
 				ImageName: cvm.ImageName,
@@ -501,9 +504,38 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	req.SecurityGroupName = sg.SecurityGroupName
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
+	productID, productName, err := l.getProductMsg(kt, order)
+	if err != nil {
+		logs.Errorf("get product message failed, err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
+		return nil, err
+	}
+
+	req.BkProductID = productID
+	req.BkProductName = productName
+
 	logs.Infof("scheduler:logics:build:cvm:request:end, order: %+v, req: %+v, rid: %s",
 		cvt.PtrToVal(order), cvt.PtrToVal(req), kt.Rid)
 	return req, nil
+}
+
+func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
+	if types.RequireType(order.RequireType) == types.RollingServer {
+		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
+	}
+
+	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt.Ctx, kt.Header(), param)
+	if err != nil {
+		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
+		return 0, "", err
+	}
+	if resp == nil || len(resp.Data) != 1 {
+		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
+		return 0, "", errors.New("search biz belonging, but resp is empty or len resp != 1")
+	}
+
+	bizBelong := resp.Data[0]
+	return bizBelong.BkProductID, bizBelong.BkProductName, nil
 }
 
 var regionToVpc = map[string]string{
