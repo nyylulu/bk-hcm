@@ -2039,14 +2039,15 @@ export default (type: string, isSimpleShow = false) => {
     const updateId = column.field;
     const originalId = updateId.replaceAll('updated_info', 'original_info');
     const originalVal = getValueByKey(data, originalId);
-    const content = !!originalVal ? `修改前: ${originalVal}` : `暂无修改前数据`;
+    const updatedVal = getValueByKey(data, updateId);
+    const content = originalVal !== updatedVal ? `修改前: ${originalVal}` : `暂无修改前数据`;
     return (
       <Popover content={content}>
         <div class={cssModule['resource-plan-detail-cell']}>
-          {!!originalVal && (
+          {originalVal !== updatedVal && (
             <Info class={[cssModule['resource-plan-detail-info'], cssModule['resource-plan-detail-text']]} />
           )}
-          <span class={!!originalVal && cssModule['resource-plan-detail-text']}>{cell}</span>
+          <span class={originalVal !== updatedVal && cssModule['resource-plan-detail-text']}>{cell}</span>
         </div>
       </Popover>
     );
