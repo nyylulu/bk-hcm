@@ -15,10 +15,13 @@ export default defineComponent({
     const { t } = useI18n();
 
     const handleAdjust = () => {
+      const searchModel = JSON.parse(route.query.searchModel as string);
       router.push({
         path: '/business/service/resource-plan-mod',
         query: {
           planIds: route.query.crpDemandId,
+          start: searchModel.expect_time_range.start,
+          end: searchModel.expect_time_range.end,
         },
       });
     };

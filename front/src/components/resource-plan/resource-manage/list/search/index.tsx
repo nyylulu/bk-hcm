@@ -235,6 +235,7 @@ export default defineComponent({
       nextTick(() => {
         if (route.query.searchModel) {
           searchModel.value = JSON.parse(route.query.searchModel as string);
+          emit('expectTimeRangeChange', searchModel.value.expect_time_range);
         }
         handleSearch();
       });
@@ -265,6 +266,7 @@ export default defineComponent({
                         authed={true}
                         autoSelect={true}
                         isShowAll={true}
+                        clearable={true}
                       />
                     </div>
                     <div>
