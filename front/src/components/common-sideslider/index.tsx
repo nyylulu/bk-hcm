@@ -35,6 +35,7 @@ export default defineComponent({
       type: String as PropType<'show' | 'if'>,
       default: 'show',
     },
+    submitTooltipsOption: Object as PropType<{ content?: string; disabled: boolean }>,
   },
   emits: ['update:isShow', 'handleSubmit', 'handleShown'],
   setup(props, ctx) {
@@ -74,7 +75,8 @@ export default defineComponent({
                     theme='primary'
                     onClick={handleSubmit}
                     disabled={props.isSubmitDisabled}
-                    loading={props.isSubmitLoading}>
+                    loading={props.isSubmitLoading}
+                    v-bk-tooltips={props.submitTooltipsOption}>
                     {t('提交')}
                   </Button>
                   <Button onClick={() => triggerShow(false)}>{t('取消')}</Button>

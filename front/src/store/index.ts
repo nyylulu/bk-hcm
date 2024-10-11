@@ -13,7 +13,7 @@ export * from './common';
 export * from './host';
 export * from './scheme';
 export * from './loadbalancer';
-export * from './ziyanScr';
+export * from './task';
 
 // @ts-ignore
 if (import.meta.hot) {

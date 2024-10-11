@@ -76,7 +76,7 @@ func (hd *lblHandler) Next(kt *kit.Kit) ([]string, error) {
 	listOpt := &typeclb.TCloudListListenersOption{
 		Region:         hd.request.Region,
 		LoadBalancerId: hd.request.LoadBalancerCloudID,
-		CloudIDs:       hd.request.ListenerCloudIds,
+		CloudIDs:       hd.request.CloudIDs,
 		Protocol:       "",
 		Port:           0,
 	}

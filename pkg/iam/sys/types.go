@@ -124,6 +124,9 @@ const (
 	// BizResPlanOperate biz resource plan operate action id to register iam.
 	BizResPlanOperate client.ActionID = "biz_resource_plan_operate"
 
+	// BizTaskManagementOperate biz task management operate action id to register iam.
+	BizTaskManagementOperate client.ActionID = "biz_task_management_operate"
+
 	// AccountFind account find action id to register iam.
 	AccountFind client.ActionID = "account_find"
 	// AccountImport account import action id to register iam.
@@ -254,6 +257,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	BizResPlanOperate: "业务-资源预测操作",
 
 	ServiceResDissolve: "服务-机房裁撤",
+
+	BizTaskManagementOperate: "业务-任务管理操作",
 
 	AccountFind:    "资源-账号查看",
 	AccountImport:  "资源-账号录入",

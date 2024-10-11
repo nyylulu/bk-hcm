@@ -232,6 +232,10 @@ const (
 	RecycleModuleInfo = "recycle_module_info"
 	// RecycleHostInfo  裁撤主机表
 	RecycleHostInfo = "recycle_host_info"
+	// TaskDetailTable 任务详情表
+	TaskDetailTable = "task_detail"
+	// TaskManagementTable 任务管理表
+	TaskManagementTable = "task_management"
 )
 
 // Validate whether the table name is valid or not.
@@ -349,6 +353,9 @@ var TableMap = map[Name]struct{}{
 	OBSBillGcpItemTable:      {},
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
+
+	TaskManagementTable: {},
+	TaskDetailTable:     {},
 }
 
 // Register 注册表名

@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/adaptor/tcloud"
 	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 )
 
@@ -56,6 +57,12 @@ func (cli *CloudAdaptorClient) TCloud(kt *kit.Kit, accountID string) (tcloud.TCl
 	if err != nil {
 		return nil, err
 	}
+
+	client, err := cli.adaptor.TCloud(secret)
+	if err != nil {
+		return nil, err
+	}
+	client.SetRateLimitRetryWithRandomInterval(kt.RequestSource == enumor.AsynchronousTasks)
 
 	return cli.adaptor.TCloud(secret)
 }
