@@ -97,9 +97,14 @@ export default defineComponent({
         requireTypes: [],
       },
     });
-    const computedAvailableSet = computed(() =>
-      resourceForm.value.charge_type === ChargeType.PREPAID ? availablePrepaidSet.value : availablePostpaidSet.value,
-    );
+    const deviceTypeSelectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
+
+    const computedAvailableSet = computed(() => {
+      const set =
+        resourceForm.value.charge_type === ChargeType.PREPAID ? availablePrepaidSet.value : availablePostpaidSet.value;
+      deviceTypeSelectorRef.value.handleSort((a, b) => Number(set.has(b.device_type)) - Number(set.has(a.device_type)));
+      return set;
+    });
     const formRef = ref();
     const IDCPMIndex = ref(-1);
     const QCLOUDCVMIndex = ref(-1);
@@ -577,7 +582,15 @@ export default defineComponent({
         () => resourceForm.value.zone,
       ],
       async ([bk_biz_id, require_type, region, zone]) => {
-        if (!bk_biz_id || !require_type || !region || !zone || resourceForm.value.resourceType !== 'QCLOUDCVM') return;
+        if (
+          !bk_biz_id ||
+          !require_type ||
+          !region ||
+          !zone ||
+          resourceForm.value.resourceType !== 'QCLOUDCVM' ||
+          isRollingServer.value
+        )
+          return;
         isLoadingDeviceType.value = true;
         availablePrepaidSet.value.clear();
         availablePostpaidSet.value.clear();
@@ -1442,6 +1455,7 @@ export default defineComponent({
                             <bk-form-item label='机型' required property='device_type'>
                               <Loading loading={isLoadingDeviceType.value}>
                                 <DevicetypeSelector
+                                  ref='device-type-selector'
                                   class='commonCard-form-select'
                                   v-model={QCLOUDCVMForm.value.spec.device_type}
                                   resourceType='cvm'

@@ -94,6 +94,10 @@ const getOptions = async () => {
   }
 };
 
+const handleSort = (sortFn: (a, b) => number) => {
+  options.value[props.resourceType].sort(sortFn);
+};
+
 watch(
   () => props.params,
   () => {
@@ -101,6 +105,8 @@ watch(
   },
   { immediate: true, deep: true },
 );
+
+defineExpose({ handleSort });
 </script>
 
 <template>
