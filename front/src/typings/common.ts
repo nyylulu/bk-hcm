@@ -31,9 +31,10 @@ export type QueryFilterType = {
 };
 
 export type RulesItem = {
-  field: string;
   op: QueryRuleOPEnum;
-  value: string | number | string[] | number[];
+  field?: string;
+  value?: string | number | string[] | number[];
+  rules?: RulesItem[];
 };
 
 export interface IOption {
@@ -52,7 +53,7 @@ export interface IPageQuery {
 
 export type QueryBuilderType = {
   filter: QueryFilterType;
-  page?: IPageQuery & { start: number; limit: number };
+  page?: IPageQuery;
 };
 
 interface IBaseResData {
@@ -65,7 +66,24 @@ export interface IListResData<T> extends IBaseResData {
   data: { details: T; count: number };
 }
 
+// todo: 改名为 ICommonResData / APIResponse
 // query 接口响应
 export interface IQueryResData<T> extends IBaseResData {
   data: T;
 }
+
+export type PaginationType = {
+  count: number;
+  limit: number;
+  current?: number;
+  'limit-list'?: number[];
+};
+
+export type SortType = {
+  column: {
+    field: string;
+  };
+  type: string;
+};
+
+export type Awaitable<T> = Promise<T> | T;

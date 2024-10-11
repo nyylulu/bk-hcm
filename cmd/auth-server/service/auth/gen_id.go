@@ -785,3 +785,20 @@ func genAwsSavingsPlansCostResource(a *meta.ResourceAttribute) (client.ActionID,
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
 	}
 }
+
+func genTaskManagementResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resource, error) {
+	res := client.Resource{
+		System: sys.SystemIDHCM,
+		Type:   sys.Biz,
+		ID:     strconv.FormatInt(a.BizID, 10),
+	}
+
+	switch a.Basic.Action {
+	case meta.Find:
+		return sys.BizAccess, []client.Resource{res}, nil
+	case meta.Create, meta.Update, meta.Delete:
+		return sys.BizTaskManagementOperate, []client.Resource{res}, nil
+	default:
+		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm action: %s", a.Basic.Action)
+	}
+}

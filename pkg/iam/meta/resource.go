@@ -125,4 +125,7 @@ const (
 
 	// AwsSavingsPlansCost aws savings plans cost
 	AwsSavingsPlansCost ResourceType = "aws_savings_plans_cost"
+
+	// TaskManagement defines task management's hcm auth resource type
+	TaskManagement ResourceType = "task_management"
 )

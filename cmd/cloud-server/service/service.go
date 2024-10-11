@@ -60,6 +60,7 @@ import (
 	"hcm/cmd/cloud-server/service/subnet"
 	"hcm/cmd/cloud-server/service/sync"
 	"hcm/cmd/cloud-server/service/sync/lock"
+	"hcm/cmd/cloud-server/service/task"
 	"hcm/cmd/cloud-server/service/user"
 	"hcm/cmd/cloud-server/service/vpc"
 	"hcm/cmd/cloud-server/service/watch/bkcc"
@@ -147,6 +148,8 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, esbClient)
 
 	go appcvm.TimingHandleDeliverApplication(svr.client, 2*time.Second)
+
+	go task.TimingHandleTaskMgmtState(apiClientSet, sd, time.Second)
 
 	return svr, nil
 }
@@ -345,6 +348,8 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 	asynctask.InitService(c)
 
 	bandwidthpackage.InitService(c)
+
+	task.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

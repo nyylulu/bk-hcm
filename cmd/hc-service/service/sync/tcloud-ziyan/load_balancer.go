@@ -65,8 +65,8 @@ func (hd *lbHandler) Prepare(cts *rest.Contexts) error {
 
 // Next ...
 func (hd *lbHandler) Next(kt *kit.Kit) ([]string, error) {
-	if len(hd.request.CloudIds) > 0 {
-		return hd.request.CloudIds, nil
+	if len(hd.request.CloudIDs) > 0 {
+		return hd.request.CloudIDs, nil
 	}
 	listOpt := &typeclb.TCloudListOption{
 		Region: hd.request.Region,
@@ -112,7 +112,7 @@ func (hd *lbHandler) Sync(kt *kit.Kit, cloudIDs []string) error {
 
 // RemoveDeleteFromCloud ...
 func (hd *lbHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
-	if len(hd.request.CloudIds) > 0 {
+	if len(hd.request.CloudIDs) > 0 {
 		return nil
 	}
 	if err := hd.syncCli.RemoveLoadBalancerDeleteFromCloud(kt, hd.request.AccountID, hd.request.Region); err != nil {

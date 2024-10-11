@@ -340,6 +340,7 @@ const businesseMenus: RouteRecordRaw[] = [
                 },
                 meta: {
                   type: 'all',
+                  isFilterAccount: true,
                 },
               },
               {

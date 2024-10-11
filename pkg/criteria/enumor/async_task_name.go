@@ -46,6 +46,8 @@ func (v ActionName) Validate() error {
 		ActionDailyAccountSplit, ActionDailyAccountSummary, ActionMonthTaskAction:
 	case ActionLoadBalancerDeleteUrlRule, ActionLoadBalancerDeleteListener:
 	case ActionObsClean, ActionObsSync:
+	case ActionBatchTaskTCloudCreateL7Rule, ActionBatchTaskTCloudBindTarget, ActionBatchTaskTCloudCreateListener:
+
 	default:
 		return fmt.Errorf("unsupported action name type: %s", v)
 	}
@@ -135,4 +137,20 @@ const (
 const (
 	ActionObsClean = "obs_bill_clean"
 	ActionObsSync  = "obs_bill_sync"
+)
+
+const (
+	// ActionBatchTaskTCloudBindTarget ...
+	ActionBatchTaskTCloudBindTarget = "batch_task_tcloud_bind_target"
+	// ActionBatchTaskTCloudCreateListener ...
+	ActionBatchTaskTCloudCreateListener = "batch_task_tcloud_create_listener"
+	// ActionBatchTaskTCloudCreateL7Rule ...
+	ActionBatchTaskTCloudCreateL7Rule = "batch_task_tcloud_create_l7_rule"
+)
+
+const (
+	// ActionSyncTCloudLoadBalancer ...
+	ActionSyncTCloudLoadBalancer = "sync_tcloud_load_balancer"
+	// SyncTCloudLoadBalancerListener ...
+	SyncTCloudLoadBalancerListener = "sync_tcloud_load_balancer_listener"
 )
