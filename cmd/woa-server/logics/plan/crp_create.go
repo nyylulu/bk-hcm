@@ -57,13 +57,15 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	case enumor.RPTicketTypeAdjust, enumor.RPTicketTypeDelete:
 		sn, err = c.createAdjustCrpTicket(kt, ticket)
 	default:
-		logs.Errorf("failed to create crp ticket, unsupported ticket type: %s, rid: %s", ticket.Type, kt.Rid)
+		logs.Errorf("failed to create crp ticket, unsupported ticket type: %s, ticket_id: %s, rid: %s", ticket.Type,
+			ticket.ID, kt.Rid)
 		return errors.New("unsupported ticket type")
 	}
 	if err != nil {
 		// 这里主要返回的error是crp ticket创建失败，且ticket状态更新失败的日志在函数内已打印，这里可以忽略该错误
 		_ = c.updateTicketStatusFailed(kt, ticket, err.Error())
-		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, ticket_id: %s, rid: %s", err,
+			ticket.ID, kt.Rid)
 		return err
 	}
 
@@ -78,7 +80,8 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	if err = c.updateTicketStatus(kt, update); err != nil {
-		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to update resource plan ticket status, err: %v, ticket_id: %s, rid: %s", err, ticket.ID,
+			kt.Rid)
 		return err
 	}
 
@@ -139,26 +142,28 @@ func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
 func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
 	addReq, err := c.constructAddReq(kt, ticket)
 	if err != nil {
-		logs.Errorf("failed to construct add cvm & cbs plan order request, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to construct add cvm & cbs plan order request, err: %v, ticket_id: %s, rid: %s", err,
+			ticket.ID, kt.Rid)
 		return "", err
 	}
 
 	resp, err := c.crpCli.AddCvmCbsPlan(kt.Ctx, kt.Header(), addReq)
 	if err != nil {
-		logs.Errorf("failed to add cvm & cbs plan order, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to add cvm & cbs plan order, err: %v, ticket_id: %s, rid: %s", err, ticket.ID, kt.Rid)
 		return "", err
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
+		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, ticket_id: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, ticket.ID, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}
 
 	sn := resp.Result.OrderId
 	if sn == "" {
-		logs.Errorf("failed to add cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
+		logs.Errorf("failed to add cvm & cbs plan order, for return empty order id, ticket_id: %s, rid: %s", ticket.ID,
+			kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
 	}
 

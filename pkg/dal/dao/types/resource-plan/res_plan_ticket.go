@@ -47,6 +47,8 @@ type RPTicketWithStatus struct {
 	rpt.ResPlanTicketTable
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
+	ItsmSn     string                `db:"itsm_sn" json:"-"`
+	CrpSn      string                `db:"crp_sn" json:"-"`
 }
 
 // RPTicketWithStatusAndRes resource plan ticket with status and resource.

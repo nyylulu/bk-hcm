@@ -22,17 +22,23 @@ package demandtime
 import (
 	"time"
 
-	"hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/tools/times"
 )
 
+// DemandYearMonthWeek is the year, month and week of the month from a demand perspective.
+type DemandYearMonthWeek struct {
+	Year  int        `json:"year"`
+	Month time.Month `json:"month"`
+	Week  int        `json:"week"`
+}
+
 // GetDemandYearMonthWeek returns the year, month and week of the month based on the input time from a demand
 // perspective.
 // 需求年月周：当一周内出现跨月（自然月）的情况，则根据哪个自然月的日期更多，划为该“月”的需求年月周。
 // 举例：2024-08-26 ～ 2024-09-01分别是周一至周日，而8月的日期比9月的日期多，则该周划为2024-08需求年月的最后一周
-func GetDemandYearMonthWeek(t time.Time) plan.DemandYearMonthWeek {
+func GetDemandYearMonthWeek(t time.Time) DemandYearMonthWeek {
 	year, month := GetDemandYearMonth(t)
 
 	// 从输入时间t逐周往前回溯，若前一周的需求年月与当前不同，则需求年月周++
@@ -47,7 +53,7 @@ func GetDemandYearMonthWeek(t time.Time) plan.DemandYearMonthWeek {
 		week += 1
 	}
 
-	return plan.DemandYearMonthWeek{
+	return DemandYearMonthWeek{
 		Year:  year,
 		Month: month,
 		Week:  week,
@@ -125,6 +131,16 @@ func getDemandMonthStartEnd(t time.Time) (time.Time, time.Time) {
 	}
 
 	return startDate, endDate
+}
+
+// IsDayCrossMonth 给定日期，判断日期是否在周纬度跨月且该日期属于下个月
+func IsDayCrossMonth(t time.Time) bool {
+	weekdays := Weekdays(t)
+
+	if weekdays[0].Month() != t.Month() {
+		return true
+	}
+	return false
 }
 
 // IsAboutToExpire check whether the cvm and cbs plan is about to expire

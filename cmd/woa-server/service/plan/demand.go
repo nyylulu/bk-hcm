@@ -126,7 +126,9 @@ func (s *service) listResPlanDemand(cts *rest.Contexts, req *ptypes.ListResPlanD
 	}
 
 	// 从CRP接口查询完整数据
-	entireDetails, err := s.planController.ListCrpDemands(cts.Kit, req, regionNames, zoneNames)
+	req.RegionNames = regionNames
+	req.ZoneNames = zoneNames
+	entireDetails, err := s.planController.ListCrpDemands(cts.Kit, req)
 	if err != nil {
 		logs.Errorf("failed to list resource plan demand, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -293,7 +295,7 @@ func sortPageListResPlanCrpDemandResp(details []*ptypes.ListResPlanDemandItem, p
 		// 计算overview
 		overview.TotalCpuCore += item.TotalCpuCore
 		overview.TotalAppliedCore += item.AppliedCpuCore
-		overview.ExpiringCpuCore += item.ExpiredCpuCore
+		overview.ExpiringCpuCore += item.ExpiringCpuCore
 		if item.PlanType.InPlan() {
 			overview.InPlanCpuCore += item.TotalCpuCore
 			overview.InPlanAppliedCpuCore += item.AppliedCpuCore
@@ -358,8 +360,12 @@ func filterResPlanDemandResp(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, deta
 				kt.Rid)
 			continue
 		}
+		isAbortToExpire := demandtime.IsAboutToExpire(expectTimeFmt)
+		if isAbortToExpire {
+			item.ExpiringCpuCore = item.RemainedCpuCore
+		}
 		if req.ExpiringOnly {
-			if !demandtime.IsAboutToExpire(expectTimeFmt) {
+			if !isAbortToExpire {
 				continue
 			}
 		}
@@ -417,7 +423,7 @@ func getListResPlanDemandItem(demandDetail *ptypes.PlanDemandDetail) (
 		TotalCpuCore:       demandDetail.TotalCpuCore,
 		AppliedCpuCore:     demandDetail.AppliedCpuCore,
 		RemainedCpuCore:    demandDetail.RemainedCpuCore,
-		ExpiredCpuCore:     demandDetail.ExpiredCpuCore,
+		ExpiringCpuCore:    demandDetail.ExpiringCpuCore,
 		TotalMemory:        demandDetail.TotalMemory,
 		AppliedMemory:      demandDetail.AppliedMemory,
 		RemainedMemory:     demandDetail.RemainedMemory,
@@ -534,7 +540,9 @@ func (s *service) getPlanDemandDetail(cts *rest.Contexts, demandID int64, bkBizI
 			fmt.Errorf("failed to convert demand list request to crp request: %s", err.Error()))
 	}
 	// get demand detail 和 list demands 调用的同一个接口
-	listDetails, err := s.planController.ListCrpDemands(cts.Kit, req, regionNames, zoneNames)
+	req.RegionNames = regionNames
+	req.ZoneNames = zoneNames
+	listDetails, err := s.planController.ListCrpDemands(cts.Kit, req)
 	if err != nil {
 		logs.Errorf("failed to get plan demand detail, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)

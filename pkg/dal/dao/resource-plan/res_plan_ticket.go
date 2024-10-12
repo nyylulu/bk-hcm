@@ -261,7 +261,8 @@ func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
 	for _, col := range rpt.ResPlanTicketColumns.Columns() {
 		columns = append(columns, "rpt."+col)
 	}
-	sql := fmt.Sprintf(`SELECT %s, rpts.status FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s %s`,
+	sql := fmt.Sprintf(
+		`SELECT %s, rpts.status, rpts.itsm_sn, rpts.crp_sn FROM %s rpt JOIN %s rpts ON rpt.id = rpts.ticket_id %s %s`,
 		strings.Join(columns, ","), table.ResPlanTicketTable, table.ResPlanTicketStatusTable, whereExpr, pageExpr)
 
 	details := make([]rtypes.RPTicketWithStatus, 0)
@@ -278,8 +279,9 @@ func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
 }
 
 // ListWithStatusAndRes list resource plan ticket with status and resource.
-func (d ResPlanTicketDao) ListWithStatusAndRes(kt *kit.Kit, opt *types.ListOption) (*rtypes.RPTicketWithStatusAndResListRst,
-	error) {
+func (d ResPlanTicketDao) ListWithStatusAndRes(kt *kit.Kit, opt *types.ListOption) (
+	*rtypes.RPTicketWithStatusAndResListRst, error) {
+
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list res plan ticket options is nil")
 	}

@@ -18,6 +18,7 @@ import (
 	"slices"
 	"unicode/utf8"
 
+	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
@@ -272,8 +273,12 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		return err
 	}
 
-	if _, err := times.ParseDay(r.ExpectTime); err != nil {
+	et, err := times.ParseDay(r.ExpectTime)
+	if err != nil {
 		return err
+	}
+	if demandtime.IsDayCrossMonth(et) {
+		return errors.New("expect_time should not be cross month")
 	}
 
 	if r.DemandSource != "" {
@@ -398,4 +403,51 @@ type GetRPTicketDemand struct {
 	DemandClass  enumor.DemandClass        `json:"demand_class"`
 	OriginalInfo *rpt.OriginalRPDemandItem `json:"original_info"`
 	UpdatedInfo  *rpt.UpdatedRPDemandItem  `json:"updated_info"`
+}
+
+// TransferResPlanTicketReq is transfer demand ticket request.
+type TransferResPlanTicketReq struct {
+	TicketIDs []string `json:"ticket_ids" binding:"required,max=100"`
+}
+
+// Validate validate transfer demand ticket request.
+func (t *TransferResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(t); err != nil {
+		return err
+	}
+
+	if len(t.TicketIDs) == 0 {
+		return errors.New("ticket_ids should not be empty")
+	}
+
+	return nil
+}
+
+// GenListTicketsOption generate list option for transfer demand ticket.
+func (t *TransferResPlanTicketReq) GenListTicketsOption() *types.ListOption {
+	return t.genListOption("id")
+}
+
+// GenListDemandsOption generate list option for transfer demand ticket.
+func (t *TransferResPlanTicketReq) GenListDemandsOption() *types.ListOption {
+	return t.genListOption("demand_id")
+}
+
+func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string) *types.ListOption {
+	rules := []filter.RuleFactory{
+		tools.ContainersExpression(ticketIDKey, t.TicketIDs),
+	}
+
+	opt := &types.ListOption{
+		Filter: &filter.Expression{
+			Op:    filter.And,
+			Rules: rules,
+		},
+		Page: &core.BasePage{
+			Start: 0,
+			Limit: core.DefaultMaxPageLimit,
+		},
+	}
+
+	return opt
 }

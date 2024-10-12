@@ -316,7 +316,6 @@ func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.Pl
 			TotalCpuCore:     item.PlanCoreAmount,
 			AppliedCpuCore:   item.ApplyCoreAmount,
 			RemainedCpuCore:  item.RealCoreAmount,
-			ExpiredCpuCore:   item.ExpiredCoreAmount,
 			TotalMemory:      item.PlanRamAmount,
 			AppliedMemory:    item.ApplyRamAmount,
 			RemainedMemory:   item.RealRamAmount,
@@ -329,18 +328,30 @@ func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.Pl
 	return rst
 }
 
-// ListCrpDemands 返回全量数据
-func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq,
-	reqRegionNames, reqZoneNames []string) (
+// ListCrpDemands 返回全量数据，listReq 中的分页参数将被忽略
+func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq) (
 	[]*ptypes.PlanDemandDetail, error) {
 
 	params := &cvmapi.CvmCbsPlanQueryParam{
-		BgName:       []string{cvmapi.CvmCbsPlanQueryBgName}, // 强制仅查询IEG的预测需求
-		DemandIdList: listReq.CrpDemandIDs,
-		InstanceType: listReq.DeviceClasses,
-		ProjectName:  listReq.ObsProjects,
-		CityName:     reqRegionNames,
-		ZoneName:     reqZoneNames,
+		BgName: []string{cvmapi.CvmCbsPlanQueryBgName}, // 强制仅查询IEG的预测需求
+	}
+	if len(listReq.CrpDemandIDs) > 0 {
+		params.DemandIdList = listReq.CrpDemandIDs
+	}
+	if len(listReq.DeviceClasses) > 0 {
+		params.InstanceType = listReq.DeviceClasses
+	}
+	if len(listReq.ObsProjects) > 0 {
+		params.ProjectName = listReq.ObsProjects
+	}
+	if len(listReq.RegionNames) > 0 {
+		params.CityName = listReq.RegionNames
+	}
+	if len(listReq.ZoneNames) > 0 {
+		params.ZoneName = listReq.ZoneNames
+	}
+	if len(listReq.OrderIDs) > 0 {
+		params.OrderIdList = listReq.OrderIDs
 	}
 	if listReq.ExpectTimeRange != nil {
 		params.UseTime = &cvmapi.UseTime{

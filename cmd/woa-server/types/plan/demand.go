@@ -45,9 +45,12 @@ type ListResPlanDemandReq struct {
 	DeviceClasses   []string             `json:"device_classes" validate:"omitempty,max=100"`
 	DeviceTypes     []string             `json:"device_types" validate:"omitempty,max=100"`
 	RegionIDs       []string             `json:"region_ids" validate:"omitempty,max=100"`
+	RegionNames     []string             `json:"-"`
 	ZoneIDs         []string             `json:"zone_ids" validate:"omitempty,max=100"`
+	ZoneNames       []string             `json:"-"`
 	PlanTypes       []enumor.PlanType    `json:"plan_types" validate:"omitempty,max=100"`
 	ExpiringOnly    bool                 `json:"expiring_only" validate:"omitempty"`
+	OrderIDs        []string             `json:"-"`
 	ExpectTimeRange *times.DateRange     `json:"expect_time_range" validate:"required"`
 	Page            *core.BasePage       `json:"page" validate:"required"`
 }
@@ -199,7 +202,7 @@ type ListResPlanDemandItem struct {
 	TotalCpuCore       float32             `json:"total_cpu_core"`
 	AppliedCpuCore     float32             `json:"applied_cpu_core"`
 	RemainedCpuCore    float32             `json:"remained_cpu_core"`
-	ExpiredCpuCore     float32             `json:"-"` // ExpiredCpuCore 目前仅用于计算overview
+	ExpiringCpuCore    float32             `json:"-"` // ExpiringCpuCore 即将过期核心数，目前仅用于计算overview
 	TotalMemory        float32             `json:"total_memory"`
 	AppliedMemory      float32             `json:"applied_memory"`
 	RemainedMemory     float32             `json:"remained_memory"`
@@ -273,7 +276,7 @@ type PlanDemandDetail struct {
 	TotalCpuCore            float32 `json:"total_cpu_core"`
 	AppliedCpuCore          float32 `json:"applied_cpu_core"`
 	RemainedCpuCore         float32 `json:"remained_cpu_core"`
-	ExpiredCpuCore          float32 `json:"expired_cpu_core"`
+	ExpiringCpuCore         float32 `json:"expiring_cpu_core"`
 	TotalMemory             float32 `json:"total_memory"`
 	AppliedMemory           float32 `json:"applied_memory"`
 	RemainedMemory          float32 `json:"remained_memory"`

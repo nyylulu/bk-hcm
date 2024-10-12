@@ -50,3 +50,24 @@ func TestGetDemandDateRangeInMonth(t *testing.T) {
 		return
 	}
 }
+
+func TestIsDayCrossMonth(t *testing.T) {
+	in := []time.Time{
+		time.Date(2024, 12, 31, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 1, 1, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 2, 28, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 3, 2, 0, 0, 0, 0, time.Local),
+	}
+	expect := []bool{
+		false,
+		true,
+		false,
+		true,
+	}
+	for i, d := range in {
+		if IsDayCrossMonth(d) != expect[i] {
+			t.Errorf("test is day cross month failed, got: %+v", d)
+			return
+		}
+	}
+}
