@@ -334,7 +334,7 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		}
 		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
 
-		updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, ticket.PlanProductName, crpDemand, demand)
+		updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
 		if err != nil {
 			logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -374,7 +374,7 @@ func (c *Controller) getCrpDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int
 // if adjust type is update, updated item are normal.
 // if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with remainOs.
 // if adjust type is cancel, updated will be empty.
-func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType, planProdName string,
+func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
 	crpSrcDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (*cvmapi.AdjustUpdatedData, error) {
 
 	// if adjust type is cancel, updated will be empty.
@@ -388,23 +388,19 @@ func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.C
 		CvmCbsPlanQueryItem: crpSrcDemand.Clone(),
 	}
 
-	// supplement updated data.
-	updatedData.CityName = demand.Updated.RegionName
-	updatedData.ZoneName = demand.Updated.ZoneName
-	updatedData.InstanceModel = demand.Updated.Cvm.DeviceType
-	updatedData.CvmAmount = float32(demand.Updated.Cvm.Os)
-	updatedData.CoreAmount = float32(demand.Updated.Cvm.CpuCore)
-	updatedData.InstanceIO = int(demand.Updated.Cbs.DiskIo)
-	updatedData.DiskTypeName = demand.Updated.Cbs.DiskTypeName
-	updatedData.AllDiskAmount = float32(demand.Updated.Cbs.DiskSize)
-	updatedData.ProjectName = string(demand.Updated.ObsProject)
-	updatedData.UseTime = demand.Updated.ExpectTime
-	updatedData.PlanProductName = planProdName
-
 	switch adjustType {
 	case enumor.CrpAdjustTypeUpdate:
-		// do nothing.
+		updatedData.CityName = demand.Updated.RegionName
+		updatedData.ZoneName = demand.Updated.ZoneName
+		updatedData.InstanceModel = demand.Updated.Cvm.DeviceType
+		updatedData.CvmAmount = float32(demand.Updated.Cvm.Os)
+		updatedData.CoreAmount = float32(demand.Updated.Cvm.CpuCore)
+		updatedData.InstanceIO = int(demand.Updated.Cbs.DiskIo)
+		updatedData.DiskTypeName = demand.Updated.Cbs.DiskTypeName
+		updatedData.AllDiskAmount = float32(demand.Updated.Cbs.DiskSize)
+		updatedData.ProjectName = string(demand.Updated.ObsProject)
 	case enumor.CrpAdjustTypeDelay:
+		updatedData.UseTime = demand.Updated.ExpectTime
 		updatedData.TimeAdjustCvmAmount = crpSrcDemand.CvmAmount
 	default:
 		logs.Errorf("invalid adjust type: %s, rid: %s", adjustType, kt.Rid)
