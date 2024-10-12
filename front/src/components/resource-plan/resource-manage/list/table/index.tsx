@@ -229,8 +229,8 @@ export default defineComponent({
     };
 
     const handleCancel = () => {
-      if (!authVerifyData.value.permissionAction.resource_plan_update) {
-        handleAuth('resource_plan_update');
+      if (!authVerifyData.value.permissionAction.biz_resource_plan_operate) {
+        handleAuth('biz_resource_plan_operate');
         globalPermissionDialog.setShow(true);
       } else {
         currentRowsData.value = selection.value;

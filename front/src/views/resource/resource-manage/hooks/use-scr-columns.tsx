@@ -2034,20 +2034,21 @@ export default (type: string, isSimpleShow = false) => {
   }: {
     cell: string;
     column: { field: string };
-    data: object;
+    data: Record<string, any>;
   }) => {
     const updateId = column.field;
     const originalId = updateId.replaceAll('updated_info', 'original_info');
     const originalVal = getValueByKey(data, originalId);
     const updatedVal = getValueByKey(data, updateId);
-    const content = originalVal !== updatedVal ? `修改前: ${originalVal}` : `暂无修改前数据`;
+    const isChanging = originalVal !== updatedVal && data.original_info;
+    const content = isChanging ? `修改前: ${originalVal}` : `暂无修改前数据`;
     return (
       <Popover content={content}>
         <div class={cssModule['resource-plan-detail-cell']}>
-          {originalVal !== updatedVal && (
+          {isChanging && (
             <Info class={[cssModule['resource-plan-detail-info'], cssModule['resource-plan-detail-text']]} />
           )}
-          <span class={originalVal !== updatedVal && cssModule['resource-plan-detail-text']}>{cell}</span>
+          <span class={isChanging && cssModule['resource-plan-detail-text']}>{cell}</span>
         </div>
       </Popover>
     );
