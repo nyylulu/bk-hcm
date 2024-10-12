@@ -526,7 +526,8 @@ func (c *Controller) GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64)
 	prodMaxAvailablePool := make(ResPlanPool)
 	for k, v := range prodPlanPool {
 		if k.PlanType == enumor.PlanTypeHcmInPlan {
-			prodMaxAvailablePool[k] = v * 1.2
+			// TODO: 预测内的总预测需要 * 120%，目前没整清楚120%的逻辑，先按100%计算
+			prodMaxAvailablePool[k] = v
 		} else {
 			prodMaxAvailablePool[k] = v
 		}
