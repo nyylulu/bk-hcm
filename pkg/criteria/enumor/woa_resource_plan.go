@@ -486,7 +486,7 @@ func (p PlanType) InPlan() bool {
 
 // GetCrpConsumeResPlanSourceTypes get crp system source types of consuming resource plan.
 func GetCrpConsumeResPlanSourceTypes() []string {
-	return []string{"申领自动调整", "申领划扣"}
+	return []string{"申领划扣", "申领划扣退回"}
 }
 
 // VerifyResPlanRst is verify resource plan result.

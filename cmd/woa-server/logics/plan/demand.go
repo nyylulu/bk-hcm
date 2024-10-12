@@ -381,6 +381,8 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 				continue
 			}
 
+			// 消耗预测CRP changelog中ChangeCoreAmount对应负值，因此需要乘-1取反
+			consumeCpuCore := -float64(changelog.ChangeCoreAmount)
 			elem := ResPlanElem{
 				PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
 				AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
@@ -388,7 +390,7 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 				ObsProject:    enumor.ObsProject(demand.ProjectName),
 				RegionName:    demand.CityName,
 				ZoneName:      demand.ZoneName,
-				CpuCore:       float64(changelog.ChangeCoreAmount),
+				CpuCore:       consumeCpuCore,
 			}
 			mutex.Lock()
 			orderConsumeMap[changelog.OrderId] = elem
