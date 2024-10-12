@@ -32,6 +32,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
+	rpcd "hcm/pkg/dal/table/resource-plan/res-plan-crp-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
@@ -67,13 +68,13 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	crpDemandIDs := slice.Map(req.Adjusts, func(adjust ptypes.AdjustRPDemandReqElem) int64 { return adjust.CrpDemandID })
 
 	// check whether all crp demand belong to the biz.
-	allBelonged, err := s.areAllCrpDemandBelongToBiz(cts.Kit, crpDemandIDs, bkBizID)
+	allBelong, err := s.areAllCrpDemandBelongToBiz(cts.Kit, crpDemandIDs, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to check whether all crp demand belong to biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	if !allBelonged {
+	if !allBelong {
 		logs.Errorf("not all adjust crp demand belong to biz: %d, rid: %s", bkBizID, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, fmt.Errorf("not all adjust crp demand belong to biz: %d", bkBizID))
 	}
@@ -86,7 +87,7 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	}
 
 	// examine and lock all resource plan demand.
-	if err = s.planController.ExamineAndLockAllRPDemand(cts.Kit, crpDemandIDs); err != nil {
+	if err = s.dao.ResPlanCrpDemand().ExamineAndLockAllRPDemand(cts.Kit, crpDemandIDs); err != nil {
 		logs.Errorf("failed to examine and lock all resource plan demand, err: %v, rid: %s", err, cts.Kit.Rid)
 		return "", errf.NewFromErr(errf.Aborted, err)
 	}
@@ -94,7 +95,7 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	// defer is used to unlock all resource plan demand when some errors occur.
 	defer func() {
 		if err != nil {
-			if tmpErr := s.planController.UnlockAllResPlanDemand(cts.Kit, crpDemandIDs); tmpErr != nil {
+			if tmpErr := s.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(cts.Kit, crpDemandIDs); tmpErr != nil {
 				logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", tmpErr, cts.Kit.Rid)
 			}
 		}
@@ -136,15 +137,11 @@ func (s *service) areAllCrpDemandBelongToBiz(kt *kit.Kit, crpDemandIDs []int64, 
 		return false, err
 	}
 
-	result := true
-	for _, item := range rst.Details {
-		if item.BkBizID != bkBizID {
-			result = false
-			break
-		}
-	}
+	notAllBelong := slices.ContainsFunc(rst.Details, func(ele rpcd.ResPlanCrpDemandTable) bool {
+		return ele.BkBizID != bkBizID
+	})
 
-	return result, nil
+	return !notAllBelong, nil
 }
 
 // examineDemandClass examine whether all demands are the same demand class, and return the demand class.
@@ -234,6 +231,10 @@ func (s *service) constructAdjustReq(kt *kit.Kit, bkBizID int64, demandClass enu
 func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPDemandReqElem,
 	demandClass enumor.DemandClass) ([]rpt.ResPlanDemand, error) {
 
+	if len(updates) == 0 {
+		return nil, nil
+	}
+
 	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
 	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
 	if err != nil {
@@ -258,14 +259,15 @@ func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPD
 			DemandClass: demandClass,
 			Original:    demandOriginMap[update.CrpDemandID],
 			Updated: &rpt.UpdatedRPDemandItem{
-				ObsProject: update.UpdatedInfo.ObsProject,
-				ExpectTime: update.UpdatedInfo.ExpectTime,
-				ZoneID:     update.UpdatedInfo.ZoneID,
-				ZoneName:   zoneMap[update.UpdatedInfo.ZoneID],
-				RegionID:   update.UpdatedInfo.RegionID,
-				RegionName: regionAreaMap[update.UpdatedInfo.RegionID].RegionName,
-				AreaID:     regionAreaMap[update.UpdatedInfo.RegionID].AreaID,
-				AreaName:   regionAreaMap[update.UpdatedInfo.RegionID].AreaName,
+				ObsProject:   update.UpdatedInfo.ObsProject,
+				ExpectTime:   update.UpdatedInfo.ExpectTime,
+				ZoneID:       update.UpdatedInfo.ZoneID,
+				ZoneName:     zoneMap[update.UpdatedInfo.ZoneID],
+				RegionID:     update.UpdatedInfo.RegionID,
+				RegionName:   regionAreaMap[update.UpdatedInfo.RegionID].RegionName,
+				AreaID:       regionAreaMap[update.UpdatedInfo.RegionID].AreaID,
+				AreaName:     regionAreaMap[update.UpdatedInfo.RegionID].AreaName,
+				DemandSource: update.DemandSource,
 			},
 		}
 
@@ -298,11 +300,15 @@ func (s *service) constructUpdateDemands(kt *kit.Kit, updates []ptypes.AdjustRPD
 
 // constructOriginalDemandMap construct original demand map.
 // return crp demand id and demand class map, crp demand id and remain cpu core map.
-func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) (
-	map[int64]*rpt.OriginalRPDemandItem, map[int64]float64, error) {
+func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int64]*rpt.OriginalRPDemandItem,
+	map[int64]float64, error) {
 
-	// call crp interface to search raw demands.
-	crpDemands, err := s.planController.QueryAllDemands(kt, &plan.QueryAllDemandsReq{CrpDemandIDs: crpDemandIDs})
+	if len(crpDemandIDs) == 0 {
+		return make(map[int64]*rpt.OriginalRPDemandItem), make(map[int64]float64), nil
+	}
+
+	// call crp interface to get demand details.
+	crpDemands, err := s.planController.QueryIEGDemands(kt, &plan.QueryIEGDemandsReq{CrpDemandIDs: crpDemandIDs})
 	if err != nil {
 		logs.Errorf("failed to query all demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, err
@@ -340,31 +346,29 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 		deviceType := crpDemand.InstanceModel
 		demandOriginMap[demandID] = &rpt.OriginalRPDemandItem{
 			CrpDemandID: demandID,
-			UpdatedRPDemandItem: rpt.UpdatedRPDemandItem{
-				ObsProject: enumor.ObsProject(crpDemand.ProjectName),
-				ExpectTime: crpDemand.UseTime,
-				ZoneID:     zoneNameMap[crpDemand.ZoneName],
-				ZoneName:   crpDemand.ZoneName,
-				RegionID:   regionAreaNameMap[crpDemand.CityName].RegionID,
-				RegionName: crpDemand.CityName,
-				AreaID:     regionAreaNameMap[crpDemand.CityName].AreaID,
-				AreaName:   regionAreaNameMap[crpDemand.CityName].AreaName,
-				Cvm: rpt.Cvm{
-					ResMode:      crpDemand.ResourceMode,
-					DeviceType:   deviceType,
-					DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-					DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-					CoreType:     deviceTypeMap[deviceType].CoreType,
-					Os:           float64(crpDemand.PlanCvmAmount),
-					CpuCore:      float64(crpDemand.PlanCoreAmount),
-					Memory:       float64(crpDemand.PlanRamAmount),
-				},
-				Cbs: rpt.Cbs{
-					DiskType:     diskType,
-					DiskTypeName: diskType.Name(),
-					DiskIo:       int64(crpDemand.InstanceIO),
-					DiskSize:     float64(crpDemand.PlanDiskAmount),
-				},
+			ObsProject:  enumor.ObsProject(crpDemand.ProjectName),
+			ExpectTime:  crpDemand.UseTime,
+			ZoneID:      zoneNameMap[crpDemand.ZoneName],
+			ZoneName:    crpDemand.ZoneName,
+			RegionID:    regionAreaNameMap[crpDemand.CityName].RegionID,
+			RegionName:  crpDemand.CityName,
+			AreaID:      regionAreaNameMap[crpDemand.CityName].AreaID,
+			AreaName:    regionAreaNameMap[crpDemand.CityName].AreaName,
+			Cvm: rpt.Cvm{
+				ResMode:      crpDemand.ResourceMode,
+				DeviceType:   deviceType,
+				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
+				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
+				CoreType:     deviceTypeMap[deviceType].CoreType,
+				Os:           float64(crpDemand.PlanCvmAmount),
+				CpuCore:      float64(crpDemand.PlanCoreAmount),
+				Memory:       float64(crpDemand.PlanRamAmount),
+			},
+			Cbs: rpt.Cbs{
+				DiskType:     diskType,
+				DiskTypeName: diskType.Name(),
+				DiskIo:       int64(crpDemand.InstanceIO),
+				DiskSize:     float64(crpDemand.PlanDiskAmount),
 			},
 		}
 
@@ -378,6 +382,10 @@ func (s *service) constructOriginalDemandMap(kt *kit.Kit, crpDemandIDs []int64) 
 // constructDelayDemands construct delay demand.
 func (s *service) constructDelayDemands(kt *kit.Kit, delays []ptypes.AdjustRPDemandReqElem,
 	demandClass enumor.DemandClass) ([]rpt.ResPlanDemand, error) {
+
+	if len(delays) == 0 {
+		return nil, nil
+	}
 
 	crpDemandIDs := slice.Map(delays, func(delay ptypes.AdjustRPDemandReqElem) int64 {
 		return delay.CrpDemandID
@@ -454,13 +462,13 @@ func (s *service) CancelBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	}
 
 	// check whether all crp demand belong to the biz.
-	allBelonged, err := s.areAllCrpDemandBelongToBiz(cts.Kit, req.CrpDemandIDs, bkBizID)
+	allBelong, err := s.areAllCrpDemandBelongToBiz(cts.Kit, req.CrpDemandIDs, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to check whether all crp demand belong to biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	if !allBelonged {
+	if !allBelong {
 		logs.Errorf("not all adjust crp demand belong to biz: %d, rid: %s", bkBizID, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, fmt.Errorf("not all adjust crp demand belong to biz: %d", bkBizID))
 	}
@@ -473,7 +481,7 @@ func (s *service) CancelBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	}
 
 	// examine and lock all resource plan demand.
-	if err = s.planController.ExamineAndLockAllRPDemand(cts.Kit, req.CrpDemandIDs); err != nil {
+	if err = s.dao.ResPlanCrpDemand().ExamineAndLockAllRPDemand(cts.Kit, req.CrpDemandIDs); err != nil {
 		logs.Errorf("failed to examine and lock all resource plan demand, err: %v, rid: %s", err, cts.Kit.Rid)
 		return "", errf.NewFromErr(errf.Aborted, err)
 	}
@@ -481,7 +489,7 @@ func (s *service) CancelBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 	// defer is used to unlock all resource plan demand when some errors occur.
 	defer func() {
 		if err != nil {
-			if tmpErr := s.planController.UnlockAllResPlanDemand(cts.Kit, req.CrpDemandIDs); tmpErr != nil {
+			if tmpErr := s.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(cts.Kit, req.CrpDemandIDs); tmpErr != nil {
 				logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", tmpErr, cts.Kit.Rid)
 			}
 		}

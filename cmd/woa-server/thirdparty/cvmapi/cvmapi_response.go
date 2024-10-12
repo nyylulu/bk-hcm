@@ -235,6 +235,79 @@ type CvmCbsPlanQueryItem struct {
 	GenerationType        string  `json:"generation_type"`
 }
 
+// Clone return a clone CvmCbsPlanQueryItem.
+func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
+	return &CvmCbsPlanQueryItem{
+		BaseCoreAmount:        i.BaseCoreAmount,
+		BaseCvmAmount:         i.BaseCvmAmount,
+		SliceId:               i.SliceId,
+		YearMonth:             i.YearMonth,
+		Year:                  i.Year,
+		Month:                 i.Month,
+		Week:                  i.Week,
+		YearMonthWeek:         i.YearMonthWeek,
+		ExpectStartDate:       i.ExpectStartDate,
+		ExpectEndDate:         i.ExpectEndDate,
+		UseTime:               i.UseTime,
+		BgId:                  i.BgId,
+		BgName:                i.BgName,
+		DeptId:                i.DeptId,
+		DeptName:              i.DeptName,
+		PlanProductId:         i.PlanProductId,
+		PlanProductName:       i.PlanProductName,
+		ProjectName:           i.ProjectName,
+		OrderId:               i.OrderId,
+		CityId:                i.CityId,
+		CityName:              i.CityName,
+		ZoneId:                i.ZoneId,
+		ZoneName:              i.ZoneName,
+		InPlan:                i.InPlan,
+		PlanWeek:              i.PlanWeek,
+		ExpeditedPostponed:    i.ExpeditedPostponed,
+		CoreType:              i.CoreType,
+		CoreTypeName:          i.CoreTypeName,
+		InstanceFamily:        i.InstanceFamily,
+		InstanceType:          i.InstanceType,
+		InstanceModel:         i.InstanceModel,
+		InstanceIO:            i.InstanceIO,
+		DiskType:              i.DiskType,
+		DiskTypeName:          i.DiskTypeName,
+		CvmAmount:             i.CvmAmount,
+		RamAmount:             i.RamAmount,
+		CoreAmount:            i.CoreAmount,
+		AllDiskAmount:         i.AllDiskAmount,
+		ApplyCvmAmount:        i.ApplyCvmAmount,
+		ApplyRamAmount:        i.ApplyRamAmount,
+		ApplyCoreAmount:       i.ApplyCoreAmount,
+		ApplyDiskAmount:       i.ApplyDiskAmount,
+		PlanCvmAmount:         i.PlanCvmAmount,
+		PlanRamAmount:         i.PlanRamAmount,
+		PlanCoreAmount:        i.PlanCoreAmount,
+		PlanDiskAmount:        i.PlanDiskAmount,
+		ExpiredCvmAmount:      i.ExpiredCvmAmount,
+		ExpiredRamAmount:      i.ExpiredRamAmount,
+		ExpiredCoreAmount:     i.ExpiredCoreAmount,
+		ExpiredDiskAmount:     i.ExpiredDiskAmount,
+		RealCvmAmount:         i.RealCvmAmount,
+		RealRamAmount:         i.RealRamAmount,
+		RealCoreAmount:        i.RealCoreAmount,
+		RealDiskAmount:        i.RealDiskAmount,
+		MjOrderId:             i.MjOrderId,
+		RequirementStatus:     i.RequirementStatus,
+		RequirementStatusName: i.RequirementStatusName,
+		RequirementWeekType:   i.RequirementWeekType,
+		IsManualWeekType:      i.IsManualWeekType,
+		IsInProcessing:        i.IsInProcessing,
+		ProcessingOrderId:     i.ProcessingOrderId,
+		DemandId:              i.DemandId,
+		ResourcePoolType:      i.ResourcePoolType,
+		ResourcePoolName:      i.ResourcePoolName,
+		ResourceMode:          i.ResourceMode,
+		StatisticalClass:      i.StatisticalClass,
+		GenerationType:        i.GenerationType,
+	}
+}
+
 // CvmCbsPlanAdjustResp cvm and cbs plan adjust response
 type CvmCbsPlanAdjustResp struct {
 	RespMeta  `json:",inline"`
@@ -244,6 +317,12 @@ type CvmCbsPlanAdjustResp struct {
 
 // CvmCbsPlanAdjustRst cvm and cbs plan adjust result
 type CvmCbsPlanAdjustRst struct {
+	Status int                     `json:"status"`
+	Data   CvmCbsPlanAdjustRstElem `json:"data"`
+}
+
+// CvmCbsPlanAdjustRstElem cvm and cbs plan adjust result element
+type CvmCbsPlanAdjustRstElem struct {
 	Status  int    `json:"status"`
 	OrderId string `json:"orderId"`
 }

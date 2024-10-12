@@ -21,9 +21,12 @@
 package resplan
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
@@ -47,6 +50,10 @@ type ResPlanCrpDemandInterface interface {
 	Update(kt *kit.Kit, expr *filter.Expression, model *rpcd.ResPlanCrpDemandTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanCrpDemandListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
+	ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error
+	// UnlockAllResPlanDemand unlock all resource plan demand.
+	UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error
 }
 
 var _ ResPlanCrpDemandInterface = new(ResPlanCrpDemandDao)
@@ -197,6 +204,68 @@ func (d ResPlanCrpDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
 		logs.ErrorJson("delete resource plan crp demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
+func (d ResPlanCrpDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error {
+	if len(crpDemandIDs) == 0 {
+		return errors.New("crp demand ids can not be empty")
+	}
+
+	opt := tools.ContainersExpression("crp_demand_id", crpDemandIDs)
+	whereExpr, whereValue, err := opt.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		details := make([]rpcd.ResPlanCrpDemandTable, 0)
+		selectSql := fmt.Sprintf(`SELECT crp_demand_id, locked FROM %s %s`, table.ResPlanCrpDemandTable, whereExpr)
+		if err = d.Orm.Txn(txn).Select(kt.Ctx, &details, selectSql, whereValue); err != nil {
+			return nil, err
+		}
+
+		haveLocked := slices.ContainsFunc(details, func(ele rpcd.ResPlanCrpDemandTable) bool {
+			return ele.Locked != nil && *ele.Locked == enumor.CrpDemandLocked
+		})
+		if haveLocked {
+			return nil, errors.New("some resource plan demand has been locked")
+		}
+
+		updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanCrpDemandTable, enumor.CrpDemandLocked,
+			whereExpr)
+		return d.Orm.Txn(txn).Update(kt.Ctx, updateSql, whereValue)
+	})
+
+	if err != nil {
+		logs.ErrorJson("examine and lock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// UnlockAllResPlanDemand unlock all resource plan demand.
+func (d ResPlanCrpDemandDao) UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error {
+	if len(crpDemandIDs) == 0 {
+		return errors.New("crp demand ids can not be empty")
+	}
+
+	opt := tools.ContainersExpression("crp_demand_id", crpDemandIDs)
+	whereExpr, whereValue, err := opt.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanCrpDemandTable, enumor.CrpDemandUnLocked,
+		whereExpr)
+
+	if _, err = d.Orm.Do().Update(kt.Ctx, updateSql, whereValue); err != nil {
+		logs.ErrorJson("unlock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

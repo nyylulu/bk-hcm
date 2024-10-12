@@ -22,7 +22,7 @@ package plan
 import (
 	"errors"
 	"fmt"
-	"unicode/utf8"
+	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/enumor"
@@ -66,7 +66,7 @@ type CreateResPlanTicketReq struct {
 	DemandClass enumor.DemandClass  `json:"demand_class" validate:"required"`
 	BizOrgRel   ptypes.BizOrgRel    `json:"biz_org_rel" validate:"required"`
 	Demands     rpt.ResPlanDemands  `json:"demands" validate:"required"`
-	Remark      string              `json:"remark" validate:"required"`
+	Remark      string              `json:"remark" validate:"omitempty"`
 }
 
 // Validate whether CreateResPlanTicketReq is valid.
@@ -124,24 +124,34 @@ func (r *CreateResPlanTicketReq) Validate() error {
 		}
 	}
 
-	lenRemark := utf8.RuneCountInString(r.Remark)
-	if lenRemark < 20 || lenRemark > 1024 {
-		return errors.New("len remark should be >= 20 and < 1024")
-	}
-
 	return nil
 }
 
-// QueryAllDemandsReq query all demands request.
-type QueryAllDemandsReq struct {
-	ExpectTimeRange *times.DateRange
-	CrpDemandIDs    []int64
-	CrpSns          []string
-	DeviceClasses   []string
-	PlanProdNames   []string
-	ObsProjects     []string
-	RegionNames     []string
-	ZoneNames       []string
+// QueryIEGDemandsReq query IEG demands request.
+type QueryIEGDemandsReq struct {
+	ExpectTimeRange *times.DateRange `json:"expect_time_range" validate:"omitempty"`
+	CrpDemandIDs    []int64          `json:"crp_demand_ids" validate:"omitempty"`
+	CrpSns          []string         `json:"crp_sns" validate:"omitempty"`
+	DeviceClasses   []string         `json:"device_classes" validate:"omitempty"`
+	PlanProdNames   []string         `json:"plan_prod_names" validate:"omitempty"`
+	ObsProjects     []string         `json:"obs_projects" validate:"omitempty"`
+	RegionNames     []string         `json:"region_names" validate:"omitempty"`
+	ZoneNames       []string         `json:"zone_names" validate:"omitempty"`
+}
+
+// Validate whether QueryIEGDemandsReq is valid.
+func (r *QueryIEGDemandsReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, crpDemandID := range r.CrpDemandIDs {
+		if crpDemandID <= 0 {
+			return errors.New("crp demand id should be > 0")
+		}
+	}
+
+	return nil
 }
 
 // AvailableTime available time.
@@ -149,21 +159,29 @@ type AvailableTime string
 
 // NewAvailableTime new an available time.
 // TODO: 目前只关注年和月，未来会添加周
-func NewAvailableTime(year, month int) AvailableTime {
+func NewAvailableTime(year int, month time.Month) AvailableTime {
 	return AvailableTime(fmt.Sprintf("%04d-%02d", year, month))
 }
 
 // VerifyResPlanElem verify resource plan element.
 type VerifyResPlanElem struct {
-	// IsAnyPlanType if IsAnyPlanType is true, it will examine both InPlan and OutPlan plan types.
-	IsAnyPlanType bool
-	PlanType      enumor.PlanType
+	// if IsPrePaid is true, Verify function will examine:
+	// 1. InPlan + OutPlan >= applied.
+	// 2. InPlan * 120% - consumed >= applied.
+	// otherwise, it will only examine InPlan + OutPlan >= applied.
+	IsPrePaid     bool
 	AvailableTime AvailableTime
 	DeviceType    string
 	ObsProject    enumor.ObsProject
 	RegionName    string
 	ZoneName      string
 	CpuCore       float64
+}
+
+// VerifyResPlanResElem verify resource plan result element.
+type VerifyResPlanResElem struct {
+	VerifyResult enumor.VerifyResPlanRst `json:"verify_result"`
+	Reason       string                  `json:"reason"`
 }
 
 // ResPlanElem resource plan element.

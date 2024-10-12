@@ -211,69 +211,15 @@ type AdjustBaseInfo struct {
 
 // AdjustSrcData adjust source data for cvm and cbs plan info adjust params
 type AdjustSrcData struct {
-	AdjustType          string  `json:"adjustType"`
-	CityId              int     `json:"cityId"`
-	CityName            string  `json:"cityName"`
-	ZoneId              int     `json:"zoneId"`
-	ZoneName            string  `json:"zoneName"`
-	InstanceType        string  `json:"instanceType"`
-	InstanceModel       string  `json:"instanceModel"`
-	CvmAmount           float32 `json:"cvmAmount"`
-	RamAmount           float32 `json:"ramAmount"`
-	CoreAmount          float32 `json:"coreAmount"`
-	InstanceIO          int     `json:"instanceIO"`
-	DiskType            int     `json:"diskType"`
-	DiskTypeName        string  `json:"diskTypeName"`
-	AllDiskAmount       float32 `json:"allDiskAmount"`
-	Desc                string  `json:"desc"`
-	ProjectName         string  `json:"projectName"`
-	RequirementWeekType string  `json:"requirementWeekType"`
-	Year                int     `json:"year"`
-	Month               int     `json:"month"`
-	UseTime             string  `json:"useTime"`
-	BgId                int     `json:"bgId"`
-	BgName              string  `json:"bgName"`
-	DeptId              int     `json:"deptId"`
-	DeptName            string  `json:"deptName"`
-	PlanProductId       int     `json:"planProductId"`
-	PlanProductName     string  `json:"planProductName"`
-	//added @2022.3.29
-	SliceId string `json:"sliceId"`
+	AdjustType           string `json:"adjustType"`
+	*CvmCbsPlanQueryItem `json:",inline"`
 }
 
 // AdjustUpdatedData adjust target data for cvm and cbs plan info adjust params
 type AdjustUpdatedData struct {
-	AdjustType          string  `json:"adjustType"`
-	TimeAdjustCvmAmount float32 `json:"timeAdjustCvmAmount,omitempty"`
-	CityId              int     `json:"cityId"`
-	CityName            string  `json:"cityName"`
-	ZoneId              int     `json:"zoneId"`
-	ZoneName            string  `json:"zoneName"`
-	InstanceType        string  `json:"instanceType"`
-	InstanceModel       string  `json:"instanceModel"`
-	CvmAmount           float32 `json:"cvmAmount"`
-	RamAmount           float32 `json:"ramAmount"`
-	CoreAmount          float32 `json:"coreAmount"`
-	InstanceIO          int     `json:"instanceIO"`
-	DiskType            int     `json:"diskType"`
-	DiskTypeName        string  `json:"diskTypeName"`
-	AllDiskAmount       float32 `json:"allDiskAmount"`
-	Desc                string  `json:"desc"`
-	ProjectName         string  `json:"projectName"`
-	RequirementWeekType string  `json:"requirementWeekType"`
-	IsManualWeekType    int     `json:"isManualWeekType"`
-	Year                int     `json:"year"`
-	Month               int     `json:"month"`
-	UseTime             string  `json:"useTime"`
-	BgId                int     `json:"bgId"`
-	BgName              string  `json:"bgName"`
-	DeptId              int     `json:"deptId"`
-	DeptName            string  `json:"deptName"`
-	PlanProductId       int     `json:"planProductId"`
-	PlanProductName     string  `json:"planProductName"`
-
-	//added @2022.3.29
-	SliceId string `json:"sliceId"`
+	AdjustType           string  `json:"adjustType"`
+	TimeAdjustCvmAmount  float32 `json:"timeAdjustCvmAmount,omitempty"`
+	*CvmCbsPlanQueryItem `json:",inline"`
 }
 
 // AddCvmCbsPlanReq add cvm and cbs plan order request

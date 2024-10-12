@@ -15,18 +15,17 @@ package plan
 import (
 	"fmt"
 	"slices"
+	"sort"
 	"time"
 
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/model/config"
+	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/tools"
-	"hcm/pkg/dal/dao/types/meta"
-	woadevicetype "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -65,8 +64,8 @@ func (s *service) VerifyResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 func (s *service) verifyResPlanDemand(kt *kit.Kit, bizOrgRel *ptypes.BizOrgRel, obsProject enumor.ObsProject,
 	suborders []task.Suborder) ([]ptypes.VerifyResPlanDemandElem, error) {
 
-	// get needed meta maps.
-	regionMap, zoneMap, deviceTypeMap, err := s.getVerifyRPDemandNeededMap(kt)
+	// get meta maps.
+	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("failed to get verify resource plan demand needed map, err: %v, rid: %s", err, kt.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -85,23 +84,21 @@ func (s *service) verifyResPlanDemand(kt *kit.Kit, bizOrgRel *ptypes.BizOrgRel, 
 			continue
 		}
 
-		// if charge type is postpaid by hour, set is any plan type to true.
-		isAnyPlanType := false
-		if subOrder.Spec.ChargeType == cvmapi.ChargeTypePostPaidByHour {
-			isAnyPlanType = true
+		isPrePaid := true
+		if subOrder.Spec.ChargeType != cvmapi.ChargeTypePrePaid {
+			isPrePaid = false
 		}
 
-		// TODO：可用日期目前设置为当前月份，需改为crp定义的可用年月
-		availableTime := plan.NewAvailableTime(time.Now().Year(), int(time.Now().Month()))
+		nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
+		availableTime := plan.NewAvailableTime(nowDemandYear, nowDemandMonth)
 
 		indexMap[len(verifySlice)] = idx
 		verifySlice = append(verifySlice, plan.VerifyResPlanElem{
-			IsAnyPlanType: isAnyPlanType,
-			PlanType:      enumor.PlanTypeHcmInPlan,
+			IsPrePaid:     isPrePaid,
 			AvailableTime: availableTime,
 			DeviceType:    subOrder.Spec.DeviceType,
 			ObsProject:    obsProject,
-			RegionName:    regionMap[subOrder.Spec.Region].RegionName,
+			RegionName:    regionAreaMap[subOrder.Spec.Region].RegionName,
 			ZoneName:      zoneMap[subOrder.Spec.Zone],
 			CpuCore:       float64(subOrder.Replicas) * float64(deviceTypeMap[subOrder.Spec.DeviceType].CpuCore),
 		})
@@ -115,44 +112,14 @@ func (s *service) verifyResPlanDemand(kt *kit.Kit, bizOrgRel *ptypes.BizOrgRel, 
 	}
 
 	// set result.
-	for idx, pass := range rst {
-		verifyResult := enumor.VerifyResPlanRstFailed
-		if pass {
-			verifyResult = enumor.VerifyResPlanRstPass
-		}
+	for idx, ele := range rst {
 		result[indexMap[idx]] = ptypes.VerifyResPlanDemandElem{
-			VerifyResult: verifyResult,
+			VerifyResult: ele.VerifyResult,
+			Reason:       ele.Reason,
 		}
 	}
 
 	return result, nil
-}
-
-// getVerifyRPDemandNeededMap get verify resource plan demand needed region map, zone map, device type map.
-func (s *service) getVerifyRPDemandNeededMap(kt *kit.Kit) (map[string]meta.RegionArea, map[string]string,
-	map[string]woadevicetype.WoaDeviceTypeTable, error) {
-	// get region map.
-	regionMap, err := s.dao.WoaZone().GetRegionAreaMap(kt)
-	if err != nil {
-		logs.Errorf("failed to get region area map, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	// get zone map.
-	zoneMap, err := s.dao.WoaZone().GetZoneMap(kt)
-	if err != nil {
-		logs.Errorf("failed to get zone map, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	// get device type map.
-	deviceTypeMap, err := s.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
-	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, nil, err
-	}
-
-	return regionMap, zoneMap, deviceTypeMap, nil
 }
 
 // GetCvmChargeTypeDeviceType get cvm charge type device type.
@@ -175,33 +142,34 @@ func (s *service) GetCvmChargeTypeDeviceType(cts *rest.Contexts) (interface{}, e
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	// get op product all remained resource plan.
-	prodRemainMap, err := s.planController.GetProdResRemainPool(cts.Kit, bizOrgRel.OpProductID, bizOrgRel.PlanProductID)
+	// get op product remained resource plan.
+	_, prodMaxAvailable, err := s.planController.GetProdResRemainPool(cts.Kit, bizOrgRel.OpProductID,
+		bizOrgRel.PlanProductID)
 	if err != nil {
 		logs.Errorf("failed to get op product remained resource plan, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	// get needed meta maps.
-	regionMap, zoneMap, _, err := s.getVerifyRPDemandNeededMap(cts.Kit)
+	// get meta maps.
+	zoneMap, regionAreaMap, _, err := s.getMetaMaps(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to get verify resource plan demand needed map, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
 	obsProject := req.RequireType.ToObsProject()
-	regionName := regionMap[req.Region].RegionName
+	regionName := regionAreaMap[req.Region].RegionName
 	zoneName := zoneMap[req.Zone]
 
 	prePaidAvlDeviceTypes, err := s.getChargeTypeAvlDeviceTypes(cts.Kit, cvmapi.ChargeTypePrePaid, obsProject,
-		regionName, zoneName, prodRemainMap)
+		regionName, zoneName, prodMaxAvailable)
 	if err != nil {
 		logs.Errorf("failed to get pre paid available device types, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
 	postPaidByHourAvlDeviceTypes, err := s.getChargeTypeAvlDeviceTypes(cts.Kit, cvmapi.ChargeTypePostPaidByHour,
-		obsProject, regionName, zoneName, prodRemainMap)
+		obsProject, regionName, zoneName, prodMaxAvailable)
 	if err != nil {
 		logs.Errorf("failed to get post paid by hour available device types, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -290,33 +258,18 @@ func (s *service) getPlanTypeAvlDeviceTypes(kt *kit.Kit, planType enumor.PlanTyp
 	// get available device type map.
 	avlDeviceTypeMap := make(map[string]struct{})
 
-	// TODO：可用日期目前设置为当前月份，需改为crp定义的可用年月
-	availableTime := plan.NewAvailableTime(time.Now().Year(), int(time.Now().Month()))
+	nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
+	availableTime := plan.NewAvailableTime(nowDemandYear, nowDemandMonth)
 
-	for _, deviceType := range matchedDeviceTypes {
-		key := plan.ResPlanPoolKey{
-			PlanType:      planType,
-			AvailableTime: availableTime,
-			DeviceType:    deviceType,
-			ObsProject:    obsProject,
-			RegionName:    regionName,
-			ZoneName:      zoneName,
-		}
+	for key, remain := range prodRemainMap {
+		if key.PlanType == planType &&
+			key.AvailableTime == availableTime &&
+			key.ObsProject == obsProject &&
+			key.RegionName == regionName &&
+			(key.ZoneName == zoneName || zoneName == "") &&
+			remain > 0 {
 
-		if v := prodRemainMap[key]; v > 0 {
-			avlDeviceTypeMap[deviceType] = struct{}{}
-		}
-
-		keyWithoutZone := plan.ResPlanPoolKey{
-			PlanType:      planType,
-			AvailableTime: availableTime,
-			DeviceType:    deviceType,
-			ObsProject:    obsProject,
-			RegionName:    regionName,
-		}
-
-		if v := prodRemainMap[keyWithoutZone]; v > 0 {
-			avlDeviceTypeMap[deviceType] = struct{}{}
+			avlDeviceTypeMap[key.DeviceType] = struct{}{}
 		}
 	}
 
@@ -351,6 +304,11 @@ func (s *service) getPlanTypeAvlDeviceTypes(kt *kit.Kit, planType enumor.PlanTyp
 		}
 	}
 
+	// sort result, put available of true to the head.
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Available
+	})
+
 	return result, nil
 }
 
@@ -366,8 +324,12 @@ func (s *service) getMatchedDeviceTypesFromMgo(kt *kit.Kit, regionName, zoneName
 	// construct mongodb filter.
 	mgoFilter := map[string]interface{}{
 		"region":       regionNameMap[regionName].RegionID,
-		"zone":         zoneNameMap[zoneName],
 		"enable_apply": true,
+	}
+
+	// zone name may be empty, if it is not empty, supplement it into filter.
+	if zoneName != "" {
+		mgoFilter["zone"] = zoneNameMap[zoneName]
 	}
 
 	matchedDeviceTypeInterfaces, err := config.Operation().CvmDevice().FindManyDeviceType(kt.Ctx, mgoFilter)

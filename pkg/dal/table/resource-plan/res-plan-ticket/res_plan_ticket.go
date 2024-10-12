@@ -161,8 +161,29 @@ func (d *ResPlanDemand) Validate() error {
 
 // OriginalRPDemandItem is original resource plan demand item.
 type OriginalRPDemandItem struct {
-	CrpDemandID         int64 `json:"crp_demand_id"`
-	UpdatedRPDemandItem `json:",inline"`
+	CrpDemandID int64 `json:"crp_demand_id"`
+	// ObsProject OBS项目类型
+	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
+	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
+	ExpectTime string `json:"expect_time" validate:"lte=64"`
+	// ZoneID 可用区ID
+	ZoneID string `json:"zone_id" validate:"lte=64"`
+	// ZoneName 可用区名称
+	ZoneName string `json:"zone_name" validate:"lte=64"`
+	// RegionID 地区/城市ID
+	RegionID string `json:"region_id" validate:"lte=64"`
+	// RegionName 地区/城市名称
+	RegionName string `json:"region_name" validate:"lte=64"`
+	// AreaID 地域ID
+	AreaID string `json:"area_id" validate:"lte=64"`
+	// AreaName 地域名称
+	AreaName string `json:"area_name" validate:"lte=64"`
+	// Remark 需求备注
+	Remark string `json:"remark" validate:"lte=255"`
+	// Cvm cvm信息
+	Cvm Cvm `json:"cvm"`
+	// Cbs cbs信息
+	Cbs Cbs `json:"cbs"`
 }
 
 // Validate whether OriginalRPDemandItem is valid.
@@ -175,7 +196,37 @@ func (i *OriginalRPDemandItem) Validate() error {
 		return errors.New("crp demand id can not be empty")
 	}
 
-	if err := i.UpdatedRPDemandItem.Validate(); err != nil {
+	if err := i.ObsProject.Validate(); err != nil {
+		return err
+	}
+
+	if len(i.ExpectTime) == 0 {
+		return errors.New("expect time can not be empty")
+	}
+
+	// NOTE: zone can be empty.
+
+	if len(i.RegionID) == 0 {
+		return errors.New("region id can not be empty")
+	}
+
+	if len(i.RegionName) == 0 {
+		return errors.New("region name can not be empty")
+	}
+
+	if len(i.AreaID) == 0 {
+		return errors.New("area id can not be empty")
+	}
+
+	if len(i.AreaName) == 0 {
+		return errors.New("area name can not be empty")
+	}
+
+	if err := i.Cvm.Validate(); err != nil {
+		return err
+	}
+
+	if err := i.Cbs.Validate(); err != nil {
 		return err
 	}
 
@@ -380,10 +431,6 @@ func (r ResPlanTicketTable) InsertValidate() error {
 
 	if err := r.validateValue(); err != nil {
 		return err
-	}
-
-	if len(r.Remark) < 20 {
-		return errors.New("len remark should be >= 20")
 	}
 
 	if len(r.Creator) == 0 {

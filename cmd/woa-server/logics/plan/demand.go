@@ -23,18 +23,21 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"slices"
 	"strconv"
 	"sync"
+	"time"
 
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rpcd "hcm/pkg/dal/table/resource-plan/res-plan-crp-demand"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/converter"
 )
 
@@ -73,10 +76,14 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 	return result, nil
 }
 
-// QueryAllDemands query all demands.
-func (c *Controller) QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error) {
+// QueryIEGDemands query IEG crp demands.
+func (c *Controller) QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error) {
 	if req == nil {
 		return nil, errors.New("request is nil")
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, err
 	}
 
 	// init request parameter.
@@ -91,6 +98,7 @@ func (c *Controller) QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*c
 				Start: 0,
 				Size:  int(core.DefaultMaxPageLimit),
 			},
+			BgName: []string{cvmapi.CvmCbsPlanQueryBgName},
 		},
 	}
 
@@ -179,97 +187,6 @@ func (c *Controller) ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enum
 	return demandClass, nil
 }
 
-// ExamineAndLockAllRPDemand examine all resource plan demand lock status and lock all resource plan demand.
-// TODO：目前此函数不在一个事务中，会有并发问题
-func (c *Controller) ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error {
-	if len(crpDemandIDs) == 0 {
-		return errors.New("crp demand ids is empty")
-	}
-
-	// examine whether all resource plan demand is unlocked.
-	pass, err := c.examineAllRPDemandLockStatus(kt, crpDemandIDs)
-	if err != nil {
-		logs.Errorf("failed to examine all resource plan demand lock status, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	if !pass {
-		logs.Errorf("some demands are locked, rid: %s", kt.Rid)
-		return errors.New("some demands are locked")
-	}
-
-	// lock all resource plan demand.
-	if err = c.lockAllResPlanDemand(kt, crpDemandIDs); err != nil {
-		logs.Errorf("failed to lock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
-// examineAllRPDemandLockStatus examine all resource plan demand lock status, return whether pass or not.
-func (c *Controller) examineAllRPDemandLockStatus(kt *kit.Kit, crpDemandIDs []int64) (bool, error) {
-	listOpt := &types.ListOption{
-		Fields: []string{"crp_demand_id", "locked"},
-		Filter: tools.ContainersExpression("crp_demand_id", crpDemandIDs),
-		Page:   core.NewDefaultBasePage(),
-	}
-
-	rst, err := c.dao.ResPlanCrpDemand().List(kt, listOpt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return false, err
-	}
-
-	demandLockStatusMap := make(map[int64]enumor.CrpDemandLockStatus)
-	for _, detail := range rst.Details {
-		if detail.Locked == nil {
-			logs.Errorf("locked of crp demand id: %d is empty, rid: %s", detail.CrpDemandID, kt.Rid)
-			return false, fmt.Errorf("locked of crp demand id: %d is empty", detail.CrpDemandID)
-		}
-
-		demandLockStatusMap[detail.CrpDemandID] = *detail.Locked
-	}
-
-	for _, status := range demandLockStatusMap {
-		if status == enumor.CrpDemandLocked {
-			return false, nil
-		}
-	}
-
-	return true, nil
-}
-
-// lockAllResPlanDemand lock all resource plan demand.
-func (c *Controller) lockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error {
-	expr := tools.ContainersExpression("crp_demand_id", crpDemandIDs)
-	lockedDemand := &rpcd.ResPlanCrpDemandTable{
-		Locked: converter.ValToPtr(enumor.CrpDemandLocked),
-	}
-
-	if err := c.dao.ResPlanCrpDemand().Update(kt, expr, lockedDemand); err != nil {
-		logs.Errorf("failed to lock resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
-// UnlockAllResPlanDemand unlock all resource plan demand.
-func (c *Controller) UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error {
-	expr := tools.ContainersExpression("crp_demand_id", crpDemandIDs)
-	unlockedDemand := &rpcd.ResPlanCrpDemandTable{
-		Locked: converter.ValToPtr(enumor.CrpDemandUnLocked),
-	}
-
-	if err := c.dao.ResPlanCrpDemand().Update(kt, expr, unlockedDemand); err != nil {
-		logs.Errorf("failed to unlock resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
 // GetProdResPlanPool get op product resource plan pool.
 func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool, error) {
 	// get op product all unlocked crp demand ids.
@@ -283,7 +200,7 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 	}
 
 	// get product all unlocked crp demand details.
-	demands, err := c.listAllCrpDemandDetails(kt, opt)
+	demands, err := c.listCrpDemandDetails(kt, opt)
 	if err != nil {
 		logs.Errorf("failed to list all crp demand details, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -293,25 +210,29 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 	pool := make(ResPlanPool)
 	strUnionFind := NewStrUnionFind()
 	for _, demand := range demands {
-		// merge matched device type.
-		deviceType := demand.InstanceModel
-		for _, ele := range strUnionFind.Elements() {
-			matched, err := c.IsDeviceMatched(kt, []string{demand.InstanceModel}, ele)
-			if err != nil {
-				logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
-				return nil, err
-			}
+		strUnionFind.Add(demand.InstanceModel)
+	}
 
-			if matched[0] {
-				strUnionFind.Union(ele, demand.InstanceModel)
-				deviceType = strUnionFind.Find(ele)
+	for _, demand := range demands {
+		// merge match device type.
+		deviceType := demand.InstanceModel
+		matches, err := c.IsDeviceMatched(kt, strUnionFind.Elements(), demand.InstanceModel)
+		if err != nil {
+			logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		for idx, match := range matches {
+			if match {
+				strUnionFind.Union(strUnionFind.Elements()[idx], demand.InstanceModel)
+				deviceType = strUnionFind.Find(demand.InstanceModel)
 				break
 			}
 		}
 
 		key := ResPlanPoolKey{
 			PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
-			AvailableTime: NewAvailableTime(demand.Year, demand.Month),
+			AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
 			DeviceType:    deviceType,
 			ObsProject:    enumor.ObsProject(demand.ProjectName),
 			RegionName:    demand.CityName,
@@ -324,9 +245,11 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 	return pool, nil
 }
 
-// listAllCrpDemandDetails list all crp resource plan demand details.
-func (c *Controller) listAllCrpDemandDetails(kt *kit.Kit, opt *filter.Expression) (
-	[]*cvmapi.CvmCbsPlanQueryItem, error) {
+// listCrpDemandDetails list crp resource plan demand details.
+func (c *Controller) listCrpDemandDetails(kt *kit.Kit, opt *filter.Expression) ([]*cvmapi.CvmCbsPlanQueryItem, error) {
+	if opt == nil {
+		return nil, errors.New("expression is nil")
+	}
 
 	// get op product all unlocked crp demand ids.
 	listOpt := &types.ListOption{
@@ -344,8 +267,8 @@ func (c *Controller) listAllCrpDemandDetails(kt *kit.Kit, opt *filter.Expression
 			return nil, err
 		}
 
-		for idx, detail := range rst.Details {
-			crpDemandIDs[idx] = detail.CrpDemandID
+		for _, detail := range rst.Details {
+			crpDemandIDs = append(crpDemandIDs, detail.CrpDemandID)
 		}
 
 		if len(rst.Details) < int(listOpt.Page.Limit) {
@@ -355,10 +278,14 @@ func (c *Controller) listAllCrpDemandDetails(kt *kit.Kit, opt *filter.Expression
 		listOpt.Page.Start += uint32(core.DefaultMaxPageLimit)
 	}
 
+	if len(crpDemandIDs) == 0 {
+		return nil, nil
+	}
+
 	// query crp demand ids corresponding demand details.
-	demands, err := c.QueryAllDemands(kt, &QueryAllDemandsReq{CrpDemandIDs: crpDemandIDs})
+	demands, err := c.QueryIEGDemands(kt, &QueryIEGDemandsReq{CrpDemandIDs: crpDemandIDs})
 	if err != nil {
-		logs.Errorf("failed to query all demands, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to query ieg demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -368,7 +295,7 @@ func (c *Controller) listAllCrpDemandDetails(kt *kit.Kit, opt *filter.Expression
 // GetProdResConsumePool get op product resource consume pool.
 func (c *Controller) GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error) {
 	// get plan product all crp demand details.
-	demands, err := c.listAllCrpDemandDetails(kt, tools.EqualExpression("plan_product_id", planProdID))
+	demands, err := c.listCrpDemandDetails(kt, tools.EqualExpression("plan_product_id", planProdID))
 	if err != nil {
 		logs.Errorf("failed to list all crp demand details, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -391,6 +318,10 @@ func (c *Controller) GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64
 
 	prodConsumePool := make(ResPlanPool)
 	strUnionFind := NewStrUnionFind()
+	for _, consume := range orderConsumeMap {
+		strUnionFind.Add(consume.DeviceType)
+	}
+
 	for _, prodOrderID := range prodOrderIDs {
 		consume := orderConsumeMap[prodOrderID]
 		deviceType := consume.DeviceType
@@ -429,59 +360,46 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 
 	orderConsumeMap := make(map[string]ResPlanElem)
 	mutex := sync.Mutex{}
-	concurrent := make(chan struct{}, 10)
-	wg := sync.WaitGroup{}
-	var hitError error
+	limit := constant.SyncConcurrencyDefaultMaxLimit
 
-	for _, demand := range demands {
-		concurrent <- struct{}{}
-		wg.Add(1)
-		go func(demand *cvmapi.CvmCbsPlanQueryItem) {
-			defer func() {
-				<-concurrent
-				wg.Done()
-			}()
+	err := concurrence.BaseExec(limit, demands, func(demand *cvmapi.CvmCbsPlanQueryItem) error {
+		crpDemandID, err := strconv.ParseInt(demand.DemandId, 10, 64)
+		if err != nil {
+			logs.Errorf("failed to parse crp demand id, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
 
-			crpDemandID, err := strconv.ParseInt(demand.DemandId, 10, 64)
-			if err != nil {
-				hitError = err
-				logs.Errorf("failed to parse crp demand id, err: %v, rid: %s", err, kt.Rid)
-				return
+		changelogs, err := c.getDemandAllChangelogs(kt, crpDemandID)
+		if err != nil {
+			logs.Errorf("failed to get crp demand all changelogs, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+
+		for _, changelog := range changelogs {
+			// skip changelog which does not consume resource plan.
+			if !slices.Contains(enumor.GetCrpConsumeResPlanSourceTypes(), changelog.SourceType) {
+				continue
 			}
 
-			changelogs, err := c.getDemandAllChangelogs(kt, crpDemandID)
-			if err != nil {
-				hitError = err
-				logs.Errorf("failed to get crp demand all changelogs, err: %v, rid: %s", err, kt.Rid)
-				return
+			elem := ResPlanElem{
+				PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
+				AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
+				DeviceType:    demand.InstanceModel,
+				ObsProject:    enumor.ObsProject(demand.ProjectName),
+				RegionName:    demand.CityName,
+				ZoneName:      demand.ZoneName,
+				CpuCore:       float64(changelog.ChangeCoreAmount),
 			}
+			mutex.Lock()
+			orderConsumeMap[changelog.OrderId] = elem
+			mutex.Unlock()
+		}
 
-			for _, changelog := range changelogs {
-				// skip not apply changelog.
-				// TODO：补充升降配
-				if changelog.SourceType != enumor.CrpOrderSourceTypeApply {
-					continue
-				}
+		return nil
+	})
 
-				elem := ResPlanElem{
-					PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
-					AvailableTime: NewAvailableTime(demand.Year, demand.Month),
-					DeviceType:    demand.InstanceModel,
-					ObsProject:    enumor.ObsProject(demand.ProjectName),
-					RegionName:    demand.CityName,
-					ZoneName:      demand.ZoneName,
-					CpuCore:       float64(changelog.ChangeCoreAmount),
-				}
-				mutex.Lock()
-				orderConsumeMap[changelog.OrderId] = elem
-				mutex.Unlock()
-			}
-		}(demand)
-
-	}
-
-	if hitError != nil {
-		return nil, hitError
+	if err != nil {
+		return nil, err
 	}
 
 	return orderConsumeMap, nil
@@ -576,62 +494,51 @@ func (c *Controller) getProdOrders(kt *kit.Kit, prodID int64, orderIDs []string)
 }
 
 // GetProdResRemainPool get op product resource remain pool.
-// NOTE: remain = plan * 120% - consume.
-func (c *Controller) GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error) {
+// @param prodID is the op product id.
+// @param planProdID is the corresponding plan product id of the op product id.
+// @return prodRemainedPool is the op product in plan and out plan remained resource plan pool.
+// @return prodMaxAvailablePool is the op product in plan and out plan remained max available resource plan pool.
+// NOTE: maxAvailableInPlanPool = totalInPlan * 120% - consumeInPlan, because the special rules of the crp system.
+func (c *Controller) GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, ResPlanPool, error) {
 	// get op product resource plan pool.
 	prodPlanPool, err := c.GetProdResPlanPool(kt, prodID)
 	if err != nil {
 		logs.Errorf("failed to get op product resource plan pool, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	// TODO: 确认下是否乘120，乘120的话写清楚原因
-	for k, v := range prodPlanPool {
-		prodPlanPool[k] = v * 1.2
+		return nil, nil, err
 	}
 
 	// get op product resource consume pool.
 	prodConsumePool, err := c.GetProdResConsumePool(kt, prodID, planProdID)
 	if err != nil {
 		logs.Errorf("failed to get op product resource consume pool, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, err
 	}
 
-	// modify keys of prodPlanPool and prodConsumePool, set their matched device type to the same.
-	if err = c.modifyResPlanPool(kt, prodPlanPool, prodConsumePool); err != nil {
-		logs.Errorf("failed to modify resource plan pool, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+	// compact keys of prodPlanPool and prodConsumePool, set their matched device type to the same.
+	if err = c.compactResPlanPool(kt, prodPlanPool, prodConsumePool); err != nil {
+		logs.Errorf("failed to compact resource plan pool, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	// construct product max available resource plan pool.
+	prodMaxAvailablePool := make(ResPlanPool)
+	for k, v := range prodPlanPool {
+		if k.PlanType == enumor.PlanTypeHcmInPlan {
+			prodMaxAvailablePool[k] = v * 1.2
+		} else {
+			prodMaxAvailablePool[k] = v
+		}
 	}
 
 	// matching.
 	for prodResPlanKey, consumeCpuCore := range prodConsumePool {
-		// if zone name is empty, it must match region name.
-		if prodResPlanKey.ZoneName == "" {
-			plan, ok := prodPlanPool[prodResPlanKey]
-			if !ok {
-				logs.Errorf("record :%v is not found in op product resource plan pool, rid: %s", prodResPlanKey, kt.Rid)
-				return nil, fmt.Errorf("record :%v is not found in op product resource plan pool", prodResPlanKey)
-			}
-
-			if consumeCpuCore > plan {
-				logs.Errorf("record :%v is not find in op product resource plan pool, rid: %s", prodResPlanKey, kt.Rid)
-				return nil, fmt.Errorf("record :%v is not find in op product resource plan pool", prodResPlanKey)
-			}
-
-			prodPlanPool[prodResPlanKey] -= consumeCpuCore
-			continue
-		}
-
-		// zone name is not empty, it may use resource plan which zone name is equal or zone name is empty.
-		consumeCpuCoreCopy := consumeCpuCore
+		// zone name should not be empty, it may use resource plan which zone name is equal or zone name is empty.
 		plan, ok := prodPlanPool[prodResPlanKey]
 		if ok {
-			prodPlanPool[prodResPlanKey] -= math.Min(plan, consumeCpuCoreCopy)
-			consumeCpuCoreCopy -= math.Min(plan, consumeCpuCoreCopy)
-		}
-
-		if consumeCpuCoreCopy == 0 {
-			continue
+			canConsume := math.Max(math.Min(plan, consumeCpuCore), 0)
+			prodPlanPool[prodResPlanKey] -= canConsume
+			prodMaxAvailablePool[prodResPlanKey] -= canConsume
+			consumeCpuCore -= canConsume
 		}
 
 		keyWithoutZone := ResPlanPoolKey{
@@ -643,25 +550,27 @@ func (c *Controller) GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64)
 		}
 
 		plan, ok = prodPlanPool[keyWithoutZone]
-		if !ok {
-			logs.Errorf("record :%v is not found in op product resource plan pool, rid: %s", keyWithoutZone, kt.Rid)
-			return nil, fmt.Errorf("record :%v is not found in op product resource plan pool", keyWithoutZone)
+		if ok {
+			canConsume := math.Max(math.Min(plan, consumeCpuCore), 0)
+			prodPlanPool[keyWithoutZone] -= canConsume
+			prodMaxAvailablePool[keyWithoutZone] -= canConsume
+			consumeCpuCore -= canConsume
 		}
 
-		if consumeCpuCoreCopy > plan {
-			logs.Errorf("record :%v is not enough in op product resource plan pool, rid: %s", keyWithoutZone, kt.Rid)
-			return nil, fmt.Errorf("record :%v is not enough in op product resource plan pool", keyWithoutZone)
+		if consumeCpuCore > 0 {
+			logs.Errorf("record :%v is not enough in op product resource plan pool, rid: %s", prodResPlanKey, kt.Rid)
+			return nil, nil, fmt.Errorf("record :%v is not enough in op product resource plan pool", prodResPlanKey)
 		}
-
-		prodPlanPool[keyWithoutZone] -= consumeCpuCoreCopy
 	}
 
-	return prodPlanPool, nil
+	return prodPlanPool, prodMaxAvailablePool, nil
 }
 
-// modifyResPlanPool modify resource plan pool1 and pool2, set their matched device type to the same.
-func (c *Controller) modifyResPlanPool(kt *kit.Kit, pool1, pool2 ResPlanPool) error {
-	strUnionFind := NewStrUnionFind()
+// compactResPlanPool 紧凑资源预测池，使pool1和pool2的key中，可以通配的机型设置为同一机型。
+// 例如：pool1中存在device_type1, device_type2，pool2中存在device_type3, device_type4，
+// 假设device_type1和device_type3通配，device_type2和device_type4通配，
+// 那么pool2中的device_type3会被修改为device_type1，device_type4会被修改为device_type2。
+func (c *Controller) compactResPlanPool(kt *kit.Kit, pool1, pool2 ResPlanPool) error {
 	for k1 := range pool1 {
 		for k2, v2 := range pool2 {
 			if k1.DeviceType == k2.DeviceType {
@@ -675,18 +584,16 @@ func (c *Controller) modifyResPlanPool(kt *kit.Kit, pool1, pool2 ResPlanPool) er
 			}
 
 			if matched[0] {
-				strUnionFind.Union(k1.DeviceType, k2.DeviceType)
-				deviceType := strUnionFind.Find(k1.DeviceType)
 				newK2 := ResPlanPoolKey{
 					PlanType:      k2.PlanType,
 					AvailableTime: k2.AvailableTime,
-					DeviceType:    deviceType,
+					DeviceType:    k1.DeviceType,
 					ObsProject:    k2.ObsProject,
 					RegionName:    k2.RegionName,
 					ZoneName:      k2.ZoneName,
 				}
 
-				pool2[newK2] += v2
+				pool2[newK2] = v2
 				delete(pool2, k2)
 			}
 		}
@@ -697,46 +604,31 @@ func (c *Controller) modifyResPlanPool(kt *kit.Kit, pool1, pool2 ResPlanPool) er
 
 // VerifyProdDemands verify whether the needs of op product can be satisfied.
 func (c *Controller) VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) (
-	[]bool, error) {
+	[]VerifyResPlanResElem, error) {
 
-	prodRemain, err := c.GetProdResRemainPool(kt, prodID, planProdID)
+	prodRemain, prodMaxAvailable, err := c.GetProdResRemainPool(kt, prodID, planProdID)
 	if err != nil {
-		logs.Errorf("failed to get prod resource remain pool, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get product resource remain pool, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	result := make([]bool, len(needs))
+	result := make([]VerifyResPlanResElem, len(needs))
 
 	// match each need.
 	for i, need := range needs {
-		for k := range prodRemain {
-			if needs[i].CpuCore == 0 {
-				continue
-			}
-
-			matched, err := c.IsDeviceMatched(kt, []string{need.DeviceType}, k.DeviceType)
+		if need.IsPrePaid {
+			// verify pre paid.
+			result[i], err = c.verifyPrePaid(kt, prodRemain, prodMaxAvailable, need)
 			if err != nil {
-				logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
+				logs.Errorf("failed to verify pre paid, err: %v, rid: %s", err, kt.Rid)
 				return nil, err
 			}
-
-			if !matched[0] {
-				continue
-			}
-
-			key := ResPlanPoolKey{
-				PlanType:      need.PlanType,
-				AvailableTime: need.AvailableTime,
-				DeviceType:    k.DeviceType,
-				ObsProject:    need.ObsProject,
-				RegionName:    need.RegionName,
-				ZoneName:      need.ZoneName,
-			}
-
-			if need.IsAnyPlanType {
-				result[i] = verifyAnyPlanType(prodRemain, key, need.CpuCore)
-			} else {
-				result[i] = verifySpecPlanType(prodRemain, key, need.CpuCore)
+		} else {
+			// verify post paid by hour.
+			result[i], err = c.verifyPostPaidByHour(kt, prodRemain, need)
+			if err != nil {
+				logs.Errorf("failed to verify post paid by hour, err: %v, rid: %s", err, kt.Rid)
+				return nil, err
 			}
 		}
 	}
@@ -744,88 +636,95 @@ func (c *Controller) VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, ne
 	return result, nil
 }
 
-func verifyAnyPlanType(prodRemain ResPlanPool, key ResPlanPoolKey, needCpuCore float64) bool {
-	inPlanKey := ResPlanPoolKey{
-		PlanType:      enumor.PlanTypeHcmInPlan,
-		AvailableTime: key.AvailableTime,
-		DeviceType:    key.DeviceType,
-		ObsProject:    key.ObsProject,
-		RegionName:    key.RegionName,
-		ZoneName:      key.ZoneName,
+// verifyPrePaid need to be satisfied require two conditions:
+// 1. InPlan + OutPlan >= applied.
+// 2. InPlan * 120% - consumed >= applied.
+func (c *Controller) verifyPrePaid(kt *kit.Kit, prodRemain, prodMaxAvailable ResPlanPool, need VerifyResPlanElem) (
+	VerifyResPlanResElem, error) {
+
+	rst, err := c.verifyPostPaidByHour(kt, prodRemain, need)
+	if err != nil {
+		logs.Errorf("failed to verify post paid by hour, err: %v, rid: %s", err, kt.Rid)
+		return VerifyResPlanResElem{}, err
 	}
 
-	remain, ok := prodRemain[inPlanKey]
-	if ok {
-		prodRemain[inPlanKey] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
+	if rst.VerifyResult != enumor.VerifyResPlanRstPass {
+		return rst, nil
 	}
 
-	outPlanKey := ResPlanPoolKey{
-		PlanType:      enumor.PlanTypeHcmOutPlan,
-		AvailableTime: key.AvailableTime,
-		DeviceType:    key.DeviceType,
-		ObsProject:    key.ObsProject,
-		RegionName:    key.RegionName,
-		ZoneName:      key.ZoneName,
+	needCpuCore := need.CpuCore
+	for key, availableCpuCore := range prodMaxAvailable {
+		if key.PlanType != enumor.PlanTypeHcmInPlan ||
+			key.AvailableTime != need.AvailableTime ||
+			key.ObsProject != need.ObsProject ||
+			key.RegionName != need.RegionName ||
+			key.ZoneName != need.ZoneName {
+			continue
+		}
+
+		matched, err := c.IsDeviceMatched(kt, []string{key.DeviceType}, need.DeviceType)
+		if err != nil {
+			logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
+			return VerifyResPlanResElem{}, err
+		}
+
+		if !matched[0] {
+			continue
+		}
+
+		canConsume := math.Max(math.Min(availableCpuCore, needCpuCore), 0)
+		prodMaxAvailable[key] -= canConsume
+		needCpuCore -= canConsume
 	}
 
-	remain, ok = prodRemain[outPlanKey]
-	if ok {
-		prodRemain[outPlanKey] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
+	if needCpuCore != 0 {
+		return VerifyResPlanResElem{
+			VerifyResult: enumor.VerifyResPlanRstFailed,
+			Reason:       "in plan resource is not enough",
+		}, nil
 	}
 
-	inPlanKeyWithoutZone := ResPlanPoolKey{
-		PlanType:      enumor.PlanTypeHcmInPlan,
-		AvailableTime: key.AvailableTime,
-		DeviceType:    key.DeviceType,
-		ObsProject:    key.ObsProject,
-		RegionName:    key.RegionName,
-	}
-
-	remain, ok = prodRemain[inPlanKeyWithoutZone]
-	if ok {
-		prodRemain[inPlanKeyWithoutZone] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
-	}
-
-	outPlanKeyWithoutZone := ResPlanPoolKey{
-		PlanType:      enumor.PlanTypeHcmOutPlan,
-		AvailableTime: key.AvailableTime,
-		DeviceType:    key.DeviceType,
-		ObsProject:    key.ObsProject,
-		RegionName:    key.RegionName,
-	}
-
-	remain, ok = prodRemain[outPlanKeyWithoutZone]
-	if ok {
-		prodRemain[outPlanKeyWithoutZone] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
-	}
-
-	return needCpuCore == 0
+	return VerifyResPlanResElem{VerifyResult: enumor.VerifyResPlanRstPass}, nil
 }
 
-func verifySpecPlanType(prodRemain ResPlanPool, key ResPlanPoolKey, needCpuCore float64) bool {
-	remain, ok := prodRemain[key]
-	if ok {
-		prodRemain[key] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
+// verifyPostPaidByHour verify whether the post paid by hour need can be satisfied.
+// parameter isPriorityInPlan is used to control whether priority to consume InPlan resource plan.
+func (c *Controller) verifyPostPaidByHour(kt *kit.Kit, prodRemain ResPlanPool, need VerifyResPlanElem) (
+	VerifyResPlanResElem, error) {
+
+	needCpuCore := need.CpuCore
+	for _, planType := range enumor.GetPlanTypeHcmMembers() {
+		for key, remainCpuCore := range prodRemain {
+			if key.PlanType != planType ||
+				key.AvailableTime != need.AvailableTime ||
+				key.ObsProject != need.ObsProject ||
+				key.RegionName != need.RegionName ||
+				key.ZoneName != need.ZoneName {
+				continue
+			}
+
+			matched, err := c.IsDeviceMatched(kt, []string{key.DeviceType}, need.DeviceType)
+			if err != nil {
+				logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
+				return VerifyResPlanResElem{}, err
+			}
+
+			if !matched[0] {
+				continue
+			}
+
+			canConsume := math.Max(math.Min(remainCpuCore, needCpuCore), 0)
+			prodRemain[key] -= canConsume
+			needCpuCore -= canConsume
+		}
 	}
 
-	keyWithoutZone := ResPlanPoolKey{
-		PlanType:      key.PlanType,
-		AvailableTime: key.AvailableTime,
-		DeviceType:    key.DeviceType,
-		ObsProject:    key.ObsProject,
-		RegionName:    key.RegionName,
+	if needCpuCore != 0 {
+		return VerifyResPlanResElem{
+			VerifyResult: enumor.VerifyResPlanRstFailed,
+			Reason:       "in plan or out plan resource is not enough",
+		}, nil
 	}
 
-	remain, ok = prodRemain[keyWithoutZone]
-	if ok {
-		prodRemain[keyWithoutZone] -= math.Min(remain, needCpuCore)
-		needCpuCore -= math.Min(remain, needCpuCore)
-	}
-
-	return needCpuCore == 0
+	return VerifyResPlanResElem{VerifyResult: enumor.VerifyResPlanRstPass}, nil
 }

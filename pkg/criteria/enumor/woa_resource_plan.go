@@ -484,10 +484,10 @@ func (p PlanType) InPlan() bool {
 	}
 }
 
-const (
-	// CrpOrderSourceTypeApply is crp order source type.
-	CrpOrderSourceTypeApply = "申领自动调整"
-)
+// GetCrpConsumeResPlanSourceTypes get crp system source types of consuming resource plan.
+func GetCrpConsumeResPlanSourceTypes() []string {
+	return []string{"申领自动调整", "申领划扣"}
+}
 
 // VerifyResPlanRst is verify resource plan result.
 type VerifyResPlanRst string

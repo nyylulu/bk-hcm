@@ -156,6 +156,8 @@ const (
 	CvmCbsPlanQueryMethod = "queryCvmCbsInfoForIEG"
 	// CvmCbsPlanAdjustMethod 需求预测首页调整接口
 	CvmCbsPlanAdjustMethod = "adjustOrder"
+	// CvmCbsPlanAutoAdjustMethod 需求预测细粒度调整接口
+	CvmCbsPlanAutoAdjustMethod = "submitAutoAdjustOrder"
 	// CvmCbsPlanAddMethod 需求预测追加接口
 	CvmCbsPlanAddMethod = "addYuntiOrder"
 	// CvmCbsPlanOrderQueryMethod 需求单据查询接口

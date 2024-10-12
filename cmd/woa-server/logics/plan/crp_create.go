@@ -23,12 +23,10 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"time"
 
 	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -89,10 +87,10 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 
 // upsertCrpDemand crp tickets are approved and upsert hcm data.
 func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
-	// call crp api to get all crp demand ids.
-	demands, err := c.QueryAllDemands(kt, &QueryAllDemandsReq{CrpSns: []string{ticket.CrpSn}})
+	// call crp api to get ticket corresponding crp demand ids.
+	demands, err := c.QueryIEGDemands(kt, &QueryIEGDemandsReq{CrpSns: []string{ticket.CrpSn}})
 	if err != nil {
-		logs.Errorf("failed to query all demands, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
+		logs.Errorf("failed to query ieg demands, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
 		return err
 	}
 
@@ -129,8 +127,8 @@ func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
 			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
 		}
 	}
-	if err = c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
-		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
+	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -191,8 +189,8 @@ func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, m
 			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
 		}
 	}
-	if err := c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
-		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
+	if err := c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -228,7 +226,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 			ZoneName:        demand.Updated.ZoneName,
 			CoreTypeName:    demand.Updated.Cvm.CoreType,
 			InstanceModel:   demand.Updated.Cvm.DeviceType,
-			CvmAmount:       float64(demand.Updated.Cvm.Os),
+			CvmAmount:       demand.Updated.Cvm.Os,
 			CoreAmount:      int(demand.Updated.Cvm.CpuCore),
 			Desc:            demand.Updated.Remark,
 			InstanceIO:      int(demand.Updated.Cbs.DiskIo),
@@ -264,7 +262,7 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 			resp.Error.Message)
 	}
 
-	sn := resp.Result.OrderId
+	sn := resp.Result.Data.OrderId
 	if sn == "" {
 		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
@@ -279,7 +277,7 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
 			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanAdjustMethod,
+			Method:  cvmapi.CvmCbsPlanAutoAdjustMethod,
 		},
 		Params: &cvmapi.CvmCbsPlanAdjustParam{
 			BaseInfo: &cvmapi.AdjustBaseInfo{
@@ -310,11 +308,6 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 	}
 
 	for _, demand := range ticket.Demands {
-		if demand.Updated == nil {
-			logs.Errorf("failed to construct adjust request, demand updated is nil, rid: %s", kt.Rid)
-			return nil, errors.New("demand updated is nil")
-		}
-
 		crpDemand, ok := crpDemandMap[(*demand.Original).CrpDemandID]
 		if !ok {
 			logs.Errorf("failed to construct adjust request, crp demand id not found, rid: %s", kt.Rid)
@@ -335,15 +328,16 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 			return nil, errors.New("unsupported ticket type")
 		}
 
-		srcItem, updatedItem, err := c.constructAdjustSrcUpdatedData(kt, adjustType, crpDemand.SliceId,
-			ticket.PlanProductName, crpDemand.CvmAmount, demand)
-		if err != nil {
-			logs.Errorf("failed to construct update src and updated data, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
+		srcItem := &cvmapi.AdjustSrcData{
+			AdjustType:          string(adjustType),
+			CvmCbsPlanQueryItem: crpDemand.Clone(),
 		}
+		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
 
-		if srcItem != nil {
-			adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
+		updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, ticket.PlanProductName, crpDemand, demand)
+		if err != nil {
+			logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
 		}
 
 		if updatedItem != nil {
@@ -356,9 +350,9 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 
 // getCrpDemandMap get crp demand id and detail map.
 func (c *Controller) getCrpDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int64]*cvmapi.CvmCbsPlanQueryItem, error) {
-	crpDemands, err := c.QueryAllDemands(kt, &QueryAllDemandsReq{CrpDemandIDs: crpDemandIDs})
+	crpDemands, err := c.QueryIEGDemands(kt, &QueryIEGDemandsReq{CrpDemandIDs: crpDemandIDs})
 	if err != nil {
-		logs.Errorf("failed to query all demands, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to query ieg demands, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -376,80 +370,48 @@ func (c *Controller) getCrpDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int
 	return crpDemandMap, nil
 }
 
-// constructAdjustSrcUpdatedData construct adjust src and updated data.
-// if adjust type is update, src and updated item are normal.
+// constructAdjustUpdatedData construct adjust updated data.
+// if adjust type is update, updated item are normal.
 // if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with remainOs.
 // if adjust type is cancel, updated will be empty.
-func (c *Controller) constructAdjustSrcUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
-	sliceID, planProdName string, remainOs float32, demand rpt.ResPlanDemand) (
-	*cvmapi.AdjustSrcData, *cvmapi.AdjustUpdatedData, error) {
-
-	originalExpectTime, err := time.Parse(constant.DateLayout, demand.Original.ExpectTime)
-	if err != nil {
-		logs.Errorf("failed to parse original expect time, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, err
-	}
-
-	srcItem := &cvmapi.AdjustSrcData{
-		AdjustType:      string(adjustType),
-		CityName:        demand.Original.RegionName,
-		ZoneName:        demand.Original.ZoneName,
-		InstanceModel:   demand.Original.Cvm.DeviceType,
-		CvmAmount:       float32(demand.Original.Cvm.Os),
-		CoreAmount:      float32(demand.Original.Cvm.CpuCore),
-		InstanceIO:      int(demand.Original.Cbs.DiskIo),
-		DiskTypeName:    demand.Original.Cbs.DiskTypeName,
-		AllDiskAmount:   float32(demand.Original.Cbs.DiskSize),
-		Desc:            demand.Original.Remark,
-		ProjectName:     string(demand.Original.ObsProject),
-		Year:            originalExpectTime.Year(),
-		Month:           int(originalExpectTime.Month()),
-		UseTime:         demand.Original.ExpectTime,
-		PlanProductName: planProdName,
-		SliceId:         sliceID,
-	}
+func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType, planProdName string,
+	crpSrcDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (*cvmapi.AdjustUpdatedData, error) {
 
 	// if adjust type is cancel, updated will be empty.
 	if adjustType == enumor.CrpAdjustTypeCancel {
-		return srcItem, nil, nil
+		return nil, nil
 	}
 
-	updatedExpectTime, err := time.Parse(constant.DateLayout, demand.Updated.ExpectTime)
-	if err != nil {
-		logs.Errorf("failed to parse updated expect time, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, err
+	// init updated data.
+	updatedData := &cvmapi.AdjustUpdatedData{
+		AdjustType:          string(adjustType),
+		CvmCbsPlanQueryItem: crpSrcDemand.Clone(),
 	}
 
-	updatedItem := &cvmapi.AdjustUpdatedData{
-		AdjustType:      string(adjustType),
-		CityName:        demand.Updated.RegionName,
-		ZoneName:        demand.Updated.ZoneName,
-		InstanceModel:   demand.Updated.Cvm.DeviceType,
-		CvmAmount:       float32(demand.Updated.Cvm.Os),
-		CoreAmount:      float32(demand.Updated.Cvm.CpuCore),
-		InstanceIO:      int(demand.Updated.Cbs.DiskIo),
-		DiskTypeName:    demand.Updated.Cbs.DiskTypeName,
-		AllDiskAmount:   float32(demand.Updated.Cbs.DiskSize),
-		Desc:            demand.Updated.Remark,
-		ProjectName:     string(demand.Updated.ObsProject),
-		Year:            updatedExpectTime.Year(),
-		Month:           int(updatedExpectTime.Month()),
-		UseTime:         demand.Updated.ExpectTime,
-		PlanProductName: planProdName,
-		SliceId:         sliceID,
-	}
+	// supplement updated data.
+	updatedData.CityName = demand.Updated.RegionName
+	updatedData.ZoneName = demand.Updated.ZoneName
+	updatedData.InstanceModel = demand.Updated.Cvm.DeviceType
+	updatedData.CvmAmount = float32(demand.Updated.Cvm.Os)
+	updatedData.CoreAmount = float32(demand.Updated.Cvm.CpuCore)
+	updatedData.InstanceIO = int(demand.Updated.Cbs.DiskIo)
+	updatedData.DiskTypeName = demand.Updated.Cbs.DiskTypeName
+	updatedData.AllDiskAmount = float32(demand.Updated.Cbs.DiskSize)
+	updatedData.ProjectName = string(demand.Updated.ObsProject)
+	updatedData.UseTime = demand.Updated.ExpectTime
+	updatedData.PlanProductName = planProdName
 
 	switch adjustType {
 	case enumor.CrpAdjustTypeUpdate:
 		// do nothing.
 	case enumor.CrpAdjustTypeDelay:
-		updatedItem.TimeAdjustCvmAmount = remainOs
+		updatedData.TimeAdjustCvmAmount = crpSrcDemand.CvmAmount
 	default:
 		logs.Errorf("invalid adjust type: %s, rid: %s", adjustType, kt.Rid)
-		return nil, nil, errors.New("invalid adjust type")
+		return nil, errors.New("invalid adjust type")
 	}
 
-	return srcItem, updatedItem, nil
+	return updatedData, nil
 }
 
 // upsertCrpDemandBizRel upsert crp demand biz rel.

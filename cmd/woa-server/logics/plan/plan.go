@@ -51,14 +51,10 @@ type Logics interface {
 	CreateAuditFlow(kt *kit.Kit, ticketID string) error
 	// CreateResPlanTicket create resource plan ticket.
 	CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketReq) (string, error)
-	// QueryAllDemands query all demands.
-	QueryAllDemands(kt *kit.Kit, req *QueryAllDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error)
+	// QueryIEGDemands query IEG crp demands.
+	QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error)
 	// ExamineDemandClass examine whether all demands are the same demand class, and return the demand class.
 	ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enumor.DemandClass, error)
-	// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
-	ExamineAndLockAllRPDemand(kt *kit.Kit, crpDemandIDs []int64) error
-	// UnlockAllResPlanDemand unlock all resource plan demand.
-	UnlockAllResPlanDemand(kt *kit.Kit, crpDemandIDs []int64) error
 	// IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
 	IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error)
 	// GetProdResPlanPool get op product resource plan pool.
@@ -66,10 +62,14 @@ type Logics interface {
 	// GetProdResConsumePool get op product resource consume pool.
 	GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error)
 	// GetProdResRemainPool get op product resource remain pool.
-	// NOTE: remain = plan * 120% - consume.
-	GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, error)
+	// @param prodID is the op product id.
+	// @param planProdID is the corresponding plan product id of the op product id.
+	// @return prodRemainedPool is the op product in plan and out plan remained resource plan pool.
+	// @return prodMaxAvailablePool is the op product in plan and out plan remained max available resource plan pool.
+	// NOTE: maxAvailableInPlanPool = totalInPlan * 120% - consumeInPlan, because the special rules of the crp system.
+	GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64, isMultiply bool) (ResPlanPool, error)
 	// VerifyProdDemands verify whether the needs of op product can be satisfied.
-	VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) ([]bool, error)
+	VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) ([]VerifyResPlanResElem, error)
 }
 
 // Controller motivates the resource plan ticket status flow.
@@ -580,8 +580,8 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
 		}
 	}
-	if err = c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
-		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
+	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -639,8 +639,8 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
 		}
 	}
-	if err = c.UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
-		logs.Errorf("failed to unlock all res plan demand, err: %v, rid: %s", err, kt.Rid)
+	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -843,9 +843,9 @@ func (c *Controller) createItsmTicket(kt *kit.Kit, ticket *TicketInfo) (string, 
 	// TODO：待修改
 	contentTemplate := `业务：%s(%d)
 预测类型：%s
-CPU总核数：%d
-内存总量(GB)：%d
-云盘总量(GB)：%d
+CPU总核数：%.2f
+内存总量(GB)：%.2f
+云盘总量(GB)：%.2f
 `
 	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.UpdatedCpuCore,
 		ticket.UpdatedMemory, ticket.UpdatedMemory)
