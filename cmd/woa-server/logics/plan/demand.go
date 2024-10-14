@@ -393,7 +393,7 @@ func (c *Controller) getApplyOrderConsumePoolMap(kt *kit.Kit, demands []*cvmapi.
 			if _, ok := orderConsumePoolMap[changelog.OrderId]; !ok {
 				orderConsumePoolMap[changelog.OrderId] = make(ResPlanPool)
 			}
-			orderConsumePoolMap[changelog.OrderId][consumePoolKey] = consumeCpuCore
+			orderConsumePoolMap[changelog.OrderId][consumePoolKey] += consumeCpuCore
 			mutex.Unlock()
 		}
 

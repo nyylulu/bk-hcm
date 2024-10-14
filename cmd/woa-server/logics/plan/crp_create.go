@@ -450,7 +450,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 
 	if len(existCrpDemandIDs) > 0 {
 		update := &rpcd.ResPlanCrpDemandTable{
-			Locked:          nil,
 			DemandClass:     demandClass,
 			BkBizID:         bizOrgRel.BkBizID,
 			BkBizName:       bizOrgRel.BkBizName,

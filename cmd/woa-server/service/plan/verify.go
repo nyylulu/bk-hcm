@@ -29,6 +29,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/converter"
 )
 
 // VerifyResPlanDemand verify resource plan demand.
@@ -227,19 +228,22 @@ func (s *service) getChargeTypeAvlDeviceTypes(kt *kit.Kit, chargeType cvmapi.Cha
 	}
 
 	// construct device type available map.
-	deviceTypeAvlMap := make(map[string]bool)
-	for _, ele := range inPlanAvlDeviceTypes {
-		deviceTypeAvlMap[ele.DeviceType] = deviceTypeAvlMap[ele.DeviceType] || ele.Available
-	}
+	deviceTypeAvlMap := converter.SliceToMap(inPlanAvlDeviceTypes, func(ele ptypes.DeviceTypeAvailable) (string, bool) {
+		return ele.DeviceType, ele.Available
+	})
 
 	for _, ele := range outPlanAvlDeviceTypes {
 		deviceTypeAvlMap[ele.DeviceType] = deviceTypeAvlMap[ele.DeviceType] || ele.Available
 	}
 
-	result := make([]ptypes.DeviceTypeAvailable, 0, len(deviceTypeAvlMap))
-	for deviceType, available := range deviceTypeAvlMap {
-		result = append(result, ptypes.DeviceTypeAvailable{DeviceType: deviceType, Available: available})
-	}
+	result := converter.MapToSlice(deviceTypeAvlMap, func(deviceType string, avl bool) ptypes.DeviceTypeAvailable {
+		return ptypes.DeviceTypeAvailable{DeviceType: deviceType, Available: avl}
+	})
+
+	// sort result, put available of true to the head.
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].Available
+	})
 
 	return result, nil
 }
@@ -291,16 +295,14 @@ func (s *service) getPlanTypeAvlDeviceTypes(kt *kit.Kit, planType enumor.PlanTyp
 	// convert device type map to result.
 	result := make([]ptypes.DeviceTypeAvailable, len(matchedDeviceTypes))
 	for idx, deviceType := range matchedDeviceTypes {
+		available := false
 		if _, ok := avlDeviceTypeMap[deviceType]; ok {
-			result[idx] = ptypes.DeviceTypeAvailable{
-				DeviceType: deviceType,
-				Available:  true,
-			}
-		} else {
-			result[idx] = ptypes.DeviceTypeAvailable{
-				DeviceType: deviceType,
-				Available:  false,
-			}
+			available = true
+		}
+
+		result[idx] = ptypes.DeviceTypeAvailable{
+			DeviceType: deviceType,
+			Available:  available,
 		}
 	}
 
