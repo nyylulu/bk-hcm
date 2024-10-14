@@ -23,8 +23,8 @@ GET /api/v1/woa/bizs/{bk_biz_id}/org/relation
   "data": {
     "bk_biz_id": 111,
     "bk_biz_name": "业务",
-    "bk_product_id": 222,
-    "bk_product_name": "运营产品",
+    "op_product_id": 222,
+    "op_product_name": "运营产品",
     "plan_product_id": 333,
     "plan_product_name": "规划产品",
     "virtual_dept_id": 1041,
@@ -47,8 +47,8 @@ GET /api/v1/woa/bizs/{bk_biz_id}/org/relation
 |-------------------|--------|--------|
 | bk_biz_id         | int    | 业务ID   |
 | bk_biz_name       | string | 业务名称   |
-| bk_product_id     | int    | 运营产品ID |
-| bk_product_name   | string | 运营产品名称 |
+| op_product_id     | int    | 运营产品ID |
+| op_product_name   | string | 运营产品名称 |
 | plan_product_id   | int    | 规划产品ID |
 | plan_product_name | string | 规划产品名称 |
 | virtual_dept_id   | int    | 虚拟部门ID |

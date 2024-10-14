@@ -1,0 +1,42 @@
+.home {
+  display: grid;
+  padding: 0 28px 8px;
+  column-gap: 40px;
+  row-gap: 12px;
+  grid-template-columns: 350px 350px 350px;
+  .op-relation{
+    width: 360px;
+    display: flex;
+      .warning-text{
+        color: #ff0000;
+      }
+  }
+  .biz-list{
+    width: 450px;
+    color: #ccc;
+  }
+  .forecast-type{
+    grid-column: 1 / 2; 
+  }
+
+  .text {
+    background: #f5f7fa;
+    border-radius: 2px;
+    line-height: 32px;
+    display: inline-block;
+    padding: 0 10px;
+    width: 100%;
+  }
+
+  :global(.bk-form-item) {
+    margin-bottom: 0 !important;
+  }
+
+  :global(.bk-radio-group) {
+    width: 100%
+  }
+
+  :global(.bk-radio-button) {
+    width: 50%;
+  }
+}

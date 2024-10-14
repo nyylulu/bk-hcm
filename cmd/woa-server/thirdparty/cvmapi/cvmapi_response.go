@@ -57,7 +57,9 @@ type OrderItem struct {
 	// 8完成
 	// 0待部门管理员审批,1待业务总监审批,2待规划经理审批,3待资源审批,4待生成CDH宿主机,
 	// 5CDH宿主机生成中,6待生成CVM,7CVM生成中,127驳回,129下发生产失败
-	Status int `json:"status"`
+	Status      int    `json:"status"`
+	ProductId   int64  `json:"productId"`
+	ProductName string `json:"productName"`
 }
 
 const (
@@ -72,7 +74,7 @@ type InstanceQueryResp struct {
 	Result   *InstanceQueryRst `json:"result"`
 }
 
-// InstanceQueryResp cvm instance query result
+// InstanceQueryRst cvm instance query result
 type InstanceQueryRst struct {
 	Total int             `json:"total"`
 	Data  []*InstanceItem `json:"data"`
@@ -95,6 +97,56 @@ type InstanceItem struct {
 	CreateTime      string `json:"createTime"`
 	Pool            int    `json:"pool"`
 	ObsProject      string `json:"obsProject"`
+}
+
+// DemandChangeLogQueryResp cvm demand change log query response
+type DemandChangeLogQueryResp struct {
+	RespMeta  `json:",inline"`
+	Result    *DemandChangeLogQueryRst `json:"result"`
+	Errorinfo interface{}              `json:"errorinfo"`
+}
+
+// DemandChangeLogQueryRst cvm demand change log query result
+type DemandChangeLogQueryRst struct {
+	Total int                               `json:"total"`
+	Data  []*DemandChangeLogQueryDemandItem `json:"data"`
+}
+
+// DemandChangeLogQueryDemandItem cvm demand change log query demand item
+type DemandChangeLogQueryDemandItem struct {
+	DemandId int                            `json:"demandId"`
+	Info     []*DemandChangeLogQueryLogItem `json:"info"`
+}
+
+// DemandChangeLogQueryLogItem cvm demand change log query log item
+type DemandChangeLogQueryLogItem struct {
+	DemandId            int     `json:"demandId"`
+	UseTime             string  `json:"useTime"`
+	BgName              string  `json:"bgName"`
+	DeptName            string  `json:"deptName"`
+	PlanProductName     string  `json:"planProductName"`
+	ProjectName         string  `json:"projectName"`
+	CityName            string  `json:"cityName"`
+	ZoneName            string  `json:"zoneName"`
+	RequirementWeekType string  `json:"requirementWeekType"`
+	ResourcePoolType    int     `json:"resourcePoolType"`
+	InstanceType        string  `json:"instanceType"`
+	InstanceModel       string  `json:"instanceModel"`
+	ChangeCvmAmount     float32 `json:"changeCvmAmount"`
+	AfterCvmAmount      float32 `json:"afterCvmAmount"`
+	ChangeCoreAmount    float32 `json:"changeCoreAmount"`
+	AfterCoreAmount     float32 `json:"afterCoreAmount"`
+	ChangeRamAmount     float32 `json:"changeRamAmount"`
+	AfterRamAmount      float32 `json:"afterRamAmount"`
+	DiskTypeName        string  `json:"diskTypeName"`
+	InstanceIO          int     `json:"instanceIO"`
+	ChangedDiskAmount   float32 `json:"changedDiskAmount"`
+	AfterDiskAmount     float32 `json:"afterDiskAmount"`
+	SourceType          string  `json:"sourceType"`
+	OrderId             string  `json:"orderId"`
+	CreateTime          string  `json:"createTime"`
+	Desc                string  `json:"desc"`
+	ResourcePoolName    string  `json:"resourcePoolName"`
 }
 
 // CvmCbsPlanQueryResp cvm and cbs plan query response
@@ -120,6 +172,10 @@ type CvmCbsPlanQueryItem struct {
 	YearMonth             string  `json:"yearMonth"`
 	Year                  int     `json:"year"`
 	Month                 int     `json:"month"`
+	Week                  int     `json:"week"`
+	YearMonthWeek         string  `json:"yearMonthWeek"`
+	ExpectStartDate       string  `json:"expectStartDate"`
+	ExpectEndDate         string  `json:"expectEndDate"`
 	UseTime               string  `json:"useTime"`
 	BgId                  int     `json:"bgId"`
 	BgName                string  `json:"bgName"`
@@ -133,8 +189,12 @@ type CvmCbsPlanQueryItem struct {
 	CityName              string  `json:"cityName"`
 	ZoneId                int     `json:"zoneId"`
 	ZoneName              string  `json:"zoneName"`
+	InPlan                string  `json:"inPlan"`
+	PlanWeek              int     `json:"planWeek"`
+	ExpeditedPostponed    string  `json:"expeditedPostponed"`
 	CoreType              int     `json:"coreType"`
 	CoreTypeName          string  `json:"coreTypeName"`
+	InstanceFamily        string  `json:"instanceFamily"`
 	InstanceType          string  `json:"instanceType"`
 	InstanceModel         string  `json:"instanceModel"`
 	InstanceIO            int     `json:"instanceIO"`
@@ -168,6 +228,84 @@ type CvmCbsPlanQueryItem struct {
 	IsInProcessing        int     `json:"isInProcessing"`
 	ProcessingOrderId     string  `json:"processingOrderId"`
 	DemandId              string  `json:"demandId"`
+	ResourcePoolType      int     `json:"resourcePoolType"`
+	ResourcePoolName      string  `json:"resourcePoolName"`
+	ResourceMode          string  `json:"resourceMode"`
+	StatisticalClass      string  `json:"statisticalClass"`
+	GenerationType        string  `json:"generation_type"`
+}
+
+// Clone return a clone CvmCbsPlanQueryItem.
+func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
+	return &CvmCbsPlanQueryItem{
+		BaseCoreAmount:        i.BaseCoreAmount,
+		BaseCvmAmount:         i.BaseCvmAmount,
+		SliceId:               i.SliceId,
+		YearMonth:             i.YearMonth,
+		Year:                  i.Year,
+		Month:                 i.Month,
+		Week:                  i.Week,
+		YearMonthWeek:         i.YearMonthWeek,
+		ExpectStartDate:       i.ExpectStartDate,
+		ExpectEndDate:         i.ExpectEndDate,
+		UseTime:               i.UseTime,
+		BgId:                  i.BgId,
+		BgName:                i.BgName,
+		DeptId:                i.DeptId,
+		DeptName:              i.DeptName,
+		PlanProductId:         i.PlanProductId,
+		PlanProductName:       i.PlanProductName,
+		ProjectName:           i.ProjectName,
+		OrderId:               i.OrderId,
+		CityId:                i.CityId,
+		CityName:              i.CityName,
+		ZoneId:                i.ZoneId,
+		ZoneName:              i.ZoneName,
+		InPlan:                i.InPlan,
+		PlanWeek:              i.PlanWeek,
+		ExpeditedPostponed:    i.ExpeditedPostponed,
+		CoreType:              i.CoreType,
+		CoreTypeName:          i.CoreTypeName,
+		InstanceFamily:        i.InstanceFamily,
+		InstanceType:          i.InstanceType,
+		InstanceModel:         i.InstanceModel,
+		InstanceIO:            i.InstanceIO,
+		DiskType:              i.DiskType,
+		DiskTypeName:          i.DiskTypeName,
+		CvmAmount:             i.CvmAmount,
+		RamAmount:             i.RamAmount,
+		CoreAmount:            i.CoreAmount,
+		AllDiskAmount:         i.AllDiskAmount,
+		ApplyCvmAmount:        i.ApplyCvmAmount,
+		ApplyRamAmount:        i.ApplyRamAmount,
+		ApplyCoreAmount:       i.ApplyCoreAmount,
+		ApplyDiskAmount:       i.ApplyDiskAmount,
+		PlanCvmAmount:         i.PlanCvmAmount,
+		PlanRamAmount:         i.PlanRamAmount,
+		PlanCoreAmount:        i.PlanCoreAmount,
+		PlanDiskAmount:        i.PlanDiskAmount,
+		ExpiredCvmAmount:      i.ExpiredCvmAmount,
+		ExpiredRamAmount:      i.ExpiredRamAmount,
+		ExpiredCoreAmount:     i.ExpiredCoreAmount,
+		ExpiredDiskAmount:     i.ExpiredDiskAmount,
+		RealCvmAmount:         i.RealCvmAmount,
+		RealRamAmount:         i.RealRamAmount,
+		RealCoreAmount:        i.RealCoreAmount,
+		RealDiskAmount:        i.RealDiskAmount,
+		MjOrderId:             i.MjOrderId,
+		RequirementStatus:     i.RequirementStatus,
+		RequirementStatusName: i.RequirementStatusName,
+		RequirementWeekType:   i.RequirementWeekType,
+		IsManualWeekType:      i.IsManualWeekType,
+		IsInProcessing:        i.IsInProcessing,
+		ProcessingOrderId:     i.ProcessingOrderId,
+		DemandId:              i.DemandId,
+		ResourcePoolType:      i.ResourcePoolType,
+		ResourcePoolName:      i.ResourcePoolName,
+		ResourceMode:          i.ResourceMode,
+		StatisticalClass:      i.StatisticalClass,
+		GenerationType:        i.GenerationType,
+	}
 }
 
 // CvmCbsPlanAdjustResp cvm and cbs plan adjust response
@@ -179,6 +317,12 @@ type CvmCbsPlanAdjustResp struct {
 
 // CvmCbsPlanAdjustRst cvm and cbs plan adjust result
 type CvmCbsPlanAdjustRst struct {
+	Status int                     `json:"status"`
+	Data   CvmCbsPlanAdjustRstElem `json:"data"`
+}
+
+// CvmCbsPlanAdjustRstElem cvm and cbs plan adjust result element
+type CvmCbsPlanAdjustRstElem struct {
 	Status  int    `json:"status"`
 	OrderId string `json:"orderId"`
 }
@@ -201,7 +345,7 @@ type QueryPlanOrderResp struct {
 	Result   map[string]*QueryPlanOrderRst `json:"result"`
 }
 
-// AddCvmCbsPlanRst query cvm and cbs plan order result
+// QueryPlanOrderRst query cvm and cbs plan order result
 type QueryPlanOrderRst struct {
 	Code int            `json:"code"`
 	Data *PlanOrderData `json:"data"`
@@ -264,7 +408,7 @@ type VpcResp struct {
 	Result   []*VpcInfo `json:"result"`
 }
 
-// VpcRst cvm vpc query result
+// VpcInfo cvm vpc query result
 type VpcInfo struct {
 	Id   string `json:"id"`
 	Name string `json:"name"`
@@ -276,7 +420,7 @@ type SubnetResp struct {
 	Result   []*SubnetInfo `json:"result"`
 }
 
-// SubnetRst cvm subnet query result
+// SubnetInfo cvm subnet query result
 type SubnetInfo struct {
 	Id        string `json:"id"`
 	Name      string `json:"name"`

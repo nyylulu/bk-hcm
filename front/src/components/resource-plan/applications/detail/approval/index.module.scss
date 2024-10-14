@@ -1,0 +1,62 @@
+.home {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  .status {
+    display: flex;
+    align-items: center;
+    color: #313238;
+    font-size: 14px;
+
+    :global(.hcm-icon) {
+      font-size: 21px;
+      margin-right: 13.5px;
+      color: #3a84ff;
+    }
+
+    :global(.bkhcm-icon-7chenggong-01) {
+      color: #2dcb56;
+    }
+
+    :global(.bkhcm-icon-38moxingshibai-01),:global(.bkhcm-icon-close-circle-fill) {
+      color: #cc4053;
+    }
+  }
+
+  .links {
+    display: flex;
+    align-items: center;
+
+    .link span {
+      display: flex;
+      align-items: center;
+
+      span {
+        margin-left: 6px;
+        font-size: 12px;
+      }
+    }
+
+    .link +.link {
+      margin-left: 26px;
+    }
+  }
+}
+
+.error-message {
+  max-width: 1475px;
+  margin-left: 13.5px;
+  justify-content: center;
+  display: flex;
+  align-items: center;
+  color: #d9001b;
+  .error-message-color {
+    color: #d9001b !important;
+  }
+}
+.title{
+  > span {
+    margin-bottom: 0px !important;
+  }
+}

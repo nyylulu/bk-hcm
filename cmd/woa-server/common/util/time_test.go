@@ -30,7 +30,6 @@ func TestGetCurrentTimeStr(t *testing.T) {
 }
 
 func TestConvParamsTime(t *testing.T) {
-	//strJSON := `{"page":{"start":0,"limit":10,"sort":"bk_host_id"},"pattern":"","bk_biz_id":2,"ip":{"flag":"bk_host_innerip|bk_host_outerip","exact":0,"data":[]},"condition":[{"bk_obj_id":"host","fields":[],"condition":[{"create_time":["2018-03-04","2018-03-17"]}]},{"bk_obj_id":"biz","fields":[],"condition":[{"field":"default","operator":"$ne","value":1}]},{"bk_obj_id":"module","fields":[],"condition":[]},{"bk_obj_id":"set","fields":[],"condition":[]}]}`
 	strJSON := `{"bk_host_id":{"$in":[99,100,101,102,103,104]},"create_time":{"$in":["2018-03-16 02:45:28","2018-03-16"]}}`
 	var a interface{}
 	err := json.Unmarshal([]byte(strJSON), &a)
@@ -54,4 +53,32 @@ func TestFormatPeriod(t *testing.T) {
 		t.Errorf("error formated period %s", periodFormated)
 	}
 	fmt.Println(periodFormated)
+}
+
+func TestTimeStrToUnixSecondDefault(t *testing.T) {
+	timeStr := "2024-09-24"
+	timeUnix, err := TimeStrToUnixSecondDefault(timeStr)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+	if timeUnix != 1727107200 {
+		t.Errorf("error time unix %d", timeUnix)
+	}
+	fmt.Println(timeUnix)
+}
+
+func TestTimeStrToTimePtr(t *testing.T) {
+	timeStr := "2024-09-24"
+	timePtr, err := TimeStrToTimePtr(timeStr)
+	if err != nil {
+		t.Error(err.Error())
+		return
+	}
+	if !timePtr.Equal(time.Date(2024, 9, 24, 0, 0, 0, 0, time.Local)) {
+		t.Error("error time ptr")
+	}
+	fmt.Println(timePtr)
+	fmt.Println(timePtr.Unix())
+	fmt.Println(timePtr.Format("2006-01-02 15:04:05"))
 }

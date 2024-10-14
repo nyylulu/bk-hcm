@@ -150,10 +150,14 @@ const (
 	CvmVpcMethod = "getVpcInfo"
 	// CvmSubnetMethod CVM subnet信息查询方法
 	CvmSubnetMethod = "getSubNetInfo"
+	// CvmCbsDemandChangeLogQueryMethod 预测需求的变更记录查询接口
+	CvmCbsDemandChangeLogQueryMethod = "queryDemandChangeLogForIEG"
 	// CvmCbsPlanQueryMethod 需求预测首页查询接口
-	CvmCbsPlanQueryMethod = "queryCvmCbsInfo"
+	CvmCbsPlanQueryMethod = "queryCvmCbsInfoForIEG"
 	// CvmCbsPlanAdjustMethod 需求预测首页调整接口
 	CvmCbsPlanAdjustMethod = "adjustOrder"
+	// CvmCbsPlanAutoAdjustMethod 需求预测细粒度调整接口
+	CvmCbsPlanAutoAdjustMethod = "submitAutoAdjustOrder"
 	// CvmCbsPlanAddMethod 需求预测追加接口
 	CvmCbsPlanAddMethod = "addYuntiOrder"
 	// CvmCbsPlanOrderQueryMethod 需求单据查询接口
@@ -173,6 +177,13 @@ const (
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"
+
+	// AdjustTypeAdjust 预测调整类型-常规修改
+	AdjustTypeAdjust = "常规修改"
+	// AdjustTypeDelay 预测调整类型-加急延期
+	AdjustTypeDelay = "加急延期"
+	// AdjustTypeCancel 预测调整类型-需求取消
+	AdjustTypeCancel = "需求取消"
 )
 
 // CVMCli yunti client options

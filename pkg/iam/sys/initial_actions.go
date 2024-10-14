@@ -648,6 +648,14 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+	}, {
+		ID:                   ZiyanResPlanManage,
+		Name:                 ActionIDNameMap[ZiyanResPlanManage],
+		NameEn:               "ZiYan Resource Plan Manage",
+		Type:                 Edit,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
 	},
 	}
 }

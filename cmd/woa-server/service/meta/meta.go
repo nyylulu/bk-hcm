@@ -127,3 +127,67 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 
 	return &core.ListResultT[mtypes.ListDeviceTypeRst]{Details: details}, nil
 }
+
+// ListPlanType lists plan type.
+func (s *service) ListPlanType(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.PlanType]{Details: enumor.GetPlanTypeHcmMembers()}, nil
+}
+
+// ListTicketType lists ticket type.
+func (s *service) ListTicketType(_ *rest.Contexts) (interface{}, error) {
+	// get ticket type members.
+	ticketTypes := enumor.GetRPTicketTypeMembers()
+	// convert to meta.DiskTypeItem slice.
+	details := make([]meta.TicketTypeItem, len(ticketTypes))
+	for idx, ticketType := range ticketTypes {
+		details[idx] = meta.TicketTypeItem{
+			TicketType:     ticketType,
+			TicketTypeName: ticketType.Name(),
+		}
+	}
+	return &core.ListResultT[meta.TicketTypeItem]{Details: details}, nil
+}
+
+// ListBizsByOpProduct lists bizs by op product.
+func (s *service) ListBizsByOpProduct(cts *rest.Contexts) (interface{}, error) {
+	req := new(mtypes.ListBizsByOpProdReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to list bizs by op product, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate list bizs by op product parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	bizs, err := s.logics.GetBizsByOpProd(cts.Kit, req.OpProductID)
+	if err != nil {
+		logs.Errorf("failed to get bizs by op product, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.Biz]{Details: bizs}, nil
+}
+
+// ListOpProducts lists op products.
+func (s *service) ListOpProducts(cts *rest.Contexts) (interface{}, error) {
+	opProds, err := s.logics.GetOpProducts(cts.Kit)
+	if err != nil {
+		logs.Errorf("failed to get op products, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.OpProduct]{Details: opProds}, nil
+}
+
+// ListPlanProducts lists plan products.
+func (s *service) ListPlanProducts(cts *rest.Contexts) (interface{}, error) {
+	planProds, err := s.logics.GetPlanProducts(cts.Kit)
+	if err != nil {
+		logs.Errorf("failed to get plan products, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.PlanProduct]{Details: planProds}, nil
+}

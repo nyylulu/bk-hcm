@@ -85,6 +85,11 @@ export const APPLY_TYPES = [
       },
     ],
   },
+  {
+    label: '资源预测',
+    name: 'resource_plan',
+    rules: [],
+  },
   // {
   //   label: '硬盘',
   //   name: 'disk',

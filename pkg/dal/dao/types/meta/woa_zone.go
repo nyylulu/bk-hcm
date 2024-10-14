@@ -20,7 +20,7 @@
 package meta
 
 import (
-	wz "hcm/pkg/dal/table/resource_plan/woa-zone"
+	wz "hcm/pkg/dal/table/resource-plan/woa-zone"
 )
 
 // WoaZoneListResult is list woa zone result.
