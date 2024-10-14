@@ -117,8 +117,8 @@ func (s *service) getResPlanTickets(kt *kit.Kit, opt *types.ListOption) (map[str
 	}
 
 	rst := make(map[string]*rptypes.RPTicketWithStatus)
-	for _, ticket := range tickets {
-		rst[ticket.ID] = &ticket
+	for idx, ticket := range tickets {
+		rst[ticket.ID] = &tickets[idx]
 	}
 
 	return rst, nil
@@ -144,12 +144,12 @@ func (s *service) getResPlanDemandByTicketIDs(kt *kit.Kit, opt *types.ListOption
 	}
 
 	rst := make(map[string][]*rpd.ResPlanDemandTable)
-	for _, demand := range demands {
+	for idx, demand := range demands {
 		ticketID := demand.TicketID
 		if _, ok := rst[ticketID]; !ok {
 			rst[ticketID] = make([]*rpd.ResPlanDemandTable, 0)
 		}
-		rst[ticketID] = append(rst[ticketID], &demand)
+		rst[ticketID] = append(rst[ticketID], &demands[idx])
 	}
 
 	return rst, nil
