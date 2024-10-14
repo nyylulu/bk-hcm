@@ -278,6 +278,8 @@ itsmFlows:
         approver:
         approvalKey:
         remarkKey:
+    # itsm service redirect url
+    redirectUrlTemplate: https://bkhcm-example.com/xxx/detail?id=%d
 
 bkchat:
   host: http://bkchat.ied.com:8000

@@ -851,6 +851,10 @@ func (c *Controller) getTicketStatusInfo(kt *kit.Kit, ticketID string) (*rpts.Re
 }
 
 func (c *Controller) createItsmTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
+	if ticket == nil {
+		return "", errors.New("ticket is nil")
+	}
+
 	// TODO：待修改
 	contentTemplate := `业务：%s(%d)
 预测类型：%s
@@ -865,6 +869,7 @@ CPU总核数：%.2f
 		Creator:        ticket.Applicant,
 		Title:          fmt.Sprintf("%s(业务ID: %d)资源预测申请", ticket.BkBizName, ticket.BkBizID),
 		ContentDisplay: content,
+		ExtraFields:    map[string]interface{}{"res_plan_url": fmt.Sprintf(c.itsmFlow.RedirectUrlTemplate, ticket.ID)},
 	}
 
 	sn, err := c.itsmCli.CreateTicket(kt, createTicketReq)

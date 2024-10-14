@@ -1272,6 +1272,8 @@ type ItsmFlow struct {
 	ServiceID int64 `yaml:"serviceID"`
 	// StateNodes is the itsm state nodes.
 	StateNodes []StateNode `yaml:"stateNodes"`
+	// RedirectUrlTemplate is the itsm service redirect url template.
+	RedirectUrlTemplate string `yaml:"redirectUrlTemplate"`
 }
 
 // validate ItsmFlow runtime.
