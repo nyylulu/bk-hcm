@@ -430,7 +430,7 @@ func (t *TransferResPlanTicketReq) GenListTicketsOption() *types.ListOption {
 
 // GenListDemandsOption generate list option for transfer demand ticket.
 func (t *TransferResPlanTicketReq) GenListDemandsOption() *types.ListOption {
-	return t.genListOption("demand_id")
+	return t.genListOption("ticket_id")
 }
 
 func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string) *types.ListOption {
