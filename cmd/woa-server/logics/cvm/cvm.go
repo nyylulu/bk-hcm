@@ -535,7 +535,7 @@ func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, str
 	}
 
 	bizBelong := resp.Data[0]
-	return bizBelong.BkProductID, bizBelong.BkProductName, nil
+	return bizBelong.OpProductID, bizBelong.OpProductName, nil
 }
 
 var regionToVpc = map[string]string{

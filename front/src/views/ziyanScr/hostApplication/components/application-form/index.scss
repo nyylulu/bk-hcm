@@ -51,6 +51,25 @@
       }
     }
   }
+
+  .statistics {
+    font-size: 12px;
+    margin-bottom: 4px;
+    .label {
+      color: #979BA5;
+      margin-right: 8px;
+    }
+    .value {
+      color: #FF9C01;
+    }
+  }
+  .status-PASS {
+    color: #2dcb56;
+  }
+
+  .status-FAILED {
+    color: #ea3636;
+  }
 }
 
 .add-resource-requirements-sideslider {

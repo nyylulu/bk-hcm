@@ -20,7 +20,7 @@
 package resplan
 
 import (
-	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
+	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 )
 
 // ResPlanDemandListResult list resource plan demand result.

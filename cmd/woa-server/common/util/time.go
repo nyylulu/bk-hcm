@@ -41,9 +41,21 @@ func GetCurrentTimePtr() *time.Time {
 }
 
 // TimeStrToUnixSecondDefault convert timeStr to timestamp
-func TimeStrToUnixSecondDefault(str string) int64 {
-	parseTime, _ := time.ParseInLocation(common.TimeDayTransferModel, str, time.Local)
-	return parseTime.Unix()
+func TimeStrToUnixSecondDefault(str string) (int64, error) {
+	timePtr, err := TimeStrToTimePtr(str)
+	if err != nil {
+		return 0, err
+	}
+	return timePtr.Unix(), nil
+}
+
+// TimeStrToTimePtr convert timeStr to time pointer
+func TimeStrToTimePtr(str string) (*time.Time, error) {
+	parseTime, err := time.ParseInLocation(common.TimeDayTransferModel, str, time.Local)
+	if err != nil {
+		return nil, err
+	}
+	return &parseTime, nil
 }
 
 // ConvParamsTime convert time params

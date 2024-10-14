@@ -126,3 +126,34 @@
     }
   }
 }
+.resource-plan-detail-cell {
+  display:flex;
+  cursor: pointer;
+  align-items: center;
+}
+.resource-plan-detail-text {
+  color: #e9a24c;
+}
+.resource-plan-detail-info {
+  font-size: 18px;
+  margin-right:4px;
+}
+.resource-plan-status-icon {
+  margin-right: 4px;
+}
+.resource-plan-status-icon-yellow {
+  color:#ff9c01
+}
+.resource-plan-status-icon-blue {
+  color:#3a84ff
+}
+.resource-plan-status-icon-red {
+  color:#ea3636
+}
+.resource-plan-status-icon-green {
+  color:#2dcb56
+}
+.resource-plan-status-icon-gray {
+  color:#c4c6cc
+}
+

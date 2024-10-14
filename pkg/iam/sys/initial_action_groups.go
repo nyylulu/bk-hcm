@@ -239,6 +239,7 @@ func genPlatformManageActionGroups() client.ActionGroup {
 					{ID: ZiyanResInventory},
 					{ID: ZiyanResCreate},
 					{ID: ZiyanResRecycle},
+					{ID: ZiyanResPlanManage},
 				},
 			},
 			{

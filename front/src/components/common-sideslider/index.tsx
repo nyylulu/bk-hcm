@@ -66,7 +66,11 @@ export default defineComponent({
         }}
         onShown={handleShown}>
         {{
-          default: () => <div class={cssModule.content}>{ctx.slots.default?.()}</div>,
+          default: () => (
+            <div class={[cssModule.content, props.renderType === 'if' ? cssModule.renderIfContent : undefined]}>
+              {ctx.slots.default?.()}
+            </div>
+          ),
           footer: !props.noFooter
             ? () => (
                 <div class={cssModule.footer}>

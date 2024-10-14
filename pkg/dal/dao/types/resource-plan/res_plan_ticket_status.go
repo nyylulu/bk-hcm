@@ -20,7 +20,7 @@
 package resplan
 
 import (
-	rpts "hcm/pkg/dal/table/resource_plan/res-plan-ticket-status"
+	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 )
 
 // ResPlanTicketStatusListResult list resource plan ticket status result.

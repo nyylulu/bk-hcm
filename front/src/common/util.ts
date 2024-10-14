@@ -312,3 +312,18 @@ export const isEmpty = (value: unknown) => {
   }
   return false;
 };
+
+// 获取深层数据
+export const getValueByKey = (data: object, keyPath: string): string => {
+  const keys = keyPath.split('.');
+  let result: unknown = JSON.parse(JSON.stringify(data));
+
+  for (const key of keys) {
+    if (result && typeof result === 'object' && key in result) {
+      result = (result as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return result as string | undefined;
+};

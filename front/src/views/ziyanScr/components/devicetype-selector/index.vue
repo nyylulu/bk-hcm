@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import { Select } from 'bkui-vue';
+import { Select, Popover } from 'bkui-vue';
 import http from '@/http';
 import type { IProps, OptionsType, SelectionType } from './types';
 
@@ -94,6 +94,10 @@ const getOptions = async () => {
   }
 };
 
+const handleSort = (sortFn: (a, b) => number) => {
+  options.value[props.resourceType].sort(sortFn);
+};
+
 watch(
   () => props.params,
   () => {
@@ -101,6 +105,8 @@ watch(
   },
   { immediate: true, deep: true },
 );
+
+defineExpose({ handleSort });
 </script>
 
 <template>
@@ -113,19 +119,15 @@ watch(
     :loading="loading"
     :placeholder="placeholder"
   >
-    <Option
+    <Popover
       v-for="option in options[resourceType]"
       :key="option.device_type"
-      :id="option.device_type"
-      :name="option.device_type"
-      :disabled="props.optionDisabled(option)"
-      v-bk-tooltips="{
-        content: props.optionDisabledTipsContent(option),
-        disabled: !props.optionDisabled(option),
-        boundary: 'parent',
-        delay: 200,
-      }"
-    />
+      :content="props.optionDisabledTipsContent(option)"
+      :disabled="!props.optionDisabled(option)"
+      :popover-delay="[200, 0]"
+    >
+      <Option :id="option.device_type" :name="option.device_type" :disabled="props.optionDisabled(option)" />
+    </Popover>
   </Select>
 </template>
 

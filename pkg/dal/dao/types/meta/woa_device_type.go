@@ -20,7 +20,7 @@
 package meta
 
 import (
-	wdt "hcm/pkg/dal/table/resource_plan/woa-device-type"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 )
 
 // WoaDeviceTypeListResult list woa device type result.

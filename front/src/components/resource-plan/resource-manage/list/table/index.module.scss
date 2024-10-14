@@ -1,0 +1,80 @@
+.table-wrapper {
+  width: 100%;
+  background: #fff;
+  box-shadow: 0 2px 4px 0 #1919290d;
+  border-radius: 2px;
+  padding: 16px 24px;
+
+  .table-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 16px;
+
+    .toolbar-buttons {
+      display: flex;
+      column-gap: 8px;
+
+      .button {
+        width: 102px;
+      }
+    }
+
+    .overview {
+      display: flex;
+      justify-content: flex-end;
+      align-items: center;
+      column-gap: 32px;
+      font-size: 12px;
+
+      .cpu-stats {
+        display: flex;
+        column-gap: 16px;
+      }
+
+      .num {
+        color: #e6a23c;
+      }
+    }
+  }
+}
+
+.operation-column {
+  height: 100%;
+  display: flex;
+  align-items: center;
+
+  .more-action {
+    margin-left: 10px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+
+    & > i {
+      position: absolute;
+    }
+
+    &:hover {
+      background-color: #f0f1f5;
+    }
+
+    &.current-operate-row {
+      background-color: #f0f1f5;
+    }
+
+    &.disabled {
+      background-color: #fff;
+      color: #dcdee5;
+      cursor: not-allowed;
+    }
+  }
+}
+
+.plus-icon {
+  font-size: 16px;
+  margin: 0 2px 0 -2px;
+}

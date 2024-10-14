@@ -598,3 +598,40 @@ export const CLOUD_CVM_DISKTYPE = {
   SSD: 'CLOUD_SSD',
   PREMIUM: 'CLOUD_PREMIUM',
 };
+
+export const RESOURCE_PLAN_STATUSES_type = {
+  INIT: 'init',
+  AUDITING: 'auditing',
+  REJECTED: 'rejected',
+  DONE: 'done',
+  CANCELED: 'canceled',
+  FAILED: 'failed',
+};
+
+// 单据管理tab - 资源预测 审批状态
+export const RESOURCE_PLAN_STATUSES_MAP = {
+  [RESOURCE_PLAN_STATUSES_type.INIT]: {
+    class: 'hcm-icon bkhcm-icon-waiting',
+    color: 'yellow',
+  },
+  [RESOURCE_PLAN_STATUSES_type.AUDITING]: {
+    class: 'hcm-icon bkhcm-icon-jiazai',
+    color: 'blue',
+  },
+  [RESOURCE_PLAN_STATUSES_type.REJECTED]: {
+    class: 'hcm-icon bkhcm-icon-failed',
+    color: 'red',
+  },
+  [RESOURCE_PLAN_STATUSES_type.DONE]: {
+    class: 'hcm-icon bkhcm-icon-success',
+    color: 'green',
+  },
+  [RESOURCE_PLAN_STATUSES_type.CANCELED]: {
+    class: 'hcm-icon bkhcm-icon-default',
+    color: 'gray',
+  },
+  [RESOURCE_PLAN_STATUSES_type.FAILED]: {
+    class: 'hcm-icon bkhcm-icon-failed',
+    color: 'red',
+  },
+};

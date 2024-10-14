@@ -32,6 +32,16 @@ const serviceMenus: RouteRecordRaw[] = [
           icon: 'hcm-icon bkhcm-icon-my-apply',
         },
       },
+      // 单据管理 tab 资源预测详情
+      {
+        path: '/service/my-apply/resource-plan/detail',
+        name: 'OpInvoiceResourceDetail',
+        component: () => import('@/views/service/resource-plan/applications/detail/index'),
+        meta: {
+          activeKey: 'myApply',
+          notMenu: true,
+        },
+      },
       {
         path: '/service/my-apply/detail',
         name: 'serviceMyApplyDetail',
@@ -48,32 +58,6 @@ const serviceMenus: RouteRecordRaw[] = [
         meta: {
           // breadcrumb: [t('服务'), t('我的审批')],
           isShowBreadcrumb: true,
-          notMenu: true,
-        },
-      },
-      {
-        path: '/service/resource-plan/list',
-        name: 'planlist',
-        component: () => import('@/views/resource-plan/list/index'),
-        meta: {
-          title: t('资源预测'),
-          activeKey: 'planlist',
-          icon: 'hcm-icon bkhcm-icon-resource-plan',
-        },
-      },
-      {
-        path: '/service/resource-plan/detail',
-        component: () => import('@/views/resource-plan/detail/index'),
-        meta: {
-          activeKey: 'planlist',
-          notMenu: true,
-        },
-      },
-      {
-        path: '/service/resource-plan/add',
-        component: () => import('@/views/resource-plan/add/index'),
-        meta: {
-          activeKey: 'planlist',
           notMenu: true,
         },
       },
@@ -97,6 +81,48 @@ const serviceMenus: RouteRecordRaw[] = [
   {
     path: '/service',
     children: [
+      {
+        path: '/service/resource-plan',
+        name: 'opResourcePlan-redirect',
+        redirect: '/business/resource-plan', // 前期宣传口径为该路由，产品希望继续保持该路由并将用户重定向到业务下的资源预测功能
+        meta: {
+          activeKey: 'opResourcePlan',
+          title: t('资源预测'),
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-resource-plan',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/resource-plan/home',
+        name: 'opResourcePlan',
+        component: () => import('@/views/service/resource-plan/resource-manage/list'),
+        meta: {
+          activeKey: 'opResourcePlan',
+          title: t('资源预测'),
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-resource-plan',
+          checkAuth: 'ziyan_resource_plan_manage',
+        },
+      },
+      {
+        path: '/service/resource-plan/detail',
+        name: 'opResourcePlanDetail',
+        component: () => import('@/views/service/resource-plan/resource-manage/detail'),
+        meta: {
+          activeKey: 'opResourcePlanDetail',
+          notMenu: true,
+        },
+      },
+      {
+        path: '/service/resource-plan/mod',
+        name: 'modPlanList',
+        component: () => import('@/views/service/resource-plan/resource-manage/mod'),
+        meta: {
+          activeKey: 'planlist',
+          notMenu: true,
+        },
+      },
       {
         path: '/service/hostInventory',
         component: () => import('@/views/ziyanScr/hostInventory/index'),

@@ -32,7 +32,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/dal/table"
-	rpd "hcm/pkg/dal/table/resource_plan/res-plan-demand"
+	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -116,7 +116,7 @@ func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.ErrorJson("update resource plan demand failed, filter: %s, err: %v, rid: %v", filterExpr, err, kt.Rid)
+			logs.ErrorJson("update resource plan demand failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
 			return nil, err
 		}
 
@@ -155,7 +155,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count res plan demand failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count res plan demand failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -192,7 +192,7 @@ func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResPlanDemandTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete resource plan demand failed, err: %v, filter: %s, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete resource plan demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 

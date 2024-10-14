@@ -22,6 +22,7 @@ package meta
 import (
 	"net/http"
 
+	"hcm/cmd/woa-server/logics/meta"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
@@ -33,6 +34,7 @@ func InitService(c *capability.Capability) {
 	s := &service{
 		dao:        c.Dao,
 		authorizer: c.Authorizer,
+		logics:     meta.New(c.EsbClient, c.Authorizer),
 	}
 	h := rest.NewHandler()
 
@@ -44,13 +46,20 @@ func InitService(c *capability.Capability) {
 type service struct {
 	dao        dao.Set
 	authorizer auth.Authorizer
+	logics     meta.Logics
 }
 
 func (s *service) initMetaService(h *rest.Handler) {
+	// TODO: 跟前端确认，是否统一进行url规范化调整
 	h.Add("ListDiskType", http.MethodGet, "/meta/disk_type/list", s.ListDiskType)
 	h.Add("ListObsProject", http.MethodGet, "/meta/obs_project/list", s.ListObsProject)
 	h.Add("ListRegion", http.MethodGet, "/meta/region/list", s.ListRegion)
 	h.Add("ListZone", http.MethodPost, "/meta/zone/list", s.ListZone)
 	h.Add("ListDeviceClass", http.MethodGet, "/meta/device_class/list", s.ListDeviceClass)
 	h.Add("ListDeviceType", http.MethodPost, "/meta/device_type/list", s.ListDeviceType)
+	h.Add("ListPlanType", http.MethodPost, "/metas/plan_types/list", s.ListPlanType)
+	h.Add("ListTicketType", http.MethodPost, "/metas/ticket_types/list", s.ListTicketType)
+	h.Add("ListBizsByOpProduct", http.MethodPost, "/metas/bizs/by/op_product/list", s.ListBizsByOpProduct)
+	h.Add("ListOpProducts", http.MethodPost, "/metas/op_products/list", s.ListOpProducts)
+	h.Add("ListPlanProducts", http.MethodPost, "/metas/plan_products/list", s.ListPlanProducts)
 }

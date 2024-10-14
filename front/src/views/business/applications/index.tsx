@@ -10,6 +10,7 @@ import HostRecycle from './recycle';
 import PublicCloudApplications from './components/public-cloud';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import ResourcePlanList from './resource-plan/list';
 
 interface ApplicationsType {
   label: string;
@@ -73,6 +74,12 @@ export default defineComponent({
         name: 'load_balance',
         Component: PublicCloudApplications,
         rules: [{ field: 'type', op: QueryRuleOPEnum.IN, value: ['create_load_balancer'] }],
+      },
+      {
+        label: t('资源预测'),
+        name: 'resource_plan',
+        Component: ResourcePlanList,
+        rules: [],
       },
     ]);
     const activeType = ref(route.query?.type || types.value[0].name);

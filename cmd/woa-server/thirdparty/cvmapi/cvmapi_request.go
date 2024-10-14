@@ -135,6 +135,17 @@ type InstanceQueryParam struct {
 	AssetId    []string `json:"instanceAssetId,omitempty"`
 }
 
+// DemandChangeLogQueryReq cvm and cbs demand change log query request
+type DemandChangeLogQueryReq struct {
+	ReqMeta `json:",inline"`
+	Params  *DemandChangeLogQueryParam `json:"params"`
+}
+
+type DemandChangeLogQueryParam struct {
+	Page         *Page   `json:"page"`
+	DemandIdList []int64 `json:"demandIdList,omitempty"`
+}
+
 // CvmCbsPlanQueryReq cvm and cbs plan info query request
 type CvmCbsPlanQueryReq struct {
 	ReqMeta `json:",inline"`
@@ -144,10 +155,12 @@ type CvmCbsPlanQueryReq struct {
 // CvmCbsPlanQueryParam cvm and cbs plan info query parameters
 type CvmCbsPlanQueryParam struct {
 	Page            *Page    `json:"page"`
-	Period          *Period  `json:"period"`
+	Period          *Period  `json:"period,omitempty"`
 	UseTime         *UseTime `json:"useTime,omitempty"`
-	BgName          []string `json:"bgName"`
-	DeptName        []string `json:"deptName"`
+	OrderIdList     []string `json:"orderIdList,omitempty"`
+	DemandIdList    []int64  `json:"demandIdList,omitempty"`
+	BgName          []string `json:"bgName,omitempty"`
+	DeptName        []string `json:"deptName,omitempty"`
 	InstanceType    []string `json:"instanceType,omitempty"`
 	PlanProductName []string `json:"planProductName,omitempty"`
 	ProjectName     []string `json:"projectName,omitempty"`
@@ -198,67 +211,15 @@ type AdjustBaseInfo struct {
 
 // AdjustSrcData adjust source data for cvm and cbs plan info adjust params
 type AdjustSrcData struct {
-	CityId              int     `json:"cityId"`
-	CityName            string  `json:"cityName"`
-	ZoneId              int     `json:"zoneId"`
-	ZoneName            string  `json:"zoneName"`
-	InstanceType        string  `json:"instanceType"`
-	InstanceModel       string  `json:"instanceModel"`
-	CvmAmount           float32 `json:"cvmAmount"`
-	RamAmount           float32 `json:"ramAmount"`
-	CoreAmount          float32 `json:"coreAmount"`
-	InstanceIO          int     `json:"instanceIO"`
-	DiskType            int     `json:"diskType"`
-	DiskTypeName        string  `json:"diskTypeName"`
-	AllDiskAmount       float32 `json:"allDiskAmount"`
-	Desc                string  `json:"desc"`
-	ProjectName         string  `json:"projectName"`
-	RequirementWeekType string  `json:"requirementWeekType"`
-	Year                int     `json:"year"`
-	Month               int     `json:"month"`
-	UseTime             string  `json:"useTime"`
-	BgId                int     `json:"bgId"`
-	BgName              string  `json:"bgName"`
-	DeptId              int     `json:"deptId"`
-	DeptName            string  `json:"deptName"`
-	PlanProductId       int     `json:"planProductId"`
-	PlanProductName     string  `json:"planProductName"`
-	//added @2022.3.29
-	SliceId string `json:"sliceId"`
+	AdjustType           string `json:"adjustType"`
+	*CvmCbsPlanQueryItem `json:",inline"`
 }
 
 // AdjustUpdatedData adjust target data for cvm and cbs plan info adjust params
 type AdjustUpdatedData struct {
-	ModifyType          string  `json:"modifyType"`
-	CityId              int     `json:"cityId"`
-	CityName            string  `json:"cityName"`
-	ZoneId              int     `json:"zoneId"`
-	ZoneName            string  `json:"zoneName"`
-	InstanceType        string  `json:"instanceType"`
-	InstanceModel       string  `json:"instanceModel"`
-	CvmAmount           float32 `json:"cvmAmount"`
-	RamAmount           float32 `json:"ramAmount"`
-	CoreAmount          float32 `json:"coreAmount"`
-	InstanceIO          int     `json:"instanceIO"`
-	DiskType            int     `json:"diskType"`
-	DiskTypeName        string  `json:"diskTypeName"`
-	AllDiskAmount       float32 `json:"allDiskAmount"`
-	Desc                string  `json:"desc"`
-	ProjectName         string  `json:"projectName"`
-	RequirementWeekType string  `json:"requirementWeekType"`
-	IsManualWeekType    int     `json:"isManualWeekType"`
-	Year                int     `json:"year"`
-	Month               int     `json:"month"`
-	UseTime             string  `json:"useTime"`
-	BgId                int     `json:"bgId"`
-	BgName              string  `json:"bgName"`
-	DeptId              int     `json:"deptId"`
-	DeptName            string  `json:"deptName"`
-	PlanProductId       int     `json:"planProductId"`
-	PlanProductName     string  `json:"planProductName"`
-
-	//added @2022.3.29
-	SliceId string `json:"sliceId"`
+	AdjustType           string  `json:"adjustType"`
+	TimeAdjustCvmAmount  float32 `json:"timeAdjustCvmAmount,omitempty"`
+	*CvmCbsPlanQueryItem `json:",inline"`
 }
 
 // AddCvmCbsPlanReq add cvm and cbs plan order request

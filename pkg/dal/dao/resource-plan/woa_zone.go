@@ -32,7 +32,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/dal/table"
-	wz "hcm/pkg/dal/table/resource_plan/woa-zone"
+	wz "hcm/pkg/dal/table/resource-plan/woa-zone"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -122,7 +122,7 @@ func (d WoaZoneDao) Update(kt *kit.Kit, filterExpr *filter.Expression, model *wz
 	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.ErrorJson("update woa zone failed, filter: %s, err: %v, rid: %v", filterExpr, err, kt.Rid)
+			logs.ErrorJson("update woa zone failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
 			return nil, err
 		}
 
@@ -161,7 +161,7 @@ func (d WoaZoneDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaZoneLis
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count woa zone failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count woa zone failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -198,7 +198,7 @@ func (d WoaZoneDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expressi
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.WoaZoneTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete woa zone failed, err: %v, filter: %s, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete woa zone failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 

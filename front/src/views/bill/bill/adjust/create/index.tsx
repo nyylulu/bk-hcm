@@ -1,5 +1,5 @@
 import { PropType, Ref, defineComponent, inject, nextTick, provide, reactive, ref, watch } from 'vue';
-import { Form, Message, Select } from 'bkui-vue';
+import { Button, Form, Message, Select } from 'bkui-vue';
 import PrimaryAccountSelector from '../../components/search/primary-account-selector';
 import VendorRadioGroup from '@/components/vendor-radio-group';
 import CommonSideslider from '@/components/common-sideslider';
@@ -123,7 +123,7 @@ export default defineComponent({
         v-model:isShow={isShow.value}
         width={1280}
         title='新增调账'
-        onHandleSubmit={handleSubmit}
+        noFooter
         isSubmitLoading={isLoading.value}>
         {{
           default: () => (
@@ -167,6 +167,17 @@ export default defineComponent({
               <Form.FormItem label={t('结果预览')}>
                 <AdjustAmount adjustData={costSum} currency={formModel.currency as 'RMB' | 'USD'} />
               </Form.FormItem>
+              <section class={'mt16'}>
+                <Button theme='primary' class={'mr16'} onClick={handleSubmit}>
+                  提交
+                </Button>
+                <Button
+                  onClick={() => {
+                    isShow.value = false;
+                  }}>
+                  取消
+                </Button>
+              </section>
             </Form>
           ),
         }}
