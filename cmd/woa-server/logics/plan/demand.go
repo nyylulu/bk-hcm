@@ -301,15 +301,15 @@ func (c *Controller) GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64
 		return nil, err
 	}
 
-	// get plan product all apply order consume map.
-	orderConsumeMap, err := c.getApplyOrderConsumeMap(kt, demands)
+	// get plan product all apply order consume pool map.
+	orderConsumePoolMap, err := c.getApplyOrderConsumePoolMap(kt, demands)
 	if err != nil {
-		logs.Errorf("failed to get apply order consume map, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get apply order consume pool map, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// get order ids of op product in order ids.
-	planProdOrderIDs := converter.MapKeyToSlice(orderConsumeMap)
+	planProdOrderIDs := converter.MapKeyToSlice(orderConsumePoolMap)
 	prodOrderIDs, err := c.getProdOrders(kt, prodID, planProdOrderIDs)
 	if err != nil {
 		logs.Errorf("failed to get op product orders, err: %v, rid: %s", err, kt.Rid)
@@ -318,47 +318,43 @@ func (c *Controller) GetProdResConsumePool(kt *kit.Kit, prodID, planProdID int64
 
 	prodConsumePool := make(ResPlanPool)
 	strUnionFind := NewStrUnionFind()
-	for _, consume := range orderConsumeMap {
-		strUnionFind.Add(consume.DeviceType)
+	for _, consumePool := range orderConsumePoolMap {
+		for consumePoolKey := range consumePool {
+			strUnionFind.Add(consumePoolKey.DeviceType)
+		}
 	}
 
 	for _, prodOrderID := range prodOrderIDs {
-		consume := orderConsumeMap[prodOrderID]
-		deviceType := consume.DeviceType
-		for _, ele := range strUnionFind.Elements() {
-			matched, err := c.IsDeviceMatched(kt, []string{ele}, consume.DeviceType)
-			if err != nil {
-				logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
-				return nil, err
+		consumePool := orderConsumePoolMap[prodOrderID]
+		for consumePoolKey, consumeCpuCore := range consumePool {
+			deviceType := consumePoolKey.DeviceType
+			for _, ele := range strUnionFind.Elements() {
+				matched, err := c.IsDeviceMatched(kt, []string{ele}, consumePoolKey.DeviceType)
+				if err != nil {
+					logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
+					return nil, err
+				}
+
+				if matched[0] {
+					strUnionFind.Union(ele, consumePoolKey.DeviceType)
+					deviceType = strUnionFind.Find(ele)
+					break
+				}
 			}
 
-			if matched[0] {
-				strUnionFind.Union(ele, consume.DeviceType)
-				deviceType = strUnionFind.Find(ele)
-				break
-			}
+			consumePoolKey.DeviceType = deviceType
+			prodConsumePool[consumePoolKey] += consumeCpuCore
 		}
-
-		key := ResPlanPoolKey{
-			PlanType:      consume.PlanType,
-			AvailableTime: consume.AvailableTime,
-			DeviceType:    deviceType,
-			ObsProject:    consume.ObsProject,
-			RegionName:    consume.RegionName,
-			ZoneName:      consume.ZoneName,
-		}
-
-		prodConsumePool[key] += consume.CpuCore
 	}
 
 	return prodConsumePool, nil
 }
 
-// getApplyOrderConsumeMap get crp demand ids corresponding apply order consume map.
-func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmCbsPlanQueryItem) (
-	map[string]ResPlanElem, error) {
+// getApplyOrderConsumePoolMap get crp demand ids corresponding apply order consume resource plan pool map.
+func (c *Controller) getApplyOrderConsumePoolMap(kt *kit.Kit, demands []*cvmapi.CvmCbsPlanQueryItem) (
+	map[string]ResPlanPool, error) {
 
-	orderConsumeMap := make(map[string]ResPlanElem)
+	orderConsumePoolMap := make(map[string]ResPlanPool)
 	mutex := sync.Mutex{}
 	limit := constant.SyncConcurrencyDefaultMaxLimit
 
@@ -381,19 +377,23 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 				continue
 			}
 
-			// 消耗预测CRP changelog中ChangeCoreAmount对应负值，因此需要乘-1取反
-			consumeCpuCore := -float64(changelog.ChangeCoreAmount)
-			elem := ResPlanElem{
+			consumePoolKey := ResPlanPoolKey{
 				PlanType:      enumor.PlanType(demand.InPlan).ToAnotherPlanType(),
 				AvailableTime: NewAvailableTime(demand.Year, time.Month(demand.Month)),
 				DeviceType:    demand.InstanceModel,
 				ObsProject:    enumor.ObsProject(demand.ProjectName),
 				RegionName:    demand.CityName,
 				ZoneName:      demand.ZoneName,
-				CpuCore:       consumeCpuCore,
 			}
+
+			// 消耗预测CRP changelog中ChangeCoreAmount对应负值，因此需要乘-1取反
+			consumeCpuCore := -float64(changelog.ChangeCoreAmount)
+
 			mutex.Lock()
-			orderConsumeMap[changelog.OrderId] = elem
+			if _, ok := orderConsumePoolMap[changelog.OrderId]; !ok {
+				orderConsumePoolMap[changelog.OrderId] = make(ResPlanPool)
+			}
+			orderConsumePoolMap[changelog.OrderId][consumePoolKey] = consumeCpuCore
 			mutex.Unlock()
 		}
 
@@ -404,7 +404,7 @@ func (c *Controller) getApplyOrderConsumeMap(kt *kit.Kit, demands []*cvmapi.CvmC
 		return nil, err
 	}
 
-	return orderConsumeMap, nil
+	return orderConsumePoolMap, nil
 }
 
 // getDemandAllChangelogs get crp demand id corresponding all changelogs.
