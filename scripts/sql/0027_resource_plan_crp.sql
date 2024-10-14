@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0027,HCMVER=v1.6.9.0-alpha.1
 
     Notes:
     1. 修改资源预测单据表。
