@@ -15,6 +15,7 @@ export interface IProps {
   params: CvmDeviceTypeReqParams;
   multiple?: boolean;
   disabled?: boolean;
+  isLoading?: boolean;
   optionDisabled?: (option: DeviceType) => boolean;
   optionDisabledTipsContent?: (option: DeviceType) => string;
   placeholder?: string;

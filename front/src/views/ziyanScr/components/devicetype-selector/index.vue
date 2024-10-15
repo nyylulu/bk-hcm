@@ -11,8 +11,8 @@ const props = withDefaults(defineProps<IProps>(), {
   params: () => ({}),
   multiple: false,
   disabled: false,
+  isLoading: false,
   optionDisabled: () => false,
-  optionDisabledTipsContent: () => '',
   placeholder: '请选择',
   sort: () => 0,
 });
@@ -115,19 +115,38 @@ defineExpose({ handleSort });
     clearable
     filterable
     :multiple="multiple"
-    :disabled="props.disabled"
-    :loading="loading"
+    :disabled="disabled"
+    :loading="loading || isLoading"
     :placeholder="placeholder"
   >
-    <Popover
-      v-for="option in options[resourceType]"
-      :key="option.device_type"
-      :content="props.optionDisabledTipsContent(option)"
-      :disabled="!props.optionDisabled(option)"
-      :popover-delay="[200, 0]"
-    >
-      <Option :id="option.device_type" :name="option.device_type" :disabled="props.optionDisabled(option)" />
-    </Popover>
+    <!-- 遍历 options 数据 -->
+    <template v-for="option in options[resourceType]" :key="option.device_type">
+      <!-- 判断是否需要使用 Popover 提示 -->
+      <Popover
+        v-if="optionDisabledTipsContent"
+        :content="optionDisabledTipsContent(option)"
+        :disabled="!optionDisabled(option)"
+        :popover-delay="[200, 0]"
+        placement="left"
+      >
+        <Option :id="option.device_type" :disabled="optionDisabled(option)">
+          <!-- 如果传入了具名插槽 'option'，则渲染插槽内容 -->
+          <template v-if="$slots.option">
+            <slot name="option" v-bind="option"></slot>
+          </template>
+          <!-- 否则渲染默认的 device_type -->
+          <template v-else>{{ option.device_type }}</template>
+        </Option>
+      </Popover>
+
+      <!-- 如果不需要 Popover 提示，直接渲染 Option -->
+      <Option v-else :id="option.device_type" :disabled="optionDisabled(option)">
+        <template v-if="$slots.option">
+          <slot name="option" v-bind="option"></slot>
+        </template>
+        <template v-else>{{ option.device_type }}</template>
+      </Option>
+    </template>
   </Select>
 </template>
 

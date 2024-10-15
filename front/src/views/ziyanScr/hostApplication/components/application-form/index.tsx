@@ -1,4 +1,4 @@
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Loading } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
@@ -591,26 +591,29 @@ export default defineComponent({
         isLoadingDeviceType.value = true;
         availablePrepaidSet.value.clear();
         availablePostpaidSet.value.clear();
-        const { data } = await planStore.list_config_cvm_charge_type_device_type({
-          bk_biz_id,
-          require_type,
-          region,
-          zone,
-        });
-        const { info } = data;
-        for (const item of info) {
-          const { charge_type, device_types } = item;
-          let set = availablePostpaidSet.value;
-          if (charge_type === ChargeType.PREPAID) {
-            set = availablePrepaidSet.value;
+        try {
+          const { data } = await planStore.list_config_cvm_charge_type_device_type({
+            bk_biz_id,
+            require_type,
+            region,
+            zone,
+          });
+          const { info } = data;
+          for (const item of info) {
+            const { charge_type, device_types } = item;
+            let set = availablePostpaidSet.value;
+            if (charge_type === ChargeType.PREPAID) {
+              set = availablePrepaidSet.value;
+            }
+            for (const device of device_types) {
+              const { device_type, available } = device;
+              if (available) set.add(device_type);
+            }
           }
-          for (const device of device_types) {
-            const { device_type, available } = device;
-            if (available) set.add(device_type);
-          }
+          if (availablePrepaidSet.value.size === 0) resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
+        } finally {
+          isLoadingDeviceType.value = false;
         }
-        isLoadingDeviceType.value = false;
-        if (availablePrepaidSet.value.size === 0) resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
       },
       {
         deep: true,
@@ -1451,38 +1454,60 @@ export default defineComponent({
                             ref={QCLOUDCVMformRef}
                             form-type='vertical'>
                             <bk-form-item label='机型' required property='device_type'>
-                              <Loading loading={isLoadingDeviceType.value}>
-                                <DevicetypeSelector
-                                  ref='device-type-selector'
-                                  class='commonCard-form-select'
-                                  v-model={QCLOUDCVMForm.value.spec.device_type}
-                                  resourceType='cvm'
-                                  params={cvmDevicetypeParams.value}
-                                  disabled={resourceForm.value.zone === ''}
-                                  optionDisabled={
-                                    !isRollingServer.value
-                                      ? (v) => !computedAvailableSet.value.has(v.device_type)
-                                      : undefined
-                                  }
-                                  optionDisabledTipsContent={
-                                    !isRollingServer.value ? () => '当前机型不在有效预测范围内' : undefined
-                                  }
-                                  placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
-                                  sort={(a, b) => {
-                                    if (!isRollingServer.value) return handleSortDemands(a, b);
-                                    const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
-                                    const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
-                                    if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
-                                      return -1;
-                                    if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType')
-                                      return 1;
-                                    return 0;
-                                  }}
-                                  onChange={(result) => {
-                                    QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType).cpu_amount;
-                                  }}
-                                />
-                              </Loading>
+                              <DevicetypeSelector
+                                ref='device-type-selector'
+                                class='commonCard-form-select'
+                                v-model={QCLOUDCVMForm.value.spec.device_type}
+                                resourceType='cvm'
+                                params={cvmDevicetypeParams.value}
+                                disabled={resourceForm.value.zone === ''}
+                                isLoading={isLoadingDeviceType.value}
+                                placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
+                                sort={(a, b) => {
+                                  if (!isRollingServer.value) return handleSortDemands(a, b);
+                                  const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
+                                  const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
+                                  if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
+                                    return -1;
+                                  if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
+                                  return 0;
+                                }}
+                                optionDisabled={
+                                  !isRollingServer.value
+                                    ? (v) => !computedAvailableSet.value.has(v.device_type)
+                                    : (option) => (option as CvmDeviceType).device_type_class === 'SpecialType'
+                                }
+                                optionDisabledTipsContent={
+                                  !isRollingServer.value
+                                    ? () => '当前机型不在有效预测范围内'
+                                    : (option) => {
+                                        const { device_type_class } = option as CvmDeviceType;
+                                        if (device_type_class === 'SpecialType') {
+                                          return '专用机型不允许选择';
+                                        }
+                                      }
+                                }
+                                onChange={(result) => {
+                                  QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType).cpu_amount;
+                                }}>
+                                {{
+                                  option: (option: CvmDeviceType) => {
+                                    const { device_type, device_type_class } = option;
+                                    const isSpecialType = device_type_class === 'SpecialType';
+                                    if (isRollingServer.value) {
+                                      return (
+                                        <>
+                                          <span>{device_type}</span>
+                                          <Tag class='ml12' theme={isSpecialType ? 'danger' : 'success'} size='small'>
+                                            {isSpecialType ? '专用机型' : '通用机型'}
+                                          </Tag>
+                                        </>
+                                      );
+                                    }
+                                    return device_type;
+                                  },
+                                }}
+                              </DevicetypeSelector>
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <bk-select
