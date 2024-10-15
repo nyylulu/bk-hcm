@@ -460,7 +460,7 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'BizResourcePlanAdd',
             component: () => import('@/views/business/resource-plan/add'),
             meta: {
-              activeKey: 'bizResourcePlanAdd',
+              activeKey: 'bizResourcePlan',
             },
           },
           {
@@ -468,7 +468,7 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'BizResourcePlanDetail',
             component: () => import('@/views/business/resource-plan/detail'),
             meta: {
-              activeKey: 'bizResourcePlanDetail',
+              activeKey: 'bizResourcePlan',
             },
           },
         ],

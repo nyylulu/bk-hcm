@@ -3,6 +3,7 @@ import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, u
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import CommonCard from '@/components/CommonCard';
 import BusinessSelector from '@/components/business-selector/index.vue';
+import HcmLink from '@/components/hcm-link/index.vue';
 import './index.scss';
 import { useAccountStore, useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
@@ -1316,17 +1317,32 @@ export default defineComponent({
                         resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !availablePostpaidSet.value.size &&
-                        !availablePrepaidSet.value.size && (
+                        !availablePrepaidSet.value.size &&
+                        !isLoadingDeviceType.value && (
                           <Alert class={'mb8'} theme='warning'>
-                            当前地域无资源预测，提预测单后再按量申请，
-                            <Button
-                              theme='primary'
-                              text
-                              onClick={() => {
-                                window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
-                              }}>
-                              去创建提预测单
-                            </Button>
+                            该地域，在当月，没有可申领的预测需求，建议：
+                            <ul>
+                              <li>
+                                1.切换有预测需求的地域，
+                                <HcmLink
+                                  theme='primary'
+                                  size='small'
+                                  href={`/#/business/resource-plan?bizs=${computedBiz.value}`}
+                                  target='_blank'>
+                                  查询当前预测需求
+                                </HcmLink>
+                              </li>
+                              <li>
+                                2.请先提交预测单，将期望到货日期设置为当月，预测需求审批通过后可申领主机，
+                                <HcmLink
+                                  theme='primary'
+                                  size='small'
+                                  href={`/#/business/resource-plan/add?bizs=${computedBiz.value}`}
+                                  target='_blank'>
+                                  去创建提预测单
+                                </HcmLink>
+                              </li>
+                            </ul>
                           </Alert>
                         )}
                       {resourceForm.value.resourceType === 'QCLOUDCVM' && (
