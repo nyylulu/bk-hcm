@@ -87,6 +87,9 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		return nil, err
 	}
 
+	tcloudLblSyncConcurrency := int(cc.HCService().SyncConfig.TCloudLoadBalancerListenerSyncConcurrency)
+	logs.Infof("tcloud loadbalancer listener sync concurrency: %d", tcloudLblSyncConcurrency)
+
 	svr := &Service{
 		clientSet:    cliSet,
 		cloudAdaptor: cloudAdaptor,

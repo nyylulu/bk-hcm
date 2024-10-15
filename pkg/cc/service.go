@@ -124,10 +124,13 @@ type CloudServerSetting struct {
 	Recycle        Recycle        `yaml:"recycle"`
 	BillConfig     BillConfig     `yaml:"billConfig"`
 	Itsm           ApiGateway     `yaml:"itsm"`
-	Cmdb           ApiGateway     `yaml:"cmdb"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
-	FinOps         ApiGateway     `yaml:"finops"`
 	Cmsi           CMSI           `yaml:"cmsi"`
+
+	// 内部版配置
+	Cmdb           ApiGateway     `yaml:"cmdb"`
+	FinOps         ApiGateway     `yaml:"finops"`
+
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -236,12 +239,26 @@ func (s DataServiceSetting) Validate() error {
 	return nil
 }
 
+// SyncConfig defines sync config.
+type SyncConfig struct {
+	// 腾讯云监听器同步并发数
+	TCloudLoadBalancerListenerSyncConcurrency uint `yaml:"tcloudLblConcurrency"`
+}
+
+func (s *SyncConfig) trySetDefault() {
+	if s.TCloudLoadBalancerListenerSyncConcurrency == 0 {
+		s.TCloudLoadBalancerListenerSyncConcurrency = 3
+	}
+}
+
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
-	Network Network   `yaml:"network"`
-	Service Service   `yaml:"service"`
-	Log     LogOption `yaml:"log"`
-	Esb     Esb       `yaml:"esb"`
+	Esb Esb `yaml:"esb"`
+
+	Network    Network    `yaml:"network"`
+	Service    Service    `yaml:"service"`
+	Log        LogOption  `yaml:"log"`
+	SyncConfig SyncConfig `yaml:"sync"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -254,6 +271,7 @@ func (s *HCServiceSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
+	s.SyncConfig.trySetDefault()
 
 	return
 }
@@ -394,10 +412,12 @@ func (s *TaskServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Database.trySetDefault()
+	s.Log.trySetDefault()
+
+
 	if s.OBSDatabase != nil {
 		s.OBSDatabase.trySetDefault()
 	}
-	s.Log.trySetDefault()
 
 	return
 }
