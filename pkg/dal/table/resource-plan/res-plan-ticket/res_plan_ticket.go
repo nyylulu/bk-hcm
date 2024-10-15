@@ -293,10 +293,6 @@ func (i *UpdatedRPDemandItem) Validate() error {
 		return errors.New("area name can not be empty")
 	}
 
-	if len(i.DemandSource) == 0 {
-		return errors.New("demand source can not be empty")
-	}
-
 	if err := i.Cvm.Validate(); err != nil {
 		return err
 	}
