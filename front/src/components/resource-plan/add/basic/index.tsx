@@ -1,25 +1,35 @@
 import dayjs from 'dayjs';
-import { defineComponent, type PropType, onBeforeMount, ref, watch, nextTick } from 'vue';
+import { defineComponent, type PropType, onBeforeMount, ref, watch, nextTick, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel';
 import { useResourcePlanStore } from '@/store';
 import cssModule from './index.module.scss';
-
+import usePlanStore from '@/store/usePlanStore';
 import type { IPlanTicketDemand, IRegion, IZone } from '@/typings/resourcePlan';
-import { AdjustType } from '@/typings/plan';
+import { timeFormatter } from '@/common/util';
+import { AdjustType, IExceptTimeRange } from '@/typings/plan';
+import { getDateRangeIntersectionWithMonth, isDateInRange } from '@/utils/plan';
+import useFormModel from '@/hooks/useFormModel';
 
 export default defineComponent({
   props: {
     planTicketDemand: Object as PropType<IPlanTicketDemand>,
     resourceType: String,
     type: String as PropType<AdjustType>,
+    submitTooltips: Object as PropType<string | { content: string; disabled: boolean }>,
   },
 
-  emits: ['update:planTicketDemand', 'update:resourceType'],
+  emits: ['update:planTicketDemand', 'update:resourceType', 'update:submitTooltips', 'update:isSubmitDisabled'],
 
   setup(props, { emit, expose }) {
+    const planStore = usePlanStore();
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
+    const { formModel: timeRange, setFormValues: setTimeRange } = useFormModel<IExceptTimeRange>({
+      year_month_week: undefined,
+      date_range_in_week: undefined,
+      date_range_in_month: undefined,
+    });
 
     const projectTypes = ref<string[]>([]);
     const regions = ref<IRegion[]>([]);
@@ -30,6 +40,16 @@ export default defineComponent({
     const isLoadingRegion = ref(false);
     const isLoadingZone = ref(false);
     const isLoadingSource = ref(false);
+    const timeStrictRange = ref({
+      start: '',
+      end: '',
+    });
+
+    const isThirteenDate = computed(() => {
+      const expectedDate = dayjs(props.planTicketDemand.expect_time);
+      const futureDate = dayjs().add(13, 'week');
+      return expectedDate.isSame(futureDate, 'day');
+    });
 
     const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
       emit('update:planTicketDemand', {
@@ -129,11 +149,53 @@ export default defineComponent({
       return formRef.value?.clearValidate();
     };
 
+    const handleDateWithThirteen = () => {
+      if (isThirteenDate.value) {
+        return;
+      }
+      handleUpdatePlanTicketDemand('expect_time', dayjs().add(13, 'week').format('YYYY-MM-DD'));
+    };
+
     watch(
       () => props.planTicketDemand.region_id,
       () => {
         handleUpdatePlanTicketDemand('zone_id', '');
         getZones();
+      },
+    );
+
+    watch(
+      () => props.planTicketDemand.expect_time,
+      async (time) => {
+        if (!time) {
+          return;
+        }
+        // 当前日期的13周后日期
+        const expect_time = timeFormatter(time, 'YYYY-MM-DD');
+
+        const { data } = await planStore.get_demand_available_time(expect_time);
+
+        // data 复制到 timeRange
+        setTimeRange(data);
+        // 计算所在周没有跨月的日期
+        timeStrictRange.value = getDateRangeIntersectionWithMonth(
+          timeRange.date_range_in_week.start,
+          timeRange.date_range_in_week.end,
+          timeRange.year_month_week.month,
+        );
+        // 是否跨月
+        const disabledWithDateRange = isDateInRange(timeFormatter(time, 'YYYY-MM-DD'), timeStrictRange.value);
+
+        emit('update:submitTooltips', {
+          content: t(
+            `日期落在${timeRange.year_month_week?.year}年${timeRange.year_month_week?.month}月W${timeRange.year_month_week?.week},需要在${timeStrictRange.value.start}~${timeStrictRange.value.end}间申领`,
+          ),
+          disabled: disabledWithDateRange,
+        });
+        emit('update:isSubmitDisabled', !disabledWithDateRange);
+      },
+      {
+        immediate: true,
       },
     );
 
@@ -203,8 +265,32 @@ export default defineComponent({
               clearable
               modelValue={props.planTicketDemand.expect_time}
               disabledDate={getDisabledDate}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('expect_time', val)}
-            />
+              onChange={(val: string) => handleUpdatePlanTicketDemand('expect_time', val)}>
+              {{
+                footer: () => (
+                  <div
+                    class={[`${isThirteenDate.value ? 'is-thirteen' : ''}`, cssModule['in-thirteen-weeks']]}
+                    onClick={handleDateWithThirteen}>
+                    {t('13周后')}
+                  </div>
+                ),
+              }}
+            </bk-date-picker>
+            <p class={cssModule['plan-mod-timepicker-tip']}>
+              {t('注意：日期落在')}
+              <span class={cssModule['time-txt']}>
+                {t(
+                  `${timeRange?.year_month_week?.year}年${timeRange?.year_month_week?.month}月W${timeRange?.year_month_week?.week}`,
+                )}
+              </span>
+              {t(',需要在')}
+              <span class={cssModule['time-txt']}>
+                {t(`${timeStrictRange.value?.start}~${timeStrictRange.value?.end}`)}
+              </span>
+              {t('之间申领，超过')}
+              <span class={cssModule['time-txt']}>{t(`${timeRange.date_range_in_month?.end}`)}</span>
+              {t('将无法申领')}
+            </p>
           </bk-form-item>
           {/* 变更原因、需求备注仅和单据绑定，编辑时无需更改 */}
           {props.type === AdjustType.none && (

@@ -5,10 +5,10 @@ import CVM from './cvm';
 import CBS from './cbs';
 import cssModule from './index.module.scss';
 import { useI18n } from 'vue-i18n';
-
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 import Type from './type';
 import { AdjustType } from '@/typings/plan';
+import dayjs from 'dayjs';
 
 export default defineComponent({
   props: {
@@ -35,6 +35,11 @@ export default defineComponent({
     const cvmRef = ref(null);
     const cbsRef = ref(null);
     const resourceType = ref('cvm');
+    const isSubmitDisabled = ref(false);
+    const submitTooltips = ref({
+      content: '',
+      disabled: false,
+    });
     const planTicketDemand = ref<IPlanTicketDemand>();
     const adjustType = ref();
 
@@ -44,7 +49,7 @@ export default defineComponent({
         props.initDemand && props.initDemand.adjustType === AdjustType.time ? AdjustType.time : AdjustType.config;
       planTicketDemand.value = {
         obs_project: '',
-        expect_time: '2024-10-01',
+        expect_time: dayjs().add(13, 'week').format('YYYY-MM-DD'),
         region_id: '',
         zone_id: '',
         demand_source: '指标变化',
@@ -128,6 +133,8 @@ export default defineComponent({
       <CommonSideslider
         width='960'
         class={cssModule.home}
+        isSubmitDisabled={isSubmitDisabled.value}
+        submitTooltips={submitTooltips.value}
         isShow={props.isShow}
         title={props.initDemand ? t('修改预测需求') : t('增加预测需求')}
         handleClose={handleClose}
@@ -137,6 +144,8 @@ export default defineComponent({
         {props.initDemand && props.isEdit && <Type v-model={adjustType.value} type={props.initDemand.adjustType} />}
         <Basic
           ref={basicRef}
+          v-model:isSubmitDisabled={isSubmitDisabled.value}
+          v-model:submitTooltips={submitTooltips.value}
           v-model:planTicketDemand={planTicketDemand.value}
           v-model:resourceType={resourceType.value}
           type={props.isEdit ? adjustType.value : AdjustType.none}
