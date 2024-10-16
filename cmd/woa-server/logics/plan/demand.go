@@ -216,7 +216,8 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 	for _, demand := range demands {
 		// merge match device type.
 		deviceType := demand.InstanceModel
-		matches, err := c.IsDeviceMatched(kt, strUnionFind.Elements(), demand.InstanceModel)
+		wildcardSource := strUnionFind.Elements()
+		matches, err := c.IsDeviceMatched(kt, wildcardSource, demand.InstanceModel)
 		if err != nil {
 			logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -224,7 +225,7 @@ func (c *Controller) GetProdResPlanPool(kt *kit.Kit, prodID int64) (ResPlanPool,
 
 		for idx, match := range matches {
 			if match {
-				strUnionFind.Union(strUnionFind.Elements()[idx], demand.InstanceModel)
+				strUnionFind.Union(wildcardSource[idx], demand.InstanceModel)
 				deviceType = strUnionFind.Find(demand.InstanceModel)
 				break
 			}

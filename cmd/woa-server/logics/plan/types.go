@@ -210,6 +210,7 @@ type ResPlanPool map[ResPlanPoolKey]float64
 
 // StrUnionFind string union find struct.
 type StrUnionFind struct {
+	idx    []string
 	parent map[string]string
 }
 
@@ -220,14 +221,18 @@ func NewStrUnionFind() *StrUnionFind {
 
 // Add adds a new element x.
 func (uf *StrUnionFind) Add(x string) {
+	if _, ok := uf.parent[x]; ok {
+		return
+	}
 	uf.parent[x] = x
+	uf.idx = append(uf.idx, x)
 }
 
 // Elements return all elements in StrUnionFind.
 func (uf *StrUnionFind) Elements() []string {
 	var res []string
-	for k := range uf.parent {
-		res = append(res, k)
+	for _, e := range uf.idx {
+		res = append(res, e)
 	}
 
 	return res
