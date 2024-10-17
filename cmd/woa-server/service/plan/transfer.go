@@ -39,7 +39,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/converter"
 
-	"github.com/AzureAD/microsoft-authentication-library-for-go/apps/errors"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -271,17 +270,16 @@ func convTicketDemandsInfoToJson(kt *kit.Kit, class enumor.DemandClass, oldDeman
 func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTicketWithStatus,
 	demands []*rpd.ResPlanDemandTable) error {
 
+	// 只有审批通过的单据才更新demand表
+	if ticketInfo.Status != enumor.RPTicketStatusDone {
+		return nil
+	}
+
 	demandIDs, err := s.getCrpDemandIDByCrpOrderID(kt, ticketInfo.CrpSn)
 	if err != nil {
 		logs.Errorf("failed to get crp demand id by crp order id, err: %v, crp_sn: %s, rid: %s", err, ticketInfo.CrpSn,
 			kt.Rid)
 		return err
-	}
-
-	if len(demands) != len(demandIDs) {
-		logs.Errorf("hcm demands count not equal to crp demands count, ticket_id: %s, crp_sn: %s, rid: %s",
-			ticketInfo.ID, ticketInfo.CrpSn, kt.Rid)
-		return errors.New("ticket demands count not equal to crp demands count")
 	}
 
 	inserts := make([]rpcd.ResPlanCrpDemandTable, len(demands))

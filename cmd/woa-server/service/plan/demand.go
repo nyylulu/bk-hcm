@@ -187,8 +187,8 @@ func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int
 			}
 
 			mapLock.Lock()
-			for _, one := range list.Details {
-				result[one.CrpDemandID] = &one
+			for id, one := range list.Details {
+				result[one.CrpDemandID] = &list.Details[id]
 			}
 			mapLock.Unlock()
 
@@ -373,7 +373,8 @@ func filterResPlanDemandResp(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, deta
 		// 将结果转换为 list detail
 		rstItem, err := getListResPlanDemandItem(item)
 		if err != nil {
-			logs.Warnf("failed to convert crp demand item, err: %v, rid: %s", err, kt.Rid)
+			logs.Warnf("failed to convert crp demand item, err: %v, demand id: %s, rid: %s", err, item.CrpDemandID,
+				kt.Rid)
 			continue
 		}
 		// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）

@@ -407,7 +407,8 @@ type GetRPTicketDemand struct {
 
 // TransferResPlanTicketReq is transfer demand ticket request.
 type TransferResPlanTicketReq struct {
-	TicketIDs []string `json:"ticket_ids" binding:"required,max=100"`
+	TicketIDs []string `json:"ticket_ids" binding:"omitempty,max=100"`
+	BkBizIDs  []int64  `json:"bk_biz_ids" binding:"omitempty,max=100"`
 }
 
 // Validate validate transfer demand ticket request.
@@ -416,8 +417,8 @@ func (t *TransferResPlanTicketReq) Validate() error {
 		return err
 	}
 
-	if len(t.TicketIDs) == 0 {
-		return errors.New("ticket_ids should not be empty")
+	if len(t.TicketIDs) == 0 && len(t.BkBizIDs) == 0 {
+		return errors.New("params ticket_ids or bk_biz_ids is required")
 	}
 
 	return nil
@@ -434,8 +435,13 @@ func (t *TransferResPlanTicketReq) GenListDemandsOption() *types.ListOption {
 }
 
 func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string) *types.ListOption {
-	rules := []filter.RuleFactory{
-		tools.ContainersExpression(ticketIDKey, t.TicketIDs),
+	var rules []filter.RuleFactory
+
+	if len(t.BkBizIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression("bk_biz_id", t.BkBizIDs))
+	}
+	if len(t.TicketIDs) > 0 {
+		rules = append(rules, tools.ContainersExpression(ticketIDKey, t.TicketIDs))
 	}
 
 	opt := &types.ListOption{
