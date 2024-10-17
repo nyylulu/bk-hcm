@@ -101,4 +101,13 @@ const (
 
 	// TaskCreateLayer7Rule is a task indicating that create layer7 rule.
 	TaskCreateLayer7Rule TaskOperation = "create_layer7_rule"
+
+	// TaskUnbindListenerRs is a task indicating that unbind listener and rs.
+	TaskUnbindListenerRs TaskOperation = "listener_unbind_rs"
+
+	// TaskModifyListenerRsWeight is a task indicating that modify listener rs weight.
+	TaskModifyListenerRsWeight TaskOperation = "listener_rs_weight"
+
+	// TaskDeleteListener is a task indicating that delete listener.
+	TaskDeleteListener TaskOperation = "listener_delete"
 )

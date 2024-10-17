@@ -1,8 +1,8 @@
 // import { CogShape } from 'bkui-vue/lib/icon';
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
-import i18n from '@/language/i18n';
-const { t } = i18n.global;
+import Meta from '../meta';
+
 const businesseMenus: RouteRecordRaw[] = [
   {
     path: '/business',
@@ -26,8 +26,14 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'hostBusinessDetail',
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
-              activeKey: 'businessHost',
-              // breadcrumb: ['资源', '主机', '详情'],
+              ...new Meta({
+                activeKey: 'businessHost',
+                layout: {
+                  breadcrumbs: {
+                    show: false,
+                  },
+                },
+              }),
             },
           },
           {
@@ -35,9 +41,10 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'hostBusinessRecyclebin',
             component: () => import('@/views/business/business-manage.vue'),
             meta: {
-              backRouter: 'hostBusinessList',
-              activeKey: 'businessHost',
-              // breadcrumb: ['资源', '主机', '回收记录'],
+              ...new Meta({
+                activeKey: 'businessHost',
+                isShowBreadcrumb: false,
+              }),
             },
           },
         ],
@@ -67,8 +74,10 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'driveBusinessDetail',
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
-              activeKey: 'businessDisk',
-              // breadcrumb: ['资源', '硬盘', '详情'],
+              ...new Meta({
+                activeKey: 'businessDisk',
+                isShowBreadcrumb: false,
+              }),
             },
           },
           {
@@ -76,9 +85,10 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'diskBusinessRecyclebin',
             component: () => import('@/views/business/business-manage.vue'),
             meta: {
-              backRouter: 'businessDiskList',
-              activeKey: 'businessDisk',
-              // breadcrumb: ['资源', '硬盘', '回收记录'],
+              ...new Meta({
+                activeKey: 'businessDisk',
+                isShowBreadcrumb: false,
+              }),
             },
           },
         ],
@@ -99,7 +109,6 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-manage.vue'),
             meta: {
               activeKey: 'businessImage',
-              // breadcrumb: ['资源', '镜像'],
             },
           },
           {
@@ -108,7 +117,6 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
               activeKey: 'businessImage',
-              // breadcrumb: ['资源', '镜像', '详情'],
             },
           },
         ],
@@ -128,8 +136,10 @@ const businesseMenus: RouteRecordRaw[] = [
             path: '',
             component: () => import('@/views/business/business-manage.vue'),
             meta: {
-              activeKey: 'businessVpc',
-              // breadcrumb: ['资源', 'VPC'],
+              ...new Meta({
+                activeKey: 'businessVpc',
+                isShowBreadcrumb: false,
+              }),
             },
           },
           {
@@ -137,8 +147,10 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'vpcBusinessDetail',
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
-              activeKey: 'businessVpc',
-              // breadcrumb: ['资源', 'VPC', '详情'],
+              ...new Meta({
+                activeKey: 'businessVpc',
+                isShowBreadcrumb: false,
+              }),
             },
           },
         ],
@@ -167,8 +179,10 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'subnetBusinessDetail',
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
-              activeKey: 'businessSubnet',
-              // breadcrumb: ['资源', '子网', '详情'],
+              ...new Meta({
+                activeKey: 'businessSubnet',
+                // breadcrumb: ['资源', '子网', '详情'],
+              }),
             },
           },
         ],
@@ -198,6 +212,7 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
               activeKey: 'businessElasticIP',
+              isShowBreadcrumb: false,
               // breadcrumb: ['资源', '弹性IP', '详情'],
             },
           },
@@ -228,6 +243,7 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
               activeKey: 'businessNetwork',
+              isShowBreadcrumb: false,
               // breadcrumb: ['资源', '网络接口', '详情'],
             },
           },
@@ -258,6 +274,7 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
               activeKey: 'businessRoutingTable',
+              isShowBreadcrumb: false,
               // breadcrumb: ['资源', '路由表', '详情'],
             },
           },
@@ -288,6 +305,7 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/business-detail.vue'),
             meta: {
               activeKey: 'businessSecurityGroup',
+              isShowBreadcrumb: false,
               // breadcrumb: ['资源', '安全组', '详情'],
             },
           },

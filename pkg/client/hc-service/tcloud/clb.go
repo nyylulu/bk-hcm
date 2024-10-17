@@ -81,7 +81,7 @@ func (c *ClbClient) CreateListenerWithTargetGroup(kt *kit.Kit, req *hcproto.List
 	*hcproto.ListenerWithRuleCreateResult, error) {
 
 	return common.Request[hcproto.ListenerWithRuleCreateReq, hcproto.ListenerWithRuleCreateResult](
-		c.client, http.MethodPost, kt, req, "/listeners/create_with_rule")
+		c.client, http.MethodPost, kt, req, "/listeners/create_with_target_group")
 }
 
 // CreateListener 创建监听器自身
@@ -235,4 +235,20 @@ func (c *ClbClient) CreateSnatIp(kt *kit.Kit, req *hcproto.TCloudCreateSnatIpReq
 func (c *ClbClient) DeleteSnatIp(kt *kit.Kit, req *hcproto.TCloudDeleteSnatIpReq) error {
 	return common.RequestNoResp[hcproto.TCloudDeleteSnatIpReq](c.client, http.MethodDelete, kt, req,
 		"/load_balancers/snat_ips")
+}
+
+// BatchRemoveListenerTarget 按负载均衡批量移除监听器的RS
+func (c *ClbClient) BatchRemoveListenerTarget(kt *kit.Kit, lbID string, req *hcproto.TCloudBatchUnbindRsReq) (
+	*hcproto.BatchCreateResult, error) {
+
+	return common.Request[hcproto.TCloudBatchUnbindRsReq, hcproto.BatchCreateResult](
+		c.client, http.MethodDelete, kt, req, "/load_balancers/%s/targets/batch", lbID)
+}
+
+// BatchModifyListenerTargetsWeight 按负载均衡批量调整监听器的RS权重
+func (c *ClbClient) BatchModifyListenerTargetsWeight(kt *kit.Kit, lbID string,
+	req *hcproto.TCloudBatchModifyRsWeightReq) (*hcproto.BatchCreateResult, error) {
+
+	return common.Request[hcproto.TCloudBatchModifyRsWeightReq, hcproto.BatchCreateResult](
+		c.client, http.MethodPatch, kt, req, "/load_balancers/%s/targets/weight", lbID)
 }

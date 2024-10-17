@@ -27,6 +27,7 @@ const getSearchCompProps = (field: ModelProperty) => {
   if (field.type === 'account') {
     return {
       bizId: getBizsId(),
+      resourceType: props.resource,
     };
   }
   return {
@@ -77,6 +78,8 @@ watch(
   border-radius: 2px;
   padding: 16px 24px;
   margin-bottom: 16px;
+  position: relative;
+  z-index: 3; // fix被bk-table-head遮挡
 
   .row-action {
     padding: 4px 0;
