@@ -1754,32 +1754,26 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '总内存(GB)',
       field: 'total_memory',
-      isDefaultShow: true,
     },
     {
       label: '已执行内存(GB)',
       field: 'applied_memory',
-      isDefaultShow: true,
     },
     {
       label: '未执行内存(GB)',
       field: 'remained_memory',
-      isDefaultShow: true,
     },
     {
       label: '云盘总量',
       field: 'total_disk_size',
-      isDefaultShow: true,
     },
     {
       label: '云盘已执行数',
       field: 'applied_disk_size',
-      isDefaultShow: true,
     },
     {
       label: '云盘未执行数',
       field: 'remained_disk_size',
-      isDefaultShow: true,
     },
     {
       label: '城市',

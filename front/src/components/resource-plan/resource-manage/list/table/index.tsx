@@ -93,7 +93,7 @@ export default defineComponent({
         {
           label: t('预测ID'),
           field: 'crp_demand_id',
-          minWidth: 120,
+          minWidth: 90,
           fixed: 'left',
           isDefaultShow: true,
           render: ({ data }: any) => {
@@ -131,10 +131,11 @@ export default defineComponent({
                       ? 'hcm-no-permision-text-btn'
                       : undefined
                   }`}
+                  disabled={!isRowSelectEnable({ row: data })}
                   onClick={() => handleOperate(firstActions.type as OperationActions, data)}>
                   {firstActions.label}
                 </Button>
-                <Dropdown trigger='click'>
+                <Dropdown trigger='click' disabled={!isRowSelectEnable({ row: data })}>
                   {{
                     default: () => (
                       <div class={cssModule['more-action']}>

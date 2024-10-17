@@ -79,7 +79,7 @@ export default defineComponent({
     };
 
     const validate = () => {
-      return formRef.value.validate();
+      return formRef.value?.validate();
     };
 
     const clearValidate = () => {
@@ -107,12 +107,16 @@ export default defineComponent({
 
     watch(
       [
-        () => props.planTicketDemand.cbs.disk_num,
-        () => props.planTicketDemand.cbs.disk_per_size,
+        () => props.planTicketDemand.cbs?.disk_num,
+        () => props.planTicketDemand.cbs?.disk_per_size,
         () => props.planTicketDemand.cvm.os,
         () => props.resourceType,
       ],
-      calcDiskSize,
+      ([cbsDiskNum, cbsDiskPerSize]) => {
+        if (cbsDiskNum !== undefined || cbsDiskPerSize !== undefined) {
+          calcDiskSize();
+        }
+      },
     );
 
     onBeforeMount(getDiskTypes);
@@ -122,102 +126,105 @@ export default defineComponent({
       clearValidate,
     });
 
-    return () => (
-      <Panel title={t('CBS云磁盘信息')} noShadow>
-        <bk-form
-          form-type='vertical'
-          ref={formRef}
-          rules={rules.value}
-          model={props.planTicketDemand.cbs}
-          class={cssModule.home}>
-          <bk-form-item label={t('云盘类型')} property='disk_type' required class={cssModule['span-line']}>
-            <bk-select
-              disabled={props.type === AdjustType.time}
-              clearable
-              loading={isLoadingDiskTypes.value}
-              modelValue={props.planTicketDemand.cbs.disk_type}
-              onChange={(val: string) => handleUpdateDiskType(val)}>
-              {diskTypes.value.map((diskType) => (
-                <bk-option id={diskType.disk_type} name={diskType.disk_type_name}></bk-option>
-              ))}
-            </bk-select>
-          </bk-form-item>
-          {/* 编辑CBS时仅可调整云盘总量 */}
-          {!isCVM.value && AdjustType.none !== props.type ? (
-            <bk-form-item label={t('云盘总量')} property='disk_size' required class={cssModule['span-half-line']}>
-              <bk-input
+    return () =>
+      props.planTicketDemand.cbs && (
+        <Panel title={t('CBS云磁盘信息')} noShadow>
+          <bk-form
+            form-type='vertical'
+            ref={formRef}
+            rules={rules.value}
+            model={props.planTicketDemand.cbs}
+            class={cssModule.home}>
+            <bk-form-item label={t('云盘类型')} property='disk_type' required class={cssModule['span-line']}>
+              <bk-select
                 disabled={props.type === AdjustType.time}
-                type='number'
-                suffix={'GB'}
-                min={0}
-                modelValue={props.planTicketDemand.cbs.disk_size}
-                onChange={(val: number) => handleUpdatePlanTicketDemand('disk_size', val || 0)}
                 clearable
-              />
+                loading={isLoadingDiskTypes.value}
+                modelValue={props.planTicketDemand.cbs.disk_type}
+                onChange={(val: string) => handleUpdateDiskType(val)}>
+                {diskTypes.value.map((diskType) => (
+                  <bk-option id={diskType.disk_type} name={diskType.disk_type_name}></bk-option>
+                ))}
+              </bk-select>
             </bk-form-item>
-          ) : (
-            <>
-              <bk-form-item
-                label={isCVM.value ? t('云磁盘容量/实例') : t('云磁盘容量/块')}
-                property='disk_per_size'
-                required
-                class={cssModule['span-half-line']}>
+            {/* 编辑CBS时仅可调整云盘总量 */}
+            {!isCVM.value && AdjustType.none !== props.type ? (
+              <bk-form-item label={t('云盘总量')} property='disk_size' required class={cssModule['span-half-line']}>
                 <bk-input
                   disabled={props.type === AdjustType.time}
                   type='number'
                   suffix={'GB'}
                   min={0}
-                  modelValue={props.planTicketDemand.cbs.disk_per_size}
-                  onChange={(val: number) => handleUpdatePlanTicketDemand('disk_per_size', val || 0)}
+                  modelValue={props.planTicketDemand.cbs.disk_size}
+                  onChange={(val: number) => handleUpdatePlanTicketDemand('disk_size', val || 0)}
                   clearable
                 />
               </bk-form-item>
-              <bk-form-item
-                label={t('云盘总量')}
-                description={props.resourceType === 'cbs' ? t('需要的云磁盘总量') : t('所有实例的系统盘，数据盘总容量')}
-                property='name'>
-                <span class={cssModule.number}>{props.planTicketDemand.cbs.disk_size} GB</span>
-              </bk-form-item>
-              {props.resourceType === 'cbs' ? (
+            ) : (
+              <>
                 <bk-form-item
-                  label={t('所需数量')}
-                  description={t('需要的云磁盘块数')}
-                  property='disk_num'
+                  label={isCVM.value ? t('云磁盘容量/实例') : t('云磁盘容量/块')}
+                  property='disk_per_size'
                   required
-                  class={cssModule['span-line']}>
+                  class={cssModule['span-half-line']}>
                   <bk-input
                     disabled={props.type === AdjustType.time}
                     type='number'
+                    suffix={'GB'}
                     min={0}
-                    suffix={t('块')}
-                    modelValue={props.planTicketDemand.cbs.disk_num}
-                    onChange={(val: number) => handleUpdatePlanTicketDemand('disk_num', val || 0)}
+                    modelValue={props.planTicketDemand.cbs.disk_per_size}
+                    onChange={(val: number) => handleUpdatePlanTicketDemand('disk_per_size', val || 0)}
                     clearable
                   />
                 </bk-form-item>
-              ) : (
-                ''
-              )}
-            </>
-          )}
+                <bk-form-item
+                  label={t('云盘总量')}
+                  description={
+                    props.resourceType === 'cbs' ? t('需要的云磁盘总量') : t('所有实例的系统盘，数据盘总容量')
+                  }
+                  property='name'>
+                  <span class={cssModule.number}>{props.planTicketDemand.cbs.disk_size} GB</span>
+                </bk-form-item>
+                {props.resourceType === 'cbs' ? (
+                  <bk-form-item
+                    label={t('所需数量')}
+                    description={t('需要的云磁盘块数')}
+                    property='disk_num'
+                    required
+                    class={cssModule['span-line']}>
+                    <bk-input
+                      disabled={props.type === AdjustType.time}
+                      type='number'
+                      min={0}
+                      suffix={t('块')}
+                      modelValue={props.planTicketDemand.cbs.disk_num}
+                      onChange={(val: number) => handleUpdatePlanTicketDemand('disk_num', val || 0)}
+                      clearable
+                    />
+                  </bk-form-item>
+                ) : (
+                  ''
+                )}
+              </>
+            )}
 
-          <bk-form-item
-            label={t('单实例磁盘IO')}
-            description={t('磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260')}
-            property='disk_io'
-            class={cssModule['span-line']}>
-            <bk-input
-              type='number'
-              min={0}
-              max={props.planTicketDemand.cbs.disk_type === 'CLOUD_PREMIUM' ? 150 : 260}
-              disabled={!props.planTicketDemand.cbs.disk_type || props.type === AdjustType.time}
-              modelValue={props.planTicketDemand.cbs.disk_io}
-              onChange={(val: number) => handleUpdatePlanTicketDemand('disk_io', val || 0)}
-              clearable
-            />
-          </bk-form-item>
-        </bk-form>
-      </Panel>
-    );
+            <bk-form-item
+              label={t('单实例磁盘IO')}
+              description={t('磁盘IO吞吐需求，无特殊要求填写15；高性能云盘上限150，SSD云硬盘上限260')}
+              property='disk_io'
+              class={cssModule['span-line']}>
+              <bk-input
+                type='number'
+                min={0}
+                max={props.planTicketDemand.cbs.disk_type === 'CLOUD_PREMIUM' ? 150 : 260}
+                disabled={!props.planTicketDemand.cbs.disk_type || props.type === AdjustType.time}
+                modelValue={props.planTicketDemand.cbs.disk_io}
+                onChange={(val: number) => handleUpdatePlanTicketDemand('disk_io', val || 0)}
+                clearable
+              />
+            </bk-form-item>
+          </bk-form>
+        </Panel>
+      );
   },
 });

@@ -125,7 +125,7 @@ export default defineComponent({
     };
 
     onBeforeRouteLeave((_to, _from, next) => {
-      if (['serviceMyApplyDetail'].includes(_to.name as string)) next();
+      if (['BizInvoiceResourceDetail'].includes(_to.name as string)) next();
       else
         InfoBox({
           title: '确定离开当前页面?',
@@ -188,7 +188,7 @@ export default defineComponent({
         theme: 'success',
       });
       router.push({
-        path: '/service/my-apply/resource-plan/detail',
+        path: '/business/applications/resource-plan/detail',
         query: {
           id: data.id,
         },
