@@ -74,18 +74,22 @@ type Service struct {
 }
 
 // NewService create a service instance.
-func NewService(sd serviced.ServiceDiscover) (*Service, error) {
+func NewService(dis serviced.Discover) (*Service, error) {
 	cli, err := restcli.NewClient(nil)
 	if err != nil {
 		return nil, err
 	}
 
-	cliSet := client.NewClientSet(cli, sd)
+	cliSet := client.NewClientSet(cli, dis)
 
-	cloudAdaptor := cloudadaptor.NewCloudAdaptorClient(cliSet.DataService())
 	if err = esb.InitEsbClient(cvt.ValToPtr(cc.HCService().Esb), metrics.Register()); err != nil {
 		return nil, err
 	}
+
+	cloudAdaptor := cloudadaptor.NewCloudAdaptorClient(cliSet.DataService())
+	tcloudLblSyncConcurrency := int(cc.HCService().SyncConfig.TCloudLoadBalancerListenerSyncConcurrency)
+	logs.Infof("tcloud loadbalancer listener sync concurrency: %d", tcloudLblSyncConcurrency)
+
 
 	svr := &Service{
 		clientSet:    cliSet,

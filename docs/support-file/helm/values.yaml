@@ -360,6 +360,9 @@ hcservice:
         targetPort: 80
         nodePort:
   port: 80
+  sync:
+    # 负载均衡下监听器同步并发数
+    tcloudLblConcurrency: 3
 
 webserver:
   ## 镜像
@@ -434,6 +437,7 @@ webserver:
       caFile:
       # the password to decrypt the certificate.
       password:
+  templatePath: /data/hcm/template
 
 taskserver:
   ## 镜像

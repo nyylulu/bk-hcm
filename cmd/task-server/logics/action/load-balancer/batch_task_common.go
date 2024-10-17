@@ -34,7 +34,17 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/assert"
+	"hcm/pkg/tools/retry"
 	"hcm/pkg/tools/slice"
+)
+
+const (
+	// BatchTaskDefaultRetryTimes 批量任务默认重试次数
+	BatchTaskDefaultRetryTimes = 3
+	// BatchTaskDefaultRetryDelayMinMS 批量任务默认重试最小延迟时间
+	BatchTaskDefaultRetryDelayMinMS = 600
+	// BatchTaskDefaultRetryDelayMaxMS 批量任务默认重试最大延迟时间
+	BatchTaskDefaultRetryDelayMaxMS = 1000
 )
 
 func listTaskDetail(kt *kit.Kit, ids []string) ([]coretask.Detail, error) {
@@ -68,9 +78,19 @@ func batchUpdateTaskDetailState(kt *kit.Kit, ids []string, state enumor.TaskDeta
 			detailUpdates[i] = datatask.UpdateTaskDetailField{ID: ids[i], State: state}
 		}
 		updateTaskReq := &datatask.UpdateDetailReq{Items: detailUpdates[:len(idBatch)]}
-		err := actcli.GetDataService().Global.TaskDetail.Update(kt, updateTaskReq)
+		rangeMS := [2]uint{BatchTaskDefaultRetryDelayMinMS, BatchTaskDefaultRetryDelayMaxMS}
+		policy := retry.NewRetryPolicy(0, rangeMS)
+		err := policy.BaseExec(kt, func() error {
+			err := actcli.GetDataService().Global.TaskDetail.Update(kt, updateTaskReq)
+			if err != nil {
+				logs.Errorf("fail to update task detail state to %s, err: %v, ids: %s, rid: %s",
+					state, err, idBatch, kt.Rid)
+				return err
+			}
+			return nil
+		})
 		if err != nil {
-			logs.Errorf("fail to update task detail state to %s, err: %v, ids: %s, rid: %s",
+			logs.Errorf("fail to update task detail state to %s after retry, err: %v, ids: %s, rid: %s",
 				state, err, idBatch, kt.Rid)
 			return err
 		}
@@ -87,19 +107,30 @@ func batchUpdateTaskDetailResultState(kt *kit.Kit, ids []string, state enumor.Ta
 		for i := range idBatch {
 			field := datatask.UpdateTaskDetailField{ID: ids[i], State: state, Result: result}
 			if reason != nil {
-				field.Reason = reason.Error()
+				// 需要截取否则超出DB字段长度限制，会更新状态失败
+				runesReason := []rune(reason.Error())
+				field.Reason = string(runesReason[:1000])
 			}
 			detailUpdates[i] = field
 		}
 		updateTaskReq := &datatask.UpdateDetailReq{Items: detailUpdates[:len(idBatch)]}
-		err := actcli.GetDataService().Global.TaskDetail.Update(kt, updateTaskReq)
+		rangeMS := [2]uint{BatchTaskDefaultRetryDelayMinMS, BatchTaskDefaultRetryDelayMaxMS}
+		policy := retry.NewRetryPolicy(0, rangeMS)
+		err := policy.BaseExec(kt, func() error {
+			err := actcli.GetDataService().Global.TaskDetail.Update(kt, updateTaskReq)
+			if err != nil {
+				logs.Errorf("fail to update task detail result state to %s, err: %v, ids: %s, rid: %s",
+					state, err, idBatch, kt.Rid)
+				return err
+			}
+			return nil
+		})
 		if err != nil {
-			logs.Errorf("fail to update task detail result state to %s, err: %v, ids: %s, rid: %s",
+			logs.Errorf("fail to update task detail result state to %s after retry, err: %v, ids: %s, rid: %s",
 				state, err, idBatch, kt.Rid)
 			return err
 		}
 	}
-
 	return nil
 }
 
@@ -177,6 +208,9 @@ func isHealthCheckChange(req *corelb.TCloudHealthCheckInfo, db *corelb.TCloudHea
 	if !assert.IsPtrStringEqual(req.CheckType, db.CheckType) {
 		return true
 	}
+	if !assert.IsPtrStringEqual(req.HttpVersion, db.HttpVersion) {
+		return true
+	}
 	if !assert.IsPtrInt64Equal(req.SourceIpType, db.SourceIpType) {
 		return true
 	}
@@ -245,4 +279,33 @@ func isListenerCertChange(want *corelb.TCloudCertificateInfo, db *corelb.TCloudC
 		}
 	}
 	return false
+}
+
+// batchListListenerByIDs 根据监听器ID数组，批量获取监听器列表
+func batchListListenerByIDs(kt *kit.Kit, lblIDs []string) ([]corelb.BaseListener, error) {
+	if len(lblIDs) == 0 {
+		return nil, errf.Newf(errf.InvalidParameter, "listener ids is required")
+	}
+
+	// 查询监听器列表
+	req := &core.ListReq{
+		Filter: tools.ContainersExpression("id", lblIDs),
+		Page:   core.NewDefaultBasePage(),
+	}
+	lblList := make([]corelb.BaseListener, 0)
+	for {
+		lblResp, err := actcli.GetDataService().Global.LoadBalancer.ListListener(kt, req)
+		if err != nil {
+			logs.Errorf("failed to list tcloud listener, err: %v, lblIDs: %v, rid: %s", err, lblIDs, kt.Rid)
+			return nil, err
+		}
+
+		lblList = append(lblList, lblResp.Details...)
+		if uint(len(lblResp.Details)) < core.DefaultMaxPageLimit {
+			break
+		}
+
+		req.Page.Start += uint32(core.DefaultMaxPageLimit)
+	}
+	return lblList, nil
 }
