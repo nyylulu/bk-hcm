@@ -21,6 +21,8 @@
 package loadbalancer
 
 import (
+	"errors"
+
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -89,54 +91,68 @@ func (svc *clbSvc) BatchCreateTCloudZiyanTargets(cts *rest.Contexts) (any, error
 		logs.Errorf("list tcloud-ziyan listener url rule failed, tgID: %s, err: %v, rid: %s", tgID, err, cts.Kit.Rid)
 		return nil, err
 	}
+	rule := urlRuleList.Details[0]
+	lbReq := core.ListReq{Filter: tools.EqualExpression("id", rule.LbID), Page: core.NewDefaultBasePage()}
+	lbResp, err := svc.dataCli.Global.LoadBalancer.ListLoadBalancer(cts.Kit, &lbReq)
+	if err != nil {
+		logs.Errorf("fail to find ziyan load balancer for add target group, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if len(lbResp.Details) == 0 {
+		return nil, errf.New(errf.RecordNotFound, "load balancer not found")
+	}
 
 	// 调用云端批量绑定虚拟主机接口
-	return svc.batchAddZiyanTargetsToGroup(cts.Kit, req, tgList[0], urlRuleList)
+	return svc.batchAddZiyanTargetsToGroup(cts.Kit, req, lbResp.Details[0], rule)
 }
 
 func (svc *clbSvc) batchAddZiyanTargetsToGroup(kt *kit.Kit, req *protolb.TCloudBatchOperateTargetReq,
-	tgInfo corelb.BaseTargetGroup, urlRuleList *dataproto.TCloudURLRuleListResult) (
-	*protolb.BatchCreateResult, error) {
+	lbInfo corelb.BaseLoadBalancer, ruleInfo corelb.TCloudLbUrlRule) (*protolb.BatchCreateResult, error) {
 
-	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, tgInfo.AccountID)
+	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, lbInfo.AccountID)
 	if err != nil {
 		return nil, err
 	}
 
-	cloudLBExists := make(map[string]struct{}, 0)
 	rsOpt := &typelb.TCloudRegisterTargetsOption{
-		Region: tgInfo.Region,
+		Region:         lbInfo.Region,
+		LoadBalancerId: ruleInfo.CloudLbID,
 	}
-	for _, ruleItem := range urlRuleList.Details {
-		if _, ok := cloudLBExists[ruleItem.CloudLbID]; !ok {
-			rsOpt.LoadBalancerId = ruleItem.CloudLbID
-			cloudLBExists[ruleItem.CloudLbID] = struct{}{}
+	for _, rsItem := range req.RsList {
+		tmpRs := &typelb.BatchTarget{
+			ListenerId: cvt.ValToPtr(ruleInfo.CloudLBLID),
+			InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
+			Port:       cvt.ValToPtr(rsItem.Port),
+			Weight:     rsItem.Weight,
 		}
-		for _, rsItem := range req.RsList {
-			tmpRs := &typelb.BatchTarget{
-				ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
-				Port:       cvt.ValToPtr(rsItem.Port),
-				Weight:     rsItem.Weight,
-			}
-			if ruleItem.RuleType == enumor.Layer7RuleType {
-				tmpRs.LocationId = cvt.ValToPtr(ruleItem.CloudID)
-			}
-			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
+		switch rsItem.InstType {
+		case enumor.CvmInstType:
+			tmpRs.InstanceId = cvt.ValToPtr(rsItem.CloudInstID)
+		case enumor.EniInstType:
+			// 跨域rs 指定 ip
+			tmpRs.EniIp = cvt.ValToPtr(rsItem.IP)
+		default:
+			return nil, errors.New(string("invalid target type: " + rsItem.InstType))
 		}
-		failIDs, err := tcloudAdpt.RegisterTargets(kt, rsOpt)
-		if err != nil {
-			logs.Errorf("register tcloud-ziyan target api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt, kt.Rid)
-			return nil, err
+
+		if ruleInfo.RuleType == enumor.Layer7RuleType {
+			tmpRs.LocationId = cvt.ValToPtr(ruleInfo.CloudID)
 		}
-		if len(failIDs) > 0 {
-			logs.Errorf("register tcloud-ziyan target api partially failed, failLblIDs: %v, req: %+v, rsOpt: %+v, rid: %s",
-				failIDs, req, rsOpt, kt.Rid)
-			return nil, errf.Newf(errf.PartialFailed, "register tcloud-ziyan target failed, failListenerIDs: %v", failIDs)
-		}
+		rsOpt.Targets = append(rsOpt.Targets, tmpRs)
+	}
+	failIDs, err := tcloudAdpt.RegisterTargets(kt, rsOpt)
+	if err != nil {
+		logs.Errorf("register tcloud-ziyan target api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt, kt.Rid)
+		return nil, err
+	}
+	if len(failIDs) > 0 {
+		logs.Errorf("register tcloud-ziyan target api partially failed, failLblIDs: %v, req: %+v, rsOpt: %+v, rid: %s",
+			failIDs, req, rsOpt, kt.Rid)
+		return nil, errf.Newf(errf.PartialFailed, "register tcloud-ziyan target failed, failListenerIDs: %v",
+			failIDs)
 	}
 
-	rsIDs, err := svc.batchCreateTargetDb(kt, req, tgInfo.AccountID, tgInfo.ID)
+	rsIDs, err := svc.batchCreateTargetDb(kt, req, lbInfo.AccountID, req.TargetGroupID)
 	if err != nil {
 		return nil, err
 	}
@@ -335,7 +351,8 @@ func (svc *clbSvc) batchModifyZiyanTargetPortCloud(kt *kit.Kit, req *protolb.TCl
 		rsOpt.NewPort = cvt.PtrToVal(req.RsList[0].NewPort)
 		err = tcloudAdpt.ModifyTargetPort(kt, rsOpt)
 		if err != nil {
-			logs.Errorf("batch modify tcloud-ziyan target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt, kt.Rid)
+			logs.Errorf("batch modify tcloud-ziyan target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt,
+				kt.Rid)
 			return errf.Newf(errf.PartialFailed, "batch modify tcloud-ziyan target port api failed, err: %v", err)
 		}
 	}
@@ -436,7 +453,8 @@ func (svc *clbSvc) batchModifyZiyanTargetWeightCloud(kt *kit.Kit, req *protolb.T
 		}
 		err = tcloudAdpt.ModifyTargetWeight(kt, rsOpt)
 		if err != nil {
-			logs.Errorf("batch modify tcloud-ziyan target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt, kt.Rid)
+			logs.Errorf("batch modify tcloud-ziyan target port api failed, err: %v, rsOpt: %+v, rid: %s", err, rsOpt,
+				kt.Rid)
 			return errf.Newf(errf.PartialFailed, "batch modify tcloud-ziyan target port api failed, err: %v", err)
 		}
 	}

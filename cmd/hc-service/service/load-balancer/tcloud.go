@@ -57,6 +57,7 @@ func (svc *clbSvc) initTCloudClbService(cap *capability.Capability) {
 	h.Add("BatchDeleteTCloudLoadBalancer", http.MethodDelete,
 		"/vendors/tcloud/load_balancers/batch", svc.BatchDeleteTCloudLoadBalancer)
 	h.Add("ListQuotaTCloudLB", http.MethodPost, "/vendors/tcloud/load_balancers/quota", svc.ListTCloudLBQuota)
+
 	h.Add("TCloudCreateSnatIps", http.MethodPost,
 		"/vendors/tcloud/load_balancers/snat_ips/create", svc.TCloudCreateSnatIps)
 	h.Add("TCloudDeleteSnatIps", http.MethodDelete,

@@ -37,7 +37,7 @@ type SyncBaseParams struct {
 func (opt SyncBaseParams) Validate() error {
 
 	if len(opt.CloudIDs) > constant.CloudResourceSyncMaxLimit {
-		return fmt.Errorf("cloudIDs shuold <= %d", constant.CloudResourceSyncMaxLimit)
+		return fmt.Errorf("cloudIDs should <= %d", constant.CloudResourceSyncMaxLimit)
 	}
 
 	return validator.Validate.Struct(opt)

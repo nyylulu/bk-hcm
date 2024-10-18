@@ -370,7 +370,7 @@ func (svc *lbSvc) batchCreateTCloudZiyanListener(kt *kit.Kit, rawReq json.RawMes
 
 	req.BkBizID = bkBizID
 	req.LbID = lbID
-	createResp, err := svc.client.HCService().TCloudZiyan.Clb.CreateListener(kt, req)
+	createResp, err := svc.client.HCService().TCloudZiyan.Clb.CreateListenerWithTargetGroup(kt, req)
 	if err != nil {
 		logs.Errorf("fail to create tcloud ziyan url rule, err: %v, req: %+v, cert: %+v, rid: %s",
 			err, req, cvt.PtrToVal(req.Certificate), kt.Rid)

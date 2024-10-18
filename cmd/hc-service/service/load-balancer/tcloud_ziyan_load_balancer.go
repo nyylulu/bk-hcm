@@ -135,40 +135,6 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (any, error) {
 	return respData, nil
 }
 
-// ListTCloudZiyanClb list tcloud-ziyan clb
-func (svc *clbSvc) ListTCloudZiyanClb(cts *rest.Contexts) (interface{}, error) {
-	req := new(protolb.TCloudListOption)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	tcloudAdpt, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := &typelb.TCloudListOption{
-		Region:   req.Region,
-		CloudIDs: req.CloudIDs,
-		Page: &adcore.TCloudPage{
-			Offset: 0,
-			Limit:  adcore.TCloudQueryLimit,
-		},
-	}
-	result, err := tcloudAdpt.ListLoadBalancer(cts.Kit, opt)
-	if err != nil {
-		logs.Errorf("[%s] list tcloud clb failed, req: %+v, err: %v, rid: %s",
-			enumor.TCloud, req, err, cts.Kit.Rid)
-		return nil, err
-	}
-
-	return result, nil
-}
-
 func (svc *clbSvc) createTCloudZiyanDBLoadBalancer(cts *rest.Contexts, req *protolb.TCloudZiyanLoadBalancerCreateReq,
 	cloudIDs []string) (err error) {
 
@@ -194,6 +160,43 @@ func (svc *clbSvc) createTCloudZiyanDBLoadBalancer(cts *rest.Contexts, req *prot
 		// 	失败也继续尝试同步
 	}
 	return err
+}
+
+// ListTCloudZiyanClb list tcloud-ziyan clb
+func (svc *clbSvc) ListTCloudZiyanClb(cts *rest.Contexts) (interface{}, error) {
+	req := new(protolb.TCloudListOption)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	tcloudAdpt, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	if req.Page.Limit > adcore.TCloudQueryLimit {
+		req.Page.Limit = adcore.TCloudQueryLimit
+	}
+	opt := &typelb.TCloudListOption{
+		Region:   req.Region,
+		CloudIDs: req.CloudIDs,
+		Page: &adcore.TCloudPage{
+			Offset: 0,
+			Limit:  adcore.TCloudQueryLimit,
+		},
+	}
+	result, err := tcloudAdpt.ListLoadBalancer(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("[%s] list tcloud clb failed, req: %+v, err: %v, rid: %s",
+			enumor.TCloudZiyan, req, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }
 
 // TCloudZiyanDescribeResources 查询clb地域下可用资源
@@ -295,8 +298,8 @@ func (svc *clbSvc) tcloudZiyanLbSync(kt *kit.Kit, accountID string, region strin
 	return nil
 }
 
-// CreateTCloudZiyanListener 创建监听器
-func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, error) {
+// CreateTCloudZiyanListenerWithTargetGroup 创建监听器
+func (svc *clbSvc) CreateTCloudZiyanListenerWithTargetGroup(cts *rest.Contexts) (interface{}, error) {
 	req := new(protolb.ListenerWithRuleCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -384,7 +387,7 @@ func (svc *clbSvc) createListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 	}
 	// 7层监听器，不管SNI开启还是关闭，都需要传入证书参数
 	// 7层监听器并且SNI开启时，创建监听器接口，不需要证书
-	if req.Protocol.IsLayer7Protocol() {
+	if req.Protocol == enumor.HttpsProtocol {
 		if req.Certificate == nil {
 			return "", "", errf.New(errf.InvalidParameter, "certificate is required when layer 7 listener")
 		}
@@ -940,6 +943,7 @@ func (svc *clbSvc) InquiryPriceTCloudZiyanLB(cts *rest.Contexts) (any, error) {
 
 		InternetChargeType:      req.InternetChargeType,
 		InternetMaxBandwidthOut: req.InternetMaxBandwidthOut,
+		BandwidthpkgSubType:     req.BandwidthpkgSubType,
 
 		BandwidthPackageID: req.BandwidthPackageID,
 		SlaType:            req.SlaType,

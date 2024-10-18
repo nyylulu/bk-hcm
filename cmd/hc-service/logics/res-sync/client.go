@@ -27,12 +27,9 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/huawei"
 	"hcm/cmd/hc-service/logics/res-sync/tcloud"
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
-	"hcm/pkg/cc"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
-	"hcm/pkg/metrics"
 	"hcm/pkg/thirdparty/esb"
-	cvt "hcm/pkg/tools/converter"
 )
 
 // Interface sync support vendor.
@@ -118,10 +115,6 @@ func (cli *client) TCloudZiyan(kt *kit.Kit, accountID string) (ziyan.Interface, 
 		return nil, err
 	}
 
-	esbCli, err := esb.NewClient(cvt.ValToPtr(cc.HCService().Esb), metrics.Register())
-	if err != nil {
-		return nil, err
-	}
-
+	esbCli := esb.EsbClient()
 	return ziyan.NewClient(cli.dataCli, cloudCli, esbCli), nil
 }

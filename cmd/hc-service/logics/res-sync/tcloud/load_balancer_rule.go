@@ -225,7 +225,7 @@ func (cli *client) deleteLayer7Rule(kt *kit.Kit, cloudIds []string) error {
 		err := cli.dbCli.TCloud.LoadBalancer.BatchDeleteTCloudUrlRule(kt, delReq)
 		if err != nil {
 			logs.Errorf("fail to delete listeners while sync, err: %v, ids:%v, rid: %s",
-				cloudIdsBatch, err, kt.Rid)
+				err, cloudIdsBatch, kt.Rid)
 			return err
 		}
 	}

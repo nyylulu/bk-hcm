@@ -39,6 +39,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
@@ -139,12 +140,21 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 }
 
 // RemoveLoadBalancerDeleteFromCloud 删除存在本地但是在云上被删除的数据
-func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID string, region string) error {
+func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, params *SyncRemovedParams) error {
+
+	if err := params.Validate(); err != nil {
+		return err
+	}
+	rules := []*filter.AtomRule{
+		tools.RuleEqual("account_id", params.AccountID),
+		tools.RuleEqual("region", params.Region),
+	}
+	if len(params.CloudIDs) > 0 {
+		// 支持指定cloud id删除
+		rules = append(rules, tools.RuleIn("cloud_id", params.CloudIDs))
+	}
 	req := &core.ListReq{
-		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("account_id", accountID),
-			tools.RuleEqual("region", region),
-		),
+		Filter: tools.ExpressionAnd(rules...),
 		Page: &core.BasePage{
 			Start: 0,
 			Limit: constant.BatchOperationMaxLimit,
@@ -167,14 +177,14 @@ func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID stri
 
 		var delCloudIDs []string
 
-		params := &SyncBaseParams{AccountID: accountID, Region: region, CloudIDs: cloudIDs}
+		params := &SyncBaseParams{AccountID: params.AccountID, Region: params.Region, CloudIDs: cloudIDs}
 		delCloudIDs, err = cli.listRemovedLBID(kt, params)
 		if err != nil {
 			return err
 		}
 
 		if len(delCloudIDs) != 0 {
-			if err = cli.deleteLoadBalancer(kt, accountID, region, delCloudIDs); err != nil {
+			if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
 				return err
 			}
 		}
@@ -439,12 +449,12 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 		lb.Zones = cvt.PtrToSlice(cloud.Zones)
 	}
 
-	lb.Extension = convertTCloudExtension(cloud, region)
+	lb.Extension = convertZiyanExtension(cloud, region)
 
 	return lb
 }
 
-func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TCloudClbExtension {
+func convertZiyanExtension(cloud typeslb.TCloudClb, region string) *corelb.TCloudClbExtension {
 	ext := &corelb.TCloudClbExtension{
 		SlaType:                  cloud.SlaType,
 		VipIsp:                   cloud.VipIsp,
@@ -454,8 +464,9 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		SnatPro:                  cloud.SnatPro,
 		MixIpTarget:              cloud.MixIpTarget,
 		ChargeType:               cloud.ChargeType,
-		Tags:                     cvt.ValToPtr(cloud.GetTags()),
 		ClusterTag:               cloud.ClusterTag,
+		ClusterIds:               cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds)[:]),
+		Tags:                     cvt.ValToPtr(cloud.GetTags()),
 		Egress:                   cloud.Egress,
 		// 该接口无法获取下列字段
 		BandwidthPackageId: nil,
@@ -497,33 +508,14 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		// 免流
 		ext.TgwGroupName = cloud.ExtraInfo.TgwGroupName
 	}
-	if len(cloud.ClusterIds) > 0 {
-		ext.ClusterIds = cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds))
-	}
+
 	// 独占集群
 	if cloud.ExclusiveCluster != nil {
-		ext.L4Clusters = cvt.ValToPtr(convClusterItemList(cloud.ExclusiveCluster.L4Clusters))
-		ext.L7Clusters = cvt.ValToPtr(convClusterItemList(cloud.ExclusiveCluster.L7Clusters))
+		ext.L4Clusters = convClusterItemList(cloud.ExclusiveCluster.L4Clusters)
+		ext.L7Clusters = convClusterItemList(cloud.ExclusiveCluster.L7Clusters)
 		ext.ClassicalCluster = convClusterItem(cloud.ExclusiveCluster.ClassicalCluster)
 	}
 	return ext
-}
-
-func convClusterItemList(clusters []*tclb.ClusterItem) (localList []*corelb.ClusterItem) {
-	for _, cluster := range clusters {
-		localList = append(localList, convClusterItem(cluster))
-	}
-	return localList
-}
-func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
-	if cluster == nil {
-		return nil
-	}
-	return &corelb.ClusterItem{
-		ClusterId:   cvt.PtrToVal(cluster.ClusterId),
-		ClusterName: cvt.PtrToVal(cluster.ClusterName),
-		Zone:        cvt.PtrToVal(cluster.Zone),
-	}
 }
 
 func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*common.VpcDB,
@@ -545,37 +537,7 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 		CloudVpcID:       cloudVpcID,
 		SubnetID:         subnetMap[cloudSubnetID],
 		CloudSubnetID:    cloudSubnetID,
-		Extension: &corelb.TCloudClbExtension{
-			SlaType:                  cloud.SlaType,
-			VipIsp:                   cloud.VipIsp,
-			LoadBalancerPassToTarget: cloud.LoadBalancerPassToTarget,
-			ChargeType:               cloud.ChargeType,
-
-			IPv6Mode:   cloud.IPv6Mode,
-			Snat:       cloud.Snat,
-			SnatPro:    cloud.SnatPro,
-			ClusterTag: cloud.ClusterTag,
-			Tags:       cvt.ValToPtr(cloud.GetTags()),
-			Egress:     cloud.Egress,
-		},
-	}
-	if len(cloud.ClusterIds) > 0 {
-		lb.Extension.ClusterIds = cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds))
-	}
-	if cloud.NetworkAttributes != nil {
-		lb.Extension.InternetMaxBandwidthOut = cloud.NetworkAttributes.InternetMaxBandwidthOut
-		lb.Extension.InternetChargeType = cloud.NetworkAttributes.InternetChargeType
-		lb.Extension.BandwidthpkgSubType = cloud.NetworkAttributes.BandwidthpkgSubType
-	}
-	if cloud.SnatIps != nil {
-		ipList := make([]corelb.SnatIp, 0, len(cloud.SnatIps))
-		for _, snatIP := range cloud.SnatIps {
-			if snatIP == nil {
-				continue
-			}
-			ipList = append(ipList, corelb.SnatIp{SubnetId: snatIP.SubnetId, Ip: snatIP.Ip})
-		}
-		lb.Extension.SnatIps = cvt.ValToPtr(ipList)
+		Extension:        convertZiyanExtension(cloud, region),
 	}
 
 	if len(cloud.LoadBalancerVips) != 0 {
@@ -590,25 +552,6 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 		lb.PublicIPv6Addresses = []string{ipv6}
 	}
 
-	// AttributeFlags
-	flagMap := make(map[string]bool)
-	// 没有碰到的则默认是false
-	for _, flag := range cloud.AttributeFlags {
-		flagMap[cvt.PtrToVal(flag)] = true
-	}
-	// 逐个赋值flag
-	lb.Extension.DeleteProtect = cvt.ValToPtr(flagMap[constant.TCLBDeleteProtect])
-
-	if cloud.Egress != nil {
-		lb.Extension.Egress = cloud.Egress
-	}
-
-	// 跨域1.0 信息
-	if cvt.PtrToVal(cloud.TargetRegionInfo.Region) != region ||
-		!assert.IsPtrStringEqual(cloud.TargetRegionInfo.VpcId, cloud.VpcId) {
-		lb.Extension.TargetRegion = cloud.TargetRegionInfo.Region
-		lb.Extension.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
-	}
 	return &lb
 }
 
@@ -783,6 +726,24 @@ func hashCloudSnatIP(ip *tclb.SnatIp) string {
 		return ","
 	}
 	return cvt.PtrToVal(ip.SubnetId) + "," + cvt.PtrToVal(ip.Ip)
+}
+
+func convClusterItemList(clusters []*tclb.ClusterItem) *[]*corelb.ClusterItem {
+	var localList []*corelb.ClusterItem
+	for _, cluster := range clusters {
+		localList = append(localList, convClusterItem(cluster))
+	}
+	return cvt.ValToPtr(localList)
+}
+func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
+	if cluster == nil {
+		return nil
+	}
+	return &corelb.ClusterItem{
+		ClusterId:   cvt.PtrToVal(cluster.ClusterId),
+		ClusterName: cvt.PtrToVal(cluster.ClusterName),
+		Zone:        cvt.PtrToVal(cluster.Zone),
+	}
 }
 
 // SyncLBOption ...

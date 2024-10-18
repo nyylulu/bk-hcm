@@ -52,7 +52,7 @@ func InitService(c *capability.Capability) {
 	h.Add("AssignLbToBiz", http.MethodPost, "/load_balancers/assign/bizs", svc.AssignLbToBiz)
 	h.Add("GetLoadBalancer", http.MethodGet, "/load_balancers/{id}", svc.GetLoadBalancer)
 	h.Add("TCloudDescribeResources", http.MethodPost,
-		"/vendors/tcloud/load_balancers/resources/describe", svc.TCloudDescribeResources)
+		"/vendors/{vendor}/load_balancers/resources/describe", svc.TCloudDescribeResources)
 	h.Add("BatchDeleteLoadBalancer", http.MethodDelete, "/load_balancers/batch", svc.BatchDeleteLoadBalancer)
 	h.Add("ListListenerCountByLbIDs", http.MethodPost, "/load_balancers/listeners/count", svc.ListListenerCountByLbIDs)
 	h.Add("GetLoadBalancerLockStatus", http.MethodGet,
@@ -78,7 +78,7 @@ func InitService(c *capability.Capability) {
 func bizService(h *rest.Handler, svc *lbSvc) {
 	// h.Add("BizBatchCreateLB", http.MethodPost, "/load_balancers/create", svc.BizBatchCreateLB)
 	h.Add("UpdateBizTCloudLoadBalancer", http.MethodPatch,
-		"/vendors/tcloud/load_balancers/{id}", svc.UpdateBizTCloudLoadBalancer)
+		"/vendors/{vendor}/load_balancers/{id}", svc.UpdateBizTCloudLoadBalancer)
 	h.Add("ListBizLoadBalancer", http.MethodPost, "/load_balancers/list", svc.ListBizLoadBalancer)
 	h.Add("ListLoadBalancerWithDeleteProtection", http.MethodPost,
 		"/load_balancers/with/delete_protection/list", svc.ListBizLoadBalancerWithDeleteProtect)
@@ -88,7 +88,7 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("ListBizListener", http.MethodPost, "/load_balancers/{lb_id}/listeners/list", svc.ListBizListener)
 	h.Add("GetBizListener", http.MethodGet, "/listeners/{id}", svc.GetBizListener)
 	h.Add("ListBizListenerDomains", http.MethodPost,
-		"/vendors/tcloud/listeners/{lbl_id}/domains/list", svc.ListBizListenerDomains)
+		"/vendors/{vendor}/listeners/{lbl_id}/domains/list", svc.ListBizListenerDomains)
 	h.Add("ListBizListenerCountByLbIDs", http.MethodPost, "/load_balancers/listeners/count",
 		svc.ListBizListenerCountByLbIDs)
 	h.Add("GetBizLoadBalancerLockStatus", http.MethodGet,
@@ -96,9 +96,9 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	h.Add("ListBizLoadBalancerQuotas", http.MethodPost, "/load_balancers/quotas", svc.ListBizLoadBalancerQuotas)
 
 	h.Add("TCloudCreateSnatIps", http.MethodPost,
-		"/vendors/tcloud/load_balancers/{lb_id}/snat_ips/create", svc.TCloudCreateSnatIps)
+		"/vendors/{vendor}/load_balancers/{lb_id}/snat_ips/create", svc.TCloudCreateSnatIps)
 	h.Add("TCloudDeleteSnatIps", http.MethodDelete,
-		"/vendors/tcloud/load_balancers/{lb_id}/snat_ips", svc.TCloudDeleteSnatIps)
+		"/vendors/{vendor}/load_balancers/{lb_id}/snat_ips", svc.TCloudDeleteSnatIps)
 
 	// 目标组
 	h.Add("ListBizTargetsByTGID", http.MethodPost,

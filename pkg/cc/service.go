@@ -117,8 +117,8 @@ func (s ApiServerSetting) Validate() error {
 // CloudServerSetting defines cloud server used setting options.
 type CloudServerSetting struct {
 	// 自研云增加的配置写在这里
-	Cmdb           ApiGateway     `yaml:"cmdb"`
-	FinOps         ApiGateway     `yaml:"finops"`
+	Cmdb   ApiGateway `yaml:"cmdb"`
+	FinOps ApiGateway `yaml:"finops"`
 
 	Network        Network        `yaml:"network"`
 	Service        Service        `yaml:"service"`
@@ -242,11 +242,18 @@ func (s DataServiceSetting) Validate() error {
 
 // SyncConfig defines sync config.
 type SyncConfig struct {
+	// 自研云监听器同步并发数
+	ZiyanLoadBalancerListenerSyncConcurrency uint `yaml:"ziyanLblConcurrency"`
+
 	// 腾讯云监听器同步并发数
 	TCloudLoadBalancerListenerSyncConcurrency uint `yaml:"tcloudLblConcurrency"`
 }
 
 func (s *SyncConfig) trySetDefault() {
+	if s.ZiyanLoadBalancerListenerSyncConcurrency == 0 {
+		s.ZiyanLoadBalancerListenerSyncConcurrency = 3
+	}
+
 	if s.TCloudLoadBalancerListenerSyncConcurrency == 0 {
 		s.TCloudLoadBalancerListenerSyncConcurrency = 3
 	}
@@ -255,7 +262,7 @@ func (s *SyncConfig) trySetDefault() {
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
-	Esb     Esb       `yaml:"esb"`
+	Esb Esb `yaml:"esb"`
 
 	Network    Network    `yaml:"network"`
 	Service    Service    `yaml:"service"`

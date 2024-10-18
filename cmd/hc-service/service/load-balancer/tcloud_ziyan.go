@@ -43,6 +43,11 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 	h.Add("ListQuotaTCloudZiyanLB", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/quota", svc.ListTCloudZiyanLBQuota)
 
+	h.Add("ZiyanCreateSnatIps", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/snat_ips/create", svc.ZiyanCreateSnatIps)
+	h.Add("TCloudDeleteSnatIps", http.MethodDelete,
+		"/vendors/tcloud-ziyan/load_balancers/snat_ips", svc.ZiyanCreateSnatIps)
+
 	h.Add("TCloudZiyanCreateUrlRule", http.MethodPost,
 		"/vendors/tcloud-ziyan/listeners/{lbl_id}/rules/batch/create", svc.TCloudZiyanCreateUrlRule)
 	h.Add("TCloudZiyanUpdateUrlRule", http.MethodPatch,
@@ -53,15 +58,17 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 		"/vendors/tcloud-ziyan/listeners/{lbl_id}/rules/by/domain/batch", svc.TCloudZiyanBatchDeleteUrlRuleByDomain)
 
 	// 监听器
-	h.Add("CreateTCloudZiyanListener", http.MethodPost,
-		"/vendors/tcloud-ziyan/listeners/create", svc.CreateTCloudZiyanListener)
+	h.Add("CreateTCloudZiyanListenerWithTargetGroup", http.MethodPost,
+		"/vendors/tcloud-ziyan/listeners/create_with_target_group", svc.CreateTCloudZiyanListenerWithTargetGroup)
 	h.Add("UpdateTCloudZiyanListener", http.MethodPatch,
 		"/vendors/tcloud-ziyan/listeners/{id}", svc.UpdateTCloudZiyanListener)
 	h.Add("UpdateTCloudZiyanListenerHealthCheck", http.MethodPatch,
 		"/vendors/tcloud-ziyan/listeners/{lbl_id}/health_check", svc.UpdateTCloudZiyanListenerHealthCheck)
 	h.Add("DeleteTCloudZiyanListener", http.MethodDelete,
 		"/vendors/tcloud-ziyan/listeners/batch", svc.DeleteTCloudZiyanListener)
-
+	// 仅创建监听器
+	h.Add("CreateTCloudZiyanListener", http.MethodPost,
+		"/vendors/tcloud-ziyan/listeners/create", svc.CreateTCloudZiyanListener)
 	// 域名、规则
 	h.Add("UpdateTCloudZiyanDomainAttr", http.MethodPatch, "/vendors/tcloud-ziyan/listeners/{lbl_id}/domains",
 		svc.UpdateTCloudZiyanDomainAttr)
@@ -83,6 +90,11 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 
 	h.Add("QueryZiyanListenerTargetsByCloudIDs", http.MethodPost,
 		"/vendors/tcloud-ziyan/targets/query_by_cloud_ids", svc.QueryZiyanListenerTargetsByCloudIDs)
+
+	// h.Add("BatchRemoveZiyanListenerTargets", http.MethodDelete,
+	// 	"/vendors/tcloud-ziyan/load_balancers/{lb_id}/targets/batch", svc.BatchRemoveZiyanListenerTargets)
+	// h.Add("BatchModifyZiyanListenerTargetsWeight", http.MethodPatch,
+	// 	"/vendors/tcloud-ziyan/load_balancers/{lb_id}/targets/weight", svc.BatchModifyZiyanListenerTargetsWeight)
 
 	h.Add("DescribeZiyanExclusiveCluster", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/exclusive_clusters/describe", svc.DescribeZiyanExclusiveCluster)
