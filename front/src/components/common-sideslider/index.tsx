@@ -37,7 +37,7 @@ export default defineComponent({
     },
     submitTooltips: {
       type: Object as PropType<{ content: string; disabled: boolean }>,
-      default: () => ({ content: '', disabled: false }),
+      default: () => ({ content: '', disabled: true }),
     },
   },
   emits: ['update:isShow', 'handleSubmit', 'handleShown'],
@@ -83,10 +83,7 @@ export default defineComponent({
                     onClick={handleSubmit}
                     disabled={props.isSubmitDisabled}
                     loading={props.isSubmitLoading}
-                    v-bk-tooltips={{
-                      content: props.submitTooltips.content,
-                      disabled: props.submitTooltips.disabled,
-                    }}>
+                    v-bk-tooltips={props.submitTooltips}>
                     {t('提交')}
                   </Button>
                   <Button onClick={() => triggerShow(false)}>{t('取消')}</Button>

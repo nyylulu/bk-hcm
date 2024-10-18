@@ -38,7 +38,7 @@ export default defineComponent({
     const isSubmitDisabled = ref(false);
     const submitTooltips = ref({
       content: '',
-      disabled: false,
+      disabled: true,
     });
     const planTicketDemand = ref<IPlanTicketDemand>();
     const adjustType = ref();
