@@ -57,6 +57,7 @@ func (bdl BatchTaskDeleteListenerOption) Validate() error {
 
 	switch bdl.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for batch delete listener: %s", bdl.Vendor)
 	}
@@ -147,7 +148,14 @@ func (act BatchTaskDeleteListenerAction) Run(kt run.ExecuteKit, params any) (res
 	parts := slice.Split(delIDs, constant.BatchDeleteListenerCloudMaxLimit)
 	for _, partIDs := range parts {
 		delIDsReq := &core.BatchDeleteReq{IDs: partIDs}
-		err = actcli.GetHCService().TCloud.Clb.DeleteListener(kt.Kit(), delIDsReq)
+		switch opt.Vendor {
+		case enumor.TCloud:
+			err = actcli.GetHCService().TCloud.Clb.DeleteListener(kt.Kit(), delIDsReq)
+		case enumor.TCloudZiyan:
+			err = actcli.GetHCService().TCloudZiyan.Clb.DeleteListener(kt.Kit(), delIDsReq)
+		default:
+			return nil, errf.Newf(errf.InvalidParameter, "batch delete listener failed, invalid vendor: %s", opt.Vendor)
+		}
 		if err != nil {
 			logs.Errorf("failed to batch delete listener, err: %v, lblPartIDs: %v, rid: %s", err, partIDs, kt.Kit().Rid)
 			return nil, err

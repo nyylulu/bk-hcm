@@ -418,7 +418,7 @@ func (c *BatchDeleteListenerExecutor) buildFlowTask(lbID string,
 	details []*batchDeleteListenerTaskDetail) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return c.buildTCloudFlowTask(lbID, details)
 	default:
 		return nil, fmt.Errorf("build flow task failed, lbID: %s, vendor: %s not supported", lbID, c.vendor)
