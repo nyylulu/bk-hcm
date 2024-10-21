@@ -10,7 +10,7 @@ import { LbPrice } from '@/typings';
 import { useI18n } from 'vue-i18n';
 import bus from '@/common/bus';
 import http from '@/http';
-import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -60,6 +60,8 @@ export default (formModel: ApplyClbModel, formRef: any, isInquiryPricesLoading: 
   const handleParams = () => {
     // eslint-disable-next-line no-nested-ternary, prefer-const
     let zones = hasZonesConfig.value ? (formModel.zones ? [formModel.zones] : []) : undefined;
+    // 自研云内网下支持多可用区
+    if (formModel.vendor === VendorEnum.ZIYAN && !isOpen.value) zones = formModel.zones as string[];
 
     return {
       ...formModel,
@@ -80,6 +82,9 @@ export default (formModel: ApplyClbModel, formRef: any, isInquiryPricesLoading: 
       // 只有内网下可以配置
       cloud_subnet_id: !isOpen.value ? formModel.cloud_subnet_id : undefined,
       cloud_eip_id: !isOpen.value ? formModel.cloud_eip_id ?? undefined : undefined,
+      // 自研云字段
+      tgw_group_name: formModel.vendor === VendorEnum.ZIYAN && isOpen.value ? formModel.tgw_group_name : undefined,
+      zhi_tong: formModel.vendor === VendorEnum.ZIYAN && isOpen.value ? formModel.zhi_tong : undefined,
       // 后端无用字段
       account_type: undefined as undefined,
       zoneType: undefined as undefined,

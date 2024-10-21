@@ -461,7 +461,7 @@ const businesseMenus: RouteRecordRaw[] = [
         name: 'hostInventory',
         component: () => import('@/views/business/host-inventory/index'),
         meta: {
-          title: t('主机库存'),
+          title: '主机库存',
           activeKey: 'zzkc',
           breadcrumb: ['资源', '主机'],
           isShowBreadcrumb: true,
@@ -555,7 +555,7 @@ const businesseMenus: RouteRecordRaw[] = [
           },
         ],
         meta: {
-          title: t('单据管理'),
+          title: '单据管理',
           activeKey: 'applications',
           isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-my-apply',

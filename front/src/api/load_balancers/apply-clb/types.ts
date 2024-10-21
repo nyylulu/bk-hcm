@@ -97,8 +97,8 @@ export interface ApplyClbModel {
   load_balancer_type: 'OPEN' | 'INTERNAL';
   // 名称
   name: string;
-  // 主可用区, 仅限公网型
-  zones: string;
+  // 主可用区, 仅限公网型（自研云内网支持多可用区）
+  zones: string | string[];
   // 备可用区, 目前仅广州、上海、南京、北京、中国香港、首尔地域的 IPv4 版本的 CLB 支持主备可用区。
   backup_zones?: string;
   // ip版本: IPV4, IPV6(ipv6 nat64), IPv6FullChain(ipv6)
@@ -135,4 +135,8 @@ export interface ApplyClbModel {
   account_type: NetworkAccountType;
   // 负载均衡规格类型, 0：共享型 1：性能容量型（仅前端使用）
   slaType: '0' | '1';
+  // 【自研云】是否开启直通特性
+  zhi_tong?: boolean;
+  // 【自研云】指定Tgw独占集群标签, 指定"ziyan_mianliu"时开启免流特性
+  tgw_group_name?: string;
 }
