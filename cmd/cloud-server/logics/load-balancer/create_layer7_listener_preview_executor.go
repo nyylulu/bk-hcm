@@ -183,6 +183,15 @@ func (c *CreateLayer7ListenerPreviewExecutor) validateListener(kt *kit.Kit, deta
 			return nil
 		}
 		return c.validateTCloudListener(kt, detail, listeners)
+	case enumor.TCloudZiyan:
+		listeners, err := c.getTCloudZiyanListenersByPort(kt, detail.CloudClbID, detail.ListenerPorts[0])
+		if err != nil {
+			return err
+		}
+		if len(listeners) == 0 {
+			return nil
+		}
+		return c.validateTCloudListener(kt, detail, listeners)
 	default:
 		return fmt.Errorf("vendor(%s) not support", c.vendor)
 	}

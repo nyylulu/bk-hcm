@@ -224,11 +224,6 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit, detail
 func (l *Layer7ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit,
 	curDetail *Layer7ListenerBindRSDetail, lbID string) (string, error) {
 
-	if curDetail.InstType == enumor.EniInstType {
-		// ENI 不做校验
-		return "", nil
-	}
-
 	lb, err := getTCloudLoadBalancer(kt, l.dataServiceCli, lbID)
 	if err != nil {
 		return "", err

@@ -254,7 +254,7 @@ func (c *CreateLayer4ListenerExecutor) buildFlowTask(lbID, lbCloudID, region str
 	details []*createLayer4ListenerTaskDetail) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return c.buildTCloudFlowTask(lbID, lbCloudID, region, details), nil
 	default:
 		return nil, fmt.Errorf("vendor %s not supported", c.vendor)

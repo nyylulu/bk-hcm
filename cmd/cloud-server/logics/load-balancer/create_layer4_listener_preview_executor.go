@@ -238,6 +238,23 @@ func (c *CreateLayer4ListenerPreviewExecutor) getURLRule(kt *kit.Kit, lbCloudID,
 		if len(rule.Details) > 0 {
 			return &rule.Details[0], nil
 		}
+	case enumor.TCloudZiyan:
+		req := &core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("cloud_lb_id", lbCloudID),
+				tools.RuleEqual("cloud_lbl_id", listenerCloudID),
+				tools.RuleEqual("vendor", c.vendor),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+		rule, err := c.dataServiceCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, req)
+		if err != nil {
+			logs.Errorf("list url rule failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		if len(rule.Details) > 0 {
+			return &rule.Details[0], nil
+		}
 	default:
 		return nil, fmt.Errorf("vendor(%s) not support", c.vendor)
 	}

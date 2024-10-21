@@ -296,7 +296,7 @@ func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Base
 	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return c.buildTCloudFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs)
 	default:
 		return nil, fmt.Errorf("not support vendor: %s", c.vendor)

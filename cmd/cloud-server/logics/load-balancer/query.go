@@ -126,6 +126,25 @@ func getURLRule(kt *kit.Kit, cli *dataservice.Client, vendor enumor.Vendor, lbCl
 		if len(rule.Details) > 0 {
 			return &rule.Details[0], nil
 		}
+	case enumor.TCloudZiyan:
+		req := &core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("cloud_lb_id", lbCloudID),
+				tools.RuleEqual("cloud_lbl_id", listenerCloudID),
+				tools.RuleEqual("domain", domain),
+				tools.RuleEqual("url", url),
+				tools.RuleEqual("vendor", vendor),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+		rule, err := cli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, req)
+		if err != nil {
+			logs.Errorf("list url rule failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		if len(rule.Details) > 0 {
+			return &rule.Details[0], nil
+		}
 	default:
 		return nil, fmt.Errorf("vendor(%s) not support", vendor)
 	}

@@ -287,7 +287,7 @@ func (c *CreateUrlRuleExecutor) buildFlowTask(lbID, lblID string, details []*cre
 	actionIDGenerator func() (cur string, prev string)) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		return c.buildTCloudFlowTask(lbID, lblID, details, actionIDGenerator)
 	default:
 		return nil, fmt.Errorf("vendor %s not supported", c.vendor)
