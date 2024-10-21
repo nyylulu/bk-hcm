@@ -55,6 +55,7 @@ func (opt BatchTaskUnBindTargetOption) Validate() error {
 
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for batch unbind rs: %s", opt.Vendor)
 	}
@@ -138,10 +139,18 @@ func (act BatchTaskUnBindTargetAction) batchListenerUnbindRs(kt *kit.Kit, lbID, 
 	}
 
 	// 调用云API解绑rs，支持幂等
-	lblResp, err := actcli.GetHCService().TCloud.Clb.BatchRemoveListenerTarget(kt, lbID, req)
+	lblResp := &hclb.BatchCreateResult{}
+	switch req.Vendor {
+	case enumor.TCloud:
+		lblResp, err = actcli.GetHCService().TCloud.Clb.BatchRemoveListenerTarget(kt, lbID, req)
+	case enumor.TCloudZiyan:
+		lblResp, err = actcli.GetHCService().TCloudZiyan.Clb.BatchRemoveListenerTarget(kt, lbID, req)
+	default:
+		return nil, errf.Newf(errf.InvalidParameter, "batch listener unbind rs failed, invalid vendor: %s", req.Vendor)
+	}
 	if err != nil {
-		logs.Errorf("failed to call hc to listener unbind rs, err: %v, lbID: %s, detailID: %s, rid: %s",
-			err, lbID, detailID, kt.Rid)
+		logs.Errorf("failed to call hc to listener unbind rs, err: %v, vendor: %s, lbID: %s, detailID: %s, rid: %s",
+			err, req.Vendor, lbID, detailID, kt.Rid)
 		return nil, err
 	}
 	return lblResp, nil

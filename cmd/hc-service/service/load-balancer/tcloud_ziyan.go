@@ -93,6 +93,8 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 
 	h.Add("BatchModifyZiyanListenerTargetsWeight", http.MethodPatch,
 		"/vendors/tcloud-ziyan/load_balancers/{lb_id}/targets/weight", svc.BatchModifyZiyanListenerTargetsWeight)
+	h.Add("BatchRemoveZiyanListenerTargets", http.MethodDelete,
+		"/vendors/tcloud-ziyan/load_balancers/{lb_id}/targets/batch", svc.BatchRemoveZiyanListenerTargets)
 
 	h.Add("DescribeZiyanExclusiveCluster", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/exclusive_clusters/describe", svc.DescribeZiyanExclusiveCluster)

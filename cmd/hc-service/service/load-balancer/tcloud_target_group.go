@@ -673,13 +673,7 @@ func (svc *clbSvc) BatchRemoveTCloudListenerTargets(cts *rest.Contexts) (any, er
 		return &protolb.BatchCreateResult{SuccessCloudIDs: []string{"HAS-UNBIND-RS"}}, nil
 	}
 
-	var targetIDs, cloudLblIDs []string
-	switch req.Vendor {
-	case enumor.TCloud:
-		targetIDs, cloudLblIDs, err = svc.unbindTCloudListenerTargets(cts.Kit, req, lblRsList)
-	default:
-		return nil, errf.Newf(errf.InvalidParameter, "batch listener unbind rs failed, invalid vendor: %s", req.Vendor)
-	}
+	targetIDs, cloudLblIDs, err := svc.unbindTCloudListenerTargets(cts.Kit, req, lblRsList)
 	if err != nil {
 		return nil, err
 	}

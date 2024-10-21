@@ -634,3 +634,99 @@ func (svc *clbSvc) modifyTCloudZiyanListenerTargetsWeight(kt *kit.Kit, req *prot
 	}
 	return cloudRuleIDs, updateRsList, nil
 }
+
+// BatchRemoveZiyanListenerTargets 按负载均衡批量移除监听器的RS
+func (svc *clbSvc) BatchRemoveZiyanListenerTargets(cts *rest.Contexts) (any, error) {
+	lbID := cts.PathParameter("lb_id").String()
+	if len(lbID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "lb_id is required")
+	}
+
+	req := new(protolb.TCloudBatchUnbindRsReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 过滤符合条件的RS列表
+	lblRsList, err := svc.filterListenerTargetList(cts.Kit, lbID, req.Details)
+	if err != nil {
+		return nil, err
+	}
+	// 没有需要移除的RS，不用处理
+	if len(lblRsList) == 0 {
+		logs.Infof("listener and rs no call api, has unbind rs, accountID: %s, lbID: %s, cloudLbID: %s, "+
+			"details: %+v, rid: %s",
+			req.AccountID, lbID, req.LoadBalancerCloudId, cvt.PtrToSlice(req.Details), cts.Kit.Rid)
+		return &protolb.BatchCreateResult{SuccessCloudIDs: []string{"HAS-UNBIND-RS"}}, nil
+	}
+
+	targetIDs, cloudLblIDs, err := svc.unbindTCloudZiyanListenerTargets(cts.Kit, req, lblRsList)
+	if err != nil {
+		return nil, err
+	}
+
+	// 删除已解绑的RS
+	for _, partIDs := range slice.Split(targetIDs, int(core.DefaultMaxPageLimit)) {
+		delReq := &dataproto.LoadBalancerBatchDeleteReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("account_id", req.AccountID),
+				tools.RuleIn("id", partIDs),
+			),
+		}
+		if err = svc.dataCli.Global.LoadBalancer.BatchDeleteTarget(cts.Kit, delReq); err != nil {
+			logs.Errorf("delete load balancer target failed, err: %v, partIDs: %v, rid: %s", err, partIDs, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+	// 记录操作日志，方便排查问题
+	logs.Infof("listener unbind rs success, lbID: %s, cloudLblIDs: %v, req: %+v, lblRsList: %+v, rid: %s",
+		lbID, cloudLblIDs, req, cvt.PtrToSlice(lblRsList), cts.Kit.Rid)
+	return &protolb.BatchCreateResult{SuccessCloudIDs: cloudLblIDs}, nil
+}
+
+func (svc *clbSvc) unbindTCloudZiyanListenerTargets(kt *kit.Kit, req *protolb.TCloudBatchUnbindRsReq,
+	lblRsList []*dataproto.ListBatchListenerResult) ([]string, []string, error) {
+
+	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, req.AccountID)
+	if err != nil {
+		logs.Errorf("listener unbind rs tcloud-ziyan api failed, get account failed, err: %v, accountID: %s, rid: %s",
+			err, req.AccountID, kt.Rid)
+		return nil, nil, err
+	}
+
+	targetIDs := make([]string, 0)
+	cloudLblIDs := make([]string, 0)
+	rsOpt := &typelb.TCloudRegisterTargetsOption{
+		LoadBalancerId: req.LoadBalancerCloudId,
+		Region:         req.Region,
+	}
+	for _, item := range lblRsList {
+		for _, rsItem := range item.RsList {
+			tmpRs := &typelb.BatchTarget{
+				ListenerId: cvt.ValToPtr(item.CloudLblID),
+				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
+				Port:       cvt.ValToPtr(rsItem.Port),
+			}
+			if rsItem.RuleType == enumor.Layer7RuleType {
+				tmpRs.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
+			}
+			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
+			targetIDs = append(targetIDs, rsItem.ID)
+			cloudLblIDs = append(cloudLblIDs, item.CloudLblID)
+		}
+	}
+	failIDs, err := tcloudAdpt.DeRegisterTargets(kt, rsOpt)
+	if err != nil {
+		logs.Errorf("listener unbind rs api failed, err: %v, rsOpt: %+v, rid: %s", err, cvt.PtrToVal(rsOpt), kt.Rid)
+		return nil, nil, err
+	}
+	if len(failIDs) > 0 {
+		logs.Errorf("listener unbind rs tcloud-ziyan api partially failed, failLblIDs: %v, req: %+v, "+
+			"rsOpt: %+v, rid: %s", failIDs, cvt.PtrToVal(req), cvt.PtrToVal(rsOpt), kt.Rid)
+		return nil, nil, errf.Newf(errf.PartialFailed, "unbind cloud listener target failed, failLblIDs: %v", failIDs)
+	}
+	return targetIDs, cloudLblIDs, nil
+}
