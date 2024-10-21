@@ -848,14 +848,7 @@ func (svc *clbSvc) BatchModifyTCloudListenerTargetsWeight(cts *rest.Contexts) (a
 		return &protolb.BatchCreateResult{SuccessCloudIDs: []string{"HAS-MODIFY-WEIGHT"}}, nil
 	}
 
-	cloudRuleIDs := make([]string, 0)
-	updateRsList := make([]*dataproto.TargetBaseReq, 0)
-	switch req.Vendor {
-	case enumor.TCloud:
-		cloudRuleIDs, updateRsList, err = svc.modifyTCloudListenerTargetsWeight(cts.Kit, req, lblRsList)
-	default:
-		return nil, errf.Newf(errf.InvalidParameter, "modify listener rs weight failed, invalid vendor: %s", req.Vendor)
-	}
+	cloudRuleIDs, updateRsList, err := svc.modifyTCloudListenerTargetsWeight(cts.Kit, req, lblRsList)
 	if err != nil {
 		return nil, err
 	}
@@ -874,6 +867,7 @@ func (svc *clbSvc) BatchModifyTCloudListenerTargetsWeight(cts *rest.Contexts) (a
 		lbID, cloudRuleIDs, req, cvt.PtrToSlice(lblRsList), cts.Kit.Rid)
 	return &protolb.BatchCreateResult{SuccessCloudIDs: cloudRuleIDs}, nil
 }
+
 func (svc *clbSvc) modifyTCloudListenerTargetsWeight(kt *kit.Kit, req *protolb.TCloudBatchModifyRsWeightReq,
 	lblRsList []*dataproto.ListBatchListenerResult) ([]string, []*dataproto.TargetBaseReq, error) {
 

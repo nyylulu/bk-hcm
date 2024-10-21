@@ -254,3 +254,11 @@ func (c *ClbClient) DescribeClusterResources(kt *kit.Kit, req *hcproto.TCloudDes
 	return common.Request[hcproto.TCloudDescribeClusterResourcesReq, tclb.DescribeClusterResourcesResponseParams](
 		c.client, http.MethodPost, kt, req, "/load_balancers/cluster_resources/describe")
 }
+
+// BatchModifyListenerTargetsWeight 按负载均衡批量调整监听器的RS权重
+func (c *ClbClient) BatchModifyListenerTargetsWeight(kt *kit.Kit, lbID string,
+	req *hcproto.TCloudBatchModifyRsWeightReq) (*hcproto.BatchCreateResult, error) {
+
+	return common.Request[hcproto.TCloudBatchModifyRsWeightReq, hcproto.BatchCreateResult](
+		c.client, http.MethodPatch, kt, req, "/load_balancers/%s/targets/weight", lbID)
+}

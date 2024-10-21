@@ -541,3 +541,96 @@ func (svc *clbSvc) ListTCloudZiyanTargetsHealth(cts *rest.Contexts) (any, error)
 
 	return healths, nil
 }
+
+// BatchModifyZiyanListenerTargetsWeight 按负载均衡批量调整监听器的RS权重
+func (svc *clbSvc) BatchModifyZiyanListenerTargetsWeight(cts *rest.Contexts) (any, error) {
+	lbID := cts.PathParameter("lb_id").String()
+	if len(lbID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "lb_id is required")
+	}
+
+	req := new(protolb.TCloudBatchModifyRsWeightReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 过滤符合条件的RS列表
+	lblRsList, err := svc.filterListenerTargetWeightList(cts.Kit, lbID, req.Details, req.NewRsWeight)
+	if err != nil {
+		return nil, err
+	}
+	// 没有需要调整权重的RS，不用处理
+	if len(lblRsList) == 0 {
+		logs.Infof("modify listener rs weight no call api, not need to modify rs weight, accountID: %s, lbID: %s, "+
+			"cloudLbID: %s, details: %+v, rid: %s",
+			req.AccountID, lbID, req.LoadBalancerCloudId, cvt.PtrToSlice(req.Details), cts.Kit.Rid)
+		return &protolb.BatchCreateResult{SuccessCloudIDs: []string{"HAS-MODIFY-WEIGHT"}}, nil
+	}
+
+	cloudRuleIDs, updateRsList, err := svc.modifyTCloudZiyanListenerTargetsWeight(cts.Kit, req, lblRsList)
+	if err != nil {
+		return nil, err
+	}
+
+	// 更新DB中的RS权重
+	rsWeightUpdateList := &protolb.TCloudBatchOperateTargetReq{LbID: lbID, RsList: updateRsList}
+	err = svc.batchUpdateTargetPortWeightDb(cts.Kit, rsWeightUpdateList)
+	if err != nil {
+		logs.Errorf("modify listener rs weight db failed, err: %v, lbID: %s, rsWeightUpdateList: %+v, "+
+			"cloudRuleIDs: %v, rid: %s", err, lbID, cvt.PtrToVal(rsWeightUpdateList), cloudRuleIDs, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 记录操作日志，方便排查问题
+	logs.Infof("modify listener rs weight success, lbID: %s, cloudRuleIDs: %v, req: %+v, lblRsList: %+v, rid: %s",
+		lbID, cloudRuleIDs, req, cvt.PtrToSlice(lblRsList), cts.Kit.Rid)
+	return &protolb.BatchCreateResult{SuccessCloudIDs: cloudRuleIDs}, nil
+}
+
+func (svc *clbSvc) modifyTCloudZiyanListenerTargetsWeight(kt *kit.Kit, req *protolb.TCloudBatchModifyRsWeightReq,
+	lblRsList []*dataproto.ListBatchListenerResult) ([]string, []*dataproto.TargetBaseReq, error) {
+
+	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, req.AccountID)
+	if err != nil {
+		logs.Errorf("modify listener rs weight tcloud-ziyan api failed, get account failed, err: %v, "+
+			"accountID: %s, rid: %s", err, req.AccountID, kt.Rid)
+		return nil, nil, err
+	}
+
+	cloudRuleIDs := make([]string, 0)
+	updateRsList := make([]*dataproto.TargetBaseReq, 0)
+	rsOpt := &typelb.TCloudTargetWeightUpdateOption{
+		LoadBalancerId: req.LoadBalancerCloudId,
+		Region:         req.Region,
+		ModifyList:     make([]*typelb.TargetWeightRule, 0),
+	}
+	for _, item := range lblRsList {
+		for _, rsItem := range item.RsList {
+			tmpRs := &typelb.TargetWeightRule{ListenerId: cvt.ValToPtr(item.CloudLblID)}
+			if rsItem.RuleType == enumor.Layer7RuleType {
+				tmpRs.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
+			}
+			tmpRs.Targets = append(tmpRs.Targets, &typelb.BatchTarget{
+				Type:       cvt.ValToPtr(string(rsItem.InstType)),
+				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
+				Port:       cvt.ValToPtr(rsItem.Port),
+				Weight:     cvt.ValToPtr(req.NewRsWeight),
+			})
+			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpRs)
+			updateRsList = append(updateRsList, &dataproto.TargetBaseReq{
+				ID: rsItem.ID, NewWeight: cvt.ValToPtr(req.NewRsWeight),
+			})
+			cloudRuleIDs = append(cloudRuleIDs, rsItem.CloudRuleID)
+		}
+	}
+	err = tcloudAdpt.ModifyTargetWeight(kt, rsOpt)
+	if err != nil {
+		logs.Errorf("modify listener rs weight tcloud-ziyan api failed, err: %v, newWeight: %d, rsOpt: %+v, rid: %s",
+			err, req.NewRsWeight, rsOpt, kt.Rid)
+		return nil, nil, err
+	}
+	return cloudRuleIDs, updateRsList, nil
+}

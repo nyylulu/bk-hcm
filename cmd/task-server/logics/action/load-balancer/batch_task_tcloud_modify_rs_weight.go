@@ -55,6 +55,7 @@ func (opt BatchTaskModifyRsWeightOption) Validate() error {
 
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for batch modify rs weight: %s", opt.Vendor)
 	}
@@ -144,6 +145,8 @@ func (act BatchTaskModifyRsWeightAction) batchListenerModifyRsWeight(kt *kit.Kit
 	switch req.Vendor {
 	case enumor.TCloud:
 		lblResp, err = actcli.GetHCService().TCloud.Clb.BatchModifyListenerTargetsWeight(kt, lbID, req)
+	case enumor.TCloudZiyan:
+		lblResp, err = actcli.GetHCService().TCloudZiyan.Clb.BatchModifyListenerTargetsWeight(kt, lbID, req)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "batch listener modify rs weight failed, invalid vendor: %s",
 			req.Vendor)
