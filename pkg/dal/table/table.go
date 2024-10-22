@@ -236,6 +236,11 @@ const (
 	RecycleModuleInfo = "recycle_module_info"
 	// RecycleHostInfo  裁撤主机表
 	RecycleHostInfo = "recycle_host_info"
+
+	RollingQuotaConfigTable   = "rolling_quota_config"
+	RollingQuotaOffsetTable   = "rolling_quota_offset"
+	RollingGlobalConfigTable  = "rolling_global_config"
+	ResourcePoolBusinessTable = "resource_pool_business"
 )
 
 // Validate whether the table name is valid or not.

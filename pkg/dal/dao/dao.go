@@ -63,6 +63,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
 	resplan "hcm/pkg/dal/dao/resource-plan"
+	rollingserver "hcm/pkg/dal/dao/rolling-server"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -159,6 +160,11 @@ type Set interface {
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
+
+	RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface
+	RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface
+	RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface
+	ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface
 
 	Txn() *Txn
 }
@@ -887,6 +893,38 @@ func (s *set) RootAccount() accountset.RootAccount {
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,
+	}
+}
+
+// RollingQuotaConfig return rolling quota config dao.
+func (s *set) RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface {
+	return &rollingserver.RollingQuotaConfigDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingQuotaOffset return rolling quota offset dao.
+func (s *set) RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface {
+	return &rollingserver.RollingQuotaOffsetDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingGlobalConfig return rolling global config dao.
+func (s *set) RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface {
+	return &rollingserver.RollingGlobalConfigDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// ResourcePoolBusiness return resource pool business dao.
+func (s *set) ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface {
+	return &rollingserver.ResourcePoolBusinessDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
 	}
 }
 
