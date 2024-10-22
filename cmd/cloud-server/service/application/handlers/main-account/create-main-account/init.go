@@ -20,10 +20,13 @@
 package mainaccount
 
 import (
+	"fmt"
+
 	"hcm/cmd/cloud-server/service/application/handlers"
 	proto "hcm/pkg/api/cloud-server/application"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/iam/auth"
+	"hcm/pkg/thirdparty/api-gateway/finops"
 )
 
 // ApplicationOfCreateMainAccount ...
@@ -33,6 +36,17 @@ type ApplicationOfCreateMainAccount struct {
 	req         *proto.MainAccountCreateReq
 	completeReq *proto.MainAccountCompleteReq
 	authorizer  auth.Authorizer
+}
+
+func (a *ApplicationOfCreateMainAccount) checkOpProduct(id int64) error {
+	info, err := a.GetOperationProductInfo(id)
+	if err != nil {
+		return err
+	}
+	if info.BgId != finops.OpProductBgIEG {
+		return fmt.Errorf("only op product of IEG is allowed")
+	}
+	return nil
 }
 
 // NewApplicationOfCreateMainAccount ...
