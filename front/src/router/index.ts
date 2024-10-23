@@ -5,6 +5,8 @@ import {
   createWebHashHistory,
   RouteLocationNormalized,
 } from 'vue-router';
+import { MENU_PLATFORM_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import { platformManagementViews } from '@/views';
 import common from './module/common';
 import workbench from './module/workbench';
 import resource from './module/resource';
@@ -32,6 +34,12 @@ const routes: RouteRecordRaw[] = [
   ...business,
   ...scheme,
   ...bill,
+  {
+    name: MENU_PLATFORM_MANAGEMENT,
+    path: '/platform',
+    redirect: { name: MENU_ROLLING_SERVER_MANAGEMENT },
+    children: platformManagementViews,
+  },
   {
     path: '/',
     redirect: '/business/host',

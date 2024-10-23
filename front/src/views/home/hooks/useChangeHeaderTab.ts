@@ -8,6 +8,7 @@ import service from '@/router/module/service';
 import business from '@/router/module/business';
 import scheme from '@/router/module/scheme';
 import bill from '@/router/module/bill';
+import { platformManagementViews } from '@/views';
 // import stores
 import { useAccountStore } from '@/store';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
@@ -65,6 +66,9 @@ export default () => {
         break;
       case 'bill':
         menus.value = bill;
+        break;
+      case 'platform':
+        menus.value = platformManagementViews;
         break;
       default:
         if (subPath[0] === 'biz_access') {

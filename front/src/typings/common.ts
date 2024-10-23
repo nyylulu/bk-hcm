@@ -69,3 +69,19 @@ export interface IListResData<T> extends IBaseResData {
 export interface IQueryResData<T> extends IBaseResData {
   data: T;
 }
+
+export type PaginationType = {
+  count: number;
+  limit: number;
+  current?: number;
+  'limit-list'?: number[];
+};
+
+export type SortType = {
+  column: {
+    field: string;
+  };
+  type: string;
+};
+
+export type Awaitable<T> = Promise<T> | T;
