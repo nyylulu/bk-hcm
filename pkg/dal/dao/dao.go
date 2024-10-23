@@ -165,6 +165,8 @@ type Set interface {
 	RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface
 	RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface
 	ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface
+	RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface
+	RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface
 
 	Txn() *Txn
 }
@@ -936,4 +938,22 @@ func (s *set) RecycleModule() module.RecycleModule {
 // RecycleHost return recycle host dao.
 func (s *set) RecycleHost() host.RecycleHost {
 	return host.NewRecycleHostDao(s.orm, s.idGen, s.audit)
+}
+
+// RollingAppliedRecord return dao.
+func (s *set) RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface {
+	return &rollingserver.RollingAppliedRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RollingReturnedRecord return dao.
+func (s *set) RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface {
+	return &rollingserver.RollingReturnedRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
 }

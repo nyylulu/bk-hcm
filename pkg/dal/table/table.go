@@ -241,6 +241,11 @@ const (
 	RollingQuotaOffsetTable   = "rolling_quota_offset"
 	RollingGlobalConfigTable  = "rolling_global_config"
 	ResourcePoolBusinessTable = "resource_pool_business"
+
+	// RollingAppliedRecordTable 滚服申请记录表
+	RollingAppliedRecordTable = "rolling_applied_record"
+	// RollingReturnedRecordTable 滚服回收记录表
+	RollingReturnedRecordTable = "rolling_returned_record"
 )
 
 // Validate whether the table name is valid or not.
@@ -360,6 +365,9 @@ var TableMap = map[Name]struct{}{
 	OBSBillGcpItemTable:      {},
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
+
+	RollingAppliedRecordTable:  {},
+	RollingReturnedRecordTable: {},
 }
 
 // Register 注册表名
