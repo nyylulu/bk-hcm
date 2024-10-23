@@ -22,8 +22,10 @@ package cloudadaptor
 import (
 	"errors"
 	"fmt"
+	"sync"
 
 	"hcm/pkg/adaptor/types"
+	"hcm/pkg/cc"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
@@ -31,12 +33,13 @@ import (
 
 // SecretClient used to get secret by account id from data-service.
 type SecretClient struct {
-	data *dataservice.Client
+	data              *dataservice.Client
+	tCloudZiyanSecret *tCloudZiyanSecret
 }
 
 // NewSecretClient new secret client that used to get secret info from data service.
 func NewSecretClient(dataCli *dataservice.Client) *SecretClient {
-	return &SecretClient{data: dataCli}
+	return &SecretClient{data: dataCli, tCloudZiyanSecret: &tCloudZiyanSecret{data: dataCli}}
 }
 
 // TCloudSecret get tcloud secret and validate secret.
@@ -68,29 +71,7 @@ func (cli *SecretClient) TCloudSecret(kt *kit.Kit, accountID string) (*types.Bas
 
 // TCloudZiyanSecret get tcloud ziyan secret and validate secret.
 func (cli *SecretClient) TCloudZiyanSecret(kt *kit.Kit, accountID string) (*types.BaseSecret, error) {
-	account, err := cli.data.TCloudZiyan.Account.Get(kt, accountID)
-	if err != nil {
-		return nil, fmt.Errorf("get tcloud ziyan account failed, err: %v", err)
-	}
-
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
-	}
-
-	if account.Extension == nil {
-		return nil, errors.New("tcloud ziyan account extension is nil")
-	}
-
-	secret := &types.BaseSecret{
-		CloudSecretID:  account.Extension.CloudSecretID,
-		CloudSecretKey: account.Extension.CloudSecretKey,
-	}
-
-	if err := secret.Validate(); err != nil {
-		return nil, err
-	}
-
-	return secret, nil
+	return cli.tCloudZiyanSecret.getSecret(kt, accountID)
 }
 
 // AwsSecret get aws secret and validate secret.
@@ -318,4 +299,53 @@ func (cli *SecretClient) AzureRootCredential(kt *kit.Kit, accountID string) (*ty
 	}
 
 	return cred, nil
+}
+
+type tCloudZiyanSecret struct {
+	secrets []types.BaseSecret
+	data    *dataservice.Client
+	index   int
+	sync.Mutex
+}
+
+func (t *tCloudZiyanSecret) getSecret(kt *kit.Kit, accountID string) (*types.BaseSecret, error) {
+	t.Lock()
+	defer t.Unlock()
+
+	num := len(t.secrets)
+
+	if num == 0 {
+		account, err := t.data.TCloudZiyan.Account.Get(kt, accountID)
+		if err != nil {
+			return nil, fmt.Errorf("get tcloud ziyan account failed, err: %v", err)
+		}
+		if account.Type != enumor.ResourceAccount {
+			return nil, fmt.Errorf("account: %s not resource account type", accountID)
+		}
+		if account.Extension == nil {
+			return nil, errors.New("tcloud ziyan account extension is nil")
+		}
+
+		t.secrets = append(t.secrets, types.BaseSecret{CloudSecretID: account.Extension.CloudSecretID,
+			CloudSecretKey: account.Extension.CloudSecretKey})
+
+		secretConf := cc.HCService().ZiyanSecrets
+		for _, conf := range secretConf {
+			t.secrets = append(t.secrets, types.BaseSecret{CloudSecretID: conf.ID, CloudSecretKey: conf.Key})
+		}
+
+		for _, secret := range t.secrets {
+			if err = secret.Validate(); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if t.index < num-1 {
+		t.index = t.index + 1
+		return &t.secrets[t.index], nil
+	}
+
+	t.index = 0
+	return &t.secrets[t.index], nil
 }

@@ -20,6 +20,7 @@
 package cc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -262,7 +263,8 @@ func (s *SyncConfig) trySetDefault() {
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
-	Esb Esb `yaml:"esb"`
+	Esb          Esb      `yaml:"esb"`
+	ZiyanSecrets []Secret `yaml:"ziyanSecrets"`
 
 	Network    Network    `yaml:"network"`
 	Service    Service    `yaml:"service"`
@@ -294,6 +296,31 @@ func (s HCServiceSetting) Validate() error {
 
 	if err := s.Service.validate(); err != nil {
 		return err
+	}
+
+	for _, secret := range s.ZiyanSecrets {
+		if err := secret.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Secret ...
+type Secret struct {
+	ID  string `yaml:"id"`
+	Key string `yaml:"key"`
+}
+
+// Validate ...
+func (s Secret) Validate() error {
+	if len(s.ID) == 0 {
+		return errors.New("secret id is not set")
+	}
+
+	if len(s.Key) == 0 {
+		return errors.New("secret key is not set")
 	}
 
 	return nil

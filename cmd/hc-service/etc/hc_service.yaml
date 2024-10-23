@@ -22,6 +22,9 @@ esb:
     # the password to decrypt the certificate.
     password:
 
+ziyanSecrets:
+  - id: id # SecretId
+    key: key # SecretKey
 
 # defines all the network related options.
 network:
@@ -86,6 +89,7 @@ log:
   alsoToStdErr: false
   # log level.
   verbosity: 0
+
 sync:
   # 腾讯云负载均衡监听器同步并发数配置
   tcloudLblConcurrency: 3

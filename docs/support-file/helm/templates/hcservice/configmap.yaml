@@ -31,4 +31,6 @@ data:
         keyFile:
         caFile:
         password:
+    ziyanSecrets:
+      {{- toYaml .Values.ziyanSecrets | nindent 6 }}
 
