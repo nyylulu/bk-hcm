@@ -138,7 +138,7 @@ export default defineComponent({
     };
 
     const getDisabledDate = (date: string) => {
-      return dayjs(date).isBefore(dayjs());
+      return dayjs(date).isBefore(dayjs().subtract(1, 'day'));
     };
 
     const validate = () => {
@@ -164,16 +164,19 @@ export default defineComponent({
       },
     );
 
+    const isExpectTimeTipsReady = ref(false);
     watch(
       () => props.planTicketDemand.expect_time,
       async (time) => {
         if (!time) {
+          isExpectTimeTipsReady.value = false;
           return;
         }
         // 当前日期的13周后日期
         const expect_time = timeFormatter(time, 'YYYY-MM-DD');
 
         const { data } = await planStore.get_demand_available_time(expect_time);
+        isExpectTimeTipsReady.value = true;
 
         // data 复制到 timeRange
         setTimeRange(data);
@@ -276,7 +279,7 @@ export default defineComponent({
                 ),
               }}
             </bk-date-picker>
-            <p class={cssModule['plan-mod-timepicker-tip']}>
+            <p v-show={isExpectTimeTipsReady.value} class={cssModule['plan-mod-timepicker-tip']}>
               {t('注意：日期落在')}
               <span class={cssModule['time-txt']}>
                 {t(

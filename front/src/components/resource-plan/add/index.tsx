@@ -8,7 +8,6 @@ import { useI18n } from 'vue-i18n';
 import type { IPlanTicket, IPlanTicketDemand } from '@/typings/resourcePlan';
 import Type from './type';
 import { AdjustType } from '@/typings/plan';
-import dayjs from 'dayjs';
 
 export default defineComponent({
   props: {
@@ -49,7 +48,7 @@ export default defineComponent({
         props.initDemand && props.initDemand.adjustType === AdjustType.time ? AdjustType.time : AdjustType.config;
       planTicketDemand.value = {
         obs_project: '',
-        expect_time: dayjs().add(13, 'week').format('YYYY-MM-DD'),
+        expect_time: '',
         region_id: '',
         zone_id: '',
         demand_source: '指标变化',
