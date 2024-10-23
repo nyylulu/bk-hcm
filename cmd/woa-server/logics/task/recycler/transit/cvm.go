@@ -21,8 +21,8 @@ import (
 	"hcm/pkg/logs"
 )
 
-// transitCvm deals with cvm transit task
-func (t *Transit) transitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+// TransitCvm deals with cvm transit task
+func (t *Transit) TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	return t.dealTransitTask2TransitCvm(order, hosts)
 }
 
@@ -36,13 +36,13 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 		assetIds = append(assetIds, host.AssetID)
 		ips = append(ips, host.IP)
 	}
-
 	if len(hostIds) == 0 || len(assetIds) == 0 || len(ips) == 0 {
-		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to run transit task, " +
-			"for host id list, asset id list or ip list is empty")
+		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to run transit task, "+
+			"for host id list, asset id list or ip list is empty, order.SuborderID: %s", order.SuborderID)
 		ev := &event.Event{
-			Type:  event.TransitFailed,
-			Error: fmt.Errorf("failed to run transit task, for host id list, asset id list or ip list is empty"),
+			Type: event.TransitFailed,
+			Error: fmt.Errorf("failed to run transit task, for host id list, asset id list or ip list is empty,"+
+				" order.SuborderID: %s", order.SuborderID),
 		}
 		return ev
 	}
@@ -51,41 +51,47 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	moduleID, err := t.cc.GetBizRecycleModuleID(nil, nil, order.BizID)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to get biz %d recycle module id, "+
-			"err: %v", order.BizID, err)
-		if errUpdate := t.updateHostInfo(order, table.RecycleStageTransit,
+			"err: %v, subOrderId: %s", order.BizID, err, order.SuborderID)
+		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
-			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+			logs.Errorf("failed to update recycle host info, err: %v, order.SuborderID: %s", errUpdate,
+				order.SuborderID)
 			ev := &event.Event{
-				Type:  event.TransitFailed,
-				Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),
+				Type: event.TransitFailed,
+				Error: fmt.Errorf("failed to update recycle host info, err: %v, order.SuborderID: %s", errUpdate,
+					order.SuborderID),
 			}
 			return ev
 		}
 
 		ev := &event.Event{
-			Type:  event.TransitFailed,
-			Error: fmt.Errorf("failed to get biz %d recycle module id, err: %v", order.BizID, err),
+			Type: event.TransitFailed,
+			Error: fmt.Errorf("failed to get biz %d recycle module id, err: %v, order.SuborderID: %s", order.BizID, err,
+				order.SuborderID),
 		}
 		return ev
 	}
 
 	// transfer hosts to module CR_IEG_资源服务系统专用退回中转勿改勿删 in the origin biz
-	if err = t.transferHost2BizTransit(assetIds, order.BizID, moduleID, order.BizID); err != nil {
+	if err = t.TransferHost2BizTransit(hosts, order.BizID, moduleID, order.BizID); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to transfer host "+
-			"to biz's CR transit module in CMDB, err: %v", err)
-		if errUpdate := t.updateHostInfo(order, table.RecycleStageTransit,
+			"to biz's CR transit module in CMDB, err: %v, order.SuborderID: %s", err, order.SuborderID)
+		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
-			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+			logs.Errorf("failed to update recycle host info, err: %v, order.SuborderID: %s", errUpdate,
+				order.SuborderID)
 			ev := &event.Event{
-				Type:  event.TransitFailed,
-				Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),
+				Type: event.TransitFailed,
+				Error: fmt.Errorf("failed to update recycle host info, err: %v, order.SuborderID: %s", errUpdate,
+					order.SuborderID),
 			}
 			return ev
 		}
 
 		ev := &event.Event{
-			Type:  event.TransitFailed,
-			Error: fmt.Errorf("failed to transfer host to biz's CR transit module in CMDB, err: %v", err),
+			Type: event.TransitFailed,
+			Error: fmt.Errorf("failed to transfer host to biz's CR transit module in CMDB, err: %v, "+
+				"order.SuborderID: %s", err, order.SuborderID),
 		}
 		return ev
 	}

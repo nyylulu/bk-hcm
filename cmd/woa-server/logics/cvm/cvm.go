@@ -140,7 +140,7 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	}
 
 	// 6. save generated cvm instances info
-	if err = l.updateGeneratedDevice(order, hosts, taskId); err != nil {
+	if err = l.createDeviceInfo(order, hosts, taskId); err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to update generated device, "+
 			"order id: %s, taskId: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
 
@@ -181,8 +181,8 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 			Business1Name: cvmapi.CvmLaunchBiz1Name,
 			Business2Id:   cvmapi.CvmLaunchBiz2Id,
 			Business2Name: cvmapi.CvmLaunchBiz2Name,
-			//Business3Id:   cvmapi.CvmLaunchBiz3Id,
-			//Business3Name: cvmapi.CvmLaunchBiz3Name,
+			// Business3Id:   cvmapi.CvmLaunchBiz3Id,
+			// Business3Name: cvmapi.CvmLaunchBiz3Name,
 			Business3Id:   662584,
 			Business3Name: "CC_SA云化池",
 			ProjectId:     int(cvm.BkProductID),
@@ -371,8 +371,8 @@ func (l *logics) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 	return resp.Result.Data, nil
 }
 
-// updateGeneratedDevice update generate record
-func (l *logics) updateGeneratedDevice(order *types.ApplyOrder, items []*cvmapi.InstanceItem, taskId string) error {
+// createDeviceInfo update generate record
+func (l *logics) createDeviceInfo(order *types.ApplyOrder, items []*cvmapi.InstanceItem, taskId string) error {
 	// 1. save device info to db
 	now := time.Now()
 	for _, item := range items {

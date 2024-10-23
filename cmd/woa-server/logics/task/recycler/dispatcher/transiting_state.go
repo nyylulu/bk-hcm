@@ -23,11 +23,43 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
 )
 
 // TransitingState the action to be executed in transiting state
 type TransitingState struct{}
+
+// UpdateState update next state
+func (ts *TransitingState) UpdateState(ctx EventContext, ev *event.Event) error {
+	taskCtx, ok := ctx.(*CommonContext)
+	if !ok {
+		logs.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			ts.Name())
+		return fmt.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			ts.Name())
+	}
+
+	// set next state
+	if errUpdate := ts.setNextState(taskCtx.Order, ev); errUpdate != nil {
+		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to update recycle order state, subOrderId: %s, "+
+			"err: %v", taskCtx.Order.SuborderID, errUpdate)
+		return errUpdate
+	}
+
+	if taskCtx.Dispatcher == nil {
+		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to add order to dispatch, "+
+			"for dispatcher is nil, subOrderId: %s, state: %s", taskCtx.Order.SuborderID, ts.Name())
+		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID, ts.Name())
+	}
+
+	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
+
+	// 记录日志
+	logs.Infof("recycler: finish transfer state, subOrderId: %s", taskCtx.Order.SuborderID)
+	return nil
+}
 
 // Name return the name of transiting state
 func (ts *TransitingState) Name() table.RecycleStatus {
@@ -47,33 +79,12 @@ func (ts *TransitingState) Execute(ctx EventContext) error {
 		return fmt.Errorf("state %s failed to execute, for invalid context order is nil", ts.Name())
 	}
 	orderId := taskCtx.Order.SuborderID
-
 	// 记录日志，方便排查问题
 	logs.Infof("recycler:logics:cvm:TransitingState:start, orderID: %s", orderId)
-
 	// run transit tasks
 	ev := taskCtx.Dispatcher.transit.DealRecycleOrder(taskCtx.Order)
 
-	// set next state
-	if errUpdate := ts.setNextState(taskCtx.Order, ev); errUpdate != nil {
-		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to update recycle order %s state, err: %v",
-			orderId, errUpdate)
-		return errUpdate
-	}
-
-	if taskCtx.Dispatcher == nil {
-		logs.Errorf("recycler:logics:cvm:TransitingState:failed, failed to add order to dispatch, "+
-			"for dispatcher is nil, order id: %s, state: %s", orderId, ts.Name())
-		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s",
-			orderId, ts.Name())
-	}
-
-	taskCtx.Dispatcher.Add(orderId)
-
-	// 记录日志
-	logs.Infof("recycler:logics:cvm:TransitingState:end, orderID: %s", orderId)
-
-	return nil
+	return ts.UpdateState(ctx, ev)
 }
 
 func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Event) error {
@@ -100,8 +111,10 @@ func (ts *TransitingState) setNextState(order *table.RecycleOrder, ev *event.Eve
 		}
 	case event.TransitFailed:
 		update["status"] = table.RecycleStatusTransitFailed
-		update["handler"] = "dommyzhang;forestchen"
+		update["handler"] = recovertask.Handler
 	default:
+		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
+		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 	}
 
 	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {

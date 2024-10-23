@@ -21,6 +21,7 @@ import (
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/cmd/woa-server/common/utils"
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -585,19 +586,38 @@ func (c *ccCli) GetHostInfoByIP(ctx context.Context, header http.Header, ip stri
 		Page: BasePage{Start: 0, Limit: 1},
 	}
 
+	// 新增重试机制
 	resp := new(ListHostResp)
-	err := c.client.Post().
-		WithContext(ctx).
-		Body(req).
-		SubResourcef(subPath).
-		WithHeaders(header).
-		Do().
-		Into(resp)
+	checkFunc := func(obj interface{}, err error) (bool, error) {
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
 
+	doFunc := func() (interface{}, error) {
+		// construct order status request
+		err := c.client.Post().
+			WithContext(ctx).
+			Body(req).
+			SubResourcef(subPath).
+			WithHeaders(header).
+			Do().
+			Into(resp)
+		return resp, err
+	}
+
+	// TODO: get retry strategy from config
+	obj, err := utils.Retry(doFunc, checkFunc, 120, 5)
 	if err != nil {
-		logs.Errorf("failed to get host info by ip, ip: %s, bkCloudID: %d, err: %v, subPath: %s",
-			ip, bkCloudID, err, subPath)
+		logs.Errorf("failed to get host info by ip, ip: %s, bkCloudID: %d, err: %v", ip, bkCloudID, err)
 		return nil, err
+	}
+
+	resp, ok := obj.(*ListHostResp)
+	if !ok {
+		return nil, fmt.Errorf("failed to get host info, resp is not ListHostResp, ip: %s, bkCloudID: %d, err: %v", ip,
+			bkCloudID, err)
 	}
 
 	if !resp.Result || resp.Code != 0 {

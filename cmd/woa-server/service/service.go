@@ -31,6 +31,7 @@ import (
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
+	"hcm/cmd/woa-server/logics/task/recoverer"
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/service/capability"
@@ -181,32 +182,54 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		// init task service logics
 		loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
 		if err != nil {
-			logs.Errorf("new loop stream failed, err: %v", err)
+			logs.Errorf("new loop stream failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
 		watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
 		if err != nil {
-			logs.Errorf("new watch mongo client failed, err: %v", err)
+			logs.Errorf("new watch mongo client failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
 		informerIf, err = informer.New(loopW, watchDB)
 		if err != nil {
-			logs.Errorf("new informer failed, err: %v", err)
+			logs.Errorf("new informer failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
 		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
 		if err != nil {
-			logs.Errorf("new scheduler failed, err: %v", err)
+			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 	}
 
-	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient, authorizer)
+	service := &Service{
+		client:      apiClientSet,
+		dao:         daoSet,
+		esbClient:   esbClient,
+		authorizer:  authorizer,
+		thirdCli:    thirdCli,
+		clientConf:  cc.WoaServer(),
+		informerIf:  informerIf,
+		schedulerIf: schedulerIf,
+	}
+	return newOtherClient(kt, service, itsmCli, sd)
+}
+
+func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer)
 	if err != nil {
-		logs.Errorf("new recycler failed, err: %v", err)
+		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	// init recoverer client
+	recoverConf := cc.WoaServer().Recover
+	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.esbClient.Cmdb(),
+		service.thirdCli.Sops); err != nil {
+		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -216,7 +239,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, daoSet, itsmCli, thirdCli.CVM)
+	planCtrl, err := planctrl.New(sd, service.dao, itsmCli, service.thirdCli.CVM)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err
@@ -228,20 +251,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	return &Service{
-		client:         apiClientSet,
-		dao:            daoSet,
-		planController: planCtrl,
-		esbClient:      esbClient,
-		authorizer:     authorizer,
-		thirdCli:       thirdCli,
-		clientConf:     cc.WoaServer(),
-		informerIf:     informerIf,
-		schedulerIf:    schedulerIf,
-		recyclerIf:     recyclerIf,
-		operationIf:    operationIf,
-		esCli:          esCli,
-	}, nil
+	service.planController = planCtrl
+	service.clientConf = cc.WoaServer()
+	service.recyclerIf = recyclerIf
+	service.operationIf = operationIf
+	service.esCli = esCli
+	return service, nil
 }
 
 // ListenAndServeRest listen and serve the restful server

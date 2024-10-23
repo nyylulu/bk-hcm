@@ -24,6 +24,7 @@ import (
 
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway"
 )
 
@@ -57,6 +58,20 @@ func (i *itsm) batchQueryTicketResult(kt *kit.Kit, sns []string) (results []Tick
 	}
 
 	return resp.Data, nil
+}
+
+// GetTicketResults 批量查询单据结果
+func (i *itsm) GetTicketResults(kt *kit.Kit, sns []string) (result []TicketResult, err error) {
+	results, err := i.batchQueryTicketResult(kt, sns)
+	if err != nil {
+		logs.Errorf("failed to get itsm ticket results, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	if len(results) == 0 {
+		logs.Errorf("itsm returns empty result, err: %v, rid: %s", errf.RecordNotFound, kt.Rid)
+		return result, err
+	}
+	return results, nil
 }
 
 // GetTicketResult 查询单据结果

@@ -18,6 +18,7 @@ import (
 	"net/http"
 
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
@@ -40,6 +41,10 @@ type SopsClientInterface interface {
 	// GetTaskNodeData get sops task node data
 	GetTaskNodeData(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
 		*GetTaskNodeDataResp, error)
+	// GetTaskList get sops task list
+	GetTaskList(ctx context.Context, header http.Header, bkBizID int64, keyword string) ([]*GetTaskListRst, error)
+	// GetTaskDetail get sops task detail
+	GetTaskDetail(kt *kit.Kit, header http.Header, taskID, bkBizID int64) (*GetTaskDetailDataResp, error)
 }
 
 // NewSopsClientInterface creates a sops api instance
@@ -64,6 +69,38 @@ func NewSopsClientInterface(opts cc.SopsCli, reg prometheus.Registerer) (SopsCli
 	}
 
 	return sopsCli, nil
+}
+
+// GetTaskList get sops task list
+func (c *sopsApi) GetTaskList(ctx context.Context, header http.Header, bkBizID int64,
+	keyword string) ([]*GetTaskListRst, error) {
+
+	subPath := "/get_task_list/%d"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	resp := new(GetTaskListResp)
+	err := c.client.Get().
+		WithContext(ctx).
+		SubResourcef(subPath, bkBizID).
+		WithHeaders(header).
+		WithParam("keyword", keyword).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to get task list by BkBizId, keyword: %s, bkBizID: %d, err: %v", keyword, bkBizID, err)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		return nil, fmt.Errorf("failed to parse get task list api, bkBizID: %d, errCode: %d, errMsg: %s",
+			bkBizID, resp.Code, resp.Message)
+	}
+
+	return resp.Data, nil
 }
 
 // sopsApi sops api interface implementation
@@ -235,6 +272,40 @@ func (c *sopsApi) GetTaskNodeData(ctx context.Context, header http.Header, taskI
 	if !resp.Result || resp.Code != 0 {
 		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, "+
 			"errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, resp.Code, resp.Message)
+	}
+
+	return resp, nil
+}
+
+// GetTaskDetail get sops task detail
+func (c *sopsApi) GetTaskDetail(kt *kit.Kit, header http.Header, taskID, bkBizID int64) (
+	*GetTaskDetailDataResp, error) {
+
+	subPath := "/get_task_detail/%d/%d"
+	key, val := c.getAuthHeader()
+	if header == nil {
+		header = http.Header{}
+	}
+	header.Set(key, val)
+	resp := new(GetTaskDetailDataResp)
+	err := c.client.Get().
+		WithContext(kt.Ctx).
+		SubResourcef(subPath, taskID, bkBizID).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	if err != nil {
+		logs.Errorf("failed to send get task detail data api, taskID: %d, bkBizID: %d, err: %v, rid: %s",
+			taskID, bkBizID, err, kt.Rid)
+		return nil, err
+	}
+
+	if !resp.Result || resp.Code != 0 {
+		logs.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, errCode: %d, errMsg: %s, rid: %s",
+			taskID, bkBizID, resp.Code, resp.Message, kt.Rid)
+		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, "+
+			"errCode: %d, errMsg: %s", taskID, bkBizID, resp.Code, resp.Message)
 	}
 
 	return resp, nil

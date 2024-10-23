@@ -22,6 +22,7 @@ import (
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/logs"
 )
 
 type applyOrder struct {
@@ -34,7 +35,13 @@ func (a *applyOrder) NextSequence(ctx context.Context) (uint64, error) {
 
 // CreateApplyOrder creates apply order in db
 func (a *applyOrder) CreateApplyOrder(ctx context.Context, inst *types.ApplyOrder) error {
-	return mongodb.Client().Table(common.BKTableNameApplyOrder).Insert(ctx, inst)
+	err := mongodb.Client().Table(common.BKTableNameApplyOrder).Insert(ctx, inst)
+	if err != nil {
+		logs.Errorf("create suborder for table %s failed, err: %v", common.BKTableNameApplyOrder, err)
+		return err
+	}
+
+	return nil
 }
 
 // GetApplyOrder gets apply order by filter from db

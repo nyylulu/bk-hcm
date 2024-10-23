@@ -14,17 +14,13 @@
 package generate
 
 import (
-	"context"
 	"errors"
 	"time"
 
 	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/storage/stream/types"
-	tasktype "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
 
 	"github.com/tidwall/gjson"
@@ -91,16 +87,6 @@ func (i *generateInformer) Pop() (uint64, error) {
 
 // listAndWatchGenerateRecord list and watch database and cache generate record into queue
 func (i *generateInformer) listAndWatchGenerateRecord() error {
-	// list generate record
-	events, err := i.listGenerateRecord()
-	if err != nil {
-		return err
-	}
-
-	for _, event := range events {
-		i.queue.Add(event)
-	}
-
 	// watch generate record
 	handler := newGenerateTokenHandler(i.key, i.watchDB)
 	startTime := &types.TimeStamp{Sec: uint32(time.Now().Unix())}
@@ -132,31 +118,6 @@ func (i *generateInformer) listAndWatchGenerateRecord() error {
 	}
 
 	return i.event.WithOne(loopOpts)
-}
-
-// listGenerateRecord gets generate record list from database
-func (i *generateInformer) listGenerateRecord() ([]uint64, error) {
-	// TODO: add expire protection
-	filter := map[string]interface{}{
-		"status":     tasktype.GenerateStatusInit,
-		"is_matched": false,
-	}
-
-	page := metadata.BasePage{
-		Limit: common.BKNoLimit,
-	}
-
-	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(context.Background(), page, filter)
-	if err != nil {
-		logs.Errorf("failed to list generate record by filter: %+v, err: %v", filter, err)
-		return nil, err
-	}
-
-	ids := make([]uint64, 0)
-	for _, record := range records {
-		ids = append(ids, record.GenerateId)
-	}
-	return ids, nil
 }
 
 // onUpsert set or update generate cache

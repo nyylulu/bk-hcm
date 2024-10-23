@@ -35,7 +35,7 @@ func (m *Matcher) transferHostAndSetOperator(info *types.DeviceInfo, order *type
 		return err
 	}
 
-	if err := m.updateHostOperator(info, hostId, order.User); err != nil {
+	if err := m.UpdateHostOperator(info, hostId, order.User); err != nil {
 		logs.Errorf("failed to update host operator, ip: %s, err: %v", info.Ip, err)
 		return err
 	}
@@ -69,8 +69,8 @@ func (m *Matcher) transferHost(info *types.DeviceInfo, hostId, bizId int64) erro
 	return nil
 }
 
-// updateHostOperator update host operator in cc 3.0
-func (m *Matcher) updateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error {
+// UpdateHostOperator update host operator in cc 3.0
+func (m *Matcher) UpdateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error {
 	update := &cmdb.UpdateHostProperty{
 		HostID: hostId,
 		Properties: map[string]interface{}{
