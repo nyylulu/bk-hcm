@@ -270,7 +270,6 @@ func (s *service) getPlanTypeAvlDeviceTypes(kt *kit.Kit, planType enumor.PlanTyp
 			key.AvailableTime == availableTime &&
 			key.ObsProject == obsProject &&
 			key.RegionName == regionName &&
-			(key.ZoneName == zoneName || zoneName == "") &&
 			remain > 0 {
 
 			avlDeviceTypeMap[key.DeviceType] = struct{}{}
