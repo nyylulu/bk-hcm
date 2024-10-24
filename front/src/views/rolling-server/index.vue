@@ -44,9 +44,12 @@ const tabComps: Record<string, any> = { quota, usage };
   height: 100%;
   :deep(.bk-tab-header) {
     padding: 0 12px;
+    background: #fff;
+    border-bottom: none;
+    box-shadow: 0 3px 4px 0 #0000000a;
   }
   :deep(.bk-tab-content) {
-    padding: 16px;
+    padding: 24px;
   }
 }
 </style>
