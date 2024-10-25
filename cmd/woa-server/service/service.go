@@ -29,6 +29,7 @@ import (
 	"time"
 
 	planctrl "hcm/cmd/woa-server/logics/plan"
+	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recycler"
@@ -40,6 +41,7 @@ import (
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
+	rollingserver "hcm/cmd/woa-server/service/rolling-server"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/cmd/woa-server/storage/dal/mongo/local"
@@ -86,6 +88,7 @@ type Service struct {
 	recyclerIf  recycler.Interface
 	operationIf operation.Interface
 	esCli       *es.EsCli
+	rsLogic     rslogics.Logics
 }
 
 // NewService create a service instance.
@@ -152,56 +155,10 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	}
 
 	kt := kit.New()
-	// Mongo开关打开才生成Client链接
-	var informerIf informer.Interface
-	var schedulerIf scheduler.Interface
-
 	// Mongo开关打开才进行Init检测
-	if cc.WoaServer().UseMongo {
-		// init mongodb client
-		mConf := cc.WoaServer().MongoDB
-		mongoConf, err := mongo.NewConf(&mConf)
-		if err != nil {
-			return nil, err
-		}
-		if err = mongodb.InitClient("", mongoConf); err != nil {
-			return nil, err
-		}
-
-		wConf := cc.WoaServer().Watch
-		watchConf, err := mongo.NewConf(&wConf)
-		if err != nil {
-			return nil, err
-		}
-
-		if err = mongodb.InitClient("", watchConf); err != nil {
-			return nil, err
-		}
-
-		// init task service logics
-		loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
-		if err != nil {
-			logs.Errorf("new loop stream failed, err: %v", err)
-			return nil, err
-		}
-
-		watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
-		if err != nil {
-			logs.Errorf("new watch mongo client failed, err: %v", err)
-			return nil, err
-		}
-
-		informerIf, err = informer.New(loopW, watchDB)
-		if err != nil {
-			logs.Errorf("new informer failed, err: %v", err)
-			return nil, err
-		}
-
-		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
-		if err != nil {
-			logs.Errorf("new scheduler failed, err: %v", err)
-			return nil, err
-		}
+	informerIf, schedulerIf, err := checkUseMonogo(kt, dis, thirdCli, esbClient)
+	if err != nil {
+		return nil, err
 	}
 
 	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient, authorizer)
@@ -219,6 +176,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	planCtrl, err := planctrl.New(sd, daoSet, itsmCli, thirdCli.CVM)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
+		return nil, err
+	}
+
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
 		return nil, err
 	}
 
@@ -241,7 +204,63 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		recyclerIf:     recyclerIf,
 		operationIf:    operationIf,
 		esCli:          esCli,
+		rsLogic:        rsLogics,
 	}, nil
+}
+
+func checkUseMonogo(kt *kit.Kit, dis serviced.ServiceDiscover, thirdCli *thirdparty.Client, esbClient esb.Client) (
+	informer.Interface, scheduler.Interface, error) {
+
+	if !cc.WoaServer().UseMongo {
+		return nil, nil, nil
+	}
+
+	// init mongodb client
+	mConf := cc.WoaServer().MongoDB
+	mongoConf, err := mongo.NewConf(&mConf)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = mongodb.InitClient("", mongoConf); err != nil {
+		return nil, nil, err
+	}
+
+	wConf := cc.WoaServer().Watch
+	watchConf, err := mongo.NewConf(&wConf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = mongodb.InitClient("", watchConf); err != nil {
+		return nil, nil, err
+	}
+
+	// init task service logics
+	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+	if err != nil {
+		logs.Errorf("new loop stream failed, err: %v", err)
+		return nil, nil, err
+	}
+
+	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+	if err != nil {
+		logs.Errorf("new watch mongo client failed, err: %v", err)
+		return nil, nil, err
+	}
+
+	informerIf, err := informer.New(loopW, watchDB)
+	if err != nil {
+		logs.Errorf("new informer failed, err: %v", err)
+		return nil, nil, err
+	}
+
+	schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+	if err != nil {
+		logs.Errorf("new scheduler failed, err: %v", err)
+		return nil, nil, err
+	}
+
+	return informerIf, schedulerIf, nil
 }
 
 // ListenAndServeRest listen and serve the restful server
@@ -317,6 +336,8 @@ func (s *Service) apiSet() *restful.Container {
 		RecyclerIf:     s.recyclerIf,
 		OperationIf:    s.operationIf,
 		EsCli:          s.esCli,
+		RsLogic:        s.rsLogic,
+		Client:         s.client,
 	}
 
 	config.InitService(c)
@@ -326,6 +347,7 @@ func (s *Service) apiSet() *restful.Container {
 	meta.InitService(c)
 	plan.InitService(c)
 	dissolve.InitService(c)
+	rollingserver.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

@@ -272,6 +272,13 @@ func genPlatformManageActionGroups() client.ActionGroup {
 					{ID: ApplicationManage},
 				},
 			},
+			{
+				Name:   "滚服管理",
+				NameEn: "Rolling Service Management",
+				Actions: []client.ActionWithID{
+					{ID: RollingServerManage},
+				},
+			},
 		},
 	}
 }

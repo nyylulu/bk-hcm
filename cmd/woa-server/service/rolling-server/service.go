@@ -1,0 +1,69 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package rollingserver 滚服相关接口
+package rollingserver
+
+import (
+	"net/http"
+
+	rslogic "hcm/cmd/woa-server/logics/rolling-server"
+	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
+	"hcm/pkg/iam/auth"
+	"hcm/pkg/rest"
+)
+
+// InitService initial the service
+func InitService(c *capability.Capability) {
+	s := &service{
+		client:             c.Client,
+		authorizer:         c.Authorizer,
+		rollingServerLogic: c.RsLogic,
+	}
+	h := rest.NewHandler()
+	h.Path("/rolling_servers")
+
+	s.initService(h)
+	h.Load(c.WebService)
+
+	// 业务下的接口
+	bizH := rest.NewHandler()
+	bizH.Path("/bizs/{bk_biz_id}/rolling_servers")
+	s.bizService(bizH)
+	bizH.Load(c.WebService)
+}
+
+type service struct {
+	authorizer         auth.Authorizer
+	client             *client.ClientSet
+	rollingServerLogic rslogic.Logics
+}
+
+// initService 资源下的接口
+func (s *service) initService(h *rest.Handler) {
+	h.Add("ListAppliedRecords", http.MethodPost, "/applied_records/list", s.ListAppliedRecords)
+	h.Add("ListReturnedRecords", http.MethodPost, "/returned_records/list", s.ListReturnedRecords)
+}
+
+// bizService 业务下的接口
+func (s *service) bizService(h *rest.Handler) {
+	h.Add("ListBizAppliedRecords", http.MethodPost, "/applied_records/list", s.ListBizAppliedRecords)
+	h.Add("ListBizReturnedRecords", http.MethodPost, "/returned_records/list", s.ListBizReturnedRecords)
+}

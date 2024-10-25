@@ -80,7 +80,7 @@ func (s *woaServer) prepare(opt *options.Option) error {
 
 	// new api server discovery client.
 	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network)
-	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName}}
+	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName, cc.DataServiceName}}
 	sd, err := serviced.NewServiceD(cc.WoaServer().Service, svcOpt, discOpt)
 	if err != nil {
 		return fmt.Errorf("new serviced discovery failed, err: %v", err)
