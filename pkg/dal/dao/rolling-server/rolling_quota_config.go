@@ -24,12 +24,12 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/rolling-server"
 	"hcm/pkg/dal/table"
 	tablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/dal/table/utils"
@@ -43,8 +43,8 @@ import (
 // RollingQuotaConfigInterface only used for rolling quota config interface.
 type RollingQuotaConfigInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingQuotaConfigTable) ([]string, error)
-	Update(kt *kit.Kit, expr *filter.Expression, model *tablers.RollingQuotaConfigTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RollingQuotaConfigListResult, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.RollingQuotaConfigTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingQuotaConfigListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
@@ -88,8 +88,8 @@ func (d RollingQuotaConfigDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []t
 	return ids, nil
 }
 
-// Update update rolling quota config.
-func (d RollingQuotaConfigDao) Update(kt *kit.Kit, filterExpr *filter.Expression,
+// UpdateWithTx update rolling quota config.
+func (d RollingQuotaConfigDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
 	model *tablers.RollingQuotaConfigTable) error {
 
 	if filterExpr == nil {
@@ -113,30 +113,23 @@ func (d RollingQuotaConfigDao) Update(kt *kit.Kit, filterExpr *filter.Expression
 
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
 
-	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
-		if err != nil {
-			logs.ErrorJson("update rolling quota config failed, filter: %v, err: %v, rid: %v",
-				filterExpr, err, kt.Rid)
-			return nil, err
-		}
-
-		if effected == 0 {
-			logs.ErrorJson("update rolling quota config, but record not found, filter: %v, rid: %v",
-				filterExpr, kt.Rid)
-		}
-
-		return nil, nil
-	})
+	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
+		logs.ErrorJson("update rolling quota config failed, filter: %v, err: %v, rid: %v",
+			filterExpr, err, kt.Rid)
 		return err
+	}
+
+	if effected == 0 {
+		logs.ErrorJson("update rolling quota config, but record not found, filter: %v, rid: %v",
+			filterExpr, kt.Rid)
 	}
 
 	return nil
 }
 
 // List get rolling quota config list.
-func (d RollingQuotaConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RollingQuotaConfigListResult, error) {
+func (d RollingQuotaConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingQuotaConfigListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list rolling quota config options is nil")
 	}
@@ -161,7 +154,7 @@ func (d RollingQuotaConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes
 			return nil, err
 		}
 
-		return &rtypes.RollingQuotaConfigListResult{Count: count}, nil
+		return &rsproto.RollingQuotaConfigListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -177,7 +170,7 @@ func (d RollingQuotaConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes
 		return nil, err
 	}
 
-	return &rtypes.RollingQuotaConfigListResult{Count: 0, Details: details}, nil
+	return &rsproto.RollingQuotaConfigListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete rolling quota config with tx.

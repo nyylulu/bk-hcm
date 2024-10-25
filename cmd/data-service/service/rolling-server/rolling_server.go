@@ -21,11 +21,17 @@
 package rollingserver
 
 import (
-	tablers "hcm/pkg/dal/table/rolling-server"
+	"hcm/cmd/data-service/service/capability"
+	resourcepoolbusiness "hcm/cmd/data-service/service/rolling-server/resource-pool-business"
+	rollingglobalconfig "hcm/cmd/data-service/service/rolling-server/rolling-global-config"
+	rollingquotaconfig "hcm/cmd/data-service/service/rolling-server/rolling-quota-config"
+	rollingquotaoffset "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset"
 )
 
-// RollingQuotaConfigListResult list rolling quota config result.
-type RollingQuotaConfigListResult struct {
-	Count   uint64                            `json:"count"`
-	Details []tablers.RollingQuotaConfigTable `json:"details"`
+// InitService initial the security group service
+func InitService(cap *capability.Capability) {
+	rollingquotaconfig.InitService(cap)
+	rollingquotaoffset.InitService(cap)
+	rollingglobalconfig.InitService(cap)
+	resourcepoolbusiness.InitService(cap)
 }

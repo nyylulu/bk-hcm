@@ -237,9 +237,13 @@ const (
 	// RecycleHostInfo  裁撤主机表
 	RecycleHostInfo = "recycle_host_info"
 
-	RollingQuotaConfigTable   = "rolling_quota_config"
-	RollingQuotaOffsetTable   = "rolling_quota_offset"
-	RollingGlobalConfigTable  = "rolling_global_config"
+	// RollingQuotaConfigTable 滚服额度配置表
+	RollingQuotaConfigTable = "rolling_quota_config"
+	// RollingQuotaOffsetTable 滚服额度偏移表
+	RollingQuotaOffsetTable = "rolling_quota_offset"
+	// RollingGlobalConfigTable 滚服全局额度表
+	RollingGlobalConfigTable = "rolling_global_config"
+	// ResourcePoolBusinessTable 资源池业务表
 	ResourcePoolBusinessTable = "resource_pool_business"
 
 	// RollingAppliedRecordTable 滚服申请记录表
@@ -365,6 +369,11 @@ var TableMap = map[Name]struct{}{
 	OBSBillGcpItemTable:      {},
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
+
+	RollingQuotaConfigTable:   {},
+	RollingQuotaOffsetTable:   {},
+	RollingGlobalConfigTable:  {},
+	ResourcePoolBusinessTable: {},
 
 	RollingAppliedRecordTable:  {},
 	RollingReturnedRecordTable: {},

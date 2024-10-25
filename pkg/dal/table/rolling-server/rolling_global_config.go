@@ -51,9 +51,9 @@ type RollingGlobalConfigTable struct {
 	// ID 唯一ID
 	ID string `db:"id" json:"id" validate:"lte=64"`
 	// GlobalQuota 全局总配额
-	GlobalQuota int64 `db:"global_quota" json:"global_quota"`
+	GlobalQuota *int64 `db:"global_quota" json:"global_quota"`
 	// BizQuota 单业务基础配额
-	BizQuota int64 `db:"biz_quota" json:"biz_quota"`
+	BizQuota *int64 `db:"biz_quota" json:"biz_quota"`
 	// UnitPrice 单价
 	UnitPrice *types.Decimal `db:"unit_price" json:"unit_price"`
 	// Creator 创建者
@@ -81,13 +81,14 @@ func (r RollingGlobalConfigTable) InsertValidate() error {
 		return errors.New("id can not be empty")
 	}
 
-	if r.GlobalQuota <= 0 {
+	if cvt.PtrToVal(r.GlobalQuota) <= 0 {
 		return errors.New("global quota is required")
 	}
 
-	if r.BizQuota <= 0 {
+	if cvt.PtrToVal(r.BizQuota) <= 0 {
 		return errors.New("biz quota is required")
 	}
+
 	if r.UnitPrice == nil {
 		return errors.New("unit price is required")
 	}
@@ -112,11 +113,11 @@ func (r RollingGlobalConfigTable) UpdateValidate() error {
 		return errors.New("id can not be empty")
 	}
 
-	if r.GlobalQuota < 0 {
+	if cvt.PtrToVal(r.GlobalQuota) < 0 {
 		return errors.New("global quota id should be >= 0")
 	}
 
-	if r.BizQuota < 0 {
+	if cvt.PtrToVal(r.BizQuota) < 0 {
 		return errors.New("biz quota should be >= 0")
 	}
 

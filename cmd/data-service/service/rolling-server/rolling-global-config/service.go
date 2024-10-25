@@ -17,15 +17,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+// Package rollingglobalcfg ...
+package rollingglobalcfg
 
 import (
-	tablers "hcm/pkg/dal/table/rolling-server"
+	"net/http"
+
+	"hcm/cmd/data-service/service/capability"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// RollingGlobalConfigListResult list rolling global config result.
-type RollingGlobalConfigListResult struct {
-	Count   uint64                             `json:"count"`
-	Details []tablers.RollingGlobalConfigTable `json:"details"`
+// InitService initialize the bill puller service
+func InitService(cap *capability.Capability) {
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateRollingGlobalConfig", http.MethodPost, "/rolling_servers/global_configs/batch/create",
+		svc.BatchCreateRollingGlobalConfig)
+	h.Add("DeleteRollingGlobalConfig", http.MethodDelete, "/rolling_servers/global_configs/batch",
+		svc.DeleteRollingGlobalConfig)
+	h.Add("ListRollingGlobalConfig", http.MethodPost, "/rolling_servers/global_configs/list",
+		svc.ListRollingGlobalConfig)
+	h.Add("BatchUpdateRollingGlobalConfig", http.MethodPatch, "/rolling_servers/global_configs/batch",
+		svc.BatchUpdateRollingGlobalConfig)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

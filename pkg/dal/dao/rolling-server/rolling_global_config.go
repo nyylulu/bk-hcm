@@ -24,12 +24,12 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/rolling-server"
 	"hcm/pkg/dal/table"
 	tablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/dal/table/utils"
@@ -43,8 +43,8 @@ import (
 // RollingGlobalConfigInterface only used for rolling global config interface.
 type RollingGlobalConfigInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingGlobalConfigTable) ([]string, error)
-	Update(kt *kit.Kit, expr *filter.Expression, model *tablers.RollingGlobalConfigTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RollingGlobalConfigListResult, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.RollingGlobalConfigTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingGlobalConfigListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
@@ -88,8 +88,8 @@ func (d RollingGlobalConfigDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []
 	return ids, nil
 }
 
-// Update update rolling global config.
-func (d RollingGlobalConfigDao) Update(kt *kit.Kit, filterExpr *filter.Expression,
+// UpdateWithTx update rolling global config.
+func (d RollingGlobalConfigDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
 	model *tablers.RollingGlobalConfigTable) error {
 
 	if filterExpr == nil {
@@ -113,30 +113,23 @@ func (d RollingGlobalConfigDao) Update(kt *kit.Kit, filterExpr *filter.Expressio
 
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
 
-	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
-		if err != nil {
-			logs.ErrorJson("update rolling global config failed, filter: %v, err: %v, rid: %v",
-				filterExpr, err, kt.Rid)
-			return nil, err
-		}
-
-		if effected == 0 {
-			logs.ErrorJson("update rolling global config, but record not found, filter: %v, rid: %v",
-				filterExpr, kt.Rid)
-		}
-
-		return nil, nil
-	})
+	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
+		logs.ErrorJson("update rolling global config failed, filter: %v, err: %v, rid: %v",
+			filterExpr, err, kt.Rid)
 		return err
+	}
+
+	if effected == 0 {
+		logs.ErrorJson("update rolling global config, but record not found, filter: %v, rid: %v",
+			filterExpr, kt.Rid)
 	}
 
 	return nil
 }
 
 // List get rolling global config list.
-func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.RollingGlobalConfigListResult,
+func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingGlobalConfigListResult,
 	error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list rolling global config options is nil")
@@ -162,7 +155,7 @@ func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtype
 			return nil, err
 		}
 
-		return &rtypes.RollingGlobalConfigListResult{Count: count}, nil
+		return &rsproto.RollingGlobalConfigListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -178,7 +171,7 @@ func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rtype
 		return nil, err
 	}
 
-	return &rtypes.RollingGlobalConfigListResult{Count: 0, Details: details}, nil
+	return &rsproto.RollingGlobalConfigListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete rolling global config with tx.

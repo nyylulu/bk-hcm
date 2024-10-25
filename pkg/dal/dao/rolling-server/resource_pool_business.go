@@ -24,12 +24,12 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/rolling-server"
 	"hcm/pkg/dal/table"
 	tablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/dal/table/utils"
@@ -43,8 +43,8 @@ import (
 // ResourcePoolBusinessInterface only used for resource pool business interface.
 type ResourcePoolBusinessInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.ResourcePoolBusinessTable) ([]string, error)
-	Update(kt *kit.Kit, expr *filter.Expression, model *tablers.ResourcePoolBusinessTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResourcePoolBusinessListResult, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.ResourcePoolBusinessTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.ResourcePoolBusinessListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
@@ -88,8 +88,8 @@ func (d ResourcePoolBusinessDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models [
 	return ids, nil
 }
 
-// Update update resource pool business.
-func (d ResourcePoolBusinessDao) Update(kt *kit.Kit, filterExpr *filter.Expression,
+// UpdateWithTx update resource pool business.
+func (d ResourcePoolBusinessDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
 	model *tablers.ResourcePoolBusinessTable) error {
 
 	if filterExpr == nil {
@@ -113,30 +113,23 @@ func (d ResourcePoolBusinessDao) Update(kt *kit.Kit, filterExpr *filter.Expressi
 
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
 
-	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
-		if err != nil {
-			logs.ErrorJson("update resource pool business failed, filter: %v, err: %v, rid: %v",
-				filterExpr, err, kt.Rid)
-			return nil, err
-		}
-
-		if effected == 0 {
-			logs.ErrorJson("update resource pool business, but record not found, filter: %v, rid: %v",
-				filterExpr, kt.Rid)
-		}
-
-		return nil, nil
-	})
+	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
+		logs.ErrorJson("update resource pool business failed, filter: %v, err: %v, rid: %v",
+			filterExpr, err, kt.Rid)
 		return err
+	}
+
+	if effected == 0 {
+		logs.ErrorJson("update resource pool business, but record not found, filter: %v, rid: %v",
+			filterExpr, kt.Rid)
 	}
 
 	return nil
 }
 
 // List get resource pool business list.
-func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResourcePoolBusinessListResult,
+func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rsproto.ResourcePoolBusinessListResult,
 	error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list resource pool business options is nil")
@@ -162,7 +155,7 @@ func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rtyp
 			return nil, err
 		}
 
-		return &rtypes.ResourcePoolBusinessListResult{Count: count}, nil
+		return &rsproto.ResourcePoolBusinessListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -178,7 +171,7 @@ func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rtyp
 		return nil, err
 	}
 
-	return &rtypes.ResourcePoolBusinessListResult{Count: 0, Details: details}, nil
+	return &rsproto.ResourcePoolBusinessListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete resource pool business with tx.

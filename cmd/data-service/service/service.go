@@ -73,6 +73,7 @@ import (
 	"hcm/cmd/data-service/service/cloud/zone"
 	"hcm/cmd/data-service/service/cos"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
+	rollingserver "hcm/cmd/data-service/service/rolling-server"
 	"hcm/cmd/data-service/service/rolling-server/rolling-applied"
 	"hcm/cmd/data-service/service/rolling-server/rolling-returned"
 	"hcm/cmd/data-service/service/user"
@@ -271,6 +272,8 @@ func (s *Service) apiSet() *restful.Container {
 
 	billexchangerate.InitService(capability)
 	billsyncrecord.InitService(capability)
+
+	rollingserver.InitService(capability)
 
 	rollingapplied.InitService(capability)
 	rollingreturned.InitService(capability)

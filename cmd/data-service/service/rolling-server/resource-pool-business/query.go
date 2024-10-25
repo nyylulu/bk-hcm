@@ -17,15 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+// Package respoolbiz ...
+package respoolbiz
 
 import (
-	tablers "hcm/pkg/dal/table/rolling-server"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// RollingQuotaOffsetListResult list rolling quota offset result.
-type RollingQuotaOffsetListResult struct {
-	Count   uint64                            `json:"count"`
-	Details []tablers.RollingQuotaOffsetTable `json:"details"`
+// ListResourcePoolBusiness list resource pool business
+func (svc *service) ListResourcePoolBusiness(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.ResourcePoolBusinessListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	return svc.dao.ResourcePoolBusiness().List(cts.Kit, opt)
 }

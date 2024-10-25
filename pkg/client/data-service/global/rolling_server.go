@@ -40,6 +40,134 @@ func NewRollingServerClient(client rest.ClientInterface) *RollingServerClient {
 	}
 }
 
+// --- resource pool business ---
+
+// ListResPoolBiz list resource pool business
+func (b *RollingServerClient) ListResPoolBiz(kt *kit.Kit, req *rsproto.ResourcePoolBusinessListReq) (
+	*rsproto.ResourcePoolBusinessListResult, error) {
+
+	return common.Request[rsproto.ResourcePoolBusinessListReq, rsproto.ResourcePoolBusinessListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/respool_bizs/list")
+}
+
+// BatchCreateResPoolBiz batch create resource pool business
+func (b *RollingServerClient) BatchCreateResPoolBiz(kt *kit.Kit, req *rsproto.ResourcePoolBusinessCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.ResourcePoolBusinessCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/respool_bizs/batch/create")
+}
+
+// BatchUpdateResPoolBiz update resource pool business
+func (b *RollingServerClient) BatchUpdateResPoolBiz(kt *kit.Kit,
+	req *rsproto.ResourcePoolBusinessBatchUpdateReq) error {
+
+	return common.RequestNoResp[rsproto.ResourcePoolBusinessBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/rolling_servers/respool_bizs/batch")
+}
+
+// DeleteResPoolBiz delete resource pool business
+func (b *RollingServerClient) DeleteResPoolBiz(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/respool_bizs/batch")
+}
+
+// --- rolling global config ---
+
+// ListGlobalConfig list global config
+func (b *RollingServerClient) ListGlobalConfig(kt *kit.Kit, req *rsproto.RollingGlobalConfigListReq) (
+	*rsproto.RollingGlobalConfigListResult, error) {
+
+	return common.Request[rsproto.RollingGlobalConfigListReq, rsproto.RollingGlobalConfigListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/global_configs/list")
+}
+
+// BatchCreateGlobalConfig batch create global config
+func (b *RollingServerClient) BatchCreateGlobalConfig(kt *kit.Kit, req *rsproto.RollingGlobalConfigCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.RollingGlobalConfigCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/global_configs/batch/create")
+}
+
+// BatchUpdateGlobalConfig update global config
+func (b *RollingServerClient) BatchUpdateGlobalConfig(kt *kit.Kit,
+	req *rsproto.RollingGlobalConfigBatchUpdateReq) error {
+
+	return common.RequestNoResp[rsproto.RollingGlobalConfigBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/rolling_servers/global_configs/batch")
+}
+
+// DeleteGlobalConfig delete global config
+func (b *RollingServerClient) DeleteGlobalConfig(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/global_configs/batch")
+}
+
+// --- rolling quota config ---
+
+// ListQuotaConfig list quota config
+func (b *RollingServerClient) ListQuotaConfig(kt *kit.Kit, req *rsproto.RollingQuotaConfigListReq) (
+	*rsproto.RollingQuotaConfigListResult, error) {
+
+	return common.Request[rsproto.RollingQuotaConfigListReq, rsproto.RollingQuotaConfigListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_configs/list")
+}
+
+// BatchCreateQuotaConfig batch create quota config
+func (b *RollingServerClient) BatchCreateQuotaConfig(kt *kit.Kit, req *rsproto.RollingQuotaConfigCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.RollingQuotaConfigCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_configs/batch/create")
+}
+
+// BatchUpdateQuotaConfig update quota config
+func (b *RollingServerClient) BatchUpdateQuotaConfig(kt *kit.Kit,
+	req *rsproto.RollingQuotaConfigBatchUpdateReq) error {
+
+	return common.RequestNoResp[rsproto.RollingQuotaConfigBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/rolling_servers/quota_configs/batch")
+}
+
+// DeleteQuotaConfig delete quota config
+func (b *RollingServerClient) DeleteQuotaConfig(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/quota_configs/batch")
+}
+
+// --- rolling quota offset ---
+
+// ListQuotaOffset list quota offset
+func (b *RollingServerClient) ListQuotaOffset(kt *kit.Kit, req *rsproto.RollingQuotaOffsetListReq) (
+	*rsproto.RollingQuotaOffsetListResult, error) {
+
+	return common.Request[rsproto.RollingQuotaOffsetListReq, rsproto.RollingQuotaOffsetListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_offsets/list")
+}
+
+// BatchCreateQuotaOffset batch create quota offset
+func (b *RollingServerClient) BatchCreateQuotaOffset(kt *kit.Kit, req *rsproto.RollingQuotaOffsetCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.RollingQuotaOffsetCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_offsets/batch/create")
+}
+
+// BatchUpdateQuotaOffset update quota offset
+func (b *RollingServerClient) BatchUpdateQuotaOffset(kt *kit.Kit,
+	req *rsproto.RollingQuotaOffsetBatchUpdateReq) error {
+
+	return common.RequestNoResp[rsproto.RollingQuotaOffsetBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/rolling_servers/quota_offsets/batch")
+}
+
+// DeleteQuotaOffset delete quota offset
+func (b *RollingServerClient) DeleteQuotaOffset(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/quota_offsets/batch")
+}
+
 // --- rolling applied record ---
 
 // ListAppliedRecord list applied record

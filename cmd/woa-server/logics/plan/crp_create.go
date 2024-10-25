@@ -154,8 +154,9 @@ func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, ticket_id: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, ticket.ID, kt.Rid)
+		logs.Errorf("failed to add cvm & cbs plan order, code: %d, msg: %s, crp_tran_id: %s, ticket_id: %s, rid: %s",
+			resp.Error.Code,
+			resp.Error.Message, resp.TraceId, ticket.ID, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}

@@ -17,15 +17,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+// Package rollingquotacfg ...
+package rollingquotacfg
 
 import (
-	tablers "hcm/pkg/dal/table/rolling-server"
+	"net/http"
+
+	"hcm/cmd/data-service/service/capability"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// ResourcePoolBusinessListResult list resource pool business result.
-type ResourcePoolBusinessListResult struct {
-	Count   uint64                              `json:"count"`
-	Details []tablers.ResourcePoolBusinessTable `json:"details"`
+// InitService initialize the bill puller service
+func InitService(cap *capability.Capability) {
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateRollingQuotaConfig", http.MethodPost, "/rolling_servers/quota_configs/batch/create",
+		svc.BatchCreateRollingQuotaConfig)
+	h.Add("DeleteRollingQuotaConfig", http.MethodDelete, "/rolling_servers/quota_configs/batch",
+		svc.DeleteRollingQuotaConfig)
+	h.Add("ListRollingQuotaConfig", http.MethodPost, "/rolling_servers/quota_configs/list",
+		svc.ListRollingQuotaConfig)
+	h.Add("BatchUpdateRollingQuotaConfig", http.MethodPatch, "/rolling_servers/quota_configs/batch",
+		svc.BatchUpdateRollingQuotaConfig)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

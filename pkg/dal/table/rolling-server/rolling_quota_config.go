@@ -60,7 +60,7 @@ type RollingQuotaConfigTable struct {
 	// Month 配额应用月份
 	Month int64 `db:"month" json:"month"`
 	// Quota CPU核心配额
-	Quota int64 `db:"quota" json:"quota"`
+	Quota *int64 `db:"quota" json:"quota"`
 	// Creator 创建者
 	Creator string `db:"creator" validate:"max=64" json:"creator"`
 	// Reviser 更新者

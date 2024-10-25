@@ -60,7 +60,7 @@ type RollingQuotaOffsetTable struct {
 	// Month 配额应用月份
 	Month int64 `db:"month" json:"month"`
 	// QuotaOffset CPU核心配额偏移量
-	QuotaOffset int64 `db:"quota_offset" json:"quota_offset"`
+	QuotaOffset *int64 `db:"quota_offset" json:"quota_offset"`
 	// Creator 创建者
 	Creator string `db:"creator" validate:"max=64" json:"creator"`
 	// Reviser 更新者
