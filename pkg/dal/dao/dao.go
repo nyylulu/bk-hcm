@@ -167,6 +167,8 @@ type Set interface {
 	ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface
 	RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface
 	RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface
+	RollingFineDetail() rollingserver.RollingFineDetailInterface
+	OBSBillItemRolling() rollingserver.OBSBillItemRolling
 
 	Txn() *Txn
 }
@@ -624,6 +626,14 @@ func (s *set) OBSBillItemGcp() obs.OBSBillItemGcp {
 	}
 }
 
+// OBSBillItemRolling returns OBSBillItemRolling dao.
+func (s *set) OBSBillItemRolling() rollingserver.OBSBillItemRolling {
+	return &rollingserver.OBSBillItemRollingDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
 // RootAccountBillConfig returns RootAccountBillConfig dao
 func (s *set) RootAccountBillConfig() bill.RootAccountBillConfig {
 	return &bill.RootAccountBillConfigDao{
@@ -925,6 +935,14 @@ func (s *set) RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface {
 // ResourcePoolBusiness return resource pool business dao.
 func (s *set) ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface {
 	return &rollingserver.ResourcePoolBusinessDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingFineDetail return rolling fine detail dao.
+func (s *set) RollingFineDetail() rollingserver.RollingFineDetailInterface {
+	return &rollingserver.RollingFineDetailDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}

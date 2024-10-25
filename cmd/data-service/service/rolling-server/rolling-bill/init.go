@@ -17,24 +17,30 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+// Package rollingbill ...
+package rollingbill
 
 import (
-	"hcm/pkg/cryptography"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/dal/objectstore"
-	"hcm/pkg/thirdparty/esb"
+	"net/http"
 
-	"github.com/emicklei/go-restful/v3"
+	"hcm/cmd/data-service/service/capability"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService  *restful.WebService
-	ObsDao      dao.Set
-	Dao         dao.Set
-	Cipher      cryptography.Crypto
-	EsbClient   esb.Client
-	ObjectStore objectstore.Storage
+// InitService initialize the rolling bill service
+func InitService(cap *capability.Capability) {
+	svc := &service{
+		obsDao: cap.ObsDao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateRollingBill", http.MethodPost, "/rolling_servers/bills/batch/create", svc.BatchCreateRollingBill)
+	h.Add("DeleteRollingBill", http.MethodDelete, "/rolling_servers/bills/batch", svc.DeleteRollingBill)
+	h.Add("ListRollingBill", http.MethodPost, "/rolling_servers/bills/list", svc.ListRollingBill)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	obsDao dao.Set
 }

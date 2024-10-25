@@ -128,9 +128,8 @@ type CloudServerSetting struct {
 	Cmsi           CMSI           `yaml:"cmsi"`
 
 	// 内部版配置
-	Cmdb           ApiGateway     `yaml:"cmdb"`
-	FinOps         ApiGateway     `yaml:"finops"`
-
+	Cmdb   ApiGateway `yaml:"cmdb"`
+	FinOps ApiGateway `yaml:"finops"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -190,6 +189,8 @@ func (s CloudServerSetting) Validate() error {
 
 // DataServiceSetting defines data service used setting options.
 type DataServiceSetting struct {
+	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
+
 	Network     Network     `yaml:"network"`
 	Service     Service     `yaml:"service"`
 	Log         LogOption   `yaml:"log"`
@@ -206,6 +207,10 @@ func (s *DataServiceSetting) trySetFlagBindIP(ip net.IP) error {
 
 // trySetDefault set the DataServiceSetting default value if user not configured.
 func (s *DataServiceSetting) trySetDefault() {
+	if s.OBSDatabase != nil {
+		s.OBSDatabase.trySetDefault()
+	}
+
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
@@ -216,6 +221,12 @@ func (s *DataServiceSetting) trySetDefault() {
 
 // Validate DataServiceSetting option.
 func (s DataServiceSetting) Validate() error {
+	if s.OBSDatabase != nil {
+		if err := s.OBSDatabase.validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := s.Network.validate(); err != nil {
 		return err
 	}
@@ -414,7 +425,6 @@ func (s *TaskServerSetting) trySetDefault() {
 	s.Database.trySetDefault()
 	s.Log.trySetDefault()
 
-
 	if s.OBSDatabase != nil {
 		s.OBSDatabase.trySetDefault()
 	}
@@ -584,7 +594,6 @@ func (s AccountServerSetting) Validate() error {
 	if err := s.BillAllocation.validate(); err != nil {
 		return err
 	}
-
 
 	if err := s.Esb.validate(); err != nil {
 		return err

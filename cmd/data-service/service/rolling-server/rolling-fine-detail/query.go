@@ -17,24 +17,36 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+// Package rollingfinedetail ...
+package rollingfinedetail
 
 import (
-	"hcm/pkg/cryptography"
-	"hcm/pkg/dal/dao"
-	"hcm/pkg/dal/objectstore"
-	"hcm/pkg/thirdparty/esb"
-
-	"github.com/emicklei/go-restful/v3"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService  *restful.WebService
-	ObsDao      dao.Set
-	Dao         dao.Set
-	Cipher      cryptography.Crypto
-	EsbClient   esb.Client
-	ObjectStore objectstore.Storage
+// ListRollingFineDetail list rolling fine detail
+func (svc *service) ListRollingFineDetail(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.RollingFineDetailListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	data, err := svc.dao.RollingFineDetail().List(cts.Kit, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	return &rsproto.RollingFineDetailListResult{Details: data.Details, Count: data.Count}, nil
 }

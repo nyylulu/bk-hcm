@@ -224,6 +224,8 @@ const (
 	OBSBillZenlayerItemTable = "obs_zenlayer_bills"
 	// OBSBillGcpItemTable OBS Gcp 账单表
 	OBSBillGcpItemTable = "obs_gcp_bills"
+	// OBSBillRollingItemTable OBS 滚服账单表
+	OBSBillRollingItemTable = "obs_rolling_bills"
 
 	// RootAccountBillConfigTable 一级账号账单配置表
 	RootAccountBillConfigTable = "root_account_bill_config"
@@ -250,6 +252,8 @@ const (
 	RollingAppliedRecordTable = "rolling_applied_record"
 	// RollingReturnedRecordTable 滚服回收记录表
 	RollingReturnedRecordTable = "rolling_returned_record"
+	// RollingFineDetail 滚服罚金明细表
+	RollingFineDetail = "rolling_fine_detail"
 )
 
 // Validate whether the table name is valid or not.
@@ -367,6 +371,7 @@ var TableMap = map[Name]struct{}{
 	OBSBillAwsItemTable:      {},
 	OBSBillZenlayerItemTable: {},
 	OBSBillGcpItemTable:      {},
+	OBSBillRollingItemTable:  {},
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
 
@@ -377,6 +382,7 @@ var TableMap = map[Name]struct{}{
 
 	RollingAppliedRecordTable:  {},
 	RollingReturnedRecordTable: {},
+	RollingFineDetail:          {},
 }
 
 // Register 注册表名
