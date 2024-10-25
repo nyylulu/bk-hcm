@@ -66,7 +66,7 @@ func (r *recycleRecoverer) recoverDetectedOrder(kt *kit.Kit, order *table.Recycl
 	}
 
 	task, taskCtx := r.newTask(order)
-	if ev.Type == event.ReturnSuccess {
+	if ev.Type == event.DetectSuccess {
 		if err := r.recyclerIf.CheckDetectStatus(order.SuborderID); err != nil {
 			logs.Errorf("failed to check detect task status, subOrderId: %s, err: %v, rid: %s", order.SuborderID, err,
 				kt.Rid)
@@ -152,10 +152,11 @@ func (r *recycleRecoverer) recoverDetectTask(kt *kit.Kit, task *table.DetectTask
 
 // updateStepInit update step status to init to start detect step
 func (r *recycleRecoverer) updateStepInit(kt *kit.Kit, task *table.DetectTask) error {
-	stepId := fmt.Sprintf("%s-%d", task.TaskID, task.SuccessNum+task.FailedNum+1)
+	stepId := task.SuccessNum + task.FailedNum + 1
 	filter := &mapstr.MapStr{
-		"id":     stepId,
-		"status": table.DetectStatusRunning,
+		"step_id":     stepId,
+		"suborder_id": task.SuborderID,
+		"status":      table.DetectStatusRunning,
 	}
 	doc := &mapstr.MapStr{
 		"status":    table.DetectStatusInit,
