@@ -310,7 +310,7 @@ func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTick
 		return err
 	}
 
-	insertDemandIDs, err := s.demandIDNotExistsInResPlanCrpDemand(kt, demandIDs)
+	insertDemandIDs, err := s.demandIDNotExistsInResPlanCrpDemand(kt, demandIDs, ticketInfo.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get demand id not exists in res plan crp demand, err: %v, ticket_id: %s, rid: %s",
 			err, ticketInfo.ID, kt.Rid)
@@ -351,7 +351,7 @@ func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTick
 }
 
 // demandIDNotExistsInResPlanCrpDemand 保证幂等，只返回在res_plan_crp_demand表中不存在的demand_id
-func (s *service) demandIDNotExistsInResPlanCrpDemand(kt *kit.Kit, demandIDs []string) ([]int64, error) {
+func (s *service) demandIDNotExistsInResPlanCrpDemand(kt *kit.Kit, demandIDs []string, bkBizID int64) ([]int64, error) {
 	rstDemandIDs := make([]int64, 0, len(demandIDs))
 
 	optDemandList := make([]int64, 0, len(demandIDs))
@@ -370,7 +370,8 @@ func (s *service) demandIDNotExistsInResPlanCrpDemand(kt *kit.Kit, demandIDs []s
 		Filter: &filter.Expression{
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
-				tools.ContainersExpression("crp_demand_id", optDemandList),
+				filter.AtomRule{Field: "crp_demand_id", Op: filter.In.Factory(), Value: optDemandList},
+				filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bkBizID},
 			},
 		},
 		Page: &core.BasePage{
