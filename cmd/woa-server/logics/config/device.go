@@ -17,6 +17,8 @@ import (
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
+	"hcm/cmd/woa-server/common/querybuilder"
 	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
 	"hcm/cmd/woa-server/thirdparty"
@@ -24,6 +26,7 @@ import (
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/slice"
 )
 
 // DeviceIf provides management interface for operations of device config
@@ -58,6 +61,9 @@ type DeviceIf interface {
 	GetPmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetPmDeviceRst, error)
 	// CreatePmDevice creates config physical machine device type
 	CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.MapStr, error)
+
+	// ListCpuCoreByDeviceTypes list cpu core by device types
+	ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
 }
 
 // NewDeviceOp creates a device interface
@@ -474,4 +480,104 @@ func (d *device) CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.
 	}
 
 	return rst, nil
+}
+
+// ListCpuCoreByDeviceTypes list cpu core by device types
+func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
+	map[string]types.DeviceTypeCpuItem, error) {
+
+	deviceReq := &types.GetDeviceParam{
+		Filter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "device_type",
+						Operator: querybuilder.OperatorIn,
+						Value:    deviceTypes,
+					}},
+			},
+		},
+		Page: metadata.BasePage{Limit: common.BKNoLimit, Start: 0},
+	}
+	deviceList, err := d.GetDevice(kt, deviceReq)
+	if err != nil {
+		logs.Errorf("get device list from mongo failed, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
+		return nil, err
+	}
+
+	deviceTypeMap := make(map[string]types.DeviceTypeCpuItem, 0)
+	existDeviceTypes := make([]string, 0)
+	for _, deviceItem := range deviceList.Info {
+		deviceType := deviceItem.DeviceType
+		deviceTypeMap[deviceType] = types.DeviceTypeCpuItem{
+			DeviceType: deviceItem.DeviceType,
+			CPUAmount:  deviceItem.Cpu,
+		}
+		existDeviceTypes = append(existDeviceTypes, deviceType)
+	}
+
+	// 如果查到了全部的DeviceType，则直接返回
+	if len(deviceList.Info) == len(deviceTypes) {
+		logs.Infof("get cpu core from mongo by device types, deviceTypes: %v, deviceTypeMap; %+v, rid: %s",
+			deviceTypes, deviceTypeMap, kt.Rid)
+		return deviceTypeMap, nil
+	}
+
+	notExistDevice := make([]string, 0)
+	for _, dtype := range deviceTypes {
+		if !slice.IsItemInSlice(existDeviceTypes, dtype) {
+			notExistDevice = append(notExistDevice, dtype)
+		}
+	}
+
+	deviceTypeMapFromCrp, err := d.ListCpuCoreFromCrp(kt, notExistDevice)
+	if err != nil {
+		logs.Errorf("get device type from crp failed, err: %v, deviceTypes: %v, rid: %s", err, notExistDevice, kt.Rid)
+		return nil, err
+	}
+	for dtype, item := range deviceTypeMapFromCrp {
+		deviceTypeMap[dtype] = item
+	}
+
+	// 记录日志
+	logs.Infof("get cpu core from crp by device types, deviceTypes: %v, deviceTypeMap; %+v, rid: %s",
+		deviceTypes, deviceTypeMap, kt.Rid)
+
+	return deviceTypeMap, nil
+}
+
+// ListCpuCoreFromCrp 从Crp平台获取设备类型信息
+func (d *device) ListCpuCoreFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error) {
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: deviceTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+
+	deviceTypeMap := make(map[string]types.DeviceTypeCpuItem, 0)
+	for _, item := range resp.Result.Data {
+		if _, ok := deviceTypeMap[item.InstanceType]; ok {
+			continue
+		}
+		deviceTypeMap[item.InstanceType] = types.DeviceTypeCpuItem{
+			DeviceType: item.InstanceType,
+			CPUAmount:  int64(item.CPUAmount),
+		}
+	}
+
+	// 记录日志
+	logs.Infof("get yunti crp device type, QueryCvmInstanceType, instTypes: %v, deviceTypeMap; %+v, rid: %s",
+		deviceTypes, deviceTypeMap, kt.Rid)
+
+	return deviceTypeMap, nil
 }

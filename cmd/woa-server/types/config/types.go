@@ -587,3 +587,9 @@ var Description = map[string]string{
 	AntiModule: "分Module",
 	AntiCampus: "分Campus",
 }
+
+// DeviceTypeCpuItem device type cpu item
+type DeviceTypeCpuItem struct {
+	DeviceType string `json:"device_type"` // 机型
+	CPUAmount  int64  `json:"cpu_amount"`  // CPU数量
+}

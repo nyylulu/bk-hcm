@@ -70,6 +70,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/preview/recycle/order
         "skip_confirm":true,
         "total_num":20,
         "cost_concerned":true,
+        "sum_cpu_core":100,
         "remark":"老旧替换"
       }
     ]
@@ -104,4 +105,5 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/preview/recycle/order
 | return_plan         |	string	  | 退回策略。"IMMEDIATE": 立即销毁, "DELAY": 延迟销毁   |
 | total_num           |	int	      | 资源总数          |
 | cost_concerned      |	bool	  | 是否涉及回收成本   |
+| sum_cpu_core        |	int	      | 资源总CPU核数     |
 | remark	          | string	  | 备注             |

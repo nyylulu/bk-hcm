@@ -156,6 +156,17 @@ type PreviewRecycleOrderRst struct {
 	Info []*table.RecycleOrder `json:"info"`
 }
 
+// PreviewRecycleOrderCpuRst preview recycle order cpu result
+type PreviewRecycleOrderCpuRst struct {
+	Info []*RecycleOrderCpuInfo `json:"info"`
+}
+
+// RecycleOrderCpuInfo recycle order cpu info
+type RecycleOrderCpuInfo struct {
+	*table.RecycleOrder `json:",inline"`
+	SumCpuCore          int64 `json:"sum_cpu_core"`
+}
+
 // AuditRecycleReq audit recycle order request
 type AuditRecycleReq struct {
 	SuborderID []string `json:"suborder_id"`

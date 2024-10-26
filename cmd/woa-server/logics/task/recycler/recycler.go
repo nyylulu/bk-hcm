@@ -29,6 +29,7 @@ import (
 	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	configLogics "hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/logics/task/recycler/classifier"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/dispatcher"
@@ -56,7 +57,7 @@ type Interface interface {
 		action meta.Action) (*types.RecycleCheckRst, error)
 	// PreviewRecycleOrder preview resource recycle order
 	PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq, bkBizIDMap map[int64]struct{}) (
-		*types.PreviewRecycleOrderRst, error)
+		*types.PreviewRecycleOrderCpuRst, error)
 	// AuditRecycleOrder audit resource recycle orders
 	AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq) error
 	// CreateRecycleOrder create resource recycle order
@@ -130,8 +131,9 @@ type recycler struct {
 	cc  cmdb.Client
 	cvm cvmapi.CVMClientInterface
 
-	dispatcher *dispatcher.Dispatcher
-	authorizer auth.Authorizer
+	dispatcher   *dispatcher.Dispatcher
+	authorizer   auth.Authorizer
+	configLogics configLogics.Logics
 }
 
 // New create a recycler
@@ -163,11 +165,12 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
 	dispatch.SetTransit(moduleTransit)
 
 	recycler := &recycler{
-		lang:       language.NewFromCtx(language.EmptyLanguageSetting),
-		cc:         esbCli.Cmdb(),
-		cvm:        thirdCli.CVM,
-		dispatcher: dispatch,
-		authorizer: authorizer,
+		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
+		cc:           esbCli.Cmdb(),
+		cvm:          thirdCli.CVM,
+		dispatcher:   dispatch,
+		authorizer:   authorizer,
+		configLogics: configLogics.New(thirdCli),
 	}
 
 	return recycler, nil
@@ -608,13 +611,13 @@ func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) (
 }
 
 // PreviewRecycleOrder preview resource recycle order
-func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycleReq, bkBizIDMap map[int64]struct{}) (
-	*types.PreviewRecycleOrderRst, error) {
+func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleReq, bkBizIDMap map[int64]struct{}) (
+	*types.PreviewRecycleOrderCpuRst, error) {
 
 	// 1. get hosts info
 	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, for list host err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to preview recycle order, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -629,19 +632,46 @@ func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycle
 	// 2. classify hosts into groups with different recycle strategies
 	groups, err := classifier.ClassifyRecycleGroups(hosts, param.ReturnPlan)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	// 3. init and save recycle orders
-	orders, err := r.initAndSaveRecycleOrders(kit, param.SkipConfirm, param.Remark, groups)
+	orders, subOrderIDDeviceTypes, err := r.initAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	rst := &types.PreviewRecycleOrderRst{
-		Info: orders,
+	subOrdersMap := make(map[string]*table.RecycleOrder, 0)
+	for _, subOrderItem := range orders {
+		subOrdersMap[subOrderItem.SuborderID] = subOrderItem
+	}
+
+	orderList := make([]*types.RecycleOrderCpuInfo, 0)
+	// 根据CVM机型列表获取CPU核数
+	for subOrderID, deviceTypes := range subOrderIDDeviceTypes {
+		deviceTypesMap, err := r.configLogics.Device().ListCpuCoreByDeviceTypes(kt, deviceTypes)
+		if err != nil {
+			logs.Errorf("failed to preview recycle order, get cpu core by device type failed, err: %v, rid: %s",
+				err, kt.Rid)
+			return nil, err
+		}
+
+		// 汇总CPU核数
+		sumCpuCore := int64(0)
+		for _, deviceItem := range deviceTypesMap {
+			sumCpuCore += deviceItem.CPUAmount
+		}
+
+		orderList = append(orderList, &types.RecycleOrderCpuInfo{
+			RecycleOrder: subOrdersMap[subOrderID],
+			SumCpuCore:   sumCpuCore,
+		})
+	}
+
+	rst := &types.PreviewRecycleOrderCpuRst{
+		Info: orderList,
 	}
 
 	return rst, nil
@@ -649,8 +679,9 @@ func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycle
 
 // initRecycleOrder init and save recycle orders
 func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup) ([]*table.RecycleOrder, error) {
+	bizGroups map[int64]classifier.RecycleGroup) ([]*table.RecycleOrder, map[string][]string, error) {
 
+	subOrderIDDeviceTypes := make(map[string][]string, 0)
 	now := time.Now()
 	orders := make([]*table.RecycleOrder, 0)
 	txnErr := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
@@ -703,6 +734,15 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 					return fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
 				}
 
+				// 4. 记录子订单跟机型的关系
+				for _, groupItem := range group {
+					if _, ok := subOrderIDDeviceTypes[order.SuborderID]; !ok {
+						subOrderIDDeviceTypes[order.SuborderID] = make([]string, 0)
+					}
+					subOrderIDDeviceTypes[order.SuborderID] = append(
+						subOrderIDDeviceTypes[order.SuborderID], groupItem.DeviceType)
+				}
+
 				orders = append(orders, order)
 				index++
 			}
@@ -711,14 +751,14 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 	})
 
 	if txnErr != nil {
-		return nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
+		return nil, nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
 	}
 
 	for _, order := range orders {
 		r.dispatcher.Add(order.SuborderID)
 	}
 
-	return orders, nil
+	return orders, subOrderIDDeviceTypes, nil
 }
 
 // initAndSaveHosts inits and saves recycle hosts
@@ -902,7 +942,7 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 	}
 
 	// 4. init and save recycle orders
-	orders, err := r.initAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups)
+	orders, _, err := r.initAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -1357,7 +1397,7 @@ func (r *recycler) getRecycleTaskById(kit *kit.Kit, taskId string) (*table.Detec
 }
 
 // PauseRecycleOrder pauses resource recycle order
-func (r *recycler) PauseRecycleOrder(kit *kit.Kit, param mapstr.MapStr) error {
+func (r *recycler) PauseRecycleOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 	// TODO
 	return nil
 }
