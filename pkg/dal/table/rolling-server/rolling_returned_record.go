@@ -36,7 +36,7 @@ var RollingReturnedRecordColumns = utils.MergeColumns(nil, RollingReturnedRecord
 var RollingReturnedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
-	{Column: "order_id", NamedC: "order_id", Type: enumor.String},
+	{Column: "order_id", NamedC: "order_id", Type: enumor.Numeric},
 	{Column: "suborder_id", NamedC: "suborder_id", Type: enumor.String},
 	{Column: "applied_record_id", NamedC: "applied_record_id", Type: enumor.String},
 	{Column: "match_applied_core", NamedC: "match_applied_core", Type: enumor.Numeric},
@@ -56,7 +56,7 @@ type RollingReturnedRecord struct {
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
 	// OrderID 主机申请的订单号
-	OrderID string `db:"order_id" json:"order_id" validate:"max=64"`
+	OrderID uint64 `db:"order_id" json:"order_id"`
 	// SubOrderID 主机回收的子订单号
 	SubOrderID string `db:"suborder_id" json:"suborder_id" validate:"max=64"`
 	// AppliedRecordID 主机回收的子订单号
@@ -92,7 +92,7 @@ func (rrr *RollingReturnedRecord) InsertValidate() error {
 	if rrr.BkBizID <= 0 {
 		return errors.New("bk_biz_id is required")
 	}
-	if len(rrr.OrderID) == 0 {
+	if rrr.OrderID == 0 {
 		return errors.New("order_id is required")
 	}
 	if len(rrr.SubOrderID) == 0 {

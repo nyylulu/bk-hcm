@@ -40,7 +40,7 @@ var RollingFineDetailColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "applied_record_id", NamedC: "applied_record_id", Type: enumor.String},
-	{Column: "order_id", NamedC: "order_id", Type: enumor.String},
+	{Column: "order_id", NamedC: "order_id", Type: enumor.Numeric},
 	{Column: "suborder_id", NamedC: "suborder_id", Type: enumor.String},
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
@@ -61,7 +61,7 @@ type RollingFineDetailTable struct {
 	// AppliedRecordID 滚服申请记录信息的唯一标识
 	AppliedRecordID string `db:"applied_record_id" json:"applied_record_id"`
 	// OrderID 订单号
-	OrderID string `db:"order_id" json:"order_id"`
+	OrderID uint64 `db:"order_id" json:"order_id"`
 	// SuborderID 子订单号
 	SubOrderID string `db:"suborder_id" json:"suborder_id"`
 	// Year 子单号记录罚金的年份
@@ -105,7 +105,7 @@ func (r RollingFineDetailTable) InsertValidate() error {
 		return errors.New("applied_record_id can not be empty")
 	}
 
-	if len(r.OrderID) == 0 {
+	if r.OrderID == 0 {
 		return errors.New("order_id can not be empty")
 	}
 

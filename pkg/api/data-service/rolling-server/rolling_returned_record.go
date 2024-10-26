@@ -50,7 +50,7 @@ func (c *BatchCreateRollingReturnedRecordReq) Validate() error {
 // RollingReturnedRecordCreateReq create request
 type RollingReturnedRecordCreateReq struct {
 	BkBizID          int64              `json:"bk_biz_id" validate:"required"`
-	OrderID          string             `json:"order_id" validate:"required"`
+	OrderID          uint64             `json:"order_id" validate:"required"`
 	SubOrderID       string             `json:"suborder_id" validate:"required"`
 	AppliedRecordID  string             `json:"applied_record_id" validate:"omitempty"`
 	MatchAppliedCore uint64             `json:"match_applied_core" validate:"required"`

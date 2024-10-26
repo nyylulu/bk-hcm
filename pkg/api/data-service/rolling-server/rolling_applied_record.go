@@ -51,7 +51,7 @@ func (c *BatchCreateRollingAppliedRecordReq) Validate() error {
 type RollingAppliedRecordCreateReq struct {
 	AppliedType   enumor.AppliedType `json:"applied_type" validate:"required"`
 	BkBizID       int64              `json:"bk_biz_id" validate:"required"`
-	OrderID       string             `json:"order_id" validate:"required"`
+	OrderID       uint64             `json:"order_id" validate:"required"`
 	SubOrderID    string             `json:"suborder_id" validate:"required"`
 	Year          int                `json:"year" validate:"required"`
 	Month         int                `json:"month" validate:"required"`

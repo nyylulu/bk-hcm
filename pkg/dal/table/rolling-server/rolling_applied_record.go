@@ -37,7 +37,7 @@ var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "applied_type", NamedC: "applied_type", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
-	{Column: "order_id", NamedC: "order_id", Type: enumor.String},
+	{Column: "order_id", NamedC: "order_id", Type: enumor.Numeric},
 	{Column: "suborder_id", NamedC: "suborder_id", Type: enumor.String},
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
@@ -58,7 +58,7 @@ type RollingAppliedRecord struct {
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
 	// OrderID 主机申请的订单号
-	OrderID string `db:"order_id" json:"order_id" validate:"max=64"`
+	OrderID uint64 `db:"order_id" json:"order_id"`
 	// SubOrderID 主机申请的子订单号
 	SubOrderID string `db:"suborder_id" json:"suborder_id" validate:"max=64"`
 	// Year 申请时间年份
@@ -98,7 +98,7 @@ func (rar *RollingAppliedRecord) InsertValidate() error {
 	if rar.BkBizID <= 0 {
 		return errors.New("bk_biz_id is required")
 	}
-	if len(rar.OrderID) == 0 {
+	if rar.OrderID == 0 {
 		return errors.New("order_id is required")
 	}
 	if len(rar.SubOrderID) == 0 {
