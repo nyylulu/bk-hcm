@@ -57,6 +57,7 @@ func (svc *service) BatchCreateRollingReturnedRecord(cts *rest.Contexts) (interf
 				Month:            createReq.Month,
 				Day:              createReq.Day,
 				ReturnedWay:      createReq.ReturnedWay,
+				Creator:          cts.Kit.User,
 			})
 		}
 		ids, err := svc.dao.RollingReturnedRecord().CreateWithTx(cts.Kit, txn, records)

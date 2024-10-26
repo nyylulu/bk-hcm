@@ -57,6 +57,7 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 				Day:           createReq.Day,
 				AppliedCore:   cvt.ValToPtr(createReq.AppliedCore),
 				DeliveredCore: cvt.ValToPtr(createReq.DeliveredCore),
+				Creator:       cts.Kit.User,
 			})
 		}
 		ids, err := svc.dao.RollingAppliedRecord().CreateWithTx(cts.Kit, txn, records)
