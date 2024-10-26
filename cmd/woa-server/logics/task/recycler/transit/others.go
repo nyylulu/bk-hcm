@@ -18,7 +18,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
-// transitOthers deals with others resource type device transit task
-func (t *Transit) transitOthers(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
-	return t.dealTransitTask2Pool(order, hosts)
+// TransitOthers deals with others resource type device transit task
+func (t *Transit) TransitOthers(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+	return t.DealTransitTask2Pool(order, hosts)
 }

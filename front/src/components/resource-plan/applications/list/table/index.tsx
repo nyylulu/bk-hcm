@@ -2,7 +2,7 @@ import { defineComponent, computed, onBeforeMount } from 'vue';
 
 import { Button } from 'bkui-vue';
 
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useResourcePlanStore } from '@/store';
 import { useI18n } from 'vue-i18n';
@@ -11,6 +11,7 @@ import Panel from '@/components/panel';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IBizResourcesTicketsParam, IOpResourcesTicketsParam, IResourcesTicketItem } from '@/typings/resourcePlan';
 import type { IPageQuery } from '@/typings';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 export default defineComponent({
   props: {
@@ -26,6 +27,7 @@ export default defineComponent({
     const resourcePlanStore = useResourcePlanStore();
     const { columns, settings } = useColumns('receiptForecastDemand');
     const router = useRouter();
+    const route = useRoute();
     const { getBizsId } = useWhereAmI();
 
     const tableColumns = computed(() => {
@@ -93,7 +95,7 @@ export default defineComponent({
       if (props.isBiz) {
         router.push({
           path: '/business/applications/resource-plan/detail',
-          query: { id: data.id },
+          query: { id: data.id, bizs: route.query[GLOBAL_BIZS_KEY] },
         });
       } else {
         router.push({

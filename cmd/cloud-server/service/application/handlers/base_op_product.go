@@ -46,6 +46,11 @@ func (a *BaseApplicationHandler) GetOperationProductManager(opId int64) (string,
 	return opProduct.PrincipalName, nil
 }
 
+// GetOperationProductInfo 查询运营产品信息
+func (a *BaseApplicationHandler) GetOperationProductInfo(opId int64) (*finops.OperationProduct, error) {
+	return a.getOperationProduct(opId)
+}
+
 func (a *BaseApplicationHandler) getOperationProduct(opId int64) (*finops.OperationProduct, error) {
 	result, err := a.FinOpsCli.ListOpProduct(a.Cts.Kit, &finops.ListOpProductParam{
 		OpProductIds: []int64{opId},

@@ -15,9 +15,12 @@ package dal
 
 import (
 	"context"
+
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/dal/types"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // RDB rename the RDB into DB
@@ -29,7 +32,8 @@ type RDB DB
 type DB interface {
 	// Table collection 操作
 	Table(collection string) types.Table
-
+	// GetDBClient 获取db client
+	GetDBClient() *mongo.Client
 	// NextSequence 获取新序列号(非事务)
 	NextSequence(ctx context.Context, sequenceName string) (uint64, error)
 
@@ -51,6 +55,7 @@ type DB interface {
 	RenameTable(ctx context.Context, prevName, currName string) error
 
 	IsDuplicatedError(error) bool
+	IsDuplicatedInsertError(error) bool
 	IsNotFoundError(error) bool
 
 	Close() error

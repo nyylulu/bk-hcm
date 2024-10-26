@@ -75,12 +75,10 @@ func (d *Dispatcher) runWorker() error {
 		logs.Errorf("failed to deal apply order, for get apply order from informer err: %v", err)
 		return err
 	}
-
 	if err := d.dispatchHandler(kit.New(), order); err != nil {
 		logs.Errorf("failed to dispatch apply order %s, err: %v", order, err)
 		return err
 	}
-
 	logs.Infof("Successfully dispatch apply order: %s", order)
 
 	return nil
@@ -114,8 +112,9 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 		logs.Infof("apply order %s need not dispatch, for retry time %d exceeds limit %d", key, applyOrder.RetryTime,
 			retryLimit)
 		// update order status to TERMINATE
-		if err := d.updateApplyOrderStatus(applyOrder, types.TicketStageSuspend, types.ApplyStatusTerminate); err != nil {
-			logs.Warnf("failed to update apply order %s status, err: %v", key, err)
+		if err := d.updateApplyOrderStatus(applyOrder, types.TicketStageSuspend,
+			types.ApplyStatusTerminate); err != nil {
+			logs.Errorf("failed to update apply order %s status, err: %v, rid: %s", key, err, kt.Rid)
 		}
 		return nil
 	}
@@ -125,7 +124,6 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 		logs.Errorf("failed to lock apply order %s, err: %v", key, err)
 		return err
 	}
-
 	// start generate step
 	if err := record.StartStep(applyOrder.SubOrderId, types.StepNameGenerate); err != nil {
 		logs.Errorf("failed to start generate step, order id: %s, err: %v", key, err)

@@ -14,6 +14,7 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
@@ -34,12 +35,12 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 		logs.Errorf("failed to match pm when init generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
 	}
-
 	// 2. get match devices
 	candidates, err := g.getMatchDevice(order, replicas)
 	if err != nil {
 		// update generate record status to Done
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, err.Error(),
 			"", nil); errRecord != nil {
 			logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId,
 				errRecord)
@@ -52,8 +53,8 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	if len(candidates) == 0 {
 		// update generate record status to Done
 		msg := "match no devices"
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, msg, "",
-			nil); errRecord != nil {
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, msg, "", nil); errRecord != nil {
 			logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId,
 				errRecord)
 			return fmt.Errorf("failed to match pm, order id: %s, err: %v", order.SubOrderId, errRecord)
@@ -63,8 +64,8 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	}
 
 	// 3. update generate record status to handling
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusHandling, "handling", "",
-		nil); err != nil {
+	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusHandling,
+		"handling", "", nil); err != nil {
 		logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId, err)
 		return fmt.Errorf("failed to match pm, order id: %s, err: %v", order.SubOrderId, err)
 	}
@@ -82,18 +83,17 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	}
 
 	// 4. save matched pm instances info
-	if err := g.updateGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 	}
 
 	// 5. update generate record status to success
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusSuccess, "success", "",
-		successIps); err != nil {
+	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
+		"success", "", successIps); err != nil {
 		logs.Errorf("failed to match pm when update generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
 	}
-
 	return nil
 }
 
@@ -241,6 +241,5 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.HostInfo,
 			order.SubOrderId)
 		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
-
 	return resp.Data.Info, nil
 }

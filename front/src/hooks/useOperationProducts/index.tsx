@@ -1,11 +1,14 @@
 import useBillStore from '@/store/useBillStore';
 import { Select } from 'bkui-vue';
-import { defineComponent, onMounted, reactive, ref, watch } from 'vue';
+import { defineComponent, onMounted, reactive, Ref, ref, watch } from 'vue';
 import './index.scss';
 import { SelectColumn } from '@blueking/ediatable';
 const { Option } = Select;
 
-export const useOperationProducts = (immediate = true) => {
+export const useOperationProducts = (
+  immediate = true,
+  filterParams?: Ref<{ op_product_ids?: number[]; op_product_name?: string; dept_ids?: number[]; bg_ids?: number[] }>,
+) => {
   const billStore = useBillStore();
   const list = ref([]);
   const pagination = reactive({
@@ -25,6 +28,7 @@ export const useOperationProducts = (immediate = true) => {
             limit: isCount ? 0 : pagination.limit,
             count: isCount,
           },
+          ...(filterParams?.value || {}),
         }),
       ),
     );
@@ -47,11 +51,8 @@ export const useOperationProducts = (immediate = true) => {
     await getList();
     const detailRes = await billStore.list_operation_products({
       op_product_ids: [id],
-      page: {
-        start: 0,
-        limit: pagination.limit,
-        count: false,
-      },
+      page: { start: 0, limit: pagination.limit, count: false },
+      ...(filterParams?.value || {}),
     });
     list.value = list.value.concat(detailRes.data.details);
   };
@@ -82,11 +83,8 @@ export const useOperationProducts = (immediate = true) => {
         isScrollLoading.value = true;
         pagination.start += pagination.limit;
         const { data } = await billStore.list_operation_products({
-          page: {
-            start: pagination.start,
-            count: false,
-            limit: pagination.limit,
-          },
+          page: { start: pagination.start, count: false, limit: pagination.limit },
+          ...(filterParams?.value || {}),
         });
         list.value.push(...data.details);
         isScrollLoading.value = false;

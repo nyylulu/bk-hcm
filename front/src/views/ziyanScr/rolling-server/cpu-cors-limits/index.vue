@@ -9,7 +9,7 @@ const props = defineProps<{
 
 const { t } = useI18n();
 
-const rollingServerCpuCorsLimits = ref(20000);
+const rollingServerCpuCorsLimits = ref(10000);
 const replicasCpuCors = ref(0);
 const isReplicasCpuCorsExceedsLimit = computed(() => replicasCpuCors.value > rollingServerCpuCorsLimits.value);
 

@@ -36,6 +36,12 @@ import (
 	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
+// Recover 配置是否开启recover服务
+type Recover struct {
+	EnableApplyRecover   bool `yaml:"enableApplyRecover"`   // 开启申请订单恢复服务
+	EnableRecycleRecover bool `yaml:"enableRecycleRecover"` // 开启回收订单恢复服务
+}
+
 // Service defines Setting related runtime.
 type Service struct {
 	Etcd Etcd `yaml:"etcd"`

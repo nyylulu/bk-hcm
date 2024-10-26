@@ -34,6 +34,38 @@ func (as *AuditingState) Name() table.RecycleStatus {
 	return table.RecycleStatusAudit
 }
 
+// UpdateState update next state
+func (as *AuditingState) UpdateState(ctx EventContext, ev *event.Event) error {
+	// set next state
+	taskCtx, ok := ctx.(*AuditContext)
+	if !ok {
+		logs.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			as.Name())
+		return fmt.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			as.Name())
+	}
+
+	if errUpdate := as.setNextState(taskCtx.Order, ev); errUpdate != nil {
+		logs.Errorf("failed to update recycle order state, subOrderId: %s, err: %v", taskCtx.Order.SuborderID,
+			errUpdate)
+		return errUpdate
+	}
+
+	if taskCtx.Dispatcher == nil {
+		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID,
+			as.Name())
+		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID, as.Name())
+	}
+
+	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
+
+	// 记录日志
+	logs.Infof("recycler:logics:cvm:AuditingState:end, subOrderID: %s", taskCtx.Order.SuborderID)
+	return nil
+}
+
 // Execute executes action in auditing state
 func (as *AuditingState) Execute(ctx EventContext) error {
 	taskCtx, ok := ctx.(*AuditContext)
@@ -49,29 +81,11 @@ func (as *AuditingState) Execute(ctx EventContext) error {
 	orderId := taskCtx.Order.SuborderID
 
 	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:AuditingState:start, orderID: %s", orderId)
+	logs.Infof("recycler:logics:cvm:AuditingState:start, subOrderID: %s", orderId)
 
 	ev := as.dealAuditTask(taskCtx.Order, taskCtx.Approval, taskCtx.Remark)
 
-	// set next state
-	if errUpdate := as.setNextState(taskCtx.Order, ev); errUpdate != nil {
-		logs.Errorf("failed to update recycle order %s state, err: %v", orderId, errUpdate)
-		return errUpdate
-	}
-
-	if taskCtx.Dispatcher == nil {
-		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s", orderId,
-			as.Name())
-		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s",
-			orderId, as.Name())
-	}
-
-	taskCtx.Dispatcher.Add(orderId)
-
-	// 记录日志
-	logs.Infof("recycler:logics:cvm:AuditingState:end, orderID: %s", orderId)
-
-	return nil
+	return as.UpdateState(ctx, ev)
 }
 
 func (as *AuditingState) dealAuditTask(order *table.RecycleOrder, approval bool, remark string) *event.Event {
@@ -118,6 +132,8 @@ func (as *AuditingState) setNextState(order *table.RecycleOrder, ev *event.Event
 			update["message"] = ev.Error.Error()
 		}
 	default:
+		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
+		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 	}
 
 	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {

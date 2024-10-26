@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // UncommitState the action to be executed in uncommit state
@@ -27,5 +28,10 @@ func (us *UncommitState) Name() table.RecycleStatus {
 
 // Execute executes action in uncommit state
 func (us *UncommitState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (us *UncommitState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

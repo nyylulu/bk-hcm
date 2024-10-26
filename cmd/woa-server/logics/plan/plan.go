@@ -133,13 +133,13 @@ func New(sd serviced.State, dao dao.Set, itsmCli itsm.Client, crpCli cvmapi.CVMC
 // Run starts dispatcher
 func (c *Controller) Run() {
 	// TODO: get interval from config
-	// list and watch tickets every 5 minutes
-	go wait.JitterUntil(c.listAndWatchTickets, 5*time.Minute, 0.5, true, c.ctx)
+	// list and watch tickets every 2 minutes
+	go wait.JitterUntil(c.listAndWatchTickets, 2*time.Minute, 0.5, true, c.ctx)
 
 	// TODO: get worker num from config
 	for i := 0; i < 10; i++ {
-		// get and handle tickets every 5 minutes
-		go wait.JitterUntil(c.runWorker, 5*time.Minute, 0.5, true, c.ctx)
+		// get and handle tickets every 2 minutes
+		go wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
 	}
 
 	select {

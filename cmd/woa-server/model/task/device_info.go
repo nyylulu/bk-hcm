@@ -27,8 +27,13 @@ import (
 type deviceInfo struct {
 }
 
-// CreateDeviceInfo creates device info in db
+// CreateDeviceInfo create device info in db
 func (d *deviceInfo) CreateDeviceInfo(ctx context.Context, inst *types.DeviceInfo) error {
+	return mongodb.Client().Table(common.BKTableNameDeviceInfo).Insert(ctx, inst)
+}
+
+// CreateDeviceInfos create device infos in db
+func (d *deviceInfo) CreateDeviceInfos(ctx context.Context, inst []*types.DeviceInfo) error {
 	return mongodb.Client().Table(common.BKTableNameDeviceInfo).Insert(ctx, inst)
 }
 

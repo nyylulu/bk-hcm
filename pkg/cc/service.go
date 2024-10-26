@@ -472,6 +472,7 @@ type WoaServerSetting struct {
 	Es           Es               `yaml:"elasticsearch"`
 	Blacklist    string           `yaml:"blacklist"`
 	UseMongo     bool             `yaml:"useMongo"`
+	Recover      Recover          `yaml:"recover"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

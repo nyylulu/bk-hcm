@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common"
+	"hcm/cmd/woa-server/common/dal"
 	"hcm/cmd/woa-server/common/language"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
@@ -31,6 +32,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/classifier"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/dispatcher"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
 	"hcm/cmd/woa-server/thirdparty"
@@ -43,6 +45,8 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Interface recycler interface
@@ -88,18 +92,41 @@ type Interface interface {
 	GetRecycleRecordRegion(kit *kit.Kit) (*types.GetRecycleRecordRegionRst, error)
 	// GetRecycleRecordZone gets resource recycle record zone list
 	GetRecycleRecordZone(kit *kit.Kit) (*types.GetRecycleRecordZoneRst, error)
-
 	// GetRecycleBizHost gets business hosts in recycle module
 	GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHostReq) (*types.GetRecycleBizHostRst, error)
-
 	// GetDetectStepCfg gets resource recycle step config info
 	GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, error)
+	// GetDispatcher gets dispatcher instance
+	GetDispatcher() *dispatcher.Dispatcher
+	// RunRecycleTask run resource recycle detect task
+	RunRecycleTask(task *table.DetectTask, startStep uint)
+	// CheckDetectStatus check whether detection is finished or not
+	CheckDetectStatus(orderId string) error
+	// TransitCvm transit CVM resource
+	TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event
+	// DealTransitTask2Pool transit regular Pm resource
+	DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event
+	// UpdateHostInfo update recycle host info
+	UpdateHostInfo(order *table.RecycleOrder, stage table.RecycleStage, status table.RecycleStatus) error
+	// DealTransitTask2Transit transit Pm resource which is dissolved or expired
+	DealTransitTask2Transit(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event
+	// TransferHost2BizTransit transfer host to business module
+	TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error
+	// RecoverReturnCvm recover retrun CVM resource without yunti orderId
+	RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
+	// QueryReturnStatus query return status
+	QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
+	// UpdateOrderInfo update recycle order info
+	UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success, failed, pending uint, msg string) error
+	// UpdateReturnTaskInfo update return task info
+	UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string, status table.ReturnStatus,
+		msg string) error
 }
 
 // recycler provides resource recycle service
 type recycler struct {
 	lang language.CCLanguageIf
-	//clientSet apimachinery.ClientSetInterface
+	// clientSet apimachinery.ClientSetInterface
 	cc  cmdb.Client
 	cvm cvmapi.CVMClientInterface
 
@@ -146,9 +173,25 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
 	return recycler, nil
 }
 
+// RecoverReturnCvm recover return CVM resource which return task is int
+func (r *recycler) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetReturn().RecoverReturnCvm(kt, task, hosts)
+}
+
+func (r *recycler) GetDispatcher() *dispatcher.Dispatcher {
+	return r.dispatcher
+}
+
+// UpdateReturnTaskInfo update return task info
+func (r *recycler) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string,
+	status table.ReturnStatus, msg string) error {
+
+	return r.dispatcher.GetReturn().UpdateReturnTaskInfo(ctx, task, taskId, status, msg)
+}
+
 // RecycleCheck check whether hosts can be recycled or not
-func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
-	action meta.Action) (*types.RecycleCheckRst, error) {
+func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBizIDMap map[int64]struct{},
+	resType meta.ResourceType, action meta.Action) (*types.RecycleCheckRst, error) {
 
 	if kt.User == "" {
 		logs.Errorf("failed to recycle check, for invalid user is empty, rid: %s", kt.Rid)
@@ -605,72 +648,81 @@ func (r *recycler) PreviewRecycleOrder(kit *kit.Kit, param *types.PreviewRecycle
 }
 
 // initRecycleOrder init and save recycle orders
-func (r *recycler) initAndSaveRecycleOrders(kit *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup) (
-
-	[]*table.RecycleOrder, error) {
+func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
+	bizGroups map[int64]classifier.RecycleGroup) ([]*table.RecycleOrder, error) {
 
 	now := time.Now()
 	orders := make([]*table.RecycleOrder, 0)
-	for biz, groups := range bizGroups {
-		id, err := dao.Set().RecycleOrder().NextSequence(kit.Ctx)
-		if err != nil {
-			return nil, errf.New(common.CCErrObjectDBOpErrno, err.Error())
+	txnErr := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
+		for biz, groups := range bizGroups {
+			id, err := dao.Set().RecycleOrder().NextSequence(sc)
+			if err != nil {
+				return errf.New(common.CCErrObjectDBOpErrno, err.Error())
+			}
+
+			index := 1
+			for grpType, group := range groups {
+				if len(group) <= 0 {
+					continue
+				}
+
+				// 1. init recycle order
+				bizName := group[0].BizName
+				order := &table.RecycleOrder{
+					OrderID:       id,
+					SuborderID:    fmt.Sprintf("%d-%d", id, index),
+					BizID:         biz,
+					BizName:       bizName,
+					User:          kt.User,
+					ResourceType:  classifier.MapGroupProperty[grpType].ResourceType,
+					RecycleType:   classifier.MapGroupProperty[grpType].RecycleType,
+					ReturnPlan:    classifier.MapGroupProperty[grpType].ReturnType,
+					CostConcerned: classifier.MapGroupProperty[grpType].CostConcerned,
+					SkipConfirm:   skipConfirm,
+					Stage:         table.RecycleStageCommit,
+					Status:        table.RecycleStatusCommitted,
+					Handler:       "AUTO",
+					TotalNum:      uint(len(group)),
+					SuccessNum:    0,
+					PendingNum:    0,
+					FailedNum:     0,
+					Remark:        remark,
+					CreateAt:      now,
+					UpdateAt:      now,
+				}
+
+				// 2. create and save recycle hosts
+				if err = r.initAndSaveHosts(sc, order, group); err != nil {
+					logs.Errorf("failed to create recycle order for save recycle host err: %v, rid: %s", err, kt.Rid)
+					return fmt.Errorf("failed to create recycle order for save recycle host err: %v", err)
+				}
+
+				// 3. save recycle order
+				if err = dao.Set().RecycleOrder().CreateRecycleOrder(sc, order); err != nil {
+					logs.Errorf("failed to create recycle order for save recycle order err: %v, rid: %s", err, kt.Rid)
+					return fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
+				}
+
+				orders = append(orders, order)
+				index++
+			}
 		}
+		return nil
+	})
 
-		index := 1
-		for grpType, group := range groups {
-			if len(group) <= 0 {
-				continue
-			}
+	if txnErr != nil {
+		return nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
+	}
 
-			// 1. init recycle order
-			bizName := group[0].BizName
-			order := &table.RecycleOrder{
-				OrderID:       id,
-				SuborderID:    fmt.Sprintf("%d-%d", id, index),
-				BizID:         biz,
-				BizName:       bizName,
-				User:          kit.User,
-				ResourceType:  classifier.MapGroupProperty[grpType].ResourceType,
-				RecycleType:   classifier.MapGroupProperty[grpType].RecycleType,
-				ReturnPlan:    classifier.MapGroupProperty[grpType].ReturnType,
-				CostConcerned: classifier.MapGroupProperty[grpType].CostConcerned,
-				SkipConfirm:   skipConfirm,
-				Stage:         table.RecycleStageCommit,
-				Status:        table.RecycleStatusUncommit,
-				Handler:       "AUTO",
-				TotalNum:      uint(len(group)),
-				SuccessNum:    0,
-				PendingNum:    0,
-				FailedNum:     0,
-				Remark:        remark,
-				CreateAt:      now,
-				UpdateAt:      now,
-			}
-
-			// 2. create and save recycle hosts
-			if err = r.initAndSaveHosts(order, group); err != nil {
-				logs.Errorf("failed to create recycle order for save recycle host err: %v, rid: %s", err, kit.Rid)
-				return nil, fmt.Errorf("failed to create recycle order for save recycle host err: %v", err)
-			}
-
-			// 3. save recycle order
-			if err = dao.Set().RecycleOrder().CreateRecycleOrder(kit.Ctx, order); err != nil {
-				logs.Errorf("failed to create recycle order for save recycle order err: %v, rid: %s", err, kit.Rid)
-				return nil, fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
-			}
-
-			orders = append(orders, order)
-			index++
-		}
+	for _, order := range orders {
+		r.dispatcher.Add(order.SuborderID)
 	}
 
 	return orders, nil
 }
 
 // initAndSaveHosts inits and saves recycle hosts
-func (r *recycler) initAndSaveHosts(order *table.RecycleOrder, hosts []*table.RecycleHost) error {
+func (r *recycler) initAndSaveHosts(ctx context.Context, order *table.RecycleOrder, hosts []*table.RecycleHost) error {
 	now := time.Now()
 	costRate := 0.0
 	if order.ResourceType == table.ResourceTypePm && order.RecycleType == table.RecycleTypeRegular {
@@ -686,9 +738,10 @@ func (r *recycler) initAndSaveHosts(order *table.RecycleOrder, hosts []*table.Re
 		host.CreateAt = now
 		host.UpdateAt = now
 
-		if err := dao.Set().RecycleHost().CreateRecycleHost(context.Background(), host); err != nil {
-			logs.Errorf("failed to save recycle host, ip: %s, err: %v", host.IP, err)
-			return fmt.Errorf("failed to save recycle host, ip: %s, err: %v", host.IP, err)
+		if err := dao.Set().RecycleHost().CreateRecycleHost(ctx, host); err != nil {
+			logs.Errorf("failed to save recycle host, ip: %s, err: %v, subOrderId: %s", host.IP, err, order.SuborderID)
+			return fmt.Errorf("failed to save recycle host, ip: %s, err: %v, subOrderId: %s", host.IP, err,
+				order.SuborderID)
 		}
 	}
 
@@ -854,8 +907,6 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-
-	r.setOrderCommitted(orders)
 
 	rst := &types.CreateRecycleOrderRst{
 		Info: orders,
@@ -1601,4 +1652,53 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 	}
 
 	return rst, nil
+}
+
+// RunRecycleTask runs recycle task
+func (r *recycler) RunRecycleTask(task *table.DetectTask, startStep uint) {
+	r.dispatcher.GetDetector().RunRecycleTask(task, startStep)
+}
+
+// CheckDetectStatus ckeck recycle task info
+func (r *recycler) CheckDetectStatus(orderId string) error {
+	return r.dispatcher.GetDetector().CheckDetectStatus(orderId)
+}
+
+// DealTransitTask2Pool deal recycle task info
+func (r *recycler) DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetTransit().DealTransitTask2Pool(order, hosts)
+}
+
+// TransitCvm transit cvm
+func (r *recycler) TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetTransit().TransitCvm(order, hosts)
+}
+
+// UpdateHostInfo update host info
+func (r *recycler) UpdateHostInfo(order *table.RecycleOrder, stage table.RecycleStage,
+	status table.RecycleStatus) error {
+	return r.dispatcher.GetTransit().UpdateHostInfo(order, stage, status)
+}
+
+// DealTransitTask2Transit deal recycle task info
+func (r *recycler) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetTransit().DealTransitTask2Transit(order, hosts)
+}
+
+// TransferHost2BizTransit transit host to biz
+func (r *recycler) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error {
+	return r.dispatcher.GetTransit().TransferHost2BizTransit(hosts, srcBizID, srcModuleID, destBizId)
+}
+
+// QueryReturnStatus transit host to biz
+func (r *recycler) QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetReturn().QueryReturnStatus(task, hosts)
+}
+
+// UpdateOrderInfo update order info
+func (r *recycler) UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success, failed, pending uint,
+	msg string) error {
+
+	return r.dispatcher.GetReturn().UpdateOrderInfo(kt.Ctx, orderId, handler, success, failed, pending,
+		msg)
 }

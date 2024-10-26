@@ -425,16 +425,16 @@ func (t *TransferResPlanTicketReq) Validate() error {
 }
 
 // GenListTicketsOption generate list option for transfer demand ticket.
-func (t *TransferResPlanTicketReq) GenListTicketsOption() *types.ListOption {
-	return t.genListOption("id")
+func (t *TransferResPlanTicketReq) GenListTicketsOption(page *core.BasePage) *types.ListOption {
+	return t.genListOption("id", page)
 }
 
 // GenListDemandsOption generate list option for transfer demand ticket.
-func (t *TransferResPlanTicketReq) GenListDemandsOption() *types.ListOption {
-	return t.genListOption("ticket_id")
+func (t *TransferResPlanTicketReq) GenListDemandsOption(page *core.BasePage) *types.ListOption {
+	return t.genListOption("ticket_id", page)
 }
 
-func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string) *types.ListOption {
+func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string, page *core.BasePage) *types.ListOption {
 	var rules []filter.RuleFactory
 
 	if len(t.BkBizIDs) > 0 {
@@ -449,10 +449,7 @@ func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string) *types.List
 			Op:    filter.And,
 			Rules: rules,
 		},
-		Page: &core.BasePage{
-			Start: 0,
-			Limit: core.DefaultMaxPageLimit,
-		},
+		Page: page,
 	}
 
 	return opt

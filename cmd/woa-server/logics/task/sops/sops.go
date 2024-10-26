@@ -28,7 +28,7 @@ import (
 
 // CreateInitSopsTask 创建标准运维-初始化任务
 func CreateInitSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ip, devnetIP string, bkBizID int64,
-	bkOsType cmdb.OsType) (int64, string, error) {
+	bkOsType cmdb.OsType, subOrderId string) (int64, string, error) {
 
 	// 操作系统不是Linux、Windows的话，不处理
 	if bkOsType != cmdb.LinuxOsType && bkOsType != cmdb.WindowsOsType {
@@ -39,10 +39,10 @@ func CreateInitSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ip, de
 
 	// 操作系统类型(Linux:1 Windows:2)
 	templateID := sopsapi.InitLinuxTemplateID
-	taskName := fmt.Sprintf(sopsapi.InitLinuxTaskNamePrefix, ip)
+	taskName := fmt.Sprintf(sopsapi.InitLinuxTaskNamePrefix, ip, subOrderId)
 	if bkOsType == cmdb.WindowsOsType {
 		templateID = sopsapi.InitWindowsTemplateID
-		taskName = fmt.Sprintf(sopsapi.InitWindowsTaskNamePrefix, ip)
+		taskName = fmt.Sprintf(sopsapi.InitWindowsTaskNamePrefix, ip, subOrderId)
 	}
 
 	params := map[string]interface{}{
@@ -185,11 +185,9 @@ func CreateRecycleOuterIPSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterfa
 // createSopsTask create a sops task
 func createSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, templateID int64, taskName string,
 	bkBizID int64, constants map[string]interface{}) (int64, string, error) {
-
-	currentTime := time.Now().Format("20060102150405")
 	createReq := &sopsapi.CreateTaskReq{
 		TemplateSource: sopsapi.CommonTemplateSource,
-		Name:           fmt.Sprintf("%s-%s", taskName, currentTime),
+		Name:           taskName,
 		Constants:      constants,
 	}
 
