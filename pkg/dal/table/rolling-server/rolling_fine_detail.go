@@ -39,6 +39,7 @@ var RollingFineDetailColumns = utils.MergeColumns(nil, RollingFineDetailColumnDe
 var RollingFineDetailColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
+	{Column: "applied_record_id", NamedC: "applied_record_id", Type: enumor.String},
 	{Column: "order_id", NamedC: "order_id", Type: enumor.String},
 	{Column: "suborder_id", NamedC: "suborder_id", Type: enumor.String},
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
@@ -57,6 +58,8 @@ type RollingFineDetailTable struct {
 	ID string `db:"id" json:"id" validate:"lte=64"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
+	// AppliedRecordID 滚服申请记录信息的唯一标识
+	AppliedRecordID string `db:"applied_record_id" json:"applied_record_id"`
 	// OrderID 订单号
 	OrderID string `db:"order_id" json:"order_id"`
 	// SuborderID 子订单号
@@ -96,6 +99,10 @@ func (r RollingFineDetailTable) InsertValidate() error {
 
 	if r.BkBizID <= 0 {
 		return errors.New("bk_biz_id should be > 0")
+	}
+
+	if len(r.AppliedRecordID) == 0 {
+		return errors.New("applied_record_id can not be empty")
 	}
 
 	if len(r.OrderID) == 0 {

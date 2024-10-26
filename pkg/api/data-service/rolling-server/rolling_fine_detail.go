@@ -49,15 +49,16 @@ func (c *BatchCreateRollingFineDetailReq) Validate() error {
 
 // RollingFineDetailCreateReq create request
 type RollingFineDetailCreateReq struct {
-	BkBizID       int64           `json:"bk_biz_id" validate:"required"`
-	OrderID       string          `json:"order_id" validate:"required"`
-	SubOrderID    string          `json:"suborder_id" validate:"required"`
-	Year          int             `json:"year" validate:"required"`
-	Month         int             `json:"month" validate:"required"`
-	Day           int             `json:"day" validate:"required"`
-	DeliveredCore uint64          `json:"delivered_core" validate:"required"`
-	ReturnedCore  uint64          `json:"returned_core" validate:"required"`
-	Fine          decimal.Decimal `json:"fine" validate:"required"`
+	BkBizID         int64           `json:"bk_biz_id" validate:"required"`
+	AppliedRecordID string          `json:"applied_record_id" validate:"required"`
+	OrderID         string          `json:"order_id" validate:"required"`
+	SubOrderID      string          `json:"suborder_id" validate:"required"`
+	Year            int             `json:"year" validate:"required"`
+	Month           int             `json:"month" validate:"required"`
+	Day             int             `json:"day" validate:"required"`
+	DeliveredCore   uint64          `json:"delivered_core" validate:"required"`
+	ReturnedCore    uint64          `json:"returned_core" validate:"required"`
+	Fine            decimal.Decimal `json:"fine" validate:"required"`
 }
 
 // Validate ...

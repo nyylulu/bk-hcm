@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/woa/rolling_servers/bills/details/list
+POST /api/v1/woa/rolling_servers/fine_details/list
 
 ### 输入参数
 

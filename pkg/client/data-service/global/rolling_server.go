@@ -223,3 +223,51 @@ func (b *RollingServerClient) BatchDeleteReturnedRecord(kt *kit.Kit, req *datapr
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/rolling_servers/returned_records/batch")
 }
+
+// --- rolling fine detail ---
+
+// ListFineDetail list fine detail
+func (b *RollingServerClient) ListFineDetail(kt *kit.Kit, req *rsproto.RollingFineDetailListReq) (
+	*rsproto.RollingFineDetailListResult, error) {
+
+	return common.Request[rsproto.RollingFineDetailListReq, rsproto.RollingFineDetailListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/fine_details/list")
+}
+
+// BatchCreateFineDetail batch create fine detail
+func (b *RollingServerClient) BatchCreateFineDetail(kt *kit.Kit, req *rsproto.BatchCreateRollingFineDetailReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.BatchCreateRollingFineDetailReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/fine_details/batch/create")
+}
+
+// BatchDeleteFineDetail delete fine detail
+func (b *RollingServerClient) BatchDeleteFineDetail(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/fine_details/batch")
+}
+
+// --- rolling bill ---
+
+// ListBill list bill
+func (b *RollingServerClient) ListBill(kt *kit.Kit, req *rsproto.RollingBillListReq) (*rsproto.RollingBillListResult,
+	error) {
+
+	return common.Request[rsproto.RollingBillListReq, rsproto.RollingBillListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/bills/list")
+}
+
+// BatchCreateBill batch create bill
+func (b *RollingServerClient) BatchCreateBill(kt *kit.Kit, req *rsproto.BatchCreateRollingBillReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.BatchCreateRollingBillReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/bills/batch/create")
+}
+
+// BatchDeleteBill delete bill
+func (b *RollingServerClient) BatchDeleteBill(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/bills/batch")
+}

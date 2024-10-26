@@ -1054,4 +1054,5 @@ ngate:
   app_code: xxxx
   app_secret: xxxx
 
-
+rollingServer:
+  syncBill: true

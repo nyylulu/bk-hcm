@@ -17,41 +17,9 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+package constant
 
-import (
-	"hcm/cmd/woa-server/thirdparty/esb"
-	rolling_server "hcm/cmd/woa-server/types/rolling-server"
-	"hcm/pkg/cc"
-	"hcm/pkg/client"
-	"hcm/pkg/kit"
-	"hcm/pkg/serviced"
+const (
+	// RollingServerSyncFailed rolling server sync failed.
+	RollingServerSyncFailed WarnSign = "rolling_server_sync_failed"
 )
-
-// Logics provides management interface for rolling server.
-type Logics interface {
-	SyncBills(kt *kit.Kit, req *rolling_server.RollingBillSyncReq) error
-}
-
-// logics rolling server logics.
-type logics struct {
-	sd        serviced.State
-	client    *client.ClientSet
-	esbClient esb.Client
-}
-
-// New creates rolling server logics instance.
-func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client) (Logics, error) {
-	rsLogics := &logics{
-		sd:        sd,
-		client:    client,
-		esbClient: esbClient,
-	}
-
-	if cc.WoaServer().RollingServer.SyncBill {
-		go rsLogics.syncBillsPeriodically()
-	}
-
-	return rsLogics, nil
-}

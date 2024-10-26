@@ -60,6 +60,11 @@ type service struct {
 func (s *service) initService(h *rest.Handler) {
 	h.Add("ListAppliedRecords", http.MethodPost, "/applied_records/list", s.ListAppliedRecords)
 	h.Add("ListReturnedRecords", http.MethodPost, "/returned_records/list", s.ListReturnedRecords)
+
+	h.Add("ListFineDetails", http.MethodPost, "/fine_details/list", s.ListFineDetails)
+
+	h.Add("ListBills", http.MethodPost, "/bills/list", s.ListBills)
+	h.Add("SyncBills", http.MethodPost, "/bills/sync", s.SyncBills)
 }
 
 // bizService 业务下的接口

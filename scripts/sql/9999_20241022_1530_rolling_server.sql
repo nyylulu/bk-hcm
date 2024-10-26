@@ -161,19 +161,21 @@ create table if not exists `rolling_returned_record`
 # 滚服罚金明细表
 create table if not exists `rolling_fine_detail`
 (
-    `id`             varchar(64)     not null,
-    `bk_biz_id`      bigint          not null comment '业务ID',
-    `order_id`       varchar(64)     not null comment '订单号',
-    `suborder_id`    varchar(64)     not null comment '子订单号',
-    `year`           bigint(1)       not null comment '子单号记录罚金的年份',
-    `month`          tinyint(1)      not null comment '子单号记录罚金的月份',
-    `day`            tinyint(1)      not null comment '子单号记录罚金的天',
-    `delivered_core` bigint          not null comment 'cpu交付核心数',
-    `returned_core`  bigint          not null comment 'cpu已退还核数',
-    `fine`           decimal(38, 10) not null comment '超时退还罚金',
-    `creator`        varchar(64)     not null,
-    `created_at`     timestamp       not null default current_timestamp,
+    `id`                varchar(64)     not null,
+    `bk_biz_id`         bigint          not null comment '业务ID',
+    `applied_record_id` varchar(64)     not null comment '滚服申请执行情况表唯一标识',
+    `order_id`          varchar(64)     not null comment '订单号',
+    `suborder_id`       varchar(64)     not null comment '子订单号',
+    `year`              bigint(1)       not null comment '子单号记录罚金的年份',
+    `month`             tinyint(1)      not null comment '子单号记录罚金的月份',
+    `day`               tinyint(1)      not null comment '子单号记录罚金的天',
+    `delivered_core`    bigint          not null comment 'cpu交付核心数',
+    `returned_core`     bigint          not null comment 'cpu已退还核数',
+    `fine`              decimal(38, 10) not null comment '超时退还罚金',
+    `creator`           varchar(64)     not null,
+    `created_at`        timestamp       not null default current_timestamp,
     primary key (`id`),
+    unique key `idx_uk_year_month_day_applied_record_id` (`year`, `month`, `day`, `applied_record_id`),
     unique key `idx_uk_year_month_day_suborder_id` (`year`, `month`, `day`, `suborder_id`)
 ) engine = innodb
   default charset = utf8mb4

@@ -97,3 +97,6 @@ data:
       {{- toYaml .Values.ngate | nindent 6 }}
     recover:
       {{- toYaml .Values.recover | nindent 6 }}
+    rollingServer:
+      syncBill: {{ .Values.rollingServer.syncBill }}
+
