@@ -164,10 +164,6 @@ func (r ResPlanCrpDemandTable) UpdateValidate() error {
 		return err
 	}
 
-	if len(r.ID) == 0 {
-		return errors.New("id can not be empty")
-	}
-
 	if r.CrpDemandID < 0 {
 		return errors.New("crp demand id should be >= 0")
 	}

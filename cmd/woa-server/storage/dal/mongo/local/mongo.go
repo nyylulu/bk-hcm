@@ -16,7 +16,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hcm/pkg/logs"
 	"reflect"
 	"strconv"
 	"strings"
@@ -29,6 +28,7 @@ import (
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/dal/types"
 	dtype "hcm/cmd/woa-server/storage/types"
+	"hcm/pkg/logs"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -186,6 +186,16 @@ func (c *Mongo) IsDuplicatedError(err error) bool {
 		}
 	}
 	return err == types.ErrDuplicated
+}
+
+// IsDuplicatedInsertError check duplicated insert error
+func (c *Mongo) IsDuplicatedInsertError(err error) bool {
+	if err != nil {
+		if strings.Contains(err.Error(), "E11000 duplicate") {
+			return true
+		}
+	}
+	return false
 }
 
 // IsNotFoundError check the not found error

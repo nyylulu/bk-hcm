@@ -20,6 +20,8 @@ import (
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
 // DetectTask supplies all the recycle detection related operations.
@@ -39,6 +41,8 @@ type DetectTask interface {
 	DeleteDetectTask(ctx context.Context, filter map[string]interface{}) (uint64, error)
 	// GetRecycleHostList gets recycle host list by filter from db
 	GetRecycleHostList(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)
+	// UpdateDetectTasks updates recycle detection tasks by filter and doc in db
+	UpdateDetectTasks(kt *kit.Kit, filter *mapstr.MapStr, doc *mapstr.MapStr) error
 }
 
 var _ DetectTask = new(detectTaskDao)
@@ -91,6 +95,15 @@ func (dt *detectTaskDao) FindManyDetectTask(ctx context.Context, page metadata.B
 	}
 
 	return insts, nil
+}
+
+// UpdateDetectTasks updates recycle detection tasks by filter and doc in db
+func (dt *detectTaskDao) UpdateDetectTasks(kt *kit.Kit, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
+	if _, err := mongodb.Client().Table(table.DetectTaskTable).UpdateMany(kt.Ctx, filter, doc); err != nil {
+		logs.Errorf("failed to update detect task, err: %v, filter: %v, doc: %v, rid: %s", err, filter, doc, kt.Rid)
+		return err
+	}
+	return nil
 }
 
 // UpdateDetectTask updates recycle detection task by filter and doc in db

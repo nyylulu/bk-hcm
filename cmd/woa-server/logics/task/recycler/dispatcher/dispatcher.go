@@ -55,6 +55,21 @@ func New(ctx context.Context) (*Dispatcher, error) {
 	return dispatcher, nil
 }
 
+// GetTransit get dispatcher member transit
+func (d *Dispatcher) GetTransit() *transit.Transit {
+	return d.transit
+}
+
+// GetReturn get dispatcher member returner
+func (d *Dispatcher) GetReturn() *returner.Returner {
+	return d.returner
+}
+
+// GetDetector get dispatcher member detector
+func (d *Dispatcher) GetDetector() *detector.Detector {
+	return d.detector
+}
+
 // SetDetector set dispatcher member detector
 func (d *Dispatcher) SetDetector(detector *detector.Detector) {
 	d.detector = detector

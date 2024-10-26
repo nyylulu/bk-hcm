@@ -29,13 +29,13 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	rpcd "hcm/pkg/dal/table/resource-plan/res-plan-crp-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/converter"
 
 	"github.com/jmoiron/sqlx"
@@ -425,8 +425,16 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		return errors.New("crp demand ids is empty")
 	}
 
+	crpDemandFilter := &filter.Expression{
+		Op: filter.And,
+		Rules: []filter.RuleFactory{
+			filter.AtomRule{Field: "crp_demand_id", Op: filter.In.Factory(), Value: crpDemandIDs},
+			filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bizOrgRel.BkBizID},
+		},
+	}
+
 	listOpt := &types.ListOption{
-		Filter: tools.ContainersExpression("crp_demand_id", crpDemandIDs),
+		Filter: crpDemandFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
 	rst, err := c.dao.ResPlanCrpDemand().List(kt, listOpt)
@@ -462,8 +470,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			VirtualDeptName: bizOrgRel.VirtualDeptName,
 			Reviser:         reviser,
 		}
-		err = c.dao.ResPlanCrpDemand().Update(kt, tools.ContainersExpression("crp_demand_id", existCrpDemandIDs),
-			update)
+		err = c.dao.ResPlanCrpDemand().Update(kt, crpDemandFilter, update)
 		if err != nil {
 			logs.Errorf("failed to update resource plan crp demand, err: %v, rid: %s", err, kt.Rid)
 			return err

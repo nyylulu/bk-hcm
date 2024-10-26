@@ -32,6 +32,7 @@ import (
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
+	"hcm/cmd/woa-server/logics/task/recoverer"
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/service/capability"
@@ -155,33 +156,101 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	}
 
 	kt := kit.New()
+	// Mongo开关打开才生成Client链接
+	var informerIf informer.Interface
+	var schedulerIf scheduler.Interface
+
 	// Mongo开关打开才进行Init检测
-	informerIf, schedulerIf, err := checkUseMonogo(kt, dis, thirdCli, esbClient)
+	if cc.WoaServer().UseMongo {
+		// init mongodb client
+		mConf := cc.WoaServer().MongoDB
+		mongoConf, err := mongo.NewConf(&mConf)
+		if err != nil {
+			return nil, err
+		}
+		if err = mongodb.InitClient("", mongoConf); err != nil {
+			return nil, err
+		}
+
+		wConf := cc.WoaServer().Watch
+		watchConf, err := mongo.NewConf(&wConf)
+		if err != nil {
+			return nil, err
+		}
+
+		if err = mongodb.InitClient("", watchConf); err != nil {
+			return nil, err
+		}
+
+		// init task service logics
+		loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+		if err != nil {
+			logs.Errorf("new loop stream failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+		if err != nil {
+			logs.Errorf("new watch mongo client failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		informerIf, err = informer.New(loopW, watchDB)
+		if err != nil {
+			logs.Errorf("new informer failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+		if err != nil {
+			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	}
+
+	service := &Service{
+		client:      apiClientSet,
+		dao:         daoSet,
+		esbClient:   esbClient,
+		authorizer:  authorizer,
+		thirdCli:    thirdCli,
+		clientConf:  cc.WoaServer(),
+		informerIf:  informerIf,
+		schedulerIf: schedulerIf,
+	}
+	return newOtherClient(kt, service, itsmCli, sd)
+}
+
+func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer)
 	if err != nil {
+		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	recyclerIf, err := recycler.New(kt.Ctx, thirdCli, esbClient, authorizer)
-	if err != nil {
-		logs.Errorf("new recycler failed, err: %v", err)
+	// init recoverer client
+	recoverConf := cc.WoaServer().Recover
+	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.esbClient.Cmdb(),
+		service.thirdCli.Sops); err != nil {
+		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	operationIf, err := operation.New(kt.Ctx)
 	if err != nil {
-		logs.Errorf("new operation failed, err: %v", err)
+		logs.Errorf("new operation failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, daoSet, itsmCli, thirdCli.CVM)
+	planCtrl, err := planctrl.New(sd, service.dao, itsmCli, service.thirdCli.CVM)
 	if err != nil {
-		logs.Errorf("new plan controller failed, err: %v", err)
+		logs.Errorf("new plan controller failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient)
+	rsLogics, err := rslogics.New(sd, service.client, service.esbClient)
 	if err != nil {
-		logs.Errorf("new rolling server logics failed, err: %v", err)
+		logs.Errorf("new rolling server logics failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -191,76 +260,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	return &Service{
-		client:         apiClientSet,
-		dao:            daoSet,
-		planController: planCtrl,
-		esbClient:      esbClient,
-		authorizer:     authorizer,
-		thirdCli:       thirdCli,
-		clientConf:     cc.WoaServer(),
-		informerIf:     informerIf,
-		schedulerIf:    schedulerIf,
-		recyclerIf:     recyclerIf,
-		operationIf:    operationIf,
-		esCli:          esCli,
-		rsLogic:        rsLogics,
-	}, nil
-}
-
-func checkUseMonogo(kt *kit.Kit, dis serviced.ServiceDiscover, thirdCli *thirdparty.Client, esbClient esb.Client) (
-	informer.Interface, scheduler.Interface, error) {
-
-	if !cc.WoaServer().UseMongo {
-		return nil, nil, nil
-	}
-
-	// init mongodb client
-	mConf := cc.WoaServer().MongoDB
-	mongoConf, err := mongo.NewConf(&mConf)
-	if err != nil {
-		return nil, nil, err
-	}
-	if err = mongodb.InitClient("", mongoConf); err != nil {
-		return nil, nil, err
-	}
-
-	wConf := cc.WoaServer().Watch
-	watchConf, err := mongo.NewConf(&wConf)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if err = mongodb.InitClient("", watchConf); err != nil {
-		return nil, nil, err
-	}
-
-	// init task service logics
-	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
-	if err != nil {
-		logs.Errorf("new loop stream failed, err: %v", err)
-		return nil, nil, err
-	}
-
-	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
-	if err != nil {
-		logs.Errorf("new watch mongo client failed, err: %v", err)
-		return nil, nil, err
-	}
-
-	informerIf, err := informer.New(loopW, watchDB)
-	if err != nil {
-		logs.Errorf("new informer failed, err: %v", err)
-		return nil, nil, err
-	}
-
-	schedulerIf, err := scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
-	if err != nil {
-		logs.Errorf("new scheduler failed, err: %v", err)
-		return nil, nil, err
-	}
-
-	return informerIf, schedulerIf, nil
+	service.planController = planCtrl
+	service.clientConf = cc.WoaServer()
+	service.recyclerIf = recyclerIf
+	service.operationIf = operationIf
+	service.esCli = esCli
+	service.rsLogic = rsLogics
+	return service, nil
 }
 
 // ListenAndServeRest listen and serve the restful server

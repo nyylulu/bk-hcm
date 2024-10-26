@@ -27,7 +27,9 @@ export default defineComponent({
     const billStore = useBillStore();
     const router = useRouter();
     const route = useRoute();
-    const { OperationProductsSelector } = useOperationProducts();
+    // 只允许IEG的运营产品
+    const operationProductFilterParams = ref({ bg_ids: [4] });
+    const { OperationProductsSelector } = useOperationProducts(true, operationProductFilterParams);
     const { formModel } = useFormModel({
       name: '', // 名字
       vendor: VendorEnum.AZURE, // 云厂商

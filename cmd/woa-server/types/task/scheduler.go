@@ -130,6 +130,8 @@ const (
 	GenerateStatusSuccess  GenerateStepStatus = 0
 	GenerateStatusHandling GenerateStepStatus = 1
 	GenerateStatusFailed   GenerateStepStatus = 2
+	// GenerateStatusSuspend 分区生产订单，未拿到机器生产单据id时状态，更新后此生产订单不会进入再生产
+	GenerateStatusSuspend GenerateStepStatus = 3
 )
 
 // GetApplyDeviceReq get resource apply delivered devices request

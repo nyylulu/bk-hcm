@@ -129,7 +129,7 @@ defineExpose({ handleSort });
         :popover-delay="[200, 0]"
         placement="left"
       >
-        <Option :id="option.device_type" :disabled="optionDisabled(option)">
+        <Option :id="option.device_type" :name="option.device_type" :disabled="optionDisabled(option)">
           <!-- 如果传入了具名插槽 'option'，则渲染插槽内容 -->
           <template v-if="$slots.option">
             <slot name="option" v-bind="option"></slot>
@@ -140,7 +140,7 @@ defineExpose({ handleSort });
       </Popover>
 
       <!-- 如果不需要 Popover 提示，直接渲染 Option -->
-      <Option v-else :id="option.device_type" :disabled="optionDisabled(option)">
+      <Option v-else :id="option.device_type" :name="option.device_type" :disabled="optionDisabled(option)">
         <template v-if="$slots.option">
           <slot name="option" v-bind="option"></slot>
         </template>

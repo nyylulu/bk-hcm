@@ -23,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/logics/task/sops"
+	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/pkg/logs"
 )
 
@@ -70,7 +71,8 @@ func (r *Recycler) createInitializeTask(task *table.RecallDetail) error {
 	}
 
 	// 创建标准运维-初始化任务
-	taskID, jobUrl, err := sops.CreateInitSopsTask(r.kt, r.sops, ip, r.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType)
+	taskID, jobUrl, err := sops.CreateInitSopsTask(r.kt, r.sops, ip, r.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType,
+		sopsapi.SopsCreateType)
 	if err != nil {
 		logs.Errorf("sops:process:check:recycler:ieod init, host %s failed to initialize, hostID: %d, bkBizID: %d, "+
 			"err: %v", ip, task.HostID, bkBizID, err)

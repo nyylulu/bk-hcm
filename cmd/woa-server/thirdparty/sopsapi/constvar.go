@@ -35,11 +35,11 @@ const (
 	// InitLinuxTemplateID 初始化-Linux-的流程模版ID
 	InitLinuxTemplateID int64 = 10078
 	// InitLinuxTaskNamePrefix 初始化-Linux-新建任务名称的前缀
-	InitLinuxTaskNamePrefix = "【常用】【SA】【Linux】初始化-%s"
+	InitLinuxTaskNamePrefix = "【常用】【SA】【Linux】初始化-%s-%s"
 	// InitWindowsTemplateID 初始化-Windows-的流程模版ID
 	InitWindowsTemplateID int64 = 10082
 	// InitWindowsTaskNamePrefix 初始化-Windows-新建任务名称的前缀
-	InitWindowsTaskNamePrefix = "【常用】【SA】【Windows】初始化-%s"
+	InitWindowsTaskNamePrefix = "【常用】【SA】【Windows】初始化-%s-%s"
 	// ConfigCheckLinux 配置检查-Linux（已确认:不需要Windows）
 	ConfigCheckLinux int64 = 10069
 	// ConfigCheckLinuxTaskNamePrefix 配置检查-Linux-新建任务名称的前缀
@@ -65,3 +65,6 @@ const (
 	// RecycleOuterIPWindowsTaskNamePrefix 回收外网IP-Windows-新建任务名称的前缀
 	RecycleOuterIPWindowsTaskNamePrefix = "【危险】【SA】【Windows】回收外网IP-%s"
 )
+
+// SopsCreateType 非scr申请主机创建sops任务
+const SopsCreateType = "NonOrderType"

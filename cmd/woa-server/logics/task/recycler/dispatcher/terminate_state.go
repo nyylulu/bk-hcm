@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // TerminateState the action to be executed in terminate state
@@ -27,5 +28,10 @@ func (ts *TerminateState) Name() table.RecycleStatus {
 
 // Execute executes action in terminate state
 func (ts *TerminateState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (ts *TerminateState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

@@ -24,6 +24,7 @@ import (
 	"strconv"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
@@ -37,6 +38,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/converter"
 
 	"github.com/jmoiron/sqlx"
@@ -56,36 +58,30 @@ func (s *service) TransferResPlanTicket(cts *rest.Contexts) (interface{}, error)
 	}
 
 	// get tickets
-	opt := req.GenListTicketsOption()
-	ticketsInfo, err := s.getResPlanTickets(cts.Kit, opt)
+	ticketsInfo, err := s.getResPlanTickets(cts.Kit, req)
 	if err != nil {
 		logs.Errorf("failed to get resource plan tickets, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	// get ticket demands
-	opt = req.GenListDemandsOption()
-	ticketDemands, err := s.getResPlanDemandByTicketIDs(cts.Kit, opt)
+	ticketDemands, err := s.getResPlanDemandByTicketIDs(cts.Kit, ticketsInfo)
 	if err != nil {
 		logs.Errorf("failed to get resource plan demand by ticket ids, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	// update res_plan_ticket
-	err = s.updateResPlanTicketsWithDemands(cts.Kit, enumor.RPTicketTypeAdd, ticketsInfo, ticketDemands)
-	if err != nil {
-		logs.Errorf("failed to update resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
+	successfulTickets := s.updateResPlanTicketsWithDemands(cts.Kit, enumor.RPTicketTypeAdd, ticketsInfo, ticketDemands)
 
 	var successfulIDs []string
 	// insert res_plan_crp_demand with ticket demands
-	for ticketID, info := range ticketsInfo {
+	for ticketID, info := range successfulTickets {
 		if _, ok := ticketDemands[ticketID]; !ok {
 			logs.Warnf("ticket %s has no demand, skip it, rid: %s", ticketID, cts.Kit.Rid)
 			continue
 		}
-		err := s.createResPlanCrpDemand(cts.Kit, info, ticketDemands[ticketID])
+		err := s.createResPlanCrpDemand(cts.Kit, info)
 		if err != nil {
 			logs.Warnf("failed to create res plan crp demand, err: %v, ticket_id: %s, rid: %s", err, ticketID,
 				cts.Kit.Rid)
@@ -97,8 +93,15 @@ func (s *service) TransferResPlanTicket(cts *rest.Contexts) (interface{}, error)
 	return map[string]interface{}{"count": len(successfulIDs), "ids": successfulIDs}, nil
 }
 
-func (s *service) getResPlanTickets(kt *kit.Kit, opt *types.ListOption) (map[string]*rptypes.RPTicketWithStatus,
-	error) {
+func (s *service) getResPlanTickets(kt *kit.Kit, req *ptypes.TransferResPlanTicketReq) (
+	map[string]*rptypes.RPTicketWithStatus, error) {
+
+	basePage := &core.BasePage{
+		Start: 0,
+		Limit: core.DefaultMaxPageLimit,
+	}
+	opt := req.GenListTicketsOption(basePage)
+
 	tickets := make([]rptypes.RPTicketWithStatus, 0)
 	for {
 		resp, err := s.dao.ResPlanTicket().ListWithStatus(kt, opt)
@@ -123,8 +126,27 @@ func (s *service) getResPlanTickets(kt *kit.Kit, opt *types.ListOption) (map[str
 	return rst, nil
 }
 
-func (s *service) getResPlanDemandByTicketIDs(kt *kit.Kit, opt *types.ListOption) (
+func (s *service) getResPlanDemandByTicketIDs(kt *kit.Kit, tickets map[string]*rptypes.RPTicketWithStatus) (
 	map[string][]*rpd.ResPlanDemandTable, error) {
+
+	ticketIDs := make([]string, 0, len(tickets))
+	for id := range tickets {
+		ticketIDs = append(ticketIDs, id)
+	}
+	rules := []filter.RuleFactory{
+		tools.ContainersExpression("ticket_id", ticketIDs),
+	}
+
+	opt := &types.ListOption{
+		Filter: &filter.Expression{
+			Op:    filter.And,
+			Rules: rules,
+		},
+		Page: &core.BasePage{
+			Start: 0,
+			Limit: core.DefaultMaxPageLimit,
+		},
+	}
 
 	demands := make([]rpd.ResPlanDemandTable, 0)
 	for {
@@ -173,17 +195,23 @@ func (s *service) getCrpDemandIDByCrpOrderID(kt *kit.Kit, orderID string) ([]str
 }
 
 func (s *service) updateResPlanTicketsWithDemands(kt *kit.Kit, ticketType enumor.RPTicketType,
-	tickets map[string]*rptypes.RPTicketWithStatus, demands map[string][]*rpd.ResPlanDemandTable) error {
+	tickets map[string]*rptypes.RPTicketWithStatus,
+	demands map[string][]*rpd.ResPlanDemandTable) map[string]*rptypes.RPTicketWithStatus {
 
+	successfulTickets := make(map[string]*rptypes.RPTicketWithStatus)
 	for ticketID, ticketInfo := range tickets {
-		ticketDemands := demands[ticketID]
+		ticketDemands, ok := demands[ticketID]
+		if !ok {
+			logs.Warnf("the ticket's demands from res_plan_demand is empty, ticket_id: %s, rid: %s", ticketID, kt.Rid)
+			continue
+		}
 
 		// merge source ticket info & ticket demands(json)
 		demandsJson, err := convTicketDemandsInfoToJson(kt, ticketInfo.DemandClass, ticketDemands)
 		if err != nil {
 			logs.Errorf("failed to convert ticket demands to json, err: %v, ticket_id: %s, rid: %s", err, ticketID,
 				kt.Rid)
-			return err
+			continue
 		}
 
 		expr := tools.EqualExpression("id", ticketID)
@@ -195,11 +223,12 @@ func (s *service) updateResPlanTicketsWithDemands(kt *kit.Kit, ticketType enumor
 		err = s.dao.ResPlanTicket().Update(kt, expr, model)
 		if err != nil {
 			logs.Errorf("failed to update res plan ticket, err: %v, ticket_id: %s, rid: %s", err, ticketID, kt.Rid)
-			return err
+			continue
 		}
+		successfulTickets[ticketID] = ticketInfo
 	}
 
-	return nil
+	return successfulTickets
 }
 
 func convTicketDemandsInfoToJson(kt *kit.Kit, class enumor.DemandClass, oldDemands []*rpd.ResPlanDemandTable) (
@@ -267,8 +296,7 @@ func convTicketDemandsInfoToJson(kt *kit.Kit, class enumor.DemandClass, oldDeman
 	return demandsJson, nil
 }
 
-func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTicketWithStatus,
-	demands []*rpd.ResPlanDemandTable) error {
+func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTicketWithStatus) error {
 
 	// 只有审批通过的单据才更新demand表
 	if ticketInfo.Status != enumor.RPTicketStatusDone {
@@ -282,15 +310,20 @@ func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTick
 		return err
 	}
 
-	inserts := make([]rpcd.ResPlanCrpDemandTable, len(demands))
-	for idx, demand := range demands {
-		dID, err := strconv.ParseInt(demandIDs[idx], 10, 64)
-		if err != nil {
-			logs.Errorf("failed to parse crp demand id to int64, err: %v, demand_id: %s, rid: %s", err, demandIDs[idx],
-				kt.Rid)
-			return err
-		}
+	insertDemandIDs, err := s.demandIDNotExistsInResPlanCrpDemand(kt, demandIDs, ticketInfo.BkBizID)
+	if err != nil {
+		logs.Errorf("failed to get demand id not exists in res plan crp demand, err: %v, ticket_id: %s, rid: %s",
+			err, ticketInfo.ID, kt.Rid)
+		return err
+	}
 
+	if len(insertDemandIDs) == 0 {
+		logs.Infof("demands for the ticket do not need to be created, ticket_id: %s, rid: %s", ticketInfo.ID, kt.Rid)
+		return nil
+	}
+
+	inserts := make([]rpcd.ResPlanCrpDemandTable, len(insertDemandIDs))
+	for idx, dID := range insertDemandIDs {
 		inserts[idx] = rpcd.ResPlanCrpDemandTable{
 			CrpDemandID:     dID,
 			Locked:          converter.ValToPtr(enumor.CrpDemandUnLocked),
@@ -303,15 +336,73 @@ func (s *service) createResPlanCrpDemand(kt *kit.Kit, ticketInfo *rptypes.RPTick
 			PlanProductName: ticketInfo.PlanProductName,
 			VirtualDeptID:   ticketInfo.VirtualDeptID,
 			VirtualDeptName: ticketInfo.VirtualDeptName,
-			Creator:         demand.Creator,
-			Reviser:         demand.Reviser,
+			Creator:         ticketInfo.Creator,
+			Reviser:         ticketInfo.Reviser,
 		}
 	}
 	_, err = s.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		return s.dao.ResPlanCrpDemand().CreateWithTx(kt, txn, inserts)
 	})
 	if err != nil {
-		logs.Errorf("failed to create resource plan crp demands, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create resource plan crp demands, err: %v, ticket_id: %s, rid: %s", err,
+			ticketInfo.ID, kt.Rid)
 	}
 	return err
+}
+
+// demandIDNotExistsInResPlanCrpDemand 保证幂等，只返回在res_plan_crp_demand表中不存在的demand_id
+func (s *service) demandIDNotExistsInResPlanCrpDemand(kt *kit.Kit, demandIDs []string, bkBizID int64) ([]int64, error) {
+	rstDemandIDs := make([]int64, 0, len(demandIDs))
+
+	optDemandList := make([]int64, 0, len(demandIDs))
+	for _, idString := range demandIDs {
+		dID, err := strconv.ParseInt(idString, 10, 64)
+		if err != nil {
+			logs.Warnf("failed to parse crp demand id to int64, err: %v, demand_id: %s, rid: %s", err, idString,
+				kt.Rid)
+			continue
+		}
+
+		optDemandList = append(optDemandList, dID)
+	}
+
+	opt := &types.ListOption{
+		Filter: &filter.Expression{
+			Op: filter.And,
+			Rules: []filter.RuleFactory{
+				filter.AtomRule{Field: "crp_demand_id", Op: filter.In.Factory(), Value: optDemandList},
+				filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bkBizID},
+			},
+		},
+		Page: &core.BasePage{
+			Start: 0,
+			Limit: core.DefaultMaxPageLimit,
+		},
+	}
+
+	existsDemandIDs := make(map[int64]interface{})
+	for {
+		resp, err := s.dao.ResPlanCrpDemand().List(kt, opt)
+		if err != nil {
+			logs.Errorf("failed to list res_plan_crp_demand by demand ids, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+
+		for _, demand := range resp.Details {
+			existsDemandIDs[demand.CrpDemandID] = nil
+		}
+
+		if len(resp.Details) < int(opt.Page.Limit) {
+			break
+		}
+		opt.Page.Start += uint32(opt.Page.Limit)
+	}
+
+	for _, id := range optDemandList {
+		if _, ok := existsDemandIDs[id]; !ok {
+			rstDemandIDs = append(rstDemandIDs, id)
+		}
+	}
+
+	return rstDemandIDs, nil
 }

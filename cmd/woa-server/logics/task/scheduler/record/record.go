@@ -10,7 +10,6 @@
  * limitations under the License.
  */
 
-// Package record record
 package record
 
 import (
@@ -18,8 +17,11 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
 
@@ -44,8 +46,8 @@ func CreateInitRecord(suborderId, ip string) error {
 		Ip:         ip,
 		TaskId:     "",
 		TaskLink:   "",
-		Status:     types.InitStatusHandling,
-		Message:    "handling",
+		Status:     types.InitStatusInit,
+		Message:    "initing",
 		CreateAt:   now,
 		UpdateAt:   now,
 		StartAt:    now,
@@ -183,4 +185,65 @@ func UpdateDeliverRecord(info *types.DeviceInfo, message string, status types.De
 	}
 
 	return nil
+}
+
+// GetDeliverRecord get resource apply deliver record
+func GetDeliverRecord(kt *kit.Kit, subOrderId string, ip string, assetId string) (*types.DeliverRecord, error) {
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderId,
+		"ip":          ip,
+		"asset_id":    assetId,
+	}
+
+	record, err := model.Operation().DeliverRecord().GetDeliverRecord(kt.Ctx, &filter)
+	if err != nil {
+		logs.Errorf("failed to get deliver record, ip: %s, err: %v, rid: %s", ip, err, kt.Rid)
+		return nil, err
+	}
+
+	return record, nil
+}
+
+// GetInitRecords get init records
+func GetInitRecords(kt *kit.Kit, subOrderId string) ([]*types.InitRecord, error) {
+	records := make([]*types.InitRecord, 0)
+	startIndex := 0
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderId,
+	}
+	for {
+		page := metadata.BasePage{
+			Start: startIndex,
+			Limit: constant.BatchOperationMaxLimit,
+		}
+
+		record, err := model.Operation().InitRecord().FindManyInitRecord(kt.Ctx, page, filter)
+		if err != nil {
+			logs.Errorf("failed to get init record, err: %v, subOrderId: %s, rid: %s", err, subOrderId, kt.Rid)
+			return nil, err
+		}
+		records = append(records, record...)
+		if len(record) < constant.BatchOperationMaxLimit {
+			break
+		}
+		startIndex += constant.BatchOperationMaxLimit
+	}
+
+	return records, nil
+}
+
+// GetInitRecord get init record by ip
+func GetInitRecord(kt *kit.Kit, subOrderId string, ip string) (*types.InitRecord, error) {
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderId,
+		"ip":          ip,
+	}
+
+	record, err := model.Operation().InitRecord().GetInitRecord(kt.Ctx, &filter)
+	if err != nil {
+		logs.Errorf("failed to get init record, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return record, nil
 }

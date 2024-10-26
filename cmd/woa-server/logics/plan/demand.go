@@ -661,8 +661,7 @@ func (c *Controller) verifyPrePaid(kt *kit.Kit, prodRemain, prodMaxAvailable Res
 		if key.PlanType != enumor.PlanTypeHcmInPlan ||
 			key.AvailableTime != need.AvailableTime ||
 			key.ObsProject != need.ObsProject ||
-			key.RegionName != need.RegionName ||
-			key.ZoneName != need.ZoneName {
+			key.RegionName != need.RegionName {
 			continue
 		}
 
@@ -702,8 +701,7 @@ func (c *Controller) verifyPostPaidByHour(kt *kit.Kit, prodRemain ResPlanPool, n
 			if key.PlanType != planType ||
 				key.AvailableTime != need.AvailableTime ||
 				key.ObsProject != need.ObsProject ||
-				key.RegionName != need.RegionName ||
-				key.ZoneName != need.ZoneName {
+				key.RegionName != need.RegionName {
 				continue
 			}
 

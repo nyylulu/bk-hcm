@@ -100,6 +100,27 @@ type GetTaskNodeDetailRst struct {
 	ExData string `json:"ex_data"`
 }
 
+type GetTaskListResp struct {
+	RespMeta `json:",inline"`
+	Data     []*GetTaskListRst `json:"data"`
+}
+
+// GetTaskListRst get sops task node detail result
+type GetTaskListRst struct {
+	// ID 节点ID
+	ID         uint64 `json:"id"`
+	Name       string `json:"name"`
+	Category   string `json:"category"`
+	IsStarted  bool   `json:"is_started"`
+	IsFinished bool   `json:"is_finished"`
+	// StartTime 最后一次执行开始时间
+	StartTime string `json:"start_time"`
+	// FinishTime 最后一次执行结束时间
+	FinishTime string `json:"finish_time"`
+	BkBizId    uint64 `json:"bk_biz_id"`
+	BkBizName  string `json:"bk_biz_name"`
+}
+
 // TaskNodeDetailOutput task node detail output
 type TaskNodeDetailOutput struct {
 	Name   string `json:"name"`
@@ -120,4 +141,16 @@ type GetTaskNodeDataRst struct {
 	Outputs []TaskNodeDetailOutput `json:"outputs"`
 	// ExData 节点执行失败详情，json字符串或者HTML字符串、普通字符串
 	ExData string `json:"ex_data"`
+}
+
+// GetTaskDetailDataResp get sops task detail data response
+type GetTaskDetailDataResp struct {
+	RespMeta `json:",inline"`
+	Data     *GetTaskDetailDataRst `json:"data"`
+}
+
+// GetTaskDetailDataRst get sops task data detail result
+type GetTaskDetailDataRst struct {
+	Id      uint64 `json:"id"`
+	TaskUrl string `json:"task_url"`
 }

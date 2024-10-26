@@ -88,6 +88,43 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 	return detector, nil
 }
 
+// CheckDetectStatus checks if detection is finished
+func (d *Detector) CheckDetectStatus(subOrderId string) error {
+	filter := map[string]interface{}{
+		"suborder_id": subOrderId,
+		"status": mapstr.MapStr{
+			common.BKDBNE: table.DetectStatusSuccess,
+		},
+	}
+	cnt, err := dao.Set().DetectTask().CountDetectTask(context.Background(), filter)
+	if err != nil {
+		logs.Errorf("failed to get detection task count, err: %v, subOrderId: %s", err, subOrderId)
+		return err
+	}
+
+	if cnt == 0 {
+		return nil
+	}
+
+	filterOrder := mapstr.MapStr{
+		"suborder_id": subOrderId,
+	}
+	update := mapstr.MapStr{
+		"failed_num": cnt,
+		"update_at":  time.Now(),
+	}
+	// ignore and continue when update failed_num error
+	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filterOrder, &update); err != nil {
+		logs.Errorf("failed to update recycle order, ignore and continue when update failed_num error, "+
+			"subOrderId: %s, err: %v", subOrderId, err)
+	}
+
+	logs.Errorf("recycle order detection failed, for detection tasks is not success, subOrderId: %s, failedStepNum: %d",
+		subOrderId, cnt)
+	return fmt.Errorf("recycle order detection failed, for detection tasks is not success, subOrderId: %s, failedStepNum"+
+		": %d", subOrderId, cnt)
+}
+
 // DealRecycleOrder deals with recycle order by running detection tasks
 func (d *Detector) DealRecycleOrder(orderId string) error {
 	// get tasks by order id
@@ -96,14 +133,13 @@ func (d *Detector) DealRecycleOrder(orderId string) error {
 		logs.Errorf("failed to get recycle tasks by order id: %d, err: %v", orderId, err)
 		return err
 	}
-
 	// run recycle tasks
 	wg := sync.WaitGroup{}
 	for _, task := range taskInfos {
 		wg.Add(1)
 		go func(task *table.DetectTask) {
 			defer wg.Done()
-			d.runRecycleTask(task)
+			d.RunRecycleTask(task, 0)
 		}(task)
 	}
 	wg.Wait()
@@ -120,7 +156,7 @@ func (d *Detector) DealRecycleTask(taskId string) error {
 		return err
 	}
 
-	go d.runRecycleTask(task)
+	go d.RunRecycleTask(task, 0)
 
 	return nil
 }
@@ -167,17 +203,18 @@ func (d *Detector) getRecycleTaskById(taskId string) (*table.DetectTask, error) 
 	return tasks[0], nil
 }
 
-func (d *Detector) runRecycleTask(task *table.DetectTask) {
+// RunRecycleTask runs recycle task
+func (d *Detector) RunRecycleTask(task *table.DetectTask, startStep uint) {
 	// check task status
 	if task.Status == table.DetectStatusSuccess || task.Status == table.DetectStatusRunning {
-		logs.Infof("recycle task %s need not dispatch, status: %s", task.TaskID, task.Status)
+		logs.Infof("recycle task need not dispatch, taskId: %s, status: %s", task.TaskID, task.Status)
 		return
 	}
 
 	// get recycle steps
 	steps, err := d.getRecycleSteps()
 	if err != nil {
-		logs.Errorf("failed to run recycle task, task id: %s, err: %v", task.TaskID, err)
+		logs.Errorf("failed to run recycle task, taskId: %s, err: %v", task.TaskID, err)
 		return
 	}
 
@@ -189,38 +226,46 @@ func (d *Detector) runRecycleTask(task *table.DetectTask) {
 
 	// run recycle steps in serial
 	total := uint(len(steps))
-	success := uint(0)
-	failed := uint(0)
+	success, failed := task.SuccessNum, task.FailedNum
+	if startStep == 0 {
+		success, failed = 0, 0
+	}
+
 	var lastErr error = nil
-	for _, step := range steps {
+	if failed != 0 {
+		lastErr = fmt.Errorf("recycle some step failed")
+	}
+
+	for i := startStep; i < total; i++ {
+		step := steps[i]
 		errRun := d.runRecycleStep(task, step)
 		if errRun != nil {
-			logs.Errorf("failed to run recycle step, step name: %s, task id: %s, err: %v", step.Name, task.TaskID,
+			logs.Errorf("failed to run recycle step, step name: %s, taskId: %s, err: %v", step.Name, task.TaskID,
 				errRun)
 			lastErr = errRun
 			failed++
 		} else {
 			success++
 		}
-
 		if err = d.updateTaskProgress(task, total, success, failed); err != nil {
-			logs.Warnf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
-				"task id: %s, subOrderID: %s, err: %v", task.TaskID, task.SuborderID, err)
+			logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
+				"taskId: %s, subOrderID: %s, err: %v", task.TaskID, task.SuborderID, err)
 		}
 	}
 
 	// update task status
 	if err = d.updateRecycleTask(task, lastErr); err != nil {
 		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
-			"task id: %s, err: %v", task.TaskID, err)
+			"taskId: %s, err: %v", task.TaskID, err)
 	}
 
 	// update recycle task
 	if err = d.updateRecycleHost(task.SuborderID, task.IP, lastErr); err != nil {
-		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle host %s, subOrderID: %s, "+
+		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle host: %s, subOrderID: %s, "+
 			"err: %v", task.IP, task.SuborderID, err)
 	}
 
+	logs.Infof("finish recycle order detect step, subOrderId: %s", task.SuborderID)
 	return
 }
 
