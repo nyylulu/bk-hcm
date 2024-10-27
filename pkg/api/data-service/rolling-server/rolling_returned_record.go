@@ -110,3 +110,12 @@ type RollingReturnedRecordUpdateReq struct {
 func (req *RollingReturnedRecordUpdateReq) Validate() error {
 	return validator.Validate.Struct(req)
 }
+
+// RollingCpuCoreSummaryResult get rolling cpu core summary result
+type RollingCpuCoreSummaryResult = core.BaseResp[*RollingCpuCoreSummaryItem]
+
+// RollingCpuCoreSummaryItem wrapper for rolling cpu core summary item
+type RollingCpuCoreSummaryItem struct {
+	SumDeliveredCore       uint64 `json:"sum_delivered_core" db:"sum_delivered_core"`
+	SumReturnedAppliedCore uint64 `json:"sum_returned_applied_core" db:"sum_returned_applied_core"`
+}

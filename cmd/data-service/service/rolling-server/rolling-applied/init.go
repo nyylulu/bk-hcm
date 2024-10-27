@@ -42,6 +42,8 @@ func InitService(cap *capability.Capability) {
 		svc.BatchUpdateRollingAppliedRecord)
 	h.Add("ListRollingAppliedRecord", http.MethodPost, "/rolling_servers/applied_records/list",
 		svc.ListRollingAppliedRecord)
+	h.Add("GetRollingAppliedCoreSum", http.MethodPost, "/rolling_servers/applied_records/applied_core/sum",
+		svc.GetRollingAppliedCoreSum)
 
 	h.Load(cap.WebService)
 }

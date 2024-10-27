@@ -196,6 +196,13 @@ func (b *RollingServerClient) BatchDeleteAppliedRecord(kt *kit.Kit, req *datapro
 		b.client, rest.DELETE, kt, req, "/rolling_servers/applied_records/batch")
 }
 
+// GetRollingAppliedCoreSum get applied core sum
+func (b *RollingServerClient) GetRollingAppliedCoreSum(kt *kit.Kit, req *rsproto.RollingAppliedRecordListReq) (
+	*rsproto.RollingCpuCoreSummaryItem, error) {
+	return common.Request[rsproto.RollingAppliedRecordListReq, rsproto.RollingCpuCoreSummaryItem](
+		b.client, rest.POST, kt, req, "/rolling_servers/applied_records/applied_core/sum")
+}
+
 // --- rolling returned record ---
 
 // ListReturnedRecord list returned record
@@ -270,4 +277,11 @@ func (b *RollingServerClient) BatchCreateBill(kt *kit.Kit, req *rsproto.BatchCre
 func (b *RollingServerClient) BatchDeleteBill(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/rolling_servers/bills/batch")
+}
+
+// GetRollingReturnedCoreSum get returned core sum
+func (b *RollingServerClient) GetRollingReturnedCoreSum(kt *kit.Kit, req *rsproto.RollingReturnedRecordListReq) (
+	*rsproto.RollingCpuCoreSummaryItem, error) {
+	return common.Request[rsproto.RollingReturnedRecordListReq, rsproto.RollingCpuCoreSummaryItem](
+		b.client, rest.POST, kt, req, "/rolling_servers/returned_records/returned_core/sum")
 }

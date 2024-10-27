@@ -60,6 +60,7 @@ type service struct {
 func (s *service) initService(h *rest.Handler) {
 	h.Add("ListAppliedRecords", http.MethodPost, "/applied_records/list", s.ListAppliedRecords)
 	h.Add("ListReturnedRecords", http.MethodPost, "/returned_records/list", s.ListReturnedRecords)
+	h.Add("GetCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetCpuCoreSummary)
 
 	h.Add("ListFineDetails", http.MethodPost, "/fine_details/list", s.ListFineDetails)
 
@@ -71,4 +72,5 @@ func (s *service) initService(h *rest.Handler) {
 func (s *service) bizService(h *rest.Handler) {
 	h.Add("ListBizAppliedRecords", http.MethodPost, "/applied_records/list", s.ListBizAppliedRecords)
 	h.Add("ListBizReturnedRecords", http.MethodPost, "/returned_records/list", s.ListBizReturnedRecords)
+	h.Add("GetBizCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetBizCpuCoreSummary)
 }

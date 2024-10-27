@@ -50,3 +50,26 @@ func (svc *service) ListRollingReturnedRecord(cts *rest.Contexts) (interface{}, 
 
 	return &rsproto.RollingReturnedRecordListResult{Details: data.Details, Count: data.Count}, nil
 }
+
+// GetRollingReturnedCoreSum get rolling returned core sum
+func (svc *service) GetRollingReturnedCoreSum(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.RollingReturnedRecordListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+	}
+
+	result, err := svc.dao.RollingReturnedRecord().GetReturnedSumDeliveredCore(cts.Kit, opt)
+	if err != nil {
+		return nil, err
+	}
+
+	return result, nil
+}

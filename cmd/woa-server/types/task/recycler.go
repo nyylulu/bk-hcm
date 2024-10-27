@@ -22,6 +22,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/validator"
 )
 
 // RecycleCheckReq resource recycle check request
@@ -1187,4 +1188,48 @@ type RecycleBizHost struct {
 	SubZone     string `json:"sub_zone"`
 	State       string `json:"state"`
 	InputTime   string `json:"input_time"`
+}
+
+// StartRecycleOrderByRecycleTypeReq start recycle order by recycle type request
+type StartRecycleOrderByRecycleTypeReq struct {
+	SubOrderIDTypes []StartRecycleOrderByRecycleTypeItem `json:"sub_order_id_types" validate:"required,min=1,max=100"`
+}
+
+// Validate validate
+func (r *StartRecycleOrderByRecycleTypeReq) Validate() error {
+	if len(r.SubOrderIDTypes) == 0 {
+		return fmt.Errorf("sub_order_id_types is required")
+	}
+	if len(r.SubOrderIDTypes) > 100 {
+		return fmt.Errorf("sub_order_id_types length should <= 100")
+	}
+	for _, item := range r.SubOrderIDTypes {
+		if err := item.Validate(); err != nil {
+			return err
+		}
+	}
+	return validator.Validate.Struct(r)
+}
+
+// StartRecycleOrderByRecycleTypeItem start recycle order by recycle type item
+type StartRecycleOrderByRecycleTypeItem struct {
+	SuborderID  string            `json:"sub_order_id"`
+	RecycleType table.RecycleType `json:"recycle_type"`
+}
+
+// Validate validate
+func (r *StartRecycleOrderByRecycleTypeItem) Validate() error {
+	if len(r.SuborderID) == 0 {
+		return fmt.Errorf("sub_order_id is required")
+	}
+
+	if len(r.RecycleType) == 0 {
+		return fmt.Errorf("recycle_type is required")
+	}
+
+	if err := r.RecycleType.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }

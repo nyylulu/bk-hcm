@@ -32,6 +32,8 @@ import (
 // Logics provides management interface for rolling server.
 type Logics interface {
 	SyncBills(kt *kit.Kit, req *rolling_server.RollingBillSyncReq) error
+	// GetCpuCoreSummary 查询滚服已交付、已退还的CPU核心数概览信息
+	GetCpuCoreSummary(kt *kit.Kit, req *rolling_server.CpuCoreSummaryReq) (any, error)
 }
 
 // logics rolling server logics.

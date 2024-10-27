@@ -46,6 +46,7 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/slice"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -74,6 +75,8 @@ type Interface interface {
 
 	// StartRecycleOrder starts resource recycle order
 	StartRecycleOrder(kit *kit.Kit, param *types.StartRecycleOrderReq) error
+	// StartRecycleOrderByRecycleType starts resource recycle order by recycle type
+	StartRecycleOrderByRecycleType(kit *kit.Kit, param *types.StartRecycleOrderByRecycleTypeReq) error
 	// StartDetectTask starts resource detection task
 	StartDetectTask(kit *kit.Kit, param *types.StartDetectTaskReq) error
 	// ReviseRecycleOrder revise recycle orders to remove detection failed hosts
@@ -1131,9 +1134,10 @@ func (r *recycler) setOrderNextStatus(orders []*table.RecycleOrder) {
 		}
 
 		update := &mapstr.MapStr{
-			"failed_num": failedNum,
-			"status":     nextStatus,
-			"update_at":  now,
+			"failed_num":   failedNum,
+			"status":       nextStatus,
+			"recycle_type": order.RecycleType,
+			"update_at":    now,
 		}
 
 		// do not dispatch order to start if set next status failed
@@ -1741,4 +1745,46 @@ func (r *recycler) UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success
 
 	return r.dispatcher.GetReturn().UpdateOrderInfo(kt.Ctx, orderId, handler, success, failed, pending,
 		msg)
+}
+
+// StartRecycleOrderByRecycleType starts resource recycle order by recycle type
+func (r *recycler) StartRecycleOrderByRecycleType(kit *kit.Kit, param *types.StartRecycleOrderByRecycleTypeReq) error {
+	subOrderIDs := make([]string, 0)
+	subOrderIDTypeMap := make(map[string]table.RecycleType, 0)
+	for _, item := range param.SubOrderIDTypes {
+		subOrderIDs = append(subOrderIDs, item.SuborderID)
+		subOrderIDTypeMap[item.SuborderID] = item.RecycleType
+	}
+	subOrderIDs = slice.Unique(subOrderIDs)
+
+	if len(subOrderIDs) == 0 {
+		return fmt.Errorf("sub_order_ids can not be empty")
+	}
+
+	filter := map[string]interface{}{}
+	filter["suborder_id"] = mapstr.MapStr{
+		common.BKDBIN: subOrderIDs,
+	}
+	page := metadata.BasePage{}
+	insts, err := dao.Set().RecycleOrder().FindManyRecycleOrder(kit.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle order by recycle type, err: %v, rid: %s", err, kit.Rid)
+		return err
+	}
+
+	cnt := len(insts)
+	if cnt == 0 {
+		logs.Errorf("get invalid recycle order by recycle type count %d == 0, rid: %s", cnt, kit.Rid)
+		return fmt.Errorf("found no recycle order by recycle type to start")
+	}
+
+	// 把符合条件的主机回收子订单里面的“回收类型”置为传入的回收类型
+	for _, item := range insts {
+		if recycleType, ok := subOrderIDTypeMap[item.SuborderID]; ok {
+			item.RecycleType = recycleType
+		}
+	}
+	r.setOrderNextStatus(insts)
+
+	return nil
 }

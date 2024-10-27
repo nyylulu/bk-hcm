@@ -24,6 +24,7 @@ import (
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -49,4 +50,28 @@ func (svc *service) ListRollingAppliedRecord(cts *rest.Contexts) (interface{}, e
 	}
 
 	return &rsproto.RollingAppliedRecordListResult{Details: data.Details, Count: data.Count}, nil
+}
+
+// GetRollingAppliedCoreSum get rolling applied core sum
+func (svc *service) GetRollingAppliedCoreSum(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.RollingAppliedRecordListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+	}
+
+	result, err := svc.dao.RollingAppliedRecord().GetAppliedSumDeliveredCore(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("get rolling applied core sum failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }

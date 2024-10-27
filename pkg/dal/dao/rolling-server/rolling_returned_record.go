@@ -47,6 +47,7 @@ type RollingReturnedRecordInterface interface {
 	Update(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *rstable.RollingReturnedRecord) error
 	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingReturnedRecordListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	GetReturnedSumDeliveredCore(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingCpuCoreSummaryItem, error)
 }
 
 var _ RollingReturnedRecordInterface = new(RollingReturnedRecordDao)
@@ -196,4 +197,37 @@ func (d RollingReturnedRecordDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *f
 	}
 
 	return nil
+}
+
+// GetReturnedSumDeliveredCore get returned sum match applied core.
+func (d RollingReturnedRecordDao) GetReturnedSumDeliveredCore(kt *kit.Kit, opt *types.ListOption) (
+	*rsproto.RollingCpuCoreSummaryItem, error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "get rolling returned sum match  core options is nil")
+	}
+
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(rstable.RollingReturnedRecordColumns.ColumnTypes())),
+		core.NewDefaultPageOption()); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]*rsproto.RollingCpuCoreSummaryItem, 0)
+	sql := fmt.Sprintf(`SELECT SUM(match_applied_core) AS sum_returned_applied_core FROM %s %s`,
+		table.RollingReturnedRecordTable, whereExpr)
+	if err = d.Orm.Do().Select(kt.Ctx, &result, sql, whereValue); err != nil {
+		logs.ErrorJson("get rolling returned sum match applied core failed, err: %v, sql: %s, whereValue: %+v, rid: %s",
+			err, sql, whereValue, kt.Rid)
+		return nil, err
+	}
+	// 空数据
+	if len(result) == 0 {
+		return &rsproto.RollingCpuCoreSummaryItem{}, nil
+	}
+	return result[0], nil
 }
