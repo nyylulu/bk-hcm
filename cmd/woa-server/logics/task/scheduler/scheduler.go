@@ -39,11 +39,6 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/recommender"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/itsmapi"
 	configtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
@@ -51,6 +46,11 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -143,7 +143,7 @@ type Interface interface {
 // scheduler provides resource apply service
 type scheduler struct {
 	lang         language.CCLanguageIf
-	itsm         itsmapi.ITSMClientInterface
+	itsm         itsm.Client
 	cc           cmdb.Client
 	dispatcher   *dispatcher.Dispatcher
 	generator    *generator.Generator
@@ -343,7 +343,7 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 		return nil, fmt.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty")
 	}
 
-	statusResp, err := s.itsm.GetTicketStatus(nil, nil, inst.ItsmTicketId)
+	statusResp, err := s.itsm.GetTicketStatus(kit, inst.ItsmTicketId)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
@@ -359,7 +359,7 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 	status := statusResp.Data.CurrentStatus
 	link := statusResp.Data.TicketUrl
 
-	logResp, err := s.itsm.GetTicketLog(nil, nil, inst.ItsmTicketId)
+	logResp, err := s.itsm.GetTicketLog(kit, inst.ItsmTicketId)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
@@ -403,30 +403,30 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 
 // AuditTicket audit resource apply ticket
 func (s *scheduler) AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error {
-	req := &itsmapi.OperateNodeReq{
+	req := &itsm.OperateNodeReq{
 		Sn:         param.ItsmTicketId,
 		StateId:    param.StateId,
 		Operator:   param.Operator,
-		ActionType: itsmapi.ActionTypeTransition,
-		Fields:     make([]*itsmapi.TicketField, 0),
+		ActionType: itsm.ActionTypeTransition,
+		Fields:     make([]*itsm.TicketField, 0),
 	}
 
-	keys, ok := itsmapi.MapStateKey[param.StateId]
+	keys, ok := itsm.MapStateKey[param.StateId]
 	if !ok {
 		logs.Errorf("failed to audit apply ticket, invalid state id: %d, rid: %s", param.StateId, kit.Rid)
 		return fmt.Errorf("failed to audit apply ticket, invalid state id: %d", param.StateId)
 	}
 
-	req.Fields = append(req.Fields, &itsmapi.TicketField{
+	req.Fields = append(req.Fields, &itsm.TicketField{
 		Key:   keys[0],
 		Value: strconv.FormatBool(param.Approval),
 	})
-	req.Fields = append(req.Fields, &itsmapi.TicketField{
+	req.Fields = append(req.Fields, &itsm.TicketField{
 		Key:   keys[1],
 		Value: param.Remark,
 	})
 
-	resp, err := s.itsm.OperateNode(nil, nil, req)
+	resp, err := s.itsm.OperateNode(kit, req)
 	if err != nil {
 		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, kit.Rid)
 		return err
@@ -649,7 +649,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 			return err
 		}
 
-		resp, err := s.itsm.CreateTicket(sc, kt.Header(), param.User, rst.OrderId, param.BkBizId)
+		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId)
 		if err != nil {
 			logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s, orderId: %d, BkBIzId: %d",
 				err, kt.Rid, rst.OrderId, param.BkBizId)
@@ -1119,9 +1119,9 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			})
 		}
 	}
-	req := &cmdb.ListBizHostReq{
-		BkBizId:     931,
-		BkModuleIds: []int64{239149},
+	req := &cmdb.ListBizHostParams{
+		BizID:       931,
+		BkModuleIDs: []int64{239149},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",
@@ -1151,20 +1151,15 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 		},
 	}
 	if len(rule.Rules) > 0 {
-		req.HostPropertyFilter = &querybuilder.QueryFilter{
+		req.HostPropertyFilter = &cmdb.QueryFilter{
 			Rule: rule,
 		}
 	}
 
-	resp, err := s.cc.ListBizHost(kit.Ctx, nil, req)
+	resp, err := s.cc.ListBizHost(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kit.Rid)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
 	// TODO: filter and sort devices
@@ -1173,10 +1168,10 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 		Info:  make([]*types.MatchDevice, 0),
 	}
 	tagNum := int64(0)
-	for _, host := range resp.Data.Info {
+	for _, host := range resp.Info {
 		rackId, err := strconv.Atoi(host.RackId)
 		if err != nil {
-			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
+			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostID, host.RackId)
 			rackId = 0
 		}
 		tag := false
@@ -1185,13 +1180,13 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			tagNum++
 		}
 		device := &types.MatchDevice{
-			BkHostId:     host.BkHostId,
-			AssetId:      host.BkAssetId,
+			BkHostId:     host.BkHostID,
+			AssetId:      host.BkAssetID,
 			Ip:           host.GetUniqIp(),
 			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
-			OsType:       host.BkOsName,
+			OsType:       host.BkOSName,
 			Region:       host.BkZoneName,
 			Zone:         host.SubZone,
 			Module:       host.ModuleName,
@@ -1787,24 +1782,28 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 		"bk_cloud_inst_id"}
 	page := cmdb.BasePage{Start: 0, Limit: 1}
 
-	var info []*cmdb.HostInfo
+	var info []*cmdb.Host
 	if param.BizID != 0 {
-		req := &cmdb.ListBizHostReq{
-			BkBizId:            param.BizID,
-			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+		req := &cmdb.ListBizHostParams{
+			BizID:              param.BizID,
+			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 			Fields:             fields,
 			Page:               page,
 		}
-		resp, err := s.cc.ListBizHost(kt.Ctx, kt.Header(), req)
+		resp, err := s.cc.ListBizHost(kt, req)
 		if err != nil {
 			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
-		info = resp.Data.Info
+		hosts := make([]*cmdb.Host, 0)
+		for _, host := range resp.Info {
+			hosts = append(hosts, &host)
+		}
+		info = hosts
 
 	} else {
 		req := &cmdb.ListHostReq{
-			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 			Fields:             fields,
 			Page:               page,
 		}
@@ -1830,13 +1829,13 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 	}
 
 	return &types.CheckRollingServerHostResp{
-		DeviceType:           host.BkSvrDeviceClsName,
+		DeviceType:           host.SvrDeviceClassName,
 		InstanceChargeType:   host.InstanceChargeType,
 		BillingStartTime:     host.BillingStartTime,
 		OldBillingExpireTime: host.BillingExpireTime,
 		NewBillingExpireTime: time.Now().AddDate(0, chargeMonths, 0),
 		ChargeMonths:         chargeMonths,
-		CloudInstID:          host.CloudInstID,
+		CloudInstID:          host.BkCloudInstID,
 	}, nil
 }
 

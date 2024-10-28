@@ -24,8 +24,8 @@ import (
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // ApplyOrder resource apply order

@@ -23,8 +23,8 @@ import (
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/logics/task/sops"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 )
 
 func (r *Recycler) dealInitializeTask(task *table.RecallDetail) error {
@@ -58,16 +58,16 @@ func (r *Recycler) createInitializeTask(task *table.RecallDetail) error {
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:recycler:ieod init, get host info by host id failed, ip: %s, bkHostID: %d, "+
-			"err: %v", ip, hostInfo.BkHostId, err)
+			"err: %v", ip, hostInfo.BkHostID, err)
 		return err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
-		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
 
 	// 创建标准运维-初始化任务

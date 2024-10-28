@@ -25,10 +25,10 @@ import (
 	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/service/capability"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitService initial the plan service.

@@ -1,8 +1,9 @@
 package rest
 
 import (
-	"hcm/pkg/criteria/constant"
 	"net/url"
+
+	"hcm/pkg/criteria/constant"
 
 	"github.com/emicklei/go-restful/v3"
 )

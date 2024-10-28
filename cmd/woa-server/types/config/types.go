@@ -20,7 +20,7 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // Requirement resource requirement type config
@@ -574,10 +574,10 @@ const (
 
 // Anti类型
 const (
-	AntiNone   string = "ANTI_NONE"   //无要求
-	AntiRack   string = "ANTI_RACK"   //分机架
-	AntiModule string = "ANTI_MODULE" //分Module
-	AntiCampus string = "ANTI_CAMPUS" //分Campus
+	AntiNone   string = "ANTI_NONE"   // 无要求
+	AntiRack   string = "ANTI_RACK"   // 分机架
+	AntiModule string = "ANTI_MODULE" // 分Module
+	AntiCampus string = "ANTI_CAMPUS" // 分Campus
 )
 
 // Description description of terms

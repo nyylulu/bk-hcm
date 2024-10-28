@@ -19,8 +19,8 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/tmpapi"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/tmpapi"
 
 	"github.com/mitchellh/mapstructure"
 )

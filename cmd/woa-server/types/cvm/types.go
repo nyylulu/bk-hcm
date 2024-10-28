@@ -20,7 +20,7 @@ import (
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 const (

@@ -23,9 +23,9 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {

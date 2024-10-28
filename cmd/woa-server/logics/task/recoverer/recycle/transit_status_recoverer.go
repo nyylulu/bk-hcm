@@ -24,10 +24,10 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // recoverTransitedOrders 恢复状态为RecycleStatusTransiting的待回收订单

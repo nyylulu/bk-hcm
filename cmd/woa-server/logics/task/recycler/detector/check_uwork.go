@@ -23,8 +23,8 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/xshipapi"
 )
 
 func (d *Detector) checkUwork(step *table.DetectStep, retry int) (int, string, error) {

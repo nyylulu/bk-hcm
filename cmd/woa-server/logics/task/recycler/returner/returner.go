@@ -29,14 +29,14 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/erpapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/erpapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -445,9 +445,9 @@ func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) erro
 func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, error) {
 	hostIDs := make([]int64, 0)
 
-	req := &cmdb.ListBizHostReq{
-		BkBizId: bizID,
-		HostPropertyFilter: &querybuilder.QueryFilter{
+	req := &cmdb.ListBizHostParams{
+		BizID: bizID,
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -476,19 +476,14 @@ func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, er
 		},
 	}
 
-	resp, err := r.esb.Cmdb().ListBizHost(nil, nil, req)
+	resp, err := r.esb.Cmdb().ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	for _, host := range resp.Data.Info {
-		hostIDs = append(hostIDs, host.BkHostId)
+	for _, host := range resp.Info {
+		hostIDs = append(hostIDs, host.BkHostID)
 	}
 
 	return hostIDs, nil
@@ -547,7 +542,7 @@ func (r *Returner) getBizRecycleModuleID(bizID int64) (int64, error) {
 
 	moduleID := int64(0)
 	for _, module := range resp.Data.Module {
-		if module.Default == cmdb.DftModuleRecycle {
+		if module.Default == int64(cmdb.DftModuleRecycle) {
 			moduleID = module.BkModuleId
 			break
 		}

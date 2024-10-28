@@ -23,9 +23,9 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/cmd/woa-server/thirdparty/erpapi"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/erpapi"
 )
 
 func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {

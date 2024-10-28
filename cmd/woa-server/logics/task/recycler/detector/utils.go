@@ -21,8 +21,9 @@ import (
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 
 	"go.uber.org/ratelimit"
 )
@@ -37,17 +38,17 @@ func init() {
 	cvmLimiter = ratelimit.New(50)
 }
 
-func (d *Detector) isTcDevice(host *cmdb.HostInfo) bool {
-	return strings.HasPrefix(host.BkAssetId, "TC")
+func (d *Detector) isTcDevice(host *cmdb.Host) bool {
+	return strings.HasPrefix(host.BkAssetID, "TC")
 }
 
-func (d *Detector) isDockerVM(host *cmdb.HostInfo) bool {
-	dashIdx := strings.Index(host.BkAssetId, "-")
+func (d *Detector) isDockerVM(host *cmdb.Host) bool {
+	dashIdx := strings.Index(host.BkAssetID, "-")
 	if dashIdx < 0 {
 		return false
 	}
 
-	if !strings.HasPrefix(host.BkAssetId[dashIdx+1:], "VM") {
+	if !strings.HasPrefix(host.BkAssetID[dashIdx+1:], "VM") {
 		return false
 	}
 
@@ -58,13 +59,13 @@ func (d *Detector) isDockerVM(host *cmdb.HostInfo) bool {
 	return true
 }
 
-func (d *Detector) getContainerParentIp(host *cmdb.HostInfo) (string, error) {
-	dashIdx := strings.Index(host.BkAssetId, "-")
+func (d *Detector) getContainerParentIp(host *cmdb.Host) (string, error) {
+	dashIdx := strings.Index(host.BkAssetID, "-")
 	if dashIdx < 0 {
 		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIP)
 	}
 
-	parentAssetId := host.BkAssetId[:dashIdx]
+	parentAssetId := host.BkAssetID[:dashIdx]
 	if len(parentAssetId) == 0 {
 		return "", fmt.Errorf("get docker host assetid failed, ip: %s", host.BkHostInnerIP)
 	}
@@ -86,10 +87,10 @@ func (d *Detector) getContainerParentIp(host *cmdb.HostInfo) (string, error) {
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.HostInfo, error) {
+func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.Host, error) {
 	// getHostBaseInfo get host base info in cc 3.0
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -151,10 +152,10 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.HostInfo, error) {
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.HostInfo, error) {
+func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.Host, error) {
 	// getHostBaseInfo get host base info in cc 3.0
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -226,8 +227,8 @@ func (d *Detector) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostBizRel, error) 
 
 // getModuleInfo get module info in cc 3.0
 func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error) {
-	req := &cmdb.SearchModuleReq{
-		BkBizId: bizId,
+	req := &cmdb.SearchModuleParams{
+		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
 				common.BKDBIN: moduleIds,
@@ -242,18 +243,13 @@ func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.Module
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.SearchModule(nil, nil, req)
+	resp, err := d.cc.SearchModule(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc module info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc module info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return resp.Info, nil
 }
 
 func (d *Detector) structToStr(v interface{}) string {

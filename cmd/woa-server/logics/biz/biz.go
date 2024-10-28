@@ -18,11 +18,11 @@ import (
 	"strconv"
 
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb.
@@ -80,19 +80,20 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, er
 	req := &cmdb.SearchBizBelongingParams{
 		BizIDs: []int64{bkBizID},
 	}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(nil, nil, req)
+
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, req)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	if resp == nil || len(resp.Data) != 1 {
+	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
 		return nil, errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
 	// convert search biz belonging response to biz org relation response.
-	bizBelong := resp.Data[0]
+	bizBelong := (*resp)[0]
 	rst := &ptypes.BizOrgRel{
 		BkBizID:         bizBelong.BizID,
 		BkBizName:       bizBelong.BizName,

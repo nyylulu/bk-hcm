@@ -26,10 +26,10 @@ import (
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/logics/pool/recycler"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb"
+	ccapi "hcm/pkg/thirdparty/esb/cmdb"
 
 	"k8s.io/client-go/util/workqueue"
 )

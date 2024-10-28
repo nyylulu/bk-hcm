@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
@@ -35,6 +34,7 @@ import (
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/converter"
 

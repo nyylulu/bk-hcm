@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -37,6 +36,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/converter"
 )

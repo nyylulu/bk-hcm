@@ -19,13 +19,13 @@ import (
 	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/logics/config"
 	model "hcm/cmd/woa-server/model/cvm"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb"
 	cvt "hcm/pkg/tools/converter"
 )
 

@@ -17,9 +17,9 @@ import (
 	"fmt"
 
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // transferHostAndSetOperator transfer host and set operator in cc 3.0

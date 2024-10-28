@@ -27,10 +27,10 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/sops"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/ngateapi"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/ngateapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/retry"
 )
@@ -120,7 +120,7 @@ func (d *Detector) recycleSopsTask(ip string, retry int) (int, string, error) {
 	return attempt, jobUrl, err
 }
 
-func (d *Detector) recycleNgateIP(step *table.DetectStep, hostInfo *cmdb.HostInfo) ([]string, error) {
+func (d *Detector) recycleNgateIP(step *table.DetectStep, hostInfo *cmdb.Host) ([]string, error) {
 	exeInfos := make([]string, 0)
 
 	if step.User == "" {
@@ -154,7 +154,7 @@ func (d *Detector) recycleNgateIP(step *table.DetectStep, hostInfo *cmdb.HostInf
 		}
 
 		recycleIPReq := &ngateapi.RecycleIPReq{
-			AssertIDList:  []string{hostInfo.BkAssetId},
+			AssertIDList:  []string{hostInfo.BkAssetID},
 			DeviceType:    ngateapi.ServerDeviceType,
 			AddressList:   addressList,
 			IPTypeEnum:    ngateapi.OuterIPType,
@@ -203,16 +203,16 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:recycle outer ip, get host biz id failed, ip: %s, bkHostId: %d, "+
-			"err: %v", ip, hostInfo.BkHostId, err)
+			"err: %v", ip, hostInfo.BkHostID, err)
 		return "", err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("recycleSopsOuterIP:can not find biz id by host id: %d, ip:%s", hostInfo.BkHostId, ip)
-		return "", fmt.Errorf("can not find biz id by host id: %d, ip: %s", hostInfo.BkHostId, ip)
+		logs.Errorf("recycleSopsOuterIP:can not find biz id by host id: %d, ip:%s", hostInfo.BkHostID, ip)
+		return "", fmt.Errorf("can not find biz id by host id: %d, ip: %s", hostInfo.BkHostID, ip)
 	}
 
 	// 1. create job

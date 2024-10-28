@@ -28,13 +28,13 @@ import (
 
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	recovertask "hcm/cmd/woa-server/types/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Interface apply recover interface

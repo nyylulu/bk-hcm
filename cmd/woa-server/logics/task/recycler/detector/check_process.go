@@ -61,22 +61,23 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
-			"err: %v", ip, hostInfo.BkHostId, err)
+			"err: %v", ip, hostInfo.BkHostID, err)
 		return "", err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
-		return "", fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return "", fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
 
 	// 1. create job
 	jobId, jobUrl, err := sops.CreateIdleCheckSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, host %s failed to check process, bkBizID: %d, err: %v", ip, bkBizID, err)
+		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, host %s failed to check process, bkBizID: %d, err: %v",
+			ip, bkBizID, err)
 		return "", fmt.Errorf("failed to check process, err: %v", err)
 	}
 

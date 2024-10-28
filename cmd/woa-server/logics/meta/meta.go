@@ -14,11 +14,11 @@
 package meta
 
 import (
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/maps"
 )
 
@@ -55,15 +55,15 @@ func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging,
 			},
 		}
 
-		resp, err := l.esbClient.Cmdb().SearchBizBelonging(nil, nil, req)
+		resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, req)
 		if err != nil {
 			logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
-		result = append(result, resp.Data...)
+		result = append(result, *resp...)
 
-		if len(resp.Data) < batch {
+		if len(*resp) < batch {
 			break
 		}
 	}

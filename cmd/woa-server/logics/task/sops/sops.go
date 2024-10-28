@@ -20,10 +20,10 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common/utils"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // CreateInitSopsTask 创建标准运维-初始化任务
