@@ -21,7 +21,6 @@ import (
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/model/config"
 	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
@@ -29,6 +28,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/converter"
 )
 

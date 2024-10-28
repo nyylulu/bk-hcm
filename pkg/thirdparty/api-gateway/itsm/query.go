@@ -88,10 +88,7 @@ func (i *itsm) GetTicketResult(kt *kit.Kit, sn string) (result TicketResult, err
 
 // GetTicketStatus get itsm ticket status
 func (i *itsm) GetTicketStatus(kt *kit.Kit, sn string) (*GetTicketStatusResp, error) {
-	resp := &struct {
-		apigateway.BaseResponse `json:",inline"`
-		Data                    *GetTicketStatusResp `json:"data"`
-	}{}
+	resp := new(GetTicketStatusResp)
 
 	param := map[string]string{
 		"sn": sn,
@@ -107,8 +104,8 @@ func (i *itsm) GetTicketStatus(kt *kit.Kit, sn string) (*GetTicketStatusResp, er
 	}
 
 	if !resp.Result || resp.Code != 0 {
-		return nil, fmt.Errorf("get ticket status failed, code: %d, msg: %s", resp.Code, resp.Message)
+		return nil, fmt.Errorf("get ticket status failed, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 	}
 
-	return resp.Data, err
+	return resp, err
 }

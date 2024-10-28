@@ -26,13 +26,13 @@ import (
 
 	logicshost "hcm/cmd/woa-server/logics/dissolve/host"
 	logicsmodule "hcm/cmd/woa-server/logics/dissolve/module"
-	"hcm/cmd/woa-server/thirdparty/es"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/es"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Table provides interface for operations of dissolve table.
@@ -207,7 +207,7 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 	wg.Add(2)
 
 	// 3.根据过滤出来的hostIDs查询cc中的主机
-	var ccHosts []cmdb.HostInfo
+	var ccHosts []cmdb.Host
 	var count int64
 	go func() {
 		defer func() {

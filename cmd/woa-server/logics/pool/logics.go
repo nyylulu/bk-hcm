@@ -16,9 +16,9 @@ package pool
 import (
 	"context"
 
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for operations of resource pool

@@ -24,9 +24,9 @@ import (
 
 	"hcm/cmd/woa-server/logics/dissolve"
 	"hcm/cmd/woa-server/service/capability"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitService initial the service

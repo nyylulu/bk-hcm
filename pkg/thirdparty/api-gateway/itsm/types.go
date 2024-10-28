@@ -19,6 +19,11 @@
 
 package itsm
 
+import (
+	"fmt"
+	"sync"
+)
+
 type Status string
 
 const (
@@ -34,14 +39,86 @@ const (
 
 // GetTicketStatusResp get itsm ticket status response
 type GetTicketStatusResp struct {
-	CurrentStatus Status        `json:"current_status"`
-	TicketUrl     string        `json:"ticket_url"`
-	CurrentSteps  []*TicketStep `json:"current_steps"`
+	RespMeta `json:",inline"`
+	Data     *GetTicketStatusRst `json:"data"`
 }
 
-// TicketStep itsm ticket step
-type TicketStep struct {
-	Name       string `json:"name"`
-	Processors string `json:"processors"`
-	StateID    int64  `json:"state_id"`
+// ServerDiscovery server discovery
+type ServerDiscovery struct {
+	name    string
+	servers []string
+	index   int
+	sync.RWMutex
+}
+
+// GetServers return server instance address
+func (s *ServerDiscovery) GetServers() ([]string, error) {
+	if s == nil {
+		return []string{}, nil
+	}
+	s.RLock()
+	defer s.RUnlock()
+
+	num := len(s.servers)
+	if num == 0 {
+		return []string{}, fmt.Errorf("oops, there is no %s server can be used", s.name)
+	}
+
+	if s.index < num-1 {
+		s.index = s.index + 1
+		return append(s.servers[s.index-1:], s.servers[:s.index-1]...), nil
+	} else {
+		s.index = 0
+		return append(s.servers[num-1:], s.servers[:num-1]...), nil
+	}
+}
+
+// 资源申请单字段
+const (
+	// TicketKeyTitle 标题
+	TicketKeyTitle string = "title"
+	// TicketKeyApplyId 资源申请单号
+	TicketKeyApplyId string = "ZIYUANSHENQINGDANHAO"
+	// TicketKeyApplyLink 资源申请单链接
+	TicketKeyApplyLink string = "ZIYUANSHENQINGDANLIANJIE"
+	// TicketKeyNeedSysAudit 是否需要系统审核
+	TicketKeyNeedSysAudit string = "SHIFOUXUYAOXITONGSHENHE"
+
+	TicketValTitleFormat     string = "资源申请单据审核[order_id:%d]"
+	TicketValNeedSysAuditYes string = "SHI"
+	TicketValNeedSysAuditNo  string = "FOU"
+
+	// ActionTypeTransition 审批类型
+	ActionTypeTransition string = "TRANSITION"
+)
+
+// MapStateKey 资源申请单的状态
+var MapStateKey = map[int64][]string{
+	// stage环境
+	// leader审核
+	1957: []string{
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 管理员审核
+	1955: []string{
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+
+	// prod环境
+	// leader审核
+	1798: []string{
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 管理员审核
+	1797: []string{
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
 }

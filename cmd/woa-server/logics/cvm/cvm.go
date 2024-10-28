@@ -23,13 +23,13 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/utils"
 	model "hcm/cmd/woa-server/model/cvm"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 )
 
@@ -524,17 +524,17 @@ func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, str
 	}
 
 	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt.Ctx, kt.Header(), param)
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, param)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
 		return 0, "", err
 	}
-	if resp == nil || len(resp.Data) != 1 {
+	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
 		return 0, "", errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
-	bizBelong := resp.Data[0]
+	bizBelong := (*resp)[0]
 	return bizBelong.OpProductID, bizBelong.OpProductName, nil
 }
 

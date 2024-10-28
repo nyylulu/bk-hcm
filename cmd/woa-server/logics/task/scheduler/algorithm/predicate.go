@@ -17,9 +17,9 @@ import (
 	"regexp"
 	"strings"
 
-	"hcm/cmd/woa-server/thirdparty/dvmapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/dvmapi"
 )
 
 // VMFitHostVirtualRatio check whether host match virtual ratio condition

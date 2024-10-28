@@ -19,16 +19,16 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/dal/pool/dao"
-	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	types "hcm/cmd/woa-server/types/pool"
-	"hcm/pkg/logs"
-
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	cvm "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
+
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/dal/pool/dao"
+	"hcm/cmd/woa-server/dal/pool/table"
+	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 func (r *Recycler) createCvmReinstallTask(task *table.RecallDetail) error {

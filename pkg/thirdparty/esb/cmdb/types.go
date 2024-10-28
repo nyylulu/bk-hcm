@@ -21,7 +21,11 @@ package cmdb
 
 import (
 	"encoding/json"
+	"strings"
+	"time"
 
+	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/thirdparty/esb/types"
 )
@@ -153,12 +157,6 @@ type BasePage struct {
 	EnableCount bool   `json:"enable_count,omitempty"`
 }
 
-// SearchBizResp is cmdb search business response.
-type SearchBizResp struct {
-	types.BaseResponse
-	SearchBizResult `json:"data"`
-}
-
 // SearchBizResult is cmdb search business response.
 type SearchBizResult struct {
 	Count int64 `json:"count"`
@@ -251,12 +249,40 @@ type esbListBizHostParams struct {
 
 // ListBizHostParams is esb list cmdb host in biz parameter.
 type ListBizHostParams struct {
-	BizID              int64        `json:"bk_biz_id"`
-	BkSetIDs           []int64      `json:"bk_set_ids"`
-	BkModuleIDs        []int64      `json:"bk_module_ids"`
+	BizID              int64           `json:"bk_biz_id"`
+	BkSetIDs           []int64         `json:"bk_set_ids"`
+	BkModuleIDs        []int64         `json:"bk_module_ids"`
+	ModuleCond         []ConditionItem `json:"module_cond"`
+	Fields             []string        `json:"fields"`
+	Page               BasePage        `json:"page"`
+	HostPropertyFilter *QueryFilter    `json:"host_property_filter,omitempty"`
+}
+
+// ListHostReq list host request
+type ListHostReq struct {
+	HostPropertyFilter *QueryFilter `json:"host_property_filter"`
 	Fields             []string     `json:"fields"`
 	Page               BasePage     `json:"page"`
-	HostPropertyFilter *QueryFilter `json:"host_property_filter,omitempty"`
+	EnableCount        bool         `json:"enable_count,omitempty" mapstructure:"enable_count,omitempty"`
+}
+
+// ListHostResp list host response
+type ListHostResp struct {
+	RespMeta `json:",inline"`
+	Data     ListHostResult `json:"data"`
+}
+
+// RespMeta cc response meta info
+type RespMeta struct {
+	Result bool   `json:"result" mapstructure:"result"`
+	Code   int    `json:"code" mapstructure:"code"`
+	ErrMsg string `json:"message" mapstructure:"message"`
+}
+
+// ListHostResult list host result
+type ListHostResult struct {
+	Count int64   `json:"count"`
+	Info  []*Host `json:"info"`
 }
 
 // ListBizHostResp is cmdb list cmdb host in biz response.
@@ -297,7 +323,47 @@ type Host struct {
 	BkCloudZone     string `json:"bk_cloud_zone"`
 	BkCloudVpcID    string `json:"bk_cloud_vpc_id"`
 	BkCloudSubnetID string `json:"bk_cloud_subnet_id"`
+	// 外网运营商
+	BkIpOerName string `json:"bk_ip_oper_name"`
+	// 机型
+	SvrDeviceClass string `json:"svr_device_class"`
+	// 操作系统类型
+	BkOsType OsType `json:"bk_os_type"`
+	// 操作系统版本
+	BkOsVersion string `json:"bk_os_version"`
+	// IDC区域
+	BkIdcArea string `json:"bk_idc_area"`
+	// 地域
+	BkZoneName string `json:"bk_zone_name"`
+	// 可用区(子Zone)
+	SubZone string `json:"sub_zone"`
+	// 子ZoneID
+	SubZoneId  string `json:"sub_zone_id"`
+	ModuleName string `json:"module_name"`
+	// 机架号
+	RackId      string `json:"rack_id"`
+	IdcUnitName string `json:"idc_unit_name"`
+	// 逻辑区域
+	LogicDomain string `json:"logic_domain"`
+	RaidName    string `json:"raid_name"`
+	// 机器上架时间，格式如"2018-05-07T00:00:00+08:00"
+	SvrInputTime string `json:"svr_input_time"`
+	// 状态
+	SvrStatus string `json:"srv_status"`
+	// 磁盘容量
+	BkDisk float64 `json:"bk_disk"`
+	// CPU逻辑核心数
+	BkCpu int64 `json:"bk_cpu"`
+	// 实例计费模式
+	InstanceChargeType string `json:"instance_charge_type"`
+	// 套餐计费起始时间
+	BillingStartTime time.Time `json:"billing_start_time"`
+	// 套餐计费过期时间
+	BillingExpireTime time.Time `json:"billing_expire_time"`
 }
+
+// OsType 操作系统类型
+type OsType string
 
 // SvrSourceTypeID 服务器来源类型
 type SvrSourceTypeID string
@@ -409,6 +475,7 @@ type ModuleInfoResult struct {
 type ModuleInfo struct {
 	BkSetID      int64  `json:"bk_set_id"`
 	BkModuleName string `json:"bk_module_name"`
+	BkModuleId   int64  `json:"bk_module_id"`
 	Default      int64  `json:"default"`
 }
 
@@ -557,24 +624,6 @@ type SearchBizBelongingResult struct {
 	Data []SearchBizBelonging `json:"data"`
 }
 
-// SearchBizBelonging is search cmdb business belonging element of result.
-type SearchBizBelonging struct {
-	BizID            int64  `json:"bk_biz_id"`
-	BizName          string `json:"bk_biz_name"`
-	BkProductID      int64  `json:"bsi_product_id"`
-	BkProductName    string `json:"bsi_product_name"`
-	PlanProductID    int64  `json:"plan_product_id"`
-	PlanProductName  string `json:"plan_product_name"`
-	BusinessDeptID   int64  `json:"business_dept_id"`
-	BusinessDeptName string `json:"business_dept_name"`
-	Bs1Name          string `json:"bs1_name"`
-	Bs1NameID        int64  `json:"bs1_name_id"`
-	Bs2Name          string `json:"bs2_name"`
-	Bs2NameID        int64  `json:"bs2_name_id"`
-	VirtualDeptID    int64  `json:"virtual_dept_id"`
-	VirtualDeptName  string `json:"virtual_dept_name"`
-}
-
 // EventType is cmdb watch event type.
 type EventType string
 
@@ -641,4 +690,283 @@ type WatchEventDetail struct {
 type HostModuleRelationParams struct {
 	BizID  int64   `json:"bk_biz_id,omitempty"`
 	HostID []int64 `json:"bk_host_id"`
+}
+
+// 分割线，下面是woa内部cmdb esb
+
+// AddHostResp add host to cc response
+type AddHostResp struct {
+	RespMeta `json:",inline"`
+}
+
+// TransferHostResp transfer host to another business response
+type TransferHostResp struct {
+	RespMeta `json:",inline"`
+}
+
+// UpdateHostsResp update hosts response
+type UpdateHostsResp struct {
+	RespMeta `json:",inline"`
+}
+
+// HostModuleResp host module relation response
+type HostModuleResp struct {
+	RespMeta `json:",inline"`
+	Data     []ModuleHost `json:"data"`
+}
+
+// ModuleHost host module relation result
+type ModuleHost struct {
+	AppID    int64  `json:"bk_biz_id,omitempty" bson:"bk_biz_id"`
+	HostID   int64  `json:"bk_host_id,omitempty" bson:"bk_host_id"`
+	ModuleID int64  `json:"bk_module_id,omitempty" bson:"bk_module_id"`
+	SetID    int64  `json:"bk_set_id,omitempty" bson:"bk_set_id"`
+	OwnerID  string `json:"bk_supplier_account,omitempty" bson:"bk_supplier_account"`
+}
+
+// DeviceTopoInfo topo info
+type DeviceTopoInfo struct {
+	InnerIP      string `json:"innerIP"`
+	AssetID      string `json:"assetID"`
+	DeviceClass  string `json:"deviceClass"`
+	Raid         string `json:"raid"`
+	OSName       string `json:"osName"`
+	OSVersion    string `json:"osVersion"`
+	IdcArea      string `json:"idcArea"`
+	SZone        string `json:"sZone"`
+	ModuleName   string `json:"moduleName"`
+	Equipment    string `json:"equipment"`
+	IdcLogicArea string `json:"idcLogicArea"`
+}
+
+const (
+	// LinuxOsType 操作系统类型-Linux
+	LinuxOsType OsType = "1"
+	// WindowsOsType 操作系统类型-Windows
+	WindowsOsType OsType = "2"
+)
+
+// GetUniqOuterIp get CC host unique outer ip
+func (h *Host) GetUniqOuterIp() string {
+	// when CC host has multiple outer ips, bk_host_outerip is like "10.0.0.1,10.0.0.2"
+	// return the first ip as host unique ip
+	multiIps := strings.Split(h.BkHostOuterIP, ",")
+	if len(multiIps) == 0 {
+		return ""
+	}
+
+	return multiIps[0]
+}
+
+// IsPmAndOuterIPDevice 检查是否物理机，是否有外网IP
+func (h *Host) IsPmAndOuterIPDevice() bool {
+	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
+	if h.SvrSourceTypeID != BkSvrSourceTypeIDSelf && h.SvrSourceTypeID != BkSvrSourceTypeIDDeposit &&
+		h.SvrSourceTypeID != BkSvrSourceTypeIDLease {
+		return false
+	}
+
+	if h.BkHostOuterIP == "" && h.BkHostOuterIPv6 == "" {
+		return false
+	}
+
+	return true
+}
+
+// HostBizRelResp find host business relation response
+type HostBizRelResp struct {
+	RespMeta `json:",inline"`
+	Data     []*HostBizRel `json:"data"`
+}
+
+// HostBizRel host business relation
+type HostBizRel struct {
+	BkHostId     int64  `json:"bk_host_id"`
+	BkBizId      int64  `json:"bk_biz_id"`
+	BkSetId      int64  `json:"bk_set_id"`
+	BkModuleId   int64  `json:"bk_module_id"`
+	BkSupplierId string `json:"bk_supplier_account"`
+}
+
+// SearchBizResp search business response
+type SearchBizResp struct {
+	RespMeta `json:",inline"`
+	Data     *SearchBizRst `json:"data"`
+}
+
+// SearchBizRst search business result
+type SearchBizRst struct {
+	Count int        `json:"count"`
+	Info  []*BizInfo `json:"info"`
+}
+
+// BizInfo business info
+type BizInfo struct {
+	BkBizId         int64  `json:"bk_biz_id"`
+	BkBizName       string `json:"bk_biz_name"`
+	BkOperGrpNameID int64  `json:"bk_oper_grp_name_id"`
+}
+
+// SearchModuleResp search module response
+type SearchModuleResp struct {
+	RespMeta `json:",inline"`
+	Data     *SearchModuleRst `json:"data"`
+}
+
+// SearchModuleRst search module result
+type SearchModuleRst struct {
+	Count int           `json:"count"`
+	Info  []*ModuleInfo `json:"info"`
+}
+
+// BizInternalModuleResp search business's internal module response
+type BizInternalModuleResp struct {
+	RespMeta `json:",inline"`
+	Data     *BizInternalModuleRespRst `json:"data"`
+}
+
+// BizInternalModuleRespRst search business's internal module result
+type BizInternalModuleRespRst struct {
+	BkSetID   int64         `json:"bk_set_id"`
+	BkSetName string        `json:"bk_set_name"`
+	Module    []*ModuleInfo `json:"module"`
+}
+
+// CrTransitResp transfer host to CR transit module response
+type CrTransitResp struct {
+	RespMeta `json:",inline"`
+	Data     *CrTransitRst `json:"data"`
+}
+
+// CrTransitRst transfer host to CR transit module result
+type CrTransitRst struct {
+	AssetIds []string `json:"asset_ids"`
+}
+
+// SearchBizBelonging is search cmdb business belonging element of result.
+type SearchBizBelonging struct {
+	BizID            int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	OpProductID      int64  `json:"bsi_product_id"`
+	OpProductName    string `json:"bsi_product_name"`
+	PlanProductID    int64  `json:"plan_product_id"`
+	PlanProductName  string `json:"plan_product_name"`
+	BusinessDeptID   int64  `json:"business_dept_id"`
+	BusinessDeptName string `json:"business_dept_name"`
+	Bs1Name          string `json:"bs1_name"`
+	Bs1NameID        int64  `json:"bs1_name_id"`
+	Bs2Name          string `json:"bs2_name"`
+	Bs2NameID        int64  `json:"bs2_name_id"`
+	VirtualDeptID    int64  `json:"virtual_dept_id"`
+	VirtualDeptName  string `json:"virtual_dept_name"`
+}
+
+// HostBizRelReq find host business relation request
+type HostBizRelReq struct {
+	BkHostId []int64 `json:"bk_host_id"`
+}
+
+// ccapi request
+
+// AddHostReq add host to cc request
+type AddHostReq struct {
+	// to be added hosts' asset id list, max length is 10
+	AssetIDs []string `json:"asset_ids"`
+	InnerIps []string `json:"inner_ips"`
+}
+
+// TransferHostReq transfer host to another business request
+type TransferHostReq struct {
+	From TransferHostSrcInfo `json:"bk_from"`
+	To   TransferHostDstInfo `json:"bk_to"`
+}
+
+// TransferHostSrcInfo transfer host source info
+type TransferHostSrcInfo struct {
+	FromBizID int64   `json:"bk_biz_id"`
+	HostIDs   []int64 `json:"bk_host_ids"`
+}
+
+// TransferHostDstInfo transfer host destination info
+type TransferHostDstInfo struct {
+	ToBizID    int64 `json:"bk_biz_id"`
+	ToModuleID int64 `json:"bk_module_id,omitempty"`
+}
+
+// UpdateHostsReq update hosts request
+type UpdateHostsReq struct {
+	Update []*UpdateHostProperty `json:"update"`
+}
+
+// UpdateHostProperty update hosts property
+type UpdateHostProperty struct {
+	HostID     int64                  `json:"bk_host_id"`
+	Properties map[string]interface{} `json:"properties"`
+}
+
+// HostModuleRelationParameter get host and module relation parameter
+type HostModuleRelationParameter struct {
+	HostID []int64 `json:"bk_host_id"`
+}
+
+// ListBizHostReq list certain business host request
+type ListBizHostReq struct {
+	BkBizId            int64           `json:"bk_biz_id"`
+	BkModuleIds        []int64         `json:"bk_module_ids"`
+	ModuleCond         []ConditionItem `json:"module_cond"`
+	HostPropertyFilter *QueryFilter    `json:"host_property_filter,omitempty"`
+	Fields             []string        `json:"fields"`
+	Page               BasePage        `json:"page"`
+}
+
+// ConditionItem cc query condition item
+type ConditionItem struct {
+	Field    string      `json:"field,omitempty"`
+	Operator string      `json:"operator,omitempty"`
+	Value    interface{} `json:"value,omitempty"`
+}
+
+// SearchBizReq search business request
+type SearchBizReq struct {
+	Filter *querybuilder.QueryFilter `json:"biz_property_filter,omitempty"`
+	Fields []string                  `json:"fields"`
+	Page   BasePage                  `json:"page"`
+}
+
+// SearchModuleReq search module request
+type SearchModuleReq struct {
+	BkBizId   int64         `json:"bk_biz_id"`
+	Condition mapstr.MapStr `json:"condition"`
+	Fields    []string      `json:"fields"`
+	Page      BasePage      `json:"page"`
+}
+
+// GetBizInternalModuleReq get business's internal module request
+type GetBizInternalModuleReq struct {
+	BkBizID int64 `json:"bk_biz_id"`
+}
+
+// CrTransitReq transfer host to CR transit module request
+type CrTransitReq struct {
+	From CrTransitSrcInfo `json:"bk_from"`
+	To   CrTransitDstInfo `json:"bk_to"`
+}
+
+// CrTransitSrcInfo transfer host source info
+type CrTransitSrcInfo struct {
+	FromBizID    int64 `json:"bk_biz_id"`
+	FromModuleID int64 `json:"bk_module_id"`
+	// max size is 10
+	AssetIDs []string `json:"asset_ids"`
+}
+
+// CrTransitDstInfo transfer host destination info
+type CrTransitDstInfo struct {
+	ToBizID int64 `json:"bk_biz_id"`
+}
+
+// CrTransitIdleReq transfer host from CR transit module back to idle module request
+type CrTransitIdleReq struct {
+	BkBizId  int64    `json:"bk_biz_id"`
+	AssetIDs []string `json:"asset_ids"`
 }

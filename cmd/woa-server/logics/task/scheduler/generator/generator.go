@@ -32,16 +32,16 @@ import (
 	poolLogics "hcm/cmd/woa-server/logics/pool"
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/dvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/dvmapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -1021,9 +1021,9 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 		logs.Errorf("failed to get cc host info, order id: %s, err: %v, rid: %s", order.SubOrderId, err)
 		return nil, err
 	}
-	mapAssetIDToHost := make(map[string]*cmdb.HostInfo)
+	mapAssetIDToHost := make(map[string]*cmdb.Host)
 	for _, host := range ccHosts {
-		mapAssetIDToHost[host.BkAssetId] = host
+		mapAssetIDToHost[host.BkAssetID] = host
 	}
 
 	logs.Infof("successfully sync device info to cc, ips: %+v, assets: %+v, rid: %s", ips, assetIds)
@@ -1032,7 +1032,7 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 }
 
 func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.ApplyOrder, generateId uint64,
-	mapAssetIDToHost map[string]*cmdb.HostInfo) []*types.DeviceInfo {
+	mapAssetIDToHost map[string]*cmdb.Host) []*types.DeviceInfo {
 
 	// save device info to db
 	now := time.Now()
@@ -1075,7 +1075,7 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 		if host, ok := mapAssetIDToHost[item.AssetId]; !ok {
 			logs.Warnf("failed to get %s detail info in cc", item.AssetId)
 		} else {
-			device.AssetId = host.BkAssetId
+			device.AssetId = host.BkAssetID
 			// update device type from cc
 			device.DeviceType = host.SvrDeviceClass
 			device.ZoneName = host.SubZone
@@ -1138,10 +1138,10 @@ func (g *Generator) isDuplicateHost(suborderId, ip string) (bool, error) {
 	return false, nil
 }
 
-func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.HostInfo, error) {
-	req := &cmdb.ListBizHostReq{
-		BkBizId: 931,
-		BkModuleIds: []int64{
+func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
+	req := &cmdb.ListBizHostParams{
+		BizID: 931,
+		BkModuleIDs: []int64{
 			// RA池
 			239148,
 			// SA云化池
@@ -1149,7 +1149,7 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.HostInfo, error) {
 			// SCR_加工池
 			532040,
 		},
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -1192,18 +1192,17 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.HostInfo, error) {
 		},
 	}
 
-	resp, err := g.cc.ListBizHost(nil, nil, req)
+	resp, err := g.cc.ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
+	hosts := make([]*cmdb.Host, 0)
+	for _, host := range resp.Info {
+		hosts = append(hosts, &host)
 	}
 
-	return resp.Data.Info, nil
+	return hosts, nil
 }
 
 // MatchCVM manual match cvm devices

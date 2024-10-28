@@ -19,9 +19,9 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/logs"
+	ccapi "hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (r *Recycler) dealTransitTask(task *table.RecallDetail) error {

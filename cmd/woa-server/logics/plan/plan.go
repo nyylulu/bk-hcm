@@ -27,7 +27,6 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common/utils/wait"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
@@ -42,6 +41,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/times"
 )
 
@@ -615,17 +615,17 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		ItsmUrl:  ticket.ItsmUrl,
 	}
 
-	switch resp.CurrentStatus {
-	case itsm.StatusFinished, itsm.StatusTerminated:
+	switch resp.Data.CurrentStatus {
+	case string(itsm.StatusFinished), string(itsm.StatusTerminated):
 		// rejected
 		update.Status = enumor.RPTicketStatusRejected
-	case itsm.StatusRunning:
+	case string(itsm.StatusRunning):
 		// check if CRP audit state
-		if len(resp.CurrentSteps) == 0 {
+		if len(resp.Data.CurrentSteps) == 0 {
 			return c.checkTicketTimeout(kt, ticket)
 		}
 
-		if resp.CurrentSteps[0].StateID != c.crpAuditNode.ID {
+		if resp.Data.CurrentSteps[0].StateId != c.crpAuditNode.ID {
 			return c.checkTicketTimeout(kt, ticket)
 		}
 
@@ -666,11 +666,11 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	// check if CRP audit state
-	if len(itsmStatus.CurrentSteps) == 0 {
+	if len(itsmStatus.Data.CurrentSteps) == 0 {
 		return c.checkTicketTimeout(kt, ticket)
 	}
 
-	if itsmStatus.CurrentSteps[0].StateID != c.crpAuditNode.ID {
+	if itsmStatus.Data.CurrentSteps[0].StateId != c.crpAuditNode.ID {
 		return c.checkTicketTimeout(kt, ticket)
 	}
 
@@ -748,7 +748,7 @@ func (c *Controller) CreateAuditFlow(kt *kit.Kit, ticketID string) error {
 		TicketID: ticketID,
 		Status:   enumor.RPTicketStatusAuditing,
 		ItsmSn:   sn,
-		ItsmUrl:  itsmStatus.TicketUrl,
+		ItsmUrl:  itsmStatus.Data.TicketUrl,
 	}
 
 	if err = c.updateTicketStatus(kt, update); err != nil {

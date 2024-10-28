@@ -18,8 +18,8 @@ import (
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // syncHostByAsset sync host info to cc 3.0 by asset id
@@ -95,19 +95,19 @@ func (g *Generator) syncHostByIp(ips []string) error {
 // listDeviceTopo list device topology info
 func (g *Generator) listDeviceTopo(ips []string) ([]*cmdb.DeviceTopoInfo, error) {
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
+		HostPropertyFilter: &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
 					querybuilder.AtomRule{
 						Field:    "bk_host_innerip",
 						Operator: querybuilder.OperatorIn,
 						Value:    ips,
 					},
 					// support bk_cloud_id 0 only
-					querybuilder.AtomRule{
+					cmdb.AtomRule{
 						Field:    "bk_cloud_id",
-						Operator: querybuilder.OperatorEqual,
+						Operator: cmdb.OperatorEqual,
 						Value:    0,
 					},
 				},
@@ -154,10 +154,10 @@ func (g *Generator) listDeviceTopo(ips []string) ([]*cmdb.DeviceTopoInfo, error)
 	for _, host := range resp.Data.Info {
 		topo := &cmdb.DeviceTopoInfo{
 			InnerIP:      host.GetUniqIp(),
-			AssetID:      host.BkAssetId,
+			AssetID:      host.BkAssetID,
 			DeviceClass:  host.SvrDeviceClass,
 			Raid:         host.RaidName,
-			OSName:       host.BkOsName,
+			OSName:       host.BkOSName,
 			OSVersion:    host.BkOsVersion,
 			IdcArea:      host.BkIdcArea,
 			SZone:        host.SubZone,
