@@ -3,14 +3,14 @@ import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { IView } from './typings';
 
-import appliedView from './applied.vue';
+import orderView from './order.vue';
 
 const router = useRouter();
 const route = useRoute();
 
 const viewActive = computed<IView>({
   get() {
-    return (route.params.view as IView) || IView.APPLIED;
+    return (route.params.view as IView) || IView.ORDER;
   },
   set(value) {
     router.push({ params: { view: value } });
@@ -18,7 +18,7 @@ const viewActive = computed<IView>({
 });
 
 const viewComps: Record<string, any> = {
-  applied: appliedView,
+  order: orderView,
 };
 </script>
 

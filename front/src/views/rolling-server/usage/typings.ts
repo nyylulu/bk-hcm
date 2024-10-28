@@ -1,8 +1,8 @@
-import { IRollingServerAppliedRecordsItem } from '@/store';
+import { RollingServerRecordItem } from '@/store';
 import { PaginationType } from '@/typings';
 
 export enum IView {
-  APPLIED = 'applied',
+  ORDER = 'order',
   BIZ = 'biz',
 }
 
@@ -20,6 +20,6 @@ export interface ISearchProps {
 
 export interface IDataListProps {
   view: IView;
-  list: IRollingServerAppliedRecordsItem[];
+  list: RollingServerRecordItem[];
   pagination: PaginationType;
 }

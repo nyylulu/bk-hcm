@@ -1,12 +1,13 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue';
+import type { ModelProperty } from '@/model/typings';
+import type { ISearchCondition, ISearchProps } from '../../typings';
+import usageAppliedView from '@/model/rolling-server/usage-applied.view';
+import usageReturnedView from '@/model/rolling-server/usage-returned.view';
+
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
-
-import { ModelProperty } from '@/model/typings';
-import type { ISearchCondition, ISearchProps } from '../../typings';
-import conditionFactory from './condition-factory';
 
 const props = withDefaults(defineProps<ISearchProps>(), {});
 const emit = defineEmits<{
@@ -14,16 +15,16 @@ const emit = defineEmits<{
   (e: 'reset'): void;
 }>();
 
-const { getConditionField } = conditionFactory();
-
 const formValues = ref<ISearchCondition>({});
 let conditionInitValues: ISearchCondition;
 
-const fields = getConditionField(props.view);
+const usageView = [...usageAppliedView, ...usageReturnedView];
+const fieldIds = ['created_at', 'bk_biz_id', 'order_id'];
+const fields = fieldIds.map((id) => usageView.find((view) => view.id === id));
 
 const getSearchCompProps = (field: ModelProperty) => {
   if (field.type === 'datetime') {
-    return { type: 'date' };
+    return { type: 'daterange', format: 'yyyy-MM-dd' };
   }
   if (field.type === 'bizs') {
     return { authed: true, multiple: true, isShowAll: true };
