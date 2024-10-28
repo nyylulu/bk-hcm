@@ -62,7 +62,7 @@ func (r *RollingServerDateTimeItem) Validate() (time.Time, error) {
 		return time.Time{}, err
 	}
 
-	return times.ParseDay(fmt.Sprintf("%d-%d-%02d", r.Year, r.Month, r.Day))
+	return times.ParseDay(fmt.Sprintf("%d-%02d-%02d", r.Year, r.Month, r.Day))
 }
 
 // CpuCoreSummaryReq is cpu core summary request.

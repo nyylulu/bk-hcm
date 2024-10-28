@@ -22,30 +22,44 @@ package rollingserver
 
 import (
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
-	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/hooks/handler"
 )
 
 // GetCpuCoreSummary get cpu core summary.
 func (s *service) GetCpuCoreSummary(cts *rest.Contexts) (any, error) {
-	return s.getCpuCoreSummary(cts, handler.ListResourceAuthRes, meta.RollingServerManage, meta.Find)
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
+	if err != nil {
+		logs.Errorf("get cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getCpuCoreSummary(cts)
 }
 
 // GetBizCpuCoreSummary get biz cpu core summary.
 func (s *service) GetBizCpuCoreSummary(cts *rest.Contexts) (any, error) {
-	return s.getCpuCoreSummary(cts, handler.ListBizAuthRes, meta.Biz, meta.Find)
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Find}, BizID: bizID})
+	if err != nil {
+		logs.Errorf("get biz cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getCpuCoreSummary(cts)
 }
 
 // listCpuCoreSummary list cpu core summary.
 // docs: docs/api-docs/web-server/docs/scr/rolling-server/list_rolling_server_cpu_core_summary.md
-func (s *service) getCpuCoreSummary(cts *rest.Contexts, authHandler handler.ListAuthResHandler,
-	resType meta.ResourceType, action meta.Action) (any, error) {
-
+func (s *service) getCpuCoreSummary(cts *rest.Contexts) (any, error) {
 	req := new(rstypes.CpuCoreSummaryReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to list rolling server cpu core summary, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -55,18 +69,6 @@ func (s *service) getCpuCoreSummary(cts *rest.Contexts, authHandler handler.List
 	if err := req.Validate(); err != nil {
 		logs.Errorf("failed to validate rolling server cpu core summary parameter, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	// list authorized instances
-	_, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{Authorizer: s.authorizer,
-		ResType: resType, Action: action})
-	if err != nil {
-		logs.Errorf("list rolling server cpu core summary failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
-	if noPermFlag {
-		logs.Errorf("list rolling server cpu core summary no perm, req: %v, rid: %s", cvt.PtrToVal(req), cts.Kit.Rid)
-		return &rsproto.RollingCpuCoreSummaryItem{}, nil
 	}
 
 	return s.rollingServerLogic.GetCpuCoreSummary(cts.Kit, req)

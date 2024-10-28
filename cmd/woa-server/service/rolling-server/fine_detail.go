@@ -26,19 +26,11 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/hooks/handler"
+	"hcm/pkg/runtime/filter"
 )
 
 // ListFineDetails list fine details.
 func (s *service) ListFineDetails(cts *rest.Contexts) (any, error) {
-	return s.listAppliedRecords(cts, handler.ListResourceAuthRes, meta.RollingServerManage, meta.Find)
-}
-
-// listFineDetails lists fine details.
-func (s *service) listFineDetails(cts *rest.Contexts, authHandler handler.ListAuthResHandler,
-	resType meta.ResourceType, action meta.Action) (any, error) {
-
 	req := new(rsproto.RollingFineDetailListReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to list rolling server fine details, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -50,21 +42,21 @@ func (s *service) listFineDetails(cts *rest.Contexts, authHandler handler.ListAu
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// list authorized instances
-	expr, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{Authorizer: s.authorizer,
-		ResType: resType, Action: action, Filter: req.Filter})
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
 	if err != nil {
-		logs.Errorf("list rolling server fine details failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("list fine details auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	if noPermFlag {
-		logs.Errorf("list rolling server fine details no perm, req: %v, rid: %s", cvt.PtrToVal(req), cts.Kit.Rid)
-		return &core.ListResult{Count: 0, Details: make([]interface{}, 0)}, nil
-	}
 
+	return s.listFineDetails(cts, req.Filter, req.Page)
+}
+
+// listFineDetails lists fine details.
+func (s *service) listFineDetails(cts *rest.Contexts, filter *filter.Expression, page *core.BasePage) (any, error) {
 	listReq := &rsproto.RollingFineDetailListReq{
-		Filter: expr,
-		Page:   req.Page,
+		Filter: filter,
+		Page:   page,
 	}
 	return s.client.DataService().Global.RollingServer.ListFineDetail(cts.Kit, listReq)
 }

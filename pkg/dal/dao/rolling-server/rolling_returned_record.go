@@ -218,7 +218,7 @@ func (d RollingReturnedRecordDao) GetReturnedSumDeliveredCore(kt *kit.Kit, opt *
 	}
 
 	result := make([]*rsproto.RollingCpuCoreSummaryItem, 0)
-	sql := fmt.Sprintf(`SELECT SUM(match_applied_core) AS sum_returned_applied_core FROM %s %s`,
+	sql := fmt.Sprintf(`SELECT IFNULL(SUM(match_applied_core),0) AS sum_returned_applied_core FROM %s %s`,
 		table.RollingReturnedRecordTable, whereExpr)
 	if err = d.Orm.Do().Select(kt.Ctx, &result, sql, whereValue); err != nil {
 		logs.ErrorJson("get rolling returned sum match applied core failed, err: %v, sql: %s, whereValue: %+v, rid: %s",
