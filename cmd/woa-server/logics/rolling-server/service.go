@@ -21,12 +21,12 @@
 package rollingserver
 
 import (
-	"hcm/cmd/woa-server/thirdparty/esb"
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/kit"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for rolling server.

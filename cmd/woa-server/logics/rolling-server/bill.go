@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
@@ -37,6 +36,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/slice"
 
 	"github.com/shopspring/decimal"
@@ -443,16 +443,16 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 	bizReq := &cmdb.SearchBizBelongingParams{
 		BizIDs: []int64{req.BkBizID},
 	}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt.Ctx, kt.Header(), bizReq)
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, bizReq)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-	if resp == nil || len(resp.Data) != 1 {
+	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
 		return errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
-	bizBelong := resp.Data[0]
+	bizBelong := (*resp)[0]
 
 	bill := rsproto.RollingBillCreateReq{
 		BkBizID:             req.BkBizID,
