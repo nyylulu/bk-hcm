@@ -15,11 +15,11 @@ package recommender
 
 import (
 	"hcm/cmd/woa-server/logics/config"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // ZoneHandler apply order zone modification recommend handler

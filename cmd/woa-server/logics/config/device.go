@@ -21,11 +21,11 @@ import (
 	"hcm/cmd/woa-server/common/querybuilder"
 	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/slice"
 )
 

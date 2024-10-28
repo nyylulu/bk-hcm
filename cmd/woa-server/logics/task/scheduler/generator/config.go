@@ -20,9 +20,9 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // getAvailableZoneInfo get available cvm zone info

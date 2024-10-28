@@ -27,11 +27,11 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // recycleRecoverer 回收恢复服务

@@ -28,10 +28,10 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	model "hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // recoverGenerateStep 恢复generateStep为StepStatusInit｜StepStatusHandling的订单

@@ -26,7 +26,6 @@ import (
 
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/es"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
@@ -34,6 +33,8 @@ import (
 	hostdefine "hcm/pkg/dal/table/dissolve/host"
 	moduledefine "hcm/pkg/dal/table/dissolve/module"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/es"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // -------------------------- Create --------------------------
@@ -252,7 +253,7 @@ func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string,
 }
 
 // GetCCHostCond get cc host condition
-func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *querybuilder.QueryFilter {
+func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *cmdb.QueryFilter {
 	andRules := make([]querybuilder.Rule, 0)
 
 	cloudIDRule := querybuilder.AtomRule{
@@ -311,7 +312,7 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *
 		andRules = append(andRules, operatorRule)
 	}
 
-	return &querybuilder.QueryFilter{
+	return &cmdb.QueryFilter{
 		Rule: querybuilder.CombinedRule{
 			Condition: querybuilder.ConditionAnd,
 			Rules:     andRules,

@@ -14,7 +14,7 @@
 package task
 
 import (
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // CVM create cvm request param

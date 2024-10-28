@@ -21,11 +21,11 @@ import (
 	"hcm/cmd/woa-server/dal/config/dao"
 	"hcm/cmd/woa-server/dal/config/table"
 	"hcm/cmd/woa-server/model/config"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // LeftIPIf provides management interface for operations of left ip config

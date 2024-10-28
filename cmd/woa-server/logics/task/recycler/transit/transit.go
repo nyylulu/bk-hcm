@@ -26,13 +26,14 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/tmpapi"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/tmpapi"
 	cvt "hcm/pkg/tools/converter"
 )
 
@@ -61,13 +62,13 @@ func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHos
 	var hosts = &cmdb.ListBizHostResult{}
 	startIndex := 0
 	for {
-		params := &cmdb.ListBizHostReq{
-			BkBizId: bkBizID,
+		params := &cmdb.ListBizHostParams{
+			BizID: bkBizID,
 			Fields: []string{
 				"bk_host_id",
 				"bk_asset_id",
 			},
-			HostPropertyFilter: &querybuilder.QueryFilter{
+			HostPropertyFilter: &cmdb.QueryFilter{
 				Rule: querybuilder.CombinedRule{
 					Condition: querybuilder.ConditionAnd,
 					Rules: []querybuilder.Rule{
@@ -80,23 +81,23 @@ func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHos
 				},
 			},
 			Page: cmdb.BasePage{
-				Start: startIndex,
+				Start: int64(startIndex),
 				Limit: common.BKMaxInstanceLimit,
 			},
 		}
-		resp, err := t.cc.ListBizHost(nil, nil, params)
+		resp, err := t.cc.ListBizHost(kit.New(), params)
 		if err != nil {
 			logs.Errorf("call cmdb to list biz host failed, bkBizID: %d, err: %v, params: %v", bkBizID, err, params)
 			return nil, err
 		}
-		hosts.Info = append(hosts.Info, resp.Data.Info...)
-		if len(resp.Data.Info) < common.BKMaxInstanceLimit {
+		hosts.Info = append(hosts.Info, resp.Info...)
+		if len(resp.Info) < common.BKMaxInstanceLimit {
 			break
 		}
 		startIndex += common.BKMaxInstanceLimit
 	}
 
-	hosts.Count = len(hosts.Info)
+	hosts.Count = int64(len(hosts.Info))
 	return hosts, nil
 }
 
@@ -384,7 +385,7 @@ func (t *Transit) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, 
 
 	remainAssetIds := make([]string, 0)
 	for _, host := range listResult.Info {
-		remainAssetIds = append(remainAssetIds, host.BkAssetId)
+		remainAssetIds = append(remainAssetIds, host.BkAssetID)
 	}
 
 	// once 10 hosts at most

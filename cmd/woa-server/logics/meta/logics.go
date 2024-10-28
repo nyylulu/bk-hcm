@@ -14,10 +14,10 @@
 package meta
 
 import (
-	"hcm/cmd/woa-server/thirdparty/esb"
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association

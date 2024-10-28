@@ -13,10 +13,10 @@
 package biz
 
 import (
-	"hcm/cmd/woa-server/thirdparty/esb"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association

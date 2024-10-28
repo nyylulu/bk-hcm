@@ -14,8 +14,8 @@
 package recommender
 
 import (
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // Handler apply order modification recommend handler

@@ -17,10 +17,10 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	"hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // VerifyResPlanDemandReq is verify resource plan demand request.

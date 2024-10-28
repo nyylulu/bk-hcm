@@ -21,9 +21,10 @@ import (
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
@@ -41,7 +42,7 @@ func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
 	}
 
 	// update task status
-	err = r.updateTaskPreCheckStatus(task, host.BkHostInnerIP, host.BkAssetId, "", table.RecallStatusClearChecking)
+	err = r.updateTaskPreCheckStatus(task, host.BkHostInnerIP, host.BkAssetID, "", table.RecallStatusClearChecking)
 	if err != nil {
 		logs.Errorf("failed to update recall task status, err: %v", err)
 		return err
@@ -55,7 +56,7 @@ func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
 }
 
 // getHostFromPool get hosts by ID from resource pool
-func (r *Recycler) getHostByIDFromPool(hostID int64) (*ccapi.HostInfo, error) {
+func (r *Recycler) getHostByIDFromPool(hostID int64) (*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionAnd,
 		Rules: []querybuilder.Rule{
@@ -67,52 +68,47 @@ func (r *Recycler) getHostByIDFromPool(hostID int64) (*ccapi.HostInfo, error) {
 		},
 	}
 
-	req := &ccapi.ListBizHostReq{
+	req := &cmdb.ListBizHostParams{
 		// check whether host is in module 资源运营服务-CR资源下架中
-		BkBizId:     types.BizIDPool,
-		BkModuleIds: []int64{types.ModuleIDPoolRecalling},
+		BizID:       types.BizIDPool,
+		BkModuleIDs: []int64{types.ModuleIDPoolRecalling},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",
 			"bk_host_innerip",
 		},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: common.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {
-		req.HostPropertyFilter = &querybuilder.QueryFilter{
+		req.HostPropertyFilter = &cmdb.QueryFilter{
 			Rule: rule,
 		}
 	}
 
-	resp, err := r.esbCli.Cmdb().ListBizHost(nil, nil, req)
+	resp, err := r.esbCli.Cmdb().ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	num := len(resp.Data.Info)
+	num := len(resp.Info)
 	if num != 1 {
 		err := fmt.Errorf("get invalid hosts num %d != 1", num)
 		logs.Errorf("get invalid hosts num %d != 1", num)
 		return nil, err
 	}
 
-	host := resp.Data.Info[0]
-	if host.BkHostId != hostID {
-		err := fmt.Errorf("get invalid host id %d != targe %d", host.BkHostId, hostID)
-		logs.Errorf("get invalid host id %d != targe %d", host.BkHostId, hostID)
+	host := resp.Info[0]
+	if host.BkHostID != hostID {
+		err := fmt.Errorf("get invalid host id %d != targe %d", host.BkHostID, hostID)
+		logs.Errorf("get invalid host id %d != targe %d", host.BkHostID, hostID)
 		return nil, err
 	}
 
-	return host, nil
+	return &host, nil
 }
 
 func (r *Recycler) updateTaskPreCheckStatus(task *table.RecallDetail, ip, asset, msg string,

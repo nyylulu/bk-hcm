@@ -58,16 +58,16 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, taskHostID: %d, "+
-			"bkHostID: %d, err: %v", ip, task.HostID, hostInfo.BkHostId, err)
+			"bkHostID: %d, err: %v", ip, task.HostID, hostInfo.BkHostID, err)
 		return err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
-		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
 
 	// 创建配置检查任务-只有Linux任务

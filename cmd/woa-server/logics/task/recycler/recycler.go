@@ -36,16 +36,16 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/slice"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -217,7 +217,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 
 	hostIds := make([]int64, 0)
 	for _, host := range hostBase {
-		hostIds = append(hostIds, host.BkHostId)
+		hostIds = append(hostIds, host.BkHostID)
 	}
 
 	// 2. get host topo info
@@ -289,7 +289,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 	for _, host := range hostBase {
 		bizId := int64(0)
 		moduleId := int64(0)
-		if rel, ok := mapHostToRel[host.BkHostId]; ok {
+		if rel, ok := mapHostToRel[host.BkHostID]; ok {
 			bizId = rel.BkBizId
 			moduleId = rel.BkModuleId
 		}
@@ -309,15 +309,15 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 			hasPermission = permission
 		}
 		checkInfo := &types.RecycleCheckInfo{
-			HostID:        host.BkHostId,
-			AssetID:       host.BkAssetId,
+			HostID:        host.BkHostID,
+			AssetID:       host.BkAssetID,
 			IP:            host.GetUniqIp(),
 			BkHostOuterIP: host.GetUniqOuterIp(),
 			BizID:         bizId,
 			BizName:       bizName,
 			TopoModule:    moduleName,
 			Operator:      host.Operator,
-			BakOperator:   host.BakOperator,
+			BakOperator:   host.BkBakOperator,
 			DeviceType:    host.SvrDeviceClass,
 			State:         host.SvrStatus,
 			InputTime:     host.SvrInputTime,
@@ -369,7 +369,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 
 	bkHostIds := make([]int64, 0)
 	for _, host := range hostBase {
-		bkHostIds = append(bkHostIds, host.BkHostId)
+		bkHostIds = append(bkHostIds, host.BkHostID)
 	}
 
 	// 2. get host biz info
@@ -403,7 +403,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 	cvmHosts := make([]*table.RecycleHost, 0)
 	for _, host := range hostBase {
 		bizId := int64(0)
-		if rel, ok := mapHostToRel[host.BkHostId]; ok {
+		if rel, ok := mapHostToRel[host.BkHostID]; ok {
 			bizId = rel.BkBizId
 		}
 		bizName := ""
@@ -417,8 +417,8 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 		hostDetail := &table.RecycleHost{
 			BizID:         bizId,
 			BizName:       bizName,
-			HostID:        host.BkHostId,
-			AssetID:       host.BkAssetId,
+			HostID:        host.BkHostID,
+			AssetID:       host.BkAssetID,
 			IP:            host.GetUniqIp(),
 			BkHostOuterIP: host.GetUniqOuterIp(),
 			DeviceType:    host.SvrDeviceClass,
@@ -426,7 +426,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 			SubZone:       host.SubZone,
 			ModuleName:    host.ModuleName,
 			Operator:      host.Operator,
-			BakOperator:   host.BakOperator,
+			BakOperator:   host.BkBakOperator,
 			InputTime:     host.SvrInputTime,
 		}
 
@@ -447,7 +447,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb.HostInfo, error) {
+func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionOr,
 		Rules:     make([]querybuilder.Rule, 0),
@@ -486,7 +486,7 @@ func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*
 	}
 
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: rule,
 		},
 		Fields: []string{
@@ -585,8 +585,8 @@ func (r *recycler) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
 
 // getModuleInfo get module info in cc 3.0
 func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error) {
-	req := &cmdb.SearchModuleReq{
-		BkBizId: bizId,
+	req := &cmdb.SearchModuleParams{
+		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
 				common.BKDBIN: moduleIds,
@@ -599,18 +599,13 @@ func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) (
 		},
 	}
 
-	resp, err := r.cc.SearchModule(kit.Ctx, nil, req)
+	resp, err := r.cc.SearchModule(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc module info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kit.Rid)
-		return nil, fmt.Errorf("failed to get cc module info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return resp.Info, nil
 }
 
 // PreviewRecycleOrder preview resource recycle order
@@ -1606,8 +1601,8 @@ func (r *recycler) GetRecycleRecordZone(kit *kit.Kit) (*types.GetRecycleRecordZo
 func (r *recycler) GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHostReq) (*types.GetRecycleBizHostRst,
 	error) {
 
-	req := &cmdb.ListBizHostReq{
-		BkBizId: param.BizID,
+	req := &cmdb.ListBizHostParams{
+		BizID: param.BizID,
 		ModuleCond: []cmdb.ConditionItem{
 			// recycle module's default is 3
 			{
@@ -1628,8 +1623,8 @@ func (r *recycler) GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHos
 			"srv_status",
 		},
 		Page: cmdb.BasePage{
-			Start: param.Page.Start,
-			Limit: param.Page.Limit,
+			Start: int64(param.Page.Start),
+			Limit: int64(param.Page.Limit),
 		},
 	}
 
@@ -1638,31 +1633,26 @@ func (r *recycler) GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHos
 		req.Page.Limit = 1
 	}
 
-	resp, err := r.cc.ListBizHost(kit.Ctx, nil, req)
+	resp, err := r.cc.ListBizHost(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kit.Rid)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
 	hostList := make([]*types.RecycleBizHost, 0)
 	rst := new(types.GetRecycleBizHostRst)
 	if param.Page.EnableCount {
-		rst.Count = int64(resp.Data.Count)
+		rst.Count = int64(resp.Count)
 		return rst, nil
 	}
 
-	for _, ccHost := range resp.Data.Info {
+	for _, ccHost := range resp.Info {
 		host := &types.RecycleBizHost{
-			HostID:      ccHost.BkHostId,
-			AssetID:     ccHost.BkAssetId,
+			HostID:      ccHost.BkHostID,
+			AssetID:     ccHost.BkAssetID,
 			IP:          ccHost.GetUniqIp(),
 			Operator:    ccHost.Operator,
-			BakOperator: ccHost.BakOperator,
+			BakOperator: ccHost.BkBakOperator,
 			DeviceType:  ccHost.SvrDeviceClass,
 			SubZone:     ccHost.SubZone,
 			State:       ccHost.SvrStatus,

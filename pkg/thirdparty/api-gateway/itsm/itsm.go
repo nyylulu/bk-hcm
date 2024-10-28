@@ -21,7 +21,9 @@
 package itsm
 
 import (
+	"fmt"
 	"net/http"
+	"strconv"
 
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
@@ -52,6 +54,13 @@ type Client interface {
 	Approve(kt *kit.Kit, req *ApproveReq) error
 	// GetTicketResults 批量获取单据结果。
 	GetTicketResults(kt *kit.Kit, sn []string) ([]TicketResult, error)
+
+	// CreateApplyTicket create itsm ticket
+	CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64) (*CreateTicketResp, error)
+	// OperateNode operate itsm ticket node
+	OperateNode(kt *kit.Kit, req *OperateNodeReq) (*OperateNodeResp, error)
+	// GetTicketLog get itsm ticket logs
+	GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error)
 }
 
 // NewClient initialize a new itsm client
@@ -95,4 +104,71 @@ func (i *itsm) header(kt *kit.Kit) http.Header {
 	header.Set(constant.RidKey, kt.Rid)
 	header.Set(constant.BKGWAuthKey, i.config.GetAuthValue())
 	return header
+}
+
+// CreateApplyTicket create itsm ticket
+func (i *itsm) CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID int64) (
+	*CreateTicketResp, error) {
+
+	req := &CreateTicketReq{
+		ServiceId: int(i.config.ServiceID),
+		Creator:   user,
+		Fields: []*TicketField{
+			{
+				Key:   TicketKeyTitle,
+				Value: fmt.Sprintf(TicketValTitleFormat, orderId),
+			},
+			{
+				Key:   TicketKeyApplyId,
+				Value: strconv.Itoa(int(orderId)),
+			},
+			{
+				Key:   TicketKeyApplyLink,
+				Value: fmt.Sprintf(i.config.ApplyLinkFormat, orderId, bizID),
+			},
+			{
+				Key:   TicketKeyNeedSysAudit,
+				Value: TicketValNeedSysAuditNo,
+			},
+		},
+	}
+	resp := new(CreateTicketResp)
+	err := i.client.Post().
+		WithContext(kt.Ctx).
+		Body(req).
+		SubResourcef("/create_ticket/").
+		WithHeaders(i.header(kt)).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// OperateNode operate itsm ticket node
+func (i *itsm) OperateNode(kt *kit.Kit, req *OperateNodeReq) (*OperateNodeResp, error) {
+
+	resp := new(OperateNodeResp)
+	err := i.client.Post().
+		WithContext(kt.Ctx).
+		Body(req).
+		SubResourcef("/operate_node/").
+		WithHeaders(i.header(kt)).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// GetTicketLog get itsm ticket logs
+func (i *itsm) GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error) {
+	resp := new(GetTicketLogResp)
+	err := i.client.Get().
+		WithContext(kt.Ctx).
+		SubResourcef("/get_ticket_logs/").
+		WithParam("sn", id).
+		WithHeaders(i.header(kt)).
+		Do().
+		Into(resp)
+
+	return resp, err
 }

@@ -25,11 +25,11 @@ import (
 	"sync"
 
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	recovertask "hcm/cmd/woa-server/types/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 )
 
 // recoverInitStep 恢复当前正在初始化的订单，initStep为handling或init

@@ -135,7 +135,7 @@ func (r *applyRecoverer) recoverDelivering(kt *kit.Kit, order *types.ApplyOrder,
 		return err
 	}
 
-	if err = r.schedulerIf.UpdateHostOperator(device, hostInfo.BkHostId, order.User); err != nil {
+	if err = r.schedulerIf.UpdateHostOperator(device, hostInfo.BkHostID, order.User); err != nil {
 		logs.Errorf("failed to update host operator, subOrderId: %s, ip: %s, err: %v, rid: %s", order.SubOrderId,
 			device.Ip, err, kt.Rid)
 		return err

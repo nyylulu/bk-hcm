@@ -31,13 +31,13 @@ import (
 	"hcm/cmd/woa-server/logics/pool/launcher"
 	"hcm/cmd/woa-server/logics/pool/recaller"
 	"hcm/cmd/woa-server/logics/pool/recycler"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // PoolIf provides management interface for operations of resource pool
@@ -163,11 +163,11 @@ func (p *pool) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*ta
 			gradeTag = cfg.GradeTag
 		}
 		hostDetail := &table.PoolHost{
-			HostID: host.BkHostId,
+			HostID: host.BkHostID,
 			Labels: map[string]string{
 				table.IPKey:           host.GetUniqIp(),
-				table.AssetIDKey:      host.BkAssetId,
-				table.ResourceTypeKey: string(classifier.GetResType(host.BkAssetId)),
+				table.AssetIDKey:      host.BkAssetID,
+				table.ResourceTypeKey: string(classifier.GetResType(host.BkAssetID)),
 				table.DeviceTypeKey:   host.SvrDeviceClass,
 				table.RegionKey:       host.BkZoneName,
 				table.ZoneKey:         host.SubZone,
@@ -182,7 +182,7 @@ func (p *pool) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*ta
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*ccapi.HostInfo, error) {
+func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionOr,
 		Rules:     make([]querybuilder.Rule, 0),
@@ -220,8 +220,8 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*ccap
 		})
 	}
 
-	req := &ccapi.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+	req := &cmdb.ListHostReq{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: rule,
 		},
 		Fields: []string{
@@ -241,7 +241,7 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*ccap
 			"bk_bak_operator",
 			"srv_status",
 		},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: common.BKMaxInstanceLimit,
 		},
@@ -354,9 +354,10 @@ func (p *pool) startLaunchTask(task *table.LaunchTask) {
 	p.launcher.Add(task.ID)
 }
 
+// HostBizRelReq
 // getHostTopoInfo get host topo info in cc 3.0
-func (p *pool) getHostTopoInfo(hostIds []int64) ([]*ccapi.HostBizRel, error) {
-	req := &ccapi.HostBizRelReq{
+func (p *pool) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostBizRel, error) {
+	req := &cmdb.HostBizRelReq{
 		BkHostId: hostIds,
 	}
 
@@ -375,8 +376,8 @@ func (p *pool) getHostTopoInfo(hostIds []int64) ([]*ccapi.HostBizRel, error) {
 }
 
 // getBizInfo get business info in cc 3.0
-func (p *pool) getBizInfo(bizIds []int64) ([]*ccapi.BizInfo, error) {
-	req := &ccapi.SearchBizReq{
+func (p *pool) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
+	req := &cmdb.SearchBizReq{
 		Filter: &querybuilder.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
@@ -390,7 +391,7 @@ func (p *pool) getBizInfo(bizIds []int64) ([]*ccapi.BizInfo, error) {
 			},
 		},
 		Fields: []string{"bk_biz_id", "bk_biz_name"},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: 200,
 		},
@@ -411,33 +412,28 @@ func (p *pool) getBizInfo(bizIds []int64) ([]*ccapi.BizInfo, error) {
 }
 
 // getModuleInfo get module info in cc 3.0
-func (p *pool) getModuleInfo(kt *kit.Kit, bizId int64, moduleIds []int64) ([]*ccapi.ModuleInfo, error) {
-	req := &ccapi.SearchModuleReq{
-		BkBizId: bizId,
+func (p *pool) getModuleInfo(kt *kit.Kit, bizId int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error) {
+	req := &cmdb.SearchModuleParams{
+		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
 				common.BKDBIN: moduleIds,
 			},
 		},
 		Fields: []string{"bk_module_id", "bk_module_name"},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: 200,
 		},
 	}
 
-	resp, err := p.esbCli.Cmdb().SearchModule(kt.Ctx, nil, req)
+	resp, err := p.esbCli.Cmdb().SearchModule(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc module info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
-		return nil, fmt.Errorf("failed to get cc module info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return resp.Info, nil
 }
 
 // CreateRecallTask create resource recall task
@@ -890,12 +886,12 @@ func (p *pool) checkHostStatus(hosts []*table.PoolHost, hostIDs []int64) error {
 
 // transferHost transfer host to target business in cc 3.0
 func (p *pool) transferHost(hostID, fromBizID, toBizID, toModuleId int64) error {
-	transferReq := &ccapi.TransferHostReq{
-		From: ccapi.TransferHostSrcInfo{
+	transferReq := &cmdb.TransferHostReq{
+		From: cmdb.TransferHostSrcInfo{
 			FromBizID: fromBizID,
 			HostIDs:   []int64{hostID},
 		},
-		To: ccapi.TransferHostDstInfo{
+		To: cmdb.TransferHostDstInfo{
 			ToBizID: toBizID,
 		},
 	}
@@ -1162,15 +1158,10 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 		return nil, err
 	}
 
-	resp, err := p.esbCli.Cmdb().ListBizHost(kt.Ctx, nil, req)
+	resp, err := p.esbCli.Cmdb().ListBizHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
 	rst := &types.GetLaunchMatchDeviceRst{
@@ -1178,20 +1169,20 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 		Info:  make([]*types.MatchDevice, 0),
 	}
 
-	for _, host := range resp.Data.Info {
+	for _, host := range resp.Info {
 		rackId, err := strconv.Atoi(host.RackId)
 		if err != nil {
-			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
+			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostID, host.RackId)
 			rackId = 0
 		}
 		device := &types.MatchDevice{
-			BkHostId:     host.BkHostId,
-			AssetId:      host.BkAssetId,
+			BkHostId:     host.BkHostID,
+			AssetId:      host.BkAssetID,
 			Ip:           host.GetUniqIp(),
 			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
-			OsType:       host.BkOsName,
+			OsType:       host.BkOSName,
 			Region:       host.BkZoneName,
 			Zone:         host.SubZone,
 			Module:       host.ModuleName,
@@ -1209,10 +1200,10 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 	return rst, nil
 }
 
-func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*ccapi.ListBizHostReq, error) {
-	req := &ccapi.ListBizHostReq{
-		BkBizId:     931,
-		BkModuleIds: []int64{239149},
+func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*cmdb.ListBizHostParams, error) {
+	req := &cmdb.ListBizHostParams{
+		BizID:       931,
+		BkModuleIDs: []int64{239149},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",
@@ -1236,7 +1227,7 @@ func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*
 			"raid_name",
 			"svr_input_time",
 		},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: common.BKMaxInstanceLimit,
 		},
@@ -1248,7 +1239,7 @@ func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*
 	}
 
 	if len(rule.Rules) > 0 {
-		req.HostPropertyFilter = &querybuilder.QueryFilter{
+		req.HostPropertyFilter = &cmdb.QueryFilter{
 			Rule: rule,
 		}
 	}

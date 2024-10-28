@@ -28,10 +28,10 @@ import (
 	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/common/util"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // getBizIDNameByName 此方法如果没有传name,那么会查询所有的业务
@@ -244,9 +244,9 @@ func (l *logics) getBlackBizIDName(kt *kit.Kit) (map[int64]string, error) {
 	return l.getBizIDNameByName(kt, bizNames, make([]string, 0))
 }
 
-func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.BasePage) ([]cmdb.HostInfo, int64, error) {
+func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.BasePage) ([]cmdb.Host, int64, error) {
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -259,7 +259,7 @@ func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.Base
 	}
 
 	if !page.Count {
-		req.Page = cmdb.BasePage{Start: int(page.Start), Limit: int(page.Limit), Sort: common.BKHostIDField}
+		req.Page = cmdb.BasePage{Start: int64(page.Start), Limit: int64(page.Limit), Sort: common.BKHostIDField}
 		hosts, err := l.getHostFromCC(kt, req)
 		if err != nil {
 			logs.Errorf("get host from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
@@ -280,7 +280,7 @@ func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.Base
 
 const noLimit = 999999999
 
-func (l *logics) getAllHostIDFromCC(kt *kit.Kit, filter *querybuilder.QueryFilter) ([]int64, error) {
+func (l *logics) getAllHostIDFromCC(kt *kit.Kit, filter *cmdb.QueryFilter) ([]int64, error) {
 	req := &cmdb.ListHostReq{
 		Fields:             []string{common.BKHostIDField},
 		HostPropertyFilter: filter,
@@ -294,13 +294,13 @@ func (l *logics) getAllHostIDFromCC(kt *kit.Kit, filter *querybuilder.QueryFilte
 
 	hostIDs := make([]int64, 0)
 	for _, host := range hosts {
-		hostIDs = append(hostIDs, host.BkHostId)
+		hostIDs = append(hostIDs, host.BkHostID)
 	}
 
 	return hostIDs, nil
 }
 
-func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.HostInfo, error) {
+func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.Host, error) {
 	if req == nil {
 		return nil, fmt.Errorf("call cc req is nil")
 	}
@@ -310,7 +310,7 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.HostI
 		req.Page.Limit = common.BKMaxInstanceLimit
 	}
 
-	result := make([]cmdb.HostInfo, 0)
+	result := make([]cmdb.Host, 0)
 	req.Page.Sort = common.BKHostIDField
 	hosts, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
 	if err != nil {
@@ -321,7 +321,7 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.HostI
 		result = append(result, *host)
 	}
 
-	if len(hosts.Data.Info) < req.Page.Limit {
+	if int64(len(hosts.Data.Info)) < req.Page.Limit {
 		return result, nil
 	}
 
@@ -338,12 +338,12 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.HostI
 		wg.Add(1)
 		pipe <- struct{}{}
 
-		pageLimit := common.BKMaxInstanceLimit
+		pageLimit := int64(common.BKMaxInstanceLimit)
 		if start+common.BKMaxInstanceLimit > count {
 			pageLimit = count - start
 		}
 
-		go func(req cmdb.ListHostReq, start, pageLimit int) {
+		go func(req cmdb.ListHostReq, start, pageLimit int64) {
 			defer func() {
 				<-pipe
 				wg.Done()

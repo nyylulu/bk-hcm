@@ -21,10 +21,10 @@ import (
 
 	"hcm/cmd/woa-server/common/utils"
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
-	"hcm/cmd/woa-server/thirdparty/dvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/dvmapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // createDVM starts a docker vm creating task

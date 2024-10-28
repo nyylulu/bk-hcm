@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,33 +17,26 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package esb implements the esb discovery.
-package esb
+package itsm
 
-import (
-	"errors"
-	"sync"
-)
-
-// esbDiscovery used to esb discovery.
-type esbDiscovery struct {
-	servers []string
-	index   int
-	sync.Mutex
+// CreateTicketReq create itsm ticket request
+type CreateTicketReq struct {
+	ServiceId int            `json:"service_id"`
+	Creator   string         `json:"creator"`
+	Fields    []*TicketField `json:"fields"`
 }
 
-// GetServers get esb server host.
-func (s *esbDiscovery) GetServers() ([]string, error) {
-	s.Lock()
-	defer s.Unlock()
-	num := len(s.servers)
-	if num == 0 {
-		return []string{}, errors.New("there is no esb server can be used")
-	}
-	if s.index < num-1 {
-		s.index = s.index + 1
-		return append(s.servers[s.index-1:], s.servers[:s.index-1]...), nil
-	}
-	s.index = 0
-	return append(s.servers[num-1:], s.servers[:num-1]...), nil
+// TicketField itsm ticket field
+type TicketField struct {
+	Key   string `json:"key"`
+	Value string `json:"value"`
+}
+
+// OperateNodeReq operate itsm ticket node request
+type OperateNodeReq struct {
+	Sn         string         `json:"sn"`
+	StateId    int64          `json:"state_id"`
+	Operator   string         `json:"operator"`
+	ActionType string         `json:"action_type"`
+	Fields     []*TicketField `json:"fields"`
 }

@@ -24,8 +24,8 @@ import (
 	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb"
 
 	"k8s.io/client-go/util/workqueue"
 )

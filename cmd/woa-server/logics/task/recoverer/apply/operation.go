@@ -27,10 +27,10 @@ import (
 	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/common/metadata"
 	model "hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 )
 
 // getTickets get apply ticket with stage and create_at between recoverTime and expireTime
@@ -121,18 +121,18 @@ func (r *applyRecoverer) getHostBizID(kt *kit.Kit, ip string) (int64, error) {
 			ip, kt.Rid)
 		return 0, err
 	}
-	// 根据bkHostID去cmdb获取bkBizID
-	hostIds := []int64{hostInfo.BkHostId}
+	// 根据BkHostID去cmdb获取bkBizID
+	hostIds := []int64{hostInfo.BkHostID}
 	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt.Ctx, kt.Header(), hostIds)
 	if err != nil {
-		logs.Errorf("recover: get host info by host id failed, err: %v, ip: %s, bkHostID: %d, rid: %s", err, ip,
-			hostInfo.BkHostId, kt.Rid)
+		logs.Errorf("recover: get host info by host id failed, err: %v, ip: %s, BkHostID: %d, rid: %s", err, ip,
+			hostInfo.BkHostID, kt.Rid)
 		return 0, err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find bizId by hostId: %d, ip: %s, rid: %s", hostInfo.BkHostId, ip, kt.Rid)
-		return 0, fmt.Errorf("can not find bizId by hostId: %d, ip: %s", hostInfo.BkHostId, ip)
+		logs.Errorf("can not find bizId by hostId: %d, ip: %s, rid: %s", hostInfo.BkHostID, ip, kt.Rid)
+		return 0, fmt.Errorf("can not find bizId by hostId: %d, ip: %s", hostInfo.BkHostID, ip)
 	}
 
 	return bkBizID, nil
@@ -202,17 +202,17 @@ func (r *applyRecoverer) getBizID(kt *kit.Kit, ip string) (int64, error) {
 			err, kt.Rid)
 		return 0, err
 	}
-	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt.Ctx, kt.Header(), []int64{hostInfo.BkHostId})
+	// 根据BkHostID去cmdb获取bkBizID
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt.Ctx, kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
-		logs.Errorf("recover: deliver status handling, get host info by host id failed, ip: %s, bkHostID: %d, "+
-			"err: %v, rid: %s", ip, hostInfo.BkHostId, err, kt.Rid)
+		logs.Errorf("recover: deliver status handling, get host info by host id failed, ip: %s, BkHostID: %d, "+
+			"err: %v, rid: %s", ip, hostInfo.BkHostID, err, kt.Rid)
 		return 0, err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by hostId: %d, rid: %s", hostInfo.BkHostId, kt.Rid)
-		return 0, fmt.Errorf("can not find biz id by hostId: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by hostId: %d, rid: %s", hostInfo.BkHostID, kt.Rid)
+		return 0, fmt.Errorf("can not find biz id by hostId: %d", hostInfo.BkHostID)
 	}
 
 	return bkBizID, nil

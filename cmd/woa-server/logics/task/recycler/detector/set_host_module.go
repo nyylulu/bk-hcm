@@ -18,9 +18,9 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (d *Detector) setHostModule(step *table.DetectStep, retry int) (int, string, error) {
