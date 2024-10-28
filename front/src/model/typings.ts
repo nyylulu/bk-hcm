@@ -13,7 +13,8 @@ export type ModelPropertyType =
   | 'cert'
   | 'ca'
   | 'region'
-  | 'bizs';
+  | 'bizs'
+  | 'business';
 
 export type ModelPropertyMeta = {
   display: {
@@ -41,7 +42,7 @@ export type PropertyColumnConfig = {
 };
 
 export type PropertyFormConfig = {
-  rules: object;
+  rules?: object;
 };
 
 // 与列展示场景相关，联合列的配置属性

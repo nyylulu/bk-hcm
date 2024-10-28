@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
-import bizView from './biz.vue';
+import bizView from './biz/index.vue';
 import globalView from './global.vue';
 
 const router = useRouter();
@@ -29,7 +29,7 @@ const viewComps: Record<string, any> = {
 <template>
   <bk-tab v-model:active="viewActive" type="card-grid" class="roll-server-quota">
     <bk-tab-panel v-for="panel in tabPanels" :key="panel.name" :label="panel.label" :name="panel.name">
-      <component :is="viewComps[viewActive]" />
+      <component :is="viewComps[viewActive]" v-if="viewActive === panel.name" />
     </bk-tab-panel>
   </bk-tab>
 </template>

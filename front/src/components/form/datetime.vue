@@ -6,7 +6,10 @@ import type { DatePickerValueType } from 'bkui-vue/lib/date-picker/interface';
 defineOptions({ name: 'hcm-form-datetime' });
 
 const props = withDefaults(
-  defineProps<{ format: string; type: 'date' | 'daterange' | 'datetime' | 'datetimerange' | 'month' | 'year' }>(),
+  defineProps<{
+    format: string;
+    type: 'date' | 'daterange' | 'datetime' | 'datetimerange' | 'month' | 'monthrange' | 'year';
+  }>(),
   {
     format: 'yyyy-MM-dd HH:mm:ss',
   },

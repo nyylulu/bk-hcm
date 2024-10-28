@@ -24,6 +24,7 @@ export const getDefaultRule: GetDefaultRule = (property, custom) => {
     cert: { op: searchOp || IN, value: [] },
     ca: { op: searchOp || EQ, value: '' },
     region: { op: searchOp || IN, value: [] },
+    business: { op: searchOp || IN, value: [] },
   };
 
   return {
@@ -41,6 +42,13 @@ export const convertValue = (
   const { IN, JSON_OVERLAPS } = QueryRuleOPEnum;
 
   if (type === 'number') {
+    return Number(value);
+  }
+
+  if (type === 'business') {
+    if (Array.isArray(value)) {
+      return value.map((val) => Number(val));
+    }
     return Number(value);
   }
 
@@ -101,6 +109,25 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
   }
 
   return queryFilter;
+};
+
+export const transformFlatCondition = (condition: Record<string, any>, properties: ModelProperty[]) => {
+  const params: Record<string, any> = {};
+  for (const [id, value] of Object.entries(condition || {})) {
+    const property = findProperty(id, properties);
+    if (!property) {
+      continue;
+    }
+
+    // 忽略空值
+    if ([null, undefined].includes(value) || !value?.length) {
+      continue;
+    }
+
+    params[id] = convertValue(value, property);
+  }
+
+  return params;
 };
 
 export const enableCount = (params = {}, enable = false) => {

@@ -1,4 +1,17 @@
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { storeToRefs } from 'pinia';
+import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
+const rollingServerQuotaStore = useRollingServerQuotaStore();
+
+const { globalQuotaConfig } = storeToRefs(rollingServerQuotaStore);
+
+const formatValue = (value: number) => {
+  if (isNaN(value) || value === undefined) {
+    return '--';
+  }
+  return value.toLocaleString();
+};
+</script>
 
 <template>
   <div>
@@ -8,27 +21,33 @@
     <div class="info-grid">
       <div class="row">
         <div class="cell head">总限额 (全平台)</div>
-        <div class="cell">20,000 核</div>
+        <div class="cell">{{ formatValue(globalQuotaConfig.global_quota) }} 核</div>
       </div>
       <div class="row">
         <div class="cell head">基础额度 (单业务)</div>
-        <div class="cell">20,000 核</div>
+        <div class="cell">{{ formatValue(globalQuotaConfig.biz_quota) }} 核</div>
       </div>
       <div class="row">
         <div class="cell head">剩余额度 (全平台)</div>
-        <div class="cell">0 核</div>
+        <div class="cell">
+          {{ formatValue(globalQuotaConfig.global_quota - globalQuotaConfig.sum_delivered_core) }} 核
+        </div>
       </div>
       <div class="row">
         <div class="cell head">已交付 (全业务)</div>
-        <div class="cell">200 核</div>
+        <div class="cell">{{ formatValue(globalQuotaConfig.sum_delivered_core) }} 核</div>
       </div>
       <div class="row">
         <div class="cell head">已退还 (全业务)</div>
-        <div class="cell">20 核</div>
+        <div class="cell">{{ formatValue(globalQuotaConfig.sum_returned_applied_core) }} 核</div>
       </div>
       <div class="row refund">
         <div class="cell head">应退还 (资源池)</div>
-        <div class="cell"><em class="hl">20 核</em></div>
+        <div class="cell">
+          <em class="hl">
+            {{ formatValue(globalQuotaConfig.sum_delivered_core - globalQuotaConfig.sum_returned_applied_core) }} 核
+          </em>
+        </div>
       </div>
     </div>
   </div>

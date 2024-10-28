@@ -1,12 +1,21 @@
 import type { RouteRecordRaw } from 'vue-router';
 import Meta from '@/router/meta';
 import { MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
 
 export default [
   {
     name: MENU_ROLLING_SERVER_MANAGEMENT,
     path: 'rolling-server/:module?/:view?',
     component: () => import('./index.vue'),
+    beforeEnter: async (to, from, next) => {
+      const rollingServerQuotaStore = useRollingServerQuotaStore();
+      try {
+        await rollingServerQuotaStore.getGlobalQuota();
+      } finally {
+        next();
+      }
+    },
     meta: {
       ...new Meta({
         title: '滚服管理',
