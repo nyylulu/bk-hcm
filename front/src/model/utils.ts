@@ -1,4 +1,4 @@
-import { ModelProperty } from '@/model/typings';
+import { ModelProperty, ModelPropertyColumn } from '@/model/typings';
 
 export const findProperty = (id: ModelProperty['id'], properties: ModelProperty[], key?: keyof ModelProperty) => {
   // 先按默认的规则找
@@ -10,4 +10,10 @@ export const findProperty = (id: ModelProperty['id'], properties: ModelProperty[
   }
 
   return found;
+};
+
+export const getColumnName = (property: ModelProperty | ModelPropertyColumn, options?: { showUnit: boolean }) => {
+  const { showUnit = true } = options || {};
+  const { name, unit } = property;
+  return `${name}${showUnit && unit ? `（${unit}）` : ''}`;
 };

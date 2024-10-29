@@ -4,6 +4,7 @@ import { useRouter, useRoute } from 'vue-router';
 
 import quota from './quota/index.vue';
 import usage from './usage/index.vue';
+import bills from './bills/index.vue';
 
 const router = useRouter();
 const route = useRoute();
@@ -11,7 +12,7 @@ const route = useRoute();
 const tabPanels = [
   { name: 'quota', label: '额度管理' },
   { name: 'usage', label: '额度执行' },
-  { name: 'review', label: '滚服核算' },
+  { name: 'bills', label: '滚服核算' },
 ];
 const tabActive = computed({
   get() {
@@ -22,7 +23,7 @@ const tabActive = computed({
   },
 });
 
-const tabComps: Record<string, any> = { quota, usage };
+const tabComps: Record<string, any> = { quota, usage, bills };
 </script>
 
 <template>

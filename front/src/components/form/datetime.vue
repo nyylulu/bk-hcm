@@ -16,7 +16,7 @@ const props = withDefaults(
 );
 
 const rangeType = computed(() => ['daterange', 'datetimerange'].includes(props.type));
-const shortcutsRange = computed(() => (rangeType.value ? getDateShortcutRange() : []));
+const shortcutsRange = computed(() => (rangeType.value ? getDateShortcutRange(props.type !== 'daterange') : []));
 
 const model = defineModel<DatePickerValueType>();
 

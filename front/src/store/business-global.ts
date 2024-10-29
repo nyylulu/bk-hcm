@@ -36,6 +36,22 @@ export const useBusinessGlobalStore = defineStore('businessGlobal', () => {
     }
   };
 
+  const getFirstBizId = async () => {
+    if (businessFullList.value.length > 0) {
+      return businessFullList.value[0].id;
+    }
+    const list = await getFullBusiness();
+    return list?.[0]?.id;
+  };
+
+  const getFirstAuthorizedBizId = async () => {
+    if (businessAuthorizedList.value.length > 0) {
+      return businessAuthorizedList.value[0].id;
+    }
+    const list = await getAuthorizedBusiness();
+    return list?.[0]?.id;
+  };
+
   return {
     businessFullList,
     businessAuthorizedList,
@@ -43,5 +59,7 @@ export const useBusinessGlobalStore = defineStore('businessGlobal', () => {
     businessAuthorizedListLoading,
     getFullBusiness,
     getAuthorizedBusiness,
+    getFirstBizId,
+    getFirstAuthorizedBizId,
   };
 });

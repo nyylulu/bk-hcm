@@ -1,4 +1,4 @@
-export type AppearanceType = 'status';
+export type AppearanceType = 'status' | 'link';
 
 export type DisplayType = {
   on?: 'cell' | 'info' | 'search';

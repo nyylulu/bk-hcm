@@ -80,7 +80,12 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
     }
 
     // 忽略空值
-    if ([null, undefined].includes(value) || !value?.length) {
+    if ([null, undefined, ''].includes(value)) {
+      continue;
+    }
+
+    if (property.meta?.search?.filterRules) {
+      queryFilter.rules.push(property.meta?.search?.filterRules(value));
       continue;
     }
 
@@ -123,7 +128,7 @@ export const transformFlatCondition = (condition: Record<string, any>, propertie
     }
 
     // 忽略空值
-    if ([null, undefined].includes(value) || !value?.length) {
+    if ([null, undefined, ''].includes(value)) {
       continue;
     }
 
@@ -144,7 +149,7 @@ export const onePageParams = () => ({ start: 0, limit: 1 });
 
 export const maxPageParams = (max = 500) => ({ start: 0, limit: max });
 
-export const getDateRange = (key: keyof DateRangeType) => {
+export const getDateRange = (key: keyof DateRangeType, include?: boolean) => {
   const dateRange = {
     toady() {
       const end = new Date();
@@ -154,42 +159,42 @@ export const getDateRange = (key: keyof DateRangeType) => {
     last7d() {
       const end = new Date();
       const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 7);
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 7 : 6));
       return [start, end];
     },
     last15d() {
       const end = new Date();
       const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 15);
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 15 : 14));
       return [start, end];
     },
     last30d() {
       const end = new Date();
       const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * 30);
+      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 30 : 29));
       return [start, end];
     },
   };
   return dateRange[key]();
 };
 
-export const getDateShortcutRange = () => {
+export const getDateShortcutRange = (include?: boolean) => {
   const shortcutsRange = [
     {
       text: '今天',
-      value: () => getDateRange('toady'),
+      value: () => getDateRange('toady', include),
     },
     {
       text: '近7天',
-      value: () => getDateRange('last7d'),
+      value: () => getDateRange('last7d', include),
     },
     {
       text: '近15天',
-      value: () => getDateRange('last15d'),
+      value: () => getDateRange('last15d', include),
     },
     {
       text: '近30天',
-      value: () => getDateRange('last30d'),
+      value: () => getDateRange('last30d', include),
     },
   ];
   return shortcutsRange;

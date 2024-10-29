@@ -1,6 +1,6 @@
 <script setup lang="ts">
-import { useBusinessGlobalStore, type IBusinessItem } from '@/store/business-global';
 import { ref, watchEffect } from 'vue';
+import { useBusinessGlobalStore, type IBusinessItem } from '@/store/business-global';
 
 export type BusinessScopeType = 'full' | 'auth';
 
@@ -36,13 +36,15 @@ watchEffect(async () => {
   loading.value = true;
   if (props.data) {
     list.value = props.data.slice();
+    loading.value = false;
   } else if (props.scope === 'full') {
     // 理论上可以直接使用store中的businessFullList，这里暂且还是重新获取一次
     list.value = await businessGlobalStore.getFullBusiness();
+    loading.value = businessGlobalStore.businessFullListLoading;
   } else if (props.scope === 'auth') {
     list.value = await businessGlobalStore.getAuthorizedBusiness();
+    loading.value = businessGlobalStore.businessAuthorizedListLoading;
   }
-  loading.value = false;
 });
 </script>
 
