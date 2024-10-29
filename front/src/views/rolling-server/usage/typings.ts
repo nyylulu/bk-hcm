@@ -1,4 +1,4 @@
-import { RollingServerRecordItem } from '@/store';
+import { IRollingServerCpuCoreSummary, RollingServerRecordItem } from '@/store';
 import { PaginationType } from '@/typings';
 
 export enum IView {
@@ -21,5 +21,6 @@ export interface ISearchProps {
 export interface IDataListProps {
   view: IView;
   list: RollingServerRecordItem[];
+  summaryInfo: IRollingServerCpuCoreSummary;
   pagination: PaginationType;
 }

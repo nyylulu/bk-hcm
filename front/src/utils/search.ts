@@ -49,6 +49,9 @@ export const convertValue = (
     if (Array.isArray(value)) {
       return value.map((val) => Number(val));
     }
+    if ([IN, JSON_OVERLAPS].includes(operator) && !Array.isArray(value)) {
+      return [Number(value)];
+    }
     return Number(value);
   }
 
@@ -190,4 +193,14 @@ export const getDateShortcutRange = () => {
     },
   ];
   return shortcutsRange;
+};
+
+export const convertDateRangeToObject = (dateRange: Date[]) => {
+  const start = new Date(dateRange[0]);
+  const end = new Date(dateRange[1]);
+
+  return {
+    start: { year: start.getFullYear(), month: start.getMonth() + 1, day: start.getDate() },
+    end: { year: end.getFullYear(), month: end.getMonth() + 1, day: end.getDate() },
+  };
 };

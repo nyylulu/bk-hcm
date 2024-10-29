@@ -21,4 +21,4 @@ export * from './host';
 export * from './scheme';
 export * from './loadbalancer';
 export * from './ziyanScr';
-export * from './rolling-server';
+export * from './rolling-server-usage';

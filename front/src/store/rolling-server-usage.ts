@@ -52,7 +52,7 @@ export interface IRollingServerCpuCoreSummary {
   sum_returned_applied_core: number;
 }
 
-export const useRollingServerStore = defineStore('rolling-server', () => {
+export const useRollingServerUsageStore = defineStore('rolling-server', () => {
   const { getBusinessApiPath } = useWhereAmI();
 
   const appliedRecordsListLoading = ref(false);
@@ -79,7 +79,7 @@ export const useRollingServerStore = defineStore('rolling-server', () => {
   const returnedRecordsListLoading = ref(false);
   const getReturnedRecordList = async (data: QueryBuilderType) => {
     returnedRecordsListLoading.value = true;
-    const api = `/api/v1/woa${getBusinessApiPath()}rolling_servers/returned_records/list`;
+    const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/returned_records/list`;
     try {
       const [listRes, countRes] = await Promise.all<
         [
@@ -105,12 +105,13 @@ export const useRollingServerStore = defineStore('rolling-server', () => {
     order_ids?: string[];
     suborder_ids?: string[];
     returned_way?: ReturnedWay;
+    applied_type?: AppliedType;
   }) => {
     cpuCoreSummaryLoading.value = true;
-    const api = `/api/v1/woa${getBusinessApiPath()}rolling_servers/cpu_core/summary`;
+    const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/cpu_core/summary`;
     try {
-      const res: IQueryResData<{ details: IRollingServerCpuCoreSummary }> = await http.post(api, data);
-      return res?.data?.details ?? {};
+      const res: IQueryResData<IRollingServerCpuCoreSummary> = await http.post(api, data);
+      return res?.data;
     } catch (error) {
       console.error(error);
       return Promise.reject(error);

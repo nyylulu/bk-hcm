@@ -3,7 +3,7 @@ import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { IView } from './typings';
 
-import orderView from './order.vue';
+import orderView from './order/index.vue';
 
 const router = useRouter();
 const route = useRoute();

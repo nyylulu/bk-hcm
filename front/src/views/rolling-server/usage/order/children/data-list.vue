@@ -3,8 +3,7 @@ import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings'
 import type { IDataListProps } from '../../typings';
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
-import usageAppliedView from '@/model/rolling-server/usage-applied.view';
-import usageReturnedView from '@/model/rolling-server/usage-returned.view';
+import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 
 withDefaults(defineProps<IDataListProps>(), {});
 
@@ -15,9 +14,8 @@ const emit = defineEmits<{
 
 const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
-const usageView = [...usageAppliedView, ...usageReturnedView];
 const fieldIds = [
-  'order_id',
+  'suborder_id',
   'bk_biz_id',
   'created_at',
   'applied_type',
@@ -29,11 +27,19 @@ const fieldIds = [
   'creator',
 ];
 const columConfig: Record<string, PropertyColumnConfig> = {
+  suborder_id: {},
+  bk_biz_id: {},
+  created_at: {},
+  applied_type: {},
   applied_core: { sort: true },
   delivered_core: { sort: true },
+  returned_core: {},
+  not_returned_core: {},
+  exec_rate: {},
+  creator: {},
 };
 const columns: ModelPropertyColumn[] = fieldIds.map((id) => ({
-  ...usageView.find((view) => view.id === id),
+  ...usageOrderViewProperties.find((view) => view.id === id),
   ...columConfig[id],
 }));
 
@@ -47,11 +53,11 @@ const { settings } = useTableSettings(columns);
       <ul class="summary">
         <li class="item">
           <div class="label">总交付（CPU核数）：</div>
-          <div class="value">150,000</div>
+          <display-value class="value" :property="{ type: 'number' }" :value="summaryInfo?.sum_delivered_core" />
         </li>
         <li class="item">
           <div class="label">总返还（CPU核数）：</div>
-          <div class="value">140,000</div>
+          <display-value class="value" :property="{ type: 'number' }" :value="summaryInfo?.sum_returned_applied_core" />
         </li>
       </ul>
     </div>

@@ -8,8 +8,8 @@ import SearchAccount from './search/account.vue';
 import SearchEnum from './search/enum.vue';
 import SearchDatetime from './search/datetime.vue';
 import SearchUser from './search/user.vue';
-import SearchBizs from './search/bizs.vue';
 import SearchArray from './search/array.vue';
+import SearchString from './search/string.vue';
 import SearchBusiness from './search/business.vue';
 
 // 展示值组件
@@ -32,8 +32,8 @@ const components = [
   SearchEnum,
   SearchDatetime,
   SearchUser,
-  SearchBizs,
   SearchArray,
+  SearchString,
   SearchBusiness,
   DisplayValue,
   FormBool,

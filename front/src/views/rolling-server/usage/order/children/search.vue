@@ -2,8 +2,7 @@
 import { ref, watch } from 'vue';
 import type { ModelProperty } from '@/model/typings';
 import type { ISearchCondition, ISearchProps } from '../../typings';
-import usageAppliedView from '@/model/rolling-server/usage-applied.view';
-import usageReturnedView from '@/model/rolling-server/usage-returned.view';
+import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
@@ -18,24 +17,24 @@ const emit = defineEmits<{
 const formValues = ref<ISearchCondition>({});
 let conditionInitValues: ISearchCondition;
 
-const usageView = [...usageAppliedView, ...usageReturnedView];
-const fieldIds = ['created_at', 'bk_biz_id', 'order_id'];
-const fields = fieldIds.map((id) => usageView.find((view) => view.id === id));
+const fieldIds = ['created_at', 'bk_biz_id', 'suborder_id'];
+const fields = fieldIds.map((id) => usageOrderViewProperties.find((view) => view.id === id));
 
 const getSearchCompProps = (field: ModelProperty) => {
-  if (field.type === 'datetime') {
+  if (field.id === 'created_at') {
     return { type: 'daterange', format: 'yyyy-MM-dd' };
   }
-  if (field.type === 'bizs') {
-    return { authed: true, multiple: true, isShowAll: true };
+
+  if (field.id === 'bk_biz_id') {
+    return { showAll: true, allOptionId: -1, scope: 'auth' };
   }
-  if (field.type === 'array') {
+  if (field.id === 'suborder_id') {
     return {
       display: { appearance: 'tag-input' },
-      'allow-create': true,
       'paste-fn': (value: string) => value.split(',').map((tag) => ({ id: tag, name: tag })),
     };
   }
+
   return {
     option: field.option,
   };

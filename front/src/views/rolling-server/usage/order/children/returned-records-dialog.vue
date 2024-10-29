@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 import { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
-import usageReturnedView from '@/model/rolling-server/usage-returned.view';
+import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { RollingServerRecordItem } from '@/store';
 
 const isShow = ref(false);
@@ -10,12 +10,14 @@ const show = (row: RollingServerRecordItem) => {
   isShow.value = true;
   data.value = row;
 };
-const fieldIds = ['created_at', 'match_applied_core', 'applied_record_id'];
+const fieldIds = ['created_at', 'match_applied_core', 'suborder_id'];
 const columConfig: Record<string, PropertyColumnConfig> = {
+  created_at: { sort: true },
   match_applied_core: { sort: true },
+  suborder_id: {}, // 主机回收的子单据ID
 };
 const columns: ModelPropertyColumn[] = fieldIds.map((id) => ({
-  ...usageReturnedView.find((view) => view.id === id),
+  ...usageOrderViewProperties.find((view) => view.id === id),
   ...columConfig[id],
 }));
 
@@ -27,11 +29,12 @@ defineExpose({ show });
     <div class="flex-row base-info">
       <div class="item">
         <div class="label">业务：</div>
-        <div>和平精英</div>
+        <display-value :property="{ type: 'business' }" :value="data?.bk_biz_id" />
       </div>
       <div class="item">
-        <div class="label">单据ID：</div>
-        <div>REQ20240120000001</div>
+        <div class="label">子单据ID：</div>
+        <!-- 主机申请的子单据ID -->
+        <display-value :property="{ type: 'string' }" :value="data?.suborder_id" />
       </div>
     </div>
     <bk-table row-hover="auto" :data="data?.returned_records" row-key="id" pagination>
