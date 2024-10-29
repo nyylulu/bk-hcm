@@ -13,12 +13,14 @@
 // Package generate record informer key
 package generate
 
-import "hcm/cmd/woa-server/common"
+import (
+	"hcm/pkg"
+)
 
 // KeyGenerate generate record informer key for token handler
 var KeyGenerate = Key{
 	namespace:  "generate_record",
-	collection: common.BKTableNameGenerateRecord,
+	collection: pkg.BKTableNameGenerateRecord,
 	ttlSeconds: 6 * 60 * 60,
 }
 

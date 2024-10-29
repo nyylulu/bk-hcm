@@ -16,13 +16,13 @@ import (
 	"context"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 )
 
 // CreateInitRecord create resource apply init record

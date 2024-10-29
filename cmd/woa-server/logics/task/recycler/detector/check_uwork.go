@@ -20,9 +20,9 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/xshipapi"
 )

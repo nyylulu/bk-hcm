@@ -24,14 +24,14 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 )
 
 // recoverDetectedOrder 恢复状态为RecycleStatusDetecting的回收订单
@@ -181,7 +181,7 @@ func (r *recycleRecoverer) getDetectTasks(kt *kit.Kit, subOrderId string,
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	tasks, err := dao.Set().DetectTask().FindManyDetectTask(kt.Ctx, page, filter)

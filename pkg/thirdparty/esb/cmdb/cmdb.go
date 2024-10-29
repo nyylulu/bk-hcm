@@ -25,15 +25,15 @@ import (
 	"fmt"
 	"net/http"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/utils"
+	"hcm/pkg"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/esb/types"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/utils"
 )
 
 // Client is an esb client to request cmdb.
@@ -255,7 +255,7 @@ func (c *cmdb) GetHostId(ctx context.Context, header http.Header, ip string) (in
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
-						Field:    common.BKHostInnerIPField,
+						Field:    pkg.BKHostInnerIPField,
 						Operator: querybuilder.OperatorEqual,
 						Value:    ip,
 					},
@@ -263,7 +263,7 @@ func (c *cmdb) GetHostId(ctx context.Context, header http.Header, ip string) (in
 			},
 		},
 		Fields: []string{
-			common.BKHostIDField,
+			pkg.BKHostIDField,
 		},
 		Page: BasePage{
 			Start: 0,
@@ -328,8 +328,8 @@ func (c *cmdb) GetHostBizIds(ctx context.Context, header http.Header, hostIds []
 	result := make(map[int64]int64)
 	start := 0
 	end := len(hostIds)
-	if len(hostIds) > common.BKMaxInstanceLimit {
-		end = common.BKMaxInstanceLimit
+	if len(hostIds) > pkg.BKMaxInstanceLimit {
+		end = pkg.BKMaxInstanceLimit
 	}
 
 	for {
@@ -366,12 +366,12 @@ func (c *cmdb) GetHostBizIds(ctx context.Context, header http.Header, hostIds []
 		}
 
 		start = end
-		if end+common.BKMaxInstanceLimit > len(hostIds) {
+		if end+pkg.BKMaxInstanceLimit > len(hostIds) {
 			end = len(hostIds)
 			continue
 		}
 
-		end += common.BKMaxInstanceLimit
+		end += pkg.BKMaxInstanceLimit
 	}
 
 	return result, nil
@@ -572,12 +572,12 @@ func (c *cmdb) GetHostInfoByIP(ctx context.Context, header http.Header, ip strin
 				Condition: ConditionAnd,
 				Rules: []Rule{
 					AtomRule{
-						Field:    common.BKHostInnerIPField,
+						Field:    pkg.BKHostInnerIPField,
 						Operator: OperatorEqual,
 						Value:    ip,
 					},
 					AtomRule{
-						Field:    common.BKCloudIDField,
+						Field:    pkg.BKCloudIDField,
 						Operator: OperatorEqual,
 						Value:    bkCloudID,
 					},
@@ -649,7 +649,7 @@ func (c *cmdb) GetHostInfoByHostID(ctx context.Context, header http.Header, bkHo
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
-						Field:    common.BKHostIDField,
+						Field:    pkg.BKHostIDField,
 						Operator: querybuilder.OperatorEqual,
 						Value:    bkHostID,
 					},

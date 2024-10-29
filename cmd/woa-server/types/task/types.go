@@ -14,9 +14,9 @@
 package task
 
 import (
-	"hcm/cmd/woa-server/common/time"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/pkg/cc"
+	"hcm/pkg/tools/time"
 )
 
 // EventInfo event info

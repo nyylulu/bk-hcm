@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
@@ -76,7 +76,7 @@ func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*cmdb.Host, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

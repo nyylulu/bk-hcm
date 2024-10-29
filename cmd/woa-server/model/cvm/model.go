@@ -16,9 +16,9 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 // model all model operation interface

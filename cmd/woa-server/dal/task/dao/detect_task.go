@@ -16,12 +16,12 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 )
 
 // DetectTask supplies all the recycle detection related operations.

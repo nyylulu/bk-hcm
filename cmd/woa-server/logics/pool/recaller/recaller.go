@@ -19,17 +19,17 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/logics/pool/recycler"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb"
 	ccapi "hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/utils/wait"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -219,7 +219,7 @@ func (r *Recaller) getIdleHosts(task *table.RecallTask) ([]*table.PoolHost, erro
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	hosts, err := dao.Set().PoolHost().FindManyPoolHost(context.Background(), page, filter)
@@ -250,7 +250,7 @@ func (r *Recaller) getFilter(task *table.RecallTask) map[string]interface{} {
 			filter[key] = selector.Value
 		case table.SelectOpIn:
 			filter[key] = mapstr.MapStr{
-				common.BKDBIN: selector.Value,
+				pkg.BKDBIN: selector.Value,
 			}
 		}
 	}

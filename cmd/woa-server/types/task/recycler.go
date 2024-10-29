@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/tools/metadata"
 )
 
 // RecycleCheckReq resource recycle check request
@@ -40,16 +40,16 @@ func (req *RecycleCheckReq) Validate() (errKey string, err error) {
 		return "ips", fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
 	}
 
-	if len(req.IPs) > common.BKMaxInstanceLimit {
-		return "ips", fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.IPs) > pkg.BKMaxInstanceLimit {
+		return "ips", fmt.Errorf("ips exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.AssetIDs) > common.BKMaxInstanceLimit {
-		return "asset_ids", fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return "asset_ids", fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.HostIDs) > common.BKMaxInstanceLimit {
-		return "bk_host_ids", fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.HostIDs) > pkg.BKMaxInstanceLimit {
+		return "bk_host_ids", fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return "", nil
@@ -124,16 +124,16 @@ func (req *PreviewRecycleReq) Validate() error {
 		return fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
 	}
 
-	if len(req.IPs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.IPs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ips exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.AssetIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.HostIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.HostIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	remarkLimit := 256
@@ -219,16 +219,16 @@ func (req *CreateRecycleReq) Validate() error {
 		return fmt.Errorf("ips, asset_ids or bk_host_ids should be set")
 	}
 
-	if len(req.IPs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.IPs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ips exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.AssetIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(req.HostIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(req.HostIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	remarkLimit := 256
@@ -342,37 +342,37 @@ func (param *GetRecycleOrderReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 
 	if len(param.BizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
-			common.BKDBIN: param.BizID,
+			pkg.BKDBIN: param.BizID,
 		}
 	}
 
 	if len(param.ResourceType) > 0 {
 		filter["resource_type"] = mapstr.MapStr{
-			common.BKDBIN: param.ResourceType,
+			pkg.BKDBIN: param.ResourceType,
 		}
 	}
 
 	if len(param.RecycleType) > 0 {
 		filter["recycle_type"] = mapstr.MapStr{
-			common.BKDBIN: param.RecycleType,
+			pkg.BKDBIN: param.RecycleType,
 		}
 	}
 
 	if len(param.Stage) == 0 {
 		filter["stage"] = mapstr.MapStr{
-			common.BKDBNE: table.RecycleStageCommit,
+			pkg.BKDBNE: table.RecycleStageCommit,
 		}
 	} else {
 		stages := make([]table.RecycleStage, 0)
@@ -383,19 +383,19 @@ func (param *GetRecycleOrderReq) GetFilter() (map[string]interface{}, error) {
 			stages = append(stages, stage)
 		}
 		filter["stage"] = mapstr.MapStr{
-			common.BKDBIN: stages,
+			pkg.BKDBIN: stages,
 		}
 	}
 
 	if len(param.Status) > 0 {
 		filter["status"] = mapstr.MapStr{
-			common.BKDBIN: param.Status,
+			pkg.BKDBIN: param.Status,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
@@ -403,7 +403,7 @@ func (param *GetRecycleOrderReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -411,7 +411,7 @@ func (param *GetRecycleOrderReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 
@@ -505,8 +505,8 @@ func (param *GetRecycleDetectReq) Validate() error {
 		return fmt.Errorf("bk_biz_id exceed limit %d", arrayLimit)
 	}
 
-	if len(param.IP) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.IP) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ip exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if len(param.Status) > arrayLimit {
@@ -555,37 +555,37 @@ func (param *GetRecycleDetectReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 
 	if len(param.BizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
-			common.BKDBIN: param.BizID,
+			pkg.BKDBIN: param.BizID,
 		}
 	}
 
 	if len(param.IP) > 0 {
 		filter["ip"] = mapstr.MapStr{
-			common.BKDBIN: param.IP,
+			pkg.BKDBIN: param.IP,
 		}
 	}
 
 	if len(param.Status) > 0 {
 		filter["status"] = mapstr.MapStr{
-			common.BKDBIN: param.Status,
+			pkg.BKDBIN: param.Status,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
@@ -593,7 +593,7 @@ func (param *GetRecycleDetectReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -601,7 +601,7 @@ func (param *GetRecycleDetectReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 
@@ -654,8 +654,8 @@ func (param *GetDetectStepReq) Validate() error {
 		return fmt.Errorf("bk_biz_id exceed limit %d", arrayLimit)
 	}
 
-	if len(param.IP) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.IP) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ip exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if len(param.StepName) > arrayLimit {
@@ -708,43 +708,43 @@ func (param *GetDetectStepReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 
 	if len(param.BizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
-			common.BKDBIN: param.BizID,
+			pkg.BKDBIN: param.BizID,
 		}
 	}
 
 	if len(param.IP) > 0 {
 		filter["ip"] = mapstr.MapStr{
-			common.BKDBIN: param.IP,
+			pkg.BKDBIN: param.IP,
 		}
 	}
 
 	if len(param.StepName) > 0 {
 		filter["step_name"] = mapstr.MapStr{
-			common.BKDBIN: param.StepName,
+			pkg.BKDBIN: param.StepName,
 		}
 	}
 
 	if len(param.Status) > 0 {
 		filter["status"] = mapstr.MapStr{
-			common.BKDBIN: param.Status,
+			pkg.BKDBIN: param.Status,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
@@ -752,7 +752,7 @@ func (param *GetDetectStepReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -760,7 +760,7 @@ func (param *GetDetectStepReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 
@@ -835,8 +835,8 @@ func (param *GetRecycleHostReq) Validate() error {
 		return fmt.Errorf("bk_username exceed limit %d", arrayLimit)
 	}
 
-	if len(param.IP) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ip exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.IP) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ip exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if len(param.Start) > 0 {
@@ -877,61 +877,61 @@ func (param *GetRecycleHostReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 
 	if len(param.BizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
-			common.BKDBIN: param.BizID,
+			pkg.BKDBIN: param.BizID,
 		}
 	}
 
 	if len(param.DeviceType) > 0 {
 		filter["device_type"] = mapstr.MapStr{
-			common.BKDBIN: param.DeviceType,
+			pkg.BKDBIN: param.DeviceType,
 		}
 	}
 
 	if len(param.Zone) > 0 {
 		filter["bk_zone_name"] = mapstr.MapStr{
-			common.BKDBIN: param.Zone,
+			pkg.BKDBIN: param.Zone,
 		}
 	}
 
 	if len(param.SubZone) > 0 {
 		filter["sub_zone"] = mapstr.MapStr{
-			common.BKDBIN: param.SubZone,
+			pkg.BKDBIN: param.SubZone,
 		}
 	}
 
 	if len(param.Stage) > 0 {
 		filter["stage"] = mapstr.MapStr{
-			common.BKDBIN: param.Stage,
+			pkg.BKDBIN: param.Stage,
 		}
 	}
 
 	if len(param.Status) > 0 {
 		filter["status"] = mapstr.MapStr{
-			common.BKDBIN: param.Status,
+			pkg.BKDBIN: param.Status,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
 	if len(param.IP) > 0 {
 		filter["ip"] = mapstr.MapStr{
-			common.BKDBIN: param.IP,
+			pkg.BKDBIN: param.IP,
 		}
 	}
 
@@ -939,7 +939,7 @@ func (param *GetRecycleHostReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -947,7 +947,7 @@ func (param *GetRecycleHostReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 

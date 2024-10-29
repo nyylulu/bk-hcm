@@ -17,13 +17,13 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
@@ -79,7 +79,7 @@ func (r *Recycler) getHostByIDFromPool(hostID int64) (*cmdb.Host, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {

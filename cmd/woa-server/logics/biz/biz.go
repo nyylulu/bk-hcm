@@ -17,12 +17,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common/querybuilder"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb.

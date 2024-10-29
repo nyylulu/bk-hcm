@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/thirdparty/esb/types"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // ----------------------------- biz -----------------------------

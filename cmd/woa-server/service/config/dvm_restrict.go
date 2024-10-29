@@ -14,7 +14,7 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common/mapstr"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/rest"
 )
 

@@ -25,7 +25,6 @@ import (
 	"strconv"
 	"sync"
 
-	"hcm/cmd/woa-server/common/util"
 	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
@@ -43,6 +42,7 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/util"
 )
 
 // ListResPlanDemand list resource plan demand.

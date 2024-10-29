@@ -17,8 +17,8 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/pkg"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // GetApplyStatReq get resource apply operation statistics request
@@ -102,14 +102,14 @@ func (req *GetApplyStatReq) GetFilter() (map[string]interface{}, error) {
 	if len(req.Start) != 0 {
 		startTime, err := time.Parse(dateLayout, req.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 	if len(req.End) != 0 {
 		endTime, err := time.Parse(dateLayout, req.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 	if len(timeCond) != 0 {

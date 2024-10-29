@@ -17,9 +17,9 @@ package recommender
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"

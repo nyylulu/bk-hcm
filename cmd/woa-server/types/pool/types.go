@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/pool/table"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 )
 
 const (
@@ -68,12 +68,12 @@ type MatchSpec struct {
 // errKey: invalid key
 // err: detail reason why errKey is invalid
 func (param *GetLaunchMatchDeviceReq) Validate() error {
-	if len(param.Ips) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("ips exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.Ips) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("ips exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
-	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -159,8 +159,8 @@ func (param *LaunchReq) Validate() error {
 		return errors.New("bk_host_ids cannot be empty")
 	}
 
-	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.HostIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -183,16 +183,16 @@ func (param *RecallReq) Validate() error {
 		return errors.New("device_type cannot be empty")
 	}
 
-	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if param.Replicas <= 0 {
 		return errors.New("replicas should be positive")
 	}
 
-	if param.Replicas > common.BKMaxInstanceLimit {
-		return fmt.Errorf("replicas exceed limit %d", common.BKMaxInstanceLimit)
+	if param.Replicas > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("replicas exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -263,19 +263,19 @@ func (param *GetLaunchTaskReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.ID) > 0 {
 		filter["id"] = mapstr.MapStr{
-			common.BKDBIN: param.ID,
+			pkg.BKDBIN: param.ID,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
 	if len(param.Phase) > 0 {
 		filter["status.phase"] = mapstr.MapStr{
-			common.BKDBIN: param.Phase,
+			pkg.BKDBIN: param.Phase,
 		}
 	}
 
@@ -283,7 +283,7 @@ func (param *GetLaunchTaskReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -291,7 +291,7 @@ func (param *GetLaunchTaskReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 
@@ -373,19 +373,19 @@ func (param *GetRecallTaskReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.ID) > 0 {
 		filter["id"] = mapstr.MapStr{
-			common.BKDBIN: param.ID,
+			pkg.BKDBIN: param.ID,
 		}
 	}
 
 	if len(param.Phase) > 0 {
 		filter["status.phase"] = mapstr.MapStr{
-			common.BKDBIN: param.Phase,
+			pkg.BKDBIN: param.Phase,
 		}
 	}
 
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 
@@ -393,7 +393,7 @@ func (param *GetRecallTaskReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.Start) > 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 
@@ -401,7 +401,7 @@ func (param *GetRecallTaskReq) GetFilter() (map[string]interface{}, error) {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 
@@ -445,8 +445,8 @@ func (param *GetLaunchHostReq) Validate() error {
 		return errors.New("invalid page.limit < 0")
 	}
 
-	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
+	if param.Page.Limit > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("exceed page.limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if param.Filter != nil {
@@ -513,8 +513,8 @@ func (param *GetRecallHostReq) Validate() error {
 		return errors.New("invalid page.limit < 0")
 	}
 
-	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
+	if param.Page.Limit > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("exceed page.limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -555,8 +555,8 @@ func (param *GetPoolHostReq) Validate() error {
 		return errors.New("invalid page.limit < 0")
 	}
 
-	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
+	if param.Page.Limit > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("exceed page.limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -567,7 +567,7 @@ func (param *GetPoolHostReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.Phase) > 0 {
 		filter["status.phase"] = mapstr.MapStr{
-			common.BKDBIN: param.Phase,
+			pkg.BKDBIN: param.Phase,
 		}
 	}
 
@@ -578,7 +578,7 @@ func (param *GetPoolHostReq) GetFilter() (map[string]interface{}, error) {
 			filter[key] = selector.Value
 		case table.SelectOpIn:
 			filter[key] = mapstr.MapStr{
-				common.BKDBIN: selector.Value,
+				pkg.BKDBIN: selector.Value,
 			}
 		}
 	}
@@ -606,8 +606,8 @@ func (param *DrawHostReq) Validate() error {
 		return errors.New("bk_host_ids cannot be empty")
 	}
 
-	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.HostIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if param.ToBizID <= 0 {
@@ -640,8 +640,8 @@ func (param *ReturnHostReq) Validate() error {
 		return errors.New("bk_host_ids cannot be empty")
 	}
 
-	if len(param.HostIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("bk_host_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.HostIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("bk_host_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -666,16 +666,16 @@ func (param *CreateRecallOrderReq) Validate() error {
 		return errors.New("device_type cannot be empty")
 	}
 
-	if len(param.AssetIDs) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("asset_ids exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.AssetIDs) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("asset_ids exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	if param.Replicas <= 0 {
 		return errors.New("replicas should be positive")
 	}
 
-	if param.Replicas > common.BKMaxInstanceLimit {
-		return fmt.Errorf("replicas exceed limit %d", common.BKMaxInstanceLimit)
+	if param.Replicas > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("replicas exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -751,8 +751,8 @@ func (param *GetRecallDetailReq) Validate() error {
 		return errors.New("invalid page.limit < 0")
 	}
 
-	if param.Page.Limit > common.BKMaxInstanceLimit {
-		return fmt.Errorf("exceed page.limit %d", common.BKMaxInstanceLimit)
+	if param.Page.Limit > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("exceed page.limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil
@@ -777,8 +777,8 @@ func (param *ResumeRecycleTaskReq) Validate() error {
 		return fmt.Errorf("id should be set")
 	}
 
-	if len(param.ID) > common.BKMaxInstanceLimit {
-		return fmt.Errorf("id exceed limit %d", common.BKMaxInstanceLimit)
+	if len(param.ID) > pkg.BKMaxInstanceLimit {
+		return fmt.Errorf("id exceed limit %d", pkg.BKMaxInstanceLimit)
 	}
 
 	return nil

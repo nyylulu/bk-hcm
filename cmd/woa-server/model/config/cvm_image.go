@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type cvmImage struct {
@@ -26,19 +26,19 @@ type cvmImage struct {
 
 // NextSequence returns next cvm image config sequence id from db
 func (i *cvmImage) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgCvmImage)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgCvmImage)
 }
 
 // CreateCvmImage creates cvm image config in db
 func (i *cvmImage) CreateCvmImage(ctx context.Context, inst *types.CvmImage) error {
-	return mongodb.Client().Table(common.BKTableNameCfgCvmImage).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgCvmImage).Insert(ctx, inst)
 }
 
 // GetCvmImage gets cvm image config by filter from db
 func (i *cvmImage) GetCvmImage(ctx context.Context, filter *mapstr.MapStr) (*types.CvmImage, error) {
 	inst := new(types.CvmImage)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgCvmImage).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgCvmImage).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (i *cvmImage) GetCvmImage(ctx context.Context, filter *mapstr.MapStr) (*typ
 func (i *cvmImage) FindManyCvmImage(ctx context.Context, filter *mapstr.MapStr) ([]*types.CvmImage, error) {
 	insts := make([]*types.CvmImage, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgCvmImage).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgCvmImage).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -58,10 +58,10 @@ func (i *cvmImage) FindManyCvmImage(ctx context.Context, filter *mapstr.MapStr) 
 
 // UpdateCvmImage updates cvm image config by filter and doc in db
 func (i *cvmImage) UpdateCvmImage(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgCvmImage).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgCvmImage).Update(ctx, filter, doc)
 }
 
 // DeleteCvmImage deletes cvm image config from db
 func (i *cvmImage) DeleteCvmImage(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgCvmImage).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgCvmImage).Delete(ctx, filter)
 }

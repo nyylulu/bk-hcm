@@ -15,10 +15,10 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	cfgtypes "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 // Zone zone operation interface
@@ -36,7 +36,7 @@ type zoneDao struct {
 func (z *zoneDao) FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*cfgtypes.Zone, error) {
 	insts := make([]*cfgtypes.Zone, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 

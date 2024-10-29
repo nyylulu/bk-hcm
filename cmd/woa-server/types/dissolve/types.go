@@ -24,8 +24,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/pkg"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
@@ -35,6 +34,7 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // -------------------------- Create --------------------------
@@ -257,7 +257,7 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *
 	andRules := make([]querybuilder.Rule, 0)
 
 	cloudIDRule := querybuilder.AtomRule{
-		Field:    common.BKCloudIDField,
+		Field:    pkg.BKCloudIDField,
 		Operator: querybuilder.OperatorEqual,
 		Value:    0, // 只需要查询管控区域为0的公司的机器
 	}
@@ -286,7 +286,7 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *
 
 	if len(assetIDs) != 0 {
 		assetIDRule := querybuilder.AtomRule{
-			Field:    common.BKAssetIDField,
+			Field:    pkg.BKAssetIDField,
 			Operator: querybuilder.OperatorIn,
 			Value:    assetIDs,
 		}
@@ -298,12 +298,12 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *
 			Condition: querybuilder.ConditionOr,
 			Rules: []querybuilder.Rule{
 				querybuilder.AtomRule{
-					Field:    common.BKOperatorField,
+					Field:    pkg.BKOperatorField,
 					Operator: querybuilder.OperatorIn,
 					Value:    req.Operators,
 				},
 				querybuilder.AtomRule{
-					Field:    common.BKBakOperatorField,
+					Field:    pkg.BKBakOperatorField,
 					Operator: querybuilder.OperatorIn,
 					Value:    req.Operators,
 				},

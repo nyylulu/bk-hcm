@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/discovery"
 	"hcm/cmd/woa-server/storage/dal/mongo/local"
 	"hcm/cmd/woa-server/storage/stream/event"
 	"hcm/cmd/woa-server/storage/stream/loop"
 	"hcm/cmd/woa-server/storage/stream/types"
+	"hcm/pkg/discovery"
 
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"

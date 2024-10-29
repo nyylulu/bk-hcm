@@ -22,21 +22,21 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/dal"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/logics/config"
 	poolLogics "hcm/cmd/woa-server/logics/pool"
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
 	"hcm/cmd/woa-server/model/task"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	utils "hcm/pkg/tools/util"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
@@ -873,7 +873,7 @@ func (g *Generator) getOrderGenRecords(suborderID string) ([]*types.GenerateReco
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(context.Background(), page, filter)
@@ -1188,7 +1188,7 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

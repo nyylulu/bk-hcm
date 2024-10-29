@@ -16,11 +16,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type generateRecord struct {
@@ -28,19 +28,19 @@ type generateRecord struct {
 
 // NextSequence returns next apply order generate record sequence id from db
 func (g *generateRecord) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameGenerateRecord)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameGenerateRecord)
 }
 
 // CreateGenerateRecord creates apply order generate record in db
 func (g *generateRecord) CreateGenerateRecord(ctx context.Context, inst *types.GenerateRecord) error {
-	return mongodb.Client().Table(common.BKTableNameGenerateRecord).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameGenerateRecord).Insert(ctx, inst)
 }
 
 // GetGenerateRecord gets apply order generate record by filter from db
 func (g *generateRecord) GetGenerateRecord(ctx context.Context, filter *mapstr.MapStr) (*types.GenerateRecord, error) {
 	inst := new(types.GenerateRecord)
 
-	if err := mongodb.Client().Table(common.BKTableNameGenerateRecord).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameGenerateRecord).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (g *generateRecord) GetGenerateRecord(ctx context.Context, filter *mapstr.M
 
 // CountGenerateRecord gets apply order generate record count by filter from db
 func (g *generateRecord) CountGenerateRecord(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameGenerateRecord).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameGenerateRecord).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -63,7 +63,7 @@ func (g *generateRecord) FindManyGenerateRecord(ctx context.Context, page metada
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameGenerateRecord).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameGenerateRecord).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -80,7 +80,7 @@ func (g *generateRecord) FindManyGenerateRecord(ctx context.Context, page metada
 
 // UpdateGenerateRecord updates apply order generate record by filter and doc in db
 func (g *generateRecord) UpdateGenerateRecord(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameGenerateRecord).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameGenerateRecord).Update(ctx, filter, doc)
 }
 
 // DeleteGenerateRecord deletes apply order generate record from db

@@ -16,9 +16,9 @@ package config
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -33,7 +33,7 @@ func (s *service) GetCvmImage(cts *rest.Contexts) (interface{}, error) {
 
 	cond := mapstr.MapStr{}
 	if len(input.Region) > 0 {
-		cond["region"] = mapstr.MapStr{common.BKDBIN: input.Region}
+		cond["region"] = mapstr.MapStr{pkg.BKDBIN: input.Region}
 	}
 
 	rst, err := s.logics.CvmImage().GetCvmImage(cts.Kit, &cond)

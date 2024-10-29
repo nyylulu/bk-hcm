@@ -15,15 +15,15 @@ package config
 import (
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/config/dao"
 	"hcm/cmd/woa-server/dal/config/table"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 )
@@ -143,14 +143,14 @@ func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 		"vpc_id": vpc,
 		// filter subnet with name prefix cvm_use_
 		"subnet_name": mapstr.MapStr{
-			common.BKDBLIKE: "^cvm_use_",
+			pkg.BKDBLIKE: "^cvm_use_",
 		},
 		"enable": true,
 	}
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	cfgSubnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filterSubnet)

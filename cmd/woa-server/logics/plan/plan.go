@@ -26,7 +26,7 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/utils/wait"
+	"hcm/pkg/tools/utils/wait"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"

@@ -19,15 +19,13 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -35,6 +33,8 @@ import (
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/thirdparty/tmpapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // Transit deal with device transit tasks
@@ -82,7 +82,7 @@ func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHos
 			},
 			Page: cmdb.BasePage{
 				Start: int64(startIndex),
-				Limit: common.BKMaxInstanceLimit,
+				Limit: pkg.BKMaxInstanceLimit,
 			},
 		}
 		resp, err := t.cc.ListBizHost(kit.New(), params)
@@ -91,10 +91,10 @@ func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHos
 			return nil, err
 		}
 		hosts.Info = append(hosts.Info, resp.Info...)
-		if len(resp.Info) < common.BKMaxInstanceLimit {
+		if len(resp.Info) < pkg.BKMaxInstanceLimit {
 			break
 		}
-		startIndex += common.BKMaxInstanceLimit
+		startIndex += pkg.BKMaxInstanceLimit
 	}
 
 	hosts.Count = int64(len(hosts.Info))
@@ -146,7 +146,7 @@ func (t *Transit) getRecycleHosts(orderId string) ([]*table.RecycleHost, error) 
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)

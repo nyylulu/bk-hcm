@@ -16,9 +16,9 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/tools/metadata"
 )
 
 // DetectStepCfg supplies all the recycle detection step config related operations.

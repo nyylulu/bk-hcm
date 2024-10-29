@@ -20,17 +20,17 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/utils"
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/utils"
 )
 
 // CVM create cvm request param

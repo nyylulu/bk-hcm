@@ -142,3 +142,78 @@ func loadCertificates(certFile, keyFile, passwd string) (*tls.Certificate, error
 
 	return &tlsCert, nil
 }
+
+func ClientTslConfVerityServer(caFile string) (*tls.Config, error) {
+	caPool, err := loadCa(caFile)
+	if err != nil {
+		return nil, err
+	}
+
+	conf := &tls.Config{
+		RootCAs: caPool,
+	}
+
+	return conf, nil
+}
+
+func ClientTLSConfVerity(caFile, certFile, keyFile, passwd string) (*tls.Config, error) {
+	caPool, err := loadCa(caFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := loadCertificates(certFile, keyFile, passwd)
+	if err != nil {
+		return nil, err
+	}
+
+	conf := &tls.Config{
+		InsecureSkipVerify: false,
+		RootCAs:            caPool,
+		Certificates:       []tls.Certificate{*cert},
+	}
+
+	return conf, nil
+}
+
+func ServerTslConf(caFile, certFile, keyFile, passwd string) (*tls.Config, error) {
+	if "" == caFile {
+		return ServerTslConfVerity(certFile, keyFile, passwd)
+	}
+
+	return ServerTslConfVerityClient(caFile, certFile, keyFile, passwd)
+}
+
+func ServerTslConfVerity(certFile, keyFile, passwd string) (*tls.Config, error) {
+
+	cert, err := loadCertificates(certFile, keyFile, passwd)
+	if err != nil {
+		return nil, err
+	}
+
+	conf := &tls.Config{
+		Certificates: []tls.Certificate{*cert},
+	}
+
+	return conf, nil
+}
+
+func ServerTslConfVerityClient(caFile, certFile, keyFile, passwd string) (*tls.Config, error) {
+	caPool, err := loadCa(caFile)
+	if err != nil {
+		return nil, err
+	}
+
+	cert, err := loadCertificates(certFile, keyFile, passwd)
+	if err != nil {
+		return nil, err
+	}
+
+	conf := &tls.Config{
+		ClientCAs:    caPool,
+		Certificates: []tls.Certificate{*cert},
+		ClientAuth:   tls.RequireAndVerifyClientCert,
+	}
+
+	return conf, nil
+}

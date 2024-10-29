@@ -18,17 +18,17 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	arrayutil "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
+	arrayutil "hcm/pkg/tools/util"
 )
 
 // CapacityIf provides management interface for operations of resource apply capacity
@@ -75,7 +75,7 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 		if IsDftCvmVpc(vpcID) {
 			// filter subnet with name prefix cvm_use_
 			filter["subnet_name"] = mapstr.MapStr{
-				common.BKDBLIKE: "^cvm_use_",
+				pkg.BKDBLIKE: "^cvm_use_",
 			}
 		}
 	}
@@ -85,7 +85,7 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	subnetList, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filter)

@@ -15,15 +15,15 @@ package config
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
 )
 
 // SubnetIf provides management interface for operations of subnet config
@@ -60,7 +60,7 @@ type subnet struct {
 func (s *subnet) GetSubnet(kt *kit.Kit, cond map[string]interface{}) (*types.GetSubnetResult, error) {
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 	insts, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, cond)
 	if err != nil {
