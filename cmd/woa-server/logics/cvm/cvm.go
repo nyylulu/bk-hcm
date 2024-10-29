@@ -556,6 +556,7 @@ var regionToVpc = map[string]string{
 	"ap-hangzhou-ec":   "vpc-puhasca0",
 	"ap-fuzhou-ec":     "vpc-hdxonj2q",
 	"ap-wuhan-ec":      "vpc-867lsj6w",
+	"ap-beijing":       "vpc-bhb0y6g8",
 }
 
 func (l *logics) getCvmVpc(region string) (string, error) {
@@ -735,6 +736,11 @@ var regionToSecGroup = map[string]*SecGroup{
 	},
 	"ap-wuhan-ec": {
 		SecurityGroupId:   "sg-p5ld4xyq",
+		SecurityGroupName: "云梯默认安全组",
+		SecurityGroupDesc: "",
+	},
+	"ap-beijing": {
+		SecurityGroupId:   "sg-rjwj7cnt",
 		SecurityGroupName: "云梯默认安全组",
 		SecurityGroupDesc: "",
 	},

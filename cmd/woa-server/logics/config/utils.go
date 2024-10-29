@@ -33,6 +33,7 @@ var regionToVpc = map[string]string{
 	"ap-hangzhou-ec":   "vpc-puhasca0",
 	"ap-fuzhou-ec":     "vpc-hdxonj2q",
 	"ap-wuhan-ec":      "vpc-867lsj6w",
+	"ap-beijing":       "vpc-bhb0y6g8",
 }
 
 // GetDftCvmVpc gets the default vpc of a region
