@@ -15,7 +15,7 @@ package local
 import (
 	"testing"
 
-	"hcm/cmd/woa-server/common/metadata"
+	"hcm/pkg/tools/metadata"
 
 	"github.com/stretchr/testify/require"
 	"go.mongodb.org/mongo-driver/bson"

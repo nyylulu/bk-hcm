@@ -16,9 +16,9 @@ package config
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -55,7 +55,7 @@ func (s *service) GetVpcList(cts *rest.Contexts) (interface{}, error) {
 	cond := map[string]interface{}{}
 	if len(input.Regions) > 0 {
 		cond["region"] = map[string]interface{}{
-			common.BKDBIN: input.Regions,
+			pkg.BKDBIN: input.Regions,
 		}
 	}
 

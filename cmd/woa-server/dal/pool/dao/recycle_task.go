@@ -15,10 +15,10 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 // RecycleTask supplies all the resource recycle task related operations.

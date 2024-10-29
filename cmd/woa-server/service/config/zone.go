@@ -16,9 +16,9 @@ package config
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -35,11 +35,11 @@ func (s *service) GetQcloudZone(cts *rest.Contexts) (interface{}, error) {
 	// if input region is empty list, return all zone info
 	if len(input.Region) > 0 {
 		cond["region"] = mapstr.MapStr{
-			common.BKDBIN: input.Region,
+			pkg.BKDBIN: input.Region,
 		}
 	} else if len(input.CmdbRegion) > 0 {
 		cond["cmdb_region_name"] = mapstr.MapStr{
-			common.BKDBIN: input.CmdbRegion,
+			pkg.BKDBIN: input.CmdbRegion,
 		}
 	}
 
@@ -119,7 +119,7 @@ func (s *service) GetIdcZone(cts *rest.Contexts) (interface{}, error) {
 	// if input region is empty list, return all zone info
 	if len(input.Region) > 0 {
 		cond["cmdb_region_name"] = mapstr.MapStr{
-			common.BKDBIN: input.Region,
+			pkg.BKDBIN: input.Region,
 		}
 	}
 

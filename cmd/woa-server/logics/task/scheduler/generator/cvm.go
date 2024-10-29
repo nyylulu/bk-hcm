@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/utils"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	cvmtypes "hcm/cmd/woa-server/types/cvm"
 	types "hcm/cmd/woa-server/types/task"
@@ -32,6 +31,7 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/utils"
 )
 
 // createCVM starts a cvm creating task

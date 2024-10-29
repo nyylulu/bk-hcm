@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
@@ -37,6 +36,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
 
 	"github.com/shopspring/decimal"

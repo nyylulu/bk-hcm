@@ -16,10 +16,10 @@ package matcher
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common/querybuilder"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // transferHostAndSetOperator transfer host and set operator in cc 3.0

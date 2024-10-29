@@ -18,11 +18,11 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
@@ -222,7 +222,7 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.Host, err
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {

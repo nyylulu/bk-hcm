@@ -25,10 +25,10 @@ import (
 	"sync/atomic"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	model "hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"

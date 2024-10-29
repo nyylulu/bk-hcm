@@ -16,9 +16,9 @@ package dal
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/dal/types"
+	"hcm/pkg/tools/metadata"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )

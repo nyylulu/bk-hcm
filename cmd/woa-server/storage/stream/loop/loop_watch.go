@@ -16,9 +16,9 @@ import (
 	"context"
 	"time"
 
-	"hcm/cmd/woa-server/common/discovery"
 	"hcm/cmd/woa-server/storage/stream/event"
 	"hcm/cmd/woa-server/storage/stream/types"
+	"hcm/pkg/discovery"
 	"hcm/pkg/logs"
 )
 

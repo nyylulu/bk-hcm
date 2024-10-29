@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/util"
 )
 
 func (d *Detector) preCheck(step *table.DetectStep, retry int) (int, string, error) {

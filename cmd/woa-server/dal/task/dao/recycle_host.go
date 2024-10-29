@@ -16,10 +16,10 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 // RecycleHost supplies all the recycle host related operations.

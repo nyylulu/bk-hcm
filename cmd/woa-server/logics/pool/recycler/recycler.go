@@ -19,11 +19,10 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -32,6 +31,7 @@ import (
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/tjjapi"
 	"hcm/pkg/thirdparty/xshipapi"
+	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/tools/uuid"
 
 	"k8s.io/client-go/util/workqueue"

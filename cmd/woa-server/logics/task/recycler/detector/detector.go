@@ -20,12 +20,11 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -42,6 +41,7 @@ import (
 	"hcm/pkg/thirdparty/tmpapi"
 	"hcm/pkg/thirdparty/uworkapi"
 	"hcm/pkg/thirdparty/xshipapi"
+	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/uuid"
 )
 
@@ -93,7 +93,7 @@ func (d *Detector) CheckDetectStatus(subOrderId string) error {
 	filter := map[string]interface{}{
 		"suborder_id": subOrderId,
 		"status": mapstr.MapStr{
-			common.BKDBNE: table.DetectStatusSuccess,
+			pkg.BKDBNE: table.DetectStatusSuccess,
 		},
 	}
 	cnt, err := dao.Set().DetectTask().CountDetectTask(context.Background(), filter)
@@ -168,7 +168,7 @@ func (d *Detector) getRecycleTasks(orderId string) ([]*table.DetectTask, error) 
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 	tasks, err := dao.Set().DetectTask().FindManyDetectTask(context.Background(), page, filter)
 	if err != nil {
@@ -440,7 +440,7 @@ func (d *Detector) getRecycleSteps() ([]*table.DetectStepCfg, error) {
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	steps, err := dao.Set().DetectStepCfg().GetDetectStepConfig(context.Background(), page, filter)

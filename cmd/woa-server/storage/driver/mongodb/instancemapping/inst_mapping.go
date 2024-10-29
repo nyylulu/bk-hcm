@@ -15,9 +15,10 @@ package instancemapping
 import (
 	"context"
 	"fmt"
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
+
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg"
+	"hcm/pkg/tools/metadata"
 )
 
 /***
@@ -47,14 +48,15 @@ var (
 
 // GetInstanceMapping TODO
 // deprecated 不建议使用，新加的要求用户必须传bk_obj_id, 改功能是在实例数据分表后， 只有实例id，没有bk_obj_id的时候使用，
-//     负责将实例id 转为bk_obj_id,
+//
+//	负责将实例id 转为bk_obj_id,
 func GetInstanceMapping(ids []int64) (map[int64]metadata.ObjectMapping, error) {
 	if len(ids) > 200 {
 		return nil, fmt.Errorf("id array count must lt 200")
 	}
 	filter := map[string]interface{}{
-		common.BKInstIDField: map[string]interface{}{
-			common.BKDBIN: ids,
+		pkg.BKInstIDField: map[string]interface{}{
+			pkg.BKDBIN: ids,
 		},
 	}
 	rows := make([]metadata.ObjectMapping, 0)
@@ -90,8 +92,8 @@ func GetInstanceObjectMapping(ids []int64) ([]metadata.ObjectMapping, error) {
 		}
 
 		filter := map[string]interface{}{
-			common.BKInstIDField: map[string]interface{}{
-				common.BKDBIN: paged,
+			pkg.BKInstIDField: map[string]interface{}{
+				pkg.BKDBIN: paged,
 			},
 		}
 		rows := make([]metadata.ObjectMapping, 0)
@@ -112,11 +114,12 @@ func Create(ctx context.Context, doc interface{}) error {
 }
 
 // Delete TODO
-//  移除实例id与模型id的对应关系就， ctx 是为了保证事务
+//
+//	移除实例id与模型id的对应关系就， ctx 是为了保证事务
 func Delete(ctx context.Context, ids []int64) error {
 	filter := map[string]interface{}{
-		common.BKInstIDField: map[string]interface{}{
-			common.BKDBIN: ids,
+		pkg.BKInstIDField: map[string]interface{}{
+			pkg.BKDBIN: ids,
 		},
 	}
 	return mongodb.Table(tableName).Delete(ctx, filter)

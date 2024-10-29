@@ -18,14 +18,14 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
 )
 
 // ApplyOrder resource apply order
@@ -373,8 +373,8 @@ func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 			return fmt.Sprintf("spec[%d].replicas", index), errors.New("should be positive")
 		}
 
-		if spec.Replicas > common.BKMaxInstanceLimit {
-			return fmt.Sprintf("spec[%d].replicas", index), fmt.Errorf("exceed limit %d", common.BKMaxInstanceLimit)
+		if spec.Replicas > pkg.BKMaxInstanceLimit {
+			return fmt.Sprintf("spec[%d].replicas", index), fmt.Errorf("exceed limit %d", pkg.BKMaxInstanceLimit)
 		}
 	}
 
@@ -841,27 +841,27 @@ func (param *GetApplyParam) GetFilter(isTicket bool) map[string]interface{} {
 	filter := make(map[string]interface{})
 	if len(param.BkBizID) > 0 {
 		filter["bk_biz_id"] = mapstr.MapStr{
-			common.BKDBIN: param.BkBizID,
+			pkg.BKDBIN: param.BkBizID,
 		}
 	}
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 	if len(param.RequireType) > 0 {
 		filter["require_type"] = mapstr.MapStr{
-			common.BKDBIN: param.RequireType,
+			pkg.BKDBIN: param.RequireType,
 		}
 	}
 	if isTicket {
@@ -877,12 +877,12 @@ func (param *GetApplyParam) GetFilter(isTicket bool) map[string]interface{} {
 			ticketStageList = append(ticketStageList, TicketStageTerminate)
 		}
 		filter["stage"] = mapstr.MapStr{
-			common.BKDBIN: ticketStageList,
+			pkg.BKDBIN: ticketStageList,
 		}
 	} else {
 		if len(param.Stage) > 0 {
 			filter["stage"] = mapstr.MapStr{
-				common.BKDBIN: param.Stage,
+				pkg.BKDBIN: param.Stage,
 			}
 		}
 	}
@@ -890,14 +890,14 @@ func (param *GetApplyParam) GetFilter(isTicket bool) map[string]interface{} {
 	if len(param.Start) != 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 	if len(param.End) != 0 {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 	if len(timeCond) != 0 {
@@ -1376,7 +1376,7 @@ func (param *GetApplyModifyReq) GetFilter() (map[string]interface{}, error) {
 	filter := make(map[string]interface{})
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 

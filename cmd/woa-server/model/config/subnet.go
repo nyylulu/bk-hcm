@@ -15,11 +15,11 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type subnet struct {
@@ -27,19 +27,19 @@ type subnet struct {
 
 // NextSequence returns next subnet config sequence id from db
 func (s *subnet) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgSubnet)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgSubnet)
 }
 
 // CreateSubnet creates subnet config in db
 func (s *subnet) CreateSubnet(ctx context.Context, inst *types.Subnet) error {
-	return mongodb.Client().Table(common.BKTableNameCfgSubnet).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Insert(ctx, inst)
 }
 
 // GetSubnet gets subnet config by filter from db
 func (s *subnet) GetSubnet(ctx context.Context, filter *mapstr.MapStr) (*types.Subnet, error) {
 	inst := new(types.Subnet)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgSubnet).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (s *subnet) GetSubnet(ctx context.Context, filter *mapstr.MapStr) (*types.S
 
 // CountSubnet gets subnet count by filter from db
 func (v *subnet) CountSubnet(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameCfgSubnet).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -62,7 +62,7 @@ func (s *subnet) FindManySubnet(ctx context.Context, page metadata.BasePage, fil
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameCfgSubnet).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -79,10 +79,10 @@ func (s *subnet) FindManySubnet(ctx context.Context, page metadata.BasePage, fil
 
 // UpdateSubnet updates subnet config by filter and doc in db
 func (s *subnet) UpdateSubnet(ctx context.Context, filter, doc map[string]interface{}) error {
-	return mongodb.Client().Table(common.BKTableNameCfgSubnet).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Update(ctx, filter, doc)
 }
 
 // DeleteSubnet deletes subnet config from db
 func (s *subnet) DeleteSubnet(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgSubnet).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgSubnet).Delete(ctx, filter)
 }

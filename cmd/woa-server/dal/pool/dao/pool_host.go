@@ -15,9 +15,9 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/tools/metadata"
 )
 
 // PoolHost supplies all the pool host related operations.

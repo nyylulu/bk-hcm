@@ -15,18 +15,18 @@ package config
 import (
 	"errors"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
+	utils "hcm/pkg/tools/util"
 )
 
 // DeviceIf provides management interface for operations of device config
@@ -308,7 +308,7 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDeviceParam) error {
 	filter := &mapstr.MapStr{
 		"zone": &mapstr.MapStr{
-			common.BKDBIN: input.Zone,
+			pkg.BKDBIN: input.Zone,
 		},
 	}
 
@@ -498,7 +498,7 @@ func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
 					}},
 			},
 		},
-		Page: metadata.BasePage{Limit: common.BKNoLimit, Start: 0},
+		Page: metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0},
 	}
 	deviceList, err := d.GetDevice(kt, deviceReq)
 	if err != nil {

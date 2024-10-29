@@ -17,9 +17,9 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/cvmapi"
 )
 

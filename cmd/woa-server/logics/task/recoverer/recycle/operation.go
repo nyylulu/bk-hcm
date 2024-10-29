@@ -22,14 +22,14 @@ package recycle
 import (
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/dispatcher"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 
 	"go.mongodb.org/mongo-driver/bson"
 )
@@ -101,7 +101,7 @@ func (r *recycleRecoverer) getRecycleHosts(kt *kit.Kit, subOrderId string) ([]*t
 	for {
 		page := metadata.BasePage{
 			Start: startIndex,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		}
 		hosts, err := dao.Set().RecycleHost().FindManyRecycleHost(kt.Ctx, page, filter)
 		if err != nil {
@@ -109,10 +109,10 @@ func (r *recycleRecoverer) getRecycleHosts(kt *kit.Kit, subOrderId string) ([]*t
 			return nil, err
 		}
 		recycleHosts = append(recycleHosts, hosts...)
-		if len(hosts) < common.BKMaxInstanceLimit {
+		if len(hosts) < pkg.BKMaxInstanceLimit {
 			break
 		}
-		startIndex += common.BKMaxInstanceLimit
+		startIndex += pkg.BKMaxInstanceLimit
 	}
 
 	return recycleHosts, nil

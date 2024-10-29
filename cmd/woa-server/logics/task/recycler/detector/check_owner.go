@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 func (d *Detector) checkOwner(step *table.DetectStep, retry int) (int, string, error) {
@@ -81,7 +81,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

@@ -17,13 +17,13 @@ import (
 	"context"
 	"sync"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/errors"
-	"hcm/cmd/woa-server/common/metric"
-	"hcm/cmd/woa-server/common/types"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg"
+	"hcm/pkg/criteria/errors"
 	"hcm/pkg/logs"
+	"hcm/pkg/metric"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/types"
 )
 
 /*
@@ -74,8 +74,9 @@ func InitClient(prefix string, config *redis.Config) errors.CCErrorCoder {
 	lastInitErr = nil
 	db, dbErr := redis.NewFromConfig(*config)
 	if dbErr != nil {
-		logs.Errorf("failed to connect the redis server, error info is:%s, config: %+v", dbErr.Error(), cvt.PtrToVal(config))
-		lastInitErr = errors.NewCCError(common.CCErrCommResourceInitFailed, "'"+prefix+" redis' initialization failed")
+		logs.Errorf("failed to connect the redis server, error info is:%s, config: %+v", dbErr.Error(),
+			cvt.PtrToVal(config))
+		lastInitErr = errors.NewCCError(pkg.CCErrCommResourceInitFailed, "'"+prefix+" redis' initialization failed")
 		return lastInitErr
 	}
 	if defaultClient == nil || prefix == defaultPrefix {

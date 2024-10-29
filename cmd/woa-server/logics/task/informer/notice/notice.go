@@ -17,10 +17,10 @@ import (
 	"errors"
 	"time"
 
-	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/storage/stream/types"
+	"hcm/pkg"
 	"hcm/pkg/logs"
 
 	"github.com/tidwall/gjson"
@@ -107,7 +107,7 @@ func (i *noticeInformer) listAndWatchNotice() error {
 			WatchOpt: &types.WatchOptions{
 				Options: types.Options{
 					EventStruct:     new(map[string]interface{}),
-					Collection:      common.BKTableNameNoticeInfo,
+					Collection:      pkg.BKTableNameNoticeInfo,
 					StartAfterToken: nil,
 					StartAtTime:     startTime,
 					// TODO: add failure callback

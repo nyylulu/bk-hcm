@@ -16,15 +16,15 @@ import (
 	"context"
 	"fmt"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 )
 
 // CommitTransaction 提交事务
 func (c *Mongo) CommitTransaction(ctx context.Context, cap *metadata.TxnCapable) error {
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 
 	// check if txn number exists, if not, then no db operation with transaction is executed, committing will return an
 	// error: "(NoSuchTransaction) Given transaction number 1 does not match any in-progress transactions. The active
@@ -73,7 +73,7 @@ func (c *Mongo) CommitTransaction(ctx context.Context, cap *metadata.TxnCapable)
 
 // AbortTransaction 取消事务
 func (c *Mongo) AbortTransaction(ctx context.Context, cap *metadata.TxnCapable) (bool, error) {
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	reloadSession, err := c.tm.PrepareTransaction(cap, c.dbc)
 	if err != nil {
 		logs.Errorf("abort transaction, but prepare transaction failed, err: %v, rid: %v", err, rid)

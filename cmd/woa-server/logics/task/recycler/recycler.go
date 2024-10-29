@@ -20,13 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/dal"
-	"hcm/cmd/woa-server/common/language"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	configLogics "hcm/cmd/woa-server/logics/config"
@@ -37,7 +30,10 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
@@ -46,7 +42,11 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/language"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -509,7 +509,7 @@ func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
@@ -589,7 +589,7 @@ func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) (
 		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
-				common.BKDBIN: moduleIds,
+				pkg.BKDBIN: moduleIds,
 			},
 		},
 		Fields: []string{"bk_module_id", "bk_module_name"},
@@ -686,7 +686,7 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 		for biz, groups := range bizGroups {
 			id, err := dao.Set().RecycleOrder().NextSequence(sc)
 			if err != nil {
-				return errf.New(common.CCErrObjectDBOpErrno, err.Error())
+				return errf.New(pkg.CCErrObjectDBOpErrno, err.Error())
 			}
 
 			index := 1
@@ -840,7 +840,7 @@ func (r *recycler) fillCvmInfo(hosts []*table.RecycleHost) error {
 func (r *recycler) AuditRecycleOrder(kit *kit.Kit, param *types.AuditRecycleReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1074,13 +1074,13 @@ func (r *recycler) StartRecycleOrder(kit *kit.Kit, param *types.StartRecycleOrde
 	filter := map[string]interface{}{}
 	if len(param.OrderID) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderID,
+			pkg.BKDBIN: param.OrderID,
 		}
 	}
 
 	if len(param.SuborderID) > 0 {
 		filter["suborder_id"] = mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		}
 	}
 
@@ -1179,7 +1179,7 @@ func (r *recycler) setOrderCommitted(orders []*table.RecycleOrder) {
 func (r *recycler) StartDetectTask(kit *kit.Kit, param *types.StartDetectTaskReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1248,7 +1248,7 @@ func (r *recycler) setOrderDetecting(orders []*table.RecycleOrder) {
 func (r *recycler) ReviseRecycleOrder(kit *kit.Kit, param *types.ReviseRecycleOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1349,7 +1349,7 @@ func (r *recycler) removeDetectFailedHosts(orderID string, ips []interface{}) er
 	filter := map[string]interface{}{
 		"suborder_id": orderID,
 		"ip": map[string]interface{}{
-			common.BKDBIN: ips,
+			pkg.BKDBIN: ips,
 		},
 	}
 
@@ -1405,7 +1405,7 @@ func (r *recycler) PauseRecycleOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 func (r *recycler) ResumeRecycleOrder(kit *kit.Kit, param *types.ResumeRecycleOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1435,7 +1435,7 @@ func (r *recycler) ResumeRecycleOrder(kit *kit.Kit, param *types.ResumeRecycleOr
 func (r *recycler) TerminateRecycleOrder(kit *kit.Kit, param *types.TerminateRecycleOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1672,7 +1672,7 @@ func (r *recycler) GetDetectStepCfg(kit *kit.Kit) (*types.GetDetectStepCfgRst, e
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := dao.Set().DetectStepCfg().GetDetectStepConfig(kit.Ctx, page, filter)
@@ -1753,7 +1753,7 @@ func (r *recycler) StartRecycleOrderByRecycleType(kit *kit.Kit, param *types.Sta
 
 	filter := map[string]interface{}{}
 	filter["suborder_id"] = mapstr.MapStr{
-		common.BKDBIN: subOrderIDs,
+		pkg.BKDBIN: subOrderIDs,
 	}
 	page := metadata.BasePage{}
 	insts, err := dao.Set().RecycleOrder().FindManyRecycleOrder(kit.Ctx, page, filter)

@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/pkg/kit"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 
 	"go.uber.org/ratelimit"
 )
@@ -130,7 +130,7 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.Host, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
@@ -183,7 +183,7 @@ func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.Host, erro
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
@@ -231,7 +231,7 @@ func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.Module
 		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
-				common.BKDBIN: moduleIds,
+				pkg.BKDBIN: moduleIds,
 			},
 		},
 		Fields: []string{"bk_module_id", "bk_module_name"},

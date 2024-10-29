@@ -13,12 +13,14 @@
 // Package apply define the key of apply order informer
 package apply
 
-import "hcm/cmd/woa-server/common"
+import (
+	"hcm/pkg"
+)
 
 // KeyApply apply order informer key for token handler
 var KeyApply = Key{
 	namespace:  "apply_order",
-	collection: common.BKTableNameApplyOrder,
+	collection: pkg.BKTableNameApplyOrder,
 	ttlSeconds: 6 * 60 * 60,
 }
 

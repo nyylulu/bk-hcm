@@ -19,7 +19,7 @@ import (
 	"fmt"
 	"reflect"
 
-	"hcm/cmd/woa-server/common/util"
+	"hcm/pkg/tools/util"
 
 	jsoniter "github.com/json-iterator/go"
 )
