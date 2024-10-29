@@ -14,9 +14,9 @@
 package config
 
 import (
-	"hcm/cmd/woa-server/common"
 	"hcm/cmd/woa-server/dal/config/table"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -78,7 +78,7 @@ func (s *service) UpdateLeftIPProperty(cts *rest.Contexts) (interface{}, error) 
 
 	cond := map[string]interface{}{
 		"id": map[string]interface{}{
-			common.BKDBIN: input.Ids,
+			pkg.BKDBIN: input.Ids,
 		},
 	}
 

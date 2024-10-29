@@ -16,11 +16,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type diskCheckRecord struct {
@@ -28,12 +28,12 @@ type diskCheckRecord struct {
 
 // NextSequence returns next apply order disk check record sequence id from db
 func (i *diskCheckRecord) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameDiskCheckRecord)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameDiskCheckRecord)
 }
 
 // CreateDiskCheckRecord creates apply order disk check record in db
 func (i *diskCheckRecord) CreateDiskCheckRecord(ctx context.Context, inst *types.DiskCheckRecord) error {
-	return mongodb.Client().Table(common.BKTableNameDiskCheckRecord).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameDiskCheckRecord).Insert(ctx, inst)
 }
 
 // GetDiskCheckRecord gets apply order disk check record by filter from db
@@ -42,7 +42,7 @@ func (i *diskCheckRecord) GetDiskCheckRecord(ctx context.Context, filter *mapstr
 
 	inst := new(types.DiskCheckRecord)
 
-	if err := mongodb.Client().Table(common.BKTableNameDiskCheckRecord).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameDiskCheckRecord).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -51,7 +51,7 @@ func (i *diskCheckRecord) GetDiskCheckRecord(ctx context.Context, filter *mapstr
 
 // CountDiskCheckRecord gets apply order disk check record count by filter from db
 func (i *diskCheckRecord) CountDiskCheckRecord(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameDiskCheckRecord).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameDiskCheckRecord).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -65,7 +65,7 @@ func (i *diskCheckRecord) FindManyDiskCheckRecord(ctx context.Context, page meta
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameDiskCheckRecord).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameDiskCheckRecord).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -82,7 +82,7 @@ func (i *diskCheckRecord) FindManyDiskCheckRecord(ctx context.Context, page meta
 
 // UpdateDiskCheckRecord updates apply order disk check record by filter and doc in db
 func (i *diskCheckRecord) UpdateDiskCheckRecord(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameDiskCheckRecord).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameDiskCheckRecord).Update(ctx, filter, doc)
 }
 
 // DeleteDiskCheckRecord deletes apply order disk check record from db

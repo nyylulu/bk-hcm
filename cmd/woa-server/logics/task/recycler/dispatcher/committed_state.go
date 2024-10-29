@@ -19,15 +19,15 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/dal"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -137,7 +137,7 @@ func (cs *CommittedState) getRecycleHosts(orderId string) ([]*table.RecycleHost,
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)

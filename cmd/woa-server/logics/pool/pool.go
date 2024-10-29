@@ -20,11 +20,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	"hcm/cmd/woa-server/logics/pool/classifier"
@@ -32,9 +27,14 @@ import (
 	"hcm/cmd/woa-server/logics/pool/recaller"
 	"hcm/cmd/woa-server/logics/pool/recycler"
 	types "hcm/cmd/woa-server/types/pool"
+	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
@@ -243,7 +243,7 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
@@ -265,7 +265,7 @@ func (p *pool) getGradeCfg() (map[string]*table.GradeCfg, error) {
 	filter := map[string]interface{}{}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := dao.Set().GradeCfg().FindManyGradeCfg(context.Background(), page, filter)
@@ -417,7 +417,7 @@ func (p *pool) getModuleInfo(kt *kit.Kit, bizId int64, moduleIds []int64) ([]*cm
 		BizID: bizId,
 		Condition: mapstr.MapStr{
 			"bk_module_id": mapstr.MapStr{
-				common.BKDBIN: moduleIds,
+				pkg.BKDBIN: moduleIds,
 			},
 		},
 		Fields: []string{"bk_module_id", "bk_module_name"},
@@ -710,12 +710,12 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	// lock host
 	filter := map[string]interface{}{
 		"bk_host_id": map[string]interface{}{
-			common.BKDBIN: param.HostIDs,
+			pkg.BKDBIN: param.HostIDs,
 		},
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 	hosts, err := dao.Set().PoolHost().FindManyPoolHost(kt.Ctx, page, filter)
 	if err != nil {
@@ -841,13 +841,13 @@ func (p *pool) ReturnHost(kt *kit.Kit, param *types.ReturnHostReq) error {
 func (p *pool) getPoolHostInfo(hostIDs []int64) ([]*table.PoolHost, error) {
 	filter := map[string]interface{}{
 		"bk_host_id": map[string]interface{}{
-			common.BKDBIN: hostIDs,
+			pkg.BKDBIN: hostIDs,
 		},
 	}
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	hosts, err := dao.Set().PoolHost().FindManyPoolHost(context.Background(), page, filter)
@@ -1131,7 +1131,7 @@ func (p *pool) GetRecalledInstance(kt *kit.Kit, param *types.GetRecalledInstReq)
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := dao.Set().RecallDetail().FindManyRecallDetail(kt.Ctx, page, filter)
@@ -1229,7 +1229,7 @@ func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
@@ -1345,11 +1345,11 @@ func (p *pool) setListMatchDeviceZoneFilter(param *types.GetLaunchMatchDeviceReq
 	if len(param.Spec.Zone) > 0 {
 		filter := mapstr.MapStr{}
 		filter["zone"] = mapstr.MapStr{
-			common.BKDBIN: param.Spec.Zone,
+			pkg.BKDBIN: param.Spec.Zone,
 		}
 		if len(param.Spec.Region) > 0 {
 			filter["region"] = mapstr.MapStr{
-				common.BKDBIN: param.Spec.Region,
+				pkg.BKDBIN: param.Spec.Region,
 			}
 		}
 		zones, err := dao.Set().Zone().FindManyZone(context.Background(), &filter)
@@ -1369,7 +1369,7 @@ func (p *pool) setListMatchDeviceZoneFilter(param *types.GetLaunchMatchDeviceReq
 	} else if len(param.Spec.Region) != 0 {
 		filter := mapstr.MapStr{}
 		filter["region"] = mapstr.MapStr{
-			common.BKDBIN: param.Spec.Region,
+			pkg.BKDBIN: param.Spec.Region,
 		}
 		zones, err := dao.Set().Zone().FindManyZone(context.Background(), &filter)
 		if err != nil {
@@ -1402,7 +1402,7 @@ func (p *pool) GetRecallMatchDevice(kt *kit.Kit, param *types.GetRecallMatchDevi
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := dao.Set().PoolHost().FindManyPoolHost(kt.Ctx, page, filter)
@@ -1445,23 +1445,23 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 		if param.ResourceType != types.ResourceTypeCvm {
 			if len(param.Spec.Region) != 0 {
 				filter["labels.region"] = map[string]interface{}{
-					common.BKDBIN: param.Spec.Region,
+					pkg.BKDBIN: param.Spec.Region,
 				}
 			}
 			if len(param.Spec.Zone) != 0 {
 				filter["labels.zone"] = map[string]interface{}{
-					common.BKDBIN: param.Spec.Zone,
+					pkg.BKDBIN: param.Spec.Zone,
 				}
 			}
 		} else {
 			if len(param.Spec.Zone) > 0 {
 				zoneFilter := mapstr.MapStr{}
 				zoneFilter["zone"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Zone,
+					pkg.BKDBIN: param.Spec.Zone,
 				}
 				if len(param.Spec.Region) > 0 {
 					zoneFilter["region"] = mapstr.MapStr{
-						common.BKDBIN: param.Spec.Region,
+						pkg.BKDBIN: param.Spec.Region,
 					}
 				}
 				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
@@ -1474,12 +1474,12 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 				}
 				cmdbZoneNames = util.StrArrayUnique(cmdbZoneNames)
 				filter["labels.zone"] = map[string]interface{}{
-					common.BKDBIN: cmdbZoneNames,
+					pkg.BKDBIN: cmdbZoneNames,
 				}
 			} else if len(param.Spec.Region) != 0 {
 				zoneFilter := mapstr.MapStr{}
 				zoneFilter["region"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Region,
+					pkg.BKDBIN: param.Spec.Region,
 				}
 				zones, err := dao.Set().Zone().FindManyZone(context.Background(), &zoneFilter)
 				if err != nil {
@@ -1491,20 +1491,20 @@ func (p *pool) getRecallMatchDeviceFilter(param *types.GetRecallMatchDeviceReq) 
 				}
 				cmdbRegionNames = util.StrArrayUnique(cmdbRegionNames)
 				filter["labels.region"] = map[string]interface{}{
-					common.BKDBIN: cmdbRegionNames,
+					pkg.BKDBIN: cmdbRegionNames,
 				}
 			}
 		}
 		if len(param.Spec.DeviceType) > 0 {
 			filter["labels.device_type"] = map[string]interface{}{
-				common.BKDBIN: param.Spec.DeviceType,
+				pkg.BKDBIN: param.Spec.DeviceType,
 			}
 		}
 	}
 
 	// only return idle or in use device
 	filter["status.phase"] = map[string]interface{}{
-		common.BKDBIN: []table.PoolHostPhase{table.PoolHostPhaseIdle, table.PoolHostPhaseInUse},
+		pkg.BKDBIN: []table.PoolHostPhase{table.PoolHostPhaseIdle, table.PoolHostPhaseInUse},
 	}
 
 	return filter, nil
@@ -1544,7 +1544,7 @@ func (p *pool) GetRecallDetail(kt *kit.Kit, param *types.GetRecallDetailReq) (*t
 func (p *pool) ResumeRecycleTask(kt *kit.Kit, param *types.ResumeRecycleTaskReq) error {
 	filter := map[string]interface{}{
 		"id": mapstr.MapStr{
-			common.BKDBIN: param.ID,
+			pkg.BKDBIN: param.ID,
 		},
 	}
 
@@ -1600,7 +1600,7 @@ func (p *pool) GetGradeCfg(kt *kit.Kit) (*types.GetGradeCfgRst, error) {
 	filter := map[string]interface{}{}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := dao.Set().GradeCfg().FindManyGradeCfg(kt.Ctx, page, filter)

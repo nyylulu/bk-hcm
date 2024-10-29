@@ -20,20 +20,20 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	commonutil "hcm/cmd/woa-server/common/util"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
+	toolsutil "hcm/pkg/tools/util"
+	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
@@ -330,7 +330,7 @@ func (m *Matcher) GetOrderGenRecords(suborderId string) ([]*types.GenerateRecord
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(context.Background(), page, filter)
@@ -754,7 +754,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	filter := map[string]interface{}{
 		"order_id": orderId,
 		"status": map[string]interface{}{
-			common.BKDBNE: types.ApplyStatusDone,
+			pkg.BKDBNE: types.ApplyStatusDone,
 		},
 	}
 
@@ -786,7 +786,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 
 	users := []string{ticket.User}
 	users = append(users, ticket.Follower...)
-	users = commonutil.StrArrayUnique(users)
+	users = toolsutil.StrArrayUnique(users)
 	noticeFmt := m.bkchat.GetNoticeFmt()
 	bizName := m.getBizName(ticket.BkBizId)
 	requireName := m.getRequireName(ticket.RequireType)

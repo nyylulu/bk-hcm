@@ -15,9 +15,9 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type model struct {

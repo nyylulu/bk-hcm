@@ -15,11 +15,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type initRecord struct {
@@ -27,19 +27,19 @@ type initRecord struct {
 
 // NextSequence returns next apply order init record sequence id from db
 func (i *initRecord) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameInitRecord)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameInitRecord)
 }
 
 // CreateInitRecord creates apply order init record in db
 func (i *initRecord) CreateInitRecord(ctx context.Context, inst *types.InitRecord) error {
-	return mongodb.Client().Table(common.BKTableNameInitRecord).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameInitRecord).Insert(ctx, inst)
 }
 
 // GetInitRecord gets apply order init record by filter from db
 func (i *initRecord) GetInitRecord(ctx context.Context, filter *mapstr.MapStr) (*types.InitRecord, error) {
 	inst := new(types.InitRecord)
 
-	if err := mongodb.Client().Table(common.BKTableNameInitRecord).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameInitRecord).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (i *initRecord) GetInitRecord(ctx context.Context, filter *mapstr.MapStr) (
 
 // CountInitRecord gets apply order init record count by filter from db
 func (i *initRecord) CountInitRecord(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameInitRecord).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameInitRecord).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -62,7 +62,7 @@ func (i *initRecord) FindManyInitRecord(ctx context.Context, page metadata.BaseP
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameInitRecord).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameInitRecord).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -79,7 +79,7 @@ func (i *initRecord) FindManyInitRecord(ctx context.Context, page metadata.BaseP
 
 // UpdateInitRecord updates apply order init record by filter and doc in db
 func (i *initRecord) UpdateInitRecord(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameInitRecord).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameInitRecord).Update(ctx, filter, doc)
 }
 
 // DeleteInitRecord deletes apply order init record from db

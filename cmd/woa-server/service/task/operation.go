@@ -13,8 +13,8 @@
 package task
 
 import (
-	"hcm/cmd/woa-server/common"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -32,7 +32,7 @@ func (s *service) GetApplyStatistics(cts *rest.Contexts) (any, error) {
 	if err != nil {
 		logs.Errorf("failed to get resource apply operation statistics, err: %v, errKey: %s, rid: %s",
 			err, errKey, cts.Kit.Rid)
-		return nil, errf.NewFromErr(common.CCErrCommParamsIsInvalid, err)
+		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
 	rst, err := s.logics.Operation().GetApplyStatistics(cts.Kit, input)

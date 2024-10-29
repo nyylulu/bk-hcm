@@ -17,9 +17,9 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/config/table"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // GetLeftIPParam get zone with left ip parameter

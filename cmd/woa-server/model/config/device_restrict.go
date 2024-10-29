@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type deviceRestrict struct {
@@ -26,19 +26,19 @@ type deviceRestrict struct {
 
 // NextSequence returns next device restrict config sequence id from db
 func (d *deviceRestrict) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgDeviceRestrict)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgDeviceRestrict)
 }
 
 // CreateDeviceRestrict creates device restrict config in db
 func (d *deviceRestrict) CreateDeviceRestrict(ctx context.Context, inst *types.DeviceRestrict) error {
-	return mongodb.Client().Table(common.BKTableNameCfgDeviceRestrict).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgDeviceRestrict).Insert(ctx, inst)
 }
 
 // GetDeviceRestrict gets device restrict config by filter from db
 func (d *deviceRestrict) GetDeviceRestrict(ctx context.Context, filter *mapstr.MapStr) (*types.DeviceRestrict, error) {
 	inst := new(types.DeviceRestrict)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgDeviceRestrict).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgDeviceRestrict).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -51,7 +51,7 @@ func (d *deviceRestrict) FindManyDeviceRestrict(ctx context.Context, filter *map
 
 	insts := make([]*types.DeviceRestrict, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgDeviceRestrict).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgDeviceRestrict).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -60,10 +60,10 @@ func (d *deviceRestrict) FindManyDeviceRestrict(ctx context.Context, filter *map
 
 // UpdateDeviceRestrict updates device restrict config by filter and doc in db
 func (d *deviceRestrict) UpdateDeviceRestrict(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgDeviceRestrict).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgDeviceRestrict).Update(ctx, filter, doc)
 }
 
 // DeleteDeviceRestrict deletes device restrict config from db
 func (d *deviceRestrict) DeleteDeviceRestrict(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgDeviceRestrict).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgDeviceRestrict).Delete(ctx, filter)
 }

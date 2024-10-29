@@ -22,13 +22,6 @@ import (
 	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/dal"
-	"hcm/cmd/woa-server/common/language"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
@@ -41,9 +34,12 @@ import (
 	"hcm/cmd/woa-server/model/task"
 	configtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -51,6 +47,10 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/language"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -217,7 +217,7 @@ func (s *scheduler) createApplyTicket(kt *kit.Kit, param *types.ApplyReq,
 
 	orderId, err := model.Operation().ApplyOrder().NextSequence(kt.Ctx)
 	if err != nil {
-		return nil, errf.Newf(common.CCErrObjectDBOpErrno, err.Error())
+		return nil, errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
 	now := time.Now()
@@ -708,7 +708,7 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 
 	page := metadata.BasePage{
 		Sort:  "-create_at",
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 		Start: 0,
 	}
 
@@ -994,7 +994,7 @@ func (s *scheduler) ExportDeliverDevice(kit *kit.Kit, param *types.ExportDeliver
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := model.Operation().DeviceInfo().FindManyDeviceInfo(kit.Ctx, page, filter)
@@ -1048,11 +1048,11 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			if len(param.Spec.Zone) != 0 {
 				filter := mapstr.MapStr{}
 				filter["zone"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Zone,
+					pkg.BKDBIN: param.Spec.Zone,
 				}
 				if len(param.Spec.Region) != 0 {
 					filter["region"] = mapstr.MapStr{
-						common.BKDBIN: param.Spec.Region,
+						pkg.BKDBIN: param.Spec.Region,
 					}
 				}
 				zones, err := model.Operation().Zone().FindManyZone(context.Background(), &filter)
@@ -1072,7 +1072,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			} else if len(param.Spec.Region) != 0 {
 				filter := mapstr.MapStr{}
 				filter["region"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Region,
+					pkg.BKDBIN: param.Spec.Region,
 				}
 				zones, err := model.Operation().Zone().FindManyZone(context.Background(), &filter)
 				if err != nil {
@@ -1147,7 +1147,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {
@@ -1239,7 +1239,7 @@ func (s *scheduler) ResumeApplyOrder(kit *kit.Kit, param mapstr.MapStr) error {
 func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1312,7 +1312,7 @@ func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
 func (s *scheduler) TerminateApplyOrder(kit *kit.Kit, param *types.TerminateApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1383,7 +1383,7 @@ func (s *scheduler) terminateOrder(orders []*types.ApplyOrder) error {
 func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBEQ: param.SuborderID,
+			pkg.BKDBEQ: param.SuborderID,
 		},
 	}
 
@@ -1602,7 +1602,7 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 	id, err := dao.Set().ModifyRecord().NextSequence(kt.Ctx)
 	if err != nil {
 		logs.Errorf("failed to get modify record next sequence id, order id: %s, err: %v", err)
-		return errf.Newf(common.CCErrObjectDBOpErrno, err.Error())
+		return errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
 	record := &table.ModifyRecord{

@@ -22,18 +22,18 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/dal/mongo/uuid"
 	"hcm/cmd/woa-server/storage/dal/redis"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
-	transactionNumberRedisKeyNamespace = common.BKCacheKeyV3Prefix + "transaction:number:"
-	transactionErrorRedisKeyNamespace  = common.BKCacheKeyV3Prefix + "transaction:error:"
+	transactionNumberRedisKeyNamespace = pkg.BKCacheKeyV3Prefix + "transaction:number:"
+	transactionErrorRedisKeyNamespace  = pkg.BKCacheKeyV3Prefix + "transaction:error:"
 )
 
 type sessionKey string
@@ -87,7 +87,7 @@ func (t *TxnManager) GenTxnNumber(sessionID string, ttl time.Duration) (int64, e
 	pip := t.cache.Pipeline()
 	defer pip.Close()
 	if ttl == 0 {
-		ttl = common.TransactionDefaultTimeout
+		ttl = pkg.TransactionDefaultTimeout
 	}
 	// we increase by step 1, so that we can calculate how many transaction has already
 	// be executed in a same session.
@@ -193,7 +193,7 @@ func (t *TxnManager) GetTxnContext(ctx context.Context, cli *mongo.Client) (cont
 // it returns the TxnCable, and a bool to indicate whether it's a transaction context or not.
 // so the caller can use the returned TxnCapable only when the bool is true. otherwise it will be panic.
 func parseTxnInfoFromCtx(txnCtx context.Context) (*metadata.TxnCapable, bool, error) {
-	id := txnCtx.Value(common.TransactionIdHeader)
+	id := txnCtx.Value(pkg.TransactionIdHeader)
 	if id == nil {
 		// do not use transaction, and return directly.
 		return nil, false, nil
@@ -205,7 +205,7 @@ func parseTxnInfoFromCtx(txnCtx context.Context) (*metadata.TxnCapable, bool, er
 	}
 
 	// parse timeout
-	ttl := txnCtx.Value(common.TransactionTimeoutHeader)
+	ttl := txnCtx.Value(pkg.TransactionTimeoutHeader)
 	if ttl == nil {
 		return nil, false, errors.New("transaction timeout value not exist")
 	}
@@ -312,17 +312,17 @@ func GenTxnCableAndSetHeader(header http.Header, opts ...metadata.TxnOption) (*m
 	var timeout time.Duration
 	if len(opts) != 0 {
 		if opts[0].Timeout < 30*time.Second {
-			timeout = common.TransactionDefaultTimeout
+			timeout = pkg.TransactionDefaultTimeout
 		} else {
 			timeout = opts[0].Timeout
 		}
 	} else {
 		// set default value
-		timeout = common.TransactionDefaultTimeout
+		timeout = pkg.TransactionDefaultTimeout
 	}
 
-	header.Set(common.TransactionIdHeader, sessionID)
-	header.Set(common.TransactionTimeoutHeader, strconv.FormatInt(int64(timeout), 10))
+	header.Set(pkg.TransactionIdHeader, sessionID)
+	header.Set(pkg.TransactionTimeoutHeader, strconv.FormatInt(int64(timeout), 10))
 
 	cap := metadata.TxnCapable{
 		Timeout:   timeout,

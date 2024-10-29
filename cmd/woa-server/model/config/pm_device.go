@@ -15,11 +15,11 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type pmDevice struct {
@@ -27,19 +27,19 @@ type pmDevice struct {
 
 // NextSequence returns next resource device type config sequence id from db
 func (d *pmDevice) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgPmDevice)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgPmDevice)
 }
 
 // CreateDevice creates resource device type config in db
 func (d *pmDevice) CreateDevice(ctx context.Context, inst *types.PmDeviceInfo) error {
-	return mongodb.Client().Table(common.BKTableNameCfgPmDevice).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Insert(ctx, inst)
 }
 
 // GetDevice gets resource device type config by filter from db
 func (d *pmDevice) GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types.PmDeviceInfo, error) {
 	inst := new(types.PmDeviceInfo)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgPmDevice).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (d *pmDevice) GetDevice(ctx context.Context, filter *mapstr.MapStr) (*types
 
 // CountDevice gets resource device count by filter from db
 func (d *pmDevice) CountDevice(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameCfgPmDevice).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -62,7 +62,7 @@ func (d *pmDevice) FindManyDevice(ctx context.Context, page metadata.BasePage, f
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameCfgPmDevice).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -79,7 +79,7 @@ func (d *pmDevice) FindManyDevice(ctx context.Context, page metadata.BasePage, f
 
 // FindManyDeviceType gets resource device type config list by filter from db
 func (d *pmDevice) FindManyDeviceType(ctx context.Context, filter map[string]interface{}) ([]interface{}, error) {
-	insts, err := mongodb.Client().Table(common.BKTableNameCfgPmDevice).Distinct(ctx, "device_type", filter)
+	insts, err := mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Distinct(ctx, "device_type", filter)
 	if err != nil {
 		return nil, err
 	}
@@ -89,10 +89,10 @@ func (d *pmDevice) FindManyDeviceType(ctx context.Context, filter map[string]int
 
 // UpdateDevice updates resource device type config by filter and doc in db
 func (d *pmDevice) UpdateDevice(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgPmDevice).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Update(ctx, filter, doc)
 }
 
 // DeleteDevice deletes resource device type config from db
 func (d *pmDevice) DeleteDevice(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgPmDevice).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgPmDevice).Delete(ctx, filter)
 }

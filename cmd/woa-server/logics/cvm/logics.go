@@ -15,18 +15,18 @@ package cvm
 import (
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/logics/config"
 	model "hcm/cmd/woa-server/model/cvm"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association

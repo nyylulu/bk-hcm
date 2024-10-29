@@ -15,10 +15,10 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type cvmInfo struct {
@@ -26,14 +26,14 @@ type cvmInfo struct {
 
 // CreateCvmInfo creates cvm info in db
 func (c *cvmInfo) CreateCvmInfo(ctx context.Context, inst *types.CvmInfo) error {
-	return mongodb.Client().Table(common.BKTableNameCvmInfo).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCvmInfo).Insert(ctx, inst)
 }
 
 // GetCvmInfo gets cvm info by filter from db
 func (c *cvmInfo) GetCvmInfo(ctx context.Context, filter *mapstr.MapStr) ([]*types.CvmInfo, error) {
 	insts := make([]*types.CvmInfo, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCvmInfo).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCvmInfo).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -42,7 +42,7 @@ func (c *cvmInfo) GetCvmInfo(ctx context.Context, filter *mapstr.MapStr) ([]*typ
 
 // UpdateCvmInfo updates cvm info by filter and doc in db
 func (c *cvmInfo) UpdateCvmInfo(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCvmInfo).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCvmInfo).Update(ctx, filter, doc)
 }
 
 // DeleteCvmInfo deletes cvm info from db

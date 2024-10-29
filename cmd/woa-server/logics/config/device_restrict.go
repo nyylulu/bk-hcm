@@ -15,9 +15,9 @@ package config
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )

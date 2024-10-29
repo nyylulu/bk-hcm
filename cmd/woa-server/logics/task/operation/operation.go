@@ -17,15 +17,15 @@ import (
 	"context"
 	"sort"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/language"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/language"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/util"
 )
 
 // Interface operation interface
@@ -84,7 +84,7 @@ func (op *operation) GetApplyStatistics(kit *kit.Kit, param *types.GetApplyStatR
 	}
 	manualOrderFilter := util.CopyMap(filter, nil, nil)
 	manualOrderFilter["suborder_id"] = mapstr.MapStr{
-		common.BKDBIN: manualOrderList,
+		pkg.BKDBIN: manualOrderList,
 	}
 	orderManualStats, err := op.getOrderStats(manualOrderFilter, param.Dimension)
 	if err != nil {
@@ -173,15 +173,15 @@ func (op *operation) getOrderStats(filter map[string]interface{}, dimension type
 
 	format := op.getDateFormat(dimension)
 	pipeline := []map[string]interface{}{
-		{common.BKDBMatch: filter},
-		{common.BKDBGroup: map[string]interface{}{
+		{pkg.BKDBMatch: filter},
+		{pkg.BKDBGroup: map[string]interface{}{
 			"_id": map[string]interface{}{
 				"$dateToString": map[string]interface{}{
 					"format": format,
 					"date":   "$create_at"}},
-			"count": map[string]interface{}{common.BKDBSum: 1}},
+			"count": map[string]interface{}{pkg.BKDBSum: 1}},
 		},
-		{common.BKDBSort: map[string]interface{}{"_id": 1}},
+		{pkg.BKDBSort: map[string]interface{}{"_id": 1}},
 	}
 
 	aggRst := make([]metadata.StringIDCount, 0)
@@ -204,15 +204,15 @@ func (op *operation) getDeviceStats(filter map[string]interface{}, dimension typ
 
 	format := op.getDateFormat(dimension)
 	pipeline := []map[string]interface{}{
-		{common.BKDBMatch: filter},
-		{common.BKDBGroup: map[string]interface{}{
+		{pkg.BKDBMatch: filter},
+		{pkg.BKDBGroup: map[string]interface{}{
 			"_id": map[string]interface{}{
 				"$dateToString": map[string]interface{}{
 					"format": format,
 					"date":   "$create_at"}},
-			"count": map[string]interface{}{common.BKDBSum: 1}},
+			"count": map[string]interface{}{pkg.BKDBSum: 1}},
 		},
-		{common.BKDBSort: map[string]interface{}{"_id": 1}},
+		{pkg.BKDBSort: map[string]interface{}{"_id": 1}},
 	}
 
 	aggRst := make([]metadata.StringIDCount, 0)
@@ -232,7 +232,7 @@ func (op *operation) getDeviceStats(filter map[string]interface{}, dimension typ
 func (op *operation) getManualOrderList(filter map[string]interface{}) ([]interface{}, error) {
 	manualFilter := util.CopyMap(filter, nil, nil)
 	manualFilter["deliverer"] = mapstr.MapStr{
-		common.BKDBNE: "icr",
+		pkg.BKDBNE: "icr",
 	}
 
 	orderList, err := model.Operation().DeviceInfo().Distinct(context.Background(), "suborder_id", manualFilter)

@@ -18,16 +18,16 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/generator"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/utils/wait"
 )
 
 // Dispatcher dispatch and deal apply order
@@ -178,7 +178,7 @@ func (d *Dispatcher) lockApplyOrder(order *types.ApplyOrder) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": order.SubOrderId,
 		"status": &mapstr.MapStr{
-			common.BKDBNE: types.ApplyStatusMatching,
+			pkg.BKDBNE: types.ApplyStatusMatching,
 		},
 	}
 

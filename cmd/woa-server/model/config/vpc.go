@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type vpc struct {
@@ -26,19 +26,19 @@ type vpc struct {
 
 // NextSequence returns next vpc config sequence id from db
 func (v *vpc) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgVpc)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgVpc)
 }
 
 // CreateVpc creates vpc config in db
 func (v *vpc) CreateVpc(ctx context.Context, inst *types.Vpc) error {
-	return mongodb.Client().Table(common.BKTableNameCfgVpc).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgVpc).Insert(ctx, inst)
 }
 
 // GetVpc gets vpc config by filter from db
 func (v *vpc) GetVpc(ctx context.Context, filter *mapstr.MapStr) (*types.Vpc, error) {
 	inst := new(types.Vpc)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgVpc).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgVpc).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -47,7 +47,7 @@ func (v *vpc) GetVpc(ctx context.Context, filter *mapstr.MapStr) (*types.Vpc, er
 
 // CountVpc gets vpc count by filter from db
 func (v *vpc) CountVpc(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameCfgVpc).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameCfgVpc).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -59,7 +59,7 @@ func (v *vpc) CountVpc(ctx context.Context, filter map[string]interface{}) (uint
 func (v *vpc) FindManyVpc(ctx context.Context, filter *mapstr.MapStr) ([]*types.Vpc, error) {
 	insts := make([]*types.Vpc, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgVpc).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgVpc).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -68,7 +68,7 @@ func (v *vpc) FindManyVpc(ctx context.Context, filter *mapstr.MapStr) ([]*types.
 
 // FindManyVpcId gets vpc id list by filter from db
 func (v *vpc) FindManyVpcId(ctx context.Context, filter map[string]interface{}) ([]interface{}, error) {
-	insts, err := mongodb.Client().Table(common.BKTableNameCfgVpc).Distinct(ctx, "vpc_id", filter)
+	insts, err := mongodb.Client().Table(pkg.BKTableNameCfgVpc).Distinct(ctx, "vpc_id", filter)
 	if err != nil {
 		return nil, err
 	}
@@ -78,10 +78,10 @@ func (v *vpc) FindManyVpcId(ctx context.Context, filter map[string]interface{}) 
 
 // UpdateVpc updates vpc config by filter and doc in db
 func (v *vpc) UpdateVpc(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgVpc).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgVpc).Update(ctx, filter, doc)
 }
 
 // DeleteVpc deletes vpc config from db
 func (v *vpc) DeleteVpc(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgVpc).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgVpc).Delete(ctx, filter)
 }

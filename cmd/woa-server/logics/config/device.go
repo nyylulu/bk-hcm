@@ -15,13 +15,13 @@ package config
 import (
 	"errors"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	utils "hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	utils "hcm/pkg/tools/util"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 )
@@ -309,7 +309,7 @@ func (d *device) CreateDevice(kt *kit.Kit, input *types.DeviceInfo) (mapstr.MapS
 func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDeviceParam) error {
 	filter := &mapstr.MapStr{
 		"zone": &mapstr.MapStr{
-			common.BKDBIN: input.Zone,
+			pkg.BKDBIN: input.Zone,
 		},
 	}
 

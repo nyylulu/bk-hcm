@@ -16,8 +16,8 @@ package config
 import (
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
@@ -148,7 +148,7 @@ func (s *service) UpdateSubnetProperty(cts *rest.Contexts) (interface{}, error) 
 
 	cond := map[string]interface{}{
 		"id": map[string]interface{}{
-			common.BKDBIN: input.Ids,
+			pkg.BKDBIN: input.Ids,
 		},
 	}
 

@@ -20,16 +20,14 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/dal"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -38,6 +36,8 @@ import (
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -80,7 +80,7 @@ func (r *Returner) getRecycleHosts(orderId string) ([]*table.RecycleHost, error)
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)
@@ -472,7 +472,7 @@ func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, er
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

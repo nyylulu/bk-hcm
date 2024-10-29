@@ -23,14 +23,14 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	model "hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/tools/metadata"
 )
 
 // getTickets get apply ticket with stage and create_at between recoverTime and expireTime
@@ -45,7 +45,7 @@ func (r *applyRecoverer) getRunningTickets(kt *kit.Kit, recoverTime time.Time,
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	tickets, err := model.Operation().ApplyTicket().FindManyApplyTicket(kt.Ctx, page, filter)
@@ -68,7 +68,7 @@ func (r *applyRecoverer) getAuditTickets(kt *kit.Kit, recoverTime time.Time,
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	auditTickets, err := model.Operation().ApplyTicket().FindManyApplyTicket(kt.Ctx, page, filter)
@@ -100,7 +100,7 @@ func (r *applyRecoverer) getSuborders(kt *kit.Kit, orderId uint64) ([]*types.App
 		"order_id": orderId,
 	}
 	page := metadata.BasePage{
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 		Start: 0,
 	}
 

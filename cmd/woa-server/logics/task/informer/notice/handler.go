@@ -16,10 +16,10 @@ package notice
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/watch"
 	"hcm/cmd/woa-server/storage/dal"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal/watch"
 	"hcm/pkg/logs"
 )
 
@@ -52,15 +52,15 @@ func (h *eventHandler) setLastWatchToken(ctx context.Context, data map[string]in
 	}
 
 	// update id and cursor field if set, to compensate for the scenario of searching with an outdated but latest cursor
-	if id, exists := data[common.BKFieldID]; exists {
-		tokenInfo[common.BKFieldID] = id
+	if id, exists := data[pkg.BKFieldID]; exists {
+		tokenInfo[pkg.BKFieldID] = id
 	}
 
-	if cursor, exists := data[common.BKCursorField]; exists {
-		tokenInfo[common.BKCursorField] = cursor
+	if cursor, exists := data[pkg.BKCursorField]; exists {
+		tokenInfo[pkg.BKCursorField] = cursor
 	}
 
-	if err := h.watchDB.Table(common.BKTableNameWatchToken).Update(ctx, filter, tokenInfo); err != nil {
+	if err := h.watchDB.Table(pkg.BKTableNameWatchToken).Update(ctx, filter, tokenInfo); err != nil {
 		logs.Errorf("set event %s last watch token failed, err: %v, data: %+v", h.key.Collection(),
 			err, tokenInfo)
 		return err
@@ -75,7 +75,7 @@ func (h *eventHandler) GetStartWatchToken(ctx context.Context) (token string, er
 	}
 
 	data := make(map[string]watch.LastChainNodeData)
-	if err := h.watchDB.Table(common.BKTableNameWatchToken).Find(filter).Fields(h.key.Collection()).
+	if err := h.watchDB.Table(pkg.BKTableNameWatchToken).Find(filter).Fields(h.key.Collection()).
 		One(ctx, &data); err != nil {
 		if !h.watchDB.IsNotFoundError(err) {
 			logs.ErrorJson("get event start watch token, will get the last event's time and start watch, "+
@@ -83,8 +83,8 @@ func (h *eventHandler) GetStartWatchToken(ctx context.Context) (token string, er
 		}
 
 		tailNode := new(watch.ChainNode)
-		if err := h.watchDB.Table("cr_noticeInfo").Find(nil).Fields(common.BKTokenField).
-			Sort(common.BKFieldID+":-1").One(context.Background(), tailNode); err != nil {
+		if err := h.watchDB.Table("cr_noticeInfo").Find(nil).Fields(pkg.BKTokenField).
+			Sort(pkg.BKFieldID+":-1").One(context.Background(), tailNode); err != nil {
 
 			if !h.watchDB.IsNotFoundError(err) {
 				logs.Errorf("get event last watch token from mongo failed, err: %v", err)

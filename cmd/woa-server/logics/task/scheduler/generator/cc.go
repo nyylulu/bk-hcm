@@ -16,10 +16,10 @@ package generator
 import (
 	"fmt"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
+	"hcm/pkg"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // syncHostByAsset sync host info to cc 3.0 by asset id
@@ -135,7 +135,7 @@ func (g *Generator) listDeviceTopo(ips []string) ([]*cmdb.DeviceTopoInfo, error)
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

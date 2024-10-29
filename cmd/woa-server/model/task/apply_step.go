@@ -16,10 +16,10 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type applyStep struct {
@@ -27,19 +27,19 @@ type applyStep struct {
 
 // NextSequence returns next apply order step sequence id from db
 func (a *applyStep) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameApplyStep)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameApplyStep)
 }
 
 // CreateApplyStep creates apply order step info in db
 func (a *applyStep) CreateApplyStep(ctx context.Context, inst *types.ApplyStep) error {
-	return mongodb.Client().Table(common.BKTableNameApplyStep).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameApplyStep).Insert(ctx, inst)
 }
 
 // GetApplyStep gets apply order step info by filter from db
 func (a *applyStep) GetApplyStep(ctx context.Context, filter *mapstr.MapStr) (*types.ApplyStep, error) {
 	inst := new(types.ApplyStep)
 
-	if err := mongodb.Client().Table(common.BKTableNameApplyStep).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameApplyStep).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (a *applyStep) GetApplyStep(ctx context.Context, filter *mapstr.MapStr) (*t
 
 // CountApplyStep gets apply step count by filter from db
 func (a *applyStep) CountApplyStep(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameApplyStep).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameApplyStep).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -60,7 +60,7 @@ func (a *applyStep) CountApplyStep(ctx context.Context, filter map[string]interf
 func (a *applyStep) FindManyApplyStep(ctx context.Context, filter *mapstr.MapStr) ([]*types.ApplyStep, error) {
 	insts := make([]*types.ApplyStep, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameApplyStep).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameApplyStep).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -69,7 +69,7 @@ func (a *applyStep) FindManyApplyStep(ctx context.Context, filter *mapstr.MapStr
 
 // UpdateApplyStep updates apply order step info by filter and doc in db
 func (a *applyStep) UpdateApplyStep(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameApplyStep).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameApplyStep).Update(ctx, filter, doc)
 }
 
 // DeleteApplyStep deletes apply order step info from db
