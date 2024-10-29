@@ -107,7 +107,7 @@ const (
 	// CvmLaunchSystemDiskSizeBasic CVM生产时系统盘大小，对于IT设备固定为50G
 	CvmLaunchSystemDiskSizeBasic = 50
 	// CVM_LAUNCH_USETIME CVM生产时数据盘类型，当前固定为高性能云盘
-	CVM_LAUNCH_USETIME = "0000-00-00 00:00:00" //CVM生产时必填项，yuti开发对该字段含义也未知，暂时写死为该固定值0000-00-00 00:00:00
+	CVM_LAUNCH_USETIME = "0000-00-00 00:00:00" // CVM生产时必填项，yuti开发对该字段含义也未知，暂时写死为该固定值0000-00-00 00:00:00
 	// CvmLaunchProjectId CVM项目ID，yuti开发对该字段含义也未知，暂时写死为固定值0
 	CvmLaunchProjectId = 0
 	// CvmOrderLinkPrefix CVM生产单据详情链接前缀
@@ -174,6 +174,9 @@ const (
 	CvmReturnDetailMethod = "queryReturnCvmByOrder"
 	// QueryCvmInstanceType 查询CVM机型信息
 	QueryCvmInstanceType = "queryCvmInstanceType"
+
+	// CvmCbsPlanDefaultDesc 需求预测单据的默认备注，用于管理员判断需求来源
+	CvmCbsPlanDefaultDesc = "[From IEG HCM]"
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"

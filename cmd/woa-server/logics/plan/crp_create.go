@@ -34,8 +34,8 @@ import (
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/converter"
 
 	"github.com/jmoiron/sqlx"
@@ -213,6 +213,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 		Params: &cvmapi.AddCvmCbsPlanParam{
 			Operator: ticket.Applicant,
 			DeptName: cvmapi.CvmLaunchDeptName,
+			Desc:     cvmapi.CvmCbsPlanDefaultDesc,
 			Items:    make([]*cvmapi.AddPlanItem, 0),
 		},
 	}
@@ -260,14 +261,16 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 		return "", err
 	}
 
+	logs.Warnf("add crp res-plan resp: %v", *resp)
+
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, req: %v, crp_trace: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, *adjustReq, resp.TraceId, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}
 
-	sn := resp.Result.Data.OrderId
+	sn := resp.Result.OrderId
 	if sn == "" {
 		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
@@ -282,13 +285,14 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
 			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanAutoAdjustMethod,
+			Method:  cvmapi.CvmCbsPlanAdjustMethod,
 		},
 		Params: &cvmapi.CvmCbsPlanAdjustParam{
 			BaseInfo: &cvmapi.AdjustBaseInfo{
 				DeptId:          cvmapi.CvmDeptId,
 				DeptName:        cvmapi.CvmLaunchDeptName,
 				PlanProductName: ticket.PlanProductName,
+				Desc:            cvmapi.CvmCbsPlanDefaultDesc,
 			},
 			SrcData:     make([]*cvmapi.AdjustSrcData, 0),
 			UpdatedData: make([]*cvmapi.AdjustUpdatedData, 0),
