@@ -42,6 +42,7 @@ var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
 	{Column: "day", NamedC: "day", Type: enumor.Numeric},
+	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "applied_core", NamedC: "applied_core", Type: enumor.Numeric},
 	{Column: "delivered_core", NamedC: "delivered_core", Type: enumor.Numeric},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
@@ -67,6 +68,8 @@ type RollingAppliedRecord struct {
 	Month int `db:"month" json:"month" validate:"max=12"`
 	// Day 申请时间天
 	Day int `db:"day" json:"day" validate:"max=31"`
+	// RollDate 申请时间年月日
+	RollDate int `db:"roll_date" json:"roll_date"`
 	// AppliedCore cpu申请核心数
 	AppliedCore *uint64 `db:"applied_core" json:"applied_core"`
 	// DeliveredCore cpu交付核心数

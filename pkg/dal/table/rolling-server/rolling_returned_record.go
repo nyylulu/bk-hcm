@@ -43,6 +43,7 @@ var RollingReturnedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
 	{Column: "day", NamedC: "day", Type: enumor.Numeric},
+	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "returned_way", NamedC: "returned_way", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
@@ -69,6 +70,8 @@ type RollingReturnedRecord struct {
 	Month int `db:"month" json:"month" validate:"max=12"`
 	// Day 申请时间天
 	Day int `db:"day" json:"day" validate:"max=31"`
+	// RollDate 申请时间年月日
+	RollDate int `db:"roll_date" json:"roll_date"`
 	// ReturnedWay 退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)
 	ReturnedWay enumor.ReturnedWay `db:"returned_way" json:"returned_way"`
 	// Creator 创建者

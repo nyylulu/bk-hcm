@@ -124,6 +124,7 @@ create table if not exists `rolling_applied_record`
     `year`           bigint          not null comment '申请时间年份',
     `month`          tinyint(1)      not null comment '申请时间月份',
     `day`            tinyint(1)      not null comment '申请时间天',
+    `roll_date`      int    unsigned not null comment '申请时间年月日',
     `applied_core`   bigint unsigned not null comment 'cpu申请核心数',
     `delivered_core` bigint unsigned not null comment 'cpu交付核心数',
     `creator`        varchar(64)     not null comment '创建人',
@@ -131,7 +132,8 @@ create table if not exists `rolling_applied_record`
     `updated_at`     timestamp       not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
     unique key `idx_uk_suborder_id_bk_biz_id_applied_type` (`suborder_id`, `bk_biz_id`, `applied_type`),
-    KEY `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`)
+    KEY `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`),
+    KEY `idx_bk_biz_id_roll_date_applied_type` (`bk_biz_id`, `roll_date`, `applied_type`)
 ) engine = innodb
   default charset = utf8mb4 comment '滚服申请记录表';
 
@@ -147,6 +149,7 @@ create table if not exists `rolling_returned_record`
     `year`               bigint          not null comment '申请时间年份',
     `month`              tinyint(1)      not null comment '申请时间月份',
     `day`                tinyint(1)      not null comment '申请时间天',
+    `roll_date`          int    unsigned not null comment '申请时间年月日',
     `returned_way`       varchar(64)     not null comment '退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)',
     `creator`            varchar(64)     not null comment '创建人',
     `created_at`         timestamp       not null default current_timestamp comment '该记录的创建时间',
@@ -154,7 +157,8 @@ create table if not exists `rolling_returned_record`
     primary key (`id`),
     unique key `idx_uk_suborder_id_bk_biz_id_returned_way` (`suborder_id`, `bk_biz_id`, `returned_way`),
     KEY `idx_bk_biz_id_applied_record_id` (`bk_biz_id`, `applied_record_id`),
-    KEY `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`)
+    KEY `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`),
+    KEY `idx_bk_biz_id_roll_date` (`bk_biz_id`, `roll_date`)
 ) engine = innodb
   default charset = utf8mb4 comment '滚服回收记录表';
 

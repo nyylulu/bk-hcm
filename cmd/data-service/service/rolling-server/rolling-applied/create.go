@@ -31,6 +31,7 @@ import (
 	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,6 +56,7 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 				Year:          createReq.Year,
 				Month:         createReq.Month,
 				Day:           createReq.Day,
+				RollDate:      times.GetDataIntDate(createReq.Year, createReq.Month, createReq.Day),
 				AppliedCore:   cvt.ValToPtr(createReq.AppliedCore),
 				DeliveredCore: cvt.ValToPtr(createReq.DeliveredCore),
 				Creator:       cts.Kit.User,
