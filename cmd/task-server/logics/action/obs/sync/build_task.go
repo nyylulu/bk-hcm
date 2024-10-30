@@ -26,7 +26,7 @@ import (
 	"hcm/pkg/tools/uuid"
 )
 
-// BuildSyncTask build clean task
+// BuildSyncTask build sync bill item task
 func BuildSyncTask(
 	mainAccountID string, vendor enumor.Vendor, billYear, billMonth int,
 	start, limit uint64) ts.CustomFlowTask {
@@ -41,6 +41,20 @@ func BuildSyncTask(
 			MainAccountID: mainAccountID,
 			Start:         start,
 			Limit:         limit,
+		},
+	}
+}
+
+// BuildSyncAdjustmentTask build adjustment sync task
+func BuildSyncAdjustmentTask(vendor enumor.Vendor, billYear, billMonth int) ts.CustomFlowTask {
+
+	return ts.CustomFlowTask{
+		ActionID:   action.ActIDType(uuid.UUID()),
+		ActionName: enumor.ActionObsAdjustmentSync,
+		Params: AdjustmentOption{
+			Vendor:    vendor,
+			BillYear:  billYear,
+			BillMonth: billMonth,
 		},
 	}
 }

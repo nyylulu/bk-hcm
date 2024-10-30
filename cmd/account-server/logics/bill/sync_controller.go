@@ -24,7 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
 	syncaction "hcm/cmd/task-server/logics/action/obs/sync"
 	"hcm/pkg/api/core"
 	billcore "hcm/pkg/api/core/bill"
@@ -44,10 +43,9 @@ import (
 )
 
 const (
-	stateNew      = "new"
-	stateCleaning = "cleaning"
-	stateSyncing  = "syncing"
-	stateSynced   = "synced"
+	stateNew     = "new"
+	stateSyncing = "syncing"
+	stateSynced  = "synced"
 
 	batchSize = uint64(50000)
 )
@@ -137,7 +135,11 @@ func (sc *SyncController) doSync(kt *kit.Kit) {
 
 func (sc *SyncController) listSyncingRecord(kt *kit.Kit) ([]*billcore.SyncRecord, error) {
 	expressions := []*filter.AtomRule{
-		tools.RuleEqual("state", enumor.BillSyncRecordStateNew),
+		tools.RuleIn("state", []enumor.BillSyncState{
+			enumor.BillSyncRecordStateNew,
+			enumor.BillSyncRecordStateSyncingBillItem,
+			enumor.BillSyncRecordStateSyncingAdjustment,
+		}),
 	}
 	pendingSyncRecordList, err := sc.Client.DataService().Global.Bill.ListBillSyncRecord(kt, &core.ListReq{
 		Filter: tools.ExpressionAnd(expressions...),
@@ -151,7 +153,7 @@ func (sc *SyncController) listSyncingRecord(kt *kit.Kit) ([]*billcore.SyncRecord
 }
 
 func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.SyncRecord) error {
-	if len(syncRecord.Detail) == 0 {
+	if syncRecord.State == enumor.BillSyncRecordStateNew || len(syncRecord.Detail) == 0 {
 		return sc.initSyncItem(kt, syncRecord)
 	}
 	itemList, err := sc.getItemListFromDetail(kt, syncRecord)
@@ -161,6 +163,7 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 	if len(itemList) == 0 {
 		return sc.initSyncItem(kt, syncRecord)
 	}
+
 	for index, item := range itemList {
 		if item.State == stateSynced {
 			continue
@@ -174,13 +177,22 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 		if err != nil {
 			return err
 		}
-		if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
-			ID:     syncRecord.ID,
-			Detail: newDetailData,
-		}); err != nil {
-			logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
+		req := &bill.BillSyncRecordUpdateReq{ID: syncRecord.ID, Detail: newDetailData}
+		if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, req); err != nil {
+			logs.Errorf("update bill sync record detail failed, err: %s, record: %s, rid: %s",
+				err, syncRecord.ID, kt.Rid)
 			return err
 		}
+		return nil
+	}
+	// all bill item synced, handle adjustment
+	adjustmentSynced, err := sc.handleAdjustment(kt, syncRecord)
+	if err != nil {
+		logs.Errorf("failed to handle obs adjustment sync record, rid: %s", kt.Rid)
+		return err
+	}
+	if !adjustmentSynced {
+		// wait
 		return nil
 	}
 
@@ -245,10 +257,9 @@ func (sc *SyncController) notifyObs(kt *kit.Kit, syncRecord *billcore.SyncRecord
 		}},
 	})
 	if err != nil {
-		logs.Errorf("fail to notify obs to repull bill, "+
-			"err: %v, vendor: %s, year: %d, month: %d, sum: %s, count: %d, col: %s, rid: %v",
-			err, syncRecord.Vendor, syncRecord.BillYear, syncRecord.BillMonth, sum.String(), totalCount, costColumn,
-			kt.Rid)
+		logs.Errorf("fail to notify obs to repull bill, err: %v, vendor: %s, year: %d, month: %d, sum: %s, count: %d,"+
+			"col: %s, rid: %v", err, syncRecord.Vendor, syncRecord.BillYear, syncRecord.BillMonth, sum.String(),
+			totalCount, costColumn, kt.Rid)
 		return err
 	}
 	logs.Infof("notify obs to repull bill done, vendor: %s, year: %d, month: %d, sum: %s, count: %d, col: %s, rid: %s",
@@ -307,11 +318,13 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 	if err != nil {
 		return err
 	}
-	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
+	req := &bill.BillSyncRecordUpdateReq{
 		ID:     syncRecord.ID,
+		State:  enumor.BillSyncRecordStateSyncingBillItem,
 		Detail: newDetailData,
-	}); err != nil {
-		logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
+	}
+	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, req); err != nil {
+		logs.Errorf("update bill sync record detail failed, err: %s, record: %s rid: %s", err, syncRecord.ID, kt.Rid)
 		return err
 	}
 	logs.Infof("init sync record for vendor %s with %d main account", syncRecord.Vendor, len(itemList))
@@ -335,8 +348,6 @@ func (sc *SyncController) handleSyncRecordDetailItem(kt *kit.Kit, syncRecordItem
 	switch syncRecordItem.State {
 	case stateNew:
 		return sc.setTotal(kt, syncRecordItem)
-	case stateCleaning:
-		return sc.doSubCleanTask(kt, syncRecordItem)
 	case stateSyncing:
 		return sc.doSubSyncTask(kt, syncRecordItem)
 	case stateSynced:
@@ -374,64 +385,12 @@ func (sc *SyncController) setTotal(kt *kit.Kit, syncRecordItem *SyncRecordDetail
 	return syncRecordItem, nil
 }
 
-func (sc *SyncController) doSubCleanTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
-	*SyncRecordDetailItem, error) {
-
-	if len(syncRecordItem.FlowID) == 0 {
-		id, err := sc.createCleanTask(kt, syncRecordItem)
-		if err != nil {
-			return nil, err
-		}
-		syncRecordItem.FlowID = id
-		syncRecordItem.State = stateCleaning
-		return syncRecordItem, nil
-	}
-	flow, err := sc.Client.TaskServer().GetFlow(kt, syncRecordItem.FlowID)
-	if err != nil {
-		logs.Warnf("get clean flow %s failed, err %s, rid: %s", syncRecordItem.FlowID, err.Error(), kt.Rid)
-		return nil, err
-	}
-	if flow.State == enumor.FlowSuccess {
-		syncRecordItem.FlowID = ""
-		syncRecordItem.State = stateSyncing
-		return syncRecordItem, nil
-	} else if flow.State == enumor.FlowFailed {
-
-		// create clean task
-		id, err := sc.createCleanTask(kt, syncRecordItem)
-		if err != nil {
-			return nil, err
-		}
-		syncRecordItem.FlowID = id
-		syncRecordItem.State = stateCleaning
-		return syncRecordItem, nil
-	}
-	return syncRecordItem, nil
-}
-
-func (sc *SyncController) createCleanTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (string, error) {
-	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, &taskserver.AddCustomFlowReq{
-		Name: enumor.FlowObsClean,
-		Memo: "do sub clean task",
-		Tasks: []taskserver.CustomFlowTask{
-			cleanaction.BuildCleanTask(
-				syncRecordItem.MainAccountID, enumor.Vendor(syncRecordItem.Vendor),
-				syncRecordItem.BillYear, syncRecordItem.BillMonth),
-		},
-	})
-	if err != nil {
-		logs.Warnf("create clean task for %v failed, err %s, rid: %s", syncRecordItem, err.Error(), kt.Rid)
-		return "", err
-	}
-	return result.ID, nil
-}
-
 func (sc *SyncController) doSubSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (
 	*SyncRecordDetailItem, error) {
 
 	if len(syncRecordItem.FlowID) == 0 {
 		// create custom sync flow
-		id, err := sc.createSyncTask(kt, syncRecordItem)
+		id, err := sc.createSyncBillItemFlow(kt, syncRecordItem)
 		if err != nil {
 			return nil, err
 		}
@@ -455,7 +414,7 @@ func (sc *SyncController) doSubSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordD
 		return syncRecordItem, nil
 	} else if flow.State == enumor.FlowFailed {
 
-		id, err := sc.createSyncTask(kt, syncRecordItem)
+		id, err := sc.createSyncBillItemFlow(kt, syncRecordItem)
 		if err != nil {
 			return nil, err
 		}
@@ -466,20 +425,84 @@ func (sc *SyncController) doSubSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordD
 	return syncRecordItem, nil
 }
 
-func (sc *SyncController) createSyncTask(kt *kit.Kit, syncRecordItem *SyncRecordDetailItem) (string, error) {
-	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, &taskserver.AddCustomFlowReq{
-		Name: enumor.FlowObsSync,
-		Memo: "do sub sync task",
+func (sc *SyncController) createSyncBillItemFlow(kt *kit.Kit, syncDetail *SyncRecordDetailItem) (string, error) {
+
+	memo := fmt.Sprintf("obs :%s %s/%s %d-%d", syncDetail.Vendor, syncDetail.RootAccountID, syncDetail.MainAccountID,
+		syncDetail.BillYear, syncDetail.BillMonth)
+	flowReq := &taskserver.AddCustomFlowReq{
+		Name: enumor.FlowObsSyncBillItem,
+		Memo: memo,
 		Tasks: []taskserver.CustomFlowTask{
 			syncaction.BuildSyncTask(
-				syncRecordItem.MainAccountID, enumor.Vendor(syncRecordItem.Vendor),
-				syncRecordItem.BillYear, syncRecordItem.BillMonth,
-				syncRecordItem.CurrentIndex, syncRecordItem.BatchSize),
+				syncDetail.MainAccountID, enumor.Vendor(syncDetail.Vendor),
+				syncDetail.BillYear, syncDetail.BillMonth,
+				syncDetail.CurrentIndex, syncDetail.BatchSize),
 		},
-	})
+	}
+	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, flowReq)
 	if err != nil {
-		logs.Warnf("create clean task for %v failed, err %s, rid: %s", syncRecordItem, err.Error(), kt.Rid)
+		logs.Errorf("create obs bill item sync task for %v failed, err: %s, rid: %s", syncDetail, err.Error(), kt.Rid)
 		return "", err
 	}
 	return result.ID, nil
+}
+
+func (sc *SyncController) createSyncAdjustmentFlow(kt *kit.Kit, record *billcore.SyncRecord) (string, error) {
+
+	memo := fmt.Sprintf("obs adjustment:%s %d-%d", record.Vendor, record.BillYear, record.BillMonth)
+	flowReq := &taskserver.AddCustomFlowReq{
+		Name: enumor.FlowObsSyncAdjustment,
+		Memo: memo,
+		Tasks: []taskserver.CustomFlowTask{
+			syncaction.BuildSyncAdjustmentTask(record.Vendor, record.BillYear, record.BillMonth),
+		},
+	}
+	result, err := sc.Client.TaskServer().CreateCustomFlow(kt, flowReq)
+	if err != nil {
+		logs.Errorf("create obs adjustment sync task for %s %d-%02d failed, err: %v, rid: %s",
+			record.Vendor, record.BillYear, record.BillMonth, err, kt.Rid)
+		return "", err
+	}
+	return result.ID, nil
+}
+
+func (sc *SyncController) handleAdjustment(kt *kit.Kit, record *billcore.SyncRecord) (synced bool, err error) {
+	flowID := record.AdjustmentFlowID
+	if len(flowID) == 0 {
+		return sc.resetAdjustmentFlowId(kt, record)
+	}
+
+	flow, err := sc.Client.TaskServer().GetFlow(kt, flowID)
+	if err != nil {
+		logs.Errorf("get obs adjustment sync flow %s failed, err: %s, rid: %s", flowID, err, kt.Rid)
+		return false, err
+	}
+	switch flow.State {
+	case enumor.FlowCancel, enumor.FlowFailed:
+		// retry
+		return sc.resetAdjustmentFlowId(kt, record)
+	case enumor.FlowSuccess:
+		// 	success
+		return true, nil
+	default:
+		// wait
+		return false, nil
+	}
+}
+
+func (sc *SyncController) resetAdjustmentFlowId(kt *kit.Kit, record *billcore.SyncRecord) (bool, error) {
+	flowID, err := sc.createSyncAdjustmentFlow(kt, record)
+	if err != nil {
+		return false, err
+	}
+	record.AdjustmentFlowID = flowID
+	req := &bill.BillSyncRecordUpdateReq{
+		ID:               record.ID,
+		State:            enumor.BillSyncRecordStateSyncingAdjustment,
+		AdjustmentFlowID: flowID}
+	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, req); err != nil {
+		logs.Errorf("set obs adjustment sync record flow id failed, err: %v, rid: %s", err, kt.Rid)
+		return false, err
+	}
+	return false, nil
 }

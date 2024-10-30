@@ -113,7 +113,7 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 				deleteFilter, err.Error(), setIndex, kt.Rid)
 			return nil, err
 		}
-		logs.Infof("delete previous obs data for %s successfully", setIndex)
+		logs.Infof("delete previous obs data for %s successfully, rid: %s", setIndex, kt.Rid)
 		return nil, nil
 	})
 	if err != nil {
@@ -131,7 +131,7 @@ func (act SyncAction) doSyncAwsBillItem(kt *kit.Kit,
 			logs.Errorf("create aws obs bill item failed of set %s, err: %s, rid: %s", setIndex, err, kt.Rid)
 			return nil, err
 		}
-		logs.Infof("create obs aws bill for %s successfully", setIndex)
+		logs.Infof("create obs aws bill for %s successfully, rid: %s", setIndex, kt.Rid)
 		return nil, nil
 	})
 	if err != nil {
@@ -153,7 +153,7 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 		return nil, fmt.Errorf("empty currency for item %v", item)
 	}
 	// 获取当月平均汇率
-	exchangeRate, err := act.getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
+	exchangeRate, err := getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
 	if err != nil {
 		logs.Warnf("failed to get exchange rate, err: %v, rid: %s", err, kt.Rid)
 		return nil, fmt.Errorf("failed to get exchange rate, err: %v", err)
@@ -183,7 +183,10 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 			ProductID:         int32(mainAccount.OpProductID),
 			LinkedAccountName: mainAccount.Extension.CloudMainAccountName,
 			Region:            regionCode,
-			Memo:              "ieg上报",
+			// OBS要求，存入标识
+			Memo: "ieg上报",
+			// OBS 要求，OBS外币金额写入line_item_unblended_cost字段中
+			LineItemUnblendedCost: item.Cost.String(),
 
 			BillPayerAccountID:                     record.BillPayerAccountId,
 			LineItemUsageAccountID:                 record.LineItemUsageAccountId,
@@ -209,7 +212,6 @@ func (act SyncAction) convertAwsBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 			LineItemNetUnblendedRate:               record.LineItemNetUnblendedRate,
 			SavingsPlanSavingsPlanRate:             record.SavingsPlanSavingsPlanRate,
 			PricingPublicOnDemandCost:              record.PricingPublicOnDemandCost,
-			LineItemUnblendedCost:                  record.LineItemUnblendedCost,
 			LineItemNetUnblendedCost:               record.LineItemNetUnblendedCost,
 			SavingsPlanSavingsPlanEffectiveCost:    record.SavingsPlanNetSavingsPlanEffectiveCost,
 			SavingsPlanSavingsPlanNetEffectiveCost: record.SavingsPlanSavingsPlanEffectiveCost,
