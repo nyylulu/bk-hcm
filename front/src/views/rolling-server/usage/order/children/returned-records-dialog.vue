@@ -1,8 +1,11 @@
 <script setup lang="ts">
-import { ref } from 'vue';
+import { h, ref } from 'vue';
+import { Button } from 'bkui-vue';
 import { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { RollingServerRecordItem } from '@/store';
+import routerAction from '@/router/utils/action';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 const isShow = ref(false);
 const data = ref<RollingServerRecordItem>();
@@ -13,8 +16,24 @@ const show = (row: RollingServerRecordItem) => {
 const fieldIds = ['created_at', 'match_applied_core', 'suborder_id'];
 const columConfig: Record<string, PropertyColumnConfig> = {
   created_at: { sort: true },
-  match_applied_core: { sort: true },
-  suborder_id: {}, // 主机回收的子单据ID
+  match_applied_core: { sort: true, align: 'right' },
+  suborder_id: {
+    render: ({ cell, data }) =>
+      h(
+        Button,
+        {
+          text: true,
+          theme: 'primary',
+          onClick() {
+            routerAction.open({
+              name: 'ApplicationsManage',
+              query: { [GLOBAL_BIZS_KEY]: data.bk_biz_id, type: 'host_recycle' },
+            });
+          },
+        },
+        cell,
+      ),
+  }, // 主机回收的子单据ID
 };
 const columns: ModelPropertyColumn[] = fieldIds.map((id) => ({
   ...usageOrderViewProperties.find((view) => view.id === id),

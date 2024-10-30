@@ -109,24 +109,21 @@ export default defineComponent({
     const handleZiyanRecycleSubmit = async () => {
       try {
         isLoading.value = true;
-        Message({
-          message: `${computedTitle.value}中, 请不要操作`,
-          theme: 'warning',
-          delay: 500,
-        });
-        const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
-        const { result } = await scrStore.startRecycleOrder({ order_id: orderIds });
-        if (result) {
-          Message({
-            message: '操作成功',
-            theme: 'success',
-          });
-          props.onFinished?.('confirm');
-
-          router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
-
-          operationType.value = OperationActions.NONE;
+        Message({ message: `${computedTitle.value}中, 请不要操作`, theme: 'warning', delay: 500 });
+        if (recycleFlowRef.value?.isSelectionRecycleTypeChange) {
+          const suborder_id_types = ziyanRecycleSelected.value.map((item) => ({
+            suborder_id: item.suborder_id,
+            recycle_type: item.recycle_type,
+          }));
+          await scrStore.startRecycleOrderByRecycleType({ suborder_id_types });
+        } else {
+          const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
+          await scrStore.startRecycleOrder({ order_id: orderIds });
         }
+        Message({ message: '操作成功', theme: 'success' });
+        props.onFinished?.('confirm');
+        router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
+        operationType.value = OperationActions.NONE;
       } finally {
         isLoading.value = false;
       }
@@ -260,10 +257,15 @@ export default defineComponent({
                       theme='primary'
                       disabled={
                         recycleFlowRef.value?.isLastStep?.()
-                          ? !ziyanRecycleSelected.value.length
+                          ? !ziyanRecycleSelected.value.length ||
+                            recycleFlowRef.value?.isRollingServerCpuCoreExceedByResPool
                           : isConfirmDisabled.value
                       }
-                      loading={isLoading.value}>
+                      loading={isLoading.value}
+                      v-bk-tooltips={{
+                        content: '资源池业务下，选择为“滚服项目”的核数，不能超过全平台应该退还给公司的额度',
+                        disabled: !recycleFlowRef.value?.isRollingServerCpuCoreExceedByResPool,
+                      }}>
                       {recycleFlowRef.value?.isLastStep?.() ? '提交' : '下一步'}
                     </Button>
                   </>

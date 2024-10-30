@@ -3,8 +3,9 @@ import merge from 'lodash/merge';
 import { ModelProperty, ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
 import { findProperty } from '@/model/utils';
 import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
+import dayjs from 'dayjs';
 
-type DateRangeType = Record<'toady' | 'last7d' | 'last15d' | 'last30d', () => [Date[], Date[]]>;
+type DateRangeType = Record<'toady' | 'last7d' | 'last15d' | 'last30d' | 'naturalMonth', () => [Date[], Date[]]>;
 type RuleItemOpVal = Omit<RulesItem, 'field'>;
 type GetDefaultRule = (property: ModelProperty, custom?: RuleItemOpVal) => RuleItemOpVal;
 
@@ -177,6 +178,12 @@ export const getDateRange = (key: keyof DateRangeType, include?: boolean) => {
       const end = new Date();
       const start = new Date();
       start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 30 : 29));
+      return [start, end];
+    },
+    naturalMonth() {
+      const now = dayjs();
+      const start = now.startOf('month').toDate();
+      const end = now.endOf('month').toDate();
       return [start, end];
     },
   };

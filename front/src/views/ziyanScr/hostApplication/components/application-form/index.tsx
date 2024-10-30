@@ -914,6 +914,9 @@ export default defineComponent({
 
     // 滚服项目-cpu需求限额
     const cpuCorsLimitsRef = useTemplateRef<typeof CpuCorsLimits>('cpu-cors-limits');
+    const availableCpuQuota = computed(() => cpuCorsLimitsRef.value?.availableCpuQuota || 0);
+    const replicasCpuCors = computed(() => cpuCorsLimitsRef.value?.replicasCpuCors || 0);
+    const isCpuCorsExceeded = computed(() => replicasCpuCors.value > availableCpuQuota.value);
 
     // 非滚服-机型排序逻辑
     const handleSortDemands = (a: CvmDeviceType, b: CvmDeviceType) => {
@@ -1058,6 +1061,11 @@ export default defineComponent({
                     addResourceRequirements.value = true;
                     title.value = '增加资源需求';
                     IDCPMlist();
+                  }}
+                  disabled={isRollingServer.value && availableCpuQuota.value === 0}
+                  v-bk-tooltips={{
+                    content: '已超过滚服的CPU可用额度，不允许添加',
+                    disabled: !(isRollingServer.value && availableCpuQuota.value === 0),
                   }}>
                   添加
                 </Button>
@@ -1069,7 +1077,13 @@ export default defineComponent({
                   一键申请
                 </Button>
                 {/* 滚服项目-cpu需求限额 */}
-                {isRollingServer.value && <CpuCorsLimits ref='cpu-cors-limits' cloudTableData={cloudTableData.value} />}
+                {isRollingServer.value && (
+                  <CpuCorsLimits
+                    ref='cpu-cors-limits'
+                    bizId={computedBiz.value}
+                    cloudTableData={cloudTableData.value}
+                  />
+                )}
               </div>
               <bk-form-item label='云主机'>
                 {!isRollingServer.value && (
@@ -1202,7 +1216,7 @@ export default defineComponent({
                     disabled={
                       (!physicalTableData.value.length && !cloudTableData.value.length) ||
                       // todo：如果是滚服项目，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
-                      cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit
+                      isCpuCorsExceeded.value
                     }
                     loading={isLoading.value}
                     v-bk-tooltips={(function () {
@@ -1212,9 +1226,9 @@ export default defineComponent({
                         content = '资源需求不能为空';
                         disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
                       }
-                      if (cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit) {
+                      if (isCpuCorsExceeded.value) {
                         content = '当前所需的CPU总核数超过滚服CPU限额，请调整后再重试。';
-                        disabled = !cpuCorsLimitsRef.value?.isReplicasCpuCorsExceedsLimit;
+                        disabled = !isCpuCorsExceeded.value;
                       }
                       return { content, disabled };
                     })()}

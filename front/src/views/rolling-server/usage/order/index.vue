@@ -5,6 +5,7 @@ import useSearchQs from '@/hooks/use-search-qs';
 import usePage from '@/hooks/use-page';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { IRollingServerCpuCoreSummary, RollingServerRecordItem, useRollingServerUsageStore } from '@/store';
+import { useRollingServerStore } from '@/store/rolling-server';
 import routerAction from '@/router/utils/action';
 import { convertDateRangeToObject, getDateRange, transformSimpleCondition } from '@/utils/search';
 import { MENU_BUSINESS_ROLLING_SERVER_USAGE_APPLIED } from '@/constants/menu-symbol';
@@ -18,6 +19,7 @@ import useTimeoutPoll from '@/hooks/use-timeout-poll';
 
 const route = useRoute();
 const { getBizsId } = useWhereAmI();
+const rollingServerStore = useRollingServerStore();
 const rollingServerUsageStore = useRollingServerUsageStore();
 
 const searchQs = useSearchQs({ key: 'filter', properties: usageOrderViewProperties });
@@ -57,26 +59,39 @@ watch(
     ]);
     const { list: appliedRecordList, count } = listRes;
 
+    // 只查询非资源池业务的返还记录
+    const applied_record_id = appliedRecordList
+      .filter((item) => !rollingServerStore.resPollBusinessIds.includes(item.bk_biz_id))
+      .map((item) => item.id); // 申请单id与返还记录单applied_record_id一一对应
+
     // 请求返回记录列表(一个申请单，不会有太多回收单，分页数量最大传500)
     const { list: returnedRecordList } = await rollingServerUsageStore.getReturnedRecordList({
-      filter: transformSimpleCondition(
-        { applied_record_id: appliedRecordList.map((appliedRecordItem) => appliedRecordItem.id) },
-        usageOrderViewProperties,
-      ),
+      filter: transformSimpleCondition({ applied_record_id }, usageOrderViewProperties),
       page: getPageParams({ current: 1, limit: 500, count: 0 }),
     });
 
-    const returned_core = returnedRecordList.reduce((acc, cur) => acc + cur.match_applied_core, 0);
-
     // 设置列表
     docList.value = appliedRecordList.map((appliedRecordItem) => {
+      // 资源池业务
+      if (rollingServerStore.resPollBusinessIds.includes(appliedRecordItem.bk_biz_id)) {
+        return { ...appliedRecordItem, isResPollBusiness: true };
+      }
+
+      // 普通业务
+      const returned_records = returnedRecordList.filter(
+        (returnedRecordItem) => returnedRecordItem.applied_record_id === appliedRecordItem.id,
+      );
+      const returned_core = returned_records.reduce((acc, cur) => acc + cur.match_applied_core, 0);
+      const not_returned_core = appliedRecordItem.delivered_core - returned_core;
+      const exec_rate = `${(returned_core / appliedRecordItem.delivered_core || 1) * 100}%`;
+
       return {
         ...appliedRecordItem,
-        returned_records: returnedRecordList,
+        returned_records,
         // 前端计算字段
         returned_core,
-        not_returned_core: appliedRecordItem.delivered_core - returned_core,
-        exec_rate: `${(returned_core / appliedRecordItem.delivered_core) * 100}%`,
+        not_returned_core,
+        exec_rate,
       };
     });
     // 设置汇总信息

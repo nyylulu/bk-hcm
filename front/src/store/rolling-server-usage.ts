@@ -41,10 +41,10 @@ export interface IRollingServerReturnedRecordItem extends IRollingServerBaseReco
 }
 
 export type RollingServerRecordItem = IRollingServerAppliedRecordItem & {
-  returned_records: IRollingServerReturnedRecordItem[];
-  returned_core: number;
-  not_returned_core: number;
-  exec_rate: string;
+  returned_records?: IRollingServerReturnedRecordItem[];
+  returned_core?: number;
+  not_returned_core?: number;
+  exec_rate?: string;
 };
 
 export interface IRollingServerCpuCoreSummary {

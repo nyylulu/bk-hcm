@@ -1,9 +1,14 @@
 <script setup lang="ts">
+import { computed, h } from 'vue';
+import { Button } from 'bkui-vue';
 import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import type { IDataListProps } from '../../typings';
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import routerAction from '@/router/utils/action';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 withDefaults(defineProps<IDataListProps>(), {});
 
@@ -13,6 +18,7 @@ const emit = defineEmits<{
 }>();
 
 const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
+const { isBusinessPage } = useWhereAmI();
 
 const fieldIds = [
   'suborder_id',
@@ -27,29 +33,47 @@ const fieldIds = [
   'creator',
 ];
 const columConfig: Record<string, PropertyColumnConfig> = {
-  suborder_id: {},
+  suborder_id: {
+    render: ({ cell, data }) =>
+      h(
+        Button,
+        {
+          text: true,
+          theme: 'primary',
+          onClick() {
+            routerAction.open({
+              name: 'ApplicationsManage',
+              query: { [GLOBAL_BIZS_KEY]: data.bk_biz_id, type: 'host_apply' },
+            });
+          },
+        },
+        cell,
+      ),
+  },
   bk_biz_id: {},
-  created_at: {},
+  created_at: { width: 180 },
   applied_type: {},
-  applied_core: { sort: true },
-  delivered_core: { sort: true },
-  returned_core: {},
-  not_returned_core: {},
-  exec_rate: {},
+  applied_core: { sort: true, align: 'right' },
+  delivered_core: { sort: true, align: 'right' },
+  returned_core: { align: 'right' },
+  not_returned_core: { align: 'right' },
+  exec_rate: { align: 'right' },
   creator: {},
 };
 const columns: ModelPropertyColumn[] = fieldIds.map((id) => ({
   ...usageOrderViewProperties.find((view) => view.id === id),
   ...columConfig[id],
 }));
+const renderColumns = computed(() => {
+  return isBusinessPage ? columns.filter((column) => column.id !== 'bk_biz_id') : columns;
+});
 
-const { settings } = useTableSettings(columns);
+const { settings } = useTableSettings(renderColumns.value);
 </script>
 
 <template>
   <div class="rolling-server-usage-data-list">
     <div class="table-tools">
-      <bk-button>导出</bk-button>
       <ul class="summary">
         <li class="item">
           <div class="label">总交付（CPU核数）：</div>
@@ -76,11 +100,14 @@ const { settings } = useTableSettings(columns);
       row-key="id"
     >
       <bk-table-column
-        v-for="(column, index) in columns"
+        v-for="(column, index) in renderColumns"
         :key="index"
         :prop="column.id"
         :label="column.name"
+        :width="column.width"
         :sort="column.sort"
+        :align="column.align"
+        :render="column.render"
       >
         <template #default="{ row }">
           <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
@@ -88,7 +115,10 @@ const { settings } = useTableSettings(columns);
       </bk-table-column>
       <bk-table-column :label="'操作'">
         <template #default="{ row }">
-          <bk-button theme="primary" text @click="emit('show-returned-records', row.id)">返还记录</bk-button>
+          <bk-button v-if="!row.isResPollBusiness" theme="primary" text @click="emit('show-returned-records', row.id)">
+            返还记录
+          </bk-button>
+          <template v-else>--</template>
         </template>
       </bk-table-column>
     </bk-table>

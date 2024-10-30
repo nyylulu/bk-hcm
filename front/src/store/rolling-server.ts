@@ -1,4 +1,4 @@
-import { ref } from 'vue';
+import { computed, ref } from 'vue';
 import { defineStore } from 'pinia';
 import http from '@/http';
 import { IListResData } from '@/typings';
@@ -15,13 +15,14 @@ export interface IRollingServerResPoolBusinessItem {
 
 export const useRollingServerStore = defineStore('rolling-server', () => {
   // 资源池业务列表
-  const resPollBizsList = ref<IRollingServerResPoolBusinessItem[]>([]);
+  const resPollBusinessList = ref<IRollingServerResPoolBusinessItem[]>([]);
+  const resPollBusinessIds = computed(() => resPollBusinessList.value.map((item) => item.bk_biz_id));
   const getResPollBusinessList = async () => {
     try {
       const res: IListResData<IRollingServerResPoolBusinessItem[]> = await http.post(
         '/api/v1/woa/rolling_servers/respool_bizs/list',
       );
-      resPollBizsList.value = res?.data?.details;
+      resPollBusinessList.value = res?.data?.details;
       return res?.data?.details;
     } catch (error) {
       console.error(error);
@@ -30,7 +31,8 @@ export const useRollingServerStore = defineStore('rolling-server', () => {
   };
 
   return {
-    resPollBizsList,
+    resPollBusinessList,
+    resPollBusinessIds,
     getResPollBusinessList,
   };
 });

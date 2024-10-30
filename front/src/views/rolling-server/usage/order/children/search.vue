@@ -3,6 +3,7 @@ import { ref, watch } from 'vue';
 import type { ModelProperty } from '@/model/typings';
 import type { ISearchCondition, ISearchProps } from '../../typings';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
+import dayjs from 'dayjs';
 
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
 import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
@@ -22,11 +23,16 @@ const fields = fieldIds.map((id) => usageOrderViewProperties.find((view) => view
 
 const getSearchCompProps = (field: ModelProperty) => {
   if (field.id === 'created_at') {
-    return { type: 'daterange', format: 'yyyy-MM-dd' };
+    return {
+      type: 'daterange',
+      format: 'yyyy-MM-dd',
+      disabledDate: (date: Date) => dayjs(date).isBefore(dayjs().subtract(30, 'day')) || dayjs(date).isAfter(dayjs()),
+      clearable: false,
+    };
   }
 
   if (field.id === 'bk_biz_id') {
-    return { showAll: true, allOptionId: -1, scope: 'auth' };
+    return { showAll: true, allOptionId: -1, clearable: false };
   }
   if (field.id === 'suborder_id') {
     return {
