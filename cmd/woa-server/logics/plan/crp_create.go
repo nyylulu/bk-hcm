@@ -213,9 +213,18 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 		Params: &cvmapi.AddCvmCbsPlanParam{
 			Operator: ticket.Applicant,
 			DeptName: cvmapi.CvmLaunchDeptName,
-			Desc:     cvmapi.CvmCbsPlanDefaultDesc,
+			Desc:     "",
 			Items:    make([]*cvmapi.AddPlanItem, 0),
 		},
+	}
+
+	switch ticket.DemandClass {
+	case enumor.DemandClassCVM:
+		addReq.Params.Desc = cvmapi.CvmCbsPlanDefaultCvmDesc
+	case enumor.DemandClassCA:
+		addReq.Params.Desc = cvmapi.CvmCbsPlanDefaultCADesc
+	default:
+		logs.Warnf("failed to construct add desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
 	for _, demand := range ticket.Demands {
@@ -292,12 +301,21 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 				DeptId:          cvmapi.CvmDeptId,
 				DeptName:        cvmapi.CvmLaunchDeptName,
 				PlanProductName: ticket.PlanProductName,
-				Desc:            cvmapi.CvmCbsPlanDefaultDesc,
+				Desc:            "",
 			},
 			SrcData:     make([]*cvmapi.AdjustSrcData, 0),
 			UpdatedData: make([]*cvmapi.AdjustUpdatedData, 0),
 			UserName:    ticket.Applicant,
 		},
+	}
+
+	switch ticket.DemandClass {
+	case enumor.DemandClassCVM:
+		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCvmDesc
+	case enumor.DemandClassCA:
+		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCADesc
+	default:
+		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
 	crpDemandIDs := make([]int64, len(ticket.Demands))
@@ -323,38 +341,51 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 			return nil, errors.New("crp demand id not found")
 		}
 
-		var adjustType enumor.CrpAdjustType
-		switch ticket.Type {
-		case enumor.RPTicketTypeAdjust:
-			adjustType = enumor.CrpAdjustTypeUpdate
-			if demand.Updated.ExpectTime != demand.Original.ExpectTime {
-				adjustType = enumor.CrpAdjustTypeDelay
-			}
-		case enumor.RPTicketTypeDelete:
-			adjustType = enumor.CrpAdjustTypeCancel
-		default:
-			logs.Errorf("unsupported ticket type: %s", ticket.Type)
-			return nil, errors.New("unsupported ticket type")
-		}
-
-		srcItem := &cvmapi.AdjustSrcData{
-			AdjustType:          string(adjustType),
-			CvmCbsPlanQueryItem: crpDemand.Clone(),
-		}
-		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
-
-		updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
+		srcItem, updatedItem, err := c.constructAdjustDemandDetails(kt, ticket.Type, crpDemand, demand)
 		if err != nil {
-			logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
+		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
 		if updatedItem != nil {
 			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem)
 		}
 	}
 
 	return adjustReq, nil
+}
+
+func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor.RPTicketType,
+	crpDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
+	*cvmapi.AdjustSrcData, *cvmapi.AdjustUpdatedData, error) {
+
+	var adjustType enumor.CrpAdjustType
+	switch ticketType {
+	case enumor.RPTicketTypeAdjust:
+		adjustType = enumor.CrpAdjustTypeUpdate
+		if demand.Updated.ExpectTime != demand.Original.ExpectTime {
+			adjustType = enumor.CrpAdjustTypeDelay
+		}
+	case enumor.RPTicketTypeDelete:
+		adjustType = enumor.CrpAdjustTypeCancel
+	default:
+		logs.Errorf("unsupported ticket type: %s， rid: %s", ticketType, kt.Rid)
+		return nil, nil, errors.New("unsupported ticket type")
+	}
+
+	srcItem := &cvmapi.AdjustSrcData{
+		AdjustType:          string(adjustType),
+		CvmCbsPlanQueryItem: crpDemand.Clone(),
+	}
+
+	updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
+	if err != nil {
+		logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	return srcItem, updatedItem, nil
 }
 
 // getCrpDemandMap get crp demand id and detail map.

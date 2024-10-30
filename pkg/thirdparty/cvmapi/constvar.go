@@ -175,8 +175,10 @@ const (
 	// QueryCvmInstanceType 查询CVM机型信息
 	QueryCvmInstanceType = "queryCvmInstanceType"
 
-	// CvmCbsPlanDefaultDesc 需求预测单据的默认备注，用于管理员判断需求来源
-	CvmCbsPlanDefaultDesc = "[From IEG HCM]"
+	// CvmCbsPlanDefaultCvmDesc 需求预测单据的默认CVM备注，用于管理员判断需求来源
+	CvmCbsPlanDefaultCvmDesc = "[From IEG HCM CVM]"
+	// CvmCbsPlanDefaultCADesc 需求预测单据的默认CA备注
+	CvmCbsPlanDefaultCADesc = "[From IEG HCM CA]"
 
 	// DftImageID default image id of TencentOS Server 2.6 (TK4)
 	DftImageID = "img-fjxtfi0n"
