@@ -579,6 +579,11 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 						Operator: querybuilder.OperatorEqual,
 						Value:    rollingserver.IEGOperateDeptID,
 					},
+					querybuilder.AtomRule{
+						Field:    "bk_business_dept_id",
+						Operator: querybuilder.OperatorEqual,
+						Value:    rollingserver.IEGOperateDeptID,
+					},
 				},
 			},
 		},
