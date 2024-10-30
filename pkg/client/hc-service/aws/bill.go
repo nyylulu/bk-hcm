@@ -44,6 +44,15 @@ func NewBillClient(client rest.ClientInterface) *BillClient {
 	}
 }
 
+// QuerySavingsPlanCostList query saving plans list
+func (v *BillClient) QuerySavingsPlanCostList(kt *kit.Kit,
+	req *hcbill.QueryAwsSavingsPlanCostReq) (*bill.AwsSavingsPlansCostListResult, error) {
+
+	return common.Request[hcbill.QueryAwsSavingsPlanCostReq, bill.AwsSavingsPlansCostListResult](
+		v.client, rest.POST, kt, req, "/savings_plans/cost/query")
+
+}
+
 // List list bill.
 func (v *BillClient) List(ctx context.Context, h http.Header, req *hcbill.AwsBillListReq) (
 	*hcbill.AwsBillListResult, error) {
@@ -131,11 +140,10 @@ func (v *BillClient) GetRootAccountSpTotalUsage(kt *kit.Kit, req *hcbill.AwsRoot
 
 }
 
-// QuerySavingsPlanCostList query saving plans list
-func (v *BillClient) QuerySavingsPlanCostList(kt *kit.Kit,
-	req *hcbill.QueryAwsSavingsPlanCostReq) (*bill.AwsSavingsPlansCostListResult, error) {
+// ListRootOutsideMonthBill query outside month bill
+func (v *BillClient) ListRootOutsideMonthBill(kt *kit.Kit, req *hcbill.AwsRootOutsideMonthBillListReq) (
+	*core.ListResultT[map[string]string], error) {
 
-	return common.Request[hcbill.QueryAwsSavingsPlanCostReq, bill.AwsSavingsPlansCostListResult](
-		v.client, rest.POST, kt, req, "/savings_plans/cost/query")
-
+	return common.Request[hcbill.AwsRootOutsideMonthBillListReq, core.ListResultT[map[string]string]](
+		v.client, rest.GET, kt, req, "/root_account_bills/list_outside_month_bills")
 }

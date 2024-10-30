@@ -24,8 +24,6 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/pkg/dal/table/types"
-
 	cleanaction "hcm/cmd/task-server/logics/action/obs/clean"
 	syncaction "hcm/cmd/task-server/logics/action/obs/sync"
 	"hcm/pkg/api/core"
@@ -139,7 +137,7 @@ func (sc *SyncController) doSync(kt *kit.Kit) {
 
 func (sc *SyncController) listSyncingRecord(kt *kit.Kit) ([]*billcore.SyncRecord, error) {
 	expressions := []*filter.AtomRule{
-		tools.RuleEqual("state", enumor.BillSyncRecordStateSyncing),
+		tools.RuleEqual("state", enumor.BillSyncRecordStateNew),
 	}
 	pendingSyncRecordList, err := sc.Client.DataService().Global.Bill.ListBillSyncRecord(kt, &core.ListReq{
 		Filter: tools.ExpressionAnd(expressions...),
@@ -178,7 +176,7 @@ func (sc *SyncController) handleSyncRecord(kt *kit.Kit, syncRecord *billcore.Syn
 		}
 		if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 			ID:     syncRecord.ID,
-			Detail: types.JsonField(newDetailData),
+			Detail: newDetailData,
 		}); err != nil {
 			logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 			return err
@@ -311,7 +309,7 @@ func (sc *SyncController) initSyncItem(kt *kit.Kit, syncRecord *billcore.SyncRec
 	}
 	if err := sc.Client.DataService().Global.Bill.UpdateBillSyncRecord(kt, &bill.BillSyncRecordUpdateReq{
 		ID:     syncRecord.ID,
-		Detail: types.JsonField(newDetailData),
+		Detail: newDetailData,
 	}); err != nil {
 		logs.Warnf("update bill sync record detail failed, err %s, rid: %s", err.Error(), kt.Rid)
 		return err
