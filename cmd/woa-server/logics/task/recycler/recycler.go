@@ -675,7 +675,7 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 					CostConcerned: classifier.MapGroupProperty[grpType].CostConcerned,
 					SkipConfirm:   skipConfirm,
 					Stage:         table.RecycleStageCommit,
-					Status:        table.RecycleStatusCommitted,
+					Status:        table.RecycleStatusUncommit,
 					Handler:       "AUTO",
 					TotalNum:      uint(len(group)),
 					SuccessNum:    0,
@@ -707,10 +707,6 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 
 	if txnErr != nil {
 		return nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
-	}
-
-	for _, order := range orders {
-		r.dispatcher.Add(order.SuborderID)
 	}
 
 	return orders, nil
@@ -902,6 +898,8 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+
+	r.setOrderCommitted(orders)
 
 	rst := &types.CreateRecycleOrderRst{
 		Info: orders,
