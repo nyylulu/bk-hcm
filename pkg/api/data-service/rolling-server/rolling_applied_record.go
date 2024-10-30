@@ -58,6 +58,7 @@ type RollingAppliedRecordCreateReq struct {
 	Day           int                `json:"day" validate:"required"`
 	AppliedCore   uint64             `json:"applied_core" validate:"required"`
 	DeliveredCore uint64             `json:"delivered_core" validate:"omitempty"`
+	InstanceGroup string             `json:"instance_group" validate:"required"`
 }
 
 // Validate ...

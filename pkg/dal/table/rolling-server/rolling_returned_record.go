@@ -45,6 +45,7 @@ var RollingReturnedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "day", NamedC: "day", Type: enumor.Numeric},
 	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "returned_way", NamedC: "returned_way", Type: enumor.String},
+	{Column: "instance_group", NamedC: "instance_group", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
@@ -74,6 +75,8 @@ type RollingReturnedRecord struct {
 	RollDate int `db:"roll_date" json:"roll_date"`
 	// ReturnedWay 退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)
 	ReturnedWay enumor.ReturnedWay `db:"returned_way" json:"returned_way"`
+	// InstanceGroup 机型族
+	InstanceGroup string `db:"instance_group" json:"instance_group"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator"`
 	// CreatedAt 创建时间

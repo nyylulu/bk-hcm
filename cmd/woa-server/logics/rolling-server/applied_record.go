@@ -82,6 +82,11 @@ func (l *logics) CreateAppliedRecord(kt *kit.Kit, createArr []rstypes.CreateAppl
 		logs.Errorf("get cpu core by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
 		return err
 	}
+	instGroupMap, err := l.configLogics.Device().ListInstanceGroup(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("get instance group failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
+		return err
+	}
 
 	now := time.Now()
 	records := make([]rsproto.RollingAppliedRecordCreateReq, len(createArr))
@@ -92,16 +97,22 @@ func (l *logics) CreateAppliedRecord(kt *kit.Kit, createArr []rstypes.CreateAppl
 			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
 			return fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
+		instGroup, ok := instGroupMap[deviceType]
+		if !ok {
+			logs.Errorf("can not find instance group, type: %s, rid: %s", deviceType, kt.Rid)
+			return fmt.Errorf("can not find instance group, type: %s", deviceType)
+		}
 
 		appliedRecord := rsproto.RollingAppliedRecordCreateReq{
-			AppliedType: create.AppliedType,
-			BkBizID:     create.BizID,
-			OrderID:     create.OrderID,
-			SubOrderID:  create.SubOrderID,
-			Year:        now.Year(),
-			Month:       int(now.Month()),
-			Day:         now.Day(),
-			AppliedCore: uint64(deviceTypeCpuCore.CPUAmount) * uint64(create.Count),
+			AppliedType:   create.AppliedType,
+			BkBizID:       create.BizID,
+			OrderID:       create.OrderID,
+			SubOrderID:    create.SubOrderID,
+			Year:          now.Year(),
+			Month:         int(now.Month()),
+			Day:           now.Day(),
+			AppliedCore:   uint64(deviceTypeCpuCore.CPUAmount) * uint64(create.Count),
+			InstanceGroup: instGroup,
 		}
 		records[i] = appliedRecord
 	}
@@ -187,8 +198,8 @@ func (l *logics) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (
 
 // ReduceRollingCvmProdAppliedRecord 减少当月通过cvm生产的滚服交付数量
 func (l *logics) ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types.MatchDeviceBrief) error {
-	// 1. 获取匹配的主机的核心总数
-	neededCPUCore, err := l.getRollingMatchCpuCore(kt, devices)
+	// 1. 获取匹配的主机的机型族以及对应的核心总数
+	neededInstGroupCPUCoreMap, err := l.getRollingMatchCpuCore(kt, devices)
 	if err != nil {
 		logs.Errorf("get rolling server match cvm product host cpu core failed, err: %v, devices: %+v, rid: %s", err,
 			devices, kt.Rid)
@@ -196,33 +207,48 @@ func (l *logics) ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types
 	}
 
 	// 2. 获取当月cvm生产的滚服主机核心数余量，判断是否满足本次需求
-	remainingCPUCore, err := l.getRollingCurMonthCVMProdCpuCore(kt)
+	instGroups := make([]string, 0)
+	for instGroup := range neededInstGroupCPUCoreMap {
+		instGroups = append(instGroups, instGroup)
+	}
+	remainingInstGroupCPUCoreMap, err := l.getRollingCurMonthCVMProdCpuCore(kt, instGroups)
 	if err != nil {
-		logs.Errorf("get rolling server current month cvm product cpu core failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get rolling server current month cvm product cpu core failed, err: %v, instGroups: %v, rid: %s",
+			err, instGroups, kt.Rid)
 		return err
 	}
-	if remainingCPUCore < neededCPUCore {
-		logs.Errorf("the remaining core quantity of cvm production is %d, and the current demand quantity is %d, "+
-			"rid: %s", remainingCPUCore, neededCPUCore, kt.Rid)
-		return fmt.Errorf("滚服当月剩余匹配量为%d, 当前所需匹配的核数为%d，不满足需求", remainingCPUCore, neededCPUCore)
+	for instGroup, neededCPUCore := range neededInstGroupCPUCoreMap {
+		remainingCPUCore, ok := remainingInstGroupCPUCoreMap[instGroup]
+		if !ok {
+			logs.Errorf("the remaining core quantity of cvm production is %d, and the current demand quantity is %d, "+
+				"instGroup: %s, rid: %s", remainingCPUCore, neededCPUCore, instGroup, kt.Rid)
+			return fmt.Errorf("滚服当月机型族:%s剩余匹配量为%d, 当前所需匹配的核数为%d，不满足需求", instGroup, 0,
+				neededCPUCore)
+		}
+
+		if remainingCPUCore < neededCPUCore {
+			logs.Errorf("the remaining core quantity of cvm production is %d, and the current demand quantity is %d, "+
+				"instGroup: %s, rid: %s", remainingCPUCore, neededCPUCore, instGroup, kt.Rid)
+			return fmt.Errorf("滚服当月机型族:%s剩余匹配量为%d, 当前所需匹配的核数为%d，不满足需求", instGroup, 0,
+				neededCPUCore)
+		}
 	}
 
 	// 3. 查询cvm滚服申请记录，进行扣减
-	if err = l.reduceRollingCvmProdCpuCore(kt, neededCPUCore); err != nil {
-		logs.Errorf("reduce rolling server cvm product applied cpu core failed, err: %v, neededCPUCore: %d, rid: %s",
-			err, neededCPUCore, kt.Rid)
+	if err = l.reduceRollingCvmProdCpuCore(kt, neededInstGroupCPUCoreMap); err != nil {
+		logs.Errorf("reduce rolling server cvm product applied cpu core failed, err: %v, neededInstGroupCPUCoreMap: "+
+			"%v, rid: %s", err, neededInstGroupCPUCoreMap, kt.Rid)
 		return err
 	}
 
 	return nil
 }
 
-func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDeviceBrief) (uint64, error) {
+func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDeviceBrief) (map[string]uint64, error) {
 	assetIDs := make([]string, len(devices))
 	for i, device := range devices {
 		assetIDs[i] = device.AssetId
 	}
-
 	deviceTypeCountMap := make(map[string]int)
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{
@@ -246,9 +272,8 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 		resp, err := l.esbClient.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
 		if err != nil {
 			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
-			return 0, err
+			return nil, err
 		}
-
 		for _, host := range resp.Data.Info {
 			if _, ok := deviceTypeCountMap[host.SvrDeviceClassName]; !ok {
 				deviceTypeCountMap[host.SvrDeviceClassName] = 0
@@ -270,102 +295,128 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCpuCoreByDeviceTypes(kt, deviceTypes)
 	if err != nil {
 		logs.Errorf("get cpu core by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
-		return 0, err
+		return nil, err
+	}
+	deviceTypeInstGroupMap, err := l.configLogics.Device().ListInstanceGroup(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("get instance group by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes,
+			kt.Rid)
+		return nil, err
 	}
 
-	var cpuCore uint64 = 0
+	instGroupCoreSumMap := make(map[string]uint64)
 	for deviceType, count := range deviceTypeCountMap {
-		deviceTypeCpuCore, ok := deviceTypeCpuCoreMap[deviceType]
+		cpuCore, ok := deviceTypeCpuCoreMap[deviceType]
 		if !ok {
 			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
-			return 0, fmt.Errorf("can not find device_type, type: %s", deviceType)
+			return nil, fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
-		cpuCore += uint64(deviceTypeCpuCore.CPUAmount) * uint64(count)
+		instGroup, ok := deviceTypeInstGroupMap[deviceType]
+		if !ok {
+			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
+			return nil, fmt.Errorf("can not find device_type, type: %s", deviceType)
+		}
+
+		if _, ok = instGroupCoreSumMap[instGroup]; !ok {
+			instGroupCoreSumMap[instGroup] = 0
+		}
+
+		instGroupCoreSumMap[instGroup] += uint64(cpuCore.CPUAmount) * uint64(count)
 	}
 
-	return cpuCore, nil
+	return instGroupCoreSumMap, nil
 }
 
-func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit) (uint64, error) {
+func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit, instGroups []string) (map[string]uint64, error) {
 	now := time.Now()
-	summaryReq := &rstypes.CpuCoreSummaryReq{
-		RollingServerDateRange: rstypes.RollingServerDateRange{
-			Start: rstypes.RollingServerDateTimeItem{
-				Year:  now.Year(),
-				Month: int(now.Month()),
-				Day:   rstypes.FirstDay,
+	instGroupCpuCoreMap := make(map[string]uint64)
+	for _, instGroup := range instGroups {
+		summaryReq := &rstypes.CpuCoreSummaryReq{
+			RollingServerDateRange: rstypes.RollingServerDateRange{
+				Start: rstypes.RollingServerDateTimeItem{
+					Year:  now.Year(),
+					Month: int(now.Month()),
+					Day:   rstypes.FirstDay,
+				},
+				End: rstypes.RollingServerDateTimeItem{
+					Year:  now.Year(),
+					Month: int(now.Month()),
+					Day:   now.Day(),
+				},
 			},
-			End: rstypes.RollingServerDateTimeItem{
-				Year:  now.Year(),
-				Month: int(now.Month()),
-				Day:   now.Day(),
-			},
-		},
-		AppliedType: enumor.CvmProduceAppliedType,
-	}
-	summary, err := l.GetCpuCoreSummary(kt, summaryReq)
-	if err != nil {
-		logs.Errorf("get cpu core summary failed, err: %v, req: %+v, rid: %s", err, *summaryReq, kt.Rid)
-		return 0, err
+			AppliedType:   enumor.CvmProduceAppliedType,
+			InstanceGroup: instGroup,
+		}
+		summary, err := l.GetCpuCoreSummary(kt, summaryReq)
+		if err != nil {
+			logs.Errorf("get cpu core summary failed, err: %v, req: %+v, rid: %s", err, *summaryReq, kt.Rid)
+			return nil, err
+		}
+
+		instGroupCpuCoreMap[instGroup] = summary.SumDeliveredCore
 	}
 
-	return summary.SumDeliveredCore, nil
+	return instGroupCpuCoreMap, nil
 }
 
-func (l *logics) reduceRollingCvmProdCpuCore(kt *kit.Kit, neededCPUCore uint64) error {
-	if neededCPUCore == 0 {
+func (l *logics) reduceRollingCvmProdCpuCore(kt *kit.Kit, neededInstGroupCPUCoreMap map[string]uint64) error {
+	if len(neededInstGroupCPUCoreMap) == 0 {
 		return nil
 	}
 
 	now := time.Now()
-	listReq := &rsproto.RollingAppliedRecordListReq{
-		Filter: &filter.Expression{
-			Op: filter.And,
-			Rules: []filter.RuleFactory{
-				&filter.AtomRule{Field: "year", Op: filter.Equal.Factory(), Value: now.Year()},
-				&filter.AtomRule{Field: "month", Op: filter.Equal.Factory(), Value: now.Month()},
-				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(),
-					Value: enumor.CvmProduceAppliedType},
-			},
-		},
-		Page: &core.BasePage{
-			Start: 0,
-			Limit: constant.BatchOperationMaxLimit,
-			Sort:  "created_at",
-		},
-	}
-
-	records := make([]*rstable.RollingAppliedRecord, 0)
-	for {
-		result, err := l.client.DataService().Global.RollingServer.ListAppliedRecord(kt, listReq)
-		if err != nil {
-			logs.Errorf("list rolling applied record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
-			return err
-		}
-		records = append(records, result.Details...)
-
-		if len(result.Details) < constant.BatchOperationMaxLimit {
-			break
-		}
-
-		listReq.Page.Start += constant.BatchOperationMaxLimit
-	}
-
 	updatedRecords := make([]rsproto.RollingAppliedRecordUpdateReq, 0)
-	for _, record := range records {
-		if neededCPUCore <= 0 {
-			break
+	for instGroup, neededCPUCore := range neededInstGroupCPUCoreMap {
+		listReq := &rsproto.RollingAppliedRecordListReq{
+			Filter: &filter.Expression{
+				Op: filter.And,
+				Rules: []filter.RuleFactory{
+					&filter.AtomRule{Field: "year", Op: filter.Equal.Factory(), Value: now.Year()},
+					&filter.AtomRule{Field: "month", Op: filter.Equal.Factory(), Value: now.Month()},
+					&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(),
+						Value: enumor.CvmProduceAppliedType},
+					&filter.AtomRule{Field: "instance_group", Op: filter.Equal.Factory(), Value: instGroup},
+				},
+			},
+			Page: &core.BasePage{
+				Start: 0,
+				Limit: constant.BatchOperationMaxLimit,
+				Sort:  "created_at",
+			},
 		}
 
-		var deliveredCore uint64 = 0
-		if neededCPUCore < *record.DeliveredCore {
-			deliveredCore = *record.DeliveredCore - neededCPUCore
-		}
-		updatedRecords = append(updatedRecords,
-			rsproto.RollingAppliedRecordUpdateReq{ID: record.ID, DeliveredCore: &deliveredCore})
+		records := make([]*rstable.RollingAppliedRecord, 0)
+		for {
+			result, err := l.client.DataService().Global.RollingServer.ListAppliedRecord(kt, listReq)
+			if err != nil {
+				logs.Errorf("list rolling applied record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
+				return err
+			}
+			records = append(records, result.Details...)
 
-		neededCPUCore -= *record.DeliveredCore
+			if len(result.Details) < constant.BatchOperationMaxLimit {
+				break
+			}
+
+			listReq.Page.Start += constant.BatchOperationMaxLimit
+		}
+
+		for _, record := range records {
+			if neededCPUCore <= 0 {
+				break
+			}
+
+			var deliveredCore uint64 = 0
+			if neededCPUCore < *record.DeliveredCore {
+				deliveredCore = *record.DeliveredCore - neededCPUCore
+			}
+			updatedRecords = append(updatedRecords,
+				rsproto.RollingAppliedRecordUpdateReq{ID: record.ID, DeliveredCore: &deliveredCore})
+
+			neededCPUCore -= *record.DeliveredCore
+		}
 	}
+
 	if len(updatedRecords) == 0 {
 		return nil
 	}

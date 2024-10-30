@@ -73,6 +73,7 @@ type CpuCoreSummaryReq struct {
 	SubOrderIDs            []string           `json:"suborder_ids" validate:"omitempty,max=100"`
 	ReturnedWay            enumor.ReturnedWay `json:"returned_way" validate:"omitempty"`
 	AppliedType            enumor.AppliedType `json:"applied_type" validate:"omitempty"`
+	InstanceGroup          string             `json:"instance_group" validate:"omitempty"`
 }
 
 // Validate validate.

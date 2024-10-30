@@ -45,6 +45,7 @@ var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "applied_core", NamedC: "applied_core", Type: enumor.Numeric},
 	{Column: "delivered_core", NamedC: "delivered_core", Type: enumor.Numeric},
+	{Column: "instance_group", NamedC: "instance_group", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
@@ -74,6 +75,8 @@ type RollingAppliedRecord struct {
 	AppliedCore *uint64 `db:"applied_core" json:"applied_core"`
 	// DeliveredCore cpu交付核心数
 	DeliveredCore *uint64 `db:"delivered_core" json:"delivered_core"`
+	// InstanceGroup 机型族
+	InstanceGroup string `db:"instance_group" json:"instance_group"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator"`
 	// CreatedAt 创建时间

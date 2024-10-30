@@ -18,6 +18,7 @@ import (
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -64,6 +65,7 @@ type DeviceIf interface {
 
 	// ListCpuCoreByDeviceTypes list cpu core by device types
 	ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
+	ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error)
 }
 
 // NewDeviceOp creates a device interface
@@ -580,4 +582,37 @@ func (d *device) ListCpuCoreFromCrp(kt *kit.Kit, deviceTypes []string) (map[stri
 		deviceTypes, deviceTypeMap, kt.Rid)
 
 	return deviceTypeMap, nil
+}
+
+// ListInstanceGroup 获取设备机型族
+func (d *device) ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error) {
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: deviceTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance group failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm instance group error, deviceTypes: %v, resp: %+v, rid: %s", deviceTypes, resp, kt.Rid)
+		return nil, errf.Newf(errf.RecordNotFound, "query cvm instance group failed, resp:[%+v] is nil", resp)
+	}
+
+	instGroupMap := make(map[string]string, 0)
+	for _, item := range resp.Result.Data {
+		instGroupMap[item.InstanceType] = item.InstanceGroup
+	}
+
+	// 记录日志
+	logs.Infof("get yunti crp instance group type, QueryCvmInstanceType, instTypes: %v, instGroupMap; %+v, rid: %s",
+		deviceTypes, instGroupMap, kt.Rid)
+
+	return instGroupMap, nil
 }

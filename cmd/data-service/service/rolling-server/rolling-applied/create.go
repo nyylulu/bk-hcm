@@ -59,6 +59,7 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 				RollDate:      times.GetDataIntDate(createReq.Year, createReq.Month, createReq.Day),
 				AppliedCore:   cvt.ValToPtr(createReq.AppliedCore),
 				DeliveredCore: cvt.ValToPtr(createReq.DeliveredCore),
+				InstanceGroup: createReq.InstanceGroup,
 				Creator:       cts.Kit.User,
 			})
 		}

@@ -48,6 +48,9 @@ func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 	if len(req.BkBizIDs) != 0 {
 		appliedRules = append(appliedRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
 	}
+	if len(req.InstanceGroup) != 0 {
+		appliedRules = append(appliedRules, tools.RuleEqual("instance_group", req.InstanceGroup))
+	}
 	// 回收记录的查询条件跟申请记录的一致
 	returnedRules = make([]*filter.AtomRule, len(appliedRules))
 	copy(returnedRules, appliedRules)

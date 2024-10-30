@@ -47,28 +47,30 @@ import (
 // syncBillsPeriodically 每天凌晨1点计算罚金
 // obs拉取的是t-1的数据，假设现在要拉取11号的数据，那么obs会在12号11点的时候进行拉取，所以我们需要在此之前准备好数据
 func (l *logics) syncBillsPeriodically() {
-	// 计算下一个凌晨1点的时间
 	now := time.Now()
+	logs.Infof("start periodically synchronizing rolling bills， time: %v", now)
+
+	// 计算下一个凌晨1点的时间
 	nextRun := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())
 	if now.After(nextRun) {
 		// 如果现在已经过了1点，计算明天的1点, 并判断今天的滚服账单是否已经同步完成
 		nextRun = nextRun.Add(24 * time.Hour)
 
-		kt := kit.New()
+		kt := core.NewBackendKit()
 		req := &rollingserver.RollingBillSyncReq{
 			BkBizID: rollingserver.SyncAllBiz,
 			Year:    now.Year(),
 			Month:   int(now.Month()),
 			Day:     now.Day(),
 		}
-		exist, err := l.isBillExist(kit.New(), req)
+		exist, err := l.isBillExist(kt, req)
 		if err != nil {
 			logs.Errorf("%s: unable to confirm whether rolling bill exists, err: %v, req: %+v, rid: %s",
 				constant.RollingServerSyncFailed, err, *req, kt.Rid)
 		}
 		if !exist {
-			logs.Errorf("%s: can not find all biz rolling bill, year: %s, month: %+v, day: %s, rid: %s",
-				constant.RollingServerSyncFailed, now.Year(), now.Month(), now.Day(), kt.Rid)
+			logs.Errorf("%s: can not find all biz rolling bill, year: %d, month: %d, day: %d, rid: %s",
+				constant.RollingServerSyncFailed, now.Year(), int(now.Month()), now.Day(), kt.Rid)
 		}
 	}
 
