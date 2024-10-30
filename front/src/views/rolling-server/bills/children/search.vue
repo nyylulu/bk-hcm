@@ -15,14 +15,14 @@ const emit = defineEmits<{
   (e: 'reset'): void;
 }>();
 
-const fieldIds = ['date', 'bk_biz_id'];
+const fieldIds = ['roll_date', 'bk_biz_id'];
 const fields = fieldIds.map((id) => billsViewProperties.find((prop) => prop.id === id));
 
 const formValues = ref<IBillsSearchCondition>({});
 let conditionInitValues: IBillsSearchCondition;
 
 const getSearchCompProps = (field: ModelProperty) => {
-  if (field.id === 'date') {
+  if (field.id === 'roll_date') {
     return {
       type: 'daterange',
       format: 'yyyy-MM-dd',

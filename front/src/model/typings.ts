@@ -1,3 +1,4 @@
+import { RenderFunctionString } from 'bkui-vue/lib/table/props';
 import { RulesItem, QueryRuleOPEnum } from '@/typings';
 import type { ResourceTypeEnum } from '@/common/resource-constant';
 
@@ -13,7 +14,6 @@ export type ModelPropertyType =
   | 'cert'
   | 'ca'
   | 'region'
-  | 'bizs'
   | 'business';
 
 export type ModelPropertyMeta = {
@@ -38,6 +38,9 @@ export type ModelProperty = {
 export type PropertyColumnConfig = {
   sort?: boolean;
   align?: 'left' | 'center' | 'right';
+  render?: RenderFunctionString;
+  width?: number | string;
+  minWidth?: number | string;
   defaultHidden?: boolean;
 };
 
@@ -46,12 +49,14 @@ export type PropertyFormConfig = {
 };
 
 export type PropertySearchConfig = {
-  op: QueryRuleOPEnum;
-  filterRules: (value: any) => RulesItem;
+  op?: QueryRuleOPEnum;
+  filterRules?: (value: any) => RulesItem;
+  format?: (value: any) => any;
 };
 
 export type PropertyDisplayConfig = {
-  appearance: string;
+  appearance?: string;
+  format?: (value: any) => any;
 };
 
 // 与列展示场景相关，联合列的配置属性
@@ -65,3 +70,10 @@ export type ModelPropertyDisplay = ModelProperty & PropertyDisplayConfig;
 
 // 与搜索场景相关，联合搜索的配置属性
 export type ModelPropertySearch = ModelProperty & PropertySearchConfig;
+
+export type ModelPropertyGeneric =
+  | ModelProperty
+  | ModelPropertyColumn
+  | ModelPropertyForm
+  | ModelPropertyDisplay
+  | ModelPropertySearch;

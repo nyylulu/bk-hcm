@@ -57,7 +57,7 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
     const endOfMonth = dayjs().endOf('month');
     try {
       const [globalQuotaRes, globalCpuCoreRes] = await Promise.all<
-        [Promise<IQueryResData<IGlobalQuota>>, Promise<IListResData<IGlobalCpuCoreSummary>>]
+        [Promise<IQueryResData<IGlobalQuota>>, Promise<IQueryResData<IGlobalCpuCoreSummary>>]
       >([
         http.get('/api/v1/woa/rolling_servers/global_config'),
         http.post('/api/v1/woa/rolling_servers/cpu_core/summary', {
@@ -74,23 +74,22 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
         }),
       ]);
 
-      globalQuotaConfig.value = { ...globalQuotaRes.data, ...globalCpuCoreRes.data.details };
+      globalQuotaConfig.value = { ...globalQuotaRes.data, ...globalCpuCoreRes.data };
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
     }
   };
 
-  const getBizQuotaList = async (params: QueryParamsType & { bk_biz_id: number }) => {
-    const { bk_biz_id, ...data } = params;
+  const getBizQuotaList = async (params: QueryParamsType) => {
     bizQuotaListLoading.value = true;
     const api = `/api/v1/woa/rolling_servers/biz_quotas/list`;
     try {
       const [listRes, countRes] = await Promise.all<
         [Promise<IListResData<IRollingServerBizQuotaItem[]>>, Promise<IListResData<IRollingServerBizQuotaItem[]>>]
-      >([http.post(api, enableCount(data, false)), http.post(api, enableCount(data, true))]);
+      >([http.post(api, enableCount(params, false)), http.post(api, enableCount(params, true))]);
       const [{ details: list = [] }, { count = 0 }] = [listRes?.data ?? {}, countRes?.data ?? {}];
-      return { list, count };
+      return { list: list || [], count };
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
@@ -126,7 +125,7 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
   }) => {
     adjustBizQuotaLoading.value = true;
     try {
-      const res: IQueryResData<{ ids: string }> = await http.patch(
+      const res: IQueryResData<{ ids: string[] }> = await http.patch(
         '/api/v1/woa/rolling_servers/quota_offsets/batch',
         params,
       );

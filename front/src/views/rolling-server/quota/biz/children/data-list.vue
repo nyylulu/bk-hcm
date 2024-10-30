@@ -3,8 +3,9 @@ import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings'
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
 import quotaBizViewProperties from '@/model/rolling-server/quota-biz.view';
-import type { IBizViewDataListProps } from '../../typings';
 import type { IRollingServerBizQuotaItem } from '@/store/rolling-server-quota';
+import { QuotaAdjustType } from '@/views/rolling-server/typings';
+import type { IBizViewDataListProps } from '../../typings';
 
 withDefaults(defineProps<IBizViewDataListProps>(), {});
 
@@ -17,10 +18,25 @@ const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
 const columnConfig: Record<string, PropertyColumnConfig> = {
   bk_biz_name: {},
-  base_quota: { sort: true },
-  adjust_type: {},
-  quota_offset: {},
-  quota_offset_final: {},
+  base_quota: { width: 120, align: 'right', sort: true },
+  adjust_type: { width: 220 },
+  quota_offset: {
+    width: 120,
+    align: 'right',
+    render: ({ data }: { data?: IRollingServerBizQuotaItem }) => {
+      if (data.quota_offset) {
+        return `${data.adjust_type === QuotaAdjustType.INCREASE ? '+' : '-'}${data.quota_offset}`;
+      }
+      return '--';
+    },
+  },
+  quota_offset_final: {
+    width: 200,
+    align: 'right',
+    render: ({ data }: { data?: IRollingServerBizQuotaItem }) => {
+      return data.base_quota + (data.quota_offset ?? 0);
+    },
+  },
   updated_at: {},
   reviser: {},
 };
@@ -55,6 +71,9 @@ const { settings } = useTableSettings(columns);
       :prop="column.id"
       :label="column.name"
       :sort="column.sort"
+      :align="column.align"
+      :width="column.width"
+      :render="column.render"
     >
       <template #default="{ row }">
         <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
@@ -64,7 +83,9 @@ const { settings } = useTableSettings(columns);
       <template #default="{ row }">
         <div class="actions">
           <bk-button theme="primary" text @click="emit('adjust', row)">调整额度</bk-button>
-          <bk-button theme="primary" text @click="emit('view-record', row)">操作记录</bk-button>
+          <bk-button theme="primary" text :disabled="!row.offset_config_id" @click="emit('view-record', row)">
+            操作记录
+          </bk-button>
         </div>
       </template>
     </bk-table-column>

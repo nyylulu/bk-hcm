@@ -1,6 +1,10 @@
-import { ModelProperty, ModelPropertyColumn } from '@/model/typings';
+import { ModelPropertyGeneric, ModelPropertyColumn } from '@/model/typings';
 
-export const findProperty = (id: ModelProperty['id'], properties: ModelProperty[], key?: keyof ModelProperty) => {
+export const findProperty = (
+  id: ModelPropertyGeneric['id'],
+  properties: ModelPropertyGeneric[],
+  key?: keyof ModelPropertyGeneric,
+) => {
   // 先按默认的规则找
   let found = properties.find((property) => property.id === id);
 
@@ -12,7 +16,7 @@ export const findProperty = (id: ModelProperty['id'], properties: ModelProperty[
   return found;
 };
 
-export const getColumnName = (property: ModelProperty | ModelPropertyColumn, options?: { showUnit: boolean }) => {
+export const getColumnName = (property: ModelPropertyColumn, options?: { showUnit: boolean }) => {
   const { showUnit = true } = options || {};
   const { name, unit } = property;
   return `${name}${showUnit && unit ? `（${unit}）` : ''}`;

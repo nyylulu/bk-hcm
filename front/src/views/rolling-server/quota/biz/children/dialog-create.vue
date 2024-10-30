@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import dayjs from 'dayjs';
+import { Message } from 'bkui-vue';
 import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
 import { type IBusinessItem } from '@/store/business-global';
+
+const emit = defineEmits<{
+  'create-success': [res: { id: string }];
+}>();
 
 const rollingServerQuotaStore = useRollingServerQuotaStore();
 
@@ -14,6 +19,11 @@ const formData = reactive({
   quota_month: dayjs().format('YYYY-MM'),
 });
 
+const quotaMax = computed(
+  () =>
+    rollingServerQuotaStore.globalQuotaConfig.global_quota ?? rollingServerQuotaStore.globalQuotaConfig.biz_quota ?? 1,
+);
+
 const formRef = ref(null);
 
 const closeDialog = () => {
@@ -22,7 +32,9 @@ const closeDialog = () => {
 
 const handleDialogConfirm = async () => {
   await formRef.value?.validate();
-  await rollingServerQuotaStore.createBizQuota(formData);
+  const resData = await rollingServerQuotaStore.createBizQuota(formData);
+  emit('create-success', resData);
+  Message({ theme: 'success', message: '新增成功' });
   closeDialog();
 };
 
@@ -47,7 +59,7 @@ const businessOptionDisabled = computed(() => {
         <hcm-form-business v-model="formData.bk_biz_ids" multiple :option-disabled="businessOptionDisabled" />
       </bk-form-item>
       <bk-form-item label="基础额度" :required="true" property="quota">
-        <hcm-form-number v-model="formData.quota" :min="1" :max="100000" />
+        <hcm-form-number v-model="formData.quota" :min="1" :max="quotaMax" />
       </bk-form-item>
     </bk-form>
   </bk-dialog>

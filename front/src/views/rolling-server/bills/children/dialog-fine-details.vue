@@ -1,8 +1,14 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import { h, ref, watchEffect } from 'vue';
+import { Button } from 'bkui-vue';
 import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
-import { useRollingServerBillsStore, type IRollingServerBillItem } from '@/store/rolling-server-bills';
+import {
+  useRollingServerBillsStore,
+  type IRollingServerBillItem,
+  type IFineDetailsItem,
+} from '@/store/rolling-server-bills';
 import usePage from '@/hooks/use-page';
+import routerAction from '@/router/utils/action';
 import billsDetailsViewProperties from '@/model/rolling-server/bills-details.view';
 import { transformSimpleCondition } from '@/utils/search';
 import { getColumnName } from '@/model/utils';
@@ -14,15 +20,28 @@ const props = defineProps<{ dataRow: IRollingServerBillItem }>();
 const model = defineModel<boolean>();
 
 const rollingServerBillsStore = useRollingServerBillsStore();
-const { pagination, getPageParams, handlePageChange, handlePageSizeChange, handleSort } = usePage(false);
+const { pagination, pageParams, handlePageChange, handlePageSizeChange, handleSort } = usePage(false);
 
 const detailsList = ref([]);
 
 const columnConfig: Record<string, PropertyColumnConfig> = {
-  suborder_id: {},
-  delivered_core: {},
-  returned_core: {},
-  not_returned_core: {},
+  suborder_id: {
+    render: ({ data }: { data?: IFineDetailsItem }) =>
+      h(
+        Button,
+        {
+          text: true,
+          theme: 'primary',
+          onClick() {
+            routerAction.open({ name: 'ApplicationsManage' });
+          },
+        },
+        data.suborder_id,
+      ),
+  },
+  delivered_core: { align: 'right' },
+  returned_core: { align: 'right' },
+  not_returned_core: { align: 'right', render: ({ data }) => data.delivered_core - data.returned_core },
 };
 
 const columns: ModelPropertyColumn[] = [];
@@ -42,26 +61,12 @@ watchEffect(async () => {
   };
   const { list, count } = await rollingServerBillsStore.getBillFineDetailsList({
     filter: transformSimpleCondition(condition, billsDetailsViewProperties),
-    page: getPageParams(pagination),
+    page: pageParams.value,
   });
 
   detailsList.value = list;
-  // detailsList.value = [
-  //   {
-  //     id: 'aa1111',
-  //     bk_biz_id: 3232,
-  //     order_id: 'aaaa1111',
-  //     suborder_id: 'bbb1111',
-  //     year: 2024,
-  //     month: 10,
-  //     day: 29,
-  //     delivered_core: 2323,
-  //     returned_core: 32,
-  //     creator: 'test',
-  //     created_at: '2024-10-02T15:04:05Z',
-  //   },
-  // ];
-  pagination.count = count || 100;
+
+  pagination.count = count;
 });
 </script>
 
@@ -72,9 +77,11 @@ watchEffect(async () => {
       <grid-item label="核算日期">{{ `${dataRow.year}-${dataRow.month}-${dataRow.day}` }}</grid-item>
     </grid-container>
     <bk-table
+      v-bkloading="{ loading: rollingServerBillsStore.billFineDetailsListLoading }"
       row-hover="auto"
       remote-pagination
       show-overflow-tooltip
+      :max-height="500"
       :data="detailsList"
       :pagination="pagination"
       @page-limit-change="handlePageSizeChange"
@@ -88,6 +95,7 @@ watchEffect(async () => {
         :label="getColumnName(column)"
         :sort="column.sort"
         :align="column.align"
+        :render="column.render"
       >
         <template #default="{ row }">
           <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />

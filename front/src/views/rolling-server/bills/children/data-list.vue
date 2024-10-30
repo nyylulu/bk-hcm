@@ -17,7 +17,10 @@ const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
 const columnConfig: Record<string, PropertyColumnConfig> = {
   bk_biz_id: {},
-  date: { sort: true },
+  roll_date: {
+    sort: true,
+    render: ({ data }) => `${data.year}-${data.month}-${data.day}`,
+  },
   not_returned_core: { sort: true, align: 'right' },
 };
 
@@ -33,7 +36,7 @@ const { settings } = useTableSettings(columns);
 
 const getDisplayCompProps = (column: ModelPropertyColumn) => {
   const { id } = column;
-  if (id === 'date') {
+  if (id === 'roll_date') {
     return { format: 'YYYY-MM-DD' };
   }
   return {};
@@ -61,6 +64,7 @@ const getDisplayCompProps = (column: ModelPropertyColumn) => {
         :label="getColumnName(column)"
         :sort="column.sort"
         :align="column.align"
+        :render="column.render"
       >
         <template #default="{ row }">
           <display-value

@@ -1,11 +1,17 @@
 <script setup lang="ts">
 import { computed, reactive, ref } from 'vue';
 import dayjs from 'dayjs';
+import { Message } from 'bkui-vue';
 import { useRollingServerQuotaStore, type IRollingServerBizQuotaItem } from '@/store/rolling-server-quota';
 import { QuotaAdjustType } from '@/views/rolling-server/typings';
 import { quotaAdjustTypeNames } from '@/views/rolling-server/constants';
 
 const props = defineProps<{ dataRow: IRollingServerBizQuotaItem }>();
+
+const emit = defineEmits<{
+  'adjust-success': [res: { ids: string[] }, isCurrent: boolean];
+}>();
+
 const model = defineModel<boolean>();
 
 // 当前or跨月，跨月不传入dataRow
@@ -19,7 +25,7 @@ const formRef = ref(null);
 const formData = reactive({
   bk_biz_ids: isCurrentMonth.value ? [props.dataRow.bk_biz_id] : [],
   base_quota: isCurrentMonth.value ? props.dataRow.base_quota : undefined,
-  adjust_type: isCurrentMonth.value ? props.dataRow.adjust_type : QuotaAdjustType.INCREASE,
+  adjust_type: isCurrentMonth.value ? props.dataRow.adjust_type ?? QuotaAdjustType.INCREASE : QuotaAdjustType.INCREASE,
   quota_offset: 1,
   adjust_month: isCurrentMonth.value ? [new Date(), new Date()] : [],
 });
@@ -40,7 +46,12 @@ const handleDialogConfirm = async () => {
     start: dayjs(saveData.adjust_month[0]).format('YYYY-MM'),
     end: dayjs(saveData.adjust_month[1]).format('YYYY-MM'),
   };
-  await rollingServerQuotaStore.adjustBizQuota(saveData);
+
+  const resData = await rollingServerQuotaStore.adjustBizQuota(saveData);
+
+  Message({ theme: 'success', message: '调整成功' });
+  emit('adjust-success', resData, isCurrentMonth.value);
+
   closeDialog();
 };
 </script>
@@ -78,6 +89,8 @@ const handleDialogConfirm = async () => {
         <div class="adjust-after">50000</div>
       </bk-form-item>
     </bk-form>
+
+    <!-- 跨月 -->
     <bk-form form-type="vertical" :model="formData" ref="formRef" v-else>
       <bk-form-item label="业务" :required="true" property="bk_biz_ids">
         <hcm-form-business v-model="formData.bk_biz_ids" multiple />

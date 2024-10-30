@@ -27,48 +27,25 @@ watch(
   () => route.query,
   async (query) => {
     condition.value = searchQs.get(query, {
-      date: [dayjs().subtract(29, 'day').toDate(), dayjs().toDate()],
+      roll_date: [dayjs().subtract(29, 'day').toDate(), dayjs().toDate()],
       bk_biz_id: await businessGlobalStore.getFirstBizId(),
     });
 
     pagination.current = Number(query.page) || 1;
     pagination.limit = Number(query.limit) || pagination.limit;
 
-    const sort = (query.sort || 'date') as string;
+    const sort = (query.sort || 'roll_date') as string;
     const order = (query.order || 'DESC') as string;
 
     const { list, count } = await rollingServerBillsStore.getBillList({
       filter: transformSimpleCondition(condition.value, billsViewProperties),
-      page: getPageParams(pagination, { sort: sort === 'date' ? 'day' : sort, order }),
+      page: getPageParams(pagination, { sort, order }),
     });
 
-    // const listx = [
-    //   {
-    //     id: 'a11111',
-    //     bk_biz_id: 2005000002,
-    //     offset_config_id: 'ab1323',
-    //     product_id: 1233,
-    //     delivered_core: 109323,
-    //     returned_core: 322,
-    //     not_returned_core: 3023,
-    //     year: 2024,
-    //     month: 10,
-    //     day: 29,
-    //     creator: 'test',
-    //     created_at: '2024-10-02T15:04:05Z',
-    //   },
-    // ];
-    // const newList = listx.map((row) => ({
-    //   ...row,
-    //   date: `${row.year}-${row.month}-${row.day}`,
-    // }));
-
     billList.value = list;
-    // billList.value = newList;
 
     // 设置页码总条数
-    pagination.count = count ?? 100;
-    // pagination.count = 100;
+    pagination.count = count;
   },
   {
     immediate: true,

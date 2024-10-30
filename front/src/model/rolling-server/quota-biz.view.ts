@@ -6,6 +6,14 @@ export default [
     id: 'quota_month',
     name: '额度月份',
     type: 'datetime',
+    meta: {
+      search: {
+        format(value: Date | string) {
+          const date = new Date(value);
+          return `${date.getFullYear()}-${date.getMonth() + 1}`;
+        },
+      },
+    },
   },
   {
     id: 'bk_biz_ids',
@@ -32,6 +40,16 @@ export default [
     id: 'base_quota',
     name: '基础额度',
     type: 'number',
+    meta: {
+      display: {
+        format(value: number) {
+          if (value === -1) {
+            return '--';
+          }
+          return value;
+        },
+      },
+    },
   },
   {
     id: 'quota_offset',

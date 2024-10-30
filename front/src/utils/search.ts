@@ -1,6 +1,6 @@
 import type { ParsedQs } from 'qs';
 import merge from 'lodash/merge';
-import { ModelProperty, ModelPropertyType } from '@/model/typings';
+import { ModelProperty, ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
 import { findProperty } from '@/model/utils';
 import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
 
@@ -35,11 +35,16 @@ export const getDefaultRule: GetDefaultRule = (property, custom) => {
 
 export const convertValue = (
   value: string | number | string[] | number[] | ParsedQs | ParsedQs[],
-  property: ModelProperty,
+  property: ModelPropertySearch,
   operator?: QueryRuleOPEnum,
 ) => {
-  const { type } = property || {};
+  const { type, format, meta } = property || {};
   const { IN, JSON_OVERLAPS } = QueryRuleOPEnum;
+
+  const formatter = format || meta?.search?.format;
+  if (formatter) {
+    return formatter(value);
+  }
 
   if (type === 'number') {
     return Number(value);
@@ -71,7 +76,7 @@ export const convertValue = (
   return value;
 };
 
-export const transformSimpleCondition = (condition: Record<string, any>, properties: ModelProperty[]) => {
+export const transformSimpleCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
   const queryFilter: QueryFilterType = { op: 'and', rules: [] };
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties);
@@ -119,7 +124,7 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
   return queryFilter;
 };
 
-export const transformFlatCondition = (condition: Record<string, any>, properties: ModelProperty[]) => {
+export const transformFlatCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
   const params: Record<string, any> = {};
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties);

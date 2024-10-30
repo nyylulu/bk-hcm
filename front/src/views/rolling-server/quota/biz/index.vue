@@ -2,9 +2,9 @@
 import { reactive, ref, watch } from 'vue';
 import { Plus } from 'bkui-vue/lib/icon';
 import { useRoute } from 'vue-router';
+import routeQuery from '@/router/utils/query';
 import useSearchQs from '@/hooks/use-search-qs';
 import usePage from '@/hooks/use-page';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useUserStore } from '@/store';
 import { useRollingServerQuotaStore, type IRollingServerBizQuotaItem } from '@/store/rolling-server-quota';
 import { transformFlatCondition } from '@/utils/search';
@@ -19,7 +19,6 @@ import DialogRecord from './children/dialog-record.vue';
 
 const route = useRoute();
 const userStore = useUserStore();
-const { getBizsId } = useWhereAmI();
 const rollingServerQuotaStore = useRollingServerQuotaStore();
 const searchQs = useSearchQs({ key: 'filter', properties: quotaBizViewProperties });
 const { pagination, getPageParams } = usePage();
@@ -43,7 +42,6 @@ watch(
 
     const { list, count } = await rollingServerQuotaStore.getBizQuotaList({
       ...transformFlatCondition(condition.value, quotaBizViewProperties),
-      bk_biz_id: getBizsId(),
       page: getPageParams(pagination, { sort, order }),
     });
 
@@ -91,6 +89,15 @@ const handleCreate = () => {
   dialog.isShow = true;
   dialog.isHidden = false;
 };
+
+const handleAdjustSuccess = (ids: string[], isCurrent: boolean) => {
+  if (isCurrent) {
+    routeQuery.refresh();
+  }
+};
+const handleCreateSuccess = () => {
+  routeQuery.refresh();
+};
 </script>
 
 <template>
@@ -112,7 +119,14 @@ const handleCreate = () => {
 
   <!-- isHidden为了销毁dialog不保留数据 -->
   <template v-if="!dialog.isHidden">
-    <component :is="dialog.component" v-model="dialog.isShow" v-bind="dialog.props" @hidden="dialog.isHidden = true" />
+    <component
+      :is="dialog.component"
+      v-model="dialog.isShow"
+      v-bind="dialog.props"
+      @hidden="dialog.isHidden = true"
+      @adjust-success="handleAdjustSuccess"
+      @create-success="handleCreateSuccess"
+    />
   </template>
 </template>
 

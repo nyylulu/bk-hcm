@@ -45,7 +45,7 @@ export const useRollingServerBillsStore = defineStore('rolling-server-bills', ()
         [Promise<IListResData<IRollingServerBillItem[]>>, Promise<IListResData<IRollingServerBillItem[]>>]
       >([http.post(api, enableCount(params, false)), http.post(api, enableCount(params, true))]);
       const [{ details: list = [] }, { count = 0 }] = [listRes?.data ?? {}, countRes?.data ?? {}];
-      return { list, count };
+      return { list: list || [], count };
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
@@ -62,7 +62,7 @@ export const useRollingServerBillsStore = defineStore('rolling-server-bills', ()
         [Promise<IListResData<IFineDetailsItem[]>>, Promise<IListResData<IFineDetailsItem[]>>]
       >([http.post(api, enableCount(params, false)), http.post(api, enableCount(params, true))]);
       const [{ details: list = [] }, { count = 0 }] = [listRes?.data ?? {}, countRes?.data ?? {}];
-      return { list, count };
+      return { list: list || [], count };
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
