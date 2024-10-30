@@ -94,19 +94,20 @@ POST /api/v1/woa/rolling_servers/bills/list
 
 #### 查询参数介绍：
 
-| 参数名称               | 参数类型   | 描述      |
-|--------------------|--------|---------|
-| id                 | string | 资源ID    |
-| bk_biz_id          | int    | 业务ID    |
-| product_id          | int    | 运营产品ID    |
-| delivered_core     | int    | 已交付核心数  |
-| returned_core     | int    | 已退还核心数  |
-| not_returned_core     | int    | 未退还核心数  |
-|   year   | int    | 记录账单的年份 |
-|  month    | int    | 记录账单的月份 |
-|   day   | int    | 记录账单的天  |
-| creator            | string | 创建者                                  |
-| created_at         | string | 创建时间，标准格式：2006-01-02T15:04:05Z       |
+| 参数名称               | 参数类型   | 描述                            |
+|--------------------|--------|-------------------------------|
+| id                 | string | 资源ID                          |
+| bk_biz_id          | int    | 业务ID                          |
+| product_id          | int    | 运营产品ID                        |
+| delivered_core     | int    | 已交付核心数                        |
+| returned_core     | int    | 已退还核心数                        |
+| not_returned_core     | int    | 未退还核心数                        |
+|   year   | int    | 记录账单的年份                       |
+|  month    | int    | 记录账单的月份                       |
+|   day   | int    | 记录账单的天                        |
+|   roll_date   | int    | 记录账单的年月天                      |
+| creator            | string | 创建者                           |
+| created_at         | string | 创建时间，标准格式：2006-01-02T15:04:05Z |
 
 接口调用者可以根据以上参数自行根据查询场景设置查询规则。
 
@@ -178,6 +179,7 @@ POST /api/v1/woa/rolling_servers/bills/list
         "year": 2023,
         "month": 2,
         "day": 12,
+        "roll_date": 20230212,
         "creator": "Jim",
         "created_at": "2023-02-12T14:47:39Z"
       }
@@ -226,6 +228,7 @@ POST /api/v1/woa/rolling_servers/bills/list
 |   year   | int    | 记录账单的年份                     |
 |  month    | int    | 记录账单的月份                     |
 |   day   | int    | 记录账单的天                      |
+|   roll_date   | int    | 记录账单的年月天                      |
 | creator            | string | 创建者                         |
 | created_at         | string | 创建时间，标准格式：2006-01-02T15:04:05Z |
 

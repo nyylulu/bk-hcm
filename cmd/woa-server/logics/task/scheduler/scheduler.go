@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/dispatcher"
 	"hcm/cmd/woa-server/logics/task/scheduler/generator"
@@ -33,10 +34,12 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/model/task"
 	configtypes "hcm/cmd/woa-server/types/config"
+	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
@@ -150,11 +153,12 @@ type scheduler struct {
 	matcher      *matcher.Matcher
 	recommend    *recommender.Recommender
 	configLogics config.Logics
+	rsLogics     rollingserver.Logics
 }
 
 // New creates a scheduler
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, informerIf informer.Interface,
-	clientConf cc.ClientConfig) (*scheduler, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+	informerIf informer.Interface, clientConf cc.ClientConfig) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -163,13 +167,13 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, in
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, thirdCli, esbCli, clientConf, informerIf)
+	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf)
 	if err != nil {
 		return nil, err
 	}
 
 	// new generator
-	generate, err := generator.New(ctx, thirdCli, esbCli, clientConf)
+	generate, err := generator.New(ctx, rsLogics, thirdCli, esbCli, clientConf)
 	if err != nil {
 		return nil, err
 	}
@@ -190,6 +194,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, in
 		matcher:      match,
 		recommend:    recommend,
 		configLogics: config.New(thirdCli),
+		rsLogics:     rsLogics,
 	}
 
 	return scheduler, nil
@@ -513,7 +518,8 @@ func (s *scheduler) ApproveTicket(kt *kit.Kit, param *types.ApproveApplyReq) err
 			return err
 		}
 
-		sessionKit := &kit.Kit{Ctx: sc, Rid: kt.Rid}
+		sessionKit := &kit.Kit{Ctx: sc, User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
+			RequestSource: kt.RequestSource}
 		if param.Approval {
 			if err := s.createSubOrders(sessionKit, param.OrderId); err != nil {
 				logs.Errorf("failed to create subOrders, orderId: %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
@@ -525,6 +531,12 @@ func (s *scheduler) ApproveTicket(kt *kit.Kit, param *types.ApproveApplyReq) err
 	})
 
 	if err != nil {
+		update["stage"] = types.TicketStageTerminate
+		if updateErr := model.Operation().ApplyTicket().UpdateApplyTicket(kt.Ctx, &filter, update); updateErr != nil {
+			logs.Errorf("failed to update apply ticket, orderId: %d, err: %v, rid: %s", param.OrderId, updateErr,
+				kt.Rid)
+			return updateErr
+		}
 		logs.Errorf("failed to approve apply ticket %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
 		return err
 	}
@@ -543,6 +555,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 	}
 
 	now := time.Now()
+	suborders := make([]*types.ApplyOrder, len(ticket.Suborders))
 	for index, suborder := range ticket.Suborders {
 		// TODO: delete debug log
 		logs.V(5).Infof("suborder data: %+v", suborder)
@@ -584,6 +597,86 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 			logs.Errorf("failed to init apply step record, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
+
+		suborders[index] = subOrder
+	}
+
+	if table.RequireType(ticket.RequireType) == table.RequireTypeRollServer {
+		if err = s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
+			logs.Errorf("create rolling applied record failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyTicket,
+	suborders []*types.ApplyOrder) error {
+
+	if len(suborders) == 0 || table.RequireType(ticket.RequireType) != table.RequireTypeRollServer {
+		return nil
+	}
+
+	if len(suborders) != len(ticket.Suborders) {
+		logs.Errorf("suborder length(%d) not equal ticket suborders length(%d), orderID: %d, rid: %s", len(suborders),
+			len(ticket.Suborders), ticket.OrderId, kt.Rid)
+		return fmt.Errorf("suborder length(%d) not equal ticket suborders length(%d), orderID: %d", len(suborders),
+			len(ticket.Suborders), ticket.OrderId)
+	}
+
+	isResPoolBiz, err := s.rsLogics.IsResPoolBiz(kt, ticket.BkBizId)
+	if err != nil {
+		logs.Errorf("unable to confirm whether biz is resource pool, err: %v, bizID: %d, rid: %s", err,
+			suborders[0].BkBizId, kt.Rid)
+		return err
+	}
+
+	appliedType := enumor.NormalAppliedType
+	if isResPoolBiz {
+		appliedType = enumor.ResourcePoolAppliedType
+	}
+
+	deviceTypeCountMap := make(map[string]int)
+	for _, suborder := range ticket.Suborders {
+		if _, ok := deviceTypeCountMap[suborder.Spec.DeviceType]; !ok {
+			deviceTypeCountMap[suborder.Spec.DeviceType] = 0
+		}
+		deviceTypeCountMap[suborder.Spec.DeviceType]++
+	}
+	count, err := s.rsLogics.GetCpuCoreSum(kt, deviceTypeCountMap)
+	if err != nil {
+		logs.Errorf("get cpu core sum failed, err: %v, deviceTypeCountMap: %v, rid: %s", err, deviceTypeCountMap,
+			kt.Rid)
+		return err
+	}
+	canApply, reason, err := s.rsLogics.CanApplyHost(kt, ticket.BkBizId, uint(count), appliedType)
+	if err != nil {
+		logs.Errorf("determine can apply host failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
+		return err
+	}
+
+	if !canApply {
+		logs.Errorf("can not apply host, ticket: %+v, reason: %s, rid: %s", *ticket, reason, kt.Rid)
+		return fmt.Errorf("%s", reason)
+	}
+
+	records := make([]rstypes.CreateAppliedRecordData, len(suborders))
+	for i, suborder := range suborders {
+		appliedRecord := rstypes.CreateAppliedRecordData{
+			BizID:       suborder.BkBizId,
+			OrderID:     suborder.OrderId,
+			SubOrderID:  suborder.SubOrderId,
+			DeviceType:  suborder.Spec.DeviceType,
+			Count:       int(ticket.Suborders[i].Replicas),
+			AppliedType: appliedType,
+		}
+		records[i] = appliedRecord
+	}
+
+	if err = s.rsLogics.CreateAppliedRecord(kt, records); err != nil {
+		logs.Errorf("create rolling server applied record failed, err: %v, req: %+v, rid: %s", err, records, kt.Rid)
+		return err
 	}
 
 	return nil
@@ -1207,9 +1300,9 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 }
 
 // MatchDevice execute resource apply match devices
-func (s *scheduler) MatchDevice(kit *kit.Kit, param *types.MatchDeviceReq) error {
-	if err := s.generator.MatchCVM(param); err != nil {
-		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kit.Rid)
+func (s *scheduler) MatchDevice(kt *kit.Kit, param *types.MatchDeviceReq) error {
+	if err := s.generator.MatchCVM(kt, param); err != nil {
+		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

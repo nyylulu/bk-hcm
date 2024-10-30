@@ -20,30 +20,35 @@ import (
 	"sync"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/metadata"
-	toolsutil "hcm/pkg/tools/util"
-	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/metadata"
+	toolsutil "hcm/pkg/tools/util"
+	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/tools/uuid"
 )
 
 // Matcher matches devices for apply order
 type Matcher struct {
+	rsLogics rollingserver.Logics
 	informer informer.Interface
 	sops     sopsapi.SopsClientInterface
 	sopsOpt  cc.SopsCli
@@ -54,10 +59,11 @@ type Matcher struct {
 }
 
 // New create a matcher
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, clientConf cc.ClientConfig,
-	informer informer.Interface) (*Matcher, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+	clientConf cc.ClientConfig, informer informer.Interface) (*Matcher, error) {
 
 	matcher := &Matcher{
+		rsLogics: rsLogics,
 		informer: informer,
 		sops:     thirdCli.Sops,
 		sopsOpt:  clientConf.Sops,
@@ -235,10 +241,17 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 
 	// 2. calculate apply order status by total and matched count
 	matchedCnt := 0
+	deviceTypeCountMap := make(map[string]int)
 	for _, device := range devices {
-		if device.IsDelivered {
-			matchedCnt++
+		if !device.IsDelivered {
+			continue
 		}
+		matchedCnt++
+
+		if _, ok := deviceTypeCountMap[device.DeviceType]; !ok {
+			deviceTypeCountMap[device.DeviceType] = 0
+		}
+		deviceTypeCountMap[device.DeviceType]++
 	}
 
 	genRecords, err := m.GetOrderGenRecords(order.SubOrderId)
@@ -287,6 +300,18 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 		stage = types.TicketStageTerminate
 		if err := m.updateSuspendSteps(order); err != nil {
 			logs.Errorf("failed to update suspend steps, suborderId: %s, err: %v", order.SubOrderId, err)
+		}
+	}
+
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		kt := core.NewBackendKit()
+		appliedTypes := []enumor.AppliedType{enumor.NormalAppliedType, enumor.ResourcePoolAppliedType}
+
+		if err = m.rsLogics.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, order.SubOrderId, appliedTypes,
+			deviceTypeCountMap); err != nil {
+			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
+				"deviceTypeCountMap: %v, rid: %s", err, order.SubOrderId, order.BkBizId, deviceTypeCountMap, kt.Rid)
+			return err
 		}
 	}
 

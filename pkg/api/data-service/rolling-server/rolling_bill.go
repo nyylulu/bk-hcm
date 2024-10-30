@@ -51,11 +51,11 @@ type RollingBillCreateReq struct {
 	// BkBizID 业务ID
 	BkBizID int64 `json:"bk_biz_id" validate:"required"`
 	// DeliveredCore 已交付核心数
-	DeliveredCore uint64 `json:"delivered_core" validate:"required"`
+	DeliveredCore uint64 `json:"delivered_core"`
 	// ReturnedCore 已退还核心数
-	ReturnedCore uint64 `json:"returned_core" validate:"required"`
+	ReturnedCore uint64 `json:"returned_core"`
 	// NotReturnedCore 未退还核心数
-	NotReturnedCore uint64 `json:"not_returned_core" validate:"required"`
+	NotReturnedCore uint64 `json:"not_returned_core"`
 	// Year 记录账单的年份
 	Year int `json:"year" validate:"required"`
 	// Month 记录账单的月份
@@ -78,7 +78,7 @@ type RollingBillCreateReq struct {
 	// BusinessName 二级业务名称
 	BusinessName string `json:"business_name" validate:"required"`
 	// BusinessModID 三级业务id
-	BusinessModID int64 `json:"business_mod_id" validate:"required"`
+	BusinessModID int64 `json:"business_mod_id"`
 	// BusinessModName 三级业务名称
 	BusinessModName string `json:"business_mod_name"`
 	// Uin uin
@@ -116,9 +116,9 @@ type RollingBillCreateReq struct {
 	// OperatorNameID 运营商ID
 	OperatorNameID int64 `json:"operator_name_id"`
 	// Amount 核算用量
-	Amount float64 `json:"amount" validate:"required"`
+	Amount float64 `json:"amount"`
 	// AmountInCurrentDate 参考日用量
-	AmountInCurrentDate float64 `json:"amount_in_current_date" validate:"required"`
+	AmountInCurrentDate float64 `json:"amount_in_current_date"`
 	// Cost 成本
 	Cost float64 `json:"cost"`
 	// ExtendDetail 扩展详情

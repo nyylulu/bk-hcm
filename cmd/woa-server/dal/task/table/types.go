@@ -233,3 +233,21 @@ const (
 	PoolPrivate PoolType = 0
 	PoolPublic  PoolType = 1
 )
+
+// RequireType 需求类型
+type RequireType int64
+
+const (
+	// RequireTypeRegular 常规项目
+	RequireTypeRegular RequireType = 1
+	// RequireTypeSpring 春节保障
+	RequireTypeSpring RequireType = 2
+	// RequireTypeDissolve 机房裁撤
+	RequireTypeDissolve RequireType = 3
+	// RequireTypeExpired 故障替换
+	RequireTypeExpired RequireType = 4
+	// RequireTypeRent 短租项目
+	RequireTypeRent RequireType = 5
+	// RequireTypeRollServer 滚服项目
+	RequireTypeRollServer RequireType = 6
+)

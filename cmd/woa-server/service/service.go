@@ -155,6 +155,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
+		return nil, err
+	}
+
 	kt := kit.New()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
@@ -201,7 +207,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 			return nil, err
 		}
 
-		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -217,6 +223,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		clientConf:  cc.WoaServer(),
 		informerIf:  informerIf,
 		schedulerIf: schedulerIf,
+		rsLogic:     rsLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -248,12 +255,6 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, service.client, service.esbClient)
-	if err != nil {
-		logs.Errorf("new rolling server logics failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
 	// init elasticsearch client
 	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
 	if err != nil {
@@ -265,7 +266,6 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 	service.recyclerIf = recyclerIf
 	service.operationIf = operationIf
 	service.esCli = esCli
-	service.rsLogic = rsLogics
 	return service, nil
 }
 

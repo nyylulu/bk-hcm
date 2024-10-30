@@ -178,15 +178,15 @@ func (b *RollingServerClient) ListAppliedRecord(kt *kit.Kit, req *rsproto.Rollin
 }
 
 // CreateAppliedRecord create applied record
-func (b *RollingServerClient) CreateAppliedRecord(kt *kit.Kit, req *rsproto.RollingAppliedRecordCreateReq) (
+func (b *RollingServerClient) CreateAppliedRecord(kt *kit.Kit, req *rsproto.BatchCreateRollingAppliedRecordReq) (
 	*core.BatchCreateResult, error) {
-	return common.Request[rsproto.RollingAppliedRecordCreateReq, core.BatchCreateResult](
+	return common.Request[rsproto.BatchCreateRollingAppliedRecordReq, core.BatchCreateResult](
 		b.client, rest.POST, kt, req, "/rolling_servers/applied_records/batch/create")
 }
 
 // UpdateAppliedRecord update applied record
-func (b *RollingServerClient) UpdateAppliedRecord(kt *kit.Kit, req *rsproto.RollingAppliedRecordUpdateReq) error {
-	return common.RequestNoResp[rsproto.RollingAppliedRecordUpdateReq](
+func (b *RollingServerClient) UpdateAppliedRecord(kt *kit.Kit, req *rsproto.BatchUpdateRollingAppliedRecordReq) error {
+	return common.RequestNoResp[rsproto.BatchUpdateRollingAppliedRecordReq](
 		b.client, rest.PATCH, kt, req, "/rolling_servers/applied_records/batch")
 }
 
@@ -220,8 +220,9 @@ func (b *RollingServerClient) CreateReturnedRecord(kt *kit.Kit, req *rsproto.Rol
 }
 
 // UpdateReturnedRecord update returned record
-func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit, req *rsproto.RollingReturnedRecordUpdateReq) error {
-	return common.RequestNoResp[rsproto.RollingReturnedRecordUpdateReq](
+func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit,
+	req *rsproto.BatchUpdateRollingReturnedRecordReq) error {
+	return common.RequestNoResp[rsproto.BatchUpdateRollingReturnedRecordReq](
 		b.client, rest.PATCH, kt, req, "/rolling_servers/returned_records/batch")
 }
 

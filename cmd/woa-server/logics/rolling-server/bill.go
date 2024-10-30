@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/tools"
 	rs "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
@@ -38,6 +39,7 @@ import (
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/times"
 
 	"github.com/shopspring/decimal"
 )
@@ -74,7 +76,7 @@ func (l *logics) syncBillsPeriodically() {
 	time.Sleep(time.Until(nextRun))
 
 	for {
-		kt := kit.New()
+		kt := core.NewBackendKit()
 		now = time.Now()
 		req := &rollingserver.RollingBillSyncReq{
 			BkBizID: rollingserver.SyncAllBiz,
@@ -115,6 +117,8 @@ func (l *logics) SyncBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq) e
 			logs.Errorf("sync biz rolling bill failed, err: %v, bizID: %d, rid: %s", err, req.BkBizID, kt.Rid)
 			return err
 		}
+
+		return nil
 	}
 
 	start := time.Now()
@@ -206,15 +210,13 @@ func (l *logics) findBillAppliedRecords(kt *kit.Kit, req *rollingserver.RollingB
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
 				&filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: req.BkBizID},
-				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
 				// 大于等于该日期的申请记录
-				&filter.AtomRule{Field: "year", Op: filter.GreaterThanEqual.Factory(), Value: startYear},
-				&filter.AtomRule{Field: "month", Op: filter.GreaterThanEqual.Factory(), Value: startMonth},
-				&filter.AtomRule{Field: "day", Op: filter.GreaterThanEqual.Factory(), Value: startDay},
+				&filter.AtomRule{Field: "roll_date", Op: filter.GreaterThanEqual.Factory(),
+					Value: times.GetDataIntDate(startYear, startMonth, startDay)},
 				// 小于等于该日期的申请记录
-				&filter.AtomRule{Field: "year", Op: filter.LessThanEqual.Factory(), Value: endYear},
-				&filter.AtomRule{Field: "month", Op: filter.LessThanEqual.Factory(), Value: endMonth},
-				&filter.AtomRule{Field: "day", Op: filter.LessThanEqual.Factory(), Value: endDay},
+				&filter.AtomRule{Field: "roll_date", Op: filter.LessThanEqual.Factory(),
+					Value: times.GetDataIntDate(endYear, endMonth, endDay)},
+				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
 			},
 		},
 		Page: &core.BasePage{
@@ -312,7 +314,7 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 	for _, apply := range appliedRecords {
 		key := getFineDetailUniqueKey(apply.Year, apply.Month, apply.Day, apply.ID)
 		if _, ok := existFineDetailMap[key]; ok {
-			logs.Infof("rolling fine detail exist, key: %s, bizID: %s, rid: %s", key, req.BkBizID, kt.Rid)
+			logs.Infof("rolling fine detail exist, key: %s, bizID: %d, rid: %s", key, req.BkBizID, kt.Rid)
 			continue
 		}
 
@@ -327,9 +329,9 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 				AppliedRecordID: apply.ID,
 				OrderID:         apply.OrderID,
 				SubOrderID:      apply.SubOrderID,
-				Year:            apply.Year,
-				Month:           apply.Month,
-				Day:             apply.Day,
+				Year:            req.Year,
+				Month:           req.Month,
+				Day:             req.Day,
 				DeliveredCore:   *apply.DeliveredCore,
 				ReturnedCore:    returnedCore,
 				Fine:            unitPrice.Mul(decimal.NewFromUint64(*apply.DeliveredCore - returnedCore)),
@@ -416,7 +418,7 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		return err
 	}
 	if exist {
-		logs.Infof("rolling bill exist, bizID: %s, year: %d, month: %d, day: %d, rid: %s", req.BkBizID, req.Year,
+		logs.Infof("rolling bill exist, bizID: %d, year: %d, month: %d, day: %d, rid: %s", req.BkBizID, req.Year,
 			req.Month, req.Day, kt.Rid)
 		return nil
 	}
@@ -432,9 +434,9 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 	amount := decimal.NewFromFloat(0)
 	amountInCurrentDate := decimal.NewFromFloat(0)
 	for _, detail := range details {
-		amount.Add(detail.Fine)
+		amount = amount.Add(detail.Fine)
 		if detail.Day == req.Day {
-			amountInCurrentDate.Add(detail.Fine)
+			amountInCurrentDate = amountInCurrentDate.Add(detail.Fine)
 			deliveredCore += detail.DeliveredCore
 			returnedCore += detail.ReturnedCore
 		}
@@ -596,6 +598,7 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 
 func (l *logics) listResPoolBizIDs(kt *kit.Kit) (map[int64]struct{}, error) {
 	listReq := &rsproto.ResourcePoolBusinessListReq{
+		Filter: tools.AllExpression(),
 		Page: &core.BasePage{
 			Start: 0,
 			Limit: constant.BatchOperationMaxLimit,
@@ -626,6 +629,7 @@ func (l *logics) listResPoolBizIDs(kt *kit.Kit) (map[int64]struct{}, error) {
 
 func (l *logics) getRollingUnitPrice(kt *kit.Kit) (*types.Decimal, error) {
 	listReq := &rsproto.RollingGlobalConfigListReq{
+		Filter: tools.AllExpression(),
 		Fields: []string{"unit_price"},
 		Page: &core.BasePage{
 			Start: 0,

@@ -21,11 +21,16 @@
 package rollingserver
 
 import (
+	"hcm/cmd/woa-server/logics/config"
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
+	types "hcm/cmd/woa-server/types/task"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/esb"
 )
 
@@ -33,22 +38,32 @@ import (
 type Logics interface {
 	SyncBills(kt *kit.Kit, req *rolling_server.RollingBillSyncReq) error
 	// GetCpuCoreSummary 查询滚服已交付、已退还的CPU核心数概览信息
-	GetCpuCoreSummary(kt *kit.Kit, req *rolling_server.CpuCoreSummaryReq) (any, error)
+	GetCpuCoreSummary(kt *kit.Kit, req *rolling_server.CpuCoreSummaryReq) (*rsproto.RollingCpuCoreSummaryItem, error)
+	IsResPoolBiz(kt *kit.Kit, bizID int64) (bool, error)
+	CanApplyHost(kt *kit.Kit, bizID int64, appliedCount uint, appliedType enumor.AppliedType) (bool, string, error)
+	CreateAppliedRecord(kt *kit.Kit, createArr []rolling_server.CreateAppliedRecordData) error
+	UpdateSubOrderRollingDeliveredCore(kt *kit.Kit, bizID int64, subOrderID string, appliedTypes []enumor.AppliedType,
+		deviceTypeCountMap map[string]int) error
+	ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types.MatchDeviceBrief) error
+	GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (uint64, error)
 }
 
 // logics rolling server logics.
 type logics struct {
-	sd        serviced.State
-	client    *client.ClientSet
-	esbClient esb.Client
+	sd           serviced.State
+	client       *client.ClientSet
+	esbClient    esb.Client
+	configLogics config.Logics
 }
 
 // New creates rolling server logics instance.
-func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client) (Logics, error) {
+func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thirdCli *thirdparty.Client) (Logics,
+	error) {
 	rsLogics := &logics{
-		sd:        sd,
-		client:    client,
-		esbClient: esbClient,
+		sd:           sd,
+		client:       client,
+		esbClient:    esbClient,
+		configLogics: config.New(thirdCli),
 	}
 
 	if cc.WoaServer().RollingServer.SyncBill {

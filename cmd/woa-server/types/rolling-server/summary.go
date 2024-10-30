@@ -68,7 +68,7 @@ func (r *RollingServerDateTimeItem) Validate() (time.Time, error) {
 // CpuCoreSummaryReq is cpu core summary request.
 type CpuCoreSummaryReq struct {
 	RollingServerDateRange `json:",inline"`
-	BkBizIDs               []int              `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	BkBizIDs               []int64            `json:"bk_biz_ids" validate:"omitempty,max=100"`
 	OrderIDs               []int              `json:"order_ids" validate:"omitempty,max=100"`
 	SubOrderIDs            []string           `json:"suborder_ids" validate:"omitempty,max=100"`
 	ReturnedWay            enumor.ReturnedWay `json:"returned_way" validate:"omitempty"`
@@ -102,4 +102,14 @@ func (r *CpuCoreSummaryReq) Validate() error {
 type CpuCoreSummaryResp struct {
 	SumDeliveredCore       uint64 `json:"sum_delivered_core"`
 	SumReturnedAppliedCore uint64 `json:"sum_returned_applied_core"`
+}
+
+// CreateAppliedRecordData create applied record Data
+type CreateAppliedRecordData struct {
+	BizID       int64              `json:"bk_biz_id"`
+	OrderID     uint64             `json:"order_id"`
+	SubOrderID  string             `json:"suborder_id"`
+	DeviceType  string             `json:"device_type"`
+	Count       int                `json:"count"`
+	AppliedType enumor.AppliedType `json:"applied_type"`
 }

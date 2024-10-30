@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,6 +56,7 @@ func (svc *service) BatchCreateRollingDineDetail(cts *rest.Contexts) (interface{
 				Year:            createReq.Year,
 				Month:           createReq.Month,
 				Day:             createReq.Day,
+				RollDate:        times.GetDataIntDate(createReq.Year, createReq.Month, createReq.Day),
 				DeliveredCore:   createReq.DeliveredCore,
 				ReturnedCore:    createReq.ReturnedCore,
 				Fine:            createReq.Fine,
@@ -64,9 +66,6 @@ func (svc *service) BatchCreateRollingDineDetail(cts *rest.Contexts) (interface{
 		ids, err := svc.dao.RollingFineDetail().CreateWithTx(cts.Kit, txn, details)
 		if err != nil {
 			return nil, fmt.Errorf("create rolling fine detail failed, err: %v", err)
-		}
-		if len(ids) != 1 {
-			return nil, fmt.Errorf("create rolling fine detail expect 1 puller IDs: %v", ids)
 		}
 		return ids, nil
 	})

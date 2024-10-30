@@ -66,9 +66,6 @@ func (svc *service) BatchCreateRollingReturnedRecord(cts *rest.Contexts) (interf
 		if err != nil {
 			return nil, fmt.Errorf("create rolling returned record failed, err: %v", err)
 		}
-		if len(ids) != 1 {
-			return nil, fmt.Errorf("create rolling returned record expect 1 puller IDs: %v", ids)
-		}
 		return ids, nil
 	})
 	if err != nil {

@@ -13,12 +13,18 @@
 package cvm
 
 import (
+	"fmt"
+	"strconv"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	model "hcm/cmd/woa-server/model/cvm"
 	types "hcm/cmd/woa-server/types/cvm"
+	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -48,15 +54,19 @@ type logics struct {
 	cliConf   cc.ClientConfig
 	confLogic config.Logics
 	esbClient esb.Client
+	rsLogic   rollingserver.Logics
 }
 
 // New create a logics manager
-func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics, esbClient esb.Client) Logics {
+func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics,
+	esbClient esb.Client, rsLogic rollingserver.Logics) Logics {
+
 	return &logics{
 		cvm:       thirdCli.CVM,
 		confLogic: confLogic,
 		cliConf:   cliConf,
 		esbClient: esbClient,
+		rsLogic:   rsLogic,
 	}
 }
 
@@ -87,6 +97,32 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 		PendingNum:  param.Replicas,
 		CreateAt:    now,
 		UpdateAt:    now,
+	}
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		canApply, reason, err := l.rsLogic.CanApplyHost(kt, order.BkBizId, order.Total, enumor.CvmProduceAppliedType)
+		if err != nil {
+			logs.Errorf("determine can apply rolling server host failed, err: %v, bizID: %s, total: %d, rid: %s", err,
+				order.BkBizId, order.Total, kt.Rid)
+			return nil, err
+		}
+		if !canApply {
+			logs.Errorf("can not apply host, order: %+v, reason: %s, rid: %s", *order, reason, kt.Rid)
+			return nil, fmt.Errorf("%s", reason)
+		}
+
+		data := rstypes.CreateAppliedRecordData{
+			BizID:       order.BkBizId,
+			OrderID:     order.OrderId,
+			SubOrderID:  strconv.FormatUint(order.OrderId, 10),
+			DeviceType:  order.Spec.DeviceType,
+			Count:       int(order.Total),
+			AppliedType: enumor.CvmProduceAppliedType,
+		}
+
+		if err = l.rsLogic.CreateAppliedRecord(kt, []rstypes.CreateAppliedRecordData{data}); err != nil {
+			logs.Errorf("create rolling applied record failed, err: %v, order: %+v, rid: %s", err, *order, kt.Rid)
+			return nil, err
+		}
 	}
 
 	if err = model.Operation().ApplyOrder().CreateApplyOrder(kt.Ctx, order); err != nil {

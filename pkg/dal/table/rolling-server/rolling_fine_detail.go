@@ -45,6 +45,7 @@ var RollingFineDetailColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
 	{Column: "day", NamedC: "day", Type: enumor.Numeric},
+	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "delivered_core", NamedC: "delivered_core", Type: enumor.Numeric},
 	{Column: "returned_core", NamedC: "returned_core", Type: enumor.Numeric},
 	{Column: "fine", NamedC: "fine", Type: enumor.Numeric},
@@ -70,6 +71,8 @@ type RollingFineDetailTable struct {
 	Month int `db:"month" json:"month"`
 	// Day 子单号记录罚金的天
 	Day int `db:"day" json:"day"`
+	// RollDate 子单号记录罚金的年月日
+	RollDate int `db:"roll_date" json:"roll_date"`
 	// DeliveredCore 已交付核心数
 	DeliveredCore uint64 `db:"delivered_core" json:"delivered_core"`
 	// ReturnedCore 已退还核心数

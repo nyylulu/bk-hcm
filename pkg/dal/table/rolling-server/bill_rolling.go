@@ -43,6 +43,7 @@ var OBSBillItemRollingColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "year", NamedC: "year", Type: enumor.Numeric},
 	{Column: "month", NamedC: "month", Type: enumor.Numeric},
 	{Column: "day", NamedC: "day", Type: enumor.Numeric},
+	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 
@@ -95,6 +96,8 @@ type OBSBillItemRolling struct {
 	Month int `db:"month" json:"month"`
 	// Day 记录账单的天
 	Day int `db:"day" json:"day"`
+	// RollDate 记录账单的年月日
+	RollDate int `db:"roll_date" json:"roll_date"`
 	// Creator 创建者
 	Creator string `db:"creator" validate:"max=64" json:"creator"`
 	// CreatedAt 创建时间

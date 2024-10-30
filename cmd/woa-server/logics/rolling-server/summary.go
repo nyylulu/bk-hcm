@@ -31,10 +31,11 @@ import (
 )
 
 // GetCpuCoreSummary get cpu core summary.
-func (s *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) (any, error) {
+func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) (*rsproto.RollingCpuCoreSummaryItem,
+	error) {
 	if err := req.Validate(); err != nil {
 		logs.Errorf("failed to validate cpu core summary request, err: %s, rid: %s", err, kt.Rid)
-		return "", err
+		return nil, err
 	}
 
 	var appliedRules, returnedRules []*filter.AtomRule
@@ -48,7 +49,8 @@ func (s *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 		appliedRules = append(appliedRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
 	}
 	// 回收记录的查询条件跟申请记录的一致
-	returnedRules = appliedRules
+	returnedRules = make([]*filter.AtomRule, len(appliedRules))
+	copy(returnedRules, appliedRules)
 
 	if len(req.OrderIDs) != 0 {
 		appliedRules = append(appliedRules, tools.RuleIn("order_id", req.OrderIDs))
@@ -66,7 +68,7 @@ func (s *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 		Filter: queryFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
-	deliverCoreResp, err := s.client.DataService().Global.RollingServer.GetRollingAppliedCoreSum(kt, deliveredReq)
+	deliverCoreResp, err := l.client.DataService().Global.RollingServer.GetRollingAppliedCoreSum(kt, deliveredReq)
 	if err != nil {
 		logs.Errorf("list rolling server applied cpu core summary failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -77,7 +79,7 @@ func (s *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 		Filter: tools.ExpressionAnd(returnedRules...),
 		Page:   core.NewDefaultBasePage(),
 	}
-	returnCoreResp, err := s.client.DataService().Global.RollingServer.GetRollingReturnedCoreSum(kt, returnedReq)
+	returnCoreResp, err := l.client.DataService().Global.RollingServer.GetRollingReturnedCoreSum(kt, returnedReq)
 	if err != nil {
 		logs.Errorf("list rolling server returned cpu core summary failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

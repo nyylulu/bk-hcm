@@ -103,6 +103,7 @@ POST /api/v1/woa/rolling_servers/fine_details/list
 |   year  | int  | 主机申请子单号记录罚金的年份                 |
 |   month  | int | 主机申请子单号记录罚金的月份                 |
 |   day  | int | 主机申请子单号记录罚金的天                  |
+|   roll_date   | int    | 主机申请子单号记录罚金的年月天                      |
 |   delivered_core | int  | cpu交付核心数                       |
 |  returned_core   | int | cpu已退还核数                       |
 | creator            | string | 创建者                            |
@@ -179,6 +180,7 @@ POST /api/v1/woa/rolling_servers/fine_details/list
         "year": 2023,
         "month": 2,
         "day": 12,
+        "roll_date": 20230212,
         "creator": "Jim",
         "created_at": "2023-02-12T14:47:39Z"
       }
@@ -225,6 +227,7 @@ POST /api/v1/woa/rolling_servers/fine_details/list
 |   year  | int  | 子单号记录罚金的年份                     |
 |   month  | int | 子单号记录罚金的月份                     |
 |   day  | int | 子单号记录罚金的天                      |
+|   roll_date   | int    | 主机申请子单号记录罚金的年月天                      |
 |   delivered_core | int  | cpu交付核心数                       |
 |  returned_core   | int | cpu已退还核数                       |
 | creator            | string | 创建者                            |

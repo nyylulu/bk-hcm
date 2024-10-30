@@ -66,9 +66,6 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 		if err != nil {
 			return nil, fmt.Errorf("create rolling applied record failed, err: %v", err)
 		}
-		if len(ids) != 1 {
-			return nil, fmt.Errorf("create rolling applied record expect 1 puller IDs: %v", ids)
-		}
 		return ids, nil
 	})
 	if err != nil {

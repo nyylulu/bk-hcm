@@ -21,25 +21,15 @@ package rollingserver
 
 import (
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
-	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/hooks/handler"
 )
 
 // ListBills list bills.
 func (s *service) ListBills(cts *rest.Contexts) (any, error) {
-	return s.listBills(cts, handler.ListResourceAuthRes, meta.RollingServerManage, meta.Find)
-}
-
-// listBills lists bills.
-func (s *service) listBills(cts *rest.Contexts, authHandler handler.ListAuthResHandler,
-	resType meta.ResourceType, action meta.Action) (any, error) {
-
 	req := new(rsproto.RollingBillListReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to list rolling server bills, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -51,23 +41,19 @@ func (s *service) listBills(cts *rest.Contexts, authHandler handler.ListAuthResH
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// list authorized instances
-	expr, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{Authorizer: s.authorizer,
-		ResType: resType, Action: action, Filter: req.Filter})
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
 	if err != nil {
-		logs.Errorf("list rolling server bills failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("list rolling server bills auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	if noPermFlag {
-		logs.Errorf("list rolling server bills no perm, req: %v, rid: %s", cvt.PtrToVal(req), cts.Kit.Rid)
-		return &core.ListResult{Count: 0, Details: make([]interface{}, 0)}, nil
-	}
 
-	listReq := &rsproto.RollingBillListReq{
-		Filter: expr,
-		Page:   req.Page,
-	}
-	return s.client.DataService().Global.RollingServer.ListBill(cts.Kit, listReq)
+	return s.listBills(cts, req)
+}
+
+// listBills lists bills.
+func (s *service) listBills(cts *rest.Contexts, req *rsproto.RollingBillListReq) (any, error) {
+	return s.client.DataService().Global.RollingServer.ListBill(cts.Kit, req)
 }
 
 // SyncBills sync bills.

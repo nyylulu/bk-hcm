@@ -20,13 +20,11 @@
 package rollingserver
 
 import (
-	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/runtime/filter"
 )
 
 // ListFineDetails list fine details.
@@ -49,14 +47,10 @@ func (s *service) ListFineDetails(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	return s.listFineDetails(cts, req.Filter, req.Page)
+	return s.listFineDetails(cts, req)
 }
 
 // listFineDetails lists fine details.
-func (s *service) listFineDetails(cts *rest.Contexts, filter *filter.Expression, page *core.BasePage) (any, error) {
-	listReq := &rsproto.RollingFineDetailListReq{
-		Filter: filter,
-		Page:   page,
-	}
-	return s.client.DataService().Global.RollingServer.ListFineDetail(cts.Kit, listReq)
+func (s *service) listFineDetails(cts *rest.Contexts, req *rsproto.RollingFineDetailListReq) (any, error) {
+	return s.client.DataService().Global.RollingServer.ListFineDetail(cts.Kit, req)
 }

@@ -124,7 +124,7 @@ create table if not exists `rolling_applied_record`
     `year`           bigint          not null comment '申请时间年份',
     `month`          tinyint(1)      not null comment '申请时间月份',
     `day`            tinyint(1)      not null comment '申请时间天',
-    `roll_date`      int    unsigned not null comment '申请时间年月日',
+    `roll_date`      int unsigned    not null comment '申请时间年月日',
     `applied_core`   bigint unsigned not null comment 'cpu申请核心数',
     `delivered_core` bigint unsigned not null comment 'cpu交付核心数',
     `creator`        varchar(64)     not null comment '创建人',
@@ -149,7 +149,7 @@ create table if not exists `rolling_returned_record`
     `year`               bigint          not null comment '申请时间年份',
     `month`              tinyint(1)      not null comment '申请时间月份',
     `day`                tinyint(1)      not null comment '申请时间天',
-    `roll_date`          int    unsigned not null comment '申请时间年月日',
+    `roll_date`          int unsigned    not null comment '申请时间年月日',
     `returned_way`       varchar(64)     not null comment '退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)',
     `creator`            varchar(64)     not null comment '创建人',
     `created_at`         timestamp       not null default current_timestamp comment '该记录的创建时间',
@@ -173,6 +173,7 @@ create table if not exists `rolling_fine_detail`
     `year`              bigint(1)       not null comment '子单号记录罚金的年份',
     `month`             tinyint(1)      not null comment '子单号记录罚金的月份',
     `day`               tinyint(1)      not null comment '子单号记录罚金的天',
+    `roll_date`         int unsigned    not null comment '子单号记录罚金的年月日',
     `delivered_core`    bigint          not null comment 'cpu交付核心数',
     `returned_core`     bigint          not null comment 'cpu已退还核数',
     `fine`              decimal(38, 10) not null comment '超时退还罚金',
@@ -180,7 +181,9 @@ create table if not exists `rolling_fine_detail`
     `created_at`        timestamp       not null default current_timestamp,
     primary key (`id`),
     unique key `idx_uk_year_month_day_applied_record_id` (`year`, `month`, `day`, `applied_record_id`),
-    unique key `idx_uk_year_month_day_suborder_id` (`year`, `month`, `day`, `suborder_id`)
+    unique key `idx_uk_year_month_day_suborder_id` (`year`, `month`, `day`, `suborder_id`),
+    key `idx_bk_biz_id_roll_date` (`bk_biz_id`, `roll_date`),
+    key `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`)
 ) engine = innodb
   default charset = utf8mb4
   collate = utf8mb4_bin comment ='滚服罚金明细表';

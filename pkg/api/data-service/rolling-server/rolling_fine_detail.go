@@ -56,9 +56,9 @@ type RollingFineDetailCreateReq struct {
 	Year            int             `json:"year" validate:"required"`
 	Month           int             `json:"month" validate:"required"`
 	Day             int             `json:"day" validate:"required"`
-	DeliveredCore   uint64          `json:"delivered_core" validate:"required"`
-	ReturnedCore    uint64          `json:"returned_core" validate:"required"`
-	Fine            decimal.Decimal `json:"fine" validate:"required"`
+	DeliveredCore   uint64          `json:"delivered_core"`
+	ReturnedCore    uint64          `json:"returned_core"`
+	Fine            decimal.Decimal `json:"fine"`
 }
 
 // Validate ...

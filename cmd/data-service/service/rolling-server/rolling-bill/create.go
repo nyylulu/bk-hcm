@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,6 +56,7 @@ func (svc *service) BatchCreateRollingBill(cts *rest.Contexts) (interface{}, err
 				Year:            createReq.Year,
 				Month:           createReq.Month,
 				Day:             createReq.Day,
+				RollDate:        times.GetDataIntDate(createReq.Year, createReq.Month, createReq.Day),
 				Creator:         cts.Kit.User,
 				// 下面字段为obs表所需的字段
 				DataDate:            createReq.DataDate,
@@ -91,9 +93,6 @@ func (svc *service) BatchCreateRollingBill(cts *rest.Contexts) (interface{}, err
 		ids, err := svc.obsDao.OBSBillItemRolling().CreateWithTx(cts.Kit, txn, details)
 		if err != nil {
 			return nil, fmt.Errorf("create rolling bill failed, err: %v", err)
-		}
-		if len(ids) != 1 {
-			return nil, fmt.Errorf("create rolling bill expect 1 puller IDs: %v", ids)
 		}
 		return ids, nil
 	})
