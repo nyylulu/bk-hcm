@@ -80,7 +80,7 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
     }
 
     // 忽略空值
-    if ([null, undefined, ''].includes(value)) {
+    if ([null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length)) {
       continue;
     }
 
@@ -128,7 +128,7 @@ export const transformFlatCondition = (condition: Record<string, any>, propertie
     }
 
     // 忽略空值
-    if ([null, undefined, ''].includes(value)) {
+    if ([null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length)) {
       continue;
     }
 

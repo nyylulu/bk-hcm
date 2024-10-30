@@ -52,7 +52,7 @@ export interface IRollingServerCpuCoreSummary {
   sum_returned_applied_core: number;
 }
 
-export const useRollingServerUsageStore = defineStore('rolling-server', () => {
+export const useRollingServerUsageStore = defineStore('rolling-server-usage', () => {
   const { getBusinessApiPath } = useWhereAmI();
 
   const appliedRecordsListLoading = ref(false);

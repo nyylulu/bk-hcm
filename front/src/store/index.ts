@@ -1,11 +1,13 @@
 import { useUserStore } from './user';
 import { useBusinessGlobalStore } from './business-global';
+import { useRollingServerStore } from './rolling-server';
 
 export const preload = async () => {
   const { userInfo } = useUserStore();
   const { getFullBusiness } = useBusinessGlobalStore();
+  const { getResPollBusinessList } = useRollingServerStore();
 
-  return Promise.all([userInfo(), getFullBusiness()]);
+  return Promise.all([userInfo(), getFullBusiness(), getResPollBusinessList()]);
 };
 
 export * from './staff';
