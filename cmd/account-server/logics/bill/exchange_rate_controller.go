@@ -182,7 +182,7 @@ func (c *ExchangeRateController) listRateFromJarvis(kt *kit.Kit, year int, month
 	}
 	stdRates, err := c.jarvis.GetPeriodExchangeRate(kt, jReq)
 	if err != nil {
-		logs.Errorf("failt get jarvis, exchange rate, err: %v, period: %d-%d, target currency: %s, rid: %s",
+		logs.Errorf("failed to get jarvis exchange rate, err: %v, period: %d-%d, target currency: %s, rid: %s",
 			err, year, month, toCurrency, kt.Rid)
 		return nil, err
 	}

@@ -11,10 +11,7 @@ export const useOperationProducts = (
 ) => {
   const billStore = useBillStore();
   const list = ref([]);
-  const pagination = reactive({
-    limit: 200,
-    start: 0,
-  });
+  const pagination = reactive({ limit: 200, start: 0 });
   const allCounts = ref(0);
 
   const getList = async (op_product_name?: string, op_product_ids?: number[]) => {
@@ -57,10 +54,6 @@ export const useOperationProducts = (
     list.value = list.value.concat(detailRes.data.details);
   };
 
-  onMounted(() => {
-    immediate && getList();
-  });
-
   const OperationProductsSelector = defineComponent({
     props: {
       modelValue: String,
@@ -90,6 +83,10 @@ export const useOperationProducts = (
         isScrollLoading.value = false;
       };
 
+      const handleClear = () => {
+        selectedVal.value = '';
+      };
+
       watch(selectedVal, (val) => emit('update:modelValue', val), { deep: true });
 
       watch(
@@ -97,6 +94,10 @@ export const useOperationProducts = (
         (val) => (selectedVal.value = val),
         { deep: true },
       );
+
+      onMounted(() => {
+        immediate && getList();
+      });
 
       expose({
         getValue,
@@ -118,6 +119,7 @@ export const useOperationProducts = (
             multipleMode={props.multiple ? 'tag' : undefined}
             remoteMethod={(val) => getList(val)}
             onScroll-end={handleScrollEnd}
+            onClear={handleClear}
             rules={[
               {
                 validator: (value: string) => Boolean(value),
@@ -136,7 +138,8 @@ export const useOperationProducts = (
             multiple={props.multiple}
             multipleMode={props.multiple ? 'tag' : undefined}
             remoteMethod={(val) => getList(val)}
-            onScroll-end={handleScrollEnd}>
+            onScroll-end={handleScrollEnd}
+            onClear={handleClear}>
             {list.value.map(({ op_product_name, op_product_id, op_product_managers }) => (
               <Option name={op_product_name} id={op_product_id} key={op_product_id}>
                 <span>

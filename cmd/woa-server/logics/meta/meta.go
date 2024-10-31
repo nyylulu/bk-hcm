@@ -47,7 +47,8 @@ func (l *logics) GetBizsByOpProd(kt *kit.Kit, prodID int64) ([]mtypes.Biz, error
 func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging, error) {
 	result := make([]cmdb.SearchBizBelonging, 0)
 	batch := constant.SearchBizBelongingMaxLimit
-	for start := 0; ; start += batch {
+	start := 0
+	for {
 		req := &cmdb.SearchBizBelongingParams{
 			Page: cmdb.SearchBizBelongingPage{
 				Limit: batch,
@@ -63,9 +64,11 @@ func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging,
 
 		result = append(result, *resp...)
 
-		if len(*resp) < batch {
+		if len(*resp) <= 0 {
 			break
 		}
+
+		start += len(*resp)
 	}
 
 	return result, nil

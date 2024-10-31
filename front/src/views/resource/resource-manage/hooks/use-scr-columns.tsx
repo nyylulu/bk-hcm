@@ -183,7 +183,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const CRSOcolumns = [
-    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true, align: 'center' },
     {
       label: '机型',
       field: 'spec.device_type',
@@ -193,18 +193,6 @@ export default (type: string, isSimpleShow = false) => {
       label: '状态',
       field: 'stage',
       render: ({ row }: any) => transformApplyStages(row.stage),
-    },
-    {
-      label: '总数',
-      field: 'total_num',
-      width: 70,
-      minWidth: 70,
-    },
-    {
-      label: '待交付',
-      field: 'pending_num',
-      width: 70,
-      minWidth: 70,
     },
     {
       label: '地域',

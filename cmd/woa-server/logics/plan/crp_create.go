@@ -34,8 +34,8 @@ import (
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/converter"
 
 	"github.com/jmoiron/sqlx"
@@ -214,8 +214,18 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 		Params: &cvmapi.AddCvmCbsPlanParam{
 			Operator: ticket.Applicant,
 			DeptName: cvmapi.CvmLaunchDeptName,
+			Desc:     "",
 			Items:    make([]*cvmapi.AddPlanItem, 0),
 		},
+	}
+
+	switch ticket.DemandClass {
+	case enumor.DemandClassCVM:
+		addReq.Params.Desc = cvmapi.CvmCbsPlanDefaultCvmDesc
+	case enumor.DemandClassCA:
+		addReq.Params.Desc = cvmapi.CvmCbsPlanDefaultCADesc
+	default:
+		logs.Warnf("failed to construct add desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
 	for _, demand := range ticket.Demands {
@@ -261,14 +271,16 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 		return "", err
 	}
 
+	logs.Warnf("add crp res-plan resp: %v", *resp)
+
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
+		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, req: %v, crp_trace: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, *adjustReq, resp.TraceId, kt.Rid)
 		return "", fmt.Errorf("failed to create crp ticket, code: %d, msg: %s", resp.Error.Code,
 			resp.Error.Message)
 	}
 
-	sn := resp.Result.Data.OrderId
+	sn := resp.Result.OrderId
 	if sn == "" {
 		logs.Errorf("failed to adjust cvm & cbs plan order, for return empty order id, rid: %s", kt.Rid)
 		return "", errors.New("failed to create crp ticket, for return empty order id")
@@ -283,18 +295,28 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
 			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanAutoAdjustMethod,
+			Method:  cvmapi.CvmCbsPlanAdjustMethod,
 		},
 		Params: &cvmapi.CvmCbsPlanAdjustParam{
 			BaseInfo: &cvmapi.AdjustBaseInfo{
 				DeptId:          cvmapi.CvmDeptId,
 				DeptName:        cvmapi.CvmLaunchDeptName,
 				PlanProductName: ticket.PlanProductName,
+				Desc:            "",
 			},
 			SrcData:     make([]*cvmapi.AdjustSrcData, 0),
 			UpdatedData: make([]*cvmapi.AdjustUpdatedData, 0),
 			UserName:    ticket.Applicant,
 		},
+	}
+
+	switch ticket.DemandClass {
+	case enumor.DemandClassCVM:
+		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCvmDesc
+	case enumor.DemandClassCA:
+		adjustReq.Params.BaseInfo.Desc = cvmapi.CvmCbsPlanDefaultCADesc
+	default:
+		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
 	crpDemandIDs := make([]int64, len(ticket.Demands))
@@ -320,38 +342,51 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 			return nil, errors.New("crp demand id not found")
 		}
 
-		var adjustType enumor.CrpAdjustType
-		switch ticket.Type {
-		case enumor.RPTicketTypeAdjust:
-			adjustType = enumor.CrpAdjustTypeUpdate
-			if demand.Updated.ExpectTime != demand.Original.ExpectTime {
-				adjustType = enumor.CrpAdjustTypeDelay
-			}
-		case enumor.RPTicketTypeDelete:
-			adjustType = enumor.CrpAdjustTypeCancel
-		default:
-			logs.Errorf("unsupported ticket type: %s", ticket.Type)
-			return nil, errors.New("unsupported ticket type")
-		}
-
-		srcItem := &cvmapi.AdjustSrcData{
-			AdjustType:          string(adjustType),
-			CvmCbsPlanQueryItem: crpDemand.Clone(),
-		}
-		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
-
-		updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
+		srcItem, updatedItem, err := c.constructAdjustDemandDetails(kt, ticket.Type, crpDemand, demand)
 		if err != nil {
-			logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
+		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
 		if updatedItem != nil {
 			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem)
 		}
 	}
 
 	return adjustReq, nil
+}
+
+func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor.RPTicketType,
+	crpDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
+	*cvmapi.AdjustSrcData, *cvmapi.AdjustUpdatedData, error) {
+
+	var adjustType enumor.CrpAdjustType
+	switch ticketType {
+	case enumor.RPTicketTypeAdjust:
+		adjustType = enumor.CrpAdjustTypeUpdate
+		if demand.Updated.ExpectTime != demand.Original.ExpectTime {
+			adjustType = enumor.CrpAdjustTypeDelay
+		}
+	case enumor.RPTicketTypeDelete:
+		adjustType = enumor.CrpAdjustTypeCancel
+	default:
+		logs.Errorf("unsupported ticket type: %s， rid: %s", ticketType, kt.Rid)
+		return nil, nil, errors.New("unsupported ticket type")
+	}
+
+	srcItem := &cvmapi.AdjustSrcData{
+		AdjustType:          string(adjustType),
+		CvmCbsPlanQueryItem: crpDemand.Clone(),
+	}
+
+	updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
+	if err != nil {
+		logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	return srcItem, updatedItem, nil
 }
 
 // getCrpDemandMap get crp demand id and detail map.

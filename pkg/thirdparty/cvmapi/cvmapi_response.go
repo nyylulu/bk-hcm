@@ -316,13 +316,8 @@ type CvmCbsPlanAdjustResp struct {
 }
 
 // CvmCbsPlanAdjustRst cvm and cbs plan adjust result
+// adjustOrder 和 submitAutoAdjustOrder 返回格式不同，需注意
 type CvmCbsPlanAdjustRst struct {
-	Status int                     `json:"status"`
-	Data   CvmCbsPlanAdjustRstElem `json:"data"`
-}
-
-// CvmCbsPlanAdjustRstElem cvm and cbs plan adjust result element
-type CvmCbsPlanAdjustRstElem struct {
 	Status  int    `json:"status"`
 	OrderId string `json:"orderId"`
 }
@@ -574,5 +569,5 @@ type QueryCvmInstanceTypeItem struct {
 	InstanceGroup         string            `json:"instanceGroup"`         // 机型族
 	CPUAmount             float64           `json:"cpuAmount"`             // CPU数量
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
-	InstanceClass         string            `json:"instanceClass"`         //实例类型
+	InstanceClass         string            `json:"instanceClass"`         // 实例类型
 }

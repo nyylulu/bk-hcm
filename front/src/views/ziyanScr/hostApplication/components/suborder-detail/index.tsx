@@ -19,6 +19,7 @@ export default defineComponent({
   },
   setup(props) {
     const list = ref([]);
+    const isLoading = ref(false);
     const scrStore = useZiyanScrStore();
     const curStatus = ref();
     const { columns: producingColumns } = useColumns('scrProduction');
@@ -29,16 +30,21 @@ export default defineComponent({
     const tableColumns = ref([]);
     const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => getListData());
     const getListData = async () => {
-      const { data } = await fetchData.value(
-        props.suborderId,
-        {
-          limit: pagination.limit,
-          start: pagination.start,
-        },
-        curStatus.value,
-      );
-      list.value = data.info;
-      pagination.count = data?.count;
+      isLoading.value = true;
+      try {
+        const { data } = await fetchData.value(
+          props.suborderId,
+          { limit: pagination.limit, start: pagination.start },
+          curStatus.value,
+        );
+        list.value = data.info;
+        pagination.count = data?.count;
+      } catch (error) {
+        list.value = [];
+        pagination.count = 0;
+      } finally {
+        isLoading.value = false;
+      }
     };
     watch(
       () => [props.suborderId, props.stepId, curStatus.value],
@@ -60,12 +66,10 @@ export default defineComponent({
             break;
           }
         }
+        pagination.start = 0;
         getListData();
       },
-      {
-        immediate: true,
-        deep: true,
-      },
+      { immediate: true, deep: true },
     );
 
     return () => (
@@ -75,15 +79,17 @@ export default defineComponent({
             <BkRadioButton label={label}>{name}</BkRadioButton>
           ))}
         </BkRadioGroup>
-        <Table
-          data={list.value}
-          remotePagination
-          pagination={pagination}
-          columns={tableColumns.value}
-          onPageLimitChange={handlePageLimitChange}
-          onPageValueChange={handlePageValueChange}
-          class={'maxheigth tablelist'}
-        />
+        <bk-loading loading={isLoading.value}>
+          <Table
+            data={list.value}
+            remotePagination
+            pagination={pagination}
+            columns={tableColumns.value}
+            onPageLimitChange={handlePageLimitChange}
+            onPageValueChange={handlePageValueChange}
+            class={'maxheigth tablelist'}
+          />
+        </bk-loading>
       </div>
     );
   },

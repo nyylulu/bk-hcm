@@ -32,3 +32,5 @@ data:
         caFile:
         password:
 
+    sync:
+      {{- toYaml .Values.hcservice.sync | nindent 6 }}

@@ -46,6 +46,10 @@ func InitBillService(cap *capability.Capability) {
 
 	h := rest.NewHandler()
 
+	// 内部版代码
+	h.Add("AwsQuerySavingsPlansCostList", "POST",
+		"/vendors/aws/savings_plans/cost/query", v.AwsQuerySavingsPlansCostList)
+	// 外部版代码
 	h.Add("AwsGetBillList", "POST", "/vendors/aws/bills/list", v.AwsGetBillList)
 	h.Add("AwsBillsPipeline", "POST", "/vendors/aws/bills/pipeline", v.AwsBillPipeline)
 	h.Add("AwsBillConfigDelete", "DELETE", "/vendors/aws/bills/{id}", v.AwsBillConfigDelete)
@@ -61,8 +65,8 @@ func InitBillService(cap *capability.Capability) {
 		"/vendors/azure/root_account_bills/list", v.AzureGetRootAccountBillList)
 	h.Add("AwsGetRootAccountSpTotalUsage", "GET",
 		"/vendors/aws/root_account_bills/sp_usage_total", v.AwsGetRootAccountSpTotalUsage)
-	h.Add("AwsQuerySavingsPlansCostList", "POST",
-		"/vendors/aws/savings_plans/cost/query", v.AwsQuerySavingsPlansCostList)
+	h.Add("AwsListRootOutsideMonthBill", "GET",
+		"/vendors/aws/root_account_bills/list_outside_month_bills", v.AwsListRootOutsideMonthBill)
 
 	h.Load(cap.WebService)
 }
