@@ -11,6 +11,7 @@ import { BILL_VENDORS_MAP } from '@/views/bill/account/account-manage/constants'
 import { SITE_TYPE_MAP } from '@/common/constant';
 import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { VendorAccountNameMap } from './constants';
+import { useVerify } from '@/hooks';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -94,24 +95,20 @@ export default defineComponent({
       dept_id: -1,
     });
 
+    const { authVerifyData } = useVerify();
+    const hasRootAccountFindPermission = computed(() => authVerifyData.value?.permissionAction?.root_account_find);
+
     onMounted(async () => {
-      const { data } = await billStore.root_accounts_list({
-        filter: {
-          op: 'and',
-          rules: [],
-        },
-        page: {
-          limit: 500,
-          start: 0,
-          count: false,
-        },
-      });
-      rootAccountList.value = data.details.map((v: any) => ({
-        name: v.name,
-        id: v.id,
-        key: v.id,
-        vendor: v.vendor,
-      }));
+      // 有权限才获取列表
+      if (hasRootAccountFindPermission.value) {
+        const { data } = await billStore.root_accounts_list({
+          filter: { op: 'and', rules: [] },
+          page: { limit: 500, start: 0, count: false },
+        });
+        rootAccountList.value = data.details.map((v: any) => ({ name: v.name, id: v.id, key: v.id, vendor: v.vendor }));
+      } else {
+        rootAccountList.value = [];
+      }
       translatorMap.value = await getTranslatorMap([info.value.op_product_id]);
     });
 

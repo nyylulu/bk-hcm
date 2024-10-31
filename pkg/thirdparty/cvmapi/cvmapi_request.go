@@ -207,6 +207,7 @@ type AdjustBaseInfo struct {
 	DeptId          int    `json:"deptId"`
 	DeptName        string `json:"deptName"`
 	PlanProductName string `json:"planProductName"`
+	Desc            string `json:"desc"`
 }
 
 // AdjustSrcData adjust source data for cvm and cbs plan info adjust params
@@ -232,6 +233,7 @@ type AddCvmCbsPlanReq struct {
 type AddCvmCbsPlanParam struct {
 	Operator string         `json:"operator"`
 	DeptName string         `json:"deptName"`
+	Desc     string         `json:"desc"`
 	Items    []*AddPlanItem `json:"items"`
 }
 

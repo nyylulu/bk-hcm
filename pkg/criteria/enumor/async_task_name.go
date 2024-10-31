@@ -45,7 +45,7 @@ func (v ActionName) Validate() error {
 	case ActionPullDailyRawBill, ActionMainAccountSummary, ActionRootAccountSummary,
 		ActionDailyAccountSplit, ActionDailyAccountSummary, ActionMonthTaskAction:
 	case ActionLoadBalancerDeleteUrlRule, ActionLoadBalancerDeleteListener:
-	case ActionObsClean, ActionObsSync:
+	case ActionObsClean, ActionObsSync, ActionObsAdjustmentSync:
 	default:
 		return fmt.Errorf("unsupported action name type: %s", v)
 	}
@@ -133,6 +133,7 @@ const (
 
 // Obs相关Action
 const (
-	ActionObsClean = "obs_bill_clean"
-	ActionObsSync  = "obs_bill_sync"
+	ActionObsClean          = "obs_bill_clean"
+	ActionObsSync           = "obs_bill_sync"
+	ActionObsAdjustmentSync = "obs_adjustment_sync"
 )

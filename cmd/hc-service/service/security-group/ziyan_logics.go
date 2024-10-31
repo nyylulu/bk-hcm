@@ -59,7 +59,7 @@ func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountI
 		Memo:           nil,
 		BkBizIDs:       []int64{bkBizID},
 	}
-	resp, err := dataCli.Global.Application.Create(kt.Ctx, kt.Header(), applicationReq)
+	resp, err := dataCli.Global.Application.CreateApplication(kt.Ctx, kt.Header(), applicationReq)
 	if err != nil {
 		logs.Errorf("fail to create application for bpaas(id: %s), err: %v, action: %s, rid: %s",
 			bpaasSN, err, action, kt.Rid)

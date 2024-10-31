@@ -29,6 +29,7 @@ export default defineComponent({
 
     const isDialogShow = ref(false);
     const list = ref([]);
+    const isLoading = ref(false);
     const curStatus = ref();
 
     const { columns: producingColumns } = useColumns('scrProduction');
@@ -41,16 +42,24 @@ export default defineComponent({
 
     const getListData = async () => {
       if (!fetchApi.value) return;
-      const { data } = await fetchApi.value(
-        props.subOrderInfo.suborder_id,
-        {
-          limit: pagination.limit,
-          start: pagination.start,
-        },
-        curStatus.value,
-      );
-      list.value = data.info;
-      pagination.count = data?.count;
+      isLoading.value = true;
+      try {
+        const { data } = await fetchApi.value(
+          props.subOrderInfo.suborder_id,
+          {
+            limit: pagination.limit,
+            start: pagination.start,
+          },
+          curStatus.value,
+        );
+        list.value = data.info;
+        pagination.count = data?.count;
+      } catch (error) {
+        list.value = [];
+        pagination.count = 0;
+      } finally {
+        isLoading.value = false;
+      }
     };
 
     watch(
@@ -73,12 +82,10 @@ export default defineComponent({
             break;
           }
         }
+        pagination.start = 0;
         getListData();
       },
-      {
-        immediate: true,
-        deep: true,
-      },
+      { immediate: true, deep: true },
     );
 
     const triggerShow = (v: boolean) => {
@@ -98,16 +105,18 @@ export default defineComponent({
             <BkRadioButton label={label}>{name}</BkRadioButton>
           ))}
         </BkRadioGroup>
-        <Table
-          style={{ maxHeight: '600px', marginTop: '16px' }}
-          data={list.value}
-          remotePagination
-          pagination={pagination}
-          columns={tableColumns.value}
-          showOverflowTooltip
-          onPageLimitChange={handlePageLimitChange}
-          onPageValueChange={handlePageValueChange}
-        />
+        <bk-loading loading={isLoading.value}>
+          <Table
+            style={{ maxHeight: '600px', marginTop: '16px' }}
+            data={list.value}
+            remotePagination
+            pagination={pagination}
+            columns={tableColumns.value}
+            showOverflowTooltip
+            onPageLimitChange={handlePageLimitChange}
+            onPageValueChange={handlePageValueChange}
+          />
+        </bk-loading>
       </CommonDialog>
     );
   },

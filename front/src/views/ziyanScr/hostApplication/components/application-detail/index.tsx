@@ -31,26 +31,50 @@ export default defineComponent({
     const ips = ref({});
     const detail: Ref<{
       info: any;
-    }> = ref({});
+      [key: string]: any;
+    }> = ref({ info: [] });
     const { transformRequireTypes } = useRequireTypes();
     const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
     const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
-    cloudcolumns.splice(4, 0, {
-      label: '已交付',
-      field: 'success_num',
-      width: 50,
-      render: ({ row }: any) => (
-        <span class={'copy-wrapper'}>
-          {row.success_num}
-          {row.success_num > 0 ? (
-            <Button text theme='primary'>
-              <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
-            </Button>
-          ) : null}
-        </span>
-      ),
-    });
+
+    // 需求子单相关num字段
+    const numColumns = [
+      {
+        label: '总数',
+        field: 'total_num',
+        width: 80,
+        render: ({ row, cell }: any) => (detail.value?.stage === 'AUDIT' ? row.replicas : cell),
+      },
+      {
+        label: '待交付',
+        field: 'pending_num',
+        width: 80,
+        render: ({ row, cell }: any) => (detail.value?.stage === 'AUDIT' ? row.replicas : cell),
+      },
+      {
+        label: '已交付',
+        field: 'success_num',
+        width: 80,
+        render: ({ row, cell }: any) => {
+          if (detail.value?.stage === 'AUDIT') return 0;
+          return (
+            <span class={'copy-wrapper'}>
+              {cell}
+              {cell > 0 ? (
+                <Button text theme='primary'>
+                  <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
+                </Button>
+              ) : null}
+            </span>
+          );
+        },
+      },
+    ];
+
+    // 给云主机添加num字段
+    cloudcolumns.splice(2, 0, ...numColumns);
+
     const Hostcolumns = [
       ...cloudcolumns,
       {
@@ -65,38 +89,16 @@ export default defineComponent({
         },
       },
     ];
+
     const Machinecolumns = [
-      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
+      { type: 'selection', width: 30, minWidth: 30, align: 'center' },
       {
         label: '机型',
         field: 'spec.device_type',
         width: 140,
       },
-      {
-        label: '总数',
-        field: 'total_num',
-        width: 40,
-      },
-      {
-        label: '待交付',
-        field: 'pending_num',
-        width: 50,
-      },
-      {
-        label: '已交付',
-        field: 'success_num',
-        width: 50,
-        render: ({ row }: any) => (
-          <span class={'copy-wrapper'}>
-            {row.success_num}
-            {row.success_num > 0 ? (
-              <Button text theme='primary'>
-                <Copy class={'copy-icon'} v-clipboard:copy={(ips.value[row.suborder_id] || []).join('\n')} />
-              </Button>
-            ) : null}
-          </span>
-        ),
-      },
+      // 给物理机添加num字段
+      ...numColumns,
       ...physicalcolumns,
       {
         label: '操作',

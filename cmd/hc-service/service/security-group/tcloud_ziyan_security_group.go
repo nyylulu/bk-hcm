@@ -324,7 +324,7 @@ func (g *securityGroup) TCloudZiyanSecurityGroupAssociateLoadBalancer(cts *rest.
 		return nil, err
 	}
 
-	if err = g.dataCli.Global.SGCommonRel.BatchUpsert(cts.Kit, sgComReq); err != nil {
+	if err = g.dataCli.Global.SGCommonRel.BatchUpsertSgCommonRels(cts.Kit, sgComReq); err != nil {
 		logs.Errorf("request dataservice upsert security group lb rels failed, err: %v, req: %+v, rid: %s",
 			err, sgComReq, cts.Kit.Rid)
 		return nil, err
@@ -395,7 +395,7 @@ func (g *securityGroup) TCloudZiyanSecurityGroupDisassociateLoadBalancer(cts *re
 
 	deleteReq := buildSGCommonRelDeleteReq(
 		enumor.TCloud, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
-	if err = g.dataCli.Global.SGCommonRel.BatchDelete(cts.Kit, deleteReq); err != nil {
+	if err = g.dataCli.Global.SGCommonRel.BatchDeleteSgCommonRels(cts.Kit, deleteReq); err != nil {
 		logs.Errorf("request dataservice tcloud delete security group lb rels failed, err: %v, req: %+v, rid: %s",
 			err, req, cts.Kit.Rid)
 		return nil, err
