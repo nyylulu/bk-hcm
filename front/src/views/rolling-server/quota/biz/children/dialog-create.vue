@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref } from 'vue';
+import { computed, reactive, ref, watchEffect } from 'vue';
 import dayjs from 'dayjs';
 import { Message } from 'bkui-vue';
 import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
@@ -15,20 +15,29 @@ const model = defineModel<boolean>();
 
 const formData = reactive({
   bk_biz_ids: [],
-  quota: rollingServerQuotaStore.globalQuotaConfig.biz_quota ?? 1,
+  quota: rollingServerQuotaStore.globalQuotaConfig.biz_quota,
   quota_month: dayjs().format('YYYY-MM'),
 });
 
-const quotaMax = computed(
-  () =>
-    rollingServerQuotaStore.globalQuotaConfig.global_quota ?? rollingServerQuotaStore.globalQuotaConfig.biz_quota ?? 1,
-);
+const quotaMax = computed(() => {
+  return rollingServerQuotaStore.globalQuotaConfig.global_quota ?? rollingServerQuotaStore.globalQuotaConfig.biz_quota;
+});
+
+const businessOptionDisabled = computed(() => {
+  return (option: IBusinessItem) => hasQuotaBizList.value.some((item) => item.bk_biz_id === option.id);
+});
 
 const formRef = ref(null);
+
+const hasQuotaBizList = ref([]);
 
 const closeDialog = () => {
   model.value = false;
 };
+
+watchEffect(async () => {
+  hasQuotaBizList.value = await rollingServerQuotaStore.getExistQuotaBizList({ quota_month: formData.quota_month });
+});
 
 const handleDialogConfirm = async () => {
   await formRef.value?.validate();
@@ -37,12 +46,6 @@ const handleDialogConfirm = async () => {
   Message({ theme: 'success', message: '新增成功' });
   closeDialog();
 };
-
-const hasQuotaBizList = ref([{ id: 2005000019, name: 'test' }]);
-
-const businessOptionDisabled = computed(() => {
-  return (option: IBusinessItem) => hasQuotaBizList.value.some((item) => item.id === option.id);
-});
 </script>
 
 <template>
@@ -59,7 +62,7 @@ const businessOptionDisabled = computed(() => {
         <hcm-form-business v-model="formData.bk_biz_ids" multiple :option-disabled="businessOptionDisabled" />
       </bk-form-item>
       <bk-form-item label="基础额度" :required="true" property="quota">
-        <hcm-form-number v-model="formData.quota" :min="1" :max="quotaMax" />
+        <hcm-form-number v-model="formData.quota" :min="1" :max="quotaMax" placeholder="1" />
       </bk-form-item>
     </bk-form>
   </bk-dialog>

@@ -43,7 +43,14 @@ watchEffect(async () => {
 
 <template>
   <bk-dialog dialog-type="show" title="操作记录" width="640" v-model:is-show="model">
-    <bk-table row-hover="auto" :data="list" show-overflow-tooltip :max-height="500">
+    <bk-table
+      :data="list"
+      :max-height="500"
+      :min-height="190"
+      row-hover="auto"
+      show-overflow-tooltip
+      v-bkloading="{ loading: rollingServerQuotaStore.adjustRecordsLoading, size: 'small' }"
+    >
       <bk-table-column
         v-for="(column, index) in columns"
         :key="index"

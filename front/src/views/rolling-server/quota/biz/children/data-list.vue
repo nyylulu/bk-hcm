@@ -18,7 +18,7 @@ const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
 const columnConfig: Record<string, PropertyColumnConfig> = {
   bk_biz_name: {},
-  base_quota: { width: 120, align: 'right', sort: true },
+  quota: { width: 120, align: 'right', sort: true },
   adjust_type: { width: 220 },
   quota_offset: {
     width: 120,
@@ -34,7 +34,7 @@ const columnConfig: Record<string, PropertyColumnConfig> = {
     width: 200,
     align: 'right',
     render: ({ data }: { data?: IRollingServerBizQuotaItem }) => {
-      return data.base_quota + (data.quota_offset ?? 0);
+      return data.quota + (data.quota_offset ?? 0) * (data.adjust_type === QuotaAdjustType.INCREASE ? 1 : -1);
     },
   },
   updated_at: {},
@@ -57,7 +57,7 @@ const { settings } = useTableSettings(columns);
     row-hover="auto"
     :data="list"
     :pagination="pagination"
-    :max-height="'calc(100vh - 401px)'"
+    :max-height="'calc(100vh - 424px)'"
     :settings="settings"
     remote-pagination
     show-overflow-tooltip

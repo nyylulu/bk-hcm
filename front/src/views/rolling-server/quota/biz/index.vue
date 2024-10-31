@@ -31,7 +31,7 @@ watch(
   async (query) => {
     condition.value = searchQs.get(query, {
       quota_month: new Date(),
-      reviser: userStore.username,
+      revisers: [userStore.username],
     });
 
     pagination.current = Number(query.page) || 1;

@@ -77,11 +77,12 @@ watchEffect(async () => {
       <grid-item label="核算日期">{{ `${dataRow.year}-${dataRow.month}-${dataRow.day}` }}</grid-item>
     </grid-container>
     <bk-table
-      v-bkloading="{ loading: rollingServerBillsStore.billFineDetailsListLoading }"
+      v-bkloading="{ loading: rollingServerBillsStore.billFineDetailsListLoading, size: 'small' }"
       row-hover="auto"
       remote-pagination
       show-overflow-tooltip
       :max-height="500"
+      :min-height="240"
       :data="detailsList"
       :pagination="pagination"
       @page-limit-change="handlePageSizeChange"

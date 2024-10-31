@@ -14,7 +14,7 @@ const emit = defineEmits<{
   (e: 'reset'): void;
 }>();
 
-const fieldIds = ['quota_month', 'bk_biz_ids', 'adjust_type', 'reviser'];
+const fieldIds = ['quota_month', 'bk_biz_ids', 'adjust_type', 'revisers'];
 const fields = fieldIds.map((id) => quotaBizViewProperties.find((prop) => prop.id === id));
 
 const formValues = ref<IBizViewSearchCondition>({});

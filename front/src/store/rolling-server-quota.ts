@@ -14,7 +14,7 @@ export interface IRollingServerBizQuotaItem {
   month: number;
   bk_biz_id: number;
   bk_biz_name: string;
-  base_quota: number;
+  quota: number;
   adjust_type: QuotaAdjustType;
   quota_offset: number;
   quota_offset_final: number;
@@ -45,11 +45,19 @@ export interface IAdjustRecordItem {
   created_at: string;
 }
 
+export interface IExistQuotaBizItem {
+  id: string;
+  bk_biz_id: number;
+  bk_biz_name: string;
+  quota: number;
+}
+
 export const useRollingServerQuotaStore = defineStore('rolling-server-quota', () => {
   const bizQuotaListLoading = ref(false);
   const createBizQuotaLoading = ref(false);
   const adjustBizQuotaLoading = ref(false);
   const adjustRecordsLoading = ref(false);
+  const existQuotaBizListLoading = ref(false);
   const globalQuotaConfig = ref<Partial<IGlobalQuota & IGlobalCpuCoreSummary>>({});
 
   const getGlobalQuota = async () => {
@@ -158,16 +166,34 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
     }
   };
 
+  const getExistQuotaBizList = async (params: { quota_month: string }) => {
+    existQuotaBizListLoading.value = true;
+    try {
+      const res: IListResData<IExistQuotaBizItem[]> = await http.post(
+        '/api/v1/woa/rolling_servers/exist_quota_bizs/list',
+        params,
+      );
+      return res?.data?.details || [];
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      existQuotaBizListLoading.value = false;
+    }
+  };
+
   return {
     bizQuotaListLoading,
     globalQuotaConfig,
     createBizQuotaLoading,
     adjustBizQuotaLoading,
     adjustRecordsLoading,
+    existQuotaBizListLoading,
     getGlobalQuota,
     getBizQuotaList,
     createBizQuota,
     adjustBizQuota,
     getAdjustRecords,
+    getExistQuotaBizList,
   };
 });

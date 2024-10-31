@@ -5,7 +5,7 @@ import { useBusinessGlobalStore } from '@/store/business-global';
 
 const businessGlobalStore = useBusinessGlobalStore();
 
-const props = defineProps<{ value: number | number[]; display?: DisplayType }>();
+const props = defineProps<{ value: number | number[]; separator: string; display?: DisplayType }>();
 
 const displayValue = computed(() => {
   const values = Array.isArray(props.value) ? props.value : [props.value];
@@ -14,7 +14,7 @@ const displayValue = computed(() => {
     const name = businessGlobalStore.businessFullList.find((item) => item.id === value)?.name;
     names.push(name);
   }
-  return names?.join?.(', ') || '--';
+  return names?.join?.(props.separator || ', ') || '--';
 });
 </script>
 

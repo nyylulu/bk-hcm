@@ -37,7 +37,12 @@ export default [
     type: 'user',
   },
   {
-    id: 'base_quota',
+    id: 'revisers',
+    name: '更新人',
+    type: 'user',
+  },
+  {
+    id: 'quota',
     name: '基础额度',
     type: 'number',
     meta: {

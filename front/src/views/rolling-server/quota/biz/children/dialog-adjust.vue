@@ -5,6 +5,7 @@ import { Message } from 'bkui-vue';
 import { useRollingServerQuotaStore, type IRollingServerBizQuotaItem } from '@/store/rolling-server-quota';
 import { QuotaAdjustType } from '@/views/rolling-server/typings';
 import { quotaAdjustTypeNames } from '@/views/rolling-server/constants';
+import BusinessValue from '@/components/display-value/business-value.vue';
 
 const props = defineProps<{ dataRow: IRollingServerBizQuotaItem }>();
 
@@ -24,9 +25,9 @@ const formRef = ref(null);
 
 const formData = reactive({
   bk_biz_ids: isCurrentMonth.value ? [props.dataRow.bk_biz_id] : [],
-  base_quota: isCurrentMonth.value ? props.dataRow.base_quota : undefined,
+  quota: isCurrentMonth.value ? props.dataRow.quota : undefined,
   adjust_type: isCurrentMonth.value ? props.dataRow.adjust_type ?? QuotaAdjustType.INCREASE : QuotaAdjustType.INCREASE,
-  quota_offset: 1,
+  quota_offset: undefined,
   adjust_month: isCurrentMonth.value ? [new Date(), new Date()] : [],
 });
 
@@ -71,7 +72,7 @@ const handleDialogConfirm = async () => {
         <hcm-form-business v-model="formData.bk_biz_ids" disabled />
       </bk-form-item>
       <bk-form-item label="基础额度" property="bk_biz_ids">
-        <hcm-form-number v-model="formData.base_quota" disabled />
+        <hcm-form-number v-model="formData.quota" disabled />
       </bk-form-item>
       <bk-form-item label="调整额度" class="compose-form-item">
         <bk-form-item property="adjust_type">
@@ -80,13 +81,20 @@ const handleDialogConfirm = async () => {
         <bk-form-item property="quota_offset" :required="true" class="flex-item">
           <hcm-form-number
             v-model="formData.quota_offset"
+            placeholder="1"
             :min="1"
-            :max="rollingServerQuotaStore.globalQuotaConfig.global_quota ?? 100000"
+            :max="rollingServerQuotaStore.globalQuotaConfig.global_quota"
           />
         </bk-form-item>
       </bk-form-item>
       <bk-form-item label="调整后额度">
-        <div class="adjust-after">50000</div>
+        <div class="adjust-after">
+          {{
+            formData.quota_offset
+              ? formData.quota + formData.quota_offset * (formData.adjust_type === QuotaAdjustType.INCREASE ? 1 : -1)
+              : '--'
+          }}
+        </div>
       </bk-form-item>
     </bk-form>
 
@@ -101,6 +109,7 @@ const handleDialogConfirm = async () => {
           class="flex-width"
           v-model="formData.adjust_month"
           format="yyyy-MM"
+          :clearable="false"
           :disabled-date="disabledDate"
         />
       </bk-form-item>
@@ -111,13 +120,23 @@ const handleDialogConfirm = async () => {
         <bk-form-item property="quota_offset" :required="true" class="flex-item">
           <hcm-form-number
             v-model="formData.quota_offset"
+            placeholder="1"
             :min="1"
-            :max="rollingServerQuotaStore.globalQuotaConfig.global_quota ?? 100000"
+            :max="rollingServerQuotaStore.globalQuotaConfig.global_quota"
           />
         </bk-form-item>
       </bk-form-item>
       <bk-form-item label="调整后额度">
-        <div class="adjust-after">50000</div>
+        <div class="adjust-after g-scroller">
+          <template v-if="formData.bk_biz_ids?.length && formData.adjust_month?.length && formData.quota_offset">
+            <business-value :value="formData.bk_biz_ids" separator="、" />
+            在{{ dayjs(formData.adjust_month[0]).format('YYYY年MM月') }}到{{
+              dayjs(formData.adjust_month[1]).format('YYYY年MM月')
+            }}的额度，每月在原基础上{{ quotaAdjustTypeNames[formData.adjust_type] }}
+            <span class="num">{{ formData.quota_offset }}</span>
+          </template>
+          <template v-else>--</template>
+        </div>
       </bk-form-item>
     </bk-form>
   </bk-dialog>
@@ -142,12 +161,17 @@ const handleDialogConfirm = async () => {
   width: 100%;
 }
 .adjust-after {
-  height: 32px;
   background: #fdf4e8;
   border-radius: 2px;
-  padding: 0 10px;
-  font-weight: 700;
-  font-size: 14px;
-  color: #e38b02;
+  padding: 6px 10px;
+  line-height: 20px;
+  color: #4d4f56;
+  max-height: 120px;
+
+  .num {
+    font-weight: 700;
+    font-size: 14px;
+    color: #e38b02;
+  }
 }
 </style>
