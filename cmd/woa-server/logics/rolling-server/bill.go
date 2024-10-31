@@ -124,30 +124,37 @@ func (l *logics) SyncBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq) e
 	}
 
 	start := time.Now()
-	logs.Infof("--- start sync all biz rolling bill, start time: %v, rid: %s ---", start, kt.Rid)
-
 	bizIDs, err := l.listIEGBizIDs(kt)
 	if err != nil {
 		logs.Errorf("list ieg biz ids failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
+	logs.Infof("--- start sync all biz rolling bill, biz count: %d, start time: %v, rid: %s ---", len(bizIDs), start,
+		kt.Rid)
 
+	success := 0
+	failed := 0
+	resPoolBizCount := 0
 	for _, bizID := range bizIDs {
 		if _, ok := resPoolBizMap[bizID]; ok {
+			resPoolBizCount++
 			logs.Infof("skip resource pool business rolling bill sync, bizID: %d, rid: %s", bizID, kt.Rid)
 			continue
 		}
 
 		subReq := &rollingserver.RollingBillSyncReq{BkBizID: bizID, Year: req.Year, Month: req.Month, Day: req.Day}
 		if err = l.syncBizBills(kt, subReq); err != nil {
+			failed++
 			logs.Errorf("%s:sync biz rolling bill failed, err: %v, bizID: %d, rid: %s",
 				constant.RollingServerSyncFailed, err, bizID, kt.Rid)
 			continue
 		}
+		success++
 	}
 
 	end := time.Now()
-	logs.Infof("--- end sync all biz rolling bill, end time: %v, cost: %v, rid: %s ---", end, end.Sub(start), kt.Rid)
+	logs.Infof("--- end sync all biz rolling bill, success: %d, failed: %d, resource biz count: %d, end time: %v, "+
+		"cost: %v, rid: %s ---", success, failed, resPoolBizCount, end, end.Sub(start), kt.Rid)
 
 	return nil
 }
