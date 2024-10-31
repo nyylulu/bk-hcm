@@ -9,7 +9,7 @@ const emit = defineEmits(['change']);
 const selected = ref<string>(props.value);
 const option = ref<ModelProperty['option']>({
   [props.value]: props.value,
-  滚服类型: '滚服类型',
+  滚服项目: '滚服项目',
 });
 
 watch(selected, (v) => {

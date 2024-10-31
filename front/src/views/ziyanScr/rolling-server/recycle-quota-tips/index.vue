@@ -16,11 +16,11 @@ const totalCount = computed(() => props.selections.reduce((prev, curr) => prev +
 const totalCpuCoreCount = computed(() => props.selections.reduce((prev, curr) => prev + curr.sum_cpu_core, 0));
 const rollingServerCpuCoreCount = computed(() =>
   props.selections.reduce((prev, curr) => {
-    if (curr.recycle_type === '滚服类型') return prev + curr.sum_cpu_core;
+    if (curr.recycle_type === '滚服项目') return prev + curr.sum_cpu_core;
     return prev;
   }, 0),
 );
-const isSelectionsHasRollingServer = computed(() => props.selections.some((item) => item.recycle_type === '滚服类型'));
+const isSelectionsHasRollingServer = computed(() => props.selections.some((item) => item.recycle_type === '滚服项目'));
 
 const shouldBeReturnedCpuCoreCount = ref<number>(0);
 const getCpuCoreSummary = async () => {

@@ -95,7 +95,7 @@ const preRecycleColumns: Column[] = [
     field: 'recycle_type',
     render: ({ cell, row }: any) => {
       return returnedWay.value === ReturnedWay.RESOURCE_POOL &&
-        (cell !== '滚服类型' || row.originRecycleType !== '滚服类型')
+        (cell !== '滚服项目' || row.originRecycleType !== '滚服项目')
         ? h(RecycleTypeSelector, {
             value: row.originRecycleType || cell,
             onChange: (v) => {

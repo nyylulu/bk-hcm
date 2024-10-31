@@ -15,7 +15,6 @@ import { GLOBAL_BIZS_KEY } from '@/common/constant';
 withDefaults(defineProps<IDataListProps>(), {});
 
 const emit = defineEmits<{
-  'view-details': [id: string];
   'show-returned-records': [id: string];
 }>();
 
@@ -37,7 +36,7 @@ const fieldIds = [
 ];
 const columConfig: Record<string, PropertyColumnConfig> = {
   suborder_id: {
-    width: 180,
+    width: 150,
     render: ({ cell, data }) => {
       const linkVNode = h(
         Button,
@@ -64,7 +63,7 @@ const columConfig: Record<string, PropertyColumnConfig> = {
       if (rollingServerStore.resPollBusinessIds.includes(data.bk_biz_id)) {
         return h('div', { class: 'flex-row justify-content-between' }, [
           linkVNode,
-          h(Tag, { theme: 'success' }, '资源池业务'),
+          h(Tag, { theme: 'success' }, '资源池'),
         ]);
       }
       return linkVNode;
