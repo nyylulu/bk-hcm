@@ -93,14 +93,15 @@ const preRecycleColumns: Column[] = [
   {
     label: '回收类型',
     field: 'recycle_type',
-    render: ({ cell, row }: any) =>
-      returnedWay.value === ReturnedWay.RESOURCE_POOL
+    render: ({ cell, row }: any) => {
+      return returnedWay.value === ReturnedWay.RESOURCE_POOL &&
+        (cell !== '滚服类型' || row.originRecycleType !== '滚服类型')
         ? h(RecycleTypeSelector, {
-            value: cell,
+            value: row.originRecycleType || cell,
             onChange: (v) => {
               if (!row.isRecycleTypeChange) {
                 row.isRecycleTypeChange = true;
-                row.originRecycleType = cell; // todo: 显示原始值
+                row.originRecycleType = cell; // 记录原始值
               } else {
                 if (v === row.originRecycleType) {
                   row.isRecycleTypeChange = false;
@@ -109,7 +110,8 @@ const preRecycleColumns: Column[] = [
               row.recycle_type = v;
             },
           })
-        : cell,
+        : cell;
+    },
   },
   {
     label: '回收选项',
@@ -228,6 +230,7 @@ const nextStep = () => {
   currentStep.value += 1;
 };
 const prevStep = () => {
+  selections.value = [];
   currentStep.value -= 1;
 };
 

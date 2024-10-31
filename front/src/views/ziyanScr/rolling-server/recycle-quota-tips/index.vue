@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
-import { useI18n } from 'vue-i18n';
 import { ReturnedWay, useRollingServerUsageStore } from '@/store';
 import { convertDateRangeToObject, getDateRange } from '@/utils/search';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -9,13 +8,19 @@ defineOptions({ name: 'recycle-quota-tips' });
 
 const props = defineProps<{ selections: any[]; returnedWay: ReturnedWay }>();
 
-const { t } = useI18n();
 const { getBizsId } = useWhereAmI();
 const rollingServerUsageStore = useRollingServerUsageStore();
 
-const recycleTypeCount = computed(() => new Set(props.selections.map((item) => item.recycle_type)).size);
-const recycleTotalCount = computed(() => props.selections.reduce((prev, curr) => prev + curr.total_num, 0));
-const recycleTotalCpuCoreCount = computed(() => props.selections.reduce((prev, curr) => prev + curr.sum_cpu_core, 0));
+const typeCount = computed(() => new Set(props.selections.map((item) => item.recycle_type)).size);
+const totalCount = computed(() => props.selections.reduce((prev, curr) => prev + curr.total_num, 0));
+const totalCpuCoreCount = computed(() => props.selections.reduce((prev, curr) => prev + curr.sum_cpu_core, 0));
+const rollingServerCpuCoreCount = computed(() =>
+  props.selections.reduce((prev, curr) => {
+    if (curr.recycle_type === '滚服类型') return prev + curr.sum_cpu_core;
+    return prev;
+  }, 0),
+);
+const isSelectionsHasRollingServer = computed(() => props.selections.some((item) => item.recycle_type === '滚服类型'));
 
 const shouldBeReturnedCpuCoreCount = ref<number>(0);
 const getCpuCoreSummary = async () => {
@@ -34,25 +39,30 @@ onMounted(() => {
 </script>
 
 <template>
-  <div v-show="!rollingServerUsageStore.cpuCoreSummaryLoading">
+  <!-- eslint-disable prettier/prettier -->
+  <div v-show="!rollingServerUsageStore.cpuCoreSummaryLoading" class="mt8">
     <p class="font-small flex-row">
-      <span class="text-danger">{{ t('注意：') }}</span>
-      {{ t('已选择') }}
-      <display-value :property="{ type: 'number' }" :value="recycleTypeCount" />
-      {{ t('种项目类型的资源，共计') }}
-      <display-value :property="{ type: 'number' }" :value="recycleTotalCount" />
-      {{ t('台，请确认后点击提交。') }}
+      <span class="text-danger">注意：</span>
+      已选择 {{ typeCount }} 种项目类型的资源，共计 {{ totalCount }} 台（{{ totalCpuCoreCount }}核心），请确认后点击提交。
     </p>
-    <p class="font-small" style="text-indent: 3em">
-      {{ ReturnedWay.RESOURCE_POOL === returnedWay ? t('其中滚服项目资源池业务应退回为') : t('其中滚服项目应退回为') }}
-      <display-value :property="{ type: 'number' }" :value="shouldBeReturnedCpuCoreCount" />
-      {{ t('核心，本次将退回') }}
-      <display-value :property="{ type: 'number' }" :value="recycleTotalCpuCoreCount" />
-      {{ t('核心，剩余待退回') }}
-      <display-value :property="{ type: 'number' }" :value="shouldBeReturnedCpuCoreCount - recycleTotalCpuCoreCount" />
-      {{ t('核心。') }}
-    </p>
+    <template v-if="isSelectionsHasRollingServer">
+      <!-- 普通业务 -->
+      <template v-if="ReturnedWay.RESOURCE_POOL !== returnedWay">
+        <p class="ext-info">滚服项目：本次退回 {{ rollingServerCpuCoreCount }} 核心后，剩余待退回 {{ shouldBeReturnedCpuCoreCount - rollingServerCpuCoreCount }} 核心，本次退回前全部应退回为 {{ shouldBeReturnedCpuCoreCount }} 核心。</p>
+        <p class="ext-info">其他项目：本次退回 {{ totalCpuCoreCount - rollingServerCpuCoreCount }} 核心。</p>
+      </template>
+      <!-- 资源池业务 -->
+      <template v-else>
+        <p class="ext-info">滚服项目：本次通过资源池业务退回 {{ rollingServerCpuCoreCount }} 核心后，全平台-滚服项目-剩余待退回 {{ shouldBeReturnedCpuCoreCount - rollingServerCpuCoreCount }} 核心，本次退回前全平台-滚服项目-应退回为 {{ shouldBeReturnedCpuCoreCount }} 核心。</p>
+        <p class="ext-info">其他项目：本次退回 {{ totalCpuCoreCount - rollingServerCpuCoreCount }} 核心。</p>
+      </template>
+    </template>
   </div>
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.ext-info {
+  font-size: 12px;
+  text-indent: 3em;
+}
+</style>

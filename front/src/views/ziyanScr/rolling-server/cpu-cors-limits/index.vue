@@ -56,12 +56,12 @@ const getCpuQuota = async (bizId: string | number) => {
     rollingServerQuotaStore.getGlobalQuota(),
   ]);
 
-  const { base_quota = 0, quota_offset = 0, adjust_type } = bizQuotaRes.list?.[0] ?? {};
+  const { quota = 0, quota_offset = 0, adjust_type } = bizQuotaRes.list?.[0] ?? {};
   const { sum_delivered_core = 0 } = summaryRes ?? {};
   const { globalQuotaConfig } = rollingServerQuotaStore;
 
   // 单个业务的实际额度 = 基础额度 + 调整额度
-  const bizQuota = adjust_type === QuotaAdjustType.INCREASE ? base_quota + quota_offset : base_quota - quota_offset;
+  const bizQuota = adjust_type === QuotaAdjustType.INCREASE ? quota + quota_offset : quota - quota_offset;
   rollingServerCpuQuota.value = bizQuota;
 
   // 可申请的核数 = min(（单个业务的实际额度 - 单个业务已交付的核数）, 剩余额度（全平台）)
@@ -79,25 +79,16 @@ defineExpose({ availableCpuQuota, replicasCpuCors });
 <template>
   <ul class="rolling-server-info">
     <li>
-      <span>{{ t('滚服CPU限额：') }}</span>
-      <span class="cpu-cors">
-        <display-value :property="{ type: 'number' }" :value="rollingServerCpuQuota" />
-        {{ t('核') }}
-      </span>
+      <span>{{ t('剩余额度：') }}</span>
+      <span class="cpu-cors">{{ availableCpuQuota }}{{ t('核') }}</span>
     </li>
     <li>
-      <span>{{ t('可用CPU限额：') }}</span>
-      <span class="cpu-cors">
-        <display-value :property="{ type: 'number' }" :value="availableCpuQuota" />
-        {{ t('核') }}
-      </span>
+      <span>{{ t('额度限制：') }}</span>
+      <span class="cpu-cors">{{ rollingServerCpuQuota }}{{ t('核') }}</span>
     </li>
     <li>
       <span>{{ t('需求核数：') }}</span>
-      <span class="cpu-cors">
-        <display-value :property="{ type: 'number' }" :value="replicasCpuCors" />
-        {{ t('核') }}
-      </span>
+      <span class="cpu-cors">{{ replicasCpuCors }} {{ t('核') }}</span>
     </li>
   </ul>
 </template>

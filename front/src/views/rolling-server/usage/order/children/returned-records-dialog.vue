@@ -4,6 +4,7 @@ import { Button } from 'bkui-vue';
 import { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { RollingServerRecordItem } from '@/store';
+import qs from 'qs';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
@@ -27,7 +28,14 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           onClick() {
             routerAction.open({
               name: 'ApplicationsManage',
-              query: { [GLOBAL_BIZS_KEY]: data.bk_biz_id, type: 'host_recycle' },
+              query: {
+                [GLOBAL_BIZS_KEY]: data.bk_biz_id,
+                type: 'host_recycle',
+                initial_filter: qs.stringify(
+                  { suborder_id: [cell] },
+                  { arrayFormat: 'brackets', encode: false, allowEmptyArrays: true },
+                ),
+              },
             });
           },
         },
@@ -63,6 +71,8 @@ defineExpose({ show });
         :prop="column.id"
         :label="column.name"
         :sort="column.sort"
+        :align="column.align"
+        :render="column.render"
       >
         <template #default="{ row }">
           <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />

@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { computed, h } from 'vue';
-import { Button } from 'bkui-vue';
+import { Button, Tag } from 'bkui-vue';
 import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import type { IDataListProps } from '../../typings';
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useRollingServerStore } from '@/store/rolling-server';
+import qs from 'qs';
 import routerAction from '@/router/utils/action';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
@@ -17,6 +19,7 @@ const emit = defineEmits<{
   'show-returned-records': [id: string];
 }>();
 
+const rollingServerStore = useRollingServerStore();
 const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 const { isBusinessPage } = useWhereAmI();
 
@@ -34,8 +37,9 @@ const fieldIds = [
 ];
 const columConfig: Record<string, PropertyColumnConfig> = {
   suborder_id: {
-    render: ({ cell, data }) =>
-      h(
+    width: 180,
+    render: ({ cell, data }) => {
+      const linkVNode = h(
         Button,
         {
           text: true,
@@ -43,12 +47,28 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           onClick() {
             routerAction.open({
               name: 'ApplicationsManage',
-              query: { [GLOBAL_BIZS_KEY]: data.bk_biz_id, type: 'host_apply' },
+              query: {
+                [GLOBAL_BIZS_KEY]: data.bk_biz_id,
+                type: 'host_apply',
+                initial_filter: qs.stringify(
+                  { orderId: [data.order_id] },
+                  { arrayFormat: 'brackets', encode: false, allowEmptyArrays: true },
+                ),
+              },
             });
           },
         },
         cell,
-      ),
+      );
+
+      if (rollingServerStore.resPollBusinessIds.includes(data.bk_biz_id)) {
+        return h('div', { class: 'flex-row justify-content-between' }, [
+          linkVNode,
+          h(Tag, { theme: 'success' }, '资源池业务'),
+        ]);
+      }
+      return linkVNode;
+    },
   },
   bk_biz_id: {},
   created_at: { width: 180 },
@@ -77,11 +97,11 @@ const { settings } = useTableSettings(renderColumns.value);
       <ul class="summary">
         <li class="item">
           <div class="label">总交付（CPU核数）：</div>
-          <display-value class="value" :property="{ type: 'number' }" :value="summaryInfo?.sum_delivered_core" />
+          <div class="value">{{ summaryInfo?.sum_delivered_core ?? '--' }}</div>
         </li>
         <li class="item">
           <div class="label">总返还（CPU核数）：</div>
-          <display-value class="value" :property="{ type: 'number' }" :value="summaryInfo?.sum_returned_applied_core" />
+          <div class="value">{{ summaryInfo?.sum_returned_applied_core ?? '--' }}</div>
         </li>
       </ul>
     </div>
