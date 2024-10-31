@@ -1,3 +1,4 @@
+import dayjs from 'dayjs';
 import { ModelProperty } from '@/model/typings';
 import { quotaAdjustTypeNames } from '@/views/rolling-server/constants';
 
@@ -9,8 +10,8 @@ export default [
     meta: {
       search: {
         format(value: Date | string) {
-          const date = new Date(value);
-          return `${date.getFullYear()}-${date.getMonth() + 1}`;
+          const date = dayjs(value);
+          return date.format('YYYY-MM');
         },
       },
     },

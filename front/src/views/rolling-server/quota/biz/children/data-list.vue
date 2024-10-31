@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
+import { getTableNewRowClass } from '@/common/util';
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
 import quotaBizViewProperties from '@/model/rolling-server/quota-biz.view';
@@ -18,7 +19,12 @@ const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
 const columnConfig: Record<string, PropertyColumnConfig> = {
   bk_biz_name: {},
-  quota: { width: 120, align: 'right', sort: true },
+  quota: {
+    width: 120,
+    align: 'right',
+    sort: true,
+    render: ({ cell }: { cell?: IRollingServerBizQuotaItem['quota'] }) => cell ?? '--',
+  },
   adjust_type: { width: 220 },
   quota_offset: {
     width: 120,
@@ -34,7 +40,10 @@ const columnConfig: Record<string, PropertyColumnConfig> = {
     width: 200,
     align: 'right',
     render: ({ data }: { data?: IRollingServerBizQuotaItem }) => {
-      return data.quota + (data.quota_offset ?? 0) * (data.adjust_type === QuotaAdjustType.INCREASE ? 1 : -1);
+      if (data.quota) {
+        return data.quota + (data.quota_offset ?? 0) * (data.adjust_type === QuotaAdjustType.INCREASE ? 1 : -1);
+      }
+      return '--';
     },
   },
   updated_at: {},
@@ -54,11 +63,13 @@ const { settings } = useTableSettings(columns);
 
 <template>
   <bk-table
+    class="biz-quota-list"
     row-hover="auto"
     :data="list"
     :pagination="pagination"
     :max-height="'calc(100vh - 424px)'"
     :settings="settings"
+    :row-class="getTableNewRowClass"
     remote-pagination
     show-overflow-tooltip
     @page-limit-change="handlePageSizeChange"
@@ -95,5 +106,12 @@ const { settings } = useTableSettings(columns);
 .actions {
   display: flex;
   gap: 12px;
+}
+.biz-quota-list {
+  :deep(.table-new-row) {
+    td {
+      background-color: #f2fff4 !important;
+    }
+  }
 }
 </style>

@@ -48,7 +48,7 @@ watch(
     quotaList.value = list;
 
     // 设置页码总条数
-    pagination.count = count ?? 1;
+    pagination.count = count;
   },
   {
     immediate: true,

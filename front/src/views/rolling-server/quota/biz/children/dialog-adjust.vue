@@ -28,7 +28,9 @@ const formData = reactive({
   quota: isCurrentMonth.value ? props.dataRow.quota : undefined,
   adjust_type: isCurrentMonth.value ? props.dataRow.adjust_type ?? QuotaAdjustType.INCREASE : QuotaAdjustType.INCREASE,
   quota_offset: undefined,
-  adjust_month: isCurrentMonth.value ? [new Date(), new Date()] : [],
+  adjust_month: isCurrentMonth.value
+    ? [new Date(props.dataRow.year, props.dataRow.month - 1), new Date(props.dataRow.year, props.dataRow.month - 1)]
+    : [],
 });
 
 const disabledDate = (date: Date) => {
@@ -71,7 +73,7 @@ const handleDialogConfirm = async () => {
       <bk-form-item label="业务" property="bk_biz_ids">
         <hcm-form-business v-model="formData.bk_biz_ids" disabled />
       </bk-form-item>
-      <bk-form-item label="基础额度" property="bk_biz_ids">
+      <bk-form-item label="基础额度" property="bk_biz_ids" v-if="formData.quota !== null">
         <hcm-form-number v-model="formData.quota" disabled />
       </bk-form-item>
       <bk-form-item label="调整额度" class="compose-form-item">
@@ -87,7 +89,7 @@ const handleDialogConfirm = async () => {
           />
         </bk-form-item>
       </bk-form-item>
-      <bk-form-item label="调整后额度">
+      <bk-form-item label="调整后额度" v-if="formData.quota !== null">
         <div class="adjust-after">
           {{
             formData.quota_offset

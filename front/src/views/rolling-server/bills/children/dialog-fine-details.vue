@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { h, ref, watchEffect } from 'vue';
+import qs from 'qs';
 import { Button } from 'bkui-vue';
 import type { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import {
@@ -7,6 +8,7 @@ import {
   type IRollingServerBillItem,
   type IFineDetailsItem,
 } from '@/store/rolling-server-bills';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import usePage from '@/hooks/use-page';
 import routerAction from '@/router/utils/action';
 import billsDetailsViewProperties from '@/model/rolling-server/bills-details.view';
@@ -33,7 +35,17 @@ const columnConfig: Record<string, PropertyColumnConfig> = {
           text: true,
           theme: 'primary',
           onClick() {
-            routerAction.open({ name: 'ApplicationsManage' });
+            routerAction.open({
+              name: 'ApplicationsManage',
+              query: {
+                [GLOBAL_BIZS_KEY]: data.bk_biz_id,
+                type: 'host_apply',
+                initial_filter: qs.stringify(
+                  { orderId: [data.order_id] },
+                  { arrayFormat: 'brackets', encode: false, allowEmptyArrays: true },
+                ),
+              },
+            });
           },
         },
         data.suborder_id,
