@@ -321,7 +321,7 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 	}
 
 	for _, apply := range appliedRecords {
-		key := getFineDetailUniqueKey(apply.Year, apply.Month, apply.Day, apply.ID)
+		key := getFineDetailUniqueKey(req.Year, req.Month, req.Day, apply.ID)
 		if _, ok := existFineDetailMap[key]; ok {
 			logs.Infof("rolling fine detail exist, key: %s, bizID: %d, rid: %s", key, req.BkBizID, kt.Rid)
 			continue
