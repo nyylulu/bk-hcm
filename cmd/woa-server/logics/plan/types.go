@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	ptypes "hcm/cmd/woa-server/types/plan"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
@@ -64,7 +64,7 @@ type TicketInfo struct {
 type CreateResPlanTicketReq struct {
 	TicketType  enumor.RPTicketType `json:"ticket_type" validate:"required"`
 	DemandClass enumor.DemandClass  `json:"demand_class" validate:"required"`
-	BizOrgRel   ptypes.BizOrgRel    `json:"biz_org_rel" validate:"required"`
+	BizOrgRel   mtypes.BizOrgRel    `json:"biz_org_rel" validate:"required"`
 	Demands     rpt.ResPlanDemands  `json:"demands" validate:"required"`
 	Remark      string              `json:"remark" validate:"omitempty"`
 }

@@ -243,6 +243,8 @@ const (
 	RollingQuotaConfigTable = "rolling_quota_config"
 	// RollingQuotaOffsetTable 滚服额度偏移表
 	RollingQuotaOffsetTable = "rolling_quota_offset"
+	// RollingQuotaOffsetAuditTable 滚服额度偏移审计表
+	RollingQuotaOffsetAuditTable = "rolling_quota_offset_audit"
 	// RollingGlobalConfigTable 滚服全局额度表
 	RollingGlobalConfigTable = "rolling_global_config"
 	// ResourcePoolBusinessTable 资源池业务表
@@ -375,10 +377,11 @@ var TableMap = map[Name]struct{}{
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
 
-	RollingQuotaConfigTable:   {},
-	RollingQuotaOffsetTable:   {},
-	RollingGlobalConfigTable:  {},
-	ResourcePoolBusinessTable: {},
+	RollingQuotaConfigTable:      {},
+	RollingQuotaOffsetTable:      {},
+	RollingQuotaOffsetAuditTable: {},
+	RollingGlobalConfigTable:     {},
+	ResourcePoolBusinessTable:    {},
 
 	RollingAppliedRecordTable:  {},
 	RollingReturnedRecordTable: {},

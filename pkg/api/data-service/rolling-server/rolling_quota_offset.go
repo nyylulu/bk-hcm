@@ -53,7 +53,7 @@ type RollingQuotaOffsetCreate struct {
 	BkBizName   string `json:"bk_biz_name" validate:"required"`
 	Year        int64  `json:"year" validate:"required"`
 	Month       int64  `json:"month" validate:"required"`
-	QuotaOffset int64  `json:"quota_offset" validate:"required"`
+	QuotaOffset *int64 `json:"quota_offset" validate:"required"`
 }
 
 // Validate validate

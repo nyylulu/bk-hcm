@@ -43,7 +43,7 @@ create table if not exists `rolling_quota_config`
     `created_at`  timestamp   not null default current_timestamp comment '该记录的创建时间',
     `updated_at`  timestamp   not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
-    unique key `idx_uk_bk_biz_id_year_month` (`bk_biz_id`, `year`, `month`)
+    unique key `idx_uk_year_month_bk_biz_id` (`year`, `month`, `bk_biz_id`)
 ) engine = innodb
   default charset = utf8mb4 comment '滚服基础额度配置表';
 
@@ -61,7 +61,8 @@ create table if not exists `rolling_quota_offset`
     `created_at`   timestamp   not null default current_timestamp comment '该记录的创建时间',
     `updated_at`   timestamp   not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
-    unique key `idx_uk_bk_biz_id_year_month` (`bk_biz_id`, `year`, `month`)
+    unique key `idx_uk_year_month_bk_biz_id` (`year`, `month`, `bk_biz_id`),
+    key `idx_reviser` (`reviser`)
 ) engine = innodb
   default charset = utf8mb4 comment '滚服配额偏移表';
 

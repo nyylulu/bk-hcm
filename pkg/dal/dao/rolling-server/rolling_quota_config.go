@@ -45,6 +45,9 @@ type RollingQuotaConfigInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingQuotaConfigTable) ([]string, error)
 	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.RollingQuotaConfigTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingQuotaConfigListResult, error)
+	ListWithQuotaOffset(kt *kit.Kit, extraOpt *types.ListOption, bkBizIDs []int64, revisers []string,
+		year, month int64, displayNullOffset bool) (
+		*rsproto.RollingQuotaConfigListWithOffsetResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
@@ -171,6 +174,84 @@ func (d RollingQuotaConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rsprot
 	}
 
 	return &rsproto.RollingQuotaConfigListResult{Count: 0, Details: details}, nil
+}
+
+// ListWithQuotaOffset list rolling quota config with quota offset.
+func (d RollingQuotaConfigDao) ListWithQuotaOffset(kt *kit.Kit, extraOpt *types.ListOption, bkBizIDs []int64,
+	revisers []string, year, month int64, displayNullOffset bool) (
+	*rsproto.RollingQuotaConfigListWithOffsetResult, error) {
+
+	if year == 0 || month == 0 {
+		return nil, errf.New(errf.InvalidParameter, "year and month is required")
+	}
+
+	whereValue := make(map[string]interface{})
+
+	sql := fmt.Sprintf(`FROM %s AS cfg LEFT JOIN %s AS off 
+              ON cfg.bk_biz_id = off.bk_biz_id AND cfg.year = off.year AND cfg.month = off.month
+              WHERE cfg.year = :opt_year AND cfg.month = :opt_month`,
+		table.RollingQuotaConfigTable, table.RollingQuotaOffsetTable)
+	whereValue["opt_year"] = year
+	whereValue["opt_month"] = month
+
+	extraWhereExpr, extraWhereValue, err := extraOpt.Filter.SQLExprAndValue(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+	for k, v := range extraWhereValue {
+		whereValue[k] = v
+	}
+	if extraWhereExpr != "()" {
+		sql += " AND " + extraWhereExpr
+	}
+
+	if len(bkBizIDs) > 0 {
+		sql += " AND cfg.bk_biz_id in (:opt_bk_biz_ids)"
+		whereValue["opt_bk_biz_ids"] = bkBizIDs
+	}
+
+	if len(revisers) > 0 {
+		sql += " AND off.reviser in (:opt_revisers)"
+		whereValue["opt_revisers"] = revisers
+	}
+
+	// 把offset null数据排除
+	if !displayNullOffset {
+		sql += " AND off.id IS NOT NULL"
+	}
+
+	if extraOpt.Page.Count {
+		// this is a count request, then do count operation only.
+		sql := fmt.Sprintf(`SELECT COUNT(*) %s`, sql)
+
+		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.ErrorJson("count quota config with quota offset failed, err: %v, sql: (%s), rid: %s", err, sql, kt.Rid)
+			return nil, err
+		}
+
+		return &rsproto.RollingQuotaConfigListWithOffsetResult{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(extraOpt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	sql = fmt.Sprintf(`SELECT cfg.id, cfg.bk_biz_id, cfg.bk_biz_name, cfg.year, cfg.month, cfg.quota, 
+                              cfg.creator, cfg.reviser, cfg.created_at, cfg.updated_at,
+                              IFNULL(off.id, "") AS offset_config_id, IFNULL(off.quota_offset, 0) AS quota_offset,
+                              IFNULL(off.creator, "") AS offset_creator, IFNULL(off.reviser, "") AS offset_reviser, 
+                              off.created_at AS offset_created_at, off.updated_at AS offset_updated_at %s %s`,
+		sql, pageExpr)
+
+	details := make([]rsproto.QuotaConfigWithOffset, 0)
+	if err := d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		logs.ErrorJson("list quota config with quota offset failed, err: %v, sql: (%s), rid: %s", err, sql, kt.Rid)
+		return nil, err
+	}
+
+	return &rsproto.RollingQuotaConfigListWithOffsetResult{Details: details}, nil
 }
 
 // DeleteWithTx delete rolling quota config with tx.

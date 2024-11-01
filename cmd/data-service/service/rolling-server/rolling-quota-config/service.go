@@ -40,6 +40,8 @@ func InitService(cap *capability.Capability) {
 		svc.DeleteRollingQuotaConfig)
 	h.Add("ListRollingQuotaConfig", http.MethodPost, "/rolling_servers/quota_configs/list",
 		svc.ListRollingQuotaConfig)
+	h.Add("ListQuotaConfigWithOffset", http.MethodPost, "/rolling_servers/quota_offset_configs/list",
+		svc.ListRollingQuotaConfigWithOffset)
 	h.Add("BatchUpdateRollingQuotaConfig", http.MethodPatch, "/rolling_servers/quota_configs/batch",
 		svc.BatchUpdateRollingQuotaConfig)
 

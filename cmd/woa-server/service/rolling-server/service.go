@@ -58,6 +58,24 @@ type service struct {
 
 // initService 资源下的接口
 func (s *service) initService(h *rest.Handler) {
+	// 资源池
+	h.Add("CreateResourcePoolBiz", http.MethodPost, "/respool_bizs/batch/create", s.CreateResourcePoolBiz)
+	h.Add("ListResourcePoolBiz", http.MethodPost, "/respool_bizs/list", s.ListResourcePoolBiz)
+	h.Add("DeleteResourcePoolBiz", http.MethodDelete, "/respool_biz/{id}", s.DeleteResourcePoolBiz)
+
+	// 全局配额
+	h.Add("CreateGlobalQuotaConfigs", http.MethodPost, "/global_configs/batch/create", s.CreateGlobalQuotaConfigs)
+	h.Add("GetGlobalQuotaConfigs", http.MethodGet, "/global_config", s.GetGlobalQuotaConfigs)
+	h.Add("DeleteGlobalQuotaConfig", http.MethodDelete, "/global_config/{id}", s.DeleteGlobalQuotaConfig)
+
+	// 业务滚服配额
+	h.Add("AdjustQuotaOffsets", http.MethodPatch, "/quota_offsets/batch", s.AdjustQuotaOffsets)
+	h.Add("CreateBizQuotaConfigs", http.MethodPost, "/biz_quotas/batch/create", s.CreateBizQuotaConfigs)
+	h.Add("ListBizsWithExistQuota", http.MethodPost, "/exist_quota_bizs/list", s.ListBizsWithExistQuota)
+	h.Add("ListBizQuotaConfigs", http.MethodPost, "/biz_quotas/list", s.ListBizQuotaConfigs)
+	h.Add("ListQuotaOffsetsAdjustRecords", http.MethodPost, "/quota_offsets/adjust_records/list",
+		s.ListQuotaOffsetsAdjustRecords)
+
 	h.Add("ListAppliedRecords", http.MethodPost, "/applied_records/list", s.ListAppliedRecords)
 	h.Add("ListReturnedRecords", http.MethodPost, "/returned_records/list", s.ListReturnedRecords)
 	h.Add("GetCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetCpuCoreSummary)

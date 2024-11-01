@@ -64,3 +64,24 @@ func (t ReturnedWay) Validate() error {
 
 	return nil
 }
+
+// QuotaOffsetAdjustType is quota offset adjust type.
+type QuotaOffsetAdjustType string
+
+const (
+	// IncreaseOffsetAdjustType is increase quota offset adjust type.
+	IncreaseOffsetAdjustType QuotaOffsetAdjustType = "increase"
+	// DecreaseOffsetAdjustType is decrease quota offset adjust type.
+	DecreaseOffsetAdjustType QuotaOffsetAdjustType = "decrease"
+)
+
+// Validate QuotaOffsetAdjustType
+func (q QuotaOffsetAdjustType) Validate() error {
+	switch q {
+	case IncreaseOffsetAdjustType, DecreaseOffsetAdjustType:
+	default:
+		return fmt.Errorf("unsupported quota offset adjust type: %s", q)
+	}
+
+	return nil
+}

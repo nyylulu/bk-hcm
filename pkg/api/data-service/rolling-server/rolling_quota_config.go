@@ -21,9 +21,12 @@
 package rollingserver
 
 import (
+	"errors"
+
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/validator"
 	tablers "hcm/pkg/dal/table/rolling-server"
+	"hcm/pkg/dal/table/types"
 	"hcm/pkg/runtime/filter"
 )
 
@@ -53,7 +56,7 @@ type RollingQuotaConfigCreate struct {
 	BkBizName string `json:"bk_biz_name" validate:"required"`
 	Year      int64  `json:"year" validate:"required"`
 	Month     int64  `json:"month" validate:"required"`
-	Quota     int64  `json:"quota" validate:"required"`
+	Quota     *int64 `json:"quota" validate:"required"`
 }
 
 // Validate validate
@@ -65,6 +68,62 @@ func (r *RollingQuotaConfigCreate) Validate() error {
 type RollingQuotaConfigListResult struct {
 	Count   uint64                            `json:"count"`
 	Details []tablers.RollingQuotaConfigTable `json:"details"`
+}
+
+// RollingQuotaConfigListWithOffsetResult list rolling quota config with quota offset result.
+type RollingQuotaConfigListWithOffsetResult struct {
+	Count   uint64                  `json:"count"`
+	Details []QuotaConfigWithOffset `json:"details"`
+}
+
+// QuotaConfigWithOffset ...
+type QuotaConfigWithOffset struct {
+	ID        string     `db:"id" json:"id" validate:"lte=64"`
+	BkBizID   int64      `db:"bk_biz_id" json:"bk_biz_id"`
+	BkBizName string     `db:"bk_biz_name" json:"bk_biz_name" validate:"lte=64"`
+	Year      int64      `db:"year" json:"year"`
+	Month     int64      `db:"month" json:"month"`
+	Quota     *int64     `db:"quota" json:"quota"`
+	Creator   string     `db:"creator" json:"creator"`
+	Reviser   string     `db:"reviser" json:"reviser"`
+	CreatedAt types.Time `db:"created_at" json:"created_at"`
+	UpdatedAt types.Time `db:"updated_at" json:"updated_at"`
+
+	OffsetConfigID  string     `db:"offset_config_id" json:"offset_config_id"`
+	QuotaOffset     *int64     `db:"quota_offset" json:"quota_offset"`
+	OffsetCreator   string     `db:"offset_creator" json:"offset_creator"`
+	OffsetReviser   string     `db:"offset_reviser" json:"offset_reviser"`
+	OffsetCreatedAt types.Time `db:"offset_created_at" json:"offset_created_at"`
+	OffsetUpdatedAt types.Time `db:"offset_updated_at" json:"offset_updated_at"`
+}
+
+// RollingQuotaConfigListWithOffsetReq list request
+type RollingQuotaConfigListWithOffsetReq struct {
+	ExtraOpt          RollingQuotaConfigListReq `json:"extra_opt" validate:"required"`
+	BkBizIDs          []int64                   `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	Revisers          []string                  `json:"revisers" validate:"omitempty,max=100"`
+	Year              int64                     `json:"year" validate:"required"`
+	Month             int64                     `json:"month" validate:"required"`
+	DisplayNullOffset *bool                     `json:"display_null_offset" validate:"required"`
+}
+
+// Validate validate
+func (r *RollingQuotaConfigListWithOffsetReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if err := r.ExtraOpt.Validate(); err != nil {
+		return err
+	}
+
+	for _, id := range r.BkBizIDs {
+		if id <= 0 {
+			return errors.New("bk biz id should be > 0")
+		}
+	}
+
+	return nil
 }
 
 // RollingQuotaConfigListReq list request

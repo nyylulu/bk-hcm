@@ -51,7 +51,7 @@ func (svc *service) BatchCreateRollingQuotaOffset(cts *rest.Contexts) (interface
 				BkBizName:   item.BkBizName,
 				Year:        item.Year,
 				Month:       item.Month,
-				QuotaOffset: &item.QuotaOffset,
+				QuotaOffset: item.QuotaOffset,
 				Creator:     cts.Kit.User,
 				Reviser:     cts.Kit.User,
 			}

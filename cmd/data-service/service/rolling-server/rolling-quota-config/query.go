@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/rest"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // ListRollingQuotaConfig list rolling quota config
@@ -44,4 +45,23 @@ func (svc *service) ListRollingQuotaConfig(cts *rest.Contexts) (interface{}, err
 	}
 
 	return svc.dao.RollingQuotaConfig().List(cts.Kit, opt)
+}
+
+func (svc *service) ListRollingQuotaConfigWithOffset(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.RollingQuotaConfigListWithOffsetReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	extraOpt := &types.ListOption{
+		Filter: req.ExtraOpt.Filter,
+		Page:   req.ExtraOpt.Page,
+		Fields: req.ExtraOpt.Fields,
+	}
+
+	return svc.dao.RollingQuotaConfig().ListWithQuotaOffset(cts.Kit, extraOpt, req.BkBizIDs, req.Revisers, req.Year,
+		req.Month, cvt.PtrToVal(req.DisplayNullOffset))
 }

@@ -135,8 +135,10 @@ func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rspro
 		return nil, errf.New(errf.InvalidParameter, "list rolling global config options is nil")
 	}
 
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablers.RollingGlobalConfigColumns.ColumnTypes())),
-		core.NewDefaultPageOption()); err != nil {
+	if err := opt.ValidateExcludeFilter(
+		filter.NewExprOption(filter.RuleFields(tablers.RollingGlobalConfigColumns.ColumnTypes())),
+		core.NewDefaultPageOption(),
+	); err != nil {
 		return nil, err
 	}
 

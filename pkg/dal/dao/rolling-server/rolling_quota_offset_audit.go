@@ -17,7 +17,6 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
 package rollingserver
 
 import (
@@ -40,24 +39,25 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// ResourcePoolBusinessInterface only used for resource pool business interface.
-type ResourcePoolBusinessInterface interface {
-	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.ResourcePoolBusinessTable) ([]string, error)
-	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.ResourcePoolBusinessTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.ResourcePoolBusinessListResult, error)
+// RollingQuotaOffsetAuditInterface only used for rolling quota offset audit interface.
+type RollingQuotaOffsetAuditInterface interface {
+	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingQuotaOffsetAuditTable) ([]string, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.RollingQuotaOffsetAuditTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.QuotaOffsetAuditListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 }
 
-var _ ResourcePoolBusinessInterface = new(ResourcePoolBusinessDao)
+var _ RollingQuotaOffsetAuditInterface = new(RollingQuotaOffsetAuditDao)
 
-// ResourcePoolBusinessDao resource pool business ResourcePoolBusinessDao.
-type ResourcePoolBusinessDao struct {
+// RollingQuotaOffsetAuditDao rolling quota offset RollingQuotaOffsetAuditDao.
+type RollingQuotaOffsetAuditDao struct {
 	Orm   orm.Interface
 	IDGen idgenerator.IDGenInterface
 }
 
-// CreateWithTx create resource pool business with tx.
-func (d ResourcePoolBusinessDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.ResourcePoolBusinessTable) (
+// CreateWithTx create rolling quota offset with tx.
+func (d RollingQuotaOffsetAuditDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx,
+	models []tablers.RollingQuotaOffsetAuditTable) (
 	[]string, error) {
 
 	if len(models) == 0 {
@@ -78,7 +78,7 @@ func (d ResourcePoolBusinessDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models [
 	}
 
 	sql := fmt.Sprintf(`INSERT INTO %s (%s)	VALUES(%s)`, models[0].TableName(),
-		tablers.ResourcePoolBusinessColumns.ColumnExpr(), tablers.ResourcePoolBusinessColumns.ColonNameExpr())
+		tablers.RollingQuotaOffsetAuditColumns.ColumnExpr(), tablers.RollingQuotaOffsetAuditColumns.ColonNameExpr())
 
 	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
 		logs.Errorf("insert %s failed, err: %v, rid: %s", models[0].TableName(), err, kt.Rid)
@@ -88,9 +88,9 @@ func (d ResourcePoolBusinessDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models [
 	return ids, nil
 }
 
-// UpdateWithTx update resource pool business.
-func (d ResourcePoolBusinessDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
-	model *tablers.ResourcePoolBusinessTable) error {
+// UpdateWithTx update rolling quota offset.
+func (d RollingQuotaOffsetAuditDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
+	model *tablers.RollingQuotaOffsetAuditTable) error {
 
 	if filterExpr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is nil")
@@ -115,30 +115,29 @@ func (d ResourcePoolBusinessDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterEx
 
 	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
-		logs.ErrorJson("update resource pool business failed, filter: %v, err: %v, rid: %v",
+		logs.ErrorJson("update rolling quota offset audit failed, filter: %v, err: %v, rid: %v",
 			filterExpr, err, kt.Rid)
 		return err
 	}
 
 	if effected == 0 {
-		logs.ErrorJson("update resource pool business, but record not found, filter: %v, rid: %v",
+		logs.ErrorJson("update rolling quota offset audit, but record not found, filter: %v, rid: %v",
 			filterExpr, kt.Rid)
 	}
 
 	return nil
 }
 
-// List get resource pool business list.
-func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rsproto.ResourcePoolBusinessListResult,
-	error) {
+// List get rolling quota offset audit list.
+func (d RollingQuotaOffsetAuditDao) List(kt *kit.Kit, opt *types.ListOption) (
+	*rsproto.QuotaOffsetAuditListResult, error) {
+
 	if opt == nil {
-		return nil, errf.New(errf.InvalidParameter, "list resource pool business options is nil")
+		return nil, errf.New(errf.InvalidParameter, "list rolling quota offset audit options is nil")
 	}
 
-	if err := opt.ValidateExcludeFilter(
-		filter.NewExprOption(filter.RuleFields(tablers.ResourcePoolBusinessColumns.ColumnTypes())),
-		core.NewDefaultPageOption(),
-	); err != nil {
+	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(tablers.RollingQuotaOffsetAuditColumns.ColumnTypes())),
+		core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}
 
@@ -149,15 +148,16 @@ func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rspr
 
 	if opt.Page.Count {
 		// this is a count request, then do count operation only.
-		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.ResourcePoolBusinessTable, whereExpr)
+		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.RollingQuotaOffsetAuditTable, whereExpr)
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count resource pool business failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count rolling quota offset audit failed, err: %v, filter: %v, rid: %s", err, opt.Filter,
+				kt.Rid)
 			return nil, err
 		}
 
-		return &rsproto.ResourcePoolBusinessListResult{Count: count}, nil
+		return &rsproto.QuotaOffsetAuditListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -165,19 +165,19 @@ func (d ResourcePoolBusinessDao) List(kt *kit.Kit, opt *types.ListOption) (*rspr
 		return nil, err
 	}
 
-	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`, tablers.ResourcePoolBusinessColumns.FieldsNamedExpr(opt.Fields),
-		table.ResourcePoolBusinessTable, whereExpr, pageExpr)
+	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`, tablers.RollingQuotaOffsetAuditColumns.FieldsNamedExpr(opt.Fields),
+		table.RollingQuotaOffsetAuditTable, whereExpr, pageExpr)
 
-	details := make([]tablers.ResourcePoolBusinessTable, 0)
+	details := make([]tablers.RollingQuotaOffsetAuditTable, 0)
 	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
 		return nil, err
 	}
 
-	return &rsproto.ResourcePoolBusinessListResult{Count: 0, Details: details}, nil
+	return &rsproto.QuotaOffsetAuditListResult{Count: 0, Details: details}, nil
 }
 
-// DeleteWithTx delete resource pool business with tx.
-func (d ResourcePoolBusinessDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error {
+// DeleteWithTx delete rolling quota offset with tx.
+func (d RollingQuotaOffsetAuditDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error {
 	if expr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is required")
 	}
@@ -187,10 +187,10 @@ func (d ResourcePoolBusinessDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *fi
 		return err
 	}
 
-	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResourcePoolBusinessTable, whereExpr)
+	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.RollingQuotaOffsetAuditTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete resource pool business failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete rolling quota offset audit failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 

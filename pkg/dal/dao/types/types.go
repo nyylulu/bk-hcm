@@ -68,6 +68,32 @@ func (opt ListOption) Validate(eo *filter.ExprOption, po *core.PageOption) error
 	return nil
 }
 
+// ValidateExcludeFilter validate list option, Filter is allowed to be empty.
+func (opt ListOption) ValidateExcludeFilter(eo *filter.ExprOption, po *core.PageOption) error {
+	if opt.Filter != nil {
+		if eo == nil {
+			return errf.New(errf.InvalidParameter, "filter expr option is required")
+		}
+		if err := opt.Filter.Validate(eo); err != nil {
+			return err
+		}
+	}
+
+	if opt.Page == nil {
+		return errf.New(errf.InvalidParameter, "page is required")
+	}
+
+	if po == nil {
+		return errf.New(errf.InvalidParameter, "page option is required")
+	}
+
+	if err := opt.Page.Validate(po); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // CountOption defines options to count resources.
 type CountOption struct {
 	Filter  *filter.Expression

@@ -17,23 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+// Package quotaoffsetaudit ...
+package quotaoffsetaudit
 
 import (
-	"hcm/cmd/data-service/service/capability"
-	resourcepoolbusiness "hcm/cmd/data-service/service/rolling-server/resource-pool-business"
-	rollingglobalconfig "hcm/cmd/data-service/service/rolling-server/rolling-global-config"
-	rollingquotaconfig "hcm/cmd/data-service/service/rolling-server/rolling-quota-config"
-	rollingquotaoffset "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset"
-	quotaoffsetaudit "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset-audit"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the security group service
-func InitService(cap *capability.Capability) {
-	rollingquotaconfig.InitService(cap)
-	rollingquotaoffset.InitService(cap)
-	quotaoffsetaudit.InitService(cap)
-	rollingglobalconfig.InitService(cap)
-	resourcepoolbusiness.InitService(cap)
+// ListQuotaOffsetAudit list rolling quota offset audit
+func (svc *service) ListQuotaOffsetAudit(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.QuotaOffsetAuditListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	return svc.dao.RollingQuotaOffsetAudit().List(cts.Kit, opt)
 }

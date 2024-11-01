@@ -114,6 +114,13 @@ func (b *RollingServerClient) ListQuotaConfig(kt *kit.Kit, req *rsproto.RollingQ
 		b.client, rest.POST, kt, req, "/rolling_servers/quota_configs/list")
 }
 
+func (b *RollingServerClient) ListQuotaConfigWithOffset(kt *kit.Kit, req *rsproto.RollingQuotaConfigListWithOffsetReq) (
+	*rsproto.RollingQuotaConfigListWithOffsetResult, error) {
+
+	return common.Request[rsproto.RollingQuotaConfigListWithOffsetReq, rsproto.RollingQuotaConfigListWithOffsetResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_offset_configs/list")
+}
+
 // BatchCreateQuotaConfig batch create quota config
 func (b *RollingServerClient) BatchCreateQuotaConfig(kt *kit.Kit, req *rsproto.RollingQuotaConfigCreateReq) (
 	*core.BatchCreateResult, error) {
@@ -166,6 +173,38 @@ func (b *RollingServerClient) BatchUpdateQuotaOffset(kt *kit.Kit,
 func (b *RollingServerClient) DeleteQuotaOffset(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/rolling_servers/quota_offsets/batch")
+}
+
+// --- rolling quota offset audit ---
+
+// ListQuotaOffsetAudit list quota offset audit
+func (b *RollingServerClient) ListQuotaOffsetAudit(kt *kit.Kit, req *rsproto.QuotaOffsetAuditListReq) (
+	*rsproto.QuotaOffsetAuditListResult, error) {
+
+	return common.Request[rsproto.QuotaOffsetAuditListReq, rsproto.QuotaOffsetAuditListResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_offsets/audit/list")
+}
+
+// BatchCreateQuotaOffsetAudit batch create quota offset audit
+func (b *RollingServerClient) BatchCreateQuotaOffsetAudit(kt *kit.Kit, req *rsproto.QuotaOffsetAuditCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rsproto.QuotaOffsetAuditCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/rolling_servers/quota_offsets/audit/batch/create")
+}
+
+// BatchUpdateQuotaOffsetAudit update quota offset audit
+func (b *RollingServerClient) BatchUpdateQuotaOffsetAudit(kt *kit.Kit,
+	req *rsproto.QuotaOffsetAuditBatchUpdateReq) error {
+
+	return common.RequestNoResp[rsproto.QuotaOffsetAuditBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/rolling_servers/quota_offsets/audit/batch")
+}
+
+// DeleteQuotaOffsetAudit delete quota offset audit
+func (b *RollingServerClient) DeleteQuotaOffsetAudit(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/rolling_servers/quota_offsets/audit/batch")
 }
 
 // --- rolling applied record ---

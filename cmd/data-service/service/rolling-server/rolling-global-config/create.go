@@ -48,8 +48,8 @@ func (svc *service) BatchCreateRollingGlobalConfig(cts *rest.Contexts) (interfac
 		models := make([]tablers.RollingGlobalConfigTable, len(req.GlobalConfigs))
 		for idx, item := range req.GlobalConfigs {
 			models[idx] = tablers.RollingGlobalConfigTable{
-				GlobalQuota: &item.GlobalQuota,
-				BizQuota:    &item.BizQuota,
+				GlobalQuota: item.GlobalQuota,
+				BizQuota:    item.BizQuota,
 				UnitPrice:   &types.Decimal{Decimal: item.UnitPrice},
 				Creator:     cts.Kit.User,
 				Reviser:     cts.Kit.User,

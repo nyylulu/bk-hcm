@@ -17,7 +17,6 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
 package rollingserver
 
 import (
@@ -25,22 +24,20 @@ import (
 	"hcm/pkg/criteria/validator"
 	tablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/runtime/filter"
-
-	"github.com/shopspring/decimal"
 )
 
-// RollingGlobalConfigCreateReq create request
-type RollingGlobalConfigCreateReq struct {
-	GlobalConfigs []RollingGlobalConfigCreate `json:"global_configs" validate:"required,max=1"`
+// QuotaOffsetAuditCreateReq create request
+type QuotaOffsetAuditCreateReq struct {
+	QuotaOffsetsAudit []QuotaOffsetAuditCreate `json:"quota_offsets_audit" validate:"required,max=100"`
 }
 
 // Validate validate
-func (r *RollingGlobalConfigCreateReq) Validate() error {
+func (r *QuotaOffsetAuditCreateReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
 	}
 
-	for _, c := range r.GlobalConfigs {
+	for _, c := range r.QuotaOffsetsAudit {
 		if err := c.Validate(); err != nil {
 			return err
 		}
@@ -49,48 +46,50 @@ func (r *RollingGlobalConfigCreateReq) Validate() error {
 	return nil
 }
 
-// RollingGlobalConfigCreate create request
-type RollingGlobalConfigCreate struct {
-	GlobalQuota *int64          `json:"global_quota" validate:"required"`
-	BizQuota    *int64          `json:"biz_quota" validate:"required"`
-	UnitPrice   decimal.Decimal `json:"unit_price" validate:"required"`
+// QuotaOffsetAuditCreate create request
+type QuotaOffsetAuditCreate struct {
+	OffsetConfigID string `json:"offset_config_id" validate:"required"`
+	Operator       string `json:"operator" validate:"required"`
+	QuotaOffset    *int64 `json:"quota_offset" validate:"required"`
+	Rid            string `json:"rid" validate:"required"`
+	AppCode        string `json:"app_code" validate:"omitempty"`
 }
 
 // Validate validate
-func (r *RollingGlobalConfigCreate) Validate() error {
+func (r *QuotaOffsetAuditCreate) Validate() error {
 	return validator.Validate.Struct(r)
 }
 
-// RollingGlobalConfigListResult list rolling global config result.
-type RollingGlobalConfigListResult struct {
-	Count   uint64                             `json:"count"`
-	Details []tablers.RollingGlobalConfigTable `json:"details"`
+// QuotaOffsetAuditListResult list rolling quota offset result.
+type QuotaOffsetAuditListResult struct {
+	Count   uint64                                 `json:"count"`
+	Details []tablers.RollingQuotaOffsetAuditTable `json:"details"`
 }
 
-// RollingGlobalConfigListReq list request
-type RollingGlobalConfigListReq struct {
+// QuotaOffsetAuditListReq list request
+type QuotaOffsetAuditListReq struct {
 	Filter *filter.Expression `json:"filter" validate:"required"`
 	Page   *core.BasePage     `json:"page" validate:"required"`
 	Fields []string           `json:"field" validate:"omitempty"`
 }
 
 // Validate validate
-func (r *RollingGlobalConfigListReq) Validate() error {
+func (r *QuotaOffsetAuditListReq) Validate() error {
 	return validator.Validate.Struct(r)
 }
 
-// RollingGlobalConfigBatchUpdateReq batch update request
-type RollingGlobalConfigBatchUpdateReq struct {
-	GlobalConfigs []RollingGlobalConfigUpdateReq `json:"global_configs" validate:"required,max=1"`
+// QuotaOffsetAuditBatchUpdateReq batch update request
+type QuotaOffsetAuditBatchUpdateReq struct {
+	QuotaOffsetsAudit []QuotaOffsetAuditUpdateReq `json:"quota_offsets_audit" validate:"required,max=100"`
 }
 
 // Validate validate
-func (r *RollingGlobalConfigBatchUpdateReq) Validate() error {
+func (r *QuotaOffsetAuditBatchUpdateReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
 	}
 
-	for _, c := range r.GlobalConfigs {
+	for _, c := range r.QuotaOffsetsAudit {
 		if err := c.Validate(); err != nil {
 			return err
 		}
@@ -99,15 +98,17 @@ func (r *RollingGlobalConfigBatchUpdateReq) Validate() error {
 	return nil
 }
 
-// RollingGlobalConfigUpdateReq batch update request
-type RollingGlobalConfigUpdateReq struct {
-	ID          string           `json:"id" validate:"required"`
-	GlobalQuota *int64           `json:"global_quota"`
-	BizQuota    *int64           `json:"biz_quota"`
-	UnitPrice   *decimal.Decimal `json:"unit_price"`
+// QuotaOffsetAuditUpdateReq batch update request
+type QuotaOffsetAuditUpdateReq struct {
+	ID             string `json:"id" validate:"required"`
+	OffsetConfigID string `json:"offset_config_id"`
+	Operator       string `json:"operator"`
+	QuotaOffset    *int64 `json:"quota_offset"`
+	Rid            string `json:"rid"`
+	AppCode        string `json:"app_code"`
 }
 
 // Validate validate
-func (r *RollingGlobalConfigUpdateReq) Validate() error {
+func (r *QuotaOffsetAuditUpdateReq) Validate() error {
 	return validator.Validate.Struct(r)
 }

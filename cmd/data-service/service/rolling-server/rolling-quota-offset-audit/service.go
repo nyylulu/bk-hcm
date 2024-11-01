@@ -17,23 +17,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+// Package quotaoffsetaudit ...
+package quotaoffsetaudit
 
 import (
+	"net/http"
+
 	"hcm/cmd/data-service/service/capability"
-	resourcepoolbusiness "hcm/cmd/data-service/service/rolling-server/resource-pool-business"
-	rollingglobalconfig "hcm/cmd/data-service/service/rolling-server/rolling-global-config"
-	rollingquotaconfig "hcm/cmd/data-service/service/rolling-server/rolling-quota-config"
-	rollingquotaoffset "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset"
-	quotaoffsetaudit "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset-audit"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the security group service
+// InitService initialize service
 func InitService(cap *capability.Capability) {
-	rollingquotaconfig.InitService(cap)
-	rollingquotaoffset.InitService(cap)
-	quotaoffsetaudit.InitService(cap)
-	rollingglobalconfig.InitService(cap)
-	resourcepoolbusiness.InitService(cap)
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateQuotaOffsetAudit", http.MethodPost, "/rolling_servers/quota_offsets/audit/batch/create",
+		svc.BatchCreateQuotaOffsetAudit)
+	h.Add("DeleteQuotaOffsetAudit", http.MethodDelete, "/rolling_servers/quota_offsets/audit/batch",
+		svc.DeleteQuotaOffsetAudit)
+	h.Add("ListQuotaOffsetAudit", http.MethodPost, "/rolling_servers/quota_offsets/audit/list",
+		svc.ListQuotaOffsetAudit)
+	h.Add("BatchUpdateQuotaOffsetAudit", http.MethodPatch, "/rolling_servers/quota_offsets/audit/batch",
+		svc.BatchUpdateQuotaOffsetAudit)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

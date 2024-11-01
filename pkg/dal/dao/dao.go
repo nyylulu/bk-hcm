@@ -163,6 +163,7 @@ type Set interface {
 
 	RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface
 	RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface
+	RollingQuotaOffsetAudit() rollingserver.RollingQuotaOffsetAuditInterface
 	RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface
 	ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface
 	RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface
@@ -919,6 +920,14 @@ func (s *set) RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface {
 // RollingQuotaOffset return rolling quota offset dao.
 func (s *set) RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface {
 	return &rollingserver.RollingQuotaOffsetDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingQuotaOffsetAudit return rolling quota offset audit dao.
+func (s *set) RollingQuotaOffsetAudit() rollingserver.RollingQuotaOffsetAuditInterface {
+	return &rollingserver.RollingQuotaOffsetAuditDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}

@@ -81,12 +81,18 @@ func (r RollingGlobalConfigTable) InsertValidate() error {
 		return errors.New("id can not be empty")
 	}
 
-	if cvt.PtrToVal(r.GlobalQuota) <= 0 {
+	if r.GlobalQuota == nil {
 		return errors.New("global quota is required")
 	}
+	if cvt.PtrToVal(r.GlobalQuota) < 0 {
+		return errors.New("global quota id should be >= 0")
+	}
 
-	if cvt.PtrToVal(r.BizQuota) <= 0 {
+	if r.BizQuota == nil {
 		return errors.New("biz quota is required")
+	}
+	if cvt.PtrToVal(r.BizQuota) < 0 {
+		return errors.New("biz quota should be >= 0")
 	}
 
 	if r.UnitPrice == nil {

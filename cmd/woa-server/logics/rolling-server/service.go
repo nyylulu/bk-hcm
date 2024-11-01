@@ -24,10 +24,12 @@ import (
 	"hcm/cmd/woa-server/logics/config"
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/enumor"
+	rstablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/kit"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
@@ -36,6 +38,24 @@ import (
 
 // Logics provides management interface for rolling server.
 type Logics interface {
+	GetGlobalQuotaConfig(kt *kit.Kit) (*rstablers.RollingGlobalConfigTable, error)
+	ListQuotaOffsetAdjustRecords(kt *kit.Kit, offsetConfigIDs []string, page *core.BasePage) (
+		*rolling_server.ListQuotaOffsetsAdjustRecordsResp, error)
+	ListBizsWithExistQuota(kt *kit.Kit, req *rolling_server.ListBizsWithExistQuotaReq) (
+		*rolling_server.ListBizsWithExistQuotaResp, error)
+	ListBizQuotaConfigs(kt *kit.Kit, req *rolling_server.ListBizQuotaConfigsReq) (
+		*rolling_server.ListBizQuotaConfigsResp, error)
+	// CreateBizQuotaConfigs 批量给业务生成当月的滚服基础额度，幂等可重复执行
+	CreateBizQuotaConfigs(kt *kit.Kit, req *rolling_server.CreateBizQuotaConfigsReq) (
+		*rolling_server.CreateBizQuotaConfigsResp, error)
+	// CreateBizQuotaConfigsForAllBiz 批量给所有业务生成当月的滚服基础额度，此时额度从全局配置表获取
+	CreateBizQuotaConfigsForAllBiz(kt *kit.Kit, quotaMonth rolling_server.QuotaMonth) (
+		*rolling_server.CreateBizQuotaConfigsResp, error)
+	AdjustQuotaOffsetConfigs(kt *kit.Kit, bkBizIDs []int64, adjustMonth rolling_server.AdjustMonthRange,
+		quotaOffset int64) (*rolling_server.AdjustQuotaOffsetsResp, error)
+	// BatchCreateQuotaOffsetConfigAudit 配额修改时创建审计记录
+	BatchCreateQuotaOffsetConfigAudit(kt *kit.Kit, effectIDs []string, quotaOffset int64) error
+
 	SyncBills(kt *kit.Kit, req *rolling_server.RollingBillSyncReq) error
 	// GetCpuCoreSummary 查询滚服已交付、已退还的CPU核心数概览信息
 	GetCpuCoreSummary(kt *kit.Kit, req *rolling_server.CpuCoreSummaryReq) (*rsproto.RollingCpuCoreSummaryItem, error)
@@ -69,6 +89,8 @@ func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thir
 	if cc.WoaServer().RollingServer.SyncBill {
 		go rsLogics.syncBillsPeriodically()
 	}
+
+	go rsLogics.createBaseQuotaConfigPeriodically()
 
 	return rsLogics, nil
 }

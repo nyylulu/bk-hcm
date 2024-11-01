@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/types/plan"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
@@ -108,7 +108,7 @@ func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	// upsert crp demand id and biz relation.
-	bizOrgRel := plan.BizOrgRel{
+	bizOrgRel := mtypes.BizOrgRel{
 		BkBizID:         ticket.BkBizID,
 		BkBizName:       ticket.BkBizName,
 		OpProductID:     ticket.OpProductID,
@@ -453,7 +453,7 @@ func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.C
 
 // upsertCrpDemandBizRel upsert crp demand biz rel.
 func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, demandClass enumor.DemandClass,
-	bizOrgRel plan.BizOrgRel, reviser string) error {
+	bizOrgRel mtypes.BizOrgRel, reviser string) error {
 
 	if len(crpDemandIDs) == 0 {
 		logs.Errorf("crp demand ids is empty, rid: %s", kt.Rid)

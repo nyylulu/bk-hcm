@@ -17,59 +17,55 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingquotacfg ...
-package rollingquotacfg
+// Package quotaoffsetaudit ...
+package quotaoffsetaudit
 
 import (
-	"fmt"
-	"reflect"
-
-	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
+	"hcm/pkg/dal/dao/tools"
 	tablers "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/rest"
 
 	"github.com/jmoiron/sqlx"
 )
 
-// BatchCreateRollingQuotaConfig create rolling quota config.
-func (svc *service) BatchCreateRollingQuotaConfig(cts *rest.Contexts) (interface{}, error) {
-	req := new(rsproto.RollingQuotaConfigCreateReq)
+// BatchUpdateQuotaOffsetAudit update rolling quota offset audit
+func (svc *service) BatchUpdateQuotaOffsetAudit(cts *rest.Contexts) (interface{}, error) {
+	req := new(rsproto.QuotaOffsetAuditBatchUpdateReq)
+
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
+
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	quotaCfgIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		models := make([]tablers.RollingQuotaConfigTable, len(req.QuotaConfigs))
-		for idx, item := range req.QuotaConfigs {
-			models[idx] = tablers.RollingQuotaConfigTable{
-				BkBizID:   item.BkBizID,
-				BkBizName: item.BkBizName,
-				Year:      item.Year,
-				Month:     item.Month,
-				Quota:     item.Quota,
-				Creator:   cts.Kit.User,
-				Reviser:   cts.Kit.User,
+
+	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		for _, updateReq := range req.QuotaOffsetsAudit {
+			record := &tablers.RollingQuotaOffsetAuditTable{
+				ID:             updateReq.ID,
+				OffsetConfigID: updateReq.OffsetConfigID,
+				Operator:       updateReq.Operator,
+				Rid:            updateReq.Rid,
+				AppCode:        updateReq.AppCode,
+			}
+			if updateReq.QuotaOffset != nil {
+				record.QuotaOffset = updateReq.QuotaOffset
+			}
+
+			if err := svc.dao.RollingQuotaOffsetAudit().UpdateWithTx(cts.Kit, txn,
+				tools.EqualExpression("id", updateReq.ID), record); err != nil {
+				return nil, err
 			}
 		}
-		recordIDs, err := svc.dao.RollingQuotaConfig().CreateWithTx(cts.Kit, txn, models)
-		if err != nil {
-			return nil, fmt.Errorf("create rolling quota config failed, err: %v", err)
-		}
-		return recordIDs, nil
+		return nil, nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	ids, ok := quotaCfgIDs.([]string)
-	if !ok {
-		return nil, fmt.Errorf("create rolling quota config but return ids type not []string, id type: %v",
-			reflect.TypeOf(quotaCfgIDs).String())
-	}
 
-	return &core.BatchCreateResult{IDs: ids}, nil
+	return nil, nil
 }

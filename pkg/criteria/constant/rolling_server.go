@@ -17,23 +17,9 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
-package rollingserver
+package constant
 
-import (
-	"hcm/cmd/data-service/service/capability"
-	resourcepoolbusiness "hcm/cmd/data-service/service/rolling-server/resource-pool-business"
-	rollingglobalconfig "hcm/cmd/data-service/service/rolling-server/rolling-global-config"
-	rollingquotaconfig "hcm/cmd/data-service/service/rolling-server/rolling-quota-config"
-	rollingquotaoffset "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset"
-	quotaoffsetaudit "hcm/cmd/data-service/service/rolling-server/rolling-quota-offset-audit"
+const (
+	// PlaceholderQuotaConfig defines the placeholder for quota config
+	PlaceholderQuotaConfig = -1
 )
-
-// InitService initial the security group service
-func InitService(cap *capability.Capability) {
-	rollingquotaconfig.InitService(cap)
-	rollingquotaoffset.InitService(cap)
-	quotaoffsetaudit.InitService(cap)
-	rollingglobalconfig.InitService(cap)
-	resourcepoolbusiness.InitService(cap)
-}
