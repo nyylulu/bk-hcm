@@ -46,6 +46,7 @@ var RollingReturnedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "returned_way", NamedC: "returned_way", Type: enumor.String},
 	{Column: "instance_group", NamedC: "instance_group", Type: enumor.String},
+	{Column: "status", NamedC: "status", Type: enumor.Numeric},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
 	{Column: "updated_at", NamedC: "updated_at", Type: enumor.Time},
@@ -64,7 +65,7 @@ type RollingReturnedRecord struct {
 	// AppliedRecordID 主机回收的子订单号
 	AppliedRecordID string `db:"applied_record_id" json:"applied_record_id" validate:"max=64"`
 	// MatchAppliedCore 滚服申请执行情况表唯一标识
-	MatchAppliedCore *uint64 `db:"match_applied_core" json:"match_applied_core"`
+	MatchAppliedCore *int64 `db:"match_applied_core" json:"match_applied_core"`
 	// Year 申请时间年份
 	Year int `db:"year" json:"year" validate:"max=9999"`
 	// Month 申请时间月份
@@ -77,6 +78,8 @@ type RollingReturnedRecord struct {
 	ReturnedWay enumor.ReturnedWay `db:"returned_way" json:"returned_way"`
 	// InstanceGroup 机型族
 	InstanceGroup string `db:"instance_group" json:"instance_group"`
+	// Status 状态(1:锁定、2:正常、3:终止)
+	Status enumor.ReturnedStatus `db:"status" json:"status"`
 	// Creator 创建者
 	Creator string `db:"creator" json:"creator"`
 	// CreatedAt 创建时间

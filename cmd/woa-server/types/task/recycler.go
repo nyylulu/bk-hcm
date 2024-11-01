@@ -1192,16 +1192,16 @@ type RecycleBizHost struct {
 
 // StartRecycleOrderByRecycleTypeReq start recycle order by recycle type request
 type StartRecycleOrderByRecycleTypeReq struct {
-	SubOrderIDTypes []StartRecycleOrderByRecycleTypeItem `json:"sub_order_id_types" validate:"required,min=1,max=100"`
+	SubOrderIDTypes []StartRecycleOrderByRecycleTypeItem `json:"suborder_id_types" validate:"required,min=1,max=100"`
 }
 
 // Validate validate
 func (r *StartRecycleOrderByRecycleTypeReq) Validate() error {
 	if len(r.SubOrderIDTypes) == 0 {
-		return fmt.Errorf("sub_order_id_types is required")
+		return fmt.Errorf("suborder_id_types is required")
 	}
 	if len(r.SubOrderIDTypes) > 100 {
-		return fmt.Errorf("sub_order_id_types length should <= 100")
+		return fmt.Errorf("suborder_id_types length should <= 100")
 	}
 	for _, item := range r.SubOrderIDTypes {
 		if err := item.Validate(); err != nil {
@@ -1213,14 +1213,14 @@ func (r *StartRecycleOrderByRecycleTypeReq) Validate() error {
 
 // StartRecycleOrderByRecycleTypeItem start recycle order by recycle type item
 type StartRecycleOrderByRecycleTypeItem struct {
-	SuborderID  string            `json:"sub_order_id"`
+	SuborderID  string            `json:"suborder_id"`
 	RecycleType table.RecycleType `json:"recycle_type"`
 }
 
 // Validate validate
 func (r *StartRecycleOrderByRecycleTypeItem) Validate() error {
 	if len(r.SuborderID) == 0 {
-		return fmt.Errorf("sub_order_id is required")
+		return fmt.Errorf("suborder_id is required")
 	}
 
 	if len(r.RecycleType) == 0 {

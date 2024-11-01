@@ -21,6 +21,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
@@ -39,18 +40,22 @@ import (
 
 // Transit deal with device transit tasks
 type Transit struct {
-	cc  cmdb.Client
-	tmp tmpapi.TMPClientInterface
+	cc      cmdb.Client
+	tmp     tmpapi.TMPClientInterface
+	rsLogic rslogics.Logics
 
 	ctx context.Context
 }
 
 // New creates a device transit station
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Transit, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, rsLogic rslogics.Logics) (
+	*Transit, error) {
+
 	transit := &Transit{
-		cc:  esbCli.Cmdb(),
-		tmp: thirdCli.Tmp,
-		ctx: ctx,
+		cc:      esbCli.Cmdb(),
+		tmp:     thirdCli.Tmp,
+		ctx:     ctx,
+		rsLogic: rsLogic,
 	}
 
 	return transit, nil
@@ -168,8 +173,8 @@ func (t *Transit) DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table
 	}
 
 	if len(hostIds) == 0 || len(ips) == 0 {
-		logs.Errorf("recycler:logics:cvm:dealTransitTask2Pool:failed, failed to run transit task, " +
-			"for host id list or ip list is empty")
+		logs.Errorf("recycler:logics:cvm:dealTransitTask2Pool:failed, failed to run transit task, "+
+			"for host id list or ip list is empty, subOrderID: %s", order.SuborderID)
 		ev := &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to run transit task, for host id list or ip list is empty"),
@@ -182,10 +187,10 @@ func (t *Transit) DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table
 	destModule := recovertask.DataToCleanedModule
 	if err := t.TransferHost(hostIds, order.BizID, destBiz, destModule); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2Pool:failed, failed to transfer host to biz %d module %d, "+
-			"err: %v", destBiz, destModule, err)
+			"subOrderID: %s, err: %v", destBiz, destModule, order.SuborderID, err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
 			table.RecycleStatusTransitFailed); errUpdate != nil {
-			logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+			logs.Errorf("failed to update recycle host info, subOrderID: %s, err: %v", order.SuborderID, errUpdate)
 			ev := &event.Event{
 				Type:  event.TransitFailed,
 				Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),
@@ -204,11 +209,11 @@ func (t *Transit) DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table
 	if err := t.shieldTMPAlarm(ips); err != nil {
 		// add shield config may fail, ignore it
 		logs.Warnf("recycler:logics:cvm:dealTransitTask2Pool:failed, failed to add shield TMP alarm config, "+
-			"err: %v, ips: %v", err, ips)
+			"subOrderID: %s, err: %v, ips: %v", order.SuborderID, err, ips)
 	}
 
 	if errUpdate := t.UpdateHostInfo(order, table.RecycleStageDone, table.RecycleStatusDone); errUpdate != nil {
-		logs.Errorf("failed to update recycle host info, err: %v", errUpdate)
+		logs.Errorf("failed to update recycle host info, subOrderID: %s, err: %v", order.SuborderID, errUpdate)
 		ev := &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to update recycle host info, err: %v", errUpdate),

@@ -21,6 +21,11 @@ package enumor
 
 import "fmt"
 
+const (
+	// RollingServerResourcePoolTask 滚服项目默认的CRP任务标识
+	RollingServerResourcePoolTask = "ROLLING_SERVER_RESOURCE_POOL"
+)
+
 // AppliedType is rolling applied record type.
 type AppliedType string
 
@@ -81,6 +86,29 @@ func (q QuotaOffsetAdjustType) Validate() error {
 	case IncreaseOffsetAdjustType, DecreaseOffsetAdjustType:
 	default:
 		return fmt.Errorf("unsupported quota offset adjust type: %s", q)
+	}
+
+	return nil
+}
+
+// ReturnedStatus is rolling returned status.
+type ReturnedStatus int
+
+const (
+	// LockedStatus 状态-锁定
+	LockedStatus ReturnedStatus = 1
+	// NormalStatus 状态-正常
+	NormalStatus ReturnedStatus = 2
+	// TerminateStatus 状态-终止
+	TerminateStatus ReturnedStatus = 3
+)
+
+// Validate ReturnedStatus.
+func (t ReturnedStatus) Validate() error {
+	switch t {
+	case LockedStatus, NormalStatus, TerminateStatus:
+	default:
+		return fmt.Errorf("unsupported returned record status: %d", t)
 	}
 
 	return nil

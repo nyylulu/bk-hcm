@@ -21,6 +21,7 @@
 package rollingserver
 
 import (
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
@@ -29,7 +30,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/enumor"
-	rstablers "hcm/pkg/dal/table/rolling-server"
+	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/kit"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
@@ -38,7 +39,7 @@ import (
 
 // Logics provides management interface for rolling server.
 type Logics interface {
-	GetGlobalQuotaConfig(kt *kit.Kit) (*rstablers.RollingGlobalConfigTable, error)
+	GetGlobalQuotaConfig(kt *kit.Kit) (*rstable.RollingGlobalConfigTable, error)
 	ListQuotaOffsetAdjustRecords(kt *kit.Kit, offsetConfigIDs []string, page *core.BasePage) (
 		*rolling_server.ListQuotaOffsetsAdjustRecordsResp, error)
 	ListBizsWithExistQuota(kt *kit.Kit, req *rolling_server.ListBizsWithExistQuotaReq) (
@@ -65,7 +66,25 @@ type Logics interface {
 	UpdateSubOrderRollingDeliveredCore(kt *kit.Kit, bizID int64, subOrderID string, appliedTypes []enumor.AppliedType,
 		deviceTypeCountMap map[string]int) error
 	ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types.MatchDeviceBrief) error
-	GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (uint64, error)
+	GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (int64, error)
+	// CalSplitRecycleHosts 计算并匹配指定时间范围指定业务的主机Host
+	CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost, allBizReturnedCpuCore,
+		globalQuota int64) (map[string]*rolling_server.RecycleHostCpuInfo, []*table.RecycleHost, int64, error)
+	// InsertReturnedHostMatched 插入需要退还的主机匹配记录
+	InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID uint64, subOrderID string, hosts []*table.RecycleHost,
+		hostMatchMap map[string]*rolling_server.RecycleHostCpuInfo, status enumor.ReturnedStatus) error
+	// UpdateReturnedStatusBySubOrderID 根据回收子订单ID更新滚服回收的状态
+	UpdateReturnedStatusBySubOrderID(kt *kit.Kit, bkBizID int64, subOrderID string,
+		updateLocked enumor.ReturnedStatus) error
+	// ListReturnedRecordsBySubOrderID 根据回收子订单ID查询滚服回收列表
+	ListReturnedRecordsBySubOrderID(kt *kit.Kit, bkBizID int64, subOrderID string) (
+		[]*rstable.RollingReturnedRecord, error)
+	// GetAllReturnedCpuCore 获取指定时间内所有业务回收的CPU总核心数
+	GetAllReturnedCpuCore(kt *kit.Kit) (int64, error)
+	// GetRollingGlobalQuota 查询系统配置的全局总额度
+	GetRollingGlobalQuota(kt *kit.Kit) (int64, error)
+	// CheckReturnedStatusBySubOrderID 校验回收订单是否有滚服剩余额度
+	CheckReturnedStatusBySubOrderID(kt *kit.Kit, orders []*table.RecycleOrder) error
 }
 
 // logics rolling server logics.

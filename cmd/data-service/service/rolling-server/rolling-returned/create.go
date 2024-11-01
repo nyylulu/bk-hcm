@@ -60,6 +60,7 @@ func (svc *service) BatchCreateRollingReturnedRecord(cts *rest.Contexts) (interf
 				RollDate:         times.GetDataIntDate(createReq.Year, createReq.Month, createReq.Day),
 				ReturnedWay:      createReq.ReturnedWay,
 				InstanceGroup:    createReq.InstanceGroup,
+				Status:           createReq.Status,
 				Creator:          cts.Kit.User,
 			})
 		}

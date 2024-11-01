@@ -21,6 +21,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
@@ -40,6 +41,7 @@ type Dispatcher struct {
 	transit  *transit.Transit
 	queue    workqueue.RateLimitingInterface
 	ctx      context.Context
+	rsLogic  rslogics.Logics
 }
 
 // New create a dispatcher
@@ -83,6 +85,16 @@ func (d *Dispatcher) SetReturner(returner *returner.Returner) {
 // SetTransit set dispatcher member transit
 func (d *Dispatcher) SetTransit(transit *transit.Transit) {
 	d.transit = transit
+}
+
+// GetRollServerLogic get dispatcher roll server logic
+func (d *Dispatcher) GetRollServerLogic() rslogics.Logics {
+	return d.rsLogic
+}
+
+// SetRollServerLogic set dispatcher roll server logic
+func (d *Dispatcher) SetRollServerLogic(rsLogic rslogics.Logics) {
+	d.rsLogic = rsLogic
 }
 
 // Run starts dispatcher

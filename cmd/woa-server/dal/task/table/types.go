@@ -41,6 +41,8 @@ func (rt RecycleType) ToObsProject() string {
 		return string(RecycleTypeRent)
 	case RecycleTypeDissolve:
 		return rt.getDissolveObsProject()
+	case RecycleTypeRollServer:
+		return string(RecycleTypeRollServer)
 	default:
 		return string(RecycleTypeRegular)
 	}

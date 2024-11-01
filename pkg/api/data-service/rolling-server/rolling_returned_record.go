@@ -49,16 +49,17 @@ func (c *BatchCreateRollingReturnedRecordReq) Validate() error {
 
 // RollingReturnedRecordCreateReq create request
 type RollingReturnedRecordCreateReq struct {
-	BkBizID          int64              `json:"bk_biz_id" validate:"required"`
-	OrderID          uint64             `json:"order_id" validate:"required"`
-	SubOrderID       string             `json:"suborder_id" validate:"required"`
-	AppliedRecordID  string             `json:"applied_record_id" validate:"omitempty"`
-	MatchAppliedCore uint64             `json:"match_applied_core" validate:"required"`
-	Year             int                `json:"year" validate:"required"`
-	Month            int                `json:"month" validate:"required"`
-	Day              int                `json:"day" validate:"required"`
-	ReturnedWay      enumor.ReturnedWay `json:"returned_way" validate:"required"`
-	InstanceGroup    string             `json:"instance_group" validate:"required"`
+	BkBizID          int64                 `json:"bk_biz_id" validate:"required"`
+	OrderID          uint64                `json:"order_id" validate:"required"`
+	SubOrderID       string                `json:"suborder_id" validate:"required"`
+	AppliedRecordID  string                `json:"applied_record_id" validate:"omitempty"`
+	MatchAppliedCore int64                 `json:"match_applied_core" validate:"required"`
+	Year             int                   `json:"year" validate:"required"`
+	Month            int                   `json:"month" validate:"required"`
+	Day              int                   `json:"day" validate:"required"`
+	ReturnedWay      enumor.ReturnedWay    `json:"returned_way" validate:"required"`
+	InstanceGroup    string                `json:"instance_group" validate:"required"`
+	Status           enumor.ReturnedStatus `json:"status" validate:"required"`
 }
 
 // Validate ...
@@ -101,22 +102,14 @@ func (c *BatchUpdateRollingReturnedRecordReq) Validate() error {
 
 // RollingReturnedRecordUpdateReq update request
 type RollingReturnedRecordUpdateReq struct {
-	ID               string             `json:"id" validate:"required"`
-	AppliedRecordID  string             `json:"applied_record_id" validate:"omitempty"`
-	MatchAppliedCore *uint64            `json:"match_applied_core" validate:"omitempty"`
-	ReturnedWay      enumor.ReturnedWay `json:"returned_way" validate:"omitempty"`
+	ID               string                `json:"id" validate:"required"`
+	AppliedRecordID  string                `json:"applied_record_id" validate:"omitempty"`
+	MatchAppliedCore *int64                `json:"match_applied_core" validate:"omitempty"`
+	ReturnedWay      enumor.ReturnedWay    `json:"returned_way" validate:"omitempty"`
+	Status           enumor.ReturnedStatus `json:"status" validate:"omitempty"`
 }
 
 // Validate ...
 func (req *RollingReturnedRecordUpdateReq) Validate() error {
 	return validator.Validate.Struct(req)
-}
-
-// RollingCpuCoreSummaryResult get rolling cpu core summary result
-type RollingCpuCoreSummaryResult = core.BaseResp[*RollingCpuCoreSummaryItem]
-
-// RollingCpuCoreSummaryItem wrapper for rolling cpu core summary item
-type RollingCpuCoreSummaryItem struct {
-	SumDeliveredCore       uint64 `json:"sum_delivered_core" db:"sum_delivered_core"`
-	SumReturnedAppliedCore uint64 `json:"sum_returned_applied_core" db:"sum_returned_applied_core"`
 }

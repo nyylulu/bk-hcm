@@ -21,11 +21,11 @@ package rollingserver
 
 import (
 	"fmt"
-	"hcm/pkg"
 	"time"
 
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/constant"
@@ -77,9 +77,10 @@ func (l *logics) CreateAppliedRecord(kt *kit.Kit, createArr []rstypes.CreateAppl
 	for _, create := range createArr {
 		deviceTypes = append(deviceTypes, create.DeviceType)
 	}
-	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCpuCoreByDeviceTypes(kt, deviceTypes)
+	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
-		logs.Errorf("get cpu core by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
+		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
 		return err
 	}
 	instGroupMap, err := l.configLogics.Device().ListInstanceGroup(kt, deviceTypes)
@@ -111,7 +112,7 @@ func (l *logics) CreateAppliedRecord(kt *kit.Kit, createArr []rstypes.CreateAppl
 			Year:          now.Year(),
 			Month:         int(now.Month()),
 			Day:           now.Day(),
-			AppliedCore:   uint64(deviceTypeCpuCore.CPUAmount) * uint64(create.Count),
+			AppliedCore:   deviceTypeCpuCore.CPUAmount * int64(create.Count),
 			InstanceGroup: instGroup,
 		}
 		records[i] = appliedRecord
@@ -172,25 +173,26 @@ func (l *logics) UpdateSubOrderRollingDeliveredCore(kt *kit.Kit, bizID int64, su
 }
 
 // GetCpuCoreSum 获取机型对应的cpu核数之和
-func (l *logics) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (uint64, error) {
+func (l *logics) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (int64, error) {
 	deviceTypes := make([]string, 0)
 	for deviceType := range deviceTypeCountMap {
 		deviceTypes = append(deviceTypes, deviceType)
 	}
-	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCpuCoreByDeviceTypes(kt, deviceTypes)
+	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
-		logs.Errorf("get cpu core by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
+		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
 		return 0, err
 	}
 
-	var deliveredCore uint64 = 0
+	var deliveredCore int64 = 0
 	for deviceType, count := range deviceTypeCountMap {
 		deviceTypeCpuCore, ok := deviceTypeCpuCoreMap[deviceType]
 		if !ok {
 			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
 			return 0, fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
-		deliveredCore += uint64(deviceTypeCpuCore.CPUAmount) * uint64(count)
+		deliveredCore += deviceTypeCpuCore.CPUAmount * int64(count)
 	}
 
 	return deliveredCore, nil
@@ -244,7 +246,7 @@ func (l *logics) ReduceRollingCvmProdAppliedRecord(kt *kit.Kit, devices []*types
 	return nil
 }
 
-func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDeviceBrief) (map[string]uint64, error) {
+func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDeviceBrief) (map[string]int64, error) {
 	assetIDs := make([]string, len(devices))
 	for i, device := range devices {
 		assetIDs[i] = device.AssetId
@@ -280,11 +282,9 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 			}
 			deviceTypeCountMap[host.SvrDeviceClassName]++
 		}
-
 		if len(resp.Data.Info) < pkg.BKMaxInstanceLimit {
 			break
 		}
-
 		req.Page.Start += pkg.BKMaxInstanceLimit
 	}
 
@@ -292,9 +292,10 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 	for deviceType := range deviceTypeCountMap {
 		deviceTypes = append(deviceTypes, deviceType)
 	}
-	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCpuCoreByDeviceTypes(kt, deviceTypes)
+	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
-		logs.Errorf("get cpu core by device type failed, err: %v, device_types: %v, rid: %s", err, deviceTypes, kt.Rid)
+		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
 		return nil, err
 	}
 	deviceTypeInstGroupMap, err := l.configLogics.Device().ListInstanceGroup(kt, deviceTypes)
@@ -304,7 +305,7 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 		return nil, err
 	}
 
-	instGroupCoreSumMap := make(map[string]uint64)
+	instGroupCoreSumMap := make(map[string]int64)
 	for deviceType, count := range deviceTypeCountMap {
 		cpuCore, ok := deviceTypeCpuCoreMap[deviceType]
 		if !ok {
@@ -316,20 +317,18 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
 			return nil, fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
-
 		if _, ok = instGroupCoreSumMap[instGroup]; !ok {
 			instGroupCoreSumMap[instGroup] = 0
 		}
-
-		instGroupCoreSumMap[instGroup] += uint64(cpuCore.CPUAmount) * uint64(count)
+		instGroupCoreSumMap[instGroup] += cpuCore.CPUAmount * int64(count)
 	}
 
 	return instGroupCoreSumMap, nil
 }
 
-func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit, instGroups []string) (map[string]uint64, error) {
+func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit, instGroups []string) (map[string]int64, error) {
 	now := time.Now()
-	instGroupCpuCoreMap := make(map[string]uint64)
+	instGroupCpuCoreMap := make(map[string]int64)
 	for _, instGroup := range instGroups {
 		summaryReq := &rstypes.CpuCoreSummaryReq{
 			RollingServerDateRange: rstypes.RollingServerDateRange{
@@ -359,7 +358,7 @@ func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit, instGroups []stri
 	return instGroupCpuCoreMap, nil
 }
 
-func (l *logics) reduceRollingCvmProdCpuCore(kt *kit.Kit, neededInstGroupCPUCoreMap map[string]uint64) error {
+func (l *logics) reduceRollingCvmProdCpuCore(kt *kit.Kit, neededInstGroupCPUCoreMap map[string]int64) error {
 	if len(neededInstGroupCPUCoreMap) == 0 {
 		return nil
 	}
@@ -406,7 +405,7 @@ func (l *logics) reduceRollingCvmProdCpuCore(kt *kit.Kit, neededInstGroupCPUCore
 				break
 			}
 
-			var deliveredCore uint64 = 0
+			var deliveredCore int64 = 0
 			if neededCPUCore < *record.DeliveredCore {
 				deliveredCore = *record.DeliveredCore - neededCPUCore
 			}

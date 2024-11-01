@@ -24,6 +24,7 @@ import (
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -54,6 +55,8 @@ func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 	// 回收记录的查询条件跟申请记录的一致
 	returnedRules = make([]*filter.AtomRule, len(appliedRules))
 	copy(returnedRules, appliedRules)
+	// 只查询未终止状态的滚服回收记录
+	returnedRules = append(returnedRules, tools.RuleEqual("status", enumor.NormalStatus))
 
 	if len(req.OrderIDs) != 0 {
 		appliedRules = append(appliedRules, tools.RuleIn("order_id", req.OrderIDs))

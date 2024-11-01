@@ -252,15 +252,14 @@ func (b *RollingServerClient) ListReturnedRecord(kt *kit.Kit, req *rsproto.Rolli
 }
 
 // CreateReturnedRecord create returned record
-func (b *RollingServerClient) CreateReturnedRecord(kt *kit.Kit, req *rsproto.RollingReturnedRecordCreateReq) (
+func (b *RollingServerClient) CreateReturnedRecord(kt *kit.Kit, req *rsproto.BatchCreateRollingReturnedRecordReq) (
 	*core.BatchCreateResult, error) {
-	return common.Request[rsproto.RollingReturnedRecordCreateReq, core.BatchCreateResult](
+	return common.Request[rsproto.BatchCreateRollingReturnedRecordReq, core.BatchCreateResult](
 		b.client, rest.POST, kt, req, "/rolling_servers/returned_records/batch/create")
 }
 
 // UpdateReturnedRecord update returned record
-func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit,
-	req *rsproto.BatchUpdateRollingReturnedRecordReq) error {
+func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit, req *rsproto.BatchUpdateRollingReturnedRecordReq) error {
 	return common.RequestNoResp[rsproto.BatchUpdateRollingReturnedRecordReq](
 		b.client, rest.PATCH, kt, req, "/rolling_servers/returned_records/batch")
 }
@@ -269,6 +268,13 @@ func (b *RollingServerClient) UpdateReturnedRecord(kt *kit.Kit,
 func (b *RollingServerClient) BatchDeleteReturnedRecord(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/rolling_servers/returned_records/batch")
+}
+
+// GetRollingReturnedCoreSum get returned core sum
+func (b *RollingServerClient) GetRollingReturnedCoreSum(kt *kit.Kit, req *rsproto.RollingReturnedRecordListReq) (
+	*rsproto.RollingCpuCoreSummaryItem, error) {
+	return common.Request[rsproto.RollingReturnedRecordListReq, rsproto.RollingCpuCoreSummaryItem](
+		b.client, rest.POST, kt, req, "/rolling_servers/returned_records/returned_core/sum")
 }
 
 // --- rolling fine detail ---
@@ -317,11 +323,4 @@ func (b *RollingServerClient) BatchCreateBill(kt *kit.Kit, req *rsproto.BatchCre
 func (b *RollingServerClient) BatchDeleteBill(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/rolling_servers/bills/batch")
-}
-
-// GetRollingReturnedCoreSum get returned core sum
-func (b *RollingServerClient) GetRollingReturnedCoreSum(kt *kit.Kit, req *rsproto.RollingReturnedRecordListReq) (
-	*rsproto.RollingCpuCoreSummaryItem, error) {
-	return common.Request[rsproto.RollingReturnedRecordListReq, rsproto.RollingCpuCoreSummaryItem](
-		b.client, rest.POST, kt, req, "/rolling_servers/returned_records/returned_core/sum")
 }

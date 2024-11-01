@@ -63,8 +63,8 @@ type DeviceIf interface {
 	// CreatePmDevice creates config physical machine device type
 	CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.MapStr, error)
 
-	// ListCpuCoreByDeviceTypes list cpu core by device types
-	ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
+	// ListCvmInstanceInfoByDeviceTypes list cvm instance info by device types
+	ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
 	ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error)
 }
 
@@ -484,8 +484,8 @@ func (d *device) CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.
 	return rst, nil
 }
 
-// ListCpuCoreByDeviceTypes list cpu core by device types
-func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
+// ListCvmInstanceInfoByDeviceTypes list cvm instance info by device types
+func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
 	map[string]types.DeviceTypeCpuItem, error) {
 
 	deviceReq := &types.GetDeviceParam{
@@ -512,16 +512,28 @@ func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
 	existDeviceTypes := make([]string, 0)
 	for _, deviceItem := range deviceList.Info {
 		deviceType := deviceItem.DeviceType
+
+		// 机型族
+		deviceGroup, ok := deviceItem.Label["device_group"]
+		if !ok {
+			return nil, errors.New("get invalid empty device group")
+		}
+		deviceGroupStr, ok := deviceGroup.(string)
+		if !ok {
+			return nil, errors.New("get invalid non-string device group")
+		}
+
 		deviceTypeMap[deviceType] = types.DeviceTypeCpuItem{
-			DeviceType: deviceItem.DeviceType,
-			CPUAmount:  deviceItem.Cpu,
+			DeviceType:  deviceItem.DeviceType,
+			CPUAmount:   deviceItem.Cpu,
+			DeviceGroup: deviceGroupStr,
 		}
 		existDeviceTypes = append(existDeviceTypes, deviceType)
 	}
 
 	// 如果查到了全部的DeviceType，则直接返回
 	if len(deviceList.Info) == len(deviceTypes) {
-		logs.Infof("get cpu core from mongo by device types, deviceTypes: %v, deviceTypeMap; %+v, rid: %s",
+		logs.Infof("get cvm instance info from mongo by device types, deviceTypes: %v, deviceTypeMap: %+v, rid: %s",
 			deviceTypes, deviceTypeMap, kt.Rid)
 		return deviceTypeMap, nil
 	}
@@ -532,10 +544,16 @@ func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
 			notExistDevice = append(notExistDevice, dtype)
 		}
 	}
+	if len(notExistDevice) == 0 {
+		logs.Infof("get cvm instance info from params by device types, deviceTypes: %v, deviceTypeMap: %+v, rid: %s",
+			deviceTypes, deviceTypeMap, kt.Rid)
+		return deviceTypeMap, nil
+	}
 
-	deviceTypeMapFromCrp, err := d.ListCpuCoreFromCrp(kt, notExistDevice)
+	deviceTypeMapFromCrp, err := d.listCvmInstanceTypeFromCrp(kt, notExistDevice)
 	if err != nil {
-		logs.Errorf("get device type from crp failed, err: %v, deviceTypes: %v, rid: %s", err, notExistDevice, kt.Rid)
+		logs.Errorf("list cvm instance type from crp failed, err: %v, deviceTypes: %v, rid: %s",
+			err, notExistDevice, kt.Rid)
 		return nil, err
 	}
 	for dtype, item := range deviceTypeMapFromCrp {
@@ -543,14 +561,16 @@ func (d *device) ListCpuCoreByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
 	}
 
 	// 记录日志
-	logs.Infof("get cpu core from crp by device types, deviceTypes: %v, deviceTypeMap; %+v, rid: %s",
-		deviceTypes, deviceTypeMap, kt.Rid)
+	logs.Infof("get cvm instance info from crp by device types, deviceTypes: %v, notExistDevice: %v, "+
+		"deviceTypeMap; %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
 
 	return deviceTypeMap, nil
 }
 
-// ListCpuCoreFromCrp 从Crp平台获取设备类型信息
-func (d *device) ListCpuCoreFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error) {
+// listCvmInstanceTypeFromCrp 从Crp平台获取实例信息
+func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (
+	map[string]types.DeviceTypeCpuItem, error) {
+
 	req := &cvmapi.QueryCvmInstanceTypeReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -565,6 +585,10 @@ func (d *device) ListCpuCoreFromCrp(kt *kit.Kit, deviceTypes []string) (map[stri
 		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm instance type error, deviceTypes: %v, resp: %+v, rid: %s", deviceTypes, resp, kt.Rid)
+		return nil, errf.Newf(errf.RecordNotFound, "query cvm instance type failed, resp:[%+v] is nil", resp)
+	}
 
 	deviceTypeMap := make(map[string]types.DeviceTypeCpuItem, 0)
 	for _, item := range resp.Result.Data {
@@ -572,8 +596,9 @@ func (d *device) ListCpuCoreFromCrp(kt *kit.Kit, deviceTypes []string) (map[stri
 			continue
 		}
 		deviceTypeMap[item.InstanceType] = types.DeviceTypeCpuItem{
-			DeviceType: item.InstanceType,
-			CPUAmount:  int64(item.CPUAmount),
+			DeviceType:  item.InstanceType,
+			CPUAmount:   int64(item.CPUAmount),
+			DeviceGroup: item.InstanceGroup,
 		}
 	}
 

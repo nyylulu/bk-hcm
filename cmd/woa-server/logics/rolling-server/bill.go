@@ -271,6 +271,7 @@ func (l *logics) findBillReturnedRecords(kt *kit.Kit, appliedRecordIDs []string)
 				Op: filter.And,
 				Rules: []filter.RuleFactory{
 					&filter.AtomRule{Field: "applied_record_id", Op: filter.In.Factory(), Value: ids},
+					&filter.AtomRule{Field: "status", Op: filter.Equal.Factory(), Value: enumor.NormalStatus},
 				},
 			},
 			Page: &core.BasePage{
@@ -327,7 +328,7 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 			continue
 		}
 
-		var returnedCore uint64
+		var returnedCore int64
 		for _, returnedRecord := range returnedRecordMap[apply.ID] {
 			returnedCore += *returnedRecord.MatchAppliedCore
 		}
@@ -341,9 +342,10 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 				Year:            req.Year,
 				Month:           req.Month,
 				Day:             req.Day,
-				DeliveredCore:   *apply.DeliveredCore,
-				ReturnedCore:    returnedCore,
-				Fine:            unitPrice.Mul(decimal.NewFromUint64(*apply.DeliveredCore - returnedCore)),
+				DeliveredCore:   uint64(*apply.DeliveredCore),
+				ReturnedCore:    uint64(returnedCore),
+				Fine: unitPrice.Mul(
+					decimal.NewFromUint64(uint64(*apply.DeliveredCore) - uint64(returnedCore))),
 			}
 			fineDetails = append(fineDetails, detail)
 		}
@@ -603,6 +605,10 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 	}
 
 	bizIDs := make([]int64, 0)
+	if resp == nil || resp.Data == nil {
+		return bizIDs, nil
+	}
+
 	for _, biz := range resp.Data.Info {
 		bizIDs = append(bizIDs, biz.BkBizId)
 	}

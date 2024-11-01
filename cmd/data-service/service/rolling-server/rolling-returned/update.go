@@ -58,6 +58,9 @@ func (svc *service) BatchUpdateRollingReturnedRecord(cts *rest.Contexts) (interf
 			if len(updateReq.ReturnedWay) != 0 {
 				recordReq.ReturnedWay = updateReq.ReturnedWay
 			}
+			if updateReq.Status > 0 {
+				recordReq.Status = updateReq.Status
+			}
 			if err := svc.dao.RollingReturnedRecord().Update(
 				cts.Kit, txn, tools.EqualExpression("id", updateReq.ID), recordReq); err != nil {
 				return nil, fmt.Errorf("update rolling returned record failed, err: %v, id: %s", err, updateReq.ID)

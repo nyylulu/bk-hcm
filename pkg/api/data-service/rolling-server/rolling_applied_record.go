@@ -56,8 +56,8 @@ type RollingAppliedRecordCreateReq struct {
 	Year          int                `json:"year" validate:"required"`
 	Month         int                `json:"month" validate:"required"`
 	Day           int                `json:"day" validate:"required"`
-	AppliedCore   uint64             `json:"applied_core" validate:"required"`
-	DeliveredCore uint64             `json:"delivered_core" validate:"omitempty"`
+	AppliedCore   int64              `json:"applied_core" validate:"required"`
+	DeliveredCore int64              `json:"delivered_core" validate:"omitempty"`
 	InstanceGroup string             `json:"instance_group" validate:"required"`
 }
 
@@ -103,11 +103,20 @@ func (c *BatchUpdateRollingAppliedRecordReq) Validate() error {
 type RollingAppliedRecordUpdateReq struct {
 	ID            string             `json:"id" validate:"required"`
 	AppliedType   enumor.AppliedType `json:"applied_type" validate:"omitempty"`
-	AppliedCore   *uint64            `json:"applied_core" validate:"omitempty"`
-	DeliveredCore *uint64            `json:"delivered_core" validate:"omitempty"`
+	AppliedCore   *int64             `json:"applied_core" validate:"omitempty"`
+	DeliveredCore *int64             `json:"delivered_core" validate:"omitempty"`
 }
 
 // Validate ...
 func (req *RollingAppliedRecordUpdateReq) Validate() error {
 	return validator.Validate.Struct(req)
+}
+
+// RollingCpuCoreSummaryResult get rolling cpu core summary result
+type RollingCpuCoreSummaryResult = core.BaseResp[*RollingCpuCoreSummaryItem]
+
+// RollingCpuCoreSummaryItem wrapper for rolling cpu core summary item
+type RollingCpuCoreSummaryItem struct {
+	SumDeliveredCore       int64 `json:"sum_delivered_core" db:"sum_delivered_core"`
+	SumReturnedAppliedCore int64 `json:"sum_returned_applied_core" db:"sum_returned_applied_core"`
 }

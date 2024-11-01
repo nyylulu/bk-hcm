@@ -72,9 +72,9 @@ type RollingAppliedRecord struct {
 	// RollDate 申请时间年月日
 	RollDate int `db:"roll_date" json:"roll_date"`
 	// AppliedCore cpu申请核心数
-	AppliedCore *uint64 `db:"applied_core" json:"applied_core"`
+	AppliedCore *int64 `db:"applied_core" json:"applied_core"`
 	// DeliveredCore cpu交付核心数
-	DeliveredCore *uint64 `db:"delivered_core" json:"delivered_core"`
+	DeliveredCore *int64 `db:"delivered_core" json:"delivered_core"`
 	// InstanceGroup 机型族
 	InstanceGroup string `db:"instance_group" json:"instance_group"`
 	// Creator 创建者

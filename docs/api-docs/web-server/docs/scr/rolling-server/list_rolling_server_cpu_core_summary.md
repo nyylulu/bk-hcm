@@ -71,10 +71,8 @@ POST /api/v1/woa/rolling_servers/cpu_core/summary
   "code": 0,
   "message": "ok",
   "data": {
-    "details": {
-        "sum_delivered_core": 100,
-        "sum_returned_applied_core": 200
-      }
+      "sum_delivered_core": 100,
+      "sum_returned_applied_core": 200
   }
 }
 ```
@@ -88,13 +86,6 @@ POST /api/v1/woa/rolling_servers/cpu_core/summary
 | data    | object    | 响应数据 |
 
 #### data
-
-| 参数名称  | 参数类型 | 描述                    |
-|---------|---------|-------------------------|
-| details | object  | 查询返回的数据            |
-
-#### data.details
-
 | 参数名称                     | 参数类型   | 描述                     |
 |-----------------------------|----------|--------------------------|
 | sum_delivered_core          | int      | cpu已交付的总核心数         |

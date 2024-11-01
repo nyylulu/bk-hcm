@@ -12,13 +12,13 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
 
 | 参数名称            | 参数类型    | 必选 | 描述                          |
 |--------------------|-----------|------|------------------------------|
-| sub_order_id_types | object array | 是   | 回收子单据ID跟数组，数量最大限制100 |
+| suborder_id_types  | object array | 是   | 回收子单据ID跟数组，数量最大限制100 |
 
 #### sub_order_id_types
 
 | 参数名称        | 参数类型    | 必选  | 描述           |
 |----------------|------------|------|---------------|
-| sub_order_id   | string     | 是   | 回收子单据ID    |
+| suborder_id    | string     | 是   | 回收子单据ID    |
 | recycle_type   | string     | 是   | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、短租项目、滚服项目) |
 
 ### 调用示例
@@ -27,9 +27,9 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
 
 ```json
 {
-  "sub_order_id_types": [
+  "suborder_id_types": [
     {
-      "sub_order_id": "1001-1",
+      "suborder_id": "1001-1",
       "recycle_type": "常规项目"
     }
   ]
