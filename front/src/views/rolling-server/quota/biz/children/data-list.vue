@@ -59,6 +59,15 @@ for (const [fieldId, config] of Object.entries(columnConfig)) {
 }
 
 const { settings } = useTableSettings(columns);
+
+const adjustDisabled = (row: IRollingServerBizQuotaItem) => {
+  const rowDate = new Date(row.year, row.month - 1);
+  const nowDate = new Date();
+  return (
+    rowDate.getFullYear() < nowDate.getFullYear() ||
+    (rowDate.getFullYear() === nowDate.getFullYear() && rowDate.getMonth() < nowDate.getMonth())
+  );
+};
 </script>
 
 <template>
@@ -93,7 +102,9 @@ const { settings } = useTableSettings(columns);
     <bk-table-column :label="'操作'" :show-overflow-tooltip="false">
       <template #default="{ row }">
         <div class="actions">
-          <bk-button theme="primary" text @click="emit('adjust', row)">调整额度</bk-button>
+          <bk-button theme="primary" text :disabled="adjustDisabled(row)" @click="emit('adjust', row)">
+            调整额度
+          </bk-button>
           <bk-button theme="primary" text :disabled="!row.offset_config_id" @click="emit('view-record', row)">
             操作记录
           </bk-button>

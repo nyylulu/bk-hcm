@@ -86,6 +86,7 @@ const handleAdjust = (row?: IRollingServerBizQuotaItem) => {
 
 const handleCreate = () => {
   dialog.component = DialogCreate;
+  dialog.props = { month: condition.value.quota_month };
   dialog.isShow = true;
   dialog.isHidden = false;
 };

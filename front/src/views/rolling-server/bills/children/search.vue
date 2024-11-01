@@ -53,10 +53,10 @@ const handleReset = () => {
 
 watch(
   () => props.condition,
-  (condition) => {
+  (condition, oldCondition) => {
     formValues.value = { ...condition };
     // 只记录第一次的condition值，重置时回到最开始的默认值
-    if (!conditionInitValues) {
+    if (!conditionInitValues && oldCondition) {
       conditionInitValues = { ...formValues.value };
     }
   },
