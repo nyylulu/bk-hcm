@@ -21,6 +21,7 @@ import (
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/model/config"
 	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
@@ -62,7 +63,7 @@ func (s *service) VerifyResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 }
 
 // verifyResPlanDemand verify resource plan demand.
-func (s *service) verifyResPlanDemand(kt *kit.Kit, bizOrgRel *ptypes.BizOrgRel, obsProject enumor.ObsProject,
+func (s *service) verifyResPlanDemand(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel, obsProject enumor.ObsProject,
 	suborders []task.Suborder) ([]ptypes.VerifyResPlanDemandElem, error) {
 
 	// get meta maps.

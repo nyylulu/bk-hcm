@@ -55,4 +55,6 @@ const (
 
 	// SearchBizBelongingMaxLimit 调用CMDB API查询业务归属的最大限制数量
 	SearchBizBelongingMaxLimit = 20
+	// RollingServerOperateMaxLimit 滚服记录操作的最大数量限制
+	RollingServerOperateMaxLimit = 100
 )

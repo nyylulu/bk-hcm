@@ -25,6 +25,7 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // DetectingState the action to be executed in detecting state
@@ -85,10 +86,10 @@ func (ds *DetectingState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
-	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s", orderId)
-
 	ev := ds.dealDetectTask(taskCtx)
+
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s, ev: %+v", orderId, cvt.PtrToVal(ev))
 
 	return ds.UpdateState(taskCtx, ev)
 }

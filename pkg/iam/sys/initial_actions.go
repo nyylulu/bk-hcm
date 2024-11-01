@@ -656,6 +656,14 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+	}, {
+		ID:                   RollingServerManage,
+		Name:                 ActionIDNameMap[RollingServerManage],
+		NameEn:               "Rolling Server Manage",
+		Type:                 View,
+		RelatedResourceTypes: nil,
+		RelatedActions:       nil,
+		Version:              1,
 	},
 	}
 }

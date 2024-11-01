@@ -1,0 +1,69 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package rollingserver ...
+package rollingserver
+
+import "hcm/pkg/criteria/validator"
+
+const (
+	// SyncAllBiz sync rolling all business bill
+	SyncAllBiz = -1
+	// FirstDay 每月第一天
+	FirstDay = 1
+	// CalculateFineStartDay 滚服机器"超期未退还"开始计算罚金的启始天数
+	CalculateFineStartDay = 31
+	// CalculateFineEndDay 滚服机器"超期未退还"开始计算罚金的最后天数
+	CalculateFineEndDay = 121
+
+	// DefaultCityID 城市ID默认值
+	DefaultCityID = 10000
+	// DefaultBusinessModID 三级业务id默认值
+	DefaultBusinessModID = 0
+	// DefaultBusinessModName 三级业务名称默认值
+	DefaultBusinessModName = ""
+	// PlatformID 平台ID
+	PlatformID = 496
+	// ResClassID 资源规格ID
+	ResClassID = 4911
+
+	// IEGOperateDeptID IEG初始运维部门ID
+	IEGOperateDeptID = 3
+)
+
+// RollingBillSyncReq sync request
+type RollingBillSyncReq struct {
+	// BkBizID 业务ID
+	BkBizID int64 `json:"bk_biz_id" validate:"required"`
+	// Year 记录账单的年份
+	Year int `json:"year" validate:"required"`
+	// Month 记录账单的月份
+	Month int `json:"month" validate:"required"`
+	// Day 记录账单的天
+	Day int `json:"day" validate:"required"`
+}
+
+// Validate ...
+func (r *RollingBillSyncReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	return nil
+}

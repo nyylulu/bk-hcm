@@ -18,9 +18,9 @@ import (
 	"fmt"
 
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
-	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // Requirement resource requirement type config
@@ -586,4 +586,11 @@ var Description = map[string]string{
 	AntiRack:   "分机架",
 	AntiModule: "分Module",
 	AntiCampus: "分Campus",
+}
+
+// DeviceTypeCpuItem device type cpu item
+type DeviceTypeCpuItem struct {
+	DeviceType  string `json:"device_type"`  // 机型
+	CPUAmount   int64  `json:"cpu_amount"`   // CPU数量
+	DeviceGroup string `json:"device_group"` // 机型族
 }

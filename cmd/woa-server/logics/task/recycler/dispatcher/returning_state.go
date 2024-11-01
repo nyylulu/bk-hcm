@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // ReturningState the action to be executed in returning state
@@ -67,7 +68,7 @@ func (rs *ReturningState) UpdateState(ctx EventContext, ev *event.Event) error {
 	}
 
 	// 记录日志
-	logs.Infof("recycler: finish return state, subOrderId: %s", taskCtx.Order.SuborderID)
+	logs.Infof("recycler: finish return state, subOrderId: %s, ev: %+v", taskCtx.Order.SuborderID, cvt.PtrToVal(ev))
 	return nil
 }
 
@@ -84,10 +85,10 @@ func (rs *ReturningState) Execute(ctx EventContext) error {
 		return fmt.Errorf("state %s failed to execute, for invalid context order is nil", rs.Name())
 	}
 	orderId := taskCtx.Order.SuborderID
-	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:ReturningState:start, orderID: %s", orderId)
 	// run return tasks
 	ev := taskCtx.Dispatcher.returner.DealRecycleOrder(taskCtx.Order)
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:ReturningState:start, subOrderID: %s, ev: %+v", orderId, cvt.PtrToVal(ev))
 	return rs.UpdateState(ctx, ev)
 }
 

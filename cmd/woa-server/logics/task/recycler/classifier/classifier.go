@@ -31,29 +31,33 @@ type RecycleGrpType int
 
 // definition of various recycle host group type
 const (
-	RecycleGrpCVMPriRegularImmediate  RecycleGrpType = iota
-	RecycleGrpCVMPriRegularDelay      RecycleGrpType = iota
-	RecycleGrpCVMPriDissolveImmediate RecycleGrpType = iota
-	RecycleGrpCVMPriDissolveDelay     RecycleGrpType = iota
-	RecycleGrpCVMPriSpringImmediate   RecycleGrpType = iota
-	RecycleGrpCVMPriSpringDelay       RecycleGrpType = iota
-	RecycleGrpCVMPriRentImmediate     RecycleGrpType = iota
-	RecycleGrpCVMPriRentDelay         RecycleGrpType = iota
-	RecycleGrpCVMPubRegularImmediate  RecycleGrpType = iota
-	RecycleGrpCVMPubRegularDelay      RecycleGrpType = iota
-	RecycleGrpCVMPubDissolveImmediate RecycleGrpType = iota
-	RecycleGrpCVMPubDissolveDelay     RecycleGrpType = iota
-	RecycleGrpCVMPubSpringImmediate   RecycleGrpType = iota
-	RecycleGrpCVMPubSpringDelay       RecycleGrpType = iota
-	RecycleGrpCVMPubRentImmediate     RecycleGrpType = iota
-	RecycleGrpCVMPubRentDelay         RecycleGrpType = iota
-	RecycleGrpPMRegularImmediate      RecycleGrpType = iota
-	RecycleGrpPMRegularDelay          RecycleGrpType = iota
-	RecycleGrpPMDissolveImmediate     RecycleGrpType = iota
-	RecycleGrpPMDissolveDelay         RecycleGrpType = iota
-	RecycleGrpPMExpiredImmediate      RecycleGrpType = iota
-	RecycleGrpPMExpiredDelay          RecycleGrpType = iota
-	RecycleGrpOthers                  RecycleGrpType = iota
+	RecycleGrpCVMPriRegularImmediate    RecycleGrpType = iota
+	RecycleGrpCVMPriRegularDelay        RecycleGrpType = iota
+	RecycleGrpCVMPriDissolveImmediate   RecycleGrpType = iota
+	RecycleGrpCVMPriDissolveDelay       RecycleGrpType = iota
+	RecycleGrpCVMPriSpringImmediate     RecycleGrpType = iota
+	RecycleGrpCVMPriSpringDelay         RecycleGrpType = iota
+	RecycleGrpCVMPriRentImmediate       RecycleGrpType = iota
+	RecycleGrpCVMPriRentDelay           RecycleGrpType = iota
+	RecycleGrpCVMPubRegularImmediate    RecycleGrpType = iota
+	RecycleGrpCVMPubRegularDelay        RecycleGrpType = iota
+	RecycleGrpCVMPubDissolveImmediate   RecycleGrpType = iota
+	RecycleGrpCVMPubDissolveDelay       RecycleGrpType = iota
+	RecycleGrpCVMPubSpringImmediate     RecycleGrpType = iota
+	RecycleGrpCVMPubSpringDelay         RecycleGrpType = iota
+	RecycleGrpCVMPubRentImmediate       RecycleGrpType = iota
+	RecycleGrpCVMPubRentDelay           RecycleGrpType = iota
+	RecycleGrpPMRegularImmediate        RecycleGrpType = iota
+	RecycleGrpPMRegularDelay            RecycleGrpType = iota
+	RecycleGrpPMDissolveImmediate       RecycleGrpType = iota
+	RecycleGrpPMDissolveDelay           RecycleGrpType = iota
+	RecycleGrpPMExpiredImmediate        RecycleGrpType = iota
+	RecycleGrpPMExpiredDelay            RecycleGrpType = iota
+	RecycleGrpOthers                    RecycleGrpType = iota
+	RecycleGrpCVMPubRollServerImmediate RecycleGrpType = iota
+	RecycleGrpCVMPubRollServerDelay     RecycleGrpType = iota
+	RecycleGrpCVMPriRollServerImmediate RecycleGrpType = iota
+	RecycleGrpCVMPriRollServerDelay     RecycleGrpType = iota
 )
 
 // RecycleGroupProperty recycle strategy properties of recycle group
@@ -219,6 +223,34 @@ var MapGroupProperty = map[RecycleGrpType]RecycleGroupProperty{
 		ResourceType:  table.ResourceTypeOthers,
 		CostConcerned: false,
 	},
+	RecycleGrpCVMPubRollServerImmediate: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeRollServer,
+		ReturnType:    table.RetPlanImmediate,
+		Pool:          table.PoolPublic,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPubRollServerDelay: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeRollServer,
+		ReturnType:    table.RetPlanDelay,
+		Pool:          table.PoolPublic,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPriRollServerImmediate: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeRollServer,
+		ReturnType:    table.RetPlanImmediate,
+		Pool:          table.PoolPrivate,
+		CostConcerned: false,
+	},
+	RecycleGrpCVMPriRollServerDelay: {
+		ResourceType:  table.ResourceTypeCvm,
+		RecycleType:   table.RecycleTypeRollServer,
+		ReturnType:    table.RetPlanDelay,
+		Pool:          table.PoolPrivate,
+		CostConcerned: false,
+	},
 }
 
 // RecycleGroup recycle group of hosts with the same resource type, recycle type and return plan
@@ -246,6 +278,7 @@ func ClassifyRecycleGroups(hosts []*table.RecycleHost, plan *types.ReturnPlan) (
 
 // fillClassifyInfo fill recycle host with classification info
 func fillClassifyInfo(hosts []*table.RecycleHost, plan *types.ReturnPlan) {
+
 	for _, host := range hosts {
 		// fill resource type
 		resType := getResType(host)
@@ -366,20 +399,30 @@ func isSpecialCvm(deviceType string) bool {
 
 // getRecycleType get host recycle type
 func getRecycleType(host *table.RecycleHost) table.RecycleType {
+
+	// 机房裁撤
 	if isDissolveDevice(host) {
 		return table.RecycleTypeDissolve
 	}
 
+	// 过保裁撤
 	if isExpiredPm(host) {
 		return table.RecycleTypeExpired
 	}
 
+	// 春节保障
 	if isSpringCvm(host) {
 		return table.RecycleTypeSpring
 	}
 
+	// 短租项目
 	if isRentCvm(host) {
 		return table.RecycleTypeRent
+	}
+
+	// 判断“回收类型”是否滚服项目
+	if isRecycleRollProject(host) {
+		return table.RecycleTypeRollServer
 	}
 
 	return table.RecycleTypeRegular
@@ -518,109 +561,149 @@ func isRentCvm(host *table.RecycleHost) bool {
 	return false
 }
 
+// isRecycleRollProject verify if given host is cvm with obs project "滚服项目"
+func isRecycleRollProject(host *table.RecycleHost) bool {
+	if host.ResourceType != table.ResourceTypeCvm {
+		return false
+	}
+
+	if host.RecycleType == table.RecycleTypeRollServer {
+		return true
+	}
+
+	return false
+}
+
 // getRecycleGrpType get host recycle group type
 func getRecycleGrpType(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpType {
 	switch host.ResourceType {
 	case table.ResourceTypeCvm:
-		{
-			if host.Pool == table.PoolPublic {
-				if host.RecycleType == table.RecycleTypeRegular {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPubRegularImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPubRegularDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeDissolve {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPubDissolveImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPubDissolveDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeSpring {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPubSpringImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPubSpringDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeRent {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPubRentImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPubRentDelay
-					}
-				}
-			} else {
-				if host.RecycleType == table.RecycleTypeRegular {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPriRegularImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPriRegularDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeDissolve {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPriDissolveImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPriDissolveDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeSpring {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPriSpringImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPriSpringDelay
-					}
-				}
-				if host.RecycleType == table.RecycleTypeRent {
-					if plan.CvmPlan == table.RetPlanImmediate {
-						return RecycleGrpCVMPriRentImmediate
-					}
-					if plan.CvmPlan == table.RetPlanDelay {
-						return RecycleGrpCVMPriRentDelay
-					}
-				}
-			}
+		if host.Pool == table.PoolPublic {
+			return cvmPoolPublic(host, plan)
+		} else {
+			return cvmPoolPrivate(host, plan)
 		}
 	case table.ResourceTypePm:
-		{
-			if host.RecycleType == table.RecycleTypeRegular {
-				if plan.PmPlan == table.RetPlanImmediate {
-					return RecycleGrpPMRegularImmediate
-				}
-				if plan.PmPlan == table.RetPlanDelay {
-					return RecycleGrpPMRegularDelay
-				}
-			}
-			if host.RecycleType == table.RecycleTypeDissolve {
-				if plan.PmPlan == table.RetPlanImmediate {
-					return RecycleGrpPMDissolveImmediate
-				}
-				if plan.PmPlan == table.RetPlanDelay {
-					return RecycleGrpPMDissolveDelay
-				}
-			}
-			if host.RecycleType == table.RecycleTypeExpired {
-				if plan.PmPlan == table.RetPlanImmediate {
-					return RecycleGrpPMExpiredImmediate
-				}
-				if plan.PmPlan == table.RetPlanDelay {
-					return RecycleGrpPMExpiredDelay
-				}
-			}
-		}
+		return idcPm(host, plan)
 	case table.ResourceTypeOthers:
 		return RecycleGrpOthers
 	}
 
+	return RecycleGrpOthers
+}
+
+func cvmPoolPublic(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpType {
+	if host.RecycleType == table.RecycleTypeRegular {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubRegularImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubRegularDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeDissolve {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubDissolveImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubDissolveDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeSpring {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubSpringImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubSpringDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeRent {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubRentImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubRentDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeRollServer { // 滚服项目
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPubRollServerImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPubRollServerDelay
+		}
+	}
+	return RecycleGrpOthers
+}
+
+func cvmPoolPrivate(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpType {
+	if host.RecycleType == table.RecycleTypeRegular {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriRegularImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriRegularDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeDissolve {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriDissolveImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriDissolveDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeSpring {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriSpringImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriSpringDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeRent {
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriRentImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriRentDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeRollServer { // 滚服项目
+		if plan.CvmPlan == table.RetPlanImmediate {
+			return RecycleGrpCVMPriRollServerImmediate
+		}
+		if plan.CvmPlan == table.RetPlanDelay {
+			return RecycleGrpCVMPriRollServerDelay
+		}
+	}
+	return RecycleGrpOthers
+}
+
+func idcPm(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpType {
+	if host.RecycleType == table.RecycleTypeRegular {
+		if plan.PmPlan == table.RetPlanImmediate {
+			return RecycleGrpPMRegularImmediate
+		}
+		if plan.PmPlan == table.RetPlanDelay {
+			return RecycleGrpPMRegularDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeDissolve {
+		if plan.PmPlan == table.RetPlanImmediate {
+			return RecycleGrpPMDissolveImmediate
+		}
+		if plan.PmPlan == table.RetPlanDelay {
+			return RecycleGrpPMDissolveDelay
+		}
+	}
+	if host.RecycleType == table.RecycleTypeExpired {
+		if plan.PmPlan == table.RetPlanImmediate {
+			return RecycleGrpPMExpiredImmediate
+		}
+		if plan.PmPlan == table.RetPlanDelay {
+			return RecycleGrpPMExpiredDelay
+		}
+	}
 	return RecycleGrpOthers
 }

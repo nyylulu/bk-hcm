@@ -1645,3 +1645,8 @@ func (c NgateCli) validate() error {
 
 	return nil
 }
+
+// RollingServer 滚服相关配置
+type RollingServer struct {
+	SyncBill bool `yaml:"syncBill"`
+}

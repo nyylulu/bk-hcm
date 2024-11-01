@@ -1,12 +1,18 @@
 <script setup lang="ts">
-import { ref, reactive, watch, h } from 'vue';
+import { ref, reactive, watch, h, computed } from 'vue';
 import { Loading, Table, Button, Sideslider } from 'bkui-vue';
 import { BkRadioGroup, BkRadioButton } from 'bkui-vue/lib/radio';
 import { Column } from 'bkui-vue/lib/table/props';
-import { useZiyanScrStore } from '@/store';
+import { ReturnedWay, useZiyanScrStore } from '@/store';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import usePagination from '@/hooks/usePagination';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import { useRollingServerStore } from '@/store/rolling-server';
+import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+
+import RecycleTypeSelector from './recycle-type-selector.vue';
+import RecycleQuotaTips from '@/views/ziyanScr/rolling-server/recycle-quota-tips/index.vue';
 
 const props = defineProps<{
   ips: string[];
@@ -14,6 +20,7 @@ const props = defineProps<{
 
 const emit = defineEmits<(e: 'selectChange', selected: any[]) => void>();
 
+const { getBizsId } = useWhereAmI();
 const businessMapStore = useBusinessMapStore();
 const scrStore = useZiyanScrStore();
 const { selections, handleSelectionChange } = useSelection();
@@ -86,6 +93,25 @@ const preRecycleColumns: Column[] = [
   {
     label: '回收类型',
     field: 'recycle_type',
+    render: ({ cell, row }: any) => {
+      return returnedWay.value === ReturnedWay.RESOURCE_POOL &&
+        (cell !== '滚服项目' || (row.originRecycleType !== undefined && row.originRecycleType !== '滚服项目'))
+        ? h(RecycleTypeSelector, {
+            value: row.originRecycleType || cell,
+            onChange: (v) => {
+              if (!row.isRecycleTypeChange) {
+                row.isRecycleTypeChange = true;
+                row.originRecycleType = cell; // 记录原始值
+              } else {
+                if (v === row.originRecycleType) {
+                  row.isRecycleTypeChange = false;
+                }
+              }
+              row.recycle_type = v;
+            },
+          })
+        : cell;
+    },
   },
   {
     label: '回收选项',
@@ -204,6 +230,7 @@ const nextStep = () => {
   currentStep.value += 1;
 };
 const prevStep = () => {
+  selections.value = [];
   currentStep.value -= 1;
 };
 
@@ -214,7 +241,47 @@ const isFirstStep = () => {
   return currentStep.value === 1;
 };
 
-defineExpose({ nextStep, prevStep, isLastStep, isFirstStep });
+// rolling-server
+const rollingServerStore = useRollingServerStore();
+const rollingServerQuotaStore = useRollingServerQuotaStore();
+const isSelectionRecycleTypeChange = computed(() => selections.value.some((item) => item.isRecycleTypeChange));
+const returnedWay = computed(() => {
+  // 不会出现多业务的场景
+  return !!rollingServerStore.resPollBusinessIds.includes(getBizsId()) ? ReturnedWay.RESOURCE_POOL : ReturnedWay.CRP;
+});
+watch(
+  returnedWay,
+  async (v) => {
+    if (v === ReturnedWay.RESOURCE_POOL) {
+      await rollingServerQuotaStore.getGlobalQuota();
+    }
+  },
+  { immediate: true },
+);
+// *暂不限制：资源池业务下，选择为“滚服项目”的核数，不能超过全平台应该退还给公司的额度
+const isRollingServerCpuCoreExceedByResPool = computed(() => {
+  if (ReturnedWay.RESOURCE_POOL === returnedWay.value) {
+    const { sum_delivered_core, sum_returned_applied_core } = rollingServerQuotaStore.globalQuotaConfig;
+    // 全平台应该退还给公司的额度
+    const limit = sum_delivered_core - sum_returned_applied_core;
+    // “滚服项目”的核数
+    const sum = selections.value
+      .filter((item) => item.recycle_type === '滚服项目')
+      .reduce((prev, curr) => prev + curr.sum_cpu_core, 0);
+
+    return sum > limit;
+  }
+  return false;
+});
+
+defineExpose({
+  nextStep,
+  prevStep,
+  isLastStep,
+  isFirstStep,
+  isSelectionRecycleTypeChange,
+  isRollingServerCpuCoreExceedByResPool,
+});
 </script>
 
 <template>
@@ -272,6 +339,9 @@ defineExpose({ nextStep, prevStep, isLastStep, isFirstStep });
         </dl>
       </div>
       <div class="confirm-submit" v-else-if="currentStep === 3">
+        <p class="font-small mb8">
+          注意：回收的项目类型，平台将自动分类，例如业务有使用滚服项目的资源，回收将优先退回到滚服项目。
+        </p>
         <Loading :loading="preRecycleLoading">
           <Table
             :data="preRecycleList"
@@ -283,6 +353,7 @@ defineExpose({ nextStep, prevStep, isLastStep, isFirstStep });
             @selectAll="(selections: any) => handleSelectionChange(selections, () => true, true)"
           ></Table>
         </Loading>
+        <recycle-quota-tips class="mt8" :returned-way="returnedWay" :selections="selections" />
       </div>
     </div>
   </div>

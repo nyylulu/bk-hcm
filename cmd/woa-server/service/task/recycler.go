@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 )
 
@@ -1070,4 +1071,61 @@ func (s *service) GetDetectStepCfg(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// StartRecycleOrderByRecycleType start recycle order by recycle type
+func (s *service) StartRecycleOrderByRecycleType(cts *rest.Contexts) (any, error) {
+	input := new(types.StartRecycleOrderByRecycleTypeReq)
+	if err := cts.DecodeInto(input); err != nil {
+		logs.Errorf("failed to start recycle order by recycle type, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err := input.Validate()
+	if err != nil {
+		logs.Errorf("failed to start recycle order by recycle type, err: %v, input: %+v, rid: %s",
+			err, input, cts.Kit.Rid)
+		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
+	}
+
+	subOrderIDs := make([]string, 0)
+	for _, item := range input.SubOrderIDTypes {
+		subOrderIDs = append(subOrderIDs, item.SuborderID)
+	}
+	subOrderIDs = slice.Unique(subOrderIDs)
+
+	// get order's biz id list
+	bizIds, err := s.getOrderBizIds(cts.Kit, []uint64{}, subOrderIDs)
+	if err != nil {
+		logs.Errorf("failed to start recycle order by recycle type, for get order biz id err: %v, rid: %s",
+			err, cts.Kit.Rid)
+		return nil, errf.Newf(pkg.CCErrCommParamsIsInvalid, "get recycle type order biz id err: %v", err)
+	}
+
+	if len(bizIds) == 0 {
+		err = errors.New("recycle type order's biz id list is empty")
+		logs.Errorf("failed to start recycle order by recycle type, input: %+v, err: %v, rid: %s",
+			input, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// check permission
+	for _, bizId := range bizIds {
+		err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Errorf("no permission to start recycle order by recycle type, failed to check permission, "+
+				"bizID: %d, err: %v, rid: %s", bizId, err, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+
+	if err = s.logics.Recycler().StartRecycleOrderByRecycleType(cts.Kit, input); err != nil {
+		logs.Errorf("failed to start recycle order by recycle type, err: %v, input: %+v, rid: %s",
+			err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
 }

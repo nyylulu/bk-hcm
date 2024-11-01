@@ -14,6 +14,7 @@
 package table
 
 import (
+	"fmt"
 	"strconv"
 	"time"
 )
@@ -23,11 +24,12 @@ type RecycleType string
 
 // definition of various recycle type
 const (
-	RecycleTypeRegular  RecycleType = "常规项目"
-	RecycleTypeDissolve RecycleType = "机房裁撤"
-	RecycleTypeExpired  RecycleType = "过保裁撤"
-	RecycleTypeSpring   RecycleType = "春节保障"
-	RecycleTypeRent     RecycleType = "短租项目"
+	RecycleTypeRegular    RecycleType = "常规项目"
+	RecycleTypeDissolve   RecycleType = "机房裁撤"
+	RecycleTypeExpired    RecycleType = "过保裁撤"
+	RecycleTypeSpring     RecycleType = "春节保障"
+	RecycleTypeRent       RecycleType = "短租项目"
+	RecycleTypeRollServer RecycleType = "滚服项目"
 )
 
 // ToObsProject convert recycle type to OBS project name
@@ -39,6 +41,8 @@ func (rt RecycleType) ToObsProject() string {
 		return string(RecycleTypeRent)
 	case RecycleTypeDissolve:
 		return rt.getDissolveObsProject()
+	case RecycleTypeRollServer:
+		return string(RecycleTypeRollServer)
 	default:
 		return string(RecycleTypeRegular)
 	}
@@ -67,6 +71,17 @@ func (rt RecycleType) getDissolveObsProject() string {
 	project := prefixYear + string(RecycleTypeDissolve)
 
 	return project
+}
+
+// Validate validate
+func (rt RecycleType) Validate() error {
+	switch rt {
+	case RecycleTypeRegular, RecycleTypeDissolve, RecycleTypeExpired,
+		RecycleTypeSpring, RecycleTypeRent, RecycleTypeRollServer:
+	default:
+		return fmt.Errorf("validate unknown recycle type: %s", rt)
+	}
+	return nil
 }
 
 // RecycleStatus recycle status
@@ -219,4 +234,22 @@ type PoolType int
 const (
 	PoolPrivate PoolType = 0
 	PoolPublic  PoolType = 1
+)
+
+// RequireType 需求类型
+type RequireType int64
+
+const (
+	// RequireTypeRegular 常规项目
+	RequireTypeRegular RequireType = 1
+	// RequireTypeSpring 春节保障
+	RequireTypeSpring RequireType = 2
+	// RequireTypeDissolve 机房裁撤
+	RequireTypeDissolve RequireType = 3
+	// RequireTypeExpired 故障替换
+	RequireTypeExpired RequireType = 4
+	// RequireTypeRent 短租项目
+	RequireTypeRent RequireType = 5
+	// RequireTypeRollServer 滚服项目
+	RequireTypeRollServer RequireType = 6
 )

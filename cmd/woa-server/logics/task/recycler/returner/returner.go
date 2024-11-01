@@ -26,6 +26,7 @@ import (
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
 	"hcm/pkg/kit"
@@ -188,7 +189,8 @@ func (r *Returner) updateReturnState(err error, taskId string, task *table.Retur
 	hosts []*table.RecycleHost) *event.Event {
 
 	if err == nil && taskId == "" {
-		err = fmt.Errorf("failed to return hosts, for return order id is empty")
+		err = fmt.Errorf("failed to return hosts, for return order id is empty, taskID: %s, subOrderID: %s",
+			taskId, task.SuborderID)
 	}
 
 	// update order info
@@ -309,7 +311,7 @@ func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnT
 		"update_at": now,
 	}
 
-	if len(taskId) > 0 {
+	if len(taskId) > 0 && taskId != enumor.RollingServerResourcePoolTask {
 		link := ""
 		switch task.ResourceType {
 		case table.ResourceTypeCvm:
@@ -336,7 +338,7 @@ func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnT
 func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, taskId string) error {
 	now := time.Now()
 	link := ""
-	if len(taskId) != 0 {
+	if len(taskId) != 0 && taskId != enumor.RollingServerResourcePoolTask {
 		switch task.ResourceType {
 		case table.ResourceTypeCvm:
 			link = cvmapi.CvmReturnLinkPrefix + taskId

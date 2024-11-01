@@ -38,6 +38,11 @@ export const headRouteConfig = [
     name: '资源选型',
     path: '/scheme/recommendation',
   },
+  {
+    id: 'platform',
+    name: '平台管理',
+    path: '/platform',
+  },
 
   // 接下来是 资源选型、平台管理
   // {

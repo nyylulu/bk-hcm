@@ -17,7 +17,7 @@ import (
 	"fmt"
 	"strconv"
 
-	ptypes "hcm/cmd/woa-server/types/plan"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -75,7 +75,7 @@ func (l *logics) ListAuthorizedBiz(kt *kit.Kit) ([]int64, error) {
 }
 
 // GetBizOrgRel get biz org relation.
-func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, error) {
+func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, error) {
 	// search cmdb business belonging.
 	req := &cmdb.SearchBizBelongingParams{
 		BizIDs: []int64{bkBizID},
@@ -94,7 +94,7 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, er
 
 	// convert search biz belonging response to biz org relation response.
 	bizBelong := (*resp)[0]
-	rst := &ptypes.BizOrgRel{
+	rst := &mtypes.BizOrgRel{
 		BkBizID:         bizBelong.BizID,
 		BkBizName:       bizBelong.BizName,
 		OpProductID:     bizBelong.OpProductID,

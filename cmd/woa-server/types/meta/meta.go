@@ -86,6 +86,18 @@ func (r *ListBizsByOpProdReq) Validate() error {
 	return nil
 }
 
+// BizOrgRel is GetBizOrgRel result.
+type BizOrgRel struct {
+	BkBizID         int64  `json:"bk_biz_id"`
+	BkBizName       string `json:"bk_biz_name"`
+	OpProductID     int64  `json:"op_product_id"`
+	OpProductName   string `json:"op_product_name"`
+	PlanProductID   int64  `json:"plan_product_id"`
+	PlanProductName string `json:"plan_product_name"`
+	VirtualDeptID   int64  `json:"virtual_dept_id"`
+	VirtualDeptName string `json:"virtual_dept_name"`
+}
+
 // Biz is GetBizs result.
 type Biz struct {
 	BkBizID   int64  `json:"bk_biz_id"`

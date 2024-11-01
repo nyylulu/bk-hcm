@@ -58,9 +58,10 @@ type Client struct {
 	LoadBalancer   *LoadBalancerClient
 	SGCommonRel    *SGCommonRelClient
 
-	MainAccount *MainAccountClient
-	RootAccount *RootAccountClient
-	Cos         *CosClient
+	MainAccount   *MainAccountClient
+	RootAccount   *RootAccountClient
+	Cos           *CosClient
+	RollingServer *RollingServerClient
 }
 
 type restClient struct {
@@ -104,5 +105,6 @@ func NewClient(client rest.ClientInterface) *Client {
 		MainAccount:    NewMainAccountClient(client),
 		RootAccount:    NewRootAccountClient(client),
 		Cos:            NewCosClient(client),
+		RollingServer:  NewRollingServerClient(client),
 	}
 }

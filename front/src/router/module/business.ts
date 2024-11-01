@@ -2,6 +2,9 @@
 import { LBRouteName } from '@/constants';
 import type { RouteRecordRaw } from 'vue-router';
 import i18n from '@/language/i18n';
+import { MENU_BUSINESS_ROLLING_SERVER } from '@/constants/menu-symbol';
+import Meta from '../meta';
+
 const { t } = i18n.global;
 const businesseMenus: RouteRecordRaw[] = [
   {
@@ -472,6 +475,19 @@ const businesseMenus: RouteRecordRaw[] = [
             },
           },
         ],
+      },
+      {
+        path: '/business/rolling-server',
+        name: MENU_BUSINESS_ROLLING_SERVER,
+        component: () => import('@/views/business/rolling-server/index.vue'),
+        meta: {
+          ...new Meta({
+            title: '滚服项目',
+            activeKey: MENU_BUSINESS_ROLLING_SERVER,
+            isShowBreadcrumb: true,
+            icon: 'hcm-icon bkhcm-icon-template-orchestration',
+          }),
+        },
       },
     ],
     meta: {

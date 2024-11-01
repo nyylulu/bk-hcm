@@ -25,6 +25,7 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // TransitingState the action to be executed in transiting state
@@ -57,7 +58,8 @@ func (ts *TransitingState) UpdateState(ctx EventContext, ev *event.Event) error 
 	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
 
 	// 记录日志
-	logs.Infof("recycler: finish transfer state, subOrderId: %s", taskCtx.Order.SuborderID)
+	logs.Infof("recycler: finish transfer state, subOrderId: %s, ev: %+v, recycleType: %s", taskCtx.Order.SuborderID,
+		cvt.PtrToVal(ev), taskCtx.Order.RecycleType)
 	return nil
 }
 
@@ -79,10 +81,12 @@ func (ts *TransitingState) Execute(ctx EventContext) error {
 		return fmt.Errorf("state %s failed to execute, for invalid context order is nil", ts.Name())
 	}
 	orderId := taskCtx.Order.SuborderID
-	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:TransitingState:start, orderID: %s", orderId)
 	// run transit tasks
 	ev := taskCtx.Dispatcher.transit.DealRecycleOrder(taskCtx.Order)
+
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:TransitingState:end, orderID: %s, recycleType: %s, ev: %+v", orderId,
+		taskCtx.Order.RecycleType, cvt.PtrToVal(ev))
 
 	return ts.UpdateState(ctx, ev)
 }

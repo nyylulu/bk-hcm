@@ -1,0 +1,198 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package rollingserver ...
+package rollingserver
+
+import (
+	"fmt"
+
+	"hcm/pkg/api/core"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
+	"hcm/pkg/criteria/errf"
+	idgenerator "hcm/pkg/dal/dao/id-generator"
+	"hcm/pkg/dal/dao/orm"
+	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/dal/table"
+	tablers "hcm/pkg/dal/table/rolling-server"
+	"hcm/pkg/dal/table/utils"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
+
+	"github.com/jmoiron/sqlx"
+)
+
+// RollingGlobalConfigInterface only used for rolling global config interface.
+type RollingGlobalConfigInterface interface {
+	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingGlobalConfigTable) ([]string, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *tablers.RollingGlobalConfigTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingGlobalConfigListResult, error)
+	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+}
+
+var _ RollingGlobalConfigInterface = new(RollingGlobalConfigDao)
+
+// RollingGlobalConfigDao rolling global config RollingGlobalConfigDao.
+type RollingGlobalConfigDao struct {
+	Orm   orm.Interface
+	IDGen idgenerator.IDGenInterface
+}
+
+// CreateWithTx create rolling global config with tx.
+func (d RollingGlobalConfigDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []tablers.RollingGlobalConfigTable) (
+	[]string, error) {
+
+	if len(models) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "models to create cannot be empty")
+	}
+
+	ids, err := d.IDGen.Batch(kt, models[0].TableName(), len(models))
+	if err != nil {
+		return nil, err
+	}
+
+	for index := range models {
+		models[index].ID = ids[index]
+
+		if err = models[index].InsertValidate(); err != nil {
+			return nil, err
+		}
+	}
+
+	sql := fmt.Sprintf(`INSERT INTO %s (%s)	VALUES(%s)`, models[0].TableName(),
+		tablers.RollingGlobalConfigColumns.ColumnExpr(), tablers.RollingGlobalConfigColumns.ColonNameExpr())
+
+	if err = d.Orm.Txn(tx).BulkInsert(kt.Ctx, sql, models); err != nil {
+		logs.Errorf("insert %s failed, err: %v, rid: %s", models[0].TableName(), err, kt.Rid)
+		return nil, fmt.Errorf("insert %s failed, err: %v", models[0].TableName(), err)
+	}
+
+	return ids, nil
+}
+
+// UpdateWithTx update rolling global config.
+func (d RollingGlobalConfigDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
+	model *tablers.RollingGlobalConfigTable) error {
+
+	if filterExpr == nil {
+		return errf.New(errf.InvalidParameter, "filter expr is nil")
+	}
+
+	if err := model.UpdateValidate(); err != nil {
+		return err
+	}
+
+	whereExpr, whereValue, err := filterExpr.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	opts := utils.NewFieldOptions().AddIgnoredFields(types.DefaultIgnoredFields...)
+	setExpr, toUpdate, err := utils.RearrangeSQLDataWithOption(model, opts)
+	if err != nil {
+		return fmt.Errorf("prepare parsed sql set filter expr failed, err: %v", err)
+	}
+
+	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
+
+	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
+	if err != nil {
+		logs.ErrorJson("update rolling global config failed, filter: %v, err: %v, rid: %v",
+			filterExpr, err, kt.Rid)
+		return err
+	}
+
+	if effected == 0 {
+		logs.ErrorJson("update rolling global config, but record not found, filter: %v, rid: %v",
+			filterExpr, kt.Rid)
+	}
+
+	return nil
+}
+
+// List get rolling global config list.
+func (d RollingGlobalConfigDao) List(kt *kit.Kit, opt *types.ListOption) (*rsproto.RollingGlobalConfigListResult,
+	error) {
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "list rolling global config options is nil")
+	}
+
+	if err := opt.ValidateExcludeFilter(
+		filter.NewExprOption(filter.RuleFields(tablers.RollingGlobalConfigColumns.ColumnTypes())),
+		core.NewDefaultPageOption(),
+	); err != nil {
+		return nil, err
+	}
+
+	whereExpr, whereValue, err := opt.Filter.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return nil, err
+	}
+
+	if opt.Page.Count {
+		// this is a count request, then do count operation only.
+		sql := fmt.Sprintf(`SELECT COUNT(*) FROM %s %s`, table.RollingGlobalConfigTable, whereExpr)
+
+		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
+		if err != nil {
+			logs.ErrorJson("count rolling global config failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
+			return nil, err
+		}
+
+		return &rsproto.RollingGlobalConfigListResult{Count: count}, nil
+	}
+
+	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
+	if err != nil {
+		return nil, err
+	}
+
+	sql := fmt.Sprintf(`SELECT %s FROM %s %s %s`, tablers.RollingGlobalConfigColumns.FieldsNamedExpr(opt.Fields),
+		table.RollingGlobalConfigTable, whereExpr, pageExpr)
+
+	details := make([]tablers.RollingGlobalConfigTable, 0)
+	if err = d.Orm.Do().Select(kt.Ctx, &details, sql, whereValue); err != nil {
+		return nil, err
+	}
+
+	return &rsproto.RollingGlobalConfigListResult{Count: 0, Details: details}, nil
+}
+
+// DeleteWithTx delete rolling global config with tx.
+func (d RollingGlobalConfigDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error {
+	if expr == nil {
+		return errf.New(errf.InvalidParameter, "filter expr is required")
+	}
+
+	whereExpr, whereValue, err := expr.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.RollingGlobalConfigTable, whereExpr)
+
+	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
+		logs.ErrorJson("delete rolling global config failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		return err
+	}
+
+	return nil
+}

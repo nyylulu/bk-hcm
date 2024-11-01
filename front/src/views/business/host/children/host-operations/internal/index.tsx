@@ -109,23 +109,25 @@ export default defineComponent({
     const handleZiyanRecycleSubmit = async () => {
       try {
         isLoading.value = true;
-        Message({
-          message: `${computedTitle.value}中, 请不要操作`,
-          theme: 'warning',
-          delay: 500,
-        });
-        const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
-        const { result } = await scrStore.startRecycleOrder({ order_id: orderIds });
-        if (result) {
-          Message({
-            message: '操作成功',
-            theme: 'success',
-          });
-          props.onFinished?.('confirm');
-
-          router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
-
-          operationType.value = OperationActions.NONE;
+        Message({ message: `${computedTitle.value}中, 请不要操作`, theme: 'warning', delay: 500 });
+        if (recycleFlowRef.value?.isSelectionRecycleTypeChange) {
+          const suborder_id_types = ziyanRecycleSelected.value.map((item) => ({
+            suborder_id: item.suborder_id,
+            recycle_type: item.recycle_type,
+          }));
+          await scrStore.startRecycleOrderByRecycleType({ suborder_id_types });
+        } else {
+          const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
+          await scrStore.startRecycleOrder({ order_id: orderIds });
+        }
+        Message({ message: '操作成功', theme: 'success' });
+        props.onFinished?.('confirm');
+        router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
+        operationType.value = OperationActions.NONE;
+      } catch (error: any) {
+        console.error(error);
+        if (error.code === 2000018) {
+          Message({ message: '任务提交失败，返回上一步重试提交', theme: 'error' });
         }
       } finally {
         isLoading.value = false;

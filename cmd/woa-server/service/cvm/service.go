@@ -33,7 +33,7 @@ import (
 func InitService(c *capability.Capability) {
 	s := &service{
 		authorizer: c.Authorizer,
-		logics:     cvm.New(c.ThirdCli, c.Conf.ClientConfig, config.New(c.ThirdCli), c.EsbClient),
+		logics:     cvm.New(c.ThirdCli, c.Conf.ClientConfig, config.New(c.ThirdCli), c.EsbClient, c.RsLogic),
 	}
 	h := rest.NewHandler()
 

@@ -194,6 +194,13 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/start/recycle/order`, data);
   };
 
+  // 按指定项目类型进行资源回收
+  const startRecycleOrderByRecycleType = async (data: {
+    suborder_id_types: { suborder_id: string; recycle_type: string }[];
+  }) => {
+    return http.post('/api/v1/woa/task/start/recycle/order/by/recycle_type', data);
+  };
+
   return {
     listVpc,
     listSubnet,
@@ -220,5 +227,6 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getPreRecycleList,
     getRecycleOrderHost,
     startRecycleOrder,
+    startRecycleOrderByRecycleType,
   };
 });

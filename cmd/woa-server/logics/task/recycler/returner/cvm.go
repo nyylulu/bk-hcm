@@ -22,24 +22,42 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
+	cvt "hcm/pkg/tools/converter"
 )
 
 func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
 	instIds := make([]string, 0)
+	isResourcePool := false
 	for _, host := range hosts {
 		if host.InstID == "" {
 			logs.Warnf("invalid host %s with empty cvm instance id", host.IP)
 			continue
 		}
+		// 如果是滚服订单，并且退还方式是“资源池”的话，不做退还到CRP的处理
+		if task.RecycleType == table.RecycleTypeRollServer && host.ReturnedWay == enumor.ResourcePoolReturnedWay {
+			isResourcePool = true
+			logs.Infof("return cvm host is rolling server need skip, subOrderID: %s, task: %+v, host: %+v",
+				task.SuborderID, cvt.PtrToVal(task), cvt.PtrToVal(host))
+			continue
+		}
 		instIds = append(instIds, host.InstID)
 	}
 
+	// 如果这批主机Host都需要转移到资源池的话，则不需要调用crp接口
+	if len(instIds) == 0 && isResourcePool {
+		logs.Infof("recycler:logics:cvm:returnCvm:SKIP, not call cvm api, subOrderId: %s, task: %+v, hosts: %+v",
+			task.SuborderID, cvt.PtrToVal(task), cvt.PtrToSlice(hosts))
+		return enumor.RollingServerResourcePoolTask, nil
+	}
+
 	if len(instIds) == 0 {
-		logs.Errorf("failed to create cvm return order, for instance id list is empty")
+		logs.Errorf("failed to create cvm return order, for instance id list is empty, subOrderID: %s, task: %+v",
+			task.SuborderID, cvt.PtrToVal(task))
 		return "", fmt.Errorf("failed to create cvm return order, for instance id list is empty")
 	}
 
@@ -51,15 +69,16 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	for try := 0; try < maxRetry; try++ {
 		resp, err = r.cvm.CreateCvmReturnOrder(nil, nil, req)
 		if err != nil {
-			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, err: %v", err)
+			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderID: %s, "+
+				"err: %v", task.SuborderID, err)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
 		}
 
 		if resp.Error.Code != 0 {
-			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, code: %d, msg: %s",
-				resp.Error.Code, resp.Error.Message)
+			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderID: %s, "+
+				"code: %d, msg: %s", task.SuborderID, resp.Error.Code, resp.Error.Message)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
@@ -92,6 +111,11 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 }
 
 func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cvmapi.ReturnReq {
+	// 回收方式
+	recycleType := table.RecycleTypeRegular
+	if task.RecycleType == table.RecycleTypeRollServer {
+		recycleType = table.RecycleTypeRollServer
+	}
 
 	req := &cvmapi.ReturnReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -109,7 +133,7 @@ func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cv
 			ReturnType: 0,
 			Reason:     "",
 			// default "常规项目"
-			ObsProject:      "常规项目",
+			ObsProject:      string(recycleType),
 			Force:           false,
 			AcceptCostShare: true,
 		},
@@ -119,6 +143,16 @@ func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cv
 	if task.ReturnPlan == table.RetPlanImmediate {
 		req.Params.IsReturnNow = 1
 	}
+
+	// 记录日志，方便排查问题
+	reqJson, err := json.Marshal(req)
+	if err != nil {
+		logs.Errorf("recycler:logics:cvm:returnCvm:jsonMarshal:failed, err: %+v, req: %+v, task: %+v", err, req, task)
+		return nil
+	}
+	logs.Infof("recycler:logics:cvm:returnCvm:success, recycleType: %s, reqJson: %s, task: %+v, instIDs: %v",
+		recycleType, reqJson, cvt.PtrToVal(task), instIds)
+
 	return req
 }
 

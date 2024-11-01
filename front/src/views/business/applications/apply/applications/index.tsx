@@ -12,6 +12,7 @@ import WName from '@/components/w-name';
 import StageDetailSideslider from './stage-detail';
 import MatchSideslider from './match';
 
+import qs from 'qs';
 import moment from 'moment';
 import { useI18n } from 'vue-i18n';
 import { throttle } from 'lodash';
@@ -452,6 +453,10 @@ export default defineComponent({
 
     const searchRulesKey = 'host_apply_applications_rules';
     const filterOrders = (searchRulesStr?: string) => {
+      const { initial_filter } = route.query ?? {};
+      if (initial_filter) {
+        Object.assign(formModel, qs.parse(initial_filter as string, { comma: true, allowEmptyArrays: true }));
+      }
       // 回填
       if (searchRulesStr) {
         // 解决人员选择器搜索问题

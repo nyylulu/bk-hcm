@@ -127,4 +127,7 @@ const (
 
 	// AwsSavingsPlansCost aws savings plans cost
 	AwsSavingsPlansCost ResourceType = "aws_savings_plans_cost"
+
+	// RollingServerManage defines biz's hcm auth resource type
+	RollingServerManage ResourceType = "rolling_server_manage"
 )

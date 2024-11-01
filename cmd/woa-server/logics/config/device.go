@@ -18,12 +18,16 @@ import (
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	utils "hcm/pkg/tools/util"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
+	utils "hcm/pkg/tools/util"
 )
 
 // DeviceIf provides management interface for operations of device config
@@ -58,6 +62,10 @@ type DeviceIf interface {
 	GetPmDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types.GetPmDeviceRst, error)
 	// CreatePmDevice creates config physical machine device type
 	CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.MapStr, error)
+
+	// ListCvmInstanceInfoByDeviceTypes list cvm instance info by device types
+	ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
+	ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error)
 }
 
 // NewDeviceOp creates a device interface
@@ -170,16 +178,12 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 	filter["enable_apply"] = true
 
 	insts, err := config.Operation().CvmDevice().FindManyDeviceType(kt.Ctx, filter)
-	logs.Infof("DEBUG:WOA:GetDeviceType, insts: %+v, err; %+v, rid: %s", insts, err, kt.Rid)
 	if err != nil {
 		return nil, err
 	}
 	instTypes := make([]string, 0)
 	for _, inst := range insts {
 		instStr := utils.GetStrByInterface(inst)
-		if instStr == "ITA5.32XLARGE576" {
-			logs.Infof("DEBUG:WOA:GetDeviceType:Loop, instStr: %s, rid: %s", instStr, kt.Rid)
-		}
 		instTypes = append(instTypes, instStr)
 	}
 	req := &cvmapi.QueryCvmInstanceTypeReq{
@@ -196,15 +200,12 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
-	logs.Infof("DEBUG:WOA:QueryCvmInstanceType, instTypes: %+v, resp; %+v, rid: %s",
+	// 记录日志
+	logs.Infof("get config device type, QueryCvmInstanceType, instTypes: %+v, resp; %+v, rid: %s",
 		instTypes, resp.Result.Data, kt.Rid)
 
 	infos := make([]types.DeviceTypeItem, 0)
 	for _, item := range resp.Result.Data {
-		if item.InstanceType == "ITA5.32XLARGE576" {
-			logs.Infof("DEBUG:WOA:QueryCvmInstanceType:Loop, item: %+v, rid: %s", item, kt.Rid)
-		}
-
 		infos = append(infos, types.DeviceTypeItem{
 			DeviceType:      item.InstanceType,
 			DeviceTypeClass: item.InstanceTypeClass,
@@ -481,4 +482,162 @@ func (d *device) CreatePmDevice(kt *kit.Kit, input *types.PmDeviceInfo) (mapstr.
 	}
 
 	return rst, nil
+}
+
+// ListCvmInstanceInfoByDeviceTypes list cvm instance info by device types
+func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []string) (
+	map[string]types.DeviceTypeCpuItem, error) {
+
+	deviceReq := &types.GetDeviceParam{
+		Filter: &querybuilder.QueryFilter{
+			Rule: querybuilder.CombinedRule{
+				Condition: querybuilder.ConditionAnd,
+				Rules: []querybuilder.Rule{
+					querybuilder.AtomRule{
+						Field:    "device_type",
+						Operator: querybuilder.OperatorIn,
+						Value:    deviceTypes,
+					}},
+			},
+		},
+		Page: metadata.BasePage{Limit: pkg.BKNoLimit, Start: 0},
+	}
+	deviceList, err := d.GetDevice(kt, deviceReq)
+	if err != nil {
+		logs.Errorf("get device list from mongo failed, err: %v, deviceTypes: %v, rid: %s", err, deviceTypes, kt.Rid)
+		return nil, err
+	}
+
+	deviceTypeMap := make(map[string]types.DeviceTypeCpuItem, 0)
+	existDeviceTypes := make([]string, 0)
+	for _, deviceItem := range deviceList.Info {
+		deviceType := deviceItem.DeviceType
+
+		// 机型族
+		deviceGroup, ok := deviceItem.Label["device_group"]
+		if !ok {
+			return nil, errors.New("get invalid empty device group")
+		}
+		deviceGroupStr, ok := deviceGroup.(string)
+		if !ok {
+			return nil, errors.New("get invalid non-string device group")
+		}
+
+		deviceTypeMap[deviceType] = types.DeviceTypeCpuItem{
+			DeviceType:  deviceItem.DeviceType,
+			CPUAmount:   deviceItem.Cpu,
+			DeviceGroup: deviceGroupStr,
+		}
+		existDeviceTypes = append(existDeviceTypes, deviceType)
+	}
+
+	// 如果查到了全部的DeviceType，则直接返回
+	if len(deviceList.Info) == len(deviceTypes) {
+		logs.Infof("get cvm instance info from mongo by device types, deviceTypes: %v, deviceTypeMap: %+v, rid: %s",
+			deviceTypes, deviceTypeMap, kt.Rid)
+		return deviceTypeMap, nil
+	}
+
+	notExistDevice := make([]string, 0)
+	for _, dtype := range deviceTypes {
+		if !slice.IsItemInSlice(existDeviceTypes, dtype) {
+			notExistDevice = append(notExistDevice, dtype)
+		}
+	}
+	if len(notExistDevice) == 0 {
+		logs.Infof("get cvm instance info from params by device types, deviceTypes: %v, deviceTypeMap: %+v, rid: %s",
+			deviceTypes, deviceTypeMap, kt.Rid)
+		return deviceTypeMap, nil
+	}
+
+	deviceTypeMapFromCrp, err := d.listCvmInstanceTypeFromCrp(kt, notExistDevice)
+	if err != nil {
+		logs.Errorf("list cvm instance type from crp failed, err: %v, deviceTypes: %v, rid: %s",
+			err, notExistDevice, kt.Rid)
+		return nil, err
+	}
+	for dtype, item := range deviceTypeMapFromCrp {
+		deviceTypeMap[dtype] = item
+	}
+
+	// 记录日志
+	logs.Infof("get cvm instance info from crp by device types, deviceTypes: %v, notExistDevice: %v, "+
+		"deviceTypeMap; %+v, rid: %s", deviceTypes, notExistDevice, deviceTypeMap, kt.Rid)
+
+	return deviceTypeMap, nil
+}
+
+// listCvmInstanceTypeFromCrp 从Crp平台获取实例信息
+func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (
+	map[string]types.DeviceTypeCpuItem, error) {
+
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: deviceTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm instance type error, deviceTypes: %v, resp: %+v, rid: %s", deviceTypes, resp, kt.Rid)
+		return nil, errf.Newf(errf.RecordNotFound, "query cvm instance type failed, resp:[%+v] is nil", resp)
+	}
+
+	deviceTypeMap := make(map[string]types.DeviceTypeCpuItem, 0)
+	for _, item := range resp.Result.Data {
+		if _, ok := deviceTypeMap[item.InstanceType]; ok {
+			continue
+		}
+		deviceTypeMap[item.InstanceType] = types.DeviceTypeCpuItem{
+			DeviceType:  item.InstanceType,
+			CPUAmount:   int64(item.CPUAmount),
+			DeviceGroup: item.InstanceGroup,
+		}
+	}
+
+	// 记录日志
+	logs.Infof("get yunti crp device type, QueryCvmInstanceType, instTypes: %v, deviceTypeMap; %+v, rid: %s",
+		deviceTypes, deviceTypeMap, kt.Rid)
+
+	return deviceTypeMap, nil
+}
+
+// ListInstanceGroup 获取设备机型族
+func (d *device) ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error) {
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: deviceTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance group failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm instance group error, deviceTypes: %v, resp: %+v, rid: %s", deviceTypes, resp, kt.Rid)
+		return nil, errf.Newf(errf.RecordNotFound, "query cvm instance group failed, resp:[%+v] is nil", resp)
+	}
+
+	instGroupMap := make(map[string]string, 0)
+	for _, item := range resp.Result.Data {
+		instGroupMap[item.InstanceType] = item.InstanceGroup
+	}
+
+	// 记录日志
+	logs.Infof("get yunti crp instance group type, QueryCvmInstanceType, instTypes: %v, instGroupMap; %+v, rid: %s",
+		deviceTypes, instGroupMap, kt.Rid)
+
+	return instGroupMap, nil
 }

@@ -29,6 +29,7 @@ import (
 	"time"
 
 	planctrl "hcm/cmd/woa-server/logics/plan"
+	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recoverer"
@@ -41,6 +42,7 @@ import (
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
+	rollingserver "hcm/cmd/woa-server/service/rolling-server"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/cmd/woa-server/storage/dal/mongo/local"
@@ -87,6 +89,7 @@ type Service struct {
 	recyclerIf  recycler.Interface
 	operationIf operation.Interface
 	esCli       *es.EsCli
+	rsLogic     rslogics.Logics
 }
 
 // NewService create a service instance.
@@ -152,6 +155,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
+		return nil, err
+	}
+
 	kt := kit.New()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
@@ -198,7 +207,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 			return nil, err
 		}
 
-		schedulerIf, err = scheduler.New(kt.Ctx, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
+		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, thirdCli, esbClient, informerIf, cc.WoaServer().ClientConfig)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -214,12 +223,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		clientConf:  cc.WoaServer(),
 		informerIf:  informerIf,
 		schedulerIf: schedulerIf,
+		rsLogic:     rsLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
-	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer)
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -235,13 +245,13 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 
 	operationIf, err := operation.New(kt.Ctx)
 	if err != nil {
-		logs.Errorf("new operation failed, err: %v", err)
+		logs.Errorf("new operation failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	planCtrl, err := planctrl.New(sd, service.dao, itsmCli, service.thirdCli.CVM)
 	if err != nil {
-		logs.Errorf("new plan controller failed, err: %v", err)
+		logs.Errorf("new plan controller failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -332,6 +342,8 @@ func (s *Service) apiSet() *restful.Container {
 		RecyclerIf:     s.recyclerIf,
 		OperationIf:    s.operationIf,
 		EsCli:          s.esCli,
+		RsLogic:        s.rsLogic,
+		Client:         s.client,
 	}
 
 	config.InitService(c)
@@ -341,6 +353,7 @@ func (s *Service) apiSet() *restful.Container {
 	meta.InitService(c)
 	plan.InitService(c)
 	dissolve.InitService(c)
+	rollingserver.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

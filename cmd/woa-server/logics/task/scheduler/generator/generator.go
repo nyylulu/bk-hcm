@@ -22,8 +22,10 @@ import (
 	"sync"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
 	poolLogics "hcm/cmd/woa-server/logics/pool"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
 	"hcm/cmd/woa-server/model/task"
 	cfgtypes "hcm/cmd/woa-server/types/config"
@@ -34,14 +36,14 @@ import (
 	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/metadata"
-	"hcm/pkg/tools/querybuilder"
-	utils "hcm/pkg/tools/util"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	utils "hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -54,6 +56,7 @@ type Generator struct {
 	ctx          context.Context
 	configLogics config.Logics
 	poolLogics   poolLogics.Logics
+	rsLogics     rollingserver.Logics
 	clientConf   cc.ClientConfig
 
 	predicateFuncs map[string]algorithm.FitPredicate
@@ -61,8 +64,8 @@ type Generator struct {
 }
 
 // New creates a generator
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, clientConf cc.ClientConfig) (
-	*Generator, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+	clientConf cc.ClientConfig) (*Generator, error) {
 
 	predicateFuncs := initPredicateFuncs()
 	priorityFuncs := initpriorityFuncs()
@@ -76,6 +79,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, cl
 		ctx:            ctx,
 		clientConf:     clientConf,
 		configLogics:   config.New(thirdCli),
+		rsLogics:       rsLogics,
 		poolLogics:     poolLogics.New(ctx, clientConf, thirdCli, esbCli),
 	}
 
@@ -1206,25 +1210,36 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 }
 
 // MatchCVM manual match cvm devices
-func (g *Generator) MatchCVM(param *types.MatchDeviceReq) error {
+func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	// 1. get order by suborder id
 	order, err := g.GetApplyOrder(param.SuborderId)
 	if err != nil {
-		logs.Errorf("failed to match cvm when get apply order, err: %v, order id: %s", err, param.SuborderId)
+		logs.Errorf("failed to match cvm when get apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
+			kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
 	}
 
 	// cannot match device if its stage is not SUSPEND
 	if order.Stage != types.TicketStageSuspend {
-		logs.Errorf("cannot match device, for order %s stage %s != %s", order.SubOrderId, order.Stage,
-			types.TicketStageSuspend)
+		logs.Errorf("cannot match device, for order %s stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
+			types.TicketStageSuspend, kt.Rid)
 		return fmt.Errorf("cannot match device, for order %s stage %s != %s", order.SubOrderId, order.Stage,
 			types.TicketStageSuspend)
 	}
 
+	// 如果是滚服类型，需要进行当月滚服额度的扣减
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		if err = g.rsLogics.ReduceRollingCvmProdAppliedRecord(kt, param.Device); err != nil {
+			logs.Errorf("reduce rolling server cvm product applied record failed, err: %+v, devices: %+v, rid: %s", err,
+				param.Device, kt.Rid)
+			return err
+		}
+	}
+
 	// set apply order status MATCHING
 	if err := g.lockApplyOrder(order); err != nil {
-		logs.Errorf("failed to match cvm when lock apply order, err: %v, order id: %s", err, param.SuborderId)
+		logs.Errorf("failed to match cvm when lock apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
+			kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
 	}
 
@@ -1233,7 +1248,8 @@ func (g *Generator) MatchCVM(param *types.MatchDeviceReq) error {
 	// 2. init generate record
 	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
 	if err != nil {
-		logs.Errorf("failed to match cvm when init generate record, err: %v, order id: %s", err, order.SubOrderId)
+		logs.Errorf("failed to match cvm when init generate record, err: %v, order id: %s, rid: %s", err,
+			order.SubOrderId, kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, order.SubOrderId)
 	}
 
@@ -1252,14 +1268,16 @@ func (g *Generator) MatchCVM(param *types.MatchDeviceReq) error {
 	// 3. save generated cvm instances info
 	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
-		return fmt.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
+		return fmt.Errorf("failed to update generated device, err: %v, order id: %s, rid: %s", err, order.SubOrderId,
+			kt.Rid)
 	}
 
 	// 4. update generate record status to success
 	msg := fmt.Sprintf("manually matched by %s successfully", param.Operator)
 	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
 		msg, "", successIps); err != nil {
-		logs.Errorf("failed to match cvm when update generate record, err: %v, order id: %s", err, order.SubOrderId)
+		logs.Errorf("failed to match cvm when update generate record, err: %v, order id: %s, rid: %s", err,
+			order.SubOrderId, kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, order.SubOrderId)
 	}
 

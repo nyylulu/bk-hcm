@@ -17,13 +17,16 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
+	"hcm/cmd/woa-server/dal/task/table"
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -62,6 +65,9 @@ type CVM struct {
 
 // executeApplyOrder CVM生产-创建单据
 func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
+	kt = &kit.Kit{Ctx: context.Background(), User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
+		RequestSource: kt.RequestSource}
+
 	// 0. update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
@@ -159,6 +165,25 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
 			order.OrderId, taskId, err, kt.Rid)
 		return
+	}
+
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		appliedTypes := []enumor.AppliedType{enumor.CvmProduceAppliedType}
+		subOrderID := strconv.FormatUint(order.OrderId, 10)
+		deviceTypeCountMap := map[string]int{order.Spec.DeviceType: len(hosts)}
+
+		if err = l.rsLogic.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, subOrderID, appliedTypes,
+			deviceTypeCountMap); err != nil {
+			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
+				"deviceTypeCountMap: %v, rid: %s", err, subOrderID, order.BkBizId, deviceTypeCountMap, kt.Rid)
+
+			if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+				logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, "+
+					"rid: %s", order.OrderId, taskId, err, kt.Rid)
+				return
+			}
+			return
+		}
 	}
 
 	return

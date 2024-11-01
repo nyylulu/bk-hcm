@@ -21,6 +21,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/metadata"
 )
 
@@ -154,6 +155,17 @@ func (req *PreviewRecycleReq) Validate() error {
 // PreviewRecycleOrderRst preview recycle order result
 type PreviewRecycleOrderRst struct {
 	Info []*table.RecycleOrder `json:"info"`
+}
+
+// PreviewRecycleOrderCpuRst preview recycle order cpu result
+type PreviewRecycleOrderCpuRst struct {
+	Info []*RecycleOrderCpuInfo `json:"info"`
+}
+
+// RecycleOrderCpuInfo recycle order cpu info
+type RecycleOrderCpuInfo struct {
+	*table.RecycleOrder `json:",inline"`
+	SumCpuCore          int64 `json:"sum_cpu_core"`
 }
 
 // AuditRecycleReq audit recycle order request
@@ -1176,4 +1188,48 @@ type RecycleBizHost struct {
 	SubZone     string `json:"sub_zone"`
 	State       string `json:"state"`
 	InputTime   string `json:"input_time"`
+}
+
+// StartRecycleOrderByRecycleTypeReq start recycle order by recycle type request
+type StartRecycleOrderByRecycleTypeReq struct {
+	SubOrderIDTypes []StartRecycleOrderByRecycleTypeItem `json:"suborder_id_types" validate:"required,min=1,max=100"`
+}
+
+// Validate validate
+func (r *StartRecycleOrderByRecycleTypeReq) Validate() error {
+	if len(r.SubOrderIDTypes) == 0 {
+		return fmt.Errorf("suborder_id_types is required")
+	}
+	if len(r.SubOrderIDTypes) > 100 {
+		return fmt.Errorf("suborder_id_types length should <= 100")
+	}
+	for _, item := range r.SubOrderIDTypes {
+		if err := item.Validate(); err != nil {
+			return err
+		}
+	}
+	return validator.Validate.Struct(r)
+}
+
+// StartRecycleOrderByRecycleTypeItem start recycle order by recycle type item
+type StartRecycleOrderByRecycleTypeItem struct {
+	SuborderID  string            `json:"suborder_id"`
+	RecycleType table.RecycleType `json:"recycle_type"`
+}
+
+// Validate validate
+func (r *StartRecycleOrderByRecycleTypeItem) Validate() error {
+	if len(r.SuborderID) == 0 {
+		return fmt.Errorf("suborder_id is required")
+	}
+
+	if len(r.RecycleType) == 0 {
+		return fmt.Errorf("recycle_type is required")
+	}
+
+	if err := r.RecycleType.Validate(); err != nil {
+		return err
+	}
+
+	return nil
 }
