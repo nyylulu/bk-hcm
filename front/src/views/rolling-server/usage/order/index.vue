@@ -27,18 +27,18 @@ const condition = ref<Record<string, any>>({});
 
 const getList = async (query: LocationQuery) => {
   condition.value = searchQs.get(query, {
-    created_at: getDateRange('last30d'),
+    roll_date: getDateRange('last30d'),
     suborder_id: [],
     bk_biz_id: [],
   });
-  const { created_at, bk_biz_id, suborder_id } = condition.value;
+  const { roll_date, bk_biz_id, suborder_id } = condition.value;
   const bk_biz_ids = bk_biz_id.length === 1 && bk_biz_id[0] === -1 ? undefined : bk_biz_id;
-  const { start, end } = convertDateRangeToObject(created_at);
+  const { start, end } = convertDateRangeToObject(roll_date);
 
   pagination.current = Number(query.page) || 1;
   pagination.limit = Number(query.limit) || pagination.limit;
 
-  const sort = (query.sort || 'created_at') as string;
+  const sort = (query.sort || 'roll_date') as string;
   const order = (query.order || 'DESC') as string;
 
   // 请求申请单据列表
@@ -75,7 +75,8 @@ const getList = async (query: LocationQuery) => {
     );
     const returned_core = returned_records.reduce((acc, cur) => acc + cur.match_applied_core, 0);
     const not_returned_core = appliedRecordItem.delivered_core - returned_core;
-    const exec_rate = `${(returned_core / appliedRecordItem.delivered_core || 1) * 100}%`;
+    // 结果保留两位小数，不显示多余0
+    const exec_rate = `${Number(((returned_core / (appliedRecordItem.delivered_core || 1)) * 100).toFixed(2))}%`;
 
     return {
       ...appliedRecordItem,
@@ -95,7 +96,7 @@ const getList = async (query: LocationQuery) => {
 
 const recordsPoll = useTimeoutPoll(() => {
   getList(route.query);
-}, 10000);
+}, 30000);
 
 watch(
   () => route.query,

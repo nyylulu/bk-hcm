@@ -17,4 +17,4 @@ export const MENU_ROLLING_SERVER_USAGE_BIZ = 'menu_rolling_server_usage_biz';
 /**
  * 滚服管理-业务
  */
-export const MENU_BUSINESS_ROLLING_SERVER_USAGE_APPLIED = 'menu_business_rolling_server_usage_applied';
+export const MENU_BUSINESS_ROLLING_SERVER = 'menu_business_rolling_server';

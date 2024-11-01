@@ -18,11 +18,11 @@ const emit = defineEmits<{
 const formValues = ref<ISearchCondition>({});
 let conditionInitValues: ISearchCondition;
 
-const fieldIds = ['created_at', 'bk_biz_id', 'suborder_id'];
+const fieldIds = ['roll_date', 'bk_biz_id', 'suborder_id'];
 const fields = fieldIds.map((id) => usageOrderViewProperties.find((view) => view.id === id));
 
 const getSearchCompProps = (field: ModelProperty) => {
-  if (field.id === 'created_at') {
+  if (field.id === 'roll_date') {
     return {
       type: 'daterange',
       format: 'yyyy-MM-dd',

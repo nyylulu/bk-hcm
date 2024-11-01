@@ -2,6 +2,7 @@ import { APPLIED_TYPE_NAME, RETURNED_WAY_NAME } from '@/views/rolling-server/usa
 import { QueryRuleOPEnum } from '@/typings';
 import { ModelProperty } from '../typings';
 import i18n from '@/language/i18n';
+import dayjs from 'dayjs';
 
 const { t } = i18n.global;
 
@@ -14,6 +15,23 @@ export default [
   { id: 'month', name: t('申请时间月份'), type: 'string' },
   { id: 'day', name: t('申请时间天'), type: 'string' },
   { id: 'creator', name: t('创建者'), type: 'user' },
+  {
+    id: 'roll_date',
+    name: t('执行记录创建时间'),
+    type: 'datetime',
+    meta: {
+      search: {
+        format(value: Date[] | Date | string) {
+          // TODO: 数组时不转换，当qs获取时传入的是数组
+          if (Array.isArray(value)) {
+            return value;
+          }
+          const date = dayjs(value);
+          return Number(date.format('YYYYMMDD'));
+        },
+      },
+    },
+  },
   { id: 'created_at', name: t('单据创建时间'), type: 'datetime' },
   { id: 'applied_type', name: t('申请类型'), type: 'enum', option: APPLIED_TYPE_NAME },
   { id: 'applied_core', name: t('申请数（核）'), type: 'number' },

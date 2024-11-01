@@ -95,7 +95,7 @@ const preRecycleColumns: Column[] = [
     field: 'recycle_type',
     render: ({ cell, row }: any) => {
       return returnedWay.value === ReturnedWay.RESOURCE_POOL &&
-        (cell !== '滚服项目' || row.originRecycleType !== '滚服项目')
+        (cell !== '滚服项目' || (row.originRecycleType !== undefined && row.originRecycleType !== '滚服项目'))
         ? h(RecycleTypeSelector, {
             value: row.originRecycleType || cell,
             onChange: (v) => {
@@ -258,7 +258,7 @@ watch(
   },
   { immediate: true },
 );
-// 资源池业务下，选择为“滚服项目”的核数，不能超过全平台应该退还给公司的额度
+// *暂不限制：资源池业务下，选择为“滚服项目”的核数，不能超过全平台应该退还给公司的额度
 const isRollingServerCpuCoreExceedByResPool = computed(() => {
   if (ReturnedWay.RESOURCE_POOL === returnedWay.value) {
     const { sum_delivered_core, sum_returned_applied_core } = rollingServerQuotaStore.globalQuotaConfig;

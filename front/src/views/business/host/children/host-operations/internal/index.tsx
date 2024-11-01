@@ -124,6 +124,11 @@ export default defineComponent({
         props.onFinished?.('confirm');
         router.push({ name: 'ApplicationsManage', query: { bizs: getBizsId(), type: 'host_recycle' } });
         operationType.value = OperationActions.NONE;
+      } catch (error: any) {
+        console.error(error);
+        if (error.code === 2000018) {
+          Message({ message: '任务提交失败，返回上一步重试提交', theme: 'error' });
+        }
       } finally {
         isLoading.value = false;
       }
@@ -257,15 +262,10 @@ export default defineComponent({
                       theme='primary'
                       disabled={
                         recycleFlowRef.value?.isLastStep?.()
-                          ? !ziyanRecycleSelected.value.length ||
-                            recycleFlowRef.value?.isRollingServerCpuCoreExceedByResPool
+                          ? !ziyanRecycleSelected.value.length
                           : isConfirmDisabled.value
                       }
-                      loading={isLoading.value}
-                      v-bk-tooltips={{
-                        content: '资源池业务下，选择为“滚服项目”的核数，不能超过全平台应该退还给公司的额度',
-                        disabled: !recycleFlowRef.value?.isRollingServerCpuCoreExceedByResPool,
-                      }}>
+                      loading={isLoading.value}>
                       {recycleFlowRef.value?.isLastStep?.() ? '提交' : '下一步'}
                     </Button>
                   </>

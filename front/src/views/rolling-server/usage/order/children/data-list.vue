@@ -11,6 +11,7 @@ import qs from 'qs';
 import routerAction from '@/router/utils/action';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { timeFormatter } from '@/common/util';
 
 withDefaults(defineProps<IDataListProps>(), {});
 
@@ -25,6 +26,7 @@ const { isBusinessPage } = useWhereAmI();
 const fieldIds = [
   'suborder_id',
   'bk_biz_id',
+  'roll_date',
   'created_at',
   'applied_type',
   'applied_core',
@@ -70,7 +72,8 @@ const columConfig: Record<string, PropertyColumnConfig> = {
     },
   },
   bk_biz_id: {},
-  created_at: { width: 180 },
+  roll_date: { width: 180, sort: true, render: ({ cell }) => timeFormatter(String(cell), 'YYYY-MM-DD') },
+  created_at: { width: 180, defaultHidden: true },
   applied_type: {},
   applied_core: { sort: true, align: 'right' },
   delivered_core: { sort: true, align: 'right' },
@@ -132,7 +135,7 @@ const { settings } = useTableSettings(renderColumns.value);
           <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
         </template>
       </bk-table-column>
-      <bk-table-column :label="'操作'">
+      <bk-table-column :label="'操作'" fixed="right" width="150">
         <template #default="{ row }">
           <bk-button v-if="!row.isResPollBusiness" theme="primary" text @click="emit('show-returned-records', row.id)">
             返还记录
