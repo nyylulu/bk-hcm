@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0030,HCMVER=v1.6.11.0
 
     Notes:
     1. 添加滚服申请记录表。
@@ -142,24 +142,24 @@ create table if not exists `rolling_applied_record`
 # rolling_returned_record table structure
 create table if not exists `rolling_returned_record`
 (
-    `id`                 varchar(64)     not null comment '唯一ID',
-    `bk_biz_id`          bigint          not null comment '业务ID',
-    `order_id`           bigint          not null comment '主机回收的订单号',
-    `suborder_id`        varchar(64)     not null comment '主机回收的子订单号',
-    `applied_record_id`  varchar(64)              default null comment '滚服申请执行情况表唯一标识',
-    `match_applied_core` bigint unsigned not null comment '用于记录该回收子单，有多少核，用于归还匹配的申请子单',
-    `year`               bigint          not null comment '申请时间年份',
-    `month`              tinyint(1)      not null comment '申请时间月份',
-    `day`                tinyint(1)      not null comment '申请时间天',
-    `roll_date`          int unsigned    not null comment '申请时间年月日',
-    `returned_way`       varchar(64)     not null comment '退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)',
-    `instance_group`     varchar(64)     not null comment '机型族',
-    `status`             tinyint(1)      unsigned not null default 0 comment '状态(1:锁定、2:正常、3:终止)',
-    `creator`            varchar(64)     not null comment '创建人',
-    `created_at`         timestamp       not null default current_timestamp comment '该记录的创建时间',
-    `updated_at`         timestamp       not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
+    `id`                 varchar(64)         not null comment '唯一ID',
+    `bk_biz_id`          bigint              not null comment '业务ID',
+    `order_id`           bigint              not null comment '主机回收的订单号',
+    `suborder_id`        varchar(64)         not null comment '主机回收的子订单号',
+    `applied_record_id`  varchar(64)                  default null comment '滚服申请执行情况表唯一标识',
+    `match_applied_core` bigint unsigned     not null comment '用于记录该回收子单，有多少核，用于归还匹配的申请子单',
+    `year`               bigint              not null comment '申请时间年份',
+    `month`              tinyint(1)          not null comment '申请时间月份',
+    `day`                tinyint(1)          not null comment '申请时间天',
+    `roll_date`          int unsigned        not null comment '申请时间年月日',
+    `returned_way`       varchar(64)         not null comment '退还方式(枚举值：crp-通过crp退还、resource_pool-通过转移到资源池退还)',
+    `instance_group`     varchar(64)         not null comment '机型族',
+    `status`             tinyint(1) unsigned not null default 0 comment '状态(1:锁定、2:正常、3:终止)',
+    `creator`            varchar(64)         not null comment '创建人',
+    `created_at`         timestamp           not null default current_timestamp comment '该记录的创建时间',
+    `updated_at`         timestamp           not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
-    unique key `idx_uk_suborder_id_bk_biz_id_applied_record_id_returned_way` (`suborder_id`,`bk_biz_id`,`applied_record_id`,`returned_way`),
+    unique key `idx_uk_suborder_id_bk_biz_id_applied_record_id_returned_way` (`suborder_id`, `bk_biz_id`, `applied_record_id`, `returned_way`),
     KEY `idx_bk_biz_id_applied_record_id` (`bk_biz_id`, `applied_record_id`),
     KEY `idx_bk_biz_id_year_month_day` (`bk_biz_id`, `year`, `month`, `day`),
     KEY `idx_bk_biz_id_roll_date` (`bk_biz_id`, `roll_date`)
@@ -203,6 +203,6 @@ values ('rolling_quota_config', '0'),
        ('rolling_fine_detail', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.6.11.0' as `hcm_ver`, '0030' as `sql_ver`;
 
 COMMIT
