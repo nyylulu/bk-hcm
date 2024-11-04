@@ -38,8 +38,8 @@ watchEffect(async () => {
     list.value = props.data.slice();
     loading.value = false;
   } else if (props.scope === 'full') {
-    // 理论上可以直接使用store中的businessFullList，这里暂且还是重新获取一次
-    list.value = await businessGlobalStore.getFullBusiness();
+    // businessFullList在preload时已获取，这里直接使用，如之后有不使用缓存数据需要则另处理
+    list.value = businessGlobalStore.businessFullList;
     loading.value = businessGlobalStore.businessFullListLoading;
   } else if (props.scope === 'auth') {
     list.value = await businessGlobalStore.getAuthorizedBusiness();

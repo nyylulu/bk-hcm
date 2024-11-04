@@ -27,7 +27,7 @@ const formData = reactive({
   bk_biz_ids: isCurrentMonth.value ? [props.dataRow.bk_biz_id] : [],
   quota: isCurrentMonth.value ? props.dataRow.quota : undefined,
   adjust_type: isCurrentMonth.value ? props.dataRow.adjust_type ?? QuotaAdjustType.INCREASE : QuotaAdjustType.INCREASE,
-  quota_offset: undefined,
+  quota_offset: isCurrentMonth.value ? props.dataRow.quota_offset : undefined,
   adjust_month: isCurrentMonth.value
     ? [new Date(props.dataRow.year, props.dataRow.month - 1), new Date(props.dataRow.year, props.dataRow.month - 1)]
     : [],

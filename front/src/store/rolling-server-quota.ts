@@ -149,15 +149,17 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
   const getAdjustRecords = async (params: { offset_config_ids: string[] }) => {
     adjustRecordsLoading.value = true;
     try {
-      const list = await rollRequest({
+      const list = (await rollRequest({
         httpClient: http,
         pageEnableCountKey: 'count',
       }).rollReqUseCount<IAdjustRecordItem>('/api/v1/woa/rolling_servers/quota_offsets/adjust_records/list', params, {
         limit: 500,
         countGetter: (res) => res.data.count,
         listGetter: (res) => res.data.details,
-      });
-      return list as IAdjustRecordItem[];
+      })) as IAdjustRecordItem[];
+      // 按时间倒序
+      list.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+      return list;
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
