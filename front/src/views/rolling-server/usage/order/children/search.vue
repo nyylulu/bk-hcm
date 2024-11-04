@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { ModelProperty } from '@/model/typings';
 import type { ISearchCondition, ISearchProps } from '../../typings';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import dayjs from 'dayjs';
 
 import GridContainer from '@/components/layout/grid-container/grid-container.vue';
@@ -15,11 +16,16 @@ const emit = defineEmits<{
   (e: 'reset'): void;
 }>();
 
+const { isBusinessPage } = useWhereAmI();
+
 const formValues = ref<ISearchCondition>({});
 let conditionInitValues: ISearchCondition;
 
 const fieldIds = ['roll_date', 'bk_biz_id', 'suborder_id'];
 const fields = fieldIds.map((id) => usageOrderViewProperties.find((view) => view.id === id));
+const renderFields = computed(() => {
+  return isBusinessPage ? fields.filter((field) => field.id !== 'bk_biz_id') : fields;
+});
 
 const getSearchCompProps = (field: ModelProperty) => {
   if (field.id === 'roll_date') {
@@ -71,7 +77,7 @@ watch(
 <template>
   <div class="rolling-server-usage-search">
     <grid-container layout="vertical" :column="3" :content-min-width="300" :gap="[16, 60]">
-      <grid-item-form-element v-for="field in fields" :key="field.id" :label="field.name">
+      <grid-item-form-element v-for="field in renderFields" :key="field.id" :label="field.name">
         <component :is="`hcm-search-${field.type}`" v-bind="getSearchCompProps(field)" v-model="formValues[field.id]" />
       </grid-item-form-element>
       <grid-item :span="4" class="row-action">

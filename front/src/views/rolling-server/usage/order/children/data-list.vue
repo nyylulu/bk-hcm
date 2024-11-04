@@ -28,7 +28,6 @@ const fieldIds = [
   'bk_biz_id',
   'roll_date',
   'created_at',
-  'applied_type',
   'applied_core',
   'delivered_core',
   'returned_core',
@@ -72,15 +71,14 @@ const columConfig: Record<string, PropertyColumnConfig> = {
     },
   },
   bk_biz_id: {},
-  roll_date: { width: 180, sort: true, render: ({ cell }) => timeFormatter(String(cell), 'YYYY-MM-DD') },
+  roll_date: { sort: true, render: ({ cell }) => timeFormatter(String(cell), 'YYYY-MM-DD') },
   created_at: { width: 180, defaultHidden: true },
-  applied_type: {},
   applied_core: { sort: true, align: 'right' },
   delivered_core: { sort: true, align: 'right' },
   returned_core: { align: 'right' },
   not_returned_core: { align: 'right' },
   exec_rate: { align: 'right' },
-  creator: {},
+  creator: { render: ({ cell }) => (cell === 'itsm_callback' ? '平台' : cell) },
 };
 const columns: ModelPropertyColumn[] = fieldIds.map((id) => ({
   ...usageOrderViewProperties.find((view) => view.id === id),
@@ -102,7 +100,7 @@ const { settings } = useTableSettings(renderColumns.value);
           <div class="value">{{ summaryInfo?.sum_delivered_core ?? '--' }}</div>
         </li>
         <li class="item">
-          <div class="label">总返还（CPU核数）：</div>
+          <div class="label">总退还（CPU核数）：</div>
           <div class="value">{{ summaryInfo?.sum_returned_applied_core ?? '--' }}</div>
         </li>
       </ul>
@@ -138,7 +136,7 @@ const { settings } = useTableSettings(renderColumns.value);
       <bk-table-column :label="'操作'" fixed="right" width="150">
         <template #default="{ row }">
           <bk-button v-if="!row.isResPollBusiness" theme="primary" text @click="emit('show-returned-records', row.id)">
-            返还记录
+            退还记录
           </bk-button>
           <template v-else>--</template>
         </template>

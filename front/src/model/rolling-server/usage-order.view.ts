@@ -17,7 +17,7 @@ export default [
   { id: 'creator', name: t('创建者'), type: 'user' },
   {
     id: 'roll_date',
-    name: t('执行记录创建时间'),
+    name: t('单据日期'),
     type: 'datetime',
     meta: {
       search: {

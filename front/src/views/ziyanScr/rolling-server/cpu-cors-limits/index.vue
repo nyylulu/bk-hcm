@@ -80,11 +80,11 @@ defineExpose({ availableCpuQuota, replicasCpuCors });
   <ul class="rolling-server-info">
     <li>
       <span>{{ t('剩余额度：') }}</span>
-      <span class="cpu-cors">{{ availableCpuQuota }}{{ t('核') }}</span>
+      <span class="cpu-cors">{{ availableCpuQuota }} {{ t('核') }}</span>
     </li>
     <li>
       <span>{{ t('额度限制：') }}</span>
-      <span class="cpu-cors">{{ rollingServerCpuQuota }}{{ t('核') }}</span>
+      <span class="cpu-cors">{{ rollingServerCpuQuota }} {{ t('核') }}</span>
     </li>
     <li>
       <span>{{ t('需求核数：') }}</span>

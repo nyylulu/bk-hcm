@@ -51,10 +51,10 @@ const getList = async (query: LocationQuery) => {
   ]);
   const { list: appliedRecordList, count } = listRes;
 
-  // 只查询非资源池业务的返还记录
+  // 只查询非资源池业务的退还记录
   const applied_record_id = appliedRecordList
     .filter((item) => !rollingServerStore.resPollBusinessIds.includes(item.bk_biz_id))
-    .map((item) => item.id); // 申请单id与返还记录单applied_record_id一一对应
+    .map((item) => item.id); // 申请单id与退还记录单applied_record_id一一对应
 
   // 请求返回记录列表(一个申请单，不会有太多回收单，分页数量最大传500)
   const { list: returnedRecordList } = await rollingServerUsageStore.getReturnedRecordList({
