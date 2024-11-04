@@ -5,6 +5,8 @@ import { timeFormatter } from '@/common/util';
 import cssModule from './index.module.scss';
 
 import { TicketBaseInfo } from '@/typings/resourcePlan';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
+
 export default defineComponent({
   props: {
     baseInfo: {
@@ -62,6 +64,7 @@ export default defineComponent({
               <span class={cssModule.value} title={item.value}>
                 {item.value || '--'}
               </span>
+              {item.label === t('预测说明') && <CopyToClipboard text='复制' content={item.value} />}
             </li>
           ))}
         </ul>
