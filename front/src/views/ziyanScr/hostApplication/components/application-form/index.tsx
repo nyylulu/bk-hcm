@@ -731,7 +731,15 @@ export default defineComponent({
     const QCLOUDCVMformRules = ref({
       device_type: [{ required: true, message: '请选择机型', trigger: 'change' }],
       image_id: [{ required: true, message: '请选择镜像', trigger: 'change' }],
-      replicas: [{ required: true, message: '请输入需求数量', trigger: 'blur' }],
+      replicas: [
+        { required: true, message: '请输入需求数量', trigger: 'blur' },
+        // 临时规则双十一后可能需要去除
+        {
+          validator: (value: number) => !(isRollingServer.value && value > 10),
+          message: '注意：因云接口限制，单次的机器数最大值为10，超过后请手动克隆为多条配置(待腾讯云发版修复)',
+          trigger: 'blur',
+        },
+      ],
       disk_size: [
         {
           trigger: 'change',
