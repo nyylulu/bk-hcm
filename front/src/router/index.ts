@@ -104,6 +104,7 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     if (isString(path)) return path === to.path;
     if (isArray(path)) return path.includes(to.path);
     if (isRegExp(path)) return path.test(to.path);
+    return false;
   });
   if (from.path === '/') {
     // 刷新或者首次进入请求权限接口

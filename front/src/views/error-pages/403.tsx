@@ -185,6 +185,11 @@ export default defineComponent({
               </p>
             </>
           )}
+          {this.urlKey === 'rolling_server_manage' && ( // 滚服管理
+            <>
+              <p class='mt5 sub-describe'>{this.t('该功能由平台资源的管理员维护，属于管理员的权限')}</p>
+            </>
+          )}
           {this.renderScrApplyTips()}
 
           <h2 class='mt20'>功能说明：</h2>
@@ -262,6 +267,12 @@ export default defineComponent({
               <p class='mt5 sub-describe'>
                 {this.t('资源立即销毁，将从云上直接删除资源，销毁属于不可逆操作，请谨慎操作。')}
               </p>
+              <p class='mt5 sub-describe'>{this.t('滚服管理')}</p>
+            </>
+          )}
+          {this.urlKey === 'rolling_server_manage' && ( // 滚服管理
+            <>
+              <p class='mt5 sub-describe'>{this.t('该功能由平台资源的管理员维护，属于管理员的权限')}</p>
             </>
           )}
           {this.renderScrFunctionTips()}

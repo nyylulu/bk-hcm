@@ -74,6 +74,8 @@ export default () => {
         if (subPath[0] === 'biz_access') {
           topMenuActiveItem.value = 'business';
           menus.value = business;
+        } else if (subPath[0] === 'rolling_server_manage') {
+          topMenuActiveItem.value = 'platform';
         } else {
           topMenuActiveItem.value = 'resource';
           menus.value = resource;

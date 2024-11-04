@@ -20,7 +20,7 @@ export const useRollingServerStore = defineStore('rolling-server', () => {
   const getResPollBusinessList = async () => {
     try {
       const res: IListResData<IRollingServerResPoolBusinessItem[]> = await http.post(
-        '/api/v1/woa/rolling_servers/respool_bizs/list',
+        '/api/v1/woa/metas/respool_bizs/list',
       );
       resPollBusinessList.value = res?.data?.details;
       return res?.data?.details;

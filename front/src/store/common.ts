@@ -82,6 +82,14 @@ export const useCommonStore = defineStore({
       { type: 'resource_plan', action: 'create', id: 'biz_resource_plan_operate', bk_biz_id: 0 }, // 业务-资源预测-新增
       { type: 'resource_plan', action: 'update', id: 'biz_resource_plan_operate', bk_biz_id: 0 }, // 业务-资源预测-修改
       { type: 'resource_plan', action: 'delete', id: 'biz_resource_plan_operate', bk_biz_id: 0 }, // 业务-资源预测-删除
+
+      // 滚服管理
+      {
+        type: 'rolling_server_manage',
+        action: 'find',
+        id: 'rolling_server_manage',
+        path: /^\/platform\/rolling-server/,
+      },
     ],
     isNoticeAlert: false, // 消息通知的显示状态
   }),
