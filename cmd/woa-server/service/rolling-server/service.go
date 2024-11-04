@@ -58,11 +58,6 @@ type service struct {
 
 // initService 资源下的接口
 func (s *service) initService(h *rest.Handler) {
-	// 资源池
-	h.Add("CreateResourcePoolBiz", http.MethodPost, "/respool_bizs/batch/create", s.CreateResourcePoolBiz)
-	h.Add("ListResourcePoolBiz", http.MethodPost, "/respool_bizs/list", s.ListResourcePoolBiz)
-	h.Add("DeleteResourcePoolBiz", http.MethodDelete, "/respool_biz/{id}", s.DeleteResourcePoolBiz)
-
 	// 全局配额
 	h.Add("CreateGlobalQuotaConfigs", http.MethodPost, "/global_configs/batch/create", s.CreateGlobalQuotaConfigs)
 	h.Add("GetGlobalQuotaConfigs", http.MethodGet, "/global_config", s.GetGlobalQuotaConfigs)

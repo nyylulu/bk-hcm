@@ -13,13 +13,18 @@
 package meta
 
 import (
+	"errors"
+
 	"hcm/cmd/woa-server/types/meta"
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/api/core"
+	dataproto "hcm/pkg/api/data-service"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	dtypes "hcm/pkg/dal/dao/types/meta"
+	imeta "hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -190,4 +195,71 @@ func (s *service) ListPlanProducts(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return &core.ListResultT[mtypes.PlanProduct]{Details: planProds}, nil
+}
+
+// ListResourcePoolBiz list all resource pool biz. no authorized
+func (s *service) ListResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	listRst := new(rsproto.ResourcePoolBusinessListResult)
+	listReq := &rsproto.ResourcePoolBusinessListReq{
+		Filter: tools.AllExpression(),
+		Page:   core.NewDefaultBasePage(),
+	}
+	for {
+		res, err := s.client.DataService().Global.RollingServer.ListResPoolBiz(cts.Kit, listReq)
+		if err != nil {
+			logs.Errorf("list resource pool business failed, err: %v, req: %+v, rid: %s", err, *listReq, cts.Kit.Rid)
+			return nil, err
+		}
+
+		listRst.Details = append(listRst.Details, res.Details...)
+
+		if len(res.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	return listRst, nil
+}
+
+// DeleteResourcePoolBiz delete resource pool biz. need authorized
+func (s *service) DeleteResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	delID := cts.PathParameter("id").String()
+	if delID == "" {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("id can't be empty"))
+	}
+
+	// authorized
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{
+		Basic: &imeta.Basic{Type: imeta.RollingServerManage, Action: imeta.Find}})
+	if err != nil {
+		logs.Errorf("delete resource pool business failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	delReq := &dataproto.BatchDeleteReq{
+		Filter: tools.EqualExpression("id", delID),
+	}
+	return nil, s.client.DataService().Global.RollingServer.DeleteResPoolBiz(cts.Kit, delReq)
+}
+
+// CreateResourcePoolBiz create resource pool biz. need authorized
+func (s *service) CreateResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	req := new(rsproto.ResourcePoolBusinessCreateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// authorized
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{
+		Basic: &imeta.Basic{Type: imeta.RollingServerManage, Action: imeta.Find}})
+	if err != nil {
+		logs.Errorf("create resource pool business failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.client.DataService().Global.RollingServer.BatchCreateResPoolBiz(cts.Kit, req)
 }

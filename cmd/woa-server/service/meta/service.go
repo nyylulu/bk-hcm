@@ -24,6 +24,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/meta"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
@@ -33,6 +34,7 @@ import (
 func InitService(c *capability.Capability) {
 	s := &service{
 		dao:        c.Dao,
+		client:     c.Client,
 		authorizer: c.Authorizer,
 		logics:     meta.New(c.EsbClient, c.Authorizer),
 	}
@@ -45,6 +47,7 @@ func InitService(c *capability.Capability) {
 
 type service struct {
 	dao        dao.Set
+	client     *client.ClientSet
 	authorizer auth.Authorizer
 	logics     meta.Logics
 }
@@ -62,4 +65,9 @@ func (s *service) initMetaService(h *rest.Handler) {
 	h.Add("ListBizsByOpProduct", http.MethodPost, "/metas/bizs/by/op_product/list", s.ListBizsByOpProduct)
 	h.Add("ListOpProducts", http.MethodPost, "/metas/op_products/list", s.ListOpProducts)
 	h.Add("ListPlanProducts", http.MethodPost, "/metas/plan_products/list", s.ListPlanProducts)
+
+	// 资源池
+	h.Add("CreateResourcePoolBiz", http.MethodPost, "/metas/respool_bizs/batch/create", s.CreateResourcePoolBiz)
+	h.Add("ListResourcePoolBiz", http.MethodPost, "/metas/respool_bizs/list", s.ListResourcePoolBiz)
+	h.Add("DeleteResourcePoolBiz", http.MethodDelete, "/metas/respool_biz/{id}", s.DeleteResourcePoolBiz)
 }

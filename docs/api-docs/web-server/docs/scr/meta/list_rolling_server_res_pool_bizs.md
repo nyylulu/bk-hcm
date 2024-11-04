@@ -1,12 +1,12 @@
 ### 描述
 
 - 该接口提供版本：v1.6.11+。
-- 该接口所需权限：平台管理-滚服管理。
+- 该接口所需权限：无。
 - 该接口功能描述：查询资源池业务列表。
 
 ### URL
 
-POST /api/v1/woa/rolling_servers/respool_bizs/list
+POST /api/v1/woa/metas/respool_bizs/list
 
 ### 输入参数
 
