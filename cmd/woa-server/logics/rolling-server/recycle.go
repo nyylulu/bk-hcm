@@ -23,6 +23,7 @@ package rollingserver
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/table"
@@ -328,10 +329,12 @@ func (l *logics) CheckReturnedStatusBySubOrderID(kt *kit.Kit, orders []*table.Re
 			deliverCore := cvt.PtrToVal(applyItem.DeliveredCore)
 			remainCore := deliverCore - returnedCore
 			// 如果该主机申请单，需要退回的CPU核心数大于剩余可退还的CPU核心数，则报错
-			if returnMatchMap[applyItem.ID] > remainCore {
+			subOrderIDMatchAppliedID := fmt.Sprintf("%s-%s", order.SuborderID, applyItem.ID)
+			if returnMatchMap[subOrderIDMatchAppliedID] > remainCore {
 				logs.Errorf("check returned locked status failed, has no rolling server remain quota, "+
-					"subOrderID: %s, applyID: %s, deliverCore: %d, returnedCore: %d, remainCore: %d, rid: %s",
-					order.SuborderID, applyItem.ID, deliverCore, returnedCore, remainCore, kt.Rid)
+					"subOrderID: %s, applyID: %s, deliverCore: %d, returnedCore: %d, remainCore: %d, "+
+					"returnMatchMap: %+v, rid: %s", order.SuborderID, applyItem.ID, deliverCore, returnedCore,
+					remainCore, returnMatchMap, kt.Rid)
 				return errf.Newf(errf.RollingServerRecycleCommitCheckError, "recycle order has no remain quota")
 			}
 		}
@@ -381,7 +384,8 @@ func (l *logics) listAppliedReturnCpuCoreRecords(kt *kit.Kit, order *table.Recyc
 		}
 
 		// 记录该回收ID对应的回收CPU核心数
-		returnMatchMap[returnedItem.ID] = cvt.PtrToVal(returnedItem.MatchAppliedCore)
+		subOrderIDMatchAppliedID := fmt.Sprintf("%s-%s", order.SuborderID, returnedItem.AppliedRecordID)
+		returnMatchMap[subOrderIDMatchAppliedID] += cvt.PtrToVal(returnedItem.MatchAppliedCore)
 		appliedRecords = append(appliedRecords, appliedList.Details...)
 		appliedRecordIDs = append(appliedRecordIDs, returnedItem.AppliedRecordID)
 	}
