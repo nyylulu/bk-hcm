@@ -29,6 +29,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/times"
 )
 
 // GetCpuCoreSummary get cpu core summary.
@@ -39,13 +40,12 @@ func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 		return nil, err
 	}
 
+	startRollDate := times.GetDataIntDate(req.Start.Year, req.Start.Month, req.Start.Day)
+	endRollDate := times.GetDataIntDate(req.End.Year, req.End.Month, req.End.Day)
+
 	var appliedRules, returnedRules []*filter.AtomRule
-	appliedRules = append(appliedRules, tools.RuleGreaterThanEqual("year", req.Start.Year))
-	appliedRules = append(appliedRules, tools.RuleGreaterThanEqual("month", req.Start.Month))
-	appliedRules = append(appliedRules, tools.RuleGreaterThanEqual("day", req.Start.Day))
-	appliedRules = append(appliedRules, tools.RuleLessThanEqual("year", req.End.Year))
-	appliedRules = append(appliedRules, tools.RuleLessThanEqual("month", req.End.Month))
-	appliedRules = append(appliedRules, tools.RuleLessThanEqual("day", req.End.Day))
+	appliedRules = append(appliedRules, tools.RuleGreaterThanEqual("roll_date", startRollDate))
+	appliedRules = append(appliedRules, tools.RuleLessThanEqual("roll_date", endRollDate))
 	if len(req.BkBizIDs) != 0 {
 		appliedRules = append(appliedRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
 	}
