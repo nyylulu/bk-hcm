@@ -158,13 +158,13 @@ func (s *service) CreateGlobalQuotaConfigs(cts *rest.Contexts) (any, error) {
 
 // GetGlobalQuotaConfigs get global quota configs.
 func (s *service) GetGlobalQuotaConfigs(cts *rest.Contexts) (any, error) {
-	// authorized
-	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+	// authorized 临时取消鉴权，后续需要添加一个业务级别的接口使用业务鉴权
+	/*err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
 		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
 	if err != nil {
 		logs.Errorf("get global quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
-	}
+	}*/
 
 	listOne, err := s.rollingServerLogic.GetGlobalQuotaConfig(cts.Kit)
 	if err != nil {
@@ -225,13 +225,13 @@ func (s *service) ListBizQuotaConfigs(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// authorized
-	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+	// authorized 临时取消鉴权
+	/*err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
 		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
 	if err != nil {
 		logs.Errorf("list biz quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
-	}
+	}*/
 
 	return s.rollingServerLogic.ListBizQuotaConfigs(cts.Kit, req)
 }
