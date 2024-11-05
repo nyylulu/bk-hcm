@@ -30,12 +30,13 @@ import (
 
 // GetCpuCoreSummary get cpu core summary.
 func (s *service) GetCpuCoreSummary(cts *rest.Contexts) (any, error) {
-	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
-	if err != nil {
-		logs.Errorf("get cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
+	// 临时去掉平台管理-权限校验
+	//err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+	//	Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
+	//if err != nil {
+	//	logs.Errorf("get cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+	//	return nil, err
+	//}
 
 	return s.getCpuCoreSummary(cts)
 }
