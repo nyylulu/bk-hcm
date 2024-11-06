@@ -5,8 +5,8 @@ import {
   createWebHashHistory,
   RouteLocationNormalized,
 } from 'vue-router';
-import { MENU_BUSINESS } from '@/constants/menu-symbol';
-import { businessViews } from '@/views';
+import { MENU_BUSINESS, MENU_PLATFORM_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import { businessViews, platformManagementViews } from '@/views';
 import common from './module/common';
 import workbench from './module/workbench';
 import resource from './module/resource';
@@ -34,6 +34,12 @@ const routes: RouteRecordRaw[] = [
   // ...business,
   ...scheme,
   ...bill,
+  {
+    name: MENU_PLATFORM_MANAGEMENT,
+    path: '/platform',
+    redirect: { name: MENU_ROLLING_SERVER_MANAGEMENT },
+    children: platformManagementViews,
+  },
   {
     path: '/',
     redirect: '/business/host',
@@ -103,7 +109,7 @@ router.beforeEach((to: RouteLocationNormalized, from: RouteLocationNormalized, n
     if (isString(path)) return path === to.path;
     if (isArray(path)) return path.includes(to.path);
     if (isRegExp(path)) return path.test(to.path);
-    return undefined;
+    return false;
   });
   if (from.path === '/') {
     // 刷新或者首次进入请求权限接口

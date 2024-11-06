@@ -15,10 +15,10 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type zone struct {
@@ -26,19 +26,19 @@ type zone struct {
 
 // NextSequence returns next zone config sequence id from db
 func (z *zone) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgQcloudZone)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgQcloudZone)
 }
 
 // CreateZone creates zone config in db
 func (z *zone) CreateZone(ctx context.Context, inst *types.Zone) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Insert(ctx, inst)
 }
 
 // GetZone gets zone config by filter from db
 func (z *zone) GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.Zone, error) {
 	inst := new(types.Zone)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (z *zone) GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.Zone,
 func (z *zone) FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*types.Zone, error) {
 	insts := make([]*types.Zone, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -58,10 +58,10 @@ func (z *zone) FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*type
 
 // UpdateZone updates zone config by filter and doc in db
 func (z *zone) UpdateZone(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Update(ctx, filter, doc)
 }
 
 // DeleteZone deletes zone config from db
 func (z *zone) DeleteZone(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudZone).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudZone).Delete(ctx, filter)
 }

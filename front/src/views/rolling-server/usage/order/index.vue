@@ -1,0 +1,135 @@
+<script setup lang="ts">
+import { ref, useTemplateRef, watch } from 'vue';
+import { type LocationQuery, useRoute } from 'vue-router';
+import useSearchQs from '@/hooks/use-search-qs';
+import usePage from '@/hooks/use-page';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import { IRollingServerCpuCoreSummary, RollingServerRecordItem, useRollingServerUsageStore } from '@/store';
+import { useRollingServerStore } from '@/store/rolling-server';
+import { convertDateRangeToObject, getDateRange, transformSimpleCondition } from '@/utils/search';
+import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
+import { ISearchCondition, IView } from '../typings';
+
+import Search from './children/search.vue';
+import DataList from './children/data-list.vue';
+import ReturnedRecordsDialog from './children/returned-records-dialog.vue';
+
+const route = useRoute();
+const rollingServerStore = useRollingServerStore();
+const rollingServerUsageStore = useRollingServerUsageStore();
+
+const searchQs = useSearchQs({ key: 'filter', properties: usageOrderViewProperties });
+const { pagination, getPageParams } = usePage();
+
+const docList = ref<RollingServerRecordItem[]>();
+const summaryInfo = ref<IRollingServerCpuCoreSummary>();
+const condition = ref<Record<string, any>>({});
+
+const getList = async (query: LocationQuery) => {
+  condition.value = searchQs.get(query, {
+    roll_date: getDateRange('last30d'),
+    suborder_id: [],
+    bk_biz_id: [],
+  });
+  const { roll_date, bk_biz_id, suborder_id } = condition.value;
+  const bk_biz_ids = bk_biz_id.length === 1 && bk_biz_id[0] === -1 ? undefined : bk_biz_id;
+  const { start, end } = convertDateRangeToObject(roll_date);
+
+  pagination.current = Number(query.page) || 1;
+  pagination.limit = Number(query.limit) || pagination.limit;
+
+  const sort = (query.sort || 'roll_date') as string;
+  const order = (query.order || 'DESC') as string;
+
+  // 请求申请单据列表
+  const [listRes, summaryRes] = await Promise.all([
+    rollingServerUsageStore.getAppliedRecordList({
+      filter: transformSimpleCondition({ ...condition.value, bk_biz_id: bk_biz_ids }, usageOrderViewProperties),
+      page: getPageParams(pagination, { sort, order }),
+    }),
+    rollingServerUsageStore.getCpuCoreSummary({ start, end, bk_biz_ids, suborder_ids: suborder_id }),
+  ]);
+  const { list: appliedRecordList, count } = listRes;
+
+  // 只查询非资源池业务的退还记录
+  const applied_record_id = appliedRecordList
+    .filter((item) => !rollingServerStore.resPollBusinessIds.includes(item.bk_biz_id))
+    .map((item) => item.id); // 申请单id与退还记录单applied_record_id一一对应
+
+  // 请求返回记录列表(一个申请单，不会有太多回收单，分页数量最大传500)
+  const { list: returnedRecordList } = await rollingServerUsageStore.getReturnedRecordList({
+    filter: transformSimpleCondition({ applied_record_id }, usageOrderViewProperties),
+    page: getPageParams({ current: 1, limit: 500, count: 0 }),
+  });
+
+  // 设置列表
+  docList.value = appliedRecordList.map((appliedRecordItem) => {
+    // 资源池业务
+    if (rollingServerStore.resPollBusinessIds.includes(appliedRecordItem.bk_biz_id)) {
+      return { ...appliedRecordItem, isResPollBusiness: true };
+    }
+
+    // 普通业务
+    const returned_records = returnedRecordList.filter(
+      (returnedRecordItem) => returnedRecordItem.applied_record_id === appliedRecordItem.id,
+    );
+    const returned_core = returned_records.reduce((acc, cur) => acc + cur.match_applied_core, 0);
+    const not_returned_core = appliedRecordItem.delivered_core - returned_core;
+    // 结果保留两位小数，不显示多余0
+    const exec_rate = `${Number(((returned_core / (appliedRecordItem.delivered_core || 1)) * 100).toFixed(2))}%`;
+
+    return {
+      ...appliedRecordItem,
+      returned_records,
+      // 前端计算字段
+      returned_core,
+      not_returned_core,
+      exec_rate,
+    };
+  });
+  // 设置汇总信息
+  summaryInfo.value = summaryRes;
+
+  // 设置页面总条数
+  pagination.count = count;
+};
+
+const recordsPoll = useTimeoutPoll(() => {
+  getList(route.query);
+}, 30000);
+
+watch(
+  () => route.query,
+  () => {
+    recordsPoll.pause();
+    recordsPoll.resume();
+  },
+  { immediate: true },
+);
+
+const handleSearch = (vals: ISearchCondition) => {
+  searchQs.set(vals);
+};
+
+const handleReset = () => {
+  searchQs.clear();
+};
+
+const returnedRecordsDialogRef = useTemplateRef<typeof ReturnedRecordsDialog>('returned-records-dialog');
+const handleReturnedRecords = (id: string) => {
+  returnedRecordsDialogRef.value.show(docList.value.find((item) => item.id === id));
+};
+</script>
+
+<template>
+  <search :view="IView.ORDER" :condition="condition" @search="handleSearch" @reset="handleReset" />
+  <data-list
+    v-bkloading="{ loading: rollingServerUsageStore.appliedRecordsListLoading }"
+    :view="IView.ORDER"
+    :list="docList"
+    :pagination="pagination"
+    :summary-info="summaryInfo"
+    @show-returned-records="handleReturnedRecords"
+  />
+  <returned-records-dialog ref="returned-records-dialog" />
+</template>

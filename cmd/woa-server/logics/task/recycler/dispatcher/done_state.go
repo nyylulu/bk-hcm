@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // DoneState the action to be executed in done state
@@ -27,5 +28,10 @@ func (ds *DoneState) Name() table.RecycleStatus {
 
 // Execute executes action in done state
 func (ds *DoneState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (ds *DoneState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

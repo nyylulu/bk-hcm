@@ -13,12 +13,14 @@
 // Package notice defines the event informer's key
 package notice
 
-import "hcm/cmd/woa-server/common"
+import (
+	"hcm/pkg"
+)
 
 // KeyNotice event informer key for token handler
 var KeyNotice = Key{
 	namespace:  "notice_info",
-	collection: common.BKTableNameNoticeInfo,
+	collection: pkg.BKTableNameNoticeInfo,
 	ttlSeconds: 6 * 60 * 60,
 }
 

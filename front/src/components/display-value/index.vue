@@ -10,6 +10,7 @@ import BoolValue from './bool-value.vue';
 import CertValue from './cert-value.vue';
 import CaValue from './ca-value.vue';
 import RegionValue from './region-value.vue';
+import BusinessValue from './business-value.vue';
 import { DisplayType } from './typings';
 
 defineOptions({ name: 'DisplayValue' });
@@ -37,6 +38,7 @@ const valueComps: Record<
   | typeof CertValue
   | typeof CaValue
   | typeof RegionValue
+  | typeof BusinessValue
 > = {
   enum: EnumValue,
   datetime: DatetimeValue,
@@ -49,6 +51,7 @@ const valueComps: Record<
   cert: CertValue,
   ca: CaValue,
   region: RegionValue,
+  business: BusinessValue,
 };
 
 const attrs = useAttrs();
@@ -63,5 +66,5 @@ const attrs = useAttrs();
     :display="props.display"
     v-bind="attrs"
   />
-  <span v-else>unknow type</span>
+  <span v-else>unknown type</span>
 </template>

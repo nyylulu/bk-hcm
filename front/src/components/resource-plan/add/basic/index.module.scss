@@ -1,0 +1,51 @@
+.home {
+  display: grid;
+  grid-gap: 24px;
+  grid-template-columns: 1fr 1fr;
+
+  .span-2 {
+    grid-column-start: span 2;
+  }
+
+  :global(.bk-form-item) {
+    margin-bottom: 0 !important;
+  }
+
+  :global(.bk-date-picker) {
+    width: 100%;
+  }
+
+  :global(.bk-radio-group) {
+    width: 100%;
+  }
+
+  :global(.bk-radio-button) {
+    width: 50%;
+  }
+
+  :global(.bk-textarea) {
+    height: 100px;
+
+    textarea {
+      height: 100%;
+    }
+  }
+  .in-thirteen-weeks {
+    text-align: center;
+    cursor: pointer;
+    padding: 10px 0;
+  }
+  :global(.is-thirteen) {
+    color: #5594fa;
+  }
+}
+
+.plan-mod-timepicker-tip {
+  line-height: 20px;
+  font-size: 12px;
+  .time-txt {
+    color: #EA3636;
+    font-size: 11px;
+    margin: 2px;
+  }
+}

@@ -13,12 +13,14 @@
 // Package ticket ...
 package ticket
 
-import "hcm/cmd/woa-server/common"
+import (
+	"hcm/pkg"
+)
 
 // KeyTicket apply ticket informer key for token handler
 var KeyTicket = Key{
 	namespace:  "apply_ticket",
-	collection: common.BKTableNameApplyTicket,
+	collection: pkg.BKTableNameApplyTicket,
 	ttlSeconds: 6 * 60 * 60,
 }
 

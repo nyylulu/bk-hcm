@@ -19,16 +19,17 @@ import (
 	"errors"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/utils/wait"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -40,6 +41,7 @@ type Dispatcher struct {
 	transit  *transit.Transit
 	queue    workqueue.RateLimitingInterface
 	ctx      context.Context
+	rsLogic  rslogics.Logics
 }
 
 // New create a dispatcher
@@ -55,6 +57,21 @@ func New(ctx context.Context) (*Dispatcher, error) {
 	return dispatcher, nil
 }
 
+// GetTransit get dispatcher member transit
+func (d *Dispatcher) GetTransit() *transit.Transit {
+	return d.transit
+}
+
+// GetReturn get dispatcher member returner
+func (d *Dispatcher) GetReturn() *returner.Returner {
+	return d.returner
+}
+
+// GetDetector get dispatcher member detector
+func (d *Dispatcher) GetDetector() *detector.Detector {
+	return d.detector
+}
+
 // SetDetector set dispatcher member detector
 func (d *Dispatcher) SetDetector(detector *detector.Detector) {
 	d.detector = detector
@@ -68,6 +85,16 @@ func (d *Dispatcher) SetReturner(returner *returner.Returner) {
 // SetTransit set dispatcher member transit
 func (d *Dispatcher) SetTransit(transit *transit.Transit) {
 	d.transit = transit
+}
+
+// GetRollServerLogic get dispatcher roll server logic
+func (d *Dispatcher) GetRollServerLogic() rslogics.Logics {
+	return d.rsLogic
+}
+
+// SetRollServerLogic set dispatcher roll server logic
+func (d *Dispatcher) SetRollServerLogic(rsLogic rslogics.Logics) {
+	d.rsLogic = rsLogic
 }
 
 // Run starts dispatcher
@@ -185,7 +212,7 @@ func (d *Dispatcher) getRecycleHosts(orderId string) ([]*table.RecycleHost, erro
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)

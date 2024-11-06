@@ -199,6 +199,33 @@ export const ZiyanRenderRow = defineComponent({
         <tr>
           <td>
             <SelectColumn
+              list={ziyanSourceAddressTypes}
+              v-model={formModel.sourceAddress}
+              ref={sourceAddressTypeRef}
+              rules={[
+                {
+                  validator: (value: string) => Boolean(value),
+                  message: '源地址类型不能为空',
+                },
+                {
+                  validator: (value: string) =>
+                    (formModel.protocol === 'icmpv6' && value !== ZiyanSourceAddressType.IPV4) ||
+                    formModel.protocol !== 'icmpv6',
+                  message: 'ICMPV6 不支持 IPV4',
+                },
+              ]}
+            />
+          </td>
+          <td>
+            <SourceAddress
+              v-model={formModel[formModel.sourceAddress]}
+              {...props}
+              sourceAddressType={formModel.sourceAddress as TcloudSourceAddressType}
+              ref={sourceAddressValRef}
+            />
+          </td>
+          <td>
+            <SelectColumn
               list={protocols.value}
               v-model={formModel.protocol}
               ref={protocolRef}
@@ -271,33 +298,6 @@ export const ZiyanRenderRow = defineComponent({
                 />
               )
             }
-          </td>
-          <td>
-            <SelectColumn
-              list={ziyanSourceAddressTypes}
-              v-model={formModel.sourceAddress}
-              ref={sourceAddressTypeRef}
-              rules={[
-                {
-                  validator: (value: string) => Boolean(value),
-                  message: '源地址类型不能为空',
-                },
-                {
-                  validator: (value: string) =>
-                    (formModel.protocol === 'icmpv6' && value !== ZiyanSourceAddressType.IPV4) ||
-                    formModel.protocol !== 'icmpv6',
-                  message: 'ICMPV6 不支持 IPV4',
-                },
-              ]}
-            />
-          </td>
-          <td>
-            <SourceAddress
-              v-model={formModel[formModel.sourceAddress]}
-              {...props}
-              sourceAddressType={formModel.sourceAddress as TcloudSourceAddressType}
-              ref={sourceAddressValRef}
-            />
           </td>
           <td>
             <SelectColumn

@@ -1,14 +1,15 @@
 /* eslint-disable no-nested-ternary */
 // table 字段相关信息
 import { useAccountStore } from '@/store';
-import { Button } from 'bkui-vue';
+import { Info, Spinner, Share } from 'bkui-vue/lib/icon';
+import { Button, Popover, Tag } from 'bkui-vue';
 import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { CLOUD_HOST_STATUS, VendorEnum } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -22,7 +23,7 @@ import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import cssModule from './use-scr-columns.module.scss';
 import { defaults } from 'lodash';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, getValueByKey } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
 import { getResourceTypeName, getReturnPlanName } from '@/utils';
 import {
@@ -35,10 +36,12 @@ import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/tra
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
-import { Spinner, Share } from 'bkui-vue/lib/icon';
+
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
+import { ResourcesDemandsStatus } from '@/typings/resourcePlan';
+import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -180,7 +183,7 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
   const CRSOcolumns = [
-    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
+    { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true, align: 'center' },
     {
       label: '机型',
       field: 'spec.device_type',
@@ -190,18 +193,6 @@ export default (type: string, isSimpleShow = false) => {
       label: '状态',
       field: 'stage',
       render: ({ row }: any) => transformApplyStages(row.stage),
-    },
-    {
-      label: '总数',
-      field: 'total_num',
-      width: 70,
-      minWidth: 70,
-    },
-    {
-      label: '待交付',
-      field: 'pending_num',
-      width: 70,
-      minWidth: 70,
     },
     {
       label: '地域',
@@ -297,40 +288,55 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '机型',
       field: 'spec.device_type',
-      width: 150,
+      width: 120,
+      isDefaultShow: true,
+    },
+    {
+      label: '计费模式',
+      field: 'spec.charge_type',
+      width: 80,
+      isDefaultShow: true,
+      render: ({ cell }: any) => ChargeTypeMap[cell as ChargeType] || '--',
     },
     {
       label: '需求数量',
       field: 'replicas',
-      width: 90,
+      width: 50,
+      isDefaultShow: true,
     },
     {
       label: '地域',
       field: 'spec.region',
       width: 150,
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
+      isDefaultShow: true,
     },
     {
       label: '园区',
       field: 'spec.zone',
       width: 150,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
+      isDefaultShow: true,
     },
     {
       label: '镜像',
       field: 'spec.image_id',
       render: ({ row }: any) => getImageName(row.spec.image_id),
+      width: 150,
+      isDefaultShow: true,
     },
     {
-      label: '数据盘大小',
+      label: '数据盘(G)',
       field: 'spec.disk_size',
-      width: 95,
+      width: 70,
+      isDefaultShow: true,
     },
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
       width: 95,
       render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
+      isDefaultShow: true,
     },
     {
       label: '私有网络',
@@ -1660,6 +1666,223 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
 
+  // 资源预测列表
+  const resourceForecastColumns = [
+    {
+      label: '业务',
+      field: 'bk_biz_name',
+      fixed: 'left',
+      isDefaultShow: true,
+    },
+    {
+      label: '运营产品',
+      field: 'op_product_name',
+      fixed: 'left',
+    },
+    {
+      label: '预测类型',
+      field: 'demand_class',
+      fixed: 'left',
+      isDefaultShow: true,
+    },
+    {
+      label: '需求可用年月',
+      field: 'available_year_month',
+      fixed: 'left',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      fixed: 'left',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '机型类型',
+      field: 'device_class',
+      fixed: 'left',
+    },
+    {
+      label: '机型规格',
+      field: 'device_type',
+      fixed: 'left',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例需求数',
+      field: 'total_os',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例已执行数',
+      field: 'applied_os',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例未执行数',
+      field: 'remained_os',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU需求核数',
+      field: 'total_cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU已执行核数',
+      field: 'applied_cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU未执行核数',
+      field: 'remained_cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '总内存(GB)',
+      field: 'total_memory',
+    },
+    {
+      label: '已执行内存(GB)',
+      field: 'applied_memory',
+    },
+    {
+      label: '未执行内存(GB)',
+      field: 'remained_memory',
+    },
+    {
+      label: '云盘总量',
+      field: 'total_disk_size',
+    },
+    {
+      label: '云盘已执行数',
+      field: 'applied_disk_size',
+    },
+    {
+      label: '云盘未执行数',
+      field: 'remained_disk_size',
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+    },
+    {
+      label: '计划类型',
+      field: 'plan_type',
+      fixed: 'right',
+      minWidth: 100,
+      isDefaultShow: true,
+      render: ({ data }: any) => (
+        <Tag theme={data.plan_type === '预测内' ? 'success' : 'warning'}>{data.plan_type}</Tag>
+      ),
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      fixed: 'right',
+    },
+    {
+      label: '机型代次',
+      field: 'generation_type',
+      fixed: 'right',
+    },
+    {
+      label: '机型族',
+      field: 'device_family',
+      fixed: 'right',
+    },
+    {
+      label: '云磁盘类型',
+      field: 'disk_type_name',
+      fixed: 'right',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'disk_io',
+      fixed: 'right',
+    },
+    // {
+    //   label: '备注',
+    //   field: 'remarks',
+    //   fixed: 'right',
+    // },
+    {
+      label: '状态',
+      field: 'status',
+      fixed: 'right',
+      isDefaultShow: true,
+      render: ({ data }: any) => (
+        <>
+          {data.status === ResourcesDemandsStatus.CAN_APPLY && <span class={cssModule['c-success']}>可申领</span>}
+          {data.status === ResourcesDemandsStatus.NOT_READY && <span class={cssModule['c-info']}>未到申领时间</span>}
+          {data.status === ResourcesDemandsStatus.EXPIRED && <span class={cssModule['c-info']}>已过期</span>}
+          {data.status === ResourcesDemandsStatus.SPENT_ALL && <span class={cssModule['c-info']}>额度用尽</span>}
+          {data.status === ResourcesDemandsStatus.LOCKED && <span class={cssModule['c-warning']}>变更中</span>}
+        </>
+      ),
+    },
+  ];
+
+  // 资源预测批量取消列表
+  const resourceForecastBatchCancelColumns = [
+    {
+      label: '预测ID',
+      field: 'crp_demand_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '机型类型',
+      field: 'device_class',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型规格',
+      field: 'device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例总数',
+      field: 'total_os',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'disk_type_name',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'disk_io',
+    },
+    {
+      label: '云盘总量',
+      field: 'total_disk_size',
+    },
+  ];
+
   // 服务请求 - 资源预测
   const forecastDemandColumns = [
     {
@@ -1714,6 +1937,205 @@ export default (type: string, isSimpleShow = false) => {
       field: 'submitted_at',
       isDefaultShow: true,
       render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+  ];
+
+  // 单据下的资源预测
+  const receiptForecastDemandColumns = [
+    {
+      label: '审批状态',
+      field: 'status_name',
+      isDefaultShow: true,
+      render: ({ cell, data }: any) => {
+        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status];
+
+        return (
+          <span>
+            <i
+              class={`${className} ${cssModule['resource-plan-status-icon']}  ${
+                cssModule[`resource-plan-status-icon-${color}`]
+              }`}></i>
+            {cell}
+          </span>
+        );
+      },
+    },
+    {
+      label: '类型',
+      field: 'ticket_type_name',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核心数',
+      field: 'updated_info.cvm.cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(GB)',
+      field: 'updated_info.cvm.memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云硬盘总量(GB)',
+      field: 'updated_info.cbs.disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '提单人',
+      field: 'applicant',
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'remark',
+    },
+    {
+      label: '创建时间',
+      field: 'created_at',
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '提单时间',
+      field: 'submitted_at',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+    {
+      label: '完成时间',
+      field: 'completed_at',
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+    },
+  ];
+
+  // 资源预测 前后变化
+  const resourcePlanChangeingRender = ({
+    cell,
+    column,
+    data,
+  }: {
+    cell: string;
+    column: { field: string };
+    data: Record<string, any>;
+  }) => {
+    const updateId = column.field;
+    const originalId = updateId.replaceAll('updated_info', 'original_info');
+    const originalVal = getValueByKey(data, originalId);
+    const updatedVal = getValueByKey(data, updateId);
+    const isChanging = originalVal !== updatedVal && data.original_info;
+    const content = isChanging ? `修改前: ${originalVal}` : `暂无修改前数据`;
+    return (
+      <Popover content={content}>
+        <div class={cssModule['resource-plan-detail-cell']}>
+          {isChanging && (
+            <Info class={[cssModule['resource-plan-detail-info'], cssModule['resource-plan-detail-text']]} />
+          )}
+          <span class={isChanging && cssModule['resource-plan-detail-text']}>{cell}</span>
+        </div>
+      </Popover>
+    );
+  };
+
+  // 资源预测详情
+  const adjustmentEntryColums = [
+    {
+      label: '期望到货日期',
+      field: 'expect_time',
+      align: 'center',
+      minWidth: 120,
+    },
+    {
+      label: '部门',
+      field: 'dept_name',
+      align: 'center',
+      minWidth: 120,
+    },
+    {
+      label: '规划产品',
+      field: 'plan_product_name',
+      align: 'center',
+      minWidth: 120,
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      align: 'center',
+      minWidth: 150,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+      align: 'center',
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+      align: 'center',
+      minWidth: 100,
+    },
+    {
+      label: '13周类型',
+      field: 'demand_week',
+      align: 'center',
+      minWidth: 150,
+    },
+    {
+      label: '实例规格',
+      field: 'device_type',
+      align: 'center',
+      minWidth: 150,
+    },
+    {
+      label: '实例数当前值/变更值',
+      minWidth: 150,
+      align: 'center',
+      render: ({ data }: any) => (
+        <span>
+          {data.after_cvm_amount}/{data.change_cvm_amount}
+        </span>
+      ),
+    },
+    {
+      label: 'CPU核数当前值/变更值',
+      minWidth: 150,
+      align: 'center',
+      render: ({ data }: any) => (
+        <span>
+          {data.after_core_amount}/{data.change_core_amount}
+        </span>
+      ),
+    },
+    {
+      label: '资源池',
+      field: 'res_pool',
+      align: 'center',
+    },
+    {
+      label: '磁盘数(G)当前值/变更值',
+      align: 'center',
+      render: ({ data }: any) => (
+        <span>
+          {data.after_disk_amount}/{data.changed_disk_amount}
+        </span>
+      ),
+    },
+    {
+      label: '变更类型',
+      field: 'demand_source',
+      minWidth: 150,
+      align: 'center',
+    },
+    {
+      label: '单号',
+      field: 'crp_sn',
+      minWidth: 200,
+      align: 'center',
+    },
+    {
+      label: '备注',
+      field: 'remark',
+      align: 'center',
+      minWidth: 150,
     },
   ];
 
@@ -1802,6 +2224,117 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '备注',
       field: 'remark',
+    },
+  ];
+
+  // 单据资源预测详情
+  const receiptForecastDemandDetailColums = [
+    {
+      label: '机型规格',
+      field: 'updated_info.cvm.device_type',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '总CPU核数',
+      field: 'updated_info.cvm.cpu_core',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '总内存(G)',
+      field: 'updated_info.cvm.memory',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '总云盘大小(G)',
+      field: 'updated_info.cbs.disk_size',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '预测类型',
+      field: 'demand_class',
+      isDefaultShow: true,
+    },
+    {
+      label: '项目类型',
+      field: 'updated_info.obs_project',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '地域',
+      field: 'updated_info.area_name',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'updated_info.region_name',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '可用区',
+      field: 'updated_info.zone_name',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '资源模式',
+      field: 'updated_info.cvm.res_mode',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'updated_info.expect_time',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '机型族',
+      field: 'updated_info.cvm.device_family',
+      render: resourcePlanChangeingRender,
+    },
+    {
+      label: '机型类型',
+      field: 'updated_info.cvm.device_class',
+      render: resourcePlanChangeingRender,
+    },
+    {
+      label: '资源池',
+      field: 'updated_info.cvm.res_pool',
+      render: resourcePlanChangeingRender,
+    },
+    {
+      label: '核心类型',
+      field: 'updated_info.cvm.core_type',
+      render: resourcePlanChangeingRender,
+    },
+    {
+      label: '实例数',
+      field: 'updated_info.cvm.os',
+      render: resourcePlanChangeingRender,
+    },
+    {
+      label: '单例磁盘IO(MB/s)',
+      field: 'updated_info.cbs.disk_io',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'updated_info.cbs.disk_type_name',
+      render: resourcePlanChangeingRender,
+      isDefaultShow: true,
+    },
+    {
+      label: '备注',
+      field: 'updated_info.remark',
+      render: resourcePlanChangeingRender,
     },
   ];
 
@@ -2678,6 +3211,71 @@ export default (type: string, isSimpleShow = false) => {
     },
   ];
 
+  const planDemandModColumns = [
+    { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+    {
+      label: '预测ID',
+      field: 'crp_demand_id',
+      isDefaultShow: true,
+    },
+    {
+      label: '类型',
+      field: 'demand_class',
+      isDefaultShow: true,
+    },
+    {
+      label: '机型规格',
+      field: 'device_type',
+      isDefaultShow: true,
+    },
+    {
+      label: '期望到货时间',
+      field: 'expect_time',
+      isDefaultShow: true,
+    },
+    {
+      label: '实例总数',
+      field: 'total_os',
+      isDefaultShow: true,
+    },
+    {
+      label: 'CPU总核数',
+      field: 'total_cpu_core',
+      isDefaultShow: true,
+    },
+    {
+      label: '内存总量(GB)',
+      field: 'total_memory',
+      isDefaultShow: true,
+    },
+    {
+      label: '云盘总量(GB)',
+      field: 'total_disk_size',
+      isDefaultShow: true,
+    },
+    {
+      label: '城市',
+      field: 'region_name',
+    },
+    {
+      label: '可用区',
+      field: 'zone_name',
+    },
+    {
+      label: '项目类型',
+      field: 'obs_project',
+      isDefaultShow: true,
+    },
+    {
+      label: '云磁盘类型',
+      field: 'disk_type_name',
+    },
+    {
+      label: '单实例磁盘IO(MB/s)',
+      field: 'disk_io',
+    },
+  ];
+
   const columnsMap = {
     hostInventor: hIColumns,
     CloudHost: CHColumns,
@@ -2695,8 +3293,13 @@ export default (type: string, isSimpleShow = false) => {
     ExecutionRecords: ERcolumns,
     scrResourceOnline: scrResourceOnlineColumns,
     scrResourceOffline: scrResourceOfflineColumns,
+    resourceForecast: resourceForecastColumns,
+    resourceForecastBatchCancel: resourceForecastBatchCancelColumns,
+    receiptForecastDemand: receiptForecastDemandColumns,
     forecastDemand: forecastDemandColumns,
+    adjustmentEntry: adjustmentEntryColums,
     forecastDemandDetail: forecastDemandDetailColums,
+    receiptForecastDemandDetail: receiptForecastDemandDetailColums,
     forecastList: forecastListColums,
     account: accountColums,
     CVMApplication: CAcolumns,
@@ -2721,6 +3324,7 @@ export default (type: string, isSimpleShow = false) => {
     billsMainAccountSummary: billsMainAccountSummaryColumns,
     billsSummaryOperationRecord: billsSummaryOperationRecordColumns,
     businessHostColumns,
+    planDemandModColumns,
   };
 
   let columns = (columnsMap[type] || []).filter((column: any) => !isSimpleShow || !column.onlyShowOnList);

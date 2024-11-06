@@ -93,6 +93,11 @@ func (a *ApplicationOfCreateMainAccount) CheckReq() error {
 		return err
 	}
 
+	if err := a.checkOpProduct(a.req.OpProductID); err != nil {
+		logs.Errorf("check op product failed, err: %s, rid: %s", err, a.Cts.Kit.Rid)
+		return err
+	}
+
 	return nil
 }
 

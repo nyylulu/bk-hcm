@@ -16,16 +16,15 @@ import (
 	"strings"
 	"time"
 
-	"hcm/pkg/logs"
-
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/errors"
-	"hcm/cmd/woa-server/common/metric"
-	"hcm/cmd/woa-server/common/types"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/dal/mongo"
 	"hcm/cmd/woa-server/storage/dal/mongo/local"
 	dbType "hcm/cmd/woa-server/storage/dal/types"
+	"hcm/pkg"
+	"hcm/pkg/criteria/errors"
+	"hcm/pkg/logs"
+	"hcm/pkg/metric"
+	"hcm/pkg/types"
 )
 
 /*
@@ -56,7 +55,7 @@ func InitClient(prefix string, config *mongo.Config) errors.CCErrorCoder {
 	db, dbErr = local.NewMgo(config.GetMongoConf(), time.Minute)
 	if dbErr != nil {
 		logs.Errorf("failed to connect the mongo server, error info is: %s", dbErr.Error())
-		lastInitErr = errors.NewCCError(common.CCErrCommResourceInitFailed,
+		lastInitErr = errors.NewCCError(pkg.CCErrCommResourceInitFailed,
 			"'"+prefix+".mongodb' initialization failed")
 		return lastInitErr
 	}

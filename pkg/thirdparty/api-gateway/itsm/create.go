@@ -42,6 +42,7 @@ type CreateTicketParams struct {
 	Title             string
 	ContentDisplay    string
 	VariableApprovers []VariableApprover
+	ExtraFields       map[string]interface{}
 }
 
 type createTicketResult struct {
@@ -65,6 +66,13 @@ func (i *itsm) CreateTicket(kt *kit.Kit, params *CreateTicketParams) (string, er
 		fields = append(fields, map[string]interface{}{
 			"key":   v.Variable,
 			"value": strings.Join(v.Approvers, ","),
+		})
+	}
+	// 其他附加字段
+	for fieldKey, fieldValue := range params.ExtraFields {
+		fields = append(fields, map[string]interface{}{
+			"key":   fieldKey,
+			"value": fieldValue,
 		})
 	}
 

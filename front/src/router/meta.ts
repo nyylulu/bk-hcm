@@ -41,6 +41,7 @@ export interface RouteMetaConfig {
   activeKey?: string;
   isShowBreadcrumb?: boolean;
   icon?: string;
+  hasPageRoute?: boolean;
 }
 
 export default class Meta {
@@ -69,7 +70,6 @@ export default class Meta {
     });
 
     this.menu.i18n = this.title;
-    this.menu.relative = data.activeKey;
 
     this.menu = Object.assign(this.menu, data.menu);
 

@@ -17,12 +17,12 @@ import (
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	ptypes "hcm/cmd/woa-server/types/plan"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb.
@@ -75,29 +75,30 @@ func (l *logics) ListAuthorizedBiz(kt *kit.Kit) ([]int64, error) {
 }
 
 // GetBizOrgRel get biz org relation.
-func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, error) {
+func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, error) {
 	// search cmdb business belonging.
 	req := &cmdb.SearchBizBelongingParams{
 		BizIDs: []int64{bkBizID},
 	}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(nil, nil, req)
+
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, req)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	if resp == nil || len(resp.Data) != 1 {
+	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
 		return nil, errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
 	// convert search biz belonging response to biz org relation response.
-	bizBelong := resp.Data[0]
-	rst := &ptypes.BizOrgRel{
+	bizBelong := (*resp)[0]
+	rst := &mtypes.BizOrgRel{
 		BkBizID:         bizBelong.BizID,
 		BkBizName:       bizBelong.BizName,
-		BkProductID:     bizBelong.BkProductID,
-		BkProductName:   bizBelong.BkProductName,
+		OpProductID:     bizBelong.OpProductID,
+		OpProductName:   bizBelong.OpProductName,
 		PlanProductID:   bizBelong.PlanProductID,
 		PlanProductName: bizBelong.PlanProductName,
 		VirtualDeptID:   bizBelong.VirtualDeptID,

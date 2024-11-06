@@ -17,17 +17,17 @@ import (
 	"errors"
 	"sort"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	configLogics "hcm/cmd/woa-server/logics/config"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
 )
 
 // DeviceTypeHandler apply order device type modification recommend handler
@@ -165,7 +165,7 @@ func (dh *DeviceTypeHandler) getCandidateDevice(kt *kit.Kit, order *types.ApplyO
 			},
 		},
 		Page: metadata.BasePage{
-			Limit: common.BKNoLimit,
+			Limit: pkg.BKNoLimit,
 			Start: 0,
 		},
 	}
@@ -313,7 +313,7 @@ func (dh *DeviceTypeHandler) getZoneList(kt *kit.Kit, region string) ([]*cfgtype
 	// if input region is empty list, return all zone info
 	if len(region) > 0 {
 		cond["region"] = mapstr.MapStr{
-			common.BKDBIN: []string{region},
+			pkg.BKDBIN: []string{region},
 		}
 	}
 	zoneResp, err := dh.configLogics.Zone().GetZone(kt, &cond)

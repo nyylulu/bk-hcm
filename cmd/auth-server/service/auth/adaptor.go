@@ -122,6 +122,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return sys.ZiyanResInventory, make([]client.Resource, 0), nil
 	case meta.ZiYanResource: // 自研云资源的操作-业务粒度
 		return genZiYanResource(a)
+	case meta.ZiYanResPlan:
+		return genZiYanResPlanResource(a)
 	case meta.AccountBill:
 		return genAccountBillResource(a)
 	case meta.Application:
@@ -130,6 +132,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genAccountBillThirdPartyResource(a)
 	case meta.AwsSavingsPlansCost:
 		return genAwsSavingsPlansCostResource(a)
+	case meta.RollingServerManage: // 平台管理-滚服管理
+		return sys.RollingServerManage, make([]client.Resource, 0), nil
 	case meta.TaskManagement:
 		return genTaskManagementResource(a)
 	default:

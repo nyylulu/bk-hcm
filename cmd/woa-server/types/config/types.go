@@ -17,10 +17,10 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // Requirement resource requirement type config
@@ -574,10 +574,10 @@ const (
 
 // Anti类型
 const (
-	AntiNone   string = "ANTI_NONE"   //无要求
-	AntiRack   string = "ANTI_RACK"   //分机架
-	AntiModule string = "ANTI_MODULE" //分Module
-	AntiCampus string = "ANTI_CAMPUS" //分Campus
+	AntiNone   string = "ANTI_NONE"   // 无要求
+	AntiRack   string = "ANTI_RACK"   // 分机架
+	AntiModule string = "ANTI_MODULE" // 分Module
+	AntiCampus string = "ANTI_CAMPUS" // 分Campus
 )
 
 // Description description of terms
@@ -586,4 +586,11 @@ var Description = map[string]string{
 	AntiRack:   "分机架",
 	AntiModule: "分Module",
 	AntiCampus: "分Campus",
+}
+
+// DeviceTypeCpuItem device type cpu item
+type DeviceTypeCpuItem struct {
+	DeviceType  string `json:"device_type"`  // 机型
+	CPUAmount   int64  `json:"cpu_amount"`   // CPU数量
+	DeviceGroup string `json:"device_group"` // 机型族
 }

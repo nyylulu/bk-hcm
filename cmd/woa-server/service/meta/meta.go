@@ -13,13 +13,18 @@
 package meta
 
 import (
+	"errors"
+
 	"hcm/cmd/woa-server/types/meta"
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/api/core"
+	dataproto "hcm/pkg/api/data-service"
+	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	dtypes "hcm/pkg/dal/dao/types/meta"
+	imeta "hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -126,4 +131,135 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return &core.ListResultT[mtypes.ListDeviceTypeRst]{Details: details}, nil
+}
+
+// ListPlanType lists plan type.
+func (s *service) ListPlanType(_ *rest.Contexts) (interface{}, error) {
+	return &core.ListResultT[enumor.PlanType]{Details: enumor.GetPlanTypeHcmMembers()}, nil
+}
+
+// ListTicketType lists ticket type.
+func (s *service) ListTicketType(_ *rest.Contexts) (interface{}, error) {
+	// get ticket type members.
+	ticketTypes := enumor.GetRPTicketTypeMembers()
+	// convert to meta.DiskTypeItem slice.
+	details := make([]meta.TicketTypeItem, len(ticketTypes))
+	for idx, ticketType := range ticketTypes {
+		details[idx] = meta.TicketTypeItem{
+			TicketType:     ticketType,
+			TicketTypeName: ticketType.Name(),
+		}
+	}
+	return &core.ListResultT[meta.TicketTypeItem]{Details: details}, nil
+}
+
+// ListBizsByOpProduct lists bizs by op product.
+func (s *service) ListBizsByOpProduct(cts *rest.Contexts) (interface{}, error) {
+	req := new(mtypes.ListBizsByOpProdReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to list bizs by op product, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate list bizs by op product parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	bizs, err := s.logics.GetBizsByOpProd(cts.Kit, req.OpProductID)
+	if err != nil {
+		logs.Errorf("failed to get bizs by op product, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.Biz]{Details: bizs}, nil
+}
+
+// ListOpProducts lists op products.
+func (s *service) ListOpProducts(cts *rest.Contexts) (interface{}, error) {
+	opProds, err := s.logics.GetOpProducts(cts.Kit)
+	if err != nil {
+		logs.Errorf("failed to get op products, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.OpProduct]{Details: opProds}, nil
+}
+
+// ListPlanProducts lists plan products.
+func (s *service) ListPlanProducts(cts *rest.Contexts) (interface{}, error) {
+	planProds, err := s.logics.GetPlanProducts(cts.Kit)
+	if err != nil {
+		logs.Errorf("failed to get plan products, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return &core.ListResultT[mtypes.PlanProduct]{Details: planProds}, nil
+}
+
+// ListResourcePoolBiz list all resource pool biz. no authorized
+func (s *service) ListResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	listRst := new(rsproto.ResourcePoolBusinessListResult)
+	listReq := &rsproto.ResourcePoolBusinessListReq{
+		Filter: tools.AllExpression(),
+		Page:   core.NewDefaultBasePage(),
+	}
+	for {
+		res, err := s.client.DataService().Global.RollingServer.ListResPoolBiz(cts.Kit, listReq)
+		if err != nil {
+			logs.Errorf("list resource pool business failed, err: %v, req: %+v, rid: %s", err, *listReq, cts.Kit.Rid)
+			return nil, err
+		}
+
+		listRst.Details = append(listRst.Details, res.Details...)
+
+		if len(res.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	return listRst, nil
+}
+
+// DeleteResourcePoolBiz delete resource pool biz. need authorized
+func (s *service) DeleteResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	delID := cts.PathParameter("id").String()
+	if delID == "" {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("id can't be empty"))
+	}
+
+	// authorized
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{
+		Basic: &imeta.Basic{Type: imeta.RollingServerManage, Action: imeta.Find}})
+	if err != nil {
+		logs.Errorf("delete resource pool business failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	delReq := &dataproto.BatchDeleteReq{
+		Filter: tools.EqualExpression("id", delID),
+	}
+	return nil, s.client.DataService().Global.RollingServer.DeleteResPoolBiz(cts.Kit, delReq)
+}
+
+// CreateResourcePoolBiz create resource pool biz. need authorized
+func (s *service) CreateResourcePoolBiz(cts *rest.Contexts) (any, error) {
+	req := new(rsproto.ResourcePoolBusinessCreateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// authorized
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{
+		Basic: &imeta.Basic{Type: imeta.RollingServerManage, Action: imeta.Find}})
+	if err != nil {
+		logs.Errorf("create resource pool business failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.client.DataService().Global.RollingServer.BatchCreateResPoolBiz(cts.Kit, req)
 }

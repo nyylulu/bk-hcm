@@ -15,40 +15,45 @@ package table
 
 import (
 	"time"
+
+	"hcm/pkg/criteria/enumor"
 )
 
 // RecycleHost defines a recycle host's detail information
 type RecycleHost struct {
-	OrderID        uint64        `json:"order_id" bson:"order_id"`
-	SuborderID     string        `json:"suborder_id" bson:"suborder_id"`
-	BizID          int64         `json:"bk_biz_id" bson:"bk_biz_id"`
-	BizName        string        `json:"bk_biz_name" bson:"bk_biz_name"`
-	User           string        `json:"bk_username" bson:"bk_username"`
-	HostID         int64         `json:"bk_host_id" bson:"bk_host_id"`
-	AssetID        string        `json:"asset_id" bson:"asset_id"`
-	IP             string        `json:"ip" bson:"ip"`
-	BkHostOuterIP  string        `json:"bk_host_outerip" bson:"bk_host_outerip"`
-	InstID         string        `json:"instance_id" bson:"instance_id"`
-	DeviceType     string        `json:"device_type" bson:"device_type"`
-	Zone           string        `json:"bk_zone_name" bson:"bk_zone_name"`
-	SubZone        string        `json:"sub_zone" bson:"sub_zone"`
-	ModuleName     string        `json:"module_name" bson:"module_name"`
-	Operator       string        `json:"operator" bson:"operator"`
-	BakOperator    string        `json:"bak_operator" bson:"bak_operator"`
-	InputTime      string        `json:"input_time" bson:"input_time"`
-	Stage          RecycleStage  `json:"stage" bson:"stage"`
-	Status         RecycleStatus `json:"status" bson:"status"`
-	ReturnID       string        `json:"return_id" bson:"return_id"`
-	ReturnLink     string        `json:"return_link" bson:"return_link"`
-	ReturnTag      string        `json:"return_tag" bson:"return_tag"`
-	ReturnCostRate float64       `json:"return_cost_rate" bson:"return_cost_rate"`
-	ReturnPlanMsg  string        `json:"return_plan_msg" bson:"return_plan_msg"`
-	ReturnTime     string        `json:"return_time" bson:"return_time"`
-	CreateAt       time.Time     `json:"create_at" bson:"create_at"`
-	UpdateAt       time.Time     `json:"update_at" bson:"update_at"`
-	ResourceType   ResourceType  `json:"-" bson:"resource_type"`
-	RecycleType    RecycleType   `json:"-" bson:"recycle_type"`
-	ReturnPlan     RetPlanType   `json:"-" bson:"return_type"`
-	Pool           PoolType      `json:"-" bson:"pool_type"`
-	ObsProject     string        `json:"-" bson:"obs_project"`
+	OrderID        uint64             `json:"order_id" bson:"order_id"`
+	SuborderID     string             `json:"suborder_id" bson:"suborder_id"`
+	BizID          int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	BizName        string             `json:"bk_biz_name" bson:"bk_biz_name"`
+	User           string             `json:"bk_username" bson:"bk_username"`
+	HostID         int64              `json:"bk_host_id" bson:"bk_host_id"`
+	AssetID        string             `json:"asset_id" bson:"asset_id"`
+	IP             string             `json:"ip" bson:"ip"`
+	BkHostOuterIP  string             `json:"bk_host_outerip" bson:"bk_host_outerip"`
+	InstID         string             `json:"instance_id" bson:"instance_id"`
+	DeviceType     string             `json:"device_type" bson:"device_type"`
+	Zone           string             `json:"bk_zone_name" bson:"bk_zone_name"`
+	SubZone        string             `json:"sub_zone" bson:"sub_zone"`
+	ModuleName     string             `json:"module_name" bson:"module_name"`
+	Operator       string             `json:"operator" bson:"operator"`
+	BakOperator    string             `json:"bak_operator" bson:"bak_operator"`
+	InputTime      string             `json:"input_time" bson:"input_time"`
+	Stage          RecycleStage       `json:"stage" bson:"stage"`
+	Status         RecycleStatus      `json:"status" bson:"status"`
+	ReturnID       string             `json:"return_id" bson:"return_id"`
+	ReturnLink     string             `json:"return_link" bson:"return_link"`
+	ReturnTag      string             `json:"return_tag" bson:"return_tag"`
+	ReturnCostRate float64            `json:"return_cost_rate" bson:"return_cost_rate"`
+	ReturnPlanMsg  string             `json:"return_plan_msg" bson:"return_plan_msg"`
+	ReturnTime     string             `json:"return_time" bson:"return_time"`
+	CreateAt       time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt       time.Time          `json:"update_at" bson:"update_at"`
+	ResourceType   ResourceType       `json:"-" bson:"resource_type"`
+	RecycleType    RecycleType        `json:"-" bson:"recycle_type"`
+	ReturnPlan     RetPlanType        `json:"-" bson:"return_type"`
+	Pool           PoolType           `json:"-" bson:"pool_type"`
+	ObsProject     string             `json:"-" bson:"obs_project"`
+	ReturnedWay    enumor.ReturnedWay `json:"returned_way" bson:"returned_way"`
+	DeviceGroup    string             `json:"device_group" bson:"device_group"`
+	CpuCore        int64              `json:"cpu_core" bson:"cpu_core"`
 }

@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // DetectFailedState the action to be executed in detect failed state
@@ -27,5 +28,10 @@ func (ds *DetectFailedState) Name() table.RecycleStatus {
 
 // Execute executes action in detect failed state
 func (ds *DetectFailedState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (ds *DetectFailedState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

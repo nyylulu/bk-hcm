@@ -17,11 +17,11 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/querybuilder"
 )
 
 func (d *Detector) checkOwner(step *table.DetectStep, retry int) (int, string, error) {
@@ -62,14 +62,14 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 	host := hostBase[0]
 
 	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
 						Field:    "bk_svr_owner_asset_id",
 						Operator: querybuilder.OperatorEqual,
-						Value:    host.BkAssetId,
+						Value:    host.BkAssetID,
 					},
 				},
 			},
@@ -81,7 +81,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 

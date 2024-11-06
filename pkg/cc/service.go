@@ -117,10 +117,6 @@ func (s ApiServerSetting) Validate() error {
 
 // CloudServerSetting defines cloud server used setting options.
 type CloudServerSetting struct {
-	// 自研云增加的配置写在这里
-	Cmdb   ApiGateway `yaml:"cmdb"`
-	FinOps ApiGateway `yaml:"finops"`
-
 	Network        Network        `yaml:"network"`
 	Service        Service        `yaml:"service"`
 	Log            LogOption      `yaml:"log"`
@@ -133,6 +129,10 @@ type CloudServerSetting struct {
 	Itsm           ApiGateway     `yaml:"itsm"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
 	Cmsi           CMSI           `yaml:"cmsi"`
+
+	// 内部版配置
+	Cmdb   ApiGateway `yaml:"cmdb"`
+	FinOps ApiGateway `yaml:"finops"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -192,6 +192,8 @@ func (s CloudServerSetting) Validate() error {
 
 // DataServiceSetting defines data service used setting options.
 type DataServiceSetting struct {
+	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
+
 	Network     Network     `yaml:"network"`
 	Service     Service     `yaml:"service"`
 	Log         LogOption   `yaml:"log"`
@@ -208,6 +210,10 @@ func (s *DataServiceSetting) trySetFlagBindIP(ip net.IP) error {
 
 // trySetDefault set the DataServiceSetting default value if user not configured.
 func (s *DataServiceSetting) trySetDefault() {
+	if s.OBSDatabase != nil {
+		s.OBSDatabase.trySetDefault()
+	}
+
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
@@ -218,6 +224,12 @@ func (s *DataServiceSetting) trySetDefault() {
 
 // Validate DataServiceSetting option.
 func (s DataServiceSetting) Validate() error {
+	if s.OBSDatabase != nil {
+		if err := s.OBSDatabase.validate(); err != nil {
+			return err
+		}
+	}
+
 	if err := s.Network.validate(); err != nil {
 		return err
 	}
@@ -454,10 +466,11 @@ func (s *TaskServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Database.trySetDefault()
+	s.Log.trySetDefault()
+
 	if s.OBSDatabase != nil {
 		s.OBSDatabase.trySetDefault()
 	}
-	s.Log.trySetDefault()
 
 	return
 }
@@ -488,20 +501,22 @@ func (s TaskServerSetting) Validate() error {
 
 // WoaServerSetting defines woa server used setting options.
 type WoaServerSetting struct {
-	Network      Network   `yaml:"network"`
-	Service      Service   `yaml:"service"`
-	Database     DataBase  `yaml:"database"`
-	Log          LogOption `yaml:"log"`
-	Esb          Esb       `yaml:"esb"`
-	MongoDB      MongoDB   `yaml:"mongodb"`
-	Watch        MongoDB   `yaml:"watch"`
-	Redis        Redis     `yaml:"redis"`
-	ClientConfig `yaml:",inline"`
-	ItsmFlows    []ItsmFlow       `yaml:"itsmFlows"`
-	ResDissolve  ResourceDissolve `yaml:"resourceDissolve"`
-	Es           Es               `yaml:"elasticsearch"`
-	Blacklist    string           `yaml:"blacklist"`
-	UseMongo     bool             `yaml:"useMongo"`
+	Network       Network   `yaml:"network"`
+	Service       Service   `yaml:"service"`
+	Database      DataBase  `yaml:"database"`
+	Log           LogOption `yaml:"log"`
+	Esb           Esb       `yaml:"esb"`
+	MongoDB       MongoDB   `yaml:"mongodb"`
+	Watch         MongoDB   `yaml:"watch"`
+	Redis         Redis     `yaml:"redis"`
+	ClientConfig  `yaml:",inline"`
+	ItsmFlows     []ItsmFlow       `yaml:"itsmFlows"`
+	ResDissolve   ResourceDissolve `yaml:"resourceDissolve"`
+	Es            Es               `yaml:"elasticsearch"`
+	Blacklist     string           `yaml:"blacklist"`
+	UseMongo      bool             `yaml:"useMongo"`
+	Recover       Recover          `yaml:"recover"`
+	RollingServer RollingServer    `yaml:"rollingServer"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

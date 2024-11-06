@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // ReturnFailedState the action to be executed in return failed state
@@ -27,5 +28,10 @@ func (rs *ReturnFailedState) Name() table.RecycleStatus {
 
 // Execute executes action in return failed state
 func (rs *ReturnFailedState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (rs *ReturnFailedState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

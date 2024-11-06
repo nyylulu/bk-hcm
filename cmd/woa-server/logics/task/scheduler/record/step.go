@@ -10,26 +10,26 @@
  * limitations under the License.
  */
 
-// Package record ...
+// Package record provides record functions
 package record
 
 import (
 	"context"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 )
 
 // CreateCommitStep init apply order commit step info
-func CreateCommitStep(suborderId string, replicas uint, stepID int) error {
+func CreateCommitStep(ctx context.Context, suborderId string, replicas uint, stepID int) error {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 		"step_name":   types.StepNameCommit,
 	}
-	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(context.Background(), filter)
+	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to create commit step, err: %v", err)
 		return err
@@ -55,7 +55,7 @@ func CreateCommitStep(suborderId string, replicas uint, stepID int) error {
 		StartAt:    now,
 		EndAt:      now,
 	}
-	if err := model.Operation().ApplyStep().CreateApplyStep(context.Background(), step); err != nil {
+	if err := model.Operation().ApplyStep().CreateApplyStep(ctx, step); err != nil {
 		logs.Errorf("failed to create commit step, err: %v", err)
 		return err
 	}
@@ -64,12 +64,12 @@ func CreateCommitStep(suborderId string, replicas uint, stepID int) error {
 }
 
 // CreateGenerateStep init apply order generate step info
-func CreateGenerateStep(suborderId string, replicas uint, stepID int) error {
+func CreateGenerateStep(ctx context.Context, suborderId string, replicas uint, stepID int) error {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 		"step_name":   types.StepNameGenerate,
 	}
-	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(context.Background(), filter)
+	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to create generate step, err: %v", err)
 		return err
@@ -93,7 +93,7 @@ func CreateGenerateStep(suborderId string, replicas uint, stepID int) error {
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
-	if err := model.Operation().ApplyStep().CreateApplyStep(context.Background(), step); err != nil {
+	if err := model.Operation().ApplyStep().CreateApplyStep(ctx, step); err != nil {
 		logs.Errorf("failed to create generate step, err: %v", err)
 		return err
 	}
@@ -162,12 +162,12 @@ func UpdateGenerateStep(suborderId string, total uint, errStep error) error {
 }
 
 // CreateInitStep init apply order init step info
-func CreateInitStep(suborderId string, replicas uint, stepID int) error {
+func CreateInitStep(ctx context.Context, suborderId string, replicas uint, stepID int) error {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 		"step_name":   types.StepNameInit,
 	}
-	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(context.Background(), filter)
+	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to create init step, err: %v", err)
 		return err
@@ -191,7 +191,7 @@ func CreateInitStep(suborderId string, replicas uint, stepID int) error {
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
-	if err := model.Operation().ApplyStep().CreateApplyStep(context.Background(), step); err != nil {
+	if err := model.Operation().ApplyStep().CreateApplyStep(ctx, step); err != nil {
 		logs.Errorf("failed to create init step, err: %v", err)
 		return err
 	}
@@ -246,12 +246,12 @@ func UpdateInitStep(suborderId string, total uint) error {
 }
 
 // CreateDiskCheckStep init apply order disk check step info
-func CreateDiskCheckStep(suborderId string, replicas uint, stepID int) error {
+func CreateDiskCheckStep(ctx context.Context, suborderId string, replicas uint, stepID int) error {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 		"step_name":   types.StepNameDiskCheck,
 	}
-	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(context.Background(), filter)
+	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to create disk check step, err: %v", err)
 		return err
@@ -275,7 +275,7 @@ func CreateDiskCheckStep(suborderId string, replicas uint, stepID int) error {
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
-	if err := model.Operation().ApplyStep().CreateApplyStep(context.Background(), step); err != nil {
+	if err := model.Operation().ApplyStep().CreateApplyStep(ctx, step); err != nil {
 		logs.Errorf("failed to create disk check step, err: %v", err)
 		return err
 	}
@@ -330,12 +330,12 @@ func UpdateDiskCheckStep(suborderId string, total uint) error {
 }
 
 // CreateDeliverStep init apply order deliver step info
-func CreateDeliverStep(suborderId string, replicas uint, stepID int) error {
+func CreateDeliverStep(ctx context.Context, suborderId string, replicas uint, stepID int) error {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 		"step_name":   types.StepNameDeliver,
 	}
-	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(context.Background(), filter)
+	stepCnt, err := model.Operation().ApplyStep().CountApplyStep(ctx, filter)
 	if err != nil {
 		logs.Errorf("failed to create deliver step, err: %v", err)
 		return err
@@ -359,7 +359,7 @@ func CreateDeliverStep(suborderId string, replicas uint, stepID int) error {
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
-	if err := model.Operation().ApplyStep().CreateApplyStep(context.Background(), step); err != nil {
+	if err := model.Operation().ApplyStep().CreateApplyStep(ctx, step); err != nil {
 		logs.Errorf("failed to create deliver step, err: %v", err)
 		return err
 	}

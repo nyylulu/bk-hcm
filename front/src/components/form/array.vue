@@ -33,7 +33,9 @@ const localModel = computed({
 
 const defaultComp = computed(() => (props.display?.on === 'cell' ? InputColumn : 'bk-input'));
 
-const appearanceComps: Record<string, any> = {};
+const appearanceComps: Record<string, any> = {
+  'tag-input': 'bk-tag-input',
+};
 
 const compColumnRef = ref();
 

@@ -48,6 +48,18 @@ type SyncOption struct {
 	Limit         uint64        `json:"limit" validate:"required"`
 }
 
+// String ...
+func (opt SyncOption) String() string {
+	return fmt.Sprintf("%s-%s-%d-%d-%d-%d",
+		opt.Vendor, opt.MainAccountID, opt.BillYear, opt.BillMonth, opt.Start, opt.Limit)
+}
+
+// SetIndex for identify bill batch
+func (opt SyncOption) SetIndex(start, limit uint64) string {
+	return fmt.Sprintf("%s-%s-%d-%d-%d-%d",
+		opt.Vendor, opt.MainAccountID, opt.BillYear, opt.BillMonth, start, limit)
+}
+
 var _ action.Action = new(SyncAction)
 var _ action.ParameterAction = new(SyncAction)
 
@@ -113,8 +125,8 @@ func (act SyncAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, e
 	}
 }
 
-func (act SyncAction) getExchangeRate(
-	kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode, billYear, billMonth int) (*decimal.Decimal, error) {
+func getExchangeRate(kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode,
+	billYear, billMonth int) (*decimal.Decimal, error) {
 
 	expressions := []*filter.AtomRule{
 		tools.RuleEqual("from_currency", fromCurrency),

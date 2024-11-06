@@ -22,15 +22,10 @@ import (
 	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/language"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/dispatcher"
 	"hcm/cmd/woa-server/logics/task/scheduler/generator"
@@ -38,24 +33,35 @@ import (
 	"hcm/cmd/woa-server/logics/task/scheduler/recommender"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/itsmapi"
 	configtypes "hcm/cmd/woa-server/types/config"
+	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/language"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Interface scheduler interface
 type Interface interface {
 	// UpdateApplyTicket creates or updates resource apply ticket
-	UpdateApplyTicket(kit *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error)
+	UpdateApplyTicket(kt *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error)
 	// GetApplyTicket gets resource apply ticket
 	GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq) (*types.GetApplyTicketRst, error)
 	// GetApplyAudit gets resource apply ticket audit info
@@ -105,6 +111,32 @@ type Interface interface {
 	RecommendApplyOrder(kit *kit.Kit, param *types.RecommendApplyReq) (*types.RecommendApplyRst, error)
 	// GetApplyModify gets resource apply order modify records
 	GetApplyModify(kit *kit.Kit, param *types.GetApplyModifyReq) (*types.GetApplyModifyRst, error)
+	// DeliverDevice deliver one device to business
+	DeliverDevice(info *types.DeviceInfo, order *types.ApplyOrder) error
+	// SetDeviceDelivered set device info delivered
+	SetDeviceDelivered(info *types.DeviceInfo) error
+	// GetGenerateRecords check and update cvm device
+	GetGenerateRecords(kt *kit.Kit, orderId string) ([]*types.GenerateRecord, error)
+	// AddCvmDevices check and update cvm device
+	AddCvmDevices(kit *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error
+	// UpdateOrderStatus check generate record by order id
+	UpdateOrderStatus(suborderID string) error
+	// UpdateHostOperator update operator of host
+	UpdateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error
+	// ProcessInitStep process init step
+	ProcessInitStep(device *types.DeviceInfo) error
+	// CheckSopsUpdate check if the sops task is completed and update the initialization status
+	CheckSopsUpdate(bkBizID int64, info *types.DeviceInfo, jobUrl string, jobIDStr string) error
+	// RunDiskCheck run disk check
+	RunDiskCheck(order *types.ApplyOrder, devices []*types.DeviceInfo) ([]*types.DeviceInfo, error)
+	// DeliverDevices deliver devices to business
+	DeliverDevices(order *types.ApplyOrder, observeDevices []*types.DeviceInfo) error
+	// FinalApplyStep after deliver device, update generate record status and order status
+	FinalApplyStep(genRecord *types.GenerateRecord, order *types.ApplyOrder) error
+	// GetMatcher get matcher
+	GetMatcher() *matcher.Matcher
+	// GetGenerator get generator
+	GetGenerator() *generator.Generator
 
 	// CheckRollingServerHost check rolling server host
 	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*types.CheckRollingServerHostResp,
@@ -114,18 +146,19 @@ type Interface interface {
 // scheduler provides resource apply service
 type scheduler struct {
 	lang         language.CCLanguageIf
-	itsm         itsmapi.ITSMClientInterface
+	itsm         itsm.Client
 	cc           cmdb.Client
 	dispatcher   *dispatcher.Dispatcher
 	generator    *generator.Generator
 	matcher      *matcher.Matcher
 	recommend    *recommender.Recommender
 	configLogics config.Logics
+	rsLogics     rollingserver.Logics
 }
 
 // New creates a scheduler
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, informerIf informer.Interface,
-	clientConf cc.ClientConfig) (*scheduler, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+	informerIf informer.Interface, clientConf cc.ClientConfig) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -134,13 +167,13 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, in
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, thirdCli, esbCli, clientConf, informerIf)
+	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf)
 	if err != nil {
 		return nil, err
 	}
 
 	// new generator
-	generate, err := generator.New(ctx, thirdCli, esbCli, clientConf)
+	generate, err := generator.New(ctx, rsLogics, thirdCli, esbCli, clientConf)
 	if err != nil {
 		return nil, err
 	}
@@ -161,26 +194,35 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, in
 		matcher:      match,
 		recommend:    recommend,
 		configLogics: config.New(thirdCli),
+		rsLogics:     rsLogics,
 	}
 
 	return scheduler, nil
 }
 
-// UpdateApplyTicket creates or updates resource apply ticket
-func (s *scheduler) UpdateApplyTicket(kit *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error) {
-	if param.OrderId <= 0 {
-		return s.createApplyTicket(kit, param, types.TicketStageUncommit)
-	}
-
-	return s.updateApplyTicket(kit, param, types.TicketStageUncommit)
+// GetDispatcher get dispatcher
+func (s *scheduler) GetDispatcher() *dispatcher.Dispatcher {
+	return s.dispatcher
 }
 
-func (s *scheduler) createApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage types.TicketStage) (
-	*types.CreateApplyOrderResult, error) {
+// GetGenerator get generator
+func (s *scheduler) GetGenerator() *generator.Generator { return s.generator }
 
-	orderId, err := model.Operation().ApplyOrder().NextSequence(kit.Ctx)
+// UpdateApplyTicket creates or updates resource apply ticket
+func (s *scheduler) UpdateApplyTicket(kt *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error) {
+	if param.OrderId <= 0 {
+		return s.createApplyTicket(kt, param, types.TicketStageUncommit)
+	}
+
+	return s.updateApplyTicket(kt, param, types.TicketStageUncommit)
+}
+
+func (s *scheduler) createApplyTicket(kt *kit.Kit, param *types.ApplyReq,
+	stage types.TicketStage) (*types.CreateApplyOrderResult, error) {
+
+	orderId, err := model.Operation().ApplyOrder().NextSequence(kt.Ctx)
 	if err != nil {
-		return nil, errf.Newf(common.CCErrObjectDBOpErrno, err.Error())
+		return nil, errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
 	now := time.Now()
@@ -201,8 +243,8 @@ func (s *scheduler) createApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage
 
 	logs.V(9).Infof("ticket data: %+v", ticket)
 
-	if err := model.Operation().ApplyTicket().CreateApplyTicket(kit.Ctx, ticket); err != nil {
-		logs.Errorf("failed to create apply ticket, err: %v, rid: %s", err, kit.Rid)
+	if err := model.Operation().ApplyTicket().CreateApplyTicket(kt.Ctx, ticket); err != nil {
+		logs.Errorf("failed to create apply ticket, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -213,22 +255,22 @@ func (s *scheduler) createApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage
 	return rst, nil
 }
 
-func (s *scheduler) updateApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage types.TicketStage) (
-	*types.CreateApplyOrderResult, error) {
+func (s *scheduler) updateApplyTicket(kt *kit.Kit, param *types.ApplyReq,
+	stage types.TicketStage) (*types.CreateApplyOrderResult, error) {
 
 	filter := mapstr.MapStr{
 		"order_id": param.OrderId,
 	}
 
-	origin, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	origin, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
 	if err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if origin.Stage != types.TicketStageUncommit {
 		logs.Errorf("failed to update apply ticket, for invalid stage: %s != %s, rid: %s", origin.Stage,
-			types.TicketStageUncommit, kit.Rid)
+			types.TicketStageUncommit, kt.Rid)
 		return nil, fmt.Errorf("invalid ticket stage:%s != %s", origin.Stage, types.TicketStageUncommit)
 	}
 
@@ -246,8 +288,8 @@ func (s *scheduler) updateApplyTicket(kit *kit.Kit, param *types.ApplyReq, stage
 		"update_at":     time.Now(),
 	}
 
-	if err := model.Operation().ApplyTicket().UpdateApplyTicket(kit.Ctx, &filter, update); err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, kit.Rid)
+	if err := model.Operation().ApplyTicket().UpdateApplyTicket(kt.Ctx, &filter, update); err != nil {
+		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -306,7 +348,7 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 		return nil, fmt.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty")
 	}
 
-	statusResp, err := s.itsm.GetTicketStatus(nil, nil, inst.ItsmTicketId)
+	statusResp, err := s.itsm.GetTicketStatus(kit, inst.ItsmTicketId)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
@@ -322,7 +364,7 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 	status := statusResp.Data.CurrentStatus
 	link := statusResp.Data.TicketUrl
 
-	logResp, err := s.itsm.GetTicketLog(nil, nil, inst.ItsmTicketId)
+	logResp, err := s.itsm.GetTicketLog(kit, inst.ItsmTicketId)
 	if err != nil {
 		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
@@ -366,30 +408,30 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 
 // AuditTicket audit resource apply ticket
 func (s *scheduler) AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error {
-	req := &itsmapi.OperateNodeReq{
+	req := &itsm.OperateNodeReq{
 		Sn:         param.ItsmTicketId,
 		StateId:    param.StateId,
 		Operator:   param.Operator,
-		ActionType: itsmapi.ActionTypeTransition,
-		Fields:     make([]*itsmapi.TicketField, 0),
+		ActionType: itsm.ActionTypeTransition,
+		Fields:     make([]*itsm.TicketField, 0),
 	}
 
-	keys, ok := itsmapi.MapStateKey[param.StateId]
+	keys, ok := itsm.MapStateKey[param.StateId]
 	if !ok {
 		logs.Errorf("failed to audit apply ticket, invalid state id: %d, rid: %s", param.StateId, kit.Rid)
 		return fmt.Errorf("failed to audit apply ticket, invalid state id: %d", param.StateId)
 	}
 
-	req.Fields = append(req.Fields, &itsmapi.TicketField{
+	req.Fields = append(req.Fields, &itsm.TicketField{
 		Key:   keys[0],
 		Value: strconv.FormatBool(param.Approval),
 	})
-	req.Fields = append(req.Fields, &itsmapi.TicketField{
+	req.Fields = append(req.Fields, &itsm.TicketField{
 		Key:   keys[1],
 		Value: param.Remark,
 	})
 
-	resp, err := s.itsm.OperateNode(nil, nil, req)
+	resp, err := s.itsm.OperateNode(kit, req)
 	if err != nil {
 		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, kit.Rid)
 		return err
@@ -456,7 +498,7 @@ func (s *scheduler) AutoAuditTicket(kit *kit.Kit, param *types.ApplyAutoAuditReq
 }
 
 // ApproveTicket approve or reject resource apply ticket
-func (s *scheduler) ApproveTicket(kit *kit.Kit, param *types.ApproveApplyReq) error {
+func (s *scheduler) ApproveTicket(kt *kit.Kit, param *types.ApproveApplyReq) error {
 	filter := mapstr.MapStr{
 		"order_id": param.OrderId,
 	}
@@ -470,34 +512,50 @@ func (s *scheduler) ApproveTicket(kit *kit.Kit, param *types.ApproveApplyReq) er
 		"update_at": time.Now(),
 	}
 
-	if err := model.Operation().ApplyTicket().UpdateApplyTicket(kit.Ctx, &filter, update); err != nil {
-		logs.Errorf("failed to update apply ticket, filter: %+v, update: %+v, err: %v, rid: %s", filter, update, err,
-			kit.Rid)
-		return fmt.Errorf("failed to approve apply ticket %d, err: %v", param.OrderId, err)
-	}
-
-	if param.Approval {
-		if err := s.createSubOrders(kit, param.OrderId); err != nil {
-			logs.Errorf("failed to create sub orders, err: %v, rid: %s", err, kit.Rid)
-			return fmt.Errorf("failed to approve apply ticket %d, err: %v", param.OrderId, err)
+	err := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
+		if err := model.Operation().ApplyTicket().UpdateApplyTicket(sc, &filter, update); err != nil {
+			logs.Errorf("failed to update apply ticket, orderId: %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
+			return err
 		}
-	}
 
+		sessionKit := &kit.Kit{Ctx: sc, User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
+			RequestSource: kt.RequestSource}
+		if param.Approval {
+			if err := s.createSubOrders(sessionKit, param.OrderId); err != nil {
+				logs.Errorf("failed to create subOrders, orderId: %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		update["stage"] = types.TicketStageTerminate
+		if updateErr := model.Operation().ApplyTicket().UpdateApplyTicket(kt.Ctx, &filter, update); updateErr != nil {
+			logs.Errorf("failed to update apply ticket, orderId: %d, err: %v, rid: %s", param.OrderId, updateErr,
+				kt.Rid)
+			return updateErr
+		}
+		logs.Errorf("failed to approve apply ticket %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
+		return err
+	}
 	return nil
 }
 
-func (s *scheduler) createSubOrders(kit *kit.Kit, orderId uint64) error {
+func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 	filter := mapstr.MapStr{
 		"order_id": orderId,
 	}
 
-	ticket, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	ticket, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket by filter: %+v, err: %v, rid: %s", filter, err, kit.Rid)
+		logs.Errorf("failed to get apply ticket by filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
 		return err
 	}
 
 	now := time.Now()
+	suborders := make([]*types.ApplyOrder, len(ticket.Suborders))
 	for index, suborder := range ticket.Suborders {
 		// TODO: delete debug log
 		logs.V(5).Infof("suborder data: %+v", suborder)
@@ -529,14 +587,23 @@ func (s *scheduler) createSubOrders(kit *kit.Kit, orderId uint64) error {
 		}
 		logs.V(4).Infof("suborder data: %+v", subOrder)
 
-		// init all step record
-		if err := s.initAllSteps(kit, subOrder.SubOrderId, subOrder.Total, subOrder.EnableDiskCheck); err != nil {
-			logs.Errorf("failed to init apply step record, err: %v, rid: %s", err, kit.Rid)
+		if err := model.Operation().ApplyOrder().CreateApplyOrder(kt.Ctx, subOrder); err != nil {
+			logs.Errorf("failed to create apply order, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
 
-		if err := model.Operation().ApplyOrder().CreateApplyOrder(kit.Ctx, subOrder); err != nil {
-			logs.Errorf("failed to create apply order, err: %v, rid: %s", err, kit.Rid)
+		// init all step record
+		if err := s.initAllSteps(kt, subOrder.SubOrderId, subOrder.Total, subOrder.EnableDiskCheck); err != nil {
+			logs.Errorf("failed to init apply step record, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+
+		suborders[index] = subOrder
+	}
+
+	if table.RequireType(ticket.RequireType) == table.RequireTypeRollServer {
+		if err = s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
+			logs.Errorf("create rolling applied record failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
 			return err
 		}
 	}
@@ -544,42 +611,114 @@ func (s *scheduler) createSubOrders(kit *kit.Kit, orderId uint64) error {
 	return nil
 }
 
+func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyTicket,
+	suborders []*types.ApplyOrder) error {
+
+	if len(suborders) == 0 || table.RequireType(ticket.RequireType) != table.RequireTypeRollServer {
+		return nil
+	}
+
+	if len(suborders) != len(ticket.Suborders) {
+		logs.Errorf("suborder length(%d) not equal ticket suborders length(%d), orderID: %d, rid: %s", len(suborders),
+			len(ticket.Suborders), ticket.OrderId, kt.Rid)
+		return fmt.Errorf("suborder length(%d) not equal ticket suborders length(%d), orderID: %d", len(suborders),
+			len(ticket.Suborders), ticket.OrderId)
+	}
+
+	isResPoolBiz, err := s.rsLogics.IsResPoolBiz(kt, ticket.BkBizId)
+	if err != nil {
+		logs.Errorf("unable to confirm whether biz is resource pool, err: %v, bizID: %d, rid: %s", err,
+			suborders[0].BkBizId, kt.Rid)
+		return err
+	}
+
+	appliedType := enumor.NormalAppliedType
+	if isResPoolBiz {
+		appliedType = enumor.ResourcePoolAppliedType
+	}
+
+	deviceTypeCountMap := make(map[string]int)
+	for _, suborder := range ticket.Suborders {
+		if _, ok := deviceTypeCountMap[suborder.Spec.DeviceType]; !ok {
+			deviceTypeCountMap[suborder.Spec.DeviceType] = 0
+		}
+		deviceTypeCountMap[suborder.Spec.DeviceType]++
+	}
+	count, err := s.rsLogics.GetCpuCoreSum(kt, deviceTypeCountMap)
+	if err != nil {
+		logs.Errorf("get cpu core sum failed, err: %v, deviceTypeCountMap: %v, rid: %s", err, deviceTypeCountMap,
+			kt.Rid)
+		return err
+	}
+	canApply, reason, err := s.rsLogics.CanApplyHost(kt, ticket.BkBizId, uint(count), appliedType)
+	if err != nil {
+		logs.Errorf("determine can apply host failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
+		return err
+	}
+
+	if !canApply {
+		logs.Errorf("can not apply host, ticket: %+v, reason: %s, rid: %s", *ticket, reason, kt.Rid)
+		return fmt.Errorf("%s", reason)
+	}
+
+	records := make([]rstypes.CreateAppliedRecordData, len(suborders))
+	for i, suborder := range suborders {
+		appliedRecord := rstypes.CreateAppliedRecordData{
+			BizID:       suborder.BkBizId,
+			OrderID:     suborder.OrderId,
+			SubOrderID:  suborder.SubOrderId,
+			DeviceType:  suborder.Spec.DeviceType,
+			Count:       int(ticket.Suborders[i].Replicas),
+			AppliedType: appliedType,
+		}
+		records[i] = appliedRecord
+	}
+
+	if err = s.rsLogics.CreateAppliedRecord(kt, records); err != nil {
+		logs.Errorf("create rolling server applied record failed, err: %v, req: %+v, rid: %s", err, records, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
 // initAllSteps init apply order all steps
-func (s *scheduler) initAllSteps(kit *kit.Kit, suborderId string, total uint, enableDiskCheck bool) error {
+func (s *scheduler) initAllSteps(kt *kit.Kit, suborderId string, total uint,
+	enableDiskCheck bool) error {
 	// init commit step
 	stepID := 1
-	if err := record.CreateCommitStep(suborderId, total, stepID); err != nil {
-		logs.Errorf("order %s failed to create commit step, err: %v, rid: %s", suborderId, err, kit.Rid)
+	if err := record.CreateCommitStep(kt.Ctx, suborderId, total, stepID); err != nil {
+		logs.Errorf("order %s failed to create commit step, err: %v, rid: %s", suborderId, err, kt.Rid)
 		return err
 	}
 
 	// init generate step
 	stepID++
-	if err := record.CreateGenerateStep(suborderId, total, stepID); err != nil {
-		logs.Errorf("order %s failed to create generate step, err: %v, rid: %s", suborderId, err, kit.Rid)
+	if err := record.CreateGenerateStep(kt.Ctx, suborderId, total, stepID); err != nil {
+		logs.Errorf("order %s failed to create generate step, err: %v, rid: %s", suborderId, err, kt.Rid)
 		return err
 	}
 
 	// init init step
 	stepID++
-	if err := record.CreateInitStep(suborderId, total, stepID); err != nil {
-		logs.Errorf("order %s failed to create init step, err: %v, rid: %s", suborderId, err, kit.Rid)
+	if err := record.CreateInitStep(kt.Ctx, suborderId, total, stepID); err != nil {
+		logs.Errorf("order %s failed to create init step, err: %v, rid: %s", suborderId, err, kt.Rid)
 		return err
 	}
 
 	if enableDiskCheck {
 		// init disk check step
 		stepID++
-		if err := record.CreateDiskCheckStep(suborderId, total, stepID); err != nil {
-			logs.Errorf("order %s failed to create disk check step, err: %v, rid: %s", suborderId, err, kit.Rid)
+		if err := record.CreateDiskCheckStep(kt.Ctx, suborderId, total, stepID); err != nil {
+			logs.Errorf("order %s failed to create disk check step, err: %v, rid: %s", suborderId, err, kt.Rid)
 			return err
 		}
 	}
 
 	// init deliver step
 	stepID++
-	if err := record.CreateDeliverStep(suborderId, total, stepID); err != nil {
-		logs.Errorf("order %s failed to create deliver step, err: %v, rid: %s", suborderId, err, kit.Rid)
+	if err := record.CreateDeliverStep(kt.Ctx, suborderId, total, stepID); err != nil {
+		logs.Errorf("order %s failed to create deliver step, err: %v, rid: %s", suborderId, err, kt.Rid)
 		return err
 	}
 
@@ -587,41 +726,47 @@ func (s *scheduler) initAllSteps(kit *kit.Kit, suborderId string, total uint, en
 }
 
 // CreateApplyOrder creates resource apply order
-func (s *scheduler) CreateApplyOrder(kit *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error) {
+func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error) {
 	rst := new(types.CreateApplyOrderResult)
 	var err error = nil
-	if param.OrderId <= 0 {
-		rst, err = s.createApplyTicket(kit, param, types.TicketStageAudit)
-	} else {
-		rst, err = s.updateApplyTicket(kit, param, types.TicketStageAudit)
-	}
 
-	if err != nil {
-		return nil, err
-	}
+	txnErr := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
+		sessionKit := &kit.Kit{Ctx: sc, Rid: kt.Rid}
+		if param.OrderId <= 0 {
+			rst, err = s.createApplyTicket(sessionKit, param, types.TicketStageAudit)
+		} else {
+			rst, err = s.updateApplyTicket(sessionKit, param, types.TicketStageAudit)
+		}
+		if err != nil {
+			logs.Errorf("failed to create apply order, orderId: %d, err: %v, rid: %s", param.OrderId, err, kt.Rid)
+			return err
+		}
 
-	resp, err := s.itsm.CreateTicket(nil, nil, param.User, rst.OrderId, param.BkBizId)
-	if err != nil {
-		logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s", err, kit.Rid)
-		return nil, fmt.Errorf("failed to create apply order, for create itsm ticket err: %v", err)
-	}
+		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId)
+		if err != nil {
+			logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s, orderId: %d, BkBIzId: %d",
+				err, kt.Rid, rst.OrderId, param.BkBizId)
+			return err
+		}
 
-	if resp.Code != 0 {
-		logs.Errorf("failed to create apply order, for create itsm ticket err, code: %d, msg: %s, rid: %s", resp.Code,
-			resp.ErrMsg, kit.Rid)
-		return nil, fmt.Errorf("failed to create apply order, for create itsm ticket err, code: %d, msg: %s", resp.Code,
-			resp.ErrMsg)
-	}
+		if resp.Code != 0 {
+			logs.Errorf("failed to create apply order, for create itsm ticket err, code: %d, msg: %s, rid: %s, orderId: %d,"+
+				" BkBIzId: %d", resp.Code, resp.ErrMsg, kt.Rid, rst.OrderId, param.BkBizId)
+			return err
+		}
 
-	if err := s.setTicketId(kit, rst.OrderId, resp.Data.Sn); err != nil {
-		logs.Errorf("failed to create apply order, for set ticket id err: %v, rid: %s", err, kit.Rid)
-		return nil, fmt.Errorf("failed to create apply order, for set ticket id err: %v", err)
-	}
+		if err := s.setTicketId(sessionKit, rst.OrderId, resp.Data.Sn); err != nil {
+			logs.Errorf("failed to create apply order, for set ticket id err: %v, rid: %s, orderId: %d, sn: %s",
+				err, kt.Rid, rst.OrderId, resp.Data.Sn)
+			return err
+		}
+		return nil
+	})
 
-	return rst, nil
+	return rst, txnErr
 }
 
-func (s *scheduler) setTicketId(kit *kit.Kit, orderId uint64, itsmTicketId string) error {
+func (s *scheduler) setTicketId(kt *kit.Kit, orderId uint64, itsmTicketId string) error {
 	filter := mapstr.MapStr{
 		"order_id": orderId,
 	}
@@ -631,8 +776,8 @@ func (s *scheduler) setTicketId(kit *kit.Kit, orderId uint64, itsmTicketId strin
 		"update_at":      time.Now(),
 	}
 
-	if err := model.Operation().ApplyTicket().UpdateApplyTicket(kit.Ctx, &filter, doc); err != nil {
-		logs.Errorf("failed to update apply ticket, err: %v", err)
+	if err := model.Operation().ApplyTicket().UpdateApplyTicket(kt.Ctx, &filter, doc); err != nil {
+		logs.Errorf("failed to update apply ticket, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -656,7 +801,7 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 
 	page := metadata.BasePage{
 		Sort:  "-create_at",
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 		Start: 0,
 	}
 
@@ -942,7 +1087,7 @@ func (s *scheduler) ExportDeliverDevice(kit *kit.Kit, param *types.ExportDeliver
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	insts, err := model.Operation().DeviceInfo().FindManyDeviceInfo(kit.Ctx, page, filter)
@@ -996,11 +1141,11 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			if len(param.Spec.Zone) != 0 {
 				filter := mapstr.MapStr{}
 				filter["zone"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Zone,
+					pkg.BKDBIN: param.Spec.Zone,
 				}
 				if len(param.Spec.Region) != 0 {
 					filter["region"] = mapstr.MapStr{
-						common.BKDBIN: param.Spec.Region,
+						pkg.BKDBIN: param.Spec.Region,
 					}
 				}
 				zones, err := model.Operation().Zone().FindManyZone(context.Background(), &filter)
@@ -1020,7 +1165,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			} else if len(param.Spec.Region) != 0 {
 				filter := mapstr.MapStr{}
 				filter["region"] = mapstr.MapStr{
-					common.BKDBIN: param.Spec.Region,
+					pkg.BKDBIN: param.Spec.Region,
 				}
 				zones, err := model.Operation().Zone().FindManyZone(context.Background(), &filter)
 				if err != nil {
@@ -1067,9 +1212,9 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			})
 		}
 	}
-	req := &cmdb.ListBizHostReq{
-		BkBizId:     931,
-		BkModuleIds: []int64{239149},
+	req := &cmdb.ListBizHostParams{
+		BizID:       931,
+		BkModuleIDs: []int64{239149},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",
@@ -1095,24 +1240,19 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {
-		req.HostPropertyFilter = &querybuilder.QueryFilter{
+		req.HostPropertyFilter = &cmdb.QueryFilter{
 			Rule: rule,
 		}
 	}
 
-	resp, err := s.cc.ListBizHost(kit.Ctx, nil, req)
+	resp, err := s.cc.ListBizHost(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kit.Rid)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
 	}
 
 	// TODO: filter and sort devices
@@ -1121,10 +1261,10 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 		Info:  make([]*types.MatchDevice, 0),
 	}
 	tagNum := int64(0)
-	for _, host := range resp.Data.Info {
+	for _, host := range resp.Info {
 		rackId, err := strconv.Atoi(host.RackId)
 		if err != nil {
-			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
+			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostID, host.RackId)
 			rackId = 0
 		}
 		tag := false
@@ -1133,13 +1273,13 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			tagNum++
 		}
 		device := &types.MatchDevice{
-			BkHostId:     host.BkHostId,
-			AssetId:      host.BkAssetId,
+			BkHostId:     host.BkHostID,
+			AssetId:      host.BkAssetID,
 			Ip:           host.GetUniqIp(),
 			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
-			OsType:       host.BkOsName,
+			OsType:       host.BkOSName,
 			Region:       host.BkZoneName,
 			Zone:         host.SubZone,
 			Module:       host.ModuleName,
@@ -1160,9 +1300,9 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 }
 
 // MatchDevice execute resource apply match devices
-func (s *scheduler) MatchDevice(kit *kit.Kit, param *types.MatchDeviceReq) error {
-	if err := s.generator.MatchCVM(param); err != nil {
-		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kit.Rid)
+func (s *scheduler) MatchDevice(kt *kit.Kit, param *types.MatchDeviceReq) error {
+	if err := s.generator.MatchCVM(kt, param); err != nil {
+		logs.Errorf("failed to match devices, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -1192,7 +1332,7 @@ func (s *scheduler) ResumeApplyOrder(kit *kit.Kit, param mapstr.MapStr) error {
 func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1206,7 +1346,7 @@ func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderRe
 
 	cnt := len(insts)
 	if cnt == 0 {
-		logs.Errorf("found no apply order to start, rid: %s", cnt, kit.Rid)
+		logs.Errorf("found no apply order to start, orderNum: %d, rid: %s", cnt, kit.Rid)
 		return fmt.Errorf("found no apply order to start")
 	}
 
@@ -1265,7 +1405,7 @@ func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
 func (s *scheduler) TerminateApplyOrder(kit *kit.Kit, param *types.TerminateApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBIN: param.SuborderID,
+			pkg.BKDBIN: param.SuborderID,
 		},
 	}
 
@@ -1279,7 +1419,7 @@ func (s *scheduler) TerminateApplyOrder(kit *kit.Kit, param *types.TerminateAppl
 
 	cnt := len(insts)
 	if cnt == 0 {
-		logs.Errorf("found no apply order to terminate, rid: %s", cnt, kit.Rid)
+		logs.Errorf("found no apply order to terminate, rid: %s", kit.Rid)
 		return fmt.Errorf("found no apply order to terminate")
 	}
 
@@ -1336,7 +1476,7 @@ func (s *scheduler) terminateOrder(orders []*types.ApplyOrder) error {
 func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": mapstr.MapStr{
-			common.BKDBEQ: param.SuborderID,
+			pkg.BKDBEQ: param.SuborderID,
 		},
 	}
 
@@ -1555,7 +1695,7 @@ func (s *scheduler) createModifyRecord(kt *kit.Kit, order *types.ApplyOrder, par
 	id, err := dao.Set().ModifyRecord().NextSequence(kt.Ctx)
 	if err != nil {
 		logs.Errorf("failed to get modify record next sequence id, order id: %s, err: %v", err)
-		return errf.Newf(common.CCErrObjectDBOpErrno, err.Error())
+		return errf.Newf(pkg.CCErrObjectDBOpErrno, err.Error())
 	}
 
 	record := &table.ModifyRecord{
@@ -1643,6 +1783,80 @@ func (s *scheduler) GetApplyModify(kt *kit.Kit, param *types.GetApplyModifyReq) 
 	return rst, nil
 }
 
+// ProcessInitStep processes orders with init step
+func (s *scheduler) ProcessInitStep(device *types.DeviceInfo) error {
+	return s.matcher.ProcessInitStep(device)
+}
+
+// CheckSopsUpdate checks sops task and update status, return err if sops task failed or update failed
+func (s *scheduler) CheckSopsUpdate(bkBizID int64, info *types.DeviceInfo, jobUrl string, jobIDStr string) error {
+	return s.matcher.CheckSopsUpdate(bkBizID, info, jobUrl, jobIDStr)
+}
+
+// RunDiskCheck runs disk check
+func (s *scheduler) RunDiskCheck(order *types.ApplyOrder, devices []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
+	return s.matcher.RunDiskCheck(order, devices)
+}
+
+// DeliverDevices delivers devices to order biz
+func (s *scheduler) DeliverDevices(order *types.ApplyOrder, observeDevices []*types.DeviceInfo) error {
+	return s.matcher.DeliverDevices(order, observeDevices)
+}
+
+// FinalApplyStep checks whether the record is updated
+func (s *scheduler) FinalApplyStep(genRecord *types.GenerateRecord, order *types.ApplyOrder) error {
+	return s.matcher.FinalApplyStep(genRecord, order)
+}
+
+// GetGenerateRecords get generate record by order id
+func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types.GenerateRecord, error) {
+	recordInfo, err := s.matcher.GetOrderGenRecords(subOrderId)
+	if err != nil {
+		logs.Errorf("failed to get generate generateRecord by subOrderId, subOrderId: %s, err: %v, rid: %s", subOrderId,
+			err, kt.Rid)
+		return nil, err
+	}
+	return recordInfo, nil
+}
+
+// AddCvmDevices check and add cvm device
+func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
+	order *types.ApplyOrder) error {
+
+	_, err := s.generator.AddCvmDevices(kt, taskId, generateId, order)
+	if err != nil {
+		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
+			kt.Rid)
+		return err
+	}
+	return nil
+}
+
+// UpdateOrderStatus check generate record by order id
+func (s *scheduler) UpdateOrderStatus(suborderID string) error {
+	return s.generator.UpdateOrderStatus(suborderID)
+}
+
+// GetMatcher get matcher
+func (s *scheduler) GetMatcher() *matcher.Matcher {
+	return s.matcher
+}
+
+// DeliverDevice deliver device
+func (s *scheduler) DeliverDevice(info *types.DeviceInfo, order *types.ApplyOrder) error {
+	return s.matcher.DeliverDevice(info, order)
+}
+
+// UpdateHostOperator update host operator
+func (s *scheduler) UpdateHostOperator(info *types.DeviceInfo, hostId int64, operator string) error {
+	return s.matcher.UpdateHostOperator(info, hostId, operator)
+}
+
+// SetDeviceDelivered set device delivered
+func (s *scheduler) SetDeviceDelivered(info *types.DeviceInfo) error {
+	return s.matcher.SetDeviceDelivered(info)
+}
+
 // CheckRollingServerHost check rolling server host
 func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
 	*types.CheckRollingServerHostResp, error) {
@@ -1661,24 +1875,28 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 		"bk_cloud_inst_id"}
 	page := cmdb.BasePage{Start: 0, Limit: 1}
 
-	var info []*cmdb.HostInfo
+	var info []*cmdb.Host
 	if param.BizID != 0 {
-		req := &cmdb.ListBizHostReq{
-			BkBizId:            param.BizID,
-			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+		req := &cmdb.ListBizHostParams{
+			BizID:              param.BizID,
+			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 			Fields:             fields,
 			Page:               page,
 		}
-		resp, err := s.cc.ListBizHost(kt.Ctx, kt.Header(), req)
+		resp, err := s.cc.ListBizHost(kt, req)
 		if err != nil {
 			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
-		info = resp.Data.Info
+		hosts := make([]*cmdb.Host, 0)
+		for _, host := range resp.Info {
+			hosts = append(hosts, &host)
+		}
+		info = hosts
 
 	} else {
 		req := &cmdb.ListHostReq{
-			HostPropertyFilter: &querybuilder.QueryFilter{Rule: rule},
+			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 			Fields:             fields,
 			Page:               page,
 		}
@@ -1704,13 +1922,13 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 	}
 
 	return &types.CheckRollingServerHostResp{
-		DeviceType:           host.BkSvrDeviceClsName,
+		DeviceType:           host.SvrDeviceClassName,
 		InstanceChargeType:   host.InstanceChargeType,
 		BillingStartTime:     host.BillingStartTime,
 		OldBillingExpireTime: host.BillingExpireTime,
 		NewBillingExpireTime: time.Now().AddDate(0, chargeMonths, 0),
 		ChargeMonths:         chargeMonths,
-		CloudInstID:          host.CloudInstID,
+		CloudInstID:          host.BkCloudInstID,
 	}, nil
 }
 

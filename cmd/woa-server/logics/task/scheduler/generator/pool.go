@@ -14,15 +14,16 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common/utils"
 	pooltable "hcm/cmd/woa-server/dal/pool/table"
 	pooltypes "hcm/cmd/woa-server/types/pool"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/utils"
 )
 
 const (
@@ -31,7 +32,8 @@ const (
 )
 
 // launchRecallHost launch recall pool host
-func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recall *types.MatchPoolSpec) (uint64, error) {
+func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recall *types.MatchPoolSpec) (uint64,
+	error) {
 	// 1. init generate record
 	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, uint(recall.Replicas))
 	if err != nil {
@@ -54,7 +56,8 @@ func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recal
 			taskID, err)
 
 		// update generate record status to Done
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, err.Error(),
 			"", nil); errRecord != nil {
 			logs.Errorf("failed to update generate record, order id: %s, recall order id: %s, err: %v",
 				order.SubOrderId, taskID, errRecord)
@@ -81,13 +84,14 @@ func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recal
 	}
 
 	// 4. save recalled instances info
-	if err := g.updateGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 		return generateId, fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
 	// 5. update generate record status to success
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusSuccess, "success", "",
+	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
+		"success", "",
 		successIps); err != nil {
 		logs.Errorf("failed to update generate record, order id: %s, recall order id: %d, err: %v", order.SubOrderId,
 			taskID, err)
@@ -125,7 +129,8 @@ func (g *Generator) createAndCheckRecallOrder(kt *kit.Kit, order *types.ApplyOrd
 		logs.Errorf("failed to create recall order, order id: %s, err: %v", order.SubOrderId, err)
 
 		// update generate record status to failed
-		if errRecord := g.updateGenerateRecord(types.ResourceTypePool, generateId, types.GenerateStatusFailed,
+		if errRecord := g.UpdateGenerateRecord(context.Background(), types.ResourceTypePool, generateId,
+			types.GenerateStatusFailed,
 			err.Error(), "", nil); errRecord != nil {
 			logs.Errorf("failed to update generate record, order id: %s, err: %v", order.SubOrderId, errRecord)
 			return taskID, fmt.Errorf("failed to update generate record, order id: %s, err: %v", order.SubOrderId,
@@ -136,7 +141,8 @@ func (g *Generator) createAndCheckRecallOrder(kt *kit.Kit, order *types.ApplyOrd
 	}
 
 	// 2. update generate record status to query
-	if err := g.updateGenerateRecord(types.ResourceTypePool, generateId, types.GenerateStatusHandling, "handling",
+	if err := g.UpdateGenerateRecord(context.Background(), types.ResourceTypePool, generateId,
+		types.GenerateStatusHandling, "handling",
 		strconv.Itoa(int(taskID)), nil); err != nil {
 		logs.Errorf("failed to update generate record, order id: %s, err: %v", order.SubOrderId, err)
 		return taskID, fmt.Errorf("failed to update generate record, order id: %s, err: %v", order.SubOrderId, err)
@@ -148,7 +154,8 @@ func (g *Generator) createAndCheckRecallOrder(kt *kit.Kit, order *types.ApplyOrd
 			taskID, err)
 
 		// update generate record status to Done
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, err.Error(),
 			"", nil); errRecord != nil {
 			logs.Errorf("failed to check recall order, order id: %s, task id: %s, err: %v", order.SubOrderId, taskID,
 				errRecord)

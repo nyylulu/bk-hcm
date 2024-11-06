@@ -113,6 +113,8 @@ const (
 	ZiyanResInventory ResourceType = "ziyan_resource_inventory"
 	// ZiYanResource 自研云资源-平台管理-业务粒度
 	ZiYanResource ResourceType = "ziyan_resource"
+	// ZiYanResPlan 平台-自研云资源-资源预测
+	ZiYanResPlan ResourceType = "ziyan_resource_plan"
 
 	// AccountBill 云账单管理
 	AccountBill ResourceType = "account_bill"
@@ -125,6 +127,9 @@ const (
 
 	// AwsSavingsPlansCost aws savings plans cost
 	AwsSavingsPlansCost ResourceType = "aws_savings_plans_cost"
+
+	// RollingServerManage defines biz's hcm auth resource type
+	RollingServerManage ResourceType = "rolling_server_manage"
 
 	// TaskManagement defines task management's hcm auth resource type
 	TaskManagement ResourceType = "task_management"

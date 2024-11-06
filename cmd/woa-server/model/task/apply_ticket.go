@@ -16,11 +16,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type applyTicket struct {
@@ -28,19 +28,19 @@ type applyTicket struct {
 
 // NextSequence returns next apply ticket sequence id from db
 func (a *applyTicket) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameApplyTicket)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameApplyTicket)
 }
 
 // CreateApplyTicket creates apply ticket in db
 func (a *applyTicket) CreateApplyTicket(ctx context.Context, inst *types.ApplyTicket) error {
-	return mongodb.Client().Table(common.BKTableNameApplyTicket).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameApplyTicket).Insert(ctx, inst)
 }
 
 // GetApplyTicket gets apply ticket by filter from db
 func (a *applyTicket) GetApplyTicket(ctx context.Context, filter *mapstr.MapStr) (*types.ApplyTicket, error) {
 	inst := new(types.ApplyTicket)
 
-	if err := mongodb.Client().Table(common.BKTableNameApplyTicket).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameApplyTicket).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (a *applyTicket) GetApplyTicket(ctx context.Context, filter *mapstr.MapStr)
 
 // CountApplyTicket gets apply ticket count by filter from db
 func (a *applyTicket) CountApplyTicket(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameApplyTicket).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameApplyTicket).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -63,7 +63,7 @@ func (a *applyTicket) FindManyApplyTicket(ctx context.Context, page metadata.Bas
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameApplyTicket).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameApplyTicket).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -80,7 +80,7 @@ func (a *applyTicket) FindManyApplyTicket(ctx context.Context, page metadata.Bas
 
 // UpdateApplyTicket updates apply ticket by filter and doc in db
 func (a *applyTicket) UpdateApplyTicket(ctx context.Context, filter *mapstr.MapStr, doc interface{}) error {
-	return mongodb.Client().Table(common.BKTableNameApplyTicket).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameApplyTicket).Update(ctx, filter, doc)
 }
 
 // DeleteApplyTicket deletes apply ticket from db

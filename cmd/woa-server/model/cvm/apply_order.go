@@ -15,11 +15,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 type applyOrder struct {
@@ -27,19 +27,19 @@ type applyOrder struct {
 
 // NextSequence returns next apply order sequence id from db
 func (a *applyOrder) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCvmApplyOrder)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCvmApplyOrder)
 }
 
 // CreateApplyOrder creates apply order in db
 func (a *applyOrder) CreateApplyOrder(ctx context.Context, inst *types.ApplyOrder) error {
-	return mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCvmApplyOrder).Insert(ctx, inst)
 }
 
 // GetApplyOrder gets apply order by filter from db
 func (a *applyOrder) GetApplyOrder(ctx context.Context, filter *mapstr.MapStr) (*types.ApplyOrder, error) {
 	inst := new(types.ApplyOrder)
 
-	if err := mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCvmApplyOrder).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -48,7 +48,7 @@ func (a *applyOrder) GetApplyOrder(ctx context.Context, filter *mapstr.MapStr) (
 
 // CountApplyOrder gets apply order count by filter from db
 func (a *applyOrder) CountApplyOrder(ctx context.Context, filter map[string]interface{}) (uint64, error) {
-	total, err := mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Find(filter).Count(ctx)
+	total, err := mongodb.Client().Table(pkg.BKTableNameCvmApplyOrder).Find(filter).Count(ctx)
 	if err != nil {
 		return 0, err
 	}
@@ -62,7 +62,7 @@ func (a *applyOrder) FindManyApplyOrder(ctx context.Context, page metadata.BaseP
 
 	limit := uint64(page.Limit)
 	start := uint64(page.Start)
-	query := mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Find(filter).Limit(limit).Start(start)
+	query := mongodb.Client().Table(pkg.BKTableNameCvmApplyOrder).Find(filter).Limit(limit).Start(start)
 	if len(page.Sort) > 0 {
 		query = query.Sort(page.Sort)
 	} else {
@@ -79,7 +79,7 @@ func (a *applyOrder) FindManyApplyOrder(ctx context.Context, page metadata.BaseP
 
 // UpdateApplyOrder updates apply order by filter and doc in db
 func (a *applyOrder) UpdateApplyOrder(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCvmApplyOrder).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCvmApplyOrder).Update(ctx, filter, doc)
 }
 
 // DeleteApplyOrder deletes apply order from db

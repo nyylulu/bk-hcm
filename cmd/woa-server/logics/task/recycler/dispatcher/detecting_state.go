@@ -19,12 +19,13 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // DetectingState the action to be executed in detecting state
@@ -33,6 +34,42 @@ type DetectingState struct{}
 // Name return the name of detecting state
 func (ds *DetectingState) Name() table.RecycleStatus {
 	return table.RecycleStatusDetecting
+}
+
+// UpdateState update next state
+func (ds *DetectingState) UpdateState(ctx EventContext, ev *event.Event) error {
+	taskCtx, ok := ctx.(*CommonContext)
+	if !ok {
+		logs.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			ds.Name())
+		return fmt.Errorf("failed to convert to audit context, subOrderId: %s, state: %s", taskCtx.Order.SuborderID,
+			ds.Name())
+	}
+
+	if errUpdate := ds.setNextState(taskCtx.Order, ev); errUpdate != nil {
+		logs.Errorf("failed to update recycle order state, subOrderId: %s, err: %v", taskCtx.Order.SuborderID,
+			errUpdate)
+		return errUpdate
+	}
+
+	// need not dispatch if next state is audit
+	if ev.Type == event.DetectSuccess && taskCtx.Order.ResourceType == table.ResourceTypePm &&
+		taskCtx.Order.RecycleType == table.RecycleTypeRegular && taskCtx.Order.TotalNum > 10 {
+		return nil
+	}
+
+	if taskCtx.Dispatcher == nil {
+		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID,
+			ds.Name())
+		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, subOrderId: %s, state: %s",
+			taskCtx.Order.SuborderID, ds.Name())
+	}
+
+	taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
+	// 记录日志
+	logs.Infof("recycler: success detect state, subOrderId: %s", taskCtx.Order.SuborderID)
+	return nil
 }
 
 // Execute executes action in detecting state
@@ -49,36 +86,12 @@ func (ds *DetectingState) Execute(ctx EventContext) error {
 	}
 	orderId := taskCtx.Order.SuborderID
 
-	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s", orderId)
-
 	ev := ds.dealDetectTask(taskCtx)
 
-	// set next state
-	if errUpdate := ds.setNextState(taskCtx.Order, ev); errUpdate != nil {
-		logs.Errorf("failed to update recycle order %s state, err: %v", orderId, errUpdate)
-		return errUpdate
-	}
+	// 记录日志，方便排查问题
+	logs.Infof("recycler:logics:cvm:DetectingState:start, orderID: %s, ev: %+v", orderId, cvt.PtrToVal(ev))
 
-	// need not dispatch if next state is audit
-	if ev.Type == event.DetectSuccess && taskCtx.Order.ResourceType == table.ResourceTypePm &&
-		taskCtx.Order.RecycleType == table.RecycleTypeRegular && taskCtx.Order.TotalNum > 10 {
-		return nil
-	}
-
-	if taskCtx.Dispatcher == nil {
-		logs.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s", orderId,
-			ds.Name())
-		return fmt.Errorf("failed to add order to dispatch, for dispatcher is nil, order id: %s, state: %s",
-			orderId, ds.Name())
-	}
-
-	taskCtx.Dispatcher.Add(orderId)
-
-	// 记录日志
-	logs.Infof("recycler:logics:cvm:DetectingState:end, orderID: %s", orderId)
-
-	return nil
+	return ds.UpdateState(taskCtx, ev)
 }
 
 func (ds *DetectingState) dealDetectTask(ctx *CommonContext) *event.Event {
@@ -91,14 +104,13 @@ func (ds *DetectingState) dealDetectTask(ctx *CommonContext) *event.Event {
 		logs.Errorf("failed to update recycle hosts, order id: %s, err: %v")
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
-
 	// run detection tasks
 	if err := ctx.Dispatcher.detector.DealRecycleOrder(orderId); err != nil {
 		logs.Warnf("failed to run detection tasks, err: %v", err)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
 
-	if err := ds.checkDetectStatus(orderId); err != nil {
+	if err := ctx.Dispatcher.detector.CheckDetectStatus(orderId); err != nil {
 		logs.Warnf("detection tasks failed, err: %v", err)
 		return &event.Event{Type: event.DetectFailed, Error: err}
 	}
@@ -127,42 +139,6 @@ func (ds *DetectingState) updateHostInfo(orderId string, stage table.RecycleStag
 	return nil
 }
 
-func (ds *DetectingState) checkDetectStatus(orderId string) error {
-	filter := map[string]interface{}{
-		"suborder_id": orderId,
-		"status": mapstr.MapStr{
-			common.BKDBNE: table.DetectStatusSuccess,
-		},
-	}
-
-	cnt, err := dao.Set().DetectTask().CountDetectTask(context.Background(), filter)
-	if err != nil {
-		logs.Errorf("failed to get detection task count, err: %v", err)
-		return err
-	}
-
-	if cnt > 0 {
-		filterOrder := mapstr.MapStr{
-			"suborder_id": orderId,
-		}
-
-		update := mapstr.MapStr{
-			"failed_num": cnt,
-			"update_at":  time.Now(),
-		}
-
-		// ignore and continue when update failed_num error
-		if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filterOrder, &update); err != nil {
-			logs.Warnf("failed to update recycle order %s, err: %v", orderId, err)
-		}
-
-		logs.Errorf("recycle order %s detection failed, for %d detection tasks is not success", orderId, cnt)
-		return fmt.Errorf("recycle order %s detection failed, for %d detection tasks is not success", orderId, cnt)
-	}
-
-	return nil
-}
-
 func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Event) error {
 	filter := mapstr.MapStr{
 		"suborder_id": order.SuborderID,
@@ -178,7 +154,7 @@ func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Even
 			order.TotalNum > 10 {
 			update["stage"] = table.RecycleStageAudit
 			update["status"] = table.RecycleStatusAudit
-			update["handler"] = "dommyzhang;forestchen"
+			update["handler"] = recovertask.Handler
 		} else {
 			update["stage"] = table.RecycleStageTransit
 			update["status"] = table.RecycleStatusTransiting
@@ -187,6 +163,8 @@ func (ds *DetectingState) setNextState(order *table.RecycleOrder, ev *event.Even
 		update["stage"] = table.RecycleStageDetect
 		update["status"] = table.RecycleStatusDetectFailed
 	default:
+		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
+		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 	}
 
 	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {

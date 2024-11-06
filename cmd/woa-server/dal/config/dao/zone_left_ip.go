@@ -15,10 +15,10 @@ package dao
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/dal/config/table"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 // ZoneLeftIP supplies all the zone with left ip related operations.

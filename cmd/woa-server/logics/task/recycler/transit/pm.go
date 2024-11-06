@@ -21,13 +21,13 @@ import (
 	"hcm/pkg/logs"
 )
 
-// transitPm deals with physical machine transit task
-func (t *Transit) transitPm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+// TransitPm deals with physical machine transit task
+func (t *Transit) TransitPm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	switch order.RecycleType {
 	case table.RecycleTypeDissolve, table.RecycleTypeExpired:
-		return t.dealTransitTask2Transit(order, hosts)
+		return t.DealTransitTask2Transit(order, hosts)
 	case table.RecycleTypeRegular:
-		return t.dealTransitTask2Pool(order, hosts)
+		return t.DealTransitTask2Pool(order, hosts)
 	default:
 		logs.Warnf("failed to deal transit task for order %s, for unknown recycle type %s", order.SuborderID,
 			order.RecycleType)

@@ -19,16 +19,16 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/pkg/logs"
-
 	clb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
 	tchttp "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/http"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	cvm "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
 	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
+
+	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 const (
@@ -192,7 +192,7 @@ func (r *DescribeLBListenersResponse) FromJsonString(s string) error {
 	return json.Unmarshal([]byte(s), &r)
 }
 
-func (d *Detector) initCloudClients(host *cmdb.HostInfo) (*tencentCloudClients, error) {
+func (d *Detector) initCloudClients(host *cmdb.Host) (*tencentCloudClients, error) {
 	id, key := d.tcOpt.Credential.ID, d.tcOpt.Credential.Key
 	timeOut := 30
 	areaEn, ok := _regionMap[host.BkZoneName]
@@ -299,7 +299,7 @@ func (d *Detector) checkCvmStrategy(ip string) (string, error) {
 	return strings.Join(exeInfos, "\n"), nil
 }
 
-func (d *Detector) checkDockerStrategy(clients *tencentCloudClients, host *cmdb.HostInfo) (string, error) {
+func (d *Detector) checkDockerStrategy(clients *tencentCloudClients, host *cmdb.Host) (string, error) {
 	exeInfos := make([]string, 0)
 
 	exeInfo, err := d.checkDockerSecurityGroup(clients, host)
@@ -317,7 +317,7 @@ func (d *Detector) checkDockerStrategy(clients *tencentCloudClients, host *cmdb.
 	return strings.Join(exeInfos, "\n"), nil
 }
 
-func (d *Detector) checkVmStrategy(clients *tencentCloudClients, host *cmdb.HostInfo) (string, error) {
+func (d *Detector) checkVmStrategy(clients *tencentCloudClients, host *cmdb.Host) (string, error) {
 	exeInfos := make([]string, 0)
 
 	exeInfo, err := d.checkVmSecurityGroup(clients, host)
@@ -335,7 +335,7 @@ func (d *Detector) checkVmStrategy(clients *tencentCloudClients, host *cmdb.Host
 	return strings.Join(exeInfos, "\n"), nil
 }
 
-func (d *Detector) checkDockerSecurityGroup(clients *tencentCloudClients, host *cmdb.HostInfo) (string, error) {
+func (d *Detector) checkDockerSecurityGroup(clients *tencentCloudClients, host *cmdb.Host) (string, error) {
 	request := cvm.NewDescribeInstancesRequest()
 	filterIp := _cvmFilterIp
 	ip := host.GetUniqIp()
@@ -388,9 +388,9 @@ func (d *Detector) checkIsDefaultSG(clients *tencentCloudClients, sgId string) e
 	return nil
 }
 
-func (d *Detector) checkVmSecurityGroup(clients *tencentCloudClients, host *cmdb.HostInfo) (string, error) {
+func (d *Detector) checkVmSecurityGroup(clients *tencentCloudClients, host *cmdb.Host) (string, error) {
 	request := vpc.NewDescribeNetworkInterfacesRequest()
-	//params := "{\"Filters\":[{\"Name\":\"private-ip-address\",\"Values\":[\"9.140.150.140\"]}]}"
+	// params := "{\"Filters\":[{\"Name\":\"private-ip-address\",\"Values\":[\"X.XXX.XXX.XXX\"]}]}"
 	// address-ip - String - （过滤条件）内网IPv4地址，单IP后缀模糊匹配，多IP精确匹配。可以与`ip-exact-match`配合做单IP的精确匹配查询。
 	// ip-exact-match - Boolean - （过滤条件）内网IPv4精确匹配查询，存在多值情况，只取第一个。
 	request.Filters = []*vpc.Filter{
@@ -429,7 +429,7 @@ func (d *Detector) checkVmSecurityGroup(clients *tencentCloudClients, host *cmdb
 	return exeInfo, nil
 }
 
-func (d *Detector) checkCLB(clients *tencentCloudClients, host *cmdb.HostInfo) (string, error) {
+func (d *Detector) checkCLB(clients *tencentCloudClients, host *cmdb.Host) (string, error) {
 	request := NewDescribeLBListenersRequest()
 	vpcId, ok := _vpcIdMap[host.BkZoneName]
 	if !ok {

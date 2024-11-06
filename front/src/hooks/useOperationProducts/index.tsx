@@ -1,17 +1,17 @@
 import useBillStore from '@/store/useBillStore';
 import { Select } from 'bkui-vue';
-import { defineComponent, onMounted, reactive, ref, watch } from 'vue';
+import { defineComponent, onMounted, reactive, Ref, ref, watch } from 'vue';
 import './index.scss';
 import { SelectColumn } from '@blueking/ediatable';
 const { Option } = Select;
 
-export const useOperationProducts = (immediate = true) => {
+export const useOperationProducts = (
+  immediate = true,
+  filterParams?: Ref<{ op_product_ids?: number[]; op_product_name?: string; dept_ids?: number[]; bg_ids?: number[] }>,
+) => {
   const billStore = useBillStore();
   const list = ref([]);
-  const pagination = reactive({
-    limit: 200,
-    start: 0,
-  });
+  const pagination = reactive({ limit: 200, start: 0 });
   const allCounts = ref(0);
 
   const getList = async (op_product_name?: string, op_product_ids?: number[]) => {
@@ -25,6 +25,7 @@ export const useOperationProducts = (immediate = true) => {
             limit: isCount ? 0 : pagination.limit,
             count: isCount,
           },
+          ...(filterParams?.value || {}),
         }),
       ),
     );
@@ -47,18 +48,11 @@ export const useOperationProducts = (immediate = true) => {
     await getList();
     const detailRes = await billStore.list_operation_products({
       op_product_ids: [id],
-      page: {
-        start: 0,
-        limit: pagination.limit,
-        count: false,
-      },
+      page: { start: 0, limit: pagination.limit, count: false },
+      ...(filterParams?.value || {}),
     });
     list.value = list.value.concat(detailRes.data.details);
   };
-
-  onMounted(() => {
-    immediate && getList();
-  });
 
   const OperationProductsSelector = defineComponent({
     props: {
@@ -82,14 +76,15 @@ export const useOperationProducts = (immediate = true) => {
         isScrollLoading.value = true;
         pagination.start += pagination.limit;
         const { data } = await billStore.list_operation_products({
-          page: {
-            start: pagination.start,
-            count: false,
-            limit: pagination.limit,
-          },
+          page: { start: pagination.start, count: false, limit: pagination.limit },
+          ...(filterParams?.value || {}),
         });
         list.value.push(...data.details);
         isScrollLoading.value = false;
+      };
+
+      const handleClear = () => {
+        selectedVal.value = '';
       };
 
       watch(selectedVal, (val) => emit('update:modelValue', val), { deep: true });
@@ -99,6 +94,10 @@ export const useOperationProducts = (immediate = true) => {
         (val) => (selectedVal.value = val),
         { deep: true },
       );
+
+      onMounted(() => {
+        immediate && getList();
+      });
 
       expose({
         getValue,
@@ -120,6 +119,7 @@ export const useOperationProducts = (immediate = true) => {
             multipleMode={props.multiple ? 'tag' : undefined}
             remoteMethod={(val) => getList(val)}
             onScroll-end={handleScrollEnd}
+            onClear={handleClear}
             rules={[
               {
                 validator: (value: string) => Boolean(value),
@@ -138,7 +138,8 @@ export const useOperationProducts = (immediate = true) => {
             multiple={props.multiple}
             multipleMode={props.multiple ? 'tag' : undefined}
             remoteMethod={(val) => getList(val)}
-            onScroll-end={handleScrollEnd}>
+            onScroll-end={handleScrollEnd}
+            onClear={handleClear}>
             {list.value.map(({ op_product_name, op_product_id, op_product_managers }) => (
               <Option name={op_product_name} id={op_product_id} key={op_product_id}>
                 <span>

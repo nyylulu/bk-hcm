@@ -17,10 +17,10 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 const (
@@ -150,6 +150,24 @@ type ApplyOrder struct {
 	UpdateAt    time.Time   `json:"update_at" bson:"update_at"`
 }
 
+// RequireType cvm require type
+type RequireType int64
+
+const (
+	// Regular 常规项目
+	Regular RequireType = 1
+	// SpringFestival 春节保障
+	SpringFestival RequireType = 2
+	// HostDissolve 机房裁撤
+	HostDissolve RequireType = 3
+	// FaultReplacement  故障替换
+	FaultReplacement RequireType = 4
+	// ShortTermRental 短租项目
+	ShortTermRental RequireType = 5
+	// RollingServer 滚服项目
+	RollingServer RequireType = 6
+)
+
 // ApplyStatus cvm apply order status
 type ApplyStatus string
 
@@ -228,56 +246,56 @@ func (param *GetApplyParam) GetFilter() map[string]interface{} {
 	filter := make(map[string]interface{})
 	if len(param.OrderId) > 0 {
 		filter["order_id"] = mapstr.MapStr{
-			common.BKDBIN: param.OrderId,
+			pkg.BKDBIN: param.OrderId,
 		}
 	}
 	if len(param.TaskId) > 0 {
 		filter["task_id"] = mapstr.MapStr{
-			common.BKDBIN: param.TaskId,
+			pkg.BKDBIN: param.TaskId,
 		}
 	}
 	if len(param.User) > 0 {
 		filter["bk_username"] = mapstr.MapStr{
-			common.BKDBIN: param.User,
+			pkg.BKDBIN: param.User,
 		}
 	}
 	if len(param.RequireType) > 0 {
 		filter["require_type"] = mapstr.MapStr{
-			common.BKDBIN: param.RequireType,
+			pkg.BKDBIN: param.RequireType,
 		}
 	}
 	if len(param.Status) > 0 {
 		filter["status"] = mapstr.MapStr{
-			common.BKDBIN: param.Status,
+			pkg.BKDBIN: param.Status,
 		}
 	}
 	if len(param.Region) > 0 {
 		filter["spec.region"] = mapstr.MapStr{
-			common.BKDBIN: param.Region,
+			pkg.BKDBIN: param.Region,
 		}
 	}
 	if len(param.Zone) > 0 {
 		filter["spec.zone"] = mapstr.MapStr{
-			common.BKDBIN: param.Zone,
+			pkg.BKDBIN: param.Zone,
 		}
 	}
 	if len(param.DeviceType) > 0 {
 		filter["spec.device_type"] = mapstr.MapStr{
-			common.BKDBIN: param.DeviceType,
+			pkg.BKDBIN: param.DeviceType,
 		}
 	}
 	timeCond := make(map[string]interface{})
 	if len(param.Start) != 0 {
 		startTime, err := time.Parse(dateLayout, param.Start)
 		if err == nil {
-			timeCond[common.BKDBGTE] = startTime
+			timeCond[pkg.BKDBGTE] = startTime
 		}
 	}
 	if len(param.End) != 0 {
 		endTime, err := time.Parse(dateLayout, param.End)
 		if err == nil {
 			// '%lte: 2006-01-02' means '%lt: 2006-01-03 00:00:00'
-			timeCond[common.BKDBLT] = endTime.AddDate(0, 0, 1)
+			timeCond[pkg.BKDBLT] = endTime.AddDate(0, 0, 1)
 		}
 	}
 	if len(timeCond) != 0 {

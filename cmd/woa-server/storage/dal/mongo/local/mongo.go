@@ -16,19 +16,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"hcm/pkg/logs"
 	"reflect"
 	"strconv"
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/dal/redis"
 	"hcm/cmd/woa-server/storage/dal/types"
 	dtype "hcm/cmd/woa-server/storage/types"
+	"hcm/pkg"
+	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -69,7 +69,7 @@ func NewMgo(config MongoConf, timeout time.Duration) (*Mongo, error) {
 	}
 	socketTimeout := time.Second * time.Duration(config.SocketTimeout)
 	maxConnIdleTime := 25 * time.Minute
-	appName := common.GetIdentification()
+	appName := pkg.GetIdentification()
 	// do not change this, our transaction plan need it to false.
 	// it's related with the transaction number(eg txnNumber) in a transaction session.
 	disableWriteRetry := false
@@ -188,6 +188,16 @@ func (c *Mongo) IsDuplicatedError(err error) bool {
 	return err == types.ErrDuplicated
 }
 
+// IsDuplicatedInsertError check duplicated insert error
+func (c *Mongo) IsDuplicatedInsertError(err error) bool {
+	if err != nil {
+		if strings.Contains(err.Error(), "E11000 duplicate") {
+			return true
+		}
+	}
+	return false
+}
+
 // IsNotFoundError check the not found error
 func (c *Mongo) IsNotFoundError(err error) bool {
 	return err == types.ErrDocumentNotFound
@@ -303,17 +313,17 @@ func (f *Find) Limit(limit uint64) types.Find {
 }
 
 var hostSpecialFieldMap = map[string]bool{
-	common.BKHostInnerIPField: true,
-	common.BKHostOuterIPField: true,
-	common.BKOperatorField:    true,
-	common.BKBakOperatorField: true,
+	pkg.BKHostInnerIPField: true,
+	pkg.BKHostOuterIPField: true,
+	pkg.BKOperatorField:    true,
+	pkg.BKBakOperatorField: true,
 }
 
 // All 查询多个
 func (f *Find) All(ctx context.Context, result interface{}) error {
 	mtc.collectOperCount(f.collName, findOper)
 
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	start := time.Now()
 	defer func() {
 		mtc.collectOperDuration(f.collName, findOper, time.Since(start))
@@ -346,7 +356,7 @@ func (f *Find) All(ctx context.Context, result interface{}) error {
 func (f *Find) List(ctx context.Context, result interface{}) (int64, error) {
 	mtc.collectOperCount(f.collName, findOper)
 
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	start := time.Now()
 	defer func() {
 		mtc.collectOperDuration(f.collName, findOper, time.Since(start))
@@ -390,7 +400,7 @@ func (f *Find) One(ctx context.Context, result interface{}) error {
 	mtc.collectOperCount(f.collName, findOper)
 
 	start := time.Now()
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	defer func() {
 		mtc.collectOperDuration(f.collName, findOper, time.Since(start))
 	}()
@@ -631,23 +641,23 @@ func (c *Collection) DeleteMany(ctx context.Context, filter types.Filter) (uint6
 
 func (c *Collection) tryArchiveDeletedDoc(ctx context.Context, filter types.Filter) error {
 	switch c.collName {
-	case common.BKTableNameModuleHostConfig:
-	case common.BKTableNameBaseHost:
-	case common.BKTableNameBaseApp:
-	case common.BKTableNameBaseSet:
-	case common.BKTableNameBaseModule:
-	case common.BKTableNameSetTemplate:
-	case common.BKTableNameBaseProcess:
-	case common.BKTableNameProcessInstanceRelation:
+	case pkg.BKTableNameModuleHostConfig:
+	case pkg.BKTableNameBaseHost:
+	case pkg.BKTableNameBaseApp:
+	case pkg.BKTableNameBaseSet:
+	case pkg.BKTableNameBaseModule:
+	case pkg.BKTableNameSetTemplate:
+	case pkg.BKTableNameBaseProcess:
+	case pkg.BKTableNameProcessInstanceRelation:
 
-	case common.BKTableNameBaseInst:
-	case common.BKTableNameInstAsst:
+	case pkg.BKTableNameBaseInst:
+	case pkg.BKTableNameInstAsst:
 		// NOTE: should not use the table name for archive, the object instance and association
 		// was saved in sharding tables, we still case the BKTableNameBaseInst here for the archive
 		// error message in order to find the wrong table name used in logics level.
 
 	default:
-		if !common.IsObjectShardingTable(c.collName) {
+		if !pkg.IsObjectShardingTable(c.collName) {
 			// do not archive the delete docs
 			return nil
 		}
@@ -676,15 +686,15 @@ func (c *Collection) tryArchiveDeletedDoc(ctx context.Context, filter types.Filt
 		}
 	}
 
-	_, err = c.dbc.Database(c.dbname).Collection(common.BKTableNameDelArchive).InsertMany(ctx, archives)
+	_, err = c.dbc.Database(c.dbname).Collection(pkg.BKTableNameDelArchive).InsertMany(ctx, archives)
 	return err
 }
 
 func (c *Mongo) redirectTable(tableName string) string {
-	if common.IsObjectInstShardingTable(tableName) {
-		tableName = common.BKTableNameBaseInst
-	} else if common.IsObjectInstAsstShardingTable(tableName) {
-		tableName = common.BKTableNameInstAsst
+	if pkg.IsObjectInstShardingTable(tableName) {
+		tableName = pkg.BKTableNameBaseInst
+	} else if pkg.IsObjectInstAsstShardingTable(tableName) {
+		tableName = pkg.BKTableNameInstAsst
 	}
 	return tableName
 }
@@ -693,7 +703,7 @@ func (c *Mongo) redirectTable(tableName string) string {
 func (c *Mongo) NextSequence(ctx context.Context, sequenceName string) (uint64, error) {
 	sequenceName = c.redirectTable(sequenceName)
 
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	start := time.Now()
 	defer func() {
 		logs.V(4).Infof("mongo next-sequence cost %dms, rid: %v", time.Since(start)/time.Millisecond, rid)
@@ -732,7 +742,7 @@ func (c *Mongo) NextSequences(ctx context.Context, sequenceName string, num int)
 	}
 	sequenceName = c.redirectTable(sequenceName)
 
-	rid := ctx.Value(common.ContextRequestIDField)
+	rid := ctx.Value(pkg.ContextRequestIDField)
 	start := time.Now()
 	defer func() {
 		logs.V(4).Infof("mongo next-sequences cost %dms, rid: %v", time.Since(start)/time.Millisecond, rid)
@@ -1222,7 +1232,7 @@ func validHostType(collection string, projection map[string]int, result interfac
 		return fmt.Errorf("host query result type invalid")
 	}
 
-	if collection != common.BKTableNameBaseHost {
+	if collection != pkg.BKTableNameBaseHost {
 		return nil
 	}
 
@@ -1327,25 +1337,25 @@ func getCollectionOption(ctx context.Context) *options.CollectionOptions {
 	var opt *options.CollectionOptions
 	switch util.GetDBReadPreference(ctx) {
 
-	case common.NilMode:
+	case pkg.NilMode:
 
-	case common.PrimaryMode:
+	case pkg.PrimaryMode:
 		opt = &options.CollectionOptions{
 			ReadPreference: readpref.Primary(),
 		}
-	case common.PrimaryPreferredMode:
+	case pkg.PrimaryPreferredMode:
 		opt = &options.CollectionOptions{
 			ReadPreference: readpref.PrimaryPreferred(readpref.WithMaxStaleness(maxStalenessSeconds)),
 		}
-	case common.SecondaryMode:
+	case pkg.SecondaryMode:
 		opt = &options.CollectionOptions{
 			ReadPreference: readpref.Secondary(readpref.WithMaxStaleness(maxStalenessSeconds)),
 		}
-	case common.SecondaryPreferredMode:
+	case pkg.SecondaryPreferredMode:
 		opt = &options.CollectionOptions{
 			ReadPreference: readpref.SecondaryPreferred(readpref.WithMaxStaleness(maxStalenessSeconds)),
 		}
-	case common.NearestMode:
+	case pkg.NearestMode:
 		opt = &options.CollectionOptions{
 			ReadPreference: readpref.Nearest(readpref.WithMaxStaleness(maxStalenessSeconds)),
 		}

@@ -14,14 +14,16 @@
 package generator
 
 import (
+	"context"
 	"fmt"
 	"strconv"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // matchPM match pm devices
@@ -34,12 +36,12 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 		logs.Errorf("failed to match pm when init generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
 	}
-
 	// 2. get match devices
 	candidates, err := g.getMatchDevice(order, replicas)
 	if err != nil {
 		// update generate record status to Done
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, err.Error(),
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, err.Error(),
 			"", nil); errRecord != nil {
 			logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId,
 				errRecord)
@@ -52,8 +54,8 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	if len(candidates) == 0 {
 		// update generate record status to Done
 		msg := "match no devices"
-		if errRecord := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusFailed, msg, "",
-			nil); errRecord != nil {
+		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
+			types.GenerateStatusFailed, msg, "", nil); errRecord != nil {
 			logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId,
 				errRecord)
 			return fmt.Errorf("failed to match pm, order id: %s, err: %v", order.SubOrderId, errRecord)
@@ -63,8 +65,8 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	}
 
 	// 3. update generate record status to handling
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusHandling, "handling", "",
-		nil); err != nil {
+	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusHandling,
+		"handling", "", nil); err != nil {
 		logs.Errorf("failed to match pm when update generate record, order id: %s, err: %v", order.SubOrderId, err)
 		return fmt.Errorf("failed to match pm, order id: %s, err: %v", order.SubOrderId, err)
 	}
@@ -82,18 +84,17 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	}
 
 	// 4. save matched pm instances info
-	if err := g.updateGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 	}
 
 	// 5. update generate record status to success
-	if err := g.updateGenerateRecord(order.ResourceType, generateId, types.GenerateStatusSuccess, "success", "",
-		successIps); err != nil {
+	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
+		"success", "", successIps); err != nil {
 		logs.Errorf("failed to match pm when update generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
 	}
-
 	return nil
 }
 
@@ -109,18 +110,18 @@ func (g *Generator) getMatchDevice(order *types.ApplyOrder, replicas uint) ([]*t
 	for _, host := range candidates {
 		rackId, err := strconv.Atoi(host.RackId)
 		if err != nil {
-			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostId, host.RackId)
+			logs.Warnf("failed to convert host %d rack_id %s to int", host.BkHostID, host.RackId)
 			rackId = 0
 		}
 
 		device := &types.MatchDevice{
-			BkHostId:     host.BkHostId,
-			AssetId:      host.BkAssetId,
+			BkHostId:     host.BkHostID,
+			AssetId:      host.BkAssetID,
 			Ip:           host.GetUniqIp(),
 			OuterIp:      host.BkHostOuterIP,
 			Isp:          host.BkIpOerName,
 			DeviceType:   host.SvrDeviceClass,
-			OsType:       host.BkOsName,
+			OsType:       host.BkOSName,
 			Region:       host.BkZoneName,
 			Zone:         host.SubZone,
 			Module:       host.ModuleName,
@@ -143,7 +144,7 @@ func (g *Generator) getMatchDevice(order *types.ApplyOrder, replicas uint) ([]*t
 }
 
 // listHostFromPool list filtered hosts from resource pool
-func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.HostInfo, error) {
+func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionAnd,
 		Rules:     make([]querybuilder.Rule, 0),
@@ -193,9 +194,9 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.HostInfo,
 			})
 		}
 	}
-	req := &cmdb.ListBizHostReq{
-		BkBizId:     931,
-		BkModuleIds: []int64{239149},
+	req := &cmdb.ListBizHostParams{
+		BizID:       931,
+		BkModuleIDs: []int64{239149},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",
@@ -221,26 +222,25 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.HostInfo,
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 	if len(rule.Rules) > 0 {
-		req.HostPropertyFilter = &querybuilder.QueryFilter{
+		req.HostPropertyFilter = &cmdb.QueryFilter{
 			Rule: rule,
 		}
 	}
 
-	resp, err := g.cc.ListBizHost(nil, nil, req)
+	resp, err := g.cc.ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, order id: %s", err, order.SubOrderId)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s, order id: %s", resp.Code, resp.ErrMsg,
-			order.SubOrderId)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
+	hosts := make([]*cmdb.Host, 0)
+	for _, host := range resp.Info {
+		hosts = append(hosts, &host)
 	}
 
-	return resp.Data.Info, nil
+	return hosts, nil
 }

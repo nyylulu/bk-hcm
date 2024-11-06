@@ -20,25 +20,243 @@
 package plan
 
 import (
+	"errors"
+	"fmt"
+	"time"
+
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	"hcm/pkg/tools/times"
 )
 
-// TicketBriefInfo resource plan ticket brief info
-type TicketBriefInfo struct {
-	ID              string                `json:"id"`
-	Applicant       string                `json:"applicant"`
-	BkBizID         int64                 `json:"bk_biz_id"`
-	BkBizName       string                `json:"bk_biz_name"`
-	BkProductName   string                `json:"bk_product_name"`
-	PlanProductName string                `json:"plan_product_name"`
-	DemandClass     enumor.DemandClass    `json:"demand_class"`
-	CpuCore         int64                 `json:"cpu_core"`
-	Memory          int64                 `json:"memory"`
-	DiskSize        int64                 `json:"disk_size"`
-	SubmittedAt     string                `json:"submitted_at"`
-	Status          enumor.RPTicketStatus `json:"status"`
-	ItsmSn          string                `json:"itsm_sn"`
-	ItsmUrl         string                `json:"itsm_url"`
-	CrpSn           string                `json:"crp_sn"`
-	CrpUrl          string                `json:"crp_url"`
+// TicketInfo resource plan ticket info.
+type TicketInfo struct {
+	ID               string                `json:"id"`
+	Type             enumor.RPTicketType   `json:"type"`
+	Applicant        string                `json:"applicant"`
+	BkBizID          int64                 `json:"bk_biz_id"`
+	BkBizName        string                `json:"bk_biz_name"`
+	OpProductID      int64                 `json:"op_product_id"`
+	OpProductName    string                `json:"op_product_name"`
+	PlanProductID    int64                 `json:"plan_product_id"`
+	PlanProductName  string                `json:"plan_product_name"`
+	VirtualDeptID    int64                 `json:"virtual_dept_id"`
+	VirtualDeptName  string                `json:"virtual_dept_name"`
+	DemandClass      enumor.DemandClass    `json:"demand_class"`
+	OriginalCpuCore  float64               `json:"original_cpu_core"`
+	OriginalMemory   float64               `json:"original_memory"`
+	OriginalDiskSize float64               `json:"original_disk_size"`
+	UpdatedCpuCore   float64               `json:"updated_cpu_core"`
+	UpdatedMemory    float64               `json:"updated_memory"`
+	UpdatedDiskSize  float64               `json:"updated_disk_size"`
+	Demands          rpt.ResPlanDemands    `json:"demands"`
+	SubmittedAt      string                `json:"submitted_at"`
+	Status           enumor.RPTicketStatus `json:"status"`
+	ItsmSn           string                `json:"itsm_sn"`
+	ItsmUrl          string                `json:"itsm_url"`
+	CrpSn            string                `json:"crp_sn"`
+	CrpUrl           string                `json:"crp_url"`
+}
+
+// CreateResPlanTicketReq is create resource plan ticket request.
+type CreateResPlanTicketReq struct {
+	TicketType  enumor.RPTicketType `json:"ticket_type" validate:"required"`
+	DemandClass enumor.DemandClass  `json:"demand_class" validate:"required"`
+	BizOrgRel   mtypes.BizOrgRel    `json:"biz_org_rel" validate:"required"`
+	Demands     rpt.ResPlanDemands  `json:"demands" validate:"required"`
+	Remark      string              `json:"remark" validate:"omitempty"`
+}
+
+// Validate whether CreateResPlanTicketReq is valid.
+func (r *CreateResPlanTicketReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if err := r.TicketType.Validate(); err != nil {
+		return err
+	}
+
+	switch r.TicketType {
+	case enumor.RPTicketTypeAdd:
+		for _, demand := range r.Demands {
+			if demand.Original != nil {
+				return errors.New("original demand of add ticket should be empty")
+			}
+
+			if demand.Updated == nil {
+				return errors.New("updated demand of add ticket can not be empty")
+			}
+		}
+	case enumor.RPTicketTypeAdjust:
+		for _, demand := range r.Demands {
+			if demand.Original == nil {
+				return errors.New("original demand of adjust ticket can not be empty")
+			}
+
+			if demand.Updated == nil {
+				return errors.New("updated demand of adjust ticket can not be empty")
+			}
+		}
+	case enumor.RPTicketTypeDelete:
+		for _, demand := range r.Demands {
+			if demand.Original == nil {
+				return errors.New("original demand of delete ticket can not be empty")
+			}
+
+			if demand.Updated != nil {
+				return errors.New("updated demand of delete ticket should be empty")
+			}
+		}
+	default:
+		return fmt.Errorf("unsupported resource plan ticket type: %s", r.TicketType)
+	}
+
+	if err := r.DemandClass.Validate(); err != nil {
+		return err
+	}
+
+	for _, demand := range r.Demands {
+		if err := demand.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// QueryIEGDemandsReq query IEG demands request.
+type QueryIEGDemandsReq struct {
+	ExpectTimeRange *times.DateRange `json:"expect_time_range" validate:"omitempty"`
+	CrpDemandIDs    []int64          `json:"crp_demand_ids" validate:"omitempty"`
+	CrpSns          []string         `json:"crp_sns" validate:"omitempty"`
+	DeviceClasses   []string         `json:"device_classes" validate:"omitempty"`
+	PlanProdNames   []string         `json:"plan_prod_names" validate:"omitempty"`
+	ObsProjects     []string         `json:"obs_projects" validate:"omitempty"`
+	RegionNames     []string         `json:"region_names" validate:"omitempty"`
+	ZoneNames       []string         `json:"zone_names" validate:"omitempty"`
+}
+
+// Validate whether QueryIEGDemandsReq is valid.
+func (r *QueryIEGDemandsReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, crpDemandID := range r.CrpDemandIDs {
+		if crpDemandID <= 0 {
+			return errors.New("crp demand id should be > 0")
+		}
+	}
+
+	return nil
+}
+
+// AvailableTime available time.
+type AvailableTime string
+
+// NewAvailableTime new an available time.
+// TODO: 目前只关注年和月，未来会添加周
+func NewAvailableTime(year int, month time.Month) AvailableTime {
+	return AvailableTime(fmt.Sprintf("%04d-%02d", year, month))
+}
+
+// VerifyResPlanElem verify resource plan element.
+type VerifyResPlanElem struct {
+	// if IsPrePaid is true, Verify function will examine:
+	// 1. InPlan + OutPlan >= applied.
+	// 2. InPlan * 120% - consumed >= applied.
+	// otherwise, it will only examine InPlan + OutPlan >= applied.
+	IsPrePaid     bool
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+	CpuCore       float64
+}
+
+// VerifyResPlanResElem verify resource plan result element.
+type VerifyResPlanResElem struct {
+	VerifyResult enumor.VerifyResPlanRst `json:"verify_result"`
+	Reason       string                  `json:"reason"`
+}
+
+// ResPlanElem resource plan element.
+type ResPlanElem struct {
+	PlanType      enumor.PlanType
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+	CpuCore       float64
+}
+
+// ResPlanPoolKey resource plan pool key.
+type ResPlanPoolKey struct {
+	PlanType      enumor.PlanType
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	RegionName    string
+	ZoneName      string
+}
+
+// ResPlanPool resource plan pool.
+type ResPlanPool map[ResPlanPoolKey]float64
+
+// StrUnionFind string union find struct.
+type StrUnionFind struct {
+	idx    []string
+	parent map[string]string
+}
+
+// NewStrUnionFind news a string union find.
+func NewStrUnionFind() *StrUnionFind {
+	return &StrUnionFind{parent: make(map[string]string)}
+}
+
+// Add adds a new element x.
+func (uf *StrUnionFind) Add(x string) {
+	if _, ok := uf.parent[x]; ok {
+		return
+	}
+	uf.parent[x] = x
+	uf.idx = append(uf.idx, x)
+}
+
+// Elements return all elements in StrUnionFind.
+func (uf *StrUnionFind) Elements() []string {
+	var res []string
+	for _, e := range uf.idx {
+		res = append(res, e)
+	}
+
+	return res
+}
+
+// Find finds the root parent of x.
+func (uf *StrUnionFind) Find(x string) string {
+	if uf.parent[x] != x {
+		uf.parent[x] = uf.Find(uf.parent[x])
+	}
+
+	return uf.parent[x]
+}
+
+// Union unions the unions where x and y are.
+func (uf *StrUnionFind) Union(x, y string) {
+	parentX := uf.Find(x)
+	parentY := uf.Find(y)
+	if parentX != parentY {
+		uf.parent[parentY] = parentX
+	}
+}
+
+// Connected judges whether x and y are connected.
+func (uf *StrUnionFind) Connected(x, y string) bool {
+	return uf.Find(x) == uf.Find(y)
 }

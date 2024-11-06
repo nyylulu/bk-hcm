@@ -1,31 +1,3 @@
-# defines esb related settings. 内部版用于调用cc获取clb业务信息
-esb:
-  # endpoints is a seed list of host:port addresses of esb nodes.
-  endpoints:
-    - http://paas.bk.com
-  # appCode is the BlueKing app code of hcm to request esb.
-  appCode:
-  # appSecret is the BlueKing app secret of hcm to request esb.
-  appSecret:
-  # user is the BlueKing user of hcm to request esb.
-  user: admin
-  # defines tls related options.
-  tls:
-    # server should be accessed without verifying the TLS certificate.
-    insecureSkipVerify:
-    # server requires TLS client certificate authentication.
-    certFile:
-    # server requires TLS client certificate authentication.
-    keyFile:
-    # trusted root certificates for server.
-    caFile:
-    # the password to decrypt the certificate.
-    password:
-
-ziyanSecrets:
-  - id: id # SecretId
-    key: key # SecretKey
-
 # defines all the network related options.
 network:
   # bindIP is ip where server working on.
@@ -89,7 +61,30 @@ log:
   alsoToStdErr: false
   # log level.
   verbosity: 0
-
 sync:
   # 腾讯云负载均衡监听器同步并发数配置
   tcloudLblConcurrency: 3
+
+# defines esb related settings. 内部版用于调用cc获取clb业务信息
+esb:
+  # endpoints is a seed list of host:port addresses of esb nodes.
+  endpoints:
+    - http://paas.bk.com
+  # appCode is the BlueKing app code of hcm to request esb.
+  appCode:
+  # appSecret is the BlueKing app secret of hcm to request esb.
+  appSecret:
+  # user is the BlueKing user of hcm to request esb.
+  user: admin
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:

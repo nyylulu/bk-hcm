@@ -31,8 +31,8 @@ export type QueryFilterType = {
 };
 
 export type RulesItem = {
-  op: QueryRuleOPEnum;
   field?: string;
+  op: QueryRuleOPEnum;
   value?: string | number | string[] | number[];
   rules?: RulesItem[];
 };
@@ -55,6 +55,11 @@ export type QueryBuilderType = {
   filter: QueryFilterType;
   page?: IPageQuery;
   fields?: string[];
+};
+
+export type QueryParamsType = {
+  [key: string]: any;
+  page?: IPageQuery;
 };
 
 interface IBaseResData {

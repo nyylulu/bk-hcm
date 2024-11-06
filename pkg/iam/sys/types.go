@@ -123,6 +123,8 @@ const (
 
 	// BizResPlanOperate biz resource plan operate action id to register iam.
 	BizResPlanOperate client.ActionID = "biz_resource_plan_operate"
+	// ZiyanResPlanManage ziyan resource plan manage action id to register iam.
+	ZiyanResPlanManage client.ActionID = "ziyan_resource_plan_manage"
 
 	// BizTaskManagementOperate biz task management operate action id to register iam.
 	BizTaskManagementOperate client.ActionID = "biz_task_management_operate"
@@ -230,6 +232,9 @@ const (
 	// AwsSavingsPlansCostQuery aws savings plans cost query action id to register iam.
 	AwsSavingsPlansCostQuery client.ActionID = "aws_savings_plans_cost_query"
 
+	// RollingServerManage 平台管理-滚服管理
+	RollingServerManage client.ActionID = "rolling_server_manage"
+
 	// Skip is an action that no need to auth
 	Skip client.ActionID = "skip"
 )
@@ -254,7 +259,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	BizRecycleBinConfig:    "业务-回收站配置",
 	BizOperationRecordFind: "业务-操作记录查看",
 
-	BizResPlanOperate: "业务-资源预测操作",
+	BizResPlanOperate:  "业务-资源预测操作",
+	ZiyanResPlanManage: "平台-资源预测",
 
 	ServiceResDissolve: "服务-机房裁撤",
 
@@ -302,6 +308,7 @@ var ActionIDNameMap = map[client.ActionID]string{
 	AccountBillManage:      "云账单-云账单管理",
 	ApplicationManage:      "单据管理",
 	AccountBillPull:        "云账单-云账单拉取",
+	RollingServerManage:    "滚服管理",
 
 	MainAccountFind:   "账号-二级账号查看",
 	MainAccountCreate: "账号-二级账号创建",

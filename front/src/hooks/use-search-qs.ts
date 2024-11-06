@@ -3,7 +3,7 @@ import qs from 'qs';
 import { ModelProperty } from '@/model/typings';
 import { findProperty } from '@/model/utils';
 import routeQuery from '@/router/utils/query';
-import { convertValue } from '@/utils/search';
+import { convertValue, getDefaultRule } from '@/utils/search';
 
 type useSearchQsParamsType = {
   properties: ModelProperty[];
@@ -40,7 +40,8 @@ export default function useSearchQs({
     const filter = qs.parse(query[key] as string, { comma: true, allowEmptyArrays: true });
     for (const [id, val] of Object.entries(filter)) {
       const property = findProperty(id, properties);
-      condition[id] = convertValue(val, property);
+      const { op } = getDefaultRule(property);
+      condition[id] = convertValue(val, property, op);
     }
     return condition;
   };

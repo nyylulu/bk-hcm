@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type idcZone struct {
@@ -26,19 +26,19 @@ type idcZone struct {
 
 // NextSequence returns next zone config sequence id from db
 func (z *idcZone) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgIdcZone)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgIdcZone)
 }
 
 // CreateZone creates zone config in db
 func (z *idcZone) CreateZone(ctx context.Context, inst *types.IdcZone) error {
-	return mongodb.Client().Table(common.BKTableNameCfgIdcZone).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Insert(ctx, inst)
 }
 
 // GetZone gets zone config by filter from db
 func (z *idcZone) GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.IdcZone, error) {
 	inst := new(types.IdcZone)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgIdcZone).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (z *idcZone) GetZone(ctx context.Context, filter *mapstr.MapStr) (*types.Id
 func (z *idcZone) FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*types.IdcZone, error) {
 	insts := make([]*types.IdcZone, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgIdcZone).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -58,7 +58,7 @@ func (z *idcZone) FindManyZone(ctx context.Context, filter *mapstr.MapStr) ([]*t
 
 // GetRegionList gets region list by filter from db
 func (z *idcZone) GetRegionList(ctx context.Context, filter map[string]interface{}) ([]interface{}, error) {
-	insts, err := mongodb.Client().Table(common.BKTableNameCfgIdcZone).Distinct(ctx, "cmdb_region_name", filter)
+	insts, err := mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Distinct(ctx, "cmdb_region_name", filter)
 	if err != nil {
 		return nil, err
 	}
@@ -68,10 +68,10 @@ func (z *idcZone) GetRegionList(ctx context.Context, filter map[string]interface
 
 // UpdateZone updates zone config by filter and doc in db
 func (z *idcZone) UpdateZone(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgIdcZone).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Update(ctx, filter, doc)
 }
 
 // DeleteZone deletes zone config from db
 func (z *idcZone) DeleteZone(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgIdcZone).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgIdcZone).Delete(ctx, filter)
 }

@@ -54,7 +54,7 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
       // 校验失败
       rollingServerHost.value = null;
       emit('validateFailed');
-      reject(error);
+      reject((error as any).message);
     } finally {
       isCheckLoading.value = false;
     }
@@ -68,15 +68,19 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
     :label="t('继承套餐的机器代表')"
     property="bk_asset_id"
     required
-    :description="t('继承套餐，选择一台现网中已存在的，需要的滚服机器，滚服项目继承此机器的购买时长。')"
+    :description="
+      t(
+        '选择填写本业务下一台机器作为继承套餐的代表，继承原套餐类型、计费时长、地域大区等信息。填写要求：\n1.必须为本业务下的主机\n2.主机的地域，必须和所选地域匹配，大区必须匹配\n3.机型必须为常规机型\n4.主机必须有计费模式，计费开始时间，计费结束时间',
+      )
+    "
     :rules="[{ validator: (value: string) => checkRollingSeverHost(value), message: t('校验失败')}]"
   >
     <InputWithValidate
-      v-model="model"
-      class="w300"
+      v-model.trim="model"
+      class="w600"
       :loading="isCheckLoading"
       @click="formItem.validate()"
-      :placeholder="t('请输入一个需要滚服的固资号')"
+      :placeholder="t('请输入本业务下一个继承机器的CC固资号，当前必须为同城，待支持跨城')"
     />
     <!-- 校验成功，展示继承的机器信息，并且在添加配置清单时设置默认值（计费模式、购买时长...）。 -->
     <ul class="inherit-instance-info" v-if="rollingServerHost">
@@ -105,8 +109,8 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
 </template>
 
 <style scoped lang="scss">
-.w300 {
-  width: 300px;
+.w600 {
+  width: 600px;
 }
 
 .inherit-instance-info {

@@ -160,7 +160,8 @@ func (act SyncAction) doSyncZenlayerBillItem(kt *kit.Kit,
 	return nil
 }
 
-func (act SyncAction) convertZenlayerBill(kt *kit.Kit, syncOpt *SyncOption, result *billproto.ZenlayerBillItemListResult,
+func (act SyncAction) convertZenlayerBill(kt *kit.Kit, syncOpt *SyncOption,
+	result *billproto.ZenlayerBillItemListResult,
 	setIndex string, mainAccount *asproto.MainAccountGetResult[accountsetcore.ZenlayerMainAccountExtension]) (
 	[]*tableobs.OBSBillItemZenlayer, error) {
 
@@ -172,7 +173,7 @@ func (act SyncAction) convertZenlayerBill(kt *kit.Kit, syncOpt *SyncOption, resu
 		return nil, fmt.Errorf("empty currency for item %v, rid: %s", item, kt.Rid)
 	}
 	// 获取当月平均汇率
-	exchangeRate, err := act.getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
+	exchangeRate, err := getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
 	if err != nil {
 		logs.Warnf("failed to get exchange rate, err %s, rid %s", err.Error(), kt.Rid)
 		return nil, fmt.Errorf("failed to get exchange rate, err %s, rid %s", err.Error(), kt.Rid)

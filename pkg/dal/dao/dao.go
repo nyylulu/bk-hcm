@@ -63,6 +63,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
 	resplan "hcm/pkg/dal/dao/resource-plan"
+	rollingserver "hcm/pkg/dal/dao/rolling-server"
 	"hcm/pkg/dal/dao/task"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
@@ -153,11 +154,23 @@ type Set interface {
 	ResPlanTicket() resplan.ResPlanTicketInterface
 	ResPlanDemand() resplan.ResPlanDemandInterface
 	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
+	ResPlanCrpDemand() resplan.ResPlanCrpDemandInterface
+	ResPlanPenalty() resplan.ResPlanPenaltyInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
 
 	RecycleModule() module.RecycleModule
 	RecycleHost() host.RecycleHost
+
+	RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface
+	RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface
+	RollingQuotaOffsetAudit() rollingserver.RollingQuotaOffsetAuditInterface
+	RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface
+	ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface
+	RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface
+	RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface
+	RollingFineDetail() rollingserver.RollingFineDetailInterface
+	OBSBillItemRolling() rollingserver.OBSBillItemRolling
 
 	TaskDetail() task.Detail
 	TaskManagement() task.Management
@@ -617,6 +630,14 @@ func (s *set) OBSBillItemGcp() obs.OBSBillItemGcp {
 	}
 }
 
+// OBSBillItemRolling returns OBSBillItemRolling dao.
+func (s *set) OBSBillItemRolling() rollingserver.OBSBillItemRolling {
+	return &rollingserver.OBSBillItemRollingDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
 // RootAccountBillConfig returns RootAccountBillConfig dao
 func (s *set) RootAccountBillConfig() bill.RootAccountBillConfig {
 	return &bill.RootAccountBillConfigDao{
@@ -837,6 +858,24 @@ func (s *set) ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface {
 	}
 }
 
+// ResPlanCrpDemand resource plan crp demand dao.
+func (s *set) ResPlanCrpDemand() resplan.ResPlanCrpDemandInterface {
+	return &resplan.ResPlanCrpDemandDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanPenalty resource plan penalty dao.
+func (s *set) ResPlanPenalty() resplan.ResPlanPenaltyInterface {
+	return &resplan.ResPlanPenaltyDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
 // WoaZone woa zone status dao.
 func (s *set) WoaZone() resplan.WoaZoneInterface {
 	return &resplan.WoaZoneDao{
@@ -873,6 +912,54 @@ func (s *set) RootAccount() accountset.RootAccount {
 	}
 }
 
+// RollingQuotaConfig return rolling quota config dao.
+func (s *set) RollingQuotaConfig() rollingserver.RollingQuotaConfigInterface {
+	return &rollingserver.RollingQuotaConfigDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingQuotaOffset return rolling quota offset dao.
+func (s *set) RollingQuotaOffset() rollingserver.RollingQuotaOffsetInterface {
+	return &rollingserver.RollingQuotaOffsetDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingQuotaOffsetAudit return rolling quota offset audit dao.
+func (s *set) RollingQuotaOffsetAudit() rollingserver.RollingQuotaOffsetAuditInterface {
+	return &rollingserver.RollingQuotaOffsetAuditDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingGlobalConfig return rolling global config dao.
+func (s *set) RollingGlobalConfig() rollingserver.RollingGlobalConfigInterface {
+	return &rollingserver.RollingGlobalConfigDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// ResourcePoolBusiness return resource pool business dao.
+func (s *set) ResourcePoolBusiness() rollingserver.ResourcePoolBusinessInterface {
+	return &rollingserver.ResourcePoolBusinessDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
+// RollingFineDetail return rolling fine detail dao.
+func (s *set) RollingFineDetail() rollingserver.RollingFineDetailInterface {
+	return &rollingserver.RollingFineDetailDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
+}
+
 // RecycleModule return recycle module dao.
 func (s *set) RecycleModule() module.RecycleModule {
 	return module.NewRecycleModuleDao(s.orm, s.idGen, s.audit)
@@ -881,6 +968,24 @@ func (s *set) RecycleModule() module.RecycleModule {
 // RecycleHost return recycle host dao.
 func (s *set) RecycleHost() host.RecycleHost {
 	return host.NewRecycleHostDao(s.orm, s.idGen, s.audit)
+}
+
+// RollingAppliedRecord return dao.
+func (s *set) RollingAppliedRecord() rollingserver.RollingAppliedRecordInterface {
+	return &rollingserver.RollingAppliedRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// RollingReturnedRecord return dao.
+func (s *set) RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface {
+	return &rollingserver.RollingReturnedRecordDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
 }
 
 // TaskDetail return task detail dao.

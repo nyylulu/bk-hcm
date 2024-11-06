@@ -14,6 +14,8 @@
 package meta
 
 import (
+	"errors"
+
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 )
@@ -22,6 +24,12 @@ import (
 type DiskTypeItem struct {
 	DiskType     enumor.DiskType `json:"disk_type"`
 	DiskTypeName string          `json:"disk_type_name"`
+}
+
+// TicketTypeItem defines ticket type item.
+type TicketTypeItem struct {
+	TicketType     enumor.RPTicketType `json:"ticket_type"`
+	TicketTypeName string              `json:"ticket_type_name"`
 }
 
 // ListZoneReq defines list zone request.
@@ -58,4 +66,52 @@ type ListDeviceTypeRst struct {
 	CoreType   string `json:"core_type"`
 	CpuCore    int64  `json:"cpu_core"`
 	Memory     int64  `json:"memory"`
+}
+
+// ListBizsByOpProdReq defines list bizs by op product request.
+type ListBizsByOpProdReq struct {
+	OpProductID int64 `json:"op_product_id" validate:"required"`
+}
+
+// Validate whether ListBizsByOpProdReq is valid.
+func (r *ListBizsByOpProdReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if r.OpProductID <= 0 {
+		return errors.New("invalid op product id, should be > 0")
+	}
+
+	return nil
+}
+
+// BizOrgRel is GetBizOrgRel result.
+type BizOrgRel struct {
+	BkBizID         int64  `json:"bk_biz_id"`
+	BkBizName       string `json:"bk_biz_name"`
+	OpProductID     int64  `json:"op_product_id"`
+	OpProductName   string `json:"op_product_name"`
+	PlanProductID   int64  `json:"plan_product_id"`
+	PlanProductName string `json:"plan_product_name"`
+	VirtualDeptID   int64  `json:"virtual_dept_id"`
+	VirtualDeptName string `json:"virtual_dept_name"`
+}
+
+// Biz is GetBizs result.
+type Biz struct {
+	BkBizID   int64  `json:"bk_biz_id"`
+	BkBizName string `json:"bk_biz_name"`
+}
+
+// OpProduct is GetOpProducts result.
+type OpProduct struct {
+	OpProductID   int64  `json:"op_product_id"`
+	OpProductName string `json:"op_product_name"`
+}
+
+// PlanProduct is GetPlanProducts result.
+type PlanProduct struct {
+	PlanProductID   int64  `json:"plan_product_id"`
+	PlanProductName string `json:"plan_product_name"`
 }

@@ -17,19 +17,23 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/utils"
+	"hcm/cmd/woa-server/dal/task/table"
 	model "hcm/cmd/woa-server/model/cvm"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/utils"
 )
 
 // CVM create cvm request param
@@ -55,10 +59,15 @@ type CVM struct {
 	ChargeType        cvmapi.ChargeType `json:"chargeType"`
 	ChargeMonths      uint              `json:"chargeMonths"`
 	InheritInstanceId string            `json:"inherit_instance_id"`
+	BkProductID       int64             `json:"bk_product_id"`
+	BkProductName     string            `json:"bk_product_name"`
 }
 
 // executeApplyOrder CVM生产-创建单据
 func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
+	kt = &kit.Kit{Ctx: context.Background(), User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
+		RequestSource: kt.RequestSource}
+
 	// 0. update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
@@ -137,7 +146,7 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 	}
 
 	// 6. save generated cvm instances info
-	if err = l.updateGeneratedDevice(order, hosts, taskId); err != nil {
+	if err = l.createDeviceInfo(order, hosts, taskId); err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to update generated device, "+
 			"order id: %s, taskId: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
 
@@ -158,6 +167,25 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 		return
 	}
 
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		appliedTypes := []enumor.AppliedType{enumor.CvmProduceAppliedType}
+		subOrderID := strconv.FormatUint(order.OrderId, 10)
+		deviceTypeCountMap := map[string]int{order.Spec.DeviceType: len(hosts)}
+
+		if err = l.rsLogic.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, subOrderID, appliedTypes,
+			deviceTypeCountMap); err != nil {
+			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
+				"deviceTypeCountMap: %v, rid: %s", err, subOrderID, order.BkBizId, deviceTypeCountMap, kt.Rid)
+
+			if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+				logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, "+
+					"rid: %s", order.OrderId, taskId, err, kt.Rid)
+				return
+			}
+			return
+		}
+	}
+
 	return
 }
 
@@ -173,16 +201,16 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 		Params: &cvmapi.OrderCreateParams{
 			Zone:          cvm.Zone,
 			DeptName:      cvmapi.CvmLaunchDeptName,
-			ProductName:   cvmapi.CvmLaunchProductName,
+			ProductName:   cvm.BkProductName,
 			Business1Id:   cvmapi.CvmLaunchBiz1Id,
 			Business1Name: cvmapi.CvmLaunchBiz1Name,
 			Business2Id:   cvmapi.CvmLaunchBiz2Id,
 			Business2Name: cvmapi.CvmLaunchBiz2Name,
-			//Business3Id:   cvmapi.CvmLaunchBiz3Id,
-			//Business3Name: cvmapi.CvmLaunchBiz3Name,
+			// Business3Id:   cvmapi.CvmLaunchBiz3Id,
+			// Business3Name: cvmapi.CvmLaunchBiz3Name,
 			Business3Id:   662584,
 			Business3Name: "CC_SA云化池",
-			ProjectId:     cvmapi.CvmLaunchProjectId,
+			ProjectId:     int(cvm.BkProductID),
 			Image: &cvmapi.Image{
 				ImageId:   cvm.ImageId,
 				ImageName: cvm.ImageName,
@@ -368,8 +396,8 @@ func (l *logics) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 	return resp.Result.Data, nil
 }
 
-// updateGeneratedDevice update generate record
-func (l *logics) updateGeneratedDevice(order *types.ApplyOrder, items []*cvmapi.InstanceItem, taskId string) error {
+// createDeviceInfo update generate record
+func (l *logics) createDeviceInfo(order *types.ApplyOrder, items []*cvmapi.InstanceItem, taskId string) error {
 	// 1. save device info to db
 	now := time.Now()
 	for _, item := range items {
@@ -501,9 +529,38 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	req.SecurityGroupName = sg.SecurityGroupName
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
+	productID, productName, err := l.getProductMsg(kt, order)
+	if err != nil {
+		logs.Errorf("get product message failed, err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
+		return nil, err
+	}
+
+	req.BkProductID = productID
+	req.BkProductName = productName
+
 	logs.Infof("scheduler:logics:build:cvm:request:end, order: %+v, req: %+v, rid: %s",
 		cvt.PtrToVal(order), cvt.PtrToVal(req), kt.Rid)
 	return req, nil
+}
+
+func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
+	if types.RequireType(order.RequireType) == types.RollingServer {
+		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
+	}
+
+	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
+	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, param)
+	if err != nil {
+		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
+		return 0, "", err
+	}
+	if resp == nil || len(*resp) != 1 {
+		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
+		return 0, "", errors.New("search biz belonging, but resp is empty or len resp != 1")
+	}
+
+	bizBelong := (*resp)[0]
+	return bizBelong.OpProductID, bizBelong.OpProductName, nil
 }
 
 var regionToVpc = map[string]string{
@@ -523,6 +580,8 @@ var regionToVpc = map[string]string{
 	"na-siliconvalley": "vpc-n040n5bl",
 	"ap-hangzhou-ec":   "vpc-puhasca0",
 	"ap-fuzhou-ec":     "vpc-hdxonj2q",
+	"ap-wuhan-ec":      "vpc-867lsj6w",
+	"ap-beijing":       "vpc-bhb0y6g8",
 }
 
 func (l *logics) getCvmVpc(region string) (string, error) {
@@ -697,6 +756,16 @@ var regionToSecGroup = map[string]*SecGroup{
 	},
 	"ap-fuzhou-ec": {
 		SecurityGroupId:   "sg-leqa6w29",
+		SecurityGroupName: "云梯默认安全组",
+		SecurityGroupDesc: "",
+	},
+	"ap-wuhan-ec": {
+		SecurityGroupId:   "sg-p5ld4xyq",
+		SecurityGroupName: "云梯默认安全组",
+		SecurityGroupDesc: "",
+	},
+	"ap-beijing": {
+		SecurityGroupId:   "sg-rjwj7cnt",
 		SecurityGroupName: "云梯默认安全组",
 		SecurityGroupDesc: "",
 	},

@@ -12,6 +12,9 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// OpProductBgIEG BG ID for IEG
+const OpProductBgIEG = 4
+
 // ListOpProductParam ...
 type ListOpProductParam struct {
 	// 筛选事业群id列表，不传筛选全部

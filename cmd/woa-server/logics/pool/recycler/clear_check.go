@@ -58,17 +58,17 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
-			"err: %v", ip, hostInfo.BkHostId, err)
+			"err: %v", ip, hostInfo.BkHostID, err)
 		return err
 	}
 
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
-		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
 
 	// 创建空闲检查任务

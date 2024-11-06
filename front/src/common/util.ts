@@ -105,8 +105,8 @@ export function timeFromNow(val: string, unit: QUnitType | OpUnitType = 'minute'
  * @returns 'row-class': ({ created_at }: { created_at: string }) => string
  */
 export function getTableNewRowClass() {
-  return ({ created_at }: { created_at: string }) => {
-    if (timeFromNow(created_at) <= 5) {
+  return ({ created_at, updated_at }: { created_at?: string; updated_at?: string }) => {
+    if ((created_at && timeFromNow(created_at) <= 5) || (updated_at && timeFromNow(updated_at) <= 5)) {
       return 'table-new-row';
     }
   };
@@ -311,4 +311,19 @@ export const isEmpty = (value: unknown) => {
     return true;
   }
   return false;
+};
+
+// 获取深层数据
+export const getValueByKey = (data: object, keyPath: string): string => {
+  const keys = keyPath.split('.');
+  let result: unknown = JSON.parse(JSON.stringify(data));
+
+  for (const key of keys) {
+    if (result && typeof result === 'object' && key in result) {
+      result = (result as Record<string, unknown>)[key];
+    } else {
+      return undefined;
+    }
+  }
+  return result as string | undefined;
 };

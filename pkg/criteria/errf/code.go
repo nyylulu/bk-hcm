@@ -72,4 +72,6 @@ const (
 	BillItemImportDataError int32 = 2000016
 	// BillItemImportEmptyDataError 账单导入空列表
 	BillItemImportEmptyDataError int32 = 2000017
+	// RollingServerRecycleCommitCheckError 提交回收滚服订单校验错误
+	RollingServerRecycleCommitCheckError int32 = 2000018
 )

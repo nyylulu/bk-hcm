@@ -20,8 +20,9 @@
 package sops
 
 import (
-	"golang.org/x/time/rate"
 	"sync"
+
+	"golang.org/x/time/rate"
 )
 
 // 定义一个全局的速率限制器映射

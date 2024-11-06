@@ -13,10 +13,10 @@
 package biz
 
 import (
-	"hcm/cmd/woa-server/thirdparty/esb"
-	ptypes "hcm/cmd/woa-server/types/plan"
+	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association
@@ -24,7 +24,7 @@ type Logics interface {
 	// ListAuthorizedBiz list authorized biz with biz access permission from cmdb.
 	ListAuthorizedBiz(kt *kit.Kit) ([]int64, error)
 	// GetBizOrgRel get biz org relation.
-	GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*ptypes.BizOrgRel, error)
+	GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, error)
 }
 
 type logics struct {

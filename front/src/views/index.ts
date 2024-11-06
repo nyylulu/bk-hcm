@@ -1,5 +1,6 @@
 import business from '@/router/module/business';
 import task from '@/views/task/route-config';
+import rollingServer from '@/views/rolling-server/route-config';
 
 business.forEach((group) => {
   const index = group.children.findIndex((menu) => menu.name === 'businessRecord');
@@ -8,3 +9,5 @@ business.forEach((group) => {
   }
 });
 export const businessViews = business;
+
+export const platformManagementViews = [...rollingServer];

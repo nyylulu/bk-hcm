@@ -22,12 +22,12 @@ package table
 import (
 	"errors"
 
-	"hcm/cmd/woa-server/thirdparty/es"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/es"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string,
@@ -93,7 +93,7 @@ func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, inde
 	return &dissolve.ListHostDetails{Details: details}, nil
 }
 
-func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMap map[string]dissolve.Host,
+func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.Host, esHostMap map[string]dissolve.Host,
 	hostBizIDMap map[int64]int64) ([]dissolve.Host, error) {
 
 	bizIDs := make([]int64, 0)
@@ -108,9 +108,9 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMa
 
 	result := make([]dissolve.Host, len(ccHosts))
 	for idx, ccHost := range ccHosts {
-		bizID, ok := hostBizIDMap[ccHost.BkHostId]
+		bizID, ok := hostBizIDMap[ccHost.BkHostID]
 		if !ok {
-			logs.Errorf("can not find biz id, host id: %d, map: %+v,rid: %s", ccHost.BkHostId, hostBizIDMap, kt.Rid)
+			logs.Errorf("can not find biz id, host id: %d, map: %+v,rid: %s", ccHost.BkHostID, hostBizIDMap, kt.Rid)
 			return nil, errors.New("host is invalid")
 		}
 
@@ -120,19 +120,19 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMa
 			return nil, errors.New("biz is invalid")
 		}
 
-		esHost, ok := esHostMap[ccHost.BkAssetId]
+		esHost, ok := esHostMap[ccHost.BkAssetID]
 		if ok {
 			esHost.AppName = bizName
 			esHost.ModuleName = ccHost.ModuleName
 			esHost.BizID = bizID
 			esHost.ServerOperator = ccHost.Operator
-			esHost.ServerBakOperator = ccHost.BakOperator
+			esHost.ServerBakOperator = ccHost.BkBakOperator
 			result[idx] = esHost
 			continue
 		}
 
 		result[idx] = dissolve.Host{
-			ServerAssetID:     ccHost.BkAssetId,
+			ServerAssetID:     ccHost.BkAssetID,
 			InnerIP:           ccHost.BkHostInnerIP,
 			OuterIP:           ccHost.BkHostOuterIP,
 			AppName:           bizName,
@@ -144,7 +144,7 @@ func (l *logics) fillHostDataByES(kt *kit.Kit, ccHosts []cmdb.HostInfo, esHostMa
 			GoUpDate:          ccHost.SvrInputTime,
 			RaidName:          ccHost.RaidName,
 			LogicArea:         ccHost.LogicDomain,
-			ServerBakOperator: ccHost.BakOperator,
+			ServerBakOperator: ccHost.BkBakOperator,
 			ServerOperator:    ccHost.Operator,
 			DiskTotal:         ccHost.BkDisk,
 			MaxCPUCoreAmount:  ccHost.BkCpu,

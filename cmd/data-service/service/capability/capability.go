@@ -32,6 +32,7 @@ import (
 // Capability defines the service's capability
 type Capability struct {
 	WebService  *restful.WebService
+	ObsDao      dao.Set
 	Dao         dao.Set
 	Cipher      cryptography.Crypto
 	EsbClient   esb.Client

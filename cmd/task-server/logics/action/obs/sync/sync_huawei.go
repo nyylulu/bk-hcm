@@ -162,7 +162,7 @@ func (act SyncAction) convertHuaweiBill(kt *kit.Kit, syncOpt *SyncOption, result
 		return nil, fmt.Errorf("empty currency for item %v", item)
 	}
 	// 获取当月平均汇率
-	exchangeRate, err := act.getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
+	exchangeRate, err := getExchangeRate(kt, currency, enumor.CurrencyRMB, syncOpt.BillYear, syncOpt.BillMonth)
 	if err != nil {
 		logs.Errorf("failed to get exchange rate, err: %s, syncOpt: %+v, rid: %s", err.Error(), syncOpt, kt.Rid)
 		return nil, fmt.Errorf("failed to get exchange rate, err: %s", err.Error())

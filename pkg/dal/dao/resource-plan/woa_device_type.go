@@ -32,7 +32,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/dal/table"
-	wdt "hcm/pkg/dal/table/resource_plan/woa-device-type"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -118,7 +118,7 @@ func (d WoaDeviceTypeDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 		if err != nil {
-			logs.ErrorJson("update woa device type failed, filter: %s, err: %v, rid: %v", filterExpr, err, kt.Rid)
+			logs.ErrorJson("update woa device type failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
 			return nil, err
 		}
 
@@ -157,7 +157,7 @@ func (d WoaDeviceTypeDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaD
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count woa device type failed, err: %v, filter: %s, rid: %s", err, opt.Filter, kt.Rid)
+			logs.ErrorJson("count woa device type failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -194,7 +194,7 @@ func (d WoaDeviceTypeDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.WoaDeviceTypeTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete woa device type failed, err: %v, filter: %s, rid: %s", err, expr, kt.Rid)
+		logs.ErrorJson("delete woa device type failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 

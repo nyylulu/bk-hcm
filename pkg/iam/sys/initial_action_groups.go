@@ -246,6 +246,7 @@ func genPlatformManageActionGroups() client.ActionGroup {
 					{ID: ZiyanResInventory},
 					{ID: ZiyanResCreate},
 					{ID: ZiyanResRecycle},
+					{ID: ZiyanResPlanManage},
 				},
 			},
 			{
@@ -276,6 +277,13 @@ func genPlatformManageActionGroups() client.ActionGroup {
 				NameEn: "Service Request",
 				Actions: []client.ActionWithID{
 					{ID: ApplicationManage},
+				},
+			},
+			{
+				Name:   "滚服管理",
+				NameEn: "Rolling Service Management",
+				Actions: []client.ActionWithID{
+					{ID: RollingServerManage},
 				},
 			},
 		},

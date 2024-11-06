@@ -83,6 +83,7 @@ func register() {
 	action.RegisterAction(actionrootsummary.RootAccountSummaryAction{})
 	action.RegisterAction(actionmonthtask.MonthTaskAction{})
 	action.RegisterAction(actionobssync.SyncAction{})
+	action.RegisterAction(actionobssync.SyncAdjustmentAction{})
 	action.RegisterAction(actionobsclean.CleanAction{})
 
 	action.RegisterAction(actionlb.DeleteURLRuleAction{})

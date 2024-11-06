@@ -20,21 +20,27 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/querybuilder"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
-	"hcm/cmd/woa-server/thirdparty/erpapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/erpapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/querybuilder"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // Returner deal with device return tasks
@@ -75,7 +81,7 @@ func (r *Returner) getRecycleHosts(orderId string) ([]*table.RecycleHost, error)
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKMaxInstanceLimit,
+		Limit: pkg.BKMaxInstanceLimit,
 	}
 
 	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(context.Background(), page, filter)
@@ -135,7 +141,7 @@ func (r *Returner) dealReturnTask(task *table.ReturnTask) *event.Event {
 	case table.ReturnStatusInit:
 		return r.returnHosts(task, hosts)
 	case table.ReturnStatusRunning:
-		return r.queryReturnStatus(task, hosts)
+		return r.QueryReturnStatus(task, hosts)
 	case table.ReturnStatusSuccess:
 		ev := &event.Event{Type: event.ReturnSuccess, Error: nil}
 		return ev
@@ -176,15 +182,21 @@ func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHos
 	default:
 		err = fmt.Errorf("failed to return hosts, for unsupported resource type %s", task.ResourceType)
 	}
+	return r.updateReturnState(err, taskId, task, hosts)
+}
+
+func (r *Returner) updateReturnState(err error, taskId string, task *table.ReturnTask,
+	hosts []*table.RecycleHost) *event.Event {
 
 	if err == nil && taskId == "" {
-		err = fmt.Errorf("failed to return hosts, for return order id is empty")
+		err = fmt.Errorf("failed to return hosts, for return order id is empty, taskID: %s, subOrderID: %s",
+			taskId, task.SuborderID)
 	}
 
 	// update order info
 	if err != nil {
-		if errUpdate := r.updateOrderInfo(task.SuborderID, "dommyzhang;forestchen", 0, uint(len(hosts)), 0,
-			err.Error()); errUpdate != nil {
+		if errUpdate := r.UpdateOrderInfo(context.Background(), task.SuborderID, recovertask.Handler, 0,
+			uint(len(hosts)), 0, err.Error()); errUpdate != nil {
 			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
 				task.SuborderID, errUpdate)
 			return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
@@ -193,30 +205,38 @@ func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHos
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
-	if errUpdate := r.updateOrderInfo(task.SuborderID, "AUTO", 0, 0, uint(len(hosts)), ""); errUpdate != nil {
-		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
-			task.SuborderID, errUpdate)
-		return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
+	txnErr := dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
+		if errUpdate := r.UpdateOrderInfo(sc, task.SuborderID, "AUTO", 0, 0, uint(len(hosts)), ""); errUpdate != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
+				task.SuborderID, errUpdate)
+			return errUpdate
+		}
+
+		// update return task info
+		if err := r.UpdateReturnTaskInfo(sc, task, taskId, table.ReturnStatusRunning, ""); err != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, order id: %s, err: %v",
+				task.SuborderID, err)
+			return err
+		}
+
+		// update recycle host info
+		if err := r.updateHostInfo(sc, task, taskId); err != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, order id: %s, err: %v",
+				task.SuborderID, err)
+			return err
+		}
+		return nil
+	})
+
+	if txnErr != nil {
+		return &event.Event{Type: event.ReturnFailed, Error: txnErr}
 	}
 
-	// update return task info
-	if err := r.updateTaskInfo(task, taskId, table.ReturnStatusRunning, ""); err != nil {
-		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, order id: %s, err: %v",
-			task.SuborderID, err)
-		return &event.Event{Type: event.ReturnFailed, Error: err}
-	}
-
-	// update recycle host info
-	if err := r.updateHostInfo(task, taskId); err != nil {
-		logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, order id: %s, err: %v",
-			task.SuborderID, err)
-		return &event.Event{Type: event.ReturnFailed, Error: err}
-	}
-
-	return &event.Event{Type: event.ReturnHandling, Error: nil}
+	return &event.Event{Type: event.ReturnHandling}
 }
 
-func (r *Returner) queryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+// QueryReturnStatus 查询return任务状态
+func (r *Returner) QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
 	if task.TaskID == "" {
 		ev := &event.Event{
 			Type:  event.ReturnFailed,
@@ -249,7 +269,9 @@ func (r *Returner) queryReturnStatus(task *table.ReturnTask, hosts []*table.Recy
 	}
 }
 
-func (r *Returner) updateOrderInfo(orderId, handler string, success, failed, pending uint, msg string) error {
+// UpdateOrderInfo 更新回收订单信息
+func (r *Returner) UpdateOrderInfo(ctx context.Context, orderId, handler string, success, failed, pending uint,
+	msg string) error {
 	filter := mapstr.MapStr{
 		"suborder_id": orderId,
 	}
@@ -267,7 +289,7 @@ func (r *Returner) updateOrderInfo(orderId, handler string, success, failed, pen
 		update["handler"] = handler
 	}
 
-	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), &filter, &update); err != nil {
+	if err := dao.Set().RecycleOrder().UpdateRecycleOrder(ctx, &filter, &update); err != nil {
 		logs.Errorf("failed to update return task, order id: %s, err: %v", orderId, err)
 		return err
 	}
@@ -275,7 +297,10 @@ func (r *Returner) updateOrderInfo(orderId, handler string, success, failed, pen
 	return nil
 }
 
-func (r *Returner) updateTaskInfo(task *table.ReturnTask, taskId string, status table.ReturnStatus, msg string) error {
+// UpdateReturnTaskInfo 更新回收任务信息
+func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string,
+	status table.ReturnStatus, msg string) error {
+
 	filter := mapstr.MapStr{
 		"suborder_id": task.SuborderID,
 	}
@@ -286,7 +311,7 @@ func (r *Returner) updateTaskInfo(task *table.ReturnTask, taskId string, status 
 		"update_at": now,
 	}
 
-	if len(taskId) > 0 {
+	if len(taskId) > 0 && taskId != enumor.RollingServerResourcePoolTask {
 		link := ""
 		switch task.ResourceType {
 		case table.ResourceTypeCvm:
@@ -302,7 +327,7 @@ func (r *Returner) updateTaskInfo(task *table.ReturnTask, taskId string, status 
 		update["message"] = msg
 	}
 
-	if err := dao.Set().ReturnTask().UpdateReturnTask(context.Background(), &filter, &update); err != nil {
+	if err := dao.Set().ReturnTask().UpdateReturnTask(ctx, &filter, &update); err != nil {
 		logs.Errorf("failed to update return task, order id: %s, err: %v", task.SuborderID, err)
 		return err
 	}
@@ -310,10 +335,10 @@ func (r *Returner) updateTaskInfo(task *table.ReturnTask, taskId string, status 
 	return nil
 }
 
-func (r *Returner) updateHostInfo(task *table.ReturnTask, taskId string) error {
+func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, taskId string) error {
 	now := time.Now()
 	link := ""
-	if len(taskId) != 0 {
+	if len(taskId) != 0 && taskId != enumor.RollingServerResourcePoolTask {
 		switch task.ResourceType {
 		case table.ResourceTypeCvm:
 			link = cvmapi.CvmReturnLinkPrefix + taskId
@@ -334,7 +359,7 @@ func (r *Returner) updateHostInfo(task *table.ReturnTask, taskId string) error {
 		"update_at":   now,
 	}
 
-	if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), &filter, &update); err != nil {
+	if err := dao.Set().RecycleHost().UpdateRecycleHost(ctx, &filter, &update); err != nil {
 		logs.Errorf("failed to update recycle host, order id: %s, err: %v", task.SuborderID, err)
 		return err
 	}
@@ -422,9 +447,9 @@ func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) erro
 func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, error) {
 	hostIDs := make([]int64, 0)
 
-	req := &cmdb.ListBizHostReq{
-		BkBizId: bizID,
-		HostPropertyFilter: &querybuilder.QueryFilter{
+	req := &cmdb.ListBizHostParams{
+		BizID: bizID,
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
@@ -449,23 +474,18 @@ func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, er
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
-	resp, err := r.esb.Cmdb().ListBizHost(nil, nil, req)
+	resp, err := r.esb.Cmdb().ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	for _, host := range resp.Data.Info {
-		hostIDs = append(hostIDs, host.BkHostId)
+	for _, host := range resp.Info {
+		hostIDs = append(hostIDs, host.BkHostID)
 	}
 
 	return hostIDs, nil
@@ -524,7 +544,7 @@ func (r *Returner) getBizRecycleModuleID(bizID int64) (int64, error) {
 
 	moduleID := int64(0)
 	for _, module := range resp.Data.Module {
-		if module.Default == cmdb.DftModuleRecycle {
+		if module.Default == int64(cmdb.DftModuleRecycle) {
 			moduleID = module.BkModuleId
 			break
 		}

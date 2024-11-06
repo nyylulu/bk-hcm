@@ -18,14 +18,14 @@ import (
 	"errors"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	"hcm/cmd/woa-server/common/utils/wait"
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/esb"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/utils/wait"
 
 	"k8s.io/client-go/util/workqueue"
 )
@@ -188,7 +188,7 @@ func (l *Launcher) getOpRecords(id uint64) ([]*table.OpRecord, error) {
 
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	records, err := dao.Set().OpRecord().FindManyOpRecord(context.Background(), page, filter)

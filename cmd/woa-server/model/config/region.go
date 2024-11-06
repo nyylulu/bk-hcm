@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type region struct {
@@ -26,19 +26,19 @@ type region struct {
 
 // NextSequence returns next region config sequence id from db
 func (r *region) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgQcloudRegion)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgQcloudRegion)
 }
 
 // CreateRegion creates region config in db
 func (r *region) CreateRegion(ctx context.Context, inst *types.Region) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudRegion).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudRegion).Insert(ctx, inst)
 }
 
 // GetRegion gets resource region config by filter from db
 func (r *region) GetRegion(ctx context.Context, filter *mapstr.MapStr) (*types.Region, error) {
 	inst := new(types.Region)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgQcloudRegion).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgQcloudRegion).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (r *region) GetRegion(ctx context.Context, filter *mapstr.MapStr) (*types.R
 func (r *region) FindManyRegion(ctx context.Context, filter *mapstr.MapStr) ([]*types.Region, error) {
 	insts := make([]*types.Region, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgQcloudRegion).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgQcloudRegion).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -58,10 +58,10 @@ func (r *region) FindManyRegion(ctx context.Context, filter *mapstr.MapStr) ([]*
 
 // UpdateRegion updates region config by filter and doc in db
 func (r *region) UpdateRegion(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudRegion).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudRegion).Update(ctx, filter, doc)
 }
 
 // DeleteRegion deletes region config from db
 func (r *region) DeleteRegion(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgQcloudRegion).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgQcloudRegion).Delete(ctx, filter)
 }

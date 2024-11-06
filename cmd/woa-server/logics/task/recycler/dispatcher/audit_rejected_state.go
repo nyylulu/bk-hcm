@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // AuditRejectedState the action to be executed in audit rejected state
@@ -27,5 +28,10 @@ func (as *AuditRejectedState) Name() table.RecycleStatus {
 
 // Execute executes action in audit rejected state
 func (as *AuditRejectedState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (as *AuditRejectedState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

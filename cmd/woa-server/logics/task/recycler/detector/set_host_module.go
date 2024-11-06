@@ -18,8 +18,9 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (d *Detector) setHostModule(step *table.DetectStep, retry int) (int, string, error) {
@@ -65,8 +66,8 @@ func (d *Detector) transferHost(ip string) error {
 		return fmt.Errorf("can not find host bizID from cc ip: %s", ip)
 	}
 
-	destBiz := 213
-	destModuleId := 16679
+	destBiz := recovertask.RebornBizId
+	destModuleId := recovertask.DataToCleanedModule
 	transferReq := &cmdb.TransferHostReq{
 		From: cmdb.TransferHostSrcInfo{
 			FromBizID: srcBiz,

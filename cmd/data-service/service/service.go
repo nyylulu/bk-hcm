@@ -73,6 +73,11 @@ import (
 	"hcm/cmd/data-service/service/cloud/zone"
 	"hcm/cmd/data-service/service/cos"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
+	rollingserver "hcm/cmd/data-service/service/rolling-server"
+	"hcm/cmd/data-service/service/rolling-server/rolling-applied"
+	rollingbill "hcm/cmd/data-service/service/rolling-server/rolling-bill"
+	rollingfinedetail "hcm/cmd/data-service/service/rolling-server/rolling-fine-detail"
+	"hcm/cmd/data-service/service/rolling-server/rolling-returned"
 	"hcm/cmd/data-service/service/task"
 	"hcm/cmd/data-service/service/user"
 	"hcm/pkg/cc"
@@ -95,6 +100,7 @@ import (
 // Service do all the data service's work
 type Service struct {
 	serve       *http.Server
+	obsDao      dao.Set
 	dao         dao.Set
 	cipher      cryptography.Crypto
 	esbClient   esb.Client
@@ -103,6 +109,15 @@ type Service struct {
 
 // NewService create a service instance.
 func NewService() (*Service, error) {
+	var obsDao dao.Set
+	if cc.DataService().OBSDatabase != nil {
+		var err error
+		obsDao, err = dao.NewDaoSet(*cc.DataService().OBSDatabase)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	dao, err := dao.NewDaoSet(cc.DataService().Database)
 	if err != nil {
 		return nil, err
@@ -128,6 +143,7 @@ func NewService() (*Service, error) {
 	}
 
 	svr := &Service{
+		obsDao:      obsDao,
 		dao:         dao,
 		cipher:      cipher,
 		esbClient:   esbClient,
@@ -208,6 +224,7 @@ func (s *Service) apiSet() *restful.Container {
 
 	capability := &capability.Capability{
 		WebService:  ws,
+		ObsDao:      s.obsDao,
 		Dao:         s.dao,
 		Cipher:      s.cipher,
 		EsbClient:   s.esbClient,
@@ -270,6 +287,13 @@ func (s *Service) apiSet() *restful.Container {
 
 	billexchangerate.InitService(capability)
 	billsyncrecord.InitService(capability)
+
+	rollingserver.InitService(capability)
+
+	rollingapplied.InitService(capability)
+	rollingreturned.InitService(capability)
+	rollingfinedetail.InitService(capability)
+	rollingbill.InitService(capability)
 
 	task.InitService(capability)
 

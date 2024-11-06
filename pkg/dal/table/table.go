@@ -187,6 +187,10 @@ const (
 	WoaZoneTable = "woa_zone"
 	// WoaDeviceTypeTable is woa_device_type table's name.
 	WoaDeviceTypeTable = "woa_device_type"
+	// ResPlanCrpDemandTable is res_plan_crp_demand table's name.
+	ResPlanCrpDemandTable = "res_plan_crp_demand"
+	// ResPlanPenaltyTable is res_plan_penalty table's name.
+	ResPlanPenaltyTable = "res_plan_penalty"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -220,6 +224,8 @@ const (
 	OBSBillZenlayerItemTable = "obs_zenlayer_bills"
 	// OBSBillGcpItemTable OBS Gcp 账单表
 	OBSBillGcpItemTable = "obs_gcp_bills"
+	// OBSBillRollingItemTable OBS 滚服账单表
+	OBSBillRollingItemTable = "obs_rolling_bills"
 
 	// RootAccountBillConfigTable 一级账号账单配置表
 	RootAccountBillConfigTable = "root_account_bill_config"
@@ -232,6 +238,24 @@ const (
 	RecycleModuleInfo = "recycle_module_info"
 	// RecycleHostInfo  裁撤主机表
 	RecycleHostInfo = "recycle_host_info"
+
+	// RollingQuotaConfigTable 滚服额度配置表
+	RollingQuotaConfigTable = "rolling_quota_config"
+	// RollingQuotaOffsetTable 滚服额度偏移表
+	RollingQuotaOffsetTable = "rolling_quota_offset"
+	// RollingQuotaOffsetAuditTable 滚服额度偏移审计表
+	RollingQuotaOffsetAuditTable = "rolling_quota_offset_audit"
+	// RollingGlobalConfigTable 滚服全局额度表
+	RollingGlobalConfigTable = "rolling_global_config"
+	// ResourcePoolBusinessTable 资源池业务表
+	ResourcePoolBusinessTable = "resource_pool_business"
+
+	// RollingAppliedRecordTable 滚服申请记录表
+	RollingAppliedRecordTable = "rolling_applied_record"
+	// RollingReturnedRecordTable 滚服回收记录表
+	RollingReturnedRecordTable = "rolling_returned_record"
+	// RollingFineDetail 滚服罚金明细表
+	RollingFineDetail = "rolling_fine_detail"
 	// TaskDetailTable 任务详情表
 	TaskDetailTable = "task_detail"
 	// TaskManagementTable 任务管理表
@@ -343,6 +367,8 @@ var TableMap = map[Name]struct{}{
 	ResPlanTicketStatusTable: {},
 	WoaZoneTable:             {},
 	WoaDeviceTypeTable:       {},
+	ResPlanCrpDemandTable:    {},
+	ResPlanPenaltyTable:      {},
 
 	MainAccountTable: {},
 	RootAccountTable: {},
@@ -351,8 +377,19 @@ var TableMap = map[Name]struct{}{
 	OBSBillAwsItemTable:      {},
 	OBSBillZenlayerItemTable: {},
 	OBSBillGcpItemTable:      {},
+	OBSBillRollingItemTable:  {},
 	RecycleModuleInfo:        {},
 	RecycleHostInfo:          {},
+
+	RollingQuotaConfigTable:      {},
+	RollingQuotaOffsetTable:      {},
+	RollingQuotaOffsetAuditTable: {},
+	RollingGlobalConfigTable:     {},
+	ResourcePoolBusinessTable:    {},
+
+	RollingAppliedRecordTable:  {},
+	RollingReturnedRecordTable: {},
+	RollingFineDetail:          {},
 
 	TaskManagementTable: {},
 	TaskDetailTable:     {},

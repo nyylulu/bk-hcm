@@ -19,12 +19,13 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
-	"hcm/cmd/woa-server/thirdparty/erpapi"
+	recovertask "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/erpapi"
 )
 
 func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
@@ -209,10 +210,11 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		handler := "AUTO"
 		msg := ""
 		if isApproving {
-			handler = "dommyzhang;forestchen"
+			handler = recovertask.Handler
 			msg = "return order is approving"
 		}
-		if err := r.updateOrderInfo(task.SuborderID, handler, successCnt, failedCnt, runningCnt, msg); err != nil {
+		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, handler, successCnt, failedCnt, runningCnt,
+			msg); err != nil {
 			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
 			// ignore update error and continue to query
 		}
@@ -228,11 +230,12 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 			r.rollbackTransit(hosts)
 		}
 
-		if err := r.updateTaskInfo(task, "", table.ReturnStatusFailed, msg); err != nil {
+		if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
 			logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
-		if err := r.updateOrderInfo(task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt, msg); err != nil {
+		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+			msg); err != nil {
 			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
 			// ignore update error and continue to query
 		}
@@ -240,12 +243,13 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		return &event.Event{Type: event.ReturnFailed, Error: nil}
 	}
 
-	if err := r.updateTaskInfo(task, "", table.ReturnStatusSuccess, "success"); err != nil {
+	if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
 		logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
-	if err := r.updateOrderInfo(task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt, "success"); err != nil {
+	if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+		"success"); err != nil {
 		logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
 		// ignore update error and continue to query
 	}

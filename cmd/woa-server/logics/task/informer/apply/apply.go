@@ -18,15 +18,16 @@ import (
 	"errors"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/storage/stream/types"
+	recovertask "hcm/cmd/woa-server/types/task"
 	tasktype "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 
 	"github.com/tidwall/gjson"
 	"k8s.io/client-go/util/workqueue"
@@ -100,7 +101,6 @@ func (a *applyInformer) listAndWatchApplyOrder() error {
 	for _, order := range applyOrders {
 		a.queue.Add(order)
 	}
-
 	// watch apply order
 	handler := newApplyTokenHandler(a.key, a.watchDB)
 	startTime := &types.TimeStamp{Sec: uint32(time.Now().Unix())}
@@ -111,7 +111,7 @@ func (a *applyInformer) listAndWatchApplyOrder() error {
 			WatchOpt: &types.WatchOptions{
 				Options: types.Options{
 					EventStruct:     new(map[string]interface{}),
-					Collection:      common.BKTableNameApplyOrder,
+					Collection:      pkg.BKTableNameApplyOrder,
 					StartAfterToken: nil,
 					StartAtTime:     startTime,
 					// TODO: add failure callback
@@ -136,14 +136,20 @@ func (a *applyInformer) listAndWatchApplyOrder() error {
 
 // listApplyOrder gets apply order list from database
 func (a *applyInformer) listApplyOrder() ([]string, error) {
+	restartTime := time.Now()
+	expireTime := restartTime.AddDate(0, 0, recovertask.ExpireDays)
 	filter := map[string]interface{}{
 		"status": &mapstr.MapStr{
-			common.BKDBIN: []string{string(tasktype.ApplyStatusWaitForMatch), string(tasktype.ApplyStatusMatchedSome)},
+			pkg.BKDBIN: []string{string(tasktype.ApplyStatusWaitForMatch), string(tasktype.ApplyStatusMatchedSome)},
+		},
+		"create_at": mapstr.MapStr{
+			"$gte": expireTime,
+			"$lt":  restartTime,
 		},
 	}
 
 	page := metadata.BasePage{
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(context.Background(), page, filter)

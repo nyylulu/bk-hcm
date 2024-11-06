@@ -17,12 +17,12 @@ package recommender
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // Recommender make recommendations for resource apply

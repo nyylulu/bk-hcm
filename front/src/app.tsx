@@ -1,7 +1,7 @@
 import { defineComponent } from 'vue';
-import { provideBreadcrumb } from './hooks/use-breakcrumb';
 import Home from '@/views/home';
 import Notice from '@/views/notice/index.vue';
+import { provideBreadcrumb } from './hooks/use-breakcrumb';
 
 const { ENABLE_NOTICE } = window.PROJECT_CONFIG;
 

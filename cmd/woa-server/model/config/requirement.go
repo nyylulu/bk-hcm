@@ -15,10 +15,10 @@ package config
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 )
 
 type requirement struct {
@@ -26,19 +26,19 @@ type requirement struct {
 
 // NextSequence returns next resource requirement type config sequence id from db
 func (r *requirement) NextSequence(ctx context.Context) (uint64, error) {
-	return mongodb.Client().NextSequence(ctx, common.BKTableNameCfgRequirement)
+	return mongodb.Client().NextSequence(ctx, pkg.BKTableNameCfgRequirement)
 }
 
 // CreateRequirement creates resource requirement type config in db
 func (r *requirement) CreateRequirement(ctx context.Context, inst *types.Requirement) error {
-	return mongodb.Client().Table(common.BKTableNameCfgRequirement).Insert(ctx, inst)
+	return mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Insert(ctx, inst)
 }
 
 // GetRequirement gets resource requirement type config by filter from db
 func (r *requirement) GetRequirement(ctx context.Context, filter *mapstr.MapStr) (*types.Requirement, error) {
 	inst := new(types.Requirement)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgRequirement).Find(filter).One(ctx, inst); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Find(filter).One(ctx, inst); err != nil {
 		return nil, err
 	}
 
@@ -49,7 +49,7 @@ func (r *requirement) GetRequirement(ctx context.Context, filter *mapstr.MapStr)
 func (r *requirement) FindManyRequirement(ctx context.Context, filter *mapstr.MapStr) ([]*types.Requirement, error) {
 	insts := make([]*types.Requirement, 0)
 
-	if err := mongodb.Client().Table(common.BKTableNameCfgRequirement).Find(filter).All(ctx, &insts); err != nil {
+	if err := mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Find(filter).All(ctx, &insts); err != nil {
 		return nil, err
 	}
 
@@ -58,10 +58,10 @@ func (r *requirement) FindManyRequirement(ctx context.Context, filter *mapstr.Ma
 
 // UpdateRequirement updates resource requirement type config by filter and doc in db
 func (r *requirement) UpdateRequirement(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgRequirement).Update(ctx, filter, doc)
+	return mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Update(ctx, filter, doc)
 }
 
 // DeleteRequirement deletes resource requirement type config from db
 func (r *requirement) DeleteRequirement(ctx context.Context, filter *mapstr.MapStr) error {
-	return mongodb.Client().Table(common.BKTableNameCfgRequirement).Delete(ctx, filter)
+	return mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Delete(ctx, filter)
 }

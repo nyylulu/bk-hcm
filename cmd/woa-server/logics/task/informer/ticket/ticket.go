@@ -18,14 +18,14 @@ import (
 	"errors"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/metadata"
 	"hcm/cmd/woa-server/model/task"
 	"hcm/cmd/woa-server/storage/dal"
 	"hcm/cmd/woa-server/storage/stream"
 	"hcm/cmd/woa-server/storage/stream/types"
 	tasktype "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/metadata"
 
 	"github.com/tidwall/gjson"
 	"k8s.io/client-go/util/workqueue"
@@ -110,7 +110,7 @@ func (a *ticketInformer) listAndWatchApplyTicket() error {
 			WatchOpt: &types.WatchOptions{
 				Options: types.Options{
 					EventStruct:     new(map[string]interface{}),
-					Collection:      common.BKTableNameApplyTicket,
+					Collection:      pkg.BKTableNameApplyTicket,
 					StartAfterToken: nil,
 					StartAtTime:     startTime,
 					// TODO: add failure callback
@@ -140,7 +140,7 @@ func (a *ticketInformer) listApplyTicket() ([]uint64, error) {
 	}
 
 	page := metadata.BasePage{
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	tickets, err := model.Operation().ApplyTicket().FindManyApplyTicket(context.Background(), page, filter)
@@ -164,7 +164,8 @@ func (a *ticketInformer) onUpsert(e *types.Event) bool {
 	// TODO: order_id as const
 	id := gjson.GetBytes(e.DocBytes, "order_id").Uint()
 	if id <= 0 {
-		logs.Errorf("received invalid ticket event, skip, op: %s, doc: %s, rid: %s", e.OperationType, e.DocBytes, e.ID())
+		logs.Errorf("received invalid ticket event, skip, op: %s, doc: %s, rid: %s", e.OperationType, e.DocBytes,
+			e.ID())
 		return false
 	}
 

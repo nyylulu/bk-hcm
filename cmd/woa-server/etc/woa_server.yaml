@@ -278,6 +278,8 @@ itsmFlows:
         approver:
         approvalKey:
         remarkKey:
+    # itsm service redirect url
+    redirectUrlTemplate: https://bkhcm-example.com/xxx/detail?id=%d
 
 bkchat:
   host: http://bkchat.ied.com:8000
@@ -319,3 +321,14 @@ ngate:
   host: https://127.0.0.1
   app_code: test
   app_secret: test
+
+# 开启recover服务，恢复服务重启前处于执行中的订单，使其继续流转
+recover:
+  # 开启申请单据恢复服务
+  enableApplyRecover: false
+  # 开启回收单据恢复服务
+  enableRecycleRecover: false
+
+rollingServer:
+  syncBill: true
+

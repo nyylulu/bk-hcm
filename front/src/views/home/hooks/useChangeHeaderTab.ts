@@ -9,6 +9,7 @@ import { businessViews } from '@/views';
 
 import scheme from '@/router/module/scheme';
 import bill from '@/router/module/bill';
+import { platformManagementViews } from '@/views';
 // import stores
 import { useAccountStore } from '@/store';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
@@ -67,10 +68,15 @@ export default () => {
       case 'bill':
         menus.value = bill;
         break;
+      case 'platform':
+        menus.value = platformManagementViews;
+        break;
       default:
         if (subPath[0] === 'biz_access') {
           topMenuActiveItem.value = 'business';
           menus.value = businessViews;
+        } else if (subPath[0] === 'rolling_server_manage') {
+          topMenuActiveItem.value = 'platform';
         } else {
           topMenuActiveItem.value = 'resource';
           menus.value = resource;

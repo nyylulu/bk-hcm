@@ -15,11 +15,11 @@ package model
 import (
 	"context"
 
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/tools/metadata"
 )
 
 // model all model operation interface
@@ -158,7 +158,7 @@ type ApplyOrder interface {
 type ApplyStep interface {
 	// NextSequence returns next apply order sequence id from db
 	NextSequence(ctx context.Context) (uint64, error)
-	// CreateApplyOrder creates apply order in db
+	// CreateApplyStep creates apply step in db
 	CreateApplyStep(ctx context.Context, inst *types.ApplyStep) error
 	// GetApplyStep gets apply order by filter from db
 	GetApplyStep(ctx context.Context, filter *mapstr.MapStr) (*types.ApplyStep, error)
@@ -168,7 +168,7 @@ type ApplyStep interface {
 	FindManyApplyStep(ctx context.Context, filter *mapstr.MapStr) ([]*types.ApplyStep, error)
 	// UpdateApplyStep updates apply order by filter and doc in db
 	UpdateApplyStep(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
-	// DeleteApplyOrder deletes apply order from db
+	// DeleteApplyStep deletes apply step from db
 	DeleteApplyStep()
 }
 
@@ -252,6 +252,8 @@ type DeliverRecord interface {
 type DeviceInfo interface {
 	// CreateDeviceInfo creates device info in db
 	CreateDeviceInfo(ctx context.Context, inst *types.DeviceInfo) error
+	// CreateDeviceInfos creates devices info in db
+	CreateDeviceInfos(ctx context.Context, inst []*types.DeviceInfo) error
 	// GetDeviceInfo gets device info by filter from db
 	GetDeviceInfo(ctx context.Context, filter *mapstr.MapStr) ([]*types.DeviceInfo, error)
 	// CountDeviceInfo gets device info count by filter from db

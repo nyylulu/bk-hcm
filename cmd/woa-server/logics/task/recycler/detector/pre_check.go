@@ -18,10 +18,10 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/common/util"
 	"hcm/cmd/woa-server/dal/task/table"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/util"
 )
 
 func (d *Detector) preCheck(step *table.DetectStep, retry int) (int, string, error) {
@@ -76,7 +76,7 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	}
 
 	if strings.Contains(hostBase[0].Operator, step.User) == false &&
-		strings.Contains(hostBase[0].BakOperator, step.User) == false {
+		strings.Contains(hostBase[0].BkBakOperator, step.User) == false {
 		logs.Errorf("recycler:logics:cvm:checkRecyclability:failed, failed to recycle check, for %s is not "+
 			"operator or bak operator of host %s", step.User, step.IP)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to recycle check, for %s is not operator or bak "+
@@ -84,7 +84,7 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	}
 
 	// 2. check module
-	hostIds := []int64{hostBase[0].BkHostId}
+	hostIds := []int64{hostBase[0].BkHostID}
 	relations, err := d.getHostTopoInfo(hostIds)
 	if err != nil {
 		logs.Errorf("failed to recycle check, for get host topo err: %v, step id: %s", err, step.ID)
@@ -126,7 +126,7 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	}
 
 	moduleId := int64(0)
-	if rel, ok := mapHostToRel[hostBase[0].BkHostId]; ok {
+	if rel, ok := mapHostToRel[hostBase[0].BkHostID]; ok {
 		moduleId = rel.BkModuleId
 	}
 	moduleName := ""

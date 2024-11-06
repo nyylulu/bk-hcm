@@ -23,10 +23,10 @@ import (
 	"hcm/cmd/woa-server/logics/dissolve/host"
 	"hcm/cmd/woa-server/logics/dissolve/module"
 	dissolvetable "hcm/cmd/woa-server/logics/dissolve/table"
-	esCli "hcm/cmd/woa-server/thirdparty/es"
-	"hcm/cmd/woa-server/thirdparty/esb"
 	"hcm/pkg/cc"
 	"hcm/pkg/dal/dao"
+	esCli "hcm/pkg/thirdparty/es"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides resource dissolve logics

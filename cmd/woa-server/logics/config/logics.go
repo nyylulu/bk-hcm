@@ -12,7 +12,9 @@
 
 package config
 
-import "hcm/cmd/woa-server/thirdparty"
+import (
+	"hcm/pkg/thirdparty"
+)
 
 // Logics provides management interface for operations of model and instance and related resources like association
 type Logics interface {

@@ -21,7 +21,7 @@ package resplan
 
 import (
 	"hcm/pkg/criteria/enumor"
-	rpt "hcm/pkg/dal/table/resource_plan/res-plan-ticket"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 )
 
 // RPTicketListResult list resource plan ticket result.
@@ -36,9 +36,66 @@ type RPTicketWithStatusListRst struct {
 	Details []RPTicketWithStatus `json:"details"`
 }
 
+// RPTicketWithStatusAndResListRst list resource plan ticket with status and resource result.
+type RPTicketWithStatusAndResListRst struct {
+	Count   uint64                     `json:"count"`
+	Details []RPTicketWithStatusAndRes `json:"details"`
+}
+
 // RPTicketWithStatus resource plan ticket with status.
 type RPTicketWithStatus struct {
 	rpt.ResPlanTicketTable
 	Status     enumor.RPTicketStatus `json:"status"`
 	StatusName string                `json:"status_name"`
+	ItsmSn     string                `db:"itsm_sn" json:"-"`
+	CrpSn      string                `db:"crp_sn" json:"-"`
+}
+
+// RPTicketWithStatusAndRes resource plan ticket with status and resource.
+type RPTicketWithStatusAndRes struct {
+	RPTicketWithStatus
+	TicketTypeName string               `json:"ticket_type_name"`
+	OriginalInfo   RPTicketResourceInfo `json:"original_info"`
+	UpdatedInfo    RPTicketResourceInfo `json:"updated_info"`
+}
+
+// RPTicketResourceInfo resource plan ticket resource info.
+type RPTicketResourceInfo struct {
+	Cvm cvmInfo `json:"cvm"`
+	Cbs cbsInfo `json:"cbs"`
+}
+
+// NewResourceInfo new resource info.
+func NewResourceInfo(cpuCore, memory, diskSize float64) RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			CpuCore: &cpuCore,
+			Memory:  &memory,
+		},
+		Cbs: cbsInfo{
+			DiskSize: &diskSize,
+		},
+	}
+}
+
+// NewNullResourceInfo new null resource info.
+func NewNullResourceInfo() RPTicketResourceInfo {
+	return RPTicketResourceInfo{
+		Cvm: cvmInfo{
+			CpuCore: nil,
+			Memory:  nil,
+		},
+		Cbs: cbsInfo{
+			DiskSize: nil,
+		},
+	}
+}
+
+type cvmInfo struct {
+	CpuCore *float64 `json:"cpu_core"`
+	Memory  *float64 `json:"memory"`
+}
+
+type cbsInfo struct {
+	DiskSize *float64 `json:"disk_size"`
 }

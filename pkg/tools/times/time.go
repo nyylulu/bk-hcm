@@ -111,3 +111,8 @@ func GetMonthDays(year int, month time.Month) []int {
 	}
 	return days
 }
+
+// GetDataIntDate 如：year:2021, month：1, day: 2 => 20210102
+func GetDataIntDate(year, month, day int) int {
+	return year*10000 + month*100 + day
+}

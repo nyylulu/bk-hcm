@@ -10,6 +10,7 @@ import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 
+import qs from 'qs';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/store';
 import { useTable } from '@/hooks/useTable/useTable';
@@ -245,6 +246,10 @@ export default defineComponent({
 
     const searchRulesKey = 'host_recycle_applications_rules';
     const filterOrders = (searchRulesStr?: string) => {
+      const { initial_filter } = route.query ?? {};
+      if (initial_filter) {
+        Object.assign(formModel, qs.parse(initial_filter as string, { comma: true, allowEmptyArrays: true }));
+      }
       // 回填
       if (searchRulesStr) {
         // 解决人员选择器搜索问题

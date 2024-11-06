@@ -16,13 +16,13 @@ package generator
 import (
 	"errors"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/querybuilder"
-	"hcm/cmd/woa-server/common/util"
-	"hcm/cmd/woa-server/thirdparty/cvmapi"
 	cfgtype "hcm/cmd/woa-server/types/config"
+	"hcm/pkg"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/util"
 )
 
 // getAvailableZoneInfo get available cvm zone info
@@ -98,7 +98,7 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 	// if input region is empty list, return all zone info
 	if len(region) > 0 {
 		cond["region"] = mapstr.MapStr{
-			common.BKDBIN: []string{region},
+			pkg.BKDBIN: []string{region},
 		}
 	}
 	zoneResp, err := g.configLogics.Zone().GetZone(kt, &cond)

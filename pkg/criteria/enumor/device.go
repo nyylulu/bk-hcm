@@ -58,3 +58,18 @@ func (t DiskType) Name() string {
 func GetDiskTypeMembers() []DiskType {
 	return []DiskType{DiskPremium, DiskSSD}
 }
+
+// GetDiskTypeFromCrpName get DiskType from crp disk type name.
+func GetDiskTypeFromCrpName(name string) (DiskType, error) {
+	for typ, n := range diskTypeNameMap {
+		if string(typ) == name {
+			return typ, nil
+		}
+
+		// 兼容crpName返回为中文的情况
+		if n == name {
+			return typ, nil
+		}
+	}
+	return "", fmt.Errorf("unsupported disk type name: %s", name)
+}

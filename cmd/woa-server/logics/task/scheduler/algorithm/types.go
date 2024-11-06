@@ -14,8 +14,8 @@
 package algorithm
 
 import (
-	"hcm/cmd/woa-server/thirdparty/dvmapi"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/thirdparty/dvmapi"
 )
 
 // FitPredicate host filter functor

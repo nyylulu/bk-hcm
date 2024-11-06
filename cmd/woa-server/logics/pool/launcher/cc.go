@@ -15,9 +15,9 @@ package launcher
 import (
 	"fmt"
 
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/logs"
+	ccapi "hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // transferHost2Pool transfer hosts to CR pool module

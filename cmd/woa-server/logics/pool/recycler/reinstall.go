@@ -21,9 +21,9 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
-	"hcm/cmd/woa-server/thirdparty/xshipapi"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/xshipapi"
 )
 
 // ReinstallStatus reinstall task status

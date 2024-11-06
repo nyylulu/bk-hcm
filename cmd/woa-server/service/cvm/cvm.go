@@ -13,9 +13,9 @@
 package cvm
 
 import (
-	"hcm/cmd/woa-server/common/mapstr"
 	types "hcm/cmd/woa-server/types/cvm"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"

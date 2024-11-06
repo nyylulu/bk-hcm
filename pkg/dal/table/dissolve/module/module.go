@@ -22,12 +22,12 @@ package module
 import (
 	"errors"
 
-	"hcm/cmd/woa-server/common/util"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/table"
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/dal/table/utils"
+	"hcm/pkg/tools/util"
 )
 
 // RecycleModuleColumns defines all the recycle module table's columns.

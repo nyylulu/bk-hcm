@@ -15,6 +15,7 @@ package dispatcher
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/task/recycler/event"
 )
 
 // Task recycle order processing task
@@ -67,6 +68,7 @@ func (t *Task) initState() {
 type ActionState interface {
 	Name() table.RecycleStatus
 	Execute(ctx EventContext) error
+	UpdateState(ctx EventContext, ev *event.Event) error
 }
 
 // DftState the action to be executed in default state
@@ -79,5 +81,10 @@ func (rs *DftState) Name() table.RecycleStatus {
 
 // Execute executes action in default state
 func (rs *DftState) Execute(ctx EventContext) error {
+	return nil
+}
+
+// UpdateState update next state
+func (rs *DftState) UpdateState(ctx EventContext, ev *event.Event) error {
 	return nil
 }

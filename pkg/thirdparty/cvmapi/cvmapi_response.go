@@ -1,0 +1,573 @@
+/*
+ * Tencent is pleased to support the open source community by making 蓝鲸 available.
+ * Copyright (C) 2017-2018 THL A29 Limited, a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License"); you may not use this file except
+ * in compliance with the License. You may obtain a copy of the License at
+ * http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing, software distributed under
+ * the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package cvmapi
+
+// RespMeta cvm response meta info
+type RespMeta struct {
+	Id      string    `json:"id"`
+	JsonRpc string    `json:"jsonrpc"`
+	TraceId string    `json:"x_trace_id"`
+	Error   RespError `json:"error"`
+}
+
+// RespError cvm response error info
+type RespError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// OrderCreateResp cvm create order response
+type OrderCreateResp struct {
+	RespMeta `json:",inline"`
+	Result   *OrderCreateRst `json:"result"`
+}
+
+// OrderCreateRst cvm create order result
+type OrderCreateRst struct {
+	OrderId string `json:"orderId"`
+	Status  int    `json:"status"`
+}
+
+// OrderQueryResp cvm order query response
+type OrderQueryResp struct {
+	RespMeta `json:",inline"`
+	Result   *OrderQueryRst `json:"result"`
+}
+
+// OrderQueryRst cvm order query result
+type OrderQueryRst struct {
+	Total int          `json:"total"`
+	Data  []*OrderItem `json:"data"`
+}
+
+// OrderItem cvm order info
+type OrderItem struct {
+	OrderId string `json:"orderId"`
+	// 单据状态：
+	// 8完成
+	// 0待部门管理员审批,1待业务总监审批,2待规划经理审批,3待资源审批,4待生成CDH宿主机,
+	// 5CDH宿主机生成中,6待生成CVM,7CVM生成中,127驳回,129下发生产失败
+	Status      int    `json:"status"`
+	ProductId   int64  `json:"productId"`
+	ProductName string `json:"productName"`
+}
+
+const (
+	OrderStatusFinish int = 8
+	OrderStatusReject int = 127
+	OrderStatusFailed int = 129
+)
+
+// InstanceQueryResp cvm instance query response
+type InstanceQueryResp struct {
+	RespMeta `json:",inline"`
+	Result   *InstanceQueryRst `json:"result"`
+}
+
+// InstanceQueryRst cvm instance query result
+type InstanceQueryRst struct {
+	Total int             `json:"total"`
+	Data  []*InstanceItem `json:"data"`
+}
+
+// InstanceItem cvm instance info
+type InstanceItem struct {
+	InstanceId      string `json:"instanceId"`
+	InstanceStatus  string `json:"instanceStatus"`
+	AssetId         string `json:"instanceAssetId"`
+	LanIp           string `json:"lanIp"`
+	WanIp           string `json:"wanIp"`
+	OwnerLanIp      string `json:"ownerLanIp"`
+	CloudCampus     string `json:"cloudCampus"`
+	SecurityGroupId string `json:"securityGroupId"`
+	ImageName       string `json:"imageName"`
+	PrivateVpcId    string `json:"privateVpcId"`
+	CloudRegion     string `json:"cloudRegion"`
+	PrivateSubnetId string `json:"privateSubnetId"`
+	CreateTime      string `json:"createTime"`
+	Pool            int    `json:"pool"`
+	ObsProject      string `json:"obsProject"`
+}
+
+// DemandChangeLogQueryResp cvm demand change log query response
+type DemandChangeLogQueryResp struct {
+	RespMeta  `json:",inline"`
+	Result    *DemandChangeLogQueryRst `json:"result"`
+	Errorinfo interface{}              `json:"errorinfo"`
+}
+
+// DemandChangeLogQueryRst cvm demand change log query result
+type DemandChangeLogQueryRst struct {
+	Total int                               `json:"total"`
+	Data  []*DemandChangeLogQueryDemandItem `json:"data"`
+}
+
+// DemandChangeLogQueryDemandItem cvm demand change log query demand item
+type DemandChangeLogQueryDemandItem struct {
+	DemandId int                            `json:"demandId"`
+	Info     []*DemandChangeLogQueryLogItem `json:"info"`
+}
+
+// DemandChangeLogQueryLogItem cvm demand change log query log item
+type DemandChangeLogQueryLogItem struct {
+	DemandId            int     `json:"demandId"`
+	UseTime             string  `json:"useTime"`
+	BgName              string  `json:"bgName"`
+	DeptName            string  `json:"deptName"`
+	PlanProductName     string  `json:"planProductName"`
+	ProjectName         string  `json:"projectName"`
+	CityName            string  `json:"cityName"`
+	ZoneName            string  `json:"zoneName"`
+	RequirementWeekType string  `json:"requirementWeekType"`
+	ResourcePoolType    int     `json:"resourcePoolType"`
+	InstanceType        string  `json:"instanceType"`
+	InstanceModel       string  `json:"instanceModel"`
+	ChangeCvmAmount     float32 `json:"changeCvmAmount"`
+	AfterCvmAmount      float32 `json:"afterCvmAmount"`
+	ChangeCoreAmount    float32 `json:"changeCoreAmount"`
+	AfterCoreAmount     float32 `json:"afterCoreAmount"`
+	ChangeRamAmount     float32 `json:"changeRamAmount"`
+	AfterRamAmount      float32 `json:"afterRamAmount"`
+	DiskTypeName        string  `json:"diskTypeName"`
+	InstanceIO          int     `json:"instanceIO"`
+	ChangedDiskAmount   float32 `json:"changedDiskAmount"`
+	AfterDiskAmount     float32 `json:"afterDiskAmount"`
+	SourceType          string  `json:"sourceType"`
+	OrderId             string  `json:"orderId"`
+	CreateTime          string  `json:"createTime"`
+	Desc                string  `json:"desc"`
+	ResourcePoolName    string  `json:"resourcePoolName"`
+}
+
+// CvmCbsPlanQueryResp cvm and cbs plan query response
+type CvmCbsPlanQueryResp struct {
+	RespMeta  `json:",inline"`
+	Result    *CvmCbsPlanQueryRst `json:"result"`
+	Errorinfo interface{}         `json:"errorinfo"`
+}
+
+// CvmCbsPlanQueryRst cvm and cbs plan query result
+type CvmCbsPlanQueryRst struct {
+	Total         int                    `json:"total"`
+	Data          []*CvmCbsPlanQueryItem `json:"data"`
+	AllCvmAmount  float32                `json:"allCvmAmount"`
+	AllCoreAmount float32                `json:"allCoreAmount"`
+}
+
+// CvmCbsPlanQueryItem cvm and cbs plan query item
+type CvmCbsPlanQueryItem struct {
+	BaseCoreAmount        int     `json:"baseCoreAmount"`
+	BaseCvmAmount         float32 `json:"baseCvmAmount"`
+	SliceId               string  `json:"sliceId"`
+	YearMonth             string  `json:"yearMonth"`
+	Year                  int     `json:"year"`
+	Month                 int     `json:"month"`
+	Week                  int     `json:"week"`
+	YearMonthWeek         string  `json:"yearMonthWeek"`
+	ExpectStartDate       string  `json:"expectStartDate"`
+	ExpectEndDate         string  `json:"expectEndDate"`
+	UseTime               string  `json:"useTime"`
+	BgId                  int     `json:"bgId"`
+	BgName                string  `json:"bgName"`
+	DeptId                int     `json:"deptId"`
+	DeptName              string  `json:"deptName"`
+	PlanProductId         int     `json:"planProductId"`
+	PlanProductName       string  `json:"planProductName"`
+	ProjectName           string  `json:"projectName"`
+	OrderId               string  `json:"orderId"`
+	CityId                int     `json:"cityId"`
+	CityName              string  `json:"cityName"`
+	ZoneId                int     `json:"zoneId"`
+	ZoneName              string  `json:"zoneName"`
+	InPlan                string  `json:"inPlan"`
+	PlanWeek              int     `json:"planWeek"`
+	ExpeditedPostponed    string  `json:"expeditedPostponed"`
+	CoreType              int     `json:"coreType"`
+	CoreTypeName          string  `json:"coreTypeName"`
+	InstanceFamily        string  `json:"instanceFamily"`
+	InstanceType          string  `json:"instanceType"`
+	InstanceModel         string  `json:"instanceModel"`
+	InstanceIO            int     `json:"instanceIO"`
+	DiskType              int     `json:"diskType"`
+	DiskTypeName          string  `json:"diskTypeName"`
+	CvmAmount             float32 `json:"cvmAmount"`
+	RamAmount             float32 `json:"ramAmount"`
+	CoreAmount            float32 `json:"coreAmount"`
+	AllDiskAmount         float32 `json:"allDiskAmount"`
+	ApplyCvmAmount        float32 `json:"applyCvmAmount"`
+	ApplyRamAmount        float32 `json:"applyRamAmount"`
+	ApplyCoreAmount       float32 `json:"applyCoreAmount"`
+	ApplyDiskAmount       float32 `json:"applyDiskAmount"`
+	PlanCvmAmount         float32 `json:"planCvmAmount"`
+	PlanRamAmount         float32 `json:"planRamAmount"`
+	PlanCoreAmount        float32 `json:"planCoreAmount"`
+	PlanDiskAmount        float32 `json:"planDiskAmount"`
+	ExpiredCvmAmount      float32 `json:"expiredCvmAmount"`
+	ExpiredRamAmount      float32 `json:"expiredRamAmount"`
+	ExpiredCoreAmount     float32 `json:"expiredCoreAmount"`
+	ExpiredDiskAmount     float32 `json:"expiredDiskAmount"`
+	RealCvmAmount         float32 `json:"realCvmAmount"`
+	RealRamAmount         float32 `json:"realRamAmount"`
+	RealCoreAmount        float32 `json:"realCoreAmount"`
+	RealDiskAmount        float32 `json:"realDiskAmount"`
+	MjOrderId             string  `json:"mjOrderId"`
+	RequirementStatus     int     `json:"requirementStatus"`
+	RequirementStatusName string  `json:"requirementStatusName"`
+	RequirementWeekType   string  `json:"requirementWeekType"`
+	IsManualWeekType      int     `json:"isManualWeekType"`
+	IsInProcessing        int     `json:"isInProcessing"`
+	ProcessingOrderId     string  `json:"processingOrderId"`
+	DemandId              string  `json:"demandId"`
+	ResourcePoolType      int     `json:"resourcePoolType"`
+	ResourcePoolName      string  `json:"resourcePoolName"`
+	ResourceMode          string  `json:"resourceMode"`
+	StatisticalClass      string  `json:"statisticalClass"`
+	GenerationType        string  `json:"generation_type"`
+}
+
+// Clone return a clone CvmCbsPlanQueryItem.
+func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
+	return &CvmCbsPlanQueryItem{
+		BaseCoreAmount:        i.BaseCoreAmount,
+		BaseCvmAmount:         i.BaseCvmAmount,
+		SliceId:               i.SliceId,
+		YearMonth:             i.YearMonth,
+		Year:                  i.Year,
+		Month:                 i.Month,
+		Week:                  i.Week,
+		YearMonthWeek:         i.YearMonthWeek,
+		ExpectStartDate:       i.ExpectStartDate,
+		ExpectEndDate:         i.ExpectEndDate,
+		UseTime:               i.UseTime,
+		BgId:                  i.BgId,
+		BgName:                i.BgName,
+		DeptId:                i.DeptId,
+		DeptName:              i.DeptName,
+		PlanProductId:         i.PlanProductId,
+		PlanProductName:       i.PlanProductName,
+		ProjectName:           i.ProjectName,
+		OrderId:               i.OrderId,
+		CityId:                i.CityId,
+		CityName:              i.CityName,
+		ZoneId:                i.ZoneId,
+		ZoneName:              i.ZoneName,
+		InPlan:                i.InPlan,
+		PlanWeek:              i.PlanWeek,
+		ExpeditedPostponed:    i.ExpeditedPostponed,
+		CoreType:              i.CoreType,
+		CoreTypeName:          i.CoreTypeName,
+		InstanceFamily:        i.InstanceFamily,
+		InstanceType:          i.InstanceType,
+		InstanceModel:         i.InstanceModel,
+		InstanceIO:            i.InstanceIO,
+		DiskType:              i.DiskType,
+		DiskTypeName:          i.DiskTypeName,
+		CvmAmount:             i.CvmAmount,
+		RamAmount:             i.RamAmount,
+		CoreAmount:            i.CoreAmount,
+		AllDiskAmount:         i.AllDiskAmount,
+		ApplyCvmAmount:        i.ApplyCvmAmount,
+		ApplyRamAmount:        i.ApplyRamAmount,
+		ApplyCoreAmount:       i.ApplyCoreAmount,
+		ApplyDiskAmount:       i.ApplyDiskAmount,
+		PlanCvmAmount:         i.PlanCvmAmount,
+		PlanRamAmount:         i.PlanRamAmount,
+		PlanCoreAmount:        i.PlanCoreAmount,
+		PlanDiskAmount:        i.PlanDiskAmount,
+		ExpiredCvmAmount:      i.ExpiredCvmAmount,
+		ExpiredRamAmount:      i.ExpiredRamAmount,
+		ExpiredCoreAmount:     i.ExpiredCoreAmount,
+		ExpiredDiskAmount:     i.ExpiredDiskAmount,
+		RealCvmAmount:         i.RealCvmAmount,
+		RealRamAmount:         i.RealRamAmount,
+		RealCoreAmount:        i.RealCoreAmount,
+		RealDiskAmount:        i.RealDiskAmount,
+		MjOrderId:             i.MjOrderId,
+		RequirementStatus:     i.RequirementStatus,
+		RequirementStatusName: i.RequirementStatusName,
+		RequirementWeekType:   i.RequirementWeekType,
+		IsManualWeekType:      i.IsManualWeekType,
+		IsInProcessing:        i.IsInProcessing,
+		ProcessingOrderId:     i.ProcessingOrderId,
+		DemandId:              i.DemandId,
+		ResourcePoolType:      i.ResourcePoolType,
+		ResourcePoolName:      i.ResourcePoolName,
+		ResourceMode:          i.ResourceMode,
+		StatisticalClass:      i.StatisticalClass,
+		GenerationType:        i.GenerationType,
+	}
+}
+
+// CvmCbsPlanAdjustResp cvm and cbs plan adjust response
+type CvmCbsPlanAdjustResp struct {
+	RespMeta  `json:",inline"`
+	Result    *CvmCbsPlanAdjustRst `json:"result"`
+	Errorinfo interface{}          `json:"errorinfo"`
+}
+
+// CvmCbsPlanAdjustRst cvm and cbs plan adjust result
+// adjustOrder 和 submitAutoAdjustOrder 返回格式不同，需注意
+type CvmCbsPlanAdjustRst struct {
+	Status  int    `json:"status"`
+	OrderId string `json:"orderId"`
+}
+
+// AddCvmCbsPlanResp add cvm and cbs plan order response
+type AddCvmCbsPlanResp struct {
+	RespMeta `json:",inline"`
+	Result   *AddCvmCbsPlanRst `json:"result"`
+}
+
+// AddCvmCbsPlanRst add cvm and cbs plan order result
+type AddCvmCbsPlanRst struct {
+	Status  int    `json:"status"`
+	OrderId string `json:"orderId"`
+}
+
+// QueryPlanOrderResp query cvm and cbs plan order response
+type QueryPlanOrderResp struct {
+	RespMeta `json:",inline"`
+	Result   map[string]*QueryPlanOrderRst `json:"result"`
+}
+
+// QueryPlanOrderRst query cvm and cbs plan order result
+type QueryPlanOrderRst struct {
+	Code int            `json:"code"`
+	Data *PlanOrderData `json:"data"`
+}
+
+// PlanOrderData query cvm and cbs plan order data
+type PlanOrderData struct {
+	BaseInfo *PlanOrderBaseInfo `json:"baseInfo"`
+}
+
+type PlanOrderStatus int
+
+const (
+	// PlanOrderStatusDeptAdmin 部门管理员审批
+	PlanOrderStatusDeptAdmin PlanOrderStatus = 1
+	// PlanOrderStatusPlanManager 规划经理审批
+	PlanOrderStatusPlanManager PlanOrderStatus = 2
+	// PlanOrderStatusResManager 资源经理审批
+	PlanOrderStatusResManager PlanOrderStatus = 3
+	// PlanOrderStatusFinished 申请结束
+	PlanOrderStatusFinished PlanOrderStatus = 4
+	// PlanOrderStatusArchPlat 架平审批
+	PlanOrderStatusArchPlat PlanOrderStatus = 6
+	// PlanOrderStatusResGM 资源总监审批
+	PlanOrderStatusResGM PlanOrderStatus = 10
+	// PlanOrderStatusRejected 审批驳回
+	PlanOrderStatusRejected PlanOrderStatus = 127
+	// PlanOrderStatusApproved 审批通过
+	PlanOrderStatusApproved PlanOrderStatus = 20
+)
+
+// PlanOrderBaseInfo query cvm and cbs plan order base info
+type PlanOrderBaseInfo struct {
+	Status PlanOrderStatus `json:"status"`
+}
+
+// CapacityResp cvm apply capacity query response
+type CapacityResp struct {
+	RespMeta `json:",inline"`
+	Result   *CapacityRst `json:"result"`
+}
+
+// CapacityRst cvm apply capacity query result
+type CapacityRst struct {
+	MaxNum  int             `json:"maxNum"`
+	MaxInfo []*CapacityInfo `json:"maxInfo"`
+	Ret     int             `json:"ret"`
+	Msg     string          `json:"msg"`
+}
+
+// CapacityInfo cvm apply capacity into
+type CapacityInfo struct {
+	Key   string `json:"key"`
+	Value int    `json:"value"`
+}
+
+// VpcResp cvm vpc query response
+type VpcResp struct {
+	RespMeta `json:",inline"`
+	Result   []*VpcInfo `json:"result"`
+}
+
+// VpcInfo cvm vpc query result
+type VpcInfo struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// SubnetResp cvm subnet query response
+type SubnetResp struct {
+	RespMeta `json:",inline"`
+	Result   []*SubnetInfo `json:"result"`
+}
+
+// SubnetInfo cvm subnet query result
+type SubnetInfo struct {
+	Id        string `json:"id"`
+	Name      string `json:"name"`
+	LeftIpNum int    `json:"leftIpNum"`
+}
+
+// ReturnQueryResp cvm return order query response
+type ReturnQueryResp struct {
+	RespMeta `json:",inline"`
+	Result   *ReturnQueryRst `json:"result"`
+}
+
+// ReturnQueryRst cvm return order query result
+type ReturnQueryRst struct {
+	Total int                `json:"total"`
+	Data  []*ReturnOrderItem `json:"data"`
+}
+
+// ReturnOrderItem cvm return order info
+type ReturnOrderItem struct {
+	Status      int               `json:"status"`
+	Description string            `json:"statusDesc"`
+	Message     string            `json:"statusMsg"`
+	ReturnCnt   int               `json:"returnCount"`
+	FinishCnt   int               `json:"finishCount"`
+	Instances   []*ReturnInstance `json:"returnInstances"`
+}
+
+// ReturnInstance cvm return instance info
+type ReturnInstance struct {
+	InstanceId   string `json:"instanceId"`
+	Status       int    `json:"status"`
+	Summary      string `json:"summaryStatus"`
+	Description  string `json:"statusDesc"`
+	ReturnBudget bool   `json:"returnBudget"`
+	FinishTime   string `json:"finishTime"`
+}
+
+// ReturnDetailResp cvm return order detail query response
+type ReturnDetailResp struct {
+	RespMeta `json:",inline"`
+	Result   *ReturnDetailRst `json:"result"`
+}
+
+// ReturnDetailRst cvm return order detail query result
+type ReturnDetailRst struct {
+	Total int             `json:"total"`
+	Data  []*ReturnDetail `json:"data"`
+}
+
+// ReturnDetail cvm return order detail info
+type ReturnDetail struct {
+	InstanceId string `json:"instanceId"`
+	AssetId    string `json:"instanceAssetId"`
+	Ip         string `json:"lanIp"`
+	// instance return status:
+	// 1	回收站
+	// 2	云销毁中
+	// 10	停用并回收IP
+	// 15	从CMDB删除
+	// 20	销毁完成
+	// 127  审批驳回
+	// 128	异常终止
+	Status int `json:"status"`
+	// Tag return plan tag
+	Tag string `json:"tag"`
+	// Partition cost sharing ratio
+	Partition float64 `json:"partition"`
+	// RetPlanMsg return plan and cost sharing remark
+	RetPlanMsg string `json:"returnPlanMessage"`
+	FinishTime string `json:"finishTime"`
+}
+
+// GetCvmProcessResp get cvm process response
+type GetCvmProcessResp struct {
+	RespMeta `json:",inline"`
+	Result   *GetCvmProcessRst `json:"result"`
+}
+
+// GetCvmProcessRst get cvm process result
+type GetCvmProcessRst struct {
+	Total int               `json:"total"`
+	Data  []*CvmProcessItem `json:"data"`
+}
+
+// CvmProcessItem cvm process item
+type CvmProcessItem struct {
+	InstanceId string `json:"instanceId"`
+	AssetId    string `json:"instanceAssetId"`
+	Ip         string `json:"lanIp"`
+	OrderId    string `json:"orderId"`
+	// StatusDesc cvm process status description
+	// OTHERS(-1, "未定义的流程"),
+	// EMPTY(0, ""),
+	// UPGRADE(1, "升降配中"),
+	// MIGRATE(2, "迁移中"),
+	// EXCHANGE(8, "置换中"),
+	// RETURN(9, "销毁中")
+	StatusDesc string `json:"statusDesc"`
+}
+
+// GetErpProcessResp get erp process response
+type GetErpProcessResp struct {
+	RespMeta `json:",inline"`
+	Result   *GetErpProcessRst `json:"result"`
+}
+
+// GetErpProcessRst get erp process result
+type GetErpProcessRst struct {
+	Total int               `json:"total"`
+	Data  []*ErpProcessItem `json:"data"`
+}
+
+// ErpProcessItem erp process item
+type ErpProcessItem struct {
+	AssetId    string `json:"logicPcCode"`
+	OrderId    string `json:"orderCode"`
+	ActionType string `json:"actionType"`
+}
+
+// QueryCvmInstanceTypeResp query cvm instance type response
+type QueryCvmInstanceTypeResp struct {
+	RespMeta `json:",inline"`
+	Result   *QueryCvmInstanceTypeRst `json:"result"`
+}
+
+// QueryCvmInstanceTypeRst query cvm instance type result
+type QueryCvmInstanceTypeRst struct {
+	Data []QueryCvmInstanceTypeItem `json:"data"`
+}
+
+// InstanceTypeClass 通/专用机型，SpecialType专用，CommonType通用
+type InstanceTypeClass string
+
+const (
+	// SpecialType 专用机型
+	SpecialType InstanceTypeClass = "SpecialType"
+	// CommonType 通用机型
+	CommonType InstanceTypeClass = "CommonType"
+)
+
+// QueryCvmInstanceTypeItem query cvm instance type item
+type QueryCvmInstanceTypeItem struct {
+	InstanceClassDesc     string            `json:"instanceClassDesc"`     // 实例类型
+	InstanceType          string            `json:"instanceType"`          // 实例规格
+	InstanceTypeClass     InstanceTypeClass `json:"instanceTypeClass"`     // 通/专用机型，SpecialType专用，CommonType通用
+	InstanceTypeClassDesc string            `json:"instanceTypeClassDesc"` // // 通/专用机型
+	RamAmount             float64           `json:"ramAmount"`             // 内存
+	GPUType               string            `json:"gpuType"`               // GPU类型
+	FirmName              string            `json:"firmName"`              // 厂商
+	InstanceGroup         string            `json:"instanceGroup"`         // 机型族
+	CPUAmount             float64           `json:"cpuAmount"`             // CPU数量
+	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
+	InstanceClass         string            `json:"instanceClass"`         // 实例类型
+}

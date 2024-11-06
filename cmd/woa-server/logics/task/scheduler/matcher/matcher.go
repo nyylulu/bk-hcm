@@ -20,30 +20,35 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/mapstr"
-	"hcm/cmd/woa-server/common/metadata"
-	commonutil "hcm/cmd/woa-server/common/util"
-	"hcm/cmd/woa-server/common/utils/wait"
+	"hcm/cmd/woa-server/dal/task/table"
+	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/cmd/woa-server/model/task"
-	"hcm/cmd/woa-server/thirdparty"
-	"hcm/cmd/woa-server/thirdparty/bkchatapi"
-	"hcm/cmd/woa-server/thirdparty/esb"
-	"hcm/cmd/woa-server/thirdparty/esb/cmdb"
-	"hcm/cmd/woa-server/thirdparty/sopsapi"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
+	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/metadata"
+	toolsutil "hcm/pkg/tools/util"
+	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/tools/uuid"
 )
 
 // Matcher matches devices for apply order
 type Matcher struct {
+	rsLogics rollingserver.Logics
 	informer informer.Interface
 	sops     sopsapi.SopsClientInterface
 	sopsOpt  cc.SopsCli
@@ -54,10 +59,11 @@ type Matcher struct {
 }
 
 // New create a matcher
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, clientConf cc.ClientConfig,
-	informer informer.Interface) (*Matcher, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+	clientConf cc.ClientConfig, informer informer.Interface) (*Matcher, error) {
 
 	matcher := &Matcher{
+		rsLogics: rsLogics,
 		informer: informer,
 		sops:     thirdCli.Sops,
 		sopsOpt:  clientConf.Sops,
@@ -93,7 +99,7 @@ func (m *Matcher) runWorker() error {
 	}
 
 	// get generate record
-	generateRecord, err := m.getGenerateRecord(generateId)
+	generateRecord, err := m.GetGenerateRecord(generateId)
 	if err != nil {
 		logs.Errorf("failed to get generate record by id: %d, err: %v", generateId, err)
 		return err
@@ -122,6 +128,28 @@ func (m *Matcher) runWorker() error {
 	return nil
 }
 
+// FinalApplyStep after deliver device, check order result to regenerate device or reinit
+func (m *Matcher) FinalApplyStep(genRecord *types.GenerateRecord, order *types.ApplyOrder) error {
+	// set generate record matched
+	if err := m.setGenerateRecordMatched(genRecord.GenerateId); err != nil {
+		logs.Errorf("failed to update generate record, err: %v, schedule id: %d", err, genRecord.GenerateId)
+		return err
+	}
+
+	// update apply order status
+	if err := m.updateApplyOrderStatus(order); err != nil {
+		logs.Errorf("failed to update apply order status, order id: %s, err: %v", genRecord.SubOrderId, err)
+		return err
+	}
+
+	// send ticket done notification
+	if err := m.notifyApplyDone(order.OrderId); err != nil {
+		logs.Warnf("failed to send apply done notification, order id: %s, err: %v", genRecord.SubOrderId, err)
+		return nil
+	}
+	return nil
+}
+
 // matchHandler apply order match handler
 func (m *Matcher) matchHandler(genRecord *types.GenerateRecord) error {
 	// get apply order by key
@@ -145,25 +173,7 @@ func (m *Matcher) matchHandler(genRecord *types.GenerateRecord) error {
 		return err
 	}
 
-	// set generate record matched
-	if err := m.setGenerateRecordMatched(genRecord.GenerateId); err != nil {
-		logs.Errorf("failed to update generate record, schedule id: %d, err: %v", genRecord.GenerateId, err)
-		return err
-	}
-
-	// update apply order status
-	if err := m.updateApplyOrderStatus(applyOrder); err != nil {
-		logs.Errorf("failed to update apply order status, order id: %s, err: %v", genRecord.SubOrderId, err)
-		return err
-	}
-
-	// send ticket done notification
-	if err := m.notifyApplyDone(applyOrder.OrderId); err != nil {
-		logs.Warnf("failed to send apply done notification, order id: %s, err: %v", genRecord.SubOrderId, err)
-		return nil
-	}
-
-	return nil
+	return m.FinalApplyStep(genRecord, applyOrder)
 }
 
 // getApplyOrder gets apply order from db by order id
@@ -180,6 +190,46 @@ func (m *Matcher) getApplyOrder(orderId string) (*types.ApplyOrder, error) {
 	return order, nil
 }
 
+func (m *Matcher) updateSuspendSteps(order *types.ApplyOrder) error {
+	now := time.Now()
+	filter := &mapstr.MapStr{
+		"suborder_id": order.SubOrderId,
+		"step_name":   types.StepNameGenerate,
+	}
+	doc := &mapstr.MapStr{
+		"status":    types.StepStatusFailed,
+		"update_at": now,
+		"end_at":    now,
+		"message":   "can not get generateId, unknown generate status, check YunTi to find if devices are generated",
+	}
+
+	if err := model.Operation().ApplyStep().UpdateApplyStep(context.Background(), filter, doc); err != nil {
+		logs.Errorf("failed to update apply 生产 step status to apply status failed, suborderId: %s, err: %v",
+			order.SubOrderId, err)
+		return err
+	}
+	return nil
+}
+
+func (m *Matcher) updateGenerateFailed(generateId uint64) error {
+	filter := &mapstr.MapStr{
+		"generate_id": generateId,
+	}
+	now := time.Now()
+	doc := mapstr.MapStr{
+		"update_at": now,
+		"status":    types.GenerateStatusFailed,
+		"message":   "can not get generateId, unknown generate status, check YunTi to find if devices are generated",
+	}
+
+	if err := model.Operation().GenerateRecord().UpdateGenerateRecord(context.Background(), filter, &doc); err != nil {
+		logs.Errorf("failed to update generate record to failed, generateId: err: %v, %d", err, generateId)
+		return err
+	}
+
+	return nil
+}
+
 // updateApplyOrderStatus update apply order status
 func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	// 1. get unreleased devices from db
@@ -191,25 +241,44 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 
 	// 2. calculate apply order status by total and matched count
 	matchedCnt := 0
+	deviceTypeCountMap := make(map[string]int)
 	for _, device := range devices {
-		if device.IsDelivered {
-			matchedCnt++
+		if !device.IsDelivered {
+			continue
 		}
+		matchedCnt++
+
+		if _, ok := deviceTypeCountMap[device.DeviceType]; !ok {
+			deviceTypeCountMap[device.DeviceType] = 0
+		}
+		deviceTypeCountMap[device.DeviceType]++
 	}
 
-	genRecords, err := m.getOrderGenRecords(order.SubOrderId)
+	genRecords, err := m.GetOrderGenRecords(order.SubOrderId)
 	if err != nil {
 		logs.Errorf("failed to get generate records, order id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
 
 	hasGenRecordMatching := false
+	isSuspend := false
+	suspendCnt := 0
+
 	for _, recordItem := range genRecords {
 		if recordItem.Status == types.GenerateStatusInit ||
 			recordItem.Status == types.GenerateStatusHandling ||
-			recordItem.Status == types.GenerateStatusSuccess && recordItem.IsMatched == false {
+			recordItem.Status == types.GenerateStatusSuccess && !recordItem.IsMatched {
 			hasGenRecordMatching = true
-			break
+		}
+
+		if recordItem.Status == types.GenerateStatusSuspend {
+			isSuspend = true
+			suspendCnt += int(recordItem.TotalNum)
+			logs.Infof("generate failed, unknown if generate interface was called, task_id not obtained, check machines")
+			if err := m.updateGenerateFailed(recordItem.GenerateId); err != nil {
+				logs.Errorf("failed to update generate status to failed, suborderId: %s, err: %v", order.SubOrderId,
+					err)
+			}
 		}
 	}
 
@@ -224,6 +293,26 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 			status = types.ApplyStatusMatching
 		}
 		stage = types.TicketStageRunning
+	}
+
+	if isSuspend && suspendCnt+matchedCnt >= int(order.Total) {
+		status = types.ApplyStatusTerminate
+		stage = types.TicketStageTerminate
+		if err := m.updateSuspendSteps(order); err != nil {
+			logs.Errorf("failed to update suspend steps, suborderId: %s, err: %v", order.SubOrderId, err)
+		}
+	}
+
+	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+		kt := core.NewBackendKit()
+		appliedTypes := []enumor.AppliedType{enumor.NormalAppliedType, enumor.ResourcePoolAppliedType}
+
+		if err = m.rsLogics.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, order.SubOrderId, appliedTypes,
+			deviceTypeCountMap); err != nil {
+			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
+				"deviceTypeCountMap: %v, rid: %s", err, order.SubOrderId, order.BkBizId, deviceTypeCountMap, kt.Rid)
+			return err
+		}
 	}
 
 	// 3. do update apply order status
@@ -245,8 +334,8 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	return nil
 }
 
-// getGenerateRecord gets generate record from db by generate id
-func (m *Matcher) getGenerateRecord(id uint64) (*types.GenerateRecord, error) {
+// GetGenerateRecord gets generate record from db by generate id
+func (m *Matcher) GetGenerateRecord(id uint64) (*types.GenerateRecord, error) {
 	filter := &mapstr.MapStr{
 		"generate_id": id,
 	}
@@ -259,14 +348,14 @@ func (m *Matcher) getGenerateRecord(id uint64) (*types.GenerateRecord, error) {
 	return recordInfo, nil
 }
 
-// getOrderGenRecords gets all generate records related to given order
-func (m *Matcher) getOrderGenRecords(suborderId string) ([]*types.GenerateRecord, error) {
+// GetOrderGenRecords gets all generate records related to given order
+func (m *Matcher) GetOrderGenRecords(suborderId string) ([]*types.GenerateRecord, error) {
 	filter := map[string]interface{}{
 		"suborder_id": suborderId,
 	}
 	page := metadata.BasePage{
 		Start: 0,
-		Limit: common.BKNoLimit,
+		Limit: pkg.BKNoLimit,
 	}
 
 	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(context.Background(), page, filter)
@@ -298,19 +387,13 @@ func (m *Matcher) setGenerateRecordMatched(generateId uint64) error {
 	return nil
 }
 
-// matchDevice deal match device tasks
-func (m *Matcher) matchDevice(order *types.ApplyOrder, genId uint64) error {
-	// 1. get unreleased devices from db
-	unreleased, err := m.getGeneratedDevice(genId)
-	if err != nil {
-		logs.Errorf("failed to get unreleased device, order id: %s, err: %v", order.SubOrderId, err)
-		return err
-	}
+// InitDevices start init devices
+func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
 
 	// start init step
 	if err := record.StartStep(order.SubOrderId, types.StepNameInit); err != nil {
 		logs.Errorf("failed to start init step, order id: %s, err: %v", order.SubOrderId, err)
-		return err
+		return nil, err
 	}
 
 	mutex := sync.Mutex{}
@@ -331,27 +414,7 @@ func (m *Matcher) matchDevice(order *types.ApplyOrder, genId uint64) error {
 		wg.Add(1)
 		go func(device *types.DeviceInfo) {
 			defer wg.Done()
-			// TODO: check device not support yet
-			// 2. check devices
-			/*
-				if err := m.checkDevice(device); err != nil {
-					logs.Errorf("failed to check device, ip: %s, err: %v", device.IP, err)
-					continue
-				}*/
-
-			// 3. init devices
-			maxRetry := 3
-			var err error = nil
-			for try := 0; try < maxRetry; try++ {
-				if err = m.initDevice(device); err != nil {
-					logs.Errorf("failed to init device, will retry in 60s, ip: %s, err: %v", device.Ip, err)
-					time.Sleep(180 * time.Second)
-					continue
-				}
-				break
-			}
-
-			if err != nil {
+			if err := m.ProcessInitStep(device); err != nil {
 				appendError(err)
 			} else {
 				appendDevice(device)
@@ -363,39 +426,87 @@ func (m *Matcher) matchDevice(order *types.ApplyOrder, genId uint64) error {
 	// update init step
 	if err := record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
 		logs.Errorf("failed to update init step, order id: %s, err: %v", order.SubOrderId, err)
-		return err
+		return nil, err
 	}
 
-	if order.EnableDiskCheck {
-		observeDevices, err = m.runDiskCheck(order, observeDevices)
-		if err != nil {
-			logs.Errorf("failed to run disk check task, order id: %s, err: %v", order.SubOrderId, err)
-			return err
-		}
-	}
+	return observeDevices, nil
+}
 
+// DeliverDevices deliver devices to business
+func (m *Matcher) DeliverDevices(order *types.ApplyOrder, observeDevices []*types.DeviceInfo) error {
 	// start deliver step
 	if err := record.StartStep(order.SubOrderId, types.StepNameDeliver); err != nil {
 		logs.Errorf("failed to start deliver step, order id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
 
-	// 4. deliver devices to business
+	// deliver devices to business
 	// TODO: batch processing
 	for _, device := range observeDevices {
-		if err := m.deliverDevice(device, order); err != nil {
-			logs.Errorf("failed to deliver device, ip: %s, err: %v", device.Ip, err)
+		if err := m.DeliverDevice(device, order); err != nil {
+			logs.Errorf("failed to deliver device, subOrderId: %s, ip: %s, err: %v", order.SubOrderId, device.Ip, err)
 			continue
 		}
 	}
 
 	// update deliver step
 	if err := record.UpdateDeliverStep(order.SubOrderId, order.Total); err != nil {
-		logs.Errorf("failed to update init step, order id: %s, err: %v", order.SubOrderId, err)
+		logs.Errorf("failed to update init step, subOrderId: %s, err: %v", order.SubOrderId, err)
+		return err
+	}
+	return nil
+}
+
+// ProcessInitStep start a goroutine to perform initialization tasks on a certain machine
+func (m *Matcher) ProcessInitStep(device *types.DeviceInfo) error {
+	// TODO: check device not support yet
+	// 1. check devices
+	/*
+		if err := m.checkDevice(device); err != nil {
+			logs.Errorf("failed to check device, ip: %s, err: %v", device.IP, err)
+			return
+		}
+	*/
+	// 2. init devices
+	maxRetry := 3
+	var err error
+	for try := 0; try < maxRetry; try++ {
+		if err = m.initDevice(device); err != nil {
+			logs.Errorf("failed to init device, will retry in 60s, ip: %s, err: %v", device.Ip, err)
+			time.Sleep(180 * time.Second)
+			continue
+		}
+		break
+	}
+
+	if err != nil {
+		logs.Errorf("failed to init device, ip: %s, err: %v", device.Ip, err)
 		return err
 	}
 
 	return nil
+}
+
+// matchDevice deal match device tasks
+func (m *Matcher) matchDevice(order *types.ApplyOrder, genId uint64) error {
+	// 1. get unreleased devices from db
+	unreleased, err := m.getGeneratedDevice(genId)
+	if err != nil {
+		logs.Errorf("failed to get unreleased device, order id: %s, err: %v", order.SubOrderId, err)
+		return err
+	}
+
+	observeDevices, err := m.InitDevices(order, unreleased)
+
+	if order.EnableDiskCheck {
+		observeDevices, err = m.RunDiskCheck(order, observeDevices)
+		if err != nil {
+			logs.Errorf("failed to run disk check task, order id: %s, err: %v", order.SubOrderId, err)
+			return err
+		}
+	}
+
+	return m.DeliverDevices(order, observeDevices)
 }
 
 // getGeneratedDevice gets generated devices bindings to generate record
@@ -451,19 +562,19 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := m.cc.GetHostBizIds(m.kt.Ctx, m.kt.Header(), []int64{hostInfo.BkHostId})
+	bkBizIDs, err := m.cc.GetHostBizIds(m.kt.Ctx, m.kt.Header(), []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, infoBkBizID: %d, "+
-			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostId, err)
+			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostID, err)
 		return err
 	}
-	bkBizID, ok := bkBizIDs[hostInfo.BkHostId]
+	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
-		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
-		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostId)
+		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
-
-	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType)
+	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType,
+		info.SubOrderId)
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init device, host %s failed to initialize, infoBkBizID: %d, "+
 			"bkBizID: %d, bkHostID: %d, err: %v", info.Ip, info.BkBizId, bkBizID, info.BkHostId, err)
@@ -479,19 +590,30 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 
 	jobIDStr := strconv.FormatInt(jobId, 10)
 	// update init record
-	errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl,
-		"handling", types.InitStatusHandling)
+	errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl, "handling",
+		types.InitStatusHandling)
 	if errRecord != nil {
 		logs.Warnf("host %s failed to update initialize record, jobID: %d, jobUrl: %s, bkBizID: %s, err: %v",
 			info.Ip, jobId, jobUrl, bkBizID, errRecord)
 	}
 
-	// 2. get job status
-	if err = sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
+	return m.CheckSopsUpdate(bkBizID, info, jobUrl, jobIDStr)
+}
+
+// CheckSopsUpdate 检查sops任务状态并更新
+func (m *Matcher) CheckSopsUpdate(bkBizID int64, info *types.DeviceInfo, jobUrl string, jobIDStr string) error {
+	// 1. get job status
+	jobId, err := strconv.ParseInt(jobIDStr, 10, 64)
+	if err != nil {
+		logs.Errorf("can not get jobId by jobIDStr, jobIDStr: %s, err: %v", jobIDStr, err)
+		return fmt.Errorf("can not get jobId by jobIDStr, jobIDStr: %s", jobIDStr)
+	}
+
+	if err := sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
 		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, jobID: %d, "+
 			"jobUrl: %s, bkBizID: %d, err: %v", info.Ip, jobId, jobUrl, bkBizID, err)
 		// update init record
-		errRecord = record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl,
+		errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl,
 			err.Error(), types.InitStatusFailed)
 		if errRecord != nil {
 			logs.Errorf("host %s failed to initialize, bkBizID: %d, jobID: %d, jobUrl: %s, err: %v",
@@ -501,22 +623,21 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 		return fmt.Errorf("host %s failed to initialize, jobID: %d, err: %v", info.Ip, jobId, err)
 	}
 
-	// 3. update device status
+	// 2. update device status
 	info.InitTaskId = strconv.FormatInt(jobId, 10)
 	info.InitTaskLink = jobUrl
-	if err = m.setDeviceInited(info); err != nil {
+	if err := m.SetDeviceInited(info); err != nil {
 		logs.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
 		return fmt.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
 	}
 
 	// update init record
-	if err = record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl, "success",
+	if err := record.UpdateInitRecord(info.SubOrderId, info.Ip, jobIDStr, jobUrl, "success",
 		types.InitStatusSuccess); err != nil {
 		logs.Errorf("host %s failed to initialize, bkBizID: %d, jobId: %d, jobUrl: %s, err: %v",
 			info.Ip, bkBizID, jobId, jobUrl, err)
 		return fmt.Errorf("host %s failed to initialize, jobID: %d, jobUrl: %s, err: %v", info.Ip, jobId, jobUrl, err)
 	}
-
 	return nil
 }
 
@@ -530,8 +651,8 @@ func (m *Matcher) checkDeviceDisk(info *types.DeviceInfo) error {
 	return nil
 }
 
-// deliverDevice delivers device to business
-func (m *Matcher) deliverDevice(info *types.DeviceInfo, order *types.ApplyOrder) error {
+// DeliverDevice delivers device to business
+func (m *Matcher) DeliverDevice(info *types.DeviceInfo, order *types.ApplyOrder) error {
 	if info.IsDelivered {
 		logs.Infof("host %s is delivered, need not deliver", info.Ip)
 		return nil
@@ -542,7 +663,6 @@ func (m *Matcher) deliverDevice(info *types.DeviceInfo, order *types.ApplyOrder)
 		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
-
 	// 1. set host module and host operator
 	if err := m.transferHostAndSetOperator(info, order); err != nil {
 		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
@@ -553,9 +673,8 @@ func (m *Matcher) deliverDevice(info *types.DeviceInfo, order *types.ApplyOrder)
 		}
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
-
 	// 2. update device status
-	if err := m.setDeviceDelivered(info); err != nil {
+	if err := m.SetDeviceDelivered(info); err != nil {
 		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
@@ -590,8 +709,8 @@ func (m *Matcher) setDeviceChecked(info *types.DeviceInfo) error {
 	return nil
 }
 
-// setDeviceInited set device inited flag
-func (m *Matcher) setDeviceInited(info *types.DeviceInfo) error {
+// SetDeviceInited set device inited flag
+func (m *Matcher) SetDeviceInited(info *types.DeviceInfo) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": info.SubOrderId,
 		"ip":          info.Ip,
@@ -636,8 +755,8 @@ func (m *Matcher) setDeviceDiskChecked(info *types.DeviceInfo) error {
 	return nil
 }
 
-// setDeviceDelivered set device delivered flag
-func (m *Matcher) setDeviceDelivered(info *types.DeviceInfo) error {
+// SetDeviceDelivered set device delivered flag
+func (m *Matcher) SetDeviceDelivered(info *types.DeviceInfo) error {
 	filter := &mapstr.MapStr{
 		"suborder_id": info.SubOrderId,
 		"ip":          info.Ip,
@@ -660,7 +779,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	filter := map[string]interface{}{
 		"order_id": orderId,
 		"status": map[string]interface{}{
-			common.BKDBNE: types.ApplyStatusDone,
+			pkg.BKDBNE: types.ApplyStatusDone,
 		},
 	}
 
@@ -692,7 +811,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 
 	users := []string{ticket.User}
 	users = append(users, ticket.Follower...)
-	users = commonutil.StrArrayUnique(users)
+	users = toolsutil.StrArrayUnique(users)
 	noticeFmt := m.bkchat.GetNoticeFmt()
 	bizName := m.getBizName(ticket.BkBizId)
 	requireName := m.getRequireName(ticket.RequireType)
@@ -745,7 +864,8 @@ func (m *Matcher) getRequireName(requireType int64) string {
 	}
 }
 
-func (m *Matcher) runDiskCheck(order *types.ApplyOrder, devices []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
+// RunDiskCheck 执行磁盘检查
+func (m *Matcher) RunDiskCheck(order *types.ApplyOrder, devices []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
 	// start init step
 	if err := record.StartStep(order.SubOrderId, types.StepNameDiskCheck); err != nil {
 		logs.Errorf("failed to start init step, order id: %s, err: %v", order.SubOrderId, err)

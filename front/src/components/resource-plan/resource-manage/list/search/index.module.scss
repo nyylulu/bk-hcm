@@ -1,0 +1,41 @@
+.infoItem {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  .icon {
+    margin-right: 8px;
+    font-size: 18px;
+  }
+}
+
+.search-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
+  row-gap: 16px;
+  margin: 24px 0;
+
+  .search-label {
+    margin-bottom: 6px;
+  }
+
+  :global(.bk-date-picker) {
+    width: 100%;
+  }
+}
+
+.search-checkbox-wrapper {
+  margin-bottom: 24px;
+}
+
+.search-button {
+  width: 102px;
+
+  + .search-button {
+    margin-left: 8px;
+  }
+}
+
+.mb-16 {
+  margin-bottom: 16px;
+}

@@ -17,8 +17,8 @@ package plan
 type BizOrgRel struct {
 	BkBizID         int64  `json:"bk_biz_id"`
 	BkBizName       string `json:"bk_biz_name"`
-	BkProductID     int64  `json:"bk_product_id"`
-	BkProductName   string `json:"bk_product_name"`
+	OpProductID     int64  `json:"op_product_id"`
+	OpProductName   string `json:"op_product_name"`
 	PlanProductID   int64  `json:"plan_product_id"`
 	PlanProductName string `json:"plan_product_name"`
 	VirtualDeptID   int64  `json:"virtual_dept_id"`

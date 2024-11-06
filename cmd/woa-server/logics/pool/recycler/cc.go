@@ -18,10 +18,10 @@ import (
 	"fmt"
 	"strings"
 
-	"hcm/cmd/woa-server/common"
-	"hcm/cmd/woa-server/common/querybuilder"
-	ccapi "hcm/cmd/woa-server/thirdparty/esb/cmdb"
+	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
@@ -37,10 +37,10 @@ func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
 		return "", fmt.Errorf("get unexpected host base info, for count %d != 1", cnt)
 	}
 
-	if hostInfos[0].BkHostId != hostID {
-		logs.Errorf("get unexpected host base info, for return host id %d != target %d", hostInfos[0].BkHostId, hostID)
+	if hostInfos[0].BkHostID != hostID {
+		logs.Errorf("get unexpected host base info, for return host id %d != target %d", hostInfos[0].BkHostID, hostID)
 		return "", fmt.Errorf("get unexpected host base info, for return host id %d != target %d",
-			hostInfos[0].BkHostId, hostID)
+			hostInfos[0].BkHostID, hostID)
 	}
 
 	ip := r.getUniqIp(hostInfos[0].BkHostInnerIP)
@@ -49,7 +49,7 @@ func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*ccapi.HostInfo, error) {
+func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*cmdb.Host, error) {
 	if len(hostIds) == 0 {
 		return nil, errors.New("host id list is empty")
 	}
@@ -65,8 +65,8 @@ func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*ccapi.HostInfo, error) {
 		},
 	}
 
-	req := &ccapi.ListHostReq{
-		HostPropertyFilter: &querybuilder.QueryFilter{
+	req := &cmdb.ListHostReq{
+		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: rule,
 		},
 		Fields: []string{
@@ -74,9 +74,9 @@ func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*ccapi.HostInfo, error) {
 			"bk_asset_id",
 			"bk_host_innerip",
 		},
-		Page: ccapi.BasePage{
+		Page: cmdb.BasePage{
 			Start: 0,
-			Limit: common.BKMaxInstanceLimit,
+			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
