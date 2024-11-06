@@ -1,5 +1,6 @@
 import { defineComponent, type PropType } from 'vue';
 import { Share } from 'bkui-vue/lib/icon';
+import StatusUnknown from '@/assets/image/Status-unknown.png';
 
 import { useI18n } from 'vue-i18n';
 
@@ -31,6 +32,8 @@ export default defineComponent({
           return <i class='hcm-icon bkhcm-icon-7chenggong-01'></i>;
         case 'failed':
           return <i class='hcm-icon bkhcm-icon-close-circle-fill'></i>;
+        case 'revoked':
+          return <img src={StatusUnknown} style={{ width: '22px', marginRight: '10px' }} />;
         default:
           return <i class='hcm-icon bkhcm-icon-jiazai'></i>;
       }

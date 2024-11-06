@@ -604,8 +604,8 @@ export const RESOURCE_PLAN_STATUSES_type = {
   AUDITING: 'auditing',
   REJECTED: 'rejected',
   DONE: 'done',
-  CANCELED: 'canceled',
   FAILED: 'failed',
+  REVOKED: 'revoked',
 };
 
 // 单据管理tab - 资源预测 审批状态
@@ -626,7 +626,7 @@ export const RESOURCE_PLAN_STATUSES_MAP = {
     class: 'hcm-icon bkhcm-icon-success',
     color: 'green',
   },
-  [RESOURCE_PLAN_STATUSES_type.CANCELED]: {
+  [RESOURCE_PLAN_STATUSES_type.REVOKED]: {
     class: 'hcm-icon bkhcm-icon-default',
     color: 'gray',
   },
