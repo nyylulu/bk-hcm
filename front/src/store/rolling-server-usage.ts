@@ -1,9 +1,10 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
+import rollRequest from '@blueking/roll-request';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 import { enableCount } from '@/utils/search';
-import { IListResData, IQueryResData, QueryBuilderType } from '@/typings';
+import { IListResData, IQueryResData, QueryBuilderType, QueryFilterType } from '@/typings';
 
 export enum AppliedType {
   NORMAL = 'normal',
@@ -77,18 +78,19 @@ export const useRollingServerUsageStore = defineStore('rolling-server-usage', ()
   };
 
   const returnedRecordsListLoading = ref(false);
-  const getReturnedRecordList = async (data: QueryBuilderType) => {
+  const getReturnedRecordList = async (params: { filter: QueryFilterType }) => {
     returnedRecordsListLoading.value = true;
     const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/returned_records/list`;
     try {
-      const [listRes, countRes] = await Promise.all<
-        [
-          Promise<IListResData<IRollingServerReturnedRecordItem[]>>,
-          Promise<IListResData<IRollingServerReturnedRecordItem[]>>,
-        ]
-      >([http.post(api, enableCount(data, false)), http.post(api, enableCount(data, true))]);
-      const [{ details: list = [] }, { count = 0 }] = [listRes?.data ?? {}, countRes?.data ?? {}];
-      return { list, count };
+      const list = (await rollRequest({
+        httpClient: http,
+        pageEnableCountKey: 'count',
+      }).rollReqUseCount<IRollingServerReturnedRecordItem>(api, params, {
+        limit: 500,
+        countGetter: (res) => res.data.count,
+        listGetter: (res) => res.data.details,
+      })) as IRollingServerReturnedRecordItem[];
+      return list;
     } catch (error) {
       console.error(error);
       return Promise.reject(error);
