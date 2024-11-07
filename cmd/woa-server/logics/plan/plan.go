@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/pkg/tools/utils/wait"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
@@ -43,6 +42,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/times"
+	"hcm/pkg/tools/utils/wait"
 )
 
 // Logics provides management interface for resource plan.
@@ -619,6 +619,9 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	case string(itsm.StatusFinished), string(itsm.StatusTerminated):
 		// rejected
 		update.Status = enumor.RPTicketStatusRejected
+	case string(itsm.StatusRevoked):
+		// revoked
+		update.Status = enumor.RPTicketStatusRevoked
 	case string(itsm.StatusRunning):
 		// check if CRP audit state
 		if len(resp.Data.CurrentSteps) == 0 {
@@ -641,7 +644,7 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	// 单据被拒需要释放资源
-	if update.Status != enumor.RPTicketStatusRejected {
+	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
 		return nil
 	}
 	allCrpDemandIDs := make([]int64, 0)
@@ -863,7 +866,7 @@ CPU总核数：%.2f
 云盘总量(GB)：%.2f
 `
 	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.UpdatedCpuCore,
-		ticket.UpdatedMemory, ticket.UpdatedMemory)
+		ticket.UpdatedMemory, ticket.UpdatedDiskSize)
 	createTicketReq := &itsm.CreateTicketParams{
 		ServiceID:      c.itsmFlow.ServiceID,
 		Creator:        ticket.Applicant,

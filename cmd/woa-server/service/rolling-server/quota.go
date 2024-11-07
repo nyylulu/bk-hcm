@@ -158,14 +158,7 @@ func (s *service) CreateGlobalQuotaConfigs(cts *rest.Contexts) (any, error) {
 
 // GetGlobalQuotaConfigs get global quota configs.
 func (s *service) GetGlobalQuotaConfigs(cts *rest.Contexts) (any, error) {
-	// authorized 临时取消鉴权，后续需要添加一个业务级别的接口使用业务鉴权
-	/*err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
-	if err != nil {
-		logs.Errorf("get global quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}*/
-
+	// get global config not need authorization
 	listOne, err := s.rollingServerLogic.GetGlobalQuotaConfig(cts.Kit)
 	if err != nil {
 		logs.Errorf("get global quota config failed, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -225,13 +218,13 @@ func (s *service) ListBizQuotaConfigs(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	// authorized 临时取消鉴权
-	/*err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+	// authorized
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
 		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
 	if err != nil {
 		logs.Errorf("list biz quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
-	}*/
+	}
 
 	return s.rollingServerLogic.ListBizQuotaConfigs(cts.Kit, req)
 }
@@ -259,4 +252,34 @@ func (s *service) ListQuotaOffsetsAdjustRecords(cts *rest.Contexts) (any, error)
 	}
 
 	return s.rollingServerLogic.ListQuotaOffsetAdjustRecords(cts.Kit, req.OffsetConfigIds, req.Page)
+}
+
+// GetBizBizQuotaConfigs get biz quota configs.
+func (s *service) GetBizBizQuotaConfigs(cts *rest.Contexts) (any, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	req := new(rstypes.GetBizBizQuotaConfigsReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to get biz's biz quota configs, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate biz's biz quota configs parameter, err: %v, req: %v, rid: %s", err, *req,
+			cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// authorized
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Find}, BizID: bizID})
+	if err != nil {
+		logs.Errorf("get biz's biz quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.rollingServerLogic.GetBizBizQuotaConfigs(cts.Kit, bizID, req)
 }

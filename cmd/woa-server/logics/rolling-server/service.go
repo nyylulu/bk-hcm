@@ -44,8 +44,12 @@ type Logics interface {
 		*rolling_server.ListQuotaOffsetsAdjustRecordsResp, error)
 	ListBizsWithExistQuota(kt *kit.Kit, req *rolling_server.ListBizsWithExistQuotaReq) (
 		*rolling_server.ListBizsWithExistQuotaResp, error)
+	// ListBizQuotaConfigs 获取批量业务的额度信息列表，管理员使用
 	ListBizQuotaConfigs(kt *kit.Kit, req *rolling_server.ListBizQuotaConfigsReq) (
 		*rolling_server.ListBizQuotaConfigsResp, error)
+	// GetBizBizQuotaConfigs 获取当前业务自身的额度信息，业务使用
+	GetBizBizQuotaConfigs(kt *kit.Kit, bkBizID int64, req *rolling_server.GetBizBizQuotaConfigsReq) (
+		*rolling_server.ListBizQuotaConfigsItem, error)
 	// CreateBizQuotaConfigs 批量给业务生成当月的滚服基础额度，幂等可重复执行
 	CreateBizQuotaConfigs(kt *kit.Kit, req *rolling_server.CreateBizQuotaConfigsReq) (
 		*rolling_server.CreateBizQuotaConfigsResp, error)

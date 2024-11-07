@@ -36,8 +36,9 @@ type DemandYearMonthWeek struct {
 
 // GetDemandYearMonthWeek returns the year, month and week of the month based on the input time from a demand
 // perspective.
-// 需求年月周：当一周内出现跨月（自然月）的情况，则根据哪个自然月的日期更多，划为该“月”的需求年月周。
-// 举例：2024-08-26 ～ 2024-09-01分别是周一至周日，而8月的日期比9月的日期多，则该周划为2024-08需求年月的最后一周
+// 需求年月周：当一周内出现跨月（自然月）的情况，则根据该周周一所属月划为该月的需求年月周。
+// 举例1：2024-08-26 ～ 2024-09-01分别是周一至周日，则该周划为2024-08需求年月的最后一周
+// 举例2：2024-09-30 ～ 2024-10-06分别是周一至周日，则该周划为2024-09需求年月的最后一周
 func GetDemandYearMonthWeek(t time.Time) DemandYearMonthWeek {
 	year, month := GetDemandYearMonth(t)
 
@@ -82,13 +83,9 @@ func GetDemandDateRangeInMonth(t time.Time) times.DateRange {
 
 // GetDemandYearMonth returns the year, month based on the input time from a demand perspective.
 func GetDemandYearMonth(t time.Time) (year int, month time.Month) {
+	// 无论如何，需求所属年月均以所在周的周一为准
 	weekdays := Weekdays(t)
-
-	// 当一周内出现跨月（自然月）的情况，则根据哪个自然月的日期更多，划为该“月”的年月周
-	year = weekdays[3].Year()
-	month = weekdays[3].Month()
-
-	return
+	return weekdays[0].Year(), weekdays[0].Month()
 }
 
 // Weekdays returns the weekdays from Monday to Sunday around the input time.
@@ -107,8 +104,9 @@ func Weekdays(t time.Time) (week [7]time.Time) {
 }
 
 // getDemandMonthStartEnd 获取给定时间的需求年月的第一天和最后一天
-// 当第一天所在周落在本月更多，则将当周的第一天当作本月的第一天，否则将下一周的第一天当作本月的第一天
-// 当最后一天所在周落在本月更多，则将当周的最后一天当作本月的最后一天，否则将上一周的最后一天当作本月的最后一天
+// 当输入时间在所在周跨月，则统一将该周周一所在月作为需求月
+// 当需求月第一天所在周跨月时，将第二周的第一天当作本月的第一天
+// 无论如何，最后一周的最后一天都是本月的最后一天，即使最后一周出现跨月
 func getDemandMonthStartEnd(t time.Time) (time.Time, time.Time) {
 	year, month := GetDemandYearMonth(t)
 

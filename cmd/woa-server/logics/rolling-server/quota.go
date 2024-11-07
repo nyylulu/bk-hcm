@@ -683,6 +683,30 @@ func (l *logics) ListBizsWithExistQuota(kt *kit.Kit, req *rstypes.ListBizsWithEx
 	return resp, nil
 }
 
+// GetBizBizQuotaConfigs get biz's biz quota configs
+func (l *logics) GetBizBizQuotaConfigs(kt *kit.Kit, bkBizID int64, req *rstypes.GetBizBizQuotaConfigsReq) (
+	*rstypes.ListBizQuotaConfigsItem, error) {
+
+	listReq := &rstypes.ListBizQuotaConfigsReq{
+		BkBizIDs:   []int64{bkBizID},
+		QuotaMonth: req.QuotaMonth,
+		Page:       core.NewDefaultBasePage(),
+	}
+
+	listResp, err := l.ListBizQuotaConfigs(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list biz quota configs, err: %v, req: %v, rid: %s", err, *listReq, kt.Rid)
+	}
+
+	if len(listResp.Details) == 0 {
+		logs.Errorf("failed to list biz quota configs, biz quota config not found, "+
+			"biz id: %d, quota month: %s, rid: %s", bkBizID, req.QuotaMonth, kt.Rid)
+		return nil, errf.New(errf.InvalidParameter, "biz quota config not found")
+	}
+
+	return listResp.Details[0], nil
+}
+
 // ListBizQuotaConfigs list biz quota configs
 func (l *logics) ListBizQuotaConfigs(kt *kit.Kit, req *rstypes.ListBizQuotaConfigsReq) (
 	*rstypes.ListBizQuotaConfigsResp, error) {

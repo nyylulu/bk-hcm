@@ -33,6 +33,8 @@ const (
 	StatusFinished Status = "FINISHED"
 	// StatusTerminated 被终止
 	StatusTerminated Status = "TERMINATED"
+	// StatusRevoked 已撤销
+	StatusRevoked Status = "REVOKED"
 	// StatusSuspended 被挂起
 	StatusSuspended Status = "SUSPENDED"
 )
