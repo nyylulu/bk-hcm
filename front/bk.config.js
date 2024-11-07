@@ -1,11 +1,12 @@
-const webpack = require('webpack')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
-const { resolve } = require('path');
-const replaceStaticUrlPlugin = require('./replace-static-url-plugin')
+const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
+const fs = require('fs');
+const { resolve, join } = require('path');
+const replaceStaticUrlPlugin = require('./replace-static-url-plugin');
 const isModeProduction = process.env.NODE_ENV === 'production';
-const indexPath = isModeProduction ? './index.html' : './index-dev.html'
+const indexPath = isModeProduction ? './index.html' : './index-dev.html';
 const env = require('./env')();
-const apiMocker = require('./mock-server.js')
+const apiMocker = require('./mock-server.js');
 module.exports = {
   appConfig() {
     return {
@@ -29,43 +30,63 @@ module.exports = {
           },
         },
       },
-      devServer : {
+      devServer: {
         host: env.DEV_HOST,
         port: 5000,
         historyApiFallback: true,
         disableHostCheck: true,
         before(app) {
           apiMocker(app, {
-                // watch: [
-                //   '/mock/api/v4/organization/user_info/',
-                //   '/mock/api/v4/add/',
-                //   '/mock/api/v4/get/',
-                //   '/mock/api/v4/sync/',
-                //   '/mock/api/v4/cloud/public_images/list/'
-                // ],
-                api: resolve(__dirname, './mock/api.ts')
-            })
+            // watch: [
+            //   '/mock/api/v4/organization/user_info/',
+            //   '/mock/api/v4/add/',
+            //   '/mock/api/v4/get/',
+            //   '/mock/api/v4/sync/',
+            //   '/mock/api/v4/cloud/public_images/list/'
+            // ],
+            api: resolve(__dirname, './mock/api.ts'),
+          });
         },
-        proxy: {
-        }
-      }
-    }
+        proxy: {},
+      },
+    };
   },
   configureWebpack(_webpackConfig) {
     webpackConfig = _webpackConfig;
+    const extensions = ['.js', '.vue', '.json', '.ts', '.tsx'];
     webpackConfig.plugins.push(
       new replaceStaticUrlPlugin(),
-      new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function(resource) {
-        resource.request = resource.request.replace(
-          /\.plugin/,
-          `${env.isInternal ? '-internal.plugin' : '.plugin'}`
-        );
+      new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function (resource) {
+        // 获取文件的绝对路径
+        const absPath = resolve(resource.context, resource.request);
 
+        // 内部插件后缀
+        const internalPluginSuffix = '-internal.plugin';
+
+        // 构造内部插件和默认插件的基本路径（不带扩展名）
+        const internalPluginBase = absPath.replace(/\.plugin/, internalPluginSuffix);
+
+        // 定义一个辅助函数来检查文件是否存在
+        const fileExists = (basePath) => {
+          return extensions.some((ext) => fs.existsSync(`${basePath}${ext}`));
+        };
+
+        // 检查 -internal.plugin 文件是否存在
+        if (env.isInternal && fileExists(internalPluginBase)) {
+          // 如果内部插件存在，使用它
+          resource.request = internalPluginBase;
+        } else {
+          // 如果没有任何插件文件存在，发出警告并保留原始 request
+          console.error(`Warning: No suitable file found for ${internalPluginBase}. Using default plugin file.`);
+          resource.request = absPath;
+        }
+
+        // 如果 createData 存在，也同步更新它的 request
         if (resource.createData) {
           resource.createData.request = resource.request;
         }
       }),
-    )
+    );
     webpackConfig.plugins.push(
       new CopyWebpackPlugin({
         patterns: [
@@ -84,8 +105,8 @@ module.exports = {
             to: '[name][ext]', // 保持原文件名
           },
         ],
-      })
-    )
+      }),
+    );
 
     // webpackConfig.externals = {
     //   'axios':'axios',
@@ -94,7 +115,7 @@ module.exports = {
     webpackConfig.resolve = {
       ...webpackConfig.resolve,
       symlinks: false,
-      extensions: ['.js', '.vue', '.json', '.ts', '.tsx'],
+      extensions,
       alias: {
         ...webpackConfig.resolve?.alias,
         // extensions: ['.js', '.jsx', '.ts', '.tsx'],
