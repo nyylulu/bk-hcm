@@ -1,36 +1,39 @@
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
-import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
+import { useRouter, useRoute } from 'vue-router';
+import './index.scss';
+
+import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
+import { Spinner } from 'bkui-vue/lib/icon';
 import CommonCard from '@/components/CommonCard';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import HcmLink from '@/components/hcm-link/index.vue';
-import './index.scss';
-import { useAccountStore, useUserStore } from '@/store';
 import MemberSelect from '@/components/MemberSelect';
-import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
-import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
-import { Spinner } from 'bkui-vue/lib/icon';
 import DiskTypeSelect from '../DiskTypeSelect';
-import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import NetworkInfoPanel from '../network-info-panel/index.vue';
+import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
-import apiService from '@/api/scrApi';
-
-import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
-import http from '@/http';
 import applicationSideslider from '../application-sideslider';
-import { useRouter, useRoute } from 'vue-router';
-import { timeFormatter, expectedDeliveryTime } from '@/common/util';
-import { cloneDeep } from 'lodash';
-import { VerifyStatus, VerifyStatusMap } from './constants';
-import usePlanStore from '@/store/usePlanStore';
 import WName from '@/components/w-name';
-import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
-import { ChargeType } from '@/typings/plan';
+import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
+
+import { useAccountStore, useUserStore } from '@/store';
+import usePlanStore from '@/store/usePlanStore';
+import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useFormModel from '@/hooks/useFormModel';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
+import apiService from '@/api/scrApi';
+import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
+import { VerifyStatus, VerifyStatusMap } from './constants';
+import { ChargeType } from '@/typings/plan';
+import { cloneDeep } from 'lodash';
+import { timeFormatter, expectedDeliveryTime } from '@/common/util';
+import http from '@/http';
+
 // 滚服项目
 import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
 import InheritPackageFormItem from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
@@ -1040,7 +1043,7 @@ export default defineComponent({
                 </bk-form-item>
               </div>
               {/* 滚服项目-tips */}
-              {isRollingServer.value && <RollingServerTipsAlert />}
+              {isRollingServer.value ? <RollingServerTipsAlert /> : <HostApplyTipsAlert />}
             </CommonCard>
             <CommonCard
               title={() => (
