@@ -133,4 +133,6 @@ const (
 
 	// TaskManagement defines task management's hcm auth resource type
 	TaskManagement ResourceType = "task_management"
+	// Image 镜像
+	Image ResourceType = "image"
 )

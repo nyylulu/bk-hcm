@@ -31,6 +31,7 @@ type Client struct {
 	Region        *RegionClient
 	ArgsTpl       *ArgsTplClient
 	Cvm           *CvmClient
+	Image         *ImageClient
 	Application   *ApplicationClient
 	Cert          *CertClient
 	Clb           *ClbClient
@@ -48,6 +49,7 @@ func NewClient(client rest.ClientInterface) *Client {
 		Region:        NewRegionClient(client),
 		ArgsTpl:       NewArgsTplClient(client),
 		Cvm:           NewCvmClient(client),
+		Image:         NewCloudPublicClient(client),
 		Application:   NewApplicationClient(client),
 		Cert:          NewCertClient(client),
 		Clb:           NewClbClient(client),

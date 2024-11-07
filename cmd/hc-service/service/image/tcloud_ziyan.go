@@ -17,37 +17,47 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package image ...
 package image
 
 import (
 	"net/http"
 
-	"hcm/cmd/cloud-server/service/capability"
-	"hcm/pkg/client"
-	"hcm/pkg/iam/auth"
+	"hcm/cmd/hc-service/service/capability"
+	"hcm/pkg/api/hc-service/image"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
-// InitImageService initialize the image service.
-func InitImageService(c *capability.Capability) {
-	svc := &imageSvc{
-		client:     c.ApiClient,
-		authorizer: c.Authorizer,
-	}
-
+func (svc *imageSvc) initTCloudZiyanImageService(cap *capability.Capability) {
 	h := rest.NewHandler()
 
-	h.Add("GetImage", http.MethodGet, "/vendors/{vendor}/images/{id}", svc.RetrieveImage)
-	h.Add("ListImage", http.MethodPost, "/images/list", svc.ListImage)
+	h.Add("ListTCloudZiyanImage", http.MethodPost, "/vendors/tcloud-ziyan/images/list", svc.ListTCloudZiyanImage)
 
-	h.Add("QueryImage", http.MethodPost, "/vendors/{vendor}/images/query_from_cloud", svc.QueryImage)
-	h.Add("QueryBizImage", http.MethodPost, "/bizs/{bk_biz_id}/vendors/{vendor}/images/query_from_cloud",
-		svc.QueryBizImage)
-
-	h.Load(c.WebService)
+	h.Load(cap.WebService)
 }
 
-type imageSvc struct {
-	client     *client.ClientSet
-	authorizer auth.Authorizer
+// ListTCloudZiyanImage ...
+func (svc *imageSvc) ListTCloudZiyanImage(cts *rest.Contexts) (interface{}, error) {
+
+	req := new(image.TCloudImageListOption)
+	err := cts.DecodeInto(req)
+	if err != nil {
+		return nil, err
+	}
+	err = req.Validate()
+	if err != nil {
+		return nil, err
+	}
+	cli, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+	result, err := cli.ListImage(cts.Kit, req.TCloudImageListOption)
+	if err != nil {
+		logs.Errorf("list tcloud-ziyan images failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return result, nil
 }
