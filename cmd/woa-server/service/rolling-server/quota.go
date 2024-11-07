@@ -254,16 +254,16 @@ func (s *service) ListQuotaOffsetsAdjustRecords(cts *rest.Contexts) (any, error)
 	return s.rollingServerLogic.ListQuotaOffsetAdjustRecords(cts.Kit, req.OffsetConfigIds, req.Page)
 }
 
-// GetBizBizQuotaConfigs get biz quota configs.
-func (s *service) GetBizBizQuotaConfigs(cts *rest.Contexts) (any, error) {
+// ListBizBizQuotaConfigs list biz's biz quota configs.
+func (s *service) ListBizBizQuotaConfigs(cts *rest.Contexts) (any, error) {
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, err
 	}
 
-	req := new(rstypes.GetBizBizQuotaConfigsReq)
+	req := new(rstypes.ListBizBizQuotaConfigsReq)
 	if err := cts.DecodeInto(req); err != nil {
-		logs.Errorf("failed to get biz's biz quota configs, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to list biz's biz quota configs, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
@@ -277,9 +277,9 @@ func (s *service) GetBizBizQuotaConfigs(cts *rest.Contexts) (any, error) {
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
 		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Find}, BizID: bizID})
 	if err != nil {
-		logs.Errorf("get biz's biz quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("list biz's biz quota configs failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	return s.rollingServerLogic.GetBizBizQuotaConfigs(cts.Kit, bizID, req)
+	return s.rollingServerLogic.ListBizBizQuotaConfigs(cts.Kit, bizID, req)
 }

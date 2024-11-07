@@ -88,5 +88,5 @@ func (s *service) bizService(h *rest.Handler) {
 	h.Add("GetBizCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetBizCpuCoreSummary)
 
 	// 业务配额
-	h.Add("GetBizBizQuotaConfigs", http.MethodGet, "/biz_quota", s.GetBizBizQuotaConfigs)
+	h.Add("ListBizBizQuotaConfigs", http.MethodPost, "/biz_quotas/list", s.ListBizBizQuotaConfigs)
 }

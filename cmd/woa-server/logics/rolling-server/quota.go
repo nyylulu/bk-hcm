@@ -683,9 +683,9 @@ func (l *logics) ListBizsWithExistQuota(kt *kit.Kit, req *rstypes.ListBizsWithEx
 	return resp, nil
 }
 
-// GetBizBizQuotaConfigs get biz's biz quota configs
-func (l *logics) GetBizBizQuotaConfigs(kt *kit.Kit, bkBizID int64, req *rstypes.GetBizBizQuotaConfigsReq) (
-	*rstypes.ListBizQuotaConfigsItem, error) {
+// ListBizBizQuotaConfigs get biz's biz quota configs
+func (l *logics) ListBizBizQuotaConfigs(kt *kit.Kit, bkBizID int64, req *rstypes.ListBizBizQuotaConfigsReq) (
+	*rstypes.ListBizQuotaConfigsResp, error) {
 
 	listReq := &rstypes.ListBizQuotaConfigsReq{
 		BkBizIDs:   []int64{bkBizID},
@@ -704,7 +704,7 @@ func (l *logics) GetBizBizQuotaConfigs(kt *kit.Kit, bkBizID int64, req *rstypes.
 		return nil, errf.New(errf.InvalidParameter, "biz quota config not found")
 	}
 
-	return listResp.Details[0], nil
+	return listResp, nil
 }
 
 // ListBizQuotaConfigs list biz quota configs
