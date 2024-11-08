@@ -1,7 +1,6 @@
 const webpack = require('webpack');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
-const fs = require('fs');
-const { resolve, join } = require('path');
+const { resolve } = require('path');
 const replaceStaticUrlPlugin = require('./replace-static-url-plugin');
 const isModeProduction = process.env.NODE_ENV === 'production';
 const indexPath = isModeProduction ? './index.html' : './index-dev.html';
@@ -56,32 +55,9 @@ module.exports = {
     const extensions = ['.js', '.vue', '.json', '.ts', '.tsx'];
     webpackConfig.plugins.push(
       new replaceStaticUrlPlugin(),
-      new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function (resource) {
-        // 获取文件的绝对路径
-        const absPath = resolve(resource.context, resource.request);
+      new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function(resource) {
+        resource.request = resource.request.replace(/\.plugin/, `${env.isInternal ? '-internal.plugin' : '.plugin'}`);
 
-        // 内部插件后缀
-        const internalPluginSuffix = '-internal.plugin';
-
-        // 构造内部插件和默认插件的基本路径（不带扩展名）
-        const internalPluginBase = absPath.replace(/\.plugin/, internalPluginSuffix);
-
-        // 定义一个辅助函数来检查文件是否存在
-        const fileExists = (basePath) => {
-          return extensions.some((ext) => fs.existsSync(`${basePath}${ext}`));
-        };
-
-        // 检查 -internal.plugin 文件是否存在
-        if (env.isInternal && fileExists(internalPluginBase)) {
-          // 如果内部插件存在，使用它
-          resource.request = internalPluginBase;
-        } else {
-          // 如果没有任何插件文件存在，发出警告并保留原始 request
-          console.error(`Warning: No suitable file found for ${internalPluginBase}. Using default plugin file.`);
-          resource.request = absPath;
-        }
-
-        // 如果 createData 存在，也同步更新它的 request
         if (resource.createData) {
           resource.createData.request = resource.request;
         }
