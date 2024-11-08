@@ -89,6 +89,6 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/load_balancers/operations/{
 
 #### data参数说明
 
-| 参数名称    | 参数类型   | 描述     |
-|---------|--------|--------|
-| task_id | string | 任务管理id |
+| 参数名称               | 参数类型   | 描述     |
+|--------------------|--------|--------|
+| task_management_id | string | 任务管理id |
