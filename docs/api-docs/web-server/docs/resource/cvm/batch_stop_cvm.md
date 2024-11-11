@@ -27,13 +27,12 @@ POST /api/v1/cloud/cvms/batch/stop_async
 
 ### 响应示例
 
-
 ```json
 {
   "code": 0,
   "message": "ok",
   "data": {
-    "task_management_ids": ["xxxxxx"]
+    "task_management_id": "xxxxxx"
   }
 }
 ```
@@ -49,6 +48,6 @@ POST /api/v1/cloud/cvms/batch/stop_async
 
 #### data参数说明
 
-| 参数名称                | 参数类型     | 描述       |
-|---------------------|----------|----------|
-| task_management_ids | []string | 任务管理id列表 |
+| 参数名称               | 参数类型   | 描述     |
+|--------------------|--------|--------|
+| task_management_id | string | 任务管理id |
