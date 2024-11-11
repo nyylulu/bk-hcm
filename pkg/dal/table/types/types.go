@@ -25,6 +25,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+
+	"hcm/pkg/criteria/enumor"
 )
 
 // JsonField 对应 db 的 json field 格式字段
@@ -108,6 +110,19 @@ func (str StringArray) Value() (driver.Value, error) {
 	}
 
 	return json.Marshal(str)
+}
+
+// ToVendors encode the StringArray to a enumor.Vendor.
+func (str StringArray) ToVendors() []enumor.Vendor {
+	if str == nil {
+		return []enumor.Vendor{}
+	}
+
+	vendors := make([]enumor.Vendor, len(str))
+	for _, value := range str {
+		vendors = append(vendors, enumor.Vendor(value))
+	}
+	return vendors
 }
 
 // Int64Array 对应 db 的json数字数组格式字段

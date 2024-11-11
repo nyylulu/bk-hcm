@@ -96,21 +96,21 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/task_managements/list
 #### 查询参数介绍：
 
 | 参数名称                    | 参数类型   | 描述                                                                           |
-|------------|--------------|------------------------------------------------------------------------------|
-| id         | string       | 任务管理数据ID                                                                     |
-| bk_biz_id  | int          | 业务ID                                                                         |
-| source     | string       | 任务来源，如：标准运维插件(sops)、excel导入(excel)                                           |
-| vendor     | string       | 供应商（枚举值：tcloud、aws、azure、gcp、huawei）                                         |
-| state      | string       | 任务状态，如：为running（运行中）、failed（失败）、success（成功）、deliver_partial（部分成功）、cancel（取消） |
-| account_id | string       | 账号ID                                                                         |
-| resource   | string       | 资源类型，如: clb、host                                                             |
-| operations | string array | 操作                                                                           |
-| flow_ids   | string array | 关联的后台异步任务flow id数组                                                           |
-| extension  | object       | 扩展字段                                                                         |
-| creator    | string       | 创建者                                                                          |
-| reviser    | string       | 修改者                                                                          |
-| created_at | string       | 创建时间，标准格式：2006-01-02T15:04:05Z                                               |
-| updated_at | string       | 修改时间，标准格式：2006-01-02T15:04:05Z                                               |
+|-------------|--------------|------------------------------------------------------------------------------|
+| id          | string       | 任务管理数据ID                                                                     |
+| bk_biz_id   | int          | 业务ID                                                                         |
+| source      | string       | 任务来源，如：标准运维插件(sops)、excel导入(excel)                                           |
+| vendors     | string array | 供应商（枚举值：tcloud、aws、azure、gcp、huawei）                                         |
+| state       | string       | 任务状态，如：为running（运行中）、failed（失败）、success（成功）、deliver_partial（部分成功）、cancel（取消） |
+| account_ids | string array | 账号ID                                                                         |
+| resource    | string       | 资源类型，如: clb、host                                                             |
+| operations  | string array | 操作                                                                           |
+| flow_ids    | string array | 关联的后台异步任务flow id数组                                                           |
+| extension   | object       | 扩展字段                                                                         |
+| creator     | string       | 创建者                                                                          |
+| reviser     | string       | 修改者                                                                          |
+| created_at  | string       | 创建时间，标准格式：2006-01-02T15:04:05Z                                               |
+| updated_at  | string       | 修改时间，标准格式：2006-01-02T15:04:05Z                                               |
 
 接口调用者可以根据以上参数自行根据查询场景设置查询规则。
 
@@ -177,9 +177,9 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/task_managements/list
         "id": "00000001",
         "bk_biz_id": 2,
         "source": "sops",
-        "vendor": "tcloud",
+        "vendors": ["tcloud"],
         "state": "running",
-        "account_id": "00000001",
+        "account_ids": ["00000001"],
         "resource": "clb",
         "operators": ["create_layer4_listener"],
         "flow_ids": ["00000001"],
@@ -216,26 +216,26 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/task_managements/list
 
 #### data
 
-| 参数名称    | 参数类型   | 描述             |
-|---------|--------|----------------|
+| 参数名称 | 参数类型 | 描述                    |
+|---------|--------|-------------------------|
 | count   | uint64 | 当前规则能匹配到的总记录条数 |
-| details | array  | 查询返回的数据        |
+| details | array  | 查询返回的数据             |
 
 #### data.details[n]
 
-| 参数名称       | 参数类型         | 描述                                                                           |
-|------------|--------------|------------------------------------------------------------------------------|
-| id         | string       | 任务管理ID                                                                       |
-| bk_biz_id  | int          | 业务id                                                                         |
-| source     | string       | 任务来源，如：标准运维插件(sops)、excel导入(excel)                                           |
-| vendor     | string       | 供应商（枚举值：tcloud、aws、azure、gcp、huawei）                                         |
-| state      | string       | 任务状态，如：为running（运行中）、failed（失败）、success（成功）、deliver_partial（部分成功）、cancel（取消） |
-| account_id | string       | 账号ID                                                                         |
-| resource   | string       | 资源类型，如: clb、host                                                             |
-| operations | string array | 操作                                                                           |
-| flow_ids   | string array | 关联的后台异步任务flow id数组                                                           |
-| extension  | object       | 扩展字段                                                                         |
-| creator    | string       | 创建者                                  |
-| reviser    | string       | 修改者                                  |
-| created_at | string       | 创建时间，标准格式：2006-01-02T15:04:05Z       |
-| updated_at | string       | 修改时间，标准格式：2006-01-02T15:04:05Z       |
+| 参数名称     | 参数类型       | 描述                                                                           |
+|-------------|--------------|------------------------------------------------------------------------------|
+| id          | string       | 任务管理ID                                                                       |
+| bk_biz_id   | int          | 业务id                                                                         |
+| source      | string       | 任务来源，如：标准运维插件(sops)、excel导入(excel)                                           |
+| vendors     | string array | 供应商（枚举值：tcloud、aws、azure、gcp、huawei）                                         |
+| state       | string       | 任务状态，如：为running（运行中）、failed（失败）、success（成功）、deliver_partial（部分成功）、cancel（取消） |
+| account_ids | string array | 账号ID                                                                         |
+| resource    | string       | 资源类型，如: clb、host                                                             |
+| operations  | string array | 操作                                                                           |
+| flow_ids    | string array | 关联的后台异步任务flow id数组                                                           |
+| extension   | object       | 扩展字段                                                                         |
+| creator     | string       | 创建者                                  |
+| reviser     | string       | 修改者                                  |
+| created_at  | string       | 创建时间，标准格式：2006-01-02T15:04:05Z       |
+| updated_at  | string       | 修改时间，标准格式：2006-01-02T15:04:05Z       |
