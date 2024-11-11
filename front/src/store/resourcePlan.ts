@@ -17,6 +17,7 @@ import {
   IPlanDemandResult,
   IListChangeLogsParam,
   IListChangeLogsResult,
+  ResourcePlanTicketAuditResData,
 } from '@/typings/resourcePlan';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -47,6 +48,14 @@ export const useResourcePlanStore = defineStore({
     // 获取  服务请求 资源预测申请单据详情。
     getOpResourcesTicketsById(id: string): Promise<ResourcePlanTicketByIdResult> {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/resources/tickets/${id}`);
+    },
+    // 查询资源预测单据的审批流，包括审批状态、当前审批阶段等（业务下）
+    getBizResourcesTicketsAuditById(bizId: number, id: string): Promise<ResourcePlanTicketAuditResData> {
+      return http.get(`/api/v1/woa/bizs/${bizId}/plans/resources/tickets/${id}/audit`);
+    },
+    // 查询资源预测单据的审批流，包括审批状态、当前审批阶段等（服务请求下）
+    getOpResourcesTicketsAuditById(id: string): Promise<ResourcePlanTicketAuditResData> {
+      return http.get(`/api/v1/woa/plans/resources/tickets/${id}/audit`);
     },
     createPlan(data: IPlanTicket): { data: { id: string } } {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/create`, data);

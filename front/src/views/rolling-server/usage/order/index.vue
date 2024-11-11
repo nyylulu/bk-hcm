@@ -93,9 +93,13 @@ const getList = async (query: LocationQuery) => {
   pagination.count = count;
 };
 
-const recordsPoll = useTimeoutPoll(() => {
-  getList(route.query);
-}, 30000);
+const recordsPoll = useTimeoutPoll(
+  () => {
+    getList(route.query);
+  },
+  30000,
+  { immediate: true },
+);
 
 watch(
   () => route.query,
@@ -103,7 +107,6 @@ watch(
     recordsPoll.pause();
     recordsPoll.resume();
   },
-  { immediate: true },
 );
 
 const handleSearch = (vals: ISearchCondition) => {
