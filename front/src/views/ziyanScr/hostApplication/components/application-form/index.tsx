@@ -940,17 +940,18 @@ export default defineComponent({
       async (val) => {
         resetCpuAmount();
         for (const item of val) {
-          const { cpu, charge_type } = item.spec;
+          const { replicas, spec } = item;
+          const { cpu, charge_type } = spec;
           if (ChargeType.POSTPAID_BY_HOUR === charge_type) {
             setCpuAmount({
               ...cpuAmount,
-              postpaid: cpuAmount.postpaid + cpu,
+              postpaid: cpuAmount.postpaid + cpu * replicas,
             });
           }
           if (ChargeType.PREPAID === charge_type) {
             setCpuAmount({
               ...cpuAmount,
-              prepaid: cpuAmount.prepaid + cpu,
+              prepaid: cpuAmount.prepaid + cpu * replicas,
             });
           }
         }
