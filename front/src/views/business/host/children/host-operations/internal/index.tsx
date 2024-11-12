@@ -10,12 +10,31 @@ import CommonLocalTable from '@/components/LocalTable';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
-import { OperationActions, operationMap } from '../index';
+import { operationMap as defaultOperationMap, OperationMapItem } from '../index';
 import RecycleFlow from './recycle-flow.vue';
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
-export { OperationActions, operationMap } from '../index';
+export enum OperationActions {
+  NONE = 'none',
+  START = 'start',
+  STOP = 'stop',
+  REBOOT = 'reboot',
+  RECYCLE = 'recycle',
+  RESET = 'reset',
+}
+
+export const operationMap: Record<OperationActions, OperationMapItem> = {
+  ...defaultOperationMap,
+  [OperationActions.RESET]: {
+    label: '重装',
+    disabledStatus: [] as string[],
+    loading: false,
+    // 鉴权参数
+    authId: 'biz_iaas_resource_delete',
+    actionName: 'biz_iaas_resource_delete',
+  },
+};
 
 export default defineComponent({
   props: {
@@ -74,31 +93,54 @@ export default defineComponent({
       onFinished: props.onFinished,
     });
 
-    const operationDisabledTips = (type: string) => {
-      const isRecycle = type === OperationActions.RECYCLE;
+    const getOperationConfig = (type: OperationActions) => {
+      // 点击事件（值缺省时，为默认点击事件）
+      const clickHandler = () => handleClickMenu(type);
+
       if (isMix.value) {
         return {
-          content: '腾讯云自研云和公有云的主机，不支持同时操作',
-          disabled: false,
+          disabled: true,
+          tooltips: { content: '腾讯云自研云和公有云的主机，不支持同时操作', disabled: false },
+          clickHandler,
         };
       }
-      if (isZiyanOnly.value) {
+
+      // 非自研云不支持重装操作
+      const isReset = type === OperationActions.RESET;
+      if (!isZiyanOnly.value && isReset) {
         return {
-          content: isRecycle ? '' : '暂不支持',
-          disabled: isRecycle,
+          disabled: true,
+          tooltips: { content: '暂不支持', disabled: false },
+          clickHandler,
         };
       }
-      return {
-        content: '',
-        disabled: true,
-      };
+
+      // 预鉴权
+      const { authId, actionName } = operationMap[type];
+      const noPermission = !authVerifyData?.value?.permissionAction?.[authId];
+      if (authId && actionName && noPermission) {
+        return {
+          disabled: false,
+          tooltips: { disabled: true },
+          clickHandler: () => {
+            handleAuth(actionName);
+            globalPermissionDialog.setShow(true);
+          },
+        };
+      }
+
+      return { disabled: false, tooltips: { disabled: true }, clickHandler };
     };
 
     const handleClickMenu = (type: OperationActions) => {
-      if (!operationDisabledTips(type).disabled) {
+      if (getOperationConfig(type).disabled) {
         return;
       }
       operationType.value = type;
+      // 主机重装操作
+      if (type === OperationActions.RESET) {
+        console.error('🚀 ~ handleClickMenu ~ type:', type);
+      }
     };
 
     const ziyanRecycleSelected = ref([]);
@@ -180,24 +222,14 @@ export default defineComponent({
                   {Object.entries(operationMap)
                     .filter(([opType]) => opType !== OperationActions.NONE)
                     .map(([opType, opData]) => {
+                      const { disabled, tooltips, clickHandler } = getOperationConfig(opType as OperationActions);
                       return withDirectives(
                         <BkDropdownItem
-                          onClick={() => {
-                            if (!authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete) {
-                              handleAuth('biz_iaas_resource_delete');
-                              globalPermissionDialog.setShow(true);
-                            } else handleClickMenu(opType as OperationActions);
-                          }}
-                          extCls={`more-action-item${
-                            !operationDisabledTips(opType as OperationActions).disabled ||
-                            (opType === OperationActions.RECYCLE &&
-                              !authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete)
-                              ? ' disabled'
-                              : ''
-                          }`}>
+                          onClick={clickHandler}
+                          extCls={`more-action-item${disabled ? ' disabled' : ''}`}>
                           批量{opData.label}
                         </BkDropdownItem>,
-                        [[bkTooltips, operationDisabledTips(opType as OperationActions)]],
+                        [[bkTooltips, tooltips]],
                       );
                     })}
                   <CopyToClipboard

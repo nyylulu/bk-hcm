@@ -45,7 +45,7 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
 
   const computedTitle = computed(() => {
     if (operationType.value === OperationActions.NONE) return `批量${operationMap[previousOperationType.value]?.label}`;
-    return `批量${operationMap[operationType.value].label}`;
+    return `批量${operationMap[operationType.value]?.label}`;
   });
 
   const getDiskNumByCvmIds = async () => {
@@ -203,7 +203,7 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
   });
 
   const computedContent = computed(() => {
-    const targetOperationName = operationMap[operationType.value].label;
+    const targetOperationName = operationMap[operationType.value]?.label;
     return (
       <div class={cssModule['host-operations-selection-tip']}>
         已选择 <span class={cssModule['host-operations-selection-tip-all']}>{selections.value.length}</span> 个主机，

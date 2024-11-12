@@ -40,6 +40,8 @@ export type OperationMapItem = {
   label: string;
   disabledStatus?: string[];
   loading?: boolean;
+  authId?: string;
+  actionName?: string;
 };
 
 export const operationMap = {

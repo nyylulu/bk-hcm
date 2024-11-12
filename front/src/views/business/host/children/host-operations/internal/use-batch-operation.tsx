@@ -1,13 +1,19 @@
-import { computed, watch } from 'vue';
+import { computed, Ref, watch } from 'vue';
+import { Message } from 'bkui-vue';
 import { useZiyanScrStore } from '@/store';
 import { VendorEnum } from '@/common/constant';
-import { OperationActions } from '../index';
+import { ResourceTypeEnum } from '@/common/resource-constant';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useBusinessStore } from '@/store/business';
+import routerAction from '@/router/utils/action';
+import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
+import { OperationActions } from './index';
 import defaultUseBatchOperation, { type Params } from '../use-batch-operation';
 
 const useBatchOperation = ({ selections, onFinished }: Params) => {
   const {
-    operationType,
-    isDialogShow,
+    operationType: defaultOperationType,
+    isDialogShow: defaultIsDialogShow,
     isConfirmDisabled,
     operationsDisabled,
     computedTitle,
@@ -26,14 +32,21 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     selectedRowPublicIPs,
     getDiskNumByCvmIds,
     handleSwitch,
-    handleConfirm,
+    handleConfirm: defaultHandleConfirm,
     handleCancelDialog,
   } = defaultUseBatchOperation({
     selections,
     onFinished,
   });
 
+  const operationType: Ref<OperationActions> = defaultOperationType;
+
+  const { getBizsId } = useWhereAmI();
   const scrStore = useZiyanScrStore();
+  const businessStore = useBusinessStore();
+
+  // 重装操作不集成到 host-operations 组件中
+  const isDialogShow = computed(() => defaultIsDialogShow.value && OperationActions.RESET !== operationType.value);
 
   const vendorSet = computed(() => {
     const vendors = selections.value.map((item) => item.vendor);
@@ -145,6 +158,39 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     isConfirmDisabled.value = targetHost.value.length === 0;
     handleSwitch(targetHost.value.length > 0);
   });
+
+  const handleConfirm = async () => {
+    if (isZiyanOnly.value) {
+      const hostIds = targetHost.value.map((v) => v.id);
+      if ([OperationActions.START, OperationActions.STOP, OperationActions.REBOOT].includes(operationType.value)) {
+        try {
+          isLoading.value = true;
+
+          const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds });
+          // 跳转至新任务详情页
+          routerAction.redirect({
+            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+            params: { resourceType: ResourceTypeEnum.HOST, id: result.task_management_id },
+            query: { bizs: getBizsId() },
+          });
+
+          Message({
+            message: '操作成功',
+            theme: 'success',
+          });
+
+          onFinished?.('confirm');
+          operationType.value = OperationActions.NONE;
+        } finally {
+          isLoading.value = false;
+        }
+      } else {
+        // 批量重装
+      }
+    } else {
+      defaultHandleConfirm();
+    }
+  };
 
   return {
     operationType,

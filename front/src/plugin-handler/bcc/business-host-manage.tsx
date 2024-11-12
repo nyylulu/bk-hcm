@@ -3,18 +3,23 @@ import { Button, Dropdown, Message, bkTooltips } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { VendorEnum } from '@/common/constant';
+import { ResourceTypeEnum } from '@/common/resource-constant';
+import Confirm, { confirmInstance } from '@/components/confirm';
 import defaultUseColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import HostOperations, {
   OperationActions,
   operationMap,
 } from '@/views/business/host/children/host-operations/internal/index';
+import { OperationActions as DefaultOperationActions } from '@/views/business/host/children/host-operations/index';
 import useSingleOperation from '@/views/business/host/children/host-operations/internal/use-single-operation';
 import defaultUseSingleOperation from '@/views/business/host/children/host-operations/use-single-operation';
 import defaultUseTableListQuery from '@/hooks/useTableListQuery';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useBusinessStore } from '@/store/business';
+import routerAction from '@/router/utils/action';
+import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
 import type { PropsType } from '@/hooks/useTableListQuery';
 import type { PluginHandlerType } from '../business-host-manage';
-import { useVerify } from '@/hooks';
-import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 
@@ -31,11 +36,11 @@ type UseColumnsParams = {
 };
 
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
-  const { authVerifyData, handleAuth } = useVerify();
-  const globalPermissionDialogStore = useGlobalPermissionDialog();
   const { t } = useI18n();
   const router = useRouter();
-  const { isOperateDisabled, getMenuTooltipsOption, currentOperateRowIndex } = useSingleOperation();
+  const { getBizsId } = useWhereAmI();
+  const businessStore = useBusinessStore();
+
   const { handleOperate: defaultHandleOperate } = defaultUseSingleOperation({
     beforeConfirm() {
       extra.isLoading.value = true;
@@ -54,17 +59,39 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
     },
   });
 
-  const handleOperate = async (type: OperationActions, data: any) => {
-    if (isOperateDisabled(type, data)) return;
-
-    if (data.vendor === VendorEnum.ZIYAN) {
-      // 使用批量回收操作
-      extra.getTableRef()?.value?.clearSelection?.();
-      extra.getHostOperationRef()?.value?.handleSingleZiyanRecycle?.(data);
-    } else {
-      defaultHandleOperate(type, data);
-    }
-  };
+  const { currentOperateRowIndex, getOperationConfig } = useSingleOperation({
+    customOperate(type: OperationActions, data: any) {
+      if (data.vendor === VendorEnum.ZIYAN) {
+        if (type === OperationActions.RECYCLE) {
+          // 使用批量回收操作
+          extra.getTableRef()?.value?.clearSelection?.();
+          extra.getHostOperationRef()?.value?.handleSingleZiyanRecycle?.(data);
+        } else if (type === OperationActions.RESET) {
+          // 重装单个
+        } else {
+          // 开机、关机、重启操作
+          const { label } = operationMap[type];
+          Confirm(`确定${label}`, <>当前操作主机为：{data.name}</>, async () => {
+            confirmInstance.hide();
+            extra.isLoading.value = true;
+            try {
+              const result = await businessStore.cvmOperateAsync(type, { ids: [data.id] });
+              // 跳转至新任务详情页
+              routerAction.redirect({
+                name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+                params: { resourceType: ResourceTypeEnum.HOST, id: result.task_management_id },
+                query: { bizs: getBizsId() },
+              });
+            } finally {
+              extra.isLoading.value = false;
+            }
+          });
+        }
+      } else {
+        defaultHandleOperate(type as DefaultOperationActions, data);
+      }
+    },
+  });
 
   const operationDropdownList = Object.entries(operationMap)
     .filter(([type]) => ![OperationActions.RECYCLE, OperationActions.NONE].includes(type as OperationActions))
@@ -91,25 +118,13 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
                     text
                     theme={'primary'}
                     class={`mr10 ${
-                      !authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete
-                        ? 'hcm-no-permision-text-btn'
-                        : ''
+                      getOperationConfig(OperationActions.RECYCLE, data).noPermission ? 'hcm-no-permision-text-btn' : ''
                     }`}
-                    onClick={() => {
-                      if (authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete) {
-                        handleOperate(OperationActions.RECYCLE, data);
-                      } else {
-                        handleAuth('biz_iaas_resource_delete');
-                        globalPermissionDialogStore.setShow(true);
-                      }
-                    }}
-                    disabled={
-                      authVerifyData?.value?.permissionAction?.biz_iaas_resource_delete &&
-                      isOperateDisabled(OperationActions.RECYCLE, data)
-                    }>
+                    onClick={getOperationConfig(OperationActions.RECYCLE, data).clickHandler}
+                    disabled={getOperationConfig(OperationActions.RECYCLE, data).disabled}>
                     {operationMap[OperationActions.RECYCLE].label}
                   </Button>,
-                  [[bkTooltips, getMenuTooltipsOption(OperationActions.RECYCLE, data)]],
+                  [[bkTooltips, getOperationConfig(OperationActions.RECYCLE, data).tooltips]],
                 ),
                 <Dropdown
                   trigger='click'
@@ -128,16 +143,18 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
                     content: () => (
                       <DropdownMenu>
                         {operationDropdownList.map(({ label, type }) => {
+                          const { disabled, tooltips, clickHandler } = getOperationConfig(
+                            type as OperationActions,
+                            data,
+                          );
                           return withDirectives(
                             <DropdownItem
                               key={type}
-                              onClick={() => handleOperate(type as OperationActions, data)}
-                              extCls={`more-action-item${
-                                isOperateDisabled(type as OperationActions, data) ? ' disabled' : ''
-                              }`}>
+                              onClick={clickHandler}
+                              extCls={`more-action-item${disabled ? ' disabled' : ''}`}>
                               {label}
                             </DropdownItem>,
-                            [[bkTooltips, getMenuTooltipsOption(type as OperationActions, data)]],
+                            [[bkTooltips, tooltips]],
                           );
                         })}
                       </DropdownMenu>
