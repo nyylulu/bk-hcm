@@ -136,6 +136,7 @@ func (l *logics) SyncBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq) e
 	failed := 0
 	resPoolBizCount := 0
 	for _, bizID := range bizIDs {
+		time.Sleep(200 * time.Millisecond)
 		if _, ok := resPoolBizMap[bizID]; ok {
 			resPoolBizCount++
 			logs.Infof("skip resource pool business rolling bill sync, bizID: %d, rid: %s", bizID, kt.Rid)
