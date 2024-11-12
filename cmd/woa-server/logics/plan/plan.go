@@ -89,6 +89,8 @@ const (
 	TicketSvcNameResPlan = "res_plan"
 	// TicketNodeNameCrpAudit 资源预测在ITSM流程中的CRP审批节点
 	TicketNodeNameCrpAudit = "crp_audit"
+	// TicketOperatorNameCrpAudit 资源预测在ITSM流程中的CRP审批节点操作人
+	TicketOperatorNameCrpAudit = "icr"
 	// AuditFlowTimeoutDay 审批流超时时间，单位天
 	AuditFlowTimeoutDay int = 5
 	// PendingTicketTraceDay 带处理的单据历史追溯时间，单位天

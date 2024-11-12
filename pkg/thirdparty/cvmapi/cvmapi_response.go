@@ -374,7 +374,10 @@ const (
 
 // PlanOrderBaseInfo query cvm and cbs plan order base info
 type PlanOrderBaseInfo struct {
-	Status PlanOrderStatus `json:"status"`
+	Status           PlanOrderStatus `json:"status"`
+	StatusMsg        string          `json:"statusMsg"`
+	StatusDesc       string          `json:"statusDesc"`
+	CurrentProcessor string          `json:"currentProcessor"`
 }
 
 // CapacityResp cvm apply capacity query response
@@ -570,4 +573,27 @@ type QueryCvmInstanceTypeItem struct {
 	CPUAmount             float64           `json:"cpuAmount"`             // CPU数量
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
 	InstanceClass         string            `json:"instanceClass"`         // 实例类型
+}
+
+// GetApproveLogResp get approve log response
+type GetApproveLogResp struct {
+	RespMeta  `json:",inline"`
+	Result    map[string]GetApproveLogOrderRst `json:"result"`
+	Errorinfo interface{}                      `json:"errorinfo"`
+}
+
+// GetApproveLogOrderRst get approve log result
+type GetApproveLogOrderRst []*GetApproveLogItem
+
+// GetApproveLogItem get approve log item
+type GetApproveLogItem struct {
+	TodoOrderID   string `json:"todoOrderId"`
+	OperateTime   string `json:"operateTime"`
+	OperateResult string `json:"operateResult"`
+	OperateInfo   string `json:"operateInfo"`
+	Activity      string `json:"activity"`
+	Operator      string `json:"operator"`
+	Memo          string `json:"memo"`
+	Platform      string `json:"platform"`
+	OrderID       string `json:"orderId"`
 }

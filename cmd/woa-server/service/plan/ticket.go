@@ -521,3 +521,63 @@ func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 
 	return resp, nil
 }
+
+// GetResPlanTicketAudit get biz resource plan ticket audit.
+func (s *service) GetResPlanTicketAudit(cts *rest.Contexts) (interface{}, error) {
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize ticket resource plan access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Application, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	return s.getResPlanTicketAudit(cts.Kit, ticketID)
+}
+
+// GetBizResPlanTicketAudit get biz resource plan ticket audit.
+func (s *service) GetBizResPlanTicketAudit(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
+	ticketID := cts.PathParameter("ticket_id").String()
+	if len(ticketID) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
+	}
+
+	// authorize biz access.
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	return s.getResPlanTicketAudit(cts.Kit, ticketID)
+}
+
+func (s *service) getResPlanTicketAudit(kt *kit.Kit, ticketID string) (*ptypes.GetResPlanTicketAuditResp, error) {
+	resp := new(ptypes.GetResPlanTicketAuditResp)
+	resp.TicketID = ticketID
+
+	// 查询Itsm单号和Crp单号
+	statusInfo, err := s.getRPTicketStatusInfo(kt, ticketID)
+	if err != nil {
+		logs.Errorf("get resource plan ticket status info failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	itsmAudit, crpAudit, err := s.planController.GetItsmAndCrpAuditStatus(kt, statusInfo)
+	if err != nil {
+		logs.Errorf("get itsm and crp audit status failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	resp.ItsmAudit = itsmAudit
+	resp.CrpAudit = crpAudit
+
+	return resp, nil
+}
