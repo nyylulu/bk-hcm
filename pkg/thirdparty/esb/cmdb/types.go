@@ -401,8 +401,14 @@ var HostFields = []string{
 	"bk_cloud_id",
 	"bk_os_name",
 	"bk_svr_source_type_id",
-	"bk_asset_id",
 	"bk_svr_device_cls_name",
+	"svr_source_type_id", // 服务器来源类型ID
+	"srv_status",         // CC的运营状态
+	"svr_device_class",   // 机型
+	"bk_disk",            // 磁盘容量(GB)
+	"bk_cpu",             // CPU逻辑核心数
+	"operator",           // 主要维护人
+	"bk_bak_operator",    // 备份维护人
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	"bk_cloud_vpc_id",

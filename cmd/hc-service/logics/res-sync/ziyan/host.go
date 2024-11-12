@@ -263,6 +263,14 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 		Extension: &cvm.TCloudZiyanHostExtension{
 			HostID:          ccHost.BkHostID,
 			SvrSourceTypeID: ccHost.SvrSourceTypeID,
+			SrvStatus:       ccHost.SvrStatus,
+			BkAssetID:       ccHost.BkAssetID,
+			SvrDeviceClass:  ccHost.SvrDeviceClass,
+			BkDisk:          ccHost.BkDisk,
+			BkCpu:           ccHost.BkCpu,
+			BkOSName:        ccHost.BkOSName,
+			Operator:        ccHost.Operator,
+			BkBakOperator:   ccHost.BkBakOperator,
 		},
 	}
 
@@ -318,6 +326,26 @@ func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TC
 		return true
 	}
 
+	if db.MachineType != cloud.MachineType {
+		return true
+	}
+
+	if db.CloudCreatedTime != cloud.CloudCreatedTime {
+		return true
+	}
+
+	if db.CloudExpiredTime != cloud.CloudExpiredTime {
+		return true
+	}
+
+	if isIPExtensionChange(db, cloud) {
+		return true
+	}
+
+	return false
+}
+
+func isIPExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TCloudZiyanHostExtension]) bool {
 	if !assert.IsStringSliceEqual(db.PrivateIPv4Addresses, cloud.PrivateIPv4Addresses) {
 		return true
 	}
@@ -334,20 +362,13 @@ func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TC
 		return true
 	}
 
-	if db.MachineType != cloud.MachineType {
-		return true
-	}
-
-	if db.CloudCreatedTime != cloud.CloudCreatedTime {
-		return true
-	}
-
-	if db.CloudExpiredTime != cloud.CloudExpiredTime {
-		return true
-	}
-
 	if db.Extension == nil || cloud.Extension == nil || db.Extension.HostID != cloud.Extension.HostID ||
-		db.Extension.SvrSourceTypeID != cloud.Extension.SvrSourceTypeID {
+		db.Extension.SvrSourceTypeID != cloud.Extension.SvrSourceTypeID ||
+		db.Extension.SrvStatus != cloud.Extension.SrvStatus || db.Extension.BkAssetID != cloud.Extension.BkAssetID ||
+		db.Extension.SvrDeviceClass != cloud.Extension.SvrDeviceClass || db.Extension.BkCpu != cloud.Extension.BkCpu ||
+		db.Extension.BkDisk != cloud.Extension.BkDisk || db.Extension.BkOSName != cloud.Extension.BkOSName ||
+		db.Extension.Operator != cloud.Extension.Operator ||
+		db.Extension.BkBakOperator != cloud.Extension.BkBakOperator {
 
 		return true
 	}

@@ -21,10 +21,10 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/batch/reset_async
 | 参数名称        | 参数类型   | 必选 | 描述          |
 |----------------|-----------|------|--------------|
 | id	         | string	   | 是   | 主机唯一ID     |
-| asset_id	     | string	   | 是   | 设备固资号     |
+| bk_asset_id    | string	   | 是   | 设备固资号     |
 | device_type    | string	   | 是   | 机型          |
 | image_name_old | string	   | 是   | 原镜像名称     |
-| image_id       | string	   | 是   | 新镜像ID      |
+| cloud_image_id | string	   | 是   | 新镜像云ID     |
 | image_name     | string	   | 是   | 新镜像名称     |
 | image_type     | string	   | 是   | 新镜像类型(PUBLIC_IMAGE:公共镜像 PRIVATE_IMAGE:私有镜像) |
 
@@ -35,10 +35,10 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/batch/reset_async
   "hosts": [
     {
       "id": "00000001",
-      "asset_id": "xxxxxx",
+      "bk_asset_id": "xxxxxx",
       "device_type": "SA5.4XLARGE32",
       "image_name_old": "Tencent OS 001",
-      "image_id": "002",
+      "cloud_image_id": "img-002",
       "image_name": "Tencent OS 002",
       "image_type": "PUBLIC_IMAGE"
     }

@@ -52,6 +52,8 @@ type Interface interface {
 	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.ListBizHostResult, error)
 	QuerySecurityGroupNamesByCloudID(kt *kit.Kit, vendor enumor.Vendor,
 		sgCloudIds []string) (map[string]string, error)
+	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error)
+	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
 }
 
 type cvm struct {

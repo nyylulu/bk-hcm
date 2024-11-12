@@ -25,6 +25,7 @@ import (
 
 	rr "hcm/pkg/api/core/recycle-record"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 )
 
@@ -194,4 +195,47 @@ type CvmRelatedInfo struct {
 	DiskCount int      `json:"disk_count"`
 	EipCount  int      `json:"eip_count"`
 	Eip       []string `json:"eip"`
+}
+
+// ListCvmBatchResetReq define list cvm batch reset req.
+type ListCvmBatchResetReq struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+}
+
+// Validate validate.
+func (req *ListCvmBatchResetReq) Validate() error {
+	if err := validator.Validate.Struct(req); err != nil {
+		return err
+	}
+	return nil
+}
+
+// CvmBatchResetHostInfo define cvm batch reset host info.
+type CvmBatchResetHostInfo struct {
+	ID                   string                `json:"id"`
+	Vendor               enumor.Vendor         `json:"vendor"`
+	AccountID            string                `json:"account_id"`
+	BkHostID             int64                 `json:"bk_host_id"`
+	BkHostName           string                `json:"bk_host_name"`
+	CloudID              string                `json:"cloud_id"`
+	BkAssetID            string                `json:"bk_asset_id"`
+	PrivateIPv4Addresses []string              `json:"private_ipv4_addresses"`
+	PrivateIPv6Addresses []string              `json:"private_ipv6_addresses"`
+	PublicIPv4Addresses  []string              `json:"public_ipv4_addresses"`
+	PublicIPv6Addresses  []string              `json:"public_ipv6_addresses"`
+	Operator             string                `json:"operator"`
+	BkBakOperator        string                `json:"bak_operator"`
+	DeviceType           string                `json:"device_type"`
+	Region               string                `json:"region"`
+	Zone                 string                `json:"zone"`
+	BkOSName             string                `json:"bk_os_name"`
+	SvrSourceTypeID      string                `json:"bk_svr_source_type_id"`
+	Status               string                `json:"status"`
+	SrvStatus            string                `json:"srv_status"`
+	ResetStatus          enumor.CvmResetStatus `json:"reset_status"`
+}
+
+// ListCvmBatchResetResp define list cvm batch reset response.
+type ListCvmBatchResetResp struct {
+	Details []CvmBatchResetHostInfo `json:"details"`
 }

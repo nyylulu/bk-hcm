@@ -48,7 +48,7 @@ func (req CmdbHostListReq) Validate() error {
 // CmdbHostQueryReq 从cc 查询主机
 type CmdbHostQueryReq struct {
 	BkBizID        int64
-	Vendor         enumor.Vendor
+	Vendor         enumor.Vendor `json:"vendor" validate:"omitempty"`
 	AccountID      string        `json:"account_id" validate:"required"`
 	Region         string        `json:"region" validate:"omitempty"`
 	Zone           string        `json:"zone" validate:"omitempty"`
@@ -61,5 +61,6 @@ type CmdbHostQueryReq struct {
 	OuterIP        []string      `json:"outer_ip" validate:"omitempty"`
 	InnerIPv6      []string      `json:"inner_ipv6" validate:"omitempty"`
 	OuterIPv6      []string      `json:"outer_ipv6" validate:"omitempty"`
+	BkHostIDs      []int64       `json:"bk_host_ids" validate:"omitempty"`
 	Page           cmdb.BasePage `json:"page" validate:"required"`
 }

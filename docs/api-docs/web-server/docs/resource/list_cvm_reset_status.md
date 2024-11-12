@@ -12,13 +12,7 @@ POST /api/v1/woa/cvms/list/reset/status
 
 | 参数名称  | 参数类型       | 必选 | 描述                      |
 |----------|--------------|------|--------------------------|
-| hosts    | HostsObject  | 是    | 要查询的主机列表，数量最大500 |
-
-### HostsObject
-| 参数名称      | 参数类型       | 必选 | 描述                      |
-|--------------|--------------|------|--------------------------|
-| id           | string       | 是   | 要查询的主机唯一ID          |
-| vendor       | string       | 是   | 云厂商（枚举值：tcloud、aws、azure、gcp、huawei）|
+| ids      | string array | 是    | 要查询的主机ID数组，数量最大500 |
 
 ### 调用示例
 
@@ -26,12 +20,7 @@ POST /api/v1/woa/cvms/list/reset/status
 
 ```json
 {
-   "hosts": [
-     {
-        "id": "00000001",
-        "vendor":"tcloud"
-     }
-  ]
+  "ids": ["00000001"]
 }
 ```
 
@@ -50,7 +39,7 @@ POST /api/v1/woa/cvms/list/reset/status
         "id": "00000001",
         "bk_host_id":17,
         "bk_host_name": "xxxxxx",
-        "asset_id":"xxxxxxx",
+        "bk_asset_id":"xxxxxxx",
         "private_ipv4_addresses":["10.0.0.1"],
         "private_ipv6_addresses":["10.0.0.1"],
         "public_ipv4_addresses":["10.0.0.1"],
@@ -93,7 +82,7 @@ POST /api/v1/woa/cvms/list/reset/status
 | id                     | string	    | 主机唯一ID      |
 | bk_host_id             | int	        | CC主机ID       |
 | bk_host_name           | string	    | CC主机名称      |
-| asset_id	             | string	    | 设备固资号      |
+| bk_asset_id            | string	    | 设备固资号      |
 | private_ipv4_addresses | string array	| 内网ipv4      |
 | private_ipv6_addresses | string array | 内网ipv6      |
 | public_ipv4_addresses	 | string array | 外网ipv4      |

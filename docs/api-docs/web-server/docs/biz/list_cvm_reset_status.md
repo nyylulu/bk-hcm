@@ -40,7 +40,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/cvms/list/reset/status
         "id": "00000001",
         "bk_host_id":17,
         "bk_host_name": "xxxxxx",
-        "asset_id":"xxxxxxx",
+        "bk_asset_id":"xxxxxxx",
         "private_ipv4_addresses":["10.0.0.1"],
         "private_ipv6_addresses":["10.0.0.1"],
         "public_ipv4_addresses":["10.0.0.1"],
@@ -83,7 +83,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/cvms/list/reset/status
 | id                     | string	    | 主机唯一ID      |
 | bk_host_id             | int	        | CC主机ID       |
 | bk_host_name           | string	    | CC主机名称      |
-| asset_id	             | string	    | 设备固资号      |
+| bk_asset_id	         | string	    | 设备固资号      |
 | private_ipv4_addresses | string array	| 内网ipv4      |
 | private_ipv6_addresses | string array | 内网ipv6      |
 | public_ipv4_addresses	 | string array | 外网ipv4      |

@@ -20,21 +20,29 @@
 package cvm
 
 import (
+	"fmt"
+
+	"hcm/pkg"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // GetCmdbBizHosts 获取cmdb业务拓扑下主机
 func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.ListBizHostResult, error) {
 
-	ccVendor, exists := cmdb.HcmCmdbVendorMap[req.Vendor]
-	if !exists {
-		return nil, errf.New(errf.InvalidParameter, "not supported vendor: %s"+string(req.Vendor))
+	var combinedRule = cmdb.CombinedRule{Condition: "AND", Rules: make([]cmdb.Rule, 0)}
+	if req.Vendor != "" {
+		ccVendor, exists := cmdb.HcmCmdbVendorMap[req.Vendor]
+		if !exists {
+			return nil, errf.New(errf.InvalidParameter, "not supported vendor: %s"+string(req.Vendor))
+		}
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.Equal("bk_cloud_vendor", ccVendor))
 	}
-	combinedRule := cmdb.Combined("AND", cmdb.Equal("bk_cloud_vendor", ccVendor))
 	if req.Region != "" {
 		// 筛选地域
 		combinedRule.Rules = append(combinedRule.Rules, cmdb.Equal("bk_cloud_region", req.Region))
@@ -64,6 +72,9 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 	if len(req.OuterIPv6) > 0 {
 		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_host_outerip_v6", req.OuterIPv6))
 	}
+	if len(req.BkHostIDs) > 0 {
+		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_host_id", req.BkHostIDs))
+	}
 	params := &cmdb.ListBizHostParams{
 		BizID:              req.BkBizID,
 		BkSetIDs:           req.BkSetIDs,
@@ -74,8 +85,52 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 	}
 	cmdbResult, err := c.cmdb.ListBizHost(kt, params)
 	if err != nil {
-		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, cvt.PtrToVal(req), kt.Rid)
 		return nil, err
 	}
 	return cmdbResult, nil
+}
+
+// GetHostTopoInfo get host topo info in cc 3.0
+func (c *cvm) GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error) {
+	req := &cmdb.HostBizRelReq{
+		BkHostId: hostIds,
+	}
+
+	resp, err := c.cmdb.FindHostBizRelation(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to get cc host topo info, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Result == false || resp.Code != 0 {
+		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
+		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
+	}
+
+	return resp.Data, nil
+}
+
+// GetModuleInfo get module info in cc 3.0
+func (c *cvm) GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error) {
+	req := &cmdb.SearchModuleParams{
+		BizID: bkBizID,
+		Condition: mapstr.MapStr{
+			"bk_module_id": mapstr.MapStr{
+				pkg.BKDBIN: moduleIds,
+			},
+		},
+		Fields: []string{"bk_module_id", "bk_module_name"},
+		Page: cmdb.BasePage{
+			Start: 0,
+			Limit: 200,
+		},
+	}
+	resp, err := c.cmdb.SearchModule(kit, req)
+	if err != nil {
+		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	return resp.Info, nil
 }

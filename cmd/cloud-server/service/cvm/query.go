@@ -242,3 +242,66 @@ func (svc *cvmSvc) queryCvmRelatedRes(cts *rest.Contexts, validHandler handler.V
 	})
 	return relatedInfos, nil
 }
+
+// ListCvmResetStatus list cvm reset status.
+func (svc *cvmSvc) ListCvmResetStatus(cts *rest.Contexts) (interface{}, error) {
+	return svc.listCvmResetStatus(cts, handler.ListResourceAuthRes)
+}
+
+// ListBizCvmResetStatus list biz cvm reset status.
+func (svc *cvmSvc) ListBizCvmResetStatus(cts *rest.Contexts) (interface{}, error) {
+	return svc.listCvmResetStatus(cts, handler.ListBizAuthRes)
+}
+
+// listCvmResetStatus 获取业务下云主机是否可重装的状态列表
+func (svc *cvmSvc) listCvmResetStatus(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (any, error) {
+	req := new(cscvm.ListCvmBatchResetReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+
+	// 校验业务权限
+	_, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{
+		Authorizer: svc.authorizer, ResType: meta.Cvm, Action: meta.Find})
+	if err != nil {
+		return nil, err
+	}
+	if noPermFlag {
+		return cscvm.ListCvmBatchResetResp{Details: make([]cscvm.CvmBatchResetHostInfo, 0)}, nil
+	}
+
+	// 查询cvm表的列表信息，单次最大限制500条
+	cvmReq := &core.ListReq{
+		Filter: tools.ContainersExpression("id", req.IDs),
+		Page:   core.NewDefaultBasePage(),
+	}
+	cvmResp, err := svc.client.DataService().Global.Cvm.ListCvm(cts.Kit, cvmReq)
+	if err != nil {
+		return nil, err
+	}
+
+	vendorIDMap := make(map[enumor.Vendor][]string)
+	for _, item := range cvmResp.Details {
+		vendorIDMap[item.Vendor] = append(vendorIDMap[item.Vendor], item.ID)
+	}
+
+	hosts := make([]cscvm.CvmBatchResetHostInfo, 0)
+	for vendor, cvmIDs := range vendorIDMap {
+		switch vendor {
+		case enumor.TCloudZiyan:
+			vendorHosts, err := svc.listTCloudZiyanCvmHost(cts.Kit, cvmIDs)
+			if err != nil {
+				return nil, err
+			}
+			hosts = append(hosts, vendorHosts...)
+		default:
+			logs.Errorf("list cvm reset invalid vendor: %s", vendor)
+			return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("list cvm reset invalid vendor: %s", vendor))
+		}
+	}
+
+	return cscvm.ListCvmBatchResetResp{Details: hosts}, nil
+}
