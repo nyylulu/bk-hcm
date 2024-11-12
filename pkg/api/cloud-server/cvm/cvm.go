@@ -97,6 +97,41 @@ func (req *BatchRebootCvmReq) Validate() error {
 	return validator.Validate.Struct(req)
 }
 
+// BatchStartCvmReqV2 batch start cvm req.
+type BatchStartCvmReqV2 struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+}
+
+// Validate batch start cvm request.
+func (req *BatchStartCvmReqV2) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// BatchStopCvmReqV2 batch stop cvm req.
+type BatchStopCvmReqV2 struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+}
+
+// Validate batch stop cvm request.
+func (req *BatchStopCvmReqV2) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// BatchRebootCvmReqV2 batch reboot cvm req.
+type BatchRebootCvmReqV2 struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+}
+
+// Validate batch reboot cvm request.
+func (req *BatchRebootCvmReqV2) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// BatchOperateResp batch operate response, return task management id.
+type BatchOperateResp struct {
+	TaskManagementID string `json:"task_management_id"`
+}
+
 // -------------------------- Recycle ------------------------
 
 // CvmRecycleReq recycle cvm request.

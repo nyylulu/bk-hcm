@@ -40,7 +40,7 @@ import (
 )
 
 // ListZiyanCmdbHost 从cc处拉取自研云主机, 支持二次拉取到云上信息
-func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
+func (svc *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 	bizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
@@ -57,7 +57,7 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 
 	// 校验业务权限
 	_, noPermFlag, err := handler.ListBizAuthRes(cts,
-		&handler.ListAuthResOption{Authorizer: c.authorizer, ResType: meta.Cvm, Action: meta.Find})
+		&handler.ListAuthResOption{Authorizer: svc.authorizer, ResType: meta.Cvm, Action: meta.Find})
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +67,7 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 	}
 
 	// 1. 获取cmdb 业务下主机列表
-	cmdbResult, err := c.cvmLgc.GetCmdbBizHosts(cts.Kit, &cscvm.CmdbHostQueryReq{
+	cmdbResult, err := svc.cvmLgc.GetCmdbBizHosts(cts.Kit, &cscvm.CmdbHostQueryReq{
 		BkBizID:        bizID,
 		Vendor:         enumor.TCloudZiyan,
 		AccountID:      req.AccountID,
@@ -92,7 +92,7 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 
 	if req.QueryFromCloud {
 		// 2. 尝试从云上获取数据
-		hosts, err := c.queryFromCloud(cts.Kit, req.AccountID, cmdbResult.Info)
+		hosts, err := svc.queryFromCloud(cts.Kit, req.AccountID, cmdbResult.Info)
 		if err != nil {
 			return nil, err
 		}
@@ -123,7 +123,7 @@ func (c *cvmSvc) ListZiyanCmdbHost(cts *rest.Contexts) (any, error) {
 }
 
 // QueryFromCloud 从cc处拉取自研云主机
-func (c *cvmSvc) queryFromCloud(kt *kit.Kit, accountID string, cmdbHosts []cmdb.Host) (
+func (svc *cvmSvc) queryFromCloud(kt *kit.Kit, accountID string, cmdbHosts []cmdb.Host) (
 	hosts []*corecvm.Cvm[corecvm.TCloudZiyanCvmExtension], err error) {
 
 	instIds := make([]string, 0, len(cmdbHosts))
@@ -149,7 +149,7 @@ func (c *cvmSvc) queryFromCloud(kt *kit.Kit, accountID string, cmdbHosts []cmdb.
 				CvmIDs:    ids,
 				Page:      &core.BasePage{Start: 0, Limit: typecore.TCloudQueryLimit},
 			}
-			cloudHostsPtr, err := c.client.HCService().TCloudZiyan.Cvm.QueryTCloudZiyanCVM(kt, csReq)
+			cloudHostsPtr, err := svc.client.HCService().TCloudZiyan.Cvm.QueryTCloudZiyanCVM(kt, csReq)
 			if err != nil {
 				logs.Errorf("fail to query tcloud ziyan cvm, err: %v, cloud_ids: %v, rid:%s",
 					err, cloudIDs, kt.Rid)
@@ -174,7 +174,7 @@ func (c *cvmSvc) queryFromCloud(kt *kit.Kit, accountID string, cmdbHosts []cmdb.
 	for _, detail := range details {
 		sgCloudIDs = append(sgCloudIDs, detail.Extension.CloudSecurityGroupIDs...)
 	}
-	sgNameMap, err := c.cvmLgc.QuerySecurityGroupNamesByCloudID(kt, enumor.TCloudZiyan, sgCloudIDs)
+	sgNameMap, err := svc.cvmLgc.QuerySecurityGroupNamesByCloudID(kt, enumor.TCloudZiyan, sgCloudIDs)
 	if err != nil {
 		logs.Errorf("fail to query security group names, err: %v, sg_cloud_ids: %v, rid: %s",
 			err, sgCloudIDs, kt.Rid)

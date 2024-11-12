@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/cvm"
+	protocvm "hcm/pkg/api/hc-service/cvm"
 	"hcm/pkg/api/hc-service/sync"
 	"hcm/pkg/client/common"
 	"hcm/pkg/criteria/errf"
@@ -111,6 +112,75 @@ func (cli *CvmClient) DeleteHostByCond(ctx context.Context, h http.Header,
 		Body(request).
 		SubResourcef("/hosts/by_condition/delete").
 		WithHeaders(h).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}
+
+// BatchStartCvm ....
+func (cli *CvmClient) BatchStartCvm(kt *kit.Kit, request *protocvm.TCloudBatchStartReq) error {
+
+	resp := new(rest.BaseResp)
+
+	err := cli.client.Post().
+		WithContext(kt.Ctx).
+		Body(request).
+		SubResourcef("/cvms/batch/start").
+		WithHeaders(kt.Header()).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}
+
+// BatchStopCvm ....
+func (cli *CvmClient) BatchStopCvm(kt *kit.Kit, request *protocvm.TCloudBatchStopReq) error {
+
+	resp := new(rest.BaseResp)
+
+	err := cli.client.Post().
+		WithContext(kt.Ctx).
+		Body(request).
+		SubResourcef("/cvms/batch/stop").
+		WithHeaders(kt.Header()).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}
+
+// BatchRebootCvm ....
+func (cli *CvmClient) BatchRebootCvm(kt *kit.Kit, request *protocvm.TCloudBatchRebootReq) error {
+
+	resp := new(rest.BaseResp)
+
+	err := cli.client.Post().
+		WithContext(kt.Ctx).
+		Body(request).
+		SubResourcef("/cvms/batch/reboot").
+		WithHeaders(kt.Header()).
 		Do().
 		Into(resp)
 	if err != nil {

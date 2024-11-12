@@ -481,7 +481,7 @@ func (svc *cvmSvc) BatchDeleteHuaWeiCvm(cts *rest.Contexts) (interface{}, error)
 }
 
 // syncCvmRelEip sync cvm rel eip
-func (svc cvmSvc) syncCvmRelEip(kt *kit.Kit, accountID, region string, cvmIDs []string) error {
+func (svc *cvmSvc) syncCvmRelEip(kt *kit.Kit, accountID, region string, cvmIDs []string) error {
 	listEipRel := &core.ListReq{
 		Filter: tools.ContainersExpression("cvm_id", cvmIDs),
 		Page:   core.NewDefaultBasePage(),
@@ -536,7 +536,7 @@ func (svc cvmSvc) syncCvmRelEip(kt *kit.Kit, accountID, region string, cvmIDs []
 }
 
 // syncCvmRelDisk sync cvm rel disk
-func (svc cvmSvc) syncCvmRelDisk(kt *kit.Kit, accountID, region string, cvmIDs []string) error {
+func (svc *cvmSvc) syncCvmRelDisk(kt *kit.Kit, accountID, region string, cvmIDs []string) error {
 	listEipRel := &core.ListReq{
 		Filter: tools.ContainersExpression("cvm_id", cvmIDs),
 		Page:   core.NewDefaultBasePage(),
@@ -591,7 +591,7 @@ func (svc cvmSvc) syncCvmRelDisk(kt *kit.Kit, accountID, region string, cvmIDs [
 }
 
 // HuaWeiCvmCount count huawei cvm.
-func (svc cvmSvc) HuaWeiCvmCount(cts *rest.Contexts) (interface{}, error) {
+func (svc *cvmSvc) HuaWeiCvmCount(cts *rest.Contexts) (interface{}, error) {
 	req := new(apicloud.HuaWeiSecret)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)

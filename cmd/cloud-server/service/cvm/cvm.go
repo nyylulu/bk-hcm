@@ -73,6 +73,14 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("QueryBizCvmRelatedRes", http.MethodPost, "/bizs/{bk_biz_id}/cvms/rel_res/batch", svc.QueryBizCvmRelatedRes)
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
 
+	h.Add("BatchAsyncStartCvm", http.MethodPost, "/cvms/batch/start_async", svc.BatchAsyncStartCvm)
+	h.Add("BatchAsyncStopCvm", http.MethodPost, "/cvms/batch/stop_async", svc.BatchAsyncStopCvm)
+	h.Add("BatchAsyncRebootCvm", http.MethodPost, "/cvms/batch/reboot_async", svc.BatchAsyncRebootCvm)
+	h.Add("BatchAsyncStartBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/start_async", svc.BatchAsyncStartBizCvm)
+	h.Add("BatchAsyncStopBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/stop_async", svc.BatchAsyncStopBizCvm)
+	h.Add("BatchAsyncRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reboot_async",
+		svc.BatchAsyncRebootBizCvm)
+
 	// 业务下回收接口
 	h.Add("RecycleBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/recycle", svc.RecycleBizCvm)
 	h.Add("RecoverBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/recover", svc.RecoverBizCvm)

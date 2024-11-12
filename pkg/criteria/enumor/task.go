@@ -45,7 +45,7 @@ type TaskManagementSource string
 // Validate ...
 func (t TaskManagementSource) Validate() error {
 	switch t {
-	case TaskManagementSourceSops, TaskManagementSourceExcel:
+	case TaskManagementSourceSops, TaskManagementSourceExcel, TaskManagementSourceAPI:
 		return nil
 	default:
 		return fmt.Errorf("invalid task management source: %s", t)
@@ -57,6 +57,8 @@ const (
 	TaskManagementSourceSops TaskManagementSource = "sops"
 	// TaskManagementSourceExcel is a source indicating that excel.
 	TaskManagementSourceExcel TaskManagementSource = "excel"
+	// TaskManagementSourceAPI is a source indicating that api.
+	TaskManagementSourceAPI TaskManagementSource = "api"
 )
 
 // TaskManagementResource is task management resource.
@@ -65,6 +67,7 @@ type TaskManagementResource string
 const (
 	// TaskManagementResClb is a resource indicating that clb.
 	TaskManagementResClb TaskManagementResource = "clb"
+	TaskManagementResCVM TaskManagementResource = "cvm"
 )
 
 // TaskDetailState is task detail state.
@@ -110,4 +113,11 @@ const (
 
 	// TaskDeleteListener is a task indicating that delete listener.
 	TaskDeleteListener TaskOperation = "listener_delete"
+
+	// TaskStartCvm is a task indicating that start cvm.
+	TaskStartCvm TaskOperation = "start_cvm"
+	// TaskStopCvm is a task indicating that stop cvm.
+	TaskStopCvm TaskOperation = "stop_cvm"
+	// TaskRebootCvm is a task indicating that reboot cvm.
+	TaskRebootCvm TaskOperation = "reboot_cvm"
 )

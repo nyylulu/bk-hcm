@@ -1,0 +1,80 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+package cvm
+
+import (
+	proto "hcm/pkg/api/cloud-server/cvm"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/logs"
+	"hcm/pkg/rest"
+	"hcm/pkg/tools/hooks/handler"
+)
+
+// BatchAsyncRebootCvm batch stop cvm.
+func (svc *cvmSvc) BatchAsyncRebootCvm(cts *rest.Contexts) (interface{}, error) {
+	return svc.batchAsyncRebootCvmSvc(cts, constant.UnassignedBiz, handler.ResOperateAuth)
+}
+
+// BatchAsyncRebootBizCvm batch stop biz cvm.
+func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth)
+}
+
+func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, validHandler handler.ValidWithAuthHandler) (
+	interface{}, error) {
+
+	req := new(proto.BatchRebootCvmReqV2)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
+		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if err := svc.createAudit(cts, req.IDs); err != nil {
+		logs.Errorf("create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	cvmList, err := svc.listCvmByIDs(cts.Kit, req.IDs)
+	if err != nil {
+		logs.Errorf("list cvm by ids failed, ids: %v, err: %v, rid: %s", req.IDs, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	taskManagementID, err := svc.buildFlowAndTaskManagement(cts.Kit, bkBizID, enumor.TaskRebootCvm, cvmList)
+	if err != nil {
+		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return proto.BatchOperateResp{
+		TaskManagementID: taskManagementID,
+	}, nil
+}
