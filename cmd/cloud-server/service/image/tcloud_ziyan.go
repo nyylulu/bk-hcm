@@ -21,10 +21,7 @@
 package image
 
 import (
-	"hcm/pkg/api/core"
 	"hcm/pkg/api/hc-service/image"
-	"hcm/pkg/criteria/errf"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -44,32 +41,10 @@ func (svc *imageSvc) TCloudZiyanQueryImage(cts *rest.Contexts) (interface{}, err
 
 // TCLoudZiyanBizQueryImage ...
 func (svc *imageSvc) TCLoudZiyanBizQueryImage(cts *rest.Contexts) (interface{}, error) {
-	bizID, err := cts.PathParameter("bk_biz_id").Int64()
-	if err != nil {
-		return nil, err
-	}
-
 	req, err := svc.decodeAndValidateTCloudImageListOption(cts)
 	if err != nil {
 		logs.Errorf("decode and validate tcloud ziyan image list option failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
-	}
-
-	accountBizReq := &core.ListReq{
-		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("bk_biz_id", bizID),
-			tools.RuleEqual("account_id", req.AccountID),
-		),
-		Page: core.NewCountPage(),
-	}
-	result, err := svc.client.DataService().Global.Account.ListAccountBizRel(
-		cts.Kit.Ctx, cts.Kit.Header(), accountBizReq)
-	if err != nil {
-		logs.Errorf("list account biz rel failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
-	if result.Count == 0 {
-		return nil, errf.New(errf.PermissionDenied, "no permission")
 	}
 
 	return svc.tcloudZiyanQueryImage(cts, req, handler.BizOperateAuth)

@@ -54,6 +54,7 @@ type Interface interface {
 		sgCloudIds []string) (map[string]string, error)
 	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error)
 	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
+	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
 }
 
 type cvm struct {

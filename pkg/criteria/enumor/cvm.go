@@ -30,6 +30,4 @@ const (
 	NoOperatorCvmResetStatus CvmResetStatus = 1
 	// NoIdleCvmResetStatus 状态-不在空闲机模块
 	NoIdleCvmResetStatus CvmResetStatus = 2
-	// NoResetingCvmResetStatus 状态-CC运营状态不在“重装中”
-	NoResetingCvmResetStatus CvmResetStatus = 3
 )

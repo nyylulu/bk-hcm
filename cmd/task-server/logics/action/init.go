@@ -61,6 +61,7 @@ func register() {
 	action.RegisterAction(actioncvm.StartActionV2{})
 	action.RegisterAction(actioncvm.StopActionV2{})
 	action.RegisterAction(actioncvm.RebootActionV2{})
+	action.RegisterAction(actioncvm.BatchTaskCvmResetAction{})
 
 	action.RegisterAction(actionfirewall.DeleteAction{})
 
@@ -70,7 +71,7 @@ func register() {
 	action.RegisterAction(actioneip.DeleteEIPAction{})
 
 	action.RegisterAction(actionlb.AddTargetToGroupAction{})
-	action.RegisterAction(actionflow.LoadBalancerOperateWatchAction{})
+	action.RegisterAction(actionflow.FlowSlaveOperateWatchAction{})
 	action.RegisterTpl(actionflow.FlowLoadBalancerOperateWatchTpl)
 	action.RegisterAction(actionlb.RemoveTargetAction{})
 	action.RegisterAction(actionlb.ModifyTargetPortAction{})

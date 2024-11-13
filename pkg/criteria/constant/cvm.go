@@ -24,6 +24,8 @@ package constant
 const (
 	// IdleMachine CVM模块-空闲机
 	IdleMachine = "空闲机"
+	// CCIdleMachine CVM模块-CC_空闲机
+	CCIdleMachine = "CC_空闲机"
 	// IdleMachineModuleName CVM模块-空闲机模块
 	IdleMachineModuleName = "空闲机模块"
 	// ResetingSrvStatus CC运营状态-重装中

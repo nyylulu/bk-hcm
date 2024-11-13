@@ -193,3 +193,25 @@ func (cli *CvmClient) BatchRebootCvm(kt *kit.Kit, request *protocvm.TCloudBatchR
 
 	return nil
 }
+
+// ResetCvm 重装CVM
+func (cli *CvmClient) ResetCvm(kt *kit.Kit, request *protocvm.TCloudBatchResetCvmReq) error {
+	resp := new(rest.BaseResp)
+
+	err := cli.client.Post().
+		WithContext(kt.Ctx).
+		Body(request).
+		SubResourcef("/cvms/reset").
+		WithHeaders(kt.Header()).
+		Do().
+		Into(resp)
+	if err != nil {
+		return err
+	}
+
+	if resp.Code != errf.OK {
+		return errf.New(resp.Code, resp.Message)
+	}
+
+	return nil
+}

@@ -217,13 +217,12 @@ func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.C
 		}
 
 		resetStatus := enumor.NormalCvmResetStatus
-		if moduleName != constant.IdleMachine && moduleName != constant.IdleMachineModuleName {
+		if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
+			moduleName != constant.IdleMachineModuleName {
 			resetStatus = enumor.NoIdleCvmResetStatus
 		} else if !strings.Contains(host.Extension.Operator, kt.User) &&
 			!strings.Contains(host.Extension.BkBakOperator, kt.User) {
 			resetStatus = enumor.NoOperatorCvmResetStatus
-		} else if host.Extension.SrvStatus != constant.ResetingSrvStatus {
-			resetStatus = enumor.NoResetingCvmResetStatus
 		}
 
 		cvmHosts = append(cvmHosts, cscvm.CvmBatchResetHostInfo{
@@ -231,7 +230,7 @@ func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.C
 			Vendor:               host.Vendor,
 			AccountID:            host.AccountID,
 			BkHostID:             host.Extension.HostID,
-			BkHostName:           host.Extension.BkHostName,
+			BkHostName:           host.Name,
 			CloudID:              hostCvmMap[hostID].CloudID,
 			BkAssetID:            host.Extension.BkAssetID,
 			PrivateIPv4Addresses: hostCvmMap[hostID].PrivateIPv4Addresses,
@@ -244,6 +243,7 @@ func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.C
 			Region:               hostCvmMap[hostID].Region,
 			Zone:                 hostCvmMap[hostID].Zone,
 			BkOSName:             host.Extension.BkOSName,
+			TopoModule:           moduleName,
 			SvrSourceTypeID:      host.Extension.SvrSourceTypeID,
 			Status:               hostCvmMap[hostID].Status,
 			SrvStatus:            host.Extension.SrvStatus,

@@ -6,7 +6,7 @@
 
 ### URL
 
-POST /api/v1/woa/cvms/list/reset/status
+POST /api/v1/cloud/cvms/list/reset/status
 
 ### 输入参数
 
@@ -50,6 +50,7 @@ POST /api/v1/woa/cvms/list/reset/status
         "region": "南京-xx"
         "zone": "南京-xx"
         "bk_os_name": "xxxxxx",
+        "topo_module": "空闲机",
         "bk_svr_source_type_id": "1",
         "status":"运行中",
         "srv_status":"使用中",
@@ -81,7 +82,7 @@ POST /api/v1/woa/cvms/list/reset/status
 |------------------------|--------------|---------------|
 | id                     | string	    | 主机唯一ID      |
 | bk_host_id             | int	        | CC主机ID       |
-| bk_host_name           | string	    | CC主机名称      |
+| bk_host_name           | string	    | 主机名称        |
 | bk_asset_id            | string	    | 设备固资号      |
 | private_ipv4_addresses | string array	| 内网ipv4      |
 | private_ipv6_addresses | string array | 内网ipv6      |
@@ -93,7 +94,8 @@ POST /api/v1/woa/cvms/list/reset/status
 | region                 | string       | 地域           |
 | zone                   | string       | 可用区          |
 | bk_os_name             | string       | 操作系统名称     |
+| topo_module            | string	    | 模块名称        |
 | bk_svr_source_type_id  | string       | 服务来源类型ID(0:未知1:自有2:托管3:租用4:虚拟机5:容器) |
 | status	             | string       | 主机状态        |
 | srv_status             | string       | CC的运营状态    |
-| reset_status           | string	    | 重装状态(0:正常1:不是主备负责人2:不在空闲机模块3:CC运营状态不在“重装中”) |
+| reset_status           | int   	    | 重装状态(0:正常1:不是主备负责人2:不在空闲机模块) |

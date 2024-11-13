@@ -140,6 +140,8 @@ const (
 		FlowBatchTaskListenerModifyRsWeight)
 	// DeleteListenerTaskType 任务类型-批量删除监听器
 	DeleteListenerTaskType = TaskType(FlowBatchTaskDeleteListener)
+	// ResetCvmTaskType 任务类型-CVM重装
+	ResetCvmTaskType = TaskType(FlowResetCvm)
 )
 
 // InstType 实例类型

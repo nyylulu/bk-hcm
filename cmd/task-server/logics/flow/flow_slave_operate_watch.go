@@ -43,14 +43,14 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-var _ action.Action = new(LoadBalancerOperateWatchAction)
-var _ action.ParameterAction = new(LoadBalancerOperateWatchAction)
+var _ action.Action = new(FlowSlaveOperateWatchAction)
+var _ action.ParameterAction = new(FlowSlaveOperateWatchAction)
 
-// LoadBalancerOperateWatchAction define load balancer operate watch.
-type LoadBalancerOperateWatchAction struct{}
+// FlowSlaveOperateWatchAction define flow slave operate watch.
+type FlowSlaveOperateWatchAction struct{}
 
-// LoadBalancerOperateWatchOption define load balancer operate watch option.
-type LoadBalancerOperateWatchOption struct {
+// FlowSlaveOperateWatchOption define flow slave operate watch option.
+type FlowSlaveOperateWatchOption struct {
 	FlowID string `json:"flow_id" validate:"required"`
 	// 资源ID，比如负载均衡ID
 	ResID string `json:"res_id" validate:"required"`
@@ -64,24 +64,24 @@ type LoadBalancerOperateWatchOption struct {
 	TaskType enumor.TaskType `json:"task_type" validate:"required"`
 }
 
-// Validate LoadBalancerOperateWatchOption.
-func (opt LoadBalancerOperateWatchOption) Validate() error {
+// Validate FlowSlaveOperateWatchOption.
+func (opt FlowSlaveOperateWatchOption) Validate() error {
 	return opt.Validate()
 }
 
 // ParameterNew return request params.
-func (act LoadBalancerOperateWatchAction) ParameterNew() (params interface{}) {
-	return new(LoadBalancerOperateWatchOption)
+func (act FlowSlaveOperateWatchAction) ParameterNew() (params interface{}) {
+	return new(FlowSlaveOperateWatchOption)
 }
 
 // Name return action name
-func (act LoadBalancerOperateWatchAction) Name() enumor.ActionName {
-	return enumor.ActionLoadBalancerOperateWatch
+func (act FlowSlaveOperateWatchAction) Name() enumor.ActionName {
+	return enumor.ActionFlowSlaveOperateWatch
 }
 
 // Run flow watch.
-func (act LoadBalancerOperateWatchAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, error) {
-	opt, ok := params.(*LoadBalancerOperateWatchOption)
+func (act FlowSlaveOperateWatchAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, error) {
+	opt, ok := params.(*FlowSlaveOperateWatchOption)
 	if !ok {
 		return nil, errf.New(errf.InvalidParameter, "params type mismatch")
 	}
@@ -122,7 +122,7 @@ func (act LoadBalancerOperateWatchAction) Run(kt run.ExecuteKit, params interfac
 }
 
 // processResFlow 检查Flow是否终态状态、解锁资源跟Flow的状态
-func (act LoadBalancerOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *LoadBalancerOperateWatchOption,
+func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *FlowSlaveOperateWatchOption,
 	flowInfo tableasync.AsyncFlowTable) (bool, error) {
 
 	switch flowInfo.State {
@@ -200,7 +200,7 @@ func (act LoadBalancerOperateWatchAction) processResFlow(kt run.ExecuteKit, opt 
 	}
 }
 
-func (act LoadBalancerOperateWatchAction) queryResFlowLock(kt run.ExecuteKit, opt *LoadBalancerOperateWatchOption) (
+func (act FlowSlaveOperateWatchAction) queryResFlowLock(kt run.ExecuteKit, opt *FlowSlaveOperateWatchOption) (
 	[]tablelb.ResourceFlowLockTable, error) {
 
 	// 当Flow失败时，检查资源锁定是否超时
@@ -220,7 +220,7 @@ func (act LoadBalancerOperateWatchAction) queryResFlowLock(kt run.ExecuteKit, op
 	return resFlowLockList.Details, nil
 }
 
-func (act LoadBalancerOperateWatchAction) updateFlowStateByCAS(kt *kit.Kit, flowID string,
+func (act FlowSlaveOperateWatchAction) updateFlowStateByCAS(kt *kit.Kit, flowID string,
 	source, target enumor.FlowState) error {
 
 	_, err := actcli.GetDaoSet().Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
@@ -243,8 +243,8 @@ func (act LoadBalancerOperateWatchAction) updateFlowStateByCAS(kt *kit.Kit, flow
 }
 
 // updateTargetGroupListenerRuleRelBindStatus 更新目标组与监听器的绑定状态
-func (act LoadBalancerOperateWatchAction) updateTargetGroupListenerRuleRelBindStatus(kt *kit.Kit,
-	opt *LoadBalancerOperateWatchOption, flowState enumor.FlowState) error {
+func (act FlowSlaveOperateWatchAction) updateTargetGroupListenerRuleRelBindStatus(kt *kit.Kit,
+	opt *FlowSlaveOperateWatchOption, flowState enumor.FlowState) error {
 
 	if opt == nil || opt.TaskType != enumor.ApplyTargetGroupType || opt.SubResType != enumor.TargetGroupCloudResType {
 		return nil
@@ -270,8 +270,8 @@ func (act LoadBalancerOperateWatchAction) updateTargetGroupListenerRuleRelBindSt
 }
 
 // Rollback Flow查询状态失败时的回滚Action，此处不需要回滚处理
-func (act LoadBalancerOperateWatchAction) Rollback(kt run.ExecuteKit, params interface{}) error {
-	logs.Infof(" ----------- LoadBalancerOperateWatchAction Rollback -----------, params: %s, rid: %s",
+func (act FlowSlaveOperateWatchAction) Rollback(kt run.ExecuteKit, params interface{}) error {
+	logs.Infof(" ----------- FlowSlaveOperateWatchAction Rollback -----------, params: %s, rid: %s",
 		params, kt.Kit().Rid)
 	return nil
 }

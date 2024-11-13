@@ -28,7 +28,7 @@ type ActionName string
 func (v ActionName) Validate() error {
 	switch v {
 	case ActionAssignCvm, ActionStartCvm, ActionStopCvm, ActionRebootCvm, ActionDeleteCvm, ActionCreateCvm,
-		ActionCreateAwsCvm, ActionCreateHuaWeiCvm, ActionCreateGcpCvm, ActionCreateAzureCvm:
+		ActionCreateAwsCvm, ActionCreateHuaWeiCvm, ActionCreateGcpCvm, ActionCreateAzureCvm, ActionResetCvm:
 
 	case ActionDeleteFirewallRule:
 
@@ -39,7 +39,7 @@ func (v ActionName) Validate() error {
 	case VirRoot:
 	case ActionCreateFactoryTest, ActionProduceTest, ActionAssembleTest, ActionSleep:
 	case ActionTargetGroupAddRS, ActionTargetGroupRemoveRS, ActionTargetGroupModifyPort, ActionTargetGroupModifyWeight:
-	case ActionLoadBalancerOperateWatch:
+	case ActionFlowSlaveOperateWatch:
 	case ActionListenerRuleAddTarget:
 	case ActionDeleteLoadBalancer:
 	case ActionPullDailyRawBill, ActionMainAccountSummary, ActionRootAccountSummary,
@@ -70,6 +70,7 @@ const (
 	ActionCreateHuaWeiCvm ActionName = "create_huawei_cvm"
 	ActionCreateGcpCvm    ActionName = "create_gcp_cvm"
 	ActionCreateAzureCvm  ActionName = "create_azure_cvm"
+	ActionResetCvm        ActionName = "reset_cvm"
 
 	ActionStartCvmV2  ActionName = "start_cvm_v2"
 	ActionStopCvmV2   ActionName = "stop_cvm_v2"
@@ -112,7 +113,7 @@ const (
 
 // Flow相关Action
 const (
-	ActionLoadBalancerOperateWatch ActionName = "load_balancer_operate_watch"
+	ActionFlowSlaveOperateWatch ActionName = "flow_slave_operate_watch"
 )
 
 // 负载均衡相关Action

@@ -52,7 +52,7 @@ func (svc *cvmSvc) initTCloudZiyanCvmService(cap *capability.Capability) {
 		svc.BatchStopTCloudZiyanCvm)
 	h.Add("BatchRebootTCloudZiyanCvm", http.MethodPost, "/vendors/tcloud-ziyan/cvms/batch/reboot",
 		svc.BatchRebootTCloudZiyanCvm)
-
+	h.Add("BatchResetTCloudZiyanCvm", http.MethodPost, "/vendors/tcloud-ziyan/cvms/reset", svc.BatchResetTCloudZiyanCvm)
 	h.Load(cap.WebService)
 }
 
@@ -327,4 +327,37 @@ func convTCloudCvm(c typecvm.TCloudCvm, accountID, region string) corecvm.Cvm[co
 			DisableApiTermination: c.DisableApiTermination,
 		},
 	}
+}
+
+// BatchResetTCloudZiyanCvm 重装系统
+func (svc *cvmSvc) BatchResetTCloudZiyanCvm(cts *rest.Contexts) (any, error) {
+	req := new(protocvm.TCloudBatchResetCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, cloudID := range req.CloudIDs {
+		opt := &typecvm.ResetInstanceOption{
+			Region:   req.Region,
+			CloudID:  cloudID,
+			ImageID:  req.ImageID,
+			Password: req.Password,
+		}
+		if _, err = client.ResetCvmInstance(cts.Kit, opt); err != nil {
+			logs.Errorf("request adaptor to tcloud ziyan reset cvm instance failed, err: %v, opt: %+v, cloudID: %s, "+
+				"rid: %s", err, cvt.PtrToVal(req), cloudID, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+
+	return nil, nil
 }

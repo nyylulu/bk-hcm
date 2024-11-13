@@ -362,7 +362,7 @@ func genCvmResource(a *meta.ResourceAttribute) (client.ActionID, []client.Resour
 	}
 
 	switch a.Basic.Action {
-	case meta.Stop, meta.Reboot, meta.Start, meta.ResetPwd:
+	case meta.Stop, meta.Reboot, meta.Start, meta.ResetPwd, meta.ResetSystem:
 		if a.BizID > 0 {
 			return sys.BizIaaSResOperate, []client.Resource{bizRes}, nil
 		}

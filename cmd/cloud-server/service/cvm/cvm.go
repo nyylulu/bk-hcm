@@ -21,6 +21,7 @@
 package cvm
 
 import (
+	"fmt"
 	"net/http"
 
 	"hcm/cmd/cloud-server/logics/audit"
@@ -28,8 +29,12 @@ import (
 	"hcm/cmd/cloud-server/logics/disk"
 	"hcm/cmd/cloud-server/logics/eip"
 	"hcm/cmd/cloud-server/service/capability"
+	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	"hcm/pkg/client"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/auth"
+	"hcm/pkg/kit"
 	"hcm/pkg/rest"
 )
 
@@ -74,6 +79,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
 	h.Add("ListBizCvmResetStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/reset/status",
 		svc.ListBizCvmResetStatus)
+	h.Add("BatchResetAsyncBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reset_async",
+		svc.BatchResetAsyncBizCvm)
 
 	h.Add("BatchAsyncStartCvm", http.MethodPost, "/cvms/batch/start_async", svc.BatchAsyncStartCvm)
 	h.Add("BatchAsyncStopCvm", http.MethodPost, "/cvms/batch/stop_async", svc.BatchAsyncStopCvm)
@@ -102,4 +109,32 @@ type cvmSvc struct {
 	diskLgc    disk.Interface
 	cvmLgc     cvm.Interface
 	eipLgc     eip.Interface
+}
+
+// batchListCvmByIDs 批量获取CVM列表
+func (svc *cvmSvc) batchListCvmByIDs(kt *kit.Kit, ids []string) ([]corecvm.BaseCvm, error) {
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("ids is empty")
+	}
+
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleIn("id", ids),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+	list := make([]corecvm.BaseCvm, 0)
+	for {
+		cvmResp, err := svc.client.DataService().Global.Cvm.ListCvm(kt, listReq)
+		if err != nil {
+			return nil, err
+		}
+
+		list = append(list, cvmResp.Details...)
+		if len(cvmResp.Details) < int(core.DefaultMaxPageLimit) {
+			break
+		}
+		listReq.Page.Start += uint32(core.DefaultMaxPageLimit)
+	}
+	return list, nil
 }

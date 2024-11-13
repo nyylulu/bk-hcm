@@ -554,10 +554,10 @@ func (svc *lbSvc) createApplyTGFlow(kt *kit.Kit, tgID string, lblInfo *corelb.Ba
 	flowID := mainFlowResult.ID
 	// 创建从任务并加锁
 	flowWatchReq := &apits.AddTemplateFlowReq{
-		Name: enumor.FlowLoadBalancerOperateWatch,
+		Name: enumor.FlowSlaveOperateWatch,
 		Tasks: []apits.TemplateFlowTask{{
 			ActionID: "1",
-			Params: &actionflow.LoadBalancerOperateWatchOption{
+			Params: &actionflow.FlowSlaveOperateWatchOption{
 				FlowID:     flowID,
 				ResID:      lblInfo.LbID,
 				ResType:    enumor.LoadBalancerCloudResType,

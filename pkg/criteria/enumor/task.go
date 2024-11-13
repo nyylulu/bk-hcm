@@ -67,6 +67,7 @@ type TaskManagementResource string
 const (
 	// TaskManagementResClb is a resource indicating that clb.
 	TaskManagementResClb TaskManagementResource = "clb"
+	// TaskManagementResCVM is a resource indicating that cvm.
 	TaskManagementResCVM TaskManagementResource = "cvm"
 )
 
@@ -120,4 +121,6 @@ const (
 	TaskStopCvm TaskOperation = "stop_cvm"
 	// TaskRebootCvm is a task indicating that reboot cvm.
 	TaskRebootCvm TaskOperation = "reboot_cvm"
+	// TaskCvmResetSystem is a task indicating that cvm reset system.
+	TaskCvmResetSystem TaskOperation = "cvm_reset_system"
 )
