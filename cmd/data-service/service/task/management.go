@@ -184,19 +184,21 @@ func (svc *service) UpdateTaskManagement(cts *rest.Contexts) (interface{}, error
 				continue
 			}
 
-			vendors := make(tabletype.StringArray, 0, len(one.Vendors))
-			for _, vendor := range one.Vendors {
-				vendors = append(vendors, string(vendor))
-			}
 			management := &tabletask.ManagementTable{
 				BkBizID:    one.BkBizID,
 				Source:     one.Source,
-				Vendors:    vendors,
 				State:      one.State,
 				AccountIDs: one.AccountIDs,
 				Resource:   one.Resource,
 				FlowIDs:    one.FlowIDs,
 				Reviser:    cts.Kit.User,
+			}
+			if len(one.Vendors) != 0 {
+				vendors := make(tabletype.StringArray, 0, len(one.Vendors))
+				for _, vendor := range one.Vendors {
+					vendors = append(vendors, string(vendor))
+				}
+				management.Vendors = vendors
 			}
 
 			if len(one.Operations) != 0 {

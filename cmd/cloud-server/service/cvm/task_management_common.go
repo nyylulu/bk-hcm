@@ -31,7 +31,6 @@ import (
 func (svc *cvmSvc) createTaskManagement(kt *kit.Kit, bkBizID int64, vendors []enumor.Vendor, accountIDs []string,
 	source enumor.TaskManagementSource, operation enumor.TaskOperation) (string, error) {
 
-	// TODO vendor and accountID should be a slice
 	taskManagementCreateReq := &task.CreateManagementReq{
 		Items: []task.CreateManagementField{
 			{
@@ -63,14 +62,20 @@ func (svc *cvmSvc) createTaskDetails(kt *kit.Kit, bkBizID int64, taskManagementI
 	if len(details) == 0 {
 		return nil
 	}
+
+	paramMap, err := svc.getCvmWithExtMap(kt, details)
+	if err != nil {
+		logs.Errorf("get cvm with ext map failed, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
 	taskDetailsCreateReq := &task.CreateDetailReq{}
-	// TODO detail.Param 需要根据原型进行调整
 	for _, detail := range details {
 		taskDetailsCreateReq.Items = append(taskDetailsCreateReq.Items, task.CreateDetailField{
 			BkBizID:          bkBizID,
 			TaskManagementID: taskManagementID,
 			Operation:        taskOperation,
-			Param:            detail.cvm,
+			Param:            paramMap[detail.cvm.ID],
 			State:            enumor.TaskDetailInit,
 		})
 	}

@@ -204,7 +204,8 @@ func (svc *cvmSvc) listCvmByIDs(kt *kit.Kit, ids []string) ([]corecvm.BaseCvm, e
 	return result, nil
 }
 
-func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string, validHandler handler.ValidWithAuthHandler) error {
+func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string,
+	validHandler handler.ValidWithAuthHandler) error {
 
 	basicInfoReq := dataproto.ListResourceBasicInfoReq{
 		ResourceType: enumor.CvmCloudResType,
@@ -234,4 +235,103 @@ func (svc *cvmSvc) createAudit(cts *rest.Contexts, ids []string) error {
 		return err
 	}
 	return nil
+}
+
+// getCvmWithExtMap map cvm id to cvm with ext
+func (svc *cvmSvc) getCvmWithExtMap(kt *kit.Kit, details []*cvmTaskDetail) (map[string]interface{}, error) {
+	cvmIDGroupByVendor := make(map[enumor.Vendor][]string)
+	for _, detail := range details {
+		cvmIDGroupByVendor[detail.cvm.Vendor] = append(cvmIDGroupByVendor[detail.cvm.Vendor], detail.cvm.ID)
+	}
+
+	result := make(map[string]interface{})
+	for vendor, ids := range cvmIDGroupByVendor {
+		switch vendor {
+		case enumor.TCloud:
+			cvmMap, err := svc.listTCloudCvmWithExt(kt, ids)
+			if err != nil {
+				logs.Errorf("list tcloud cvm with ext failed, ids: %v, err: %v, rid: %s", ids, err, kt.Rid)
+				return nil, err
+			}
+			for key, value := range cvmMap {
+				result[key] = value
+			}
+		case enumor.TCloudZiyan:
+			cvms, err := svc.listTCloudZiyanCvmWithExt(kt, ids)
+			if err != nil {
+				logs.Errorf("list tcloud ziyan cvm with ext failed, ids: %v, err: %v, rid: %s", ids, err, kt.Rid)
+				return nil, err
+			}
+			for key, value := range cvms {
+				result[key] = value
+			}
+		default:
+			return nil, fmt.Errorf("getCvmWithExtMap, unsupported vendor: %s", vendor)
+		}
+	}
+	return result, nil
+}
+
+func (svc *cvmSvc) listTCloudCvmWithExt(kt *kit.Kit, ids []string) (
+	map[string]corecvm.Cvm[corecvm.TCloudCvmExtension], error) {
+
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("ids is empty")
+	}
+	cvmList := make([]corecvm.Cvm[corecvm.TCloudCvmExtension], 0, len(ids))
+	for _, idList := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		listReq := &dataproto.CvmListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("id", idList),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+		cvm, err := svc.client.DataService().TCloud.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
+		if err != nil {
+			logs.Errorf("list cvm failed, ids: %v, err: %v, rid: %s", idList, err, kt.Rid)
+			return nil, err
+		}
+		if len(cvm.Details) == 0 {
+			return nil, fmt.Errorf("no cvm found by ids: %v", ids)
+		}
+		cvmList = append(cvmList, cvm.Details...)
+	}
+	result := make(map[string]corecvm.Cvm[corecvm.TCloudCvmExtension])
+	for _, cvm := range cvmList {
+		result[cvm.ID] = cvm
+	}
+
+	return result, nil
+}
+
+func (svc *cvmSvc) listTCloudZiyanCvmWithExt(kt *kit.Kit, ids []string) (
+	map[string]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], error) {
+
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("ids is empty")
+	}
+	cvmList := make([]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], 0, len(ids))
+	for _, idList := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		listReq := &dataproto.CvmListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("id", idList),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+		cvm, err := svc.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
+		if err != nil {
+			logs.Errorf("list cvm failed, ids: %v, err: %v, rid: %s", idList, err, kt.Rid)
+			return nil, err
+		}
+		if len(cvm.Details) == 0 {
+			return nil, fmt.Errorf("no cvm found by ids: %v", ids)
+		}
+		cvmList = append(cvmList, cvm.Details...)
+	}
+	result := make(map[string]corecvm.Cvm[corecvm.TCloudZiyanHostExtension])
+	for _, cvm := range cvmList {
+		result[cvm.ID] = cvm
+	}
+
+	return result, nil
 }

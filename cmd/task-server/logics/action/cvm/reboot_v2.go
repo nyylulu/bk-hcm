@@ -37,6 +37,7 @@ import (
 
 var _ action.Action = new(RebootActionV2)
 var _ action.ParameterAction = new(RebootActionV2)
+var _ action.RollbackAction = new(RebootActionV2)
 
 // RebootActionV2 cvm重启, 包含任务管理
 type RebootActionV2 struct{}
@@ -141,4 +142,11 @@ func (c RebootActionV2) rebootTCloudCvm(kt *kit.Kit, opt *CvmOperationOptionV2) 
 // ParameterNew ...
 func (c RebootActionV2) ParameterNew() (params interface{}) {
 	return new(CvmOperationOptionV2)
+}
+
+// Rollback 无需回滚
+func (c RebootActionV2) Rollback(kt run.ExecuteKit, params any) error {
+	logs.Infof(" ----------- RebootActionV2 Rollback -----------, params: %+v, rid: %s",
+		params, kt.Kit().Rid)
+	return nil
 }
