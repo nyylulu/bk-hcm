@@ -179,7 +179,7 @@ func (r *Returner) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 	req := r.createReturnReq(instIds, task)
 	resp := new(cvmapi.OrderCreateResp)
 
-	var cvmNum int
+	var cvmNum = len(cvms)
 	maxRetry := 3
 	for try := 0; try < maxRetry; try++ {
 		resp, err = r.cvm.CreateCvmReturnOrder(kt.Ctx, kt.Header(), req)
@@ -200,16 +200,17 @@ func (r *Returner) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 		}
 	}
 
-	// 故障前未创建return单，恢复后成功创建return单
-	if err == nil && resp.Error.Code == 0 {
+	// 故障前未创建return单，恢复后成功创建return单(兼容crp已销毁的逻辑)
+	if err == nil && (resp.Error.Code == 0 ||
+		(resp.Error.Code == -20001 && resp.Error.Message == "未查到可操作的CVM实例")) {
 		// 成功调用cvm回退接口
-		logs.Infof("success to call cvm return interface, returnNum: %d, total: %d, subOrderId: %s, rid: %s", cvmNum,
-			len(hosts), task.SuborderID, kt.Rid)
+		logs.Infof("success to call cvm return interface, returnNum: %d, total: %d, subOrderId: %s, "+
+			"traceID: %s, rid: %s", cvmNum, len(hosts), task.SuborderID, resp.TraceId, kt.Rid)
 		return r.updateReturnState(err, resp.Result.OrderId, task, hosts)
 	}
 
-	logs.Errorf("return task is running, failed to return cvm, num: %d, total: %d, subOrderId: %s, err: %v, rid: %s",
-		cvmNum, len(hosts), task.SuborderID, err, kt.Rid)
+	logs.Errorf("return task is running, failed to return cvm, failedNum: %d, total: %d, subOrderId: %s, err: %v, "+
+		"resp: %+v, rid: %s", cvmNum, len(hosts), task.SuborderID, err, cvt.PtrToVal(resp), kt.Rid)
 	msg := fmt.Sprintf("%d hosts return failed, return is running or no exit cvms, subOrderId: %s", cvmNum,
 		task.SuborderID)
 	if err := r.UpdateReturnTaskInfo(kt.Ctx, task, "", table.ReturnStatusFailed, msg); err != nil {
