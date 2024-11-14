@@ -24,21 +24,32 @@ import (
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
 // GetCpuCoreSummary get cpu core summary.
 func (s *service) GetCpuCoreSummary(cts *rest.Contexts) (any, error) {
-	// 临时去掉平台管理-权限校验
-	//err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-	//	Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
-	//if err != nil {
-	//	logs.Errorf("get cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
-	//	return nil, err
-	//}
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.RollingServerManage, Action: meta.Find}})
+	if err != nil {
+		logs.Errorf("get cpu core summary auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
 
-	return s.getCpuCoreSummary(cts)
+	req := new(rstypes.CpuCoreSummaryReq)
+	if err = cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to list rolling server cpu core summary, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err = req.Validate(); err != nil {
+		logs.Errorf("failed to validate rolling server cpu core summary parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return s.getCpuCoreSummary(cts.Kit, req)
 }
 
 // GetBizCpuCoreSummary get biz cpu core summary.
@@ -55,22 +66,29 @@ func (s *service) GetBizCpuCoreSummary(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	return s.getCpuCoreSummary(cts)
-}
-
-// listCpuCoreSummary list cpu core summary.
-// docs: docs/api-docs/web-server/docs/scr/rolling-server/list_rolling_server_cpu_core_summary.md
-func (s *service) getCpuCoreSummary(cts *rest.Contexts) (any, error) {
 	req := new(rstypes.CpuCoreSummaryReq)
-	if err := cts.DecodeInto(req); err != nil {
+	if err = cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to list rolling server cpu core summary, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	if err := req.Validate(); err != nil {
+	if err = req.Validate(); err != nil {
 		logs.Errorf("failed to validate rolling server cpu core summary parameter, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	return s.rollingServerLogic.GetCpuCoreSummary(cts.Kit, req)
+	// 业务下查询summary时，bk_biz_ids只能传当前业务ID 或 传空，不能传入其他业务的ID
+	if len(req.BkBizIDs) > 0 && (len(req.BkBizIDs) != 1 || req.BkBizIDs[0] != bizID) {
+		logs.Errorf("failed to validate rolling server parameter, only bk_biz_id of own business can be passed in, "+
+			"bkBizIDs: %v, rid: %s", req.BkBizIDs, cts.Kit.Rid)
+		return nil, errf.Newf(errf.InvalidParameter, "only bk_biz_id of own business can be passed in")
+	}
+
+	return s.getCpuCoreSummary(cts.Kit, req)
+}
+
+// listCpuCoreSummary list cpu core summary.
+// docs: docs/api-docs/web-server/docs/scr/rolling-server/list_rolling_server_cpu_core_summary.md
+func (s *service) getCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) (any, error) {
+	return s.rollingServerLogic.GetCpuCoreSummary(kt, req)
 }

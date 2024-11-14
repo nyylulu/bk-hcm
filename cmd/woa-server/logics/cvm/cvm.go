@@ -14,6 +14,7 @@ package cvm
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -268,8 +269,18 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 	}
 
 	// 记录cvm创建成功的日志，方便排查问题
-	logs.Infof("scheduler:logics:create:cvm:success, req: %+v, resp: %+v",
-		cvt.PtrToVal(createReq), cvt.PtrToVal(createResp))
+	// 需要记录crp返回的所有结果包括traceid
+	jsonCreateReq, err := json.Marshal(createReq)
+	if err != nil {
+		logs.Errorf("scheduler:logics:create:cvm:failed to marshal createReq, err: %v", err)
+		return "", err
+	}
+	jsonCreateResp, err := json.Marshal(createResp)
+	if err != nil {
+		logs.Errorf("scheduler:logics:create:cvm:failed to marshal createResp, err: %v", err)
+		return "", err
+	}
+	logs.Infof("scheduler:logics:create:cvm:end, req: %s, resp: %s", jsonCreateReq, jsonCreateResp)
 
 	if createResp.Error.Code != 0 {
 		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s", createResp.Error.Code,

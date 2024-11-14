@@ -32,6 +32,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
 	"hcm/pkg/kit"
@@ -41,6 +42,7 @@ import (
 	"hcm/pkg/thirdparty/dvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	utils "hcm/pkg/tools/util"
@@ -981,17 +983,19 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 
 	devices, err := g.syncHostToCMDB(order, generateId, items)
 	if err != nil {
-		logs.Errorf("failed to syn to cmdb, order id: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v, rid: %s", order.SubOrderId,
+			generateId, err, kt.Rid)
 		return err
 	}
 
-	if err := model.Operation().DeviceInfo().CreateDeviceInfos(kt.Ctx, devices); err != nil {
-		logs.Errorf("failed to save device info to db, order id: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
+	if err = model.Operation().DeviceInfo().CreateDeviceInfos(kt.Ctx, devices); err != nil {
+		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v, rid: %s",
+			order.SubOrderId, generateId, err, kt.Rid)
 		return err
 	}
 
-	logs.Infof("successfully sync device info to cc, orderId: %s, ips: %+v, assets: %+v, rid: %s", kt.Rid, ips,
-		assetIds, kt.Rid)
+	logs.Infof("successfully sync device info to cc, orderId: %s, generateId: %d, ips: %+v, assets: %+v, "+
+		"devices: %+v, rid: %s", order.SubOrderId, generateId, ips, assetIds, cvt.PtrToSlice(devices), kt.Rid)
 
 	return nil
 }
@@ -1003,6 +1007,14 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 	for _, item := range items {
 		ips = append(ips, item.Ip)
 		assetIds = append(assetIds, item.AssetId)
+	}
+
+	// 线上Bug，返回了空的DeviceInfo数组，导致mongo插入失败
+	if len(ips) == 0 && len(assetIds) == 0 {
+		logs.Errorf("failed to sync device info to cc, ips and assetIds is empty, subOrderID: %s, generateId: %s, "+
+			"items: %+v", order.SubOrderId, generateId, cvt.PtrToSlice(items))
+		return nil, errf.Newf(errf.RecordNotFound, "failed to sync device info to cc, ips and assetIds is empty, "+
+			"subOrderID: %s", order.SubOrderId)
 	}
 
 	// 1. sync device info to cc
@@ -1030,7 +1042,8 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 		mapAssetIDToHost[host.BkAssetID] = host
 	}
 
-	logs.Infof("successfully sync device info to cc, ips: %+v, assets: %+v, rid: %s", ips, assetIds)
+	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v",
+		order.SubOrderId, ips, assetIds)
 	devices := g.buildDevicesInfo(items, order, generateId, mapAssetIDToHost)
 	return devices, nil
 }
@@ -1109,16 +1122,18 @@ func (g *Generator) createGeneratedDevice(order *types.ApplyOrder, generateId ui
 
 	devices, err := g.syncHostToCMDB(order, generateId, items)
 	if err != nil {
-		logs.Errorf("failed to syn to cmdb, order id: %s, err: %v", order.SubOrderId, err)
+		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v", order.SubOrderId, generateId, err)
 		return err
 	}
 
-	if err := model.Operation().DeviceInfo().CreateDeviceInfos(context.Background(), devices); err != nil {
-		logs.Errorf("failed to save device info to db, order id: %s, err: %v", order.SubOrderId, err)
+	if err = model.Operation().DeviceInfo().CreateDeviceInfos(context.Background(), devices); err != nil {
+		logs.Errorf("failed to save device info to db, order id: %s, generateId: %d, err: %v", order.SubOrderId,
+			generateId, err)
 		return err
 	}
 
-	logs.Infof("successfully sync device info to cc, ips: %+v, assets: %+v", ips, assetIds)
+	logs.Infof("successfully sync device info to cc, subOrderID: %s, generateId: %d, ips: %+v, assets: %+v, "+
+		"devices: %+v", order.SubOrderId, generateId, ips, assetIds, cvt.PtrToSlice(devices))
 
 	return nil
 }

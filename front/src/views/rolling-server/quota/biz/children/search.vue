@@ -25,6 +25,7 @@ const getSearchCompProps = (field: ModelProperty) => {
     return {
       type: 'month',
       format: 'yyyy-MM',
+      clearable: false,
     };
   }
   return {

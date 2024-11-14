@@ -6,6 +6,7 @@ import rollRequest from '@blueking/roll-request';
 import type { QuotaAdjustType } from '@/views/rolling-server/typings';
 import { enableCount } from '@/utils/search';
 import http from '@/http';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 export interface IRollingServerBizQuotaItem {
   id: string;
@@ -53,6 +54,8 @@ export interface IExistQuotaBizItem {
 }
 
 export const useRollingServerQuotaStore = defineStore('rolling-server-quota', () => {
+  const { getBusinessApiPath } = useWhereAmI();
+
   const bizQuotaListLoading = ref(false);
   const createBizQuotaLoading = ref(false);
   const adjustBizQuotaLoading = ref(false);
@@ -68,7 +71,7 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
         [Promise<IQueryResData<IGlobalQuota>>, Promise<IQueryResData<IGlobalCpuCoreSummary>>]
       >([
         http.get('/api/v1/woa/rolling_servers/global_config'),
-        http.post('/api/v1/woa/rolling_servers/cpu_core/summary', {
+        http.post(`/api/v1/woa/${getBusinessApiPath()}rolling_servers/cpu_core/summary`, {
           start: {
             year: startOfMonth.year(),
             month: startOfMonth.month() + 1,
@@ -91,7 +94,7 @@ export const useRollingServerQuotaStore = defineStore('rolling-server-quota', ()
 
   const getBizQuotaList = async (params: QueryParamsType) => {
     bizQuotaListLoading.value = true;
-    const api = `/api/v1/woa/rolling_servers/biz_quotas/list`;
+    const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/biz_quotas/list`;
     try {
       const [listRes, countRes] = await Promise.all<
         [Promise<IListResData<IRollingServerBizQuotaItem[]>>, Promise<IListResData<IRollingServerBizQuotaItem[]>>]

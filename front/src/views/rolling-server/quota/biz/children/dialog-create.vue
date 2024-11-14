@@ -4,9 +4,6 @@ import dayjs from 'dayjs';
 import { Message } from 'bkui-vue';
 import { useRollingServerQuotaStore } from '@/store/rolling-server-quota';
 import { type IBusinessItem } from '@/store/business-global';
-import type { IBizViewSearchCondition } from '../../typings';
-
-const props = defineProps<{ month: IBizViewSearchCondition['month'] }>();
 
 const emit = defineEmits<{
   'create-success': [res: { id: string }];
@@ -19,7 +16,7 @@ const model = defineModel<boolean>();
 const formData = reactive({
   bk_biz_ids: [],
   quota: rollingServerQuotaStore.globalQuotaConfig.biz_quota,
-  quota_month: dayjs(props.month).format('YYYY-MM'),
+  quota_month: dayjs().format('YYYY-MM'),
 });
 
 const quotaMax = computed(() => {
@@ -64,11 +61,11 @@ const handleDialogConfirm = async () => {
       <bk-form-item label="业务" :required="true" property="bk_biz_ids">
         <hcm-form-business v-model="formData.bk_biz_ids" multiple :option-disabled="businessOptionDisabled" />
       </bk-form-item>
-      <bk-form-item label="月份">
+      <bk-form-item label="月份" description="基础额度只允许新增当月未初始化的业务">
         <hcm-form-datetime
           style="width: 100%"
           type="monthrange"
-          :value="[dayjs(props.month).toDate(), dayjs(props.month).toDate()]"
+          :value="[dayjs().toDate(), dayjs().toDate()]"
           format="yyyy-MM"
           :readonly="true"
         />

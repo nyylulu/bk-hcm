@@ -1,5 +1,7 @@
-import dayjs from 'dayjs';
 import { defineComponent, type PropType, onBeforeMount, ref, watch, nextTick, computed } from 'vue';
+import dayjs from 'dayjs';
+import isBetween from 'dayjs/plugin/isBetween';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel';
 import { useResourcePlanStore } from '@/store';
@@ -10,6 +12,9 @@ import { timeFormatter } from '@/common/util';
 import { AdjustType, IExceptTimeRange } from '@/typings/plan';
 import { getDateRangeIntersectionWithMonth, isDateInRange } from '@/utils/plan';
 import useFormModel from '@/hooks/useFormModel';
+
+dayjs.extend(isBetween);
+dayjs.extend(isoWeek);
 
 export default defineComponent({
   props: {
@@ -137,8 +142,21 @@ export default defineComponent({
         });
     };
 
-    const getDisabledDate = (date: string) => {
-      return dayjs(date).isBefore(dayjs().subtract(1, 'day'));
+    const getDisabledDate = (date: Date) => {
+      const currentDate = dayjs(date);
+
+      const startOfWeek = dayjs().startOf('isoWeek');
+      const endOfWeek = dayjs().endOf('isoWeek');
+
+      // 检查给定日期是否在本周内
+      if (currentDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
+        // 检查给定日期是否跨月
+        if (currentDate.month() !== startOfWeek.month()) {
+          return true;
+        }
+        return false;
+      }
+      return dayjs(currentDate).isBefore(dayjs());
     };
 
     const validate = () => {

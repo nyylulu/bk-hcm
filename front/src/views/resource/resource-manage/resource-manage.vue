@@ -317,6 +317,7 @@ watch(activeTab, () => {
   router.replace({
     query: {
       type: activeTab.value,
+      accountId: accountId.value || undefined,
     },
   });
 });

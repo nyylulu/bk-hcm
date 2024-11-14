@@ -450,3 +450,14 @@ type QueryCvmInstanceTypeParams struct {
 	InstanceType  []string `json:"instanceType,omitempty"`
 	InstanceGroup []string `json:"instanceGroup,omitempty"`
 }
+
+// GetApproveLogReq get approve log request
+type GetApproveLogReq struct {
+	ReqMeta `json:",inline"`
+	Params  *GetApproveLogParams `json:"params"`
+}
+
+// GetApproveLogParams get approve log parameters
+type GetApproveLogParams struct {
+	OrderId []string `json:"orderId"`
+}

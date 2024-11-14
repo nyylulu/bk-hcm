@@ -174,6 +174,8 @@ const (
 	CvmReturnDetailMethod = "queryReturnCvmByOrder"
 	// QueryCvmInstanceType 查询CVM机型信息
 	QueryCvmInstanceType = "queryCvmInstanceType"
+	// GetApproveLogMethod 查询审批日志
+	GetApproveLogMethod = "getApproveLog"
 
 	// CvmCbsPlanDefaultCvmDesc 需求预测单据的默认CVM备注，用于管理员判断需求来源
 	CvmCbsPlanDefaultCvmDesc = "[From IEG HCM CVM]"

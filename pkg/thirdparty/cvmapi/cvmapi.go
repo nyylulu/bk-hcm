@@ -37,6 +37,8 @@ type CVMClientInterface interface {
 	QueryCvmVpc(ctx context.Context, header http.Header, req *VpcReq) (*VpcResp, error)
 	// QueryCvmSubnet query cvm subnet info
 	QueryCvmSubnet(ctx context.Context, header http.Header, req *SubnetReq) (*SubnetResp, error)
+	// GetApproveLog get approve log
+	GetApproveLog(ctx context.Context, header http.Header, req *GetApproveLogReq) (*GetApproveLogResp, error)
 	// QueryCvmCbsPlans query cvm and cbs plan info
 	QueryCvmCbsPlans(ctx context.Context, header http.Header, req *CvmCbsPlanQueryReq) (*CvmCbsPlanQueryResp, error)
 	// AdjustCvmCbsPlans adjust cvm and cbs plan info
@@ -189,6 +191,24 @@ func (c *cvmApi) QueryCvmVpc(ctx context.Context, header http.Header, req *VpcRe
 func (c *cvmApi) QueryCvmSubnet(ctx context.Context, header http.Header, req *SubnetReq) (*SubnetResp, error) {
 	subPath := "/apply/api/cvm"
 	resp := new(SubnetResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// GetApproveLog get approve log
+func (c *cvmApi) GetApproveLog(ctx context.Context, header http.Header, req *GetApproveLogReq) (*GetApproveLogResp,
+	error) {
+
+	subPath := "/apply/api/cvm/getApproveLog"
+	resp := new(GetApproveLogResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

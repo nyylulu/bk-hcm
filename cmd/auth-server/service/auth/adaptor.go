@@ -130,14 +130,14 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genApplicationResources(a)
 	case meta.AccountBillThirdParty:
 		return genAccountBillThirdPartyResource(a)
+	case meta.Image:
+		return genImageResource(a)
 	case meta.AwsSavingsPlansCost:
 		return genAwsSavingsPlansCostResource(a)
 	case meta.RollingServerManage: // 平台管理-滚服管理
 		return sys.RollingServerManage, make([]client.Resource, 0), nil
 	case meta.TaskManagement:
 		return genTaskManagementResource(a)
-	case meta.Image:
-		return genImageResource(a)
 	default:
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm auth type: %s", a.Basic.Type)
 	}

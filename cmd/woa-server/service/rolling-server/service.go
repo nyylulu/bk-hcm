@@ -86,4 +86,7 @@ func (s *service) bizService(h *rest.Handler) {
 	h.Add("ListBizAppliedRecords", http.MethodPost, "/applied_records/list", s.ListBizAppliedRecords)
 	h.Add("ListBizReturnedRecords", http.MethodPost, "/returned_records/list", s.ListBizReturnedRecords)
 	h.Add("GetBizCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetBizCpuCoreSummary)
+
+	// 业务配额
+	h.Add("ListBizBizQuotaConfigs", http.MethodPost, "/biz_quotas/list", s.ListBizBizQuotaConfigs)
 }

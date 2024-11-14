@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, useAttrs } from 'vue';
 import { getDateShortcutRange } from '@/utils/search';
 import type { DatePickerValueType } from 'bkui-vue/lib/date-picker/interface';
 
@@ -46,8 +46,10 @@ const localModel = computed({
     model.value = val;
   },
 });
+
+const attrs = useAttrs();
 </script>
 
 <template>
-  <bk-date-picker v-model="localModel" :type="type" :shortcuts="shortcutsRange" :format="format" />
+  <bk-date-picker v-model="localModel" v-bind="attrs" :type="type" :shortcuts="shortcutsRange" :format="format" />
 </template>

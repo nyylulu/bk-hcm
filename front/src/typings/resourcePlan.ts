@@ -131,6 +131,42 @@ export interface TicketBaseInfo {
   submitted_at: string;
 }
 
+export interface IPlanTicketAudit {
+  ticket_id: string;
+  itsm_audit: IPlanTicketItsmAudit;
+  crp_audit: IPlanTicketCrpAudit;
+}
+export interface IPlanTicketItsmAudit {
+  itsm_sn: string;
+  itsm_url: string;
+  status: string;
+  status_name: string;
+  message: string;
+  current_steps: IPlanTicketAuditCurrentStep[];
+  logs: IPlanTicketAuditLog[];
+}
+export interface IPlanTicketCrpAudit {
+  crp_sn: string;
+  crp_url: string;
+  status: string;
+  status_name: string;
+  message: string;
+  current_steps: IPlanTicketAuditCurrentStep[];
+  logs: IPlanTicketAuditLog[];
+}
+export interface IPlanTicketAuditCurrentStep {
+  state_id: number | string;
+  name: string;
+  processors: string[];
+}
+export interface IPlanTicketAuditLog {
+  operator: string;
+  operate_at: string;
+  message: string;
+  name?: string; // Optional because it's not present in every log
+}
+export type ResourcePlanTicketAuditResData = IQueryResData<IPlanTicketAudit>;
+
 export interface IPlanTicket {
   bk_biz_id: number;
   demand_class: string;

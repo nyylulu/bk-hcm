@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from 'vue';
+import { reactive, ref, watch } from 'vue';
 import { Plus } from 'bkui-vue/lib/icon';
 import { useRoute } from 'vue-router';
 import routeQuery from '@/router/utils/query';
@@ -62,12 +62,6 @@ const dialog = reactive({
   props: {},
 });
 
-const createButtonDisabled = computed(() => {
-  const conditionDate = new Date(condition.value.quota_month);
-  const nowDate = new Date();
-  return !(conditionDate.getFullYear() === nowDate.getFullYear() && conditionDate.getMonth() === nowDate.getMonth());
-});
-
 const handleSearch = (values: IBizViewSearchCondition) => {
   searchQs.set(values);
 };
@@ -92,7 +86,6 @@ const handleAdjust = (row?: IRollingServerBizQuotaItem) => {
 
 const handleCreate = () => {
   dialog.component = DialogCreate;
-  dialog.props = { month: condition.value.quota_month };
   dialog.isShow = true;
   dialog.isHidden = false;
 };
@@ -110,7 +103,7 @@ const handleCreateSuccess = () => {
 <template>
   <search :condition="condition" @search="handleSearch" @reset="handleReset" />
   <div class="toolbar">
-    <bk-button theme="primary" :disabled="createButtonDisabled" @click="handleCreate">
+    <bk-button theme="primary" @click="handleCreate">
       <plus style="font-size: 22px" />
       新增额度
     </bk-button>
