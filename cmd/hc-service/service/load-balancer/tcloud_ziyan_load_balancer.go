@@ -141,7 +141,7 @@ func (svc *clbSvc) createTCloudZiyanDBLoadBalancer(cts *rest.Contexts, req *prot
 	dataReq := &dataproto.TCloudCLBCreateReq{Lbs: make([]dataproto.TCloudCLBCreate, len(cloudIDs))}
 	for i, cloudID := range cloudIDs {
 		dataReq.Lbs[i].CloudID = cloudID
-		dataReq.Lbs[i].Vendor = enumor.TCloud
+		dataReq.Lbs[i].Vendor = enumor.TCloudZiyan
 		dataReq.Lbs[i].BkBizID = req.BkBizID
 
 		dataReq.Lbs[i].Name = fmt.Sprintf("%s-%d", cvt.PtrToVal(req.Name), i)
@@ -154,7 +154,7 @@ func (svc *clbSvc) createTCloudZiyanDBLoadBalancer(cts *rest.Contexts, req *prot
 
 	}
 	// 创建本地数据，保存业务信息
-	_, err = svc.dataCli.TCloud.LoadBalancer.BatchCreateTCloudClb(cts.Kit, dataReq)
+	_, err = svc.dataCli.TCloudZiyan.LoadBalancer.BatchCreateClb(cts.Kit, dataReq)
 	if err != nil {
 		logs.Errorf("fail to create db load balancer after cloud create, err: %v, rid: %s", err, cts.Kit.Rid)
 		// 	失败也继续尝试同步
@@ -809,7 +809,7 @@ func (svc *clbSvc) updateTCloudZiyanDomainAttr(kt *kit.Kit, req *protolb.DomainA
 	}
 
 	// 获取负载均衡信息
-	lbInfo, err := svc.dataCli.TCloud.LoadBalancer.Get(kt, lblInfo.LbID)
+	lbInfo, err := svc.dataCli.TCloudZiyan.LoadBalancer.Get(kt, lblInfo.LbID)
 	if err != nil {
 		logs.Errorf("fail to get tcloud load balancer(%s), err: %v, rid: %s", lblInfo.LbID, err, kt.Rid)
 		return err

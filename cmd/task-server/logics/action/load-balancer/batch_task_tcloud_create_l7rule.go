@@ -64,6 +64,7 @@ func (opt BatchTaskTCloudCreateL7RuleOption) Validate() error {
 
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for create l7 rule: %s", opt.Vendor)
 	}
@@ -187,6 +188,9 @@ func (act BatchTaskTCloudCreateL7RuleAction) createNonExists(kt *kit.Kit, nonExi
 		switch opt.Vendor {
 		case enumor.TCloud:
 			lblResp, createErr = actcli.GetHCService().TCloud.Clb.BatchCreateUrlRule(kt, opt.ListenerID, ruleCreateReq)
+		case enumor.TCloudZiyan:
+			lblResp, createErr = actcli.GetHCService().TCloudZiyan.Clb.BatchCreateUrlRule(kt, opt.ListenerID,
+				ruleCreateReq)
 		default:
 			return nil, fmt.Errorf("unsupport vendor for check rule exist: %s", opt.Vendor)
 		}
@@ -273,6 +277,8 @@ func (act BatchTaskTCloudCreateL7RuleAction) checkExistsRule(kt *kit.Kit, opt *B
 		switch opt.Vendor {
 		case enumor.TCloud:
 			ruleResp, err = actcli.GetDataService().TCloud.LoadBalancer.ListUrlRule(kt, listRuleReq)
+		case enumor.TCloudZiyan:
+			ruleResp, err = actcli.GetDataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, listRuleReq)
 		default:
 			return nil, fmt.Errorf("unsupport vendor for check rule exist: %s", opt.Vendor)
 		}

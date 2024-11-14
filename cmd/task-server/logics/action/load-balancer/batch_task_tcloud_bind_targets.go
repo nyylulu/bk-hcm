@@ -57,6 +57,7 @@ func (opt BatchTaskBindTargetOption) Validate() error {
 
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for bind target: %s", opt.Vendor)
 	}
@@ -129,6 +130,9 @@ func (act BatchTaskBindTargetAction) Run(kt run.ExecuteKit, params any) (result 
 		switch opt.Vendor {
 		case enumor.TCloud:
 			err = actcli.GetHCService().TCloud.Clb.BatchRegisterTargetToListenerRule(asyncKit,
+				opt.LoadBalancerID, opt.BatchRegisterTCloudTargetReq)
+		case enumor.TCloudZiyan:
+			err = actcli.GetHCService().TCloudZiyan.Clb.BatchRegisterTargetToListenerRule(asyncKit,
 				opt.LoadBalancerID, opt.BatchRegisterTCloudTargetReq)
 		default:
 			return nil, fmt.Errorf("unsupport vendor for bind rule: %s", opt.Vendor)

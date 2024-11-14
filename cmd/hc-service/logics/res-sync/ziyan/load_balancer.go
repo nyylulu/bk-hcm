@@ -25,6 +25,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync"
 
 	"hcm/cmd/hc-service/logics/res-sync/common"
 	typecore "hcm/pkg/adaptor/types/core"
@@ -44,6 +45,7 @@ import (
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/util"
 
 	tclb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
@@ -253,8 +255,8 @@ func (cli *client) createLoadBalancer(kt *kit.Kit, accountID string, region stri
 		return nil, err
 	}
 
-	logs.Infof("[%s] sync load balancer to create lb success, accountID: %s, count: %d, rid: %s",
-		enumor.TCloudZiyan, accountID, len(addSlice), kt.Rid)
+	logs.Infof("[%s] sync load balancer to create lb success, region: %s, accountID: %s, count: %d, rid: %s",
+		enumor.TCloudZiyan, region, accountID, len(addSlice), kt.Rid)
 
 	return nil, nil
 }
@@ -750,6 +752,8 @@ func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
 type SyncLBOption struct {
 }
 
+var bs2bkBizIDMap sync.Map
+
 // Validate ...
 func (o *SyncLBOption) Validate() error {
 	return validator.Validate.Struct(o)
@@ -772,30 +776,41 @@ func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) err
 			bs2NameIds = append(bs2NameIds, bs2NameId)
 		}
 	}
-	bs2bkBizIDMap := make(map[int64]int64, len(slice.Unique(bs2NameIds)))
-	if len(bs2NameIds) > 0 {
+	notFoundIds := make([]int64, 0, 100)
+	for _, bs2id := range slice.Unique(bs2NameIds) {
+		if _, ok := bs2bkBizIDMap.Load(bs2id); !ok {
+			notFoundIds = append(notFoundIds, bs2id)
+		}
+	}
+	if len(notFoundIds) > 0 {
 		param := &cmdb.SearchBizParams{
 			Page: cmdb.BasePage{},
 			BizPropertyFilter: &cmdb.QueryFilter{
-				Rule: cmdb.Combined(cmdb.ConditionAnd, cmdb.In("bs2_name_id", bs2NameIds)),
+				Rule: cmdb.Combined(cmdb.ConditionAnd, cmdb.In("bs2_name_id", notFoundIds)),
 			},
 		}
 		business, err := cli.esb.Cmdb().SearchBusiness(kt, param)
 		if err != nil {
-			logs.Errorf("fail to search cmdb business, err:%v,bs2_name_id list: %v, rid: %s", err, bs2NameIds, kt.Rid)
+			logs.Errorf("fail to search cmdb business, err:%v,bs2_name_id list: %v, rid: %s", err, notFoundIds, kt.Rid)
 			return err
 		}
 
 		for _, biz := range business.Info {
-			bs2bkBizIDMap[biz.BsName2ID] = biz.BizID
+			bs2bkBizIDMap.Store(biz.BsName2ID, biz.BizID)
 		}
 	}
 
 	for i, clb := range lbFromCloud {
 		// 对没有解析到标签的业务，fallback到未分配
 		lbFromCloud[i].BkBizID = constant.UnassignedBiz
-		if bkBizID, ok := bs2bkBizIDMap[clb.Bs2NameID]; ok {
-			lbFromCloud[i].BkBizID = bkBizID
+		if bkBizID, ok := bs2bkBizIDMap.Load(clb.Bs2NameID); ok {
+			var err error
+			lbFromCloud[i].BkBizID, err = util.GetInt64ByInterface(bkBizID)
+			// should never happen
+			if err != nil {
+				logs.Errorf("fail to convert bkBizID to int64, err: %v, rid: %s", err, kt.Rid)
+				return err
+			}
 		}
 	}
 	return nil
