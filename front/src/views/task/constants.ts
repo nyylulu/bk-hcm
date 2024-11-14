@@ -1,6 +1,6 @@
-import { TaskClbType, TaskStatus, TaskSource, TaskDetailStatus } from './typings';
+import { TaskClbType, TaskCvmType, TaskStatus, TaskSource, TaskDetailStatus } from './typings';
 
-export const TASKT_CLB_TYPE_NAME = {
+export const TASK_CLB_TYPE_NAME = {
   [TaskClbType.CREATE_L4_LISTENER]: '创建监听器-TCP/UDP',
   [TaskClbType.CREATE_L7_LISTENER]: '创建监听器-HTTP/HTTPS',
   [TaskClbType.CREATE_L7_RULE]: '创建URL规则-HTTP/HTTPS',
@@ -11,11 +11,19 @@ export const TASKT_CLB_TYPE_NAME = {
   [TaskClbType.MODIFY_RS_WEIGHT]: '权重调整',
 };
 
-export const TASK_TYPE_NAME = {
-  ...TASKT_CLB_TYPE_NAME,
+export const TASK_CVM_TYPE_NAME = {
+  [TaskCvmType.RESET]: '重装',
+  [TaskCvmType.START]: '开机',
+  [TaskCvmType.STOP]: '关机',
+  [TaskCvmType.REBOOT]: '重启',
 };
 
-export const TASKT_STATUS_NAME = {
+export const TASK_TYPE_NAME = {
+  ...TASK_CLB_TYPE_NAME,
+  ...TASK_CVM_TYPE_NAME,
+};
+
+export const TASK_STATUS_NAME = {
   [TaskStatus.RUNNING]: '执行中',
   [TaskStatus.FAILED]: '失败',
   [TaskStatus.SUCCESS]: '成功',
@@ -23,12 +31,13 @@ export const TASKT_STATUS_NAME = {
   [TaskStatus.CANCELED]: '已取消',
 };
 
-export const TASKT_SOURCE_NAME = {
+export const TASK_SOURCE_NAME = {
   [TaskSource.SOPS]: '标准运维',
-  [TaskSource.EXCEL]: '页面操作',
+  [TaskSource.EXCEL]: 'Excel导入',
+  [TaskSource.API]: '页面操作',
 };
 
-export const TASKT_DETAIL_STATUS_NAME = {
+export const TASK_DETAIL_STATUS_NAME = {
   [TaskDetailStatus.INIT]: '待执行',
   [TaskDetailStatus.RUNNING]: '运行',
   [TaskDetailStatus.FAILED]: '失败',

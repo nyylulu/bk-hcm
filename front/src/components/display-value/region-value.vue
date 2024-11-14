@@ -21,8 +21,10 @@ const regionStore = useRegionStore();
 
 watchEffect(async () => {
   // TODO: 缓存与合并请求
-  const res = await regionStore.getRegionList({ vendor: props.vendor });
-  list.value = res;
+  if (props.vendor) {
+    const res = await regionStore.getRegionList({ vendor: props.vendor });
+    list.value = res;
+  }
 });
 </script>
 

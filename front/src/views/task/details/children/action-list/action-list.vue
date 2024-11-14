@@ -8,7 +8,9 @@ import { ITaskDetailItem } from '@/store';
 import columnFactory from './column-factory';
 const { getColumns } = columnFactory();
 
-const props = withDefaults(defineProps<IActionListProps>(), {});
+const props = withDefaults(defineProps<IActionListProps>(), {
+  selectable: true,
+});
 
 const emit = defineEmits<(e: 'select', data: any[]) => void>();
 
@@ -61,7 +63,7 @@ watch(
     @selection-change="handleSelectChange"
     row-key="id"
   >
-    <bk-table-column type="selection" align="center" min-width="30"></bk-table-column>
+    <bk-table-column type="selection" align="center" min-width="30" v-if="selectable"></bk-table-column>
     <bk-table-column
       v-for="(column, index) in columns"
       :key="index"
@@ -70,7 +72,12 @@ watch(
       :sort="column.sort"
     >
       <template #default="{ row }">
-        <display-value :property="column" :value="get(row, column.id)" :display="column?.meta?.display" />
+        <display-value
+          :property="column"
+          :value="get(row, column.id)"
+          :display="column?.meta?.display"
+          :vendor="row?.param?.vendor"
+        />
       </template>
     </bk-table-column>
   </bk-table>

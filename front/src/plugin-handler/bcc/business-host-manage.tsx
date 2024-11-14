@@ -76,10 +76,13 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
             extra.isLoading.value = true;
             try {
               const result = await businessStore.cvmOperateAsync(type, { ids: [data.id] });
+
+              Message({ message: t('操作成功'), theme: 'success' });
+
               // 跳转至新任务详情页
               routerAction.redirect({
                 name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-                params: { resourceType: ResourceTypeEnum.HOST, id: result.task_management_id },
+                params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
                 query: { bizs: getBizsId() },
               });
             } finally {

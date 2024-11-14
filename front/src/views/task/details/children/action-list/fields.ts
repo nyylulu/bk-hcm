@@ -1,7 +1,7 @@
 import { PropertyColumnConfig } from '@/model/typings';
 import { ResourceTypeEnum } from '@/common/resource-constant';
 import type { DisplayType, DisplayAppearanceType, DisplayOnType } from '@/components/form/typings';
-import { type TaskType, TaskClbType } from '@/views/task/typings';
+import { type TaskType, TaskClbType, TaskCvmType } from '@/views/task/typings';
 
 export const baseFieldIds = ['created_at', 'updated_at', 'state', 'reason'];
 
@@ -32,6 +32,19 @@ const clbSopsBaseFieldIds = [
   'param.cloud_lb_ids',
   'param.protocol',
   'param.ports',
+];
+
+const cvmBaseFieldIds = [
+  'created_at',
+  'updated_at',
+  'param.private_ipv4_addresses',
+  'param.extension.bk_asset_id',
+  'param.vendor',
+  'param.account_id',
+  'param.region',
+  'param.zone',
+  'param.cloud_vpc_ids',
+  'param.cloud_subnet_id',
 ];
 
 const clbFieldIds = {
@@ -83,6 +96,13 @@ const clbFieldIds = {
   [TaskClbType.DELETE_LISTENER]: [...clbSopsBaseFieldIds, 'state', 'reason'],
   [TaskClbType.UNBIND_RS]: [...clbSopsBaseFieldIds, 'state', 'reason'],
   [TaskClbType.MODIFY_RS_WEIGHT]: [...clbSopsBaseFieldIds, 'state', 'reason'],
+};
+
+const cvmFieldIds = {
+  [TaskCvmType.START]: [...cvmBaseFieldIds, 'state', 'reason'],
+  [TaskCvmType.STOP]: [...cvmBaseFieldIds, 'state', 'reason'],
+  [TaskCvmType.REBOOT]: [...cvmBaseFieldIds, 'state', 'reason'],
+  [TaskCvmType.RESET]: [...cvmBaseFieldIds, 'param.image_name_old', 'param.image_name', 'state', 'reason'],
 };
 
 const clbBaseRerunParamFieldIds = {
@@ -261,5 +281,7 @@ export const fieldRerunBaseIdMap = new Map<
 >();
 
 fieldIdMap.set(ResourceTypeEnum.CLB, clbFieldIds);
+fieldIdMap.set(ResourceTypeEnum.CVM, cvmFieldIds);
+
 fieldRerunIdMap.set(ResourceTypeEnum.CLB, clbRerunParamFieldIds);
 fieldRerunBaseIdMap.set(ResourceTypeEnum.CLB, clbBaseRerunParamFieldIds);

@@ -3,12 +3,13 @@ import { computed } from 'vue';
 import { useRoute } from 'vue-router';
 import { ResourceTypeEnum } from '@/common/resource-constant';
 import clb from './clb.vue';
+import cvm from './cvm.vue';
 
 const route = useRoute();
 
 const resourceType = computed(() => (route.params.resourceType || ResourceTypeEnum.CLB) as string);
 
-const detailComps: Record<string, any> = { clb };
+const detailComps: Record<string, any> = { clb, cvm };
 </script>
 
 <template>

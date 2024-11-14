@@ -15,10 +15,9 @@ const appearance = computed(() => props.display?.appearance);
 
 const displayValue = computed(() => {
   const vals = Array.isArray(props.value) ? props.value : [props.value];
-  return vals.map((val) => props.option?.[val] || props.value).join(', ') || '--';
+  return vals.map((val) => props.option?.[val] || val).join(', ') || '--';
 });
-
-const appearanceComps: Record<AppearanceType, any> = {
+const appearanceComps: Partial<Record<AppearanceType, any>> = {
   status: Status,
 };
 </script>

@@ -3,14 +3,17 @@ import { computed } from 'vue';
 import { AppearanceType, DisplayType } from './typings';
 import Link from './appearance/link.vue';
 
-const props = defineProps<{ value: string | number; display: DisplayType }>();
-
-const displayValue = computed(() => props.value || '--');
+const props = defineProps<{ value: string | number | string[] | number[]; display: DisplayType }>();
 
 const displayOn = computed(() => props.display?.on || 'cell');
 const appearance = computed(() => props.display?.appearance);
 
-const appearanceComps: Record<AppearanceType, any> = {
+const displayValue = computed(() => {
+  const vals = Array.isArray(props.value) ? props.value : [props.value];
+  return vals?.join?.(', ') || '--';
+});
+
+const appearanceComps: Partial<Record<AppearanceType, any>> = {
   link: Link,
 };
 </script>

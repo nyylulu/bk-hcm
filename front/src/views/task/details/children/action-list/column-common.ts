@@ -3,6 +3,8 @@ import { ResourceTypeEnum } from '@/common/resource-constant';
 import taskDetailsViewProperties from '@/model/task/detail.view';
 import { ITaskItem } from '@/store';
 import { type TaskType } from '@/views/task/typings';
+import { getModel } from '@/model/manager';
+import { DetailCvmView } from '@/model/task/detail-cvm.view';
 import { baseFieldIds, fieldIdMap, fieldRerunIdMap, fieldRerunBaseIdMap, baseColumnConfig } from './fields';
 
 const taskActionViewProperties: ModelPropertyColumn[] = [...taskDetailsViewProperties];
@@ -14,9 +16,13 @@ export const getColumnIds = (resourceType: ResourceTypeEnum, operation: TaskType
 
 const getColumns = (type: ResourceTypeEnum, operations?: ITaskItem['operations']) => {
   const [operation] = operations || [];
+  let properties = taskActionViewProperties;
+  if (type === ResourceTypeEnum.CVM) {
+    properties = getModel(DetailCvmView).getProperties();
+  }
   const columnIds = getColumnIds(type, operation as TaskType);
   return columnIds.map((id) => ({
-    ...taskActionViewProperties.find((item) => item.id === id),
+    ...properties.find((item) => item.id === id),
     ...baseColumnConfig[id],
   }));
 };

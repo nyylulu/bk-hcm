@@ -8,9 +8,8 @@ import {
   type ITaskRerunParams,
   useTaskStore,
 } from '@/store';
-import accountProperties from '@/model/account/properties';
-import taskProperties from '@/model/task/properties';
-import regionProperties from '@/model/region/properties';
+import { getModel } from '@/model/manager';
+import { RerunView } from '@/model/task/rerun.view';
 import { ResourceTypeEnum } from '@/common/resource-constant';
 import routerAction from '@/router/utils/action';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -23,9 +22,9 @@ import columnFactory from '@/views/task/details/children/action-list/column-fact
 const props = defineProps<{ resource: ResourceTypeEnum; info: Partial<ITaskItem>; selected: ITaskDetailItem[] }>();
 const model = defineModel({ default: false });
 
-const taskViewProperties = [...accountProperties, ...taskProperties, ...regionProperties];
+const properties = getModel(RerunView).getProperties();
 
-const fields = ['vendor', 'region_id', 'operations'].map((id) => taskViewProperties.find((item) => item.id === id));
+const fields = ['vendors', 'region_id', 'operations'].map((id) => properties.find((item) => item.id === id));
 
 const { getRerunColumns } = columnFactory(props.info.vendor as any);
 const columns = getRerunColumns(props.resource, props.info.operations);

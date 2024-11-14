@@ -1,22 +1,28 @@
 <script setup lang="ts">
 import { computed } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import clb from './clb.vue';
+import cvm from './cvm.vue';
 
 const router = useRouter();
 const route = useRoute();
+const { getBizsId } = useWhereAmI();
 
-const tabPanels = [{ name: 'clb', label: '负载均衡' }];
+const tabPanels = [
+  { name: 'clb', label: '负载均衡' },
+  { name: 'cvm', label: '主机' },
+];
 const tabActive = computed({
   get() {
     return route.params.resourceType || tabPanels[0].name;
   },
   set(value) {
-    router.push({ params: { resourceType: value }, query: route.query });
+    router.push({ params: { resourceType: value }, query: { bizs: getBizsId() } });
   },
 });
 
-const tabComps: Record<string, any> = { clb };
+const tabComps: Record<string, any> = { clb, cvm };
 </script>
 
 <template>

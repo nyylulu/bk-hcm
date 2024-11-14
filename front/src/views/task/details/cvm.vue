@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref, watch, watchEffect } from 'vue';
+import { computed, onMounted, ref, watch, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
 import { ITaskCountItem, ITaskDetailItem, ITaskItem, ITaskStatusItem, useTaskStore } from '@/store';
 import { ResourceTypeEnum } from '@/common/resource-constant';
@@ -13,11 +13,9 @@ import taskDetailsViewProperties from '@/model/task/detail.view';
 import { transformSimpleCondition } from '@/utils/search';
 import BasicInfo from './children/basic-info/basic-info.vue';
 import ActionList from './children/action-list/action-list.vue';
-import Rerun from './children/rerun/rerun.vue';
-import Cancel from './children/cancel/cancel.vue';
 
 import { TASK_TYPE_NAME } from '../constants';
-import { TaskClbType, TaskDetailStatus } from '../typings';
+import { TaskDetailStatus } from '../typings';
 
 const taskStore = useTaskStore();
 const { getBizsId } = useWhereAmI();
@@ -38,19 +36,6 @@ const taskDetails = ref<ITaskItem>();
 const condition = ref<Record<string, any>>({});
 
 const selections = ref([]);
-const rerunState = reactive({
-  isShow: false,
-});
-
-const isSopsOperation = computed(() =>
-  taskDetails.value?.operations?.some?.((op) =>
-    [TaskClbType.DELETE_LISTENER, TaskClbType.MODIFY_RS_WEIGHT, TaskClbType.UNBIND_RS].includes(op),
-  ),
-);
-
-const rerunButtonDisabled = computed(() => {
-  return !selections.value.length || isSopsOperation.value;
-});
 
 // 本任务的状态
 const status = ref<ITaskStatusItem>();
@@ -129,18 +114,11 @@ watchEffect(async () => {
   const taskOps = Array.isArray(operations) ? operations : [operations];
   const title = taskOps.map((op) => TASK_TYPE_NAME[op]).join(',');
 
-  setTitle(title);
+  setTitle(`主机${title}`);
 });
 
 const handleActionSelect = (data: any[]) => {
   selections.value = data;
-};
-
-const handleClickRerun = () => {
-  if (!selections.value.length) {
-    return;
-  }
-  rerunState.isShow = true;
 };
 
 const handleClickStatusCount = (status?: TaskDetailStatus) => {
@@ -156,18 +134,10 @@ onMounted(() => {
 
 <template>
   <common-card class="content-card" :title="() => '基本信息'">
-    <basic-info :resource="ResourceTypeEnum.CLB" :data="taskDetails"></basic-info>
+    <basic-info :resource="ResourceTypeEnum.CVM" :data="taskDetails"></basic-info>
   </common-card>
   <common-card class="content-card" :title="() => '操作详情'">
     <div class="toolbar">
-      <bk-button
-        theme="primary"
-        :disabled="rerunButtonDisabled"
-        v-bk-tooltips="{ content: '暂不支持', disabled: !isSopsOperation }"
-        @click="handleClickRerun"
-      >
-        失败任务重执行
-      </bk-button>
       <div class="stats">
         <span class="count-item">
           总数:
@@ -209,22 +179,14 @@ onMounted(() => {
     </div>
     <action-list
       v-bkloading="{ loading: taskStore.taskDetailListLoading }"
-      :resource="ResourceTypeEnum.CLB"
+      :resource="ResourceTypeEnum.CVM"
       :list="taskDetailList"
       :detail="taskDetails"
       :pagination="pagination"
+      :selectable="false"
       @select="handleActionSelect"
     />
   </common-card>
-  <template v-if="selections.length">
-    <rerun
-      v-model="rerunState.isShow"
-      :resource="ResourceTypeEnum.CLB"
-      :info="taskDetails"
-      :selected="selections"
-    ></rerun>
-  </template>
-  <cancel :resource="ResourceTypeEnum.CLB" :info="taskDetails" :status="status?.state" />
 </template>
 
 <style lang="scss" scoped>
@@ -244,7 +206,6 @@ onMounted(() => {
 .stats {
   display: flex;
   gap: 16px;
-  margin-left: 24px;
   .count-item {
     display: flex;
     align-items: center;

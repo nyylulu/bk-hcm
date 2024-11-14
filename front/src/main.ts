@@ -1,6 +1,8 @@
 import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 
+import 'reflect-metadata';
+
 import bus from './common/bus';
 import http from './http';
 import router from './router';

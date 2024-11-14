@@ -1,5 +1,5 @@
 import { ModelProperty } from '@/model/typings';
-import { TASKT_DETAIL_STATUS_NAME } from '@/views/task/constants';
+import { TASK_DETAIL_STATUS_NAME } from '@/views/task/constants';
 
 export default [
   {
@@ -21,7 +21,7 @@ export default [
     id: 'state',
     name: '任务状态',
     type: 'enum',
-    option: TASKT_DETAIL_STATUS_NAME,
+    option: TASK_DETAIL_STATUS_NAME,
     meta: {
       display: {
         appearance: 'status',

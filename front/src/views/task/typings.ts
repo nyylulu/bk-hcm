@@ -13,7 +13,14 @@ export enum TaskClbType {
   MODIFY_RS_WEIGHT = 'listener_rs_weight',
 }
 
-export type TaskType = TaskClbType;
+export enum TaskCvmType {
+  START = 'start_cvm',
+  STOP = 'stop_cvm',
+  REBOOT = 'reboot_cvm',
+  RESET = 'cvm_reset_system',
+}
+
+export type TaskType = TaskClbType | TaskCvmType;
 
 export enum TaskStatus {
   RUNNING = 'running',
@@ -26,6 +33,7 @@ export enum TaskStatus {
 export enum TaskSource {
   SOPS = 'sops',
   EXCEL = 'excel',
+  API = 'api',
 }
 
 export enum TaskDetailStatus {
@@ -36,7 +44,7 @@ export enum TaskDetailStatus {
   CANCEL = 'cancel',
 }
 
-export interface ISearchConditon {
+export interface ISearchCondition {
   account?: string;
   type?: TaskType;
   state?: TaskStatus;
@@ -48,7 +56,7 @@ export interface ISearchConditon {
 
 export interface ISearchProps {
   resource: ResourceTypeEnum;
-  condition: ISearchConditon;
+  condition: ISearchCondition;
 }
 
 export interface IDataListProps {
@@ -62,4 +70,5 @@ export interface IActionListProps {
   list: ITaskDetailItem[];
   detail: Partial<ITaskItem>;
   pagination: PaginationType;
+  selectable?: boolean;
 }

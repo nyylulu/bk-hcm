@@ -9,7 +9,7 @@ import useTimeoutPoll from '@/hooks/use-timeout-poll';
 import { useUserStore, useTaskStore, ITaskStatusItem, ITaskCountItem, ITaskItem } from '@/store';
 import routerAction from '@/router/utils/action';
 import { TaskStatus, type ISearchCondition } from '@/views/task/typings';
-import { SearchClbView } from '@/model/task/search.view';
+import { SearchCvmView } from '@/model/task/search.view';
 import { getModel } from '@/model/manager';
 import { transformSimpleCondition, getDateRange } from '@/utils/search';
 import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
@@ -22,7 +22,7 @@ const userStore = useUserStore();
 const taskStore = useTaskStore();
 const { getBizsId } = useWhereAmI();
 
-const properties = getModel(SearchClbView).getProperties();
+const properties = getModel(SearchCvmView).getProperties();
 
 const searchQs = useSearchQs({ key: 'filter', properties });
 const { pagination, getPageParams } = usePage();
@@ -69,7 +69,7 @@ watch(
       created_at: getDateRange('last7d'),
       creator: userStore.username,
     });
-    condition.value.resource = ResourceTypeEnum.CLB;
+    condition.value.resource = ResourceTypeEnum.CVM;
 
     pagination.current = Number(query.page) || 1;
     pagination.limit = Number(query.limit) || pagination.limit;
@@ -111,7 +111,7 @@ const handleViewDetails = (id: string) => {
   routerAction.redirect(
     {
       name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-      params: { resourceType: ResourceTypeEnum.CLB, id },
+      params: { resourceType: ResourceTypeEnum.CVM, id },
       query: { bizs: getBizsId() },
     },
     {
@@ -126,7 +126,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <search :resource="ResourceTypeEnum.CLB" :condition="condition" @search="handleSearch" @reset="handleReset" />
+  <search :resource="ResourceTypeEnum.CVM" :condition="condition" @search="handleSearch" @reset="handleReset" />
   <data-list
     v-bkloading="{ loading: taskStore.taskListLoading }"
     :resource="ResourceTypeEnum.CLB"

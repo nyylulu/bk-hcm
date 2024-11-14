@@ -1,17 +1,17 @@
 import type { ParsedQs } from 'qs';
 import merge from 'lodash/merge';
-import { ModelProperty, ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
+import { ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
 import { findProperty } from '@/model/utils';
 import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
 
 type DateRangeType = Record<'toady' | 'last7d' | 'last15d' | 'last30d' | 'naturalMonth', () => [Date[], Date[]]>;
 type RuleItemOpVal = Omit<RulesItem, 'field'>;
-type GetDefaultRule = (property: ModelProperty, custom?: RuleItemOpVal) => RuleItemOpVal;
+type GetDefaultRule = (property: ModelPropertySearch, custom?: RuleItemOpVal) => RuleItemOpVal;
 
 export const getDefaultRule: GetDefaultRule = (property, custom) => {
   const { EQ, AND, IN } = QueryRuleOPEnum;
-  const searchOp = property?.meta?.search?.op;
+  const searchOp = property.op ?? property?.meta?.search?.op;
 
   const defaultMap: Record<ModelPropertyType, RuleItemOpVal> = {
     string: { op: searchOp || EQ, value: [] },
@@ -19,7 +19,7 @@ export const getDefaultRule: GetDefaultRule = (property, custom) => {
     enum: { op: searchOp || IN, value: [] },
     datetime: { op: AND, value: [] },
     user: { op: searchOp || IN, value: [] },
-    account: { op: searchOp || EQ, value: '' },
+    account: { op: searchOp || IN, value: [] },
     array: { op: searchOp || IN, value: [] },
     bool: { op: searchOp || EQ, value: '' },
     cert: { op: searchOp || IN, value: [] },

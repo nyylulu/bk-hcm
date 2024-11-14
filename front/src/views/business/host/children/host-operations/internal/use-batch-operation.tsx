@@ -167,19 +167,18 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
           isLoading.value = true;
 
           const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds });
-          // 跳转至新任务详情页
-          routerAction.redirect({
-            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-            params: { resourceType: ResourceTypeEnum.HOST, id: result.task_management_id },
-            query: { bizs: getBizsId() },
-          });
 
           Message({
             message: '操作成功',
             theme: 'success',
           });
 
-          onFinished?.('confirm');
+          // 跳转至新任务详情页
+          routerAction.redirect({
+            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+            params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
+            query: { bizs: getBizsId() },
+          });
           operationType.value = OperationActions.NONE;
         } finally {
           isLoading.value = false;
