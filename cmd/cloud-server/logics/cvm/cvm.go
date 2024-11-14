@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/cloud-server/logics/eip"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	rr "hcm/pkg/api/core/recycle-record"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
@@ -55,6 +56,8 @@ type Interface interface {
 	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error)
 	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
 	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
+	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation, cvmList []corecvm.BaseCvm) (
+		string, error)
 }
 
 type cvm struct {

@@ -99,7 +99,8 @@ func (c *cvm) CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, er
 }
 
 func (c *cvm) buildTaskManagementAndDetails(kt *kit.Kit, params *TaskManageBaseReq) (string, error) {
-	taskID, err := c.createTaskManagement(kt, params)
+	taskID, err := c.createTaskManagement(kt, params.BkBizID, params.Vendors, params.AccountIDs, params.Source,
+		params.TaskOperation, params.Resource)
 	if err != nil {
 		logs.Errorf("create task management failed, err: %v, params: %+v, rid: %s", err, cvt.PtrToVal(params), kt.Rid)
 		return "", err
@@ -115,24 +116,27 @@ func (c *cvm) buildTaskManagementAndDetails(kt *kit.Kit, params *TaskManageBaseR
 }
 
 // createTaskManagement 创建任务管理记录
-func (c *cvm) createTaskManagement(kt *kit.Kit, params *TaskManageBaseReq) (string, error) {
+func (c *cvm) createTaskManagement(kt *kit.Kit, bkBizID int64, vendors []enumor.Vendor, accountIDs []string,
+	source enumor.TaskManagementSource, operation enumor.TaskOperation, resource enumor.TaskManagementResource) (
+	string, error) {
+
 	taskManagementCreateReq := &task.CreateManagementReq{
 		Items: []task.CreateManagementField{
 			{
-				BkBizID:    params.BkBizID,
-				Source:     params.Source,
-				Vendors:    params.Vendors,
-				AccountIDs: params.AccountIDs,
-				Resource:   params.Resource,
+				BkBizID:    bkBizID,
+				Source:     source,
+				Vendors:    vendors,
+				AccountIDs: accountIDs,
+				Resource:   resource,
 				State:      enumor.TaskManagementRunning, // 默认:执行中
-				Operations: []enumor.TaskOperation{params.TaskOperation},
+				Operations: []enumor.TaskOperation{operation},
 			},
 		},
 	}
 
 	result, err := c.client.DataService().Global.TaskManagement.Create(kt, taskManagementCreateReq)
 	if err != nil {
-		logs.Errorf("create dataservice task management failed, err: %v, params: %+v, rid: %s", err, params, kt.Rid)
+		logs.Errorf("create dataservice task management failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -196,7 +200,11 @@ func (c *cvm) buildFlows(kt *kit.Kit, params *TaskManageBaseReq) ([]string, erro
 		flowID, err := c.buildFlow(kt, vendor, details, params.TaskType, params.UniqueID)
 		if err != nil {
 			logs.Errorf("build flow for cvm reset failed, vendor: %s, err: %v, rid: %s", vendor, err, kt.Rid)
-			err = c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, details)
+			detailIDs := make([]string, 0, len(details))
+			for _, detail := range details {
+				detailIDs = append(detailIDs, detail.taskDetailID)
+			}
+			err = c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, detailIDs)
 			if err != nil {
 				logs.Errorf("update task details status failed, vendor: %s, err: %v, rid: %s", vendor, err, kt.Rid)
 				return nil, err
@@ -231,7 +239,7 @@ func (c *cvm) buildFlow(kt *kit.Kit, vendor enumor.Vendor, details []*BatchCvmRe
 		return "", err
 	}
 
-	flowID, err := c.createFlowTask(kt, flowTasks, taskType, uniqueID)
+	flowID, err := c.createFlowTask(kt, flowTasks, taskType, enumor.FlowResetCvm, uniqueID)
 	if err != nil {
 		logs.Errorf("create flow task failed, err: %v, rid: %s", err, kt.Rid)
 		return "", err
@@ -302,11 +310,11 @@ func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmReset
 	return result, nil
 }
 
-func (c *cvm) createFlowTask(kt *kit.Kit, flowTasks []ts.CustomFlowTask, taskType enumor.TaskType, uniqueID string) (
-	string, error) {
+func (c *cvm) createFlowTask(kt *kit.Kit, flowTasks []ts.CustomFlowTask, taskType enumor.TaskType,
+	flowName enumor.FlowName, uniqueID string) (string, error) {
 
 	addReq := &ts.AddCustomFlowReq{
-		Name: enumor.FlowResetCvm,
+		Name: flowName,
 		ShareData: tableasync.NewShareData(map[string]string{
 			"unique_id": uniqueID,
 		}),
@@ -399,12 +407,12 @@ func (c *cvm) updateTaskDetails(kt *kit.Kit, params *TaskManageBaseReq) error {
 }
 
 func (c *cvm) updateTaskDetailsState(kt *kit.Kit, state enumor.TaskDetailState,
-	taskDetails []*BatchCvmResetTaskDetail) error {
+	taskDetailIDs []string) error {
 
-	updateItems := make([]task.UpdateTaskDetailField, 0, len(taskDetails))
-	for _, detail := range taskDetails {
+	updateItems := make([]task.UpdateTaskDetailField, 0, len(taskDetailIDs))
+	for _, id := range taskDetailIDs {
 		updateItems = append(updateItems, task.UpdateTaskDetailField{
-			ID:    detail.taskDetailID,
+			ID:    id,
 			State: state,
 		})
 	}

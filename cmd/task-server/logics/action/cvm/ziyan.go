@@ -21,14 +21,16 @@ package actioncvm
 
 import (
 	actcli "hcm/cmd/task-server/logics/action/cli"
+	actionflow "hcm/cmd/task-server/logics/flow"
 	typecvm "hcm/pkg/adaptor/types/cvm"
 	hcprotocvm "hcm/pkg/api/hc-service/cvm"
+	cvmproto "hcm/pkg/api/task-server/cvm"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
 
-func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
+func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
 
 	req := &hcprotocvm.TCloudBatchStartReq{
 		AccountID: opt.AccountID,
@@ -39,7 +41,8 @@ func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV
 	if executeErr != nil {
 		logs.Errorf("fail to call hc to start cvms, err: %v, req: %+v, rid: %s",
 			executeErr, opt, kt.Rid)
-		err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
+		err := actionflow.BatchUpdateTaskDetailResultState(
+			kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
 		if err != nil {
 			logs.Errorf("fail to set detail to failed after cloud operation, err: %v, rid: %s",
 				err, kt.Rid)
@@ -48,7 +51,7 @@ func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV
 	}
 
 	// 更新任务状态为 success
-	err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
+	err := actionflow.BatchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
 	if err != nil {
 		logs.Errorf("fail to set detail to success after cloud operation, err: %v, rid: %s",
 			err, kt.Rid)
@@ -57,7 +60,7 @@ func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV
 	return nil
 }
 
-func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
+func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
 
 	req := &hcprotocvm.TCloudBatchStopReq{
 		AccountID: opt.AccountID,
@@ -68,7 +71,8 @@ func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2)
 	if executeErr != nil {
 		logs.Errorf("fail to call hc to start cvms, err: %v, req: %+v, rid: %s",
 			executeErr, opt, kt.Rid)
-		err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
+		err := actionflow.BatchUpdateTaskDetailResultState(
+			kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
 		if err != nil {
 			logs.Errorf("fail to set detail to failed after cloud operation, err: %v, rid: %s",
 				err, kt.Rid)
@@ -77,7 +81,7 @@ func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2)
 	}
 
 	// 更新任务状态为 success
-	err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
+	err := actionflow.BatchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
 	if err != nil {
 		logs.Errorf("fail to set detail to success after cloud operation, err: %v, rid: %s",
 			err, kt.Rid)
@@ -86,7 +90,7 @@ func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2)
 	return nil
 }
 
-func (c RebootActionV2) rebootTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
+func (c RebootActionV2) rebootTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
 
 	req := &hcprotocvm.TCloudBatchRebootReq{
 		AccountID: opt.AccountID,
@@ -98,7 +102,8 @@ func (c RebootActionV2) rebootTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptio
 	if executeErr != nil {
 		logs.Errorf("fail to call hc to start cvms, err: %v, req: %+v, rid: %s",
 			executeErr, opt, kt.Rid)
-		err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
+		err := actionflow.BatchUpdateTaskDetailResultState(
+			kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
 		if err != nil {
 			logs.Errorf("fail to set detail to failed after cloud operation, err: %v, rid: %s",
 				err, kt.Rid)
@@ -107,7 +112,7 @@ func (c RebootActionV2) rebootTCloudZiyanCvm(kt *kit.Kit, opt *CvmOperationOptio
 	}
 
 	// 更新任务状态为 success
-	err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
+	err := actionflow.BatchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
 	if err != nil {
 		logs.Errorf("fail to set detail to success after cloud operation, err: %v, rid: %s",
 			err, kt.Rid)

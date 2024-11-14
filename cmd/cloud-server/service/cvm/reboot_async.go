@@ -68,7 +68,13 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, val
 		return nil, err
 	}
 
-	taskManagementID, err := svc.buildFlowAndTaskManagement(cts.Kit, bkBizID, enumor.TaskRebootCvm, cvmList)
+	uniqueID, err := calCvmResetUniqueID(cts.Kit, bkBizID, req.IDs)
+	if err != nil {
+		logs.Errorf("cal cvm reset unique key failed, err: %v, cvmIDs: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		return "", err
+	}
+
+	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID, enumor.TaskRebootCvm, cvmList)
 	if err != nil {
 		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err

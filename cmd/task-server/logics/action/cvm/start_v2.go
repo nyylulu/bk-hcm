@@ -23,12 +23,13 @@ import (
 	"fmt"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
+	actionflow "hcm/cmd/task-server/logics/flow"
 	hcprotocvm "hcm/pkg/api/hc-service/cvm"
+	"hcm/pkg/api/task-server/cvm"
 	"hcm/pkg/async/action"
 	"hcm/pkg/async/action/run"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
-	"hcm/pkg/criteria/validator"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 )
@@ -49,7 +50,7 @@ func (c StartActionV2) Name() enumor.ActionName {
 
 // Run ...
 func (c StartActionV2) Run(kt run.ExecuteKit, params interface{}) (result interface{}, err error) {
-	opt, ok := params.(*CvmOperationOptionV2)
+	opt, ok := params.(*cvm.CvmOperationOption)
 	if !ok {
 		return nil, errf.New(errf.InvalidParameter, "params type mismatch")
 	}
@@ -60,7 +61,7 @@ func (c StartActionV2) Run(kt run.ExecuteKit, params interface{}) (result interf
 	asyncKit := kt.AsyncKit()
 
 	// detail 状态检查
-	detailList, err := listTaskDetail(asyncKit, opt.ManagementDetailIDs)
+	detailList, err := actionflow.ListTaskDetail(asyncKit, opt.ManagementDetailIDs)
 	if err != nil {
 		return fmt.Sprintf("task detail query failed"), err
 	}
@@ -76,7 +77,8 @@ func (c StartActionV2) Run(kt run.ExecuteKit, params interface{}) (result interf
 	}
 
 	// 更新任务状态为 running
-	if err := batchUpdateTaskDetailState(asyncKit, opt.ManagementDetailIDs, enumor.TaskDetailRunning); err != nil {
+	err = actionflow.BatchUpdateTaskDetailState(asyncKit, opt.ManagementDetailIDs, enumor.TaskDetailRunning)
+	if err != nil {
 		return nil, fmt.Errorf("fail to update detail to running, err: %v", err)
 	}
 
@@ -88,7 +90,7 @@ func (c StartActionV2) Run(kt run.ExecuteKit, params interface{}) (result interf
 	return nil, nil
 }
 
-func (c StartActionV2) startCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
+func (c StartActionV2) startCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
 
 	switch opt.Vendor {
 	case enumor.TCloud:
@@ -109,7 +111,7 @@ func (c StartActionV2) startCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
 	return nil
 }
 
-func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *CvmOperationOptionV2) error {
+func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
 
 	req := &hcprotocvm.TCloudBatchStartReq{
 		AccountID: opt.AccountID,
@@ -120,7 +122,8 @@ func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *CvmOperationOptionV2) er
 	if executeErr != nil {
 		logs.Errorf("fail to call hc to start cvms, err: %v, req: %+v, rid: %s",
 			executeErr, opt, kt.Rid)
-		err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
+		err := actionflow.BatchUpdateTaskDetailResultState(
+			kt, opt.ManagementDetailIDs, enumor.TaskDetailFailed, nil, executeErr)
 		if err != nil {
 			logs.Errorf("fail to set detail to failed after cloud operation, err: %v, rid: %s",
 				err, kt.Rid)
@@ -129,7 +132,7 @@ func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *CvmOperationOptionV2) er
 	}
 
 	// 更新任务状态为 success
-	err := batchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
+	err := actionflow.BatchUpdateTaskDetailResultState(kt, opt.ManagementDetailIDs, enumor.TaskDetailSuccess, nil, nil)
 	if err != nil {
 		logs.Errorf("fail to set detail to success after cloud operation, err: %v, rid: %s",
 			err, kt.Rid)
@@ -140,7 +143,7 @@ func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *CvmOperationOptionV2) er
 
 // ParameterNew ...
 func (c StartActionV2) ParameterNew() (params interface{}) {
-	return new(CvmOperationOptionV2)
+	return new(*cvm.CvmOperationOption)
 }
 
 // Rollback 无需回滚
@@ -148,33 +151,4 @@ func (c StartActionV2) Rollback(kt run.ExecuteKit, params any) error {
 	logs.Infof(" ----------- StartActionV2 Rollback -----------, params: %+v, rid: %s",
 		params, kt.Kit().Rid)
 	return nil
-}
-
-// CvmOperationOptionV2 operation cvm option.
-type CvmOperationOptionV2 struct {
-	Vendor    enumor.Vendor `json:"vendor" validate:"required"`
-	AccountID string        `json:"account_id" validate:"required"`
-	Region    string        `json:"region" validate:"omitempty"`
-	// IDs TCloud/HuaWei/Aws 支持批量操作，Azure/Gcp 仅支持单个操作
-	IDs                 []string `json:"ids" validate:"required,min=1,max=100"`
-	ManagementDetailIDs []string `json:"management_detail_ids" validate:"required,min=1,max=100"`
-}
-
-// Validate operation cvm option.
-func (opt CvmOperationOptionV2) Validate() error {
-
-	switch opt.Vendor {
-	case enumor.TCloud, enumor.TCloudZiyan:
-		if len(opt.Region) == 0 {
-			return fmt.Errorf("vendor: %s region is required", opt.Vendor)
-		}
-	default:
-		return fmt.Errorf("cvm operation option unsupported vendor: %s", opt.Vendor)
-	}
-	if len(opt.ManagementDetailIDs) != len(opt.IDs) {
-		return errf.Newf(errf.InvalidParameter, "management_detail_ids and IDs length not match: %d! = %d",
-			len(opt.ManagementDetailIDs), len(opt.IDs))
-	}
-
-	return validator.Validate.Struct(opt)
 }

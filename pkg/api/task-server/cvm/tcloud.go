@@ -54,3 +54,32 @@ func (opt BatchTaskCvmResetOption) Validate() error {
 	}
 	return validator.Validate.Struct(opt)
 }
+
+// CvmOperationOption operation cvm option.
+type CvmOperationOption struct {
+	Vendor    enumor.Vendor `json:"vendor" validate:"required"`
+	AccountID string        `json:"account_id" validate:"required"`
+	Region    string        `json:"region" validate:"omitempty"`
+	// IDs TCloud/HuaWei/Aws 支持批量操作，Azure/Gcp 仅支持单个操作
+	IDs                 []string `json:"ids" validate:"required,min=1,max=100"`
+	ManagementDetailIDs []string `json:"management_detail_ids" validate:"required,min=1,max=100"`
+}
+
+// Validate operation cvm option.
+func (opt CvmOperationOption) Validate() error {
+
+	switch opt.Vendor {
+	case enumor.TCloud, enumor.TCloudZiyan:
+		if len(opt.Region) == 0 {
+			return fmt.Errorf("vendor: %s region is required", opt.Vendor)
+		}
+	default:
+		return fmt.Errorf("cvm operation option unsupported vendor: %s", opt.Vendor)
+	}
+	if len(opt.ManagementDetailIDs) != len(opt.IDs) {
+		return errf.Newf(errf.InvalidParameter, "management_detail_ids and IDs length not match: %d! = %d",
+			len(opt.ManagementDetailIDs), len(opt.IDs))
+	}
+
+	return validator.Validate.Struct(opt)
+}

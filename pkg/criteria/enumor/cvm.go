@@ -31,3 +31,15 @@ const (
 	// NoIdleCvmResetStatus 状态-不在空闲机模块
 	NoIdleCvmResetStatus CvmResetStatus = 2
 )
+
+// 任务类型
+const (
+	// ResetCvmTaskType 任务类型-CVM重装
+	ResetCvmTaskType = TaskType(FlowResetCvm)
+	// StartCvmTaskType 任务类型-启动云服务器
+	StartCvmTaskType = TaskType(FlowStartCvm)
+	// StopCvmTaskType 任务类型-停止云服务器
+	StopCvmTaskType = TaskType(FlowStopCvm)
+	// RebootCvmTaskType 任务类型-重启云服务器
+	RebootCvmTaskType = TaskType(FlowRebootCvm)
+)

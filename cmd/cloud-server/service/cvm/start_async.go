@@ -21,14 +21,11 @@ package cvm
 
 import (
 	"fmt"
-	"strings"
-
 	proto "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	protoaudit "hcm/pkg/api/data-service/audit"
 	dataproto "hcm/pkg/api/data-service/cloud"
-	ts "hcm/pkg/api/task-server"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -38,7 +35,6 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
 )
@@ -83,7 +79,13 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		return nil, err
 	}
 
-	taskManagementID, err := svc.buildFlowAndTaskManagement(cts.Kit, bkBizID, enumor.TaskStartCvm, cvmList)
+	uniqueID, err := calCvmResetUniqueID(cts.Kit, bkBizID, req.IDs)
+	if err != nil {
+		logs.Errorf("cal cvm reset unique key failed, err: %v, cvmIDs: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		return "", err
+	}
+
+	taskManagementID, err := svc.cvmLgc.CvmPowerOperation(cts.Kit, bkBizID, uniqueID, enumor.TaskStartCvm, cvmList)
 	if err != nil {
 		logs.Errorf("build flow and task management failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -92,90 +94,6 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 	return proto.BatchOperateResp{
 		TaskManagementID: taskManagementID,
 	}, nil
-}
-
-func (svc *cvmSvc) updateTaskManagementAndDetails(kt *kit.Kit, taskManagementID, flowID string, details []*cvmTaskDetail) error {
-
-	for _, detail := range details {
-		detail.flowID = flowID
-	}
-	if err := svc.updateTaskDetails(kt, details); err != nil {
-		logs.Errorf("update task details failed, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-	if err := svc.updateTaskManagement(kt, taskManagementID, flowID); err != nil {
-		logs.Errorf("update task management failed, taskManagementID: %s, flowID: %s, err: %v, rid: %s",
-			taskManagementID, flowID, err, kt.Rid)
-		return err
-	}
-	return nil
-}
-
-func (svc *cvmSvc) buildFlow(kt *kit.Kit, actionName enumor.ActionName, flowName enumor.FlowName,
-	groupResult map[enumor.Vendor]map[string][]*cvmTaskDetail) (string, error) {
-
-	tasks := make([]ts.CustomFlowTask, 0)
-	for vendor, detailMap := range groupResult {
-		for key, details := range detailMap {
-			// 同一个account、region 共用一个flowTask, 所有flowTask共用一个flow
-			split := strings.Split(key, "_")
-			accountID := split[0]
-			region := split[1]
-
-			flowTasks, err := buildFlowTasks(actionName, vendor, accountID, region, details)
-			if err != nil {
-				logs.Errorf("build flow task failed, err: %v, rid: %s", err, kt.Rid)
-				return "", err
-			}
-			tasks = append(tasks, flowTasks...)
-		}
-	}
-	flowID, err := svc.createFlowTask(kt, flowName, tasks)
-	if err != nil {
-		logs.Errorf("create flow task failed, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
-	return flowID, nil
-}
-
-// groupCvmByVendorAndAccountAndRegion group cvm by vendor, account and region
-// result vendor -> account_region -> []*cvmTaskDetail
-func groupCvmByVendorAndAccountAndRegion(cvmList []corecvm.BaseCvm) (vendorList []enumor.Vendor, accountList []string,
-	result map[enumor.Vendor]map[string][]*cvmTaskDetail, detailList []*cvmTaskDetail) {
-
-	vendorMap := make(map[enumor.Vendor]struct{})
-	accountMap := make(map[string]struct{})
-	groupResult := make(map[enumor.Vendor]map[string][]*cvmTaskDetail)
-	detailList = make([]*cvmTaskDetail, 0)
-	for _, cvm := range cvmList {
-		vendorMap[cvm.Vendor] = struct{}{}
-		accountMap[cvm.AccountID] = struct{}{}
-
-		m, exist := groupResult[cvm.Vendor]
-		if !exist {
-			m = make(map[string][]*cvmTaskDetail)
-		}
-		key := cvm.AccountID + "_" + cvm.Region
-		l, exist := m[key]
-		if !exist {
-			l = make([]*cvmTaskDetail, 0)
-		}
-		detail := &cvmTaskDetail{cvm: cvm}
-		l = append(l, detail)
-		detailList = append(detailList, detail)
-		m[key] = l
-		groupResult[cvm.Vendor] = m
-	}
-
-	return converter.MapKeyToSlice(vendorMap), converter.MapKeyToSlice(accountMap), groupResult, detailList
-}
-
-type cvmTaskDetail struct {
-	taskDetailID string
-	flowID       string
-	actionID     string
-
-	cvm corecvm.BaseCvm
 }
 
 func (svc *cvmSvc) listCvmByIDs(kt *kit.Kit, ids []string) ([]corecvm.BaseCvm, error) {
@@ -235,103 +153,4 @@ func (svc *cvmSvc) createAudit(cts *rest.Contexts, ids []string) error {
 		return err
 	}
 	return nil
-}
-
-// getCvmWithExtMap map cvm id to cvm with ext
-func (svc *cvmSvc) getCvmWithExtMap(kt *kit.Kit, details []*cvmTaskDetail) (map[string]interface{}, error) {
-	cvmIDGroupByVendor := make(map[enumor.Vendor][]string)
-	for _, detail := range details {
-		cvmIDGroupByVendor[detail.cvm.Vendor] = append(cvmIDGroupByVendor[detail.cvm.Vendor], detail.cvm.ID)
-	}
-
-	result := make(map[string]interface{})
-	for vendor, ids := range cvmIDGroupByVendor {
-		switch vendor {
-		case enumor.TCloud:
-			cvmMap, err := svc.listTCloudCvmWithExt(kt, ids)
-			if err != nil {
-				logs.Errorf("list tcloud cvm with ext failed, ids: %v, err: %v, rid: %s", ids, err, kt.Rid)
-				return nil, err
-			}
-			for key, value := range cvmMap {
-				result[key] = value
-			}
-		case enumor.TCloudZiyan:
-			cvms, err := svc.listTCloudZiyanCvmWithExt(kt, ids)
-			if err != nil {
-				logs.Errorf("list tcloud ziyan cvm with ext failed, ids: %v, err: %v, rid: %s", ids, err, kt.Rid)
-				return nil, err
-			}
-			for key, value := range cvms {
-				result[key] = value
-			}
-		default:
-			return nil, fmt.Errorf("getCvmWithExtMap, unsupported vendor: %s", vendor)
-		}
-	}
-	return result, nil
-}
-
-func (svc *cvmSvc) listTCloudCvmWithExt(kt *kit.Kit, ids []string) (
-	map[string]corecvm.Cvm[corecvm.TCloudCvmExtension], error) {
-
-	if len(ids) == 0 {
-		return nil, fmt.Errorf("ids is empty")
-	}
-	cvmList := make([]corecvm.Cvm[corecvm.TCloudCvmExtension], 0, len(ids))
-	for _, idList := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
-		listReq := &dataproto.CvmListReq{
-			Filter: tools.ExpressionAnd(
-				tools.RuleIn("id", idList),
-			),
-			Page: core.NewDefaultBasePage(),
-		}
-		cvm, err := svc.client.DataService().TCloud.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
-		if err != nil {
-			logs.Errorf("list cvm failed, ids: %v, err: %v, rid: %s", idList, err, kt.Rid)
-			return nil, err
-		}
-		if len(cvm.Details) == 0 {
-			return nil, fmt.Errorf("no cvm found by ids: %v", ids)
-		}
-		cvmList = append(cvmList, cvm.Details...)
-	}
-	result := make(map[string]corecvm.Cvm[corecvm.TCloudCvmExtension])
-	for _, cvm := range cvmList {
-		result[cvm.ID] = cvm
-	}
-
-	return result, nil
-}
-
-func (svc *cvmSvc) listTCloudZiyanCvmWithExt(kt *kit.Kit, ids []string) (
-	map[string]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], error) {
-
-	if len(ids) == 0 {
-		return nil, fmt.Errorf("ids is empty")
-	}
-	cvmList := make([]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], 0, len(ids))
-	for _, idList := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
-		listReq := &dataproto.CvmListReq{
-			Filter: tools.ExpressionAnd(
-				tools.RuleIn("id", idList),
-			),
-			Page: core.NewDefaultBasePage(),
-		}
-		cvm, err := svc.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
-		if err != nil {
-			logs.Errorf("list cvm failed, ids: %v, err: %v, rid: %s", idList, err, kt.Rid)
-			return nil, err
-		}
-		if len(cvm.Details) == 0 {
-			return nil, fmt.Errorf("no cvm found by ids: %v", ids)
-		}
-		cvmList = append(cvmList, cvm.Details...)
-	}
-	result := make(map[string]corecvm.Cvm[corecvm.TCloudZiyanHostExtension])
-	for _, cvm := range cvmList {
-		result[cvm.ID] = cvm
-	}
-
-	return result, nil
 }
