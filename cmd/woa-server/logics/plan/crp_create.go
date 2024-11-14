@@ -213,7 +213,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 		},
 		Params: &cvmapi.AddCvmCbsPlanParam{
 			Operator: ticket.Applicant,
-			DeptName: cvmapi.CvmLaunchDeptName,
+			DeptName: ticket.VirtualDeptName,
 			Desc:     "",
 			Items:    make([]*cvmapi.AddPlanItem, 0),
 		},
@@ -299,8 +299,8 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		},
 		Params: &cvmapi.CvmCbsPlanAdjustParam{
 			BaseInfo: &cvmapi.AdjustBaseInfo{
-				DeptId:          cvmapi.CvmDeptId,
-				DeptName:        cvmapi.CvmLaunchDeptName,
+				DeptId:          int(ticket.VirtualDeptID),
+				DeptName:        ticket.VirtualDeptName,
 				PlanProductName: ticket.PlanProductName,
 				Desc:            "",
 			},
@@ -431,6 +431,9 @@ func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.C
 
 	switch adjustType {
 	case enumor.CrpAdjustTypeUpdate:
+		// 为了避免CRP在name为空的情况下用ID来补数据，需要把ID置为空
+		updatedData.CityId = 0
+		updatedData.ZoneId = 0
 		updatedData.CityName = demand.Updated.RegionName
 		updatedData.ZoneName = demand.Updated.ZoneName
 		updatedData.InstanceModel = demand.Updated.Cvm.DeviceType

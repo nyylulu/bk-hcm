@@ -4,6 +4,7 @@ import { type LocationQuery, useRoute } from 'vue-router';
 import useSearchQs from '@/hooks/use-search-qs';
 import usePage from '@/hooks/use-page';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { IRollingServerCpuCoreSummary, RollingServerRecordItem, useRollingServerUsageStore } from '@/store';
 import { useRollingServerStore } from '@/store/rolling-server';
 import { convertDateRangeToObject, getDateRange, transformSimpleCondition } from '@/utils/search';
@@ -18,6 +19,7 @@ const route = useRoute();
 const rollingServerStore = useRollingServerStore();
 const rollingServerUsageStore = useRollingServerUsageStore();
 
+const { isBusinessPage, getBizsId } = useWhereAmI();
 const searchQs = useSearchQs({ key: 'filter', properties: usageOrderViewProperties });
 const { pagination, getPageParams } = usePage();
 
@@ -32,7 +34,9 @@ const getList = async (query: LocationQuery) => {
     bk_biz_id: [],
   });
   const { roll_date, bk_biz_id, suborder_id } = condition.value;
-  const bk_biz_ids = bk_biz_id.length === 1 && bk_biz_id[0] === -1 ? undefined : bk_biz_id;
+  let bk_biz_ids = bk_biz_id.length === 1 && bk_biz_id[0] === -1 ? undefined : bk_biz_id;
+  // 业务下需要传入当前业务用于查询
+  if (isBusinessPage) bk_biz_ids = [getBizsId()];
   const { start, end } = convertDateRangeToObject(roll_date);
 
   pagination.current = Number(query.page) || 1;
@@ -56,37 +60,32 @@ const getList = async (query: LocationQuery) => {
     .filter((item) => !rollingServerStore.resPollBusinessIds.includes(item.bk_biz_id))
     .map((item) => item.id); // 申请单id与退还记录单applied_record_id一一对应
 
-  // 请求返回记录列表(一个申请单，不会有太多回收单，分页数量最大传500)
-  const { list: returnedRecordList } = await rollingServerUsageStore.getReturnedRecordList({
-    filter: transformSimpleCondition({ applied_record_id }, usageOrderViewProperties),
-    page: getPageParams({ current: 1, limit: 500, count: 0 }),
-  });
+  // 如果当页appliedRecordList中存有普通业务，则需请求对应的退还记录列表
+  if (applied_record_id.length > 0) {
+    const returnedRecordList = await rollingServerUsageStore.getReturnedRecordList({
+      filter: transformSimpleCondition({ applied_record_id }, usageOrderViewProperties),
+    });
+    // 设置列表
+    docList.value = appliedRecordList.map((appliedRecordItem) => {
+      // 资源池业务
+      if (rollingServerStore.resPollBusinessIds.includes(appliedRecordItem.bk_biz_id)) {
+        return { ...appliedRecordItem, isResPollBusiness: true };
+      }
+      // 普通业务
+      const returned_records = returnedRecordList.filter(
+        (returnedRecordItem) => returnedRecordItem.applied_record_id === appliedRecordItem.id,
+      );
+      // 前端计算字段：returned_core, not_returned_core, exec_rate
+      const returned_core = returned_records.reduce((acc, cur) => acc + cur.match_applied_core, 0);
+      const not_returned_core = appliedRecordItem.delivered_core - returned_core;
+      const exec_rate = `${Number(((returned_core / (appliedRecordItem.delivered_core || 1)) * 100).toFixed(2))}%`; // 结果保留两位小数，不显示多余0
 
-  // 设置列表
-  docList.value = appliedRecordList.map((appliedRecordItem) => {
-    // 资源池业务
-    if (rollingServerStore.resPollBusinessIds.includes(appliedRecordItem.bk_biz_id)) {
-      return { ...appliedRecordItem, isResPollBusiness: true };
-    }
+      return { ...appliedRecordItem, returned_records, returned_core, not_returned_core, exec_rate };
+    });
+  } else {
+    docList.value = appliedRecordList.map((item) => ({ ...item, isResPollBusiness: true }));
+  }
 
-    // 普通业务
-    const returned_records = returnedRecordList.filter(
-      (returnedRecordItem) => returnedRecordItem.applied_record_id === appliedRecordItem.id,
-    );
-    const returned_core = returned_records.reduce((acc, cur) => acc + cur.match_applied_core, 0);
-    const not_returned_core = appliedRecordItem.delivered_core - returned_core;
-    // 结果保留两位小数，不显示多余0
-    const exec_rate = `${Number(((returned_core / (appliedRecordItem.delivered_core || 1)) * 100).toFixed(2))}%`;
-
-    return {
-      ...appliedRecordItem,
-      returned_records,
-      // 前端计算字段
-      returned_core,
-      not_returned_core,
-      exec_rate,
-    };
-  });
   // 设置汇总信息
   summaryInfo.value = summaryRes;
 
@@ -94,9 +93,13 @@ const getList = async (query: LocationQuery) => {
   pagination.count = count;
 };
 
-const recordsPoll = useTimeoutPoll(() => {
-  getList(route.query);
-}, 30000);
+const recordsPoll = useTimeoutPoll(
+  () => {
+    getList(route.query);
+  },
+  30000,
+  { immediate: true },
+);
 
 watch(
   () => route.query,
@@ -104,7 +107,6 @@ watch(
     recordsPoll.pause();
     recordsPoll.resume();
   },
-  { immediate: true },
 );
 
 const handleSearch = (vals: ISearchCondition) => {

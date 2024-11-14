@@ -405,6 +405,64 @@ type GetRPTicketDemand struct {
 	UpdatedInfo  *rpt.UpdatedRPDemandItem  `json:"updated_info"`
 }
 
+// GetResPlanTicketAuditResp is get resource plan ticket audit response.
+type GetResPlanTicketAuditResp struct {
+	TicketID  string                `json:"ticket_id"`
+	ItsmAudit *GetRPTicketItsmAudit `json:"itsm_audit"`
+	CrpAudit  *GetRPTicketCrpAudit  `json:"crp_audit"`
+}
+
+// GetRPTicketItsmAudit get resource plan ticket itsm audit.
+type GetRPTicketItsmAudit struct {
+	ItsmSn       string                `json:"itsm_sn"`
+	ItsmUrl      string                `json:"itsm_url"`
+	Status       enumor.RPTicketStatus `json:"status"`
+	StatusName   string                `json:"status_name"`
+	Message      string                `json:"message"`
+	CurrentSteps []*ItsmAuditStep      `json:"current_steps"`
+	Logs         []*ItsmAuditLog       `json:"logs"`
+}
+
+// GetRPTicketCrpAudit get resource plan ticket crp audit.
+type GetRPTicketCrpAudit struct {
+	CrpSn        string                `json:"crp_sn"`
+	CrpUrl       string                `json:"crp_url"`
+	Status       enumor.RPTicketStatus `json:"status"`
+	StatusName   string                `json:"status_name"`
+	Message      string                `json:"message"`
+	CurrentSteps []*CrpAuditStep       `json:"current_steps"`
+	Logs         []*CrpAuditLog        `json:"logs"`
+}
+
+// ItsmAuditStep is itsm audit step.
+type ItsmAuditStep struct {
+	StateID    int64    `json:"state_id"`
+	Name       string   `json:"name"`
+	Processors []string `json:"processors"`
+}
+
+// ItsmAuditLog is itsm audit log.
+type ItsmAuditLog struct {
+	Operator  string `json:"operator"`
+	OperateAt string `json:"operate_at"`
+	Message   string `json:"message"`
+}
+
+// CrpAuditStep is crp audit step.
+type CrpAuditStep struct {
+	StateID    string   `json:"state_id"`
+	Name       string   `json:"name"`
+	Processors []string `json:"processors"`
+}
+
+// CrpAuditLog is crp audit log.
+type CrpAuditLog struct {
+	Operator  string `json:"operator"`
+	OperateAt string `json:"operate_at"`
+	Message   string `json:"message"`
+	Name      string `json:"name"`
+}
+
 // TransferResPlanTicketReq is transfer demand ticket request.
 type TransferResPlanTicketReq struct {
 	TicketIDs []string `json:"ticket_ids" binding:"omitempty,max=100"`

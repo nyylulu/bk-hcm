@@ -79,6 +79,8 @@ const (
 	RPTicketStatusDone RPTicketStatus = "done"
 	// RPTicketStatusFailed is resource plan ticket status failed.
 	RPTicketStatusFailed RPTicketStatus = "failed"
+	// RPTicketStatusRevoked is resource plan ticket status revoked.
+	RPTicketStatusRevoked RPTicketStatus = "revoked"
 )
 
 // Validate RPTicketStatus.
@@ -89,6 +91,7 @@ func (s RPTicketStatus) Validate() error {
 	case RPTicketStatusRejected:
 	case RPTicketStatusDone:
 	case RPTicketStatusFailed:
+	case RPTicketStatusRevoked:
 	default:
 		return fmt.Errorf("unsupported resource plan status: %s", s)
 	}
@@ -103,6 +106,7 @@ var rdTicketStatusNameMap = map[RPTicketStatus]string{
 	RPTicketStatusRejected: "审批拒绝",
 	RPTicketStatusDone:     "审批通过",
 	RPTicketStatusFailed:   "审批失败",
+	RPTicketStatusRevoked:  "已撤销",
 }
 
 // Name return RPTicketStatus's name.
@@ -118,6 +122,7 @@ func GetRPTicketStatusMembers() []RPTicketStatus {
 		RPTicketStatusRejected,
 		RPTicketStatusDone,
 		RPTicketStatusFailed,
+		RPTicketStatusRevoked,
 	}
 }
 

@@ -6,7 +6,7 @@ export default defineComponent({
     name: { type: String, required: true },
     alias: String,
   },
-  setup(props) {
+  setup(props, { slots }) {
     return () => (
       <Button
         text
@@ -14,6 +14,7 @@ export default defineComponent({
         onClick={() => {
           window.open(`wxwork://message?username=${props.name}`);
         }}>
+        {slots.icon?.()}
         {props.alias || props.name}
       </Button>
     );

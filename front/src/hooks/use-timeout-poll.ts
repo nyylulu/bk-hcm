@@ -36,7 +36,7 @@ export default function useTimeoutPoll(fn: () => Awaitable<void>, interval: numb
   function resume() {
     if (!isActive.value) {
       isActive.value = true;
-      loop();
+      immediate ? loop() : start();
     }
   }
 

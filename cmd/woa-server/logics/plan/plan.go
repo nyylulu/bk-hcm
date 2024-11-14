@@ -26,7 +26,6 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/pkg/tools/utils/wait"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
@@ -43,6 +42,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/times"
+	"hcm/pkg/tools/utils/wait"
 )
 
 // Logics provides management interface for resource plan.
@@ -89,6 +89,8 @@ const (
 	TicketSvcNameResPlan = "res_plan"
 	// TicketNodeNameCrpAudit 资源预测在ITSM流程中的CRP审批节点
 	TicketNodeNameCrpAudit = "crp_audit"
+	// TicketOperatorNameCrpAudit 资源预测在ITSM流程中的CRP审批节点操作人
+	TicketOperatorNameCrpAudit = "icr"
 	// AuditFlowTimeoutDay 审批流超时时间，单位天
 	AuditFlowTimeoutDay int = 5
 	// PendingTicketTraceDay 带处理的单据历史追溯时间，单位天
@@ -619,6 +621,9 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	case string(itsm.StatusFinished), string(itsm.StatusTerminated):
 		// rejected
 		update.Status = enumor.RPTicketStatusRejected
+	case string(itsm.StatusRevoked):
+		// revoked
+		update.Status = enumor.RPTicketStatusRevoked
 	case string(itsm.StatusRunning):
 		// check if CRP audit state
 		if len(resp.Data.CurrentSteps) == 0 {
@@ -641,7 +646,7 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	// 单据被拒需要释放资源
-	if update.Status != enumor.RPTicketStatusRejected {
+	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
 		return nil
 	}
 	allCrpDemandIDs := make([]int64, 0)
@@ -863,7 +868,7 @@ CPU总核数：%.2f
 云盘总量(GB)：%.2f
 `
 	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.UpdatedCpuCore,
-		ticket.UpdatedMemory, ticket.UpdatedMemory)
+		ticket.UpdatedMemory, ticket.UpdatedDiskSize)
 	createTicketReq := &itsm.CreateTicketParams{
 		ServiceID:      c.itsmFlow.ServiceID,
 		Creator:        ticket.Applicant,

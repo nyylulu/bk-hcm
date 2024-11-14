@@ -65,18 +65,26 @@ func (svc *securityGroupSvc) associateCloudCvm(cts *rest.Contexts,
 	}
 
 	switch sgInfo.Vendor {
-
+	case enumor.TCloud:
+		err := svc.client.HCService().TCloud.SecurityGroup.BatchAssociateCloudCvm(cts.Kit, req.SecurityGroupID,
+			req.CloudCvmIDs)
+		if err != nil {
+			logs.Errorf("fail to call hc service associate tcloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+				err, req.SecurityGroupID, req.CloudCvmIDs, cts.Kit.Rid)
+			return nil, err
+		}
+		return nil, nil
 	case enumor.TCloudZiyan:
 		err := svc.client.HCService().TCloudZiyan.SecurityGroup.BatchAssociateCloudCvm(cts.Kit, req.SecurityGroupID,
 			req.CloudCvmIDs)
 		if err != nil {
-			logs.Errorf("fail to call hc service associate cloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+			logs.Errorf("fail to call hc service associate ziyan cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
 				err, req.SecurityGroupID, req.CloudCvmIDs, cts.Kit.Rid)
 			return nil, err
 		}
 		return nil, nil
 	default:
-		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", sgInfo.Vendor)
+		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for batch associate cloud cvm", sgInfo.Vendor)
 	}
 
 }
@@ -114,18 +122,28 @@ func (svc *securityGroupSvc) disassociateCloudCvm(cts *rest.Contexts, validHandl
 
 	switch sgInfo.Vendor {
 
+	case enumor.TCloud:
+		err := svc.client.HCService().TCloud.SecurityGroup.BatchDisassociateCloudCvm(cts.Kit,
+			req.SecurityGroupID, req.CloudCvmIDs)
+		if err != nil {
+			logs.Errorf("fail to call hc service dissociate tcloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+				err, req.SecurityGroupID, req.CloudCvmIDs, cts.Kit.Rid)
+			return nil, err
+		}
+		return nil, nil
+
 	case enumor.TCloudZiyan:
 		err := svc.client.HCService().TCloudZiyan.SecurityGroup.BatchDisassociateCloudCvm(cts.Kit,
 			req.SecurityGroupID, req.CloudCvmIDs)
 		if err != nil {
-			logs.Errorf("fail to call hc service dissociate cloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+			logs.Errorf("fail to call hc service dissociate ziyan cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
 				err, req.SecurityGroupID, req.CloudCvmIDs, cts.Kit.Rid)
 			return nil, err
 		}
 		return nil, nil
 
 	default:
-		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", sgInfo.Vendor)
+		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for batch associate cloud cvm", sgInfo.Vendor)
 	}
 
 }
@@ -157,4 +175,24 @@ func (svc *securityGroupSvc) decodeAssociateReq(cts *rest.Contexts, validHandler
 		return nil, nil, err
 	}
 	return req, sgInfo, nil
+}
+
+// BatchAssociateCvm 关联安全组，安全组本地id，cvm 云id
+func (svc *securityGroupSvc) BatchAssociateCvm(cts *rest.Contexts) (any, error) {
+	return svc.associateCloudCvm(cts, handler.ResOperateAuth)
+}
+
+// BatchAssociateBizCvm 业务下关联安全组，安全组本地id，cvm 云id
+func (svc *securityGroupSvc) BatchAssociateBizCvm(cts *rest.Contexts) (any, error) {
+	return svc.associateCloudCvm(cts, handler.BizOperateAuth)
+}
+
+// BatchDisassociateCvm disassociate cvm.
+func (svc *securityGroupSvc) BatchDisassociateCvm(cts *rest.Contexts) (any, error) {
+	return svc.disassociateCloudCvm(cts, handler.ResOperateAuth)
+}
+
+// BatchDisassociateBizCvm disassociate biz cvm.
+func (svc *securityGroupSvc) BatchDisassociateBizCvm(cts *rest.Contexts) (any, error) {
+	return svc.disassociateCloudCvm(cts, handler.BizOperateAuth)
 }

@@ -299,3 +299,21 @@ type ListQuotaOffsetsAdjustRecordsItem struct {
 	QuotaOffset    uint64                       `json:"quota_offset"`
 	CreatedAt      types.Time                   `json:"created_at"`
 }
+
+// ListBizBizQuotaConfigsReq is get biz quota configs request.
+type ListBizBizQuotaConfigsReq struct {
+	QuotaMonth QuotaMonth `json:"quota_month" validate:"required"`
+}
+
+// Validate whether ListBizBizQuotaConfigsReq is valid.
+func (r ListBizBizQuotaConfigsReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if err := r.QuotaMonth.Validate(); err != nil {
+		return err
+	}
+
+	return nil
+}

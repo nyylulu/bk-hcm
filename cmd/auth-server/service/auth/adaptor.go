@@ -130,6 +130,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return genApplicationResources(a)
 	case meta.AccountBillThirdParty:
 		return genAccountBillThirdPartyResource(a)
+	case meta.Image:
+		return genImageResource(a)
 	case meta.AwsSavingsPlansCost:
 		return genAwsSavingsPlansCostResource(a)
 	case meta.RollingServerManage: // 平台管理-滚服管理

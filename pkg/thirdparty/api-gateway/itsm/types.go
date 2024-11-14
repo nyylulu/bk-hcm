@@ -33,6 +33,8 @@ const (
 	StatusFinished Status = "FINISHED"
 	// StatusTerminated 被终止
 	StatusTerminated Status = "TERMINATED"
+	// StatusRevoked 已撤销
+	StatusRevoked Status = "REVOKED"
 	// StatusSuspended 被挂起
 	StatusSuspended Status = "SUSPENDED"
 )
@@ -122,3 +124,11 @@ var MapStateKey = map[int64][]string{
 		// 备注key
 		"e3dda6544a3a67f67d85737a9027e4e5"},
 }
+
+// 审批流程中的特殊节点
+const (
+	// AuditNodeStart 流程开始
+	AuditNodeStart string = "流程开始."
+	// AuditNodeEnd 流程结束
+	AuditNodeEnd string = "流程结束."
+)

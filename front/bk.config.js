@@ -1,11 +1,11 @@
-const webpack = require('webpack')
-const CopyWebpackPlugin = require('copy-webpack-plugin')
+const webpack = require('webpack');
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 const { resolve } = require('path');
-const replaceStaticUrlPlugin = require('./replace-static-url-plugin')
+const replaceStaticUrlPlugin = require('./replace-static-url-plugin');
 const isModeProduction = process.env.NODE_ENV === 'production';
-const indexPath = isModeProduction ? './index.html' : './index-dev.html'
+const indexPath = isModeProduction ? './index.html' : './index-dev.html';
 const env = require('./env')();
-const apiMocker = require('./mock-server.js')
+const apiMocker = require('./mock-server.js');
 module.exports = {
   appConfig() {
     return {
@@ -29,43 +29,40 @@ module.exports = {
           },
         },
       },
-      devServer : {
+      devServer: {
         host: env.DEV_HOST,
         port: 5000,
         historyApiFallback: true,
         disableHostCheck: true,
         before(app) {
           apiMocker(app, {
-                // watch: [
-                //   '/mock/api/v4/organization/user_info/',
-                //   '/mock/api/v4/add/',
-                //   '/mock/api/v4/get/',
-                //   '/mock/api/v4/sync/',
-                //   '/mock/api/v4/cloud/public_images/list/'
-                // ],
-                api: resolve(__dirname, './mock/api.ts')
-            })
+            // watch: [
+            //   '/mock/api/v4/organization/user_info/',
+            //   '/mock/api/v4/add/',
+            //   '/mock/api/v4/get/',
+            //   '/mock/api/v4/sync/',
+            //   '/mock/api/v4/cloud/public_images/list/'
+            // ],
+            api: resolve(__dirname, './mock/api.ts'),
+          });
         },
-        proxy: {
-        }
-      }
-    }
+        proxy: {},
+      },
+    };
   },
   configureWebpack(_webpackConfig) {
     webpackConfig = _webpackConfig;
+    const extensions = ['.js', '.vue', '.json', '.ts', '.tsx'];
     webpackConfig.plugins.push(
       new replaceStaticUrlPlugin(),
       new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function(resource) {
-        resource.request = resource.request.replace(
-          /\.plugin/,
-          `${env.isInternal ? '-internal.plugin' : '.plugin'}`
-        );
+        resource.request = resource.request.replace(/\.plugin/, `${env.isInternal ? '-internal.plugin' : '.plugin'}`);
 
         if (resource.createData) {
           resource.createData.request = resource.request;
         }
       }),
-    )
+    );
     webpackConfig.plugins.push(
       new CopyWebpackPlugin({
         patterns: [
@@ -84,8 +81,8 @@ module.exports = {
             to: '[name][ext]', // 保持原文件名
           },
         ],
-      })
-    )
+      }),
+    );
 
     // webpackConfig.externals = {
     //   'axios':'axios',
@@ -94,7 +91,7 @@ module.exports = {
     webpackConfig.resolve = {
       ...webpackConfig.resolve,
       symlinks: false,
-      extensions: ['.js', '.vue', '.json', '.ts', '.tsx'],
+      extensions,
       alias: {
         ...webpackConfig.resolve?.alias,
         // extensions: ['.js', '.jsx', '.ts', '.tsx'],

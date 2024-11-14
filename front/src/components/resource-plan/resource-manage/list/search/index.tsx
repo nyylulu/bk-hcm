@@ -73,10 +73,6 @@ export default defineComponent({
 
     const searchModel = ref(JSON.parse(JSON.stringify(initialSearchModel)));
 
-    const disabledDate = (date: any) => {
-      return dayjs(date).isBefore(dayjs().startOf('month'));
-    };
-
     const handleSearch = () => {
       storeSearchModelInQuery(JSON.stringify(searchModel.value));
       emit('search', searchModel.value);
@@ -329,7 +325,6 @@ export default defineComponent({
                     onChange={(val: string[]) => handleChangeDate('expect_time_range', val)}
                     type='daterange'
                     clearable={false}
-                    disabledDate={disabledDate}
                   />
                 </div>
                 <div>

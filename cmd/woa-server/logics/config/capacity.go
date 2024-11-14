@@ -254,7 +254,8 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 		logs.Errorf("get zone capacity failed to marshal capacityReq, err: %v, rid: %s", err, kt.Rid)
 		return nil
 	}
-	jsonResp, err := json.Marshal(resp.Result)
+	// 需要记录crp返回的所有结果包括traceid
+	jsonResp, err := json.Marshal(resp)
 	if err != nil {
 		logs.Errorf("get zone capacity failed to marshal capacityResp, err: %v, rid: %s", err, kt.Rid)
 		return nil

@@ -22,8 +22,10 @@ package plan
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
@@ -32,6 +34,8 @@ import (
 	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/cvmapi"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -145,4 +149,226 @@ func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt
 	}
 
 	return result, nil
+}
+
+// GetItsmAndCrpAuditStatus get itsm and crp audit status.
+func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.GetRPTicketStatusInfo) (
+	*ptypes.GetRPTicketItsmAudit, *ptypes.GetRPTicketCrpAudit, error) {
+
+	itsmAudit := &ptypes.GetRPTicketItsmAudit{
+		ItsmSn:  ticketStatus.ItsmSn,
+		ItsmUrl: ticketStatus.ItsmUrl,
+	}
+	crpAudit := &ptypes.GetRPTicketCrpAudit{
+		CrpSn:  ticketStatus.CrpSn,
+		CrpUrl: ticketStatus.CrpUrl,
+	}
+
+	// 审批未开始
+	if ticketStatus.ItsmSn == "" {
+		itsmAudit.Status = enumor.RPTicketStatusInit
+		itsmAudit.StatusName = itsmAudit.Status.Name()
+		crpAudit.Status = enumor.RPTicketStatusInit
+		crpAudit.StatusName = crpAudit.Status.Name()
+		return itsmAudit, crpAudit, nil
+	}
+
+	// 获取ITSM审批记录和当前审批节点
+	itsmStatus, err := c.itsmCli.GetTicketStatus(kt, ticketStatus.ItsmSn)
+	if err != nil {
+		logs.Errorf("failed to get itsm audit status, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		return nil, nil, err
+	}
+	itsmLogs, err := c.itsmCli.GetTicketLog(kt, ticketStatus.ItsmSn)
+	if err != nil {
+		logs.Errorf("failed to get itsm audit log, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		return nil, nil, err
+	}
+
+	itsmAudit, err = c.setItsmAuditDetails(itsmAudit, itsmStatus, itsmLogs)
+	if err != nil {
+		logs.Errorf("failed to set itsm audit details, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
+		return nil, nil, err
+	}
+
+	// ITSM审批中或审批终止在itsm阶段
+	if ticketStatus.CrpSn == "" {
+		// ITSM流程没有正常结束，将单据审批状态作为ITSM流程的当前状态
+		if itsmAudit.Status != enumor.RPTicketStatusDone {
+			itsmAudit.Status = ticketStatus.Status
+			itsmAudit.StatusName = itsmAudit.Status.Name()
+			itsmAudit.Message = ticketStatus.Message
+			crpAudit.Status = enumor.RPTicketStatusInit
+			crpAudit.StatusName = crpAudit.Status.Name()
+			return itsmAudit, crpAudit, nil
+		}
+		// ITSM流程正常结束，CRP单据尚未创建
+		crpAudit.Status = ticketStatus.Status
+		crpAudit.StatusName = crpAudit.Status.Name()
+		crpAudit.Message = ticketStatus.Message
+		return itsmAudit, crpAudit, nil
+	}
+	// itsm审批流已结束
+	itsmAudit.Status = enumor.RPTicketStatusDone
+	itsmAudit.StatusName = itsmAudit.Status.Name()
+
+	// 流程走到CRP步骤，获取CRP审批记录和当前审批节点
+	crpCurrentSteps, err := c.GetCrpCurrentApprove(kt, ticketStatus.CrpSn)
+	if err != nil {
+		logs.Errorf("failed to get crp current approve, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSn, kt.Rid)
+		return nil, nil, err
+	}
+	crpApproveLogs, err := c.GetCrpApproveLogs(kt, ticketStatus.CrpSn)
+	if err != nil {
+		logs.Errorf("failed to get crp approve logs, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSn, kt.Rid)
+		return nil, nil, err
+	}
+
+	// CRP审批状态赋值
+	crpAudit.Status = ticketStatus.Status
+	crpAudit.StatusName = crpAudit.Status.Name()
+	crpAudit.Message = ticketStatus.Message
+	crpAudit.CurrentSteps = crpCurrentSteps
+	crpAudit.Logs = crpApproveLogs
+
+	return itsmAudit, crpAudit, nil
+}
+
+func (c *Controller) setItsmAuditDetails(itsmAudit *ptypes.GetRPTicketItsmAudit, current *itsm.GetTicketStatusResp,
+	logs *itsm.GetTicketLogResp) (*ptypes.GetRPTicketItsmAudit, error) {
+
+	// current steps
+	itsmAudit.CurrentSteps = make([]*ptypes.ItsmAuditStep, len(current.Data.CurrentSteps))
+	for i, step := range current.Data.CurrentSteps {
+		itsmAudit.CurrentSteps[i] = &ptypes.ItsmAuditStep{
+			StateID:    step.StateId,
+			Name:       step.Name,
+			Processors: strings.Split(step.Processors, ","),
+		}
+	}
+
+	// logs
+	itsmAudit.Logs = make([]*ptypes.ItsmAuditLog, 0, len(logs.Data.Logs))
+	for _, log := range logs.Data.Logs {
+		// 流程开始、结束、CRP审批 不展示
+		if log.Message == itsm.AuditNodeStart || log.Message == itsm.AuditNodeEnd ||
+			log.Operator == TicketOperatorNameCrpAudit {
+			continue
+		}
+
+		itsmAudit.Logs = append(itsmAudit.Logs, &ptypes.ItsmAuditLog{
+			Operator:  log.Operator,
+			OperateAt: log.OperateAt,
+			Message:   log.Message,
+		})
+	}
+
+	// 如果itsm审批流已经到了CRP阶段，需要赋值为结束状态
+	if len(current.Data.CurrentSteps) > 0 && current.Data.CurrentSteps[0].StateId == c.crpAuditNode.ID {
+		itsmAudit.Status = enumor.RPTicketStatusDone
+		itsmAudit.StatusName = itsmAudit.Status.Name()
+		itsmAudit.CurrentSteps = itsmAudit.CurrentSteps[:0]
+	}
+
+	return itsmAudit, nil
+}
+
+// GetCrpCurrentApprove 查询当前审批节点
+func (c *Controller) GetCrpCurrentApprove(kt *kit.Kit, orderID string) ([]*ptypes.CrpAuditStep, error) {
+	req := &cvmapi.QueryPlanOrderReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmCbsPlanOrderQueryMethod,
+		},
+		Params: &cvmapi.QueryPlanOrderParam{
+			OrderIds: []string{orderID},
+		},
+	}
+	resp, err := c.crpCli.QueryPlanOrder(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to query crp plan order, code: %d, msg: %s, order id: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, orderID, kt.Rid)
+		return nil, fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+	}
+
+	if resp.Result == nil {
+		logs.Errorf("failed to query crp plan order, for result is empty, order id: %s, rid: %s", orderID, kt.Rid)
+		return nil, errors.New("failed to query crp plan order, for result is empty")
+	}
+
+	orderItem, ok := resp.Result[orderID]
+	if !ok {
+		logs.Errorf("query crp plan order return no result by order id: %s, rid: %s", orderID, kt.Rid)
+		return nil, fmt.Errorf("query crp plan order return no result by order id: %s", orderID)
+	}
+
+	// 如果processors为空，说明审批已经结束
+	processors := orderItem.Data.BaseInfo.CurrentProcessor
+	if processors == "" {
+		return []*ptypes.CrpAuditStep{}, nil
+	}
+
+	currentStep := &ptypes.CrpAuditStep{
+		StateID:    "", // CRP接口暂时没有节点的ID，后续实现审批操作功能时，必须补全这个ID
+		Name:       orderItem.Data.BaseInfo.StatusDesc,
+		Processors: strings.Split(processors, ";"),
+	}
+
+	return []*ptypes.CrpAuditStep{currentStep}, nil
+}
+
+// GetCrpApproveLogs 查询Crp审批记录
+func (c *Controller) GetCrpApproveLogs(kt *kit.Kit, orderID string) ([]*ptypes.CrpAuditLog, error) {
+	req := &cvmapi.GetApproveLogReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.GetApproveLogMethod,
+		},
+		Params: &cvmapi.GetApproveLogParams{
+			OrderId: []string{orderID},
+		},
+	}
+
+	resp, err := c.crpCli.GetApproveLog(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to get crp approve log, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to get crp approve log, code: %d, msg: %s, order id: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, req.Params.OrderId, kt.Rid)
+		return nil, fmt.Errorf("failed to get crp approve log, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+	}
+
+	if resp.Result == nil {
+		logs.Errorf("failed to get crp approve log, for result is empty, order id: %s, rid: %s", req.Params.OrderId,
+			kt.Rid)
+		return nil, errors.New("failed to get crp approve log, for result is empty")
+	}
+
+	orderLogs, ok := resp.Result[orderID]
+	if !ok {
+		return []*ptypes.CrpAuditLog{}, nil
+	}
+
+	// crp返回的审批记录是倒序的，需要反转
+	auditLogs := make([]*ptypes.CrpAuditLog, len(orderLogs))
+	for i := len(orderLogs) - 1; i >= 0; i-- {
+		auditLogs[len(orderLogs)-1-i] = &ptypes.CrpAuditLog{
+			Operator:  orderLogs[i].Operator,
+			OperateAt: orderLogs[i].OperateTime,
+			Message:   orderLogs[i].OperateResult,
+			Name:      orderLogs[i].Activity,
+		}
+	}
+
+	return auditLogs, nil
 }
