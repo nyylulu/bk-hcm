@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"time"
 
+	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
@@ -39,6 +40,7 @@ import (
 	"hcm/cmd/woa-server/service/config"
 	"hcm/cmd/woa-server/service/cvm"
 	"hcm/cmd/woa-server/service/dissolve"
+	greenchannel "hcm/cmd/woa-server/service/green-channel"
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
@@ -90,6 +92,7 @@ type Service struct {
 	operationIf operation.Interface
 	esCli       *es.EsCli
 	rsLogic     rslogics.Logics
+	gcLogic     gclogics.Logics
 }
 
 // NewService create a service instance.
@@ -161,6 +164,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	gcLogics, err := gclogics.New(apiClientSet, thirdCli)
+	if err != nil {
+		logs.Errorf("new green channel logics failed, err: %v", err)
+		return nil, err
+	}
+
 	kt := kit.New()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
@@ -224,6 +233,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		informerIf:  informerIf,
 		schedulerIf: schedulerIf,
 		rsLogic:     rsLogics,
+		gcLogic:     gcLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -344,6 +354,7 @@ func (s *Service) apiSet() *restful.Container {
 		EsCli:          s.esCli,
 		RsLogic:        s.rsLogic,
 		Client:         s.client,
+		GcLogic:        s.gcLogic,
 	}
 
 	config.InitService(c)
@@ -354,6 +365,7 @@ func (s *Service) apiSet() *restful.Container {
 	plan.InitService(c)
 	dissolve.InitService(c)
 	rollingserver.InitService(c)
+	greenchannel.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }
