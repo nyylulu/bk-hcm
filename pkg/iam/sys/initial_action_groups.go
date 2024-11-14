@@ -279,6 +279,13 @@ func genPlatformManageActionGroups() client.ActionGroup {
 					{ID: RollingServerManage},
 				},
 			},
+			{
+				Name:   "小额绿通",
+				NameEn: "Green Channel",
+				Actions: []client.ActionWithID{
+					{ID: GreenChannel},
+				},
+			},
 		},
 	}
 }

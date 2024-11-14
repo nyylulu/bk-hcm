@@ -132,4 +132,7 @@ const (
 
 	// RollingServerManage defines biz's hcm auth resource type
 	RollingServerManage ResourceType = "rolling_server_manage"
+
+	// GreenChannel defines biz's hcm auth resource type
+	GreenChannel ResourceType = "green_channel"
 )

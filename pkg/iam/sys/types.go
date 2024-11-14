@@ -232,6 +232,9 @@ const (
 	// RollingServerManage 平台管理-滚服管理
 	RollingServerManage client.ActionID = "rolling_server_manage"
 
+	// GreenChannel 平台管理-小额绿通
+	GreenChannel client.ActionID = "green_channel"
+
 	// Skip is an action that no need to auth
 	Skip client.ActionID = "skip"
 )
@@ -304,6 +307,7 @@ var ActionIDNameMap = map[client.ActionID]string{
 	ApplicationManage:      "单据管理",
 	AccountBillPull:        "云账单-云账单拉取",
 	RollingServerManage:    "滚服管理",
+	GreenChannel:           "小额绿通",
 
 	MainAccountFind:   "账号-二级账号查看",
 	MainAccountCreate: "账号-二级账号创建",

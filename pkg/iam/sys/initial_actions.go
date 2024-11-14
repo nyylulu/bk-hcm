@@ -665,6 +665,15 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedActions:       nil,
 		Version:              1,
 	},
+		{
+			ID:                   GreenChannel,
+			Name:                 ActionIDNameMap[GreenChannel],
+			NameEn:               "Green Channel",
+			Type:                 View,
+			RelatedResourceTypes: nil,
+			RelatedActions:       nil,
+			Version:              1,
+		},
 	}
 }
 
