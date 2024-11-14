@@ -21,6 +21,7 @@ import (
 	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -325,7 +326,7 @@ func (dh *DeviceTypeHandler) getZoneList(kt *kit.Kit, region string) ([]*cfgtype
 }
 
 // getCapacity get resource apply capacity info
-func (dh *DeviceTypeHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string,
+func (dh *DeviceTypeHandler) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone string,
 	chargeType cvmapi.ChargeType) (int64, error) {
 
 	param := &cfgtype.GetCapacityParam{

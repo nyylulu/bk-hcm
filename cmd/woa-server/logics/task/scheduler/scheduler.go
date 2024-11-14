@@ -601,7 +601,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 		suborders[index] = subOrder
 	}
 
-	if table.RequireType(ticket.RequireType) == table.RequireTypeRollServer {
+	if enumor.RequireType(ticket.RequireType) == enumor.RequireTypeRollServer {
 		if err = s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
 			logs.Errorf("create rolling applied record failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
 			return err
@@ -614,7 +614,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyTicket,
 	suborders []*types.ApplyOrder) error {
 
-	if len(suborders) == 0 || table.RequireType(ticket.RequireType) != table.RequireTypeRollServer {
+	if len(suborders) == 0 || enumor.RequireType(ticket.RequireType) != enumor.RequireTypeRollServer {
 		return nil
 	}
 
@@ -1573,7 +1573,9 @@ func (s *scheduler) validateModifyDeviceType(kt *kit.Kit, order *types.ApplyOrde
 	return nil
 }
 
-func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType int64, deviceType, region, zone string) (string, error) {
+func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone string) (
+	string, error) {
+
 	rules := []querybuilder.Rule{
 		querybuilder.AtomRule{
 			Field:    "device_type",

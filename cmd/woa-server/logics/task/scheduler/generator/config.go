@@ -18,6 +18,7 @@ import (
 
 	cfgtype "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -26,7 +27,7 @@ import (
 )
 
 // getAvailableZoneInfo get available cvm zone info
-func (g *Generator) getAvailableZoneInfo(kt *kit.Kit, requireType int64, deviceType, region string) (
+func (g *Generator) getAvailableZoneInfo(kt *kit.Kit, requireType enumor.RequireType, deviceType, region string) (
 	[]*cfgtype.Zone, error) {
 
 	allZones, err := g.getZoneList(kt, region)
@@ -53,7 +54,9 @@ func (g *Generator) getAvailableZoneInfo(kt *kit.Kit, requireType int64, deviceT
 }
 
 // getAvailableZoneIds get available cvm zone id
-func (g *Generator) getAvailableZoneIds(kt *kit.Kit, requireType int64, deviceType, region string) ([]string, error) {
+func (g *Generator) getAvailableZoneIds(kt *kit.Kit, requireType enumor.RequireType, deviceType, region string) (
+	[]string, error) {
+
 	param := &cfgtype.GetDeviceParam{
 		Filter: &querybuilder.QueryFilter{
 			Rule: querybuilder.CombinedRule{
@@ -110,7 +113,7 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 }
 
 // getCapacity get resource apply capacity info
-func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string,
+func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc, subnet string,
 	chargeType cvmapi.ChargeType) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
@@ -140,7 +143,7 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType int64, deviceType, regi
 }
 
 // getCapacityDetail get resource apply capacity detail info
-func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType int64, deviceType, region, zone, vpc, subnet string,
+func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc, subnet string,
 	chargeType cvmapi.ChargeType) (*cfgtype.CapacityInfo, error) {
 
 	param := &cfgtype.GetCapacityParam{

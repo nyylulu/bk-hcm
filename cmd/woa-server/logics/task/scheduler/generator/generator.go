@@ -22,7 +22,6 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
 	poolLogics "hcm/cmd/woa-server/logics/pool"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
@@ -32,6 +31,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
@@ -208,9 +208,9 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	// 2. get available zones
 	requireType := order.RequireType
-	// transform 4:"故障替换" to 1:"常规项目"
-	if requireType == 4 {
-		requireType = 1
+	// 故障替换和小额绿通均使用常规项目的机型
+	if requireType == enumor.RequireTypeExpired || requireType == enumor.RequireTypeGreenChannel {
+		requireType = enumor.RequireTypeRegular
 	}
 	availZones, err := g.getAvailableZoneInfo(kt, requireType, order.Spec.DeviceType, order.Spec.Region)
 	if err != nil {
@@ -1243,7 +1243,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	}
 
 	// 如果是滚服类型，需要进行当月滚服额度的扣减
-	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		if err = g.rsLogics.ReduceRollingCvmProdAppliedRecord(kt, param.Device); err != nil {
 			logs.Errorf("reduce rolling server cvm product applied record failed, err: %+v, devices: %+v, rid: %s", err,
 				param.Device, kt.Rid)

@@ -31,40 +31,53 @@ type OrderCreateReq struct {
 
 // OrderCreateParams cvm create order parameters
 type OrderCreateParams struct {
-	Zone              string      `json:"zone"`
-	DeptName          string      `json:"deptName"`
-	ProductName       string      `json:"productName"`
-	Business1Id       int         `json:"business1Id"`
-	Business1Name     string      `json:"business1Name"`
-	Business2Id       int         `json:"business2Id"`
-	Business2Name     string      `json:"business2Name"`
-	Business3Id       int         `json:"business3Id"`
-	Business3Name     string      `json:"business3Name"`
-	ProjectId         int         `json:"projectId"`
-	Image             *Image      `json:"image,omitempty"`
-	InstanceType      string      `json:"instanceType"`
-	SystemDiskType    string      `json:"systemDiskType"`
-	SystemDiskSize    int         `json:"systemDiskSize"`
-	DataDisk          []*DataDisk `json:"dataDisk,omitempty"`
-	VpcId             string      `json:"vpcId"`
-	SubnetId          string      `json:"subnetId"`
-	AsVpcGateway      int         `json:"asVpcGateway,omitempty"`
-	ApplyNum          int         `json:"applyNum"`
-	PassWord          string      `json:"passWord"`
-	Security          *Security   `json:"security,omitempty"`
-	IsSecurityService int         `json:"isSecurityService,omitempty"`
-	IsMonitorService  int         `json:"isMonitorService,omitempty"`
-	RecoverGrpId      string      `json:"recoverGrpId,omitempty"`
-	InstanceName      string      `json:"instanceName,omitempty"`
-	UseTime           string      `json:"useTime,omitempty"`
-	Memo              string      `json:"memo,omitempty"`
-	Operator          string      `json:"operator"`
-	BakOperator       string      `json:"bakOperator"`
-	ObsProject        string      `json:"obsProject"`
-	ChargeType        ChargeType  `json:"chargeType,omitempty"`
-	ChargeMonths      uint        `json:"chargeMonths,omitempty"`
-	InheritInstanceId string      `json:"inheritInstanceId,omitempty"`
+	Zone              string       `json:"zone"`
+	DeptName          string       `json:"deptName"`
+	ProductName       string       `json:"productName"`
+	Business1Id       int          `json:"business1Id"`
+	Business1Name     string       `json:"business1Name"`
+	Business2Id       int          `json:"business2Id"`
+	Business2Name     string       `json:"business2Name"`
+	Business3Id       int          `json:"business3Id"`
+	Business3Name     string       `json:"business3Name"`
+	ProjectId         int          `json:"projectId"`
+	Image             *Image       `json:"image,omitempty"`
+	InstanceType      string       `json:"instanceType"`
+	SystemDiskType    string       `json:"systemDiskType"`
+	SystemDiskSize    int          `json:"systemDiskSize"`
+	DataDisk          []*DataDisk  `json:"dataDisk,omitempty"`
+	VpcId             string       `json:"vpcId"`
+	SubnetId          string       `json:"subnetId"`
+	AsVpcGateway      int          `json:"asVpcGateway,omitempty"`
+	ApplyNum          int          `json:"applyNum"`
+	PassWord          string       `json:"passWord"`
+	Security          *Security    `json:"security,omitempty"`
+	IsSecurityService int          `json:"isSecurityService,omitempty"`
+	IsMonitorService  int          `json:"isMonitorService,omitempty"`
+	RecoverGrpId      string       `json:"recoverGrpId,omitempty"`
+	InstanceName      string       `json:"instanceName,omitempty"`
+	UseTime           string       `json:"useTime,omitempty"`
+	Memo              string       `json:"memo,omitempty"`
+	Operator          string       `json:"operator"`
+	BakOperator       string       `json:"bakOperator"`
+	ObsProject        string       `json:"obsProject"`
+	ResourceType      ResourceType `json:"resourceType,omitempty"`
+	ChargeType        ChargeType   `json:"chargeType,omitempty"`
+	ChargeMonths      uint         `json:"chargeMonths,omitempty"`
+	InheritInstanceId string       `json:"inheritInstanceId,omitempty"`
 }
+
+// ResourceType 申请类型
+type ResourceType int
+
+const (
+	// ResourceTypeNormal 常规申领
+	ResourceTypeNormal ResourceType = 0
+	// ResourceTypeQuick 小额快速申领
+	ResourceTypeQuick ResourceType = 5
+	// ResourceTypeMachineFamily 机型族申领
+	ResourceTypeMachineFamily ResourceType = 7
+)
 
 // ChargeType charge type
 type ChargeType string
@@ -313,7 +326,7 @@ type QueryPlanOrderParam struct {
         "dataDiskInfo":[
 
         ],
-        "resourceType":0
+        "ResourceType":0
     },
     "jsonrpc":"2.0",
     "id":"16477579036464836"

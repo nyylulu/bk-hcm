@@ -20,7 +20,6 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
@@ -303,7 +302,7 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 		}
 	}
 
-	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		kt := core.NewBackendKit()
 		appliedTypes := []enumor.AppliedType{enumor.NormalAppliedType, enumor.ResourcePoolAppliedType}
 
@@ -814,7 +813,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	users = toolsutil.StrArrayUnique(users)
 	noticeFmt := m.bkchat.GetNoticeFmt()
 	bizName := m.getBizName(ticket.BkBizId)
-	requireName := m.getRequireName(ticket.RequireType)
+	requireName := ticket.RequireType.GetName()
 	createTime := ticket.CreateAt.Local().Format(constant.DateTimeLayout)
 	if ticket.CreateAt.Location() == time.UTC {
 		location, err := time.LoadLocation("Asia/Shanghai")
@@ -842,26 +841,6 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	}
 
 	return nil
-}
-
-func (m *Matcher) getRequireName(requireType int64) string {
-	switch requireType {
-	case 1:
-		return "常规项目"
-	case 2:
-		return "春节保障"
-	case 3:
-		return "机房裁撤"
-	case 4:
-		return "故障替换"
-	case 5:
-		return "短租项目"
-	case 6:
-		return "滚服项目"
-
-	default:
-		return ""
-	}
 }
 
 // RunDiskCheck 执行磁盘检查

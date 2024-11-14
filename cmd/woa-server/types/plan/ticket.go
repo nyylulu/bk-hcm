@@ -269,7 +269,7 @@ func (r *CreateResPlanDemandReq) Validate() error {
 		return err
 	}
 
-	if err := r.ObsProject.Validate(); err != nil {
+	if err := r.ObsProject.ValidateResPlan(); err != nil {
 		return err
 	}
 

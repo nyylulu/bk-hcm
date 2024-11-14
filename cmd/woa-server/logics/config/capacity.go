@@ -21,6 +21,7 @@ import (
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -270,7 +271,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string, vpcList []string,
 	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
 
-	projectName := cvmapi.GetObsProject(input.RequireType)
+	projectName := enumor.RequireType(input.RequireType).ToObsProject()
 
 	req := &cvmapi.CapacityReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -285,7 +286,7 @@ func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string,
 			InstanceType: input.DeviceType,
 			VpcId:        vpcList[0],
 			SubnetId:     vpcToSubnet[vpcList[0]][0],
-			ProjectName:  projectName,
+			ProjectName:  string(projectName),
 		},
 	}
 	// 计费模式,默认包年包月

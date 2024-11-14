@@ -17,7 +17,6 @@ import (
 	"strconv"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	model "hcm/cmd/woa-server/model/cvm"
@@ -98,7 +97,7 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 		CreateAt:    now,
 		UpdateAt:    now,
 	}
-	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		canApply, reason, err := l.rsLogic.CanApplyHost(kt, order.BkBizId, order.Total, enumor.CvmProduceAppliedType)
 		if err != nil {
 			logs.Errorf("determine can apply rolling server host failed, err: %v, bizID: %s, total: %d, rid: %s", err,
@@ -232,7 +231,7 @@ func (l *logics) GetCapacity(kt *kit.Kit, param *types.CvmCapacityReq) (*types.C
 	}
 
 	// set project name
-	req.Params.ProjectName = cvmapi.GetObsProject(param.RequireType)
+	req.Params.ProjectName = string(enumor.RequireType(param.RequireType).ToObsProject())
 
 	resp, err := l.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {

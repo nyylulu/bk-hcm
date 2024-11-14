@@ -19,7 +19,13 @@
 
 package enumor
 
-import "fmt"
+import (
+	"fmt"
+	"strconv"
+	"time"
+
+	"hcm/pkg/tools/converter"
+)
 
 // RPTicketType is resource plan ticket type.
 type RPTicketType string
@@ -203,7 +209,6 @@ func GetResModeMembers() []ResMode {
 }
 
 // ObsProject is obs project.
-// TODO this enum will be changed to get from obs api.
 type ObsProject string
 
 const (
@@ -211,68 +216,162 @@ const (
 	ObsProjectNormal ObsProject = "常规项目"
 	// ObsProjectReuse is obs project reuse project.
 	ObsProjectReuse ObsProject = "改造复用"
-	// ObsProjectCNY is obs project normal Chinese New Year project.
-	ObsProjectCNY ObsProject = "2025春节保障"
-	// ObsProjectDissolve is obs dissolve project.
-	ObsProjectDissolve ObsProject = "2024机房裁撤"
 	// ObsProjectMigrate is obs migrate project.
 	ObsProjectMigrate ObsProject = "轻量云徙"
+	// ObsProjectRollServer is obs roll server project.
+	ObsProjectRollServer ObsProject = "滚服项目"
 )
+
+// GetObsProjectMembers get ObsProject's members.
+func GetObsProjectMembers() []ObsProject {
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate, ObsProjectRollServer}
+	obsProjects = append(obsProjects, getSpringObsProject(), getDissolveObsProject())
+
+	return obsProjects
+}
+
+// GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
+func GetObsProjectMembersForResPlan() []ObsProject {
+	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate}
+	obsProjects = append(obsProjects, getSpringObsProject(), getDissolveObsProject())
+
+	return obsProjects
+}
 
 // Validate ObsProject.
 func (o ObsProject) Validate() error {
-	switch o {
-	case ObsProjectNormal:
-	case ObsProjectReuse:
-	case ObsProjectCNY:
-	case ObsProjectDissolve:
-	case ObsProjectMigrate:
-	default:
+	obsProjects := GetObsProjectMembers()
+	obsProjectMap := converter.SliceToMap(obsProjects, func(obj ObsProject) (ObsProject, struct{}) {
+		return obj, struct{}{}
+	})
+
+	if _, ok := obsProjectMap[o]; !ok {
 		return fmt.Errorf("unsupported obs project: %s", o)
 	}
 
 	return nil
 }
 
-// GetObsProjectMembers get ObsProject's members.
-func GetObsProjectMembers() []ObsProject {
-	return []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectCNY, ObsProjectDissolve, ObsProjectMigrate}
+// ValidateResPlan validate obs project used in resource plan.
+func (o ObsProject) ValidateResPlan() error {
+	obsProjects := GetObsProjectMembersForResPlan()
+	obsProjectMap := converter.SliceToMap(obsProjects, func(obj ObsProject) (ObsProject, struct{}) {
+		return obj, struct{}{}
+	})
+
+	if _, ok := obsProjectMap[o]; !ok {
+		return fmt.Errorf("unsupported obs project: %s", o)
+	}
+
+	return nil
+}
+
+// getSpringObsProject get spring obs project.
+func getSpringObsProject() ObsProject {
+	// 春保窗口期：12月1日～次年3月15日
+	// 12月1日～12月31日提单的春保项目前缀为次年
+	year := time.Now().Local().Year()
+	if time.Now().Month() == time.December {
+		year += 1
+	}
+
+	prefixYear := strconv.Itoa(year)
+	project := ObsProject(prefixYear + "春节保障")
+
+	return project
+}
+
+// getDissolveObsProject get dissolve obs project.
+func getDissolveObsProject() ObsProject {
+	// 按自然年作为机房裁撤的窗口滚动周期
+	// 如"2024机房裁撤"
+	year := time.Now().Local().Year()
+	prefixYear := strconv.Itoa(year)
+	project := ObsProject(prefixYear + "机房裁撤")
+
+	return project
 }
 
 // RequireType is resource apply require type.
 type RequireType int64
 
 const (
-	// RequireTypeNormal is normal project.
-	RequireTypeNormal RequireType = 1
-	// RequireTypeChineseNewYear is project normal Chinese New Year project.
-	RequireTypeChineseNewYear RequireType = 2
-	// RequireTypeDissolve is dissolve project.
+	// RequireTypeRegular 常规项目
+	RequireTypeRegular RequireType = 1
+	// RequireTypeSpring 春节保障
+	RequireTypeSpring RequireType = 2
+	// RequireTypeDissolve 机房裁撤
 	RequireTypeDissolve RequireType = 3
+	// RequireTypeExpired 故障替换
+	RequireTypeExpired RequireType = 4
+	// RequireTypeRollServer 滚服项目
+	RequireTypeRollServer RequireType = 6
+	//	RequireTypeGreenChannel 小额绿通
+	RequireTypeGreenChannel RequireType = 7
 )
+
+var requireTypeNameMap = map[RequireType]string{
+	RequireTypeRegular:      "常规项目",
+	RequireTypeSpring:       "春节保障",
+	RequireTypeDissolve:     "机房裁撤",
+	RequireTypeExpired:      "故障替换",
+	RequireTypeRollServer:   "滚服项目",
+	RequireTypeGreenChannel: "小额绿通",
+}
+
+// GetName get name of RequireType.
+func (t RequireType) GetName() string {
+	if name, ok := requireTypeNameMap[t]; ok {
+		return name
+	}
+
+	return "Unknown"
+}
+
+// GetRequireTypeMembers get members of RequireType.
+func GetRequireTypeMembers() []RequireType {
+	return []RequireType{
+		RequireTypeRegular,
+		RequireTypeSpring,
+		RequireTypeDissolve,
+		RequireTypeExpired,
+		RequireTypeRollServer,
+		RequireTypeGreenChannel,
+	}
+}
 
 // Validate RequireType.
 func (t RequireType) Validate() error {
-	switch t {
-	case RequireTypeNormal:
-	case RequireTypeChineseNewYear:
-	case RequireTypeDissolve:
-	default:
+	requireTypeMembers := GetRequireTypeMembers()
+	requireTypeMemberMap := converter.SliceToMap(requireTypeMembers, func(member RequireType) (RequireType, struct{}) {
+		return member, struct{}{}
+	})
+	if _, ok := requireTypeMemberMap[t]; !ok {
 		return fmt.Errorf("unsupported require type: %d", t)
 	}
 
 	return nil
 }
 
-var requireTypeObsProjectMap = map[RequireType]ObsProject{
-	RequireTypeNormal:         ObsProjectNormal,
-	RequireTypeChineseNewYear: ObsProjectCNY,
-	RequireTypeDissolve:       ObsProjectDissolve,
-}
-
 // ToObsProject ObsProject.
 func (t RequireType) ToObsProject() ObsProject {
-	return requireTypeObsProjectMap[t]
+	if obsProject, ok := requireTypeObsProjectMap[t]; ok {
+		return obsProject
+	}
+
+	// 默认是常规项目
+	return ObsProjectNormal
+}
+
+var requireTypeObsProjectMap = map[RequireType]ObsProject{
+	RequireTypeRegular: ObsProjectNormal,
+	// "故障替换"项目使用"常规项目"的 obs project
+	RequireTypeExpired:    ObsProjectNormal,
+	RequireTypeRollServer: ObsProjectRollServer,
+	// "小额绿通"使用"常规项目"的 obs project
+	RequireTypeGreenChannel: ObsProjectNormal,
+	RequireTypeSpring:       getSpringObsProject(),
+	RequireTypeDissolve:     getDissolveObsProject(),
 }
 
 // DemandSource is demand source.

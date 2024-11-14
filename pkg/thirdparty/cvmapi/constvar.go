@@ -13,60 +13,6 @@
 // Package cvmapi ...
 package cvmapi
 
-import (
-	"strconv"
-	"time"
-)
-
-var mapObsProject = map[int64]string{
-	1: "常规项目",
-	2: "春节保障",
-	3: "机房裁撤",
-	4: "常规项目",
-	5: "短租项目",
-	6: "滚服项目",
-}
-
-// GetObsProject get OBS project by CR require type.
-func GetObsProject(requireType int64) string {
-	switch requireType {
-	case 1, 4, 5, 6:
-		return mapObsProject[requireType]
-	case 2:
-		return getSpringObsProject()
-	case 3:
-		return getDissolveObsProject()
-	default:
-		// return "常规项目" as default
-		return mapObsProject[1]
-	}
-}
-
-func getSpringObsProject() string {
-	// 春保窗口期：12月1日～次年3月15日
-	// 12月1日～12月31日提单的春保项目前缀为次年
-	year := time.Now().Local().Year()
-	if time.Now().Month() == time.December {
-		year += 1
-	}
-
-	prefixYear := strconv.Itoa(year)
-	project := prefixYear + "春节保障"
-
-	return project
-}
-
-func getDissolveObsProject() string {
-	// TODO:
-	// 暂定按自然年作为机房裁撤的窗口滚动周期
-	// 如"2024机房裁撤"
-	year := time.Now().Local().Year()
-	prefixYear := strconv.Itoa(year)
-	project := prefixYear + "机房裁撤"
-
-	return project
-}
-
 // CvmCbsPlanModityType 需求预测接口调整类型
 var CvmCbsPlanModityType = map[int64]string{
 	1: "add",
