@@ -68,6 +68,7 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
           extra.getHostOperationRef()?.value?.handleSingleZiyanRecycle?.(data);
         } else if (type === OperationActions.RESET) {
           // 重装单个
+          extra.getHostOperationRef()?.value?.hostBatchResetDialogRef?.show([data.id]);
         } else {
           // 开机、关机、重启操作
           const { label } = operationMap[type];

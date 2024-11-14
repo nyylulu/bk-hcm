@@ -54,16 +54,25 @@ export const operationMap = {
     label: '开机',
     disabledStatus: HOST_RUNNING_STATUS,
     loading: false,
+    // 鉴权参数
+    authId: 'biz_iaas_resource_operate',
+    actionName: 'biz_iaas_resource_operate',
   },
   [OperationActions.STOP]: {
     label: '关机',
     disabledStatus: HOST_SHUTDOWN_STATUS,
     loading: false,
+    // 鉴权参数
+    authId: 'biz_iaas_resource_operate',
+    actionName: 'biz_iaas_resource_operate',
   },
   [OperationActions.REBOOT]: {
     label: '重启',
     disabledStatus: HOST_SHUTDOWN_STATUS,
     loading: false,
+    // 鉴权参数
+    authId: 'biz_iaas_resource_operate',
+    actionName: 'biz_iaas_resource_operate',
   },
   [OperationActions.RECYCLE]: {
     label: '回收',

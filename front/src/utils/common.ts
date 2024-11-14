@@ -28,6 +28,13 @@ const getInstVip = (inst: any) => {
   return '--';
 };
 
+const getPrivateIPs = (data: any) => {
+  return [...(data.private_ipv4_addresses || []), ...(data.private_ipv6_addresses || [])].join(',') || '--';
+};
+const getPublicIPs = (data: any) => {
+  return [...(data.public_ipv4_addresses || []), ...(data.public_ipv6_addresses || [])].join(',') || '--';
+};
+
 /**
  * 清洗请求载荷，去除空值
  * @param payload 请求载荷
@@ -312,6 +319,8 @@ const isPortValid = (text: string) => {
 };
 export {
   getInstVip,
+  getPrivateIPs,
+  getPublicIPs,
   exportTableToExcel,
   getEntirePath,
   cleanPayload,

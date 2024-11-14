@@ -144,6 +144,36 @@ export const transformFlatCondition = (condition: Record<string, any>, propertie
   return params;
 };
 
+// 处理本地搜索，返回一个filterFn - search-select
+export const getLocalFilterFnBySearchSelect = (
+  searchValue: Array<{ id: string; name: string; values: Array<{ id: string; name: string }> }>,
+) => {
+  // 非数组，直接返回空函数，不过滤
+  if (!Array.isArray(searchValue)) return () => true;
+
+  // 将搜索值转换为 rules，rule之间为AND关系，rule.values之间为OR关系
+  const rules = searchValue.reduce<Array<{ key: string; values: string[] }>>((prev, curr) => {
+    // 查找结果数组中是否已经存在该 id 的条目
+    const existing = prev.find((entry) => entry.key === curr.id);
+    if (existing) {
+      // 如果存在，则合并 values
+      existing.values.push(...curr.values.map((value) => value.id));
+    } else {
+      // 如果不存在，创建一个新的条目
+      prev.push({ key: curr.id, values: curr.values.map((value) => value.id) });
+    }
+    return prev;
+  }, []);
+
+  // 构建过滤函数
+  return (item: any) =>
+    rules.every(({ key, values }) => {
+      const itemValues = item[key];
+      // 将itemValues转为字符串，这样既可以比较数字，又可以比较字符串和字符串数组
+      return itemValues && values.some((v) => String(itemValues).includes(v));
+    });
+};
+
 export const enableCount = (params = {}, enable = false) => {
   if (enable) {
     return Object.assign({}, params, { page: { count: true } });

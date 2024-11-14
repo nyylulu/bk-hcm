@@ -1,4 +1,4 @@
-import { PropType, defineComponent, ref, toRefs, withDirectives } from 'vue';
+import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
 import { Button, Dialog, Dropdown, Loading, Message, bkTooltips } from 'bkui-vue';
 import cssModule from '../index.module.scss';
@@ -15,6 +15,8 @@ import RecycleFlow from './recycle-flow.vue';
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 
+import HostBatchResetDialog from './host-batch-reset-dialog/index.vue';
+
 export enum OperationActions {
   NONE = 'none',
   START = 'start',
@@ -26,13 +28,19 @@ export enum OperationActions {
 
 export const operationMap: Record<OperationActions, OperationMapItem> = {
   ...defaultOperationMap,
+  [OperationActions.RECYCLE]: {
+    ...defaultOperationMap[OperationActions.RECYCLE],
+    // 鉴权参数
+    authId: 'biz_iaas_resource_delete',
+    actionName: 'biz_iaas_resource_delete',
+  },
   [OperationActions.RESET]: {
     label: '重装',
     disabledStatus: [] as string[],
     loading: false,
     // 鉴权参数
-    authId: 'biz_iaas_resource_delete',
-    actionName: 'biz_iaas_resource_delete',
+    authId: 'biz_iaas_resource_operate',
+    actionName: 'biz_iaas_resource_operate',
   },
 };
 
@@ -139,7 +147,7 @@ export default defineComponent({
       operationType.value = type;
       // 主机重装操作
       if (type === OperationActions.RESET) {
-        console.error('🚀 ~ handleClickMenu ~ type:', type);
+        hostBatchResetDialogRef.value.show(selections.value.map((v) => v.id));
       }
     };
 
@@ -182,8 +190,12 @@ export default defineComponent({
       operationType.value = OperationActions.RECYCLE;
     };
 
+    // 主机重装
+    const hostBatchResetDialogRef = useTemplateRef<typeof HostBatchResetDialog>('host-batch-reset-dialog');
+
     expose({
       handleSingleZiyanRecycle,
+      hostBatchResetDialogRef,
     });
 
     const commonTable = () => (
@@ -317,6 +329,9 @@ export default defineComponent({
             ),
           }}
         </Dialog>
+
+        {/* 批量重装dialog */}
+        <HostBatchResetDialog ref='host-batch-reset-dialog' />
       </>
     );
   },
