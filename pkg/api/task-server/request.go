@@ -109,6 +109,7 @@ type CustomFlowTask struct {
 	DependOn []action.ActIDType `json:"depend_on" validate:"omitempty"`
 
 	// Retry 任务运行重试相关配置参数，如果不设置，默认不允许进行重试。
+	// 如果该任务需要支持重试，并且需要用任务管理的功能，那么RollbackAction里面需要把task_detail的状态重置为init，否则重新Run时会被拦截
 	Retry *tableasync.Retry `json:"retry" validate:"omitempty"`
 }
 

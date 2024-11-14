@@ -298,7 +298,6 @@ func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmReset
 				ManagementDetailIDs: managementDetailIDs,
 				CvmResetList:        cvmResetList,
 			},
-			Retry: tableasync.NewRetryWithPolicy(3, 100, 200),
 		}
 		result = append(result, tmpTask)
 

@@ -271,7 +271,7 @@ func (act FlowSlaveOperateWatchAction) updateTargetGroupListenerRuleRelBindStatu
 
 // Rollback Flow查询状态失败时的回滚Action，此处不需要回滚处理
 func (act FlowSlaveOperateWatchAction) Rollback(kt run.ExecuteKit, params interface{}) error {
-	logs.Infof(" ----------- FlowSlaveOperateWatchAction Rollback -----------, params: %s, rid: %s",
+	logs.Infof(" ----------- FlowSlaveOperateWatchAction Rollback -----------, params: %+v, rid: %s",
 		params, kt.Kit().Rid)
 	return nil
 }

@@ -119,7 +119,7 @@ func (str StringArray) ToVendors() []enumor.Vendor {
 		return []enumor.Vendor{}
 	}
 
-	vendors := make([]enumor.Vendor, len(str))
+	vendors := make([]enumor.Vendor, 0, len(str))
 	for _, value := range str {
 		vendors = append(vendors, enumor.Vendor(value))
 	}

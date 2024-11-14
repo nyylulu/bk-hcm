@@ -103,12 +103,14 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 		return nil, err
 	}
 
-	taskManageID, err := svc.createCvmResetTaskManage(cts.Kit, bkBizID, cvmIDs, cvmIDMap, req.Pwd)
+	taskManagementID, err := svc.createCvmResetTaskManage(cts.Kit, bkBizID, cvmIDs, cvmIDMap, req.Pwd)
 	if err != nil {
 		return nil, err
 	}
 
-	return taskManageID, nil
+	return cscvm.BatchOperateResp{
+		TaskManagementID: taskManagementID,
+	}, nil
 }
 
 func (svc *cvmSvc) createCvmResetTaskManage(kt *kit.Kit, bkBizID int64, cvmIDs []string,

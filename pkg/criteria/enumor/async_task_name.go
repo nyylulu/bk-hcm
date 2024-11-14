@@ -71,10 +71,9 @@ const (
 	ActionCreateGcpCvm    ActionName = "create_gcp_cvm"
 	ActionCreateAzureCvm  ActionName = "create_azure_cvm"
 	ActionResetCvm        ActionName = "reset_cvm"
-
-	ActionStartCvmV2  ActionName = "start_cvm_v2"
-	ActionStopCvmV2   ActionName = "stop_cvm_v2"
-	ActionRebootCvmV2 ActionName = "reboot_cvm_v2"
+	ActionStartCvmV2      ActionName = "start_cvm_v2"
+	ActionStopCvmV2       ActionName = "stop_cvm_v2"
+	ActionRebootCvmV2     ActionName = "reboot_cvm_v2"
 )
 
 // 防火墙相关Action

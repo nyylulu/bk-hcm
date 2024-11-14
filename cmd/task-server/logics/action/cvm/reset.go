@@ -25,7 +25,7 @@ import (
 	"fmt"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
-	actionlb "hcm/cmd/task-server/logics/flow"
+	actflow "hcm/cmd/task-server/logics/flow"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	hclb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/api/task-server/cvm"
@@ -35,6 +35,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // --------------------------[批量操作-批量重装CVM]-----------------------------
@@ -74,10 +75,10 @@ func (act BatchTaskCvmResetAction) Run(kt run.ExecuteKit, params any) (result an
 			// 更新为失败
 			targetState = enumor.TaskDetailFailed
 		}
-		err := actionlb.BatchUpdateTaskDetailResultState(kt.Kit(), []string{detailID}, targetState, ret, optErr)
+		err := actflow.BatchUpdateTaskDetailResultState(kt.Kit(), []string{detailID}, targetState, ret, optErr)
 		if err != nil {
-			logs.Errorf("failed to set detail to [%s] after cloud operation finished, err: %v, rid: %s",
-				targetState, err, kt.Kit().Rid)
+			logs.Errorf("failed to set detail to after cloud operation finished, state: %s, detailID: %s, err: %v, "+
+				"optErr: %+v, ret: %+v, rid: %s", targetState, detailID, err, optErr, cvt.PtrToVal(ret), kt.Kit().Rid)
 			return nil, err
 		}
 		if optErr != nil {
@@ -94,7 +95,7 @@ func (act BatchTaskCvmResetAction) Run(kt run.ExecuteKit, params any) (result an
 func (act BatchTaskCvmResetAction) batchResetCvmSystem(kt *kit.Kit, detailID string,
 	req *protocvm.TCloudBatchResetCvmReq) (*hclb.BatchCreateResult, error) {
 
-	detailList, err := actionlb.ListTaskDetail(kt, []string{detailID})
+	detailList, err := actflow.ListTaskDetail(kt, []string{detailID})
 	if err != nil {
 		logs.Errorf("failed to query task detail, err: %v, detailID: %s, rid: %s", err, detailID, kt.Rid)
 		return nil, err
@@ -106,12 +107,12 @@ func (act BatchTaskCvmResetAction) batchResetCvmSystem(kt *kit.Kit, detailID str
 		return nil, nil
 	}
 	if detail.State != enumor.TaskDetailInit {
-		return nil, errf.Newf(errf.InvalidParameter, "task management detail(%s) status(%s) is not init",
-			detail.ID, detail.State)
+		return nil, errf.Newf(errf.InvalidParameter, "task management detail is not init, detailID: %s, "+
+			"taskManageID: %s, flowID: %s, status:%s", detail.ID, detail.TaskManagementID, detail.FlowID, detail.State)
 	}
 
 	// 更新任务状态为 running
-	if err = actionlb.BatchUpdateTaskDetailState(kt, []string{detailID}, enumor.TaskDetailRunning); err != nil {
+	if err = actflow.BatchUpdateTaskDetailState(kt, []string{detailID}, enumor.TaskDetailRunning); err != nil {
 		return nil, fmt.Errorf("failed to update detail to running, detailID: %s, err: %v", detailID, err)
 	}
 
@@ -123,13 +124,15 @@ func (act BatchTaskCvmResetAction) batchResetCvmSystem(kt *kit.Kit, detailID str
 		if jsonErr != nil {
 			return nil, jsonErr
 		}
-		logs.Infof("call hcservice api reset cvm end, vendor: %s, detailID: %s, err: %+v, jsonErr: %+v, "+
-			"cvmResetJson: %s, rid: %s", req.Vendor, detailID, err, jsonErr, cvmResetJson, kt.Rid)
+		logs.Infof("call hcservice api reset cvm end, vendor: %s, detailID: %s, taskManageID: %s, flowID: %s, "+
+			"cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detailID, detail.TaskManagementID,
+			detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "batch hcservice cvm reset failed, invalid vendor: %s", req.Vendor)
 	}
 	if err != nil {
-		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, rid: %s", err, detailID, kt.Rid)
+		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, taskManageID: %s, flowID: %s, "+
+			"rid: %s", err, detailID, detail.TaskManagementID, detail.FlowID, kt.Rid)
 		return nil, err
 	}
 	return nil, nil
