@@ -66,7 +66,7 @@ type TCloudLoadBalancerCreateReq struct {
 
 	InternetChargeType *typelb.TCloudLoadBalancerNetworkChargeType `json:"internet_charge_type" validate:"omitempty"`
 
-	Tags []*corelb.TagPair `json:"tags" validate:"dive,required"`
+	Tags []apicore.TagPair `json:"tags,omitempty"`
 }
 
 // Validate request.

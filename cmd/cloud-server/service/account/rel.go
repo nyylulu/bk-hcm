@@ -46,14 +46,11 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(
-		cts.Kit.Ctx,
-		cts.Kit.Header(),
-		&protocloud.AccountBizRelWithAccountListReq{
-			BkBizIDs:    []int64{bkBizID},
-			AccountType: accountType,
-		},
-	)
+	listReq := &protocloud.AccountBizRelWithAccountListReq{
+		BkBizIDs:    []int64{bkBizID},
+		AccountType: accountType,
+	}
+	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit,listReq)
 	if err != nil {
 		logs.Errorf("fail to query biz account, err: %v, bizID: %s, rid:%s", err, bkBizID, cts.Kit.Rid)
 		return nil, err

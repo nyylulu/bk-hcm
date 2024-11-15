@@ -23,14 +23,14 @@ import (
 	"errors"
 	"fmt"
 
-	loadbalancer "hcm/pkg/api/core/cloud/load-balancer"
+	apicore "hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // GenTagsForBizs 为负载均衡生成业务标签
-func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []*loadbalancer.TagPair, err error) {
+func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []apicore.TagPair, err error) {
 
 	// 去cc 查询业务信息
 	req := &cmdb.SearchBizCompanyCmdbInfoParams{BizIDs: []int64{bkBizId}}
@@ -51,7 +51,7 @@ func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []*load
 			bkBizId, cmdbBizInfo.BkBizID)
 	}
 
-	tags = []*loadbalancer.TagPair{
+	tags = []apicore.TagPair{
 		{Key: "运营产品", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.BkProductName, cmdbBizInfo.BkProductID)},
 		{Key: "一级业务", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.Bs1Name, cmdbBizInfo.Bs1NameID)},
 		{Key: "二级业务", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.Bs2Name, cmdbBizInfo.Bs2NameID)},
