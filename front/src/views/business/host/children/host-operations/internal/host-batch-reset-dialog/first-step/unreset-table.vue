@@ -49,7 +49,12 @@ watchEffect(() => {
             :render="column.render"
           >
             <template #default="{ row }">
-              <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
+              <display-value
+                :property="column"
+                :value="row[column.id]"
+                :display="column?.meta?.display"
+                :vendor="row?.vendor"
+              />
             </template>
           </bk-table-column>
         </bk-table>

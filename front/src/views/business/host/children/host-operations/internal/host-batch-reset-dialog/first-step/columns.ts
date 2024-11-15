@@ -18,7 +18,7 @@ export default [
   { id: 'private_ip_address', name: t('内网IP'), type: 'string' },
   { id: 'public_ip_address', name: t('外网IP'), type: 'string' },
   { id: 'bk_host_name', name: t('主机名称'), type: 'string' },
-  { id: 'region', name: t('地域'), type: 'string' },
+  { id: 'region', name: t('地域'), type: 'region' },
   { id: 'zone', name: t('可用区'), type: 'string' },
   {
     id: 'status',

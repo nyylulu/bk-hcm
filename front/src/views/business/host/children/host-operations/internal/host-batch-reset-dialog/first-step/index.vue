@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
-import type { CvmListRestStatusData } from '../typings';
+import { useRegionsStore } from '@/store/useRegionsStore';
 import { getLocalFilterFnBySearchSelect } from '@/utils/search';
+import type { CvmListRestStatusData } from '../typings';
 
 import resetTable from './reset-table.vue';
 import unResetTable from './unreset-table.vue';
@@ -10,6 +11,7 @@ import unResetTable from './unreset-table.vue';
 const props = defineProps<{ listData: CvmListRestStatusData }>();
 
 const { t } = useI18n();
+const regionsStore = useRegionsStore();
 
 const radios = [
   { label: 0, alias: t('可重装') },
@@ -29,7 +31,9 @@ const renderList = computed(() => {
   const { reset, unReset } = props.listData;
 
   // 根据search-select过滤
-  const filterFn = getLocalFilterFnBySearchSelect(searchValue.value);
+  const filterFn = getLocalFilterFnBySearchSelect(searchValue.value, [
+    { field: 'region', formatter: (v: string) => regionsStore.getRegionNameEN(v) },
+  ]);
 
   return isResettable.value ? reset.filter(filterFn) : unReset.filter(filterFn);
 });

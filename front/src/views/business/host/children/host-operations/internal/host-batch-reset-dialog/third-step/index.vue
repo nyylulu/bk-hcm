@@ -34,7 +34,7 @@ const columns = [
   { id: 'account_id', name: t('云账号'), type: 'user' },
   { id: 'type', name: t('类型'), type: 'string' },
   { id: 'count', name: t('数量'), type: 'string' },
-  { id: 'region', name: t('地域'), type: 'string' },
+  { id: 'region', name: t('地域'), type: 'region' },
   { id: 'image_name', name: t('重装后镜像名称'), type: 'string' },
 ] as ModelPropertyColumn[];
 
@@ -48,7 +48,7 @@ const expandRowColumns: ModelPropertyColumn[] = [
   { id: 'private_ip_address', name: t('内网IP'), type: 'string' },
   { id: 'public_ip_address', name: t('外网IP'), type: 'string' },
   { id: 'bk_host_name', name: t('主机名称'), type: 'string' },
-  { id: 'region', name: t('地域'), type: 'string' },
+  { id: 'region', name: t('地域'), type: 'region' },
   { id: 'zone', name: t('可用区'), type: 'string' },
   { id: 'device_type', name: t('机型'), type: 'string', width: 150 },
   { id: 'image_name_old', name: t('原镜像名称'), type: 'string', width: 250 },
@@ -84,7 +84,12 @@ defineExpose<Exposes>({
         <bk-table-column type="expand" min-width="50" />
         <bk-table-column v-for="(column, index) in columns" :key="index" :prop="column.id" :label="column.name">
           <template #default="{ row }">
-            <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
+            <display-value
+              :property="column"
+              :value="row[column.id]"
+              :display="column?.meta?.display"
+              :vendor="row.vendor"
+            />
           </template>
         </bk-table-column>
 
@@ -106,7 +111,12 @@ defineExpose<Exposes>({
                 :width="column.width"
               >
                 <template #default="{ row }">
-                  <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
+                  <display-value
+                    :property="column"
+                    :value="row[column.id]"
+                    :display="column?.meta?.display"
+                    :vendor="row.vendor"
+                  />
                 </template>
               </bk-table-column>
             </bk-table>

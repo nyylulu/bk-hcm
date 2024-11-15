@@ -146,21 +146,31 @@ export const transformFlatCondition = (condition: Record<string, any>, propertie
 
 // 处理本地搜索，返回一个filterFn - search-select
 export const getLocalFilterFnBySearchSelect = (
-  searchValue: Array<{ id: string; name: string; values: Array<{ id: string; name: string }> }>,
+  searchValue: Array<{ id: string; name: string; values: { id: string; name: string }[] }>,
+  options: Array<{ field: string; formatter: Function }> = [],
 ) => {
   // 非数组，直接返回空函数，不过滤
   if (!Array.isArray(searchValue)) return () => true;
 
+  const getValue = (value: { id: string; name: string }, key: string) => {
+    let searchVal = value.id;
+    options.forEach(({ field, formatter }) => {
+      if (field === key) searchVal = formatter(searchVal);
+    });
+    return searchVal;
+  };
+
   // 将搜索值转换为 rules，rule之间为AND关系，rule.values之间为OR关系
-  const rules = searchValue.reduce<Array<{ key: string; values: string[] }>>((prev, curr) => {
+  const rules = searchValue.reduce<Array<{ key: string; values: string[] }>>((prev, { id, values }) => {
     // 查找结果数组中是否已经存在该 id 的条目
-    const existing = prev.find((entry) => entry.key === curr.id);
+    const existing = prev.find(({ key }) => key === id);
+
     if (existing) {
       // 如果存在，则合并 values
-      existing.values.push(...curr.values.map((value) => value.id));
+      existing.values.push(...values.map((value) => getValue(value, id)));
     } else {
       // 如果不存在，创建一个新的条目
-      prev.push({ key: curr.id, values: curr.values.map((value) => value.id) });
+      prev.push({ key: id, values: values.map((value) => getValue(value, id)) });
     }
     return prev;
   }, []);

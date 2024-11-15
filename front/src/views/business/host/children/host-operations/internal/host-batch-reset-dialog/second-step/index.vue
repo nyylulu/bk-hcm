@@ -31,7 +31,7 @@ const columns = [
   { id: 'account_id', name: t('云账号'), type: 'user' },
   { id: 'type', name: t('类型'), type: 'string' },
   { id: 'count', name: t('数量'), type: 'string' },
-  { id: 'region', name: t('地域'), type: 'string' },
+  { id: 'region', name: t('地域'), type: 'region' },
 ] as ModelPropertyColumn[];
 
 const formRef = useTemplateRef<typeof Form>('form');
@@ -141,7 +141,12 @@ defineExpose<Exposes>({
       <bk-table row-hover="auto" :data="formModel.hosts" pagination show-overflow-tooltip row-key="id">
         <bk-table-column v-for="(column, index) in columns" :key="index" :prop="column.id" :label="column.name">
           <template #default="{ row }">
-            <display-value :property="column" :value="row[column.id]" :display="column?.meta?.display" />
+            <display-value
+              :property="column"
+              :value="row[column.id]"
+              :display="column?.meta?.display"
+              :vendor="row.vendor"
+            />
           </template>
         </bk-table-column>
 
