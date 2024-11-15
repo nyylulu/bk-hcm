@@ -69,8 +69,8 @@ const renderLogs = (audit: IPlanTicketItsmAudit | IPlanTicketCrpAudit, type: 'it
         ]);
   };
 
-  // 撤销、失败、结束、拒绝，这四种状态，直接输出 logs
-  if (['revoked', 'rejected', 'canceled', 'failed'].includes(status)) {
+  // 撤销、失败、结束、拒绝，done 这五种状态，直接输出 logs
+  if (['revoked', 'rejected', 'canceled', 'failed', 'done'].includes(status)) {
     if (!logs) return [];
     const result = [
       ...logs.map((log) => ({ tag: h('div', { class: 'tag' }, log[tagKey]), content: renderSuccessContentValue(log) })),
@@ -88,11 +88,11 @@ const renderLogs = (audit: IPlanTicketItsmAudit | IPlanTicketCrpAudit, type: 'it
     return result.map((log, index) => ({
       ...log,
       nodeType: 'vnode',
-      type: index < result.length - 1 ? 'success' : 'danger',
+      type: index < result.length - 1 || status === 'done' ? 'success' : 'danger',
     }));
   }
 
-  // auditing、done 状态展示全部流程（current_steps可能不存在）
+  // auditing 状态展示全部流程（current_steps可能不存在）
   const currentStepIdx = steps[type].findIndex((step) => step.name === current_steps?.[0]?.name);
   return steps[type].map((step, index) => {
     const { name, auto, link } = step;
@@ -158,7 +158,7 @@ watch(
 </script>
 
 <template>
-  <panel class="panel" :title="t('审批信息')">
+  <panel v-if="renderItsmAuditLogs.length" class="panel" :title="t('审批信息')">
     <step :label="t('一级审批')" :title="t('ITSM 平台审批')" :link-url="detail?.itsm_audit?.itsm_url">
       <template #content>
         <bk-timeline :list="renderItsmAuditLogs" />
