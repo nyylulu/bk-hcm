@@ -256,6 +256,9 @@ const (
 	RollingReturnedRecordTable = "rolling_returned_record"
 	// RollingFineDetail 滚服罚金明细表
 	RollingFineDetail = "rolling_fine_detail"
+
+	//	GlobalConfigTable 全局配置表
+	GlobalConfigTable = "global_config"
 )
 
 // Validate whether the table name is valid or not.
@@ -386,6 +389,8 @@ var TableMap = map[Name]struct{}{
 	RollingAppliedRecordTable:  {},
 	RollingReturnedRecordTable: {},
 	RollingFineDetail:          {},
+
+	GlobalConfigTable: {},
 }
 
 // Register 注册表名

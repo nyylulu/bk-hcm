@@ -72,6 +72,7 @@ import (
 	sync "hcm/cmd/data-service/service/cloud/sync"
 	"hcm/cmd/data-service/service/cloud/zone"
 	"hcm/cmd/data-service/service/cos"
+	globalconfig "hcm/cmd/data-service/service/global-config"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
 	rollingserver "hcm/cmd/data-service/service/rolling-server"
 	"hcm/cmd/data-service/service/rolling-server/rolling-applied"
@@ -293,6 +294,7 @@ func (s *Service) apiSet() *restful.Container {
 	rollingreturned.InitService(capability)
 	rollingfinedetail.InitService(capability)
 	rollingbill.InitService(capability)
+	globalconfig.InitService(capability)
 
 	return restful.NewContainer().Add(capability.WebService)
 }
