@@ -63,9 +63,11 @@ func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperati
 func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
 
 	req := &hcprotocvm.TCloudBatchStopReq{
-		AccountID: opt.AccountID,
-		Region:    opt.Region,
-		IDs:       opt.IDs,
+		AccountID:   opt.AccountID,
+		Region:      opt.Region,
+		IDs:         opt.IDs,
+		StopType:    typecvm.SoftFirst,
+		StoppedMode: typecvm.KeepCharging,
 	}
 	executeErr := actcli.GetHCService().TCloudZiyan.Cvm.BatchStopCvm(kt, req)
 	if executeErr != nil {
