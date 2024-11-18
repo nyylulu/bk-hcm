@@ -48,7 +48,7 @@
     "@blueking/login-modal": "^1.0.1",
     "@blueking/notice-component": "^2.0.5",
     "@blueking/release-note": "^0.0.1-beta.17",
-    "@blueking/roll-request": "^1.0.0-alpha",
+    "@blueking/roll-request": "^1.0.2",
     "@types/lodash": "^4.14.182",
     "@types/qs": "^6.9.7",
     "@types/validator": "^13.12.0",

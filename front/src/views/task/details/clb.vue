@@ -94,7 +94,7 @@ const fetchCountAndStatus = async () => {
 
 const taskStatusPoll = useTimeoutPoll(() => {
   fetchCountAndStatus();
-}, 60000);
+}, 10000);
 
 watch(
   () => route.query,

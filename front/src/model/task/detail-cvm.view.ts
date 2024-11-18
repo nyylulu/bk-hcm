@@ -3,6 +3,7 @@ import { Model, Column } from '@/decorator';
 import { VendorEnum, VendorMap } from '@/common/constant';
 import { TaskDetailStatus } from '@/views/task/typings';
 import { TASK_DETAIL_STATUS_NAME } from '@/views/task/constants';
+import { getPrivateIPs } from '@/utils/common';
 
 @Model('task/detail-cvm.view')
 export class DetailCvmView {
@@ -21,13 +22,16 @@ export class DetailCvmView {
   @Column('string', { name: '失败原因' })
   reason: string;
 
-  @Column('array', { name: '内网IP' })
+  @Column('array', {
+    name: '内网IP',
+    render: ({ data }) => getPrivateIPs(data.param),
+  })
   'param.private_ipv4_addresses': string[];
 
   @Column('string', { name: '固资号' })
   'param.extension.bk_asset_id': string;
 
-  @Column('string', { name: '云厂商', option: VendorMap })
+  @Column('enum', { name: '云厂商', option: VendorMap })
   'param.vendor': VendorEnum;
 
   @Column('account', { name: '云账号' })

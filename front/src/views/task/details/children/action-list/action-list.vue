@@ -70,6 +70,7 @@ watch(
       :prop="column.id"
       :label="column.name"
       :sort="column.sort"
+      :render="column.render"
     >
       <template #default="{ row }">
         <display-value

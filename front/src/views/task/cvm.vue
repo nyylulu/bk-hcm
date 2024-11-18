@@ -97,7 +97,7 @@ watch(
 const taskStatusPoll = useTimeoutPoll(() => {
   const ids = taskList.value.filter((item) => [TaskStatus.RUNNING].includes(item.state)).map((item) => item.id);
   fetchCountAndStatus(ids);
-}, 60000);
+}, 10000);
 
 const handleSearch = (vals: ISearchCondition) => {
   searchQs.set(vals);
