@@ -10,10 +10,10 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
 
 ### 输入参数
 
-| 参数名称          | 参数类型   | 必选 | 描述       |
-|---------------|--------|----|----------|
-| crp_demand_id | int    | 是  | 资源预测需求ID |
-| page          | object | 是  | 分页设置     |
+| 参数名称      | 参数类型   | 必选 | 描述     |
+|-----------|--------|----|--------|
+| demand_id | string | 是  | 预测需求ID |
+| page      | object | 是  | 分页设置   |
 
 #### page
 
@@ -27,7 +27,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
 
 ```json
 {
-  "crp_demand_id": 387330,
+  "demand_id": "0000001z",
   "page": {
     "count": false,
     "start": 0,
@@ -45,34 +45,22 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
   "data": {
     "details": [
       {
-        "crp_demand_id": 387330,
+        "id": "00000011",
+        "demand_id": "0000001z",
         "expect_time": "2024-10-21",
-        "bg_name": "IEG互动娱乐事业群",
-        "dept_name": "IEG技术运营部",
-        "plan_product_name": "移动终端游戏",
-        "op_product_name": "运营产品",
         "obs_project": "常规项目",
         "region_name": "广州",
         "zone_name": "广州三区",
-        "demand_week": "UNPLAN_9_13W",
-        "res_pool_type": 0,
-        "device_class": "标准型S5",
         "device_type": "S5.2XLARGE16",
-        "change_cvm_amount": 0.125000,
-        "after_cvm_amount": 0.125000,
+        "change_cvm_amount": "0.125000",
         "change_core_amount": 1,
-        "after_core_amount": 1,
         "change_ram_amount": 2,
-        "after_ram_amount": 2,
-        "disk_type": null,
-        "disk_io": 0,
         "changed_disk_amount": 1,
-        "after_disk_amount": 1,
-        "demand_source": "追加需求订单",
+        "demand_source": "追加",
+        "ticket_id": "00000022",
         "crp_sn": "XQ202408221500512986",
-        "create_time": null,
-        "remark": "由 UNPLAN_9_13W 自动变为 UNPLAN_9_13W\n",
-        "res_pool": "自研池"
+        "create_time": "2024-09-01T12:00:00Z",
+        "remark": "创建资源预测需求\n"
       }
     ]
   }
@@ -96,33 +84,21 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
 
 #### data.details[n]
 
-| 参数名称                | 参数类型   | 描述         |
-|---------------------|--------|------------|
-| crp_demand_id       | int    | CRP需求ID    |
-| expect_time         | string | 期望交付时间     |
-| bg_name             | string | 事业群        |
-| dept_name           | string | 部门         |
-| plan_product_name   | string | 规划产品       |
-| op_product_name     | string | 运营产品       |
-| obs_project         | string | 项目类型       |
-| region_name         | string | 地区/城市名称    |
-| zone_name           | string | 可用区        |
-| demand_week         | string | 13周需求类型    |
-| res_pool_type       | int    | 资源池类型ID    |
-| res_pool            | string | 资源池        |
-| device_class        | string | 机型类型       |
-| device_type         | string | 机型规格       |
-| change_cvm_amount   | int    | 实例数变更值     |
-| after_cvm_amount    | int    | 实例数当前值     |
-| change_core_amount  | int    | CPU核数变更值   |
-| after_core_amount   | int    | CPU核数当前值   |
-| change_ram_amount   | int    | 内存变更值（G）   |
-| after_ram_amount    | int    | 内存当前值（G）   |
-| changed_disk_amount | int    | 磁盘数变更值（G）  |
-| after_disk_amount   | int    | 磁盘数当前值（G）  |
-| disk_type           | string | 云盘类型       |
-| disk_io             | int    | 磁盘IO（MB/s） |
-| demand_source       | string | 变更类型       |
-| crp_sn              | string | 变更单号       |
-| create_time         | string | 变更时间       |
-| remark              | string | 备注         |
+| 参数名称                | 参数类型   | 描述               |
+|---------------------|--------|------------------|
+| id                  | string | 变更记录ID           |
+| demand_id           | string | 预测需求ID           |
+| expect_time         | string | 期望交付时间           |
+| obs_project         | string | 项目类型             |
+| region_name         | string | 地区/城市名称          |
+| zone_name           | string | 可用区              |
+| device_type         | string | 机型规格             |
+| change_cvm_amount   | string | 实例数变更值，可能为正或负    |
+| change_core_amount  | int    | CPU核数变更值，可能为正或负  |
+| change_ram_amount   | int    | 内存变更值（G），可能为正或负  |
+| changed_disk_amount | int    | 磁盘数变更值（G），可能为正或负 |
+| demand_source       | string | 变更类型             |
+| ticket_id           | string | 变更需求的HCM订单号      |
+| crp_sn              | string | 变更需求的CRP订单号      |
+| create_time         | string | 变更时间             |
+| remark              | string | 备注               |

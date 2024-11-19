@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.7.1+。
+- 该接口提供版本：v9.9.9+。
 - 该接口所需权限：平台-资源预测。
 - 该接口功能描述：查询资源预测需求列表。
 
@@ -8,22 +8,22 @@
 
 POST /api/v1/woa/plans/resources/demands/list
 
-| 参数名称              | 参数类型         | 必选 | 描述                                                |
-|-------------------|--------------|----|---------------------------------------------------|
-| bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部，数量最大100                            |
-| op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部，数量最大100                          |
-| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部，数量最大100                          |
-| crp_demand_ids    | int array    | 否  | CRP需求ID列表，不传时查询全部，数量最大100                         |
-| obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                         |
-| demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                          |
-| device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                            |
-| device_types      | string array | 否  | 机型规格列表，不传时查询全部，数量最大100                            |
-| region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部，数量最大100                         |
-| zone_ids          | string array | 否  | 可用区ID列表，不传时查询全部，数量最大100                           |
-| plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                            |
-| expiring_only     | bool         | 否  | 是否包只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
-| expect_time_range | object       | 是  | 期望交付时间范围                                          |
-| page              | object       | 是  | 分页设置                                              |
+| 参数名称              | 参数类型         | 必选 | 描述                                               |
+|-------------------|--------------|----|--------------------------------------------------|
+| bk_biz_ids        | int array    | 否  | 业务ID列表，不传时查询全部，数量最大100                           |
+| op_product_ids    | int array    | 否  | 运营产品ID列表，不传时查询全部，数量最大100                         |
+| plan_product_ids  | int array    | 否  | 规划产品ID列表，不传时查询全部，数量最大100                         |
+| demand_ids        | string array | 否  | 预测需求ID列表，不传时查询全部，数量最大100                         |
+| obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                        |
+| demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                         |
+| device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                           |
+| device_types      | string array | 否  | 机型规格列表，不传时查询全部，数量最大100                           |
+| region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部，数量最大100                        |
+| zone_ids          | string array | 否  | 可用区ID列表，不传时查询全部，数量最大100                          |
+| plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                           |
+| expiring_only     | bool         | 否  | 是否只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
+| expect_time_range | object       | 是  | 期望交付时间范围                                         |
+| page              | object       | 是  | 分页设置                                             |
 
 ### expect_time_range
 
@@ -55,8 +55,8 @@ POST /api/v1/woa/plans/resources/demands/list
   "plan_product_ids": [
     20
   ],
-  "crp_demand_ids": [
-    1
+  "demand_ids": [
+    "0000001z"
   ],
   "obs_projects": [
     "常规项目"
@@ -110,7 +110,7 @@ POST /api/v1/woa/plans/resources/demands/list
     },
     "details": [
       {
-        "crp_demand_id": 387330,
+        "demand_id": "0000001z",
         "bk_biz_id": 111,
         "bk_biz_name": "业务",
         "op_product_id": 222,
@@ -120,13 +120,12 @@ POST /api/v1/woa/plans/resources/demands/list
         "status": "locked",
         "status_name": "变更中",
         "demand_class": "CVM",
-        "available_year_month": "2024-01",
         "expect_time": "2024-01-01",
         "device_class": "高IO型I6t",
         "device_type": "I6t.33XMEDIUM198",
-        "total_os": 56,
-        "applied_os": 44,
-        "remained_os": 12,
+        "total_os": "56.5",
+        "applied_os": "44.5",
+        "remained_os": "12",
         "total_cpu_core": 560,
         "applied_cpu_core": 440,
         "remained_cpu_core": 120,
@@ -142,7 +141,6 @@ POST /api/v1/woa/plans/resources/demands/list
         "zone_name": "上海二区",
         "plan_type": "预测内",
         "obs_project": "常规项目",
-        "generation_type": "采购",
         "device_family": "高IO型",
         "disk_type": "CLOUD_PREMIUM",
         "disk_type_name": "高性能云硬盘",
@@ -183,42 +181,40 @@ POST /api/v1/woa/plans/resources/demands/list
 
 #### data.details[n]
 
-| 参数名称                 | 参数类型   | 描述                                                                                |
-|----------------------|--------|-----------------------------------------------------------------------------------|
-| crp_demand_id        | int    | CRP需求ID                                                                           |
-| bk_biz_id            | int    | 业务ID                                                                              |
-| bk_biz_name          | string | 业务名称                                                                              |
-| op_product_id        | int    | 运营产品ID                                                                            |
-| op_product_name      | string | 运营产品名称                                                                            |
-| plan_product_id      | int    | 规划产品ID                                                                            |
-| plan_product_name    | string | 规划产品名称                                                                            |
-| status               | string | 需求状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中） |
-| status_name          | string | 需求状态名称                                                                            |
-| demand_class         | string | 预测的需求类型                                                                           |
-| available_year_month | string | 需求可用年月                                                                            |
-| expect_time          | string | 期望交付日期                                                                            |
-| device_class         | string | 机型类型                                                                              |
-| device_type          | string | 机型规格                                                                              |
-| total_os             | int    | 总OS数量                                                                             |
-| applied_os           | int    | 已申请OS数量                                                                           |
-| remained_os          | int    | 剩余OS数量                                                                            |
-| total_cpu_core       | int    | 总CPU核数                                                                            |
-| applied_cpu_core     | int    | 已申请CPU核数                                                                          |
-| remained_cpu_core    | int    | 剩余CPU核数                                                                           |
-| total_memory         | int    | 总内存大小                                                                             |
-| applied_memory       | int    | 已申请内存大小                                                                           |
-| remained_memory      | int    | 剩余内存大小                                                                            |
-| total_disk_size      | int    | 总云盘大小                                                                             |
-| applied_disk_size    | int    | 已申请云盘大小                                                                           |
-| remained_disk_size   | int    | 剩余云盘大小                                                                            |
-| region_id            | string | 地区/城市ID                                                                           |
-| region_name          | string | 地区/城市名称                                                                           |
-| zone_id              | string | 可用区ID                                                                             |
-| zone_name            | string | 可用区名称                                                                             |
-| plan_type            | string | 计划类型                                                                              |
-| obs_project          | string | OBS项目类型                                                                           |
-| generation_type      | string | 机型代次                                                                              |
-| device_family        | string | 机型族                                                                               |
-| disk_type            | string | 云盘类型                                                                              |
-| disk_type_name       | string | 云盘类型名称                                                                            |
-| disk_io              | int    | 云盘IO                                                                              |
+| 参数名称               | 参数类型   | 描述                                                                                |
+|--------------------|--------|-----------------------------------------------------------------------------------|
+| demand_id          | string | 预测需求ID                                                                            |
+| bk_biz_id          | int    | 业务ID                                                                              |
+| bk_biz_name        | string | 业务名称                                                                              |
+| op_product_id      | int    | 运营产品ID                                                                            |
+| op_product_name    | string | 运营产品名称                                                                            |
+| plan_product_id    | int    | 规划产品ID                                                                            |
+| plan_product_name  | string | 规划产品名称                                                                            |
+| status             | string | 需求状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中） |
+| status_name        | string | 需求状态名称                                                                            |
+| demand_class       | string | 预测的需求类型                                                                           |
+| expect_time        | string | 期望交付日期                                                                            |
+| device_class       | string | 机型类型                                                                              |
+| device_type        | string | 机型规格                                                                              |
+| total_os           | string | 总OS数量                                                                             |
+| applied_os         | string | 已申请OS数量                                                                           |
+| remained_os        | string | 剩余OS数量                                                                            |
+| total_cpu_core     | int    | 总CPU核数                                                                            |
+| applied_cpu_core   | int    | 已申请CPU核数                                                                          |
+| remained_cpu_core  | int    | 剩余CPU核数                                                                           |
+| total_memory       | int    | 总内存大小                                                                             |
+| applied_memory     | int    | 已申请内存大小                                                                           |
+| remained_memory    | int    | 剩余内存大小                                                                            |
+| total_disk_size    | int    | 总云盘大小                                                                             |
+| applied_disk_size  | int    | 已申请云盘大小                                                                           |
+| remained_disk_size | int    | 剩余云盘大小                                                                            |
+| region_id          | string | 地区/城市ID                                                                           |
+| region_name        | string | 地区/城市名称                                                                           |
+| zone_id            | string | 可用区ID                                                                             |
+| zone_name          | string | 可用区名称                                                                             |
+| plan_type          | string | 计划类型                                                                              |
+| obs_project        | string | OBS项目类型                                                                           |
+| device_family      | string | 机型族                                                                               |
+| disk_type          | string | 云盘类型                                                                              |
+| disk_type_name     | string | 云盘类型名称                                                                            |
+| disk_io            | int    | 云盘IO                                                                              |
