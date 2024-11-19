@@ -21,6 +21,8 @@
 package datagconf
 
 import (
+	"fmt"
+
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/validator"
 	tablegconf "hcm/pkg/dal/table/global-config"
@@ -49,7 +51,7 @@ type ListResp core.ListResultT[tablegconf.GlobalConfigTable]
 
 // BatchCreateReq ...
 type BatchCreateReq struct {
-	Configs []tablegconf.GlobalConfigTable `json:"configs" validate:"required,dive"`
+	Configs []GlobalConfig `json:"configs" validate:"required,min=1"`
 }
 
 // Validate BatchCreateReq
@@ -63,13 +65,19 @@ func (req *BatchCreateReq) Validate() error {
 
 // BatchUpdateReq ...
 type BatchUpdateReq struct {
-	Configs []tablegconf.GlobalConfigTable `json:"configs" validate:"required,dive"`
+	Configs []GlobalConfig `json:"configs" validate:"required,min=1"`
 }
 
 // Validate BatchUpdateReq
 func (req *BatchUpdateReq) Validate() error {
 	if err := validator.Validate.Struct(req); err != nil {
 		return err
+	}
+
+	for _, config := range req.Configs {
+		if len(config.ID) == 0 {
+			return fmt.Errorf("config id can not be empty")
+		}
 	}
 
 	return nil
@@ -106,4 +114,18 @@ func (req *FindReq) Validate() error {
 	}
 
 	return nil
+}
+
+// GlobalConfig define cvm table.
+type GlobalConfig struct {
+	// ID global config id
+	ID string `json:"id"`
+	// ConfigKey global config key, key+type is unique
+	ConfigKey string `json:"config_key"`
+	// ConfigValue global config value, json format
+	ConfigValue interface{} `json:"config_value"`
+	// ConfigType global config type
+	ConfigType string `json:"config_type"`
+	// Memo global config memo
+	Memo *string `json:"memo"`
 }

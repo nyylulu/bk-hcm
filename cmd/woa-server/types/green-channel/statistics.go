@@ -101,3 +101,27 @@ type StatisticalRecordItem struct {
 	SumDeliveredCore uint64 `json:"sum_delivered_core" bson:"sum_delivered_core"`
 	SumAppliedCore   uint64 `json:"sum_applied_core" bson:"sum_applied_core"`
 }
+
+// GetConfigsResp is get config response.
+type GetConfigsResp struct {
+	Config `json:",inline"`
+}
+
+// UpdateConfigsReq is update config request.
+type UpdateConfigsReq struct {
+	BizQuota       *int64 `json:"biz_quota" validate:"omitempty"`
+	IEGQuota       *int64 `json:"ieg_quota" validate:"omitempty"`
+	AuditThreshold *int64 `json:"audit_threshold" validate:"omitempty"`
+}
+
+// Validate UpdateConfigsReq
+func (u *UpdateConfigsReq) Validate() error {
+	return validator.Validate.Struct(u)
+}
+
+// Config is config.
+type Config struct {
+	BizQuota       int64 `json:"biz_quota"`
+	IEGQuota       int64 `json:"ieg_quota"`
+	AuditThreshold int64 `json:"audit_threshold"`
+}

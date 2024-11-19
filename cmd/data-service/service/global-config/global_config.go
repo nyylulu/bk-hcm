@@ -30,8 +30,10 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	tablegconf "hcm/pkg/dal/table/global-config"
+	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,7 +57,7 @@ func (svc *service) BatchCreateGlobalConfigs(cts *rest.Contexts) (interface{}, e
 		for index, config := range req.Configs {
 			globalConfigs[index] = tablegconf.GlobalConfigTable{
 				ConfigKey:   config.ConfigKey,
-				ConfigValue: config.ConfigValue,
+				ConfigValue: dtypes.JsonField(util.GetStrByInterface(config.ConfigValue)),
 				ConfigType:  config.ConfigType,
 				Memo:        config.Memo,
 				Creator:     cts.Kit.User,
@@ -127,12 +129,11 @@ func (svc *service) BatchUpdateGlobalConfigs(cts *rest.Contexts) (interface{}, e
 	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		for _, config := range req.Configs {
 			record := &tablegconf.GlobalConfigTable{
-				ID:      config.ID,
 				Reviser: cts.Kit.User,
 			}
 
 			if config.ConfigValue != nil {
-				record.ConfigValue = config.ConfigValue
+				record.ConfigValue = dtypes.JsonField(util.GetStrByInterface(config.ConfigValue))
 			}
 
 			if config.Memo != nil {

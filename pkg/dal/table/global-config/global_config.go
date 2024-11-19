@@ -21,7 +21,6 @@
 package tablegconf
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -51,23 +50,23 @@ var GlobalConfigTableColumnDescriptors = utils.ColumnDescriptors{
 // GlobalConfigTable define cvm table.
 type GlobalConfigTable struct {
 	// ID global config id
-	ID string `db:"id" json:"id" validate:"lte=64"`
+	ID string `db:"id" json:"id"`
 	// ConfigKey global config key, key+type is unique
-	ConfigKey string `db:"config_key" validate:"required,lte=64" json:"config_key"`
+	ConfigKey string `db:"config_key" json:"config_key"`
 	// ConfigValue global config value, json format
-	ConfigValue json.RawMessage `db:"config_value" validate:"required" json:"config_value"`
+	ConfigValue types.JsonField `db:"config_value" json:"config_value"`
 	// ConfigType global config type, enum: string/int/float/bool/map/slice
-	ConfigType string `db:"config_type" validate:"required,lte=64" json:"config_type"`
+	ConfigType string `db:"config_type" json:"config_type"`
 	// Memo global config memo
-	Memo *string `db:"memo" validate:"lte=255" json:"memo"`
+	Memo *string `db:"memo" json:"memo"`
 	// Creator 创建者
-	Creator string `db:"creator" validate:"max=64" json:"creator"`
+	Creator string `db:"creator" json:"creator"`
 	// Reviser 更新者
-	Reviser string `db:"reviser" validate:"max=64" json:"reviser"`
+	Reviser string `db:"reviser" json:"reviser"`
 	// CreatedAt 创建时间
-	CreatedAt types.Time `db:"created_at" validate:"isdefault" json:"created_at"`
+	CreatedAt types.Time `db:"created_at" json:"created_at"`
 	// UpdatedAt 更新时间
-	UpdatedAt types.Time `db:"updated_at" validate:"isdefault" json:"updated_at"`
+	UpdatedAt types.Time `db:"updated_at" json:"updated_at"`
 }
 
 // UniqueKey returns the unique key of BizOrgRel table.
@@ -133,9 +132,8 @@ func (t GlobalConfigTable) UpdateValidate() error {
 	if err := validator.Validate.Struct(t); err != nil {
 		return err
 	}
-
-	if len(t.ID) == 0 {
-		return errors.New("id is required, but not set")
+	if len(t.ID) != 0 {
+		return errors.New("id can not be updated")
 	}
 
 	// key+type 组成一个全局唯一键，所以不能更新

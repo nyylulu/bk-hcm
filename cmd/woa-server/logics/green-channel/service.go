@@ -32,6 +32,8 @@ import (
 type Logics interface {
 	GetCpuCoreSummary(kt *kit.Kit, req *gctypes.CpuCoreSummaryReq) (*gctypes.CpuCoreSummaryResp, error)
 	ListStatisticalRecord(kt *kit.Kit, req *gctypes.StatisticalRecordReq) (*gctypes.StatisticalRecordResp, error)
+	GetConfigs(kt *kit.Kit) (gctypes.Config, error)
+	UpdateConfigs(kt *kit.Kit, req *gctypes.UpdateConfigsReq) error
 }
 
 // logics green channel logics.

@@ -21,12 +21,13 @@
 package greenchannel
 
 import (
+	"net/http"
+
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
-	"net/http"
 )
 
 // InitService initial the service
@@ -59,6 +60,9 @@ type service struct {
 func (s *service) initService(h *rest.Handler) {
 	h.Add("GetGreenChannelCpuCoreSummary", http.MethodPost, "/cpu_core/summary", s.GetCpuCoreSummary)
 	h.Add("ListGreenChannelStatisticalRecord", http.MethodPost, "/statistical_record/list", s.ListStatisticalRecord)
+
+	h.Add("GetGreenChannelConfigs", http.MethodGet, "/configs", s.GetConfigs)
+	h.Add("UpdateGreenChannelConfigs", http.MethodPatch, "/configs", s.UpdateConfigs)
 }
 
 // bizService 业务下的接口
