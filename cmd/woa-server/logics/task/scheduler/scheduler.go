@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"time"
@@ -450,6 +451,8 @@ func (s *scheduler) AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error 
 	return nil
 }
 
+type checker func(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error)
+
 // AutoAuditTicket system automatic audit resource apply ticket callback
 func (s *scheduler) AutoAuditTicket(kit *kit.Kit, param *types.ApplyAutoAuditReq) (*types.ApplyAutoAuditRst, error) {
 	filter := mapstr.MapStr{
@@ -474,31 +477,87 @@ func (s *scheduler) AutoAuditTicket(kit *kit.Kit, param *types.ApplyAutoAuditReq
 		Remark:   "approved",
 	}
 
-	total := uint(0)
-	for _, suborder := range order.Suborders {
-		total += suborder.Replicas
-		// 所有物理机资源申请（除故障替换外），都需要人工审核
-		if order.RequireType != 4 {
-			if suborder.ResourceType == types.ResourceTypePm {
-				logs.Errorf("failed to auto audit order %d, for resource type include %s, rid: %s", param.OrderId,
-					types.ResourceTypePm, kit.Rid)
-				rst.Approval = 0
-				rst.Remark = fmt.Sprintf("order %d resource type include %s", param.OrderId, types.ResourceTypePm)
-				return rst, nil
-			}
+	checkerRules := []checker{
+		checkResourceType,
+		checkTotalDevice,
+		checkRequireType,
+	}
+	for _, checkerRule := range checkerRules {
+		reason, needAudit, err := checkerRule(s, kit, order)
+		if err != nil {
+			logs.Errorf("failed to check %s, err: %v, rid: %s", reflect.TypeOf(checkerRule).Name(), err, kit.Rid)
+			return nil, err
+		}
+
+		if needAudit {
+			rst.Approval = 0
+			rst.Remark = reason
+			return rst, nil
 		}
 	}
 
-	auditThreshold := uint(50)
-	if total > auditThreshold {
-		logs.Errorf("failed to auto audit order %d, for apply number exceeds %d, rid: %s", param.OrderId,
-			auditThreshold, kit.Rid)
-		rst.Approval = 0
-		rst.Remark = fmt.Sprintf("order %d apply number %d exceed auto audit threshold %d", param.OrderId, total,
-			auditThreshold)
+	return rst, nil
+}
+
+// checkTotalDevice auto audit threshold device number
+const auditThresholdDevice = uint(50)
+
+// checkTotalDevice check total device number
+func checkTotalDevice(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	totalDevice := uint(0)
+	for _, suborder := range order.Suborders {
+		totalDevice += suborder.Replicas
 	}
 
-	return rst, nil
+	if totalDevice > auditThresholdDevice {
+		reason := fmt.Sprintf("order %d apply device number %d exceed auto audit threshold %d",
+			order.OrderId, totalDevice, auditThresholdDevice)
+		return reason, true, nil
+	}
+
+	return "", false, nil
+}
+
+// checkRequireType check require type
+func checkRequireType(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	if order.RequireType == enumor.RequireTypeGreenChannel {
+		greenChannelConfig, err := s.gcLogics.GetConfigs(kit)
+		if err != nil {
+			return "", false, err
+		}
+
+		totalAppliedCore := uint(0)
+		for _, suborder := range order.Suborders {
+			totalAppliedCore += suborder.AppliedCore
+		}
+
+		if int64(totalAppliedCore) > greenChannelConfig.AuditThreshold {
+			return fmt.Sprintf("order %d apply core %d exceed green channel auto approval audit threshold %d",
+				order.OrderId, totalAppliedCore, greenChannelConfig.AuditThreshold), true, nil
+		}
+
+		return "", false, nil
+	}
+
+	return "", false, nil
+}
+
+// checkResourceType ...
+func checkResourceType(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	// 所有物理机资源申请（除故障替换外），都需要人工审核
+	for _, suborder := range order.Suborders {
+		if order.RequireType == enumor.RequireTypeExpired {
+			continue
+		}
+
+		if suborder.ResourceType == types.ResourceTypePm {
+			reason := fmt.Sprintf("order %d apply resource type %s, but require type is %s",
+				order.OrderId, suborder.ResourceType, order.RequireType)
+			return reason, true, nil
+		}
+	}
+
+	return "", false, nil
 }
 
 // ApproveTicket approve or reject resource apply ticket
