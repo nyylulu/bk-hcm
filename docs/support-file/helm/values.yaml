@@ -736,6 +736,8 @@ bkCmdbCreateBizDocsUrl: "http://cmdb.bk.com/docs"
 enableCloudSelection: true
 # 是否启用账单账号功能
 enableAccountBill: true
+# 自研云clb业务白名单，白名单内的业务会出现业务下clb页面入口, 填入字符串形式json数组
+ziyanClbBizWhitelist: "[]"
 
 ## 加密配置，Note: 首次部署后不可修改，否则数据将无法解密
 ##
