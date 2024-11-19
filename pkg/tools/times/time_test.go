@@ -48,3 +48,26 @@ func TestDaysInMonth(t *testing.T) {
 		assert.Equal(t, days, testCase.days)
 	}
 }
+
+func TestGetMondayOfWeek(t *testing.T) {
+	testCases := []struct {
+		now    time.Time
+		monday time.Time
+	}{{
+		now:    time.Date(2024, 11, 18, 0, 0, 0, 0, time.Local),
+		monday: time.Date(2024, 11, 18, 0, 0, 0, 0, time.Local),
+	},
+		{
+			now:    time.Date(2024, 11, 21, 0, 0, 0, 0, time.Local),
+			monday: time.Date(2024, 11, 18, 0, 0, 0, 0, time.Local),
+		},
+		{
+			now:    time.Date(2024, 11, 24, 0, 0, 0, 0, time.Local),
+			monday: time.Date(2024, 11, 18, 0, 0, 0, 0, time.Local),
+		},
+	}
+	for _, testCase := range testCases {
+		monday := GetMondayOfWeek(testCase.now)
+		assert.Equal(t, monday, testCase.monday)
+	}
+}

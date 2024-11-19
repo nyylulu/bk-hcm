@@ -21,7 +21,9 @@
 package greenchannel
 
 import (
+	"fmt"
 	"strings"
+	"time"
 
 	model "hcm/cmd/woa-server/model/task"
 	gctypes "hcm/cmd/woa-server/types/green-channel"
@@ -29,6 +31,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/times"
 )
 
 // GetCpuCoreSummary get cpu core summary.
@@ -55,7 +58,7 @@ func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *gctypes.CpuCoreSummaryReq) 
 		{pkg.BKDBMatch: filter},
 		{pkg.BKDBGroup: map[string]interface{}{
 			"_id":   nil,
-			"count": map[string]interface{}{pkg.BKDBSum: "$success_num"}},
+			"count": map[string]interface{}{pkg.BKDBSum: "$delivered_core"}},
 		},
 	}
 
@@ -117,8 +120,8 @@ func (l *logics) ListStatisticalRecord(kt *kit.Kit, req *gctypes.StatisticalReco
 		{pkg.BKDBGroup: map[string]interface{}{
 			"_id":              "$bk_biz_id",
 			"unique_order_ids": map[string]interface{}{pkg.BKDBAddToSet: "$order_id"},
-			sumDeliveredCore:   map[string]interface{}{pkg.BKDBSum: "$success_num"},
-			sumAppliedCore:     map[string]interface{}{pkg.BKDBSum: "$total_num"},
+			sumDeliveredCore:   map[string]interface{}{pkg.BKDBSum: "$delivered_core"},
+			sumAppliedCore:     map[string]interface{}{pkg.BKDBSum: "$applied_core"},
 		}},
 		{pkg.BKDBProject: map[string]interface{}{
 			"_id":            0,
@@ -152,4 +155,36 @@ func (l *logics) ListStatisticalRecord(kt *kit.Kit, req *gctypes.StatisticalReco
 	}
 
 	return &gctypes.StatisticalRecordResp{Details: aggRst}, nil
+}
+
+// CanApplyHost check if can apply host
+func (l *logics) CanApplyHost(kt *kit.Kit, bizID int64, appliedCount uint) (bool, string, error) {
+	now := time.Now()
+	monday := times.GetMondayOfWeek(now)
+
+	summaryReq := &gctypes.CpuCoreSummaryReq{
+		DateRange: gctypes.DateRange{
+			Start: times.DateTimeItem{Year: monday.Year(), Month: int(monday.Month()), Day: monday.Day()},
+			End:   times.DateTimeItem{Year: now.Year(), Month: int(now.Month()), Day: now.Day()},
+		},
+		BkBizIDs: []int64{bizID},
+	}
+	summary, err := l.GetCpuCoreSummary(kt, summaryReq)
+	if err != nil {
+		logs.Errorf("failed to get cpu core summary, err: %v, req: %v, rid: %s", err, summaryReq, kt.Rid)
+		return false, "", err
+	}
+
+	config, err := l.GetConfigs(kt)
+	if err != nil {
+		logs.Errorf("failed to get green channel configs, err: %v, rid: %s", err, kt.Rid)
+		return false, "", err
+	}
+
+	if uint(summary.SumDeliveredCore)+appliedCount > uint(config.BizQuota) {
+		return false, fmt.Sprintf("业务(%d)本周小额绿通已交付%d核心，本次申请%d核心，超过本周总额度限制:%d核心", bizID,
+			summary.SumDeliveredCore, appliedCount, config.BizQuota), nil
+	}
+
+	return true, "", nil
 }

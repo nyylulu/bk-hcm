@@ -178,7 +178,7 @@ func (l *logics) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (
 	for deviceType := range deviceTypeCountMap {
 		deviceTypes = append(deviceTypes, deviceType)
 	}
-	deviceTypeCpuCoreMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
+	deviceTypeInfoMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
 		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
 			err, deviceTypes, kt.Rid)
@@ -187,12 +187,12 @@ func (l *logics) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (
 
 	var deliveredCore int64 = 0
 	for deviceType, count := range deviceTypeCountMap {
-		deviceTypeCpuCore, ok := deviceTypeCpuCoreMap[deviceType]
+		deviceTypeInfo, ok := deviceTypeInfoMap[deviceType]
 		if !ok {
 			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
 			return 0, fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
-		deliveredCore += deviceTypeCpuCore.CPUAmount * int64(count)
+		deliveredCore += deviceTypeInfo.CPUAmount * int64(count)
 	}
 
 	return deliveredCore, nil

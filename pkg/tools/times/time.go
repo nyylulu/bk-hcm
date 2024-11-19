@@ -145,3 +145,18 @@ func (r *DateTimeItem) Validate() error {
 func (r *DateTimeItem) GetTime() time.Time {
 	return time.Date(r.Year, time.Month(r.Month), r.Day, 0, 0, 0, 0, time.UTC)
 }
+
+// GetMondayOfWeek 获取本周的周一日期
+func GetMondayOfWeek(now time.Time) time.Time {
+	weekday := now.Weekday()
+
+	// 计算距离本周一的天数差
+	daysToMonday := int(time.Monday - weekday)
+	if weekday == time.Sunday {
+		daysToMonday = -6
+	}
+
+	// 计算本周一的日期
+	monday := now.AddDate(0, 0, daysToMonday)
+	return monday
+}

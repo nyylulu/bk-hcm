@@ -34,6 +34,7 @@ type Logics interface {
 	ListStatisticalRecord(kt *kit.Kit, req *gctypes.StatisticalRecordReq) (*gctypes.StatisticalRecordResp, error)
 	GetConfigs(kt *kit.Kit) (gctypes.Config, error)
 	UpdateConfigs(kt *kit.Kit, req *gctypes.UpdateConfigsReq) error
+	CanApplyHost(kt *kit.Kit, bizID int64, appliedCount uint) (bool, string, error)
 }
 
 // logics green channel logics.

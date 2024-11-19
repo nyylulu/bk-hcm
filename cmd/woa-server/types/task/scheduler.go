@@ -50,10 +50,14 @@ type ApplyOrder struct {
 	Total             uint               `json:"total_num" bson:"total_num"`
 	SuccessNum        uint               `json:"success_num" bson:"success_num"`
 	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
-	RetryTime         uint               `json:"retry_time" bson:"retry_time"`
-	ModifyTime        uint               `json:"modify_time" bson:"modify_time"`
-	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
+	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
+	AppliedCore uint `json:"applied_core" bson:"applied_core,omitempty"`
+	// DeliveredCore 注意：该字段目前只会记录虚拟机交付的核心数量
+	DeliveredCore uint      `json:"delivered_core" bson:"delivered_core,omitempty"`
+	RetryTime     uint      `json:"retry_time" bson:"retry_time"`
+	ModifyTime    uint      `json:"modify_time" bson:"modify_time"`
+	CreateAt      time.Time `json:"create_at" bson:"create_at"`
+	UpdateAt      time.Time `json:"update_at" bson:"update_at"`
 }
 
 // ResourceType resource type
@@ -628,6 +632,7 @@ type Suborder struct {
 	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
 	Remark            string        `json:"remark" bson:"remark"`
 	Spec              *ResourceSpec `json:"spec" bson:"spec"`
+	AppliedCore       uint          `json:"applied_core" bson:"applied_core,omitempty"`
 }
 
 // Validate whether Suborder is valid
