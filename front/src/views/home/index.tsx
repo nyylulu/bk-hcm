@@ -27,7 +27,7 @@ import { headRouteConfig } from '@/router/header-config';
 import logo from '@/assets/image/logo.png';
 import './index.scss';
 
-import { MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
+import { MENU_ROLLING_SERVER_MANAGEMENT, MENU_GREEN_CHANNEL_MANAGEMENT } from '@/constants/menu-symbol';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { VERSION, BK_COMPONENT_API_URL, BK_HCM_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } =
@@ -78,7 +78,7 @@ export default defineComponent({
 
     // 过渡方式，最终希望所有路由通过name跳转
     const getRouteLinkParams = (config: any) => {
-      if ([MENU_ROLLING_SERVER_MANAGEMENT].includes(config.name)) {
+      if ([MENU_ROLLING_SERVER_MANAGEMENT, MENU_GREEN_CHANNEL_MANAGEMENT].includes(config.name)) {
         return { name: config.name };
       }
       return { path: config.path };

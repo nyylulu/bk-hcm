@@ -4,8 +4,14 @@ import { ModelProperty, ModelPropertyGeneric, ModelPropertySearch, ModelProperty
 import { findProperty } from '@/model/utils';
 import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
 
-type DateRangeType = Record<'toady' | 'last7d' | 'last15d' | 'last30d' | 'naturalMonth', () => [Date[], Date[]]>;
+dayjs.extend(isoWeek);
+
+type DateRangeType = Record<
+  'toady' | 'last7d' | 'last15d' | 'last30d' | 'naturalMonth' | 'naturalIsoWeek',
+  () => [Date[], Date[]]
+>;
 type RuleItemOpVal = Omit<RulesItem, 'field'>;
 type GetDefaultRule = (property: ModelProperty, custom?: RuleItemOpVal) => RuleItemOpVal;
 
@@ -128,13 +134,19 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
 export const transformFlatCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
   const params: Record<string, any> = {};
   for (const [id, value] of Object.entries(condition || {})) {
-    const property = findProperty(id, properties);
+    const property = findProperty(id, properties) as ModelPropertySearch;
     if (!property) {
       continue;
     }
 
     // 忽略空值
     if ([null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length)) {
+      continue;
+    }
+
+    const converter = property.converter || property.meta?.search?.converter;
+    if (converter) {
+      Object.assign(params, converter(value));
       continue;
     }
 
@@ -184,6 +196,12 @@ export const getDateRange = (key: keyof DateRangeType, include?: boolean) => {
       const now = dayjs();
       const start = now.startOf('month').toDate();
       const end = now.endOf('month').toDate();
+      return [start, end];
+    },
+    naturalIsoWeek() {
+      const now = dayjs();
+      const start = now.startOf('isoWeek').toDate();
+      const end = now.endOf('isoWeek').toDate();
       return [start, end];
     },
   };

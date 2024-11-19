@@ -90,6 +90,14 @@ export const useCommonStore = defineStore({
         id: 'rolling_server_manage',
         path: /^\/platform\/rolling-server/,
       },
+
+      // 小额绿通
+      {
+        type: 'green_channel',
+        action: 'find',
+        id: 'green_channel',
+        path: /^\/platform\/green-channel/,
+      },
     ],
     isNoticeAlert: false, // 消息通知的显示状态
   }),

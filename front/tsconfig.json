@@ -4,6 +4,7 @@
     "strictPropertyInitialization": false,
     "allowSyntheticDefaultImports": true,
     "experimentalDecorators": true,
+    "emitDecoratorMetadata": true,
     "importHelpers": true,
     "resolveJsonModule": true,
     "allowJs": true,
