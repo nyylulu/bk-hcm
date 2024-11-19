@@ -30,14 +30,29 @@ import './index.scss';
 import { MENU_BUSINESS_TASK_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
-const { VERSION, BK_COMPONENT_API_URL, BK_HCM_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } =
-  window.PROJECT_CONFIG;
+const {
+  VERSION,
+  BK_COMPONENT_API_URL,
+  BK_HCM_DOMAIN,
+  ENABLE_CLOUD_SELECTION,
+  ENABLE_ACCOUNT_BILL,
+  ZIYAN_CLB_BIZ_WHITELIST,
+} = window.PROJECT_CONFIG;
 
 export default defineComponent({
   name: 'Home',
   setup() {
     const NAV_WIDTH = 240;
     const NAV_TYPE = 'top-bottom';
+
+    let ziyanClbBizWhitelist;
+    try {
+      // 兼容 undefined, null, 'null', 'undefined', '', '[]'
+      ziyanClbBizWhitelist = ZIYAN_CLB_BIZ_WHITELIST ? JSON.parse(ZIYAN_CLB_BIZ_WHITELIST) ?? [] : [];
+    } catch (error) {
+      console.error('Failed to parse ZIYAN_CLB_BIZ_WHITELIST', error);
+      ziyanClbBizWhitelist = [];
+    }
 
     const { t } = useI18n();
     const route = useRoute();
@@ -46,7 +61,7 @@ export default defineComponent({
     const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
     const { fetchAllCloudAreas } = useCloudAreaStore();
     const { fetchRegions } = useRegionsStore();
-    const { whereAmI } = useWhereAmI();
+    const { whereAmI, getBizsId } = useWhereAmI();
     const { getAuthVerifyData, authVerifyData } = useVerify(); // 权限中心权限
 
     const openedKeys: string[] = [];
@@ -259,17 +274,23 @@ export default defineComponent({
                   activeKey={route.meta.activeKey as string}>
                   {menus.value
                     .map((menuItem) => {
+                      const { hasPageRoute, groupTitle, notMenu, checkAuth, checkZiyanBizWhitelist } =
+                        menuItem.meta || {};
+
                       // menuItem.children 是一个数组, 且没有配置 hasPageRoute(页面级子路由)
-                      if (Array.isArray(menuItem.children) && !menuItem.meta?.hasPageRoute) {
+                      if (Array.isArray(menuItem.children) && !hasPageRoute) {
                         const children = menuItem.children
                           // 过滤掉非菜单的路由项
                           .filter((child) => !child.meta?.notMenu)
                           // 构建子菜单项
                           .map((child) => {
-                            // 如果配置了 checkAuth, 则检查菜单是否具有访问权限
+                            const { checkAuth, checkZiyanBizWhitelist } = child.meta || {};
+
                             if (
-                              child.meta?.checkAuth &&
-                              !authVerifyData.value?.permissionAction[child.meta?.checkAuth as string]
+                              // 配置了 checkAuth 且不具备访问权限，隐藏菜单
+                              (checkAuth && !authVerifyData.value?.permissionAction[checkAuth as string]) ||
+                              // 配置了 checkZiyanBizWhitelist，且当前业务不在白名单中，隐藏菜单
+                              (checkZiyanBizWhitelist && !ziyanClbBizWhitelist.includes(getBizsId()))
                             ) {
                               return null;
                             }
@@ -303,17 +324,19 @@ export default defineComponent({
                         if (!children.length) return null;
 
                         return (
-                          <Menu.Group key={menuItem.path as string} name={menuItem.meta?.groupTitle as string}>
+                          <Menu.Group key={menuItem.path as string} name={groupTitle as string}>
                             {{ default: () => children }}
                           </Menu.Group>
                         );
                       }
 
-                      // 如果配置了 notMenu、或者配置了 checkAuth 且不具备访问权限, 则隐藏菜单
                       if (
-                        menuItem.meta?.notMenu ||
-                        (menuItem.meta?.checkAuth &&
-                          !authVerifyData.value?.permissionAction[menuItem.meta.checkAuth as string])
+                        // notMenu = true，隐藏菜单
+                        notMenu ||
+                        // 配置了 checkAuth 且不具备访问权限，隐藏菜单
+                        (checkAuth && !authVerifyData.value?.permissionAction[checkAuth as string]) ||
+                        // 配置了 checkZiyanBizWhitelist，且当前业务不在白名单中，隐藏菜单
+                        (checkZiyanBizWhitelist && !ziyanClbBizWhitelist.includes(getBizsId()))
                       ) {
                         return null;
                       }
