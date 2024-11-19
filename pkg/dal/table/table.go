@@ -191,6 +191,10 @@ const (
 	ResPlanCrpDemandTable = "res_plan_crp_demand"
 	// ResPlanPenaltyTable is res_plan_penalty table's name.
 	ResPlanPenaltyTable = "res_plan_penalty"
+	// ResPlanDemandPenaltyBaseTable is res_plan_demand_penalty_base table's name.
+	ResPlanDemandPenaltyBaseTable = "res_plan_demand_penalty_base"
+	// ResPlanDemandChangelogTable is res_plan_ticket_changelog table's name.
+	ResPlanDemandChangelogTable = "res_plan_demand_changelog"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -365,13 +369,15 @@ var TableMap = map[Name]struct{}{
 	ResourceFlowRelTable:            {},
 	ResourceFlowLockTable:           {},
 
-	ResPlanTicketTable:       {},
-	ResPlanDemandTable:       {},
-	ResPlanTicketStatusTable: {},
-	WoaZoneTable:             {},
-	WoaDeviceTypeTable:       {},
-	ResPlanCrpDemandTable:    {},
-	ResPlanPenaltyTable:      {},
+	ResPlanTicketTable:            {},
+	ResPlanDemandTable:            {},
+	ResPlanTicketStatusTable:      {},
+	WoaZoneTable:                  {},
+	WoaDeviceTypeTable:            {},
+	ResPlanCrpDemandTable:         {},
+	ResPlanPenaltyTable:           {},
+	ResPlanDemandPenaltyBaseTable: {},
+	ResPlanDemandChangelogTable:   {},
 
 	MainAccountTable: {},
 	RootAccountTable: {},

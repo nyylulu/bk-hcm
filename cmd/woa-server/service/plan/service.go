@@ -99,6 +99,4 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("GetCvmChargeTypeDeviceType", http.MethodPost, "/config/findmany/config/cvm/charge_type/device_type",
 		s.GetCvmChargeTypeDeviceType)
 
-	// transfer
-	h.Add("TransferResPlanTicket", http.MethodPost, "/plans/resources/tickets/transfer", s.TransferResPlanTicket)
 }

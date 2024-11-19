@@ -312,3 +312,48 @@ func TestGetStrValsFromArrMapInterfaceByKey(t *testing.T) {
 		})
 	}
 }
+
+func TestGetStrSliceByInterface(t *testing.T) {
+	type CustomString *[]string
+	cs := CustomString(&[]string{"xxx"})
+	nilPtr := CustomString(nil)
+
+	type args struct {
+		data interface{}
+	}
+	tests := []struct {
+		name    string
+		args    args
+		want    []string
+		wantErr bool
+	}{
+		// 预期解析失败的测试用例
+		{"customStruct", args{data: struct{}{}}, []string{}, true},
+		{"interface", args{data: []interface{}{}}, []string{}, true},
+		{"string", args{data: "xxx"}, []string{}, true},
+		{"nil", args{data: nil}, []string{}, true},
+		// 预期解析成功的测试用例
+		{"empty", args{data: []string{}}, []string{}, false},
+		{"array", args{data: [1]string{"x"}}, []string{"x"}, false},
+		{"nilPtr", args{data: nilPtr}, []string{}, false},
+		{"pass", args{data: []string{"x", "y", "z"}}, []string{"x", "y", "z"}, false},
+		{"customType", args{data: CustomString(&[]string{"xxx"})}, []string{"xxx"}, false},
+		{"nestedPtr", args{data: &cs}, []string{"xxx"}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := GetStrSliceByInterface(tt.args.data)
+			if (err != nil) != tt.wantErr {
+				t.Errorf("GetStrSliceByInterface() error = %v, wantErr %v", err, tt.wantErr)
+				return
+			}
+			if err != nil {
+				t.Logf("GetStrSliceByInterface() error = %v", err)
+				return
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetStrSliceByInterface() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}

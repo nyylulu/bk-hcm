@@ -154,6 +154,8 @@ type Set interface {
 
 	ResPlanTicket() resplan.ResPlanTicketInterface
 	ResPlanDemand() resplan.ResPlanDemandInterface
+	ResPlanDemandPenaltyBase() resplan.DemandPenaltyBaseInterface
+	ResPlanDemandChangelog() resplan.DemandChangelogInterface
 	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
 	ResPlanCrpDemand() resplan.ResPlanCrpDemandInterface
 	ResPlanPenalty() resplan.ResPlanPenaltyInterface
@@ -846,6 +848,24 @@ func (s *set) ResPlanTicket() resplan.ResPlanTicketInterface {
 // ResPlanDemand resource plan demand dao.
 func (s *set) ResPlanDemand() resplan.ResPlanDemandInterface {
 	return &resplan.ResPlanDemandDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanDemandPenaltyBase resource plan demand penalty base dao.
+func (s *set) ResPlanDemandPenaltyBase() resplan.DemandPenaltyBaseInterface {
+	return &resplan.DemandPenaltyBaseDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanDemandChangelog resource plan demand changelog dao.
+func (s *set) ResPlanDemandChangelog() resplan.DemandChangelogInterface {
+	return &resplan.DemandChangelogDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

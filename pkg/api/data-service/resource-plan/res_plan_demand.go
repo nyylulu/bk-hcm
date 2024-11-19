@@ -1,0 +1,165 @@
+/*
+ * TencentBlueKing is pleased to support the open source community by making
+ * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
+ * Copyright (C) 2022 THL A29 Limited,
+ * a Tencent company. All rights reserved.
+ * Licensed under the MIT License (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at http://opensource.org/licenses/MIT
+ * Unless required by applicable law or agreed to in writing,
+ * software distributed under the License is distributed on
+ * an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
+ * either express or implied. See the License for the
+ * specific language governing permissions and limitations under the License.
+ *
+ * We undertake not to change the open source license (MIT license) applicable
+ *
+ * to the current version of the project delivered to anyone in the future.
+ */
+
+// Package resourceplan ...
+package resourceplan
+
+import (
+	"time"
+
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+	"hcm/pkg/dal/dao/types"
+	tablers "hcm/pkg/dal/table/resource-plan/res-plan-demand"
+
+	"github.com/shopspring/decimal"
+)
+
+// ResPlanDemandCreateReq create request
+type ResPlanDemandCreateReq struct {
+	Demands []ResPlanDemandCreate `json:"demands" validate:"required,min=1,max=100"`
+}
+
+// Validate validate
+func (r *ResPlanDemandCreateReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, c := range r.Demands {
+		if err := c.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ResPlanDemandCreate create request
+type ResPlanDemandCreate struct {
+	BkBizID         int64               `json:"bk_biz_id" validate:"required"`
+	BkBizName       string              `json:"bk_biz_name" validate:"required"`
+	OpProductID     int64               `json:"op_product_id" validate:"required"`
+	OpProductName   string              `json:"op_product_name" validate:"required"`
+	PlanProductID   int64               `json:"plan_product_id" validate:"required"`
+	PlanProductName string              `json:"plan_product_name" validate:"required"`
+	VirtualDeptID   int64               `json:"virtual_dept_id" validate:"required"`
+	VirtualDeptName string              `json:"virtual_dept_name" validate:"required"`
+	DemandClass     enumor.DemandClass  `json:"demand_class" validate:"required"`
+	ObsProject      enumor.ObsProject   `json:"obs_project" validate:"required"`
+	ExpectTime      string              `json:"expect_time" validate:"required"`
+	PlanType        enumor.PlanTypeCode `json:"plan_type" validate:"required"`
+	AreaID          string              `json:"area_id" validate:"required"`
+	AreaName        string              `json:"area_name" validate:"required"`
+	RegionID        string              `json:"region_id" validate:"required"`
+	RegionName      string              `json:"region_name" validate:"required"`
+	ZoneID          string              `json:"zone_id" validate:"omitempty"`
+	ZoneName        string              `json:"zone_name" validate:"omitempty"`
+	DeviceFamily    string              `json:"device_family" validate:"required"`
+	DeviceClass     string              `json:"device_class" validate:"required"`
+	DeviceType      string              `json:"device_type" validate:"required"`
+	CoreType        string              `json:"core_type" validate:"required"`
+	DiskType        enumor.DiskType     `json:"disk_type" validate:"required"`
+	DiskTypeName    string              `json:"disk_type_name" validate:"required"`
+	OS              decimal.Decimal     `json:"os" validate:"required"`
+	CpuCore         int64               `json:"cpu_core" validate:"required"`
+	Memory          int64               `json:"memory" validate:"required"`
+	DiskSize        int64               `json:"disk_size" validate:"required"`
+	DiskIO          int64               `json:"disk_io" validate:"required"`
+}
+
+// Validate validate
+func (r *ResPlanDemandCreate) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	_, err := time.Parse(constant.DateLayout, r.ExpectTime)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// ResPlanDemandBatchUpdateReq batch update request
+type ResPlanDemandBatchUpdateReq struct {
+	Demands []ResPlanDemandUpdateReq `json:"demands" validate:"required,min=1,max=100"`
+}
+
+// Validate validate
+func (r *ResPlanDemandBatchUpdateReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	for _, c := range r.Demands {
+		if err := c.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// ResPlanDemandUpdateReq batch update request
+type ResPlanDemandUpdateReq struct {
+	ID              string           `json:"id" validate:"required"`
+	OpProductID     int64            `json:"op_product_id"`
+	OpProductName   string           `json:"op_product_name"`
+	PlanProductID   int64            `json:"plan_product_id"`
+	PlanProductName string           `json:"plan_product_name"`
+	VirtualDeptID   int64            `json:"virtual_dept_id"`
+	VirtualDeptName string           `json:"virtual_dept_name"`
+	CoreType        string           `json:"core_type"`
+	OS              *decimal.Decimal `json:"os"`
+	CpuCore         *int64           `json:"cpu_core"`
+	Memory          *int64           `json:"memory"`
+	DiskSize        *int64           `json:"disk_size"`
+}
+
+// Validate validate
+func (r *ResPlanDemandUpdateReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// ResPlanDemandLockOpReq lock operation request
+type ResPlanDemandLockOpReq struct {
+	IDs []string `json:"ids" validate:"required,min=1,max=100,dive,gt=0"`
+}
+
+// Validate validate
+func (r ResPlanDemandLockOpReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// ResPlanDemandListResult list result
+type ResPlanDemandListResult types.ListResult[tablers.ResPlanDemandTable]
+
+// ResPlanDemandListReq list request
+type ResPlanDemandListReq struct {
+	core.ListReq `json:",inline"`
+}
+
+// Validate validate
+func (r *ResPlanDemandListReq) Validate() error {
+	return r.ListReq.Validate()
+}

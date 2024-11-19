@@ -25,10 +25,8 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	mtypes "hcm/pkg/dal/dao/types/meta"
-	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
-	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -286,73 +284,6 @@ func getMetaNameMapsFromIDMap(zoneMap map[string]string, regionAreaMap map[strin
 		regionNameMap[item.RegionName] = item
 	}
 	return zoneNameMap, regionNameMap
-}
-
-// convert CreateResPlanDemandReq slice to ResPlanTicketTable slice.
-func (s *service) convToRPDemandTableSlice(kt *kit.Kit, ticketID string, requests []ptypes.CreateResPlanDemandReq) (
-	[]rpd.ResPlanDemandTable, error) {
-
-	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
-	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
-	if err != nil {
-		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	demands := make([]rpd.ResPlanDemandTable, 0, len(requests))
-	for _, req := range requests {
-		var cvm, cbs dtypes.JsonField
-		if slices.Contains(req.DemandResTypes, enumor.DemandResTypeCVM) {
-			deviceType := req.Cvm.DeviceType
-			cvm, err = dtypes.NewJsonField(rpd.Cvm{
-				ResMode:      req.Cvm.ResMode,
-				DeviceType:   deviceType,
-				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
-				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
-				CoreType:     deviceTypeMap[deviceType].CoreType,
-				Os:           *req.Cvm.Os,
-				CpuCore:      *req.Cvm.CpuCore,
-				Memory:       *req.Cvm.Memory,
-			})
-			if err != nil {
-				logs.Errorf("cvm new json field failed, err: %v, rid: %s", err, kt.Rid)
-				return nil, err
-			}
-		}
-
-		if slices.Contains(req.DemandResTypes, enumor.DemandResTypeCBS) {
-			cbs, err = dtypes.NewJsonField(rpd.Cbs{
-				DiskType:     req.Cbs.DiskType,
-				DiskTypeName: req.Cbs.DiskType.Name(),
-				DiskIo:       *req.Cbs.DiskIo,
-				DiskSize:     *req.Cbs.DiskSize,
-			})
-			if err != nil {
-				logs.Errorf("cbs new json field failed, err: %v, rid: %s", err, kt.Rid)
-				return nil, err
-			}
-		}
-
-		demands = append(demands, rpd.ResPlanDemandTable{
-			TicketID:     ticketID,
-			ObsProject:   req.ObsProject,
-			ExpectTime:   req.ExpectTime,
-			ZoneID:       req.ZoneID,
-			ZoneName:     zoneMap[req.ZoneID],
-			RegionID:     req.RegionID,
-			RegionName:   regionAreaMap[req.RegionID].RegionName,
-			AreaID:       regionAreaMap[req.RegionID].AreaID,
-			AreaName:     regionAreaMap[req.RegionID].AreaName,
-			DemandSource: req.DemandSource,
-			Remark:       req.Remark,
-			Cvm:          cvm,
-			Cbs:          cbs,
-			Creator:      kt.User,
-			Reviser:      kt.User,
-		})
-	}
-
-	return demands, nil
 }
 
 // GetResPlanTicket get resource plan ticket detail.

@@ -154,6 +154,43 @@ func GetMapInterfaceByInerface(data interface{}) ([]interface{}, error) {
 	return values, nil
 }
 
+// GetStrSliceByInterface interface to []string
+func GetStrSliceByInterface(data interface{}) ([]string, error) {
+	values := make([]string, 0)
+
+	if data == nil {
+		return nil, fmt.Errorf("data is nil")
+	}
+
+	typeOf := reflect.TypeOf(data)
+	valueOf := reflect.ValueOf(data)
+	for typeOf.Kind() == reflect.Ptr {
+		typeOf = typeOf.Elem()
+		valueOf = valueOf.Elem()
+	}
+
+	switch typeOf.Kind() {
+	case reflect.Slice, reflect.Array:
+		if !valueOf.IsValid() || valueOf.IsZero() {
+			return values, nil
+		}
+
+		eleType := typeOf.Elem()
+		switch eleType.Kind() {
+		case reflect.String:
+			for i := 0; i < valueOf.Len(); i++ {
+				values = append(values, valueOf.Index(i).String())
+			}
+		default:
+			return nil, errors.New("not []string, type is: " + typeOf.Kind().String())
+		}
+	default:
+		return nil, errors.New("not []string, type is: " + typeOf.Kind().String())
+	}
+
+	return values, nil
+}
+
 // SliceStrToInt 将字符串切片转换为整型切片
 func SliceStrToInt(sliceStr []string) ([]int, error) {
 	sliceInt := make([]int, 0)
@@ -290,7 +327,7 @@ func SliceInterfaceToString(faceSlice []interface{}) ([]string, error) {
 	for i, item := range faceSlice {
 		var ok bool
 
-		//如果转化失败则返回错误.
+		// 如果转化失败则返回错误.
 		if results[i], ok = item.(string); !ok {
 			return nil, errors.New("can't convert to string")
 		}
@@ -309,7 +346,7 @@ func SliceInterfaceToBool(faceSlice []interface{}) ([]bool, error) {
 	for i, item := range faceSlice {
 		var ok bool
 
-		//如果转化失败则返回错误.
+		// 如果转化失败则返回错误.
 		if results[i], ok = item.(bool); !ok {
 			return nil, errors.New("can't convert to bool")
 		}

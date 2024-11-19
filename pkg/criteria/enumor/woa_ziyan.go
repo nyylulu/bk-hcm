@@ -519,6 +519,28 @@ func (d DemandStatus) Name() string {
 	return demandStatusNameMaps[d]
 }
 
+// PlanTypeCode is resource plan type code.
+type PlanTypeCode string
+
+const (
+	// PlanTypeCodeInPlan is in plan.
+	PlanTypeCodeInPlan PlanTypeCode = "in_plan"
+	// PlanTypeCodeOutPlan is out plan.
+	PlanTypeCodeOutPlan PlanTypeCode = "out_plan"
+)
+
+// Validate PlanTypeCode.
+func (p PlanTypeCode) Validate() error {
+	switch p {
+	case PlanTypeCodeInPlan:
+	case PlanTypeCodeOutPlan:
+	default:
+		return fmt.Errorf("unsupported plan type code: %s", p)
+	}
+
+	return nil
+}
+
 // PlanType is resource plan type.
 // TODO: 考虑HCM和CRP的计划类型是否拆为2个类型
 type PlanType string
@@ -666,6 +688,49 @@ const (
 
 // ItsmServiceNameApply ITSM中的资源申请流程在 HCM 中的名称（此处名称并非与 ITSM 中的流程名称完全一致）
 const ItsmServiceNameApply = "资源申领流程"
+
+// DemandPenaltyBaseSource is demand penalty base source.
+type DemandPenaltyBaseSource string
+
+const (
+	DemandPenaltyBaseSourceLocal DemandPenaltyBaseSource = "local"
+	DemandPenaltyBaseSourceCrp   DemandPenaltyBaseSource = "crp"
+)
+
+// Validate DemandPenaltyBaseSource.
+func (d DemandPenaltyBaseSource) Validate() error {
+	switch d {
+	case DemandPenaltyBaseSourceLocal:
+	case DemandPenaltyBaseSourceCrp:
+	default:
+		return fmt.Errorf("unsupported demand penalty base source: %s", d)
+	}
+
+	return nil
+}
+
+type DemandChangelogType string
+
+const (
+	DemandChangelogTypeAppend DemandChangelogType = "append"
+	DemandChangelogTypeAdjust DemandChangelogType = "adjust"
+	DemandChangelogTypeDelete DemandChangelogType = "delete"
+	DemandChangelogTypeExpend DemandChangelogType = "expend"
+)
+
+// Validate DemandChangelogType.
+func (d DemandChangelogType) Validate() error {
+	switch d {
+	case DemandChangelogTypeAppend:
+	case DemandChangelogTypeAdjust:
+	case DemandChangelogTypeDelete:
+	case DemandChangelogTypeExpend:
+	default:
+		return fmt.Errorf("unsupported demand changelog type: %s", d)
+	}
+
+	return nil
+}
 
 const (
 	// ResourcePoolBiz 资源池业务

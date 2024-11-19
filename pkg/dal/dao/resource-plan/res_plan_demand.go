@@ -21,22 +21,26 @@
 package resplan
 
 import (
+	"errors"
 	"fmt"
+	"slices"
 
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	"hcm/pkg/dal/table"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	"hcm/pkg/dal/table/utils"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	cvt "hcm/pkg/tools/converter"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -44,9 +48,11 @@ import (
 // ResPlanDemandInterface only used for resource plan demand interface.
 type ResPlanDemandInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.ResPlanDemandTable) ([]string, error)
-	Update(kt *kit.Kit, expr *filter.Expression, model *rpd.ResPlanDemandTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanDemandListResult, error)
+	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *rpd.ResPlanDemandTable) error
+	List(kt *kit.Kit, opt *types.ListOption) (*rpproto.ResPlanDemandListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
+	ExamineAndLockAllRPDemand(kt *kit.Kit, demandIDs []string) error
+	UnlockAllResPlanDemand(kt *kit.Kit, demandIDs []string) error
 }
 
 var _ ResPlanDemandInterface = new(ResPlanDemandDao)
@@ -90,8 +96,9 @@ func (d ResPlanDemandDao) CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []rpd.Re
 	return ids, nil
 }
 
-// Update update resource plan demand.
-func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, model *rpd.ResPlanDemandTable) error {
+// UpdateWithTx update resource plan demand.
+func (d ResPlanDemandDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *filter.Expression,
+	model *rpd.ResPlanDemandTable) error {
 	if filterExpr == nil {
 		return errf.New(errf.InvalidParameter, "filter expr is nil")
 	}
@@ -113,28 +120,21 @@ func (d ResPlanDemandDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 
 	sql := fmt.Sprintf(`UPDATE %s %s %s`, model.TableName(), setExpr, whereExpr)
 
-	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		effected, err := d.Orm.Txn(txn).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
-		if err != nil {
-			logs.ErrorJson("update resource plan demand failed, filter: %v, err: %v, rid: %v", filterExpr, err, kt.Rid)
-			return nil, err
-		}
-
-		if effected == 0 {
-			logs.ErrorJson("update resource plan demand, but record not found, filter: %v, rid: %v", filterExpr, kt.Rid)
-		}
-
-		return nil, nil
-	})
+	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
+		logs.ErrorJson("update resource plan demand failed, filter: %v, err: %v, rid: %s", filterExpr, err, kt.Rid)
 		return err
+	}
+
+	if effected == 0 {
+		logs.ErrorJson("update resource plan demand, but record not found, filter: %v, rid: %s", filterExpr, kt.Rid)
 	}
 
 	return nil
 }
 
 // List get resource plan demand list.
-func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResPlanDemandListResult, error) {
+func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rpproto.ResPlanDemandListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list res plan demand options is nil")
 	}
@@ -159,7 +159,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 			return nil, err
 		}
 
-		return &rtypes.ResPlanDemandListResult{Count: count}, nil
+		return &rpproto.ResPlanDemandListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -175,7 +175,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rtypes.ResP
 		return nil, err
 	}
 
-	return &rtypes.ResPlanDemandListResult{Count: 0, Details: details}, nil
+	return &rpproto.ResPlanDemandListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete resource plan demand with tx.
@@ -193,6 +193,68 @@ func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
 		logs.ErrorJson("delete resource plan demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// ExamineAndLockAllRPDemand examine and lock all resource plan demand.
+func (d ResPlanDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, demandIDs []string) error {
+	if len(demandIDs) == 0 {
+		return errf.New(errf.InvalidParameter, "demand ids can not be empty")
+	}
+
+	opt := tools.ContainersExpression("id", demandIDs)
+	whereExpr, whereValue, err := opt.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	_, err = d.Orm.AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		details := make([]rpd.ResPlanDemandTable, 0)
+		selectSql := fmt.Sprintf(`SELECT id, locked FROM %s %s`, table.ResPlanDemandTable, whereExpr)
+		if err = d.Orm.Txn(txn).Select(kt.Ctx, &details, selectSql, whereValue); err != nil {
+			return nil, err
+		}
+
+		haveLocked := slices.ContainsFunc(details, func(ele rpd.ResPlanDemandTable) bool {
+			return ele.Locked != nil && cvt.PtrToVal(ele.Locked) == enumor.CrpDemandLocked
+		})
+		if haveLocked {
+			return nil, errors.New("some resource plan demand has been locked")
+		}
+
+		updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanDemandTable, enumor.CrpDemandLocked,
+			whereExpr)
+		return d.Orm.Txn(txn).Update(kt.Ctx, updateSql, whereValue)
+	})
+
+	if err != nil {
+		logs.ErrorJson("examine and lock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// UnlockAllResPlanDemand unlock all resource plan demand.
+func (d ResPlanDemandDao) UnlockAllResPlanDemand(kt *kit.Kit, demandIDs []string) error {
+	if len(demandIDs) == 0 {
+		return errf.New(errf.InvalidParameter, "demand ids can not be empty")
+	}
+
+	opt := tools.ContainersExpression("id", demandIDs)
+	whereExpr, whereValue, err := opt.SQLWhereExpr(tools.DefaultSqlWhereOption)
+	if err != nil {
+		return err
+	}
+
+	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanDemandTable, enumor.CrpDemandUnLocked,
+		whereExpr)
+
+	if _, err = d.Orm.Do().Update(kt.Ctx, updateSql, whereValue); err != nil {
+		logs.ErrorJson("unlock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
