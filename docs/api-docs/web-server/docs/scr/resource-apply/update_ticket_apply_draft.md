@@ -10,17 +10,17 @@ POST /api/v1/woa/task/update/apply/ticket
 
 ### 输入参数
 
-| 参数名称           | 参数类型         | 必选 | 描述                                                                 |
-|----------------|--------------|----|--------------------------------------------------------------------|
-| order_id       | int	         | 否	 | 若order_id传值且非0，则更新order_id对应的申请单据草稿；若order_id未传值或为0，则创建申请单据草稿      |
-| bk_biz_id      | int	         | 是	 | CC业务ID                                                             |
-| bk_username    | string       | 是	 | 资源申请提单人                                                            |
-| follower	      | string       | 否	 | 关注人，如果有多人，以","分隔，如："name1,name2"                                   |
-| enable_notice	 | bool	        | 否	 | 是否通知用户单据完成，默认为false                                                |
-| require_type   | int	         | 是	 | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换;  6: 滚服项目; 7: 小额绿通 |
-| expect_time    | string       | 是	 | 期望交付时间                                                             |
-| remark	        | string       | 否	 | 备注                                                                 |
-| suborders	     | object array | 是  | 资源申请子需求单信息                                                         |
+| 参数名称           | 参数类型         | 必选 | 描述                                                            |
+|----------------|--------------|----|---------------------------------------------------------------|
+| order_id       | int	         | 否	 | 若order_id传值且非0，则更新order_id对应的申请单据草稿；若order_id未传值或为0，则创建申请单据草稿 |
+| bk_biz_id      | int	         | 是	 | CC业务ID                                                        |
+| bk_username    | string       | 是	 | 资源申请提单人                                                       |
+| follower	      | string       | 否	 | 关注人，如果有多人，以","分隔，如："name1,name2"                              |
+| enable_notice	 | bool	        | 否	 | 是否通知用户单据完成，默认为false                                           |
+| require_type   | int	         | 是	 | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换;  6: 滚服项目; 7: 小额绿通    |
+| expect_time    | string       | 是	 | 期望交付时间                                                        |
+| remark	        | string       | 否	 | 备注                                                            |
+| suborders	     | object array | 是  | 资源申请子需求单信息                                                    |
 
 #### suborders
 
@@ -179,7 +179,7 @@ POST /api/v1/woa/task/update/apply/ticket
         "zone": "ap-shanghai-2",
         "device_group": "GAMESERVER",
         "device_type": "D4-8-200-10",
-        "image": "hub.oa.com/library/tlinux2.2:v1.6",
+        "image": "test.xxx/library/tlinux2.2:v1.6",
         "mount_path": "/data1",
         "network_type": "TENTHOUSAND",
         "cpu_provider": "Intel"
@@ -211,7 +211,7 @@ POST /api/v1/woa/task/update/apply/ticket
         "zone": "上海-青浦",
         "device_group": "GAMESERVER",
         "device_type": "D4-8-200-10",
-        "image": "hub.oa.com/library/tlinux2.2:v1.6",
+        "image": "test.xxx/library/tlinux2.2:v1.6",
         "kernel": "",
         "mount_path": "/data1",
         "network_type": "TENTHOUSAND"

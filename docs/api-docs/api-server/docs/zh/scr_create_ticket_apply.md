@@ -184,7 +184,7 @@ POST /api/v1/woa/task/create/apply
         "zone": "ap-shanghai-2",
         "device_group": "GAMESERVER",
         "device_type": "D4-8-200-10",
-        "image": "hub.oa.com/library/tlinux2.2:v1.6",
+        "image": "test.xxx/library/tlinux2.2:v1.6",
         "mount_path": "/data1",
         "network_type": "TENTHOUSAND",
         "cpu_provider": "Intel"
@@ -216,7 +216,7 @@ POST /api/v1/woa/task/create/apply
         "zone": "上海-青浦",
         "device_group": "GAMESERVER",
         "device_type": "D4-8-200-10",
-        "image": "hub.oa.com/library/tlinux2.2:v1.6",
+        "image": "test.xxx/library/tlinux2.2:v1.6",
         "kernel": "",
         "mount_path": "/data1",
         "network_type": "TENTHOUSAND"

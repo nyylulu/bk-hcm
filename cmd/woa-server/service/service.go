@@ -177,36 +177,8 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 
 	// Mongo开关打开才进行Init检测
 	if cc.WoaServer().UseMongo {
-		// init mongodb client
-		mConf := cc.WoaServer().MongoDB
-		mongoConf, err := mongo.NewConf(&mConf)
+		loopW, watchDB, err := initMongoDB(kt, dis)
 		if err != nil {
-			return nil, err
-		}
-		if err = mongodb.InitClient("", mongoConf); err != nil {
-			return nil, err
-		}
-
-		wConf := cc.WoaServer().Watch
-		watchConf, err := mongo.NewConf(&wConf)
-		if err != nil {
-			return nil, err
-		}
-
-		if err = mongodb.InitClient("", watchConf); err != nil {
-			return nil, err
-		}
-
-		// init task service logics
-		loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
-		if err != nil {
-			logs.Errorf("new loop stream failed, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-
-		watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
-		if err != nil {
-			logs.Errorf("new watch mongo client failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
@@ -237,6 +209,43 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		gcLogic:     gcLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
+}
+
+// initMongoDB init mongodb client and watch client
+func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterface, *local.Mongo, error) {
+	// init mongodb client
+	mConf := cc.WoaServer().MongoDB
+	mongoConf, err := mongo.NewConf(&mConf)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err = mongodb.InitClient("", mongoConf); err != nil {
+		return nil, nil, err
+	}
+
+	wConf := cc.WoaServer().Watch
+	watchConf, err := mongo.NewConf(&wConf)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	if err = mongodb.InitClient("", watchConf); err != nil {
+		return nil, nil, err
+	}
+
+	// init task service logics
+	loopW, err := stream.NewLoopStream(mongoConf.GetMongoConf(), dis)
+	if err != nil {
+		logs.Errorf("new loop stream failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+
+	watchDB, err := local.NewMgo(watchConf.GetMongoConf(), time.Minute)
+	if err != nil {
+		logs.Errorf("new watch mongo client failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+	return loopW, watchDB, err
 }
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
