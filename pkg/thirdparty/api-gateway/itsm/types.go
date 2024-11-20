@@ -85,6 +85,8 @@ const (
 	TicketKeyApplyLink string = "ZIYUANSHENQINGDANLIANJIE"
 	// TicketKeyNeedSysAudit 是否需要系统审核
 	TicketKeyNeedSysAudit string = "SHIFOUXUYAOXITONGSHENHE"
+	// TicketKeyApplyReason 申请理由
+	TicketKeyApplyReason string = "apply_reason"
 
 	TicketValTitleFormat     string = "资源申请单据审核[order_id:%d]"
 	TicketValNeedSysAuditYes string = "SHI"
