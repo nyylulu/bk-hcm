@@ -491,5 +491,18 @@ func (svc *cvmSvc) BatchResetTCloudCvm(cts *rest.Contexts) (interface{}, error) 
 		}
 	}
 
+	syncClient := synctcloud.NewClient(svc.dataCli, client)
+	params := &synctcloud.SyncBaseParams{
+		AccountID: req.AccountID,
+		Region:    req.Region,
+		CloudIDs:  req.CloudIDs,
+	}
+
+	_, err = syncClient.Cvm(cts.Kit, params, &synctcloud.SyncCvmOption{})
+	if err != nil {
+		logs.Errorf("sync tcloud cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
 	return nil, nil
 }

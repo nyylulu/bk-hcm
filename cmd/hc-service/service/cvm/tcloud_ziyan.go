@@ -22,12 +22,13 @@ package cvm
 import (
 	"net/http"
 
-	synctcloud "hcm/cmd/hc-service/logics/res-sync/tcloud"
+	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/capability"
 	adcore "hcm/pkg/adaptor/types/core"
 	typecvm "hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	protocloud "hcm/pkg/api/data-service/cloud"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -35,6 +36,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/esb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
 
@@ -104,20 +106,21 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	listReq := &core.ListReq{
-		Fields: []string{"cloud_id"},
+	listReq := &protocloud.CvmListReq{
 		Filter: tools.ContainersExpression("id", req.IDs),
 		Page:   core.NewDefaultBasePage(),
 	}
-	listResp, err := svc.dataCli.Global.Cvm.ListCvm(cts.Kit, listReq)
+	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
 		return nil, err
 	}
 
 	cloudIDs := make([]string, 0, len(listResp.Details))
+	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -130,22 +133,22 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 		CloudIDs: cloudIDs,
 	}
 	if err = client.StartCvm(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to start tcloud cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		logs.Errorf("request adaptor to start tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
 		return nil, err
 	}
 
-	syncClient := synctcloud.NewClient(svc.dataCli, client)
-
-	params := &synctcloud.SyncBaseParams{
-		AccountID: req.AccountID,
-		Region:    req.Region,
-		CloudIDs:  cloudIDs,
-	}
-
-	_, err = syncClient.Cvm(cts.Kit, params, &synctcloud.SyncCvmOption{})
-	if err != nil {
-		logs.Errorf("sync tcloud cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
+	for bizID, hostIDs := range bizIDToHostIDs {
+		params := &syncziyan.SyncHostParams{
+			AccountID: req.AccountID,
+			BizID:     bizID,
+			HostIDs:   hostIDs,
+		}
+		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		if err != nil {
+			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -162,20 +165,21 @@ func (svc *cvmSvc) BatchStopTCloudZiyanCvm(cts *rest.Contexts) (interface{}, err
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	listReq := &core.ListReq{
-		Fields: []string{"cloud_id"},
+	listReq := &protocloud.CvmListReq{
 		Filter: tools.ContainersExpression("id", req.IDs),
 		Page:   core.NewDefaultBasePage(),
 	}
-	listResp, err := svc.dataCli.Global.Cvm.ListCvm(cts.Kit, listReq)
+	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
 		return nil, err
 	}
 
 	cloudIDs := make([]string, 0, len(listResp.Details))
+	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -190,22 +194,22 @@ func (svc *cvmSvc) BatchStopTCloudZiyanCvm(cts *rest.Contexts) (interface{}, err
 		StoppedMode: req.StoppedMode,
 	}
 	if err = client.StopCvm(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to stop tcloud cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		logs.Errorf("request adaptor to stop tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
 		return nil, err
 	}
 
-	syncClient := synctcloud.NewClient(svc.dataCli, client)
-
-	params := &synctcloud.SyncBaseParams{
-		AccountID: req.AccountID,
-		Region:    req.Region,
-		CloudIDs:  cloudIDs,
-	}
-
-	_, err = syncClient.Cvm(cts.Kit, params, &synctcloud.SyncCvmOption{})
-	if err != nil {
-		logs.Errorf("sync tcloud cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
+	for bizID, hostIDs := range bizIDToHostIDs {
+		params := &syncziyan.SyncHostParams{
+			AccountID: req.AccountID,
+			BizID:     bizID,
+			HostIDs:   hostIDs,
+		}
+		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		if err != nil {
+			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -222,20 +226,21 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	listReq := &core.ListReq{
-		Fields: []string{"cloud_id"},
+	listReq := &protocloud.CvmListReq{
 		Filter: tools.ContainersExpression("id", req.IDs),
 		Page:   core.NewDefaultBasePage(),
 	}
-	listResp, err := svc.dataCli.Global.Cvm.ListCvm(cts.Kit, listReq)
+	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
 		return nil, err
 	}
 
 	cloudIDs := make([]string, 0, len(listResp.Details))
+	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -249,22 +254,22 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 		StopType: req.StopType,
 	}
 	if err = client.RebootCvm(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to reboot tcloud cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		logs.Errorf("request adaptor to reboot tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
 		return nil, err
 	}
 
-	syncClient := synctcloud.NewClient(svc.dataCli, client)
-
-	params := &synctcloud.SyncBaseParams{
-		AccountID: req.AccountID,
-		Region:    req.Region,
-		CloudIDs:  cloudIDs,
-	}
-
-	_, err = syncClient.Cvm(cts.Kit, params, &synctcloud.SyncCvmOption{})
-	if err != nil {
-		logs.Errorf("sync tcloud cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
+	for bizID, hostIDs := range bizIDToHostIDs {
+		params := &syncziyan.SyncHostParams{
+			AccountID: req.AccountID,
+			BizID:     bizID,
+			HostIDs:   hostIDs,
+		}
+		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		if err != nil {
+			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	return nil, nil
@@ -355,6 +360,37 @@ func (svc *cvmSvc) BatchResetTCloudZiyanCvm(cts *rest.Contexts) (any, error) {
 		if _, err = client.ResetCvmInstance(cts.Kit, opt); err != nil {
 			logs.Errorf("request adaptor to tcloud ziyan reset cvm instance failed, err: %v, opt: %+v, cloudID: %s, "+
 				"rid: %s", err, cvt.PtrToVal(req), cloudID, cts.Kit.Rid)
+			return nil, err
+		}
+	}
+
+	// 同步主机信息
+	listReq := &protocloud.CvmListReq{
+		Filter: tools.ContainersExpression("cloud_id", req.CloudIDs),
+		Page:   core.NewDefaultBasePage(),
+	}
+	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
+	if err != nil {
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, cloudIDs: %v, rid: %s",
+			err, req.CloudIDs, cts.Kit.Rid)
+		return nil, err
+	}
+
+	bizIDToHostIDs := make(map[int64][]int64)
+	for _, one := range listResp.Details {
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
+	}
+
+	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
+	for bizID, hostIDs := range bizIDToHostIDs {
+		params := &syncziyan.SyncHostParams{
+			AccountID: req.AccountID,
+			BizID:     bizID,
+			HostIDs:   hostIDs,
+		}
+		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		if err != nil {
+			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
 	}
