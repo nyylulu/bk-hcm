@@ -10,14 +10,15 @@ import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 
-import qs from 'qs';
 import { useI18n } from 'vue-i18n';
 import { useUserStore } from '@/store';
+import { QueryRuleOPEnum } from '@/typings';
 import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import useSearchQs from '@/hooks/use-search-qs';
 import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { getRecycleStageOpts } from '@/api/host/recycle';
@@ -245,11 +246,17 @@ export default defineComponent({
     };
 
     const searchRulesKey = 'host_recycle_applications_rules';
+    const searchQs = useSearchQs({
+      key: 'initial_filter',
+      properties: [
+        { id: 'requireType', type: 'number', name: 'requireType', op: QueryRuleOPEnum.IN },
+        { id: 'orderId', type: 'number', name: 'orderId', op: QueryRuleOPEnum.IN },
+        { id: 'suborder_id', type: 'number', name: 'suborder_id', op: QueryRuleOPEnum.IN },
+      ],
+    });
     const filterOrders = (searchRulesStr?: string) => {
-      const { initial_filter } = route.query ?? {};
-      if (initial_filter) {
-        Object.assign(formModel, qs.parse(initial_filter as string, { comma: true, allowEmptyArrays: true }));
-      }
+      // 合并默认条件值
+      Object.assign(formModel, searchQs.get(route.query));
       // 回填
       if (searchRulesStr) {
         // 解决人员选择器搜索问题

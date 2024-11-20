@@ -6,8 +6,8 @@ import type { IDataListProps } from '../../typings';
 import usePage from '@/hooks/use-page';
 import useTableSettings from '@/hooks/use-table-settings';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import useSearchQs from '@/hooks/use-search-qs';
 import { useRollingServerStore } from '@/store/rolling-server';
-import qs from 'qs';
 import routerAction from '@/router/utils/action';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
@@ -45,15 +45,13 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           text: true,
           theme: 'primary',
           onClick() {
+            const searchQs = useSearchQs();
             routerAction.open({
               name: 'ApplicationsManage',
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',
-                initial_filter: qs.stringify(
-                  { orderId: [data.order_id] },
-                  { arrayFormat: 'brackets', encode: false, allowEmptyArrays: true },
-                ),
+                initial_filter: searchQs.build({ orderId: [data.order_id] }),
               },
             });
           },
