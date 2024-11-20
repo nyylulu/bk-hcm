@@ -581,6 +581,7 @@ onMounted(() => {
             @success="handleSuccess"
             :is-edit="isEdit"
             :detail="formDetail"
+            :show="isShowSideSlider"
             @edit="handleEdit"
             v-model:isFormDataChanged="isFormDataChanged"
           ></component>

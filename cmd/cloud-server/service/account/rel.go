@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -40,8 +41,14 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 	accountType := cts.Request.QueryParameter("account_type")
 
 	// validate biz and authorize
-	err = handler.BizOperateAuth(cts, &handler.ValidWithAuthOption{Authorizer: a.authorizer, ResType: meta.Biz,
-		Action: meta.Find})
+	opt := &handler.ValidWithAuthOption{
+		Authorizer: a.authorizer, ResType: meta.Biz,
+		Action: meta.Access,
+		BasicInfo: &types.CloudResourceBasicInfo{
+			ResType: enumor.AccountCloudResType,
+			BkBizID: bkBizID,
+		}}
+	err = handler.BizOperateAuth(cts, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -50,7 +57,7 @@ func (a *accountSvc) ListByBkBizID(cts *rest.Contexts) (interface{}, error) {
 		BkBizIDs:    []int64{bkBizID},
 		AccountType: accountType,
 	}
-	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit,listReq)
+	accounts, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit, listReq)
 	if err != nil {
 		logs.Errorf("fail to query biz account, err: %v, bizID: %s, rid:%s", err, bkBizID, cts.Kit.Rid)
 		return nil, err
