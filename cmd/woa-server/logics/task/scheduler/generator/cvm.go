@@ -23,7 +23,6 @@ import (
 	"time"
 
 	cfgtypes "hcm/cmd/woa-server/types/config"
-	cvmtypes "hcm/cmd/woa-server/types/cvm"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -427,7 +426,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 }
 
 func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if cvmtypes.RequireType(order.RequireType) == cvmtypes.RollingServer {
+	if order.RequireType == enumor.RequireTypeRollServer {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

@@ -111,7 +111,7 @@
 | suborder_id         | string    | 资源申请子单号                                                                                                    |
 | bk_biz_id           | int       | 业务ID                                                                                                       |
 | bk_username         | string    | 提单人                                                                                                        |
-| require_type        | int       | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换; 5: 短租项目; 6: 滚服项目; 7: 小额绿通                                         |
+| require_type        | int       | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换;  6: 滚服项目; 7: 小额绿通                                         |
 | resource_type       | string    | 资源类型。"QCLOUDCVM": 腾讯云虚拟机, "IDCPM": IDC物理机, "QCLOUDDVM": Qcloud富容器, "IDCDVM": IDC富容器                        |
 | expect_time         | string    | 期望交付时间                                                                                                     |
 | description         | string    | 主单备注                                                                                                       |

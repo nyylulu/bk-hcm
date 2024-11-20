@@ -15,7 +15,7 @@ POST /api/v1/woa/cvm/create/apply/order
 | bk_biz_id    | int	   | 是	 | CC业务ID                                                             |
 | bk_module_id | int    | 是	 | CC业务模块ID                                                           |
 | bk_username  | string | 是	 | 资源申请提单人                                                            |
-| require_type | int	   | 是	 | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换; 5: 短租项目; 6: 滚服项目; 7: 小额绿通 |
+| require_type | int	   | 是	 | 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤; 4: 故障替换;  6: 滚服项目; 7: 小额绿通 |
 | replicas     | int    | 是	 | 需求资源数量                                                             |
 | remark	      | string | 否	 | 备注                                                                 |
 | spec	        | object | 是  | 资源需求声明                                                             |

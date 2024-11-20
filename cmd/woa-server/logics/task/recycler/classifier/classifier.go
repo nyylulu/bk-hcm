@@ -113,20 +113,6 @@ var MapGroupProperty = map[RecycleGrpType]RecycleGroupProperty{
 		Pool:          table.PoolPrivate,
 		CostConcerned: false,
 	},
-	RecycleGrpCVMPriRentImmediate: {
-		ResourceType:  table.ResourceTypeCvm,
-		RecycleType:   table.RecycleTypeRent,
-		ReturnType:    table.RetPlanImmediate,
-		Pool:          table.PoolPrivate,
-		CostConcerned: false,
-	},
-	RecycleGrpCVMPriRentDelay: {
-		ResourceType:  table.ResourceTypeCvm,
-		RecycleType:   table.RecycleTypeRent,
-		ReturnType:    table.RetPlanDelay,
-		Pool:          table.PoolPrivate,
-		CostConcerned: false,
-	},
 	RecycleGrpCVMPubRegularImmediate: {
 		ResourceType:  table.ResourceTypeCvm,
 		RecycleType:   table.RecycleTypeRegular,
@@ -165,20 +151,6 @@ var MapGroupProperty = map[RecycleGrpType]RecycleGroupProperty{
 	RecycleGrpCVMPubSpringDelay: {
 		ResourceType:  table.ResourceTypeCvm,
 		RecycleType:   table.RecycleTypeSpring,
-		ReturnType:    table.RetPlanDelay,
-		Pool:          table.PoolPublic,
-		CostConcerned: false,
-	},
-	RecycleGrpCVMPubRentImmediate: {
-		ResourceType:  table.ResourceTypeCvm,
-		RecycleType:   table.RecycleTypeRent,
-		ReturnType:    table.RetPlanImmediate,
-		Pool:          table.PoolPublic,
-		CostConcerned: false,
-	},
-	RecycleGrpCVMPubRentDelay: {
-		ResourceType:  table.ResourceTypeCvm,
-		RecycleType:   table.RecycleTypeRent,
 		ReturnType:    table.RetPlanDelay,
 		Pool:          table.PoolPublic,
 		CostConcerned: false,
@@ -415,11 +387,6 @@ func getRecycleType(host *table.RecycleHost) table.RecycleType {
 		return table.RecycleTypeSpring
 	}
 
-	// 短租项目
-	if isRentCvm(host) {
-		return table.RecycleTypeRent
-	}
-
 	// 判断“回收类型”是否滚服项目
 	if isRecycleRollProject(host) {
 		return table.RecycleTypeRollServer
@@ -548,19 +515,6 @@ func isSpringWindow() bool {
 	return false
 }
 
-// isRentCvm verify if given host is cvm with obs project "短租项目"
-func isRentCvm(host *table.RecycleHost) bool {
-	if host.ResourceType != table.ResourceTypeCvm {
-		return false
-	}
-
-	if host.ObsProject == "短租项目" {
-		return true
-	}
-
-	return false
-}
-
 // isRecycleRollProject verify if given host is cvm with obs project "滚服项目"
 func isRecycleRollProject(host *table.RecycleHost) bool {
 	if host.ResourceType != table.ResourceTypeCvm {
@@ -617,14 +571,6 @@ func cvmPoolPublic(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpTy
 			return RecycleGrpCVMPubSpringDelay
 		}
 	}
-	if host.RecycleType == table.RecycleTypeRent {
-		if plan.CvmPlan == table.RetPlanImmediate {
-			return RecycleGrpCVMPubRentImmediate
-		}
-		if plan.CvmPlan == table.RetPlanDelay {
-			return RecycleGrpCVMPubRentDelay
-		}
-	}
 	if host.RecycleType == table.RecycleTypeRollServer { // 滚服项目
 		if plan.CvmPlan == table.RetPlanImmediate {
 			return RecycleGrpCVMPubRollServerImmediate
@@ -659,14 +605,6 @@ func cvmPoolPrivate(host *table.RecycleHost, plan *types.ReturnPlan) RecycleGrpT
 		}
 		if plan.CvmPlan == table.RetPlanDelay {
 			return RecycleGrpCVMPriSpringDelay
-		}
-	}
-	if host.RecycleType == table.RecycleTypeRent {
-		if plan.CvmPlan == table.RetPlanImmediate {
-			return RecycleGrpCVMPriRentImmediate
-		}
-		if plan.CvmPlan == table.RetPlanDelay {
-			return RecycleGrpCVMPriRentDelay
 		}
 	}
 	if host.RecycleType == table.RecycleTypeRollServer { // 滚服项目

@@ -558,7 +558,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 }
 
 func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if types.RequireType(order.RequireType) == types.RollingServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

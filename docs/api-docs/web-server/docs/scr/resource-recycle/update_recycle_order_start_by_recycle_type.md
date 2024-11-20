@@ -10,16 +10,16 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
 
 ### 输入参数
 
-| 参数名称            | 参数类型    | 必选 | 描述                          |
-|--------------------|-----------|------|------------------------------|
-| suborder_id_types  | object array | 是   | 回收子单据ID跟数组，数量最大限制100 |
+| 参数名称              | 参数类型         | 必选 | 描述                   |
+|-------------------|--------------|----|----------------------|
+| suborder_id_types | object array | 是  | 回收子单据ID跟数组，数量最大限制100 |
 
 #### sub_order_id_types
 
-| 参数名称        | 参数类型    | 必选  | 描述           |
-|----------------|------------|------|---------------|
-| suborder_id    | string     | 是   | 回收子单据ID    |
-| recycle_type   | string     | 是   | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、短租项目、滚服项目) |
+| 参数名称         | 参数类型   | 必选 | 描述                                 |
+|--------------|--------|----|------------------------------------|
+| suborder_id  | string | 是  | 回收子单据ID                            |
+| recycle_type | string | 是  | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、滚服项目) |
 
 ### 调用示例
 
@@ -42,21 +42,21 @@ POST /api/v1/woa/task/start/recycle/order/by/recycle_type
 
 ```json
 {
-  "result":true,
-  "code":0,
-  "message":"success",
+  "result": true,
+  "code": 0,
+  "message": "success",
   "data": null
 }
 ```
 
 ### 响应参数说明
 
-| 参数名称    | 参数类型       | 描述               |
-|------------|--------------|--------------------|
-| result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
-| code       | int          | 错误编码。 0表示success，>0表示失败错误  |
-| message    | string       | 请求失败返回的错误信息 |
-| data	     | object array | 请求返回的数据        |
+| 参数名称    | 参数类型         | 描述                         |
+|---------|--------------|----------------------------|
+| result  | bool         | 请求成功与否。true:请求成功；false请求失败 |
+| code    | int          | 错误编码。 0表示success，>0表示失败错误  |
+| message | string       | 请求失败返回的错误信息                |
+| data	   | object array | 请求返回的数据                    |
 
 #### data
 
