@@ -2,6 +2,7 @@
 import usePage from '@/hooks/use-page';
 import { getModel } from '@/model/manager';
 import { getColumnName } from '@/model/utils';
+import { ModelPropertyColumn } from '@/model/typings';
 import { StatsListView } from '@/model/green-channel/stats-list.view';
 import type { IDataListProps } from '../typings';
 
@@ -9,7 +10,7 @@ withDefaults(defineProps<IDataListProps>(), {});
 
 const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
-const properties = getModel(StatsListView).getProperties();
+const properties = getModel(StatsListView).getProperties<ModelPropertyColumn>();
 </script>
 
 <template>

@@ -252,6 +252,7 @@ export default defineComponent({
         { id: 'requireType', type: 'number', name: 'requireType', op: QueryRuleOPEnum.IN },
         { id: 'orderId', type: 'number', name: 'orderId', op: QueryRuleOPEnum.IN },
         { id: 'suborder_id', type: 'number', name: 'suborder_id', op: QueryRuleOPEnum.IN },
+        { id: 'bkUsername', type: 'user', name: 'bkUsername', op: QueryRuleOPEnum.IN },
       ],
     });
     const filterOrders = (searchRulesStr?: string) => {

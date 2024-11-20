@@ -8,7 +8,7 @@ import { convertDateRangeToObject, getDateRange } from '@/utils/search';
 export interface IGlobalQuota {
   ieg_quota: number;
   biz_quota: number;
-  auto_approval_border: number;
+  audit_threshold: number;
 }
 
 export interface ICpuCoreSummary {
@@ -31,6 +31,8 @@ export interface ICpuCoreSummaryParams {
 
 export const useGreenChannelQuotaStore = defineStore('green-channel-quota', () => {
   const { getBusinessApiPath } = useWhereAmI();
+
+  const updateQuotaConfigLoading = ref(false);
 
   const globalQuotaConfig = ref<Partial<IGlobalQuota & ICpuCoreSummary>>({});
 
@@ -64,9 +66,33 @@ export const useGreenChannelQuotaStore = defineStore('green-channel-quota', () =
     }
   };
 
+  const updateQuotaConfig = async (data: Partial<IGlobalQuota>) => {
+    updateQuotaConfigLoading.value = true;
+    try {
+      await http.patch('/api/v1/woa/green_channels/configs', data);
+
+      // 成功后更新值
+      for (const [key, value] of Object.entries(data)) {
+        updateQuotaConfigValue(key as keyof IGlobalQuota, value);
+      }
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      updateQuotaConfigLoading.value = false;
+    }
+  };
+
+  const updateQuotaConfigValue = (key: keyof IGlobalQuota, value: number) => {
+    globalQuotaConfig.value[key] = value;
+  };
+
   return {
     globalQuotaConfig,
+    updateQuotaConfigLoading,
     getGlobalQuota,
     getCpuCoreSummary,
+    updateQuotaConfig,
+    updateQuotaConfigValue,
   };
 });

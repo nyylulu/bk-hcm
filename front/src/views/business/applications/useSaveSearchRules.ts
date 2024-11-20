@@ -12,13 +12,14 @@ export function useSaveSearchRules(
   const route = useRoute();
 
   const saveSearchRules = () => {
+    // initial_filter为进入页面时的初始参数，主动查询时清除掉只保留queryKey
     router.replace({
-      query: { ...route.query, [queryKey]: encodeValueByBtoa(formModel), _t: Date.now() },
+      query: { ...route.query, [queryKey]: encodeValueByBtoa(formModel), initial_filter: undefined, _t: Date.now() },
     });
   };
 
   const clearSearchRules = () => {
-    router.replace({ query: { ...route.query, [queryKey]: undefined, _t: Date.now() } });
+    router.replace({ query: { ...route.query, [queryKey]: undefined, initial_filter: undefined, _t: Date.now() } });
   };
 
   const backfillSearchRules = (searchRulesStr: string) => {

@@ -93,7 +93,7 @@ const handleReset = () => {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 24px 0 24px;
+  padding: 16px 32px 0 24px;
   background: #fff;
 
   .summary {

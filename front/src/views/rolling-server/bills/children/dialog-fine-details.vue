@@ -41,7 +41,7 @@ const columnConfig: Record<string, PropertyColumnConfig> = {
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',
-                initial_filter: searchQs.build({ orderId: [data.order_id] }),
+                initial_filter: searchQs.build({ orderId: [data.order_id], bkUsername: [] }),
               },
             });
           },
