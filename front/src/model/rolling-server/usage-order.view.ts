@@ -42,4 +42,5 @@ export default [
   { id: 'returned_core', name: t('已退还（核）'), type: 'number' },
   { id: 'not_returned_core', name: t('未退还（核）'), type: 'number' },
   { id: 'exec_rate', name: t('执行率'), type: 'string' },
+  { id: 'status', name: t('状态'), type: 'number' },
 ] as ModelProperty[];

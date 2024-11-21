@@ -63,7 +63,8 @@ const getList = async (query: LocationQuery) => {
   // 如果当页appliedRecordList中存有普通业务，则需请求对应的退还记录列表
   if (applied_record_id.length > 0) {
     const returnedRecordList = await rollingServerUsageStore.getReturnedRecordList({
-      filter: transformSimpleCondition({ applied_record_id }, usageOrderViewProperties),
+      // 查询正常状态的回收记录
+      filter: transformSimpleCondition({ applied_record_id, status: 2 }, usageOrderViewProperties),
     });
     // 设置列表
     docList.value = appliedRecordList.map((appliedRecordItem) => {
