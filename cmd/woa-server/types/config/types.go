@@ -29,6 +29,7 @@ type Requirement struct {
 	BkInstId    int64              `json:"id" bson:"id"`
 	RequireType enumor.RequireType `json:"require_type" bson:"require_type"`
 	RequireName string             `json:"require_name" bson:"require_name"`
+	Position    int64              `json:"position" bson:"position"`
 }
 
 // GetRequirementResult get requirement type list result
