@@ -23,13 +23,14 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-redis/redis/v7 v7.4.1
-	github.com/go-sql-driver/mysql v1.8.1
+	// go-sql-driver/mysql v1.8.1 may casuse error: connection.go:49: unexpected EOF
+	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt v3.2.1+incompatible
 	github.com/golang-jwt/jwt/v4 v4.5.0
 	github.com/golang/protobuf v1.5.4
 	github.com/huaweicloud/huaweicloud-sdk-go-v3 v0.1.40
-	github.com/jmoiron/sqlx v1.4.0
+	github.com/jmoiron/sqlx v1.3.5
 	github.com/json-iterator/go v1.1.12
 	github.com/microsoftgraph/msgraph-sdk-go v1.26.0
 	github.com/mitchellh/mapstructure v1.5.0
@@ -135,7 +136,6 @@ require (
 )
 
 require (
-	filippo.io/edwards25519 v1.1.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/internal v1.5.2 // indirect
 	github.com/mozillazg/go-httpheader v0.2.1 // indirect
 	github.com/richardlehane/mscfb v1.0.4 // indirect
@@ -196,7 +196,8 @@ require (
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
 
-replace github.com/jmoiron/sqlx v1.4.0 => github.com/chenjr15/sqlx v0.0.0-20241120032801-68d4a8b60c27
+// add unicode character namedquery support
+replace github.com/jmoiron/sqlx v1.3.5 => github.com/chenjr15/sqlx v0.0.0-20241121072647-0e820a7ed576
 
 // 自研云需要修改sdk，支持差异化参数
 replace github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb => ./pkg/thirdparty/tencentcloud/clb
