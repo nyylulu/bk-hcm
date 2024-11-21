@@ -43,3 +43,30 @@ const (
 	// RebootCvmTaskType 任务类型-重启云服务器
 	RebootCvmTaskType = TaskType(FlowRebootCvm)
 )
+
+// CvmOperateStatus define cvm operate status
+type CvmOperateStatus int
+
+// OperateStatus cvm 电源操作状态
+const (
+	// CvmOperateStatusNormal 状态-正常
+	CvmOperateStatusNormal CvmOperateStatus = 0
+	// CvmOperateStatusNoOperator 状态-不是主备负责人
+	CvmOperateStatusNoOperator CvmOperateStatus = 1
+	// CvmOperateStatusNoIdle 状态-不在空闲机模块
+	CvmOperateStatusNoIdle CvmOperateStatus = 2
+)
+
+// CvmOperateType define cvm operate type
+type CvmOperateType string
+
+const (
+	// CvmOperateTypeStart 启动云服务器
+	CvmOperateTypeStart = "start"
+	// CvmOperateTypeStop 停止云服务器
+	CvmOperateTypeStop = "stop"
+	// CvmOperateTypeReboot 重启云服务器
+	CvmOperateTypeReboot = "reboot"
+	// CvmOperateTypeReset 重装云服务器
+	CvmOperateTypeReset = "reset"
+)

@@ -99,38 +99,18 @@ func (req *BatchRebootCvmReq) Validate() error {
 	return validator.Validate.Struct(req)
 }
 
-// BatchStartCvmReqV2 batch start cvm req.
-type BatchStartCvmReqV2 struct {
+// BatchCvmPowerOperateReq batch cvm operate req.
+type BatchCvmPowerOperateReq struct {
 	IDs []string `json:"ids" validate:"required,min=1,max=500"`
 }
 
-// Validate batch start cvm request.
-func (req *BatchStartCvmReqV2) Validate() error {
+// Validate ...
+func (req *BatchCvmPowerOperateReq) Validate() error {
 	return validator.Validate.Struct(req)
 }
 
-// BatchStopCvmReqV2 batch stop cvm req.
-type BatchStopCvmReqV2 struct {
-	IDs []string `json:"ids" validate:"required,min=1,max=500"`
-}
-
-// Validate batch stop cvm request.
-func (req *BatchStopCvmReqV2) Validate() error {
-	return validator.Validate.Struct(req)
-}
-
-// BatchRebootCvmReqV2 batch reboot cvm req.
-type BatchRebootCvmReqV2 struct {
-	IDs []string `json:"ids" validate:"required,min=1,max=500"`
-}
-
-// Validate batch reboot cvm request.
-func (req *BatchRebootCvmReqV2) Validate() error {
-	return validator.Validate.Struct(req)
-}
-
-// BatchOperateResp batch operate response, return task management id.
-type BatchOperateResp struct {
+// BatchCvmOperateResp batch cvm operate response, return task management id.
+type BatchCvmOperateResp struct {
 	TaskManagementID string `json:"task_management_id"`
 }
 
@@ -198,50 +178,51 @@ type CvmRelatedInfo struct {
 	Eip       []string `json:"eip"`
 }
 
-// ListCvmBatchResetReq define list cvm batch reset req.
-type ListCvmBatchResetReq struct {
-	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+// ListCvmBatchOperateReq define list cvm batch operate req.
+type ListCvmBatchOperateReq struct {
+	IDs         []string              `json:"ids" validate:"required,min=1,max=500"`
+	OperateType enumor.CvmOperateType `json:"operate_type" validate:"required"`
 }
 
 // Validate validate.
-func (req *ListCvmBatchResetReq) Validate() error {
+func (req *ListCvmBatchOperateReq) Validate() error {
 	if err := validator.Validate.Struct(req); err != nil {
 		return err
 	}
 	return nil
 }
 
-// CvmBatchResetHostInfo define cvm batch reset host info.
-type CvmBatchResetHostInfo struct {
-	ID                   string                `json:"id"`
-	Vendor               enumor.Vendor         `json:"vendor"`
-	AccountID            string                `json:"account_id"`
-	BkHostID             int64                 `json:"bk_host_id"`
-	BkHostName           string                `json:"bk_host_name"`
-	CloudID              string                `json:"cloud_id"`
-	BkAssetID            string                `json:"bk_asset_id"`
-	PrivateIPv4Addresses []string              `json:"private_ipv4_addresses"`
-	PrivateIPv6Addresses []string              `json:"private_ipv6_addresses"`
-	PublicIPv4Addresses  []string              `json:"public_ipv4_addresses"`
-	PublicIPv6Addresses  []string              `json:"public_ipv6_addresses"`
-	CloudVpcIDs          []string              `json:"cloud_vpc_ids"`
-	CloudSubnetIDs       []string              `json:"cloud_subnet_ids"`
-	Operator             string                `json:"operator"`
-	BkBakOperator        string                `json:"bak_operator"`
-	DeviceType           string                `json:"device_type"`
-	Region               string                `json:"region"`
-	Zone                 string                `json:"zone"`
-	BkOSName             string                `json:"bk_os_name"`
-	TopoModule           string                `json:"topo_module"`
-	SvrSourceTypeID      string                `json:"bk_svr_source_type_id"`
-	Status               string                `json:"status"`
-	SrvStatus            string                `json:"srv_status"`
-	ResetStatus          enumor.CvmResetStatus `json:"reset_status"`
+// CvmBatchOperateHostInfo define cvm batch operate host info.
+type CvmBatchOperateHostInfo struct {
+	ID                   string                  `json:"id"`
+	Vendor               enumor.Vendor           `json:"vendor"`
+	AccountID            string                  `json:"account_id"`
+	BkHostID             int64                   `json:"bk_host_id"`
+	BkHostName           string                  `json:"bk_host_name"`
+	CloudID              string                  `json:"cloud_id"`
+	BkAssetID            string                  `json:"bk_asset_id"`
+	PrivateIPv4Addresses []string                `json:"private_ipv4_addresses"`
+	PrivateIPv6Addresses []string                `json:"private_ipv6_addresses"`
+	PublicIPv4Addresses  []string                `json:"public_ipv4_addresses"`
+	PublicIPv6Addresses  []string                `json:"public_ipv6_addresses"`
+	CloudVpcIDs          []string                `json:"cloud_vpc_ids"`
+	CloudSubnetIDs       []string                `json:"cloud_subnet_ids"`
+	Operator             string                  `json:"operator"`
+	BkBakOperator        string                  `json:"bak_operator"`
+	DeviceType           string                  `json:"device_type"`
+	Region               string                  `json:"region"`
+	Zone                 string                  `json:"zone"`
+	BkOSName             string                  `json:"bk_os_name"`
+	TopoModule           string                  `json:"topo_module"`
+	SvrSourceTypeID      string                  `json:"bk_svr_source_type_id"`
+	Status               string                  `json:"status"`
+	SrvStatus            string                  `json:"srv_status"`
+	OperateStatus        enumor.CvmOperateStatus `json:"operate_status"`
 }
 
-// ListCvmBatchResetResp define list cvm batch reset response.
-type ListCvmBatchResetResp struct {
-	Details []CvmBatchResetHostInfo `json:"details"`
+// ListCvmBatchOperateResp define list cvm batch operate response.
+type ListCvmBatchOperateResp struct {
+	Details []CvmBatchOperateHostInfo `json:"details"`
 }
 
 // BatchCvmHostItem batch cvm host item.

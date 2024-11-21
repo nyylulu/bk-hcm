@@ -21,12 +21,15 @@ package cvm
 
 import (
 	"fmt"
+	"strings"
 
 	proto "hcm/pkg/api/cloud-server"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -243,19 +246,19 @@ func (svc *cvmSvc) queryCvmRelatedRes(cts *rest.Contexts, validHandler handler.V
 	return relatedInfos, nil
 }
 
-// ListCvmResetStatus list cvm reset status.
-func (svc *cvmSvc) ListCvmResetStatus(cts *rest.Contexts) (interface{}, error) {
-	return svc.listCvmResetStatus(cts, handler.ListResourceAuthRes)
+// ListCvmOperateStatus list cvm operate status.
+func (svc *cvmSvc) ListCvmOperateStatus(cts *rest.Contexts) (interface{}, error) {
+	return svc.listCvmOperateStatus(cts, handler.ListResourceAuthRes)
 }
 
-// ListBizCvmResetStatus list biz cvm reset status.
-func (svc *cvmSvc) ListBizCvmResetStatus(cts *rest.Contexts) (interface{}, error) {
-	return svc.listCvmResetStatus(cts, handler.ListBizAuthRes)
+// ListBizCvmOperateStatus list biz cvm operate status.
+func (svc *cvmSvc) ListBizCvmOperateStatus(cts *rest.Contexts) (interface{}, error) {
+	return svc.listCvmOperateStatus(cts, handler.ListBizAuthRes)
 }
 
-// listCvmResetStatus 获取业务下云主机是否可重装的状态列表
-func (svc *cvmSvc) listCvmResetStatus(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (any, error) {
-	req := new(cscvm.ListCvmBatchResetReq)
+// listCvmResetStatus 获取业务下云主机是否可开关机、重启的状态列表
+func (svc *cvmSvc) listCvmOperateStatus(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (any, error) {
+	req := new(cscvm.ListCvmBatchOperateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -263,45 +266,83 @@ func (svc *cvmSvc) listCvmResetStatus(cts *rest.Contexts, authHandler handler.Li
 		return nil, err
 	}
 
+	validateFunc, err := chooseValidateFunc(req.OperateType)
+	if err != nil {
+		logs.Errorf("choose validate func failed, err: %v, operate_type: %s, rid: %s", err, req.OperateType, cts.Kit.Rid)
+		return nil, err
+	}
+
 	// 校验业务权限
 	_, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{
 		Authorizer: svc.authorizer, ResType: meta.Cvm, Action: meta.Find})
 	if err != nil {
+		logs.Errorf("auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 	if noPermFlag {
-		return cscvm.ListCvmBatchResetResp{Details: make([]cscvm.CvmBatchResetHostInfo, 0)}, nil
+		return cscvm.ListCvmBatchOperateResp{Details: make([]cscvm.CvmBatchOperateHostInfo, 0)}, nil
 	}
 
-	// 查询cvm表的列表信息，单次最大限制500条
-	cvmReq := &core.ListReq{
-		Filter: tools.ContainersExpression("id", req.IDs),
-		Page:   core.NewDefaultBasePage(),
-	}
-	cvmResp, err := svc.client.DataService().Global.Cvm.ListCvm(cts.Kit, cvmReq)
+	cvmResp, err := svc.batchListCvmByIDs(cts.Kit, req.IDs)
 	if err != nil {
+		logs.Errorf("batch list cvm failed, err: %v, cvm_ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
 		return nil, err
 	}
-
 	vendorIDMap := make(map[enumor.Vendor][]string)
-	for _, item := range cvmResp.Details {
+	for _, item := range cvmResp {
 		vendorIDMap[item.Vendor] = append(vendorIDMap[item.Vendor], item.ID)
 	}
 
-	hosts := make([]cscvm.CvmBatchResetHostInfo, 0)
+	hosts := make([]cscvm.CvmBatchOperateHostInfo, 0)
 	for vendor, cvmIDs := range vendorIDMap {
 		switch vendor {
 		case enumor.TCloudZiyan:
-			vendorHosts, err := svc.listTCloudZiyanCvmHost(cts.Kit, cvmIDs)
+			vendorHosts, err := svc.listTCloudZiyanCvmOperateHost(cts.Kit, cvmIDs, validateFunc)
 			if err != nil {
+				logs.Errorf("list cvm operate failed, err: %v, cvm_ids: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
 				return nil, err
 			}
 			hosts = append(hosts, vendorHosts...)
 		default:
-			logs.Errorf("list cvm reset invalid vendor: %s", vendor)
-			return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("list cvm reset invalid vendor: %s", vendor))
+			logs.Errorf("list cvm operate invalid vendor: %s", vendor)
+			return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("list cvm operate invalid vendor: %s", vendor))
 		}
 	}
 
-	return cscvm.ListCvmBatchResetResp{Details: hosts}, nil
+	return cscvm.ListCvmBatchOperateResp{Details: hosts}, nil
+}
+
+type validateOperateStatusFunc func(user, moduleName string,
+	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus
+
+func chooseValidateFunc(operateType enumor.CvmOperateType) (validateOperateStatusFunc, error) {
+	switch operateType {
+	case enumor.CvmOperateTypeReset:
+		return validateOperateStatusForReset, nil
+	case enumor.CvmOperateTypeStart, enumor.CvmOperateTypeStop, enumor.CvmOperateTypeReboot:
+		return validateOperateStatusForOperate, nil
+	default:
+		return nil, errf.NewFromErr(errf.InvalidParameter,
+			fmt.Errorf("listCvmOperateStatus invalid operate type: %s", operateType))
+	}
+}
+
+func validateOperateStatusForReset(user, moduleName string,
+	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
+
+	if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
+		moduleName != constant.IdleMachineModuleName {
+		return enumor.CvmOperateStatusNoIdle
+	}
+	return validateOperateStatusForOperate(user, moduleName, host)
+}
+
+func validateOperateStatusForOperate(user, _ string,
+	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
+
+	if !strings.Contains(host.Extension.Operator, user) &&
+		!strings.Contains(host.Extension.BkBakOperator, user) {
+		return enumor.CvmOperateStatusNoOperator
+	}
+	return enumor.CvmOperateStatusNormal
 }

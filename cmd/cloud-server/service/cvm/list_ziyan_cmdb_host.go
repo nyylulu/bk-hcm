@@ -29,7 +29,6 @@ import (
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	webserver "hcm/pkg/api/web-server"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -192,21 +191,23 @@ func (svc *cvmSvc) queryFromCloud(kt *kit.Kit, accountID string, cmdbHosts []cmd
 	return details, nil
 }
 
-// listTCloudZiyanCvmHost 获取自研云主机列表
-func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.CvmBatchResetHostInfo, error) {
+// listTCloudZiyanCvmOperateHost 获取自研云主机列表&可操作状态
+func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
+	validateStatusFunc validateOperateStatusFunc) ([]cscvm.CvmBatchOperateHostInfo, error) {
+
 	// 根据主机ID获取主机列表
-	hostIDs, hostCvmMap, err := c.listTCloudZiyanCvmExtMapByIDs(kt, cvmIDs)
+	hostIDs, hostCvmMap, err := svc.listTCloudZiyanCvmExtMapByIDs(kt, cvmIDs)
 	if err != nil {
 		return nil, err
 	}
 
 	// 查询cc的Topo关系
-	mapHostToRel, mapModuleIdToModule, err := c.listCmdbHostRelModule(kt, hostIDs)
+	mapHostToRel, mapModuleIdToModule, err := svc.listCmdbHostRelModule(kt, hostIDs)
 	if err != nil {
 		return nil, err
 	}
 
-	cvmHosts := make([]cscvm.CvmBatchResetHostInfo, 0)
+	cvmHosts := make([]cscvm.CvmBatchOperateHostInfo, 0)
 	for _, host := range hostCvmMap {
 		hostID := host.Extension.HostID
 		moduleName := ""
@@ -216,16 +217,7 @@ func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.C
 			}
 		}
 
-		resetStatus := enumor.NormalCvmResetStatus
-		if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
-			moduleName != constant.IdleMachineModuleName {
-			resetStatus = enumor.NoIdleCvmResetStatus
-		} else if !strings.Contains(host.Extension.Operator, kt.User) &&
-			!strings.Contains(host.Extension.BkBakOperator, kt.User) {
-			resetStatus = enumor.NoOperatorCvmResetStatus
-		}
-
-		cvmHosts = append(cvmHosts, cscvm.CvmBatchResetHostInfo{
+		cvmHosts = append(cvmHosts, cscvm.CvmBatchOperateHostInfo{
 			ID:                   host.ID,
 			Vendor:               host.Vendor,
 			AccountID:            host.AccountID,
@@ -247,18 +239,18 @@ func (c *cvmSvc) listTCloudZiyanCvmHost(kt *kit.Kit, cvmIDs []string) ([]cscvm.C
 			SvrSourceTypeID:      host.Extension.SvrSourceTypeID,
 			Status:               hostCvmMap[hostID].Status,
 			SrvStatus:            host.Extension.SrvStatus,
-			ResetStatus:          resetStatus,
+			OperateStatus:        validateStatusFunc(kt.User, moduleName, host),
 		})
 	}
 	return cvmHosts, nil
 }
 
 // listCmdbHostRelModule 查询cc的主机列表及Topo关系
-func (c *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]*cmdb.HostBizRel,
+func (svc *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]*cmdb.HostBizRel,
 	map[int64]*cmdb.ModuleInfo, error) {
 
 	// get host topo info
-	relations, err := c.cvmLgc.GetHostTopoInfo(kt, hostIDs)
+	relations, err := svc.cvmLgc.GetHostTopoInfo(kt, hostIDs)
 	if err != nil {
 		logs.Errorf("failed to recycle check, for list host, err: %v, hostIDs: %v, rid: %s", err, hostIDs, kt.Rid)
 		return nil, nil, err
@@ -280,7 +272,7 @@ func (c *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]
 	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
 	for bizId, moduleIds := range mapBizToModule {
 		moduleIdUniq := util.IntArrayUnique(moduleIds)
-		moduleList, err := c.cvmLgc.GetModuleInfo(kt, bizId, moduleIdUniq)
+		moduleList, err := svc.cvmLgc.GetModuleInfo(kt, bizId, moduleIdUniq)
 		if err != nil {
 			logs.Errorf("failed to cvm reset check, for get module info, err: %v, bizId: %d, "+
 				"moduleIdUniq: %v, rid: %s", err, bizId, moduleIdUniq, kt.Rid)
@@ -308,7 +300,7 @@ func (c *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]
 }
 
 // listTCloudZiyanCvmExtMapByIDs 根据主机ID获取主机列表（含扩展信息）
-func (c *cvmSvc) listTCloudZiyanCvmExtMapByIDs(kt *kit.Kit, cvmIDs []string) (
+func (svc *cvmSvc) listTCloudZiyanCvmExtMapByIDs(kt *kit.Kit, cvmIDs []string) (
 	[]int64, map[int64]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], error) {
 
 	// 查询云主机的扩展信息
@@ -318,7 +310,7 @@ func (c *cvmSvc) listTCloudZiyanCvmExtMapByIDs(kt *kit.Kit, cvmIDs []string) (
 	}
 	cvmExtList := make([]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], 0)
 	for {
-		extResp, err := c.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), extReq)
+		extResp, err := svc.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), extReq)
 		if err != nil {
 			logs.Errorf("fail to list tcloud ziyan cvm ext map, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, kt.Rid)
 			return nil, nil, err

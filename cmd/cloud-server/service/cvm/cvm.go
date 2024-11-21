@@ -77,11 +77,11 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reboot", svc.BatchRebootBizCvm)
 	h.Add("QueryBizCvmRelatedRes", http.MethodPost, "/bizs/{bk_biz_id}/cvms/rel_res/batch", svc.QueryBizCvmRelatedRes)
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
-	h.Add("ListBizCvmResetStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/reset/status",
-		svc.ListBizCvmResetStatus)
 	h.Add("BatchResetAsyncBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reset_async",
 		svc.BatchResetAsyncBizCvm)
 
+	h.Add("ListBizCvmOperateStatus", http.MethodPost, "/bizs/{bk_biz_id}/cvms/list/operate/status",
+		svc.ListBizCvmOperateStatus)
 	h.Add("BatchAsyncStartCvm", http.MethodPost, "/cvms/batch/start_async", svc.BatchAsyncStartCvm)
 	h.Add("BatchAsyncStopCvm", http.MethodPost, "/cvms/batch/stop_async", svc.BatchAsyncStopCvm)
 	h.Add("BatchAsyncRebootCvm", http.MethodPost, "/cvms/batch/reboot_async", svc.BatchAsyncRebootCvm)

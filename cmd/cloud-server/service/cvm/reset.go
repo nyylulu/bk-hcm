@@ -108,7 +108,7 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 		return nil, err
 	}
 
-	return cscvm.BatchOperateResp{
+	return cscvm.BatchCvmOperateResp{
 		TaskManagementID: taskManagementID,
 	}, nil
 }
@@ -144,7 +144,7 @@ func (svc *cvmSvc) createCvmResetTaskManage(kt *kit.Kit, bkBizID int64, cvmIDs [
 	accountIDs := make([]string, 0)
 	for _, host := range cvmList {
 		taskDetail := &lgccvm.CvmResetTaskDetailReq{
-			CvmBatchResetHostInfo: cscvm.CvmBatchResetHostInfo{
+			CvmBatchOperateHostInfo: cscvm.CvmBatchOperateHostInfo{
 				ID:                   host.ID,
 				Vendor:               host.Vendor,
 				AccountID:            host.AccountID,

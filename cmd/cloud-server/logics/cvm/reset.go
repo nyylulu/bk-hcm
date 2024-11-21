@@ -55,11 +55,11 @@ type TaskManageBaseReq struct {
 
 // CvmResetTaskDetailReq cvm reset task detail req.
 type CvmResetTaskDetailReq struct {
-	cscvm.CvmBatchResetHostInfo `json:",inline"`
-	ImageNameOld                string `json:"image_name_old" validate:"required"`
-	CloudImageID                string `json:"cloud_image_id" validate:"required"`
-	ImageName                   string `json:"image_name" validate:"required"`
-	Pwd                         string `json:"pwd" validate:"required"`
+	cscvm.CvmBatchOperateHostInfo `json:",inline"`
+	ImageNameOld                  string `json:"image_name_old" validate:"required"`
+	CloudImageID                  string `json:"cloud_image_id" validate:"required"`
+	ImageName                     string `json:"image_name" validate:"required"`
+	Pwd                           string `json:"pwd" validate:"required"`
 }
 
 // BatchCvmResetTaskDetail 用于记录 detail - 异步任务flow&task - 任务管理 之间的关系
@@ -152,10 +152,10 @@ func (c *cvm) createTaskDetails(kt *kit.Kit, taskID string, param *TaskManageBas
 	taskDetailsCreateReq := &task.CreateDetailReq{}
 	for _, detail := range param.Details {
 		detailParams := &CvmResetTaskDetailReq{
-			CvmBatchResetHostInfo: detail.CvmBatchResetHostInfo,
-			ImageNameOld:          detail.ImageNameOld,
-			CloudImageID:          detail.CloudImageID,
-			ImageName:             detail.ImageName,
+			CvmBatchOperateHostInfo: detail.CvmBatchOperateHostInfo,
+			ImageNameOld:            detail.ImageNameOld,
+			CloudImageID:            detail.CloudImageID,
+			ImageName:               detail.ImageName,
 		}
 		taskDetailsCreateReq.Items = append(taskDetailsCreateReq.Items, task.CreateDetailField{
 			BkBizID:          param.BkBizID,

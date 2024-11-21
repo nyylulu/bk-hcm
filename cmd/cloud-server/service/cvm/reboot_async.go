@@ -46,7 +46,7 @@ func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, erro
 func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, validHandler handler.ValidWithAuthHandler) (
 	interface{}, error) {
 
-	req := new(proto.BatchRebootCvmReqV2)
+	req := new(proto.BatchCvmPowerOperateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -80,7 +80,7 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, val
 		return nil, err
 	}
 
-	return proto.BatchOperateResp{
+	return proto.BatchCvmOperateResp{
 		TaskManagementID: taskManagementID,
 	}, nil
 }
