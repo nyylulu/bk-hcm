@@ -89,7 +89,7 @@ export default defineComponent({
       model: {
         bkBizId: '',
         bkUsername: '',
-        requireType: 1,
+        requireType: undefined as number,
         enableNotice: false,
         expectTime: expectedDeliveryTime(),
         remark: '',
