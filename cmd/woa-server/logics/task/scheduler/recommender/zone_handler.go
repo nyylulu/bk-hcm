@@ -40,8 +40,8 @@ func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 
 	//  get available zones
 	requireType := order.RequireType
-	// 故障替换和小额绿通均使用常规项目的机型
-	if requireType == enumor.RequireTypeExpired || requireType == enumor.RequireTypeGreenChannel {
+	// 小额绿通均使用常规项目的机型
+	if requireType == enumor.RequireTypeGreenChannel {
 		requireType = enumor.RequireTypeRegular
 	}
 

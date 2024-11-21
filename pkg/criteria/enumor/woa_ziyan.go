@@ -302,8 +302,6 @@ const (
 	RequireTypeSpring RequireType = 2
 	// RequireTypeDissolve 机房裁撤
 	RequireTypeDissolve RequireType = 3
-	// RequireTypeExpired 故障替换
-	RequireTypeExpired RequireType = 4
 	// RequireTypeRollServer 滚服项目
 	RequireTypeRollServer RequireType = 6
 	//	RequireTypeGreenChannel 小额绿通
@@ -314,7 +312,6 @@ var requireTypeNameMap = map[RequireType]string{
 	RequireTypeRegular:      "常规项目",
 	RequireTypeSpring:       "春节保障",
 	RequireTypeDissolve:     "机房裁撤",
-	RequireTypeExpired:      "故障替换",
 	RequireTypeRollServer:   "滚服项目",
 	RequireTypeGreenChannel: "小额绿通",
 }
@@ -334,7 +331,6 @@ func GetRequireTypeMembers() []RequireType {
 		RequireTypeRegular,
 		RequireTypeSpring,
 		RequireTypeDissolve,
-		RequireTypeExpired,
 		RequireTypeRollServer,
 		RequireTypeGreenChannel,
 	}
@@ -364,9 +360,7 @@ func (t RequireType) ToObsProject() ObsProject {
 }
 
 var requireTypeObsProjectMap = map[RequireType]ObsProject{
-	RequireTypeRegular: ObsProjectNormal,
-	// "故障替换"项目使用"常规项目"的 obs project
-	RequireTypeExpired:    ObsProjectNormal,
+	RequireTypeRegular:    ObsProjectNormal,
 	RequireTypeRollServer: ObsProjectRollServer,
 	// "小额绿通"使用"常规项目"的 obs project
 	RequireTypeGreenChannel: ObsProjectNormal,

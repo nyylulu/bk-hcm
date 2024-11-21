@@ -544,12 +544,8 @@ func checkRequireType(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (str
 
 // checkResourceType ...
 func checkResourceType(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
-	// 所有物理机资源申请（除故障替换外），都需要人工审核
+	// 所有物理机资源申请，都需要人工审核
 	for _, suborder := range order.Suborders {
-		if order.RequireType == enumor.RequireTypeExpired {
-			continue
-		}
-
 		if suborder.ResourceType == types.ResourceTypePm {
 			reason := fmt.Sprintf("order %d apply resource type %s, but require type is %s",
 				order.OrderId, suborder.ResourceType, order.RequireType)
