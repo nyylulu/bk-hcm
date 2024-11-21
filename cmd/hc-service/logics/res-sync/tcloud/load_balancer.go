@@ -545,7 +545,6 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		ChargeType:               cloud.ChargeType,
 		ClusterTag:               cloud.ClusterTag,
 		ClusterIds:               cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds)),
-		Tags:                     cvt.ValToPtr(cloud.GetTags()),
 		// 该接口无法获取下列字段
 		BandwidthPackageId: nil,
 	}

@@ -32,6 +32,8 @@ type Interface interface {
 
 	SecurityGroup(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGOption) (*SyncResult, error)
 	RemoveSecurityGroupDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
+	RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, accountID string, region string,
+		allCloudIDMap map[string]struct{}) error
 
 	Subnet(kt *kit.Kit, params *SyncBaseParams, opt *SyncSubnetOption) (*SyncResult, error)
 	RemoveSubnetDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
@@ -59,6 +61,7 @@ type Interface interface {
 
 	LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)
 	RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, params *SyncRemovedParams) error
+	RemoveLoadBalancerDeleteFromCloudV2(kt *kit.Kit, param *SyncRemovedParams, allCloudIDMap map[string]struct{}) error
 
 	// LoadBalancerWithListener 同步负载均衡及监听器
 	LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)

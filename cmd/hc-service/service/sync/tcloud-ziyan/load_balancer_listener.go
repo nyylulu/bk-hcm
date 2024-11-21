@@ -105,8 +105,6 @@ func (hd *lblHandler) Next(kt *kit.Kit) ([]string, error) {
 		Region:         hd.request.Region,
 		LoadBalancerId: hd.request.LoadBalancerCloudID,
 		CloudIDs:       hd.request.CloudIDs,
-		Protocol:       "",
-		Port:           0,
 	}
 
 	lbResult, err := hd.syncCli.CloudCli().ListListener(kt, listOpt)

@@ -213,9 +213,9 @@ func (clb TCloudClb) GetTagMap() apicore.TagMap {
 }
 
 // GetTags 返回Tag信息
-func (clb TCloudClb) GetTags() (tags []corelb.TagPair) {
+func (clb TCloudClb) GetTags() (tags []apicore.TagPair) {
 	for _, tag := range clb.Tags {
-		tags = append(tags, corelb.TagPair{
+		tags = append(tags, apicore.TagPair{
 			Key:   cvt.PtrToVal(tag.TagKey),
 			Value: cvt.PtrToVal(tag.TagValue),
 		})

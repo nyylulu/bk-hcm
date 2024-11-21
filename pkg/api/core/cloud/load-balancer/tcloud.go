@@ -121,9 +121,6 @@ type TCloudClbExtension struct {
 	// 负载均衡类型，0 传统负载均衡，1 负载均衡
 	Forward *uint64 `json:"forward,omitempty"`
 
-	// TODO 废弃，使用外层标签
-	Tags *[]TagPair `json:"tags"`
-
 	// Stgw独占集群的标签。
 	ClusterTag *string `json:"cluster_id,omitempty"`
 	// 集群ID，集群标识，在需要配置公有云独占集群或本地专有集群时使用。
@@ -143,12 +140,6 @@ type TCloudClbExtension struct {
 // IsTraditional 是否是传统型负载均衡
 func (ext *TCloudClbExtension) IsTraditional() bool {
 	return cvt.PtrToVal(ext.Forward) == uint64(TCloudTraditionalClbType)
-}
-
-// TagPair Key Value Pair TODO 废弃
-type TagPair struct {
-	Key   string `json:"key"`
-	Value string `json:"value"`
 }
 
 // SnatIp ...

@@ -31,7 +31,6 @@ import (
 	cloudaccount "hcm/pkg/api/cloud-server/account"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/region"
-	"hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -87,13 +86,11 @@ func (a *accountSvc) SyncCloudResourceByCond(cts *rest.Contexts) (any, error) {
 		return nil, errf.Newf(errf.InvalidParameter, "account not found by vendor: %s", vendor)
 	}
 
-	if err := vendor.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
 	switch vendor {
 	case enumor.TCloud:
 		return a.tcloudCondSyncRes(cts, accountID, resName)
+	case enumor.TCloudZiyan:
+		return a.ziyanCondSyncRes(cts, accountID, constant.UnassignedBiz, resName)
 
 	default:
 		return nil, fmt.Errorf("conditional sync doesnot support vendor: %s", vendor)
@@ -124,29 +121,37 @@ func (a *accountSvc) SyncBizCloudResourceByCond(cts *rest.Contexts) (any, error)
 	}
 
 	// 查询该账号对应的Vendor
-	bizRelReq := &cloud.AccountBizRelWithAccountListReq{BkBizIDs: []int64{bkBizId}}
-	accountBizList, err := a.client.DataService().Global.Account.ListAccountBizRelWithAccount(cts.Kit, bizRelReq)
+	baseInfo, err := a.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType, accountID)
 	if err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-
-	found := false
-	for i := range accountBizList {
-		accountWithBiz := accountBizList[i]
-		if accountWithBiz.ID != accountID || accountWithBiz.Vendor != vendor {
-			continue
-		}
-		found = true
-		break
+	if baseInfo.Vendor != vendor {
+		return nil, errf.Newf(errf.InvalidParameter, "account not found by vendor: %s", vendor)
 	}
-	if !found {
-		return nil, errors.New("account not found by biz or vendor")
+
+	if vendor != enumor.Ziyan {
+		// 查询业务关系
+		bizReq := &core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("account_id", accountID),
+				tools.RuleEqual("bk_biz_id", bkBizId),
+			),
+			Page: core.NewCountPage(),
+		}
+		rel, err := a.client.DataService().Global.Account.ListAccountBizRel(cts.Kit.Ctx, cts.Kit.Header(), bizReq)
+		if err != nil {
+			return nil, err
+		}
+		if rel.Count == 0 {
+			return nil, errf.New(errf.InvalidParameter, "account not found by biz")
+		}
 	}
 
 	switch vendor {
 	case enumor.TCloud:
 		return a.tcloudCondSyncRes(cts, accountID, resName)
-
+	case enumor.TCloudZiyan:
+		return a.ziyanCondSyncRes(cts, accountID, bkBizId, resName)
 	default:
 		return nil, fmt.Errorf("conditional sync not supports vendor: %s", vendor)
 	}
