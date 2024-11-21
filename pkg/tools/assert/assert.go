@@ -26,15 +26,34 @@ import (
 	"strings"
 
 	"hcm/pkg/tools/converter"
+
+	jsoniter "github.com/json-iterator/go"
 )
 
 // IsNumeric test if an interface is a numeric value or not.
 func IsNumeric(val interface{}) bool {
-	switch val.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, float32, float64, json.Number:
-		return true
+	if val == nil {
+		return false
 	}
-	return false
+
+	switch reflect.TypeOf(val).Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64,
+		reflect.Float32, reflect.Float64:
+		return true
+	case reflect.String:
+		if _, ok := val.(json.Number); ok {
+			return true
+		}
+
+		if _, ok := val.(jsoniter.Number); ok {
+			return true
+		}
+
+		return false
+	default:
+		return false
+	}
 }
 
 // IsBasicValue test if an interface is the basic supported
