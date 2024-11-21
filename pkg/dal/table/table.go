@@ -256,6 +256,9 @@ const (
 	RollingReturnedRecordTable = "rolling_returned_record"
 	// RollingFineDetail 滚服罚金明细表
 	RollingFineDetail = "rolling_fine_detail"
+
+	//	GlobalConfigTable 全局配置表
+	GlobalConfigTable = "global_config"
 	// TaskDetailTable 任务详情表
 	TaskDetailTable = "task_detail"
 	// TaskManagementTable 任务管理表
@@ -390,6 +393,8 @@ var TableMap = map[Name]struct{}{
 	RollingAppliedRecordTable:  {},
 	RollingReturnedRecordTable: {},
 	RollingFineDetail:          {},
+
+	GlobalConfigTable: {},
 
 	TaskManagementTable: {},
 	TaskDetailTable:     {},

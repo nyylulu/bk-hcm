@@ -13,7 +13,7 @@ export class Model<M> {
     this.instance = new ModelClass();
   }
 
-  getProperties(): ModelPropertyGeneric[] {
+  getProperties<T extends ModelPropertyGeneric>(): T[] {
     const columnMetadata = getMetadataStorage().columns.filter(
       (item: IColumnMetadata) => item.target === this.target || this.target.prototype instanceof (item.target as any),
     );

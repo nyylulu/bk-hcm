@@ -18,6 +18,7 @@ import (
 	"errors"
 	"fmt"
 	"math"
+	"reflect"
 	"sort"
 	"strconv"
 	"time"
@@ -25,6 +26,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
+	greenchannel "hcm/cmd/woa-server/logics/green-channel"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/dispatcher"
@@ -50,6 +52,7 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/language"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -154,11 +157,12 @@ type scheduler struct {
 	recommend    *recommender.Recommender
 	configLogics config.Logics
 	rsLogics     rollingserver.Logics
+	gcLogics     greenchannel.Logics
 }
 
 // New creates a scheduler
-func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
-	informerIf informer.Interface, clientConf cc.ClientConfig) (*scheduler, error) {
+func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
+	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -195,6 +199,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdpart
 		recommend:    recommend,
 		configLogics: config.New(thirdCli),
 		rsLogics:     rsLogics,
+		gcLogics:     gcLogics,
 	}
 
 	return scheduler, nil
@@ -446,6 +451,8 @@ func (s *scheduler) AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error 
 	return nil
 }
 
+type checker func(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error)
+
 // AutoAuditTicket system automatic audit resource apply ticket callback
 func (s *scheduler) AutoAuditTicket(kit *kit.Kit, param *types.ApplyAutoAuditReq) (*types.ApplyAutoAuditRst, error) {
 	filter := mapstr.MapStr{
@@ -470,31 +477,87 @@ func (s *scheduler) AutoAuditTicket(kit *kit.Kit, param *types.ApplyAutoAuditReq
 		Remark:   "approved",
 	}
 
-	total := uint(0)
-	for _, suborder := range order.Suborders {
-		total += suborder.Replicas
-		// 所有物理机资源申请（除故障替换外），都需要人工审核
-		if order.RequireType != 4 {
-			if suborder.ResourceType == types.ResourceTypePm {
-				logs.Errorf("failed to auto audit order %d, for resource type include %s, rid: %s", param.OrderId,
-					types.ResourceTypePm, kit.Rid)
-				rst.Approval = 0
-				rst.Remark = fmt.Sprintf("order %d resource type include %s", param.OrderId, types.ResourceTypePm)
-				return rst, nil
-			}
+	checkerRules := []checker{
+		checkResourceType,
+		checkTotalDevice,
+		checkRequireType,
+	}
+	for _, checkerRule := range checkerRules {
+		reason, needAudit, err := checkerRule(s, kit, order)
+		if err != nil {
+			logs.Errorf("failed to check %s, err: %v, rid: %s", reflect.TypeOf(checkerRule).Name(), err, kit.Rid)
+			return nil, err
+		}
+
+		if needAudit {
+			rst.Approval = 0
+			rst.Remark = reason
+			return rst, nil
 		}
 	}
 
-	auditThreshold := uint(50)
-	if total > auditThreshold {
-		logs.Errorf("failed to auto audit order %d, for apply number exceeds %d, rid: %s", param.OrderId,
-			auditThreshold, kit.Rid)
-		rst.Approval = 0
-		rst.Remark = fmt.Sprintf("order %d apply number %d exceed auto audit threshold %d", param.OrderId, total,
-			auditThreshold)
+	return rst, nil
+}
+
+// checkTotalDevice auto audit threshold device number
+const auditThresholdDevice = uint(50)
+
+// checkTotalDevice check total device number
+func checkTotalDevice(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	totalDevice := uint(0)
+	for _, suborder := range order.Suborders {
+		totalDevice += suborder.Replicas
 	}
 
-	return rst, nil
+	if totalDevice > auditThresholdDevice {
+		reason := fmt.Sprintf("order %d apply device number %d exceed auto audit threshold %d",
+			order.OrderId, totalDevice, auditThresholdDevice)
+		return reason, true, nil
+	}
+
+	return "", false, nil
+}
+
+// checkRequireType check require type
+func checkRequireType(s *scheduler, kit *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	if order.RequireType == enumor.RequireTypeGreenChannel {
+		greenChannelConfig, err := s.gcLogics.GetConfigs(kit)
+		if err != nil {
+			return "", false, err
+		}
+
+		totalAppliedCore := uint(0)
+		for _, suborder := range order.Suborders {
+			totalAppliedCore += suborder.AppliedCore
+		}
+
+		if int64(totalAppliedCore) > greenChannelConfig.AuditThreshold {
+			return fmt.Sprintf("order %d apply core %d exceed green channel auto approval audit threshold %d",
+				order.OrderId, totalAppliedCore, greenChannelConfig.AuditThreshold), true, nil
+		}
+
+		return "", false, nil
+	}
+
+	return "", false, nil
+}
+
+// checkResourceType ...
+func checkResourceType(_ *scheduler, _ *kit.Kit, order *types.ApplyTicket) (string, bool, error) {
+	// 所有物理机资源申请（除故障替换外），都需要人工审核
+	for _, suborder := range order.Suborders {
+		if order.RequireType == enumor.RequireTypeExpired {
+			continue
+		}
+
+		if suborder.ResourceType == types.ResourceTypePm {
+			reason := fmt.Sprintf("order %d apply resource type %s, but require type is %s",
+				order.OrderId, suborder.ResourceType, order.RequireType)
+			return reason, true, nil
+		}
+	}
+
+	return "", false, nil
 }
 
 // ApproveTicket approve or reject resource apply ticket
@@ -580,6 +643,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 			Total:             suborder.Replicas,
 			PendingNum:        suborder.Replicas,
 			SuccessNum:        0,
+			AppliedCore:       suborder.AppliedCore,
 			RetryTime:         0,
 			ModifyTime:        0,
 			CreateAt:          now,
@@ -601,9 +665,26 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 		suborders[index] = subOrder
 	}
 
-	if table.RequireType(ticket.RequireType) == table.RequireTypeRollServer {
-		if err = s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
+	if err = s.doCreateOrderPostOp(kt, ticket, suborders); err != nil {
+		logs.Errorf("do create order post op failed, err: %v, ticket: %+v, suborders: %v, rid: %s", err,
+			cvt.PtrToVal(ticket), suborders, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+func (s *scheduler) doCreateOrderPostOp(kt *kit.Kit, ticket *types.ApplyTicket, suborders []*types.ApplyOrder) error {
+	switch ticket.RequireType {
+	case enumor.RequireTypeRollServer:
+		if err := s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
 			logs.Errorf("create rolling applied record failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
+			return err
+		}
+
+	case enumor.RequireTypeGreenChannel:
+		if err := s.canApplyGreenChannelHost(kt, ticket); err != nil {
+			logs.Errorf("apply green channel host failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
 			return err
 		}
 	}
@@ -614,7 +695,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyTicket,
 	suborders []*types.ApplyOrder) error {
 
-	if len(suborders) == 0 || table.RequireType(ticket.RequireType) != table.RequireTypeRollServer {
+	if len(suborders) == 0 || ticket.RequireType != enumor.RequireTypeRollServer {
 		return nil
 	}
 
@@ -682,6 +763,30 @@ func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyT
 	return nil
 }
 
+func (s *scheduler) canApplyGreenChannelHost(kt *kit.Kit, ticket *types.ApplyTicket) error {
+	if ticket.RequireType != enumor.RequireTypeGreenChannel {
+		return nil
+	}
+
+	var appliedCount uint = 0
+	for _, suborder := range ticket.Suborders {
+		appliedCount += suborder.AppliedCore
+	}
+
+	canApply, reason, err := s.gcLogics.CanApplyHost(kt, ticket.BkBizId, appliedCount)
+	if err != nil {
+		logs.Errorf("determine can apply green channel host failed, err: %v, bizID: %d, total: %d, rid: %s", err,
+			ticket.BkBizId, appliedCount, kt.Rid)
+		return err
+	}
+	if !canApply {
+		logs.Errorf("can not apply green channel host, bizID: %d, reason: %s, rid: %s", ticket.BkBizId, reason, kt.Rid)
+		return fmt.Errorf("%s", reason)
+	}
+
+	return nil
+}
+
 // initAllSteps init apply order all steps
 func (s *scheduler) initAllSteps(kt *kit.Kit, suborderId string, total uint,
 	enableDiskCheck bool) error {
@@ -730,6 +835,12 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	rst := new(types.CreateApplyOrderResult)
 	var err error = nil
 
+	param, err = s.fillCVMAppliedCore(kt, param)
+	if err != nil {
+		logs.Errorf("failed to fill applied core, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
+		return nil, err
+	}
+
 	txnErr := dal.RunTransaction(kt, func(sc mongo.SessionContext) error {
 		sessionKit := &kit.Kit{Ctx: sc, Rid: kt.Rid}
 		if param.OrderId <= 0 {
@@ -742,7 +853,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 			return err
 		}
 
-		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId)
+		resp, err := s.itsm.CreateApplyTicket(sessionKit, param.User, rst.OrderId, param.BkBizId, param.Remark)
 		if err != nil {
 			logs.Errorf("failed to create apply order, for create itsm ticket err: %v, rid: %s, orderId: %d, BkBIzId: %d",
 				err, kt.Rid, rst.OrderId, param.BkBizId)
@@ -764,6 +875,44 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	})
 
 	return rst, txnErr
+}
+
+func (s *scheduler) fillCVMAppliedCore(kt *kit.Kit, param *types.ApplyReq) (*types.ApplyReq, error) {
+	if param == nil {
+		logs.Errorf("failed to fill applied core, param is nil, rid: %s", kt.Rid)
+		return nil, errf.New(errf.InvalidParameter, "param is nil")
+	}
+
+	deviceTypes := make([]string, 0)
+	for _, suborder := range param.Suborders {
+		if suborder.ResourceType == types.ResourceTypeCvm {
+			deviceTypes = append(deviceTypes, suborder.Spec.DeviceType)
+		}
+
+	}
+	deviceTypeInfoMap, err := s.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
+		return nil, err
+	}
+
+	for i, suborder := range param.Suborders {
+		if suborder.ResourceType != types.ResourceTypeCvm {
+			continue
+		}
+
+		deviceType := suborder.Spec.DeviceType
+		deviceTypeInfo, ok := deviceTypeInfoMap[deviceType]
+		if !ok {
+			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
+			return nil, fmt.Errorf("can not find device_type, type: %s", deviceType)
+		}
+
+		param.Suborders[i].AppliedCore = uint(deviceTypeInfo.CPUAmount) * suborder.Replicas
+	}
+
+	return param, nil
 }
 
 func (s *scheduler) setTicketId(kt *kit.Kit, orderId uint64, itsmTicketId string) error {
@@ -1573,7 +1722,9 @@ func (s *scheduler) validateModifyDeviceType(kt *kit.Kit, order *types.ApplyOrde
 	return nil
 }
 
-func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType int64, deviceType, region, zone string) (string, error) {
+func (s *scheduler) getDeviceGroup(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone string) (
+	string, error) {
+
 	rules := []querybuilder.Rule{
 		querybuilder.AtomRule{
 			Field:    "device_type",

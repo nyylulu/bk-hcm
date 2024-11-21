@@ -20,7 +20,7 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/config"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
@@ -48,14 +48,15 @@ import (
 
 // Matcher matches devices for apply order
 type Matcher struct {
-	rsLogics rollingserver.Logics
-	informer informer.Interface
-	sops     sopsapi.SopsClientInterface
-	sopsOpt  cc.SopsCli
-	cc       cmdb.Client
-	bkchat   bkchatapi.BkChatClientInterface
-	ctx      context.Context
-	kt       *kit.Kit
+	rsLogics     rollingserver.Logics
+	configLogics config.Logics
+	informer     informer.Interface
+	sops         sopsapi.SopsClientInterface
+	sopsOpt      cc.SopsCli
+	cc           cmdb.Client
+	bkchat       bkchatapi.BkChatClientInterface
+	ctx          context.Context
+	kt           *kit.Kit
 }
 
 // New create a matcher
@@ -63,14 +64,15 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdpart
 	clientConf cc.ClientConfig, informer informer.Interface) (*Matcher, error) {
 
 	matcher := &Matcher{
-		rsLogics: rsLogics,
-		informer: informer,
-		sops:     thirdCli.Sops,
-		sopsOpt:  clientConf.Sops,
-		cc:       esbCli.Cmdb(),
-		bkchat:   thirdCli.BkChat,
-		ctx:      ctx,
-		kt:       &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
+		rsLogics:     rsLogics,
+		configLogics: config.New(thirdCli),
+		informer:     informer,
+		sops:         thirdCli.Sops,
+		sopsOpt:      clientConf.Sops,
+		cc:           esbCli.Cmdb(),
+		bkchat:       thirdCli.BkChat,
+		ctx:          ctx,
+		kt:           &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
 	}
 
 	// TODO: get worker num from config
@@ -303,8 +305,8 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 		}
 	}
 
-	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
-		kt := core.NewBackendKit()
+	kt := core.NewBackendKit()
+	if order.RequireType == enumor.RequireTypeRollServer {
 		appliedTypes := []enumor.AppliedType{enumor.NormalAppliedType, enumor.ResourcePoolAppliedType}
 
 		if err = m.rsLogics.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, order.SubOrderId, appliedTypes,
@@ -326,12 +328,48 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 		"status":      status,
 		"update_at":   time.Now(),
 	}
+	if order.ResourceType == types.ResourceTypeCvm {
+		sum, err := m.GetCpuCoreSum(kt, deviceTypeCountMap)
+		if err != nil {
+			logs.Errorf("get cpu core failed, err: %v, deviceTypeCountMap: %v, rid: %s", err, deviceTypeCountMap,
+				kt.Rid)
+			return err
+		}
+		doc.Set("delivered_core", sum)
+	}
+
 	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
 		logs.Errorf("failed to update apply order, id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
 
 	return nil
+}
+
+// GetCpuCoreSum 获取机型对应的cpu核数之和
+func (m *Matcher) GetCpuCoreSum(kt *kit.Kit, deviceTypeCountMap map[string]int) (int64, error) {
+	deviceTypes := make([]string, 0)
+	for deviceType := range deviceTypeCountMap {
+		deviceTypes = append(deviceTypes, deviceType)
+	}
+	deviceTypeInfoMap, err := m.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("get cvm instance info by device type failed, err: %v, device_types: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
+		return 0, err
+	}
+
+	var deliveredCore int64 = 0
+	for deviceType, count := range deviceTypeCountMap {
+		deviceTypeInfo, ok := deviceTypeInfoMap[deviceType]
+		if !ok {
+			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
+			return 0, fmt.Errorf("can not find device_type, type: %s", deviceType)
+		}
+		deliveredCore += deviceTypeInfo.CPUAmount * int64(count)
+	}
+
+	return deliveredCore, nil
 }
 
 // GetGenerateRecord gets generate record from db by generate id
@@ -814,7 +852,7 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	users = toolsutil.StrArrayUnique(users)
 	noticeFmt := m.bkchat.GetNoticeFmt()
 	bizName := m.getBizName(ticket.BkBizId)
-	requireName := m.getRequireName(ticket.RequireType)
+	requireName := ticket.RequireType.GetName()
 	createTime := ticket.CreateAt.Local().Format(constant.DateTimeLayout)
 	if ticket.CreateAt.Location() == time.UTC {
 		location, err := time.LoadLocation("Asia/Shanghai")
@@ -842,26 +880,6 @@ func (m *Matcher) notifyApplyDone(orderId uint64) error {
 	}
 
 	return nil
-}
-
-func (m *Matcher) getRequireName(requireType int64) string {
-	switch requireType {
-	case 1:
-		return "常规项目"
-	case 2:
-		return "春节保障"
-	case 3:
-		return "机房裁撤"
-	case 4:
-		return "故障替换"
-	case 5:
-		return "短租项目"
-	case 6:
-		return "滚服项目"
-
-	default:
-		return ""
-	}
 }
 
 // RunDiskCheck 执行磁盘检查

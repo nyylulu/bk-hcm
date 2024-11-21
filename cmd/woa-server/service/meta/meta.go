@@ -46,7 +46,7 @@ func (s *service) ListDiskType(_ *rest.Contexts) (interface{}, error) {
 
 // ListObsProject lists obs project.
 func (s *service) ListObsProject(_ *rest.Contexts) (interface{}, error) {
-	return &core.ListResultT[enumor.ObsProject]{Details: enumor.GetObsProjectMembers()}, nil
+	return &core.ListResultT[enumor.ObsProject]{Details: enumor.GetObsProjectMembersForResPlan()}, nil
 }
 
 // ListRegion lists region.

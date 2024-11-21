@@ -20,6 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -30,29 +31,33 @@ import (
 
 // ApplyOrder resource apply order
 type ApplyOrder struct {
-	OrderId           uint64        `json:"order_id" bson:"order_id"`
-	SubOrderId        string        `json:"suborder_id" bson:"suborder_id"`
-	BkBizId           int64         `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string        `json:"bk_username" bson:"bk_username"`
-	Follower          []string      `json:"follower" bson:"follower"`
-	Auditor           string        `json:"auditor" bson:"auditor"`
-	RequireType       int64         `json:"require_type" bson:"require_type"`
-	ExpectTime        string        `json:"expect_time" bson:"expect_time"`
-	ResourceType      ResourceType  `json:"resource_type" bson:"resource_type"`
-	Spec              *ResourceSpec `json:"spec" bson:"spec"`
-	AntiAffinityLevel string        `json:"anti_affinity_level" bson:"anti_affinity_level"`
-	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
-	Description       string        `json:"description" bson:"description"`
-	Remark            string        `json:"remark" bson:"remark"`
-	Stage             TicketStage   `json:"stage" bson:"stage"`
-	Status            ApplyStatus   `json:"status" bson:"status"`
-	Total             uint          `json:"total_num" bson:"total_num"`
-	SuccessNum        uint          `json:"success_num" bson:"success_num"`
-	PendingNum        uint          `json:"pending_num" bson:"pending_num"`
-	RetryTime         uint          `json:"retry_time" bson:"retry_time"`
-	ModifyTime        uint          `json:"modify_time" bson:"modify_time"`
-	CreateAt          time.Time     `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time     `json:"update_at" bson:"update_at"`
+	OrderId           uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
+	BkBizId           int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string             `json:"bk_username" bson:"bk_username"`
+	Follower          []string           `json:"follower" bson:"follower"`
+	Auditor           string             `json:"auditor" bson:"auditor"`
+	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
+	ExpectTime        string             `json:"expect_time" bson:"expect_time"`
+	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
+	Spec              *ResourceSpec      `json:"spec" bson:"spec"`
+	AntiAffinityLevel string             `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool               `json:"enable_disk_check" bson:"enable_disk_check"`
+	Description       string             `json:"description" bson:"description"`
+	Remark            string             `json:"remark" bson:"remark"`
+	Stage             TicketStage        `json:"stage" bson:"stage"`
+	Status            ApplyStatus        `json:"status" bson:"status"`
+	Total             uint               `json:"total_num" bson:"total_num"`
+	SuccessNum        uint               `json:"success_num" bson:"success_num"`
+	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
+	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
+	AppliedCore uint `json:"applied_core" bson:"applied_core,omitempty"`
+	// DeliveredCore 注意：该字段目前只会记录虚拟机交付的核心数量
+	DeliveredCore uint      `json:"delivered_core" bson:"delivered_core,omitempty"`
+	RetryTime     uint      `json:"retry_time" bson:"retry_time"`
+	ModifyTime    uint      `json:"modify_time" bson:"modify_time"`
+	CreateAt      time.Time `json:"create_at" bson:"create_at"`
+	UpdateAt      time.Time `json:"update_at" bson:"update_at"`
 }
 
 // ResourceType resource type
@@ -383,54 +388,54 @@ func (param *MatchPoolDeviceReq) Validate() (errKey string, err error) {
 
 // DeviceInfo device info
 type DeviceInfo struct {
-	OrderId           uint64       `json:"order_id" bson:"order_id"`
-	SubOrderId        string       `json:"suborder_id" bson:"suborder_id"`
-	GenerateId        uint64       `json:"generate_id" bson:"generate_id"`
-	BkBizId           int          `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string       `json:"bk_username" bson:"bk_username"`
-	BkHostId          int64        `json:"bk_host_id" bson:"bk_host_id"`
-	Ip                string       `json:"ip" bson:"ip"`
-	AssetId           string       `json:"asset_id" bson:"asset_id"`
-	RequireType       int64        `json:"require_type" bson:"require_type"`
-	ResourceType      ResourceType `json:"resource_type" bson:"resource_type"`
-	DeviceType        string       `json:"device_type" bson:"device_type"`
-	Description       string       `json:"description" bson:"description"`
-	Remark            string       `json:"remark" bson:"remark"`
-	ZoneName          string       `json:"zone_name" bson:"zone_name"`
-	ZoneID            int          `json:"zone_id" bson:"zone_id"`
-	ModuleName        string       `json:"module_name" bson:"module_name"`
-	Equipment         string       `json:"rack_id" bson:"rack_id"`
-	IsMatched         bool         `json:"is_matched" bson:"is_matched"`
-	IsChecked         bool         `json:"is_checked" bson:"is_checked"`
-	IsInited          bool         `json:"is_inited" bson:"is_inited"`
-	IsDiskChecked     bool         `json:"is_disk_checked" bson:"is_disk_checked"`
-	IsDelivered       bool         `json:"is_delivered" bson:"is_delivered"`
-	Deliverer         string       `json:"deliverer" bson:"deliverer"`
-	GenerateTaskId    string       `json:"generate_task_id" bson:"generate_task_id"`
-	GenerateTaskLink  string       `json:"generate_task_link" bson:"generate_task_link"`
-	InitTaskId        string       `json:"init_task_id" bson:"init_task_id"`
-	InitTaskLink      string       `json:"init_task_link" bson:"init_task_link"`
-	DiskCheckTaskId   string       `json:"disk_check_task_id" bson:"disk_check_task_id"`
-	DiskCheckTaskLink string       `json:"disk_check_task_link" bson:"disk_check_task_link"`
-	CreateAt          time.Time    `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time    `json:"update_at" bson:"update_at"`
+	OrderId           uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
+	GenerateId        uint64             `json:"generate_id" bson:"generate_id"`
+	BkBizId           int                `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string             `json:"bk_username" bson:"bk_username"`
+	BkHostId          int64              `json:"bk_host_id" bson:"bk_host_id"`
+	Ip                string             `json:"ip" bson:"ip"`
+	AssetId           string             `json:"asset_id" bson:"asset_id"`
+	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
+	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
+	DeviceType        string             `json:"device_type" bson:"device_type"`
+	Description       string             `json:"description" bson:"description"`
+	Remark            string             `json:"remark" bson:"remark"`
+	ZoneName          string             `json:"zone_name" bson:"zone_name"`
+	ZoneID            int                `json:"zone_id" bson:"zone_id"`
+	ModuleName        string             `json:"module_name" bson:"module_name"`
+	Equipment         string             `json:"rack_id" bson:"rack_id"`
+	IsMatched         bool               `json:"is_matched" bson:"is_matched"`
+	IsChecked         bool               `json:"is_checked" bson:"is_checked"`
+	IsInited          bool               `json:"is_inited" bson:"is_inited"`
+	IsDiskChecked     bool               `json:"is_disk_checked" bson:"is_disk_checked"`
+	IsDelivered       bool               `json:"is_delivered" bson:"is_delivered"`
+	Deliverer         string             `json:"deliverer" bson:"deliverer"`
+	GenerateTaskId    string             `json:"generate_task_id" bson:"generate_task_id"`
+	GenerateTaskLink  string             `json:"generate_task_link" bson:"generate_task_link"`
+	InitTaskId        string             `json:"init_task_id" bson:"init_task_id"`
+	InitTaskLink      string             `json:"init_task_link" bson:"init_task_link"`
+	DiskCheckTaskId   string             `json:"disk_check_task_id" bson:"disk_check_task_id"`
+	DiskCheckTaskLink string             `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
 }
 
 // ApplyTicket resource apply ticket
 type ApplyTicket struct {
-	OrderId      uint64      `json:"order_id" bson:"order_id"`
-	ItsmTicketId string      `json:"itsm_ticket_id" bson:"itsm_ticket_id"`
-	Stage        TicketStage `json:"stage" bson:"stage"`
-	BkBizId      int64       `json:"bk_biz_id" bson:"bk_biz_id"`
-	User         string      `json:"bk_username" bson:"bk_username"`
-	Follower     []string    `json:"follower" bson:"follower"`
-	EnableNotice bool        `json:"enable_notice" bson:"enable_notice"`
-	RequireType  int64       `json:"require_type" bson:"require_type"`
-	ExpectTime   string      `json:"expect_time" bson:"expect_time"`
-	Remark       string      `json:"remark" bson:"remark"`
-	Suborders    []*Suborder `json:"suborders" bson:"suborders"`
-	CreateAt     time.Time   `json:"create_at" bson:"create_at"`
-	UpdateAt     time.Time   `json:"update_at" bson:"update_at"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	ItsmTicketId string             `json:"itsm_ticket_id" bson:"itsm_ticket_id"`
+	Stage        TicketStage        `json:"stage" bson:"stage"`
+	BkBizId      int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	Follower     []string           `json:"follower" bson:"follower"`
+	EnableNotice bool               `json:"enable_notice" bson:"enable_notice"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ExpectTime   string             `json:"expect_time" bson:"expect_time"`
+	Remark       string             `json:"remark" bson:"remark"`
+	Suborders    []*Suborder        `json:"suborders" bson:"suborders"`
+	CreateAt     time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt     time.Time          `json:"update_at" bson:"update_at"`
 }
 
 // TicketStage resource apply ticket stage
@@ -565,15 +570,15 @@ type ApplyAutoAuditRst struct {
 
 // ApplyReq resource apply request
 type ApplyReq struct {
-	OrderId      uint64      `json:"order_id" bson:"order_id"`
-	BkBizId      int64       `json:"bk_biz_id" bson:"bk_biz_id"`
-	User         string      `json:"bk_username" bson:"bk_username"`
-	Follower     []string    `json:"follower" bson:"follower"`
-	EnableNotice bool        `json:"enable_notice" bson:"enable_notice"`
-	RequireType  int64       `json:"require_type" bson:"require_type"`
-	ExpectTime   string      `json:"expect_time" bson:"expect_time"`
-	Remark       string      `json:"remark" bson:"remark"`
-	Suborders    []*Suborder `json:"suborders" bson:"suborders"`
+	OrderId      uint64             `json:"order_id" bson:"order_id"`
+	BkBizId      int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User         string             `json:"bk_username" bson:"bk_username"`
+	Follower     []string           `json:"follower" bson:"follower"`
+	EnableNotice bool               `json:"enable_notice" bson:"enable_notice"`
+	RequireType  enumor.RequireType `json:"require_type" bson:"require_type"`
+	ExpectTime   string             `json:"expect_time" bson:"expect_time"`
+	Remark       string             `json:"remark" bson:"remark"`
+	Suborders    []*Suborder        `json:"suborders" bson:"suborders"`
 }
 
 // Validate whether ApplyRequest is valid
@@ -588,8 +593,8 @@ func (req *ApplyReq) Validate() error {
 		return fmt.Errorf("bk_username cannot be empty")
 	}
 
-	if req.RequireType <= 0 {
-		return fmt.Errorf("invalid require_type <= 0")
+	if err := req.RequireType.Validate(); err != nil {
+		return err
 	}
 
 	if _, err := time.Parse(datetimeLayout, req.ExpectTime); err != nil {
@@ -627,6 +632,7 @@ type Suborder struct {
 	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
 	Remark            string        `json:"remark" bson:"remark"`
 	Spec              *ResourceSpec `json:"spec" bson:"spec"`
+	AppliedCore       uint          `json:"applied_core" bson:"applied_core,omitempty"`
 }
 
 // Validate whether Suborder is valid
@@ -765,26 +771,26 @@ func (m UnifyOrderList) Less(i, j int) bool {
 
 // UnifyOrder get apply order result object, including apply ticket and order
 type UnifyOrder struct {
-	OrderId           uint64        `json:"order_id" bson:"order_id"`
-	SubOrderId        string        `json:"suborder_id" bson:"suborder_id"`
-	BkBizId           int64         `json:"bk_biz_id" bson:"bk_biz_id"`
-	User              string        `json:"bk_username" bson:"bk_username"`
-	RequireType       int64         `json:"require_type" bson:"require_type"`
-	ResourceType      ResourceType  `json:"resource_type" bson:"resource_type"`
-	ExpectTime        string        `json:"expect_time" bson:"expect_time"`
-	Description       string        `json:"description" bson:"description"`
-	Remark            string        `json:"remark" bson:"remark"`
-	Spec              *ResourceSpec `json:"spec" bson:"spec"`
-	AntiAffinityLevel string        `json:"anti_affinity_level" bson:"anti_affinity_level"`
-	EnableDiskCheck   bool          `json:"enable_disk_check" bson:"enable_disk_check"`
-	Stage             TicketStage   `json:"stage" bson:"stage"`
-	Status            ApplyStatus   `json:"status" bson:"status"`
-	Total             uint          `json:"total_num" bson:"total_num"`
-	SuccessNum        uint          `json:"success_num" bson:"success_num"`
-	PendingNum        uint          `json:"pending_num" bson:"pending_num"`
-	ModifyTime        uint          `json:"modify_time" bson:"modify_time"`
-	CreateAt          time.Time     `json:"create_at" bson:"create_at"`
-	UpdateAt          time.Time     `json:"update_at" bson:"update_at"`
+	OrderId           uint64             `json:"order_id" bson:"order_id"`
+	SubOrderId        string             `json:"suborder_id" bson:"suborder_id"`
+	BkBizId           int64              `json:"bk_biz_id" bson:"bk_biz_id"`
+	User              string             `json:"bk_username" bson:"bk_username"`
+	RequireType       enumor.RequireType `json:"require_type" bson:"require_type"`
+	ResourceType      ResourceType       `json:"resource_type" bson:"resource_type"`
+	ExpectTime        string             `json:"expect_time" bson:"expect_time"`
+	Description       string             `json:"description" bson:"description"`
+	Remark            string             `json:"remark" bson:"remark"`
+	Spec              *ResourceSpec      `json:"spec" bson:"spec"`
+	AntiAffinityLevel string             `json:"anti_affinity_level" bson:"anti_affinity_level"`
+	EnableDiskCheck   bool               `json:"enable_disk_check" bson:"enable_disk_check"`
+	Stage             TicketStage        `json:"stage" bson:"stage"`
+	Status            ApplyStatus        `json:"status" bson:"status"`
+	Total             uint               `json:"total_num" bson:"total_num"`
+	SuccessNum        uint               `json:"success_num" bson:"success_num"`
+	PendingNum        uint               `json:"pending_num" bson:"pending_num"`
+	ModifyTime        uint               `json:"modify_time" bson:"modify_time"`
+	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
 }
 
 // GetApplyParam get apply order request parameter

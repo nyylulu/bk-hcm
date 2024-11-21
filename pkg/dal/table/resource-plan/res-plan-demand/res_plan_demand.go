@@ -133,7 +133,7 @@ func (r ResPlanDemandTable) InsertValidate() error {
 		return errors.New("ticket id can not be empty")
 	}
 
-	if err := r.ObsProject.Validate(); err != nil {
+	if err := r.ObsProject.ValidateResPlan(); err != nil {
 		return err
 	}
 
@@ -177,7 +177,7 @@ func (r ResPlanDemandTable) UpdateValidate() error {
 	}
 
 	if len(r.ObsProject) > 0 {
-		if err := r.ObsProject.Validate(); err != nil {
+		if err := r.ObsProject.ValidateResPlan(); err != nil {
 			return err
 		}
 	}

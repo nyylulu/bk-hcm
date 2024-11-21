@@ -1,29 +1,33 @@
 import { type LocationQuery } from 'vue-router';
 import qs from 'qs';
-import { ModelProperty } from '@/model/typings';
+import { ModelPropertySearch } from '@/model/typings';
 import { findProperty } from '@/model/utils';
 import routeQuery from '@/router/utils/query';
 import { convertValue, getDefaultRule } from '@/utils/search';
 
 type useSearchQsParamsType = {
-  properties: ModelProperty[];
+  properties?: ModelPropertySearch[];
   key?: string;
   forceUpdate?: boolean;
   resetPage?: boolean;
 };
 
 export default function useSearchQs({
-  properties,
+  properties = [],
   key = 'filter',
   forceUpdate = true,
   resetPage = true,
-}: useSearchQsParamsType) {
-  const set = (value: Record<string, string | number | string[] | number[]>) => {
-    const queryVal = qs.stringify(value, {
+}: useSearchQsParamsType = {}) {
+  const build = (value: Record<string, string | number | string[] | number[]>) => {
+    return qs.stringify(value, {
       arrayFormat: 'comma',
       encode: false,
       allowEmptyArrays: true,
     });
+  };
+
+  const set = (value: Record<string, string | number | string[] | number[]>) => {
+    const queryVal = build(value);
 
     const updateQuery = { [key]: queryVal };
     if (resetPage) {
@@ -51,6 +55,7 @@ export default function useSearchQs({
   };
 
   return {
+    build,
     get,
     set,
     clear,

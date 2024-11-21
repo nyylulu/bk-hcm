@@ -116,3 +116,47 @@ func GetMonthDays(year int, month time.Month) []int {
 func GetDataIntDate(year, month, day int) int {
 	return year*10000 + month*100 + day
 }
+
+// DateTimeItem defines green channel datetime item.
+type DateTimeItem struct {
+	Year  int `json:"year"`
+	Month int `json:"month"`
+	Day   int `json:"day"`
+}
+
+// Validate validate.
+func (r *DateTimeItem) Validate() error {
+	if r.Year < 0 {
+		return errf.New(errf.InvalidParameter, "year should be >= 0")
+	}
+
+	if r.Month < 1 || r.Month > 12 {
+		return errf.New(errf.InvalidParameter, "month should be in [1, 12]")
+	}
+
+	if r.Day < 1 || r.Day > 31 {
+		return errf.New(errf.InvalidParameter, "day should be in [1, 31]")
+	}
+
+	return nil
+}
+
+// GetTime get time.
+func (r *DateTimeItem) GetTime() time.Time {
+	return time.Date(r.Year, time.Month(r.Month), r.Day, 0, 0, 0, 0, time.UTC)
+}
+
+// GetMondayOfWeek 获取本周的周一日期
+func GetMondayOfWeek(now time.Time) time.Time {
+	weekday := now.Weekday()
+
+	// 计算距离本周一的天数差
+	daysToMonday := int(time.Monday - weekday)
+	if weekday == time.Sunday {
+		daysToMonday = -6
+	}
+
+	// 计算本周一的日期
+	monday := now.AddDate(0, 0, daysToMonday)
+	return monday
+}

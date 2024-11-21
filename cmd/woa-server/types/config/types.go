@@ -17,6 +17,7 @@ import (
 	"errors"
 	"fmt"
 
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
@@ -25,9 +26,9 @@ import (
 
 // Requirement resource requirement type config
 type Requirement struct {
-	BkInstId    int64  `json:"id" bson:"id"`
-	RequireType int64  `json:"require_type" bson:"require_type"`
-	RequireName string `json:"require_name" bson:"require_name"`
+	BkInstId    int64              `json:"id" bson:"id"`
+	RequireType enumor.RequireType `json:"require_type" bson:"require_type"`
+	RequireName string             `json:"require_name" bson:"require_name"`
 }
 
 // GetRequirementResult get requirement type list result
@@ -246,21 +247,21 @@ type GetCvmImageResult struct {
 
 // DeviceInfo cvm device info
 type DeviceInfo struct {
-	BkInstId       int64         `json:"id" bson:"id"`
-	RequireType    int64         `json:"require_type" bson:"require_type"`
-	Region         string        `json:"region" bson:"region"`
-	Zone           string        `json:"zone" bson:"zone"`
-	DeviceType     string        `json:"device_type" bson:"device_type"`
-	Cpu            int64         `json:"cpu" bson:"cpu"`
-	Mem            int64         `json:"mem" bson:"mem"`
-	Disk           int64         `json:"disk" bson:"disk"`
-	Remark         string        `json:"remark" bson:"remark"`
-	Label          mapstr.MapStr `json:"label" bson:"label"`
-	CapacityFlag   int           `json:"capacity_flag" bson:"capacity_flag"`
-	EnableCapacity bool          `json:"enable_capacity" bson:"enable_capacity"`
-	EnableApply    bool          `json:"enable_apply" bson:"enable_apply"`
-	Score          float64       `json:"score" bson:"score"`
-	Comment        string        `json:"comment" bson:"comment"`
+	BkInstId       int64              `json:"id" bson:"id"`
+	RequireType    enumor.RequireType `json:"require_type" bson:"require_type"`
+	Region         string             `json:"region" bson:"region"`
+	Zone           string             `json:"zone" bson:"zone"`
+	DeviceType     string             `json:"device_type" bson:"device_type"`
+	Cpu            int64              `json:"cpu" bson:"cpu"`
+	Mem            int64              `json:"mem" bson:"mem"`
+	Disk           int64              `json:"disk" bson:"disk"`
+	Remark         string             `json:"remark" bson:"remark"`
+	Label          mapstr.MapStr      `json:"label" bson:"label"`
+	CapacityFlag   int                `json:"capacity_flag" bson:"capacity_flag"`
+	EnableCapacity bool               `json:"enable_capacity" bson:"enable_capacity"`
+	EnableApply    bool               `json:"enable_apply" bson:"enable_apply"`
+	Score          float64            `json:"score" bson:"score"`
+	Comment        string             `json:"comment" bson:"comment"`
 }
 
 const (
@@ -348,13 +349,13 @@ type GetDeviceTypeDetailResult struct {
 
 // CreateManyDeviceParam create device config in batch request param
 type CreateManyDeviceParam struct {
-	RequireType []int64  `json:"require_type"`
-	Zone        []string `json:"zone"`
-	DeviceGroup string   `json:"device_group"`
-	DeviceType  string   `json:"device_type"`
-	Cpu         int64    `json:"cpu"`
-	Mem         int64    `json:"mem"`
-	Remark      string   `json:"remark"`
+	RequireType []enumor.RequireType `json:"require_type"`
+	Zone        []string             `json:"zone"`
+	DeviceGroup string               `json:"device_group"`
+	DeviceType  string               `json:"device_type"`
+	Cpu         int64                `json:"cpu"`
+	Mem         int64                `json:"mem"`
+	Remark      string               `json:"remark"`
 }
 
 // Validate whether GetDeviceParam is valid
@@ -367,6 +368,12 @@ func (param *CreateManyDeviceParam) Validate() (errKey string, err error) {
 
 	if len(param.RequireType) > 20 {
 		return "require_type", errors.New("exceed limit 20")
+	}
+
+	for _, rt := range param.RequireType {
+		if err := rt.Validate(); err != nil {
+			return "require_type", err
+		}
 	}
 
 	if len(param.Zone) == 0 {
@@ -453,12 +460,12 @@ type GetPmDeviceRst struct {
 
 // GetCapacityParam get resource apply capacity request param
 type GetCapacityParam struct {
-	RequireType int64  `json:"require_type"`
-	DeviceType  string `json:"device_type"`
-	Region      string `json:"region"`
-	Zone        string `json:"zone"`
-	Vpc         string `json:"vpc"`
-	Subnet      string `json:"subnet"`
+	RequireType enumor.RequireType `json:"require_type"`
+	DeviceType  string             `json:"device_type"`
+	Region      string             `json:"region"`
+	Zone        string             `json:"zone"`
+	Vpc         string             `json:"vpc"`
+	Subnet      string             `json:"subnet"`
 	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
 	ChargeType cvmapi.ChargeType `json:"charge_type"`
 }
@@ -467,9 +474,9 @@ type GetCapacityParam struct {
 // errKey: invalid key
 // err: detail reason why errKey is invalid
 func (param *GetCapacityParam) Validate() (string, error) {
-	if param.RequireType <= 0 {
+	if err := param.RequireType.Validate(); err != nil {
 		key := "require_type"
-		return key, fmt.Errorf("invalid %s <= 0", key)
+		return key, err
 	}
 
 	if len(param.DeviceType) == 0 {
@@ -514,19 +521,19 @@ type CapacityMaxInfo struct {
 
 // UpdateCapacityParam update resource capacity info param
 type UpdateCapacityParam struct {
-	RequireType int64  `json:"require_type"`
-	DeviceType  string `json:"device_type"`
-	Region      string `json:"region"`
-	Zone        string `json:"zone"`
+	RequireType enumor.RequireType `json:"require_type"`
+	DeviceType  string             `json:"device_type"`
+	Region      string             `json:"region"`
+	Zone        string             `json:"zone"`
 }
 
 // Validate whether UpdateCapacityParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
 func (param *UpdateCapacityParam) Validate() (string, error) {
-	if param.RequireType <= 0 {
+	if err := param.RequireType.Validate(); err != nil {
 		key := "require_type"
-		return key, fmt.Errorf("invalid %s <= 0", key)
+		return key, err
 	}
 
 	if len(param.DeviceType) == 0 {

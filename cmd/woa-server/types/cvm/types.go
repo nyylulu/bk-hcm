@@ -17,9 +17,9 @@ import (
 	"fmt"
 	"time"
 
-	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 )
 
@@ -149,24 +149,6 @@ type ApplyOrder struct {
 	CreateAt    time.Time   `json:"create_at" bson:"create_at"`
 	UpdateAt    time.Time   `json:"update_at" bson:"update_at"`
 }
-
-// RequireType cvm require type
-type RequireType int64
-
-const (
-	// Regular 常规项目
-	Regular RequireType = 1
-	// SpringFestival 春节保障
-	SpringFestival RequireType = 2
-	// HostDissolve 机房裁撤
-	HostDissolve RequireType = 3
-	// FaultReplacement  故障替换
-	FaultReplacement RequireType = 4
-	// ShortTermRental 短租项目
-	ShortTermRental RequireType = 5
-	// RollingServer 滚服项目
-	RollingServer RequireType = 6
-)
 
 // ApplyStatus cvm apply order status
 type ApplyStatus string

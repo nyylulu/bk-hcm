@@ -23,9 +23,9 @@ import (
 	"time"
 
 	cfgtypes "hcm/cmd/woa-server/types/config"
-	cvmtypes "hcm/cmd/woa-server/types/cvm"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -114,7 +114,11 @@ func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
 	}
 
 	// set obs project type
-	createReq.Params.ObsProject = cvmapi.GetObsProject(cvm.ApplyType)
+	requireType := enumor.RequireType(cvm.ApplyType)
+	createReq.Params.ObsProject = string(requireType.ToObsProject())
+	if requireType == enumor.RequireTypeGreenChannel {
+		createReq.Params.ResourceType = cvmapi.ResourceTypeQuick
+	}
 
 	jsonReq, _ := json.Marshal(createReq)
 	logs.Infof("scheduler:logics:generator:create:cvm:start, create cvm req: %s", string(jsonReq))
@@ -313,7 +317,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	// construct cvm launch req
 	req := &types.CVM{
 		AppId:             "931",
-		ApplyType:         order.RequireType,
+		ApplyType:         int64(order.RequireType),
 		AppModuleId:       51524,
 		Operator:          "dommyzhang",
 		ApplyNumber:       replicas,
@@ -422,7 +426,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 }
 
 func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if cvmtypes.RequireType(order.RequireType) == cvmtypes.RollingServer {
+	if order.RequireType == enumor.RequireTypeRollServer {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

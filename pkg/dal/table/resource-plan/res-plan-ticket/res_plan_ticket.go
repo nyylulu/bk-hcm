@@ -196,7 +196,7 @@ func (i *OriginalRPDemandItem) Validate() error {
 		return errors.New("crp demand id can not be empty")
 	}
 
-	if err := i.ObsProject.Validate(); err != nil {
+	if err := i.ObsProject.ValidateResPlan(); err != nil {
 		return err
 	}
 
@@ -267,7 +267,7 @@ func (i *UpdatedRPDemandItem) Validate() error {
 		return err
 	}
 
-	if err := i.ObsProject.Validate(); err != nil {
+	if err := i.ObsProject.ValidateResPlan(); err != nil {
 		return err
 	}
 

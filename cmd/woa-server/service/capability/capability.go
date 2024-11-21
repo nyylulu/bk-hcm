@@ -21,6 +21,7 @@
 package capability
 
 import (
+	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
 	rslogic "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
@@ -56,4 +57,5 @@ type Capability struct {
 	OperationIf    operation.Interface
 	EsCli          *es.EsCli
 	RsLogic        rslogic.Logics
+	GcLogic        gclogics.Logics
 }

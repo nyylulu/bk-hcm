@@ -4,7 +4,7 @@ import { Button } from 'bkui-vue';
 import { ModelPropertyColumn, PropertyColumnConfig } from '@/model/typings';
 import usageOrderViewProperties from '@/model/rolling-server/usage-order.view';
 import { RollingServerRecordItem } from '@/store';
-import qs from 'qs';
+import useSearchQs from '@/hooks/use-search-qs';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
@@ -26,15 +26,13 @@ const columConfig: Record<string, PropertyColumnConfig> = {
           text: true,
           theme: 'primary',
           onClick() {
+            const searchQs = useSearchQs();
             routerAction.open({
               name: 'ApplicationsManage',
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_recycle',
-                initial_filter: qs.stringify(
-                  { suborder_id: [cell] },
-                  { arrayFormat: 'brackets', encode: false, allowEmptyArrays: true },
-                ),
+                initial_filter: searchQs.build({ suborder_id: [cell], bkUsername: [] }),
               },
             });
           },

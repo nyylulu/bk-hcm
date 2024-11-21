@@ -37,8 +37,12 @@ import http from '@/http';
 // 滚服项目
 import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
 import InheritPackageFormItem from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
-import CpuCorsLimits from '@/views/ziyanScr/rolling-server/cpu-cors-limits/index.vue';
+import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
 import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
+// 小额绿通
+import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
+import GreenChannelConfirm from './green-channel/confirm.vue';
+import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
@@ -122,8 +126,12 @@ export default defineComponent({
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
     const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, getMonthName } = useCvmChargeType();
     const cloudTableColumns = ref([]);
-    // 滚服项目-状态
+
+    // 特殊需求类型（滚服项目、小额绿通）-状态
     const isRollingServer = computed(() => order.value.model.requireType === 6);
+    const isGreenChannel = computed(() => order.value.model.requireType === 7);
+    const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
+
     const PhysicalMachineoperation = ref({
       label: '操作',
       width: 100,
@@ -247,7 +255,7 @@ export default defineComponent({
         render({ cell }: { cell: VerifyStatus }) {
           return <span class={`status-${cell}`}>{VerifyStatusMap[cell] || '待校验'}</span>;
         },
-        isHidden: isRollingServer.value,
+        isHidden: isSpecialRequirement.value,
       },
       {
         field: 'reason',
@@ -256,7 +264,7 @@ export default defineComponent({
         render({ cell }: { cell: string }) {
           return cell || '--';
         },
-        isHidden: isRollingServer.value,
+        isHidden: isSpecialRequirement.value,
       },
     ];
     // 添加按钮侧边栏公共表单对象
@@ -583,13 +591,14 @@ export default defineComponent({
         () => resourceForm.value.zone,
       ],
       async ([bk_biz_id, require_type, region, zone]) => {
+        // 查询有效预测范围内的机型
         if (
           !bk_biz_id ||
           !require_type ||
           !region ||
           !zone ||
           resourceForm.value.resourceType !== 'QCLOUDCVM' ||
-          isRollingServer.value
+          isSpecialRequirement.value
         )
           return;
         isLoadingDeviceType.value = true;
@@ -903,7 +912,7 @@ export default defineComponent({
       }
     };
     watch(
-      isRollingServer,
+      isSpecialRequirement,
       (val) => {
         if (!val) {
           resourceForm.value.bk_asset_id = '';
@@ -912,7 +921,7 @@ export default defineComponent({
           cloudHostSetting = generateColumnsSettings(cloudTableColumns.value);
           return;
         }
-        // 滚服项目, 默认为云主机, 禁用选择
+        // 滚服项目、小额绿通, 默认为云主机, 禁用选择
         resourceForm.value.resourceType = 'QCLOUDCVM';
         // 动态更新云主机列字段
         cloudTableColumns.value = [...CloudHostcolumns, CloudHostoperation.value];
@@ -923,17 +932,44 @@ export default defineComponent({
       },
     );
 
-    // 滚服项目-cpu需求限额
-    const cpuCorsLimitsRef = useTemplateRef<typeof CpuCorsLimits>('cpu-cors-limits');
-    const availableCpuQuota = computed(() => cpuCorsLimitsRef.value?.availableCpuQuota || 0);
-    const replicasCpuCors = computed(() => cpuCorsLimitsRef.value?.replicasCpuCors || 0);
-    const isCpuCorsExceeded = computed(() => replicasCpuCors.value > availableCpuQuota.value);
+    // 清空配置清单
+    const clearResRequirements = () => {
+      cloudTableData.value = [];
+      physicalTableData.value = [];
+    };
+
+    // 需求核数
+    const replicasCpuCores = computed(() =>
+      cloudTableData.value.reduce((prev, curr) => {
+        const { replicas, spec } = curr;
+        const { cpu } = spec;
+        return prev + replicas * cpu;
+      }, 0),
+    );
+
+    // 滚服项目、小额绿通 - cpu需求限额
+    const rollingServerCpuCoreLimitsRef = useTemplateRef<typeof RollingServerCpuCoreLimits>(
+      'rolling-server-cpu-core-limits',
+    );
+    const availableCpuCoreQuota = computed(() => {
+      let val = 0;
+      if (isRollingServer.value) val = rollingServerCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
+      if (isGreenChannel.value) val = greenChannelCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
+      return val;
+    });
+    const isCpuCoreExceeded = computed(() => replicasCpuCores.value > availableCpuCoreQuota.value);
 
     // 非滚服-机型排序逻辑
     const handleSortDemands = (a: CvmDeviceType, b: CvmDeviceType) => {
       const set = computedAvailableSet.value;
       return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
     };
+
+    // 小额绿通
+    const greenChannelConfirmRef = useTemplateRef<typeof GreenChannelConfirm>('green-channel-confirm');
+    const greenChannelCpuCoreLimitsRef = useTemplateRef<typeof GreenChannelCpuCoreLimits>(
+      'green-channel-cpu-core-limits',
+    );
 
     watch(
       () => cloudTableData.value,
@@ -1000,10 +1036,14 @@ export default defineComponent({
                   <bk-select
                     class='item-warp-component'
                     v-model={order.value.model.requireType}
-                    onChange={() => {
-                      // 手动更改时，需要清空已保存的需求
-                      cloudTableData.value = [];
-                      physicalTableData.value = [];
+                    onChange={(newV: number, oldV: number) => {
+                      // 小额绿通，弹出确认框
+                      if (newV === 7) {
+                        greenChannelConfirmRef.value.show(oldV);
+                      } else {
+                        // 手动更改时，需要清空已保存的需求
+                        clearResRequirements();
+                      }
                     }}>
                     {order.value.options.requireTypes.map((item: { require_type: any; require_name: any }) => (
                       <bk-option
@@ -1043,8 +1083,11 @@ export default defineComponent({
                   />
                 </bk-form-item>
               </div>
-              {/* 滚服项目-tips */}
-              {isRollingServer.value ? <RollingServerTipsAlert /> : <HostApplyTipsAlert />}
+              {(function () {
+                if (isRollingServer.value) return <RollingServerTipsAlert />;
+                if (isGreenChannel.value) return <GreenChannelTipsAlert />;
+                return <HostApplyTipsAlert />;
+              })()}
             </CommonCard>
             <CommonCard
               title={() => (
@@ -1074,38 +1117,48 @@ export default defineComponent({
                     title.value = '增加资源需求';
                     IDCPMlist();
                   }}
-                  disabled={isRollingServer.value && availableCpuQuota.value === 0}
+                  disabled={isSpecialRequirement.value && availableCpuCoreQuota.value <= 0}
                   v-bk-tooltips={{
-                    content: '已超过滚服的CPU可用额度，不允许添加',
-                    disabled: !(isRollingServer.value && availableCpuQuota.value === 0),
+                    content: `已超过${isRollingServer.value ? '滚服项目' : '小额绿通'}的CPU可用额度，不允许添加`,
+                    disabled: !(isSpecialRequirement.value && availableCpuCoreQuota.value <= 0),
                   }}>
                   添加
                 </Button>
                 <Button
                   class='button'
                   onClick={handleApplication}
-                  disabled={isRollingServer.value}
-                  v-bk-tooltips={{ content: '滚服项目暂不支持一键申请', disabled: !isRollingServer.value }}>
+                  disabled={isRollingServer.value || (isGreenChannel.value && availableCpuCoreQuota.value <= 0)}
+                  v-bk-tooltips={{
+                    content: isRollingServer.value
+                      ? '滚服项目暂不支持一键申请'
+                      : '已超过小额绿通的CPU可用额度，不允许添加',
+                    disabled: !(isRollingServer.value || (isGreenChannel.value && availableCpuCoreQuota.value <= 0)),
+                  }}>
                   一键申请
                 </Button>
                 {/* 滚服项目-cpu需求限额 */}
                 {isRollingServer.value && (
-                  <CpuCorsLimits
-                    ref='cpu-cors-limits'
+                  <RollingServerCpuCoreLimits
+                    ref='rolling-server-cpu-core-limits'
                     bizId={computedBiz.value}
-                    cloudTableData={cloudTableData.value}
+                    replicasCpuCores={replicasCpuCores.value}
+                  />
+                )}
+                {/* 小额绿通-cpu需求限额 */}
+                {isGreenChannel.value && (
+                  <GreenChannelCpuCoreLimits
+                    ref='green-channel-cpu-core-limits'
+                    replicasCpuCores={replicasCpuCores.value}
                   />
                 )}
               </div>
               <bk-form-item label='云主机'>
-                {!isRollingServer.value && (
-                  <p class={'statistics'}>
-                    <span class={'label'}>包年包月CPU总数：</span>
-                    <span class={'value'}>{cpuAmount.prepaid}核</span>
-                    <span class={'ml24 label'}>按量计费CPU总数：</span>
-                    <span class={'value'}>{cpuAmount.postpaid}核</span>
-                  </p>
-                )}
+                <p class={'statistics'}>
+                  <span class={'label'}>包年包月CPU总数：</span>
+                  <span class={'value'}>{cpuAmount.prepaid}核</span>
+                  <span class={'ml24 label'}>按量计费CPU总数：</span>
+                  <span class={'value'}>{cpuAmount.postpaid}核</span>
+                </p>
                 <bk-table
                   align='left'
                   row-hover='auto'
@@ -1139,7 +1192,8 @@ export default defineComponent({
                   placeholder='请输入申请单备注'></Input>
               </bk-form-item>
             </CommonCard>
-            {!isRollingServer.value && isVerifyFailed.value && (
+
+            {!isSpecialRequirement.value && isVerifyFailed.value && (
               <CommonCard title={() => '需求预检'}>
                 <Alert theme='danger' showIcon={false} class={'mb24'}>
                   {cpuAmount.prepaid > 0 && (
@@ -1178,8 +1232,8 @@ export default defineComponent({
             )}
 
             <bk-form-item class={'mt16'}>
-              {/* 非滚服 */}
-              {!isRollingServer.value && (
+              {!isSpecialRequirement.value ? (
+                // 非滚服、非小额绿通
                 <>
                   {!!cloudTableData.value.length && isNeedVerfiy.value ? (
                     <Button class='mr16' theme='primary' loading={isLoading.value} onClick={handleVerify}>
@@ -1190,47 +1244,41 @@ export default defineComponent({
                       <Button
                         class='mr16'
                         theme='primary'
-                        disabled={!physicalTableData.value.length && !cloudTableData.value.length}
                         loading={isLoading.value}
+                        disabled={!physicalTableData.value.length && !cloudTableData.value.length}
                         v-bk-tooltips={{
                           content: '资源需求不能为空',
                           disabled: physicalTableData.value.length || cloudTableData.value.length,
                         }}
-                        onClick={() => {
-                          handleSaveOrSubmit('submit');
-                        }}>
+                        onClick={() => handleSaveOrSubmit('submit')}>
                         提交
                       </Button>
                       <Button
+                        class={'mr16'}
                         loading={isLoading.value}
                         disabled={!physicalTableData.value.length && !cloudTableData.value.length}
                         v-bk-tooltips={{
                           content: '资源需求不能为空',
                           disabled: physicalTableData.value.length || cloudTableData.value.length,
                         }}
-                        onClick={() => {
-                          handleSaveOrSubmit('save');
-                        }}
-                        class={'mr16'}>
+                        onClick={() => handleSaveOrSubmit('save')}>
                         保存
                       </Button>
                     </>
                   )}
                 </>
-              )}
-
-              {/* 滚服 */}
-              {isRollingServer.value && (
+              ) : (
+                // 滚服、小额绿通
                 <>
                   <Button
                     class='mr16'
                     theme='primary'
+                    loading={isLoading.value}
                     disabled={
                       (!physicalTableData.value.length && !cloudTableData.value.length) ||
-                      // todo：如果是滚服项目，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
-                      isCpuCorsExceeded.value
+                      // todo：如果是滚服项目、小额绿通，且需求核数超过限额，暂不允许提交，后续与资源预测交互同步。
+                      isCpuCoreExceeded.value
                     }
-                    loading={isLoading.value}
                     v-bk-tooltips={(function () {
                       let disabled = true;
                       let content = '';
@@ -1238,50 +1286,28 @@ export default defineComponent({
                         content = '资源需求不能为空';
                         disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
                       }
-                      if (isCpuCorsExceeded.value) {
-                        content = '当前所需的CPU总核数超过滚服CPU限额，请调整后再重试。';
-                        disabled = !isCpuCorsExceeded.value;
+                      if (isCpuCoreExceeded.value) {
+                        const name = isRollingServer.value ? '滚服项目' : '小额绿通';
+                        content = `当前所需的CPU总核数超过${name}CPU限额，请调整后再重试。`;
+                        disabled = !isCpuCoreExceeded.value;
                       }
                       return { content, disabled };
                     })()}
-                    onClick={() => {
-                      handleSaveOrSubmit('submit');
-                    }}>
+                    onClick={() => handleSaveOrSubmit('submit')}>
                     提交
                   </Button>
+                  {/* 滚服、小额绿通不支持保存 */}
                   <Button
+                    class={'mr16'}
                     loading={isLoading.value}
-                    // 滚服项目暂不支持保存
-                    disabled={
-                      (!physicalTableData.value.length && !cloudTableData.value.length) || isRollingServer.value
-                    }
-                    v-bk-tooltips={(function () {
-                      let disabled = true;
-                      let content = '';
-                      if (!physicalTableData.value.length && !cloudTableData.value.length) {
-                        content = '资源需求不能为空';
-                        disabled = Boolean(physicalTableData.value.length || cloudTableData.value.length);
-                      }
-                      if (isRollingServer.value) {
-                        content = '滚服项目暂不支持保存';
-                        disabled = !isRollingServer.value;
-                      }
-                      return { content, disabled };
-                    })()}
-                    onClick={() => {
-                      handleSaveOrSubmit('save');
-                    }}
-                    class={'mr16'}>
+                    disabled={true}
+                    v-bk-tooltips={{ content: `${isRollingServer.value ? '滚服项目' : '小额绿通'}暂不支持保存` }}>
                     保存
                   </Button>
                 </>
               )}
-              <Button
-                onClick={() => {
-                  handleCancel();
-                }}>
-                取消
-              </Button>
+
+              <Button onClick={handleCancel}>取消</Button>
             </bk-form-item>
           </bk-form>
 
@@ -1308,8 +1334,12 @@ export default defineComponent({
                           class={'selection-box'}
                           v-model={resourceForm.value.resourceType}
                           onChange={onResourceTypeChange}
-                          disabled={isRollingServer.value}
-                          v-bk-tooltips={{ content: '滚服项目只允许云主机', disabled: !isRollingServer.value }}>
+                          // 滚服项目、小额绿通只支持云主机
+                          disabled={isSpecialRequirement.value}
+                          v-bk-tooltips={{
+                            content: `${isRollingServer.value ? '滚服项目' : '小额绿通'}只支持云主机`,
+                            disabled: !isSpecialRequirement.value,
+                          }}>
                           {resourceTypes.value.map((resType: { value: any; label: any }) => (
                             <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
                           ))}
@@ -1339,7 +1369,7 @@ export default defineComponent({
                           onChange={onQcloudZoneChange}
                         />
                       </bk-form-item>
-                      {!isRollingServer.value &&
+                      {!isSpecialRequirement.value &&
                         resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !availablePostpaidSet.value.size &&
@@ -1391,40 +1421,51 @@ export default defineComponent({
                             />
                           )}
                           <bk-form-item label='计费模式' required property='charge_type'>
-                            <RadioGroup
-                              v-model={resourceForm.value.charge_type}
-                              type='card'
-                              style={{ width: '260px' }}
-                              disabled={isRollingServer.value}
-                              v-bk-tooltips={{
-                                content: '继承原有套餐，计费模式不可选',
-                                disabled: !isRollingServer.value,
-                              }}>
-                              <RadioButton
-                                label={cvmChargeTypes.PREPAID}
-                                disabled={availablePrepaidSet.value.size === 0}
+                            {isSpecialRequirement.value ? (
+                              // 滚服项目、小额绿通
+                              <RadioGroup
+                                v-model={resourceForm.value.charge_type}
+                                type='card'
+                                style={{ width: '260px' }}
+                                // 滚服不支持选择计费模式
+                                disabled={isRollingServer.value}
                                 v-bk-tooltips={{
-                                  content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                  disabled:
-                                    isRollingServer.value ||
-                                    !resourceForm.value.zone ||
-                                    availablePrepaidSet.value.size > 0,
+                                  content: '继承原有套餐，计费模式不可选',
+                                  disabled: !isRollingServer.value,
                                 }}>
-                                {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
-                              </RadioButton>
-                              <RadioButton
-                                label={cvmChargeTypes.POSTPAID_BY_HOUR}
-                                disabled={availablePostpaidSet.value.size === 0}
-                                v-bk-tooltips={{
-                                  content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                  disabled:
-                                    isRollingServer.value ||
-                                    !resourceForm.value.zone ||
-                                    availablePostpaidSet.value.size > 0,
-                                }}>
-                                {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
-                              </RadioButton>
-                            </RadioGroup>
+                                <RadioButton label={cvmChargeTypes.PREPAID}>
+                                  {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
+                                </RadioButton>
+                                <RadioButton label={cvmChargeTypes.POSTPAID_BY_HOUR}>
+                                  {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
+                                </RadioButton>
+                              </RadioGroup>
+                            ) : (
+                              // 其他需求类型
+                              <RadioGroup
+                                v-model={resourceForm.value.charge_type}
+                                type='card'
+                                style={{ width: '260px' }}>
+                                <RadioButton
+                                  label={cvmChargeTypes.PREPAID}
+                                  disabled={availablePrepaidSet.value.size === 0}
+                                  v-bk-tooltips={{
+                                    content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                    disabled: !resourceForm.value.zone || availablePrepaidSet.value.size > 0,
+                                  }}>
+                                  {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
+                                </RadioButton>
+                                <RadioButton
+                                  label={cvmChargeTypes.POSTPAID_BY_HOUR}
+                                  disabled={availablePostpaidSet.value.size === 0}
+                                  v-bk-tooltips={{
+                                    content: '当前地域无有效的预测需求，请提预测单后再按量申请',
+                                    disabled: !resourceForm.value.zone || availablePostpaidSet.value.size > 0,
+                                  }}>
+                                  {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
+                                </RadioButton>
+                              </RadioGroup>
+                            )}
                             <bk-alert theme='info' class='form-item-tips'>
                               {{
                                 title: () => (
@@ -1448,6 +1489,7 @@ export default defineComponent({
                                 filterable={false}
                                 clearable={false}
                                 style={{ width: '260px' }}
+                                // 滚服项目不支持选择购买时长
                                 disabled={isRollingServer.value}
                                 v-bk-tooltips={{
                                   content: '继承原有套餐包年包月时长，此处的购买时长为剩余时长',
@@ -1506,7 +1548,7 @@ export default defineComponent({
                                 isLoading={isLoadingDeviceType.value}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
                                 sort={(a, b) => {
-                                  if (!isRollingServer.value) return handleSortDemands(a, b);
+                                  if (!isSpecialRequirement.value) return handleSortDemands(a, b);
                                   const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
                                   const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
                                   if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
@@ -1515,12 +1557,12 @@ export default defineComponent({
                                   return 0;
                                 }}
                                 optionDisabled={
-                                  !isRollingServer.value
+                                  !isSpecialRequirement.value
                                     ? (v) => !computedAvailableSet.value.has(v.device_type)
                                     : (option) => (option as CvmDeviceType).device_type_class === 'SpecialType'
                                 }
                                 optionDisabledTipsContent={
-                                  !isRollingServer.value
+                                  !isSpecialRequirement.value
                                     ? () => '当前机型不在有效预测范围内'
                                     : (option) => {
                                         const { device_type_class } = option as CvmDeviceType;
@@ -1536,7 +1578,7 @@ export default defineComponent({
                                   option: (option: CvmDeviceType) => {
                                     const { device_type, device_type_class } = option;
                                     const isSpecialType = device_type_class === 'SpecialType';
-                                    if (isRollingServer.value) {
+                                    if (isSpecialRequirement.value) {
                                       return (
                                         <>
                                           <span>{device_type}</span>
@@ -1743,7 +1785,7 @@ export default defineComponent({
                     v-bk-tooltips={{
                       content: '当前地域无资源预测，提预测单后再按量申请',
                       disabled: !(
-                        !isRollingServer.value &&
+                        !isSpecialRequirement.value &&
                         resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !availablePostpaidSet.value.size &&
@@ -1751,7 +1793,7 @@ export default defineComponent({
                       ),
                     }}
                     disabled={
-                      !isRollingServer.value &&
+                      !isSpecialRequirement.value &&
                       resourceForm.value.zone &&
                       resourceForm.value.resourceType === 'QCLOUDCVM' &&
                       !availablePostpaidSet.value.size &&
@@ -1778,6 +1820,13 @@ export default defineComponent({
             }}>
             <applicationSideslider device={device.value} onOneApplication={OneClickApplication} />
           </Sideslider>
+
+          {/* 小额绿通 confirm-dialog */}
+          <GreenChannelConfirm
+            ref='green-channel-confirm'
+            onConfirm={clearResRequirements}
+            onCancel={(oldRequireType) => (order.value.model.requireType = oldRequireType)}
+          />
         </div>
       </div>
     );

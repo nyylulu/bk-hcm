@@ -60,6 +60,7 @@ export type PropertySearchConfig = {
   op?: QueryRuleOPEnum;
   filterRules?: (value: any) => RulesItem;
   format?: (value: any) => any;
+  converter?: (value: any) => Record<string, any>;
 };
 
 export type PropertyDisplayConfig = {

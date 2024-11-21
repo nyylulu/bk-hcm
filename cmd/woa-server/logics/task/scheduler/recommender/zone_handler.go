@@ -17,6 +17,7 @@ import (
 	"hcm/cmd/woa-server/logics/config"
 	cfgtype "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/cvmapi"
@@ -39,9 +40,9 @@ func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 
 	//  get available zones
 	requireType := order.RequireType
-	// transform 4:"故障替换" to 1:"常规项目"
-	if requireType == 4 {
-		requireType = 1
+	// 故障替换和小额绿通均使用常规项目的机型
+	if requireType == enumor.RequireTypeExpired || requireType == enumor.RequireTypeGreenChannel {
+		requireType = enumor.RequireTypeRegular
 	}
 
 	// 3. get capacity
@@ -75,7 +76,7 @@ func (zh *ZoneHandler) Handle(order *types.ApplyOrder) (*Recommendation, bool) {
 }
 
 // getCapacity get resource apply capacity info
-func (zh *ZoneHandler) getCapacity(kt *kit.Kit, requireType int64, deviceType, region, zone string,
+func (zh *ZoneHandler) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone string,
 	chargeType cvmapi.ChargeType) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{

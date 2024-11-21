@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/dal/task/table"
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
@@ -168,7 +167,7 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 		return
 	}
 
-	if table.RequireType(order.RequireType) == table.RequireTypeRollServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		appliedTypes := []enumor.AppliedType{enumor.CvmProduceAppliedType}
 		subOrderID := strconv.FormatUint(order.OrderId, 10)
 		deviceTypeCountMap := map[string]int{order.Spec.DeviceType: len(hosts)}
@@ -259,7 +258,11 @@ func (l *logics) createCVM(cvm *CVM) (string, error) {
 	}
 
 	// set obs project type
-	createReq.Params.ObsProject = cvmapi.GetObsProject(cvm.ApplyType)
+	requireType := enumor.RequireType(cvm.ApplyType)
+	createReq.Params.ObsProject = string(requireType.ToObsProject())
+	if requireType == enumor.RequireTypeGreenChannel {
+		createReq.Params.ResourceType = cvmapi.ResourceTypeQuick
+	}
 
 	// call cvm api to launchCvm cvm order
 	createResp, err := l.cvm.CreateCvmOrder(nil, nil, createReq)
@@ -555,7 +558,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 }
 
 func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if types.RequireType(order.RequireType) == types.RollingServer {
+	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

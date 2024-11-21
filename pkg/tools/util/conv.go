@@ -62,42 +62,25 @@ func GetIntByInterface(a interface{}) (int, error) {
 
 // GetInt64ByInterface interface to int64
 func GetInt64ByInterface(a interface{}) (int64, error) {
+	typeOf := reflect.TypeOf(a)
+	valueOf := reflect.ValueOf(a)
+	for typeOf.Kind() == reflect.Ptr {
+		typeOf = reflect.TypeOf(a).Elem()
+		valueOf = reflect.ValueOf(a).Elem()
+	}
+
 	var id int64 = 0
 	var err error
-	switch a.(type) {
-	case int:
-		id = int64(a.(int))
-	case int8:
-		return int64(a.(int8)), nil
-	case int16:
-		return int64(a.(int16)), nil
-	case int32:
-		id = int64(a.(int32))
-	case int64:
-		id = int64(a.(int64))
-	case uint:
-		id = int64(a.(uint))
-	case uint8:
-		return int64(a.(uint8)), nil
-	case uint16:
-		return int64(a.(uint16)), nil
-	case uint32:
-		id = int64(a.(uint32))
-	case uint64:
-		id = int64(a.(uint64))
-	case json.Number:
-		id, err = a.(json.Number).Int64()
-	case float64:
-		tmpID := a.(float64)
-		id = int64(tmpID)
-	case float32:
-		tmpID := a.(float32)
-		id = int64(tmpID)
-	case string:
-		id, err = strconv.ParseInt(a.(string), 10, 64)
+	switch typeOf.Kind() {
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Uint, reflect.Uint8,
+		reflect.Uint16, reflect.Uint32, reflect.Uint64:
+		id = valueOf.Int()
+	case reflect.Float64, reflect.Float32:
+		id = int64(valueOf.Float())
+	case reflect.String:
+		id, err = strconv.ParseInt(valueOf.String(), 10, 64)
 	default:
-		err = errors.New("not numeric")
-
+		err = fmt.Errorf("not numeric, type: %v", reflect.TypeOf(a))
 	}
 	return id, err
 }

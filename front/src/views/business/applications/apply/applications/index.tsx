@@ -12,15 +12,16 @@ import WName from '@/components/w-name';
 import StageDetailSideslider from './stage-detail';
 import MatchSideslider from './match';
 
-import qs from 'qs';
 import moment from 'moment';
 import { useI18n } from 'vue-i18n';
 import { throttle } from 'lodash';
 import { useUserStore, useZiyanScrStore } from '@/store';
+import { QueryRuleOPEnum } from '@/typings';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useFormModel from '@/hooks/useFormModel';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
+import useSearchQs from '@/hooks/use-search-qs';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { applicationTime } from '@/common/util';
@@ -452,11 +453,18 @@ export default defineComponent({
     });
 
     const searchRulesKey = 'host_apply_applications_rules';
+    const searchQs = useSearchQs({
+      key: 'initial_filter',
+      properties: [
+        { id: 'requireType', type: 'number', name: 'requireType', op: QueryRuleOPEnum.IN },
+        { id: 'orderId', type: 'number', name: 'orderId', op: QueryRuleOPEnum.IN },
+        { id: 'suborder_id', type: 'number', name: 'suborder_id', op: QueryRuleOPEnum.IN },
+        { id: 'bkUsername', type: 'user', name: 'bkUsername', op: QueryRuleOPEnum.IN },
+      ],
+    });
     const filterOrders = (searchRulesStr?: string) => {
-      const { initial_filter } = route.query ?? {};
-      if (initial_filter) {
-        Object.assign(formModel, qs.parse(initial_filter as string, { comma: true, allowEmptyArrays: true }));
-      }
+      // 合并默认条件值
+      Object.assign(formModel, searchQs.get(route.query));
       // 回填
       if (searchRulesStr) {
         // 解决人员选择器搜索问题

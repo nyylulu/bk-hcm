@@ -28,7 +28,6 @@ const (
 	RecycleTypeDissolve   RecycleType = "机房裁撤"
 	RecycleTypeExpired    RecycleType = "过保裁撤"
 	RecycleTypeSpring     RecycleType = "春节保障"
-	RecycleTypeRent       RecycleType = "短租项目"
 	RecycleTypeRollServer RecycleType = "滚服项目"
 )
 
@@ -37,8 +36,6 @@ func (rt RecycleType) ToObsProject() string {
 	switch rt {
 	case RecycleTypeSpring:
 		return rt.getSpringObsProject()
-	case RecycleTypeRent:
-		return string(RecycleTypeRent)
 	case RecycleTypeDissolve:
 		return rt.getDissolveObsProject()
 	case RecycleTypeRollServer:
@@ -77,7 +74,7 @@ func (rt RecycleType) getDissolveObsProject() string {
 func (rt RecycleType) Validate() error {
 	switch rt {
 	case RecycleTypeRegular, RecycleTypeDissolve, RecycleTypeExpired,
-		RecycleTypeSpring, RecycleTypeRent, RecycleTypeRollServer:
+		RecycleTypeSpring, RecycleTypeRollServer:
 	default:
 		return fmt.Errorf("validate unknown recycle type: %s", rt)
 	}
@@ -234,22 +231,4 @@ type PoolType int
 const (
 	PoolPrivate PoolType = 0
 	PoolPublic  PoolType = 1
-)
-
-// RequireType 需求类型
-type RequireType int64
-
-const (
-	// RequireTypeRegular 常规项目
-	RequireTypeRegular RequireType = 1
-	// RequireTypeSpring 春节保障
-	RequireTypeSpring RequireType = 2
-	// RequireTypeDissolve 机房裁撤
-	RequireTypeDissolve RequireType = 3
-	// RequireTypeExpired 故障替换
-	RequireTypeExpired RequireType = 4
-	// RequireTypeRent 短租项目
-	RequireTypeRent RequireType = 5
-	// RequireTypeRollServer 滚服项目
-	RequireTypeRollServer RequireType = 6
 )

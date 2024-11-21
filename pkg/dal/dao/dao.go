@@ -58,6 +58,7 @@ import (
 	"hcm/pkg/dal/dao/cloud/zone"
 	"hcm/pkg/dal/dao/dissolve/host"
 	"hcm/pkg/dal/dao/dissolve/module"
+	globalconfig "hcm/pkg/dal/dao/global-config"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/obs"
 	"hcm/pkg/dal/dao/orm"
@@ -171,6 +172,8 @@ type Set interface {
 	RollingReturnedRecord() rollingserver.RollingReturnedRecordInterface
 	RollingFineDetail() rollingserver.RollingFineDetailInterface
 	OBSBillItemRolling() rollingserver.OBSBillItemRolling
+
+	GlobalConfig() globalconfig.Interface
 
 	TaskDetail() task.Detail
 	TaskManagement() task.Management
@@ -985,6 +988,14 @@ func (s *set) RollingReturnedRecord() rollingserver.RollingReturnedRecordInterfa
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,
+	}
+}
+
+// GlobalConfig return dao.
+func (s *set) GlobalConfig() globalconfig.Interface {
+	return &globalconfig.Dao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
 	}
 }
 

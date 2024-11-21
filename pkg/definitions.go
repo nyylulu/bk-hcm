@@ -223,8 +223,17 @@ const (
 	// BKDBReplaceRoot the db operator
 	BKDBReplaceRoot = "$replaceRoot"
 
+	// BKDBSkip the db operator to skip return number of doc
+	BKDBSkip = "$skip"
+
 	// BKDBLimit the db operator to limit return number of doc
 	BKDBLimit = "$limit"
+
+	// BKDBAsc the db operator to sort asc
+	BKDBAsc = 1
+
+	// BKDBDesc the db operator to sort desc
+	BKDBDesc = -1
 )
 
 const (
