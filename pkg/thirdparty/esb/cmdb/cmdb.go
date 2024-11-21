@@ -46,6 +46,8 @@ type Client interface {
 	GetBizBriefCacheTopo(kt *kit.Kit, params *GetBizBriefCacheTopoParams) (*GetBizBriefCacheTopoResult, error)
 	FindHostTopoRelation(kt *kit.Kit, params *FindHostTopoRelationParams) (*HostTopoRelationResult, error)
 	SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error)
+	// SearchBizCompanyCmdbInfo 返回cc业务在公司cmdb的信息
+	SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmdbInfoParams) (*[]CompanyCmdbInfo, error)
 	// SearchBizBelonging search cmdb business belonging.
 	SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*[]SearchBizBelonging, error)
 	ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error)
@@ -147,6 +149,14 @@ func (c *cmdb) SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInf
 
 	return types.EsbCall[SearchModuleParams, ModuleInfoResult](c.client, c.config, rest.POST, kt, params,
 		"/cc/search_module/")
+}
+
+// SearchBizCompanyCmdbInfo 查询cc 业务和公司cmdb运营产品、一二级业务的关系
+func (c *cmdb) SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmdbInfoParams) (
+	*[]CompanyCmdbInfo, error) {
+
+	return types.EsbCall[SearchBizCompanyCmdbInfoParams, []CompanyCmdbInfo](c.client, c.config, rest.POST, kt,
+		params, "/cc/search_cost_info_relation/")
 }
 
 // SearchBizBelonging search cmdb business belonging.

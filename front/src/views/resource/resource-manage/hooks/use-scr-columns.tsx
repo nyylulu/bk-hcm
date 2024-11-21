@@ -1947,7 +1947,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'status_name',
       isDefaultShow: true,
       render: ({ cell, data }: any) => {
-        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status] || {};
+        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status];
 
         return (
           <span>

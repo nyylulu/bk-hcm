@@ -541,7 +541,7 @@ export const VendorMap = {
   [VendorEnum.KAOPU]: '靠谱云',
 };
 
-export const VendorReverseMap = {
+export const VendorReverseMap: ConstantMapRecord = {
   亚马逊云: VendorEnum.AWS,
   微软云: VendorEnum.AZURE,
   谷歌云: VendorEnum.GCP,
@@ -589,7 +589,7 @@ export const CLB_SPECS: ConstantMapRecord = {
   'clb.c4.xlarge': '超强型4规格',
 };
 
-export const CLB_BINDING_STATUS = {
+export const CLB_BINDING_STATUS: ConstantMapRecord = {
   binding: '绑定中',
   success: '已绑定',
   failed: '未绑定',
@@ -604,8 +604,8 @@ export const RESOURCE_PLAN_STATUSES_type = {
   AUDITING: 'auditing',
   REJECTED: 'rejected',
   DONE: 'done',
+  CANCELED: 'canceled',
   FAILED: 'failed',
-  REVOKED: 'revoked',
 };
 
 // 单据管理tab - 资源预测 审批状态
@@ -626,7 +626,7 @@ export const RESOURCE_PLAN_STATUSES_MAP = {
     class: 'hcm-icon bkhcm-icon-success',
     color: 'green',
   },
-  [RESOURCE_PLAN_STATUSES_type.REVOKED]: {
+  [RESOURCE_PLAN_STATUSES_type.CANCELED]: {
     class: 'hcm-icon bkhcm-icon-default',
     color: 'gray',
   },

@@ -39,6 +39,7 @@ import (
 	"hcm/cmd/web-server/service/cmdb"
 	"hcm/cmd/web-server/service/itsm"
 	"hcm/cmd/web-server/service/notice"
+	templateSvc "hcm/cmd/web-server/service/template"
 	"hcm/cmd/web-server/service/user"
 	"hcm/cmd/web-server/service/version"
 	"hcm/pkg/cc"
@@ -274,6 +275,7 @@ func (s *Service) apiSet() *restful.WebService {
 	if cc.WebServer().Notice.Enable {
 		notice.InitService(c)
 	}
+	templateSvc.InitTemplateService(c)
 
 	return ws
 }
@@ -355,6 +357,8 @@ func (s *Service) indexHandleFunc(req *restful.Request, resp *restful.Response) 
 		"ENABLE_CLOUD_SELECTION":      cc.WebServer().Web.EnableCloudSelection,
 		"ENABLE_ACCOUNT_BILL":         cc.WebServer().Web.EnableAccountBill,
 		"ENABLE_NOTICE":               cc.WebServer().Notice.Enable,
+
+		"ZIYAN_CLB_BIZ_WHITELIST": cc.WebServer().Web.ZiyanClbBizWhitelist,
 	}
 	err = tmpl.Execute(resp.ResponseWriter, content)
 	if err != nil {

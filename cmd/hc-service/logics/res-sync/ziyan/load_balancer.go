@@ -21,8 +21,11 @@
 package ziyan
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
+	"strings"
+	"sync"
 
 	"hcm/cmd/hc-service/logics/res-sync/common"
 	typecore "hcm/pkg/adaptor/types/core"
@@ -37,9 +40,12 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/util"
 
 	tclb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
@@ -48,8 +54,8 @@ import (
 // 1. 同步该负载均衡自身属性，同步关联安全组信息
 // 2. 同步该负载均衡下的监听器
 // 3. 同步监听器下的规则
-func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult,
-	error) {
+func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (
+	*SyncResult, error) {
 
 	_, err := cli.LoadBalancer(kt, params, opt)
 	if err != nil {
@@ -58,8 +64,6 @@ func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams,
 	}
 	// 同步下属监听器
 	requiredLBCloudIds := params.CloudIDs
-	// 获取同步后的lb数据
-	params.CloudIDs = nil
 	lbList, err := cli.listLBFromDB(kt, params)
 	if err != nil {
 		logs.Errorf("fail to get lb from db after lb layer sync, before listener sync, err: %v, rid: %s", err, kt.Rid)
@@ -67,7 +71,7 @@ func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams,
 	}
 
 	// 同步对应安全组关联关系
-	err = cli.lbSgRel(kt, params, lbList)
+	err = cli.lbSgRel(kt, params, opt, lbList)
 	if err != nil {
 		logs.Errorf("fail to sync load balancer sg rel, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -84,7 +88,7 @@ func (cli *client) LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams,
 	}
 
 	if _, err = cli.listenerByLbBatch(kt, lblParams); err != nil {
-		logs.Errorf("fail to sync listener of lbs(ids: %v), err: %v, rid: %s", requiredLBCloudIds, err, kt.Rid)
+		logs.Errorf("fail to sync listener of lbs, err: %v, ids: %v, rid: %s", err, requiredLBCloudIds, kt.Rid)
 		return nil, err
 	}
 
@@ -96,8 +100,7 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 	if err := validator.ValidateTool(params, opt); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-
-	lbFromCloud, err := cli.listLBFromCloud(kt, params)
+	lbFromCloud, err := cli.getWithPrefetchedCloudLB(kt, params, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -111,8 +114,14 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 		return new(SyncResult), nil
 	}
 
+	// 从云上Tag获取二级业务id，再从cc获取cc业务id，后续关联资源同步都会同步到这个业务下
+	if err := cli.fillBkBizId(kt, lbFromCloud); err != nil {
+		logs.Errorf("fail to fill bk biz id, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	addSlice, updateMap, delCloudIDs := common.Diff[typeslb.TCloudClb, corelb.TCloudLoadBalancer](
-		lbFromCloud, lbFromDB, isLBChange)
+		lbFromCloud, lbFromDB, isZiyanLBChange)
 
 	// 删除云上已经删除的负载均衡实例
 	if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
@@ -131,18 +140,114 @@ func (cli *client) LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLB
 	return new(SyncResult), nil
 }
 
-// RemoveLoadBalancerDeleteFromCloud 删除存在本地但是在云上被删除的数据
-func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID string, region string) error {
+func (cli *client) getWithPrefetchedCloudLB(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (
+	[]typeslb.TCloudClb, error) {
+
+	var err error
+	fetched := false
+	lbFromCloud := opt.PrefetchedLB
+	if len(lbFromCloud) == len(params.CloudIDs) {
+		fetched = true
+		wantedCloudIDMap := cvt.StringSliceToMap(params.CloudIDs)
+		for i := range lbFromCloud {
+			delete(wantedCloudIDMap, lbFromCloud[i].GetCloudID())
+		}
+		if len(wantedCloudIDMap) > 0 {
+			logs.Warnf("wanted lb not found by prefetched cache, not found: %v, rid: %s",
+				cvt.MapKeyToStringSlice(wantedCloudIDMap), kt.Rid)
+			fetched = false
+		}
+	}
+	if fetched {
+		return lbFromCloud, nil
+	}
+	lbFromCloud, err = cli.listLBFromCloud(kt, params)
+	if err != nil {
+		return nil, err
+	}
+	return lbFromCloud, nil
+}
+
+// RemoveLoadBalancerDeleteFromCloudV2 清理云上已删除资源
+func (cli *client) RemoveLoadBalancerDeleteFromCloudV2(kt *kit.Kit, params *SyncRemovedParams,
+	allCloudIDMap map[string]struct{}) error {
+
+	if err := params.Validate(); err != nil {
+		return err
+	}
+	rules := []*filter.AtomRule{
+		tools.RuleEqual("account_id", params.AccountID),
+		tools.RuleEqual("region", params.Region),
+	}
+	if len(params.CloudIDs) > 0 {
+		// 支持指定cloud id删除
+		rules = append(rules, tools.RuleIn("cloud_id", params.CloudIDs))
+	}
+	for k := range params.TagFilters {
+		rules = append(rules, tools.RuleJsonIn(getDatabaseTagKey(k), params.TagFilters[k]))
+	}
 	req := &core.ListReq{
-		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("account_id", accountID),
-			tools.RuleEqual("region", region),
-		),
+		Filter: tools.ExpressionAnd(rules...),
+		Page:   &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit},
+	}
+	var delCloudIDs []string
+
+	for {
+		resultFromDB, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListLoadBalancer(kt, req)
+		if err != nil {
+			logs.Errorf("[%s] request dataservice to list clb failed, err: %v, req: %+v, rid: %s",
+				enumor.Ziyan, err, req, kt.Rid)
+			return err
+		}
+
+		for i := range resultFromDB.Details {
+			cloudId := resultFromDB.Details[i].CloudID
+			if _, ok := allCloudIDMap[cloudId]; !ok {
+				delCloudIDs = append(delCloudIDs, cloudId)
+			}
+		}
+
+		if uint(len(resultFromDB.Details)) < core.DefaultMaxPageLimit {
+			break
+		}
+		req.Page.Start += uint32(core.DefaultMaxPageLimit)
+	}
+
+	logs.Infof("[%s] will remove %d deleted load balancer from cloud, account: %s, region: %s, rid: %s",
+		enumor.Ziyan, len(delCloudIDs), params.AccountID, params.Region, kt.Rid)
+	for _, idBatch := range slice.Split(delCloudIDs, constant.BatchOperationMaxLimit) {
+		if err := cli.deleteLoadBalancer(kt, params.AccountID, params.Region, idBatch); err != nil {
+			logs.Errorf("fail to delete removed clb, err: %v, account: %s, region: %s, cloudIds: %v, rid: %s",
+				err, params.AccountID, params.Region, idBatch, kt.Rid)
+			return err
+		}
+	}
+
+	return nil
+}
+
+// RemoveLoadBalancerDeleteFromCloud 删除存在本地但是在云上被删除的数据
+func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, params *SyncRemovedParams) error {
+
+	if err := params.Validate(); err != nil {
+		return err
+	}
+	rules := []*filter.AtomRule{
+		tools.RuleEqual("account_id", params.AccountID),
+		tools.RuleEqual("region", params.Region),
+	}
+	if len(params.CloudIDs) > 0 {
+		// 支持指定cloud id删除
+		rules = append(rules, tools.RuleIn("cloud_id", params.CloudIDs))
+	}
+	req := &core.ListReq{
+		Filter: tools.ExpressionAnd(rules...),
 		Page: &core.BasePage{
 			Start: 0,
-			Limit: constant.TCLBDescribeMax,
+			Limit: constant.BatchOperationMaxLimit,
 		},
 	}
+
 	for {
 		lbFromDB, err := cli.dbCli.Global.LoadBalancer.ListLoadBalancer(kt, req)
 		if err != nil {
@@ -159,14 +264,14 @@ func (cli *client) RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID stri
 
 		var delCloudIDs []string
 
-		params := &SyncBaseParams{AccountID: accountID, Region: region, CloudIDs: cloudIDs}
+		params := &SyncBaseParams{AccountID: params.AccountID, Region: params.Region, CloudIDs: cloudIDs}
 		delCloudIDs, err = cli.listRemovedLBID(kt, params)
 		if err != nil {
 			return err
 		}
 
 		if len(delCloudIDs) != 0 {
-			if err = cli.deleteLoadBalancer(kt, accountID, region, delCloudIDs); err != nil {
+			if err = cli.deleteLoadBalancer(kt, params.AccountID, params.Region, delCloudIDs); err != nil {
 				return err
 			}
 		}
@@ -235,8 +340,8 @@ func (cli *client) createLoadBalancer(kt *kit.Kit, accountID string, region stri
 		return nil, err
 	}
 
-	logs.Infof("[%s] sync load balancer to create lb success, accountID: %s, count: %d, rid: %s",
-		enumor.TCloudZiyan, accountID, len(addSlice), kt.Rid)
+	logs.Infof("[%s] sync load balancer to create lb success, region: %s, accountID: %s, count: %d, rid: %s",
+		enumor.TCloudZiyan, region, accountID, len(addSlice), kt.Rid)
 
 	return nil, nil
 }
@@ -318,7 +423,11 @@ func (cli *client) deleteLoadBalancer(kt *kit.Kit, accountID string, region stri
 	}
 
 	deleteReq := &protocloud.LoadBalancerBatchDeleteReq{
-		Filter: tools.ContainersExpression("cloud_id", delCloudIDs),
+		Filter: tools.ExpressionAnd(
+			tools.RuleIn("cloud_id", delCloudIDs),
+			tools.RuleEqual("region", region),
+			tools.RuleEqual("vendor", enumor.TCloudZiyan),
+		),
 	}
 	if err = cli.dbCli.Global.LoadBalancer.BatchDelete(kt, deleteReq); err != nil {
 		logs.Errorf("[%s] call data service to batch delete lb failed, err: %v, rid: %s",
@@ -393,7 +502,7 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 		Name:             cvt.PtrToVal(cloud.LoadBalancerName),
 		Vendor:           enumor.TCloudZiyan,
 		AccountID:        accountID,
-		BkBizID:          constant.UnassignedBiz,
+		BkBizID:          cloud.BkBizID,
 		LoadBalancerType: cvt.PtrToVal(cloud.LoadBalancerType),
 		IPVersion:        cloud.GetIPVersion(),
 		Region:           region,
@@ -406,6 +515,7 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 		CloudCreatedTime: cvt.PtrToVal(cloud.CreateTime),
 		CloudStatusTime:  cvt.PtrToVal(cloud.StatusTime),
 		CloudExpiredTime: cvt.PtrToVal(cloud.ExpireTime),
+		Tags:             cloud.GetTagMap(),
 		// 备注字段云上没有
 		Memo: nil,
 	}
@@ -426,15 +536,19 @@ func convCloudToDBCreate(cloud typeslb.TCloudClb, accountID string, region strin
 	//  可用区判断
 	if typeslb.TCloudLoadBalancerType(lb.LoadBalancerType) == typeslb.OpenLoadBalancerType && cloud.MasterZone != nil {
 		lb.Zones = []string{cvt.PtrToVal(cloud.MasterZone.Zone)}
+	} else {
+		// 自研云 内网多可用区
+		lb.Zones = cvt.PtrToSlice(cloud.Zones)
 	}
 
-	lb.Extension = convertTCloudExtension(cloud, region)
+	lb.Extension = convertZiyanExtension(cloud, region)
 
 	return lb
 }
 
-func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TCloudClbExtension {
+func convertZiyanExtension(cloud typeslb.TCloudClb, region string) *corelb.TCloudClbExtension {
 	ext := &corelb.TCloudClbExtension{
+		Forward:                  cloud.Forward,
 		SlaType:                  cloud.SlaType,
 		VipIsp:                   cloud.VipIsp,
 		LoadBalancerPassToTarget: cloud.LoadBalancerPassToTarget,
@@ -443,6 +557,9 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		SnatPro:                  cloud.SnatPro,
 		MixIpTarget:              cloud.MixIpTarget,
 		ChargeType:               cloud.ChargeType,
+		ClusterTag:               cloud.ClusterTag,
+		ClusterIds:               cvt.ValToPtr(cvt.PtrToSlice(cloud.ClusterIds)),
+		Egress:                   cloud.Egress,
 		// 该接口无法获取下列字段
 		BandwidthPackageId: nil,
 	}
@@ -477,6 +594,20 @@ func convertTCloudExtension(cloud typeslb.TCloudClb, region string) *corelb.TClo
 		ext.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
 	}
 
+	if cloud.ExtraInfo != nil {
+		// 直通
+		ext.ZhiTong = cloud.ExtraInfo.ZhiTong
+		// 免流
+		ext.TgwGroupName = cloud.ExtraInfo.TgwGroupName
+	}
+
+	// 独占集群
+	if cloud.ExclusiveCluster != nil {
+		ext.L4Clusters = convClusterItemList(cloud.ExclusiveCluster.L4Clusters)
+		ext.L7Clusters = convClusterItemList(cloud.ExclusiveCluster.L7Clusters)
+		ext.ClassicalCluster = convClusterItem(cloud.ExclusiveCluster.ClassicalCluster)
+	}
+
 	return ext
 }
 
@@ -487,6 +618,7 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 	cloudSubnetID := cvt.PtrToVal(cloud.SubnetId)
 	lb := protocloud.LoadBalancerExtUpdateReq[corelb.TCloudClbExtension]{
 		ID:               id,
+		BkBizID:          cloud.BkBizID,
 		Name:             cvt.PtrToVal(cloud.LoadBalancerName),
 		Domain:           cvt.PtrToVal(cloud.LoadBalancerDomain),
 		IPVersion:        cloud.GetIPVersion(),
@@ -498,33 +630,9 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 		CloudVpcID:       cloudVpcID,
 		SubnetID:         subnetMap[cloudSubnetID],
 		CloudSubnetID:    cloudSubnetID,
-		Extension: &corelb.TCloudClbExtension{
-			SlaType:                  cloud.SlaType,
-			VipIsp:                   cloud.VipIsp,
-			LoadBalancerPassToTarget: cloud.LoadBalancerPassToTarget,
-			ChargeType:               cloud.ChargeType,
-
-			IPv6Mode: cloud.IPv6Mode,
-			Snat:     cloud.Snat,
-			SnatPro:  cloud.SnatPro,
-		},
+		Tags:             cloud.GetTagMap(),
+		Extension:        convertZiyanExtension(cloud, region),
 	}
-	if cloud.NetworkAttributes != nil {
-		lb.Extension.InternetMaxBandwidthOut = cloud.NetworkAttributes.InternetMaxBandwidthOut
-		lb.Extension.InternetChargeType = cloud.NetworkAttributes.InternetChargeType
-		lb.Extension.BandwidthpkgSubType = cloud.NetworkAttributes.BandwidthpkgSubType
-	}
-	if cloud.SnatIps != nil {
-		ipList := make([]corelb.SnatIp, 0, len(cloud.SnatIps))
-		for _, snatIP := range cloud.SnatIps {
-			if snatIP == nil {
-				continue
-			}
-			ipList = append(ipList, corelb.SnatIp{SubnetId: snatIP.SubnetId, Ip: snatIP.Ip})
-		}
-		lb.Extension.SnatIps = cvt.ValToPtr(ipList)
-	}
-
 	if len(cloud.LoadBalancerVips) != 0 {
 		switch typeslb.TCloudLoadBalancerType(cvt.PtrToVal(cloud.LoadBalancerType)) {
 		case typeslb.InternalLoadBalancerType:
@@ -536,32 +644,18 @@ func convCloudToDBUpdate(id string, cloud typeslb.TCloudClb, vpcMap map[string]*
 	if ipv6 := cvt.PtrToVal(cloud.AddressIPv6); len(ipv6) > 0 {
 		lb.PublicIPv6Addresses = []string{ipv6}
 	}
-
-	// AttributeFlags
-	flagMap := make(map[string]bool)
-	// 没有碰到的则默认是false
-	for _, flag := range cloud.AttributeFlags {
-		flagMap[cvt.PtrToVal(flag)] = true
-	}
-	// 逐个赋值flag
-	lb.Extension.DeleteProtect = cvt.ValToPtr(flagMap[constant.TCLBDeleteProtect])
-
-	if cloud.Egress != nil {
-		lb.Extension.Egress = cloud.Egress
-	}
-
-	// 跨域1.0 信息
-	if cvt.PtrToVal(cloud.TargetRegionInfo.Region) != region ||
-		!assert.IsPtrStringEqual(cloud.TargetRegionInfo.VpcId, cloud.VpcId) {
-		lb.Extension.TargetRegion = cloud.TargetRegionInfo.Region
-		lb.Extension.TargetCloudVpcID = cloud.TargetRegionInfo.VpcId
-	}
 	return &lb
 }
 
-func isLBChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) bool {
+func isZiyanLBChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) bool {
 
 	if db.Name != cvt.PtrToVal(cloud.LoadBalancerName) {
+		return true
+	}
+	if isTagsChange(db.Tags, cloud.Tags) {
+		return true
+	}
+	if cloud.BkBizID != db.BkBizID {
 		return true
 	}
 
@@ -625,6 +719,10 @@ func isLBExtensionChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) 
 		return true
 	}
 
+	if !assert.IsPtrUint64Equal(db.Extension.Forward, cloud.Forward) {
+		return true
+	}
+
 	if cloud.NetworkAttributes != nil {
 		if !assert.IsPtrInt64Equal(db.Extension.InternetMaxBandwidthOut,
 			cloud.NetworkAttributes.InternetMaxBandwidthOut) {
@@ -680,13 +778,28 @@ func isLBExtensionChange(cloud typeslb.TCloudClb, db corelb.TCloudLoadBalancer) 
 	}
 
 	// 跨域1.0 信息
-	if !assert.IsPtrStringEqual(db.Extension.TargetRegion, cloud.TargetRegionInfo.Region) {
+	if cvt.PtrToVal(cloud.TargetRegionInfo.Region) != db.Region &&
+		!assert.IsPtrStringEqual(db.Extension.TargetRegion, cloud.TargetRegionInfo.Region) {
 		return true
 	}
-	if !assert.IsPtrStringEqual(db.Extension.TargetCloudVpcID, cloud.TargetRegionInfo.VpcId) {
+	if cvt.PtrToVal(cloud.TargetRegionInfo.VpcId) != db.CloudVpcID &&
+		!assert.IsPtrStringEqual(db.Extension.TargetCloudVpcID, cloud.TargetRegionInfo.VpcId) {
 		return true
 	}
 
+	return false
+}
+
+func isTagsChange(localTag core.TagMap, cloudTags []*tclb.TagInfo) bool {
+	if len(localTag) != len(cloudTags) {
+		return true
+	}
+	for _, cloud := range cloudTags {
+		key := cvt.PtrToVal(cloud.TagKey)
+		if v, ok := localTag.Get(key); !ok || cvt.PtrToVal(cloud.TagValue) != v {
+			return true
+		}
+	}
 	return false
 }
 
@@ -726,11 +839,115 @@ func hashCloudSnatIP(ip *tclb.SnatIp) string {
 	return cvt.PtrToVal(ip.SubnetId) + "," + cvt.PtrToVal(ip.Ip)
 }
 
+func convClusterItemList(clusters []*tclb.ClusterItem) *[]*corelb.ClusterItem {
+	var localList []*corelb.ClusterItem
+	for _, cluster := range clusters {
+		localList = append(localList, convClusterItem(cluster))
+	}
+	return cvt.ValToPtr(localList)
+}
+func convClusterItem(cluster *tclb.ClusterItem) *corelb.ClusterItem {
+	if cluster == nil {
+		return nil
+	}
+	return &corelb.ClusterItem{
+		ClusterId:   cvt.PtrToVal(cluster.ClusterId),
+		ClusterName: cvt.PtrToVal(cluster.ClusterName),
+		Zone:        cvt.PtrToVal(cluster.Zone),
+	}
+}
+
 // SyncLBOption ...
 type SyncLBOption struct {
+	// optional cloud lb cache item, must have same order of SyncParams.
+	PrefetchedLB []typeslb.TCloudClb
 }
+
+var bs2bkBizIDMap sync.Map
 
 // Validate ...
 func (o *SyncLBOption) Validate() error {
 	return validator.Validate.Struct(o)
+}
+
+// 从cc处根据二级业务id查询到对应cc业务id, 并填充对应数据
+func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) error {
+	// 赋值业务id
+	bs2NameIds := make([]int64, 0, len(lbFromCloud))
+	for i, clb := range lbFromCloud {
+		// 从tag解析二级业务id
+		bs2NameId, err := getZiyanBs2NameIDByTag(clb)
+		if err != nil {
+			logs.Errorf("fail to get bs2NameId of load balancer %s, err: %v, rid: %s", clb.GetCloudID(), err, kt.Rid)
+			// 没有找到不报错，fallback 到 -1
+			bs2NameId = -1
+		}
+		lbFromCloud[i].Bs2NameID = bs2NameId
+		if bs2NameId > 0 {
+			bs2NameIds = append(bs2NameIds, bs2NameId)
+		}
+	}
+	notFoundIds := make([]int64, 0, 100)
+	for _, bs2id := range slice.Unique(bs2NameIds) {
+		if _, ok := bs2bkBizIDMap.Load(bs2id); !ok {
+			notFoundIds = append(notFoundIds, bs2id)
+		}
+	}
+	if len(notFoundIds) > 0 {
+		param := &cmdb.SearchBizParams{
+			Page: cmdb.BasePage{},
+			BizPropertyFilter: &cmdb.QueryFilter{
+				Rule: cmdb.Combined(cmdb.ConditionAnd, cmdb.In("bs2_name_id", notFoundIds)),
+			},
+		}
+		business, err := cli.esb.Cmdb().SearchBusiness(kt, param)
+		if err != nil {
+			logs.Errorf("fail to search cmdb business, err:%v,bs2_name_id list: %v, rid: %s", err, notFoundIds, kt.Rid)
+			return err
+		}
+
+		for _, biz := range business.Info {
+			bs2bkBizIDMap.Store(biz.BsName2ID, biz.BizID)
+		}
+	}
+
+	for i, clb := range lbFromCloud {
+		// 对没有解析到标签的业务，fallback到未分配
+		lbFromCloud[i].BkBizID = constant.UnassignedBiz
+		if bkBizID, ok := bs2bkBizIDMap.Load(clb.Bs2NameID); ok {
+			var err error
+			lbFromCloud[i].BkBizID, err = util.GetInt64ByInterface(bkBizID)
+			// should never happen
+			if err != nil {
+				logs.Errorf("fail to convert bkBizID to int64, err: %v, rid: %s", err, kt.Rid)
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// 解析标签中的二级业务id
+func getZiyanBs2NameIDByTag(lb typeslb.TCloudClb) (int64, error) {
+	for _, tag := range lb.Tags {
+		switch cvt.PtrToVal(tag.TagKey) {
+		case "二级业务":
+			// FORMAT: CC_BizName_Bs2NameID
+			v := cvt.PtrToVal(tag.TagValue)
+			if !strings.HasPrefix(v, "CC_") {
+				return -1, fmt.Errorf("tag value %s is not started with CC_", v)
+			}
+			parts := strings.Split(v, "_")
+			if len(parts) < 3 {
+				return -1, fmt.Errorf("tag value %s format mismatch CC_xxx_123", v)
+			}
+			bs2NameIDStr := parts[len(parts)-1]
+			bs2NameID, err := strconv.ParseInt(bs2NameIDStr, 10, 64)
+			if err != nil {
+				return -1, fmt.Errorf("fail to parse bs2NameId into int64, tag value: %s, err: %w", v, err)
+			}
+			return bs2NameID, nil
+		}
+	}
+	return -1, errors.New("二级业务 tag not found")
 }

@@ -22,6 +22,9 @@ package enumor
 // TCloudZiyan  腾讯自研云 厂商常量
 const TCloudZiyan Vendor = "tcloud-ziyan"
 
+// Ziyan same as TCloudZiyan
+const Ziyan = TCloudZiyan
+
 func init() {
 	RegisterVendor(TCloudZiyan, VendorInfo{
 		NameEn:             "Tencent Cloud Ziyan Account",

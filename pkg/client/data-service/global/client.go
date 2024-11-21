@@ -63,6 +63,9 @@ type Client struct {
 	Cos           *CosClient
 	RollingServer *RollingServerClient
 	GlobalConfig  *GlobalConfigsClient
+
+	TaskDetail     *TaskDetailClient
+	TaskManagement *TaskManagementClient
 }
 
 type restClient struct {
@@ -108,5 +111,8 @@ func NewClient(client rest.ClientInterface) *Client {
 		Cos:            NewCosClient(client),
 		RollingServer:  NewRollingServerClient(client),
 		GlobalConfig:   NewGlobalConfigClient(client),
+
+		TaskDetail:     NewTaskDetailClient(client),
+		TaskManagement: NewTaskManagementClient(client),
 	}
 }

@@ -31,6 +31,8 @@ data:
         keyFile:
         caFile:
         password:
+    ziyanSecrets:
+      {{- toYaml .Values.ziyanSecrets | nindent 6 }}
 
     sync:
       {{- toYaml .Values.hcservice.sync | nindent 6 }}

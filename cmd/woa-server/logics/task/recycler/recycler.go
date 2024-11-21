@@ -750,13 +750,11 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 			if err != nil {
 				return errf.New(pkg.CCErrObjectDBOpErrno, err.Error())
 			}
-
 			index := 1
 			for grpType, group := range groups {
 				if len(group) <= 0 {
 					continue
 				}
-
 				// 1. init recycle order
 				bizName := group[0].BizName
 				order := &table.RecycleOrder{
@@ -781,23 +779,19 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 					CreateAt:      now,
 					UpdateAt:      now,
 				}
-
 				// 记录回收订单日志，方便排查问题
 				logs.Infof("start to create recycle order for save recycle host, orderInfo: %+v, group: %+v, rid: %s",
 					order, cvt.PtrToSlice(group), kt.Rid)
-
 				// 2. create and save recycle hosts
 				if err = r.initAndSaveHosts(sc, order, group); err != nil {
 					logs.Errorf("failed to create recycle order for save recycle host err: %v, rid: %s", err, kt.Rid)
 					return fmt.Errorf("failed to create recycle order for save recycle host err: %v", err)
 				}
-
 				// 3. save recycle order
 				if err = dao.Set().RecycleOrder().CreateRecycleOrder(sc, order); err != nil {
 					logs.Errorf("failed to create recycle order for save recycle order err: %v, rid: %s", err, kt.Rid)
 					return fmt.Errorf("failed to create recycle order for save recycle order err: %v", err)
 				}
-
 				// 4.插入需要退还的主机匹配记录
 				if err = r.rsLogic.InsertReturnedHostMatched(kt, biz, order.OrderID, order.SuborderID,
 					group, bkBizIDHostMatchMap[biz], enumor.LockedStatus); err != nil {
@@ -806,7 +800,6 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 						err, order.SuborderID, bkBizIDHostMatchMap, kt.Rid)
 					return fmt.Errorf("failed to create returned host matched for save recycle order err: %v", err)
 				}
-
 				// 5. 记录子订单跟机型的关系
 				for _, groupItem := range group {
 					if _, ok := subOrderIDDeviceTypes[order.SuborderID]; !ok {
@@ -817,18 +810,15 @@ func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remar
 					}
 					subOrderIDDeviceTypes[order.SuborderID][groupItem.DeviceType]++
 				}
-
 				orders = append(orders, order)
 				index++
 			}
 		}
 		return nil
 	})
-
 	if txnErr != nil {
 		return nil, nil, fmt.Errorf("failed to init and save recycle orders, err: %v, rid: %s", txnErr, kt.Rid)
 	}
-
 	return orders, subOrderIDDeviceTypes, nil
 }
 

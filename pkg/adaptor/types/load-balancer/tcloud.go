@@ -25,6 +25,7 @@ import (
 	"strings"
 
 	"hcm/pkg/adaptor/types/core"
+	apicore "hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -42,14 +43,6 @@ const (
 	OpenLoadBalancerType TCloudLoadBalancerType = "OPEN"
 	// InternalLoadBalancerType 内网属性
 	InternalLoadBalancerType TCloudLoadBalancerType = "INTERNAL"
-)
-
-// TCloudLoadBalancerInstType 负载均衡实例的类型
-type TCloudLoadBalancerInstType int64
-
-const (
-	// DefaultLoadBalancerInstType 1:通用的负载均衡实例，目前只支持传入1
-	DefaultLoadBalancerInstType TCloudLoadBalancerInstType = 1
 )
 
 // TCloudDefaultISP 默认ISP
@@ -123,6 +116,26 @@ const (
 	BandwidthPackage TCloudLoadBalancerNetworkChargeType = `BANDWIDTH_PACKAGE`
 )
 
+// TCloudClbListOrderByField clb list order by field
+type TCloudClbListOrderByField string
+
+const (
+	// TCloudOrderByLoadBalancerName order by load balancer name
+	TCloudOrderByLoadBalancerName TCloudClbListOrderByField = "LoadBalancerName"
+	// TCloudOrderByCreateTime order by create time
+	TCloudOrderByCreateTime TCloudClbListOrderByField = "CreateTime"
+	// TCloudOrderByDomain order by domain
+	TCloudOrderByDomain TCloudClbListOrderByField = "Domain"
+	// TCloudOrderByLoadBalancerType order by load balancer type
+	TCloudOrderByLoadBalancerType TCloudClbListOrderByField = "LoadBalancerType"
+)
+const (
+	// TCloudCLBOrderAscending 顺序
+	TCloudCLBOrderAscending int64 = 0
+	// TCloudCLBOrderDescending 倒序
+	TCloudCLBOrderDescending int64 = 1
+)
+
 // -------------------------- List Clb--------------------------
 
 // TCloudListOption defines options to list tcloud clb instances.
@@ -130,6 +143,11 @@ type TCloudListOption struct {
 	Region   string           `json:"region" validate:"required"`
 	CloudIDs []string         `json:"cloud_ids" validate:"omitempty,max=20"`
 	Page     *core.TCloudPage `json:"page" validate:"omitempty"`
+
+	OrderBy   *TCloudClbListOrderByField `json:"order_by"`
+	OrderType *int64                     `json:"order_type"`
+
+	TagFilters apicore.MultiValueTagMap `json:"tag_filters"`
 }
 
 // Validate tcloud clb list option.
@@ -149,6 +167,8 @@ func (opt TCloudListOption) Validate() error {
 
 // TCloudClb for clb Instance
 type TCloudClb struct {
+	BkBizID   int64
+	Bs2NameID int64
 	*tclb.LoadBalancer
 }
 
@@ -175,6 +195,34 @@ func (clb TCloudClb) GetIPVersion() enumor.IPAddressType {
 	return enumor.IPAddressType(ver)
 }
 
+// IsTraditionalClb 是否是传统型CLB
+func (clb TCloudClb) IsTraditionalClb() bool {
+	return clb.LoadBalancer != nil && cvt.PtrToVal(clb.Forward) == uint64(corelb.TCloudTraditionalClbType)
+}
+
+// GetTagMap ...
+func (clb TCloudClb) GetTagMap() apicore.TagMap {
+	if len(clb.Tags) == 0 {
+		return nil
+	}
+	tagMap := make(apicore.TagMap, len(clb.Tags))
+	for _, tag := range clb.Tags {
+		tagMap.Set(cvt.PtrToVal(tag.TagKey), cvt.PtrToVal(tag.TagValue))
+	}
+	return tagMap
+}
+
+// GetTags 返回Tag信息
+func (clb TCloudClb) GetTags() (tags []apicore.TagPair) {
+	for _, tag := range clb.Tags {
+		tags = append(tags, apicore.TagPair{
+			Key:   cvt.PtrToVal(tag.TagKey),
+			Value: cvt.PtrToVal(tag.TagValue),
+		})
+	}
+	return tags
+}
+
 // -------------------------- List Listeners--------------------------
 
 // TCloudListListenersOption defines options to list tcloud listeners instances.
@@ -197,6 +245,7 @@ func (opt TCloudListListenersOption) Validate() error {
 
 // TCloudListener for listener Instance
 type TCloudListener struct {
+	Region string
 	*tclb.Listener
 }
 
@@ -208,6 +257,11 @@ func (clb TCloudListener) GetCloudID() string {
 // GetProtocol ...
 func (clb TCloudListener) GetProtocol() enumor.ProtocolType {
 	return cvt.PtrToVal((*enumor.ProtocolType)(clb.Protocol))
+}
+
+func (clb TCloudListener) String() string {
+	return fmt.Sprintf("{id:%s,name:%s,port:%d}",
+		cvt.PtrToVal(clb.ListenerId), cvt.PtrToVal(clb.ListenerName), cvt.PtrToVal(clb.Port))
 }
 
 // -------------------------- List Targets--------------------------
@@ -244,33 +298,33 @@ func (t *TCloudListenerTarget) GetProtocol() enumor.ProtocolType {
 
 // TCloudCreateClbOption defines options to create tcloud clb instances.
 type TCloudCreateClbOption struct {
-	Region                   string                     `json:"region" validate:"required"`
-	LoadBalancerType         TCloudLoadBalancerType     `json:"load_balancer_type" validate:"required"`
-	Forward                  TCloudLoadBalancerInstType `json:"forward" validate:"omitempty"`
-	LoadBalancerName         *string                    `json:"load_balancer_name" validate:"omitempty,max=60"`
-	VpcID                    *string                    `json:"vpc_id" validate:"omitempty"`
-	SubnetID                 *string                    `json:"subnet_id" validate:"omitempty"`
-	ProjectID                *int64                     `json:"project_id" validate:"omitempty"`
-	AddressIPVersion         TCloudIPVersionForCreate   `json:"address_ip_version" validate:"omitempty"`
-	Number                   *uint64                    `json:"number" validate:"omitempty,min=1"`
-	MasterZoneID             *string                    `json:"master_zone_id" validate:"omitempty"`
-	ZoneID                   *string                    `json:"zone_id" validate:"omitempty"`
-	VipIsp                   *string                    `json:"vip_isp" validate:"omitempty"`
-	Tags                     []*tclb.TagInfo            `json:"tags" validate:"omitempty"`
-	Vip                      *string                    `json:"vip" validate:"omitempty"`
-	BandwidthPackageID       *string                    `json:"bandwidth_package_id" validate:"omitempty"`
-	ExclusiveCluster         *tclb.ExclusiveCluster     `json:"exclusive_cluster" validate:"omitempty"`
-	SlaType                  *string                    `json:"sla_type" validate:"omitempty"`
-	ClusterIds               []*string                  `json:"cluster_ids" validate:"omitempty"`
-	ClientToken              *string                    `json:"client_token" validate:"omitempty"`
-	SnatPro                  *bool                      `json:"snat_pro" validate:"omitempty"`
-	SnatIps                  []*tclb.SnatIp             `json:"snat_ips" validate:"omitempty"`
-	ClusterTag               *string                    `json:"cluster_tag" validate:"omitempty"`
-	SlaveZoneID              *string                    `json:"slave_zone_id" validate:"omitempty"`
-	EipAddressID             *string                    `json:"eip_address_id" validate:"omitempty"`
-	LoadBalancerPassToTarget *bool                      `json:"load_balancer_pass_to_target" validate:"omitempty"`
-	DynamicVip               *bool                      `json:"dynamic_vip" validate:"omitempty"`
-	Egress                   *string                    `json:"egress" validate:"omitempty"`
+	Region                   string                            `json:"region" validate:"required"`
+	LoadBalancerType         TCloudLoadBalancerType            `json:"load_balancer_type" validate:"required"`
+	Forward                  corelb.TCloudLoadBalancerInstType `json:"forward" validate:"omitempty"`
+	LoadBalancerName         *string                           `json:"load_balancer_name" validate:"omitempty,max=60"`
+	VpcID                    *string                           `json:"vpc_id" validate:"omitempty"`
+	SubnetID                 *string                           `json:"subnet_id" validate:"omitempty"`
+	ProjectID                *int64                            `json:"project_id" validate:"omitempty"`
+	AddressIPVersion         TCloudIPVersionForCreate          `json:"address_ip_version" validate:"omitempty"`
+	Number                   *uint64                           `json:"number" validate:"omitempty,min=1"`
+	MasterZoneID             *string                           `json:"master_zone_id" validate:"omitempty"`
+	ZoneID                   *string                           `json:"zone_id" validate:"omitempty"`
+	VipIsp                   *string                           `json:"vip_isp" validate:"omitempty"`
+	Tags                     []apicore.TagPair                 `json:"tags" validate:"omitempty"`
+	Vip                      *string                           `json:"vip" validate:"omitempty"`
+	BandwidthPackageID       *string                           `json:"bandwidth_package_id" validate:"omitempty"`
+	ExclusiveCluster         *tclb.ExclusiveCluster            `json:"exclusive_cluster" validate:"omitempty"`
+	SlaType                  *string                           `json:"sla_type" validate:"omitempty"`
+	ClusterIds               []*string                         `json:"cluster_ids" validate:"omitempty"`
+	ClientToken              *string                           `json:"client_token" validate:"omitempty"`
+	SnatPro                  *bool                             `json:"snat_pro" validate:"omitempty"`
+	SnatIps                  []*tclb.SnatIp                    `json:"snat_ips" validate:"omitempty"`
+	ClusterTag               *string                           `json:"cluster_tag" validate:"omitempty"`
+	SlaveZoneID              *string                           `json:"slave_zone_id" validate:"omitempty"`
+	EipAddressID             *string                           `json:"eip_address_id" validate:"omitempty"`
+	LoadBalancerPassToTarget *bool                             `json:"load_balancer_pass_to_target" validate:"omitempty"`
+	DynamicVip               *bool                             `json:"dynamic_vip" validate:"omitempty"`
+	Egress                   *string                           `json:"egress" validate:"omitempty"`
 
 	InternetChargeType      *TCloudLoadBalancerNetworkChargeType `json:"internet_charge_type"`
 	InternetMaxBandwidthOut *int64                               `json:"internet_max_bandwidth_out" `
@@ -616,6 +670,7 @@ func (opt TCloudDeleteRuleOption) Validate() error {
 
 // TCloudUrlRule ...
 type TCloudUrlRule struct {
+	Region string
 	*tclb.RuleOutput
 }
 
@@ -727,6 +782,7 @@ type TargetWeightRule struct {
 
 // Backend ...
 type Backend struct {
+	TargetGroupRegion string
 	*tclb.Backend
 }
 
@@ -864,5 +920,59 @@ type TCloudDeleteSnatIpOpt struct {
 
 // Validate ...
 func (opt *TCloudDeleteSnatIpOpt) Validate() error {
+	return validator.Validate.Struct(opt)
+}
+
+// TCloudDescribeExclusiveClustersOption defines options to query clb  exclusive cluster.
+type TCloudDescribeExclusiveClustersOption struct {
+	Region string `json:"region" validate:"required"`
+	// 按照 集群 的类型过滤，包括"TGW","STGW","VPCGW"
+	ClusterType []string `json:"cluster_type" validate:"omitempty"`
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照 集群 的名称过滤。
+	ClusterName []string `json:"cluster_name" validate:"omitempty"`
+	// 按照 集群 的标签过滤。（只有TGW/STGW集群有集群标签）
+	ClusterTag []string `json:"cluster_tag" validate:"omitempty"`
+	// 按照 集群 内的vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+
+	// 按照 集群 内的负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照 集群 的网络类型过滤，如："Public","Private"。
+	Network []string `json:"network" validate:"omitempty"`
+	// 按照 集群 所在可用区过滤，如："ap-guangzhou-1"（广州一区）。
+	Zone []string `json:"zone" validate:"omitempty"`
+	// 按照TGW集群的 Isp 类型过滤，如："BGP","CMCC","CUCC","CTCC","INTERNAL"。
+	Isp []string `json:"isp" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate tcloud listeners list option.
+func (opt TCloudDescribeExclusiveClustersOption) Validate() error {
+	return validator.Validate.Struct(opt)
+}
+
+// TCloudDescribeClusterResourcesOption ...
+type TCloudDescribeClusterResourcesOption struct {
+	Region string `json:"region" validate:"required"`
+
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+	// 按照负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照是否闲置过滤，如"True","False"。
+	Idle *bool `json:"idle,omitempty" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate ...
+func (opt TCloudDescribeClusterResourcesOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }

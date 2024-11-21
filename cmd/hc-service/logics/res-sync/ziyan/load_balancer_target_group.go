@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	dataproto "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
@@ -35,7 +36,6 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/assert"
-	"hcm/pkg/tools/classifier"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/json"
 	"hcm/pkg/tools/slice"
@@ -46,6 +46,7 @@ import (
 // LocalTargetGroup 同步本地目标组
 func (cli *client) LocalTargetGroup(kt *kit.Kit, param *SyncBaseParams, opt *SyncListenerOption,
 	cloudListeners []typeslb.TCloudListener) error {
+
 	// 目前主要是同步健康检查
 	healthMap := make(map[string]*tclb.HealthCheck, len(cloudListeners))
 	cloudIDs := make([]string, 0, len(cloudListeners))
@@ -62,8 +63,14 @@ func (cli *client) LocalTargetGroup(kt *kit.Kit, param *SyncBaseParams, opt *Syn
 			cloudIDs = append(cloudIDs, cvt.PtrToVal(rule.LocationId))
 		}
 	}
+	if len(cloudIDs) == 0 {
+		// 只有7层监听器，且所有监听器都为空的情况会导致这里为空
+		logs.Infof("no listener found for %v, rid: %s", cloudListeners, kt.Rid)
+		return nil
+	}
 	tgCloudHealthMap, tgList, err := cli.getTargetGruop(kt, opt.LBID, cloudIDs, healthMap)
 	if err != nil {
+		logs.Errorf("fail to get local target group for sync, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 	for _, tg := range tgList {
@@ -146,7 +153,7 @@ func (cli *client) ListenerTargets(kt *kit.Kit, param *SyncBaseParams, opt *Sync
 		}
 
 		// 存在则比较
-		return cli.compareTargetsChange(kt, param.AccountID, tgId, cloudTargets, tgRsMap[tgId])
+		return cli.compareTargetsChange(kt, param.AccountID, tgId, param.Region, cloudTargets, tgRsMap[tgId])
 	}
 	// 遍历云上的监听器、规则
 	for _, listener := range cloudListenerTargets {
@@ -208,6 +215,11 @@ func (cli *client) listTargetRelated(kt *kit.Kit, param *SyncBaseParams, opt *Sy
 		logs.Errorf("fail to list target from db while syncing, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, nil, err
 	}
+	if opt.CachedLoadBalancer != nil && opt.CachedLoadBalancer.CloudID == opt.CloudLBID {
+		return cloudListenerTargets, relMap, tgRsMap, opt.CachedLoadBalancer, nil
+	}
+
+	logs.Errorf("cache for target sync mismatch opt: %+v, rid:%s ", opt, kt.Rid)
 
 	lbResp, err := cli.listLBFromDB(kt, &SyncBaseParams{
 		AccountID: param.AccountID,
@@ -226,13 +238,15 @@ func (cli *client) listTargetRelated(kt *kit.Kit, param *SyncBaseParams, opt *Sy
 	return cloudListenerTargets, relMap, tgRsMap, cvt.ValToPtr(lbResp[0]), nil
 }
 
-func (cli *client) compareTargetsChange(kt *kit.Kit, accountID, tgID string, cloudTargets []*tclb.Backend,
-	dbRsList []corelb.BaseTarget) (
-	err error) {
+func (cli *client) compareTargetsChange(kt *kit.Kit, accountID, tgID, tgRegion string, cloudTargets []*tclb.Backend,
+	dbRsList []corelb.BaseTarget) (err error) {
 
+	if len(cloudTargets) == 0 && len(dbRsList) == 0 {
+		return nil
+	}
 	// 增加包裹类型
 	cloudRsList := slice.Map(cloudTargets, func(rs *tclb.Backend) typeslb.Backend {
-		return typeslb.Backend{Backend: rs}
+		return typeslb.Backend{Backend: rs, TargetGroupRegion: tgRegion}
 	})
 	addSlice, updateMap, delLocalIDs := diff[typeslb.Backend, corelb.BaseTarget](cloudRsList, dbRsList, isRsChange)
 
@@ -240,12 +254,13 @@ func (cli *client) compareTargetsChange(kt *kit.Kit, accountID, tgID string, clo
 		return err
 	}
 
-	if err = cli.updateRs(kt, updateMap); err != nil {
+	if err = cli.updateRs(kt, tgRegion, updateMap); err != nil {
 		return err
 	}
-	if _, err = cli.createRs(kt, accountID, tgID, addSlice); err != nil {
+	if _, err = cli.createRs(kt, accountID, tgID, tgRegion, addSlice); err != nil {
 		return err
 	}
+
 	return nil
 }
 
@@ -257,7 +272,9 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
 			tools.RuleEqual("cloud_id", cloudRule.LocationId),
-			tools.RuleEqual("cloud_lbl_id", listener.ListenerId)),
+			tools.RuleEqual("cloud_lbl_id", listener.ListenerId),
+			tools.RuleEqual("region", lb.Region),
+		),
 		Page: core.NewDefaultBasePage(),
 	}
 
@@ -293,7 +310,7 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 			Weight:          0,
 			HealthCheck:     types.JsonField(healthcheck),
 			Memo:            cvt.ValToPtr("auto created for rule " + cvt.PtrToVal(cloudRule.LocationId)),
-			RsList:          slice.Map(cloudRule.Targets, convTarget(lb.AccountID)),
+			RsList:          slice.Map(cloudRule.Targets, convTarget(lb.AccountID, lb.Region)),
 		},
 		ListenerRuleID:      dbRule.ID,
 		CloudListenerRuleID: dbRule.CloudID,
@@ -316,18 +333,20 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 	return nil
 }
 
-func convTarget(accountID string) func(cloudTarget *tclb.Backend) *dataproto.TargetBaseReq {
+func convTarget(accountID, tgRegion string) func(cloudTarget *tclb.Backend) *dataproto.TargetBaseReq {
 	return func(cloudTarget *tclb.Backend) *dataproto.TargetBaseReq {
 		localTarget := typeslb.Backend{Backend: cloudTarget}
 		target := &dataproto.TargetBaseReq{
-			InstType:         cvt.PtrToVal((*enumor.InstType)(cloudTarget.Type)),
-			CloudInstID:      cvt.PtrToVal(cloudTarget.InstanceId),
-			Port:             cvt.PtrToVal(cloudTarget.Port),
-			Weight:           cloudTarget.Weight,
-			AccountID:        accountID,
-			PrivateIPAddress: cvt.PtrToSlice(cloudTarget.PrivateIpAddresses),
-			PublicIPAddress:  cvt.PtrToSlice(cloudTarget.PublicIpAddresses),
-			IP:               localTarget.GetIP(),
+			InstName:          cvt.PtrToVal(cloudTarget.InstanceName),
+			InstType:          cvt.PtrToVal((*enumor.InstType)(cloudTarget.Type)),
+			CloudInstID:       cvt.PtrToVal(cloudTarget.InstanceId),
+			Port:              cvt.PtrToVal(cloudTarget.Port),
+			Weight:            cloudTarget.Weight,
+			AccountID:         accountID,
+			TargetGroupRegion: tgRegion,
+			PrivateIPAddress:  cvt.PtrToSlice(cloudTarget.PrivateIpAddresses),
+			PublicIPAddress:   cvt.PtrToSlice(cloudTarget.PublicIpAddresses),
+			IP:                localTarget.GetIP(),
 		}
 		if enumor.InstType(cvt.PtrToVal(cloudTarget.Type)) == enumor.CcnInstType {
 			target.CloudInstID = localTarget.GetCloudID()
@@ -343,7 +362,7 @@ func convTarget(accountID string) func(cloudTarget *tclb.Backend) *dataproto.Tar
 func (cli *client) createLocalTargetGroupL4(kt *kit.Kit, opt *SyncListenerOption,
 	lb *corelb.TCloudLoadBalancer, listener typeslb.TCloudListenerTarget) error {
 
-	lbl, rule, err := cli.listListenerWithRule(kt, cvt.PtrToVal(listener.ListenerId))
+	lbl, rule, err := cli.listListenerWithRule(kt, cvt.PtrToVal(listener.ListenerId), lb.ID)
 	if err != nil {
 		logs.Errorf("fail to list listener with rule, err: %v, rid:%s", err, kt.Rid)
 		return err
@@ -369,7 +388,7 @@ func (cli *client) createLocalTargetGroupL4(kt *kit.Kit, opt *SyncListenerOption
 			Weight:          0,
 			HealthCheck:     types.JsonField(healthcheck),
 			Memo:            cvt.ValToPtr("auto created for listener " + cvt.PtrToVal(listener.ListenerId)),
-			RsList:          slice.Map(listener.Targets, convTarget(lb.AccountID)),
+			RsList:          slice.Map(listener.Targets, convTarget(lb.AccountID, lb.Region)),
 		},
 		// 需要用4层对应的规则id
 		ListenerRuleID:      rule.ID,
@@ -394,12 +413,15 @@ func (cli *client) createLocalTargetGroupL4(kt *kit.Kit, opt *SyncListenerOption
 	return nil
 }
 
-func (cli *client) listListenerWithRule(kt *kit.Kit, listenerCloudID string) (
+func (cli *client) listListenerWithRule(kt *kit.Kit, listenerCloudID, lbID string) (
 	*corelb.Listener[corelb.TCloudListenerExtension], *corelb.TCloudLbUrlRule, error) {
 
 	listReq := &core.ListReq{
-		Filter: tools.EqualExpression("cloud_id", listenerCloudID),
-		Page:   core.NewDefaultBasePage(),
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("lb_id", lbID),
+			tools.RuleEqual("cloud_id", listenerCloudID),
+		),
+		Page: core.NewDefaultBasePage(),
 	}
 	lblResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListListener(kt, listReq)
 	if err != nil {
@@ -417,7 +439,9 @@ func (cli *client) listListenerWithRule(kt *kit.Kit, listenerCloudID string) (
 	// 获取对应规则
 	listReq.Filter = tools.ExpressionAnd(
 		tools.RuleEqual("cloud_id", lbl.CloudID),
-		tools.RuleEqual("lbl_id", lbl.ID))
+		tools.RuleEqual("cloud_lbl_id", lbl.CloudID),
+		tools.RuleEqual("region", lbl.Region),
+	)
 	ruleResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
 	if err != nil {
 		logs.Errorf("fail to list rule of l4 listener, err: %v, lbl_id: %s, lbl_cloud_id: %s, rid: %s",
@@ -427,7 +451,7 @@ func (cli *client) listListenerWithRule(kt *kit.Kit, listenerCloudID string) (
 	if len(ruleResp.Details) == 0 {
 		logs.Errorf("rule of listener can not be found by id(%s), lbl_id: %s, lbl_cloud_id: %s, rid: %s ",
 			lbl.ID, lbl.CloudID, kt.Rid)
-		return nil, nil, fmt.Errorf("rule of listener  can not be found by id(%s) while target group syncing",
+		return nil, nil, fmt.Errorf("rule of listener can not be found by id(%s) while target group syncing",
 			listenerCloudID)
 	}
 	return cvt.ValToPtr(lbl), cvt.ValToPtr(ruleResp.Details[0]), nil
@@ -438,19 +462,20 @@ func (cli *client) deleteRs(kt *kit.Kit, localIds []string) error {
 	if len(localIds) == 0 {
 		return nil
 	}
-
-	delReq := &dataproto.LoadBalancerBatchDeleteReq{Filter: tools.ContainersExpression("id", localIds)}
-	err := cli.dbCli.Global.LoadBalancer.BatchDeleteTarget(kt, delReq)
-	if err != nil {
-		logs.Errorf("fail to delete rs (ids=%v), err: %v, rid: %s", localIds, err, kt.Rid)
-		return err
+	for _, idBatch := range slice.Split(localIds, constant.BatchOperationMaxLimit) {
+		delReq := &dataproto.LoadBalancerBatchDeleteReq{Filter: tools.ContainersExpression("id", idBatch)}
+		err := cli.dbCli.Global.LoadBalancer.BatchDeleteTarget(kt, delReq)
+		if err != nil {
+			logs.Errorf("fail to delete ziyan rs, err: %v, ids: %v, rid: %s", err, idBatch, kt.Rid)
+			return err
+		}
 	}
 
 	return nil
 }
 
 // 更新rs中的信息
-func (cli *client) updateRs(kt *kit.Kit, updateMap map[string]typeslb.Backend) (err error) {
+func (cli *client) updateRs(kt *kit.Kit, tgRegion string, updateMap map[string]typeslb.Backend) (err error) {
 
 	if len(updateMap) == 0 {
 		return nil
@@ -458,42 +483,53 @@ func (cli *client) updateRs(kt *kit.Kit, updateMap map[string]typeslb.Backend) (
 	updates := make([]*dataproto.TargetUpdate, 0, len(updateMap))
 	for id, backend := range updateMap {
 		updates = append(updates, &dataproto.TargetUpdate{
-			ID:               id,
-			Port:             cvt.PtrToVal(backend.Port),
-			Weight:           backend.Weight,
-			PrivateIPAddress: cvt.PtrToSlice(backend.PrivateIpAddresses),
-			PublicIPAddress:  cvt.PtrToSlice(backend.PublicIpAddresses),
-			InstName:         cvt.PtrToVal(backend.InstanceName),
+			ID:                id,
+			Port:              cvt.PtrToVal(backend.Port),
+			Weight:            backend.Weight,
+			PrivateIPAddress:  cvt.PtrToSlice(backend.PrivateIpAddresses),
+			PublicIPAddress:   cvt.PtrToSlice(backend.PublicIpAddresses),
+			InstName:          cvt.PtrToVal(backend.InstanceName),
+			TargetGroupRegion: tgRegion,
 		})
 	}
-	updateReq := &dataproto.TargetBatchUpdateReq{Targets: updates}
-	if err = cli.dbCli.Global.LoadBalancer.BatchUpdateTarget(kt, updateReq); err != nil {
-		logs.Errorf("fail to update targets while syncing, err: %v, rid:%s", err, kt.Rid)
+
+	for _, updateBatch := range slice.Split(updates, constant.BatchOperationMaxLimit) {
+		updateReq := &dataproto.TargetBatchUpdateReq{Targets: updateBatch}
+		if err = cli.dbCli.Global.LoadBalancer.BatchUpdateTarget(kt, updateReq); err != nil {
+			logs.Errorf("fail to update targets while syncing, err: %v, rid:%s", err, kt.Rid)
+		}
 	}
 
 	return err
 }
 
-func (cli *client) createRs(kt *kit.Kit, accountID, tgId string, addSlice []typeslb.Backend) ([]string, error) {
+func (cli *client) createRs(kt *kit.Kit, accountID, tgId, tgRegion string, addSlice []typeslb.Backend) (
+	[]string, error) {
 
 	if len(addSlice) == 0 {
 		return nil, nil
 	}
 
-	var targets []*dataproto.TargetBaseReq = make([]*dataproto.TargetBaseReq, 0, len(addSlice))
-	for _, backend := range addSlice {
-		rs := convTarget(accountID)(backend.Backend)
-		rs.TargetGroupID = tgId
-		targets = append(targets, rs)
+	targets := make([]*dataproto.TargetBaseReq, 0, constant.BatchOperationMaxLimit)
+	createIds := make([]string, 0, len(targets))
+
+	for _, targetBatch := range slice.Split(addSlice, constant.BatchOperationMaxLimit) {
+		targets = targets[:0]
+		for _, backend := range targetBatch {
+			rs := convTarget(accountID, tgRegion)(backend.Backend)
+			rs.TargetGroupID = tgId
+			targets = append(targets, rs)
+		}
+		created, err := cli.dbCli.Global.LoadBalancer.BatchCreateTCloudTarget(kt,
+			&dataproto.TargetBatchCreateReq{Targets: targets})
+		if err != nil {
+			logs.Errorf("fail to create target for target group syncing, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		createIds = append(createIds, created.IDs...)
 	}
 
-	created, err := cli.dbCli.Global.LoadBalancer.BatchCreateTCloudTarget(kt,
-		&dataproto.TargetBatchCreateReq{Targets: targets})
-	if err != nil {
-		logs.Errorf("fail to create target for target group syncing, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-	return created.IDs, nil
+	return createIds, nil
 }
 
 // 获取云上监听器列表
@@ -521,40 +557,60 @@ func (cli *client) listTargetsFromDB(kt *kit.Kit, param *SyncBaseParams, opt *Sy
 		listReq.Filter.Rules = append(listReq.Filter.Rules, tools.RuleIn("cloud_lbl_id", param.CloudIDs))
 	}
 	// 获取关系
-	relResp, err := cli.dbCli.Global.LoadBalancer.ListTargetGroupListenerRel(kt, listReq)
-	if err != nil {
-		logs.Errorf("fail to ListTargetGroupListenerRel, err: %v, rid: %s ", err, kt.Rid)
-		return nil, nil, err
+	relList := make([]corelb.BaseTargetListenerRuleRel, 0)
+	for {
+		relRespTemp, err := cli.dbCli.Global.LoadBalancer.ListTargetGroupListenerRel(kt, listReq)
+		if err != nil {
+			logs.Errorf("fail to list target group listener rel, err: %v, req: %v, cloud_lbl_id: %s, rid: %s", err,
+				listReq, param.CloudIDs, kt.Rid)
+			return nil, nil, err
+		}
+		relList = append(relList, relRespTemp.Details...)
+
+		if uint(len(relRespTemp.Details)) < core.DefaultMaxPageLimit {
+			break
+		}
+
+		listReq.Page.Start += uint32(core.DefaultMaxPageLimit)
 	}
 	relMap = make(map[string]*corelb.BaseTargetListenerRuleRel)
 	tgRsMap = make(map[string][]corelb.BaseTarget)
-	if len(relResp.Details) == 0 {
+	if len(relList) == 0 {
 		return relMap, tgRsMap, nil
 	}
 
-	tgIDMap := make(map[string]struct{}, len(relResp.Details))
+	tgIDMap := make(map[string]struct{}, len(relList))
 
-	for i, rel := range relResp.Details {
+	for i, rel := range relList {
 		tgIDMap[rel.TargetGroupID] = struct{}{}
-		relMap[rel.CloudListenerRuleID] = cvt.ValToPtr(relResp.Details[i])
+		relMap[rel.CloudListenerRuleID] = cvt.ValToPtr(relList[i])
 	}
-	relResp.Details = nil
+
 	// 目标组ID 去重
 	tgIDs := cvt.MapKeyToStringSlice(tgIDMap)
-
 	// 查询对应的rs列表
-	rsList, err := cli.dbCli.Global.LoadBalancer.ListTarget(kt, &core.ListReq{
-		Filter: tools.ExpressionAnd(tools.RuleIn("target_group_id", tgIDs)),
-		Page:   core.NewDefaultBasePage(),
-	})
-	if err != nil {
-		logs.Errorf("fail to list targets of target group(ids=%v), err: %v, rid: %s", tgIDs, err, kt.Rid)
-		return nil, nil, err
+	for _, tgID := range tgIDs {
+		// 按目标组查询
+		req := &core.ListReq{
+			Filter: tools.ExpressionAnd(tools.RuleEqual("target_group_id", tgID)),
+			Page:   core.NewDefaultBasePage(),
+		}
+		for {
+			// 查询对应的rs列表
+			rsList, err := cli.dbCli.Global.LoadBalancer.ListTarget(kt, req)
+			if err != nil {
+				logs.Errorf("fail to list targets of target group(id=%s), err: %v, rid: %s", tgID, err, kt.Rid)
+				return nil, nil, err
+			}
+			tgRsMap[tgID] = append(tgRsMap[tgID], rsList.Details...)
+
+			if uint(len(rsList.Details)) < core.DefaultMaxPageLimit {
+				break
+			}
+
+			req.Page.Start += uint32(core.DefaultMaxPageLimit)
+		}
 	}
-	// 按目标组分
-	tgRsMap = classifier.ClassifySlice(rsList.Details, func(rs corelb.BaseTarget) string {
-		return rs.TargetGroupID
-	})
 
 	return relMap, tgRsMap, nil
 }
@@ -580,6 +636,10 @@ func isRsChange(cloud typeslb.Backend, db corelb.BaseTarget) bool {
 	}
 
 	if !assert.IsStringSliceEqual(cvt.PtrToSlice(cloud.PublicIpAddresses), db.PublicIPAddress) {
+		return true
+	}
+
+	if cloud.TargetGroupRegion != db.TargetGroupRegion {
 		return true
 	}
 	return false

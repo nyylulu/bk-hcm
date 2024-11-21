@@ -106,7 +106,7 @@ func (svc *lbSvc) associateTargetGroupListenerRel(cts *rest.Contexts,
 	case enumor.TCloud:
 		return svc.tcloudTargetGroupListenerRel(cts.Kit, req, svc.listRuleWithCondition)
 	case enumor.TCloudZiyan:
-		return svc.tcloudTargetGroupListenerRel(cts.Kit, req, svc.listTCloudZiyanRuleWithCondition)
+		return svc.tcloudTargetGroupListenerRel(cts.Kit, req, svc.listZiyanRuleWithCondition)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
 	}

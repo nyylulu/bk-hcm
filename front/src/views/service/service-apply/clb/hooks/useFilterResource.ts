@@ -8,6 +8,7 @@ import { ApplyClbModel, SpecAvailability } from '@/api/load_balancers/apply-clb/
 import { reqResourceListOfCurrentRegion } from '@/api/load_balancers/apply-clb';
 import { ClbQuota, LbPrice } from '@/typings';
 import { cloneDeep, debounce, uniqBy } from 'lodash';
+import { VendorEnum } from '@/common/constant';
 
 // 当云地域变更时, 获取用户在当前地域支持可用区列表和资源列表
 export default (formModel: ApplyClbModel) => {
@@ -193,10 +194,17 @@ export default (formModel: ApplyClbModel) => {
   const inquiryPrices = async () => {
     isInquiryPricesLoading.value = true;
     try {
+      // eslint-disable-next-line prefer-const
+      let zones = formModel.zones ? [formModel.zones] : [];
+      // 自研云内网下支持多可用区
+      if (formModel.vendor === VendorEnum.ZIYAN && formModel.load_balancer_type === 'INTERNAL') {
+        zones = formModel.zones as string[];
+      }
+
       const { data } = await businessStore.lbPricesInquiry({
         ...formModel,
         bk_biz_id: isBusinessPage ? formModel.bk_biz_id : undefined,
-        zones: [formModel.zones],
+        zones,
         backup_zones: formModel.backup_zones ? [formModel.backup_zones] : undefined,
         bandwidthpkg_sub_type: formModel.vip_isp === 'BGP' ? 'BGP' : 'SINGLE_ISP',
         bandwidth_package_id: undefined,

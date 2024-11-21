@@ -41,6 +41,7 @@ create table `tcloud_ziyan_lb_url_rule`
     `cloud_lbl_id`          varchar(255) not null,
     `target_group_id`       varchar(255)          default '',
     `cloud_target_group_id` varchar(255)          default '',
+    `region`                varchar(20)           default '' not null,
 
     `domain`                varchar(255)          default '',
     `url`                   varchar(255)          default '',

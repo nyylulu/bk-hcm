@@ -21,6 +21,7 @@ package tziyan
 
 import (
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/kit"
 )
@@ -36,23 +37,24 @@ func (opt *SyncPublicResourceOption) Validate() error {
 }
 
 // SyncPublicResource ...
-func SyncPublicResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncPublicResourceOption) error {
+func SyncPublicResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncPublicResourceOption) (
+	failedRes enumor.CloudResourceType, err error) {
 
 	if err := opt.Validate(); err != nil {
-		return err
+		return "", err
 	}
 
 	if err := SyncRegion(kt, cliSet.HCService(), opt.AccountID); err != nil {
-		return err
+		return enumor.RegionCloudResType, err
 	}
 
 	regions, err := ListRegion(kt, cliSet.DataService())
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	if err = SyncZone(kt, cliSet.HCService(), opt.AccountID, regions); err != nil {
-		return err
+		return enumor.ZoneCloudResType, err
 	}
 
 	// 暂未接入
@@ -60,5 +62,5 @@ func SyncPublicResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncPublicRe
 	// 	return err
 	// }
 
-	return nil
+	return "", nil
 }

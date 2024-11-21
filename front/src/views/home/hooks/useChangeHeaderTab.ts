@@ -5,7 +5,8 @@ import workbench from '@/router/module/workbench';
 import resource from '@/router/module/resource';
 import resourcePlan from '@/router/module/resource-plan';
 import service from '@/router/module/service';
-import business from '@/router/module/business';
+import { businessViews } from '@/views';
+
 import scheme from '@/router/module/scheme';
 import bill from '@/router/module/bill';
 import { platformManagementViews } from '@/views';
@@ -44,7 +45,7 @@ export default () => {
     topMenuActiveItem.value = id;
     switch (id) {
       case 'business':
-        menus.value = business;
+        menus.value = businessViews;
         break;
       case 'resource':
         menus.value = resource;
@@ -73,7 +74,7 @@ export default () => {
       default:
         if (subPath[0] === 'biz_access') {
           topMenuActiveItem.value = 'business';
-          menus.value = business;
+          menus.value = businessViews;
         } else if (subPath[0] === 'rolling_server_manage') {
           topMenuActiveItem.value = 'platform';
         } else {

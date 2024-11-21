@@ -43,7 +43,7 @@ import (
 
 // UpdateBizTCloudLoadBalancer  业务下更新clb
 func (svc *lbSvc) UpdateBizTCloudLoadBalancer(cts *rest.Contexts) (any, error) {
-
+	vendor := enumor.Vendor(cts.PathParameter("vendor"))
 	lbID := cts.PathParameter("id").String()
 	if len(lbID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "id is required")
@@ -85,7 +85,7 @@ func (svc *lbSvc) UpdateBizTCloudLoadBalancer(cts *rest.Contexts) (any, error) {
 		logs.Errorf("create update audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	switch baseInfo.Vendor {
+	switch vendor {
 	case enumor.TCloud:
 		return nil, svc.client.HCService().TCloud.Clb.Update(cts.Kit, lbID, req)
 	case enumor.TCloudZiyan:

@@ -51,6 +51,11 @@ func (c *ClbClient) SyncLoadBalancer(kt *kit.Kit, req *sync.TCloudSyncReq) error
 	return common.RequestNoResp[sync.TCloudSyncReq](c.client, http.MethodPost, kt, req, "/load_balancers/sync")
 }
 
+// SyncLoadBalancerListener 同步负载均衡下监听器
+func (c *ClbClient) SyncLoadBalancerListener(kt *kit.Kit, req *sync.TCloudListenerSyncReq) error {
+	return common.RequestNoResp[sync.TCloudListenerSyncReq](c.client, http.MethodPost, kt, req, "/listeners/sync")
+}
+
 // DescribeResources ...
 func (c *ClbClient) DescribeResources(kt *kit.Kit, req *hcproto.TCloudDescribeResourcesOption) (
 	*tclb.DescribeResourcesResponseParams, error) {
@@ -60,10 +65,10 @@ func (c *ClbClient) DescribeResources(kt *kit.Kit, req *hcproto.TCloudDescribeRe
 }
 
 // BatchCreate ...
-func (c *ClbClient) BatchCreate(kt *kit.Kit, req *hcproto.TCloudLoadBalancerCreateReq) (
+func (c *ClbClient) BatchCreate(kt *kit.Kit, req *hcproto.TCloudZiyanLoadBalancerCreateReq) (
 	*hcproto.BatchCreateResult, error) {
 
-	return common.Request[hcproto.TCloudLoadBalancerCreateReq, hcproto.BatchCreateResult](
+	return common.Request[hcproto.TCloudZiyanLoadBalancerCreateReq, hcproto.BatchCreateResult](
 		c.client, http.MethodPost, kt, req, "/load_balancers/batch/create")
 }
 
@@ -73,11 +78,19 @@ func (c *ClbClient) Update(kt *kit.Kit, id string, req *hcproto.TCloudLBUpdateRe
 		kt, req, "/load_balancers/%s", id)
 }
 
-// CreateListener 创建监听器
-func (c *ClbClient) CreateListener(kt *kit.Kit, req *hcproto.ListenerWithRuleCreateReq) (
+// CreateListenerWithTargetGroup 创建监听器和规则附带目标组绑定信息
+func (c *ClbClient) CreateListenerWithTargetGroup(kt *kit.Kit, req *hcproto.ListenerWithRuleCreateReq) (
 	*hcproto.ListenerWithRuleCreateResult, error) {
 
 	return common.Request[hcproto.ListenerWithRuleCreateReq, hcproto.ListenerWithRuleCreateResult](
+		c.client, http.MethodPost, kt, req, "/listeners/create_with_target_group")
+}
+
+// CreateListener 创建监听器自身
+func (c *ClbClient) CreateListener(kt *kit.Kit, req *hcproto.TCloudListenerCreateReq) (
+	*hcproto.ListenerCreateResult, error) {
+
+	return common.Request[hcproto.TCloudListenerCreateReq, hcproto.ListenerCreateResult](
 		c.client, http.MethodPost, kt, req, "/listeners/create")
 }
 
@@ -224,4 +237,36 @@ func (c *ClbClient) CreateSnatIp(kt *kit.Kit, req *hcproto.TCloudCreateSnatIpReq
 func (c *ClbClient) DeleteSnatIp(kt *kit.Kit, req *hcproto.TCloudDeleteSnatIpReq) error {
 	return common.RequestNoResp[hcproto.TCloudDeleteSnatIpReq](c.client, http.MethodDelete, kt, req,
 		"/load_balancers/snat_ips")
+}
+
+// DescribeExclusiveCluster ...
+func (c *ClbClient) DescribeExclusiveCluster(kt *kit.Kit, req *hcproto.TCloudDescribeExclusiveClusterReq) (
+	*tclb.DescribeExclusiveClustersResponseParams, error) {
+
+	return common.Request[hcproto.TCloudDescribeExclusiveClusterReq, tclb.DescribeExclusiveClustersResponseParams](
+		c.client, http.MethodPost, kt, req, "/load_balancers/exclusive_clusters/describe")
+}
+
+// DescribeClusterResources 查询负载均衡集群中资源列表
+func (c *ClbClient) DescribeClusterResources(kt *kit.Kit, req *hcproto.TCloudDescribeClusterResourcesReq) (
+	*tclb.DescribeClusterResourcesResponseParams, error) {
+
+	return common.Request[hcproto.TCloudDescribeClusterResourcesReq, tclb.DescribeClusterResourcesResponseParams](
+		c.client, http.MethodPost, kt, req, "/load_balancers/cluster_resources/describe")
+}
+
+// BatchModifyListenerTargetsWeight 按负载均衡批量调整监听器的RS权重
+func (c *ClbClient) BatchModifyListenerTargetsWeight(kt *kit.Kit, lbID string,
+	req *hcproto.TCloudBatchModifyRsWeightReq) (*hcproto.BatchCreateResult, error) {
+
+	return common.Request[hcproto.TCloudBatchModifyRsWeightReq, hcproto.BatchCreateResult](
+		c.client, http.MethodPatch, kt, req, "/load_balancers/%s/targets/weight", lbID)
+}
+
+// BatchRemoveListenerTarget 按负载均衡批量移除监听器的RS
+func (c *ClbClient) BatchRemoveListenerTarget(kt *kit.Kit, lbID string, req *hcproto.TCloudBatchUnbindRsReq) (
+	*hcproto.BatchCreateResult, error) {
+
+	return common.Request[hcproto.TCloudBatchUnbindRsReq, hcproto.BatchCreateResult](
+		c.client, http.MethodDelete, kt, req, "/load_balancers/%s/targets/batch", lbID)
 }

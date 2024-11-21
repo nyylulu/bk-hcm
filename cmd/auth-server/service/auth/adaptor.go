@@ -138,6 +138,8 @@ func AdaptAuthOptions(a *meta.ResourceAttribute) (client.ActionID, []client.Reso
 		return sys.RollingServerManage, make([]client.Resource, 0), nil
 	case meta.GreenChannel: // 平台管理-小额绿通
 		return sys.GreenChannel, make([]client.Resource, 0), nil
+	case meta.TaskManagement:
+		return genTaskManagementResource(a)
 	default:
 		return "", nil, errf.Newf(errf.InvalidParameter, "unsupported hcm auth type: %s", a.Basic.Type)
 	}

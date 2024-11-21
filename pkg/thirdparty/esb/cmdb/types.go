@@ -167,6 +167,8 @@ type SearchBizResult struct {
 type Biz struct {
 	BizID   int64  `json:"bk_biz_id"`
 	BizName string `json:"bk_biz_name"`
+	// 二级业务id
+	BsName2ID int64 `json:"bs2_name_id"`
 }
 
 // -------------------------- cloud area --------------------------
@@ -604,6 +606,36 @@ var HuaWeiCmdbStatusMap = map[string]CloudHostStatus{
 	"SHELVED":           UnknownCloudHostStatus,
 	"SHELVED_OFFLOADED": UnknownCloudHostStatus,
 	"UNKNOWN":           UnknownCloudHostStatus,
+}
+
+// SearchBizCompanyCmdbInfoParams is search cmdb business belonging parameter.
+type SearchBizCompanyCmdbInfoParams struct {
+	BizIDs   []int64  `json:"bk_biz_ids,omitempty"`
+	BizNames []string `json:"bk_biz_names,omitempty"`
+	Page     BasePage `json:"page,omitempty"`
+}
+
+// CompanyCmdbInfoResult is search cmdb business belonging result.
+type CompanyCmdbInfoResult struct {
+	Data []CompanyCmdbInfo `json:"data"`
+}
+
+// CompanyCmdbInfo is search cmdb business belonging element of result.
+type CompanyCmdbInfo struct {
+	BkBizID          int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	BkProductID      int64  `json:"bsi_product_id"`
+	BkProductName    string `json:"bsi_product_name"`
+	PlanProductID    int64  `json:"plan_product_id"`
+	PlanProductName  string `json:"plan_product_name"`
+	BusinessDeptID   int64  `json:"business_dept_id"`
+	BusinessDeptName string `json:"business_dept_name"`
+	Bs1Name          string `json:"bs1_name"`
+	Bs1NameID        int64  `json:"bs1_name_id"`
+	Bs2Name          string `json:"bs2_name"`
+	Bs2NameID        int64  `json:"bs2_name_id"`
+	VirtualDeptID    int64  `json:"virtual_dept_id"`
+	VirtualDeptName  string `json:"virtual_dept_name"`
 }
 
 // SearchBizBelongingParams is search cmdb business belonging parameter.

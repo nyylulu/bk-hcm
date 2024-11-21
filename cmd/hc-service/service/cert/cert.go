@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/hc-service/service/capability"
 	"hcm/pkg/client"
 	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // InitCertService initial cert service.
@@ -32,6 +33,7 @@ func InitCertService(cap *capability.Capability) {
 	svc := &certSvc{
 		ad:      cap.CloudAdaptor,
 		dataCli: cap.ClientSet.DataService(),
+		esb:     cap.EsbCli,
 	}
 
 	svc.initTCloudCertService(cap)
@@ -42,4 +44,5 @@ type certSvc struct {
 	ad      *cloudadaptor.CloudAdaptorClient
 	dataCli *dataservice.Client
 	client  *client.ClientSet
+	esb     esb.Client
 }

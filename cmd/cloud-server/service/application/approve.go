@@ -36,6 +36,7 @@ import (
 	huaweidiskhandler "hcm/cmd/cloud-server/service/application/handlers/disk/huawei"
 	tclouddiskhandler "hcm/cmd/cloud-server/service/application/handlers/disk/tcloud"
 	"hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud"
+	ziyan "hcm/cmd/cloud-server/service/application/handlers/load_balancer/tcloud-ziyan"
 	createmainaccount "hcm/cmd/cloud-server/service/application/handlers/main-account/create-main-account"
 	updatemainaccount "hcm/cmd/cloud-server/service/application/handlers/main-account/update-main-account"
 	awsvpchandler "hcm/cmd/cloud-server/service/application/handlers/vpc/aws"
@@ -272,6 +273,12 @@ func (a *applicationSvc) getHandlerOfCreateLoadBalancer(opt *handlers.HandlerOpt
 			return nil, err
 		}
 		return tcloud.NewApplicationOfCreateTCloudLB(opt, req), nil
+	case enumor.TCloudZiyan:
+		req, err := parseReqFromApplicationContent[hclb.TCloudZiyanLoadBalancerCreateReq](application.Content)
+		if err != nil {
+			return nil, err
+		}
+		return ziyan.NewApplicationOfCreateZiyanLB(opt, req), nil
 	default:
 		return nil, fmt.Errorf("not support handler of create %s load balancer", vendor)
 	}

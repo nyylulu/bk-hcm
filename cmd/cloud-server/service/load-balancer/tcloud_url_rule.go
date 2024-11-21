@@ -179,8 +179,8 @@ func (svc *lbSvc) listRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, cond
 	return urlRuleList, nil
 }
 
-// listTCloudZiyanRuleWithCondition list ziyan rule with additional rules
-func (svc *lbSvc) listTCloudZiyanRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, conditions ...filter.RuleFactory) (
+// listZiyanRuleWithCondition list ziyan rule with additional rules
+func (svc *lbSvc) listZiyanRuleWithCondition(kt *kit.Kit, listReq *core.ListReq, conditions ...filter.RuleFactory) (
 	*dataproto.TCloudURLRuleListResult, error) {
 
 	req := &core.ListReq{
@@ -271,6 +271,7 @@ func (svc *lbSvc) ListBizUrlRulesByListener(cts *rest.Contexts) (any, error) {
 
 // ListBizListenerDomains 指定监听器下的域名列表
 func (svc *lbSvc) ListBizListenerDomains(cts *rest.Contexts) (any, error) {
+	vendor := enumor.Vendor(cts.PathParameter("vendor"))
 	lblID := cts.PathParameter("lbl_id").String()
 	if len(lblID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "listener is required")
@@ -303,10 +304,18 @@ func (svc *lbSvc) ListBizListenerDomains(cts *rest.Contexts) (any, error) {
 	if !lbl.Protocol.IsLayer7Protocol() {
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported listener protocol type: %s", lbl.Protocol)
 	}
+	var ruleList *dataproto.TCloudURLRuleListResult
 	// 查询规则列表
-	ruleList, err := svc.listRuleWithCondition(cts.Kit, req)
+	switch vendor {
+	case enumor.TCloud:
+		ruleList, err = svc.listRuleWithCondition(cts.Kit, req)
+	case enumor.TCloudZiyan:
+		ruleList, err = svc.listZiyanRuleWithCondition(cts.Kit, req)
+	default:
+		return nil, fmt.Errorf("unsupport vendor for list rule: %s", vendor)
+	}
 	if err != nil {
-		logs.Errorf("fail list rule under listener(id=%s), err: %v, rid: %s", lblID, err, cts.Kit.Rid)
+		logs.Errorf("[%s] fail list rule under listener(id=%s), err: %v, rid: %s", vendor, lblID, err, cts.Kit.Rid)
 		return nil, err
 	}
 

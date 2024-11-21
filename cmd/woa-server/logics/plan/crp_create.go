@@ -462,7 +462,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		logs.Errorf("crp demand ids is empty, rid: %s", kt.Rid)
 		return errors.New("crp demand ids is empty")
 	}
-
 	crpDemandFilter := &filter.Expression{
 		Op: filter.And,
 		Rules: []filter.RuleFactory{
@@ -470,7 +469,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bizOrgRel.BkBizID},
 		},
 	}
-
 	listOpt := &types.ListOption{
 		Filter: crpDemandFilter,
 		Page:   core.NewDefaultBasePage(),
@@ -480,11 +478,9 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		logs.Errorf("failed to list resource plan crp demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-
 	existCrpDemandMap := converter.SliceToMap(rst.Details, func(detail rpcd.ResPlanCrpDemandTable) (int64, struct{}) {
 		return detail.CrpDemandID, struct{}{}
 	})
-
 	existCrpDemandIDs := make([]int64, 0)
 	notExistCrpDemandIDs := make([]int64, 0)
 	for _, crpDemandID := range crpDemandIDs {
@@ -494,7 +490,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			notExistCrpDemandIDs = append(notExistCrpDemandIDs, crpDemandID)
 		}
 	}
-
 	if len(existCrpDemandIDs) > 0 {
 		update := &rpcd.ResPlanCrpDemandTable{
 			DemandClass:     demandClass,
@@ -514,7 +509,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			return err
 		}
 	}
-
 	if len(notExistCrpDemandIDs) > 0 {
 		inserts := make([]rpcd.ResPlanCrpDemandTable, len(notExistCrpDemandIDs))
 		for idx, crpDemandID := range notExistCrpDemandIDs {
@@ -542,6 +536,5 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		}
 		return err
 	}
-
 	return nil
 }

@@ -126,6 +126,9 @@ const (
 	// ZiyanResPlanManage ziyan resource plan manage action id to register iam.
 	ZiyanResPlanManage client.ActionID = "ziyan_resource_plan_manage"
 
+	// BizTaskManagementOperate biz task management operate action id to register iam.
+	BizTaskManagementOperate client.ActionID = "biz_task_management_operate"
+
 	// AccountFind account find action id to register iam.
 	AccountFind client.ActionID = "account_find"
 	// AccountImport account import action id to register iam.
@@ -263,6 +266,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	ZiyanResPlanManage: "平台-资源预测",
 
 	ServiceResDissolve: "服务-机房裁撤",
+
+	BizTaskManagementOperate: "业务-任务管理操作",
 
 	AccountFind:    "资源-账号查看",
 	AccountImport:  "资源-账号录入",

@@ -40,6 +40,8 @@ export default defineComponent({
       vendor: null,
       account_type: 'STANDARD',
       slaType: '0',
+      zhi_tong: false,
+      tgw_group_name: '',
     });
 
     // use custom hooks
