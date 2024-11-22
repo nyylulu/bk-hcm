@@ -35,6 +35,10 @@ const selectedId = computed({
   },
 });
 
+const findCvmVpcByVpcId = (vpc_id: string) => {
+  return optionList.value.find((item) => item.vpc_id === vpc_id);
+};
+
 const getOptionList = async (region: string) => {
   const res = await http.post('/api/v1/woa/config/findmany/config/cvm/vpc', { region });
   optionList.value = res.data.info;
@@ -47,6 +51,8 @@ watch(
   },
   { immediate: true },
 );
+
+defineExpose({ findCvmVpcByVpcId });
 </script>
 
 <template>
