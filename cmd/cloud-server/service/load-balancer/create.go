@@ -72,7 +72,7 @@ func (svc *lbSvc) BatchCreateLB(cts *rest.Contexts) (any, error) {
 	case enumor.TCloud:
 		return svc.batchCreateTCloudLB(cts.Kit, req.Data)
 	case enumor.TCloudZiyan:
-		return svc.batchCreateTCloudZiyanLB(cts.Kit, req.Data)
+		return nil, errors.New("ziyan account does not support create clb directly")
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -92,7 +92,7 @@ func (svc *lbSvc) batchCreateTCloudLB(kt *kit.Kit, rawReq json.RawMessage) (any,
 }
 
 func (svc *lbSvc) batchCreateTCloudZiyanLB(kt *kit.Kit, rawReq json.RawMessage) (any, error) {
-	req := new(hcproto.TCloudLoadBalancerCreateReq)
+	req := new(hcproto.TCloudZiyanLoadBalancerCreateReq)
 	if err := json.Unmarshal(rawReq, req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -320,7 +320,7 @@ func (svc *lbSvc) batchCreateTCloudListener(kt *kit.Kit, rawReq json.RawMessage,
 
 	req.BkBizID = bkBizID
 	req.LbID = lbID
-	createResp, err := svc.client.HCService().TCloud.Clb.CreateListener(kt, req)
+	createResp, err := svc.client.HCService().TCloud.Clb.CreateListenerWithTargetGroup(kt, req)
 	if err != nil {
 		logs.Errorf("fail to create tcloud url rule, err: %v, req: %+v, cert: %+v, rid: %s",
 			err, req, cvt.PtrToVal(req.Certificate), kt.Rid)
@@ -370,7 +370,7 @@ func (svc *lbSvc) batchCreateTCloudZiyanListener(kt *kit.Kit, rawReq json.RawMes
 
 	req.BkBizID = bkBizID
 	req.LbID = lbID
-	createResp, err := svc.client.HCService().TCloudZiyan.Clb.CreateListener(kt, req)
+	createResp, err := svc.client.HCService().TCloudZiyan.Clb.CreateListenerWithTargetGroup(kt, req)
 	if err != nil {
 		logs.Errorf("fail to create tcloud ziyan url rule, err: %v, req: %+v, cert: %+v, rid: %s",
 			err, req, cvt.PtrToVal(req.Certificate), kt.Rid)

@@ -23,6 +23,7 @@ require (
 	github.com/gin-gonic/gin v1.10.0
 	github.com/go-playground/validator/v10 v10.20.0
 	github.com/go-redis/redis/v7 v7.4.1
+	// go-sql-driver/mysql v1.8.1 may casuse error: connection.go:49: unexpected EOF
 	github.com/go-sql-driver/mysql v1.7.1
 	github.com/gogo/protobuf v1.3.2
 	github.com/golang-jwt/jwt v3.2.1+incompatible
@@ -34,7 +35,6 @@ require (
 	github.com/microsoftgraph/msgraph-sdk-go v1.26.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/mohae/deepcopy v0.0.0-20170929034955-c48cc78d4826
-	github.com/mssola/user_agent v0.6.0
 	github.com/olivere/elastic/v7 v7.0.32
 	github.com/onsi/ginkgo v1.16.4
 	github.com/onsi/gomega v1.31.0
@@ -54,7 +54,7 @@ require (
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl v1.0.908
 	github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc v1.0.908
 	github.com/tencentyun/cos-go-sdk-v5 v0.7.48
-	github.com/tencentyun/qcloud-cos-sts-sdk v0.0.0-20240524051400-0402a4c50c2a
+	github.com/tencentyun/qcloud-cos-sts-sdk v0.0.0-20241118064430-63a76784514f
 	github.com/tidwall/gjson v1.14.4
 	github.com/xuri/excelize/v2 v2.8.1
 	go.etcd.io/etcd/api/v3 v3.5.13
@@ -152,7 +152,7 @@ require (
 	github.com/coreos/go-systemd/v22 v22.5.0 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
-	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/goccy/go-json v0.10.2
 	github.com/golang/groupcache v0.0.0-20210331224755-41bb18bfe9da // indirect
 	github.com/google/flatbuffers v23.5.26+incompatible // indirect
 	github.com/google/s2a-go v0.1.7 // indirect
@@ -184,7 +184,7 @@ require (
 	golang.org/x/mod v0.15.0 // indirect
 	golang.org/x/net v0.25.0 // indirect
 	golang.org/x/oauth2 v0.18.0 // indirect
-	golang.org/x/sync v0.6.0 // indirect
+	golang.org/x/sync v0.6.0
 	golang.org/x/sys v0.20.0 // indirect
 	golang.org/x/text v0.15.0 // indirect
 	golang.org/x/tools v0.18.0 // indirect
@@ -195,6 +195,9 @@ require (
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )
+
+// add unicode character namedquery support
+replace github.com/jmoiron/sqlx v1.3.5 => github.com/chenjr15/sqlx v0.0.0-20241121072647-0e820a7ed576
 
 // 自研云需要修改sdk，支持差异化参数
 replace github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb => ./pkg/thirdparty/tencentcloud/clb

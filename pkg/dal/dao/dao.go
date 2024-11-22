@@ -65,6 +65,7 @@ import (
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
 	resplan "hcm/pkg/dal/dao/resource-plan"
 	rollingserver "hcm/pkg/dal/dao/rolling-server"
+	"hcm/pkg/dal/dao/task"
 	daouser "hcm/pkg/dal/dao/user"
 	"hcm/pkg/kit"
 	"hcm/pkg/metrics"
@@ -174,6 +175,8 @@ type Set interface {
 
 	GlobalConfig() globalconfig.Interface
 
+	TaskDetail() task.Detail
+	TaskManagement() task.Management
 	Txn() *Txn
 }
 
@@ -994,4 +997,14 @@ func (s *set) GlobalConfig() globalconfig.Interface {
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
+}
+
+// TaskDetail return task detail dao.
+func (s *set) TaskDetail() task.Detail {
+	return task.NewDetailDao(s.orm, s.idGen, s.audit)
+}
+
+// TaskManagement return task management dao.
+func (s *set) TaskManagement() task.Management {
+	return task.NewManagementDao(s.orm, s.idGen, s.audit)
 }

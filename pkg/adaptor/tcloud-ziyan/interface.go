@@ -20,7 +20,9 @@
 package ziyan
 
 import (
+	"hcm/pkg/adaptor/poller"
 	"hcm/pkg/adaptor/tcloud"
+	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/kit"
 	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
 )
@@ -29,4 +31,5 @@ import (
 type TCloudZiyan interface {
 	tcloud.TCloud
 	GetBPaasApplicationDetail(kt *kit.Kit, applicationID uint64) (*bpaas.GetBpaasApplicationDetailResponseParams, error)
+	CreateZiyanLoadBalancer(kt *kit.Kit, opt *typelb.TCloudZiyanCreateClbOption) (*poller.BaseDoneResult, error)
 }

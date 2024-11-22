@@ -29,6 +29,7 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Interface sync support vendor.
@@ -114,5 +115,6 @@ func (cli *client) TCloudZiyan(kt *kit.Kit, accountID string) (ziyan.Interface, 
 		return nil, err
 	}
 
-	return ziyan.NewClient(cli.dataCli, cloudCli), nil
+	esbCli := esb.EsbClient()
+	return ziyan.NewClient(cli.dataCli, cloudCli, esbCli), nil
 }

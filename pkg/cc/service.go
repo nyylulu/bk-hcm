@@ -20,6 +20,7 @@
 package cc
 
 import (
+	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -50,6 +51,10 @@ func ServiceName() Name {
 type Name string
 
 const (
+
+	// WoaServerName is woa server's name
+	WoaServerName Name = "woa-server"
+
 	// APIServerName is api server's name
 	APIServerName Name = "api-server"
 	// CloudServerName is cloud server's name
@@ -64,8 +69,6 @@ const (
 	WebServerName Name = "web-server"
 	// TaskServerName is task server's name
 	TaskServerName Name = "task-server"
-	// WoaServerName is woa server's name
-	WoaServerName Name = "woa-server"
 	// AccountServerName is account server's name
 	AccountServerName Name = "account-server"
 )
@@ -252,11 +255,18 @@ func (s DataServiceSetting) Validate() error {
 
 // SyncConfig defines sync config.
 type SyncConfig struct {
+	// 自研云监听器同步并发数
+	ZiyanLoadBalancerListenerSyncConcurrency uint `yaml:"ziyanLblConcurrency"`
+
 	// 腾讯云监听器同步并发数
 	TCloudLoadBalancerListenerSyncConcurrency uint `yaml:"tcloudLblConcurrency"`
 }
 
 func (s *SyncConfig) trySetDefault() {
+	if s.ZiyanLoadBalancerListenerSyncConcurrency == 0 {
+		s.ZiyanLoadBalancerListenerSyncConcurrency = 3
+	}
+
 	if s.TCloudLoadBalancerListenerSyncConcurrency == 0 {
 		s.TCloudLoadBalancerListenerSyncConcurrency = 3
 	}
@@ -264,7 +274,9 @@ func (s *SyncConfig) trySetDefault() {
 
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
-	Esb Esb `yaml:"esb"`
+	// 自研云增加的配置写在这里
+	Esb          Esb      `yaml:"esb"`
+	ZiyanSecrets []Secret `yaml:"ziyanSecrets"`
 
 	Network    Network    `yaml:"network"`
 	Service    Service    `yaml:"service"`
@@ -296,6 +308,31 @@ func (s HCServiceSetting) Validate() error {
 
 	if err := s.Service.validate(); err != nil {
 		return err
+	}
+
+	for _, secret := range s.ZiyanSecrets {
+		if err := secret.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Secret ...
+type Secret struct {
+	ID  string `yaml:"id"`
+	Key string `yaml:"key"`
+}
+
+// Validate ...
+func (s Secret) Validate() error {
+	if len(s.ID) == 0 {
+		return errors.New("secret id is not set")
+	}
+
+	if len(s.Key) == 0 {
+		return errors.New("secret key is not set")
 	}
 
 	return nil
@@ -356,6 +393,7 @@ type WebServerSetting struct {
 	Itsm          ApiGateway    `yaml:"itsm"`
 	ChangeLogPath ChangeLogPath `yaml:"changeLogPath"`
 	Notice        Notice        `yaml:"notice"`
+	TemplatePath  string        `yaml:"templatePath"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -368,6 +406,10 @@ func (s *WebServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
+	s.ChangeLogPath.trySetDefault()
+	if len(s.TemplatePath) == 0 {
+		s.TemplatePath = "template"
+	}
 
 	return
 }
@@ -404,6 +446,7 @@ func (s WebServerSetting) Validate() error {
 
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
+	// 自研云增加的配置写在这里
 	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
 
 	Network  Network   `yaml:"network"`
@@ -540,6 +583,7 @@ func (s WoaServerSetting) Validate() error {
 
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
+	// 自研云增加的配置写在这里
 	FinOps       ApiGateway   `yaml:"finops"`
 	Jarvis       Jarvis       `yaml:"jarvis"`
 	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
@@ -607,4 +651,13 @@ func (s AccountServerSetting) Validate() error {
 type ChangeLogPath struct {
 	Chinese string `yaml:"ch"`
 	English string `yaml:"en"`
+}
+
+func (c *ChangeLogPath) trySetDefault() {
+	if c.Chinese == "" {
+		c.Chinese = "changelog/ch"
+	}
+	if c.English == "" {
+		c.English = "changelog/en"
+	}
 }

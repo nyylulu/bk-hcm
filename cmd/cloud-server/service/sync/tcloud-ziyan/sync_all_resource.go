@@ -48,8 +48,8 @@ func (opt *SyncAllResourceOption) Validate() error {
 }
 
 // SyncAllResource sync resource.
-func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
-	opt *SyncAllResourceOption) (enumor.CloudResourceType, error) {
+func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncAllResourceOption) (
+	failedRes enumor.CloudResourceType, hitErr error) {
 
 	if err := opt.Validate(); err != nil {
 		return "", err
@@ -59,11 +59,10 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 	logs.V(3).Infof("tcloud ziyan account[%s] sync all resource start, time: %v, opt: %v, rid: %s", opt.AccountID,
 		start, opt, kt.Rid)
 
-	var hitErr error
 	defer func() {
 		if hitErr != nil {
-			logs.Errorf("%s: sync all resource failed, err: %v, account: %s, rid: %s", constant.AccountSyncFailed,
-				hitErr, opt.AccountID, kt.Rid)
+			logs.Errorf("%s: sync all resource failed on %s(%s), err: %v, rid: %s",
+				constant.AccountSyncFailed, opt.AccountID, failedRes, hitErr, kt.Rid)
 			return
 		}
 
@@ -75,9 +74,9 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		syncOpt := &SyncPublicResourceOption{
 			AccountID: opt.AccountID,
 		}
-		if hitErr = SyncPublicResource(kt, cliSet, syncOpt); hitErr != nil {
+		if failedRes, hitErr = SyncPublicResource(kt, cliSet, syncOpt); hitErr != nil {
 			logs.Errorf("sync public resource failed, err: %v, opt: %v, rid: %s", hitErr, opt, kt.Rid)
-			return "", hitErr
+			return failedRes, hitErr
 		}
 	}
 
@@ -101,14 +100,6 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet,
 		if hitErr = syncer.ResSyncFunc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
 			return syncer.ResType, hitErr
 		}
-	}
-
-	if hitErr = SyncCert(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-		return enumor.SecurityGroupCloudResType, hitErr
-	}
-
-	if hitErr = SyncLoadBalancer(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-		return enumor.SecurityGroupCloudResType, hitErr
 	}
 
 	return "", nil

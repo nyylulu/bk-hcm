@@ -25,10 +25,12 @@ import (
 
 	"hcm/pkg/adaptor/types/core"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
+	apicore "hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	"hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/converter"
 )
@@ -45,6 +47,7 @@ type TCloudLoadBalancerCreateReq struct {
 
 	// 公网	单可用区		传递zones（单元素数组）
 	// 公网	主备可用区	传递zones（单元素数组），以及backup_zones
+	// 内网  多可用区 	传递zones（多元素数组）
 	Zones                   []string `json:"zones" validate:"omitempty"`
 	BackupZones             []string `json:"backup_zones" validate:"omitempty"`
 	CloudVpcID              *string  `json:"cloud_vpc_id" validate:"required"`
@@ -62,6 +65,8 @@ type TCloudLoadBalancerCreateReq struct {
 	Memo         string  `json:"memo" validate:"omitempty"`
 
 	InternetChargeType *typelb.TCloudLoadBalancerNetworkChargeType `json:"internet_charge_type" validate:"omitempty"`
+
+	Tags []apicore.TagPair `json:"tags,omitempty"`
 }
 
 // Validate request.
@@ -283,6 +288,46 @@ func (r TCloudRuleDeleteByDomainReq) Validate() error {
 
 // --------------------------[创建监听器及规则]--------------------------
 
+// TCloudListenerCreateReq listener only create req.
+type TCloudListenerCreateReq struct {
+	Name          string                        `json:"name" validate:"required"`
+	BkBizID       int64                         `json:"bk_biz_id" validate:"omitempty"`
+	LbID          string                        `json:"lb_id" validate:"required"`
+	Protocol      enumor.ProtocolType           `json:"protocol" validate:"required"`
+	Port          int64                         `json:"port" validate:"required"`
+	Scheduler     string                        `json:"scheduler" validate:"omitempty"`
+	SessionExpire int64                         `json:"session_expire" validate:"omitempty"`
+	SniSwitch     enumor.SniType                `json:"sni_switch" validate:"omitempty"`
+	Certificate   *corelb.TCloudCertificateInfo `json:"certificate" validate:"omitempty"`
+	SessionType   *string                       `json:"session_type" validate:"omitempty"`
+	EndPort       *int64                        `json:"end_port" validate:"omitempty,min=1"`
+}
+
+// Validate 校验创建监听器的参数
+func (req *TCloudListenerCreateReq) Validate() error {
+
+	if req.SessionExpire > 0 && (req.SessionExpire < 30 || req.SessionExpire > 3600) {
+		return errors.New("session_expire must be '0' or between `30` and `3600`")
+	}
+
+	// 7层HTTPS 监听器 SNI开启，不能传入证书，SNI关闭时，需要传入证书
+	if req.Protocol == enumor.HttpsProtocol {
+		if req.SniSwitch == enumor.SniTypeClose && req.Certificate == nil {
+			return errf.New(errf.InvalidParameter, "certificate is required for non-sni https listener")
+		}
+		if req.SniSwitch == enumor.SniTypeClose && converter.PtrToVal(req.Certificate.CaCloudID) == "" && len(req.
+			Certificate.CertCloudIDs) == 0 {
+			return errf.New(errf.InvalidParameter,
+				"certificate.ca_cloud_id/certificate.cert_cloud_ids is required for non-sni https listener")
+		}
+		if req.SniSwitch == enumor.SniTypeOpen && req.Certificate != nil {
+			return errf.New(errf.InvalidParameter, "certificate should not exists for sni https listener")
+		}
+	}
+
+	return validator.Validate.Struct(req)
+}
+
 // ListenerWithRuleCreateReq listener with rule create req.
 type ListenerWithRuleCreateReq struct {
 	Name          string                        `json:"name" validate:"omitempty"`
@@ -319,6 +364,9 @@ type ListenerWithRuleCreateResult struct {
 	CloudLblID  string `json:"cloud_lbl_id"`
 	CloudRuleID string `json:"cloud_rule_id"`
 }
+
+// ListenerCreateResult 监听器创建结果
+type ListenerCreateResult = apicore.CloudCreateResult
 
 // --------------------------[更新监听器]--------------------------
 
@@ -526,5 +574,95 @@ type TCloudDeleteSnatIpReq struct {
 
 // Validate ...
 func (r *TCloudDeleteSnatIpReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// --------------------------[按负载均衡批量解绑RS]--------------------------
+
+// TCloudBatchUnbindRsReq tcloud batch unbind rs req.
+type TCloudBatchUnbindRsReq struct {
+	AccountID           string                           `json:"account_id" validate:"required"`
+	Region              string                           `json:"region" validate:"required"`
+	Vendor              enumor.Vendor                    `json:"vendor" validate:"required"`
+	LoadBalancerCloudId string                           `json:"load_balancer_cloud_id" validate:"required"`
+	Details             []*cloud.ListBatchListenerResult `json:"details"`
+}
+
+// Validate validate tcloud batch unbind rs.
+func (req *TCloudBatchUnbindRsReq) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// --------------------------[按负载均衡批量调整RS权重]--------------------------
+
+// TCloudBatchModifyRsWeightReq tcloud batch modify rs weight req.
+type TCloudBatchModifyRsWeightReq struct {
+	AccountID           string                           `json:"account_id" validate:"required"`
+	Region              string                           `json:"region" validate:"required"`
+	Vendor              enumor.Vendor                    `json:"vendor" validate:"required"`
+	LoadBalancerCloudId string                           `json:"load_balancer_cloud_id" validate:"required"`
+	Details             []*cloud.ListBatchListenerResult `json:"details"`
+	NewRsWeight         int64                            `json:"new_rs_weight" validate:"required"`
+}
+
+// Validate validate tcloud batch modify rs weight.
+func (req *TCloudBatchModifyRsWeightReq) Validate() error {
+	return validator.Validate.Struct(req)
+}
+
+// TCloudDescribeExclusiveClusterReq ...
+type TCloudDescribeExclusiveClusterReq struct {
+	AccountID string `json:"account_id" validate:"required"`
+	Region    string `json:"region" validate:"required"`
+
+	// 按照 集群 的类型过滤，包括"TGW","STGW","VPCGW"
+	ClusterType []string `json:"cluster_type" validate:"omitempty"`
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照 集群 的名称过滤。
+	ClusterName []string `json:"cluster_name" validate:"omitempty"`
+	// 按照 集群 的标签过滤。（只有TGW/STGW集群有集群标签）
+	ClusterTag []string `json:"cluster_tag" validate:"omitempty"`
+	// 按照 集群 内的vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+
+	// 按照 集群 内的负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照 集群 的网络类型过滤，如："Public","Private"。
+	Network []string `json:"network" validate:"omitempty"`
+	// 按照 集群 所在可用区过滤，如："ap-guangzhou-1"（广州一区）。
+	Zone []string `json:"zone" validate:"omitempty"`
+	// 按照TGW集群的 Isp 类型过滤，如："BGP","CMCC","CUCC","CTCC","INTERNAL"。
+	Isp []string `json:"isp" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate ...
+func (r *TCloudDescribeExclusiveClusterReq) Validate() error {
+	return validator.Validate.Struct(r)
+}
+
+// TCloudDescribeClusterResourcesReq ...
+type TCloudDescribeClusterResourcesReq struct {
+	AccountID string `json:"account_id" validate:"required"`
+	Region    string `json:"region" validate:"required"`
+
+	// 按照 集群 的唯一ID过滤，如 ："tgw-12345678","stgw-12345678","vpcgw-12345678"。
+	ClusterID []string `json:"cluster_id" validate:"omitempty"`
+	// 按照vip过滤。
+	Vip []string `json:"vip" validate:"omitempty"`
+	// 按照负载均衡唯一ID过滤。
+	LoadBalancerID []string `json:"load_balancer_id" validate:"omitempty"`
+	// 按照是否闲置过滤，如"True","False"。
+	Idle *bool `json:"idle,omitempty" validate:"omitempty"`
+
+	Limit  *uint64 `json:"limit"  validate:"omitempty"`
+	Offset *uint64 `json:"offset" validate:"omitempty"`
+}
+
+// Validate ...
+func (r *TCloudDescribeClusterResourcesReq) Validate() error {
 	return validator.Validate.Struct(r)
 }

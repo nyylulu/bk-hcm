@@ -21,6 +21,7 @@ package loadbalancer
 
 import (
 	"errors"
+	"fmt"
 
 	cslb "hcm/pkg/api/cloud-server/load-balancer"
 	hclb "hcm/pkg/api/hc-service/load-balancer"
@@ -36,6 +37,8 @@ import (
 
 // TCloudCreateSnatIps ...
 func (svc *lbSvc) TCloudCreateSnatIps(cts *rest.Contexts) (any, error) {
+
+	vendor := enumor.Vendor(cts.PathParameter("vendor"))
 	lbID := cts.PathParameter("lb_id").String()
 	if len(lbID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "load balancer id is required")
@@ -92,8 +95,17 @@ func (svc *lbSvc) TCloudCreateSnatIps(cts *rest.Contexts) (any, error) {
 		SnatIPs:             req.SnatIps,
 	}
 
-	if err := svc.client.HCService().TCloud.Clb.CreateSnatIp(cts.Kit, hcReq); err != nil {
-		logs.Errorf("fail to call hc service to create snat ip, err: %v, rid: %s", err, cts.Kit.Rid)
+	switch vendor {
+	case enumor.TCloud:
+		err = svc.client.HCService().TCloud.Clb.CreateSnatIp(cts.Kit, hcReq)
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.Clb.CreateSnatIp(cts.Kit, hcReq)
+	default:
+		return nil, fmt.Errorf("not support vendor for create snat ip: %s", vendor)
+	}
+
+	if err != nil {
+		logs.Errorf("[%s] fail to call hc service to create snat ip, err: %v, rid: %s", vendor, err, cts.Kit.Rid)
 		return nil, err
 	}
 	return nil, nil
@@ -101,7 +113,7 @@ func (svc *lbSvc) TCloudCreateSnatIps(cts *rest.Contexts) (any, error) {
 
 // TCloudDeleteSnatIps ...
 func (svc *lbSvc) TCloudDeleteSnatIps(cts *rest.Contexts) (any, error) {
-
+	vendor := enumor.Vendor(cts.PathParameter("vendor"))
 	lbID := cts.PathParameter("lb_id").String()
 	if len(lbID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "load balancer id is required")
@@ -162,8 +174,16 @@ func (svc *lbSvc) TCloudDeleteSnatIps(cts *rest.Contexts) (any, error) {
 		Ips:                 req.DeleteIps,
 	}
 
-	if err := svc.client.HCService().TCloud.Clb.DeleteSnatIp(cts.Kit, hcReq); err != nil {
-		logs.Errorf("fail to call hc service to delete snat ip, err: %v, rid: %s", err, cts.Kit.Rid)
+	switch vendor {
+	case enumor.TCloud:
+		err = svc.client.HCService().TCloud.Clb.DeleteSnatIp(cts.Kit, hcReq)
+	case enumor.TCloudZiyan:
+		err = svc.client.HCService().TCloudZiyan.Clb.DeleteSnatIp(cts.Kit, hcReq)
+	default:
+		return nil, fmt.Errorf("not support vendor for create snat ip: %s", vendor)
+	}
+	if err != nil {
+		logs.Errorf("[%s] fail to call hc service to delete snat ip, err: %v, rid: %s", vendor, err, cts.Kit.Rid)
 		return nil, err
 	}
 	return nil, nil

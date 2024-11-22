@@ -23,6 +23,7 @@ import (
 	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/kit"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // Interface support resource sync.
@@ -31,6 +32,8 @@ type Interface interface {
 
 	SecurityGroup(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGOption) (*SyncResult, error)
 	RemoveSecurityGroupDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
+	RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, accountID string, region string,
+		allCloudIDMap map[string]struct{}) error
 
 	Subnet(kt *kit.Kit, params *SyncBaseParams, opt *SyncSubnetOption) (*SyncResult, error)
 	RemoveSubnetDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
@@ -57,13 +60,15 @@ type Interface interface {
 	RemoveCertDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 
 	LoadBalancer(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)
-	RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
+	RemoveLoadBalancerDeleteFromCloud(kt *kit.Kit, params *SyncRemovedParams) error
+	RemoveLoadBalancerDeleteFromCloudV2(kt *kit.Kit, param *SyncRemovedParams, allCloudIDMap map[string]struct{}) error
 
 	// LoadBalancerWithListener 同步负载均衡及监听器
 	LoadBalancerWithListener(kt *kit.Kit, params *SyncBaseParams, opt *SyncLBOption) (*SyncResult, error)
 
 	// Listener 同步指定负载均衡下的指定云id 负载均衡
 	Listener(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption) (*SyncResult, error)
+	RemoveListenerDeleteFromCloud(kt *kit.Kit, params *ListenerSyncRemovedParams) error
 
 	RemoveHostFromCC(kt *kit.Kit, params *DelHostParams) error
 	HostWithRelRes(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error)
@@ -75,6 +80,8 @@ type client struct {
 	accountID string
 	cloudCli  ziyan.TCloudZiyan
 	dbCli     *dataservice.Client
+	// 引入esb 是为了同步时是去cc查询业务信息，后期考虑将clb 业务同步改到CloudServer中异步执行
+	esb esb.Client
 }
 
 // CloudCli return tcloud client.
@@ -83,9 +90,11 @@ func (cli *client) CloudCli() ziyan.TCloudZiyan {
 }
 
 // NewClient new sync client.
-func NewClient(dbCli *dataservice.Client, cloudCli ziyan.TCloudZiyan) Interface {
+func NewClient(dbCli *dataservice.Client, cloudCli ziyan.TCloudZiyan, esbCli esb.Client) Interface {
+	// 获取 cmdb
 	return &client{
-		dbCli:    dbCli,
 		cloudCli: cloudCli,
+		dbCli:    dbCli,
+		esb:      esbCli,
 	}
 }

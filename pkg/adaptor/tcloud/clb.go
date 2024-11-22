@@ -25,8 +25,9 @@ import (
 
 	"hcm/pkg/adaptor/poller"
 	"hcm/pkg/adaptor/types"
+	"hcm/pkg/adaptor/types/core"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
-	"hcm/pkg/criteria/constant"
+	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -56,20 +57,32 @@ func (t *TCloudImpl) ListLoadBalancer(kt *kit.Kit, opt *typelb.TCloudListOption)
 	// 负载均衡实例ID。实例ID数量上限为20个
 	if len(opt.CloudIDs) != 0 {
 		req.LoadBalancerIds = common.StringPtrs(opt.CloudIDs)
-		req.Limit = common.Int64Ptr(int64(constant.TCloudLoadBalancerQueryMax))
+		req.Limit = common.Int64Ptr(int64(core.TCloudQueryLimit))
 	}
 
 	if opt.Page != nil {
 		req.Offset = common.Int64Ptr(int64(opt.Page.Offset))
 		req.Limit = common.Int64Ptr(int64(opt.Page.Limit))
 	}
+	req.OrderBy = (*string)(opt.OrderBy)
+	req.OrderType = opt.OrderType
 
-	resp, err := client.DescribeLoadBalancersWithContext(kt.Ctx, req)
+	for k, v := range opt.TagFilters {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   getTagFilterKey(k),
+			Values: cvt.SliceToPtr(v),
+		})
+	}
+
+	resp, err := NetworkErrRetry(client.DescribeLoadBalancersWithContext, kt, req)
 	if err != nil {
-		logs.Errorf("list tcloud clb failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		logs.Errorf("fail to describe lodabalancer from tcloud, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
+	if resp == nil || resp.Response == nil {
+		return nil, errors.New("empty lb response from tcloud")
+	}
 	clbs := make([]typelb.TCloudClb, 0, len(resp.Response.LoadBalancerSet))
 	for _, one := range resp.Response.LoadBalancerSet {
 		clbs = append(clbs, typelb.TCloudClb{LoadBalancer: one})
@@ -129,13 +142,15 @@ func (t *TCloudImpl) ListListener(kt *kit.Kit, opt *typelb.TCloudListListenersOp
 	if opt.Port > 0 {
 		req.Port = common.Int64Ptr(opt.Port)
 	}
-
-	resp, err := client.DescribeListenersWithContext(kt.Ctx, req)
+	resp, err := NetworkErrRetry(client.DescribeListenersWithContext, kt, req)
 	if err != nil {
-		logs.Errorf("list tcloud listeners failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		logs.Errorf("fail to describe listener from tcloud, err: %s, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
+	if resp == nil || resp.Response == nil {
+		return nil, errors.New("empty listener response from tcloud")
+	}
 	listeners := make([]typelb.TCloudListener, 0, len(resp.Response.Listeners))
 	for _, one := range resp.Response.Listeners {
 		listeners = append(listeners, typelb.TCloudListener{Listener: one})
@@ -256,7 +271,7 @@ func (t *TCloudImpl) formatCreateClbRequest(opt *typelb.TCloudCreateClbOption) *
 	// 负载均衡后端目标设备所属的网络
 	req.VpcId = opt.VpcID
 	// 负载均衡实例的类型。1：通用的负载均衡实例，目前只支持传入1。
-	req.Forward = common.Int64Ptr(int64(typelb.DefaultLoadBalancerInstType))
+	req.Forward = common.Int64Ptr(int64(corelb.TCloudDefaultLoadBalancerType))
 	// 是否支持绑定跨地域/跨Vpc绑定IP的功能
 	req.SnatPro = opt.SnatPro
 	// Target是否放通来自CLB的流量。开启放通（true）：只验证CLB上的安全组；不开启放通（false）：需同时验证CLB和后端实例上的安全组
@@ -279,8 +294,14 @@ func (t *TCloudImpl) formatCreateClbRequest(opt *typelb.TCloudCreateClbOption) *
 	req.MasterZoneId = opt.MasterZoneID
 
 	req.BandwidthPackageId = opt.BandwidthPackageID
-	req.Tags = opt.Tags
 	req.SnatIps = opt.SnatIps
+
+	for _, tag := range opt.Tags {
+		req.Tags = append(req.Tags, &clb.TagInfo{
+			TagKey:   cvt.ValToPtr(tag.Key),
+			TagValue: cvt.ValToPtr(tag.Value),
+		})
+	}
 
 	// 使用默认ISP时传递空即可
 	ispVal := cvt.PtrToVal(opt.VipIsp)
@@ -728,4 +749,150 @@ func (t *TCloudImpl) DeleteLoadBalancerSnatIps(kt *kit.Kit, opt *typelb.TCloudDe
 	}
 
 	return nil
+}
+
+// DescribeExclusiveClusters 查询负载均衡集群列表
+// https://cloud.tencent.com/document/product/214/49278
+func (t *TCloudImpl) DescribeExclusiveClusters(kt *kit.Kit, opt *typelb.TCloudDescribeExclusiveClustersOption) (
+	*clb.DescribeExclusiveClustersResponseParams, error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "describe exclusive clusters  option can not be nil")
+	}
+
+	if err := opt.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := t.clientSet.ClbClient(opt.Region)
+	if err != nil {
+		return nil, fmt.Errorf("init tencent cloud clb client failed, region: %s, err: %v", opt.Region, err)
+	}
+	req := clb.NewDescribeExclusiveClustersRequest()
+
+	if len(opt.ClusterType) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-type"),
+			Values: common.StringPtrs(opt.ClusterType),
+		})
+	}
+	if len(opt.ClusterID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-id"),
+			Values: common.StringPtrs(opt.ClusterID),
+		})
+	}
+	if len(opt.ClusterName) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-name"),
+			Values: common.StringPtrs(opt.ClusterName),
+		})
+	}
+	if len(opt.ClusterTag) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-tag"),
+			Values: common.StringPtrs(opt.ClusterTag),
+		})
+	}
+
+	if len(opt.Vip) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("vip"),
+			Values: common.StringPtrs(opt.Vip),
+		})
+	}
+
+	if len(opt.LoadBalancerID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("loadblancer-id"),
+			Values: common.StringPtrs(opt.LoadBalancerID),
+		})
+	}
+	if len(opt.Network) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("network"),
+			Values: common.StringPtrs(opt.Network),
+		})
+	}
+	if len(opt.Zone) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("zone"),
+			Values: common.StringPtrs(opt.Zone),
+		})
+	}
+
+	if len(opt.Isp) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("isp"),
+			Values: common.StringPtrs(opt.Isp),
+		})
+	}
+
+	req.Limit = opt.Limit
+	req.Offset = opt.Offset
+
+	resp, err := client.DescribeExclusiveClustersWithContext(kt.Ctx, req)
+	if err != nil {
+		logs.Errorf("tencent cloud describe resources failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+	return resp.Response, nil
+}
+
+// DescribeClusterResources 查询负载均衡集群中资源列表
+// https://cloud.tencent.com/document/product/214/49279
+func (t *TCloudImpl) DescribeClusterResources(kt *kit.Kit, opt *typelb.TCloudDescribeClusterResourcesOption) (*clb.DescribeClusterResourcesResponseParams, error) {
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "describe cluster resources option can not be nil")
+	}
+
+	if err := opt.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := t.clientSet.ClbClient(opt.Region)
+	if err != nil {
+		return nil, fmt.Errorf("init tencent cloud clb client failed, region: %s, err: %v", opt.Region, err)
+	}
+
+	req := clb.NewDescribeClusterResourcesRequest()
+	if len(opt.ClusterID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("cluster-id"),
+			Values: common.StringPtrs(opt.ClusterID),
+		})
+	}
+	if len(opt.Vip) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("vip"),
+			Values: common.StringPtrs(opt.Vip),
+		})
+	}
+	if len(opt.LoadBalancerID) != 0 {
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("loadblancer-id"),
+			Values: common.StringPtrs(opt.LoadBalancerID),
+		})
+	}
+	if opt.Idle != nil {
+		idleValue := "False"
+		if *opt.Idle {
+			idleValue = "True"
+		}
+		req.Filters = append(req.Filters, &clb.Filter{
+			Name:   common.StringPtr("idle"),
+			Values: common.StringPtrs([]string{idleValue}),
+		})
+	}
+
+	req.Limit = opt.Limit
+	req.Offset = opt.Offset
+
+	resp, err := client.DescribeClusterResourcesWithContext(kt.Ctx, req)
+	if err != nil {
+		logs.Errorf("tencent cloud describe cluster resources failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+
+	return resp.Response, nil
 }

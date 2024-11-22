@@ -26,17 +26,19 @@ import (
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	dataproto "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 
 	tclb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
 
 // LoadBalancerRule 规则同步
-func (cli *client) loadBalancerRule(kt *kit.Kit, opt *SyncListenerOption,
+func (cli *client) loadBalancerRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption,
 	cloudListeners []typeslb.TCloudListener) (any, error) {
 
 	var l4Listeners, l7Listeners []typeslb.TCloudListener
@@ -61,7 +63,7 @@ func (cli *client) loadBalancerRule(kt *kit.Kit, opt *SyncListenerOption,
 	for i, cloudListener := range cloudListeners {
 		lblCloudIDs[i] = cvt.PtrToVal(cloudListener.ListenerId)
 	}
-	dbListeners, err := cli.listListenerFromDB(kt, opt.LBID, lblCloudIDs, core.NewDefaultBasePage())
+	dbListeners, err := cli.listAllListenerFromDB(kt, opt.LBID, lblCloudIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -80,7 +82,7 @@ func (cli *client) loadBalancerRule(kt *kit.Kit, opt *SyncListenerOption,
 			continue
 		}
 		l7Opt.ListenerID = dbLbl.ID
-		_, err := cli.ListenerLayer7Rule(kt, l7Opt, listener)
+		_, err := cli.ListenerLayer7Rule(kt, params, l7Opt, listener)
 		if err != nil {
 			logs.Errorf("fail to sync rules of listener, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -94,7 +96,8 @@ func (cli *client) loadBalancerRule(kt *kit.Kit, opt *SyncListenerOption,
 func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, lbID string, l4Listeners []typeslb.TCloudListener) (
 	*SyncResult, error) {
 
-	dbRules, err := cli.listL4RuleFromDB(kt, lbID)
+	cloudIDs := slice.Map(l4Listeners, typeslb.TCloudListener.GetCloudID)
+	dbRules, err := cli.listL4RuleFromDB(kt, lbID, cloudIDs)
 	if err != nil {
 		return nil, err
 	}
@@ -117,11 +120,11 @@ func (cli *client) LoadBalancerLayer4Rule(kt *kit.Kit, lbID string, l4Listeners 
 }
 
 // ListenerLayer7Rule 同步指定监听器下的7层规则，7层按监听器同步
-func (cli *client) ListenerLayer7Rule(kt *kit.Kit, opt *SyncLayer7RuleOption, cloudListener typeslb.TCloudListener) (
-	*SyncResult, error) {
-	// 对于七层规则逐个监听器进行同步
+func (cli *client) ListenerLayer7Rule(kt *kit.Kit, params *SyncBaseParams, opt *SyncLayer7RuleOption,
+	cloudListener typeslb.TCloudListener) (*SyncResult, error) {
 
-	dbRules, err := cli.listL7RuleFromDB(kt, cvt.PtrToVal(cloudListener.ListenerId))
+	// 对于七层规则逐个监听器进行同步
+	dbRules, err := cli.listL7RuleFromDB(kt, opt.ListenerID)
 	if err != nil {
 		return nil, err
 	}
@@ -132,27 +135,30 @@ func (cli *client) ListenerLayer7Rule(kt *kit.Kit, opt *SyncLayer7RuleOption, cl
 
 	cloudRules := make([]typeslb.TCloudUrlRule, 0, len(cloudListener.Rules))
 	for _, rule := range cloudListener.Rules {
-		cloudRules = append(cloudRules, typeslb.TCloudUrlRule{RuleOutput: rule})
+		cloudRules = append(cloudRules, typeslb.TCloudUrlRule{
+			Region:     params.Region,
+			RuleOutput: rule,
+		})
 	}
 
 	addSlice, updateMap, delCloudIDs := common.Diff[typeslb.TCloudUrlRule, corelb.TCloudLbUrlRule](
 		cloudRules, dbRules, isLayer7RuleChange)
 
-	if err = cli.deleteLayer7Rule(kt, delCloudIDs); err != nil {
+	if err = cli.deleteLayer7Rule(kt, opt.ListenerID, delCloudIDs); err != nil {
 		return nil, err
 	}
 
-	if err = cli.updateLayer7Rule(kt, updateMap); err != nil {
+	if err = cli.updateLayer7Rule(kt, params.Region, updateMap); err != nil {
 		return nil, err
 	}
 
-	if _, err = cli.createLayer7Rule(kt, opt, addSlice); err != nil {
+	if _, err = cli.createLayer7Rule(kt, params.Region, opt, addSlice); err != nil {
 		return nil, err
 	}
 	return nil, nil
 }
 
-func (cli *client) listL4RuleFromDB(kt *kit.Kit, lbID string) ([]corelb.TCloudLbUrlRule, error) {
+func (cli *client) listL4RuleFromDB(kt *kit.Kit, lbID string, cloudIDs []string) ([]corelb.TCloudLbUrlRule, error) {
 
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
@@ -160,111 +166,172 @@ func (cli *client) listL4RuleFromDB(kt *kit.Kit, lbID string) ([]corelb.TCloudLb
 			tools.RuleEqual("rule_type", enumor.Layer4RuleType)),
 		Page: core.NewDefaultBasePage(),
 	}
-
-	ruleResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
-	if err != nil {
-		logs.Errorf("fail to list rule of lb(%s) for sync, err: %v, rid: %s", lbID, err, kt.Rid)
-		return nil, err
+	if len(cloudIDs) > 0 {
+		listReq.Filter.Rules = append(listReq.Filter.Rules, tools.RuleIn("cloud_id", cloudIDs))
 	}
-	return ruleResp.Details, nil
+	var rules []corelb.TCloudLbUrlRule
+	for {
+		ruleResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
+		if err != nil {
+			logs.Errorf("fail to list rule of lb(%s) for sync, err: %v, rid: %s", lbID, err, kt.Rid)
+			return nil, err
+		}
+		rules = append(rules, ruleResp.Details...)
+		if len(ruleResp.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(len(ruleResp.Details))
+	}
+
+	return rules, nil
 }
 
-func (cli *client) listL7RuleFromDB(kt *kit.Kit, cloudLBLID string) ([]corelb.TCloudLbUrlRule, error) {
+func (cli *client) listL7RuleFromDB(kt *kit.Kit, listenerID string) ([]corelb.TCloudLbUrlRule, error) {
 	listReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("cloud_lbl_id", cloudLBLID),
-			tools.RuleEqual("rule_type", enumor.Layer7RuleType)),
+			tools.RuleEqual("lbl_id", listenerID),
+			tools.RuleEqual("rule_type", enumor.Layer7RuleType),
+		),
 		Page: core.NewDefaultBasePage(),
 	}
 
-	ruleResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
-	if err != nil {
-		logs.Errorf("fail to list rule of lbl(%s) for sync, err: %v, rid: %s", cloudLBLID, err, kt.Rid)
-		return nil, err
+	var rules []corelb.TCloudLbUrlRule
+	for {
+		ruleResp, err := cli.dbCli.TCloudZiyan.LoadBalancer.ListUrlRule(kt, listReq)
+		if err != nil {
+			logs.Errorf("fail to list l7 rule of lbl(%s) for sync, err: %v, rid: %s", listenerID, err, kt.Rid)
+			return nil, err
+		}
+		rules = append(rules, ruleResp.Details...)
+		if len(ruleResp.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(len(ruleResp.Details))
 	}
-	return ruleResp.Details, nil
+
+	return rules, nil
 }
+
 func (cli *client) updateLayer4Rule(kt *kit.Kit, updateMap map[string]typeslb.TCloudListener) error {
 
 	if len(updateMap) == 0 {
 		return nil
 	}
 	updateReq := &dataproto.TCloudUrlRuleBatchUpdateReq{}
+	urlRules := make([]*dataproto.TCloudUrlRuleUpdate, 0, len(updateMap))
 	for id, listener := range updateMap {
-		updateReq.UrlRules = append(updateReq.UrlRules,
-			&dataproto.TCloudUrlRuleUpdate{
-				ID:            id,
-				Scheduler:     cvt.PtrToVal(listener.Scheduler),
-				SessionType:   cvt.PtrToVal(listener.SessionType),
-				SessionExpire: listener.SessionExpireTime,
-				HealthCheck:   convHealthCheck(listener.HealthCheck),
-				Certificate:   convCert(listener.Certificate),
-			},
-		)
+		urlRules = append(urlRules, &dataproto.TCloudUrlRuleUpdate{
+			ID:            id,
+			Region:        listener.Region,
+			Scheduler:     cvt.PtrToVal(listener.Scheduler),
+			SessionType:   cvt.PtrToVal(listener.SessionType),
+			SessionExpire: listener.SessionExpireTime,
+			HealthCheck:   convHealthCheck(listener.HealthCheck),
+			Certificate:   convCert(listener.Certificate),
+		})
 	}
-	err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdateTCloudUrlRule(kt, updateReq)
-	if err != nil {
-		logs.Errorf("fail to update tcloud ziyan url rule, err: %v, rid: %s", err, kt.Rid)
-		return err
+	for _, updateBatch := range slice.Split(urlRules, constant.BatchOperationMaxLimit) {
+		updateReq.UrlRules = updateBatch
+		err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdateTCloudUrlRule(kt, updateReq)
+		if err != nil {
+			logs.Errorf("fail to update tcloud ziyan url rule, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
 	}
+
 	return nil
 }
 
-func (cli *client) deleteLayer7Rule(kt *kit.Kit, cloudIds []string) error {
+func (cli *client) deleteLayer4Rule(kt *kit.Kit, lbID string, cloudIds []string) error {
 
 	if len(cloudIds) == 0 {
 		return nil
 	}
-	delReq := &dataproto.LoadBalancerBatchDeleteReq{Filter: tools.ContainersExpression("cloud_id", cloudIds)}
-	err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchDeleteTCloudUrlRule(kt, delReq)
-	if err != nil {
-		logs.Errorf("fail to delete listeners(ids:%v) while sync, err: %v, rid: %s",
-			cloudIds, err, kt.Rid)
-		return err
+	for _, cloudIdsBatch := range slice.Split(cloudIds, constant.BatchOperationMaxLimit) {
+		delReq := &dataproto.LoadBalancerBatchDeleteReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("cloud_id", cloudIdsBatch),
+				tools.RuleEqual("lb_id", lbID),
+			),
+		}
+		err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchDeleteTCloudUrlRule(kt, delReq)
+		if err != nil {
+			logs.Errorf("fail to delete ziyan listeners while sync, err: %v, ids:%v, rid: %s",
+				err, cloudIdsBatch, kt.Rid)
+			return err
+		}
 	}
 	return nil
 }
 
-func (cli *client) createLayer7Rule(kt *kit.Kit, opt *SyncLayer7RuleOption,
+func (cli *client) deleteLayer7Rule(kt *kit.Kit, lblID string, cloudIds []string) error {
+
+	if len(cloudIds) == 0 {
+		return nil
+	}
+	for _, cloudIdsBatch := range slice.Split(cloudIds, constant.BatchOperationMaxLimit) {
+		delReq := &dataproto.LoadBalancerBatchDeleteReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("cloud_id", cloudIdsBatch),
+				tools.RuleEqual("lbl_id", lblID),
+			),
+		}
+		err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchDeleteTCloudUrlRule(kt, delReq)
+		if err != nil {
+			logs.Errorf("fail to delete ziyan listeners while sync, err: %v, ids:%v, rid: %s",
+				err, cloudIdsBatch, kt.Rid)
+			return err
+		}
+	}
+	return nil
+}
+
+func (cli *client) createLayer7Rule(kt *kit.Kit, region string, opt *SyncLayer7RuleOption,
 	addSlice []typeslb.TCloudUrlRule) ([]string, error) {
 
 	if len(addSlice) == 0 {
 		return nil, nil
 	}
 
-	dbRules := make([]dataproto.TCloudUrlRuleCreate, 0)
-	for _, cloud := range addSlice {
+	createdIDs := make([]string, 0, len(addSlice))
+	dbRules := make([]dataproto.TCloudUrlRuleCreate, 0, len(addSlice))
 
-		dbRules = append(dbRules, dataproto.TCloudUrlRuleCreate{
-			LbID:       opt.LBID,
-			CloudLbID:  opt.CloudLBID,
-			LblID:      opt.ListenerID,
-			CloudLBLID: opt.CloudListenerID,
-			CloudID:    cloud.GetCloudID(),
-			RuleType:   enumor.Layer7RuleType,
+	for _, addSliceBatch := range slice.Split(addSlice, constant.BatchOperationMaxLimit) {
+		dbRules = dbRules[:0]
+		for _, cloud := range addSliceBatch {
+			dbRules = append(dbRules, dataproto.TCloudUrlRuleCreate{
+				LbID:       opt.LBID,
+				CloudLbID:  opt.CloudLBID,
+				LblID:      opt.ListenerID,
+				CloudLBLID: opt.CloudListenerID,
+				CloudID:    cloud.GetCloudID(),
+				RuleType:   enumor.Layer7RuleType,
 
-			Domain:    cvt.PtrToVal(cloud.Domain),
-			URL:       cvt.PtrToVal(cloud.Url),
-			Scheduler: cvt.PtrToVal(cloud.Scheduler),
+				Region:    region,
+				Domain:    cvt.PtrToVal(cloud.Domain),
+				URL:       cvt.PtrToVal(cloud.Url),
+				Scheduler: cvt.PtrToVal(cloud.Scheduler),
 
-			SessionExpire: cvt.PtrToVal(cloud.SessionExpireTime),
-			HealthCheck:   convHealthCheck(cloud.HealthCheck),
-			Certificate:   convCert(cloud.Certificate),
-		})
+				SessionExpire: cvt.PtrToVal(cloud.SessionExpireTime),
+				HealthCheck:   convHealthCheck(cloud.HealthCheck),
+				Certificate:   convCert(cloud.Certificate),
+			})
+		}
+
+		ruleCreated, err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchCreateTCloudUrlRule(kt,
+			&dataproto.TCloudUrlRuleBatchCreateReq{UrlRules: dbRules})
+		if err != nil {
+			logs.Errorf("fail to create rule while sync, err: %v syncOpt: %+v, rid: %s",
+				err, opt, kt.Rid)
+			return nil, err
+		}
+		createdIDs = append(createdIDs, ruleCreated.IDs...)
 	}
 
-	ruleCreated, err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchCreateTCloudUrlRule(kt,
-		&dataproto.TCloudUrlRuleBatchCreateReq{UrlRules: dbRules})
-	if err != nil {
-		logs.Errorf("fail to create rule while sync, err: %v syncOpt: %+v, rid: %s",
-			err, opt, kt.Rid)
-		return nil, err
-	}
-
-	return ruleCreated.IDs, nil
+	return createdIDs, nil
 }
 
-func (cli *client) updateLayer7Rule(kt *kit.Kit, updateMap map[string]typeslb.TCloudUrlRule) error {
+func (cli *client) updateLayer7Rule(kt *kit.Kit, region string, updateMap map[string]typeslb.TCloudUrlRule) error {
 
 	if len(updateMap) == 0 {
 		return nil
@@ -275,6 +342,7 @@ func (cli *client) updateLayer7Rule(kt *kit.Kit, updateMap map[string]typeslb.TC
 
 		updates = append(updates, &dataproto.TCloudUrlRuleUpdate{
 			ID:            id,
+			Region:        region,
 			Domain:        cvt.PtrToVal(rule.Domain),
 			URL:           cvt.PtrToVal(rule.Url),
 			Scheduler:     cvt.PtrToVal(rule.Scheduler),
@@ -284,13 +352,14 @@ func (cli *client) updateLayer7Rule(kt *kit.Kit, updateMap map[string]typeslb.TC
 		})
 	}
 
-	err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdateTCloudUrlRule(kt,
-		&dataproto.TCloudUrlRuleBatchUpdateReq{UrlRules: updates})
-	if err != nil {
-		logs.Errorf("fail to update rule while sync, err: %v, rid: %s", err, kt.Rid)
-		return err
+	for _, updateBatch := range slice.Split(updates, constant.BatchOperationMaxLimit) {
+		err := cli.dbCli.TCloudZiyan.LoadBalancer.BatchUpdateTCloudUrlRule(kt,
+			&dataproto.TCloudUrlRuleBatchUpdateReq{UrlRules: updateBatch})
+		if err != nil {
+			logs.Errorf("fail to update rule while sync, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
 	}
-
 	return nil
 }
 func convHealthCheck(cloud *tclb.HealthCheck) *corelb.TCloudHealthCheckInfo {
@@ -338,6 +407,10 @@ func isLayer4RuleChange(cloud typeslb.TCloudListener, db corelb.TCloudLbUrlRule)
 	if isListenerCertChange(cloud.Certificate, db.Certificate) {
 		return true
 	}
+	if cloud.Region != db.Region {
+		return true
+	}
+
 	return false
 }
 
@@ -353,6 +426,9 @@ func isLayer7RuleChange(cloud typeslb.TCloudUrlRule, db corelb.TCloudLbUrlRule) 
 		return true
 	}
 	if cvt.PtrToVal(cloud.Domain) != db.Domain {
+		return true
+	}
+	if cloud.Region != db.Region {
 		return true
 	}
 

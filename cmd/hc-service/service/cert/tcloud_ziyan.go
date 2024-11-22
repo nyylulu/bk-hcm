@@ -21,9 +21,9 @@
 package cert
 
 import (
-	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"net/http"
 
+	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/capability"
 	typecert "hcm/pkg/adaptor/types/cert"
 	adcore "hcm/pkg/adaptor/types/core"
@@ -85,7 +85,7 @@ func (svc *certSvc) CreateTCloudZiyanCert(cts *rest.Contexts) (interface{}, erro
 	}
 
 	cloudIDs := result.SuccessCloudIDs
-	syncClient := syncziyan.NewClient(svc.dataCli, tcloud)
+	syncClient := syncziyan.NewClient(svc.dataCli, tcloud, svc.esb)
 
 	params := &syncziyan.SyncBaseParams{
 		AccountID: req.AccountID,

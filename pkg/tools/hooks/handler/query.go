@@ -20,6 +20,7 @@
 package handler
 
 import (
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
@@ -51,8 +52,17 @@ func ListBizAuthRes(cts *rest.Contexts, opt *ListAuthResOption) (*filter.Express
 		return nil, false, nil
 	}
 
-	bizFilter, err := tools.And(filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bizID},
-		opt.Filter)
+	rules := make([]filter.RuleFactory, 0)
+	rules = append(rules, tools.RuleEqual("bk_biz_id", bizID))
+	if (opt.ResType == meta.Vpc || opt.ResType == meta.Subnet) && opt.Action == meta.Find {
+		// 对vpc或subnet资源的查询操作，需添加暴露自研云资源的or条件，表示自研云的这两种资源对所有业务都可见，为临时解决方案，后期需去除
+		rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
+	}
+	expression := filter.Expression{
+		Op:    filter.Or,
+		Rules: rules,
+	}
+	bizFilter, err := tools.And(&expression, opt.Filter)
 	if err != nil {
 		return nil, false, err
 	}

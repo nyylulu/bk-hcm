@@ -46,6 +46,10 @@ func (v ActionName) Validate() error {
 		ActionDailyAccountSplit, ActionDailyAccountSummary, ActionMonthTaskAction:
 	case ActionLoadBalancerDeleteUrlRule, ActionLoadBalancerDeleteListener:
 	case ActionObsClean, ActionObsSync, ActionObsAdjustmentSync:
+	case ActionBatchTaskTCloudCreateL7Rule, ActionBatchTaskTCloudBindTarget, ActionBatchTaskTCloudCreateListener,
+		ActionBatchTaskTCloudUnBindTarget, ActionBatchTaskTCloudModifyRsWeight, ActionBatchTaskDeleteListener:
+	case ActionSyncTCloudLoadBalancer, SyncTCloudLoadBalancerListener:
+
 	default:
 		return fmt.Errorf("unsupported action name type: %s", v)
 	}
@@ -136,4 +140,26 @@ const (
 	ActionObsClean          = "obs_bill_clean"
 	ActionObsSync           = "obs_bill_sync"
 	ActionObsAdjustmentSync = "obs_adjustment_sync"
+)
+
+const (
+	// ActionBatchTaskTCloudBindTarget ...
+	ActionBatchTaskTCloudBindTarget = "batch_task_tcloud_bind_target"
+	// ActionBatchTaskTCloudCreateListener ...
+	ActionBatchTaskTCloudCreateListener = "batch_task_tcloud_create_listener"
+	// ActionBatchTaskTCloudCreateL7Rule ...
+	ActionBatchTaskTCloudCreateL7Rule = "batch_task_tcloud_create_l7_rule"
+	// ActionBatchTaskTCloudUnBindTarget 异步任务-监听器批量解绑RS
+	ActionBatchTaskTCloudUnBindTarget = "batch_task_tcloud_unbind_target"
+	// ActionBatchTaskTCloudModifyRsWeight 异步任务-监听器批量调整RS权重
+	ActionBatchTaskTCloudModifyRsWeight = "batch_task_tcloud_listener_modify_rs_weight"
+	// ActionBatchTaskDeleteListener 异步任务-批量删除监听器
+	ActionBatchTaskDeleteListener ActionName = "batch_task_tcloud_delete_listener"
+)
+
+const (
+	// ActionSyncTCloudLoadBalancer ...
+	ActionSyncTCloudLoadBalancer = "sync_tcloud_load_balancer"
+	// SyncTCloudLoadBalancerListener ...
+	SyncTCloudLoadBalancerListener = "sync_tcloud_load_balancer_listener"
 )

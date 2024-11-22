@@ -118,6 +118,28 @@ type TCloudClbExtension struct {
 	TargetRegion *string `json:"target_region,omitempty"`
 	// 跨域1.0 为0表示基础网络
 	TargetCloudVpcID *string `json:"target_vpc,omitempty"`
+	// 负载均衡类型，0 传统负载均衡，1 负载均衡
+	Forward *uint64 `json:"forward,omitempty"`
+
+	// Stgw独占集群的标签。
+	ClusterTag *string `json:"cluster_id,omitempty"`
+	// 集群ID，集群标识，在需要配置公有云独占集群或本地专有集群时使用。
+	ClusterIds *[]string `json:"cluster_ids,omitempty"`
+	// vpcgw集群
+	ClassicalCluster *ClusterItem `json:"classical_cluster"`
+	// 4层独占集群列表
+	L4Clusters *[]*ClusterItem `json:"l4_clusters"`
+	// 7层独占集群列表
+	L7Clusters *[]*ClusterItem `json:"l7_clusters"`
+	// 直通
+	ZhiTong *bool `json:"zhi_tong"`
+	// 独占集群
+	TgwGroupName *string `json:"tgw_group_name"`
+}
+
+// IsTraditional 是否是传统型负载均衡
+func (ext *TCloudClbExtension) IsTraditional() bool {
+	return cvt.PtrToVal(ext.Forward) == uint64(TCloudTraditionalClbType)
 }
 
 // SnatIp ...
@@ -151,7 +173,7 @@ type TCloudHealthCheckInfo struct {
 	TimeOut *int64 `json:"time_out,omitempty" validate:"omitempty,min=2,max=60"`
 	// 健康检查探测间隔时间，默认值：5，IPv4 CLB实例的取值范围为：2-300，IPv6 CLB 实例的取值范围为：5-300。单位：秒
 	// 说明：部分老旧 IPv4 CLB实例的取值范围为：5-300
-	IntervalTime *int64 `json:"interval_time,omitempty" validate:"omitempty,min=5,max=300"`
+	IntervalTime *int64 `json:"interval_time,omitempty" validate:"omitempty,min=2,max=300"`
 	// 健康阈值，默认值：3，表示当连续探测三次健康则表示该转发正常，可选值：2~10，单位：次
 	HealthNum *int64 `json:"health_num,omitempty" validate:"omitempty,min=2,max=10"`
 	// 不健康阈值，默认值：3，表示当连续探测三次不健康则表示该转发异常，可选值：2~10，单位：次。
@@ -207,3 +229,20 @@ type TCloudListenerExtension struct {
 
 // TCloudListener ...
 type TCloudListener = Listener[TCloudListenerExtension]
+
+// TCloudLoadBalancerInstType 负载均衡实例的类型
+type TCloudLoadBalancerInstType int64
+
+const (
+	// TCloudDefaultLoadBalancerType 1:通用的负载均衡实例，目前只支持传入1
+	TCloudDefaultLoadBalancerType TCloudLoadBalancerInstType = 1
+	// TCloudTraditionalClbType 传统型负载均衡
+	TCloudTraditionalClbType TCloudLoadBalancerInstType = 0
+)
+
+// ClusterItem ...
+type ClusterItem struct {
+	ClusterId   string `json:"cluster_id"`
+	ClusterName string `json:"cluster_name"`
+	Zone        string `json:"zone"`
+}

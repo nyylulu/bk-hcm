@@ -100,7 +100,7 @@ module.exports = {
         '@charts': resolve(__dirname, './src/plugins/charts'),
         '@datasource': resolve(__dirname, './src/plugins/datasource'),
         '@modules': resolve(__dirname, './src/store/modules'),
-        '@pluginHandler': resolve(__dirname, `./src/plugin-handler${env.isInternal ? '/bcc' : ''}`),
+        '@pluginHandler': resolve(__dirname, `./src/plugin-handler${process.env?.version === 'bcc' ? '/bcc' : ''}`),
       },
     };
   },

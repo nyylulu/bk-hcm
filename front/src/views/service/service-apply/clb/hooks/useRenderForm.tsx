@@ -1,6 +1,6 @@
 import { computed, defineComponent, ref, watch } from 'vue';
 // import components
-import { Button, Form, Input, Select, Slider } from 'bkui-vue';
+import { Button, Form, Input, Select, Slider, Switcher } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import { EditLine, Plus } from 'bkui-vue/lib/icon';
 import ZoneSelector from '@/components/zone-selector/index.vue';
@@ -17,7 +17,7 @@ import BandwidthPackageSelector from '../../components/common/BandwidthPackageSe
 import { type ISubnetItem } from '../../cvm/children/SubnetPreviewDialog';
 import type { ApplyClbModel } from '@/api/load_balancers/apply-clb/types';
 // import constants
-import { CLB_SPECS, LB_ISP, ResourceTypeEnum } from '@/common/constant';
+import { CLB_SPECS, LB_ISP, ResourceTypeEnum, VendorEnum } from '@/common/constant';
 import { LOAD_BALANCER_TYPE, ADDRESS_IP_VERSION, ZONE_TYPE, INTERNET_CHARGE_TYPE } from '@/constants/clb';
 // import utils
 import bus from '@/common/bus';
@@ -86,6 +86,12 @@ export default (formModel: ApplyClbModel) => {
   const quotaRemaining = computed(() =>
     currentLbQuota.value?.quota_limit ? requireCountMax.value - formModel.require_count : 0,
   );
+  // 是否可以配置免流, true为可以, false为不可以
+  const mianliuAvailable = computed(() => {
+    return ispList.value
+      .find(({ Isp }) => Isp === formModel.vip_isp)
+      ?.TypeSet.find(({ Type, Availability }: any) => Type === 'ziyan_mianliu' && Availability === 'Available');
+  });
 
   const rules = {
     name: [
@@ -222,6 +228,8 @@ export default (formModel: ApplyClbModel) => {
                       region={formModel.region}
                       delayed={true}
                       isLoading={isResourceListLoading.value}
+                      // 自研云内网下支持多可用区
+                      multiple={formModel.vendor === VendorEnum.ZIYAN && isIntranet.value}
                     />
                   );
                 } else {
@@ -271,6 +279,23 @@ export default (formModel: ApplyClbModel) => {
               </Button>
             </div>
           ),
+        },
+        // 自研云公网下支持
+        {
+          label: t('直通'),
+          property: 'zhi_tong',
+          description: t(
+            '请谨慎选择，默认为非直通模式，购买后不支持切换。\n未开启时，后端 RS 接收报文的目标 IP 为 RS 内网 IP；\n开启后时，后端 RS 接收报文的目标 IP 为 CLB 实例 VIP。',
+          ),
+          hidden: formModel.vendor !== VendorEnum.ZIYAN || isIntranet.value,
+          content: () => {
+            return (
+              <div class='flex-row align-items-center'>
+                <Switcher v-model={formModel.zhi_tong} theme='primary' />
+                <span class='ml12'>{formModel.zhi_tong ? t('已开启直通功能') : t('未开启直通功能')}</span>
+              </div>
+            );
+          },
         },
         {
           label: '运营商类型',
@@ -349,6 +374,31 @@ export default (formModel: ApplyClbModel) => {
             },
           },
         ],
+        // 自研云公网下支持
+        {
+          label: t('免流'),
+          property: 'tgw_group_name',
+          description: t('移动、电信、联调运营商支持免流线路'),
+          hidden: formModel.vendor !== VendorEnum.ZIYAN || isIntranet.value || !formModel.vip_isp,
+          content: () => (
+            <div class='flex-row align-items-center'>
+              <Switcher
+                v-model={formModel.tgw_group_name}
+                theme='primary'
+                trueValue='ziyan_mianliu'
+                falseValue=''
+                disabled={!mianliuAvailable.value}
+              />
+              <span class='ml12'>
+                {(function () {
+                  if (!mianliuAvailable.value) return t('当前地域、可用区不支持免流');
+                  if (formModel.tgw_group_name === 'ziyan_mianliu') return t('已开启免流功能');
+                  return t('未开启免流功能');
+                })()}
+              </span>
+            </div>
+          ),
+        },
         {
           label: '弹性公网 IP',
           // 弹性IP，仅内网可绑定。公网类型无法指定IP。绑定弹性IP后，内网CLB当做公网CLB使用

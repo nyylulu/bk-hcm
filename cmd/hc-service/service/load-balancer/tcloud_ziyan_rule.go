@@ -22,7 +22,6 @@ package loadbalancer
 
 import (
 	syncZiyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
-	ziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -93,7 +92,7 @@ func (svc *clbSvc) TCloudZiyanCreateUrlRule(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	if err := svc.lblSync(cts.Kit, tcloudAdpt, lb, []string{listener.CloudID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, lb, []string{listener.CloudID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for create rule, lblID: %s, rid: %s", lblID, cts.Kit.Rid)
 		return nil, err
@@ -154,7 +153,7 @@ func (svc *clbSvc) TCloudZiyanUpdateUrlRule(cts *rest.Contexts) (any, error) {
 		logs.Errorf("fail to update rule, err: %v, id: %s, rid: %s", err, ruleID, cts.Kit.Rid)
 		return nil, err
 	}
-	if err := svc.ziyanLblSync(cts.Kit, tcloudAdpt, lb, []string{rules[0].CloudLBLID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, lb, []string{rules[0].CloudLBLID}); err != nil {
 		logs.Errorf("fail to sync listener for update rule(%s), rid: %s", ruleID, cts.Kit.Rid)
 		return nil, err
 	}
@@ -239,7 +238,7 @@ func (svc *clbSvc) TCloudZiyanBatchDeleteUrlRule(cts *rest.Contexts) (any, error
 		return nil, err
 	}
 
-	if err := svc.ziyanLblSync(cts.Kit, tcloudAdpt, lb, []string{rules[0].CloudLBLID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, lb, []string{rules[0].CloudLBLID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for delete rule, req: %+v, rid: %s", req, cts.Kit.Rid)
 		return nil, err
@@ -293,7 +292,7 @@ func (svc *clbSvc) TCloudZiyanBatchDeleteUrlRuleByDomain(cts *rest.Contexts) (an
 		}
 	}
 
-	if err := svc.ziyanLblSync(cts.Kit, tcloudAdpt, lb, []string{listener.CloudID}); err != nil {
+	if err := svc.ziyanLblSync(cts.Kit, lb, []string{listener.CloudID}); err != nil {
 		// 调用同步的方法内会打印错误，这里只标记调用方
 		logs.Errorf("fail to sync listener for delete rule, req: %+v, rid: %s", req, cts.Kit.Rid)
 		return nil, err
@@ -302,10 +301,13 @@ func (svc *clbSvc) TCloudZiyanBatchDeleteUrlRuleByDomain(cts *rest.Contexts) (an
 	return nil, nil
 }
 
-func (svc *clbSvc) ziyanLblSync(kt *kit.Kit, adaptor ziyan.TCloudZiyan, lb *corelb.BaseLoadBalancer,
-	cloudIDs []string) error {
+func (svc *clbSvc) ziyanLblSync(kt *kit.Kit, lb *corelb.BaseLoadBalancer, cloudIDs []string) error {
 
-	syncClient := syncZiyan.NewClient(svc.dataCli, adaptor)
+	syncClient, err := svc.syncCli.TCloudZiyan(kt, lb.AccountID)
+	if err != nil {
+		logs.Errorf("fail to init tcloud ziyan sync client, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
 	opt := &syncZiyan.SyncListenerOption{
 		BizID:     lb.BkBizID,
 		LBID:      lb.ID,
@@ -316,7 +318,7 @@ func (svc *clbSvc) ziyanLblSync(kt *kit.Kit, adaptor ziyan.TCloudZiyan, lb *core
 		Region:    lb.Region,
 		CloudIDs:  cloudIDs,
 	}
-	_, err := syncClient.Listener(kt, param, opt)
+	_, err = syncClient.Listener(kt, param, opt)
 	if err != nil {
 		logs.Errorf("sync listener of lb(%s) failed, err: %v, rid: %s", lb.CloudID, err, kt.Rid)
 		return err

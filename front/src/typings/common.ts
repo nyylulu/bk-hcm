@@ -54,6 +54,7 @@ export interface IPageQuery {
 export type QueryBuilderType = {
   filter: QueryFilterType;
   page?: IPageQuery;
+  fields?: string[];
 };
 
 export type QueryParamsType = {
@@ -71,6 +72,7 @@ export interface IListResData<T> extends IBaseResData {
   data: { details: T; count: number };
 }
 
+// todo: 改名为 ICommonResData / APIResponse
 // query 接口响应
 export interface IQueryResData<T> extends IBaseResData {
   data: T;
@@ -91,3 +93,8 @@ export type SortType = {
 };
 
 export type Awaitable<T> = Promise<T> | T;
+
+export interface IBreadcrumb {
+  title: string;
+  display: boolean;
+}

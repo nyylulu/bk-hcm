@@ -129,7 +129,7 @@ func (cli *client) syncCvmRelRes(kt *kit.Kit, params *SyncHostParams,
 
 			return nil
 		}); err != nil {
-			logs.Errorf("[%s] sync cvm associate subnet failed, err: %v, rid: %s", enumor.TCloud, err, kt.Rid)
+			logs.Errorf("[%s] sync cvm associate subnet failed, err: %v, rid: %s", enumor.Ziyan, err, kt.Rid)
 			return err
 		}
 
@@ -146,7 +146,7 @@ func (cli *client) syncCvmRelRes(kt *kit.Kit, params *SyncHostParams,
 
 			return nil
 		}); err != nil {
-			logs.Errorf("[%s] sync cvm associate disk failed, err: %v, rid: %s", enumor.TCloud, err, kt.Rid)
+			logs.Errorf("[%s] sync cvm associate disk failed, err: %v, rid: %s", enumor.Ziyan, err, kt.Rid)
 			return err
 		}
 	}

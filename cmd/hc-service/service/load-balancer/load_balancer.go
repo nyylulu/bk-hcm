@@ -22,6 +22,7 @@ package loadbalancer
 
 import (
 	"hcm/cmd/hc-service/logics/cloud-adaptor"
+	ressync "hcm/cmd/hc-service/logics/res-sync"
 	"hcm/cmd/hc-service/service/capability"
 	dataservice "hcm/pkg/client/data-service"
 )
@@ -31,6 +32,7 @@ func InitLoadBalancerService(cap *capability.Capability) {
 	svc := &clbSvc{
 		ad:      cap.CloudAdaptor,
 		dataCli: cap.ClientSet.DataService(),
+		syncCli: cap.ResSyncCli,
 	}
 
 	svc.initTCloudClbService(cap)
@@ -40,4 +42,5 @@ func InitLoadBalancerService(cap *capability.Capability) {
 type clbSvc struct {
 	ad      *cloudadaptor.CloudAdaptorClient
 	dataCli *dataservice.Client
+	syncCli ressync.Interface
 }

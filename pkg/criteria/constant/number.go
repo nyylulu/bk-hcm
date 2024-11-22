@@ -52,9 +52,17 @@ const (
 	BkBizIDMaxLimit = uint(3000)
 	// ExcelExportLimit two hundred thousands 二十万
 	ExcelExportLimit = 20_0000
+	// ExcelImportRowLimit five thousand 五千
+	ExcelImportRowLimit = 5000
+
+	// BatchTaskMaxLimit 批量操作最大的限制数量
+	BatchTaskMaxLimit = 20
 
 	// SearchBizBelongingMaxLimit 调用CMDB API查询业务归属的最大限制数量
 	SearchBizBelongingMaxLimit = 20
 	// RollingServerOperateMaxLimit 滚服记录操作的最大数量限制
 	RollingServerOperateMaxLimit = 100
 )
+
+// SyncConcurrencyZiyanMaxLimit 自研云同步并发最大限制
+const SyncConcurrencyZiyanMaxLimit = 3

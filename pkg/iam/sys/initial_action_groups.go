@@ -97,6 +97,13 @@ func genResManagementActionGroups() []client.ActionGroup {
 						{ID: BizResPlanOperate},
 					},
 				},
+				{
+					Name:   "任务管理",
+					NameEn: "Biz Task Management",
+					Actions: []client.ActionWithID{
+						{ID: BizTaskManagementOperate},
+					},
+				},
 			},
 		},
 	}

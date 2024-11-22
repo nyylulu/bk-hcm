@@ -259,6 +259,11 @@ const (
 
 	//	GlobalConfigTable 全局配置表
 	GlobalConfigTable = "global_config"
+
+	// TaskDetailTable 任务详情表
+	TaskDetailTable = "task_detail"
+	// TaskManagementTable 任务管理表
+	TaskManagementTable = "task_management"
 )
 
 // Validate whether the table name is valid or not.
@@ -391,6 +396,9 @@ var TableMap = map[Name]struct{}{
 	RollingFineDetail:          {},
 
 	GlobalConfigTable: {},
+
+	TaskManagementTable: {},
+	TaskDetailTable:     {},
 }
 
 // Register 注册表名

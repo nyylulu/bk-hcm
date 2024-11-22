@@ -11,15 +11,18 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud-ziyan/cmdb/hosts/list
 
 ### 输入参数
 
-| 参数名称             | 参数类型      | 必选 | 描述        |
-|------------------|-----------|----|-----------|
-| bk_biz_id        | int       | 是  | 业务ID      |
-| query_from_cloud | bool      | 否  | 是否从云上拉取数据 |
-| account_id       | string    | 是  | 账号id      |
-| region           | string    | 否  | 地域        |
-| bk_set_ids       | array int | 否  | 集群ID列表    |
-| bk_module_ids    | array int | 否  | 模块ID列表    |
-| page             | object    | 是  | 分页设置      |
+| 参数名称             | 参数类型         | 必选 | 描述        |
+|------------------|--------------|----|-----------|
+| bk_biz_id        | int          | 是  | 业务ID      |
+| query_from_cloud | bool         | 否  | 是否从云上拉取数据 |
+| account_id       | string       | 是  | 账号id      |
+| region           | string       | 否  | 地域        |
+| zone             | string       | 否  | 可用区       |
+| bk_set_ids       | array int    | 否  | 集群ID列表    |
+| bk_module_ids    | array int    | 否  | 模块ID列表    |
+| cloud_vpc_ids    | array string | 否  | 云vpcid    |
+| cloud_subnet_ids | array string | 否  | 云子网id     |
+| page             | object       | 是  | 分页设置      |
 
 #### page
 
@@ -94,8 +97,12 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud-ziyan/cmdb/hosts/list
         "cloud_launched_time": "2022-01-21",
         "cloud_expired_time": "2022-02-22",
         "extension": {
-          "cloud_security_group_ids": ["sg-111"],
-          "security_group_names": ["sg1"]
+          "cloud_security_group_ids": [
+            "sg-111"
+          ],
+          "security_group_names": [
+            "sg1"
+          ]
         },
         "creator": "Jim",
         "reviser": "Jim",

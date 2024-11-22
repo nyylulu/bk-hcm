@@ -104,6 +104,7 @@ func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLb
 		CloudLBLID:         one.CloudLBLID,
 		TargetGroupID:      one.TargetGroupID,
 		CloudTargetGroupID: one.CloudTargetGroupID,
+		Region:             one.Region,
 		Domain:             one.Domain,
 		URL:                one.URL,
 		Scheduler:          one.Scheduler,
@@ -121,7 +122,7 @@ func convZiyanTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudZiyanLb
 	}, nil
 }
 
-// BatchDeleteTCloudUrlRule 批量删除腾讯云规则
+// BatchDeleteTCloudZiyanUrlRule 批量删除腾讯云规则
 func (svc *lbSvc) BatchDeleteTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 	req := new(dataproto.LoadBalancerBatchDeleteReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -171,7 +172,7 @@ func (svc *lbSvc) BatchDeleteTCloudZiyanUrlRule(cts *rest.Contexts) (any, error)
 	return nil, nil
 }
 
-// BatchCreateTCloudUrlRule 批量创建腾讯云url规则 纯规则条目创建，不校验监听器， 有目标组则一起创建关联关系
+// BatchCreateTCloudZiyanUrlRule 批量创建腾讯云url规则 纯规则条目创建，不校验监听器， 有目标组则一起创建关联关系
 func (svc *lbSvc) BatchCreateTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 	req := new(dataproto.TCloudUrlRuleBatchCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -247,6 +248,7 @@ func (svc *lbSvc) convZiyanRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate)
 		CloudLBLID:         rule.CloudLBLID,
 		TargetGroupID:      rule.TargetGroupID,
 		CloudTargetGroupID: rule.CloudTargetGroupID,
+		Region:             rule.Region,
 		Domain:             rule.Domain,
 		URL:                rule.URL,
 		Scheduler:          rule.Scheduler,
@@ -274,7 +276,7 @@ func (svc *lbSvc) convZiyanRule(kt *kit.Kit, rule dataproto.TCloudUrlRuleCreate)
 	return ruleModel, nil
 }
 
-// BatchUpdateTCloudUrlRule ..
+// BatchUpdateTCloudZiyanUrlRule ..
 func (svc *lbSvc) BatchUpdateTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 	req := new(dataproto.TCloudUrlRuleBatchUpdateReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -303,6 +305,7 @@ func (svc *lbSvc) BatchUpdateTCloudZiyanUrlRule(cts *rest.Contexts) (any, error)
 				TargetGroupID:      rule.TargetGroupID,
 				CloudTargetGroupID: rule.CloudTargetGroupID,
 				Scheduler:          rule.Scheduler,
+				Region:             rule.Region,
 				SessionExpire:      converter.PtrToVal(rule.SessionExpire),
 				SessionType:        rule.SessionType,
 				Memo:               rule.Memo,
