@@ -2,18 +2,21 @@ import { ref } from 'vue';
 import { getRequireTypes } from '@/api/host/task';
 export const useRequireTypes = () => {
   const requireTypes = ref([]);
+
   const fetchRequireTypes = async () => {
     const res = await getRequireTypes();
     requireTypes.value = res?.data?.info || [];
   };
+
   fetchRequireTypes();
-  const findRequireTypes = (someValue) => {
-    return requireTypes.value.find((item) => {
-      return Object.values(item).some((value) => value === someValue);
-    });
+
+  const findRequireTypes = (require_type: number) => {
+    return requireTypes.value.find((item) => item.require_type === require_type);
   };
-  const getTypeCn = (someValue) => {
-    return findRequireTypes(someValue)?.require_name || someValue;
+
+  const getTypeCn = (require_type: number) => {
+    return findRequireTypes(require_type)?.require_name || require_type;
   };
+
   return { getTypeCn };
 };
