@@ -1650,3 +1650,19 @@ func (c NgateCli) validate() error {
 type RollingServer struct {
 	SyncBill bool `yaml:"syncBill"`
 }
+
+// MOA MOA api配置
+type MOA struct {
+	PaasID    string    `yaml:"paasID"`
+	Token     string    `yaml:"token"`
+	Endpoints []string  `yaml:"endpoints"`
+	TLS       TLSConfig `yaml:"tls"`
+}
+
+// validate do validate
+func (c *MOA) validate() error {
+	if len(c.Endpoints) == 0 {
+		return errors.New("moa endpoints is empty")
+	}
+	return nil
+}

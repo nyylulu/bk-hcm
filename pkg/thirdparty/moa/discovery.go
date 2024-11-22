@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,27 +17,32 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+package moa
 
 import (
-	"hcm/pkg/client"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"hcm/pkg/thirdparty/api-gateway/notice"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/moa"
-
-	"github.com/emicklei/go-restful/v3"
+	"errors"
+	"sync"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService *restful.WebService
-	ApiClient  *client.ClientSet
-	EsbClient  esb.Client
-	Authorizer auth.Authorizer
-	ItsmCli    itsm.Client
-	NoticeCli  notice.Client
-	MoaCli     moa.Client
+// discovery simple discovery.
+type discovery struct {
+	servers []string
+	index   int
+	sync.Mutex
+}
+
+// GetServers get moa server host.
+func (s *discovery) GetServers() ([]string, error) {
+	s.Lock()
+	defer s.Unlock()
+	num := len(s.servers)
+	if num == 0 {
+		return []string{}, errors.New("there is no moa server can be used")
+	}
+	if s.index < num-1 {
+		s.index = s.index + 1
+		return append(s.servers[s.index-1:], s.servers[:s.index-1]...), nil
+	}
+	s.index = 0
+	return append(s.servers[num-1:], s.servers[:num-1]...), nil
 }

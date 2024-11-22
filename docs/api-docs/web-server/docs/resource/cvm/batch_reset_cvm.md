@@ -10,11 +10,12 @@ POST /api/v1/cloud/cvms/batch/reset_async
 
 ### 输入参数
 
-| 参数名称        | 参数类型         | 必选 | 描述                            |
-|-------------|--------------|----|-------------------------------|
-| hosts       | object array | 是  | 虚拟机的Host列表                    |
-| pwd         | string       | 是  | 重装密码                          |
-| pwd_confirm | string       | 是  | 重装确认密码                        |
+| 参数名称        | 参数类型         | 必选 | 描述                     |
+|-------------|--------------|----|------------------------|
+| hosts       | object array | 是  | 虚拟机的Host列表, 最多支持500台主机 |
+| pwd         | string       | 是  | 重装密码                   |
+| pwd_confirm | string       | 是  | 重装确认密码                 |
+| session_id  | string       | 是  | moa验证的会话ID             |
 
 
 #### hosts[n]
@@ -44,7 +45,8 @@ POST /api/v1/cloud/cvms/batch/reset_async
     }
   ],
   "pwd": "xxxxxx",
-  "pwd_confirm": "xxxxxx"
+  "pwd_confirm": "xxxxxx",
+  "session_id": "xxxxxx"
 }
 ```
 
@@ -62,15 +64,15 @@ POST /api/v1/cloud/cvms/batch/reset_async
 
 ### 响应参数说明
 
-| 参数名称 | 参数类型 | 描述    |
-|---------|--------|---------|
-| code    | int    | 状态码   |
+| 参数名称    | 参数类型   | 描述   |
+|---------|--------|------|
+| code    | int    | 状态码  |
 | message | string | 请求信息 |
 | data    | object | 响应数据 |
 
 #### data参数说明
 
-| 参数名称             | 参数类型  | 描述      |
-|---------------------|---------|-----------|
-| task_management_id  | string  | 任务管理id |
+| 参数名称               | 参数类型   | 描述     |
+|--------------------|--------|--------|
+| task_management_id | string | 任务管理id |
 

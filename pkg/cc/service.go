@@ -394,6 +394,7 @@ type WebServerSetting struct {
 	ChangeLogPath ChangeLogPath `yaml:"changeLogPath"`
 	Notice        Notice        `yaml:"notice"`
 	TemplatePath  string        `yaml:"templatePath"`
+	MOA           MOA           `yaml:"moa"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -438,6 +439,10 @@ func (s WebServerSetting) Validate() error {
 	}
 
 	if err := s.Notice.validate(); err != nil {
+		return err
+	}
+
+	if err := s.MOA.validate(); err != nil {
 		return err
 	}
 

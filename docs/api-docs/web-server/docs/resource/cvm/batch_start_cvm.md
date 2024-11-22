@@ -10,9 +10,11 @@ POST /api/v1/cloud/cvms/batch/start_async
 
 ### 输入参数
 
-| 参数名称   | 参数类型         | 必选 | 描述                            |
-|--------|--------------|----|-------------------------------|
-| ids    | string array | 是  | 虚拟机的ID列表                      |
+| 参数名称       | 参数类型         | 必选 | 描述                  |
+|------------|--------------|----|---------------------|
+| ids        | string array | 是  | 虚拟机的ID列表,最多支持500个ID |
+| session_id | string       | 是  | moa验证的会话ID          |
+
 
 
 ### 调用示例
@@ -22,7 +24,8 @@ POST /api/v1/cloud/cvms/batch/start_async
   "ids": [
     "00000001",
     "00000002"
-  ]
+  ],
+  "session_id": "xxxxxx"
 }
 ```
 

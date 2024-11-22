@@ -21,6 +21,7 @@ package cvm
 
 import (
 	"fmt"
+
 	proto "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
@@ -64,6 +65,10 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	if err := svc.validateMOAResult(cts, req.SessionID); err != nil {
+		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
+		return nil, err
+	}
 	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -152,5 +157,29 @@ func (svc *cvmSvc) createAudit(cts *rest.Contexts, ids []string) error {
 		logs.Errorf("create operation audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return err
 	}
+	return nil
+}
+
+func (svc *cvmSvc) validateMOAResult(cts *rest.Contexts, sessionID string) error {
+	resp, err := svc.etcdCli.Get(cts.Kit.Ctx, sessionID)
+	if err != nil {
+		logs.Errorf("get session failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return err
+	}
+	if resp.Count == 0 {
+		return fmt.Errorf("no result found by session: %s", sessionID)
+	}
+	kv := resp.Kvs[0]
+	result := string(kv.Value)
+	if result != enumor.VerificationResultConfirm {
+		return fmt.Errorf("verification result is not confirm, result: %s", result)
+	}
+
+	// delete key-value
+	if _, err = svc.etcdCli.Delete(cts.Kit.Ctx, sessionID); err != nil {
+		logs.Errorf("delete session failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return err
+	}
+
 	return nil
 }

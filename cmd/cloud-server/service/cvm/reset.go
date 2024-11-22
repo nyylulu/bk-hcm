@@ -70,6 +70,11 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	if err := svc.validateMOAResult(cts, req.SessionID); err != nil {
+		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
+		return nil, err
+	}
+
 	cvmIDs := make([]string, 0, len(req.Hosts))
 	cvmIDMap := make(map[string]cscvm.BatchCvmHostItem)
 	for _, host := range req.Hosts {

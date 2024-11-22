@@ -31,15 +31,29 @@ import (
 	"hcm/cmd/cloud-server/service/capability"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+
+	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 // InitCvmService initialize the cvm service.
 func InitCvmService(c *capability.Capability) {
+	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
+	if err != nil {
+		logs.Errorf("convert etcd config failed, err: %v", err)
+		return
+	}
+	etcdCli, err := etcd3.New(etcdCfg)
+	if err != nil {
+		logs.Errorf("create etcd client failed, err: %v", err)
+		return
+	}
 	svc := &cvmSvc{
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
@@ -47,6 +61,7 @@ func InitCvmService(c *capability.Capability) {
 		diskLgc:    c.Logics.Disk,
 		cvmLgc:     c.Logics.Cvm,
 		eipLgc:     c.Logics.Eip,
+		etcdCli:    etcdCli,
 	}
 
 	h := rest.NewHandler()
@@ -109,6 +124,7 @@ type cvmSvc struct {
 	diskLgc    disk.Interface
 	cvmLgc     cvm.Interface
 	eipLgc     eip.Interface
+	etcdCli    *etcd3.Client
 }
 
 // batchListCvmByIDs 批量获取CVM列表

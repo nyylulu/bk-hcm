@@ -17,27 +17,18 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+package enumor
 
-import (
-	"hcm/pkg/client"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"hcm/pkg/thirdparty/api-gateway/notice"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/moa"
-
-	"github.com/emicklei/go-restful/v3"
+const (
+	// VerificationStatusPending ...
+	VerificationStatusPending = "pending"
+	// VerificationStatusFinish ...
+	VerificationStatusFinish = "finish"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService *restful.WebService
-	ApiClient  *client.ClientSet
-	EsbClient  esb.Client
-	Authorizer auth.Authorizer
-	ItsmCli    itsm.Client
-	NoticeCli  notice.Client
-	MoaCli     moa.Client
-}
+const (
+	// VerificationResultConfirm ...
+	VerificationResultConfirm = "confirm"
+	// VerificationResultCancel ...
+	VerificationResultCancel = "cancel"
+)

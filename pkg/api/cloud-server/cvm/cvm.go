@@ -101,7 +101,8 @@ func (req *BatchRebootCvmReq) Validate() error {
 
 // BatchCvmPowerOperateReq batch cvm operate req.
 type BatchCvmPowerOperateReq struct {
-	IDs []string `json:"ids" validate:"required,min=1,max=500"`
+	IDs       []string `json:"ids" validate:"required,min=1,max=500,dive,gt=0"`
+	SessionID string   `json:"session_id" validate:"required"`
 }
 
 // Validate ...
@@ -245,6 +246,7 @@ type BatchResetCvmReq struct {
 	Hosts      []BatchCvmHostItem `json:"hosts" validate:"required,min=1,max=500"`
 	Pwd        string             `json:"pwd" validate:"required,min=12,max=30"`
 	PwdConfirm string             `json:"pwd_confirm" validate:"required,min=12,max=30"`
+	SessionID  string             `json:"session_id" validate:"required"`
 }
 
 // Validate batch reset cvm request.
