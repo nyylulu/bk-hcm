@@ -137,10 +137,7 @@ const businesseMenus: RouteRecordRaw[] = [
             path: '',
             component: () => import('@/views/business/business-manage.vue'),
             meta: {
-              ...new Meta({
-                activeKey: 'businessVpc',
-                isShowBreadcrumb: false,
-              }),
+              activeKey: 'businessVpc',
             },
           },
           {
@@ -182,6 +179,7 @@ const businesseMenus: RouteRecordRaw[] = [
             meta: {
               ...new Meta({
                 activeKey: 'businessSubnet',
+                isShowBreadcrumb: false,
                 // breadcrumb: ['资源', '子网', '详情'],
               }),
             },
@@ -464,7 +462,6 @@ const businesseMenus: RouteRecordRaw[] = [
         meta: {
           title: '资源预测',
           activeKey: 'bizResourcePlan',
-          isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-resource-plan',
         },
         children: [
@@ -474,6 +471,7 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/business/resource-plan/list'),
             meta: {
               activeKey: 'bizResourcePlan',
+              isShowBreadcrumb: true,
             },
           },
           {
@@ -547,7 +545,6 @@ const businesseMenus: RouteRecordRaw[] = [
             component: () => import('@/views/resource/resource-manage/operationRecord/RecordDetail/index'),
             meta: {
               activeKey: 'businessRecord',
-              isShowBreadcrumb: true,
               icon: 'hcm-icon bkhcm-icon-cert',
             },
           },
@@ -555,7 +552,6 @@ const businesseMenus: RouteRecordRaw[] = [
         meta: {
           title: '操作记录',
           activeKey: 'businessRecord',
-          isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-operation-record',
         },
       },
@@ -566,6 +562,9 @@ const businesseMenus: RouteRecordRaw[] = [
             path: '',
             name: 'ApplicationsManage',
             component: () => import('@/views/business/applications/index'),
+            meta: {
+              isShowBreadcrumb: true,
+            },
           },
           // 资源管理下 单据管理 tab 资源预测详情
           {
@@ -626,7 +625,6 @@ const businesseMenus: RouteRecordRaw[] = [
         meta: {
           title: '单据管理',
           activeKey: 'applications',
-          isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-my-apply',
         },
       },

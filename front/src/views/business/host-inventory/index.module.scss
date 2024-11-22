@@ -1,6 +1,17 @@
-.table-wrapper {
-  height: calc(100% - 234px);
+.page {
   padding: 24px;
+  height: 100%;
+
+  .filter {
+    margin-bottom: 12px;
+    background-color: #fff;
+  }
+
+  .table {
+    height: calc(100% - 246px);
+    padding: 24px;
+    background-color: #fff;
+  }
 }
 
 .buttons {
