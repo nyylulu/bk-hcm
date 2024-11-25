@@ -62,9 +62,9 @@ func (hd *lbHandler) SyncConcurrent() uint {
 		return hd.request.Concurrent
 	}
 	if hd.request.Region == "ap-nanjing" {
-		return 6
+		return 3
 	}
-	return 5
+	return 2
 }
 
 // ListConcurrent use request specified or 1
