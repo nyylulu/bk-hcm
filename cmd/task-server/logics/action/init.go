@@ -39,15 +39,17 @@ import (
 	"hcm/pkg/async/action"
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Init init action.
-func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set) {
+func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set, cmdbCli cmdb.Client) {
 	actcli.SetClientSet(cli)
 	actcli.SetDaoSet(dao)
 	if obsDao != nil {
 		actcli.SetObsDaoSet(obsDao)
 	}
+	actcli.SetCMDBClient(cmdbCli)
 	register()
 }
 

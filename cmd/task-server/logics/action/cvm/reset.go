@@ -21,10 +21,8 @@
 package actioncvm
 
 import (
-	"encoding/json"
 	"fmt"
 
-	actcli "hcm/cmd/task-server/logics/action/cli"
 	actflow "hcm/cmd/task-server/logics/flow"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	hclb "hcm/pkg/api/hc-service/load-balancer"
@@ -119,22 +117,16 @@ func (act BatchTaskCvmResetAction) batchResetCvmSystem(kt *kit.Kit, detailID str
 	// 调用云API重装CVM
 	switch req.Vendor {
 	case enumor.TCloudZiyan:
-		err = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
-		cvmResetJson, jsonErr := json.Marshal(req)
-		if jsonErr != nil {
-			return nil, jsonErr
+		err := act.resetTCloudZiyanCvm(kt, detail, req)
+		if err != nil {
+			logs.Errorf("failed to reset tcloud ziyan cvm, err: %v, detailID: %s, req: %+v, rid: %s",
+				err, detailID, req, kt.Rid)
+			return nil, err
 		}
-		logs.Infof("call hcservice api reset cvm end, vendor: %s, detailID: %s, taskManageID: %s, flowID: %s, "+
-			"cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detailID, detail.TaskManagementID,
-			detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "batch hcservice cvm reset failed, invalid vendor: %s", req.Vendor)
 	}
-	if err != nil {
-		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, taskManageID: %s, flowID: %s, "+
-			"rid: %s", err, detailID, detail.TaskManagementID, detail.FlowID, kt.Rid)
-		return nil, err
-	}
+
 	return nil, nil
 }
 

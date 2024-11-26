@@ -286,6 +286,7 @@ func (c *cvm) buildTCloudFlowTask(vendor enumor.Vendor, details []*BatchCvmReset
 				Region:    detail.Region,
 				CloudIDs:  []string{detail.CloudID},
 				ImageID:   detail.CloudImageID,
+				ImageName: detail.ImageName,
 				Password:  detail.Pwd,
 			})
 		}

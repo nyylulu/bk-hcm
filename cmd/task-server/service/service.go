@@ -50,6 +50,7 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -99,7 +100,14 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 		}
 	}
 
-	logicsaction.Init(apiClientSet, dao, obsDao)
+	cmdbCfg := cc.TaskServer().Cmdb
+	cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), nil)
+	if err != nil {
+		logs.Errorf("create cmdb client failed, err: %v", err)
+		return nil, err
+	}
+
+	logicsaction.Init(apiClientSet, dao, obsDao, cmdbCli)
 	async, err := createAndStartAsync(sd, dao, shutdownWaitTimeSec)
 	if err != nil {
 		return nil, err

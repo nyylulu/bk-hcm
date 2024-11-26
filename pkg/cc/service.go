@@ -452,7 +452,8 @@ func (s WebServerSetting) Validate() error {
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
 	// 自研云增加的配置写在这里
-	OBSDatabase *DataBase `yaml:"obsDatabase,omitempty"`
+	OBSDatabase *DataBase  `yaml:"obsDatabase,omitempty"`
+	Cmdb        ApiGateway `yaml:"cmdb"`
 
 	Network  Network   `yaml:"network"`
 	Service  Service   `yaml:"service"`

@@ -21,6 +21,7 @@ package cmdb
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 	"time"
 
@@ -1007,4 +1008,25 @@ type CrTransitDstInfo struct {
 type CrTransitIdleReq struct {
 	BkBizId  int64    `json:"bk_biz_id"`
 	AssetIDs []string `json:"asset_ids"`
+}
+
+// UpdateCvmOSReq ...
+type UpdateCvmOSReq struct {
+	BkAssetId string             `json:"bk_asset_id"`
+	Data      UpdateCvmOSReqData `json:"data"`
+}
+
+// UpdateCvmOSReqData ...
+type UpdateCvmOSReqData struct {
+	BkOsName    string `json:"bk_os_name"`
+	BkOsVersion string `json:"bk_os_version"`
+	SrvStatus   string `json:"srv_status"`
+}
+
+// Validate ...
+func (u *UpdateCvmOSReq) Validate() error {
+	if len(u.BkAssetId) == 0 {
+		return fmt.Errorf("bk_asset_id is required")
+	}
+	return nil
 }

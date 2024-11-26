@@ -82,6 +82,8 @@ type Client interface {
 	GetHostInfoByIP(ctx context.Context, header http.Header, ip string, bkCloudID int) (*Host, error)
 	// GetHostInfoByHostID get host info by host id in CMDB
 	GetHostInfoByHostID(ctx context.Context, header http.Header, bkHostID int64) (*Host, error)
+	// UpdateCvmOSAndSvrStatus update host info in CMDB, used for cvm reset
+	UpdateCvmOSAndSvrStatus(kt *kit.Kit, req *UpdateCvmOSReq) error
 }
 
 // NewClient initialize a new cmdb client
@@ -694,6 +696,11 @@ func (c *cmdb) GetHostInfoByHostID(ctx context.Context, header http.Header, bkHo
 	}
 
 	return resp.Data.Info[0], nil
+}
+
+// UpdateCvmOSAndSvrStatus ...
+func (c *cmdb) UpdateCvmOSAndSvrStatus(kt *kit.Kit, req *UpdateCvmOSReq) error {
+	return errors.New("not implemented, please use cmdb api gateway")
 }
 
 func (c *cmdb) getAuthHeaderWithUser(user string) (string, string) {

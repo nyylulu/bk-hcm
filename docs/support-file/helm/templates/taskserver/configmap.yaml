@@ -25,4 +25,6 @@ data:
       {{- toYaml .Values.taskserver.async | nindent 6 }}
     obsDatabase:
       {{- toYaml .Values.obsDatabase | nindent 6 }}
+    cmdb:
+      {{- toYaml .Values.cmdbApiGateway | nindent 6 }}
 

@@ -21,7 +21,9 @@
 package image
 
 import (
+	"hcm/cmd/cloud-server/service/common"
 	"hcm/pkg/api/hc-service/image"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
@@ -36,26 +38,31 @@ func (svc *imageSvc) TCloudZiyanQueryImage(cts *rest.Contexts) (interface{}, err
 		return nil, err
 	}
 
-	return svc.tcloudZiyanQueryImage(cts, req, handler.ResOperateAuth)
+	return svc.tcloudZiyanQueryImage(cts, constant.UnassignedBiz, req, handler.ResOperateAuth)
 }
 
 // TCLoudZiyanBizQueryImage ...
 func (svc *imageSvc) TCLoudZiyanBizQueryImage(cts *rest.Contexts) (interface{}, error) {
+	bizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
 	req, err := svc.decodeAndValidateTCloudImageListOption(cts)
 	if err != nil {
 		logs.Errorf("decode and validate tcloud ziyan image list option failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	return svc.tcloudZiyanQueryImage(cts, req, handler.BizOperateAuth)
+	return svc.tcloudZiyanQueryImage(cts, bizID, req, handler.BizOperateAuth)
 }
 
-func (svc *imageSvc) tcloudZiyanQueryImage(cts *rest.Contexts, req *image.TCloudImageListOption,
+func (svc *imageSvc) tcloudZiyanQueryImage(cts *rest.Contexts, bizID int64, req *image.TCloudImageListOption,
 	validHandler handler.ValidWithAuthHandler) (interface{}, error) {
 
 	// validate biz and authorize
 	err := validHandler(cts, &handler.ValidWithAuthOption{Authorizer: svc.authorizer, ResType: meta.Image,
-		Action: meta.Find})
+		Action: meta.Find, BasicInfo: common.GetCloudResourceBasicInfo(req.AccountID, bizID)})
 	if err != nil {
 		return nil, err
 	}

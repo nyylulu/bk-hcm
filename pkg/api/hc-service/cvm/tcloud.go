@@ -170,6 +170,7 @@ type TCloudBatchResetCvmReq struct {
 	Region    string        `json:"region" validate:"required"`
 	CloudIDs  []string      `json:"cloud_ids" validate:"required"`
 	ImageID   string        `json:"image_id" validate:"required"`
+	ImageName string        `json:"image_name" validate:"required"`
 	Password  string        `json:"password" validate:"required,min=12,max=30"`
 }
 
