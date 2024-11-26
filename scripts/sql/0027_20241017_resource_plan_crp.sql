@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=0027,HCMVER=v1.6.9.0-alpha.1
+    SQLVER=0027,HCMVER=v1.6.9.0
 
     Notes:
     1. 修改资源预测单据表。
@@ -91,6 +91,6 @@ values ('res_plan_crp_demand', '0'),
        ('res_plan_penalty', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.6.9.0' as `hcm_ver`, '0027' as `sql_ver`;
 
 COMMIT

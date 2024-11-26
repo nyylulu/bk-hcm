@@ -84,7 +84,7 @@ get_current_version() {
 }
 
 get_hcm_ver() {
-    ver=$(grep -o -E 'HCMVER=v[0-9]+\.[0-9]+\.[0-9]+' $1 | tail -c +8)
+    ver=$(grep -o -E 'HCMVER=v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9])?' $1 | tail -c +8)
     # 处理没有版本信息的旧版本SQL文件
     if [ -z "$ver" ]; then
         # 从传入的参数重取前4个字符作为idx
