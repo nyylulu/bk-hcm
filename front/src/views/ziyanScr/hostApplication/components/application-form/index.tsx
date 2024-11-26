@@ -483,35 +483,26 @@ export default defineComponent({
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
-        order.value.model = {
-          bkBizId: data.bk_biz_id,
-          bkUsername: data.bk_username,
-          requireType: data.require_type,
-          enableNotice: data.enable_notice,
-          expectTime: data.expect_time,
-          remark: data.remark,
-          follower: data.follower,
-          suborders: data.suborders,
-        };
-        defaultUserlist.value = order.value.model.follower.map((element: any) => ({
-          username: element,
-          display_name: element,
-        }));
 
-        order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }: any) => {
-          resource_type === 'QCLOUDCVM'
-            ? cloudTableData.value.push({
-                remark,
-                resource_type: 'QCLOUDCVM',
-                replicas: +replicas,
-                spec,
-              })
-            : physicalTableData.value.push({
-                remark,
-                resource_type: 'IDCPM',
-                replicas: +replicas,
-                spec,
-              });
+        const {
+          bk_biz_id: bkBizId,
+          bk_username: bkUsername,
+          require_type: requireType,
+          enable_notice: enableNotice,
+          expect_time: expectTime,
+          remark,
+          follower,
+          suborders,
+        } = data ?? {};
+
+        order.value.model = { bkBizId, bkUsername, requireType, enableNotice, expectTime, remark, follower, suborders };
+
+        defaultUserlist.value = follower.map((element: any) => ({ username: element, display_name: element }));
+
+        suborders.forEach(({ resource_type, remark, replicas, spec, applied_core }: any) => {
+          const data = { resource_type, remark, replicas: +replicas, spec, applied_core };
+
+          resource_type === 'QCLOUDCVM' ? cloudTableData.value.push(data) : physicalTableData.value.push(data);
         });
       }
       if (route?.query?.id) {
@@ -949,9 +940,11 @@ export default defineComponent({
     // 需求核数
     const replicasCpuCores = computed(() =>
       cloudTableData.value.reduce((prev, curr) => {
-        const { replicas, spec } = curr;
-        const { cpu } = spec;
-        return prev + replicas * cpu;
+        const { replicas, spec, applied_core } = curr;
+        // 如果 applied_core(接口值) 有值，则优先使用；若无值，则使用前端计算值
+        if (applied_core !== undefined) return prev + applied_core;
+
+        return prev + replicas * spec.cpu;
       }, 0),
     );
 
@@ -984,19 +977,19 @@ export default defineComponent({
       async (val) => {
         resetCpuAmount();
         for (const item of val) {
-          const { replicas, spec } = item;
+          const { replicas, spec, applied_core } = item;
           const { cpu, charge_type } = spec;
+
+          // 如果 applied_core(接口值) 有值，则优先使用；若无值，则使用前端计算值
           if (ChargeType.POSTPAID_BY_HOUR === charge_type) {
-            setCpuAmount({
-              ...cpuAmount,
-              postpaid: cpuAmount.postpaid + cpu * replicas,
-            });
+            const postpaid =
+              applied_core !== undefined ? cpuAmount.postpaid + applied_core : cpuAmount.postpaid + cpu * replicas;
+            setCpuAmount({ ...cpuAmount, postpaid });
           }
           if (ChargeType.PREPAID === charge_type) {
-            setCpuAmount({
-              ...cpuAmount,
-              prepaid: cpuAmount.prepaid + cpu * replicas,
-            });
+            const prepaid =
+              applied_core !== undefined ? cpuAmount.prepaid + applied_core : cpuAmount.prepaid + cpu * replicas;
+            setCpuAmount({ ...cpuAmount, prepaid });
           }
         }
         isNeedVerfiy.value = val.reduce((acc, cur) => {
