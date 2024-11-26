@@ -65,6 +65,12 @@ func (a *accountSvc) list(cts *rest.Contexts, typ meta.ResourceType) (interface{
 	if isAny {
 		reqFilter = req.Filter
 	} else {
+		// 根据分页条件筛选账号id
+		accountIDs = getSliceByPage(accountIDs, req.Page)
+		if len(accountIDs) == 0 {
+			// out of range
+			return []map[string]interface{}{}, nil
+		}
 		reqFilter = &filter.Expression{
 			Op: filter.And,
 			Rules: []filter.RuleFactory{
@@ -100,6 +106,17 @@ func (a *accountSvc) list(cts *rest.Contexts, typ meta.ResourceType) (interface{
 	}
 
 	return accounts, nil
+}
+
+func getSliceByPage[T any](data []T, page *core.BasePage) []T {
+	length := len(data)
+	if length == 0 {
+		return []T{}
+	}
+	// safe slice
+	begin := min(int(page.Start), length)
+	end := min(length, int(page.Start)+int(page.Limit))
+	return data[begin:end]
 }
 
 func (a *accountSvc) getAccountSyncDetail(cts *rest.Contexts, accountID string,
