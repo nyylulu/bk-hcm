@@ -1,4 +1,4 @@
-import { computed, defineComponent, ref, watch, onMounted } from 'vue';
+import { computed, defineComponent, ref, watch, onMounted, reactive } from 'vue';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
@@ -30,6 +30,7 @@ import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import http from '@/http';
 import { useSaveSearchRules } from '../../useSaveSearchRules';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -47,6 +48,10 @@ export default defineComponent({
 
     const stageDetailSidesliderRef = ref();
     const matchSidesliderRef = ref();
+
+    const stageDetailSlideState = reactive({
+      suborderId: undefined,
+    });
 
     const { formModel, resetForm } = useFormModel({
       bkBizId: [],
@@ -162,6 +167,25 @@ export default defineComponent({
       });
     };
 
+    const stageDetailPolling = useTimeoutPoll(
+      async () => {
+        const { data: list } = await getMatchDetails(stageDetailSlideState.suborderId);
+        machineDetails.value = list.info;
+      },
+      30000,
+      {
+        max: 60,
+      },
+    );
+
+    const handleChangeStageSlideShow = (isShow: boolean) => {
+      if (isShow) {
+        stageDetailPolling.resume();
+      } else {
+        stageDetailPolling.reset();
+      }
+    };
+
     const { CommonTable, getListData, isLoading, pagination } = useTable({
       tableOptions: {
         columns: [
@@ -258,6 +282,7 @@ export default defineComponent({
                     class={{ ml8: stage === 'SUSPEND' && modifyTime < 2 }}
                     onClick={async () => {
                       const { data: list } = await getMatchDetails(data.suborder_id);
+                      stageDetailSlideState.suborderId = data.suborder_id;
                       machineDetails.value = list.info;
                       stageDetailSidesliderRef.value.triggerShow(true);
                     }}>
@@ -567,7 +592,11 @@ export default defineComponent({
         <section class={cssModule['table-wrapper']}>
           <CommonTable />
         </section>
-        <StageDetailSideslider ref={stageDetailSidesliderRef} details={machineDetails.value} />
+        <StageDetailSideslider
+          ref={stageDetailSidesliderRef}
+          details={machineDetails.value}
+          onChangeSlideShow={handleChangeStageSlideShow}
+        />
         <MatchSideslider ref={matchSidesliderRef} data={curRow.value} />
       </>
     );

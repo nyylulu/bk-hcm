@@ -7,6 +7,7 @@ import CommonDialog from '@/components/common-dialog';
 import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
 
 export interface SubOrderInfo {
   step_name: string;
@@ -62,6 +63,14 @@ export default defineComponent({
       }
     };
 
+    const suborderDetailPolling = useTimeoutPoll(
+      () => {
+        getListData();
+      },
+      30000,
+      { max: 60 },
+    );
+
     watch(
       () => [props.subOrderInfo.suborder_id, props.subOrderInfo.step_id, curStatus.value],
       () => {
@@ -86,6 +95,18 @@ export default defineComponent({
         getListData();
       },
       { immediate: true, deep: true },
+    );
+
+    watch(
+      isDialogShow,
+      (isShow) => {
+        if (isShow) {
+          suborderDetailPolling.resume();
+        } else {
+          suborderDetailPolling.reset();
+        }
+      },
+      { immediate: true },
     );
 
     const triggerShow = (v: boolean) => {
