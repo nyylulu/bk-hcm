@@ -172,6 +172,7 @@ type TCloudBatchResetCvmReq struct {
 	ImageID   string        `json:"image_id" validate:"required"`
 	ImageName string        `json:"image_name" validate:"required"`
 	Password  string        `json:"password" validate:"required,min=12,max=30"`
+	IPs       []string      `json:"ips" validate:"required"`
 }
 
 // Validate batch reset cvm request.

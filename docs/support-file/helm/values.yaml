@@ -1078,3 +1078,9 @@ ngate:
 
 rollingServer:
   syncBill: true
+
+# Alarm告警平台的配置
+alarm:
+  host: http://12345678.com
+  app_code: xxxx
+  app_secret: xxxx

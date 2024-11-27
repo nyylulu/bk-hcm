@@ -25,6 +25,7 @@ import (
 	hcservice "hcm/pkg/client/hc-service"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/alarmapi"
 )
 
 var (
@@ -32,6 +33,7 @@ var (
 	daoSet    dao.Set
 	obsDaoSet dao.Set
 	cmdbCli   cmdb.Client
+	alarmCli  alarmapi.AlarmClientInterface
 )
 
 // SetClientSet set client set.
@@ -82,4 +84,14 @@ func SetCMDBClient(cli cmdb.Client) {
 // GetCMDBCli get cmdb client.
 func GetCMDBCli() cmdb.Client {
 	return cmdbCli
+}
+
+// SetAlarmCli set alarm cli.
+func SetAlarmCli(cli alarmapi.AlarmClientInterface) {
+	alarmCli = cli
+}
+
+// GetAlarmCli get alarm cli.
+func GetAlarmCli() alarmapi.AlarmClientInterface {
+	return alarmCli
 }

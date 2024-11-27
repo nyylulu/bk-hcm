@@ -454,6 +454,7 @@ type TaskServerSetting struct {
 	// 自研云增加的配置写在这里
 	OBSDatabase *DataBase  `yaml:"obsDatabase,omitempty"`
 	Cmdb        ApiGateway `yaml:"cmdb"`
+	AlarmCli    *AlarmCli `yaml:"alarm,omitempty"`
 
 	Network  Network   `yaml:"network"`
 	Service  Service   `yaml:"service"`
@@ -498,6 +499,12 @@ func (s TaskServerSetting) Validate() error {
 
 	if s.OBSDatabase != nil {
 		if err := s.OBSDatabase.validate(); err != nil {
+			return err
+		}
+	}
+
+	if s.AlarmCli != nil {
+		if err := s.AlarmCli.validate(); err != nil {
 			return err
 		}
 	}

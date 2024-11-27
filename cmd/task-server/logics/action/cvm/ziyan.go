@@ -31,11 +31,13 @@ import (
 	protocloud "hcm/pkg/api/data-service/cloud"
 	hcprotocvm "hcm/pkg/api/hc-service/cvm"
 	cvmproto "hcm/pkg/api/task-server/cvm"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/alarmapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
@@ -140,10 +142,19 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		return err
 	}
 
+	// 屏蔽告警
+	serverBindIP := cc.TaskServer().Network.BindIP
+	alarmIDs, err := actcli.GetAlarmCli().AddShieldAlarm(kt, req.IPs, alarmapi.ShieldHour, serverBindIP, "")
+	if err != nil {
+		logs.Errorf("failed to add shield alarm, err: %v, ips: %v, rid: %s", err, req.IPs, kt.Rid)
+		return err
+	}
+
 	// update cmdb cvm srv_status
 	for _, cvm := range cvms {
 		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, constant.ResetingSrvStatus, ""); err != nil {
-			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, rid: %s", err, cvm.Extension.BkAssetID, kt.Rid)
+			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, rid: %s",
+				err, cvm.Extension.BkAssetID, kt.Rid)
 			return err
 		}
 	}
@@ -151,9 +162,9 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 	err = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
 	cvmResetJson, jsonErr := json.Marshal(req)
 	if jsonErr != nil {
-		logs.Errorf("call hcservice api reset cvm json marshal, vendor: %s, detailID: %s, taskManageID: %s, flowID: %s, "+
-			"cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detail.ID, detail.TaskManagementID,
-			detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
+		logs.Errorf("call hcservice api reset cvm json marshal, vendor: %s, detailID: %s, taskManageID: %s, "+
+			"flowID: %s, cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detail.ID,
+			detail.TaskManagementID, detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
 		return jsonErr
 	}
 	if err != nil {
@@ -164,12 +175,26 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 
 	for _, cvm := range cvms {
 		// update cmdb cvm os info
-		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, cvm.Extension.SrvStatus, req.ImageName); err != nil {
-			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, cvmCloudID: %s, taskManageID: %s,"+
-				" flowID: %s, rid: %s", err, cvm.CloudID, detail.TaskManagementID, detail.FlowID, cvm.Extension.BkAssetID, kt.Rid)
+		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, cvm.Extension.SrvStatus,
+			req.ImageName); err != nil {
+
+			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, cvmCloudID: %s, taskManageID: %s, "+
+				"flowID: %s, rid: %s", err, cvm.CloudID, detail.TaskManagementID, detail.FlowID,
+				cvm.Extension.BkAssetID, kt.Rid)
 			return err
 		}
 	}
+
+	// 解除屏蔽
+	if len(alarmIDs) > 0 {
+		_, err = actcli.GetAlarmCli().DelShieldAlarm(kt, alarmIDs, serverBindIP)
+		if err != nil {
+			logs.Errorf("failed to del shield alarm, err: %v, alarmIDs: %v, ips: %v, rid: %s",
+				err, alarmIDs, req.IPs, kt.Rid)
+			return err
+		}
+	}
+
 	return nil
 }
 

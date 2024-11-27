@@ -40,14 +40,20 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/alarmapi"
 )
 
 // Init init action.
-func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set, cmdbCli cmdb.Client) {
+func Init(cli *client.ClientSet, dao dao.Set, obsDao dao.Set, cmdbCli cmdb.Client,
+	alarmCli alarmapi.AlarmClientInterface) {
+
 	actcli.SetClientSet(cli)
 	actcli.SetDaoSet(dao)
 	if obsDao != nil {
 		actcli.SetObsDaoSet(obsDao)
+	}
+	if alarmCli != nil {
+		actcli.SetAlarmCli(alarmCli)
 	}
 	actcli.SetCMDBClient(cmdbCli)
 	register()

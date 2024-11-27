@@ -1666,3 +1666,23 @@ func (c *MOA) validate() error {
 	}
 	return nil
 }
+
+// AlarmCli alarm client options
+type AlarmCli struct {
+	AlarmApiAddr string `yaml:"host"`
+	AppCode      string `yaml:"app_code"`
+	AppSecret    string `yaml:"app_secret"`
+}
+
+func (c AlarmCli) validate() error {
+	if len(c.AlarmApiAddr) == 0 {
+		return errors.New("alarm.host is not set")
+	}
+	if len(c.AppCode) == 0 {
+		return errors.New("alarm.app_code is not set")
+	}
+	if len(c.AppSecret) == 0 {
+		return errors.New("alarm.app_secret is not set")
+	}
+	return nil
+}

@@ -27,4 +27,5 @@ data:
       {{- toYaml .Values.obsDatabase | nindent 6 }}
     cmdb:
       {{- toYaml .Values.cmdbApiGateway | nindent 6 }}
-
+    alarm:
+      {{- toYaml .Values.alarm | nindent 6 }}
