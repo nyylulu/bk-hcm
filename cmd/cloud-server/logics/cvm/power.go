@@ -75,7 +75,7 @@ func (c *cvm) CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, tas
 		for _, detail := range detailList {
 			detailIDs = append(detailIDs, detail.taskDetailID)
 		}
-		if updateErr := c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, detailIDs); updateErr != nil {
+		if updateErr := c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, detailIDs, err.Error()); updateErr != nil {
 			logs.Errorf("update task management state failed, err: %v, rid: %s", updateErr, kt.Rid)
 			return "", updateErr
 		}

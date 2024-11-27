@@ -21,6 +21,7 @@ package actioncvm
 
 import (
 	"encoding/json"
+	"fmt"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -142,6 +143,11 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		return err
 	}
 
+	if err = validateCvmSvrStatus(kt, cvms); err != nil {
+		logs.Errorf("fail to validate cvm status, err: %v, req: %+v, rid: %s")
+		return err
+	}
+
 	// 屏蔽告警
 	serverBindIP := cc.TaskServer().Network.BindIP
 	alarmIDs, err := actcli.GetAlarmCli().AddShieldAlarm(kt, req.IPs, alarmapi.ShieldHour, serverBindIP, "")
@@ -195,6 +201,45 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		}
 	}
 
+	return nil
+}
+
+func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) error {
+	// get cvm info from cc, and check the svr_status isn't resetting
+	mapBizToHostIDs := make(map[int64][]int64)
+	for _, cvm := range cvms {
+		mapBizToHostIDs[cvm.BkBizID] = append(mapBizToHostIDs[cvm.BkBizID], cvm.Extension.HostID)
+	}
+	for bizID, hostIDs := range mapBizToHostIDs {
+		params := &cmdb.ListBizHostParams{
+			BizID:  bizID,
+			Fields: []string{"bk_host_id", "bk_host_innerip", "svr_status"},
+			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
+			HostPropertyFilter: &cmdb.QueryFilter{
+				Rule: &cmdb.CombinedRule{
+					Condition: "AND",
+					Rules: []cmdb.Rule{
+						&cmdb.AtomRule{Field: "bk_host_id", Operator: "in", Value: hostIDs},
+					},
+				},
+			},
+		}
+		hostResult, err := actcli.GetCMDBCli().ListBizHost(kt, params)
+		if err != nil {
+			logs.Errorf("request cmdb list biz host failed, err: %v, bizID: %d, hostIDs: %v, rid: %s",
+				err, bizID, hostIDs, kt.Rid)
+			return err
+		}
+
+		for _, host := range hostResult.Info {
+			if host.SvrStatus == constant.ResetingSrvStatus {
+				logs.Errorf("cvm svr_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
+					host.BkHostID, host.BkHostInnerIP, kt.Rid)
+				return fmt.Errorf("cvm svr_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
+					host.BkHostID, host.BkHostInnerIP, kt.Rid)
+			}
+		}
+	}
 	return nil
 }
 

@@ -204,7 +204,7 @@ func (c *cvm) buildFlows(kt *kit.Kit, params *TaskManageBaseReq) ([]string, erro
 			for _, detail := range details {
 				detailIDs = append(detailIDs, detail.taskDetailID)
 			}
-			err = c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, detailIDs)
+			err = c.updateTaskDetailsState(kt, enumor.TaskDetailFailed, detailIDs, err.Error())
 			if err != nil {
 				logs.Errorf("update task details status failed, vendor: %s, err: %v, rid: %s", vendor, err, kt.Rid)
 				return nil, err
@@ -408,13 +408,14 @@ func (c *cvm) updateTaskDetails(kt *kit.Kit, params *TaskManageBaseReq) error {
 }
 
 func (c *cvm) updateTaskDetailsState(kt *kit.Kit, state enumor.TaskDetailState,
-	taskDetailIDs []string) error {
+	taskDetailIDs []string, reason string) error {
 
 	updateItems := make([]task.UpdateTaskDetailField, 0, len(taskDetailIDs))
 	for _, id := range taskDetailIDs {
 		updateItems = append(updateItems, task.UpdateTaskDetailField{
-			ID:    id,
-			State: state,
+			ID:     id,
+			State:  state,
+			Reason: reason,
 		})
 	}
 	updateDetailsReq := &task.UpdateDetailReq{
