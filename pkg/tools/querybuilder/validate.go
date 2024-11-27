@@ -13,12 +13,11 @@
 package querybuilder
 
 import (
-	"encoding/json"
 	"fmt"
 	"reflect"
 	"time"
 
-	jsoniter "github.com/json-iterator/go"
+	"hcm/pkg/tools/assert"
 	"hcm/pkg/tools/util"
 )
 
@@ -30,13 +29,17 @@ var (
 )
 
 func getType(value interface{}) string {
-	switch value.(type) {
-	case int, int8, int16, int32, int64, uint, uint8, uint16, uint32, uint64, uintptr, float64, float32, jsoniter.Number, json.Number:
+	if assert.IsNumeric(value) {
 		return TypeNumeric
+	}
+
+	if assert.IsString(value) {
+		return TypeString
+	}
+
+	switch value.(type) {
 	case bool:
 		return TypeBoolean
-	case string:
-		return TypeString
 	default:
 		return TypeUnknown
 	}
