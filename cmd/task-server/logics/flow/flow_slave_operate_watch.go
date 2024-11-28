@@ -140,13 +140,8 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 		}
 
 		// 解锁资源
-		unlockReq := &dataproto.ResFlowLockReq{
-			ResID:   opt.ResID,
-			ResType: opt.ResType,
-			FlowID:  opt.FlowID,
-			Status:  resStatus,
-		}
-		return true, actcli.GetDataService().Global.LoadBalancer.ResFlowUnLock(kt.Kit(), unlockReq)
+		err := act.processUnlockResFlow(kt, opt, resStatus)
+		return true, err
 	case enumor.FlowFailed:
 		// 当Flow失败时，检查资源锁定是否超时
 		resFlowLockList, err := act.queryResFlowLock(kt, opt)
@@ -162,20 +157,25 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 			return false, err
 		}
 
-		createTime, err := time.Parse(constant.TimeStdFormat, string(resFlowLockList[0].CreatedAt))
-		if err != nil {
-			return false, err
-		}
+		// 目前只有CLB的资源需要超时解锁
+		switch resFlowLockList[0].ResType {
+		case enumor.LoadBalancerCloudResType, enumor.ListenerCloudResType,
+			enumor.TargetGroupCloudResType, enumor.TCLoudUrlRuleCloudResType:
 
-		nowTime := time.Now()
-		if nowTime.Sub(createTime).Hours() > constant.ResFlowLockExpireDays*24 {
-			timeoutReq := &dataproto.ResFlowLockReq{
-				ResID:   opt.ResID,
-				ResType: opt.ResType,
-				FlowID:  opt.FlowID,
-				Status:  enumor.TimeoutResFlowStatus,
+			createTime, err := time.Parse(constant.TimeStdFormat, string(resFlowLockList[0].CreatedAt))
+			if err != nil {
+				return false, err
 			}
-			return true, actcli.GetDataService().Global.LoadBalancer.ResFlowUnLock(kt.Kit(), timeoutReq)
+
+			nowTime := time.Now()
+			if nowTime.Sub(createTime).Hours() > constant.ResFlowLockExpireDays*24 {
+				err = act.processUnlockResFlow(kt, opt, enumor.TimeoutResFlowStatus)
+				return true, err
+			}
+		default:
+			// CVM主机重装等资源，需要立刻解锁
+			err = act.processUnlockResFlow(kt, opt, enumor.CancelResFlowStatus)
+			return true, err
 		}
 		return false, nil
 	case enumor.FlowInit:
@@ -198,6 +198,18 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 	default:
 		return false, nil
 	}
+}
+
+func (act FlowSlaveOperateWatchAction) processUnlockResFlow(kt run.ExecuteKit, opt *FlowSlaveOperateWatchOption,
+	status enumor.ResFlowStatus) error {
+
+	unlockReq := &dataproto.ResFlowLockReq{
+		ResID:   opt.ResID,
+		ResType: opt.ResType,
+		FlowID:  opt.FlowID,
+		Status:  status,
+	}
+	return actcli.GetDataService().Global.LoadBalancer.ResFlowUnLock(kt.Kit(), unlockReq)
 }
 
 func (act FlowSlaveOperateWatchAction) queryResFlowLock(kt run.ExecuteKit, opt *FlowSlaveOperateWatchOption) (
