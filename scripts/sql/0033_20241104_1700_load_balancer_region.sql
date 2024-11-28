@@ -36,7 +36,8 @@ START TRANSACTION;
 -- 1. 修改负载均衡表唯一键索引为cloud_id, vendor, region
 alter table load_balancer
     add constraint idx_uk_cloud_id_vendor_region unique (cloud_id, vendor, region);
-alter table load_balancer drop key idx_uk_cloud_id_vendor;
+alter table load_balancer
+    drop key idx_uk_cloud_id_vendor;
 
 
 -- 2. 负载均衡监听器表新增region字段, 并补充索引 (vendor, account_id, bk_biz_id, cloud_lb_id)
@@ -62,7 +63,7 @@ alter table load_balancer_target_group
     drop key idx_uk_cloud_id_vendor;
 
 alter table load_balancer_target_group
-    add index idx_bk_biz_id (bk_biz_id,id );
+    add index idx_bk_biz_id (bk_biz_id, id);
 
 -- 5. 腾讯云URL规则表新增region字段
 alter table tcloud_lb_url_rule
@@ -84,7 +85,7 @@ alter table load_balancer_target
     add column target_group_region varchar(20) default '' not null after `inst_name`;
 
 alter table load_balancer_target
-    add index idx_target_group_id (target_group_id,id);
+    add index idx_target_group_id (target_group_id, id);
 
 -- 8. 负载均衡target表修改唯一键索引为cloud_target_group_id, ip, port, cloud_inst_id, target_group_region
 alter table load_balancer_target
