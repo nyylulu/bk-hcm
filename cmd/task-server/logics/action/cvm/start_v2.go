@@ -143,7 +143,7 @@ func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) 
 
 // ParameterNew ...
 func (c StartActionV2) ParameterNew() (params interface{}) {
-	return new(*cvm.CvmOperationOption)
+	return new(cvm.CvmOperationOption)
 }
 
 // Rollback 无需回滚

@@ -21,6 +21,7 @@ package cvm
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 
 	typecore "hcm/pkg/adaptor/types/core"
@@ -207,6 +208,12 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 		return nil, err
 	}
 
+	mapCloudIDToCvm, err := svc.mapTCloudZiyanCloudCvms(kt, hostCvmMap)
+	if err != nil {
+		logs.Errorf("fail to map tcloud ziyan cloud cvms, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	cvmHosts := make([]cscvm.CvmBatchOperateHostInfo, 0)
 	for _, host := range hostCvmMap {
 		hostID := host.Extension.HostID
@@ -215,6 +222,12 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 			if module, exist := mapModuleIdToModule[rel.BkModuleId]; exist {
 				moduleName = module.BkModuleName
 			}
+		}
+
+		cloudCvm, ok := mapCloudIDToCvm[host.CloudID]
+		if !ok {
+			logs.Warnf("cloud cvm not found, cloud_id: %v, host_id: %v, rid: %s", host.CloudID, hostID, kt.Rid)
+			return nil, fmt.Errorf("cloud cvm not found, cloud_id: %v, host_id: %v", host.CloudID, hostID)
 		}
 
 		cvmHosts = append(cvmHosts, cscvm.CvmBatchOperateHostInfo{
@@ -239,10 +252,52 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 			SvrSourceTypeID:      host.Extension.SvrSourceTypeID,
 			Status:               hostCvmMap[hostID].Status,
 			SrvStatus:            host.Extension.SrvStatus,
-			OperateStatus:        validateStatusFunc(kt.User, moduleName, host),
+			OperateStatus:        validateStatusFunc(kt.User, moduleName, cloudCvm.Status, host),
 		})
 	}
+
 	return cvmHosts, nil
+}
+
+// mapTCloudZiyanCloudCvms 查询云上的主机信息
+func (svc *cvmSvc) mapTCloudZiyanCloudCvms(kt *kit.Kit, cvms map[int64]corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) (
+	map[string]corecvm.Cvm[corecvm.TCloudZiyanCvmExtension], error) {
+
+	// group by account, region
+	mapAccountRegionToCvmCloudID := make(map[string][]string)
+	for _, host := range cvms {
+		key := getCombinedKey(host.AccountID, host.Region, "+")
+		mapAccountRegionToCvmCloudID[key] = append(mapAccountRegionToCvmCloudID[key], host.CloudID)
+	}
+
+	result := make(map[string]corecvm.Cvm[corecvm.TCloudZiyanCvmExtension])
+	for key, cloudIDs := range mapAccountRegionToCvmCloudID {
+		split := strings.Split(key, "+")
+		accountID, region := split[0], split[1]
+		for _, ids := range slice.Split(cloudIDs, typecore.TCloudQueryLimit) {
+			req := &corecvm.QueryCloudCvmReq{
+				Vendor:    enumor.TCloudZiyan,
+				AccountID: accountID,
+				Region:    region,
+				CvmIDs:    ids,
+				Page:      &core.BasePage{Start: 0, Limit: typecore.TCloudQueryLimit},
+			}
+			resp, err := svc.client.HCService().TCloudZiyan.Cvm.QueryTCloudZiyanCVM(kt, req)
+			if err != nil {
+				logs.Errorf("fail to query tcloud ziyan cvm, err: %v, cloud_ids: %v, rid:%s", err, cloudIDs, kt.Rid)
+				return nil, err
+			}
+			for _, detail := range resp.Details {
+				result[detail.CloudID] = detail
+			}
+		}
+	}
+	return result, nil
+}
+
+// 拼接唯一key main-sub
+func getCombinedKey(main, sub, sep string) string {
+	return main + sep + sub
 }
 
 // listCmdbHostRelModule 查询cc的主机列表及Topo关系

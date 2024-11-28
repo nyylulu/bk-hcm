@@ -263,7 +263,7 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 		Extension: &cvm.TCloudZiyanHostExtension{
 			HostID:          ccHost.BkHostID,
 			SvrSourceTypeID: ccHost.SvrSourceTypeID,
-			SrvStatus:       ccHost.SvrStatus,
+			SrvStatus:       ccHost.SrvStatus,
 			BkAssetID:       ccHost.BkAssetID,
 			SvrDeviceClass:  ccHost.SvrDeviceClass,
 			BkDisk:          ccHost.BkDisk,

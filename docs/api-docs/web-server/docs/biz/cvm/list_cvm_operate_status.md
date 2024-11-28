@@ -81,24 +81,24 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list/operate/status
 
 #### data.info
 
-| 参数名称                   | 参数类型          | 描述                                  |
-|------------------------|---------------|-------------------------------------|
-| id                     | string	       | 主机唯一ID                              |
-| bk_host_id             | int	          | CC主机ID                              |
-| bk_host_name           | string	       | 主机名称                                |
-| bk_asset_id            | string	       | 设备固资号                               |
-| private_ipv4_addresses | string array	 | 内网ipv4                              |
-| private_ipv6_addresses | string array  | 内网ipv6                              |
-| public_ipv4_addresses	 | string array  | 外网ipv4                              |
-| public_ipv6_addresses  | string array  | 外网ipv6                              |
-| operator               | string	       | 主机负责人                               |
-| bak_operator           | string	       | 主机备份负责人                             |
-| device_type            | string	       | 机型                                  |
-| region                 | string        | 地域                                  |
-| zone                   | string        | 可用区                                 |
-| bk_os_name             | string        | 操作系统名称                              |
-| topo_module            | string	       | 模块名称                                |
-| bk_svr_source_type_id  | string        | 服务来源类型ID(0:未知1:自有2:托管3:租用4:虚拟机5:容器) |
-| status	                | string        | 主机状态                                |
-| srv_status             | string        | CC的运营状态                             |
-| operate_status         | int   	       | 可操作状态(0:正常1:不是主备负责人2:不在空闲机模块)       |
+| 参数名称                   | 参数类型          | 描述                                                      |
+|------------------------|---------------|---------------------------------------------------------|
+| id                     | string	       | 主机唯一ID                                                  |
+| bk_host_id             | int	          | CC主机ID                                                  |
+| bk_host_name           | string	       | 主机名称                                                    |
+| bk_asset_id            | string	       | 设备固资号                                                   |
+| private_ipv4_addresses | string array	 | 内网ipv4                                                  |
+| private_ipv6_addresses | string array  | 内网ipv6                                                  |
+| public_ipv4_addresses	 | string array  | 外网ipv4                                                  |
+| public_ipv6_addresses  | string array  | 外网ipv6                                                  |
+| operator               | string	       | 主机负责人                                                   |
+| bak_operator           | string	       | 主机备份负责人                                                 |
+| device_type            | string	       | 机型                                                      |
+| region                 | string        | 地域                                                      |
+| zone                   | string        | 可用区                                                     |
+| bk_os_name             | string        | 操作系统名称                                                  |
+| topo_module            | string	       | 模块名称                                                    |
+| bk_svr_source_type_id  | string        | 服务来源类型ID(0:未知1:自有2:托管3:租用4:虚拟机5:容器)                     |
+| status	                | string        | 主机状态                                                    |
+| srv_status             | string        | CC的运营状态                                                 |
+| operate_status         | int   	       | 可操作状态(0:正常1:不是主备负责人2:不在空闲机模块3:云服务器未处于关机状态4:云服务器未处于开机状态) |

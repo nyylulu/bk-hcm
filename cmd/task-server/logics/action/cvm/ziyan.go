@@ -205,7 +205,7 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 }
 
 func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) error {
-	// get cvm info from cc, and check the svr_status isn't resetting
+	// get cvm info from cc, and check the srv_status isn't resetting
 	mapBizToHostIDs := make(map[int64][]int64)
 	for _, cvm := range cvms {
 		mapBizToHostIDs[cvm.BkBizID] = append(mapBizToHostIDs[cvm.BkBizID], cvm.Extension.HostID)
@@ -213,7 +213,7 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 	for bizID, hostIDs := range mapBizToHostIDs {
 		params := &cmdb.ListBizHostParams{
 			BizID:  bizID,
-			Fields: []string{"bk_host_id", "bk_host_innerip", "svr_status"},
+			Fields: []string{"bk_host_id", "bk_host_innerip", "srv_status"},
 			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
 			HostPropertyFilter: &cmdb.QueryFilter{
 				Rule: &cmdb.CombinedRule{
@@ -232,10 +232,12 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 		}
 
 		for _, host := range hostResult.Info {
-			if host.SvrStatus == constant.ResetingSrvStatus {
-				logs.Errorf("cvm svr_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
+			logs.Errorf("cvm srv_status: %s, hostID: %d, hostInnerIP: %s, rid: %s",
+				host.SrvStatus, host.BkHostID, host.BkHostInnerIP, kt.Rid)
+			if host.SrvStatus == constant.ResetingSrvStatus {
+				logs.Errorf("cvm srv_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
 					host.BkHostID, host.BkHostInnerIP, kt.Rid)
-				return fmt.Errorf("cvm svr_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
+				return fmt.Errorf("cvm srv_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
 					host.BkHostID, host.BkHostInnerIP, kt.Rid)
 			}
 		}

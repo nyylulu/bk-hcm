@@ -327,7 +327,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 			Operator:      host.Operator,
 			BakOperator:   host.BkBakOperator,
 			DeviceType:    host.SvrDeviceClass,
-			State:         host.SvrStatus,
+			State:         host.SrvStatus,
 			InputTime:     host.SvrInputTime,
 		}
 		r.fillCheckInfo(checkInfo, kt.User, hasPermission)
@@ -1745,7 +1745,7 @@ func (r *recycler) GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHos
 			BakOperator: ccHost.BkBakOperator,
 			DeviceType:  ccHost.SvrDeviceClass,
 			SubZone:     ccHost.SubZone,
-			State:       ccHost.SvrStatus,
+			State:       ccHost.SrvStatus,
 			InputTime:   ccHost.SvrInputTime,
 		}
 		hostList = append(hostList, host)

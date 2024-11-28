@@ -312,7 +312,7 @@ func (svc *cvmSvc) listCvmOperateStatus(cts *rest.Contexts, authHandler handler.
 	return cscvm.ListCvmBatchOperateResp{Details: hosts}, nil
 }
 
-type validateOperateStatusFunc func(user, moduleName string,
+type validateOperateStatusFunc func(user, moduleName, cloudCvmStatus string,
 	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus
 
 func chooseValidateFunc(operateType enumor.CvmOperateType) (validateOperateStatusFunc, error) {
@@ -320,29 +320,48 @@ func chooseValidateFunc(operateType enumor.CvmOperateType) (validateOperateStatu
 	case enumor.CvmOperateTypeReset:
 		return validateOperateStatusForReset, nil
 	case enumor.CvmOperateTypeStart, enumor.CvmOperateTypeStop, enumor.CvmOperateTypeReboot:
-		return validateOperateStatusForOperate, nil
+		return func(user, moduleName, cloudCvmStatus string,
+			host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
+			return validateOperateStatusForOperate(user, moduleName, cloudCvmStatus, operateType, host)
+		}, nil
 	default:
 		return nil, errf.NewFromErr(errf.InvalidParameter,
-			fmt.Errorf("listCvmOperateStatus invalid operate type: %s", operateType))
+			fmt.Errorf("chooseValidateFunc invalid operate type: %s", operateType))
 	}
 }
 
-func validateOperateStatusForReset(user, moduleName string,
+func validateOperateStatusForReset(user, moduleName, _ string,
 	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
 
 	if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
 		moduleName != constant.IdleMachineModuleName {
 		return enumor.CvmOperateStatusNoIdle
 	}
-	return validateOperateStatusForOperate(user, moduleName, host)
+	if !strings.Contains(host.Extension.Operator, user) &&
+		!strings.Contains(host.Extension.BkBakOperator, user) {
+		return enumor.CvmOperateStatusNoOperator
+	}
+	return enumor.CvmOperateStatusNormal
 }
 
-func validateOperateStatusForOperate(user, _ string,
+func validateOperateStatusForOperate(user, _, cloudCvmStatus string, operationType enumor.CvmOperateType,
 	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
 
 	if !strings.Contains(host.Extension.Operator, user) &&
 		!strings.Contains(host.Extension.BkBakOperator, user) {
 		return enumor.CvmOperateStatusNoOperator
+	}
+	switch operationType {
+	case enumor.CvmOperateTypeStart:
+		if cloudCvmStatus != enumor.TCloudCvmStatusStopped {
+			return enumor.CvmOperateStatusNoStop
+		}
+	case enumor.CvmOperateTypeStop, enumor.CvmOperateTypeReboot:
+		if cloudCvmStatus != enumor.TCloudCvmStatusRunning {
+			return enumor.CvmOperateStatusNoRunning
+		}
+	default:
+		logs.Errorf("validateOperateStatusForOperate invalid operate type: %s", operationType)
 	}
 	return enumor.CvmOperateStatusNormal
 }

@@ -352,7 +352,7 @@ type Host struct {
 	// 机器上架时间，格式如"2018-05-07T00:00:00+08:00"
 	SvrInputTime string `json:"svr_input_time"`
 	// 状态
-	SvrStatus string `json:"srv_status"`
+	SrvStatus string `json:"srv_status"`
 	// 磁盘容量
 	BkDisk float64 `json:"bk_disk"`
 	// CPU逻辑核心数
