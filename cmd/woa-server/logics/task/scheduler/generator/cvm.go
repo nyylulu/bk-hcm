@@ -379,6 +379,15 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 				"subnet: %+v, orderInfo: %+v, capacity: %+v",
 				len(subnetList), zone, req.VPCId, cvt.PtrToVal(subnet), cvt.PtrToVal(order), capacity)
 		}
+
+		// TODO: 小额绿通需要独立计算子网可用容量,目前临时为小额绿通分配一个子网区域
+		if order.RequireType == enumor.RequireTypeGreenChannel && (subnetID == "" || applyNum <= 0) {
+			if len(subnetList) > 0 {
+				subnetID = subnetList[0].Id
+				applyNum = 1
+			}
+		}
+
 		if subnetID == "" || applyNum <= 0 {
 			// get capacity detail as component of error message
 			capInfo, _ := g.getCapacityDetail(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
