@@ -494,5 +494,5 @@ type RevokeCvmOrderReq struct {
 
 // RevokeCvmOrderParams ...
 type RevokeCvmOrderParams struct {
-	OrderId string `json:"orderId"`
+	OrderId string `json:"order_id"`
 }
