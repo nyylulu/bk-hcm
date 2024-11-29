@@ -88,7 +88,7 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("UpdateApplyTicket", http.MethodPost, "/update/apply/ticket", s.UpdateApplyTicket)
 	h.Add("GetApplyTicket", http.MethodPost, "/get/apply/ticket", s.GetApplyTicket)
-	h.Add("GetApplyAudit", http.MethodPost, "/get/apply/ticket/audit", s.GetApplyAudit)
+	h.Add("GetApplyAuditItsm", http.MethodPost, "/get/apply/ticket/audit", s.GetApplyAuditItsm)
 	h.Add("CancelApplyTicketItsm", http.MethodPost, "/apply/ticket/itsm_audit/cancel", s.CancelApplyTicketItsm)
 	h.Add("CancelApplyTicketCrp", http.MethodPost, "/apply/ticket/crp_audit/cancel", s.CancelApplyTicketCrp)
 	h.Add("AuditApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditApplyTicket)
@@ -118,6 +118,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("GetApplyModify", http.MethodPost, "/find/apply/record/modify", s.GetApplyModify)
 
 	h.Add("CheckRollingServerHost", http.MethodPost, "/check/rolling_server/host", s.CheckRollingServerHost)
+	h.Add("GetApplyAuditCrp", http.MethodPost, "/apply/crp_ticket/audit/get", s.GetApplyAuditCrp)
 }
 
 // bizService 业务下的接口
@@ -129,7 +130,8 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("ModifyBizApplyOrder", http.MethodPost, "/modify/apply", s.ModifyBizApplyOrder)
 	h.Add("GetBizApplyOrder", http.MethodPost, "/findmany/apply", s.GetApplyBizOrder)
 	h.Add("GetBizApplyTicket", http.MethodPost, "/get/apply/ticket", s.GetBizApplyTicket)
-	h.Add("GetBizApplyAudit", http.MethodPost, "/get/apply/ticket/audit", s.GetBizApplyAudit)
+	h.Add("GetBizApplyAuditItsm", http.MethodPost, "/get/apply/ticket/audit", s.GetBizApplyAuditItsm)
+	h.Add("GetBizApplyAuditCrp", http.MethodPost, "/apply/crp_ticket/audit/get", s.GetBizApplyAuditCrp)
 	h.Add("GetBizApplyDetail", http.MethodPost, "/find/apply/detail", s.GetBizApplyDetail)
 	h.Add("GetBizApplyGenerate", http.MethodPost, "/find/apply/record/generate", s.GetBizApplyGenerate)
 	h.Add("GetBizApplyDevice", http.MethodPost, "/findmany/apply/device", s.GetBizApplyDevice)

@@ -472,48 +472,99 @@ type GetApplyTicketRst struct {
 	*ApplyTicket `json:",inline"`
 }
 
-// ApplyAudit resource apply ticket audit info
-type ApplyAudit struct {
-	OrderId        uint64            `json:"order_id"`
-	ItsmTicketId   string            `json:"itsm_ticket_id"`
-	ItsmTicketLink string            `json:"itsm_ticket_link"`
-	Status         string            `json:"status"`
-	CurrentSteps   []*ApplyAuditStep `json:"current_steps"`
-	Logs           []*ApplyAuditLog  `json:"logs"`
+// ApplyAuditItsm resource apply ticket audit info
+type ApplyAuditItsm struct {
+	OrderId        uint64                `json:"order_id"`
+	ItsmTicketId   string                `json:"itsm_ticket_id"`
+	ItsmTicketLink string                `json:"itsm_ticket_link"`
+	Status         string                `json:"status"`
+	CurrentSteps   []*ApplyAuditItsmStep `json:"current_steps"`
+	Logs           []*ApplyAuditItsmLog  `json:"logs"`
 }
 
-// ApplyAuditStep resource apply ticket current audit step
-type ApplyAuditStep struct {
+// ApplyAuditItsmStep resource apply ticket current audit step
+type ApplyAuditItsmStep struct {
 	Name       string `json:"name"`
 	Processors string `json:"processors"`
 	StateId    int64  `json:"state_id"`
 }
 
-// ApplyAuditLog resource apply ticket audit log
-type ApplyAuditLog struct {
+// ApplyAuditItsmLog resource apply ticket audit log
+type ApplyAuditItsmLog struct {
 	Operator  string `json:"operator"`
 	OperateAt string `json:"operate_at"`
 	Message   string `json:"message"`
 	Source    string `json:"source"`
 }
 
-// GetApplyAuditReq get apply ticket audit info request parameter
-type GetApplyAuditReq struct {
-	OrderId uint64 `json:"order_id"`
-	BkBizID int64  `json:"bk_biz_id"`
+// ApplyAuditCrp resource apply ticket audit info
+type ApplyAuditCrp struct {
+	CrpTicketId   string             `json:"crp_ticket_id"`
+	CrpTicketLink string             `json:"crp_ticket_link"`
+	Logs          []ApplyAuditCrpLog `json:"logs"`
+	CurrentStep   ApplyAuditCrpStep  `json:"current_step"`
 }
 
-// Validate whether GetApplyAuditReq is valid
-// errKey: invalid key
-// err: detail reason why errKey is invalid
-func (req *GetApplyAuditReq) Validate() (errKey string, err error) {
-	// TODO
-	return "", nil
+// ApplyAuditCrpLog resource apply ticket current audit step
+type ApplyAuditCrpLog struct {
+	TaskNo        int64  `json:"task_no"`
+	TaskName      string `json:"task_name"`
+	OperateResult string `json:"operate_result"`
+	Operator      string `json:"operator"`
+	OperateInfo   string `json:"operate_info"`
+	OperateTime   string `json:"operate_time"`
 }
 
-// GetApplyAuditRst get apply ticket audit info result
-type GetApplyAuditRst struct {
-	*ApplyAudit `json:",inline"`
+// ApplyAuditCrpStep resource apply ticket current audit step
+type ApplyAuditCrpStep struct {
+	CurrentTaskNo    int                `json:"current_task_no"`
+	CurrentTaskName  string             `json:"current_task_name"`
+	Status           int                `json:"status"`
+	StatusDesc       string             `json:"status_desc"`
+	FailInstanceInfo []FailInstanceInfo `json:"fail_instance_info"`
+}
+
+// FailInstanceInfo resource apply ticket current audit step
+type FailInstanceInfo struct {
+	ErrorMsgTypeEn string `json:"error_msg_type_en"`
+	ErrorType      string `json:"error_type"`
+	ErrorMsgTypeCn string `json:"error_msg_type_cn"`
+	RequestId      string `json:"request_id"`
+	ErrorMsg       string `json:"error_msg"`
+	Operator       string `json:"operator"`
+	ErrorCount     int    `json:"error_count"`
+}
+
+// GetApplyAuditItsmReq get apply ticket audit info request parameter
+type GetApplyAuditItsmReq struct {
+	OrderId uint64 `json:"order_id" validate:"required"`
+	BkBizID int64  `json:"bk_biz_id" validate:"required"`
+}
+
+// Validate GetApplyAuditItsmReq
+func (req *GetApplyAuditItsmReq) Validate() (err error) {
+	return validator.Validate.Struct(req)
+}
+
+// GetApplyAuditItsmRst get apply ticket audit info result
+type GetApplyAuditItsmRst struct {
+	*ApplyAuditItsm `json:",inline"`
+}
+
+// GetApplyAuditCrpReq get apply ticket audit info request parameter
+type GetApplyAuditCrpReq struct {
+	CrpTicketId string `json:"crp_ticket_id" validate:"required"`
+	SuborderId  string `json:"suborder_id" validate:"required"`
+}
+
+// Validate GetApplyAuditCrpReq
+func (req *GetApplyAuditCrpReq) Validate() (err error) {
+	return validator.Validate.Struct(req)
+}
+
+// GetApplyAuditCrpRst get apply ticket audit info result
+type GetApplyAuditCrpRst struct {
+	*ApplyAuditCrp `json:",inline"`
 }
 
 // ApplyAuditReq audit apply ticket request parameter

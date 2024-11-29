@@ -472,7 +472,7 @@ func (c *Controller) getProdOrders(kt *kit.Kit, prodID int64, orderIDs []string)
 	}
 
 	if resp.Result == nil {
-		logs.Errorf("query cvm orders, but result is nil, rid: %s", kt.Rid)
+		logs.Errorf("query cvm orders, but result is nil, trace id: %s, rid: %s", resp.TraceId, kt.Rid)
 		return nil, errors.New("query cvm orders, but result is nil")
 	}
 

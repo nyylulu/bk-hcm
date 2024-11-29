@@ -51,14 +51,15 @@ type OrderQueryRst struct {
 }
 
 // FailInstanceInfo cvm order fail instance info
+// 由于 CRP 接口协议混乱，目前两种命名方式都有，详细请联系 crp 确认，目前使用下划线命名法的数据
 type FailInstanceInfo struct {
 	ErrorMsgTypeEn string `json:"errorMsgTypeEn"`
+	ErrorMsg1      string `json:"errorMsg"`
 	ErrorMsg       string `json:"error_msg"`
-	ErrorType      string `json:"errorType"`
-	ErrorType1     string `json:"error_type"`
+	ErrorType1     string `json:"errorType"`
+	ErrorType      string `json:"error_type"`
 	ErrorMsgTypeCn string `json:"errorMsgTypeCn"`
 	RequestId      string `json:"requestId"`
-	ErrorMsg1      string `json:"errorMsg"`
 	ErrorCount     int    `json:"error_count"`
 	Operator       string `json:"operator"`
 	ErrorCount1    int    `json:"errorCount"`
