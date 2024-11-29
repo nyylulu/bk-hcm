@@ -648,7 +648,7 @@ export default (formModel: ApplyClbModel) => {
     () => formModel.account_id,
     (val) => {
       // 当云账号变更时, 查询用户网络类型
-      reqAccountNetworkType(val).then(({ data: { NetworkAccountType } }) => {
+      reqAccountNetworkType(formModel.vendor, val).then(({ data: { NetworkAccountType } }) => {
         formModel.account_type = NetworkAccountType;
       });
     },

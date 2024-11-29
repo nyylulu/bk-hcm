@@ -76,10 +76,10 @@ export default (formModel: ApplyClbModel) => {
    * 获取当前地域「可用区列表和资源列表的映射关系」
    * @param region 地域
    */
-  const getResourceListOfCurrentRegion = async (params: any) => {
+  const getResourceListOfCurrentRegion = async (vendor: VendorEnum, params: any) => {
     isResourceListLoading.value = true;
     try {
-      const { data } = await reqResourceListOfCurrentRegion(params);
+      const { data } = await reqResourceListOfCurrentRegion(vendor, params);
       const { ZoneResourceSet } = data;
 
       // 重置资源映射
@@ -240,7 +240,7 @@ export default (formModel: ApplyClbModel) => {
       };
 
       // 获取当前地域「可用区列表和资源列表的映射关系」
-      getResourceListOfCurrentRegion(params);
+      getResourceListOfCurrentRegion(formModel.vendor, params);
     },
     { deep: true },
   );
