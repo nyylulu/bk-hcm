@@ -2,23 +2,23 @@
 
 - 该接口提供版本：v9.9.9+。
 - 该接口所需权限：平台管理-主机申领。
-- 该接口功能描述：取消主机申请的当前审批单据（ITSM审批单据或CRP审批单据）。
+- 该接口功能描述：取消主机申请子订单的所有可取消CRP单据。
 
 ### URL
 
-PATCH /api/v1/woa/task/apply/ticket/audit/cancel
+POST /api/v1/woa/task/apply/ticket/crp_audit/cancel
 
 ### 输入参数
 
-| 参数名称         | 参数类型   | 必选 | 描述    |
-|--------------|--------|----|-------|
-| sub_order_id | string | 是  | 子单据ID |
+| 参数名称        | 参数类型   | 必选 | 描述       |
+|-------------|--------|----|----------|
+| suborder_id | string | 是  | HCM子订单ID |
 
 ### 调用示例
 
 ```json
 {
-  "sub_order_id": "xxx"
+  "suborder_id": "xxx"
 }
 ```
 

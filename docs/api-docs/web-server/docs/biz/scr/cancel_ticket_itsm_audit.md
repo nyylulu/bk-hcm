@@ -2,23 +2,23 @@
 
 - 该接口提供版本：v9.9.9+。
 - 该接口所需权限：业务访问。
-- 该接口功能描述：取消主机申请的当前审批单据（ITSM审批单据或CRP审批单据）。
+- 该接口功能描述：取消主机申请的当前ITSM审批单据。
 
 ### URL
 
-PATCH /api/v1/woa/task/apply/ticket/audit/cancel
+POST /api/v1/woa/bizs/{bk_biz_id}/task/apply/ticket/itsm_audit/cancel
 
 ### 输入参数
 
-| 参数名称         | 参数类型   | 必选 | 描述   |
-|--------------|--------|----|------|
-| sub_order_id | string | 是  | 单据ID |
+| 参数名称     | 参数类型 | 必选 | 描述      |
+|----------|------|----|---------|
+| order_id | int  | 是  | HCM订单ID |
 
 ### 调用示例
 
 ```json
 {
-  "sub_order_id": "xxx"
+  "order_id": 1234
 }
 ```
 
