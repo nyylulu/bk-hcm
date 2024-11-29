@@ -43,20 +43,26 @@ func (svc *lbSvc) TCloudDescribeResources(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Account, Action: meta.Find,
-		ResourceID: req.AccountID}}
-	if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
-		logs.Errorf("describe resources auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	// 自研云不鉴权
+	if vendor != enumor.TCloudZiyan {
+		authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Account, Action: meta.Find,
+			ResourceID: req.AccountID}}
+		if err := svc.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+			logs.Errorf("describe resources auth failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
-	_, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType,
+	accountInfo, err := svc.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit, enumor.AccountCloudResType,
 		req.AccountID)
 	if err != nil {
 		// 这里校验账号是否存在，出现错误大概率是账号不存在
 		logs.V(3).Errorf("fail to get account info, err: %s, account id: %s, rid: %s",
 			err, req.AccountID, cts.Kit.Rid)
 		return nil, err
+	}
+	if accountInfo.Vendor != vendor {
+		return nil, fmt.Errorf("account vendor %s does not match given vendor %s", accountInfo.Vendor, vendor)
 	}
 
 	switch vendor {

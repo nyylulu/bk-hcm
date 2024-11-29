@@ -32,6 +32,7 @@ type ApplicationOfCreateZiyanLB struct {
 	req *hclb.TCloudZiyanLoadBalancerCreateReq
 }
 
+// GetBkBizIDs return biz ids
 func (a *ApplicationOfCreateZiyanLB) GetBkBizIDs() []int64 {
 	return []int64{a.bizId}
 }

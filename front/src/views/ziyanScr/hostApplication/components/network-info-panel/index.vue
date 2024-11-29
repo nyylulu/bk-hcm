@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, useTemplateRef, watchEffect } from 'vue';
 import { Form } from 'bkui-vue';
 import { DownShape, RightShape } from 'bkui-vue/lib/icon';
 import Panel from '@/components/panel';
@@ -30,6 +30,8 @@ const { t } = useI18n();
 const isCollapsed = ref(true);
 const selectCvmVpc = ref<ICvmVpc>(null);
 const selectedCvmSubnet = ref<ICvmSubnet>(null);
+const cvmVpcSelectorRef = useTemplateRef('cvm-vpc-selector');
+const cvmSubnetSelectorRef = useTemplateRef('cvm-subnet-selector');
 
 const handleCvmVpcChange = (val?: ICvmVpc) => {
   selectCvmVpc.value = val;
@@ -41,17 +43,11 @@ const handleCvmSubnetChange = (val?: ICvmSubnet) => {
   emit('changeSubnet', val);
 };
 
-watch(
-  () => props.region,
-  () => {
-    vpc.value = '';
-    selectCvmVpc.value = null;
-  },
-);
-
-watch([() => props.zone, vpc], () => {
-  subnet.value = '';
-  selectedCvmSubnet.value = null;
+watchEffect(() => {
+  selectCvmVpc.value = cvmVpcSelectorRef.value?.findCvmVpcByVpcId(vpc.value);
+});
+watchEffect(() => {
+  selectedCvmSubnet.value = cvmSubnetSelectorRef.value?.findCvmSubnetBySubnetId(subnet.value);
 });
 </script>
 
@@ -93,6 +89,7 @@ watch([() => props.zone, vpc], () => {
       <FormItem label="VPC">
         <CvmVpcSelector
           class="w600"
+          ref="cvm-vpc-selector"
           v-model="vpc"
           :region="props.region"
           :disabled="props.disabledVpc"
@@ -104,6 +101,7 @@ watch([() => props.zone, vpc], () => {
       <FormItem label="子网">
         <CvmSubnetSelector
           class="w600"
+          ref="cvm-subnet-selector"
           v-model="subnet"
           :region="props.region"
           :zone="props.zone"

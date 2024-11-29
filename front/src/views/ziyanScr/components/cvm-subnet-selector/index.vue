@@ -40,6 +40,10 @@ const selectedId = computed({
   },
 });
 
+const findCvmSubnetBySubnetId = (subnet_id: string) => {
+  return optionList.value.find((item) => item.subnet_id === subnet_id);
+};
+
 const getOptionList = async (data: { region: string; zone: string; vpc: string }) => {
   const res = await http.post('/api/v1/woa/config/findmany/config/cvm/subnet', data);
   optionList.value = res.data.info;
@@ -56,6 +60,8 @@ watch(
   },
   { immediate: true },
 );
+
+defineExpose({ findCvmSubnetBySubnetId });
 </script>
 
 <template>

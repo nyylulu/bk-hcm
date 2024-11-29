@@ -1,8 +1,8 @@
 ### 描述
 
 - 该接口提供版本：v1.6.1+。
-- 该接口所需权限：无。
-- 该接口功能描述：获取资源申请单据审核信息。
+- 该接口所需权限：平台管理-主机申领。
+- 该接口功能描述：获取资源申请ITSM单据审核信息。
 
 ### URL
 
@@ -35,8 +35,8 @@ POST /api/v1/woa/task/get/apply/ticket/audit
   "message":"success",
   "data":{
     "order_id":1001,
-    "itsm_ticket_id":"INC20220421000001",
-    "itsm_ticket_link":"https://bkc-itsm-stag.woa.com/#/ticket/detail?id=5626",
+    "itsm_ticket_id":"INC202xxx21000001",
+    "itsm_ticket_link":"",
     "status":"FINISHED",
     "current_steps":[
       {

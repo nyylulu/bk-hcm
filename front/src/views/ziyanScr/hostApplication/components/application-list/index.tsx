@@ -1,4 +1,4 @@
-import { defineComponent, onMounted, ref, computed, watch } from 'vue';
+import { defineComponent, onMounted, ref, computed, watch, reactive } from 'vue';
 import './index.scss';
 import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -27,6 +27,7 @@ import MatchPanel from '../match-panel';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getResourceTypeName } from '../transform';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
 export default defineComponent({
@@ -34,7 +35,6 @@ export default defineComponent({
     const userStore = useUserStore();
     const businessMapStore = useBusinessMapStore();
     const { transformApplyStages } = useApplyStages();
-    const isSidesliderShow = ref(false);
     const machineDetails = ref([]);
     const isMatchPanelShow = ref(false);
     const isDialogShow = ref(false);
@@ -44,6 +44,12 @@ export default defineComponent({
       step_id: 1,
       suborder_id: 0,
     });
+
+    const stageDetailSlideState = reactive({
+      show: false,
+      suborderId: undefined,
+    });
+
     const scrStore = useZiyanScrStore();
     const { formModel, resetForm } = useFormModel({
       bkBizId: [],
@@ -202,7 +208,8 @@ export default defineComponent({
                     theme={'primary'}
                     class={{ ml8: stage === 'SUSPEND' && modifyTime < 2 }}
                     onClick={async () => {
-                      isSidesliderShow.value = true;
+                      stageDetailSlideState.show = true;
+                      stageDetailSlideState.suborderId = data.suborder_id;
                       const { data: list } = await getMatchDetails(data.suborder_id);
                       machineDetails.value = list.info;
                     }}>
@@ -429,6 +436,28 @@ export default defineComponent({
       { deep: true },
     );
 
+    watch(
+      () => stageDetailSlideState.show,
+      (val) => {
+        if (val) {
+          stageDetailPolling.resume();
+        } else {
+          stageDetailPolling.reset();
+        }
+      },
+    );
+
+    const stageDetailPolling = useTimeoutPoll(
+      async () => {
+        const { data: list } = await getMatchDetails(stageDetailSlideState.suborderId);
+        machineDetails.value = list.info;
+      },
+      30000,
+      {
+        max: 60,
+      },
+    );
+
     const getOrderRoute = (row) => {
       let routeParams: any = {
         name: 'host-application-detail',
@@ -581,7 +610,7 @@ export default defineComponent({
           </Button>
         </div>
         <CommonTable />
-        <CommonSideslider v-model:isShow={isSidesliderShow.value} title='资源匹配详情' width={1100} noFooter>
+        <CommonSideslider v-model:isShow={stageDetailSlideState.show} title='资源匹配详情' width={1100} noFooter>
           <Table
             showOverflowTooltip
             border={['outer', 'col', 'row']}
@@ -676,7 +705,11 @@ export default defineComponent({
         </CommonSideslider>
 
         <CommonDialog v-model:isShow={isDialogShow.value} title={`资源${curSuborder.value.step_name}详情`} width={1200}>
-          <SuborderDetail suborderId={curSuborder.value.suborder_id} stepId={curSuborder.value.step_id} />
+          <SuborderDetail
+            suborderId={curSuborder.value.suborder_id}
+            stepId={curSuborder.value.step_id}
+            isShow={isDialogShow.value}
+          />
         </CommonDialog>
 
         <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderDirective='if'>

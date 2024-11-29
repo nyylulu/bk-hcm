@@ -50,6 +50,7 @@ type SyncTCloudLoadBalancerListenerOption struct {
 func (opt SyncTCloudLoadBalancerListenerOption) Validate() error {
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for sync load balancer listener: %s", opt.Vendor)
 	}
@@ -76,6 +77,8 @@ func (act SyncTCloudLoadBalancerListenerAction) Run(kt run.ExecuteKit, params an
 	switch opt.Vendor {
 	case enumor.TCloud:
 		taskErr = actcli.GetHCService().TCloud.Clb.SyncLoadBalancerListener(kt.Kit(), opt.TCloudListenerSyncReq)
+	case enumor.TCloudZiyan:
+		taskErr = actcli.GetHCService().TCloudZiyan.Clb.SyncLoadBalancerListener(kt.Kit(), opt.TCloudListenerSyncReq)
 	default:
 		return nil, fmt.Errorf("unsupport vendor for sync load balancer listener: %s", opt.Vendor)
 	}

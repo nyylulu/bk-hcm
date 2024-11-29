@@ -35,10 +35,6 @@ func (a *accountSvc) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error
 		return nil, errf.New(errf.InvalidParameter, "accountID is required")
 	}
 
-	// 校验用户有该账号的查看权限
-	if err := a.checkPermission(cts, meta.Find, accountID); err != nil {
-		return nil, err
-	}
 	// 查询该账号对应的Vendor
 	baseInfo, err := a.client.DataService().Global.Cloud.GetResBasicInfo(cts.Kit,
 		enumor.AccountCloudResType, accountID)
@@ -48,8 +44,13 @@ func (a *accountSvc) GetTCloudNetworkAccountType(cts *rest.Contexts) (any, error
 
 	switch baseInfo.Vendor {
 	case enumor.TCloud:
+		// 校验用户有该账号的查看权限
+		if err := a.checkPermission(cts, meta.Find, accountID); err != nil {
+			return nil, err
+		}
 		return a.client.HCService().TCloud.Account.GetNetworkAccountType(cts.Kit, accountID)
 	case enumor.TCloudZiyan:
+		// 自研云不鉴权
 		return a.client.HCService().TCloudZiyan.Account.GetNetworkAccountType(cts.Kit, accountID)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor: %s", baseInfo.Vendor)

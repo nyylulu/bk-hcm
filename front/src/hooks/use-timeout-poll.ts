@@ -1,12 +1,18 @@
 import { getCurrentScope, onScopeDispose, ref } from 'vue';
 import type { Awaitable } from '@/typings';
 
-export default function useTimeoutPoll(fn: () => Awaitable<void>, interval: number, options?: { immediate?: boolean }) {
-  const { immediate = false } = options || {};
+export default function useTimeoutPoll(
+  fn: () => Awaitable<void>,
+  interval: number,
+  options?: { immediate?: boolean; max: number },
+) {
+  const { immediate = false, max = 100 } = options || {};
 
   const isActive = ref(false);
 
   let timer: ReturnType<typeof setTimeout> | null = null;
+
+  let times = 0;
 
   function clear() {
     if (timer) {
@@ -29,6 +35,11 @@ export default function useTimeoutPoll(fn: () => Awaitable<void>, interval: numb
       return;
     }
 
+    if (times >= max) {
+      return;
+    }
+    times += 1;
+
     await fn();
     start();
   }
@@ -44,6 +55,12 @@ export default function useTimeoutPoll(fn: () => Awaitable<void>, interval: numb
     isActive.value = false;
   }
 
+  function reset() {
+    clear();
+    isActive.value = false;
+    times = 0;
+  }
+
   if (immediate) {
     resume();
   }
@@ -56,5 +73,6 @@ export default function useTimeoutPoll(fn: () => Awaitable<void>, interval: numb
     isActive,
     pause,
     resume,
+    reset,
   };
 }

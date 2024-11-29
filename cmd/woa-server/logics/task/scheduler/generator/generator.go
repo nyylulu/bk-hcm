@@ -208,8 +208,8 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	// 2. get available zones
 	requireType := order.RequireType
-	// 故障替换和小额绿通均使用常规项目的机型
-	if requireType == enumor.RequireTypeExpired || requireType == enumor.RequireTypeGreenChannel {
+	// 小额绿通均使用常规项目的机型
+	if requireType == enumor.RequireTypeGreenChannel {
 		requireType = enumor.RequireTypeRegular
 	}
 	availZones, err := g.getAvailableZoneInfo(kt, requireType, order.Spec.DeviceType, order.Spec.Region)

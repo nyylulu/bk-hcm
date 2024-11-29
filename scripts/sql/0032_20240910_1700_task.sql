@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0032,HCMVER=v1.7.0.0
 
     Notes:
     1. 添加任务管理表task_management
@@ -79,6 +79,6 @@ values ('task_management', '0'),
        ('task_detail', '0');
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.0.0' as `hcm_ver`, '0032' as `sql_ver`;
 
 COMMIT

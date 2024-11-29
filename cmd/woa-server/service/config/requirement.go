@@ -24,7 +24,7 @@ import (
 
 // GetRequirement gets requirement type config list
 func (s *service) GetRequirement(cts *rest.Contexts) (interface{}, error) {
-	rst, err := s.logics.Requirement().GetRequirement(cts.Kit)
+	rst, err := s.logics.Requirement().GetRequirement(cts.Kit, "position")
 	if err != nil {
 		logs.Errorf("failed to get requirement list, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err

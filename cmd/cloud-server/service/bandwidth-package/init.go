@@ -100,7 +100,7 @@ func (svc *bandSvc) QueryBandPackage(cts *rest.Contexts) (any, error) {
 	case enumor.TCloud:
 		return svc.ListTCloudBwPkg(cts.Kit, req.Data)
 	case enumor.TCloudZiyan:
-		return svc.ListTCloudBwPkg(cts.Kit, req.Data)
+		return svc.ListTCloudZiyanBwPkg(cts.Kit, req.Data)
 	default:
 		return nil, errors.New("unsupported vendor: " + string(account.Vendor))
 	}

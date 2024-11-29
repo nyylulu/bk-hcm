@@ -14,6 +14,7 @@ package config
 
 import (
 	"context"
+	"strings"
 
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	types "hcm/cmd/woa-server/types/config"
@@ -46,10 +47,13 @@ func (r *requirement) GetRequirement(ctx context.Context, filter *mapstr.MapStr)
 }
 
 // FindManyRequirement gets resource requirement type config list by filter from db
-func (r *requirement) FindManyRequirement(ctx context.Context, filter *mapstr.MapStr) ([]*types.Requirement, error) {
-	insts := make([]*types.Requirement, 0)
+func (r *requirement) FindManyRequirement(ctx context.Context, filter *mapstr.MapStr, sortFields ...string) (
+	[]*types.Requirement, error) {
 
-	if err := mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Find(filter).All(ctx, &insts); err != nil {
+	insts := make([]*types.Requirement, 0)
+	err := mongodb.Client().Table(pkg.BKTableNameCfgRequirement).Find(filter).
+		Sort(strings.Join(sortFields, ",")).All(ctx, &insts)
+	if err != nil {
 		return nil, err
 	}
 

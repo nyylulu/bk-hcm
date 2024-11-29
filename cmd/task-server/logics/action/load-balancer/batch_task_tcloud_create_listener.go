@@ -64,6 +64,7 @@ type BatchTaskTCloudCreateListenerOption struct {
 func (opt BatchTaskTCloudCreateListenerOption) Validate() error {
 	switch opt.Vendor {
 	case enumor.TCloud:
+	case enumor.TCloudZiyan:
 	default:
 		return fmt.Errorf("unsupport vendor for create listener: %s", opt.Vendor)
 	}
@@ -157,6 +158,8 @@ func (act BatchTaskTCloudCreateListenerAction) createSingleListener(kt *kit.Kit,
 		switch vendor {
 		case enumor.TCloud:
 			lblResp, err = actcli.GetHCService().TCloud.Clb.CreateListener(kt, req)
+		case enumor.TCloudZiyan:
+			lblResp, err = actcli.GetHCService().TCloudZiyan.Clb.CreateListener(kt, req)
 		default:
 			return nil, fmt.Errorf("unsupport vendor for create listener: %s", vendor)
 		}
@@ -195,22 +198,25 @@ func (act BatchTaskTCloudCreateListenerAction) checkListenerExists(kt *kit.Kit, 
 		),
 		Page: core.NewDefaultBasePage(),
 	}
+	var lblResp *dataproto.TCloudListenerListResult
 	switch vendor {
 	case enumor.TCloud:
-		lblResp, err := actcli.GetDataService().TCloud.LoadBalancer.ListListener(kt, lbReq)
-		if err != nil {
-			return nil, fmt.Errorf("fail to query listener, err: %v", err)
-		}
-		if len(lblResp.Details) == 0 {
-			// 不存在，不返回错误
-			return nil, nil
-		}
-		// 存在则判断是否和入参一致
-		lbl = cvt.ValToPtr(lblResp.Details[0])
+		lblResp, err = actcli.GetDataService().TCloud.LoadBalancer.ListListener(kt, lbReq)
+	case enumor.TCloudZiyan:
+		lblResp, err = actcli.GetDataService().TCloudZiyan.LoadBalancer.ListListener(kt, lbReq)
+
 	default:
 		return nil, fmt.Errorf("unsupport vendor for sync load balancer listener: %s", vendor)
 	}
-
+	if err != nil {
+		return nil, fmt.Errorf("fail to query listener, err: %v", err)
+	}
+	if len(lblResp.Details) == 0 {
+		// 不存在，不返回错误
+		return nil, nil
+	}
+	// 存在则判断是否和入参一致
+	lbl = cvt.ValToPtr(lblResp.Details[0])
 	if err := act.isL7Match(req, lbl); err != nil {
 		return nil, err
 	}
@@ -286,6 +292,8 @@ func (act BatchTaskTCloudCreateListenerAction) checkL4RuleExists(kt *kit.Kit, lb
 	switch lbl.Vendor {
 	case enumor.TCloud:
 		ruleResp, err = actcli.GetDataService().TCloud.LoadBalancer.ListUrlRule(kt, ruleReq)
+	case enumor.TCloudZiyan:
+		ruleResp, err = actcli.GetDataService().TCloudZiyan.LoadBalancer.ListUrlRule(kt, ruleReq)
 	default:
 		return fmt.Errorf("unsupport vendor for check l4 rule exists, vendor: %s", lbl.Vendor)
 	}

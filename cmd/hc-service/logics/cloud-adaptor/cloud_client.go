@@ -64,7 +64,7 @@ func (cli *CloudAdaptorClient) TCloud(kt *kit.Kit, accountID string) (tcloud.TCl
 	}
 	client.SetRateLimitRetryWithRandomInterval(kt.RequestSource == enumor.AsynchronousTasks)
 
-	return cli.adaptor.TCloud(secret)
+	return client, nil
 }
 
 // TCloudZiyan return tcloud client.
@@ -73,8 +73,14 @@ func (cli *CloudAdaptorClient) TCloudZiyan(kt *kit.Kit, accountID string) (ziyan
 	if err != nil {
 		return nil, err
 	}
+	client, err := cli.adaptor.TCloudZiyan(secret)
+	if err != nil {
+		return nil, err
+	}
 
-	return cli.adaptor.TCloudZiyan(secret)
+	client.SetRateLimitRetryWithRandomInterval(kt.RequestSource == enumor.AsynchronousTasks)
+
+	return client, nil
 }
 
 // Aws return aws client.

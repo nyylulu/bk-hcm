@@ -6,6 +6,7 @@ import { DETAIL_STATUS } from './constants';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
+import useTimeoutPoll from '@/hooks/use-timeout-poll';
 export default defineComponent({
   props: {
     suborderId: {
@@ -15,6 +16,10 @@ export default defineComponent({
     stepId: {
       required: true,
       type: Number,
+    },
+    isShow: {
+      required: true,
+      type: Boolean,
     },
   },
   setup(props) {
@@ -46,6 +51,15 @@ export default defineComponent({
         isLoading.value = false;
       }
     };
+
+    const suborderDetailPolling = useTimeoutPoll(
+      () => {
+        getListData();
+      },
+      30000,
+      { max: 60 },
+    );
+
     watch(
       () => [props.suborderId, props.stepId, curStatus.value],
       () => {
@@ -70,6 +84,18 @@ export default defineComponent({
         getListData();
       },
       { immediate: true, deep: true },
+    );
+
+    watch(
+      () => props.isShow,
+      (isShow) => {
+        if (isShow) {
+          suborderDetailPolling.resume();
+        } else {
+          suborderDetailPolling.reset();
+        }
+      },
+      { immediate: true },
     );
 
     return () => (

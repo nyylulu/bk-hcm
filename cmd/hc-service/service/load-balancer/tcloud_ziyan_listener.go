@@ -91,7 +91,7 @@ func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, e
 		// 默认使用负载均衡所在业务
 		req.BkBizID = lbInfo.BkBizID
 	}
-	tcloudAdpt, err := svc.ad.TCloud(cts.Kit, lbInfo.AccountID)
+	tcloudAdpt, err := svc.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
 	if err != nil {
 		return nil, err
 	}

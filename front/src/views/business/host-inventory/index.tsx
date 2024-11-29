@@ -197,7 +197,7 @@ export default defineComponent({
     });
 
     return () => (
-      <>
+      <div class={cssModule.page}>
         <GridFilterComp
           rules={[
             {
@@ -299,11 +299,12 @@ export default defineComponent({
           onReset={clearFilter}
           loading={isLoading.value}
           col={5}
+          class={cssModule.filter}
         />
-        <section class={cssModule['table-wrapper']}>
+        <section class={cssModule.table}>
           <CommonTable style={{ height: 'calc(100% - 48px)' }} />
         </section>
-      </>
+      </div>
     );
   },
 });

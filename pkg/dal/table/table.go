@@ -259,6 +259,7 @@ const (
 
 	//	GlobalConfigTable 全局配置表
 	GlobalConfigTable = "global_config"
+
 	// TaskDetailTable 任务详情表
 	TaskDetailTable = "task_detail"
 	// TaskManagementTable 任务管理表

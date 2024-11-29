@@ -118,6 +118,7 @@ func (svc *lbSvc) ListLoadBalancerRaw(cts *rest.Contexts) (any, error) {
 }
 
 func convTableToBaseLB(one *tablelb.LoadBalancerTable) *corelb.BaseLoadBalancer {
+
 	return &corelb.BaseLoadBalancer{
 		ID:                   one.ID,
 		CloudID:              one.CloudID,
@@ -143,6 +144,7 @@ func convTableToBaseLB(one *tablelb.LoadBalancerTable) *corelb.BaseLoadBalancer 
 		CloudCreatedTime:     one.CloudCreatedTime,
 		CloudStatusTime:      one.CloudStatusTime,
 		CloudExpiredTime:     one.CloudExpiredTime,
+		Tags:                 core.TagMap(one.Tags),
 		Memo:                 one.Memo,
 		Revision: &core.Revision{
 			Creator:   one.Creator,
@@ -358,6 +360,7 @@ func convTableToBaseListener(one *tablelb.LoadBalancerListenerTable) *corelb.Bas
 		Protocol:      one.Protocol,
 		Port:          one.Port,
 		DefaultDomain: one.DefaultDomain,
+		Region:        one.Region,
 		Zones:         one.Zones,
 		Memo:          one.Memo,
 		SniSwitch:     one.SniSwitch,
@@ -451,6 +454,7 @@ func convTableToBaseTCloudLbURLRule(kt *kit.Kit, one *tablelb.TCloudLbUrlRuleTab
 		CloudLBLID:         one.CloudLBLID,
 		TargetGroupID:      one.TargetGroupID,
 		CloudTargetGroupID: one.CloudTargetGroupID,
+		Region:             one.Region,
 		Domain:             one.Domain,
 		URL:                one.URL,
 		Scheduler:          one.Scheduler,
@@ -512,6 +516,7 @@ func convTableToBaseTarget(one *tablelb.LoadBalancerTargetTable) *corelb.BaseTar
 		InstID:             one.InstID,
 		CloudInstID:        one.CloudInstID,
 		InstName:           one.InstName,
+		TargetGroupRegion:  one.TargetGroupRegion,
 		TargetGroupID:      one.TargetGroupID,
 		CloudTargetGroupID: one.CloudTargetGroupID,
 		Port:               one.Port,
@@ -1161,7 +1166,8 @@ func (svc *lbSvc) listBizListenerByLbIDs(kt *kit.Kit, req *protocloud.ListListen
 	for {
 		loopLblList, err := svc.dao.LoadBalancerListener().List(kt, opt)
 		if err != nil {
-			logs.Errorf("list biz listener by clbIDs failed, err: %v, req: %+v, rid: %s", err, cvt.PtrToVal(req), kt.Rid)
+			logs.Errorf("list biz listener by clbIDs failed, err: %v, req: %+v, rid: %s",
+				err, cvt.PtrToVal(req), kt.Rid)
 			return nil, nil, nil, fmt.Errorf("list biz listener by clbIDs failed, err: %v", err)
 		}
 
@@ -1273,6 +1279,7 @@ func (svc *lbSvc) listTargetByCond(kt *kit.Kit, req *protocloud.ListListenerWith
 				InstID:             item.InstID,
 				CloudInstID:        item.CloudInstID,
 				InstName:           item.InstName,
+				TargetGroupRegion:  item.TargetGroupRegion,
 				TargetGroupID:      item.TargetGroupID,
 				CloudTargetGroupID: item.CloudTargetGroupID,
 				PrivateIPAddress:   item.PrivateIPAddress,
@@ -1438,6 +1445,7 @@ func (svc *lbSvc) convertBatchListListener(lblList []tablelb.LoadBalancerListene
 			Protocol:      item.Protocol,
 			Port:          item.Port,
 			DefaultDomain: item.DefaultDomain,
+			Region:        item.Region,
 			Zones:         item.Zones,
 			SniSwitch:     item.SniSwitch,
 		})

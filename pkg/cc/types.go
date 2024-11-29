@@ -521,6 +521,8 @@ type Web struct {
 	BkCmdbCreateBizDocsUrl string `yaml:"bkCmdbCreateBizDocsUrl"`
 	EnableCloudSelection   bool   `yaml:"enableCloudSelection"`
 	EnableAccountBill      bool   `yaml:"enableAccountBill"`
+
+	ZiyanClbBizWhitelist string `yaml:"ziyanClbBizWhitelist"`
 }
 
 func (s Web) validate() error {
@@ -1590,10 +1592,11 @@ func (opt *GcpCreditConfig) Validate() error {
 
 // BillAllocationOption ...
 type BillAllocationOption struct {
-	AwsSavingsPlans  []AwsSavingsPlansOption `yaml:"awsSavingsPlans"`
-	AwsCommonExpense BillCommonExpense       `yaml:"awsCommonExpense"`
-	GcpCredits       []GcpCreditConfig       `yaml:"gcpCredits"`
-	GcpCommonExpense BillCommonExpense       `yaml:"gcpCommonExpense"`
+	AwsSavingsPlans     []AwsSavingsPlansOption `yaml:"awsSavingsPlans"`
+	AwsCommonExpense    BillCommonExpense       `yaml:"awsCommonExpense"`
+	GcpCredits          []GcpCreditConfig       `yaml:"gcpCredits"`
+	GcpCommonExpense    BillCommonExpense       `yaml:"gcpCommonExpense"`
+	HuaweiCommonExpense BillCommonExpense       `yaml:"huaweiCommonExpense"`
 }
 
 func (opt *BillAllocationOption) validate() error {

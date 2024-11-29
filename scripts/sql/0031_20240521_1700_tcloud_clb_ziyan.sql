@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0031,HCMVER=v1.7.0.0
 
     Notes:
     1. 支持腾讯云负载均衡
@@ -41,6 +41,7 @@ create table `tcloud_ziyan_lb_url_rule`
     `cloud_lbl_id`          varchar(255) not null,
     `target_group_id`       varchar(255)          default '',
     `cloud_target_group_id` varchar(255)          default '',
+    `region`                varchar(20)           default '' not null,
 
     `domain`                varchar(255)          default '',
     `url`                   varchar(255)          default '',
@@ -57,17 +58,18 @@ create table `tcloud_ziyan_lb_url_rule`
     `created_at`            timestamp    not null default current_timestamp,
     `updated_at`            timestamp    not null default current_timestamp on update current_timestamp,
     primary key (`id`),
-    unique key `idx_uk_cloud_id_lbl_id` (`cloud_id`, `lbl_id`)
+    unique key `idx_uk_cloud_id_lbl_id` (`cloud_id`, `lbl_id`,`region`),
+    key `idx_lb_id_rule_type` (`lb_id`,`rule_type`),
+    key `idx_lbl_id_rule_type` (`lbl_id`,`rule_type`)
 ) engine = innodb
   default charset = utf8mb4
   collate = utf8mb4_bin comment ='负载均衡七层规则';
-
 
 insert into id_generator(`resource`, `max_id`)
 values ('tcloud_ziyan_lb_url_rule', '0');
 
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.0.0' as `hcm_ver`, '0031' as `sql_ver`;
 
 COMMIT

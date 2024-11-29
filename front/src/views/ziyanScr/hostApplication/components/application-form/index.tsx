@@ -89,7 +89,7 @@ export default defineComponent({
       model: {
         bkBizId: '',
         bkUsername: '',
-        requireType: 1,
+        requireType: undefined as number,
         enableNotice: false,
         expectTime: expectedDeliveryTime(),
         remark: '',
@@ -168,7 +168,7 @@ export default defineComponent({
                     <DropdownItem
                       key='retry'
                       onClick={() => {
-                        modifylist(row, index, 'IDCPM');
+                        modifylist(cloneDeep(row), index, 'IDCPM');
                         dropdownMenuShowState.idc = false;
                       }}>
                       修改
@@ -225,7 +225,7 @@ export default defineComponent({
                     <DropdownItem
                       key='retry'
                       onClick={() => {
-                        modifylist(row, index, 'QCLOUDCVM');
+                        modifylist(cloneDeep(row), index, 'QCLOUDCVM');
                         dropdownMenuShowState.cvm = false;
                       }}>
                       修改
@@ -317,7 +317,7 @@ export default defineComponent({
         raid_type: '', // RAID 类型
         os_type: '', // 操作系统
         isp: '', // 经营商
-        antiAffinityLevel: '',
+        anti_affinity_level: '',
         network_type: 'TENTHOUSAND',
         replicas: 1, // 需求数量
       },
@@ -326,13 +326,12 @@ export default defineComponent({
         region: [{ required: true, message: '请选择地域', trigger: 'change' }],
         replicas: [{ required: true, message: '请输入需求数量', trigger: 'blur' }],
         os_type: [{ required: true, message: '请选择操作系统', trigger: 'change' }],
-        antiAffinityLevel: [{ required: true, message: '请选择反亲和性', trigger: 'change' }],
+        anti_affinity_level: [{ required: true, message: '请选择反亲和性', trigger: 'change' }],
       },
       options: {
         deviceTypes: [],
         osTypes: [],
         raidType: [],
-        antiAffinityLevels: [],
         regions: [],
         zones: [],
         isps: [],
@@ -342,31 +341,30 @@ export default defineComponent({
     const cloudTableData = ref([]);
     // 物理机table
     const physicalTableData = ref([]);
-    // QCLOUDCVM云地域变化
-    const onQcloudRegionChange = () => {
-      resourceForm.value.zone = '';
-      QCLOUDCVMForm.value.spec.device_type = '';
-      QCLOUDCVMForm.value.spec.vpc = '';
-    };
 
-    // QCLOUDCVM可用区变化
-    const onQcloudZoneChange = () => {
+    // 云地域变更时, 清空zone, vpc, subnet, device_type
+    const handleRegionChange = () => {
+      resourceForm.value.zone = '';
+      handleZoneChange();
+
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-        QCLOUDCVMForm.value.spec.device_type = '';
-      }
-    };
-    const onQcloudAffinityChange = (val: any) => {
-      pmForm.value.spec.antiAffinityLevel = val;
-    };
-    // IDCPM云地域变化
-    const onRegionChange = () => {
-      if (resourceForm.value.resourceType === 'QCLOUDCVM') {
-        onQcloudRegionChange();
+        QCLOUDCVMForm.value.spec.vpc = '';
       } else {
-        resourceForm.value.zone = '';
         pmForm.value.spec.device_type = '';
       }
     };
+    // 可用区变更时, 清空subnet, device_type
+    const handleZoneChange = () => {
+      if (resourceForm.value.resourceType === 'QCLOUDCVM') {
+        QCLOUDCVMForm.value.spec.subnet = '';
+        QCLOUDCVMForm.value.spec.device_type = '';
+      }
+    };
+
+    const onQcloudAffinityChange = (val: any) => {
+      pmForm.value.spec.anti_affinity_level = val;
+    };
+
     // 获取QCLOUDCVM镜像列表
     const loadImages = async () => {
       const { info } = await apiService.getImages([resourceForm.value.region]);
@@ -441,22 +439,19 @@ export default defineComponent({
       CVMapplication.value = false;
       resourceForm.value.resourceType = resourceType;
       modifyresourceType.value = resourceType;
+
+      const { anti_affinity_level, bk_asset_id, remark, replicas, spec } = row;
+      const { region, zone, charge_type, charge_months } = spec;
+
+      Object.assign(resourceForm.value, { bk_asset_id, region, zone, remark });
+
       if (resourceType === 'QCLOUDCVM') {
-        QCLOUDCVMForm.value.spec = cloudTableData.value[index].spec;
-        resourceForm.value.region = cloudTableData.value[index].spec.region;
-        resourceForm.value.zone = cloudTableData.value[index].spec.zone;
-        resourceForm.value.charge_type = cloudTableData.value[index].spec.charge_type;
-        resourceForm.value.charge_months = cloudTableData.value[index].spec.charge_months;
-        QCLOUDCVMForm.value.spec.replicas = +row.replicas;
-        QCLOUDCVMForm.value.spec.anti_affinity_level = row.anti_affinity_level;
+        QCLOUDCVMForm.value.spec = { ...spec, anti_affinity_level, replicas: +replicas };
+        Object.assign(resourceForm.value, { charge_type, charge_months });
       } else {
-        pmForm.value.spec = physicalTableData.value[index].spec;
-        resourceForm.value.region = physicalTableData.value[index].spec.region;
-        resourceForm.value.zone = physicalTableData.value[index].spec.zone;
-        pmForm.value.spec.antiAffinityLevel = row.anti_affinity_level;
-        pmForm.value.spec.replicas = +row.replicas;
+        pmForm.value.spec = { ...spec, anti_affinity_level, replicas: +replicas };
       }
-      resourceForm.value.remark = row.remark;
+
       title.value = '修改资源需求';
       modifyindex.value = index;
       addResourceRequirements.value = true;
@@ -488,35 +483,26 @@ export default defineComponent({
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
-        order.value.model = {
-          bkBizId: data.bk_biz_id,
-          bkUsername: data.bk_username,
-          requireType: data.require_type,
-          enableNotice: data.enable_notice,
-          expectTime: data.expect_time,
-          remark: data.remark,
-          follower: data.follower,
-          suborders: data.suborders,
-        };
-        defaultUserlist.value = order.value.model.follower.map((element: any) => ({
-          username: element,
-          display_name: element,
-        }));
 
-        order.value.model.suborders.forEach(({ resource_type, remark, replicas, spec }: any) => {
-          resource_type === 'QCLOUDCVM'
-            ? cloudTableData.value.push({
-                remark,
-                resource_type: 'QCLOUDCVM',
-                replicas: +replicas,
-                spec,
-              })
-            : physicalTableData.value.push({
-                remark,
-                resource_type: 'IDCPM',
-                replicas: +replicas,
-                spec,
-              });
+        const {
+          bk_biz_id: bkBizId,
+          bk_username: bkUsername,
+          require_type: requireType,
+          enable_notice: enableNotice,
+          expect_time: expectTime,
+          remark,
+          follower,
+          suborders,
+        } = data ?? {};
+
+        order.value.model = { bkBizId, bkUsername, requireType, enableNotice, expectTime, remark, follower, suborders };
+
+        defaultUserlist.value = follower.map((element: any) => ({ username: element, display_name: element }));
+
+        suborders.forEach(({ resource_type, remark, replicas, spec, applied_core }: any) => {
+          const data = { resource_type, remark, replicas: +replicas, spec, applied_core };
+
+          resource_type === 'QCLOUDCVM' ? cloudTableData.value.push(data) : physicalTableData.value.push(data);
         });
       }
       if (route?.query?.id) {
@@ -705,33 +691,39 @@ export default defineComponent({
         device_type: '', // 机型
         raid_type: '', // RAID 类型
         os_type: '', // 操作系统
-        antiAffinityLevel: '',
+        anti_affinity_level: '',
         replicas: 1,
         isp: '', // 运营商
         network_type: 'TENTHOUSAND',
       };
     };
     const cloudResourceForm = () => {
+      const {
+        resourceType: resource_type,
+        remark,
+        enable_disk_check,
+        region,
+        zone,
+        charge_type,
+        charge_months,
+        bk_asset_id,
+      } = resourceForm.value;
+
       return {
-        resource_type: resourceForm.value.resourceType,
-        remark: resourceForm.value.remark,
-        enable_disk_check: resourceForm.value.enable_disk_check,
+        bk_asset_id,
+        resource_type,
+        remark,
+        enable_disk_check,
         anti_affinity_level: QCLOUDCVMForm.value.spec.anti_affinity_level,
         replicas: +QCLOUDCVMForm.value.spec.replicas,
-        spec: {
-          ...QCLOUDCVMForm.value.spec,
-          region: resourceForm.value.region,
-          zone: resourceForm.value.zone,
-          charge_type: resourceForm.value.charge_type,
-          charge_months: resourceForm.value.charge_months,
-        },
+        spec: { ...QCLOUDCVMForm.value.spec, region, zone, charge_type, charge_months },
       };
     };
     const PMResourceForm = () => {
       return {
         resource_type: resourceForm.value.resourceType,
         remark: resourceForm.value.remark,
-        anti_affinity_level: pmForm.value.spec.antiAffinityLevel,
+        anti_affinity_level: pmForm.value.spec.anti_affinity_level,
         replicas: +pmForm.value.spec.replicas,
         spec: {
           region: resourceForm.value.region,
@@ -890,6 +882,13 @@ export default defineComponent({
         router.go(-1);
       }
     };
+
+    // vpc变更时，置空subnet
+    const handleVpcChange = () => {
+      QCLOUDCVMForm.value.spec.subnet = '';
+      onQcloudDeviceTypeChange();
+    };
+
     const cvmCapacity = ref([]);
     const loading = ref(false);
     const onQcloudDeviceTypeChange = async () => {
@@ -941,9 +940,11 @@ export default defineComponent({
     // 需求核数
     const replicasCpuCores = computed(() =>
       cloudTableData.value.reduce((prev, curr) => {
-        const { replicas, spec } = curr;
-        const { cpu } = spec;
-        return prev + replicas * cpu;
+        const { replicas, spec, applied_core } = curr;
+        // 如果 applied_core(接口值) 有值，则优先使用；若无值，则使用前端计算值
+        if (applied_core !== undefined) return prev + applied_core;
+
+        return prev + replicas * spec.cpu;
       }, 0),
     );
 
@@ -976,19 +977,19 @@ export default defineComponent({
       async (val) => {
         resetCpuAmount();
         for (const item of val) {
-          const { replicas, spec } = item;
+          const { replicas, spec, applied_core } = item;
           const { cpu, charge_type } = spec;
+
+          // 如果 applied_core(接口值) 有值，则优先使用；若无值，则使用前端计算值
           if (ChargeType.POSTPAID_BY_HOUR === charge_type) {
-            setCpuAmount({
-              ...cpuAmount,
-              postpaid: cpuAmount.postpaid + cpu * replicas,
-            });
+            const postpaid =
+              applied_core !== undefined ? cpuAmount.postpaid + applied_core : cpuAmount.postpaid + cpu * replicas;
+            setCpuAmount({ ...cpuAmount, postpaid });
           }
           if (ChargeType.PREPAID === charge_type) {
-            setCpuAmount({
-              ...cpuAmount,
-              prepaid: cpuAmount.prepaid + cpu * replicas,
-            });
+            const prepaid =
+              applied_core !== undefined ? cpuAmount.prepaid + applied_core : cpuAmount.prepaid + cpu * replicas;
+            setCpuAmount({ ...cpuAmount, prepaid });
           }
         }
         isNeedVerfiy.value = val.reduce((acc, cur) => {
@@ -1350,7 +1351,7 @@ export default defineComponent({
                           class={'selection-box'}
                           v-model={resourceForm.value.region}
                           params={{ resourceType: resourceForm.value.resourceType }}
-                          onChange={onRegionChange}></AreaSelector>
+                          onChange={handleRegionChange}></AreaSelector>
                       </bk-form-item>
                       <bk-form-item label='可用区' required property='zone'>
                         <ZoneTagSelector
@@ -1366,7 +1367,7 @@ export default defineComponent({
                           minWidth={184}
                           maxWidth={184}
                           autoExpand={'selected'}
-                          onChange={onQcloudZoneChange}
+                          onChange={handleZoneChange}
                         />
                       </bk-form-item>
                       {!isSpecialRequirement.value &&
@@ -1520,7 +1521,7 @@ export default defineComponent({
                         zone={resourceForm.value.zone}
                         disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
                         disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
-                        onChangeVpc={onQcloudDeviceTypeChange}
+                        onChangeVpc={handleVpcChange}
                         onChangeSubnet={onQcloudDeviceTypeChange}
                       />
                     </Form>
@@ -1750,9 +1751,9 @@ export default defineComponent({
                                 label='反亲和性'
                                 required
                                 class={'select-Affinity'}
-                                property='antiAffinityLevel'>
+                                property='anti_affinity_level'>
                                 <AntiAffinityLevelSelect
-                                  v-model={pmForm.value.spec.antiAffinityLevel}
+                                  v-model={pmForm.value.spec.anti_affinity_level}
                                   params={{
                                     resourceType: resourceForm.value.resourceType,
                                     hasZone: resourceForm.value.zone !== '',

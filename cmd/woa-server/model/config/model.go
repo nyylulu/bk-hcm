@@ -136,7 +136,7 @@ type Requirement interface {
 	// GetRequirement gets resource requirement type config by filter from db
 	GetRequirement(ctx context.Context, filter *mapstr.MapStr) (*types.Requirement, error)
 	// FindManyRequirement gets resource requirement type config list by filter from db
-	FindManyRequirement(ctx context.Context, filter *mapstr.MapStr) ([]*types.Requirement, error)
+	FindManyRequirement(ctx context.Context, filter *mapstr.MapStr, sortFields ...string) ([]*types.Requirement, error)
 	// UpdateRequirement updates resource requirement type config by filter and doc in db
 	UpdateRequirement(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
 	// DeleteRequirement deletes resource requirement type config from db

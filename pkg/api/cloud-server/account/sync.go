@@ -17,32 +17,22 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-/*
-    SQLVER=0026,HCMVER=v1.6.10
+package account
 
-    Notes:
-    1. 修改`async_flow`表，增加`worker`,`state`索引
-    2. 修改`async_flow`表，增加`state`索引
-    3. 修改`account_bill_item`表，增加(`root_account_id`, `main_account_id`, `bill_day`)索引
-    4. 修改`account_bill_sync_record`表，增加`adjustment_flow_id`字段
-*/
+import (
+	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/validator"
+)
 
-START TRANSACTION;
+// TCloudResCondSyncReq sync condition
+type TCloudResCondSyncReq struct {
+	Regions  []string `json:"regions,omitempty" validate:"min=1,max=5"`
+	CloudIDs []string `json:"cloud_ids,omitempty" validate:"max=20"`
 
-alter table async_flow
-    add index idx_worker_state_id (worker, state);
-alter table async_flow
-    add index idx_state_id (state, id);
+	TagFilters core.MultiValueTagMap `json:"tag_filters,omitempty" validate:"max=5"`
+}
 
-alter table account_bill_item
-    add index `idx_root_main_bill_day` (`root_account_id`, `main_account_id`, `bill_day`);
-
-
-alter table account_bill_sync_record
-    add adjustment_flow_id varchar(64) not null default '' after detail;
-
-CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v1.6.10' as `hcm_ver`, '0026' as `sql_ver`;
-
-COMMIT;
-
+// Validate ...
+func (r *TCloudResCondSyncReq) Validate() error {
+	return validator.Validate.Struct(r)
+}

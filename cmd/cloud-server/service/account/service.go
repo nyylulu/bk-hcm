@@ -57,6 +57,12 @@ func InitAccountService(c *capability.Capability) {
 	h.Add("DeleteAccount", http.MethodDelete, "/accounts/{account_id}", svc.DeleteAccount)
 	h.Add("DeleteValidate", http.MethodPost, "/accounts/{account_id}/delete/validate", svc.DeleteValidate)
 
+	h.Add("SyncCloudResourceByCond", http.MethodPost,
+		"/vendors/{vendor}/accounts/{account_id}/resources/{res}/sync_by_cond", svc.SyncCloudResourceByCond)
+	h.Add("SyncBizCloudResourceByCond", http.MethodPost,
+		"/bizs/{bk_biz_id}/vendors/{vendor}/accounts/{account_id}/resources/{res}/sync_by_cond",
+		svc.SyncBizCloudResourceByCond)
+
 	// 获取账号配额
 	h.Add("GetBizTCloudZoneQuota", http.MethodPost,
 		"/bizs/{bk_biz_id}/vendors/tcloud/accounts/{account_id}/zones/quotas",
@@ -83,7 +89,7 @@ func InitAccountService(c *capability.Capability) {
 	h.Add("ListTCloudAuthPolicies", http.MethodPost, "/vendors/tcloud/accounts/auth_policies/list",
 		svc.ListTCloudAuthPolicies)
 
-	h.Add("GetTCloudNetworkAccountType", http.MethodGet, "/vendors/tcloud/accounts/{account_id}/network_type",
+	h.Add("GetTCloudNetworkAccountType", http.MethodGet, "/vendors/{vendor}/accounts/{account_id}/network_type",
 		svc.GetTCloudNetworkAccountType)
 
 	h.Load(c.WebService)

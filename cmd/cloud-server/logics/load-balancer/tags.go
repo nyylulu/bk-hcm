@@ -20,44 +20,20 @@
 package lblogic
 
 import (
-	"errors"
-	"fmt"
-
-	loadbalancer "hcm/pkg/api/core/cloud/load-balancer"
+	apicore "hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/ziyan"
 )
 
 // GenTagsForBizs 为负载均衡生成业务标签
-func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []*loadbalancer.TagPair, err error) {
-
-	// 去cc 查询业务信息
-	req := &cmdb.SearchBizCompanyCmdbInfoParams{BizIDs: []int64{bkBizId}}
-	companyInfoList, err := ccCli.SearchBizCompanyCmdbInfo(kt, req)
+func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []apicore.TagPair, err error) {
+	meta, err := ziyan.GetResourceMetaByBiz(kt, ccCli, bkBizId)
 	if err != nil {
-		logs.Errorf("fail call cc to SearchBizCompanyCmdbInfo for cc biz id: %d, err: %v, rid: %s",
+		logs.Errorf("fail to get resource meta for bk biz id: %d, err: %v, rid: %s",
 			bkBizId, err, kt.Rid)
 		return nil, err
 	}
-	if companyInfoList == nil || len(*companyInfoList) < 1 {
-		return nil, errors.New("no data returned form cc")
-	}
-	cmdbBizInfo := (*companyInfoList)[0]
-	if cmdbBizInfo.BkBizID != bkBizId {
-		logs.Errorf("company cmdb biz info from cc mismatch, want: %d, got: %d, rid: %s",
-			bkBizId, cmdbBizInfo.BkBizID, kt.Rid)
-		return nil, fmt.Errorf("company cmdb biz info from cc mismatch, want: %d, got: %d",
-			bkBizId, cmdbBizInfo.BkBizID)
-	}
-
-	tags = []*loadbalancer.TagPair{
-		{Key: "运营产品", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.BkProductName, cmdbBizInfo.BkProductID)},
-		{Key: "一级业务", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.Bs1Name, cmdbBizInfo.Bs1NameID)},
-		{Key: "二级业务", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.Bs2Name, cmdbBizInfo.Bs2NameID)},
-		{Key: "运营部门", Value: fmt.Sprintf("%s_%d", cmdbBizInfo.VirtualDeptName, cmdbBizInfo.VirtualDeptID)},
-		{Key: "负责人", Value: kt.User},
-	}
-
-	return tags, nil
+	return meta.GetTagPairs(), nil
 }

@@ -26,8 +26,8 @@ import (
 	"errors"
 	"fmt"
 
-	"hcm/pkg/tools/maps"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/tools/maps"
 )
 
 // JsonField 对应 db 的 json field 格式字段

@@ -23,7 +23,7 @@ import (
 // RequirementIf provides management interface for operations of requirement config
 type RequirementIf interface {
 	// GetRequirement get requirement type config list
-	GetRequirement(kt *kit.Kit) (*types.GetRequirementResult, error)
+	GetRequirement(kt *kit.Kit, sortFields ...string) (*types.GetRequirementResult, error)
 	// CreateRequirement creates requirement type config
 	CreateRequirement(kt *kit.Kit, input *types.Requirement) (mapstr.MapStr, error)
 	// UpdateRequirement updates requirement type config
@@ -41,9 +41,9 @@ type requirement struct {
 }
 
 // GetRequirement get requirement type config list
-func (r *requirement) GetRequirement(kt *kit.Kit) (*types.GetRequirementResult, error) {
+func (r *requirement) GetRequirement(kt *kit.Kit, sortFields ...string) (*types.GetRequirementResult, error) {
 	filter := new(mapstr.MapStr)
-	insts, err := config.Operation().Requirement().FindManyRequirement(kt.Ctx, filter)
+	insts, err := config.Operation().Requirement().FindManyRequirement(kt.Ctx, filter, sortFields...)
 	if err != nil {
 		return nil, err
 	}

@@ -208,7 +208,9 @@ export default defineComponent({
                 <Button onClick={clearFilter}>重置</Button>
               </div>
             </div>
-            <div class='btn-container oper-btn-pad'>
+          </div>
+          <div class='table-wrapper'>
+            <div class='op-tools-wrapper'>
               <Button disabled={allIpList.value.length === 0} v-clipboard={allIpList.value.join('\n')}>
                 复制所有主机IP <span>({allIpList.value.length})</span>
               </Button>
@@ -217,8 +219,8 @@ export default defineComponent({
               </Button>
               <Button onClick={exportToExcel}>导出全部</Button>
             </div>
+            <CommonTable />
           </div>
-          <CommonTable />
           <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
         </div>
       </div>

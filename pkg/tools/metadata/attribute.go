@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/criteria/errors"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/assert"
 	"hcm/pkg/tools/util"
 
 	"github.com/tidwall/gjson"
@@ -376,7 +377,7 @@ func (attribute *Attribute) validInt(ctx context.Context, val interface{}, key s
 		return errors.RawErrorInfo{}
 	}
 
-	if !util.IsNumeric(val) {
+	if !assert.IsNumeric(val) {
 		logs.Errorf("params %s:%#v not int, rid: %s", key, val, rid)
 		return errors.RawErrorInfo{
 			ErrCode: pkg.CCErrCommParamsNeedInt,

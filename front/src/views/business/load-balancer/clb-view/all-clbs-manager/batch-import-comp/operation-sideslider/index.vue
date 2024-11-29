@@ -14,6 +14,8 @@ import useFormModel from '@/hooks/useFormModel';
 import { Action, LbBatchImportBaseInfo, LbImportPreview } from '../types';
 import http from '@/http';
 import { localStorageActions } from '@/common/util';
+import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
+import { ResourceTypeEnum } from '@/common/resource-constant';
 
 defineOptions({ name: 'LbBatchImportOperationSideslider' });
 const props = defineProps<{ activeAction: Action }>();
@@ -71,7 +73,7 @@ const previewRef = useTemplateRef<typeof Preview>('preview');
 const isSubmitDisabled = computed(
   () => isBaseInfoHasEmpty.value || !previewData.value || previewRef.value?.info.notExecutableCount !== 0,
 );
-const submitTooltipsOption = computed(() => {
+const submitTooltips = computed(() => {
   // 基本信息未录入
   if (isBaseInfoHasEmpty.value) {
     return { disabled: !isBaseInfoHasEmpty.value, content: t('请录入云账号、云地域、操作类型等信息') };
@@ -105,8 +107,11 @@ const handleSubmit = async () => {
     // 记录当前选中的云账号、云地域、操作类型 - formModel
     localStorageActions.set('bk-hcm-lb-batch-import-form-model', formModel);
 
-    // todo: 改用name跳转
-    router.push({ path: `/business/task/clb/details${res.data.task_management_id}`, query: { bizs: bkBizId.value } });
+    router.push({
+      name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+      query: { bizs: bkBizId.value },
+      params: { resourceType: ResourceTypeEnum.CLB, id: res.data.task_management_id },
+    });
   } finally {
     isSubmitLoading.value = false;
   }
@@ -123,7 +128,7 @@ defineExpose({ show });
     :confirm-text="t('确认并提交')"
     :is-submit-loading="isSubmitLoading"
     :is-submit-disabled="isSubmitDisabled"
-    :submit-tooltips-option="submitTooltipsOption"
+    :submit-tooltips="submitTooltips"
     @handle-submit="handleSubmit"
   >
     <Form :model="formModel">

@@ -12,7 +12,19 @@
 
 .application-detail-container {
   .detail-wrapper {
-    margin: 76px 10px;
+    margin: 78px 24px;
+
+    .table-wrapper {
+      padding: 16px 24px;
+      background-color: #fff;
+
+      .op-tools-wrapper {
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+    }
   }
 }
 

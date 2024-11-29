@@ -185,6 +185,7 @@ const serviceMenus: RouteRecordRaw[] = [
             component: () => import('@/views/ziyanScr/host-recycle'),
             meta: {
               activeKey: 'recovery',
+              isShowBreadcrumb: true,
               breadcrumb: ['资源', '主机'],
             },
           },
@@ -220,7 +221,6 @@ const serviceMenus: RouteRecordRaw[] = [
           activeKey: 'recovery',
           title: t('主机回收'),
           breadcrumb: ['资源', '主机'],
-          isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-host-recycle',
           checkAuth: 'ziyan_resource_recycle',
         },

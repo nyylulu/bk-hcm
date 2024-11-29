@@ -87,7 +87,7 @@ export default defineComponent({
       },
     );
 
-    watch([() => resourceAccountStore.resourceAccount.id, whereAmI.value], () => {
+    watch([() => resourceAccountStore.resourceAccount?.id, whereAmI.value], () => {
       if (whereAmI.value === Senarios.resource) {
         curIpRef.value?.reset();
         subIpRef.value?.reset();

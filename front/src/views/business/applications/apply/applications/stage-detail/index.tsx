@@ -1,4 +1,4 @@
-import { defineComponent, ref } from 'vue';
+import { defineComponent, ref, watch } from 'vue';
 
 import { Button, Table } from 'bkui-vue';
 import CommonSideslider from '@/components/common-sideslider';
@@ -9,7 +9,8 @@ import { timeFormatter } from '@/common/util';
 
 export default defineComponent({
   props: { details: Array },
-  setup(props, { expose }) {
+  emits: ['changeSlideShow'],
+  setup(props, { expose, emit }) {
     const { t } = useI18n();
     const isSidesliderShow = ref(false);
     const suborderDetailDialogRef = ref();
@@ -98,6 +99,10 @@ export default defineComponent({
     const triggerShow = (v: boolean) => {
       isSidesliderShow.value = v;
     };
+
+    watch(isSidesliderShow, (isShow) => {
+      emit('changeSlideShow', isShow);
+    });
 
     expose({ triggerShow });
 
