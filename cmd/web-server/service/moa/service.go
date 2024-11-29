@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"hcm/cmd/web-server/service/capability"
+	"hcm/pkg/api/web-server/moa"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
@@ -65,25 +66,38 @@ type service struct {
 
 // Request ...
 func (s service) Request(cts *rest.Contexts) (interface{}, error) {
-	req := new(pkgmoa.InitiateVerificationReq)
+	req := new(moa.InitiateVerificationReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
 	}
-	resp, err := s.client.Request(cts.Kit, req)
+
+	opt := &pkgmoa.InitiateVerificationReq{
+		Username:      req.Username,
+		Channel:       req.Channel,
+		Language:      req.Language,
+		PromptPayload: req.PromptPayload,
+	}
+	resp, err := s.client.Request(cts.Kit, opt)
 	if err != nil {
 		logs.Errorf("request moa api failed, err: %v, req: %v, rid: %s", err, converter.PtrToVal(req), cts.Kit.Rid)
 		return nil, err
 	}
-	return resp, nil
+
+	result := moa.InitiateVerificationResp{SessionId: resp.SessionId}
+	return result, nil
 }
 
 // Verify ...
 func (s service) Verify(cts *rest.Contexts) (interface{}, error) {
-	req := new(pkgmoa.VerificationReq)
+	req := new(moa.VerificationReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
 	}
-	resp, err := s.client.Verify(cts.Kit, req)
+	opt := &pkgmoa.VerificationReq{
+		SessionId: req.SessionId,
+		Username:  req.Username,
+	}
+	resp, err := s.client.Verify(cts.Kit, opt)
 	if err != nil {
 		return nil, err
 	}
@@ -100,7 +114,12 @@ func (s service) Verify(cts *rest.Contexts) (interface{}, error) {
 			return nil, err
 		}
 	}
-	return resp, nil
+	result := moa.VerificationResp{
+		Status:     resp.Status,
+		ButtonType: resp.ButtonType,
+		SessionId:  resp.SessionId,
+	}
+	return result, nil
 }
 
 const (

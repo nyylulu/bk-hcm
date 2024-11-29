@@ -10,12 +10,12 @@ POST /api/v1/web/moa/request
 
 ### 输入参数
 
-| 参数名称          | 参数类型    | 必选 | 描述                                        |
-|---------------|---------|----|-------------------------------------------|
-| username	     | string	 | 是	 | 用户名                                       |
-| channel	      | string	 | 是	 | 	使用哪种二次验证通道(1) moa: MOA弹窗确认(2) sms: 短信验证码 |
-| language	     | string	 | 是	 | 语言                                        |
-| promptPayload | string  | 是	 | 二次验证弹窗内容, 参考调用示例进行调整                      |
+| 参数名称           | 参数类型    | 必选 | 描述                                        |
+|----------------|---------|----|-------------------------------------------|
+| username	      | string	 | 是	 | 用户名                                       |
+| channel	       | string	 | 是	 | 	使用哪种二次验证通道(1) moa: MOA弹窗确认(2) sms: 短信验证码 |
+| language	      | string	 | 是	 | 语言                                        |
+| prompt_payload | string  | 是	 | 二次验证弹窗内容, 参考调用示例进行调整                      |
 
 
 ### 调用示例
@@ -26,7 +26,7 @@ POST /api/v1/web/moa/request
     "username": "zhangsan",
     "channel": "moa",
     "language": "zh",
-    "promptPayload": "{\"zh\":{\"title\":\"新设备登录授权\",\"navigator\":\"导航栏\",\"desc\":\"您的账号正在新设备登录MOA，是否同意本次操作？\",\"footer\":\"\",\"buttons\":[{\"desc\":\"确定\",\"button_type\":\"confirm\"},{\"desc\":\"取消\",\"button_type\":\"cancel\"}]},\"en\":{\"title\":\"Two-step verification\",\"navigator\":\"navigator\",\"desc\":\"A new device is signing in MOA\",\"icon_url\":\"https://xxx.xxx.xxx\",\"footer\":\"\",\"buttons\":[{\"desc\":\"Allow\",\"button_type\":\"confirm\"},{\"desc\":\"Do Not Allow\",\"button_type\":\"cancel\"}]}}"
+    "prompt_payload": "{\"zh\":{\"title\":\"新设备登录授权\",\"navigator\":\"导航栏\",\"desc\":\"您的账号正在新设备登录MOA，是否同意本次操作？\",\"footer\":\"\",\"buttons\":[{\"desc\":\"确定\",\"button_type\":\"confirm\"},{\"desc\":\"取消\",\"button_type\":\"cancel\"}]},\"en\":{\"title\":\"Two-step verification\",\"navigator\":\"navigator\",\"desc\":\"A new device is signing in MOA\",\"icon_url\":\"https://xxx.xxx.xxx\",\"footer\":\"\",\"buttons\":[{\"desc\":\"Allow\",\"button_type\":\"confirm\"},{\"desc\":\"Do Not Allow\",\"button_type\":\"cancel\"}]}}"
 }
 ```
 
@@ -38,7 +38,7 @@ POST /api/v1/web/moa/request
   "code": 0,
   "message": "",
   "data": {
-    "sessionId": "random_string"
+    "session_id": "random_string"
   }
 }
 ```
@@ -52,7 +52,7 @@ POST /api/v1/web/moa/request
 | data    | object | 响应数据 |
 
 #### data参数说明
-| 参数名称      | 参数类型   | 描述               |
-|-----------|--------|------------------|
-| sessionId | string | 会话ID, 用于查询二次验证结果 |
+| 参数名称       | 参数类型   | 描述               |
+|------------|--------|------------------|
+| session_id | string | 会话ID, 用于查询二次验证结果 |
 
