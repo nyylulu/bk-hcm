@@ -611,3 +611,43 @@ func (r VerifyResPlanRst) Validate() error {
 
 	return nil
 }
+
+// CrpOrderStatus is crp order status.
+type CrpOrderStatus int
+
+const (
+	// CrpOrderStatusDeptApprove 部门管理员审批
+	CrpOrderStatusDeptApprove CrpOrderStatus = 0
+	// CrpOrderStatusDirectorApprove 业务总监审批
+	CrpOrderStatusDirectorApprove CrpOrderStatus = 1
+	// CrpOrderStatusPlanApprove 规划经理审批
+	CrpOrderStatusPlanApprove CrpOrderStatus = 2
+	// CrpOrderStatusResourceApprove 资源经理审批
+	CrpOrderStatusResourceApprove CrpOrderStatus = 3
+	// CrpOrderStatusCloudApprove 等待云上审批
+	CrpOrderStatusCloudApprove CrpOrderStatus = 14
+	// CrpOrderStatusWaitDeliver 等待交付
+	CrpOrderStatusWaitDeliver CrpOrderStatus = 4
+	// CrpOrderStatusDelivering 交付队列中
+	CrpOrderStatusDelivering CrpOrderStatus = 5
+	// CrpOrderStatusResource 资源准备中
+	CrpOrderStatusResource CrpOrderStatus = 6
+	// CrpOrderStatusCvm CVM 生成中
+	CrpOrderStatusCvm CrpOrderStatus = 7
+	// CrpOrderStatusFinish 执行完成
+	CrpOrderStatusFinish CrpOrderStatus = 8
+	// CrpOrderStatusReject 驳回
+	CrpOrderStatusReject CrpOrderStatus = 127
+	// CrpOrderStatusFailed CVM创建失败
+	CrpOrderStatusFailed CrpOrderStatus = 129
+)
+
+// CrpOrderStatusCanRevoke 目前 crp 只支持单据处于下列状态时可以发起撤单
+var CrpOrderStatusCanRevoke = []CrpOrderStatus{
+	CrpOrderStatusDeptApprove,
+	CrpOrderStatusDirectorApprove,
+	CrpOrderStatusPlanApprove,
+	CrpOrderStatusResourceApprove,
+	CrpOrderStatusWaitDeliver,
+	CrpOrderStatusDelivering,
+}

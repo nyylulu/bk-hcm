@@ -103,6 +103,8 @@ const (
 	ApplyStatusPaused       ApplyStatus = "PAUSED"
 	ApplyStatusDone         ApplyStatus = "DONE"
 	ApplyStatusTerminate    ApplyStatus = "TERMINATE"
+	// ApplyStatusGracefulTerminate 比起 ApplyStatusTerminate，将不再发起重试，但是后续的流程仍会继续流转
+	ApplyStatusGracefulTerminate ApplyStatus = "GRACEFUL_TERMINATE"
 )
 
 // GenerateRecord apply order vm generate record
@@ -1424,5 +1426,15 @@ type CancelApplyTicketItsmReq struct {
 
 // Validate CancelApplyTicketItsmReq
 func (c *CancelApplyTicketItsmReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
+
+// CancelApplyTicketCrpReq cancel apply ticket crp request
+type CancelApplyTicketCrpReq struct {
+	SubOrderID string `json:"suborder_id" validate:"required"`
+}
+
+// Validate CancelApplyTicketCrpReq
+func (c *CancelApplyTicketCrpReq) Validate() error {
 	return validator.Validate.Struct(c)
 }

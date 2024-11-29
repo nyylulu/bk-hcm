@@ -155,7 +155,7 @@ func (r *applyRecoverer) recoverAuditTicket(kt *kit.Kit, auditTickets []*types.A
 
 // recoverRunningTickets 获得状态为TicketStageRunning状态订单
 func (r *applyRecoverer) recoverRunningTickets(kt *kit.Kit, tickets []*types.ApplyTicket) error {
-	logs.Infof("start recover RUNNING tickets, ticketNum: %d, rid: %s", len(tickets), kt.Rid)
+	logs.Infof("start recover tickets, ticketNum: %d, rid: %s", len(tickets), kt.Rid)
 	orders := make([]*types.ApplyOrder, 0)
 	for _, ticket := range tickets {
 		subOrders, err := r.getSuborders(kt, ticket.OrderId)
@@ -180,7 +180,7 @@ func (r *applyRecoverer) recoverRunningTickets(kt *kit.Kit, tickets []*types.App
 				<-dealChan
 			}()
 
-			if err := r.recoverMatchingOrders(kt, order); err != nil {
+			if err := r.recoverOrders(kt, order); err != nil {
 				atomic.AddInt64(&failed, 1)
 				logs.Errorf("failed to recover order, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId, kt.Rid)
 				return
@@ -195,16 +195,16 @@ func (r *applyRecoverer) recoverRunningTickets(kt *kit.Kit, tickets []*types.App
 	return nil
 }
 
-// recoverMatchingOrder 恢复状态为ApplyStatusMatching的订单
-func (r *applyRecoverer) recoverMatchingOrders(kt *kit.Kit, order *types.ApplyOrder) error {
+// recoverOrders 恢复状态为ApplyStatusMatching 和 ApplyStatusGracefulTerminate 状态订单
+func (r *applyRecoverer) recoverOrders(kt *kit.Kit, order *types.ApplyOrder) error {
 	// execute only one step
-	if order.Status != types.ApplyStatusMatching {
-		logs.Infof("order status is not matching, ignore it, suborderId: %s, status: %s,rid: %s", order.SubOrderId,
-			order.Status, kt.Rid)
+	if order.Status != types.ApplyStatusMatching && order.Status != types.ApplyStatusGracefulTerminate {
+		logs.Infof("order status is not matching or graceful terminate, ignore it, suborderId: %s, status: %s,rid: %s",
+			order.SubOrderId, order.Status, kt.Rid)
 		return nil
 	}
 
-	logs.Infof("start recover order with status MATCHING, subOrderId: %s, rid: %s", order.SubOrderId, kt.Rid)
+	logs.Infof("start recover order with status %s, subOrderId: %s, rid: %s", order.Status, order.SubOrderId, kt.Rid)
 	// 恢复generate step
 	generateStep, err := r.getOrderStep(kt, types.StepNameGenerate, order.SubOrderId)
 	if err != nil {
@@ -217,8 +217,8 @@ func (r *applyRecoverer) recoverMatchingOrders(kt *kit.Kit, order *types.ApplyOr
 				order.SubOrderId, kt.Rid)
 			return err
 		}
-		logs.Infof("success recover order with status MATCHING in generate step, subOrderId: %s, rid: %s",
-			order.SubOrderId, kt.Rid)
+		logs.Infof("success recover order with status %s in generate step, subOrderId: %s, rid: %s",
+			order.Status, order.SubOrderId, kt.Rid)
 		return nil
 	}
 	// 恢复init step
@@ -233,8 +233,8 @@ func (r *applyRecoverer) recoverMatchingOrders(kt *kit.Kit, order *types.ApplyOr
 				order.SubOrderId, kt.Rid)
 			return err
 		}
-		logs.Infof("success recover order with status MATCHING in init step, subOrderId: %s, rid: %s", order.SubOrderId,
-			kt.Rid)
+		logs.Infof("success recover order with status %s in init step, subOrderId: %s, rid: %s",
+			order.Status, order.SubOrderId, kt.Rid)
 		return nil
 	}
 	// 恢复deliver step
@@ -249,12 +249,23 @@ func (r *applyRecoverer) recoverMatchingOrders(kt *kit.Kit, order *types.ApplyOr
 				order.SubOrderId, kt.Rid)
 			return err
 		}
-		logs.Infof("success recover order with status MATCHING in deliver step, subOrderId: %s, rid: %s",
-			order.SubOrderId, kt.Rid)
+		logs.Infof("success recover order with status %s in deliver step, subOrderId: %s, rid: %s",
+			order.Status, order.SubOrderId, kt.Rid)
 		return nil
 	}
 
-	logs.Infof("end recover order with status MATCHING, subOrderId: %s, rid: %s", order.SubOrderId, kt.Rid)
+	// 特殊处理 GracefulTerminate 状态
+	// 由于 GracefulTerminate 可能出现前序状态均已完毕，无法触发单据更新逻辑，于此处进行单据状态更新
+	if order.Status == types.ApplyStatusGracefulTerminate && order.Stage == types.TicketStageRunning {
+		if err = r.schedulerIf.GetMatcher().UpdateApplyOrderStatus(order); err != nil {
+			logs.Errorf("failed to update apply order status, subOrderId: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
+			return err
+		}
+
+	}
+
+	logs.Infof("end recover order with status %s, subOrderId: %s, rid: %s", order.Status, order.SubOrderId, kt.Rid)
 	return nil
 }
 

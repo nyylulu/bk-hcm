@@ -464,17 +464,7 @@ func (c *Controller) getDemandAllChangelogs(kt *kit.Kit, crpDemandID int64) (
 
 // getProdOrders get order ids of op product in order ids.
 func (c *Controller) getProdOrders(kt *kit.Kit, prodID int64, orderIDs []string) ([]string, error) {
-	req := &cvmapi.OrderQueryReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmOrderStatusMethod,
-		},
-		Params: &cvmapi.OrderQueryParam{
-			OrderId: orderIDs,
-		},
-	}
-
+	req := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: orderIDs})
 	resp, err := c.crpCli.QueryCvmOrders(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		logs.Errorf("failed to query cvm orders, err: %v, rid: %s", err, kt.Rid)

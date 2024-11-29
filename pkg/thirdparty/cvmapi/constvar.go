@@ -88,6 +88,10 @@ const (
 	CvmLaunchMethod = "createCvmOrder"
 	// CvmOrderStatusMethod CVM单据进度查询方法
 	CvmOrderStatusMethod = "queryOrders"
+	// CvmQueryApproveLogMethod CVM审批日志查询方法
+	CvmQueryApproveLogMethod = "queryCvmApproveLog"
+	// CvmRevokeOrderMethod  CVM撤销单据方法
+	CvmRevokeOrderMethod = "revokeOrder"
 	// CvmInstanceStatusMethod CVM实例状态查询方法
 	CvmInstanceStatusMethod = "queryCVMInstances"
 	// CvmCapacityMethod CVM容量查询方法
@@ -144,4 +148,40 @@ type CVMCli struct {
 	// CvmApiAddr yunti api address
 	CvmApiAddr        string `yaml:"host"`
 	CvmLaunchPassword string `yaml:"launch_password"`
+}
+
+// NewCvmQueryApproveLogReq CVM审批日志查询请求元数据
+func NewCvmQueryApproveLogReq(params *GetCvmApproveLogParams) *GetCvmApproveLogReq {
+	return &GetCvmApproveLogReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmQueryApproveLogMethod,
+		},
+		Params: params,
+	}
+}
+
+// NewOrderQueryReq CVM审批日志查询请求元数据
+func NewOrderQueryReq(params *OrderQueryParam) *OrderQueryReq {
+	return &OrderQueryReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmOrderStatusMethod,
+		},
+		Params: params,
+	}
+}
+
+// NewRevokeCvmOrderReq CVM撤回订单请求元数据
+func NewRevokeCvmOrderReq(params *RevokeCvmOrderParams) *RevokeCvmOrderReq {
+	return &RevokeCvmOrderReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmRevokeOrderMethod,
+		},
+		Params: params,
+	}
 }

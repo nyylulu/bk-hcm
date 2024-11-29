@@ -326,13 +326,14 @@ func (l *logics) checkCVM(orderId string) error {
 			return false, fmt.Errorf("query cvm order return %d orders with order id: %s", num, orderId)
 		}
 
-		if resp.Result.Data[0].Status != cvmapi.OrderStatusFinish &&
-			resp.Result.Data[0].Status != cvmapi.OrderStatusReject &&
-			resp.Result.Data[0].Status != cvmapi.OrderStatusFailed {
+		status := enumor.CrpOrderStatus(resp.Result.Data[0].Status)
+		if status != enumor.CrpOrderStatusFinish &&
+			status != enumor.CrpOrderStatusReject &&
+			status != enumor.CrpOrderStatusFailed {
 			return false, fmt.Errorf("cvm order %s handling", orderId)
 		}
 
-		if resp.Result.Data[0].Status != cvmapi.OrderStatusFinish {
+		if status != enumor.CrpOrderStatusFinish {
 			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId,
 				resp.Result.Data[0].Status)
 		}
@@ -342,16 +343,7 @@ func (l *logics) checkCVM(orderId string) error {
 
 	doFunc := func() (interface{}, error) {
 		// construct order status request
-		req := &cvmapi.OrderQueryReq{
-			ReqMeta: cvmapi.ReqMeta{
-				Id:      cvmapi.CvmId,
-				JsonRpc: cvmapi.CvmJsonRpc,
-				Method:  cvmapi.CvmOrderStatusMethod,
-			},
-			Params: &cvmapi.OrderQueryParam{
-				OrderId: []string{orderId},
-			},
-		}
+		req := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{orderId}})
 
 		// call cvm api to query cvm order status
 		return l.cvm.QueryCvmOrders(nil, nil, req)

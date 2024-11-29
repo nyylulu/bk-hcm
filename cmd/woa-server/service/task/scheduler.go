@@ -1432,7 +1432,7 @@ func withOrderID(orderID int64) filterOptFunc {
 }
 
 // withSuborderIDs filter apply order by suborder ids
-func withSuborderIDs(suborderIDs []string) filterOptFunc {
+func withSuborderIDs(suborderIDs ...string) filterOptFunc {
 	return func(filter map[string]interface{}) {
 		if len(suborderIDs) == 0 {
 			return
@@ -1547,4 +1547,96 @@ func (s *service) CancelBizApplyTicketItsm(cts *rest.Contexts) (interface{}, err
 	}
 
 	return nil, nil
+}
+
+// CancelApplyTicketCrp ...
+func (s *service) CancelApplyTicketCrp(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.CancelApplyTicketCrpReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	applyOrders, err := s.listApplyOrders(cts.Kit, withSuborderIDs(req.SubOrderID))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	resAttrs := make([]meta.ResourceAttribute, 0)
+	for _, applyOrder := range applyOrders {
+		resAttrs = append(resAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: applyOrder.BkBizId,
+		})
+	}
+
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, resAttrs...); err != nil {
+		logs.Errorf("failed to check cancel apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketCrp(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket crp, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// CancelBizApplyTicketCrp ...
+func (s *service) CancelBizApplyTicketCrp(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel biz apply ticket crp, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(types.CancelApplyTicketCrpReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketCrp(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket crp, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// listApplyOrders list apply orders
+func (s *service) listApplyOrders(kit *kit.Kit, filterOptFns ...filterOptFunc) ([]*types.ApplyOrder, error) {
+	filter := map[string]interface{}{}
+	for _, fn := range filterOptFns {
+		fn(filter)
+	}
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: pkg.BKNoLimit,
+	}
+	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
 }

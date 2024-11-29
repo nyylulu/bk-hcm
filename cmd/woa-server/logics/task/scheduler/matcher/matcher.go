@@ -139,7 +139,7 @@ func (m *Matcher) FinalApplyStep(genRecord *types.GenerateRecord, order *types.A
 	}
 
 	// update apply order status
-	if err := m.updateApplyOrderStatus(order); err != nil {
+	if err := m.UpdateApplyOrderStatus(order); err != nil {
 		logs.Errorf("failed to update apply order status, order id: %s, err: %v", genRecord.SubOrderId, err)
 		return err
 	}
@@ -162,7 +162,7 @@ func (m *Matcher) matchHandler(genRecord *types.GenerateRecord) error {
 	}
 
 	// check order status
-	if applyOrder.Status != types.ApplyStatusMatching {
+	if applyOrder.Status != types.ApplyStatusMatching && applyOrder.Status != types.ApplyStatusGracefulTerminate {
 		logs.Infof("apply order %s cannot match for status not Matching, status: %s", genRecord.SubOrderId,
 			applyOrder.Status)
 		return fmt.Errorf("apply order %s cannot match for status not Matching, status: %s", genRecord.SubOrderId,
@@ -232,8 +232,8 @@ func (m *Matcher) updateGenerateFailed(generateId uint64) error {
 	return nil
 }
 
-// updateApplyOrderStatus update apply order status
-func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
+// UpdateApplyOrderStatus update apply order status
+func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	// 1. get unreleased devices from db
 	devices, err := m.getUnreleasedDevice(order.SubOrderId)
 	if err != nil {
@@ -242,19 +242,8 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	// 2. calculate apply order status by total and matched count
-	matchedCnt := 0
-	deviceTypeCountMap := make(map[string]int)
-	for _, device := range devices {
-		if !device.IsDelivered {
-			continue
-		}
-		matchedCnt++
-
-		if _, ok := deviceTypeCountMap[device.DeviceType]; !ok {
-			deviceTypeCountMap[device.DeviceType] = 0
-		}
-		deviceTypeCountMap[device.DeviceType]++
-	}
+	deviceTypeCountMap := calDeviceTypeCountMap(devices)
+	matchedCnt := calMatchCnt(devices)
 
 	genRecords, err := m.GetOrderGenRecords(order.SubOrderId)
 	if err != nil {
@@ -318,6 +307,47 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	// 3. do update apply order status
+	err = m.updateApplyOrderToDb(kt, order, matchedCnt, pendingCnt, stage, status, deviceTypeCountMap)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// calMatchCnt calculate matched count
+func calMatchCnt(devices []*types.DeviceInfo) int {
+	matchedCnt := 0
+	for _, device := range devices {
+		if !device.IsDelivered {
+			continue
+		}
+		matchedCnt++
+	}
+
+	return matchedCnt
+}
+
+// calDeviceTypeCountMap calculate matched count
+func calDeviceTypeCountMap(devices []*types.DeviceInfo) map[string]int {
+	deviceTypeCountMap := make(map[string]int)
+	for _, device := range devices {
+		if !device.IsDelivered {
+			continue
+		}
+
+		if _, ok := deviceTypeCountMap[device.DeviceType]; !ok {
+			deviceTypeCountMap[device.DeviceType] = 0
+		}
+		deviceTypeCountMap[device.DeviceType]++
+	}
+	return deviceTypeCountMap
+}
+
+// updateApplyOrderToDb update apply order status to db
+func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, matchedCnt int, pendingCnt int,
+	stage types.TicketStage, status types.ApplyStatus, deviceTypeCountMap map[string]int) error {
+
 	filter := &mapstr.MapStr{
 		"suborder_id": order.SubOrderId,
 	}
@@ -331,8 +361,8 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 	if order.ResourceType == types.ResourceTypeCvm {
 		sum, err := m.GetCpuCoreSum(kt, deviceTypeCountMap)
 		if err != nil {
-			logs.Errorf("get cpu core failed, err: %v, deviceTypeCountMap: %v, rid: %s", err, deviceTypeCountMap,
-				kt.Rid)
+			logs.Errorf("get cpu core failed, err: %v, deviceTypeCountMap: %v, rid: %s",
+				err, deviceTypeCountMap, kt.Rid)
 			return err
 		}
 		doc.Set("delivered_core", sum)
@@ -342,7 +372,6 @@ func (m *Matcher) updateApplyOrderStatus(order *types.ApplyOrder) error {
 		logs.Errorf("failed to update apply order, id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
-
 	return nil
 }
 

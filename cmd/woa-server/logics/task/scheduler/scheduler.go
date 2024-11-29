@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
@@ -147,6 +148,8 @@ type Interface interface {
 
 	// CancelApplyTicketItsm cancel apply ticket which in itsm
 	CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error
+	// CancelApplyTicketCrp cancel apply ticket which in crp
+	CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error
 }
 
 // scheduler provides resource apply service
@@ -161,6 +164,7 @@ type scheduler struct {
 	configLogics config.Logics
 	rsLogics     rollingserver.Logics
 	gcLogics     greenchannel.Logics
+	crpCli       cvmapi.CVMClientInterface
 }
 
 // New creates a scheduler
@@ -195,6 +199,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	scheduler := &scheduler{
 		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
 		itsm:         thirdCli.ITSM,
+		crpCli:       thirdCli.CVM,
 		cc:           esbCli.Cmdb(),
 		dispatcher:   dispatch,
 		generator:    generate,
@@ -2190,3 +2195,150 @@ const (
 	// ItsmAuditStepLeader leader审核
 	ItsmAuditStepLeader = "leader审核"
 )
+
+// CancelApplyTicketCrp ...
+func (s *scheduler) CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error {
+	// common filter and page
+	filter := map[string]interface{}{
+		"suborder_id": req.SubOrderID,
+	}
+	page := metadata.BasePage{
+		Limit: 1,
+		Start: 0,
+	}
+
+	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	if len(orders) == 0 {
+		return errf.New(errf.InvalidParameter, "order is not exist")
+	}
+
+	order := orders[0]
+
+	switch order.Status {
+	case types.ApplyStatusMatching, types.ApplyStatusMatchedSome, types.ApplyStatusGracefulTerminate:
+		break
+	default:
+		return errf.New(errf.InvalidParameter, fmt.Sprintf("order status is %s cannot cancel", order.Status))
+	}
+
+	generateRecords, err := model.Operation().GenerateRecord().FindManyGenerateRecord(kt.Ctx, page, filter)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否有单据尚未发起 crp 请求
+	for _, generateRecord := range generateRecords {
+		if generateRecord.TaskId == "" {
+			return fmt.Errorf("has task still in init,can't revoke suborder, generate id: %d, order id: %s",
+				generateRecord.GenerateId, order.SubOrderId)
+		}
+	}
+
+	// 获取所有未完成的task
+	unFinishedTasks := make([]string, 0)
+	for _, generateRecord := range generateRecords {
+		if taskIsUnFinish(generateRecord) {
+			unFinishedTasks = append(unFinishedTasks, generateRecord.TaskId)
+		}
+	}
+
+	// 筛选可以撤单的crp task
+	canRevokeTasks := s.filterCanRevokeCrpTask(kt, unFinishedTasks)
+	if len(canRevokeTasks) == 0 {
+		return errors.New("no task can revoke")
+	}
+
+	// 开始执行撤单程序
+	if err = s.revokeApplyOrder(kt, order.SubOrderId, canRevokeTasks); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// taskIsUnFinish check crp task is finish
+func taskIsUnFinish(generateRecord *types.GenerateRecord) bool {
+	if generateRecord.Status == types.GenerateStatusHandling {
+		return true
+	}
+
+	return false
+}
+
+// filterCanRevokeCrpTask 筛选可以撤单的 crp 单据
+func (s *scheduler) filterCanRevokeCrpTask(kt *kit.Kit, taskIDs []string) []string {
+	params := &cvmapi.OrderQueryParam{
+		OrderId: taskIDs,
+		Status:  make([]int, 0, len(enumor.CrpOrderStatusCanRevoke)),
+	}
+	req := cvmapi.NewOrderQueryReq(params)
+	for _, status := range enumor.CrpOrderStatusCanRevoke {
+		req.Params.Status = append(req.Params.Status, int(status))
+	}
+
+	ordersResp, err := s.crpCli.QueryCvmOrders(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to query cvm orders, err: %v, rid: %s", err, kt.Rid)
+		return nil
+	}
+
+	if len(ordersResp.Result.Data) == 0 {
+		return nil
+	}
+
+	taskIDs = make([]string, 0, len(ordersResp.Result.Data))
+	for _, order := range ordersResp.Result.Data {
+		taskIDs = append(taskIDs, order.OrderId)
+	}
+
+	return taskIDs
+}
+
+// revokeApplyOrder revoke apply order
+func (s *scheduler) revokeApplyOrder(kt *kit.Kit, subOrderId string, taskIDs []string) error {
+	// 1. 修改 apply order 状态为 GracefulTerminate
+	filter := &mapstr.MapStr{
+		"suborder_id": subOrderId,
+	}
+	doc := &mapstr.MapStr{
+		"status": types.ApplyStatusGracefulTerminate,
+	}
+	err := model.Operation().ApplyOrder().UpdateApplyOrder(kt.Ctx, filter, doc)
+	if err != nil {
+		return err
+	}
+
+	// 2. 发起 CRP 撤单
+	// CRP 单据撤销失败，只记录日志
+	errs := make([]string, 0)
+	for _, taskID := range taskIDs {
+		params := &cvmapi.RevokeCvmOrderParams{
+			OrderId: taskID,
+		}
+		req := cvmapi.NewRevokeCvmOrderReq(params)
+		resp, err := s.crpCli.RevokeCvmOrder(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("taskID: %s, err: %v", taskID, err))
+			logs.Warnf("failed to revoke cvm order, taskID: %s, err: %v, rid: %s", taskID, err, kt.Rid)
+			continue
+		}
+
+		if resp.RespMeta.Error.Code != 0 {
+			err = fmt.Errorf("failed to revoke cvm order, trace id: %s, code: %d, msg: %s",
+				resp.TraceId, resp.RespMeta.Error.Code, resp.RespMeta.Error.Message)
+			logs.Warnf("failed to revoke cvm order, err: %v, rid: %s", err, kt.Rid)
+			continue
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+
+	return nil
+}
