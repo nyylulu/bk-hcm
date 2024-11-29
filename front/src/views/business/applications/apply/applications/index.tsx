@@ -103,7 +103,7 @@ export default defineComponent({
       let routeParams: RouteLocationRaw = {
         name: 'HostApplicationsDetail',
         params: { id: row.order_id },
-        query: route.query,
+        query: { ...route.query, creator: row.bk_username, bkBizId: row.bk_biz_id },
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };

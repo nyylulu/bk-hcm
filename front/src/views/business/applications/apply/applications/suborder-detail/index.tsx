@@ -1,6 +1,6 @@
 import { defineComponent, PropType, ref, watch } from 'vue';
 
-import { Table } from 'bkui-vue';
+import { Message, Table } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import CommonDialog from '@/components/common-dialog';
 
@@ -8,6 +8,7 @@ import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import CrpTicketAudit from './crp-ticket-audit.vue';
 
 export interface SubOrderInfo {
   step_name: string;
@@ -77,7 +78,8 @@ export default defineComponent({
         switch (props.subOrderInfo.step_id) {
           case 2: {
             fetchApi.value = scrStore.getProductionDetails;
-            tableColumns.value = producingColumns;
+            // 增加折叠列，显示crp审批流信息
+            tableColumns.value = [{ type: 'expand', minWidth: 50 }, ...producingColumns];
             break;
           }
           case 3: {
@@ -91,6 +93,7 @@ export default defineComponent({
             break;
           }
         }
+
         pagination.start = 0;
         getListData();
       },
@@ -113,6 +116,24 @@ export default defineComponent({
       isDialogShow.value = v;
     };
 
+    const handleRowExpand = async ({ row }: any) => {
+      row.isExpand = row.isExpand !== undefined ? !row.isExpand : true;
+    };
+
+    const isCancelApplyCrpTicketLoading = ref(false);
+    const cancelCrpTicket = async () => {
+      isCancelApplyCrpTicketLoading.value = true;
+      try {
+        await scrStore.cancelApplyCrpTicket({ suborder_id: String(props.subOrderInfo.suborder_id) });
+        Message({ theme: 'success', message: '撤单成功' });
+        getListData();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        isCancelApplyCrpTicketLoading.value = false;
+      }
+    };
+
     expose({ triggerShow });
 
     return () => (
@@ -121,11 +142,26 @@ export default defineComponent({
         title={`资源${props.subOrderInfo.step_name}详情`}
         width={1200}
         dialogType='show'>
-        <BkRadioGroup v-model={curStatus.value}>
-          {DETAIL_STATUS.map(({ label, name }) => (
-            <BkRadioButton label={label}>{name}</BkRadioButton>
-          ))}
-        </BkRadioGroup>
+        <div class='flex-row align-items-center'>
+          <BkRadioGroup v-model={curStatus.value}>
+            {DETAIL_STATUS.map(({ label, name }) => (
+              <BkRadioButton label={label}>{name}</BkRadioButton>
+            ))}
+          </BkRadioGroup>
+          {/* todo: 暂时不限制按钮功能 */}
+          {props.subOrderInfo.step_id === 2 && (
+            <bk-pop-confirm
+              title='撤销单据'
+              content='撤销单据后，将取消本次的资源申请！'
+              trigger='click'
+              placement='top-end'
+              onConfirm={cancelCrpTicket}>
+              <bk-button style='margin-left: auto' theme='primary' loading={isCancelApplyCrpTicketLoading.value}>
+                撤单
+              </bk-button>
+            </bk-pop-confirm>
+          )}
+        </div>
         <bk-loading loading={isLoading.value}>
           <Table
             style={{ maxHeight: '600px', marginTop: '16px' }}
@@ -136,7 +172,13 @@ export default defineComponent({
             showOverflowTooltip
             onPageLimitChange={handlePageLimitChange}
             onPageValueChange={handlePageValueChange}
-          />
+            onRowExpand={handleRowExpand}>
+            {{
+              expandRow: (row: any) => {
+                return <CrpTicketAudit crpTicketId={row.task_id} subOrderId={String(props.subOrderInfo.suborder_id)} />;
+              },
+            }}
+          </Table>
         </bk-loading>
       </CommonDialog>
     );

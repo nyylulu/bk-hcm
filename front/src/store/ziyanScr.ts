@@ -2,7 +2,7 @@ import http from '@/http';
 import { CreateRecallTaskModal } from '@/typings/scr';
 import { defineStore } from 'pinia';
 
-import type { IPageQuery } from '@/typings/common';
+import type { IPageQuery, IQueryResData } from '@/typings/common';
 import type {
   IRecycleArea,
   IQueryDissolveList,
@@ -12,6 +12,7 @@ import type {
   IDissolveHostOriginListResult,
   IDissolveHostOriginListParam,
   IDissolveRecycledModuleListParam,
+  IApplyCrpTicketAudit,
 } from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -138,6 +139,20 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
       filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
     });
 
+  // 获取资源申请CRP单据审核信息：docs/api-docs/web-server/docs/biz/scr/get_ticket_crp_audit_by_suborderid.md
+  const getApplyCrpTicketAudit = async (data: { crp_ticket_id: string; suborder_id: string }) => {
+    const res: IQueryResData<IApplyCrpTicketAudit> = await http.post(
+      `/api/v1/woa/${getBusinessApiPath()}task/apply/crp_ticket/audit/get`,
+      data,
+    );
+    return res.data;
+  };
+
+  // 取消主机申请子订单的所有可取消CRP单据
+  const cancelApplyCrpTicket = async (data: { suborder_id: string }) => {
+    return http.post(`/api/v1/woa/${getBusinessApiPath()}task/apply/ticket/crp_audit/cancel`, data);
+  };
+
   // 查询裁撤数据中当前主机信息。
   const dissolveHostCurrentList = (data: IDissolveHostCurrentListParam): Promise<IDissolveHostCurrentListResult> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/dissolve/host/current/list`, data);
@@ -219,6 +234,8 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     getInitializationDetails,
     getDiskCheckDetails,
     getDeliveryDetails,
+    getApplyCrpTicketAudit,
+    cancelApplyCrpTicket,
     dissolveHostCurrentList,
     dissolveHostOriginList,
     getRequirementList,
