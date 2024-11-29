@@ -142,8 +142,11 @@ type Interface interface {
 	GetGenerator() *generator.Generator
 
 	// CheckRollingServerHost check rolling server host
-	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*types.CheckRollingServerHostResp,
-		error)
+	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
+		*types.CheckRollingServerHostResp, error)
+
+	// CancelApplyTicketItsm cancel apply ticket which in itsm
+	CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error
 }
 
 // scheduler provides resource apply service
@@ -2094,3 +2097,96 @@ func calculateMonths(startTime, endTime time.Time) int {
 
 	return totalMonths
 }
+
+// CancelApplyTicketItsm ...
+func (s *scheduler) CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error {
+	filter := mapstr.MapStr{
+		"order_id": req.OrderID,
+	}
+
+	applyTicket, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	ticketStatusResp, err := s.itsm.GetTicketStatus(kt, applyTicket.ItsmTicketId)
+	if err != nil {
+		logs.Errorf("failed to get ticket status, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 0. 判断单据状态
+	err = checkTicketCanCancel(kt, applyTicket, ticketStatusResp.Data)
+	if err != nil {
+		return err
+	}
+
+	// 1. 关闭 hcm 单据
+	applyReq := &types.ApproveApplyReq{
+		OrderId:  applyTicket.OrderId,
+		Operator: kt.User,
+		Approval: false,
+		Remark:   fmt.Sprintf("%s手动取消单据", kt.User),
+	}
+	err = s.ApproveTicket(kt, applyReq)
+	if err != nil {
+		logs.Errorf("failed to approve ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 2. 关闭 itsm 单据
+	actionMsg := fmt.Sprintf("%s手动取消单据", kt.User)
+	err = s.itsm.TerminateTicket(kt, applyTicket.ItsmTicketId, enumor.ItsmOperatorHcm, actionMsg)
+	if err != nil {
+		logs.Errorf("failed to cancel itsm ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// checkTicketCanCancel 检查单据是否可以撤单
+func checkTicketCanCancel(kt *kit.Kit, applyTicket *types.ApplyTicket, ticketStatusRst *itsm.GetTicketStatusRst) error {
+	// 1. 只有提单人可以撤单
+	if applyTicket.User != kt.User {
+		return errors.New("only ticket creator can cancel ticket")
+	}
+
+	// 2. 单据需要处于运行中或暂停状态
+	ticketStatus := itsm.Status(ticketStatusRst.CurrentStatus)
+	if ticketStatus != (itsm.StatusRunning) && ticketStatus != (itsm.StatusSuspended) {
+		return errors.New("ticket status is not running or suspended")
+	}
+
+	// 3. 单据只有处于指定节点时才可以取消
+	canCancel := false
+	for _, step := range ticketStatusRst.CurrentSteps {
+		if checkStepCanCancel(step.Name) {
+			canCancel = true
+			break
+		}
+	}
+	if !canCancel {
+		return errors.New("ticket steps cannot be cancelled")
+	}
+
+	return nil
+}
+
+// checkStepCanCancel 检查单据步骤是否可以撤单
+func checkStepCanCancel(stepName string) bool {
+	switch stepName {
+	case ItsmAuditStepAdmin, ItsmAuditStepLeader:
+		return true
+	default:
+		return false
+	}
+}
+
+const (
+	// ItsmAuditStepAdmin 管理员审核
+	ItsmAuditStepAdmin = "管理员审核"
+	// ItsmAuditStepLeader leader审核
+	ItsmAuditStepLeader = "leader审核"
+)

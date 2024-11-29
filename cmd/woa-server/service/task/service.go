@@ -89,6 +89,7 @@ func (s *service) initSchedulerService(h *rest.Handler) {
 	h.Add("UpdateApplyTicket", http.MethodPost, "/update/apply/ticket", s.UpdateApplyTicket)
 	h.Add("GetApplyTicket", http.MethodPost, "/get/apply/ticket", s.GetApplyTicket)
 	h.Add("GetApplyAudit", http.MethodPost, "/get/apply/ticket/audit", s.GetApplyAudit)
+	h.Add("CancelApplyTicketItsm", http.MethodPost, "/apply/ticket/itsm_audit/cancel", s.CancelApplyTicketItsm)
 	h.Add("AuditApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditApplyTicket)
 	h.Add("AutoAuditApplyTicket", http.MethodPost, "/autoaudit/apply/ticket", s.AutoAuditApplyTicket)
 	h.Add("AutoAuditApplyTicket", http.MethodPost, "/approve/apply/ticket", s.ApproveApplyTicket)
@@ -148,4 +149,5 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("GetBizRecycleDetect", http.MethodPost, "/findmany/recycle/detect", s.GetBizRecycleDetect)
 	h.Add("ListBizDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListBizDetectHost)
 	h.Add("GetBizRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetBizRecycleDetectStep)
+	h.Add("CancelBizApplyTicketItsm", http.MethodPost, "/apply/ticket/itsm_audit/cancel", s.CancelBizApplyTicketItsm)
 }

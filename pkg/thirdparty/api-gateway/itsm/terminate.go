@@ -26,14 +26,21 @@ import (
 	"hcm/pkg/thirdparty/api-gateway"
 )
 
-// WithdrawTicket 撤销单据
-// WithdrawTicket 撤销单据，需要符合撤销条件，正常用户能在 ITSM 上执行此操作。
-func (i *itsm) WithdrawTicket(kt *kit.Kit, sn string, operator string) error {
+type actionType = string
+
+const (
+	// ActionTypeTERMINATE 终止
+	ActionTypeTERMINATE actionType = "TERMINATE"
+)
+
+// TerminateTicket 终止单据
+// TerminateTicket 不关心单据当前处于什么状态，直接终止，需要单独申请权限，正常用户无法在 ITSM 上执行此操作。
+func (i *itsm) TerminateTicket(kt *kit.Kit, sn string, operator string, actionMsg string) error {
 	req := map[string]interface{}{
 		"sn":             sn,
 		"operator":       operator,
-		"action_type":    "WITHDRAW",
-		"action_message": "applicant withdraw ticket",
+		"action_type":    ActionTypeTERMINATE,
+		"action_message": actionMsg,
 	}
 	resp := new(apigateway.BaseResponse)
 	err := i.client.Post().
@@ -46,7 +53,7 @@ func (i *itsm) WithdrawTicket(kt *kit.Kit, sn string, operator string) error {
 		return err
 	}
 	if !resp.Result || resp.Code != 0 {
-		return fmt.Errorf("withdraw ticket failed, code: %d, msg: %s", resp.Code, resp.Message)
+		return fmt.Errorf("terminate ticket failed, code: %d, msg: %s", resp.Code, resp.Message)
 	}
 
 	return nil

@@ -139,7 +139,13 @@ func (s *service) GetBizApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyTicket(cts.Kit, input)
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
 }
 
 // GetApplyTicket get apply ticket
@@ -156,14 +162,9 @@ func (s *service) GetApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyTicket(cts.Kit, input)
-}
-
-// getApplyTicket get apply ticket
-func (s *service) getApplyTicket(kt *kit.Kit, input *types.GetApplyTicketReq) (any, error) {
-	rst, err := s.logics.Scheduler().GetApplyTicket(kt, input)
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -1389,6 +1390,8 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// getApplyOrderBizIds get apply order biz ids
+// Deprecated: use listApplyOrders instead
 func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int64, error) {
 	filter := map[string]interface{}{}
 
@@ -1418,6 +1421,44 @@ func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int
 	return bizIds, nil
 }
 
+// listApplyOrders list apply orders
+type filterOptFunc func(filter map[string]interface{})
+
+// withOrderID filter apply order by order id
+func withOrderID(orderID int64) filterOptFunc {
+	return func(filter map[string]interface{}) {
+		filter["order_id"] = orderID
+	}
+}
+
+// withSuborderIDs filter apply order by suborder ids
+func withSuborderIDs(suborderIDs []string) filterOptFunc {
+	return func(filter map[string]interface{}) {
+		if len(suborderIDs) == 0 {
+			return
+		}
+
+		filter["suborder_id"] = mapstr.MapStr{
+			pkg.BKDBIN: suborderIDs,
+		}
+	}
+}
+
+// listApplyTicket list apply orders
+func (s *service) listApplyTicket(kit *kit.Kit, filterOptFns ...filterOptFunc) (*types.ApplyTicket, error) {
+	filter := mapstr.MapStr{}
+	for _, fn := range filterOptFns {
+		fn(filter)
+	}
+
+	ticket, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ticket, nil
+}
+
 // CheckRollingServerHost check rolling server host
 func (s *service) CheckRollingServerHost(cts *rest.Contexts) (any, error) {
 	input := new(types.CheckRollingServerHostReq)
@@ -1438,4 +1479,72 @@ func (s *service) CheckRollingServerHost(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// CancelApplyTicketItsm ...
+func (s *service) CancelApplyTicketItsm(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.CancelApplyTicketItsmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	ticket, err := s.listApplyTicket(cts.Kit, withOrderID(req.OrderID))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: ticket.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketItsm(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket itsm, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
+}
+
+// CancelBizApplyTicketItsm ...
+func (s *service) CancelBizApplyTicketItsm(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel biz apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(types.CancelApplyTicketItsmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketItsm(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel biz apply ticket itsm, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
 }

@@ -1416,3 +1416,13 @@ type CheckRollingServerHostResp struct {
 	NewBillingExpireTime time.Time `json:"new_billing_expire_time"`
 	CloudInstID          string    `json:"bk_cloud_inst_id"`
 }
+
+// CancelApplyTicketItsmReq cancel apply ticket crp request
+type CancelApplyTicketItsmReq struct {
+	OrderID int64 `json:"order_id" validate:"required"`
+}
+
+// Validate CancelApplyTicketItsmReq
+func (c *CancelApplyTicketItsmReq) Validate() error {
+	return validator.Validate.Struct(c)
+}
