@@ -274,6 +274,11 @@ func (svc *cvmSvc) mapTCloudZiyanCloudCvms(kt *kit.Kit, cvms map[int64]corecvm.C
 	for key, cloudIDs := range mapAccountRegionToCvmCloudID {
 		split := strings.Split(key, "+")
 		accountID, region := split[0], split[1]
+		if region == "" {
+			logs.Errorf("region is empty, account_id: %s, cvm_ids: %v, rid: %s", accountID, cloudIDs, kt.Rid)
+			return nil, fmt.Errorf("region is empty, account_id: %s, cvm_ids: %v", accountID, cloudIDs)
+		}
+
 		for _, ids := range slice.Split(cloudIDs, typecore.TCloudQueryLimit) {
 			req := &corecvm.QueryCloudCvmReq{
 				Vendor:    enumor.TCloudZiyan,
