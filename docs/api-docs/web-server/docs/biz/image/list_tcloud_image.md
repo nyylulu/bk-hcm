@@ -1,17 +1,18 @@
 ### 描述
 
-- 该接口提供版本：v9.9.9+。
+- 该接口提供版本：v1.7.0.4+。
 - 该接口所需权限：业务访问。
 - 该接口功能描述：查询腾讯云镜像列表。
 
 ### URL
 
-POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/tcloud/images/query_from_cloud
+POST /api/v1/cloud/bizs/{bk_biz_id}/vendors/{vendor}/images/query_from_cloud
 
 ### 请求参数
 | 参数名称       | 参数类型         | 必选 | 描述                                   |
 |------------|--------------|----|--------------------------------------|
 | bk_biz_id  | int64        | 是  | 业务ID                                 |
+| vendor     | string       | 是  | 云厂商（枚举值：tcloud）                |
 | account_id | string       | 是  | 账号ID                                 |
 | region     | string       | 是  | 地域ID（唯一标识）                           |
 | cloud_ids  | string array | 否  | 镜像ID列表, 不能和filters同时使用               |
