@@ -9,7 +9,8 @@ import NoPermission from '@/views/resource/NoPermission';
 import AccountList from '../resource/resource-manage/account/accountList';
 import GlobalPermissionDialog from '@/components/global-permission-dialog';
 
-import cookie from 'cookie';
+import Cookies from 'js-cookie';
+import i18n from '@/language/i18n';
 import { useI18n } from 'vue-i18n';
 import { useVerify } from '@/hooks';
 import { useUserStore, useAccountStore, useCommonStore } from '@/store';
@@ -72,7 +73,7 @@ export default defineComponent({
     const isRouterAlive = ref<Boolean>(true);
     const curYear = ref(new Date().getFullYear());
     const isMenuOpen = ref<boolean>(true);
-    const language = ref(cookie.parse(document.cookie).blueking_language || 'zh-cn');
+    const language = ref(Cookies.get('blueking_language') || i18n.global.locale.value);
 
     const isNeedSideMenu = computed(
       () => ![Senarios.resource, Senarios.scheme, Senarios.unauthorized].includes(whereAmI.value),
@@ -165,7 +166,7 @@ export default defineComponent({
     watch(
       () => language.value,
       async (val) => {
-        document.cookie = `blueking_language=${val}; domain=${BK_HCM_DOMAIN}`;
+        Cookies.set('blueking_language', val, { domain: BK_HCM_DOMAIN });
         await saveLanguage(val);
         location.reload();
       },

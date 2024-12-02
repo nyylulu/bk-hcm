@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch, watchEffect } from 'vue';
 import { useRoute } from 'vue-router';
-import { ITaskCountItem, ITaskDetailItem, ITaskItem, ITaskStatusItem, useTaskStore } from '@/store';
+import { ITaskCountItem, ITaskDetailItem, ITaskItem, useTaskStore } from '@/store';
 import { ResourceTypeEnum } from '@/common/resource-constant';
 import useBreakcrumb from '@/hooks/use-breakcrumb';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -37,19 +37,19 @@ const condition = ref<Record<string, any>>({});
 
 const selections = ref([]);
 
-// 本任务的状态
-const status = ref<ITaskStatusItem>();
 // 本任务统计数据
 const counts = ref<ITaskCountItem>();
 
 const statusPoolIds = computed(() => {
-  return taskDetailList.value.filter((item) => [TaskDetailStatus.RUNNING].includes(item.state)).map((item) => item.id);
+  return taskDetailList.value
+    .filter((item) => [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(item.state))
+    .map((item) => item.id);
 });
 
 const fetchCountAndStatus = async () => {
   // 获取当前任务状态与统计数据
-  const reqs: Promise<ITaskStatusItem[] | ITaskCountItem[] | ITaskDetailItem[]>[] = [
-    taskStore.getTaskStatus({ bk_biz_id: getBizsId(), ids: [id.value] }),
+  const reqs: Promise<ITaskItem | ITaskCountItem[] | ITaskDetailItem[]>[] = [
+    taskStore.getTaskDetails(id.value, getBizsId()),
     taskStore.getTaskCounts({ bk_biz_id: getBizsId(), ids: [id.value] }),
   ];
 
@@ -60,13 +60,10 @@ const fetchCountAndStatus = async () => {
 
   const [statusRes, countRes, detailStatusRes] = await Promise.allSettled(reqs);
 
-  const statusList = (statusRes as PromiseFulfilledResult<ITaskStatusItem[]>).value ?? [];
-  const detailStatusList = (detailStatusRes as PromiseFulfilledResult<ITaskDetailItem[]>)?.value ?? [];
-  const countList = (countRes as PromiseFulfilledResult<ITaskCountItem[]>)?.value ?? [];
-
   // 更新本任务的状态与统计数据
-  [counts.value] = countList;
-  [status.value] = statusList;
+  taskDetails.value = (statusRes as PromiseFulfilledResult<ITaskItem>).value;
+  [counts.value] = (countRes as PromiseFulfilledResult<ITaskCountItem[]>)?.value ?? [];
+  const detailStatusList = (detailStatusRes as PromiseFulfilledResult<ITaskDetailItem[]>)?.value ?? [];
 
   // 更新当前任务详情列表中数据的状态
   taskDetailList.value.forEach((row) => {

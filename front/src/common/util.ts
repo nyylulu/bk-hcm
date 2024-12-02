@@ -3,23 +3,6 @@ import utc from 'dayjs/plugin/utc';
 
 dayjs.extend(utc);
 
-// 获取 cookie object
-export function getCookies(strCookie = document.cookie): any {
-  if (!strCookie) {
-    return {};
-  }
-  const arrCookie = strCookie.split('; '); // 分割
-  const cookiesObj = {};
-  arrCookie.forEach((cookieStr) => {
-    const arr = cookieStr.split('=');
-    const [key, value] = arr;
-    if (key) {
-      cookiesObj[key] = value;
-    }
-  });
-  return cookiesObj;
-}
-
 /**
  * 检查是不是 object 类型
  * @param item
@@ -119,27 +102,6 @@ export function classes(dynamicCls: object, constCls = ''): string {
     .join(' ')
     .concat(constCls ? ` ${constCls}` : '');
 }
-
-/**
- * 获取Cookie
- * @param {String} name
- */
-export const getCookie = (name: string) => {
-  const reg = new RegExp(`(^|)${name}=([^;]*)(;|$)`);
-  const data = document.cookie.match(reg);
-  if (data) {
-    return unescape(data[2]);
-  }
-  return null;
-};
-
-/**
- * 删除Cookie
- * @param {String} name
- */
-export const deleteCookie = (name: string) => {
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/`;
-};
 
 /**
  * 对象转为 url query 字符串

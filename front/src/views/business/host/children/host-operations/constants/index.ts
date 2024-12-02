@@ -1,13 +1,15 @@
 import i18n from '@/language/i18n';
 import { ConstantMapRecord } from '@/typings';
-import { ImageType } from './typings';
+import { ImageType } from '../typings';
 
 const { t } = i18n.global;
 
-export const RESET_STATUS_MAP: ConstantMapRecord = {
+export const OPERATE_STATUS_MAP: ConstantMapRecord = {
+  0: t('正常'),
   1: t('不是主备负责人，无权限进行该操作'),
   2: t('不在空闲机模块，不可重装'),
-  3: t('CC运营状态不在“重装中”，不可重装'),
+  3: t('云服务器未处于关机状态'),
+  4: t('云服务器未处于开机状态'),
 };
 
 // 物理机

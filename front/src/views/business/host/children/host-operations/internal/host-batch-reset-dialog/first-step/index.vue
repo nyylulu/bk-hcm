@@ -3,12 +3,14 @@ import { computed, ref } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { getLocalFilterFnBySearchSelect } from '@/utils/search';
-import type { CvmListRestStatusData } from '../typings';
+import type { CvmListRestDataView } from '../../../typings';
 
-import resetTable from './reset-table.vue';
-import unResetTable from './unreset-table.vue';
+import cvmStatusBaseColumns from '../../../constants/cvm-status-base-columns';
 
-const props = defineProps<{ listData: CvmListRestStatusData }>();
+import cvmStatusTable from '../../../children/cvm-status-table.vue';
+import cvmStatusCollapseTable from '../../../children/cvm-status-collapse-table.vue';
+
+const props = defineProps<{ listData: CvmListRestDataView }>();
 
 const { t } = useI18n();
 const regionsStore = useRegionsStore();
@@ -61,9 +63,9 @@ const renderList = computed(() => {
     </section>
 
     <!-- 可重装 -->
-    <reset-table v-if="isResettable" :list="renderList" />
+    <cvm-status-table v-if="isResettable" :list="renderList" :columns="cvmStatusBaseColumns" />
     <!-- 不可重装 -->
-    <un-reset-table v-else :list="renderList" />
+    <cvm-status-collapse-table v-else :list="renderList" />
   </div>
 </template>
 

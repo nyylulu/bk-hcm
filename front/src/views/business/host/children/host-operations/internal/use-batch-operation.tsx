@@ -1,4 +1,4 @@
-import { computed, Ref, watch } from 'vue';
+import { computed, Ref, useTemplateRef, watch } from 'vue';
 import { Message } from 'bkui-vue';
 import { useZiyanScrStore } from '@/store';
 import { VendorEnum } from '@/common/constant';
@@ -9,6 +9,8 @@ import routerAction from '@/router/utils/action';
 import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
 import { OperationActions } from './index';
 import defaultUseBatchOperation, { type Params } from '../use-batch-operation';
+import { CvmOperateType, useCvmOperateStore } from '@/store/cvm-operate';
+import { getPrivateIPs, getPublicIPs } from '@/utils';
 
 const useBatchOperation = ({ selections, onFinished }: Params) => {
   const {
@@ -44,6 +46,7 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
   const { getBizsId } = useWhereAmI();
   const scrStore = useZiyanScrStore();
   const businessStore = useBusinessStore();
+  const cvmOperateStore = useCvmOperateStore();
 
   // 重装操作不集成到 host-operations 组件中
   const isDialogShow = computed(() => defaultIsDialogShow.value && OperationActions.RESET !== operationType.value);
@@ -145,9 +148,33 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     }
   };
 
-  watch(operationType, async () => {
+  const getZiyanCvmOperateStatus = async (type: OperationActions) => {
+    isDialogLoading.value = true;
+    try {
+      const ids = selections.value.map((v) => v.id);
+      const operate_type = type as CvmOperateType;
+      const list = (await cvmOperateStore.getCvmListOperateStatus({ ids, operate_type })).map((item) => ({
+        ...item,
+        private_ip_address: getPrivateIPs(item),
+        public_ip_address: getPublicIPs(item),
+      }));
+
+      // operate_status 为 0，push 到 targetHost.value 中；其他状态值，push 到 unTargetHost.value 中
+      targetHost.value = list.filter((v) => v.operate_status === 0);
+      unTargetHost.value = list.filter((v) => v.operate_status !== 0);
+    } finally {
+      isDialogLoading.value = false;
+    }
+  };
+
+  watch(operationType, async (type) => {
     if (isZiyanRecycle.value) {
       await getRecyclableStatus();
+    }
+
+    // 自研云主机操作：开/关机、重启
+    if (isZiyanOnly.value && [OperationActions.START, OperationActions.STOP, OperationActions.REBOOT].includes(type)) {
+      await getZiyanCvmOperateStatus(type);
     }
 
     // 公有云回收
@@ -159,32 +186,31 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     handleSwitch(targetHost.value.length > 0);
   });
 
+  const moaVerifyRef = useTemplateRef<any>('moa-verify');
   const handleConfirm = async () => {
     if (isZiyanOnly.value) {
       const hostIds = targetHost.value.map((v) => v.id);
-      if ([OperationActions.START, OperationActions.STOP, OperationActions.REBOOT].includes(operationType.value)) {
-        try {
-          isLoading.value = true;
+      const session_id = moaVerifyRef.value?.verifyResult.session_id;
 
-          const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds });
+      try {
+        isLoading.value = true;
 
-          Message({
-            message: '操作成功',
-            theme: 'success',
-          });
+        const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds, session_id });
 
-          // 跳转至新任务详情页
-          routerAction.redirect({
-            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-            params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
-            query: { bizs: getBizsId() },
-          });
-          operationType.value = OperationActions.NONE;
-        } finally {
-          isLoading.value = false;
-        }
-      } else {
-        // 批量重装
+        Message({
+          message: '操作成功',
+          theme: 'success',
+        });
+
+        // 跳转至新任务详情页
+        routerAction.redirect({
+          name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+          params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
+          query: { bizs: getBizsId() },
+        });
+        operationType.value = OperationActions.NONE;
+      } finally {
+        isLoading.value = false;
       }
     } else {
       defaultHandleConfirm();
@@ -206,11 +232,13 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     hostPrivateIP4s,
     isLoading,
     tableData,
+    targetHost,
     selected,
     isDialogLoading,
     searchData,
     selectedRowPrivateIPs,
     selectedRowPublicIPs,
+    moaVerifyRef,
     handleSwitch,
     handleConfirm,
     handleCancelDialog,

@@ -1,6 +1,6 @@
-import { deleteCookie } from '@/common/util';
 import { defineStore } from 'pinia';
 import { ref } from 'vue';
+import Cookies from 'js-cookie';
 
 export default defineStore('usePagePermissionStore', () => {
   const hasPagePermission = ref(true);
@@ -9,8 +9,8 @@ export default defineStore('usePagePermissionStore', () => {
   const setPermissionMsg = (val: string) => (permissionMsg.value = val);
 
   const logout = () => {
-    deleteCookie('bk_token');
-    deleteCookie('bk_ticket');
+    Cookies.remove('bk_token', { path: '/' });
+    Cookies.remove('bk_ticket', { path: '/' });
     window.location.href = `${window.PROJECT_CONFIG.BK_LOGIN_URL}/?is_from_logout=1&c_url=${window.location.href}`;
   };
 

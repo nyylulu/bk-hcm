@@ -1,29 +1,29 @@
 <script setup lang="ts">
-import { useTemplateRef, watchEffect } from 'vue';
+import { computed, ComputedRef, useTemplateRef, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
-import type { ICvmListRestStatus } from '@/store/cvm/reset';
+import type { ICvmListOperateStatus } from '@/store/cvm-operate';
 import useFormModel from '@/hooks/useFormModel';
-import { IDC_SVC_SOURCE_TYPE_IDS, IMAGE_TYPE_NAME } from '../constants';
+import { IDC_SVC_SOURCE_TYPE_IDS, IMAGE_TYPE_NAME } from '../../../constants';
 import type { ModelPropertyColumn } from '@/model/typings';
-import type { ITableModel } from '../typings';
+import type { ICvmOperateTableView } from '../../../typings';
 
 import { Form } from 'bkui-vue';
 import ImageSelector, { IImageItem } from './image-selector.vue';
 import PwdInput from '@/views/service/service-apply/cvm/children/PwdInput';
 
 interface IFormModel {
-  hosts: ITableModel[];
+  hosts: ICvmOperateTableView[];
   pwd: string;
   pwd_confirm: string;
 }
 interface Exposes {
   formModel: IFormModel;
-  validateEmpty: () => boolean;
+  isParamsHasEmptyValue: ComputedRef<boolean>;
   validateForm: () => Promise<boolean>;
 }
 
-const props = defineProps<{ list: ICvmListRestStatus[] }>();
+const props = defineProps<{ list: ICvmListOperateStatus[] }>();
 
 const { t } = useI18n();
 
@@ -89,7 +89,7 @@ const handleImageNameChange = (image: IImageItem, row: any) => {
   row.image_name = name;
 
   // 为聚合条下的每个主机添加批量重装参数
-  row.list = row.list.map((item: ICvmListRestStatus) => {
+  row.list = row.list.map((item: ICvmListOperateStatus) => {
     return {
       ...item,
       image_name_old: item.bk_os_name,
@@ -100,11 +100,11 @@ const handleImageNameChange = (image: IImageItem, row: any) => {
   });
 };
 
-const validateEmpty = () => {
-  const v1 = formModel.hosts.some((item) => item.image_type === '' || item.image_name === '');
+const isParamsHasEmptyValue = computed(() => {
+  const v1 = formModel.hosts.some((item) => !item.image_type || !item.image_name);
   const v2 = formModel.pwd === '' || formModel.pwd_confirm === '';
   return v1 || v2;
-};
+});
 
 const validateForm = async () => formRef.value.validate();
 
@@ -123,14 +123,14 @@ watchEffect(() => {
     Object.assign(target, { count: target.count + 1, list: [...target.list, curr] });
 
     return prev;
-  }, new Map<string, ITableModel>());
+  }, new Map<string, ICvmOperateTableView>());
 
   formModel.hosts = initialMap.values().toArray();
 });
 
 defineExpose<Exposes>({
   formModel,
-  validateEmpty,
+  isParamsHasEmptyValue,
   validateForm,
 });
 </script>

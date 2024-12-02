@@ -2,21 +2,29 @@
   <select-column
     ref="selectRef"
     style="height: 42px"
+    id-key="cloud_id"
+    display-key="name"
     v-model="localValue"
     :clearable="false"
     :loading="isLoading"
+    :scroll-loading="isScrollLoading"
     :list="selectList"
+    :remote-method="remoteMethod"
     @change="handleChange"
+    @scroll-end="handleScrollEnd"
   />
 </template>
 
 <script setup lang="ts">
-import { ref, watch, watchEffect } from 'vue';
-import { SelectColumn } from '@blueking/ediatable';
-import type { IListItem } from '@blueking/ediatable/typings/components/select-column.vue';
+import { reactive, ref, watch, watchEffect } from 'vue';
+import { debounce } from 'lodash';
+
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import type { IListItem } from '@blueking/ediatable/typings/components/select-column.vue';
+import type { IListResData } from '@/typings';
 import http from '@/http';
-import rollRequest from '@blueking/roll-request';
+
+import { SelectColumn } from '@blueking/ediatable';
 
 interface Props {
   modelValue?: string;
@@ -61,7 +69,15 @@ const selectRef = ref();
 const localValue = ref(props.modelValue);
 
 const isLoading = ref(false);
+const isScrollLoading = ref(false);
 const selectList = ref<ImageList>([]);
+const totalCount = ref(0);
+const params = reactive<Params>({
+  account_id: props.accountId,
+  region: props.region,
+  filters: [],
+  page: { limit: 100, offset: 0 },
+});
 
 const handleChange = async () => {
   const value = await selectRef.value.getValue();
@@ -69,40 +85,72 @@ const handleChange = async () => {
   emit('change', target);
 };
 
-const getList = async (params: Params) => {
-  const list = (await rollRequest({
-    httpClient: http,
-    pageStartKey: 'offset',
-  }).rollReq(`/api/v1/cloud/${getBusinessApiPath()}vendors/${props.vendor}/images/query_from_cloud`, params, {
-    limit: 100,
-    countGetter: (res) => res.data.count,
-    listGetter: (res) => res.data.details,
-  })) as ImageList;
-
-  return list;
+const reset = () => {
+  Object.assign(params, { filters: [], page: { limit: 100, offset: 0 } });
+  selectList.value = [];
+  totalCount.value = 0;
 };
 
+const getList = async () => {
+  try {
+    const res: IListResData<ImageList> = await http.post(
+      `/api/v1/cloud/${getBusinessApiPath()}vendors/${props.vendor}/images/query_from_cloud`,
+      params,
+    );
+    const { details: list = [], count = 0 } = res.data ?? {};
+    selectList.value = [...selectList.value, ...list];
+    totalCount.value = count;
+
+    return { list, count };
+  } catch (error) {
+    console.error(error);
+    reset();
+  }
+};
+
+const handleScrollEnd = async () => {
+  if (totalCount.value <= selectList.value.length || isScrollLoading.value) return;
+
+  isScrollLoading.value = true;
+  try {
+    params.page.offset += params.page.limit;
+    await getList();
+  } finally {
+    isScrollLoading.value = false;
+  }
+};
+
+// 远程搜索
+const remoteMethod = debounce(async (name: string) => {
+  reset();
+  const filters = [{ name: 'image-type', values: [props.imageType] }];
+  name && filters.push({ name: 'image-name', values: [name] });
+  Object.assign(params, { filters });
+
+  isLoading.value = true;
+  try {
+    await getList();
+  } finally {
+    isLoading.value = false;
+  }
+}, 500);
+
+// 镜像类型变更时，重置列表
 watch(
   () => props.imageType,
   async (imageType) => {
     if (!imageType) return;
-    const { accountId, region } = props;
-    const params: Params = { account_id: accountId, region, filters: [{ name: 'image-type', values: [imageType] }] };
+    reset();
+    Object.assign(params, { filters: [{ name: 'image-type', values: [imageType] }] });
+
     isLoading.value = true;
     try {
-      const list = await getList(params);
-      // id-key, display-key 没有透传, 暂时用默认的
-      selectList.value = list.map((item) => ({ ...item, label: item.name, value: item.cloud_id }));
-    } catch (error) {
-      console.error(error);
-      selectList.value = [];
+      await getList();
     } finally {
       isLoading.value = false;
     }
   },
-  {
-    immediate: true,
-  },
+  { immediate: true },
 );
 
 watchEffect(() => {

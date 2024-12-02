@@ -1,25 +1,23 @@
 <script setup lang="ts">
-import type { ICvmListRestStatus } from '@/store/cvm/reset';
+import type { ICvmListOperateStatus } from '@/store/cvm-operate';
+import type { ModelPropertyColumn } from '@/model/typings';
 
-import columns from './columns';
-
-const props = defineProps<{ list: ICvmListRestStatus[] }>();
-
-const renderColumns = columns.slice();
+defineOptions({ name: 'cvm-status-table' });
+defineProps<{ list: ICvmListOperateStatus[]; columns: ModelPropertyColumn[] }>();
 </script>
 
 <template>
   <bk-table
     class=""
     row-hover="auto"
-    :data="props.list"
+    :data="list"
     min-height="auto"
     max-height="300px"
     show-overflow-tooltip
     row-key="id"
   >
     <bk-table-column
-      v-for="(column, index) in renderColumns"
+      v-for="(column, index) in columns"
       :key="index"
       :prop="column.id"
       :label="column.name"

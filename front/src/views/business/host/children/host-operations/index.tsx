@@ -38,6 +38,7 @@ export type OperationActionType = keyof typeof OperationActions;
 
 export type OperationMapItem = {
   label: string;
+  labelEn?: string;
   disabledStatus?: string[];
   loading?: boolean;
   authId?: string;
@@ -52,6 +53,7 @@ export const operationMap = {
   },
   [OperationActions.START]: {
     label: '开机',
+    labelEn: 'Start',
     disabledStatus: HOST_RUNNING_STATUS,
     loading: false,
     // 鉴权参数
@@ -60,6 +62,7 @@ export const operationMap = {
   },
   [OperationActions.STOP]: {
     label: '关机',
+    labelEn: 'Stop',
     disabledStatus: HOST_SHUTDOWN_STATUS,
     loading: false,
     // 鉴权参数
@@ -68,6 +71,7 @@ export const operationMap = {
   },
   [OperationActions.REBOOT]: {
     label: '重启',
+    labelEn: 'Reboot',
     disabledStatus: HOST_SHUTDOWN_STATUS,
     loading: false,
     // 鉴权参数

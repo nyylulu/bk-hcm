@@ -4,11 +4,13 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 import type { IListResData } from '@/typings';
 import http from '@/http';
 
-export interface ICvmListRestStatus {
+export interface ICvmListOperateStatus {
   id: string;
+  vendor: string;
   account_id: string;
   bk_host_id: number;
   bk_host_name: string;
+  cloud_id: string;
   bk_asset_id: string;
   private_ipv4_addresses: string[];
   private_ipv6_addresses: string[];
@@ -18,14 +20,13 @@ export interface ICvmListRestStatus {
   bak_operator: string;
   device_type: string;
   region: string;
-  vendor: string;
   zone: string;
   bk_os_name: string;
   topo_module: string;
   bk_svr_source_type_id: string; // '1','2','3'是物理机, '4','5'是虚拟机
   status: string;
   srv_status: string;
-  reset_status: number;
+  operate_status: number;
   // view-properties
   private_ip_address?: string;
   public_ip_address?: string;
@@ -35,7 +36,10 @@ export interface ICvmListRestStatus {
   image_type?: string;
 }
 
-interface ICvmBatchResetAsyncHost {
+export type CvmOperateType = 'start' | 'stop' | 'reboot' | 'reset';
+
+// 批量重装
+interface ICvmBatchResetAsyncHostItem {
   id: string;
   bk_asset_id: string;
   device_type: string;
@@ -45,16 +49,16 @@ interface ICvmBatchResetAsyncHost {
   image_type: string;
 }
 
-export const useCvmResetStore = defineStore('cvm-reset', () => {
+export const useCvmOperateStore = defineStore('cvm-operate', () => {
   const { getBusinessApiPath } = useWhereAmI();
 
-  // 查询虚拟机重装状态列表：docs/api-docs/web-server/docs/biz/list_cvm_reset_status.md
-  const isCvmListResetStatusLoading = ref(false);
-  const getCvmListResetStatus = async (data: { ids: string[] }) => {
-    isCvmListResetStatusLoading.value = true;
+  // 查询虚拟机可操作状态列表, 如开关机、重启、重装：/docs/api-docs/web-server/docs/biz/cvm/list_cvm_operate_status.md
+  const isCvmListOperateStatusLoading = ref(false);
+  const getCvmListOperateStatus = async (data: { ids: string[]; operate_type: CvmOperateType }) => {
+    isCvmListOperateStatusLoading.value = true;
     try {
-      const res: IListResData<ICvmListRestStatus[]> = await http.post(
-        `/api/v1/cloud/${getBusinessApiPath()}cvms/list/reset/status`,
+      const res: IListResData<ICvmListOperateStatus[]> = await http.post(
+        `/api/v1/cloud/${getBusinessApiPath()}cvms/list/operate/status`,
         data,
       );
       return res?.data?.details || [];
@@ -62,13 +66,18 @@ export const useCvmResetStore = defineStore('cvm-reset', () => {
       console.error(error);
       return Promise.reject(error);
     } finally {
-      isCvmListResetStatusLoading.value = false;
+      isCvmListOperateStatusLoading.value = false;
     }
   };
 
-  // 批量重装虚拟机：docs/api-docs/web-server/docs/biz/batch_reset_cvm.md
+  // 批量重装虚拟机：/docs/api-docs/web-server/docs/biz/cvm/batch_reset_cvm.md
   const isCvmBatchResetAsyncLoading = ref(false);
-  const cvmBatchResetAsync = async (params: { hosts: ICvmBatchResetAsyncHost[]; pwd: string; pwd_confirm: string }) => {
+  const cvmBatchResetAsync = async (params: {
+    hosts: ICvmBatchResetAsyncHostItem[];
+    pwd: string;
+    pwd_confirm: string;
+    session_id: string;
+  }) => {
     isCvmBatchResetAsyncLoading.value = true;
     try {
       const res = await http.post(`/api/v1/cloud/${getBusinessApiPath()}cvms/batch/reset_async`, params);
@@ -82,8 +91,8 @@ export const useCvmResetStore = defineStore('cvm-reset', () => {
   };
 
   return {
-    isCvmListResetStatusLoading,
-    getCvmListResetStatus,
+    isCvmListOperateStatusLoading,
+    getCvmListOperateStatus,
     isCvmBatchResetAsyncLoading,
     cvmBatchResetAsync,
   };

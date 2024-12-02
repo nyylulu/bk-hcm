@@ -1,21 +1,27 @@
-import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
+import { PropType, computed, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
-import { Button, Dialog, Dropdown, Loading, Message, bkTooltips } from 'bkui-vue';
 import cssModule from '../index.module.scss';
-import { AngleDown } from 'bkui-vue/lib/icon';
-import { BkDropdownItem, BkDropdownMenu } from 'bkui-vue/lib/dropdown';
+
 import { useZiyanScrStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
-import CommonLocalTable from '@/components/LocalTable';
-import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
-import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
 import { operationMap as defaultOperationMap, OperationMapItem } from '../index';
+import cvmStatusBaseColumns from '../constants/cvm-status-base-columns';
+
+import { Button, Dialog, Dropdown, Message, bkTooltips } from 'bkui-vue';
+import { BkDropdownItem, BkDropdownMenu } from 'bkui-vue/lib/dropdown';
+import { BkButtonGroup } from 'bkui-vue/lib/button';
+import { AngleDown } from 'bkui-vue/lib/icon';
 import RecycleFlow from './recycle-flow.vue';
+import CommonLocalTable from '@/components/LocalTable';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
+import HostBatchResetDialog from './host-batch-reset-dialog/index.vue';
+import CvmStatusCollapseTable from '../children/cvm-status-collapse-table.vue';
+import CvmStatusTable from '../children/cvm-status-table.vue';
+import MoaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
+
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
-
-import HostBatchResetDialog from './host-batch-reset-dialog/index.vue';
 
 export enum OperationActions {
   NONE = 'none',
@@ -36,6 +42,7 @@ export const operationMap: Record<OperationActions, OperationMapItem> = {
   },
   [OperationActions.RESET]: {
     label: '重装',
+    labelEn: 'Reset',
     disabledStatus: [] as string[],
     loading: false,
     // 鉴权参数
@@ -83,9 +90,9 @@ export default defineComponent({
       computedContent,
       isLoading,
       selected,
-      isDialogLoading,
       computedColumns,
       tableData,
+      targetHost,
       searchData,
       isMix,
       isZiyanOnly,
@@ -96,6 +103,7 @@ export default defineComponent({
       handleSwitch,
       handleConfirm,
       handleCancelDialog,
+      moaVerifyRef,
     } = useBatchOperation({
       selections,
       onFinished: props.onFinished,
@@ -193,6 +201,24 @@ export default defineComponent({
     // 主机重装
     const hostBatchResetDialogRef = useTemplateRef<typeof HostBatchResetDialog>('host-batch-reset-dialog');
 
+    // 开/关机、重启 MOA校验
+    const moaVerifyPromptPayload = computed(() => {
+      const operateName = operationMap[operationType.value].label;
+      const operateNameEn = operationMap[operationType.value].labelEn;
+      const operateNum = tableData.value.length;
+
+      return {
+        zh: {
+          title: `HCM-主机${operateName}确认`,
+          desc: `您正在对${operateNum}台主机执行${operateName}，是否同意本次操作？`,
+        },
+        en: {
+          title: `HCM-Host ${operateNameEn} Verification`,
+          desc: `${operateNameEn} OS on ${operateNum} host(s). Do you agree to this operation?`,
+        },
+      };
+    });
+
     expose({
       handleSingleZiyanRecycle,
       hostBatchResetDialogRef,
@@ -260,6 +286,7 @@ export default defineComponent({
           </Dropdown>
         </div>
 
+        {/* 开机、关机、重启、回收操作 dialog */}
         <Dialog
           isShow={isDialogShow.value}
           quickClose={false}
@@ -267,65 +294,119 @@ export default defineComponent({
           ref={dialogRef}
           width={1500}
           closeIcon={!isLoading.value}
-          onClosed={handleCancelDialog}>
+          onClosed={handleCancelDialog}
+          renderDirective='if'>
           {{
             default: () => (
-              <Loading loading={isDialogLoading.value}>
-                <div class={cssModule['host-operations-main']}>
-                  {isZiyanRecycle.value ? (
-                    <RecycleFlow
-                      ref={recycleFlowRef}
-                      ips={hostPrivateIP4s.value}
-                      onSelectChange={handleZiyanRecycleSelectChange}>
-                      {commonTable()}
-                    </RecycleFlow>
-                  ) : (
-                    <>
-                      {computedTips.value && <div class={cssModule['host-operations-tips']}>{computedTips.value}</div>}
-                      {commonTable()}
-                    </>
-                  )}
-                </div>
-              </Loading>
+              <div class={cssModule['host-operations-main']}>
+                {isZiyanRecycle.value ? (
+                  <RecycleFlow
+                    ref={recycleFlowRef}
+                    ips={hostPrivateIP4s.value}
+                    onSelectChange={handleZiyanRecycleSelectChange}>
+                    {commonTable()}
+                  </RecycleFlow>
+                ) : (
+                  <>
+                    {computedTips.value && <div class={cssModule['host-operations-tips']}>{computedTips.value}</div>}
+                    {/* 自研云主机操作 */}
+                    {isZiyanOnly.value ? (
+                      <>
+                        <div class={[cssModule['host-operations-toolbar'], 'mb12']}>
+                          <BkButtonGroup>
+                            <Button onClick={() => handleSwitch(true)} selected={selected.value === 'target'}>
+                              可{operationMap[operationType.value].label}
+                            </Button>
+                            <Button onClick={() => handleSwitch(false)} selected={selected.value === 'untarget'}>
+                              不可{operationMap[operationType.value].label}
+                            </Button>
+                          </BkButtonGroup>
+                          {computedContent.value}
+                        </div>
+                        {selected.value === 'target' ? (
+                          <CvmStatusTable list={tableData.value} columns={cvmStatusBaseColumns} />
+                        ) : (
+                          <CvmStatusCollapseTable list={tableData.value} />
+                        )}
+                      </>
+                    ) : (
+                      // 公有云主机操作
+                      commonTable()
+                    )}
+                  </>
+                )}
+              </div>
             ),
             footer: (
-              <>
-                {isZiyanRecycle.value ? (
-                  <>
-                    {!recycleFlowRef.value?.isFirstStep?.() && (
-                      <Button onClick={() => recycleFlowRef.value.prevStep()} class='mr10'>
-                        上一步
-                      </Button>
-                    )}
+              <div class={cssModule.footer}>
+                {(function () {
+                  // 自研云回收
+                  if (isZiyanRecycle.value) {
+                    return (
+                      <>
+                        {!recycleFlowRef.value?.isFirstStep?.() && (
+                          <Button class={cssModule.button} onClick={() => recycleFlowRef.value.prevStep()}>
+                            上一步
+                          </Button>
+                        )}
+                        <Button
+                          class={cssModule.button}
+                          onClick={
+                            recycleFlowRef.value?.isLastStep?.()
+                              ? () => handleZiyanRecycleSubmit()
+                              : () => recycleFlowRef.value.nextStep()
+                          }
+                          theme='primary'
+                          disabled={
+                            recycleFlowRef.value?.isLastStep?.()
+                              ? !ziyanRecycleSelected.value.length
+                              : isConfirmDisabled.value
+                          }
+                          loading={isLoading.value}>
+                          {recycleFlowRef.value?.isLastStep?.() ? '提交' : '下一步'}
+                        </Button>
+                      </>
+                    );
+                  }
+                  // 自研云开/关机、重启
+                  if (isZiyanOnly.value) {
+                    return (
+                      <>
+                        {targetHost.value.length > 0 && (
+                          <MoaVerifyBtn
+                            ref='moa-verify'
+                            class={cssModule['moa-verify-btn']}
+                            verifyText='MOA校验'
+                            promptPayload={moaVerifyPromptPayload.value}
+                          />
+                        )}
+                        <Button
+                          class={cssModule.button}
+                          onClick={handleConfirm}
+                          theme='primary'
+                          disabled={moaVerifyRef.value?.verifyResult.button_type !== 'confirm'}
+                          loading={isLoading.value}>
+                          {operationMap[operationType.value].label}
+                        </Button>
+                      </>
+                    );
+                  }
+                  // 公有云开/关机、重启、回收
+                  return (
                     <Button
-                      onClick={
-                        recycleFlowRef.value?.isLastStep?.()
-                          ? () => handleZiyanRecycleSubmit()
-                          : () => recycleFlowRef.value.nextStep()
-                      }
+                      class={cssModule.button}
+                      onClick={handleConfirm}
                       theme='primary'
-                      disabled={
-                        recycleFlowRef.value?.isLastStep?.()
-                          ? !ziyanRecycleSelected.value.length
-                          : isConfirmDisabled.value
-                      }
+                      disabled={isConfirmDisabled.value}
                       loading={isLoading.value}>
-                      {recycleFlowRef.value?.isLastStep?.() ? '提交' : '下一步'}
+                      {operationMap[operationType.value].label}
                     </Button>
-                  </>
-                ) : (
-                  <Button
-                    onClick={handleConfirm}
-                    theme='primary'
-                    disabled={isConfirmDisabled.value}
-                    loading={isLoading.value}>
-                    {operationMap[operationType.value].label}
-                  </Button>
-                )}
-                <Button onClick={handleCancelDialog} class='ml10' disabled={isLoading.value}>
+                  );
+                })()}
+                <Button onClick={handleCancelDialog} class={cssModule.button} disabled={isLoading.value}>
                   取消
                 </Button>
-              </>
+              </div>
             ),
           }}
         </Dialog>

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { reactive, ref, useTemplateRef, watchEffect } from 'vue';
+import { computed, reactive, ref, useTemplateRef } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { Message } from 'bkui-vue';
@@ -7,12 +7,13 @@ import description from './description.vue';
 import firstStep from './first-step/index.vue';
 import secondStep from './second-step/index.vue';
 import thirdStep from './third-step/index.vue';
+import moaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
 
-import { useCvmResetStore } from '@/store/cvm/reset';
+import { useCvmOperateStore } from '@/store/cvm-operate';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { getPrivateIPs, getPublicIPs } from '@/utils';
 import routerAction from '@/router/utils/action';
-import type { CvmListRestStatusData, ITableModel } from './typings';
+import type { CvmListRestDataView, ICvmOperateTableView } from '../../typings';
 import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
 import { ResourceTypeEnum } from '@/common/constant';
 
@@ -24,14 +25,14 @@ defineOptions({ name: 'host-batch-reset-dialog' });
 
 const { t } = useI18n();
 const { getBizsId } = useWhereAmI();
-const cvmResetStore = useCvmResetStore();
+const cvmOperateStore = useCvmOperateStore();
 
 const isShow = ref(false);
-const listData = reactive<CvmListRestStatusData>({ reset: [], unReset: [], count: 0 });
+const listData = reactive<CvmListRestDataView>({ reset: [], unReset: [], count: 0 });
 const show = async (ids: string[]) => {
   try {
     // 获取主机重装状态list
-    const list = (await cvmResetStore.getCvmListResetStatus({ ids })).map((item) => ({
+    const list = (await cvmOperateStore.getCvmListOperateStatus({ ids, operate_type: 'reset' })).map((item) => ({
       ...item,
       private_ip_address: getPrivateIPs(item),
       public_ip_address: getPublicIPs(item),
@@ -39,8 +40,8 @@ const show = async (ids: string[]) => {
 
     // 组装主机重装状态data
     Object.assign(listData, {
-      reset: list.filter((item) => item.reset_status === 0),
-      unReset: list.filter((item) => item.reset_status !== 0),
+      reset: list.filter((item) => item.operate_status === 0),
+      unReset: list.filter((item) => item.operate_status !== 0),
       count: list.length,
     });
 
@@ -60,13 +61,11 @@ const state = reactive({
 });
 
 const secondStepRef = useTemplateRef('second-step-ref');
-const thirdStepRef = useTemplateRef('third-step-ref');
-const thirdStepInitialList = ref<ITableModel[]>();
+const thirdStepRef = useTemplateRef<InstanceType<typeof thirdStep>>('third-step-ref');
+const thirdStepInitialList = ref<ICvmOperateTableView[]>();
 
 // 判断是否可点击下一步、提交
-const isNextStepDisabled = ref(true);
-const nextStepDisabledTooltips = reactive<{ content?: string; disabled: boolean }>({ disabled: true });
-watchEffect(() => {
+const nextStepDisabledOptions = computed(() => {
   let disabled = true;
   let content = '';
 
@@ -76,18 +75,18 @@ watchEffect(() => {
     content = t('没有可重装的主机');
   } else if (state.curStep === 2) {
     // 若当前为第二步，检查镜像参数、密码是否为空
-    disabled = secondStepRef.value?.validateEmpty();
+    disabled = secondStepRef.value?.isParamsHasEmptyValue;
     content = t('镜像参数或密码不能为空');
   } else {
-    // 若当前为第三步，检查是否同意协议
-    disabled = thirdStepRef.value?.validateEmpty();
-    content = t('请阅读并同意重装协议');
+    // 若当前为第三步，检查是否同意协议以及MOA校验是否通过
+    const isAgree = thirdStepRef.value?.formModel.agree;
+    disabled = !isAgree || moaVerifyResult.value?.button_type !== 'confirm';
+    content = isAgree ? t('未通过MOA校验') : t('请阅读并同意重装协议');
   }
-
-  isNextStepDisabled.value = disabled;
-  Object.assign(nextStepDisabledTooltips, { disabled: !disabled, content });
+  return { disabled, tooltips: { disabled: !disabled, content } };
 });
 
+const submitHosts = computed(() => thirdStepRef.value?.submitHosts || []);
 const handleNext = async () => {
   if (state.curStep === 1) {
     // 若当前为第一步，直接跳转第二步
@@ -100,9 +99,11 @@ const handleNext = async () => {
   } else {
     // 若当前为第三步, 提交重装
     const { pwd, pwd_confirm } = secondStepRef.value?.formModel || {};
-    const hosts = thirdStepRef.value?.getSubmitHosts();
-    const params = { hosts, pwd, pwd_confirm };
-    const res = await cvmResetStore.cvmBatchResetAsync(params);
+    const hosts = submitHosts.value;
+    const { session_id } = moaVerifyResult.value;
+    const params = { hosts, pwd, pwd_confirm, session_id };
+
+    const res = await cvmOperateStore.cvmBatchResetAsync(params);
     Message({ theme: 'success', message: t('提交成功') });
     hide();
     // 跳转至新任务详情页
@@ -117,6 +118,9 @@ const handleNext = async () => {
 const handlePrev = () => {
   state.curStep -= 1;
 };
+
+const moaVerifyRef = useTemplateRef('moa-verify');
+const moaVerifyResult = computed(() => moaVerifyRef.value?.verifyResult);
 
 defineExpose<Exposes>({ show });
 </script>
@@ -144,18 +148,33 @@ defineExpose<Exposes>({ show });
 
     <template #footer>
       <div class="i-footer-wrap">
+        <moa-verify-btn
+          v-if="state.curStep === 3"
+          class="button moa-verify-btn"
+          ref="moa-verify"
+          :prompt-payload="{
+            zh: {
+              title: 'HCM-主机重装确认',
+              desc: `您正在对${submitHosts.length}台主机重装系统，是否同意本次操作？`,
+            },
+            en: {
+              title: 'HCM-Host Reinstall Verification',
+              desc: `Reinstall OS on ${submitHosts.length} host(s). Do you agree to this operation?`,
+            },
+          }"
+        />
         <bk-button v-if="state.curStep !== 1" class="button" @click="handlePrev">{{ t('上一步') }}</bk-button>
         <bk-button
-          class="button ml-auto"
+          class="button"
           theme="primary"
-          :disabled="isNextStepDisabled"
-          :loading="cvmResetStore.isCvmBatchResetAsyncLoading"
+          :disabled="nextStepDisabledOptions.disabled"
+          :loading="cvmOperateStore.isCvmBatchResetAsyncLoading"
           @click="handleNext"
-          v-bk-tooltips="nextStepDisabledTooltips"
+          v-bk-tooltips="nextStepDisabledOptions.tooltips"
         >
           {{ state.curStep === 3 ? t('提交') : t('下一步') }}
         </bk-button>
-        <bk-button class="button ml8" @click="hide">{{ t('取消') }}</bk-button>
+        <bk-button class="button" @click="hide">{{ t('取消') }}</bk-button>
       </div>
     </template>
   </bk-dialog>
@@ -171,11 +190,18 @@ defineExpose<Exposes>({ show });
   .i-footer-wrap {
     display: flex;
     align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+
     .button {
       min-width: 88px;
     }
-    .ml-auto {
-      margin-left: auto;
+    .moa-verify-btn {
+      margin-right: auto;
+
+      :deep(.error-message) {
+        max-width: 800px;
+      }
     }
   }
 }

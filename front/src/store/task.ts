@@ -188,7 +188,7 @@ export const useTaskStore = defineStore('task', () => {
           op: 'and',
           rules: [{ field: 'id', op: QueryRuleOPEnum.IN, value: ids }],
         },
-        fields: ['state'],
+        fields: ['state', 'id'],
         page: maxPageParams(),
       });
       return res?.data?.details;

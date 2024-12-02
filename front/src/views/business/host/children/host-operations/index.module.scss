@@ -1,4 +1,6 @@
 .host-operations-main {
+  min-height: 40vh;
+
   :global(.felx-row) {
     display: flex;
     align-items: center;
@@ -29,7 +31,7 @@
 }
 
 .host_operations_blue_txt {
-  color: rgb(0, 136, 255)
+  color: rgb(0, 136, 255);
 }
 
 .host_operations_red_txt {
@@ -60,5 +62,21 @@
   .host-operations-selection-tip-untarget {
     color: #ea3636;
     font-weight: bold;
+  }
+}
+
+.footer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+
+  .moa-verify-btn {
+    margin-right: auto;
+  }
+
+  .button {
+    min-width: 88px;
   }
 }

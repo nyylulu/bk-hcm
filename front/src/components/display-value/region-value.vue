@@ -1,8 +1,13 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue';
 import { useRegionStore } from '@/store/region';
+import { ResourceTypeEnum } from '@/common/resource-constant';
 
-const props = defineProps<{ value: string | string[]; vendor: string }>();
+const props = defineProps<{
+  value: string | string[];
+  vendor: string;
+  resourceType?: ResourceTypeEnum.CVM | ResourceTypeEnum.VPC | ResourceTypeEnum.DISK | ResourceTypeEnum.SUBNET;
+}>();
 
 const list = ref([]);
 
@@ -20,10 +25,8 @@ const displayValue = computed(() => {
 const regionStore = useRegionStore();
 
 watchEffect(async () => {
-  // TODO: 缓存与合并请求
   if (props.vendor) {
-    const res = await regionStore.getRegionList({ vendor: props.vendor });
-    list.value = res;
+    list.value = await regionStore.getRegionList({ vendor: props.vendor, resourceType: props.resourceType });
   }
 });
 </script>

@@ -1,13 +1,12 @@
 <script setup lang="ts">
-import { watchEffect } from 'vue';
+import { computed, Ref, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 import useFormModel from '@/hooks/useFormModel';
 import type { ModelPropertyColumn } from '@/model/typings';
-import type { ICvmListRestStatus } from '@/store/cvm/reset';
-import type { ITableModel } from '../typings';
+import type { ICvmOperateTableView } from '../../../typings';
 
 interface IFormModel {
-  hosts: ITableModel[];
+  hosts: ICvmOperateTableView[];
   agree: boolean;
 }
 
@@ -22,11 +21,11 @@ interface ISubmitHostItem {
 }
 
 interface Exposes {
-  validateEmpty: () => boolean;
-  getSubmitHosts: () => ISubmitHostItem[];
+  formModel: IFormModel;
+  submitHosts: Ref<ISubmitHostItem[]>;
 }
 
-const props = defineProps<{ list: ITableModel[] }>();
+const props = defineProps<{ list: ICvmOperateTableView[] }>();
 
 const { t } = useI18n();
 
@@ -54,26 +53,30 @@ const expandRowColumns: ModelPropertyColumn[] = [
   { id: 'image_name_old', name: t('原镜像名称'), type: 'string', width: 250 },
 ];
 
-const validateEmpty = () => {
-  return formModel.agree === false;
-};
-
-const getSubmitHosts = () => {
+// 用于提交的 hosts
+const submitHosts = computed(() => {
   return formModel.hosts
-    .reduce<ICvmListRestStatus[]>((prev, curr) => [...prev, ...curr.list], [])
-    .map<ISubmitHostItem>((item) => {
-      const { id, bk_asset_id, device_type, image_name_old, cloud_image_id, image_name, image_type } = item;
-      return { id, bk_asset_id, device_type, image_name_old, cloud_image_id, image_name, image_type };
-    });
-};
+    ? formModel.hosts
+        .flatMap((curr) => curr.list)
+        .map(({ id, bk_asset_id, device_type, image_name_old, cloud_image_id, image_name, image_type }) => ({
+          id,
+          bk_asset_id,
+          device_type,
+          image_name_old,
+          cloud_image_id,
+          image_name,
+          image_type,
+        }))
+    : [];
+});
 
 watchEffect(() => {
   formModel.hosts = props.list;
 });
 
 defineExpose<Exposes>({
-  validateEmpty,
-  getSubmitHosts,
+  formModel,
+  submitHosts,
 });
 </script>
 
