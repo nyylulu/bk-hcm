@@ -21,7 +21,11 @@ package times
 
 import (
 	"fmt"
+	"strconv"
 	"time"
+
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/logs"
 )
 
 // GetLastMonth get last month year and month
@@ -140,4 +144,20 @@ func GetLastMonthUTC() (year int, month int) {
 func GetRelativeMonthUTC(offset int) (int, int) {
 	now := time.Now().UTC()
 	return getRelativeMonth(now.Year(), int(now.Month()), offset)
+}
+
+// ConvStrTimeToInt convert str time to int
+func ConvStrTimeToInt(strTime, layout string) (int, error) {
+	t, err := time.Parse(layout, strTime)
+	if err != nil {
+		return 0, err
+	}
+
+	strTime = t.Format(constant.DateLayoutCompact)
+	timeInt, err := strconv.Atoi(strTime)
+	if err != nil {
+		logs.Errorf("convert str time to int failed, strTime: %s, err: %v", strTime, t, err)
+		return 0, err
+	}
+	return timeInt, nil
 }

@@ -13,25 +13,27 @@
 // Package task ...
 package task
 
+import "hcm/pkg/criteria/enumor"
+
 // DVMSelector docker vm selector parameter
 type DVMSelector struct {
-	Cores             int      `json:"cpu"`
-	Memory            int      `json:"mem"`
-	Disk              int      `json:"disk"`
-	DeviceClass       string   `json:"deviceClass"`
-	Image             string   `json:"image"`
-	Kernel            string   `json:"kernel"`
-	DockerType        string   `json:"dockerType"`
-	NetworkType       string   `json:"networkType"`
-	DataDiskMountPath string   `json:"dataDiskMountPath"`
-	DataDiskType      string   `json:"dataDiskType"`
-	DataDiskRaid      string   `json:"dataDiskRaid"`
-	Region            string   `json:"region"`
-	Zone              string   `json:"zone"`
-	ExtranetIsp       string   `json:"extranetIsp"`
-	HostRole          string   `json:"hostRole"`
-	CpuProvider       string   `json:"cpuProvider"`
-	AmdDevicePattern  []string `json:"amdDevicePattern"`
+	Cores             int             `json:"cpu"`
+	Memory            int             `json:"mem"`
+	Disk              int             `json:"disk"`
+	DeviceClass       string          `json:"deviceClass"`
+	Image             string          `json:"image"`
+	Kernel            string          `json:"kernel"`
+	DockerType        string          `json:"dockerType"`
+	NetworkType       string          `json:"networkType"`
+	DataDiskMountPath string          `json:"dataDiskMountPath"`
+	DataDiskType      enumor.DiskType `json:"dataDiskType"`
+	DataDiskRaid      string          `json:"dataDiskRaid"`
+	Region            string          `json:"region"`
+	Zone              string          `json:"zone"`
+	ExtranetIsp       string          `json:"extranetIsp"`
+	HostRole          string          `json:"hostRole"`
+	CpuProvider       string          `json:"cpuProvider"`
+	AmdDevicePattern  []string        `json:"amdDevicePattern"`
 }
 
 // HostPriority docker host priority for schedule

@@ -22,6 +22,7 @@ package demandchangelog
 
 import (
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -30,6 +31,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -55,12 +57,19 @@ func (svc *service) BatchUpdateDemandChangelog(cts *rest.Contexts) (interface{},
 				CrpOrderID: updateReq.CrpOrderID,
 				SuborderID: updateReq.SuborderID,
 				Type:       updateReq.Type,
-				ExpectTime: updateReq.ExpectTime,
 				ObsProject: updateReq.ObsProject,
 				RegionName: updateReq.RegionName,
 				ZoneName:   updateReq.ZoneName,
 				DeviceType: updateReq.DeviceType,
 				Remark:     updateReq.Remark,
+			}
+			// 把字符串类型的[期望交付时间转]为符合格式的Int类型
+			if len(updateReq.ExpectTime) > 0 {
+				expectTimeInt, err := times.ConvStrTimeToInt(updateReq.ExpectTime, constant.DateLayout)
+				if err != nil {
+					return nil, errf.NewFromErr(errf.InvalidParameter, err)
+				}
+				record.ExpectTime = expectTimeInt
 			}
 			if updateReq.OSChange != nil {
 				record.OSChange = &types.Decimal{Decimal: cvt.PtrToVal(updateReq.OSChange)}

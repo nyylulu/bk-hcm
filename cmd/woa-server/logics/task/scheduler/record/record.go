@@ -133,7 +133,7 @@ func CreateDeliverRecord(info *types.DeviceInfo) error {
 	}
 	cnt, err := model.Operation().DeliverRecord().CountDeliverRecord(context.Background(), filter)
 	if err != nil {
-		logs.Errorf("failed to create deliver record, err: %v", err)
+		logs.Errorf("failed to create deliver record, subOrderID: %s, err: %v", info.SubOrderId, err)
 		return err
 	}
 	if cnt > 0 {
@@ -152,12 +152,13 @@ func CreateDeliverRecord(info *types.DeviceInfo) error {
 		GenerateTaskLink: info.GenerateTaskLink,
 		InitTaskId:       info.InitTaskId,
 		InitTaskLink:     info.InitTaskLink,
+		IsManualMatched:  info.IsManualMatched,
 		CreateAt:         now,
 		UpdateAt:         now,
 		StartAt:          now,
 	}
-	if err := model.Operation().DeliverRecord().CreateDeliverRecord(context.Background(), record); err != nil {
-		logs.Errorf("failed to create deliver record, err: %v", err)
+	if err = model.Operation().DeliverRecord().CreateDeliverRecord(context.Background(), record); err != nil {
+		logs.Errorf("failed to create deliver record, subOrderID: %s, err: %v", info.SubOrderId, err)
 		return err
 	}
 

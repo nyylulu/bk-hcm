@@ -595,7 +595,7 @@ func (g *Generator) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, er
 // launchCvm creates cvm and return created device ips
 func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint) (uint64, error) {
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
 	if err != nil {
 		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to launch cvm when init generate record, "+
 			"order id: %s, err: %v", order.SubOrderId, err)
@@ -751,7 +751,7 @@ func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSe
 	replicas uint) (uint64, error) {
 
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
 	if err != nil {
 		logs.Errorf("failed to launch docker vm when init generate record, order id: %s, err: %v", order.SubOrderId,
 			err)
@@ -895,30 +895,33 @@ func (g *Generator) getOrderGenRecords(suborderID string) ([]*types.GenerateReco
 }
 
 // initGenerateRecord creates generate record
-func (g *Generator) initGenerateRecord(resourceType types.ResourceType, orderId string, total uint) (uint64, error) {
+func (g *Generator) initGenerateRecord(resourceType types.ResourceType, subOrderId string, total uint,
+	isManualMatched bool) (uint64, error) {
+
 	id, err := model.Operation().GenerateRecord().NextSequence(context.Background())
 	if err != nil {
-		logs.Errorf("failed to get generate record next sequence id, order id: %s, err: %v", err)
+		logs.Errorf("failed to get generate record next sequence id, subOrderId: %s, err: %v", subOrderId, err)
 		return 0, err
 	}
 
 	now := time.Now()
 	record := &types.GenerateRecord{
-		SubOrderId:   orderId,
-		GenerateId:   id,
-		GenerateType: string(resourceType),
-		Status:       types.GenerateStatusInit,
-		IsMatched:    false,
-		TotalNum:     total,
-		SuccessNum:   0,
-		SuccessList:  make([]string, 0),
-		CreateAt:     now,
-		UpdateAt:     now,
-		StartAt:      now,
+		SubOrderId:      subOrderId,
+		GenerateId:      id,
+		GenerateType:    string(resourceType),
+		Status:          types.GenerateStatusInit,
+		IsMatched:       false,
+		TotalNum:        total,
+		SuccessNum:      0,
+		SuccessList:     make([]string, 0),
+		CreateAt:        now,
+		UpdateAt:        now,
+		StartAt:         now,
+		IsManualMatched: isManualMatched, // 是否手工匹配
 	}
 
-	if err := model.Operation().GenerateRecord().CreateGenerateRecord(context.Background(), record); err != nil {
-		logs.Errorf("failed to init generate record, order id: %s, err: %v", orderId, err)
+	if err = model.Operation().GenerateRecord().CreateGenerateRecord(context.Background(), record); err != nil {
+		logs.Errorf("failed to init generate record, subOrderId: %s, err: %v", subOrderId, err)
 		return 0, err
 	}
 
@@ -1088,6 +1091,7 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 			DiskCheckTaskId:   item.DiskCheckTaskId,
 			DiskCheckTaskLink: item.DiskCheckTaskLink,
 			Deliverer:         item.Deliverer,
+			IsManualMatched:   item.IsManualMatched,
 			CreateAt:          now,
 			UpdateAt:          now,
 		}
@@ -1247,7 +1251,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	}
 
 	// 如果是滚服类型，需要进行当月滚服额度的扣减
-	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
+	if order.RequireType == enumor.RequireTypeRollServer {
 		if err = g.rsLogics.ReduceRollingCvmProdAppliedRecord(kt, param.Device); err != nil {
 			logs.Errorf("reduce rolling server cvm product applied record failed, err: %+v, devices: %+v, rid: %s", err,
 				param.Device, kt.Rid)
@@ -1256,7 +1260,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	}
 
 	// set apply order status MATCHING
-	if err := g.lockApplyOrder(order); err != nil {
+	if err = g.lockApplyOrder(order); err != nil {
 		logs.Errorf("failed to match cvm when lock apply order, err: %v, order id: %s, rid: %s", err, param.SuborderId,
 			kt.Rid)
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, param.SuborderId)
@@ -1265,7 +1269,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	replicas := uint(len(param.Device))
 
 	// 2. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, true)
 	if err != nil {
 		logs.Errorf("failed to match cvm when init generate record, err: %v, order id: %s, rid: %s", err,
 			order.SubOrderId, kt.Rid)
@@ -1277,15 +1281,16 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	successIps := make([]string, 0)
 	for _, host := range param.Device {
 		deviceList = append(deviceList, &types.DeviceInfo{
-			Ip:        host.Ip,
-			AssetId:   host.AssetId,
-			Deliverer: param.Operator,
+			Ip:              host.Ip,
+			AssetId:         host.AssetId,
+			Deliverer:       param.Operator,
+			IsManualMatched: true,
 		})
 		successIps = append(successIps, host.Ip)
 	}
 
 	// 3. save generated cvm instances info
-	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err = g.createGeneratedDevice(order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s, rid: %s", err, order.SubOrderId,
 			kt.Rid)
@@ -1293,7 +1298,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 
 	// 4. update generate record status to success
 	msg := fmt.Sprintf("manually matched by %s successfully", param.Operator)
-	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
+	if err = g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
 		msg, "", successIps); err != nil {
 		logs.Errorf("failed to match cvm when update generate record, err: %v, order id: %s, rid: %s", err,
 			order.SubOrderId, kt.Rid)

@@ -43,7 +43,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 
 ```json
 {
-  "crp_demand_ids": [
+  "demand_ids": [
     "0000001z"
   ],
   "obs_projects": [

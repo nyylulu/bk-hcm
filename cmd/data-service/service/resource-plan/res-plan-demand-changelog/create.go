@@ -22,15 +22,19 @@ package demandchangelog
 
 import (
 	"fmt"
+	"strconv"
+	"time"
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	tablers "hcm/pkg/dal/table/resource-plan/res-plan-demand-changelog"
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/bkbase"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/util"
 
@@ -49,13 +53,23 @@ func (svc *service) BatchCreateDemandChangelog(cts *rest.Contexts) (interface{},
 	changelogIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		models := make([]tablers.DemandChangelogTable, len(req.Changelogs))
 		for idx, item := range req.Changelogs {
+			t, err := time.Parse(constant.DateLayout, item.ExpectTime)
+			if err != nil {
+				return nil, errf.NewFromErr(errf.InvalidParameter, err)
+			}
+			expectTime := t.Format(bkbase.DateLayout)
+			expectTimeInt, err := strconv.Atoi(expectTime)
+			if err != nil {
+				logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v", expectTime, err)
+			}
+
 			models[idx] = tablers.DemandChangelogTable{
 				DemandID:       item.DemandID,
 				TicketID:       item.TicketID,
 				CrpOrderID:     item.CrpOrderID,
 				SuborderID:     item.SuborderID,
 				Type:           item.Type,
-				ExpectTime:     item.ExpectTime,
+				ExpectTime:     expectTimeInt,
 				ObsProject:     item.ObsProject,
 				RegionName:     item.RegionName,
 				ZoneName:       item.ZoneName,

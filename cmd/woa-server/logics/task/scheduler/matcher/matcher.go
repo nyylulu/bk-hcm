@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/logics/plan"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/record"
@@ -40,6 +41,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	toolsutil "hcm/pkg/tools/util"
 	"hcm/pkg/tools/utils/wait"
@@ -49,6 +51,7 @@ import (
 // Matcher matches devices for apply order
 type Matcher struct {
 	rsLogics     rollingserver.Logics
+	planLogics   plan.Logics
 	configLogics config.Logics
 	informer     informer.Interface
 	sops         sopsapi.SopsClientInterface
@@ -61,10 +64,11 @@ type Matcher struct {
 
 // New create a matcher
 func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
-	clientConf cc.ClientConfig, informer informer.Interface) (*Matcher, error) {
+	clientConf cc.ClientConfig, informer informer.Interface, planLogics plan.Logics) (*Matcher, error) {
 
 	matcher := &Matcher{
 		rsLogics:     rsLogics,
+		planLogics:   planLogics,
 		configLogics: config.New(thirdCli),
 		informer:     informer,
 		sops:         thirdCli.Sops,
@@ -366,9 +370,16 @@ func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, mat
 			return err
 		}
 		doc.Set("delivered_core", sum)
+
+		// 为该子订单匹配CVM资源预测单并生成预测变更记录
+		if err = m.planLogics.AddMatchedPlanDemandExpendLogs(kt, order.BkBizId, order); err != nil {
+			logs.Errorf("failed to add matched plan demand expend logs, subOrderID: %s, err: %v, subOrder: %+v",
+				order.SubOrderId, err, cvt.PtrToVal(order))
+			return err
+		}
 	}
 
-	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
+	if err = model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
 		logs.Errorf("failed to update apply order, id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}
@@ -721,34 +732,34 @@ func (m *Matcher) checkDeviceDisk(info *types.DeviceInfo) error {
 // DeliverDevice delivers device to business
 func (m *Matcher) DeliverDevice(info *types.DeviceInfo, order *types.ApplyOrder) error {
 	if info.IsDelivered {
-		logs.Infof("host %s is delivered, need not deliver", info.Ip)
+		logs.Infof("host %s is delivered, need not deliver, subOrderID: %s", info.Ip, order.SubOrderId)
 		return nil
 	}
 
 	// create deliver record
 	if err := record.CreateDeliverRecord(info); err != nil {
-		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
+		logs.Errorf("failed to deliver device, ip: %s, subOrderID: %s, err: %v", info.Ip, order.SubOrderId, err)
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
 	// 1. set host module and host operator
 	if err := m.transferHostAndSetOperator(info, order); err != nil {
-		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
+		logs.Errorf("failed to deliver device, ip: %s, subOrderID: %s, err: %v", info.Ip, order.SubOrderId, err)
 		// update deliver record
 		if errRecord := record.UpdateDeliverRecord(info, err.Error(), types.DeliverStatusFailed); errRecord != nil {
-			logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
+			logs.Errorf("failed to deliver device, ip: %s, subOrderID: %s, err: %v", info.Ip, order.SubOrderId, err)
 			return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 		}
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
 	// 2. update device status
 	if err := m.SetDeviceDelivered(info); err != nil {
-		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
+		logs.Errorf("failed to deliver device, ip: %s, subOrderID: %s, err: %v", info.Ip, order.SubOrderId, err)
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
 
 	// update deliver record
 	if err := record.UpdateDeliverRecord(info, "success", types.DeliverStatusSuccess); err != nil {
-		logs.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
+		logs.Errorf("failed to deliver device, ip: %s, subOrderID: %s, err: %v", info.Ip, order.SubOrderId, err)
 		return fmt.Errorf("failed to deliver device, ip: %s, err: %v", info.Ip, err)
 	}
 

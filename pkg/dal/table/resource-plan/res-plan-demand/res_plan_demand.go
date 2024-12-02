@@ -47,7 +47,7 @@ var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "virtual_dept_name", NamedC: "virtual_dept_name", Type: enumor.String},
 	{Column: "demand_class", NamedC: "demand_class", Type: enumor.String},
 	{Column: "obs_project", NamedC: "obs_project", Type: enumor.String},
-	{Column: "expect_time", NamedC: "expect_time", Type: enumor.String},
+	{Column: "expect_time", NamedC: "expect_time", Type: enumor.Numeric},
 	{Column: "plan_type", NamedC: "plan_type", Type: enumor.String},
 	{Column: "area_id", NamedC: "area_id", Type: enumor.String},
 	{Column: "area_name", NamedC: "area_name", Type: enumor.String},
@@ -98,8 +98,8 @@ type ResPlanDemandTable struct {
 	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
 	// ObsProject 项目类型
 	ObsProject enumor.ObsProject `db:"obs_project" json:"obs_project" validate:"lte=64"`
-	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
-	ExpectTime string `db:"expect_time" json:"expect_time" validate:"lte=16"`
+	// ExpectTime 期望交付时间
+	ExpectTime int `db:"expect_time" json:"expect_time"`
 	// PlanType 预测内外
 	PlanType enumor.PlanTypeCode `db:"plan_type" json:"plan_type" validate:"lte=16"`
 	// AreaID 地域ID
@@ -177,7 +177,7 @@ func (r ResPlanDemandTable) InsertValidate() error {
 		return err
 	}
 
-	if len(r.ExpectTime) == 0 {
+	if r.ExpectTime <= 0 {
 		return errors.New("expect time can not be empty")
 	}
 

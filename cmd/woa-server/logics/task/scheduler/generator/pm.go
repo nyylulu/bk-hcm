@@ -22,6 +22,7 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"

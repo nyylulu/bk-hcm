@@ -29,7 +29,7 @@
 
 START TRANSACTION;
 
-drop talbe if exists `res_plan_demand`;
+drop table if exists `res_plan_demand`;
 # res_plan_demand table structure
 create table if not exists `res_plan_demand`
 (
@@ -45,7 +45,7 @@ create table if not exists `res_plan_demand`
     `virtual_dept_name` varchar(64)    not null comment '虚拟部门名称',
     `demand_class`      varchar(16)    not null comment '预测的需求类型(枚举值：CVM、CA)',
     `obs_project`       varchar(64)    not null comment '项目类型',
-    `expect_time`       varchar(16)    not null comment '期望到货时间，YYYY-MM-DD',
+    `expect_time`       int unsigned   not null comment '期望到货时间，YYYYMMDD',
     `plan_type`         varchar(16)    not null comment '预测内外（枚举值：in_plan、out_plan）',
     `area_id`           varchar(64)    not null comment '地域ID',
     `area_name`         varchar(64)    not null comment '地域名称',

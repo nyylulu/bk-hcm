@@ -170,6 +170,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM)
+	if err != nil {
+		logs.Errorf("new plan controller failed, err: %v", err)
+		return nil, err
+	}
+
 	kt := kit.New()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
@@ -189,7 +195,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		}
 
 		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
-			cc.WoaServer().ClientConfig)
+			cc.WoaServer().ClientConfig, planCtrl)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -197,16 +203,17 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	}
 
 	service := &Service{
-		client:      apiClientSet,
-		dao:         daoSet,
-		esbClient:   esbClient,
-		authorizer:  authorizer,
-		thirdCli:    thirdCli,
-		clientConf:  cc.WoaServer(),
-		informerIf:  informerIf,
-		schedulerIf: schedulerIf,
-		rsLogic:     rsLogics,
-		gcLogic:     gcLogics,
+		client:         apiClientSet,
+		dao:            daoSet,
+		esbClient:      esbClient,
+		authorizer:     authorizer,
+		thirdCli:       thirdCli,
+		clientConf:     cc.WoaServer(),
+		informerIf:     informerIf,
+		schedulerIf:    schedulerIf,
+		rsLogic:        rsLogics,
+		gcLogic:        gcLogics,
+		planController: planCtrl,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -269,19 +276,12 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, service.dao, itsmCli, service.thirdCli.CVM)
-	if err != nil {
-		logs.Errorf("new plan controller failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
 	// init elasticsearch client
 	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
 	if err != nil {
 		return nil, err
 	}
 
-	service.planController = planCtrl
 	service.clientConf = cc.WoaServer()
 	service.recyclerIf = recyclerIf
 	service.operationIf = operationIf

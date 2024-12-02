@@ -33,6 +33,8 @@ const (
 	DateTimeLayout = "2006-01-02 15:04:05"
 	// YearMonthLayout is the date layout with '%Y-%m'
 	YearMonthLayout = "2006-01"
+	// DateLayoutCompact is the date layout with '%Y%m%d'
+	DateLayoutCompact = "20060102"
 )
 
 // TimeStdRegexp is a regular expression to match the TimeStdFormat(RFC3339) with millisecond

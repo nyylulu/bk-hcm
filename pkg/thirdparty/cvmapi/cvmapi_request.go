@@ -14,6 +14,8 @@ package cvmapi
 
 import (
 	"fmt"
+
+	"hcm/pkg/criteria/enumor"
 )
 
 // ReqMeta cvm request meta info
@@ -110,8 +112,8 @@ type Image struct {
 
 // DataDisk cvm specification
 type DataDisk struct {
-	DataDiskType string `json:"dataDiskType"`
-	DataDiskSize int    `json:"dataDiskSize"`
+	DataDiskType enumor.DiskType `json:"dataDiskType"`
+	DataDiskSize int             `json:"dataDiskSize"`
 }
 
 // Security cvm security specification

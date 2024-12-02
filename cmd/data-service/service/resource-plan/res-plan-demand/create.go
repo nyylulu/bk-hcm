@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
@@ -33,6 +34,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/times"
 	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
@@ -50,6 +52,12 @@ func (svc *service) BatchCreateResPlanDemand(cts *rest.Contexts) (interface{}, e
 	demandIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		models := make([]tablers.ResPlanDemandTable, len(req.Demands))
 		for idx, item := range req.Demands {
+			// 把字符串类型的[期望交付时间转]为符合格式的Int类型
+			expectTimeInt, err := times.ConvStrTimeToInt(item.ExpectTime, constant.DateLayout)
+			if err != nil {
+				return nil, err
+			}
+
 			models[idx] = tablers.ResPlanDemandTable{
 				Locked:          cvt.ValToPtr(enumor.CrpDemandUnLocked),
 				BkBizID:         item.BkBizID,
@@ -62,7 +70,7 @@ func (svc *service) BatchCreateResPlanDemand(cts *rest.Contexts) (interface{}, e
 				VirtualDeptName: item.VirtualDeptName,
 				DemandClass:     item.DemandClass,
 				ObsProject:      item.ObsProject,
-				ExpectTime:      item.ExpectTime,
+				ExpectTime:      expectTimeInt,
 				PlanType:        item.PlanType,
 				AreaID:          item.AreaID,
 				AreaName:        item.AreaName,

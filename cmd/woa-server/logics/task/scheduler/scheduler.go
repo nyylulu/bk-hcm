@@ -28,6 +28,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/config"
 	greenchannel "hcm/cmd/woa-server/logics/green-channel"
+	"hcm/cmd/woa-server/logics/plan"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/scheduler/dispatcher"
@@ -172,7 +173,8 @@ type scheduler struct {
 
 // New creates a scheduler
 func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
-	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig) (*scheduler, error) {
+	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics) (
+	*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -181,7 +183,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf)
+	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf, planLogics)
 	if err != nil {
 		return nil, err
 	}

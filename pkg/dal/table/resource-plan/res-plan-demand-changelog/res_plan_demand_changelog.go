@@ -41,7 +41,7 @@ var DemandChangelogColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "crp_order_id", NamedC: "crp_order_id", Type: enumor.String},
 	{Column: "suborder_id", NamedC: "suborder_id", Type: enumor.String},
 	{Column: "type", NamedC: "type", Type: enumor.String},
-	{Column: "expect_time", NamedC: "expect_time", Type: enumor.String},
+	{Column: "expect_time", NamedC: "expect_time", Type: enumor.Numeric},
 	{Column: "obs_project", NamedC: "obs_project", Type: enumor.String},
 	{Column: "region_name", NamedC: "region_name", Type: enumor.String},
 	{Column: "zone_name", NamedC: "zone_name", Type: enumor.String},
@@ -69,8 +69,8 @@ type DemandChangelogTable struct {
 	SuborderID string `db:"suborder_id" json:"suborder_id" validate:"lte=64"`
 	// Type 变更类型
 	Type enumor.DemandChangelogType `db:"type" json:"type"`
-	// ExpectTime 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01
-	ExpectTime string `db:"expect_time" json:"expect_time" validate:"lte=16"`
+	// ExpectTime 期望交付时间
+	ExpectTime int `db:"expect_time" json:"expect_time"`
 	// ObsProject 项目类型
 	ObsProject enumor.ObsProject `db:"obs_project" json:"obs_project" validate:"lte=64"`
 	// RegionName 地区/城市名称

@@ -51,7 +51,7 @@ type CVM struct {
 	ImageId           string            `json:"image_id"`
 	ImageName         string            `json:"image_name"`
 	InstanceType      string            `json:"instanceType"`
-	DiskType          string            `json:"disk_type"`
+	DiskType          enumor.DiskType   `json:"disk_type"`
 	DiskSize          int64             `json:"disk_size"`
 	SecurityGroupId   string            `json:"securityGroupId"`
 	SecurityGroupName string            `json:"securityGroupName"`

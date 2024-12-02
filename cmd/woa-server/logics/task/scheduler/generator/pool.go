@@ -35,7 +35,7 @@ const (
 func (g *Generator) launchRecallHost(kt *kit.Kit, order *types.ApplyOrder, recall *types.MatchPoolSpec) (uint64,
 	error) {
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, uint(recall.Replicas))
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, uint(recall.Replicas), false)
 	if err != nil {
 		logs.Errorf("failed to init generate record, order id: %s, err: %v", order.SubOrderId,
 			err)

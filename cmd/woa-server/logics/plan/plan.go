@@ -27,8 +27,10 @@ import (
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
+	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
+	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao"
@@ -36,6 +38,7 @@ import (
 	"hcm/pkg/dal/dao/types"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
+	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
@@ -67,15 +70,24 @@ type Logics interface {
 	// @return prodRemainedPool is the op product in plan and out plan remained resource plan pool.
 	// @return prodMaxAvailablePool is the op product in plan and out plan remained max available resource plan pool.
 	// NOTE: maxAvailableInPlanPool = totalInPlan * 120% - consumeInPlan, because the special rules of the crp system.
-	GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64, isMultiply bool) (ResPlanPool, error)
+	GetProdResRemainPool(kt *kit.Kit, prodID, planProdID int64) (ResPlanPool, ResPlanPool, error)
 	// VerifyProdDemands verify whether the needs of op product can be satisfied.
 	VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) ([]VerifyResPlanResElem, error)
+	// GetProdResConsumePoolV2 get biz resource consume pool.
+	GetProdResConsumePoolV2(kt *kit.Kit, bkBizIDs []int64, startDay, endDay time.Time) (ResPlanConsumePool, error)
+	// VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
+	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error)
+	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
+	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *tasktypes.ApplyOrder) error
+	// GetAllDeviceTypeMap get all device type map.
+	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 }
 
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
 	dao          dao.Set
 	sd           serviced.State
+	client       *client.ClientSet
 	itsmCli      itsm.Client
 	itsmFlow     cc.ItsmFlow
 	crpAuditNode cc.StateNode
@@ -98,7 +110,9 @@ const (
 )
 
 // New creates a resource plan ticket controller instance.
-func New(sd serviced.State, dao dao.Set, itsmCli itsm.Client, crpCli cvmapi.CVMClientInterface) (*Controller, error) {
+func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
+	crpCli cvmapi.CVMClientInterface) (*Controller, error) {
+
 	q := NewUniQueue()
 
 	var itsmFlowCfg cc.ItsmFlow
@@ -119,6 +133,7 @@ func New(sd serviced.State, dao dao.Set, itsmCli itsm.Client, crpCli cvmapi.CVMC
 	ctrl := &Controller{
 		dao:          dao,
 		sd:           sd,
+		client:       client,
 		itsmCli:      itsmCli,
 		itsmFlow:     itsmFlowCfg,
 		crpAuditNode: crpAuditNode,

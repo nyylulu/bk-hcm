@@ -26,8 +26,13 @@ import (
 
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/dal/dao/tools"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/times"
 )
 
@@ -175,13 +180,32 @@ type VerifyResPlanElem struct {
 	ObsProject    enumor.ObsProject
 	RegionName    string
 	ZoneName      string
-	CpuCore       float64
+	CpuCore       int64
+}
+
+// VerifyResPlanElemV2 verify resource plan element v2.
+type VerifyResPlanElemV2 struct {
+	// if IsPrePaid is true, Verify function will examine:
+	// 1. InPlan + OutPlan >= applied.
+	// 2. InPlan * 100% - consumed >= applied.(120% to be implemented)
+	// otherwise, it will only examine InPlan + OutPlan >= applied.
+	IsPrePaid     bool
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	BkBizID       int64
+	DemandClass   enumor.DemandClass
+	RegionID      string
+	ZoneID        string
+	DiskType      enumor.DiskType
+	CpuCore       int64
 }
 
 // VerifyResPlanResElem verify resource plan result element.
 type VerifyResPlanResElem struct {
-	VerifyResult enumor.VerifyResPlanRst `json:"verify_result"`
-	Reason       string                  `json:"reason"`
+	VerifyResult   enumor.VerifyResPlanRst `json:"verify_result"`
+	Reason         string                  `json:"reason"`
+	MatchDemandIDs []string                `json:"match_demand_ids"`
 }
 
 // ResPlanElem resource plan element.
@@ -206,7 +230,26 @@ type ResPlanPoolKey struct {
 }
 
 // ResPlanPool resource plan pool.
-type ResPlanPool map[ResPlanPoolKey]float64
+type ResPlanPool map[ResPlanPoolKey]int64
+
+// ResPlanPoolKeyV2 resource plan demand key v2.
+type ResPlanPoolKeyV2 struct {
+	PlanType      enumor.PlanTypeCode
+	AvailableTime AvailableTime
+	DeviceType    string
+	ObsProject    enumor.ObsProject
+	BkBizID       int64
+	DemandClass   enumor.DemandClass
+	RegionID      string
+	ZoneID        string
+	DiskType      enumor.DiskType
+}
+
+// ResPlanConsumePool resource plan consume pool.
+type ResPlanConsumePool map[ResPlanPoolKeyV2]int64
+
+// ResPlanPoolMatch resource plan demand match.
+type ResPlanPoolMatch map[ResPlanPoolKeyV2]map[string]int64
 
 // StrUnionFind string union find struct.
 type StrUnionFind struct {
@@ -259,4 +302,32 @@ func (uf *StrUnionFind) Union(x, y string) {
 // Connected judges whether x and y are connected.
 func (uf *StrUnionFind) Connected(x, y string) bool {
 	return uf.Find(x) == uf.Find(y)
+}
+
+// GetPlanTypeByChargeType 根据计费模式，获取映射的预测内或预测外.
+func (c *Controller) GetPlanTypeByChargeType(chargeType cvmapi.ChargeType) (enumor.PlanTypeCode, error) {
+	switch chargeType {
+	case cvmapi.ChargeTypePrePaid: // 计费模式:包年包月
+		return enumor.PlanTypeCodeInPlan, nil
+	case cvmapi.ChargeTypePostPaidByHour: // 计费模式:按量计费
+		return enumor.PlanTypeCodeOutPlan, nil
+	default:
+		return "", errf.Newf(errf.InvalidParameter, "resource plan unknown charge type: %s", chargeType)
+	}
+}
+
+// GetZoneMapByRegionIDs get zone map by region ids.
+func (c *Controller) GetZoneMapByRegionIDs(kt *kit.Kit, regionIDs []string) (map[string]string, error) {
+	queryReq := tools.ContainersExpression("region_id", regionIDs)
+	zoneList, err := c.dao.WoaZone().GetZoneList(kt, queryReq)
+	if err != nil {
+		logs.Errorf("get zone map by region ids failed, err: %v, regionIDs: %v, rid: %s", err, regionIDs, kt.Rid)
+		return nil, err
+	}
+
+	zoneMap := make(map[string]string)
+	for _, detail := range zoneList {
+		zoneMap[detail.ZoneID] = detail.ZoneName
+	}
+	return zoneMap, nil
 }

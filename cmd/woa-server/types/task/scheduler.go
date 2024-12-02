@@ -116,16 +116,17 @@ type GenerateRecord struct {
 	TaskLink     string `json:"task_link" bson:"task_link"`
 	RequestInfo  string `json:"request_info" bson:"request_info"`
 	// 0: success, 1: handling, 2: failed
-	Status      GenerateStepStatus `json:"status" bson:"status"`
-	IsMatched   bool               `json:"is_matched" bson:"is_matched"`
-	Message     string             `json:"message" bson:"message"`
-	TotalNum    uint               `json:"total_num" bson:"total_num"`
-	SuccessNum  uint               `json:"success_num" bson:"success_num"`
-	SuccessList []string           `json:"success_list" bson:"success_list"`
-	CreateAt    time.Time          `json:"create_at" bson:"create_at"`
-	UpdateAt    time.Time          `json:"update_at" bson:"update_at"`
-	StartAt     time.Time          `json:"start_at" bson:"start_at"`
-	EndAt       time.Time          `json:"end_at" bson:"end_at"`
+	Status          GenerateStepStatus `json:"status" bson:"status"`
+	IsMatched       bool               `json:"is_matched" bson:"is_matched"`
+	Message         string             `json:"message" bson:"message"`
+	TotalNum        uint               `json:"total_num" bson:"total_num"`
+	SuccessNum      uint               `json:"success_num" bson:"success_num"`
+	SuccessList     []string           `json:"success_list" bson:"success_list"`
+	CreateAt        time.Time          `json:"create_at" bson:"create_at"`
+	UpdateAt        time.Time          `json:"update_at" bson:"update_at"`
+	StartAt         time.Time          `json:"start_at" bson:"start_at"`
+	EndAt           time.Time          `json:"end_at" bson:"end_at"`
+	IsManualMatched bool               `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
 }
 
 // GenerateStepStatus generate step status
@@ -419,6 +420,7 @@ type DeviceInfo struct {
 	InitTaskLink      string             `json:"init_task_link" bson:"init_task_link"`
 	DiskCheckTaskId   string             `json:"disk_check_task_id" bson:"disk_check_task_id"`
 	DiskCheckTaskLink string             `json:"disk_check_task_link" bson:"disk_check_task_link"`
+	IsManualMatched   bool               `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
 	CreateAt          time.Time          `json:"create_at" bson:"create_at"`
 	UpdateAt          time.Time          `json:"update_at" bson:"update_at"`
 }
@@ -756,19 +758,19 @@ func (s *Suborder) Validate() (errKey string, err error) {
 
 // ResourceSpec resource specifications
 type ResourceSpec struct {
-	Region      string `json:"region" bson:"region"`
-	Zone        string `json:"zone" bson:"zone"`
-	DeviceGroup string `json:"device_group" bson:"device_group"`
-	DeviceType  string `json:"device_type" bson:"device_type"`
-	ImageId     string `json:"image_id" bson:"image_id"`
-	Image       string `json:"image" bson:"image"`
-	DiskSize    int64  `json:"disk_size" bson:"disk_size"`
-	DiskType    string `json:"disk_type" bson:"disk_type"`
-	NetworkType string `json:"network_type" bson:"network_type"`
-	Vpc         string `json:"vpc" bson:"vpc"`
-	Subnet      string `json:"subnet" bson:"subnet"`
-	OsType      string `json:"os_type" bson:"os_type"`
-	RaidType    string `json:"raid_type" bson:"raid_type"`
+	Region      string          `json:"region" bson:"region"`
+	Zone        string          `json:"zone" bson:"zone"`
+	DeviceGroup string          `json:"device_group" bson:"device_group"`
+	DeviceType  string          `json:"device_type" bson:"device_type"`
+	ImageId     string          `json:"image_id" bson:"image_id"`
+	Image       string          `json:"image" bson:"image"`
+	DiskSize    int64           `json:"disk_size" bson:"disk_size"`
+	DiskType    enumor.DiskType `json:"disk_type" bson:"disk_type"`
+	NetworkType string          `json:"network_type" bson:"network_type"`
+	Vpc         string          `json:"vpc" bson:"vpc"`
+	Subnet      string          `json:"subnet" bson:"subnet"`
+	OsType      string          `json:"os_type" bson:"os_type"`
+	RaidType    string          `json:"raid_type" bson:"raid_type"`
 	// 外网运营商: "电信","联通","移动","CAP"
 	Isp string `json:"isp" bson:"isp"`
 	// 数据盘挂载点
@@ -1320,6 +1322,7 @@ type DeliverRecord struct {
 	GenerateTaskLink string            `json:"generate_task_link" bson:"generate_task_link"`
 	InitTaskId       string            `json:"init_task_id" bson:"init_task_id"`
 	InitTaskLink     string            `json:"init_task_link" bson:"init_task_link"`
+	IsManualMatched  bool              `json:"is_manual_matched" bson:"is_manual_matched"` // 是否手工匹配
 	CreateAt         time.Time         `json:"create_at" bson:"create_at"`
 	UpdateAt         time.Time         `json:"update_at" bson:"update_at"`
 	StartAt          time.Time         `json:"start_at" bson:"start_at"`

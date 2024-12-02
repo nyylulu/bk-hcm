@@ -541,6 +541,11 @@ func (p PlanTypeCode) Validate() error {
 	return nil
 }
 
+// GetPlanTypeCodeHcmMembers get hcm PlanTypeCode's members.
+func GetPlanTypeCodeHcmMembers() []PlanTypeCode {
+	return []PlanTypeCode{PlanTypeCodeInPlan, PlanTypeCodeOutPlan}
+}
+
 // PlanType is resource plan type.
 // TODO: 考虑HCM和CRP的计划类型是否拆为2个类型
 type PlanType string
