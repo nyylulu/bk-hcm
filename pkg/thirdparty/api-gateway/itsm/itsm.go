@@ -46,6 +46,8 @@ type Client interface {
 	GetTicketStatus(kt *kit.Kit, sn string) (*GetTicketStatusResp, error)
 	// WithdrawTicket 撤销单据。
 	WithdrawTicket(kt *kit.Kit, sn string, operator string) error
+	// TerminateTicket 终止单据。
+	TerminateTicket(kt *kit.Kit, sn string, operator string, actionMsg string) error
 	// VerifyToken 校验Token。
 	VerifyToken(kt *kit.Kit, token string) (bool, error)
 	// GetTicketsByUser 获取用户的单据。

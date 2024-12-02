@@ -464,6 +464,7 @@ export default defineComponent({
         params: {
           id: row.order_id,
         },
+        query: { ...route.query, creator: row.bk_username, bkBizId: row.bk_biz_id },
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = {

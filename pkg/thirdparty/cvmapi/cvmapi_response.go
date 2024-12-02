@@ -50,6 +50,21 @@ type OrderQueryRst struct {
 	Data  []*OrderItem `json:"data"`
 }
 
+// FailInstanceInfo cvm order fail instance info
+// 由于 CRP 接口协议混乱，目前两种命名方式都有，详细请联系 crp 确认，目前使用下划线命名法的数据
+type FailInstanceInfo struct {
+	ErrorMsgTypeEn string `json:"errorMsgTypeEn"`
+	ErrorMsg1      string `json:"errorMsg"`
+	ErrorMsg       string `json:"error_msg"`
+	ErrorType1     string `json:"errorType"`
+	ErrorType      string `json:"error_type"`
+	ErrorMsgTypeCn string `json:"errorMsgTypeCn"`
+	RequestId      string `json:"requestId"`
+	ErrorCount     int    `json:"error_count"`
+	Operator       string `json:"operator"`
+	ErrorCount1    int    `json:"errorCount"`
+}
+
 // OrderItem cvm order info
 type OrderItem struct {
 	OrderId string `json:"orderId"`
@@ -57,16 +72,12 @@ type OrderItem struct {
 	// 8完成
 	// 0待部门管理员审批,1待业务总监审批,2待规划经理审批,3待资源审批,4待生成CDH宿主机,
 	// 5CDH宿主机生成中,6待生成CVM,7CVM生成中,127驳回,129下发生产失败
-	Status      int    `json:"status"`
-	ProductId   int64  `json:"productId"`
-	ProductName string `json:"productName"`
+	Status            int                `json:"status"`
+	StatusDesc        string             `json:"statusDesc"`
+	ProductId         int64              `json:"productId"`
+	ProductName       string             `json:"productName"`
+	FailInstanceInfos []FailInstanceInfo `json:"failInstanceInfo"`
 }
-
-const (
-	OrderStatusFinish int = 8
-	OrderStatusReject int = 127
-	OrderStatusFailed int = 129
-)
 
 // InstanceQueryResp cvm instance query response
 type InstanceQueryResp struct {
@@ -596,4 +607,32 @@ type GetApproveLogItem struct {
 	Memo          string `json:"memo"`
 	Platform      string `json:"platform"`
 	OrderID       string `json:"orderId"`
+}
+
+// GetCvmApproveLogsResp get cvm approve logs response
+type GetCvmApproveLogsResp struct {
+	RespMeta `json:",inline"`
+	Result   *CvmApproveLogsRst `json:"result"`
+}
+
+// CvmApprovalLog cvm approve log result
+type CvmApprovalLog struct {
+	TaskNo        int64  `json:"taskNo"`
+	TaskName      string `json:"taskName"`
+	OperateResult string `json:"operateResult"`
+	Operator      string `json:"operator"`
+	OperateInfo   string `json:"operateInfo"`
+	OperateTime   string `json:"operateTime"`
+}
+
+// CvmApproveLogsRst cvm approve log result
+type CvmApproveLogsRst struct {
+	Data            []CvmApprovalLog `json:"data"`
+	CurrentTaskNo   int              `json:"currentTaskNo"`
+	CurrentTaskName string           `json:"currentTaskName"`
+}
+
+// RevokeCvmOrderResp ...
+type RevokeCvmOrderResp struct {
+	RespMeta `json:",inline"`
 }

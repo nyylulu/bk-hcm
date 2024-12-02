@@ -474,3 +474,25 @@ type GetApproveLogReq struct {
 type GetApproveLogParams struct {
 	OrderId []string `json:"orderId"`
 }
+
+// GetCvmApproveLogReq get cvm approve log request
+type GetCvmApproveLogReq struct {
+	ReqMeta `json:",inline"`
+	Params  *GetCvmApproveLogParams `json:"params"`
+}
+
+// GetCvmApproveLogParams get cvm approve log parameters
+type GetCvmApproveLogParams struct {
+	OrderId string `json:"orderId"`
+}
+
+// RevokeCvmOrderReq ...
+type RevokeCvmOrderReq struct {
+	ReqMeta `json:",inline"`
+	Params  *RevokeCvmOrderParams `json:"params"`
+}
+
+// RevokeCvmOrderParams ...
+type RevokeCvmOrderParams struct {
+	OrderId string `json:"order_id"`
+}

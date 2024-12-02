@@ -133,3 +133,34 @@ export interface IDissolveRecycledModuleListParam {
     value: boolean | number | string | (boolean | number | string)[];
   }[];
 }
+
+export interface IApplyCrpTicketAudit {
+  crp_ticket_id: string;
+  crp_ticket_link: string;
+  logs: Array<{
+    task_no: number;
+    task_name: string;
+    operate_result: string;
+    operator: string;
+    operate_info: string;
+    operate_time: string;
+  }>;
+  current_step: {
+    current_task_no: number;
+    current_task_name: string;
+    status: number;
+    status_desc: string;
+    fail_instance_info: Array<{
+      error_msg_type_en: string;
+      error_type: string;
+      error_msg_type_cn: string;
+      request_id: string;
+      error_msg: string;
+      operator: string;
+      error_count: number;
+    }>;
+  };
+}
+export type IApplyCrpTicketAuditLogItem = IApplyCrpTicketAudit['logs'][number];
+export type IApplyCrpTicketAuditCurrentStepItem = IApplyCrpTicketAudit['current_step'];
+export type IApplyCrpTicketAuditFailInfoItem = IApplyCrpTicketAudit['current_step']['fail_instance_info'][number];

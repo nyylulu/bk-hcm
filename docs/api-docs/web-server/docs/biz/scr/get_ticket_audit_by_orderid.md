@@ -10,9 +10,10 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/get/apply/ticket/audit
 
 ### 输入参数
 
-| 参数名称     | 参数类型 | 必选 | 描述   |
-|----------|------|----|------|
-| order_id | int  | 是  | 单据ID |
+| 参数名称      | 参数类型 | 必选 | 描述   |
+|-----------|------|----|------|
+| order_id  | int  | 是  | 单据ID |
+| bk_biz_id | int  | 是  | 业务ID |
 
 ### 调用示例
 
@@ -20,7 +21,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/get/apply/ticket/audit
 
 ```json
 {
-  "order_id": 1001
+  "order_id": 1001,
+  "bk_biz_id": 639
 }
 ```
 

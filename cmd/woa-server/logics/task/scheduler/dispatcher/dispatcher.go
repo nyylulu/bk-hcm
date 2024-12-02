@@ -100,8 +100,7 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 	}
 
 	// check order status
-	if applyOrder.Status == types.ApplyStatusDone || applyOrder.Status == types.ApplyStatusMatching ||
-		applyOrder.Status == types.ApplyStatusTerminate {
+	if !shouldDispatch(applyOrder.Status) {
 		logs.Infof("apply order %s need not dispatch, status: %s", key, applyOrder.Status)
 		return nil
 	}
@@ -157,6 +156,19 @@ func (d *Dispatcher) dispatchHandler(kt *kit.Kit, key string) error {
 	logs.Infof("finished dispatch order %s", key)
 
 	return nil
+}
+
+// shouldDispatch checks if apply order should not dispatch
+func shouldDispatch(status types.ApplyStatus) bool {
+	switch status {
+	case types.ApplyStatusDone,
+		types.ApplyStatusMatching,
+		types.ApplyStatusTerminate,
+		types.ApplyStatusGracefulTerminate:
+		return false
+	default:
+		return true
+	}
 }
 
 // getApplyOrder gets apply order by order id

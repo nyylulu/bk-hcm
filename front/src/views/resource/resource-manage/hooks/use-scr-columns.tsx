@@ -504,10 +504,14 @@ export default (type: string, isSimpleShow = false) => {
             text
             theme='primary'
             onClick={() => {
-              const to = { name: 'host-application-detail', params: { id: data.order_id } };
+              const to = {
+                name: 'host-application-detail',
+                params: { id: data.order_id },
+                query: { ...route.query, creator: data.bk_username, bkBizId: data.bk_biz_id },
+              };
               if (Senarios.business === whereAmI.value) {
                 // 业务下
-                Object.assign(to, { name: 'HostApplicationsDetail', query: route.query });
+                Object.assign(to, { name: 'HostApplicationsDetail' });
               }
               router.push(to);
             }}>

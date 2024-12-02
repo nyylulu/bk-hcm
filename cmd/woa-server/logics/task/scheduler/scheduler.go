@@ -21,6 +21,7 @@ import (
 	"reflect"
 	"sort"
 	"strconv"
+	"strings"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
@@ -67,8 +68,10 @@ type Interface interface {
 	UpdateApplyTicket(kt *kit.Kit, param *types.ApplyReq) (*types.CreateApplyOrderResult, error)
 	// GetApplyTicket gets resource apply ticket
 	GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq) (*types.GetApplyTicketRst, error)
-	// GetApplyAudit gets resource apply ticket audit info
-	GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (*types.GetApplyAuditRst, error)
+	// GetApplyAuditItsm gets resource apply ticket itsm audit info
+	GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (*types.GetApplyAuditItsmRst, error)
+	// GetApplyAuditCrp gets resource apply ticket crp audit info
+	GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (*types.GetApplyAuditCrpRst, error)
 	// AuditTicket audit resource apply ticket
 	AuditTicket(kit *kit.Kit, param *types.ApplyAuditReq) error
 	// AutoAuditTicket system automatic audit resource apply ticket callback
@@ -142,8 +145,13 @@ type Interface interface {
 	GetGenerator() *generator.Generator
 
 	// CheckRollingServerHost check rolling server host
-	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*types.CheckRollingServerHostResp,
-		error)
+	CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
+		*types.CheckRollingServerHostResp, error)
+
+	// CancelApplyTicketItsm cancel apply ticket which in itsm
+	CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error
+	// CancelApplyTicketCrp cancel apply ticket which in crp
+	CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error
 }
 
 // scheduler provides resource apply service
@@ -158,6 +166,7 @@ type scheduler struct {
 	configLogics config.Logics
 	rsLogics     rollingserver.Logics
 	gcLogics     greenchannel.Logics
+	crpCli       cvmapi.CVMClientInterface
 }
 
 // New creates a scheduler
@@ -192,6 +201,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	scheduler := &scheduler{
 		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
 		itsm:         thirdCli.ITSM,
+		crpCli:       thirdCli.CVM,
 		cc:           esbCli.Cmdb(),
 		dispatcher:   dispatch,
 		generator:    generate,
@@ -330,9 +340,9 @@ func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq)
 	return rst, nil
 }
 
-// GetApplyAudit gets resource apply ticket audit info
-func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
-	*types.GetApplyAuditRst, error) {
+// GetApplyAuditItsm gets resource apply ticket audit info
+func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (
+	*types.GetApplyAuditItsmRst, error) {
 
 	filter := mapstr.MapStr{
 		"order_id": param.OrderId,
@@ -381,26 +391,26 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 		return nil, fmt.Errorf("failed to get apply ticket audit info, code: %d, msg: %s", logResp.Code, logResp.ErrMsg)
 	}
 
-	rst := &types.GetApplyAuditRst{
-		ApplyAudit: &types.ApplyAudit{
+	rst := &types.GetApplyAuditItsmRst{
+		ApplyAuditItsm: &types.ApplyAuditItsm{
 			OrderId:        param.OrderId,
 			ItsmTicketId:   inst.ItsmTicketId,
 			ItsmTicketLink: link,
 			Status:         status,
-			CurrentSteps:   make([]*types.ApplyAuditStep, 0),
-			Logs:           make([]*types.ApplyAuditLog, 0),
+			CurrentSteps:   make([]*types.ApplyAuditItsmStep, 0),
+			Logs:           make([]*types.ApplyAuditItsmLog, 0),
 		},
 	}
 
 	for _, step := range statusResp.Data.CurrentSteps {
-		rst.CurrentSteps = append(rst.CurrentSteps, &types.ApplyAuditStep{
+		rst.CurrentSteps = append(rst.CurrentSteps, &types.ApplyAuditItsmStep{
 			Name:       step.Name,
 			Processors: step.Processors,
 			StateId:    step.StateId,
 		})
 	}
 	for _, log := range logResp.Data.Logs {
-		rst.Logs = append(rst.Logs, &types.ApplyAuditLog{
+		rst.Logs = append(rst.Logs, &types.ApplyAuditItsmLog{
 			Operator:  log.Operator,
 			OperateAt: log.OperateAt,
 			Message:   log.Message,
@@ -409,6 +419,85 @@ func (s *scheduler) GetApplyAudit(kit *kit.Kit, param *types.GetApplyAuditReq) (
 	}
 
 	return rst, nil
+}
+
+// GetApplyAuditCrp gets resource apply ticket audit info
+func (s *scheduler) GetApplyAuditCrp(kit *kit.Kit, param *types.GetApplyAuditCrpReq) (
+	*types.GetApplyAuditCrpRst, error) {
+
+	logsReq := cvmapi.NewCvmQueryApproveLogReq(&cvmapi.GetCvmApproveLogParams{OrderId: param.CrpTicketId})
+	logsResp, err := s.crpCli.GetCvmApproveLogs(kit.Ctx, kit.Header(), logsReq)
+	if err != nil {
+		logs.Errorf("failed to get cvm approve logs, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	if logsResp.Error.Code != 0 {
+		logs.Errorf("failed to get cvm approve logs, err: %v, trace id: %s, rid: %s",
+			logsResp.Error.Message, logsResp.TraceId, kit.Rid)
+		return nil, errors.New(logsResp.Error.Message)
+	}
+
+	if logsResp.Result == nil || len(logsResp.Result.Data) == 0 {
+		logs.Errorf("cvm approve logs is empty, trace id: %s, rid: %s", logsResp.TraceId, kit.Rid)
+		return nil, fmt.Errorf("cvm approve logs is empty")
+	}
+
+	orderReq := cvmapi.NewOrderQueryReq(&cvmapi.OrderQueryParam{OrderId: []string{param.CrpTicketId}})
+	orderResp, err := s.crpCli.QueryCvmOrders(kit.Ctx, kit.Header(), orderReq)
+	if err != nil {
+		logs.Errorf("failed to query cvm order, err: %v, rid: %s", err, kit.Rid)
+		return nil, err
+	}
+
+	if orderResp.Error.Code != 0 {
+		logs.Errorf("failed to query cvm order, err: %v, trace id: %s, rid: %s",
+			orderResp.Error.Message, orderResp.TraceId, kit.Rid)
+		return nil, errors.New(orderResp.Error.Message)
+	}
+
+	if orderResp.Result == nil || len(orderResp.Result.Data) == 0 {
+		logs.Errorf("crp order is empty, trace id: %s, rid: %s", orderResp.TraceId, kit.Rid)
+		return nil, fmt.Errorf("crp order is empty")
+	}
+
+	resp := &types.GetApplyAuditCrpRst{
+		ApplyAuditCrp: &types.ApplyAuditCrp{
+			CrpTicketId:   param.CrpTicketId,
+			CrpTicketLink: fmt.Sprintf("%s%s", cvmapi.CvmOrderLinkPrefix, param.CrpTicketId),
+			CurrentStep: types.ApplyAuditCrpStep{
+				CurrentTaskNo:   logsResp.Result.CurrentTaskNo,
+				CurrentTaskName: logsResp.Result.CurrentTaskName,
+				Status:          orderResp.Result.Data[0].Status,
+				StatusDesc:      orderResp.Result.Data[0].StatusDesc,
+			},
+		},
+	}
+
+	for _, log := range logsResp.Result.Data {
+		resp.Logs = append(resp.Logs, types.ApplyAuditCrpLog{
+			TaskNo:        log.TaskNo,
+			TaskName:      log.TaskName,
+			OperateResult: log.OperateResult,
+			Operator:      log.Operator,
+			OperateInfo:   log.OperateInfo,
+			OperateTime:   log.OperateTime,
+		})
+	}
+
+	for _, failedInfo := range orderResp.Result.Data[0].FailInstanceInfos {
+		resp.CurrentStep.FailInstanceInfo = append(resp.CurrentStep.FailInstanceInfo, types.FailInstanceInfo{
+			ErrorMsgTypeEn: failedInfo.ErrorMsgTypeEn,
+			ErrorType:      failedInfo.ErrorType,
+			ErrorMsgTypeCn: failedInfo.ErrorMsgTypeCn,
+			RequestId:      failedInfo.RequestId,
+			ErrorMsg:       failedInfo.ErrorMsg,
+			Operator:       failedInfo.Operator,
+			ErrorCount:     failedInfo.ErrorCount,
+		})
+	}
+
+	return resp, nil
 }
 
 // AuditTicket audit resource apply ticket
@@ -2093,4 +2182,244 @@ func calculateMonths(startTime, endTime time.Time) int {
 	}
 
 	return totalMonths
+}
+
+// CancelApplyTicketItsm ...
+func (s *scheduler) CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error {
+	filter := mapstr.MapStr{
+		"order_id": req.OrderID,
+	}
+
+	applyTicket, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	ticketStatusResp, err := s.itsm.GetTicketStatus(kt, applyTicket.ItsmTicketId)
+	if err != nil {
+		logs.Errorf("failed to get ticket status, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 0. 判断单据状态
+	err = checkTicketCanCancel(kt, applyTicket, ticketStatusResp.Data)
+	if err != nil {
+		return err
+	}
+
+	// 1. 关闭 hcm 单据
+	applyReq := &types.ApproveApplyReq{
+		OrderId:  applyTicket.OrderId,
+		Operator: kt.User,
+		Approval: false,
+		Remark:   fmt.Sprintf("%s手动取消单据", kt.User),
+	}
+	err = s.ApproveTicket(kt, applyReq)
+	if err != nil {
+		logs.Errorf("failed to approve ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 2. 关闭 itsm 单据
+	actionMsg := fmt.Sprintf("%s手动取消单据", kt.User)
+	err = s.itsm.TerminateTicket(kt, applyTicket.ItsmTicketId, enumor.ItsmOperatorHcm, actionMsg)
+	if err != nil {
+		logs.Errorf("failed to cancel itsm ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// checkTicketCanCancel 检查单据是否可以撤单
+func checkTicketCanCancel(kt *kit.Kit, applyTicket *types.ApplyTicket, ticketStatusRst *itsm.GetTicketStatusRst) error {
+	// 1. 只有提单人可以撤单
+	if applyTicket.User != kt.User {
+		return errors.New("only ticket creator can cancel ticket")
+	}
+
+	// 2. 单据需要处于运行中或暂停状态
+	ticketStatus := itsm.Status(ticketStatusRst.CurrentStatus)
+	if ticketStatus != (itsm.StatusRunning) && ticketStatus != (itsm.StatusSuspended) {
+		return errors.New("ticket status is not running or suspended")
+	}
+
+	// 3. 单据只有处于指定节点时才可以取消
+	canCancel := false
+	for _, step := range ticketStatusRst.CurrentSteps {
+		if checkStepCanCancel(step.Name) {
+			canCancel = true
+			break
+		}
+	}
+	if !canCancel {
+		return errors.New("ticket steps cannot be cancelled")
+	}
+
+	return nil
+}
+
+// checkStepCanCancel 检查单据步骤是否可以撤单
+func checkStepCanCancel(stepName string) bool {
+	switch stepName {
+	case ItsmAuditStepAdmin, ItsmAuditStepLeader:
+		return true
+	default:
+		return false
+	}
+}
+
+const (
+	// ItsmAuditStepAdmin 管理员审核
+	ItsmAuditStepAdmin = "管理员审核"
+	// ItsmAuditStepLeader leader审核
+	ItsmAuditStepLeader = "leader审核"
+)
+
+// CancelApplyTicketCrp ...
+func (s *scheduler) CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error {
+	// common filter and page
+	filter := map[string]interface{}{
+		"suborder_id": req.SubOrderID,
+	}
+	page := metadata.BasePage{
+		Limit: 1,
+		Start: 0,
+	}
+
+	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	if len(orders) == 0 {
+		return errf.New(errf.InvalidParameter, "order is not exist")
+	}
+
+	order := orders[0]
+
+	switch order.Status {
+	case types.ApplyStatusMatching, types.ApplyStatusMatchedSome, types.ApplyStatusGracefulTerminate:
+		break
+	default:
+		return errf.New(errf.InvalidParameter, fmt.Sprintf("order status is %s cannot cancel", order.Status))
+	}
+
+	generateRecords, err := model.Operation().GenerateRecord().FindManyGenerateRecord(kt.Ctx, page, filter)
+	if err != nil {
+		return err
+	}
+
+	// 检查是否有单据尚未发起 crp 请求
+	for _, generateRecord := range generateRecords {
+		if generateRecord.TaskId == "" {
+			return fmt.Errorf("has task still in init,can't revoke suborder, generate id: %d, order id: %s",
+				generateRecord.GenerateId, order.SubOrderId)
+		}
+	}
+
+	// 获取所有未完成的task
+	unFinishedTasks := make([]string, 0)
+	for _, generateRecord := range generateRecords {
+		if taskIsUnFinish(generateRecord) {
+			unFinishedTasks = append(unFinishedTasks, generateRecord.TaskId)
+		}
+	}
+
+	// 筛选可以撤单的crp task
+	canRevokeTasks := s.filterCanRevokeCrpTask(kt, unFinishedTasks)
+	if len(canRevokeTasks) == 0 {
+		return errors.New("no task can revoke")
+	}
+
+	// 开始执行撤单程序
+	if err = s.revokeApplyOrder(kt, order.SubOrderId, canRevokeTasks); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// taskIsUnFinish check crp task is finish
+func taskIsUnFinish(generateRecord *types.GenerateRecord) bool {
+	if generateRecord.Status == types.GenerateStatusHandling {
+		return true
+	}
+
+	return false
+}
+
+// filterCanRevokeCrpTask 筛选可以撤单的 crp 单据
+func (s *scheduler) filterCanRevokeCrpTask(kt *kit.Kit, taskIDs []string) []string {
+	params := &cvmapi.OrderQueryParam{
+		OrderId: taskIDs,
+		Status:  make([]int, 0, len(enumor.CrpOrderStatusCanRevoke)),
+	}
+	req := cvmapi.NewOrderQueryReq(params)
+	for _, status := range enumor.CrpOrderStatusCanRevoke {
+		req.Params.Status = append(req.Params.Status, int(status))
+	}
+
+	ordersResp, err := s.crpCli.QueryCvmOrders(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("failed to query cvm orders, err: %v, rid: %s", err, kt.Rid)
+		return nil
+	}
+
+	if len(ordersResp.Result.Data) == 0 {
+		return nil
+	}
+
+	taskIDs = make([]string, 0, len(ordersResp.Result.Data))
+	for _, order := range ordersResp.Result.Data {
+		taskIDs = append(taskIDs, order.OrderId)
+	}
+
+	return taskIDs
+}
+
+// revokeApplyOrder revoke apply order
+func (s *scheduler) revokeApplyOrder(kt *kit.Kit, subOrderId string, taskIDs []string) error {
+	// 1. 修改 apply order 状态为 GracefulTerminate
+	filter := &mapstr.MapStr{
+		"suborder_id": subOrderId,
+	}
+	doc := &mapstr.MapStr{
+		"status": types.ApplyStatusGracefulTerminate,
+	}
+	err := model.Operation().ApplyOrder().UpdateApplyOrder(kt.Ctx, filter, doc)
+	if err != nil {
+		return err
+	}
+
+	// 2. 发起 CRP 撤单
+	// CRP 单据撤销失败，只记录日志
+	errs := make([]string, 0)
+	for _, taskID := range taskIDs {
+		params := &cvmapi.RevokeCvmOrderParams{
+			OrderId: taskID,
+		}
+		req := cvmapi.NewRevokeCvmOrderReq(params)
+		resp, err := s.crpCli.RevokeCvmOrder(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			errs = append(errs, fmt.Sprintf("taskID: %s, err: %v", taskID, err))
+			logs.Warnf("failed to revoke cvm order, taskID: %s, err: %v, rid: %s", taskID, err, kt.Rid)
+			continue
+		}
+
+		if resp.RespMeta.Error.Code != 0 {
+			err = fmt.Errorf("failed to revoke cvm order, trace id: %s, code: %d, msg: %s",
+				resp.TraceId, resp.RespMeta.Error.Code, resp.RespMeta.Error.Message)
+			logs.Warnf("failed to revoke cvm order, err: %v, rid: %s", err, kt.Rid)
+			continue
+		}
+	}
+
+	if len(errs) > 0 {
+		return errors.New(strings.Join(errs, "\n"))
+	}
+
+	return nil
 }

@@ -63,6 +63,10 @@ type CVMClientInterface interface {
 	// QueryCvmInstanceType query cvm instance type
 	QueryCvmInstanceType(ctx context.Context, header http.Header, req *QueryCvmInstanceTypeReq) (
 		*QueryCvmInstanceTypeResp, error)
+	// GetCvmApproveLogs get cvm approve logs
+	GetCvmApproveLogs(ctx context.Context, header http.Header, req *GetCvmApproveLogReq) (*GetCvmApproveLogsResp, error)
+	// RevokeCvmOrder revoke cvm order
+	RevokeCvmOrder(ctx context.Context, header http.Header, req *RevokeCvmOrderReq) (*RevokeCvmOrderResp, error)
 }
 
 // NewCVMClientInterface creates a cvm api instance
@@ -432,4 +436,40 @@ func (c *cvmApi) QueryCvmInstanceType(ctx context.Context, header http.Header, r
 	}
 
 	return resp, nil
+}
+
+// GetCvmApproveLogs get cvm approve logs
+func (c *cvmApi) GetCvmApproveLogs(ctx context.Context, header http.Header,
+	req *GetCvmApproveLogReq) (*GetCvmApproveLogsResp, error) {
+
+	subPath := "/api/approve"
+	resp := new(GetCvmApproveLogsResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// RevokeCvmOrder revoke cvm order
+func (c *cvmApi) RevokeCvmOrder(ctx context.Context, header http.Header, req *RevokeCvmOrderReq) (
+	*RevokeCvmOrderResp, error) {
+
+	subPath := "/apply/api/"
+	resp := new(RevokeCvmOrderResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
 }

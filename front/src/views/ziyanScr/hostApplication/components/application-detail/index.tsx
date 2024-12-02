@@ -1,22 +1,24 @@
 import { Ref, defineComponent, onMounted, ref, computed, onUnmounted } from 'vue';
-import { useUserStore } from '@/store';
-import './index.scss';
-import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import CommonCard from '@/components/CommonCard';
-import { Button, Table, Timeline, Message, Input, Card } from 'bkui-vue';
-import http from '@/http';
 import { useRoute } from 'vue-router';
-import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
-import { Copy, Share } from 'bkui-vue/lib/icon';
-import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
-import { timeFormatter } from '@/common/util';
-import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import WName from '@/components/w-name';
-import ModifyRecord from './modify-record';
-import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import './index.scss';
+
 import { isEqual } from 'lodash';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
+import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
+import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import { timeFormatter } from '@/common/util';
+import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import http from '@/http';
+
+import { Button, Table, Message } from 'bkui-vue';
+import { Copy } from 'bkui-vue/lib/icon';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
+import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
+import Panel from '@/components/panel';
+import WName from '@/components/w-name';
+import ModifyRecord from './modify-record';
+import ItsmTicketAudit from './itsm-ticket-audit.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -121,21 +123,7 @@ export default defineComponent({
         bkBizId: row.bk_biz_id,
       };
     };
-    const applyRecord = ref({
-      order_id: 0,
-      itsm_ticket_id: '',
-      itsm_ticket_link: '',
-      status: '',
-      current_steps: [],
-      logs: [
-        {
-          operator: '',
-          operate_at: '',
-          message: '',
-          source: '',
-        },
-      ],
-    });
+
     const clipHostIp = computed(() => {
       let batchCopyIps: any[] = [];
       selections.value.forEach((item) => {
@@ -206,48 +194,6 @@ export default defineComponent({
       suborders.value = data?.suborders || [];
     };
 
-    const orderAuditTimer: any = { id: null, count: 0 };
-    // 获取单据审核记录
-    const getOrderAuditRecords = async () => {
-      const orderId = route.params.id;
-      const { data } = await http.post(
-        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/get/apply/ticket/audit`,
-        { order_id: +orderId },
-      );
-      applyRecord.value = data;
-      // 如果单据处于处理中(RUNNING)状态, 创建定时任务(30s刷新一次, 最多刷新60次)
-      if (orderAuditTimer.count < 60 && data.status === 'RUNNING') {
-        orderAuditTimer.count += 1;
-        orderAuditTimer.id = setTimeout(() => {
-          getOrderAuditRecords();
-        }, 30000);
-      }
-    };
-    const userStore = useUserStore();
-    const currentAuditStep = computed(() => {
-      return {
-        name: applyRecord.value.currentSteps?.[0]?.name || '',
-        processors: applyRecord.value.currentSteps?.[0]?.processors || '',
-        stateId: applyRecord.value.currentSteps?.[0]?.stateId || '',
-      };
-    });
-    const auditRemark = ref('');
-    const approvalOrder = (params: Object) =>
-      http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/audit/apply/ticket`, params);
-    const approval = (resolve) => {
-      const { itsmTicketId } = applyRecord.value;
-      approvalOrder({
-        orderId: +route.params.id,
-        itsmTicketId,
-        stateId: +currentAuditStep.value.stateId,
-        operator: userStore.username,
-        approval: resolve,
-        remark: auditRemark.value,
-      }).then(() => {
-        getOrderAuditRecords();
-        auditRemark.value = '';
-      });
-    };
     const getDeliveredHostField = async (suborderId) => {
       const params = {
         filter: {
@@ -278,165 +224,102 @@ export default defineComponent({
     onMounted(async () => {
       await getOrderDetail(route.params.id as string);
       await getdemandDetail();
-      getOrderAuditRecords();
     });
 
     onUnmounted(() => {
       // 清除定时任务
       clearTimeout(demandDetailTimer.id);
-      clearTimeout(orderAuditTimer.id);
     });
 
     return () => (
       <div class={'application-detail-container'}>
         <DetailHeader>单据详情</DetailHeader>
         <div class={'detail-wrapper'}>
-          <CommonCard title={() => '基本信息'}>
+          <Panel title='基本信息'>
             <DetailInfo
               detail={detail.value}
               fields={[
-                {
-                  name: '单据 ID',
-                  prop: 'order_id',
-                },
-                {
-                  name: '提单人',
-                  prop: 'bk_username',
-                },
+                { name: '单据 ID', prop: 'order_id' },
                 {
                   name: '创建时间',
                   prop: 'create_at',
-                  render() {
-                    return timeFormatter(detail.value.create_at, 'YYYY-MM-DD');
-                  },
+                  render: () => timeFormatter(detail.value.create_at, 'YYYY-MM-DD'),
                 },
-              ]}
-            />
-          </CommonCard>
-          <CommonCard title={() => '主单信息'} class={'mt24'}>
-            <DetailInfo
-              detail={detail.value}
-              fields={[
-                {
-                  name: '业务',
-                  prop: 'bk_biz_id',
-                  render() {
-                    return getBusinessNameById(detail.value.bk_biz_id);
-                  },
-                },
-                {
-                  name: '需求类型',
-                  prop: 'require_type',
-                  render() {
-                    return transformRequireTypes(detail.value.require_type);
-                  },
-                },
+                { name: '提单人', prop: 'bk_username' },
                 {
                   name: '期望交付时间',
                   prop: 'expect_time',
-                  render() {
-                    return timeFormatter(detail.value.expect_time, 'YYYY-MM-DD');
-                  },
+                  render: () => timeFormatter(detail.value.expect_time, 'YYYY-MM-DD'),
                 },
                 {
-                  name: '关注人',
-                  prop: 'follower',
+                  name: '业务',
+                  prop: 'bk_biz_id',
+                  render: () => getBusinessNameById(detail.value.bk_biz_id),
                 },
+                { name: '关注人', prop: 'follower' },
                 {
-                  name: '备注',
-                  prop: 'remark',
+                  name: '需求类型',
+                  prop: 'require_type',
+                  render: () => transformRequireTypes(detail.value.require_type),
                 },
+                { name: '备注', prop: 'remark' },
               ]}
             />
-          </CommonCard>
-          <Card class={'mt24'} border={false} showHeader={false} showFooter={false}>
-            <p class={'common-card-title'}>需求子单</p>
-            <div class={`common-card-content`}>
-              <Button
-                class={'mr8'}
-                v-clipboard:copy={clipHostIp.value.join('\n')}
-                v-clipboard:success={batchMessage}
-                disabled={selections.value.length === 0}>
-                批量复制IP
-              </Button>
-              {cloundMachineList.value.length > 0 && (
-                <>
-                  <p class={'mt16 mb8'}>云主机</p>
-                  <Table
-                    showOverflowTooltip
-                    data={cloundMachineList.value}
-                    columns={Hostcolumns}
-                    {...{
-                      onSelect: (selections: any) => {
-                        handleSelectionChange(selections, () => true, false);
-                      },
-                      onSelectAll: (selections: any) => {
-                        handleSelectionChange(selections, () => true, true);
-                      },
-                    }}
-                  />
-                </>
-              )}
-              {physicMachineList.value.length > 0 && (
-                <>
-                  <p class={'mt16 mb8'}>物理机</p>
-                  <Table
-                    showOverflowTooltip
-                    {...{
-                      onSelect: (selections: any) => {
-                        handleSelectionChange(selections, () => true, false);
-                      },
-                      onSelectAll: (selections: any) => {
-                        handleSelectionChange(selections, () => true, true);
-                      },
-                    }}
-                    data={physicMachineList.value}
-                    columns={Machinecolumns}
-                  />
-                </>
-              )}
-            </div>
-          </Card>
+          </Panel>
 
-          <CommonCard title={() => '审批流程'} class={'mt24'}>
+          <Panel title='需求子单' class='mt24'>
             <Button
-              theme='primary'
-              text
-              onClick={() => {
-                window.open(applyRecord.value.itsm_ticket_link, '_blank');
-              }}>
-              <Share width={12} height={12} class={'mr4'} fill='#3A84FF' />
-              跳转到 ITSM 查看审批详情
+              class={'mr8'}
+              v-clipboard:copy={clipHostIp.value.join('\n')}
+              v-clipboard:success={batchMessage}
+              disabled={selections.value.length === 0}>
+              批量复制IP
             </Button>
-            {currentAuditStep.value.name ? (
-              <div class='apply-human'>
-                当前审批步骤：{currentAuditStep.value.name} 审核人：
-                <WName name={currentAuditStep.value.processors} />
-              </div>
-            ) : null}
-            {currentAuditStep.value.processors.includes(userStore.username) ? (
-              <div>
-                <Input v-model={auditRemark.value} type='textarea' placeholder='请输入审核意见' />
-                <div class='apply-operate'>
-                  <Button theme='primary' onClick={() => approval(true)}>
-                    审核通过
-                  </Button>
-                  <Button theme='danger' onClick={() => approval(false)}>
-                    驳回
-                  </Button>
-                </div>
-              </div>
-            ) : null}
-            <div class={'timeline-container'}>
-              <Timeline
-                list={applyRecord.value.logs.map(({ message, operate_at }) => ({
-                  tag: message,
-                  content: <span class={'timeline-content-txt'}>{operate_at}</span>,
-                  nodeType: 'vnode',
-                }))}
-              />
-            </div>
-          </CommonCard>
+            {cloundMachineList.value.length > 0 && (
+              <>
+                <p class={'mt16 mb8'}>云主机</p>
+                <Table
+                  showOverflowTooltip
+                  data={cloundMachineList.value}
+                  columns={Hostcolumns}
+                  {...{
+                    onSelect: (selections: any) => {
+                      handleSelectionChange(selections, () => true, false);
+                    },
+                    onSelectAll: (selections: any) => {
+                      handleSelectionChange(selections, () => true, true);
+                    },
+                  }}
+                />
+              </>
+            )}
+            {physicMachineList.value.length > 0 && (
+              <>
+                <p class={'mt16 mb8'}>物理机</p>
+                <Table
+                  showOverflowTooltip
+                  {...{
+                    onSelect: (selections: any) => {
+                      handleSelectionChange(selections, () => true, false);
+                    },
+                    onSelectAll: (selections: any) => {
+                      handleSelectionChange(selections, () => true, true);
+                    },
+                  }}
+                  data={physicMachineList.value}
+                  columns={Machinecolumns}
+                />
+              </>
+            )}
+          </Panel>
+
+          <Panel title='审批流程' class='mt24'>
+            <ItsmTicketAudit
+              orderId={+route.params.id}
+              creator={route.query.creator as string}
+              bkBizId={Number(route.query.bkBizId)}
+            />
+          </Panel>
         </div>
         <ModifyRecord v-model={showRecordSlider.value} showObj={recordParams.value} />
       </div>

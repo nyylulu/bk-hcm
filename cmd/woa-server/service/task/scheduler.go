@@ -139,7 +139,13 @@ func (s *service) GetBizApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyTicket(cts.Kit, input)
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return rst, nil
 }
 
 // GetApplyTicket get apply ticket
@@ -156,22 +162,17 @@ func (s *service) GetApplyTicket(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyTicket(cts.Kit, input)
-}
-
-// getApplyTicket get apply ticket
-func (s *service) getApplyTicket(kt *kit.Kit, input *types.GetApplyTicketReq) (any, error) {
-	rst, err := s.logics.Scheduler().GetApplyTicket(kt, input)
+	rst, err := s.logics.Scheduler().GetApplyTicket(cts.Kit, input)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 
 	return rst, nil
 }
 
-// GetBizApplyAudit get biz apply audit
-func (s *service) GetBizApplyAudit(cts *rest.Contexts) (any, error) {
+// GetBizApplyAuditItsm get biz apply audit
+func (s *service) GetBizApplyAuditItsm(cts *rest.Contexts) (any, error) {
 	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
 		return nil, err
@@ -189,44 +190,178 @@ func (s *service) GetBizApplyAudit(cts *rest.Contexts) (any, error) {
 		return nil, err
 	}
 
-	input := new(types.GetApplyAuditReq)
+	input := new(types.GetApplyAuditItsmReq)
 	if err = cts.DecodeInto(input); err != nil {
 		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 	input.BkBizID = bkBizID
 
-	errKey, err := input.Validate()
-	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+	if err := input.Validate(); err != nil {
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyAudit(cts.Kit, input)
+	return s.getApplyAuditItsm(cts.Kit, input)
 }
 
-// GetApplyAudit get apply audit
-func (s *service) GetApplyAudit(cts *rest.Contexts) (any, error) {
-	input := new(types.GetApplyAuditReq)
-	if err := cts.DecodeInto(input); err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+// GetBizApplyAuditCrp get biz apply audit
+func (s *service) GetBizApplyAuditCrp(cts *rest.Contexts) (any, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check biz apply ticket crp audit permission, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
-	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+	req := new(types.GetApplyAuditCrpReq)
+	if err = cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to get biz apply ticket crp audit info, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to get biz apply ticket crp audit info, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	return s.getApplyAudit(cts.Kit, input)
+	recordFilter := make(map[string]interface{})
+	recordFilter["suborder_id"] = req.SuborderId
+	recordFilter["task_id"] = req.CrpTicketId
+	page := metadata.BasePage{Start: 0, Limit: 1}
+	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(cts.Kit.Ctx, page, recordFilter)
+	if err != nil {
+		logs.Errorf("failed to list generate records, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(records) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("generate record not found"))
+	}
+
+	applyOrders, err := s.listApplyOrders(cts.Kit, page, withSuborderIDs(records[0].SubOrderId), withBizID(bkBizID))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(applyOrders) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
+	}
+
+	resAttr := meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: applyOrders[0].BkBizId,
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, resAttr)
+	if err != nil {
+		logs.Errorf("failed to check get apply audit crp, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getApplyAuditCrp(cts.Kit, req)
 }
 
-// getApplyAudit get apply ticket audit info
-func (s *service) getApplyAudit(kt *kit.Kit, input *types.GetApplyAuditReq) (any, error) {
-	rst, err := s.logics.Scheduler().GetApplyAudit(kt, input)
+// GetApplyAuditItsm get apply audit
+func (s *service) GetApplyAuditItsm(cts *rest.Contexts) (any, error) {
+	req := new(types.GetApplyAuditItsmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	ticket, err := s.listApplyTicket(cts.Kit, withOrderID(int64(req.OrderId)))
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: ticket.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("failed to check get apply audit itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getApplyAuditItsm(cts.Kit, req)
+}
+
+// GetApplyAuditCrp ...
+func (s *service) GetApplyAuditCrp(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.GetApplyAuditCrpReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	recordFilter := make(map[string]interface{})
+	recordFilter["suborder_id"] = req.SuborderId
+	recordFilter["task_id"] = req.CrpTicketId
+	page := metadata.BasePage{Start: 0, Limit: 1}
+	records, err := model.Operation().GenerateRecord().FindManyGenerateRecord(cts.Kit.Ctx, page, recordFilter)
+	if err != nil {
+		logs.Errorf("failed to list generate records, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(records) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("generate record not found"))
+	}
+
+	applyOrders, err := s.listApplyOrders(cts.Kit, page, withSuborderIDs(records[0].SubOrderId))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(applyOrders) == 0 {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
+	}
+
+	resAttr := meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: applyOrders[0].BkBizId,
+	}
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, resAttr)
+	if err != nil {
+		logs.Errorf("failed to check get apply audit crp, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return s.getApplyAuditCrp(cts.Kit, req)
+}
+
+// getApplyAuditItsm get apply ticket audit info
+func (s *service) getApplyAuditItsm(kt *kit.Kit, req *types.GetApplyAuditItsmReq) (any, error) {
+	rst, err := s.logics.Scheduler().GetApplyAuditItsm(kt, req)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket itsm audit info, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+// getApplyAuditCrp get apply ticket audit info
+func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq) (any, error) {
+	rst, err := s.logics.Scheduler().GetApplyAuditCrp(kt, req)
+	if err != nil {
+		logs.Errorf("failed to get apply ticket crp audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -1389,6 +1524,8 @@ func (s *service) GetApplyModify(cts *rest.Contexts) (any, error) {
 	return rst, nil
 }
 
+// getApplyOrderBizIds get apply order biz ids
+// Deprecated: use listApplyOrders instead
 func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int64, error) {
 	filter := map[string]interface{}{}
 
@@ -1418,6 +1555,68 @@ func (s *service) getApplyOrderBizIds(kit *kit.Kit, suborderIds []string) ([]int
 	return bizIds, nil
 }
 
+// filterOptFunc list apply orders
+type filterOptFunc func(filter map[string]interface{})
+
+// withOrderID filter apply order by order id
+func withOrderID(orderID int64) filterOptFunc {
+	return func(filter map[string]interface{}) {
+		filter["order_id"] = orderID
+	}
+}
+
+// withSuborderIDs filter apply order by suborder ids
+func withSuborderIDs(suborderIDs ...string) filterOptFunc {
+	return func(filter map[string]interface{}) {
+		if len(suborderIDs) == 0 {
+			return
+		}
+
+		filter["suborder_id"] = mapstr.MapStr{
+			pkg.BKDBIN: suborderIDs,
+		}
+	}
+}
+
+// withBizID filter apply order by biz id
+func withBizID(bizID int64) filterOptFunc {
+	return func(filter map[string]interface{}) {
+		filter["bk_biz_id"] = bizID
+	}
+}
+
+// listApplyOrders list apply orders
+func (s *service) listApplyOrders(kit *kit.Kit, page metadata.BasePage, filterOptFns ...filterOptFunc) (
+	[]*types.ApplyOrder, error) {
+
+	filter := map[string]interface{}{}
+	for _, fn := range filterOptFns {
+		fn(filter)
+	}
+
+	orders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return orders, nil
+}
+
+// listApplyOrders list apply orders
+func (s *service) listApplyTicket(kit *kit.Kit, filterOptFns ...filterOptFunc) (*types.ApplyTicket, error) {
+	filter := mapstr.MapStr{}
+	for _, fn := range filterOptFns {
+		fn(filter)
+	}
+
+	ticket, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	if err != nil {
+		return nil, err
+	}
+
+	return ticket, nil
+}
+
 // CheckRollingServerHost check rolling server host
 func (s *service) CheckRollingServerHost(cts *rest.Contexts) (any, error) {
 	input := new(types.CheckRollingServerHostReq)
@@ -1438,4 +1637,149 @@ func (s *service) CheckRollingServerHost(cts *rest.Contexts) (any, error) {
 	}
 
 	return rst, nil
+}
+
+// CancelApplyTicketItsm ...
+func (s *service) CancelApplyTicketItsm(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.CancelApplyTicketItsmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	ticket, err := s.listApplyTicket(cts.Kit, withOrderID(req.OrderID))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: ticket.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketItsm(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket itsm, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
+}
+
+// CancelBizApplyTicketItsm ...
+func (s *service) CancelBizApplyTicketItsm(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel biz apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(types.CancelApplyTicketItsmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketItsm(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel biz apply ticket itsm, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return nil, nil
+}
+
+// CancelApplyTicketCrp ...
+func (s *service) CancelApplyTicketCrp(cts *rest.Contexts) (interface{}, error) {
+	req := new(types.CancelApplyTicketCrpReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: 1,
+	}
+	applyOrders, err := s.listApplyOrders(cts.Kit, page, withSuborderIDs(req.SubOrderID))
+	if err != nil {
+		logs.Errorf("failed to list apply orders, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	resAttrs := make([]meta.ResourceAttribute, 0)
+	for _, applyOrder := range applyOrders {
+		resAttrs = append(resAttrs, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: applyOrder.BkBizId,
+		})
+	}
+
+	if err = s.authorizer.AuthorizeWithPerm(cts.Kit, resAttrs...); err != nil {
+		logs.Errorf("failed to check cancel apply ticket itsm, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketCrp(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket crp, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// CancelBizApplyTicketCrp ...
+func (s *service) CancelBizApplyTicketCrp(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+	if bkBizID <= 0 {
+		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
+	}
+
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+	})
+	if err != nil {
+		logs.Errorf("failed to check cancel biz apply ticket crp, bizID: %d, err: %v, rid: %s",
+			bkBizID, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(types.CancelApplyTicketCrpReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := s.logics.Scheduler().CancelApplyTicketCrp(cts.Kit, req); err != nil {
+		logs.Errorf("failed to cancel apply ticket crp, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
 }
