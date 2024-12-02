@@ -380,7 +380,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		if order.RequireType == enumor.RequireTypeGreenChannel && (subnetID == "" || applyNum <= 0) {
 			if len(subnetList) > 0 {
 				subnetID = subnetList[0].Id
-				applyNum = 1
+				applyNum = replicas
 			}
 		}
 
