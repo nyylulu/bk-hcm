@@ -31,7 +31,10 @@ import (
 type DemandYearMonthWeek struct {
 	Year  int        `json:"year"`
 	Month time.Month `json:"month"`
-	Week  int        `json:"week"`
+	// Week 需求年月周
+	Week int `json:"week"`
+	// YearWeek 需求全年周
+	YearWeek int `json:"year_week"`
 }
 
 // GetDemandYearMonthWeek returns the year, month and week of the month based on the input time from a demand
@@ -42,22 +45,31 @@ type DemandYearMonthWeek struct {
 func GetDemandYearMonthWeek(t time.Time) DemandYearMonthWeek {
 	year, month := GetDemandYearMonth(t)
 
-	// 从输入时间t逐周往前回溯，若前一周的需求年月与当前不同，则需求年月周++
+	// 从输入时间t逐周往前回溯：
+	// 若前一周的需求年月与当前不同，则需求年月周++
+	// 若前一周的需求年与当前不同，则需求全年周++
 	// 举例：2024年9月8日的需求年月是“2024年9月”，前一周（2024年9月1日）的需求年月是“2024年8月”，两者的需求年月不同，
 	//   因此，2024年9月8日的需求年月周为“2024年9月第1周”
 	week := 1
+	yearWeek := 1
 	for tPrevWeek := t.AddDate(0, 0, -7); ; tPrevWeek = tPrevWeek.AddDate(0, 0, -7) {
-		_, monthOfPrevWeek := GetDemandYearMonth(tPrevWeek)
-		if monthOfPrevWeek != month {
+		yearOfPrevWeek, monthOfPrevWeek := GetDemandYearMonth(tPrevWeek)
+		if yearOfPrevWeek != year {
 			break
 		}
-		week += 1
+
+		if monthOfPrevWeek == month {
+			week += 1
+		}
+
+		yearWeek += 1
 	}
 
 	return DemandYearMonthWeek{
-		Year:  year,
-		Month: month,
-		Week:  week,
+		Year:     year,
+		Month:    month,
+		Week:     week,
+		YearWeek: yearWeek,
 	}
 }
 
@@ -167,4 +179,25 @@ func GetDemandStatus(expectedStart, expectedEnd *time.Time) enumor.DemandStatus 
 	}
 
 	return enumor.DemandStatusCanApply
+}
+
+// GetDemandStatusByExpectTime 根据期望交付时间获取需求状态
+func GetDemandStatusByExpectTime(expectTime string) (enumor.DemandStatus, error) {
+	t, err := time.Parse(constant.DateLayout, expectTime)
+	if err != nil {
+		return "", err
+	}
+
+	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
+	// 未到申领时间
+	if t.After(monthEnd) {
+		return enumor.DemandStatusNotReady, nil
+	}
+
+	// 已过期
+	if t.Before(monthStart) {
+		return enumor.DemandStatusExpired, nil
+	}
+
+	return enumor.DemandStatusCanApply, nil
 }

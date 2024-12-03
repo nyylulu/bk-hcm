@@ -150,6 +150,30 @@ type InstanceQueryParam struct {
 	AssetId    []string `json:"instanceAssetId,omitempty"`
 }
 
+// PlanOrderChangeReq cvm and cbs plan order change request
+type PlanOrderChangeReq struct {
+	ReqMeta `json:",inline"`
+	Params  *PlanOrderChangeParam `json:"params"`
+}
+
+type PlanOrderChangeParam struct {
+	Page            *Page    `json:"page"`
+	Period          *Period  `json:"period,omitempty"`
+	OrderId         []string `json:"orderId,omitempty"`
+	BgName          []string `json:"bgName,omitempty"`
+	DeptName        []string `json:"deptName,omitempty"`
+	PlanProductName []string `json:"planProductName,omitempty"`
+	InstanceFamily  []string `json:"instanceFamily,omitempty"`
+	InstanceType    []string `json:"instanceType,omitempty"`
+	ProjectName     []string `json:"projectName,omitempty"`
+	// ResourceMode 资源模式（按机型/按机型族）
+	ResourceMode string   `json:"resourceMode,omitempty"`
+	UseTime      *UseTime `json:"useTime,omitempty"`
+	CityName     []string `json:"cityName,omitempty"`
+	ZoneName     []string `json:"zoneName,omitempty"`
+	InPlan       bool     `json:"inPlan,omitempty"`
+}
+
 // DemandChangeLogQueryReq cvm and cbs demand change log query request
 type DemandChangeLogQueryReq struct {
 	ReqMeta `json:",inline"`

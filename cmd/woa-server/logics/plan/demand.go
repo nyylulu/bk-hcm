@@ -20,6 +20,7 @@
 package plan
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -27,8 +28,10 @@ import (
 	"sync"
 	"time"
 
+	"hcm/cmd/woa-server/logics/plan/demand-time"
 	model "hcm/cmd/woa-server/model/task"
-	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
+	mtypes "hcm/cmd/woa-server/types/meta"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
@@ -40,8 +43,10 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
+	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpd "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	rpdc "hcm/pkg/dal/table/resource-plan/res-plan-demand-changelog"
+	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -51,8 +56,10 @@ import (
 	"hcm/pkg/tools/concurrence"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 )
 
 // IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
@@ -88,6 +95,743 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 	}
 
 	return result, nil
+}
+
+// ListResPlanDemandAndOverview list res plan demand and overview.
+func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit,
+	req *ptypes.ListResPlanDemandReq) (*ptypes.ListResPlanDemandResp,
+	error) {
+
+	// 获取demand列表
+	demandList, count, err := c.listAllResPlanDemand(kt, req)
+	if err != nil {
+		logs.Errorf("failed to list res plan demand, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
+		return nil, err
+	}
+	// 只返回总数，不返回详情及统计
+	if req.Page.Count {
+		return &ptypes.ListResPlanDemandResp{
+			Count: count,
+		}, nil
+	}
+
+	demandIDs := make([]string, len(demandList))
+	bkBizIDs := make([]int64, 0)
+	for idx, demand := range demandList {
+		demandIDs[idx] = demand.ID
+		bkBizIDs = append(bkBizIDs, demand.BkBizID)
+	}
+
+	// 获取当月预测消耗历史，聚合为 ResPlanConsumePool
+	startDay, endDay, err := req.ExpectTimeRange.GetTimeDate()
+	if err != nil {
+		logs.Errorf("failed to parse date range, err: %v, date range: %s - %s, rid: %s", err, req.ExpectTimeRange.Start,
+			req.ExpectTimeRange.End, kt.Rid)
+		return nil, err
+	}
+	prodConsumePool, err := c.GetProdResConsumePoolV2(kt, bkBizIDs, startDay, endDay)
+	if err != nil {
+		logs.Errorf("failed to get biz resource consume pool v2, bkBizIDs: %v, err: %v, rid: %s", bkBizIDs, err, kt.Rid)
+		return nil, err
+	}
+
+	// 获取各个机型的核心数
+	deviceTypeMap, err := c.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
+	if err != nil {
+		logs.Errorf("get device type map failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	planAppliedCore := convResConsumePoolToExpendMap(kt, prodConsumePool, deviceTypeMap)
+	// 清洗数据，计算overview，分页
+	overview, rst, err := convResPlanDemandRespAndPage(kt, req.Page, demandList, planAppliedCore, deviceTypeMap)
+	if err != nil {
+		logs.Errorf("failed to convert res plan demand table to response item, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return &ptypes.ListResPlanDemandResp{
+		Overview: overview,
+		Details:  rst,
+	}, nil
+}
+
+// convResConsumePoolToExpendMap 将 ResConsumePool 转为以 ResPlanDemandExpendKey 为 key 的 map
+// 因为 ResConsumePool 精确指定了deviceType，因此在list时无法进行模糊匹配，需要进行转化后使用
+func convResConsumePoolToExpendMap(kt *kit.Kit, pool ResPlanConsumePool,
+	deviceTypes map[string]wdt.WoaDeviceTypeTable) map[ptypes.ResPlanDemandExpendKey]int64 {
+
+	consumeMap := make(map[ptypes.ResPlanDemandExpendKey]int64)
+
+	for key, cpuCore := range pool {
+		if _, ok := deviceTypes[key.DeviceType]; !ok {
+			logs.Warnf("device type %s not found, rid: %s", key.DeviceType, kt.Rid)
+			continue
+		}
+
+		expendKey := ptypes.ResPlanDemandExpendKey{
+			BkBizID:       key.BkBizID,
+			PlanType:      key.PlanType,
+			AvailableTime: ptypes.AvailableMonth(key.AvailableTime),
+			DeviceFamily:  deviceTypes[key.DeviceType].DeviceFamily,
+			CoreType:      deviceTypes[key.DeviceType].CoreType,
+			ObsProject:    key.ObsProject,
+			RegionID:      key.RegionID,
+		}
+
+		consumeMap[expendKey] += cpuCore
+	}
+
+	return consumeMap
+}
+
+// convResPlanDemandRespAndPage convert res plan demand table to res plan demand response item, and apply page.
+func convResPlanDemandRespAndPage(kt *kit.Kit, page *core.BasePage, planTables []rpd.ResPlanDemandTable,
+	planAppliedCore map[ptypes.ResPlanDemandExpendKey]int64, deviceTypes map[string]wdt.WoaDeviceTypeTable) (
+	*ptypes.ListResPlanDemandOverview, []*ptypes.ListResPlanDemandItem, error) {
+
+	overview := &ptypes.ListResPlanDemandOverview{}
+	demandDetails := make([]*ptypes.ListResPlanDemandItem, len(planTables))
+
+	for idx, demand := range planTables {
+		expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime), constant.DateLayoutCompact,
+			constant.DateLayout)
+		if err != nil {
+			logs.Errorf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
+				demand.ExpectTime, kt.Rid)
+			return nil, nil, err
+		}
+
+		demandKey, err := getDemandExpendKeyFromTable(kt, demand, expectDateStr, deviceTypes)
+		if err != nil {
+			logs.Errorf("failed to get demand expend key, err: %v, demand id: %s, rid: %s", err, demand.ID,
+				kt.Rid)
+			return nil, nil, err
+		}
+
+		demandDetails[idx] = convListResPlanDemandItemByTable(demand, expectDateStr)
+
+		// 计算已消耗/剩余的核心数和实例数
+		// 因为可能存在分页，planAppliedCore 可能无法用尽，这里无法判断这种情况是否正常
+		if allAppliedCpuCore, ok := planAppliedCore[demandKey]; ok {
+			demandAppliedCpuCore := min(allAppliedCpuCore, cvt.PtrToVal(demand.CpuCore))
+			demandDetails[idx].AppliedCpuCore = demandAppliedCpuCore
+			planAppliedCore[demandKey] = planAppliedCore[demandKey] - demandAppliedCpuCore
+
+			deviceCpuCore := decimal.NewFromInt(deviceTypes[demand.DeviceType].CpuCore)
+			demandDetails[idx].AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
+		}
+		demandDetails[idx].RemainedOS = demandDetails[idx].TotalOS.Sub(demandDetails[idx].AppliedOS)
+		demandDetails[idx].RemainedCpuCore = demandDetails[idx].TotalCpuCore - demandDetails[idx].AppliedCpuCore
+
+		// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）
+		status, err := demandtime.GetDemandStatusByExpectTime(expectDateStr)
+		if err != nil {
+			logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demand.ID, kt.Rid)
+		} else {
+			demandDetails[idx].SetStatus(status)
+		}
+
+		// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
+		if status == enumor.DemandStatusCanApply {
+			demandDetails[idx].ExpiringCpuCore = demandDetails[idx].RemainedCpuCore
+		}
+
+		if cvt.PtrToVal(demand.Locked) == enumor.CrpDemandLocked {
+			demandDetails[idx].Status = enumor.DemandStatusLocked
+		}
+		demandDetails[idx].StatusName = demandDetails[idx].Status.Name()
+
+		// 计算overview
+		overview.TotalCpuCore += demandDetails[idx].TotalCpuCore
+		overview.TotalAppliedCore += demandDetails[idx].AppliedCpuCore
+		overview.ExpiringCpuCore += demandDetails[idx].ExpiringCpuCore
+		if demand.PlanType.InPlan() {
+			overview.InPlanCpuCore += demandDetails[idx].TotalCpuCore
+			overview.InPlanAppliedCpuCore += demandDetails[idx].AppliedCpuCore
+		} else {
+			overview.OutPlanCpuCore += demandDetails[idx].TotalCpuCore
+			overview.OutPlanAppliedCpuCore += demandDetails[idx].AppliedCpuCore
+		}
+	}
+
+	offset := int(page.Start + uint32(page.Limit))
+	if offset > len(demandDetails) {
+		offset = len(demandDetails)
+	}
+	demandDetails = demandDetails[int(page.Start):offset]
+
+	return overview, demandDetails, nil
+}
+
+func getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, expectTime string,
+	deviceTypeMap map[string]wdt.WoaDeviceTypeTable) (ptypes.ResPlanDemandExpendKey, error) {
+
+	availableTime, err := ptypes.NewAvailableMonth(expectTime)
+	if err != nil {
+		logs.Errorf("failed to parse demand available time, err: %v, expect_time: %s, rid: %s", err,
+			demand.ExpectTime, kt.Rid)
+		return ptypes.ResPlanDemandExpendKey{}, err
+	}
+
+	return ptypes.ResPlanDemandExpendKey{
+		BkBizID:       demand.BkBizID,
+		PlanType:      demand.PlanType,
+		AvailableTime: availableTime,
+		DeviceFamily:  deviceTypeMap[demand.DeviceType].DeviceFamily,
+		CoreType:      deviceTypeMap[demand.DeviceType].CoreType,
+		ObsProject:    demand.ObsProject,
+		RegionID:      demand.RegionID,
+	}, nil
+}
+
+func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime string) *ptypes.ListResPlanDemandItem {
+	return &ptypes.ListResPlanDemandItem{
+		DemandID:        table.ID,
+		BkBizID:         table.BkBizID,
+		BkBizName:       table.BkBizName,
+		OpProductID:     table.OpProductID,
+		OpProductName:   table.OpProductName,
+		PlanProductID:   table.PlanProductID,
+		PlanProductName: table.PlanProductName,
+		DemandClass:     table.DemandClass,
+		DemandResType:   table.DemandResType,
+		ExpectTime:      expectTime,
+		DeviceClass:     table.DeviceClass,
+		DeviceType:      table.DeviceType,
+		TotalOS:         table.OS.Decimal,
+		AppliedOS:       decimal.NewFromInt(0),
+		TotalCpuCore:    cvt.PtrToVal(table.CpuCore),
+		AppliedCpuCore:  0,
+		TotalMemory:     cvt.PtrToVal(table.Memory),
+		TotalDiskSize:   cvt.PtrToVal(table.DiskSize),
+		RegionID:        table.RegionID,
+		RegionName:      table.RegionName,
+		ZoneID:          table.ZoneID,
+		ZoneName:        table.ZoneName,
+		PlanType:        table.PlanType.Name(),
+		ObsProject:      table.ObsProject,
+		DeviceFamily:    table.DeviceFamily,
+		DiskType:        table.DiskType,
+		DiskTypeName:    table.DiskType.Name(),
+		DiskIO:          table.DiskIO,
+	}
+}
+
+// GetResPlanDemandDetail get demand detail
+func (c *Controller) GetResPlanDemandDetail(kt *kit.Kit, demandID string, bkBizIDs []int64) (
+	*ptypes.GetPlanDemandDetailResp, error) {
+
+	listRules := make([]*filter.AtomRule, 0)
+	listRules = append(listRules, tools.RuleEqual("id", demandID))
+	if len(bkBizIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("bk_biz_id", bkBizIDs))
+	}
+
+	listReq := &rpproto.ResPlanDemandListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(listRules...),
+			Page:   core.NewDefaultBasePage(),
+		},
+	}
+
+	rst, err := c.client.DataService().Global.ResourcePlan.ListResPlanDemand(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if len(rst.Details) == 0 {
+		return nil, fmt.Errorf("demand %s not found in bk_biz_id: %v", demandID, bkBizIDs)
+	}
+	detail := rst.Details[0]
+
+	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(detail.ExpectTime), constant.DateLayoutCompact,
+		constant.DateLayout)
+	if err != nil {
+		logs.Errorf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
+			detail.ExpectTime, kt.Rid)
+		return nil, err
+	}
+
+	result := &ptypes.GetPlanDemandDetailResp{
+		DemandID:        detail.ID,
+		ExpectTime:      expectDateStr,
+		BkBizID:         detail.BkBizID,
+		BkBizName:       detail.BkBizName,
+		DeptID:          detail.VirtualDeptID,
+		DeptName:        detail.VirtualDeptName,
+		PlanProductID:   detail.PlanProductID,
+		PlanProductName: detail.PlanProductName,
+		OpProductID:     detail.OpProductID,
+		OpProductName:   detail.OpProductName,
+		ObsProject:      detail.ObsProject,
+		AreaID:          detail.AreaID,
+		AreaName:        detail.AreaName,
+		RegionID:        detail.RegionID,
+		RegionName:      detail.RegionName,
+		ZoneID:          detail.ZoneID,
+		ZoneName:        detail.ZoneName,
+		PlanType:        detail.PlanType.Name(),
+		CoreType:        detail.CoreType,
+		DeviceFamily:    detail.DeviceFamily,
+		DeviceClass:     detail.DeviceClass,
+		DeviceType:      detail.DeviceType,
+		OS:              detail.OS.Decimal,
+		Memory:          cvt.PtrToVal(detail.Memory),
+		CpuCore:         cvt.PtrToVal(detail.CpuCore),
+		DiskSize:        cvt.PtrToVal(detail.DiskSize),
+		DiskIO:          detail.DiskIO,
+		DiskType:        detail.DiskType,
+		DiskTypeName:    detail.DiskType.Name(),
+		ResMode:         detail.ResMode.Name(),
+	}
+	return result, nil
+}
+
+func convListResPlanDemandTimeFilter(kt *kit.Kit, expiringOnly bool, expectTimeRange *times.DateRange) (
+	[]*filter.AtomRule, error) {
+
+	listRules := make([]*filter.AtomRule, 0)
+
+	// 筛选本月到期，即期望交付时间在本月内的
+	if expiringOnly {
+		monthRange := demandtime.GetDemandDateRangeInMonth(time.Now())
+		startExpTime, err := times.ConvStrTimeToInt(monthRange.Start, constant.DateLayout)
+		if err != nil {
+			logs.Errorf("failed to parse month range, err: %v, month_range: %v, rid: %s", err, monthRange, kt.Rid)
+			return nil, err
+		}
+		endExpTime, err := times.ConvStrTimeToInt(monthRange.End, constant.DateLayout)
+		if err != nil {
+			logs.Errorf("failed to parse month range, err: %v, month_range: %v, rid: %s", err, monthRange, kt.Rid)
+			return nil, err
+		}
+		listRules = append(listRules, tools.RuleGreaterThanEqual("expect_time", startExpTime))
+		listRules = append(listRules, tools.RuleLessThanEqual("expect_time", endExpTime))
+	}
+	if expectTimeRange != nil {
+		startExpTime, err := times.ConvStrTimeToInt(expectTimeRange.Start, constant.DateLayout)
+		if err != nil {
+			logs.Errorf("failed to parse start expect time, err: %v, range_start: %s, rid: %s", err,
+				expectTimeRange.Start, kt.Rid)
+			return nil, err
+		}
+		endExpTime, err := times.ConvStrTimeToInt(expectTimeRange.End, constant.DateLayout)
+		if err != nil {
+			logs.Errorf("failed to parse end expect time, err: %v, range_end: %s, rid: %s", err,
+				expectTimeRange.End, kt.Rid)
+			return nil, err
+		}
+		listRules = append(listRules, tools.RuleGreaterThanEqual("expect_time", startExpTime))
+		listRules = append(listRules, tools.RuleLessThanEqual("expect_time", endExpTime))
+	}
+
+	return listRules, nil
+}
+
+func convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]*filter.AtomRule, error) {
+	listRules := make([]*filter.AtomRule, 0)
+	if len(req.BkBizIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
+	}
+	if len(req.OpProductIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("op_product_id", req.OpProductIDs))
+	}
+	if len(req.PlanProductIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("plan_product_id", req.PlanProductIDs))
+	}
+	if len(req.DemandIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("id", req.DemandIDs))
+	}
+	if len(req.ObsProjects) > 0 {
+		listRules = append(listRules, tools.RuleIn("obs_project", req.ObsProjects))
+	}
+	if len(req.DemandClasses) > 0 {
+		listRules = append(listRules, tools.RuleIn("demand_class", req.DemandClasses))
+	}
+	if len(req.DeviceClasses) > 0 {
+		listRules = append(listRules, tools.RuleIn("device_class", req.DeviceClasses))
+	}
+	if len(req.DeviceTypes) > 0 {
+		listRules = append(listRules, tools.RuleIn("device_type", req.DeviceTypes))
+	}
+	if len(req.RegionIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("region_id", req.RegionIDs))
+	}
+	if len(req.ZoneIDs) > 0 {
+		listRules = append(listRules, tools.RuleIn("zone_id", req.ZoneIDs))
+	}
+	if len(req.PlanTypes) > 0 {
+		planTypeCodes := make([]enumor.PlanTypeCode, len(req.PlanTypes))
+		for _, planType := range req.PlanTypes {
+			planTypeCodes = append(planTypeCodes, planType.GetCode())
+		}
+		listRules = append(listRules, tools.RuleIn("plan_type", planTypeCodes))
+	}
+
+	timeRules, err := convListResPlanDemandTimeFilter(kt, req.ExpiringOnly, req.ExpectTimeRange)
+	if err != nil {
+		logs.Errorf("failed to convert list res plan demand time filter, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	listRules = append(listRules, timeRules...)
+
+	return listRules, nil
+}
+
+// listAllResPlanDemand list all res plan demand by request.
+// Note that only count and sort is used in the req.Page.
+func (c *Controller) listAllResPlanDemand(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]rpd.ResPlanDemandTable,
+	uint64,
+	error) {
+
+	listRules, err := convAllResPlanDemandListOpt(kt, req)
+	if err != nil {
+		logs.Errorf("failed to convert list res plan demand filter, err: %v, rid: %s", err, kt.Rid)
+		return nil, 0, err
+	}
+
+	listPage := &core.BasePage{
+		Start: 0,
+		Limit: core.DefaultMaxPageLimit,
+		Sort:  req.Page.Sort,
+		Order: req.Page.Order,
+	}
+	if req.Page.Count {
+		listPage = req.Page
+	}
+
+	listReq := &rpproto.ResPlanDemandListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(listRules...),
+			Page:   listPage,
+		},
+	}
+
+	result := make([]rpd.ResPlanDemandTable, 0)
+	for {
+		rst, err := c.client.DataService().Global.ResourcePlan.ListResPlanDemand(kt, listReq)
+		if err != nil {
+			logs.Errorf("failed to list local res plan demand, err: %v, rid: %s", err, kt.Rid)
+			return nil, 0, err
+		}
+
+		if req.Page.Count {
+			return nil, rst.Count, nil
+		}
+
+		result = append(result, rst.Details...)
+
+		if len(rst.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	return result, 0, nil
+}
+
+func convResPlanDemandCreateReq(kt *kit.Kit, bizOrgRel mtypes.BizOrgRel, ticket *TicketInfo,
+	demand *ptypes.CrpOrderChangeInfo) (rpproto.ResPlanDemandCreateReq, error) {
+
+	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
+	if err != nil {
+		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
+			kt.Rid)
+		return rpproto.ResPlanDemandCreateReq{}, err
+	}
+
+	createReq := rpproto.ResPlanDemandCreateReq{
+		BkBizID:         bizOrgRel.BkBizID,
+		BkBizName:       bizOrgRel.BkBizName,
+		OpProductID:     bizOrgRel.OpProductID,
+		OpProductName:   bizOrgRel.OpProductName,
+		PlanProductID:   bizOrgRel.PlanProductID,
+		PlanProductName: bizOrgRel.PlanProductName,
+		VirtualDeptID:   bizOrgRel.VirtualDeptID,
+		VirtualDeptName: bizOrgRel.VirtualDeptName,
+		DemandClass:     ticket.DemandClass,
+		DemandResType:   demand.DemandResType,
+		ResMode:         demand.ResMode,
+		ObsProject:      demand.ObsProject,
+		ExpectTime:      expectTimeFormat.Format(constant.DateLayout),
+		PlanType:        demand.PlanType,
+		AreaID:          demand.AreaID,
+		AreaName:        demand.AreaName,
+		RegionID:        demand.RegionID,
+		RegionName:      demand.RegionName,
+		ZoneID:          demand.ZoneID,
+		ZoneName:        demand.ZoneName,
+		DeviceFamily:    demand.DeviceFamily,
+		DeviceClass:     demand.DeviceClass,
+		DeviceType:      demand.DeviceType,
+		CoreType:        demand.CoreType,
+		DiskType:        demand.DiskType,
+		DiskTypeName:    demand.DiskTypeName,
+		OS:              demand.ChangeOs,
+		CpuCore:         demand.ChangeCpuCore,
+		Memory:          demand.ChangeMemory,
+		DiskSize:        demand.ChangeDiskSize,
+		DiskIO:          demand.DiskIO,
+	}
+	if kt.User == constant.BackendOperationUserKey {
+		createReq.Creator = ticket.Applicant
+	}
+
+	return createReq, nil
+}
+
+// CreateResPlanDemand create res plan demand.
+func (c *Controller) CreateResPlanDemand(kt *kit.Kit, bizOrgRel mtypes.BizOrgRel, ticket *TicketInfo,
+	demand *ptypes.CrpOrderChangeInfo) ([]string, error) {
+
+	createReq, err := convResPlanDemandCreateReq(kt, bizOrgRel, ticket, demand)
+	if err != nil {
+		logs.Errorf("failed to convert res plan demand create req, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	batchReq := &rpproto.ResPlanDemandBatchCreateReq{
+		Demands: []rpproto.ResPlanDemandCreateReq{createReq},
+	}
+
+	rst, err := c.client.DataService().Global.ResourcePlan.BatchCreateResPlanDemand(kt, batchReq)
+	if err != nil {
+		logs.Errorf("failed to create res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	// 更新日志
+	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
+	if err != nil {
+		logs.Warnf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
+			kt.Rid)
+		return rst.IDs, nil
+	}
+
+	demandID := rst.IDs[0]
+	osChange := demand.ChangeOs
+	cpuCoreChange := demand.ChangeCpuCore
+	memoryChange := demand.ChangeMemory
+	diskSizeChange := demand.ChangeDiskSize
+	changelogReq := &rpproto.DemandChangelogCreateReq{
+		Changelogs: []rpproto.DemandChangelogCreate{
+			{
+				DemandID:       demandID,
+				TicketID:       ticket.ID,
+				CrpOrderID:     ticket.CrpSn,
+				SuborderID:     "",
+				Type:           enumor.DemandChangelogTypeAppend,
+				ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
+				ObsProject:     demand.ObsProject,
+				RegionName:     demand.RegionName,
+				ZoneName:       demand.ZoneName,
+				DeviceType:     demand.DeviceType,
+				OSChange:       &osChange,
+				CpuCoreChange:  &cpuCoreChange,
+				MemoryChange:   &memoryChange,
+				DiskSizeChange: &diskSizeChange,
+				Remark:         ticket.Remark,
+			},
+		},
+	}
+
+	_, err = c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
+	if err != nil {
+		logs.Warnf("failed to create plan demand changelog, demand_id: %s, err: %v, rid: %s", demandID, err,
+			kt.Rid)
+	}
+
+	return rst.IDs, nil
+}
+
+// RepairResPlanDemandFromTicket 给定时间范围，从范围内的历史单据还原预测
+func (c *Controller) RepairResPlanDemandFromTicket(kt *kit.Kit, bkBizIDs []int64,
+	ticketTimeRange times.DateRange) error {
+
+	start := time.Now()
+	logs.Infof("start repair res plan demand from ticket, bk_biz_ids: %v, rangeStart: %s, rangeEnd: %s, time: %v, "+
+		"rid: %s", bkBizIDs, ticketTimeRange.Start, ticketTimeRange.End, start, kt.Rid)
+
+	// 捞取时间范围内的所有订单
+	listTicketRules := make([]filter.RuleFactory, 0)
+
+	drFilter, err := tools.DateRangeExpression("submitted_at", &ticketTimeRange)
+	if err != nil {
+		logs.Errorf("failed to build ticket time range filter, err: %v, time_range: %v, rid: %s", err,
+			ticketTimeRange, kt.Rid)
+		return err
+	}
+	listTicketRules = append(listTicketRules, drFilter)
+
+	if len(bkBizIDs) > 0 {
+		listTicketRules = append(listTicketRules, tools.RuleIn("bk_biz_id", bkBizIDs))
+	}
+
+	listTicketFilter, err := tools.And(listTicketRules...)
+	if err != nil {
+		logs.Errorf("failed to build ticket filter, err: %v, bk_biz_ids: %v, time_range: %v, rid: %s", err,
+			bkBizIDs, ticketTimeRange, kt.Rid)
+		return err
+	}
+
+	allTickets, err := c.listAllResPlanTicket(kt, listTicketFilter)
+	if err != nil {
+		logs.Errorf("failed to list all res plan ticket, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 从订单还原预测变更信息
+	if err := c.applyResPlanDemandChangeFromRPTickets(kt, allTickets); err != nil {
+		logs.Errorf("failed to apply res plan demand change from res plan ticket, err: %v, bk_biz_ids: %v, "+
+			"rangeStart: %s, rangeEnd: %s, rid: %s", err, bkBizIDs, ticketTimeRange.Start, ticketTimeRange.End, kt.Rid)
+		return err
+	}
+
+	end := time.Now()
+	logs.Infof("end repair res plan demand from ticket, bk_biz_ids: %v, rangeStart: %s, rangeEnd: %s, time: %v, "+
+		"cost: %ds, rid: %s", bkBizIDs, ticketTimeRange.Start, ticketTimeRange.End, end, end.Sub(start).Seconds(),
+		kt.Rid)
+	return nil
+}
+
+func (c *Controller) applyResPlanDemandChangeFromRPTickets(kt *kit.Kit, tickets []rtypes.RPTicketWithStatus) error {
+	for _, ticket := range tickets {
+		// 只看已通过的订单
+		if ticket.Status != enumor.RPTicketStatusDone {
+			continue
+		}
+
+		var demands rpt.ResPlanDemands
+		if err := json.Unmarshal([]byte(ticket.Demands), &demands); err != nil {
+			logs.Errorf("failed to unmarshal demands, err: %v, rid: %s", err, kt.Rid)
+			return err
+
+		}
+
+		ticketInfo := &TicketInfo{
+			ID:               ticket.ID,
+			Type:             ticket.Type,
+			Applicant:        ticket.Applicant,
+			BkBizID:          ticket.BkBizID,
+			BkBizName:        ticket.BkBizName,
+			OpProductID:      ticket.OpProductID,
+			OpProductName:    ticket.OpProductName,
+			PlanProductID:    ticket.PlanProductID,
+			PlanProductName:  ticket.PlanProductName,
+			VirtualDeptID:    ticket.VirtualDeptID,
+			VirtualDeptName:  ticket.VirtualDeptName,
+			DemandClass:      ticket.DemandClass,
+			OriginalCpuCore:  ticket.OriginalCpuCore,
+			OriginalMemory:   ticket.OriginalMemory,
+			OriginalDiskSize: ticket.OriginalDiskSize,
+			UpdatedCpuCore:   ticket.UpdatedCpuCore,
+			UpdatedMemory:    ticket.UpdatedMemory,
+			UpdatedDiskSize:  ticket.UpdatedDiskSize,
+			Remark:           ticket.Remark,
+			Demands:          demands,
+			SubmittedAt:      ticket.SubmittedAt,
+			Status:           ticket.Status,
+			ItsmSn:           ticket.ItsmSn,
+			ItsmUrl:          ticket.ItsmSn,
+			CrpSn:            ticket.CrpSn,
+			CrpUrl:           ticket.CrpSn,
+		}
+
+		if err := c.applyResPlanDemandChange(kt, ticketInfo); err != nil {
+			logs.Errorf("failed to apply res plan demand change, err: %v, ticket_info: %+v, rid: %s", err,
+				*ticketInfo, kt.Rid)
+			return err
+		}
+
+		logs.Infof("apply res plan demand change from ticket, bk_biz_id: %d, ticket_id: %s, rid: %s",
+			ticket.BkBizID, ticket.ID, kt.Rid)
+	}
+
+	return nil
+}
+
+// UpdateResPlanDemand update res plan demand.
+func (c *Controller) UpdateResPlanDemand(kt *kit.Kit, ticket *TicketInfo, demandBefore rpd.ResPlanDemandTable,
+	demandChange *ptypes.CrpOrderChangeInfo) error {
+
+	beforeOS := cvt.PtrToVal(demandBefore.OS)
+	afterOS := beforeOS.Add(demandChange.ChangeOs)
+
+	beforeCpuCore := cvt.PtrToVal(demandBefore.CpuCore)
+	afterCpuCore := beforeCpuCore + demandChange.ChangeCpuCore
+
+	beforeMemory := cvt.PtrToVal(demandBefore.Memory)
+	afterMemory := beforeMemory + demandChange.ChangeMemory
+
+	beforeDiskSize := cvt.PtrToVal(demandBefore.DiskSize)
+	afterDiskSize := beforeDiskSize + demandChange.ChangeDiskSize
+
+	updateReq := rpproto.ResPlanDemandUpdateReq{
+		ID:       demandBefore.ID,
+		OS:       &afterOS,
+		CpuCore:  &afterCpuCore,
+		Memory:   &afterMemory,
+		DiskSize: &afterDiskSize,
+	}
+	if kt.User == constant.BackendOperationUserKey {
+		updateReq.Reviser = ticket.Applicant
+	}
+
+	batchReq := &rpproto.ResPlanDemandBatchUpdateReq{
+		Demands: []rpproto.ResPlanDemandUpdateReq{updateReq},
+	}
+
+	err := c.client.DataService().Global.ResourcePlan.BatchUpdateResPlanDemand(kt, batchReq)
+	if err != nil {
+		logs.Errorf("failed to update res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 更新日志
+	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demandBefore.ExpectTime),
+		constant.DateLayoutCompact, constant.DateLayout)
+	if err != nil {
+		logs.Warnf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
+			demandBefore.ExpectTime, kt.Rid)
+		expectDateStr = ""
+	}
+
+	demandID := demandBefore.ID
+	osChange := demandChange.ChangeOs
+	cpuCoreChange := demandChange.ChangeCpuCore
+	memoryChange := demandChange.ChangeMemory
+	diskSizeChange := demandChange.ChangeDiskSize
+	changelogReq := &rpproto.DemandChangelogCreateReq{
+		Changelogs: []rpproto.DemandChangelogCreate{
+			{
+				DemandID:       demandID,
+				TicketID:       ticket.ID,
+				CrpOrderID:     ticket.CrpSn,
+				SuborderID:     "",
+				Type:           enumor.DemandChangelogTypeAdjust,
+				ExpectTime:     expectDateStr,
+				ObsProject:     demandBefore.ObsProject,
+				RegionName:     demandBefore.RegionName,
+				ZoneName:       demandBefore.ZoneName,
+				DeviceType:     demandBefore.DeviceType,
+				OSChange:       &osChange,
+				CpuCoreChange:  &cpuCoreChange,
+				MemoryChange:   &memoryChange,
+				DiskSizeChange: &diskSizeChange,
+				Remark:         ticket.Remark,
+			},
+		},
+	}
+
+	_, err = c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
+	if err != nil {
+		logs.Warnf("failed to create plan demand changelog, demand_id: %s, err: %v, rid: %s", demandID, err,
+			kt.Rid)
+	}
+
+	return nil
 }
 
 // QueryIEGDemands query IEG crp demands.
@@ -451,19 +1195,21 @@ func (c *Controller) getDemandAllChangelogs(kt *kit.Kit, crpDemandID int64) (
 		}
 
 		if resp.Error.Code != 0 {
-			logs.Errorf("failed to list crp demand change log, code: %d, msg: %s, rid: %s", resp.Error.Code,
-				resp.Error.Message, kt.Rid)
+			logs.Errorf("failed to list crp demand change log, code: %d, msg: %s, crp_trace: %s, rid: %s",
+				resp.Error.Code, resp.Error.Message, resp.TraceId, kt.Rid)
 			return nil, fmt.Errorf("failed to list crp demand change log, code: %d, msg: %s", resp.Error.Code,
 				resp.Error.Message)
 		}
 
 		if resp.Result == nil {
-			logs.Errorf("failed to list crp demand change log, for result is empty, rid: %s", kt.Rid)
+			logs.Errorf("failed to list crp demand change log, for result is empty, crp_trace: %s, rid: %s",
+				resp.TraceId, kt.Rid)
 			return nil, errors.New("failed to list crp demand change log, for result is empty")
 		}
 
 		if len(resp.Result.Data) == 0 {
-			logs.Errorf("failed to list crp demand change log, for result data is empty, rid: %s", kt.Rid)
+			logs.Errorf("failed to list crp demand change log, for result data is empty, crp_trace: %s, rid: %s",
+				resp.TraceId, kt.Rid)
 			return nil, errors.New("failed to list crp demand change log, for result data is empty")
 		}
 

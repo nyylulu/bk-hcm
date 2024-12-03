@@ -47,6 +47,8 @@ type CVMClientInterface interface {
 	AddCvmCbsPlan(ctx context.Context, header http.Header, req *AddCvmCbsPlanReq) (*AddCvmCbsPlanResp, error)
 	// QueryPlanOrder query cvm and cbs plan order
 	QueryPlanOrder(ctx context.Context, header http.Header, req *QueryPlanOrderReq) (*QueryPlanOrderResp, error)
+	// QueryPlanOrderChange query cvm and cbs plan order change
+	QueryPlanOrderChange(ctx context.Context, header http.Header, req *PlanOrderChangeReq) (*PlanOrderChangeResp, error)
 	// QueryDemandChangeLog query demand change log
 	QueryDemandChangeLog(ctx context.Context, header http.Header, req *DemandChangeLogQueryReq) (
 		*DemandChangeLogQueryResp, error)
@@ -285,6 +287,24 @@ func (c *cvmApi) QueryPlanOrder(ctx context.Context, header http.Header, req *Qu
 
 	subPath := "/yunti-demand/external"
 	resp := new(QueryPlanOrderResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryPlanOrderChange query cvm and cbs plan order change
+func (c *cvmApi) QueryPlanOrderChange(ctx context.Context, header http.Header, req *PlanOrderChangeReq) (
+	*PlanOrderChangeResp, error) {
+
+	subPath := "/yunti-demand/external"
+	resp := new(PlanOrderChangeResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

@@ -170,7 +170,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM)
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM, esbClient)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err

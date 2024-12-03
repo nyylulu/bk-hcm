@@ -46,6 +46,8 @@ var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "virtual_dept_id", NamedC: "virtual_dept_id", Type: enumor.Numeric},
 	{Column: "virtual_dept_name", NamedC: "virtual_dept_name", Type: enumor.String},
 	{Column: "demand_class", NamedC: "demand_class", Type: enumor.String},
+	{Column: "demand_res_type", NamedC: "demand_res_type", Type: enumor.String},
+	{Column: "res_mode", NamedC: "res_mode", Type: enumor.String},
 	{Column: "obs_project", NamedC: "obs_project", Type: enumor.String},
 	{Column: "expect_time", NamedC: "expect_time", Type: enumor.Numeric},
 	{Column: "plan_type", NamedC: "plan_type", Type: enumor.String},
@@ -96,6 +98,10 @@ type ResPlanDemandTable struct {
 	VirtualDeptName string `db:"virtual_dept_name" json:"virtual_dept_name" validate:"lte=64"`
 	// DemandClass 需求类型
 	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
+	// DemandResType 需求资源类型
+	DemandResType enumor.DemandResType `db:"demand_res_type" json:"demand_res_type" validate:"lte=8"`
+	// ResMode 资源模式
+	ResMode enumor.ResModeCode `db:"res_mode" json:"res_mode" validate:"lte=16"`
 	// ObsProject 项目类型
 	ObsProject enumor.ObsProject `db:"obs_project" json:"obs_project" validate:"lte=64"`
 	// ExpectTime 期望交付时间
@@ -170,6 +176,14 @@ func (r ResPlanDemandTable) InsertValidate() error {
 	}
 
 	if err := r.DemandClass.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.DemandResType.Validate(); err != nil {
+		return err
+	}
+
+	if err := r.ResMode.Validate(); err != nil {
 		return err
 	}
 
@@ -302,16 +316,8 @@ func (r ResPlanDemandTable) UpdateValidate() error {
 		return err
 	}
 
-	if len(r.DemandClass) > 0 {
-		if err := r.DemandClass.Validate(); err != nil {
-			return err
-		}
-	}
-
-	if len(r.ObsProject) > 0 {
-		if err := r.ObsProject.ValidateResPlan(); err != nil {
-			return err
-		}
+	if err := r.demandResourceMetaValidate(); err != nil {
+		return err
 	}
 
 	if len(r.PlanType) > 0 {
@@ -340,6 +346,35 @@ func (r ResPlanDemandTable) UpdateValidate() error {
 
 	if len(r.Reviser) == 0 {
 		return errors.New("reviser can not be empty")
+	}
+
+	return nil
+}
+
+// 抽出部分检查，降低圈复杂度
+func (r ResPlanDemandTable) demandResourceMetaValidate() error {
+	if len(r.DemandClass) > 0 {
+		if err := r.DemandClass.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if len(r.DemandResType) > 0 {
+		if err := r.DemandResType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if len(r.ResMode) > 0 {
+		if err := r.ResMode.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if len(r.ObsProject) > 0 {
+		if err := r.ObsProject.ValidateResPlan(); err != nil {
+			return err
+		}
 	}
 
 	return nil

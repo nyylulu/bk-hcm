@@ -181,6 +181,26 @@ func (t DemandResType) Validate() error {
 	return nil
 }
 
+// ResModeCode is resource plan res mode code.
+type ResModeCode string
+
+const (
+	ResModeCodeByDeviceType   ResModeCode = "device_type"
+	ResModeCodeByDeviceFamily ResModeCode = "device_family"
+)
+
+// Validate ResModeCode
+func (r ResModeCode) Validate() error {
+	switch r {
+	case ResModeCodeByDeviceType:
+	case ResModeCodeByDeviceFamily:
+	default:
+		return fmt.Errorf("unsupported res mode code: %s", r)
+	}
+
+	return nil
+}
+
 // ResMode is resource plan resource mode.
 type ResMode string
 
@@ -208,6 +228,26 @@ func GetResModeMembers() []ResMode {
 	return []ResMode{ResModeByDeviceType, ResModeByDeviceFamily}
 }
 
+var resModeNameMap = map[ResModeCode]ResMode{
+	ResModeCodeByDeviceType:   ResModeByDeviceType,
+	ResModeCodeByDeviceFamily: ResModeByDeviceFamily,
+}
+
+// Name get ResModeCode's name.
+func (r ResModeCode) Name() ResMode {
+	return resModeNameMap[r]
+}
+
+// Code get ResMode's code.
+func (r ResMode) Code() (ResModeCode, error) {
+	for code, n := range resModeNameMap {
+		if n == r {
+			return code, nil
+		}
+	}
+	return "", fmt.Errorf("unsupported res mode: %s", r)
+}
+
 // ObsProject is obs project.
 type ObsProject string
 
@@ -233,7 +273,8 @@ func GetObsProjectMembers() []ObsProject {
 // GetObsProjectMembersForResPlan get ObsProject's members for resource plan.
 func GetObsProjectMembersForResPlan() []ObsProject {
 	obsProjects := []ObsProject{ObsProjectNormal, ObsProjectReuse, ObsProjectMigrate}
-	obsProjects = append(obsProjects, getSpringObsProject(), getDissolveObsProject())
+	obsProjects = append(obsProjects, getSpringObsProjectForResPlan()...)
+	obsProjects = append(obsProjects, getDissolveObsProjectForResPlan()...)
 
 	return obsProjects
 }
@@ -290,6 +331,41 @@ func getDissolveObsProject() ObsProject {
 	project := ObsProject(prefixYear + "机房裁撤")
 
 	return project
+}
+
+// getSpringObsProjectForResPlan get spring obs project for resource plan.
+func getSpringObsProjectForResPlan() []ObsProject {
+	projects := make([]ObsProject, 0)
+	nowYear := time.Now().Year()
+	// 春保窗口期：12月1日～次年3月25日
+
+	// 因预测的提前性，1月1日～次年3月25日均允许提次年的春保项目预测单
+	prefixYear := strconv.Itoa(nowYear + 1)
+	projects = append(projects, ObsProject(prefixYear+"春节保障"))
+
+	// 3月25日前允许申请当年的春保项目预测单
+	ddl := time.Date(nowYear, time.March, 25, 0, 0, 0, 0, time.Local)
+	if time.Now().Before(ddl) {
+		prefixYear := strconv.Itoa(nowYear)
+		projects = append(projects, ObsProject(prefixYear+"春节保障"))
+	}
+
+	return projects
+}
+
+// getDissolveObsProjectForResPlan get dissolve obs project for resource plan.
+func getDissolveObsProjectForResPlan() []ObsProject {
+	projects := make([]ObsProject, 0)
+
+	// 按自然年作为机房裁撤的窗口滚动周期
+	// 如"2024机房裁撤"
+	nowYear := time.Now().Local().Year()
+	prefixYear := strconv.Itoa(nowYear)
+	projects = append(projects, ObsProject(prefixYear+"机房裁撤"))
+	nextPrefixYear := strconv.Itoa(nowYear + 1)
+	projects = append(projects, ObsProject(nextPrefixYear+"机房裁撤"))
+
+	return projects
 }
 
 // RequireType is resource apply require type.
@@ -546,8 +622,30 @@ func GetPlanTypeCodeHcmMembers() []PlanTypeCode {
 	return []PlanTypeCode{PlanTypeCodeInPlan, PlanTypeCodeOutPlan}
 }
 
+// PlanTypeMaps is plan type maps.
+var PlanTypeMaps = map[PlanTypeCode]PlanType{
+	PlanTypeCodeInPlan:  PlanTypeHcmInPlan,
+	PlanTypeCodeOutPlan: PlanTypeHcmOutPlan,
+}
+
+// Name return the name of PlanTypeCode.
+func (p PlanTypeCode) Name() PlanType {
+	return PlanTypeMaps[p]
+}
+
+// InPlan return true if the plan type is in plan.
+func (p PlanTypeCode) InPlan() bool {
+	switch p {
+	case PlanTypeCodeInPlan:
+		return true
+	case PlanTypeCodeOutPlan:
+		return false
+	default:
+		return false
+	}
+}
+
 // PlanType is resource plan type.
-// TODO: 考虑HCM和CRP的计划类型是否拆为2个类型
 type PlanType string
 
 const (
@@ -573,6 +671,19 @@ func (p PlanType) Validate() error {
 	}
 
 	return nil
+}
+
+// PlanTypeNameMaps is plan type name maps.
+var PlanTypeNameMaps = map[PlanType]PlanTypeCode{
+	PlanTypeCrpInPlan:  PlanTypeCodeInPlan,
+	PlanTypeCrpOutPlan: PlanTypeCodeOutPlan,
+	PlanTypeHcmInPlan:  PlanTypeCodeInPlan,
+	PlanTypeHcmOutPlan: PlanTypeCodeOutPlan,
+}
+
+// GetCode get plan type code.
+func (p PlanType) GetCode() PlanTypeCode {
+	return PlanTypeNameMaps[p]
 }
 
 // GetPlanTypeHcmMembers get hcm PlanType's members.
@@ -735,6 +846,18 @@ func (d DemandChangelogType) Validate() error {
 	}
 
 	return nil
+}
+
+var demandChangelogTypeNameMap = map[DemandChangelogType]string{
+	DemandChangelogTypeAppend: "追加",
+	DemandChangelogTypeAdjust: "调整",
+	DemandChangelogTypeDelete: "删除",
+	DemandChangelogTypeExpend: "消耗",
+}
+
+// Name get demand changelog type name.
+func (d DemandChangelogType) Name() string {
+	return demandChangelogTypeNameMap[d]
 }
 
 const (

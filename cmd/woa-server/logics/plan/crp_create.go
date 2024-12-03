@@ -26,6 +26,7 @@ import (
 
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/types"
@@ -88,56 +89,6 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	return nil
 }
 
-// upsertCrpDemand crp tickets are approved and upsert hcm data.
-func (c *Controller) upsertCrpDemand(kt *kit.Kit, ticket *TicketInfo) error {
-	// call crp api to get ticket corresponding crp demand ids.
-	demands, err := c.QueryIEGDemands(kt, &QueryIEGDemandsReq{CrpSns: []string{ticket.CrpSn}})
-	if err != nil {
-		logs.Errorf("failed to query ieg demands, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
-		return err
-	}
-
-	crpDemandIDs := make([]int64, len(demands))
-	for idx, demand := range demands {
-		crpDemandID, err := strconv.ParseInt(demand.DemandId, 10, 64)
-		if err != nil {
-			logs.Errorf("failed to parse crp demand id, err: %v, demand_id: %s, rid: %s", err, demand.DemandId, kt.Rid)
-			return err
-		}
-		crpDemandIDs[idx] = crpDemandID
-	}
-
-	// upsert crp demand id and biz relation.
-	bizOrgRel := mtypes.BizOrgRel{
-		BkBizID:         ticket.BkBizID,
-		BkBizName:       ticket.BkBizName,
-		OpProductID:     ticket.OpProductID,
-		OpProductName:   ticket.OpProductName,
-		PlanProductID:   ticket.PlanProductID,
-		PlanProductName: ticket.PlanProductName,
-		VirtualDeptID:   ticket.VirtualDeptID,
-		VirtualDeptName: ticket.VirtualDeptName,
-	}
-	if err = c.upsertCrpDemandBizRel(kt, crpDemandIDs, ticket.DemandClass, bizOrgRel, ticket.Applicant); err != nil {
-		logs.Errorf("failed to upsert crp demand biz relation, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	// unlock all crp demands.
-	allCrpDemandIDs := append([]int64{}, crpDemandIDs...)
-	for _, demand := range ticket.Demands {
-		if demand.Original != nil {
-			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
-		}
-	}
-	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
-}
-
 // createAddCrpTicket create add crp ticket.
 func (c *Controller) createAddCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
 	addReq, err := c.constructAddReq(kt, ticket)
@@ -189,13 +140,16 @@ func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, m
 	}
 
 	// 失败需要释放资源
-	allCrpDemandIDs := make([]int64, 0)
+	allDemandIDs := make([]string, 0)
 	for _, demand := range ticket.Demands {
 		if demand.Original != nil {
-			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
 		}
 	}
-	if err := c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+	unlockReq := &rpproto.ResPlanDemandLockOpReq{
+		IDs: allDemandIDs,
+	}
+	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}

@@ -12,6 +12,12 @@
 
 package cvmapi
 
+import (
+	"hcm/pkg/criteria/enumor"
+
+	"github.com/shopspring/decimal"
+)
+
 // RespMeta cvm response meta info
 type RespMeta struct {
 	Id      string    `json:"id"`
@@ -108,6 +114,44 @@ type InstanceItem struct {
 	CreateTime      string `json:"createTime"`
 	Pool            int    `json:"pool"`
 	ObsProject      string `json:"obsProject"`
+}
+
+// PlanOrderChangeResp cvm plan order change response
+type PlanOrderChangeResp struct {
+	RespMeta `json:",inline"`
+	Result   *PlanOrderChangeRst `json:"result"`
+}
+
+// PlanOrderChangeRst cvm plan order change result
+type PlanOrderChangeRst struct {
+	Total int                    `json:"total"`
+	Data  []*PlanOrderChangeItem `json:"data"`
+}
+
+// PlanOrderChangeItem cvm plan order change item
+type PlanOrderChangeItem struct {
+	UseTime           string            `json:"useTime"`
+	BgName            string            `json:"bgName"`
+	DeptName          string            `json:"deptName"`
+	PlanProductName   string            `json:"planProductName"`
+	ProjectName       enumor.ObsProject `json:"projectName"`
+	CityName          string            `json:"cityName"`
+	ZoneName          string            `json:"zoneName"`
+	InstanceFamily    string            `json:"instanceFamily"`
+	InstanceType      string            `json:"instanceType"`
+	InstanceModel     string            `json:"instanceModel"`
+	CoreTypeName      string            `json:"coreTypeName"`
+	DiskTypeName      string            `json:"diskTypeName"`
+	PlanType          enumor.PlanType   `json:"planType"`
+	ChangeCvmAmount   decimal.Decimal   `json:"changeCvmAmount"`
+	ChangeCoreAmount  int64             `json:"changeCoreAmount"`
+	ChangeRamAmount   int64             `json:"changeRamAmount"`
+	ChangedDiskAmount int64             `json:"changedDiskAmount"`
+	InstanceIO        int64             `json:"instanceIO"`
+	SourceType        string            `json:"sourceType"`
+	OrderId           string            `json:"orderId"`
+	ResourceMode      enumor.ResMode    `json:"resourceMode"`
+	Desc              string            `json:"desc"`
 }
 
 // DemandChangeLogQueryResp cvm demand change log query response

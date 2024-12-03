@@ -108,6 +108,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
         "status": "locked",
         "status_name": "变更中",
         "demand_class": "CVM",
+        "demand_res_type": "CVM",
         "expect_time": "2024-01-01",
         "device_class": "高IO型I6t",
         "device_type": "I6t.33XMEDIUM198",
@@ -180,8 +181,9 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | plan_product_name  | string | 规划产品名称                                                                            |
 | status             | string | 需求状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中） |
 | status_name        | string | 需求状态名称                                                                            |
-| demand_class       | string | 预测的需求类型                                                                           |
-| expect_time        | string | 期望交付日期                                                                            |
+| demand_class       | string | 预测的需求类型，枚举值：CVM、CA                                                                |
+| demand_res_type    | string | 预测资源类型，枚举值：CVM、CBS                                                                |
+| expect_time        | string | 期望交付日期，格式为YYYY-MM-DD，例如2024-01-01                                                 |
 | device_class       | string | 机型类型                                                                              |
 | device_type        | string | 机型规格                                                                              |
 | total_os           | string | 总OS数量                                                                             |

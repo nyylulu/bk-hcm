@@ -44,6 +44,8 @@ create table if not exists `res_plan_demand`
     `virtual_dept_id`   bigint         not null comment '虚拟部门ID',
     `virtual_dept_name` varchar(64)    not null comment '虚拟部门名称',
     `demand_class`      varchar(16)    not null comment '预测的需求类型(枚举值：CVM、CA)',
+    `demand_res_type`   varchar(8)     not null comment '资源类型(枚举值：CVM、CBS)',
+    `res_mode`          varchar(16)    not null comment '资源模式(枚举值：device_type、device_family)',
     `obs_project`       varchar(64)    not null comment '项目类型',
     `expect_time`       int unsigned   not null comment '期望到货时间，YYYYMMDD',
     `plan_type`         varchar(16)    not null comment '预测内外（枚举值：in_plan、out_plan）',
@@ -69,14 +71,16 @@ create table if not exists `res_plan_demand`
     `created_at`        timestamp      not null default current_timestamp comment '该记录的创建时间',
     `updated_at`        timestamp      not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
-    unique key `idx_uk_bk_biz_id_dimensions` (`bk_biz_id`, `plan_type`, `demand_class`, `obs_project`, `expect_time`, `region_id`, `zone_id`, `device_type`, `disk_type`, `disk_io`),
+    -- 避免索引超长，部分字段指定了前缀长度
+    unique key `idx_uk_bk_biz_id_dimensions` (`bk_biz_id`, `plan_type`, `obs_project`(16), `expect_time`, `region_id`(16), `zone_id`, `device_type`(16), `demand_class`, `demand_res_type`, `res_mode`, `disk_type`(16), `disk_io`),
     key `idx_obs_project` (`obs_project`),
     key `idx_device_class` (`device_class`),
+    key `idx_device_family_core_type` (`device_family`, `core_type`),
     key `idx_device_type` (`device_type`),
     key `idx_expect_time` (`expect_time`),
     key `idx_region_id` (`region_id`)
-) engine = innodb
-  default charset = utf8mb4 comment '资源预测需求表';
+    ) engine = innodb
+    default charset = utf8mb4 comment '资源预测需求表';
 
 # res_plan_demand_penalty_base table structure
 create table if not exists `res_plan_demand_penalty_base`
@@ -101,10 +105,10 @@ create table if not exists `res_plan_demand_penalty_base`
     `created_at`        timestamp   not null default current_timestamp comment '该记录的创建时间',
     `updated_at`        timestamp   not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
-    unique key `idx_uk_bk_biz_id_year_week_dimensions` (`bk_biz_id`, `year_week`, `source`, `area_name`, `device_family`),
+    unique key `idx_uk_year_week_bk_biz_id_dimensions` (`year_week`, `bk_biz_id`, `source`, `area_name`, `device_family`),
     key `idx_year_month` (`year`, `month`)
-) engine = innodb
-  default charset = utf8mb4 comment '罚金计算基数表';
+    ) engine = innodb
+    default charset = utf8mb4 comment '罚金计算基数表';
 
 # res_plan_demand_changelog table structure
 create table if not exists `res_plan_demand_changelog`
@@ -115,7 +119,7 @@ create table if not exists `res_plan_demand_changelog`
     `crp_order_id`     varchar(64)    not null comment 'CRP系统订单号',
     `suborder_id`      varchar(64)    not null comment '主机申领子订单号',
     `type`             varchar(16)    not null comment '变更类型(枚举值：append(追加)、adjust(修改)、delete(删除)、expend(消耗))',
-    `expect_time`      varchar(16)    not null comment '期望到货时间，YYYY-MM-DD（变更后）',
+    `expect_time`      int unsigned   not null comment '期望到货时间，YYYYMMDD（变更后）',
     `obs_project`      varchar(64)    not null comment '项目类型（变更后）',
     `region_name`      varchar(64)    not null comment '地区/城市名称（变更后）',
     `zone_name`        varchar(64)    not null comment '可用区名称（变更后）',
@@ -129,8 +133,8 @@ create table if not exists `res_plan_demand_changelog`
     `updated_at`       timestamp      not null default CURRENT_TIMESTAMP on update CURRENT_TIMESTAMP comment '该记录的更新时间',
     primary key (`id`),
     key `idx_demand_id` (`demand_id`)
-) engine = innodb
-  default charset = utf8mb4 comment '预测变更记录表';
+    ) engine = innodb
+    default charset = utf8mb4 comment '预测变更记录表';
 
 insert into id_generator(`resource`, `max_id`)
 values ('res_plan_demand_penalty_base', '0'),

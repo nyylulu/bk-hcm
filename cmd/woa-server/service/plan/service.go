@@ -99,4 +99,6 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("GetCvmChargeTypeDeviceTypeV2", http.MethodPost, "/config/findmany/config/cvm/charge_type/device_type",
 		s.GetCvmChargeTypeDeviceTypeV2)
 
+	// repair history data
+	h.Add("RepairResPlanDemand", http.MethodPost, "/plans/resources/demands/repair", s.RepairResPlanDemand)
 }

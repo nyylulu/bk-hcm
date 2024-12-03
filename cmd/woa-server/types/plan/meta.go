@@ -16,7 +16,7 @@ package plan
 import (
 	"time"
 
-	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
+	"hcm/cmd/woa-server/logics/plan/demand-time"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/times"

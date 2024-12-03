@@ -18,7 +18,7 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
+	"hcm/cmd/woa-server/logics/plan/demand-time"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"

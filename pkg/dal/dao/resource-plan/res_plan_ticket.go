@@ -211,6 +211,7 @@ func (d ResPlanTicketDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 }
 
 // ListWithStatus list resource plan ticket with corresponding status.
+// TODO 无法用 res_plan_ticket 和 res_plan_ticket_status 的共有字段作为查询条件，例如 created_time
 func (d ResPlanTicketDao) ListWithStatus(kt *kit.Kit, opt *types.ListOption) (
 	*rtypes.RPTicketWithStatusListRst, error) {
 

@@ -22,8 +22,6 @@ package demandchangelog
 
 import (
 	"fmt"
-	"strconv"
-	"time"
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
@@ -34,8 +32,8 @@ import (
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/api-gateway/bkbase"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/times"
 	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
@@ -53,14 +51,10 @@ func (svc *service) BatchCreateDemandChangelog(cts *rest.Contexts) (interface{},
 	changelogIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		models := make([]tablers.DemandChangelogTable, len(req.Changelogs))
 		for idx, item := range req.Changelogs {
-			t, err := time.Parse(constant.DateLayout, item.ExpectTime)
+			// 把字符串类型的[期望交付时间转]为符合格式的Int类型
+			expectTimeInt, err := times.ConvStrTimeToInt(item.ExpectTime, constant.DateLayout)
 			if err != nil {
-				return nil, errf.NewFromErr(errf.InvalidParameter, err)
-			}
-			expectTime := t.Format(bkbase.DateLayout)
-			expectTimeInt, err := strconv.Atoi(expectTime)
-			if err != nil {
-				logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v", expectTime, err)
+				logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v", item.ExpectTime, err)
 			}
 
 			models[idx] = tablers.DemandChangelogTable{

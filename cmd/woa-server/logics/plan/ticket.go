@@ -26,14 +26,18 @@ import (
 	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
+	"hcm/pkg/dal/dao/types"
+	rtypes "hcm/pkg/dal/dao/types/resource-plan"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	rpts "hcm/pkg/dal/table/resource-plan/res-plan-ticket-status"
 	dtypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 
@@ -375,4 +379,32 @@ func (c *Controller) GetCrpApproveLogs(kt *kit.Kit, orderID string) ([]*ptypes.C
 	}
 
 	return auditLogs, nil
+}
+
+// listAllResPlanTicket list all res plan ticket.
+func (c *Controller) listAllResPlanTicket(kt *kit.Kit, listFilter *filter.Expression) ([]rtypes.RPTicketWithStatus,
+	error) {
+
+	listReq := &types.ListOption{
+		Filter: listFilter,
+		Page:   core.NewDefaultBasePage(),
+	}
+
+	rstDetails := make([]rtypes.RPTicketWithStatus, 0)
+	for {
+		rst, err := c.dao.ResPlanTicket().ListWithStatus(kt, listReq)
+		if err != nil {
+			return nil, err
+		}
+
+		rstDetails = append(rstDetails, rst.Details...)
+
+		if len(rst.Details) < int(listReq.Page.Limit) {
+			break
+		}
+
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	return rstDetails, nil
 }

@@ -26,9 +26,9 @@ import (
 	"fmt"
 	"time"
 
-	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
@@ -44,6 +44,7 @@ import (
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/times"
 	"hcm/pkg/tools/utils/wait"
 )
@@ -88,6 +89,7 @@ type Controller struct {
 	dao          dao.Set
 	sd           serviced.State
 	client       *client.ClientSet
+	esbCli       esb.Client
 	itsmCli      itsm.Client
 	itsmFlow     cc.ItsmFlow
 	crpAuditNode cc.StateNode
@@ -111,7 +113,7 @@ const (
 
 // New creates a resource plan ticket controller instance.
 func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
-	crpCli cvmapi.CVMClientInterface) (*Controller, error) {
+	crpCli cvmapi.CVMClientInterface, esbCli esb.Client) (*Controller, error) {
 
 	q := NewUniQueue()
 
@@ -134,6 +136,7 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 		dao:          dao,
 		sd:           sd,
 		client:       client,
+		esbCli:       esbCli,
 		itsmCli:      itsmCli,
 		itsmFlow:     itsmFlowCfg,
 		crpAuditNode: crpAuditNode,
@@ -260,7 +263,7 @@ func (c *Controller) runWorker() error {
 	logs.Infof("ready to handle ticket %s", tkID)
 
 	// check the status of the ticket
-	kt := kit.New()
+	kt := core.NewBackendKit()
 	tkInfo, err := c.getTicketInfo(kt, tkID)
 	if err != nil {
 		logs.Errorf("failed to get ticket info, err: %v, id: %s, rid: %s", err, tkID, kt.Rid)
@@ -283,260 +286,6 @@ func (c *Controller) runWorker() error {
 	}
 
 	return c.checkItsmTicket(kt, tkInfo)
-}
-
-func convListResPlanDemandItem(items []*cvmapi.CvmCbsPlanQueryItem) []*ptypes.PlanDemandDetail {
-	rst := make([]*ptypes.PlanDemandDetail, 0, len(items))
-	for _, item := range items {
-		rstItem := &ptypes.PlanDemandDetail{
-			GetPlanDemandDetailResp: ptypes.GetPlanDemandDetailResp{
-				CrpDemandID:        item.DemandId,
-				YearMonthWeek:      item.YearMonthWeek,
-				ExpectStartDate:    item.ExpectStartDate,
-				ExpectEndDate:      item.ExpectEndDate,
-				ExpectTime:         item.UseTime,
-				BgID:               int64(item.BgId),
-				BgName:             item.BgName,
-				DeptID:             int64(item.DeptId),
-				DeptName:           item.DeptName,
-				PlanProductID:      int64(item.PlanProductId),
-				PlanProductName:    item.PlanProductName,
-				ObsProject:         item.ProjectName,
-				RegionName:         item.CityName,
-				ZoneName:           item.ZoneName,
-				PlanType:           enumor.PlanType(item.InPlan).ToAnotherPlanType(),
-				PlanAdvanceWeek:    item.PlanWeek,
-				ExpeditedPostponed: item.ExpeditedPostponed,
-				CoreTypeID:         item.CoreType,
-				CoreType:           item.CoreTypeName,
-				DeviceFamily:       item.InstanceFamily,
-				DeviceClass:        item.InstanceType,
-				DeviceType:         item.InstanceModel,
-				OS:                 item.PlanCvmAmount,
-				Memory:             item.PlanRamAmount,
-				CpuCore:            item.PlanCoreAmount,
-				DiskSize:           item.PlanDiskAmount,
-				DiskIO:             item.InstanceIO,
-				DiskTypeName:       item.DiskTypeName,
-				DemandWeek:         item.RequirementWeekType,
-				ResPoolType:        item.ResourcePoolType,
-				ResPool:            item.ResourcePoolName,
-				ResMode:            item.ResourceMode,
-				GenerationType:     item.GenerationType,
-			},
-			Year:             item.Year,
-			Month:            item.Month,
-			Week:             item.Week,
-			TotalOS:          item.PlanCvmAmount,
-			AppliedOS:        item.ApplyCvmAmount,
-			RemainedOS:       item.RealCvmAmount,
-			TotalCpuCore:     item.PlanCoreAmount,
-			AppliedCpuCore:   item.ApplyCoreAmount,
-			RemainedCpuCore:  item.RealCoreAmount,
-			TotalMemory:      item.PlanRamAmount,
-			AppliedMemory:    item.ApplyRamAmount,
-			RemainedMemory:   item.RealRamAmount,
-			TotalDiskSize:    item.PlanDiskAmount,
-			AppliedDiskSize:  item.ApplyDiskAmount,
-			RemainedDiskSize: item.RealDiskAmount,
-		}
-		rst = append(rst, rstItem)
-	}
-	return rst
-}
-
-// ListCrpDemands 返回全量数据，listReq 中的分页参数将被忽略
-func (c *Controller) ListCrpDemands(kt *kit.Kit, listReq *ptypes.ListResPlanDemandReq) (
-	[]*ptypes.PlanDemandDetail, error) {
-
-	params := &cvmapi.CvmCbsPlanQueryParam{
-		BgName: []string{cvmapi.CvmCbsPlanQueryBgName}, // 强制仅查询IEG的预测需求
-	}
-	if len(listReq.CrpDemandIDs) > 0 {
-		params.DemandIdList = listReq.CrpDemandIDs
-	}
-	if len(listReq.DeviceClasses) > 0 {
-		params.InstanceType = listReq.DeviceClasses
-	}
-	if len(listReq.ObsProjects) > 0 {
-		params.ProjectName = listReq.ObsProjects
-	}
-	if len(listReq.RegionNames) > 0 {
-		params.CityName = listReq.RegionNames
-	}
-	if len(listReq.ZoneNames) > 0 {
-		params.ZoneName = listReq.ZoneNames
-	}
-	if len(listReq.OrderIDs) > 0 {
-		params.OrderIdList = listReq.OrderIDs
-	}
-	if listReq.ExpectTimeRange != nil {
-		params.UseTime = &cvmapi.UseTime{
-			Start: listReq.ExpectTimeRange.Start,
-			End:   listReq.ExpectTimeRange.End,
-		}
-	}
-	// 500条一组查询出全部结果
-	page := &cvmapi.Page{
-		Start: 0,
-		Size:  int(core.DefaultMaxPageLimit),
-	}
-
-	rst := make([]*ptypes.PlanDemandDetail, 0)
-	for {
-		resp, err := c.listCrpDemandsPage(kt, params, page)
-		if err != nil {
-			return nil, err
-		}
-
-		rst = append(rst, resp...)
-
-		if len(resp) < page.Size {
-			break
-		}
-		page.Start += page.Size
-	}
-	return rst, nil
-}
-
-// ListCrpDemandsPage 分页查询
-func (c *Controller) listCrpDemandsPage(kt *kit.Kit, params *cvmapi.CvmCbsPlanQueryParam, page *cvmapi.Page) (
-	[]*ptypes.PlanDemandDetail, error) {
-
-	params.Page = page
-	req := &cvmapi.CvmCbsPlanQueryReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsPlanQueryMethod,
-		},
-		Params: params,
-	}
-
-	resp, err := c.crpCli.QueryCvmCbsPlans(kt.Ctx, kt.Header(), req)
-	if err != nil {
-		logs.Errorf("failed to list crp demand, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if resp.Error.Code != 0 {
-		logs.Errorf("failed to list crp demand, code: %d, msg: %s, rid: %s, params: %+v", resp.Error.Code,
-			resp.Error.Message,
-			kt.Rid, req.Params)
-		return nil, fmt.Errorf("failed to list crp demand, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
-	}
-
-	if resp.Result == nil {
-		logs.Errorf("failed to list crp demand, for result is empty, rid: %s, params: %+v", kt.Rid, req.Params)
-		return nil, errors.New("failed to list crp demand, for result is empty")
-	}
-
-	return convListResPlanDemandItem(resp.Result.Data), nil
-}
-
-func convListDemandChangeLogItem(items []*cvmapi.DemandChangeLogQueryLogItem) []*ptypes.ListDemandChangeLogItem {
-	rst := make([]*ptypes.ListDemandChangeLogItem, 0, len(items))
-	for _, item := range items {
-		rstItem := &ptypes.ListDemandChangeLogItem{
-			CrpDemandId:       int64(item.DemandId),
-			ExpectTime:        item.UseTime,
-			BgName:            item.BgName,
-			DeptName:          item.DeptName,
-			PlanProductName:   item.PlanProductName,
-			ObsProject:        item.ProjectName,
-			RegionName:        item.CityName,
-			ZoneName:          item.ZoneName,
-			DemandWeek:        item.RequirementWeekType,
-			ResPoolType:       item.ResourcePoolType,
-			DeviceClass:       item.InstanceType,
-			DeviceType:        item.InstanceModel,
-			ChangeCvmAmount:   item.ChangeCvmAmount,
-			AfterCvmAmount:    item.AfterCvmAmount,
-			ChangeCoreAmount:  item.ChangeCoreAmount,
-			AfterCoreAmount:   item.AfterCoreAmount,
-			ChangeRamAmount:   item.ChangeRamAmount,
-			AfterRamAmount:    item.AfterRamAmount,
-			DiskType:          item.DiskTypeName,
-			DiskIo:            item.InstanceIO,
-			ChangedDiskAmount: item.ChangedDiskAmount,
-			AfterDiskAmount:   item.AfterDiskAmount,
-			DemandSource:      item.SourceType,
-			CrpSn:             item.OrderId,
-			CreateTime:        item.CreateTime,
-			Remark:            item.Desc,
-			ResPool:           item.ResourcePoolName,
-		}
-		rst = append(rst, rstItem)
-	}
-	return rst
-}
-
-// ListCrpDemandChangeLog list crp demand change log by demand id, full query
-func (c *Controller) ListCrpDemandChangeLog(kt *kit.Kit, crpDemandId int64) (
-	[]*ptypes.ListDemandChangeLogItem, error) {
-
-	// 500条一组查询出全部结果
-	page := &cvmapi.Page{
-		Start: 0,
-		Size:  int(core.DefaultMaxPageLimit),
-	}
-
-	rst := make([]*ptypes.ListDemandChangeLogItem, 0)
-	for {
-		resp, err := c.listCrpDemandChangeLogPage(kt, crpDemandId, page)
-		if err != nil {
-			return nil, err
-		}
-
-		rst = append(rst, resp...)
-
-		if len(resp) < page.Size {
-			break
-		}
-		page.Start += page.Size
-	}
-	return rst, nil
-}
-
-// listCrpDemandChangeLogPage list crp demand change log by demand id, page query
-func (c *Controller) listCrpDemandChangeLogPage(kt *kit.Kit, crpDemandId int64, page *cvmapi.Page) (
-	[]*ptypes.ListDemandChangeLogItem, error) {
-
-	rst := make([]*ptypes.ListDemandChangeLogItem, 0)
-	req := &cvmapi.DemandChangeLogQueryReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsDemandChangeLogQueryMethod,
-		},
-		Params: &cvmapi.DemandChangeLogQueryParam{
-			DemandIdList: []int64{crpDemandId},
-			Page:         page,
-		},
-	}
-	resp, err := c.crpCli.QueryDemandChangeLog(kt.Ctx, kt.Header(), req)
-	if err != nil {
-		logs.Errorf("failed to list crp demand change log, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	if resp.Error.Code != 0 {
-		logs.Errorf("failed to list crp demand change log, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
-		return nil, fmt.Errorf("failed to list crp demand change log, code: %d, msg: %s", resp.Error.Code,
-			resp.Error.Message)
-	}
-
-	if resp.Result == nil {
-		logs.Errorf("failed to list crp demand change log, for result is empty, rid: %s", kt.Rid)
-		return nil, errors.New("failed to list crp demand change log, for result is empty")
-	}
-
-	if len(resp.Result.Data) < 1 {
-		return rst, nil
-	}
-
-	return convListDemandChangeLogItem(resp.Result.Data[0].Info), nil
 }
 
 func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
@@ -602,13 +351,16 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	if update.Status != enumor.RPTicketStatusRejected {
 		return nil
 	}
-	allCrpDemandIDs := make([]int64, 0)
+	allDemandIDs := make([]string, 0)
 	for _, demand := range ticket.Demands {
 		if demand.Original != nil {
-			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
 		}
 	}
-	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+	unlockReq := &rpproto.ResPlanDemandLockOpReq{
+		IDs: allDemandIDs,
+	}
+	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -664,13 +416,16 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
 		return nil
 	}
-	allCrpDemandIDs := make([]int64, 0)
+	allDemandIDs := make([]string, 0)
 	for _, demand := range ticket.Demands {
 		if demand.Original != nil {
-			allCrpDemandIDs = append(allCrpDemandIDs, (*demand.Original).CrpDemandID)
+			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
 		}
 	}
-	if err = c.dao.ResPlanCrpDemand().UnlockAllResPlanDemand(kt, allCrpDemandIDs); err != nil {
+	unlockReq := &rpproto.ResPlanDemandLockOpReq{
+		IDs: allDemandIDs,
+	}
+	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -721,7 +476,7 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	// crp单据通过后更新本地数据表
-	if err := c.upsertCrpDemand(kt, ticket); err != nil {
+	if err := c.applyResPlanDemandChange(kt, ticket); err != nil {
 		logs.Errorf("failed to upsert crp demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
@@ -817,6 +572,7 @@ func (c *Controller) getTicketInfo(kt *kit.Kit, ticketID string) (*TicketInfo, e
 		UpdatedCpuCore:   base.UpdatedCpuCore,
 		UpdatedMemory:    base.UpdatedMemory,
 		UpdatedDiskSize:  base.UpdatedDiskSize,
+		Remark:           base.Remark,
 		Demands:          demands,
 		SubmittedAt:      base.SubmittedAt,
 		Status:           status.Status,

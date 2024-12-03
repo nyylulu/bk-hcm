@@ -51,10 +51,10 @@ func (b *ResourcePlanClient) ListResPlanDemand(kt *kit.Kit, req *rpproto.ResPlan
 }
 
 // BatchCreateResPlanDemand batch create resource plan demand
-func (b *ResourcePlanClient) BatchCreateResPlanDemand(kt *kit.Kit, req *rpproto.ResPlanDemandCreateReq) (
+func (b *ResourcePlanClient) BatchCreateResPlanDemand(kt *kit.Kit, req *rpproto.ResPlanDemandBatchCreateReq) (
 	*core.BatchCreateResult, error) {
 
-	return common.Request[rpproto.ResPlanDemandCreateReq, core.BatchCreateResult](
+	return common.Request[rpproto.ResPlanDemandBatchCreateReq, core.BatchCreateResult](
 		b.client, rest.POST, kt, req, "/res_plans/res_plan_demands/batch/create")
 }
 
@@ -80,6 +80,14 @@ func (b *ResourcePlanClient) LockResPlanDemand(kt *kit.Kit, req *rpproto.ResPlan
 func (b *ResourcePlanClient) UnlockResPlanDemand(kt *kit.Kit, req *rpproto.ResPlanDemandLockOpReq) error {
 	return common.RequestNoResp[rpproto.ResPlanDemandLockOpReq](
 		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_demands/unlock")
+}
+
+// BatchUpsertResPlanDemand upsert resource plan demand
+func (b *ResourcePlanClient) BatchUpsertResPlanDemand(kt *kit.Kit, req *rpproto.ResPlanDemandBatchUpsertReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.ResPlanDemandBatchUpsertReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_demands/batch/upsert")
 }
 
 // --- demand penalty base ---

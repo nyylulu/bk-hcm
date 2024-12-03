@@ -56,6 +56,7 @@ type TicketInfo struct {
 	UpdatedCpuCore   float64               `json:"updated_cpu_core"`
 	UpdatedMemory    float64               `json:"updated_memory"`
 	UpdatedDiskSize  float64               `json:"updated_disk_size"`
+	Remark           string                `json:"remark"`
 	Demands          rpt.ResPlanDemands    `json:"demands"`
 	SubmittedAt      string                `json:"submitted_at"`
 	Status           enumor.RPTicketStatus `json:"status"`

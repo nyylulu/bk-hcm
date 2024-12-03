@@ -57,7 +57,7 @@ type DateRange struct {
 }
 
 // Validate validates the date range.
-func (r *DateRange) Validate() error {
+func (r DateRange) Validate() error {
 	start, err := ParseDay(r.Start)
 	if err != nil {
 		return err
@@ -73,6 +73,21 @@ func (r *DateRange) Validate() error {
 	}
 
 	return nil
+}
+
+// GetTimeDate get start and end time.
+func (r DateRange) GetTimeDate() (time.Time, time.Time, error) {
+	start, err := ParseDay(r.Start)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	end, err := ParseDay(r.End)
+	if err != nil {
+		return time.Time{}, time.Time{}, err
+	}
+
+	return start, end, nil
 }
 
 // ParseDay parse day from string.

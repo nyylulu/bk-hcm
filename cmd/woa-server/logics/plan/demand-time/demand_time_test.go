@@ -25,11 +25,41 @@ import (
 )
 
 func TestGetDemandYearMonthWeek(t *testing.T) {
-	date := time.Date(2024, 9, 1, 0, 0, 0, 0, time.Local)
-	ymw := GetDemandYearMonthWeek(date)
-	if !(ymw.Year == 2024 && ymw.Month == time.August && ymw.Week == 5) {
-		t.Errorf("test get demand year month week failed, got: %+v", ymw)
-		return
+	in := []time.Time{
+		time.Date(2024, 9, 1, 0, 0, 0, 0, time.Local),
+		time.Date(2024, 1, 1, 0, 0, 0, 0, time.Local),
+		time.Date(2024, 1, 7, 0, 0, 0, 0, time.Local),
+		time.Date(2024, 1, 8, 0, 0, 0, 0, time.Local),
+		time.Date(2024, 12, 31, 0, 0, 0, 0, time.Local),
+		time.Date(2025, 1, 1, 0, 0, 0, 0, time.Local),
+	}
+	expect := []DemandYearMonthWeek{
+		{
+			Year: 2024, Month: 8, Week: 4, YearWeek: 35,
+		},
+		{
+			Year: 2024, Month: 1, Week: 1, YearWeek: 1,
+		},
+		{
+			Year: 2024, Month: 1, Week: 1, YearWeek: 1,
+		},
+		{
+			Year: 2024, Month: 1, Week: 2, YearWeek: 2,
+		},
+		{
+			Year: 2024, Month: 12, Week: 5, YearWeek: 53,
+		},
+		{
+			Year: 2024, Month: 12, Week: 5, YearWeek: 53,
+		},
+	}
+
+	for i, d := range in {
+		ymw := GetDemandYearMonthWeek(d)
+		if ymw != expect[i] {
+			t.Errorf("test get demand year month week failed, got: %+v", ymw)
+			return
+		}
 	}
 }
 

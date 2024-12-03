@@ -161,6 +161,9 @@ func (d *ResPlanDemand) Validate() error {
 
 // OriginalRPDemandItem is original resource plan demand item.
 type OriginalRPDemandItem struct {
+	// DemandID 需求ID
+	DemandID string `json:"demand_id"`
+	// CrpDemandID crp demand id
 	CrpDemandID int64 `json:"crp_demand_id"`
 	// ObsProject OBS项目类型
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`

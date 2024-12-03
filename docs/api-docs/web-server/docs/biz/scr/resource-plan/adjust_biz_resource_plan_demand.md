@@ -1,6 +1,6 @@
 ### 描述
 
-- 该接口提供版本：v1.7.1+。
+- 该接口提供版本：v9.9.9+。
 - 该接口所需权限：业务-资源预测操作。
 - 该接口功能描述：批量调整资源预测需求。
 
@@ -16,7 +16,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
 
 | 参数名称          | 参数类型   | 必选 | 描述                                                          |
 |---------------|--------|----|-------------------------------------------------------------|
-| crp_demand_id | int    | 是  | CRP需求ID                                                     |
+| demand_id     | string | 是  | 预测需求ID                                                      |
 | adjust_type   | string | 是  | 调整类型，枚举值：update（常规修改）、delay（加急延期）                           |
 | demand_source | string | 否  | 需求分类/变更原因，adjust_type为update时必填                             |
 | original_info | object | 否  | 调整前需求信息，adjust_type为update时必填                               |
@@ -62,7 +62,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
 {
   "adjusts": [
     {
-      "crp_demand_id": 387330,
+      "demand_id": "0000001z",
       "adjust_type": "update",
       "demand_source": "指标变化",
       "original_info": {
@@ -115,7 +115,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
       }
     },
     {
-      "crp_demand_id": 387330,
+      "demand_id": "0000002a",
       "adjust_type": "delay",
       "expect_time": "2025-01-01",
       "delay_os": 10

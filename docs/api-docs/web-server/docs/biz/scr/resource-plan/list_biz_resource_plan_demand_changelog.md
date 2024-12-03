@@ -59,6 +59,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
         "demand_source": "追加",
         "ticket_id": "00000022",
         "crp_sn": "XQ202408221500512986",
+        "suborder_id": "",
         "create_time": "2024-09-01T12:00:00Z",
         "remark": "创建资源预测需求\n"
       }
@@ -84,21 +85,22 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/demands/change_logs/list
 
 #### data.details[n]
 
-| 参数名称                | 参数类型   | 描述               |
-|---------------------|--------|------------------|
-| id                  | string | 变更记录ID           |
-| demand_id           | string | 预测需求ID           |
-| expect_time         | string | 期望交付时间           |
-| obs_project         | string | 项目类型             |
-| region_name         | string | 地区/城市名称          |
-| zone_name           | string | 可用区              |
-| device_type         | string | 机型规格             |
-| change_cvm_amount   | string | 实例数变更值，可能为正或负    |
-| change_core_amount  | int    | CPU核数变更值，可能为正或负  |
-| change_ram_amount   | int    | 内存变更值（G），可能为正或负  |
-| changed_disk_amount | int    | 磁盘数变更值（G），可能为正或负 |
-| demand_source       | string | 变更类型             |
-| ticket_id           | string | 变更需求的HCM订单号      |
-| crp_sn              | string | 变更需求的CRP订单号      |
-| create_time         | string | 变更时间             |
-| remark              | string | 备注               |
+| 参数名称                | 参数类型   | 描述                                |
+|---------------------|--------|-----------------------------------|
+| id                  | string | 变更记录ID                            |
+| demand_id           | string | 预测需求ID                            |
+| expect_time         | string | 期望交付时间，格式为YYYY-MM-DD，例如2024-01-01 |
+| obs_project         | string | 项目类型                              |
+| region_name         | string | 地区/城市名称                           |
+| zone_name           | string | 可用区                               |
+| device_type         | string | 机型规格                              |
+| change_cvm_amount   | string | 实例数变更值，可能为正或负                     |
+| change_core_amount  | int    | CPU核数变更值，可能为正或负                   |
+| change_ram_amount   | int    | 内存变更值（G），可能为正或负                   |
+| changed_disk_amount | int    | 磁盘数变更值（G），可能为正或负                  |
+| demand_source       | string | 变更类型，枚举值：追加、调整、删除、消耗              |
+| ticket_id           | string | 变更需求的HCM订单号                       |
+| crp_sn              | string | 变更需求的CRP订单号                       |
+| suborder_id         | string | 主机申领的子订单号，在消耗记录用到                 |
+| create_time         | string | 变更时间                              |
+| remark              | string | 备注                                |

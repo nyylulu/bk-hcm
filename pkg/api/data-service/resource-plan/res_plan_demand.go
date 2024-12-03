@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/dao/types"
 	tablers "hcm/pkg/dal/table/resource-plan/res-plan-demand"
@@ -33,13 +34,13 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// ResPlanDemandCreateReq create request
-type ResPlanDemandCreateReq struct {
-	Demands []ResPlanDemandCreate `json:"demands" validate:"required,min=1,max=100"`
+// ResPlanDemandBatchCreateReq create request
+type ResPlanDemandBatchCreateReq struct {
+	Demands []ResPlanDemandCreateReq `json:"demands" validate:"required,min=1,max=100"`
 }
 
 // Validate validate
-func (r *ResPlanDemandCreateReq) Validate() error {
+func (r *ResPlanDemandBatchCreateReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
 	}
@@ -53,41 +54,44 @@ func (r *ResPlanDemandCreateReq) Validate() error {
 	return nil
 }
 
-// ResPlanDemandCreate create request
-type ResPlanDemandCreate struct {
-	BkBizID         int64               `json:"bk_biz_id" validate:"required"`
-	BkBizName       string              `json:"bk_biz_name" validate:"required"`
-	OpProductID     int64               `json:"op_product_id" validate:"required"`
-	OpProductName   string              `json:"op_product_name" validate:"required"`
-	PlanProductID   int64               `json:"plan_product_id" validate:"required"`
-	PlanProductName string              `json:"plan_product_name" validate:"required"`
-	VirtualDeptID   int64               `json:"virtual_dept_id" validate:"required"`
-	VirtualDeptName string              `json:"virtual_dept_name" validate:"required"`
-	DemandClass     enumor.DemandClass  `json:"demand_class" validate:"required"`
-	ObsProject      enumor.ObsProject   `json:"obs_project" validate:"required"`
-	ExpectTime      string              `json:"expect_time" validate:"required"`
-	PlanType        enumor.PlanTypeCode `json:"plan_type" validate:"required"`
-	AreaID          string              `json:"area_id" validate:"required"`
-	AreaName        string              `json:"area_name" validate:"required"`
-	RegionID        string              `json:"region_id" validate:"required"`
-	RegionName      string              `json:"region_name" validate:"required"`
-	ZoneID          string              `json:"zone_id" validate:"omitempty"`
-	ZoneName        string              `json:"zone_name" validate:"omitempty"`
-	DeviceFamily    string              `json:"device_family" validate:"required"`
-	DeviceClass     string              `json:"device_class" validate:"required"`
-	DeviceType      string              `json:"device_type" validate:"required"`
-	CoreType        string              `json:"core_type" validate:"required"`
-	DiskType        enumor.DiskType     `json:"disk_type" validate:"required"`
-	DiskTypeName    string              `json:"disk_type_name" validate:"required"`
-	OS              decimal.Decimal     `json:"os" validate:"required"`
-	CpuCore         int64               `json:"cpu_core" validate:"required"`
-	Memory          int64               `json:"memory" validate:"required"`
-	DiskSize        int64               `json:"disk_size" validate:"required"`
-	DiskIO          int64               `json:"disk_io" validate:"required"`
+// ResPlanDemandCreateReq create request
+type ResPlanDemandCreateReq struct {
+	BkBizID         int64                `json:"bk_biz_id" validate:"required"`
+	BkBizName       string               `json:"bk_biz_name" validate:"required"`
+	OpProductID     int64                `json:"op_product_id" validate:"required"`
+	OpProductName   string               `json:"op_product_name" validate:"required"`
+	PlanProductID   int64                `json:"plan_product_id" validate:"required"`
+	PlanProductName string               `json:"plan_product_name" validate:"required"`
+	VirtualDeptID   int64                `json:"virtual_dept_id" validate:"required"`
+	VirtualDeptName string               `json:"virtual_dept_name" validate:"required"`
+	DemandClass     enumor.DemandClass   `json:"demand_class" validate:"required"`
+	DemandResType   enumor.DemandResType `json:"demand_res_type" validate:"required"`
+	ResMode         enumor.ResModeCode   `json:"res_mode" validate:"required"`
+	ObsProject      enumor.ObsProject    `json:"obs_project" validate:"required"`
+	ExpectTime      string               `json:"expect_time" validate:"required"`
+	PlanType        enumor.PlanTypeCode  `json:"plan_type" validate:"required"`
+	AreaID          string               `json:"area_id" validate:"required"`
+	AreaName        string               `json:"area_name" validate:"required"`
+	RegionID        string               `json:"region_id" validate:"required"`
+	RegionName      string               `json:"region_name" validate:"required"`
+	ZoneID          string               `json:"zone_id" validate:"omitempty"`
+	ZoneName        string               `json:"zone_name" validate:"omitempty"`
+	DeviceFamily    string               `json:"device_family" validate:"required"`
+	DeviceClass     string               `json:"device_class" validate:"required"`
+	DeviceType      string               `json:"device_type" validate:"required"`
+	CoreType        string               `json:"core_type" validate:"required"`
+	DiskType        enumor.DiskType      `json:"disk_type" validate:"required"`
+	DiskTypeName    string               `json:"disk_type_name" validate:"required"`
+	OS              decimal.Decimal      `json:"os" validate:"required"`
+	CpuCore         int64                `json:"cpu_core" validate:"required"`
+	Memory          int64                `json:"memory" validate:"required"`
+	DiskSize        int64                `json:"disk_size" validate:"required"`
+	DiskIO          int64                `json:"disk_io" validate:"required"`
+	Creator         string               `json:"creator" validate:"omitempty"`
 }
 
 // Validate validate
-func (r *ResPlanDemandCreate) Validate() error {
+func (r *ResPlanDemandCreateReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
 	}
@@ -134,6 +138,7 @@ type ResPlanDemandUpdateReq struct {
 	CpuCore         *int64           `json:"cpu_core"`
 	Memory          *int64           `json:"memory"`
 	DiskSize        *int64           `json:"disk_size"`
+	Reviser         string           `json:"reviser"`
 }
 
 // Validate validate
@@ -149,6 +154,37 @@ type ResPlanDemandLockOpReq struct {
 // Validate validate
 func (r ResPlanDemandLockOpReq) Validate() error {
 	return validator.Validate.Struct(r)
+}
+
+// ResPlanDemandBatchUpsertReq batch upsert request
+type ResPlanDemandBatchUpsertReq struct {
+	CreateDemands []ResPlanDemandCreateReq `json:"create_demands" validate:"omitempty,max=100"`
+	UpdateDemands []ResPlanDemandUpdateReq `json:"update_demands" validate:"omitempty,max=100"`
+}
+
+// Validate validate
+func (r ResPlanDemandBatchUpsertReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if len(r.CreateDemands) == 0 && len(r.UpdateDemands) == 0 {
+		return errf.New(errf.InvalidParameter, "create demands and update demands can not be both empty")
+	}
+
+	for _, c := range r.CreateDemands {
+		if err := c.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, c := range r.UpdateDemands {
+		if err := c.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // ResPlanDemandListResult list result

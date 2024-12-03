@@ -31,6 +31,7 @@ import (
 	"hcm/pkg/dal/dao/orm"
 	tablers "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	"hcm/pkg/dal/table/types"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
@@ -42,7 +43,7 @@ import (
 
 // BatchCreateResPlanDemand create resource plan demand
 func (svc *service) BatchCreateResPlanDemand(cts *rest.Contexts) (interface{}, error) {
-	req := new(rpproto.ResPlanDemandCreateReq)
+	req := new(rpproto.ResPlanDemandBatchCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -50,52 +51,10 @@ func (svc *service) BatchCreateResPlanDemand(cts *rest.Contexts) (interface{}, e
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 	demandIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		models := make([]tablers.ResPlanDemandTable, len(req.Demands))
-		for idx, item := range req.Demands {
-			// 把字符串类型的[期望交付时间转]为符合格式的Int类型
-			expectTimeInt, err := times.ConvStrTimeToInt(item.ExpectTime, constant.DateLayout)
-			if err != nil {
-				return nil, err
-			}
-
-			models[idx] = tablers.ResPlanDemandTable{
-				Locked:          cvt.ValToPtr(enumor.CrpDemandUnLocked),
-				BkBizID:         item.BkBizID,
-				BkBizName:       item.BkBizName,
-				OpProductID:     item.OpProductID,
-				OpProductName:   item.OpProductName,
-				PlanProductID:   item.PlanProductID,
-				PlanProductName: item.PlanProductName,
-				VirtualDeptID:   item.VirtualDeptID,
-				VirtualDeptName: item.VirtualDeptName,
-				DemandClass:     item.DemandClass,
-				ObsProject:      item.ObsProject,
-				ExpectTime:      expectTimeInt,
-				PlanType:        item.PlanType,
-				AreaID:          item.AreaID,
-				AreaName:        item.AreaName,
-				RegionID:        item.RegionID,
-				RegionName:      item.RegionName,
-				ZoneID:          item.ZoneID,
-				ZoneName:        item.ZoneName,
-				DeviceFamily:    item.DeviceFamily,
-				DeviceClass:     item.DeviceClass,
-				DeviceType:      item.DeviceType,
-				CoreType:        item.CoreType,
-				DiskType:        item.DiskType,
-				DiskTypeName:    item.DiskTypeName,
-				OS:              &types.Decimal{Decimal: item.OS},
-				CpuCore:         cvt.ValToPtr(item.CpuCore),
-				Memory:          cvt.ValToPtr(item.Memory),
-				DiskSize:        cvt.ValToPtr(item.DiskSize),
-				DiskIO:          item.DiskIO,
-				Creator:         cts.Kit.User,
-				Reviser:         cts.Kit.User,
-			}
-		}
-		recordIDs, err := svc.dao.ResPlanDemand().CreateWithTx(cts.Kit, txn, models)
+		recordIDs, err := svc.batchCreateResPlanDemandWithTx(cts.Kit, txn, req.Demands)
 		if err != nil {
-			return nil, fmt.Errorf("create resource plan demand failed, err: %v", err)
+			logs.Errorf("failed to batch create resource plan demand with tx, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, err
 		}
 		return recordIDs, nil
 	})
@@ -110,4 +69,70 @@ func (svc *service) BatchCreateResPlanDemand(cts *rest.Contexts) (interface{}, e
 	}
 
 	return &core.BatchCreateResult{IDs: ids}, nil
+}
+
+func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
+	createReqs []rpproto.ResPlanDemandCreateReq) (
+	[]string, error) {
+
+	models := make([]tablers.ResPlanDemandTable, len(createReqs))
+	for idx, item := range createReqs {
+		// 把字符串类型的[期望交付时间转]为符合格式的Int类型
+		expectTimeInt, err := times.ConvStrTimeToInt(item.ExpectTime, constant.DateLayout)
+		if err != nil {
+			logs.Errorf("convert expect time to int64 failed, expect time: %s, err: %v", item.ExpectTime, err)
+			return nil, errf.NewFromErr(errf.InvalidParameter, err)
+		}
+
+		createT := tablers.ResPlanDemandTable{
+			Locked:          cvt.ValToPtr(enumor.CrpDemandUnLocked),
+			BkBizID:         item.BkBizID,
+			BkBizName:       item.BkBizName,
+			OpProductID:     item.OpProductID,
+			OpProductName:   item.OpProductName,
+			PlanProductID:   item.PlanProductID,
+			PlanProductName: item.PlanProductName,
+			VirtualDeptID:   item.VirtualDeptID,
+			VirtualDeptName: item.VirtualDeptName,
+			DemandClass:     item.DemandClass,
+			DemandResType:   item.DemandResType,
+			ResMode:         item.ResMode,
+			ObsProject:      item.ObsProject,
+			ExpectTime:      expectTimeInt,
+			PlanType:        item.PlanType,
+			AreaID:          item.AreaID,
+			AreaName:        item.AreaName,
+			RegionID:        item.RegionID,
+			RegionName:      item.RegionName,
+			ZoneID:          item.ZoneID,
+			ZoneName:        item.ZoneName,
+			DeviceFamily:    item.DeviceFamily,
+			DeviceClass:     item.DeviceClass,
+			DeviceType:      item.DeviceType,
+			CoreType:        item.CoreType,
+			DiskType:        item.DiskType,
+			DiskTypeName:    item.DiskTypeName,
+			OS:              &types.Decimal{Decimal: item.OS},
+			CpuCore:         cvt.ValToPtr(item.CpuCore),
+			Memory:          cvt.ValToPtr(item.Memory),
+			DiskSize:        cvt.ValToPtr(item.DiskSize),
+			DiskIO:          item.DiskIO,
+			Creator:         kt.User,
+			Reviser:         kt.User,
+		}
+
+		// 系统创建的情况下，creator需要从参数中取
+		if item.Creator != "" {
+			createT.Creator = item.Creator
+			createT.Reviser = item.Creator
+		}
+
+		models[idx] = createT
+	}
+	recordIDs, err := svc.dao.ResPlanDemand().CreateWithTx(kt, txn, models)
+	if err != nil {
+		logs.Errorf("create resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, fmt.Errorf("create resource plan demand failed, err: %v", err)
+	}
+	return recordIDs, nil
 }

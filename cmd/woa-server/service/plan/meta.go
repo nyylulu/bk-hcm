@@ -13,7 +13,7 @@
 package plan
 
 import (
-	demandtime "hcm/cmd/woa-server/service/plan/demand-time"
+	"hcm/cmd/woa-server/logics/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"

@@ -161,3 +161,13 @@ func ConvStrTimeToInt(strTime, layout string) (int, error) {
 	}
 	return timeInt, nil
 }
+
+// TransTimeStrWithLayout trans time str with layout
+func TransTimeStrWithLayout(inTimeStr string, inLayout, outLayout string) (string, error) {
+	t, err := time.Parse(inLayout, inTimeStr)
+	if err != nil {
+		return "", err
+	}
+
+	return t.Format(outLayout), nil
+}

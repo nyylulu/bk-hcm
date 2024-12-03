@@ -102,6 +102,8 @@ const (
 	CvmSubnetMethod = "getSubNetInfo"
 	// CvmCbsDemandChangeLogQueryMethod 预测需求的变更记录查询接口
 	CvmCbsDemandChangeLogQueryMethod = "queryDemandChangeLogForIEG"
+	// CvmCbsPlanOrderChangeMethod 预测需求的订单变更流水接口
+	CvmCbsPlanOrderChangeMethod = "queryOrderChangeForIEG"
 	// CvmCbsPlanQueryMethod 需求预测首页查询接口
 	CvmCbsPlanQueryMethod = "queryCvmCbsInfoForIEG"
 	// CvmCbsPlanAdjustMethod 需求预测首页调整接口

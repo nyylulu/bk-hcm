@@ -21,15 +21,20 @@
 package resplandemand
 
 import (
+	"fmt"
+
+	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	tablers "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	"hcm/pkg/dal/table/types"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -47,35 +52,10 @@ func (svc *service) BatchUpdateResPlanDemand(cts *rest.Contexts) (interface{}, e
 	}
 
 	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		for _, updateReq := range req.Demands {
-			record := &tablers.ResPlanDemandTable{
-				ID:              updateReq.ID,
-				OpProductID:     updateReq.OpProductID,
-				OpProductName:   updateReq.OpProductName,
-				PlanProductID:   updateReq.PlanProductID,
-				PlanProductName: updateReq.PlanProductName,
-				VirtualDeptID:   updateReq.VirtualDeptID,
-				VirtualDeptName: updateReq.VirtualDeptName,
-				CoreType:        updateReq.CoreType,
-				Reviser:         cts.Kit.User,
-			}
-			if updateReq.OS != nil {
-				record.OS = &types.Decimal{Decimal: cvt.PtrToVal(updateReq.OS)}
-			}
-			if updateReq.CpuCore != nil {
-				record.CpuCore = updateReq.CpuCore
-			}
-			if updateReq.Memory != nil {
-				record.Memory = updateReq.Memory
-			}
-			if updateReq.DiskSize != nil {
-				record.DiskSize = updateReq.DiskSize
-			}
-
-			if err := svc.dao.ResPlanDemand().UpdateWithTx(cts.Kit, txn,
-				tools.EqualExpression("id", updateReq.ID), record); err != nil {
-				return nil, err
-			}
+		_, err := svc.batchUpdateResPlanDemandWithTx(cts.Kit, txn, req.Demands)
+		if err != nil {
+			logs.Errorf("failed to batch update res plan demand with tx, err: %v, rid: %v", err, cts.Kit.Rid)
+			return nil, err
 		}
 		return nil, nil
 	})
@@ -84,6 +64,48 @@ func (svc *service) BatchUpdateResPlanDemand(cts *rest.Contexts) (interface{}, e
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
+	updateReqs []rpproto.ResPlanDemandUpdateReq) (
+	[]string, error) {
+
+	for _, updateReq := range updateReqs {
+		record := &tablers.ResPlanDemandTable{
+			ID:              updateReq.ID,
+			OpProductID:     updateReq.OpProductID,
+			OpProductName:   updateReq.OpProductName,
+			PlanProductID:   updateReq.PlanProductID,
+			PlanProductName: updateReq.PlanProductName,
+			VirtualDeptID:   updateReq.VirtualDeptID,
+			VirtualDeptName: updateReq.VirtualDeptName,
+			CoreType:        updateReq.CoreType,
+			Reviser:         kt.User,
+		}
+		if updateReq.OS != nil {
+			record.OS = &types.Decimal{Decimal: cvt.PtrToVal(updateReq.OS)}
+		}
+		if updateReq.CpuCore != nil {
+			record.CpuCore = updateReq.CpuCore
+		}
+		if updateReq.Memory != nil {
+			record.Memory = updateReq.Memory
+		}
+		if updateReq.DiskSize != nil {
+			record.DiskSize = updateReq.DiskSize
+		}
+		// 系统创建的情况下，reviser需要从参数中取
+		if updateReq.Reviser != "" {
+			record.Reviser = updateReq.Reviser
+		}
+
+		if err := svc.dao.ResPlanDemand().UpdateWithTx(kt, txn,
+			tools.EqualExpression("id", updateReq.ID), record); err != nil {
+			logs.Errorf("update res plan demand failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	}
 	return nil, nil
 }
 
@@ -125,4 +147,52 @@ func (svc *service) UnlockResPlanDemand(cts *rest.Contexts) (interface{}, error)
 	}
 
 	return nil, nil
+}
+
+// BatchUpsertResPlanDemand batch upsert res plan demand, contains create or update
+func (svc *service) BatchUpsertResPlanDemand(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.ResPlanDemandBatchUpsertReq)
+
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	createIDs, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		createIDs := make([]string, 0)
+
+		if len(req.CreateDemands) > 0 {
+			var err error
+			createIDs, err = svc.batchCreateResPlanDemandWithTx(cts.Kit, txn, req.CreateDemands)
+			if err != nil {
+				logs.Errorf("batch create res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
+				return nil, err
+			}
+		}
+
+		if len(req.UpdateDemands) > 0 {
+			_, err := svc.batchUpdateResPlanDemandWithTx(cts.Kit, txn, req.UpdateDemands)
+			if err != nil {
+				logs.Errorf("batch update res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
+				return nil, err
+			}
+		}
+
+		return createIDs, nil
+	})
+	if err != nil {
+		logs.Errorf("batch upsert resource plan demand failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	ids, err := util.GetStrSliceByInterface(createIDs)
+	if err != nil {
+		logs.Errorf("upsert resource plan demand but return ids type not []string, err: %v, rid: %s", err,
+			cts.Kit.Rid)
+		return nil, fmt.Errorf("upsert resource plan demand but return ids type not []string, err: %v", err)
+	}
+
+	return &core.BatchCreateResult{IDs: ids}, nil
 }
