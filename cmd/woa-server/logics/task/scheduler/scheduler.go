@@ -40,6 +40,7 @@ import (
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -2097,59 +2098,16 @@ func (s *scheduler) SetDeviceDelivered(info *types.DeviceInfo) error {
 func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
 	*types.CheckRollingServerHostResp, error) {
 
-	rule := querybuilder.CombinedRule{
-		Condition: querybuilder.ConditionOr,
-		Rules: []querybuilder.Rule{
-			querybuilder.AtomRule{
-				Field:    "bk_asset_id",
-				Operator: querybuilder.OperatorEqual,
-				Value:    param.AssetID,
-			},
-		},
+	host, err := s.getInheritedHostFromCC(kt, param)
+	if err != nil {
+		logs.Errorf("get rolling server host from bkcc failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
-	fields := []string{"bk_svr_device_cls_name", "instance_charge_type", "billing_start_time", "billing_expire_time",
-		"bk_cloud_inst_id"}
-	page := cmdb.BasePage{Start: 0, Limit: 1}
-
-	var info []*cmdb.Host
-	if param.BizID != 0 {
-		req := &cmdb.ListBizHostParams{
-			BizID:              param.BizID,
-			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
-			Fields:             fields,
-			Page:               page,
-		}
-		resp, err := s.cc.ListBizHost(kt, req)
-		if err != nil {
-			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-			return nil, err
-		}
-		hosts := make([]*cmdb.Host, 0)
-		for _, host := range resp.Info {
-			hosts = append(hosts, &host)
-		}
-		info = hosts
-
-	} else {
-		req := &cmdb.ListHostReq{
-			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
-			Fields:             fields,
-			Page:               page,
-		}
-		resp, err := s.cc.ListHost(kt.Ctx, kt.Header(), req)
-		if err != nil {
-			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-			return nil, err
-		}
-		info = resp.Data.Info
+	if err = s.checkInheritedHost(kt, param, host); err != nil {
+		logs.Errorf("check inherited host failed, err: %v, param: %+v, host: %+v, rid: %s", err, param, host, kt.Rid)
+		return nil, err
 	}
 
-	if len(info) != 1 {
-		logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(info), param, kt.Rid)
-		return nil, errors.New("host is invalid")
-	}
-
-	host := info[0]
 	chargeMonths := calculateMonths(time.Now(), host.BillingExpireTime)
 
 	// 兜底逻辑，如果当前时间加申请的月份数时间还是小于原来的套餐时间，那么就加上一个月
@@ -2166,6 +2124,133 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 		ChargeMonths:         chargeMonths,
 		CloudInstID:          host.BkCloudInstID,
 	}, nil
+}
+
+func (s *scheduler) getInheritedHostFromCC(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*cmdb.Host, error) {
+	rule := querybuilder.CombinedRule{
+		Condition: querybuilder.ConditionOr,
+		Rules: []querybuilder.Rule{
+			querybuilder.AtomRule{
+				Field:    "bk_asset_id",
+				Operator: querybuilder.OperatorEqual,
+				Value:    param.AssetID,
+			},
+		},
+	}
+	fields := []string{"bk_svr_device_cls_name", "instance_charge_type", "billing_start_time", "billing_expire_time",
+		"bk_cloud_inst_id", "dept_name"}
+	page := cmdb.BasePage{Start: 0, Limit: 1}
+
+	if param.BizID != 0 {
+		req := &cmdb.ListBizHostParams{
+			BizID:              param.BizID,
+			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
+			Fields:             fields,
+			Page:               page,
+		}
+		resp, err := s.cc.ListBizHost(kt, req)
+		if err != nil {
+			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+
+		if len(resp.Info) != 1 {
+			logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(resp.Info), param, kt.Rid)
+			return nil, errors.New("该主机不在当前业务")
+		}
+
+		return &resp.Info[0], nil
+	}
+
+	req := &cmdb.ListHostReq{
+		HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
+		Fields:             fields,
+		Page:               page,
+	}
+	resp, err := s.cc.ListHost(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+
+	if len(resp.Data.Info) != 1 {
+		logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(resp.Data.Info), param, kt.Rid)
+		return nil, errors.New("该主机在配置平台(bkcc)不存在")
+	}
+
+	return resp.Data.Info[0], nil
+}
+
+func (s *scheduler) checkInheritedHost(kt *kit.Kit, param *types.CheckRollingServerHostReq, host *cmdb.Host) error {
+	if host == nil {
+		return errf.New(errf.InvalidParameter, "host not found")
+	}
+
+	if host.DeptName != constant.IEGDeptName {
+		return errors.New("主机的所属的运维部门不是IEG")
+	}
+
+	if host.InstanceChargeType == "" {
+		return errors.New("该主机计费模式为空")
+	}
+
+	if host.BillingStartTime.IsZero() {
+		return errors.New("该主机无计费开始时间")
+	}
+
+	if host.InstanceChargeType == string(cvm.Prepaid) && host.BillingExpireTime.IsZero() {
+		return errors.New("该主机无计费结束时间")
+	}
+
+	deviceTypeInfoMap, err := s.configLogics.Device().ListDeviceTypeInfoFromCrp(kt, []string{host.SvrDeviceClassName})
+	if err != nil {
+		logs.Errorf("list device type info from crp failed, err: %v, val: %s, rid: %s", err, host.SvrDeviceClassName,
+			kt.Rid)
+		return err
+	}
+	deviceTypeInfo, ok := deviceTypeInfoMap[host.SvrDeviceClassName]
+	if !ok {
+		return errors.New("该主机未找到对应的机型信息")
+	}
+	if deviceTypeInfo.InstanceTypeClass != cvmapi.CommonType {
+		return errors.New("该主机机型不是通用机型")
+	}
+
+	req := &cvmapi.InstanceQueryReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.CvmInstanceStatusMethod,
+		},
+		Params: &cvmapi.InstanceQueryParam{
+			AssetId: []string{param.AssetID},
+		},
+	}
+	resp, err := s.crpCli.QueryCvmInstances(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
+		return err
+	}
+	if resp.Error.Code != 0 {
+		logs.Errorf("failed to query cvm instance, code: %d, msg: %s, asset id: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, param.AssetID, kt.Rid)
+		return fmt.Errorf("failed to query cvm instance, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+	}
+	if resp.Result == nil {
+		logs.Errorf("failed to query cvm instance, for result is nil, asset id: %s, rid: %s", param.AssetID, kt.Rid)
+		return errors.New("failed to query cvm instance, for result is nil")
+	}
+	if len(resp.Result.Data) != 1 {
+		logs.Errorf("failed to query cvm instance, for data num %d != 1, asset id: %s, rid: %s", len(resp.Result.Data),
+			param.AssetID, kt.Rid)
+		return fmt.Errorf("failed to query cvm instance, for data num %d != 1", len(resp.Result.Data))
+	}
+
+	if resp.Result.Data[0].CloudRegion != param.Region {
+		return errors.New("继承主机的地域与当前所选不匹配")
+	}
+
+	return nil
 }
 
 func calculateMonths(startTime, endTime time.Time) int {

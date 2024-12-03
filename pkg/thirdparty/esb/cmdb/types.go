@@ -363,6 +363,8 @@ type Host struct {
 	BillingStartTime time.Time `json:"billing_start_time"`
 	// 套餐计费过期时间
 	BillingExpireTime time.Time `json:"billing_expire_time"`
+	// 运维部门
+	DeptName string `json:"dept_name"`
 }
 
 // OsType 操作系统类型

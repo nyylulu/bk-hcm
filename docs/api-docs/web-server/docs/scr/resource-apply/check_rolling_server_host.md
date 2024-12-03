@@ -10,10 +10,11 @@ POST /api/v1/woa/task/check/rolling_server/host
 
 ### 输入参数
 
-| 参数名称        | 参数类型   | 必选 | 描述            |
-|-------------|--------|----|---------------|
-| bk_asset_id | string | 是  | 主机固资号         |
-| bk_biz_id   | string | 否  | 在业务下请求，需要传该参数 |
+| 参数名称        | 参数类型   | 必选 | 描述             |
+|-------------|--------|----|----------------|
+| bk_asset_id | string | 是  | 主机固资号          |
+| bk_biz_id   | string | 否  | 在业务下请求，需要传该参数  |
+| region      | string | 是  | 滚服项目生产的机器所在的地域 |
 
 ### 调用示例
 
@@ -22,7 +23,8 @@ POST /api/v1/woa/task/check/rolling_server/host
 ```json
 {
   "bk_asset_id":"ins-111",
-  "bk_biz_id": 1
+  "bk_biz_id": 1,
+  "region":"ap-beijing"
 }
 ```
 

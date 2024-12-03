@@ -38,4 +38,7 @@ const (
 
 	// InternalBPaasEndpoint bpaas 内部域名
 	InternalBPaasEndpoint = "bpaas.internal.tencentcloudapi.com"
+
+	// IEGDeptName 互动娱乐事业部
+	IEGDeptName = "互动娱乐事业部"
 )

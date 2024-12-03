@@ -67,6 +67,8 @@ type DeviceIf interface {
 	// ListCvmInstanceInfoByDeviceTypes list cvm instance info by device types
 	ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem, error)
 	ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[string]string, error)
+
+	ListDeviceTypeInfoFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]cvmapi.QueryCvmInstanceTypeItem, error)
 }
 
 // NewDeviceOp creates a device interface
@@ -587,8 +589,8 @@ var CoreTypeMap = map[int]enumor.CoreType{
 }
 
 // listCvmInstanceTypeFromCrp 从Crp平台获取实例信息
-func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (
-	map[string]types.DeviceTypeCpuItem, error) {
+func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (map[string]types.DeviceTypeCpuItem,
+	error) {
 
 	req := &cvmapi.QueryCvmInstanceTypeReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -660,4 +662,35 @@ func (d *device) ListInstanceGroup(kt *kit.Kit, deviceTypes []string) (map[strin
 		deviceTypes, instGroupMap, kt.Rid)
 
 	return instGroupMap, nil
+}
+
+// ListDeviceTypeInfoFromCrp 从crp获取设备机型信息
+func (d *device) ListDeviceTypeInfoFromCrp(kt *kit.Kit, deviceTypes []string) (
+	map[string]cvmapi.QueryCvmInstanceTypeItem, error) {
+
+	req := &cvmapi.QueryCvmInstanceTypeReq{
+		ReqMeta: cvmapi.ReqMeta{
+			Id:      cvmapi.CvmId,
+			JsonRpc: cvmapi.CvmJsonRpc,
+			Method:  cvmapi.QueryCvmInstanceType,
+		},
+		Params: &cvmapi.QueryCvmInstanceTypeParams{InstanceType: deviceTypes},
+	}
+
+	resp, err := d.cvm.QueryCvmInstanceType(kt.Ctx, kt.Header(), req)
+	if err != nil {
+		logs.Errorf("query cvm instance type failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return nil, err
+	}
+	if resp.Result == nil {
+		logs.Errorf("query cvm instance type error, deviceTypes: %v, resp: %+v, rid: %s", deviceTypes, resp, kt.Rid)
+		return nil, errf.Newf(errf.RecordNotFound, "query cvm instance type failed, resp:[%+v]", resp)
+	}
+
+	deviceTypeInfos := make(map[string]cvmapi.QueryCvmInstanceTypeItem, len(resp.Result.Data))
+	for _, item := range resp.Result.Data {
+		deviceTypeInfos[item.InstanceType] = item
+	}
+
+	return deviceTypeInfos, nil
 }

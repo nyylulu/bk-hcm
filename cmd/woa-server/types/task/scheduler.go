@@ -1452,6 +1452,7 @@ type GetApplyModifyRst struct {
 type CheckRollingServerHostReq struct {
 	AssetID string `json:"bk_asset_id" validate:"required"`
 	BizID   int64  `json:"bk_biz_id"`
+	Region  string `json:"region" validate:"required"`
 }
 
 // Validate CheckRollingServerHostReq
