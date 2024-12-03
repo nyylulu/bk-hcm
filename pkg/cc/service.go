@@ -20,7 +20,6 @@
 package cc
 
 import (
-	"errors"
 	"fmt"
 	"net"
 	"sync"
@@ -51,9 +50,6 @@ func ServiceName() Name {
 type Name string
 
 const (
-
-	// WoaServerName is woa server's name
-	WoaServerName Name = "woa-server"
 
 	// APIServerName is api server's name
 	APIServerName Name = "api-server"
@@ -319,25 +315,6 @@ func (s HCServiceSetting) Validate() error {
 	return nil
 }
 
-// Secret ...
-type Secret struct {
-	ID  string `yaml:"id"`
-	Key string `yaml:"key"`
-}
-
-// Validate ...
-func (s Secret) Validate() error {
-	if len(s.ID) == 0 {
-		return errors.New("secret id is not set")
-	}
-
-	if len(s.Key) == 0 {
-		return errors.New("secret key is not set")
-	}
-
-	return nil
-}
-
 // AuthServerSetting defines auth server used setting options.
 type AuthServerSetting struct {
 	Network Network   `yaml:"network"`
@@ -454,7 +431,7 @@ type TaskServerSetting struct {
 	// 自研云增加的配置写在这里
 	OBSDatabase *DataBase  `yaml:"obsDatabase,omitempty"`
 	Cmdb        ApiGateway `yaml:"cmdb"`
-	AlarmCli    *AlarmCli `yaml:"alarm,omitempty"`
+	AlarmCli    *AlarmCli  `yaml:"alarm,omitempty"`
 
 	Network  Network   `yaml:"network"`
 	Service  Service   `yaml:"service"`

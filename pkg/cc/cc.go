@@ -194,25 +194,6 @@ func TaskServer() TaskServerSetting {
 	return *s
 }
 
-// WoaServer return woa server Setting.
-func WoaServer() WoaServerSetting {
-	rt.lock.Lock()
-	defer rt.lock.Unlock()
-
-	if !rt.Ready() {
-		logs.ErrorDepthf(1, "runtime not ready, return empty task server setting")
-		return WoaServerSetting{}
-	}
-
-	s, ok := rt.settings.(*WoaServerSetting)
-	if !ok {
-		logs.ErrorDepthf(1, "current %s service can not get woa server setting", ServiceName())
-		return WoaServerSetting{}
-	}
-
-	return *s
-}
-
 // AccountServer return account server Setting.
 func AccountServer() AccountServerSetting {
 	rt.lock.Lock()
