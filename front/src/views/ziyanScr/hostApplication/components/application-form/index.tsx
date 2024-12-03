@@ -853,7 +853,7 @@ export default defineComponent({
       try {
         const { data } = await planStore.verify_resource_demand({
           bk_biz_id: +computedBiz.value,
-          require_type: 1,
+          require_type: order.value.model.requireType,
           suborders,
         });
         for (let i = 0; i < cloudTableData.value.length; i++) {
