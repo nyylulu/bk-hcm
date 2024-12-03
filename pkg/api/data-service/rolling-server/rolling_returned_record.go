@@ -59,6 +59,7 @@ type RollingReturnedRecordCreateReq struct {
 	Day              int                   `json:"day" validate:"required"`
 	ReturnedWay      enumor.ReturnedWay    `json:"returned_way" validate:"required"`
 	InstanceGroup    string                `json:"instance_group" validate:"required"`
+	CoreType         enumor.CoreType       `json:"core_type" validate:"required"`
 	Status           enumor.ReturnedStatus `json:"status" validate:"required"`
 }
 

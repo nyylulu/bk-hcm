@@ -56,4 +56,5 @@ type RecycleHost struct {
 	ReturnedWay    enumor.ReturnedWay `json:"returned_way" bson:"returned_way"`
 	DeviceGroup    string             `json:"device_group" bson:"device_group"`
 	CpuCore        int64              `json:"cpu_core" bson:"cpu_core"`
+	CoreType       enumor.CoreType    `json:"core_type" bson:"core_type"`
 }

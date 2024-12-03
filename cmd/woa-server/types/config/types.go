@@ -598,7 +598,8 @@ var Description = map[string]string{
 
 // DeviceTypeCpuItem device type cpu item
 type DeviceTypeCpuItem struct {
-	DeviceType  string `json:"device_type"`  // 机型
-	CPUAmount   int64  `json:"cpu_amount"`   // CPU数量
-	DeviceGroup string `json:"device_group"` // 机型族
+	DeviceType  string          `json:"device_type"`  // 机型
+	CPUAmount   int64           `json:"cpu_amount"`   // CPU数量
+	DeviceGroup string          `json:"device_group"` // 机型族
+	CoreType    enumor.CoreType `json:"core_type"`    // 机型核心类型
 }

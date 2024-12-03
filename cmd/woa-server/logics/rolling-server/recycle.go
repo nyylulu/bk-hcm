@@ -45,11 +45,11 @@ import (
 
 // CalSplitRecycleHosts 计算并匹配指定时间范围指定业务的主机Host
 func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table.RecycleHost,
-	allBizReturnedCpuCore, globalQuota int64) (map[string]*rstypes.RecycleHostCpuInfo, []*table.RecycleHost,
+	allBizReturnedCpuCore, globalQuota int64) (map[string]*rstypes.RecycleHostMatchInfo, []*table.RecycleHost,
 	int64, error) {
 
 	// 1.统计该回收Host子订单中的机型、全业务已退还的CPU总核数、全局的CPU总核数
-	hostCpuMap, err := l.statisRecycleHostsAndBizCpuSystemQuota(kt, hosts)
+	hostMatchMap, err := l.buildHostMatchMap(kt, hosts)
 	if err != nil {
 		logs.ErrorJson("statis recycle host cpu system quota failed, err: %v, bkBizID: %d, hosts: %+v, rid: %s",
 			err, bkBizID, hosts, kt.Rid)
@@ -77,18 +77,18 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	isContinue := false
 	for _, dateRange := range matchRange {
 		// 匹配滚服申请订单
-		hostCpuMap, isContinue, allBizReturnedCpuCore, err = l.MatchRecycleCvmHostQuota(kt, bkBizID,
-			dateRange.End, dateRange.Start, allBizReturnedCpuCore, globalQuota, hostCpuMap)
+		hostMatchMap, isContinue, allBizReturnedCpuCore, err = l.MatchRecycleCvmHostQuota(kt, bkBizID,
+			dateRange.End, dateRange.Start, allBizReturnedCpuCore, globalQuota, hostMatchMap)
 		if err != nil {
 			logs.Errorf("match recycle rolling cvm host quota by bizID failed, err: %v, bkBizID: %d, dateRange：%+v, "+
-				"hostCpuMap: %+v, rid: %s", err, bkBizID, dateRange, hostCpuMap, kt.Rid)
+				"hostCpuMap: %+v, rid: %s", err, bkBizID, dateRange, hostMatchMap, kt.Rid)
 			return nil, nil, 0, err
 		}
 
 		// 记录日志方便排查问题
 		logs.Infof("match recycle rolling cvm host quota by bizID success, bkBizID: %d,  globalQuota: %d, "+
 			"dateRange：%+v, hostCpuMap: %+v, allBizReturnedCpuCore: %d, isContinue: %v, rid: %s", bkBizID, globalQuota,
-			dateRange, hostCpuMap, allBizReturnedCpuCore, isContinue, kt.Rid)
+			dateRange, hostMatchMap, allBizReturnedCpuCore, isContinue, kt.Rid)
 		if !isContinue {
 			break
 		}
@@ -97,7 +97,7 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	// 检查那些主机已匹配，则给主机Host设置退还方式、回收类型
 	for _, host := range hosts {
 		// 查询该主机是否已匹配到滚服申请单
-		if hostMatchInfo, ok := hostCpuMap[host.IP]; ok && hostMatchInfo.IsMatched {
+		if hostMatchInfo, ok := hostMatchMap[host.IP]; ok && hostMatchInfo.IsMatched {
 			// 设置该Host的退还方式
 			host.ReturnedWay = hostMatchInfo.ReturnedWay
 			host.RecycleType = table.RecycleTypeRollServer
@@ -107,20 +107,20 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 		}
 	}
 
-	return hostCpuMap, hosts, allBizReturnedCpuCore, nil
+	return hostMatchMap, hosts, allBizReturnedCpuCore, nil
 }
 
-func (l *logics) statisRecycleHostsAndBizCpuSystemQuota(kt *kit.Kit, hosts []*table.RecycleHost) (
-	map[string]*rstypes.RecycleHostCpuInfo, error) {
+func (l *logics) buildHostMatchMap(kt *kit.Kit, hosts []*table.RecycleHost) (map[string]*rstypes.RecycleHostMatchInfo,
+	error) {
 
 	deviceTypes := make([]string, 0)
-	hostCpuMap := make(map[string]*rstypes.RecycleHostCpuInfo, 0)
+	hostMatchMap := make(map[string]*rstypes.RecycleHostMatchInfo, 0)
 	for _, host := range hosts {
 		deviceTypes = append(deviceTypes, host.DeviceType)
-		hostCpuMap[host.IP] = &rstypes.RecycleHostCpuInfo{RecycleHost: host}
+		hostMatchMap[host.IP] = &rstypes.RecycleHostMatchInfo{RecycleHost: host}
 	}
 
-	// 根据设备列表获取设备实例信息（CPU核数、机型族）
+	// 根据设备列表获取设备实例信息（CPU核数、机型族, 核心类型）
 	deviceInstanceMap, err := l.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, deviceTypes)
 	if err != nil {
 		logs.Errorf("split rolling recycle host, list cvm instance by device type failed, err: %v, "+
@@ -129,7 +129,7 @@ func (l *logics) statisRecycleHostsAndBizCpuSystemQuota(kt *kit.Kit, hosts []*ta
 	}
 
 	// 2.计算每个回收Host对应的CPU核心数
-	for _, hostItem := range hostCpuMap {
+	for _, hostItem := range hostMatchMap {
 		deviceInstanceInfo, ok := deviceInstanceMap[hostItem.DeviceType]
 		if !ok {
 			logs.Errorf("split rolling recycle host, device type not found, hostIP: %s, deviceType: %s, rid: %s",
@@ -139,15 +139,16 @@ func (l *logics) statisRecycleHostsAndBizCpuSystemQuota(kt *kit.Kit, hosts []*ta
 		}
 		hostItem.CpuCore = deviceInstanceInfo.CPUAmount
 		hostItem.DeviceGroup = deviceInstanceInfo.DeviceGroup
+		hostItem.CoreType = deviceInstanceInfo.CoreType
 	}
 
-	return hostCpuMap, nil
+	return hostMatchMap, nil
 }
 
 // MatchRecycleCvmHostQuota 匹配指定时间范围指定业务的主机回收额度
 func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNum, endDayNum int,
-	allBizReturnedCpuCore, globalQuota int64, hostCpuMap map[string]*rstypes.RecycleHostCpuInfo) (
-	map[string]*rstypes.RecycleHostCpuInfo, bool, int64, error) {
+	allBizReturnedCpuCore, globalQuota int64, hostCpuMap map[string]*rstypes.RecycleHostMatchInfo) (
+	map[string]*rstypes.RecycleHostMatchInfo, bool, int64, error) {
 
 	// 1.查询指定时间、指定业务滚服申请跟回收的列表
 	appliedRecords, returnedRecordMap, err := l.listRollServerAppliedAndRecycle(kt, bkBizID, startDayNum, endDayNum)
@@ -160,6 +161,7 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 	if len(appliedRecords) == 0 {
 		return hostCpuMap, true, 0, nil
 	}
+	appliedRecords = sortAppliedRecords(appliedRecords)
 
 	// 2.指定时间范围内，该业务剩余可退还的CPU总核心数
 	for _, apply := range appliedRecords {
@@ -180,7 +182,8 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 		for _, hostItem := range hostCpuMap {
 			// 申请单有剩余CPU核数 + 该主机尚未匹配 + 机型族相同
 			if remainCore > 0 && !hostItem.IsMatched && hostItem.CpuCore <= remainCore &&
-				apply.InstanceGroup == hostItem.DeviceGroup {
+				apply.InstanceGroup == hostItem.DeviceGroup &&
+				(apply.CoreType == rstypes.OldVersionCoreType || apply.CoreType == hostItem.CoreType) {
 
 				// 3.计算当前业务可回收的"退还方式"，所有业务的滚服回收核数 > 全局总额度，走“资源池回收”
 				returnedWay := enumor.CrpReturnedWay
@@ -220,9 +223,25 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 	return hostCpuMap, continueMatched, allBizReturnedCpuCore, nil
 }
 
+// sortAppliedRecords 先前版本滚服主机申请记录没有核心类型字段，这里进行排序，让上层在使用滚服申请记录的时候，优先匹配有核心类型值的数据
+func sortAppliedRecords(appliedRecords []*rstable.RollingAppliedRecord) []*rstable.RollingAppliedRecord {
+	records := make([]*rstable.RollingAppliedRecord, 0)
+	oldRecords := make([]*rstable.RollingAppliedRecord, 0)
+	for _, record := range appliedRecords {
+		if record.CoreType == rstypes.OldVersionCoreType {
+			oldRecords = append(oldRecords, record)
+			continue
+		}
+		records = append(records, record)
+	}
+
+	records = append(records, oldRecords...)
+	return records
+}
+
 // InsertReturnedHostMatched 插入需要退还的主机匹配记录
 func (l *logics) InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID uint64, subOrderID string,
-	hosts []*table.RecycleHost, hostMatchMap map[string]*rstypes.RecycleHostCpuInfo,
+	hosts []*table.RecycleHost, hostMatchMap map[string]*rstypes.RecycleHostMatchInfo,
 	status enumor.ReturnedStatus) error {
 
 	if hostMatchMap == nil {
@@ -231,67 +250,57 @@ func (l *logics) InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID u
 		return nil
 	}
 
-	// 按滚服申请表主键ID、机型族来分组
-	appliedCpuMap := make(map[string]map[string]map[enumor.ReturnedWay]*rstypes.RecycleHostCpuInfo, 0)
+	// 按滚服申请表主键ID、机型族、核心类型、退回类型来分组
+	appliedMatchMap := make(map[rstypes.ReturnedRecordInfo]int64)
 	for _, host := range hosts {
 		hostMatchInfo, exist := hostMatchMap[host.IP]
 		if !exist || !hostMatchInfo.IsMatched {
 			continue
 		}
-		if _, exist = appliedCpuMap[hostMatchInfo.AppliedRecordID]; !exist {
-			appliedCpuMap[hostMatchInfo.AppliedRecordID] = make(
-				map[string]map[enumor.ReturnedWay]*rstypes.RecycleHostCpuInfo, 0)
+
+		key := rstypes.ReturnedRecordInfo{
+			AppliedRecordID: hostMatchInfo.AppliedRecordID,
+			DeviceGroup:     host.DeviceGroup,
+			CoreType:        host.CoreType,
+			ReturnedWay:     host.ReturnedWay,
 		}
-		if _, exist = appliedCpuMap[hostMatchInfo.AppliedRecordID][host.DeviceGroup]; !exist {
-			appliedCpuMap[hostMatchInfo.AppliedRecordID][host.DeviceGroup] = make(
-				map[enumor.ReturnedWay]*rstypes.RecycleHostCpuInfo, 0)
-		}
-		if _, exist = appliedCpuMap[hostMatchInfo.AppliedRecordID][host.DeviceGroup][host.ReturnedWay]; !exist {
-			appliedCpuMap[hostMatchInfo.AppliedRecordID][host.DeviceGroup][host.ReturnedWay] =
-				&rstypes.RecycleHostCpuInfo{}
-		}
-		appliedCpuMap[hostMatchInfo.AppliedRecordID][host.DeviceGroup][host.ReturnedWay].MatchAppliedCore +=
-			hostMatchInfo.CpuCore
+
+		appliedMatchMap[key] += hostMatchInfo.CpuCore
 	}
 
 	now := time.Now()
 	year, month, day := now.Year(), int(now.Month()), now.Day()
 
-	for appliedRecordID, appliedHostList := range appliedCpuMap {
-		records := make([]rsproto.RollingReturnedRecordCreateReq, 0)
-		for deviceGroup, returnWayHostMap := range appliedHostList {
-			for returnedWay, hostCpuItem := range returnWayHostMap {
-				records = append(records, rsproto.RollingReturnedRecordCreateReq{
-					BkBizID:          bkBizID,
-					OrderID:          orderID,
-					SubOrderID:       subOrderID,
-					AppliedRecordID:  appliedRecordID,
-					MatchAppliedCore: hostCpuItem.MatchAppliedCore,
-					Year:             year,
-					Month:            month,
-					Day:              day,
-					ReturnedWay:      returnedWay,
-					InstanceGroup:    deviceGroup,
-					Status:           status,
-				})
-			}
-		}
-
-		for _, partRecords := range slice.Split(records, constant.RollingServerOperateMaxLimit) {
-			createReq := &rsproto.BatchCreateRollingReturnedRecordReq{
-				ReturnedRecords: partRecords,
-			}
-			if _, err := l.client.DataService().Global.RollingServer.CreateReturnedRecord(kt, createReq); err != nil {
-				logs.Errorf("insert returned host matched, create returned record failed, err: %v, bkBizID: %d, "+
-					"orderID: %d, subOrderID: %s, appliedRecordID: %s, partRecords: %+v, rid: %s", err, bkBizID,
-					orderID, subOrderID, appliedRecordID, partRecords, kt.Rid)
-				return err
-			}
-			logs.Infof("insert returned host matched, create returned record success, bkBizID: %d, "+
-				"orderID: %d, subOrderID: %s, appliedRecordID: %s, partRecords: %+v, rid: %s", bkBizID,
-				orderID, subOrderID, appliedRecordID, partRecords, kt.Rid)
-		}
+	records := make([]rsproto.RollingReturnedRecordCreateReq, 0)
+	for key, cpuCore := range appliedMatchMap {
+		records = append(records, rsproto.RollingReturnedRecordCreateReq{
+			BkBizID:          bkBizID,
+			OrderID:          orderID,
+			SubOrderID:       subOrderID,
+			AppliedRecordID:  key.AppliedRecordID,
+			MatchAppliedCore: cpuCore,
+			Year:             year,
+			Month:            month,
+			Day:              day,
+			ReturnedWay:      key.ReturnedWay,
+			InstanceGroup:    key.DeviceGroup,
+			Status:           status,
+			CoreType:         key.CoreType,
+		})
 	}
+
+	for _, partRecords := range slice.Split(records, constant.RollingServerOperateMaxLimit) {
+		createReq := &rsproto.BatchCreateRollingReturnedRecordReq{ReturnedRecords: partRecords}
+		if _, err := l.client.DataService().Global.RollingServer.CreateReturnedRecord(kt, createReq); err != nil {
+			logs.Errorf("insert returned host matched, create returned record failed, err: %v, bkBizID: %d, "+
+				"orderID: %d, subOrderID: %s, partRecords: %+v, rid: %s", err, bkBizID, orderID, subOrderID,
+				partRecords, kt.Rid)
+			return err
+		}
+		logs.Infof("insert returned host matched, create returned record success, bkBizID: %d, orderID: %d, "+
+			"subOrderID: %s, partRecords: %+v, rid: %s", bkBizID, orderID, subOrderID, partRecords, kt.Rid)
+	}
+
 	return nil
 }
 
@@ -357,8 +366,9 @@ func (l *logics) listAppliedReturnCpuCoreRecords(kt *kit.Kit, order *table.Recyc
 	if len(returnedList) == 0 {
 		logs.Errorf("update returned locked status failed, has no rolling server returned, subOrderID: %s, rid: %s",
 			order.SuborderID, kt.Rid)
-		return nil, nil, nil, errf.Newf(errf.RollingServerRecycleCommitCheckError, "recycle order has no rolling server "+
-			"no returned record, subOrderID: %s, rid: %s", order.SuborderID, kt.Rid)
+		return nil, nil, nil, errf.Newf(errf.RollingServerRecycleCommitCheckError,
+			"recycle order has no rolling server "+
+				"no returned record, subOrderID: %s, rid: %s", order.SuborderID, kt.Rid)
 	}
 
 	appliedRecords := make([]*rstable.RollingAppliedRecord, 0)

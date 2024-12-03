@@ -22,6 +22,7 @@ package rollingserver
 
 import (
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/enumor"
 )
 
 const (
@@ -39,10 +40,18 @@ type RecycleMatchDateRange struct {
 	End int `json:"end"`
 }
 
-// RecycleHostCpuInfo recycle host cpu info
-type RecycleHostCpuInfo struct {
+// RecycleHostMatchInfo recycle host match info
+type RecycleHostMatchInfo struct {
 	*table.RecycleHost `json:",inline"`
 	IsMatched          bool   `json:"is_matched"`
 	AppliedRecordID    string `json:"applied_record_id"`
 	MatchAppliedCore   int64  `json:"match_applied_core"`
+}
+
+// ReturnedRecordInfo returned record info
+type ReturnedRecordInfo struct {
+	AppliedRecordID string             `json:"applied_record_id"`
+	DeviceGroup     string             `json:"device_group"`
+	CoreType        enumor.CoreType    `json:"core_type"`
+	ReturnedWay     enumor.ReturnedWay `json:"returned_way"`
 }

@@ -59,6 +59,7 @@ type RollingAppliedRecordCreateReq struct {
 	AppliedCore   int64              `json:"applied_core" validate:"required"`
 	DeliveredCore int64              `json:"delivered_core" validate:"omitempty"`
 	InstanceGroup string             `json:"instance_group" validate:"required"`
+	CoreType      enumor.CoreType    `json:"core_type" validate:"required"`
 }
 
 // Validate ...

@@ -46,6 +46,7 @@ var RollingReturnedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "roll_date", NamedC: "roll_date", Type: enumor.Numeric},
 	{Column: "returned_way", NamedC: "returned_way", Type: enumor.String},
 	{Column: "instance_group", NamedC: "instance_group", Type: enumor.String},
+	{Column: "core_type", NamedC: "core_type", Type: enumor.String},
 	{Column: "status", NamedC: "status", Type: enumor.Numeric},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
@@ -78,6 +79,8 @@ type RollingReturnedRecord struct {
 	ReturnedWay enumor.ReturnedWay `db:"returned_way" json:"returned_way"`
 	// InstanceGroup 机型族
 	InstanceGroup string `db:"instance_group" json:"instance_group"`
+	// CoreType 机型核心类型
+	CoreType enumor.CoreType `db:"core_type" json:"core_type"`
 	// Status 状态(1:锁定、2:正常、3:终止)
 	Status enumor.ReturnedStatus `db:"status" json:"status"`
 	// Creator 创建者

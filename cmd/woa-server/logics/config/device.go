@@ -18,6 +18,7 @@ import (
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
@@ -523,10 +524,21 @@ func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []str
 			return nil, errors.New("get invalid non-string device group")
 		}
 
+		// 机型核心类型
+		deviceSize, ok := deviceItem.Label["device_size"]
+		if !ok {
+			return nil, errors.New("get invalid empty device size")
+		}
+		deviceSizeStr, ok := deviceSize.(string)
+		if !ok {
+			return nil, errors.New("get invalid non-string device size")
+		}
+
 		deviceTypeMap[deviceType] = types.DeviceTypeCpuItem{
 			DeviceType:  deviceItem.DeviceType,
 			CPUAmount:   deviceItem.Cpu,
 			DeviceGroup: deviceGroupStr,
+			CoreType:    enumor.CoreType(deviceSizeStr),
 		}
 		existDeviceTypes = append(existDeviceTypes, deviceType)
 	}
@@ -567,6 +579,13 @@ func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []str
 	return deviceTypeMap, nil
 }
 
+// CoreTypeMap 设备核心类型，key为crp侧的值，1.2.3 分别标识，大核心，中核心，小核心
+var CoreTypeMap = map[int]enumor.CoreType{
+	1: enumor.CoreTypeBig,
+	2: enumor.CoreTypeMedium,
+	3: enumor.CoreTypeSmall,
+}
+
 // listCvmInstanceTypeFromCrp 从Crp平台获取实例信息
 func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (
 	map[string]types.DeviceTypeCpuItem, error) {
@@ -599,6 +618,7 @@ func (d *device) listCvmInstanceTypeFromCrp(kt *kit.Kit, deviceTypes []string) (
 			DeviceType:  item.InstanceType,
 			CPUAmount:   int64(item.CPUAmount),
 			DeviceGroup: item.InstanceGroup,
+			CoreType:    CoreTypeMap[item.CoreType],
 		}
 	}
 

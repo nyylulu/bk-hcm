@@ -584,6 +584,7 @@ type QueryCvmInstanceTypeItem struct {
 	CPUAmount             float64           `json:"cpuAmount"`             // CPU数量
 	GPUAmount             float64           `json:"gpuAmount"`             // GPU卡数量
 	InstanceClass         string            `json:"instanceClass"`         // 实例类型
+	CoreType              int               `json:"coreType"`              // 1.2.3 分别标识，大核心，中核心，小核心
 }
 
 // GetApproveLogResp get approve log response

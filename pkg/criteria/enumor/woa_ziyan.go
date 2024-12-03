@@ -651,3 +651,15 @@ var CrpOrderStatusCanRevoke = []CrpOrderStatus{
 	CrpOrderStatusWaitDeliver,
 	CrpOrderStatusDelivering,
 }
+
+// CoreType 核心类型
+type CoreType string
+
+const (
+	// CoreTypeBig 大核心
+	CoreTypeBig CoreType = "大核心"
+	// CoreTypeMedium 中核心
+	CoreTypeMedium CoreType = "中核心"
+	// CoreTypeSmall 小核心
+	CoreTypeSmall CoreType = "小核心"
+)

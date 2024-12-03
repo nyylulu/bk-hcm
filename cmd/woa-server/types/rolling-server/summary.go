@@ -74,6 +74,7 @@ type CpuCoreSummaryReq struct {
 	ReturnedWay            enumor.ReturnedWay `json:"returned_way" validate:"omitempty"`
 	AppliedType            enumor.AppliedType `json:"applied_type" validate:"omitempty"`
 	InstanceGroup          string             `json:"instance_group" validate:"omitempty"`
+	CoreType               *enumor.CoreType   `json:"core_type" validate:"omitempty"`
 }
 
 // Validate validate.
@@ -114,3 +115,6 @@ type CreateAppliedRecordData struct {
 	Count       int                `json:"count"`
 	AppliedType enumor.AppliedType `json:"applied_type"`
 }
+
+// OldVersionCoreType 之前版本是没有core_type的字段的，这里定义一个空字符串，用于给其他地方兼容之前没有该字段的滚服申请滚服记录
+const OldVersionCoreType = enumor.CoreType("")

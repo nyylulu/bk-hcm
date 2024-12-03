@@ -653,17 +653,17 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 	}
 
 	// 对每个业务的主机Host列表，匹配归类为“滚服项目”
-	bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostCpuInfo, 0)
-	hostCpuMap := make(map[string]*rstypes.RecycleHostCpuInfo, 0)
+	bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostMatchInfo, 0)
+	hostMatchMap := make(map[string]*rstypes.RecycleHostMatchInfo, 0)
 	for _, bkBizID := range bkBizIDs {
-		hostCpuMap, hosts, allBizReturnedCpuCore, err = r.rsLogic.CalSplitRecycleHosts(kt, bkBizID, hosts,
+		hostMatchMap, hosts, allBizReturnedCpuCore, err = r.rsLogic.CalSplitRecycleHosts(kt, bkBizID, hosts,
 			allBizReturnedCpuCore, globalQuota)
 		if err != nil {
 			logs.Errorf("failed to preview recycle order, for check recycle quota bkBizID: %d, err: %v, rid: %s",
 				bkBizID, err, kt.Rid)
 			return nil, err
 		}
-		bkBizIDHostMatchMap[bkBizID] = hostCpuMap
+		bkBizIDHostMatchMap[bkBizID] = hostMatchMap
 	}
 
 	// 2. classify hosts into groups with different recycle strategies
@@ -689,8 +689,8 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 
 // fillRecycleOrderDeviceList 创建初始化回收Order及主机Hosts并将机型对应的CPU核数填充到orders里面
 func (r *recycler) createAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup, bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostCpuInfo) (
-	[]*types.RecycleOrderCpuInfo, error) {
+	bizGroups map[int64]classifier.RecycleGroup,
+	bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostMatchInfo) ([]*types.RecycleOrderCpuInfo, error) {
 
 	// init and save recycle orders
 	orders, subOrderIDDeviceTypes, err := r.initAndSaveRecycleOrders(kt, skipConfirm, remark,
@@ -738,8 +738,9 @@ func (r *recycler) createAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, rem
 
 // initRecycleOrder init and save recycle orders
 func (r *recycler) initAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, remark string,
-	bizGroups map[int64]classifier.RecycleGroup, bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostCpuInfo) (
-	[]*table.RecycleOrder, map[string]map[string]int64, error) {
+	bizGroups map[int64]classifier.RecycleGroup,
+	bkBizIDHostMatchMap map[int64]map[string]*rstypes.RecycleHostMatchInfo) ([]*table.RecycleOrder,
+	map[string]map[string]int64, error) {
 
 	subOrderIDDeviceTypes := make(map[string]map[string]int64, 0)
 	now := time.Now()
@@ -1893,14 +1894,14 @@ func (r *recycler) setRollingServerRecycleHost(kt *kit.Kit, orders []*table.Recy
 			return err
 		}
 
-		bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostCpuInfo, 0)
+		bkBizIDHostMatchMap := make(map[int64]map[string]*rstypes.RecycleHostMatchInfo, 0)
 		for _, hostItem := range hostList.Info {
 			// 管理员指定回收类型的话，回收方式为CRP回收
 			hostItem.ReturnedWay = enumor.CrpReturnedWay
 			if _, ok := bkBizIDHostMatchMap[item.BizID]; !ok {
-				bkBizIDHostMatchMap[item.BizID] = make(map[string]*rstypes.RecycleHostCpuInfo, 0)
+				bkBizIDHostMatchMap[item.BizID] = make(map[string]*rstypes.RecycleHostMatchInfo, 0)
 			}
-			bkBizIDHostMatchMap[item.BizID][hostItem.IP] = &rstypes.RecycleHostCpuInfo{
+			bkBizIDHostMatchMap[item.BizID][hostItem.IP] = &rstypes.RecycleHostMatchInfo{
 				RecycleHost: hostItem,
 				IsMatched:   true,
 			}
