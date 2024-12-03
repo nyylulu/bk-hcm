@@ -352,9 +352,14 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		sort.Sort(sort.Reverse(subnetList))
 		subnetID := ""
 		applyNum := uint(0)
+		ignorePrediction := false
+		if order.RequireType == enumor.RequireTypeGreenChannel {
+			ignorePrediction = true
+		}
+
 		for _, subnet := range subnetList {
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, subnet.Id, order.Spec.ChargeType)
+				req.VPCId, subnet.Id, order.Spec.ChargeType, ignorePrediction)
 			if err != nil {
 				logs.Errorf("failed to get capacity with subnet %s, subnetNum: %d, zone: %s, reqVpcID: %s, err: %v",
 					subnet.Id, len(subnetList), zone, req.VPCId, err)
@@ -374,14 +379,6 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 			logs.Errorf("buildCvmReq:get no available capacity info, subnetNum: %d, zone: %s, reqVpcID: %s, "+
 				"subnet: %+v, orderInfo: %+v, capacity: %+v",
 				len(subnetList), zone, req.VPCId, cvt.PtrToVal(subnet), cvt.PtrToVal(order), capacity)
-		}
-
-		// TODO: 小额绿通需要独立计算子网可用容量,目前临时为小额绿通分配一个子网区域
-		if order.RequireType == enumor.RequireTypeGreenChannel && (subnetID == "" || applyNum <= 0) {
-			if len(subnetList) > 0 {
-				subnetID = subnetList[0].Id
-				applyNum = replicas
-			}
 		}
 
 		if subnetID == "" || applyNum <= 0 {

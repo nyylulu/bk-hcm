@@ -113,16 +113,17 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 }
 
 // getCapacity get resource apply capacity info
-func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc, subnet string,
-	chargeType cvmapi.ChargeType) (map[string]int64, error) {
+func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc,
+	subnet string, chargeType cvmapi.ChargeType, ignorePrediction bool) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
-		RequireType: requireType,
-		DeviceType:  deviceType,
-		Region:      region,
-		Zone:        zone,
-		Vpc:         vpc,
-		Subnet:      subnet,
+		RequireType:      requireType,
+		DeviceType:       deviceType,
+		Region:           region,
+		Zone:             zone,
+		Vpc:              vpc,
+		Subnet:           subnet,
+		IgnorePrediction: ignorePrediction,
 	}
 	// 计费模式,默认包年包月
 	if len(chargeType) > 0 {
@@ -143,8 +144,8 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, dev
 }
 
 // getCapacityDetail get resource apply capacity detail info
-func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc, subnet string,
-	chargeType cvmapi.ChargeType) (*cfgtype.CapacityInfo, error) {
+func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc,
+	subnet string, chargeType cvmapi.ChargeType) (*cfgtype.CapacityInfo, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType: requireType,

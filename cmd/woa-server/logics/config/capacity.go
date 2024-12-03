@@ -107,7 +107,7 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	zoneToCapacity := make(map[string]*types.CapacityInfo)
 	for zoneID, vpcList := range zoneToVpc {
 		vpcUniq := arrayutil.StrArrayUnique(vpcList)
-		capa := c.getZoneCapacity(kt, input, zoneID, vpcUniq, vpcToSubnet)
+		capa := c.getZoneCapacity(kt, input, zoneID, vpcUniq, vpcToSubnet, input.IgnorePrediction)
 		if capa != nil {
 			zoneToCapacity[zoneID] = capa
 		}
@@ -184,7 +184,7 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 }
 
 func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, zone string, vpcList []string,
-	vpcToSubnet map[string][]string) *types.CapacityInfo {
+	vpcToSubnet map[string][]string, ignorePrediction bool) *types.CapacityInfo {
 
 	// 1. query cvm capacity
 	if len(vpcList) == 0 {
@@ -248,7 +248,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 	totalLeftIp := c.sumLeftIp(subnetToLeftIp, vpcList, vpcToSubnet)
 
 	// 4. update max info
-	c.updateCapacityMaxInfo(capacityItem, totalLeftIp)
+	c.updateCapacityMaxInfo(capacityItem, totalLeftIp, ignorePrediction)
 
 	jsonReq, err := json.Marshal(req)
 	if err != nil {
@@ -341,14 +341,16 @@ func (c *capacity) sumLeftIp(subnetToLeftIp map[string]*cvmapi.SubnetInfo, vpcLi
 	return int64(total)
 }
 
-func (c *capacity) updateCapacityMaxInfo(capacity *types.CapacityInfo, leftIp int64) {
+func (c *capacity) updateCapacityMaxInfo(capacity *types.CapacityInfo, leftIp int64, ignorePrediction bool) {
 	maxNum := leftIp
 	for _, maxInfo := range capacity.MaxInfo {
-		if maxInfo.Key == "所选VPC子网可用IP数" {
+		key := maxInfo.Key
+		if key == hcmKeyIPCap {
 			maxInfo.Value = leftIp
 		}
 
-		if maxInfo.Value < maxNum {
+		// 所有key的最小值，为可申请的最大值；当忽略预测时，只需要关心所选VPC子网可用IP数和云梯系统单次最大申请量。
+		if maxInfo.Value < maxNum && (!ignorePrediction || key == hcmKeyIPCap || key == crpKeyApplyLimit) {
 			maxNum = maxInfo.Value
 		}
 	}
@@ -369,19 +371,33 @@ func (c *capacity) getCapacityFlag(num int) int {
 	return flag
 }
 
+const (
+	crpKeyCBSCap        = "云后端CBS容量计算可申领量"
+	crpKeyCVMCap        = "云后端CVM容量计算可申领量"
+	crpKeyIPCap         = "所选VPC子网可用IP数"
+	crpKeyPredictionCap = "未执行需求预测的可申领量"
+	crpKeyApplyLimit    = "云梯系统单次提单最大量"
+
+	hcmKeyCBSCap        = "云后端CBS库存可申请量"
+	hcmKeyCVMCap        = "云后端CVM库存可申请量"
+	hcmKeyIPCap         = "所选VPC子网可用IP数"
+	hcmKeyPredictionCap = "未执行需求预测的可申请量"
+	hcmKeyApplyLimit    = "云梯系统单次最大申请量"
+)
+
 // translateCapacityKey translate yunti capacity info key to cr capacity info key
 func (c *capacity) translateCapacityKey(key string) string {
 	switch key {
-	case "云后端CBS容量计算可申领量":
-		return "云后端CBS库存可申请量"
-	case "云后端CVM容量计算可申领量":
-		return "云后端CVM库存可申请量"
-	case "所选VPC子网可用IP数":
-		return "所选VPC子网可用IP数"
-	case "未执行需求预测的可申领量":
-		return "未执行需求预测的可申请量"
-	case "云梯系统单次提单最大量":
-		return "云梯系统单次最大申请量"
+	case crpKeyCBSCap:
+		return hcmKeyCBSCap
+	case crpKeyCVMCap:
+		return hcmKeyCVMCap
+	case crpKeyIPCap:
+		return hcmKeyIPCap
+	case crpKeyPredictionCap:
+		return hcmKeyPredictionCap
+	case crpKeyApplyLimit:
+		return hcmKeyApplyLimit
 	default:
 		return key
 	}
