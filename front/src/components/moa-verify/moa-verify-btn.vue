@@ -6,6 +6,7 @@ import Cookies from 'js-cookie';
 import i18n, { Locale } from '@/language/i18n';
 import { useUserStore } from '@/store';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 
 import type { IExposes, IMoaVerifyResult, IPromptPayloadTypes, IProps } from './typings';
@@ -23,6 +24,7 @@ const props = withDefaults(defineProps<IProps>(), {
 const attrs = useAttrs();
 
 const userStore = useUserStore();
+const { getBusinessApiPath } = useWhereAmI();
 
 const languageMap: { [key in Locale]: string } = {
   // 针对 moa 只识别 zh 而言，需要转换一下
@@ -59,7 +61,7 @@ const handleClick = async () => {
 
   const language = languageMap[bluekingLanguage];
 
-  const res: IQueryResData<{ session_id: string }> = await http.post('/api/v1/web/moa/request', {
+  const res: IQueryResData<{ session_id: string }> = await http.post(`/api/v1/web/${getBusinessApiPath()}moa/request`, {
     username,
     channel,
     language,
@@ -85,7 +87,10 @@ const verifyResult = reactive<IMoaVerifyResult>(getDefaultVerifyResult());
 const verifyMoa = async () => {
   try {
     const { username } = userStore;
-    const res: IQueryResData<IMoaVerifyResult> = await http.post('/api/v1/web/moa/verify', { username, session_id });
+    const res: IQueryResData<IMoaVerifyResult> = await http.post(`/api/v1/web/${getBusinessApiPath()}moa/verify`, {
+      username,
+      session_id,
+    });
     const { status } = res.data ?? {};
 
     if (status === 'finish') {

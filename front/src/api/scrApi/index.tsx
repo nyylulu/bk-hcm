@@ -53,8 +53,8 @@ const getCvmTypes = async (zone: string, area: any) => {
  * 获取镜像列表
  * @param  {String} area 区域 id
  */
-const getImages = async (params) => {
-  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/image`, { params });
+const getImages = async (region: string[]) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/findmany/config/cvm/image`, { region });
   return data;
 };
 /**

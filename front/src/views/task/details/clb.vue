@@ -88,6 +88,7 @@ const fetchCountAndStatus = async () => {
     const foundState = detailStatusList.find((item) => item?.id === row.id);
     if (foundState) {
       row.state = foundState.state;
+      row.reason = foundState.reason;
     }
   });
 };

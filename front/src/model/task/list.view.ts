@@ -24,7 +24,15 @@ export class ListView {
   @Column('user', { name: '操作人' })
   creator: string;
 
-  @Column('enum', { name: '任务状态', option: TASK_STATUS_NAME, appearance: 'status' })
+  @Column('enum', {
+    name: '任务状态',
+    option: TASK_STATUS_NAME,
+    meta: {
+      display: {
+        appearance: 'status',
+      },
+    },
+  })
   state: TaskStatus;
 
   @Column('number', { name: '总数' })

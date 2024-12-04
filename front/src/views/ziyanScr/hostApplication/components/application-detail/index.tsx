@@ -75,13 +75,14 @@ export default defineComponent({
     ];
 
     // 给云主机添加num字段
-    cloudcolumns.splice(2, 0, ...numColumns);
+    cloudcolumns.splice(3, 0, ...numColumns);
 
     const Hostcolumns = [
       ...cloudcolumns,
       {
         label: '操作',
         width: 120,
+        fixed: 'right',
         render: ({ row }: any) => {
           return (
             <Button text theme='primary' onClick={() => showRecord(row)}>

@@ -165,10 +165,10 @@ onBeforeMount(() => {
     :ticket-link="data.itsm_ticket_link"
     :logs="renderLogs"
   >
-    <!-- 提单人可以在“管理员审核”和“leader审核”两个状态下进行撤单操作 -->
+    <!-- 提单人可以在“管理员审批”和“leader审批”两个状态下进行撤单操作 -->
     <template
       #header-end
-      v-if="userStore.username === creator && ['管理员审核', 'leader审核'].includes(data.current_steps[0]?.name)"
+      v-if="userStore.username === creator && ['管理员审批', 'leader审批'].includes(data.current_steps[0]?.name)"
     >
       <bk-pop-confirm
         :title="t('撤销单据')"

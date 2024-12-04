@@ -16,7 +16,14 @@ export class DetailCvmView {
   @Column('datetime', { name: '结束时间', sort: true })
   updated_at: string;
 
-  @Column('enum', { name: '任务状态', option: TASK_DETAIL_STATUS_NAME, sort: true, appearance: 'status' })
+  @Column('enum', {
+    name: '任务状态',
+    option: TASK_DETAIL_STATUS_NAME,
+    sort: true,
+    meta: {
+      display: { appearance: 'status' },
+    },
+  })
   state: TaskDetailStatus;
 
   @Column('string', { name: '失败原因' })

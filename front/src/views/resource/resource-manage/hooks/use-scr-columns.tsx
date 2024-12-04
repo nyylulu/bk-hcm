@@ -36,6 +36,7 @@ import { getCvmProduceStatus, getTypeCn } from '@/views/ziyanScr/cvm-produce/tra
 import { getDiskTypesName, getImageName } from '@/components/property-list/transform';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import { transformAntiAffinityLevels } from '@/views/ziyanScr/hostApplication/components/transform';
+import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
@@ -66,6 +67,9 @@ export default (type: string, isSimpleShow = false) => {
   const businessMapStore = useBusinessMapStore();
   const cloudAreaStore = useCloudAreaStore();
   const { transformApplyStages } = useApplyStages();
+
+  const { cvmChargeTypes, cvmChargeTypeNames, getMonthName } = useCvmChargeType();
+
   const getLinkField = (options: LinkFieldOptions) => {
     // 设置options的默认值
     defaults(options, {
@@ -190,6 +194,19 @@ export default (type: string, isSimpleShow = false) => {
       width: 140,
     },
     {
+      label: t('计费模式'),
+      field: 'spec.charge_type',
+      width: 120,
+      render: ({ data, cell }: any) => {
+        if (cvmChargeTypes.PREPAID === cell) {
+          return `${cvmChargeTypeNames[cell]}(${getMonthName(data.spec.charge_months)})`;
+        }
+        if (cvmChargeTypes.POSTPAID_BY_HOUR === cell) {
+          return `${cvmChargeTypeNames[cell]}`;
+        }
+      },
+    },
+    {
       label: '状态',
       field: 'stage',
       render: ({ row }: any) => transformApplyStages(row.stage),
@@ -197,7 +214,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '地域',
       field: 'spec.region',
-      width: 160,
+      width: 120,
       render: ({ row }: any) => getRegionCn(row.spec.region),
     },
     {
@@ -215,15 +232,18 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '镜像',
       field: 'spec.image_id',
+      width: 200,
       render: ({ row }: any) => getImageName(row.spec.image_id),
     },
     {
       label: 'VPC',
       field: 'spec.vpc',
+      width: 120,
     },
     {
       label: '子网',
       field: 'spec.subnet',
+      width: 120,
     },
     {
       label: '数据盘大小',

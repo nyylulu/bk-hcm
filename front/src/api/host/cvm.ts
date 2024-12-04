@@ -52,7 +52,7 @@ export const getVpcs = (params) => {
   return http.post(getEntirePath('config/findmany/config/cvm/vpc'), params);
 };
 
-export const getImages = (params) => {
+export const getImages = (params: { region: string[] }) => {
   return http.post(getEntirePath('config/findmany/config/cvm/image'), params);
 };
 

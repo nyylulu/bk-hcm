@@ -18,10 +18,10 @@ export type ModelPropertyType =
   | 'business';
 
 export type ModelPropertyMeta = {
-  display: PropertyDisplayConfig;
-  search: PropertySearchConfig;
-  column: PropertyColumnConfig;
-  form: PropertyFormConfig;
+  display?: PropertyDisplayConfig;
+  search?: PropertySearchConfig;
+  column?: PropertyColumnConfig;
+  form?: PropertyFormConfig;
 };
 
 // 模型的基础字段，与业务场景无关
