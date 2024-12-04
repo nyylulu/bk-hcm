@@ -308,19 +308,19 @@ type Host struct {
 	BkCloudHostStatus CloudHostStatus `json:"bk_cloud_host_status"`
 	BkCloudID         int64           `json:"bk_cloud_id"`
 	// 云上地域，如 "ap-guangzhou"
-	BkCloudRegion      string  `json:"bk_cloud_region"`
-	BkHostInnerIP      string  `json:"bk_host_innerip"`
-	BkHostOuterIP      string  `json:"bk_host_outerip"`
-	BkHostInnerIPv6    string  `json:"bk_host_innerip_v6"`
-	BkHostOuterIPv6    string  `json:"bk_host_outerip_v6"`
-	Operator           string  `json:"operator"`
-	BkBakOperator      string  `json:"bk_bak_operator"`
-	BkHostName         string  `json:"bk_host_name"`
-	BkComment          *string `json:"bk_comment,omitempty"`
-	BkOSName           string  `json:"bk_os_name"`
-	SvrSourceTypeID    string  `json:"bk_svr_source_type_id"`
-	BkAssetID          string  `json:"bk_asset_id"`
-	SvrDeviceClassName string  `json:"bk_svr_device_cls_name"`
+	BkCloudRegion      string          `json:"bk_cloud_region"`
+	BkHostInnerIP      string          `json:"bk_host_innerip"`
+	BkHostOuterIP      string          `json:"bk_host_outerip"`
+	BkHostInnerIPv6    string          `json:"bk_host_innerip_v6"`
+	BkHostOuterIPv6    string          `json:"bk_host_outerip_v6"`
+	Operator           string          `json:"operator"`
+	BkBakOperator      string          `json:"bk_bak_operator"`
+	BkHostName         string          `json:"bk_host_name"`
+	BkComment          *string         `json:"bk_comment,omitempty"`
+	BkOSName           string          `json:"bk_os_name"`
+	SvrSourceTypeID    SvrSourceTypeID `json:"bk_svr_source_type_id"`
+	BkAssetID          string          `json:"bk_asset_id"`
+	SvrDeviceClassName string          `json:"bk_svr_device_cls_name"`
 
 	// 以下字段仅内部版支持，由cc从云梯获取
 	BkCloudZone     string `json:"bk_cloud_zone"`
@@ -374,16 +374,16 @@ type OsType string
 type SvrSourceTypeID string
 
 const (
-	// Own 自有, 物理机
-	Own SvrSourceTypeID = "1"
-	// Hosting 托管, 物理机
-	Hosting SvrSourceTypeID = "2"
-	// Rent 租用, 物理机
-	Rent = "3"
-	// CVM 虚拟机
-	CVM = "4"
-	// Container 容器
-	Container = "5"
+	// SvrSourceTypeIDOwn 服务器来源类型ID-自有, 物理机
+	SvrSourceTypeIDOwn SvrSourceTypeID = "1"
+	// SvrSourceTypeIDHosting 服务器来源类型ID-托管, 物理机
+	SvrSourceTypeIDHosting SvrSourceTypeID = "2"
+	// SvrSourceTypeIDRent 服务器来源类型ID-租用, 物理机
+	SvrSourceTypeIDRent SvrSourceTypeID = "3"
+	// SvrSourceTypeIDCVM 服务器来源类型ID-虚拟机
+	SvrSourceTypeIDCVM SvrSourceTypeID = "4"
+	// SvrSourceTypeIDContainer 服务器来源类型ID-容器
+	SvrSourceTypeIDContainer SvrSourceTypeID = "5"
 )
 
 // HostFields cmdb common fields
@@ -802,8 +802,7 @@ func (h *Host) GetUniqOuterIp() string {
 // IsPmAndOuterIPDevice 检查是否物理机，是否有外网IP
 func (h *Host) IsPmAndOuterIPDevice() bool {
 	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
-	if h.SvrSourceTypeID != BkSvrSourceTypeIDSelf && h.SvrSourceTypeID != BkSvrSourceTypeIDDeposit &&
-		h.SvrSourceTypeID != BkSvrSourceTypeIDLease {
+	if !IsPhysicalMachine(h.SvrSourceTypeID) {
 		return false
 	}
 
@@ -812,6 +811,17 @@ func (h *Host) IsPmAndOuterIPDevice() bool {
 	}
 
 	return true
+}
+
+// IsPhysicalMachine 检查是否物理机
+func IsPhysicalMachine(svrSourceTypeID SvrSourceTypeID) bool {
+	// 服务器来源类型ID(未知(0, 默认值) 自有(1) 托管(2) 租用(3) 虚拟机(4) 容器(5))
+	switch svrSourceTypeID {
+	case SvrSourceTypeIDOwn, SvrSourceTypeIDHosting, SvrSourceTypeIDRent:
+		return true
+	default:
+		return false
+	}
 }
 
 // HostBizRelResp find host business relation response

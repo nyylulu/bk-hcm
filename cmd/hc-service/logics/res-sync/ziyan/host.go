@@ -120,7 +120,7 @@ func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHo
 		host := convertToHost(&ccHost, accountID, bizID)
 		hostMap[host.CloudID] = host
 
-		if ccHost.SvrSourceTypeID != cmdb.CVM {
+		if ccHost.SvrSourceTypeID != cmdb.SvrSourceTypeIDCVM {
 			continue
 		}
 

@@ -38,6 +38,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/times"
@@ -130,6 +131,10 @@ func (l *logics) buildHostMatchMap(kt *kit.Kit, hosts []*table.RecycleHost) (map
 
 	// 2.计算每个回收Host对应的CPU核心数
 	for _, hostItem := range hostMatchMap {
+		// 物理机不需要参与计算
+		if cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
+			continue
+		}
 		deviceInstanceInfo, ok := deviceInstanceMap[hostItem.DeviceType]
 		if !ok {
 			logs.Errorf("split rolling recycle host, device type not found, hostIP: %s, deviceType: %s, rid: %s",
@@ -163,6 +168,8 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 	}
 	appliedRecords = sortAppliedRecords(appliedRecords)
 
+	// 剩余的CPU总核心数
+	var remainSumCore int64
 	// 2.指定时间范围内，该业务剩余可退还的CPU总核心数
 	for _, apply := range appliedRecords {
 		// 该子订单已退回的CPU总核心数
@@ -173,15 +180,22 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 
 		// 该主机申请单，是否还有剩余可退还的CPU核心数
 		remainCore := cvt.PtrToVal(apply.DeliveredCore) - returnedCore
+		// 计算当前剩余的CPU总核心数
+		remainSumCore += remainCore
 
-		if remainCore <= 0 {
+		if remainSumCore <= 0 {
 			continue
 		}
 
 		// 寻找比剩余可退还的CPU核心数，更小的主机
 		for _, hostItem := range hostCpuMap {
+			// 物理机不需要参与
+			if cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
+				continue
+			}
+
 			// 申请单有剩余CPU核数 + 该主机尚未匹配 + 机型族相同
-			if remainCore > 0 && !hostItem.IsMatched && hostItem.CpuCore <= remainCore &&
+			if remainSumCore > 0 && !hostItem.IsMatched && hostItem.CpuCore <= remainSumCore &&
 				apply.InstanceGroup == hostItem.DeviceGroup &&
 				(apply.CoreType == rstypes.OldVersionCoreType || apply.CoreType == hostItem.CoreType) {
 
@@ -196,16 +210,17 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 				hostItem.ReturnedWay = returnedWay
 				hostItem.AppliedRecordID = apply.ID
 				hostItem.MatchAppliedCore = hostItem.CpuCore
-				// 扣减剩余可退还的CPU核心数
-				remainCore -= hostItem.CpuCore
+				// 扣减剩余可退还的CPU总核心数
+				remainSumCore -= hostItem.CpuCore
 			}
 		}
 	}
 
-	// 4.检查主机列表里面，是否还有未匹配的主机
+	// 4.检查主机列表里面，是否还有未匹配的虚拟主机
 	continueMatched := false
 	for _, hostItem := range hostCpuMap {
-		if !hostItem.IsMatched {
+		// 尚未匹配到，并且不是物理机的话，可以继续匹配
+		if !hostItem.IsMatched && !cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
 			continueMatched = true
 			break
 		}
@@ -217,8 +232,8 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 			err, bkBizID, kt.Rid)
 		return nil, false, 0, err
 	}
-	logs.Infof("match recycle rolling cvm host quota end, bkBizID: %d, continueMatched: %v, hostCpuMap: %s, rid: %s",
-		bkBizID, continueMatched, hostCpuMapJson, kt.Rid)
+	logs.Infof("match recycle rolling cvm host quota end, bkBizID: %d, continueMatched: %v, remainSumCore: %d, "+
+		"hostCpuMap: %s, rid: %s", bkBizID, continueMatched, remainSumCore, hostCpuMapJson, kt.Rid)
 
 	return hostCpuMap, continueMatched, allBizReturnedCpuCore, nil
 }
@@ -254,7 +269,8 @@ func (l *logics) InsertReturnedHostMatched(kt *kit.Kit, bkBizID int64, orderID u
 	appliedMatchMap := make(map[rstypes.ReturnedRecordInfo]int64)
 	for _, host := range hosts {
 		hostMatchInfo, exist := hostMatchMap[host.IP]
-		if !exist || !hostMatchInfo.IsMatched {
+		// 未匹配、物理机，不需要参与
+		if !exist || !hostMatchInfo.IsMatched || cmdb.IsPhysicalMachine(host.SvrSourceTypeID) {
 			continue
 		}
 

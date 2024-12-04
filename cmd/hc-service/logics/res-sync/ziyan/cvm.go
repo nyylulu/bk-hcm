@@ -91,7 +91,7 @@ func (cli *client) getCVM(kt *kit.Kit, ccHosts []cmdb.Host) (map[string][]typesc
 
 	regionCloudIDMap := make(map[string][]string)
 	for _, ccHost := range ccHosts {
-		if ccHost.SvrSourceTypeID != cmdb.CVM {
+		if ccHost.SvrSourceTypeID != cmdb.SvrSourceTypeIDCVM {
 			continue
 		}
 

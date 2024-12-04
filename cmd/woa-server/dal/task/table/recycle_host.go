@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // RecycleHost defines a recycle host's detail information
@@ -57,4 +58,5 @@ type RecycleHost struct {
 	DeviceGroup    string             `json:"device_group" bson:"device_group"`
 	CpuCore        int64              `json:"cpu_core" bson:"cpu_core"`
 	CoreType       enumor.CoreType    `json:"core_type" bson:"core_type"`
+	SvrSourceTypeID cmdb.SvrSourceTypeID `json:"bk_svr_source_type_id"`
 }

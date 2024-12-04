@@ -423,19 +423,20 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 		}
 
 		hostDetail := &table.RecycleHost{
-			BizID:         bizId,
-			BizName:       bizName,
-			HostID:        host.BkHostID,
-			AssetID:       host.BkAssetID,
-			IP:            host.GetUniqIp(),
-			BkHostOuterIP: host.GetUniqOuterIp(),
-			DeviceType:    host.SvrDeviceClass,
-			Zone:          host.BkZoneName,
-			SubZone:       host.SubZone,
-			ModuleName:    host.ModuleName,
-			Operator:      host.Operator,
-			BakOperator:   host.BkBakOperator,
-			InputTime:     host.SvrInputTime,
+			BizID:           bizId,
+			BizName:         bizName,
+			HostID:          host.BkHostID,
+			AssetID:         host.BkAssetID,
+			IP:              host.GetUniqIp(),
+			BkHostOuterIP:   host.GetUniqOuterIp(),
+			DeviceType:      host.SvrDeviceClass,
+			Zone:            host.BkZoneName,
+			SubZone:         host.SubZone,
+			ModuleName:      host.ModuleName,
+			Operator:        host.Operator,
+			BakOperator:     host.BkBakOperator,
+			InputTime:       host.SvrInputTime,
+			SvrSourceTypeID: host.SvrSourceTypeID,
 		}
 
 		hostDetails = append(hostDetails, hostDetail)
@@ -514,6 +515,7 @@ func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*
 			"operator",
 			"bk_bak_operator",
 			"srv_status",
+			"bk_svr_source_type_id",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
@@ -714,11 +716,6 @@ func (r *recycler) createAndSaveRecycleOrders(kt *kit.Kit, skipConfirm bool, rem
 			logs.Errorf("failed to preview recycle order, get cvm instance by device type failed, err: %v, rid: %s",
 				err, kt.Rid)
 			return nil, err
-		}
-		// 查询的CVM机型数量不一致
-		if len(deviceTypes) != len(deviceTypesMap) {
-			return nil, errf.Newf(errf.RecordNotFound, "preview recycle order device type num not match, "+
-				"subOrderID: %s, deviceTypes: %v, rid: %s", subOrderID, deviceTypes, kt.Rid)
 		}
 
 		// 汇总CPU核数

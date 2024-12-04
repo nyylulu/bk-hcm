@@ -23,6 +23,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // QueryCloudCvmReq 查询云上cvm信息
@@ -50,14 +51,14 @@ type TCloudZiyanCvmExtension struct {
 
 // TCloudZiyanHostExtension 内部版从cc同步的自研云的主机
 type TCloudZiyanHostExtension struct {
-	HostID          int64   `json:"bk_host_id"`
-	SvrSourceTypeID string  `json:"svr_source_type_id"`
-	SrvStatus       string  `json:"srv_status"`       // CC的运营状态
-	BkAssetID       string  `json:"bk_asset_id"`      // 固资号
-	SvrDeviceClass  string  `json:"svr_device_class"` // 机型
-	BkDisk          float64 `json:"bk_disk"`          // 磁盘容量(GB)
-	BkCpu           int64   `json:"bk_cpu"`           // CPU逻辑核心数
-	BkOSName        string  `json:"bk_os_name"`       // 操作系统名称
-	Operator        string  `json:"operator"`         // 主负责人
-	BkBakOperator   string  `json:"bk_bak_operator"`  // 备份负责人
+	HostID          int64                `json:"bk_host_id"`
+	SvrSourceTypeID cmdb.SvrSourceTypeID `json:"svr_source_type_id"` // 服务器来源类型ID
+	SrvStatus       string               `json:"srv_status"`         // CC的运营状态
+	BkAssetID       string               `json:"bk_asset_id"`        // 固资号
+	SvrDeviceClass  string               `json:"svr_device_class"`   // 机型
+	BkDisk          float64              `json:"bk_disk"`            // 磁盘容量(GB)
+	BkCpu           int64                `json:"bk_cpu"`             // CPU逻辑核心数
+	BkOSName        string               `json:"bk_os_name"`         // 操作系统名称
+	Operator        string               `json:"operator"`           // 主负责人
+	BkBakOperator   string               `json:"bk_bak_operator"`    // 备份负责人
 }

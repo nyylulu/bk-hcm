@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // AssignCvmToBizReq define assign cvm to biz req.
@@ -215,7 +216,7 @@ type CvmBatchOperateHostInfo struct {
 	Zone                 string                  `json:"zone"`
 	BkOSName             string                  `json:"bk_os_name"`
 	TopoModule           string                  `json:"topo_module"`
-	SvrSourceTypeID      string                  `json:"bk_svr_source_type_id"`
+	SvrSourceTypeID      cmdb.SvrSourceTypeID    `json:"bk_svr_source_type_id"`
 	Status               string                  `json:"status"`
 	SrvStatus            string                  `json:"srv_status"`
 	OperateStatus        enumor.CvmOperateStatus `json:"operate_status"`
