@@ -1,12 +1,12 @@
 ### 描述
 
-- 该接口提供版本：v1.7.0.4+。
-- 该接口所需权限：无。
+- 该接口提供版本：v1.7.0.7+。
+- 该接口所需权限：业务访问。
 - 该接口功能描述：发起MOA二次校验。
 
 ### URL
 
-POST /api/v1/web/moa/request
+POST /api/v1/web/bizs/{bk_biz_id}/moa/request
 
 ### 输入参数
 

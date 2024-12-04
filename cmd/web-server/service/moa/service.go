@@ -26,10 +26,14 @@ import (
 	"hcm/pkg/api/web-server/moa"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/iam/auth"
+	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/converter"
+	"hcm/pkg/tools/hooks/handler"
 
 	etcd3 "go.etcd.io/etcd/client/v3"
 )
@@ -47,28 +51,51 @@ func InitService(c *capability.Capability) {
 		return
 	}
 	svc := &service{
-		client:  c.MoaCli,
-		etcdCli: etcdCli,
+		client:     c.MoaCli,
+		etcdCli:    etcdCli,
+		authorizer: c.Authorizer,
 	}
 
 	h := rest.NewHandler()
 
-	h.Add("MOARequest", http.MethodPost, "/moa/request", svc.Request)
-	h.Add("MOAVerify", http.MethodPost, "/moa/verify", svc.Verify)
+	h.Add("MoaBizRequest", http.MethodPost, "/bizs/{bk_biz_id}/moa/request", svc.MoaBizRequest)
+	h.Add("MoaBizVerify", http.MethodPost, "/bizs/{bk_biz_id}/moa/verify", svc.MoaBizVerify)
 
 	h.Load(c.WebService)
 }
 
 type service struct {
-	client  pkgmoa.Client
-	etcdCli *etcd3.Client
+	client     pkgmoa.Client
+	etcdCli    *etcd3.Client
+	authorizer auth.Authorizer
 }
 
-// Request ...
-func (s service) Request(cts *rest.Contexts) (interface{}, error) {
+// MoaBizRequest moa biz request.
+func (s service) MoaBizRequest(cts *rest.Contexts) (any, error) {
+	return s.moaRequest(cts, handler.ListBizAuthRes, meta.Biz, meta.Access)
+}
+
+// MoaBizRequest ...
+func (s service) moaRequest(cts *rest.Contexts, validHandler handler.ListAuthResHandler, resType meta.ResourceType,
+	action meta.Action) (any, error) {
+
 	req := new(moa.InitiateVerificationReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// validate biz and authorize
+	validReq := &handler.ListAuthResOption{Authorizer: s.authorizer, ResType: resType, Action: action}
+	_, noPerm, err := validHandler(cts, validReq)
+	if err != nil {
+		return nil, err
+	}
+	if noPerm {
+		return nil, errf.New(errf.PermissionDenied, "permission denied for request moa")
 	}
 
 	opt := &pkgmoa.InitiateVerificationReq{
@@ -87,12 +114,32 @@ func (s service) Request(cts *rest.Contexts) (interface{}, error) {
 	return result, nil
 }
 
-// Verify ...
-func (s service) Verify(cts *rest.Contexts) (interface{}, error) {
+// MoaBizVerify moa biz verify.
+func (s service) MoaBizVerify(cts *rest.Contexts) (any, error) {
+	return s.moaVerify(cts, handler.ListBizAuthRes)
+}
+
+// moaVerify ...
+func (s service) moaVerify(cts *rest.Contexts, validHandler handler.ListAuthResHandler) (any, error) {
 	req := new(moa.VerificationReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
 	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// validate biz and authorize
+	_, noPerm, err := validHandler(cts,
+		&handler.ListAuthResOption{Authorizer: s.authorizer, ResType: meta.Biz, Action: meta.Access})
+	if err != nil {
+		return nil, err
+	}
+	if noPerm {
+		return nil, errf.New(errf.PermissionDenied, "permission denied for verify moa")
+	}
+
 	opt := &pkgmoa.VerificationReq{
 		SessionId: req.SessionId,
 		Username:  req.Username,
