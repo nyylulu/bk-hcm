@@ -2333,7 +2333,7 @@ func checkTicketCanCancel(kt *kit.Kit, applyTicket *types.ApplyTicket, ticketSta
 	// 3. 单据只有处于指定节点时才可以取消
 	canCancel := false
 	for _, step := range ticketStatusRst.CurrentSteps {
-		if checkStepCanCancel(step.Name) {
+		if checkStepCanCancel(step.Name, applyCancelNodes()) {
 			canCancel = true
 			break
 		}
@@ -2345,22 +2345,31 @@ func checkTicketCanCancel(kt *kit.Kit, applyTicket *types.ApplyTicket, ticketSta
 	return nil
 }
 
-// checkStepCanCancel 检查单据步骤是否可以撤单
-func checkStepCanCancel(stepName string) bool {
-	switch stepName {
-	case ItsmAuditStepAdmin, ItsmAuditStepLeader:
-		return true
-	default:
-		return false
+// applyCancelNodes 资源申请服务可以撤单的节点
+func applyCancelNodes() []string {
+	nodes := make([]string, 0)
+	for _, flow := range cc.WoaServer().CancelItsmFlows {
+		if flow.ServiceName == enumor.ItsmServiceNameApply {
+			for _, node := range flow.StateNodes {
+				nodes = append(nodes, node.NodeName)
+			}
+			break
+		}
 	}
+
+	return nodes
 }
 
-const (
-	// ItsmAuditStepAdmin 管理员审核
-	ItsmAuditStepAdmin = "管理员审核"
-	// ItsmAuditStepLeader leader审核
-	ItsmAuditStepLeader = "leader审核"
-)
+// checkStepCanCancel 检查单据步骤是否可以撤单
+func checkStepCanCancel(nodeName string, cancelNodes []string) bool {
+	for _, node := range cancelNodes {
+		if node == nodeName {
+			return true
+		}
+	}
+
+	return false
+}
 
 // CancelApplyTicketCrp ...
 func (s *scheduler) CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error {

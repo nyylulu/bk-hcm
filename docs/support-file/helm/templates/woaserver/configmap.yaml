@@ -74,6 +74,8 @@ data:
       {{- toYaml .Values.itsm | nindent 6 }}
     itsmFlows:
       {{- toYaml .Values.itsmFlows | nindent 6 }}
+    cancelItsmFlows:
+      {{- toYaml .Values.cancelItsmFlows | nindent 6 }}
     resourceDissolve:
       originDate: {{ .Values.resourceDissolve.originDate }}
     elasticsearch:

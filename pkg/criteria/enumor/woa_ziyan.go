@@ -663,3 +663,6 @@ const (
 	// CoreTypeSmall 小核心
 	CoreTypeSmall CoreType = "小核心"
 )
+
+// ItsmServiceNameApply ITSM中的资源申请流程在 HCM 中的名称（此处名称并非与 ITSM 中的流程名称完全一致）
+const ItsmServiceNameApply = "资源申领流程"

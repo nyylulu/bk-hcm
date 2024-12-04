@@ -491,22 +491,23 @@ func (s TaskServerSetting) Validate() error {
 
 // WoaServerSetting defines woa server used setting options.
 type WoaServerSetting struct {
-	Network       Network   `yaml:"network"`
-	Service       Service   `yaml:"service"`
-	Database      DataBase  `yaml:"database"`
-	Log           LogOption `yaml:"log"`
-	Esb           Esb       `yaml:"esb"`
-	MongoDB       MongoDB   `yaml:"mongodb"`
-	Watch         MongoDB   `yaml:"watch"`
-	Redis         Redis     `yaml:"redis"`
-	ClientConfig  `yaml:",inline"`
-	ItsmFlows     []ItsmFlow       `yaml:"itsmFlows"`
-	ResDissolve   ResourceDissolve `yaml:"resourceDissolve"`
-	Es            Es               `yaml:"elasticsearch"`
-	Blacklist     string           `yaml:"blacklist"`
-	UseMongo      bool             `yaml:"useMongo"`
-	Recover       Recover          `yaml:"recover"`
-	RollingServer RollingServer    `yaml:"rollingServer"`
+	Network         Network   `yaml:"network"`
+	Service         Service   `yaml:"service"`
+	Database        DataBase  `yaml:"database"`
+	Log             LogOption `yaml:"log"`
+	Esb             Esb       `yaml:"esb"`
+	MongoDB         MongoDB   `yaml:"mongodb"`
+	Watch           MongoDB   `yaml:"watch"`
+	Redis           Redis     `yaml:"redis"`
+	ClientConfig    `yaml:",inline"`
+	ItsmFlows       []ItsmFlow       `yaml:"itsmFlows"`
+	CancelItsmFlows []ItsmFlow       `yaml:"cancelItsmFlows"`
+	ResDissolve     ResourceDissolve `yaml:"resourceDissolve"`
+	Es              Es               `yaml:"elasticsearch"`
+	Blacklist       string           `yaml:"blacklist"`
+	UseMongo        bool             `yaml:"useMongo"`
+	Recover         Recover          `yaml:"recover"`
+	RollingServer   RollingServer    `yaml:"rollingServer"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

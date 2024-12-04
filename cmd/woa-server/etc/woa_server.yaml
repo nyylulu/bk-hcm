@@ -265,6 +265,15 @@ itsm:
     # the password to decrypt the certificate.
     password:
 
+# defines itsm flows which can be cancelled related configuration
+cancelItsmFlows:
+  # itsm service name
+  - serviceName: "资源申领流程"
+    # itsm state nodes
+    stateNodes:
+      - nodeName: "leader审批"
+      - nodeName: "管理员审批"
+
 # defines itsm flows related configuration
 itsmFlows:
   # itsm service name
