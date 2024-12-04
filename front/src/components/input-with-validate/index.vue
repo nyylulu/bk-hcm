@@ -33,7 +33,7 @@ const computedDisabled = computed(() => {
 </script>
 
 <template>
-  <Input v-model="value" :placeholder="placeholder">
+  <Input v-model="value" :disabled="disabled" :placeholder="placeholder">
     <template #suffix>
       <Button
         theme="primary"

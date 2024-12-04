@@ -365,6 +365,7 @@ export default defineComponent({
           {isRollingServer.value && (
             <InheritPackageFormItem
               v-model={modelForm.value.bk_asset_id}
+              region={modelForm.value.spec.region}
               onValidateSuccess={(host) => {
                 modelForm.value.spec.charge_type = host.instance_charge_type;
                 modelForm.value.spec.charge_months = host.charge_months;

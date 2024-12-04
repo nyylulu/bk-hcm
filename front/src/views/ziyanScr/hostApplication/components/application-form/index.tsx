@@ -1409,6 +1409,7 @@ export default defineComponent({
                             <InheritPackageFormItem
                               v-model={resourceForm.value.bk_asset_id}
                               bizs={order.value.model.bkBizId}
+                              region={resourceForm.value.region}
                               onValidateSuccess={(host) => {
                                 resourceForm.value.charge_type = host.instance_charge_type;
                                 resourceForm.value.charge_months = host.charge_months;

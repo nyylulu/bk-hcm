@@ -250,7 +250,9 @@ function handleReject(error: any, config: any) {
     );
   }
   http.queue.delete(config.requestId);
-  if (config.globalError && error.response) {
+
+  // 非2xx请求错误
+  if (error.response) {
     const { status, data } = error.response;
     const nextError = { message: error.message, response: error.response };
     if (status === 401) {
@@ -268,15 +270,23 @@ function handleReject(error: any, config: any) {
     } else if (data?.message && error.code !== 0 && error.code !== 2000009 && error.code !== 2000012) {
       nextError.message = data.message;
       Message({ theme: 'error', message: nextError.message });
+    } else {
+      Message({ theme: 'error', message: error.message });
     }
-
-    // messageError(nextError.message)
     return Promise.reject(nextError);
   }
-  handleCustomErrorCode(error);
-  handleBccCustomErrorCode(error);
 
-  console.error(error.message);
+  // 有请求无响应
+  if (error.request) {
+    Message({ theme: 'error', message: 'Network Error' });
+    return Promise.reject(error);
+  }
+
+  // 业务错误
+  if (config.globalError) {
+    handleCustomErrorCode(error);
+    handleBccCustomErrorCode(error);
+  }
 
   return Promise.reject(error);
 }

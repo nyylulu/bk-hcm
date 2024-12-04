@@ -23,6 +23,7 @@ export interface RollingServerHost {
 
 defineOptions({ name: 'InheritPackageFormItem' });
 const props = defineProps<{
+  region: string;
   bizs?: number | string;
 }>();
 const emit = defineEmits<{
@@ -39,22 +40,31 @@ const formItem = useTemplateRef('formItem');
 const isCheckLoading = ref(false);
 const rollingServerHost = ref<RollingServerHost>();
 
+const checkMessage = ref('');
+
 const checkRollingSeverHost = (bk_asset_id: string) => {
   if (!bk_asset_id) return true;
   return new Promise(async (resolve, reject) => {
     isCheckLoading.value = true;
     try {
-      const bk_biz_id = Senarios.service === whereAmI.value ? props.bizs : getBizsId();
-      const res = await http.post('/api/v1/woa/task/check/rolling_server/host', { bk_biz_id, bk_asset_id });
+      const { region, bizs } = props;
+      const bk_biz_id = Senarios.service === whereAmI.value ? bizs : getBizsId();
+      const res = await http.post(
+        '/api/v1/woa/task/check/rolling_server/host',
+        { bk_biz_id, bk_asset_id, region },
+        { globalError: false },
+      );
       rollingServerHost.value = res.data;
       // 将校验成功的机器代表信息回传
       emit('validateSuccess', res.data);
-      resolve(res.data);
-    } catch (error) {
+      checkMessage.value = '';
+      resolve(true);
+    } catch (error: any) {
       // 校验失败
       rollingServerHost.value = null;
       emit('validateFailed');
-      reject((error as any).message);
+      checkMessage.value = error.message;
+      reject(false);
     } finally {
       isCheckLoading.value = false;
     }
@@ -70,18 +80,20 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
     required
     :description="
       t(
-        '选择填写本业务下一台机器作为继承套餐的代表，继承原套餐类型、计费时长、地域大区等信息。填写要求：\n1.必须为本业务下的主机\n2.主机的地域，必须和所选地域匹配，大区必须匹配\n3.机型必须为常规机型\n4.主机必须有计费模式，计费开始时间，计费结束时间',
+        '选择填写本业务下一台机器作为继承套餐的代表，继承原套餐类型、计费时长、地域大区等信息。填写要求：\n1.必须为本业务下的主机的CC固资号\n2.主机的地域，必须和所选地域匹配，大区必须匹配\n3.机型必须为常规机型\n4.主机必须有计费模式，计费开始时间，计费结束时间',
       )
     "
-    :rules="[{ validator: (value: string) => checkRollingSeverHost(value), message: t('校验失败')}]"
+    :rules="[{ validator: (value: string) => checkRollingSeverHost(value) }]"
   >
     <InputWithValidate
       v-model.trim="model"
       class="w600"
       :loading="isCheckLoading"
+      :disabled="!region"
       @click="formItem.validate()"
       :placeholder="t('请输入本业务下一个继承机器的CC固资号，当前必须为同城，待支持跨城')"
     />
+    <template #error>{{ checkMessage }}</template>
     <!-- 校验成功，展示继承的机器信息，并且在添加配置清单时设置默认值（计费模式、购买时长...）。 -->
     <ul class="inherit-instance-info" v-if="rollingServerHost">
       <li>
