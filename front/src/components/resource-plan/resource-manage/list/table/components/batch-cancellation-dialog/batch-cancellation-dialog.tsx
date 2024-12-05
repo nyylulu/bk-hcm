@@ -47,7 +47,7 @@ export default defineComponent({
 
     const handleConfirm = async () => {
       const params = {
-        crp_demand_ids: props.data.map(({ crp_demand_id }) => crp_demand_id),
+        cancel_demands: props.data.map(({ demand_id, remained_cpu_core }) => ({ demand_id, remained_cpu_core })),
       };
       await cancelResourcesDemands(getBizsId(), params);
       Message({ theme: 'success', message: '批量删除成功' });

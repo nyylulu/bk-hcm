@@ -92,7 +92,7 @@ export default defineComponent({
         },
         {
           label: t('预测ID'),
-          field: 'crp_demand_id',
+          field: 'demand_id',
           minWidth: 90,
           fixed: 'left',
           isDefaultShow: true,
@@ -104,10 +104,10 @@ export default defineComponent({
                 onClick={() => {
                   router.push({
                     path: props.isBiz ? '/business/resource-plan/detail' : '/service/resource-plan/detail',
-                    query: { ...route.query, crpDemandId: data.crp_demand_id },
+                    query: { ...route.query, demandId: data.demand_id },
                   });
                 }}>
-                {data.crp_demand_id}
+                {data.demand_id}
               </Button>
             );
           },
@@ -216,7 +216,7 @@ export default defineComponent({
         handleAuth('biz_resource_plan_operate');
         globalPermissionDialog.setShow(true);
       } else {
-        const planIds = data.map(({ crp_demand_id }) => crp_demand_id).join(',');
+        const planIds = data.map(({ demand_id }) => demand_id).join(',');
         const path = props.isBiz ? '/business/service/resource-plan-mod' : '/service/resource-plan/mod';
         router.push({
           path,

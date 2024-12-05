@@ -1,5 +1,5 @@
 export interface IDemandListDetail {
-  crp_demand_id: number; // CRP需求ID
+  demand_id: string; // CRP需求ID
   bk_biz_id: number; // 业务ID
   bk_biz_name: string; // 业务名称
   op_product_id: number; // 运营产品ID
@@ -139,7 +139,7 @@ export interface AdjustInfo {
 
 // 调整项
 export interface IAdjust {
-  crp_demand_id: number; // CRP需求ID
+  demand_id: string; // CRP需求ID
   adjust_type: string; // 调整类型 (枚举值: update (常规修改), delay (加急延期))
   demand_source: string; // 调整来源
   original_info: AdjustInfo; // 原始信息

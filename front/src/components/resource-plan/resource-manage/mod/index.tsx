@@ -63,7 +63,7 @@ export default defineComponent({
               class={'mr8'}
               onClick={() => {
                 isPlanEditShow.value = true;
-                const idx = tableData.value.findIndex(({ crp_demand_id }) => crp_demand_id === data.crp_demand_id);
+                const idx = tableData.value.findIndex(({ demand_id }) => demand_id === data.demand_id);
                 curEditData.value = planStore.convertToPlanTicketDemand(tableData.value[idx]);
                 resetSelections();
               }}>
@@ -75,7 +75,7 @@ export default defineComponent({
               width={288}
               trigger='click'
               onConfirm={() => {
-                const idx = tableData.value.findIndex(({ crp_demand_id }) => crp_demand_id === data.crp_demand_id);
+                const idx = tableData.value.findIndex(({ demand_id }) => demand_id === data.demand_id);
                 tableData.value.splice(idx, 1);
                 originData.value.splice(idx, 1);
               }}>
@@ -150,7 +150,7 @@ export default defineComponent({
     watch(
       () => route.query,
       async () => {
-        const planIds = (route.query.planIds as string)?.split(',').map((v) => +v) || [];
+        const planIds = (route.query.planIds as string)?.split(',').map((v) => v) || [];
         const timeRange = {
           start: route.query.start as string,
           end: route.query.end as string,
@@ -262,8 +262,8 @@ export default defineComponent({
               </section>
               <Table
                 ref={tableRef}
-                key={'crp_demand_id'}
-                rowKey={'crp_demand_id'}
+                key={'demand_id'}
+                rowKey={'demand_id'}
                 columns={tableColumns}
                 data={tableData.value}
                 settings={tableSettings.value}
@@ -364,9 +364,9 @@ export default defineComponent({
                     await delayFormRef.value.validate();
                     const ids = selections.value
                       .filter((v) => ![AdjustType.config].includes(v.adjustType))
-                      .map((v) => v.crp_demand_id);
+                      .map((v) => v.demand_id);
                     tableData.value = tableData.value.map((v) => {
-                      if (ids.includes(v.crp_demand_id))
+                      if (ids.includes(v.demand_id))
                         return {
                           ...v,
                           expect_time: timeFormatter(formModel.time, 'YYYY-MM-DD'),
@@ -406,7 +406,7 @@ export default defineComponent({
             clearSelection();
           }}
           onUpdateDemand={(val) => {
-            const idx = tableData.value.findIndex(({ crp_demand_id }) => crp_demand_id === val.crp_demand_id);
+            const idx = tableData.value.findIndex(({ demand_id }) => demand_id === val.demand_id);
             const originItem = tableData.value[idx];
             const tmp = planStore.convertToDemandListDetail(val, originItem);
             tableData.value.splice(idx, 1, tmp);

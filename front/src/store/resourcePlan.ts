@@ -115,8 +115,8 @@ export const useResourcePlanStore = defineStore({
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/bizs/${bk_biz_id}/plans/resources/demands/list`, data);
     },
     // 查询业务下资源预测需求详情信息
-    getPlanDemand(bk_biz_id: number, crp_demand_id: number): Promise<IPlanDemandResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/bizs/${bk_biz_id}/plans/demands/${crp_demand_id}`);
+    getPlanDemand(bk_biz_id: number, demand_id: string): Promise<IPlanDemandResult> {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/bizs/${bk_biz_id}/plans/demands/${demand_id}`);
     },
     // 查询资源预测需求单的变更历史
     getListChangeLogs(bk_biz_id: number, data: IListChangeLogsParam): Promise<IListChangeLogsResult> {
@@ -127,15 +127,20 @@ export const useResourcePlanStore = defineStore({
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/resources/demands/list`, data);
     },
     // 查询管理下资源预测需求详情信息
-    getPlanDemandByOrg(crp_demand_id: number): Promise<IPlanDemandResult> {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/demands/${crp_demand_id}`);
+    getPlanDemandByOrg(demand_id: string): Promise<IPlanDemandResult> {
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/demands/${demand_id}`);
     },
     // 查询管理下资源预测需求单的变更历史
     getListChangeLogsByOrg(data: IListChangeLogsParam): Promise<IListChangeLogsResult> {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plans/demands/change_logs/list`, data);
     },
     // 批量取消资源预测需求
-    cancelResourcesDemands(bk_biz_id: number, data: { crp_demand_ids: number[] }) {
+    cancelResourcesDemands(
+      bk_biz_id: number,
+      data: {
+        cancel_demands: { demand_id: string; remained_cpu_core: number }[];
+      },
+    ) {
       return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/bizs/${bk_biz_id}/plans/resources/demands/cancel`, data);
     },
   },

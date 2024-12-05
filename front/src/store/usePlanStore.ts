@@ -25,7 +25,7 @@ export default defineStore('planStore', () => {
    * 查询业务下资源预测需求列表
    */
   const list_biz_resource_plan_demand = async (
-    ids: number[], // 预测需求IDS
+    ids: string[], // 预测需求IDS
     expect_time_range: ITimeRange,
   ): Promise<{
     [key: string]: any;
@@ -35,7 +35,7 @@ export default defineStore('planStore', () => {
     };
   }> => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}plans/resources/demands/list`, {
-      crp_demand_ids: ids,
+      demand_ids: ids,
       expect_time_range,
       page: {
         count: false,
@@ -135,7 +135,7 @@ export default defineStore('planStore', () => {
     };
 
     return {
-      crp_demand_id: originalDetail.crp_demand_id,
+      demand_id: originalDetail.demand_id,
       adjust_type: updatedDetail.adjustType,
       demand_source: updatedDetail.demand_source,
       original_info: mapDetailToAdjustInfo(originalDetail),
@@ -186,7 +186,7 @@ export default defineStore('planStore', () => {
       demand_source: detail.demand_source,
       demand_class: detail.demand_class,
       adjustType: detail.adjustType,
-      crp_demand_id: detail.crp_demand_id,
+      demand_id: detail.demand_id,
       demand_res_types,
       cvm,
       cbs,
@@ -198,7 +198,7 @@ export default defineStore('planStore', () => {
    */
   function convertToDemandListDetail(plan: IPlanTicketDemand, originDetail: IDemandListDetail): IDemandListDetail {
     const detail: Partial<IDemandListDetail> = {
-      crp_demand_id: plan.crp_demand_id,
+      demand_id: plan.demand_id,
       demand_class: plan.demand_class,
       demand_source: plan.demand_source,
       expect_time: plan.expect_time,

@@ -1710,12 +1710,6 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
     },
     {
-      label: '需求可用年月',
-      field: 'available_year_month',
-      fixed: 'left',
-      isDefaultShow: true,
-    },
-    {
       label: '期望到货时间',
       field: 'expect_time',
       fixed: 'left',
@@ -1856,7 +1850,7 @@ export default (type: string, isSimpleShow = false) => {
   const resourceForecastBatchCancelColumns = [
     {
       label: '预测ID',
-      field: 'crp_demand_id',
+      field: 'demand_id',
       isDefaultShow: true,
     },
     {
@@ -1971,7 +1965,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'status_name',
       isDefaultShow: true,
       render: ({ cell, data }: any) => {
-        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status];
+        const { class: className, color } = RESOURCE_PLAN_STATUSES_MAP[data.status] || {};
 
         return (
           <span>
@@ -2069,18 +2063,6 @@ export default (type: string, isSimpleShow = false) => {
       minWidth: 120,
     },
     {
-      label: '部门',
-      field: 'dept_name',
-      align: 'center',
-      minWidth: 120,
-    },
-    {
-      label: '规划产品',
-      field: 'plan_product_name',
-      align: 'center',
-      minWidth: 120,
-    },
-    {
       label: '项目类型',
       field: 'obs_project',
       align: 'center',
@@ -2090,6 +2072,7 @@ export default (type: string, isSimpleShow = false) => {
       label: '城市',
       field: 'region_name',
       align: 'center',
+      minWidth: 130,
     },
     {
       label: '可用区',
@@ -2098,50 +2081,28 @@ export default (type: string, isSimpleShow = false) => {
       minWidth: 100,
     },
     {
-      label: '13周类型',
-      field: 'demand_week',
-      align: 'center',
-      minWidth: 150,
-    },
-    {
       label: '实例规格',
       field: 'device_type',
       align: 'center',
       minWidth: 150,
     },
     {
-      label: '实例数当前值/变更值',
-      minWidth: 150,
+      label: '实例数变更值',
+      minWidth: 130,
       align: 'center',
-      render: ({ data }: any) => (
-        <span>
-          {data.after_cvm_amount}/{data.change_cvm_amount}
-        </span>
-      ),
+      render: ({ data }: any) => <span>{data.change_cvm_amount}</span>,
     },
     {
-      label: 'CPU核数当前值/变更值',
-      minWidth: 150,
+      label: 'CPU核数变更值',
+      minWidth: 130,
       align: 'center',
-      render: ({ data }: any) => (
-        <span>
-          {data.after_core_amount}/{data.change_core_amount}
-        </span>
-      ),
+      render: ({ data }: any) => <span>{data.change_core_amount}</span>,
     },
     {
-      label: '资源池',
-      field: 'res_pool',
+      label: '磁盘数(G)变更值',
+      minWidth: 130,
       align: 'center',
-    },
-    {
-      label: '磁盘数(G)当前值/变更值',
-      align: 'center',
-      render: ({ data }: any) => (
-        <span>
-          {data.after_disk_amount}/{data.changed_disk_amount}
-        </span>
-      ),
+      render: ({ data }: any) => <span>{data.changed_disk_amount}</span>,
     },
     {
       label: '变更类型',
@@ -2150,10 +2111,23 @@ export default (type: string, isSimpleShow = false) => {
       align: 'center',
     },
     {
-      label: '单号',
+      label: 'CRP订单号',
       field: 'crp_sn',
       minWidth: 200,
       align: 'center',
+    },
+    {
+      label: '预测单号',
+      field: 'ticket_id',
+      minWidth: 200,
+      align: 'center',
+    },
+    {
+      label: '子订单号',
+      field: 'suborder_id',
+      minWidth: 200,
+      align: 'center',
+      render: ({ cell }: { cell: string }) => cell || '--',
     },
     {
       label: '备注',
@@ -3239,7 +3213,7 @@ export default (type: string, isSimpleShow = false) => {
     { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
     {
       label: '预测ID',
-      field: 'crp_demand_id',
+      field: 'demand_id',
       isDefaultShow: true,
     },
     {

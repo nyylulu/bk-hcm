@@ -202,7 +202,7 @@ export interface IPlanTicketDemand {
     disk_per_size: number;
   };
   adjustType: AdjustType;
-  crp_demand_id: number;
+  demand_id: string;
 }
 
 export interface IBizOrgRelation {
@@ -264,7 +264,7 @@ export interface IListResourcesDemandsParam {
   bk_biz_ids?: number[];
   op_product_ids?: string[];
   plan_product_ids?: string[];
-  crp_demand_ids?: number[];
+  demand_ids?: string[];
   obs_projects?: string[];
   demand_classes?: string[];
   device_classes?: string[];
@@ -292,7 +292,7 @@ export interface IListResourcesDemandsResult {
     expiring_cpu_core: number;
   };
   details: {
-    crp_demand_id: number;
+    demand_id: string;
     bk_biz_id: number;
     bk_biz_name: string;
     op_product_id: number;
@@ -333,7 +333,7 @@ export interface IListResourcesDemandsResult {
 export type IListResourcesDemandsItem = IListResourcesDemandsResult['details'][number];
 
 interface PlanDemandResult {
-  crp_demand_id: string;
+  demand_id: string;
   year_month_week: string;
   expect_start_date: string;
   expect_end_date: string;
@@ -380,13 +380,13 @@ interface PlanDemandResult {
 export type IPlanDemandResult = IQueryResData<PlanDemandResult>;
 
 export interface IListChangeLogsParam {
-  crp_demand_id: number;
+  demand_id: string;
   page: IPageQuery;
 }
 
 export interface IListChangeLogsResult {
   details: {
-    crp_demand_id: number;
+    demand_id: string;
     expect_time: string;
     bg_name: string;
     dept_name: string;

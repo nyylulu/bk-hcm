@@ -27,14 +27,10 @@ export default defineComponent({
       { label: t('资源模式'), value: baseInfo.value?.res_mode },
       { label: t('运营产品'), value: baseInfo.value?.op_product_name },
       { label: t('机型族'), value: baseInfo.value?.device_family },
-      { label: t('规划产品'), value: baseInfo.value?.plan_product_name },
       { label: t('机型类型'), value: baseInfo.value?.device_class },
-      { label: t('部门'), value: baseInfo.value?.dept_name },
       { label: t('机型规格'), value: baseInfo.value?.device_type },
       { label: t('项目类型'), value: baseInfo.value?.obs_project },
       { label: t('实例数'), value: baseInfo.value?.os },
-      { label: t('13周需求类型'), value: baseInfo.value?.demand_week },
-      { label: t('资源池'), value: baseInfo.value?.res_pool },
       { label: t('期望到货时间'), value: timeFormatter(baseInfo.value?.expect_time) },
       { label: t('核心类型'), value: baseInfo.value?.core_type },
       { label: t('计划类型'), value: baseInfo.value?.plan_type },
@@ -46,10 +42,12 @@ export default defineComponent({
     ]);
 
     const getPlanDemandDetail = async () => {
-      const { bizs, crpDemandId } = route.query;
+      const { bizs, demandId } = route.query;
       isLoading.value = true;
       try {
-        const result = props.isBiz ? await getPlanDemand(+bizs, +crpDemandId) : await getPlanDemandByOrg(+crpDemandId);
+        const result = props.isBiz
+          ? await getPlanDemand(+bizs, demandId as string)
+          : await getPlanDemandByOrg(demandId as string);
         baseInfo.value = result.data;
       } catch (error) {
         console.error('Error fetching plan demand details:', error);

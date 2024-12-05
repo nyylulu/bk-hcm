@@ -26,7 +26,7 @@ export default defineComponent({
     const getData = (page: IPageQuery) => {
       const params = {
         page,
-        crp_demand_id: +route.query.crpDemandId,
+        demand_id: route.query.demandId as string,
       };
       try {
         return props.isBiz ? getListChangeLogs(getBizsId(), params) : getListChangeLogsByOrg(params);
