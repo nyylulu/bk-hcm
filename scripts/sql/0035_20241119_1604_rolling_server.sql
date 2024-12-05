@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0035,HCMVER=v1.7.0.8
 
     Notes:
     1. 滚服申请记录、回收记录添加机型核心类型字段。
@@ -33,6 +33,6 @@ alter table rolling_returned_record
     add column `core_type` varchar(64) comment '机型核心类型' default '';
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.0.8' as `hcm_ver`, '0035' as `sql_ver`;
 
 COMMIT
