@@ -923,7 +923,7 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 
 	param, err = s.fillCVMAppliedCore(kt, param)
 	if err != nil {
-		logs.Errorf("failed to fill applied core, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
+		logs.Errorf("failed to fill applied core, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
