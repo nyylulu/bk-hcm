@@ -60,7 +60,7 @@ type Logics interface {
 	// QueryIEGDemands query IEG crp demands.
 	QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error)
 	// ExamineDemandClass examine whether all demands are the same demand class, and return the demand class.
-	ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enumor.DemandClass, error)
+	ExamineDemandClass(kt *kit.Kit, demandIDs []string) (enumor.DemandClass, error)
 	// IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
 	IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error)
 	// GetProdResPlanPool get op product resource plan pool.
@@ -503,7 +503,8 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 
 	// crp单据通过后更新本地数据表
 	if err := c.applyResPlanDemandChange(kt, ticket); err != nil {
-		logs.Errorf("failed to upsert crp demand, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("%s: failed to upsert crp demand, err: %v, rid: %s", constant.DemandChangeAppliedFailed,
+			err, kt.Rid)
 		return err
 	}
 

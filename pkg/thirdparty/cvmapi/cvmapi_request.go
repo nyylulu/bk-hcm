@@ -230,6 +230,24 @@ type CvmCbsPlanQueryParam struct {
 	UserName        string   `json:"userName,omitempty"`
 }
 
+// CvmCbsAdjustAblePlanQueryReq cvm and cbs plan adjustable query request
+type CvmCbsAdjustAblePlanQueryReq struct {
+	ReqMeta `json:",inline"`
+	Params  *CvmCbsAdjustAblePlanQueryParam `json:"params"`
+}
+
+// CvmCbsAdjustAblePlanQueryParam cvm and cbs plan adjustable query parameters
+type CvmCbsAdjustAblePlanQueryParam struct {
+	CityName        string `json:"cityName,omitempty"`
+	InstanceModel   string `json:"instanceModel,omitempty"`
+	UseTime         string `json:"useTime,omitempty"`
+	PlanProductName string `json:"planProductName,omitempty"`
+	ProjectName     string `json:"projectName,omitempty"`
+	InstanceFamily  string `json:"instanceFamily,omitempty"`
+	DiskTypeName    string `json:"diskTypeName,omitempty"`
+	ResourceMode    string `json:"resourceMode,omitempty"`
+}
+
 // Page restrict the returned start index and returned number of plan items for cvm&cbs planinfo query
 type Page struct {
 	Start int `json:"start"`
@@ -279,7 +297,7 @@ type AdjustSrcData struct {
 // AdjustUpdatedData adjust target data for cvm and cbs plan info adjust params
 type AdjustUpdatedData struct {
 	AdjustType           string  `json:"adjustType"`
-	TimeAdjustCvmAmount  float32 `json:"timeAdjustCvmAmount,omitempty"`
+	TimeAdjustCvmAmount  float64 `json:"timeAdjustCvmAmount,omitempty"`
 	*CvmCbsPlanQueryItem `json:",inline"`
 }
 

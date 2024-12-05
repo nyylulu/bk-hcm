@@ -40,6 +40,9 @@ const (
 	AsyncTaskWarnSign = "async_task_exec_exception"
 	// ApplicationDeliverFailed 申请单交付失败告警
 	ApplicationDeliverFailed WarnSign = "application_deliver_failed"
+
+	// DemandChangeAppliedFailed demand change applied failed
+	DemandChangeAppliedFailed WarnSign = "demand_change_applied_failed"
 )
 
 const (
@@ -52,3 +55,8 @@ const (
 
 // TCloudClientErrRetryTimes ..
 const TCloudClientErrRetryTimes = 5
+
+const (
+	// CRPResPlanDemandIsInProcessing CRP的预测资源已被其他单据修改，正在审批中
+	CRPResPlanDemandIsInProcessing = "AdjustDemandIsInProcessingException"
+)

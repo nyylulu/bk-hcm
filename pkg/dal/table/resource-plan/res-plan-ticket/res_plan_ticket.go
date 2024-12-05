@@ -91,6 +91,7 @@ type ResPlanTicketTable struct {
 	VirtualDeptName string `db:"virtual_dept_name" json:"virtual_dept_name" validate:"lte=64"`
 	// DemandClass 预测的需求类型
 	DemandClass enumor.DemandClass `db:"demand_class" json:"demand_class" validate:"lte=16"`
+	// TODO OS需要调整为decimal；cpu、memory、disk_size需要调整为int64
 	// OriginalOS 原始OS数，单位：台
 	OriginalOS float64 `db:"original_os" json:"original_os"`
 	// OriginalCpuCore 原始CPU核心数，单位：台
@@ -161,9 +162,9 @@ func (d *ResPlanDemand) Validate() error {
 
 // OriginalRPDemandItem is original resource plan demand item.
 type OriginalRPDemandItem struct {
-	// DemandID 需求ID
+	// DemandID HCM res plan demand ID
 	DemandID string `json:"demand_id"`
-	// CrpDemandID crp demand id
+	// CrpDemandID crp demand id, 兼容旧版本json
 	CrpDemandID int64 `json:"crp_demand_id"`
 	// ObsProject OBS项目类型
 	ObsProject enumor.ObsProject `json:"obs_project" validate:"lte=64"`
@@ -195,8 +196,8 @@ func (i *OriginalRPDemandItem) Validate() error {
 		return err
 	}
 
-	if i.CrpDemandID <= 0 {
-		return errors.New("crp demand id can not be empty")
+	if len(i.DemandID) <= 0 && i.CrpDemandID <= 0 {
+		return errors.New("demand id can not be empty")
 	}
 
 	if err := i.ObsProject.ValidateResPlan(); err != nil {
@@ -309,14 +310,14 @@ func (i *UpdatedRPDemandItem) Validate() error {
 
 // Cvm is struct of ResPlanDemandTable's Cvm.
 type Cvm struct {
-	ResMode      string  `json:"res_mode"`
-	DeviceType   string  `json:"device_type"`
-	DeviceClass  string  `json:"device_class" validate:"lte=64"`
-	DeviceFamily string  `json:"device_family" validate:"lte=64"`
-	CoreType     string  `json:"core_type" validate:"lte=64"`
-	Os           float64 `json:"os"`
-	CpuCore      float64 `json:"cpu_core"`
-	Memory       float64 `json:"memory"`
+	ResMode      enumor.ResMode `json:"res_mode"`
+	DeviceType   string         `json:"device_type"`
+	DeviceClass  string         `json:"device_class" validate:"lte=64"`
+	DeviceFamily string         `json:"device_family" validate:"lte=64"`
+	CoreType     string         `json:"core_type" validate:"lte=64"`
+	Os           types.Decimal  `json:"os"`
+	CpuCore      int64          `json:"cpu_core"`
+	Memory       int64          `json:"memory"`
 }
 
 // Validate whether Cvm is valid.
@@ -325,7 +326,7 @@ func (c *Cvm) Validate() error {
 		return err
 	}
 
-	if c.Os < 0 {
+	if c.Os.IsNegative() {
 		return errors.New("os should be >= 0")
 	}
 
@@ -345,7 +346,7 @@ type Cbs struct {
 	DiskType     enumor.DiskType `json:"disk_type"`
 	DiskTypeName string          `json:"disk_type_name"`
 	DiskIo       int64           `json:"disk_io"`
-	DiskSize     float64         `json:"disk_size"`
+	DiskSize     int64           `json:"disk_size"`
 }
 
 // Validate whether Cbs is valid.

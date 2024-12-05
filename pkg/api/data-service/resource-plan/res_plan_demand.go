@@ -82,10 +82,10 @@ type ResPlanDemandCreateReq struct {
 	CoreType        string               `json:"core_type" validate:"required"`
 	DiskType        enumor.DiskType      `json:"disk_type" validate:"required"`
 	DiskTypeName    string               `json:"disk_type_name" validate:"required"`
-	OS              decimal.Decimal      `json:"os" validate:"required"`
-	CpuCore         int64                `json:"cpu_core" validate:"required"`
-	Memory          int64                `json:"memory" validate:"required"`
-	DiskSize        int64                `json:"disk_size" validate:"required"`
+	OS              *decimal.Decimal     `json:"os" validate:"required"`
+	CpuCore         *int64               `json:"cpu_core" validate:"required"`
+	Memory          *int64               `json:"memory" validate:"required"`
+	DiskSize        *int64               `json:"disk_size" validate:"required"`
 	DiskIO          int64                `json:"disk_io" validate:"required"`
 	Creator         string               `json:"creator" validate:"omitempty"`
 }

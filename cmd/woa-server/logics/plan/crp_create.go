@@ -23,10 +23,13 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	mtypes "hcm/cmd/woa-server/types/meta"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/types"
@@ -38,6 +41,7 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/converter"
+	"hcm/pkg/tools/math"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -63,6 +67,13 @@ func (c *Controller) createCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		return errors.New("unsupported ticket type")
 	}
 	if err != nil {
+		// 因CRP单据修改冲突导致的提单失败，不返回报错，记录日志后返回队列继续等待
+		if strings.Contains(err.Error(), constant.CRPResPlanDemandIsInProcessing) {
+			logs.Warnf("failed to create crp ticket, as crp res plan demand is in processing, err: %v, "+
+				"ticket_id: %s, rid: %s", err, ticket.ID, kt.Rid)
+			return nil
+		}
+
 		// 这里主要返回的error是crp ticket创建失败，且ticket状态更新失败的日志在函数内已打印，这里可以忽略该错误
 		_ = c.updateTicketStatusFailed(kt, ticket, err.Error())
 		logs.Errorf("failed to create crp ticket with different ticket type, err: %v, ticket_id: %s, rid: %s", err,
@@ -134,6 +145,11 @@ func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, m
 		Message:  msg,
 	}
 
+	if len(msg) > 255 {
+		logs.Warnf("failure message is truncated to 255, origin message: %s, rid: %s", msg, kt.Rid)
+		update.Message = msg[:255]
+	}
+
 	if err := c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -196,7 +212,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 			ZoneName:        demand.Updated.ZoneName,
 			CoreTypeName:    demand.Updated.Cvm.CoreType,
 			InstanceModel:   demand.Updated.Cvm.DeviceType,
-			CvmAmount:       demand.Updated.Cvm.Os,
+			CvmAmount:       demand.Updated.Cvm.Os.InexactFloat64(),
 			CoreAmount:      int(demand.Updated.Cvm.CpuCore),
 			Desc:            demand.Updated.Remark,
 			InstanceIO:      int(demand.Updated.Cbs.DiskIo),
@@ -213,7 +229,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 // createAdjustCrpTicket create adjust crp ticket.
 // ticket types RPTicketTypeAdjust and RPTicketTypeDelete are both belonged to adjust crp ticket.
 func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (string, error) {
-	adjustReq, err := c.constructAdjustReq(kt, ticket)
+	adjustReq, err := c.constructCrpAdjustReq(kt, ticket)
 	if err != nil {
 		logs.Errorf("failed to construct adjust cvm & cbs plan order request, err: %v, rid: %s", err, kt.Rid)
 		return "", err
@@ -243,8 +259,8 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 	return sn, nil
 }
 
-// constructAdjustReq construct cvm cbs plan adjust request.
-func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.CvmCbsPlanAdjustReq, error) {
+// constructCrpAdjustReq construct cvm cbs plan adjust request.
+func (c *Controller) constructCrpAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.CvmCbsPlanAdjustReq, error) {
 	adjustReq := &cvmapi.CvmCbsPlanAdjustReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -273,47 +289,50 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cvmap
 		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
-	crpDemandIDs := make([]int64, len(ticket.Demands))
-	for idx, demand := range ticket.Demands {
+	for _, demand := range ticket.Demands {
 		if demand.Original == nil {
 			logs.Errorf("failed to construct adjust request, demand original is nil, rid: %s", kt.Rid)
 			return nil, errors.New("demand original is nil")
 		}
 
-		crpDemandIDs[idx] = (*demand.Original).CrpDemandID
-	}
-
-	crpDemandMap, err := c.getCrpDemandMap(kt, crpDemandIDs)
-	if err != nil {
-		logs.Errorf("failed to get crp demand map, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	for _, demand := range ticket.Demands {
-		crpDemand, ok := crpDemandMap[(*demand.Original).CrpDemandID]
-		if !ok {
-			logs.Errorf("failed to construct adjust request, crp demand id not found, rid: %s", kt.Rid)
-			return nil, errors.New("crp demand id not found")
+		// query crp for a set of res plan demands that can be adjusted.
+		adjustAbleReq := &ptypes.AdjustAbleDemandsReq{
+			RegionName:      demand.Original.RegionName,
+			DeviceFamily:    demand.Original.Cvm.DeviceFamily,
+			DeviceType:      demand.Original.Cvm.DeviceType,
+			ExpectTime:      demand.Original.ExpectTime,
+			PlanProductName: ticket.PlanProductName,
+			ObsProject:      demand.Original.ObsProject,
+			DiskType:        demand.Original.Cbs.DiskType,
+			ResMode:         demand.Original.Cvm.ResMode,
+		}
+		adjustAbleDemands, err := c.QueryAdjustAbleDemands(kt, adjustAbleReq)
+		if err != nil {
+			logs.Errorf("failed to query adjust able demands, err: %v, req: %+v, rid: %s", err, *adjustReq, kt.Rid)
+			return nil, err
 		}
 
-		srcItem, updatedItem, err := c.constructAdjustDemandDetails(kt, ticket.Type, crpDemand, demand)
+		srcItem, updatedItem, err := c.constructAdjustDemandDetails(kt, ticket.Type, ticket.PlanProductID,
+			ticket.PlanProductName, adjustAbleDemands, demand)
 		if err != nil {
 			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
-		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
+		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem...)
 		if updatedItem != nil {
-			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem)
+			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem...)
 		}
 	}
 
 	return adjustReq, nil
 }
 
-func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor.RPTicketType,
-	crpDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
-	*cvmapi.AdjustSrcData, *cvmapi.AdjustUpdatedData, error) {
+// constructAdjustDemandDetails 构造调整预测请求参数
+// 因crp不支持部分调整，这里通过将crp中的预测（可能有多条）调减调整的原始量，再在crp中追加一条调整的目标量，来间接实现部分调整。
+func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor.RPTicketType, planProductID int64,
+	planProductName string, adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
 
 	var adjustType enumor.CrpAdjustType
 	switch ticketType {
@@ -323,24 +342,40 @@ func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor
 			adjustType = enumor.CrpAdjustTypeDelay
 		}
 	case enumor.RPTicketTypeDelete:
-		adjustType = enumor.CrpAdjustTypeCancel
+		// 我们的删除对crp来说是部分调减
+		adjustType = enumor.CrpAdjustTypeUpdate
 	default:
 		logs.Errorf("unsupported ticket type: %s， rid: %s", ticketType, kt.Rid)
 		return nil, nil, errors.New("unsupported ticket type")
 	}
 
-	srcItem := &cvmapi.AdjustSrcData{
-		AdjustType:          string(adjustType),
-		CvmCbsPlanQueryItem: crpDemand.Clone(),
-	}
-
-	updatedItem, err := c.constructAdjustUpdatedData(kt, adjustType, crpDemand, demand)
+	// 构造请求，将crp中的预测调减调整的原始量
+	srcItems, updatedItems, err := c.constructAdjustUpdatedData(kt, adjustType, adjustAbleCrpDemands, demand)
 	if err != nil {
 		logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, err
 	}
 
-	return srcItem, updatedItem, nil
+	if len(srcItems) == 0 {
+		logs.Errorf("failed to construct adjust data, src items is empty, demand origin: %+v, demand update: %v, "+
+			"rid: %s", demand.Original, demand.Updated, kt.Rid)
+		return nil, nil, errors.New("CRP has no resource plan that can be used for adjust")
+	}
+
+	// 加急延期、删除时不追加预测
+	if adjustType == enumor.CrpAdjustTypeDelay || ticketType == enumor.RPTicketTypeDelete {
+		return srcItems, updatedItems, nil
+	}
+
+	// 追加一条等于调整目标量的预测
+	addItem, err := c.constructAdjustAppendData(kt, planProductID, planProductName, demand)
+	if err != nil {
+		logs.Errorf("failed to construct adjust append data, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
+	updatedItems = append(updatedItems, addItem)
+
+	return srcItems, updatedItems, nil
 }
 
 // getCrpDemandMap get crp demand id and detail map.
@@ -367,42 +402,106 @@ func (c *Controller) getCrpDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int
 
 // constructAdjustUpdatedData construct adjust updated data.
 // if adjust type is update, updated item are normal.
-// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with remainOs.
-// if adjust type is cancel, updated will be empty.
+// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with OriginOs.
+// if adjust type is cancel, error.
 func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
-	crpSrcDemand *cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (*cvmapi.AdjustUpdatedData, error) {
+	adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
+	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
 
-	// if adjust type is cancel, updated will be empty.
-	if adjustType == enumor.CrpAdjustTypeCancel {
-		return nil, nil
+	srcItems := make([]*cvmapi.AdjustSrcData, 0)
+	updatedItems := make([]*cvmapi.AdjustUpdatedData, 0)
+
+	// 遍历可用于调减的crp预测，凑齐调减总量
+	needCpuCores := demand.Original.Cvm.CpuCore
+	for _, adjustAbleD := range adjustAbleCrpDemands {
+		if needCpuCores <= 0 {
+			break
+		}
+
+		canConsume := min(needCpuCores, adjustAbleD.RealCoreAmount)
+		// CvmAmount虽然理论上大于等于RealCoreAmount，但是为确保后续除法计算不出异常，判断下CvmAmount的大小
+		if canConsume <= 0 || adjustAbleD.CvmAmount == 0 {
+			continue
+		}
+
+		deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
+		// 和CRP确认保留2位小数可以，但是肯定会存在误差
+		willChangeCvm, err := math.RoundToDecimalPlaces(float64(canConsume)/deviceCore, 2)
+		if err != nil {
+			logs.Warnf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
+				"rid: %s", err, adjustAbleD.DemandId, float64(canConsume)/deviceCore, kt.Rid)
+			continue
+		}
+
+		needCpuCores -= canConsume
+
+		srcItems = append(srcItems, &cvmapi.AdjustSrcData{
+			AdjustType:          string(adjustType),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		})
+
+		updatedItem := &cvmapi.AdjustUpdatedData{
+			AdjustType:          string(adjustType),
+			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+		}
+
+		switch adjustType {
+		case enumor.CrpAdjustTypeUpdate:
+			// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
+			updatedItem.CvmAmount -= willChangeCvm
+			updatedItem.CoreAmount -= canConsume
+		case enumor.CrpAdjustTypeDelay:
+			updatedItem.UseTime = demand.Updated.ExpectTime
+			updatedItem.TimeAdjustCvmAmount = willChangeCvm
+		default:
+			logs.Errorf("failed to construct adjust updated data. unsupported adjust type: %s， rid: %s", adjustType,
+				kt.Rid)
+			return nil, nil, fmt.Errorf("unsupported adjust type: %s", adjustType)
+		}
+
+		updatedItems = append(updatedItems, updatedItem)
+
+		// 避免该预测在其他ticket子变动中被重复消费
+		adjustAbleD.RealCoreAmount -= canConsume
 	}
 
-	// init updated data.
+	if needCpuCores > 0 {
+		logs.Errorf("crp demand remained is not enough to deduction, adjust: %+v, need cpu cores: %d, rid: %s",
+			demand.Original.Cvm, needCpuCores, kt.Rid)
+		return nil, nil, fmt.Errorf("crp demand remained is not enough to deduction, adjust cores: %d, need cores: %d",
+			demand.Original.Cvm.CpuCore, needCpuCores)
+	}
+
+	return srcItems, updatedItems, nil
+}
+
+// constructAdjustAppendData construct adjust append data.
+func (c *Controller) constructAdjustAppendData(kt *kit.Kit, planProductID int64, planProductName string,
+	demand rpt.ResPlanDemand) (
+	*cvmapi.AdjustUpdatedData, error) {
+
+	demandItem := &cvmapi.CvmCbsPlanQueryItem{
+		SliceId:         demand.Original.DemandID,
+		ProjectName:     string(demand.Updated.ObsProject),
+		PlanProductId:   int(planProductID),
+		PlanProductName: planProductName,
+		InstanceType:    demand.Updated.Cvm.DeviceClass,
+		CityId:          0,
+		CityName:        demand.Updated.RegionName,
+		ZoneId:          0,
+		ZoneName:        demand.Updated.ZoneName,
+		InstanceModel:   demand.Updated.Cvm.DeviceType,
+		UseTime:         demand.Updated.ExpectTime,
+		CvmAmount:       demand.Updated.Cvm.Os.InexactFloat64(),
+		InstanceIO:      int(demand.Updated.Cbs.DiskIo),
+		DiskType:        0,
+		DiskTypeName:    demand.Updated.Cbs.DiskTypeName,
+		AllDiskAmount:   demand.Updated.Cbs.DiskSize,
+	}
+
 	updatedData := &cvmapi.AdjustUpdatedData{
-		AdjustType:          string(adjustType),
-		CvmCbsPlanQueryItem: crpSrcDemand.Clone(),
-	}
-
-	switch adjustType {
-	case enumor.CrpAdjustTypeUpdate:
-		// 为了避免CRP在name为空的情况下用ID来补数据，需要把ID置为空
-		updatedData.CityId = 0
-		updatedData.ZoneId = 0
-		updatedData.CityName = demand.Updated.RegionName
-		updatedData.ZoneName = demand.Updated.ZoneName
-		updatedData.InstanceModel = demand.Updated.Cvm.DeviceType
-		updatedData.CvmAmount = float32(demand.Updated.Cvm.Os)
-		updatedData.CoreAmount = float32(demand.Updated.Cvm.CpuCore)
-		updatedData.InstanceIO = int(demand.Updated.Cbs.DiskIo)
-		updatedData.DiskTypeName = demand.Updated.Cbs.DiskTypeName
-		updatedData.AllDiskAmount = float32(demand.Updated.Cbs.DiskSize)
-		updatedData.ProjectName = string(demand.Updated.ObsProject)
-	case enumor.CrpAdjustTypeDelay:
-		updatedData.UseTime = demand.Updated.ExpectTime
-		updatedData.TimeAdjustCvmAmount = crpSrcDemand.CvmAmount
-	default:
-		logs.Errorf("invalid adjust type: %s, rid: %s", adjustType, kt.Rid)
-		return nil, errors.New("invalid adjust type")
+		AdjustType:          string(enumor.CrpAdjustTypeUpdate),
+		CvmCbsPlanQueryItem: demandItem,
 	}
 
 	return updatedData, nil
@@ -416,6 +515,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		logs.Errorf("crp demand ids is empty, rid: %s", kt.Rid)
 		return errors.New("crp demand ids is empty")
 	}
+
 	crpDemandFilter := &filter.Expression{
 		Op: filter.And,
 		Rules: []filter.RuleFactory{
@@ -423,6 +523,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bizOrgRel.BkBizID},
 		},
 	}
+
 	listOpt := &types.ListOption{
 		Filter: crpDemandFilter,
 		Page:   core.NewDefaultBasePage(),
@@ -432,9 +533,11 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		logs.Errorf("failed to list resource plan crp demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
+
 	existCrpDemandMap := converter.SliceToMap(rst.Details, func(detail rpcd.ResPlanCrpDemandTable) (int64, struct{}) {
 		return detail.CrpDemandID, struct{}{}
 	})
+
 	existCrpDemandIDs := make([]int64, 0)
 	notExistCrpDemandIDs := make([]int64, 0)
 	for _, crpDemandID := range crpDemandIDs {
@@ -444,6 +547,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			notExistCrpDemandIDs = append(notExistCrpDemandIDs, crpDemandID)
 		}
 	}
+
 	if len(existCrpDemandIDs) > 0 {
 		update := &rpcd.ResPlanCrpDemandTable{
 			DemandClass:     demandClass,
@@ -463,6 +567,7 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 			return err
 		}
 	}
+
 	if len(notExistCrpDemandIDs) > 0 {
 		inserts := make([]rpcd.ResPlanCrpDemandTable, len(notExistCrpDemandIDs))
 		for idx, crpDemandID := range notExistCrpDemandIDs {
@@ -490,5 +595,6 @@ func (c *Controller) upsertCrpDemandBizRel(kt *kit.Kit, crpDemandIDs []int64, de
 		}
 		return err
 	}
+
 	return nil
 }

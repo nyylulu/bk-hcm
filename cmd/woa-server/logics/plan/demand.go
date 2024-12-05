@@ -28,9 +28,8 @@ import (
 	"sync"
 	"time"
 
-	"hcm/cmd/woa-server/logics/plan/demand-time"
+	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	model "hcm/cmd/woa-server/model/task"
-	mtypes "hcm/cmd/woa-server/types/meta"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
@@ -532,25 +531,29 @@ func (c *Controller) listAllResPlanDemand(kt *kit.Kit, req *ptypes.ListResPlanDe
 	return result, 0, nil
 }
 
-func convResPlanDemandCreateReq(kt *kit.Kit, bizOrgRel mtypes.BizOrgRel, ticket *TicketInfo,
-	demand *ptypes.CrpOrderChangeInfo) (rpproto.ResPlanDemandCreateReq, error) {
+func convCreateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, demand *ptypes.CrpOrderChangeInfo) (
+	rpproto.ResPlanDemandCreateReq, rpproto.DemandChangelogCreate, error) {
 
 	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
 	if err != nil {
 		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
 			kt.Rid)
-		return rpproto.ResPlanDemandCreateReq{}, err
+		return rpproto.ResPlanDemandCreateReq{}, rpproto.DemandChangelogCreate{}, err
 	}
 
+	osChange := demand.ChangeOs
+	cpuCoreChange := demand.ChangeCpuCore
+	memoryChange := demand.ChangeMemory
+	diskSizeChange := demand.ChangeDiskSize
 	createReq := rpproto.ResPlanDemandCreateReq{
-		BkBizID:         bizOrgRel.BkBizID,
-		BkBizName:       bizOrgRel.BkBizName,
-		OpProductID:     bizOrgRel.OpProductID,
-		OpProductName:   bizOrgRel.OpProductName,
-		PlanProductID:   bizOrgRel.PlanProductID,
-		PlanProductName: bizOrgRel.PlanProductName,
-		VirtualDeptID:   bizOrgRel.VirtualDeptID,
-		VirtualDeptName: bizOrgRel.VirtualDeptName,
+		BkBizID:         ticket.BkBizID,
+		BkBizName:       ticket.BkBizName,
+		OpProductID:     ticket.OpProductID,
+		OpProductName:   ticket.OpProductName,
+		PlanProductID:   ticket.PlanProductID,
+		PlanProductName: ticket.PlanProductName,
+		VirtualDeptID:   ticket.VirtualDeptID,
+		VirtualDeptName: ticket.VirtualDeptName,
 		DemandClass:     ticket.DemandClass,
 		DemandResType:   demand.DemandResType,
 		ResMode:         demand.ResMode,
@@ -569,81 +572,37 @@ func convResPlanDemandCreateReq(kt *kit.Kit, bizOrgRel mtypes.BizOrgRel, ticket 
 		CoreType:        demand.CoreType,
 		DiskType:        demand.DiskType,
 		DiskTypeName:    demand.DiskTypeName,
-		OS:              demand.ChangeOs,
-		CpuCore:         demand.ChangeCpuCore,
-		Memory:          demand.ChangeMemory,
-		DiskSize:        demand.ChangeDiskSize,
+		OS:              &osChange,
+		CpuCore:         &cpuCoreChange,
+		Memory:          &memoryChange,
+		DiskSize:        &diskSizeChange,
 		DiskIO:          demand.DiskIO,
 	}
 	if kt.User == constant.BackendOperationUserKey {
 		createReq.Creator = ticket.Applicant
 	}
 
-	return createReq, nil
-}
-
-// CreateResPlanDemand create res plan demand.
-func (c *Controller) CreateResPlanDemand(kt *kit.Kit, bizOrgRel mtypes.BizOrgRel, ticket *TicketInfo,
-	demand *ptypes.CrpOrderChangeInfo) ([]string, error) {
-
-	createReq, err := convResPlanDemandCreateReq(kt, bizOrgRel, ticket, demand)
-	if err != nil {
-		logs.Errorf("failed to convert res plan demand create req, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	batchReq := &rpproto.ResPlanDemandBatchCreateReq{
-		Demands: []rpproto.ResPlanDemandCreateReq{createReq},
-	}
-
-	rst, err := c.client.DataService().Global.ResourcePlan.BatchCreateResPlanDemand(kt, batchReq)
-	if err != nil {
-		logs.Errorf("failed to create res plan demand, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
 	// 更新日志
-	expectTimeFormat, err := time.Parse(constant.DateLayout, demand.ExpectTime)
-	if err != nil {
-		logs.Warnf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, demand.ExpectTime,
-			kt.Rid)
-		return rst.IDs, nil
+	logCreateReq := rpproto.DemandChangelogCreate{
+		// DemandID 需要在demand创建后补充
+		DemandID:       "",
+		TicketID:       ticket.ID,
+		CrpOrderID:     ticket.CrpSn,
+		SuborderID:     "",
+		Type:           enumor.DemandChangelogTypeAppend,
+		ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
+		ObsProject:     demand.ObsProject,
+		RegionName:     demand.RegionName,
+		ZoneName:       demand.ZoneName,
+		DeviceType:     demand.DeviceType,
+		OSChange:       &osChange,
+		CpuCoreChange:  &cpuCoreChange,
+		MemoryChange:   &memoryChange,
+		DiskSizeChange: &diskSizeChange,
+		Remark:         ticket.Remark,
 	}
 
-	demandID := rst.IDs[0]
-	osChange := demand.ChangeOs
-	cpuCoreChange := demand.ChangeCpuCore
-	memoryChange := demand.ChangeMemory
-	diskSizeChange := demand.ChangeDiskSize
-	changelogReq := &rpproto.DemandChangelogCreateReq{
-		Changelogs: []rpproto.DemandChangelogCreate{
-			{
-				DemandID:       demandID,
-				TicketID:       ticket.ID,
-				CrpOrderID:     ticket.CrpSn,
-				SuborderID:     "",
-				Type:           enumor.DemandChangelogTypeAppend,
-				ExpectTime:     expectTimeFormat.Format(constant.DateLayout),
-				ObsProject:     demand.ObsProject,
-				RegionName:     demand.RegionName,
-				ZoneName:       demand.ZoneName,
-				DeviceType:     demand.DeviceType,
-				OSChange:       &osChange,
-				CpuCoreChange:  &cpuCoreChange,
-				MemoryChange:   &memoryChange,
-				DiskSizeChange: &diskSizeChange,
-				Remark:         ticket.Remark,
-			},
-		},
-	}
-
-	_, err = c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
-	if err != nil {
-		logs.Warnf("failed to create plan demand changelog, demand_id: %s, err: %v, rid: %s", demandID, err,
-			kt.Rid)
-	}
-
-	return rst.IDs, nil
+	return createReq, logCreateReq, nil
 }
 
 // RepairResPlanDemandFromTicket 给定时间范围，从范围内的历史单据还原预测
@@ -752,88 +711,6 @@ func (c *Controller) applyResPlanDemandChangeFromRPTickets(kt *kit.Kit, tickets 
 	return nil
 }
 
-// UpdateResPlanDemand update res plan demand.
-func (c *Controller) UpdateResPlanDemand(kt *kit.Kit, ticket *TicketInfo, demandBefore rpd.ResPlanDemandTable,
-	demandChange *ptypes.CrpOrderChangeInfo) error {
-
-	beforeOS := cvt.PtrToVal(demandBefore.OS)
-	afterOS := beforeOS.Add(demandChange.ChangeOs)
-
-	beforeCpuCore := cvt.PtrToVal(demandBefore.CpuCore)
-	afterCpuCore := beforeCpuCore + demandChange.ChangeCpuCore
-
-	beforeMemory := cvt.PtrToVal(demandBefore.Memory)
-	afterMemory := beforeMemory + demandChange.ChangeMemory
-
-	beforeDiskSize := cvt.PtrToVal(demandBefore.DiskSize)
-	afterDiskSize := beforeDiskSize + demandChange.ChangeDiskSize
-
-	updateReq := rpproto.ResPlanDemandUpdateReq{
-		ID:       demandBefore.ID,
-		OS:       &afterOS,
-		CpuCore:  &afterCpuCore,
-		Memory:   &afterMemory,
-		DiskSize: &afterDiskSize,
-	}
-	if kt.User == constant.BackendOperationUserKey {
-		updateReq.Reviser = ticket.Applicant
-	}
-
-	batchReq := &rpproto.ResPlanDemandBatchUpdateReq{
-		Demands: []rpproto.ResPlanDemandUpdateReq{updateReq},
-	}
-
-	err := c.client.DataService().Global.ResourcePlan.BatchUpdateResPlanDemand(kt, batchReq)
-	if err != nil {
-		logs.Errorf("failed to update res plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	// 更新日志
-	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demandBefore.ExpectTime),
-		constant.DateLayoutCompact, constant.DateLayout)
-	if err != nil {
-		logs.Warnf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
-			demandBefore.ExpectTime, kt.Rid)
-		expectDateStr = ""
-	}
-
-	demandID := demandBefore.ID
-	osChange := demandChange.ChangeOs
-	cpuCoreChange := demandChange.ChangeCpuCore
-	memoryChange := demandChange.ChangeMemory
-	diskSizeChange := demandChange.ChangeDiskSize
-	changelogReq := &rpproto.DemandChangelogCreateReq{
-		Changelogs: []rpproto.DemandChangelogCreate{
-			{
-				DemandID:       demandID,
-				TicketID:       ticket.ID,
-				CrpOrderID:     ticket.CrpSn,
-				SuborderID:     "",
-				Type:           enumor.DemandChangelogTypeAdjust,
-				ExpectTime:     expectDateStr,
-				ObsProject:     demandBefore.ObsProject,
-				RegionName:     demandBefore.RegionName,
-				ZoneName:       demandBefore.ZoneName,
-				DeviceType:     demandBefore.DeviceType,
-				OSChange:       &osChange,
-				CpuCoreChange:  &cpuCoreChange,
-				MemoryChange:   &memoryChange,
-				DiskSizeChange: &diskSizeChange,
-				Remark:         ticket.Remark,
-			},
-		},
-	}
-
-	_, err = c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
-	if err != nil {
-		logs.Warnf("failed to create plan demand changelog, demand_id: %s, err: %v, rid: %s", demandID, err,
-			kt.Rid)
-	}
-
-	return nil
-}
-
 // QueryIEGDemands query IEG crp demands.
 func (c *Controller) QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*cvmapi.CvmCbsPlanQueryItem, error) {
 	if req == nil {
@@ -913,36 +790,6 @@ func (c *Controller) QueryIEGDemands(kt *kit.Kit, req *QueryIEGDemandsReq) ([]*c
 	}
 
 	return result, nil
-}
-
-// ExamineDemandClass examine whether all demands are the same demand class, and return the demand class.
-func (c *Controller) ExamineDemandClass(kt *kit.Kit, crpDemandIDs []int64) (enumor.DemandClass, error) {
-	listOpt := &types.ListOption{
-		Fields: []string{"demand_class"},
-		Filter: tools.ContainersExpression("crp_demand_id", crpDemandIDs),
-		Page:   core.NewDefaultBasePage(),
-	}
-
-	rst, err := c.dao.ResPlanCrpDemand().List(kt, listOpt)
-	if err != nil {
-		logs.Errorf("failed to list resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
-
-	if len(rst.Details) == 0 {
-		logs.Errorf("list resource plan demand, but len detail is 0, rid: %s", kt.Rid)
-		return "", errors.New("list resource plan demand, but len detail is 0")
-	}
-
-	demandClass := rst.Details[0].DemandClass
-	for _, detail := range rst.Details {
-		if detail.DemandClass != demandClass {
-			logs.Errorf("not all demand classes are the same, rid: %s", kt.Rid)
-			return "", errors.New("not all demand classes are the same")
-		}
-	}
-
-	return demandClass, nil
 }
 
 // GetProdResPlanPool get op product resource plan pool.

@@ -42,6 +42,7 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/shopspring/decimal"
 )
 
 // CreateResPlanTicket create resource plan ticket.
@@ -102,18 +103,19 @@ func (c *Controller) CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketRe
 
 // constructResPlanTicket construct resource plan ticket.
 func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt.ResPlanTicketTable, error) {
-	var originalOs, originalCpuCore, originalMemory, originalDiskSize float64
-	var updatedOs, updatedCpuCore, updatedMemory, updatedDiskSize float64
+	var originalOs, updatedOs decimal.Decimal
+	var originalCpuCore, originalMemory, originalDiskSize int64
+	var updatedCpuCore, updatedMemory, updatedDiskSize int64
 	for _, demand := range req.Demands {
 		if demand.Original != nil {
-			originalOs += (*demand.Original).Cvm.Os
+			originalOs = originalOs.Add((*demand.Original).Cvm.Os.Decimal)
 			originalCpuCore += (*demand.Original).Cvm.CpuCore
 			originalMemory += (*demand.Original).Cvm.Memory
 			originalDiskSize += (*demand.Original).Cbs.DiskSize
 		}
 
 		if demand.Updated != nil {
-			updatedOs += (*demand.Updated).Cvm.Os
+			updatedOs = updatedOs.Add((*demand.Updated).Cvm.Os.Decimal)
 			updatedCpuCore += (*demand.Updated).Cvm.CpuCore
 			updatedMemory += (*demand.Updated).Cvm.Memory
 			updatedDiskSize += (*demand.Updated).Cbs.DiskSize
@@ -138,14 +140,14 @@ func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt
 		VirtualDeptID:    req.BizOrgRel.VirtualDeptID,
 		VirtualDeptName:  req.BizOrgRel.VirtualDeptName,
 		DemandClass:      req.DemandClass,
-		OriginalOS:       originalOs,
-		OriginalCpuCore:  originalCpuCore,
-		OriginalMemory:   originalMemory,
-		OriginalDiskSize: originalDiskSize,
-		UpdatedOS:        updatedOs,
-		UpdatedCpuCore:   updatedCpuCore,
-		UpdatedMemory:    updatedMemory,
-		UpdatedDiskSize:  updatedDiskSize,
+		OriginalOS:       originalOs.InexactFloat64(),
+		OriginalCpuCore:  float64(originalCpuCore),
+		OriginalMemory:   float64(originalMemory),
+		OriginalDiskSize: float64(originalDiskSize),
+		UpdatedOS:        updatedOs.InexactFloat64(),
+		UpdatedCpuCore:   float64(updatedCpuCore),
+		UpdatedMemory:    float64(updatedMemory),
+		UpdatedDiskSize:  float64(updatedDiskSize),
 		Remark:           req.Remark,
 		Creator:          applicant,
 		Reviser:          applicant,

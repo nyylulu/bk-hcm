@@ -176,3 +176,18 @@ func (d Decimal) rescale(exp int32) Decimal {
 		exp:   exp,
 	}
 }
+
+// RoundToDecimalPlaces rounds a float64 to the given number of decimal places.
+func RoundToDecimalPlaces(f float64, places int) (float64, error) {
+	if places < 0 {
+		return 0, fmt.Errorf("decimal places must be >= 0")
+	}
+
+	f = math.Round(f*math.Pow10(places)) / math.Pow10(places)
+
+	if math.IsNaN(f) {
+		return 0, fmt.Errorf("round to NaN")
+	}
+
+	return f, nil
+}

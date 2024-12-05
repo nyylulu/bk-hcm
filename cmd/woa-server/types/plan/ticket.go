@@ -26,7 +26,10 @@ import (
 	"hcm/pkg/dal/dao/types"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	"hcm/pkg/runtime/filter"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/times"
+
+	"github.com/shopspring/decimal"
 )
 
 // ListResPlanTicketReq is list resource plan ticket request.
@@ -250,16 +253,16 @@ type CreateResPlanDemandReq struct {
 	Remark         string                 `json:"remark" validate:"omitempty"`
 	DemandResTypes []enumor.DemandResType `json:"demand_res_types" validate:"required"`
 	Cvm            *struct {
-		ResMode    string   `json:"res_mode"`
-		DeviceType string   `json:"device_type"`
-		Os         *float64 `json:"os"`
-		CpuCore    *float64 `json:"cpu_core"`
-		Memory     *float64 `json:"memory"`
+		ResMode    enumor.ResMode   `json:"res_mode"`
+		DeviceType string           `json:"device_type"`
+		Os         *decimal.Decimal `json:"os"`
+		CpuCore    *int64           `json:"cpu_core"`
+		Memory     *int64           `json:"memory"`
 	} `json:"cvm" validate:"omitempty"`
 	Cbs *struct {
 		DiskType enumor.DiskType `json:"disk_type"`
 		DiskIo   *int64          `json:"disk_io"`
-		DiskSize *float64        `json:"disk_size"`
+		DiskSize *int64          `json:"disk_size"`
 	} `json:"cbs" validate:"omitempty"`
 }
 
@@ -318,15 +321,15 @@ func (r *CreateResPlanDemandReq) cvmValidate() error {
 		return errors.New("demand includes cvm, cvm should not be nil")
 	}
 
-	if len(r.Cvm.ResMode) == 0 {
-		return errors.New("cvm res mode should not be empty")
+	if err := r.Cvm.ResMode.Validate(); err != nil {
+		return err
 	}
 
 	if len(r.Cvm.DeviceType) == 0 {
 		return errors.New("cvm device type should not be empty")
 	}
 
-	if *r.Cvm.Os < 0 {
+	if cvt.PtrToVal(r.Cvm.Os).IsNegative() {
 		return errors.New("os should be >= 0")
 	}
 
@@ -359,6 +362,24 @@ func (r *CreateResPlanDemandReq) cbsValidate() error {
 	}
 
 	return nil
+}
+
+// GetResource get resource plan demand resource.
+func (r *CreateResPlanDemandReq) GetResource() CreateResPlanDemandResource {
+	return CreateResPlanDemandResource{
+		Os:       cvt.PtrToVal(r.Cvm.Os),
+		CpuCore:  cvt.PtrToVal(r.Cvm.CpuCore),
+		Memory:   cvt.PtrToVal(r.Cvm.Memory),
+		DiskSize: cvt.PtrToVal(r.Cbs.DiskSize),
+	}
+}
+
+// CreateResPlanDemandResource is create resource plan demand resource.
+type CreateResPlanDemandResource struct {
+	Os       decimal.Decimal `json:"os"`
+	CpuCore  int64           `json:"cpu_core"`
+	Memory   int64           `json:"memory"`
+	DiskSize int64           `json:"disk_size"`
 }
 
 // GetResPlanTicketResp is get resource plan ticket response.

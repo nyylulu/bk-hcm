@@ -25,7 +25,6 @@ import (
 	"math"
 	"strconv"
 
-	mtypes "hcm/cmd/woa-server/types/meta"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
@@ -40,134 +39,350 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/times"
 
 	"github.com/shopspring/decimal"
 )
 
-// applyResPlanDemandChangeAggregate apply changes according to aggregation rules.
-func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *TicketInfo, bizOrgRel mtypes.BizOrgRel,
-	matchDemands []rpd.ResPlanDemandTable, changeDemand *ptypes.CrpOrderChangeInfo,
-	deviceTypeMap map[string]wdt.WoaDeviceTypeTable) ([]string, error) {
-
-	unlockDemandIDs := make([]string, 0)
-
-	// 未匹配到完全一致的预测，需要根据 调增OR调减 选择新建或模糊调减数据
-	if len(matchDemands) == 0 {
-		// 新增数据
-		if changeDemand.ChangeCpuCore > 0 {
-			demandIDs, err := c.CreateResPlanDemand(kt, bizOrgRel, ticket, changeDemand)
-			if err != nil {
-				logs.Errorf("failed to create res plan demand, err: %v, bk_biz_id: %d, changeDemand: %+v, rid: %s",
-					err, bizOrgRel.BkBizID, changeDemand, kt.Rid)
-				return nil, err
-			}
-			unlockDemandIDs = append(unlockDemandIDs, demandIDs...)
-			return unlockDemandIDs, nil
-		}
-
-		// 模糊调减
-		updatedDemandIDs, err := c.DeductResPlanDemandAggregate(kt, ticket, matchDemands, changeDemand, deviceTypeMap)
-		if err != nil {
-			logs.Errorf("failed to update res plan demand aggregate, err: %v, bk_biz_id: %d, changeDemand: %+v, rid: %s",
-				err, bizOrgRel.BkBizID, changeDemand, kt.Rid)
-			return nil, err
-		}
-		unlockDemandIDs = append(unlockDemandIDs, updatedDemandIDs...)
-		return unlockDemandIDs, nil
-	}
-
-	// 以demandKey唯一键匹配到的数据，最多只可能有1条
-	// 更新数据
-	err := c.UpdateResPlanDemand(kt, ticket, matchDemands[0], changeDemand)
-	if err != nil {
-		logs.Errorf("failed to update res plan demand, err: %v, bk_biz_id: %d, changeDemand: %+v, rid: %s",
-			err, bizOrgRel.BkBizID, changeDemand, kt.Rid)
-		return nil, err
-	}
-	unlockDemandIDs = append(unlockDemandIDs, matchDemands[0].ID)
-
-	return unlockDemandIDs, nil
-}
-
 // applyResPlanDemandChange apply res plan demand change.
 func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) error {
 	// call crp api to get plan order change info.
-	changeDemands, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
+	changeDemandsOri, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
 	if err != nil {
 		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
 		return err
 	}
+	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
+	changeDemands := aggregateDemandChangeInfo(changeDemandsOri, ticket)
+
+	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
+	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, changeDemands, ticket)
+	if err != nil {
+		logs.Errorf("failed to prepare res plan demand change req, err: %v, ticket: %s, rid: %s", err,
+			ticket.ID, kt.Rid)
+		return err
+	}
+
+	createdIDs, err := c.BatchUpsertResPlanDemand(kt, upsertReq, updatedIDs)
+	if err != nil {
+		logs.Errorf("failed to batch upsert res plan demand, err: %v, ticket: %s, rid: %s", err, ticket.ID,
+			kt.Rid)
+		return err
+	}
+
+	// 创建预测的日志
+	err = c.CreateResPlanChangelog(kt, createLogReq, createdIDs)
+	if err != nil {
+		// 变更记录创建失败不阻断整个预测的更新流程（且此时预测数据已变更，上游不应感知到error），因此此处仅记录warning，不返回error
+		logs.Warnf("failed to create res plan demand changelog, err: %v, created demands: %v, rid: %s", err,
+			createdIDs, kt.Rid)
+	}
+	// 更新预测的日志
+	err = c.CreateResPlanChangelog(kt, updateLogReq, []string{})
+	if err != nil {
+		// 变更记录创建失败不阻断整个预测的更新流程（且此时预测数据已变更，上游不应感知到error），因此此处仅记录warning，不返回error
+		logs.Warnf("failed to create res plan demand changelog, err: %v, updated demands: %v, rid: %s", err,
+			updatedIDs, kt.Rid)
+	}
+
+	return nil
+}
+
+// CreateResPlanChangelog create resource plan demand changelog.
+// If demandIDs is provided, will reset the changelog's demand id.
+func (c *Controller) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto.DemandChangelogCreate,
+	demandIDs []string) error {
+	if len(changelogReqs) == 0 {
+		return nil
+	}
+
+	if len(demandIDs) > 0 && len(demandIDs) != len(changelogReqs) {
+		logs.Errorf("demand ids and changelog create reqs length not equal, demand ids: %v, "+
+			"changelog create reqs: %v, rid: %s", demandIDs, changelogReqs, kt.Rid)
+		return fmt.Errorf("demand ids and changelog create reqs length not equal")
+	}
+
+	createDemandIDs := make([]string, len(changelogReqs))
+	for idx := range changelogReqs {
+		if len(demandIDs) > 0 {
+			changelogReqs[idx].DemandID = demandIDs[idx]
+		}
+		createDemandIDs[idx] = changelogReqs[idx].DemandID
+	}
+
+	changelogReq := &rpproto.DemandChangelogCreateReq{
+		Changelogs: changelogReqs,
+	}
+
+	_, err := c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
+	if err != nil {
+		logs.Errorf("failed to create plan demand changelog, demand ids: %v, err: %v, rid: %s", createDemandIDs,
+			err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// prepareResPlanDemandChangeReq 准备更新资源预测表的参数
+// 返回值：更新参数，被更新的资源ID，新增预测的变更日志，修改预测的变更日志
+// 因新增预测的变更日志需要在更新完成后追加预测ID，因此需要和修改的变更日志分开返回
+func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
+	ticket *TicketInfo) (*rpproto.ResPlanDemandBatchUpsertReq, []string, []rpproto.DemandChangelogCreate,
+	[]rpproto.DemandChangelogCreate, error) {
+
+	// needUpdateDemands记录全部扣减完成后的最终结果
+	needUpdateDemands := make(map[string]*rpd.ResPlanDemandTable)
+	// demandUpdatedResource记录变化量，用于记录变更日志
+	demandUpdatedResource := make(map[string]*ptypes.DemandResource)
 
 	// 从 woa_zone 获取城市/地区的中英文对照
 	zoneMap, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
 	if err != nil {
 		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
-		return err
+		return nil, nil, nil, nil, err
 	}
 	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 
-	// upsert crp demand id and biz relation.
-	bizOrgRel := mtypes.BizOrgRel{
-		BkBizID:         ticket.BkBizID,
-		BkBizName:       ticket.BkBizName,
-		OpProductID:     ticket.OpProductID,
-		OpProductName:   ticket.OpProductName,
-		PlanProductID:   ticket.PlanProductID,
-		PlanProductName: ticket.PlanProductName,
-		VirtualDeptID:   ticket.VirtualDeptID,
-		VirtualDeptName: ticket.VirtualDeptName,
-	}
-
-	unlockDemandIDs := make([]string, 0)
+	batchCreateReq := make([]rpproto.ResPlanDemandCreateReq, 0)
+	batchCreateLogReq := make([]rpproto.DemandChangelogCreate, 0)
 	for _, changeDemand := range changeDemands {
 		err := changeDemand.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap)
 		if err != nil {
-			logs.Warnf("failed to set region area and zone id, err: %v, rid: %s", err, kt.Rid)
-			continue
+			logs.Errorf("failed to set region area and zone id, err: %v, change demand: %+v, rid: %s", err,
+				*changeDemand, kt.Rid)
+			return nil, nil, nil, nil, err
 		}
 
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
 		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap)
 		if err != nil {
-			logs.Warnf("failed to get aggregate key, err: %v, rid: %s", err, kt.Rid)
-			continue
+			logs.Errorf("failed to get aggregate key, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
+				kt.Rid)
+			return nil, nil, nil, nil, err
 		}
 		localDemands, err := c.ListResPlanDemandByAggregateKey(kt, aggregateKey)
 		if err != nil {
-			logs.Warnf("failed to get local res plan demands, err: %v, aggregate key: %+v, rid: %s", err,
-				aggregateKey, kt.Rid)
-			continue
+			logs.Errorf("failed to get local res plan demands, err: %v, aggregate key: %+v, change demand: %+v, "+
+				"rid: %s", err, aggregateKey, *changeDemand, kt.Rid)
+			return nil, nil, nil, nil, err
 		}
-
-		// 优先调整完全匹配的预测需求，如果找不到，调减时随机挑选几条调减（优先调整加锁的），避免调出负数
-		demandKey := changeDemand.GetKey(ticket.BkBizID, ticket.DemandClass)
-		matchDemands := matchDemandTableByDemandKey(kt, localDemands, demandKey)
 
 		// 根据匹配情况决定如何调整数据库中的现有预测需求
-		changeDemandIDs, err := c.applyResPlanDemandChangeAggregate(kt, ticket, bizOrgRel, matchDemands,
-			changeDemand, deviceTypeMap)
+		createReq, createLogReq, err := c.applyResPlanDemandChangeAggregate(kt, ticket, localDemands,
+			changeDemand, needUpdateDemands, demandUpdatedResource)
 		if err != nil {
-			logs.Warnf("failed to apply res plan demand change aggregate, err: %v, rid: %s", err, kt.Rid)
-			continue
+			logs.Errorf("failed to apply res plan demand change aggregate, err: %v, change demand: %+v, rid: %s",
+				err, *changeDemand, kt.Rid)
+			return nil, nil, nil, nil, err
 		}
-		unlockDemandIDs = append(unlockDemandIDs, changeDemandIDs...)
+		if createReq != nil {
+			batchCreateReq = append(batchCreateReq, cvt.PtrToVal(createReq))
+			batchCreateLogReq = append(batchCreateLogReq, cvt.PtrToVal(createLogReq))
+		}
 	}
 
+	// 准备更新语句
+	updatedIDs, batchUpdateReq, updateChangelogReqs, err := convUpdateResPlanDemandReqs(kt, ticket, needUpdateDemands,
+		demandUpdatedResource, deviceTypeMap)
+	if err != nil {
+		logs.Errorf("failed to convert update res plan demand reqs, err: %v, ticket: %s, rid: %s", err,
+			ticket.ID, kt.Rid)
+		return nil, nil, nil, nil, err
+	}
+
+	upsertReq := &rpproto.ResPlanDemandBatchUpsertReq{
+		CreateDemands: batchCreateReq,
+		UpdateDemands: batchUpdateReq,
+	}
+
+	return upsertReq, updatedIDs, batchCreateLogReq, updateChangelogReqs, nil
+}
+
+func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, updateDemands map[string]*rpd.ResPlanDemandTable,
+	demandChangelog map[string]*ptypes.DemandResource, deviceTypeMap map[string]wdt.WoaDeviceTypeTable) (
+	[]string, []rpproto.ResPlanDemandUpdateReq, []rpproto.DemandChangelogCreate, error) {
+
+	updatedDemandIDs := make([]string, 0)
+	batchUpdateReq := make([]rpproto.ResPlanDemandUpdateReq, 0)
+	batchCreateChangelogReq := make([]rpproto.DemandChangelogCreate, 0)
+
+	for demandID, updated := range updateDemands {
+		deviceInfo, ok := deviceTypeMap[updated.DeviceType]
+		if !ok {
+			logs.Errorf("device_type: %s, not found in device_type_map, rid: %s", updated.DeviceType, kt.Rid)
+			return nil, nil, nil, fmt.Errorf("device_type: %s is not found", updated.DeviceType)
+		}
+
+		updatedDemandIDs = append(updatedDemandIDs, demandID)
+
+		// OS and memory should be calculated by cpu core
+		updatedOS := decimal.NewFromInt(cvt.PtrToVal(updated.CpuCore)).Div(decimal.NewFromInt(deviceInfo.CpuCore))
+		updatedMemory := updatedOS.Mul(decimal.NewFromInt(deviceInfo.Memory)).IntPart()
+
+		updateReq := rpproto.ResPlanDemandUpdateReq{
+			ID:       demandID,
+			OS:       &updatedOS,
+			CpuCore:  updated.CpuCore,
+			Memory:   &updatedMemory,
+			DiskSize: updated.DiskSize,
+		}
+		if kt.User == constant.BackendOperationUserKey {
+			updateReq.Reviser = ticket.Applicant
+		}
+		batchUpdateReq = append(batchUpdateReq, updateReq)
+
+		// 变更日志
+		demandChangeRes, ok := demandChangelog[demandID]
+		if !ok {
+			// 更新日志无法创建不阻断整个预测的更新流程，因此此处仅记录warning，不返回error
+			logs.Warnf("failed to get demand change res, demand_id: %s, rid: %s", demandID, kt.Rid)
+			continue
+		}
+
+		expectTimeStr, err := times.TransTimeStrWithLayout(strconv.Itoa(updated.ExpectTime),
+			constant.DateLayoutCompact, constant.DateLayout)
+		if err != nil {
+			logs.Warnf("failed to convert expect time to string, err: %v, expect time: %d, demand_id: %s, rid: %s",
+				err, updated.ExpectTime, demandID, kt.Rid)
+			continue
+		}
+
+		changeCpuCore := demandChangeRes.CpuCore
+		changeDiskSize := demandChangeRes.DiskSize
+		changeOS := decimal.NewFromInt(changeCpuCore).Div(decimal.NewFromInt(deviceInfo.CpuCore))
+		changeMemory := changeOS.Mul(decimal.NewFromInt(deviceInfo.Memory)).IntPart()
+
+		logCreateReq := rpproto.DemandChangelogCreate{
+			DemandID:       demandID,
+			TicketID:       ticket.ID,
+			CrpOrderID:     ticket.CrpSn,
+			SuborderID:     "",
+			Type:           enumor.DemandChangelogTypeAdjust,
+			ExpectTime:     expectTimeStr,
+			ObsProject:     updated.ObsProject,
+			RegionName:     updated.RegionName,
+			ZoneName:       updated.ZoneName,
+			DeviceType:     updated.DeviceType,
+			OSChange:       &changeOS,
+			CpuCoreChange:  &changeCpuCore,
+			MemoryChange:   &changeMemory,
+			DiskSizeChange: &changeDiskSize,
+			Remark:         ticket.Remark,
+		}
+		batchCreateChangelogReq = append(batchCreateChangelogReq, logCreateReq)
+	}
+
+	return updatedDemandIDs, batchUpdateReq, batchCreateChangelogReq, nil
+}
+
+func aggregateDemandChangeInfo(changeDemands []*ptypes.CrpOrderChangeInfo,
+	ticket *TicketInfo) []*ptypes.CrpOrderChangeInfo {
+
+	changeDemandMap := make(map[ptypes.ResPlanDemandKey]*ptypes.CrpOrderChangeInfo)
+	for _, changeDemand := range changeDemands {
+		changeKey := changeDemand.GetKey(ticket.BkBizID, ticket.DemandClass)
+		finalChange, ok := changeDemandMap[changeKey]
+		if !ok {
+			changeDemandMap[changeKey] = changeDemand
+			continue
+		}
+
+		finalChange.ChangeOs = finalChange.ChangeOs.Add(changeDemand.ChangeOs)
+		finalChange.ChangeCpuCore = finalChange.ChangeCpuCore + changeDemand.ChangeCpuCore
+		finalChange.ChangeMemory = finalChange.ChangeMemory + changeDemand.ChangeMemory
+		finalChange.ChangeDiskSize = finalChange.ChangeDiskSize + changeDemand.ChangeDiskSize
+	}
+
+	return maps.Values(changeDemandMap)
+}
+
+// BatchUpsertResPlanDemand batch upsert res plan demand and unlock res plans.
+func (c *Controller) BatchUpsertResPlanDemand(kt *kit.Kit, upsertReq *rpproto.ResPlanDemandBatchUpsertReq,
+	updatedIDs []string) ([]string, error) {
+
+	unlockDemandIDs := make([]string, 0)
+	// 批量创建和更新预测
+	createdRst, err := c.client.DataService().Global.ResourcePlan.BatchUpsertResPlanDemand(kt, upsertReq)
+	if err != nil {
+		logs.Errorf("failed to batch upsert res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	unlockDemandIDs = append(unlockDemandIDs, createdRst.IDs...)
+	unlockDemandIDs = append(unlockDemandIDs, updatedIDs...)
 	if len(unlockDemandIDs) == 0 {
-		return nil
+		return createdRst.IDs, nil
 	}
 
 	// unlock all crp demands.
 	unlockReq := &rpproto.ResPlanDemandLockOpReq{
 		IDs: unlockDemandIDs,
 	}
-	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
+	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
+		logs.Warnf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 	}
 
-	return nil
+	return createdRst.IDs, nil
+}
+
+// applyResPlanDemandChangeAggregate apply changes according to aggregation rules.
+// return the requests to create, and the needUpdateDemands map to update with a transaction.
+func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *TicketInfo,
+	localDemands []rpd.ResPlanDemandTable, changeDemand *ptypes.CrpOrderChangeInfo,
+	needUpdateDemands map[string]*rpd.ResPlanDemandTable, demandUpdateRes map[string]*ptypes.DemandResource) (
+	*rpproto.ResPlanDemandCreateReq, *rpproto.DemandChangelogCreate, error) {
+
+	// 追加预测，不需要模糊匹配
+	if changeDemand.ChangeCpuCore > 0 {
+		// 优先追加到完全匹配的预测需求上，如果找不到，直接新增
+		demandKey := changeDemand.GetKey(ticket.BkBizID, ticket.DemandClass)
+		matchDemands := matchDemandTableByDemandKey(kt, localDemands, demandKey)
+
+		// 没有完全匹配的，直接新增
+		if len(matchDemands) == 0 {
+			createReq, createLogReq, err := convCreateResPlanDemandReqs(kt, ticket, changeDemand)
+			if err != nil {
+				logs.Errorf("failed to convert create res plan demand reqs, err: %v, bk_biz_id: %d, "+
+					"changeDemand: %+v, rid: %s", err, ticket.BkBizID, changeDemand, kt.Rid)
+				return nil, nil, err
+			}
+
+			return &createReq, &createLogReq, nil
+		}
+
+		// 以demandKey唯一键匹配到的数据，最多只可能有1条，追加
+		localDemand := matchDemands[0]
+		// 对已有数据的变更只记录变更量，全部变更处理完成后再统一拼装更新请求
+		if _, ok := needUpdateDemands[localDemand.ID]; !ok {
+			needUpdateDemands[localDemand.ID] = &localDemand
+			demandUpdateRes[localDemand.ID] = &ptypes.DemandResource{
+				DeviceType: localDemand.DeviceType,
+				CpuCore:    0,
+				DiskSize:   0,
+			}
+		}
+		remainedCpuCore := cvt.PtrToVal(needUpdateDemands[localDemand.ID].CpuCore) + changeDemand.ChangeCpuCore
+		remainedDiskSize := cvt.PtrToVal(needUpdateDemands[localDemand.ID].DiskSize) + changeDemand.ChangeDiskSize
+
+		needUpdateDemands[localDemand.ID].CpuCore = &remainedCpuCore
+		needUpdateDemands[localDemand.ID].DiskSize = &remainedDiskSize
+		demandUpdateRes[localDemand.ID].CpuCore += changeDemand.ChangeCpuCore
+		demandUpdateRes[localDemand.ID].DiskSize += changeDemand.ChangeDiskSize
+
+		return nil, nil, nil
+	}
+
+	// 调减预测，在范围内随机模糊调减，优先调减加锁的
+	err := c.DeductResPlanDemandAggregate(kt, localDemands, needUpdateDemands, demandUpdateRes, changeDemand)
+	if err != nil {
+		logs.Errorf("failed to update res plan demand aggregate, err: %v, bk_biz_id: %d, changeDemand: %+v, rid: %s",
+			err, ticket.BkBizID, changeDemand, kt.Rid)
+		return nil, nil, err
+	}
+
+	return nil, nil, nil
 }
 
 // QueryCrpOrderChangeInfo query crp order change info.
@@ -254,9 +469,10 @@ func convOrderChangeInfoFromCrpRespItem(kt *kit.Kit, orderID string, item *cvmap
 	}
 
 	resType := enumor.DemandResTypeCVM
-	// 机型为空时为CBS类型变更
+	// 机型为空时为CBS类型变更，TODO 暂不支持CBS类型的变更，没有机型无法和本地数据进行匹配
 	if item.InstanceModel == "" {
 		resType = enumor.DemandResTypeCBS
+		return nil, errors.New("cbs type is not support")
 	}
 
 	return &ptypes.CrpOrderChangeInfo{
@@ -428,18 +644,14 @@ func matchDemandTableByDemandKey(kt *kit.Kit, demands []rpd.ResPlanDemandTable,
 // DeductResPlanDemandAggregate 根据聚合Key筛选一组res plan demand调减
 // 只有 demandChange.ChangeCpuCore <= 0 时才可以使用这个函数，> 0 时直接走新增
 // 不考虑demand key完全一致，优先选择加锁的
-func (c *Controller) DeductResPlanDemandAggregate(kt *kit.Kit, ticket *TicketInfo,
-	aggregateDemands []rpd.ResPlanDemandTable, demandChange *ptypes.CrpOrderChangeInfo,
-	deviceTypes map[string]wdt.WoaDeviceTypeTable) ([]string, error) {
+func (c *Controller) DeductResPlanDemandAggregate(kt *kit.Kit, aggregateDemands []rpd.ResPlanDemandTable,
+	needUpdateDemands map[string]*rpd.ResPlanDemandTable, demandUpdateRes map[string]*ptypes.DemandResource,
+	demandChange *ptypes.CrpOrderChangeInfo) error {
 
 	if demandChange.ChangeCpuCore > 0 {
-		return nil, fmt.Errorf("demand deduct cpu core should be <= 0, change_info: %+v, rid: %s",
+		return fmt.Errorf("demand deduct cpu core should be <= 0, change_info: %+v, rid: %s",
 			*demandChange, kt.Rid)
 	}
-
-	updatedDemandIDs := make([]string, 0)
-	updateReqs := make([]rpproto.ResPlanDemandUpdateReq, 0)
-	changelogCreateReqs := make([]rpproto.DemandChangelogCreate, 0)
 
 	// 优先选择加锁的
 	unlockedDemands := make([]rpd.ResPlanDemandTable, 0, len(aggregateDemands))
@@ -452,11 +664,10 @@ func (c *Controller) DeductResPlanDemandAggregate(kt *kit.Kit, ticket *TicketInf
 			continue
 		}
 
-		demandUpdateReq, changelogCreateReq := convDeductNumberAndUpdateReq(kt, demand, demandChange, ticket,
-			deviceTypes)
-		updateReqs = append(updateReqs, demandUpdateReq)
-		changelogCreateReqs = append(changelogCreateReqs, changelogCreateReq)
-		updatedDemandIDs = append(updatedDemandIDs, demand.ID)
+		deductCpuNum := prepareDeductResPlanDemand(demand, demandChange.ChangeCpuCore, needUpdateDemands,
+			demandUpdateRes)
+		// deductCpuNum是正数，demandChange.ChangeCpuCore是负数
+		demandChange.ChangeCpuCore += deductCpuNum
 	}
 
 	// 如果还没有扣减完，继续扣减未加锁的，但是这是预期外的，需要给一个警告
@@ -464,110 +675,48 @@ func (c *Controller) DeductResPlanDemandAggregate(kt *kit.Kit, ticket *TicketInf
 		if demandChange.ChangeCpuCore == 0 {
 			break
 		}
-
-		demandUpdateReq, changelogCreateReq := convDeductNumberAndUpdateReq(kt, demand, demandChange, ticket,
-			deviceTypes)
-		updateReqs = append(updateReqs, demandUpdateReq)
 		logs.Warnf("demand update occur on unlocked data and may result in unexpected results, update demand: %s, rid: %s",
 			demand.ID, kt.Rid)
-		changelogCreateReqs = append(changelogCreateReqs, changelogCreateReq)
-		updatedDemandIDs = append(updatedDemandIDs, demand.ID)
+
+		deductCpuNum := prepareDeductResPlanDemand(demand, demandChange.ChangeCpuCore, needUpdateDemands,
+			demandUpdateRes)
+		// deductCpuNum是正数，demandChange.ChangeCpuCore是负数
+		demandChange.ChangeCpuCore += deductCpuNum
 	}
 
 	// 现有的量不够调减
 	if demandChange.ChangeCpuCore < 0 {
 		logs.Errorf("failed to update res plan demand, remained demand is not enough to deduct, change_info: %+v, rid: %s",
 			*demandChange, kt.Rid)
-		return updatedDemandIDs, errors.New("remained demand is not enough to deduct")
+		return errors.New("remained demand is not enough to deduct")
 	}
 
-	if len(updateReqs) == 0 {
-		return updatedDemandIDs, nil
-	}
-
-	batchUpdateReq := &rpproto.ResPlanDemandBatchUpdateReq{
-		Demands: updateReqs,
-	}
-	err := c.client.DataService().Global.ResourcePlan.BatchUpdateResPlanDemand(kt, batchUpdateReq)
-	if err != nil {
-		logs.Errorf("failed to update res plan demand, err: %v, rid: %s", err, kt.Rid)
-		return updatedDemandIDs, err
-	}
-
-	// 更新日志
-	changelogReq := &rpproto.DemandChangelogCreateReq{
-		Changelogs: changelogCreateReqs,
-	}
-
-	_, err = c.client.DataService().Global.ResourcePlan.BatchCreateDemandChangelog(kt, changelogReq)
-	if err != nil {
-		logs.Warnf("failed to batch create plan demand changelog, err: %v, rid: %s", err, kt.Rid)
-	}
-
-	return updatedDemandIDs, nil
+	return nil
 }
 
-// convDeductNumberAndUpdateReq 拼装扣减更新请求
-// 注意该方法会改变传入的demandChange数据，直接扣减掉对应的CPU数量
-func convDeductNumberAndUpdateReq(kt *kit.Kit, demand rpd.ResPlanDemandTable, demandChange *ptypes.CrpOrderChangeInfo,
-	ticket *TicketInfo, deviceTypes map[string]wdt.WoaDeviceTypeTable) (
-	rpproto.ResPlanDemandUpdateReq, rpproto.DemandChangelogCreate) {
+// prepareDeductResPlanDemand prepare the needUpdateDemands map to deduct res plan demand.
+// return is the cpu core will be deducted, always > 0.
+func prepareDeductResPlanDemand(updateDemand rpd.ResPlanDemandTable, changeCpuCore int64,
+	needUpdateDemands map[string]*rpd.ResPlanDemandTable, demandUpdateRes map[string]*ptypes.DemandResource) int64 {
 
-	// deductCpuNum是正数，demandChange.ChangeCpuCore是负数
-	changeCpuCoreAbs := math.Abs(float64(demandChange.ChangeCpuCore))
-	deductCpuNum := int64(math.Min(changeCpuCoreAbs, float64(cvt.PtrToVal(demand.CpuCore))))
-	demandChange.ChangeCpuCore += deductCpuNum
-
-	// 换算调减的OS、memory数量
-	deductOSNum := decimal.NewFromInt(deductCpuNum).Div(decimal.NewFromInt(deviceTypes[demand.DeviceType].CpuCore))
-	deductMemoryNum := deductOSNum.Mul(decimal.NewFromInt(deviceTypes[demand.DeviceType].Memory)).IntPart()
-
-	remainedOS := demand.OS.Decimal.Sub(deductOSNum)
-	remainedCpuCore := cvt.PtrToVal(demand.CpuCore) - deductCpuNum
-	remainedMemory := cvt.PtrToVal(demand.Memory) - deductMemoryNum
-
-	demandUpdateReq := rpproto.ResPlanDemandUpdateReq{
-		ID:      demand.ID,
-		OS:      &remainedOS,
-		CpuCore: &remainedCpuCore,
-		Memory:  &remainedMemory,
-
-		// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
-		DiskSize: demand.DiskSize,
+	if _, ok := needUpdateDemands[updateDemand.ID]; !ok {
+		needUpdateDemands[updateDemand.ID] = &updateDemand
+		demandUpdateRes[updateDemand.ID] = &ptypes.DemandResource{
+			DeviceType: updateDemand.DeviceType,
+			CpuCore:    0,
+			DiskSize:   0,
+		}
 	}
-	if kt.User == constant.BackendOperationUserKey {
-		demandUpdateReq.Reviser = ticket.Applicant
-	}
+	demandCpuCore := cvt.PtrToVal(needUpdateDemands[updateDemand.ID].CpuCore)
 
-	// 记录更新日志
-	expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime), constant.DateLayoutCompact,
-		constant.DateLayout)
-	if err != nil {
-		logs.Warnf("failed to parse demand expect time, err: %v, expect_time: %d, rid: %s", err,
-			demand.ExpectTime, kt.Rid)
-		expectDateStr = ""
-	}
-	osChange := deductOSNum.Neg()
-	cpuCoreChange := -deductCpuNum
-	memoryChange := -deductMemoryNum
-	diskSizeChange := int64(0)
-	changelogCreateReq := rpproto.DemandChangelogCreate{
-		DemandID:       demand.ID,
-		TicketID:       ticket.ID,
-		CrpOrderID:     ticket.CrpSn,
-		SuborderID:     "",
-		Type:           enumor.DemandChangelogTypeAdjust,
-		ExpectTime:     expectDateStr,
-		ObsProject:     demand.ObsProject,
-		RegionName:     demand.RegionName,
-		ZoneName:       demand.ZoneName,
-		DeviceType:     demand.DeviceType,
-		OSChange:       &osChange,
-		CpuCoreChange:  &cpuCoreChange,
-		MemoryChange:   &memoryChange,
-		DiskSizeChange: &diskSizeChange,
-		Remark:         ticket.Remark,
-	}
+	changeCpuCoreAbs := math.Abs(float64(changeCpuCore))
+	deductCpuNum := int64(math.Min(changeCpuCoreAbs, float64(demandCpuCore)))
 
-	return demandUpdateReq, changelogCreateReq
+	// 对已有数据的变更只记录变更量，全部变更处理完成后再统一拼装更新请求
+	// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
+	remainedCpuCore := demandCpuCore - deductCpuNum
+	needUpdateDemands[updateDemand.ID].CpuCore = &remainedCpuCore
+	demandUpdateRes[updateDemand.ID].CpuCore -= deductCpuNum
+
+	return deductCpuNum
 }

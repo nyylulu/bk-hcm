@@ -227,66 +227,71 @@ type CvmCbsPlanQueryResp struct {
 type CvmCbsPlanQueryRst struct {
 	Total         int                    `json:"total"`
 	Data          []*CvmCbsPlanQueryItem `json:"data"`
-	AllCvmAmount  float32                `json:"allCvmAmount"`
-	AllCoreAmount float32                `json:"allCoreAmount"`
+	AllCvmAmount  float64                `json:"allCvmAmount"`
+	AllCoreAmount int64                  `json:"allCoreAmount"`
 }
 
 // CvmCbsPlanQueryItem cvm and cbs plan query item
 type CvmCbsPlanQueryItem struct {
-	BaseCoreAmount        int     `json:"baseCoreAmount"`
-	BaseCvmAmount         float32 `json:"baseCvmAmount"`
-	SliceId               string  `json:"sliceId"`
-	YearMonth             string  `json:"yearMonth"`
-	Year                  int     `json:"year"`
-	Month                 int     `json:"month"`
-	Week                  int     `json:"week"`
-	YearMonthWeek         string  `json:"yearMonthWeek"`
-	ExpectStartDate       string  `json:"expectStartDate"`
-	ExpectEndDate         string  `json:"expectEndDate"`
-	UseTime               string  `json:"useTime"`
-	BgId                  int     `json:"bgId"`
-	BgName                string  `json:"bgName"`
-	DeptId                int     `json:"deptId"`
-	DeptName              string  `json:"deptName"`
-	PlanProductId         int     `json:"planProductId"`
-	PlanProductName       string  `json:"planProductName"`
-	ProjectName           string  `json:"projectName"`
-	OrderId               string  `json:"orderId"`
-	CityId                int     `json:"cityId"`
-	CityName              string  `json:"cityName"`
-	ZoneId                int     `json:"zoneId"`
-	ZoneName              string  `json:"zoneName"`
-	InPlan                string  `json:"inPlan"`
-	PlanWeek              int     `json:"planWeek"`
-	ExpeditedPostponed    string  `json:"expeditedPostponed"`
-	CoreType              int     `json:"coreType"`
-	CoreTypeName          string  `json:"coreTypeName"`
-	InstanceFamily        string  `json:"instanceFamily"`
-	InstanceType          string  `json:"instanceType"`
-	InstanceModel         string  `json:"instanceModel"`
-	InstanceIO            int     `json:"instanceIO"`
-	DiskType              int     `json:"diskType"`
-	DiskTypeName          string  `json:"diskTypeName"`
-	CvmAmount             float32 `json:"cvmAmount"`
-	RamAmount             float32 `json:"ramAmount"`
-	CoreAmount            float32 `json:"coreAmount"`
-	AllDiskAmount         float32 `json:"allDiskAmount"`
-	ApplyCvmAmount        float32 `json:"applyCvmAmount"`
-	ApplyRamAmount        float32 `json:"applyRamAmount"`
-	ApplyCoreAmount       float32 `json:"applyCoreAmount"`
-	ApplyDiskAmount       float32 `json:"applyDiskAmount"`
-	PlanCvmAmount         float32 `json:"planCvmAmount"`
-	PlanRamAmount         float32 `json:"planRamAmount"`
-	PlanCoreAmount        float32 `json:"planCoreAmount"`
-	PlanDiskAmount        float32 `json:"planDiskAmount"`
-	ExpiredCvmAmount      float32 `json:"expiredCvmAmount"`
-	ExpiredRamAmount      float32 `json:"expiredRamAmount"`
-	ExpiredCoreAmount     float32 `json:"expiredCoreAmount"`
-	ExpiredDiskAmount     float32 `json:"expiredDiskAmount"`
-	RealCvmAmount         float32 `json:"realCvmAmount"`
-	RealRamAmount         float32 `json:"realRamAmount"`
-	RealCoreAmount        float32 `json:"realCoreAmount"`
-	RealDiskAmount        float32 `json:"realDiskAmount"`
+	BaseCoreAmount     int     `json:"baseCoreAmount"`
+	BaseCvmAmount      float64 `json:"baseCvmAmount"`
+	SliceId            string  `json:"sliceId"`
+	YearMonth          string  `json:"yearMonth"`
+	Year               int     `json:"year"`
+	Month              int     `json:"month"`
+	Week               int     `json:"week"`
+	YearMonthWeek      string  `json:"yearMonthWeek"`
+	ExpectStartDate    string  `json:"expectStartDate"`
+	ExpectEndDate      string  `json:"expectEndDate"`
+	UseTime            string  `json:"useTime"`
+	BgId               int     `json:"bgId"`
+	BgName             string  `json:"bgName"`
+	DeptId             int     `json:"deptId"`
+	DeptName           string  `json:"deptName"`
+	PlanProductId      int     `json:"planProductId"`
+	PlanProductName    string  `json:"planProductName"`
+	ProjectName        string  `json:"projectName"`
+	OrderId            string  `json:"orderId"`
+	CityId             int     `json:"cityId"`
+	CityName           string  `json:"cityName"`
+	ZoneId             int     `json:"zoneId"`
+	ZoneName           string  `json:"zoneName"`
+	InPlan             string  `json:"inPlan"`
+	PlanWeek           int     `json:"planWeek"`
+	ExpeditedPostponed string  `json:"expeditedPostponed"`
+	CoreType           int     `json:"coreType"`
+	CoreTypeName       string  `json:"coreTypeName"`
+	InstanceFamily     string  `json:"instanceFamily"`
+	InstanceType       string  `json:"instanceType"`
+	InstanceModel      string  `json:"instanceModel"`
+	InstanceIO         int     `json:"instanceIO"`
+	DiskType           int     `json:"diskType"`
+	DiskTypeName       string  `json:"diskTypeName"`
+	// CvmAmount 未执行需求数
+	CvmAmount     float64 `json:"cvmAmount"`
+	RamAmount     float64 `json:"ramAmount"` // CRP 格式定义有问题，实际一定是int，可以按照int64处理
+	CoreAmount    int64   `json:"coreAmount"`
+	AllDiskAmount int64   `json:"allDiskAmount"`
+	// ApplyCvmAmount 已申领数
+	ApplyCvmAmount  float64 `json:"applyCvmAmount"`
+	ApplyRamAmount  float64 `json:"applyRamAmount"`
+	ApplyCoreAmount int64   `json:"applyCoreAmount"`
+	ApplyDiskAmount int64   `json:"applyDiskAmount"`
+	// PlanCvmAmount 总需求数
+	PlanCvmAmount  float64 `json:"planCvmAmount"`
+	PlanRamAmount  float64 `json:"planRamAmount"`
+	PlanCoreAmount int64   `json:"planCoreAmount"`
+	PlanDiskAmount int64   `json:"planDiskAmount"`
+	// ExpiredCvmAmount 已过期数
+	ExpiredCvmAmount  float64 `json:"expiredCvmAmount"`
+	ExpiredRamAmount  float64 `json:"expiredRamAmount"`
+	ExpiredCoreAmount int64   `json:"expiredCoreAmount"`
+	ExpiredDiskAmount int64   `json:"expiredDiskAmount"`
+	// RealCvmAmount 未过期的未执行数
+	RealCvmAmount         float64 `json:"realCvmAmount"`
+	RealRamAmount         float64 `json:"realRamAmount"`
+	RealCoreAmount        int64   `json:"realCoreAmount"`
+	RealDiskAmount        int64   `json:"realDiskAmount"`
 	MjOrderId             string  `json:"mjOrderId"`
 	RequirementStatus     int     `json:"requirementStatus"`
 	RequirementStatusName string  `json:"requirementStatusName"`
@@ -299,6 +304,7 @@ type CvmCbsPlanQueryItem struct {
 	ResourcePoolName      string  `json:"resourcePoolName"`
 	ResourceMode          string  `json:"resourceMode"`
 	StatisticalClass      string  `json:"statisticalClass"`
+	VagueStatus           int     `json:"vagueStatus"`
 	GenerationType        string  `json:"generation_type"`
 }
 
@@ -371,6 +377,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		ResourcePoolName:      i.ResourcePoolName,
 		ResourceMode:          i.ResourceMode,
 		StatisticalClass:      i.StatisticalClass,
+		VagueStatus:           i.VagueStatus,
 		GenerationType:        i.GenerationType,
 	}
 }

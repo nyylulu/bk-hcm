@@ -100,6 +100,16 @@ func Map[IType any, OType any](source []IType, mapFunc func(IType) OType) []OTyp
 	return target
 }
 
+// FuncToMap 对slice里面的每个元素执行mapFunc函数，返回map
+func FuncToMap[IType any, OType any, Key comparable](source []IType, mapFunc func(IType) (Key, OType)) map[Key]OType {
+	target := make(map[Key]OType)
+	for _, v := range source {
+		key, val := mapFunc(v)
+		target[key] = val
+	}
+	return target
+}
+
 // Filter 通过给定的filter函数过滤出符合条件的子slice
 func Filter[V any](s []V, filter func(V) bool) []V {
 	subSlice := make([]V, 0, len(s))

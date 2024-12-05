@@ -269,32 +269,32 @@ func (r ResPlanDemandTable) bizInsertValidate() error {
 }
 
 func (r ResPlanDemandTable) resourceInsertValidate() error {
-	if r.OS.Sign() <= 0 {
-		return errors.New("os should be > 0")
+	if r.OS.Sign() < 0 {
+		return errors.New("os should be >= 0")
 	}
 
 	if r.CpuCore == nil {
 		return errors.New("cpu core can not be nil")
 	}
 
-	if cvt.PtrToVal(r.CpuCore) <= 0 {
-		return errors.New("cpu core should be > 0")
+	if cvt.PtrToVal(r.CpuCore) < 0 {
+		return errors.New("cpu core should be >= 0")
 	}
 
 	if r.Memory == nil {
 		return errors.New("memory can not be nil")
 	}
 
-	if cvt.PtrToVal(r.Memory) <= 0 {
-		return errors.New("memory should be > 0")
+	if cvt.PtrToVal(r.Memory) < 0 {
+		return errors.New("memory should be >= 0")
 	}
 
 	if r.DiskSize == nil {
 		return errors.New("disk size can not be nil")
 	}
 
-	if cvt.PtrToVal(r.DiskSize) <= 0 {
-		return errors.New("disk size should be > 0")
+	if cvt.PtrToVal(r.DiskSize) < 0 {
+		return errors.New("disk size should be >= 0")
 	}
 
 	return nil

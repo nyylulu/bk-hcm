@@ -41,6 +41,9 @@ type CVMClientInterface interface {
 	GetApproveLog(ctx context.Context, header http.Header, req *GetApproveLogReq) (*GetApproveLogResp, error)
 	// QueryCvmCbsPlans query cvm and cbs plan info
 	QueryCvmCbsPlans(ctx context.Context, header http.Header, req *CvmCbsPlanQueryReq) (*CvmCbsPlanQueryResp, error)
+	// QueryAdjustAbleDemand query cvm and cbs plan info which can be adjusted
+	QueryAdjustAbleDemand(ctx context.Context, header http.Header, req *CvmCbsAdjustAblePlanQueryReq) (
+		*CvmCbsPlanQueryResp, error)
 	// AdjustCvmCbsPlans adjust cvm and cbs plan info
 	AdjustCvmCbsPlans(ctx context.Context, header http.Header, req *CvmCbsPlanAdjustReq) (*CvmCbsPlanAdjustResp, error)
 	// AddCvmCbsPlan add cvm and cbs plan order
@@ -232,6 +235,24 @@ func (c *cvmApi) GetApproveLog(ctx context.Context, header http.Header, req *Get
 
 // QueryCvmCbsPlans query cvm and cbs plans
 func (c *cvmApi) QueryCvmCbsPlans(ctx context.Context, header http.Header, req *CvmCbsPlanQueryReq) (
+	*CvmCbsPlanQueryResp, error) {
+
+	subPath := "/yunti-demand/external"
+	resp := new(CvmCbsPlanQueryResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// QueryAdjustAbleDemand query adjust able demand
+func (c *cvmApi) QueryAdjustAbleDemand(ctx context.Context, header http.Header, req *CvmCbsAdjustAblePlanQueryReq) (
 	*CvmCbsPlanQueryResp, error) {
 
 	subPath := "/yunti-demand/external"

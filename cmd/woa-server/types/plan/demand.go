@@ -356,6 +356,51 @@ type ListDemandChangeLogItem struct {
 	Remark            string            `json:"remark"`
 }
 
+// AdjustAbleDemandsReq is the request query demands that can be adjusted.
+type AdjustAbleDemandsReq struct {
+	RegionName      string            `json:"region_name" validate:"omitempty"`
+	DeviceFamily    string            `json:"device_family" validate:"omitempty"`
+	DeviceType      string            `json:"device_type" validate:"omitempty"`
+	ExpectTime      string            `json:"expect_time" validate:"omitempty"`
+	PlanProductName string            `json:"plan_product_name" validate:"omitempty"`
+	ObsProject      enumor.ObsProject `json:"obs_project" validate:"omitempty"`
+	DiskType        enumor.DiskType   `json:"disk_type" validate:"omitempty"`
+	ResMode         enumor.ResMode    `json:"res_mode" validate:"omitempty"`
+}
+
+// Validate whether AdjustAbleDemandsReq is valid.
+func (r AdjustAbleDemandsReq) Validate() error {
+	if err := validator.Validate.Struct(r); err != nil {
+		return err
+	}
+
+	if len(r.ExpectTime) > 0 {
+		if _, err := time.Parse(constant.DateLayout, r.ExpectTime); err != nil {
+			return err
+		}
+	}
+
+	if len(r.ObsProject) > 0 {
+		if err := r.ObsProject.ValidateResPlan(); err != nil {
+			return err
+		}
+	}
+
+	if len(r.DiskType) > 0 {
+		if err := r.DiskType.Validate(); err != nil {
+			return err
+		}
+	}
+
+	if len(r.ResMode) > 0 {
+		if err := r.ResMode.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 // AdjustRPDemandReq is adjust resource plan demand request.
 type AdjustRPDemandReq struct {
 	Adjusts []AdjustRPDemandReqElem `json:"adjusts" validate:"required,max=100"`
@@ -437,7 +482,6 @@ func (e *AdjustRPDemandReqElem) Validate() error {
 
 // CancelRPDemandReq is cancel resource plan demand request.
 type CancelRPDemandReq struct {
-	CrpDemandIDs  []int64                 `json:"crp_demand_ids" validate:"omitempty"`
 	CancelDemands []CancelRPDemandReqElem `json:"cancel_demands" validate:"required,max=100"`
 }
 
@@ -537,6 +581,15 @@ func (c *CalcAndPushPenaltyRatioReq) Validate() error {
 	return nil
 }
 
+// DemandResource is demand resource.
+// Include device type, cpu core and disk size now.
+// The OS and memory can be calculated by cpu core and device type.
+type DemandResource struct {
+	DeviceType string
+	CpuCore    int64
+	DiskSize   int64
+}
+
 // CrpOrderChangeInfo is response of crp order change info.
 type CrpOrderChangeInfo struct {
 	OrderID       string               `json:"order_id"`
@@ -576,6 +629,13 @@ func (c *CrpOrderChangeInfo) SetRegionAreaAndZoneID(zoneNameMap map[string]strin
 	c.RegionID = regionArea.RegionID
 	c.AreaID = regionArea.AreaID
 	c.AreaName = regionArea.AreaName
+
+	// CRP的底层逻辑里空字符串会存储为"-"
+	// 实际操作中，数据为空时CRP理论上会返回一个默认的可用区，这里仅为兜底
+	if c.ZoneName == "-" {
+		c.ZoneID = ""
+		return nil
+	}
 
 	zoneID, exists := zoneNameMap[c.ZoneName]
 	if !exists {

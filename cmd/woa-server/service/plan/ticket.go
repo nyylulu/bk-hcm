@@ -27,10 +27,12 @@ import (
 	mtypes "hcm/pkg/dal/dao/types/meta"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
+	tabletypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // ListResPlanTicket list resource plan ticket.
@@ -193,9 +195,9 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 				DeviceClass:  deviceTypeMap[deviceType].DeviceClass,
 				DeviceFamily: deviceTypeMap[deviceType].DeviceFamily,
 				CoreType:     deviceTypeMap[deviceType].CoreType,
-				Os:           *demand.Cvm.Os,
-				CpuCore:      *demand.Cvm.CpuCore,
-				Memory:       *demand.Cvm.Memory,
+				Os:           tabletypes.Decimal{Decimal: cvt.PtrToVal(demand.Cvm.Os)},
+				CpuCore:      cvt.PtrToVal(demand.Cvm.CpuCore),
+				Memory:       cvt.PtrToVal(demand.Cvm.Memory),
 			}
 		}
 
@@ -203,8 +205,8 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 			demands[idx].Updated.Cbs = rpt.Cbs{
 				DiskType:     demand.Cbs.DiskType,
 				DiskTypeName: demand.Cbs.DiskType.Name(),
-				DiskIo:       *demand.Cbs.DiskIo,
-				DiskSize:     *demand.Cbs.DiskSize,
+				DiskIo:       cvt.PtrToVal(demand.Cbs.DiskIo),
+				DiskSize:     cvt.PtrToVal(demand.Cbs.DiskSize),
 			}
 		}
 	}
