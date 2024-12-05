@@ -5,7 +5,7 @@ import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelect
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import DiskTypeSelect from '@/views/ziyanScr/hostApplication/components/DiskTypeSelect';
 import ImageDialog from './image-dialog';
-import CvmCapacity from './cvm-capacity';
+import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import { Alert, Checkbox, Form, Input, Select, Radio } from 'bkui-vue';
 import { HelpFill } from 'bkui-vue/lib/icon';
 import CvmVpcSelector from '@/views/ziyanScr/components/cvm-vpc-selector/index.vue';
@@ -24,7 +24,6 @@ export default defineComponent({
     ZoneSelector,
     DiskTypeSelect,
     ImageDialog,
-    CvmCapacity,
   },
   props: {
     modelValue: {
@@ -203,7 +202,7 @@ export default defineComponent({
       }
       getDeviceTypesDetails(params).then((res) => {
         const list = ['高IO型', '大数据型'];
-        if (list.includes(res.data.info[0].device_group)) {
+        if (list.includes(res.data.info[0]?.device_group)) {
           showDiskCheck.value = true;
         } else {
           modelForm.value.enableDiskCheck = false;
@@ -351,16 +350,20 @@ export default defineComponent({
 
           <div class='require-number'>
             <FormItem label='需求数量' required property='replicas'>
-              <Input v-model={modelForm.value.replicas} type='number' min={1} max={1000} />
-              <div
-                v-bk-tooltips={{
-                  content: <div>如果需求数量超过最大可申请量，请提单后联系管理员 forestchen,dommyzhang</div>,
-                }}>
-                <HelpFill />
+              <div class='flex-row align-items-center'>
+                <Input v-model={modelForm.value.replicas} type='number' min={1} max={1000} />
+                <div
+                  class='ml8'
+                  v-bk-tooltips={{
+                    content: <div>如果需求数量超过最大可申请量，请提单后联系管理员 forestchen,dommyzhang</div>,
+                  }}>
+                  <HelpFill />
+                </div>
               </div>
-              <cvm-capacity params={cvmCapacityParams.value} />
+              <CvmMaxCapacity params={cvmCapacityParams.value} />
             </FormItem>
           </div>
+
           {/* 滚服项目-继承套餐 */}
           {isRollingServer.value && (
             <InheritPackageFormItem

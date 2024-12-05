@@ -2,8 +2,7 @@ import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, u
 import { useRouter, useRoute } from 'vue-router';
 import './index.scss';
 
-import { Input, Button, Sideslider, Message, Popover, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
-import { Spinner } from 'bkui-vue/lib/icon';
+import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import BusinessSelector from '@/components/business-selector/index.vue';
@@ -18,6 +17,7 @@ import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/
 import applicationSideslider from '../application-sideslider';
 import WName from '@/components/w-name';
 import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
+import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 
 import { useAccountStore, useUserStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
@@ -25,7 +25,6 @@ import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useFormModel from '@/hooks/useFormModel';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
-import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import apiService from '@/api/scrApi';
 import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
 import { VerifyStatus, VerifyStatusMap } from './constants';
@@ -416,9 +415,7 @@ export default defineComponent({
         handleDeviceTypeChange();
       },
     );
-    watch([() => QCLOUDCVMForm.value.spec.device_type, () => resourceForm.value.charge_type], () => {
-      onQcloudDeviceTypeChange();
-    });
+
     // 获取 QCLOUDCVM机型列表
     const cvmDevicetypeParams = computed(() => {
       const { region, zone } = resourceForm.value;
@@ -645,7 +642,6 @@ export default defineComponent({
       assignment(row);
       title.value = '增加资源需求';
       addResourceRequirements.value = true;
-      onQcloudDeviceTypeChange();
     };
     const ARtriggerShow = (isShow: boolean) => {
       emptyForm();
@@ -886,30 +882,15 @@ export default defineComponent({
     // vpc变更时，置空subnet
     const handleVpcChange = () => {
       QCLOUDCVMForm.value.spec.subnet = '';
-      onQcloudDeviceTypeChange();
     };
 
-    const cvmCapacity = ref([]);
-    const loading = ref(false);
-    const onQcloudDeviceTypeChange = async () => {
+    const cvmMaxCapacityQueryParams = computed(() => {
+      const { requireType: require_type } = order.value.model;
       const { device_type, vpc, subnet } = QCLOUDCVMForm.value.spec;
       const { region, zone, charge_type } = resourceForm.value;
-      const params = {
-        require_type: order.value.model.requireType,
-        region,
-        zone,
-        device_type,
-        vpc,
-        subnet,
-        charge_type,
-      };
-      if (params.device_type) {
-        loading.value = true;
-        const { info } = await apiService.getCapacity(params);
-        cvmCapacity.value = info || [];
-        loading.value = false;
-      }
-    };
+      return { require_type, region, zone, device_type, vpc, subnet, charge_type };
+    });
+
     watch(
       isSpecialRequirement,
       (val) => {
@@ -1523,7 +1504,6 @@ export default defineComponent({
                         disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
                         disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
                         onChangeVpc={handleVpcChange}
-                        onChangeSubnet={onQcloudDeviceTypeChange}
                       />
                     </Form>
                   )}
@@ -1640,53 +1620,9 @@ export default defineComponent({
                                 class='commonCard-form-select'
                                 v-model={QCLOUDCVMForm.value.spec.replicas}
                                 min={1}></Input>
-                              <div class={'request-quantity-container'}>
-                                {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                                  <>
-                                    {cvmCapacity.value.length ? (
-                                      <>
-                                        {cvmCapacity.value.map((item) => (
-                                          <div class={'tooltips'}>
-                                            <span class={'request-quantity-text'}>
-                                              {getZoneCn(item?.zone)}最大可申请量
-                                            </span>
-                                            <span class={'max-request-hint'}>{item?.max_num || 0}</span>
-                                            {loading.value ? <Spinner class={'mr10'} /> : <></>}
-                                            <Popover trigger='hover' theme='light' disableTeleport={true} arrow={false}>
-                                              {{
-                                                default: () => (
-                                                  <span>
-                                                    {item?.max_info.length && (
-                                                      <span class={'calculation-details'}>( 查看明细 )</span>
-                                                    )}
-                                                  </span>
-                                                ),
-                                                content: () => (
-                                                  <div class={'content'}>
-                                                    {item?.max_info.length &&
-                                                      item?.max_info.map((val: { key: any; value: any }) => (
-                                                        <div>
-                                                          <span class={'application'}> {val.key}</span>
-                                                          <span class={'max-request-hint'}> {val.value}</span>
-                                                        </div>
-                                                      ))}
-                                                  </div>
-                                                ),
-                                              }}
-                                            </Popover>
-                                          </div>
-                                        ))}
-                                      </>
-                                    ) : (
-                                      <div class={'tooltips'}>
-                                        <span>最大可申请量 </span>
-                                        <span class={'max-request-hint'}>0</span>
-                                        {loading.value ? <Spinner class={'mr10'} /> : <></>}
-                                      </div>
-                                    )}
-                                  </>
-                                )}
-                              </div>
+                              {resourceForm.value.resourceType === 'QCLOUDCVM' && (
+                                <CvmMaxCapacity params={cvmMaxCapacityQueryParams.value} />
+                              )}
                             </bk-form-item>
                             <bk-form-item label='备注'>
                               <Input

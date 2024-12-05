@@ -67,12 +67,6 @@
 .require-number {
   display: flex;
   .bk-form-content{
-      display: flex;
-      align-items: center;
-      position: relative;
-      & > div+div {
-          margin-left: 10px;
-      }
       .bk-input {
           width: 165px;
       }

@@ -56,11 +56,11 @@
     font-size: 12px;
     margin-bottom: 4px;
     .label {
-      color: #979BA5;
+      color: #979ba5;
       margin-right: 8px;
     }
     .value {
-      color: #FF9C01;
+      color: #ff9c01;
     }
   }
   .status-PASS {
@@ -148,36 +148,6 @@
     }
     .input-demand {
       width: 290px;
-    }
-  }
-  .request-quantity-container {
-    display: inline-block;
-    .tooltips {
-      height: 20px;
-      display: block;
-      color: #979ba5;
-      font-size: 12px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 0 5px;
-      .calculation-details {
-        text-decoration: underline;
-        color: #909399;
-        font-size: 12px;
-      }
-      .max-request-hint {
-        padding: 0px 2px;
-        color: #3a84ff;
-        font-size: 12px;
-      }
-      .request-quantity-text {
-        flex: 1;
-        text-align: right;
-      }
-      .content {
-        line-height: 26px;
-      }
     }
   }
 

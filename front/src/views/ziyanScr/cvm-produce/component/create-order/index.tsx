@@ -133,11 +133,13 @@ export default defineComponent({
     });
     return () => (
       <Dialog
+        class='cvm-produce-create-order-dialog'
         v-bind={attrs}
         width='1300'
         v-model:isShow={isDisplay.value}
         title={props.title}
-        onClosed={handleOrderFormCancel}>
+        onClosed={handleOrderFormCancel}
+        renderDirective='if'>
         {{
           default: () => (
             <div>

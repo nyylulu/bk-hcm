@@ -6,3 +6,9 @@
         margin-left: 10px;
     }
 }
+.cvm-produce-create-order-dialog {
+  .bk-modal-content {
+    max-height: 80vh;
+    overflow: auto;
+  }
+}
