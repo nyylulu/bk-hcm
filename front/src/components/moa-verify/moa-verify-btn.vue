@@ -129,7 +129,7 @@ defineExpose<IExposes>({ verifyResult });
     <teleport v-if="loading" :to="boundary" :disabled="disableTeleport || !boundary" defer>
       <bk-alert class="loading-message" theme="warning" closable>
         <span>
-          {{ t('提示内容：请打开手机MOA，对操作内容确认。超时3分钟未确认，需重新校验。如有疑问，点击使用指引（') }}
+          {{ t('请打开手机MOA，对操作内容确认。超时3分钟未确认，需重新校验。如有疑问，点击使用指引（') }}
         </span>
         <bk-link theme="primary" target="_blank" href="https://iwiki.woa.com/p/4013134908">
           https://iwiki.woa.com/p/4013134908
