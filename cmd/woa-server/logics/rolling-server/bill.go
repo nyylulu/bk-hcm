@@ -53,9 +53,7 @@ func (l *logics) syncBillsPeriodically() {
 	// 计算下一个凌晨1点的时间
 	nextRun := time.Date(now.Year(), now.Month(), now.Day(), 1, 0, 0, 0, now.Location())
 	if now.After(nextRun) {
-		// 如果现在已经过了1点，计算明天的1点, 并判断今天的滚服账单是否已经同步完成
-		nextRun = nextRun.Add(24 * time.Hour)
-
+		// 如果现在已经过了1点，再计算一次当天的罚金，防止刚好在1点的时候被重启了;最后计算明天的1点的时间
 		kt := core.NewBackendKit()
 		req := &rollingserver.RollingBillSyncReq{
 			BkBizID: rollingserver.SyncAllBiz,
@@ -63,15 +61,11 @@ func (l *logics) syncBillsPeriodically() {
 			Month:   int(now.Month()),
 			Day:     now.Day(),
 		}
-		exist, err := l.isBillExist(kt, req)
-		if err != nil {
-			logs.Errorf("%s: unable to confirm whether rolling bill exists, err: %v, req: %+v, rid: %s",
-				constant.RollingServerSyncFailed, err, *req, kt.Rid)
+		if err := l.SyncBills(kt, req); err != nil {
+			logs.Errorf("sync all biz rolling bill failed, err: %v, req: %v, rid: %s", err, *req, kt.Rid)
 		}
-		if !exist {
-			logs.Errorf("%s: can not find all biz rolling bill, year: %d, month: %d, day: %d, rid: %s",
-				constant.RollingServerSyncFailed, now.Year(), int(now.Month()), now.Day(), kt.Rid)
-		}
+
+		nextRun = nextRun.Add(24 * time.Hour)
 	}
 
 	// 等待直到下一个凌晨1点
@@ -452,6 +446,13 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 			deliveredCore += detail.DeliveredCore
 			returnedCore += detail.ReturnedCore
 		}
+	}
+
+	// 如果业务没有罚金，则不创建账单
+	if amount.Equal(decimal.Zero) && amountInCurrentDate.Equal(decimal.Zero) {
+		logs.Infof("no fine detail, bizID: %d, year: %d, month: %d, day: %d, rid: %s", req.BkBizID, req.Year, req.Month,
+			req.Day, kt.Rid)
+		return nil
 	}
 
 	bizReq := &cmdb.SearchBizBelongingParams{
