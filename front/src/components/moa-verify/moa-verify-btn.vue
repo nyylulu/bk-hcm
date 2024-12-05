@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { reactive, ref, useAttrs } from 'vue';
+import { useI18n } from 'vue-i18n';
 import { merge } from 'lodash';
 
 import Cookies from 'js-cookie';
@@ -24,6 +25,7 @@ const props = withDefaults(defineProps<IProps>(), {
 const attrs = useAttrs();
 
 const userStore = useUserStore();
+const { t } = useI18n();
 const { getBusinessApiPath } = useWhereAmI();
 
 const languageMap: { [key in Locale]: string } = {
@@ -124,6 +126,17 @@ defineExpose<IExposes>({ verifyResult });
     >
       {{ props.verifyText }}
     </bk-button>
+    <teleport v-if="loading" :to="boundary" :disabled="disableTeleport || !boundary" defer>
+      <bk-alert class="loading-message" theme="warning" closable>
+        <span>
+          {{ t('提示内容：请打开手机MOA，对操作内容确认。超时3分钟未确认，需重新校验。如有疑问，点击使用指引（') }}
+        </span>
+        <bk-link theme="primary" target="_blank" href="https://iwiki.woa.com/p/4013134908">
+          https://iwiki.woa.com/p/4013134908
+        </bk-link>
+        <span>{{ t('）') }}</span>
+      </bk-alert>
+    </teleport>
     <moa-verify-result v-if="showVerifyResult" :verify-result="verifyResult" />
   </div>
 </template>
@@ -135,6 +148,12 @@ defineExpose<IExposes>({ verifyResult });
 
   :deep(.error-message) {
     max-width: 1000px;
+  }
+}
+
+.loading-message {
+  :deep(.bk-alert-wraper) {
+    align-items: center;
   }
 }
 </style>

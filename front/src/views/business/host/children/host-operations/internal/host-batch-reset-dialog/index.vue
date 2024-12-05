@@ -122,6 +122,8 @@ const handlePrev = () => {
 const moaVerifyRef = useTemplateRef('moa-verify');
 const moaVerifyResult = computed(() => moaVerifyRef.value?.verifyResult);
 
+const footerRef = useTemplateRef<HTMLElement>('footer');
+
 defineExpose<Exposes>({ show });
 </script>
 
@@ -147,7 +149,7 @@ defineExpose<Exposes>({ show });
     <third-step ref="third-step-ref" v-show="state.curStep === 3" :list="thirdStepInitialList" />
 
     <template #footer>
-      <div class="i-footer-wrap">
+      <div class="i-footer-wrap" ref="footer">
         <moa-verify-btn
           v-if="state.curStep === 3"
           class="button moa-verify-btn"
@@ -162,6 +164,7 @@ defineExpose<Exposes>({ show });
               desc: `Reinstall OS on ${submitHosts.length} host(s). Do you agree to this operation?`,
             },
           }"
+          :boundary="footerRef"
         />
         <bk-button v-if="state.curStep !== 1" class="button" @click="handlePrev">{{ t('上一步') }}</bk-button>
         <bk-button
@@ -188,6 +191,7 @@ defineExpose<Exposes>({ show });
   }
 
   .i-footer-wrap {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: flex-end;
@@ -196,6 +200,7 @@ defineExpose<Exposes>({ show });
     .button {
       min-width: 88px;
     }
+
     .moa-verify-btn {
       margin-right: auto;
 
@@ -203,6 +208,17 @@ defineExpose<Exposes>({ show });
         max-width: 800px;
       }
     }
+
+    :deep(.loading-message) {
+      position: absolute;
+      left: -24px;
+      top: -48px;
+      width: calc(100% + 48px);
+    }
+  }
+
+  :deep(.bk-dialog-content) {
+    margin-bottom: 40px;
   }
 }
 </style>

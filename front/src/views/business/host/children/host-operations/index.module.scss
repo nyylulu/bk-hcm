@@ -1,4 +1,5 @@
 .host-operations-main {
+  margin-bottom: 40px;
   min-height: 40vh;
 
   :global(.felx-row) {
@@ -78,5 +79,12 @@
 
   .button {
     min-width: 88px;
+  }
+
+  :global(.loading-message) {
+    position: absolute;
+    left: -24px;
+    top: -48px;
+    width: calc(100% + 48px);
   }
 }

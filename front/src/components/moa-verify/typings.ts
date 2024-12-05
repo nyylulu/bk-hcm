@@ -23,6 +23,8 @@ export interface IProps {
   verifyText?: string;
   theme?: 'primary' | 'success' | 'warning' | 'danger';
   showVerifyResult?: boolean;
+  boundary?: string | HTMLElement;
+  disableTeleport?: boolean;
 }
 
 export interface IExposes {

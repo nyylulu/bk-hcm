@@ -219,6 +219,8 @@ export default defineComponent({
       };
     });
 
+    const footerRef = useTemplateRef<HTMLElement>('footer');
+
     expose({
       handleSingleZiyanRecycle,
       hostBatchResetDialogRef,
@@ -338,7 +340,7 @@ export default defineComponent({
               </div>
             ),
             footer: (
-              <div class={cssModule.footer}>
+              <div class={cssModule.footer} ref='footer'>
                 {(function () {
                   // 自研云回收
                   if (isZiyanRecycle.value) {
@@ -378,6 +380,7 @@ export default defineComponent({
                             class={cssModule['moa-verify-btn']}
                             verifyText='MOA校验'
                             promptPayload={moaVerifyPromptPayload.value}
+                            boundary={footerRef.value}
                           />
                         )}
                         <Button
