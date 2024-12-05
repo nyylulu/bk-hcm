@@ -581,11 +581,11 @@ func (d *device) ListCvmInstanceInfoByDeviceTypes(kt *kit.Kit, deviceTypes []str
 	return deviceTypeMap, nil
 }
 
-// CoreTypeMap 设备核心类型，key为crp侧的值，1.2.3 分别标识，大核心，中核心，小核心
+// CoreTypeMap 设备核心类型，key为crp侧的值，1.2.3 分别标识，小核心，中核心，大核心
 var CoreTypeMap = map[int]enumor.CoreType{
-	1: enumor.CoreTypeBig,
+	1: enumor.CoreTypeSmall,
 	2: enumor.CoreTypeMedium,
-	3: enumor.CoreTypeSmall,
+	3: enumor.CoreTypeBig,
 }
 
 // listCvmInstanceTypeFromCrp 从Crp平台获取实例信息
