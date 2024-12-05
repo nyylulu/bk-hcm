@@ -38,7 +38,7 @@ func InitService(c *capability.Capability) {
 		planController: c.PlanController,
 		esbClient:      c.EsbClient,
 		authorizer:     c.Authorizer,
-		logics:         biz.New(c.EsbClient, c.Authorizer),
+		bizLogics:      c.BizLogic,
 	}
 	h := rest.NewHandler()
 
@@ -52,7 +52,7 @@ type service struct {
 	esbClient      esb.Client
 	planController *plan.Controller
 	authorizer     auth.Authorizer
-	logics         biz.Logics
+	bizLogics      biz.Logics
 }
 
 func (s *service) initPlanService(h *rest.Handler) {
@@ -101,4 +101,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// repair history data
 	h.Add("RepairResPlanDemand", http.MethodPost, "/plans/resources/demands/repair", s.RepairResPlanDemand)
+	// penalty
+	h.Add("CalcPenaltyBase", http.MethodPost, "/plans/penalty/base/calc", s.CalcPenaltyBase)
+	h.Add("CalcAndPushPenaltyRatio", http.MethodPost, "/plans/penalty/ratio/push", s.CalcAndPushPenaltyRatio)
 }

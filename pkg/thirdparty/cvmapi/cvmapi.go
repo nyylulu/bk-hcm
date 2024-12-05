@@ -52,6 +52,9 @@ type CVMClientInterface interface {
 	// QueryDemandChangeLog query demand change log
 	QueryDemandChangeLog(ctx context.Context, header http.Header, req *DemandChangeLogQueryReq) (
 		*DemandChangeLogQueryResp, error)
+	// ReportPenaltyRatio report penalty ratio
+	ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
+		*CvmCbsPlanPenaltyRatioReportResp, error)
 	// CreateCvmReturnOrder creates cvm return order
 	CreateCvmReturnOrder(ctx context.Context, header http.Header, req *ReturnReq) (*OrderCreateResp, error)
 	// QueryCvmReturnOrders query cvm return order status
@@ -323,6 +326,24 @@ func (c *cvmApi) QueryDemandChangeLog(ctx context.Context, header http.Header, r
 
 	subPath := "/yunti-demand/external"
 	resp := new(DemandChangeLogQueryResp)
+	err := c.client.Post().
+		WithContext(ctx).
+		Body(req).
+		SubResourcef(subPath).
+		WithParam(CvmApiKey, CvmApiKeyVal).
+		WithHeaders(header).
+		Do().
+		Into(resp)
+
+	return resp, err
+}
+
+// ReportPenaltyRatio report penalty ratio
+func (c *cvmApi) ReportPenaltyRatio(ctx context.Context, header http.Header, req *CvmCbsPlanPenaltyRatioReportReq) (
+	*CvmCbsPlanPenaltyRatioReportResp, error) {
+
+	subPath := "/tocservice/obs/"
+	resp := new(CvmCbsPlanPenaltyRatioReportResp)
 	err := c.client.Post().
 		WithContext(ctx).
 		Body(req).

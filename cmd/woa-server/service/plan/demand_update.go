@@ -65,7 +65,8 @@ func (s *service) AdjustBizResPlanDemand(cts *rest.Contexts) (rst interface{}, e
 		return nil, err
 	}
 
-	crpDemandIDs := slice.Map(req.Adjusts, func(adjust ptypes.AdjustRPDemandReqElem) int64 { return adjust.CrpDemandID })
+	crpDemandIDs := slice.Map(req.Adjusts,
+		func(adjust ptypes.AdjustRPDemandReqElem) int64 { return adjust.CrpDemandID })
 
 	// check whether all crp demand belong to the biz.
 	allBelong, err := s.areAllCrpDemandBelongToBiz(cts.Kit, crpDemandIDs, bkBizID)
@@ -210,7 +211,7 @@ func (s *service) constructAdjustReq(kt *kit.Kit, bkBizID int64, demandClass enu
 	}
 
 	// get biz org relation.
-	bizOrgRel, err := s.logics.GetBizOrgRel(kt, bkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(kt, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -540,7 +541,7 @@ func (s *service) constructCancelReq(kt *kit.Kit, bkBizID int64, demandClass enu
 	}
 
 	// get biz org relation.
-	bizOrgRel, err := s.logics.GetBizOrgRel(kt, bkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(kt, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

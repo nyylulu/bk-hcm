@@ -114,6 +114,8 @@ const (
 	CvmCbsPlanAddMethod = "addYuntiOrder"
 	// CvmCbsPlanOrderQueryMethod 需求单据查询接口
 	CvmCbsPlanOrderQueryMethod = "queryYuntiOrder"
+	// CvmCbsPlanPenaltyRatioReportMethod 需求预测罚金分摊比例上报接口
+	CvmCbsPlanPenaltyRatioReportMethod = "reportForecastPartition"
 	// CvmGetProcessMethod CVM流程查询方法
 	CvmGetProcessMethod = "getCVMProcess"
 	// GetErpProcessMethod ERP流程查询方法

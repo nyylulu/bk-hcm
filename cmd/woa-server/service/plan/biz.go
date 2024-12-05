@@ -31,7 +31,7 @@ func (s *service) GetBizOrgRel(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("bk biz id should be > 0"))
 	}
 
-	rst, err := s.logics.GetBizOrgRel(cts.Kit, bkBizID)
+	rst, err := s.bizLogics.GetBizOrgRel(cts.Kit, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)

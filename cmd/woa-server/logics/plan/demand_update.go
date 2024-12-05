@@ -93,7 +93,7 @@ func (c *Controller) applyResPlanDemandChangeAggregate(kt *kit.Kit, ticket *Tick
 // applyResPlanDemandChange apply res plan demand change.
 func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) error {
 	// call crp api to get plan order change info.
-	changeDemands, err := c.QueryCrpOderChangeInfo(kt, ticket.CrpSn)
+	changeDemands, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
 	if err != nil {
 		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
 		return err
@@ -170,8 +170,8 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 	return nil
 }
 
-// QueryCrpOderChangeInfo query crp order change info.
-func (c *Controller) QueryCrpOderChangeInfo(kt *kit.Kit, orderID string) ([]*ptypes.CrpOrderChangeInfo,
+// QueryCrpOrderChangeInfo query crp order change info.
+func (c *Controller) QueryCrpOrderChangeInfo(kt *kit.Kit, orderID string) ([]*ptypes.CrpOrderChangeInfo,
 	error) {
 
 	// init request parameter.

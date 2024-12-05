@@ -180,9 +180,30 @@ type DemandChangeLogQueryReq struct {
 	Params  *DemandChangeLogQueryParam `json:"params"`
 }
 
+// DemandChangeLogQueryParam cvm and cbs demand change log query parameters
 type DemandChangeLogQueryParam struct {
 	Page         *Page   `json:"page"`
 	DemandIdList []int64 `json:"demandIdList,omitempty"`
+}
+
+// CvmCbsPlanPenaltyRatioReportReq cvm and cbs plan penalty ratio report request
+type CvmCbsPlanPenaltyRatioReportReq struct {
+	ReqMeta `json:",inline"`
+	Params  *CvmCbsPlanPenaltyRatioReportParam `json:"params"`
+}
+
+// CvmCbsPlanPenaltyRatioReportParam cvm and cbs plan penalty ratio report parameters
+type CvmCbsPlanPenaltyRatioReportParam struct {
+	YearMonth string                   `json:"yearMonth"`
+	Data      []CvmCbsPlanProductRatio `json:"data"`
+}
+
+// CvmCbsPlanProductRatio cvm and cbs plan, plan product penalty ratio parameters
+type CvmCbsPlanProductRatio struct {
+	GroupDeptId           []int64         `json:"groupDeptId"`
+	GroupPlanProductId    []int64         `json:"groupPlanProductId"`
+	ProductIdPartitionMap map[int64]int64 `json:"productIdPartitionMap"`
+	Memo                  string          `json:"memo,omitempty"`
 }
 
 // CvmCbsPlanQueryReq cvm and cbs plan info query request

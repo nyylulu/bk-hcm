@@ -33,9 +33,9 @@ type logics struct {
 }
 
 // New create a logics manager
-func New(esbClient esb.Client, authorizer auth.Authorizer) Logics {
+func New(esbClient esb.Client, authorizer auth.Authorizer) (Logics, error) {
 	return &logics{
 		esbClient:  esbClient,
 		authorizer: authorizer,
-	}
+	}, nil
 }

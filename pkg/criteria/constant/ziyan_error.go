@@ -22,4 +22,9 @@ package constant
 const (
 	// RollingServerSyncFailed rolling server sync failed.
 	RollingServerSyncFailed WarnSign = "rolling_server_sync_failed"
+
+	// DemandPenaltyBaseGenerateFailed res plan demand penalty base generate failed.
+	DemandPenaltyBaseGenerateFailed WarnSign = "demand_penalty_base_generate_failed"
+	// DemandPenaltyRatioReportFailed res plan demand penalty ratio report failed.
+	DemandPenaltyRatioReportFailed WarnSign = "demand_penalty_ratio_report_failed"
 )

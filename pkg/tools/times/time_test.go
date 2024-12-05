@@ -71,3 +71,74 @@ func TestGetMondayOfWeek(t *testing.T) {
 		assert.Equal(t, monday, testCase.monday)
 	}
 }
+
+func TestGetNextMondayOfWeek(t *testing.T) {
+	type args struct {
+		t time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Time
+	}{
+		{
+			name: "monday",
+			args: args{t: time.Date(2024, 11, 18, 0, 0, 0, 0, time.Local)},
+			want: time.Date(2024, 11, 25, 0, 0, 0, 0, time.Local),
+		},
+		{
+			name: "tuesday",
+			args: args{t: time.Date(2024, 11, 19, 0, 0, 0, 0, time.Local)},
+			want: time.Date(2024, 11, 25, 0, 0, 0, 0, time.Local),
+		},
+		{
+			name: "sunday",
+			args: args{t: time.Date(2024, 11, 24, 0, 0, 0, 0, time.Local)},
+			want: time.Date(2024, 11, 25, 0, 0, 0, 0, time.Local),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, GetNextMondayOfWeek(tt.args.t), "GetNextMondayOfWeek(%v)", tt.args.t)
+		})
+	}
+}
+
+func TestIsLastNDaysOfMonth(t *testing.T) {
+	type args struct {
+		t     time.Time
+		lastN int
+	}
+	tests := []struct {
+		name string
+		args args
+		want bool
+	}{
+		{"test1", args{
+			t:     time.Date(2024, 2, 28, 13, 28, 59, 0, time.Local),
+			lastN: 1,
+		}, false},
+		{"test2", args{
+			t:     time.Date(2025, 2, 28, 13, 28, 59, 0, time.Local),
+			lastN: 1,
+		}, true},
+		{"test3", args{
+			t:     time.Date(2024, 11, 28, 0, 0, 0, 0, time.Local),
+			lastN: 3,
+		}, true},
+		{"test4", args{
+			t:     time.Date(2024, 12, 25, 0, 0, 0, 0, time.Local),
+			lastN: 7,
+		}, true},
+		{"test5", args{
+			t:     time.Date(2024, 12, 25, 0, 0, 0, 0, time.Local),
+			lastN: 6,
+		}, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, IsLastNDaysOfMonth(tt.args.t, tt.args.lastN), "IsLastNDaysOfMonth(%v, %v)",
+				tt.args.t, tt.args.lastN)
+		})
+	}
+}

@@ -24,8 +24,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"runtime/debug"
 	"time"
 
+	"hcm/cmd/woa-server/logics/biz"
 	tasktypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
@@ -94,6 +96,7 @@ type Controller struct {
 	itsmFlow     cc.ItsmFlow
 	crpAuditNode cc.StateNode
 	crpCli       cvmapi.CVMClientInterface
+	bizLogics    biz.Logics
 	workQueue    *UniQueue
 	ctx          context.Context
 }
@@ -113,7 +116,7 @@ const (
 
 // New creates a resource plan ticket controller instance.
 func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
-	crpCli cvmapi.CVMClientInterface, esbCli esb.Client) (*Controller, error) {
+	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (*Controller, error) {
 
 	q := NewUniQueue()
 
@@ -141,6 +144,7 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 		itsmFlow:     itsmFlowCfg,
 		crpAuditNode: crpAuditNode,
 		crpCli:       crpCli,
+		bizLogics:    bizLogic,
 		workQueue:    q,
 		ctx:          context.Background(),
 	}
@@ -161,6 +165,28 @@ func (c *Controller) Run() {
 		// get and handle tickets every 2 minutes
 		go wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
 	}
+
+	// 每周一生成12周后的核算基准数据
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyBaseGenerateFailed, r, debug.Stack())
+			}
+		}()
+
+		c.generatePenaltyBase(c.ctx)
+	}()
+
+	// 每月最后7天，每天下午18:00计算当月罚金分摊比例并推送到CRP
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyRatioReportFailed, r, debug.Stack())
+			}
+		}()
+
+		c.calcAndReportPenaltyRatioToCRP(c.ctx)
+	}()
 
 	select {
 	case <-c.ctx.Done():

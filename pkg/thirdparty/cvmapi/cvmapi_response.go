@@ -204,6 +204,18 @@ type DemandChangeLogQueryLogItem struct {
 	ResourcePoolName    string  `json:"resourcePoolName"`
 }
 
+// CvmCbsPlanPenaltyRatioReportResp cvm and cbs plan penalty ratio report response
+type CvmCbsPlanPenaltyRatioReportResp struct {
+	RespMeta  `json:",inline"`
+	Result    *CvmCbsPlanPenaltyRatioReportRst `json:"result"`
+	Errorinfo interface{}                      `json:"errorinfo"`
+}
+
+// CvmCbsPlanPenaltyRatioReportRst cvm and cbs plan penalty ratio report result
+type CvmCbsPlanPenaltyRatioReportRst struct {
+	Message string `json:"message"`
+}
+
 // CvmCbsPlanQueryResp cvm and cbs plan query response
 type CvmCbsPlanQueryResp struct {
 	RespMeta  `json:",inline"`

@@ -20,7 +20,6 @@
 package plan
 
 import (
-	"errors"
 	"fmt"
 	"sync"
 
@@ -82,7 +81,7 @@ func (s *service) ListBizResPlanDemand(cts *rest.Contexts) (interface{}, error) 
 	}
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
+	bkBizIDs, err := s.bizLogics.ListAuthorizedBiz(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -146,32 +145,6 @@ func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int
 	return result, nil
 }
 
-func convReqRegionIDsToNames(regionIDs []string, regionMap map[string]mtypes.RegionArea) ([]string, error) {
-	reqRegionNames := make([]string, 0)
-	for _, reqRegionID := range regionIDs {
-		regionArea, exists := regionMap[reqRegionID]
-		// 查询参数中的regionId如果数据库中查不到，查询直接失败
-		if !exists {
-			return nil, fmt.Errorf("region id: %s not found in woa_zone", reqRegionID)
-		}
-		reqRegionNames = append(reqRegionNames, regionArea.RegionName)
-	}
-	return reqRegionNames, nil
-}
-
-func convReqZoneIDsToNames(zoneIDs []string, zoneMap map[string]string) ([]string, error) {
-	reqZoneNames := make([]string, 0)
-	for _, reqZoneID := range zoneIDs {
-		zoneName, exists := zoneMap[reqZoneID]
-		// 查询参数中的zoneId如果数据库中查不到，查询直接失败
-		if !exists {
-			return nil, fmt.Errorf("zone id: %s not found in woa_zone", reqZoneID)
-		}
-		reqZoneNames = append(reqZoneNames, zoneName)
-	}
-	return reqZoneNames, nil
-}
-
 // GetPlanDemandDetail get plan demand detail.
 func (s *service) GetPlanDemandDetail(cts *rest.Contexts) (interface{}, error) {
 	demandID := cts.PathParameter("id").String()
@@ -194,7 +167,7 @@ func (s *service) GetBizPlanDemandDetail(cts *rest.Contexts) (interface{}, error
 	demandID := cts.PathParameter("id").String()
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
+	bkBizIDs, err := s.bizLogics.ListAuthorizedBiz(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -256,21 +229,6 @@ func (s *service) filterPlanDemandDetailRespByBkBizIDs(kt *kit.Kit, bkBizIDs []i
 	return src, errf.OK, nil
 }
 
-// convPlanDemandDetailResp convert plan demand detail to crp resp.
-func convPlanDemandDetailResp(listDetails []*ptypes.PlanDemandDetail) (*ptypes.GetPlanDemandDetailResp, error) {
-	if len(listDetails) == 0 {
-		return nil, errors.New("list demand detail return an empty result")
-	}
-
-	detail := listDetails[0]
-	resp := &detail.GetPlanDemandDetailResp
-	if err := resp.SetDiskType(); err != nil {
-		return nil, err
-	}
-
-	return resp, nil
-}
-
 // ListBizPlanDemandChangeLog list biz plan demand change log.
 func (s *service) ListBizPlanDemandChangeLog(cts *rest.Contexts) (interface{}, error) {
 	req := new(ptypes.ListDemandChangeLogReq)
@@ -290,7 +248,7 @@ func (s *service) ListBizPlanDemandChangeLog(cts *rest.Contexts) (interface{}, e
 	}
 
 	// 权限校验
-	bkBizIDs, err := s.logics.ListAuthorizedBiz(cts.Kit)
+	bkBizIDs, err := s.bizLogics.ListAuthorizedBiz(cts.Kit)
 	if err != nil {
 		logs.Errorf("failed to list authorized biz, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)

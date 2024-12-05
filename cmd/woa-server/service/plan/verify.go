@@ -47,7 +47,7 @@ func (s *service) VerifyResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	// get biz id corresponding op product id and plan product id.
-	bizOrgRel, err := s.logics.GetBizOrgRel(cts.Kit, req.BkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(cts.Kit, req.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -234,7 +234,7 @@ func (s *service) GetCvmChargeTypeDeviceType(cts *rest.Contexts) (interface{}, e
 	}
 
 	// get biz id corresponding op product id and plan product id.
-	bizOrgRel, err := s.logics.GetBizOrgRel(cts.Kit, req.BkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(cts.Kit, req.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)

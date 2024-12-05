@@ -175,3 +175,24 @@ func GetMondayOfWeek(now time.Time) time.Time {
 	monday := now.AddDate(0, 0, daysToMonday)
 	return monday
 }
+
+// GetNextMondayOfWeek 获取下周的周一日期
+func GetNextMondayOfWeek(t time.Time) time.Time {
+	weekday := t.Weekday()
+
+	daysToMonday := int(time.Monday - weekday)
+	if weekday >= time.Monday {
+		daysToMonday += 7
+	}
+	nextMonday := t.AddDate(0, 0, daysToMonday)
+	return nextMonday
+}
+
+// IsLastNDaysOfMonth 判断是否是当月最后N天
+func IsLastNDaysOfMonth(t time.Time, lastN int) bool {
+	// 获取月份的天数
+	daysInMonth := time.Date(t.Year(), t.Month()+1, 0, 0, 0, 0, 0, time.Local).Day()
+	// 计算距离月底的天数
+	daysUntilEndOfMonth := daysInMonth - t.Day()
+	return daysUntilEndOfMonth < lastN
+}

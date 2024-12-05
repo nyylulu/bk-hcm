@@ -210,7 +210,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 	}
 
 	// get biz org relation.
-	bizOrgRel, err := s.logics.GetBizOrgRel(kt, req.BkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(kt, req.BkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
 		return "", err

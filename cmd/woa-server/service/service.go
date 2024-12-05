@@ -28,6 +28,7 @@ import (
 	"strconv"
 	"time"
 
+	"hcm/cmd/woa-server/logics/biz"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
@@ -93,6 +94,7 @@ type Service struct {
 	esCli       *es.EsCli
 	rsLogic     rslogics.Logics
 	gcLogic     gclogics.Logics
+	bizLogic    biz.Logics
 }
 
 // NewService create a service instance.
@@ -170,7 +172,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM, esbClient)
+	bizLogic, err := biz.New(esbClient, authorizer)
+	if err != nil {
+		logs.Errorf("new biz logic failed, err: %v", err)
+		return nil, err
+	}
+
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM, esbClient, bizLogic)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err
@@ -214,6 +222,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		rsLogic:        rsLogics,
 		gcLogic:        gcLogics,
 		planController: planCtrl,
+		bizLogic:       bizLogic,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -365,6 +374,7 @@ func (s *Service) apiSet() *restful.Container {
 		RsLogic:        s.rsLogic,
 		Client:         s.client,
 		GcLogic:        s.gcLogic,
+		BizLogic:       s.bizLogic,
 	}
 
 	config.InitService(c)
