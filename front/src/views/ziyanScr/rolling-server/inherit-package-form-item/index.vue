@@ -19,6 +19,7 @@ export interface RollingServerHost {
   billing_start_time: string;
   old_billing_expire_time: string;
   bk_cloud_inst_id: string;
+  device_group: string;
 }
 
 defineOptions({ name: 'InheritPackageFormItem' });
@@ -96,25 +97,31 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
     <template #error>{{ checkMessage }}</template>
     <!-- 校验成功，展示继承的机器信息，并且在添加配置清单时设置默认值（计费模式、购买时长...）。 -->
     <ul class="inherit-instance-info" v-if="rollingServerHost">
-      <li>
-        <span class="label">{{ t('机型：') }}</span>
-        <span>{{ rollingServerHost.device_type }}</span>
+      <li class="instance-info-item">
+        <span class="label">{{ t('机型') }}</span>
+        <span class="content">{{ rollingServerHost.device_type || '--' }}</span>
       </li>
-      <li>
-        <span class="label">{{ t('计费模式：') }}</span>
-        <span>{{ INSTANCE_CHARGE_MAP[rollingServerHost.instance_charge_type] }}</span>
+      <li class="instance-info-item">
+        <span class="label">{{ t('机型族') }}</span>
+        <span class="content">{{ rollingServerHost.device_group || '--' }}</span>
       </li>
-      <li>
-        <span class="label">{{ t('剩余时间：') }}</span>
-        <span>{{ rollingServerHost.charge_months ? getMonthName(rollingServerHost.charge_months) : '--' }}</span>
+      <li class="instance-info-item">
+        <span class="label">{{ t('计费模式') }}</span>
+        <span class="content">{{ INSTANCE_CHARGE_MAP[rollingServerHost.instance_charge_type] || '--' }}</span>
       </li>
-      <li>
-        <span class="label">{{ t('计费起始时间：') }}</span>
-        <span>{{ timeFormatter(rollingServerHost.billing_start_time) }}</span>
+      <li class="instance-info-item">
+        <span class="label">{{ t('剩余时间') }}</span>
+        <span class="content">
+          {{ rollingServerHost.charge_months ? getMonthName(rollingServerHost.charge_months) : '--' }}
+        </span>
       </li>
-      <li>
-        <span class="label">{{ t('计费过期时间：') }}</span>
-        <span>{{ timeFormatter(rollingServerHost.old_billing_expire_time) }}</span>
+      <li class="instance-info-item">
+        <span class="label">{{ t('计费起始时间') }}</span>
+        <span class="content">{{ timeFormatter(rollingServerHost.billing_start_time) }}</span>
+      </li>
+      <li class="instance-info-item">
+        <span class="label">{{ t('计费过期时间') }}</span>
+        <span class="content">{{ timeFormatter(rollingServerHost.old_billing_expire_time) }}</span>
       </li>
     </ul>
   </FormItem>
@@ -128,14 +135,14 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
 .inherit-instance-info {
   display: flex;
   align-items: center;
+  gap: 24px;
+  margin-top: 8px;
 
-  li {
-    margin-right: 24px;
+  .instance-info-item {
     font-size: 12px;
-
-    &:last-of-type {
-      margin-right: 0;
-    }
+    display: flex;
+    flex-direction: column;
+    line-height: 20px;
 
     .label {
       color: $font-deep-color;

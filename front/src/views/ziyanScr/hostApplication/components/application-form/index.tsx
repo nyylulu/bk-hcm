@@ -35,7 +35,9 @@ import http from '@/http';
 
 // 滚服项目
 import RollingServerTipsAlert from '@/views/ziyanScr/rolling-server/tips-alert/index.vue';
-import InheritPackageFormItem from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
+import InheritPackageFormItem, {
+  type RollingServerHost,
+} from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
 import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
@@ -130,6 +132,9 @@ export default defineComponent({
     const isRollingServer = computed(() => order.value.model.requireType === 6);
     const isGreenChannel = computed(() => order.value.model.requireType === 7);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
+
+    // 滚服继承套餐的机器
+    let rollingServerHost: RollingServerHost = null;
 
     const PhysicalMachineoperation = ref({
       label: '操作',
@@ -1394,11 +1399,24 @@ export default defineComponent({
                                 resourceForm.value.charge_type = host.instance_charge_type;
                                 resourceForm.value.charge_months = host.charge_months;
                                 QCLOUDCVMForm.value.spec.inherit_instance_id = host.bk_cloud_inst_id;
+                                // 机型族与上次数据不一致时需要清除机型选择
+                                if (
+                                  rollingServerHost &&
+                                  host.device_group !== rollingServerHost.device_group &&
+                                  QCLOUDCVMForm.value.spec.device_type
+                                ) {
+                                  QCLOUDCVMForm.value.spec.device_type = '';
+                                }
+                                rollingServerHost = host;
                               }}
                               onValidateFailed={() => {
                                 // 恢复默认值
                                 resourceForm.value.charge_type = cvmChargeTypes.PREPAID;
                                 resourceForm.value.charge_months = 36;
+                                if (QCLOUDCVMForm.value.spec.device_type) {
+                                  QCLOUDCVMForm.value.spec.device_type = '';
+                                }
+                                rollingServerHost = null;
                               }}
                             />
                           )}
@@ -1540,24 +1558,30 @@ export default defineComponent({
                                 optionDisabled={
                                   !isSpecialRequirement.value
                                     ? (v) => !computedAvailableSet.value.has(v.device_type)
-                                    : (option) => (option as CvmDeviceType).device_type_class === 'SpecialType'
+                                    : (option) =>
+                                        (option as CvmDeviceType).device_type_class === 'SpecialType' ||
+                                        (isRollingServer.value &&
+                                          (option as CvmDeviceType).device_group !== rollingServerHost?.device_group)
                                 }
                                 optionDisabledTipsContent={
                                   !isSpecialRequirement.value
                                     ? () => '当前机型不在有效预测范围内'
                                     : (option) => {
-                                        const { device_type_class } = option as CvmDeviceType;
+                                        const { device_type_class, device_group } = option as CvmDeviceType;
                                         if (device_type_class === 'SpecialType') {
                                           return '专用机型不允许选择';
+                                        }
+                                        if (isRollingServer.value && device_group !== rollingServerHost?.device_group) {
+                                          return '机型族不匹配';
                                         }
                                       }
                                 }
                                 onChange={(result) => {
-                                  QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType).cpu_amount;
+                                  QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType)?.cpu_amount;
                                 }}>
                                 {{
                                   option: (option: CvmDeviceType) => {
-                                    const { device_type, device_type_class } = option;
+                                    const { device_type, device_type_class, device_group } = option;
                                     const isSpecialType = device_type_class === 'SpecialType';
                                     if (isSpecialRequirement.value) {
                                       return (
@@ -1566,6 +1590,11 @@ export default defineComponent({
                                           <Tag class='ml12' theme={isSpecialType ? 'danger' : 'success'} size='small'>
                                             {isSpecialType ? '专用机型' : '通用机型'}
                                           </Tag>
+                                          {device_group && (
+                                            <Tag class='ml12' size='small'>
+                                              {device_group}
+                                            </Tag>
+                                          )}
                                         </>
                                       );
                                     }
