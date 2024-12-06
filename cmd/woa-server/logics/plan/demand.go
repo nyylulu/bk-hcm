@@ -1736,6 +1736,7 @@ func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlan
 
 	matchDemandIDs := make([]string, 0)
 	// 检查[预测内]是否有余量
+	allResPlanCore := int64(0)
 	needCpuCore := need.CpuCore
 	for key, availableCpuCoreMap := range prodMaxAvailable {
 		// 已经匹配完需要的核心数
@@ -1763,6 +1764,7 @@ func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlan
 			if availableCpuCore <= 0 || needCpuCore <= 0 {
 				continue
 			}
+			allResPlanCore += availableCpuCore
 			canConsume := max(min(availableCpuCore, needCpuCore), 0)
 			needCpuCore -= canConsume
 			prodMaxAvailable[key][demandID] -= canConsume
@@ -1776,7 +1778,7 @@ func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlan
 	if needCpuCore != 0 {
 		return VerifyResPlanResElem{
 			VerifyResult: enumor.VerifyResPlanRstFailed,
-			Reason:       "in plan resource is not enough",
+			Reason:       fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore),
 		}, nil
 	}
 
@@ -1788,6 +1790,7 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 	VerifyResPlanResElem, error) {
 
 	matchDemandIDs := make([]string, 0)
+	allResPlanCore := int64(0)
 	needCpuCore := need.CpuCore
 	for _, planType := range enumor.GetPlanTypeCodeHcmMembers() {
 		for key, remainCpuCoreMap := range prodRemain {
@@ -1817,6 +1820,7 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 				if remainCpuCore <= 0 || needCpuCore <= 0 {
 					continue
 				}
+				allResPlanCore += remainCpuCore
 				canConsume := max(min(remainCpuCore, needCpuCore), 0)
 				needCpuCore -= canConsume
 				prodRemain[key][demandID] -= canConsume
@@ -1831,7 +1835,7 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 	if needCpuCore != 0 {
 		return VerifyResPlanResElem{
 			VerifyResult: enumor.VerifyResPlanRstFailed,
-			Reason:       "in plan or out plan resource is not enough",
+			Reason:       fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore),
 		}, nil
 	}
 
