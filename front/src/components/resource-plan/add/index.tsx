@@ -74,6 +74,11 @@ export default defineComponent({
       };
     };
 
+    const isConfigAdjustDisabled = ref(false);
+    const handleExpectTimeChangeInTimeAdjust = (v: boolean) => {
+      isConfigAdjustDisabled.value = v;
+    };
+
     const handleClose = () => {
       emit('update:isShow', false);
     };
@@ -140,7 +145,13 @@ export default defineComponent({
         onUpdate:isShow={handleClose}
         onHandleSubmit={props.isEdit ? handleUpdate : handleSubmit}
         onHandleShown={handleShown}>
-        {props.initDemand && props.isEdit && <Type v-model={adjustType.value} type={props.initDemand.adjustType} />}
+        {props.initDemand && props.isEdit && (
+          <Type
+            v-model={adjustType.value}
+            type={props.initDemand.adjustType}
+            disabledConfig={isConfigAdjustDisabled.value}
+          />
+        )}
         <Basic
           ref={basicRef}
           v-model:isSubmitDisabled={isSubmitDisabled.value}
@@ -148,6 +159,7 @@ export default defineComponent({
           v-model:planTicketDemand={planTicketDemand.value}
           v-model:resourceType={resourceType.value}
           type={props.isEdit ? adjustType.value : AdjustType.none}
+          onExpectTimeChangeInTimeAdjust={handleExpectTimeChangeInTimeAdjust}
         />
         <CVM
           ref={cvmRef}

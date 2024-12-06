@@ -24,7 +24,13 @@ export default defineComponent({
     submitTooltips: Object as PropType<string | { content: string; disabled: boolean }>,
   },
 
-  emits: ['update:planTicketDemand', 'update:resourceType', 'update:submitTooltips', 'update:isSubmitDisabled'],
+  emits: [
+    'update:planTicketDemand',
+    'update:resourceType',
+    'update:submitTooltips',
+    'update:isSubmitDisabled',
+    'expectTimeChangeInTimeAdjust',
+  ],
 
   setup(props, { emit, expose }) {
     const planStore = usePlanStore();
@@ -35,6 +41,9 @@ export default defineComponent({
       date_range_in_week: undefined,
       date_range_in_month: undefined,
     });
+
+    // 记录原始到货期望时间（修改预测需求）
+    const originExpectTime = props.type !== AdjustType.none ? props.planTicketDemand.expect_time : '';
 
     const projectTypes = ref<string[]>([]);
     const regions = ref<IRegion[]>([]);
@@ -286,7 +295,13 @@ export default defineComponent({
               clearable
               modelValue={props.planTicketDemand.expect_time}
               disabledDate={getDisabledDate}
-              onChange={(val: string) => handleUpdatePlanTicketDemand('expect_time', val)}>
+              onChange={(val: string) => {
+                // 调整方式为『调整时间』，并且期望到货日期变更后，不可以再更改调整方式为『调整配置』
+                if (props.type === AdjustType.time) {
+                  emit('expectTimeChangeInTimeAdjust', originExpectTime !== val);
+                }
+                handleUpdatePlanTicketDemand('expect_time', val);
+              }}>
               {{
                 footer: () => (
                   <div

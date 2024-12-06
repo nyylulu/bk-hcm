@@ -11,6 +11,7 @@ export default defineComponent({
   props: {
     modelValue: String as PropType<AdjustType>,
     type: String as PropType<AdjustType>,
+    disabledConfig: Boolean,
   },
   emits: ['update:modelValue'],
   setup(props, { emit }) {
@@ -27,11 +28,12 @@ export default defineComponent({
             <BkRadioGroup modelValue={props.modelValue} onChange={triggerUpdate}>
               <BkRadioButton
                 label={AdjustType.config}
-                disabled={props.type === AdjustType.time}
-                v-bk-tooltips={{
-                  content: t('已延期，不支持调整'),
-                  disabled: props.type !== AdjustType.time,
-                }}>
+                disabled={props.type === AdjustType.time || props.disabledConfig}
+                v-bk-tooltips={
+                  props.type === AdjustType.time
+                    ? { content: t('已延期，不支持调整'), disabled: props.type !== AdjustType.time }
+                    : { content: t('期望到货日期已变更，不可更改调整方式'), disabled: !props.disabledConfig }
+                }>
                 {t('调整配置')}
               </BkRadioButton>
               <BkRadioButton

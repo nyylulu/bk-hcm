@@ -172,7 +172,7 @@ export default defineComponent({
                     <DropdownItem
                       key='retry'
                       onClick={() => {
-                        modifylist(cloneDeep(row), index, 'IDCPM');
+                        modifylist(row, index, 'IDCPM');
                         dropdownMenuShowState.idc = false;
                       }}>
                       修改
@@ -195,7 +195,8 @@ export default defineComponent({
     });
     const CloudHostoperation = ref({
       label: '操作',
-      width: 100,
+      fixed: 'right',
+      width: 120,
       render: ({ row, index }: any) => {
         return (
           <div class='operation-column'>
@@ -229,7 +230,7 @@ export default defineComponent({
                     <DropdownItem
                       key='retry'
                       onClick={() => {
-                        modifylist(cloneDeep(row), index, 'QCLOUDCVM');
+                        modifylist(row, index, 'QCLOUDCVM');
                         dropdownMenuShowState.cvm = false;
                       }}>
                       修改
@@ -264,7 +265,8 @@ export default defineComponent({
       {
         field: 'reason',
         label: '预检信息',
-        width: 110,
+        width: 200,
+        isDefaultShow: true,
         render({ cell }: { cell: string }) {
           return cell || '--';
         },
@@ -430,19 +432,28 @@ export default defineComponent({
       };
     });
 
-    const clonelist = (row: any, resourceType: string) => {
-      resourceType === 'QCLOUDCVM'
-        ? cloudTableData.value.push(cloneDeep(row))
-        : physicalTableData.value.push(cloneDeep(row));
+    const clonelist = (originRow: any, resourceType: string) => {
+      const cloneRow = cloneDeep(originRow);
+
+      if (resourceType === 'QCLOUDCVM') {
+        // 克隆后，需要重新进行需求预检
+        Object.assign(cloneRow, { verify_result: '', reason: '' });
+        cloudTableData.value.push(cloneRow);
+      } else {
+        physicalTableData.value.push(cloneRow);
+      }
     };
+
     const modifyindex = ref(0);
     const modifyresourceType = ref('');
-    const modifylist = (row: any, index: number, resourceType: string) => {
+    const modifylist = (originRow: any, index: number, resourceType: string) => {
+      const cloneRow = cloneDeep(originRow);
+
       CVMapplication.value = false;
       resourceForm.value.resourceType = resourceType;
       modifyresourceType.value = resourceType;
 
-      const { anti_affinity_level, bk_asset_id, remark, replicas, spec } = row;
+      const { anti_affinity_level, bk_asset_id, remark, replicas, spec } = cloneRow;
       const { region, zone, charge_type, charge_months } = spec;
 
       Object.assign(resourceForm.value, { bk_asset_id, region, zone, remark });

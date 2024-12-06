@@ -314,7 +314,7 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '计费模式',
       field: 'spec.charge_type',
-      width: 80,
+      width: 120,
       isDefaultShow: true,
       render: ({ cell }: any) => ChargeTypeMap[cell as ChargeType] || '--',
     },
@@ -342,7 +342,7 @@ export default (type: string, isSimpleShow = false) => {
       label: '镜像',
       field: 'spec.image_id',
       render: ({ row }: any) => getImageName(row.spec.image_id),
-      width: 150,
+      width: 200,
       isDefaultShow: true,
     },
     {
