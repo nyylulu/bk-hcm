@@ -22,7 +22,7 @@ POST /api/v1/woa/task/check/rolling_server/host
 
 ```json
 {
-  "bk_asset_id":"ins-111",
+  "bk_asset_id": "ins-111",
   "bk_biz_id": 1,
   "region":"ap-beijing"
 }
@@ -34,11 +34,11 @@ POST /api/v1/woa/task/check/rolling_server/host
 
 ```json
 {
-  "result":true,
-  "code":0,
-  "message":"success",
-  "data":{
-    "device_type":"C3.2XLARGE16",
+  "result": true,
+  "code": 0,
+  "message": "success",
+  "data": {
+    "device_type": "C3.2XLARGE16",
     "instance_charge_type": "PREPAID",
     "charge_months": "36",
     "billing_start_time": "2024-06-03 17:43:47",
@@ -50,22 +50,23 @@ POST /api/v1/woa/task/check/rolling_server/host
 
 ### 响应参数说明
 
-| 参数名称    | 参数类型       | 描述               |
-|------------|--------------|--------------------|
-| result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
-| code       | int          | 错误编码。 0表示success，>0表示失败错误  |
-| message    | string       | 请求失败返回的错误信息 |
-| data	     | object array | 响应数据             |
+| 参数名称    | 参数类型         | 描述                         |
+|---------|--------------|----------------------------|
+| result  | bool         | 请求成功与否。true:请求成功；false请求失败 |
+| code    | int          | 错误编码。 0表示success，>0表示失败错误  |
+| message | string       | 请求失败返回的错误信息                |
+| data	   | object array | 响应数据                       |
 
 #### data
 
-| 参数名称          | 参数类型    | 描述                                                                                                                      |
-|------------------|---------|-------------------------------------------------------------------------------------------------------------------------|
-| device_type         | string	 | 机型                                                                                                                      |
-| instance_charge_type     | string  | 实例计费模式。(PREPAID：表示预付费，即包年包月、POSTPAID_BY_HOUR：表示后付费，即按量计费、CDHPAID：专用宿主机付费，即只对专用宿主机计费，不对专用宿主机上的实例计费。、SPOTPAID：表示竞价实例付费。)。 |
-| charge_months | int     | 购买时长，单位：月，如果是按量计费类型，则这个字段没有值                                                                                            |
-| billing_start_time | string  | 套餐计费起始时间                                                                                                                |
+| 参数名称                    | 参数类型    | 描述                                                                                                                      |
+|-------------------------|---------|-------------------------------------------------------------------------------------------------------------------------|
+| device_type             | string	 | 机型                                                                                                                      |
+| device_group            | string	 | 机型族                                                                                                                     |
+| instance_charge_type    | string  | 实例计费模式。(PREPAID：表示预付费，即包年包月、POSTPAID_BY_HOUR：表示后付费，即按量计费、CDHPAID：专用宿主机付费，即只对专用宿主机计费，不对专用宿主机上的实例计费。、SPOTPAID：表示竞价实例付费。)。 |
+| charge_months           | int     | 购买时长，单位：月，如果是按量计费类型，则这个字段没有值                                                                                            |
+| billing_start_time      | string  | 套餐计费起始时间                                                                                                                |
 | old_billing_expire_time | string  | 被继承机器套餐计费过期时间                                                                                                           |
 | new_billing_expire_time | string  | 新申请机器套餐计费过期时间                                                                                                           |
-| bk_cloud_inst_id | string  | 云主机实例ID                                                                                                                 |
+| bk_cloud_inst_id        | string  | 云主机实例ID                                                                                                                 |
 

@@ -674,6 +674,28 @@ func (req *ApplyReq) Validate() error {
 		}
 	}
 
+	if req.RequireType == enumor.RequireTypeRollServer {
+		if err := req.validateAsRollingServer(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// validateAsRollingServer validate whether rolling server suborders are valid
+func (req *ApplyReq) validateAsRollingServer() error {
+	// 如果需求类型为滚服类型，那么必须传入继承的云主机实例ID
+	for _, suborder := range req.Suborders {
+		if suborder.Spec == nil {
+			return fmt.Errorf("spec cannot be empty")
+		}
+
+		if len(suborder.Spec.InheritInstanceId) == 0 {
+			return fmt.Errorf("inherit_instance_id cannot be empty")
+		}
+	}
+
 	return nil
 }
 
@@ -1463,6 +1485,7 @@ func (c *CheckRollingServerHostReq) Validate() error {
 // CheckRollingServerHostResp check rolling server host response
 type CheckRollingServerHostResp struct {
 	DeviceType           string    `json:"device_type"`
+	DeviceGroup          string    `json:"device_group"`
 	InstanceChargeType   string    `json:"instance_charge_type"`
 	ChargeMonths         int       `json:"charge_months"`
 	BillingStartTime     time.Time `json:"billing_start_time"`

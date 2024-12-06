@@ -333,6 +333,7 @@ type GetDeviceTypeResult struct {
 type DeviceTypeItem struct {
 	DeviceType      string                   `json:"device_type"`       // 机型
 	DeviceTypeClass cvmapi.InstanceTypeClass `json:"device_type_class"` // 通/专用机型，SpecialType专用，CommonType通用
+	DeviceGroup     string                   `json:"device_group"`      // 机型族
 	CPUAmount       float64                  `json:"cpu_amount"`        // CPU数量
 }
 

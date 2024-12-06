@@ -921,6 +921,13 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	rst := new(types.CreateApplyOrderResult)
 	var err error = nil
 
+	if param.RequireType == enumor.RequireTypeRollServer {
+		if err := s.checkRollingServer(kt, param); err != nil {
+			logs.Errorf("failed to check rolling server, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	}
+
 	param, err = s.fillCVMAppliedCore(kt, param)
 	if err != nil {
 		logs.Errorf("failed to fill applied core, err: %v, rid: %s", err, kt.Rid)
@@ -961,6 +968,54 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	})
 
 	return rst, txnErr
+}
+
+func (s *scheduler) checkRollingServer(kt *kit.Kit, param *types.ApplyReq) error {
+	for _, suborder := range param.Suborders {
+		// 根据继承的主机信息，获取云主机信息
+		ccReq := &getHostFromCCReq{
+			CloudInstID: suborder.Spec.InheritInstanceId,
+		}
+		inheritHostInfo, err := s.getInheritedHostFromCC(kt, ccReq)
+		if err != nil {
+			err = fmt.Errorf("failed to get inherited host from cc, err: %v", err)
+			return err
+		}
+
+		// 获取当前选择机型和继承主机的机型信息
+		hostInfoMap, err := s.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt,
+			[]string{suborder.Spec.DeviceType, inheritHostInfo.SvrDeviceClassName})
+		if err != nil {
+			err = fmt.Errorf("failed to get host info from crp, err: %v", err)
+			return err
+		}
+
+		selectDeviceType, ok := hostInfoMap[suborder.Spec.DeviceType]
+		if !ok {
+			err = fmt.Errorf("failed to get select device type info, device type: %s",
+				suborder.Spec.DeviceType)
+			return err
+		}
+
+		inheritDeviceType, ok := hostInfoMap[inheritHostInfo.SvrDeviceClassName]
+		if !ok {
+			err = fmt.Errorf("failed to get inherit host device type info, device type: %s",
+				inheritHostInfo.SvrDeviceClassName)
+			return err
+		}
+
+		// 判断选择的机型和继承主机的机型是否属于同一个机型族
+		if selectDeviceType.DeviceGroup != inheritDeviceType.DeviceGroup {
+			err = fmt.Errorf("select device type and inherit device type is not in the same device group,"+
+				" select device type: %s, select device type group: %s,"+
+				" inherit device type: %s, inherit device type group: %s",
+				selectDeviceType.DeviceType, selectDeviceType.DeviceGroup,
+				inheritDeviceType.DeviceType, inheritDeviceType.DeviceGroup)
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *scheduler) fillCVMAppliedCore(kt *kit.Kit, param *types.ApplyReq) (*types.ApplyReq, error) {
@@ -2098,7 +2153,11 @@ func (s *scheduler) SetDeviceDelivered(info *types.DeviceInfo) error {
 func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollingServerHostReq) (
 	*types.CheckRollingServerHostResp, error) {
 
-	host, err := s.getInheritedHostFromCC(kt, param)
+	ccReq := &getHostFromCCReq{
+		AssetID: param.AssetID,
+		BizID:   param.BizID,
+	}
+	host, err := s.getInheritedHostFromCC(kt, ccReq)
 	if err != nil {
 		logs.Errorf("get rolling server host from bkcc failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -2115,8 +2174,22 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 		chargeMonths++
 	}
 
+	// 校验机型是否匹配
+	cvmInfoMap, err := s.configLogics.Device().ListCvmInstanceInfoByDeviceTypes(kt, []string{host.SvrDeviceClassName})
+	if err != nil {
+		logs.Errorf("get cvm instance info failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	if _, ok := cvmInfoMap[host.SvrDeviceClassName]; !ok {
+		err = fmt.Errorf("device type not match cvm instance info, host: %+v", host)
+		logs.Errorf("check inherited host failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	return &types.CheckRollingServerHostResp{
 		DeviceType:           host.SvrDeviceClassName,
+		DeviceGroup:          cvmInfoMap[host.SvrDeviceClassName].DeviceGroup,
 		InstanceChargeType:   host.InstanceChargeType,
 		BillingStartTime:     host.BillingStartTime,
 		OldBillingExpireTime: host.BillingExpireTime,
@@ -2126,17 +2199,41 @@ func (s *scheduler) CheckRollingServerHost(kt *kit.Kit, param *types.CheckRollin
 	}, nil
 }
 
-func (s *scheduler) getInheritedHostFromCC(kt *kit.Kit, param *types.CheckRollingServerHostReq) (*cmdb.Host, error) {
+// getHostFromCCReq get host from cc request
+type getHostFromCCReq struct {
+	AssetID     string
+	CloudInstID string
+	BizID       int64
+}
+
+func (s *scheduler) getInheritedHostFromCC(kt *kit.Kit, param *getHostFromCCReq) (*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionOr,
-		Rules: []querybuilder.Rule{
+		Rules:     []querybuilder.Rule{},
+	}
+
+	if len(param.AssetID) > 0 {
+		rule.Rules = append(rule.Rules,
 			querybuilder.AtomRule{
 				Field:    "bk_asset_id",
 				Operator: querybuilder.OperatorEqual,
 				Value:    param.AssetID,
-			},
-		},
+			})
 	}
+
+	if len(param.CloudInstID) > 0 {
+		rule.Rules = append(rule.Rules,
+			querybuilder.AtomRule{
+				Field:    "bk_cloud_inst_id",
+				Operator: querybuilder.OperatorEqual,
+				Value:    param.CloudInstID,
+			})
+	}
+
+	if len(rule.Rules) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "asset_id and cloud_inst_id can not be empty at the same time")
+	}
+
 	fields := []string{"bk_svr_device_cls_name", "instance_charge_type", "billing_start_time", "billing_expire_time",
 		"bk_cloud_inst_id", "dept_name"}
 	page := cmdb.BasePage{Start: 0, Limit: 1}

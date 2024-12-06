@@ -212,6 +212,7 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 		infos = append(infos, types.DeviceTypeItem{
 			DeviceType:      item.InstanceType,
 			DeviceTypeClass: item.InstanceTypeClass,
+			DeviceGroup:     item.InstanceGroup,
 			CPUAmount:       item.CPUAmount,
 		})
 	}
