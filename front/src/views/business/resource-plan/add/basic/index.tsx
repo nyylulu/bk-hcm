@@ -102,7 +102,7 @@ export default defineComponent({
     return () => (
       <Panel title={t('基本信息')}>
         <bk-form form-type='vertical' ref={formRef} model={props.modelValue} class={cssModule.home}>
-          <bk-form-item label={t('业务所属运营产品')}>
+          <bk-form-item label={t('运营产品')}>
             <bk-input disabled={true} loading={opRelationLoading.value} modelValue={productName.value} />
             {isShowNoOpRelation.value && (
               <div class={cssModule['op-relation']}>
@@ -113,14 +113,12 @@ export default defineComponent({
               </div>
             )}
           </bk-form-item>
-          <bk-form-item label={t('运营产品业务')}>
+          <bk-form-item label={t('运营产品关联业务')}>
             <bk-input disabled={true} loading={bizListRelationLoading.value} modelValue={bizNameList.value}></bk-input>
-            <div class={cssModule['biz-list']}>
-              {t(
-                `注意：当前运营产品有${bizListLength.value}个业务，资源预测额度在这${bizListLength.value}个业务中共用`,
-              )}
-            </div>
           </bk-form-item>
+          <bk-alert theme='warning' class={cssModule['biz-list']}>
+            {t(`注意：当前运营产品有${bizListLength.value}个业务，资源预测额度在这${bizListLength.value}个业务中共用`)}
+          </bk-alert>
           <bk-form-item label={t('预测类型')} property='demand_class' required class={cssModule['forecast-type']}>
             <bk-select
               clearable

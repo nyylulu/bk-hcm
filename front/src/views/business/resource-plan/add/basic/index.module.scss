@@ -12,8 +12,9 @@
       }
   }
   .biz-list{
-    width: 450px;
-    color: #ccc;
+    grid-column: 1 / 2; 
+    width: 740px;
+    line-height: normal;
   }
   .forecast-type{
     grid-column: 1 / 2; 
