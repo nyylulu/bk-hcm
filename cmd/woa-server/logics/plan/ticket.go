@@ -184,8 +184,12 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 		logs.Errorf("failed to get itsm audit log, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
 		return nil, nil, err
 	}
+	if itsmLogs.Data == nil {
+		logs.Errorf("itsm audit log is empty, sn: %s, rid: %s", ticketStatus.ItsmSn, kt.Rid)
+		return nil, nil, fmt.Errorf("itsm audit log is empty, sn: %s", ticketStatus.ItsmSn)
+	}
 
-	itsmAudit, err = c.setItsmAuditDetails(itsmAudit, itsmStatus, itsmLogs)
+	itsmAudit, err = c.setItsmAuditDetails(itsmAudit, itsmStatus, itsmLogs.Data)
 	if err != nil {
 		logs.Errorf("failed to set itsm audit details, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
 		return nil, nil, err
@@ -235,7 +239,7 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 }
 
 func (c *Controller) setItsmAuditDetails(itsmAudit *ptypes.GetRPTicketItsmAudit, current *itsm.GetTicketStatusResp,
-	logs *itsm.GetTicketLogResp) (*ptypes.GetRPTicketItsmAudit, error) {
+	logData *itsm.GetTicketLogRst) (*ptypes.GetRPTicketItsmAudit, error) {
 
 	// current steps
 	itsmAudit.CurrentSteps = make([]*ptypes.ItsmAuditStep, len(current.Data.CurrentSteps))
@@ -248,8 +252,8 @@ func (c *Controller) setItsmAuditDetails(itsmAudit *ptypes.GetRPTicketItsmAudit,
 	}
 
 	// logs
-	itsmAudit.Logs = make([]*ptypes.ItsmAuditLog, 0, len(logs.Data.Logs))
-	for _, log := range logs.Data.Logs {
+	itsmAudit.Logs = make([]*ptypes.ItsmAuditLog, 0, len(logData.Logs))
+	for _, log := range logData.Logs {
 		// 流程开始、结束、CRP审批 不展示
 		if log.Message == itsm.AuditNodeStart || log.Message == itsm.AuditNodeEnd ||
 			log.Operator == TicketOperatorNameCrpAudit {
