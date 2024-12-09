@@ -113,7 +113,6 @@ func (c RebootActionV2) rebootCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) erro
 }
 
 func (c RebootActionV2) rebootTCloudCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchRebootReq{
 		AccountID: opt.AccountID,
 		Region:    opt.Region,

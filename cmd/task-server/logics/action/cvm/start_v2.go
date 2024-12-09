@@ -112,7 +112,6 @@ func (c StartActionV2) startCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error 
 }
 
 func (c StartActionV2) startTCloudCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchStartReq{
 		AccountID: opt.AccountID,
 		Region:    opt.Region,

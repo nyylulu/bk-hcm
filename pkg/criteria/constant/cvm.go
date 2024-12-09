@@ -30,4 +30,8 @@ const (
 	IdleMachineModuleName = "空闲机模块"
 	// ResetingSrvStatus CC运营状态-重装中
 	ResetingSrvStatus = "重装中"
+	// CvmBatchTaskRetryDelayMinMS CVM-批量任务默认重试最小延迟时间
+	CvmBatchTaskRetryDelayMinMS = 1000
+	// CvmBatchTaskRetryDelayMaxMS CVM-批量任务默认重试最大延迟时间
+	CvmBatchTaskRetryDelayMaxMS = 5000
 )

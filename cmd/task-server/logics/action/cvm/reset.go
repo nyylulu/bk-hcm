@@ -62,18 +62,19 @@ func (act BatchTaskCvmResetAction) Run(kt run.ExecuteKit, params any) (result an
 			fmt.Sprintf("params type mismatch, BatchTaskCvmResetOption:%+v", params))
 	}
 
+	asyncKit := kt.AsyncKit()
 	results := make([]*hclb.BatchCreateResult, 0, len(opt.CvmResetList))
 	for i := range opt.CvmResetList {
 		detailID := opt.ManagementDetailIDs[i]
 		// 逐条更新结果
-		ret, optErr := act.batchResetCvmSystem(kt.Kit(), detailID, opt.CvmResetList[i])
+		ret, optErr := act.batchResetCvmSystem(asyncKit, detailID, opt.CvmResetList[i])
 		// 结束后写回状态
 		targetState := enumor.TaskDetailSuccess
 		if optErr != nil {
 			// 更新为失败
 			targetState = enumor.TaskDetailFailed
 		}
-		err := actflow.BatchUpdateTaskDetailResultState(kt.Kit(), []string{detailID}, targetState, ret, optErr)
+		err := actflow.BatchUpdateTaskDetailResultState(asyncKit, []string{detailID}, targetState, ret, optErr)
 		if err != nil {
 			logs.Errorf("failed to set detail to after cloud operation finished, state: %s, detailID: %s, err: %v, "+
 				"optErr: %+v, ret: %+v, rid: %s", targetState, detailID, err, optErr, cvt.PtrToVal(ret), kt.Kit().Rid)
@@ -117,7 +118,7 @@ func (act BatchTaskCvmResetAction) batchResetCvmSystem(kt *kit.Kit, detailID str
 	// 调用云API重装CVM
 	switch req.Vendor {
 	case enumor.TCloudZiyan:
-		err := act.resetTCloudZiyanCvm(kt, detail, req)
+		err = act.resetTCloudZiyanCvm(kt, detail, req)
 		if err != nil {
 			logs.Errorf("failed to reset tcloud ziyan cvm, err: %v, detailID: %s, req: %+v, rid: %s",
 				err, detailID, req, kt.Rid)

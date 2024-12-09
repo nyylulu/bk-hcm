@@ -22,6 +22,7 @@ package actioncvm
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -40,10 +41,10 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/alarmapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/retry"
 )
 
 func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchStartReq{
 		AccountID: opt.AccountID,
 		Region:    opt.Region,
@@ -73,7 +74,6 @@ func (c StartActionV2) startTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperati
 }
 
 func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchStopReq{
 		AccountID:   opt.AccountID,
 		Region:      opt.Region,
@@ -105,7 +105,6 @@ func (c StopActionV2) stopTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperation
 }
 
 func (c RebootActionV2) rebootTCloudZiyanCvm(kt *kit.Kit, opt *cvmproto.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchRebootReq{
 		AccountID: opt.AccountID,
 		Region:    opt.Region,
@@ -165,17 +164,33 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		}
 	}
 
-	err = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
-	cvmResetJson, jsonErr := json.Marshal(req)
-	if jsonErr != nil {
-		logs.Errorf("call hcservice api reset cvm json marshal, vendor: %s, detailID: %s, taskManageID: %s, "+
-			"flowID: %s, cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detail.ID,
-			detail.TaskManagementID, detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
-		return jsonErr
+	rangeMS := [2]uint{constant.CvmBatchTaskRetryDelayMinMS, constant.CvmBatchTaskRetryDelayMaxMS}
+	policy := retry.NewRetryPolicy(0, rangeMS)
+	for {
+		err = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
+		cvmResetJson, jsonErr := json.Marshal(req)
+		if jsonErr != nil {
+			logs.Errorf("call hcservice api reset cvm json marshal, vendor: %s, detailID: %s, taskManageID: %s, "+
+				"flowID: %s, cvmResetJson: %s, err: %+v, jsonErr: %+v, rid: %s", req.Vendor, detail.ID,
+				detail.TaskManagementID, detail.FlowID, cvmResetJson, err, jsonErr, kt.Rid)
+			return jsonErr
+		}
+		// 仅在碰到限频错误时进行重试
+		if err != nil && strings.Contains(err.Error(), constant.TCloudLimitExceededErrCode) {
+			if policy.RetryCount()+1 < actionflow.BatchTaskDefaultRetryTimes {
+				// 	非最后一次重试，继续sleep
+				logs.Errorf("call tcloud-ziyan cvm reset reach rate limit, will sleep for retry, retry count: %d, "+
+					"err: %v, rid: %s", policy.RetryCount(), err, kt.Rid)
+				policy.Sleep()
+				continue
+			}
+		}
+		// 其他情况都跳过
+		break
 	}
 	if err != nil {
 		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, taskManageID: %s, flowID: %s, "+
-			"cvmResetJson: %s, rid: %s", err, detail.ID, detail.TaskManagementID, detail.FlowID, cvmResetJson, kt.Rid)
+			"rid: %s", err, detail.ID, detail.TaskManagementID, detail.FlowID, kt.Rid)
 		return err
 	}
 
@@ -195,9 +210,9 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 	if len(alarmIDs) > 0 {
 		_, err = actcli.GetAlarmCli().DelShieldAlarm(kt, alarmIDs, serverBindIP)
 		if err != nil {
-			logs.Errorf("failed to del shield alarm, err: %v, alarmIDs: %v, ips: %v, rid: %s",
+			// 解除屏蔽可忽略，不影响主功能
+			logs.Warnf("failed to del shield alarm, err: %v, alarmIDs: %v, ips: %v, rid: %s",
 				err, alarmIDs, req.IPs, kt.Rid)
-			return err
 		}
 	}
 

@@ -113,7 +113,6 @@ func (c StopActionV2) stopCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
 }
 
 func (c StopActionV2) stopTCloudCvm(kt *kit.Kit, opt *cvm.CvmOperationOption) error {
-
 	req := &hcprotocvm.TCloudBatchStopReq{
 		AccountID:   opt.AccountID,
 		Region:      opt.Region,
