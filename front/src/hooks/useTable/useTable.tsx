@@ -38,7 +38,7 @@ export interface IProp {
     // 用于预览效果的数据
     reviewData?: Array<Record<string, any>>;
     // 其他 table 属性/自定义事件, 比如 settings, onSelectionChange...
-    extra?: Object;
+    extra?: any;
   };
   // 请求相关字段
   requestOption?: {
@@ -107,7 +107,10 @@ export const useTable = (props: IProp) => {
   };
   const filter = reactive({ op: QueryRuleOPEnum.AND, rules: getInitialRules() });
 
-  const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(() => getListData());
+  const { pagination, handlePageLimitChange, handlePageValueChange } = usePagination(
+    () => getListData(),
+    props.tableOptions.extra?.pagination,
+  );
 
   // 钩子 - 表头排序时
   const handleSort = ({ column, type }: any) => {

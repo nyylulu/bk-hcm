@@ -1,16 +1,36 @@
-import { PropType, defineComponent, ref } from 'vue';
+import { PropType, defineComponent, reactive, ref } from 'vue';
 import { useRouter } from 'vue-router';
-import { Button, Checkbox, Message, TagInput } from 'bkui-vue';
+import { Button, Checkbox, Dialog, Message, TagInput } from 'bkui-vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import FilterFormItems from '../filter-form-items';
 import InputNumber from '@/components/input-number';
 import ScrIdcZoneSelector from './ScrIdcZoneSelector';
 import ScrCreateFilterSelector from './ScrCreateFilterSelector';
 import CreateRecallTaskDialog from './CreateRecallTaskDialog';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useZiyanScrStore } from '@/store';
 import './index.scss';
+import type { PaginationType } from '@/hooks/usePagination';
+
+interface ILaunchDeviceItem {
+  bk_host_id: number;
+  asset_id: string;
+  ip: string;
+  outer_ip: string;
+  isp: string;
+  device_type: string;
+  os_type: string;
+  region: string;
+  zone: string;
+  module: string;
+  equipment: number;
+  idc_unit: string;
+  idc_logic_area: string;
+  raid_type: string;
+  input_time: string;
+}
 
 interface ScrResourceManageCreateFilterType {
   ips: string[];
@@ -118,8 +138,14 @@ export default defineComponent({
 
     const isAutoCheck = ref(false);
 
-    const { CommonTable, dataList, getListData, pagination } = useTable({
-      tableOptions: { columns },
+    const pagination = reactive<PaginationType>({
+      start: 0,
+      count: 0,
+      limit: 10,
+      'limit-list': [10, 20, 50, 100, 500],
+    });
+    const { CommonTable, dataList, getListData } = useTable({
+      tableOptions: { columns, extra: { pagination } },
       requestOption: { dataPath: 'data.info', full: true },
       scrConfig: () => ({
         url,
@@ -146,19 +172,33 @@ export default defineComponent({
       if (value) {
         for (let i = 0; i < selectNumber.value; i++) {
           commonTableRef.value.tableRef.toggleRowSelection(dataList.value[i]);
+          onlineList.value = commonTableRef.value.tableRef.getSelection();
         }
       } else {
         commonTableRef.value.tableRef.clearSelection();
+        onlineList.value = [];
       }
     };
-    const handleOnline = async () => {
-      const ids = commonTableRef.value.tableRef.getSelection().map((item: any) => item.bk_host_id);
-      const {
-        data: { id },
-      } = await ziyanScrStore.createOnlineTask({ bk_host_ids: ids });
-      Message({ theme: 'success', message: '提交成功' });
-      // 跳转至资源上架详情
-      router.push({ name: 'scrResourceManageDetail', params: { id }, query: { type: 'online' } });
+
+    const isOnlineLoading = ref(false);
+    const onlineList = ref<Partial<ILaunchDeviceItem>[]>([]);
+    const isOnlineConfirmShow = ref(false);
+    const handleOnline = () => {
+      onlineList.value = commonTableRef.value.tableRef.getSelection();
+      isOnlineConfirmShow.value = true;
+    };
+    const handleOnlineConfirm = async () => {
+      try {
+        const bk_host_ids = onlineList.value.map(({ bk_host_id }) => bk_host_id);
+        const {
+          data: { id },
+        } = await ziyanScrStore.createOnlineTask({ bk_host_ids });
+        Message({ theme: 'success', message: '提交成功' });
+        // 跳转至资源上架详情
+        router.push({ name: 'scrResourceManageDetail', params: { id }, query: { type: 'online' } });
+      } finally {
+        isOnlineLoading.value = false;
+      }
     };
 
     return () => (
@@ -193,7 +233,7 @@ export default defineComponent({
                   <Checkbox v-model={isAutoCheck.value} class='mr8' onChange={handleCheck}>
                     一键勾选
                   </Checkbox>
-                  <Button theme='primary' onClick={handleOnline}>
+                  <Button theme='primary' loading={isOnlineLoading.value} onClick={handleOnline}>
                     提交上架
                   </Button>
                 </div>
@@ -205,6 +245,22 @@ export default defineComponent({
             />
           </div>
         </div>
+        <Dialog
+          class='online-confirm-dialog'
+          isShow={isOnlineConfirmShow.value}
+          title='上架确认'
+          onConfirm={handleOnlineConfirm}
+          onClosed={() => (isOnlineConfirmShow.value = false)}>
+          <p>本次上架 {onlineList.value.length} 台，请确认后操作。</p>
+          <div class='copy-button-group'>
+            <CopyToClipboard content={onlineList.value.map(({ asset_id }) => asset_id).join('\n')}>
+              <Button theme='primary'>复制固资号</Button>
+            </CopyToClipboard>
+            <CopyToClipboard content={onlineList.value.map(({ ip }) => ip).join('\n')}>
+              <Button theme='primary'>复制IP</Button>
+            </CopyToClipboard>
+          </div>
+        </Dialog>
         {/* 资源下架 */}
         {props.type === 'offline' && (
           <CreateRecallTaskDialog ref={createRecallTaskDialogRef} onReloadTable={reloadTableDataList} />

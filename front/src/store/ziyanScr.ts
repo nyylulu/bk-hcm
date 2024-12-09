@@ -103,7 +103,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
    * 资源上架到资源池
    * @param data 要上架的CC主机ID，数量最大500
    */
-  const createOnlineTask = (data: { bk_host_ids: string[] }) => {
+  const createOnlineTask = (data: { bk_host_ids: number[] }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/pool/create/launch/task`, data);
   };
 

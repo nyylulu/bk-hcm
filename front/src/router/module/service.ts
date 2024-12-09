@@ -263,6 +263,7 @@ const serviceMenus: RouteRecordRaw[] = [
             component: () => import('@/views/ziyanScr/resource-manage'),
             meta: {
               activeKey: 'scr-resource-manage',
+              isShowBreadcrumb: true,
             },
           },
           {
@@ -291,7 +292,6 @@ const serviceMenus: RouteRecordRaw[] = [
         meta: {
           title: t('资源上下架'),
           activeKey: 'scr-resource-manage',
-          isShowBreadcrumb: true,
           icon: 'hcm-icon bkhcm-icon-res-shelves',
           checkAuth: 'ziyan_res_shelves_find',
         },
