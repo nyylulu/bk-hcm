@@ -73,8 +73,8 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	if err := svc.createAudit(cts, req.IDs); err != nil {
-		logs.Errorf("create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err := svc.createAudit(cts, protoaudit.Start, req.IDs); err != nil {
+		logs.Errorf("create audit for %s failed, err: %v, rid: %s", protoaudit.Start, err, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -152,10 +152,13 @@ func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string,
 	return nil
 }
 
-func (svc *cvmSvc) createAudit(cts *rest.Contexts, ids []string) error {
-	if err := svc.audit.ResBaseOperationAudit(cts.Kit, enumor.CvmAuditResType, protoaudit.Start, ids); err != nil {
-		logs.Errorf("create operation audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return err
+func (svc *cvmSvc) createAudit(cts *rest.Contexts, operationAction protoaudit.OperationAction, ids []string) error {
+
+	for _, tmpIDs := range slice.Split(ids, constant.BatchOperationMaxLimit) {
+		if err := svc.audit.ResBaseOperationAudit(cts.Kit, enumor.CvmAuditResType, operationAction, tmpIDs); err != nil {
+			logs.Errorf("create operation audit failed, err: %v, cvmIDs: %v, rid: %s", err, tmpIDs, cts.Kit.Rid)
+			return err
+		}
 	}
 	return nil
 }
@@ -167,7 +170,7 @@ func (svc *cvmSvc) validateMOAResult(cts *rest.Contexts, sessionID string) error
 		return err
 	}
 	if resp.Count == 0 {
-		return fmt.Errorf("no result found by session: %s", sessionID)
+		return errf.Newf(errf.MOAValidationTimeoutError, "no session found by id: %s", sessionID)
 	}
 	kv := resp.Kvs[0]
 	result := string(kv.Value)

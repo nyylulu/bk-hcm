@@ -21,6 +21,7 @@ package cvm
 
 import (
 	proto "hcm/pkg/api/cloud-server/cvm"
+	"hcm/pkg/api/data-service/audit"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -62,8 +63,8 @@ func (svc *cvmSvc) batchAsyncStopCvmSvc(cts *rest.Contexts, bkBizID int64, valid
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
-	if err := svc.createAudit(cts, req.IDs); err != nil {
-		logs.Errorf("create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+	if err := svc.createAudit(cts, audit.Stop, req.IDs); err != nil {
+		logs.Errorf("create audit for %s failed, err: %v, rid: %s", audit.Stop, err, cts.Kit.Rid)
 		return nil, err
 	}
 

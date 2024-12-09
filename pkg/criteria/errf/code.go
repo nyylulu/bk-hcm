@@ -74,4 +74,6 @@ const (
 	BillItemImportEmptyDataError int32 = 2000017
 	// RollingServerRecycleCommitCheckError 提交回收滚服订单校验错误
 	RollingServerRecycleCommitCheckError int32 = 2000018
+	// MOAValidationTimeoutError MOA校验结果超时错误
+	MOAValidationTimeoutError int32 = 2000019
 )

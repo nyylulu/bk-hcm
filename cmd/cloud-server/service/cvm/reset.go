@@ -102,14 +102,18 @@ func (svc *cvmSvc) batchResetAsyncCvm(cts *rest.Contexts, bkBizID int64, validHa
 	}
 
 	// 创建审计记录
-	if err = svc.audit.ResBaseOperationAudit(
-		cts.Kit, enumor.CvmAuditResType, protoaudit.ResetSystem, cvmIDs); err != nil {
-		logs.Errorf("create reset cvm operation audit failed, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
-		return nil, err
+	for _, ids := range slice.Split(cvmIDs, constant.BatchOperationMaxLimit) {
+		if err = svc.audit.ResBaseOperationAudit(
+			cts.Kit, enumor.CvmAuditResType, protoaudit.ResetSystem, ids); err != nil {
+			logs.Errorf("create reset cvm operation audit failed, err: %v, cvmIDs: %v, rid: %s",
+				err, ids, cts.Kit.Rid)
+			return nil, err
+		}
 	}
 
 	taskManagementID, err := svc.createCvmResetTaskManage(cts.Kit, bkBizID, cvmIDs, cvmIDMap, req.Pwd)
 	if err != nil {
+		logs.Errorf("create cvm reset task manage failed, err: %v, cvmIDs: %v, rid: %s", err, cvmIDs, cts.Kit.Rid)
 		return nil, err
 	}
 
