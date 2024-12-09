@@ -168,8 +168,6 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 	}
 	appliedRecords = sortAppliedRecords(appliedRecords)
 
-	// 剩余的CPU总核心数
-	var remainSumCore int64
 	// 2.指定时间范围内，该业务剩余可退还的CPU总核心数
 	for _, apply := range appliedRecords {
 		// 该子订单已退回的CPU总核心数
@@ -180,10 +178,8 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 
 		// 该主机申请单，是否还有剩余可退还的CPU核心数
 		remainCore := cvt.PtrToVal(apply.DeliveredCore) - returnedCore
-		// 计算当前剩余的CPU总核心数
-		remainSumCore += remainCore
 
-		if remainSumCore <= 0 {
+		if remainCore <= 0 {
 			continue
 		}
 
@@ -195,7 +191,7 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 			}
 
 			// 申请单有剩余CPU核数 + 该主机尚未匹配 + 机型族相同
-			if remainSumCore > 0 && !hostItem.IsMatched && hostItem.CpuCore <= remainSumCore &&
+			if remainCore > 0 && !hostItem.IsMatched && hostItem.CpuCore <= remainCore &&
 				apply.InstanceGroup == hostItem.DeviceGroup &&
 				(apply.CoreType == rstypes.OldVersionCoreType || apply.CoreType == hostItem.CoreType) {
 
@@ -211,7 +207,7 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 				hostItem.AppliedRecordID = apply.ID
 				hostItem.MatchAppliedCore = hostItem.CpuCore
 				// 扣减剩余可退还的CPU总核心数
-				remainSumCore -= hostItem.CpuCore
+				remainCore -= hostItem.CpuCore
 			}
 		}
 	}
@@ -232,8 +228,8 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 			err, bkBizID, kt.Rid)
 		return nil, false, 0, err
 	}
-	logs.Infof("match recycle rolling cvm host quota end, bkBizID: %d, continueMatched: %v, remainSumCore: %d, "+
-		"hostCpuMap: %s, rid: %s", bkBizID, continueMatched, remainSumCore, hostCpuMapJson, kt.Rid)
+	logs.Infof("match recycle rolling cvm host quota end, bkBizID: %d, continueMatched: %v, hostCpuMap: %s, rid: %s",
+		bkBizID, continueMatched, hostCpuMapJson, kt.Rid)
 
 	return hostCpuMap, continueMatched, allBizReturnedCpuCore, nil
 }
