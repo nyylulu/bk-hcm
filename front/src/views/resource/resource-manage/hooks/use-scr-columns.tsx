@@ -41,7 +41,7 @@ import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import WName from '@/components/w-name';
 import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
-import { ResourcesDemandsStatus } from '@/typings/resourcePlan';
+import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 
 interface LinkFieldOptions {
@@ -1984,19 +1984,52 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
     },
     {
-      label: 'CPU总核心数',
+      label: 'CPU核数',
       field: 'updated_info.cvm.cpu_core',
       isDefaultShow: true,
+      render: ({ cell, data }: { cell: number; data: IResourcesTicketItem }) => {
+        const value = cell - data.original_info.cvm.cpu_core;
+        if (isNaN(value)) {
+          return '--';
+        }
+        let prefix = value > 0 ? '+' : '';
+        if (value === 0) {
+          prefix = data.ticket_type === 'delete' ? '-' : '+';
+        }
+        return `${prefix}${value}`;
+      },
     },
     {
-      label: '内存总量(GB)',
+      label: '内存量(GB)',
       field: 'updated_info.cvm.memory',
       isDefaultShow: true,
+      render: ({ cell, data }: { cell: number; data: IResourcesTicketItem }) => {
+        const value = cell - data.original_info.cvm.memory;
+        if (isNaN(value)) {
+          return '--';
+        }
+        let prefix = value > 0 ? '+' : '';
+        if (value === 0) {
+          prefix = data.ticket_type === 'delete' ? '-' : '+';
+        }
+        return `${prefix}${value}`;
+      },
     },
     {
-      label: '云硬盘总量(GB)',
+      label: '云硬盘量(GB)',
       field: 'updated_info.cbs.disk_size',
       isDefaultShow: true,
+      render: ({ cell, data }: { cell: number; data: IResourcesTicketItem }) => {
+        const value = cell - data.original_info.cbs.disk_size;
+        if (isNaN(value)) {
+          return '--';
+        }
+        let prefix = value > 0 ? '+' : '';
+        if (value === 0) {
+          prefix = data.ticket_type === 'delete' ? '-' : '+';
+        }
+        return `${prefix}${value}`;
+      },
     },
     {
       label: '提单人',
