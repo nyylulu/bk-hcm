@@ -29,6 +29,8 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // HostWithRelRes ...
@@ -90,65 +92,86 @@ func (cli *client) syncCvmRelRes(kt *kit.Kit, params *SyncHostParams,
 		return nil
 	}
 
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	pipeline := make(chan struct{}, 20)
+	doFunc := func(relMgr *cvmrelmgr.CvmRelManger, resType enumor.CloudResourceType,
+		syncFunc func(kt *kit.Kit, cloudIDs []string) error) error {
+
+		defer func() {
+			<-pipeline
+		}()
+
+		err := relMgr.Sync(kt, resType, syncFunc)
+		if err != nil {
+			logs.Errorf("[%s] sync cvm associate %s failed, err: %v, rid: %s", enumor.TCloudZiyan, resType, err, kt.Rid)
+			return err
+		}
+
+		return nil
+	}
+
 	for region, cvms := range regionCVMMap {
+		regionVal := region
 		// 获取cvm和关联资源的关联关系
-		mgr, err := cli.buildCvmRelManger(kt, region, cvms)
+		mgr, err := cli.buildCvmRelManger(kt, regionVal, cvms)
 		if err != nil {
 			logs.Errorf("[%s] build cvm rel manager failed, err: %v, rid: %s", enumor.TCloudZiyan, err, kt.Rid)
 			return err
 		}
 
-		// sync vpc
-		if err = mgr.Sync(kt, enumor.VpcCloudResType, func(kt *kit.Kit, cloudIDs []string) error {
-			assResParams := &SyncBaseParams{
-				AccountID: params.AccountID,
-				Region:    region,
-				CloudIDs:  cloudIDs,
-			}
-			if _, err := cli.Vpc(kt, assResParams, new(SyncVpcOption)); err != nil {
-				return err
-			}
+		syncFuncMap := map[enumor.CloudResourceType]func(kt *kit.Kit, cloudIDs []string) error{
+			enumor.VpcCloudResType: func(kt *kit.Kit, cloudIDs []string) error {
+				assResParams := &SyncBaseParams{
+					AccountID: params.AccountID,
+					Region:    regionVal,
+					CloudIDs:  cloudIDs,
+				}
+				if _, err = cli.Vpc(kt, assResParams, new(SyncVpcOption)); err != nil {
+					return err
+				}
 
-			return nil
-		}); err != nil {
-			logs.Errorf("[%s] sync cvm associate vpc failed, err: %v, rid: %s", enumor.TCloudZiyan, err, kt.Rid)
-			return err
+				return nil
+			},
+			enumor.SubnetCloudResType: func(kt *kit.Kit, cloudIDs []string) error {
+				assResParams := &SyncBaseParams{
+					AccountID: params.AccountID,
+					Region:    regionVal,
+					CloudIDs:  cloudIDs,
+				}
+				if _, err = cli.Subnet(kt, assResParams, new(SyncSubnetOption)); err != nil {
+					return err
+				}
+
+				return nil
+			},
+			enumor.SecurityGroupCloudResType: func(kt *kit.Kit, cloudIDs []string) error {
+				assResParams := &SyncBaseParams{
+					AccountID: params.AccountID,
+					Region:    regionVal,
+					CloudIDs:  cloudIDs,
+				}
+				if _, err = cli.SecurityGroup(kt, assResParams, new(SyncSGOption)); err != nil {
+					return err
+				}
+
+				return nil
+			},
 		}
 
-		// sync subnet
-		if err = mgr.Sync(kt, enumor.SubnetCloudResType, func(kt *kit.Kit, cloudIDs []string) error {
-			assResParams := &SyncBaseParams{
-				AccountID: params.AccountID,
-				Region:    region,
-				CloudIDs:  cloudIDs,
-			}
-			if _, err := cli.Subnet(kt, assResParams, new(SyncSubnetOption)); err != nil {
-				logs.Errorf("[%s] sync cvm associate subnet failed, err: %v, rid: %s", enumor.TCloudZiyan, err, kt.Rid)
-				return err
-			}
+		for resType, syncFunc := range syncFuncMap {
+			pipeline <- struct{}{}
+			curMgr := mgr
+			curResType := resType
+			curSyncFunc := syncFunc
 
-			return nil
-		}); err != nil {
-			logs.Errorf("[%s] sync cvm associate subnet failed, err: %v, rid: %s", enumor.Ziyan, err, kt.Rid)
-			return err
+			eg.Go(func() error {
+				return doFunc(curMgr, curResType, curSyncFunc)
+			})
 		}
+	}
 
-		// sync security group
-		if err = mgr.Sync(kt, enumor.SecurityGroupCloudResType, func(kt *kit.Kit, cloudIDs []string) error {
-			assResParams := &SyncBaseParams{
-				AccountID: params.AccountID,
-				Region:    region,
-				CloudIDs:  cloudIDs,
-			}
-			if _, err := cli.SecurityGroup(kt, assResParams, new(SyncSGOption)); err != nil {
-				return err
-			}
-
-			return nil
-		}); err != nil {
-			logs.Errorf("[%s] sync cvm associate disk failed, err: %v, rid: %s", enumor.Ziyan, err, kt.Rid)
-			return err
-		}
+	if err := eg.Wait(); err != nil {
+		return err
 	}
 
 	return nil

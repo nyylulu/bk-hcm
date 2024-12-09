@@ -29,6 +29,8 @@ import (
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // SyncAllResourceOption ...
@@ -92,14 +94,31 @@ func SyncAllResource(kt *kit.Kit, cliSet *client.ClientSet, opt *SyncAllResource
 		Vendor:    string(enumor.TCloudZiyan),
 	}
 
-	if hitErr = SyncHost(kt, cliSet, opt.AccountID, sd); hitErr != nil {
-		return enumor.CvmCloudResType, hitErr
-	}
-
-	for _, syncer := range syncOrder {
-		if hitErr = syncer.ResSyncFunc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
-			return syncer.ResType, hitErr
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	var resType enumor.CloudResourceType
+	// 单独开协程处理，自研云主机同步和其他资源的同步不相互影响
+	eg.Go(func() error {
+		if hitErr = SyncHost(kt, cliSet, opt.AccountID, sd); hitErr != nil {
+			resType = enumor.CvmCloudResType
+			return hitErr
 		}
+
+		return nil
+	})
+
+	eg.Go(func() error {
+		for _, syncer := range syncOrder {
+			if hitErr = syncer.ResSyncFunc(kt, cliSet, opt.AccountID, regions, sd); hitErr != nil {
+				resType = syncer.ResType
+				return hitErr
+			}
+		}
+
+		return nil
+	})
+
+	if hitErr = eg.Wait(); hitErr != nil {
+		return resType, hitErr
 	}
 
 	return "", nil
