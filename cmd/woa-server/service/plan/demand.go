@@ -164,9 +164,11 @@ func (s *service) listResPlanDemand(cts *rest.Contexts, req *ptypes.ListResPlanD
 }
 
 // listResPlanCrpDemands list res plan crp demands, demandIDs length is unknown, page query
-func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int64]*rpcd.ResPlanCrpDemandTable, error) {
+func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int64][]*rpcd.ResPlanCrpDemandTable,
+	error) {
+
 	var mapLock sync.Mutex
-	result := make(map[int64]*rpcd.ResPlanCrpDemandTable)
+	result := make(map[int64][]*rpcd.ResPlanCrpDemandTable)
 
 	// 查询参数最多500条，超过的需要分组查询
 	batch := int(filter.DefaultMaxInLimit)
@@ -188,7 +190,7 @@ func (s *service) listResPlanCrpDemands(kt *kit.Kit, demandIDs []int64) (map[int
 
 			mapLock.Lock()
 			for id, one := range list.Details {
-				result[one.CrpDemandID] = &list.Details[id]
+				result[one.CrpDemandID] = append(result[one.CrpDemandID], &list.Details[id])
 			}
 			mapLock.Unlock()
 
@@ -260,6 +262,7 @@ func (s *service) appendListResPlanDemandRespFieldWithTable(kt *kit.Kit, details
 	for _, item := range details {
 		if _, exists := resPlanCrpDemands[item.CrpDemandID]; !exists {
 			// 本地没有的数据直接干掉，可能有一定风险
+			logs.Warnf("cannot found demand_id: %d from res_plan_crp_demand, rid: %s", item.CrpDemandID, kt.Rid)
 			continue
 		}
 
@@ -268,20 +271,25 @@ func (s *service) appendListResPlanDemandRespFieldWithTable(kt *kit.Kit, details
 			continue
 		}
 
-		if *resPlanCrpDemands[item.CrpDemandID].Locked == enumor.CrpDemandLocked {
-			item.Status = enumor.DemandStatusLocked
+		// 因CRP合并，一个demand可能被多个业务共享
+		for _, localDemand := range resPlanCrpDemands[item.CrpDemandID] {
+			bizItem := item.Copy()
+
+			if *localDemand.Locked == enumor.CrpDemandLocked {
+				bizItem.Status = enumor.DemandStatusLocked
+			}
+
+			bizItem.StatusName = bizItem.Status.Name()
+			bizItem.BkBizID = localDemand.BkBizID
+			bizItem.BkBizName = localDemand.BkBizName
+			bizItem.OpProductID = localDemand.OpProductID
+			bizItem.OpProductName = localDemand.OpProductName
+			bizItem.PlanProductID = localDemand.PlanProductID
+			bizItem.PlanProductName = localDemand.PlanProductName
+			bizItem.DemandClass = localDemand.DemandClass
+
+			rstDetails = append(rstDetails, bizItem)
 		}
-
-		item.StatusName = item.Status.Name()
-		item.BkBizID = resPlanCrpDemands[item.CrpDemandID].BkBizID
-		item.BkBizName = resPlanCrpDemands[item.CrpDemandID].BkBizName
-		item.OpProductID = resPlanCrpDemands[item.CrpDemandID].OpProductID
-		item.OpProductName = resPlanCrpDemands[item.CrpDemandID].OpProductName
-		item.PlanProductID = resPlanCrpDemands[item.CrpDemandID].PlanProductID
-		item.PlanProductName = resPlanCrpDemands[item.CrpDemandID].PlanProductName
-		item.DemandClass = resPlanCrpDemands[item.CrpDemandID].DemandClass
-
-		rstDetails = append(rstDetails, item)
 	}
 	return rstDetails, nil
 }
@@ -580,24 +588,38 @@ func (s *service) filterPlanDemandDetailRespByBkBizIDs(kt *kit.Kit, bkBizIDs []i
 		// 本地没有的数据直接干掉
 		return nil, errf.Aborted, fmt.Errorf("cannot found demand_id: %d from res_plan_crp_demand", demandID)
 	}
-	// 业务无权限
-	bkBizID := resPlanCrpDemands[demandID].BkBizID
-	if len(bkBizIDs) > 0 {
-		if !slice.IsItemInSlice(bkBizIDs, bkBizID) {
-			return nil, errf.PermissionDenied, fmt.Errorf("bk_biz_id: %d is not authorized", bkBizID)
+
+	// 因CRP合并，一个demand可能被多个业务共享，detail挑选其中一个有权限的业务返回
+	authorized := false
+	for _, localDemand := range resPlanCrpDemands[demandID] {
+		// 业务无权限
+		bkBizID := localDemand.BkBizID
+		if len(bkBizIDs) > 0 {
+			if !slice.IsItemInSlice(bkBizIDs, bkBizID) {
+				continue
+			}
 		}
+		authorized = true
+
+		src.BkBizID = localDemand.BkBizID
+		src.BkBizName = localDemand.BkBizName
+		src.OpProductID = localDemand.OpProductID
+		src.OpProductName = localDemand.OpProductName
+
+		// 匹配到一个就break
+		break
 	}
+
+	if !authorized {
+		return nil, errf.PermissionDenied, fmt.Errorf("bk_biz_id: %v is not authorized", bkBizIDs)
+	}
+
 	if err = src.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap); err != nil {
 		return nil, errf.Aborted, err
 	}
 	if err = src.SetDiskType(); err != nil {
 		return nil, errf.Aborted, err
 	}
-
-	src.BkBizID = resPlanCrpDemands[demandID].BkBizID
-	src.BkBizName = resPlanCrpDemands[demandID].BkBizName
-	src.OpProductID = resPlanCrpDemands[demandID].OpProductID
-	src.OpProductName = resPlanCrpDemands[demandID].OpProductName
 
 	return src, errf.OK, nil
 }
@@ -713,17 +735,25 @@ func (s *service) convCrpDemandChangeLogResp(kt *kit.Kit, clogItems []*ptypes.Li
 	}
 	for _, item := range clogItems {
 		if _, exists := resPlanCrpDemands[item.CrpDemandId]; !exists {
-			logs.Warnf("cannot found demand_id: %d from res_plan_crp_demand", item.CrpDemandId)
+			logs.Warnf("cannot found demand_id: %d from res_plan_crp_demand, rid: %s", item.CrpDemandId, kt.Rid)
 			continue
 		}
-		itemBkBizID := resPlanCrpDemands[item.CrpDemandId].BkBizID
-		if len(bkBizIDs) > 0 {
-			if !slice.IsItemInSlice(bkBizIDs, itemBkBizID) {
-				continue
+
+		// 因CRP合并，一个demand可能被多个业务共享
+		for _, localDemand := range resPlanCrpDemands[item.CrpDemandId] {
+			itemBkBizID := localDemand.BkBizID
+			if len(bkBizIDs) > 0 {
+				if !slice.IsItemInSlice(bkBizIDs, itemBkBizID) {
+					continue
+				}
 			}
+
+			item.OpProductName = localDemand.OpProductName
+
+			// 匹配到一个就break
+			break
 		}
 
-		item.OpProductName = resPlanCrpDemands[item.CrpDemandId].OpProductName
 		rst = append(rst, item)
 	}
 

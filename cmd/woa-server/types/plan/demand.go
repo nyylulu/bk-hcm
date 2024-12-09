@@ -31,6 +31,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
 	mtypes "hcm/pkg/dal/dao/types/meta"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/times"
 )
 
@@ -262,6 +263,12 @@ func (l *ListResPlanDemandItem) SetRegionAndZoneID(zoneNameMap map[string]string
 	}
 	l.ZoneID = zoneID
 	return nil
+}
+
+// Copy ListResPlanDemandItem copy
+func (l *ListResPlanDemandItem) Copy() *ListResPlanDemandItem {
+	c := cvt.PtrToVal(l)
+	return &c
 }
 
 // PlanDemandDetail crp demand detail的本地格式化
