@@ -381,6 +381,9 @@ export default defineComponent({
                             verifyText='MOA校验'
                             promptPayload={moaVerifyPromptPayload.value}
                             boundary={footerRef.value}
+                            successText={`校验成功，请点击右侧“${
+                              operationMap[operationType.value].label
+                            }”按钮，5分钟内有效。`}
                           />
                         )}
                         <Button

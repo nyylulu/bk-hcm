@@ -197,10 +197,7 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
 
         const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds, session_id });
 
-        Message({
-          message: '操作成功',
-          theme: 'success',
-        });
+        Message({ theme: 'success', message: '操作成功' });
 
         // 跳转至新任务详情页
         routerAction.redirect({
@@ -209,6 +206,14 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
           query: { bizs: getBizsId() },
         });
         operationType.value = OperationActions.NONE;
+      } catch (error: any) {
+        if (error.code === 2000019) {
+          // MOA校验过期
+          Message({ theme: 'error', message: 'MOA校验过期，请重新发起校验后操作' });
+          moaVerifyRef.value?.resetVerifyResult();
+        } else {
+          Message({ theme: 'error', message: error.message });
+        }
       } finally {
         isLoading.value = false;
       }

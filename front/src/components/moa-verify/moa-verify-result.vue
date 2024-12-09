@@ -1,12 +1,12 @@
 <script setup lang="ts">
-import { useI18n } from 'vue-i18n';
 import type { IMoaVerifyResult } from './typings';
 import successIcon from '@/assets/image/corret-fill.png';
 import failedIcon from '@/assets/image/delete-fill.png';
 
-defineProps<{ verifyResult: IMoaVerifyResult }>();
-
-const { t } = useI18n();
+withDefaults(defineProps<{ verifyResult: IMoaVerifyResult; successText?: string; failText?: string }>(), {
+  successText: '校验成功',
+  failText: '校验失败',
+});
 </script>
 
 <template>
@@ -14,11 +14,11 @@ const { t } = useI18n();
   <div v-if="verifyResult.status === 'finish'" class="verify-result">
     <template v-if="verifyResult.button_type === 'confirm'">
       <img :src="successIcon" alt="" />
-      <span>{{ t('校验成功') }}</span>
+      <span>{{ successText }}</span>
     </template>
     <template v-else-if="verifyResult.button_type === 'cancel'">
       <img :src="failedIcon" alt="" />
-      <span>{{ t('校验失败') }}</span>
+      <span>{{ failText }}</span>
     </template>
   </div>
   <!-- 报错处理 -->

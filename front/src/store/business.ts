@@ -557,7 +557,9 @@ export const useBusinessStore = defineStore({
     },
     // 自研云主机，开机、关机、重启操作，使用异步任务接口
     cvmOperateAsync(type: string, data: { ids: string[]; session_id: string }) {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}cvms/batch/${type}_async`, data);
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}cvms/batch/${type}_async`, data, {
+        globalError: false,
+      });
     },
   },
 });

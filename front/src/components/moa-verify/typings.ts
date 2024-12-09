@@ -21,6 +21,8 @@ export interface IProps {
   channel?: 'moa' | 'sms'; // 二次验证通道
   promptPayload: IPromptPayloadTypes; // 二次验证弹窗内容
   verifyText?: string;
+  successText?: string;
+  failText?: string;
   theme?: 'primary' | 'success' | 'warning' | 'danger';
   showVerifyResult?: boolean;
   boundary?: string | HTMLElement;
@@ -29,6 +31,7 @@ export interface IProps {
 
 export interface IExposes {
   verifyResult: IMoaVerifyResult;
+  resetVerifyResult: () => void;
 }
 
 export interface IMoaVerifyResult {

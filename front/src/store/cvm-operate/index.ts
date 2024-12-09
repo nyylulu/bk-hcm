@@ -80,7 +80,9 @@ export const useCvmOperateStore = defineStore('cvm-operate', () => {
   }) => {
     isCvmBatchResetAsyncLoading.value = true;
     try {
-      const res = await http.post(`/api/v1/cloud/${getBusinessApiPath()}cvms/batch/reset_async`, params);
+      const res = await http.post(`/api/v1/cloud/${getBusinessApiPath()}cvms/batch/reset_async`, params, {
+        globalError: false,
+      });
       return res?.data;
     } catch (error) {
       console.error(error);

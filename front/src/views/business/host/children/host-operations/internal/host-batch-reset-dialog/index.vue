@@ -103,15 +103,25 @@ const handleNext = async () => {
     const { session_id } = moaVerifyResult.value;
     const params = { hosts, pwd, pwd_confirm, session_id };
 
-    const res = await cvmOperateStore.cvmBatchResetAsync(params);
-    Message({ theme: 'success', message: t('提交成功') });
-    hide();
-    // 跳转至新任务详情页
-    routerAction.redirect({
-      name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-      params: { resourceType: ResourceTypeEnum.CVM, id: res.task_management_id },
-      query: { bizs: getBizsId() },
-    });
+    try {
+      const res = await cvmOperateStore.cvmBatchResetAsync(params);
+      Message({ theme: 'success', message: t('提交成功') });
+      hide();
+      // 跳转至新任务详情页
+      routerAction.redirect({
+        name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+        params: { resourceType: ResourceTypeEnum.CVM, id: res.task_management_id },
+        query: { bizs: getBizsId() },
+      });
+    } catch (error: any) {
+      if (error.code === 2000019) {
+        // MOA校验过期
+        Message({ theme: 'error', message: t('MOA校验过期，请重新发起校验后操作') });
+        moaVerifyRef.value?.resetVerifyResult();
+      } else {
+        Message({ theme: 'error', message: error.message });
+      }
+    }
   }
 };
 
@@ -165,6 +175,7 @@ defineExpose<Exposes>({ show });
             },
           }"
           :boundary="footerRef"
+          :success-text="t('校验成功，请点击右侧“重装”按钮，5分钟内有效。')"
         />
         <bk-button v-if="state.curStep !== 1" class="button" @click="handlePrev">{{ t('上一步') }}</bk-button>
         <bk-button
