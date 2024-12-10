@@ -61,3 +61,8 @@ func (a *ApplicationOfCreateZiyanLB) PrepareReqFromContent() error {
 func (a *ApplicationOfCreateZiyanLB) GetItsmApprover(managers []string) []itsm.VariableApprover {
 	return a.GetItsmPlatformAndAccountApprover(managers, a.req.AccountID)
 }
+
+// GetBkBizIDs return biz ids
+func (a *ApplicationOfCreateZiyanLB) GetBkBizIDs() []int64 {
+	return []int64{a.req.BkBizID}
+}
