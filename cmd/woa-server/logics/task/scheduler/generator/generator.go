@@ -1219,9 +1219,10 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
+
 	hosts := make([]*cmdb.Host, 0)
 	for _, host := range resp.Info {
-		hosts = append(hosts, &host)
+		hosts = append(hosts, cvt.ValToPtr(host))
 	}
 
 	return hosts, nil

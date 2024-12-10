@@ -22,8 +22,9 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/querybuilder"
 )
 
 // matchPM match pm devices
@@ -239,7 +240,7 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.Host, err
 
 	hosts := make([]*cmdb.Host, 0)
 	for _, host := range resp.Info {
-		hosts = append(hosts, &host)
+		hosts = append(hosts, cvt.ValToPtr(host))
 	}
 
 	return hosts, nil
