@@ -22,7 +22,6 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
@@ -33,7 +32,7 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	replicas := order.Total - uint(len(existDevices))
 
 	// 1. init generate record
-	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas)
+	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
 	if err != nil {
 		logs.Errorf("failed to match pm when init generate record, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to match pm, err: %v, order id: %s", err, order.SubOrderId)
