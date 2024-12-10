@@ -379,7 +379,7 @@ func (m *Matcher) updateApplyOrderToDb(kt *kit.Kit, order *types.ApplyOrder, mat
 		}
 	}
 
-	if err = model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
+	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, doc); err != nil {
 		logs.Errorf("failed to update apply order, id: %s, err: %v", order.SubOrderId, err)
 		return err
 	}

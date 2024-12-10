@@ -1462,15 +1462,16 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 
 	orderConsumePoolMap := make(ResPlanConsumePool)
 	for _, subOrderInfo := range subOrders {
-		planType, err := c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
-		if err != nil {
-			logs.Errorf("failed to get plan type by charge type, err: %v, rid: %s", err, kt.Rid)
-			return nil, err
+		// TODO 目前预测只关注CVM类型的主机
+		if subOrderInfo.ResourceType != tasktypes.ResourceTypeCvm {
+			continue
 		}
 
-		var demandClass enumor.DemandClass
-		if subOrderInfo.ResourceType == tasktypes.ResourceTypeCvm {
-			demandClass = enumor.DemandClassCVM
+		planType, err := c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
+		if err != nil {
+			logs.Errorf("failed to get plan type by charge type, err: %v, subOrder: %+v, rid: %s", err,
+				*subOrderInfo, kt.Rid)
+			return nil, err
 		}
 
 		consumePoolKey := ResPlanPoolKeyV2{
@@ -1479,7 +1480,7 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			DeviceType:    subOrderInfo.Spec.DeviceType,
 			ObsProject:    subOrderInfo.RequireType.ToObsProject(),
 			BkBizID:       subOrderInfo.BkBizId,
-			DemandClass:   demandClass,
+			DemandClass:   enumor.DemandClassCVM,
 			RegionID:      subOrderInfo.Spec.Region,
 			ZoneID:        subOrderInfo.Spec.Zone,
 			DiskType:      subOrderInfo.Spec.DiskType,
