@@ -50,11 +50,19 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 	// call crp api to get plan order change info.
 	changeDemandsOri, err := c.QueryCrpOrderChangeInfo(kt, ticket.CrpSn)
 	if err != nil {
-		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn, kt.Rid)
+		logs.Errorf("failed to query crp order change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
+			kt.Rid)
 		return err
 	}
 	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
-	changeDemands := aggregateDemandChangeInfo(changeDemandsOri, ticket)
+	changeDemands, err := c.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
+	if err != nil {
+		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
+			kt.Rid)
+		return err
+	}
+
+	logs.Infof("aggregate demand change info: %+v, rid: %s", cvt.PtrToSlice(changeDemands), kt.Rid)
 
 	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
 	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, changeDemands, ticket)
@@ -138,23 +146,15 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, changeDemands []
 	demandUpdatedResource := make(map[string]*ptypes.DemandResource)
 
 	// 从 woa_zone 获取城市/地区的中英文对照
-	zoneMap, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
 	if err != nil {
-		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, nil, err
 	}
-	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 
 	batchCreateReq := make([]rpproto.ResPlanDemandCreateReq, 0)
 	batchCreateLogReq := make([]rpproto.DemandChangelogCreate, 0)
 	for _, changeDemand := range changeDemands {
-		err := changeDemand.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap)
-		if err != nil {
-			logs.Errorf("failed to set region area and zone id, err: %v, change demand: %+v, rid: %s", err,
-				*changeDemand, kt.Rid)
-			return nil, nil, nil, nil, err
-		}
-
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
 		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap)
 		if err != nil {
@@ -277,11 +277,26 @@ func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, updateDemands 
 	return updatedDemandIDs, batchUpdateReq, batchCreateChangelogReq, nil
 }
 
-func aggregateDemandChangeInfo(changeDemands []*ptypes.CrpOrderChangeInfo,
-	ticket *TicketInfo) []*ptypes.CrpOrderChangeInfo {
+func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
+	ticket *TicketInfo) ([]*ptypes.CrpOrderChangeInfo, error) {
+
+	// 从 woa_zone 获取城市/地区的中英文对照
+	zoneMap, regionAreaMap, _, err := c.getMetaMaps(kt)
+	if err != nil {
+		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 
 	changeDemandMap := make(map[ptypes.ResPlanDemandKey]*ptypes.CrpOrderChangeInfo)
 	for _, changeDemand := range changeDemands {
+		err := changeDemand.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap)
+		if err != nil {
+			logs.Errorf("failed to set region area and zone id, err: %v, change demand: %+v, rid: %s", err,
+				*changeDemand, kt.Rid)
+			return nil, err
+		}
+
 		changeKey := changeDemand.GetKey(ticket.BkBizID, ticket.DemandClass)
 		finalChange, ok := changeDemandMap[changeKey]
 		if !ok {
@@ -295,7 +310,7 @@ func aggregateDemandChangeInfo(changeDemands []*ptypes.CrpOrderChangeInfo,
 		finalChange.ChangeDiskSize = finalChange.ChangeDiskSize + changeDemand.ChangeDiskSize
 	}
 
-	return maps.Values(changeDemandMap)
+	return maps.Values(changeDemandMap), nil
 }
 
 // BatchUpsertResPlanDemand batch upsert res plan demand and unlock res plans.
