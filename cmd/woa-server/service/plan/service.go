@@ -71,7 +71,8 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("ListResPlanTicket", http.MethodPost, "/plans/resources/tickets/list", s.ListResPlanTicket)
 	h.Add("ListBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/list",
 		s.ListBizResPlanTicket)
-	h.Add("CreateBizResPlanTicket", http.MethodPost, "/plan/resource/ticket/create", s.CreateBizResPlanTicket)
+	h.Add("CreateBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/create",
+		s.CreateBizResPlanTicket)
 	h.Add("GetResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetResPlanTicket)
 	h.Add("GetBizResPlanTicket", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{id}",
 		s.GetBizResPlanTicket)

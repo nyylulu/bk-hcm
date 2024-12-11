@@ -209,7 +209,6 @@ func (r *ListBizResPlanTicketReq) Validate() error {
 
 // CreateResPlanTicketReq is create resource plan ticket request.
 type CreateResPlanTicketReq struct {
-	BkBizID     int64                    `json:"bk_biz_id" validate:"required"`
 	DemandClass enumor.DemandClass       `json:"demand_class" validate:"required"`
 	Demands     []CreateResPlanDemandReq `json:"demands" validate:"required"`
 	Remark      string                   `json:"remark" validate:"required"`
@@ -219,10 +218,6 @@ type CreateResPlanTicketReq struct {
 func (r *CreateResPlanTicketReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
-	}
-
-	if r.BkBizID <= 0 {
-		return errors.New("bk biz id should be > 0")
 	}
 
 	if err := r.DemandClass.Validate(); err != nil {

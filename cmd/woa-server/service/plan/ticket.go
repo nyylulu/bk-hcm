@@ -127,6 +127,11 @@ func (s *service) ListBizResPlanTicket(cts *rest.Contexts) (interface{}, error) 
 
 // CreateBizResPlanTicket create biz resource plan ticket.
 func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
 	req := new(ptypes.CreateResPlanTicketReq)
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
@@ -139,12 +144,12 @@ func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error
 	}
 
 	// authorize biz resource plan operation.
-	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ResPlan, Action: meta.Create}, BizID: req.BkBizID}
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ResPlan, Action: meta.Create}, BizID: bkBizID}
 	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
 		return nil, err
 	}
 
-	ticketID, err := s.createResPlanTicket(cts.Kit, req)
+	ticketID, err := s.createResPlanTicket(cts.Kit, bkBizID, req)
 	if err != nil {
 		logs.Errorf("failed to create resource plan ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -160,7 +165,7 @@ func (s *service) CreateBizResPlanTicket(cts *rest.Contexts) (interface{}, error
 }
 
 // createResPlanTicket create resource plan ticket.
-func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTicketReq) (string, error) {
+func (s *service) createResPlanTicket(kt *kit.Kit, bkBizID int64, req *ptypes.CreateResPlanTicketReq) (string, error) {
 	// get create resource plan ticket needed zoneMap, regionAreaMap and deviceTypeMap.
 	zoneMap, regionAreaMap, deviceTypeMap, err := s.getMetaMaps(kt)
 	if err != nil {
@@ -212,7 +217,7 @@ func (s *service) createResPlanTicket(kt *kit.Kit, req *ptypes.CreateResPlanTick
 	}
 
 	// get biz org relation.
-	bizOrgRel, err := s.bizLogics.GetBizOrgRel(kt, req.BkBizID)
+	bizOrgRel, err := s.bizLogics.GetBizOrgRel(kt, bkBizID)
 	if err != nil {
 		logs.Errorf("failed to get biz org rel, err: %v, rid: %s", err, kt.Rid)
 		return "", err

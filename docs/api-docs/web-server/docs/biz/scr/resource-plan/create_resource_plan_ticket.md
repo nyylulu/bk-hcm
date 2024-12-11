@@ -1,16 +1,15 @@
 ### 描述
 
-- 该接口提供版本：v1.5.1+。
+- 该接口提供版本：v9.9.9+。
 - 该接口所需权限：业务-资源预测操作。
 - 该接口功能描述：创建资源预测单据。
 
 ### URL
 
-POST /api/v1/woa/plan/resource/ticket/create
+POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/create
 
 | 参数名称         | 参数类型         | 必选 | 描述                  |
 |--------------|--------------|----|---------------------|
-| bk_biz_id    | int          | 是  | 业务ID                |
 | demand_class | string       | 是  | 预测的需求类型(枚举值：CVM、CA) |
 | demands      | object array | 是  | 需求列表                |
 | remark       | string       | 是  | 预测说明，最少20字，最多1024字  |
@@ -51,7 +50,6 @@ POST /api/v1/woa/plan/resource/ticket/create
 
 ```json
 {
-  "bk_biz_id": 639,
   "demand_class": "CVM",
   "demands": [
     {
