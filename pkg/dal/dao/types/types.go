@@ -68,6 +68,29 @@ func (opt ListOption) Validate(eo *filter.ExprOption, po *core.PageOption) error
 	return nil
 }
 
+// CountOption defines options to count resources.
+type CountOption struct {
+	Filter  *filter.Expression
+	GroupBy string
+}
+
+// Validate list option.
+func (opt *CountOption) Validate(eo *filter.ExprOption) error {
+	if opt.Filter == nil {
+		return errf.New(errf.InvalidParameter, "filter expr is required")
+	}
+
+	if eo == nil {
+		return errf.New(errf.InvalidParameter, "filter expr option is required")
+	}
+
+	if err := opt.Filter.Validate(eo); err != nil {
+		return err
+	}
+
+	return nil
+}
+
 // ValidateExcludeFilter validate list option, Filter is allowed to be empty.
 func (opt ListOption) ValidateExcludeFilter(eo *filter.ExprOption, po *core.PageOption) error {
 	if opt.Filter != nil {
@@ -88,29 +111,6 @@ func (opt ListOption) ValidateExcludeFilter(eo *filter.ExprOption, po *core.Page
 	}
 
 	if err := opt.Page.Validate(po); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// CountOption defines options to count resources.
-type CountOption struct {
-	Filter  *filter.Expression
-	GroupBy string
-}
-
-// Validate list option.
-func (opt *CountOption) Validate(eo *filter.ExprOption) error {
-	if opt.Filter == nil {
-		return errf.New(errf.InvalidParameter, "filter expr is required")
-	}
-
-	if eo == nil {
-		return errf.New(errf.InvalidParameter, "filter expr option is required")
-	}
-
-	if err := opt.Filter.Validate(eo); err != nil {
 		return err
 	}
 

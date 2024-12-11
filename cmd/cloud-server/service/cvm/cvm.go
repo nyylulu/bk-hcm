@@ -91,6 +91,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchStopBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/stop", svc.BatchStopBizCvm)
 	h.Add("BatchRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reboot", svc.BatchRebootBizCvm)
 	h.Add("QueryBizCvmRelatedRes", http.MethodPost, "/bizs/{bk_biz_id}/cvms/rel_res/batch", svc.QueryBizCvmRelatedRes)
+	h.Add("ListCvmSecurityGroupRules", http.MethodPost,
+		"/bizs/{bk_biz_id}/cvms/{cvm_id}/security_groups/{security_group_id}/rules/list", svc.ListCvmSecurityGroupRules)
 	h.Add("InquiryBizPriceCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/prices/inquiry", svc.InquiryBizPriceCvm)
 	h.Add("BatchResetAsyncBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reset_async",
 		svc.BatchResetAsyncBizCvm)
@@ -111,6 +113,11 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("GetBizRecycledCvm", http.MethodGet, "/bizs/{bk_biz_id}/recycled/cvms/{id}", svc.GetBizRecyclingCvm)
 	h.Add("BatchDeleteBizRecycledCvm", http.MethodDelete, "/bizs/{bk_biz_id}/recycled/cvms/batch",
 		svc.BatchDeleteBizRecycledCvm)
+
+	h.Add("BatchListCvmSecurityGroups", http.MethodPost, "/cvms/security_groups/batch/list",
+		svc.BatchListCvmSecurityGroups)
+	h.Add("BizBatchListCvmSecurityGroups", http.MethodPost, "/bizs/{bk_biz_id}/cvms/security_groups/batch/list",
+		svc.BizBatchListCvmSecurityGroups)
 
 	initCvmServiceHooks(svc, h)
 

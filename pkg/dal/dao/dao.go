@@ -173,10 +173,10 @@ type Set interface {
 	RollingFineDetail() rollingserver.RollingFineDetailInterface
 	OBSBillItemRolling() rollingserver.OBSBillItemRolling
 
-	GlobalConfig() globalconfig.Interface
-
 	TaskDetail() task.Detail
 	TaskManagement() task.Management
+	GlobalConfig() globalconfig.Interface
+
 	Txn() *Txn
 }
 
@@ -991,14 +991,6 @@ func (s *set) RollingReturnedRecord() rollingserver.RollingReturnedRecordInterfa
 	}
 }
 
-// GlobalConfig return dao.
-func (s *set) GlobalConfig() globalconfig.Interface {
-	return &globalconfig.Dao{
-		Orm:   s.orm,
-		IDGen: s.idGen,
-	}
-}
-
 // TaskDetail return task detail dao.
 func (s *set) TaskDetail() task.Detail {
 	return task.NewDetailDao(s.orm, s.idGen, s.audit)
@@ -1007,4 +999,12 @@ func (s *set) TaskDetail() task.Detail {
 // TaskManagement return task management dao.
 func (s *set) TaskManagement() task.Management {
 	return task.NewManagementDao(s.orm, s.idGen, s.audit)
+}
+
+// GlobalConfig return dao.
+func (s *set) GlobalConfig() globalconfig.Interface {
+	return &globalconfig.Dao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+	}
 }

@@ -289,3 +289,12 @@ export const getValueByKey = (data: object, keyPath: string): string => {
   }
   return result as string | undefined;
 };
+
+// 标签解析
+export const formatTags = (data: { [k: string]: any }) => {
+  return (
+    Object.entries(data ?? {})
+      .map((item) => item.join(':'))
+      .join(';') || '--'
+  );
+};

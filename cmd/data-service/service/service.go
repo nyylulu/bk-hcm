@@ -288,6 +288,7 @@ func (s *Service) apiSet() *restful.Container {
 
 	billexchangerate.InitService(capability)
 	billsyncrecord.InitService(capability)
+	globalconfig.InitService(capability)
 
 	rollingserver.InitService(capability)
 

@@ -116,7 +116,7 @@ func (svc *securityGroupSvc) listSGRule(cts *rest.Contexts, validHandler handler
 		return svc.client.DataService().TCloudZiyan.SecurityGroup.ListSecurityGroupRule(cts.Kit, listReq, sgID)
 
 	default:
-		return nil, errf.Newf(errf.Unknown, "vendor: %s not support", vendor)
+		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for list security group rule", vendor)
 	}
 }
 

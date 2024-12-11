@@ -11,7 +11,7 @@ import { Message } from 'bkui-vue';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
-import { timeFormatter } from '@/common/util';
+import { timeFormatter, formatTags } from '@/common/util';
 import { FieldList } from '../../../common/info-list/types';
 
 const props = defineProps({
@@ -82,11 +82,19 @@ const settingInfo: FieldList = [
     render: (val: string) => timeFormatter(val),
   },
   {
+    name: t('标签'),
+    prop: 'tags',
+    render: (val: any) => formatTags(val),
+  },
+  {
     name: t('备注'),
     prop: 'memo',
     edit: props.vendor !== 'aws',
   },
-].filter(({ prop }) => (whereAmI.value === Senarios.business && !['bk_biz_id'].includes(prop)) || whereAmI.value !== Senarios.business);
+].filter(
+  ({ prop }) =>
+    (whereAmI.value === Senarios.business && !['bk_biz_id'].includes(prop)) || whereAmI.value !== Senarios.business,
+);
 
 if (props.vendor === 'tcloud' || props.vendor === 'aws' || props.vendor === 'huawei') {
   settingInfo.splice(8, 0, {

@@ -50,7 +50,6 @@ func ServiceName() Name {
 type Name string
 
 const (
-
 	// APIServerName is api server's name
 	APIServerName Name = "api-server"
 	// CloudServerName is cloud server's name
@@ -249,25 +248,6 @@ func (s DataServiceSetting) Validate() error {
 	return nil
 }
 
-// SyncConfig defines sync config.
-type SyncConfig struct {
-	// 自研云监听器同步并发数
-	ZiyanLoadBalancerListenerSyncConcurrency uint `yaml:"ziyanLblConcurrency"`
-
-	// 腾讯云监听器同步并发数
-	TCloudLoadBalancerListenerSyncConcurrency uint `yaml:"tcloudLblConcurrency"`
-}
-
-func (s *SyncConfig) trySetDefault() {
-	if s.ZiyanLoadBalancerListenerSyncConcurrency == 0 {
-		s.ZiyanLoadBalancerListenerSyncConcurrency = 3
-	}
-
-	if s.TCloudLoadBalancerListenerSyncConcurrency == 0 {
-		s.TCloudLoadBalancerListenerSyncConcurrency = 3
-	}
-}
-
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
@@ -304,6 +284,9 @@ func (s HCServiceSetting) Validate() error {
 
 	if err := s.Service.validate(); err != nil {
 		return err
+	}
+	if err := s.SyncConfig.Validate(); err != nil {
+		return fmt.Errorf("syncConfig validate error: %w", err)
 	}
 
 	for _, secret := range s.ZiyanSecrets {
@@ -596,7 +579,6 @@ func (s *AccountServerSetting) trySetFlagBindIP(ip net.IP) error {
 
 // trySetDefault set the TaskServerSetting default value if user not configured.
 func (s *AccountServerSetting) trySetDefault() {
-
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Controller.trySetDefault()
