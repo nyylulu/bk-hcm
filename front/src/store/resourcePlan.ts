@@ -57,8 +57,8 @@ export const useResourcePlanStore = defineStore({
     getOpResourcesTicketsAuditById(id: string): Promise<ResourcePlanTicketAuditResData> {
       return http.get(`/api/v1/woa/plans/resources/tickets/${id}/audit`);
     },
-    createPlan(data: IPlanTicket): { data: { id: string } } {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/plan/resource/ticket/create`, data);
+    createBizPlan(data: IPlanTicket, bk_biz_id: number): { data: { id: string } } {
+      return http.post(`/api/v1/woa/bizs/${bk_biz_id}/plans/resources/tickets/create`, data);
     },
     getBizOrgRelation(bizId: number) {
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/bizs/${bizId}/org/relation`);

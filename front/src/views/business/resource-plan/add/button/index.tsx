@@ -25,7 +25,7 @@ export default defineComponent({
       try {
         isLoading.value = true;
         await validate();
-        const data = await resourcePlanStore.createPlan(props.modelValue);
+        const data = await resourcePlanStore.createBizPlan(props.modelValue, props.modelValue.bk_biz_id);
         router.push({
           path: '/business/applications/resource-plan/detail',
           query: {
