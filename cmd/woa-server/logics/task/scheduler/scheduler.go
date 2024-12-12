@@ -732,6 +732,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 			PendingNum:        suborder.Replicas,
 			SuccessNum:        0,
 			AppliedCore:       suborder.AppliedCore,
+			ObsProject:        ticket.RequireType.ToObsProject(),
 			RetryTime:         0,
 			ModifyTime:        0,
 			CreateAt:          now,

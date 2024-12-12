@@ -47,6 +47,7 @@ import (
 	rpdc "hcm/pkg/dal/table/resource-plan/res-plan-demand-changelog"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
+	tableTypes "hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
@@ -1422,8 +1423,9 @@ func (c *Controller) GetProdResConsumePoolV2(kt *kit.Kit, bkBizIDs []int64, star
 		consumePoolKey.DeviceType = deviceType
 		prodConsumePool[consumePoolKey] += consumeCpuCore
 	}
-	logs.Infof("get biz resource consume pool v2, bkBizIDs: %v, startDay: %s, endDay: %s, pool: %+v, rid: %s", bkBizIDs,
-		startDay.Format(constant.TimeStdFormat), endDay.Format(constant.TimeStdFormat), prodConsumePool, kt.Rid)
+	logs.Infof("get biz resource consume pool v2, bkBizIDs: %v, startDay: %s, endDay: %s, pool: %+v, "+
+		"strUnionFind: %+v, orderConsumePoolMap: %+v, rid: %s", bkBizIDs, startDay.Format(constant.TimeStdFormat),
+		endDay.Format(constant.TimeStdFormat), prodConsumePool, cvt.PtrToVal(strUnionFind), orderConsumePoolMap, kt.Rid)
 
 	return prodConsumePool, nil
 }
@@ -1464,6 +1466,10 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 		if subOrderInfo.ResourceType != tasktypes.ResourceTypeCvm {
 			continue
 		}
+		// 如果项目类型是常规，则RequireType也需要是对应的常规项目
+		if subOrderInfo.ObsProject == enumor.ObsProjectNormal && subOrderInfo.RequireType != enumor.RequireTypeRegular {
+			continue
+		}
 
 		planType, err := c.GetPlanTypeByChargeType(subOrderInfo.Spec.ChargeType)
 		if err != nil {
@@ -1476,7 +1482,7 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			PlanType:      planType,
 			AvailableTime: NewAvailableTime(subOrderInfo.CreateAt.Year(), subOrderInfo.CreateAt.Month()),
 			DeviceType:    subOrderInfo.Spec.DeviceType,
-			ObsProject:    subOrderInfo.RequireType.ToObsProject(),
+			ObsProject:    subOrderInfo.ObsProject,
 			BkBizID:       subOrderInfo.BkBizId,
 			DemandClass:   enumor.DemandClassCVM,
 			RegionID:      subOrderInfo.Spec.Region,
@@ -1522,6 +1528,8 @@ func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []Ver
 			}
 		}
 	}
+	logs.Infof("verify prod demands v2 end, bkBizID: %d, needs: %+v, prodRemain: %+v, prodMaxAvailable: %+v, "+
+		"result: %+v, rid: %s", bkBizID, needs, prodRemain, prodMaxAvailable, result, kt.Rid)
 
 	return result, nil
 }
@@ -1603,8 +1611,7 @@ func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
 
 	nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
 	startDay := time.Date(nowDemandYear, nowDemandMonth, 1, 0, 0, 0, 0, time.UTC)
-	nextMonthDay := time.Date(nowDemandYear, nowDemandMonth+1, 1, 0, 0, 0, 0, time.UTC)
-	endDay := nextMonthDay.AddDate(0, 0, -1)
+	endDay := time.Date(nowDemandYear, nowDemandMonth+1, 1, 0, 0, 0, 0, time.UTC)
 
 	// get biz resource plan pool.
 	prodPlanPool, err := c.GetProdResPlanPoolMatch(kt, bkBizID, startDay, endDay)
@@ -1851,7 +1858,7 @@ func (c *Controller) getMatchedPlanDemandIDs(kt *kit.Kit, bkBizID int64, subOrde
 		IsPrePaid:     isPrePaid,
 		AvailableTime: availableTime,
 		DeviceType:    subOrder.Spec.DeviceType,
-		ObsProject:    subOrder.RequireType.ToObsProject(),
+		ObsProject:    subOrder.ObsProject,
 		BkBizID:       bkBizID,
 		DemandClass:   enumor.DemandClassCVM,
 		RegionID:      subOrder.Spec.Region,
@@ -1918,16 +1925,19 @@ func (c *Controller) AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, 
 	inserts := make([]rpdc.DemandChangelogTable, len(demandIDs))
 	for idx, demandItem := range demandListResp.Details {
 		inserts[idx] = rpdc.DemandChangelogTable{
-			DemandID:      demandItem.ID,
-			SuborderID:    subOrder.SubOrderId,
-			Type:          enumor.DemandChangelogTypeExpend,
-			ExpectTime:    demandItem.ExpectTime,
-			ObsProject:    subOrder.RequireType.ToObsProject(),
-			RegionName:    demandItem.RegionName,
-			ZoneName:      demandItem.ZoneName,
-			DeviceType:    subOrder.Spec.DeviceType,
-			CpuCoreChange: cvt.ValToPtr(int64(subOrder.AppliedCore)),
-			Remark:        subOrder.Remark,
+			DemandID:       demandItem.ID,
+			SuborderID:     subOrder.SubOrderId,
+			Type:           enumor.DemandChangelogTypeExpend,
+			ExpectTime:     demandItem.ExpectTime,
+			ObsProject:     subOrder.ObsProject,
+			RegionName:     demandItem.RegionName,
+			ZoneName:       demandItem.ZoneName,
+			DeviceType:     subOrder.Spec.DeviceType,
+			CpuCoreChange:  cvt.ValToPtr(int64(subOrder.AppliedCore)),
+			OSChange:       &tableTypes.Decimal{},
+			MemoryChange:   cvt.ValToPtr(int64(0)),
+			DiskSizeChange: cvt.ValToPtr(int64(0)),
+			Remark:         subOrder.Remark,
 		}
 	}
 	_, err = c.dao.Txn().AutoTxn(kt, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {

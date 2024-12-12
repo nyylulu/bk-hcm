@@ -53,11 +53,12 @@ type ApplyOrder struct {
 	// AppliedCore 注意：该字段目前只会记录虚拟机申请的核心数量
 	AppliedCore uint `json:"applied_core" bson:"applied_core,omitempty"`
 	// DeliveredCore 注意：该字段目前只会记录虚拟机交付的核心数量
-	DeliveredCore uint      `json:"delivered_core" bson:"delivered_core,omitempty"`
-	RetryTime     uint      `json:"retry_time" bson:"retry_time"`
-	ModifyTime    uint      `json:"modify_time" bson:"modify_time"`
-	CreateAt      time.Time `json:"create_at" bson:"create_at"`
-	UpdateAt      time.Time `json:"update_at" bson:"update_at"`
+	DeliveredCore uint              `json:"delivered_core" bson:"delivered_core,omitempty"`
+	ObsProject    enumor.ObsProject `json:"obs_project" bson:"obs_project"`
+	RetryTime     uint              `json:"retry_time" bson:"retry_time"`
+	ModifyTime    uint              `json:"modify_time" bson:"modify_time"`
+	CreateAt      time.Time         `json:"create_at" bson:"create_at"`
+	UpdateAt      time.Time         `json:"update_at" bson:"update_at"`
 }
 
 // ResourceType resource type
