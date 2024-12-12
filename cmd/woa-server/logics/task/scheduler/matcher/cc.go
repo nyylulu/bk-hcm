@@ -17,6 +17,7 @@ import (
 	"fmt"
 
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
@@ -28,6 +29,21 @@ func (m *Matcher) transferHostAndSetOperator(info *types.DeviceInfo, order *type
 	if err != nil {
 		logs.Errorf("failed to get host id by ip: %s, err: %v", info.Ip, err)
 		return err
+	}
+
+	idMap, err := m.cc.GetHostBizIds(nil, nil, []int64{hostId})
+	if err != nil {
+		logs.Errorf("failed to get host biz id, ip: %s, err: %v", info.Ip, err)
+		return err
+	}
+	bizID, ok := idMap[hostId]
+	if !ok {
+		logs.Errorf("failed to get host biz id, ip: %s, err: %v", info.Ip, err)
+		return fmt.Errorf("failed to get host biz id, ip: %s", info.Ip)
+	}
+	if bizID != enumor.ResourcePoolBiz {
+		logs.Errorf("host is not in biz, ip: %s, biz id: %d", info.Ip, bizID)
+		return nil
 	}
 
 	if err := m.transferHost(info, hostId, order.BkBizId); err != nil {
@@ -47,8 +63,7 @@ func (m *Matcher) transferHostAndSetOperator(info *types.DeviceInfo, order *type
 func (m *Matcher) transferHost(info *types.DeviceInfo, hostId, bizId int64) error {
 	transferReq := &cmdb.TransferHostReq{
 		From: cmdb.TransferHostSrcInfo{
-			// TODO: use const
-			FromBizID: 931,
+			FromBizID: enumor.ResourcePoolBiz,
 			HostIDs:   []int64{hostId},
 		},
 		To: cmdb.TransferHostDstInfo{
