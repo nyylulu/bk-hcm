@@ -1708,17 +1708,9 @@ func (c *Controller) compactResPlanPoolMatch(kt *kit.Kit, pool1 ResPlanPoolMatch
 			}
 
 			if matched[0] {
-				newK2 := ResPlanPoolKeyV2{
-					PlanType:      k2.PlanType,
-					AvailableTime: k2.AvailableTime,
-					DeviceType:    k1.DeviceType,
-					ObsProject:    k2.ObsProject,
-					DemandClass:   k2.DemandClass,
-					RegionID:      k2.RegionID,
-					ZoneID:        k2.ZoneID,
-					DiskType:      k2.DiskType,
-				}
-
+				// 这里只需要使用k1的设备类型字段，不用重新挨个赋值，容易遗漏
+				newK2 := k2
+				newK2.DeviceType = k1.DeviceType
 				if _, ok := pool2[newK2]; !ok {
 					pool2[newK2] = v2
 					delete(pool2, k2)
