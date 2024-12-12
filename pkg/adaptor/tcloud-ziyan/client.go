@@ -38,14 +38,15 @@ import (
 )
 
 type clientSet struct {
-	credential *common.Credential
+	credential common.CredentialIface
 	profile    *profile.ClientProfile
 }
 
 // 自研云客户端集
 func newClientSet(s *types.BaseSecret, profile *profile.ClientProfile) *clientSet {
 	return &clientSet{
-		credential: common.NewCredential(s.CloudSecretID, s.CloudSecretKey),
+		// 自研云使用随机秘钥
+		credential: types.WarpZiyanMultiSecret(s),
 		profile:    profile,
 	}
 
