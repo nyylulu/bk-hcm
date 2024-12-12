@@ -1783,7 +1783,8 @@ export default defineComponent({
             title='CVM一键申请'
             onClosed={() => {
               CAtriggerShow(false);
-            }}>
+            }}
+            renderDirective='if'>
             <applicationSideslider device={device.value} onOneApplication={OneClickApplication} />
           </Sideslider>
 

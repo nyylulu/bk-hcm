@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { h, onBeforeMount, reactive, ref } from 'vue';
+import { h, onBeforeMount, onUnmounted, reactive, ref, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import { useUserStore } from '@/store';
@@ -95,7 +95,13 @@ const getRenderLogs = ({ logs, current_steps }: ItsmTicketAudit) => {
           hasHandleBtn
             ? h(
                 Button,
-                { theme: 'primary', size: 'small', class: 'approval-btn', onClick: () => (isShow.value = true) },
+                {
+                  theme: 'primary',
+                  size: 'small',
+                  class: 'approval-btn',
+                  loading: approvalLoading.value,
+                  onClick: () => (isShow.value = true),
+                },
                 t('立即处理'),
               )
             : null,
@@ -115,6 +121,8 @@ const getRenderLogs = ({ logs, current_steps }: ItsmTicketAudit) => {
 
 // 审批操作
 const isShow = ref(false);
+const approvalLoading = ref(false);
+let approvalLoadingTimer: ReturnType<typeof setTimeout> | null = null;
 const { formModel, resetForm } = useFormModel({ approval: true, remark: '' });
 const approvalItsmAudit = async () => {
   const { order_id, itsm_ticket_id } = data;
@@ -124,9 +132,25 @@ const approvalItsmAudit = async () => {
   const params = { order_id, itsm_ticket_id, state_id, operator, approval, remark };
 
   await http.post(`/api/v1/woa/${getBusinessApiPath()}task/audit/apply/ticket`, params);
-  getData(props.orderId, props.bkBizId);
-  resetForm();
+
+  // 5s后刷新itsm审批流信息
+  approvalLoading.value = true;
+  renderLogs.value = getRenderLogs(data as ItsmTicketAudit); // 重新渲染timeline
+  approvalLoadingTimer = setTimeout(() => {
+    approvalLoading.value = false;
+    getData(props.orderId, props.bkBizId);
+    resetForm();
+  }, 5000);
 };
+watch(isShow, (val) => {
+  if (val) {
+    // 当进入审批操作的时候，暂停定时刷新任务
+    refreshTask.reset();
+  } else {
+    // 当退出审批操作的时候，恢复定时刷新任务
+    refreshTask.resume();
+  }
+});
 
 // 撤单操作
 const isCancelItsmTicketLoading = ref(false);
@@ -154,6 +178,10 @@ const refreshTask = useTimeoutPoll(
 
 onBeforeMount(() => {
   getData(props.orderId, props.bkBizId);
+});
+
+onUnmounted(() => {
+  clearTimeout(approvalLoadingTimer);
 });
 </script>
 
