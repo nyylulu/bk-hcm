@@ -1436,8 +1436,6 @@ func (c *Controller) listApplyOrder(kt *kit.Kit, bkBizIDs []int64, startDay, end
 		"bk_biz_id": mapstr.MapStr{
 			pkg.BKDBIN: bkBizIDs,
 		},
-		"stage":  tasktypes.TicketStageDone,
-		"status": tasktypes.ApplyStatusDone,
 		"create_at": mapstr.MapStr{
 			pkg.BKDBGTE: startDay,
 			pkg.BKDBLTE: endDay,
