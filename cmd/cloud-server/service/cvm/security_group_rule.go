@@ -102,6 +102,12 @@ func (svc *cvmSvc) listCvmSecurityGroupRules(kt *kit.Kit, vendor enumor.Vendor, 
 			Page:   req.Page,
 		}
 		return svc.client.DataService().Azure.SecurityGroup.ListSecurityGroupRule(kt.Ctx, kt.Header(), listReq, sgID)
+	case enumor.TCloudZiyan:
+		listReq := &dataproto.TCloudSGRuleListReq{
+			Filter: req.Filter,
+			Page:   req.Page,
+		}
+		return svc.client.DataService().TCloudZiyan.SecurityGroup.ListSecurityGroupRule(kt, listReq, sgID)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for get cvm security group rules", vendor)
 	}

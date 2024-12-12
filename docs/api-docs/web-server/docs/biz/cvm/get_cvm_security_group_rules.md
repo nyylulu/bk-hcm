@@ -199,7 +199,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/{cvm_id}/security_groups/{security_grou
 | created_at                     | string | 创建时间，标准格式：2006-01-02T15:04:05Z                                                                                                   |
 | updated_at                     | string | 最后一次修改时间，标准格式：2006-01-02T15:04:05Z                                                                                               |
 
-#### data.details[n] & vendor=tcloud
+#### data.details[n] & vendor=tcloud/tcloud-ziyan
 
 | 参数名称                           | 参数类型   | 描述                                                          |
 |--------------------------------|--------|-------------------------------------------------------------|
