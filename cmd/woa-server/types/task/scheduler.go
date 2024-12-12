@@ -567,6 +567,22 @@ type GetApplyAuditCrpRst struct {
 	*ApplyAuditCrp `json:",inline"`
 }
 
+// BizApplyAuditReq biz audit apply ticket request parameter
+type BizApplyAuditReq struct {
+	OrderId  uint64 `json:"order_id" validate:"required"`
+	StateId  int64  `json:"state_id" validate:"required"`
+	Approval bool   `json:"approval"`
+	Remark   string `json:"remark"`
+}
+
+// Validate whether BizApplyAuditReq is valid
+func (req *BizApplyAuditReq) Validate() (err error) {
+	return validator.Validate.Struct(req)
+}
+
+// ResApplyAuditReq 资源下单审核请求参数
+type ResApplyAuditReq = BizApplyAuditReq
+
 // ApplyAuditReq audit apply ticket request parameter
 type ApplyAuditReq struct {
 	OrderId      uint64 `json:"order_id"`

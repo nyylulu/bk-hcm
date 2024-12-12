@@ -98,29 +98,55 @@ const (
 
 // MapStateKey 资源申请单的状态
 var MapStateKey = map[int64][]string{
-	// stage环境
+	// devhk环境
 	// leader审核
-	1957: []string{
+	7185: []string{
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	1955: []string{
+	7184: []string{
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// stage环境
+	// leader审核
+	7250: []string{
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 管理员审核
+	7249: []string{
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key
 		"e3dda6544a3a67f67d85737a9027e4e5"},
 
-	// prod环境
+	// grey环境
 	// leader审核
-	1798: []string{
+	6241: []string{
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	1797: []string{
+	6240: []string{
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// prod环境
+	// leader审核
+	6204: []string{
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 管理员审核
+	6203: []string{
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key

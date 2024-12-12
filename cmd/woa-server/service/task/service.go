@@ -154,4 +154,6 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("GetBizRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetBizRecycleDetectStep)
 	h.Add("CancelBizApplyTicketItsm", http.MethodPost, "/apply/ticket/itsm_audit/cancel", s.CancelBizApplyTicketItsm)
 	h.Add("CancelBizApplyTicketCrp", http.MethodPost, "/apply/ticket/crp_audit/cancel", s.CancelBizApplyTicketCrp)
+	h.Add("AuditBizApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditBizApplyTicket)
+
 }

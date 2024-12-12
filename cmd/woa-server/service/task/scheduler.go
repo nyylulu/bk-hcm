@@ -368,21 +368,90 @@ func (s *service) getApplyAuditCrp(kt *kit.Kit, req *types.GetApplyAuditCrpReq) 
 	return rst, nil
 }
 
-// AuditApplyTicket audit apply ticket
-func (s *service) AuditApplyTicket(cts *rest.Contexts) (any, error) {
-	input := new(types.ApplyAuditReq)
-	if err := cts.DecodeInto(input); err != nil {
-		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+// AuditBizApplyTicket 业务下审批ITSM单据
+func (s *service) AuditBizApplyTicket(cts *rest.Contexts) (any, error) {
+
+	bkBizId, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
 		return nil, err
 	}
 
-	errKey, err := input.Validate()
-	if err != nil {
-		logs.Errorf("failed to audit apply ticket, err: %v, errKey: %s, rid: %s", err, errKey, cts.Kit.Rid)
+	req := new(types.BizApplyAuditReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
 	}
 
-	if err := s.logics.Scheduler().AuditTicket(cts.Kit, input); err != nil {
+	ticket, err := s.listApplyTicket(cts.Kit, withOrderID(int64(req.OrderId)), withBizID(bkBizId))
+	if err != nil {
+		logs.Errorf("failed to get apply order for audit biz apply ticket, err: %v, biz: %d, order: %d, rid: %s",
+			err, bkBizId, req.OrderId, cts.Kit.Rid)
+		return nil, err
+	}
+	// 业务访问权限
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Find}, BizID: ticket.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("failed to check apply ticket perm for audit biz apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	auditParam := &types.ApplyAuditReq{
+		OrderId:      req.OrderId,
+		ItsmTicketId: ticket.ItsmTicketId,
+		StateId:      req.StateId,
+		Operator:     cts.Kit.User,
+		Approval:     req.Approval,
+		Remark:       req.Remark,
+	}
+	if err := s.logics.Scheduler().AuditTicket(cts.Kit, auditParam); err != nil {
+		logs.Errorf("failed to audit biz apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	return nil, nil
+}
+
+// AuditApplyTicket audit apply ticket
+func (s *service) AuditApplyTicket(cts *rest.Contexts) (any, error) {
+	req := new(types.ResApplyAuditReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(pkg.CCErrCommParamsIsInvalid, err)
+	}
+
+	ticket, err := s.listApplyTicket(cts.Kit, withOrderID(int64(req.OrderId)))
+	if err != nil {
+		logs.Errorf("failed to get apply order for audit ticket, err: %v, order: %d, rid: %s",
+			err, req.OrderId, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 资源下主机申领权限
+	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: ticket.BkBizId,
+	})
+	if err != nil {
+		logs.Errorf("failed to check apply ticket perm for audit res apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	auditParam := &types.ApplyAuditReq{
+		OrderId:      req.OrderId,
+		ItsmTicketId: ticket.ItsmTicketId,
+		StateId:      req.StateId,
+		// 默认使用当前用户
+		Operator: cts.Kit.User,
+		Approval: req.Approval,
+		Remark:   req.Remark,
+	}
+	if err := s.logics.Scheduler().AuditTicket(cts.Kit, auditParam); err != nil {
 		logs.Errorf("failed to audit apply ticket, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
