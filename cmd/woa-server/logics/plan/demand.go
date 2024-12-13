@@ -1546,15 +1546,7 @@ func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64) (ResP
 	}
 
 	// construct product max available resource plan pool.
-	prodMaxAvailablePool := make(ResPlanPoolMatch)
-	for k, v := range prodPlanPool {
-		if k.PlanType == enumor.PlanTypeCodeInPlan {
-			// 预测内的总预测需要 * 120%，目前没整清楚120%的逻辑，先按100%计算
-			prodMaxAvailablePool[k] = v
-		} else {
-			prodMaxAvailablePool[k] = v
-		}
-	}
+	prodMaxAvailablePool := deepCopyPlanPool(prodPlanPool)
 
 	// matching.
 	for prodResPlanKey, consumeCpuCore := range prodConsumePool {
@@ -1604,6 +1596,18 @@ func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64) (ResP
 	}
 
 	return prodPlanPool, prodMaxAvailablePool, nil
+}
+
+func deepCopyPlanPool(src ResPlanPoolMatch) ResPlanPoolMatch {
+	dst := make(ResPlanPoolMatch)
+	for k, v := range src {
+		newMap := make(map[string]int64)
+		for demandID, planCore := range v {
+			newMap[demandID] = planCore
+		}
+		dst[k] = newMap
+	}
+	return dst
 }
 
 func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
