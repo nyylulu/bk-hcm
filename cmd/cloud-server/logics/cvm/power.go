@@ -21,7 +21,6 @@ package cvm
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 
 	"hcm/pkg/api/core"
@@ -37,6 +36,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/converter"
+	"hcm/pkg/tools/counter"
 	"hcm/pkg/tools/slice"
 )
 
@@ -100,6 +100,7 @@ func (c *cvm) buildFlowForPower(kt *kit.Kit, uniqueID string, actionName enumor.
 	}
 
 	tasks := make([]ts.CustomFlowTask, 0)
+	actionIDGenerator := counter.NewNumStringCounter(1, 10)
 	for vendor, detailMap := range groupResult {
 		for key, details := range detailMap {
 			// 同一个account、region 共用一个flowTask, 所有flowTask共用一个flow
@@ -107,7 +108,7 @@ func (c *cvm) buildFlowForPower(kt *kit.Kit, uniqueID string, actionName enumor.
 			accountID := split[0]
 			region := split[1]
 
-			flowTasks, err := buildFlowTasks(actionName, vendor, accountID, region, details)
+			flowTasks, err := buildFlowTasks(actionName, vendor, accountID, region, details, actionIDGenerator)
 			if err != nil {
 				logs.Errorf("build flow task failed, err: %v, rid: %s", err, kt.Rid)
 				return "", err
@@ -376,7 +377,7 @@ func (c *cvm) updateTaskDetailsForPower(kt *kit.Kit, details []*cvmTaskDetail) e
 }
 
 func buildFlowTasks(actionName enumor.ActionName, vendor enumor.Vendor, accountID, region string,
-	details []*cvmTaskDetail) ([]ts.CustomFlowTask, error) {
+	details []*cvmTaskDetail, actionIDGenerator func() string) ([]ts.CustomFlowTask, error) {
 
 	switch vendor {
 	case enumor.TCloud, enumor.TCloudZiyan:
@@ -386,7 +387,6 @@ func buildFlowTasks(actionName enumor.ActionName, vendor enumor.Vendor, accountI
 
 	paramMaps := make(map[string]*cvmproto.CvmOperationOption)
 	tasks := make([]ts.CustomFlowTask, 0, len(paramMaps))
-	count := 1
 
 	splitDetails := slice.Split(details, constant.BatchOperationMaxLimit)
 	for _, list := range splitDetails {
@@ -394,6 +394,7 @@ func buildFlowTasks(actionName enumor.ActionName, vendor enumor.Vendor, accountI
 			continue
 		}
 
+		actionID := actionIDGenerator()
 		opt := &cvmproto.CvmOperationOption{
 			Vendor:              vendor,
 			AccountID:           accountID,
@@ -405,14 +406,13 @@ func buildFlowTasks(actionName enumor.ActionName, vendor enumor.Vendor, accountI
 		for _, detail := range list {
 			opt.IDs = append(opt.IDs, detail.cvm.ID)
 			opt.ManagementDetailIDs = append(opt.ManagementDetailIDs, detail.taskDetailID)
-			detail.actionID = strconv.Itoa(count)
+			detail.actionID = actionID
 		}
 		tasks = append(tasks, ts.CustomFlowTask{
-			ActionID:   action.ActIDType(strconv.Itoa(count)),
+			ActionID:   action.ActIDType(actionID),
 			ActionName: actionName,
 			Params:     opt,
 		})
-		count++
 	}
 
 	return tasks, nil
