@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/hc-service/service/sync/handler"
 	typecore "hcm/pkg/adaptor/types/core"
 	typeclb "hcm/pkg/adaptor/types/load-balancer"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -55,28 +56,14 @@ type lbHandler struct {
 
 var _ handler.HandlerV2[typeclb.TCloudClb] = new(lbHandler)
 
-// SyncConcurrent use request specified or 1
-func (hd *lbHandler) SyncConcurrent() uint {
-	// TODO read from config
-	if hd.request != nil && hd.request.Concurrent != 0 {
-		return hd.request.Concurrent
-	}
-	if hd.request.Region == "ap-nanjing" {
-		return 3
-	}
-	return 2
-}
-
 // ListConcurrent use request specified or 1
 func (hd *lbHandler) ListConcurrent() uint {
-	// TODO read from config
 	if hd.request != nil && hd.request.Concurrent != 0 {
 		return hd.request.Concurrent
 	}
-	if hd.request.Region == "ap-nanjing" || hd.request.Region == "ap-shanghai" {
-		return 20
-	}
-	return 5
+	// read from config file
+	listing, _ := cc.HCService().SyncConfig.GetSyncConcurrent(enumor.Ziyan, hd.resType, hd.request.Region)
+	return max(listing, 1)
 }
 
 // Next ...

@@ -28,6 +28,7 @@ import (
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/capability"
 	"hcm/pkg/api/hc-service/sync"
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/enumor"
@@ -107,11 +108,12 @@ func (hd *baseHandler) Describe() string {
 
 // SyncConcurrent use request specified or 1
 func (hd *baseHandler) SyncConcurrent() uint {
-	// TODO read from config
 	if hd.request != nil && hd.request.Concurrent != 0 {
 		return hd.request.Concurrent
 	}
-	return 1
+	// read from config file
+	_, syncing := cc.HCService().SyncConfig.GetSyncConcurrent(enumor.Ziyan, hd.resType, hd.request.Region)
+	return max(syncing, 1)
 }
 
 // Resource return resource type of handler

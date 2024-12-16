@@ -103,8 +103,8 @@ func (cli *client) Listener(kt *kit.Kit, params *SyncBaseParams, opt *SyncListen
 		return nil, err
 	}
 
-	//  分批同步云上监听器
-	for _, listeners := range slice.Split(cloudListeners, constant.TCLBDescribeMax) {
+	//  分批同步云上监听器, 下面需要调用查看监听器rs，支持的单次数量为100
+	for _, listeners := range slice.Split(cloudListeners, 100) {
 		cloudLblIds := slice.Map(listeners, func(l typeslb.TCloudListener) string { return cvt.PtrToVal(l.ListenerId) })
 		lblParam := &SyncBaseParams{
 			AccountID: params.AccountID,
