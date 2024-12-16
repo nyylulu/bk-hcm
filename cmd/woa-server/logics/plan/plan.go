@@ -661,12 +661,13 @@ func (c *Controller) createItsmTicket(kt *kit.Kit, ticket *TicketInfo) (string, 
 	// TODO：待修改
 	contentTemplate := `业务：%s(%d)
 预测类型：%s
-CPU总核数：%.2f
-内存总量(GB)：%.2f
-云盘总量(GB)：%.2f
+CPU变更核数：%.2f
+内存变更量(GB)：%.2f
+云盘变更量(GB)：%.2f
 `
-	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass, ticket.UpdatedCpuCore,
-		ticket.UpdatedMemory, ticket.UpdatedDiskSize)
+	content := fmt.Sprintf(contentTemplate, ticket.BkBizName, ticket.BkBizID, ticket.DemandClass,
+		ticket.UpdatedCpuCore-ticket.OriginalCpuCore, ticket.UpdatedMemory-ticket.OriginalMemory,
+		ticket.UpdatedDiskSize-ticket.OriginalDiskSize)
 	createTicketReq := &itsm.CreateTicketParams{
 		ServiceID:      c.itsmFlow.ServiceID,
 		Creator:        ticket.Applicant,

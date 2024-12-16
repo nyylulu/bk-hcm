@@ -483,8 +483,7 @@ func convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) 
 // listAllResPlanDemand list all res plan demand by request.
 // Note that only count and sort is used in the req.Page.
 func (c *Controller) listAllResPlanDemand(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]rpd.ResPlanDemandTable,
-	uint64,
-	error) {
+	uint64, error) {
 
 	listRules, err := convAllResPlanDemandListOpt(kt, req)
 	if err != nil {

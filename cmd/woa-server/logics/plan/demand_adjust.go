@@ -503,10 +503,24 @@ func (c *Controller) constructOriginalDemandMap(kt *kit.Kit,
 		return nil, err
 	}
 
+	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	if err != nil {
+		logs.Errorf("failed to get all device type map, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	demandOriginMap := make(map[string]*rpt.OriginalRPDemandItem)
 	for _, demand := range demands {
+		deviceType, ok := deviceTypeMap[demand.DeviceType]
+		if !ok {
+			logs.Errorf("failed to get device type, device type: %s, rid: %s", demand.DeviceType, kt.Rid)
+			return nil, fmt.Errorf("device type: %s is not found", demand.DeviceType)
+		}
+
 		// 变更前资源量以请求中的变更前数据为准
-		originOS := originDemandMap[demand.ID].Os
+		originCPUCore := originDemandMap[demand.ID].CpuCore
+		originOS := decimal.NewFromInt(originCPUCore).Div(decimal.NewFromInt(deviceType.CpuCore))
+		originMem := originOS.Mul(decimal.NewFromInt(deviceType.Memory)).IntPart()
 
 		expectTimeStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime),
 			constant.DateLayoutCompact, constant.DateLayout)
@@ -533,8 +547,8 @@ func (c *Controller) constructOriginalDemandMap(kt *kit.Kit,
 				DeviceFamily: demand.DeviceFamily,
 				CoreType:     demand.CoreType,
 				Os:           types.Decimal{Decimal: originOS},
-				CpuCore:      originDemandMap[demand.ID].CpuCore,
-				Memory:       originDemandMap[demand.ID].Memory,
+				CpuCore:      originCPUCore,
+				Memory:       originMem,
 			},
 			Cbs: rpt.Cbs{
 				DiskType:     demand.DiskType,
