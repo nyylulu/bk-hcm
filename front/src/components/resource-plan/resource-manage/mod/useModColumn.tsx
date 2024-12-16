@@ -48,32 +48,32 @@ export const useModColumn = (originData: Ref<IDemandListDetail[]>) => {
         renderDiff(data, originData.value[index], 'expect_time'),
     },
     {
-      label: '实例总数',
-      field: 'total_os',
+      label: '实例剩余数',
+      field: 'remained_os',
       isDefaultShow: true,
       render: ({ data, index }: { data: IDemandListDetail; index: number }) =>
-        renderDiff(data, originData.value[index], 'total_os'),
+        renderDiff(data, originData.value[index], 'remained_os'),
     },
     {
-      label: 'CPU总核数',
-      field: 'total_cpu_core',
+      label: 'CPU剩余核数',
+      field: 'remained_cpu_core',
       isDefaultShow: true,
       render: ({ data, index }: { data: IDemandListDetail; index: number }) =>
-        renderDiff(data, originData.value[index], 'total_cpu_core'),
+        renderDiff(data, originData.value[index], 'remained_cpu_core'),
     },
     {
-      label: '内存总量(GB)',
-      field: 'total_memory',
+      label: '内存剩余量(GB)',
+      field: 'remained_memory',
       isDefaultShow: true,
       render: ({ data, index }: { data: IDemandListDetail; index: number }) =>
-        renderDiff(data, originData.value[index], 'total_memory'),
+        renderDiff(data, originData.value[index], 'remained_memory'),
     },
     {
-      label: '云盘总量(GB)',
-      field: 'total_disk_size',
+      label: '云盘剩余量(GB)',
+      field: 'remained_disk_size',
       isDefaultShow: true,
       render: ({ data, index }: { data: IDemandListDetail; index: number }) =>
-        renderDiff(data, originData.value[index], 'total_disk_size'),
+        renderDiff(data, originData.value[index], 'remained_disk_size'),
     },
     {
       label: '城市',

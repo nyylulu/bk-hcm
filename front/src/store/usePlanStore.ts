@@ -103,7 +103,7 @@ export default defineStore('planStore', () => {
   function convertToAdjust(originalDetail: IDemandListDetail, updatedDetail: IDemandListDetail): IAdjust {
     const mapDetailToAdjustInfo = (detail: IDemandListDetail): AdjustInfo => {
       const demandResTypes: string[] = ['CBS'];
-      if (detail.total_cpu_core > 0 || detail.total_memory > 0) {
+      if (detail.remained_cpu_core > 0 || detail.remained_memory > 0) {
         demandResTypes.push('CVM');
       }
 
@@ -121,15 +121,15 @@ export default defineStore('planStore', () => {
             ? {
                 res_mode: detail.res_mode,
                 device_type: detail.device_type,
-                os: detail.total_os,
-                cpu_core: detail.total_cpu_core,
-                memory: detail.total_memory,
+                os: detail.remained_os,
+                cpu_core: detail.remained_cpu_core,
+                memory: detail.remained_memory,
               }
             : undefined,
         cbs: {
           disk_type: detail.disk_type,
           disk_io: detail.disk_io,
-          disk_size: detail.total_disk_size,
+          disk_size: detail.remained_disk_size,
         },
       };
     };
@@ -153,26 +153,28 @@ export default defineStore('planStore', () => {
     if (detail.demand_class === 'CVM') demand_res_types.push('cvm');
 
     const cvm =
-      detail.total_os > 0
+      detail.remained_os > 0
         ? {
             res_mode: detail.res_mode,
             device_class: detail.device_class,
             device_type: detail.device_type,
-            os: detail.total_os,
-            cpu_core: detail.total_cpu_core,
-            memory: detail.total_memory,
+            os: detail.remained_os,
+            cpu_core: detail.remained_cpu_core,
+            memory: detail.remained_memory,
           }
         : undefined;
 
     const cbs =
-      detail.total_disk_size > 0
+      detail.remained_disk_size > 0
         ? {
             disk_type: detail.disk_type,
             disk_type_name: detail.disk_type_name,
             disk_io: detail.disk_io,
-            disk_size: detail.total_disk_size,
+            disk_size: detail.remained_disk_size,
             disk_per_size:
-              detail.total_disk_size && detail.total_os ? Math.floor(detail.total_disk_size / detail.total_os) : 0,
+              detail.remained_disk_size && detail.remained_os
+                ? Math.floor(detail.remained_disk_size / detail.remained_os)
+                : 0,
           }
         : undefined;
 
@@ -204,10 +206,10 @@ export default defineStore('planStore', () => {
       expect_time: plan.expect_time,
       device_class: plan.cvm?.device_class,
       device_type: plan.cvm?.device_type,
-      total_os: plan.cvm?.os,
-      total_cpu_core: plan.cvm?.cpu_core,
-      total_memory: plan.cvm?.memory,
-      total_disk_size: plan.cbs?.disk_size,
+      remained_os: plan.cvm?.os,
+      remained_cpu_core: plan.cvm?.cpu_core,
+      remained_memory: plan.cvm?.memory,
+      remained_disk_size: plan.cbs?.disk_size,
       region_id: plan.region_id,
       region_name: plan.region_name,
       zone_id: plan.zone_id,

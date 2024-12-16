@@ -115,9 +115,9 @@ export default defineComponent({
         );
       });
 
-    const computedTotalCpus = computeDifference('total_cpu_core');
-    const computedTotalMemory = computeDifference('total_memory');
-    const computedTotalDiskGB = computeDifference('total_disk_size');
+    const computedTotalCpus = computeDifference('remained_cpu_core');
+    const computedTotalMemory = computeDifference('remained_memory');
+    const computedTotalDiskGB = computeDifference('remained_disk_size');
 
     const clearSelection = () => {
       tableRef?.value?.clearSelection();
@@ -277,15 +277,15 @@ export default defineComponent({
           <Panel class={'plan-mod-statistics-panel'} title={`${t('修改预览')}`}>
             <div class={'statistics'}>
               <p class={'item'}>
-                <span class={'label'}>{t('CPU总核数：')}</span>
+                <span class={'label'}>{t('CPU调整数(核)：')}</span>
                 <span class={'value'}>{computedTotalCpus.value}</span>
               </p>
               <p class={'item'}>
-                <span class={'label'}>{t('内存总量(GB)：')}</span>
+                <span class={'label'}>{t('内存调整量(GB)：')}</span>
                 <span class={'value'}>{computedTotalMemory.value}</span>
               </p>
               <p class={'item'}>
-                <span class={'label'}>{t('云盘总量(GB))：')}</span>
+                <span class={'label'}>{t('云硬盘调整量(GB))：')}</span>
                 <span class={'value'}>{computedTotalDiskGB.value}</span>
               </p>
             </div>

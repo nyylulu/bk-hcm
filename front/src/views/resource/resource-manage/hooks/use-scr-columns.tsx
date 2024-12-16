@@ -3265,23 +3265,23 @@ export default (type: string, isSimpleShow = false) => {
       isDefaultShow: true,
     },
     {
-      label: '实例总数',
-      field: 'total_os',
+      label: '实例剩余数',
+      field: 'remained_os',
       isDefaultShow: true,
     },
     {
-      label: 'CPU总核数',
-      field: 'total_cpu_core',
+      label: 'CPU剩余核数',
+      field: 'remained_cpu_core',
       isDefaultShow: true,
     },
     {
-      label: '内存总量(GB)',
-      field: 'total_memory',
+      label: '内存剩余量(GB)',
+      field: 'remained_memory',
       isDefaultShow: true,
     },
     {
-      label: '云盘总量(GB)',
-      field: 'total_disk_size',
+      label: '云盘剩余量(GB)',
+      field: 'remained_disk_size',
       isDefaultShow: true,
     },
     {
