@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0036,HCMVER=v1.7.1.0
 
     Notes:
     1. 添加预测需求表。
@@ -143,6 +143,6 @@ values ('res_plan_demand_penalty_base', '0'),
 update id_generator set `max_id` = 0 where `resource` = 'res_plan_demand';
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.1.0' as `hcm_ver`, '0036' as `sql_ver`;
 
 COMMIT
