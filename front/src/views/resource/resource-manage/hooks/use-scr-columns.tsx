@@ -25,7 +25,7 @@ import cssModule from './use-scr-columns.module.scss';
 import { defaults } from 'lodash';
 import { timeFormatter, getValueByKey } from '@/common/util';
 import { capacityLevel } from '@/utils/scr';
-import { getResourceTypeName, getReturnPlanName } from '@/utils';
+import { formatDisplayNumber, getResourceTypeName, getReturnPlanName } from '@/utils';
 import {
   getRecycleTaskStatusLabel,
   getBusinessNameById,
@@ -1731,16 +1731,19 @@ export default (type: string, isSimpleShow = false) => {
       label: '实例需求数',
       field: 'total_os',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: '实例已执行数',
       field: 'applied_os',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: '实例未执行数',
       field: 'remained_os',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: 'CPU需求核数',
@@ -1873,6 +1876,7 @@ export default (type: string, isSimpleShow = false) => {
       label: '实例总数',
       field: 'total_os',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: '城市',
@@ -3268,6 +3272,7 @@ export default (type: string, isSimpleShow = false) => {
       label: '实例剩余数',
       field: 'remained_os',
       isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: 'CPU剩余核数',

@@ -153,7 +153,7 @@ export default defineStore('planStore', () => {
     if (detail.demand_class === 'CVM') demand_res_types.push('cvm');
 
     const cvm =
-      detail.remained_os > 0
+      +detail.remained_os > 0
         ? {
             res_mode: detail.res_mode,
             device_class: detail.device_class,
@@ -173,7 +173,7 @@ export default defineStore('planStore', () => {
             disk_size: detail.remained_disk_size,
             disk_per_size:
               detail.remained_disk_size && detail.remained_os
-                ? Math.floor(detail.remained_disk_size / detail.remained_os)
+                ? Math.floor(detail.remained_disk_size / +detail.remained_os)
                 : 0,
           }
         : undefined;

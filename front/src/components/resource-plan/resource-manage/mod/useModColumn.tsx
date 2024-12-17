@@ -1,4 +1,5 @@
 import { IDemandListDetail } from '@/typings/plan';
+import { formatDisplayNumber } from '@/utils';
 import { ExclamationCircleShape } from 'bkui-vue/lib/icon';
 import { computed, Ref } from 'vue';
 
@@ -13,10 +14,10 @@ export const useModColumn = (originData: Ref<IDemandListDetail[]>) => {
           class={'mr4'}
           fill='#FF9C01'
           v-bk-tooltips={{
-            content: `修改前：${origin?.[field]}`,
+            content: `修改前：${formatDisplayNumber(origin?.[field])}`,
           }}
         />
-        {cur[field]}
+        {formatDisplayNumber(cur[field])}
       </span>
     );
   };

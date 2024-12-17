@@ -11,9 +11,9 @@ export interface IDemandListDetail {
   expect_time: string; // 期望交付日期
   device_class: string; // 机型类型
   device_type: string; // 机型
-  total_os: number; // 总OS数量
-  applied_os: number; // 已申请OS数量
-  remained_os: number; // 剩余OS数量
+  total_os: string; // 总OS数量
+  applied_os: string; // 已申请OS数量
+  remained_os: string; // 剩余OS数量
   total_cpu_core: number; // 总CPU核数
   applied_cpu_core: number; // 已申请CPU核数
   remained_cpu_core: number; // 剩余CPU核数

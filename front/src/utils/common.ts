@@ -317,6 +317,12 @@ const isPortValid = (text: string) => {
   }
   return true;
 };
+
+const formatDisplayNumber = (value: string | number, fractionDigits = 2) => {
+  if (value === undefined || value === null || isNaN(Number(value))) return '--';
+  return Number(Number(value).toFixed(fractionDigits));
+};
+
 export {
   getInstVip,
   getPrivateIPs,
@@ -334,4 +340,5 @@ export {
   analysisPort,
   isIpsValid,
   isPortValid,
+  formatDisplayNumber,
 };

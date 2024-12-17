@@ -189,7 +189,7 @@ export interface IPlanTicketDemand {
     res_mode: string;
     device_class: string;
     device_type: string;
-    os: number;
+    os: string;
     cpu_core: number;
     memory: number;
   };
@@ -304,9 +304,9 @@ export interface IListResourcesDemandsResult {
     expect_time: string;
     device_class: string;
     device_type: string;
-    total_os: number;
-    applied_os: number;
-    remained_os: number;
+    total_os: string;
+    applied_os: string;
+    remained_os: string;
     total_cpu_core: number;
     applied_cpu_core: number;
     remained_cpu_core: number;
