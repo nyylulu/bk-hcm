@@ -26,7 +26,6 @@ import (
 
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/dal/dao/tools"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
@@ -312,8 +311,8 @@ func (c *Controller) GetPlanTypeByChargeType(chargeType cvmapi.ChargeType) (enum
 		return enumor.PlanTypeCodeInPlan, nil
 	case cvmapi.ChargeTypePostPaidByHour: // 计费模式:按量计费
 		return enumor.PlanTypeCodeOutPlan, nil
-	default:
-		return "", errf.Newf(errf.InvalidParameter, "resource plan unknown charge type: %s", chargeType)
+	default: // 计费模式默认:包年包月
+		return enumor.PlanTypeCodeInPlan, nil
 	}
 }
 
