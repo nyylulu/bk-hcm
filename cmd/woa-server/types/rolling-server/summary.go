@@ -43,9 +43,6 @@ func (r *RollingServerDateRange) Validate() error {
 	if startDate.After(endDate) {
 		return fmt.Errorf("start date should be no later than end date")
 	}
-	if startDate.Before(endDate.AddDate(0, 0, -31)) {
-		return fmt.Errorf("start date should be no earlier than end date 31 days")
-	}
 	return validator.Validate.Struct(r)
 }
 
