@@ -26,18 +26,18 @@ import (
 
 // DetectTask supplies all the recycle detection related operations.
 type DetectTask interface {
-	// CreateRecycleTask creates recycle detection task in db
+	// CreateDetectTask creates recycle detection task in db
 	CreateDetectTask(ctx context.Context, inst *table.DetectTask) error
-	// GetRecycleTask gets recycle detection task by filter from db
+	// GetDetectTask gets recycle detection task by filter from db
 	GetDetectTask(ctx context.Context, filter *mapstr.MapStr) (*table.DetectTask, error)
-	// CountRecycleTask gets recycle detection task count by filter from db
+	// CountDetectTask gets recycle detection task count by filter from db
 	CountDetectTask(ctx context.Context, filter map[string]interface{}) (uint64, error)
-	// FindManyRecycleTask gets recycle detection task list by filter from db
+	// FindManyDetectTask gets recycle detection task list by filter from db
 	FindManyDetectTask(ctx context.Context, page metadata.BasePage, filter map[string]interface{}) (
 		[]*table.DetectTask, error)
-	// UpdateRecycleTask updates recycle detection task by filter and doc in db
+	// UpdateDetectTask updates recycle detection task by filter and doc in db
 	UpdateDetectTask(ctx context.Context, filter *mapstr.MapStr, doc *mapstr.MapStr) error
-	// DeleteRecycleTask deletes recycle detection task from db
+	// DeleteDetectTask deletes recycle detection task from db
 	DeleteDetectTask(ctx context.Context, filter map[string]interface{}) (uint64, error)
 	// GetRecycleHostList gets recycle host list by filter from db
 	GetRecycleHostList(ctx context.Context, filter map[string]interface{}) ([]interface{}, error)

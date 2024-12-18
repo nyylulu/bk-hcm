@@ -17,7 +17,6 @@ package detector
 import (
 	"context"
 	"fmt"
-	"sync"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
@@ -43,6 +42,8 @@ import (
 	"hcm/pkg/thirdparty/xshipapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/uuid"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // Detector detects rejected device for recycle
@@ -128,23 +129,24 @@ func (d *Detector) CheckDetectStatus(subOrderId string) error {
 // DealRecycleOrder deals with recycle order by running detection tasks
 func (d *Detector) DealRecycleOrder(orderId string) error {
 	// get tasks by order id
+
 	taskInfos, err := d.getRecycleTasks(orderId)
 	if err != nil {
 		logs.Errorf("failed to get recycle tasks by order id: %d, err: %v", orderId, err)
 		return err
 	}
 	// run recycle tasks
-	wg := sync.WaitGroup{}
+	eg := errgroup.Group{}
+	// 每个主机都会创建一个recycle task，这里防止无限制并发
+	eg.SetLimit(5)
 	for _, task := range taskInfos {
-		wg.Add(1)
-		go func(task *table.DetectTask) {
-			defer wg.Done()
-			d.RunRecycleTask(task, 0)
-		}(task)
+		taskInfo := task
+		eg.Go(func() error {
+			d.RunRecycleTask(taskInfo, 0)
+			return nil
+		})
 	}
-	wg.Wait()
-
-	return nil
+	return eg.Wait()
 }
 
 // DealRecycleTask deals with recycle task
