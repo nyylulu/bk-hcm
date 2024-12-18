@@ -2,122 +2,49 @@ import { defineComponent, ref, computed, watch, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getRecycleStageOpts, retryOrder, submitOrder, stopOrder } from '@/api/host/recycle';
-import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
-import BusinessSelector from '@/components/business-selector/index.vue';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import RequireNameSelect from './require-name-select';
-import { Button, Form, Message, Select, Dropdown } from 'bkui-vue';
-import { useUserStore } from '@/store';
-import MemberSelect from '@/components/MemberSelect';
+import { Button, Message, Dropdown } from 'bkui-vue';
+import GridContainer from '@/components/layout/grid-container/grid-container.vue';
+import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
+import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import { Plus, Search } from 'bkui-vue/lib/icon';
-import BillDetail from '../bill-detail';
-import FloatInput from '@/components/float-input';
+import { Plus } from 'bkui-vue/lib/icon';
 import './index.scss';
 import { useRoute, useRouter } from 'vue-router';
-import dayjs from 'dayjs';
-const { FormItem } = Form;
+import useSearchQs from '@/hooks/use-search-qs';
+import { useBusinessGlobalStore } from '@/store/business-global';
+import { getDateRange, transformFlatCondition } from '@/utils/search';
+import type { ModelProperty } from '@/model/typings';
+import { getModel } from '@/model/manager';
+import HocSearch from '@/model/hoc-search.vue';
+import { HostRecycleSearchNonBusiness } from '@/model/order/host-recycle-search';
+import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
+
 const { DropdownMenu, DropdownItem } = Dropdown;
+
 export default defineComponent({
   components: {
-    RequireNameSelect,
-    MemberSelect,
     ExportToExcelButton,
-    BillDetail,
-    FloatInput,
   },
   setup() {
     const currentOperateRowIndex = ref(-1);
-    const userStore = useUserStore();
     const router = useRouter();
     const route = useRoute();
-    const defaultRecycleForm = () => {
-      return {
-        bk_biz_id: [],
-        order_id: [],
-        suborder_id: [],
-        resource_type: [],
-        recycle_type: [],
-        return_plan: [],
-        stage: [],
-        bk_username: [userStore.username],
-      };
-    };
-    const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
-    const recycleForm = ref(defaultRecycleForm());
-    const timeForm = ref(defaultTime());
-    const handleTime = (time) => (!time ? '' : dayjs(time).format('YYYY-MM-DD'));
-    const timeObj = computed(() => {
-      return {
-        start: handleTime(timeForm.value[0]),
-        end: handleTime(timeForm.value[1]),
-      };
-    });
-    const pageInfo = ref({
-      start: 0,
-      limit: 10,
-      enable_count: false,
-    });
-    const requestListParams = computed(() => {
-      const params = {
-        ...recycleForm.value,
-        ...timeObj.value,
-        page: pageInfo.value,
-        bk_biz_id:
-          recycleForm.value.bk_biz_id.length === 0
-            ? businessRef.value.businessList.slice(1).map((item: any) => item.id)
-            : recycleForm.value.bk_biz_id,
-      };
-      params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
-      removeEmptyFields(params);
-      return params;
-    });
-    const resourceTypeList = [
-      {
-        key: 'QCLOUDCVM',
-        value: '腾讯云虚拟机',
-      },
-      {
-        key: 'IDCPM',
-        value: 'IDC物理机',
-      },
-      {
-        key: 'OTHERS',
-        value: '其他',
-      },
-    ];
-    const returnPlanList = [
-      {
-        key: 'IMMEDIATE',
-        value: '立即销毁',
-      },
-      {
-        key: 'DELAY',
-        value: '延迟销毁',
-      },
-    ];
+
+    const businessGlobalStore = useBusinessGlobalStore();
+
+    const searchFields = getModel(HostRecycleSearchNonBusiness).getProperties();
+    const searchQs = useSearchQs({ key: 'filter', properties: searchFields });
+
+    const condition = ref<Record<string, any>>({});
+    const searchValues = ref<Record<string, any>>({});
+
     const stageList = ref([]);
     const fetchStageList = async () => {
       const data = await getRecycleStageOpts();
       stageList.value = data?.info || [];
     };
-    const filterOrders = () => {
-      pagination.start = 0;
-      recycleForm.value.bk_biz_id =
-        recycleForm.value.bk_biz_id.length === 1 && recycleForm.value.bk_biz_id[0] === 'all'
-          ? []
-          : recycleForm.value.bk_biz_id;
-      getListData();
-    };
-    const clearFilter = () => {
-      const initForm = defaultRecycleForm();
-      // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
-      // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
-      initForm.bk_biz_id = businessRef.value.defaultBusiness;
-      recycleForm.value = initForm;
-      timeForm.value = defaultTime();
-      filterOrders();
-    };
+
     const goToPrecheck = () => {
       router.push({
         path: '/service/hostRecycling/preDetail',
@@ -200,13 +127,6 @@ export default defineComponent({
         },
       });
     };
-
-    watch(
-      () => userStore.username,
-      (username) => {
-        recycleForm.value.bk_username = [username];
-      },
-    );
 
     const opBtnDisabled = computed(() => {
       return (status) => {
@@ -293,7 +213,7 @@ export default defineComponent({
       },
     });
     const tableColumns = [...columns, ...operateColList];
-    const { CommonTable, getListData, dataList, pagination } = useTable({
+    const { CommonTable, getListData, dataList } = useTable({
       tableOptions: {
         columns: tableColumns,
         extra: {
@@ -314,14 +234,84 @@ export default defineComponent({
         immediate: false,
       },
       scrConfig: () => {
+        const payload = transformFlatCondition(condition.value, searchFields);
+        if (payload.bk_biz_id?.[0] === 0) {
+          payload.bk_biz_id = businessGlobalStore.businessAuthorizedList.map((item: any) => item.id);
+        }
         return {
           url: '/api/v1/woa/task/findmany/recycle/order',
-          payload: {
-            ...requestListParams.value,
-          },
+          payload,
         };
       },
     });
+
+    const getSearchCompProps = (field: ModelProperty) => {
+      if (field.type === 'business') {
+        return {
+          scope: 'auth',
+          showAll: true,
+          emptySelectAll: true,
+          cacheKey: serviceShareBizSelectedKey,
+        };
+      }
+      if (field.id === 'create_at') {
+        return {
+          type: 'daterange',
+          format: 'yyyy-MM-dd',
+        };
+      }
+      if (field.id === 'order_id') {
+        return {
+          pasteFn: (value: string) =>
+            value
+              .split(/\r\n|\n|\r/)
+              .filter((tag) => /^\d+$/.test(tag))
+              .map((tag) => ({ id: tag, name: tag })),
+        };
+      }
+      if (field.id === 'suborder_id') {
+        return {
+          pasteFn: (value: string) => value.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag })),
+        };
+      }
+      if (field.id === 'stage') {
+        const stages = stageList.value.reduce((acc, { stage, description }) => {
+          acc[stage] = description;
+          return acc;
+        }, {});
+        return {
+          option: stages,
+        };
+      }
+      return {
+        option: field.option,
+      };
+    };
+
+    const handleSearch = () => {
+      searchQs.set(searchValues.value);
+    };
+
+    const handleReset = () => {
+      searchQs.clear();
+    };
+
+    watch(
+      () => route.query,
+      async (query) => {
+        const defaultCondition = {
+          create_at: getDateRange('last30d', true),
+          bk_biz_id: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
+        };
+        condition.value = searchQs.get(query, defaultCondition);
+
+        searchValues.value = condition.value;
+
+        getListData();
+      },
+      { immediate: true },
+    );
+
     const returnPreDetails = (row: { suborder_id: any; bk_biz_id: any }) => {
       router.push({
         path: '/service/hostRecycling/preDetail',
@@ -336,81 +326,33 @@ export default defineComponent({
         query: { ...route.query },
       });
     };
-    const businessRef = ref(null);
+
     const renderNodes = () => {
       return (
         <div class={'apply-list-container'}>
-          <div class={'filter-container'}>
-            <Form model={recycleForm} formType='vertical' class={'scr-form-wrapper'}>
-              <FormItem label='业务'>
-                <BusinessSelector
-                  ref={businessRef}
-                  v-model={recycleForm.value.bk_biz_id}
-                  autoSelect
-                  authed
-                  clearable={false}
-                  isShowAll
-                  notAutoSelectAll
-                  multiple
-                  url-key='scr_host_bizs'
-                  base64Encode
-                />
-              </FormItem>
-              <FormItem label='OBS项目类型'>
-                <require-name-select v-model={recycleForm.value.recycle_type} multiple clearable collapse-tags />
-              </FormItem>
-              <FormItem label='单号'>
-                <FloatInput v-model={recycleForm.value.order_id} placeholder='请输入单号，多个换行分割' />
-              </FormItem>
-              <FormItem label='子单号'>
-                <FloatInput v-model={recycleForm.value.suborder_id} placeholder='请输入子单号，多个换行分割' />
-              </FormItem>
-              <FormItem label='资源类型'>
-                <Select v-model={recycleForm.value.resource_type} multiple clearable placeholder='请选择资源类型'>
-                  {resourceTypeList.map(({ key, value }) => {
-                    return <Select.Option key={key} name={value} id={key} />;
-                  })}
-                </Select>
-              </FormItem>
-              <FormItem label='回收类型'>
-                <Select v-model={recycleForm.value.return_plan} multiple clearable placeholder='请选择回收类型'>
-                  {returnPlanList.map(({ key, value }) => {
-                    return <Select.Option key={key} name={value} id={key}></Select.Option>;
-                  })}
-                </Select>
-              </FormItem>
-              <FormItem label='状态'>
-                <Select v-model={recycleForm.value.stage} multiple clearable placeholder='请选择状态'>
-                  {stageList.value.map(({ stage, description }) => {
-                    return <Select.Option key={stage} name={description} id={stage}></Select.Option>;
-                  })}
-                </Select>
-              </FormItem>
-              <FormItem label='回收人'>
-                <member-select
-                  v-model={recycleForm.value.bk_username}
-                  multiple
-                  clearable
-                  defaultUserlist={[
-                    {
-                      username: userStore.username,
-                      display_name: userStore.username,
-                    },
-                  ]}
-                  placeholder='请输入企业微信名'
-                />
-              </FormItem>
-              <FormItem label='回收时间'>
-                <bk-date-picker v-model={timeForm.value} type='daterange' />
-              </FormItem>
-            </Form>
-            <div class='btn-container'>
-              <Button theme='primary' onClick={filterOrders}>
-                <Search />
-                查询
-              </Button>
-              <Button onClick={() => clearFilter()}>重置</Button>
-            </div>
+          <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
+            <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+              {searchFields.map((field) => (
+                <GridItemFormElement key={field.id} label={field.name}>
+                  <HocSearch
+                    is={field.type}
+                    display={field.meta?.display}
+                    v-model={searchValues.value[field.id]}
+                    {...getSearchCompProps(field)}
+                  />
+                </GridItemFormElement>
+              ))}
+              <GridItem span={4}>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <bk-button theme='primary' style={{ minWidth: '86px' }} onClick={handleSearch}>
+                    查询
+                  </bk-button>
+                  <bk-button style={{ minWidth: '86px' }} onClick={handleReset}>
+                    重置
+                  </bk-button>
+                </div>
+              </GridItem>
+            </GridContainer>
           </div>
           <div class='btn-container oper-btn-pad'>
             <Button theme='primary' onClick={returnRecyclingResources}>
@@ -432,18 +374,10 @@ export default defineComponent({
         </div>
       );
     };
+
     onMounted(() => {
       fetchStageList();
     });
-
-    watch(
-      () => businessRef.value?.businessList,
-      (val) => {
-        if (!val?.length) return;
-        getListData();
-      },
-      { deep: true },
-    );
 
     return renderNodes;
   },

@@ -1,17 +1,20 @@
-import { defineComponent, computed, watch, ref } from 'vue';
+import { defineComponent, computed, onMounted } from 'vue';
 import './index.scss';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
-import BusinessSelector from '@/components/business-selector/index.vue';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { Button, Form, Input } from 'bkui-vue';
 import MemberSelect from '@/components/MemberSelect';
 import useFormModel from '@/hooks/useFormModel';
 import { useUserStore } from '@/store';
-import { timeFormatter, applicationTime } from '@/common/util';
+import { useBusinessGlobalStore } from '@/store/business-global';
+import { timeFormatter, applicationTime, isEmpty } from '@/common/util';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import HcmSearchBusiness from '@/components/search/business.vue';
+import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
+
 const { FormItem } = Form;
 export default defineComponent({
   setup() {
@@ -24,9 +27,11 @@ export default defineComponent({
       return selections.value.map((item) => item.asset_id).join('\n');
     });
     const userStore = useUserStore();
+    const businessGlobalStore = useBusinessGlobalStore();
+
     const { formModel, resetForm } = useFormModel({
       orderId: '',
-      bkBizId: [],
+      bkBizId: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
       bkUsername: [userStore.username],
       ip: '',
       requireType: '',
@@ -34,7 +39,6 @@ export default defineComponent({
       dateRange: applicationTime(),
     });
 
-    const businessSelectorRef = ref();
     const { CommonTable, getListData, isLoading, dataList, pagination } = useTable({
       tableOptions: {
         columns,
@@ -64,8 +68,8 @@ export default defineComponent({
               [
                 'bk_biz_id',
                 'in',
-                formModel.bkBizId.length === 0
-                  ? businessSelectorRef.value.businessList.slice(1).map((item: any) => item.id)
+                formModel.bkBizId?.[0] === 0 || isEmpty(formModel.bkBizId)
+                  ? businessGlobalStore.businessAuthorizedList.map((item: any) => item.id)
                   : formModel.bkBizId,
               ],
               ['require_type', '=', formModel.requireType],
@@ -99,34 +103,22 @@ export default defineComponent({
 
     const filterOrders = () => {
       pagination.start = 0;
-      formModel.bkBizId = formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? [] : formModel.bkBizId;
       getListData();
     };
 
-    watch(
-      () => businessSelectorRef.value?.businessList,
-      (val) => {
-        if (!val?.length) return;
-        getListData();
-      },
-      { deep: true },
-    );
+    onMounted(() => {
+      getListData();
+    });
 
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
           <Form label-width='110' formType='vertical' class='scr-form-wrapper' model={formModel}>
             <FormItem label='业务'>
-              <BusinessSelector
-                ref={businessSelectorRef}
-                autoSelect
-                multiple
+              <HcmSearchBusiness
                 v-model={formModel.bkBizId}
-                authed
-                isShowAll
-                notAutoSelectAll
-                url-key='scr_host_bizs'
-                base64Encode
+                showAll
+                {...{ scope: 'auth', emptySelectAll: true, cacheKey: serviceShareBizSelectedKey }}
               />
             </FormItem>
             <FormItem label='需求类型'>
@@ -170,9 +162,6 @@ export default defineComponent({
             <Button
               onClick={() => {
                 resetForm();
-                // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
-                // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
-                formModel.bkBizId = businessSelectorRef.value.defaultBusiness;
                 filterOrders();
               }}>
               重置

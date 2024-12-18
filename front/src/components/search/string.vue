@@ -18,7 +18,7 @@ const appearance = computed(() => props.display?.appearance);
 
 const localModel = computed({
   get() {
-    if (props.multiple && !Array.isArray(model.value)) {
+    if (props.multiple && model.value && !Array.isArray(model.value)) {
       return [model.value];
     }
     return model.value;

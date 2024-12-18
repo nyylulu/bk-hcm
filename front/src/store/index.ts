@@ -4,10 +4,10 @@ import { useRollingServerStore } from './rolling-server';
 
 export const preload = async () => {
   const { userInfo } = useUserStore();
-  const { getFullBusiness } = useBusinessGlobalStore();
+  const { getFullBusiness, getAuthorizedBusiness } = useBusinessGlobalStore();
   const { getResPollBusinessList } = useRollingServerStore();
 
-  return Promise.all([userInfo(), getFullBusiness(), getResPollBusinessList()]);
+  return Promise.all([userInfo(), getFullBusiness(), getAuthorizedBusiness(), getResPollBusinessList()]);
 };
 
 export * from './staff';

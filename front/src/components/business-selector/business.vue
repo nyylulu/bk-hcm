@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import { useBusinessGlobalStore, type IBusinessItem } from '@/store/business-global';
+import { isEmpty } from '@/common/util';
 
 export type BusinessScopeType = 'full' | 'auth';
 
@@ -9,8 +10,11 @@ export interface IBusinessSelectorProps {
   multiple?: boolean;
   clearable?: boolean;
   filterable?: boolean;
+  showAll?: boolean;
   showSelectAll?: boolean;
   collapseTags?: boolean;
+  allOptionId?: number;
+  emptySelectAll?: boolean;
   scope?: BusinessScopeType;
   data?: IBusinessItem[];
   optionDisabled?: (item: IBusinessItem) => boolean;
@@ -21,7 +25,10 @@ const props = withDefaults(defineProps<IBusinessSelectorProps>(), {
   multiple: false,
   clearable: true,
   filterable: true,
+  showAll: false,
   showSelectAll: false,
+  allOptionId: 0,
+  emptySelectAll: false,
   scope: 'full',
 });
 
@@ -42,24 +49,46 @@ watchEffect(async () => {
     list.value = businessGlobalStore.businessFullList;
     loading.value = businessGlobalStore.businessFullListLoading;
   } else if (props.scope === 'auth') {
-    list.value = await businessGlobalStore.getAuthorizedBusiness();
+    // businessAuthorizedList在preload时已获取
+    list.value = businessGlobalStore.businessAuthorizedList;
     loading.value = businessGlobalStore.businessAuthorizedListLoading;
   }
+});
+
+const localModel = computed({
+  get() {
+    if (props.showAll && props.emptySelectAll && isEmpty(model.value)) {
+      return [props.allOptionId];
+    }
+    if (props.multiple && model.value && !Array.isArray(model.value)) {
+      return [model.value];
+    }
+    return model.value;
+  },
+  set(val) {
+    model.value = val;
+  },
 });
 </script>
 
 <template>
   <bk-select
-    v-model="model"
+    v-model="localModel"
     :disabled="disabled"
     :multiple="multiple"
     :filterable="filterable"
     :loading="loading"
     :clearable="clearable"
     :collapse-tags="collapseTags"
+    :show-all="showAll"
+    :all-option-id="allOptionId"
     :show-select-all="showSelectAll"
     :multiple-mode="multiple ? 'tag' : 'default'"
   >
+    <!-- fix “全部”回显 -->
+    <template #tag v-if="showAll && localModel?.[0] === allOptionId">
+      <span class="all-option-name">全部</span>
+    </template>
     <bk-option
       v-for="item in list"
       :key="item.id"
@@ -69,3 +98,9 @@ watchEffect(async () => {
     />
   </bk-select>
 </template>
+
+<style lang="scss" scoped>
+.all-option-name {
+  font-size: 12px;
+}
+</style>

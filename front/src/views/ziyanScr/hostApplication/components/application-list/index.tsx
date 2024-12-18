@@ -1,25 +1,21 @@
 import { defineComponent, onMounted, ref, computed, watch, reactive } from 'vue';
 import './index.scss';
-import useFormModel from '@/hooks/useFormModel';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { Button, Form, Input, Message, Table, Sideslider } from 'bkui-vue';
-import BusinessSelector from '@/components/business-selector/index.vue';
-import RequirementTypeSelector from '@/components/scr/requirement-type-selector';
-import ApplicationStatusSelector from '@/components/scr/application-status-selector';
-import ScrDatePicker from '@/components/scr/scr-date-picker';
-import MemberSelect from '@/components/MemberSelect';
+import { Button, Message, Table, Sideslider } from 'bkui-vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
-import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useRoute, useRouter } from 'vue-router';
 import moment from 'moment';
 import WName from '@/components/w-name';
 import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
 import CommonSideslider from '@/components/common-sideslider';
-import { timeFormatter, applicationTime } from '@/common/util';
+import GridContainer from '@/components/layout/grid-container/grid-container.vue';
+import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
+import GridItem from '@/components/layout/grid-container/grid-item.vue';
+import { timeFormatter } from '@/common/util';
 import http from '@/http';
-import { useZiyanScrStore, useUserStore } from '@/store';
+import { useZiyanScrStore } from '@/store';
 import SuborderDetail from '../suborder-detail';
 import CommonDialog from '@/components/common-dialog';
 import { throttle } from 'lodash';
@@ -28,11 +24,17 @@ import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
 import { getResourceTypeName } from '../transform';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
-const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
-const { FormItem } = Form;
+import useSearchQs from '@/hooks/use-search-qs';
+import { useBusinessGlobalStore } from '@/store/business-global';
+import { getDateRange, transformFlatCondition } from '@/utils/search';
+import type { ModelProperty } from '@/model/typings';
+import { getModel } from '@/model/manager';
+import HocSearch from '@/model/hoc-search.vue';
+import { HostApplySearchNonBusiness } from '@/model/order/host-apply-search';
+import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
+
 export default defineComponent({
   setup() {
-    const userStore = useUserStore();
     const businessMapStore = useBusinessMapStore();
     const { transformApplyStages } = useApplyStages();
     const machineDetails = ref([]);
@@ -51,14 +53,8 @@ export default defineComponent({
     });
 
     const scrStore = useZiyanScrStore();
-    const { formModel, resetForm } = useFormModel({
-      bkBizId: [],
-      requireType: [],
-      stage: [],
-      orderId: [],
-      dateRange: applicationTime(),
-      user: [userStore.username],
-    });
+    const businessGlobalStore = useBusinessGlobalStore();
+
     const reapply = (data: any) => {
       router.push({
         path: '/service/hostApplication/apply',
@@ -107,8 +103,10 @@ export default defineComponent({
       };
     });
 
-    const businessSelectorRef = ref();
-    const { CommonTable, getListData, isLoading, pagination } = useTable({
+    const searchFields = getModel(HostApplySearchNonBusiness).getProperties();
+    const searchQs = useSearchQs({ key: 'filter', properties: searchFields });
+
+    const { CommonTable, getListData, pagination } = useTable({
       tableOptions: {
         columns: [
           {
@@ -398,42 +396,73 @@ export default defineComponent({
         dataPath: 'data.info',
         immediate: false,
       },
-      scrConfig: () => ({
-        url: '/api/v1/woa/task/findmany/apply',
-        payload: removeEmptyFields({
-          bk_biz_id:
-            formModel.bkBizId.length === 0
-              ? businessSelectorRef.value.businessList.slice(1).map((item: any) => item.id)
-              : formModel.bkBizId,
-          order_id: formModel.orderId.length
-            ? String(formModel.orderId)
-                .split('\n')
-                .map((v) => +v)
-            : undefined,
-          // suborder_id: formModel.suborderId,
-          bk_username: formModel.user,
-          stage: formModel.stage,
-          start: formModel.dateRange[0],
-          end: formModel.dateRange[1],
-          require_type: formModel.requireType,
-        }),
-      }),
+      scrConfig: () => {
+        const payload = transformFlatCondition(condition.value, searchFields);
+        if (payload.bk_biz_id?.[0] === 0) {
+          payload.bk_biz_id = businessGlobalStore.businessAuthorizedList.map((item: any) => item.id);
+        }
+        return {
+          url: '/api/v1/woa/task/findmany/apply',
+          payload,
+        };
+      },
     });
 
-    watch(
-      () => userStore.username,
-      (username) => {
-        formModel.user = [username];
-      },
-    );
+    const condition = ref<Record<string, any>>({});
+    const searchValues = ref<Record<string, any>>({});
+
+    const getSearchCompProps = (field: ModelProperty) => {
+      if (field.type === 'business') {
+        return {
+          scope: 'auth',
+          showAll: true,
+          emptySelectAll: true,
+          cacheKey: serviceShareBizSelectedKey,
+        };
+      }
+      if (field.id === 'create_at') {
+        return {
+          type: 'daterange',
+          format: 'yyyy-MM-dd',
+        };
+      }
+      if (field.id === 'order_id') {
+        return {
+          pasteFn: (value: string) =>
+            value
+              .split(/\r\n|\n|\r/)
+              .filter((tag) => /^\d+$/.test(tag))
+              .map((tag) => ({ id: tag, name: tag })),
+          placeholder: '请输入单号',
+        };
+      }
+      return {};
+    };
+
+    const handleSearch = () => {
+      // TODO: 实际无效
+      pagination.start = 0;
+      searchQs.set(searchValues.value);
+    };
+
+    const handleReset = () => {
+      searchQs.clear();
+    };
 
     watch(
-      () => businessSelectorRef.value?.businessList,
-      (val) => {
-        if (!val?.length) return;
+      () => route.query,
+      async (query) => {
+        const defaultCondition = {
+          create_at: getDateRange('last30d', true),
+          bk_biz_id: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
+        };
+        condition.value = searchQs.get(query, defaultCondition);
+
+        searchValues.value = condition.value;
+
         getListData();
       },
-      { deep: true },
+      { immediate: true },
     );
 
     watch(
@@ -464,7 +493,7 @@ export default defineComponent({
         params: {
           id: row.order_id,
         },
-        query: { ...route.query, creator: row.bk_username, bkBizId: row.bk_biz_id },
+        query: { creator: row.bk_username, bkBizId: row.bk_biz_id },
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = {
@@ -476,13 +505,13 @@ export default defineComponent({
     };
     // 获取匹配详情
     const getMatchDetails = async (subOrderId: number) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/find/apply/detail`, {
+      return http.post('/api/v1/woa/task/find/apply/detail', {
         suborder_id: subOrderId,
       });
     };
     // 已交付设备
     const getDeliveredDevices = (params) => {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/findmany/apply/device`, params);
+      return http.post('/api/v1/woa/task/findmany/apply/device', params);
     };
     // 查询交付IP和固号IP
     const getDeliveredHostField = (row, fieldKey) => {
@@ -526,77 +555,35 @@ export default defineComponent({
         throttleInfo.value(row);
       }
     };
-    const filterOrders = () => {
-      pagination.start = 0;
-      formModel.bkBizId = formModel.bkBizId.length === 1 && formModel.bkBizId[0] === 'all' ? [] : formModel.bkBizId;
-      getListData();
-    };
+
     onMounted(() => {
       throttleDeliveredHostField();
     });
     return () => (
       <div class={'apply-list-container'}>
-        <div class={'filter-container'}>
-          <Form model={formModel} formType='vertical' class={'scr-form-wrapper'}>
-            <FormItem label='业务'>
-              <BusinessSelector
-                ref={businessSelectorRef}
-                autoSelect
-                v-model={formModel.bkBizId}
-                multiple
-                authed
-                isShowAll
-                notAutoSelectAll
-                url-key='scr_host_bizs'
-                base64Encode
-              />
-            </FormItem>
-            <FormItem label='需求类型'>
-              <RequirementTypeSelector v-model={formModel.requireType} multiple />
-            </FormItem>
-            <FormItem label='单据状态'>
-              <ApplicationStatusSelector v-model={formModel.stage} multiple />
-            </FormItem>
-            <FormItem label='单号'>
-              <Input
-                v-model={formModel.orderId}
-                type='textarea'
-                autosize
-                resize={false}
-                placeholder='请输入单号,多个换行分割'
-              />
-            </FormItem>
-            <FormItem label='申请时间'>
-              <ScrDatePicker v-model={formModel.dateRange} />
-            </FormItem>
-            <FormItem label='申请人'>
-              <MemberSelect
-                v-model={formModel.user}
-                clearable
-                defaultUserlist={[
-                  {
-                    username: userStore.username,
-                    display_name: userStore.username,
-                  },
-                ]}
-              />
-            </FormItem>
-          </Form>
-          <div class='btn-container'>
-            <Button theme={'primary'} onClick={filterOrders} loading={isLoading.value}>
-              查询
-            </Button>
-            <Button
-              onClick={() => {
-                resetForm({ user: [userStore.username] });
-                // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
-                // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
-                formModel.bkBizId = businessSelectorRef.value.defaultBusiness;
-                filterOrders();
-              }}>
-              重置
-            </Button>
-          </div>
+        <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
+          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+            {searchFields.map((field) => (
+              <GridItemFormElement key={field.id} label={field.name}>
+                <HocSearch
+                  is={field.type}
+                  display={field.meta?.display}
+                  v-model={searchValues.value[field.id]}
+                  {...getSearchCompProps(field)}
+                />
+              </GridItemFormElement>
+            ))}
+            <GridItem span={4}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <bk-button theme='primary' style={{ minWidth: '86px' }} onClick={handleSearch}>
+                  查询
+                </bk-button>
+                <bk-button style={{ minWidth: '86px' }} onClick={handleReset}>
+                  重置
+                </bk-button>
+              </div>
+            </GridItem>
+          </GridContainer>
         </div>
         <div class='btn-container oper-btn-pad'>
           <Button

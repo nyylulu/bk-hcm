@@ -32,7 +32,7 @@ const columConfig: Record<string, PropertyColumnConfig> = {
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_recycle',
-                initial_filter: searchQs.build({ suborder_id: [cell], bkUsername: [] }),
+                filter: searchQs.build({ suborder_id: [cell], bk_username: [] }),
               },
             });
           },

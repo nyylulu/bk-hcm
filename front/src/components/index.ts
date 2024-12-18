@@ -11,6 +11,8 @@ import SearchUser from './search/user.vue';
 import SearchArray from './search/array.vue';
 import SearchString from './search/string.vue';
 import SearchBusiness from './search/business.vue';
+import SearchReqType from './search/req-type.vue';
+import SearchReqStage from './search/req-stage.vue';
 
 // 展示值组件
 import DisplayValue from './display-value/index.vue';
@@ -25,6 +27,8 @@ import FormNumber from './form/number.vue';
 import FormCert from './form/cert.vue';
 import FormCa from './form/ca.vue';
 import FormBusiness from './form/business.vue';
+import FormReqType from './form/req-type.vue';
+import FormReqStage from './form/req-stage.vue';
 
 const components = [
   PermissionDialog,
@@ -35,6 +39,8 @@ const components = [
   SearchArray,
   SearchString,
   SearchBusiness,
+  SearchReqType,
+  SearchReqStage,
   DisplayValue,
   FormBool,
   FormEnum,
@@ -45,6 +51,8 @@ const components = [
   FormCert,
   FormCa,
   FormBusiness,
+  FormReqType,
+  FormReqStage,
 ];
 export default {
   install(app: App) {
@@ -52,7 +60,7 @@ export default {
       app.component(component.name, component);
     });
 
-    [editItem, propertyList].map((item) => {
+    [editItem, propertyList].forEach((item) => {
       app.use(item);
     });
   },

@@ -2,29 +2,26 @@ import { computed, defineComponent, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
-import { Button, Dropdown, Message, Select } from 'bkui-vue';
-import GridFilterComp from '@/components/grid-filter-comp';
-import RequireNameSelect from '@/views/ziyanScr/host-recycle/host-recycle-table/require-name-select';
-import FloatInput from '@/components/float-input';
-import MemberSelect from '@/components/MemberSelect';
+import { Button, Dropdown, Message } from 'bkui-vue';
+import GridContainer from '@/components/layout/grid-container/grid-container.vue';
+import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
+import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import ExportToExcelButton from '@/components/export-to-excel-button';
-import ScrDatePicker from '@/components/scr/scr-date-picker';
-
 import { useI18n } from 'vue-i18n';
-import { useUserStore } from '@/store';
-import { QueryRuleOPEnum } from '@/typings';
 import { useTable } from '@/hooks/useTable/useTable';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
-import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import useSearchQs from '@/hooks/use-search-qs';
 import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { getRecycleStageOpts } from '@/api/host/recycle';
-import { useSaveSearchRules } from '../../useSaveSearchRules';
-import useFormModel from '@/hooks/useFormModel';
-import { applicationTime } from '@/common/util';
+import { useUserStore } from '@/store';
+import { getDateRange, transformFlatCondition } from '@/utils/search';
+import type { ModelProperty } from '@/model/typings';
+import { getModel } from '@/model/manager';
+import HocSearch from '@/model/hoc-search.vue';
+import { HostRecycleSearch } from '@/model/order/host-recycle-search';
 
 export default defineComponent({
   setup() {
@@ -34,49 +31,19 @@ export default defineComponent({
     const { t } = useI18n();
     const route = useRoute();
 
-    const resourceTypeList = [
-      { key: 'QCLOUDCVM', value: '腾讯云虚拟机' },
-      { key: 'IDCPM', value: 'IDC物理机' },
-      { key: 'OTHERS', value: '其他' },
-    ];
-    const returnPlanList = [
-      { key: 'IMMEDIATE', value: '立即销毁' },
-      { key: 'DELAY', value: '延迟销毁' },
-    ];
-
-    const defaultRecycleForm = () => {
-      return {
-        bk_biz_id: [] as any[],
-        order_id: [] as any[],
-        suborder_id: [] as any[],
-        resource_type: [] as any[],
-        recycle_type: [] as any[],
-        return_plan: [] as any[],
-        stage: [] as any[],
-        bk_username: [userStore.username],
-        dateRange: applicationTime(),
-      };
-    };
-    const { formModel, resetForm } = useFormModel(defaultRecycleForm());
     const currentOperateRowIndex = ref(-1);
+
+    const searchFields = getModel(HostRecycleSearch).getProperties();
+    const searchQs = useSearchQs({ key: 'filter', properties: searchFields });
+
+    const condition = ref<Record<string, any>>({});
+    const searchValues = ref<Record<string, any>>({});
 
     const opBtnDisabled = computed(() => {
       return (status: any) =>
         ['UNCOMMIT', 'COMMITTED', 'DETECTING', 'FOR_AUDIT', 'TRANSITING', 'RETURNING', 'DONE', 'TERMINATE'].includes(
           status,
         );
-    });
-    const requestListParams = computed(() => {
-      const params = {
-        ...formModel,
-        start: formModel.dateRange[0],
-        end: formModel.dateRange[1],
-        bk_biz_id: [getBizsId()],
-      };
-      params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
-      params.dateRange = undefined;
-      removeEmptyFields(params);
-      return params;
     });
 
     const { columns } = useScrColumns('hostRecycleApplication');
@@ -98,7 +65,7 @@ export default defineComponent({
       exportFormatter: (data: any) => `${data.order_id}/${data.suborder_id}`,
     });
     const { selections, handleSelectionChange } = useSelection();
-    const { CommonTable, getListData, dataList, pagination, isLoading } = useTable({
+    const { CommonTable, getListData, dataList } = useTable({
       tableOptions: {
         columns: [
           ...columns,
@@ -182,14 +149,73 @@ export default defineComponent({
       scrConfig: () => {
         return {
           url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/recycle/order`,
-          payload: { ...requestListParams.value },
+          payload: transformFlatCondition(condition.value, searchFields),
         };
       },
     });
+
+    const getSearchCompProps = (field: ModelProperty) => {
+      if (field.id === 'create_at') {
+        return {
+          type: 'daterange',
+          format: 'yyyy-MM-dd',
+        };
+      }
+      if (field.id === 'order_id') {
+        return {
+          pasteFn: (value: string) =>
+            value
+              .split(/\r\n|\n|\r/)
+              .filter((tag) => /^\d+$/.test(tag))
+              .map((tag) => ({ id: tag, name: tag })),
+        };
+      }
+      if (field.id === 'suborder_id') {
+        return {
+          pasteFn: (value: string) => value.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag })),
+        };
+      }
+      if (field.id === 'stage') {
+        const stages = stageList.value.reduce((acc, { stage, description }) => {
+          acc[stage] = description;
+          return acc;
+        }, {});
+        return {
+          option: stages,
+        };
+      }
+      return {
+        option: field.option,
+      };
+    };
+
+    const handleSearch = () => {
+      searchQs.set(searchValues.value);
+    };
+
+    const handleReset = () => {
+      searchQs.clear();
+    };
+
+    watch(
+      () => route.query,
+      async (query) => {
+        condition.value = searchQs.get(query, {
+          create_at: getDateRange('last30d', true),
+          bk_username: [userStore.username],
+        });
+
+        searchValues.value = condition.value;
+
+        getListData();
+      },
+      { immediate: true },
+    );
+
     const enterDetail = (row: any) => {
       router.push({
         name: 'HostRecycleDocDetail',
-        query: { ...route.query, suborderId: row.suborder_id, bkBizId: getBizsId() },
+        query: { suborderId: row.suborder_id, bkBizId: getBizsId() },
       });
     };
     const returnPreDetails = (row: any) => {
@@ -245,127 +271,36 @@ export default defineComponent({
       stageList.value = data?.info || [];
     };
 
-    const searchRulesKey = 'host_recycle_applications_rules';
-    const searchQs = useSearchQs({
-      key: 'initial_filter',
-      properties: [
-        { id: 'requireType', type: 'number', name: 'requireType', op: QueryRuleOPEnum.IN },
-        { id: 'orderId', type: 'number', name: 'orderId', op: QueryRuleOPEnum.IN },
-        { id: 'suborder_id', type: 'number', name: 'suborder_id', op: QueryRuleOPEnum.IN },
-        { id: 'bkUsername', type: 'user', name: 'bkUsername', op: QueryRuleOPEnum.IN },
-      ],
-    });
-    const filterOrders = (searchRulesStr?: string) => {
-      // 合并默认条件值
-      Object.assign(formModel, searchQs.get(route.query));
-      // 回填
-      if (searchRulesStr) {
-        // 解决人员选择器搜索问题
-        formModel.bk_username.length > 0 &&
-          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bk_username])]);
-      }
-      formModel.bk_biz_id = [getBizsId()];
-      pagination.start = 0;
-      getListData();
-    };
-    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
-
-    const handleSearch = () => {
-      // update query
-      saveSearchRules();
-    };
-
-    const handleReset = () => {
-      resetForm(defaultRecycleForm());
-      formModel.bk_biz_id = [getBizsId()];
-      // update query
-      clearSearchRules();
-    };
-
-    watch(
-      () => userStore.username,
-      (username) => {
-        if (route.query[searchRulesKey]) return;
-        // 无搜索记录，设置申请人默认值
-        formModel.bk_username = [username];
-      },
-    );
-
     onMounted(() => {
       fetchStageList();
     });
 
     return () => (
       <>
-        <GridFilterComp
-          onSearch={handleSearch}
-          onReset={handleReset}
-          loading={isLoading.value}
-          col={4}
-          rules={[
-            {
-              title: t('需求类型'),
-              content: <RequireNameSelect v-model={formModel.recycle_type} multiple clearable collapseTags />,
-            },
-            {
-              title: t('单号'),
-              content: <FloatInput v-model={formModel.order_id} placeholder={t('请输入单号，多个换行分割')} />,
-            },
-            {
-              title: t('子单号'),
-              content: <FloatInput v-model={formModel.suborder_id} placeholder={t('请输入子单号，多个换行分割')} />,
-            },
-            {
-              title: t('资源类型'),
-              content: (
-                <Select v-model={formModel.resource_type} multiple clearable placeholder={t('请选择资源类型')}>
-                  {resourceTypeList.map(({ key, value }) => {
-                    return <Select.Option key={key} name={value} id={key} />;
-                  })}
-                </Select>
-              ),
-            },
-            {
-              title: t('回收类型'),
-              content: (
-                <Select v-model={formModel.return_plan} multiple clearable placeholder={t('请选择回收类型')}>
-                  {returnPlanList.map(({ key, value }) => {
-                    return <Select.Option key={key} name={value} id={key}></Select.Option>;
-                  })}
-                </Select>
-              ),
-            },
-            {
-              title: t('状态'),
-              content: (
-                <Select v-model={formModel.stage} multiple clearable placeholder={t('请选择状态')}>
-                  {stageList.value.map(({ stage, description }) => {
-                    return <Select.Option key={stage} name={description} id={stage}></Select.Option>;
-                  })}
-                </Select>
-              ),
-            },
-            {
-              title: t('回收人'),
-              content: (
-                <MemberSelect
-                  v-model={formModel.bk_username}
-                  multiple
-                  clearable
-                  placeholder={t('请输入企业微信名')}
-                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
-                    username,
-                    display_name: username,
-                  }))}
+        <div style={{ padding: '24px 24px 0 24px' }}>
+          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+            {searchFields.map((field) => (
+              <GridItemFormElement key={field.id} label={field.name}>
+                <HocSearch
+                  is={field.type}
+                  display={field.meta?.display}
+                  v-model={searchValues.value[field.id]}
+                  {...getSearchCompProps(field)}
                 />
-              ),
-            },
-            {
-              title: t('回收时间'),
-              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
-            },
-          ]}
-        />
+              </GridItemFormElement>
+            ))}
+            <GridItem span={4}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <bk-button theme='primary' style={{ minWidth: '86px' }} onClick={handleSearch}>
+                  查询
+                </bk-button>
+                <bk-button style={{ minWidth: '86px' }} onClick={handleReset}>
+                  重置
+                </bk-button>
+              </div>
+            </GridItem>
+          </GridContainer>
+        </div>
         <section class={cssModule['table-wrapper']}>
           <div class={[cssModule.buttons, cssModule.mb16]}>
             <ExportToExcelButton

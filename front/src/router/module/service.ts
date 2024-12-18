@@ -1,5 +1,10 @@
 import type { RouteRecordRaw } from 'vue-router';
 import i18n from '@/language/i18n';
+import {
+  MENU_SERVICE_HOST_APPLICATION,
+  MENU_SERVICE_HOST_RECYCLE_ENTRY,
+  MENU_SERVICE_HOST_RECYCLE,
+} from '@/constants/menu-symbol';
 
 const { t } = i18n.global;
 
@@ -138,7 +143,7 @@ const serviceMenus: RouteRecordRaw[] = [
       {
         path: '/service/hostApplication',
         component: () => import('@/views/ziyanScr/hostApplication'),
-        name: '主机申领',
+        name: MENU_SERVICE_HOST_APPLICATION,
         meta: {
           title: t('主机申领'),
           activeKey: 'apply',
@@ -177,11 +182,11 @@ const serviceMenus: RouteRecordRaw[] = [
       },
       {
         path: '/service/hostRecycling',
-        name: '主机回收',
+        name: MENU_SERVICE_HOST_RECYCLE_ENTRY,
         children: [
           {
             path: '',
-            name: 'hostRecycle',
+            name: MENU_SERVICE_HOST_RECYCLE,
             component: () => import('@/views/ziyanScr/host-recycle'),
             meta: {
               activeKey: 'recovery',

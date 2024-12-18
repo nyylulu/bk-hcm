@@ -32,6 +32,8 @@ export const getDefaultRule: GetDefaultRule = (property, custom) => {
     ca: { op: searchOp || EQ, value: '' },
     region: { op: searchOp || IN, value: [] },
     business: { op: searchOp || IN, value: [] },
+    'req-type': { op: searchOp || IN, value: [] },
+    'req-stage': { op: searchOp || IN, value: [] },
   };
 
   return {
@@ -53,7 +55,7 @@ export const convertValue = (
     return formatter(value);
   }
 
-  if (type === 'number' || type === 'business') {
+  if (['number', 'business', 'req-type'].includes(type)) {
     if (Array.isArray(value)) {
       return value.map((val) => Number(val));
     }

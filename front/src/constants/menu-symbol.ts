@@ -35,3 +35,16 @@ export const MENU_GREEN_CHANNEL_QUOTA_GLOBAL = 'menu_green_channel_quota_global'
 export const MENU_GREEN_CHANNEL_QUOTA_BIZ = 'menu_green_channel_quota_biz';
 export const MENU_GREEN_CHANNEL_STATS = 'menu_green_channel_stats';
 export const MENU_GREEN_CHANNEL_STATS_BIZ = 'menu_green_channel_stats_biz';
+
+/**
+ * 服务请求
+ */
+export const MENU_SERVICE_HOST_APPLICATION = 'menu_service_host_application';
+export const MENU_SERVICE_HOST_RECYCLE_ENTRY = 'menu_service_host_recycle_entry';
+export const MENU_SERVICE_HOST_RECYCLE = 'menu_service_host_recycle';
+
+/**
+ * 资源管理（业务）
+ */
+export const MENU_BUSINESS_HOST_APPLICATION = 'menu_business_host_application';
+export const MENU_BUSINESS_HOST_RECYCLE = 'menu_business_host_recycle';

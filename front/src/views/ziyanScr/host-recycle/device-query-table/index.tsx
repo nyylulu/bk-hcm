@@ -1,20 +1,23 @@
-import { defineComponent, ref, computed, onMounted, watch } from 'vue';
+import { defineComponent, ref, computed, onMounted } from 'vue';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import { getDeviceTypeList, getRegionList, getZoneList, getRecycleStageOpts } from '@/api/host/recycle';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import { Search } from 'bkui-vue/lib/icon';
 import { useUserStore } from '@/store';
-import BusinessSelector from '@/components/business-selector/index.vue';
+import { useBusinessGlobalStore } from '@/store/business-global';
 import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import FloatInput from '@/components/float-input';
 import dayjs from 'dayjs';
 import { Button, DatePicker, Form, Select } from 'bkui-vue';
+import HcmSearchBusiness from '@/components/search/business.vue';
+import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
+import { isEmpty } from '@/common/util';
+
 const { FormItem } = Form;
 export default defineComponent({
   components: {
-    BusinessSelector,
     MemberSelect,
     ExportToExcelButton,
     FloatInput,
@@ -22,8 +25,9 @@ export default defineComponent({
   emits: ['goBillDetailPage'],
   setup(_, { emit }) {
     const userStore = useUserStore();
+    const businessGlobalStore = useBusinessGlobalStore();
     const defaultDeviceForm = () => ({
-      bk_biz_id: [],
+      bk_biz_id: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
       order_id: [],
       suborder_id: [],
       ip: [],
@@ -77,8 +81,8 @@ export default defineComponent({
         ...timeObj.value,
         page: pageInfo.value,
         bk_biz_id:
-          deviceForm.value.bk_biz_id.length === 0
-            ? businessRef.value.businessList.slice(1).map((item: any) => item.id)
+          deviceForm.value.bk_biz_id?.[0] === 0 || isEmpty(deviceForm.value.bk_biz_id)
+            ? businessGlobalStore.businessAuthorizedList.map((item: any) => item.id)
             : deviceForm.value.bk_biz_id,
       };
       params.order_id = params.order_id.length ? params.order_id.map((v) => +v) : [];
@@ -108,17 +112,10 @@ export default defineComponent({
     });
     const filterOrders = () => {
       pagination.start = 0;
-      deviceForm.value.bk_biz_id =
-        deviceForm.value.bk_biz_id.length === 1 && deviceForm.value.bk_biz_id[0] === 'all'
-          ? []
-          : deviceForm.value.bk_biz_id;
       getListData();
     };
     const clearFilter = () => {
       const initForm = defaultDeviceForm();
-      // 因为要保存业务全选的情况, 所以这里 defaultBusiness 可能是 ['all'], 而组件的全选对应着 [], 所以需要额外处理
-      // 根源是此处的接口要求全选时携带传递所有业务id, 所以需要与空数组做区分
-      initForm.bk_biz_id = businessRef.value.defaultBusiness;
       deviceForm.value = initForm;
       timeForm.value = defaultTime();
       filterOrders();
@@ -139,47 +136,25 @@ export default defineComponent({
       const data = await getRecycleStageOpts();
       stageList.value = data?.info || [];
     };
-    const businessRef = ref(null);
+
     onMounted(() => {
       fetchDeviceTypeList();
       fetchRegionList();
       fetchZoneList();
       fetchStageList();
+
+      getListData();
     });
-
-    watch(
-      () => userStore.username,
-      (username) => {
-        deviceForm.value.bk_username = [username];
-      },
-    );
-
-    watch(
-      () => businessRef.value?.businessList,
-      (val) => {
-        if (!val?.length) return;
-        getListData();
-      },
-      { deep: true },
-    );
 
     return () => (
       <div class={'apply-list-container'}>
         <div class={'filter-container'}>
           <Form formType='vertical' class={'scr-form-wrapper'} model={deviceForm}>
             <FormItem label='业务'>
-              <business-selector
-                ref={businessRef}
+              <HcmSearchBusiness
                 v-model={deviceForm.value.bk_biz_id}
-                placeholder='请选择业务'
-                authed
-                autoSelect
-                clearable={false}
-                isShowAll
-                notAutoSelectAll
-                multiple
-                url-key='scr_host_bizs'
-                base64Encode
+                showAll
+                {...{ scope: 'auth', emptySelectAll: true, cacheKey: serviceShareBizSelectedKey }}
               />
             </FormItem>
             <FormItem label='单号'>

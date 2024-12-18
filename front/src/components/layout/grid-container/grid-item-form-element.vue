@@ -1,13 +1,11 @@
 <template>
-  <grid-item v-bind="attrs">
+  <grid-item v-bind="props">
     <div class="form-element">
       <slot />
     </div>
   </grid-item>
 </template>
 <script setup lang="ts">
-import { useAttrs } from 'vue';
-import GridItem from './grid-item.vue';
-
-const attrs = useAttrs();
+import GridItem, { type IGridItemProps } from './grid-item.vue';
+const props = defineProps<IGridItemProps>();
 </script>

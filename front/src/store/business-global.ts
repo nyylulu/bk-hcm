@@ -36,20 +36,37 @@ export const useBusinessGlobalStore = defineStore('businessGlobal', () => {
     }
   };
 
-  const getFirstBizId = async () => {
+  const getBusinessFullList = async () => {
     if (businessFullList.value.length > 0) {
-      return businessFullList.value[0].id;
+      return businessFullList.value;
     }
     const list = await getFullBusiness();
+    return list;
+  };
+
+  const getBusinessAuthorizedList = async () => {
+    if (businessAuthorizedList.value.length > 0) {
+      return businessAuthorizedList.value;
+    }
+    const list = await getAuthorizedBusiness();
+    return list;
+  };
+
+  const getFirstBizId = async () => {
+    const list = await getBusinessFullList();
     return list?.[0]?.id;
   };
 
   const getFirstAuthorizedBizId = async () => {
-    if (businessAuthorizedList.value.length > 0) {
-      return businessAuthorizedList.value[0].id;
-    }
-    const list = await getAuthorizedBusiness();
+    const list = await getBusinessAuthorizedList();
     return list?.[0]?.id;
+  };
+
+  const getCacheSelected = (key: string) => {
+    if (localStorage.getItem(key)) {
+      const cacheValue = JSON.parse(localStorage.getItem(key));
+      return cacheValue;
+    }
   };
 
   return {
@@ -59,7 +76,10 @@ export const useBusinessGlobalStore = defineStore('businessGlobal', () => {
     businessAuthorizedListLoading,
     getFullBusiness,
     getAuthorizedBusiness,
+    getBusinessFullList,
+    getBusinessAuthorizedList,
     getFirstBizId,
     getFirstAuthorizedBizId,
+    getCacheSelected,
   };
 });

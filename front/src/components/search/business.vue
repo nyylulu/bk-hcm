@@ -1,16 +1,25 @@
 <script setup lang="ts">
 import { computed, useAttrs } from 'vue';
 import BusinessSelector from '@/components/business-selector/business.vue';
+import { isEmpty } from '@/common/util';
 
 defineOptions({ name: 'hcm-search-business' });
 
 const props = withDefaults(
-  defineProps<{ multiple: boolean; clearable: boolean; filterable: boolean; collapseTags: boolean }>(),
+  defineProps<{
+    multiple?: boolean;
+    clearable?: boolean;
+    filterable?: boolean;
+    collapseTags?: boolean;
+    showAll?: boolean;
+    cacheKey?: string;
+  }>(),
   {
     multiple: true,
     clearable: true,
     filterable: true,
     collapseTags: true,
+    showAll: false,
   },
 );
 
@@ -24,6 +33,14 @@ const localModel = computed({
     return model.value;
   },
   set(val) {
+    // 操作本地缓存，如果是空数据则删除缓存
+    if (props.cacheKey) {
+      if (isEmpty(val)) {
+        localStorage.removeItem(props.cacheKey);
+      } else {
+        localStorage.setItem(props.cacheKey, JSON.stringify(val));
+      }
+    }
     model.value = val;
   },
 });
@@ -38,6 +55,7 @@ const attrs = useAttrs();
     :clearable="clearable"
     :filterable="filterable"
     :collapse-tags="collapseTags"
+    :show-all="showAll"
     v-bind="attrs"
   />
 </template>

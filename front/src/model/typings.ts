@@ -15,7 +15,9 @@ export type ModelPropertyType =
   | 'cert'
   | 'ca'
   | 'region'
-  | 'business';
+  | 'business'
+  | 'req-type'
+  | 'req-stage';
 
 export type ModelPropertyMeta = {
   display?: PropertyDisplayConfig;

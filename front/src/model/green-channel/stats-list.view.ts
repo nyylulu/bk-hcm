@@ -25,7 +25,7 @@ export class StatsListView {
               query: {
                 [GLOBAL_BIZS_KEY]: data.bk_biz_id,
                 type: 'host_apply',
-                initial_filter: searchQs.build({ requireType: [7], bkUsername: [] }),
+                filter: searchQs.build({ require_type: [7], bk_username: [] }),
               },
             });
           },

@@ -2,12 +2,11 @@ import { computed, defineComponent, ref, watch, onMounted, reactive } from 'vue'
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import cssModule from './index.module.scss';
 
-import { Button, Message, TagInput } from 'bkui-vue';
+import { Button, Message } from 'bkui-vue';
 import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
-import GridFilterComp from '@/components/grid-filter-comp';
-import ScrDatePicker from '@/components/scr/scr-date-picker';
-import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
-import MemberSelect from '@/components/MemberSelect';
+import GridContainer from '@/components/layout/grid-container/grid-container.vue';
+import GridItemFormElement from '@/components/layout/grid-container/grid-item-form-element.vue';
+import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import WName from '@/components/w-name';
 import StageDetailSideslider from './stage-detail';
 import MatchSideslider from './match';
@@ -16,21 +15,21 @@ import moment from 'moment';
 import { useI18n } from 'vue-i18n';
 import { throttle } from 'lodash';
 import { useUserStore, useZiyanScrStore } from '@/store';
-import { QueryRuleOPEnum } from '@/typings';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
-import useFormModel from '@/hooks/useFormModel';
 import useScrColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useTable } from '@/hooks/useTable/useTable';
 import useSearchQs from '@/hooks/use-search-qs';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import { useApplyStages } from '@/views/ziyanScr/hooks/use-apply-stages';
-import { applicationTime } from '@/common/util';
 import { getResourceTypeName } from '@/views/ziyanScr/hostApplication/components/transform';
 import { getZoneCn } from '@/views/ziyanScr/cvm-web/transform';
-import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
 import http from '@/http';
-import { useSaveSearchRules } from '../../useSaveSearchRules';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
+import { getDateRange, transformFlatCondition } from '@/utils/search';
+import type { ModelProperty } from '@/model/typings';
+import { getModel } from '@/model/manager';
+import HocSearch from '@/model/hoc-search.vue';
+import { HostApplySearch } from '@/model/order/host-apply-search';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -40,7 +39,7 @@ export default defineComponent({
     const { t } = useI18n();
     const userStore = useUserStore();
     const scrStore = useZiyanScrStore();
-    const { getBusinessApiPath, getBizsId } = useWhereAmI();
+    const { getBusinessApiPath } = useWhereAmI();
     const route = useRoute();
 
     const { transformApplyStages } = useApplyStages();
@@ -53,14 +52,6 @@ export default defineComponent({
       suborderId: undefined,
     });
 
-    const { formModel, resetForm } = useFormModel({
-      bkBizId: [],
-      requireType: [],
-      stage: [],
-      orderId: [],
-      dateRange: applicationTime(),
-      bkUsername: [userStore.username],
-    });
     const curRow = ref({});
 
     const orderClipboard = ref<any>({});
@@ -103,7 +94,7 @@ export default defineComponent({
       let routeParams: RouteLocationRaw = {
         name: 'HostApplicationsDetail',
         params: { id: row.order_id },
-        query: { ...route.query, creator: row.bk_username, bkBizId: row.bk_biz_id },
+        query: { creator: row.bk_username, bkBizId: row.bk_biz_id },
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };
@@ -186,7 +177,10 @@ export default defineComponent({
       }
     };
 
-    const { CommonTable, getListData, isLoading, pagination } = useTable({
+    const searchFields = getModel(HostApplySearch).getProperties();
+    const searchQs = useSearchQs({ key: 'filter', properties: searchFields });
+
+    const { CommonTable, getListData, pagination } = useTable({
       tableOptions: {
         columns: [
           {
@@ -463,132 +457,92 @@ export default defineComponent({
         dataPath: 'data.info',
         immediate: false,
       },
-      scrConfig: () => ({
-        url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`,
-        payload: removeEmptyFields({
-          bk_biz_id: [getBizsId()],
-          order_id: formModel.orderId.map((v) => Number(v)),
-          bk_username: formModel.bkUsername,
-          stage: formModel.stage,
-          start: formModel.dateRange[0],
-          end: formModel.dateRange[1],
-          require_type: formModel.requireType,
-        }),
-      }),
+      scrConfig: () => {
+        return {
+          url: `/api/v1/woa/${getBusinessApiPath()}task/findmany/apply`,
+          payload: transformFlatCondition(condition.value, searchFields),
+        };
+      },
     });
 
-    const searchRulesKey = 'host_apply_applications_rules';
-    const searchQs = useSearchQs({
-      key: 'initial_filter',
-      properties: [
-        { id: 'requireType', type: 'number', name: 'requireType', op: QueryRuleOPEnum.IN },
-        { id: 'orderId', type: 'number', name: 'orderId', op: QueryRuleOPEnum.IN },
-        { id: 'suborder_id', type: 'number', name: 'suborder_id', op: QueryRuleOPEnum.IN },
-        { id: 'bkUsername', type: 'user', name: 'bkUsername', op: QueryRuleOPEnum.IN },
-      ],
-    });
-    const filterOrders = (searchRulesStr?: string) => {
-      // 合并默认条件值
-      Object.assign(formModel, searchQs.get(route.query));
-      // 回填
-      if (searchRulesStr) {
-        // 解决人员选择器搜索问题
-        formModel.bkUsername.length > 0 &&
-          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bkUsername])]);
+    const condition = ref<Record<string, any>>({});
+    const searchValues = ref<Record<string, any>>({});
+
+    const getSearchCompProps = (field: ModelProperty) => {
+      if (field.id === 'create_at') {
+        return {
+          type: 'daterange',
+          format: 'yyyy-MM-dd',
+        };
       }
-      pagination.start = 0;
-      getListData();
+      if (field.id === 'order_id') {
+        return {
+          pasteFn: (value: string) =>
+            value
+              .split(/\r\n|\n|\r/)
+              .filter((tag) => /^\d+$/.test(tag))
+              .map((tag) => ({ id: tag, name: tag })),
+          placeholder: '请输入单号',
+        };
+      }
+      return {};
     };
-    const { saveSearchRules, clearSearchRules } = useSaveSearchRules(searchRulesKey, filterOrders, formModel);
 
     const handleSearch = () => {
-      // update query
-      saveSearchRules();
+      // TODO: 实际无效
+      pagination.start = 0;
+      searchQs.set(searchValues.value);
     };
 
     const handleReset = () => {
-      resetForm({ bkUsername: [userStore.username] });
-      // update query
-      clearSearchRules();
+      searchQs.clear();
     };
+
+    watch(
+      () => route.query,
+      async (query) => {
+        condition.value = searchQs.get(query, {
+          create_at: getDateRange('last30d', true),
+          bk_username: [userStore.username],
+        });
+
+        searchValues.value = condition.value;
+
+        getListData();
+      },
+      { immediate: true },
+    );
 
     onMounted(() => {
       throttleDeliveredHostField();
     });
 
-    watch(
-      () => userStore.username,
-      (username) => {
-        if (route.query[searchRulesKey]) return;
-        // 无搜索记录，设置申请人默认值
-        formModel.bkUsername = [username];
-      },
-    );
-
     return () => (
       <>
-        <GridFilterComp
-          onSearch={handleSearch}
-          onReset={handleReset}
-          loading={isLoading.value}
-          rules={[
-            {
-              title: t('需求类型'),
-              content: (
-                <ScrCreateFilterSelector
-                  v-model={formModel.requireType}
-                  api={scrStore.getRequirementList}
-                  multiple
-                  optionIdPath='require_type'
-                  optionNamePath='require_name'
+        <div style={{ padding: '24px 24px 0 24px' }}>
+          <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
+            {searchFields.map((field) => (
+              <GridItemFormElement key={field.id} label={field.name}>
+                <HocSearch
+                  is={field.type}
+                  display={field.meta?.display}
+                  v-model={searchValues.value[field.id]}
+                  {...getSearchCompProps(field)}
                 />
-              ),
-            },
-            {
-              title: t('单据状态'),
-              content: (
-                <ScrCreateFilterSelector
-                  v-model={formModel.stage}
-                  api={scrStore.getApplyStageList}
-                  multiple
-                  optionIdPath='stage'
-                  optionNamePath='description'
-                />
-              ),
-            },
-            {
-              title: t('单号'),
-              content: (
-                <TagInput
-                  v-model={formModel.orderId}
-                  allow-create
-                  collapse-tags
-                  allow-auto-match
-                  pasteFn={(v) => v.split(/\r\n|\n|\r/).map((tag) => ({ id: tag, name: tag }))}
-                  placeholder={t('请输入单号')}
-                />
-              ),
-            },
-            {
-              title: t('申请时间'),
-              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
-            },
-            {
-              title: t('申请人'),
-              content: (
-                <MemberSelect
-                  v-model={formModel.bkUsername}
-                  clearable
-                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
-                    username,
-                    display_name: username,
-                  }))}
-                  placeholder={t('请输入企业微信名')}
-                />
-              ),
-            },
-          ]}
-        />
+              </GridItemFormElement>
+            ))}
+            <GridItem span={4}>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <bk-button theme='primary' style={{ minWidth: '86px' }} onClick={handleSearch}>
+                  查询
+                </bk-button>
+                <bk-button style={{ minWidth: '86px' }} onClick={handleReset}>
+                  重置
+                </bk-button>
+              </div>
+            </GridItem>
+          </GridContainer>
+        </div>
         <section class={cssModule['table-wrapper']}>
           <CommonTable />
         </section>

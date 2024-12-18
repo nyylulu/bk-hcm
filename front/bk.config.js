@@ -5,7 +5,7 @@ const replaceStaticUrlPlugin = require('./replace-static-url-plugin');
 const isModeProduction = process.env.NODE_ENV === 'production';
 const indexPath = isModeProduction ? './index.html' : './index-dev.html';
 const env = require('./env')();
-const apiMocker = require('./mock-server.js');
+// const apiMocker = require('./mock-server.js');
 module.exports = {
   appConfig() {
     return {
@@ -35,16 +35,16 @@ module.exports = {
         historyApiFallback: true,
         disableHostCheck: true,
         before(app) {
-          apiMocker(app, {
-            // watch: [
-            //   '/mock/api/v4/organization/user_info/',
-            //   '/mock/api/v4/add/',
-            //   '/mock/api/v4/get/',
-            //   '/mock/api/v4/sync/',
-            //   '/mock/api/v4/cloud/public_images/list/'
-            // ],
-            api: resolve(__dirname, './mock/api.ts'),
-          });
+          // apiMocker(app, {
+          //   // watch: [
+          //   //   '/mock/api/v4/organization/user_info/',
+          //   //   '/mock/api/v4/add/',
+          //   //   '/mock/api/v4/get/',
+          //   //   '/mock/api/v4/sync/',
+          //   //   '/mock/api/v4/cloud/public_images/list/'
+          //   // ],
+          //   api: resolve(__dirname, './mock/api.ts'),
+          // });
         },
         proxy: {},
       },
