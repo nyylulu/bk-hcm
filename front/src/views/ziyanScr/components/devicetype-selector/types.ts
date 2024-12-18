@@ -46,6 +46,6 @@ export type IdcpmDeviceTypeList = Array<IdcpmDeviceType>;
 
 export type OptionsType = { cvm: CvmDeviceTypeList; idcpm: IdcpmDeviceTypeList };
 
-type DeviceType = CvmDeviceType | IdcpmDeviceType;
+export type DeviceType = CvmDeviceType | IdcpmDeviceType;
 type DeviceTypeList = CvmDeviceTypeList | IdcpmDeviceTypeList;
 export type SelectionType = DeviceType | DeviceTypeList;

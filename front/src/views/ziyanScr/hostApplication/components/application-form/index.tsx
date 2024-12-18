@@ -39,7 +39,7 @@ import InheritPackageFormItem, {
   type RollingServerHost,
 } from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
-import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
+import { DeviceType, CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
 import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
 import GreenChannelConfirm from './green-channel/confirm.vue';
@@ -132,6 +132,34 @@ export default defineComponent({
     const isRollingServer = computed(() => order.value.model.requireType === 6);
     const isGreenChannel = computed(() => order.value.model.requireType === 7);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
+
+    // 选择的cvm机型
+    const selectedCvmDeviceType = ref<CvmDeviceType>(null);
+    // 需求类型-常规项目
+    const isNormalRequireType = computed(() => order.value.model.requireType === 1);
+
+    // 是否为默认包4年
+    const isDefaultFourYears = computed(
+      () =>
+        isNormalRequireType.value &&
+        selectedCvmDeviceType.value?.device_type_class === 'SpecialType' &&
+        resourceForm.value.charge_type === cvmChargeTypes.PREPAID,
+    );
+
+    // 购买时长的禁用状态
+    const chargeMonthDisabledState = computed(() => {
+      if (isRollingServer.value || isDefaultFourYears.value) {
+        return {
+          disabled: true,
+          tips: isRollingServer.value
+            ? '继承原有套餐包年包月时长，此处的购买时长为剩余时长'
+            : '专用机型只能选择4年套餐',
+        };
+      }
+      return {
+        disabled: false,
+      };
+    });
 
     // 滚服继承套餐的机器
     let rollingServerHost: RollingServerHost = null;
@@ -751,8 +779,8 @@ export default defineComponent({
         { required: true, message: '请输入需求数量', trigger: 'blur' },
         // 临时规则双十一后可能需要去除
         {
-          validator: (value: number) => !(isRollingServer.value && value > 10),
-          message: '注意：因云接口限制，单次的机器数最大值为10，超过后请手动克隆为多条配置(待腾讯云发版修复)',
+          validator: (value: number) => !(isRollingServer.value && value > 100),
+          message: '注意：因云接口限制，单次的机器数最大值为100，超过后请手动克隆为多条配置',
           trigger: 'blur',
         },
       ],
@@ -957,7 +985,7 @@ export default defineComponent({
     const isCpuCoreExceeded = computed(() => replicasCpuCores.value > availableCpuCoreQuota.value);
 
     // 非滚服-机型排序逻辑
-    const handleSortDemands = (a: CvmDeviceType, b: CvmDeviceType) => {
+    const handleSortDemands = (a: DeviceType, b: DeviceType) => {
       const set = computedAvailableSet.value;
       return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
     };
@@ -1311,6 +1339,7 @@ export default defineComponent({
           {/* 增加资源需求 */}
           <Sideslider
             class='add-resource-requirements-sideslider'
+            renderDirective='if'
             width={1200}
             isShow={addResourceRequirements.value}
             title={title.value}
@@ -1407,8 +1436,10 @@ export default defineComponent({
                               bizs={order.value.model.bkBizId}
                               region={resourceForm.value.region}
                               onValidateSuccess={(host) => {
-                                resourceForm.value.charge_type = host.instance_charge_type;
-                                resourceForm.value.charge_months = host.charge_months;
+                                const { instance_charge_type: chargeType, charge_months: chargeMonths } = host;
+                                resourceForm.value.charge_type = chargeType;
+                                resourceForm.value.charge_months =
+                                  chargeType === cvmChargeTypes.PREPAID ? chargeMonths : undefined;
                                 QCLOUDCVMForm.value.spec.inherit_instance_id = host.bk_cloud_inst_id;
                                 // 机型族与上次数据不一致时需要清除机型选择
                                 if (
@@ -1500,11 +1531,10 @@ export default defineComponent({
                                 filterable={false}
                                 clearable={false}
                                 style={{ width: '260px' }}
-                                // 滚服项目不支持选择购买时长
-                                disabled={isRollingServer.value}
+                                disabled={chargeMonthDisabledState.value.disabled}
                                 v-bk-tooltips={{
-                                  content: '继承原有套餐包年包月时长，此处的购买时长为剩余时长',
-                                  disabled: !isRollingServer.value,
+                                  content: chargeMonthDisabledState.value.tips,
+                                  disabled: !chargeMonthDisabledState.value.disabled,
                                 }}>
                                 {(function () {
                                   const options = isRollingServer.value
@@ -1589,27 +1619,29 @@ export default defineComponent({
                                 }
                                 onChange={(result) => {
                                   QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType)?.cpu_amount;
+                                  selectedCvmDeviceType.value = result as CvmDeviceType;
+                                  if (isDefaultFourYears.value) {
+                                    // 专用机型默认包4年
+                                    resourceForm.value.charge_months = 48;
+                                  }
                                 }}>
                                 {{
                                   option: (option: CvmDeviceType) => {
                                     const { device_type, device_type_class, device_group } = option;
                                     const isSpecialType = device_type_class === 'SpecialType';
-                                    if (isSpecialRequirement.value) {
-                                      return (
-                                        <>
-                                          <span>{device_type}</span>
-                                          <Tag class='ml12' theme={isSpecialType ? 'danger' : 'success'} size='small'>
-                                            {isSpecialType ? '专用机型' : '通用机型'}
+                                    return (
+                                      <>
+                                        <span>{device_type}</span>
+                                        <Tag class='ml12' theme={isSpecialType ? 'danger' : 'success'} size='small'>
+                                          {isSpecialType ? '专用机型' : '通用机型'}
+                                        </Tag>
+                                        {device_group && (
+                                          <Tag class='ml12' size='small'>
+                                            {device_group}
                                           </Tag>
-                                          {device_group && (
-                                            <Tag class='ml12' size='small'>
-                                              {device_group}
-                                            </Tag>
-                                          )}
-                                        </>
-                                      );
-                                    }
-                                    return device_type;
+                                        )}
+                                      </>
+                                    );
                                   },
                                 }}
                               </DevicetypeSelector>
@@ -1658,7 +1690,8 @@ export default defineComponent({
                                 type='number'
                                 class='commonCard-form-select'
                                 v-model={QCLOUDCVMForm.value.spec.replicas}
-                                min={1}></Input>
+                                min={1}
+                                max={1000}></Input>
                               {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                                 <CvmMaxCapacity params={cvmMaxCapacityQueryParams.value} />
                               )}
