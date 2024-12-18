@@ -11,6 +11,8 @@ import useTimeoutPoll from '@/hooks/use-timeout-poll';
 import CommonCard from '@/components/CommonCard';
 import taskDetailsViewProperties from '@/model/task/detail.view';
 import { transformSimpleCondition } from '@/utils/search';
+import { getPrivateIPs } from '@/utils/common';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import BasicInfo from './children/basic-info/basic-info.vue';
 import ActionList from './children/action-list/action-list.vue';
 
@@ -44,6 +46,25 @@ const statusPoolIds = computed(() => {
   return taskDetailList.value
     .filter((item) => [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(item.state))
     .map((item) => item.id);
+});
+
+const allStatusIPs = computed(() => {
+  return taskDetailList.value.map((item) => ({ ip: getPrivateIPs(item.param), status: item.state }));
+});
+const allIPs = computed(() => {
+  return allStatusIPs.value.map((item) => item.ip).join('\n');
+});
+const allSuccessIPs = computed(() => {
+  return allStatusIPs.value
+    .filter((item) => item.status === TaskDetailStatus.SUCCESS)
+    .map((item) => item.ip)
+    .join('\n');
+});
+const allFailIPs = computed(() => {
+  return allStatusIPs.value
+    .filter((item) => item.status === TaskDetailStatus.FAILED)
+    .map((item) => item.ip)
+    .join('\n');
 });
 
 const fetchCountAndStatus = async () => {
@@ -174,6 +195,23 @@ onMounted(() => {
           </bk-link>
         </span>
       </div>
+      <div class="action-buttons">
+        <copy-to-clipboard :disabled="!allIPs" :content="allIPs">
+          <template #default="{ disabled }">
+            <bk-button theme="primary" @click="handleActionSelect" :disabled="disabled">复制全部IP</bk-button>
+          </template>
+        </copy-to-clipboard>
+        <copy-to-clipboard :disabled="!allSuccessIPs" :content="allSuccessIPs">
+          <template #default="{ disabled }">
+            <bk-button @click="handleActionSelect" :disabled="disabled">复制成功IP</bk-button>
+          </template>
+        </copy-to-clipboard>
+        <copy-to-clipboard :disabled="!allFailIPs" :content="allFailIPs">
+          <template #default="{ disabled }">
+            <bk-button @click="handleActionSelect" :disabled="disabled">复制失败IP</bk-button>
+          </template>
+        </copy-to-clipboard>
+      </div>
     </div>
     <action-list
       v-bkloading="{ loading: taskStore.taskDetailListLoading }"
@@ -198,11 +236,13 @@ onMounted(() => {
 }
 .toolbar {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 12px;
   margin: 16px 0;
 }
 .stats {
   display: flex;
+  align-items: center;
   gap: 16px;
   .count-item {
     display: flex;
@@ -212,5 +252,10 @@ onMounted(() => {
       font-style: normal;
     }
   }
+}
+.action-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 </style>
