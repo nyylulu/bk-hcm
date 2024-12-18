@@ -1,15 +1,14 @@
-import { defineComponent, type PropType, ref, computed, watch } from 'vue';
+import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { useDepartment } from '@/hooks';
+import { useBusinessGlobalStore } from '@/store/business-global';
 import { useUserStore } from '@/store';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-// import OrganizationSelect from '@/components/OrganizationSelect/index';
-import BusinessSelector from '@/components/business-selector/index.vue';
-import MemberSelect from '@/components/MemberSelect';
+import HcmSearchOrg from '@/components/search/org.vue';
+import HcmSearchBusiness from '@/components/search/business.vue';
+import HcmSearchUser from '@/components/search/user.vue';
 import CurrentDialog from '../current-dialog';
 import ModuleDialog from '../module-dialog';
 import OriginDialog from '../origin-dialog';
@@ -34,10 +33,8 @@ export default defineComponent({
   setup(props) {
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
-    const businessMapStore = useBusinessMapStore();
+    const businessGlobalStore = useBusinessGlobalStore();
     const userStore = useUserStore();
-
-    const { departmentMap } = useDepartment();
 
     const columns = [
       {
@@ -74,6 +71,7 @@ export default defineComponent({
     );
     const isLoading = ref(false);
     const organizations = ref([]);
+    const orgChecked = ref([]);
     const operators = ref([userStore.username]);
     const bkBizIds = ref([]);
     const dissloveList = ref<IDissolve[]>([]);
@@ -84,12 +82,7 @@ export default defineComponent({
     const moduleNames = ref<string[]>([]);
     const tableColumns = ref(columns);
 
-    watch(
-      () => userStore.username,
-      (username) => {
-        operators.value = [username];
-      },
-    );
+    const orgRef = ref(null);
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
@@ -106,11 +99,8 @@ export default defineComponent({
       };
 
       // 收集所选节点下的所有叶子节点的code数据
-      organizations.value.forEach((orgId) => {
-        const dept = departmentMap.value?.get(orgId);
-        if (dept) {
-          collectLeafCodes(dept);
-        }
+      orgChecked.value.forEach((org) => {
+        collectLeafCodes(org);
       });
 
       return [...leafIds];
@@ -127,7 +117,7 @@ export default defineComponent({
       ziyanScrStore
         .getDissolveList({
           group_ids: groupIds.value,
-          bk_biz_names: bkBizIds.value.map(businessMapStore.getNameFromBusinessMap),
+          bk_biz_names: !bkBizIds.value?.[0] ? [] : businessGlobalStore.getBusinessNames(bkBizIds.value),
           module_names: moduleNames.value,
           operators: operators.value,
         })
@@ -149,7 +139,7 @@ export default defineComponent({
     };
 
     const handleReset = () => {
-      organizations.value = [];
+      orgRef.value.clear();
       bkBizIds.value = [];
       operators.value = [userStore.username];
     };
@@ -181,26 +171,23 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <OrganizationSelect class={cssModule['search-item']} v-model={organizations.value}></OrganizationSelect> */}
+          <span class={cssModule['search-label']}>{t('组织')}：</span>
+          <HcmSearchOrg
+            ref={orgRef}
+            class={cssModule['search-item']}
+            {...{ placeholder: '请选择或输入名称查找', searchPlaceholder: '请输入2个以上字符搜索' }}
+            v-model={organizations.value}
+            v-model:checked={orgChecked.value}
+          />
           <span class={cssModule['search-label']}>{t('业务')}：</span>
-          <BusinessSelector
+          <HcmSearchBusiness
             class={cssModule['search-item']}
+            v-model={bkBizIds.value}
             multiple
-            authed={true}
-            isShowAll={true}
-            autoSelect={true}
-            v-model={bkBizIds.value}></BusinessSelector>
+            {...{ scope: 'auth', showAll: true }}
+          />
           <span class={cssModule['search-label']}>{t('人员')}：</span>
-          <MemberSelect
-            class={cssModule['search-item']}
-            v-model={operators.value}
-            defaultUserlist={[
-              {
-                username: userStore.username,
-                display_name: userStore.username,
-              },
-            ]}></MemberSelect>
+          <HcmSearchUser class={cssModule['search-item']} v-model={operators.value} />
           <bk-button
             theme='primary'
             class={cssModule['search-button']}
@@ -227,9 +214,8 @@ export default defineComponent({
         <bk-loading loading={isLoading.value}>
           <bk-table
             show-overflow-tooltip
-            virtual-enabled={true}
-            height='500px'
             data={dissloveList.value}
+            max-height={'calc(100vh - 531px)'}
             class={cssModule.table}>
             <bk-table-column label={t('业务')} field='bk_biz_name' min-width='150px' fixed='left'></bk-table-column>
             <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px'>
