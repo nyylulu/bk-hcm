@@ -85,7 +85,7 @@ export default defineComponent({
         return;
       }
       active.value += 1;
-      resourceType.value.clearValidate();
+      resourceType.value?.clearValidate();
     };
     const upDrawer = (val: boolean) => {
       drawer.value = val;

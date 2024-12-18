@@ -23,7 +23,7 @@ export default defineComponent({
     };
     const clearValidate = () => {
       nextTick(() => {
-        recycleForm.value.clearValidate();
+        recycleForm.value?.clearValidate();
       });
     };
     expose({ handleConfirm, clearValidate });

@@ -84,6 +84,9 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     }, []),
   );
 
+  // 只需要preview可回收的主机
+  const previewHostIps = computed(() => targetHost.value?.flatMap((cur) => cur.private_ipv4_addresses) || []);
+
   const getZiyanRecycleColumn = (defaultColumns: typeof baseColumns.value) => {
     const columns = defaultColumns.slice();
     columns.unshift({
@@ -235,6 +238,7 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
     isZiyanOnly,
     isZiyanRecycle,
     hostPrivateIP4s,
+    previewHostIps,
     isLoading,
     tableData,
     targetHost,

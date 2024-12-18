@@ -97,7 +97,7 @@ export default defineComponent({
       isMix,
       isZiyanOnly,
       isZiyanRecycle,
-      hostPrivateIP4s,
+      previewHostIps,
       selectedRowPrivateIPs,
       selectedRowPublicIPs,
       handleSwitch,
@@ -304,7 +304,7 @@ export default defineComponent({
                 {isZiyanRecycle.value ? (
                   <RecycleFlow
                     ref={recycleFlowRef}
-                    ips={hostPrivateIP4s.value}
+                    ips={previewHostIps.value}
                     onSelectChange={handleZiyanRecycleSelectChange}>
                     {commonTable()}
                   </RecycleFlow>
