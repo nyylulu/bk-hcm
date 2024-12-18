@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"hcm/cmd/hc-service/logics/res-sync/common"
+	"hcm/cmd/hc-service/logics/res-sync/tcloud"
 	adcore "hcm/pkg/adaptor/types/core"
 	typescvm "hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/api/core"
@@ -110,7 +111,8 @@ func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHo
 
 	hostMap := make(map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension])
 	regionCloudIDMap := make(map[string][]string)
-	for _, ccHost := range ccHosts {
+	for i := range ccHosts {
+		ccHost := ccHosts[i]
 		// cc中可能会存在连固资号都没有的脏数据，这里需要把他们剔除掉
 		if ccHost.BkCloudInstID == "" && ccHost.BkAssetID == "" {
 			logs.Errorf("host(%d) asset id is invalid, rid: %s", ccHost.BkHostID, kt.Rid)
@@ -205,6 +207,10 @@ func (cli *client) fillCloudFields(kt *kit.Kit, accountID string, regionCloudIDM
 			host.CloudSubnetIDs = []string{converter.PtrToVal(one.VirtualPrivateCloud.SubnetId)}
 			host.SubnetIDs = []string{subnetMap[converter.PtrToVal(one.VirtualPrivateCloud.SubnetId)]}
 			host.CloudCreatedTime = converter.PtrToVal(one.CreatedTime)
+			if host.Extension == nil {
+				host.Extension = &cvm.TCloudZiyanHostExtension{}
+			}
+			host.Extension.TCloudCvmExtension = tcloud.BuildCVMExtension(one)
 
 			hostMap[cloudID] = host
 		}
@@ -338,14 +344,18 @@ func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TC
 		return true
 	}
 
-	if isIPExtensionChange(db, cloud) {
+	if isHostIPChange(db, cloud) {
+		return true
+	}
+
+	if isHostExtensionChange(db, cloud) {
 		return true
 	}
 
 	return false
 }
 
-func isIPExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TCloudZiyanHostExtension]) bool {
+func isHostIPChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TCloudZiyanHostExtension]) bool {
 	if !assert.IsStringSliceEqual(db.PrivateIPv4Addresses, cloud.PrivateIPv4Addresses) {
 		return true
 	}
@@ -362,14 +372,55 @@ func isIPExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm
 		return true
 	}
 
-	if db.Extension == nil || cloud.Extension == nil || db.Extension.HostID != cloud.Extension.HostID ||
-		db.Extension.SvrSourceTypeID != cloud.Extension.SvrSourceTypeID ||
-		db.Extension.SrvStatus != cloud.Extension.SrvStatus || db.Extension.BkAssetID != cloud.Extension.BkAssetID ||
-		db.Extension.SvrDeviceClass != cloud.Extension.SvrDeviceClass || db.Extension.BkCpu != cloud.Extension.BkCpu ||
-		db.Extension.BkDisk != cloud.Extension.BkDisk || db.Extension.BkOSName != cloud.Extension.BkOSName ||
-		db.Extension.Operator != cloud.Extension.Operator ||
-		db.Extension.BkBakOperator != cloud.Extension.BkBakOperator {
+	return false
+}
 
+func isHostExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TCloudZiyanHostExtension]) bool {
+	if db.Extension == nil || cloud.Extension == nil {
+		return true
+	}
+
+	if db.Extension.HostID != cloud.Extension.HostID {
+		return true
+	}
+
+	if db.Extension.SvrSourceTypeID != cloud.Extension.SvrSourceTypeID {
+		return true
+	}
+
+	if db.Extension.SrvStatus != cloud.Extension.SrvStatus {
+		return true
+	}
+
+	if db.Extension.BkAssetID != cloud.Extension.BkAssetID {
+		return true
+	}
+
+	if db.Extension.SvrDeviceClass != cloud.Extension.SvrDeviceClass {
+		return true
+	}
+
+	if db.Extension.BkCpu != cloud.Extension.BkCpu {
+		return true
+	}
+
+	if db.Extension.BkDisk != cloud.Extension.BkDisk {
+		return true
+	}
+
+	if db.Extension.BkOSName != cloud.Extension.BkOSName {
+		return true
+	}
+
+	if db.Extension.Operator != cloud.Extension.Operator {
+		return true
+	}
+
+	if db.Extension.BkBakOperator != cloud.Extension.BkBakOperator {
+		return true
+	}
+
+	if tcloud.IsCvmExtensionChange(cloud.Extension.TCloudCvmExtension, db.Extension.TCloudCvmExtension) {
 		return true
 	}
 
