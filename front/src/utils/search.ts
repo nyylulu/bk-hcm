@@ -9,7 +9,7 @@ import isoWeek from 'dayjs/plugin/isoWeek';
 dayjs.extend(isoWeek);
 
 type DateRangeType = Record<
-  'toady' | 'last7d' | 'last15d' | 'last30d' | 'naturalMonth' | 'naturalIsoWeek',
+  'today' | 'last7d' | 'last15d' | 'last30d' | 'last90d' | 'last120d' | 'last180d' | 'naturalMonth' | 'naturalIsoWeek',
   () => [Date[], Date[]]
 >;
 type RuleItemOpVal = Omit<RulesItem, 'field'>;
@@ -206,37 +206,32 @@ export const onePageParams = () => ({ start: 0, limit: 1 });
 export const maxPageParams = (max = 500) => ({ start: 0, limit: max });
 
 export const getDateRange = (key: keyof DateRangeType, include?: boolean) => {
+  const calculateRange = (days: number) => {
+    const end = new Date();
+    const start = new Date();
+    start.setTime(end.getTime() - 3600 * 1000 * 24 * (include ? days : days - 1));
+    return [start, end];
+  };
+
   const dateRange = {
-    toady() {
+    today: () => {
       const end = new Date();
       const start = new Date(end.getFullYear(), end.getMonth(), end.getDate());
       return [start, end];
     },
-    last7d() {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 7 : 6));
-      return [start, end];
-    },
-    last15d() {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 15 : 14));
-      return [start, end];
-    },
-    last30d() {
-      const end = new Date();
-      const start = new Date();
-      start.setTime(start.getTime() - 3600 * 1000 * 24 * (include ? 30 : 29));
-      return [start, end];
-    },
-    naturalMonth() {
+    last7d: () => calculateRange(7),
+    last15d: () => calculateRange(15),
+    last30d: () => calculateRange(30),
+    last90d: () => calculateRange(90),
+    last120d: () => calculateRange(120),
+    last180d: () => calculateRange(180),
+    naturalMonth: () => {
       const now = dayjs();
       const start = now.startOf('month').toDate();
       const end = now.endOf('month').toDate();
       return [start, end];
     },
-    naturalIsoWeek() {
+    naturalIsoWeek: () => {
       const now = dayjs();
       const start = now.startOf('isoWeek').toDate();
       const end = now.endOf('isoWeek').toDate();
@@ -250,7 +245,7 @@ export const getDateShortcutRange = (include?: boolean) => {
   const shortcutsRange = [
     {
       text: '今天',
-      value: () => getDateRange('toady', include),
+      value: () => getDateRange('today', include),
     },
     {
       text: '近7天',
@@ -263,6 +258,14 @@ export const getDateShortcutRange = (include?: boolean) => {
     {
       text: '近30天',
       value: () => getDateRange('last30d', include),
+    },
+    {
+      text: '近90天',
+      value: () => getDateRange('last90d', include),
+    },
+    {
+      text: '近180天',
+      value: () => getDateRange('last180d', include),
     },
   ];
   return shortcutsRange;

@@ -32,7 +32,7 @@ const getSearchCompProps = (field: ModelProperty) => {
     return {
       type: 'daterange',
       format: 'yyyy-MM-dd',
-      disabledDate: (date: Date) => dayjs(date).isBefore(dayjs().subtract(30, 'day')) || dayjs(date).isAfter(dayjs()),
+      disabledDate: (date: Date) => dayjs(date).isBefore(dayjs().subtract(180, 'day')) || dayjs(date).isAfter(dayjs()),
       clearable: false,
     };
   }

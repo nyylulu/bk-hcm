@@ -26,7 +26,7 @@ const shouldBeReturnedCpuCoreCount = ref<number>(0);
 const getCpuCoreSummary = async () => {
   const bk_biz_ids = [getBizsId()];
   const res = await rollingServerUsageStore.getCpuCoreSummary({
-    ...convertDateRangeToObject(getDateRange('naturalMonth')),
+    ...convertDateRangeToObject(getDateRange('last120d')),
     bk_biz_ids,
     returned_way: props.returnedWay,
   });
