@@ -259,6 +259,7 @@ type GetRecycleOrderReq struct {
 	BizID        []int64               `json:"bk_biz_id"`
 	ResourceType []table.ResourceType  `json:"resource_type"`
 	RecycleType  []table.RecycleType   `json:"recycle_type"`
+	ReturnPlan   []table.RetPlanType   `json:"return_plan"`
 	Stage        []table.RecycleStage  `json:"stage"`
 	Status       []table.RecycleStatus `json:"status"`
 	User         []string              `json:"bk_username"`
@@ -367,6 +368,12 @@ func (param *GetRecycleOrderReq) GetFilter() (map[string]interface{}, error) {
 	if len(param.RecycleType) > 0 {
 		filter["recycle_type"] = mapstr.MapStr{
 			pkg.BKDBIN: param.RecycleType,
+		}
+	}
+
+	if len(param.ReturnPlan) > 0 {
+		filter["return_plan"] = mapstr.MapStr{
+			pkg.BKDBIN: param.ReturnPlan,
 		}
 	}
 

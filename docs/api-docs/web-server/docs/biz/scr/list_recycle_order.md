@@ -10,13 +10,18 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/recycle/order
 
 ### 输入参数
 
-| 参数名称      | 参数类型       | 必选 | 描述        |
-|--------------|--------------|------|------------|
-| order_id	   | int	      | 否   | 资源申请单号 |
-| bk_username  | string	      | 否   | 提单人      |
-| start        | string	      | 否   | 单据创建时间过滤条件起点日期，格式如"2022-05-01" |
-| end          | string	      | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01" |
-| page         | object	      | 是   | 分页信息     |
+| 参数名称       | 参数类型          | 必选 | 描述        |
+|-------------- |-----------------|------|------------|
+| order_id	    | array int	      | 否   | 资源申请单号 |
+| suborder_id   | array string    | 否   | 资源申请子单号  |
+| stage         | array string    | 否   | 状态(枚举值:COMMIT、DETECT、AUDIT、TRANSIT、RETURN、DONE、TERMINATE) |
+| resource_type | array string    | 否   | 需求资源类型(枚举值:"QCLOUDCVM": 腾讯云虚拟机, "IDCPM": IDC物理机, "OTHERS": 其他) |
+| recycle_type  | array string    | 否   | 回收类型(枚举值:常规项目、机房裁撤、过保裁撤、春节保障、滚服项目)  |
+| return_plan   | array string    | 否   | 退回策略(枚举值:"IMMEDIATE": 立即销毁, "DELAY": 延迟销毁)  |
+| bk_username   | string	      | 否   | 提单人      |
+| start         | string	      | 否   | 单据创建时间过滤条件起点日期，格式如"2022-05-01" |
+| end           | string	      | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01" |
+| page          | object	      | 是   | 分页信息     |
 
 #### page
 
@@ -38,8 +43,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/recycle/order
 
 ```json
 {
-  "order_id":1001,
-  "bk_username":"xxx",
+  "order_id":[1001],
+  "bk_username":["xxx"],
   "start":"2022-04-18",
   "end":"2022-04-25",
   "page":{
