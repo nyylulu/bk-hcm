@@ -16,18 +16,21 @@ package task
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
 
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/util"
@@ -567,6 +570,11 @@ func (s *service) CreateApplyOrder(cts *rest.Contexts) (any, error) {
 
 // createApplyOrder creates apply order
 func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, error) {
+	if err := s.verifyResPlanDemand(kt, input); err != nil {
+		logs.Errorf("failed to verify res plan demand, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	rst, err := s.logics.Scheduler().CreateApplyOrder(kt, input)
 	if err != nil {
 		logs.Errorf("failed to create apply order, err: %v, rid: %s", err, kt.Rid)
@@ -574,6 +582,40 @@ func (s *service) createApplyOrder(kt *kit.Kit, input *types.ApplyReq) (any, err
 	}
 
 	return rst, nil
+}
+
+// verifyResPlanDemand 资源预测余量校验
+func (s *service) verifyResPlanDemand(kt *kit.Kit, input *types.ApplyReq) error {
+	if !input.RequireType.NeedVerifyResPlan() {
+		return nil
+	}
+
+	subOrders := make([]types.Suborder, 0, len(input.Suborders))
+	for _, subPtr := range input.Suborders {
+		subOrders = append(subOrders, cvt.PtrToVal(subPtr))
+	}
+
+	planRst, err := s.planLogics.VerifyResPlanDemandV2(kt, input.BkBizId, input.RequireType.ToObsProject(),
+		subOrders)
+	if err != nil {
+		logs.Errorf("failed to verify resource plan demand, err: %v, bk_biz_id: %d, rid: %s", err,
+			input.BkBizId, kt.Rid)
+		return errf.NewFromErr(errf.ResPlanVerifyFailed, err)
+	}
+
+	for idx, verifyEle := range planRst {
+		if verifyEle.VerifyResult != enumor.VerifyResPlanRstFailed {
+			continue
+		}
+		errOrder := "failed to verify res plan demand"
+		if len(subOrders) > idx {
+			errOrder = fmt.Sprintf("suborder %d failed the resource plan demand verify", idx+1)
+		}
+		return errf.New(errf.ResPlanVerifyFailed, fmt.Sprintf("%s, reason: %s", errOrder,
+			verifyEle.Reason))
+	}
+
+	return nil
 }
 
 // GetApplyBizOrder get biz apply order

@@ -425,6 +425,17 @@ func (t RequireType) Validate() error {
 	return nil
 }
 
+// NeedVerifyResPlan need verify resource plan.
+func (t RequireType) NeedVerifyResPlan() bool {
+	switch t {
+	// 常规项目、春节保障、机房裁撤 需要校验预测
+	case RequireTypeRegular, RequireTypeSpring, RequireTypeDissolve:
+		return true
+	default:
+		return false
+	}
+}
+
 // ToObsProject ObsProject.
 func (t RequireType) ToObsProject() ObsProject {
 	if obsProject, ok := requireTypeObsProjectMap[t]; ok {

@@ -137,7 +137,8 @@ func (s *service) VerifyResPlanDemandV2(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	result, err := s.verifyResPlanDemandV2(cts.Kit, req.BkBizID, req.RequireType.ToObsProject(), req.Suborders)
+	result, err := s.planController.VerifyResPlanDemandV2(cts.Kit, req.BkBizID, req.RequireType.ToObsProject(),
+		req.Suborders)
 	if err != nil {
 		logs.Errorf("failed to verify resource plan demand v2, err: %v, req: %+v, rid: %s",
 			err, cvt.PtrToVal(req), cts.Kit.Rid)
@@ -145,79 +146,6 @@ func (s *service) VerifyResPlanDemandV2(cts *rest.Contexts) (any, error) {
 	}
 
 	return &ptypes.VerifyResPlanDemandResp{Verifications: result}, nil
-}
-
-// verifyResPlanDemandV2 verify resource plan demand.
-func (s *service) verifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProject enumor.ObsProject,
-	subOrders []task.Suborder) ([]ptypes.VerifyResPlanDemandElem, error) {
-
-	// get all device type maps.
-	deviceTypeMap, err := s.planController.GetAllDeviceTypeMap(kt)
-	if err != nil {
-		logs.Errorf("get all device type map failed, err: %v, bkBizID: %d, rid: %s", err, bkBizID, kt.Rid)
-		return nil, err
-	}
-
-	result := make([]ptypes.VerifyResPlanDemandElem, len(subOrders))
-	indexMap := make(map[int]int)
-	verifySlice := make([]plan.VerifyResPlanElemV2, 0)
-
-	for idx, subOrder := range subOrders {
-		// if resource type is not cvm, set verify result to not involved.
-		if subOrder.ResourceType != task.ResourceTypeCvm {
-			result[idx] = ptypes.VerifyResPlanDemandElem{
-				VerifyResult: enumor.VerifyResPlanRstNotInvolved,
-			}
-			continue
-		}
-
-		// 是否包年包月
-		isPrePaid := true
-		if subOrder.Spec.ChargeType != cvmapi.ChargeTypePrePaid {
-			isPrePaid = false
-		}
-
-		nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
-		availableTime := plan.NewAvailableTime(nowDemandYear, nowDemandMonth)
-
-		var cpuCore int64
-		if deviceInfo, ok := deviceTypeMap[subOrder.Spec.DeviceType]; ok {
-			cpuCore = deviceInfo.CpuCore
-		}
-
-		indexMap[len(verifySlice)] = idx
-		verifySlice = append(verifySlice, plan.VerifyResPlanElemV2{
-			IsPrePaid:     isPrePaid,
-			AvailableTime: availableTime,
-			DeviceType:    subOrder.Spec.DeviceType,
-			ObsProject:    obsProject,
-			BkBizID:       bkBizID,
-			DemandClass:   enumor.DemandClassCVM,
-			RegionID:      subOrder.Spec.Region,
-			ZoneID:        subOrder.Spec.Zone,
-			DiskType:      subOrder.Spec.DiskType,
-			CpuCore:       int64(subOrder.Replicas) * cpuCore,
-		})
-	}
-
-	// call verify resource plan demands to verify each cvm demands.
-	rst, err := s.planController.VerifyProdDemandsV2(kt, bkBizID, verifySlice)
-	if err != nil {
-		logs.Errorf("failed to verify resource plan demand v2, err: %v, bkBizID: %d, rid: %s", err, bkBizID, kt.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-
-	// set result.
-	for idx, ele := range rst {
-		result[indexMap[idx]] = ptypes.VerifyResPlanDemandElem{
-			VerifyResult: ele.VerifyResult,
-			Reason:       ele.Reason,
-		}
-	}
-
-	logs.Infof("verify res plan demand v2 end, bkBizID: %d, verifySlice: %+v, result: %+v, rid: %s",
-		bkBizID, verifySlice, result, kt.Rid)
-	return result, nil
 }
 
 // GetCvmChargeTypeDeviceType get cvm charge type device type.

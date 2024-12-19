@@ -28,7 +28,9 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/biz"
+	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
+	ttypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/cc"
@@ -78,6 +80,9 @@ type Logics interface {
 	VerifyProdDemands(kt *kit.Kit, prodID, planProdID int64, needs []VerifyResPlanElem) ([]VerifyResPlanResElem, error)
 	// GetProdResConsumePoolV2 get biz resource consume pool.
 	GetProdResConsumePoolV2(kt *kit.Kit, bkBizIDs []int64, startDay, endDay time.Time) (ResPlanConsumePool, error)
+	// VerifyResPlanDemandV2 verify resource plan demand for subOrders.
+	VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProject enumor.ObsProject, subOrders []ttypes.Suborder) (
+		[]ptypes.VerifyResPlanDemandElem, error)
 	// VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
 	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.

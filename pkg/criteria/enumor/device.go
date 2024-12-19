@@ -43,6 +43,15 @@ func (t DiskType) Validate() error {
 	return nil
 }
 
+// GetWithDefault get DiskType, return default value if DiskType Validate is error.
+func (t DiskType) GetWithDefault() DiskType {
+	if err := t.Validate(); err != nil {
+		return DiskPremium
+	}
+
+	return t
+}
+
 // diskTypeNameMap records disk type corresponding name.
 var diskTypeNameMap = map[DiskType]string{
 	DiskPremium: "高性能云硬盘",

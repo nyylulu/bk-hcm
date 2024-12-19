@@ -76,4 +76,7 @@ const (
 	RollingServerRecycleCommitCheckError int32 = 2000018
 	// MOAValidationTimeoutError MOA校验结果超时错误
 	MOAValidationTimeoutError int32 = 2000019
+
+	// ResPlanVerifyFailed 资源预测余量校验失败
+	ResPlanVerifyFailed int32 = 2000020
 )

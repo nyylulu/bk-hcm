@@ -102,6 +102,14 @@ func (ct ChargeType) Validate() error {
 	}
 }
 
+// GetWithDefault 获取计费模式，当计费模式为空时，返回默认值
+func (ct ChargeType) GetWithDefault() ChargeType {
+	if err := ct.Validate(); err != nil {
+		return ChargeTypePrePaid
+	}
+	return ct
+}
+
 // Image cvm image specification
 type Image struct {
 	ImageId   string `json:"imageId"`
