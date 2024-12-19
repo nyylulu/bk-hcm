@@ -228,7 +228,7 @@ export default defineComponent({
                       v-bk-tooltips={{
                         content: (
                           <span>
-                            {modifyTime < 2 ? (
+                            {modifyTime < 6 ? (
                               <span>
                                 {t('建议')}
                                 <Button size='small' text theme={'primary'} class={'ml8'}>
@@ -253,6 +253,7 @@ export default defineComponent({
               const modifyButton = () => {
                 return (
                   <Button
+                    class='mr8'
                     size='small'
                     onClick={() => modify(data)}
                     disabled={data.resource_type === 'IDCPM'}
@@ -273,7 +274,6 @@ export default defineComponent({
                     size='small'
                     text
                     theme={'primary'}
-                    class={{ ml8: stage === 'SUSPEND' && modifyTime < 2 }}
                     onClick={async () => {
                       const { data: list } = await getMatchDetails(data.suborder_id);
                       stageDetailSlideState.suborderId = data.suborder_id;
@@ -292,7 +292,7 @@ export default defineComponent({
                     {abnormalStatus()}
                   </p>
                   <p>
-                    {stage === 'SUSPEND' && modifyTime < 2 ? modifyButton() : null}
+                    {stage === 'SUSPEND' && modifyTime < 6 ? modifyButton() : null}
                     {['RUNNING', 'DONE', 'SUSPEND'].includes(stage) ? progressButton() : null}
                   </p>
                 </div>
