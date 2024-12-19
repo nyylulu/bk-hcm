@@ -15,6 +15,7 @@ package table
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 )
@@ -30,6 +31,34 @@ const (
 	RecycleTypeSpring     RecycleType = "春节保障"
 	RecycleTypeRollServer RecycleType = "滚服项目"
 )
+
+// CanUpdateRecycleType 输入当前的回收类型，以及想要更新的回收类型，根据回收类型的优先级进行判断，
+// 如果当前回收类型优先级高于想要更新的回收类型，则返回false，否则返回true
+func CanUpdateRecycleType(cur, desired RecycleType) bool {
+	curPriority := getRecycleTypePriority(cur)
+	desiredPriority := getRecycleTypePriority(desired)
+
+	// 值越小，优先级越高
+	if curPriority < desiredPriority {
+		return false
+	}
+
+	return true
+}
+
+// getRecycleTypePriority 返回值越小，优先级越高
+func getRecycleTypePriority(recycleType RecycleType) int {
+	switch recycleType {
+	case RecycleTypeDissolve:
+		return 0
+	case RecycleTypeRollServer:
+		return 1
+	case RecycleTypeSpring:
+		return 2
+	default:
+		return math.MaxInt
+	}
+}
 
 // ToObsProject convert recycle type to OBS project name
 func (rt RecycleType) ToObsProject() string {

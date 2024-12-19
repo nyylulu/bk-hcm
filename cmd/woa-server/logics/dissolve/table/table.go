@@ -69,7 +69,7 @@ func New(recycledModule logicsmodule.RecycledModule, recycledHost logicshost.Rec
 func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq) (
 	*dissolve.ListHostDetails, error) {
 
-	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames)
+	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, false)
 	if err != nil {
 		logs.Errorf("get host asset id by module name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
@@ -161,7 +161,7 @@ func (l *logics) getCurBizName(kt *kit.Kit, hosts []dissolve.Host) ([]dissolve.H
 func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 	*dissolve.ListHostDetails, error) {
 
-	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames)
+	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, true)
 	if err != nil {
 		logs.Errorf("get host asset id by module name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err

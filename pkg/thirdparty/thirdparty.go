@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/thirdparty/caiche"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
 	"hcm/pkg/thirdparty/erpapi"
@@ -63,6 +64,7 @@ type Client struct {
 	Sops            sopsapi.SopsClientInterface
 	ITSM            itsm.Client
 	Ngate           ngateapi.NgateClientInterface
+	CaiChe          caiche.CaiCheClientInterface
 }
 
 // NewClient new third party client
@@ -171,6 +173,12 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		return nil, err
 	}
 
+	caiCheCli, err := caiche.NewCaiCheClientInterface(opts.CaiChe, reg)
+	if err != nil {
+		logs.Errorf("failed to new caiche api client, err: %v", err)
+		return nil, err
+	}
+
 	client := &Client{
 		CVM:             cvm,
 		OldCVM:          oldCvm,
@@ -187,6 +195,7 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		L5:              l5,
 		Safety:          safety,
 		Ngate:           ngateCli,
+		CaiChe:          caiCheCli,
 	}
 	return client, nil
 }

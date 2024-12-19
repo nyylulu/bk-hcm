@@ -131,3 +131,20 @@ func (s *service) DeleteRecycledHost(cts *rest.Contexts) (interface{}, error) {
 
 	return nil, nil
 }
+
+// SyncRecycledHost sync recycle host
+func (s *service) SyncRecycledHost(cts *rest.Contexts) (interface{}, error) {
+	// 自研云资源-机房裁撤管理-菜单粒度
+	err := s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
+		Basic: &meta.Basic{Type: meta.ZiyanResDissolveManage, Action: meta.Find}})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = s.logics.RecycledHost().Sync(cts.Kit); err != nil {
+		logs.Errorf("sync recycle host failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}

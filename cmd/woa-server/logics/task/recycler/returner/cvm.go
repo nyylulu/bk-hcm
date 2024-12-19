@@ -111,12 +111,6 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 }
 
 func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cvmapi.ReturnReq {
-	// 回收方式
-	recycleType := table.RecycleTypeRegular
-	if task.RecycleType == table.RecycleTypeRollServer {
-		recycleType = table.RecycleTypeRollServer
-	}
-
 	req := &cvmapi.ReturnReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -133,12 +127,11 @@ func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cv
 			ReturnType: 0,
 			Reason:     "",
 			// default "常规项目"
-			ObsProject:      string(recycleType),
+			ObsProject:      task.RecycleType.ToObsProject(),
 			Force:           false,
 			AcceptCostShare: true,
 		},
 	}
-	req.Params.ObsProject = task.RecycleType.ToObsProject()
 
 	if task.ReturnPlan == table.RetPlanImmediate {
 		req.Params.IsReturnNow = 1
@@ -151,7 +144,7 @@ func (r *Returner) createReturnReq(instIds []string, task *table.ReturnTask) *cv
 		return nil
 	}
 	logs.Infof("recycler:logics:cvm:returnCvm:success, recycleType: %s, reqJson: %s, task: %+v, instIDs: %v",
-		recycleType, reqJson, cvt.PtrToVal(task), instIds)
+		task.RecycleType, reqJson, cvt.PtrToVal(task), instIds)
 
 	return req
 }

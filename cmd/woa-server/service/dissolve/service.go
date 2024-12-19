@@ -32,10 +32,11 @@ import (
 // InitService initial the service
 func InitService(c *capability.Capability) {
 	s := &service{
-		logics:     dissolve.New(c.Dao, c.EsbClient, c.EsCli, c.Conf),
+		logics:     c.DissolveLogic,
 		esbClient:  c.EsbClient,
 		authorizer: c.Authorizer,
 	}
+
 	h := rest.NewHandler()
 
 	s.initDissolveService(h)
@@ -61,6 +62,7 @@ func (s *service) initDissolveService(h *rest.Handler) {
 	h.Add("UpdateRecycledHost", http.MethodPut, "/dissolve/recycled_host/update", s.UpdateRecycledHost)
 	h.Add("ListRecycledHost", http.MethodPost, "/dissolve/recycled_host/list", s.ListRecycledHost)
 	h.Add("DeleteRecycledHost", http.MethodDelete, "/dissolve/recycled_host/delete", s.DeleteRecycledHost)
+	h.Add("SyncRecycledHost", http.MethodPost, "/dissolve/recycled_host/sync", s.SyncRecycledHost)
 
 	// resource dissolve
 	h.Add("ListOriginHost", http.MethodPost, "/dissolve/host/origin/list", s.ListOriginHost)

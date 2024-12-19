@@ -131,6 +131,7 @@ type ClientConfig struct {
 	Sops      SopsCli    `yaml:"sops"`
 	ITSM      ApiGateway `yaml:"itsm"`
 	Ngate     NgateCli   `yaml:"ngate"`
+	CaiChe    CaiCheCli  `yaml:"caiche"`
 }
 
 func (c ClientConfig) validate() error {
@@ -191,6 +192,10 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.Sops.validate(); err != nil {
+		return err
+	}
+
+	if err := c.CaiChe.Validate(); err != nil {
 		return err
 	}
 
@@ -559,12 +564,18 @@ func (i ItsmFlow) validate() error {
 
 // ResourceDissolve resource dissolve config
 type ResourceDissolve struct {
-	OriginDate string `yaml:"originDate"`
+	OriginDate       string   `yaml:"originDate"`
+	ProjectNames     []string `yaml:"projectNames"`
+	SyncDissolveHost bool     `yaml:"syncDissolveHost"`
 }
 
 func (r ResourceDissolve) validate() error {
 	if len(r.OriginDate) == 0 {
 		return errors.New("resourceDissolve.originDate is not set")
+	}
+
+	if len(r.ProjectNames) == 0 {
+		return errors.New("resourceDissolve.projectNames is not set")
 	}
 
 	return nil
@@ -823,6 +834,30 @@ func (s Secret) Validate() error {
 
 	if len(s.Key) == 0 {
 		return errors.New("secret key is not set")
+	}
+
+	return nil
+}
+
+// CaiCheCli caiche client options
+type CaiCheCli struct {
+	Host      string `yaml:"host"`
+	AppKey    string `yaml:"app_key"`
+	AppSecret string `yaml:"app_secret"`
+}
+
+// Validate ...
+func (c CaiCheCli) Validate() error {
+	if c.Host == "" {
+		return errors.New("caiche host is not set")
+	}
+
+	if c.AppKey == "" {
+		return errors.New("caiche app_key is not set")
+	}
+
+	if c.AppSecret == "" {
+		return errors.New("caiche app_secret is not set")
 	}
 
 	return nil

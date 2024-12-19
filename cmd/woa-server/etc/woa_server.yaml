@@ -306,6 +306,9 @@ bkchat:
 
 resourceDissolve:
   originDate: "20240105"
+  projectNames:
+    - "2025机房裁撤"
+  syncDissolveHost: true
 
 elasticsearch:
   url: 127.0.0.1:9200
@@ -341,3 +344,7 @@ recover:
 rollingServer:
   syncBill: true
 
+caiche:
+  host: http://127.0.0.1
+  app_key: test
+  app_secret: test

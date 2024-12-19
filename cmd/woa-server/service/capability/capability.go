@@ -22,6 +22,7 @@ package capability
 
 import (
 	"hcm/cmd/woa-server/logics/biz"
+	"hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
 	rslogic "hcm/cmd/woa-server/logics/rolling-server"
@@ -60,4 +61,5 @@ type Capability struct {
 	RsLogic        rslogic.Logics
 	GcLogic        gclogics.Logics
 	BizLogic       biz.Logics
+	DissolveLogic  dissolve.Logics
 }

@@ -99,6 +99,11 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	for _, host := range hosts {
 		// 查询该主机是否已匹配到滚服申请单
 		if hostMatchInfo, ok := hostMatchMap[host.IP]; ok && hostMatchInfo.IsMatched {
+			if !table.CanUpdateRecycleType(host.RecycleType, table.RecycleTypeRollServer) {
+				return nil, nil, 0, fmt.Errorf("host can not update recycle type: %s, host: %+v",
+					table.RecycleTypeRollServer, cvt.PtrToVal(host))
+			}
+
 			// 设置该Host的退还方式
 			host.ReturnedWay = hostMatchInfo.ReturnedWay
 			host.RecycleType = table.RecycleTypeRollServer
@@ -187,6 +192,11 @@ func (l *logics) MatchRecycleCvmHostQuota(kt *kit.Kit, bkBizID int64, startDayNu
 		for _, hostItem := range hostCpuMap {
 			// 物理机不需要参与
 			if cmdb.IsPhysicalMachine(hostItem.SvrSourceTypeID) {
+				continue
+			}
+
+			// 如果主机当前的回收类型优先级高于滚服回收类型，那么该主机不能用于滚服回收
+			if !table.CanUpdateRecycleType(hostItem.RecycleType, table.RecycleTypeRollServer) {
 				continue
 			}
 

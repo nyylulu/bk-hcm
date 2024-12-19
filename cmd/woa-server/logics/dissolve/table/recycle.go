@@ -21,6 +21,7 @@ package table
 
 import (
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/dal/table/dissolve/module"
@@ -29,7 +30,8 @@ import (
 )
 
 // getAssetIDByModule 当模块的裁撤状态为为「部分裁」时，返回它所需要进行裁撤主机的固资产号
-func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string) (map[string][]string, error) {
+// onlyIncomplete参数表示只返回当前阶段为未裁撤的主机
+func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplete bool) (map[string][]string, error) {
 	result := make(map[string][]string)
 	if len(modules) == 0 {
 		return result, nil
@@ -73,6 +75,14 @@ func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string) (map[string][
 	}
 
 	filter = tools.ContainersExpression("module", partTypeModule)
+	if onlyIncomplete {
+		filter, err = tools.And(filter, tools.EqualExpression("abolish_phase", enumor.Incomplete))
+		if err != nil {
+			logs.Errorf("build filter with abolish_phase failed, err: %v, filter: %+v, rid: %s", err, filter, kt.Rid)
+			return nil, err
+		}
+	}
+
 	page = &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit, Sort: "id"}
 	opt = &types.ListOption{Fields: []string{"module", "asset_id"}, Filter: filter, Page: page}
 	for {

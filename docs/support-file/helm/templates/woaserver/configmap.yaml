@@ -77,7 +77,7 @@ data:
     cancelItsmFlows:
       {{- toYaml .Values.cancelItsmFlows | nindent 6 }}
     resourceDissolve:
-      originDate: {{ .Values.resourceDissolve.originDate }}
+      {{- toYaml .Values.resourceDissolve | nindent 6 }}
     elasticsearch:
       url: {{ .Values.elasticsearch.url }}
       user: {{ .Values.elasticsearch.user }}
@@ -101,4 +101,5 @@ data:
       {{- toYaml .Values.recover | nindent 6 }}
     rollingServer:
       syncBill: {{ .Values.rollingServer.syncBill }}
-
+    caiche:
+      {{- toYaml .Values.caiche | nindent 6 }}

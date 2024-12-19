@@ -998,6 +998,9 @@ egress:
 
 resourceDissolve:
   originDate: "20240105"
+  projectNames:
+    - "2025机房裁撤"
+  syncDissolveHost: true
 
 elasticsearch:
   url:

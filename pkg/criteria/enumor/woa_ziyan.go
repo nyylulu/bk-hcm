@@ -877,3 +877,17 @@ const (
 	// ResourcePoolBiz 资源池业务
 	ResourcePoolBiz = 931
 )
+
+// AbolishPhase 裁撤阶段
+type AbolishPhase string
+
+const (
+	// Incomplete 裁撤未完成
+	Incomplete AbolishPhase = "incomplete"
+	// Complete 裁撤完成
+	Complete AbolishPhase = "complete"
+	// BsiComplete 业务退回
+	BsiComplete AbolishPhase = "bsiComplete"
+	// Retain 保留暂不裁撤
+	Retain AbolishPhase = "retain"
+)

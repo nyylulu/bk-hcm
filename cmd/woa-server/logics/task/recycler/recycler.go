@@ -23,6 +23,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	configLogics "hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/logics/dissolve"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/recycler/classifier"
 	"hcm/cmd/woa-server/logics/task/recycler/detector"
@@ -139,15 +140,16 @@ type recycler struct {
 	cc  cmdb.Client
 	cvm cvmapi.CVMClientInterface
 
-	dispatcher   *dispatcher.Dispatcher
-	authorizer   auth.Authorizer
-	configLogics configLogics.Logics
-	rsLogic      rslogics.Logics
+	dispatcher    *dispatcher.Dispatcher
+	authorizer    auth.Authorizer
+	configLogics  configLogics.Logics
+	rsLogic       rslogics.Logics
+	dissolveLogic dissolve.Logics
 }
 
 // New create a recycler
 func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
-	authorizer auth.Authorizer, rsLogic rslogics.Logics) (*recycler, error) {
+	authorizer auth.Authorizer, rsLogic rslogics.Logics, dissolveLogic dissolve.Logics) (*recycler, error) {
 
 	// new detector
 	moduleDetector, err := detector.New(ctx, thirdCli, esbCli)
@@ -175,13 +177,14 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
 	dispatch.SetRollServerLogic(rsLogic)
 
 	recycler := &recycler{
-		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
-		cc:           esbCli.Cmdb(),
-		cvm:          thirdCli.CVM,
-		dispatcher:   dispatch,
-		authorizer:   authorizer,
-		configLogics: configLogics.New(thirdCli),
-		rsLogic:      rsLogic,
+		lang:          language.NewFromCtx(language.EmptyLanguageSetting),
+		cc:            esbCli.Cmdb(),
+		cvm:           thirdCli.CVM,
+		dispatcher:    dispatch,
+		authorizer:    authorizer,
+		configLogics:  configLogics.New(thirdCli),
+		rsLogic:       rsLogic,
+		dissolveLogic: dissolveLogic,
 	}
 
 	return recycler, nil
@@ -363,11 +366,13 @@ func (r *recycler) fillCheckInfo(host *types.RecycleCheckInfo, user string, hasP
 }
 
 // getHostBaseInfo get host detail info for recycle
-func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*table.RecycleHost, error) {
+func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostIds []int64) (
+	[]*table.RecycleHost, error) {
+
 	// 1. get host base info
 	hostBase, err := r.getHostBaseInfo(ips, assetIds, hostIds)
 	if err != nil {
-		logs.Errorf("failed to get host detail info, for list host err: %v", err)
+		logs.Errorf("failed to get host detail info, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -383,7 +388,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 	// 2. get host biz info
 	relations, err := r.getHostTopoInfo(bkHostIds)
 	if err != nil {
-		logs.Errorf("failed to get host detail info, for list host err: %v", err)
+		logs.Errorf("failed to get host detail info, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -397,7 +402,7 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 
 	bizList, err := r.getBizInfo(bizIds)
 	if err != nil {
-		logs.Errorf("failed to get host detail info, for get business info err: %v", err)
+		logs.Errorf("failed to get host detail info, for get business info err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -447,8 +452,8 @@ func (r *recycler) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([
 	}
 
 	// fill cvm info
-	if err = r.fillCvmInfo(cvmHosts); err != nil {
-		logs.Errorf("failed to fill cvm info, err: %v", err)
+	if err = r.fillCvmInfo(kt, cvmHosts); err != nil {
+		logs.Errorf("failed to fill cvm info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -623,7 +628,7 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 	*types.PreviewRecycleOrderCpuRst, error) {
 
 	// 1. get hosts info
-	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
+	hosts, err := r.getHostDetailInfo(kt, param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
 		logs.Errorf("failed to preview recycle order, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -847,7 +852,7 @@ func (r *recycler) initAndSaveHosts(ctx context.Context, order *table.RecycleOrd
 	return nil
 }
 
-func (r *recycler) fillCvmInfo(hosts []*table.RecycleHost) error {
+func (r *recycler) fillCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) error {
 	// skip query cvm instance when input no hosts
 	if len(hosts) == 0 {
 		return nil
@@ -871,14 +876,14 @@ func (r *recycler) fillCvmInfo(hosts []*table.RecycleHost) error {
 		},
 	}
 
-	resp, err := r.cvm.QueryCvmInstances(nil, nil, req)
+	resp, err := r.cvm.QueryCvmInstances(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		logs.Errorf("failed to query cvm instance, err: %v", err)
 		return err
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("query cvm failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("query cvm failed, code: %d, msg: %s, rid: %s", resp.Error.Code, resp.Error.Message, kt.Rid)
 		return fmt.Errorf("query cvm failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
@@ -894,7 +899,38 @@ func (r *recycler) fillCvmInfo(hosts []*table.RecycleHost) error {
 		}
 	}
 
+	hosts, err = r.fillCVMRecycleType(kt, hosts)
+	if err != nil {
+		logs.Errorf("failed to fill cvm recycle type, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
 	return nil
+}
+
+func (r *recycler) fillCVMRecycleType(kt *kit.Kit, hosts []*table.RecycleHost) ([]*table.RecycleHost, error) {
+	assetIDs := make([]string, 0, len(hosts))
+	for _, host := range hosts {
+		assetIDs = append(assetIDs, host.AssetID)
+	}
+
+	dissolveHostMap, err := r.dissolveLogic.RecycledHost().IsDissolveHost(kt, assetIDs)
+	if err != nil {
+		logs.Errorf("failed to check if host is dissolve host, err: %v, assetIDs: %v, rid: %s", err, assetIDs, kt.Rid)
+		return nil, err
+	}
+
+	for _, host := range hosts {
+		if isDissolveHost := dissolveHostMap[host.AssetID]; !isDissolveHost {
+			continue
+		}
+
+		if table.CanUpdateRecycleType(host.RecycleType, table.RecycleTypeDissolve) {
+			host.RecycleType = table.RecycleTypeDissolve
+		}
+	}
+
+	return hosts, nil
 }
 
 // AuditRecycleOrder audit resource recycle orders
@@ -958,7 +994,7 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 	resType meta.ResourceType, action meta.Action) (*types.CreateRecycleOrderRst, error) {
 
 	// 1. get hosts info
-	hosts, err := r.getHostDetailInfo(param.IPs, param.AssetIDs, param.HostIDs)
+	hosts, err := r.getHostDetailInfo(kt, param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
 		logs.Errorf("failed to create recycle order, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err

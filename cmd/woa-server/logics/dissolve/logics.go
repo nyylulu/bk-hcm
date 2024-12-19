@@ -20,13 +20,19 @@
 package dissolve
 
 import (
+	"context"
+	"time"
+
 	"hcm/cmd/woa-server/logics/dissolve/host"
 	"hcm/cmd/woa-server/logics/dissolve/module"
 	dissolvetable "hcm/cmd/woa-server/logics/dissolve/table"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/dal/dao"
+	"hcm/pkg/thirdparty"
 	esCli "hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/tools/utils/wait"
 )
 
 // Logics provides resource dissolve logics
@@ -43,11 +49,21 @@ type logics struct {
 }
 
 // New create a logics manager
-func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, conf cc.WoaServerSetting) Logics {
+func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, thirdCli *thirdparty.Client,
+	conf cc.WoaServerSetting) Logics {
+
 	recycledModule := module.New(dao)
-	recycledHost := host.New(dao)
+	recycledHost := host.New(dao, thirdCli, conf.ResDissolve.ProjectNames)
 	originDate := conf.ResDissolve.OriginDate
 	blacklist := conf.Blacklist
+
+	if conf.ResDissolve.SyncDissolveHost {
+		workFunc := func() error {
+			kt := core.NewBackendKit()
+			return recycledHost.Sync(kt)
+		}
+		go wait.Until(workFunc, 30*time.Minute, context.Background())
+	}
 
 	return &logics{
 		recycledModule: recycledModule,

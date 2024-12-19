@@ -29,6 +29,7 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/biz"
+	disLogics "hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
@@ -84,17 +85,18 @@ type Service struct {
 	esbClient esb.Client
 	itsmCli   itsm.Client
 	// authorizer 鉴权所需接口集合
-	authorizer  auth.Authorizer
-	thirdCli    *thirdparty.Client
-	clientConf  cc.WoaServerSetting
-	schedulerIf scheduler.Interface
-	informerIf  informer.Interface
-	recyclerIf  recycler.Interface
-	operationIf operation.Interface
-	esCli       *es.EsCli
-	rsLogic     rslogics.Logics
-	gcLogic     gclogics.Logics
-	bizLogic    biz.Logics
+	authorizer    auth.Authorizer
+	thirdCli      *thirdparty.Client
+	clientConf    cc.WoaServerSetting
+	schedulerIf   scheduler.Interface
+	informerIf    informer.Interface
+	recyclerIf    recycler.Interface
+	operationIf   operation.Interface
+	esCli         *es.EsCli
+	rsLogic       rslogics.Logics
+	gcLogic       gclogics.Logics
+	bizLogic      biz.Logics
+	dissolveLogic disLogics.Logics
 }
 
 // NewService create a service instance.
@@ -184,6 +186,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
+	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
+	if err != nil {
+		return nil, err
+	}
+
+	dissolveLogics := disLogics.New(daoSet, esbClient, esCli, thirdCli, cc.WoaServer())
+
 	kt := kit.New()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
@@ -219,10 +228,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		clientConf:     cc.WoaServer(),
 		informerIf:     informerIf,
 		schedulerIf:    schedulerIf,
+		esCli:          esCli,
 		rsLogic:        rsLogics,
 		gcLogic:        gcLogics,
 		planController: planCtrl,
 		bizLogic:       bizLogic,
+		dissolveLogic:  dissolveLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -265,7 +276,8 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 }
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
-	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic)
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic,
+		service.dissolveLogic)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -285,16 +297,9 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	// init elasticsearch client
-	esCli, err := es.NewEsClient(cc.WoaServer().Es, cc.WoaServer().Blacklist)
-	if err != nil {
-		return nil, err
-	}
-
 	service.clientConf = cc.WoaServer()
 	service.recyclerIf = recyclerIf
 	service.operationIf = operationIf
-	service.esCli = esCli
 	return service, nil
 }
 
@@ -375,6 +380,7 @@ func (s *Service) apiSet() *restful.Container {
 		Client:         s.client,
 		GcLogic:        s.gcLogic,
 		BizLogic:       s.bizLogic,
+		DissolveLogic:  s.dissolveLogic,
 	}
 
 	config.InitService(c)
