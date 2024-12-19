@@ -20,7 +20,7 @@
 package ziyan
 
 import (
-	lblogic "hcm/cmd/cloud-server/logics/load-balancer"
+	ziyanlogic "hcm/cmd/cloud-server/logics/ziyan"
 	hclb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
@@ -30,7 +30,7 @@ import (
 // PrepareReq 预处理请求参数
 func (a *ApplicationOfCreateZiyanLB) PrepareReq() error {
 	// 补充业务tag
-	tags, err := lblogic.GenTagsForBizs(a.Cts.Kit, a.EsbClient.Cmdb(), a.req.BkBizID)
+	tags, err := ziyanlogic.GenTagsForBizs(a.Cts.Kit, a.EsbClient.Cmdb(), a.req.BkBizID)
 	if err != nil {
 		logs.Errorf("fail to generate tags for load balancer application: err: %v,req: %+v, rid: %s",
 			err, a.req, a.Cts.Kit.Rid)

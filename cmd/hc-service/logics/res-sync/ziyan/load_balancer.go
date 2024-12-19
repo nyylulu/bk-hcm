@@ -21,11 +21,8 @@
 package ziyan
 
 import (
-	"errors"
 	"fmt"
 	"strconv"
-	"strings"
-	"sync"
 
 	"hcm/cmd/hc-service/logics/res-sync/common"
 	typecore "hcm/pkg/adaptor/types/core"
@@ -41,11 +38,10 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
-	"hcm/pkg/tools/util"
+	"hcm/pkg/ziyan"
 
 	tclb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
@@ -863,8 +859,6 @@ type SyncLBOption struct {
 	PrefetchedLB []typeslb.TCloudClb
 }
 
-var bs2bkBizIDMap sync.Map
-
 // Validate ...
 func (o *SyncLBOption) Validate() error {
 	return validator.Validate.Struct(o)
@@ -872,82 +866,36 @@ func (o *SyncLBOption) Validate() error {
 
 // 从cc处根据二级业务id查询到对应cc业务id, 并填充对应数据
 func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) error {
-	// 赋值业务id
+
+	// 1. 获取二级业务id
 	bs2NameIds := make([]int64, 0, len(lbFromCloud))
-	for i, clb := range lbFromCloud {
-		// 从tag解析二级业务id
-		bs2NameId, err := getZiyanBs2NameIDByTag(clb)
-		if err != nil {
-			logs.Errorf("fail to get bs2NameId of load balancer %s, err: %v, rid: %s", clb.GetCloudID(), err, kt.Rid)
-			// 没有找到不报错，fallback 到 -1
-			bs2NameId = -1
+	for i := range lbFromCloud {
+		clb := &lbFromCloud[i]
+		// 沿用原HCM1.0解析模式，只处理二级业务标签
+		meta := ziyan.ParseResourceMetaIgnoreErr(clb.GetTagMap())
+		clb.Bs2NameID = ziyan.NotFoundID
+		clb.BkBizID = constant.UnassignedBiz
+		if meta != nil && meta.Bs2NameID > 0 {
+			clb.Bs2NameID = meta.Bs2NameID
 		}
-		lbFromCloud[i].Bs2NameID = bs2NameId
-		if bs2NameId > 0 {
-			bs2NameIds = append(bs2NameIds, bs2NameId)
-		}
+		bs2NameIds = append(bs2NameIds, clb.Bs2NameID)
 	}
-	notFoundIds := make([]int64, 0, 100)
-	for _, bs2id := range slice.Unique(bs2NameIds) {
-		if _, ok := bs2bkBizIDMap.Load(bs2id); !ok {
-			notFoundIds = append(notFoundIds, bs2id)
-		}
+	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cli.esb.Cmdb(), bs2NameIds)
+	if err != nil {
+		logs.Errorf("fail to get bkBizId by bs2NameIds for clb, err: %v, rid: %s", err, kt.Rid)
+		return err
 	}
-	if len(notFoundIds) > 0 {
-		param := &cmdb.SearchBizParams{
-			Page: cmdb.BasePage{},
-			BizPropertyFilter: &cmdb.QueryFilter{
-				Rule: cmdb.Combined(cmdb.ConditionAnd, cmdb.In("bs2_name_id", notFoundIds)),
-			},
-		}
-		business, err := cli.esb.Cmdb().SearchBusiness(kt, param)
-		if err != nil {
-			logs.Errorf("fail to search cmdb business, err:%v,bs2_name_id list: %v, rid: %s", err, notFoundIds, kt.Rid)
-			return err
-		}
-
-		for _, biz := range business.Info {
-			bs2bkBizIDMap.Store(biz.BsName2ID, biz.BizID)
-		}
+	if len(bizIds) != len(lbFromCloud) {
+		return fmt.Errorf("bizIds length(%d) not equal to clb length(%d)", len(bizIds), len(lbFromCloud))
 	}
 
-	for i, clb := range lbFromCloud {
-		// 对没有解析到标签的业务，fallback到未分配
-		lbFromCloud[i].BkBizID = constant.UnassignedBiz
-		if bkBizID, ok := bs2bkBizIDMap.Load(clb.Bs2NameID); ok {
-			var err error
-			lbFromCloud[i].BkBizID, err = util.GetInt64ByInterface(bkBizID)
-			// should never happen
-			if err != nil {
-				logs.Errorf("fail to convert bkBizID to int64, err: %v, rid: %s", err, kt.Rid)
-				return err
-			}
+	for i := range lbFromCloud {
+		clb := &lbFromCloud[i]
+		if clb.Bs2NameID <= 0 {
+			// 跳过没有找到二级业务id的clb
+			continue
 		}
+		clb.BkBizID = bizIds[i]
 	}
 	return nil
-}
-
-// 解析标签中的二级业务id
-func getZiyanBs2NameIDByTag(lb typeslb.TCloudClb) (int64, error) {
-	for _, tag := range lb.Tags {
-		switch cvt.PtrToVal(tag.TagKey) {
-		case "二级业务":
-			// FORMAT: CC_BizName_Bs2NameID
-			v := cvt.PtrToVal(tag.TagValue)
-			if !strings.HasPrefix(v, "CC_") {
-				return -1, fmt.Errorf("tag value %s is not started with CC_", v)
-			}
-			parts := strings.Split(v, "_")
-			if len(parts) < 3 {
-				return -1, fmt.Errorf("tag value %s format mismatch CC_xxx_123", v)
-			}
-			bs2NameIDStr := parts[len(parts)-1]
-			bs2NameID, err := strconv.ParseInt(bs2NameIDStr, 10, 64)
-			if err != nil {
-				return -1, fmt.Errorf("fail to parse bs2NameId into int64, tag value: %s, err: %w", v, err)
-			}
-			return bs2NameID, nil
-		}
-	}
-	return -1, errors.New("二级业务 tag not found")
 }

@@ -17,7 +17,7 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package lblogic
+package ziyan
 
 import (
 	apicore "hcm/pkg/api/core"
@@ -27,7 +27,7 @@ import (
 	"hcm/pkg/ziyan"
 )
 
-// GenTagsForBizs 为负载均衡生成业务标签
+// GenTagsForBizs 为自研云资源生成业务标签
 func GenTagsForBizs(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags []apicore.TagPair, err error) {
 	meta, err := ziyan.GetResourceMetaByBiz(kt, ccCli, bkBizId)
 	if err != nil {

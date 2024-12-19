@@ -20,6 +20,9 @@
 package securitygroup
 
 import (
+	"fmt"
+
+	ziyanlogic "hcm/cmd/cloud-server/logics/ziyan"
 	"hcm/cmd/cloud-server/service/common"
 	proto "hcm/pkg/api/cloud-server"
 	hcproto "hcm/pkg/api/hc-service"
@@ -29,6 +32,7 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/assert"
 	"hcm/pkg/tools/hooks/handler"
 )
@@ -208,6 +212,14 @@ func (svc *securityGroupSvc) createTCloudZiyanSecurityGroup(cts *rest.Contexts, 
 		AccountID: req.AccountID,
 		BkBizID:   bizID,
 	}
+	// 打业务标签
+	tags, err := ziyanlogic.GenTagsForBizs(cts.Kit, esb.EsbClient().Cmdb(), bizID)
+	if err != nil {
+		logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, rid: %s", err, bizID, cts.Kit.Rid)
+		return nil, fmt.Errorf("failed to generate biz tag, err: %w", err)
+	}
+	createReq.Tags = tags
+
 	result, err := svc.client.HCService().TCloudZiyan.SecurityGroup.CreateSecurityGroup(cts.Kit, createReq)
 	if err != nil {
 		logs.Errorf("create tcloud ziyan security group failed, err: %v, req: %v, rid: %s", err, createReq, cts.Kit.Rid)

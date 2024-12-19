@@ -54,6 +54,7 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 		Region:      req.Region,
 		Name:        req.Name,
 		Description: req.Memo,
+		Tags:        req.Tags,
 	}
 	sg, err := client.CreateSecurityGroup(cts.Kit, opt)
 	if err != nil {
@@ -73,6 +74,7 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 			Extension: &corecloud.TCloudSecurityGroupExtension{
 				CloudProjectID: sg.ProjectId,
 			},
+			Tags: core.NewTagMap(req.Tags...),
 		}},
 	}
 	result, err := g.dataCli.TCloudZiyan.SecurityGroup.BatchCreateSecurityGroup(cts.Kit, createReq)
