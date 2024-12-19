@@ -45,7 +45,7 @@ func (cli *client) HostWithRelRes(kt *kit.Kit, params *SyncHostParams) (*SyncRes
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	ccHosts, err := cli.getHostFromCCByHostIDs(kt, params.BizID, params.HostIDs, cmdb.HostFields)
+	ccHosts, err := cli.getBizHostFromCCByHostIDs(kt, params.BizID, params.HostIDs, cmdb.HostFields)
 	if err != nil {
 		logs.Errorf("get host from cc by host id failed, err: %v, ids: %v, rid: %s", err, params.HostIDs, kt.Rid)
 		return nil, err

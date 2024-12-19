@@ -55,7 +55,8 @@ func (cli *client) Host(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	ccHosts, err := cli.getHostFromCCByHostIDs(kt, params.BizID, params.HostIDs, cmdb.HostFields)
+	// 需要不带业务id去查询主机，防止在前面耗时过程中，主机已被转移到其他业务，这里查不到主机导致把db里的数据误删的问题
+	ccHosts, err := cli.getHostFromCCByHostIDs(kt, params.HostIDs, cmdb.HostFields)
 	if err != nil {
 		logs.Errorf("get host from cc by host id failed, err: %v, ids: %v, rid: %s", err, params.HostIDs, kt.Rid)
 		return nil, err
@@ -71,7 +72,7 @@ func (cli *client) Host(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error
 		return new(SyncResult), nil
 	}
 
-	cloudHosts, err := cli.getCloudHost(kt, params.AccountID, params.BizID, ccHosts)
+	cloudHosts, err := cli.getCloudHost(kt, params.AccountID, ccHosts)
 	if err != nil {
 		logs.Errorf("get cloud host failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -86,14 +87,14 @@ func (cli *client) Host(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error
 		}
 	}
 
-	if len(addSlice) > 0 {
-		if err = cli.createHost(kt, convToCreate(addSlice)); err != nil {
+	if len(updateMap) > 0 {
+		if err = cli.updateHost(kt, convToUpdate(updateMap)); err != nil {
 			return nil, err
 		}
 	}
 
-	if len(updateMap) > 0 {
-		if err = cli.updateHost(kt, convToUpdate(updateMap)); err != nil {
+	if len(addSlice) > 0 {
+		if err = cli.createHost(kt, convToCreate(addSlice)); err != nil {
 			return nil, err
 		}
 	}
@@ -102,11 +103,21 @@ func (cli *client) Host(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error
 
 }
 
-func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHosts []cmdb.Host) (
+func (cli *client) getCloudHost(kt *kit.Kit, accountID string, ccHosts []cmdb.Host) (
 	[]cvm.Cvm[cvm.TCloudZiyanHostExtension], error) {
 
 	if len(ccHosts) == 0 {
 		return make([]cvm.Cvm[cvm.TCloudZiyanHostExtension], 0), nil
+	}
+
+	hostIDs := make([]int64, 0, len(ccHosts))
+	for _, host := range ccHosts {
+		hostIDs = append(hostIDs, host.BkHostID)
+	}
+	hostBizIDMap, err := cli.getHostBizID(kt, hostIDs)
+	if err != nil {
+		logs.Errorf("get host biz id failed, err: %v, host ids: %v, rid: %s", err, hostIDs, kt.Rid)
+		return nil, err
 	}
 
 	hostMap := make(map[string]cvm.Cvm[cvm.TCloudZiyanHostExtension])
@@ -116,6 +127,12 @@ func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHo
 		// cc中可能会存在连固资号都没有的脏数据，这里需要把他们剔除掉
 		if ccHost.BkCloudInstID == "" && ccHost.BkAssetID == "" {
 			logs.Errorf("host(%d) asset id is invalid, rid: %s", ccHost.BkHostID, kt.Rid)
+			continue
+		}
+
+		bizID, ok := hostBizIDMap[ccHost.BkHostID]
+		if !ok {
+			logs.Errorf("can not find host(%d) biz id, rid: %s", ccHost.BkHostID, kt.Rid)
 			continue
 		}
 
@@ -140,6 +157,28 @@ func (cli *client) getCloudHost(kt *kit.Kit, accountID string, bizID int64, ccHo
 
 	return cli.fillCloudFields(kt, accountID, regionCloudIDMap, hostMap)
 
+}
+
+func (cli *client) getHostBizID(kt *kit.Kit, hostIDs []int64) (map[int64]int64, error) {
+	if len(hostIDs) == 0 {
+		return make(map[int64]int64), nil
+	}
+
+	hostBizIDMap := make(map[int64]int64)
+	for _, batch := range slice.Split(hostIDs, int(core.DefaultMaxPageLimit)) {
+		req := &cmdb.HostModuleRelationParams{HostID: batch}
+		relationRes, err := esb.EsbClient().Cmdb().FindHostBizRelations(kt, req)
+		if err != nil {
+			logs.Errorf("fail to find cmdb topo relation, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+
+		for _, relation := range *relationRes {
+			hostBizIDMap[relation.HostID] = relation.BizID
+		}
+	}
+
+	return hostBizIDMap, nil
 }
 
 func (cli *client) fillCloudFields(kt *kit.Kit, accountID string, regionCloudIDMap map[string][]string,
@@ -515,10 +554,46 @@ func (cli *client) getHostFromCCByBizID(kt *kit.Kit, bizID int64, fields []strin
 		},
 	}
 
-	return cli.getHostsFromCC(kt, params)
+	return cli.getBizHostFromCC(kt, params)
 }
 
-func (cli *client) getHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs []int64, fields []string) ([]cmdb.Host,
+func (cli *client) getHostFromCCByHostIDs(kt *kit.Kit, hostIDs []int64, fields []string) ([]cmdb.Host, error) {
+	res := make([]cmdb.Host, 0)
+	for _, batch := range slice.Split(hostIDs, int(core.DefaultMaxPageLimit)) {
+		params := &cmdb.ListHostReq{
+			Fields: fields,
+			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit)},
+			HostPropertyFilter: &cmdb.QueryFilter{
+				Rule: &cmdb.CombinedRule{
+					Condition: "AND",
+					Rules: []cmdb.Rule{
+						&cmdb.AtomRule{Field: "bk_cloud_id", Operator: "equal", Value: 0},
+						&cmdb.AtomRule{Field: "bk_host_id", Operator: "in", Value: batch},
+					},
+				},
+			},
+		}
+
+		resp, err := esb.EsbClient().Cmdb().ListHost(kt.Ctx, kt.Header(), params)
+		if err != nil {
+			logs.Errorf("get host from cc failed, err: %v, params: %+v, rid: %s", err, params, kt.Rid)
+			return nil, err
+		}
+
+		if !resp.Result || resp.Code != 0 {
+			logs.Errorf("get host from cc failed, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
+			return nil, fmt.Errorf("get host from cc failed, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+		}
+
+		for _, host := range resp.Data.Info {
+			res = append(res, converter.PtrToVal(host))
+		}
+	}
+
+	return res, nil
+}
+
+func (cli *client) getBizHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs []int64, fields []string) ([]cmdb.Host,
 	error) {
 
 	res := make([]cmdb.Host, 0)
@@ -538,7 +613,7 @@ func (cli *client) getHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs []in
 			},
 		}
 
-		hosts, err := cli.getHostsFromCC(kt, params)
+		hosts, err := cli.getBizHostFromCC(kt, params)
 		if err != nil {
 			logs.Errorf("get host from cc failed, err: %v, params: %+v, rid: %s", err, params, kt.Rid)
 			return nil, err
@@ -549,7 +624,7 @@ func (cli *client) getHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs []in
 	return res, nil
 }
 
-func (cli *client) getHostsFromCC(kt *kit.Kit, params *cmdb.ListBizHostParams) ([]cmdb.Host, error) {
+func (cli *client) getBizHostFromCC(kt *kit.Kit, params *cmdb.ListBizHostParams) ([]cmdb.Host, error) {
 	hosts := make([]cmdb.Host, 0)
 	for {
 		result, err := esb.EsbClient().Cmdb().ListBizHost(kt, params)
