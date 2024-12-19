@@ -265,7 +265,7 @@ type MatchSpec struct {
 	Zone        []string `json:"zone"`
 	DeviceType  []string `json:"device_type"`
 	Image       []string `json:"image"`
-	OsType      []string `json:"os_type"`
+	OsType      string   `json:"os_type"`
 	RaidType    []string `json:"raid_type"`
 	DiskType    []string `json:"disk_type"`
 	NetworkType []string `json:"network_type"`

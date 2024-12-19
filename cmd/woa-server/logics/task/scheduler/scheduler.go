@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"math"
 	"reflect"
+	"regexp"
 	"sort"
 	"strconv"
 	"strings"
@@ -1484,10 +1485,12 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			})
 		}
 		if len(param.Spec.OsType) != 0 {
+			re := regexp.MustCompile(`([.*+?^${}()|[\]\\])`)
+			osType := re.ReplaceAllString(param.Spec.OsType, `\$1`)
 			rule.Rules = append(rule.Rules, querybuilder.AtomRule{
 				Field:    "bk_os_name",
-				Operator: querybuilder.OperatorIn,
-				Value:    param.Spec.OsType,
+				Operator: querybuilder.OperatorContains,
+				Value:    osType,
 			})
 		}
 		if len(param.Spec.RaidType) != 0 {
