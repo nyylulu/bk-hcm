@@ -128,6 +128,8 @@ func (svc *cvmSvc) getCvm(cts *rest.Contexts, validHandler handler.ListAuthResHa
 	}
 
 	switch basicInfo.Vendor {
+	case enumor.TCloudZiyan:
+		return svc.client.DataService().TCloudZiyan.Cvm.GetCvm(cts.Kit.Ctx, cts.Kit.Header(), id)
 	case enumor.TCloud:
 		return svc.client.DataService().TCloud.Cvm.GetCvm(cts.Kit.Ctx, cts.Kit.Header(), id)
 
@@ -397,7 +399,8 @@ func (svc *cvmSvc) listCvmOperateStatus(cts *rest.Contexts, authHandler handler.
 
 	validateFunc, err := chooseValidateFunc(req.OperateType)
 	if err != nil {
-		logs.Errorf("choose validate func failed, err: %v, operate_type: %s, rid: %s", err, req.OperateType, cts.Kit.Rid)
+		logs.Errorf("choose validate func failed, err: %v, operate_type: %s, rid: %s",
+			err, req.OperateType, cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -434,7 +437,8 @@ func (svc *cvmSvc) listCvmOperateStatus(cts *rest.Contexts, authHandler handler.
 			hosts = append(hosts, vendorHosts...)
 		default:
 			logs.Errorf("list cvm operate invalid vendor: %s", vendor)
-			return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("list cvm operate invalid vendor: %s", vendor))
+			return nil, errf.NewFromErr(errf.InvalidParameter,
+				fmt.Errorf("list cvm operate invalid vendor: %s", vendor))
 		}
 	}
 
