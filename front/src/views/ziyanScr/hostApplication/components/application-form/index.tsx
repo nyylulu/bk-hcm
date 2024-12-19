@@ -1,7 +1,6 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import './index.scss';
-
 import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -18,7 +17,7 @@ import applicationSideslider from '../application-sideslider';
 import WName from '@/components/w-name';
 import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
-
+import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 import { useAccountStore, useUserStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
@@ -536,9 +535,18 @@ export default defineComponent({
           suborders,
         } = data ?? {};
 
-        order.value.model = { bkBizId, bkUsername, requireType, enableNotice, expectTime, remark, follower, suborders };
+        order.value.model = {
+          bkBizId,
+          bkUsername,
+          requireType,
+          enableNotice,
+          expectTime,
+          remark,
+          follower: follower || [],
+          suborders,
+        };
 
-        defaultUserlist.value = follower.map((element: any) => ({ username: element, display_name: element }));
+        defaultUserlist.value = (follower || []).map((element: any) => ({ username: element, display_name: element }));
 
         suborders.forEach(({ resource_type, remark, replicas, spec, applied_core }: any) => {
           const data = { resource_type, remark, replicas: +replicas, spec, applied_core };
@@ -756,7 +764,15 @@ export default defineComponent({
         enable_disk_check,
         anti_affinity_level: QCLOUDCVMForm.value.spec.anti_affinity_level,
         replicas: +QCLOUDCVMForm.value.spec.replicas,
-        spec: { ...QCLOUDCVMForm.value.spec, region, zone, charge_type, charge_months },
+        spec: {
+          ...QCLOUDCVMForm.value.spec,
+          // bk-input[number]粘贴与当前值相同的字符数值最终得到的是字符串值，这里统一转换为数字
+          disk_size: Number(QCLOUDCVMForm.value.spec.disk_size),
+          region,
+          zone,
+          charge_type,
+          charge_months,
+        },
       };
     };
     const PMResourceForm = () => {
@@ -789,7 +805,7 @@ export default defineComponent({
           trigger: 'change',
           message: '数据盘大小范围在0-16000GB之间，数值必须是10的整数倍',
           validator: (val: number) => {
-            return /^(0|[1-9]\d{0,3}0{1,3})$/.test(String(val)) && val <= 16000;
+            return val >= 0 && val <= 16000 && val % 10 === 0;
           },
         },
       ],
@@ -1032,7 +1048,7 @@ export default defineComponent({
 
     return () => (
       <div class='host-application-form-wrapper'>
-        {!props.isbusiness && <DetailHeader backRouteName='主机申领'>新增申请</DetailHeader>}
+        {!props.isbusiness && <DetailHeader backRouteName={MENU_SERVICE_HOST_APPLICATION}>新增申请</DetailHeader>}
         <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
           <bk-form
