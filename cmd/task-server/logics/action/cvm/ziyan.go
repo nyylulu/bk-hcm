@@ -164,10 +164,11 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		}
 	}
 
+	var cloudErr error
 	rangeMS := [2]uint{constant.CvmBatchTaskRetryDelayMinMS, constant.CvmBatchTaskRetryDelayMaxMS}
 	policy := retry.NewRetryPolicy(0, rangeMS)
 	for {
-		err = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
+		cloudErr = actcli.GetHCService().TCloudZiyan.Cvm.ResetCvm(kt, req)
 		cvmResetJson, jsonErr := json.Marshal(req)
 		if jsonErr != nil {
 			logs.Errorf("call hcservice api reset cvm json marshal, vendor: %s, detailID: %s, taskManageID: %s, "+
@@ -176,11 +177,11 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 			return jsonErr
 		}
 		// 仅在碰到限频错误时进行重试
-		if err != nil && strings.Contains(err.Error(), constant.TCloudLimitExceededErrCode) {
+		if cloudErr != nil && strings.Contains(cloudErr.Error(), constant.TCloudLimitExceededErrCode) {
 			if policy.RetryCount()+1 < actionflow.BatchTaskDefaultRetryTimes {
 				// 	非最后一次重试，继续sleep
 				logs.Errorf("call tcloud-ziyan cvm reset reach rate limit, will sleep for retry, retry count: %d, "+
-					"err: %v, rid: %s", policy.RetryCount(), err, kt.Rid)
+					"err: %v, rid: %s", policy.RetryCount(), cloudErr, kt.Rid)
 				policy.Sleep()
 				continue
 			}
@@ -188,16 +189,16 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		// 其他情况都跳过
 		break
 	}
-	if err != nil {
-		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, taskManageID: %s, flowID: %s, "+
-			"rid: %s", err, detail.ID, detail.TaskManagementID, detail.FlowID, kt.Rid)
-		return err
-	}
+	// 云端报错后，需要恢复主机状态、解除屏蔽，支持用户再次提交，所以放在下面再报错
 
+	newImageName := ""
+	if cloudErr == nil {
+		newImageName = req.ImageName
+	}
 	for _, cvm := range cvms {
 		// update cmdb cvm os info
 		if err = updateCMDBCvmOSAndSvrStatus(kt, cvm.Extension.BkAssetID, cvm.Extension.SrvStatus,
-			req.ImageName); err != nil {
+			newImageName); err != nil {
 
 			logs.Errorf("update cmdb cvm os failed, err: %v, bkAssetID: %s, cvmCloudID: %s, taskManageID: %s, "+
 				"flowID: %s, rid: %s", err, cvm.CloudID, detail.TaskManagementID, detail.FlowID,
@@ -214,6 +215,13 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 			logs.Warnf("failed to del shield alarm, err: %v, alarmIDs: %v, ips: %v, rid: %s",
 				err, alarmIDs, req.IPs, kt.Rid)
 		}
+	}
+
+	// 记录云端报错信息
+	if cloudErr != nil {
+		logs.Errorf("failed to call hcservice to reset cvm, err: %v, detailID: %s, taskManageID: %s, flowID: %s, "+
+			"rid: %s", cloudErr, detail.ID, detail.TaskManagementID, detail.FlowID, kt.Rid)
+		return cloudErr
 	}
 
 	return nil
