@@ -1,4 +1,5 @@
 import http from '@/http';
+import { ICvmDeviceCreateModel } from '@/views/ziyanScr/cvm-model/CreateDevice';
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
 /**
@@ -209,13 +210,8 @@ const updateCvmDeviceTypeConfigs = async ({ ids, properties }) => {
  * CVM机型配置信息创建接口
  * @returns {Promise}
  */
-const createCvmDevice = async ({ requireType, deviceGroup, deviceType, ...restParams }) => {
-  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/createmany/config/cvm/device`, {
-    ...restParams,
-    require_type: requireType,
-    device_group: deviceGroup,
-    device_type: deviceType,
-  });
+const createCvmDevice = async (params: ICvmDeviceCreateModel) => {
+  const { data } = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/config/createmany/config/cvm/device`, params);
   return data;
 };
 /** 资源回收单据执行接口 */
