@@ -31,6 +31,7 @@ const componentMap = {
   azure: AzureInfo,
   gcp: GcpInfo,
   aws: AwsInfo,
+  'tcloud-ziyan': TcloudInfo,
 };
 
 // const renderComponent = componentMap[route.params.type as string];

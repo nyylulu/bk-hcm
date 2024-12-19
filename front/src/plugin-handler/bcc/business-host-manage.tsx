@@ -3,8 +3,6 @@ import { Button, Dropdown, Message, bkTooltips } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { VendorEnum } from '@/common/constant';
-import { ResourceTypeEnum } from '@/common/resource-constant';
-import Confirm, { confirmInstance } from '@/components/confirm';
 import defaultUseColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import HostOperations, {
   OperationActions,
@@ -14,10 +12,6 @@ import { OperationActions as DefaultOperationActions } from '@/views/business/ho
 import useSingleOperation from '@/views/business/host/children/host-operations/internal/use-single-operation';
 import defaultUseSingleOperation from '@/views/business/host/children/host-operations/use-single-operation';
 import defaultUseTableListQuery from '@/hooks/useTableListQuery';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
-import { useBusinessStore } from '@/store/business';
-import routerAction from '@/router/utils/action';
-import { MENU_BUSINESS_TASK_MANAGEMENT_DETAILS } from '@/constants/menu-symbol';
 import type { PropsType } from '@/hooks/useTableListQuery';
 import type { PluginHandlerType } from '../business-host-manage';
 
@@ -38,8 +32,6 @@ type UseColumnsParams = {
 const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra }: UseColumnsParams) => {
   const { t } = useI18n();
   const router = useRouter();
-  const { getBizsId } = useWhereAmI();
-  const businessStore = useBusinessStore();
 
   const { handleOperate: defaultHandleOperate } = defaultUseSingleOperation({
     beforeConfirm() {
@@ -59,39 +51,21 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
     },
   });
 
-  const { currentOperateRowIndex, getOperationConfig } = useSingleOperation({
+  // 主机操作（单个）
+  const { currentOperateRowIndex, showDropdown, hideDropdown, getOperationConfig } = useSingleOperation({
     customOperate(type: OperationActions, data: any) {
       if (data.vendor === VendorEnum.ZIYAN) {
-        if (type === OperationActions.RECYCLE) {
-          // 使用批量回收操作
-          extra.getTableRef()?.value?.clearSelection?.();
-          extra.getHostOperationRef()?.value?.handleSingleZiyanRecycle?.(data);
-        } else if (type === OperationActions.RESET) {
-          // 重装单个
+        // 自研云主机操作
+        if (OperationActions.RESET === type) {
+          // 重装
           extra.getHostOperationRef()?.value?.hostBatchResetDialogRef?.show([data.id]);
         } else {
-          // 开机、关机、重启操作
-          const { label } = operationMap[type];
-          Confirm(`确定${label}`, <>当前操作主机为：{data.name}</>, async () => {
-            confirmInstance.hide();
-            extra.isLoading.value = true;
-            try {
-              const result = await businessStore.cvmOperateAsync(type, { ids: [data.id] });
-
-              Message({ message: t('操作成功'), theme: 'success' });
-
-              // 跳转至新任务详情页
-              routerAction.redirect({
-                name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-                params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
-                query: { bizs: getBizsId() },
-              });
-            } finally {
-              extra.isLoading.value = false;
-            }
-          });
+          // 开机、关机、重启、回收
+          extra.getTableRef()?.value?.clearSelection?.();
+          extra.getHostOperationRef()?.value?.handleSingleZiyanCvmOperate?.(type, data);
         }
       } else {
+        // 公有云主机操作
         defaultHandleOperate(type as DefaultOperationActions, data);
       }
     },
@@ -131,16 +105,18 @@ const useColumns = ({ type = 'businessHostColumns', isSimpleShow = false, extra 
                   [[bkTooltips, getOperationConfig(OperationActions.RECYCLE, data).tooltips]],
                 ),
                 <Dropdown
-                  trigger='click'
+                  isShow={currentOperateRowIndex.value === index}
+                  trigger='manual'
                   popoverOptions={{
                     renderType: 'shown',
-                    onAfterShow: () => (currentOperateRowIndex.value = index),
-                    onAfterHidden: () => (currentOperateRowIndex.value = -1),
+                    onAfterHidden: hideDropdown,
+                    forceClickoutside: true,
                   }}>
                   {{
                     default: () => (
                       <div
-                        class={[`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`]}>
+                        class={[`more-action${currentOperateRowIndex.value === index ? ' current-operate-row' : ''}`]}
+                        onClick={() => showDropdown(index)}>
                         <i class={'hcm-icon bkhcm-icon-more-fill'}></i>
                       </div>
                     ),

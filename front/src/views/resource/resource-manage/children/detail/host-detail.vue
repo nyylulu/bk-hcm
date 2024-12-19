@@ -84,6 +84,11 @@ if (cloudType.value === 'tcloud' || cloudType.value === 'aws') {
   hostTabs.splice(1, 1);
 }
 
+if ('tcloud-ziyan' === cloudType.value) {
+  // 自研云没有网络接口、弹性ip、云硬盘
+  hostTabs.splice(1, 3);
+}
+
 if (cloudType.value === 'gcp') {
   // 腾讯云和Aws没有网络接口
   hostTabs.splice(4, 1);
@@ -141,8 +146,6 @@ const modifyCvmStatus = async (type: string) => {
     } else {
       getDetail();
     }
-  } catch (error) {
-    console.log(error);
   } finally {
     cvmInfo.value[type].loading = false;
   }

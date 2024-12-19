@@ -89,6 +89,7 @@ export default defineComponent({
       computedTips,
       computedContent,
       isLoading,
+      isDialogLoading,
       selected,
       computedColumns,
       tableData,
@@ -192,10 +193,11 @@ export default defineComponent({
       }
     };
 
-    const handleSingleZiyanRecycle = (data: any) => {
+    // 自研云主机开机、关机、重启、回收（单个）
+    const handleSingleZiyanCvmOperate = (type: OperationActions, data?: any) => {
       // 每次替换上一条
       selections.value.splice(0, selections.value.length, { ...data, __formSingleOp: true });
-      operationType.value = OperationActions.RECYCLE;
+      operationType.value = type;
     };
 
     // 主机重装
@@ -222,7 +224,7 @@ export default defineComponent({
     const footerRef = useTemplateRef<HTMLElement>('footer');
 
     expose({
-      handleSingleZiyanRecycle,
+      handleSingleZiyanCvmOperate,
       hostBatchResetDialogRef,
     });
 
@@ -325,11 +327,13 @@ export default defineComponent({
                           </BkButtonGroup>
                           {computedContent.value}
                         </div>
-                        {selected.value === 'target' ? (
-                          <CvmStatusTable list={tableData.value} columns={cvmStatusBaseColumns} />
-                        ) : (
-                          <CvmStatusCollapseTable list={tableData.value} />
-                        )}
+                        <div v-bkloading={{ loading: isDialogLoading.value }} style={{ minHeight: '290px' }}>
+                          {selected.value === 'target' ? (
+                            <CvmStatusTable list={tableData.value} columns={cvmStatusBaseColumns} />
+                          ) : (
+                            <CvmStatusCollapseTable list={tableData.value} />
+                          )}
+                        </div>
                       </>
                     ) : (
                       // 公有云主机操作

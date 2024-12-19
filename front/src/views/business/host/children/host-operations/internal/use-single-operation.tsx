@@ -10,12 +10,21 @@ const useSingleOperation = ({ customOperate }: { customOperate: Function }) => {
 
   const currentOperateRowIndex = ref(-1);
 
+  const showDropdown = (index: number) => {
+    currentOperateRowIndex.value = index;
+  };
+
+  const hideDropdown = () => {
+    currentOperateRowIndex.value = -1;
+  };
+
   const handleClickMenu = (type: OperationActions, data: any) => {
     if (getOperationConfig(type, data).disabled) {
       return;
     }
 
     customOperate(type, data);
+    hideDropdown();
   };
 
   const getOperationConfig = (type: OperationActions, data: any) => {
@@ -62,6 +71,8 @@ const useSingleOperation = ({ customOperate }: { customOperate: Function }) => {
 
   return {
     currentOperateRowIndex,
+    showDropdown,
+    hideDropdown,
     getOperationConfig,
   };
 };

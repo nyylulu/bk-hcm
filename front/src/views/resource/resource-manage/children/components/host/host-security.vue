@@ -1,6 +1,6 @@
 <script lang="ts" setup>
-import { ref, PropType, reactive, h, watch, computed, inject } from 'vue';
-import { Button, Message } from 'bkui-vue';
+import { ref, PropType, reactive, h, watch, computed, inject, withDirectives } from 'vue';
+import { bkTooltips, Button, Message } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import useQueryCommonList from '@/views/resource/resource-manage/hooks/use-query-list-common';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
@@ -137,56 +137,56 @@ const columns: any = [
   {
     label: t('操作'),
     render({ data }: any) {
-      return h('span', {}, [
-        data.vendor === 'azure' &&
+      // 绑定
+      const isShowBindBtn = data.vendor === 'azure';
+      const isBindBtnDisabled = data.vendor === 'azure' && data.extension?.cloud_security_group_id; // 如果有安全组id 就不可以绑定
+      const bindBtnClickHandler = () => {
+        if (data.vendor === 'azure') {
+          securityId.value = data.extension.security_group_id;
+          curreClickId.value = data.id;
+        } else {
+          securityId.value = data.id;
+        }
+        handleSecurityDialog();
+      };
+
+      // 解绑
+      const isUnbindBtnDisabled =
+        'tcloud-ziyan' === data.vendor || // todo：自研云暂不支持安全组操作
+        (data.vendor === 'azure' && !data.extension?.cloud_security_group_id) ||
+        !authVerifyData.value?.permissionAction[actionName.value]; // 如果没有安全组id 就不可以解绑
+      const unbindTooltipsOption =
+        data.vendor === 'tcloud-ziyan'
+          ? { content: '自研云暂不支持安全组操作', disabled: 'tcloud-ziyan' !== data.vendor }
+          : { disabled: true };
+      const unBindBtnClickHandler = () => {
+        if (data.vendor === 'azure') {
+          securityId.value = data.extension.security_group_id;
+          curreClickId.value = data.id;
+        } else {
+          securityId.value = data.id;
+        }
+        unBind(data);
+      };
+
+      return h('span', null, [
+        isShowBindBtn &&
           h(
             Button,
-            {
-              text: true,
-              theme: 'primary',
-              class: 'mr10',
-              disabled: data.vendor === 'azure' && data.extension?.cloud_security_group_id, // 如果有安全组id 就不可以绑定
-              onClick() {
-                if (data.vendor === 'azure') {
-                  securityId.value = data.extension.security_group_id;
-                  curreClickId.value = data.id;
-                } else {
-                  securityId.value = data.id;
-                }
-                handleSecurityDialog();
-              },
-            },
-            ['绑定'],
+            { text: true, theme: 'primary', class: 'mr8', disabled: isBindBtnDisabled, onClick: bindBtnClickHandler },
+            '绑定',
           ),
         h(
           'span',
-          {
-            onClick() {
-              showAuthDialog(actionName.value);
-            },
-          },
-          [
+          { onClick: () => showAuthDialog(actionName.value) },
+          withDirectives(
             h(
               Button,
-              {
-                text: true,
-                theme: 'primary',
-                disabled:
-                  (data.vendor === 'azure' && !data.extension?.cloud_security_group_id) ||
-                  !authVerifyData.value?.permissionAction[actionName.value], // 如果没有安全组id 就不可以解绑
-                onClick() {
-                  if (data.vendor === 'azure') {
-                    securityId.value = data.extension.security_group_id;
-                    curreClickId.value = data.id;
-                  } else {
-                    securityId.value = data.id;
-                  }
-                  unBind(data);
-                },
-              },
-              ['解绑'],
+              { text: true, theme: 'primary', disabled: isUnbindBtnDisabled, onClick: unBindBtnClickHandler },
+              '解绑',
             ),
-          ],
+            [[bkTooltips, unbindTooltipsOption]],
+          ),
         ),
       ]);
     },
