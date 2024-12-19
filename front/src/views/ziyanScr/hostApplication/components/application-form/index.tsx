@@ -1221,37 +1221,17 @@ export default defineComponent({
             {!isSpecialRequirement.value && isVerifyFailed.value && (
               <CommonCard title={() => '需求预检'}>
                 <Alert theme='danger' showIcon={false} class={'mb24'}>
-                  {cpuAmount.prepaid > 0 && (
-                    <p class={'status-FAILED'}>
-                      前包年包月计费模式的资源需求超过资源预测的额度，请调整后重试，
-                      <Button
-                        theme='primary'
-                        text
-                        onClick={() => {
-                          window.open(
-                            whereAmI.value === Senarios.business
-                              ? '#/business/resource-plan'
-                              : '#/service/resource-plan',
-                            '_blank',
-                          );
-                        }}>
-                        查看资源预测
-                      </Button>
-                    </p>
-                  )}
-                  {cpuAmount.postpaid > 0 && (
-                    <p class={'status-FAILED'}>
-                      资源需求中有使用按量计费模式，长期使用成本较高，建议提预测单13周后转包年包月，
-                      <Button
-                        theme='primary'
-                        text
-                        onClick={() => {
-                          window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank');
-                        }}>
-                        去创建提预测单
-                      </Button>
-                    </p>
-                  )}
+                  资源需求超过资源预测的剩余额度，请查看预检信息的报错明细，处理建议：
+                  <br />
+                  1.调整所需的资源，修改机型或者调整需求数量
+                  <br />
+                  2.增加资源预测报备后再重试，去
+                  <Button
+                    theme='primary'
+                    text
+                    onClick={() => window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank')}>
+                    报备资源预测
+                  </Button>
                 </Alert>
               </CommonCard>
             )}

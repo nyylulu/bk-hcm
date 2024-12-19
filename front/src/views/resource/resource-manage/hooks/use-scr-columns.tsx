@@ -9,7 +9,7 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -43,6 +43,7 @@ import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
+import routerAction from '@/router/utils/action';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -2152,12 +2153,33 @@ export default (type: string, isSimpleShow = false) => {
       field: 'crp_sn',
       minWidth: 200,
       align: 'center',
+      render: ({ cell }: { cell: string }) => (
+        <Button
+          theme='primary'
+          text
+          onClick={() => routerAction.open({ path: `https://crp.woa.com/crp-outside/yunti/orders/iaasplan/${cell}` })}>
+          {cell}
+        </Button>
+      ),
     },
     {
       label: '预测单号',
       field: 'ticket_id',
       minWidth: 200,
       align: 'center',
+      render: ({ cell }: { cell: string }) => (
+        <Button
+          theme='primary'
+          text
+          onClick={() =>
+            routerAction.redirect({
+              name: 'BizInvoiceResourceDetail',
+              query: { id: cell, [GLOBAL_BIZS_KEY]: route.query[GLOBAL_BIZS_KEY] },
+            })
+          }>
+          {cell}
+        </Button>
+      ),
     },
     {
       label: '子订单号',

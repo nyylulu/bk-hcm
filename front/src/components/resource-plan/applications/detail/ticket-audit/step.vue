@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 defineProps<{
   label: string;
@@ -21,6 +22,7 @@ const { t } = useI18n();
           <Share width="12" height="12" class="ml6" />
         </div>
       </bk-link>
+      <copy-to-clipboard class="ml6" :disabled="!linkUrl" :content="linkUrl" />
     </h3>
     <div class="content">
       <slot name="content"></slot>
