@@ -13,6 +13,8 @@ import DiskTypeSelect from '../../../DiskTypeSelect';
 import { useUserStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import CvmImageSelector from '@/views/ziyanScr/components/ostype-selector/cvm-image-selector.vue';
+import IdcpmOstypeSelector from '@/views/ziyanScr/components/ostype-selector/idcpm-ostype-selector.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { FormItem } = Form;
@@ -36,6 +38,7 @@ export default defineComponent({
         zone: [props.formModelData.spec.zone],
         device_type: [props.formModelData.spec.device_type],
         disk_type: [props.formModelData.spec.disk_type],
+        os_type: '',
       },
     });
     const options = ref([
@@ -60,18 +63,11 @@ export default defineComponent({
       }
     };
     const getDomainList = () => {
+      const { resource_type, spec } = formModel;
+
       return http.post(
         `${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/findmany/apply/match/device`,
-        removeEmptyFields({
-          resource_type: formModel.resource_type,
-          ips: ipArray.value,
-          spec: {
-            device_type: formModel.spec.device_type,
-            region: formModel.spec.region,
-            zone: formModel.spec.zone,
-            disk_type: formModel.spec.disk_type,
-          },
-        }),
+        removeEmptyFields({ resource_type, ips: ipArray.value, spec }),
       );
     };
     const tableColumns = ref([
@@ -235,8 +231,15 @@ export default defineComponent({
                 multiple
               />
             </FormItem>
+            <FormItem label='操作系统'>
+              {formModel.resource_type === 'QCLOUDCVM' ? (
+                <CvmImageSelector v-model={formModel.spec.os_type} region={formModel.spec.region} idKey='image_name' />
+              ) : (
+                <IdcpmOstypeSelector v-model={formModel.spec.os_type} />
+              )}
+            </FormItem>
             <FormItem label='数据盘类型'>
-              <DiskTypeSelect v-model={formModel.spec.disk_type} />
+              <DiskTypeSelect v-model={formModel.spec.disk_type} multiple />
             </FormItem>
             <FormItem label='内网IP'>
               <Input type='textarea' v-model={formModel.ips} />
