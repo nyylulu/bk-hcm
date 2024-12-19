@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
@@ -324,10 +325,10 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 		return err
 	}
 
-	for _, zone := range zones {
+	for _, zoneItem := range zones {
 		param := &types.DeviceInfo{
-			Region:     zone.Region,
-			Zone:       zone.Zone,
+			Region:     zoneItem.Region,
+			Zone:       zoneItem.Zone,
 			DeviceType: input.DeviceType,
 			Cpu:        input.Cpu,
 			Mem:        input.Mem,
@@ -336,6 +337,7 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 			Remark: input.Remark,
 			Label: mapstr.MapStr{
 				"device_group": input.DeviceGroup,
+				"device_size":  input.DeviceSize,
 			},
 			EnableCapacity: true,
 			EnableApply:    true,
@@ -346,8 +348,8 @@ func (d *device) CreateManyDevice(kt *kit.Kit, input *types.CreateManyDevicePara
 		for _, requireType := range input.RequireType {
 			param.RequireType = requireType
 
-			if _, err := d.CreateDevice(kt, param); err != nil {
-				logs.Errorf("failed to create device, err: %v, rid: %s", err, kt.Rid)
+			if _, err = d.CreateDevice(kt, param); err != nil {
+				logs.Errorf("failed to create device, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
 				return err
 			}
 		}

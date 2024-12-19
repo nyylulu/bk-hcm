@@ -15,6 +15,7 @@ POST /api/v1/woa/config/createmany/config/cvm/device
 | require_type	| int array	   | 是	  | 需求类型       |
 | zone	        | string array | 是	  | 可用区         |
 | device_group	| string	   | 是   | 机型族         |
+| device_size	| string	   | 是   | 核心类型，枚举值：小核心、中核心、大核心 |
 | device_type	| string	   | 是   | 设备型号        |
 | cpu	        | int	       | 是   | CPU核数，单位个  |
 | mem	        | int	       | 是   | 内存大小，单位G  |
@@ -33,6 +34,7 @@ POST /api/v1/woa/config/createmany/config/cvm/device
     "ap-shanghai-2"
   ],
   "device_group":"标准型",
+  "device_size":"大核心",
   "device_type":"S2.LARGE16",
   "cpu":4,
   "mem":16,

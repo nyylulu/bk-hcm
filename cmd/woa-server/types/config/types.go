@@ -19,6 +19,7 @@ import (
 
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/criteria/validator"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -351,58 +352,67 @@ type GetDeviceTypeDetailResult struct {
 
 // CreateManyDeviceParam create device config in batch request param
 type CreateManyDeviceParam struct {
-	RequireType []enumor.RequireType `json:"require_type"`
-	Zone        []string             `json:"zone"`
-	DeviceGroup string               `json:"device_group"`
-	DeviceType  string               `json:"device_type"`
-	Cpu         int64                `json:"cpu"`
-	Mem         int64                `json:"mem"`
+	RequireType []enumor.RequireType `json:"require_type" validate:"required,max=20,dive"`
+	Zone        []string             `json:"zone" validate:"required,max=100,dive"`
+	DeviceGroup string               `json:"device_group" validate:"required"`
+	DeviceSize  enumor.CoreType      `json:"device_size" validate:"required"`
+	DeviceType  string               `json:"device_type" validate:"required"`
+	Cpu         int64                `json:"cpu" validate:"required,min=1"`
+	Mem         int64                `json:"mem" validate:"required,min=1"`
 	Remark      string               `json:"remark"`
 }
 
 // Validate whether GetDeviceParam is valid
 // errKey: invalid key
 // err: detail reason why errKey is invalid
-func (param *CreateManyDeviceParam) Validate() (errKey string, err error) {
+func (param *CreateManyDeviceParam) Validate() error {
 	if len(param.RequireType) == 0 {
-		return "require_type", errors.New("empty or non-exist")
+		return errors.New("require_type empty or non-exist")
 	}
 
 	if len(param.RequireType) > 20 {
-		return "require_type", errors.New("exceed limit 20")
+		return errors.New("require_type exceed limit 20")
 	}
 
 	for _, rt := range param.RequireType {
 		if err := rt.Validate(); err != nil {
-			return "require_type", err
+			return fmt.Errorf("require_type: %v", err)
 		}
 	}
 
 	if len(param.Zone) == 0 {
-		return "zone", errors.New("empty or non-exist")
+		return errors.New("zone empty or non-exist")
 	}
 
 	if len(param.Zone) > 100 {
-		return "zone", errors.New("exceed limit 100")
+		return errors.New("zone exceed limit 100")
 	}
 
 	if param.DeviceGroup == "" {
-		return "device_group", errors.New("empty or non-exist")
+		return errors.New("device_group empty or non-exist")
+	}
+
+	if param.DeviceSize == "" {
+		return errors.New("device_size empty or non-exist")
+	}
+
+	if err := param.DeviceSize.Validate(); err != nil {
+		return err
 	}
 
 	if param.DeviceType == "" {
-		return "device_type", errors.New("empty or non-exist")
+		return errors.New("device_type empty or non-exist")
 	}
 
 	if param.Cpu <= 0 {
-		return "cpu", errors.New("should be positive")
+		return errors.New("cpu should be positive")
 	}
 
 	if param.Mem <= 0 {
-		return "mem", errors.New("should be positive")
+		return errors.New("mem should be positive")
 	}
 
-	return "", nil
+	return validator.Validate.Struct(param)
 }
 
 // UpdateDevicePropertyParam update device property request param
