@@ -46,5 +46,6 @@ func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
 	h.Add("TCloudZiyanSecurityGroupDisassociateLoadBalancer", "POST",
 		"/vendors/tcloud-ziyan/security_groups/disassociate/load_balancers",
 		svc.TCloudZiyanSecurityGroupDisassociateLoadBalancer)
-
+	h.Add("TCloudZiyanListSecurityGroupStatistic", "POST", "/vendors/tcloud-ziyan/security_groups/statistic",
+		svc.TCloudZiyanListSecurityGroupStatistic)
 }

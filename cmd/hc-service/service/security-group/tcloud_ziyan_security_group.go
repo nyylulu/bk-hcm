@@ -20,6 +20,8 @@
 package securitygroup
 
 import (
+	"fmt"
+
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	adptsg "hcm/pkg/adaptor/types/security-group"
 	"hcm/pkg/api/core"
@@ -404,4 +406,50 @@ func (g *securityGroup) TCloudZiyanSecurityGroupDisassociateLoadBalancer(cts *re
 	}
 
 	return nil, nil
+}
+
+// TCloudZiyanListSecurityGroupStatistic ...
+func (g *securityGroup) TCloudZiyanListSecurityGroupStatistic(cts *rest.Contexts) (any, error) {
+	req := new(proto.TCloudListSecurityGroupStatisticReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sgMap, err := g.getSecurityGroupMap(cts.Kit, req.SecurityGroupIDs)
+	if err != nil {
+		logs.Errorf("get security group map failed, sgID: %v, err: %v, rid: %s", req.SecurityGroupIDs, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	cloudIDs := make([]string, 0, len(req.SecurityGroupIDs))
+	for _, sgID := range req.SecurityGroupIDs {
+		sg, ok := sgMap[sgID]
+		if !ok {
+			logs.Errorf("security group: %s not found, rid: %s", sgID, cts.Kit.Rid)
+			return nil, fmt.Errorf("security group: %s not found", sgID)
+		}
+		cloudIDs = append(cloudIDs, sg.CloudID)
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &adptsg.TCloudListOption{
+		Region:   req.Region,
+		CloudIDs: cloudIDs,
+	}
+	resp, err := client.DescribeSecurityGroupAssociationStatistics(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("request adaptor to tcloud-ziyan security group statistic failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return resp, nil
 }
