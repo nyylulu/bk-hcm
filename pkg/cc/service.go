@@ -491,6 +491,7 @@ type WoaServerSetting struct {
 	UseMongo        bool             `yaml:"useMongo"`
 	Recover         Recover          `yaml:"recover"`
 	RollingServer   RollingServer    `yaml:"rollingServer"`
+	ResPlan         ResPlan          `yaml:"resPlan"`
 }
 
 // trySetFlagBindIP try set flag bind ip.

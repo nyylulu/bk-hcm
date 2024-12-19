@@ -348,3 +348,6 @@ caiche:
   host: http://127.0.0.1
   app_key: test
   app_secret: test
+
+resPlan:
+  reportPenaltyRatio: false

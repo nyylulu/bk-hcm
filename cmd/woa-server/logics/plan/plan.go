@@ -179,6 +179,10 @@ func (c *Controller) Run() {
 
 	// 每月最后7天，每天下午18:00计算当月罚金分摊比例并推送到CRP
 	go func() {
+		if !cc.WoaServer().ResPlan.ReportPenaltyRatio {
+			return
+		}
+
 		defer func() {
 			if r := recover(); r != nil {
 				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyRatioReportFailed, r, debug.Stack())

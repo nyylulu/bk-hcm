@@ -553,7 +553,7 @@ func (s *service) getMatchedDeviceTypesFromMgoV2(kt *kit.Kit, regionID, zoneID s
 	}
 
 	// zone name may be empty, if it is not empty, supplement it into filter.
-	if zoneID != "" {
+	if zoneID != "" && zoneID != cvmapi.CvmSeparateCampus {
 		mgoFilter["zone"] = zoneID
 	}
 

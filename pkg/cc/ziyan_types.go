@@ -784,6 +784,11 @@ type RollingServer struct {
 	SyncBill bool `yaml:"syncBill"`
 }
 
+// ResPlan 资源预测相关配置
+type ResPlan struct {
+	ReportPenaltyRatio bool `yaml:"reportPenaltyRatio"`
+}
+
 // MOA MOA api配置
 type MOA struct {
 	PaasID    string    `yaml:"paasID"`

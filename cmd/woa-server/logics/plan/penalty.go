@@ -265,7 +265,7 @@ func (c *Controller) createDemandPenaltyBase(kt *kit.Kit, baseYearWeek dtime.Dem
 	penaltyBaseCreateReqs := make([]rpproto.DemandPenaltyBaseCreate, 0, len(baseCoreMap))
 	for key, val := range baseCoreMap {
 		bizOrgRel := bizOrgRelMap[key.BkBizID]
-		baseCore := val
+		baseCore := max(val, 0)
 		penaltyBaseCreateReqs = append(penaltyBaseCreateReqs, rpproto.DemandPenaltyBaseCreate{
 			Year:            baseYearWeek.Year,
 			Month:           int(baseYearWeek.Month),

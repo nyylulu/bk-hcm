@@ -259,7 +259,18 @@ func (s *service) ListBizPlanDemandChangeLog(cts *rest.Contexts) (interface{}, e
 		return core.ListResultT[any]{Details: make([]any, 0)}, nil
 	}
 
-	return s.listPlanDemandChangeLog(cts, req, []int64{bizID})
+	// demands belong to bizID
+	belongs, err := s.planController.AreAllDemandBelongToBiz(cts.Kit, []string{req.DemandID}, bizID)
+	if err != nil {
+		logs.Errorf("failed to check if all demand belong to biz, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	if !belongs {
+		return nil, errf.NewFromErr(errf.PermissionDenied, fmt.Errorf("bk_biz is not authorized"))
+	}
+
+	return s.listPlanDemandChangeLog(cts, req)
 }
 
 // ListPlanDemandChangeLog list demand change log.
@@ -281,26 +292,12 @@ func (s *service) ListPlanDemandChangeLog(cts *rest.Contexts) (interface{}, erro
 		return nil, err
 	}
 
-	return s.listPlanDemandChangeLog(cts, req, []int64{})
+	return s.listPlanDemandChangeLog(cts, req)
 }
 
 // listPlanDemandChangeLog list demand change log primary logic.
-func (s *service) listPlanDemandChangeLog(cts *rest.Contexts, req *ptypes.ListDemandChangeLogReq, bkBizIDs []int64) (
+func (s *service) listPlanDemandChangeLog(cts *rest.Contexts, req *ptypes.ListDemandChangeLogReq) (
 	interface{}, error) {
-
-	demandReq := &ptypes.ListResPlanDemandReq{
-		BkBizIDs:  bkBizIDs,
-		DemandIDs: []string{req.DemandID},
-		Page:      core.NewCountPage(),
-	}
-	rstCount, err := s.planController.ListResPlanDemandAndOverview(cts.Kit, demandReq)
-	if err != nil {
-		logs.Errorf("failed to list res plan demand to authorize, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.Aborted, err)
-	}
-	if rstCount.Count == 0 {
-		return nil, errf.NewFromErr(errf.PermissionDenied, fmt.Errorf("bk_biz is not authorized"))
-	}
 
 	resp, err := s.planController.ListCrpDemandChangeLog(cts.Kit, req)
 	if err != nil {

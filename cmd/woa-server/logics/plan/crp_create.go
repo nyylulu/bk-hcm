@@ -448,7 +448,7 @@ func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.C
 		switch adjustType {
 		case enumor.CrpAdjustTypeUpdate:
 			// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
-			updatedItem.CvmAmount -= willChangeCvm
+			updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
 			updatedItem.CoreAmount -= canConsume
 		case enumor.CrpAdjustTypeDelay:
 			updatedItem.UseTime = demand.Updated.ExpectTime

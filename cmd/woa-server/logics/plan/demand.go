@@ -98,32 +98,31 @@ func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, devi
 }
 
 // ListResPlanDemandAndOverview list res plan demand and overview.
-func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit,
-	req *ptypes.ListResPlanDemandReq) (*ptypes.ListResPlanDemandResp,
-	error) {
+func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) (
+	*ptypes.ListResPlanDemandResp, error) {
 
-	// 获取demand列表
-	demandList, count, err := c.listAllResPlanDemand(kt, req)
+	// 需要将期望到货时间扩展至整个需求周期月，查询全部的预测并分配消耗情况后，再进行筛选。以确保无论筛选条件如何，每条预测消耗量的一致
+	listAllReq, err := extendResPlanListReq(req)
 	if err != nil {
-		logs.Errorf("failed to list res plan demand, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
+		logs.Errorf("failed to convert list request to list all request, err: %v, req: %+v, rid: %s", err, *req,
+			kt.Rid)
 		return nil, err
 	}
-	// 只返回总数，不返回详情及统计
-	if req.Page.Count {
-		return &ptypes.ListResPlanDemandResp{
-			Count: count,
-		}, nil
+
+	// 获取demand列表
+	demandList, _, err := c.listAllResPlanDemand(kt, listAllReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan demand, err: %v, req: %+v, rid: %s", err, *listAllReq, kt.Rid)
+		return nil, err
 	}
 
-	demandIDs := make([]string, len(demandList))
 	bkBizIDs := make([]int64, 0)
-	for idx, demand := range demandList {
-		demandIDs[idx] = demand.ID
+	for _, demand := range demandList {
 		bkBizIDs = append(bkBizIDs, demand.BkBizID)
 	}
 
 	// 获取当月预测消耗历史，聚合为 ResPlanConsumePool
-	startDay, endDay, err := req.ExpectTimeRange.GetTimeDate()
+	startDay, endDay, err := listAllReq.ExpectTimeRange.GetTimeDate()
 	if err != nil {
 		logs.Errorf("failed to parse date range, err: %v, date range: %s - %s, rid: %s", err, req.ExpectTimeRange.Start,
 			req.ExpectTimeRange.End, kt.Rid)
@@ -141,18 +140,71 @@ func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit,
 		logs.Errorf("get device type map failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
-
 	planAppliedCore := convResConsumePoolToExpendMap(kt, prodConsumePool, deviceTypeMap)
-	// 清洗数据，计算overview，分页
-	overview, rst, err := convResPlanDemandRespAndPage(kt, req.Page, demandList, planAppliedCore, deviceTypeMap)
+
+	// 清洗数据，计算overview
+	overview, rst, err := convResPlanDemandRespAndFilter(kt, req, demandList, planAppliedCore, deviceTypeMap)
 	if err != nil {
 		logs.Errorf("failed to convert res plan demand table to response item, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
+	// 只返回总数，不返回详情及统计
+	if req.Page.Count {
+		return &ptypes.ListResPlanDemandResp{
+			Count: uint64(len(rst)),
+		}, nil
+	}
+
+	// planAppliedCore 未用尽，给出警告
+	for key, appliedCPUCore := range planAppliedCore {
+		if appliedCPUCore > 0 {
+			logs.Warnf("plan applied core have not been used up, applied_key: %+v, remained_cpu_core: %d, rid: %s",
+				key, appliedCPUCore, kt.Rid)
+		}
+	}
+
+	// 数据分页
+	// TODO 注意如果后续支持排序，不能在dao层直接排序，会影响消耗记录的对应关系，需要在这里额外进行
+	rst = pageResPlanDemands(req.Page, rst)
 	return &ptypes.ListResPlanDemandResp{
 		Overview: overview,
 		Details:  rst,
+	}, nil
+}
+
+func pageResPlanDemands(page *core.BasePage, demands []*ptypes.ListResPlanDemandItem) []*ptypes.ListResPlanDemandItem {
+	if page.Start >= uint32(len(demands)) {
+		return []*ptypes.ListResPlanDemandItem{}
+	}
+
+	offset := int(page.Start + uint32(page.Limit))
+	if offset > len(demands) {
+		offset = len(demands)
+	}
+	return demands[int(page.Start):offset]
+}
+
+// extendResPlanListReq to ensure that res plan data and expend data can be aligned.
+// extend expect_time to the entire demand month and remove other request params outside bk_biz.
+func extendResPlanListReq(req *ptypes.ListResPlanDemandReq) (*ptypes.ListResPlanDemandReq, error) {
+	startT, endT, err := req.ExpectTimeRange.GetTimeDate()
+	if err != nil {
+		return nil, err
+	}
+
+	startDemandTimeRange := demandtime.GetDemandDateRangeInMonth(startT)
+	endDemandTimeRange := demandtime.GetDemandDateRangeInMonth(endT)
+
+	return &ptypes.ListResPlanDemandReq{
+		BkBizIDs:       req.BkBizIDs,
+		OpProductIDs:   req.OpProductIDs,
+		PlanProductIDs: req.PlanProductIDs,
+		ExpectTimeRange: &times.DateRange{
+			Start: startDemandTimeRange.Start,
+			End:   endDemandTimeRange.End,
+		},
+		Page: core.NewDefaultBasePage(),
 	}, nil
 }
 
@@ -185,15 +237,58 @@ func convResConsumePoolToExpendMap(kt *kit.Kit, pool ResPlanConsumePool,
 	return consumeMap
 }
 
-// convResPlanDemandRespAndPage convert res plan demand table to res plan demand response item, and apply page.
-func convResPlanDemandRespAndPage(kt *kit.Kit, page *core.BasePage, planTables []rpd.ResPlanDemandTable,
+func demandBelongListReq(demandItem *ptypes.ListResPlanDemandItem, req *ptypes.ListResPlanDemandReq) bool {
+	if !req.CheckDemandIDs(demandItem.DemandID) {
+		return false
+	}
+	if !req.CheckObsProjects(demandItem.ObsProject) {
+		return false
+	}
+	if !req.CheckDemandClasses(demandItem.DemandClass) {
+		return false
+	}
+	if !req.CheckDeviceClasses(demandItem.DeviceClass) {
+		return false
+	}
+	if !req.CheckDeviceTypes(demandItem.DeviceType) {
+		return false
+	}
+	if !req.CheckRegionIDs(demandItem.RegionID) {
+		return false
+	}
+	if !req.CheckZoneIDs(demandItem.ZoneID) {
+		return false
+	}
+	if !req.CheckPlanTypes(demandItem.PlanType) {
+		return false
+	}
+
+	// 筛选本月到期，即期望交付时间在本月内的
+	if req.ExpiringOnly {
+		monthRange := demandtime.GetDemandDateRangeInMonth(time.Now())
+		if demandItem.ExpectTime < monthRange.Start || demandItem.ExpectTime > monthRange.End {
+			return false
+		}
+	}
+	if req.ExpectTimeRange != nil {
+		if demandItem.ExpectTime < req.ExpectTimeRange.Start || demandItem.ExpectTime > req.ExpectTimeRange.End {
+			return false
+		}
+	}
+
+	return true
+}
+
+// convResPlanDemandRespAndFilter convert res plan demand table to res plan demand response item,
+// and filter by request params.
+func convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, planTables []rpd.ResPlanDemandTable,
 	planAppliedCore map[ptypes.ResPlanDemandExpendKey]int64, deviceTypes map[string]wdt.WoaDeviceTypeTable) (
 	*ptypes.ListResPlanDemandOverview, []*ptypes.ListResPlanDemandItem, error) {
 
 	overview := &ptypes.ListResPlanDemandOverview{}
-	demandDetails := make([]*ptypes.ListResPlanDemandItem, len(planTables))
+	demandDetails := make([]*ptypes.ListResPlanDemandItem, 0, len(planTables))
 
-	for idx, demand := range planTables {
+	for _, demand := range planTables {
 		expectDateStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime), constant.DateLayoutCompact,
 			constant.DateLayout)
 		if err != nil {
@@ -208,58 +303,56 @@ func convResPlanDemandRespAndPage(kt *kit.Kit, page *core.BasePage, planTables [
 				kt.Rid)
 			return nil, nil, err
 		}
-
-		demandDetails[idx] = convListResPlanDemandItemByTable(demand, expectDateStr)
+		demandItem := convListResPlanDemandItemByTable(demand, expectDateStr)
 
 		// 计算已消耗/剩余的核心数和实例数
-		// 因为可能存在分页，planAppliedCore 可能无法用尽，这里无法判断这种情况是否正常
 		if allAppliedCpuCore, ok := planAppliedCore[demandKey]; ok {
-			demandAppliedCpuCore := min(allAppliedCpuCore, cvt.PtrToVal(demand.CpuCore))
-			demandDetails[idx].AppliedCpuCore = demandAppliedCpuCore
-			planAppliedCore[demandKey] = planAppliedCore[demandKey] - demandAppliedCpuCore
+			demandAppliedCpuCore := min(allAppliedCpuCore, demandItem.TotalCpuCore)
+			demandItem.AppliedCpuCore = demandAppliedCpuCore
+			planAppliedCore[demandKey] -= demandAppliedCpuCore
 
-			deviceCpuCore := decimal.NewFromInt(deviceTypes[demand.DeviceType].CpuCore)
-			demandDetails[idx].AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
+			deviceCpuCore := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].CpuCore)
+			demandItem.AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
 		}
-		demandDetails[idx].RemainedOS = demandDetails[idx].TotalOS.Sub(demandDetails[idx].AppliedOS)
-		demandDetails[idx].RemainedCpuCore = demandDetails[idx].TotalCpuCore - demandDetails[idx].AppliedCpuCore
+		demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
+		demandItem.RemainedCpuCore = demandItem.TotalCpuCore - demandItem.AppliedCpuCore
+
+		// 不在筛选范围内的，过滤
+		if !demandBelongListReq(demandItem, req) {
+			continue
+		}
 
 		// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）
-		status, err := demandtime.GetDemandStatusByExpectTime(expectDateStr)
+		status, err := demandtime.GetDemandStatusByExpectTime(demandItem.ExpectTime)
 		if err != nil {
 			logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demand.ID, kt.Rid)
 		} else {
-			demandDetails[idx].SetStatus(status)
+			demandItem.SetStatus(status)
 		}
 
 		// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
 		if status == enumor.DemandStatusCanApply {
-			demandDetails[idx].ExpiringCpuCore = demandDetails[idx].RemainedCpuCore
+			demandItem.ExpiringCpuCore = demandItem.RemainedCpuCore
 		}
-
 		if cvt.PtrToVal(demand.Locked) == enumor.CrpDemandLocked {
-			demandDetails[idx].Status = enumor.DemandStatusLocked
+			demandItem.Status = enumor.DemandStatusLocked
 		}
-		demandDetails[idx].StatusName = demandDetails[idx].Status.Name()
+		demandItem.StatusName = demandItem.Status.Name()
 
 		// 计算overview
-		overview.TotalCpuCore += demandDetails[idx].TotalCpuCore
-		overview.TotalAppliedCore += demandDetails[idx].AppliedCpuCore
-		overview.ExpiringCpuCore += demandDetails[idx].ExpiringCpuCore
+		overview.TotalCpuCore += demandItem.TotalCpuCore
+		overview.TotalAppliedCore += demandItem.AppliedCpuCore
+		overview.ExpiringCpuCore += demandItem.ExpiringCpuCore
 		if demand.PlanType.InPlan() {
-			overview.InPlanCpuCore += demandDetails[idx].TotalCpuCore
-			overview.InPlanAppliedCpuCore += demandDetails[idx].AppliedCpuCore
+			overview.InPlanCpuCore += demandItem.TotalCpuCore
+			overview.InPlanAppliedCpuCore += demandItem.AppliedCpuCore
 		} else {
-			overview.OutPlanCpuCore += demandDetails[idx].TotalCpuCore
-			overview.OutPlanAppliedCpuCore += demandDetails[idx].AppliedCpuCore
+			overview.OutPlanCpuCore += demandItem.TotalCpuCore
+			overview.OutPlanAppliedCpuCore += demandItem.AppliedCpuCore
 		}
-	}
 
-	offset := int(page.Start + uint32(page.Limit))
-	if offset > len(demandDetails) {
-		offset = len(demandDetails)
+		demandDetails = append(demandDetails, demandItem)
 	}
-	demandDetails = demandDetails[int(page.Start):offset]
 
 	return overview, demandDetails, nil
 }

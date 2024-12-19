@@ -23,6 +23,7 @@ package plan
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	dtime "hcm/cmd/woa-server/logics/plan/demand-time"
@@ -56,7 +57,7 @@ type ListResPlanDemandReq struct {
 }
 
 // Validate whether ListResPlanDemandReq is valid.
-func (r *ListResPlanDemandReq) Validate() error {
+func (r ListResPlanDemandReq) Validate() error {
 	if err := validator.Validate.Struct(r); err != nil {
 		return err
 	}
@@ -108,6 +109,70 @@ func (r *ListResPlanDemandReq) Validate() error {
 	}
 
 	return nil
+}
+
+// CheckDemandIDs check whether demand id contains.
+func (r ListResPlanDemandReq) CheckDemandIDs(demandID string) bool {
+	if len(r.DemandIDs) > 0 {
+		return slices.Contains(r.DemandIDs, demandID)
+	}
+	return true
+}
+
+// CheckObsProjects check whether obs project contains.
+func (r ListResPlanDemandReq) CheckObsProjects(obsProject enumor.ObsProject) bool {
+	if len(r.ObsProjects) > 0 {
+		return slices.Contains(r.ObsProjects, obsProject)
+	}
+	return true
+}
+
+// CheckDemandClasses check whether demand class contains.
+func (r ListResPlanDemandReq) CheckDemandClasses(demandClass enumor.DemandClass) bool {
+	if len(r.DemandClasses) > 0 {
+		return slices.Contains(r.DemandClasses, demandClass)
+	}
+	return true
+}
+
+// CheckDeviceClasses check whether device class contains.
+func (r ListResPlanDemandReq) CheckDeviceClasses(deviceClass string) bool {
+	if len(r.DeviceClasses) > 0 {
+		return slices.Contains(r.DeviceClasses, deviceClass)
+	}
+	return true
+}
+
+// CheckDeviceTypes check whether device type contains.
+func (r ListResPlanDemandReq) CheckDeviceTypes(deviceType string) bool {
+	if len(r.DeviceTypes) > 0 {
+		return slices.Contains(r.DeviceTypes, deviceType)
+	}
+	return true
+}
+
+// CheckRegionIDs check whether region id contains.
+func (r ListResPlanDemandReq) CheckRegionIDs(regionID string) bool {
+	if len(r.RegionIDs) > 0 {
+		return slices.Contains(r.RegionIDs, regionID)
+	}
+	return true
+}
+
+// CheckZoneIDs check whether zone id contains.
+func (r ListResPlanDemandReq) CheckZoneIDs(zoneID string) bool {
+	if len(r.ZoneIDs) > 0 {
+		return slices.Contains(r.ZoneIDs, zoneID)
+	}
+	return true
+}
+
+// CheckPlanTypes check whether plan type contains.
+func (r ListResPlanDemandReq) CheckPlanTypes(planType enumor.PlanType) bool {
+	if len(r.PlanTypes) > 0 {
+		return slices.Contains(r.PlanTypes, planType)
+	}
+	return true
 }
 
 // ListResPlanDemandResp is list resource plan demand response.

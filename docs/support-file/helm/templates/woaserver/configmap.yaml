@@ -103,3 +103,6 @@ data:
       syncBill: {{ .Values.rollingServer.syncBill }}
     caiche:
       {{- toYaml .Values.caiche | nindent 6 }}
+    resPlan:
+      reportPenaltyRatio: {{ .Values.resPlan.reportPenaltyRatio }}
+
