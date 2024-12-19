@@ -283,6 +283,11 @@ export default defineComponent({
           option: stages,
         };
       }
+      if (field.id === 'recycle_type') {
+        return {
+          useNameValue: true,
+        };
+      }
       return {
         option: field.option,
       };

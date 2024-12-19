@@ -4,11 +4,14 @@ import { useConfigRequirementStore, type IRequirementItem } from '@/store/config
 
 defineOptions({ name: 'hcm-form-req-type' });
 
-const props = withDefaults(defineProps<{ multiple?: boolean; clearable?: boolean; disabled?: boolean }>(), {
-  multiple: false,
-});
+const props = withDefaults(
+  defineProps<{ multiple?: boolean; clearable?: boolean; disabled?: boolean; useNameValue?: boolean }>(),
+  {
+    multiple: false,
+  },
+);
 
-const model = defineModel<number | number[]>();
+const model = defineModel<number | number[] | string | string[]>();
 const attrs = useAttrs();
 
 const list = ref<IRequirementItem[]>([]);
@@ -21,8 +24,12 @@ const localModel = computed({
     return model.value;
   },
   set(value) {
-    const newVal = Array.isArray(value) ? value.map((val) => Number(val)) : Number(value);
-    model.value = newVal;
+    if (!props.useNameValue) {
+      const newVal = Array.isArray(value) ? value.map((val) => Number(val)) : Number(value);
+      model.value = newVal;
+    } else {
+      model.value = value as string | string[];
+    }
   },
 });
 
@@ -40,7 +47,7 @@ watchEffect(async () => {
     :clearable="clearable"
     :multiple="multiple"
     :multiple-mode="multiple ? 'tag' : 'default'"
-    :id-key="'require_type'"
+    :id-key="!useNameValue ? 'require_type' : 'require_name'"
     :display-key="'require_name'"
     v-bind="attrs"
   />

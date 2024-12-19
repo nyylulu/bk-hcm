@@ -5,7 +5,17 @@ import { toArray } from '@/common/util';
 
 @Model('order/host-apply-search')
 export class HostApplySearch {
-  @Column('req-type', { name: '需求类型', index: 1 })
+  @Column('req-type', {
+    name: '需求类型',
+    meta: {
+      search: {
+        format: (value) => {
+          return toArray(value).map((val: string) => Number(val));
+        },
+      },
+    },
+    index: 1,
+  })
   require_type: number;
 
   @Column('req-stage', { name: '单据状态', index: 1 })

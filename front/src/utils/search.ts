@@ -55,7 +55,7 @@ export const convertValue = (
     return formatter(value);
   }
 
-  if (['number', 'business', 'req-type'].includes(type)) {
+  if (['number', 'business'].includes(type)) {
     if (Array.isArray(value)) {
       return value.map((val) => Number(val));
     }

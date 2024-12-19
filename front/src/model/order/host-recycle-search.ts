@@ -6,7 +6,7 @@ import { toArray } from '@/common/util';
 @Model('order/host-recycle-search')
 export class HostRecycleSearch {
   @Column('req-type', { name: '需求类型', index: 1 })
-  require_type: number;
+  recycle_type: string;
 
   @Column('string', {
     name: '单号',
