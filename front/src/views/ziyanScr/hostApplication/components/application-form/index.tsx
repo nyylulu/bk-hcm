@@ -1229,8 +1229,8 @@ export default defineComponent({
                   <Button
                     theme='primary'
                     text
-                    onClick={() => window.open(`#/business/resource-plan/add?bizs=${computedBiz.value}`, '_blank')}>
-                    报备资源预测
+                    onClick={() => window.open(`#/business/resource-plan?bizs=${computedBiz.value}`, '_blank')}>
+                    查看资源预测
                   </Button>
                 </Alert>
               </CommonCard>
@@ -1319,7 +1319,6 @@ export default defineComponent({
           {/* 增加资源需求 */}
           <Sideslider
             class='add-resource-requirements-sideslider'
-            renderDirective='if'
             width={1200}
             isShow={addResourceRequirements.value}
             title={title.value}
@@ -1807,8 +1806,7 @@ export default defineComponent({
             title='CVM一键申请'
             onClosed={() => {
               CAtriggerShow(false);
-            }}
-            renderDirective='if'>
+            }}>
             <applicationSideslider device={device.value} onOneApplication={OneClickApplication} />
           </Sideslider>
 
