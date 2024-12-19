@@ -218,7 +218,7 @@ export default defineComponent({
       exportTableToExcel(totalList, tableColumns, '设备销毁详情');
     };
     const preCheckDetail = ref(false);
-    const transferData = ref({});
+    const transferData = ref<{ suborderId?: string; ip?: string; page?: { start: number; limit: number } }>({});
     const application = (row) => {
       preCheckDetail.value = true;
       transferData.value = {
@@ -342,7 +342,9 @@ export default defineComponent({
               <CommonTable></CommonTable>
             </div>
           </div>
-          <execute-record v-model={preCheckDetail.value} dataInfo={transferData.value} />
+          {transferData.value?.suborderId && (
+            <execute-record v-model={preCheckDetail.value} dataInfo={transferData.value} />
+          )}
         </div>
       </>
     );

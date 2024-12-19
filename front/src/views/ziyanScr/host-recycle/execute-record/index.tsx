@@ -30,6 +30,7 @@ export default defineComponent({
       },
       requestOption: {
         dataPath: 'data.info',
+        immediate: false,
       },
       scrConfig: () => {
         return {
@@ -61,7 +62,7 @@ export default defineComponent({
         };
         getListData();
       },
-      { deep: true },
+      { deep: true, immediate: true },
     );
     const updateShowValue = () => {
       emit('update:modelValue', false);
