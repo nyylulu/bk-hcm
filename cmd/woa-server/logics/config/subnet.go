@@ -15,14 +15,17 @@ package config
 import (
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 )
 
@@ -189,37 +192,88 @@ func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to get cvm subnet info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to get crp cvm subnet info, code: %d, msg: %s, crpTraceID: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId, kt.Rid)
 		return fmt.Errorf("failed to get cvm subnet info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
-	for _, subnet := range resp.Result {
+	for _, subnetItem := range resp.Result {
 		filter := map[string]interface{}{
 			"region":      param.Region,
 			"zone":        param.Zone,
 			"vpc_id":      param.Vpc,
-			"subnet_id":   subnet.Id,
-			"subnet_name": subnet.Name,
+			"subnet_id":   subnetItem.Id,
+			"subnet_name": subnetItem.Name,
 		}
-		cnt, err := config.Operation().Subnet().CountSubnet(kt.Ctx, filter)
+		count, err := config.Operation().Subnet().CountSubnet(kt.Ctx, filter)
 		if err != nil {
-			logs.Errorf("failed to count subnet with filter: %+v, err: %v", filter, err)
+			logs.Errorf("failed to count subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
 			return err
 		}
-		if cnt <= 0 {
+		// 按云端返回的子网ID、子网名称能查到数据，说明已同步，用于多次执行同步的场景
+		if count > 0 {
+			continue
+		}
+
+		// 拉取所有符合条件的子网
+		filter = map[string]interface{}{
+			"region":    param.Region,
+			"zone":      param.Zone,
+			"vpc_id":    param.Vpc,
+			"subnet_id": subnetItem.Id,
+		}
+		page := metadata.BasePage{
+			Sort:  "id",
+			Start: 0,
+			Limit: pkg.BKMaxPageSize,
+		}
+		subnetList := make([]*types.Subnet, 0)
+		for {
+			list, err := config.Operation().Subnet().FindManySubnet(kt.Ctx, page, filter)
+			if err != nil {
+				logs.Errorf("failed to list subnet with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
+				return err
+			}
+
+			subnetList = append(subnetList, list...)
+			if len(list) < pkg.BKMaxPageSize {
+				break
+			}
+			page.Start += pkg.BKMaxPageSize
+		}
+
+		txnErr := dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
+			kt.Ctx = sc
+			// 清理旧的子网
+			for _, subnetInfo := range subnetList {
+				err = s.DeleteSubnet(kt, subnetInfo.BkInstId)
+				if err != nil {
+					logs.Errorf("failed to delete subnet, err: %v, subnetInstID: %d, param: %+v, subnetItem: %+v, "+
+						"rid: %s", err, subnetInfo.BkInstId, cvt.PtrToVal(param), cvt.PtrToVal(subnetItem), kt.Rid)
+					return err
+				}
+			}
+
+			// 插入新的子网
 			subnetCfg := &types.Subnet{
 				Region:     param.Region,
 				Zone:       param.Zone,
 				VpcId:      param.Vpc,
-				SubnetId:   subnet.Id,
-				SubnetName: subnet.Name,
+				SubnetId:   subnetItem.Id,
+				SubnetName: subnetItem.Name,
 				Enable:     true,
 				Comment:    "",
 			}
-			if _, err := s.CreateSubnet(kt, subnetCfg); err != nil {
-				logs.Errorf("failed to create subnet, err: %v", filter, err)
+			if _, err = s.CreateSubnet(kt, subnetCfg); err != nil {
+				logs.Errorf("failed to create subnet, err: %v, subnetOld: %+v, subnetCfg: %+v, rid: %s",
+					err, subnetList[0], cvt.PtrToVal(subnetCfg), kt.Rid)
 				return err
 			}
+			return nil
+		})
+		if txnErr != nil {
+			logs.Errorf("failed to create subnet with transation, err: %v, rid: %s", filter, txnErr, kt.Rid)
+			return txnErr
 		}
 	}
 

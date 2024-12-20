@@ -149,7 +149,8 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 
 	count := len(rst.Info)
 	if count != 1 {
-		logs.Errorf("get invalid capacity info num %d not equal 1, rid: %s", count, kt.Rid)
+		logs.Errorf("get invalid capacity info num %d not equal 1, input: %+v, rid: %s",
+			count, cvt.PtrToVal(input), kt.Rid)
 		return fmt.Errorf("get invalid capacity info num %d not equal 1", count)
 	}
 
@@ -175,10 +176,14 @@ func (c *capacity) UpdateCapacity(kt *kit.Kit, input *types.UpdateCapacityParam)
 		"capacity_flag": flag,
 	}
 
-	if err := config.Operation().CvmDevice().UpdateDevice(kt.Ctx, filter, update); err != nil {
-		logs.Errorf("failed to update capacity info in db, err: %v, %s", err, kt.Rid)
+	if err = config.Operation().CvmDevice().UpdateDevice(kt.Ctx, filter, update); err != nil {
+		logs.Errorf("failed to update capacity info in db, err: %v, flag: %d, input: %+v, rid: %s",
+			err, flag, cvt.PtrToVal(input), kt.Rid)
 		return err
 	}
+	// 记录日志方便排查问题
+	logs.Errorf("update device capacity success, maxNum: %d, flag: %d, input: %+v, crpResp: %+v, rid: %s",
+		maxNum, flag, cvt.PtrToVal(input), cvt.PtrToSlice(rst.Info), kt.Rid)
 
 	return nil
 }

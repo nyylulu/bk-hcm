@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
+	ressync "hcm/cmd/woa-server/logics/res-sync"
 	rslogic "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
@@ -62,4 +63,5 @@ type Capability struct {
 	GcLogic        gclogics.Logics
 	BizLogic       biz.Logics
 	DissolveLogic  dissolve.Logics
+	ResSyncLogic   ressync.Logics
 }

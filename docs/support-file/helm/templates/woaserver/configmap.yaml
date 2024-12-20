@@ -105,4 +105,5 @@ data:
       {{- toYaml .Values.caiche | nindent 6 }}
     resPlan:
       reportPenaltyRatio: {{ .Values.resPlan.reportPenaltyRatio }}
-
+    resourceSync:
+      {{- toYaml .Values.resourceSync | nindent 6 }}

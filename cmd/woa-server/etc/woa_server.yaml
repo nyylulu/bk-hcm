@@ -351,3 +351,10 @@ caiche:
 
 resPlan:
   reportPenaltyRatio: false
+
+# 开启自研云资源同步服务,单位:分钟
+resourceSync:
+  syncVpc: 30
+  syncSubnet: 30
+  syncCapacity: 360
+  syncLeftIP: 360

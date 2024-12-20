@@ -32,6 +32,7 @@ import (
 	disLogics "hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
+	ressynclogics "hcm/cmd/woa-server/logics/res-sync"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
@@ -46,6 +47,7 @@ import (
 	"hcm/cmd/woa-server/service/meta"
 	"hcm/cmd/woa-server/service/plan"
 	"hcm/cmd/woa-server/service/pool"
+	ressync "hcm/cmd/woa-server/service/res-sync"
 	rollingserver "hcm/cmd/woa-server/service/rolling-server"
 	"hcm/cmd/woa-server/service/task"
 	"hcm/cmd/woa-server/storage/dal/mongo"
@@ -97,6 +99,7 @@ type Service struct {
 	gcLogic       gclogics.Logics
 	bizLogic      biz.Logics
 	dissolveLogic disLogics.Logics
+	resSyncLogic ressynclogics.Logics
 }
 
 // NewService create a service instance.
@@ -297,9 +300,16 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
+	resSyncLogics, err := ressynclogics.New(sd, service.client, service.thirdCli)
+	if err != nil {
+		logs.Errorf("new resource sync logics failed, err: %v", err)
+		return nil, err
+	}
+
 	service.clientConf = cc.WoaServer()
 	service.recyclerIf = recyclerIf
 	service.operationIf = operationIf
+	service.resSyncLogic = resSyncLogics
 	return service, nil
 }
 
@@ -381,6 +391,7 @@ func (s *Service) apiSet() *restful.Container {
 		GcLogic:        s.gcLogic,
 		BizLogic:       s.bizLogic,
 		DissolveLogic:  s.dissolveLogic,
+		ResSyncLogic:   s.resSyncLogic,
 	}
 
 	config.InitService(c)
@@ -392,6 +403,7 @@ func (s *Service) apiSet() *restful.Container {
 	dissolve.InitService(c)
 	rollingserver.InitService(c)
 	greenchannel.InitService(c)
+	ressync.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

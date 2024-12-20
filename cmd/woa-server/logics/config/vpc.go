@@ -15,13 +15,16 @@ package config
 import (
 	"fmt"
 
+	"go.mongodb.org/mongo-driver/mongo"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	cvt "hcm/pkg/tools/converter"
 )
 
 // VpcIf provides management interface for operations of vpc config
@@ -145,38 +148,71 @@ func (v *vpc) SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error {
 
 	resp, err := v.cvm.QueryCvmVpc(kt.Ctx, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cvm vpc info, err: %v", err)
+		logs.Errorf("failed to get cvm vpc info, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to get cvm vpc info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
-		return fmt.Errorf("failed to get cvm vpc info, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to get cvm vpc info, code: %d, msg: %s, region: %s, crpTraceID: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, param.Region, resp.TraceId, kt.Rid)
+		return fmt.Errorf("failed to get cvm vpc info, code: %d, msg: %s, crpTraceID: %s", resp.Error.Code,
+			resp.Error.Message, resp.TraceId)
 	}
 
-	for _, vpc := range resp.Result {
+	for _, vpcItem := range resp.Result {
 		filter := map[string]interface{}{
 			"region":   param.Region,
-			"vpc_id":   vpc.Id,
-			"vpc_name": vpc.Name,
+			"vpc_id":   vpcItem.Id,
+			"vpc_name": vpcItem.Name,
 		}
-		cnt, err := config.Operation().Vpc().CountVpc(kt.Ctx, filter)
+		count, err := config.Operation().Vpc().CountVpc(kt.Ctx, filter)
 		if err != nil {
-			logs.Errorf("failed to count vpc with filter: %+v, err: %v", filter, err)
+			logs.Errorf("failed to count vpc with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
 			return err
 		}
-		if cnt <= 0 {
+		// 按云端返回的VPCID、VPC名称能查到数据，说明已同步，用于多次执行同步的场景
+		if count > 0 {
+			continue
+		}
+
+		listFilter := &mapstr.MapStr{
+			"region": param.Region,
+			"vpc_id": vpcItem.Id,
+		}
+		vpcList, err := config.Operation().Vpc().FindManyVpc(kt.Ctx, listFilter)
+		if err != nil {
+			logs.Errorf("failed to list vpc with filter: %+v, err: %v, rid: %s", filter, err, kt.Rid)
+			return err
+		}
+
+		txnErr := dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
+			kt.Ctx = sc
+			// 清理旧的VPC
+			for _, vpcInfo := range vpcList {
+				err = v.DeleteVpc(kt, vpcInfo.BkInstId)
+				if err != nil {
+					logs.Errorf("failed to delete vpc, err: %v, vpcInstID: %d, region: %s, vpcItem: %+v, rid: %s",
+						err, vpcInfo.BkInstId, param.Region, cvt.PtrToVal(vpcItem), kt.Rid)
+					return err
+				}
+			}
+
+			// 插入新的VPC
 			vpcCfg := &types.Vpc{
 				Region:  param.Region,
-				VpcId:   vpc.Id,
-				VpcName: vpc.Name,
+				VpcId:   vpcItem.Id,
+				VpcName: vpcItem.Name,
 			}
-			if _, err := v.CreateVpc(kt, vpcCfg); err != nil {
-				logs.Errorf("failed to create vpc, err: %v", filter, err)
+			if _, err = v.CreateVpc(kt, vpcCfg); err != nil {
+				logs.Errorf("failed to create vpc, err: %v, rid: %s", filter, err, kt.Rid)
 				return err
 			}
+			return nil
+		})
+		if txnErr != nil {
+			logs.Errorf("failed to create vpc with transation, err: %v, rid: %s", filter, txnErr, kt.Rid)
+			return txnErr
 		}
 	}
-
 	return nil
 }
