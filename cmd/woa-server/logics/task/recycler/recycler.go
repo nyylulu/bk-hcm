@@ -386,24 +386,51 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 	}
 
 	// 2. get host biz info
+	mapHostToRel, mapBizIdToBiz, mapModuleIdToModule, err := r.getBizModuleRelByHostIDs(kt, bkHostIds)
+	if err != nil {
+		return nil, err
+	}
+
+	// 3. fill host info
+	hostDetails := r.getHostDetails(kt, hostBase, mapHostToRel, mapBizIdToBiz, mapModuleIdToModule)
+
+	// 4. fill cvm info
+	if err = r.fillCvmInfo(kt, hostDetails); err != nil {
+		logs.Errorf("failed to fill cvm info, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return hostDetails, nil
+}
+
+func (r *recycler) getBizModuleRelByHostIDs(kt *kit.Kit, bkHostIds []int64) (map[int64]*cmdb.HostBizRel,
+	map[int64]*cmdb.BizInfo, map[int64]*cmdb.ModuleInfo, error) {
+
 	relations, err := r.getHostTopoInfo(bkHostIds)
 	if err != nil {
 		logs.Errorf("failed to get host detail info, for list host err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	bizIds := make([]int64, 0)
 	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
+	mapBizToModule := make(map[int64][]int64)
 	for _, rel := range relations {
 		bizIds = append(bizIds, rel.BkBizId)
 		mapHostToRel[rel.BkHostId] = rel
+
+		// 记录业务ID跟模块ID的映射
+		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
+			mapBizToModule[rel.BkBizId] = make([]int64, 0)
+		}
+		mapBizToModule[rel.BkBizId] = append(mapBizToModule[rel.BkBizId], rel.BkModuleId)
 	}
 	bizIds = util.IntArrayUnique(bizIds)
 
 	bizList, err := r.getBizInfo(bizIds)
 	if err != nil {
 		logs.Errorf("failed to get host detail info, for get business info err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	mapBizIdToBiz := make(map[int64]*cmdb.BizInfo)
@@ -411,13 +438,33 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 		mapBizIdToBiz[biz.BkBizId] = biz
 	}
 
-	// 3. fill host info
+	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
+	for bizId, moduleIds := range mapBizToModule {
+		moduleIdUniq := slice.Unique(moduleIds)
+		moduleList, err := r.getModuleInfo(kt, bizId, moduleIdUniq)
+		if err != nil {
+			logs.Errorf("failed to recycle check, for get module info err: %v, bizId: %d, moduleIds: %v, "+
+				"rid: %s", err, bizId, moduleIds, kt.Rid)
+			return nil, nil, nil, err
+		}
+		for _, module := range moduleList {
+			mapModuleIdToModule[module.BkModuleId] = module
+		}
+	}
+	return mapHostToRel, mapBizIdToBiz, mapModuleIdToModule, nil
+}
+
+func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
+	mapHostToRel map[int64]*cmdb.HostBizRel, mapBizIdToBiz map[int64]*cmdb.BizInfo,
+	mapModuleIdToModule map[int64]*cmdb.ModuleInfo) []*table.RecycleHost {
+
 	hostDetails := make([]*table.RecycleHost, 0)
-	cvmHosts := make([]*table.RecycleHost, 0)
 	for _, host := range hostBase {
 		bizId := int64(0)
+		moduleId := int64(0)
 		if rel, ok := mapHostToRel[host.BkHostID]; ok {
 			bizId = rel.BkBizId
+			moduleId = rel.BkModuleId
 		}
 		bizName := ""
 		if biz, ok := mapBizIdToBiz[bizId]; ok {
@@ -425,6 +472,10 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 		} else if bizId == 5000008 {
 			// 业务资源池
 			bizName = "业务资源池"
+		}
+		moduleName := ""
+		if module, ok := mapModuleIdToModule[moduleId]; ok {
+			moduleName = module.BkModuleName
 		}
 
 		hostDetail := &table.RecycleHost{
@@ -443,21 +494,21 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 			InputTime:       host.SvrInputTime,
 			SvrSourceTypeID: host.SvrSourceTypeID,
 		}
+		// 检查该主机是否可回收
+		checkInfo := &types.RecycleCheckInfo{
+			AssetID:     hostDetail.AssetID,
+			IP:          hostDetail.IP,
+			TopoModule:  moduleName,
+			Operator:    hostDetail.Operator,
+			BakOperator: hostDetail.BakOperator,
+		}
+		r.fillCheckInfo(checkInfo, kt.User, true)
+		hostDetail.Recyclable = checkInfo.Recyclable
+		hostDetail.RecycleMessage = checkInfo.Message
 
 		hostDetails = append(hostDetails, hostDetail)
-
-		if classifier.IsQcloudCvm(hostDetail.AssetID) {
-			cvmHosts = append(cvmHosts, hostDetail)
-		}
 	}
-
-	// fill cvm info
-	if err = r.fillCvmInfo(kt, cvmHosts); err != nil {
-		logs.Errorf("failed to fill cvm info, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	return hostDetails, nil
+	return hostDetails
 }
 
 // getHostBaseInfo get host base info in cc 3.0
@@ -852,7 +903,14 @@ func (r *recycler) initAndSaveHosts(ctx context.Context, order *table.RecycleOrd
 	return nil
 }
 
-func (r *recycler) fillCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) error {
+func (r *recycler) fillCvmInfo(kt *kit.Kit, hostDetails []*table.RecycleHost) error {
+	hosts := make([]*table.RecycleHost, 0)
+	for _, host := range hostDetails {
+		if classifier.IsQcloudCvm(host.AssetID) {
+			hosts = append(hosts, host)
+		}
+	}
+
 	// skip query cvm instance when input no hosts
 	if len(hosts) == 0 {
 		return nil
@@ -883,7 +941,8 @@ func (r *recycler) fillCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) error {
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("query cvm failed, code: %d, msg: %s, rid: %s", resp.Error.Code, resp.Error.Message, kt.Rid)
+		logs.Errorf("query cvm failed, code: %d, msg: %s, crpTraceID: %s, ipList: %v, rid: %s", resp.Error.Code,
+			resp.Error.Message, resp.TraceId, ipList, kt.Rid)
 		return fmt.Errorf("query cvm failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
@@ -1012,6 +1071,11 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 		if _, ok := bkBizIDMap[host.BizID]; !ok && len(bkBizIDMap) > 0 {
 			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
 				"the bizIDMap:%+v passed in", host.BizID, host.HostID, bkBizIDMap)
+		}
+		// 校验该主机是否可回收
+		if !host.Recyclable {
+			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d, hostID:%d, IP: %s, can not be recycled, "+
+				"message: %s", host.BizID, host.HostID, host.IP, host.RecycleMessage)
 		}
 
 		bizIds = append(bizIds, host.BizID)
