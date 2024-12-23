@@ -42,10 +42,9 @@ type RecycleMatchDateRange struct {
 
 // RecycleHostMatchInfo recycle host match info
 type RecycleHostMatchInfo struct {
-	*table.RecycleHost `json:",inline"`
-	IsMatched          bool   `json:"is_matched"`
-	AppliedRecordID    string `json:"applied_record_id"`
-	MatchAppliedCore   int64  `json:"match_applied_core"`
+	*table.RecycleHost    `json:",inline"`
+	IsMatched             bool             `json:"is_matched"`
+	MatchAppliedIDCoreMap map[string]int64 `json:"match_applied_id_core_map"`
 }
 
 // ReturnedRecordInfo returned record info
@@ -54,4 +53,16 @@ type ReturnedRecordInfo struct {
 	DeviceGroup     string             `json:"device_group"`
 	CoreType        enumor.CoreType    `json:"core_type"`
 	ReturnedWay     enumor.ReturnedWay `json:"returned_way"`
+}
+
+// AppliedRecordKey applied record key
+type AppliedRecordKey struct {
+	DeviceGroup string          `json:"device_group"`
+	CoreType    enumor.CoreType `json:"core_type"`
+}
+
+// AppliedRecordInfo applied record info
+type AppliedRecordInfo struct {
+	SumCpuCore       int64            `json:"sum_cpu_core"`
+	AppliedIDCoreMap map[string]int64 `json:"applied_id_core_map"`
 }
