@@ -20,12 +20,15 @@
 package metric
 
 import (
+	"bytes"
+	"io"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/tidwall/gjson"
 
 	"hcm/pkg/criteria/enumor"
 )
@@ -63,6 +66,54 @@ func GetZiyanRecordRoundTripper(next http.RoundTripper) promhttp.RoundTripperFun
 				"api_name":  action,
 				"http_code": code,
 			}).Observe(cost)
+		// 配合自研云多秘钥请求配置，记录秘钥请求，及其错误码
+		var ak = ""
+		authHeaders := req.Header["Authorization"]
+		if len(authHeaders) == 1 {
+			ak = GetTCloudSecretID(authHeaders[0])
+		}
+		var sdkErr = ""
+		if err == nil {
+			sdkErr, ret = tryReadError(ret)
+		}
+
+		ziyanLabels := prometheus.Labels{
+			"endpoint":        req.Host,
+			"region":          region,
+			"api_name":        action,
+			"http_code":       code,
+			"secret_id":       ak,
+			"tcloud_err_code": sdkErr,
+		}
+		cloudApiMetric.ziyanAkCounter.With(ziyanLabels).Inc()
 		return ret, err
 	}
+}
+
+func tryReadError(ret *http.Response) (string, *http.Response) {
+
+	var sdkErr = ""
+	// 尝试查询记录sdk错误
+	b, err := io.ReadAll(ret.Body)
+	if err != nil {
+		return "ReadBodyError", ret
+	}
+	sdkErr = gjson.GetBytes(b, "Response.Error.Code").String()
+	ret.Body = io.NopCloser(bytes.NewReader(b))
+	return sdkErr, ret
+}
+
+// GetTCloudSecretID 格式： TC3-HMAC-SHA256 Credential=xxxxxxxx/
+func GetTCloudSecretID(authHeader string) string {
+	prefix := "TC3-HMAC-SHA256 Credential="
+	prefixLength := len(prefix)
+	if !strings.HasPrefix(authHeader, prefix) {
+		return ""
+	}
+	// 	find first slash
+	idx := strings.IndexByte(authHeader, '/')
+	if idx == -1 {
+		return ""
+	}
+	return authHeader[prefixLength:idx]
 }

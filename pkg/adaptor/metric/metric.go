@@ -61,6 +61,17 @@ func InitCloudApiMetrics(reg prometheus.Registerer) {
 		}, []string{"vendor", "http_code", "api_name", "region", "endpoint"})
 	reg.MustRegister(m.errCounter)
 
+	ziyanAkskCounterOpt := prometheus.CounterOpts{
+		Namespace:   metrics.Namespace,
+		Subsystem:   metrics.CloudApiSubSys,
+		Name:        "ziyan_ak_usage_total",
+		Help:        "the usage of ziyan aksk",
+		ConstLabels: labels,
+	}
+	ziyanAkskLables := []string{"http_code", "api_name", "region", "endpoint", "secret_id", "tcloud_err_code"}
+	m.ziyanAkCounter = prometheus.NewCounterVec(ziyanAkskCounterOpt, ziyanAkskLables)
+	reg.MustRegister(m.ziyanAkCounter)
+
 	cloudApiMetric = m
 }
 
@@ -70,6 +81,9 @@ type metric struct {
 
 	// errCounter record the total error count request cloud API.
 	errCounter *prometheus.CounterVec
+
+	// ziyanAkCounter 记录自研云aksk轮询使用情况
+	ziyanAkCounter *prometheus.CounterVec
 }
 
 // GetTCloudRecordRoundTripper get record round tripper for tcloud
