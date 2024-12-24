@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0037,HCMVER=v1.7.1.2
 
     Notes:
     1. 裁撤主机表添加裁撤阶段字段
@@ -34,6 +34,6 @@ alter table recycle_host_info
     drop index idx_uk_inner_ip;
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.1.2' as `hcm_ver`, '0037' as `sql_ver`;
 
 COMMIT
