@@ -22,12 +22,13 @@ import type { ModelProperty } from '@/model/typings';
 import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostRecycleSearch } from '@/model/order/host-recycle-search';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 export default defineComponent({
   setup() {
     const router = useRouter();
     const userStore = useUserStore();
-    const { getBusinessApiPath, getBizsId } = useWhereAmI();
+    const { getBusinessApiPath } = useWhereAmI();
     const { t } = useI18n();
     const route = useRoute();
 
@@ -220,7 +221,7 @@ export default defineComponent({
     const enterDetail = (row: any) => {
       router.push({
         name: 'HostRecycleDocDetail',
-        query: { suborderId: row.suborder_id, bkBizId: getBizsId() },
+        query: { [GLOBAL_BIZS_KEY]: row.bk_biz_id, suborderId: row.suborder_id, bkBizId: row.bk_biz_id },
       });
     };
     const returnPreDetails = (row: any) => {

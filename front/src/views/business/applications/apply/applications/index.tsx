@@ -30,6 +30,7 @@ import type { ModelProperty } from '@/model/typings';
 import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearch } from '@/model/order/host-apply-search';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -94,7 +95,7 @@ export default defineComponent({
       let routeParams: RouteLocationRaw = {
         name: 'HostApplicationsDetail',
         params: { id: row.order_id },
-        query: { creator: row.bk_username, bkBizId: row.bk_biz_id },
+        query: { [GLOBAL_BIZS_KEY]: row.bk_biz_id, creator: row.bk_username, bkBizId: row.bk_biz_id },
       };
       if (row.stage === 'UNCOMMIT') {
         routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };
