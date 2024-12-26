@@ -206,6 +206,11 @@ func (act SyncAction) convertGcpBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 			newItem.Region = converter.PtrToVal(record.Region)
 			newItem.Zone = converter.PtrToVal(record.Zone)
 			newItem.DispatchProjectId = converter.PtrToVal(record.ProjectID)
+		} else {
+			// 某些账单是HCM生成的（如支持费），没有云上原始账单，也没有生成对应的Extension字段。
+			// 这里使用生成的产品名称填充，保证用户有一个可读的账单
+			newItem.ServiceDescription = item.HcProductName
+			newItem.ServiceId = item.HcProductCode
 		}
 		retList = append(retList, newItem)
 	}
