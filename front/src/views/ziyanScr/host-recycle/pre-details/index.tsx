@@ -165,7 +165,7 @@ export default defineComponent({
       exportTableToExcel(totalList, [{ label: 'IP', field: 'ip', width: 80 }, ...columns], '预检详情列表');
     };
     const openDetails = ref(false);
-    const transferData = ref({});
+    const transferData = ref<{ suborderId?: string; ip?: string; page?: { start: number; limit: number } }>({});
     const application = (row) => {
       openDetails.value = true;
       Object.assign(transferData.value, {
@@ -221,7 +221,9 @@ export default defineComponent({
             </div>
             <CommonTable />
           </div>
-          <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
+          {transferData.value?.suborderId && (
+            <execute-record v-model={openDetails.value} dataInfo={transferData.value} />
+          )}
         </div>
       </div>
     );
