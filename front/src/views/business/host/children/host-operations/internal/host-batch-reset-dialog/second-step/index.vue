@@ -39,16 +39,17 @@ const { formModel } = useFormModel<IFormModel>({ hosts: [], pwd: '', pwd_confirm
 const rules = {
   pwd: [
     {
-      validator: (value: string) => value.length >= 8 && value.length <= 30,
-      message: t('密码长度需要在8-30个字符之间'),
+      validator: (value: string) => value.length >= 8 && value.length <= 20,
+      message: '密码长度需要在8-20个字符之间',
       trigger: 'blur',
     },
     {
       validator: (value: string) => {
-        const pattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d|.*[!@$%^\-_=+[{}\]:,./?])[A-Za-z\d!@$%^\-_=+[{}\]:,./?]+$/;
+        // eslint-disable-next-line no-useless-escape
+        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{8,20}$/;
         return pattern.test(value);
       },
-      message: t('密码不符合复杂度要求'),
+      message: '密码不符合复杂度要求',
       trigger: 'blur',
     },
     {
@@ -64,16 +65,17 @@ const rules = {
   ],
   pwd_confirm: [
     {
-      validator: (value: string) => value.length >= 8 && value.length <= 30,
-      message: t('密码长度需要在8-30个字符之间'),
+      validator: (value: string) => value.length >= 8 && value.length <= 20,
+      message: '密码长度需要在8-20个字符之间',
       trigger: 'blur',
     },
     {
       validator: (value: string) => {
-        const pattern = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d|.*[!@$%^\-_=+[{}\]:,./?])[A-Za-z\d!@$%^\-_=+[{}\]:,./?]+$/;
+        // eslint-disable-next-line no-useless-escape
+        const pattern = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@#+_\-\[\]{}])[A-Za-z\d@#+_\-\[\]{}]{8,20}$/;
         return pattern.test(value);
       },
-      message: t('密码不符合复杂度要求'),
+      message: '密码不符合复杂度要求',
       trigger: 'blur',
     },
     {
