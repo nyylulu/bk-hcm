@@ -17,7 +17,7 @@ import Rerun from './children/rerun/rerun.vue';
 import Cancel from './children/cancel/cancel.vue';
 
 import { TASK_TYPE_NAME } from '../constants';
-import { TaskClbType, TaskDetailStatus } from '../typings';
+import { TaskClbType, TaskStatus, TaskDetailStatus } from '../typings';
 
 const taskStore = useTaskStore();
 const { getBizsId } = useWhereAmI();
@@ -58,7 +58,9 @@ const status = ref<ITaskStatusItem>();
 const counts = ref<ITaskCountItem>();
 
 const statusPoolIds = computed(() => {
-  return taskDetailList.value.filter((item) => [TaskDetailStatus.RUNNING].includes(item.state)).map((item) => item.id);
+  return taskDetailList.value
+    .filter((item) => [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(item.state))
+    .map((item) => item.id);
 });
 
 const fetchCountAndStatus = async () => {
@@ -82,6 +84,7 @@ const fetchCountAndStatus = async () => {
   // 更新本任务的状态与统计数据
   [counts.value] = countList;
   [status.value] = statusList;
+  taskDetails.value.state = status.value?.state;
 
   // 更新当前任务详情列表中数据的状态
   taskDetailList.value.forEach((row) => {
@@ -124,6 +127,13 @@ watch(
   },
   { immediate: true },
 );
+
+watch(status, (newStatus) => {
+  // 大任务的状态不是运行中，暂停轮询
+  if (newStatus.state !== TaskStatus.RUNNING) {
+    taskStatusPoll.pause();
+  }
+});
 
 watchEffect(async () => {
   const operations = taskDetails.value?.operations ?? [];

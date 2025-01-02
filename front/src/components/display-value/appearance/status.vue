@@ -59,7 +59,16 @@ const icon = computed(() => {
     &.running {
       width: 12px;
       height: 12px;
+      animation: spin 2s linear infinite;
     }
+  }
+}
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
   }
 }
 </style>

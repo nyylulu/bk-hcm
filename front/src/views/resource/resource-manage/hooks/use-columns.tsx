@@ -1162,6 +1162,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       },
     },
     {
+      label: '地域',
+      field: 'region',
+      isDefaultShow: true,
+      width: 150,
+      render: ({ cell, row }: { cell: string; row: { vendor: VendorEnum } }) => getRegionName(row.vendor, cell) || '--',
+      sort: true,
+    },
+    {
       label: '网络类型',
       field: 'lb_type',
       isDefaultShow: true,
@@ -1186,6 +1194,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '分配状态',
       field: 'bk_biz_id',
       isDefaultShow: true,
+      width: 100,
       notDisplayedInBusiness: true,
       render: ({ cell }: { cell: number }) => (
         <bk-tag
@@ -1202,6 +1211,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '删除保护',
       field: 'delete_protect',
       isDefaultShow: true,
+      width: 90,
       render: ({ cell }: { cell: boolean }) => (cell ? <bk-tag theme='success'>开启</bk-tag> : <bk-tag>关闭</bk-tag>),
       filter: {
         list: [
@@ -1214,6 +1224,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: 'IP版本',
       field: 'ip_version',
       isDefaultShow: true,
+      width: 90,
       render: ({ cell }: { cell: string }) => IP_VERSION_MAP[cell],
       sort: true,
       filter: {
@@ -1229,6 +1240,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '标签',
       field: 'tags',
       isDefaultShow: true,
+      width: 150,
       render: ({ cell }: { cell: any }) => formatTags(cell),
     },
     {
@@ -1241,13 +1253,6 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       filter: {
         list: [{ value: VendorEnum.TCLOUD, text: VendorMap[VendorEnum.TCLOUD] }],
       },
-    },
-    {
-      label: '地域',
-      field: 'region',
-      width: 120,
-      render: ({ cell, row }: { cell: string; row: { vendor: VendorEnum } }) => getRegionName(row.vendor, cell) || '--',
-      sort: true,
     },
     {
       label: '可用区域',

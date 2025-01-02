@@ -115,10 +115,10 @@ const handelDone = async (row: ITaskDetailItem) => {
 const handleValidate = async () => {
   const params: ITaskRerunParams = {
     bk_biz_id: props.info.bk_biz_id,
-    vendor: props.info.vendor,
+    vendor: props.info.vendors?.[0],
     operation_type: props.info.operations?.[0],
     data: {
-      account_id: props.info.account_id,
+      account_id: props.info.account_ids?.[0],
       region_ids: regionIds.value,
       details: [],
     },
@@ -181,7 +181,7 @@ const handleCancel = () => {
             :property="field"
             :value="baseInfo[field.id]"
             :display="{ ...field.meta?.display, on: 'info' }"
-            :vendor="baseInfo?.vendor"
+            :vendor="baseInfo?.vendors?.[0]"
           />
         </grid-item>
       </grid-container>
