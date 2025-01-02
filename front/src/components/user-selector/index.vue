@@ -64,6 +64,8 @@ const localModel = computed<string[]>({
 
 const userList = ref<IUserItem[]>([]);
 
+const tagInputRef = ref(null);
+
 const listTpl = (node: IUserItem, hl: (value: string) => string) => {
   const innerHTML = `${hl(node.username)}${node.display_name ? `(${hl(node.display_name)})` : ''}`;
   return h('div', { class: 'bk-selector-node' }, [
@@ -114,7 +116,16 @@ watchEffect(async () => {
       }
     }
 
-    userList.value = [...userList.value, ...existUserList, ...newUserList];
+    // 需要再次去重
+    const totalUserList = [...userList.value, ...existUserList, ...newUserList];
+    const uniqueUserList = totalUserList.reduce((acc, cur) => {
+      if (!acc.some((item) => item.username === cur.username)) {
+        acc.push(cur);
+      }
+      return acc;
+    }, []);
+
+    userList.value = uniqueUserList;
   }
 });
 
@@ -142,6 +153,9 @@ const handleClickMe = () => {
   } else {
     localModel.value = [userStore.username];
   }
+
+  // blur触发强制隐藏，由于组件的实现问题，不隐藏当只有一个“我”选项时会出现一个空白
+  tagInputRef.value?.handleBlur();
 };
 </script>
 
@@ -149,6 +163,7 @@ const handleClickMe = () => {
   <bk-tag-input
     class="user-selector"
     v-model="localModel"
+    ref="tagInputRef"
     :list="userList"
     :tpl="listTpl"
     :tag-tpl="tagTpl"
@@ -171,7 +186,7 @@ const handleClickMe = () => {
   >
     <template #suffix>
       <div class="suffix">
-        <div class="me" v-show="!userStore.searchLoading" @click="handleClickMe">我</div>
+        <div class="me" v-show="!userStore.searchLoading" @click.stop="handleClickMe">我</div>
         <div class="loading" v-show="userStore.searchLoading">
           <bk-loading :loading="userStore.searchLoading" mode="spin" size="mini" />
         </div>
