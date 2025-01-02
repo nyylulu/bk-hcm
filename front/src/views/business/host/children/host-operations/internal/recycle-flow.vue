@@ -13,6 +13,8 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 import RecycleTypeSelector from './recycle-type-selector.vue';
 import RecycleQuotaTips from '@/views/ziyanScr/rolling-server/recycle-quota-tips/index.vue';
+import type { IPreviewRecycleOrderItem } from '../typings';
+import { cloneDeep, isEqualWith } from 'lodash';
 
 const props = defineProps<{
   ips: string[];
@@ -30,7 +32,8 @@ const { pagination, handlePageLimitChange, handlePageValueChange } = usePaginati
 const steps = [{ title: '确认回收IP' }, { title: '回收配置' }, { title: '回收提交' }];
 const currentStep = ref(1);
 
-const preRecycleList = ref([]);
+const preRecycleList = ref<IPreviewRecycleOrderItem[]>([]);
+let originPreRecycleList: IPreviewRecycleOrderItem[] = [];
 const preRecycleLoading = ref(false);
 
 const settings = reactive({
@@ -93,24 +96,29 @@ const preRecycleColumns: Column[] = [
   {
     label: '回收类型',
     field: 'recycle_type',
-    render: ({ cell, row }: any) => {
-      return returnedWay.value === ReturnedWay.RESOURCE_POOL &&
-        (cell !== '滚服项目' || (row.originRecycleType !== undefined && row.originRecycleType !== '滚服项目'))
-        ? h(RecycleTypeSelector, {
-            value: row.originRecycleType || cell,
-            onChange: (v) => {
-              if (!row.isRecycleTypeChange) {
-                row.isRecycleTypeChange = true;
-                row.originRecycleType = cell; // 记录原始值
-              } else {
-                if (v === row.originRecycleType) {
-                  row.isRecycleTypeChange = false;
-                }
-              }
-              row.recycle_type = v;
-            },
-          })
-        : cell;
+    render: ({ cell, index }: any) => {
+      const origin = originPreRecycleList[index];
+      const selectionIdx = selections.value.findIndex(
+        (item: IPreviewRecycleOrderItem) => item.suborder_id === origin.suborder_id,
+      );
+
+      if (returnedWay.value === ReturnedWay.RESOURCE_POOL && origin.recycle_type !== '滚服项目') {
+        const handleChange = (v: string) => {
+          // 修改表格table数据
+          preRecycleList.value[index].recycle_type = v;
+          // 如果改变的是勾选的行，需要同步更新勾选列表
+          if (selectionIdx !== -1) {
+            selections.value[selectionIdx].recycle_type = v;
+          }
+        };
+
+        return h(RecycleTypeSelector, {
+          originValue: origin.recycle_type,
+          onChange: handleChange,
+        });
+      }
+
+      return cell;
     },
   },
   {
@@ -184,6 +192,8 @@ const getPreRecycleList = async () => {
       data: { info = [] },
     } = await scrStore.getPreRecycleList(params);
     preRecycleList.value = info;
+
+    originPreRecycleList = cloneDeep(info);
   } finally {
     preRecycleLoading.value = false;
   }
@@ -244,7 +254,18 @@ const isFirstStep = () => {
 // rolling-server
 const rollingServerStore = useRollingServerStore();
 const rollingServerQuotaStore = useRollingServerQuotaStore();
-const isSelectionRecycleTypeChange = computed(() => selections.value.some((item) => item.isRecycleTypeChange));
+const isSelectionRecycleTypeChange = () => {
+  // 勾选项所对应的原始数据
+  const selectedSuborderIds = new Set(selections.value.map((selection) => selection.suborder_id));
+  const originSelections = originPreRecycleList.filter((item) => selectedSuborderIds.has(item.suborder_id));
+
+  return !isEqualWith(selections.value, originSelections, (objValue, othValue) => {
+    if (objValue && othValue) {
+      return objValue.recycle_type === othValue.recycle_type; // 只比较 recycle_type 字段
+    }
+    return false; // 如果任一值为未定义，返回 false 表示不相等
+  });
+};
 const returnedWay = computed(() => {
   // 不会出现多业务的场景
   return !!rollingServerStore.resPollBusinessIds.includes(getBizsId()) ? ReturnedWay.RESOURCE_POOL : ReturnedWay.CRP;

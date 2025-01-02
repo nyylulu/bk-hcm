@@ -1,15 +1,20 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue';
+import { ref, watch, watchEffect } from 'vue';
 import { ModelProperty } from '@/model/typings';
 
 defineOptions({ name: 'recycle-type-selector' });
-const props = defineProps<{ value: string }>();
+const props = defineProps<{ originValue: string }>();
 const emit = defineEmits(['change']);
 
-const selected = ref<string>(props.value);
+const selected = ref<string>(props.originValue);
 const option = ref<ModelProperty['option']>({
-  [props.value]: props.value,
-  滚服项目: '滚服项目',
+  [props.originValue]: props.originValue,
+});
+
+watchEffect(() => {
+  if (props.originValue !== '滚服项目') {
+    option.value = { [props.originValue]: props.originValue, 滚服项目: '滚服项目' };
+  }
 });
 
 watch(selected, (v) => {
