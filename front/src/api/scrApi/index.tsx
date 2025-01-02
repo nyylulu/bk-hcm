@@ -215,9 +215,9 @@ const createCvmDevice = async (params: ICvmDeviceCreateModel) => {
   return data;
 };
 /** 资源回收单据执行接口 */
-const startRecycleList = async (orderId) => {
+const startRecycleList = async (suborder_id: string[]) => {
   const data = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/task/start/recycle/order`, {
-    order_id: orderId,
+    suborder_id,
   });
   return data;
 };

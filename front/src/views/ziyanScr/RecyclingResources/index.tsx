@@ -217,8 +217,8 @@ export default defineComponent({
       };
     };
     const handleConfirm = async () => {
-      const orderId = selectedHosts.value.map((item) => item.order_id);
-      const { result } = await apiService.startRecycleList(orderId);
+      const suborder_id = selectedHosts.value.map((item) => item.suborder_id);
+      const { result } = await apiService.startRecycleList(suborder_id);
       if (result) {
         takeSnapshot();
         router.push({
