@@ -285,7 +285,7 @@ export default defineComponent({
                 <span class={'value'}>{computedTotalMemory.value}</span>
               </p>
               <p class={'item'}>
-                <span class={'label'}>{t('云硬盘调整量(GB))：')}</span>
+                <span class={'label'}>{t('云硬盘调整量(GB)：')}</span>
                 <span class={'value'}>{computedTotalDiskGB.value}</span>
               </p>
             </div>
@@ -343,7 +343,7 @@ export default defineComponent({
                           {timeRange.year_month_week.year}年{timeRange.year_month_week.month}月W
                           {timeRange.year_month_week.week}
                         </span>
-                        ,需要在
+                        ，需要在
                         <span class={'time-txt'}>
                           {timeStrictRange.value.start}~{timeStrictRange.value.end}
                         </span>

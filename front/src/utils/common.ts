@@ -319,7 +319,8 @@ const isPortValid = (text: string) => {
 };
 
 const formatDisplayNumber = (value: string | number, fractionDigits = 2) => {
-  if (value === undefined || value === null || isNaN(Number(value))) return '--';
+  if (typeof value === 'string' && isNaN(Number(value))) return value;
+  if (value === undefined || value === null) return '--';
   return Number(Number(value).toFixed(fractionDigits));
 };
 
