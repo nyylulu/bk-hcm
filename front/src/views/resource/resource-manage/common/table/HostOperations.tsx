@@ -123,7 +123,7 @@ export default defineComponent({
         },
         {
           field: 'name',
-          label: '主机名称',
+          label: '实例名称',
         },
         {
           field: 'region',

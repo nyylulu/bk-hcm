@@ -3207,7 +3207,7 @@ export default (type: string, isSimpleShow = false) => {
       render: ({ cell, row }: { cell: string; row: { vendor: VendorEnum } }) => getRegionName(row.vendor, cell) || '--',
     },
     {
-      label: '主机名称',
+      label: '实例名称',
       field: 'name',
       sort: true,
       isDefaultShow: true,

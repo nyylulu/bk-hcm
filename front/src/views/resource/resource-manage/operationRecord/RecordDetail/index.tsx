@@ -38,7 +38,7 @@ export default defineComponent({
             id: 'public_ip_addresses',
           },
           {
-            name: '主机名称',
+            name: '实例名称',
             id: 'inst_name',
           },
           {
@@ -68,7 +68,7 @@ export default defineComponent({
             },
           },
           {
-            label: '主机名称',
+            label: '实例名称',
             field: 'inst_name',
           },
           {

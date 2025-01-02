@@ -24,7 +24,7 @@ const isResettable = computed(() => selected.value === radios[0].label);
 
 const searchData = computed(() => [
   { id: 'private_ip_address', name: t('内网IP') },
-  { id: 'bk_host_name', name: t('主机名称') },
+  { id: 'bk_host_name', name: t('实例名称') },
   { id: 'region', name: t('地域') },
 ]);
 const searchValue = ref();

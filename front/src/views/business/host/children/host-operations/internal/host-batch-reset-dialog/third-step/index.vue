@@ -46,7 +46,7 @@ const expandRowColumns: ModelPropertyColumn[] = [
   { id: 'bk_asset_id', name: t('固资号'), type: 'string', width: 150 },
   { id: 'private_ip_address', name: t('内网IP'), type: 'string' },
   { id: 'public_ip_address', name: t('外网IP'), type: 'string' },
-  { id: 'bk_host_name', name: t('主机名称'), type: 'string' },
+  { id: 'bk_host_name', name: t('实例名称'), type: 'string' },
   { id: 'region', name: t('地域'), type: 'region' },
   { id: 'zone', name: t('可用区'), type: 'string' },
   { id: 'device_type', name: t('机型'), type: 'string', width: 150 },

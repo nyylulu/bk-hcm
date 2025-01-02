@@ -11,10 +11,6 @@ const optionMap = new Map<ResourceTypeEnum, ISearchItem[]>();
 
 export const base: ISearchItem[] = [
   {
-    name: '名称',
-    id: 'name',
-  },
-  {
     name: '云厂商',
     id: 'vendor',
     multiple: true,
@@ -41,6 +37,10 @@ export const cvm: ISearchItem[] = [
   {
     name: '主机ID',
     id: 'cloud_id',
+  },
+  {
+    name: '实例名称',
+    id: 'name',
   },
   ...base,
   ...[
