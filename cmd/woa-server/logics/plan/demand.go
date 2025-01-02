@@ -312,10 +312,13 @@ func convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.ListResPlanDemandRe
 			planAppliedCore[demandKey] -= demandAppliedCpuCore
 
 			deviceCpuCore := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].CpuCore)
+			deviceMemory := decimal.NewFromInt(deviceTypes[demandItem.DeviceType].Memory)
 			demandItem.AppliedOS = decimal.NewFromInt(demandAppliedCpuCore).Div(deviceCpuCore)
+			demandItem.AppliedMemory = demandItem.AppliedOS.Mul(deviceMemory).IntPart()
 		}
 		demandItem.RemainedOS = demandItem.TotalOS.Sub(demandItem.AppliedOS)
 		demandItem.RemainedCpuCore = demandItem.TotalCpuCore - demandItem.AppliedCpuCore
+		demandItem.RemainedMemory = demandItem.TotalMemory - demandItem.AppliedMemory
 
 		// 不在筛选范围内的，过滤
 		if !demandBelongListReq(demandItem, req) {
@@ -398,6 +401,7 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		AppliedCpuCore:  0,
 		TotalMemory:     cvt.PtrToVal(table.Memory),
 		TotalDiskSize:   cvt.PtrToVal(table.DiskSize),
+		RemainedDiskSize: cvt.PtrToVal(table.DiskSize),
 		RegionID:        table.RegionID,
 		RegionName:      table.RegionName,
 		ZoneID:          table.ZoneID,

@@ -251,6 +251,15 @@ type ResPlanConsumePool map[ResPlanPoolKeyV2]int64
 // ResPlanPoolMatch resource plan demand match.
 type ResPlanPoolMatch map[ResPlanPoolKeyV2]map[string]int64
 
+// AdjustAbleRemainObj adjust able resource plan remained avail cpu core.
+type AdjustAbleRemainObj struct {
+	OriginDemand *cvmapi.CvmCbsPlanQueryItem
+	AdjustType   enumor.CrpAdjustType
+	// expectTime 当 adjustType 为 CrpAdjustTypeDelay 时，记录最新的期望交付时间
+	ExpectTime  string
+	WillConsume int64
+}
+
 // StrUnionFind string union find struct.
 type StrUnionFind struct {
 	idx    []string

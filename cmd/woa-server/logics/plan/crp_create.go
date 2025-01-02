@@ -289,6 +289,7 @@ func (c *Controller) constructCrpAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cv
 		logs.Warnf("failed to construct adjust desc, unsupported demand class: %s, rid: %s", ticket.DemandClass, kt.Rid)
 	}
 
+	adjCRPDemandsRst := make(map[string]*AdjustAbleRemainObj)
 	for _, demand := range ticket.Demands {
 		if demand.Original == nil {
 			logs.Errorf("failed to construct adjust request, demand original is nil, rid: %s", kt.Rid)
@@ -312,17 +313,26 @@ func (c *Controller) constructCrpAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cv
 			return nil, err
 		}
 
-		srcItem, updatedItem, err := c.constructAdjustDemandDetails(kt, ticket.Type, ticket.PlanProductID,
-			ticket.PlanProductName, adjustAbleDemands, demand)
+		// 预处理CRP中预测的调整结果，以及给出调整后追加的更新请求
+		updatedItem, err := c.constructAdjustDemandDetails(kt, ticket, demand, adjustAbleDemands, adjCRPDemandsRst)
 		if err != nil {
 			logs.Errorf("failed to construct adjust demand details, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
-		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem...)
 		if updatedItem != nil {
-			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem...)
+			adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem)
 		}
+	}
+
+	for _, adjustObj := range adjCRPDemandsRst {
+		srcItem, updatedItem, err := c.constructAdjustUpdatedData(kt, adjustObj)
+		if err != nil {
+			logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		adjustReq.Params.SrcData = append(adjustReq.Params.SrcData, srcItem)
+		adjustReq.Params.UpdatedData = append(adjustReq.Params.UpdatedData, updatedItem)
 	}
 
 	return adjustReq, nil
@@ -330,12 +340,13 @@ func (c *Controller) constructCrpAdjustReq(kt *kit.Kit, ticket *TicketInfo) (*cv
 
 // constructAdjustDemandDetails 构造调整预测请求参数
 // 因crp不支持部分调整，这里通过将crp中的预测（可能有多条）调减调整的原始量，再在crp中追加一条调整的目标量，来间接实现部分调整。
-func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor.RPTicketType, planProductID int64,
-	planProductName string, adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
-	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
+// 对crp数据的调减记录在入参 adjCRPDemandsRst map中，上层调用时需注意入参 adjCRPDemandsRst 会被本方法修改
+func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticket *TicketInfo, demand rpt.ResPlanDemand,
+	adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, adjCRPDemandsRst map[string]*AdjustAbleRemainObj) (
+	*cvmapi.AdjustUpdatedData, error) {
 
 	var adjustType enumor.CrpAdjustType
-	switch ticketType {
+	switch ticket.Type {
 	case enumor.RPTicketTypeAdjust:
 		adjustType = enumor.CrpAdjustTypeUpdate
 		if demand.Updated.ExpectTime != demand.Original.ExpectTime {
@@ -345,37 +356,30 @@ func (c *Controller) constructAdjustDemandDetails(kt *kit.Kit, ticketType enumor
 		// 我们的删除对crp来说是部分调减
 		adjustType = enumor.CrpAdjustTypeUpdate
 	default:
-		logs.Errorf("unsupported ticket type: %s， rid: %s", ticketType, kt.Rid)
-		return nil, nil, errors.New("unsupported ticket type")
+		logs.Errorf("unsupported ticket type: %s， rid: %s", ticket.Type, kt.Rid)
+		return nil, errors.New("unsupported ticket type")
 	}
 
-	// 构造请求，将crp中的预测调减调整的原始量
-	srcItems, updatedItems, err := c.constructAdjustUpdatedData(kt, adjustType, adjustAbleCrpDemands, demand)
+	// 预处理，计算crp中的预测调减结果
+	adjCRPDemandsRst, err := c.prePrepareAdjustAbleData(kt, adjustType, adjustAbleCrpDemands, adjCRPDemandsRst, demand)
 	if err != nil {
-		logs.Errorf("failed to construct adjust updated data, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, err
-	}
-
-	if len(srcItems) == 0 {
-		logs.Errorf("failed to construct adjust data, src items is empty, demand origin: %+v, demand update: %v, "+
-			"rid: %s", demand.Original, demand.Updated, kt.Rid)
-		return nil, nil, errors.New("CRP has no resource plan that can be used for adjust")
+		logs.Errorf("failed to pre prepare adjust able data, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	// 加急延期、删除时不追加预测
-	if adjustType == enumor.CrpAdjustTypeDelay || ticketType == enumor.RPTicketTypeDelete {
-		return srcItems, updatedItems, nil
+	if adjustType == enumor.CrpAdjustTypeDelay || ticket.Type == enumor.RPTicketTypeDelete {
+		return nil, nil
 	}
 
 	// 追加一条等于调整目标量的预测
-	addItem, err := c.constructAdjustAppendData(kt, planProductID, planProductName, demand)
+	addItem, err := c.constructAdjustAppendData(kt, ticket.PlanProductID, ticket.PlanProductName, demand)
 	if err != nil {
 		logs.Errorf("failed to construct adjust append data, err: %v, rid: %s", err, kt.Rid)
-		return nil, nil, err
+		return nil, err
 	}
-	updatedItems = append(updatedItems, addItem)
 
-	return srcItems, updatedItems, nil
+	return addItem, nil
 }
 
 // getCrpDemandMap get crp demand id and detail map.
@@ -400,16 +404,12 @@ func (c *Controller) getCrpDemandMap(kt *kit.Kit, crpDemandIDs []int64) (map[int
 	return crpDemandMap, nil
 }
 
-// constructAdjustUpdatedData construct adjust updated data.
-// if adjust type is update, updated item are normal.
-// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with OriginOs.
-// if adjust type is cancel, error.
-func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
-	adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, demand rpt.ResPlanDemand) (
-	[]*cvmapi.AdjustSrcData, []*cvmapi.AdjustUpdatedData, error) {
-
-	srcItems := make([]*cvmapi.AdjustSrcData, 0)
-	updatedItems := make([]*cvmapi.AdjustUpdatedData, 0)
+// prePrepareAdjustAbleData 预处理可调减的数据.
+// 适用于多个子订单会重复调整到同一条预测数据的场景，先将所有可能的影响汇总.
+// 再通过 constructAdjustUpdatedData 生成最终的调整请求
+func (c *Controller) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.CrpAdjustType,
+	adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, adjustDemandsRemainAvail map[string]*AdjustAbleRemainObj,
+	demand rpt.ResPlanDemand) (map[string]*AdjustAbleRemainObj, error) {
 
 	// 遍历可用于调减的crp预测，凑齐调减总量
 	needCpuCores := demand.Original.Cvm.CpuCore
@@ -418,61 +418,95 @@ func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustType enumor.C
 			break
 		}
 
-		canConsume := min(needCpuCores, adjustAbleD.RealCoreAmount)
+		remainedCpuCores := adjustAbleD.RealCoreAmount
+		if _, ok := adjustDemandsRemainAvail[adjustAbleD.SliceId]; ok {
+			remainedCpuCores -= adjustDemandsRemainAvail[adjustAbleD.SliceId].WillConsume
+		}
+
+		canConsume := min(needCpuCores, remainedCpuCores)
 		// CvmAmount虽然理论上大于等于RealCoreAmount，但是为确保后续除法计算不出异常，判断下CvmAmount的大小
 		if canConsume <= 0 || adjustAbleD.CvmAmount == 0 {
 			continue
 		}
 
-		deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
-		// 和CRP确认保留2位小数可以，但是肯定会存在误差
-		willChangeCvm, err := math.RoundToDecimalPlaces(float64(canConsume)/deviceCore, 2)
-		if err != nil {
-			logs.Warnf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
-				"rid: %s", err, adjustAbleD.DemandId, float64(canConsume)/deviceCore, kt.Rid)
+		if _, ok := adjustDemandsRemainAvail[adjustAbleD.SliceId]; !ok {
+			adjustDemandsRemainAvail[adjustAbleD.SliceId] = &AdjustAbleRemainObj{
+				OriginDemand: adjustAbleD.Clone(),
+				AdjustType:   adjustType,
+				ExpectTime:   demand.Updated.ExpectTime,
+			}
+		}
+		adjustAbleRemain := adjustDemandsRemainAvail[adjustAbleD.SliceId]
+
+		if adjustType != adjustAbleRemain.AdjustType {
+			logs.Warnf("adjust type is not eq, need adjust: %+v, adjust type: %s, slice: %s, rid: %s",
+				converter.PtrToVal(demand.Original), adjustType, adjustAbleD.SliceId, kt.Rid)
 			continue
 		}
 
+		if adjustType == enumor.CrpAdjustTypeDelay && demand.Updated.ExpectTime != adjustAbleRemain.ExpectTime {
+			logs.Warnf("adjust type is delay, but expect time is not eq, need adjust: %+v, slice: %s, rid: %s",
+				converter.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
+			continue
+		}
+
+		adjustAbleRemain.WillConsume += canConsume
 		needCpuCores -= canConsume
-
-		srcItems = append(srcItems, &cvmapi.AdjustSrcData{
-			AdjustType:          string(adjustType),
-			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
-		})
-
-		updatedItem := &cvmapi.AdjustUpdatedData{
-			AdjustType:          string(adjustType),
-			CvmCbsPlanQueryItem: adjustAbleD.Clone(),
-		}
-
-		switch adjustType {
-		case enumor.CrpAdjustTypeUpdate:
-			// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
-			updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
-			updatedItem.CoreAmount -= canConsume
-		case enumor.CrpAdjustTypeDelay:
-			updatedItem.UseTime = demand.Updated.ExpectTime
-			updatedItem.TimeAdjustCvmAmount = willChangeCvm
-		default:
-			logs.Errorf("failed to construct adjust updated data. unsupported adjust type: %s， rid: %s", adjustType,
-				kt.Rid)
-			return nil, nil, fmt.Errorf("unsupported adjust type: %s", adjustType)
-		}
-
-		updatedItems = append(updatedItems, updatedItem)
-
-		// 避免该预测在其他ticket子变动中被重复消费
-		adjustAbleD.RealCoreAmount -= canConsume
 	}
 
 	if needCpuCores > 0 {
 		logs.Errorf("crp demand remained is not enough to deduction, adjust: %+v, need cpu cores: %d, rid: %s",
 			demand.Original.Cvm, needCpuCores, kt.Rid)
-		return nil, nil, fmt.Errorf("crp demand remained is not enough to deduction, adjust cores: %d, need cores: %d",
+		return nil, fmt.Errorf("crp demand remained is not enough to deduction, adjust cores: %d, need cores: %d",
 			demand.Original.Cvm.CpuCore, needCpuCores)
 	}
 
-	return srcItems, updatedItems, nil
+	return adjustDemandsRemainAvail, nil
+}
+
+// constructAdjustUpdatedData construct adjust updated data.
+// if adjust type is update, updated item are normal.
+// if adjust type is delay, updated will fill parameter TimeAdjustCvmAmount with OriginOs.
+// if adjust type is cancel, error.
+func (c *Controller) constructAdjustUpdatedData(kt *kit.Kit, adjustObj *AdjustAbleRemainObj) (
+	*cvmapi.AdjustSrcData, *cvmapi.AdjustUpdatedData, error) {
+
+	adjustAbleD := adjustObj.OriginDemand
+	willConsume := adjustObj.WillConsume
+
+	deviceCore := float64(adjustAbleD.CoreAmount) / adjustAbleD.CvmAmount
+	// 和CRP确认保留2位小数可以，但是肯定会存在误差
+	willChangeCvm, err := math.RoundToDecimalPlaces(float64(willConsume)/deviceCore, 2)
+	if err != nil {
+		logs.Errorf("failed to round change cvm to 2 decimal places, err: %v, crp_demand:%s, change cvm: %f, "+
+			"rid: %s", err, adjustAbleD.DemandId, float64(willConsume)/deviceCore, kt.Rid)
+		return nil, nil, err
+	}
+
+	srcItem := &cvmapi.AdjustSrcData{
+		AdjustType:          string(adjustObj.AdjustType),
+		CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+	}
+	updatedItem := &cvmapi.AdjustUpdatedData{
+		AdjustType:          string(adjustObj.AdjustType),
+		CvmCbsPlanQueryItem: adjustAbleD.Clone(),
+	}
+
+	switch adjustObj.AdjustType {
+	case enumor.CrpAdjustTypeUpdate:
+		// TODO 硬盘跟机器大小毫无关系，且预测扣除时也不考虑硬盘大小，这里先不进行硬盘的扣除，避免出现负数；但是CBS类型的调减会没有效果
+		updatedItem.CvmAmount = max(updatedItem.CvmAmount-willChangeCvm, 0)
+		updatedItem.CoreAmount -= willConsume
+	case enumor.CrpAdjustTypeDelay:
+		updatedItem.UseTime = adjustObj.ExpectTime
+		updatedItem.TimeAdjustCvmAmount = willChangeCvm
+	default:
+		logs.Errorf("failed to construct adjust updated data. unsupported adjust type: %s, rid: %s",
+			adjustObj.AdjustType, kt.Rid)
+		return nil, nil, fmt.Errorf("unsupported adjust type: %s", adjustObj.AdjustType)
+	}
+
+	return srcItem, updatedItem, nil
 }
 
 // constructAdjustAppendData construct adjust append data.
