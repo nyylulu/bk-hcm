@@ -176,8 +176,8 @@ export default defineComponent({
           }));
           await scrStore.startRecycleOrderByRecycleType({ suborder_id_types });
         } else {
-          const orderIds = ziyanRecycleSelected.value.map((item) => item.order_id);
-          await scrStore.startRecycleOrder({ order_id: orderIds });
+          const suborder_id = ziyanRecycleSelected.value.map((item) => item.suborder_id);
+          await scrStore.startRecycleOrder({ suborder_id });
         }
         Message({ message: '操作成功', theme: 'success' });
         props.onFinished?.('confirm');

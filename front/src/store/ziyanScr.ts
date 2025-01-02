@@ -205,7 +205,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
   };
 
   // 资源回收单据执行接口
-  const startRecycleOrder = (data: { order_id: number[] }) => {
+  const startRecycleOrder = (data: { suborder_id: string[] }) => {
     return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/${getBusinessApiPath()}task/start/recycle/order`, data);
   };
 
