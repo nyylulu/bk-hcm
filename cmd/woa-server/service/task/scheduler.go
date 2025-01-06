@@ -262,13 +262,9 @@ func (s *service) GetBizApplyAuditCrp(cts *rest.Contexts) (any, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
 	}
 
-	resAttr := meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: applyOrders[0].BkBizId,
-	}
-	err = s.authorizer.AuthorizeWithPerm(cts.Kit, resAttr)
-	if err != nil {
-		logs.Errorf("failed to check get apply audit crp, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
+	// 校验主机申请单的业务ID
+	if applyOrders[0].BkBizId != bkBizID {
+		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("apply order not found"))
 	}
 
 	return s.getApplyAuditCrp(cts.Kit, req)
