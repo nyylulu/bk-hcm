@@ -35,7 +35,7 @@ type RespError struct {
 // OrderCreateResp cvm create order response
 type OrderCreateResp struct {
 	RespMeta `json:",inline"`
-	Result   *OrderCreateRst `json:"result"`
+	Result   OrderCreateRst `json:"result"`
 }
 
 // OrderCreateRst cvm create order result

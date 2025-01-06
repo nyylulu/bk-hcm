@@ -22,6 +22,7 @@ package apply
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -81,6 +82,12 @@ func (r *applyRecoverer) recoverApplyTickets(kt *kit.Kit) error {
 	}
 
 	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logs.Errorf("[hcm server panic], err: %v, rid: %s, debug strace: %s", err, kt.Rid, debug.Stack())
+			}
+		}()
+
 		if err := r.recoverAuditTicket(kt, auditTickets); err != nil {
 			logs.Errorf("failed to recover apply ticket with AUDIT stage, err: %v, rid: %s", err, kt.Rid)
 		}

@@ -21,6 +21,7 @@ package recycle
 
 import (
 	"fmt"
+	"runtime/debug"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -59,6 +60,7 @@ func StartRecover(kt *kit.Kit, itsmCli itsm.Client, recycler recycler.Interface,
 		logs.Errorf("recycle recover: failed to start recycle recover, err: %v, rid: %s", err, subKit.Rid)
 		return err
 	}
+
 	return nil
 }
 
@@ -79,6 +81,12 @@ func (r *recycleRecoverer) recoverRecycleTickets(kt *kit.Kit) error {
 
 // recoverRunningOrders 恢复未完成回收订单
 func (r *recycleRecoverer) recoverRunningOrders(kt *kit.Kit, orders []*table.RecycleOrder) {
+	defer func() {
+		if err := recover(); err != nil {
+			logs.Errorf("[hcm server panic], err: %v, rid: %s, debug strace: %s", err, kt.Rid, debug.Stack())
+		}
+	}()
+
 	logs.Infof("start recover running recycle orders, orderNum: %d, rid: %s", len(orders), kt.Rid)
 
 	dealChan := make(chan struct{}, recovertask.ApplyGoroutinesNum)

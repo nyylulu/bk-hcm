@@ -193,12 +193,11 @@ func (r *Returner) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 		}
 	}
 
-	// 故障前未创建return单，恢复后成功创建return单(兼容crp已销毁的逻辑)
-	if err == nil && (resp.Error.Code == 0 ||
-		(resp.Error.Code == -20001 && resp.Error.Message == "未查到可操作的CVM实例")) {
+	// 故障前未创建return单，恢复后成功创建return单
+	if err == nil && resp.Error.Code == 0 {
 		// 成功调用cvm回退接口
-		logs.Infof("success to call cvm return interface, returnNum: %d, total: %d, subOrderId: %s, "+
-			"traceID: %s, rid: %s", cvmNum, len(hosts), task.SuborderID, resp.TraceId, kt.Rid)
+		logs.Infof("success to call cvm return api, num: %d, total: %d, subOrderId: %s, result: %v, traceID: %s, "+
+			"rid: %s", cvmNum, len(hosts), task.SuborderID, resp.Result, resp.TraceId, kt.Rid)
 		return r.updateReturnState(err, resp.Result.OrderId, task, hosts)
 	}
 
