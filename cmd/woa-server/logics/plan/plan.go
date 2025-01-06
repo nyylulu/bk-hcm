@@ -161,14 +161,30 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 
 // Run starts dispatcher
 func (c *Controller) Run() {
-	// TODO: get interval from config
-	// list and watch tickets every 2 minutes
-	go wait.JitterUntil(c.listAndWatchTickets, 2*time.Minute, 0.5, true, c.ctx)
+	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
+			}
+		}()
+
+		// TODO: get interval from config
+		// list and watch tickets every 2 minutes
+		wait.JitterUntil(c.listAndWatchTickets, 2*time.Minute, 0.5, true, c.ctx)
+	}()
 
 	// TODO: get worker num from config
 	for i := 0; i < 10; i++ {
-		// get and handle tickets every 2 minutes
-		go wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
+		go func() {
+			defer func() {
+				if r := recover(); r != nil {
+					logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
+				}
+			}()
+
+			// get and handle tickets every 2 minutes
+			wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
+		}()
 	}
 
 	// 每周一生成12周后的核算基准数据

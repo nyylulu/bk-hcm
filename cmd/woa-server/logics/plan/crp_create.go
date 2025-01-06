@@ -433,7 +433,10 @@ func (c *Controller) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.Crp
 			adjustDemandsRemainAvail[adjustAbleD.SliceId] = &AdjustAbleRemainObj{
 				OriginDemand: adjustAbleD.Clone(),
 				AdjustType:   adjustType,
-				ExpectTime:   demand.Updated.ExpectTime,
+			}
+			// 取消类型的调整单据，没有updated字段
+			if demand.Updated != nil {
+				adjustDemandsRemainAvail[adjustAbleD.SliceId].ExpectTime = demand.Updated.ExpectTime
 			}
 		}
 		adjustAbleRemain := adjustDemandsRemainAvail[adjustAbleD.SliceId]
@@ -444,10 +447,17 @@ func (c *Controller) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.Crp
 			continue
 		}
 
-		if adjustType == enumor.CrpAdjustTypeDelay && demand.Updated.ExpectTime != adjustAbleRemain.ExpectTime {
-			logs.Warnf("adjust type is delay, but expect time is not eq, need adjust: %+v, slice: %s, rid: %s",
-				converter.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
-			continue
+		if adjustType == enumor.CrpAdjustTypeDelay {
+			if demand.Updated == nil {
+				logs.Warnf("adjust type is delay, but updated is nil, need adjust: %+v, slice: %s, rid: %s",
+					converter.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
+				continue
+			}
+			if demand.Updated.ExpectTime != adjustAbleRemain.ExpectTime {
+				logs.Warnf("adjust type is delay, but expect time is not eq, need adjust: %+v, slice: %s, rid: %s",
+					converter.PtrToVal(demand.Original), adjustAbleD.SliceId, kt.Rid)
+				continue
+			}
 		}
 
 		adjustAbleRemain.WillConsume += canConsume

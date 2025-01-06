@@ -23,6 +23,8 @@ const (
 	// RollingServerSyncFailed rolling server sync failed.
 	RollingServerSyncFailed WarnSign = "rolling_server_sync_failed"
 
+	// ResPlanTicketWatchFailed res plan ticket watch failed.
+	ResPlanTicketWatchFailed WarnSign = "res_plan_ticket_watch_failed"
 	// DemandPenaltyBaseGenerateFailed res plan demand penalty base generate failed.
 	DemandPenaltyBaseGenerateFailed WarnSign = "demand_penalty_base_generate_failed"
 	// DemandPenaltyRatioReportFailed res plan demand penalty ratio report failed.
