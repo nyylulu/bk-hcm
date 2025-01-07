@@ -93,17 +93,18 @@ type Logics interface {
 
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
-	dao          dao.Set
-	sd           serviced.State
-	client       *client.ClientSet
-	esbCli       esb.Client
-	itsmCli      itsm.Client
-	itsmFlow     cc.ItsmFlow
-	crpAuditNode cc.StateNode
-	crpCli       cvmapi.CVMClientInterface
-	bizLogics    biz.Logics
-	workQueue    *UniQueue
-	ctx          context.Context
+	dao            dao.Set
+	sd             serviced.State
+	client         *client.ClientSet
+	esbCli         esb.Client
+	itsmCli        itsm.Client
+	itsmFlow       cc.ItsmFlow
+	crpAuditNode   cc.StateNode
+	crpCli         cvmapi.CVMClientInterface
+	bizLogics      biz.Logics
+	workQueue      *UniQueue
+	deviceTypesMap *DeviceTypesMap
+	ctx            context.Context
 }
 
 const (
@@ -123,8 +124,6 @@ const (
 func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
 	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (*Controller, error) {
 
-	q := NewUniQueue()
-
 	var itsmFlowCfg cc.ItsmFlow
 	for _, itsmFlow := range cc.WoaServer().ItsmFlows {
 		if itsmFlow.ServiceName == TicketSvcNameResPlan {
@@ -141,17 +140,18 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 	}
 
 	ctrl := &Controller{
-		dao:          dao,
-		sd:           sd,
-		client:       client,
-		esbCli:       esbCli,
-		itsmCli:      itsmCli,
-		itsmFlow:     itsmFlowCfg,
-		crpAuditNode: crpAuditNode,
-		crpCli:       crpCli,
-		bizLogics:    bizLogic,
-		workQueue:    q,
-		ctx:          context.Background(),
+		dao:            dao,
+		sd:             sd,
+		client:         client,
+		esbCli:         esbCli,
+		itsmCli:        itsmCli,
+		itsmFlow:       itsmFlowCfg,
+		crpAuditNode:   crpAuditNode,
+		crpCli:         crpCli,
+		bizLogics:      bizLogic,
+		workQueue:      NewUniQueue(),
+		deviceTypesMap: NewDeviceTypesMap(dao),
+		ctx:            context.Background(),
 	}
 
 	go ctrl.Run()

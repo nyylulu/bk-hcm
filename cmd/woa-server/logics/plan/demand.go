@@ -62,41 +62,6 @@ import (
 	"github.com/shopspring/decimal"
 )
 
-// IsDeviceMatched return whether each device type in deviceTypeSlice can use deviceType's resource plan.
-func (c *Controller) IsDeviceMatched(kt *kit.Kit, deviceTypeSlice []string, deviceType string) ([]bool, error) {
-	// get device type map.
-	deviceTypeMap, err := c.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
-	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
-	result := make([]bool, len(deviceTypeSlice))
-	for idx, ele := range deviceTypeSlice {
-		// if ele and device type are equal, then they are matched.
-		if ele == deviceType {
-			result[idx] = true
-		}
-
-		if _, ok := deviceTypeMap[ele]; !ok {
-			continue
-		}
-
-		if _, ok := deviceTypeMap[deviceType]; !ok {
-			continue
-		}
-
-		// if device family and core type of ele and device type are equal, then they are matched.
-		if deviceTypeMap[ele].DeviceFamily == deviceTypeMap[deviceType].DeviceFamily &&
-			deviceTypeMap[ele].CoreType == deviceTypeMap[deviceType].CoreType {
-
-			result[idx] = true
-		}
-	}
-
-	return result, nil
-}
-
 // ListResPlanDemandAndOverview list res plan demand and overview.
 func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) (
 	*ptypes.ListResPlanDemandResp, error) {
@@ -135,7 +100,7 @@ func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListR
 	}
 
 	// 获取各个机型的核心数
-	deviceTypeMap, err := c.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
+	deviceTypeMap, err := c.deviceTypesMap.GetDeviceTypes(kt)
 	if err != nil {
 		logs.Errorf("get device type map failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -2053,7 +2018,7 @@ func (c *Controller) AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, 
 // GetAllDeviceTypeMap get all device type map.
 func (c *Controller) GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error) {
 	// get all device type maps.
-	deviceTypeMap, err := c.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
+	deviceTypeMap, err := c.deviceTypesMap.GetDeviceTypes(kt)
 	if err != nil {
 		logs.Errorf("get all device type map failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

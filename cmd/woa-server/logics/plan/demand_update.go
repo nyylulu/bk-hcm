@@ -532,7 +532,7 @@ func (c *Controller) getMetaMaps(kt *kit.Kit) (map[string]string, map[string]dmt
 	}
 
 	// get device type mapping.
-	deviceTypeMap, err := c.dao.WoaDeviceType().GetDeviceTypeMap(kt, tools.AllExpression())
+	deviceTypeMap, err := c.deviceTypesMap.GetDeviceTypes(kt)
 	if err != nil {
 		logs.Errorf("get device type map failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, err

@@ -15,6 +15,7 @@ package plan
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"slices"
 
 	"hcm/cmd/woa-server/logics/plan"
@@ -426,6 +427,11 @@ func (s *service) getRPTicketStatusInfo(kt *kit.Kit, ticketID string) (*ptypes.G
 
 // GetBizResPlanTicket get biz resource plan ticket detail.
 func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
+	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
+	if err != nil {
+		return nil, err
+	}
+
 	ticketID := cts.PathParameter("id").String()
 	if len(ticketID) == 0 {
 		return nil, errf.NewFromErr(errf.InvalidParameter, errors.New("ticket id can not be empty"))
@@ -442,6 +448,12 @@ func (s *service) GetBizResPlanTicket(cts *rest.Contexts) (interface{}, error) {
 	}
 	resp.BaseInfo = baseInfo
 	resp.Demands = demands
+
+	if baseInfo.BkBizID != bkBizID {
+		logs.Errorf("ticket: %s is not belongs to bk_biz_id: %d, rid: %s", ticketID, bkBizID, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, fmt.Errorf("ticket is not belongs to bk_biz_id: %d",
+			bkBizID))
+	}
 
 	// authorize biz access.
 	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: baseInfo.BkBizID}
