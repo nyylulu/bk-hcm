@@ -108,6 +108,7 @@ export const useRollingServerUsageStore = defineStore('rolling-server-usage', ()
     suborder_ids?: string[];
     returned_way?: ReturnedWay;
     applied_type?: AppliedType;
+    require_type?: number;
   }) => {
     cpuCoreSummaryLoading.value = true;
     const api = `/api/v1/woa/${getBusinessApiPath()}rolling_servers/cpu_core/summary`;

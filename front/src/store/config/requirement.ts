@@ -23,7 +23,7 @@ export const useConfigRequirementStore = defineStore('config-requirement', () =>
       const res: RequirementResponse = await http.get('/api/v1/woa/config/find/config/requirement');
 
       const list = res?.data?.info ?? [];
-      requirementTypeList.value = list;
+      requirementTypeList.value = list.sort((a, b) => a.position - b.position);
 
       return requirementTypeList.value;
     } catch (error) {

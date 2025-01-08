@@ -55,6 +55,7 @@ const options: Record<IRequirementItem['require_type'], { tags: string[]; icon: 
   3: { tags: ['专项资源', '限期申请'], icon: 'bkhcm-icon-host-multi', recommend: false },
   6: { tags: ['即时申领', '资源周转'], icon: 'bkhcm-icon-rolling-server', recommend: true },
   7: { tags: ['即时申领', '小额紧急'], icon: 'bkhcm-icon-green-channel-rocket', recommend: true },
+  8: { tags: ['2025春节紧急资源', '按量计费'], icon: 'bkhcm-icon-regular', recommend: false },
 };
 
 const handleSelect = (item: IRequirementItem) => {
@@ -87,13 +88,13 @@ const handleSelect = (item: IRequirementItem) => {
       @click="handleSelect(req)"
     >
       <div class="type-icon">
-        <i :class="['hcm-icon', options[req.require_type].icon, 'req-type-icon']"></i>
+        <i :class="['hcm-icon', options[req.require_type]?.icon || 'bkhcm-icon-regular', 'req-type-icon']"></i>
       </div>
       <div class="type-name">{{ req.require_name }}</div>
       <div class="tag-list">
-        <div class="tag-item" v-for="(tag, index) in options[req.require_type].tags" :key="index">{{ tag }}</div>
+        <div class="tag-item" v-for="(tag, index) in options[req.require_type]?.tags" :key="index">{{ tag }}</div>
       </div>
-      <div class="recommend-tag" v-if="options[req.require_type].recommend">推荐</div>
+      <div class="recommend-tag" v-if="options[req.require_type]?.recommend">推荐</div>
     </div>
   </div>
 </template>
@@ -107,7 +108,7 @@ const handleSelect = (item: IRequirementItem) => {
     position: relative;
     display: flex;
     flex-direction: column;
-    width: 160px;
+    width: 200px;
     height: 102px;
     background: #fff;
     border: 1px solid #dcdee5;

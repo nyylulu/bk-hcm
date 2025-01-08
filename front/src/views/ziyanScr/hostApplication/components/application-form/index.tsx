@@ -6,7 +6,6 @@ import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import HcmLink from '@/components/hcm-link/index.vue';
-import MemberSelect from '@/components/MemberSelect';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import DiskTypeSelect from '../DiskTypeSelect';
@@ -16,6 +15,7 @@ import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/
 import applicationSideslider from '../application-sideslider';
 import WName from '@/components/w-name';
 import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
+import HostApplySpringPoolTips from './spring-pool/tips.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
 import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 import { useAccountStore, useUserStore } from '@/store';
@@ -41,7 +41,6 @@ import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core
 import { DeviceType, CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
 import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
-import GreenChannelConfirm from './green-channel/confirm.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -127,6 +126,8 @@ export default defineComponent({
     // 特殊需求类型（滚服项目、小额绿通）-状态
     const isRollingServer = computed(() => order.value.model.requireType === 6);
     const isGreenChannel = computed(() => order.value.model.requireType === 7);
+    const isSpringPool = computed(() => order.value.model.requireType === 8);
+    const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
 
     // 选择的cvm机型
@@ -516,7 +517,6 @@ export default defineComponent({
         }
       },
     );
-    const defaultUserlist = ref([]);
     const unReapply = async () => {
       if (route?.query?.order_id) {
         const data = await apiService.getOrderDetail(+route?.query?.order_id);
@@ -542,8 +542,6 @@ export default defineComponent({
           follower: follower || [],
           suborders,
         };
-
-        defaultUserlist.value = (follower || []).map((element: any) => ({ username: element, display_name: element }));
 
         suborders.forEach(({ resource_type, remark, replicas, spec, applied_core }: any) => {
           const data = { resource_type, remark, replicas: +replicas, spec, applied_core };
@@ -633,7 +631,7 @@ export default defineComponent({
         availablePostpaidSet.value.clear();
         try {
           const { data } = await planStore.list_config_cvm_charge_type_device_type({
-            bk_biz_id,
+            bk_biz_id: !isSpringPool.value ? bk_biz_id : 931,
             require_type,
             region,
             zone,
@@ -787,7 +785,7 @@ export default defineComponent({
         { required: true, message: '请输入需求数量', trigger: 'blur' },
         // 临时规则双十一后可能需要去除
         {
-          validator: (value: number) => !(isRollingServer.value && value > 100),
+          validator: (value: number) => !(isRollingServerLike.value && value > 100),
           message: '注意：因云接口限制，单次的机器数最大值为100，超过后请手动克隆为多条配置',
           trigger: 'blur',
         },
@@ -899,7 +897,7 @@ export default defineComponent({
       isLoading.value = true;
       try {
         const { data } = await planStore.verify_resource_demand({
-          bk_biz_id: +computedBiz.value,
+          bk_biz_id: !isSpringPool.value ? +computedBiz.value : 931,
           require_type: order.value.model.requireType,
           suborders,
         });
@@ -986,7 +984,7 @@ export default defineComponent({
     );
     const availableCpuCoreQuota = computed(() => {
       let val = 0;
-      if (isRollingServer.value) val = rollingServerCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
+      if (isRollingServerLike.value) val = rollingServerCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
       if (isGreenChannel.value) val = greenChannelCpuCoreLimitsRef.value?.availableCpuCoreQuota ?? val;
       return val;
     });
@@ -999,7 +997,6 @@ export default defineComponent({
     };
 
     // 小额绿通
-    const greenChannelConfirmRef = useTemplateRef<typeof GreenChannelConfirm>('green-channel-confirm');
     const greenChannelCpuCoreLimitsRef = useTemplateRef<typeof GreenChannelCpuCoreLimits>(
       'green-channel-cpu-core-limits',
     );
@@ -1069,14 +1066,9 @@ export default defineComponent({
                   <hcm-form-req-type
                     appearance='card'
                     v-model={order.value.model.requireType}
-                    onChange={(newV: number, oldV: number) => {
-                      // 小额绿通，弹出确认框
-                      if (newV === 7) {
-                        greenChannelConfirmRef.value.show(oldV);
-                      } else {
-                        // 手动更改时，需要清空已保存的需求
-                        clearResRequirements();
-                      }
+                    onChange={() => {
+                      // 手动更改时，需要清空已保存的需求
+                      clearResRequirements();
                     }}
                   />
                 </bk-form-item>
@@ -1084,6 +1076,7 @@ export default defineComponent({
                   {(function () {
                     if (isRollingServer.value) return <RollingServerTipsAlert />;
                     if (isGreenChannel.value) return <GreenChannelTipsAlert />;
+                    if (isSpringPool.value) return <HostApplySpringPoolTips />;
                     return <HostApplyTipsAlert />;
                   })()}
                 </div>
@@ -1108,13 +1101,7 @@ export default defineComponent({
                     type='datetime'></bk-date-picker>
                 </bk-form-item>
                 <bk-form-item label='关注人'>
-                  <MemberSelect
-                    class='item-warp-component'
-                    multiple
-                    clearable
-                    v-model={order.value.model.follower}
-                    defaultUserlist={defaultUserlist.value}
-                  />
+                  <hcm-form-user class='item-warp-component' v-model={order.value.model.follower} />
                 </bk-form-item>
               </div>
             </CommonCard>
@@ -1146,10 +1133,13 @@ export default defineComponent({
                     title.value = '增加资源需求';
                     IDCPMlist();
                   }}
-                  disabled={isSpecialRequirement.value && availableCpuCoreQuota.value <= 0}
+                  disabled={(isSpecialRequirement.value || isSpringPool.value) && availableCpuCoreQuota.value <= 0}
                   v-bk-tooltips={{
-                    content: `已超过${isRollingServer.value ? '滚服项目' : '小额绿通'}的CPU可用额度，不允许添加`,
-                    disabled: !(isSpecialRequirement.value && availableCpuCoreQuota.value <= 0),
+                    content: `已超过${
+                      // eslint-disable-next-line no-nested-ternary
+                      isRollingServerLike.value ? (isRollingServer.value ? '滚服项目' : '春保资源池') : '小额绿通'
+                    }的CPU可用额度，不允许添加`,
+                    disabled: !((isSpecialRequirement.value || isSpringPool.value) && availableCpuCoreQuota.value <= 0),
                   }}>
                   添加
                 </Button>
@@ -1165,8 +1155,8 @@ export default defineComponent({
                   }}>
                   一键申请
                 </Button>
-                {/* 滚服项目-cpu需求限额 */}
-                {isRollingServer.value && (
+                {/* 滚服项目-cpu需求限额，春保资源池复用滚服 */}
+                {isRollingServerLike.value && (
                   <RollingServerCpuCoreLimits
                     ref='rolling-server-cpu-core-limits'
                     bizId={computedBiz.value}
@@ -1344,10 +1334,17 @@ export default defineComponent({
                           v-model={resourceForm.value.resourceType}
                           onChange={onResourceTypeChange}
                           // 滚服项目、小额绿通只支持云主机
-                          disabled={isSpecialRequirement.value}
+                          disabled={isSpecialRequirement.value || isRollingServerLike.value}
                           v-bk-tooltips={{
-                            content: `${isRollingServer.value ? '滚服项目' : '小额绿通'}只支持云主机`,
-                            disabled: !isSpecialRequirement.value,
+                            content: `${
+                              // eslint-disable-next-line no-nested-ternary
+                              isRollingServerLike.value
+                                ? isRollingServer.value
+                                  ? '滚服项目'
+                                  : '春保资源池'
+                                : '小额绿通'
+                            }只支持云主机`,
+                            disabled: !(isSpecialRequirement.value || isRollingServerLike.value),
                           }}>
                           {resourceTypes.value.map((resType: { value: any; label: any }) => (
                             <bk-option key={resType.value} value={resType.value} label={resType.label}></bk-option>
@@ -1385,29 +1382,34 @@ export default defineComponent({
                         !availablePrepaidSet.value.size &&
                         !isLoadingDeviceType.value && (
                           <Alert class={'mb8'} theme='warning'>
-                            该地域，在当月，没有可申领的预测需求，建议：
-                            <ul>
-                              <li>
-                                1.切换有预测需求的地域，
-                                <HcmLink
-                                  theme='primary'
-                                  size='small'
-                                  href={`/#/business/resource-plan?bizs=${computedBiz.value}`}
-                                  target='_blank'>
-                                  查询当前预测需求
-                                </HcmLink>
-                              </li>
-                              <li>
-                                2.请先提交预测单，将期望到货日期设置为当月，预测需求审批通过后可申领主机，
-                                <HcmLink
-                                  theme='primary'
-                                  size='small'
-                                  href={`/#/business/resource-plan/add?bizs=${computedBiz.value}`}
-                                  target='_blank'>
-                                  去创建提预测单
-                                </HcmLink>
-                              </li>
-                            </ul>
+                            该地域，在当月，没有可申领的预测需求
+                            {!isSpringPool.value && (
+                              <>
+                                ，建议：
+                                <ul>
+                                  <li>
+                                    1.切换有预测需求的地域，
+                                    <HcmLink
+                                      theme='primary'
+                                      size='small'
+                                      href={`/#/business/resource-plan?bizs=${computedBiz.value}`}
+                                      target='_blank'>
+                                      查询当前预测需求
+                                    </HcmLink>
+                                  </li>
+                                  <li>
+                                    2.请先提交预测单，将期望到货日期设置为当月，预测需求审批通过后可申领主机，
+                                    <HcmLink
+                                      theme='primary'
+                                      size='small'
+                                      href={`/#/business/resource-plan/add?bizs=${computedBiz.value}`}
+                                      target='_blank'>
+                                      去创建提预测单
+                                    </HcmLink>
+                                  </li>
+                                </ul>
+                              </>
+                            )}
                           </Alert>
                         )}
                       {resourceForm.value.resourceType === 'QCLOUDCVM' && (
@@ -1811,15 +1813,12 @@ export default defineComponent({
             onClosed={() => {
               CAtriggerShow(false);
             }}>
-            <applicationSideslider device={device.value} onOneApplication={OneClickApplication} />
+            <applicationSideslider
+              isShow={CVMapplication.value}
+              device={device.value}
+              onOneApplication={OneClickApplication}
+            />
           </Sideslider>
-
-          {/* 小额绿通 confirm-dialog */}
-          <GreenChannelConfirm
-            ref='green-channel-confirm'
-            onConfirm={clearResRequirements}
-            onCancel={(oldRequireType) => (order.value.model.requireType = oldRequireType)}
-          />
         </div>
       </div>
     );

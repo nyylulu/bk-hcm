@@ -48,10 +48,13 @@ const getList = async (query: LocationQuery) => {
   // 请求申请单据列表
   const [listRes, summaryRes] = await Promise.all([
     rollingServerUsageStore.getAppliedRecordList({
-      filter: transformSimpleCondition({ ...condition.value, bk_biz_id: bk_biz_ids }, usageOrderViewProperties),
+      filter: transformSimpleCondition(
+        { ...condition.value, bk_biz_id: bk_biz_ids, require_type: 6 },
+        usageOrderViewProperties,
+      ),
       page: getPageParams(pagination, { sort, order }),
     }),
-    rollingServerUsageStore.getCpuCoreSummary({ start, end, bk_biz_ids, suborder_ids: suborder_id }),
+    rollingServerUsageStore.getCpuCoreSummary({ start, end, bk_biz_ids, suborder_ids: suborder_id, require_type: 6 }),
   ]);
   const { list: appliedRecordList, count } = listRes;
 

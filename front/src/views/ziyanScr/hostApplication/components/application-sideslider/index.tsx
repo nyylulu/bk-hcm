@@ -33,6 +33,10 @@ export default defineComponent({
       type: Object,
       default: () => {},
     },
+    isShow: {
+      type: Boolean,
+      default: false,
+    },
   },
   emits: ['oneApplication'],
   setup(props, { emit }) {
@@ -159,7 +163,8 @@ export default defineComponent({
         device.value.filter.require_type && {
           field: 'require_type',
           operator: 'equal',
-          value: device.value.filter.require_type,
+          // 小额与春保资源池时使用常规需求类型
+          value: [7, 8].includes(device.value.filter.require_type) ? 1 : device.value.filter.require_type,
         },
         device.value.filter.device_type.length && {
           field: 'device_type',
@@ -259,6 +264,18 @@ export default defineComponent({
         getviewapplication();
       },
     );
+
+    watch(
+      () => props.isShow,
+      (val) => {
+        // 侧边栏展示时使用最新的需求类型数据并重新获取数据
+        if (val) {
+          device.value.filter.require_type = props.device.filter.require_type;
+          getviewapplication();
+        }
+      },
+    );
+
     onMounted(() => {
       getfetchOptionslist();
       loadRestrict();

@@ -27,6 +27,7 @@ import FormNumber from './form/number.vue';
 import FormCert from './form/cert.vue';
 import FormCa from './form/ca.vue';
 import FormBusiness from './form/business.vue';
+import FormUser from './form/user.vue';
 import FormReqType from './form/req-type.vue';
 import FormReqStage from './form/req-stage.vue';
 
@@ -51,6 +52,7 @@ const components = [
   FormCert,
   FormCa,
   FormBusiness,
+  FormUser,
   FormReqType,
   FormReqStage,
 ];
