@@ -586,16 +586,21 @@ func (s *service) verifyResPlanDemand(kt *kit.Kit, input *types.ApplyReq) error 
 		return nil
 	}
 
+	verifyBizID := input.BkBizId
+	if input.RequireType.IsUseManageBizPlan() {
+		verifyBizID = enumor.ResourcePoolBiz
+	}
+
 	subOrders := make([]types.Suborder, 0, len(input.Suborders))
 	for _, subPtr := range input.Suborders {
 		subOrders = append(subOrders, cvt.PtrToVal(subPtr))
 	}
 
-	planRst, err := s.planLogics.VerifyResPlanDemandV2(kt, input.BkBizId, input.RequireType.ToObsProject(),
+	planRst, err := s.planLogics.VerifyResPlanDemandV2(kt, verifyBizID, input.RequireType.ToObsProject(),
 		subOrders)
 	if err != nil {
 		logs.Errorf("failed to verify resource plan demand, err: %v, bk_biz_id: %d, rid: %s", err,
-			input.BkBizId, kt.Rid)
+			verifyBizID, kt.Rid)
 		return errf.NewFromErr(errf.ResPlanVerifyFailed, err)
 	}
 
