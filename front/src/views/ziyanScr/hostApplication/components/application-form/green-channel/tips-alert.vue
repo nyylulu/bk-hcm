@@ -8,7 +8,7 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <bk-alert>
+  <bk-alert theme="warning">
     <p>
       {{
         t(

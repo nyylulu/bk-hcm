@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 158 63" class="design-iconfont">
+  <defs>
+    <linearGradient x1="50%" y1="0%" x2="50%" y2="100%" id="zfpzb00c7__j0q7mmw6rb">
+      <stop stop-color="#D8E7FF" offset="0%"/>
+      <stop stop-color="#FFF" offset="100%"/>
+    </linearGradient>
+    <path d="M1,0 L157,0 C157.552285,-1.01453063e-16 158,0.44771525 158,1 L158,63 L158,63 L0,63 L0,1 C-6.76353751e-17,0.44771525 0.44771525,6.76353751e-17 1,0 Z" id="zfpzb00c7__shytlg5loa"/>
+  </defs>
+  <g fill="none" fill-rule="evenodd">
+    <mask id="zfpzb00c7__7sbf1ka8fc" fill="#fff">
+      <use xlink:href="#zfpzb00c7__shytlg5loa"/>
+    </mask>
+    <use fill="url(#zfpzb00c7__j0q7mmw6rb)" xlink:href="#zfpzb00c7__shytlg5loa"/>
+    <path d="M69.5768658,-2.96249092 L165.690959,48.9767002 L161.114094,51.45 L65,-0.48919112 L69.5768658,-2.96249092 Z M73.6822143,-5.88096998 L169.796678,46.0584493 L168.881302,46.5531105 L72.7668384,-5.38630884 L73.6822143,-5.88096998 Z M93.8855366,-14.7 L190,37.2394193 L175.353987,45.1539975 L79.2395231,-6.78542182 L93.8855366,-14.7 Z" fill="#FFF" opacity=".13136509" mask="url(#zfpzb00c7__7sbf1ka8fc)"/>
+    <path d="M-33.4579314,28.13958 L61.9255089,80.4586173 L57.3834403,82.95 L-38,30.6309627 L-33.4579314,28.13958 Z M-29.3834403,25.2 L66,77.5190373 L65.0915863,78.0173139 L-30.291854,25.6982765 L-29.3834403,25.2 Z" fill="#FFF" opacity=".2959929" mask="url(#zfpzb00c7__7sbf1ka8fc)"/>
+  </g>
+</svg>

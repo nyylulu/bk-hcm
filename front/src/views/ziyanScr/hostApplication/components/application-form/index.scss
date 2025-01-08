@@ -70,6 +70,17 @@
   .status-FAILED {
     color: #ea3636;
   }
+
+  .basic-top-row {
+    .alert-content {
+      margin-bottom: 24px;
+      margin-top: -8px;
+
+      .bk-alert {
+        border: none;
+      }
+    }
+  }
 }
 
 .add-resource-requirements-sideslider {

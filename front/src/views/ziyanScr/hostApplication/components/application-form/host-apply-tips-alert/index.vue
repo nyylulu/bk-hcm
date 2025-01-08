@@ -9,7 +9,7 @@ const { t } = useI18n();
 
 <template>
   <!-- eslint-disable prettier/prettier -->
-  <bk-alert class="host-apply-tips-alert">
+  <bk-alert class="host-apply-tips-alert" theme="warning">
     <p>{{ t('主机申请流程') }}</p>
     <ul>
       <ol>

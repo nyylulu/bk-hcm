@@ -89,7 +89,7 @@ export default defineComponent({
       model: {
         bkBizId: '',
         bkUsername: '',
-        requireType: undefined as number,
+        requireType: 1,
         enableNotice: false,
         expectTime: expectedDeliveryTime(),
         remark: '',
@@ -100,9 +100,6 @@ export default defineComponent({
         bkBizId: [{ required: true, message: '请选择业务', trigger: 'change' }],
         requireType: [{ required: true, message: '请选择需求类型', trigger: 'change' }],
         expectTime: [{ required: true, message: '请填写期望交付时间', trigger: 'change' }],
-      },
-      options: {
-        requireTypes: [],
       },
     });
     const deviceTypeSelectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
@@ -559,12 +556,7 @@ export default defineComponent({
         addResourceRequirements.value = true;
       }
     };
-    const getfetchOptionslist = async () => {
-      const { info } = await apiService.getRequireTypes();
-      order.value.options.requireTypes = info;
-    };
     onMounted(() => {
-      getfetchOptionslist();
       unReapply();
     });
     watch(
@@ -1058,7 +1050,7 @@ export default defineComponent({
             rules={order.value.rules}
             ref={formRef}>
             <CommonCard title={() => '基本信息'} class='mb12'>
-              <div class='flex-row align-content-center'>
+              <div class='basic-top-row'>
                 {!props.isbusiness && (
                   <bk-form-item label='所属业务' required property='bkBizId' class='mr24'>
                     <BusinessSelector
@@ -1074,8 +1066,8 @@ export default defineComponent({
                 )}
 
                 <bk-form-item label='需求类型' required property='requireType'>
-                  <bk-select
-                    class='item-warp-component'
+                  <hcm-form-req-type
+                    appearance='card'
                     v-model={order.value.model.requireType}
                     onChange={(newV: number, oldV: number) => {
                       // 小额绿通，弹出确认框
@@ -1085,15 +1077,16 @@ export default defineComponent({
                         // 手动更改时，需要清空已保存的需求
                         clearResRequirements();
                       }
-                    }}>
-                    {order.value.options.requireTypes.map((item: { require_type: any; require_name: any }) => (
-                      <bk-option
-                        key={item.require_type}
-                        value={item.require_type}
-                        label={item.require_name}></bk-option>
-                    ))}
-                  </bk-select>
+                    }}
+                  />
                 </bk-form-item>
+                <div class='alert-content'>
+                  {(function () {
+                    if (isRollingServer.value) return <RollingServerTipsAlert />;
+                    if (isGreenChannel.value) return <GreenChannelTipsAlert />;
+                    return <HostApplyTipsAlert />;
+                  })()}
+                </div>
               </div>
               <div class='flex-row align-content-center'>
                 <bk-form-item
@@ -1124,11 +1117,6 @@ export default defineComponent({
                   />
                 </bk-form-item>
               </div>
-              {(function () {
-                if (isRollingServer.value) return <RollingServerTipsAlert />;
-                if (isGreenChannel.value) return <GreenChannelTipsAlert />;
-                return <HostApplyTipsAlert />;
-              })()}
             </CommonCard>
             <CommonCard
               title={() => (

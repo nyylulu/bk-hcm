@@ -10,7 +10,7 @@ const { t } = useI18n();
 
 <template>
   <!-- eslint-disable prettier/prettier -->
-  <Alert class="rolling-server-tips-alert">
+  <Alert class="rolling-server-tips-alert" theme="warning">
     <p>{{ t('注意：当前选择的是滚服项目，每个业务每月只允许申请使用1万核心，额度有限，限量申请，先到先得。更多信息请参考文档') }} <bk-link theme="primary" href="https://iwiki.woa.com/p/4012608772" target="_blank">https://iwiki.woa.com/p/4012608772</bk-link></p>
     <ul>
       <li><strong>{{ t('套餐计费：') }}</strong>{{ (t('继承原有机器的计费起止时间、计费模式')) }}</li>
@@ -20,7 +20,7 @@ const { t } = useI18n();
       <li><strong>{{ t('超期罚金：') }}</strong>{{ t('在机器申请后第31-121天内未退还，按超期机器的50%成本核算加收罚金，最少收1天，最多收91天') }}</li>
     </ul>
     <p>{{ t('例：某业务申请1W核心滚服资源，有0.5W核心在30天内退还（此时无罚金），另外0.5W核心没有在30天内退回，从超期第1天开始按天计算50%罚金成本，此后业务下退回开始按天计算退回核心数（只计入CVM通用资源），直至退回核心数满0.5W核心，停止罚金成本。') }}</p>
-    <br /> 
+    <br />
     <p>{{ t('如有疑问请咨询') }}<WName name="ICR" :alias="t('ICR(IEG资源服务助手)')" />{{ t('确认。') }}</p>
   </Alert>
 </template>
