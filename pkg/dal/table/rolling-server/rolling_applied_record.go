@@ -35,6 +35,7 @@ var RollingAppliedRecordColumns = utils.MergeColumns(nil, RollingAppliedRecordCo
 // RollingAppliedRecordColumnDescriptor is column descriptors.
 var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
+	{Column: "require_type", NamedC: "require_type", Type: enumor.Numeric},
 	{Column: "applied_type", NamedC: "applied_type", Type: enumor.String},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "order_id", NamedC: "order_id", Type: enumor.Numeric},
@@ -56,6 +57,8 @@ var RollingAppliedRecordColumnDescriptor = utils.ColumnDescriptors{
 type RollingAppliedRecord struct {
 	// ID 自增ID
 	ID string `db:"id" json:"id" validate:"lte=64"`
+	// RequireType 需求类型
+	RequireType enumor.RequireType `db:"require_type" json:"require_type"`
 	// AppliedType 申请类型(枚举值：normal-普通申请、resource_pool-资源池申请、cvm_product-管理员cvm生产)
 	AppliedType enumor.AppliedType `db:"applied_type" json:"applied_type" validate:"lte=64"`
 	// BkBizID 业务ID
@@ -97,6 +100,9 @@ func (rar *RollingAppliedRecord) TableName() table.Name {
 func (rar *RollingAppliedRecord) InsertValidate() error {
 	if len(rar.ID) == 0 {
 		return errors.New("id is required")
+	}
+	if err := rar.RequireType.Validate(); err != nil {
+		return err
 	}
 	if len(rar.AppliedType) == 0 {
 		return errors.New("applied_type is required")

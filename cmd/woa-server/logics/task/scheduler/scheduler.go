@@ -841,6 +841,7 @@ func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyT
 			DeviceType:  suborder.Spec.DeviceType,
 			Count:       int(ticket.Suborders[i].Replicas),
 			AppliedType: appliedType,
+			RequireType: suborder.RequireType,
 		}
 		records[i] = appliedRecord
 	}
@@ -1606,20 +1607,20 @@ func (s *scheduler) MatchDevice(kt *kit.Kit, param *types.MatchDeviceReq) error 
 }
 
 // MatchPoolDevice execute resource apply match devices from resource pool
-func (s *scheduler) MatchPoolDevice(kit *kit.Kit, param *types.MatchPoolDeviceReq) error {
+func (s *scheduler) MatchPoolDevice(_ *kit.Kit, param *types.MatchPoolDeviceReq) error {
 	go s.generator.MatchPoolDevice(param)
 
 	return nil
 }
 
 // PauseApplyOrder pauses resource apply order
-func (s *scheduler) PauseApplyOrder(kit *kit.Kit, param mapstr.MapStr) error {
+func (s *scheduler) PauseApplyOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 	// TODO
 	return nil
 }
 
 // ResumeApplyOrder resumes resource apply order
-func (s *scheduler) ResumeApplyOrder(kit *kit.Kit, param mapstr.MapStr) error {
+func (s *scheduler) ResumeApplyOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 	// TODO
 	return nil
 }

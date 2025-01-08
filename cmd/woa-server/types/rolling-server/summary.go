@@ -72,6 +72,7 @@ type CpuCoreSummaryReq struct {
 	AppliedType            enumor.AppliedType `json:"applied_type" validate:"omitempty"`
 	InstanceGroup          string             `json:"instance_group" validate:"omitempty"`
 	CoreType               *enumor.CoreType   `json:"core_type" validate:"omitempty"`
+	RequireType            enumor.RequireType `json:"require_type" validate:"omitempty"`
 }
 
 // Validate validate.
@@ -94,6 +95,11 @@ func (r *CpuCoreSummaryReq) Validate() error {
 	if err := r.AppliedType.Validate(); len(r.AppliedType) > 0 && err != nil {
 		return err
 	}
+	if r.RequireType > 0 {
+		if err := r.RequireType.Validate(); err != nil {
+			return err
+		}
+	}
 	return validator.Validate.Struct(r)
 }
 
@@ -111,6 +117,7 @@ type CreateAppliedRecordData struct {
 	DeviceType  string             `json:"device_type"`
 	Count       int                `json:"count"`
 	AppliedType enumor.AppliedType `json:"applied_type"`
+	RequireType enumor.RequireType `json:"require_type"`
 }
 
 // OldVersionCoreType 之前版本是没有core_type的字段的，这里定义一个空字符串，用于给其他地方兼容之前没有该字段的滚服申请滚服记录

@@ -671,6 +671,9 @@ func (l *logics) listAppliedRecordsByDate(kt *kit.Kit, bkBizID int64, year, mont
 			Rules: []filter.RuleFactory{
 				&filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bkBizID},
 				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
+				&filter.AtomRule{
+					Field: "require_type", Op: filter.Equal.Factory(), Value: enumor.RequireTypeRollServer,
+				},
 				// 大于等于该日期的回收记录
 				&filter.AtomRule{Field: "roll_date", Op: filter.GreaterThanEqual.Factory(), Value: startRollDate},
 				// 小于等于该日期的回收记录

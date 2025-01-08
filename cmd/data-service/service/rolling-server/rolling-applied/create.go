@@ -49,6 +49,7 @@ func (svc *service) BatchCreateRollingAppliedRecord(cts *rest.Contexts) (interfa
 		records := make([]rstable.RollingAppliedRecord, 0, len(req.AppliedRecords))
 		for _, createReq := range req.AppliedRecords {
 			records = append(records, rstable.RollingAppliedRecord{
+				RequireType:   createReq.RequireType,
 				AppliedType:   createReq.AppliedType,
 				BkBizID:       createReq.BkBizID,
 				OrderID:       createReq.OrderID,

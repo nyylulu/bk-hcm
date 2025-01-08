@@ -49,6 +49,7 @@ func (c *BatchCreateRollingAppliedRecordReq) Validate() error {
 
 // RollingAppliedRecordCreateReq create request
 type RollingAppliedRecordCreateReq struct {
+	RequireType   enumor.RequireType `json:"require_type" validate:"required"`
 	AppliedType   enumor.AppliedType `json:"applied_type" validate:"required"`
 	BkBizID       int64              `json:"bk_biz_id" validate:"required"`
 	OrderID       uint64             `json:"order_id" validate:"required"`

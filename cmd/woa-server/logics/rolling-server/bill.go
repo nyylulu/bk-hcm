@@ -221,6 +221,9 @@ func (l *logics) findBillAppliedRecords(kt *kit.Kit, req *rollingserver.RollingB
 				&filter.AtomRule{Field: "roll_date", Op: filter.LessThanEqual.Factory(),
 					Value: times.GetDataIntDate(endYear, endMonth, endDay)},
 				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
+				&filter.AtomRule{
+					Field: "require_type", Op: filter.Equal.Factory(), Value: enumor.RequireTypeRollServer,
+				},
 			},
 		},
 		Page: &core.BasePage{

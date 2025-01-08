@@ -90,11 +90,12 @@ func (l *logics) CreateAppliedRecord(kt *kit.Kit, createArr []rstypes.CreateAppl
 		deviceType := create.DeviceType
 		deviceTypeInfo, ok := deviceTypeInfoMap[deviceType]
 		if !ok {
-			logs.Errorf("can not find device_type, type: %s, rid: %s", deviceType, kt.Rid)
+			logs.Errorf("can not find device_type, type: %s, create: %+v, rid: %s", deviceType, create, kt.Rid)
 			return fmt.Errorf("can not find device_type, type: %s", deviceType)
 		}
 
 		appliedRecord := rsproto.RollingAppliedRecordCreateReq{
+			RequireType:   create.RequireType,
 			AppliedType:   create.AppliedType,
 			BkBizID:       create.BizID,
 			OrderID:       create.OrderID,

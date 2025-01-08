@@ -116,6 +116,7 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 			DeviceType:  order.Spec.DeviceType,
 			Count:       int(order.Total),
 			AppliedType: enumor.CvmProduceAppliedType,
+			RequireType: enumor.RequireType(order.RequireType),
 		}
 
 		if err = l.rsLogic.CreateAppliedRecord(kt, []rstypes.CreateAppliedRecordData{data}); err != nil {

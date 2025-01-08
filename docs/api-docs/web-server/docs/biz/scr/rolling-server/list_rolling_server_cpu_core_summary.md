@@ -19,6 +19,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/rolling_servers/cpu_core/summary
 | suborder_ids  | string array  | 否      | 子订单号数组，数量最大限制100         |
 | returned_way  | string        | 否      | 退还方式(枚举值(crp:通过crp退还、resource_pool:通过转移到资源池退还)) |
 | applied_type  | string        | 否      | 申请类型(枚举值(normal:普通申请、resource_pool:资源池申请、cvm_product:管理员cvm生产)) |
+| require_type  | int           | 否      | 项目类型(6:滚服项目8:春保资源池)) |
 
 #### start
 
@@ -56,7 +57,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/rolling_servers/cpu_core/summary
   "suborder_ids": ["xxxxxx"],
   "bk_biz_ids": [111,222],
   "returned_way": "crp",
-  "applied_type": "cvm_product"
+  "applied_type": "cvm_product",
+  "require_type": 6
 }
 ```
 

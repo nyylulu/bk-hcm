@@ -71,6 +71,9 @@ func (l *logics) GetCpuCoreSummary(kt *kit.Kit, req *rstypes.CpuCoreSummaryReq) 
 	if len(req.AppliedType) != 0 {
 		appliedRules = append(appliedRules, tools.RuleEqual("applied_type", req.AppliedType))
 	}
+	if req.RequireType > 0 {
+		appliedRules = append(appliedRules, tools.RuleEqual("require_type", req.RequireType))
+	}
 
 	// 查询滚服申请记录表的总的CPU核心数-已交付
 	queryFilter := tools.ExpressionAnd(appliedRules...)
