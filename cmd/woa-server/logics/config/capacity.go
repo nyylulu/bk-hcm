@@ -21,7 +21,6 @@ import (
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
 	"hcm/pkg"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -276,7 +275,7 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string, vpcList []string,
 	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
 
-	projectName := enumor.RequireType(input.RequireType).ToObsProject()
+	projectName := input.RequireType.ToObsProject()
 
 	req := &cvmapi.CapacityReq{
 		ReqMeta: cvmapi.ReqMeta{

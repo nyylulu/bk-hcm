@@ -207,14 +207,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 	}
 
 	// 2. get available zones
-	requireType := order.RequireType
-	ignorePrediction := false
-	// 小额绿通均使用常规项目的机型，不需要关心预测
-	if requireType == enumor.RequireTypeGreenChannel {
-		requireType = enumor.RequireTypeRegular
-		ignorePrediction = true
-	}
-	availZones, err := g.getAvailableZoneInfo(kt, requireType, order.Spec.DeviceType, order.Spec.Region)
+	availZones, err := g.getAvailableZoneInfo(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region)
 	if err != nil {
 		logs.Errorf("failed to generate cvm, for get available zones err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to generate cvm, for get available zones err: %v", err)
@@ -226,7 +219,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 
 	// 3. get capacity
 	zoneCapacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region,
-		cvmapi.CvmSeparateCampus, "", "", order.Spec.ChargeType, ignorePrediction)
+		cvmapi.CvmSeparateCampus, "", "", order.Spec.ChargeType)
 	if err != nil {
 		logs.Errorf("failed to generate cvm, for get zone capacity err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to generate cvm, for get zone capacity err: %v", err)

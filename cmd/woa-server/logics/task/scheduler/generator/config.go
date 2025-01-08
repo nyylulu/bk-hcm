@@ -65,7 +65,7 @@ func (g *Generator) getAvailableZoneIds(kt *kit.Kit, requireType enumor.RequireT
 					&querybuilder.AtomRule{
 						Field:    "require_type",
 						Operator: querybuilder.OperatorEqual,
-						Value:    requireType,
+						Value:    requireType.ToRequireTypeWhenGetDevice(),
 					},
 					&querybuilder.AtomRule{
 						Field:    "device_type",
@@ -114,7 +114,7 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 
 // getCapacity get resource apply capacity info
 func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc,
-	subnet string, chargeType cvmapi.ChargeType, ignorePrediction bool) (map[string]int64, error) {
+	subnet string, chargeType cvmapi.ChargeType) (map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
 		RequireType:      requireType,
@@ -123,7 +123,7 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, dev
 		Zone:             zone,
 		Vpc:              vpc,
 		Subnet:           subnet,
-		IgnorePrediction: ignorePrediction,
+		IgnorePrediction: !requireType.NeedVerifyResPlan(),
 	}
 	// 计费模式,默认包年包月
 	if len(chargeType) > 0 {

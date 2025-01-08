@@ -352,14 +352,9 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		sort.Sort(sort.Reverse(subnetList))
 		subnetID := ""
 		applyNum := uint(0)
-		ignorePrediction := false
-		if order.RequireType == enumor.RequireTypeGreenChannel {
-			ignorePrediction = true
-		}
-
 		for _, subnet := range subnetList {
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, subnet.Id, order.Spec.ChargeType, ignorePrediction)
+				req.VPCId, subnet.Id, order.Spec.ChargeType)
 			if err != nil {
 				logs.Errorf("failed to get capacity with subnet %s, subnetNum: %d, zone: %s, reqVpcID: %s, err: %v",
 					subnet.Id, len(subnetList), zone, req.VPCId, err)

@@ -468,6 +468,26 @@ func (t RequireType) IsUseManageBizPlan() bool {
 	return false
 }
 
+// ToRequireTypeWhenGetDevice 查询机型时使用的需求类型
+func (t RequireType) ToRequireTypeWhenGetDevice() RequireType {
+	requireTypeMap := map[RequireType]RequireType{
+		RequireTypeRegular:    RequireTypeRegular,
+		RequireTypeRollServer: RequireTypeRollServer,
+		// "小额绿通"使用"常规项目"类型查询机型
+		RequireTypeGreenChannel: RequireTypeRegular,
+		RequireTypeSpring:       RequireTypeSpring,
+		RequireTypeDissolve:     RequireTypeDissolve,
+		// "春保资源池"使用"常规项目"类型查询机型
+		RequireTypeSpringResPool: RequireTypeRegular,
+	}
+
+	requireType, ok := requireTypeMap[t]
+	if !ok {
+		return t
+	}
+	return requireType
+}
+
 var requireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeRegular:    ObsProjectNormal,
 	RequireTypeRollServer: ObsProjectRollServer,
