@@ -19,7 +19,7 @@
 
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9
+    SQLVER=0038,HCMVER=v1.7.1.6
 
     Notes:
     1. 滚服申请记录表添加需求类型字段。
@@ -30,9 +30,10 @@ START TRANSACTION;
 alter table rolling_applied_record
     add column `require_type` int(11) comment '需求类型(6:滚服项目8:春保资源池)' default 0 after `id`;
 
-update rolling_applied_record set require_type = 6;
+update rolling_applied_record
+set require_type = 6;
 
-CREATE OR REPLACE DEFINER='ADMIN'@'localhost' VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+CREATE OR REPLACE DEFINER ='ADMIN'@'localhost' VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
+SELECT 'v1.7.1.6' as `hcm_ver`, '0038' as `sql_ver`;
 
 COMMIT
