@@ -766,7 +766,7 @@ func (s *scheduler) createSubOrders(kt *kit.Kit, orderId uint64) error {
 
 func (s *scheduler) doCreateOrderPostOp(kt *kit.Kit, ticket *types.ApplyTicket, suborders []*types.ApplyOrder) error {
 	switch ticket.RequireType {
-	case enumor.RequireTypeRollServer:
+	case enumor.RequireTypeRollServer, enumor.RequireTypeSpringResPool:
 		if err := s.createRollingAppliedRecord(kt, ticket, suborders); err != nil {
 			logs.Errorf("create rolling applied record failed, err: %v, ticket: %+v, rid: %s", err, *ticket, kt.Rid)
 			return err
@@ -785,7 +785,7 @@ func (s *scheduler) doCreateOrderPostOp(kt *kit.Kit, ticket *types.ApplyTicket, 
 func (s *scheduler) createRollingAppliedRecord(kt *kit.Kit, ticket *types.ApplyTicket,
 	suborders []*types.ApplyOrder) error {
 
-	if len(suborders) == 0 || ticket.RequireType != enumor.RequireTypeRollServer {
+	if len(suborders) == 0 || !ticket.RequireType.IsNeedQuotaManage() {
 		return nil
 	}
 

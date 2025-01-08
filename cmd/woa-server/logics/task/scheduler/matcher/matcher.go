@@ -299,7 +299,7 @@ func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	}
 
 	kt := core.NewBackendKit()
-	if order.RequireType == enumor.RequireTypeRollServer {
+	if order.RequireType.IsNeedQuotaManage() {
 		appliedTypes := []enumor.AppliedType{enumor.NormalAppliedType, enumor.ResourcePoolAppliedType}
 
 		if err = m.rsLogics.UpdateSubOrderRollingDeliveredCore(kt, order.BkBizId, order.SubOrderId, appliedTypes,

@@ -428,7 +428,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 }
 
 func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if order.RequireType == enumor.RequireTypeRollServer {
+	if order.RequireType.IsUseManageBizPlan() {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

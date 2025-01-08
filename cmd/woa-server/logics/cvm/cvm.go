@@ -550,7 +550,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 }
 
 func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
-	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
+	if enumor.RequireType(order.RequireType).IsUseManageBizPlan() {
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 

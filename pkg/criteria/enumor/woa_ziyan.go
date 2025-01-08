@@ -382,14 +382,17 @@ const (
 	RequireTypeRollServer RequireType = 6
 	//	RequireTypeGreenChannel 小额绿通
 	RequireTypeGreenChannel RequireType = 7
+	// RequireTypeSpringResPool 春保资源池
+	RequireTypeSpringResPool RequireType = 8
 )
 
 var requireTypeNameMap = map[RequireType]string{
-	RequireTypeRegular:      "常规项目",
-	RequireTypeSpring:       "春节保障",
-	RequireTypeDissolve:     "机房裁撤",
-	RequireTypeRollServer:   "滚服项目",
-	RequireTypeGreenChannel: "小额绿通",
+	RequireTypeRegular:       "常规项目",
+	RequireTypeSpring:        "春节保障",
+	RequireTypeDissolve:      "机房裁撤",
+	RequireTypeRollServer:    "滚服项目",
+	RequireTypeGreenChannel:  "小额绿通",
+	RequireTypeSpringResPool: "春保资源池",
 }
 
 // GetName get name of RequireType.
@@ -409,6 +412,7 @@ func GetRequireTypeMembers() []RequireType {
 		RequireTypeDissolve,
 		RequireTypeRollServer,
 		RequireTypeGreenChannel,
+		RequireTypeSpringResPool,
 	}
 }
 
@@ -428,8 +432,8 @@ func (t RequireType) Validate() error {
 // NeedVerifyResPlan need verify resource plan.
 func (t RequireType) NeedVerifyResPlan() bool {
 	switch t {
-	// 常规项目、春节保障、机房裁撤 需要校验预测
-	case RequireTypeRegular, RequireTypeSpring, RequireTypeDissolve:
+	// 常规项目、春节保障、机房裁撤、春保资源池需要校验预测
+	case RequireTypeRegular, RequireTypeSpring, RequireTypeDissolve, RequireTypeSpringResPool:
 		return true
 	default:
 		return false
@@ -446,6 +450,24 @@ func (t RequireType) ToObsProject() ObsProject {
 	return ObsProjectNormal
 }
 
+// IsNeedQuotaManage 是否在主机申请时使用额度管理
+func (t RequireType) IsNeedQuotaManage() bool {
+	if t == RequireTypeRollServer || t == RequireTypeSpringResPool {
+		return true
+	}
+
+	return false
+}
+
+// IsUseManageBizPlan 是否使用管理业务的运营产品去申请主机，扣减预测
+func (t RequireType) IsUseManageBizPlan() bool {
+	if t == RequireTypeRollServer || t == RequireTypeSpringResPool {
+		return true
+	}
+
+	return false
+}
+
 var requireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeRegular:    ObsProjectNormal,
 	RequireTypeRollServer: ObsProjectRollServer,
@@ -453,6 +475,8 @@ var requireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeGreenChannel: ObsProjectNormal,
 	RequireTypeSpring:       getSpringObsProject(),
 	RequireTypeDissolve:     getDissolveObsProject(),
+	// "春保资源池"使用"常规项目"的 obs project
+	RequireTypeSpringResPool: ObsProjectNormal,
 }
 
 // DemandSource is demand source.
