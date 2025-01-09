@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ComputedRef, useTemplateRef, watchEffect } from 'vue';
+import { computed, ComputedRef, h, useTemplateRef, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import type { ICvmListOperateStatus } from '@/store/cvm-operate';
@@ -152,7 +152,7 @@ defineExpose<Exposes>({
           </template>
         </bk-table-column>
 
-        <bk-table-column :label="t('镜像类型')">
+        <bk-table-column :label="() => h('div', { class: 'is-required-column' }, t('镜像类型'))">
           <template #default="{ row }">
             <hcm-form-enum
               v-model="row.image_type"
@@ -164,7 +164,7 @@ defineExpose<Exposes>({
           </template>
         </bk-table-column>
 
-        <bk-table-column :label="t('镜像名称')" width="300">
+        <bk-table-column :label="() => h('div', { class: 'is-required-column' }, t('镜像名称'))" width="300">
           <template #default="{ row }">
             <image-selector
               :model-value="row.image_name"
@@ -198,6 +198,16 @@ defineExpose<Exposes>({
 .i-second-step-container {
   .pwd-input {
     width: 420px;
+  }
+
+  :deep(.is-required-column) {
+    &::after {
+      display: inline-block;
+      width: 14px;
+      color: #ea3636;
+      text-align: center;
+      content: '*';
+    }
   }
 }
 </style>

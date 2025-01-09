@@ -20,14 +20,19 @@ const toggle = () => {
   <div class="i-description">
     <strong>{{ t('重要说明') }}</strong>
     <div class="content" :class="{ 'is-collapse': isCollapse }">
-      <p>{{ t('1. 重装的主机，必须在配置平台的空闲机模块中，单次重装仅限500个IP') }}</p>
-      <p>{{ t('2. 仅支持云主机重装，暂不支持IDC物理机（自研云）重装') }}</p>
-      <p>{{ t('3. 主负责人或备份负责人，必须为当前的执行人') }}</p>
-      <p>{{ t('4. 主机的云状态，必须处于关机状态，才允许重装') }}</p>
-      <p>{{ t('5. 建议对数据做好相关备份后重装') }}</p>
-      <p>{{ t('6. 重装后，主机系统盘内的所有数据将被清除，恢复到初始状态，该操作不可恢复，请谨慎操作') }}</p>
+      <p>1. {{ t('重装的主机，必须在配置平台的空闲机模块中，单次重装仅限500个IP') }}</p>
       <p>
-        {{ t('7. 主机数据盘的数据仍保留，但重装系统后需要手动挂载才能使用') }}
+        2. {{ t('仅支持云主机的重装，DC物理机（自研云）重装请到') }}
+        <hcm-link theme="primary" size="small" target="_blank" href="https://server.woa.com">
+          https://server.woa.com
+        </hcm-link>
+        {{ t('操作') }}
+      </p>
+      <p>3. {{ t('主机的主负责人或备份负责人，必须为当前的执行人') }}</p>
+      <p>4. {{ t('建议对数据做好相关备份后重装') }}</p>
+      <p>5. {{ t('重装后，主机系统盘内的所有数据将被清除，恢复到初始状态，该操作不可恢复，请谨慎操作') }}</p>
+      <p>
+        6. {{ t('主机数据盘的数据仍保留，但重装系统后需要手动挂载才能使用') }}
         <hcm-link
           theme="primary"
           size="small"
@@ -37,7 +42,7 @@ const toggle = () => {
           {{ t('参考文档') }}
         </hcm-link>
       </p>
-      <p>{{ t('8. 重装后，需要人工初始化，如安装 gse_agent，bf 等') }}</p>
+      <p>7. {{ t('重装后，需要人工初始化，如安装 gse_agent，bf 等') }}</p>
     </div>
     <div class="i-op-wrap">
       <bk-button theme="primary" text @click="toggle">
