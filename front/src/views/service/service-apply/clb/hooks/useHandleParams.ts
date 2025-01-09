@@ -2,7 +2,6 @@ import { nextTick, onMounted, onUnmounted, watch } from 'vue';
 // import types
 import { ApplyClbModel } from '@/api/load_balancers/apply-clb/types';
 import bus from '@/common/bus';
-import { VendorEnum } from '@/common/constant';
 
 export default (formModel: ApplyClbModel, formRef: any) => {
   // 重置参数
@@ -46,8 +45,6 @@ export default (formModel: ApplyClbModel, formRef: any) => {
       resetParams();
       if (val === 'INTERNAL') {
         resetParams(['address_ip_version', 'sla_type', 'internet_charge_type', 'internet_max_bandwidth_out']);
-        // 自研云内网下支持多可用区
-        formModel.vendor === VendorEnum.ZIYAN && (formModel.zones = []);
       } else {
         // 如果是公网, 则重置初始状态
         Object.assign(formModel, {

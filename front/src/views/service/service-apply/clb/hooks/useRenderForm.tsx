@@ -108,6 +108,15 @@ export default (formModel: ApplyClbModel) => {
     if (v === '0') formModel.sla_type = 'shared';
   };
 
+  const handleLoadBalancerTypeChange = (val: 'OPEN' | 'INTERNAL') => {
+    formModel.zones = undefined;
+
+    // 自研云内网下支持多可用区
+    if (formModel.vendor === VendorEnum.ZIYAN && val === 'INTERNAL') {
+      formModel.zones = [];
+    }
+  };
+
   // form item options
   const formItemOptions = computed(() => [
     {
@@ -121,7 +130,7 @@ export default (formModel: ApplyClbModel) => {
             property: 'load_balancer_type',
             description: '公网：面向公网使用的负载均衡。\n内网：面向内网使用的负载均衡。',
             content: () => (
-              <BkRadioGroup v-model={formModel.load_balancer_type}>
+              <BkRadioGroup v-model={formModel.load_balancer_type} onChange={handleLoadBalancerTypeChange}>
                 {LOAD_BALANCER_TYPE.map(({ label, value }) => (
                   <BkRadioButton label={value} class='w110'>
                     {t(label)}
