@@ -137,7 +137,7 @@ export default defineComponent({
             field: 'stage',
             width: 200,
             render: ({ data }: any) => {
-              const { stage, createAt, modify_time: modifyTime } = data;
+              const { stage, createAt } = data;
               const diffHours = moment(new Date()).diff(moment(createAt), 'hours');
               const isAbnormal = diffHours >= 2 && stage === 'RUNNING';
 
@@ -159,18 +159,10 @@ export default defineComponent({
                       v-bk-tooltips={{
                         content: (
                           <span>
-                            {modifyTime < 2 ? (
-                              <span>
-                                建议
-                                <Button size='small' text theme={'primary'} class={'ml8'}>
-                                  修改需求重试
-                                </Button>
-                              </span>
-                            ) : (
-                              <span>
-                                请查看详情后联系 <WName name={'BK助手'} class={'ml8'}></WName> 进行处理
-                              </span>
-                            )}
+                            建议
+                            <Button size='small' text theme={'primary'} class={'ml8'}>
+                              修改需求重试
+                            </Button>
                           </span>
                         ),
                       }}>
@@ -184,6 +176,7 @@ export default defineComponent({
               const modifyButton = () => {
                 return (
                   <Button
+                    class='mr8'
                     size='small'
                     onClick={() => modify(data)}
                     disabled={data.resource_type === 'IDCPM'}
@@ -204,7 +197,6 @@ export default defineComponent({
                     size='small'
                     text
                     theme={'primary'}
-                    class={{ ml8: stage === 'SUSPEND' && modifyTime < 2 }}
                     onClick={async () => {
                       stageDetailSlideState.show = true;
                       stageDetailSlideState.suborderId = data.suborder_id;
@@ -223,7 +215,7 @@ export default defineComponent({
                     {abnormalStatus()}
                   </p>
                   <p>
-                    {stage === 'SUSPEND' && modifyTime < 2 ? modifyButton() : null}
+                    {stage === 'SUSPEND' ? modifyButton() : null}
                     {['RUNNING', 'DONE', 'SUSPEND'].includes(stage) ? progressButton() : null}
                   </p>
                 </div>

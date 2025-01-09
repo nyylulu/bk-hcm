@@ -207,7 +207,7 @@ export default defineComponent({
             field: 'stage',
             width: 200,
             render: ({ data }: any) => {
-              const { stage, createAt, modify_time: modifyTime } = data;
+              const { stage, createAt } = data;
               const diffHours = moment(new Date()).diff(moment(createAt), 'hours');
               const isAbnormal = diffHours >= 2 && stage === 'RUNNING';
 
@@ -229,18 +229,10 @@ export default defineComponent({
                       v-bk-tooltips={{
                         content: (
                           <span>
-                            {modifyTime < 6 ? (
-                              <span>
-                                {t('建议')}
-                                <Button size='small' text theme={'primary'} class={'ml8'}>
-                                  {t('修改需求重试')}
-                                </Button>
-                              </span>
-                            ) : (
-                              <span>
-                                {t('请查看详情后联系')} <WName name={'BK助手'} class={'ml8'}></WName> {t('进行处理')}
-                              </span>
-                            )}
+                            {t('建议')}
+                            <Button size='small' text theme={'primary'} class={'ml8'}>
+                              {t('修改需求重试')}
+                            </Button>
                           </span>
                         ),
                       }}>
@@ -293,7 +285,7 @@ export default defineComponent({
                     {abnormalStatus()}
                   </p>
                   <p>
-                    {stage === 'SUSPEND' && modifyTime < 6 ? modifyButton() : null}
+                    {stage === 'SUSPEND' ? modifyButton() : null}
                     {['RUNNING', 'DONE', 'SUSPEND'].includes(stage) ? progressButton() : null}
                   </p>
                 </div>
