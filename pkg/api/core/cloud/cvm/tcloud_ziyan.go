@@ -53,6 +53,7 @@ type TCloudZiyanCvmExtension struct {
 type TCloudZiyanHostExtension struct {
 	*TCloudCvmExtension `json:",inline"`
 	HostID              int64                `json:"bk_host_id"`
+	HostName            string               `json:"bk_host_name"`       // CC主机名称
 	SvrSourceTypeID     cmdb.SvrSourceTypeID `json:"svr_source_type_id"` // 服务器来源类型ID
 	SrvStatus           string               `json:"srv_status"`         // CC的运营状态
 	BkAssetID           string               `json:"bk_asset_id"`        // 固资号

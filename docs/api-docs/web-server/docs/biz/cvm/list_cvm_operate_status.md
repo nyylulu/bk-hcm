@@ -40,6 +40,7 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list/operate/status
     "details":[
       {
         "id": "00000001",
+        "name": "xxxxxx",
         "bk_host_id":17,
         "bk_host_name": "xxxxxx",
         "bk_asset_id":"xxxxxxx",
@@ -84,8 +85,9 @@ POST /api/v1/cloud/bizs/{bk_biz_id}/cvms/list/operate/status
 | 参数名称                   | 参数类型          | 描述                                                      |
 |------------------------|---------------|---------------------------------------------------------|
 | id                     | string	       | 主机唯一ID                                                  |
-| bk_host_id             | int	          | CC主机ID                                                  |
-| bk_host_name           | string	       | 主机名称                                                    |
+| name                   | string	       | 主机实例名称                                                  |
+| bk_host_id             | int	           | CC主机ID                                                  |
+| bk_host_name           | string	       | CC主机名称                                                    |
 | bk_asset_id            | string	       | 设备固资号                                                   |
 | private_ipv4_addresses | string array	 | 内网ipv4                                                  |
 | private_ipv6_addresses | string array  | 内网ipv6                                                  |

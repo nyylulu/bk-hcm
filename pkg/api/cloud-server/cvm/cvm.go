@@ -222,6 +222,7 @@ type CvmBatchOperateHostInfo struct {
 	ID                   string                  `json:"id"`
 	Vendor               enumor.Vendor           `json:"vendor"`
 	AccountID            string                  `json:"account_id"`
+	Name                 string                  `json:"name"`
 	BkHostID             int64                   `json:"bk_host_id"`
 	BkHostName           string                  `json:"bk_host_name"`
 	CloudID              string                  `json:"cloud_id"`
