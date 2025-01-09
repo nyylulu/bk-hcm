@@ -946,3 +946,11 @@ const (
 	// Retain 保留暂不裁撤
 	Retain AbolishPhase = "retain"
 )
+
+// XrayFaultTicketIsEnd xray故障单是否结单
+type XrayFaultTicketIsEnd int
+
+const (
+	XrayFaultTicketNotEnd XrayFaultTicketIsEnd = 0
+	XrayFaultTicketHasEnd XrayFaultTicketIsEnd = 1
+)

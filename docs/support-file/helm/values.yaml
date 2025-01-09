@@ -1136,3 +1136,9 @@ resourceSync:
   syncSubnet: 30
   syncCapacity: 360
   syncLeftIP: 360
+
+# Xray故障单平台的配置
+xray:
+  host: http://127.0.0.1
+  client_id: test
+  secret_key: test

@@ -17,11 +17,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/xshipapi"
@@ -52,33 +54,8 @@ func (d *Detector) checkUworkPass(step *table.DetectStep) (string, error) {
 	exeInfos := make([]string, 0)
 
 	if step.User == "" {
-		logs.Errorf("failed to check uwork ticket, for invalid user is empty, step id: %s", step.ID)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork, for invalid user is empty")
-	}
-
-	respTicket, err := d.uwork.CheckUworkTicket(nil, nil, step.User, step.IP)
-	if err != nil {
-		logs.Errorf("failed to check uwork ticket, err: %v, step id: %s", err, step.ID)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork, err: %v", err)
-	}
-
-	ticketRespStr := d.structToStr(respTicket)
-	exeInfo := fmt.Sprintf("uwork ticket response: %s", ticketRespStr)
-	exeInfos = append(exeInfos, exeInfo)
-
-	if respTicket.Return != 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("check uwork ticket api return err: %s", respTicket.Detail)
-	}
-
-	ticketIds := make([]string, 0)
-	for _, ticket := range respTicket.Data {
-		if ticket.IsEnd == "0" {
-			ticketIds = append(ticketIds, ticket.TicketNo)
-		}
-	}
-
-	if len(ticketIds) > 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork tickets: %s", strings.Join(ticketIds, ";"))
+		logs.Errorf("failed to check uwork-xray ticket, for invalid user is empty, step id: %s", step.ID)
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xray, for invalid user is empty")
 	}
 
 	filter := &mapstr.MapStr{
@@ -87,25 +64,51 @@ func (d *Detector) checkUworkPass(step *table.DetectStep) (string, error) {
 	}
 	host, err := dao.Set().RecycleHost().GetRecycleHost(context.Background(), filter)
 	if err != nil {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to get host asset id: err: %s", err.Error())
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to get host asset id, err: %s, subOrderID: %s, "+
+			"stepIP: %s", err.Error(), step.SuborderID, step.IP)
+	}
+
+	// 获取尚未结单的故障单
+	respTicket, err := d.xray.CheckXrayFaultTickets(nil, nil, host.AssetID, enumor.XrayFaultTicketNotEnd)
+	if err != nil {
+		logs.Errorf("failed to check uwork-xray ticket, err: %v, stepIP: %s, assetID: %s, step id: %s",
+			err, step.IP, host.AssetID, step.ID)
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xray, err: %v", err)
+	}
+
+	ticketRespStr := d.structToStr(respTicket)
+	exeInfo := fmt.Sprintf("uwork-xray ticket response: %s", ticketRespStr)
+	exeInfos = append(exeInfos, exeInfo)
+
+	ticketIds := make([]string, 0)
+	for _, ticket := range respTicket.Data {
+		if ticket.IsEnd == enumor.XrayFaultTicketNotEnd {
+			ticketIds = append(ticketIds, strconv.Itoa(ticket.InstanceID))
+		}
+	}
+
+	if len(ticketIds) > 0 {
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork-xray tickets: %s", strings.Join(ticketIds, ";"))
 	}
 
 	respProcess, err := d.xship.GetXServerProcess(nil, nil, host.AssetID)
 	if err != nil {
-		logs.Errorf("failed to check uwork process, err: %v, step id: %s", err, step.ID)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork process, err: %v", err)
+		logs.Errorf("failed to check uwork-xship process, err: %v, stepIP: %s, assetID: %s, step id: %s",
+			err, step.IP, host.AssetID, step.ID)
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check uwork-xship process, err: %v", err)
 	}
 
 	processRespStr := d.structToStr(respProcess)
-	exeInfoProcess := fmt.Sprintf("uwork process response: %s", processRespStr)
+	exeInfoProcess := fmt.Sprintf("uwork-xship process response: %s", processRespStr)
 	exeInfos = append(exeInfos, exeInfoProcess)
 
 	if respProcess.Code != xshipapi.CodeSuccess {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("check uwork process api return err: %s", respProcess.Message)
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("check uwork-xship process api return err: %s",
+			respProcess.Message)
 	}
 
 	if respProcess.Data == nil {
-		return strings.Join(exeInfos, "\n"), errors.New("check uwork process api return data is nil")
+		return strings.Join(exeInfos, "\n"), errors.New("check uwork-xship process api return data is nil")
 	}
 
 	processes := make([]string, 0)
@@ -114,7 +117,7 @@ func (d *Detector) checkUworkPass(step *table.DetectStep) (string, error) {
 	}
 
 	if len(processes) > 0 {
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork process: %s", strings.Join(processes, ";"))
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("has uwork-xship process: %s", strings.Join(processes, ";"))
 	}
 
 	return strings.Join(exeInfos, "\n"), nil

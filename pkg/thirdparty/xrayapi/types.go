@@ -10,8 +10,8 @@
  * limitations under the License.
  */
 
-// Package uworkapi uwork api
-package uworkapi
+// Package xrayapi xray api
+package xrayapi
 
 import (
 	"fmt"
@@ -20,8 +20,8 @@ import (
 
 // ClientOptions client options
 type ClientOptions struct {
-	// Uwork api address
-	UworkApiAddr []string
+	// xray api address
+	XrayApiAddr []string
 }
 
 // ServerDiscovery server discovery

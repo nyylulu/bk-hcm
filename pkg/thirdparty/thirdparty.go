@@ -38,7 +38,7 @@ import (
 	"hcm/pkg/thirdparty/tgwapi"
 	"hcm/pkg/thirdparty/tjjapi"
 	"hcm/pkg/thirdparty/tmpapi"
-	"hcm/pkg/thirdparty/uworkapi"
+	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -53,7 +53,7 @@ type Client struct {
 	Xship           xshipapi.XshipClientInterface
 	Erp             erpapi.ErpClientInterface
 	Tmp             tmpapi.TMPClientInterface
-	Uwork           uworkapi.UworkClientInterface
+	Xray            xrayapi.XrayClientInterface
 	GCS             gcsapi.GcsClientInterface
 	Tcaplus         tcaplusapi.TcaplusClientInterface
 	TGW             tgwapi.TgwClientInterface
@@ -131,9 +131,9 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		return nil, err
 	}
 
-	uwork, err := uworkapi.NewUworkClientInterface(opts.Uwork, reg)
+	xray, err := xrayapi.NewXrayClientInterface(opts.Xray, reg)
 	if err != nil {
-		logs.Errorf("failed to new uwork api client, err: %v", err)
+		logs.Errorf("failed to new xray api client, err: %v", err)
 		return nil, err
 	}
 
@@ -188,7 +188,7 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		TencentCloudOpt: opts.TCloudOpt,
 		Erp:             erp,
 		Tmp:             tmp,
-		Uwork:           uwork,
+		Xray:            xray,
 		GCS:             gcs,
 		Tcaplus:         tcaplus,
 		TGW:             tgw,

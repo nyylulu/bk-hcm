@@ -193,8 +193,10 @@ erp:
 tmp:
   host: http://127.0.0.1
 
-uwork:
+xray:
   host: http://127.0.0.1
+  client_id: test
+  secret_key: test
 
 gcs:
   host: http://127.0.0.1

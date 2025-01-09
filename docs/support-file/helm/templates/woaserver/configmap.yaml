@@ -52,8 +52,8 @@ data:
       {{- toYaml .Values.erp | nindent 6 }}
     tmp:
       {{- toYaml .Values.tmp | nindent 6 }}
-    uwork:
-      {{- toYaml .Values.uwork | nindent 6 }}
+    xray:
+      {{- toYaml .Values.xray | nindent 6 }}
     gcs:
       {{- toYaml .Values.gcs | nindent 6 }}
     tcaplus:

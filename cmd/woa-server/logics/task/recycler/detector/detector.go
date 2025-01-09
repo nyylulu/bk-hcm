@@ -38,7 +38,7 @@ import (
 	"hcm/pkg/thirdparty/tcaplusapi"
 	"hcm/pkg/thirdparty/tgwapi"
 	"hcm/pkg/thirdparty/tmpapi"
-	"hcm/pkg/thirdparty/uworkapi"
+	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/uuid"
@@ -49,7 +49,7 @@ import (
 // Detector detects rejected device for recycle
 type Detector struct {
 	cc      cmdb.Client
-	uwork   uworkapi.UworkClientInterface
+	xray    xrayapi.XrayClientInterface
 	xship   xshipapi.XshipClientInterface
 	tmp     tmpapi.TMPClientInterface
 	gcs     gcsapi.GcsClientInterface
@@ -70,7 +70,7 @@ type Detector struct {
 func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Detector, error) {
 	detector := &Detector{
 		cc:      esbCli.Cmdb(),
-		uwork:   thirdCli.Uwork,
+		xray:    thirdCli.Xray,
 		xship:   thirdCli.Xship,
 		tmp:     thirdCli.Tmp,
 		gcs:     thirdCli.GCS,

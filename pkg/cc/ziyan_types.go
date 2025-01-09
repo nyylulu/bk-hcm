@@ -121,7 +121,7 @@ type ClientConfig struct {
 	DvmOpt    DVMCli     `yaml:"dvm"`
 	ErpOpt    ErpCli     `yaml:"erp"`
 	TmpOpt    TmpCli     `yaml:"tmp"`
-	Uwork     UworkCli   `yaml:"uwork"`
+	Xray      XrayCli    `yaml:"xray"`
 	GCS       GCSCli     `yaml:"gcs"`
 	Tcaplus   TcaplusCli `yaml:"tcaplus"`
 	TGW       TGWCli     `yaml:"tgw"`
@@ -163,7 +163,7 @@ func (c ClientConfig) validate() error {
 		return err
 	}
 
-	if err := c.Uwork.validate(); err != nil {
+	if err := c.Xray.validate(); err != nil {
 		return err
 	}
 
@@ -365,15 +365,25 @@ func (c TmpCli) validate() error {
 	return nil
 }
 
-// UworkCli Uwork client options
-type UworkCli struct {
-	// Uwork api address
-	UworkApiAddr string `yaml:"host"`
+// XrayCli xray client options
+type XrayCli struct {
+	// xray api address
+	XrayApiAddr string `yaml:"host"`
+	ClientID    string `yaml:"client_id"`
+	SecretKey   string `yaml:"secret_key"`
 }
 
-func (c UworkCli) validate() error {
-	if len(c.UworkApiAddr) == 0 {
-		return errors.New("uwork.host is not set")
+func (x XrayCli) validate() error {
+	if len(x.XrayApiAddr) == 0 {
+		return errors.New("xray.host is not set")
+	}
+
+	if len(x.ClientID) == 0 {
+		return errors.New("xray.client_id is not set")
+	}
+
+	if len(x.SecretKey) == 0 {
+		return errors.New("xray.secret_key is not set")
 	}
 
 	return nil
