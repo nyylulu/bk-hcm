@@ -154,7 +154,7 @@ export default defineComponent({
                 </div>
                 <div class='form-item-container'>
                   <FormItem label='需求类型' required property='require_type'>
-                    <Select v-model={topModelForm.value.require_type} clearable placeholder='请选择'>
+                    <Select v-model={topModelForm.value.require_type} clearable class='i-form-control'>
                       {requireTypeList.value.map(({ label, value }) => {
                         return <Select.Option key={value} name={label} id={value} />;
                       })}
@@ -171,7 +171,10 @@ export default defineComponent({
           ),
           footer: () => (
             <div class='dialog-footer-btn'>
-              <bk-button theme='primary' onClick={handleOrderFormSubmit}>
+              <bk-button
+                theme='primary'
+                onClick={handleOrderFormSubmit}
+                disabled={bottomModelFormRef.value?.isSubmitDisabled}>
                 提交
               </bk-button>
               <bk-button onClick={handleOrderFormCancel}>取消</bk-button>

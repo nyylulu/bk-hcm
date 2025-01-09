@@ -5,7 +5,6 @@ import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert, Tag }
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import BusinessSelector from '@/components/business-selector/index.vue';
-import HcmLink from '@/components/hcm-link/index.vue';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import DiskTypeSelect from '../DiskTypeSelect';
@@ -42,6 +41,9 @@ import { DeviceType, CvmDeviceType } from '@/views/ziyanScr/components/devicetyp
 // 小额绿通
 import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
+// 预测
+import usePlanDeviceType from '@/views/ziyanScr/hostApplication/plan/usePlanDeviceType';
+import PlanLinkAlert from '../../plan/plan-link-alert.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 const { DropdownMenu, DropdownItem } = Dropdown;
@@ -60,7 +62,6 @@ export default defineComponent({
     const accountStore = useAccountStore();
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
-    const isLoadingDeviceType = ref(false);
     const router = useRouter();
     const route = useRoute();
     const addResourceRequirements = ref(false);
@@ -69,8 +70,6 @@ export default defineComponent({
     const CVMapplication = ref(false);
     const { getBizsId, whereAmI } = useWhereAmI();
     const planStore = usePlanStore();
-    const availablePrepaidSet = ref(new Set());
-    const availablePostpaidSet = ref(new Set());
     const isNeedVerfiy = ref(false);
     const isVerifyFailed = ref(false);
     const {
@@ -86,7 +85,7 @@ export default defineComponent({
       submitting: false,
       saving: false,
       model: {
-        bkBizId: '',
+        bkBizId: undefined as number,
         bkUsername: '',
         requireType: 1,
         enableNotice: false,
@@ -101,14 +100,53 @@ export default defineComponent({
         expectTime: [{ required: true, message: '请填写期望交付时间', trigger: 'change' }],
       },
     });
-    const deviceTypeSelectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
 
-    const computedAvailableSet = computed(() => {
-      const set =
-        resourceForm.value.charge_type === ChargeType.PREPAID ? availablePrepaidSet.value : availablePostpaidSet.value;
-      deviceTypeSelectorRef.value.handleSort((a, b) => Number(set.has(b.device_type)) - Number(set.has(a.device_type)));
-      return set;
-    });
+    const deviceTypeSelectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
+    const selectedChargeType = computed(() => resourceForm.value.charge_type);
+    const {
+      isPlanedDeviceTypeLoading,
+      availableDeviceTypeSet,
+      computedAvailableDeviceTypeSet,
+      hasPlanedDeviceType,
+      getPlanedDeviceType,
+    } = usePlanDeviceType(deviceTypeSelectorRef, selectedChargeType);
+
+    // 机型排序
+    const deviceTypeCompareFn = (a: DeviceType, b: DeviceType) => {
+      // 非滚服、非小额绿通，走预测
+      if (!isSpecialRequirement.value) {
+        const set = computedAvailableDeviceTypeSet.value;
+        return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
+      }
+      // 滚服、小额绿通
+      const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
+      const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
+      if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType') return -1;
+      if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
+      return 0;
+    };
+    // 机型选项禁用
+    const deviceTypeOptionDisabledCallback = (option: DeviceType) => {
+      // 非滚服、非小额绿通
+      if (!isSpecialRequirement.value) {
+        return !computedAvailableDeviceTypeSet.value.has(option.device_type);
+      }
+      // 滚服、小额绿通
+      const { device_type_class, device_group } = option as CvmDeviceType;
+      return (
+        'SpecialType' === device_type_class ||
+        (isRollingServer.value && device_group !== rollingServerHost?.device_group)
+      );
+    };
+    const deviceTypeOptionDisabledTipsCallback = (option: DeviceType) => {
+      // 非滚服、非小额绿通
+      if (!isSpecialRequirement.value) return '当前机型不在有效预测范围内';
+      // 滚服、小额绿通
+      const { device_type_class, device_group } = option as CvmDeviceType;
+      if (device_type_class === 'SpecialType') return '专用机型不允许选择';
+      if (isRollingServer.value && device_group !== rollingServerHost?.device_group) return '机型族不匹配';
+    };
+
     const formRef = ref();
     const IDCPMIndex = ref(-1);
     const QCLOUDCVMIndex = ref(-1);
@@ -626,36 +664,14 @@ export default defineComponent({
           isSpecialRequirement.value
         )
           return;
-        isLoadingDeviceType.value = true;
-        availablePrepaidSet.value.clear();
-        availablePostpaidSet.value.clear();
-        try {
-          const { data } = await planStore.list_config_cvm_charge_type_device_type({
-            bk_biz_id: !isSpringPool.value ? bk_biz_id : 931,
-            require_type,
-            region,
-            zone,
-          });
-          const { info } = data;
-          for (const item of info) {
-            const { charge_type, device_types } = item;
-            let set = availablePostpaidSet.value;
-            if (charge_type === ChargeType.PREPAID) {
-              set = availablePrepaidSet.value;
-            }
-            for (const device of device_types) {
-              const { device_type, available } = device;
-              if (available) set.add(device_type);
-            }
-          }
-          if (availablePrepaidSet.value.size === 0) resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
-        } finally {
-          isLoadingDeviceType.value = false;
+
+        await getPlanedDeviceType(!isSpringPool.value ? bk_biz_id : 931, require_type, region, zone);
+
+        if (availableDeviceTypeSet.prepaid.size === 0) {
+          resourceForm.value.charge_type = cvmChargeTypes.POSTPAID_BY_HOUR;
         }
       },
-      {
-        deep: true,
-      },
+      { deep: true },
     );
 
     const assignment = (data: any) => {
@@ -989,12 +1005,6 @@ export default defineComponent({
       return val;
     });
     const isCpuCoreExceeded = computed(() => replicasCpuCores.value > availableCpuCoreQuota.value);
-
-    // 非滚服-机型排序逻辑
-    const handleSortDemands = (a: DeviceType, b: DeviceType) => {
-      const set = computedAvailableSet.value;
-      return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
-    };
 
     // 小额绿通
     const greenChannelCpuCoreLimitsRef = useTemplateRef<typeof GreenChannelCpuCoreLimits>(
@@ -1375,42 +1385,17 @@ export default defineComponent({
                           onChange={handleZoneChange}
                         />
                       </bk-form-item>
+                      {/* 预测指引 */}
                       {!isSpecialRequirement.value &&
                         resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                        !availablePostpaidSet.value.size &&
-                        !availablePrepaidSet.value.size &&
-                        !isLoadingDeviceType.value && (
-                          <Alert class={'mb8'} theme='warning'>
-                            该地域，在当月，没有可申领的预测需求
-                            {!isSpringPool.value && (
-                              <>
-                                ，建议：
-                                <ul>
-                                  <li>
-                                    1.切换有预测需求的地域，
-                                    <HcmLink
-                                      theme='primary'
-                                      size='small'
-                                      href={`/#/business/resource-plan?bizs=${computedBiz.value}`}
-                                      target='_blank'>
-                                      查询当前预测需求
-                                    </HcmLink>
-                                  </li>
-                                  <li>
-                                    2.请先提交预测单，将期望到货日期设置为当月，预测需求审批通过后可申领主机，
-                                    <HcmLink
-                                      theme='primary'
-                                      size='small'
-                                      href={`/#/business/resource-plan/add?bizs=${computedBiz.value}`}
-                                      target='_blank'>
-                                      去创建提预测单
-                                    </HcmLink>
-                                  </li>
-                                </ul>
-                              </>
-                            )}
-                          </Alert>
+                        !hasPlanedDeviceType.value &&
+                        !isPlanedDeviceTypeLoading.value && (
+                          <PlanLinkAlert
+                            bkBizId={computedBiz.value}
+                            showSuggestions={!isSpringPool.value}
+                            style='margin: -12px 0 24px'
+                          />
                         )}
                       {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                         <>
@@ -1475,19 +1460,19 @@ export default defineComponent({
                                 style={{ width: '260px' }}>
                                 <RadioButton
                                   label={cvmChargeTypes.PREPAID}
-                                  disabled={availablePrepaidSet.value.size === 0}
+                                  disabled={availableDeviceTypeSet.prepaid.size === 0}
                                   v-bk-tooltips={{
                                     content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                    disabled: !resourceForm.value.zone || availablePrepaidSet.value.size > 0,
+                                    disabled: !resourceForm.value.zone || availableDeviceTypeSet.prepaid.size > 0,
                                   }}>
                                   {cvmChargeTypeNames[cvmChargeTypes.PREPAID]}
                                 </RadioButton>
                                 <RadioButton
                                   label={cvmChargeTypes.POSTPAID_BY_HOUR}
-                                  disabled={availablePostpaidSet.value.size === 0}
+                                  disabled={availableDeviceTypeSet.postpaid.size === 0}
                                   v-bk-tooltips={{
                                     content: '当前地域无有效的预测需求，请提预测单后再按量申请',
-                                    disabled: !resourceForm.value.zone || availablePostpaidSet.value.size > 0,
+                                    disabled: !resourceForm.value.zone || availableDeviceTypeSet.postpaid.size > 0,
                                   }}>
                                   {cvmChargeTypeNames[cvmChargeTypes.POSTPAID_BY_HOUR]}
                                 </RadioButton>
@@ -1570,38 +1555,11 @@ export default defineComponent({
                                 resourceType='cvm'
                                 params={cvmDevicetypeParams.value}
                                 disabled={resourceForm.value.zone === ''}
-                                isLoading={isLoadingDeviceType.value}
+                                isLoading={isPlanedDeviceTypeLoading.value}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
-                                sort={(a, b) => {
-                                  if (!isSpecialRequirement.value) return handleSortDemands(a, b);
-                                  const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
-                                  const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
-                                  if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType')
-                                    return -1;
-                                  if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
-                                  return 0;
-                                }}
-                                optionDisabled={
-                                  !isSpecialRequirement.value
-                                    ? (v) => !computedAvailableSet.value.has(v.device_type)
-                                    : (option) =>
-                                        (option as CvmDeviceType).device_type_class === 'SpecialType' ||
-                                        (isRollingServer.value &&
-                                          (option as CvmDeviceType).device_group !== rollingServerHost?.device_group)
-                                }
-                                optionDisabledTipsContent={
-                                  !isSpecialRequirement.value
-                                    ? () => '当前机型不在有效预测范围内'
-                                    : (option) => {
-                                        const { device_type_class, device_group } = option as CvmDeviceType;
-                                        if (device_type_class === 'SpecialType') {
-                                          return '专用机型不允许选择';
-                                        }
-                                        if (isRollingServer.value && device_group !== rollingServerHost?.device_group) {
-                                          return '机型族不匹配';
-                                        }
-                                      }
-                                }
+                                sort={deviceTypeCompareFn}
+                                optionDisabled={deviceTypeOptionDisabledCallback}
+                                optionDisabledTipsContent={deviceTypeOptionDisabledTipsCallback}
                                 onChange={(result) => {
                                   QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType)?.cpu_amount;
                                   selectedCvmDeviceType.value = result as CvmDeviceType;
@@ -1783,16 +1741,14 @@ export default defineComponent({
                         !isSpecialRequirement.value &&
                         resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                        !availablePostpaidSet.value.size &&
-                        !availablePrepaidSet.value.size
+                        !hasPlanedDeviceType.value
                       ),
                     }}
                     disabled={
                       !isSpecialRequirement.value &&
                       resourceForm.value.zone &&
                       resourceForm.value.resourceType === 'QCLOUDCVM' &&
-                      !availablePostpaidSet.value.size &&
-                      !availablePrepaidSet.value.size
+                      !hasPlanedDeviceType.value
                     }>
                     保存需求
                   </Button>

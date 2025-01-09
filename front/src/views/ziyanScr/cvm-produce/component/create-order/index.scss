@@ -1,10 +1,14 @@
 .form-item-container {
-    display: flex;
+  display: flex;
+
+  .i-form-control {
+    width: 300px;
+  }
 }
 .dialog-footer-btn {
-    .bk-button+.bk-button {
-        margin-left: 10px;
-    }
+  .bk-button + .bk-button {
+    margin-left: 10px;
+  }
 }
 .cvm-produce-create-order-dialog {
   .bk-modal-content {

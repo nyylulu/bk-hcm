@@ -46,7 +46,7 @@ export enum AdjustType {
 }
 
 export interface IListConfigCvmChargeTypeDeviceTypeParams {
-  bk_biz_id: number | string; // CC业务ID
+  bk_biz_id: number; // CC业务ID
   require_type: number; // 需求类型。1: 常规项目; 2: 春节保障; 3: 机房裁撤
   region: string; // 地域
   zone?: string; // 可用区，若为空则查询地域下所有可用区支持的机型
