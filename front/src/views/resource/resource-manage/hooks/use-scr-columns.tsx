@@ -2157,7 +2157,7 @@ export default (type: string, isSimpleShow = false) => {
         <Button
           theme='primary'
           text
-          onClick={() => routerAction.open({ path: `https://crp.woa.com/crp-outside/yunti/orders/iaasplan/${cell}` })}>
+          onClick={() => window.open(`https://crp.woa.com/crp-outside/yunti/orders/iaasplan/${cell}`, '_blank')}>
           {cell}
         </Button>
       ),
