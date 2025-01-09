@@ -20,7 +20,7 @@ const availableCpuCoreQuota = computed(() => {
 const cpuCoreQuota = computed(() => globalQuotaConfig.value?.biz_quota);
 
 onBeforeMount(() => {
-  greenChannelQuotaStore.getGlobalQuota();
+  greenChannelQuotaStore.getGlobalQuota(false);
 });
 
 defineExpose({ availableCpuCoreQuota });

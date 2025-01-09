@@ -36,14 +36,15 @@ export const useGreenChannelQuotaStore = defineStore('green-channel-quota', () =
 
   const globalQuotaConfig = ref<Partial<IGlobalQuota & ICpuCoreSummary>>({});
 
-  const getGlobalQuota = async () => {
+  const getGlobalQuota = async (isPlatform = true) => {
     try {
       const [globalQuotaRes, globalCpuCoreRes] = await Promise.all<
         [Promise<IQueryResData<IGlobalQuota>>, Promise<IQueryResData<ICpuCoreSummary>>]
       >([
         http.get('/api/v1/woa/green_channels/configs'),
         http.post(`/api/v1/woa/${getBusinessApiPath()}green_channels/cpu_core/summary`, {
-          ...convertDateRangeToObject(getDateRange('naturalIsoWeek')),
+          // 平台管理中查自然月，业务管理中查自然周
+          ...convertDateRangeToObject(getDateRange(isPlatform ? 'naturalMonth' : 'naturalIsoWeek')),
         }),
       ]);
 
