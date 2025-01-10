@@ -22,7 +22,6 @@ package plan
 import (
 	"time"
 
-	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
@@ -30,7 +29,6 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/tools/times"
 )
 
 // CalcPenaltyBase 计算罚金分摊基数
@@ -68,20 +66,7 @@ func (s *service) calcPenaltyBase(kt *kit.Kit, req *ptypes.CalcPenaltyBaseReq) e
 		return err
 	}
 
-	baseDayYearMonthWeek := demandtime.GetDemandYearMonthWeek(baseDay)
-	// 单据只看12周前的
-	days12Before := baseDay.AddDate(0, 0, -12*7)
-	monday12Before := times.GetMondayOfWeek(days12Before)
-
-	err = s.planController.CreatePenaltyBaseFromTicket(kt, req.BkBizIDs, monday12Before,
-		demandtime.GetDemandDateRangeInWeek(baseDay), baseDayYearMonthWeek)
-	if err != nil {
-		logs.Errorf("failed to create penalty base from ticket, err: %v, req_base_day: %s, rid: %s", err,
-			req.PenaltyBaseDay, kt.Rid)
-		return err
-	}
-
-	return nil
+	return s.planController.CalcPenaltyBase(kt, baseDay, req.BkBizIDs)
 }
 
 // CalcAndPushPenaltyRatio 计算并推送罚金分摊比例

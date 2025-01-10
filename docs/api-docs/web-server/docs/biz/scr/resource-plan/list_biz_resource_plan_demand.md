@@ -110,6 +110,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
         "demand_class": "CVM",
         "demand_res_type": "CVM",
         "expect_time": "2024-01-01",
+        "expired_time": "2024-01-28",
         "device_class": "高IO型I6t",
         "device_type": "I6t.33XMEDIUM198",
         "total_os": "56.5",
@@ -184,6 +185,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | demand_class       | string | 预测的需求类型，枚举值：CVM、CA                                                                |
 | demand_res_type    | string | 预测资源类型，枚举值：CVM、CBS                                                                |
 | expect_time        | string | 期望交付日期，格式为YYYY-MM-DD，例如2024-01-01                                                 |
+| expired_time       | string | 预测申领截止日期，格式为YYYY-MM-DD，例如2024-01-01                                               |
 | device_class       | string | 机型类型                                                                              |
 | device_type        | string | 机型规格                                                                              |
 | total_os           | string | 总OS数量                                                                             |

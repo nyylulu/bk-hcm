@@ -159,6 +159,7 @@ type Set interface {
 	ResPlanTicketStatus() resplan.ResPlanTicketStatusInterface
 	ResPlanCrpDemand() resplan.ResPlanCrpDemandInterface
 	ResPlanPenalty() resplan.ResPlanPenaltyInterface
+	ResPlanWeek() resplan.ResPlanWeekInterface
 	WoaZone() resplan.WoaZoneInterface
 	WoaDeviceType() resplan.WoaDeviceTypeInterface
 
@@ -893,6 +894,15 @@ func (s *set) ResPlanCrpDemand() resplan.ResPlanCrpDemandInterface {
 // ResPlanPenalty resource plan penalty dao.
 func (s *set) ResPlanPenalty() resplan.ResPlanPenaltyInterface {
 	return &resplan.ResPlanPenaltyDao{
+		Orm:   s.orm,
+		IDGen: s.idGen,
+		Audit: s.audit,
+	}
+}
+
+// ResPlanWeek resource plan week dao.
+func (s *set) ResPlanWeek() resplan.ResPlanWeekInterface {
+	return &resplan.ResPlanWeekDao{
 		Orm:   s.orm,
 		IDGen: s.idGen,
 		Audit: s.audit,

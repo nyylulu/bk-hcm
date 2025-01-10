@@ -60,7 +60,11 @@ func (c *Controller) generatePenaltyBase(ctx context.Context) {
 	// 判断上周的罚金基数是否已经生成，没有需要先补上周的
 	kt := core.NewBackendKit()
 	days12After := now.AddDate(0, 0, 12*7)
-	yearMonthWeek12After := dtime.GetDemandYearMonthWeek(days12After)
+	yearMonthWeek12After, err := c.demandTime.GetDemandYearMonthWeek(kt, days12After)
+	if err != nil {
+		logs.Errorf("%s: failed to get year month week, err: %v, demand_date: %s, rid: %s",
+			constant.DemandPenaltyBaseGenerateFailed, err, days12After.String(), kt.Rid)
+	}
 
 	exists, err := c.isPenaltyBaseExists(kt, yearMonthWeek12After.Year, yearMonthWeek12After.YearWeek)
 	if err != nil {
@@ -76,7 +80,7 @@ func (c *Controller) generatePenaltyBase(ctx context.Context) {
 			thisMonday.Location())
 
 		err := c.CreatePenaltyBaseFromTicket(kt, []int64{}, ticketEnd,
-			dtime.GetDemandDateRangeInWeek(days12After), yearMonthWeek12After)
+			c.demandTime.GetDemandDateRangeInWeek(kt, days12After), yearMonthWeek12After)
 		if err != nil {
 			logs.Errorf("%s: failed to create penalty base from ticket, err: %v, year_month_week: %+v, rid: %s",
 				constant.DemandPenaltyBaseGenerateFailed, err, yearMonthWeek12After, kt.Rid)
@@ -95,11 +99,15 @@ func (c *Controller) generatePenaltyBase(ctx context.Context) {
 
 		kt = core.NewBackendKit()
 		days12After = nextRunTime.AddDate(0, 0, 12*7)
-		yearMonthWeek12After = dtime.GetDemandYearMonthWeek(days12After)
+		yearMonthWeek12After, err = c.demandTime.GetDemandYearMonthWeek(kt, days12After)
+		if err != nil {
+			logs.Errorf("%s: failed to get year month week, err: %v, demand_date: %s, rid: %s",
+				constant.DemandPenaltyBaseGenerateFailed, err, days12After.String(), kt.Rid)
+		}
 
 		// 计算罚金基数
 		err := c.CreatePenaltyBaseFromTicket(kt, []int64{}, nextRunTime,
-			dtime.GetDemandDateRangeInWeek(days12After), yearMonthWeek12After)
+			c.demandTime.GetDemandDateRangeInWeek(kt, days12After), yearMonthWeek12After)
 		if err != nil {
 			logs.Errorf("%s: failed to create penalty base from ticket, err: %v, year_month_week: %+v, rid: %s",
 				constant.DemandPenaltyBaseGenerateFailed, err, yearMonthWeek12After, kt.Rid)
@@ -186,6 +194,30 @@ func (c *Controller) isPenaltyBaseExists(kt *kit.Kit, year int, penaltyWeek int)
 	}
 
 	return false, nil
+}
+
+// CalcPenaltyBase 计算罚金分摊基数
+func (c *Controller) CalcPenaltyBase(kt *kit.Kit, baseDay time.Time, bkBizIDs []int64) error {
+	baseDayYearMonthWeek, err := c.demandTime.GetDemandYearMonthWeek(kt, baseDay)
+	if err != nil {
+		logs.Errorf("failed to get demand year month week, err: %v, base_day: %s, rid: %s", err,
+			baseDay.String(), kt.Rid)
+		return err
+	}
+
+	// 单据只看12周前的
+	days12Before := baseDay.AddDate(0, 0, -12*7)
+	monday12Before := times.GetMondayOfWeek(days12Before)
+
+	err = c.CreatePenaltyBaseFromTicket(kt, bkBizIDs, monday12Before,
+		c.demandTime.GetDemandDateRangeInWeek(kt, baseDay), baseDayYearMonthWeek)
+	if err != nil {
+		logs.Errorf("failed to create penalty base from ticket, err: %v, base_day: %s, rid: %s", err,
+			baseDay.String(), kt.Rid)
+		return err
+	}
+
+	return nil
 }
 
 // CreatePenaltyBaseFromTicket 从历史单据还原罚金分摊基数，即预测总量
@@ -359,7 +391,12 @@ func (c *Controller) calcPenaltyBaseCoreByTicket(kt *kit.Kit, tickets []rtypes.R
 
 // CalcPenaltyRatioAndPush calc penalty ratio with unexecuted cpu core
 func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) error {
-	year, month := dtime.GetDemandYearMonth(baseTime)
+	year, month, err := c.demandTime.GetDemandYearMonth(kt, baseTime)
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, base_time: %s, rid: %s", err, baseTime.String(),
+			kt.Rid)
+		return err
+	}
 	// 1.获取当月预测申请基准核数
 	listFilter := tools.ExpressionAnd(
 		tools.RuleEqual("year", year),
@@ -372,34 +409,15 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 		return err
 	}
 
-	// 2.从 woa_zone 获取大区和机型对应关系 metadata
-	_, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	// 2.从主机申领记录中，获取当月预测消耗总核数
+	planAppliedCore, err := c.GetBizResPlanAppliedCPUCore(kt, bkBizIDs, baseTime)
 	if err != nil {
-		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to get biz res plan applied cpu core, err: %v, bk_biz_ids: %v, base_time: %s, rid: %s",
+			err, bkBizIDs, baseTime, kt.Rid)
 		return err
 	}
 
-	// 3.从主机申领记录中，获取当月预测消耗总核数
-	timeRange := dtime.GetDemandDateRangeInMonth(baseTime)
-	startDay, endDay, err := timeRange.GetTimeDate()
-	if err != nil {
-		logs.Errorf("failed to parse date range, err: %v, date range: %s - %s, rid: %s", err, timeRange.Start,
-			timeRange.End, kt.Rid)
-		return err
-	}
-	prodConsumePool, err := c.GetProdResConsumePoolV2(kt, bkBizIDs, startDay, endDay)
-	if err != nil {
-		logs.Errorf("failed to get biz resource consume pool v2, bkBizIDs: %v, err: %v, rid: %s", bkBizIDs, err,
-			kt.Rid)
-		return err
-	}
-	planAppliedCore, err := convResConsumePoolToPenaltyMap(kt, prodConsumePool, regionAreaMap, deviceTypeMap)
-	if err != nil {
-		logs.Errorf("failed to convert res consume pool to penalty map, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	// 4.获取业务的运营产品&规划产品
+	// 3.获取业务的运营产品&规划产品
 	bizOrgRelMap := make(map[int64]*mtypes.BizOrgRel)
 	for _, bkBizID := range bkBizIDs {
 		rel, err := c.bizLogics.GetBizOrgRel(kt, bkBizID)
@@ -410,7 +428,7 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 		bizOrgRelMap[bkBizID] = rel
 	}
 
-	// 5.计算运营产品下未执行到80%的核数，并收敛到规划产品
+	// 4.计算运营产品下未执行到80%的核数，并收敛到规划产品
 	planProductUnexecMap := make(map[int64]map[int64]int64)
 	for key, baseCore := range penaltyBaseMap {
 		bizOrg, ok := bizOrgRelMap[key.BkBizID]
@@ -429,7 +447,7 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 		planProductUnexecMap[planProductID][opProductID] -= planAppliedCore[key]
 	}
 
-	// 6.推送罚金比例到CRP
+	// 5.推送罚金比例到CRP
 	err = c.pushPenaltyRatioToCRP(kt, planProductUnexecMap, fmt.Sprintf("%04d-%02d", year, month))
 	if err != nil {
 		logs.Errorf("failed to push penalty ratio to crp, err: %v, base_time: %s, year: %d, month: %d, rid: %s",
@@ -438,6 +456,44 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 	}
 
 	return nil
+}
+
+// GetBizResPlanAppliedCPUCore 获取业务预测已申领的核数，按需求月维度统计，入参需提供该需求月内的任意时间
+func (c *Controller) GetBizResPlanAppliedCPUCore(kt *kit.Kit, bkBizIDs []int64, baseTime time.Time) (
+	map[ptypes.DemandPenaltyBaseKey]int64, error) {
+
+	// 从 woa_zone 获取大区和机型对应关系 metadata
+	_, regionAreaMap, deviceTypeMap, err := c.getMetaMaps(kt)
+	if err != nil {
+		logs.Errorf("get meta maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	timeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, baseTime)
+	if err != nil {
+		logs.Errorf("failed to get demand date range in month, err: %v, base_time: %s, rid: %s", err,
+			baseTime.String(), kt.Rid)
+		return nil, err
+	}
+	startDay, endDay, err := timeRange.GetTimeDate()
+	if err != nil {
+		logs.Errorf("failed to parse date range, err: %v, date range: %s - %s, rid: %s", err, timeRange.Start,
+			timeRange.End, kt.Rid)
+		return nil, err
+	}
+	prodConsumePool, err := c.GetProdResConsumePoolV2(kt, bkBizIDs, startDay, endDay)
+	if err != nil {
+		logs.Errorf("failed to get biz resource consume pool v2, bkBizIDs: %v, err: %v, rid: %s", bkBizIDs, err,
+			kt.Rid)
+		return nil, err
+	}
+	planAppliedCore, err := convResConsumePoolToPenaltyMap(kt, prodConsumePool, regionAreaMap, deviceTypeMap)
+	if err != nil {
+		logs.Errorf("failed to convert res consume pool to penalty map, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	return planAppliedCore, nil
 }
 
 // convResConsumePoolToPenaltyMap 将 ResConsumePool 转为以 DemandPenaltyBaseKey 为 key 的 map

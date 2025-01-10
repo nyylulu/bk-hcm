@@ -18,7 +18,6 @@ import (
 	"slices"
 	"unicode/utf8"
 
-	"hcm/cmd/woa-server/logics/plan/demand-time"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
@@ -269,14 +268,6 @@ func (r *CreateResPlanDemandReq) Validate() error {
 
 	if err := r.ObsProject.ValidateResPlan(); err != nil {
 		return err
-	}
-
-	et, err := times.ParseDay(r.ExpectTime)
-	if err != nil {
-		return err
-	}
-	if demandtime.IsDayCrossMonth(et) {
-		return errors.New("expect_time should not be cross month")
 	}
 
 	if r.DemandSource != "" {

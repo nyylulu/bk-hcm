@@ -17,21 +17,35 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package resplanweek ...
+package resplanweek
 
 import (
+	"net/http"
+
 	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	"hcm/pkg/dal/dao"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
+// InitService initialize the res plan week service
 func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
+	svc := &service{
+		dao: cap.Dao,
+	}
+	h := rest.NewHandler()
+	h.Add("BatchCreateResPlanWeek", http.MethodPost, "/res_plans/res_plan_weeks/batch/create",
+		svc.BatchCreateResPlanWeek)
+	h.Add("DeleteResPlanWeek", http.MethodDelete, "/res_plans/res_plan_weeks/batch",
+		svc.DeleteResPlanWeek)
+	h.Add("ListResPlanWeek", http.MethodPost, "/res_plans/res_plan_weeks/list",
+		svc.ListResPlanWeek)
+	h.Add("BatchUpdateResPlanWeek", http.MethodPatch, "/res_plans/res_plan_weeks/batch",
+		svc.BatchUpdateResPlanWeek)
+
+	h.Load(cap.WebService)
+}
+
+type service struct {
+	dao dao.Set
 }

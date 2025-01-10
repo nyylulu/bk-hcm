@@ -20,10 +20,18 @@
 package demandtime
 
 import (
+	"errors"
+	"math"
 	"time"
 
+	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/tools/times"
 )
 
@@ -37,32 +45,83 @@ type DemandYearMonthWeek struct {
 	YearWeek int `json:"year_week"`
 }
 
+// DemandTime is the interface for demand time.
+type DemandTime interface {
+	// GetDemandYearMonthWeek 返回给定时间所属的需求年月周
+	GetDemandYearMonthWeek(kt *kit.Kit, t time.Time) (DemandYearMonthWeek, error)
+	// GetDemandYearMonth 返回给定时间的所属需求年月
+	GetDemandYearMonth(kt *kit.Kit, t time.Time) (int, time.Month, error)
+
+	// GetDemandDateRangeInMonth 返回给定时间所属需求周期的起始和结束时间
+	// 目前需求周期以月为单位，因此该方法返回需求月的起始和结束时间
+	GetDemandDateRangeInMonth(kt *kit.Kit, t time.Time) (times.DateRange, error)
+	// GetDemandDateRangeInWeek 返回给定时间所在周的起始和结束时间
+	GetDemandDateRangeInWeek(kt *kit.Kit, t time.Time) times.DateRange
+
+	// IsDayCrossMonth 判断给定日期的所属需求月是否和所属自然月不同
+	IsDayCrossMonth(kt *kit.Kit, t time.Time) (bool, error)
+	// GetDemandStatusByExpectTime 根据期望交付时间，判断需求状态
+	GetDemandStatusByExpectTime(kt *kit.Kit, expectTime string) (enumor.DemandStatus, times.DateRange, error)
+}
+
+// DemandTimeFromTable is the implementation of DemandTime.
+type DemandTimeFromTable struct {
+	client *client.ClientSet
+}
+
+// NewDemandTimeFromTable ...
+func NewDemandTimeFromTable(client *client.ClientSet) DemandTime {
+	return &DemandTimeFromTable{
+		client: client,
+	}
+}
+
 // GetDemandYearMonthWeek returns the year, month and week of the month based on the input time from a demand
 // perspective.
-// 需求年月周：当一周内出现跨月（自然月）的情况，则根据该周周一所属月划为该月的需求年月周。
-// 举例1：2024-08-26 ～ 2024-09-01分别是周一至周日，则该周划为2024-08需求年月的最后一周
-// 举例2：2024-09-30 ～ 2024-10-06分别是周一至周日，则该周划为2024-09需求年月的最后一周
-func GetDemandYearMonthWeek(t time.Time) DemandYearMonthWeek {
-	year, month := GetDemandYearMonth(t)
+func (d DemandTimeFromTable) GetDemandYearMonthWeek(kt *kit.Kit, t time.Time) (DemandYearMonthWeek, error) {
+	year, month, err := d.GetDemandYearMonth(kt, t)
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, demand_time: %s, rid: %s", err, t.String(),
+			kt.Rid)
+		return DemandYearMonthWeek{}, err
+	}
 
-	// 从输入时间t逐周往前回溯：
-	// 若前一周的需求年月与当前不同，则需求年月周++
-	// 若前一周的需求年与当前不同，则需求全年周++
-	// 举例：2024年9月8日的需求年月是“2024年9月”，前一周（2024年9月1日）的需求年月是“2024年8月”，两者的需求年月不同，
-	//   因此，2024年9月8日的需求年月周为“2024年9月第1周”
+	timeCompactInt := times.ConvTimeToCompactInt(t)
+	// 获取该需求月的所有周，计算本周属于第几周
+	listReq := &rpproto.ResPlanWeekListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("year", year),
+				tools.RuleEqual("month", month),
+			),
+			Page: &core.BasePage{
+				Start: 0,
+				Limit: core.DefaultMaxPageLimit,
+				Sort:  "year_week",
+			},
+		},
+	}
+
+	rst, err := d.client.DataService().Global.ResourcePlan.ListResPlanWeek(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan week, err: %v, demand_time: %d, rid: %s", err, timeCompactInt,
+			kt.Rid)
+		return DemandYearMonthWeek{}, err
+	}
+
+	if len(rst.Details) == 0 {
+		logs.Errorf("no res plan week found, demand_time: %d, rid: %s", timeCompactInt, kt.Rid)
+		return DemandYearMonthWeek{}, errors.New("cannot determine which year_month_week the demand belongs to")
+	}
+
+	yearWeek := -1
 	week := 1
-	yearWeek := 1
-	for tPrevWeek := t.AddDate(0, 0, -7); ; tPrevWeek = tPrevWeek.AddDate(0, 0, -7) {
-		yearOfPrevWeek, monthOfPrevWeek := GetDemandYearMonth(tPrevWeek)
-		if yearOfPrevWeek != year {
+	for _, item := range rst.Details {
+		if item.Start <= timeCompactInt && timeCompactInt <= item.End {
+			yearWeek = item.YearWeek
 			break
 		}
-
-		if monthOfPrevWeek == month {
-			week += 1
-		}
-
-		yearWeek += 1
+		week++
 	}
 
 	return DemandYearMonthWeek{
@@ -70,12 +129,56 @@ func GetDemandYearMonthWeek(t time.Time) DemandYearMonthWeek {
 		Month:    month,
 		Week:     week,
 		YearWeek: yearWeek,
+	}, nil
+}
+
+// GetDemandYearMonth returns the year, month based on the input time from a demand perspective.
+func (d DemandTimeFromTable) GetDemandYearMonth(kt *kit.Kit, t time.Time) (int, time.Month, error) {
+	timeCompactInt := times.ConvTimeToCompactInt(t)
+	listReq := &rpproto.ResPlanWeekListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleLessThanEqual("start", timeCompactInt),
+				tools.RuleGreaterThanEqual("end", timeCompactInt),
+			),
+			Page: core.NewDefaultBasePage(),
+		},
 	}
+
+	rst, err := d.client.DataService().Global.ResourcePlan.ListResPlanWeek(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan week, err: %v, demand_time: %d, rid: %s", err, timeCompactInt,
+			kt.Rid)
+		return 0, 0, err
+	}
+
+	if len(rst.Details) == 0 {
+		logs.Errorf("no res plan week found, demand_time: %d, rid: %s", timeCompactInt, kt.Rid)
+		return 0, 0, errors.New("cannot determine which month the demand belongs to")
+	}
+
+	year := rst.Details[0].Year
+	month := rst.Details[0].Month
+
+	return year, time.Month(month), nil
+}
+
+// GetDemandDateRangeInMonth get the date range of a month based on the input time from a demand perspective.
+func (d DemandTimeFromTable) GetDemandDateRangeInMonth(kt *kit.Kit, t time.Time) (times.DateRange, error) {
+	startDate, endDate, err := d.getDemandMonthStartEnd(kt, t)
+	if err != nil {
+		return times.DateRange{}, err
+	}
+
+	return times.DateRange{
+		Start: startDate.Format(constant.DateLayout),
+		End:   endDate.Format(constant.DateLayout),
+	}, nil
 }
 
 // GetDemandDateRangeInWeek get the date range of a week based on the input time from a demand perspective.
-func GetDemandDateRangeInWeek(t time.Time) times.DateRange {
-	weekdays := Weekdays(t)
+func (d DemandTimeFromTable) GetDemandDateRangeInWeek(kt *kit.Kit, t time.Time) times.DateRange {
+	weekdays := d.weekdays(t)
 
 	return times.DateRange{
 		Start: weekdays[0].Format(constant.DateLayout),
@@ -83,25 +186,59 @@ func GetDemandDateRangeInWeek(t time.Time) times.DateRange {
 	}
 }
 
-// GetDemandDateRangeInMonth get the date range of a month based on the input time from a demand perspective.
-func GetDemandDateRangeInMonth(t time.Time) times.DateRange {
-	startDate, endDate := getDemandMonthStartEnd(t)
-
-	return times.DateRange{
-		Start: startDate.Format(constant.DateLayout),
-		End:   endDate.Format(constant.DateLayout),
+// getDemandMonthStartEnd 获取给定时间的需求年月的第一天和最后一天
+// 当输入时间在所在周跨月，则统一将该周周一所在月作为需求月
+func (d DemandTimeFromTable) getDemandMonthStartEnd(kt *kit.Kit, t time.Time) (time.Time, time.Time, error) {
+	// 获取需求所属年月
+	year, month, err := d.GetDemandYearMonth(kt, t)
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, demand_time: %s, rid: %s", err, t.String(),
+			kt.Rid)
+		return time.Time{}, time.Time{}, err
 	}
-}
 
-// GetDemandYearMonth returns the year, month based on the input time from a demand perspective.
-func GetDemandYearMonth(t time.Time) (year int, month time.Month) {
-	// 无论如何，需求所属年月均以所在周的周一为准
-	weekdays := Weekdays(t)
-	return weekdays[0].Year(), weekdays[0].Month()
+	timeCompactInt := times.ConvTimeToCompactInt(t)
+	// 获取该需求月的范围
+	listReq := &rpproto.ResPlanWeekListReq{
+		ListReq: core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("year", year),
+				tools.RuleEqual("month", month),
+			),
+			Page: core.NewDefaultBasePage(),
+		},
+	}
+
+	rst, err := d.client.DataService().Global.ResourcePlan.ListResPlanWeek(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to list res plan week, err: %v, demand_time: %d, rid: %s", err, timeCompactInt,
+			kt.Rid)
+		return time.Time{}, time.Time{}, err
+	}
+
+	if len(rst.Details) == 0 {
+		logs.Errorf("no res plan week found, demand_time: %d, rid: %s", timeCompactInt, kt.Rid)
+		return time.Time{}, time.Time{}, errors.New("cannot determine which month the demand belongs to")
+	}
+
+	startDateInt := math.MaxInt
+	endDateInt := 0
+	for _, demandWeek := range rst.Details {
+		if demandWeek.Start < startDateInt {
+			startDateInt = demandWeek.Start
+		}
+		if demandWeek.End > endDateInt {
+			endDateInt = demandWeek.End
+		}
+	}
+
+	startDate := times.ConvCompactIntToTime(startDateInt)
+	endDate := times.ConvCompactIntToTime(endDateInt)
+	return startDate, endDate, nil
 }
 
 // Weekdays returns the weekdays from Monday to Sunday around the input time.
-func Weekdays(t time.Time) (week [7]time.Time) {
+func (d DemandTimeFromTable) weekdays(t time.Time) (week [7]time.Time) {
 	offset := int(time.Monday - t.Weekday())
 	if offset > 0 {
 		offset = -6
@@ -115,89 +252,53 @@ func Weekdays(t time.Time) (week [7]time.Time) {
 	return
 }
 
-// getDemandMonthStartEnd 获取给定时间的需求年月的第一天和最后一天
-// 当输入时间在所在周跨月，则统一将该周周一所在月作为需求月
-// 当需求月第一天所在周跨月时，将第二周的第一天当作本月的第一天
-// 无论如何，最后一周的最后一天都是本月的最后一天，即使最后一周出现跨月
-func getDemandMonthStartEnd(t time.Time) (time.Time, time.Time) {
-	year, month := GetDemandYearMonth(t)
-
-	firstDay := time.Date(year, month, 1, 0, 0, 0, 0, t.Location())
-	lastDay := firstDay.AddDate(0, 1, -1)
-
-	weekdaysOfFirstDay := Weekdays(firstDay)
-	weekdaysOfLastDay := Weekdays(lastDay)
-
-	startDate := weekdaysOfFirstDay[0]
-	// 若自然月的第一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月起始时间往后推一周
-	if _, monthOfFirstDay := GetDemandYearMonth(firstDay); monthOfFirstDay != month {
-		startDate = startDate.AddDate(0, 0, 7)
+// IsDayCrossMonth 给定日期，判断日期所属需求月和所属自然月是否不同
+func (d DemandTimeFromTable) IsDayCrossMonth(kt *kit.Kit, t time.Time) (bool, error) {
+	_, month, err := d.GetDemandYearMonth(kt, t)
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, demand_time: %s, rid: %s", err, t.String(),
+			kt.Rid)
+		return false, err
 	}
 
-	endDate := weekdaysOfLastDay[6]
-	// 若自然月的最后一天的需求年月与输入时间的需求年月不同，则输入时间的需求年月结束时间往前推一周
-	if _, monthOfLastDay := GetDemandYearMonth(lastDay); monthOfLastDay != month {
-		endDate = endDate.AddDate(0, 0, -7)
+	if month != t.Month() {
+		return true, nil
 	}
 
-	return startDate, endDate
-}
-
-// IsDayCrossMonth 给定日期，判断日期是否在周纬度跨月且该日期属于下个月
-func IsDayCrossMonth(t time.Time) bool {
-	weekdays := Weekdays(t)
-
-	if weekdays[0].Month() != t.Month() {
-		return true
-	}
-	return false
-}
-
-// IsAboutToExpire check whether the cvm and cbs plan is about to expire
-func IsAboutToExpire(expectedTime *time.Time) bool {
-	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
-
-	// 如果期望时间早于本月（即已过期），是否还属于“即将”过期？
-	if expectedTime.Before(monthStart) || expectedTime.After(monthEnd) {
-		return false
-	}
-	return true
-}
-
-// GetDemandStatus 获取需求状态
-func GetDemandStatus(expectedStart, expectedEnd *time.Time) enumor.DemandStatus {
-	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
-
-	// 未到申领时间
-	if expectedStart.After(monthEnd) {
-		return enumor.DemandStatusNotReady
-	}
-
-	// 已过期
-	if expectedEnd.Before(monthStart) {
-		return enumor.DemandStatusExpired
-	}
-
-	return enumor.DemandStatusCanApply
+	return false, nil
 }
 
 // GetDemandStatusByExpectTime 根据期望交付时间获取需求状态
-func GetDemandStatusByExpectTime(expectTime string) (enumor.DemandStatus, error) {
+func (d DemandTimeFromTable) GetDemandStatusByExpectTime(kt *kit.Kit, expectTime string) (enumor.DemandStatus,
+	times.DateRange, error) {
+
 	t, err := time.Parse(constant.DateLayout, expectTime)
 	if err != nil {
-		return "", err
+		logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err, expectTime, kt.Rid)
+		return "", times.DateRange{}, err
 	}
 
-	monthStart, monthEnd := getDemandMonthStartEnd(time.Now())
+	monthStart, monthEnd, err := d.getDemandMonthStartEnd(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get demand month start end, err: %v, expect_time: %s, rid: %s", err, expectTime,
+			kt.Rid)
+		return "", times.DateRange{}, err
+	}
+
+	demandRange := times.DateRange{
+		Start: monthStart.Format(constant.DateLayout),
+		End:   monthEnd.Format(constant.DateLayout),
+	}
+
 	// 未到申领时间
 	if t.After(monthEnd) {
-		return enumor.DemandStatusNotReady, nil
+		return enumor.DemandStatusNotReady, demandRange, nil
 	}
 
 	// 已过期
 	if t.Before(monthStart) {
-		return enumor.DemandStatusExpired, nil
+		return enumor.DemandStatusExpired, demandRange, nil
 	}
 
-	return enumor.DemandStatusCanApply, nil
+	return enumor.DemandStatusCanApply, demandRange, nil
 }

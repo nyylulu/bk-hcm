@@ -28,7 +28,6 @@ import (
 	"sync"
 	"time"
 
-	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	model "hcm/cmd/woa-server/model/task"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
@@ -67,7 +66,7 @@ func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListR
 	*ptypes.ListResPlanDemandResp, error) {
 
 	// 需要将期望到货时间扩展至整个需求周期月，查询全部的预测并分配消耗情况后，再进行筛选。以确保无论筛选条件如何，每条预测消耗量的一致
-	listAllReq, err := extendResPlanListReq(req)
+	listAllReq, err := c.extendResPlanListReq(kt, req)
 	if err != nil {
 		logs.Errorf("failed to convert list request to list all request, err: %v, req: %+v, rid: %s", err, *req,
 			kt.Rid)
@@ -108,7 +107,7 @@ func (c *Controller) ListResPlanDemandAndOverview(kt *kit.Kit, req *ptypes.ListR
 	planAppliedCore := convResConsumePoolToExpendMap(kt, prodConsumePool, deviceTypeMap)
 
 	// 清洗数据，计算overview
-	overview, rst, err := convResPlanDemandRespAndFilter(kt, req, demandList, planAppliedCore, deviceTypeMap)
+	overview, rst, err := c.convResPlanDemandRespAndFilter(kt, req, demandList, planAppliedCore, deviceTypeMap)
 	if err != nil {
 		logs.Errorf("failed to convert res plan demand table to response item, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -152,14 +151,28 @@ func pageResPlanDemands(page *core.BasePage, demands []*ptypes.ListResPlanDemand
 
 // extendResPlanListReq to ensure that res plan data and expend data can be aligned.
 // extend expect_time to the entire demand month and remove other request params outside bk_biz.
-func extendResPlanListReq(req *ptypes.ListResPlanDemandReq) (*ptypes.ListResPlanDemandReq, error) {
+func (c *Controller) extendResPlanListReq(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) (*ptypes.ListResPlanDemandReq,
+	error) {
+
 	startT, endT, err := req.ExpectTimeRange.GetTimeDate()
 	if err != nil {
+		logs.Errorf("failed to parse date range, err: %v, date range: %s - %s, rid: %s", err,
+			req.ExpectTimeRange.Start, req.ExpectTimeRange.End, kt.Rid)
 		return nil, err
 	}
 
-	startDemandTimeRange := demandtime.GetDemandDateRangeInMonth(startT)
-	endDemandTimeRange := demandtime.GetDemandDateRangeInMonth(endT)
+	startDemandTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, startT)
+	if err != nil {
+		logs.Errorf("failed to get start demand date range in month, err: %v, start: %s, rid: %s", err, startT,
+			kt.Rid)
+		return nil, err
+	}
+	endDemandTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, endT)
+	if err != nil {
+		logs.Errorf("failed to get end demand date range in month, err: %v, end: %s, rid: %s", err, endT,
+			kt.Rid)
+		return nil, err
+	}
 
 	return &ptypes.ListResPlanDemandReq{
 		BkBizIDs:       req.BkBizIDs,
@@ -202,53 +215,64 @@ func convResConsumePoolToExpendMap(kt *kit.Kit, pool ResPlanConsumePool,
 	return consumeMap
 }
 
-func demandBelongListReq(demandItem *ptypes.ListResPlanDemandItem, req *ptypes.ListResPlanDemandReq) bool {
+func (c *Controller) demandBelongListReq(kt *kit.Kit, demandItem *ptypes.ListResPlanDemandItem,
+	req *ptypes.ListResPlanDemandReq) (bool, error) {
+
 	if !req.CheckDemandIDs(demandItem.DemandID) {
-		return false
+		return false, nil
 	}
 	if !req.CheckObsProjects(demandItem.ObsProject) {
-		return false
+		return false, nil
 	}
 	if !req.CheckDemandClasses(demandItem.DemandClass) {
-		return false
+		return false, nil
 	}
 	if !req.CheckDeviceClasses(demandItem.DeviceClass) {
-		return false
+		return false, nil
 	}
 	if !req.CheckDeviceTypes(demandItem.DeviceType) {
-		return false
+		return false, nil
 	}
 	if !req.CheckRegionIDs(demandItem.RegionID) {
-		return false
+		return false, nil
 	}
 	if !req.CheckZoneIDs(demandItem.ZoneID) {
-		return false
+		return false, nil
 	}
 	if !req.CheckPlanTypes(demandItem.PlanType) {
-		return false
+		return false, nil
 	}
 
 	// 筛选本月到期，即期望交付时间在本月内的
 	if req.ExpiringOnly {
-		monthRange := demandtime.GetDemandDateRangeInMonth(time.Now())
+		monthRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, time.Now())
+		if err != nil {
+			logs.Errorf("failed to get demand date range in month, err: %v, rid: %s", err, kt.Rid)
+			return false, err
+		}
 		if demandItem.ExpectTime < monthRange.Start || demandItem.ExpectTime > monthRange.End {
-			return false
+			return false, nil
+		}
+		// 筛选本月即将到期的需求时，不展示已经耗尽的需求
+		if demandItem.AppliedCpuCore == demandItem.TotalCpuCore {
+			return false, nil
 		}
 	}
 	if req.ExpectTimeRange != nil {
 		if demandItem.ExpectTime < req.ExpectTimeRange.Start || demandItem.ExpectTime > req.ExpectTimeRange.End {
-			return false
+			return false, nil
 		}
 	}
 
-	return true
+	return true, nil
 }
 
 // convResPlanDemandRespAndFilter convert res plan demand table to res plan demand response item,
 // and filter by request params.
-func convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.ListResPlanDemandReq, planTables []rpd.ResPlanDemandTable,
-	planAppliedCore map[ptypes.ResPlanDemandExpendKey]int64, deviceTypes map[string]wdt.WoaDeviceTypeTable) (
-	*ptypes.ListResPlanDemandOverview, []*ptypes.ListResPlanDemandItem, error) {
+func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.ListResPlanDemandReq,
+	planTables []rpd.ResPlanDemandTable, planAppliedCore map[ptypes.ResPlanDemandExpendKey]int64,
+	deviceTypes map[string]wdt.WoaDeviceTypeTable) (*ptypes.ListResPlanDemandOverview, []*ptypes.ListResPlanDemandItem,
+	error) {
 
 	overview := &ptypes.ListResPlanDemandOverview{}
 	demandDetails := make([]*ptypes.ListResPlanDemandItem, 0, len(planTables))
@@ -286,16 +310,22 @@ func convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.ListResPlanDemandRe
 		demandItem.RemainedMemory = demandItem.TotalMemory - demandItem.AppliedMemory
 
 		// 不在筛选范围内的，过滤
-		if !demandBelongListReq(demandItem, req) {
+		belong, err := c.demandBelongListReq(kt, demandItem, req)
+		if err != nil {
+			logs.Errorf("failed to check demand belong, err: %v, demand: %s, rid: %s", err, *demandItem, kt.Rid)
+			return nil, nil, err
+		}
+		if !belong {
 			continue
 		}
 
 		// 计算demand状态，can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）
-		status, err := demandtime.GetDemandStatusByExpectTime(demandItem.ExpectTime)
+		status, demandRange, err := c.demandTime.GetDemandStatusByExpectTime(kt, demandItem.ExpectTime)
 		if err != nil {
 			logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demand.ID, kt.Rid)
 		} else {
 			demandItem.SetStatus(status)
+			demandItem.ExpiredTime = demandRange.End
 		}
 
 		// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
@@ -451,14 +481,18 @@ func (c *Controller) GetResPlanDemandDetail(kt *kit.Kit, demandID string, bkBizI
 	return result, nil
 }
 
-func convListResPlanDemandTimeFilter(kt *kit.Kit, expiringOnly bool, expectTimeRange *times.DateRange) (
+func (c *Controller) convListResPlanDemandTimeFilter(kt *kit.Kit, expiringOnly bool, expectTimeRange *times.DateRange) (
 	[]*filter.AtomRule, error) {
 
 	listRules := make([]*filter.AtomRule, 0)
 
 	// 筛选本月到期，即期望交付时间在本月内的
 	if expiringOnly {
-		monthRange := demandtime.GetDemandDateRangeInMonth(time.Now())
+		monthRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, time.Now())
+		if err != nil {
+			logs.Errorf("failed to get demand date range in month, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
 		startExpTime, err := times.ConvStrTimeToInt(monthRange.Start, constant.DateLayout)
 		if err != nil {
 			logs.Errorf("failed to parse month range, err: %v, month_range: %v, rid: %s", err, monthRange, kt.Rid)
@@ -492,7 +526,9 @@ func convListResPlanDemandTimeFilter(kt *kit.Kit, expiringOnly bool, expectTimeR
 	return listRules, nil
 }
 
-func convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]*filter.AtomRule, error) {
+func (c *Controller) convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]*filter.AtomRule,
+	error) {
+
 	listRules := make([]*filter.AtomRule, 0)
 	if len(req.BkBizIDs) > 0 {
 		listRules = append(listRules, tools.RuleIn("bk_biz_id", req.BkBizIDs))
@@ -532,7 +568,7 @@ func convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) 
 		listRules = append(listRules, tools.RuleIn("plan_type", planTypeCodes))
 	}
 
-	timeRules, err := convListResPlanDemandTimeFilter(kt, req.ExpiringOnly, req.ExpectTimeRange)
+	timeRules, err := c.convListResPlanDemandTimeFilter(kt, req.ExpiringOnly, req.ExpectTimeRange)
 	if err != nil {
 		logs.Errorf("failed to convert list res plan demand time filter, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -547,7 +583,7 @@ func convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) 
 func (c *Controller) listAllResPlanDemand(kt *kit.Kit, req *ptypes.ListResPlanDemandReq) ([]rpd.ResPlanDemandTable,
 	uint64, error) {
 
-	listRules, err := convAllResPlanDemandListOpt(kt, req)
+	listRules, err := c.convAllResPlanDemandListOpt(kt, req)
 	if err != nil {
 		logs.Errorf("failed to convert list res plan demand filter, err: %v, rid: %s", err, kt.Rid)
 		return nil, 0, err
@@ -1674,7 +1710,11 @@ func deepCopyPlanPool(src ResPlanPoolMatch) ResPlanPoolMatch {
 func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
 	ResPlanPoolMatch, ResPlanConsumePool, error) {
 
-	nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
+	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, rid: %s", err, kt.Rid)
+		return nil, nil, err
+	}
 	startDay := time.Date(nowDemandYear, nowDemandMonth, 1, 0, 0, 0, 0, time.UTC)
 	endDay := time.Date(nowDemandYear, nowDemandMonth+1, 1, 0, 0, 0, 0, time.UTC)
 
@@ -1915,7 +1955,11 @@ func (c *Controller) getMatchedPlanDemandIDs(kt *kit.Kit, bkBizID int64, subOrde
 		isPrePaid = false
 	}
 
-	nowDemandYear, nowDemandMonth := demandtime.GetDemandYearMonth(time.Now())
+	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get now demand year month, err: %v, bkBizID: %d, rid: %s", err, bkBizID, kt.Rid)
+		return nil, err
+	}
 	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
 
 	verifySlice := make([]VerifyResPlanElemV2, 0)

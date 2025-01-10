@@ -40,6 +40,7 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/times"
 
 	"github.com/jmoiron/sqlx"
 	"github.com/shopspring/decimal"
@@ -53,7 +54,7 @@ func (c *Controller) CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketRe
 	}
 
 	// construct resource plan ticket.
-	ticket, err := constructResPlanTicket(req, kt.User)
+	ticket, err := c.constructResPlanTicket(kt, req, kt.User)
 	if err != nil {
 		logs.Errorf("failed to construct resource plan ticket, err: %s, rid: %s", err, kt.Rid)
 		return "", err
@@ -102,7 +103,9 @@ func (c *Controller) CreateResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketRe
 }
 
 // constructResPlanTicket construct resource plan ticket.
-func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt.ResPlanTicketTable, error) {
+func (c *Controller) constructResPlanTicket(kt *kit.Kit, req *CreateResPlanTicketReq, applicant string) (
+	*rpt.ResPlanTicketTable, error) {
+
 	var originalOs, updatedOs decimal.Decimal
 	var originalCpuCore, originalMemory, originalDiskSize int64
 	var updatedCpuCore, updatedMemory, updatedDiskSize int64
@@ -115,6 +118,23 @@ func constructResPlanTicket(req *CreateResPlanTicketReq, applicant string) (*rpt
 		}
 
 		if demand.Updated != nil {
+			// 期望交付时间的预测需求月和其自然月必须一致，否则需要选择该周的其他时间
+			et, err := times.ParseDay(demand.Updated.ExpectTime)
+			if err != nil {
+				logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err,
+					demand.Updated.ExpectTime, kt.Rid)
+				return nil, err
+			}
+			isCross, err := c.demandTime.IsDayCrossMonth(kt, et)
+			if err != nil {
+				logs.Errorf("failed to check if expect time is cross month, err: %v, expect_time: %s, rid: %s",
+					err, et.String(), kt.Rid)
+				return nil, err
+			}
+			if isCross {
+				return nil, fmt.Errorf("expect_time should not be cross month, expect_time: %s",
+					demand.Updated.ExpectTime)
+			}
 			updatedOs = updatedOs.Add((*demand.Updated).Cvm.Os.Decimal)
 			updatedCpuCore += (*demand.Updated).Cvm.CpuCore
 			updatedMemory += (*demand.Updated).Cvm.Memory

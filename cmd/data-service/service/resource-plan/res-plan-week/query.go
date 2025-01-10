@@ -17,21 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package resourceplan ...
-package resourceplan
+// Package resplanweek ...
+package resplanweek
 
 import (
-	"hcm/cmd/data-service/service/capability"
-	resplandemand "hcm/cmd/data-service/service/resource-plan/res-plan-demand"
-	demandchangelog "hcm/cmd/data-service/service/resource-plan/res-plan-demand-changelog"
-	demandpenaltybase "hcm/cmd/data-service/service/resource-plan/res-plan-demand-penalty-base"
-	resplanweek "hcm/cmd/data-service/service/resource-plan/res-plan-week"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// InitService initial the resource plan service.
-func InitService(cap *capability.Capability) {
-	resplandemand.InitService(cap)
-	demandpenaltybase.InitService(cap)
-	demandchangelog.InitService(cap)
-	resplanweek.InitService(cap)
+// ListResPlanWeek list res plan week
+func (svc *service) ListResPlanWeek(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.ResPlanWeekListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	return svc.dao.ResPlanWeek().List(cts.Kit, opt)
 }

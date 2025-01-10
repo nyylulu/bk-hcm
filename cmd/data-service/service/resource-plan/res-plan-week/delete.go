@@ -17,8 +17,8 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package demandchangelog ...
-package demandchangelog
+// Package resplanweek ...
+package resplanweek
 
 import (
 	"fmt"
@@ -37,8 +37,8 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// DeleteDemandChangelog delete demand changelog
-func (svc *service) DeleteDemandChangelog(cts *rest.Contexts) (interface{}, error) {
+// DeleteResPlanWeek delete res plan week
+func (svc *service) DeleteResPlanWeek(cts *rest.Contexts) (interface{}, error) {
 	req := new(proto.BatchDeleteReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, err
@@ -54,10 +54,10 @@ func (svc *service) DeleteDemandChangelog(cts *rest.Contexts) (interface{}, erro
 
 	delIDs := make([]string, 0)
 	for {
-		listResp, err := svc.dao.ResPlanDemandChangelog().List(cts.Kit, listOpt)
+		listResp, err := svc.dao.ResPlanWeek().List(cts.Kit, listOpt)
 		if err != nil {
-			logs.Errorf("delete list demand changelog failed, err: %v, rid: %s", err, cts.Kit.Rid)
-			return nil, fmt.Errorf("delete list demand changelog failed, err: %v", err)
+			logs.Errorf("delete list resource plan week failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, fmt.Errorf("delete list resource plan week failed, err: %v", err)
 		}
 
 		for _, one := range listResp.Details {
@@ -77,14 +77,14 @@ func (svc *service) DeleteDemandChangelog(cts *rest.Contexts) (interface{}, erro
 	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
 		for _, batchIDs := range slice.Split(delIDs, constant.BatchOperationMaxLimit) {
 			delFilter := tools.ContainersExpression("id", batchIDs)
-			if err := svc.dao.ResPlanDemandChangelog().DeleteWithTx(cts.Kit, txn, delFilter); err != nil {
+			if err := svc.dao.ResPlanWeek().DeleteWithTx(cts.Kit, txn, delFilter); err != nil {
 				return nil, err
 			}
 		}
 		return nil, nil
 	})
 	if err != nil {
-		logs.Errorf("delete demand changelog failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("delete resource plan week failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

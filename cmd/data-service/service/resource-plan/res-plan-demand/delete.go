@@ -25,12 +25,14 @@ import (
 
 	"hcm/pkg/api/core"
 	proto "hcm/pkg/api/data-service"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/slice"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -45,26 +47,39 @@ func (svc *service) DeleteResPlanDemand(cts *rest.Contexts) (interface{}, error)
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	opt := &types.ListOption{
+	listOpt := &types.ListOption{
 		Filter: req.Filter,
 		Page:   core.NewDefaultBasePage(),
 	}
-	listResp, err := svc.dao.ResPlanDemand().List(cts.Kit, opt)
-	if err != nil {
-		logs.Errorf("delete list resource plan demand failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, fmt.Errorf("delete list resource plan demand failed, err: %v", err)
+
+	delIDs := make([]string, 0)
+	for {
+		listResp, err := svc.dao.ResPlanDemand().List(cts.Kit, listOpt)
+		if err != nil {
+			logs.Errorf("delete list resource plan demand failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return nil, fmt.Errorf("delete list resource plan demand failed, err: %v", err)
+		}
+
+		for _, one := range listResp.Details {
+			delIDs = append(delIDs, one.ID)
+		}
+
+		if len(listResp.Details) < int(listOpt.Page.Limit) {
+			break
+		}
+		listOpt.Page.Start += uint32(listOpt.Page.Limit)
 	}
-	if len(listResp.Details) == 0 {
+
+	if len(delIDs) == 0 {
 		return nil, nil
 	}
-	delIDs := make([]string, len(listResp.Details))
-	for index, one := range listResp.Details {
-		delIDs[index] = one.ID
-	}
-	_, err = svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		delFilter := tools.ContainersExpression("id", delIDs)
-		if err = svc.dao.ResPlanDemand().DeleteWithTx(cts.Kit, txn, delFilter); err != nil {
-			return nil, err
+
+	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
+		for _, batchIDs := range slice.Split(delIDs, constant.BatchOperationMaxLimit) {
+			delFilter := tools.ContainersExpression("id", batchIDs)
+			if err := svc.dao.ResPlanDemand().DeleteWithTx(cts.Kit, txn, delFilter); err != nil {
+				return nil, err
+			}
 		}
 		return nil, nil
 	})

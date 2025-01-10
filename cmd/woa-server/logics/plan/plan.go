@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/biz"
+	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	tasktypes "hcm/cmd/woa-server/types/task"
 	ttypes "hcm/cmd/woa-server/types/task"
@@ -104,6 +105,7 @@ type Controller struct {
 	bizLogics      biz.Logics
 	workQueue      *UniQueue
 	deviceTypesMap *DeviceTypesMap
+	demandTime     demandtime.DemandTime
 	ctx            context.Context
 }
 
@@ -151,6 +153,7 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 		bizLogics:      bizLogic,
 		workQueue:      NewUniQueue(),
 		deviceTypesMap: NewDeviceTypesMap(dao),
+		demandTime:     demandtime.NewDemandTimeFromTable(client),
 		ctx:            context.Background(),
 	}
 

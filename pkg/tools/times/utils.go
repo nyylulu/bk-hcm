@@ -171,3 +171,17 @@ func TransTimeStrWithLayout(inTimeStr string, inLayout, outLayout string) (strin
 
 	return t.Format(outLayout), nil
 }
+
+// ConvTimeToCompactInt convert time to compact int, like 20250101
+func ConvTimeToCompactInt(t time.Time) int {
+	tYear, tMonth, tDay := t.Date()
+	return tYear*10000 + int(tMonth)*100 + tDay
+}
+
+// ConvCompactIntToTime convert compact int, like 20250101 to time
+func ConvCompactIntToTime(t int) time.Time {
+	year := t / 10000
+	month := (t % 10000) / 100
+	day := t % 100
+	return time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+}

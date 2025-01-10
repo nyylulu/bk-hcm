@@ -195,6 +195,8 @@ const (
 	ResPlanDemandPenaltyBaseTable = "res_plan_demand_penalty_base"
 	// ResPlanDemandChangelogTable is res_plan_ticket_changelog table's name.
 	ResPlanDemandChangelogTable = "res_plan_demand_changelog"
+	// ResPlanWeekTable is res_plan_week table's name.
+	ResPlanWeekTable = "res_plan_week"
 
 	// MainAccountTable is main_account table's name
 	MainAccountTable Name = "main_account"
@@ -378,6 +380,7 @@ var TableMap = map[Name]struct{}{
 	ResPlanPenaltyTable:           {},
 	ResPlanDemandPenaltyBaseTable: {},
 	ResPlanDemandChangelogTable:   {},
+	ResPlanWeekTable:              {},
 
 	MainAccountTable: {},
 	RootAccountTable: {},

@@ -105,4 +105,7 @@ func (s *service) initPlanService(h *rest.Handler) {
 	// penalty
 	h.Add("CalcPenaltyBase", http.MethodPost, "/plans/penalty/base/calc", s.CalcPenaltyBase)
 	h.Add("CalcAndPushPenaltyRatio", http.MethodPost, "/plans/penalty/ratio/push", s.CalcAndPushPenaltyRatio)
+
+	// demand week
+	h.Add("ImportDemandWeek", http.MethodPost, "/plans/demand_week/import", s.ImportDemandWeek)
 }

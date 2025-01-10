@@ -928,6 +928,28 @@ func (d DemandChangelogType) Name() string {
 	return demandChangelogTypeNameMap[d]
 }
 
+// ResPlanWeekHolidayStatus is resource plan week holiday status.
+type ResPlanWeekHolidayStatus int8
+
+const (
+	// ResPlanWeekIsHoliday resource plan week is holiday.
+	ResPlanWeekIsHoliday ResPlanWeekHolidayStatus = 0
+	// ResPlanWeekIsNotHoliday resource plan week is not holiday.
+	ResPlanWeekIsNotHoliday ResPlanWeekHolidayStatus = 1
+)
+
+// Validate ResPlanWeekHolidayStatus.
+func (s ResPlanWeekHolidayStatus) Validate() error {
+	switch s {
+	case ResPlanWeekIsHoliday:
+	case ResPlanWeekIsNotHoliday:
+	default:
+		return fmt.Errorf("unsupported res plan week holiday status: %d", s)
+	}
+
+	return nil
+}
+
 const (
 	// ResourcePoolBiz 资源池业务
 	ResourcePoolBiz = 931

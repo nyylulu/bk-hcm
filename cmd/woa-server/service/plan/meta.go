@@ -13,11 +13,17 @@
 package plan
 
 import (
-	"hcm/cmd/woa-server/logics/plan/demand-time"
+	"encoding/csv"
+	"errors"
+	"io"
+	"strconv"
+
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
@@ -67,13 +73,139 @@ func (s *service) GetDemandAvailableTime(cts *rest.Contexts) (interface{}, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	yearMonthWeek := demandtime.GetDemandYearMonthWeek(date)
-	drWeek := demandtime.GetDemandDateRangeInWeek(date)
-	drMonth := demandtime.GetDemandDateRangeInMonth(date)
+	return s.planController.GetDemandAvailableTime(cts.Kit, date)
+}
 
-	return &ptypes.DemandAvailTimeResp{
-		YearMonthWeek: yearMonthWeek,
-		DRInWeek:      drWeek,
-		DRInMonth:     drMonth,
-	}, nil
+// ImportDemandWeek imports demand week from csv file.
+func (s *service) ImportDemandWeek(cts *rest.Contexts) (interface{}, error) {
+	file, _, err := cts.Request.Request.FormFile("file")
+	if err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	defer file.Close()
+
+	createReq, err := parseDemandWeekFromCSV(cts.Kit, file)
+	if err != nil {
+		logs.Errorf("failed to parse demand week from csv, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return s.planController.CreateDemandWeek(cts.Kit, createReq)
+}
+
+func parseDemandWeekFromCSV(kt *kit.Kit, reader io.Reader) ([]rpproto.ResPlanWeekCreateReq, error) {
+	csvR := csv.NewReader(reader)
+	headers, err := csvR.Read()
+	if err != nil {
+		logs.Errorf("failed to read csv file, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	// 确认表头
+	yearIdx, monthIdx, weekIdx, startIdx, endIdx, isHolidayIdx, err := parseDemandWeekCSVHeaders(kt, headers)
+	if err != nil {
+		logs.Errorf("failed to parse csv file headers, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	var records []rpproto.ResPlanWeekCreateReq
+	line := 0
+	for {
+		line += 1
+		record, err := csvR.Read()
+		if err != nil {
+			break
+		}
+
+		year, err := strconv.Atoi(record[yearIdx])
+		if err != nil {
+			logs.Errorf("failed to parse year from csv, err: %v, line: %d, year: %s, rid: %s", err, line,
+				record[yearIdx], kt.Rid)
+			return nil, err
+		}
+
+		month, err := strconv.Atoi(record[monthIdx])
+		if err != nil {
+			logs.Errorf("failed to parse month from csv, err: %v, line: %d, month: %s, rid: %s", err, line,
+				record[monthIdx], kt.Rid)
+			return nil, err
+		}
+
+		week, err := strconv.Atoi(record[weekIdx])
+		if err != nil {
+			logs.Errorf("failed to parse week from csv, err: %v, line: %d, week: %s, rid: %s", err, line,
+				record[weekIdx], kt.Rid)
+			return nil, err
+		}
+
+		start, err := strconv.Atoi(record[startIdx])
+		if err != nil {
+			logs.Errorf("failed to parse start from csv, err: %v, line: %d, start: %s, rid: %s", err, line,
+				record[startIdx], kt.Rid)
+			return nil, err
+		}
+
+		end, err := strconv.Atoi(record[endIdx])
+		if err != nil {
+			logs.Errorf("failed to parse end from csv, err: %v, line: %d, end: %s, rid: %s", err, line,
+				record[endIdx], kt.Rid)
+			return nil, err
+		}
+
+		isHolidayInt, err := strconv.Atoi(record[isHolidayIdx])
+		if err != nil {
+			logs.Errorf("failed to parse is_holiday from csv, err: %v, line: %d, is_holiday: %s, rid: %s", err,
+				line, record[isHolidayIdx], kt.Rid)
+			return nil, err
+		}
+		isHoliday := enumor.ResPlanWeekHolidayStatus(isHolidayInt)
+
+		records = append(records, rpproto.ResPlanWeekCreateReq{
+			Year:      year,
+			Month:     month,
+			YearWeek:  week,
+			Start:     start,
+			End:       end,
+			IsHoliday: &isHoliday,
+		})
+	}
+
+	return records, nil
+}
+
+func parseDemandWeekCSVHeaders(kt *kit.Kit, headers []string) (yearIdx int, monthIdx int, weekIdx int,
+	startIdx int, endIdx int, isHolidayIdx int, err error) {
+
+	yearIdx = -1
+	monthIdx = -1
+	weekIdx = -1
+	startIdx = -1
+	endIdx = -1
+	isHolidayIdx = -1
+	for i, header := range headers {
+		switch header {
+		case "year":
+			yearIdx = i
+		case "month":
+			monthIdx = i
+		case "week":
+			weekIdx = i
+		case "start":
+			startIdx = i
+		case "end":
+			endIdx = i
+		case "is_holiday":
+			isHolidayIdx = i
+		default:
+			continue
+		}
+	}
+
+	if yearIdx == -1 || monthIdx == -1 || weekIdx == -1 || startIdx == -1 || endIdx == -1 || isHolidayIdx == -1 {
+		logs.Errorf("failed to find csv headers, need headers: year/month/week/start/end/is_holiday, rid: %s",
+			kt.Rid)
+		return yearIdx, monthIdx, weekIdx, startIdx, endIdx, isHolidayIdx, errors.New("failed to find csv headers")
+	}
+
+	return yearIdx, monthIdx, weekIdx, startIdx, endIdx, isHolidayIdx, nil
 }

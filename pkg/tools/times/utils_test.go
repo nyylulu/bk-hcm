@@ -150,3 +150,93 @@ func TestGetRelativeMonth(t *testing.T) {
 func getDate(year, month int) time.Time {
 	return time.Date(year, time.Month(month), 1, 0, 0, 0, 0, time.UTC)
 }
+
+func TestConvTimeToCompactInt(t *testing.T) {
+	type args struct {
+		t time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{
+			name: "2025/01/01",
+			args: args{
+				t: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+			},
+			want: 20250101,
+		},
+		{
+			name: "2025/01/31",
+			args: args{
+				t: time.Date(2025, 1, 31, 0, 0, 0, 0, time.UTC),
+			},
+			want: 20250131,
+		},
+		{
+			name: "2025/10/01",
+			args: args{
+				t: time.Date(2025, 10, 1, 0, 0, 0, 0, time.UTC),
+			},
+			want: 20251001,
+		},
+		{
+			name: "2025/12/12",
+			args: args{
+				t: time.Date(2025, 12, 12, 0, 0, 0, 0, time.UTC),
+			},
+			want: 20251212,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, ConvTimeToCompactInt(tt.args.t), "ConvTimeToCompactInt(%v)", tt.args.t)
+		})
+	}
+}
+
+func TestConvCompactIntToTime(t *testing.T) {
+	type args struct {
+		t int
+	}
+	tests := []struct {
+		name string
+		args args
+		want time.Time
+	}{
+		{
+			name: "2025/01/01",
+			args: args{
+				t: 20250101,
+			},
+			want: time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name: "2025/01/31",
+			args: args{
+				t: 20250131,
+			},
+			want: time.Date(2025, 1, 31, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name: "2025/10/01",
+			args: args{
+				t: 20251001,
+			},
+			want: time.Date(2025, 10, 1, 0, 0, 0, 0, time.UTC),
+		},
+		{
+			name: "2025/12/12",
+			args: args{
+				t: 20251212,
+			},
+			want: time.Date(2025, 12, 12, 0, 0, 0, 0, time.UTC),
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, ConvCompactIntToTime(tt.args.t), "ConvCompactIntToTime(%v)", tt.args.t)
+		})
+	}
+}

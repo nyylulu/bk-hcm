@@ -151,3 +151,33 @@ func (b *ResourcePlanClient) DeleteDemandChangelog(kt *kit.Kit, req *dataproto.B
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/res_plans/demand_changelogs/batch")
 }
+
+// --- res plan week ---
+
+// ListResPlanWeek list resource plan week
+func (b *ResourcePlanClient) ListResPlanWeek(kt *kit.Kit, req *rpproto.ResPlanWeekListReq) (
+	*rpproto.ResPlanWeekListResult, error) {
+
+	return common.Request[rpproto.ResPlanWeekListReq, rpproto.ResPlanWeekListResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_weeks/list")
+}
+
+// BatchCreateResPlanWeek batch create resource plan week
+func (b *ResourcePlanClient) BatchCreateResPlanWeek(kt *kit.Kit, req *rpproto.ResPlanWeekBatchCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.ResPlanWeekBatchCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/res_plan_weeks/batch/create")
+}
+
+// BatchUpdateResPlanWeek update resource plan week
+func (b *ResourcePlanClient) BatchUpdateResPlanWeek(kt *kit.Kit, req *rpproto.ResPlanWeekBatchUpdateReq) error {
+	return common.RequestNoResp[rpproto.ResPlanWeekBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/res_plan_weeks/batch")
+}
+
+// DeleteResPlanWeek delete resource plan week
+func (b *ResourcePlanClient) DeleteResPlanWeek(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_weeks/batch")
+}

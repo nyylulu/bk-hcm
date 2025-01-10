@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math"
 	"strconv"
+	"time"
 
 	ptypes "hcm/cmd/woa-server/types/plan"
 	"hcm/pkg/api/core"
@@ -155,8 +156,22 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, changeDemands []
 	batchCreateReq := make([]rpproto.ResPlanDemandCreateReq, 0)
 	batchCreateLogReq := make([]rpproto.DemandChangelogCreate, 0)
 	for _, changeDemand := range changeDemands {
+		// 根据changeDemand的expectTime获取期望交付的时间范围
+		expectTimeT, err := time.Parse(constant.DateLayout, changeDemand.ExpectTime)
+		if err != nil {
+			logs.Errorf("failed to parse expect time, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
+				kt.Rid)
+			return nil, nil, nil, nil, err
+		}
+		expectTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTimeT)
+		if err != nil {
+			logs.Errorf("failed to get demand date range in month, err: %v, change demand: %+v, rid: %s", err,
+				*changeDemand, kt.Rid)
+			return nil, nil, nil, nil, err
+		}
+
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
-		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap)
+		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap, expectTimeRange)
 		if err != nil {
 			logs.Errorf("failed to get aggregate key, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
 				kt.Rid)

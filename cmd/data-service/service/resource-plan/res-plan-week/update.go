@@ -17,76 +17,68 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package demandchangelog ...
-package demandchangelog
+// Package resplanweek ...
+package resplanweek
 
 import (
-	"fmt"
-
-	"hcm/pkg/api/core"
-	proto "hcm/pkg/api/data-service"
-	"hcm/pkg/criteria/constant"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
-	"hcm/pkg/dal/dao/types"
+	tablers "hcm/pkg/dal/table/resource-plan/res-plan-week"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/tools/slice"
 
 	"github.com/jmoiron/sqlx"
 )
 
-// DeleteDemandChangelog delete demand changelog
-func (svc *service) DeleteDemandChangelog(cts *rest.Contexts) (interface{}, error) {
-	req := new(proto.BatchDeleteReq)
+// BatchUpdateResPlanWeek update resource plan week
+func (svc *service) BatchUpdateResPlanWeek(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.ResPlanWeekBatchUpdateReq)
+
 	if err := cts.DecodeInto(req); err != nil {
-		return nil, err
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
 	if err := req.Validate(); err != nil {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
-	listOpt := &types.ListOption{
-		Filter: req.Filter,
-		Page:   core.NewDefaultBasePage(),
-	}
-
-	delIDs := make([]string, 0)
-	for {
-		listResp, err := svc.dao.ResPlanDemandChangelog().List(cts.Kit, listOpt)
-		if err != nil {
-			logs.Errorf("delete list demand changelog failed, err: %v, rid: %s", err, cts.Kit.Rid)
-			return nil, fmt.Errorf("delete list demand changelog failed, err: %v", err)
-		}
-
-		for _, one := range listResp.Details {
-			delIDs = append(delIDs, one.ID)
-		}
-
-		if len(listResp.Details) < int(listOpt.Page.Limit) {
-			break
-		}
-		listOpt.Page.Start += uint32(listOpt.Page.Limit)
-	}
-
-	if len(delIDs) == 0 {
-		return nil, nil
-	}
 
 	_, err := svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (interface{}, error) {
-		for _, batchIDs := range slice.Split(delIDs, constant.BatchOperationMaxLimit) {
-			delFilter := tools.ContainersExpression("id", batchIDs)
-			if err := svc.dao.ResPlanDemandChangelog().DeleteWithTx(cts.Kit, txn, delFilter); err != nil {
-				return nil, err
-			}
+		_, err := svc.batchUpdateResPlanWeekWithTx(cts.Kit, txn, req.Weeks)
+		if err != nil {
+			logs.Errorf("failed to batch update res plan week with tx, err: %v, rid: %v", err, cts.Kit.Rid)
+			return nil, err
 		}
 		return nil, nil
 	})
 	if err != nil {
-		logs.Errorf("delete demand changelog failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("update res plan week failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
 	}
 
+	return nil, nil
+}
+
+func (svc *service) batchUpdateResPlanWeekWithTx(kt *kit.Kit, txn *sqlx.Tx, updateReqs []rpproto.ResPlanWeekUpdateReq) (
+	[]string, error) {
+
+	for _, updateReq := range updateReqs {
+		record := &tablers.ResPlanWeekTable{
+			ID:    updateReq.ID,
+			Start: updateReq.Start,
+			End:   updateReq.End,
+		}
+		if updateReq.IsHoliday != nil {
+			record.IsHoliday = updateReq.IsHoliday
+		}
+
+		if err := svc.dao.ResPlanWeek().UpdateWithTx(kt, txn,
+			tools.EqualExpression("id", updateReq.ID), record); err != nil {
+			logs.Errorf("update res plan week failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+	}
 	return nil, nil
 }

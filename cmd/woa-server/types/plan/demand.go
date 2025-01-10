@@ -26,7 +26,6 @@ import (
 	"slices"
 	"time"
 
-	dtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -216,6 +215,7 @@ type ListResPlanDemandItem struct {
 	DemandClass      enumor.DemandClass   `json:"demand_class"`
 	DemandResType    enumor.DemandResType `json:"demand_res_type"`
 	ExpectTime       string               `json:"expect_time"`
+	ExpiredTime      string               `json:"expired_time"`
 	DeviceClass      string               `json:"device_class"`
 	DeviceType       string               `json:"device_type"`
 	TotalOS          decimal.Decimal      `json:"total_os"`
@@ -731,23 +731,18 @@ func (c *CrpOrderChangeInfo) GetKey(bkBizID int64, demandClass enumor.DemandClas
 }
 
 // GetAggregateKey get aggregate key of crp order change info.
-func (c *CrpOrderChangeInfo) GetAggregateKey(bkBizID int64,
-	deviceTypes map[string]wdttablers.WoaDeviceTypeTable) (ResPlanDemandAggregateKey, error) {
+func (c *CrpOrderChangeInfo) GetAggregateKey(bkBizID int64, deviceTypes map[string]wdttablers.WoaDeviceTypeTable,
+	expectTimeRange times.DateRange) (ResPlanDemandAggregateKey, error) {
 
 	deviceInfo, ok := deviceTypes[c.DeviceType]
 	if !ok {
 		return ResPlanDemandAggregateKey{}, fmt.Errorf("device type: %s not found", c.DeviceType)
 	}
 
-	expectTimeT, err := time.Parse(constant.DateLayout, c.ExpectTime)
-	if err != nil {
-		return ResPlanDemandAggregateKey{}, fmt.Errorf("failed to parse expect time: %s", c.ExpectTime)
-	}
-
 	key := ResPlanDemandAggregateKey{
 		BkBizID:         bkBizID,
 		RegionID:        c.RegionID,
-		ExpectTimeRange: dtime.GetDemandDateRangeInMonth(expectTimeT),
+		ExpectTimeRange: expectTimeRange,
 		DeviceFamily:    deviceInfo.DeviceFamily,
 		CoreType:        deviceInfo.CoreType,
 		PlanType:        c.PlanType,
