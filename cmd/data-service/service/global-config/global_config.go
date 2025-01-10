@@ -23,6 +23,7 @@ package globalconfig
 import (
 	"fmt"
 
+	"encoding/json"
 	"hcm/pkg/api/core"
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/criteria/errf"
@@ -39,7 +40,7 @@ import (
 
 // BatchCreateGlobalConfigs creates the global config.
 func (svc *service) BatchCreateGlobalConfigs(cts *rest.Contexts) (interface{}, error) {
-	req := new(datagconf.BatchCreateReq)
+	req := new(datagconf.BatchCreateReqT[json.RawMessage])
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("create global config decode request failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
@@ -114,7 +115,7 @@ func (svc *service) ListGlobalConfigs(cts *rest.Contexts) (interface{}, error) {
 
 // BatchUpdateGlobalConfigs ...
 func (svc *service) BatchUpdateGlobalConfigs(cts *rest.Contexts) (interface{}, error) {
-	req := new(datagconf.BatchUpdateReq)
+	req := new(datagconf.BatchUpdateReqT[json.RawMessage])
 	if err := cts.DecodeInto(req); err != nil {
 		logs.Errorf("batch update global config decode request failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)

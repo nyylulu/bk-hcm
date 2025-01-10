@@ -23,6 +23,7 @@ package greenchannel
 import (
 	gctypes "hcm/cmd/woa-server/types/green-channel"
 	"hcm/pkg/api/core"
+	cgconf "hcm/pkg/api/core/global-config"
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/dal/dao/tools"
@@ -117,25 +118,25 @@ func (l *logics) UpdateConfigs(kt *kit.Kit, req *gctypes.UpdateConfigsReq) error
 	})
 
 	dataReq := &datagconf.BatchUpdateReq{
-		Configs: make([]datagconf.GlobalConfig, 0),
+		Configs: make([]cgconf.GlobalConfig, 0),
 	}
 
 	if req.BizQuota != nil {
-		dataReq.Configs = append(dataReq.Configs, datagconf.GlobalConfig{
+		dataReq.Configs = append(dataReq.Configs, cgconf.GlobalConfig{
 			ID:          configIDMap[constant.ConfigKeyGCBizQuota],
 			ConfigValue: req.BizQuota,
 		})
 	}
 
 	if req.IEGQuota != nil {
-		dataReq.Configs = append(dataReq.Configs, datagconf.GlobalConfig{
+		dataReq.Configs = append(dataReq.Configs, cgconf.GlobalConfig{
 			ID:          configIDMap[constant.ConfigTypeGCIEGQuota],
 			ConfigValue: req.IEGQuota,
 		})
 	}
 
 	if req.AuditThreshold != nil {
-		dataReq.Configs = append(dataReq.Configs, datagconf.GlobalConfig{
+		dataReq.Configs = append(dataReq.Configs, cgconf.GlobalConfig{
 			ID:          configIDMap[constant.ConfigTypeGCAuditThreshold],
 			ConfigValue: req.AuditThreshold,
 		})
