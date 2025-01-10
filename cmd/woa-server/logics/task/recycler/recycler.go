@@ -1204,7 +1204,8 @@ func (r *recycler) ListDetectHost(kit *kit.Kit, param *types.GetRecycleDetectReq
 func (r *recycler) GetRecycleDetectStep(kit *kit.Kit, param *types.GetDetectStepReq) (*types.GetDetectStepRst, error) {
 	filter, err := param.GetFilter()
 	if err != nil {
-		logs.Errorf("failed to get recycle detection step, for get filter err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get recycle detection step, for get filter err: %v, param: %+v, rid: %s",
+			err, cvt.PtrToVal(param), kit.Rid)
 		return nil, err
 	}
 

@@ -35,8 +35,76 @@ import (
 )
 
 // createCVM starts a cvm creating task
-func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
+func (g *Generator) createCVM(kt *kit.Kit, cvm *types.CVM, order *types.ApplyOrder) (string, error) {
 	// construct cvm launch request
+	createReq := g.getCreateCvmReq(cvm)
+
+	// 增加日志记录
+	jsonReq, err := json.Marshal(createReq)
+	if err != nil {
+		logs.Warnf("scheduler:logics:generator:create:cvm json marshal failed, err: %+v, rid: %s", err, kt.Rid)
+	}
+	logs.Infof("scheduler:logics:generator:create:cvm:start, subOrderID: %s, create cvm req: %s, rid: %s",
+		order.SubOrderId, string(jsonReq), kt.Rid)
+
+	// call cvm api to launchCvm cvm order
+	maxRetry := 3
+	resp := new(cvmapi.OrderCreateResp)
+	for try := 0; try < maxRetry; try++ {
+		// need not wait for the first try
+		if try != 0 {
+			// retry after 30 seconds
+			time.Sleep(30 * time.Second)
+		}
+
+		resp, err = g.cvm.CreateCvmOrder(kt.Ctx, kt.Header(), createReq)
+		if err != nil {
+			logs.Warnf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, subOrderID: %s, "+
+				"req: %s, err: %v, rid: %s", order.SubOrderId, string(jsonReq), err, kt.Rid)
+			continue
+		}
+
+		if resp.Error.Code != 0 {
+			logs.Warnf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, subOrderID: %s, "+
+				"code: %d, msg: %s, crpTraceID: %s, rid: %s", order.SubOrderId, resp.Error.Code, resp.Error.Message,
+				resp.TraceId, kt.Rid)
+			if g.needRetryCreateCvm(resp.Error.Code, resp.Error.Message) {
+				continue
+			}
+		}
+
+		break
+	}
+
+	if err != nil {
+		logs.Errorf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, subOrderID: %s, "+
+			"req: %s, err: %v, rid: %s", order.SubOrderId, string(jsonReq), err, kt.Rid)
+		return "", err
+	}
+
+	respStr := ""
+	b, err := json.Marshal(resp)
+	if err != nil {
+		logs.Warnf("scheduler:logics:generator:create:cvm json marshal failed, err: %v, rid: %s", err, kt.Rid)
+	}
+
+	respStr = string(b)
+	logs.Infof("scheduler:logics:generator:create:cvm:success, subOrderID: %s, create cvm req: %s, resp: %s, rid: %s",
+		order.SubOrderId, string(jsonReq), respStr, kt.Rid)
+
+	if resp.Error.Code != 0 {
+		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s, crpTraceID: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId)
+	}
+
+	if resp.Result.OrderId == "" {
+		return "", fmt.Errorf("cvm order create task return empty order id, crpTraceID: %s", resp.TraceId)
+	}
+
+	return resp.Result.OrderId, nil
+}
+
+func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	createReq := &cvmapi.OrderCreateReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -54,16 +122,13 @@ func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
 			Business3Id:   cvmapi.CvmLaunchBiz3Id,
 			Business3Name: cvmapi.CvmLaunchBiz3Name,
 			ProjectId:     int(cvm.BkProductID),
-			Image: &cvmapi.Image{
-				ImageId:   cvm.ImageId,
-				ImageName: cvm.ImageName,
-			},
-			InstanceType: cvm.InstanceType,
-			DataDisk:     make([]*cvmapi.DataDisk, 0),
-			VpcId:        cvm.VPCId,
-			SubnetId:     cvm.SubnetId,
-			ApplyNum:     int(cvm.ApplyNumber),
-			PassWord:     g.clientConf.CvmOpt.CvmLaunchPassword,
+			Image:         &cvmapi.Image{ImageId: cvm.ImageId, ImageName: cvm.ImageName},
+			InstanceType:  cvm.InstanceType,
+			DataDisk:      make([]*cvmapi.DataDisk, 0),
+			VpcId:         cvm.VPCId,
+			SubnetId:      cvm.SubnetId,
+			ApplyNum:      int(cvm.ApplyNumber),
+			PassWord:      g.clientConf.CvmOpt.CvmLaunchPassword,
 			Security: &cvmapi.Security{
 				SecurityGroupId:   cvm.SecurityGroupId,
 				SecurityGroupName: cvm.SecurityGroupName,
@@ -105,74 +170,19 @@ func (g *Generator) createCVM(cvm *types.CVM) (string, error) {
 			DataDiskSize: 1320,
 		})
 	}
-
 	if cvm.DiskSize > 0 {
 		createReq.Params.DataDisk = append(createReq.Params.DataDisk, &cvmapi.DataDisk{
 			DataDiskType: cvm.DiskType,
 			DataDiskSize: int(cvm.DiskSize),
 		})
 	}
-
 	// set obs project type
 	requireType := enumor.RequireType(cvm.ApplyType)
 	createReq.Params.ObsProject = string(requireType.ToObsProject())
 	if requireType == enumor.RequireTypeGreenChannel {
 		createReq.Params.ResourceType = cvmapi.ResourceTypeQuick
 	}
-
-	jsonReq, _ := json.Marshal(createReq)
-	logs.Infof("scheduler:logics:generator:create:cvm:start, create cvm req: %s", string(jsonReq))
-
-	// call cvm api to launchCvm cvm order
-	maxRetry := 3
-	var err error = nil
-	resp := new(cvmapi.OrderCreateResp)
-	for try := 0; try < maxRetry; try++ {
-		// need not wait for the first try
-		if try != 0 {
-			// retry after 30 seconds
-			time.Sleep(30 * time.Second)
-		}
-
-		resp, err = g.cvm.CreateCvmOrder(nil, nil, createReq)
-		if err != nil {
-			logs.Warnf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, req: %s, err: %v",
-				string(jsonReq), err)
-			continue
-		}
-
-		if resp.Error.Code != 0 {
-			logs.Warnf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, code: %d, msg: %s",
-				resp.Error.Code, resp.Error.Message)
-			if g.needRetryCreateCvm(resp.Error.Code, resp.Error.Message) {
-				continue
-			}
-		}
-
-		break
-	}
-
-	if err != nil {
-		logs.Errorf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, req: %s, err: %v",
-			string(jsonReq), err)
-		return "", err
-	}
-
-	respStr := ""
-	if b, err := json.Marshal(resp); err == nil {
-		respStr = string(b)
-	}
-	logs.Infof("scheduler:logics:generator:create:cvm:success, create cvm req: %s, resp: %s", string(jsonReq), respStr)
-
-	if resp.Error.Code != 0 {
-		return "", fmt.Errorf("cvm order create task failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
-	}
-
-	if resp.Result.OrderId == "" {
-		return "", fmt.Errorf("cvm order create task return empty order id")
-	}
-
-	return resp.Result.OrderId, nil
+	return createReq
 }
 
 func (g *Generator) needRetryCreateCvm(code int, msg string) bool {
@@ -344,9 +354,10 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	if order.Spec.Subnet != "" {
 		req.SubnetId = order.Spec.Subnet
 	} else {
-		subnetList, err := g.getCvmSubnet(kt, order.Spec.Region, zone, req.VPCId)
+		subnetList, err := g.getCvmSubnet(kt, zone, req.VPCId, order)
 		if err != nil {
-			logs.Errorf("failed to get available subnet, err: %v", err)
+			logs.Errorf("failed to get available subnet, subOrderID: %s, err: %v, region: %s, zone: %s, vpcID: %s, "+
+				"rid: %s", order.SubOrderId, err, order.Spec.Region, zone, req.VPCId, kt.Rid)
 			return nil, err
 		}
 		sort.Sort(sort.Reverse(subnetList))
@@ -356,13 +367,15 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
 				req.VPCId, subnet.Id, order.Spec.ChargeType)
 			if err != nil {
-				logs.Errorf("failed to get capacity with subnet %s, subnetNum: %d, zone: %s, reqVpcID: %s, err: %v",
-					subnet.Id, len(subnetList), zone, req.VPCId, err)
+				logs.Errorf("failed to get capacity with subnet %s, subOrderID: %s, subnetNum: %d, zone: %s, "+
+					"reqVpcID: %s, err: %v, rid: %s", subnet.Id, order.SubOrderId, len(subnetList), zone,
+					req.VPCId, err, kt.Rid)
 				continue
 			}
 			maxNum, ok := capacity[zone]
 			if !ok {
-				logs.Warnf("get no capacity with zone %s and subnet %s, err: %v", zone, subnet.Id)
+				logs.Warnf("get no capacity with zone %s and subnet %s, subOrderID: %s, rid: %s",
+					zone, subnet.Id, order.SubOrderId, kt.Rid)
 				continue
 			}
 			if maxNum > 0 {
@@ -371,20 +384,23 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 				break
 			}
 			// 记录日志，方便排查线上资源申请问题
-			logs.Errorf("buildCvmReq:get no available capacity info, subnetNum: %d, zone: %s, reqVpcID: %s, "+
-				"subnet: %+v, orderInfo: %+v, capacity: %+v",
-				len(subnetList), zone, req.VPCId, cvt.PtrToVal(subnet), cvt.PtrToVal(order), capacity)
+			logs.Errorf("buildCvmReq:get no available capacity info, subOrderID: %s, subnetNum: %d, zone: %s, "+
+				"reqVpcID: %s, subnet: %+v, orderInfo: %+v, capacity: %+v, rid: %s", order.SubOrderId, len(subnetList),
+				zone, req.VPCId, cvt.PtrToVal(subnet), cvt.PtrToVal(order), capacity, kt.Rid)
 		}
 
 		if subnetID == "" || applyNum <= 0 {
 			// get capacity detail as component of error message
 			capInfo, _ := g.getCapacityDetail(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
 				req.VPCId, "", order.Spec.ChargeType)
-			capInfoStr, _ := json.Marshal(capInfo)
+			capInfoStr, err := json.Marshal(capInfo)
+			if err != nil {
+				logs.Warnf("buildCvmReq:get empty subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)
+			}
 			// 记录日志，方便排查线上资源申请问题
-			logs.Errorf("buildCvmReq:get empty subnet info failed, subnetNum: %d, applyNum: %d, zone: %s, "+
-				"reqVpcID: %s, subnetID: %s, orderInfo: %+v, capInfoStr: %s",
-				len(subnetList), applyNum, zone, req.VPCId, subnetID, cvt.PtrToVal(order), capInfoStr)
+			logs.Errorf("buildCvmReq:get empty subnet info failed, subOrderID: %s, subnetNum: %d, applyNum: %d, "+
+				"zone: %s, reqVpcID: %s, subnetID: %s, orderInfo: %+v, capInfoStr: %s, rid: %s", order.SubOrderId,
+				len(subnetList), applyNum, zone, req.VPCId, subnetID, cvt.PtrToVal(order), capInfoStr, kt.Rid)
 			return nil, fmt.Errorf("no capacity: %s", capInfoStr)
 		}
 		req.SubnetId = subnetID
@@ -393,9 +409,14 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 			req.ApplyNumber = applyNum
 		}
 		// 记录日志，方便排查线上资源申请问题
-		logs.Infof("buildCvmReq:get subnet info success, subnetNum: %d, applyNum: %d, replicas: %d, zone: %s, "+
-			"reqVpcID: %s, subnetID: %s, orderInfo: %+v, subnetList: %+v, req: %+v", len(subnetList), applyNum,
-			replicas, zone, req.VPCId, subnetID, cvt.PtrToVal(order), subnetList, cvt.PtrToVal(req))
+		subnetListRemain, err := json.Marshal(subnetList)
+		if err != nil {
+			logs.Warnf("buildCvmReq:get subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)
+		}
+		logs.Infof("buildCvmReq:get subnet info success, subOrderID: %s, subnetNum: %d, applyNum: %d, replicas: %d, "+
+			"zone: %s, reqVpcID: %s, subnetID: %s, orderInfo: %+v, subnetList: %s, req: %+v, rid: %s",
+			order.SubOrderId, len(subnetList), applyNum, replicas, zone, req.VPCId, subnetID, cvt.PtrToVal(order),
+			subnetListRemain, cvt.PtrToVal(req), kt.Rid)
 	}
 
 	// image
@@ -493,7 +514,7 @@ func (l AvailSubnetList) Swap(i, j int) {
 	l[i], l[j] = l[j], l[i]
 }
 
-func (g *Generator) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (AvailSubnetList, error) {
+func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.ApplyOrder) (AvailSubnetList, error) {
 	subnetList := AvailSubnetList{}
 	req := &cvmapi.SubnetReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -503,7 +524,7 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (AvailSu
 		},
 		Params: &cvmapi.SubnetParam{
 			DeptId: cvmapi.CvmDeptId,
-			Region: region,
+			Region: order.Spec.Region,
 			Zone:   zone,
 			VpcId:  vpc,
 		},
@@ -511,12 +532,21 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (AvailSu
 
 	resp, err := g.cvm.QueryCvmSubnet(nil, nil, req)
 	if err != nil {
-		logs.Errorf("failed to get cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get cvm subnet info, subOrderID: %s, err: %v, region: %s, zone: %s, vpc: %s, "+
+			"crpResp: %+v, rid: %s", order.SubOrderId, err, order.Spec.Region, zone, vpc, cvt.PtrToVal(resp), kt.Rid)
 		return subnetList, err
 	}
+	// 记录crp返回的剩余IP日志
+	crpRemainIPJSON, err := json.Marshal(resp.Result)
+	if err != nil {
+		logs.Warnf("get crp cvm subnet remainIP num json marshal failed, err: %+v, rid: %s", err, kt.Rid)
+	}
+	logs.Infof("get crp cvm subnet remainIP num success, subOrderID: %s, region: %s, zone: %s, vpc: %s, "+
+		"crpRemainIP: %s, crpTraceID: %s, rid: %s", order.SubOrderId, order.Spec.Region, zone, vpc,
+		crpRemainIPJSON, resp.TraceId, kt.Rid)
 
 	cond := map[string]interface{}{
-		"region": region,
+		"region": order.Spec.Region,
 		"zone":   zone,
 		"vpc_id": vpc,
 	}
@@ -524,7 +554,8 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (AvailSu
 	cond["enable"] = true
 	cfgSubnets, err := g.configLogics.Subnet().GetSubnet(kt, cond)
 	if err != nil {
-		logs.Errorf("failed to get config cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get config cvm subnet info, subOrderID: %s, err: %v, region: %s, zone: %s, vpc: %s, "+
+			"rid: %s", order.SubOrderId, err, order.Spec.Region, zone, vpc, kt.Rid)
 		return subnetList, err
 	}
 	mapIdTosubnet := make(map[string]*cfgtypes.Subnet)
@@ -548,7 +579,8 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (AvailSu
 	}
 
 	if subnetList.Len() == 0 {
-		return subnetList, fmt.Errorf("found no available subnet with region %s, zone %s, vpc %s", region, zone, vpc)
+		return subnetList, fmt.Errorf("found no available subnet with region:%s, zone:%s, vpc:%s, crpTraceID: %s",
+			order.Spec.Region, zone, vpc, resp.TraceId)
 	}
 
 	return subnetList, nil

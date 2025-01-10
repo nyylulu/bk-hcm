@@ -19,6 +19,7 @@
 package apigateway
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sync"
@@ -97,6 +98,19 @@ func ApiGatewayCall[IT any, OT any](cli rest.ClientInterface, cfg *cc.ApiGateway
 			resp.RequestID, resp.TraceID)
 		logs.Errorf("api gateway returns error, url: %s, err: %v, rid: %s", url, err, kt.Rid)
 		return nil, err
+	}
+	if logs.GetV() >= 4 {
+		// 记录日志方便排查问题
+		reqJSON, err := json.Marshal(req)
+		if err != nil {
+			return nil, err
+		}
+		respJSON, err := json.Marshal(resp)
+		if err != nil {
+			return nil, err
+		}
+		logs.Infof("end to call api gateway api, err: %v, url: %s, urlParams: %+v, reqJSON: %s, respJSON: %s, rid: %s",
+			err, url, urlParams, reqJSON, respJSON, kt.Rid)
 	}
 	return resp.Data, nil
 }

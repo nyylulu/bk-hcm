@@ -206,18 +206,19 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 	req := c.createCapacityReq(input, zone, vpcList, vpcToSubnet)
 	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
-		logs.ErrorJson("failed to get cvm apply capacity, err: %v, req: %+v, rid", err, req, kt.Rid)
+		logs.ErrorJson("failed to get cvm apply capacity, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, rid: %s", resp.Error.Code, resp.Error.Message,
-			kt.Rid)
+		logs.Errorf("failed to get cvm apply capacity, code: %d, msg: %s, crpTraceID: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, resp.TraceId, kt.Rid)
 		return nil
 	}
 
 	if resp.Result == nil {
-		logs.Errorf("failed to get cvm apply capacity, for result is nil, rid", kt.Rid)
+		logs.Errorf("failed to get cvm apply capacity, for result is nil, crpTraceID: %s, rid: %s",
+			resp.TraceId, kt.Rid)
 		return nil
 	}
 
@@ -265,9 +266,14 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 		logs.Errorf("get zone capacity failed to marshal capacityResp, err: %v, rid: %s", err, kt.Rid)
 		return nil
 	}
-	logs.Infof("get zone capacity info, input: %+v, capacityReq: %s, capacityResp: %s, capacityItem: %+v, "+
-		"vpcList: %v, rid: %s", cvt.PtrToVal(input), string(jsonReq), string(jsonResp),
-		cvt.ValToPtr(capacityItem), vpcList, kt.Rid)
+	jsonCapacityItem, err := json.Marshal(capacityItem)
+	if err != nil {
+		logs.Errorf("get zone capacity failed to marshal capacityItem, err: %v, rid: %s", err, kt.Rid)
+		return nil
+	}
+	logs.Infof("get zone capacity info, input: %+v, zone: %s, capacityReq: %s, capacityResp: %s, capacityItem: %s, "+
+		"vpcList: %v, rid: %s", cvt.PtrToVal(input), zone, string(jsonReq), string(jsonResp), jsonCapacityItem,
+		vpcList, kt.Rid)
 
 	return capacityItem
 }

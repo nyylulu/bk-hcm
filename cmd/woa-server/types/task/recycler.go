@@ -775,6 +775,11 @@ func (param *GetDetectStepReq) GetFilter() (map[string]interface{}, error) {
 		filter["create_at"] = timeCond
 	}
 
+	// 防止前端不传任何参数的情况
+	if len(filter) == 0 {
+		return nil, errors.New("no filter condition provided")
+	}
+
 	return filter, nil
 }
 

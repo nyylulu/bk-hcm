@@ -22,6 +22,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/recycle/detect/step
 | end          | string	          | 否   | 单据创建时间过滤条件终点日期，格式如"2022-05-01" |
 | page         | object	          | 是   | 分页信息                    |
 
+- 说明：order_id、suborder_id、ip、step_name、status、bk_username、start、end不能同时为空
+
 #### page
 
 | 参数名称      | 参数类型 | 必选 | 描述                            |
