@@ -35,6 +35,7 @@ import (
 	"hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 )
 
 // -------------------------- Create --------------------------
@@ -253,45 +254,14 @@ func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string,
 }
 
 // GetCCHostCond get cc host condition
-func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *cmdb.QueryFilter {
+func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) []*cmdb.QueryFilter {
 	andRules := make([]querybuilder.Rule, 0)
-
 	cloudIDRule := querybuilder.AtomRule{
 		Field:    pkg.BKCloudIDField,
 		Operator: querybuilder.OperatorEqual,
 		Value:    0, // 只需要查询管控区域为0的公司的机器
 	}
 	andRules = append(andRules, cloudIDRule)
-
-	moduleNames := make([]string, 0)
-	assetIDs := make([]string, 0)
-	for _, moduleName := range req.ModuleNames {
-		ids, ok := moduleAssetIDMap[moduleName]
-		if !ok {
-			moduleNames = append(moduleNames, moduleName)
-			continue
-		}
-
-		assetIDs = append(assetIDs, ids...)
-	}
-
-	if len(moduleNames) != 0 {
-		moduleNameRule := querybuilder.AtomRule{
-			Field:    "module_name",
-			Operator: querybuilder.OperatorIn,
-			Value:    moduleNames,
-		}
-		andRules = append(andRules, moduleNameRule)
-	}
-
-	if len(assetIDs) != 0 {
-		assetIDRule := querybuilder.AtomRule{
-			Field:    pkg.BKAssetIDField,
-			Operator: querybuilder.OperatorIn,
-			Value:    assetIDs,
-		}
-		andRules = append(andRules, assetIDRule)
-	}
 
 	if len(req.Operators) != 0 {
 		operatorRule := querybuilder.CombinedRule{
@@ -312,12 +282,50 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) *
 		andRules = append(andRules, operatorRule)
 	}
 
-	return &cmdb.QueryFilter{
-		Rule: querybuilder.CombinedRule{
-			Condition: querybuilder.ConditionAnd,
-			Rules:     andRules,
-		},
+	moduleNames := make([]string, 0)
+	assetIDs := make([]string, 0)
+	for _, moduleName := range req.ModuleNames {
+		ids, ok := moduleAssetIDMap[moduleName]
+		if !ok {
+			moduleNames = append(moduleNames, moduleName)
+			continue
+		}
+
+		assetIDs = append(assetIDs, ids...)
 	}
+
+	result := make([]*cmdb.QueryFilter, 0)
+	// 由于module name和assetID一起查询cc时效率很低，所以这里把他们拆成不同的查询条件
+	if len(moduleNames) != 0 {
+		moduleNameRule := querybuilder.AtomRule{
+			Field:    "module_name",
+			Operator: querybuilder.OperatorIn,
+			Value:    moduleNames,
+		}
+		rules := make([]querybuilder.Rule, len(andRules))
+		copy(rules, andRules)
+		rules = append(rules, moduleNameRule)
+		cond := &cmdb.QueryFilter{Rule: querybuilder.CombinedRule{Condition: querybuilder.ConditionAnd, Rules: rules}}
+		result = append(result, cond)
+	}
+	batchSize := 1000
+	if len(assetIDs) != 0 {
+		for _, batch := range slice.Split(assetIDs, batchSize) {
+			assetIDRule := querybuilder.AtomRule{
+				Field:    pkg.BKAssetIDField,
+				Operator: querybuilder.OperatorIn,
+				Value:    batch,
+			}
+			rules := make([]querybuilder.Rule, len(andRules))
+			copy(rules, andRules)
+			rules = append(rules, assetIDRule)
+			cond := &cmdb.QueryFilter{Rule: querybuilder.CombinedRule{Condition: querybuilder.ConditionAnd,
+				Rules: rules}}
+			result = append(result, cond)
+		}
+	}
+
+	return result
 }
 
 // ListCurHostCond list current host condition

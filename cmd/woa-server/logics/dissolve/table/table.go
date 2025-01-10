@@ -168,10 +168,10 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 	}
 
 	// 1.由于有些条件值不在cc的主机字段上，所以先根据主机上有的字段，查出host id
-	cond := req.GetCCHostCond(moduleAssetIDMap)
-	originHostIDs, err := l.getAllHostIDFromCC(kt, cond)
+	conds := req.GetCCHostCond(moduleAssetIDMap)
+	originHostIDs, err := l.getAllHostIDFromCC(kt, conds)
 	if err != nil {
-		logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
+		logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, conds, kt.Rid)
 		return nil, err
 	}
 

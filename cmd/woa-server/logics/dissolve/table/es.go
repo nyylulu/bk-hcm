@@ -21,6 +21,7 @@ package table
 
 import (
 	"errors"
+	"sync"
 
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/api/core"
@@ -28,11 +29,15 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb/cmdb"
+
+	"golang.org/x/sync/errgroup"
 )
 
-func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string,
-	page *core.BasePage) (*dissolve.ListHostDetails, error) {
-
+func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string, page *core.BasePage) (
+	*dissolve.ListHostDetails, error) {
+	if page == nil {
+		return nil, errors.New("page is nil")
+	}
 	if page.Count {
 		count, err := l.esCli.CountWithCond(kt.Ctx, cond, index)
 		if err != nil {
@@ -40,43 +45,61 @@ func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, inde
 				kt.Rid)
 			return nil, err
 		}
-
 		return &dissolve.ListHostDetails{Count: count}, nil
 	}
-
 	if page.Sort == "" {
 		page.Sort = "_id"
 	}
-
+	var lock sync.Mutex
+	var err error
+	pipeline := make(chan struct{}, 10)
 	res := make([]es.Host, 0)
-	var pageLimit uint = 10000
-	limit := page.Limit
-	if limit > pageLimit {
-		page.Limit = pageLimit
-	}
-	for {
-		hosts, err := l.esCli.SearchWithCond(kt.Ctx, cond, index, int(page.Start), int(page.Limit), page.Sort)
+	requestEnd := page.Start + uint32(page.Limit)
+	doFunc := func(start, limit int) error {
+		defer func() {
+			<-pipeline
+		}()
+		if start >= int(requestEnd) {
+			return nil
+		}
+
+		var hosts []es.Host
+		hosts, err = l.esCli.SearchWithCond(kt.Ctx, cond, index, start, limit, page.Sort)
 		if err != nil {
 			logs.Errorf("get host by condition failed, err: %v, index: %s, cond: %v, rid: %s", err, index, cond,
 				kt.Rid)
-			return nil, err
+			return err
 		}
 
+		lock.Lock()
+		defer lock.Unlock()
 		res = append(res, hosts...)
+		// start+len(hosts) < int(requestEnd) 的判断逻辑是为了防止多个协程查不到数据后，不断累加requestEnd，所以应该取它们的最小值
+		if len(hosts) < limit && start+len(hosts) < int(requestEnd) {
+			requestEnd = uint32(start + len(hosts))
+		}
+		return nil
+	}
 
-		if len(hosts) < int(page.Limit) {
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	start := page.Start
+	var limit uint32 = 3000
+	for start < requestEnd {
+		if start+limit > requestEnd {
+			limit = requestEnd - start
+		}
+		pipeline <- struct{}{}
+		curStart := start
+		curLimit := limit
+		eg.Go(func() error { return doFunc(int(curStart), int(curLimit)) })
+		// 这里错误只跳出当前循环，由下面eg.Wait()的时候统一处理异常
+		if err != nil {
 			break
 		}
-
-		if len(res) >= int(limit) {
-			break
-		}
-
-		page.Start += uint32(pageLimit)
-
-		if page.Start+uint32(page.Limit) > uint32(limit) {
-			page.Limit = limit - uint(page.Start)
-		}
+		start += limit
+	}
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	details := make([]dissolve.Host, len(res))
@@ -86,7 +109,6 @@ func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, inde
 			logs.Errorf("convert host failed, err: %v, host: %v, rid: %s", err, host, kt.Rid)
 			return nil, err
 		}
-
 		details[i] = *detail
 	}
 

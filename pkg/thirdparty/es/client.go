@@ -120,6 +120,7 @@ func (es *EsCli) CountWithCond(ctx context.Context, cond map[string][]interface{
 func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error) {
 	query := elastic.NewBoolQuery()
 	query.Must(elastic.NewTermsQuery("cluster_id", 0))
+	subOrQuery := elastic.NewBoolQuery()
 	for k, v := range cond {
 		// 当查询条件为操作人时，可以对主维护人或者备份维护人进行匹配
 		if k == Operator {
@@ -134,8 +135,14 @@ func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error
 			continue
 		}
 
+		if k == ModuleName || k == AssetID {
+			subOrQuery.Should(elastic.NewTermsQuery(k, v...))
+			continue
+		}
+
 		query.Must(elastic.NewTermsQuery(k, v...))
 	}
+	query.Must(subOrQuery)
 
 	return query, nil
 }

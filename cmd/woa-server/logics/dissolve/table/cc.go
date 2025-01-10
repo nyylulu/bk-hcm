@@ -31,7 +31,10 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // getBizIDNameByName 此方法如果没有传name,那么会查询所有的业务
@@ -280,21 +283,48 @@ func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.Base
 
 const noLimit = 999999999
 
-func (l *logics) getAllHostIDFromCC(kt *kit.Kit, filter *cmdb.QueryFilter) ([]int64, error) {
-	req := &cmdb.ListHostReq{
-		Fields:             []string{pkg.BKHostIDField},
-		HostPropertyFilter: filter,
-		Page:               cmdb.BasePage{Start: 0, Limit: noLimit, Sort: pkg.BKHostIDField},
-	}
-	hosts, err := l.getHostFromCC(kt, req)
-	if err != nil {
-		logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
-		return nil, err
+func (l *logics) getAllHostIDFromCC(kt *kit.Kit, conds []*cmdb.QueryFilter) ([]int64, error) {
+	if len(conds) == 0 {
+		logs.Errorf("get all host id from cc failed, cond is nil, rid: %s", kt.Rid)
+		return nil, fmt.Errorf("conds is nil")
 	}
 
 	hostIDs := make([]int64, 0)
-	for _, host := range hosts {
-		hostIDs = append(hostIDs, host.BkHostID)
+	var lock sync.Mutex
+	pipeline := make(chan struct{}, 20)
+	doFunc := func(cond *cmdb.QueryFilter) error {
+		defer func() {
+			<-pipeline
+		}()
+
+		req := &cmdb.ListHostReq{
+			Fields:             []string{pkg.BKHostIDField},
+			HostPropertyFilter: cond,
+			Page:               cmdb.BasePage{Start: 0, Limit: noLimit, Sort: pkg.BKHostIDField},
+		}
+		hosts, err := l.getHostFromCC(kt, req)
+		if err != nil {
+			logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
+			return err
+		}
+
+		lock.Lock()
+		defer lock.Unlock()
+		for _, host := range hosts {
+			hostIDs = append(hostIDs, host.BkHostID)
+		}
+		return nil
+	}
+
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	for _, cond := range conds {
+		pipeline <- struct{}{}
+		curCond := cond
+		eg.Go(func() error { return doFunc(curCond) })
+	}
+
+	if err := eg.Wait(); err != nil {
+		return nil, err
 	}
 
 	return hostIDs, nil
@@ -392,9 +422,37 @@ func (l *logics) getHostCountFromCC(kt *kit.Kit, req *cmdb.ListHostReq) (int64, 
 func (l *logics) getHostIDByBizCond(kt *kit.Kit, originHostIDs []int64, bizIDName, blackBizIDName map[int64]string) (
 	[]int64, map[int64]int64, error) {
 
-	originHostBizIDMap, err := l.esbCli.Cmdb().GetHostBizIds(kt.Ctx, kt.Header(), originHostIDs)
-	if err != nil {
-		logs.Errorf("get host biz id failed, err: %v, originHostIDs: %v, rid: %s", err, originHostIDs, kt.Rid)
+	var lock sync.Mutex
+	pipeline := make(chan struct{}, 30)
+	originHostBizIDMap := make(map[int64]int64)
+	doFunc := func(hostIDs []int64) error {
+		defer func() {
+			<-pipeline
+		}()
+
+		subHostBizIDMap, err := l.esbCli.Cmdb().GetHostBizIds(kt.Ctx, kt.Header(), hostIDs)
+		if err != nil {
+			logs.Errorf("get host biz id failed, err: %v, originHostIDs: %v, rid: %s", err, hostIDs, kt.Rid)
+			return err
+		}
+
+		lock.Lock()
+		defer lock.Unlock()
+		for key, val := range subHostBizIDMap {
+			originHostBizIDMap[key] = val
+		}
+
+		return nil
+	}
+
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	pageSize := 1000
+	for _, hostIDs := range slice.Split(originHostIDs, pageSize) {
+		pipeline <- struct{}{}
+		curHostIDs := hostIDs
+		eg.Go(func() error { return doFunc(curHostIDs) })
+	}
+	if err := eg.Wait(); err != nil {
 		return nil, nil, err
 	}
 
