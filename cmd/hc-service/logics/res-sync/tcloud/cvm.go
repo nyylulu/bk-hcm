@@ -142,7 +142,7 @@ func (cli *client) updateCvm(kt *kit.Kit, accountID string, region string,
 			imageID = id
 		}
 
-		extesion := BuildCVMExtension(one)
+		extension := BuildCVMExtension(one)
 		updateOne := dataproto.CvmBatchUpdate[corecvm.TCloudCvmExtension]{
 			ID:             id,
 			Name:           converter.PtrToVal(one.InstanceName),
@@ -161,7 +161,7 @@ func (cli *client) updateCvm(kt *kit.Kit, accountID string, region string,
 			// 云上该字段没有
 			CloudLaunchedTime: "",
 			CloudExpiredTime:  converter.PtrToVal(one.ExpiredTime),
-			Extension:         extesion,
+			Extension:         extension,
 		}
 
 		if len(one.IPv6Addresses) != 0 {

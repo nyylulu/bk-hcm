@@ -179,3 +179,16 @@ type TCloudBatchResetCvmReq struct {
 func (opt TCloudBatchResetCvmReq) Validate() error {
 	return validator.Validate.Struct(opt)
 }
+
+// TCloudCvmBatchAssociateSecurityGroupReq defines options to associate security group to cvm request.
+type TCloudCvmBatchAssociateSecurityGroupReq struct {
+	AccountID        string   `json:"account_id" validate:"required"`
+	Region           string   `json:"region" validate:"required"`
+	SecurityGroupIDs []string `json:"security_group_ids" validate:"required"`
+	CvmID            string   `json:"cvm_id" validate:"required"`
+}
+
+// Validate associate security group to cvm request.
+func (opt TCloudCvmBatchAssociateSecurityGroupReq) Validate() error {
+	return validator.Validate.Struct(opt)
+}

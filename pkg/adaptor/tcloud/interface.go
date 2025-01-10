@@ -199,4 +199,6 @@ type TCloud interface {
 	DescribeClusterResources(kt *kit.Kit, opt *typelb.TCloudDescribeClusterResourcesOption) (*tclb.DescribeClusterResourcesResponseParams, error)
 
 	ResetCvmInstance(kt *kit.Kit, opt *cvm.ResetInstanceOption) (*poller.BaseDoneResult, error)
+
+	BatchCvmAssociateSecurityGroups(kt *kit.Kit, opt *cvm.TCloudAssociateSecurityGroupsOption) error
 }

@@ -885,6 +885,7 @@ etcd:
   ##
   persistence:
     enabled: false
+  dialTimeoutMS: 1500
 
 externalEtcd:
   ## ETCD 配置
@@ -898,6 +899,7 @@ externalEtcd:
   ##
   username: ""
   password: ""
+  dialTimeoutMS: 1500
   ## ETCD Client 证书配置
   ##
   tls:

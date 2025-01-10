@@ -284,6 +284,15 @@ func (req *BatchResetCvmReq) Validate() error {
 	if req.Pwd != req.PwdConfirm {
 		return errf.Newf(errf.InvalidParameter, "pwd and pwd_confirm require the same value")
 	}
+	return validator.Validate.Struct(req)
+}
 
+// BatchAssociateSecurityGroupsReq ...
+type BatchAssociateSecurityGroupsReq struct {
+	SecurityGroupIDs []string `json:"security_group_ids" validate:"required,min=1,max=500"`
+}
+
+// Validate ...
+func (req BatchAssociateSecurityGroupsReq) Validate() error {
 	return validator.Validate.Struct(req)
 }
