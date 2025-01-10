@@ -14,6 +14,7 @@ defineOptions({ name: 'InternetInfoPanel' });
 
 const vpc = defineModel<string>('vpc');
 const subnet = defineModel<string>('subnet');
+
 const props = defineProps<{
   region: string;
   zone: string;
@@ -35,6 +36,8 @@ const cvmSubnetSelectorRef = useTemplateRef('cvm-subnet-selector');
 
 const handleCvmVpcChange = (val?: ICvmVpc) => {
   selectCvmVpc.value = val;
+  selectedCvmSubnet.value = undefined;
+  subnet.value = undefined;
   emit('changeVpc', val);
 };
 
