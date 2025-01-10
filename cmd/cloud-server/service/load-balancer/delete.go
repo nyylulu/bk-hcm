@@ -141,12 +141,37 @@ func (svc *lbSvc) deleteListener(cts *rest.Contexts, validHandler handler.ValidW
 		return nil, err
 	}
 
-	// delete tcloud cloud listener
-	err = svc.client.HCService().TCloud.Clb.DeleteListener(cts.Kit, req)
-	if err != nil {
-		logs.Errorf("[%s] request hcservice to delete listener failed, ids: %s, err: %v, rid: %s",
-			enumor.TCloud, req.IDs, err, cts.Kit.Rid)
-		return nil, err
+	// basicInfoMap group by vendor
+	vendorToIDsMap := make(map[enumor.Vendor][]string)
+	for id, info := range basicInfoMap {
+		vendorToIDsMap[info.Vendor] = append(vendorToIDsMap[info.Vendor], id)
+	}
+
+	for vendor, ids := range vendorToIDsMap {
+		switch vendor {
+		case enumor.TCloud:
+			deleteReq := &core.BatchDeleteReq{
+				IDs: ids,
+			}
+			err = svc.client.HCService().TCloud.Clb.DeleteListener(cts.Kit, deleteReq)
+			if err != nil {
+				logs.Errorf("[%s] request hcservice to delete listener failed, ids: %s, err: %v, rid: %s",
+					enumor.TCloud, req.IDs, err, cts.Kit.Rid)
+				return nil, err
+			}
+		case enumor.TCloudZiyan:
+			deleteReq := &core.BatchDeleteReq{
+				IDs: ids,
+			}
+			err = svc.client.HCService().TCloudZiyan.Clb.DeleteListener(cts.Kit, deleteReq)
+			if err != nil {
+				logs.Errorf("[%s] request hcservice to delete listener failed, ids: %s, err: %v, rid: %s",
+					enumor.TCloudZiyan, ids, err, cts.Kit.Rid)
+				return nil, err
+			}
+		default:
+			return nil, fmt.Errorf("vendor %s not supported for delete listener", vendor)
+		}
 	}
 
 	return nil, nil

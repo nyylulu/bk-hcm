@@ -351,7 +351,7 @@ func (svc *clbSvc) CreateTCloudZiyanListenerWithTargetGroup(cts *rest.Contexts) 
 	}
 
 	// 创建云端监听器、规则
-	cloudLblID, cloudRuleID, err := svc.createListenerWithRuleInZiyan(cts.Kit, req, lbInfo)
+	cloudLblID, cloudRuleID, err := svc.createListenerWithRuleInZiyan(cts.Kit, req, lbInfo, targetGroupInfo)
 	if err != nil {
 		return nil, err
 	}
@@ -366,7 +366,7 @@ func (svc *clbSvc) CreateTCloudZiyanListenerWithTargetGroup(cts *rest.Contexts) 
 }
 
 func (svc *clbSvc) createListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.ListenerWithRuleCreateReq,
-	lbInfo corelb.BaseLoadBalancer) (string, string, error) {
+	lbInfo corelb.BaseLoadBalancer, tgInfo corelb.BaseTargetGroup) (string, string, error) {
 
 	tcloudAdpt, err := svc.ad.TCloudZiyan(kt, lbInfo.AccountID)
 	if err != nil {
@@ -384,6 +384,14 @@ func (svc *clbSvc) createListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 		SniSwitch:         req.SniSwitch,
 		SessionType:       cvt.ValToPtr(req.SessionType),
 		Certificate:       req.Certificate,
+	}
+	if req.Protocol.IsLayer4Protocol() {
+		lblOpt.HealthCheck = &corelb.TCloudHealthCheckInfo{}
+		if tgInfo.HealthCheck != nil {
+			lblOpt.HealthCheck.HealthSwitch = tgInfo.HealthCheck.HealthSwitch
+		} else {
+			lblOpt.HealthCheck.HealthSwitch = cvt.ValToPtr(int64(0))
+		}
 	}
 	// 7层监听器，不管SNI开启还是关闭，都需要传入证书参数
 	// 7层监听器并且SNI开启时，创建监听器接口，不需要证书
@@ -420,6 +428,12 @@ func (svc *clbSvc) createListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 			Url:               cvt.ValToPtr(req.Url),
 			SessionExpireTime: cvt.ValToPtr(req.SessionExpire),
 			DefaultServer:     cvt.ValToPtr(true),
+			HealthCheck:       &corelb.TCloudHealthCheckInfo{},
+		}
+		if tgInfo.HealthCheck != nil {
+			oneRule.HealthCheck.HealthSwitch = tgInfo.HealthCheck.HealthSwitch
+		} else {
+			oneRule.HealthCheck.HealthSwitch = cvt.ValToPtr(int64(0))
 		}
 		if len(req.Domain) > 0 {
 			oneRule.Domain = cvt.ValToPtr(req.Domain)
@@ -471,6 +485,7 @@ func (svc *clbSvc) insertListenerWithRuleInZiyan(kt *kit.Kit, req *protolb.Liste
 				CloudLbID:          lbInfo.CloudID,
 				Protocol:           req.Protocol,
 				Port:               req.Port,
+				Region:             lbInfo.Region,
 				CloudRuleID:        cloudRuleID,
 				Scheduler:          req.Scheduler,
 				RuleType:           ruleType,

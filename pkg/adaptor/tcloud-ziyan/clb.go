@@ -160,7 +160,7 @@ func (t *ZiyanAdpt) formatCreateClbRequest(opt *typelb.TCloudZiyanCreateClbOptio
 	if len(cvt.PtrToVal(opt.TgwGroupName)) > 0 {
 		req.TgwGroupName = opt.TgwGroupName
 	}
-	if len(opt.Zones) > 0 {
+	if len(opt.Zones) > 0 && opt.LoadBalancerType == typelb.InternalLoadBalancerType {
 		req.Zones = cvt.SliceToPtr(opt.Zones)
 	}
 	return req

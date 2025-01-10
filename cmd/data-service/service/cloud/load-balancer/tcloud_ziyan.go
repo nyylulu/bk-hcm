@@ -56,8 +56,8 @@ func (svc *lbSvc) ListTCloudZiyanUrlRule(cts *rest.Contexts) (any, error) {
 	}
 	result, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().List(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("list tcloud lb url rule failed, req: %+v, err: %v, rid: %s", req, err, cts.Kit.Rid)
-		return nil, fmt.Errorf("list tcloud lb url rule failed, err: %v", err)
+		logs.Errorf("list tcloud-ziyan lb url rule failed, req: %+v, err: %v, rid: %s", req, err, cts.Kit.Rid)
+		return nil, fmt.Errorf("list tcloud-ziyan lb url rule failed, err: %v", err)
 	}
 
 	if req.Page.Count {
@@ -140,8 +140,8 @@ func (svc *lbSvc) BatchDeleteTCloudZiyanUrlRule(cts *rest.Contexts) (any, error)
 	}
 	listResp, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().List(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("list tcloud lb rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, fmt.Errorf("list tcloud lb rule failed, err: %v", err)
+		logs.Errorf("list tcloud-ziyan lb rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, fmt.Errorf("list tcloud-ziyan lb rule failed, err: %v", err)
 	}
 
 	if len(listResp.Details) == 0 {

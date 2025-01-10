@@ -107,6 +107,7 @@ func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, e
 		SniSwitch:         req.SniSwitch,
 		SessionType:       req.SessionType,
 		Certificate:       req.Certificate,
+		HealthCheck:       req.HealthCheck,
 	}
 
 	result, err := tcloudAdpt.CreateListener(cts.Kit, lblOpt)
@@ -132,8 +133,7 @@ func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, e
 }
 
 func (svc *clbSvc) createZiyanListenerDB(kt *kit.Kit, req *protolb.TCloudListenerCreateReq,
-	lbInfo corelb.BaseLoadBalancer,
-	cloudID string) (string, error) {
+	lbInfo corelb.BaseLoadBalancer, cloudID string) (string, error) {
 
 	if req.Protocol.IsLayer7Protocol() {
 		// for layer 7 only create listeners itself
@@ -148,6 +148,7 @@ func (svc *clbSvc) createZiyanListenerDB(kt *kit.Kit, req *protolb.TCloudListene
 				CloudLbID: lbInfo.CloudID,
 				Protocol:  req.Protocol,
 				Port:      req.Port,
+				Region:    lbInfo.Region,
 				Extension: &corelb.TCloudListenerExtension{
 					Certificate: req.Certificate,
 					EndPort:     req.EndPort,
@@ -183,6 +184,7 @@ func (svc *clbSvc) createZiyanListenerDB(kt *kit.Kit, req *protolb.TCloudListene
 			SessionExpire: req.SessionExpire,
 			SniSwitch:     req.SniSwitch,
 			Certificate:   req.Certificate,
+			Region:        lbInfo.Region,
 		}}}
 	created, err := svc.dataCli.TCloudZiyan.LoadBalancer.BatchCreateTCloudListenerWithRule(kt, ruleCreateReq)
 	if err != nil {

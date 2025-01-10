@@ -38,7 +38,8 @@ import (
 )
 
 // LoadBalancerRule 规则同步
-func (cli *client) loadBalancerRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption, cloudListeners []typeslb.TCloudListener) (any, error) {
+func (cli *client) loadBalancerRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncListenerOption,
+	cloudListeners []typeslb.TCloudListener) (any, error) {
 
 	var l4Listeners, l7Listeners []typeslb.TCloudListener
 	for _, listener := range cloudListeners {
