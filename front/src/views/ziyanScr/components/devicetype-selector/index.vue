@@ -49,6 +49,9 @@ const getOptions = async () => {
   const { resourceType, params, sort } = props;
   const { require_type, region, zone, device_group, cpu, mem, disk, enable_capacity, enable_apply } = params;
 
+  // 小额与春保资源池时使用常规需求类型，require_type可能是多选，这里暂仅考虑主机申请与修改场景单选
+  const requireType = [7, 8].includes(require_type as number) ? 1 : require_type;
+
   const buildRules = (fields: Array<{ field: string; value: number | string | Array<number | string> | boolean }>) => {
     return fields.reduce((prev, curr) => {
       const { field, value } = curr;
@@ -63,7 +66,7 @@ const getOptions = async () => {
   };
 
   const rules = buildRules([
-    { field: 'require_type', value: require_type },
+    { field: 'require_type', value: requireType },
     { field: 'region', value: region },
     { field: 'zone', value: zone },
     { field: 'label.device_group', value: device_group },

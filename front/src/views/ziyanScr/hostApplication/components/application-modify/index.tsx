@@ -158,7 +158,12 @@ export default defineComponent({
     const cvmDevicetypeParams = computed(() => {
       const { zone } = order.value.model.spec;
       const { region } = rawOrder.value.spec;
-      return { region, zone: zone !== 'cvm_separate_campus' ? zone : undefined };
+      const require_type = route?.query?.require_type;
+      return {
+        region,
+        zone: zone !== 'cvm_separate_campus' ? zone : undefined,
+        require_type: require_type ? Number(require_type) : undefined,
+      };
     });
 
     const handleSubmit = async () => {

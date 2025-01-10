@@ -492,6 +492,7 @@ export default defineComponent({
       return {
         region,
         zone: zone !== 'cvm_separate_campus' ? zone : undefined,
+        require_type: order.value.model.requireType,
       };
     });
 
