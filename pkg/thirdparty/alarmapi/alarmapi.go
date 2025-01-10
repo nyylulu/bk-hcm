@@ -48,7 +48,7 @@ type AlarmClientInterface interface {
 	// AddShieldAlarm add shield alarm
 	AddShieldAlarm(kt *kit.Kit, ips []string, hourNum time.Duration, operateIP string, reason string) ([]string, error)
 	// DelShieldAlarm del shield alarm
-	DelShieldAlarm(kt *kit.Kit, ids []string, operateIP string) ([]bool, error)
+	DelShieldAlarm(kt *kit.Kit, ids []string, operateIP string) (string, error)
 }
 
 // NewAlarmClientInterface creates a alarm api instance
@@ -118,10 +118,10 @@ func (a *alarmApi) getShieldConfig(ctx context.Context, header http.Header, ip s
 }
 
 // addShieldConfig add shield alarm config
-func (a *alarmApi) addShieldConfig(ctx context.Context, header http.Header, req *AddShieldReq) (*AddShieldResp, error) {
+func (a *alarmApi) addShieldConfig(ctx context.Context, header http.Header, req *AddShieldReq) (int64, error) {
 	params, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 
 	header = a.authHeader(params, header)
@@ -136,24 +136,37 @@ func (a *alarmApi) addShieldConfig(ctx context.Context, header http.Header, req 
 		Into(&resp)
 
 	if err != nil {
-		logs.Errorf("failed to add alarm shield config, err: %v, req: %+v, ips: %v",
-			err, cvt.PtrToVal(req), req.Params.Ip)
-		return nil, err
+		logs.Errorf("failed to add alarm shield config, err: %v, req: %+v, ips: %v", err, cvt.PtrToVal(req),
+			req.Params.Ip)
+		return 0, err
 	}
 
-	return resp, err
+	if resp.Code != 0 {
+		logs.Errorf("failed to add alarm shield config, code: %d, msg: %s, ips: %v", resp.Code, resp.Msg,
+			req.Params.Ip)
+		return 0, fmt.Errorf("failed to add alarm shield config, code: %d, msg: %s, ips: %v", resp.Code, resp.Msg,
+			req.Params.Ip)
+	}
+
+	var alarmID int64
+	if err = json.Unmarshal(resp.Data, &alarmID); err != nil {
+		logs.Errorf("fail to decode alarm shield config result, err: %v, resp: %+v, ips: %v", err, resp, req.Params.Ip)
+		return 0, err
+	}
+
+	return alarmID, err
 }
 
 // delShieldConfig del shield alarm config
-func (a *alarmApi) delShieldConfig(ctx context.Context, header http.Header, req *DelShieldReq) ([]bool, error) {
+func (a *alarmApi) delShieldConfig(ctx context.Context, header http.Header, req *DelShieldReq) (string, error) {
 	params, err := json.Marshal(req)
 	if err != nil {
-		return nil, err
+		return "", err
 	}
 
 	header = a.authHeader(params, header)
 	subPath := "/tnm2_api/alarm.del_alarm_shield_config_bu"
-	ret := make([]bool, 0)
+	var ret string
 	err = a.client.Post().
 		WithContext(ctx).
 		Body(req).
@@ -163,9 +176,9 @@ func (a *alarmApi) delShieldConfig(ctx context.Context, header http.Header, req 
 		Into(&ret)
 
 	if err != nil {
-		logs.Errorf("failed to del alarm shield config, err: %v, req: %+v, id: %s",
-			err, cvt.PtrToVal(req), req.Params.ID)
-		return nil, err
+		logs.Errorf("failed to del alarm shield config, subPath: %s, err: %v, req: %+v, id: %s",
+			subPath, err, cvt.PtrToVal(req), req.Params.ID)
+		return "", err
 	}
 
 	return ret, nil
@@ -211,27 +224,21 @@ func (a *alarmApi) AddShieldAlarm(kt *kit.Kit, ips []string, hourNum time.Durati
 			},
 		}
 
-		resp, err := a.addShieldConfig(kt.Ctx, kt.Header(), req)
+		alarmID, err := a.addShieldConfig(kt.Ctx, kt.Header(), req)
 		if err != nil {
 			// add shield config may fail, ignore it
 			logs.Errorf("failed to add shield alarm config, err: %v, ips: %v, rid: %s", err, ips, kt.Rid)
 			continue
 		}
 
-		if resp.Code != 0 {
-			// add shield config may fail, ignore it
-			logs.Errorf("failed to add shield alarm config, code: %d, msg: %s, ips: %v, rid: %s",
-				resp.Code, resp.Msg, ips, kt.Rid)
-			continue
-		}
-		alarmIDs = append(alarmIDs, strconv.FormatInt(resp.Data, 10))
+		alarmIDs = append(alarmIDs, strconv.FormatInt(alarmID, 10))
 	}
 
 	return alarmIDs, nil
 }
 
 // DelShieldAlarm del shield alarm
-func (a *alarmApi) DelShieldAlarm(kt *kit.Kit, ids []string, operateIP string) ([]bool, error) {
+func (a *alarmApi) DelShieldAlarm(kt *kit.Kit, ids []string, operateIP string) (string, error) {
 	req := &DelShieldReq{
 		Method: DelShieldMethod,
 		Params: &DelShieldParams{
@@ -244,7 +251,7 @@ func (a *alarmApi) DelShieldAlarm(kt *kit.Kit, ids []string, operateIP string) (
 	resp, err := a.delShieldConfig(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		logs.Errorf("failed to del shield alarm config, err: %v, ids: %v, rid: %s", err, ids, kt.Rid)
-		return nil, err
+		return "", err
 	}
 
 	return resp, nil

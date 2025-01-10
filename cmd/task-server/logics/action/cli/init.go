@@ -24,8 +24,9 @@ import (
 	dataservice "hcm/pkg/client/data-service"
 	hcservice "hcm/pkg/client/hc-service"
 	"hcm/pkg/dal/dao"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/thirdparty/alarmapi"
+	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/sampwdapi"
 )
 
 var (
@@ -34,6 +35,7 @@ var (
 	obsDaoSet dao.Set
 	cmdbCli   cmdb.Client
 	alarmCli  alarmapi.AlarmClientInterface
+	samPwdCli sampwdapi.Client
 )
 
 // SetClientSet set client set.
@@ -94,4 +96,14 @@ func SetAlarmCli(cli alarmapi.AlarmClientInterface) {
 // GetAlarmCli get alarm cli.
 func GetAlarmCli() alarmapi.AlarmClientInterface {
 	return alarmCli
+}
+
+// SetSamPwdCli set sampwd cli.
+func SetSamPwdCli(cli sampwdapi.Client) {
+	samPwdCli = cli
+}
+
+// GetSamPwdCli get sampwd cli.
+func GetSamPwdCli() sampwdapi.Client {
+	return samPwdCli
 }

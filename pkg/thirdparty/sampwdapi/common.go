@@ -17,21 +17,25 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package alarmapi Alarm API
-package alarmapi
+// Package sampwdapi sampwd api
+package sampwdapi
 
-import "encoding/json"
+import "hcm/pkg/criteria/validator"
 
-// AlarmShieldConfig alarm shield config
-type AlarmShieldConfig struct {
-	CiSetInfo  string `json:"ciset_info"`
-	ShieldRule string `json:"shield_rule"`
-	CycleEnd   string `json:"cycle_end"`
+// UpdateHostPwdReq 更新密码库中的主机密码-请求体
+type UpdateHostPwdReq struct {
+	BkHostID     int64  `json:"bk_host_id" validate:"required"`
+	Password     string `json:"password" validate:"required"`
+	UserName     string `json:"username" validate:"required"`
+	GenerateTime string `json:"generate_time" validate:"omitempty"` // 格式为YYYY-MM-DD HH:MM:SS
 }
 
-// AddShieldResp add shield alarm config response
-type AddShieldResp struct {
-	Code int             `json:"returnCode"`
-	Msg  string          `json:"msg"`
-	Data json.RawMessage `json:"data"`
+// Validate ...
+func (v *UpdateHostPwdReq) Validate() error {
+	return validator.Validate.Struct(v)
+}
+
+// UpdateHostPwdResp the response of the request
+type UpdateHostPwdResp struct {
+	ID int `json:"id"`
 }

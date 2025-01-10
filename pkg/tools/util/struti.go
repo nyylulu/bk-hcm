@@ -90,17 +90,17 @@ func IsTime(sInput string) (DateTimeFieldType, bool) {
 	return invalidDateTimeType, false
 }
 
-// 是否时区
+// IsTimeZone 是否时区
 func IsTimeZone(sInput string) bool {
 	return timeZoneRegexp.MatchString(sInput)
 }
 
-// 是否用户
+// IsUser 是否用户
 func IsUser(sInput string) bool {
 	return userRegexp.MatchString(sInput)
 }
 
-// str2time
+// Str2Time str2time
 func Str2Time(timeStr string, timeType DateTimeFieldType) time.Time {
 	var layout string
 	switch timeType {
@@ -143,4 +143,14 @@ func ContainsAnyString(s string, subs ...string) bool {
 // for example, Normalize(" hello world") ==> "HELLO WORLD"
 func Normalize(str string) string {
 	return strings.ToUpper(strings.TrimSpace(str))
+}
+
+// JoinStrings 拼接两个字符串，并使用指定的分隔符
+func JoinStrings(str1, str2, separator string) string {
+	return str1 + separator + str2
+}
+
+// SplitString 按指定分隔符拆分字符串
+func SplitString(input, separator string) []string {
+	return strings.Split(input, separator)
 }

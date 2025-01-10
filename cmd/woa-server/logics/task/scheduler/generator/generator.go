@@ -273,11 +273,12 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 			defer wg.Done()
 			genId, err := g.launchCvm(kt, order, zoneId, replicas)
 			if err != nil {
-				logs.Errorf("failed to launch cvm, err: %v", err)
+				logs.Errorf("failed to launch cvm, subOrderID: %s, err: %v, zoneId: %s, replicas: %d, rid: %s",
+					order.SubOrderId, err, zoneId, replicas, kt.Rid)
 				appendError(err)
 			} else {
-				logs.Infof("success to launch cvm, zone: %s, replicas: %d, order id: %s, generate id: %d", zoneId,
-					replicas, order.SubOrderId, genId)
+				logs.Infof("success to launch cvm, zone: %s, replicas: %d, subOrderID: %s, generate id: %d, rid: %s",
+					zoneId, replicas, order.SubOrderId, genId, kt.Rid)
 				appendGenRecord(genId)
 			}
 		}(order, zone.Zone, replicas)
@@ -290,17 +291,19 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 	wg.Wait()
 
 	if len(genRecordIds) == 0 {
-		logs.Errorf("failed to generate cvm separate, for no zone has generate record, rid: %s", kt.Rid)
+		logs.Errorf("failed to generate cvm separate, for no zone has generate record, subOrderID: %s, errs: %v, "+
+			"rid: %s", order.SubOrderId, errs, kt.Rid)
 		return fmt.Errorf("failed to generate cvm separate, for no zone has generate record")
 	}
 
 	if len(errs) > 0 {
-		logs.Errorf("failed to generate cvm separate, errs: %v", errs)
+		logs.Errorf("failed to generate cvm separate, subOrderID: %s, errs: %v, rid: %s",
+			order.SubOrderId, errs, kt.Rid)
 
 		// check all generate records and update apply order status
-		if err := g.UpdateOrderStatus(order.SubOrderId); err != nil {
-			logs.Errorf("failed to update order status, subOrderId: %s, err: %v, rid: %s", order.SubOrderId, err,
-				kt.Rid)
+		if err = g.UpdateOrderStatus(order.SubOrderId); err != nil {
+			logs.Errorf("failed to update order status, subOrderId: %s, err: %v, rid: %s",
+				order.SubOrderId, err, kt.Rid)
 		}
 	}
 

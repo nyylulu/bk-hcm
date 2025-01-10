@@ -46,6 +46,8 @@ import (
 	toolsutil "hcm/pkg/tools/util"
 	"hcm/pkg/tools/utils/wait"
 	"hcm/pkg/tools/uuid"
+
+	"golang.org/x/sync/errgroup"
 )
 
 // Matcher matches devices for apply order
@@ -475,7 +477,6 @@ func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.Devic
 	}
 
 	mutex := sync.Mutex{}
-	wg := sync.WaitGroup{}
 	errs := make([]error, 0)
 	observeDevices := make([]*types.DeviceInfo, 0)
 	appendError := func(err error) {
@@ -488,22 +489,30 @@ func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.Devic
 		defer mutex.Unlock()
 		observeDevices = append(observeDevices, device)
 	}
+
+	eg := errgroup.Group{}
+	// 每个主机都会创建一个init task，这里防止无限制并发
+	eg.SetLimit(5)
 	for _, device := range unreleased {
-		wg.Add(1)
-		go func(device *types.DeviceInfo) {
-			defer wg.Done()
-			if err := m.ProcessInitStep(device); err != nil {
+		deviceInfo := device
+		eg.Go(func() error {
+			if err := m.ProcessInitStep(deviceInfo); err != nil {
 				appendError(err)
 			} else {
-				appendDevice(device)
+				appendDevice(deviceInfo)
 			}
-		}(device)
+			return nil
+		})
 	}
-	wg.Wait()
+	err := eg.Wait()
+	if err != nil {
+		logs.Errorf("failed to process init step devices, subOrderID: %s, err: %v", order.SubOrderId, err)
+		return nil, err
+	}
 
 	// update init step
-	if err := record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
-		logs.Errorf("failed to update init step, order id: %s, err: %v", order.SubOrderId, err)
+	if err = record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
+		logs.Errorf("failed to update init step, subOrderID: %s, err: %v", order.SubOrderId, err)
 		return nil, err
 	}
 

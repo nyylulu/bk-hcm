@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	actionflow "hcm/cmd/task-server/logics/flow"
@@ -41,6 +42,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/alarmapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/sampwdapi"
 	"hcm/pkg/tools/retry"
 )
 
@@ -224,6 +226,14 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		return cloudErr
 	}
 
+	// 更新主机密码
+	errMap := act.updateHostPwd(kt, cvms, detail.Creator, req.Password)
+	if len(errMap) > 0 {
+		// 更新失败不影响主流程，记录告警日志
+		logs.Errorf("%s: failed to update host pwd, detailID: %s, taskManageID: %s, flowID: %s, errMap: %+v, rid: %s",
+			constant.CvmResetSystemUpdatePwdFailed, detail.ID, detail.TaskManagementID, detail.FlowID, errMap, kt.Rid)
+	}
+
 	return nil
 }
 
@@ -300,4 +310,46 @@ func updateCMDBCvmOSAndSvrStatus(kt *kit.Kit, bkAssetID, srvStatus, osName strin
 		return err
 	}
 	return nil
+}
+
+func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension],
+	operator, pwd string) map[int]error {
+
+	var errMap = make(map[int]error)
+	for idx, cvm := range cvms {
+		pwdReq := &sampwdapi.UpdateHostPwdReq{
+			BkHostID:     cvm.Extension.HostID,
+			Password:     pwd,
+			UserName:     operator, //  操作人
+			GenerateTime: time.Now().Format(constant.DateTimeLayout),
+		}
+		rangeMS := [2]uint{constant.CvmBatchTaskRetryDelayMinMS, constant.CvmBatchTaskRetryDelayMaxMS}
+		policy := retry.NewRetryPolicy(0, rangeMS)
+		for {
+			pwdResp, err := actcli.GetSamPwdCli().UpdateHostPwd(kt, pwdReq)
+			if err != nil {
+				if policy.RetryCount()+1 < actionflow.BatchTaskDefaultRetryTimes {
+					// 	非最后一次重试，继续sleep
+					logs.Errorf("failed to update host password, will sleep for retry, retry count: %d, "+
+						"cvmCloudID: %s, hostID: %d, err: %+v, rid: %s",
+						policy.RetryCount(), cvm.CloudID, cvm.Extension.HostID, err, kt.Rid)
+					policy.Sleep()
+					continue
+				}
+
+				errMap[idx] = fmt.Errorf("failed to update host password, cvmCloudID: %s, hostID: %d, IPs: %v, "+
+					"err: %v", cvm.CloudID, cvm.Extension.HostID, cvm.PrivateIPv4Addresses, err)
+				break
+			}
+
+			if pwdResp.ID <= 0 {
+				logs.Errorf("failed to update host password id, cvmCloudID: %s, hostID: %d, pwdResp: %+v, rid: %s",
+					cvm.CloudID, cvm.Extension.HostID, pwdResp, kt.Rid)
+				errMap[idx] = fmt.Errorf("failed to update host password id, cvmCloudID: %s, hostID: %d, "+
+					"IPs: %v, pwdResp: %+v", cvm.CloudID, cvm.Extension.HostID, cvm.PrivateIPv4Addresses, pwdResp)
+			}
+			break
+		}
+	}
+	return errMap
 }

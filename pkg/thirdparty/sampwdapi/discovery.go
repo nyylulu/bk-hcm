@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +17,33 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package alarmapi Alarm API
-package alarmapi
+// Package sampwdapi sampwd api
+package sampwdapi
 
-import "encoding/json"
+import (
+	"errors"
+	"sync"
+)
 
-// AlarmShieldConfig alarm shield config
-type AlarmShieldConfig struct {
-	CiSetInfo  string `json:"ciset_info"`
-	ShieldRule string `json:"shield_rule"`
-	CycleEnd   string `json:"cycle_end"`
+// discovery simple discovery.
+type discovery struct {
+	servers []string
+	index   int
+	sync.Mutex
 }
 
-// AddShieldResp add shield alarm config response
-type AddShieldResp struct {
-	Code int             `json:"returnCode"`
-	Msg  string          `json:"msg"`
-	Data json.RawMessage `json:"data"`
+// GetServers get sampwd server host.
+func (s *discovery) GetServers() ([]string, error) {
+	s.Lock()
+	defer s.Unlock()
+	num := len(s.servers)
+	if num == 0 {
+		return []string{}, errors.New("there is no sampwd server can be used")
+	}
+	if s.index < num-1 {
+		s.index = s.index + 1
+		return append(s.servers[s.index-1:], s.servers[:s.index-1]...), nil
+	}
+	s.index = 0
+	return append(s.servers[num-1:], s.servers[:num-1]...), nil
 }

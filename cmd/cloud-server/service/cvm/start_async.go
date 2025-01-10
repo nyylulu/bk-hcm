@@ -38,6 +38,7 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/util"
 )
 
 // BatchAsyncStartCvm batch start cvm.
@@ -173,8 +174,20 @@ func (svc *cvmSvc) validateMOAResult(cts *rest.Contexts, sessionID string) error
 		return errf.Newf(errf.MOAValidationTimeoutError, "no session found by id: %s", sessionID)
 	}
 	kv := resp.Kvs[0]
-	result := string(kv.Value)
-	if result != enumor.VerificationResultConfirm {
+	valueStr := string(kv.Value)
+	result := util.SplitString(valueStr, "-")
+	if len(result) != 2 {
+		logs.Errorf("invalid verification result, sessionID: %s, value: %s, rid: %s", sessionID, valueStr, cts.Kit.Rid)
+		return fmt.Errorf("invalid verification result")
+	}
+	if result[0] != cts.Kit.User {
+		logs.Errorf("verification username is not match, sessionID: %s, value: %s, currUser: %s, rid: %s",
+			sessionID, valueStr, cts.Kit.User, cts.Kit.Rid)
+		return fmt.Errorf("verification username is not match")
+	}
+	if result[1] != enumor.VerificationResultConfirm {
+		logs.Errorf("verification result is not confirm, sessionID: %s, value: %s, currUser: %s, result: %v, rid: %s",
+			sessionID, valueStr, cts.Kit.User, result, cts.Kit.Rid)
 		return fmt.Errorf("verification result is not confirm, result: %s", result)
 	}
 

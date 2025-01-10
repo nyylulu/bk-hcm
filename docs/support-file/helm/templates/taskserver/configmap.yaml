@@ -29,3 +29,5 @@ data:
       {{- toYaml .Values.cmdbApiGateway | nindent 6 }}
     alarm:
       {{- toYaml .Values.alarm | nindent 6 }}
+    sampwd:
+      {{- toYaml .Values.sampwd | nindent 6 }}

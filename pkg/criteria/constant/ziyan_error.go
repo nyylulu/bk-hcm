@@ -29,4 +29,7 @@ const (
 	DemandPenaltyBaseGenerateFailed WarnSign = "demand_penalty_base_generate_failed"
 	// DemandPenaltyRatioReportFailed res plan demand penalty ratio report failed.
 	DemandPenaltyRatioReportFailed WarnSign = "demand_penalty_ratio_report_failed"
+
+	// CvmResetSystemUpdatePwdFailed cvm reset system update pwd failed.
+	CvmResetSystemUpdatePwdFailed WarnSign = "cvm_reset_system_update_pwd_failed"
 )

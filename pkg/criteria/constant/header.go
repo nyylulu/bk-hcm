@@ -46,6 +46,8 @@ const (
 
 	// BKGWAuthKey is blueking api gateway authorization header key.
 	BKGWAuthKey = "X-Bkapi-Authorization"
+	// ContentTypeKey is content type header key.
+	ContentTypeKey = "Content-Type"
 )
 
 const (

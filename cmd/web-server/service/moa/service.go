@@ -34,6 +34,7 @@ import (
 	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
+	"hcm/pkg/tools/util"
 
 	etcd3 "go.etcd.io/etcd/client/v3"
 )
@@ -130,6 +131,11 @@ func (s service) moaVerify(cts *rest.Contexts, validHandler handler.ListAuthResH
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 校验是否同一个用户
+	if req.Username != cts.Kit.User {
+		return nil, errf.Newf(errf.InvalidParameter, "username is not match")
+	}
+
 	// validate biz and authorize
 	_, noPerm, err := validHandler(cts,
 		&handler.ListAuthResOption{Authorizer: s.authorizer, ResType: meta.Biz, Action: meta.Access})
@@ -155,7 +161,8 @@ func (s service) moaVerify(cts *rest.Contexts, validHandler handler.ListAuthResH
 			logs.Errorf("grant etcd lease failed, err: %v, leaseResp: %v, rid: %s", err, leaseResp, cts.Kit.Rid)
 			return nil, err
 		}
-		putResp, err := s.etcdCli.Put(cts.Kit.Ctx, resp.SessionId, resp.ButtonType, etcd3.WithLease(leaseResp.ID))
+		moaValue := util.JoinStrings(cts.Kit.User, resp.ButtonType, "-")
+		putResp, err := s.etcdCli.Put(cts.Kit.Ctx, resp.SessionId, moaValue, etcd3.WithLease(leaseResp.ID))
 		if err != nil {
 			logs.Errorf("put etcd lease failed, err: %v, putResp: %v, rid: %s", err, putResp, cts.Kit.Rid)
 			return nil, err

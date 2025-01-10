@@ -68,6 +68,8 @@ type ApiGatewayResp[T any] struct {
 	BKErrorCode    int    `json:"bk_error_code"`
 	Message        string `json:"message"`
 	BKErrorMessage string `json:"bk_error_msg"`
+	RequestID      string `json:"request_id"`
+	TraceID        string `json:"trace_id"`
 	Data           T      `json:"data"`
 }
 
@@ -90,8 +92,9 @@ func ApiGatewayCall[IT any, OT any](cli rest.ClientInterface, cfg *cc.ApiGateway
 	}
 
 	if !resp.Result || resp.Code != 0 {
-		err := fmt.Errorf("failed to call api gateway, code: %d, msg: %s, bk_error_code: %d, bk_error_msg: %s",
-			resp.Code, resp.Message, resp.BKErrorCode, resp.BKErrorMessage)
+		err = fmt.Errorf("failed to call api gateway, code: %d, msg: %s, bk_error_code: %d, bk_error_msg: %s, "+
+			"bkRequestID: %s, bkTraceID: %s", resp.Code, resp.Message, resp.BKErrorCode, resp.BKErrorMessage,
+			resp.RequestID, resp.TraceID)
 		logs.Errorf("api gateway returns error, url: %s, err: %v, rid: %s", url, err, kt.Rid)
 		return nil, err
 	}
@@ -137,5 +140,6 @@ func getCommonHeader(kt *kit.Kit, cfg *cc.ApiGateway) http.Header {
 		cfg.AppCode, cfg.AppSecret, user)
 	header.Set(constant.BKGWAuthKey, bkAuth)
 	header.Set(constant.RidKey, kt.Rid)
+	header.Set(constant.ContentTypeKey, "application/json") // 网关接口要求必须传MIME类型
 	return header
 }

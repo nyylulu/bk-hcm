@@ -412,9 +412,10 @@ func (s WebServerSetting) Validate() error {
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
 	// 自研云增加的配置写在这里
-	OBSDatabase *DataBase  `yaml:"obsDatabase,omitempty"`
-	Cmdb        ApiGateway `yaml:"cmdb"`
-	AlarmCli    *AlarmCli  `yaml:"alarm,omitempty"`
+	OBSDatabase *DataBase   `yaml:"obsDatabase,omitempty"`
+	Cmdb        ApiGateway  `yaml:"cmdb"`
+	AlarmCli    *AlarmCli   `yaml:"alarm,omitempty"`
+	SamPwdCli   *ApiGateway `yaml:"sampwd,omitempty"`
 
 	Network  Network   `yaml:"network"`
 	Service  Service   `yaml:"service"`
@@ -465,6 +466,12 @@ func (s TaskServerSetting) Validate() error {
 
 	if s.AlarmCli != nil {
 		if err := s.AlarmCli.validate(); err != nil {
+			return err
+		}
+	}
+
+	if s.SamPwdCli != nil {
+		if err := s.SamPwdCli.validate(); err != nil {
 			return err
 		}
 	}

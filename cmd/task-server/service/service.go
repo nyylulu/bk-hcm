@@ -50,8 +50,9 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
-	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/alarmapi"
+	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/thirdparty/sampwdapi"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -115,8 +116,16 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 			return nil, err
 		}
 	}
+	var samPwdCli sampwdapi.Client
+	if cc.TaskServer().SamPwdCli != nil {
+		samPwdCli, err = sampwdapi.NewClient(cc.TaskServer().SamPwdCli, metrics.Register())
+		if err != nil {
+			logs.Errorf("failed to new alarm api client, err: %v", err)
+			return nil, err
+		}
+	}
 
-	logicsaction.Init(apiClientSet, dao, obsDao, cmdbCli, alarmCli)
+	logicsaction.Init(apiClientSet, dao, obsDao, cmdbCli, alarmCli, samPwdCli)
 	async, err := createAndStartAsync(sd, dao, shutdownWaitTimeSec)
 	if err != nil {
 		return nil, err

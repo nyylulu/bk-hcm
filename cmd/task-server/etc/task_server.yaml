@@ -202,3 +202,28 @@ alarm:
   host: http://127.0.0.1
   app_code: xxxx
   app_secret: xxxx
+
+# defines sampwd related settings.
+sampwd:
+  endpoints:
+    - https://127.0.0.1
+  # appCode is the BlueKing app code of hcm to request cmdb api gateway.
+  appCode: xxxx
+  # appSecret is the BlueKing app secret of hcm to request cmdb api gateway.
+  appSecret: xxxx
+  # user is the BlueKing user of hcm to request cmdb api gateway.
+  user: xxxx
+  # BkToken is the BlueKing access token of hcm to request api gateway.
+  bkToken: xxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
