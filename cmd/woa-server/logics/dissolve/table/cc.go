@@ -247,7 +247,8 @@ func (l *logics) getBlackBizIDName(kt *kit.Kit) (map[int64]string, error) {
 	return l.getBizIDNameByName(kt, bizNames, make([]string, 0))
 }
 
-func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.BasePage) ([]cmdb.Host, int64, error) {
+func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.BasePage, source ReqSourceI) ([]cmdb.Host,
+	int64, error) {
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: querybuilder.CombinedRule{
@@ -262,6 +263,7 @@ func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.Base
 	}
 
 	if !page.Count {
+		req.Fields = source.GetCCHostFields()
 		req.Page = cmdb.BasePage{Start: int64(page.Start), Limit: int64(page.Limit), Sort: pkg.BKHostIDField}
 		hosts, err := l.getHostFromCC(kt, req)
 		if err != nil {

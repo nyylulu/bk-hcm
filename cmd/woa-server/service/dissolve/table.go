@@ -20,6 +20,7 @@
 package dissolve
 
 import (
+	"hcm/cmd/woa-server/logics/dissolve/table"
 	"hcm/cmd/woa-server/types/dissolve"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
@@ -45,7 +46,7 @@ func (s *service) ListOriginHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	result, err := s.logics.Table().FindOriginHost(cts.Kit, req)
+	result, err := s.logics.Table().FindOriginHost(cts.Kit, req, table.ReqForGetHost)
 	if err != nil {
 		logs.Errorf("find origin host failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 		return nil, err
@@ -72,7 +73,7 @@ func (s *service) ListCurHost(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
-	result, err := s.logics.Table().FindCurHost(cts.Kit, req)
+	result, err := s.logics.Table().FindCurHost(cts.Kit, req, table.ReqForGetHost)
 	if err != nil {
 		logs.Errorf("find current host failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 		return nil, err

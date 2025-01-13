@@ -21,7 +21,6 @@ package es
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -30,6 +29,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/json"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/olivere/elastic/v7"
@@ -76,13 +76,13 @@ func NewEsClient(esConf cc.Es, blacklist string) (*EsCli, error) {
 
 // SearchWithCond search with condition
 func (es *EsCli) SearchWithCond(ctx context.Context, cond map[string][]interface{}, index string, start, limit int,
-	sort string) ([]Host, error) {
+	sort string, fields []string) ([]Host, error) {
 
 	query, err := es.buildQuery(cond)
 	if err != nil {
 		return nil, err
 	}
-	search, err := es.search(ctx, query, index, start, limit, sort)
+	search, err := es.search(ctx, query, index, start, limit, sort, fields)
 	if err != nil {
 		return nil, err
 	}
@@ -147,13 +147,19 @@ func (es *EsCli) buildQuery(cond map[string][]interface{}) (elastic.Query, error
 	return query, nil
 }
 
-func (es *EsCli) search(ctx context.Context, query elastic.Query, index string, start, limit int, sort string) (
+func (es *EsCli) search(ctx context.Context, query elastic.Query, index string, start, limit int, sort string,
+	fields []string) (
 	*elastic.SearchResult, error) {
 
 	searchSource := elastic.NewSearchSource()
 	searchSource.From(start)
 	searchSource.Size(limit)
 	searchSource.Sort(sort, true)
+
+	// 指定要返回的字段
+	if len(fields) > 0 {
+		searchSource.FetchSourceContext(elastic.NewFetchSourceContext(true).Include(fields...))
+	}
 
 	searchResult, err := es.client.Search().
 		Index(index).

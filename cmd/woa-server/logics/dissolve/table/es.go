@@ -33,8 +33,8 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string, page *core.BasePage) (
-	*dissolve.ListHostDetails, error) {
+func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, index string, page *core.BasePage,
+	fields []string) (*dissolve.ListHostDetails, error) {
 	if page == nil {
 		return nil, errors.New("page is nil")
 	}
@@ -64,7 +64,7 @@ func (l *logics) findHostFromES(kt *kit.Kit, cond map[string][]interface{}, inde
 		}
 
 		var hosts []es.Host
-		hosts, err = l.esCli.SearchWithCond(kt.Ctx, cond, index, start, limit, page.Sort)
+		hosts, err = l.esCli.SearchWithCond(kt.Ctx, cond, index, start, limit, page.Sort, fields)
 		if err != nil {
 			logs.Errorf("get host by condition failed, err: %v, index: %s, cond: %v, rid: %s", err, index, cond,
 				kt.Rid)

@@ -37,8 +37,8 @@ import (
 
 // Table provides interface for operations of dissolve table.
 type Table interface {
-	FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq) (*dissolve.ListHostDetails, error)
-	FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (*dissolve.ListHostDetails, error)
+	FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (*dissolve.ListHostDetails, error)
+	FindCurHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (*dissolve.ListHostDetails, error)
 	ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq) ([]dissolve.BizDetail, error)
 }
 
@@ -66,7 +66,7 @@ func New(recycledModule logicsmodule.RecycledModule, recycledHost logicshost.Rec
 }
 
 // FindOriginHost find origin host
-func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq) (
+func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (
 	*dissolve.ListHostDetails, error) {
 
 	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, false)
@@ -95,7 +95,7 @@ func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq) (
 		logs.Errorf("get es cond failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
-	res, err := l.findHostFromES(kt, cond, l.getOriginHostIndex(), req.Page)
+	res, err := l.findHostFromES(kt, cond, l.getOriginHostIndex(), req.Page, source.GetEsHostFields())
 	if err != nil {
 		logs.Errorf("find host from es failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
@@ -158,7 +158,7 @@ func (l *logics) getCurBizName(kt *kit.Kit, hosts []dissolve.Host) ([]dissolve.H
 }
 
 // FindCurHost find current host
-func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
+func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (
 	*dissolve.ListHostDetails, error) {
 
 	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, true)
@@ -214,7 +214,7 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 			wg.Done()
 		}()
 
-		ccHosts, count, err = l.getHostByIDFromCC(kt, hostIDs, req.Page)
+		ccHosts, count, err = l.getHostByIDFromCC(kt, hostIDs, req.Page, source)
 		if err != nil {
 			logs.Errorf("get host from cc failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 			firstErr = err
@@ -238,7 +238,8 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq) (
 			firstErr = err
 			return
 		}
-		res, err := l.findHostFromES(kt, cond, l.getOriginHostIndex(), &core.BasePage{Limit: noLimit})
+		res, err := l.findHostFromES(kt, cond, l.getOriginHostIndex(), &core.BasePage{Limit: noLimit},
+			source.GetEsHostFields())
 		if err != nil {
 			logs.Errorf("find host from es failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 			firstErr = err
@@ -300,7 +301,7 @@ func (l *logics) ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq)
 
 		cond := &dissolve.HostListReq{ResDissolveReq: *req, Page: &core.BasePage{Limit: noLimit}}
 		var err error
-		res, err = l.FindCurHost(kt, cond)
+		res, err = l.FindCurHost(kt, cond, ReqForGetDissolveTable)
 		if err != nil {
 			logs.Errorf("find current host failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
 			firstErr = err
@@ -335,7 +336,7 @@ func (l *logics) ListResDissolveTable(kt *kit.Kit, req *dissolve.ResDissolveReq)
 
 func (l *logics) getOriginBizData(kt *kit.Kit, cond *dissolve.ResDissolveReq) (map[int64]dissolve.BizDetail, error) {
 	req := &dissolve.HostListReq{ResDissolveReq: *cond, Page: &core.BasePage{Limit: noLimit}}
-	res, err := l.FindOriginHost(kt, req)
+	res, err := l.FindOriginHost(kt, req, ReqForGetDissolveTable)
 	if err != nil {
 		logs.Errorf("find origin host failed, err: %v, cond: %+v, rid: %s", err, cond, kt.Rid)
 		return nil, err

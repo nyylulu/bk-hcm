@@ -383,9 +383,13 @@ func ConvertHost(origin *es.Host) (*Host, error) {
 		return nil, nil
 	}
 
-	isPass, err := strconv.ParseBool(origin.IsPass)
-	if err != nil {
-		return nil, err
+	var isPass bool
+	var err error
+	if origin.IsPass != "" {
+		isPass, err = strconv.ParseBool(origin.IsPass)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return &Host{
