@@ -416,13 +416,13 @@ type QueryPlanOrderResp struct {
 
 // QueryPlanOrderRst query cvm and cbs plan order result
 type QueryPlanOrderRst struct {
-	Code int            `json:"code"`
-	Data *PlanOrderData `json:"data"`
+	Code int           `json:"code"`
+	Data PlanOrderData `json:"data"`
 }
 
 // PlanOrderData query cvm and cbs plan order data
 type PlanOrderData struct {
-	BaseInfo *PlanOrderBaseInfo `json:"baseInfo"`
+	BaseInfo PlanOrderBaseInfo `json:"baseInfo"`
 }
 
 type PlanOrderStatus int

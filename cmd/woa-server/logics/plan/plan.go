@@ -30,7 +30,6 @@ import (
 	"hcm/cmd/woa-server/logics/biz"
 	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
 	ptypes "hcm/cmd/woa-server/types/plan"
-	tasktypes "hcm/cmd/woa-server/types/task"
 	ttypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
@@ -87,7 +86,7 @@ type Logics interface {
 	// VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
 	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
-	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *tasktypes.ApplyOrder) error
+	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
 	// GetAllDeviceTypeMap get all device type map.
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
 }
@@ -362,20 +361,29 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to query crp plan order, code: %d, msg: %s, rid: %s", resp.Error.Code,
-			resp.Error.Message, kt.Rid)
+		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
+			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
 
 	if resp.Result == nil {
-		logs.Errorf("failed to query crp plan order, for result is empty, rid: %s", kt.Rid)
+		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
+			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return errors.New("failed to query crp plan order, for result is empty")
 	}
 
 	planItem, ok := resp.Result[ticket.CrpSn]
 	if !ok {
-		logs.Errorf("query crp plan order return no result by sn: %s, rid: %s", ticket.CrpSn, kt.Rid)
+		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
+			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSn)
+	}
+
+	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
+	if planItem.Code != 1 && planItem.Code != 2 {
+		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
+			constant.ResPlanTicketWatchFailed, planItem.Code, planItem.Data, kt.Rid)
+		return fmt.Errorf("crp plan order status is incorrect, code: %d, sn: %s", planItem.Code, ticket.CrpSn)
 	}
 
 	update := &rpts.ResPlanTicketStatusTable{
@@ -408,7 +416,7 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	allDemandIDs := make([]string, 0)
 	for _, demand := range ticket.Demands {
 		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
+			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
 		}
 	}
 	unlockReq := &rpproto.ResPlanDemandLockOpReq{
@@ -473,7 +481,7 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	allDemandIDs := make([]string, 0)
 	for _, demand := range ticket.Demands {
 		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
+			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
 		}
 	}
 	unlockReq := &rpproto.ResPlanDemandLockOpReq{

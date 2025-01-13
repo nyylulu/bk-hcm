@@ -286,7 +286,7 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			return nil, nil, err
 		}
 
-		demandKey, err := getDemandExpendKeyFromTable(kt, demand, expectDateStr, deviceTypes)
+		demandKey, err := c.getDemandExpendKeyFromTable(kt, demand, expectDateStr, deviceTypes)
 		if err != nil {
 			logs.Errorf("failed to get demand expend key, err: %v, demand id: %s, rid: %s", err, demand.ID,
 				kt.Rid)
@@ -355,10 +355,17 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 	return overview, demandDetails, nil
 }
 
-func getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, expectTime string,
+func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, expectTime string,
 	deviceTypeMap map[string]wdt.WoaDeviceTypeTable) (ptypes.ResPlanDemandExpendKey, error) {
 
-	availableTime, err := ptypes.NewAvailableMonth(expectTime)
+	t, err := time.Parse(constant.DateLayout, expectTime)
+	if err != nil {
+		logs.Errorf("failed to parse demand expect time, err: %v, expect_time: %s, rid: %s", err,
+			demand.ExpectTime, kt.Rid)
+		return ptypes.ResPlanDemandExpendKey{}, err
+	}
+
+	availableYear, availableMonth, err := c.demandTime.GetDemandYearMonth(kt, t)
 	if err != nil {
 		logs.Errorf("failed to parse demand available time, err: %v, expect_time: %s, rid: %s", err,
 			demand.ExpectTime, kt.Rid)
@@ -368,7 +375,7 @@ func getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, exp
 	return ptypes.ResPlanDemandExpendKey{
 		BkBizID:       demand.BkBizID,
 		PlanType:      demand.PlanType,
-		AvailableTime: availableTime,
+		AvailableTime: ptypes.NewAvailableMonth(availableYear, availableMonth),
 		DeviceFamily:  deviceTypeMap[demand.DeviceType].DeviceFamily,
 		CoreType:      deviceTypeMap[demand.DeviceType].CoreType,
 		ObsProject:    demand.ObsProject,
@@ -378,35 +385,35 @@ func getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlanDemandTable, exp
 
 func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime string) *ptypes.ListResPlanDemandItem {
 	return &ptypes.ListResPlanDemandItem{
-		DemandID:        table.ID,
-		BkBizID:         table.BkBizID,
-		BkBizName:       table.BkBizName,
-		OpProductID:     table.OpProductID,
-		OpProductName:   table.OpProductName,
-		PlanProductID:   table.PlanProductID,
-		PlanProductName: table.PlanProductName,
-		DemandClass:     table.DemandClass,
-		DemandResType:   table.DemandResType,
-		ExpectTime:      expectTime,
-		DeviceClass:     table.DeviceClass,
-		DeviceType:      table.DeviceType,
-		TotalOS:         table.OS.Decimal,
-		AppliedOS:       decimal.NewFromInt(0),
-		TotalCpuCore:    cvt.PtrToVal(table.CpuCore),
-		AppliedCpuCore:  0,
-		TotalMemory:     cvt.PtrToVal(table.Memory),
-		TotalDiskSize:   cvt.PtrToVal(table.DiskSize),
+		DemandID:         table.ID,
+		BkBizID:          table.BkBizID,
+		BkBizName:        table.BkBizName,
+		OpProductID:      table.OpProductID,
+		OpProductName:    table.OpProductName,
+		PlanProductID:    table.PlanProductID,
+		PlanProductName:  table.PlanProductName,
+		DemandClass:      table.DemandClass,
+		DemandResType:    table.DemandResType,
+		ExpectTime:       expectTime,
+		DeviceClass:      table.DeviceClass,
+		DeviceType:       table.DeviceType,
+		TotalOS:          table.OS.Decimal,
+		AppliedOS:        decimal.NewFromInt(0),
+		TotalCpuCore:     cvt.PtrToVal(table.CpuCore),
+		AppliedCpuCore:   0,
+		TotalMemory:      cvt.PtrToVal(table.Memory),
+		TotalDiskSize:    cvt.PtrToVal(table.DiskSize),
 		RemainedDiskSize: cvt.PtrToVal(table.DiskSize),
-		RegionID:        table.RegionID,
-		RegionName:      table.RegionName,
-		ZoneID:          table.ZoneID,
-		ZoneName:        table.ZoneName,
-		PlanType:        table.PlanType.Name(),
-		ObsProject:      table.ObsProject,
-		DeviceFamily:    table.DeviceFamily,
-		DiskType:        table.DiskType,
-		DiskTypeName:    table.DiskType.Name(),
-		DiskIO:          table.DiskIO,
+		RegionID:         table.RegionID,
+		RegionName:       table.RegionName,
+		ZoneID:           table.ZoneID,
+		ZoneName:         table.ZoneName,
+		PlanType:         table.PlanType.Name(),
+		ObsProject:       table.ObsProject,
+		DeviceFamily:     table.DeviceFamily,
+		DiskType:         table.DiskType,
+		DiskTypeName:     table.DiskType.Name(),
+		DiskIO:           table.DiskIO,
 	}
 }
 
@@ -1575,9 +1582,16 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			return nil, err
 		}
 
+		demandYear, demandMonth, err := c.demandTime.GetDemandYearMonth(kt, subOrderInfo.CreateAt)
+		if err != nil {
+			logs.Errorf("failed to get demand year month, err: %v, subOrder: %+v, rid: %s", err, *subOrderInfo,
+				kt.Rid)
+			return nil, err
+		}
+
 		consumePoolKey := ResPlanPoolKeyV2{
 			PlanType:      planType,
-			AvailableTime: NewAvailableTime(subOrderInfo.CreateAt.Year(), subOrderInfo.CreateAt.Month()),
+			AvailableTime: NewAvailableTime(demandYear, demandMonth),
 			DeviceType:    subOrderInfo.Spec.DeviceType,
 			ObsProject:    subOrderInfo.ObsProject,
 			BkBizID:       subOrderInfo.BkBizId,

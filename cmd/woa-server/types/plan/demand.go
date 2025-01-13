@@ -809,12 +809,8 @@ type ResPlanDemandExpendKey struct {
 // AvailableMonth available time.
 type AvailableMonth string
 
-// NewAvailableMonth new an available month.
-func NewAvailableMonth(expectTime string) (AvailableMonth, error) {
-	t, err := time.Parse(constant.DateLayout, expectTime)
-	if err != nil {
-		return "", err
-	}
-
-	return AvailableMonth(t.Format(constant.YearMonthLayout)), nil
+// NewAvailableMonth new an available time.
+// TODO: 目前只关注年和月，未来会添加周
+func NewAvailableMonth(year int, month time.Month) AvailableMonth {
+	return AvailableMonth(fmt.Sprintf("%04d-%02d", year, month))
 }
