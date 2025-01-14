@@ -233,10 +233,11 @@ func (l *logics) getAllHostFromCaiChe(kt *kit.Kit) ([]define.RecycleHostTable, e
 
 	req := &caiche.ListDeviceReq{
 		VirtualDepartmentName: []string{"IEG_Global", "IEG技术运营部"},
-		AbolishPhase:          []enumor.AbolishPhase{enumor.Incomplete, enumor.Complete},
-		ProjectName:           l.projectNames,
-		PageIndex:             1, // 裁撤系统这个api是从1开始的
-		PageSize:              core.DefaultMaxPageLimit,
+		AbolishPhase: []enumor.AbolishPhase{enumor.Incomplete, enumor.Complete, enumor.BsiComplete,
+			enumor.Retain},
+		ProjectName: l.projectNames,
+		PageIndex:   1, // 裁撤系统这个api是从1开始的
+		PageSize:    core.DefaultMaxPageLimit,
 	}
 
 	for {

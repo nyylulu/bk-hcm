@@ -76,7 +76,9 @@ func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplet
 
 	filter = tools.ContainersExpression("module", partTypeModule)
 	if onlyIncomplete {
-		filter, err = tools.And(filter, tools.EqualExpression("abolish_phase", enumor.Incomplete))
+		filter, err = tools.And(filter,
+			tools.ContainersExpression("abolish_phase", []enumor.AbolishPhase{enumor.Incomplete, enumor.BsiComplete,
+				enumor.Retain}))
 		if err != nil {
 			logs.Errorf("build filter with abolish_phase failed, err: %v, filter: %+v, rid: %s", err, filter, kt.Rid)
 			return nil, err
