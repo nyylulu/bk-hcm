@@ -169,7 +169,7 @@ export default defineComponent({
       try {
         isLoading.value = true;
         Message({ message: `${computedTitle.value}中, 请不要操作`, theme: 'warning', delay: 500 });
-        if (recycleFlowRef.value?.isSelectionRecycleTypeChange()) {
+        if (recycleFlowRef.value?.isSelectionRecycleTypeChange(ziyanRecycleSelected.value)) {
           const suborder_id_types = ziyanRecycleSelected.value.map((item) => ({
             suborder_id: item.suborder_id,
             recycle_type: item.recycle_type,

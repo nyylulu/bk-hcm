@@ -14,7 +14,7 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 import RecycleTypeSelector from './recycle-type-selector.vue';
 import RecycleQuotaTips from '@/views/ziyanScr/rolling-server/recycle-quota-tips/index.vue';
 import type { IPreviewRecycleOrderItem } from '../typings';
-import { cloneDeep, isEqualWith } from 'lodash';
+import { cloneDeep } from 'lodash';
 
 const props = defineProps<{
   ips: string[];
@@ -254,16 +254,10 @@ const isFirstStep = () => {
 // rolling-server
 const rollingServerStore = useRollingServerStore();
 const rollingServerQuotaStore = useRollingServerQuotaStore();
-const isSelectionRecycleTypeChange = () => {
-  // 勾选项所对应的原始数据
-  const selectedSuborderIds = new Set(selections.value.map((selection) => selection.suborder_id));
-  const originSelections = originPreRecycleList.filter((item) => selectedSuborderIds.has(item.suborder_id));
-
-  return !isEqualWith(selections.value, originSelections, (objValue, othValue) => {
-    if (objValue && othValue) {
-      return objValue.recycle_type === othValue.recycle_type; // 只比较 recycle_type 字段
-    }
-    return false; // 如果任一值为未定义，返回 false 表示不相等
+const isSelectionRecycleTypeChange = (submitSelections: any[]) => {
+  return submitSelections.some((item) => {
+    const originItem = originPreRecycleList.find((originItem) => originItem.suborder_id === item.suborder_id);
+    return originItem.recycle_type !== item.recycle_type;
   });
 };
 const returnedWay = computed(() => {
