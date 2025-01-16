@@ -492,7 +492,7 @@ func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.Devic
 
 	eg := errgroup.Group{}
 	// 每个主机都会创建一个init task，这里防止无限制并发
-	eg.SetLimit(5)
+	eg.SetLimit(30)
 	for _, device := range unreleased {
 		deviceInfo := device
 		eg.Go(func() error {
