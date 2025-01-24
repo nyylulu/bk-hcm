@@ -34,4 +34,6 @@ const (
 	CvmBatchTaskRetryDelayMinMS = 1000
 	// CvmBatchTaskRetryDelayMaxMS CVM-批量任务默认重试最大延迟时间
 	CvmBatchTaskRetryDelayMaxMS = 5000
+	// UnBindBkHostID defines default value for unbind cvm's host id.
+	UnBindBkHostID int64 = -1
 )

@@ -96,3 +96,15 @@ const (
 	// TCloudCvmStatusTerminating 状态-销毁中
 	TCloudCvmStatusTerminating = "TERMINATING"
 )
+
+// CvmMatchType cvm匹配类型
+type CvmMatchType string
+
+const (
+	// AutoMatchCvm 自动匹配cvm
+	AutoMatchCvm CvmMatchType = "auto"
+	// ManualMatchCvm 手动匹配cvm
+	ManualMatchCvm CvmMatchType = "manual"
+	// NoMatchCvm 待关联cvm
+	NoMatchCvm = "no_match"
+)

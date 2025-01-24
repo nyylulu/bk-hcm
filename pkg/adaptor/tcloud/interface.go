@@ -35,6 +35,7 @@ import (
 	"hcm/pkg/adaptor/types/image"
 	"hcm/pkg/adaptor/types/instance-type"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
+	networkinterface "hcm/pkg/adaptor/types/network-interface"
 	"hcm/pkg/adaptor/types/region"
 	"hcm/pkg/adaptor/types/route-table"
 	"hcm/pkg/adaptor/types/security-group"
@@ -196,9 +197,12 @@ type TCloud interface {
 
 	DescribeExclusiveClusters(kt *kit.Kit, opt *typelb.TCloudDescribeExclusiveClustersOption) (
 		*tclb.DescribeExclusiveClustersResponseParams, error)
-	DescribeClusterResources(kt *kit.Kit, opt *typelb.TCloudDescribeClusterResourcesOption) (*tclb.DescribeClusterResourcesResponseParams, error)
+	DescribeClusterResources(kt *kit.Kit,
+		opt *typelb.TCloudDescribeClusterResourcesOption) (*tclb.DescribeClusterResourcesResponseParams, error)
 
 	ResetCvmInstance(kt *kit.Kit, opt *cvm.ResetInstanceOption) (*poller.BaseDoneResult, error)
 
 	BatchCvmAssociateSecurityGroups(kt *kit.Kit, opt *cvm.TCloudAssociateSecurityGroupsOption) error
+	DescribeNetworkInterfaces(kt *kit.Kit, opt *networkinterface.TCloudNetworkInterfaceListOption) (
+		*networkinterface.TCloudNetworkInterfaceWithCountResp, error)
 }

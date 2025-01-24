@@ -17,36 +17,40 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package csvpc
+package networkinterface
 
 import (
-	"errors"
-
+	"hcm/pkg/adaptor/types/core"
 	"hcm/pkg/criteria/validator"
+
+	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
-// AwsVpcCreateReq ...
-type AwsVpcCreateReq struct {
-	BkBizID   int64  `json:"bk_biz_id" validate:"omitempty"`
-	AccountID string `json:"account_id" validate:"required"`
-	Region    string `json:"region" validate:"required"`
-	Name      string `json:"name" validate:"required,min=1,max=60"`
-	IPv4Cidr  string `json:"ipv4_cidr" validate:"required,cidrv4"`
-
-	InstanceTenancy string `json:"instance_tenancy" validate:"required,oneof=default dedicated"`
-
-	Memo *string `json:"memo" validate:"omitempty"`
+// TCloudNetworkInterfaceListOption defines tcloud network interface list option.
+type TCloudNetworkInterfaceListOption struct {
+	Region  string           `json:"region" validate:"required"`
+	Filters []*vpc.Filter    `json:"filters" validate:"omitempty"`
+	Page    *core.TCloudPage `json:"page" validate:"required"`
 }
 
-// Validate ...
-func (req *AwsVpcCreateReq) Validate(bizRequired bool) error {
-	if err := validator.Validate.Struct(req); err != nil {
+// Validate tcloud network interface list option.
+func (opt TCloudNetworkInterfaceListOption) Validate() error {
+	if err := validator.Validate.Struct(opt); err != nil {
 		return err
 	}
-
-	if bizRequired && req.BkBizID == 0 {
-		return errors.New("bk_biz_id is required")
+	if err := opt.Page.Validate(); err != nil {
+		return err
 	}
-
 	return nil
+}
+
+// TCloudNetworkInterfaceWithCountResp defines tcloud network interface with count.
+type TCloudNetworkInterfaceWithCountResp struct {
+	TotalCount uint64
+	Details    []TCloudNetworkInterface
+}
+
+// TCloudNetworkInterface defines tcloud network interface.
+type TCloudNetworkInterface struct {
+	*vpc.NetworkInterface
 }
