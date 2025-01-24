@@ -241,7 +241,7 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 	// get cvm info from cc, and check the srv_status isn't resetting
 	mapBizToHostIDs := make(map[int64][]int64)
 	for _, cvm := range cvms {
-		mapBizToHostIDs[cvm.BkBizID] = append(mapBizToHostIDs[cvm.BkBizID], cvm.Extension.HostID)
+		mapBizToHostIDs[cvm.BkBizID] = append(mapBizToHostIDs[cvm.BkBizID], cvm.BkHostID)
 	}
 	for bizID, hostIDs := range mapBizToHostIDs {
 		params := &cmdb.ListBizHostParams{
@@ -318,7 +318,7 @@ func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm
 	var errMap = make(map[int]error)
 	for idx, cvm := range cvms {
 		pwdReq := &sampwdapi.UpdateHostPwdReq{
-			BkHostID:     cvm.Extension.HostID,
+			BkHostID:     cvm.BkHostID,
 			Password:     pwd,
 			UserName:     operator, //  操作人
 			GenerateTime: time.Now().Format(constant.DateTimeLayout),
@@ -332,21 +332,21 @@ func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm
 					// 	非最后一次重试，继续sleep
 					logs.Errorf("failed to update host password, will sleep for retry, retry count: %d, "+
 						"cvmCloudID: %s, hostID: %d, err: %+v, rid: %s",
-						policy.RetryCount(), cvm.CloudID, cvm.Extension.HostID, err, kt.Rid)
+						policy.RetryCount(), cvm.CloudID, cvm.BkHostID, err, kt.Rid)
 					policy.Sleep()
 					continue
 				}
 
 				errMap[idx] = fmt.Errorf("failed to update host password, cvmCloudID: %s, hostID: %d, IPs: %v, "+
-					"err: %v", cvm.CloudID, cvm.Extension.HostID, cvm.PrivateIPv4Addresses, err)
+					"err: %v", cvm.CloudID, cvm.BkHostID, cvm.PrivateIPv4Addresses, err)
 				break
 			}
 
 			if pwdResp.ID <= 0 {
 				logs.Errorf("failed to update host password id, cvmCloudID: %s, hostID: %d, pwdResp: %+v, rid: %s",
-					cvm.CloudID, cvm.Extension.HostID, pwdResp, kt.Rid)
+					cvm.CloudID, cvm.BkHostID, pwdResp, kt.Rid)
 				errMap[idx] = fmt.Errorf("failed to update host password id, cvmCloudID: %s, hostID: %d, "+
-					"IPs: %v, pwdResp: %+v", cvm.CloudID, cvm.Extension.HostID, cvm.PrivateIPv4Addresses, pwdResp)
+					"IPs: %v, pwdResp: %+v", cvm.CloudID, cvm.BkHostID, cvm.PrivateIPv4Addresses, pwdResp)
 			}
 			break
 		}

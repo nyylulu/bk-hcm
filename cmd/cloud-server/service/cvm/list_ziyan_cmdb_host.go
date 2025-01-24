@@ -216,7 +216,7 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 
 	cvmHosts := make([]cscvm.CvmBatchOperateHostInfo, 0)
 	for _, host := range hostCvmMap {
-		hostID := host.Extension.HostID
+		hostID := host.BkHostID
 		moduleName := ""
 		if rel, ok := mapHostToRel[hostID]; ok {
 			if module, exist := mapModuleIdToModule[rel.BkModuleId]; exist {
@@ -235,7 +235,7 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 			Vendor:               host.Vendor,
 			AccountID:            host.AccountID,
 			Name:                 host.Name,
-			BkHostID:             host.Extension.HostID,
+			BkHostID:             hostID,
 			BkHostName:           host.Extension.HostName,
 			CloudID:              hostCvmMap[hostID].CloudID,
 			BkAssetID:            host.Extension.BkAssetID,
@@ -387,11 +387,11 @@ func (svc *cvmSvc) listTCloudZiyanCvmExtMapByIDs(kt *kit.Kit, cvmIDs []string) (
 	hostIDs := make([]int64, 0)
 	hostCvmMap := make(map[int64]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], 0)
 	for _, item := range cvmExtList {
-		if item.Extension == nil || item.Extension.HostID == 0 {
+		if item.BkHostID == 0 {
 			continue
 		}
-		hostCvmMap[item.Extension.HostID] = item
-		hostIDs = append(hostIDs, item.Extension.HostID)
+		hostCvmMap[item.BkHostID] = item
+		hostIDs = append(hostIDs, item.BkHostID)
 	}
 	hostIDs = slice.Unique(hostIDs)
 	return hostIDs, hostCvmMap, nil

@@ -54,8 +54,7 @@ func (cli *client) getVpcMap(kt *kit.Kit, accountID string, region string,
 
 		for _, vpc := range vpcFromDB {
 			vpcMap[vpc.CloudID] = &common.VpcDB{
-				VpcID:     vpc.ID,
-				BkCloudID: vpc.BkCloudID,
+				VpcID: vpc.ID,
 			}
 		}
 	}

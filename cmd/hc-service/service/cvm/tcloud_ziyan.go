@@ -112,7 +112,8 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 	}
 	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -120,7 +121,7 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
-		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.BkHostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -133,7 +134,8 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 		CloudIDs: cloudIDs,
 	}
 	if err = client.StartCvm(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to start tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		logs.Errorf("request adaptor to start tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -171,7 +173,8 @@ func (svc *cvmSvc) BatchStopTCloudZiyanCvm(cts *rest.Contexts) (interface{}, err
 	}
 	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -179,7 +182,7 @@ func (svc *cvmSvc) BatchStopTCloudZiyanCvm(cts *rest.Contexts) (interface{}, err
 	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
-		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.BkHostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -232,7 +235,8 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 	}
 	listResp, err := svc.dataCli.TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
 	if err != nil {
-		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs, cts.Kit.Rid)
+		logs.Errorf("request dataservice list tcloud-ziyan cvm failed, err: %v, ids: %v, rid: %s", err, req.IDs,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -240,7 +244,7 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
 		cloudIDs = append(cloudIDs, one.CloudID)
-		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.BkHostID)
 	}
 
 	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
@@ -254,7 +258,8 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 		StopType: req.StopType,
 	}
 	if err = client.RebootCvm(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to reboot tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		logs.Errorf("request adaptor to reboot tcloud-ziyan cvm failed, err: %v, opt: %v, rid: %s", err, opt,
+			cts.Kit.Rid)
 		return nil, err
 	}
 
@@ -378,7 +383,7 @@ func (svc *cvmSvc) BatchResetTCloudZiyanCvm(cts *rest.Contexts) (any, error) {
 
 	bizIDToHostIDs := make(map[int64][]int64)
 	for _, one := range listResp.Details {
-		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.Extension.HostID)
+		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.BkHostID)
 	}
 
 	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())

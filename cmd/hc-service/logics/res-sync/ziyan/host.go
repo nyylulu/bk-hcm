@@ -292,6 +292,7 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 			CloudID:              cloudID,
 			Name:                 ccHost.BkHostName,
 			BkBizID:              bizID,
+			BkHostID:             ccHost.BkHostID,
 			BkCloudID:            ccHost.BkCloudID,
 			AccountID:            accountID,
 			Region:               ccHost.BkCloudRegion,
@@ -306,7 +307,6 @@ func convertToHost(ccHost *cmdb.Host, accountID string, bizID int64) cvm.Cvm[cvm
 			MachineType:          ccHost.SvrDeviceClassName,
 		},
 		Extension: &cvm.TCloudZiyanHostExtension{
-			HostID:          ccHost.BkHostID,
 			HostName:        ccHost.BkHostName,
 			SvrSourceTypeID: ccHost.SvrSourceTypeID,
 			SrvStatus:       ccHost.SrvStatus,
@@ -329,6 +329,10 @@ func splitIP(ip string) []string {
 
 func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TCloudZiyanHostExtension]) bool {
 	if db.BkBizID != cloud.BkBizID {
+		return true
+	}
+
+	if db.BkHostID != cloud.BkHostID {
 		return true
 	}
 
@@ -420,10 +424,6 @@ func isHostExtensionChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.C
 		return true
 	}
 
-	if db.Extension.HostID != cloud.Extension.HostID {
-		return true
-	}
-
 	if db.Extension.HostName != cloud.Extension.HostName {
 		return true
 	}
@@ -497,7 +497,7 @@ func (cli *client) deleteHostByHostID(kt *kit.Kit, hostIDs []int64) error {
 
 	for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
 		deleteReq := &cloud.CvmBatchDeleteReq{Filter: tools.ExpressionAnd(tools.RuleEqual("vendor", enumor.TCloudZiyan),
-			tools.RuleJsonIn("extension.bk_host_id", batch))}
+			tools.RuleIn("bk_host_id", batch))}
 
 		if err := cli.dbCli.Global.Cvm.BatchDeleteCvm(kt.Ctx, kt.Header(), deleteReq); err != nil {
 			logs.Errorf("[%s] request dataservice to batch delete host failed, err: %v, req: %+v, rid: %s",
@@ -520,7 +520,7 @@ func (cli *client) removeHost(kt *kit.Kit, bizID int64) error {
 		hostIDMap[host.BkHostID] = struct{}{}
 	}
 
-	dbHosts, err := cli.listHostFromDBByBizID(kt, bizID, []string{"id", "extension"})
+	dbHosts, err := cli.listHostFromDBByBizID(kt, bizID, []string{"id", "bk_host_id"})
 	if err != nil {
 		logs.Errorf("list host from db failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
 		return err
@@ -528,13 +528,8 @@ func (cli *client) removeHost(kt *kit.Kit, bizID int64) error {
 
 	delHostIDs := make([]int64, 0)
 	for _, host := range dbHosts {
-		if host.Extension == nil {
-			logs.ErrorJson("host extension field is nil, host: %+v, rid: %s", host, kt.Rid)
-			continue
-		}
-
-		if _, ok := hostIDMap[host.Extension.HostID]; !ok {
-			delHostIDs = append(delHostIDs, host.Extension.HostID)
+		if _, ok := hostIDMap[host.BkHostID]; !ok {
+			delHostIDs = append(delHostIDs, host.BkHostID)
 		}
 	}
 
@@ -673,7 +668,7 @@ func (cli *client) listHostFromDBByHostIDs(kt *kit.Kit, hostIDs []int64) ([]cvm.
 	for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
 		req := &cloud.CvmListReq{
 			Filter: tools.ExpressionAnd(tools.RuleEqual("vendor", enumor.TCloudZiyan),
-				tools.RuleJsonIn("extension.bk_host_id", batch)),
+				tools.RuleIn("bk_host_id", batch)),
 			Page: &core.BasePage{
 				Start: 0,
 				Limit: constant.BatchOperationMaxLimit,
@@ -744,6 +739,7 @@ func convToCreate(hosts []cvm.Cvm[cvm.TCloudZiyanHostExtension]) []cloud.CvmBatc
 			CloudID:              host.CloudID,
 			Name:                 host.Name,
 			BkBizID:              host.BkBizID,
+			BkHostID:             host.BkHostID,
 			BkCloudID:            host.BkCloudID,
 			AccountID:            host.AccountID,
 			Region:               host.Region,
@@ -798,7 +794,8 @@ func convToUpdate(
 			ID:                   id,
 			Name:                 host.Name,
 			BkBizID:              host.BkBizID,
-			BkCloudID:            host.BkCloudID,
+			BkHostID:             host.BkHostID,
+			BkCloudID:            &host.BkCloudID,
 			Region:               host.Region,
 			Zone:                 host.Zone,
 			CloudVpcIDs:          host.CloudVpcIDs,

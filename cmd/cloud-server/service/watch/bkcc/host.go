@@ -309,16 +309,11 @@ func (w *Watcher) consumeHostRelationEvent(kt *kit.Kit, events []cmdb.WatchEvent
 
 	updateHostIDs := make([]int64, 0)
 	for _, host := range dbHosts {
-		if host.Extension == nil {
-			logs.ErrorJson("host extension field is nil, host: %+v, rid: %s", host, kt.Rid)
+		if hostBizIDMap[host.BkHostID] == host.BkBizID {
 			continue
 		}
 
-		if hostBizIDMap[host.Extension.HostID] == host.BkBizID {
-			continue
-		}
-
-		updateHostIDs = append(updateHostIDs, host.Extension.HostID)
+		updateHostIDs = append(updateHostIDs, host.BkHostID)
 	}
 
 	if len(updateHostIDs) == 0 {
@@ -345,7 +340,7 @@ func convertHostRelation(kt *kit.Kit, data json.RawMessage) (*cmdb.HostTopoRelat
 func (w *Watcher) listHostFromDB(kt *kit.Kit, hostIDs []int64) ([]cvm.Cvm[cvm.TCloudZiyanHostExtension], error) {
 	req := &cloud.CvmListReq{
 		Filter: tools.ExpressionAnd(tools.RuleEqual("vendor", enumor.TCloudZiyan),
-			tools.RuleJsonIn("extension.bk_host_id", hostIDs)),
+			tools.RuleIn("bk_host_id", hostIDs)),
 		Page: &core.BasePage{
 			Start: 0,
 			Limit: core.DefaultMaxPageLimit,

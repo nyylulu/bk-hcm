@@ -23,6 +23,7 @@
     Notes:
     1. 删除vpc表的bk_cloud_id字段
     2. cvm表添加bk_host_id字段
+    3. 更新自研云主机的bk_host_id字段
 */
 
 START TRANSACTION;
@@ -30,6 +31,10 @@ START TRANSACTION;
 alter table vpc drop column bk_cloud_id;
 
 alter table cvm add column bk_host_id bigint DEFAULT -1 COMMENT '主机ID';
+
+update cvm set bk_host_id = JSON_EXTRACT(extension, '$.bk_host_id') where vendor = 'tcloud-ziyan'
+  and JSON_EXTRACT(extension, '$.bk_host_id') is not null and JSON_EXTRACT(extension, '$.bk_host_id') != 0;
+
 
 CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
 SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
