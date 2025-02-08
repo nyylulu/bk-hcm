@@ -519,3 +519,15 @@ func (t *TransferResPlanTicketReq) genListOption(ticketIDKey string, page *core.
 
 	return opt
 }
+
+// AuditResPlanTicketITSMReq 通过ITSM审批需求单请求
+type AuditResPlanTicketITSMReq struct {
+	StateId  int64  `json:"state_id" validate:"required"`
+	Approval *bool  `json:"approval" validate:"required"`
+	Remark   string `json:"remark"`
+}
+
+// Validate ...
+func (r *AuditResPlanTicketITSMReq) Validate() error {
+	return validator.Validate.Struct(r)
+}

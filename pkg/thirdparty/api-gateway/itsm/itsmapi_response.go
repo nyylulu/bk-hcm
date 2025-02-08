@@ -37,7 +37,7 @@ type CreateTicketRst struct {
 	Sn string `json:"sn"`
 }
 
-// OperateTicketResp operate itsm ticket node response
+// OperateNodeResp operate itsm ticket node response
 type OperateNodeResp struct {
 	RespMeta `json:",inline"`
 	Data     interface{} `json:"data"`
@@ -48,13 +48,6 @@ type GetTicketStatusRst struct {
 	CurrentStatus string        `json:"current_status"`
 	TicketUrl     string        `json:"ticket_url"`
 	CurrentSteps  []*TicketStep `json:"current_steps"`
-}
-
-// TicketStep itsm ticket step
-type TicketStep struct {
-	Name       string `json:"name"`
-	Processors string `json:"processors"`
-	StateId    int64  `json:"state_id"`
 }
 
 // GetTicketLogResp get itsm ticket logs response
@@ -78,4 +71,58 @@ type AuditLog struct {
 	Message   string `json:"message"`
 	OperateAt string `json:"operate_at"`
 	Source    string `json:"source"`
+}
+
+// TicketStep itsm step
+type TicketStep struct {
+	Name           string      `json:"name"`
+	StateId        int64       `json:"state_id"`
+	Processors     string      `json:"processors"`
+	Status         string      `json:"status,omitempty"`
+	ActionType     string      `json:"action_type,omitempty"`
+	Tag            string      `json:"tag,omitempty"`
+	ProcessorsType string      `json:"processors_type,omitempty"`
+	Fields         []StepField `json:"fields,omitempty"`
+	Operations     []Operation `json:"operations,omitempty"`
+}
+
+// StepField itsm step field
+type StepField struct {
+	Id            int           `json:"id"`
+	IsReadonly    bool          `json:"is_readonly"`
+	SourceType    string        `json:"source_type"`
+	SourceUri     string        `json:"source_uri"`
+	ApiInstanceId int           `json:"api_instance_id"`
+	Type          string        `json:"type"`
+	Key           string        `json:"key"`
+	Name          string        `json:"name"`
+	ValidateType  string        `json:"validate_type"`
+	Regex         string        `json:"regex"`
+	RegexConfig   any           `json:"regex_config"`
+	CustomRegex   string        `json:"custom_regex"`
+	Desc          string        `json:"desc"`
+	Choice        []Choice      `json:"choice"`
+	Meta          StepFieldMeta `json:"meta"`
+	WorkflowId    int           `json:"workflow_id"`
+	// ITSM BUG state_id 字段 可能会在一次接口返回中同时出现int或字符串类型，这里忽略该字段避免反序列化失败
+	// StateId       int           `json:"state_id"`
+	Source string `json:"source"`
+}
+
+// Operation itsm operation
+type Operation struct {
+	Key        string `json:"key"`
+	Name       string `json:"name"`
+	CanOperate bool   `json:"can_operate"`
+}
+
+// StepFieldMeta itsm step field meta
+type StepFieldMeta struct {
+	Code string `json:"code,omitempty"`
+}
+
+// Choice itsm choice
+type Choice struct {
+	Key  string `json:"key"`
+	Name string `json:"name"`
 }

@@ -74,12 +74,16 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("CreateBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/create",
 		s.CreateBizResPlanTicket)
 	h.Add("GetResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetResPlanTicket)
-	h.Add("GetBizResPlanTicket", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{id}",
-		s.GetBizResPlanTicket)
-	h.Add("GetResPlanTicketAudit", http.MethodGet, "/plans/resources/tickets/{ticket_id}/audit",
-		s.GetResPlanTicketAudit)
-	h.Add("GetBizResPlanTicketAudit", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit",
-		s.GetBizResPlanTicketAudit)
+	h.Add("GetBizResPlanTicket", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{id}", s.GetBizResPlanTicket)
+	h.Add("GetResPlanTicketAudit", http.MethodGet,
+		"/plans/resources/tickets/{ticket_id}/audit", s.GetResPlanTicketAudit)
+	h.Add("GetBizResPlanTicketAudit", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit", s.GetBizResPlanTicketAudit)
+	h.Add("ApproveResPlanTicketITSMNode", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveResPlanTicketITSMNode)
+	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)

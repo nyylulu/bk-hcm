@@ -730,3 +730,13 @@ func (c *Controller) updateTicketStatus(kt *kit.Kit, ticket *rpts.ResPlanTicketS
 
 	return nil
 }
+
+// ApproveTicketITSMByBiz 审批 预测单itsm节点
+func (c *Controller) ApproveTicketITSMByBiz(kt *kit.Kit, ticketID string, param *itsm.ApproveNodeOpt) error {
+
+	if err := c.itsmCli.ApproveNode(kt, param); err != nil {
+		logs.Errorf("failed to approve itsm node of plan ticket %s, err: %v, rid: %s", ticketID, err, kt.Rid)
+		return err
+	}
+	return nil
+}

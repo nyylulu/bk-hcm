@@ -1,18 +1,17 @@
 ### 描述
 
-- 该接口提供版本：v1.6.1+。
-- 该接口所需权限：平台管理-主机申领。
-- 该接口功能描述：资源申请单据审核。
+- 该接口提供版本：v9.9.9+。
+- 该接口所需权限：业务访问。
+- 该接口功能描述：资源预测申请单据ITSM审核。
 
 ### URL
 
-POST /api/v1/woa/task/audit/apply/ticket
+POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node
 
 ### 输入参数
 
 | 参数名称      | 参数类型   | 必选 | 描述           |
 |-----------|--------|----|--------------|
-| order_id  | int	   | 是  | 单据ID         |
 | state_id  | int	   | 是  | ITSM流程单据节点ID |
 | approval	 | bool   | 是  | 是否通过         |
 | remark	   | string | 否  | 审核意见         |
@@ -23,7 +22,6 @@ POST /api/v1/woa/task/audit/apply/ticket
 
 ```json
 {
-  "order_id": 1001,
   "state_id": 1957,
   "approval": true,
   "remark": "同意"
