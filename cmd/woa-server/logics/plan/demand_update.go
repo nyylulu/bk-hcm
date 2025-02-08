@@ -56,17 +56,19 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		return err
 	}
 	// 需要先把key相同的预测数据聚合，避免过大的扣减在数据库中不存在
-	changeDemands, err := c.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
+	changeDemandsMap, err := c.aggregateDemandChangeInfo(kt, changeDemandsOri, ticket)
 	if err != nil {
 		logs.Errorf("failed to aggregate demand change info, err: %v, crp_sn: %s, rid: %s", err, ticket.CrpSn,
 			kt.Rid)
 		return err
 	}
 
-	logs.Infof("aggregate demand change info: %+v, rid: %s", cvt.PtrToSlice(changeDemands), kt.Rid)
+	logs.Infof("aggregate demand change info: %+v, rid: %s", cvt.PtrToSlice(maps.Values(changeDemandsMap)),
+		kt.Rid)
 
 	// changeDemand可能会在扣减时模糊匹配到同一个需求，因此需要在扣减操作生效前记录扣减量，最后统一执行
-	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, changeDemands, ticket)
+	upsertReq, updatedIDs, createLogReq, updateLogReq, err := c.prepareResPlanDemandChangeReq(kt, ticket,
+		changeDemandsMap)
 	if err != nil {
 		logs.Errorf("failed to prepare res plan demand change req, err: %v, ticket: %s, rid: %s", err,
 			ticket.ID, kt.Rid)
@@ -137,9 +139,10 @@ func (c *Controller) CreateResPlanChangelog(kt *kit.Kit, changelogReqs []rpproto
 // prepareResPlanDemandChangeReq 准备更新资源预测表的参数
 // 返回值：更新参数，被更新的资源ID，新增预测的变更日志，修改预测的变更日志
 // 因新增预测的变更日志需要在更新完成后追加预测ID，因此需要和修改的变更日志分开返回
-func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
-	ticket *TicketInfo) (*rpproto.ResPlanDemandBatchUpsertReq, []string, []rpproto.DemandChangelogCreate,
-	[]rpproto.DemandChangelogCreate, error) {
+func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, ticket *TicketInfo,
+	changeDemandsMap map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo) (
+	*rpproto.ResPlanDemandBatchUpsertReq, []string, []rpproto.DemandChangelogCreate, []rpproto.DemandChangelogCreate,
+	error) {
 
 	// needUpdateDemands记录全部扣减完成后的最终结果
 	needUpdateDemands := make(map[string]*rpd.ResPlanDemandTable)
@@ -155,28 +158,7 @@ func (c *Controller) prepareResPlanDemandChangeReq(kt *kit.Kit, changeDemands []
 
 	batchCreateReq := make([]rpproto.ResPlanDemandCreateReq, 0)
 	batchCreateLogReq := make([]rpproto.DemandChangelogCreate, 0)
-	for _, changeDemand := range changeDemands {
-		// 根据changeDemand的expectTime获取期望交付的时间范围
-		expectTimeT, err := time.Parse(constant.DateLayout, changeDemand.ExpectTime)
-		if err != nil {
-			logs.Errorf("failed to parse expect time, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
-				kt.Rid)
-			return nil, nil, nil, nil, err
-		}
-		expectTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTimeT)
-		if err != nil {
-			logs.Errorf("failed to get demand date range in month, err: %v, change demand: %+v, rid: %s", err,
-				*changeDemand, kt.Rid)
-			return nil, nil, nil, nil, err
-		}
-
-		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
-		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap, expectTimeRange)
-		if err != nil {
-			logs.Errorf("failed to get aggregate key, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
-				kt.Rid)
-			return nil, nil, nil, nil, err
-		}
+	for aggregateKey, changeDemand := range changeDemandsMap {
 		localDemands, err := c.ListResPlanDemandByAggregateKey(kt, aggregateKey)
 		if err != nil {
 			logs.Errorf("failed to get local res plan demands, err: %v, aggregate key: %+v, change demand: %+v, "+
@@ -293,7 +275,7 @@ func convUpdateResPlanDemandReqs(kt *kit.Kit, ticket *TicketInfo, updateDemands 
 }
 
 func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*ptypes.CrpOrderChangeInfo,
-	ticket *TicketInfo) ([]*ptypes.CrpOrderChangeInfo, error) {
+	ticket *TicketInfo) (map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo, error) {
 
 	// 从 woa_zone 获取城市/地区的中英文对照
 	zoneMap, regionAreaMap, _, err := c.getMetaMaps(kt)
@@ -303,7 +285,13 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 	}
 	zoneNameMap, regionNameMap := getMetaNameMapsFromIDMap(zoneMap, regionAreaMap)
 
-	changeDemandMap := make(map[ptypes.ResPlanDemandKey]*ptypes.CrpOrderChangeInfo)
+	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	if err != nil {
+		logs.Errorf("get all device type maps failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	changeDemandMap := make(map[ptypes.ResPlanDemandAggregateKey]*ptypes.CrpOrderChangeInfo)
 	for _, changeDemand := range changeDemands {
 		err := changeDemand.SetRegionAreaAndZoneID(zoneNameMap, regionNameMap)
 		if err != nil {
@@ -312,20 +300,46 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 			return nil, err
 		}
 
-		changeKey := changeDemand.GetKey(ticket.BkBizID, ticket.DemandClass)
-		finalChange, ok := changeDemandMap[changeKey]
+		// 根据changeDemand的expectTime获取期望交付的时间范围
+		expectTimeT, err := time.Parse(constant.DateLayout, changeDemand.ExpectTime)
+		if err != nil {
+			logs.Errorf("failed to parse expect time, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
+				kt.Rid)
+			return nil, err
+		}
+		expectTimeRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTimeT)
+		if err != nil {
+			logs.Errorf("failed to get demand date range in month, err: %v, change demand: %+v, rid: %s", err,
+				*changeDemand, kt.Rid)
+			return nil, err
+		}
+
+		// TODO 因CRP会在拆单时改变云盘的类型，且CRP侧目前不强校验云盘类型，因此在调整场景下，暂时不考虑diskType的不同.
+		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
+		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap, expectTimeRange)
+		if err != nil {
+			logs.Errorf("failed to get aggregate key, err: %v, change demand: %+v, rid: %s", err, *changeDemand,
+				kt.Rid)
+			return nil, err
+		}
+		finalChange, ok := changeDemandMap[aggregateKey]
 		if !ok {
-			changeDemandMap[changeKey] = changeDemand
+			changeDemandMap[aggregateKey] = changeDemand
 			continue
 		}
 
-		finalChange.ChangeOs = finalChange.ChangeOs.Add(changeDemand.ChangeOs)
+		// 按第一条的机型，将通配机型的OS数转换后合并
+		corePerOS := decimal.NewFromInt(finalChange.ChangeCpuCore).Div(finalChange.ChangeOs)
+		changeOS := decimal.NewFromInt(changeDemand.ChangeCpuCore).Div(corePerOS)
+
+		finalChange.ChangeOs = finalChange.ChangeOs.Add(changeOS)
 		finalChange.ChangeCpuCore = finalChange.ChangeCpuCore + changeDemand.ChangeCpuCore
 		finalChange.ChangeMemory = finalChange.ChangeMemory + changeDemand.ChangeMemory
+
 		finalChange.ChangeDiskSize = finalChange.ChangeDiskSize + changeDemand.ChangeDiskSize
 	}
 
-	return maps.Values(changeDemandMap), nil
+	return changeDemandMap, nil
 }
 
 // BatchUpsertResPlanDemand batch upsert res plan demand and unlock res plans.

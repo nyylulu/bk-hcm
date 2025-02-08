@@ -753,7 +753,7 @@ func (c *CrpOrderChangeInfo) GetAggregateKey(bkBizID int64, deviceTypes map[stri
 	return key, nil
 }
 
-// ResPlanDemandKey is key of res plan demand.
+// ResPlanDemandKey is key of res plan demand. Used to uniquely identify a resource plan demand.
 type ResPlanDemandKey struct {
 	BkBizID       int64
 	DemandClass   enumor.DemandClass

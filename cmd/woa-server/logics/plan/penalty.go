@@ -146,6 +146,7 @@ func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context) {
 		default:
 		}
 
+		logs.Infof("push penalty ratio to crp, next run time: %v", nextRunTime)
 		// 等待到下一个检查时间
 		time.Sleep(time.Until(nextRunTime))
 
@@ -391,6 +392,10 @@ func (c *Controller) calcPenaltyBaseCoreByTicket(kt *kit.Kit, tickets []rtypes.R
 
 // CalcPenaltyRatioAndPush calc penalty ratio with unexecuted cpu core
 func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) error {
+	start := time.Now()
+	logs.Infof("start calc and push penalty ratio to crp, base_time: %v, time: %v, rid: %s", baseTime,
+		start, kt.Rid)
+
 	year, month, err := c.demandTime.GetDemandYearMonth(kt, baseTime)
 	if err != nil {
 		logs.Errorf("failed to get demand year month, err: %v, base_time: %s, rid: %s", err, baseTime.String(),
@@ -455,6 +460,9 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 		return err
 	}
 
+	end := time.Now()
+	logs.Infof("end calc and push penalty ratio to crp, base_time: %v, time: %v, cost: %ds, rid: %s", baseTime,
+		end, end.Sub(start).Seconds(), kt.Rid)
 	return nil
 }
 
@@ -577,6 +585,13 @@ func (c *Controller) pushPenaltyRatioToCRP(kt *kit.Kit, planProductRatioMap map[
 	ratios := make([]cvmapi.CvmCbsPlanProductRatio, 0)
 
 	for planProductID, opProductRatioMap := range planProductRatioMap {
+		// 用量超过80%时可能会出现负数
+		for opProductID, unexcutedCPUCore := range opProductRatioMap {
+			if unexcutedCPUCore < 0 {
+				opProductRatioMap[opProductID] = 0
+			}
+		}
+
 		ratios = append(ratios, cvmapi.CvmCbsPlanProductRatio{
 			// 必须提供一个空的，否则CRP接口会报空指针
 			GroupDeptId:           []int64{},
