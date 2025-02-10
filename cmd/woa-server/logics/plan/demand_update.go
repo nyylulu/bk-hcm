@@ -329,8 +329,12 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 		}
 
 		// 按第一条的机型，将通配机型的OS数转换后合并
-		corePerOS := decimal.NewFromInt(finalChange.ChangeCpuCore).Div(finalChange.ChangeOs)
-		changeOS := decimal.NewFromInt(changeDemand.ChangeCpuCore).Div(corePerOS)
+		deviceInfo, ok := deviceTypeMap[finalChange.DeviceType]
+		if !ok {
+			logs.Errorf("device_type: %s, not found in device_type_map, rid: %s", finalChange.DeviceType, kt.Rid)
+			return nil, fmt.Errorf("device_type: %s is not found", finalChange.DeviceType)
+		}
+		changeOS := decimal.NewFromInt(changeDemand.ChangeCpuCore).Div(decimal.NewFromInt(deviceInfo.CpuCore))
 
 		finalChange.ChangeOs = finalChange.ChangeOs.Add(changeOS)
 		finalChange.ChangeCpuCore = finalChange.ChangeCpuCore + changeDemand.ChangeCpuCore
