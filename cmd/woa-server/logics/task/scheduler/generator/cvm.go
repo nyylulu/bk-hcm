@@ -138,6 +138,7 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 			Memo:              cvm.NoteInfo,
 			Operator:          cvm.Operator,
 			BakOperator:       cvm.Operator,
+			ChargeType:        cvmapi.ChargeTypePrePaid,
 			InheritInstanceId: cvm.InheritInstanceId,
 		},
 	}
@@ -145,10 +146,10 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	// 计费模式
 	if len(cvm.ChargeType) > 0 {
 		createReq.Params.ChargeType = cvm.ChargeType
-		// 包年包月时才需要设置计费时长
-		if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid {
-			createReq.Params.ChargeMonths = cvm.ChargeMonths
-		}
+	}
+	// 包年包月时才需要设置计费时长
+	if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid && cvm.ChargeMonths > 0 {
+		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
 
 	// set system disk parameters
