@@ -394,7 +394,14 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 	// 3. fill host info
 	hostDetails := r.getHostDetails(kt, hostBase, mapHostToRel, mapBizIdToBiz, mapModuleIdToModule)
 
-	// 4. fill cvm info
+	// 4. fill host recycle type info
+	hostDetails, err = r.fillHostRecycleType(kt, hostDetails)
+	if err != nil {
+		logs.Errorf("failed to fill host recycle type, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	// 5. fill cvm info
 	if err = r.fillCvmInfo(kt, hostDetails); err != nil {
 		logs.Errorf("failed to fill cvm info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -958,16 +965,10 @@ func (r *recycler) fillCvmInfo(kt *kit.Kit, hostDetails []*table.RecycleHost) er
 		}
 	}
 
-	hosts, err = r.fillCVMRecycleType(kt, hosts)
-	if err != nil {
-		logs.Errorf("failed to fill cvm recycle type, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
 	return nil
 }
 
-func (r *recycler) fillCVMRecycleType(kt *kit.Kit, hosts []*table.RecycleHost) ([]*table.RecycleHost, error) {
+func (r *recycler) fillHostRecycleType(kt *kit.Kit, hosts []*table.RecycleHost) ([]*table.RecycleHost, error) {
 	assetIDs := make([]string, 0, len(hosts))
 	for _, host := range hosts {
 		assetIDs = append(assetIDs, host.AssetID)
