@@ -22,4 +22,6 @@ package constant
 const (
 	// PlaceholderQuotaConfig defines the placeholder for quota config
 	PlaceholderQuotaConfig = -1
+	// FineProportion 罚金成本比例
+	FineProportion = 0.5
 )

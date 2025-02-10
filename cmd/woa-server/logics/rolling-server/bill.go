@@ -332,6 +332,8 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		}
 
 		if *apply.DeliveredCore > returnedCore {
+			fine := unitPrice.Mul(decimal.NewFromUint64(uint64(*apply.DeliveredCore) - uint64(returnedCore))).
+				Mul(decimal.NewFromFloat(constant.FineProportion))
 			detail := rsproto.RollingFineDetailCreateReq{
 				BkBizID:         apply.BkBizID,
 				AppliedRecordID: apply.ID,
@@ -342,8 +344,7 @@ func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 				Day:             req.Day,
 				DeliveredCore:   uint64(*apply.DeliveredCore),
 				ReturnedCore:    uint64(returnedCore),
-				Fine: unitPrice.Mul(
-					decimal.NewFromUint64(uint64(*apply.DeliveredCore) - uint64(returnedCore))),
+				Fine:            fine,
 			}
 			fineDetails = append(fineDetails, detail)
 		}
