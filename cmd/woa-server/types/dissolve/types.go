@@ -212,8 +212,8 @@ func (req *ResDissolveReq) Validate() error {
 }
 
 // GetESCond get elasticsearch condition
-func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string,
-	bizIDName, blackBizIDName map[int64]string) (map[string][]interface{}, error) {
+func (req *ResDissolveReq) GetESCond(assetIDs []string, bizIDName, blackBizIDName map[int64]string) (
+	map[string][]interface{}, error) {
 
 	cond := make(map[string][]interface{})
 
@@ -238,23 +238,15 @@ func (req *ResDissolveReq) GetESCond(moduleAssetIDMap map[string][]string,
 		cond[es.Operator] = append(cond[es.Operator], v)
 	}
 
-	for _, v := range req.ModuleNames {
-		assetIDs, ok := moduleAssetIDMap[v]
-		if !ok {
-			cond[es.ModuleName] = append(cond[es.ModuleName], v)
-			continue
-		}
-
-		for _, assetID := range assetIDs {
-			cond[es.AssetID] = append(cond[es.AssetID], assetID)
-		}
+	for _, assetID := range assetIDs {
+		cond[es.AssetID] = append(cond[es.AssetID], assetID)
 	}
 
 	return cond, nil
 }
 
 // GetCCHostCond get cc host condition
-func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) []*cmdb.QueryFilter {
+func (req *ResDissolveReq) GetCCHostCond(assetIDs []string) []*cmdb.QueryFilter {
 	andRules := make([]querybuilder.Rule, 0)
 	cloudIDRule := querybuilder.AtomRule{
 		Field:    pkg.BKCloudIDField,
@@ -268,53 +260,22 @@ func (req *ResDissolveReq) GetCCHostCond(moduleAssetIDMap map[string][]string) [
 			Condition: querybuilder.ConditionOr,
 			Rules: []querybuilder.Rule{
 				querybuilder.AtomRule{
-					Field:    pkg.BKOperatorField,
-					Operator: querybuilder.OperatorIn,
-					Value:    req.Operators,
+					Field: pkg.BKOperatorField, Operator: querybuilder.OperatorIn, Value: req.Operators,
 				},
 				querybuilder.AtomRule{
-					Field:    pkg.BKBakOperatorField,
-					Operator: querybuilder.OperatorIn,
-					Value:    req.Operators,
+					Field: pkg.BKBakOperatorField, Operator: querybuilder.OperatorIn, Value: req.Operators,
 				},
 			},
 		}
 		andRules = append(andRules, operatorRule)
 	}
 
-	moduleNames := make([]string, 0)
-	assetIDs := make([]string, 0)
-	for _, moduleName := range req.ModuleNames {
-		ids, ok := moduleAssetIDMap[moduleName]
-		if !ok {
-			moduleNames = append(moduleNames, moduleName)
-			continue
-		}
-
-		assetIDs = append(assetIDs, ids...)
-	}
-
 	result := make([]*cmdb.QueryFilter, 0)
-	// 由于module name和assetID一起查询cc时效率很低，所以这里把他们拆成不同的查询条件
-	if len(moduleNames) != 0 {
-		moduleNameRule := querybuilder.AtomRule{
-			Field:    "module_name",
-			Operator: querybuilder.OperatorIn,
-			Value:    moduleNames,
-		}
-		rules := make([]querybuilder.Rule, len(andRules))
-		copy(rules, andRules)
-		rules = append(rules, moduleNameRule)
-		cond := &cmdb.QueryFilter{Rule: querybuilder.CombinedRule{Condition: querybuilder.ConditionAnd, Rules: rules}}
-		result = append(result, cond)
-	}
-	batchSize := 1000
+	batchSize := pkg.BKMaxPageSize
 	if len(assetIDs) != 0 {
 		for _, batch := range slice.Split(assetIDs, batchSize) {
 			assetIDRule := querybuilder.AtomRule{
-				Field:    pkg.BKAssetIDField,
-				Operator: querybuilder.OperatorIn,
-				Value:    batch,
+				Field: pkg.BKAssetIDField, Operator: querybuilder.OperatorIn, Value: batch,
 			}
 			rules := make([]querybuilder.Rule, len(andRules))
 			copy(rules, andRules)
