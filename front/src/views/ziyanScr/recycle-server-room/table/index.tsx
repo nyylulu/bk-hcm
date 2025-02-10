@@ -10,7 +10,6 @@ import HcmSearchOrg from '@/components/search/org.vue';
 import HcmSearchBusiness from '@/components/search/business.vue';
 import HcmSearchUser from '@/components/search/user.vue';
 import CurrentDialog from '../current-dialog';
-import ModuleDialog from '../module-dialog';
 import OriginDialog from '../origin-dialog';
 import cssModule from './index.module.scss';
 
@@ -36,7 +35,7 @@ export default defineComponent({
     const businessGlobalStore = useBusinessGlobalStore();
     const userStore = useUserStore();
 
-    const columns = [
+    const tableColumns = [
       {
         label: '业务',
         field: 'bk_biz_name',
@@ -72,15 +71,16 @@ export default defineComponent({
     const isLoading = ref(false);
     const organizations = ref([]);
     const orgChecked = ref([]);
-    const operators = ref([userStore.username]);
+    const operators = ref([]);
     const bkBizIds = ref([]);
     const dissloveList = ref<IDissolve[]>([]);
     const currentDialogShow = ref(false);
-    const moduleDialogShow = ref(false);
     const originDialogShow = ref(false);
     const searchParams = ref();
     const moduleNames = ref<string[]>([]);
-    const tableColumns = ref(columns);
+    const exportColumns = ref(tableColumns);
+
+    const currentRowData = ref<IDissolve>();
 
     const orgRef = ref(null);
 
@@ -109,7 +109,7 @@ export default defineComponent({
     const handleSearch = async () => {
       isLoading.value = true;
 
-      tableColumns.value = columns.concat(
+      exportColumns.value = tableColumns.concat(
         props.moduleNames.map((moduleName) => ({ label: moduleName, field: `module_host_count.${moduleName}` })),
       );
 
@@ -153,19 +153,16 @@ export default defineComponent({
       };
     };
 
-    const handleShowOriginDialog = (bkBizNames: string[]) => {
+    const handleShowOriginDialog = (bkBizNames: string[], row: IDissolve) => {
       originDialogShow.value = true;
       setSearchParams(bkBizNames, moduleNames.value);
+      currentRowData.value = row;
     };
 
-    const handleShowCurrentDialog = (bkBizNames: string[]) => {
+    const handleShowCurrentDialog = (bkBizNames: string[], row: IDissolve) => {
       currentDialogShow.value = true;
       setSearchParams(bkBizNames, moduleNames.value);
-    };
-
-    const handleShowModuleDialog = (bkBizNames: string[], moduleName: string) => {
-      moduleDialogShow.value = true;
-      setSearchParams(bkBizNames, [moduleName]);
+      currentRowData.value = row;
     };
 
     return () => (
@@ -205,7 +202,7 @@ export default defineComponent({
           <export-to-excel-button
             data={dissloveList.value}
             text={t('导出')}
-            columns={tableColumns.value}
+            columns={exportColumns.value}
             theme='primary'
             filename={t('整体裁撤信息')}
           />
@@ -225,16 +222,18 @@ export default defineComponent({
             </bk-table-column>
             <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
               {{
-                default: ({ row }: { row: IDissolve }) => (
-                  <bk-button
-                    text
-                    theme='primary'
-                    onClick={() =>
-                      handleShowOriginDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
-                    }>
-                    {getDisplayText(row?.total?.origin?.host_count)}
-                  </bk-button>
-                ),
+                default: ({ row }: { row: IDissolve }) => {
+                  return row.bk_biz_name !== '裁撤进度' ? (
+                    <bk-button
+                      text
+                      theme='primary'
+                      onClick={() => handleShowOriginDialog(row.bk_biz_name === '总数' ? [] : [row.bk_biz_name], row)}>
+                      {getDisplayText(row?.total?.origin?.host_count)}
+                    </bk-button>
+                  ) : (
+                    getDisplayText(row?.total?.origin?.host_count)
+                  );
+                },
               }}
             </bk-table-column>
             <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'>
@@ -244,16 +243,18 @@ export default defineComponent({
             </bk-table-column>
             <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
               {{
-                default: ({ row }: { row: IDissolve }) => (
-                  <bk-button
-                    text
-                    theme='primary'
-                    onClick={() =>
-                      handleShowCurrentDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
-                    }>
-                    {getDisplayText(row?.total?.current?.host_count)}
-                  </bk-button>
-                ),
+                default: ({ row }: { row: IDissolve }) => {
+                  return row.bk_biz_name !== '裁撤进度' ? (
+                    <bk-button
+                      text
+                      theme='primary'
+                      onClick={() => handleShowCurrentDialog(row.bk_biz_name === '总数' ? [] : [row.bk_biz_name], row)}>
+                      {getDisplayText(row?.total?.current?.host_count)}
+                    </bk-button>
+                  ) : (
+                    getDisplayText(row?.total?.current?.host_count)
+                  );
+                },
               }}
             </bk-table-column>
             <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'>
@@ -261,30 +262,16 @@ export default defineComponent({
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.current?.cpu_count)}</>,
               }}
             </bk-table-column>
-            {moduleNames.value.map((moduleName: string) => (
-              <bk-table-column label={moduleName} field={moduleName} width={`${moduleName.length * 15}px`}>
-                {{
-                  default: ({ row }: { row: IDissolve }) => (
-                    <bk-button
-                      text
-                      theme='primary'
-                      onClick={() =>
-                        handleShowModuleDialog(
-                          ['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name],
-                          moduleName,
-                        )
-                      }>
-                      {getDisplayText(row?.module_host_count?.[moduleName])}
-                    </bk-button>
-                  ),
-                }}
-              </bk-table-column>
-            ))}
           </bk-table>
         </bk-loading>
-        <CurrentDialog v-model:isShow={currentDialogShow.value} searchParams={searchParams.value}></CurrentDialog>
-        <ModuleDialog v-model:isShow={moduleDialogShow.value} searchParams={searchParams.value}></ModuleDialog>
-        <OriginDialog v-model:isShow={originDialogShow.value} searchParams={searchParams.value}></OriginDialog>
+        <CurrentDialog
+          v-model:isShow={currentDialogShow.value}
+          searchParams={searchParams.value}
+          rowData={currentRowData.value}></CurrentDialog>
+        <OriginDialog
+          v-model:isShow={originDialogShow.value}
+          searchParams={searchParams.value}
+          rowData={currentRowData.value}></OriginDialog>
       </Panel>
     );
   },
