@@ -2,8 +2,10 @@
 import { computed, watchEffect } from 'vue';
 import CombineRequest from '@blueking/combine-request';
 import { useUserStore } from '@/store/user';
+import { AppearanceType, DisplayType } from './typings';
+import WxworkLink from './appearance/wxwork-link.vue';
 
-const props = defineProps<{ value: string | string[] }>();
+const props = defineProps<{ value: string | string[]; display: DisplayType }>();
 
 const localValue = computed(() => {
   if (!props.value) {
@@ -11,6 +13,11 @@ const localValue = computed(() => {
   }
   return Array.isArray(props.value) ? props.value : [props.value];
 });
+
+const appearance = computed(() => props.display?.appearance);
+const appearanceComps: Partial<Record<AppearanceType, any>> = {
+  ['wxwork-link']: WxworkLink,
+};
 
 const displayValue = computed(() => {
   const names = localValue.value.map((username) => {
@@ -47,5 +54,8 @@ watchEffect(() => {
 </script>
 
 <template>
-  {{ displayValue }}
+  <template v-if="!appearance">
+    {{ displayValue }}
+  </template>
+  <component v-else :is="appearanceComps[appearance]" :display-value="displayValue" :value="value" />
 </template>

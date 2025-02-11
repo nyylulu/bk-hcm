@@ -158,6 +158,9 @@ export interface IPlanTicketAuditCurrentStep {
   state_id: number | string;
   name: string;
   processors: string[];
+  processors_auth: {
+    [key: string]: boolean;
+  };
 }
 export interface IPlanTicketAuditLog {
   operator: string;

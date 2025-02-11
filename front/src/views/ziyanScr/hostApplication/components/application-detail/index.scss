@@ -4,7 +4,7 @@
     .timeline-container {
       padding-top: 10px;
       .timeline-content-txt {
-        color: #979BA5;
+        color: #979ba5;
       }
     }
     .copy-wrapper {
@@ -20,7 +20,7 @@
   }
   .apply-operate {
     margin-top: 10px;
-    .bk-button+.bk-button{
+    .bk-button + .bk-button {
       margin-left: 10px;
     }
   }
@@ -30,7 +30,7 @@
   .des-top {
     margin-bottom: 10px;
     & > div {
-      label{
+      label {
         margin-right: 10px;
       }
     }
@@ -71,4 +71,8 @@
     grid-template-columns: repeat(2, 1fr);
     column-gap: 24px;
   }
+}
+
+.host-application-cancel-btn {
+  min-width: 88px;
 }

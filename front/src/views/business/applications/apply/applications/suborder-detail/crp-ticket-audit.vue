@@ -17,7 +17,10 @@ import {
 
 import { OverflowTitle } from 'bkui-vue';
 import TicketAudit from '@/views/ziyanScr/components/ticket-audit/index.vue';
-import WName from '@/components/w-name';
+import TimelineTag from '@/views/ziyanScr/components/ticket-audit/children/timeline-tag.vue';
+import TimelineContent from '@/views/ziyanScr/components/ticket-audit/children/timeline-content.vue';
+import LoadingIcon from '@/views/ziyanScr/components/ticket-audit/icon/loading-icon.vue';
+import { getWNameVNodeList } from '@/views/ziyanScr/components/ticket-audit/utils';
 
 const props = defineProps<{ crpTicketId: string; subOrderId: string }>();
 
@@ -61,21 +64,14 @@ const getData = async (crp_ticket_id: string, suborder_id: string) => {
   }
 };
 
-const getWNameVNodeList = (nameList: string[]) => {
-  return nameList.map((name, index) => {
-    if (index < nameList.length - 1) return [h(WName, { name }), ', '];
-    return h(WName, { name });
-  });
-};
-
 // 同意节点
 const getSuccessLog = (log: IApplyCrpTicketAuditLogItem): ITimelineItem => {
   const { task_name, operate_result, operator, operate_time } = log;
   const operators = operator.split(';');
 
   return {
-    tag: h('div', { class: 'i-timeline-tag' }, task_name),
-    content: h('div', { class: 'i-timeline-content' }, [
+    tag: h(TimelineTag, null, task_name),
+    content: h(TimelineContent, null, [
       h('span', null, `${t('审批意见：')}${operate_result}`),
       h('span', null, [t('审批人：'), getWNameVNodeList(operators)]),
       h('span', null, `${t('审批时间：')}${operate_time}`),
@@ -95,10 +91,10 @@ const getFailLog = (log: IApplyCrpTicketAuditLogItem, failInfo: IApplyCrpTicketA
   const errorMsg = error_msg ? `, ${error_msg}` : '';
 
   return {
-    tag: h('div', { class: 'i-timeline-tag' }, task_name),
+    tag: h(TimelineTag, null, task_name),
     content: h(
-      'div',
-      { class: 'i-timeline-content' },
+      TimelineContent,
+      null,
       h('span', { class: 'error-message' }, [
         t('错误信息：'),
         h(OverflowTitle, { type: 'tips', class: 'error-message-content' }, `${error_type}${errorMsgTypeCn}${errorMsg}`),
@@ -115,19 +111,18 @@ const getAuditingLog = (current_step: IApplyCrpTicketAuditCurrentStepItem): ITim
   const { current_task_name, status, status_desc } = current_step;
 
   return {
-    tag: h('div', { class: 'i-timeline-tag' }, current_task_name),
-    content: h('div', { class: 'i-timeline-content' }, [
+    tag: h(TimelineTag, { isCurrent: true }, current_task_name),
+    content: h(TimelineContent, null, [
       h('span', null, `${t('单据状态码：')}${status}`),
       h('span', null, `${t('单据状态描述：')}${status_desc}`),
     ]),
     nodeType: ITimelineNodeType.VNode,
-    icon: h('i', { class: 'hcm-icon bkhcm-icon-jiazai' }),
-    type: 'primary',
+    icon: h(LoadingIcon),
   };
 };
 // 默认节点
 const getDefaultLog = (name: string, type: ITimelineIconStatusType = 'default'): ITimelineItem => {
-  return { tag: h('div', { class: 'i-timeline-tag' }, name), nodeType: ITimelineNodeType.VNode, type };
+  return { tag: h(TimelineTag, null, name), nodeType: ITimelineNodeType.VNode, type };
 };
 const getRenderLogs = ({ logs, current_step }: IApplyCrpTicketAudit) => {
   let renderLogs: ITimelineItem[];
@@ -146,11 +141,11 @@ const getRenderLogs = ({ logs, current_step }: IApplyCrpTicketAudit) => {
       if (index === logs.length - 1 && status === 127) {
         const whitelist = ['cutechen', 'lotuschen'];
         return {
-          tag: h('div', { class: 'i-timeline-tag' }, task_name),
+          tag: h(TimelineTag, null, task_name),
           // !! 需要加白处理
           content: h(
-            'div',
-            { class: 'i-timeline-content no-gap' },
+            TimelineContent,
+            { class: 'no-gap' },
             h('div', null, [t('单据已被驳回，如有疑问，请联系：'), getWNameVNodeList(whitelist)]),
           ),
           nodeType: ITimelineNodeType.VNode,
@@ -198,6 +193,7 @@ onBeforeMount(() => {
     :loading="loading"
     :ticket-link="data.crp_ticket_link"
     :logs="renderLogs"
+    :copy-text="t('复制CRP审批单')"
   />
 </template>
 
@@ -210,21 +206,11 @@ onBeforeMount(() => {
     min-width: 88px;
   }
 
-  :deep(.i-timeline-tag) {
-    font-size: 14px;
-    color: $font-deep-color;
-
-    .approval-btn {
-      margin-left: 24px;
-    }
-  }
-
   :deep(.i-timeline-content) {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
     gap: 12px;
-    font-size: 12px;
 
     &.no-gap {
       gap: 0;
