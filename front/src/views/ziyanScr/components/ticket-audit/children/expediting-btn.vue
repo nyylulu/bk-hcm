@@ -6,6 +6,7 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 const props = withDefaults(
   defineProps<{
+    checkPermission?: boolean; // TODO：临时字段，目前CRP的人不能到HCM审批，不应该引导用户给CRP的人添加权限
     processors: string[];
     processorsWithBizAccess: string[];
     processorsWithoutBizAccess: string[];
@@ -15,6 +16,7 @@ const props = withDefaults(
   }>(),
   {
     // 兼容空数据，防止页面崩溃
+    checkPermission: true,
     processors: () => [],
     processorsWithBizAccess: () => [],
     processorsWithoutBizAccess: () => [],
@@ -59,7 +61,8 @@ watchEffect(() => {
           <div class="mb4">
             {{ t('当前审批人为') }}
             <!-- 都有权限 -->
-            <template v-if="processors.length === processorsWithBizAccess.length">
+            <!-- TODO：或无需引导权限申请 -->
+            <template v-if="processors.length === processorsWithBizAccess.length || !checkPermission">
               <display-value
                 v-for="processor in processors"
                 class="mr4"
@@ -93,7 +96,8 @@ watchEffect(() => {
           </div>
 
           <!-- 都有权限 -->
-          <div v-if="processors.length === processorsWithBizAccess.length">
+          <!-- TODO：或无需引导权限申请 -->
+          <div v-if="processors.length === processorsWithBizAccess.length || !checkPermission">
             <copy-to-clipboard :content="ticketLink">
               <bk-button theme="primary" text>{{ copyText }}</bk-button>
             </copy-to-clipboard>

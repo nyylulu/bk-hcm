@@ -72,6 +72,7 @@ export default defineComponent({
               {t('审批环节')}
             </span>
             <ExpeditingBtn
+              checkPermission={platform !== 'CRP'}
               processors={displayProcessors}
               processorsWithBizAccess={processorsWithBizAccess}
               processorsWithoutBizAccess={processorsWithoutBizAccess}

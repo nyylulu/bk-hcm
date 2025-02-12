@@ -109,9 +109,12 @@ const getCurrentStepItems = (
   if (!current_steps) return [];
 
   return current_steps.map<ITimelineItem>(({ name, processors }) => {
+    // 过滤无效审批人
+    const displayProcessors = processors.filter((processor) => processor);
+
     const isAuditing = status === 'auditing';
     // auditing状态，且用户为审批人时，可以进行审批处理
-    const hasApprovalBtn = showApproval && isAuditing && processors.includes(userStore.username);
+    const hasApprovalBtn = showApproval && isAuditing && displayProcessors.includes(userStore.username);
 
     return {
       tag: h(TimelineTag, { isCurrent: true }, [
@@ -136,7 +139,7 @@ const getCurrentStepItems = (
             )
           : null,
       ]),
-      content: h(TimelineContent, null, [`${status_name}，请联系 `, getWNameVNodeList(processors)]),
+      content: h(TimelineContent, null, [`${status_name}，请联系 `, getWNameVNodeList(displayProcessors)]),
       nodeType: ITimelineNodeType.VNode,
       icon: isAuditing ? h(LoadingIcon) : undefined,
       type: isAuditing ? 'primary' : 'danger',
@@ -158,7 +161,7 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
 
   // 撤销、失败、结束、拒绝，done 这五种状态，直接输出response
   if (['revoked', 'rejected', 'canceled', 'failed', 'done'].includes(status)) {
-    return [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit, false)]; // CRP暂不支持审批
+    return [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit, false)]; // TODO: CRP暂不支持审批
   }
 
   const currentStepIdx = crpSteps.findIndex((step) => step.name === current_steps?.[0]?.name);
