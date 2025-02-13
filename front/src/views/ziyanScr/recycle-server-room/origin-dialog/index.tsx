@@ -54,7 +54,7 @@ export default defineComponent({
           page: {
             count: false,
             start: 0,
-            limit: 10000,
+            limit: 50000,
           },
           ...props.searchParams,
           module_names: moduleNames ?? props.searchParams.module_names,

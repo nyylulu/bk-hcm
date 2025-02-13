@@ -123,12 +123,24 @@ export default defineComponent({
         })
         .then((result) => {
           const list = result?.data?.items || [];
-          const fixedBizIds = ['total', 'recycle-progress'];
+          const fixedBizIds = ['total'];
+
+          // “裁撤进度”合并到“总数中”
+          const totalIndex = list.findIndex((item) => item.bk_biz_id === 'total');
+          const processIndex = list.findIndex((item) => item.bk_biz_id === 'recycle-progress');
+          if (totalIndex > -1) {
+            list[totalIndex].progress = list[processIndex]?.progress;
+          }
+          if (processIndex > -1) {
+            list.splice(processIndex, 1);
+          }
+
           dissloveList.value = list.sort((a, b) => {
             const countA = (a?.total?.current?.host_count || 0) as number;
             const countB = (b?.total?.current?.host_count || 0) as number;
+            // 置顶
             if (fixedBizIds.includes(a.bk_biz_id as string) || fixedBizIds.includes(b.bk_biz_id as string)) {
-              return 0;
+              return -1;
             }
             return countB - countA;
           });
@@ -153,6 +165,15 @@ export default defineComponent({
       };
     };
 
+    const firstLevelDataFilter = (data: IDepartmentWithExtras[]) => {
+      // 正式环境第一层级只保留指定id的节点
+      const found = data.filter((item) => item.id === 2874);
+      if (found.length) {
+        return found;
+      }
+      return data;
+    };
+
     const handleShowOriginDialog = (bkBizNames: string[], row: IDissolve) => {
       originDialogShow.value = true;
       setSearchParams(bkBizNames, moduleNames.value);
@@ -172,7 +193,11 @@ export default defineComponent({
           <HcmSearchOrg
             ref={orgRef}
             class={cssModule['search-item']}
-            {...{ placeholder: '请选择或输入名称查找', searchPlaceholder: '请输入2个以上字符搜索' }}
+            {...{
+              placeholder: '请选择或输入名称查找',
+              searchPlaceholder: '请输入2个以上字符搜索',
+              firstLevelDataFilter,
+            }}
             v-model={organizations.value}
             v-model:checked={orgChecked.value}
           />

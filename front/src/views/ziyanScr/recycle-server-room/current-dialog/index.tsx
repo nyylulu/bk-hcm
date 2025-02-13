@@ -86,7 +86,7 @@ export default defineComponent({
           page: {
             count: false,
             start: 0,
-            limit: 10000,
+            limit: 50000,
           },
           ...props.searchParams,
           module_names: moduleNames ?? props.searchParams.module_names,
@@ -131,14 +131,16 @@ export default defineComponent({
               onClick={() => handleModuleSearch()}>
               全部 <em class={cssModule['item-count']}>{totalCount.value}</em>
             </div>
-            {Object.entries(props?.rowData?.module_host_count || {}).map(([name, count]) => (
-              <div
-                key={name}
-                class={[cssModule['module-item'], { [cssModule.active]: activeModule.value === name }]}
-                onClick={() => handleModuleSearch(name)}>
-                {name} <em class={cssModule['item-count']}>{count}</em>
-              </div>
-            ))}
+            {Object.entries(props?.rowData?.module_host_count || {})
+              .sort((a, b) => b[1] - a[1])
+              .map(([name, count]) => (
+                <div
+                  key={name}
+                  class={[cssModule['module-item'], { [cssModule.active]: activeModule.value === name }]}
+                  onClick={() => handleModuleSearch(name)}>
+                  {name} <em class={cssModule['item-count']}>{count}</em>
+                </div>
+              ))}
           </div>
           <div class={cssModule['data-table']} v-bkloading={{ loading: isLoading.value }}>
             <div class={cssModule.title}>
