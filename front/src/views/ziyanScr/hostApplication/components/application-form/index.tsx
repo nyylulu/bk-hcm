@@ -1077,6 +1077,8 @@ export default defineComponent({
                   <hcm-form-req-type
                     appearance='card'
                     v-model={order.value.model.requireType}
+                    // 春保资源池不显示
+                    filter={(list: any) => list.filter((item: any) => item.require_type !== 8)}
                     onChange={() => {
                       // 手动更改时，需要清空已保存的需求
                       clearResRequirements();
