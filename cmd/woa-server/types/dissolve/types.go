@@ -184,7 +184,7 @@ func (req *HostListReq) Validate() error {
 
 	pageOpt := &core.PageOption{
 		EnableUnlimitedLimit: false,
-		MaxLimit:             10000, // 由于前端需要导出数据，这里特殊调整限制值
+		MaxLimit:             50000, // 由于前端需要导出数据，这里特殊调整限制值
 		DisabledSort:         false,
 	}
 	if err := req.Page.Validate(pageOpt); err != nil {
