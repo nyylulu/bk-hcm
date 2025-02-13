@@ -36,9 +36,10 @@ import (
 )
 
 // VerifyResPlanDemandV2 verify resource plan demand for subOrders.
-func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProject enumor.ObsProject,
+func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType,
 	subOrders []ttypes.Suborder) ([]ptypes.VerifyResPlanDemandElem, error) {
 
+	obsProject := requireType.ToObsProject()
 	// get all device type maps.
 	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
 	if err != nil {
@@ -93,7 +94,7 @@ func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProjec
 	}
 
 	// call verify resource plan demands to verify each cvm demands.
-	rst, err := c.VerifyProdDemandsV2(kt, bkBizID, verifySlice)
+	rst, err := c.VerifyProdDemandsV2(kt, bkBizID, requireType, verifySlice)
 	if err != nil {
 		logs.Errorf("failed to verify resource plan demand v2, err: %v, bkBizID: %d, rid: %s", err, bkBizID, kt.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
@@ -132,27 +133,9 @@ func (c *Controller) GetPlanTypeAvlDeviceTypesV2(kt *kit.Kit, planType enumor.Pl
 	}
 
 	// get available device type map.
-	avlDeviceTypeMap := make(map[string]struct{})
-
-	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	avlDeviceTypeMap, err := c.getProdRemainAvlDeviceTypeMap(kt, req, prodRemainMap, planType)
 	if err != nil {
-		logs.Errorf("failed to get demand year month, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
-	}
-
-	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
-	obsProject := req.RequireType.ToObsProject()
-
-	for key, remainCoreMap := range prodRemainMap {
-		if key.PlanType == planType && key.AvailableTime == availableTime &&
-			key.ObsProject == obsProject && key.BkBizID == req.BkBizID && key.RegionID == req.Region {
-			for _, remain := range remainCoreMap {
-				if remain > 0 {
-					avlDeviceTypeMap[key.DeviceType] = struct{}{}
-					break
-				}
-			}
-		}
 	}
 
 	// get available device type's matched device type.
@@ -190,6 +173,44 @@ func (c *Controller) GetPlanTypeAvlDeviceTypesV2(kt *kit.Kit, planType enumor.Pl
 	})
 
 	return result, nil
+}
+
+func (c *Controller) getProdRemainAvlDeviceTypeMap(kt *kit.Kit, req *ptypes.GetCvmChargeTypeDeviceTypeReq,
+	prodRemainMap map[ResPlanPoolKeyV2]map[string]int64, planType enumor.PlanTypeCode) (map[string]struct{}, error) {
+
+	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
+	if err != nil {
+		logs.Errorf("failed to get demand year month, err: %v, planType: %s, rid: %s", err, planType, kt.Rid)
+		return nil, err
+	}
+
+	availableTime := NewAvailableTime(nowDemandYear, nowDemandMonth)
+	obsProject := req.RequireType.ToObsProject()
+	avlDeviceTypeMap := make(map[string]struct{})
+
+	for key, remainCoreMap := range prodRemainMap {
+		//  机房裁撤需要忽略预测内、预测外 --story=121848852
+		if req.RequireType == enumor.RequireTypeDissolve || key.PlanType == planType {
+			avlDeviceTypeMap = getAvlDeviceTypeMap(req, key, remainCoreMap, availableTime, obsProject, avlDeviceTypeMap)
+		}
+	}
+	return avlDeviceTypeMap, nil
+}
+
+func getAvlDeviceTypeMap(req *ptypes.GetCvmChargeTypeDeviceTypeReq, key ResPlanPoolKeyV2,
+	remainCoreMap map[string]int64, availableTime AvailableTime, obsProject enumor.ObsProject,
+	avlDeviceTypeMap map[string]struct{}) map[string]struct{} {
+
+	if key.AvailableTime == availableTime && key.ObsProject == obsProject &&
+		key.BkBizID == req.BkBizID && key.RegionID == req.Region {
+		for _, remain := range remainCoreMap {
+			if remain > 0 {
+				avlDeviceTypeMap[key.DeviceType] = struct{}{}
+				break
+			}
+		}
+	}
+	return avlDeviceTypeMap
 }
 
 // getMatchedDeviceTypesFromMgoV2 get matched device types from mongodb.

@@ -78,7 +78,7 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 
 		if resp.Error.Code != 0 {
 			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderID: %s, "+
-				"code: %d, msg: %s", task.SuborderID, resp.Error.Code, resp.Error.Message)
+				"code: %d, msg: %s, crpTraceID: %s", task.SuborderID, resp.Error.Code, resp.Error.Message, resp.TraceId)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
@@ -99,8 +99,8 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	}
 
 	if resp.Error.Code != 0 {
-		return "", fmt.Errorf("cvm return task failed, subOrderId: %s, code: %d, msg: %s", task.SuborderID,
-			resp.Error.Code, resp.Error.Message)
+		return "", fmt.Errorf("cvm return task failed, subOrderId: %s, code: %d, msg: %s, crpTraceID: %s",
+			task.SuborderID, resp.Error.Code, resp.Error.Message, resp.TraceId)
 	}
 
 	if resp.Result.OrderId == "" {

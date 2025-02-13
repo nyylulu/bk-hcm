@@ -81,10 +81,11 @@ type Logics interface {
 	// GetProdResConsumePoolV2 get biz resource consume pool.
 	GetProdResConsumePoolV2(kt *kit.Kit, bkBizIDs []int64, startDay, endDay time.Time) (ResPlanConsumePool, error)
 	// VerifyResPlanDemandV2 verify resource plan demand for subOrders.
-	VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProject enumor.ObsProject, subOrders []ttypes.Suborder) (
+	VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, subOrders []ttypes.Suborder) (
 		[]ptypes.VerifyResPlanDemandElem, error)
 	// VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
-	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error)
+	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, needs []VerifyResPlanElemV2) (
+		[]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
 	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
 	// GetAllDeviceTypeMap get all device type map.

@@ -372,7 +372,7 @@ func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlan
 		return ptypes.ResPlanDemandExpendKey{}, err
 	}
 
-	return ptypes.ResPlanDemandExpendKey{
+	resPlanDemandExpendKey := ptypes.ResPlanDemandExpendKey{
 		BkBizID:       demand.BkBizID,
 		PlanType:      demand.PlanType,
 		AvailableTime: ptypes.NewAvailableMonth(availableYear, availableMonth),
@@ -380,7 +380,13 @@ func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlan
 		CoreType:      deviceTypeMap[demand.DeviceType].CoreType,
 		ObsProject:    demand.ObsProject,
 		RegionID:      demand.RegionID,
-	}, nil
+	}
+	// 机房裁撤需要忽略预测内、预测外 --story=121848852
+	if enumor.IsDissolveObsProjectForResPlan(demand.ObsProject) {
+		resPlanDemandExpendKey.PlanType = ""
+	}
+
+	return resPlanDemandExpendKey, nil
 }
 
 func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime string) *ptypes.ListResPlanDemandItem {
@@ -1600,6 +1606,10 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 			ZoneID:        subOrderInfo.Spec.Zone,
 			DiskType:      subOrderInfo.Spec.DiskType,
 		}
+		// 机房裁撤需要忽略预测内、预测外 --story=121848852
+		if subOrderInfo.RequireType == enumor.RequireTypeDissolve {
+			consumePoolKey.PlanType = ""
+		}
 
 		// 交付的核心数量(消耗预测CRP的核心数)
 		consumeCpuCore := int64(subOrderInfo.DeliveredCore)
@@ -1610,10 +1620,10 @@ func (c *Controller) getApplyOrderConsumePoolMapV2(kt *kit.Kit, subOrders []*tas
 }
 
 // VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
-func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) (
-	[]VerifyResPlanResElem, error) {
+func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType,
+	needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error) {
 
-	prodRemain, prodMaxAvailable, err := c.GetProdResRemainPoolMatch(kt, bkBizID)
+	prodRemain, prodMaxAvailable, err := c.GetProdResRemainPoolMatch(kt, bkBizID, requireType)
 	if err != nil {
 		logs.Errorf("failed to get product resource remain pool match, bkBizID: %d, err: %v, rid: %s",
 			bkBizID, err, kt.Rid)
@@ -1625,14 +1635,14 @@ func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []Ver
 	for i, need := range needs {
 		if need.IsPrePaid {
 			// verify pre paid.
-			result[i], err = c.getPrePaidDemandMatch(kt, prodMaxAvailable, need)
+			result[i], err = c.getPrePaidDemandMatch(kt, requireType, prodMaxAvailable, need)
 			if err != nil {
 				logs.Errorf("failed to loop verify pre paid match, err: %v, need: %+v, rid: %s", err, need, kt.Rid)
 				return nil, err
 			}
 		} else {
 			// verify post paid by hour.
-			result[i], err = c.getPostPaidByHourDemandMatch(kt, prodRemain, need)
+			result[i], err = c.getPostPaidByHourDemandMatch(kt, requireType, prodRemain, need)
 			if err != nil {
 				logs.Errorf("failed to loop verify post paid by hour, err: %v, need: %+v, rid: %s", err, need, kt.Rid)
 				return nil, err
@@ -1650,8 +1660,10 @@ func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []Ver
 // @return prodRemainedPool is the biz in plan and out plan remained resource plan pool.
 // @return prodMaxAvailablePool is the biz in plan and out plan remained max available resource plan pool.
 // NOTE: maxAvailableInPlanPool = totalInPlan * 120% - consumeInPlan, because the special rules of the crp system.
-func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64) (ResPlanPoolMatch, ResPlanPoolMatch, error) {
-	prodPlanPool, prodConsumePool, err := c.getCurrMonthPlanConsumePool(kt, bkBizID)
+func (c *Controller) GetProdResRemainPoolMatch(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType) (
+	ResPlanPoolMatch, ResPlanPoolMatch, error) {
+
+	prodPlanPool, prodConsumePool, err := c.getCurrMonthPlanConsumePool(kt, bkBizID, requireType)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1721,7 +1733,7 @@ func deepCopyPlanPool(src ResPlanPoolMatch) ResPlanPoolMatch {
 	return dst
 }
 
-func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
+func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType) (
 	ResPlanPoolMatch, ResPlanConsumePool, error) {
 
 	nowDemandYear, nowDemandMonth, err := c.demandTime.GetDemandYearMonth(kt, time.Now())
@@ -1733,7 +1745,7 @@ func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
 	endDay := time.Date(nowDemandYear, nowDemandMonth+1, 1, 0, 0, 0, 0, time.UTC)
 
 	// get biz resource plan pool.
-	prodPlanPool, err := c.GetProdResPlanPoolMatch(kt, bkBizID, startDay, endDay)
+	prodPlanPool, err := c.GetProdResPlanPoolMatch(kt, bkBizID, startDay, endDay, requireType)
 	if err != nil {
 		logs.Errorf("failed to get biz resource plan pool match, bkBizID: %d, err: %v, rid: %s", bkBizID, err, kt.Rid)
 		return nil, nil, err
@@ -1755,8 +1767,8 @@ func (c *Controller) getCurrMonthPlanConsumePool(kt *kit.Kit, bkBizID int64) (
 }
 
 // GetProdResPlanPoolMatch get prod resource plan pool match.
-func (c *Controller) GetProdResPlanPoolMatch(kt *kit.Kit, bkBizID int64, startDay, endDay time.Time) (
-	ResPlanPoolMatch, error) {
+func (c *Controller) GetProdResPlanPoolMatch(kt *kit.Kit, bkBizID int64, startDay, endDay time.Time,
+	requireType enumor.RequireType) (ResPlanPoolMatch, error) {
 
 	// get biz all unlocked demand details.
 	demands, err := c.listAllPlanDemandsByBkBizID(kt, bkBizID, startDay, endDay)
@@ -1806,13 +1818,18 @@ func (c *Controller) GetProdResPlanPoolMatch(kt *kit.Kit, bkBizID int64, startDa
 			ZoneID:        demand.ZoneID,
 			DiskType:      demand.DiskType,
 		}
+		// 机房裁撤需要忽略预测内、预测外 --story=121848852
+		if requireType == enumor.RequireTypeDissolve {
+			key.PlanType = ""
+		}
 		if _, ok := pool[key]; !ok {
 			pool[key] = make(map[string]int64, 0)
 		}
 		pool[key][demand.ID] += cvt.PtrToVal(demand.CpuCore)
 	}
 	// 记录日志方便排查问题
-	logs.Infof("get res plan demand pool match success, bkBizID: %d, pool: %+v, rid: %s", bkBizID, pool, kt.Rid)
+	logs.Infof("get res plan demand pool match success, bkBizID: %d, requireType: %d, startDay: %+v, endDay: %+v, "+
+		"pool: %+v, rid: %s", bkBizID, requireType, startDay, endDay, pool, kt.Rid)
 	return pool, nil
 }
 
@@ -1848,8 +1865,8 @@ func (c *Controller) compactResPlanPoolMatch(kt *kit.Kit, pool1 ResPlanPoolMatch
 }
 
 // getPrePaidDemandMatch get prepaid demand match.
-func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlanPoolMatch, need VerifyResPlanElemV2) (
-	VerifyResPlanResElem, error) {
+func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, requireType enumor.RequireType,
+	prodMaxAvailable ResPlanPoolMatch, need VerifyResPlanElemV2) (VerifyResPlanResElem, error) {
 
 	matchDemandIDs := make([]string, 0)
 	// 检查[预测内]是否有余量
@@ -1861,9 +1878,8 @@ func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlan
 			break
 		}
 
-		if key.PlanType != enumor.PlanTypeCodeInPlan || key.AvailableTime != need.AvailableTime ||
-			key.ObsProject != need.ObsProject || key.BkBizID != need.BkBizID || key.DemandClass != need.DemandClass ||
-			key.RegionID != need.RegionID || key.DiskType != need.DiskType {
+		isSkip := isSkipDemandMatch(requireType, key, need, enumor.PlanTypeCodeInPlan)
+		if isSkip {
 			continue
 		}
 
@@ -1903,8 +1919,8 @@ func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, prodMaxAvailable ResPlan
 }
 
 // getPostPaidByHourDemandMatch get post paid by hour demand match.
-func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPlanPoolMatch, need VerifyResPlanElemV2) (
-	VerifyResPlanResElem, error) {
+func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, requireType enumor.RequireType,
+	prodRemain ResPlanPoolMatch, need VerifyResPlanElemV2) (VerifyResPlanResElem, error) {
 
 	matchDemandIDs := make([]string, 0)
 	allResPlanCore := int64(0)
@@ -1916,9 +1932,8 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 				break
 			}
 
-			if key.PlanType != planType || key.AvailableTime != need.AvailableTime ||
-				key.ObsProject != need.ObsProject || key.BkBizID != need.BkBizID ||
-				key.DemandClass != need.DemandClass || key.RegionID != need.RegionID || key.DiskType != need.DiskType {
+			isSkip := isSkipDemandMatch(requireType, key, need, planType)
+			if isSkip {
 				continue
 			}
 
@@ -1943,9 +1958,9 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 				prodRemain[key][demandID] -= canConsume
 				matchDemandIDs = append(matchDemandIDs, demandID)
 			}
-			logs.Infof("get post paid by hour match loop, key: %+v, remainCpuCoreMap: %+v, prodRemain[key]: %+v, "+
-				"needCpuCore: %f, need: %+v, rid: %s", key, remainCpuCoreMap, prodRemain[key],
-				needCpuCore, need, kt.Rid)
+			logs.Infof("get post paid by hour match loop, requireType: %d, allResPlanCore: %d, key: %+v, "+
+				"remainCpuCoreMap: %+v, prodRemain[key]: %+v, needCpuCore: %d, need: %+v, rid: %s", requireType,
+				allResPlanCore, key, remainCpuCoreMap, prodRemain[key], needCpuCore, need, kt.Rid)
 		}
 	}
 
@@ -1957,6 +1972,32 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, prodRemain ResPla
 	}
 
 	return VerifyResPlanResElem{VerifyResult: enumor.VerifyResPlanRstPass, MatchDemandIDs: matchDemandIDs}, nil
+}
+
+// isSkipDemandMatch 是否跳过不进行预测匹配
+func isSkipDemandMatch(requireType enumor.RequireType, key ResPlanPoolKeyV2, need VerifyResPlanElemV2,
+	planType enumor.PlanTypeCode) bool {
+
+	// 机房裁撤支持预测内、预测外都可以选择包年包月，可以忽略预测内、预测外 --story=121848852
+	if requireType == enumor.RequireTypeDissolve {
+		return isDiffDemandMatch(key, need)
+	} else {
+		if key.PlanType != planType {
+			return true
+		}
+		return isDiffDemandMatch(key, need)
+	}
+}
+
+// isDiffDemandMatch 比较预测单是否有不相同的参数
+func isDiffDemandMatch(key ResPlanPoolKeyV2, need VerifyResPlanElemV2) bool {
+	if key.AvailableTime != need.AvailableTime || key.ObsProject != need.ObsProject ||
+		key.BkBizID != need.BkBizID || key.DemandClass != need.DemandClass ||
+		key.RegionID != need.RegionID || key.DiskType != need.DiskType {
+
+		return true
+	}
+	return false
 }
 
 // getMatchedPlanDemandIDs get matched plan demand ids.
@@ -1991,7 +2032,7 @@ func (c *Controller) getMatchedPlanDemandIDs(kt *kit.Kit, bkBizID int64, subOrde
 	})
 
 	// call verify resource plan demands to verify each cvm demands.
-	ret, err := c.VerifyProdDemandsV2(kt, bkBizID, verifySlice)
+	ret, err := c.VerifyProdDemandsV2(kt, bkBizID, subOrder.RequireType, verifySlice)
 	if err != nil {
 		logs.Errorf("failed to get matched resource plan demand ids, err: %v, bkBizID: %d, subOrder: %+v, rid: %s",
 			err, bkBizID, cvt.PtrToVal(subOrder), kt.Rid)

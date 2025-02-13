@@ -21,6 +21,7 @@ package enumor
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"time"
 
@@ -366,6 +367,11 @@ func getDissolveObsProjectForResPlan() []ObsProject {
 	projects = append(projects, ObsProject(nextPrefixYear+"机房裁撤"))
 
 	return projects
+}
+
+// IsDissolveObsProjectForResPlan is dissolve obs project contains.
+func IsDissolveObsProjectForResPlan(obsProject ObsProject) bool {
+	return slices.Contains(getDissolveObsProjectForResPlan(), obsProject)
 }
 
 // RequireType is resource apply require type.

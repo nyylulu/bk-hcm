@@ -228,7 +228,9 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 		return fmt.Errorf("failed to generate cvm, for get zone capacity err: %v", err)
 	}
 
-	logs.Infof("zone capacity: %+v, order id: %s, rid: %s", zoneCapacity, order.SubOrderId, kt.Rid)
+	logs.Infof("generateCVMSeparate campus start, subOrderID: %s, createdTotalCount: %d, zoneCapacity: %+v, "+
+		"zoneCreatedCount: %v, availZones: %+v, rid: %s", order.SubOrderId, createdTotalCount, zoneCapacity,
+		zoneCreatedCount, cvt.PtrToSlice(availZones), kt.Rid)
 
 	// 4. for each zone, calculate replicas and launch cvm
 	mutex := sync.Mutex{}
@@ -264,6 +266,10 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 				maxCount))
 		}
 
+		logs.Infof("generateCVMSeparate campus loop, subOrderID: %s, maxCount: %d, createdTotalCount: %d, "+
+			"zoneCapacity: %+v, zoneCreatedCount: %v, zoneInfo: %+v, availZonesNum: %d, replicas: %d, rid: %s",
+			order.SubOrderId, maxCount, createdTotalCount, zoneCapacity, zoneCreatedCount, cvt.PtrToVal(zone),
+			len(availZones), replicas, kt.Rid)
 		if replicas <= 0 {
 			continue
 		}
@@ -280,8 +286,8 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 					order.SubOrderId, err, zoneId, replicas, kt.Rid)
 				appendError(err)
 			} else {
-				logs.Infof("success to launch cvm, zone: %s, replicas: %d, subOrderID: %s, generate id: %d, rid: %s",
-					zoneId, replicas, order.SubOrderId, genId, kt.Rid)
+				logs.Infof("success to launch cvm, subOrderID: %s, zone: %s, replicas: %d, generate id: %d, rid: %s",
+					order.SubOrderId, zoneId, replicas, genId, kt.Rid)
 				appendGenRecord(genId)
 			}
 		}(order, zone.Zone, replicas)
