@@ -55,6 +55,9 @@ type Authorizer interface {
 	GetPermissionToApply(kt *kit.Kit, res ...meta.ResourceAttribute) (*meta.IamPermission, error)
 	// GetApplyPermUrl get iam apply permission url.
 	GetApplyPermUrl(kt *kit.Kit, input *meta.IamPermission) (string, error)
+	// AuthorizeByUsers authorize by users.
+	AuthorizeByUsers(kt *kit.Kit, userNames []string, resources ...meta.ResourceAttribute) (
+		map[string]asproto.AuthorizeUserResp, error)
 }
 
 // NewAuthorizer create an authorizer for iam authorize related operation.
@@ -262,5 +265,42 @@ func (a authorizer) GetPermissionToApply(kt *kit.Kit, res ...meta.ResourceAttrib
 	}
 
 	return permission, nil
+}
 
+// AuthorizeByUsers if user has permission to the resources, returns auth status per resource and for all.
+func (a authorizer) AuthorizeByUsers(kt *kit.Kit, userNames []string, resources ...meta.ResourceAttribute) (
+	map[string]asproto.AuthorizeUserResp, error) {
+
+	authUserMap := make(map[string]asproto.AuthorizeUserResp)
+	for _, userName := range userNames {
+		if len(userName) == 0 {
+			continue
+		}
+
+		userInfo := &meta.UserInfo{UserName: userName}
+		req := &asproto.AuthorizeBatchReq{
+			User:      userInfo,
+			Resources: resources,
+		}
+
+		decisions, err := a.authClient.AuthorizeBatch(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("authorize failed, req: %#v, err: %v, rid: %s", req, err, kt.Rid)
+			return nil, err
+		}
+
+		authorized := true
+		for _, decision := range decisions {
+			if !decision.Authorized {
+				authorized = false
+				break
+			}
+		}
+		authUserMap[userName] = asproto.AuthorizeUserResp{
+			IsAuth: authorized,
+			Data:   decisions,
+		}
+	}
+
+	return authUserMap, nil
 }

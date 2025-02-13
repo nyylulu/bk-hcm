@@ -487,9 +487,10 @@ type ApplyAuditItsm struct {
 
 // ApplyAuditItsmStep resource apply ticket current audit step
 type ApplyAuditItsmStep struct {
-	Name       string `json:"name"`
-	Processors string `json:"processors"`
-	StateId    int64  `json:"state_id"`
+	Name           string          `json:"name"`
+	Processors     []string        `json:"processors"`
+	StateId        int64           `json:"state_id"`
+	ProcessorsAuth map[string]bool `json:"processors_auth"`
 }
 
 // ApplyAuditItsmLog resource apply ticket audit log

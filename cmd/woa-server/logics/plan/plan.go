@@ -124,7 +124,8 @@ const (
 
 // New creates a resource plan ticket controller instance.
 func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
-	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (*Controller, error) {
+	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (
+	*Controller, error) {
 
 	var itsmFlowCfg cc.ItsmFlow
 	for _, itsmFlow := range cc.WoaServer().ItsmFlows {

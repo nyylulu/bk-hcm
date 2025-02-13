@@ -488,7 +488,7 @@ func (s *service) GetResPlanTicketAudit(cts *rest.Contexts) (interface{}, error)
 		return nil, err
 	}
 
-	return s.getResPlanTicketAudit(cts.Kit, ticketID)
+	return s.getResPlanTicketAudit(cts.Kit, ticketID, constant.UnassignedBiz)
 }
 
 // GetBizResPlanTicketAudit get biz resource plan ticket audit.
@@ -509,10 +509,12 @@ func (s *service) GetBizResPlanTicketAudit(cts *rest.Contexts) (interface{}, err
 		return nil, err
 	}
 
-	return s.getResPlanTicketAudit(cts.Kit, ticketID)
+	return s.getResPlanTicketAudit(cts.Kit, ticketID, bkBizID)
 }
 
-func (s *service) getResPlanTicketAudit(kt *kit.Kit, ticketID string) (*ptypes.GetResPlanTicketAuditResp, error) {
+func (s *service) getResPlanTicketAudit(kt *kit.Kit, ticketID string, bkBizID int64) (
+	*ptypes.GetResPlanTicketAuditResp, error) {
+
 	resp := new(ptypes.GetResPlanTicketAuditResp)
 	resp.TicketID = ticketID
 
@@ -523,7 +525,7 @@ func (s *service) getResPlanTicketAudit(kt *kit.Kit, ticketID string) (*ptypes.G
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
-	itsmAudit, crpAudit, err := s.planController.GetItsmAndCrpAuditStatus(kt, statusInfo)
+	itsmAudit, crpAudit, err := s.planController.GetItsmAndCrpAuditStatus(kt, bkBizID, statusInfo)
 	if err != nil {
 		logs.Errorf("get itsm and crp audit status failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)

@@ -27,6 +27,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/config"
 	greenchannel "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
@@ -170,12 +171,13 @@ type scheduler struct {
 	rsLogics     rollingserver.Logics
 	gcLogics     greenchannel.Logics
 	crpCli       cvmapi.CVMClientInterface
+	bizLogic     biz.Logics
 }
 
 // New creates a scheduler
 func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
-	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics) (
-	*scheduler, error) {
+	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics,
+	bizLogic biz.Logics) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -214,6 +216,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 		configLogics: config.New(thirdCli),
 		rsLogics:     rsLogics,
 		gcLogics:     gcLogics,
+		bizLogic:     bizLogic,
 	}
 
 	return scheduler, nil
@@ -345,7 +348,7 @@ func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq)
 }
 
 // GetApplyAuditItsm gets resource apply ticket audit info
-func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (
+func (s *scheduler) GetApplyAuditItsm(kt *kit.Kit, param *types.GetApplyAuditItsmReq) (
 	*types.GetApplyAuditItsmRst, error) {
 
 	filter := mapstr.MapStr{
@@ -356,42 +359,53 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 		filter["bk_biz_id"] = param.BkBizID
 	}
 
-	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if inst.ItsmTicketId == "" {
-		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty, rid: %s", kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty, rid: %s", kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty")
 	}
 
-	statusResp, err := s.itsm.GetTicketStatus(kit, inst.ItsmTicketId)
+	statusResp, err := s.itsm.GetTicketStatus(kt, inst.ItsmTicketId)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if statusResp.Code != 0 {
 		logs.Errorf("failed to get apply ticket audit info, code: %d, msg: %s, rid: %s", statusResp.Code,
-			statusResp.ErrMsg, kit.Rid)
+			statusResp.ErrMsg, kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, code: %d, msg: %s", statusResp.Code,
 			statusResp.ErrMsg)
 	}
 
+	rst, err := s.getItsmApplyAuditRst(kt, param, statusResp, inst)
+	if err != nil {
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+func (s *scheduler) getItsmApplyAuditRst(kt *kit.Kit, param *types.GetApplyAuditItsmReq,
+	statusResp *itsm.GetTicketStatusResp, inst *types.ApplyTicket) (*types.GetApplyAuditItsmRst, error) {
+
 	status := statusResp.Data.CurrentStatus
 	link := statusResp.Data.TicketUrl
 
-	logResp, err := s.itsm.GetTicketLog(kit, inst.ItsmTicketId)
+	logResp, err := s.itsm.GetTicketLog(kt, inst.ItsmTicketId)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if logResp.Code != 0 {
 		logs.Errorf("failed to get apply ticket audit info, code: %d, msg: %s, rid: %s", logResp.Code, logResp.ErrMsg,
-			kit.Rid)
+			kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, code: %d, msg: %s", logResp.Code, logResp.ErrMsg)
 	}
 
@@ -407,10 +421,18 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 	}
 
 	for _, step := range statusResp.Data.CurrentSteps {
+		// 校验审批人是否有该业务的访问权限
+		processorUsers := strings.Split(step.Processors, ",")
+		processorAuth, err := s.bizLogic.BatchCheckUserBizAccessAuth(kt, param.BkBizID, processorUsers)
+		if err != nil {
+			return nil, err
+		}
+
 		rst.CurrentSteps = append(rst.CurrentSteps, &types.ApplyAuditItsmStep{
-			Name:       step.Name,
-			Processors: step.Processors,
-			StateId:    step.StateId,
+			Name:           step.Name,
+			Processors:     processorUsers,
+			StateId:        step.StateId,
+			ProcessorsAuth: processorAuth,
 		})
 	}
 	for _, log := range logResp.Data.Logs {
@@ -421,7 +443,6 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 			Source:    log.Source,
 		})
 	}
-
 	return rst, nil
 }
 

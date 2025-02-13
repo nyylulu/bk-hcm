@@ -100,3 +100,9 @@ type GetNoAuthSkipUrlResp struct {
 	rest.BaseResp `json:",inline"`
 	Data          string `json:"data"`
 }
+
+// AuthorizeUserResp authorize user response.
+type AuthorizeUserResp struct {
+	IsAuth bool            `json:"is_auth"`
+	Data   []meta.Decision `json:"data"`
+}

@@ -28,7 +28,10 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit
           "name": "总监审批",
           "processors": [
             "zhangsan"
-          ]
+          ],
+          "processors_auth": {
+            "zhangsan": true
+          }
         }
       ],
       "logs": [
@@ -57,7 +60,11 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit
           "processors": [
             "lisi",
             "wangwu"
-          ]
+          ],
+          "processors_auth": {
+            "lisi": true,
+            "wangwu": false
+          }
         }
       ],
       "logs": [
@@ -115,11 +122,12 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit
 
 #### data.itsm_audit.current_steps[n]
 
-| 参数名称       | 参数类型         | 描述    |
-|------------|--------------|-------|
-| state_id   | int          | 步骤ID  |
-| name       | string       | 步骤名称  |
-| processors | string array | 审批人列表 |
+| 参数名称         | 参数类型      | 描述           |
+|-----------------|--------------|---------------|
+| state_id        | int          | 步骤ID         |
+| name            | string       | 步骤名称        |
+| processors      | string array | 审批人列表      |
+| processors_auth | object       | 审批人是否有权限 |
 
 #### data.itsm_audit.logs[n]
 
@@ -131,11 +139,12 @@ GET /api/v1/woa/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit
 
 #### data.crp_audit.current_steps[n]
 
-| 参数名称       | 参数类型         | 描述    |
-|------------|--------------|-------|
-| state_id   | string       | 步骤ID  |
-| name       | string       | 步骤名称  |
-| processors | string array | 审批人列表 |
+| 参数名称         | 参数类型       | 描述          |
+|-----------------|--------------|---------------|
+| state_id        | string       | 步骤ID         |
+| name            | string       | 步骤名称        |
+| processors      | string array | 审批人列表      |
+| processors_auth | object       | 审批人是否有权限 |
 
 #### data.crp_audit.logs[n]
 

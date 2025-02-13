@@ -215,7 +215,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		}
 
 		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
-			cc.WoaServer().ClientConfig, planCtrl)
+			cc.WoaServer().ClientConfig, planCtrl, bizLogic)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err

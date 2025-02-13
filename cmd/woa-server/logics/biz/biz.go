@@ -107,3 +107,22 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, er
 
 	return rst, nil
 }
+
+// BatchCheckUserBizAccessAuth batch check user biz access auth.
+func (l *logics) BatchCheckUserBizAccessAuth(kt *kit.Kit, bkBizID int64, userNames []string) (map[string]bool, error) {
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	userAuthMap, err := l.authorizer.AuthorizeByUsers(kt, userNames, authRes)
+	if err != nil {
+		logs.Errorf("failed to check authorize by users, bkBizID: %d, err: %v, userNames: %v, rid: %s",
+			bkBizID, err, userNames, kt.Rid)
+		return nil, err
+	}
+
+	processorAuth := make(map[string]bool)
+	for _, userName := range userNames {
+		if authInfo, ok := userAuthMap[userName]; ok {
+			processorAuth[userName] = authInfo.IsAuth
+		}
+	}
+	return processorAuth, nil
+}

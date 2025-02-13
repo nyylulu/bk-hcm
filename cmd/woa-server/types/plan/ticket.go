@@ -443,9 +443,10 @@ type GetRPTicketCrpAudit struct {
 
 // ItsmAuditStep is itsm audit step.
 type ItsmAuditStep struct {
-	StateID    int64    `json:"state_id"`
-	Name       string   `json:"name"`
-	Processors []string `json:"processors"`
+	StateID        int64           `json:"state_id"`
+	Name           string          `json:"name"`
+	Processors     []string        `json:"processors"`
+	ProcessorsAuth map[string]bool `json:"processors_auth"`
 }
 
 // ItsmAuditLog is itsm audit log.
@@ -457,9 +458,10 @@ type ItsmAuditLog struct {
 
 // CrpAuditStep is crp audit step.
 type CrpAuditStep struct {
-	StateID    string   `json:"state_id"`
-	Name       string   `json:"name"`
-	Processors []string `json:"processors"`
+	StateID        string          `json:"state_id"`
+	Name           string          `json:"name"`
+	Processors     []string        `json:"processors"`
+	ProcessorsAuth map[string]bool `json:"processors_auth"`
 }
 
 // CrpAuditLog is crp audit log.
