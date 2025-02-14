@@ -22,7 +22,7 @@ const { t } = useI18n();
           <bk-button
             theme="primary"
             text
-            @click="routerAction.open({ path: '/#/business/resource-plan', query: { [GLOBAL_BIZS_KEY]: bkBizId } })"
+            @click="routerAction.open({ path: '/business/resource-plan', query: { [GLOBAL_BIZS_KEY]: bkBizId } })"
           >
             {{ t('查询当前预测需求') }}
           </bk-button>
@@ -32,9 +32,9 @@ const { t } = useI18n();
           <bk-button
             theme="primary"
             text
-            @click="routerAction.open({ path: '/#/business/resource-plan/add', query: { [GLOBAL_BIZS_KEY]: bkBizId } })"
+            @click="routerAction.open({ path: '/business/resource-plan/add', query: { [GLOBAL_BIZS_KEY]: bkBizId } })"
           >
-            {{ t('去创建提预测单') }}
+            {{ t('去新增资源预测') }}
           </bk-button>
         </li>
       </ul>
