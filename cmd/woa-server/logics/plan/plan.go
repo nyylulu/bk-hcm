@@ -361,26 +361,22 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-
 	if resp.Error.Code != 0 {
 		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
-
 	if resp.Result == nil {
 		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return errors.New("failed to query crp plan order, for result is empty")
 	}
-
 	planItem, ok := resp.Result[ticket.CrpSn]
 	if !ok {
 		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSn)
 	}
-
 	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
 	if planItem.Code != 1 && planItem.Code != 2 {
 		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
@@ -405,7 +401,6 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	default:
 		return c.checkTicketTimeout(kt, ticket)
 	}
-
 	if err := c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -428,7 +423,6 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-
 	return nil
 }
 

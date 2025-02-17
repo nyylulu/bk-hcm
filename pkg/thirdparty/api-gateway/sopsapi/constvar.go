@@ -56,6 +56,10 @@ const (
 	IdleCheckWindows int64 = 10103
 	// IdleCheckWindowsTaskNamePrefix 空闲检查-Windows-新建任务名称的前缀
 	IdleCheckWindowsTaskNamePrefix = "【回收接口调用】【SA】【Windows】空闲检查-%s"
+	// IdleCheckTaskIdentifier 空闲检查任务标识
+	IdleCheckTaskIdentifier = "空闲检查"
+	// IdleCheckJobInstURLField 空闲检查Job链接的字段名
+	IdleCheckJobInstURLField = "job_inst_url"
 	// RecycleOuterIPLinux 回收外网IP-Linux
 	RecycleOuterIPLinux int64 = 10206
 	// RecycleOuterIPLinuxTaskNamePrefix 回收外网IP-Linux-新建任务名称的前缀

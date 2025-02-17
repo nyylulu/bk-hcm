@@ -696,7 +696,7 @@ func (m *Matcher) CheckSopsUpdate(bkBizID int64, info *types.DeviceInfo, jobUrl 
 		return fmt.Errorf("can not get jobId by jobIDStr, jobIDStr: %s", jobIDStr)
 	}
 
-	if err := sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
+	if _, err = sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
 		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, jobID: %d, "+
 			"jobUrl: %s, bkBizID: %d, err: %v", info.Ip, jobId, jobUrl, bkBizID, err)
 		// update init record

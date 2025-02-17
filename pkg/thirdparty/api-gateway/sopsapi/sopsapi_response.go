@@ -13,6 +13,8 @@
 // Package sopsapi sops api
 package sopsapi
 
+import "encoding/json"
+
 // RespMeta sops response meta info
 type RespMeta struct {
 	Result  bool   `json:"result" mapstructure:"result"`
@@ -52,7 +54,9 @@ type GetTaskStatusRst struct {
 	// ID 节点ID
 	ID string `json:"id"`
 	// State (CREATED:未执行 RUNNING:执行中 FAILED:失败 SUSPENDED:暂停 REVOKED:已终止 FINISHED:已完成)
-	State    string                            `json:"state"`
+	State string `json:"state"`
+	// Name 节点名称
+	Name     string                            `json:"name"`
 	Children map[string]GetTaskNodeChildrenRst `json:"children"`
 }
 
@@ -76,6 +80,9 @@ type GetTaskNodeChildrenRst struct {
 	StartTime string `json:"start_time"`
 	// FinishTime 最后一次执行结束时间
 	FinishTime string `json:"finish_time"`
+	// Name 节点名称
+	Name     string                            `json:"name"`
+	Children map[string]GetTaskNodeChildrenRst `json:"children"`
 }
 
 // GetTaskNodeDetailResp get sops task node detail response
@@ -123,10 +130,10 @@ type GetTaskListRst struct {
 
 // TaskNodeDetailOutput task node detail output
 type TaskNodeDetailOutput struct {
-	Name   string `json:"name"`
-	Value  string `json:"value"`
-	Key    string `json:"key"`
-	Preset bool   `json:"preset"`
+	Name   string          `json:"name"`
+	Value  json.RawMessage `json:"value"`
+	Key    string          `json:"key"`
+	Preset bool            `json:"preset"`
 }
 
 // GetTaskNodeDataResp get sops task node data response
@@ -140,7 +147,7 @@ type GetTaskNodeDataRst struct {
 	// Outputs 输出参数
 	Outputs []TaskNodeDetailOutput `json:"outputs"`
 	// ExData 节点执行失败详情，json字符串或者HTML字符串、普通字符串
-	ExData string `json:"ex_data"`
+	ExData json.RawMessage `json:"ex_data"`
 }
 
 // GetTaskDetailDataResp get sops task detail data response

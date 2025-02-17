@@ -143,7 +143,7 @@ func (r *Recycler) checkConfCheckStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert conf check biz id %s to int, err: %v", task.ConfCheckBizID, err)
 	}
 
-	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+	if _, err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
 		logs.Errorf("sops:process:check:config check status, host %s failed to conf check, job id: %d, bkBizID: %d, "+
 			"err: %v", ip, taskID, bkBizID, err)
 

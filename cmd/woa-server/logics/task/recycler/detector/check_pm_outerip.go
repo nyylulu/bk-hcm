@@ -224,7 +224,7 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 2. get job status
-	if err = sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
+	if _, err = sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
 			logs.Infof("sops:process:check:host %s ping death, skip recycle outer ip process step, jobId: %d, "+

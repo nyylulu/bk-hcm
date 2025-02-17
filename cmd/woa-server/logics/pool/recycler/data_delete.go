@@ -140,7 +140,7 @@ func (r *Recycler) checkDataDeleteStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert data delete biz id %s to int, err: %v", task.DataDeleteBizID, err)
 	}
 
-	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+	if _, err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
 		logs.Infof("host %s failed to data delete, job id: %d, bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
 
 		errUpdate := r.updateTaskDataDeleteStatus(task, "", "", "", err.Error(), table.RecallStatusDataDeleteFailed)
