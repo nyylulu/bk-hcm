@@ -2,11 +2,10 @@ import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessGlobalStore } from '@/store/business-global';
-import { useUserStore } from '@/store';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-import HcmSearchOrg from '@/components/search/org.vue';
+// import HcmSearchOrg from '@/components/search/org.vue';
 import HcmSearchBusiness from '@/components/search/business.vue';
 import HcmSearchUser from '@/components/search/user.vue';
 import CurrentDialog from '../current-dialog';
@@ -33,7 +32,6 @@ export default defineComponent({
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
     const businessGlobalStore = useBusinessGlobalStore();
-    const userStore = useUserStore();
 
     const tableColumns = [
       {
@@ -69,7 +67,7 @@ export default defineComponent({
       </>
     );
     const isLoading = ref(false);
-    const organizations = ref([]);
+    // const organizations = ref([]);
     const orgChecked = ref([]);
     const operators = ref([]);
     const bkBizIds = ref([]);
@@ -82,7 +80,7 @@ export default defineComponent({
 
     const currentRowData = ref<IDissolve>();
 
-    const orgRef = ref(null);
+    // const orgRef = ref(null);
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
@@ -151,9 +149,9 @@ export default defineComponent({
     };
 
     const handleReset = () => {
-      orgRef.value.clear();
+      // orgRef.value.clear();
       bkBizIds.value = [];
-      operators.value = [userStore.username];
+      operators.value = [];
     };
 
     const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
@@ -165,14 +163,14 @@ export default defineComponent({
       };
     };
 
-    const firstLevelDataFilter = (data: IDepartmentWithExtras[]) => {
-      // 正式环境第一层级只保留指定id的节点
-      const found = data.filter((item) => item.id === 2874);
-      if (found.length) {
-        return found;
-      }
-      return data;
-    };
+    // const firstLevelDataFilter = (data: IDepartmentWithExtras[]) => {
+    //   // 正式环境第一层级只保留指定id的节点
+    //   const found = data.filter((item) => item.id === 2874);
+    //   if (found.length) {
+    //     return found;
+    //   }
+    //   return data;
+    // };
 
     const handleShowOriginDialog = (bkBizNames: string[], row: IDissolve) => {
       originDialogShow.value = true;
@@ -189,7 +187,7 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          <span class={cssModule['search-label']}>{t('组织')}：</span>
+          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
           <HcmSearchOrg
             ref={orgRef}
             class={cssModule['search-item']}
@@ -200,7 +198,7 @@ export default defineComponent({
             }}
             v-model={organizations.value}
             v-model:checked={orgChecked.value}
-          />
+          /> */}
           <span class={cssModule['search-label']}>{t('业务')}：</span>
           <HcmSearchBusiness
             class={cssModule['search-item']}
