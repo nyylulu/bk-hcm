@@ -33,6 +33,7 @@ data:
         keyFile:
         caFile:
         password:
+    bkHcmUrl: {{ .Values.bkHCMUrl }}
     useMongo: {{ .Values.useMongo }}
     mongodb:
       {{- toYaml .Values.mongodb | nindent 6 }}
@@ -70,6 +71,8 @@ data:
       {{- toYaml .Values.dvm | nindent 6 }}
     bkchat:
       {{- toYaml .Values.bkchat | nindent 6 }}
+    cmsi:
+      {{- toYaml .Values.cmsi | nindent 6 }}    
     itsm:
       {{- toYaml .Values.itsm | nindent 6 }}
     itsmFlows:

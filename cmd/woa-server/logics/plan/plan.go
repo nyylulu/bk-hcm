@@ -46,6 +46,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
@@ -94,19 +95,22 @@ type Logics interface {
 
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
-	dao            dao.Set
-	sd             serviced.State
-	client         *client.ClientSet
-	esbCli         esb.Client
-	itsmCli        itsm.Client
-	itsmFlow       cc.ItsmFlow
-	crpAuditNode   cc.StateNode
-	crpCli         cvmapi.CVMClientInterface
-	bizLogics      biz.Logics
-	workQueue      *UniQueue
-	deviceTypesMap *DeviceTypesMap
-	demandTime     demandtime.DemandTime
-	ctx            context.Context
+	resPlanCfg   cc.ResPlan
+	dao          dao.Set
+	sd           serviced.State
+	client       *client.ClientSet
+	bkHcmURL       string
+	CmsiClient   cmsi.Client
+	esbCli       esb.Client
+	itsmCli      itsm.Client
+	itsmFlow     cc.ItsmFlow
+	crpAuditNode cc.StateNode
+	crpCli       cvmapi.CVMClientInterface
+	bizLogics    biz.Logics
+	workQueue    *UniQueue
+    deviceTypesMap *DeviceTypesMap
+	demandTime   demandtime.DemandTime
+	ctx          context.Context
 }
 
 const (
@@ -123,9 +127,8 @@ const (
 )
 
 // New creates a resource plan ticket controller instance.
-func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
-	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (
-	*Controller, error) {
+func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.Client, itsmCli itsm.Client,
+	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (*Controller, error) {
 
 	var itsmFlowCfg cc.ItsmFlow
 	for _, itsmFlow := range cc.WoaServer().ItsmFlows {
@@ -143,19 +146,22 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 	}
 
 	ctrl := &Controller{
-		dao:            dao,
-		sd:             sd,
-		client:         client,
-		esbCli:         esbCli,
-		itsmCli:        itsmCli,
-		itsmFlow:       itsmFlowCfg,
-		crpAuditNode:   crpAuditNode,
-		crpCli:         crpCli,
-		bizLogics:      bizLogic,
-		workQueue:      NewUniQueue(),
+		resPlanCfg:   cc.WoaServer().ResPlan,
+		dao:          dao,
+		sd:           sd,
+		client:       client,
+		bkHcmURL:       cc.WoaServer().BkHcmURL,
+		CmsiClient:   cmsiCli,
+		esbCli:       esbCli,
+		itsmCli:      itsmCli,
+		itsmFlow:     itsmFlowCfg,
+		crpAuditNode: crpAuditNode,
+		crpCli:       crpCli,
+		bizLogics:    bizLogic,
+        workQueue:      NewUniQueue(),
 		deviceTypesMap: NewDeviceTypesMap(dao),
-		demandTime:     demandtime.NewDemandTimeFromTable(client),
-		ctx:            context.Background(),
+		demandTime:   demandtime.NewDemandTimeFromTable(client),
+		ctx:          context.Background(),
 	}
 
 	go ctrl.Run()
@@ -204,7 +210,7 @@ func (c *Controller) Run() {
 
 	// 每月最后7天，每天下午18:00计算当月罚金分摊比例并推送到CRP
 	go func() {
-		if !cc.WoaServer().ResPlan.ReportPenaltyRatio {
+		if !c.resPlanCfg.ReportPenaltyRatio {
 			return
 		}
 
@@ -215,6 +221,21 @@ func (c *Controller) Run() {
 		}()
 
 		c.calcAndReportPenaltyRatioToCRP(c.ctx)
+	}()
+
+	// 预测到期提醒通知
+	go func() {
+		if !c.resPlanCfg.ExpireNotification.Enable {
+			return
+		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				logs.Errorf("%s: panic: %v\n%s", constant.ResPlanExpireNotificationPushFailed, r, debug.Stack())
+			}
+		}()
+
+		c.pushExpireNotificationsRegular(c.ctx)
 	}()
 
 	select {

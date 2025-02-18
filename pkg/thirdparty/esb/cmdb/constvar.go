@@ -21,3 +21,8 @@ const (
 	// DftModuleRecycle "待回收"模块
 	DftModuleRecycle int = 3
 )
+
+const (
+	// BusinessSearchMaxLimit 业务搜索接口最大限制
+	BusinessSearchMaxLimit int = 200
+)

@@ -104,3 +104,31 @@ func (s *service) CalcAndPushPenaltyRatio(cts *rest.Contexts) (interface{}, erro
 
 	return nil, nil
 }
+
+// PushExpireNotification 推送预测到期提醒
+func (s *service) PushExpireNotification(cts *rest.Contexts) (interface{}, error) {
+	req := new(ptypes.PushExpireNoticeReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to push expire notification, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate push expire notification parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	if err := s.planController.PushExpireNotifications(cts.Kit, req.BkBizIDs, req.Receivers); err != nil {
+		logs.Errorf("failed to push expire notification, err: %v, bk_biz_ids: %v, rid: %s", err, req.BkBizIDs,
+			cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}

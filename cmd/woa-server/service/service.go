@@ -70,6 +70,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb"
@@ -183,7 +184,14 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM, esbClient, bizLogic)
+	cmsiCfg := cc.WoaServer().Cmsi
+	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create cmsi client, err: %v", err)
+		return nil, err
+	}
+
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, esbClient, bizLogic)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err

@@ -190,9 +190,16 @@ func GetNextMondayOfWeek(t time.Time) time.Time {
 
 // IsLastNDaysOfMonth 判断是否是当月最后N天
 func IsLastNDaysOfMonth(t time.Time, lastN int) bool {
+	daysUntilEndOfMonth := DaysUntilEndOfTheMonth(t)
+	return daysUntilEndOfMonth <= lastN
+}
+
+// DaysUntilEndOfTheMonth 判断t距离月底还有几天
+func DaysUntilEndOfTheMonth(t time.Time) int {
 	// 获取月份的天数
 	daysInMonth := time.Date(t.Year(), t.Month()+1, 0, 0, 0, 0, 0, time.Local).Day()
 	// 计算距离月底的天数
-	daysUntilEndOfMonth := daysInMonth - t.Day()
-	return daysUntilEndOfMonth < lastN
+	daysUntilEndOfMonth := daysInMonth - t.Day() + 1
+
+	return daysUntilEndOfMonth
 }

@@ -170,6 +170,8 @@ type Biz struct {
 	BizName string `json:"bk_biz_name"`
 	// 二级业务id
 	BsName2ID int64 `json:"bs2_name_id"`
+	// 运维负责人
+	BkBizMaintainer string `json:"bk_biz_maintainer"`
 }
 
 // -------------------------- cloud area --------------------------

@@ -420,6 +420,8 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		DiskType:         table.DiskType,
 		DiskTypeName:     table.DiskType.Name(),
 		DiskIO:           table.DiskIO,
+		Creator:          table.Creator,
+		Reviser:          table.Reviser,
 	}
 }
 

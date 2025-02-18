@@ -241,6 +241,8 @@ type ListResPlanDemandItem struct {
 	DiskType         enumor.DiskType      `json:"disk_type"`
 	DiskTypeName     string               `json:"disk_type_name"`
 	DiskIO           int64                `json:"disk_io"`
+	Creator          string               `json:"creator"`
+	Reviser          string               `json:"reviser"`
 }
 
 // SetStatus set demand status
@@ -644,6 +646,17 @@ func (c *CalcAndPushPenaltyRatioReq) Validate() error {
 	}
 
 	return nil
+}
+
+// PushExpireNoticeReq is request of push expire notice.
+type PushExpireNoticeReq struct {
+	BkBizIDs  []int64  `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	Receivers []string `json:"receivers" validate:"omitempty,max=10"`
+}
+
+// Validate whether PushExpireNoticeReq is valid.
+func (p PushExpireNoticeReq) Validate() error {
+	return validator.Validate.Struct(p)
 }
 
 // DemandResource is demand resource.

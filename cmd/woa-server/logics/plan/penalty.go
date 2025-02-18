@@ -23,6 +23,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	dtime "hcm/cmd/woa-server/logics/plan/demand-time"
@@ -40,8 +41,10 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/times"
 )
@@ -152,7 +155,7 @@ func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context) {
 
 		// CRP每月1号凌晨出上个月的账单，且每次推送都会覆盖上次推送的内容
 		// 我们只需要在最后7天饱和式推送
-		isLast7Day := times.IsLastNDaysOfMonth(now, 7)
+		isLast7Day := times.IsLastNDaysOfMonth(nextRunTime, 7)
 		if !isLast7Day {
 			// 计算下一个检查时间
 			nextRunTime = nextRunTime.Add(time.Hour * 24)
@@ -164,6 +167,52 @@ func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context) {
 		if err != nil {
 			logs.Errorf("%s: failed to calc and push penalty ratio to crp, err: %v, time: %s, rid: %s",
 				constant.DemandPenaltyRatioReportFailed, err, nextRunTime.Format(constant.DateTimeLayout), kt.Rid)
+		}
+
+		// 计算下一个检查时间
+		nextRunTime = nextRunTime.Add(time.Hour * 24)
+	}
+}
+
+// pushExpireNotifications 推送预测到期提醒，每个自然月或预测月的第一天、剩余14天/7天/5/3/2/1天时发送
+func (c *Controller) pushExpireNotificationsRegular(ctx context.Context) {
+	now := time.Now()
+
+	// 上午10:00推送
+	// 计算下次推送的时间
+	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location())
+	if now.After(nextRunTime) {
+		nextRunTime = nextRunTime.Add(time.Hour * 24)
+	}
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		// 等待到下一个检查时间
+		time.Sleep(time.Until(nextRunTime))
+
+		kt := core.NewBackendKit()
+		// 只有每个自然月或预测月的第一天，或剩余14天/7天/5/3/2/1天时需要推送
+		isNeed, err := c.needToPushExpireNotifications(kt, nextRunTime)
+		if err != nil {
+			logs.Errorf("%s: failed to check if need to push expire notifications, err: %v, time: %s, rid: %s",
+				constant.ResPlanExpireNotificationPushFailed, err, nextRunTime.Format(constant.DateTimeLayout), kt.Rid)
+			continue
+		}
+		if !isNeed {
+			// 计算下一个检查时间
+			nextRunTime = nextRunTime.Add(time.Hour * 24)
+			continue
+		}
+
+		err = c.PushExpireNotifications(kt, []int64{}, []string{})
+		if err != nil {
+			logs.Errorf("%s: failed to push expire notifications, err: %v, time: %s, rid: %s",
+				constant.ResPlanExpireNotificationPushFailed, err, nextRunTime.Format(constant.DateTimeLayout), kt.Rid)
 		}
 
 		// 计算下一个检查时间
@@ -449,7 +498,8 @@ func (c *Controller) CalcPenaltyRatioAndPush(kt *kit.Kit, baseTime time.Time) er
 		opProductID := bizOrg.OpProductID
 		// 需执行量按80%计算，小数部分忽略不计
 		planProductUnexecMap[planProductID][opProductID] += int64(float64(baseCore) * 0.8)
-		planProductUnexecMap[planProductID][opProductID] -= planAppliedCore[key]
+		remainedCore := planProductUnexecMap[planProductID][opProductID] - planAppliedCore[key]
+		planProductUnexecMap[planProductID][opProductID] = max(0, remainedCore)
 	}
 
 	// 5.推送罚金比例到CRP
@@ -626,4 +676,307 @@ func (c *Controller) pushPenaltyRatioToCRP(kt *kit.Kit, planProductRatioMap map[
 	}
 
 	return nil
+}
+
+// needToPushExpireNotifications 判断该日期是否需要推送过期通知
+// 1.如果当天所属自然月对应的需求月截止在自然月底之前，则按照需求月进行倒数（例如25年4月，预测月的范围是03.31 ～ 04.27）
+// 2.如果当天所属自然月对应的需求月截止在自然月底之后，即跨月到下个月，则按照自然月进行倒数（例如24年12月，预测月的范围是 12.02 ~ 01.05）
+// 3.无论如何，自然月的第一天一定会通知
+func (c *Controller) needToPushExpireNotifications(kt *kit.Kit, t time.Time) (bool, error) {
+	// 1号一定推送
+	if t.Day() == 1 {
+		return true, nil
+	}
+
+	// 按自然月倒数，否则按照预测月
+	byNatureMonth := false
+	// 获取当天所属自然月对应的需求月范围
+	monthRange, err := c.demandTime.GetDemandDateRangeByYearMonth(kt, t.Year(), t.Month())
+	if err != nil {
+		logs.Errorf("failed to get demand date range in month, err: %v, demand_time: %v, rid: %s", err, t, kt.Rid)
+		return false, err
+	}
+
+	firstDayNextMonth := time.Date(t.Year(), t.Month()+1, 1, 0, 0, 0, 0, t.Location())
+	if monthRange.End >= firstDayNextMonth.Format(constant.DateLayout) {
+		byNatureMonth = true
+	}
+
+	// 按自然月
+	if byNatureMonth {
+		untilDay := times.DaysUntilEndOfTheMonth(t)
+		return enumor.InExpireCountdownPeriod(untilDay), nil
+	}
+
+	// 按预测月
+	monthEnd, err := time.Parse(constant.DateLayout, monthRange.End)
+	if err != nil {
+		logs.Errorf("failed to parse month range end, err: %v, month_range: %v, rid: %s", err, monthRange, kt.Rid)
+		return false, err
+	}
+
+	untilDay := monthEnd.Day() - t.Day() + 1
+	if untilDay <= 0 {
+		return false, nil
+	}
+	return enumor.InExpireCountdownPeriod(untilDay), nil
+}
+
+// PushExpireNotifications push expire notifications
+func (c *Controller) PushExpireNotifications(kt *kit.Kit, bkBizIDs []int64, extraReceivers []string) error {
+	start := time.Now()
+	logs.Infof("start to push res plan expire notifications, bk_biz_ids: %v, time: %v, rid: %s", bkBizIDs, start,
+		kt.Rid)
+	// 1.获取通知包含预测的时间范围
+	demandRange, err := c.getExpireNotificationsDemandRange(kt, start)
+	if err != nil {
+		logs.Errorf("failed to get expire notifications demand range, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 2.按照时间范围获取预测列表
+	demandDetails := make([]*ptypes.ListResPlanDemandItem, 0)
+	listReq := &ptypes.ListResPlanDemandReq{
+		BkBizIDs:        bkBizIDs,
+		ExpectTimeRange: &demandRange,
+		Page:            core.NewDefaultBasePage(),
+	}
+	for {
+		rst, err := c.ListResPlanDemandAndOverview(kt, listReq)
+		if err != nil {
+			logs.Errorf("failed to list res plan demand and overview, err: %v, expect_range: %+v, rid: %s", err,
+				demandRange, kt.Rid)
+			return err
+		}
+
+		demandDetails = append(demandDetails, rst.Details...)
+		if len(rst.Details) < int(listReq.Page.Limit) {
+			break
+		}
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	// 3.分业务处理
+	bkBizDemands := make(map[int64][]*ptypes.ListResPlanDemandItem)
+	for _, demand := range demandDetails {
+		if _, ok := bkBizDemands[demand.BkBizID]; !ok {
+			bkBizDemands[demand.BkBizID] = make([]*ptypes.ListResPlanDemandItem, 0)
+		}
+		bkBizDemands[demand.BkBizID] = append(bkBizDemands[demand.BkBizID], demand)
+	}
+
+	// 4.获取业务运维列表
+	maintainers, err := c.bizLogics.GetBkBizMaintainer(kt, maps.Keys(bkBizDemands))
+	if err != nil {
+		logs.Errorf("failed to get bk biz maintainer, err: %v, bk_biz_ids: %v, rid: %s", err,
+			maps.Keys(bkBizDemands), kt.Rid)
+		return err
+	}
+
+	// 5.机型详情
+	deviceTypeMap, err := c.GetAllDeviceTypeMap(kt)
+	if err != nil {
+		logs.Errorf("failed to get all device type map, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	// 6.拼装邮件内容，发送邮件
+	failedBkBizIDs := make([]int64, 0)
+	for bkBizID, demands := range bkBizDemands {
+		err := c.generateAndSendMail(kt, bkBizID, demands, maintainers[bkBizID], extraReceivers, deviceTypeMap)
+		if err != nil {
+			failedBkBizIDs = append(failedBkBizIDs, bkBizID)
+			logs.Warnf("failed to generate and push expire notifications to biz: %d, err: %v, rid: %s",
+				bkBizID, err, kt.Rid)
+			continue
+		}
+	}
+
+	end := time.Now()
+	logs.Infof("end to push res plan expire notifications, failed_biz_ids: %v, time: %v, cost: %fs, rid: %s",
+		failedBkBizIDs, end, end.Sub(start).Seconds(), kt.Rid)
+
+	if len(failedBkBizIDs) > 0 {
+		return fmt.Errorf("failed to push expire notifications to bk_biz_ids: %v", failedBkBizIDs)
+	}
+	return nil
+}
+
+// getExpireNotificationsDemandRange get expire notifications demand range.
+func (c *Controller) getExpireNotificationsDemandRange(kt *kit.Kit, now time.Time) (times.DateRange, error) {
+	// 1.获取当天所属需求月的预测（可能是自然月的上个月）
+	demandRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, now)
+	if err != nil {
+		logs.Errorf("failed to get demand date range in month, err: %v, demand_time: %v, rid: %s", err, now,
+			kt.Rid)
+		return times.DateRange{}, err
+	}
+
+	// 2.获取当天所属自然月对应的需求月的预测（可能暂时还不能申领）
+	baseDay := time.Date(now.Year(), now.Month(), 15, 0, 0, 0, 0, now.Location())
+	natureDemandRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, baseDay)
+	if err != nil {
+		logs.Errorf("failed to get demand date range in month, err: %v, demand_time: %v, rid: %s", err, baseDay,
+			kt.Rid)
+		return times.DateRange{}, err
+	}
+
+	// 3.合并两种方法得到的时间范围
+	if natureDemandRange.End != demandRange.End {
+		if natureDemandRange.End < demandRange.End {
+			demandRange.Start = natureDemandRange.Start
+		} else {
+			demandRange.End = natureDemandRange.End
+		}
+	}
+
+	return demandRange, nil
+}
+
+// generateAndSendMail generate and send expire notifications email.
+func (c *Controller) generateAndSendMail(kt *kit.Kit, bkBizID int64, demands []*ptypes.ListResPlanDemandItem,
+	maintainers []string, extraReceivers []string, deviceTypeMap map[string]wdt.WoaDeviceTypeTable) error {
+
+	emailTitle, emailContent, receivers, err := c.generateExpireNotificationsEmail(kt, demands, deviceTypeMap,
+		bkBizID)
+	if err != nil {
+		logs.Errorf("failed to generate expire notifications email, err: %v, bk_biz_id: %d, rid: %s", err,
+			bkBizID, kt.Rid)
+		return err
+	}
+
+	err = c.sendEmail(kt, receivers, extraReceivers, maintainers, emailTitle, emailContent)
+	if err != nil {
+		logs.Errorf("failed to send expire notifications email, err: %v, bk_biz_id: %d, rid: %s", err,
+			bkBizID, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// generateExpireNotificationsEmail generate expire notifications email content.
+func (c *Controller) generateExpireNotificationsEmail(kt *kit.Kit, demands []*ptypes.ListResPlanDemandItem,
+	deviceTypeMap map[string]wdt.WoaDeviceTypeTable, bkBizID int64) (title string, content string, receivers []string,
+	err error) {
+
+	sendTime := time.Now()
+
+	if len(demands) == 0 {
+		return "", "", nil, errors.New("no resource plans are about to expire")
+	}
+
+	var allRemainedCPU int64
+	var expectStart, expectEnd string
+	uniqueReceivers := make(map[string]interface{})
+	// 拼装表格数据
+	tableContent := ""
+	for _, demand := range demands {
+		deviceTypeInfo, ok := deviceTypeMap[demand.DeviceType]
+		if !ok {
+			logs.Errorf("device type %s not found, rid: %s", demand.DeviceType, kt.Rid)
+			return "", "", nil, fmt.Errorf("device type %s not found", demand.DeviceType)
+		}
+
+		// 只保留“可申领”、“未到申领时间”的记录
+		if demand.Status != enumor.DemandStatusCanApply && demand.Status != enumor.DemandStatusNotReady {
+			continue
+		}
+
+		uniqueReceivers[demand.Creator] = struct{}{}
+		uniqueReceivers[demand.Reviser] = struct{}{}
+		allRemainedCPU += demand.RemainedCpuCore
+
+		if expectStart == "" || demand.ExpectTime < expectStart {
+			expectStart = demand.ExpectTime
+		}
+		if expectEnd == "" || demand.ExpectTime > expectEnd {
+			expectEnd = demand.ExpectTime
+		}
+
+		// 获取申领时间范围
+		expectTime, err := time.Parse(constant.DateLayout, demand.ExpectTime)
+		if err != nil {
+			logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err,
+				demand.ExpectTime, kt.Rid)
+			return "", "", nil, err
+		}
+		demandRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTime)
+
+		tableContent += fmt.Sprintf(ptypes.EmailTableTemplate,
+			demand.ExpectTime,
+			demandRange.Start, demandRange.End,
+			renderEmailTemplateForDemandStatus(demand.Status),
+			demand.PlanType,
+			demand.DeviceType,
+			deviceTypeInfo.DeviceClass, deviceTypeInfo.CpuCore, deviceTypeInfo.Memory,
+			demand.RemainedOS, demand.TotalOS,
+			demand.RemainedCpuCore, demand.TotalCpuCore)
+	}
+	// 跳转链接
+	appliedHostURL := fmt.Sprintf(ptypes.
+		AppliedHostURL, c.bkHcmURL, bkBizID)
+	listResPlanURL := fmt.Sprintf(ptypes.ListResPlanURL, c.bkHcmURL, bkBizID, expectStart, expectEnd)
+
+	title = fmt.Sprintf(ptypes.EmailTitleTemplate, demands[0].BkBizName, sendTime.Month())
+	content = fmt.Sprintf(ptypes.EmailContentTemplate,
+		c.bkHcmURL, c.bkHcmURL,
+		demands[0].BkBizName, sendTime.Month(), demands[0].BkBizName,
+		fmt.Sprintf("%d-%d", sendTime.Year(), sendTime.Month()),
+		allRemainedCPU,
+		appliedHostURL, listResPlanURL,
+		tableContent)
+
+	receivers = maps.Keys(uniqueReceivers)
+
+	return title, content, receivers, nil
+}
+
+func renderEmailTemplateForDemandStatus(status enumor.DemandStatus) string {
+	var renderTemplate string
+
+	switch status {
+	case enumor.DemandStatusCanApply:
+		renderTemplate = ptypes.DemandStatusCanApplyTemplate
+	default:
+		renderTemplate = ptypes.DemandStatusNotReadyTemplate
+	}
+
+	return fmt.Sprintf(renderTemplate, status.Name())
+}
+
+// sendEmail send email. Receiver is the creator and reviser of res plan, and the operator of the business is cc.
+// receivers and cc are username, not email address.
+func (c *Controller) sendEmail(kt *kit.Kit, receivers, extraReceivers []string, cc []string, emailTitle,
+	emailContent string) error {
+
+	if !c.resPlanCfg.ExpireNotification.SendToBusiness {
+		receivers = make([]string, 0)
+		cc = make([]string, 0)
+	}
+
+	if len(c.resPlanCfg.ExpireNotification.DefaultReceivers) > 0 {
+		receivers = append(receivers, c.resPlanCfg.ExpireNotification.DefaultReceivers...)
+	}
+
+	if len(extraReceivers) > 0 {
+		receivers = append(receivers, extraReceivers...)
+	}
+
+	logs.Infof("ready to send email, receivers: %v, cc: %s, title: %s, rid: %s", receivers, cc, emailTitle,
+		kt.Rid)
+
+	if len(receivers) == 0 {
+		logs.Errorf("no receivers found, rid: %s", kt.Rid)
+		return errors.New("no receivers found")
+	}
+
+	mail := &cmsi.CmsiMail{
+		ReceiverUserName: strings.Join(receivers, ","),
+		Title:            emailTitle,
+		Content:          emailContent,
+		CcUserName:       strings.Join(cc, ","),
+	}
+
+	return c.CmsiClient.SendMail(kt, mail)
 }

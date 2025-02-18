@@ -796,7 +796,15 @@ type RollingServer struct {
 
 // ResPlan 资源预测相关配置
 type ResPlan struct {
-	ReportPenaltyRatio bool `yaml:"reportPenaltyRatio"`
+	ReportPenaltyRatio bool                `yaml:"reportPenaltyRatio"`
+	ExpireNotification ResPlanExpireNotice `yaml:"expireNotification"`
+}
+
+// ResPlanExpireNotice 资源预测过期通知配置
+type ResPlanExpireNotice struct {
+	Enable           bool     `yaml:"enable"`
+	SendToBusiness   bool     `yaml:"sendToBusiness"`
+	DefaultReceivers []string `yaml:"defaultReceivers"`
 }
 
 // MOA MOA api配置

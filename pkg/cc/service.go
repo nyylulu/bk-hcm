@@ -486,6 +486,7 @@ type WoaServerSetting struct {
 	Database        DataBase  `yaml:"database"`
 	Log             LogOption `yaml:"log"`
 	Esb             Esb       `yaml:"esb"`
+	BkHcmURL        string    `yaml:"bkHcmUrl"`
 	MongoDB         MongoDB   `yaml:"mongodb"`
 	Watch           MongoDB   `yaml:"watch"`
 	Redis           Redis     `yaml:"redis"`
@@ -500,6 +501,7 @@ type WoaServerSetting struct {
 	RollingServer   RollingServer    `yaml:"rollingServer"`
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`
+	Cmsi            CMSI             `yaml:"cmsi"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -528,6 +530,10 @@ func (s WoaServerSetting) Validate() error {
 
 	if err := s.Esb.validate(); err != nil {
 		return err
+	}
+
+	if s.BkHcmURL == "" {
+		return fmt.Errorf("bkHcmUrl should not be empty")
 	}
 
 	// 开启Mongo之后才校验参数
