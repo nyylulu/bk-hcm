@@ -17,13 +17,20 @@ package detector
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
+	gcore "hcm/pkg/api/core/global-config"
+	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/cc"
+	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -40,8 +47,8 @@ import (
 	"hcm/pkg/thirdparty/tmpapi"
 	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
-	"hcm/pkg/tools/uuid"
 
 	"golang.org/x/sync/errgroup"
 )
@@ -62,12 +69,18 @@ type Detector struct {
 	sops    sopsapi.SopsClientInterface
 	ngate   ngateapi.NgateClientInterface
 
+	cliSet *client.ClientSet
+
 	ctx context.Context
 	kt  *kit.Kit
 }
 
 // New creates a detector
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Detector, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, cliSet *client.ClientSet) (
+	*Detector, error) {
+
+	kt := core.NewBackendKit()
+	kt.Ctx = ctx
 	detector := &Detector{
 		cc:      esbCli.Cmdb(),
 		xray:    thirdCli.Xray,
@@ -82,8 +95,8 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 		tcOpt:   thirdCli.TencentCloudOpt,
 		sops:    thirdCli.Sops,
 		ngate:   thirdCli.Ngate,
-		ctx:     ctx,
-		kt:      &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
+		kt:      kt,
+		cliSet:  cliSet,
 	}
 
 	return detector, nil
@@ -135,10 +148,18 @@ func (d *Detector) DealRecycleOrder(orderId string) error {
 		logs.Errorf("failed to get recycle tasks by order id: %d, err: %v", orderId, err)
 		return err
 	}
+
 	// run recycle tasks
 	eg := errgroup.Group{}
 	// 每个主机都会创建一个recycle task，这里防止无限制并发
-	eg.SetLimit(5)
+	// 从全局配置读取
+	detectConcurrence, err := d.GetDetectConcurrence()
+	if err != nil {
+		logs.Errorf("failed to get detect concurrence for order: %s, err: %v, rid: %s", orderId, err, d.kt.Rid)
+		return err
+	}
+	eg.SetLimit(detectConcurrence)
+	logs.Infof("start detect recycle order: %s, concurrence: %d, rid: %s", orderId, detectConcurrence, d.kt.Rid)
 	for _, task := range taskInfos {
 		taskInfo := task
 		eg.Go(func() error {
@@ -147,6 +168,47 @@ func (d *Detector) DealRecycleOrder(orderId string) error {
 		})
 	}
 	return eg.Wait()
+}
+
+// GetDetectConcurrence 获取单个单据内 预检并发数配置
+func (d *Detector) GetDetectConcurrence() (concurrence int, err error) {
+
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeRecycle),
+			tools.RuleEqual("config_key", constant.RecycleDetectConcurrenceConfigKey)),
+		Page:   core.NewDefaultBasePage(),
+		Fields: nil,
+	}
+	resp, err := d.cliSet.DataService().Global.GlobalConfig.List(d.kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to get detect concurrence, err: %v, rid: %s", err, d.kt.Rid)
+		return
+	}
+	if len(resp.Details) == 0 {
+		// 设置默认值
+		createReq := &datagconf.BatchCreateReqT[any]{
+			Configs: []gcore.GlobalConfigT[any]{{
+				ConfigKey:   constant.RecycleDetectConcurrenceConfigKey,
+				ConfigValue: constant.DetectDefaultConcurrence,
+				ConfigType:  constant.GlobalConfigTypeRecycle,
+				Memo:        cvt.ValToPtr("回收预检并发数"),
+			}}}
+		_, err := d.cliSet.DataService().Global.GlobalConfig.BatchCreate(d.kt, createReq)
+		if err != nil {
+			// 忽略创建失败, 后续再创建即可
+			logs.Warnf("failed to create detect concurrence, err: %v, rid: %s", err, d.kt.Rid)
+		}
+		return constant.DetectDefaultConcurrence, nil
+	}
+	configValue := string(resp.Details[0].ConfigValue)
+	parseInt, err := strconv.ParseUint(configValue, 10, 64)
+	if err != nil {
+		logs.Errorf("fail to parse detect concurrence value: %s, err: %v, rid: %s",
+			resp.Details[0].ConfigValue, err, d.kt.Rid)
+		return constant.DetectDefaultConcurrence, nil
+	}
+	return int(parseInt), nil
 }
 
 // DealRecycleTask deals with recycle task

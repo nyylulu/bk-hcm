@@ -31,22 +31,7 @@ import (
 )
 
 // ListReq ...
-type ListReq struct {
-	core.ListReq `json:",inline"`
-}
-
-// Validate ListReq
-func (req *ListReq) Validate() error {
-	if err := validator.Validate.Struct(req); err != nil {
-		return err
-	}
-
-	if err := req.ListReq.Validate(); err != nil {
-		return err
-	}
-
-	return nil
-}
+type ListReq = core.ListReq
 
 // ListResp ...
 type ListResp core.ListResultT[tablegconf.GlobalConfigTable]

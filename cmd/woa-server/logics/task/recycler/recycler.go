@@ -34,6 +34,7 @@ import (
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/client"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
@@ -148,11 +149,11 @@ type recycler struct {
 }
 
 // New create a recycler
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client,
-	authorizer auth.Authorizer, rsLogic rslogics.Logics, dissolveLogic dissolve.Logics) (*recycler, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, authorizer auth.Authorizer,
+	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet) (*recycler, error) {
 
 	// new detector
-	moduleDetector, err := detector.New(ctx, thirdCli, esbCli)
+	moduleDetector, err := detector.New(ctx, thirdCli, esbCli, cliSet)
 	if err != nil {
 		return nil, err
 	}
