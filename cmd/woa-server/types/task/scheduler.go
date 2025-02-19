@@ -1534,3 +1534,11 @@ type CancelApplyTicketCrpReq struct {
 func (c *CancelApplyTicketCrpReq) Validate() error {
 	return validator.Validate.Struct(c)
 }
+
+// DeviceInitMsg device init msg
+type DeviceInitMsg struct {
+	Device *DeviceInfo
+	JobUrl string
+	JobID  string
+	BizID  int64
+}

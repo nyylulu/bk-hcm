@@ -2105,7 +2105,11 @@ func (s *scheduler) GetApplyModify(kt *kit.Kit, param *types.GetApplyModifyReq) 
 
 // ProcessInitStep processes orders with init step
 func (s *scheduler) ProcessInitStep(device *types.DeviceInfo) error {
-	return s.matcher.ProcessInitStep(device)
+	_, errMap := s.matcher.ProcessInitStep([]*types.DeviceInfo{device})
+	if len(errMap) != 0 {
+		return errMap[0]
+	}
+	return nil
 }
 
 // CheckSopsUpdate checks sops task and update status, return err if sops task failed or update failed
