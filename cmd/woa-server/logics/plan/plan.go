@@ -29,6 +29,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/biz"
 	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
+	"hcm/cmd/woa-server/storage/driver/mongodb"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	ttypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
@@ -95,22 +96,22 @@ type Logics interface {
 
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
-	resPlanCfg   cc.ResPlan
-	dao          dao.Set
-	sd           serviced.State
-	client       *client.ClientSet
+	resPlanCfg     cc.ResPlan
+	dao            dao.Set
+	sd             serviced.State
+	client         *client.ClientSet
 	bkHcmURL       string
-	CmsiClient   cmsi.Client
-	esbCli       esb.Client
-	itsmCli      itsm.Client
-	itsmFlow     cc.ItsmFlow
-	crpAuditNode cc.StateNode
-	crpCli       cvmapi.CVMClientInterface
-	bizLogics    biz.Logics
-	workQueue    *UniQueue
-    deviceTypesMap *DeviceTypesMap
-	demandTime   demandtime.DemandTime
-	ctx          context.Context
+	CmsiClient     cmsi.Client
+	esbCli         esb.Client
+	itsmCli        itsm.Client
+	itsmFlow       cc.ItsmFlow
+	crpAuditNode   cc.StateNode
+	crpCli         cvmapi.CVMClientInterface
+	bizLogics      biz.Logics
+	workQueue      *UniQueue
+	deviceTypesMap *DeviceTypesMap
+	demandTime     demandtime.DemandTime
+	ctx            context.Context
 }
 
 const (
@@ -146,22 +147,22 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.
 	}
 
 	ctrl := &Controller{
-		resPlanCfg:   cc.WoaServer().ResPlan,
-		dao:          dao,
-		sd:           sd,
-		client:       client,
+		resPlanCfg:     cc.WoaServer().ResPlan,
+		dao:            dao,
+		sd:             sd,
+		client:         client,
 		bkHcmURL:       cc.WoaServer().BkHcmURL,
-		CmsiClient:   cmsiCli,
-		esbCli:       esbCli,
-		itsmCli:      itsmCli,
-		itsmFlow:     itsmFlowCfg,
-		crpAuditNode: crpAuditNode,
-		crpCli:       crpCli,
-		bizLogics:    bizLogic,
-        workQueue:      NewUniQueue(),
+		CmsiClient:     cmsiCli,
+		esbCli:         esbCli,
+		itsmCli:        itsmCli,
+		itsmFlow:       itsmFlowCfg,
+		crpAuditNode:   crpAuditNode,
+		crpCli:         crpCli,
+		bizLogics:      bizLogic,
+		workQueue:      NewUniQueue(),
 		deviceTypesMap: NewDeviceTypesMap(dao),
-		demandTime:   demandtime.NewDemandTimeFromTable(client),
-		ctx:          context.Background(),
+		demandTime:     demandtime.NewDemandTimeFromTable(client),
+		ctx:            context.Background(),
 	}
 
 	go ctrl.Run()
@@ -171,6 +172,16 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.
 
 // Run starts dispatcher
 func (c *Controller) Run() {
+	// controller启动后需等待一段时间，mongo等服务初始化完成后才能开始定时任务 TODO 用统一的任务调度模块来执行定时任务，确保在初始化之后
+	for {
+		if mongodb.Client() == nil {
+			logs.Warnf("mongodb client is not ready, wait seconds to retry")
+			time.Sleep(constant.IntervalWaitTaskStart)
+			continue
+		}
+		break
+	}
+
 	go func() {
 		defer func() {
 			if r := recover(); r != nil {
