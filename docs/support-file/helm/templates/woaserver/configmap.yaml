@@ -106,6 +106,7 @@ data:
       syncBill: {{ .Values.rollingServer.syncBill }}
     caiche:
       {{- toYaml .Values.caiche | nindent 6 }}
+    localTimezone: {{ .Values.localTimezone }}
     resPlan:
       {{- toYaml .Values.resPlan | nindent 6 }}
     resourceSync:

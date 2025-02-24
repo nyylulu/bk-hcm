@@ -498,6 +498,7 @@ type WoaServerSetting struct {
 	Blacklist       string           `yaml:"blacklist"`
 	UseMongo        bool             `yaml:"useMongo"`
 	Recover         Recover          `yaml:"recover"`
+	LocalTimezone   string           `yaml:"localTimezone"`
 	RollingServer   RollingServer    `yaml:"rollingServer"`
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`

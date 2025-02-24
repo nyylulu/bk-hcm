@@ -170,6 +170,12 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.
 	return ctrl, nil
 }
 
+func (c *Controller) recoverLog(keywords constant.WarnSign) {
+	if r := recover(); r != nil {
+		logs.Errorf("%s: panic: %v\n%s", keywords, r, debug.Stack())
+	}
+}
+
 // Run starts dispatcher
 func (c *Controller) Run() {
 	// controller启动后需等待一段时间，mongo等服务初始化完成后才能开始定时任务 TODO 用统一的任务调度模块来执行定时任务，确保在初始化之后
@@ -182,12 +188,15 @@ func (c *Controller) Run() {
 		break
 	}
 
+	loc, err := time.LoadLocation(cc.WoaServer().LocalTimezone)
+	if err != nil {
+		logs.Warnf("%s: load location: %s failed: %v", constant.ResPlanExpireNotificationPushFailed,
+			cc.WoaServer().LocalTimezone, err)
+		loc = time.UTC
+	}
+
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.ResPlanTicketWatchFailed)
 
 		// TODO: get interval from config
 		// list and watch tickets every 2 minutes
@@ -197,11 +206,7 @@ func (c *Controller) Run() {
 	// TODO: get worker num from config
 	for i := 0; i < 10; i++ {
 		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
-				}
-			}()
+			defer c.recoverLog(constant.ResPlanTicketWatchFailed)
 
 			// get and handle tickets every 2 minutes
 			wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
@@ -210,11 +215,7 @@ func (c *Controller) Run() {
 
 	// 每周一生成12周后的核算基准数据
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyBaseGenerateFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.DemandPenaltyBaseGenerateFailed)
 
 		c.generatePenaltyBase(c.ctx)
 	}()
@@ -225,13 +226,9 @@ func (c *Controller) Run() {
 			return
 		}
 
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyRatioReportFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.DemandPenaltyRatioReportFailed)
 
-		c.calcAndReportPenaltyRatioToCRP(c.ctx)
+		c.calcAndReportPenaltyRatioToCRP(c.ctx, loc)
 	}()
 
 	// 预测到期提醒通知
@@ -240,13 +237,9 @@ func (c *Controller) Run() {
 			return
 		}
 
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.ResPlanExpireNotificationPushFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.ResPlanExpireNotificationPushFailed)
 
-		c.pushExpireNotificationsRegular(c.ctx)
+		c.pushExpireNotificationsRegular(c.ctx, loc)
 	}()
 
 	select {

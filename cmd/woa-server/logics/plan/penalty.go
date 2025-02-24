@@ -123,13 +123,13 @@ func (c *Controller) generatePenaltyBase(ctx context.Context) {
 
 // calcAndReportPenaltyRatioToCRP CRP每月1号凌晨出上个月的账单
 // 因此每月最后7天，每天下午18:00计算当月罚金分摊比例并推送到CRP
-func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context) {
+func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context, loc *time.Location) {
 	now := time.Now()
 	logs.Infof("start to push penalty ratio to crp, time: %v", now)
 
 	// 每天下午18:00计算并推送当月罚金分摊比例
 	// 计算下次推送的时间
-	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), 18, 0, 0, 0, now.Location())
+	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), 18, 0, 0, 0, loc)
 	if now.After(nextRunTime) {
 		nextRunTime = nextRunTime.Add(time.Hour * 24)
 	}
@@ -175,12 +175,12 @@ func (c *Controller) calcAndReportPenaltyRatioToCRP(ctx context.Context) {
 }
 
 // pushExpireNotifications 推送预测到期提醒，每个自然月或预测月的第一天、剩余14天/7天/5/3/2/1天时发送
-func (c *Controller) pushExpireNotificationsRegular(ctx context.Context) {
+func (c *Controller) pushExpireNotificationsRegular(ctx context.Context, loc *time.Location) {
 	now := time.Now()
 
-	// 上午10:00推送
+	// 上午10:00推送 // 系统时间被强制设定为UTC，这里需要从配置加载时区
 	// 计算下次推送的时间
-	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, now.Location())
+	nextRunTime := time.Date(now.Year(), now.Month(), now.Day(), 10, 0, 0, 0, loc)
 	if now.After(nextRunTime) {
 		nextRunTime = nextRunTime.Add(time.Hour * 24)
 	}
