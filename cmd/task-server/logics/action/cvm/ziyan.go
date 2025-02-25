@@ -317,11 +317,11 @@ func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm
 
 	var errMap = make(map[int]error)
 	for idx, cvm := range cvms {
-		pwdReq := &sampwdapi.UpdateHostPwdReq{
+		pwdReq := sampwdapi.UpdateHostPwdReq{
 			BkHostID:     cvm.Extension.HostID,
 			Password:     pwd,
 			UserName:     operator, //  操作人
-			GenerateTime: time.Now().Format(constant.DateTimeLayout),
+			GenerateTime: time.Now().Format(time.RFC3339),
 		}
 		rangeMS := [2]uint{constant.CvmBatchTaskRetryDelayMinMS, constant.CvmBatchTaskRetryDelayMaxMS}
 		policy := retry.NewRetryPolicy(0, rangeMS)

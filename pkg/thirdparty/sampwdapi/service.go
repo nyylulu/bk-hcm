@@ -32,7 +32,7 @@ import (
 
 // Client ...
 type Client interface {
-	UpdateHostPwd(kt *kit.Kit, req *UpdateHostPwdReq) (*UpdateHostPwdResp, error)
+	UpdateHostPwd(kt *kit.Kit, req UpdateHostPwdReq) (*UpdateHostPwdResp, error)
 }
 
 type samPwdCli struct {
