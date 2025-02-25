@@ -464,6 +464,20 @@ type SubnetParam struct {
 	VpcId  string `json:"vpcId"`
 }
 
+// SubnetRealReq cvm subnet reql query request
+type SubnetRealReq struct {
+	ReqMeta `json:",inline"`
+	Params  *SubnetRealParam `json:"params"`
+}
+
+// SubnetRealParam cvm subnet real query parameters
+type SubnetRealParam struct {
+	DeptId      int    `json:"deptId"`
+	Region      string `json:"region"`
+	CloudCampus string `json:"cloudCampus"`
+	VpcId       string `json:"vpcId"`
+}
+
 // ReturnReq create cvm return order request
 type ReturnReq struct {
 	ReqMeta `json:",inline"`

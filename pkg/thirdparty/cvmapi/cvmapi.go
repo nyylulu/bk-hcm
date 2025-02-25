@@ -14,8 +14,10 @@ package cvmapi
 
 import (
 	"context"
+	"fmt"
 	"net/http"
 
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
@@ -35,8 +37,8 @@ type CVMClientInterface interface {
 	QueryCvmCapacity(ctx context.Context, header http.Header, req *CapacityReq) (*CapacityResp, error)
 	// QueryCvmVpc query cvm subnet info
 	QueryCvmVpc(ctx context.Context, header http.Header, req *VpcReq) (*VpcResp, error)
-	// QueryCvmSubnet query cvm subnet info
-	QueryCvmSubnet(ctx context.Context, header http.Header, req *SubnetReq) (*SubnetResp, error)
+	// QueryRealCvmSubnet query real cvm subnet info
+	QueryRealCvmSubnet(kt *kit.Kit, subnetReq SubnetRealParam) (*SubnetResp, error)
 	// GetApproveLog get approve log
 	GetApproveLog(ctx context.Context, header http.Header, req *GetApproveLogReq) (*GetApproveLogResp, error)
 	// QueryCvmCbsPlans query cvm and cbs plan info
@@ -199,20 +201,46 @@ func (c *cvmApi) QueryCvmVpc(ctx context.Context, header http.Header, req *VpcRe
 	return resp, err
 }
 
-// QueryCvmSubnet query cvm subnet info
-func (c *cvmApi) QueryCvmSubnet(ctx context.Context, header http.Header, req *SubnetReq) (*SubnetResp, error) {
-	subPath := "/apply/api/cvm"
+// QueryRealCvmSubnet query real cvm subnet info
+func (c *cvmApi) QueryRealCvmSubnet(kt *kit.Kit, subnetReq SubnetRealParam) (*SubnetResp, error) {
+	req := &SubnetRealReq{
+		ReqMeta: ReqMeta{
+			Id:      CvmId,
+			JsonRpc: CvmJsonRpc,
+			Method:  CvmRealSubnetMethod,
+		},
+		Params: &SubnetRealParam{
+			DeptId:      CvmDeptId,
+			Region:      subnetReq.Region,
+			CloudCampus: subnetReq.CloudCampus,
+			VpcId:       subnetReq.VpcId,
+		},
+	}
+
+	subPath := "/capacity/api"
 	resp := new(SubnetResp)
 	err := c.client.Post().
-		WithContext(ctx).
+		WithContext(kt.Ctx).
 		Body(req).
 		SubResourcef(subPath).
 		WithParam(CvmApiKey, CvmApiKeyVal).
-		WithHeaders(header).
+		WithHeaders(kt.Header()).
 		Do().
 		Into(resp)
 
-	return resp, err
+	if err != nil {
+		logs.Errorf("query real cvm subnet from crp failed, subnetReq: %+v, err: %+v, rid: %s", subnetReq, err, kt.Rid)
+		return nil, err
+	}
+
+	if resp.Error.Code != 0 {
+		logs.Errorf("query real cvm subnet from crp failed, subnetReq: %+v, errCode: %d, errMsg: %s, crpTraceID: %s, "+
+			"rid: %s", subnetReq, resp.Error.Code, resp.Error.Message, resp.TraceId, kt.Rid)
+		return nil, fmt.Errorf("query real cvm subnet from crp failed, errCode: %d, errMsg: %s, crpTraceID: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId)
+	}
+
+	return resp, nil
 }
 
 // GetApproveLog get approve log

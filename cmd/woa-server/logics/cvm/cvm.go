@@ -25,6 +25,7 @@ import (
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
@@ -600,28 +601,44 @@ func (l *logics) getCvmVpc(region string) (string, error) {
 }
 
 func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, uint, error) {
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: region,
-			VpcId:  vpc,
-		},
-	}
-	// 园区-分区Campus
-	if len(zone) > 0 && zone != cvmapi.CvmSeparateCampus {
-		req.Params.Zone = zone
+	if len(zone) <= 0 {
+		return "", 0, fmt.Errorf("get cvm subnet failed, zone is empty")
 	}
 
-	resp, err := l.cvm.QueryCvmSubnet(kt.Ctx, kt.Header(), req)
-	if err != nil {
-		logs.Errorf("failed to get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
-			err, region, zone, vpc, kt.Rid)
-		return "", 0, err
+	zones := make([]string, 0)
+	// 园区-分区Campus，获取该区域下的可用区列表
+	if zone == cvmapi.CvmSeparateCampus {
+		zoneCond := mapstr.MapStr{}
+		zoneCond["region"] = mapstr.MapStr{pkg.BKDBIN: region}
+		zoneResp, err := l.confLogic.Zone().GetZone(kt, &zoneCond)
+		if err != nil {
+			logs.Errorf("failed to get cvm subnet zone list, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zone, vpc, kt.Rid)
+			return "", 0, err
+		}
+
+		for _, zoneItem := range zoneResp.Info {
+			zones = append(zones, zoneItem.Zone)
+		}
+	} else {
+		zones = append(zones, zone)
+	}
+
+	var subnetList = make([]*cvmapi.SubnetInfo, 0)
+	// 遍历可用区，获取子网列表
+	for _, zoneValue := range zones {
+		subnetReq := cvmapi.SubnetRealParam{
+			Region:      region,
+			CloudCampus: zoneValue,
+			VpcId:       vpc,
+		}
+		resp, err := l.cvm.QueryRealCvmSubnet(kt, subnetReq)
+		if err != nil {
+			logs.Errorf("failed to loop get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zoneValue, vpc, kt.Rid)
+			return "", 0, err
+		}
+		subnetList = append(subnetList, resp.Result...)
 	}
 
 	cond := map[string]interface{}{
@@ -646,7 +663,7 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 
 	subnetId := ""
 	leftIp := uint(0)
-	for _, subnet := range resp.Result {
+	for _, subnet := range subnetList {
 		// subnet is not effective
 		if _, ok := mapIdTosubnet[subnet.Id]; !ok {
 			continue
@@ -662,14 +679,16 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	}
 
 	if subnetId == "" {
-		logs.Errorf("getCvmSubnet found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc,
-			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		logs.Errorf("getCvmSubnet found no subnet with region: %s, zone: %s, vpc: %s, cfgSubnets: %+v, "+
+			"subnetList: %+v, rid: %s", region, zone, vpc, cvt.PtrToSlice(cfgSubnets.Info),
+			cvt.PtrToSlice(subnetList), kt.Rid)
 		return "", 0, fmt.Errorf("found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc)
 	}
 
 	if leftIp <= 0 {
-		logs.Errorf("getCvmSubnet found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region, zone, vpc,
-			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		logs.Errorf("getCvmSubnet found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s, cfgSubnets: %+v, "+
+			"subnetList: %+v, rid: %s", region, zone, vpc, cvt.PtrToSlice(cfgSubnets.Info),
+			cvt.PtrToSlice(subnetList), kt.Rid)
 		return subnetId, leftIp, fmt.Errorf("found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region,
 			zone, vpc)
 	}

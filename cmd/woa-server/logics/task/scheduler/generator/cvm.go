@@ -517,21 +517,12 @@ func (l AvailSubnetList) Swap(i, j int) {
 
 func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.ApplyOrder) (AvailSubnetList, error) {
 	subnetList := AvailSubnetList{}
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: order.Spec.Region,
-			Zone:   zone,
-			VpcId:  vpc,
-		},
+	subnetReq := cvmapi.SubnetRealParam{
+		Region:      order.Spec.Region,
+		CloudCampus: zone,
+		VpcId:       vpc,
 	}
-
-	resp, err := g.cvm.QueryCvmSubnet(nil, nil, req)
+	resp, err := g.cvm.QueryRealCvmSubnet(kt, subnetReq)
 	if err != nil {
 		logs.Errorf("failed to get cvm subnet info, subOrderID: %s, err: %v, region: %s, zone: %s, vpc: %s, "+
 			"crpResp: %+v, rid: %s", order.SubOrderId, err, order.Spec.Region, zone, vpc, cvt.PtrToVal(resp), kt.Rid)

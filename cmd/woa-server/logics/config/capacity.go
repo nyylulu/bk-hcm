@@ -308,21 +308,12 @@ func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string,
 }
 
 func (c *capacity) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi.SubnetInfo, error) {
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: region,
-			Zone:   zone,
-			VpcId:  vpc,
-		},
+	subnetReq := cvmapi.SubnetRealParam{
+		Region:      region,
+		CloudCampus: zone,
+		VpcId:       vpc,
 	}
-
-	resp, err := c.cvm.QueryCvmSubnet(nil, nil, req)
+	resp, err := c.cvm.QueryRealCvmSubnet(kt, subnetReq)
 	if err != nil {
 		logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
