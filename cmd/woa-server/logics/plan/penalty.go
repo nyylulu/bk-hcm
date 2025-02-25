@@ -636,10 +636,19 @@ func (c *Controller) pushPenaltyRatioToCRP(kt *kit.Kit, planProductRatioMap map[
 
 	for planProductID, opProductRatioMap := range planProductRatioMap {
 		// 用量超过80%时可能会出现负数
+		delKeys := make([]int64, 0)
 		for opProductID, unexcutedCPUCore := range opProductRatioMap {
-			if unexcutedCPUCore < 0 {
-				opProductRatioMap[opProductID] = 0
+			if unexcutedCPUCore <= 0 {
+				delKeys = append(delKeys, opProductID)
+				continue
 			}
+		}
+		for _, delKey := range delKeys {
+			delete(opProductRatioMap, delKey)
+		}
+
+		if len(opProductRatioMap) == 0 {
+			continue
 		}
 
 		ratios = append(ratios, cvmapi.CvmCbsPlanProductRatio{
@@ -649,6 +658,11 @@ func (c *Controller) pushPenaltyRatioToCRP(kt *kit.Kit, planProductRatioMap map[
 			ProductIdPartitionMap: opProductRatioMap,
 			Memo:                  "",
 		})
+	}
+
+	if len(ratios) == 0 {
+		logs.Warnf("no need to push penalty ratio to crp, rid: %s", kt.Rid)
+		return nil
 	}
 
 	pushReq := &cvmapi.CvmCbsPlanPenaltyRatioReportReq{
