@@ -520,6 +520,7 @@ func (m *Matcher) ProcessInitStep(devices []*types.DeviceInfo) (map[int]*types.D
 	maxRetry := 3
 	errMap := make(map[int]error)
 	deviceInitMsgMap := make(map[int]*types.DeviceInitMsg)
+	successDeviceMap := make(map[int]*types.DeviceInfo)
 	eg := errgroup.Group{}
 	eg.SetLimit(10)
 	var lock sync.Mutex
@@ -528,6 +529,11 @@ func (m *Matcher) ProcessInitStep(devices []*types.DeviceInfo) (map[int]*types.D
 	for idx, device := range devices {
 		curDevice := device
 		curIdx := idx
+		if curDevice.IsInited {
+			successDeviceMap[curIdx] = curDevice
+			logs.Infof("host %s is initialized, need not init", curDevice.Ip)
+			continue
+		}
 		eg.Go(func() error {
 			var err error
 			var initMsg *types.DeviceInitMsg
@@ -552,7 +558,6 @@ func (m *Matcher) ProcessInitStep(devices []*types.DeviceInfo) (map[int]*types.D
 	_ = eg.Wait()
 
 	// 2. 检查主机初始化任务是否执行完成
-	successDeviceMap := make(map[int]*types.DeviceInfo)
 	for idx, msg := range deviceInitMsgMap {
 		curMsg := msg
 		curIdx := idx
@@ -630,7 +635,7 @@ func (m *Matcher) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, erro
 func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, error) {
 	if info.IsInited {
 		logs.Infof("host %s is initialized, need not init", info.Ip)
-		return nil, nil
+		return &types.DeviceInitMsg{Device: info}, nil
 	}
 
 	// create init record
