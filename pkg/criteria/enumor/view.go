@@ -17,37 +17,30 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package capability ...
-package capability
+package enumor
 
 import (
-	"hcm/cmd/cloud-server/logics"
-	"hcm/cmd/cloud-server/logics/audit"
-	"hcm/pkg/client"
-	"hcm/pkg/cryptography"
-	"hcm/pkg/iam/auth"
-	"hcm/pkg/thirdparty/api-gateway/bkbase"
-	"hcm/pkg/thirdparty/api-gateway/cmsi"
-	"hcm/pkg/thirdparty/api-gateway/finops"
-	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"hcm/pkg/thirdparty/api-gateway/usermgr"
-	"hcm/pkg/thirdparty/esb"
-
-	"github.com/emicklei/go-restful/v3"
+	"fmt"
 )
 
-// Capability defines the service's capability
-type Capability struct {
-	WebService *restful.WebService
-	ApiClient  *client.ClientSet
-	Authorizer auth.Authorizer
-	Audit      audit.Interface
-	Cipher     cryptography.Crypto
-	EsbClient  esb.Client
-	Logics     *logics.Logics
-	ItsmCli    itsm.Client
-	BKBaseCli  bkbase.Client
-	Finops     finops.Client
-	CmsiCli    cmsi.Client
-	UserMgrCli usermgr.Client
+// View defines the supported org topo view.
+type View string
+
+// Validate the View is valid or not
+func (v View) Validate() error {
+	if _, ok := viewNameMap[v]; !ok {
+		return fmt.Errorf("unsupported view: %s", v)
+	}
+
+	return nil
+}
+
+const (
+	// IEGView is the ieg view
+	IEGView View = "ieg"
+)
+
+// viewNameMap is the view name map.
+var viewNameMap = map[View]string{
+	IEGView: "IEG互动娱乐事业群",
 }

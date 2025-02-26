@@ -56,5 +56,5 @@ type Ticket struct {
 	Starter                  string                      `json:"starter"`
 	UnitParameter            string                      `json:"unitParameter"`
 	UpdateTime               string                      `json:"updateTime"`
-	IsRepairFailed           string                      `json:"isRepairFailed"`
+	IsRepairFailed           int                         `json:"isRepairFailed"`
 }

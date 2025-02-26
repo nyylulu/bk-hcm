@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
+	"hcm/pkg/thirdparty/api-gateway/usermgr"
 	"hcm/pkg/thirdparty/caiche"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
@@ -65,6 +66,7 @@ type Client struct {
 	ITSM            itsm.Client
 	Ngate           ngateapi.NgateClientInterface
 	CaiChe          caiche.CaiCheClientInterface
+	UserMgr         usermgr.Client
 }
 
 // NewClient new third party client
@@ -216,12 +218,12 @@ func newApiGWClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Cli
 	}
 	client.BkChat = bkchat
 
-	itsm, err := itsm.NewClient(&opts.ITSM, reg)
+	itsmCli, err := itsm.NewClient(&opts.ITSM, reg)
 	if err != nil {
 		logs.Errorf("failed to new itsm api client, err: %v", err)
 		return nil, err
 	}
-	client.ITSM = itsm
+	client.ITSM = itsmCli
 
 	return client, nil
 }

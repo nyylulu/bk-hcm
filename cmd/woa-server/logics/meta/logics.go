@@ -15,6 +15,8 @@ package meta
 
 import (
 	mtypes "hcm/cmd/woa-server/types/meta"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
 	"hcm/pkg/thirdparty/esb"
@@ -28,17 +30,21 @@ type Logics interface {
 	GetOpProducts(kt *kit.Kit) ([]mtypes.OpProduct, error)
 	// GetPlanProducts get op products.
 	GetPlanProducts(kt *kit.Kit) ([]mtypes.PlanProduct, error)
+	// GetOrgTopo get org topo
+	GetOrgTopo(kt *kit.Kit, orgType enumor.View) (*mtypes.OrgInfo, error)
 }
 
 type logics struct {
 	esbClient  esb.Client
 	authorizer auth.Authorizer
+	dao        dao.Set
 }
 
 // New create a logics manager
-func New(esbClient esb.Client, authorizer auth.Authorizer) Logics {
+func New(esbClient esb.Client, authorizer auth.Authorizer, dao dao.Set) Logics {
 	return &logics{
 		esbClient:  esbClient,
 		authorizer: authorizer,
+		dao:        dao,
 	}
 }

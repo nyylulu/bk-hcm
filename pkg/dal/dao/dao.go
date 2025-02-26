@@ -61,6 +61,7 @@ import (
 	globalconfig "hcm/pkg/dal/dao/global-config"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/obs"
+	orgtopo "hcm/pkg/dal/dao/org-topo"
 	"hcm/pkg/dal/dao/orm"
 	recyclerecord "hcm/pkg/dal/dao/recycle-record"
 	resplan "hcm/pkg/dal/dao/resource-plan"
@@ -179,6 +180,7 @@ type Set interface {
 	TaskDetail() task.Detail
 	TaskManagement() task.Management
 	GlobalConfig() globalconfig.Interface
+	OrgTopo() orgtopo.Interface
 
 	Txn() *Txn
 }
@@ -1037,4 +1039,9 @@ func (s *set) GlobalConfig() globalconfig.Interface {
 		Orm:   s.orm,
 		IDGen: s.idGen,
 	}
+}
+
+// OrgTopo returns orgtopo dao.
+func (s *set) OrgTopo() orgtopo.Interface {
+	return orgtopo.New(s.orm, s.idGen)
 }

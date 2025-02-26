@@ -605,40 +605,9 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 		return "", 0, fmt.Errorf("get cvm subnet failed, zone is empty")
 	}
 
-	zones := make([]string, 0)
-	// 园区-分区Campus，获取该区域下的可用区列表
-	if zone == cvmapi.CvmSeparateCampus {
-		zoneCond := mapstr.MapStr{}
-		zoneCond["region"] = mapstr.MapStr{pkg.BKDBIN: region}
-		zoneResp, err := l.confLogic.Zone().GetZone(kt, &zoneCond)
-		if err != nil {
-			logs.Errorf("failed to get cvm subnet zone list, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
-				err, region, zone, vpc, kt.Rid)
-			return "", 0, err
-		}
-
-		for _, zoneItem := range zoneResp.Info {
-			zones = append(zones, zoneItem.Zone)
-		}
-	} else {
-		zones = append(zones, zone)
-	}
-
-	var subnetList = make([]*cvmapi.SubnetInfo, 0)
-	// 遍历可用区，获取子网列表
-	for _, zoneValue := range zones {
-		subnetReq := cvmapi.SubnetRealParam{
-			Region:      region,
-			CloudCampus: zoneValue,
-			VpcId:       vpc,
-		}
-		resp, err := l.cvm.QueryRealCvmSubnet(kt, subnetReq)
-		if err != nil {
-			logs.Errorf("failed to loop get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
-				err, region, zoneValue, vpc, kt.Rid)
-			return "", 0, err
-		}
-		subnetList = append(subnetList, resp.Result...)
+	subnetList, err := l.getSubnetList(kt, region, zone, vpc)
+	if err != nil {
+		return "", 0, err
 	}
 
 	cond := map[string]interface{}{
@@ -694,6 +663,45 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	}
 
 	return subnetId, leftIp, nil
+}
+
+func (l *logics) getSubnetList(kt *kit.Kit, region string, zone string, vpc string) ([]*cvmapi.SubnetInfo, error) {
+	zones := make([]string, 0)
+	// 园区-分区Campus，获取该区域下的可用区列表
+	if zone == cvmapi.CvmSeparateCampus {
+		zoneCond := mapstr.MapStr{}
+		zoneCond["region"] = mapstr.MapStr{pkg.BKDBIN: region}
+		zoneResp, err := l.confLogic.Zone().GetZone(kt, &zoneCond)
+		if err != nil {
+			logs.Errorf("failed to get cvm subnet zone list, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zone, vpc, kt.Rid)
+			return nil, err
+		}
+
+		for _, zoneItem := range zoneResp.Info {
+			zones = append(zones, zoneItem.Zone)
+		}
+	} else {
+		zones = append(zones, zone)
+	}
+
+	var subnetList = make([]*cvmapi.SubnetInfo, 0)
+	// 遍历可用区，获取子网列表
+	for _, zoneValue := range zones {
+		subnetReq := cvmapi.SubnetRealParam{
+			Region:      region,
+			CloudCampus: zoneValue,
+			VpcId:       vpc,
+		}
+		resp, err := l.cvm.QueryRealCvmSubnet(kt, subnetReq)
+		if err != nil {
+			logs.Errorf("failed to loop get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zoneValue, vpc, kt.Rid)
+			return nil, err
+		}
+		subnetList = append(subnetList, resp.Result...)
+	}
+	return subnetList, nil
 }
 
 // SecGroup network security group

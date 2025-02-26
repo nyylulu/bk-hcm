@@ -73,6 +73,7 @@ import (
 	"hcm/cmd/data-service/service/cloud/zone"
 	"hcm/cmd/data-service/service/cos"
 	globalconfig "hcm/cmd/data-service/service/global-config"
+	orgtopo "hcm/cmd/data-service/service/org-topo"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
 	resourceplan "hcm/cmd/data-service/service/resource-plan"
 	rollingserver "hcm/cmd/data-service/service/rolling-server"
@@ -299,6 +300,7 @@ func (s *Service) apiSet() *restful.Container {
 	rollingfinedetail.InitService(capability)
 	rollingbill.InitService(capability)
 	globalconfig.InitService(capability)
+	orgtopo.InitService(capability)
 
 	task.InitService(capability)
 

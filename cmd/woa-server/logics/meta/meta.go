@@ -14,11 +14,16 @@
 package meta
 
 import (
+	"fmt"
+	"strconv"
+
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 )
 
@@ -114,4 +119,61 @@ func (l *logics) GetPlanProducts(kt *kit.Kit) ([]mtypes.PlanProduct, error) {
 
 	result := maps.Values(planProdMap)
 	return result, nil
+}
+
+// GetOrgTopo get org topo
+func (l *logics) GetOrgTopo(kt *kit.Kit, orgView enumor.View) (*mtypes.OrgInfo, error) {
+	switch orgView {
+	case enumor.IEGView:
+		iegOrgMap, err := l.getIEGOrgTopos(kt)
+		if err != nil {
+			return nil, err
+		}
+		return l.buildOrgTopo(iegOrgMap), nil
+	default:
+		return nil, fmt.Errorf("unsupported org topo view: %s", orgView)
+	}
+}
+
+// getIEGOrgTopos get ieg org topos
+func (l *logics) getIEGOrgTopos(kt *kit.Kit) (map[string]*mtypes.OrgInfo, error) {
+	depts, err := l.dao.OrgTopo().ListAllDepartment(kt)
+	if err != nil {
+		logs.Errorf("failed to get department info, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	topos := make(map[string]*mtypes.OrgInfo)
+	for _, v := range depts {
+		// 过滤腾讯公司及IEG的部门列表
+		if (v.Level == constant.TencentDeptLevel && v.DeptID == constant.TencentDeptID) ||
+			(v.Level == constant.IEGDeptLevel && v.DeptID == constant.IEGDeptID) || v.Level > constant.IEGDeptLevel {
+			topos[v.DeptID] = &mtypes.OrgInfo{
+				ID:          v.DeptID,
+				Name:        v.DeptName,
+				FullName:    v.FullName,
+				Level:       v.Level,
+				Parent:      v.Parent,
+				TofDeptID:   v.TofDeptID,
+				HasChildren: cvt.PtrToVal(v.HasChildren) != 0,
+				Children:    nil,
+			}
+		}
+	}
+
+	return topos, nil
+}
+
+func (l *logics) buildOrgTopo(topos map[string]*mtypes.OrgInfo) *mtypes.OrgInfo {
+	var root *mtypes.OrgInfo
+	for _, org := range topos {
+		if org.ID == constant.TencentDeptID && org.Parent == strconv.Itoa(int(constant.TencentDeptLevel)) {
+			root = org
+		} else {
+			if parent, ok := topos[org.Parent]; ok && org.Level != 0 {
+				parent.Children = append(parent.Children, org)
+			}
+		}
+	}
+	return root
 }

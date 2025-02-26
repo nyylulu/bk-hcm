@@ -52,3 +52,7 @@ data:
       {{- toYaml .Values.cloudserver.cloudSelection | nindent 6 }}
     cmdb:
       {{- toYaml .Values.cmdbApiGateway | nindent 6 }}
+    userMgr:
+      {{- toYaml .Values.userMgr | nindent 6 }}
+    orgTopoConfig:
+      {{- toYaml .Values.cloudserver.orgTopoConfig | nindent 6 }}

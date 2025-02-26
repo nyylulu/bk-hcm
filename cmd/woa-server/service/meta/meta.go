@@ -263,3 +263,31 @@ func (s *service) CreateResourcePoolBiz(cts *rest.Contexts) (any, error) {
 
 	return s.client.DataService().Global.RollingServer.BatchCreateResPoolBiz(cts.Kit, req)
 }
+
+// ListOrgTopos list org topos.
+func (s *service) ListOrgTopos(cts *rest.Contexts) (any, error) {
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{Basic: &imeta.Basic{
+		Type: imeta.ZiyanResDissolveManage, Action: imeta.Find}}); err != nil {
+		logs.Errorf("no permission to get org topo resource, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(mtypes.OrgTopoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("get org topo decode failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("get org topo request validate failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	ret, err := s.logics.GetOrgTopo(cts.Kit, req.View)
+	if err != nil {
+		logs.Errorf("failed to get org topo, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return ret, nil
+}

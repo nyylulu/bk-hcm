@@ -124,6 +124,8 @@ type CloudServerSetting struct {
 	Itsm           ApiGateway     `yaml:"itsm"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
 	Cmsi           CMSI           `yaml:"cmsi"`
+	UserMgr        ApiGateway     `yaml:"userMgr"`
+	OrgTopoConfig  BillConfig     `yaml:"orgTopoConfig"`
 
 	// 内部版配置
 	Cmdb   ApiGateway `yaml:"cmdb"`
