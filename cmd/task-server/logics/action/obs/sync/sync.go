@@ -46,6 +46,7 @@ type SyncOption struct {
 	MainAccountID string        `json:"main_account_id" validate:"required"`
 	Start         uint64        `json:"start" validate:"required"`
 	Limit         uint64        `json:"limit" validate:"required"`
+	RootAccountID string        `json:"root_account_id" validate:"required"`
 }
 
 // String ...

@@ -434,6 +434,7 @@ func (sc *SyncController) createSyncBillItemFlow(kt *kit.Kit, syncDetail *SyncRe
 		Memo: memo,
 		Tasks: []taskserver.CustomFlowTask{
 			syncaction.BuildSyncTask(
+				syncDetail.RootAccountID,
 				syncDetail.MainAccountID, enumor.Vendor(syncDetail.Vendor),
 				syncDetail.BillYear, syncDetail.BillMonth,
 				syncDetail.CurrentIndex, syncDetail.BatchSize),
