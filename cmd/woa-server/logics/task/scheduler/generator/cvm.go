@@ -246,8 +246,13 @@ func (g *Generator) checkCVM(orderId string) error {
 		}
 
 		if status != enumor.CrpOrderStatusFinish {
-			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId,
-				resp.Result.Data[0].Status)
+			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId, status)
+		}
+
+		// crp侧订单完成时，不一定代表cvm生产成功，这里需要做处理，如果没有成功创建的实例，则也认为创建失败
+		if resp.Result.Data[0].SucInstanceCount <= 0 {
+			return true, fmt.Errorf("order %s failed, status: %d, sucInstanceCount: %d", resp.Result.Data[0].OrderId,
+				status, resp.Result.Data[0].SucInstanceCount)
 		}
 
 		return true, nil

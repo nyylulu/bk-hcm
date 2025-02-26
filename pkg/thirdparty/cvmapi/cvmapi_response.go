@@ -83,6 +83,7 @@ type OrderItem struct {
 	ProductId         int64              `json:"productId"`
 	ProductName       string             `json:"productName"`
 	FailInstanceInfos []FailInstanceInfo `json:"failInstanceInfo"`
+	SucInstanceCount  int                `json:"sucInstanceCount"`
 }
 
 // InstanceQueryResp cvm instance query response
