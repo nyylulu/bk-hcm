@@ -851,12 +851,17 @@ func (c *Controller) getExpireNotificationsDemandRange(kt *kit.Kit, now time.Tim
 func (c *Controller) generateAndSendMail(kt *kit.Kit, bkBizID int64, demands []*ptypes.ListResPlanDemandItem,
 	maintainers []string, extraReceivers []string, deviceTypeMap map[string]wdt.WoaDeviceTypeTable) error {
 
-	emailTitle, emailContent, receivers, err := c.generateExpireNotificationsEmail(kt, demands, deviceTypeMap,
+	emailTitle, emailContent, receivers, skip, err := c.generateExpireNotificationsEmail(kt, demands, deviceTypeMap,
 		bkBizID)
 	if err != nil {
 		logs.Errorf("failed to generate expire notifications email, err: %v, bk_biz_id: %d, rid: %s", err,
 			bkBizID, kt.Rid)
 		return err
+	}
+
+	if skip {
+		logs.Infof("skip to send expire notifications email, bk_biz_id: %d, rid: %s", bkBizID, kt.Rid)
+		return nil
 	}
 
 	err = c.sendEmail(kt, receivers, extraReceivers, maintainers, emailTitle, emailContent)
@@ -872,24 +877,21 @@ func (c *Controller) generateAndSendMail(kt *kit.Kit, bkBizID int64, demands []*
 // generateExpireNotificationsEmail generate expire notifications email content.
 func (c *Controller) generateExpireNotificationsEmail(kt *kit.Kit, demands []*ptypes.ListResPlanDemandItem,
 	deviceTypeMap map[string]wdt.WoaDeviceTypeTable, bkBizID int64) (title string, content string, receivers []string,
-	err error) {
+	skip bool, err error) {
 
 	sendTime := time.Now()
-
-	if len(demands) == 0 {
-		return "", "", nil, errors.New("no resource plans are about to expire")
-	}
 
 	var allRemainedCPU int64
 	var expectStart, expectEnd string
 	uniqueReceivers := make(map[string]interface{})
 	// 拼装表格数据
+	validItemsNum := 0
 	tableContent := ""
 	for _, demand := range demands {
 		deviceTypeInfo, ok := deviceTypeMap[demand.DeviceType]
 		if !ok {
 			logs.Errorf("device type %s not found, rid: %s", demand.DeviceType, kt.Rid)
-			return "", "", nil, fmt.Errorf("device type %s not found", demand.DeviceType)
+			return "", "", nil, skip, fmt.Errorf("device type %s not found", demand.DeviceType)
 		}
 
 		// 只保留“可申领”、“未到申领时间”的记录
@@ -913,7 +915,7 @@ func (c *Controller) generateExpireNotificationsEmail(kt *kit.Kit, demands []*pt
 		if err != nil {
 			logs.Errorf("failed to parse expect time, err: %v, expect_time: %s, rid: %s", err,
 				demand.ExpectTime, kt.Rid)
-			return "", "", nil, err
+			return "", "", nil, skip, err
 		}
 		demandRange, err := c.demandTime.GetDemandDateRangeInMonth(kt, expectTime)
 
@@ -926,7 +928,16 @@ func (c *Controller) generateExpireNotificationsEmail(kt *kit.Kit, demands []*pt
 			deviceTypeInfo.DeviceClass, deviceTypeInfo.CpuCore, deviceTypeInfo.Memory,
 			demand.RemainedOS, demand.TotalOS,
 			demand.RemainedCpuCore, demand.TotalCpuCore)
+
+		validItemsNum++
 	}
+
+	if validItemsNum <= 0 {
+		skip = true
+		logs.Warnf("no resource plans are about to expire, bk_biz_id: %d, rid: %s", bkBizID, kt.Rid)
+		return "", "", nil, skip, nil
+	}
+
 	// 跳转链接
 	appliedHostURL := fmt.Sprintf(ptypes.
 		AppliedHostURL, c.bkHcmURL, bkBizID)
@@ -943,7 +954,7 @@ func (c *Controller) generateExpireNotificationsEmail(kt *kit.Kit, demands []*pt
 
 	receivers = maps.Keys(uniqueReceivers)
 
-	return title, content, receivers, nil
+	return title, content, receivers, skip, nil
 }
 
 func renderEmailTemplateForDemandStatus(status enumor.DemandStatus) string {
