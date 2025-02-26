@@ -267,7 +267,7 @@ func (s *service) CreateResourcePoolBiz(cts *rest.Contexts) (any, error) {
 // ListOrgTopos list org topos.
 func (s *service) ListOrgTopos(cts *rest.Contexts) (any, error) {
 	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{Basic: &imeta.Basic{
-		Type: imeta.ZiyanResDissolveManage, Action: imeta.Find}}); err != nil {
+		Type: imeta.ServiceResDissolve, Action: imeta.Find}}); err != nil {
 		logs.Errorf("no permission to get org topo resource, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
