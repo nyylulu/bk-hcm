@@ -126,8 +126,13 @@ func (act SyncAction) Run(kt run.ExecuteKit, params interface{}) (interface{}, e
 	}
 }
 
-func getExchangeRate(kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode,
-	billYear, billMonth int) (*decimal.Decimal, error) {
+func getExchangeRate(kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode, billYear, billMonth int) (
+	*decimal.Decimal, error) {
+
+	if fromCurrency == toCurrency {
+		one := decimal.NewFromInt(1)
+		return &one, nil
+	}
 
 	expressions := []*filter.AtomRule{
 		tools.RuleEqual("from_currency", fromCurrency),
@@ -149,7 +154,7 @@ func getExchangeRate(kt *kit.Kit, fromCurrency, toCurrency enumor.CurrencyCode,
 	if len(result.Details) == 0 {
 		logs.Infof("get no exchange rate from %s to %s in %d-%d, rid %s",
 			fromCurrency, toCurrency, billYear, billMonth, kt.Rid)
-		return nil, nil
+		return nil, fmt.Errorf("no exchange rate from %s to %s in %d-%d", fromCurrency, toCurrency, billYear, billMonth)
 	}
 	if len(result.Details) != 1 {
 		logs.Infof("get invalid resp length from exchange rate from %s to %s in %d-%d, resp %v, rid %s",
