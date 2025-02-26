@@ -1,11 +1,12 @@
 import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import http from '@/http';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessGlobalStore } from '@/store/business-global';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-// import HcmSearchOrg from '@/components/search/org.vue';
+import TreeSelector, { type ITreeItem } from '@/components/tree-selector/index.vue';
 import HcmSearchBusiness from '@/components/search/business.vue';
 import HcmSearchUser from '@/components/search/user.vue';
 import CurrentDialog from '../current-dialog';
@@ -13,13 +14,7 @@ import OriginDialog from '../origin-dialog';
 import cssModule from './index.module.scss';
 
 import type { IDissolve } from '@/typings/ziyanScr';
-import type { Department } from '@/typings';
-
-interface IDepartmentWithExtras extends Department {
-  extras?: {
-    code: string;
-  };
-}
+import type { IQueryResData } from '@/typings';
 
 export default defineComponent({
   components: {
@@ -67,7 +62,7 @@ export default defineComponent({
       </>
     );
     const isLoading = ref(false);
-    // const organizations = ref([]);
+    const organizations = ref([]);
     const orgChecked = ref([]);
     const operators = ref([]);
     const bkBizIds = ref([]);
@@ -80,23 +75,23 @@ export default defineComponent({
 
     const currentRowData = ref<IDissolve>();
 
-    // const orgRef = ref(null);
+    const treeSelectorRef = ref(null);
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
     const groupIds = computed(() => {
       const leafIds = new Set<string>();
 
-      const collectLeafCodes = (dept: IDepartmentWithExtras) => {
-        if (!dept?.has_children && dept?.extras?.code) {
-          leafIds.add(dept.extras.code);
+      const collectLeafCodes = (dept: ITreeItem) => {
+        if (!dept?.has_children && dept?.tof_dept_id) {
+          leafIds.add(dept.tof_dept_id);
         }
         if (dept?.has_children && dept?.children) {
           dept.children.forEach((child) => collectLeafCodes(child));
         }
       };
 
-      // 收集所选节点下的所有叶子节点的code数据
+      // 收集所选节点下的所有叶子节点的tof_dept_id数据
       orgChecked.value.forEach((org) => {
         collectLeafCodes(org);
       });
@@ -115,7 +110,9 @@ export default defineComponent({
       ziyanScrStore
         .getDissolveList({
           group_ids: groupIds.value,
-          bk_biz_names: !bkBizIds.value?.[0] ? [] : businessGlobalStore.getBusinessNames(bkBizIds.value),
+          bk_biz_names: !bkBizIds.value?.[0]
+            ? businessGlobalStore.getBusinessNames(businessGlobalStore.businessAuthorizedList.map((item) => item.id))
+            : businessGlobalStore.getBusinessNames(bkBizIds.value),
           module_names: moduleNames.value,
           operators: operators.value,
         })
@@ -149,28 +146,26 @@ export default defineComponent({
     };
 
     const handleReset = () => {
-      // orgRef.value.clear();
+      treeSelectorRef.value.clear();
       bkBizIds.value = [];
       operators.value = [];
+    };
+
+    const getOrg = async () => {
+      const res: IQueryResData<ITreeItem> = await http.post('/api/v1/woa/metas/org_topos/list', { view: 'ieg' });
+      return res.data.children;
     };
 
     const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
       searchParams.value = {
         group_ids: groupIds.value,
-        bk_biz_names: bkBizNames,
+        bk_biz_names: bkBizNames.length
+          ? bkBizNames
+          : businessGlobalStore.getBusinessNames(businessGlobalStore.businessAuthorizedList.map((item) => item.id)),
         module_names: moduleNames,
         operators: operators.value,
       };
     };
-
-    // const firstLevelDataFilter = (data: IDepartmentWithExtras[]) => {
-    //   // 正式环境第一层级只保留指定id的节点
-    //   const found = data.filter((item) => item.id === 2874);
-    //   if (found.length) {
-    //     return found;
-    //   }
-    //   return data;
-    // };
 
     const handleShowOriginDialog = (bkBizNames: string[], row: IDissolve) => {
       originDialogShow.value = true;
@@ -187,18 +182,17 @@ export default defineComponent({
     return () => (
       <Panel>
         <section class={cssModule.search}>
-          {/* <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <HcmSearchOrg
-            ref={orgRef}
+          <span class={cssModule['search-label']}>{t('组织')}：</span>
+          <TreeSelector
+            ref={treeSelectorRef}
+            data={getOrg}
             class={cssModule['search-item']}
             {...{
               placeholder: '请选择或输入名称查找',
-              searchPlaceholder: '请输入2个以上字符搜索',
-              firstLevelDataFilter,
             }}
             v-model={organizations.value}
             v-model:checked={orgChecked.value}
-          /> */}
+          />
           <span class={cssModule['search-label']}>{t('业务')}：</span>
           <HcmSearchBusiness
             class={cssModule['search-item']}

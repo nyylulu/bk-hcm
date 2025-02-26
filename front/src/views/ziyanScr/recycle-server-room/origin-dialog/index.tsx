@@ -42,6 +42,8 @@ export default defineComponent({
       t('{title}（原始）_设备详情', { title: props?.searchParams?.bk_biz_names?.[0] || '' }),
     );
 
+    const moduleHostCountMap = ref(new Map<string, number>());
+
     const handleModuleSearch = (module?: string) => {
       activeModule.value = module;
       getData(module ? [module] : undefined);
@@ -62,7 +64,12 @@ export default defineComponent({
         tableData.value = res.data.details;
         pagination.value.count = tableData.value?.length || 0;
 
+        // 未指定module时认为是“全部”
         if (!moduleNames) {
+          // 根据列表数据按module_name分组并统计每个分组的机器数量
+          tableData.value.forEach((item: any) => {
+            moduleHostCountMap.value.set(item.module_name, (moduleHostCountMap.value.get(item.module_name) ?? 0) + 1);
+          });
           totalCount.value = pagination.value.count;
         }
       } catch (error) {
@@ -79,6 +86,7 @@ export default defineComponent({
       () => props.searchParams,
       () => {
         if (props.isShow) {
+          moduleHostCountMap.value.clear();
           getData();
           activeModule.value = '';
         }
@@ -101,14 +109,16 @@ export default defineComponent({
               onClick={() => handleModuleSearch()}>
               全部 <em class={cssModule['item-count']}>{totalCount.value}</em>
             </div>
-            {(props?.searchParams?.module_names || []).map((name) => (
-              <div
-                key={name}
-                class={[cssModule['module-item'], { [cssModule.active]: activeModule.value === name }]}
-                onClick={() => handleModuleSearch(name)}>
-                {name}
-              </div>
-            ))}
+            {[...moduleHostCountMap.value]
+              .sort((a, b) => b[1] - a[1])
+              .map(([name, count]) => (
+                <div
+                  key={name}
+                  class={[cssModule['module-item'], { [cssModule.active]: activeModule.value === name }]}
+                  onClick={() => handleModuleSearch(name)}>
+                  {name} <em class={cssModule['item-count']}>{count}</em>
+                </div>
+              ))}
           </div>
           <div class={cssModule['data-table']} v-bkloading={{ loading: isLoading.value }}>
             <div class={cssModule.title}>
