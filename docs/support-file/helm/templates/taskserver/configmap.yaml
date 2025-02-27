@@ -23,6 +23,8 @@ data:
       {{- toYaml .Values.taskserver.log | nindent 6 }}
     async:
       {{- toYaml .Values.taskserver.async | nindent 6 }}
+    useLabel:
+      {{- toYaml .Values.taskserver.useLabel | nindent 6 }}
     obsDatabase:
       {{- toYaml .Values.obsDatabase | nindent 6 }}
     cmdb:
@@ -31,3 +33,4 @@ data:
       {{- toYaml .Values.alarm | nindent 6 }}
     sampwd:
       {{- toYaml .Values.sampwd | nindent 6 }}
+

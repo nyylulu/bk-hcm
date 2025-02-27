@@ -13,7 +13,7 @@ image:
   registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.7.3.5
+  tag: 1.7.4.0-alpha.1
 
 serviceAccount:
   create: true
@@ -530,6 +530,10 @@ taskserver:
       watchIntervalSec: 1
       # taskTimeoutSec 判断任务执行超时时间
       taskTimeoutSec: 300
+  # whether to use label to filter service.
+  useLabel:
+    # use label when pull aws china site bills
+    awsCN: true
 
 # defines obs database related settings.
 obsDatabase:
@@ -638,7 +642,7 @@ accountserver:
     mainAccountSummarySyncDuration:
     rootAccountSummarySyncDuration:
     dailySummarySyncDuration:
-
+    monthTaskSyncDuration:
   billAllocation:
     # aws savings plans allocation option
     awsSavingsPlans:
