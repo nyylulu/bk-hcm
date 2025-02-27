@@ -128,6 +128,11 @@ log:
   # log level.
   verbosity: 0
 
+# whether to use label to filter service.
+useLabel:
+  # use label when pull aws china site bills
+  awsCN: true
+
 # 内部版 推送账单到obs的数据库配置
 obsDatabase:
   # defines resource database related settings.

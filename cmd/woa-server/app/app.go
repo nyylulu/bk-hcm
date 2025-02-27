@@ -79,7 +79,7 @@ func (s *woaServer) prepare(opt *options.Option) error {
 	metrics.InitMetrics(net.JoinHostPort(network.BindIP, strconv.Itoa(int(network.Port))))
 
 	// new api server discovery client.
-	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network)
+	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network, opt.Sys)
 	discOpt := serviced.DiscoveryOption{Services: []cc.Name{cc.AuthServerName, cc.DataServiceName}}
 	sd, err := serviced.NewServiceD(cc.WoaServer().Service, svcOpt, discOpt)
 	if err != nil {
