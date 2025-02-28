@@ -6,7 +6,7 @@ metadata:
 data:
   config.yaml: |-
     obsDatabase:
-      {{- toYaml .Values.obsDatabase | nindent 6 }}
+      {{- toYaml .Values.dataservice.obsDatabase | nindent 6 }}
     network:
       bindIP:
       port: {{ .Values.dataservice.port}}
