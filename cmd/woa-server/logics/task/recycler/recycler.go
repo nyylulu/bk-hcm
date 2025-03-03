@@ -704,8 +704,8 @@ func (r *recycler) PreviewRecycleOrder(kt *kit.Kit, param *types.PreviewRecycleR
 	}
 	bkBizIDs = slice.Unique(bkBizIDs)
 
-	// 查询121天内所有业务总的回收CPU总核心数
-	allBizReturnedCpuCore, err := r.rsLogic.GetAllReturnedCpuCore(kt)
+	// 查询当月所有业务总的回收CPU总核心数
+	allBizReturnedCpuCore, err := r.rsLogic.GetCurrentMonthAllReturnedCpuCore(kt)
 	if err != nil {
 		logs.Errorf("query rolling recycle all returned cpu core failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

@@ -744,14 +744,13 @@ func (l *logics) listReturnedRecordsByAppliedIDs(kt *kit.Kit, bkBizID int64, app
 	return recordMap, nil
 }
 
-// GetAllReturnedCpuCore 获取指定时间内所有业务回收的CPU总核心数
-func (l *logics) GetAllReturnedCpuCore(kt *kit.Kit) (int64, error) {
+// GetCurrentMonthAllReturnedCpuCore 获取当月所有业务回收的CPU总核心数
+func (l *logics) GetCurrentMonthAllReturnedCpuCore(kt *kit.Kit) (int64, error) {
 	now := time.Now()
 	year, month, day := now.Year(), int(now.Month()), now.Day()
 
-	// 查询121天内，所有滚服回收记录已退回的CPU总核心数
-	startYear, startMonth, startDay := subDay(year, month, day, rstypes.CalculateFineEndDay)
-	startRollDate := times.GetDataIntDate(startYear, startMonth, startDay)
+	// 查询当月所有滚服回收记录已退回的CPU总核心数
+	startRollDate := times.GetDataIntDate(year, month, 1)
 	endRollDate := times.GetDataIntDate(year, month, day)
 
 	listReq := &rsproto.RollingReturnedRecordListReq{

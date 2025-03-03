@@ -83,8 +83,8 @@ type Logics interface {
 	// ListReturnedRecordsBySubOrderID 根据回收子订单ID查询滚服回收列表
 	ListReturnedRecordsBySubOrderID(kt *kit.Kit, bkBizID int64, subOrderID string) (
 		[]*rstable.RollingReturnedRecord, error)
-	// GetAllReturnedCpuCore 获取指定时间内所有业务回收的CPU总核心数
-	GetAllReturnedCpuCore(kt *kit.Kit) (int64, error)
+	// GetCurrentMonthAllReturnedCpuCore 获取当月所有业务回收的CPU总核心数
+	GetCurrentMonthAllReturnedCpuCore(kt *kit.Kit) (int64, error)
 	// GetRollingGlobalQuota 查询系统配置的全局总额度
 	GetRollingGlobalQuota(kt *kit.Kit) (int64, error)
 	// CheckReturnedStatusBySubOrderID 校验回收订单是否有滚服剩余额度
