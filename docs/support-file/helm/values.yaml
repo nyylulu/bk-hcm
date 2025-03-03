@@ -13,7 +13,7 @@ image:
   registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.7.4.0-alpha.1
+  tag: 1.7.4.0
 
 serviceAccount:
   create: true
@@ -564,7 +564,8 @@ taskserver:
   # whether to use label to filter service.
   useLabel:
     # use label when pull aws china site bills
-    awsCN: true
+    # if true, you should deploy at least one hc service with option: "--label AWSCN" to pull aws china site bills.
+    awsCN: false
   # task server obs账单推送db， 目前是三方云账单在用
   obsDatabase:
     # defines resource database related settings.
