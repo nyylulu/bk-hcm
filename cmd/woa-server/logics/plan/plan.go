@@ -730,7 +730,8 @@ CPU变更核数：%.2f
 		Creator:        ticket.Applicant,
 		Title:          fmt.Sprintf("%s(业务ID: %d)资源预测申请", ticket.BkBizName, ticket.BkBizID),
 		ContentDisplay: content,
-		ExtraFields:    map[string]interface{}{"res_plan_url": fmt.Sprintf(c.itsmFlow.RedirectUrlTemplate, ticket.ID)},
+		ExtraFields: map[string]interface{}{"res_plan_url": fmt.Sprintf(c.itsmFlow.RedirectUrlTemplate,
+			ticket.ID, ticket.BkBizID)},
 	}
 
 	sn, err := c.itsmCli.CreateTicket(kt, createTicketReq)
