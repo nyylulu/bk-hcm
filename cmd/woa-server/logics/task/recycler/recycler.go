@@ -113,6 +113,8 @@ type Interface interface {
 	RunRecycleTask(task *table.DetectTask, startStep uint)
 	// CheckDetectStatus check whether detection is finished or not
 	CheckDetectStatus(orderId string) error
+	// CheckUworkOpenTicket check whether uwork has open ticket
+	CheckUworkOpenTicket(kt *kit.Kit, assetID string) ([]string, error)
 	// TransitCvm transit CVM resource
 	TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event
 	// DealTransitTask2Pool transit regular Pm resource
@@ -150,7 +152,7 @@ type recycler struct {
 
 // New create a recycler
 func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, authorizer auth.Authorizer,
-	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet) (*recycler, error) {
+	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet) (Interface, error) {
 
 	// new detector
 	moduleDetector, err := detector.New(ctx, thirdCli, esbCli, cliSet)
@@ -1887,6 +1889,11 @@ func (r *recycler) RunRecycleTask(task *table.DetectTask, startStep uint) {
 // CheckDetectStatus ckeck recycle task info
 func (r *recycler) CheckDetectStatus(orderId string) error {
 	return r.dispatcher.GetDetector().CheckDetectStatus(orderId)
+}
+
+// CheckUworkOpenTicket ckeck host uwork ticket status
+func (r *recycler) CheckUworkOpenTicket(kt *kit.Kit, assetID string) ([]string, error) {
+	return r.dispatcher.GetDetector().GetUworkOpenTicketByAssetID(kt, assetID)
 }
 
 // DealTransitTask2Pool deal recycle task info
