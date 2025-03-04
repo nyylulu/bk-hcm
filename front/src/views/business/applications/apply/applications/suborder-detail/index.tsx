@@ -73,29 +73,31 @@ export default defineComponent({
     );
 
     watch(
-      () => [props.subOrderInfo.suborder_id, props.subOrderInfo.step_id, curStatus.value],
+      () => [props.subOrderInfo.suborder_id, props.subOrderInfo.step_id, curStatus.value, isDialogShow],
       () => {
-        switch (props.subOrderInfo.step_id) {
-          case 2: {
-            fetchApi.value = scrStore.getProductionDetails;
-            // 增加折叠列，显示crp审批流信息
-            tableColumns.value = [{ type: 'expand', minWidth: 50 }, ...producingColumns];
-            break;
+        if (isDialogShow.value) {
+          switch (props.subOrderInfo.step_id) {
+            case 2: {
+              fetchApi.value = scrStore.getProductionDetails;
+              // 增加折叠列，显示crp审批流信息
+              tableColumns.value = [{ type: 'expand', minWidth: 50 }, ...producingColumns];
+              break;
+            }
+            case 3: {
+              fetchApi.value = scrStore.getInitializationDetails;
+              tableColumns.value = initialColumns;
+              break;
+            }
+            case 4: {
+              fetchApi.value = scrStore.getDeliveryDetails;
+              tableColumns.value = deliveryColumns;
+              break;
+            }
           }
-          case 3: {
-            fetchApi.value = scrStore.getInitializationDetails;
-            tableColumns.value = initialColumns;
-            break;
-          }
-          case 4: {
-            fetchApi.value = scrStore.getDeliveryDetails;
-            tableColumns.value = deliveryColumns;
-            break;
-          }
-        }
 
-        pagination.start = 0;
-        getListData();
+          pagination.start = 0;
+          getListData();
+        }
       },
       { immediate: true, deep: true },
     );
