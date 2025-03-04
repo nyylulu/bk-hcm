@@ -443,3 +443,28 @@ func (req *RecycleHostDeleteReq) Validate() error {
 
 	return validator.Validate.Struct(req)
 }
+
+// HostDissolveStatusCheckReq check host dissolve status request.
+type HostDissolveStatusCheckReq struct {
+	HostIDs []int64 `json:"bk_host_ids" validate:"required,min=1"`
+}
+
+// Validate ...
+func (req *HostDissolveStatusCheckReq) Validate() error {
+	if len(req.HostIDs) > constant.BatchOperationMaxLimit {
+		return fmt.Errorf("check dissolve host status limit is %d", constant.BatchOperationMaxLimit)
+	}
+
+	return validator.Validate.Struct(req)
+}
+
+// HostDissolveStatusCheckResp check host dissolve status response.
+type HostDissolveStatusCheckResp struct {
+	Info []HostDissolveStatusCheckInfo `json:"info"`
+}
+
+// HostDissolveStatusCheckInfo check host dissolve status info.
+type HostDissolveStatusCheckInfo struct {
+	HostID int64 `json:"bk_host_id"`
+	Status bool  `json:"status"`
+}

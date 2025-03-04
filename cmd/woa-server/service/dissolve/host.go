@@ -20,13 +20,21 @@
 package dissolve
 
 import (
+	"fmt"
+
 	model "hcm/cmd/woa-server/types/dissolve"
+	"hcm/pkg/api/core"
+	dataproto "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/hooks/handler"
+	"hcm/pkg/tools/maps"
 )
 
 // CreateRecycledHost create recycle host
@@ -147,4 +155,81 @@ func (s *service) SyncRecycledHost(cts *rest.Contexts) (interface{}, error) {
 	}
 
 	return nil, nil
+}
+
+// CheckHostDissolveStatus check host dissolve status
+func (s *service) CheckHostDissolveStatus(cts *rest.Contexts) (interface{}, error) {
+	return s.checkHostDissolveStatus(cts, handler.ListBizAuthRes)
+}
+
+func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (interface{},
+	error) {
+
+	req := new(model.HostDissolveStatusCheckReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authFilter, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{Authorizer: s.authorizer,
+		ResType: meta.Cvm, Action: meta.Find, Filter: tools.AllExpression()})
+	if err != nil {
+		return nil, err
+	}
+	if noPermFlag {
+		return nil, errf.NewFromErr(errf.PermissionDenied, fmt.Errorf("no permission"))
+	}
+
+	rules := make([]filter.RuleFactory, 0)
+	rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
+	rules = append(rules, tools.RuleJsonIn("extension.bk_host_id", req.HostIDs))
+	rules = append(rules, authFilter)
+	listFilter := &filter.Expression{
+		Op:    filter.And,
+		Rules: rules,
+	}
+	listReq := &dataproto.CvmListReq{
+		Field:  []string{"extension"},
+		Filter: listFilter,
+		Page:   core.NewDefaultBasePage(),
+	}
+	rst, err := s.client.DataService().TCloudZiyan.Cvm.ListCvmExt(cts.Kit.Ctx, cts.Kit.Header(), listReq)
+	if err != nil {
+		logs.Errorf("failed to list host by bk_host_id, err: %v, ids: %v, rid: %s", err, req.HostIDs, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(req.HostIDs) != len(rst.Details) {
+		logs.Errorf("get host info not match with bk_host_ids, count: %d, host_id count: %d, rid: %s",
+			len(rst.Details), len(req.HostIDs), cts.Kit.Rid)
+		return nil, fmt.Errorf("host count not match, there could be invalid bk_host_id or no permissions")
+	}
+
+	hostIDAssetIDMap := make(map[int64]string)
+	for _, host := range rst.Details {
+		if host.Extension == nil {
+			logs.Errorf("host extension is nil, host: %v, rid: %s", host, cts.Kit.Rid)
+			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
+		}
+		hostIDAssetIDMap[host.Extension.HostID] = host.Extension.BkAssetID
+	}
+
+	assetIDStatusMap, err := s.logics.RecycledHost().IsDissolveHost(cts.Kit, maps.Values(hostIDAssetIDMap))
+	if err != nil {
+		logs.Errorf("check host dissolve status failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	info := make([]model.HostDissolveStatusCheckInfo, 0, len(assetIDStatusMap))
+	for _, hostID := range req.HostIDs {
+		info = append(info, model.HostDissolveStatusCheckInfo{
+			HostID: hostID,
+			Status: assetIDStatusMap[hostIDAssetIDMap[hostID]],
+		})
+	}
+
+	return model.HostDissolveStatusCheckResp{Info: info}, nil
 }
