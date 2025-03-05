@@ -127,7 +127,7 @@ type ResPlanDemandTable struct {
 	// DeviceType 机型类型
 	DeviceType string `db:"device_type" json:"device_type" validate:"lte=64"`
 	// CoreType 核心类型
-	CoreType string `db:"core_type" json:"core_type" validate:"lte=64"`
+	CoreType enumor.CoreType `db:"core_type" json:"core_type" validate:"lte=64"`
 	// DiskType 磁盘类型
 	DiskType enumor.DiskType `db:"disk_type" json:"disk_type" validate:"lte=64"`
 	// DiskTypeName 磁盘类型名称

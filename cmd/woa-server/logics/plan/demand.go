@@ -178,6 +178,8 @@ func (c *Controller) extendResPlanListReq(kt *kit.Kit, req *ptypes.ListResPlanDe
 		BkBizIDs:       req.BkBizIDs,
 		OpProductIDs:   req.OpProductIDs,
 		PlanProductIDs: req.PlanProductIDs,
+		CoreTypes:      req.CoreTypes,
+		DeviceFamilies: req.DeviceFamilies,
 		ExpectTimeRange: &times.DateRange{
 			Start: startDemandTimeRange.Start,
 			End:   endDemandTimeRange.End,
@@ -417,6 +419,7 @@ func convListResPlanDemandItemByTable(table rpd.ResPlanDemandTable, expectTime s
 		PlanType:         table.PlanType.Name(),
 		ObsProject:       table.ObsProject,
 		DeviceFamily:     table.DeviceFamily,
+		CoreType:         table.CoreType,
 		DiskType:         table.DiskType,
 		DiskTypeName:     table.DiskType.Name(),
 		DiskIO:           table.DiskIO,
@@ -562,6 +565,12 @@ func (c *Controller) convAllResPlanDemandListOpt(kt *kit.Kit, req *ptypes.ListRe
 	}
 	if len(req.DemandClasses) > 0 {
 		listRules = append(listRules, tools.RuleIn("demand_class", req.DemandClasses))
+	}
+	if len(req.DeviceFamilies) > 0 {
+		listRules = append(listRules, tools.RuleIn("device_family", req.DeviceFamilies))
+	}
+	if len(req.CoreTypes) > 0 {
+		listRules = append(listRules, tools.RuleIn("core_type", req.CoreTypes))
 	}
 	if len(req.DeviceClasses) > 0 {
 		listRules = append(listRules, tools.RuleIn("device_class", req.DeviceClasses))

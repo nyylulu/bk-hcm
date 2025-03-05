@@ -16,6 +16,8 @@ POST /api/v1/woa/plans/resources/demands/list
 | demand_ids        | string array | 否  | 预测需求ID列表，不传时查询全部，数量最大100                         |
 | obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                        |
 | demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                         |
+| core_types        | string array | 否  | 核心类型列表，不传时查询全部，数量最大100                           | 
+| device_families   | string array | 否  | 机型族列表，不传时查询全部，数量最大100                            |
 | device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                           |
 | device_types      | string array | 否  | 机型规格列表，不传时查询全部，数量最大100                           |
 | region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部，数量最大100                        |
@@ -63,6 +65,12 @@ POST /api/v1/woa/plans/resources/demands/list
   ],
   "demand_classes": [
     "CVM"
+  ],
+  "core_types": [
+    "大核心"
+  ],
+  "device_families": [
+    "标准型"
   ],
   "device_classes": [
     "标准型S5"
@@ -144,6 +152,7 @@ POST /api/v1/woa/plans/resources/demands/list
         "plan_type": "预测内",
         "obs_project": "常规项目",
         "device_family": "高IO型",
+        "core_type": "大核心",
         "disk_type": "CLOUD_PREMIUM",
         "disk_type_name": "高性能云硬盘",
         "disk_io": 15
@@ -219,6 +228,7 @@ POST /api/v1/woa/plans/resources/demands/list
 | plan_type          | string | 计划类型                                                                              |
 | obs_project        | string | OBS项目类型                                                                           |
 | device_family      | string | 机型族                                                                               |
+| core_type          | string | 核心类型                                                                              |
 | disk_type          | string | 云盘类型                                                                              |
 | disk_type_name     | string | 云盘类型名称                                                                            |
 | disk_io            | int    | 云盘IO                                                                              |

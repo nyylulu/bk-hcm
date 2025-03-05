@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -72,6 +73,12 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 	[]string, error) {
 
 	for _, updateReq := range updateReqs {
+		coreType := enumor.CoreType(updateReq.CoreType)
+		if err := coreType.Validate(); err != nil {
+			logs.Errorf("invalid core type: %s, rid: %s", coreType, kt.Rid)
+			return nil, err
+		}
+
 		record := &tablers.ResPlanDemandTable{
 			ID:              updateReq.ID,
 			OpProductID:     updateReq.OpProductID,
@@ -80,7 +87,7 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			PlanProductName: updateReq.PlanProductName,
 			VirtualDeptID:   updateReq.VirtualDeptID,
 			VirtualDeptName: updateReq.VirtualDeptName,
-			CoreType:        updateReq.CoreType,
+			CoreType:        coreType,
 			Reviser:         kt.User,
 		}
 		if updateReq.OS != nil {

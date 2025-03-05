@@ -45,6 +45,8 @@ type ListResPlanDemandReq struct {
 	DemandIDs       []string             `json:"demand_ids" validate:"omitempty,max=100"`
 	ObsProjects     []enumor.ObsProject  `json:"obs_projects" validate:"omitempty,max=100"`
 	DemandClasses   []enumor.DemandClass `json:"demand_classes" validate:"omitempty,max=100"`
+	CoreTypes       []enumor.CoreType    `json:"core_types" validate:"omitempty,max=100"`
+	DeviceFamilies  []string             `json:"device_families" validate:"omitempty,max=100"`
 	DeviceClasses   []string             `json:"device_classes" validate:"omitempty,max=100"`
 	DeviceTypes     []string             `json:"device_types" validate:"omitempty,max=100"`
 	RegionIDs       []string             `json:"region_ids" validate:"omitempty,max=100"`
@@ -238,6 +240,7 @@ type ListResPlanDemandItem struct {
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
 	DeviceFamily     string               `json:"device_family"`
+	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`
 	DiskTypeName     string               `json:"disk_type_name"`
 	DiskIO           int64                `json:"disk_io"`
@@ -313,7 +316,7 @@ type GetPlanDemandDetailResp struct {
 	ZoneID          string            `json:"zone_id"`
 	ZoneName        string            `json:"zone_name"`
 	PlanType        enumor.PlanType   `json:"plan_type"`
-	CoreType        string            `json:"core_type"`
+	CoreType        enumor.CoreType   `json:"core_type"`
 	DeviceFamily    string            `json:"device_family"`
 	DeviceClass     string            `json:"device_class"`
 	DeviceType      string            `json:"device_type"`
