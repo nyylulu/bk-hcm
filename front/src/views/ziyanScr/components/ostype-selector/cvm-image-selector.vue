@@ -16,6 +16,7 @@ interface IProps {
   multiple?: boolean;
   clearable?: boolean;
   filterable?: boolean;
+  disabled?: boolean;
 }
 
 defineOptions({ name: 'cvm-image-selector' });
@@ -25,6 +26,7 @@ const props = withDefaults(defineProps<IProps>(), {
   multiple: false,
   clearable: true,
   filterable: true,
+  disabled: false,
 });
 const model = defineModel<string | string[]>();
 
@@ -69,6 +71,7 @@ watchEffect(() => {
     :multiple="multiple"
     :clearable="clearable"
     :filterable="filterable"
+    :disabled="disabled"
   >
     <bk-option v-for="(option, index) in options" :id="option[idKey]" :key="index" :name="option[displayKey]" />
   </bk-select>

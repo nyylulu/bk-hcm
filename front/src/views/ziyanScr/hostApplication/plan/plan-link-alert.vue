@@ -3,7 +3,7 @@ import { useI18n } from 'vue-i18n';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
-withDefaults(defineProps<{ bkBizId: number; showSuggestions: boolean }>(), {
+withDefaults(defineProps<{ bkBizId: number; showSuggestions?: boolean }>(), {
   showSuggestions: true,
 });
 

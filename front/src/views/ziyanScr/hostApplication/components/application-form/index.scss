@@ -171,6 +171,12 @@
       font-size: 12px;
     }
   }
+
+  .network-info-collapse-panel {
+    .bk-collapse-content {
+      padding: 16px 52px !important;
+    }
+  }
 }
 
 .config-ticket-card {

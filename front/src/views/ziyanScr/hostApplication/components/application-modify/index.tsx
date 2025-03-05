@@ -3,7 +3,7 @@ import { Input, Button, Sideslider, Form, Alert, Message } from 'bkui-vue';
 import CommonCard from '@/components/CommonCard';
 import './index.scss';
 import ZoneSelector from '../ZoneSelector';
-import NetworkInfoPanel from '../network-info-panel/index.vue';
+import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useRouter, useRoute } from 'vue-router';
 import WName from '@/components/w-name';
@@ -290,7 +290,7 @@ export default defineComponent({
           </CommonCard>
 
           <Form model={order.value.model.spec} formType='vertical' class='mt15'>
-            <NetworkInfoPanel
+            <NetworkInfoCollapsePanel
               v-model:vpc={order.value.model.spec.vpc}
               v-model:subnet={order.value.model.spec.subnet}
               region={rawOrder.value.spec.region}
@@ -305,7 +305,7 @@ export default defineComponent({
                   />
                 ),
               }}
-            </NetworkInfoPanel>
+            </NetworkInfoCollapsePanel>
           </Form>
 
           <div class={'buttonSubmit'}>

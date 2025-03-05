@@ -8,7 +8,7 @@ import BusinessSelector from '@/components/business-selector/index.vue';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import DiskTypeSelect from '../DiskTypeSelect';
-import NetworkInfoPanel from '../network-info-panel/index.vue';
+import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
 import applicationSideslider from '../application-sideslider';
@@ -1527,7 +1527,8 @@ export default defineComponent({
 
                   {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                     <Form model={QCLOUDCVMForm.value.spec} formType='vertical' class='mt15'>
-                      <NetworkInfoPanel
+                      <NetworkInfoCollapsePanel
+                        class='network-info-collapse-panel'
                         v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
                         v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
                         region={resourceForm.value.region}

@@ -2,7 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Select, Popover } from 'bkui-vue';
 import http from '@/http';
-import type { IProps, OptionsType, SelectionType } from './types';
+import type { CvmDeviceType, IProps, OptionsType, SelectionType } from './types';
 
 const { Option } = Select;
 
@@ -145,7 +145,7 @@ defineExpose({ handleSort });
       <!-- 如果不需要 Popover 提示，直接渲染 Option -->
       <Option v-else :id="option.device_type" :name="option.device_type" :disabled="optionDisabled(option)">
         <template v-if="$slots.option">
-          <slot name="option" v-bind="option"></slot>
+          <slot name="option" v-bind="(option as CvmDeviceType)"></slot>
         </template>
         <template v-else>{{ option.device_type }}</template>
       </Option>
