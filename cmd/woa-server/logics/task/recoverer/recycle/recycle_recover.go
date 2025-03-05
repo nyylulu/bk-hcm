@@ -31,6 +31,7 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/esb/cmdb"
 )
@@ -49,17 +50,33 @@ type Interface interface {
 }
 
 // StartRecover 开启回收服务
-func StartRecover(kt *kit.Kit, itsmCli itsm.Client, recycler recycler.Interface, cmdbCli cmdb.Client) error {
+func StartRecover(kt *kit.Kit, itsmCli itsm.Client, recycler recycler.Interface, cmdbCli cmdb.Client,
+	sd serviced.State) error {
+
 	recycleRecoverer := &recycleRecoverer{
 		recyclerIf: recycler,
 		itsmCli:    itsmCli,
 		cmdbCli:    cmdbCli,
 	}
 	subKit := kt.NewSubKit()
-	if err := recycleRecoverer.recoverRecycleTickets(subKit); err != nil {
-		logs.Errorf("recycle recover: failed to start recycle recover, err: %v, rid: %s", err, subKit.Rid)
-		return err
-	}
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logs.Errorf("[hcm server panic], err: %v, rid: %s, debug strace: %s", err, kt.Rid, debug.Stack())
+			}
+		}()
+
+		for !sd.IsMaster() {
+			logs.Warnf("current server is not master, sleep one minute, rid: %s", kt.Rid)
+			time.Sleep(time.Minute)
+		}
+		logs.Infof("start recycle recover logic, rid: %s", kt.Rid)
+
+		if err := recycleRecoverer.recoverRecycleTickets(subKit); err != nil {
+			logs.Errorf("recycle recover: failed to start recycle recover, err: %v, rid: %s", err, subKit.Rid)
+		}
+	}()
 
 	return nil
 }
@@ -75,7 +92,7 @@ func (r *recycleRecoverer) recoverRecycleTickets(kt *kit.Kit) error {
 		return err
 	}
 
-	go r.recoverRunningOrders(kt, runningOrders)
+	r.recoverRunningOrders(kt, runningOrders)
 	return nil
 }
 

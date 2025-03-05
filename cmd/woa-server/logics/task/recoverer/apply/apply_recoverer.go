@@ -33,6 +33,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
@@ -47,7 +48,7 @@ type Interface interface {
 
 // StartRecover 创建applyRecoverer
 func StartRecover(kt *kit.Kit, itsmCli itsm.Client, scheduler scheduler.Interface, cmdbCli cmdb.Client,
-	sopsCli sopsapi.SopsClientInterface) error {
+	sopsCli sopsapi.SopsClientInterface, sd serviced.State) error {
 
 	subKit := kt.NewSubKit()
 	applyRecoverer := &applyRecoverer{
@@ -56,10 +57,24 @@ func StartRecover(kt *kit.Kit, itsmCli itsm.Client, scheduler scheduler.Interfac
 		cmdbCli:     cmdbCli,
 		sopsCli:     sopsCli,
 	}
-	if err := applyRecoverer.recoverApplyTickets(subKit); err != nil {
-		logs.Errorf("failed to start apply recover service, err: %v, rid: %s", err, subKit.Rid)
-		return err
-	}
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logs.Errorf("[hcm server panic], err: %v, rid: %s, debug strace: %s", err, kt.Rid, debug.Stack())
+			}
+		}()
+
+		for !sd.IsMaster() {
+			logs.Warnf("current server is not master, sleep one minute, rid: %s", kt.Rid)
+			time.Sleep(time.Minute)
+		}
+		logs.Infof("start apply recover logic, rid: %s", kt.Rid)
+
+		if err := applyRecoverer.recoverApplyTickets(subKit); err != nil {
+			logs.Errorf("failed to start apply recover service, err: %v, rid: %s", err, subKit.Rid)
+		}
+	}()
 
 	return nil
 }
@@ -81,21 +96,14 @@ func (r *applyRecoverer) recoverApplyTickets(kt *kit.Kit) error {
 		return err
 	}
 
-	go func() {
-		defer func() {
-			if err := recover(); err != nil {
-				logs.Errorf("[hcm server panic], err: %v, rid: %s, debug strace: %s", err, kt.Rid, debug.Stack())
-			}
-		}()
+	if err := r.recoverAuditTicket(kt, auditTickets); err != nil {
+		logs.Errorf("failed to recover apply ticket with AUDIT stage, err: %v, rid: %s", err, kt.Rid)
+	}
 
-		if err := r.recoverAuditTicket(kt, auditTickets); err != nil {
-			logs.Errorf("failed to recover apply ticket with AUDIT stage, err: %v, rid: %s", err, kt.Rid)
-		}
+	if err := r.recoverRunningTickets(kt, runningTickets); err != nil {
+		logs.Errorf("failed to recover apply ticket with RUNNING stage, err: %v, rid: %s", err, kt.Rid)
+	}
 
-		if err := r.recoverRunningTickets(kt, runningTickets); err != nil {
-			logs.Errorf("failed to recover apply ticket with RUNNING stage, err: %v, rid: %s", err, kt.Rid)
-		}
-	}()
 	return nil
 }
 
