@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
 
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
@@ -28,9 +28,10 @@ const props = withDefaults(
 
 const { t } = useI18n();
 const isShow = ref(false);
+const hasNoBizAccess = computed(() => props.processors.length !== props.processorsWithBizAccess.length);
 
 watchEffect(() => {
-  isShow.value = props.processors.length !== props.processorsWithBizAccess.length || props.defaultShow;
+  isShow.value = hasNoBizAccess.value || props.defaultShow;
 });
 </script>
 
@@ -53,7 +54,6 @@ watchEffect(() => {
         </bk-button>
       </div>
     </template>
-
     <template #content>
       <div class="expediting-content">
         <!-- case1：有审批人 -->
@@ -62,7 +62,7 @@ watchEffect(() => {
             {{ t('当前审批人为') }}
             <!-- 都有权限 -->
             <!-- TODO：或无需引导权限申请 -->
-            <template v-if="processors.length === processorsWithBizAccess.length || !checkPermission">
+            <template v-if="!hasNoBizAccess || !checkPermission">
               <display-value
                 v-for="processor in processors"
                 class="mr4"
@@ -74,30 +74,34 @@ watchEffect(() => {
             </template>
             <!-- 存在无权限审批人 -->
             <template v-else>
-              <display-value
-                v-for="processor in processorsWithBizAccess"
-                class="mr4"
-                :key="processor"
-                :value="processor"
-                :property="{ type: 'user' }"
-                :display="{ appearance: 'wxwork-link' }"
-              />
-              {{ t('有权限，') }}
-              <display-value
-                v-for="processor in processorsWithoutBizAccess"
-                class="mr4"
-                :key="processor"
-                :value="processor"
-                :property="{ type: 'user' }"
-                :display="{ appearance: 'wxwork-link' }"
-              />
-              {{ t('无权限。') }}
+              <template v-if="processorsWithBizAccess.length">
+                <display-value
+                  v-for="processor in processorsWithBizAccess"
+                  class="mr4"
+                  :key="processor"
+                  :value="processor"
+                  :property="{ type: 'user' }"
+                  :display="{ appearance: 'wxwork-link' }"
+                />
+                {{ t('有权限，') }}
+              </template>
+              <template v-if="processorsWithoutBizAccess.length">
+                <display-value
+                  v-for="processor in processorsWithoutBizAccess"
+                  class="mr4"
+                  :key="processor"
+                  :value="processor"
+                  :property="{ type: 'user' }"
+                  :display="{ appearance: 'wxwork-link' }"
+                />
+                {{ t('无权限。') }}
+              </template>
             </template>
           </div>
 
           <!-- 都有权限 -->
           <!-- TODO：或无需引导权限申请 -->
-          <div v-if="processors.length === processorsWithBizAccess.length || !checkPermission">
+          <div v-if="!hasNoBizAccess || !checkPermission">
             <copy-to-clipboard :content="ticketLink">
               <bk-button theme="primary" text>{{ copyText }}</bk-button>
             </copy-to-clipboard>

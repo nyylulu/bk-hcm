@@ -161,7 +161,7 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
 
   // 撤销、失败、结束、拒绝，done 这五种状态，直接输出response
   if (['revoked', 'rejected', 'canceled', 'failed', 'done'].includes(status)) {
-    return [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit, false)]; // TODO: CRP暂不支持审批
+    return [...getHistoryStepItems(audit, 'crp'), ...getCurrentStepItems(audit)];
   }
 
   const currentStepIdx = crpSteps.findIndex((step) => step.name === current_steps?.[0]?.name);
@@ -179,7 +179,7 @@ const renderCrpLogs = (audit: IPlanTicketCrpAudit) => {
     }
 
     // 当前节点
-    if (index === currentStepIdx) return getCurrentStepItems(audit)[0];
+    if (index === currentStepIdx) return getCurrentStepItems(audit, false)[0]; // TODO: CRP暂不支持审批
 
     // 未来节点
     return { tag: h(TimelineTag, null, logs[index]?.name ?? name), content: '', nodeType: ITimelineNodeType.VNode };
