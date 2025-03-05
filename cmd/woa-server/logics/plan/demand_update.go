@@ -82,6 +82,13 @@ func (c *Controller) applyResPlanDemandChange(kt *kit.Kit, ticket *TicketInfo) e
 		return err
 	}
 
+	// 单据关联的原始预测也需要解锁，避免部分预测死锁
+	unlockErr := c.unlockTicketOriginalDemands(kt, ticket)
+	if unlockErr != nil {
+		logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
+			ticket.ID, kt.Rid)
+	}
+
 	// 创建预测的日志
 	err = c.CreateResPlanChangelog(kt, createLogReq, createdIDs)
 	if err != nil {
@@ -314,7 +321,7 @@ func (c *Controller) aggregateDemandChangeInfo(kt *kit.Kit, changeDemands []*pty
 			return nil, err
 		}
 
-		// TODO 因CRP会在拆单时改变云盘的类型，且CRP侧目前不强校验云盘类型，因此在调整场景下，暂时不考虑diskType的不同.
+		// TODO 因CRP会在拆单时改变云盘的类型，且CRP侧目前云盘类型和CVM没有强绑定，因此在调整场景下，暂时不考虑diskType的不同.
 		// 因为CRP的预测和本地的不一定一致，这里需要根据聚合key获取一批通配的预测需求，在范围内调整，只保证通配范围内的总数和CRP对齐
 		aggregateKey, err := changeDemand.GetAggregateKey(ticket.BkBizID, deviceTypeMap, expectTimeRange)
 		if err != nil {

@@ -495,25 +495,11 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		return err
 	}
 
-	// 单据被拒需要释放资源
 	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
 		return nil
 	}
-	allDemandIDs := make([]string, 0)
-	for _, demand := range ticket.Demands {
-		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
-		}
-	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
-	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
+	// 单据被拒需要释放资源
+	return c.unlockTicketOriginalDemands(kt, ticket)
 }
 
 func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
@@ -560,8 +546,39 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 
 	// crp单据通过后更新本地数据表
 	if err := c.applyResPlanDemandChange(kt, ticket); err != nil {
+		// 单据更新失败需要释放原资源
+		unlockErr := c.unlockTicketOriginalDemands(kt, ticket)
+		if unlockErr != nil {
+			logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
+				ticket.ID, kt.Rid)
+		}
+
 		logs.Errorf("%s: failed to upsert crp demand, err: %v, rid: %s", constant.DemandChangeAppliedFailed,
 			err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// unlockTicketOriginalDemands 解锁订单中的原始预测需求，用于预测修改失败等特殊情况，避免死锁
+func (c *Controller) unlockTicketOriginalDemands(kt *kit.Kit, ticket *TicketInfo) error {
+	allDemandIDs := make([]string, 0)
+	for _, demand := range ticket.Demands {
+		if demand.Original != nil {
+			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
+		}
+	}
+
+	if len(allDemandIDs) == 0 {
+		return nil
+	}
+
+	unlockReq := &rpproto.ResPlanDemandLockOpReq{
+		IDs: allDemandIDs,
+	}
+	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

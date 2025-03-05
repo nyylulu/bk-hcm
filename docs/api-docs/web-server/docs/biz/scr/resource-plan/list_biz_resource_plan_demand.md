@@ -8,6 +8,8 @@
 
 POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 
+### 输入参数
+
 | 参数名称              | 参数类型         | 必选 | 描述                                               |
 |-------------------|--------------|----|--------------------------------------------------|
 | demand_ids        | string array | 否  | 预测需求ID列表，不传时查询全部，数量最大100                         |
@@ -24,7 +26,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | expect_time_range | object       | 是  | 期望交付时间范围                                         |
 | page              | object       | 是  | 分页设置                                             |
 
-### expect_time_range
+#### expect_time_range
 
 | 参数名称  | 参数类型   | 必选 | 描述                                          |
 |-------|--------|----|---------------------------------------------|

@@ -8,6 +8,8 @@
 
 POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/cancel
 
+### 输入参数
+
 | 参数名称           | 参数类型         | 必选 | 描述                |
 |----------------|--------------|----|-------------------|
 | cancel_demands | object array | 是  | 删除的预测需求列表，数量最大100 |
