@@ -1647,7 +1647,7 @@ func (s *scheduler) ResumeApplyOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 }
 
 // StartApplyOrder starts resource apply order
-func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderReq) error {
+func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
 			pkg.BKDBIN: param.SuborderID,
@@ -1656,15 +1656,15 @@ func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderRe
 
 	page := metadata.BasePage{}
 
-	insts, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, filter)
+	insts, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filter)
 	if err != nil {
-		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	cnt := len(insts)
 	if cnt == 0 {
-		logs.Errorf("found no apply order to start, orderNum: %d, rid: %s", cnt, kit.Rid)
+		logs.Errorf("found no apply order to start, orderNum: %d, rid: %s", cnt, kt.Rid)
 		return fmt.Errorf("found no apply order to start")
 	}
 
@@ -1680,23 +1680,29 @@ func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderRe
 	}
 
 	// set order status wait
-	if err := s.startOrder(insts); err != nil {
-		logs.Errorf("failed to start apply order, err: %v", err)
+	if err := s.startOrder(kt, insts); err != nil {
+		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, kt.Rid)
 		return fmt.Errorf("failed to start apply order, err: %v", err)
 	}
 
 	return nil
 }
 
-func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
+func (s *scheduler) startOrder(kt *kit.Kit, orders []*types.ApplyOrder) error {
 	now := time.Now()
 	for _, order := range orders {
 		// cannot start apply order if its stage is not SUSPEND
 		if order.Stage != types.TicketStageSuspend {
-			logs.Errorf("cannot start order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend)
+			logs.Errorf("cannot start order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, kt.Rid)
 			return fmt.Errorf("cannot start order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
 				types.TicketStageSuspend)
+		}
+
+		if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
+			logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, order.SubOrderId,
+				kt.Rid)
+			return err
 		}
 
 		filter := &mapstr.MapStr{
@@ -1711,9 +1717,31 @@ func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
 		}
 
 		if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
-			logs.Warnf("failed to set order %s running, err: %v", order.SubOrderId, err)
+			logs.Errorf("failed to set order %s running, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 			return fmt.Errorf("failed to set order %s running, err: %v", order.SubOrderId, err)
 		}
+	}
+
+	return nil
+}
+
+func (s *scheduler) startSubOrderFailedStep(kt *kit.Kit, subOrderID string) error {
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderID,
+		"status":      types.StepStatusFailed,
+	}
+
+	now := time.Now()
+	doc := mapstr.MapStr{
+		"status":    types.StepStatusHandling,
+		"message":   types.StepMsgHandling,
+		"start_at":  now,
+		"update_at": now,
+	}
+
+	if err := model.Operation().ApplyStep().UpdateApplyStep(kt.Ctx, &filter, &doc); err != nil {
+		logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, subOrderID, kt.Rid)
+		return err
 	}
 
 	return nil
@@ -1819,7 +1847,7 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 	}
 
 	// modify apply order
-	if err := s.modifyOrder(order, param); err != nil {
+	if err := s.modifyOrder(kt, order, param); err != nil {
 		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, kt.Rid)
 		return fmt.Errorf("failed to modify apply order, err: %v", err)
 	}
@@ -1970,14 +1998,20 @@ func (s *scheduler) validateModifyZone(order *types.ApplyOrder, param *types.Mod
 	return nil
 }
 
-func (s *scheduler) modifyOrder(order *types.ApplyOrder, param *types.ModifyApplyReq) error {
+func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	now := time.Now()
 	// cannot modify apply order if its stage is not SUSPEND
 	if order.Stage != types.TicketStageSuspend {
-		logs.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
-			types.TicketStageSuspend)
+		logs.Errorf("cannot modify order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend, kt.Rid)
 		return fmt.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
 			types.TicketStageSuspend)
+	}
+
+	if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
+		logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, order.SubOrderId,
+			kt.Rid)
+		return err
 	}
 
 	filter := &mapstr.MapStr{
@@ -2004,7 +2038,7 @@ func (s *scheduler) modifyOrder(order *types.ApplyOrder, param *types.ModifyAppl
 	}
 
 	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
-		logs.Warnf("failed to set order %s terminate, err: %v", order.SubOrderId, err)
+		logs.Errorf("failed to set order %s terminate, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return fmt.Errorf("failed to set order %s terminate, err: %v", order.SubOrderId, err)
 	}
 

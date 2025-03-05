@@ -540,7 +540,8 @@ func (m *Matcher) ProcessInitStep(devices []*types.DeviceInfo) (map[int]*types.D
 			for try := 0; try < maxRetry; try++ {
 				if initMsg, err = m.initDevice(curDevice); err != nil {
 					logs.Errorf("failed to init device, will retry in 60s, ip: %s, err: %v", curDevice.Ip, err)
-					time.Sleep(time.Second)
+					// 从yunti同步给公司cmdb, 到cc去同步公司cmdb信息，拿到ip，有时候会有1分钟内的延迟，所以这里sleep1分钟
+					time.Sleep(time.Minute)
 					continue
 				}
 				break
