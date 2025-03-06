@@ -312,15 +312,16 @@ func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleH
 		respStr = string(b)
 	}
 
-	logs.Infof("query cvm return detail resp: %s", respStr)
+	logs.Infof("query cvm return detail, subOrderID: %s, hostNum: %d, resp: %s", task.SuborderID, len(hosts), respStr)
 
 	if resp.Error.Code != 0 {
 		// keep loop query when error occurs until timeout
-		logs.Warnf("failed to query cvm return detail, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Warnf("failed to query cvm return detail, code: %d, msg: %s, crpTraceID: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId)
 		ev := &event.Event{
 			Type: event.ReturnHandling,
-			Error: fmt.Errorf("failed to query cvm return detail, code: %d, msg: %s", resp.Error.Code,
-				resp.Error.Message),
+			Error: fmt.Errorf("failed to query cvm return detail, code: %d, msg: %s, crpTraceID: %s", resp.Error.Code,
+				resp.Error.Message, resp.TraceId),
 		}
 		return ev
 	}

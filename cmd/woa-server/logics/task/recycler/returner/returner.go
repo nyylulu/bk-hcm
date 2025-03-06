@@ -64,14 +64,14 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*
 }
 
 // DealRecycleOrder deals with recycle order by running returning tasks
-func (r *Returner) DealRecycleOrder(order *table.RecycleOrder) *event.Event {
+func (r *Returner) DealRecycleOrder(kt *kit.Kit, order *table.RecycleOrder) *event.Event {
 	task, err := r.initReturnTask(order)
 	if err != nil {
-		logs.Errorf("failed to init return task for order %s, err: %v", order.SuborderID, err)
+		logs.Errorf("failed to init return task for order %s, err: %v, rid: %s", order.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
-	return r.dealReturnTask(task)
+	return r.dealReturnTask(kt, task)
 }
 
 func (r *Returner) getRecycleHosts(orderId string) ([]*table.RecycleHost, error) {
@@ -126,22 +126,29 @@ func (r *Returner) initReturnTask(order *table.RecycleOrder) (*table.ReturnTask,
 	return task, err
 }
 
-func (r *Returner) dealReturnTask(task *table.ReturnTask) *event.Event {
+func (r *Returner) dealReturnTask(kt *kit.Kit, task *table.ReturnTask) *event.Event {
 	// get hosts by order id
 	hosts, err := r.getRecycleHosts(task.SuborderID)
 	if err != nil {
-		logs.Errorf("failed to get recycle hosts by order id: %d, err: %v", task.SuborderID, err)
+		logs.Errorf("failed to get recycle hosts by order id: %d, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	filterHosts, err := r.filterUpdateRecycleHosts(kt, task.SuborderID, hosts)
+	if err != nil {
+		logs.Errorf("failed to get recycle hosts by order id: %d, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
 	// 记录日志
-	logs.Infof("recycler:logics:cvm:dealReturnTask:start, task: %+v", cvt.PtrToVal(task))
+	logs.Infof("recycler:logics:cvm:dealReturnTask:start, suborderID: %s, task: %+v, hostNum: %d, filterHostNum: %d, "+
+		"rid: %s", task.SuborderID, cvt.PtrToVal(task), len(hosts), len(filterHosts), kt.Rid)
 
 	switch task.Status {
 	case table.ReturnStatusInit:
-		return r.returnHosts(task, hosts)
+		return r.returnHosts(task, filterHosts)
 	case table.ReturnStatusRunning:
-		return r.QueryReturnStatus(task, hosts)
+		return r.QueryReturnStatus(task, filterHosts)
 	case table.ReturnStatusSuccess:
 		ev := &event.Event{Type: event.ReturnSuccess, Error: nil}
 		return ev
@@ -152,7 +159,8 @@ func (r *Returner) dealReturnTask(task *table.ReturnTask) *event.Event {
 		}
 		return ev
 	default:
-		logs.Warnf("failed to deal return task for order %s, for unknown status %s", task.SuborderID, task.Status)
+		logs.Warnf("failed to deal return task for order %s, for unknown status %s, rid: %s",
+			task.SuborderID, task.Status, kt.Rid)
 		ev := &event.Event{
 			Type: event.ReturnFailed,
 			Error: fmt.Errorf("failed to deal return task for order %s, for unknown status %s", task.SuborderID,
@@ -582,6 +590,91 @@ func (r *Returner) setHostOperator(hostIDs []int64, operator string) error {
 
 	if resp.Result == false || resp.Code != 0 {
 		return fmt.Errorf("failed to set host operator, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+	}
+
+	return nil
+}
+
+func (r *Returner) filterUpdateRecycleHosts(kt *kit.Kit, subOrderID string, hosts []*table.RecycleHost) (
+	[]*table.RecycleHost, error) {
+
+	assetIDs := make([]string, 0)
+	for _, host := range hosts {
+		assetIDs = append(assetIDs, host.AssetID)
+	}
+
+	// 查询已回收的主机
+	hostExists, err := r.getRecycleHostsByAssetIDsStatus(kt, assetIDs, table.RecycleStatusDone)
+	if err != nil {
+		logs.Errorf("failed to get recycle hosts by assetids and status, subOrderID: %s, err: %v, assetIDs: %v, "+
+			"rid: %s", subOrderID, err, assetIDs, kt.Rid)
+		return nil, err
+	}
+	hostExistsMap := cvt.SliceToMap(hostExists, func(rh *table.RecycleHost) (string, *table.RecycleHost) {
+		return rh.AssetID, rh
+	})
+
+	filterHosts := make([]*table.RecycleHost, 0)
+	for _, host := range hosts {
+		hostDone, ok := hostExistsMap[host.AssetID]
+		if !ok {
+			filterHosts = append(filterHosts, host)
+			continue
+		}
+
+		// 更新该子订单中已回收的主机状态
+		err = r.updateHostRecycleInfoByOrderAssetID(kt, subOrderID, host.AssetID,
+			table.RecycleStatusDone, table.RecycleStageDone, hostDone.ReturnID, hostDone.ReturnLink)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return filterHosts, nil
+}
+
+func (r *Returner) getRecycleHostsByAssetIDsStatus(kt *kit.Kit, assetIDs []string, status table.RecycleStatus) (
+	[]*table.RecycleHost, error) {
+
+	filter := map[string]interface{}{
+		"asset_id": map[string]interface{}{"$in": assetIDs},
+		"status":   status,
+	}
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: pkg.BKMaxInstanceLimit,
+	}
+
+	insts, err := dao.Set().RecycleHost().FindManyRecycleHost(kt.Ctx, page, filter)
+	if err != nil {
+		logs.Errorf("failed to get recycle hosts by assetids and status, err: %v, assetIDs: %v, status: %s, rid: %s",
+			err, assetIDs, status, kt.Rid)
+		return nil, err
+	}
+
+	return insts, nil
+}
+
+func (r *Returner) updateHostRecycleInfoByOrderAssetID(kt *kit.Kit, subOrderID, assetID string,
+	status table.RecycleStatus, stage table.RecycleStage, taskId, taskURL string) error {
+
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderID,
+		"assetID":     assetID,
+	}
+
+	update := mapstr.MapStr{
+		"stage":       stage,
+		"status":      status,
+		"return_id":   taskId,
+		"return_link": taskURL,
+		"update_at":   time.Now(),
+	}
+
+	if err := dao.Set().RecycleHost().UpdateRecycleHost(kt.Ctx, &filter, &update); err != nil {
+		logs.Errorf("failed to update recycle host by order asset id, subOrderID: %s, assetID: %s, err: %v, rid: %s",
+			subOrderID, assetID, err, kt.Rid)
+		return err
 	}
 
 	return nil
