@@ -66,6 +66,7 @@ func (s *service) initMetaService(h *rest.Handler) {
 	h.Add("ListOpProducts", http.MethodPost, "/metas/op_products/list", s.ListOpProducts)
 	h.Add("ListPlanProducts", http.MethodPost, "/metas/plan_products/list", s.ListPlanProducts)
 	h.Add("ListOrgTopos", http.MethodPost, "/metas/org_topos/list", s.ListOrgTopos)
+	h.Add("ListRequireObsProject", http.MethodPost, "/meta/requirement/obs_project/list", s.ListRequireObsProject)
 
 	// 资源池
 	h.Add("CreateResourcePoolBiz", http.MethodPost, "/metas/respool_bizs/batch/create", s.CreateResourcePoolBiz)

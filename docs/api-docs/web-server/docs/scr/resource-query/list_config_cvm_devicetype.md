@@ -84,12 +84,14 @@ POST /api/v1/woa/config/findmany/config/cvm/devicetype
       {
         "device_type": "S3.MEDIUM4",
         "device_type_class": "CommonType",
-        "cpu_amount": 2
+        "cpu_amount": 2,
+        "ram_amount": 16
       },
       {
         "device_type": "S3.LARGE8",
         "device_type_class": "CommonType",
-        "cpu_amount": 4
+        "cpu_amount": 4,
+        "ram_amount": 32
       }
     ]
   }
@@ -120,3 +122,6 @@ POST /api/v1/woa/config/findmany/config/cvm/devicetype
 | device_type_class | string | 通/专用机型，SpecialType专用，CommonType通用 |
 | device_group      | string | 机型族                               |
 | cpu_amount        | int    | cpu核数                             |
+| ram_amount        | int    | 内存容量                             |
+| core_type         | int    | 核心类型(1:小核心 2:中核心 3:大核心)     |
+| device_class      | string | 实例类型                             |

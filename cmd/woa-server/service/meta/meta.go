@@ -27,6 +27,7 @@ import (
 	imeta "hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
 )
 
 // ListDiskType lists disk type.
@@ -110,23 +111,28 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	opt := tools.AllExpression()
+	var opt []*filter.AtomRule
 	if len(req.DeviceClasses) > 0 {
-		opt = tools.ContainersExpression("device_class", req.DeviceClasses)
+		opt = append(opt, tools.RuleIn("device_class", req.DeviceClasses))
 	}
-	devTypeMap, err := s.dao.WoaDeviceType().GetDeviceTypeMap(cts.Kit, opt)
+	if len(req.DeviceTypes) > 0 {
+		opt = append(opt, tools.RuleIn("device_type", req.DeviceTypes))
+	}
+	devTypeMap, err := s.dao.WoaDeviceType().GetDeviceTypeMap(cts.Kit, tools.ExpressionAnd(opt...))
 	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device type map, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
 	details := make([]mtypes.ListDeviceTypeRst, 0, len(devTypeMap))
 	for _, v := range devTypeMap {
 		details = append(details, mtypes.ListDeviceTypeRst{
-			DeviceType: v.DeviceType,
-			CoreType:   v.CoreType,
-			CpuCore:    v.CpuCore,
-			Memory:     v.Memory,
+			DeviceType:   v.DeviceType,
+			CoreType:     v.CoreType,
+			CpuCore:      v.CpuCore,
+			Memory:       v.Memory,
+			DeviceClass:  v.DeviceClass,
+			DeviceFamily: v.DeviceFamily,
 		})
 	}
 
@@ -290,4 +296,9 @@ func (s *service) ListOrgTopos(cts *rest.Contexts) (any, error) {
 	}
 
 	return ret, nil
+}
+
+// ListRequireObsProject lists require obs project.
+func (s *service) ListRequireObsProject(_ *rest.Contexts) (any, error) {
+	return enumor.RequireTypeObsProjectMap, nil
 }

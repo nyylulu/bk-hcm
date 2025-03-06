@@ -25,6 +25,7 @@ POST /api/v1/woa/plans/resources/demands/list
 | plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                           |
 | expiring_only     | bool         | 否  | 是否只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
 | expect_time_range | object       | 是  | 期望交付时间范围                                         |
+| statuses          | string array | 否  | 状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中），不传时查询全部，数量最大5 |
 | page              | object       | 是  | 分页设置                                             |
 
 ### expect_time_range
@@ -92,6 +93,9 @@ POST /api/v1/woa/plans/resources/demands/list
     "start": "2024-01-01",
     "end": "2024-01-01"
   },
+  "statuses": [
+    "can_apply"
+  ],
   "page": {
     "count": false,
     "start": 0,
@@ -130,6 +134,7 @@ POST /api/v1/woa/plans/resources/demands/list
         "demand_class": "CVM",
         "demand_res_type": "CVM",
         "expect_time": "2024-01-01",
+        "can_apply_time": "2024-01-01",
         "expired_time": "2024-01-28",
         "device_class": "高IO型I6t",
         "device_type": "I6t.33XMEDIUM198",
@@ -206,6 +211,7 @@ POST /api/v1/woa/plans/resources/demands/list
 | demand_class       | string | 预测的需求类型，枚举值：CVM、CA                                                                |
 | demand_res_type    | string | 预测资源类型，枚举值：CVM、CBS                                                                |
 | expect_time        | string | 期望交付日期，格式为YYYY-MM-DD，例如2024-01-01                                                 |
+| can_apply_time     | string | 可申领时间，格式为YYYY-MM-DD，例如2024-01-01                                               |
 | expired_time       | string | 预测申领截止日期，格式为YYYY-MM-DD，例如2024-01-01                                               |
 | device_class       | string | 机型类型                                                                              |
 | device_type        | string | 机型规格                                                                              |

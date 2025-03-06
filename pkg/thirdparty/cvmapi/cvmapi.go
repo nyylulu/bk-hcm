@@ -525,6 +525,13 @@ func (c *cvmApi) QueryCvmInstanceType(ctx context.Context, header http.Header, r
 		return nil, err
 	}
 
+	if resp.Error.Code != 0 {
+		logs.Errorf("query cvm instance type code error, subPath: %s, code: %d, msg: %s, crpTraceID: %s, req: %+v",
+			subPath, resp.Error.Code, resp.Error.Message, resp.TraceId, req)
+		return nil, fmt.Errorf("query cvm instance type code error, code: %d, msg: %s, crpTraceID: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId)
+	}
+
 	return resp, nil
 }
 

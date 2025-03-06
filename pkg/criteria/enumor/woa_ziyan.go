@@ -448,7 +448,7 @@ func (t RequireType) NeedVerifyResPlan() bool {
 
 // ToObsProject ObsProject.
 func (t RequireType) ToObsProject() ObsProject {
-	if obsProject, ok := requireTypeObsProjectMap[t]; ok {
+	if obsProject, ok := RequireTypeObsProjectMap[t]; ok {
 		return obsProject
 	}
 
@@ -494,7 +494,8 @@ func (t RequireType) ToRequireTypeWhenGetDevice() RequireType {
 	return requireType
 }
 
-var requireTypeObsProjectMap = map[RequireType]ObsProject{
+// RequireTypeObsProjectMap 需求类型与 obs project 的映射
+var RequireTypeObsProjectMap = map[RequireType]ObsProject{
 	RequireTypeRegular:    ObsProjectNormal,
 	RequireTypeRollServer: ObsProjectRollServer,
 	// "小额绿通"使用"常规项目"的 obs project

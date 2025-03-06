@@ -270,15 +270,25 @@ func (r *Returner) getCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) ([]*cvmap
 	}
 
 	if resp.Error.Code != 0 {
-		logs.Errorf("failed to query cvm instance, code: %d, msg: %s, rid: %s", resp.Error.Code, resp.Error.Message,
-			kt.Rid)
-		return nil, fmt.Errorf("failed to query cvm instance, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
+		logs.Errorf("failed to query cvm instance, code: %d, msg: %s, crpTraceID: %s, rid: %s", resp.Error.Code,
+			resp.Error.Message, resp.TraceId, kt.Rid)
+		return nil, fmt.Errorf("failed to query cvm instance, code: %d, msg: %s, crpTraceID: %s", resp.Error.Code,
+			resp.Error.Message, resp.TraceId)
 	}
 
 	if resp.Result == nil {
 		logs.Errorf("failed to query cvm instance, for result is nil, rid: %s", kt.Rid)
 		return nil, fmt.Errorf("failed to query cvm instance, for result is nil")
 	}
+
+	// 记录查询到的CVM信息，方便排查问题
+	jsonRespData, err := json.Marshal(resp.Result.Data)
+	if err != nil {
+		logs.Warnf("query crp cvm instances failed to marshal resp, err: %v, crpTraceID: %s, rid: %s",
+			err, resp.TraceId, kt.Rid)
+	}
+	logs.Infof("query crp cvm instances result, respDataJson: %s, crpTraceID: %s, rid: %s",
+		jsonRespData, resp.TraceId, kt.Rid)
 
 	return resp.Result.Data, nil
 }

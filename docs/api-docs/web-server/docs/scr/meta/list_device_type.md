@@ -13,6 +13,7 @@ POST /api/v1/woa/meta/device_type/list
 | 参数名称           | 参数类型         | 必选 | 描述               |
 |----------------|--------------|----|------------------|
 | device_classes | string array | 否  | 查询机型类型列表，不传时查询全部 |
+| device_types   | string array | 否  | 查询设备类型列表，不传时查询全部 |
 
 ### 调用示例
 
@@ -21,6 +22,9 @@ POST /api/v1/woa/meta/device_type/list
   "device_classes": [
     "高IO型IT5",
     "标准型S5"
+  ],
+  "device_types": [
+    "SA5.LARGE8"
   ]
 }
 ```
@@ -37,13 +41,17 @@ POST /api/v1/woa/meta/device_type/list
         "device_type": "S5.2XLARGE16",
         "core_type": "大核心",
         "cpu_core": 123,
-        "memory": 123
+        "memory": 123,
+        "device_class": "标准型SA5",
+        "device_family": "标准型"
       },
       {
         "device_type": "IT5.8XLARGE128",
         "core_type": "小核心",
         "cpu_core": 123,
-        "memory": 123
+        "memory": 123,
+        "device_class": "标准型SA5",
+        "device_family": "标准型"
       }
     ]
   }
@@ -66,9 +74,11 @@ POST /api/v1/woa/meta/device_type/list
 
 #### data.details[n]
 
-| 参数名称        | 参数类型   | 描述          |
-|-------------|--------|-------------|
-| device_type | string | 机型规格        |
-| core_type   | string | 核心类型        |
-| cpu_core    | int    | CPU核心数，单位：核 |
-| memory      | int    | 内存大小，单位：GB  |
+| 参数名称       | 参数类型 | 描述              |
+|---------------|--------|-------------------|
+| device_type   | string | 机型规格           |
+| core_type     | string | 核心类型           |
+| cpu_core      | int    | CPU核心数，单位：核 |
+| memory        | int    | 内存大小，单位：GB  |
+| device_class  | string | 机型分类           |
+| device_family | string | 机型族             |

@@ -336,6 +336,9 @@ type DeviceTypeItem struct {
 	DeviceTypeClass cvmapi.InstanceTypeClass `json:"device_type_class"` // 通/专用机型，SpecialType专用，CommonType通用
 	DeviceGroup     string                   `json:"device_group"`      // 机型族
 	CPUAmount       float64                  `json:"cpu_amount"`        // CPU数量
+	RamAmount       float64                  `json:"ram_amount"`        // 内存容量
+	CoreType        int                      `json:"core_type"`         // 1.2.3 分别标识，小核心，中核心，大核心
+	DeviceClass     string                   `json:"device_class"`      // 实例类型
 }
 
 // DeviceTypeInfo cvm device type info

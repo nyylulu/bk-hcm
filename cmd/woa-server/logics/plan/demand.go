@@ -327,7 +327,8 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			logs.Warnf("failed to get demand status, err: %v, demand_id: %s, rid: %s", err, demand.ID, kt.Rid)
 		} else {
 			demandItem.SetStatus(status)
-			demandItem.ExpiredTime = demandRange.End
+			demandItem.CanApplyTime = demandRange.Start // 可申领时间
+			demandItem.ExpiredTime = demandRange.End    // 截止申领时间
 		}
 
 		// 目前即将过期核心数的逻辑等于可申领数（当月申领、当月过期）
@@ -338,6 +339,11 @@ func (c *Controller) convResPlanDemandRespAndFilter(kt *kit.Kit, req *ptypes.Lis
 			demandItem.Status = enumor.DemandStatusLocked
 		}
 		demandItem.StatusName = demandItem.Status.Name()
+
+		// 过滤状态的查询条件
+		if len(req.Statuses) > 0 && !slices.Contains(req.Statuses, demandItem.Status) {
+			continue
+		}
 
 		// 计算overview
 		overview.TotalCpuCore += demandItem.TotalCpuCore
