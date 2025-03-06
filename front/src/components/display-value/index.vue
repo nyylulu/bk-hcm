@@ -12,6 +12,7 @@ import CaValue from './ca-value.vue';
 import RegionValue from './region-value.vue';
 import BusinessValue from './business-value.vue';
 import UserValue from './user-value.vue';
+import ReqTypeValue from './req-type-value.vue';
 import { DisplayType } from './typings';
 
 defineOptions({ name: 'DisplayValue' });
@@ -42,6 +43,7 @@ const valueComps: Record<
   | typeof RegionValue
   | typeof BusinessValue
   | typeof UserValue
+  | typeof ReqTypeValue
 > = {
   enum: EnumValue,
   datetime: DatetimeValue,
@@ -55,6 +57,7 @@ const valueComps: Record<
   region: RegionValue,
   business: BusinessValue,
   user: UserValue,
+  'req-type': ReqTypeValue,
 };
 
 const attrs = useAttrs();

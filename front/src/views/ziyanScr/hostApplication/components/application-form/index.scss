@@ -185,12 +185,29 @@
     align-items: center;
 
     .button {
-      min-width: 88px;
       margin-right: 8px;
+
+      .prefix-icon {
+        font-size: 20px;
+      }
 
       &:last-of-type {
         margin-right: 0;
       }
     }
+  }
+}
+
+.cvm-apply-sideslider {
+  .custom-header-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+}
+
+.form-button-row {
+  .bk-button {
+    min-width: 86px;
   }
 }

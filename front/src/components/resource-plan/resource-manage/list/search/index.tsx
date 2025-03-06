@@ -17,7 +17,11 @@ import {
 } from '@/typings/resourcePlan';
 import { useResourcePlanStore } from '@/store';
 import dayjs from 'dayjs';
+import isoWeek from 'dayjs/plugin/isoWeek';
 import { useRoute, useRouter } from 'vue-router';
+import { RESOURCE_DEMANDS_STATUS_NAME } from '@/components/resource-plan/constants';
+
+dayjs.extend(isoWeek);
 
 export default defineComponent({
   props: {
@@ -46,9 +50,12 @@ export default defineComponent({
       plan_types: [], // 计划类型
       expiring_only: false, // 过期状态
       expect_time_range: {
-        start: dayjs().startOf('month').format('YYYY-MM-DD'),
-        end: dayjs().endOf('month').format('YYYY-MM-DD'),
+        // 当前时间所在月份的第1天往前加1周
+        start: dayjs().startOf('month').subtract(1, 'week').startOf('day').format('YYYY-MM-DD'),
+        // 当前时间往后加14周
+        end: dayjs().add(14, 'week').endOf('day').format('YYYY-MM-DD'),
       }, // 期望交付时间范围
+      statuses: [], // 状态
     };
 
     const opProductList = ref<{ op_product_id: number; op_product_name: string }[]>([]);
@@ -352,6 +359,14 @@ export default defineComponent({
                   <Select multiple v-model={searchModel.value.plan_types} loading={isLoadingPlanClass.value}>
                     {planClassList.value.map((item) => (
                       <Option name={item} id={item} />
+                    ))}
+                  </Select>
+                </div>
+                <div>
+                  <div class={cssModule['search-label']}>{t('状态')}</div>
+                  <Select multiple v-model={searchModel.value.statuses}>
+                    {Object.entries(RESOURCE_DEMANDS_STATUS_NAME).map(([id, name]) => (
+                      <Option name={name} id={id} />
                     ))}
                   </Select>
                 </div>

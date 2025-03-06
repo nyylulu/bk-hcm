@@ -191,6 +191,18 @@ export default defineComponent({
       },
     );
 
+    // 当存在初始的region_id和zone_id时，回填对应的name
+    watch(regions, () => {
+      if (props.planTicketDemand.region_id) {
+        handleChooseRegion(props.planTicketDemand.region_id);
+      }
+    });
+    watch(zones, () => {
+      if (props.planTicketDemand.zone_id) {
+        handleChooseZone(props.planTicketDemand.zone_id);
+      }
+    });
+
     const isExpectTimeTipsReady = ref(false);
     watch(
       () => props.planTicketDemand.expect_time,

@@ -48,8 +48,8 @@ const getList = async (params: MaxResourceCapacity) => {
       '/api/v1/woa/config/find/cvm/capacity',
       params,
     );
-    const { info = [] } = res.data;
-    list.value = info.map((item) => ({ ...item, zoneCn: getZoneCn(item.zone) }));
+    const { info = [] } = res.data || {};
+    list.value = info?.map((item) => ({ ...item, zoneCn: getZoneCn(item.zone) })) || [];
   } catch (error) {
     console.error(error);
     list.value = [];

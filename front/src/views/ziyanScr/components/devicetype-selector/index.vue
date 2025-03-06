@@ -19,24 +19,28 @@ const props = withDefaults(defineProps<IProps>(), {
 const emit = defineEmits<(e: 'change', result: SelectionType) => void>();
 const model = defineModel<string | string[]>();
 
+const triggerChange = (val: string | string[]) => {
+  let result: SelectionType;
+  const { multiple, resourceType } = props;
+
+  if (multiple && Array.isArray(val)) {
+    result = val.reduce((prev, curr) => {
+      prev.push(options.value[resourceType].find((item) => item.device_type === curr));
+      return prev;
+    }, []);
+  } else {
+    result = options.value[resourceType].find((item) => item.device_type === val);
+  }
+
+  emit('change', result);
+};
+
 const selected = computed({
   get() {
     return model.value;
   },
   set(val) {
-    let result: SelectionType;
-    const { multiple, resourceType } = props;
-
-    if (multiple && Array.isArray(val)) {
-      result = val.reduce((prev, curr) => {
-        prev.push(options.value[resourceType].find((item) => item.device_type === curr));
-        return prev;
-      }, []);
-    } else {
-      result = options.value[resourceType].find((item) => item.device_type === val);
-    }
-
-    emit('change', result);
+    triggerChange(val);
     model.value = val;
   },
 });
@@ -107,6 +111,20 @@ watch(
     getOptions();
   },
   { immediate: true, deep: true },
+);
+
+// 在回填数据的场景，需要默认触发一次 change 事件
+watch(
+  model,
+  async (val) => {
+    if (val) {
+      if (options.value[props.resourceType].length === 0) {
+        await getOptions();
+      }
+      triggerChange(val);
+    }
+  },
+  { immediate: true },
 );
 
 defineExpose({ handleSort });

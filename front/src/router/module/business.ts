@@ -493,6 +493,18 @@ const businesseMenus: RouteRecordRaw[] = [
         ],
       },
       {
+        path: '/business/hostInventory',
+        name: 'hostInventory',
+        component: () => import('@/views/business/host-inventory/index'),
+        meta: {
+          title: '主机库存',
+          activeKey: 'zzkc',
+          breadcrumb: ['资源', '主机'],
+          isShowBreadcrumb: true,
+          icon: 'hcm-icon bkhcm-icon-host-inventory',
+        },
+      },
+      {
         path: '/business/rolling-server',
         name: MENU_BUSINESS_ROLLING_SERVER,
         component: () => import('@/views/business/rolling-server/index.vue'),
@@ -513,18 +525,6 @@ const businesseMenus: RouteRecordRaw[] = [
   {
     path: '/business',
     children: [
-      {
-        path: '/business/hostInventory',
-        name: 'hostInventory',
-        component: () => import('@/views/business/host-inventory/index'),
-        meta: {
-          title: '主机库存',
-          activeKey: 'zzkc',
-          breadcrumb: ['资源', '主机'],
-          isShowBreadcrumb: true,
-          icon: 'hcm-icon bkhcm-icon-host-inventory',
-        },
-      },
       {
         path: '/business/record',
         name: 'businessRecord',

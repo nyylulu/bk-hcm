@@ -5,7 +5,7 @@ import { Form, Input, Select, Checkbox, Button, Radio, Switcher, Slider, Alert }
 import ConditionOptions from '../components/common/condition-options/index.vue';
 import ZoneSelector from '@/components/zone-selector/index.vue';
 import MachineTypeSelector from '../components/common/machine-type-selector';
-import Imagelector from '../components/common/image-selector';
+import ImageSelector from '../components/common/image-selector';
 import VpcSelector from '../components/common/vpc-selector';
 import SubnetSelector from '../components/common/subnet-selector';
 import SecurityGroupSelector from '../components/common/security-group-selector';
@@ -684,7 +684,7 @@ export default defineComponent({
             required: true,
             property: 'cloud_image_id',
             content: () => (
-              <Imagelector
+              <ImageSelector
                 v-model={formData.cloud_image_id}
                 vendor={cond.vendor}
                 region={cond.region}

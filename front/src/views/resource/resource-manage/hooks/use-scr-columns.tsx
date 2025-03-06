@@ -44,6 +44,7 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 import routerAction from '@/router/utils/action';
+import { RESOURCE_DEMANDS_STATUS_NAME, RESOURCE_DEMANDS_STATUS_CLASSES } from '@/components/resource-plan/constants';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -309,33 +310,33 @@ export default (type: string, isSimpleShow = false) => {
     {
       label: '机型',
       field: 'spec.device_type',
-      width: 120,
+      minWidth: 120,
       isDefaultShow: true,
     },
     {
       label: '计费模式',
       field: 'spec.charge_type',
-      width: 120,
+      minWidth: 120,
       isDefaultShow: true,
       render: ({ cell }: any) => ChargeTypeMap[cell as ChargeType] || '--',
     },
     {
       label: '需求数量',
       field: 'replicas',
-      width: 50,
+      minWidth: 90,
       isDefaultShow: true,
     },
     {
       label: '地域',
       field: 'spec.region',
-      width: 150,
+      minWidth: 150,
       render: ({ cell }: { cell: string }) => getRegionName(VendorEnum.TCLOUD, cell) || '--',
       isDefaultShow: true,
     },
     {
       label: '园区',
       field: 'spec.zone',
-      width: 150,
+      minWidth: 150,
       render: ({ row }: any) => getZoneCn(row.spec.zone),
       isDefaultShow: true,
     },
@@ -343,29 +344,33 @@ export default (type: string, isSimpleShow = false) => {
       label: '镜像',
       field: 'spec.image_id',
       render: ({ row }: any) => getImageName(row.spec.image_id),
-      width: 200,
+      minWidth: 190,
       isDefaultShow: true,
     },
     {
       label: '数据盘(G)',
       field: 'spec.disk_size',
-      width: 70,
+      minWidth: 90,
       isDefaultShow: true,
     },
     {
       label: '数据盘类型',
       field: 'spec.disk_type',
-      width: 95,
+      minWidth: 110,
       render: ({ row }: any) => getDiskTypesName(row.spec.disk_type),
       isDefaultShow: true,
     },
     {
       label: '私有网络',
       field: 'spec.vpc',
+      minWidth: 150,
+      isDefaultShow: true,
     },
     {
       label: '私有子网',
       field: 'spec.subnet',
+      minWidth: 150,
+      isDefaultShow: true,
     },
     {
       label: '备注',
@@ -1697,10 +1702,12 @@ export default (type: string, isSimpleShow = false) => {
       label: '业务',
       field: 'bk_biz_name',
       fixed: 'left',
+      minWidth: 110,
       isDefaultShow: true,
     },
     {
       label: '运营产品',
+      minWidth: 110,
       field: 'op_product_name',
       fixed: 'left',
     },
@@ -1708,96 +1715,138 @@ export default (type: string, isSimpleShow = false) => {
       label: '预测类型',
       field: 'demand_class',
       fixed: 'left',
+      minWidth: 90,
       isDefaultShow: true,
     },
     {
       label: '期望到货时间',
       field: 'expect_time',
       fixed: 'left',
+      minWidth: 110,
       isDefaultShow: true,
-      render: ({ cell }: { cell: string }) => timeFormatter(cell),
+      render: ({ cell }: { cell: string }) => timeFormatter(cell, 'YYYY-MM-DD'),
+    },
+    {
+      label: '可申领时间',
+      field: 'can_apply_time',
+      fixed: 'left',
+      minWidth: 100,
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell, 'YYYY-MM-DD'),
+    },
+    {
+      label: '截止申领时间',
+      field: 'expired_time',
+      fixed: 'left',
+      minWidth: 110,
+      isDefaultShow: true,
+      render: ({ cell }: { cell: string }) => timeFormatter(cell, 'YYYY-MM-DD'),
     },
     {
       label: '机型类型',
       field: 'device_class',
+      minWidth: 100,
       fixed: 'left',
     },
     {
       label: '机型规格',
       field: 'device_type',
       fixed: 'left',
+      minWidth: 120,
       isDefaultShow: true,
     },
     {
       label: '实例需求数',
       field: 'total_os',
+      minWidth: 100,
       isDefaultShow: true,
       render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
-      label: '实例已执行数',
+      label: '实例已申请数',
       field: 'applied_os',
+      minWidth: 110,
       isDefaultShow: true,
       render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
-      label: '实例未执行数',
+      label: '实例可申请数',
       field: 'remained_os',
+      minWidth: 120,
       isDefaultShow: true,
       render: ({ cell }: { cell: string }) => formatDisplayNumber(cell),
     },
     {
       label: 'CPU需求核数',
       field: 'total_cpu_core',
+      minWidth: 120,
       isDefaultShow: true,
     },
     {
-      label: 'CPU已执行核数',
+      label: 'CPU已申请核数',
       field: 'applied_cpu_core',
+      minWidth: 120,
       isDefaultShow: true,
     },
     {
-      label: 'CPU未执行核数',
+      label: 'CPU可申请核数',
       field: 'remained_cpu_core',
+      minWidth: 120,
       isDefaultShow: true,
     },
     {
       label: '总内存(GB)',
+      minWidth: 90,
       field: 'total_memory',
     },
     {
-      label: '已执行内存(GB)',
+      label: '已申请内存(GB)',
+      minWidth: 120,
       field: 'applied_memory',
     },
     {
-      label: '未执行内存(GB)',
+      label: '可申请内存(GB)',
+      minWidth: 120,
       field: 'remained_memory',
     },
     {
       label: '云盘总量',
+      minWidth: 90,
       field: 'total_disk_size',
     },
     {
-      label: '云盘已执行数',
+      label: '云盘已申请数',
+      minWidth: 110,
       field: 'applied_disk_size',
     },
     {
-      label: '云盘未执行数',
+      label: '云盘可申请数',
+      minWidth: 110,
       field: 'remained_disk_size',
     },
     {
       label: '城市',
       field: 'region_name',
+      minWidth: 90,
+      isDefaultShow: true,
     },
     {
       label: '可用区',
+      minWidth: 110,
       field: 'zone_name',
+      isDefaultShow: true,
+    },
+    {
+      label: '申请人',
+      field: 'creator',
+      minWidth: 110,
+      isDefaultShow: true,
     },
     {
       label: '计划类型',
       field: 'plan_type',
       fixed: 'right',
-      minWidth: 100,
+      minWidth: 90,
       isDefaultShow: true,
       render: ({ data }: any) => (
         <Tag theme={data.plan_type === '预测内' ? 'success' : 'warning'}>{data.plan_type}</Tag>
@@ -1807,6 +1856,8 @@ export default (type: string, isSimpleShow = false) => {
       label: '项目类型',
       field: 'obs_project',
       fixed: 'right',
+      minWidth: 100,
+      isDefaultShow: true,
     },
     {
       label: '机型代次',
@@ -1828,24 +1879,14 @@ export default (type: string, isSimpleShow = false) => {
       field: 'disk_io',
       fixed: 'right',
     },
-    // {
-    //   label: '备注',
-    //   field: 'remarks',
-    //   fixed: 'right',
-    // },
     {
       label: '状态',
       field: 'status',
       fixed: 'right',
+      minWidth: 110,
       isDefaultShow: true,
-      render: ({ data }: any) => (
-        <>
-          {data.status === ResourcesDemandsStatus.CAN_APPLY && <span class={cssModule['c-success']}>可申领</span>}
-          {data.status === ResourcesDemandsStatus.NOT_READY && <span class={cssModule['c-info']}>未到申领时间</span>}
-          {data.status === ResourcesDemandsStatus.EXPIRED && <span class={cssModule['c-info']}>已过期</span>}
-          {data.status === ResourcesDemandsStatus.SPENT_ALL && <span class={cssModule['c-info']}>额度用尽</span>}
-          {data.status === ResourcesDemandsStatus.LOCKED && <span class={cssModule['c-warning']}>变更中</span>}
-        </>
+      render: ({ cell: status }: { cell: ResourcesDemandsStatus }) => (
+        <span class={cssModule[RESOURCE_DEMANDS_STATUS_CLASSES[status]]}>{RESOURCE_DEMANDS_STATUS_NAME[status]}</span>
       ),
     },
   ];

@@ -5,11 +5,10 @@ import workbench from '@/router/module/workbench';
 import resource from '@/router/module/resource';
 import resourcePlan from '@/router/module/resource-plan';
 import service from '@/router/module/service';
-import { businessViews } from '@/views';
+import { businessViews, platformManagementViews } from '@/views';
 
 import scheme from '@/router/module/scheme';
 import bill from '@/router/module/bill';
-import { platformManagementViews } from '@/views';
 // import stores
 import { useAccountStore } from '@/store';
 import { useResourceAccountStore } from '@/store/useResourceAccountStore';
@@ -77,9 +76,6 @@ export default () => {
           menus.value = businessViews;
         } else if (subPath[0] === 'rolling_server_manage') {
           topMenuActiveItem.value = 'platform';
-        } else {
-          topMenuActiveItem.value = 'resource';
-          menus.value = resource;
         }
         accountStore.updateBizsId(''); // 初始化业务ID
         break;

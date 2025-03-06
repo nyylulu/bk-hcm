@@ -8,7 +8,7 @@ import DetailHeader from '@/views/resource/resource-manage/common/header/detail-
 import { useRouter, useRoute } from 'vue-router';
 import WName from '@/components/w-name';
 import apiService from '@/api/scrApi';
-import applicationSideslider from '../application-sideslider/index';
+import applicationSideslider from '../application-sideslider/index.vue';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import { getTypeCn } from '@/views/ziyanScr/cvm-produce/transform';
 import { getResourceTypeName } from '../transform';
@@ -37,6 +37,8 @@ export default defineComponent({
       cvmOneKeyApplyVisible.value = isShow;
     };
 
+    const bizId = computed(() => Number(route.query.bk_biz_id));
+
     onMounted(() => {
       getOrders();
     });
@@ -58,7 +60,7 @@ export default defineComponent({
         originalDocumentslist.value = [];
         const { info } = await http
           .post(getEntirePath(`${getBusinessApiPath()}task/findmany/apply`), {
-            bk_biz_id: [+route?.query?.bk_biz_id],
+            bk_biz_id: [bizId.value],
             suborder_id: [route?.query?.suborder_id],
           })
           .then((res: any) => res.data);
@@ -330,16 +332,15 @@ export default defineComponent({
               ARtriggerShow(false);
             }}>
             <applicationSideslider
-              onOneApplication={CVMapplication}
-              getform={cvmOneKeyApplyVisible.value}
-              cpu={applyCpu.value}
-              mem={applyMem.value}
-              region={applyRegion.value}
-              device={{
-                filter: {
-                  require_type: rawOrder.value.require_type,
-                },
+              isShow={cvmOneKeyApplyVisible.value}
+              requireType={rawOrder.value.require_type}
+              bizId={bizId.value}
+              initialCondition={{
+                cpu: applyCpu.value,
+                mem: applyMem.value,
+                region: applyRegion.value,
               }}
+              onApply={CVMapplication}
             />
           </Sideslider>
         </div>

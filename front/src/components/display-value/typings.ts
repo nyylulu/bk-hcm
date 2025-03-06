@@ -1,6 +1,6 @@
 import { type PropertyDisplayConfig } from '@/model/typings';
 
-export type AppearanceType = 'status' | 'link' | 'wxwork-link';
+export type AppearanceType = 'status' | 'link' | 'wxwork-link' | 'tag';
 
 export type DisplayType = {
   on?: 'cell' | 'info' | 'search';

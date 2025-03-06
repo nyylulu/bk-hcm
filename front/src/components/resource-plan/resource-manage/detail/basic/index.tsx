@@ -67,7 +67,7 @@ export default defineComponent({
             {baseList.value.map((item) => (
               <li>
                 <span class={cssModule.label}>{item.label}：</span>
-                <span class={cssModule.value} title={item.value}>
+                <span class={cssModule.value} title={item.value as string}>
                   {item.value || '--'}
                 </span>
               </li>

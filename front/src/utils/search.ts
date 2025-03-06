@@ -2,7 +2,7 @@ import type { ParsedQs } from 'qs';
 import merge from 'lodash/merge';
 import { ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
 import { findProperty } from '@/model/utils';
-import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
+import { QueryFilterType, QueryFilterTypeLegacy, QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 
@@ -81,8 +81,14 @@ export const convertValue = (
   return value;
 };
 
-export const transformSimpleCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
-  const queryFilter: QueryFilterType = { op: 'and', rules: [] };
+export const transformSimpleCondition = (
+  condition: Record<string, any>,
+  properties: ModelPropertyGeneric[],
+  legacy?: boolean,
+) => {
+  const queryFilter: QueryFilterType | QueryFilterTypeLegacy = !legacy
+    ? { op: 'and', rules: [] }
+    : { condition: 'AND', rules: [] };
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties);
     if (!property) {
@@ -120,7 +126,7 @@ export const transformSimpleCondition = (condition: Record<string, any>, propert
 
     const { op } = getDefaultRule(property);
     queryFilter.rules.push({
-      op,
+      [!legacy ? 'op' : 'operator']: op,
       field: id,
       value: convertValue(value, property, op) as RulesItem['value'],
     });

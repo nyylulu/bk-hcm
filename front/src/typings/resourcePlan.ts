@@ -234,6 +234,8 @@ export interface IDeviceType {
   core_type: string;
   cpu_core: number;
   memory: number;
+  device_class: string;
+  device_family: string;
 }
 
 export interface IDiskType {
@@ -280,6 +282,7 @@ export interface IListResourcesDemandsParam {
     start: string;
     end: string;
   };
+  statuses?: ResourcesDemandsStatus[];
   page: IPageQuery;
 }
 
@@ -327,6 +330,7 @@ export interface IListResourcesDemandsResult {
     obs_project: string;
     generation_type: string;
     device_family: string;
+    core_type: string;
     disk_type: string;
     disk_type_name: string;
     disk_io: number;
@@ -455,3 +459,19 @@ interface BizsByOpProductResult {
 }
 
 export type IBizsByOpProductResult = IQueryResData<BizsByOpProductResult>;
+
+export enum ResourceDemandResultStatusCode {
+  Default,
+  BGNone,
+  BGHas,
+  BIZNone,
+  BIZHas,
+}
+
+export const ResourceDemandResultStatus = {
+  [ResourceDemandResultStatusCode.Default]: '默认预测',
+  [ResourceDemandResultStatusCode.BGNone]: 'BG无预测',
+  [ResourceDemandResultStatusCode.BGHas]: 'BG有预测',
+  [ResourceDemandResultStatusCode.BIZNone]: '本业务有预测',
+  [ResourceDemandResultStatusCode.BIZHas]: '本业务无预测',
+};
