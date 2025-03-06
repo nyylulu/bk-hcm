@@ -17,14 +17,31 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package meta
+// Package woadevicetype ...
+package woadevicetype
 
 import (
-	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/rest"
 )
 
-// WoaDeviceTypeListResult list woa device type result.
-type WoaDeviceTypeListResult struct {
-	Count   uint64                   `json:"count"`
-	Details []wdt.WoaDeviceTypeTable `json:"details"`
+// ListWoaDeviceType list woa device type.
+func (svc *service) ListWoaDeviceType(cts *rest.Contexts) (interface{}, error) {
+	req := new(rpproto.WoaDeviceTypeListReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+	opt := &types.ListOption{
+		Filter: req.Filter,
+		Page:   req.Page,
+		Fields: req.Fields,
+	}
+
+	return svc.dao.WoaDeviceType().List(cts.Kit, opt)
 }

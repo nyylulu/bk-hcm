@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
@@ -39,6 +40,7 @@ func InitService(c *capability.Capability) {
 		esbClient:      c.EsbClient,
 		authorizer:     c.Authorizer,
 		bizLogics:      c.BizLogic,
+		client:         c.Client,
 	}
 	h := rest.NewHandler()
 
@@ -53,6 +55,7 @@ type service struct {
 	planController *plan.Controller
 	authorizer     auth.Authorizer
 	bizLogics      biz.Logics
+	client         *client.ClientSet
 }
 
 func (s *service) initPlanService(h *rest.Handler) {
@@ -114,4 +117,10 @@ func (s *service) initPlanService(h *rest.Handler) {
 
 	// demand week
 	h.Add("ImportDemandWeek", http.MethodPost, "/plans/demand_week/import", s.ImportDemandWeek)
+
+	// woa device type
+	h.Add("ListDeviceType", http.MethodPost, "/plans/device_types/list", s.ListDeviceType)
+	h.Add("CreateDeviceType", http.MethodPost, "/plans/device_types/batch/create", s.CreateDeviceType)
+	h.Add("UpdateDeviceType", http.MethodPatch, "/plans/device_types/batch", s.UpdateDeviceType)
+	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
 }

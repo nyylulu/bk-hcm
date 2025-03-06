@@ -76,6 +76,7 @@ import (
 	orgtopo "hcm/cmd/data-service/service/org-topo"
 	recyclerecord "hcm/cmd/data-service/service/recycle-record"
 	resourceplan "hcm/cmd/data-service/service/resource-plan"
+	woadevicetype "hcm/cmd/data-service/service/resource-plan/woa-device-type"
 	rollingserver "hcm/cmd/data-service/service/rolling-server"
 	"hcm/cmd/data-service/service/rolling-server/rolling-applied"
 	rollingbill "hcm/cmd/data-service/service/rolling-server/rolling-bill"
@@ -301,6 +302,7 @@ func (s *Service) apiSet() *restful.Container {
 	rollingbill.InitService(capability)
 	globalconfig.InitService(capability)
 	orgtopo.InitService(capability)
+	woadevicetype.InitService(capability)
 
 	task.InitService(capability)
 

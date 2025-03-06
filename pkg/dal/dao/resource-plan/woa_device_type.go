@@ -24,13 +24,13 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	rpproto "hcm/pkg/api/data-service/resource-plan"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/audit"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	mtypes "hcm/pkg/dal/dao/types/meta"
 	"hcm/pkg/dal/table"
 	wdt "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/dal/table/utils"
@@ -45,7 +45,7 @@ import (
 type WoaDeviceTypeInterface interface {
 	CreateWithTx(kt *kit.Kit, tx *sqlx.Tx, models []wdt.WoaDeviceTypeTable) ([]string, error)
 	Update(kt *kit.Kit, expr *filter.Expression, model *wdt.WoaDeviceTypeTable) error
-	List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaDeviceTypeListResult, error)
+	List(kt *kit.Kit, opt *types.ListOption) (*rpproto.WoaDeviceTypeListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
 	// GetDeviceTypeMap get device type table mapping.
 	GetDeviceTypeMap(kt *kit.Kit, expr *filter.Expression) (map[string]wdt.WoaDeviceTypeTable, error)
@@ -136,7 +136,7 @@ func (d WoaDeviceTypeDao) Update(kt *kit.Kit, filterExpr *filter.Expression, mod
 }
 
 // List get woa device type list.
-func (d WoaDeviceTypeDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaDeviceTypeListResult, error) {
+func (d WoaDeviceTypeDao) List(kt *kit.Kit, opt *types.ListOption) (*rpproto.WoaDeviceTypeListResult, error) {
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list woa device type options is nil")
 	}
@@ -161,7 +161,7 @@ func (d WoaDeviceTypeDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaD
 			return nil, err
 		}
 
-		return &mtypes.WoaDeviceTypeListResult{Count: count}, nil
+		return &rpproto.WoaDeviceTypeListResult{Count: count}, nil
 	}
 
 	pageExpr, err := types.PageSQLExpr(opt.Page, types.DefaultPageSQLOption)
@@ -177,7 +177,7 @@ func (d WoaDeviceTypeDao) List(kt *kit.Kit, opt *types.ListOption) (*mtypes.WoaD
 		return nil, err
 	}
 
-	return &mtypes.WoaDeviceTypeListResult{Count: 0, Details: details}, nil
+	return &rpproto.WoaDeviceTypeListResult{Count: 0, Details: details}, nil
 }
 
 // DeleteWithTx delete woa device type with tx.
