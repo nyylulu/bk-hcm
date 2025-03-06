@@ -983,3 +983,11 @@ const (
 	XrayFaultTicketNotEnd XrayFaultTicketIsEnd = 0
 	XrayFaultTicketHasEnd XrayFaultTicketIsEnd = 1
 )
+
+// InstanceStatus cvm instance status
+type InstanceStatus string
+
+const (
+	// CvmInstanceStatusRunning CVM实例-运行中
+	CvmInstanceStatusRunning = "RUNNING"
+)

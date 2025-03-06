@@ -290,7 +290,14 @@ func (r *Returner) getCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) ([]*cvmap
 	logs.Infof("query crp cvm instances result, respDataJson: %s, crpTraceID: %s, rid: %s",
 		jsonRespData, resp.TraceId, kt.Rid)
 
-	return resp.Result.Data, nil
+	// 只有状态为running的主机实例，才认为是需要回退的实例
+	existCvms := make([]*cvmapi.InstanceItem, 0)
+	for _, item := range resp.Result.Data {
+		if item.InstanceStatus == enumor.CvmInstanceStatusRunning {
+			existCvms = append(existCvms, item)
+		}
+	}
+	return existCvms, nil
 }
 
 func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
