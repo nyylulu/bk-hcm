@@ -64,6 +64,10 @@ export default defineComponent({
     const accountStore = useAccountStore();
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
+
+    const networkInfoFormRef = ref();
+    const networkInfoPanelRef = useTemplateRef<typeof NetworkInfoCollapsePanel>('network-info-panel');
+
     const router = useRouter();
     const route = useRoute();
     const addResourceRequirements = ref(false);
@@ -720,6 +724,7 @@ export default defineComponent({
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
         IDCPMformRef.value?.clearValidate();
+        networkInfoFormRef.value?.clearValidate();
       });
     };
     const CAtriggerShow = (isShow: boolean) => {
@@ -838,6 +843,14 @@ export default defineComponent({
       } else {
         await IDCPMformRef.value.validate();
       }
+
+      try {
+        await networkInfoFormRef.value.validate();
+      } catch (error) {
+        networkInfoPanelRef.value.handleToggle(true);
+        return Promise.reject(error);
+      }
+
       if (title.value === '增加资源需求') {
         if (resourceForm.value.resourceType === 'QCLOUDCVM') {
           cloudTableData.value.push(cloudResourceForm());
@@ -1537,13 +1550,29 @@ export default defineComponent({
                   </CommonCard>
 
                   {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                    <Form model={QCLOUDCVMForm.value.spec} formType='vertical' class='mt15'>
+                    <Form
+                      model={QCLOUDCVMForm.value.spec}
+                      formType='vertical'
+                      class='mt15'
+                      ref={networkInfoFormRef}
+                      rules={{
+                        subnet: [
+                          {
+                            validator: (value: string) => (QCLOUDCVMForm.value.spec.vpc ? !!value : true),
+                            message: '选择 VPC 后必须选择子网',
+                            trigger: 'change',
+                          },
+                        ],
+                      }}>
                       <NetworkInfoCollapsePanel
+                        ref={'network-info-panel'}
                         class='network-info-collapse-panel'
                         v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
                         v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
                         region={resourceForm.value.region}
                         zone={resourceForm.value.zone}
+                        vpcProperty={'vpc'}
+                        subnetProperty={'subnet'}
                         disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
                         disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
                         onChangeVpc={handleVpcChange}

@@ -2,6 +2,7 @@
 import { computed, ref, watch } from 'vue';
 import { Select, Popover } from 'bkui-vue';
 import http from '@/http';
+import isEqual from 'lodash/isEqual';
 import type { CvmDeviceType, IProps, OptionsType, SelectionType } from './types';
 
 const { Option } = Select;
@@ -40,7 +41,6 @@ const selected = computed({
     return model.value;
   },
   set(val) {
-    triggerChange(val);
     model.value = val;
   },
 });
@@ -116,8 +116,8 @@ watch(
 // 在回填数据的场景，需要默认触发一次 change 事件
 watch(
   model,
-  async (val) => {
-    if (val) {
+  async (val, oldVal) => {
+    if (!isEqual(val, oldVal)) {
       if (options.value[props.resourceType].length === 0) {
         await getOptions();
       }

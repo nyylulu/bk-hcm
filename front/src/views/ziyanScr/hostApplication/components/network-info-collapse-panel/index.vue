@@ -67,6 +67,8 @@ watchEffect(() => {
     subnet.value = '';
   }
 });
+
+defineExpose({ handleToggle });
 </script>
 
 <template>
