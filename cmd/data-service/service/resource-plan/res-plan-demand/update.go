@@ -74,9 +74,11 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 
 	for _, updateReq := range updateReqs {
 		coreType := enumor.CoreType(updateReq.CoreType)
-		if err := coreType.Validate(); err != nil {
-			logs.Errorf("invalid core type: %s, rid: %s", coreType, kt.Rid)
-			return nil, err
+		if coreType != "" {
+			if err := coreType.Validate(); err != nil {
+				logs.Errorf("invalid core type: %s, rid: %s", coreType, kt.Rid)
+				return nil, err
+			}
 		}
 
 		record := &tablers.ResPlanDemandTable{
