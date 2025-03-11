@@ -324,7 +324,9 @@ func (g *Generator) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 }
 
 // buildCvmReq construct a cvm creating task request
-func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint) (*types.CVM, error) {
+func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint,
+	excludeSubnetIDMap map[string]struct{}) (*types.CVM, error) {
+
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &types.CVM{
@@ -370,6 +372,11 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		subnetID := ""
 		applyNum := uint(0)
 		for _, subnet := range subnetList {
+			if _, ok := excludeSubnetIDMap[subnet.Id]; ok {
+				logs.Warnf("exclude subnet id: %s, subOrderID: %s, rid: %s", subnet.Id, order.SubOrderId, kt.Rid)
+				continue
+			}
+
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
 				req.VPCId, subnet.Id, order.Spec.ChargeType)
 			if err != nil {

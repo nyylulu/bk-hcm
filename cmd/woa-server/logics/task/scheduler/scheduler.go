@@ -2181,8 +2181,7 @@ func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types
 func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 	order *types.ApplyOrder) error {
 
-	_, err := s.generator.AddCvmDevices(kt, taskId, generateId, order)
-	if err != nil {
+	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order); err != nil {
 		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 		return err
