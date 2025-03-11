@@ -129,16 +129,14 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	if rel, ok := mapHostToRel[hostBase[0].BkHostID]; ok {
 		moduleId = rel.BkModuleId
 	}
-	moduleName := ""
+	var moduleDefaultVal int64
 	if module, ok := mapModuleIdToModule[moduleId]; ok {
-		moduleName = module.BkModuleName
+		moduleDefaultVal = module.Default
 	}
 
-	if moduleName != "待回收" && moduleName != "待回收模块" {
-		logs.Errorf("recycler:logics:cvm:checkRecyclability:failed, failed to recycle check, "+
-			"for host %s module name %s is not 待回收", step.IP, moduleName)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to recycle check, for host %s module name %s is not "+
-			"待回收", step.IP, moduleName)
+	if moduleDefaultVal != cmdb.DftModuleRecycle {
+		logs.Errorf("failed to recycle check, for host %s module is not 待回收", step.IP)
+		return strings.Join(exeInfos, "\n"), fmt.Errorf("主机(%s)不在空闲机池下的待回收模块", step.IP)
 	}
 
 	return strings.Join(exeInfos, "\n"), nil

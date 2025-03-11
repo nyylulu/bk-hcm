@@ -512,7 +512,7 @@ func (c *cmdb) GetBizRecycleModuleID(ctx context.Context, header http.Header, bi
 
 	moduleID := int64(0)
 	for _, module := range resp.Data.Module {
-		if int(module.Default) == DftModuleRecycle {
+		if module.Default == DftModuleRecycle {
 			moduleID = module.BkModuleId
 			break
 		}

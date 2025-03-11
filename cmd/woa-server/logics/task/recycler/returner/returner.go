@@ -552,7 +552,7 @@ func (r *Returner) getBizRecycleModuleID(bizID int64) (int64, error) {
 
 	moduleID := int64(0)
 	for _, module := range resp.Data.Module {
-		if module.Default == int64(cmdb.DftModuleRecycle) {
+		if module.Default == cmdb.DftModuleRecycle {
 			moduleID = module.BkModuleId
 			break
 		}

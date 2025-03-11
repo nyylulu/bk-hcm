@@ -314,27 +314,27 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 			// 业务资源池
 			bizName = "业务资源池"
 		}
-		moduleName := ""
+		var moduleDefaultVal int64
 		if module, ok := mapModuleIdToModule[moduleId]; ok {
-			moduleName = module.BkModuleName
+			moduleDefaultVal = module.Default
 		}
 		hasPermission := false
 		if permission, ok := mapBizPermission[bizId]; ok {
 			hasPermission = permission
 		}
 		checkInfo := &types.RecycleCheckInfo{
-			HostID:        host.BkHostID,
-			AssetID:       host.BkAssetID,
-			IP:            host.GetUniqIp(),
-			BkHostOuterIP: host.GetUniqOuterIp(),
-			BizID:         bizId,
-			BizName:       bizName,
-			TopoModule:    moduleName,
-			Operator:      host.Operator,
-			BakOperator:   host.BkBakOperator,
-			DeviceType:    host.SvrDeviceClass,
-			State:         host.SrvStatus,
-			InputTime:     host.SvrInputTime,
+			HostID:           host.BkHostID,
+			AssetID:          host.BkAssetID,
+			IP:               host.GetUniqIp(),
+			BkHostOuterIP:    host.GetUniqOuterIp(),
+			BizID:            bizId,
+			BizName:          bizName,
+			ModuleDefaultVal: moduleDefaultVal,
+			Operator:         host.Operator,
+			BakOperator:      host.BkBakOperator,
+			DeviceType:       host.SvrDeviceClass,
+			State:            host.SrvStatus,
+			InputTime:        host.SvrInputTime,
 		}
 		r.fillCheckInfo(checkInfo, kt.User, hasPermission)
 		checkInfos = append(checkInfos, checkInfo)
@@ -356,9 +356,9 @@ func (r *recycler) fillCheckInfo(host *types.RecycleCheckInfo, user string, hasP
 	} else if classifier.IsUnsupportedDevice(host.AssetID, host.IP) {
 		host.Recyclable = false
 		host.Message = "非YUNTI/SCR平台申请设备，请至具体申领平台回收"
-	} else if host.TopoModule != "待回收" && host.TopoModule != "待回收模块" {
+	} else if host.ModuleDefaultVal != cmdb.DftModuleRecycle {
 		host.Recyclable = false
-		host.Message = "主机模块不是[待回收]"
+		host.Message = "主机不在空闲机池下的待回收模块中"
 	} else if strings.Contains(host.Operator, user) == false && strings.Contains(host.BakOperator, user) == false {
 		host.Recyclable = false
 		host.Message = "必须为主机负责人或备份负责人"
@@ -483,9 +483,9 @@ func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
 			// 业务资源池
 			bizName = "业务资源池"
 		}
-		moduleName := ""
+		var moduleDefaultVal int64
 		if module, ok := mapModuleIdToModule[moduleId]; ok {
-			moduleName = module.BkModuleName
+			moduleDefaultVal = module.Default
 		}
 
 		hostDetail := &table.RecycleHost{
@@ -506,11 +506,11 @@ func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
 		}
 		// 检查该主机是否可回收
 		checkInfo := &types.RecycleCheckInfo{
-			AssetID:     hostDetail.AssetID,
-			IP:          hostDetail.IP,
-			TopoModule:  moduleName,
-			Operator:    hostDetail.Operator,
-			BakOperator: hostDetail.BakOperator,
+			AssetID:          hostDetail.AssetID,
+			IP:               hostDetail.IP,
+			ModuleDefaultVal: moduleDefaultVal,
+			Operator:         hostDetail.Operator,
+			BakOperator:      hostDetail.BakOperator,
 		}
 		r.fillCheckInfo(checkInfo, kt.User, true)
 		hostDetail.Recyclable = checkInfo.Recyclable
@@ -668,7 +668,7 @@ func (r *recycler) getModuleInfo(kit *kit.Kit, bizId int64, moduleIds []int64) (
 				pkg.BKDBIN: moduleIds,
 			},
 		},
-		Fields: []string{"bk_module_id", "bk_module_name"},
+		Fields: []string{"bk_module_id", "bk_module_name", "default"},
 		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: 200,

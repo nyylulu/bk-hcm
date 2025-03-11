@@ -18,9 +18,9 @@ import (
 	"fmt"
 	"strings"
 
-	"hcm/pkg/kit"
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
@@ -234,7 +234,7 @@ func (d *Detector) getModuleInfo(bizId int64, moduleIds []int64) ([]*cmdb.Module
 				pkg.BKDBIN: moduleIds,
 			},
 		},
-		Fields: []string{"bk_module_id", "bk_module_name"},
+		Fields: []string{"bk_module_id", "bk_module_name", "default"},
 		Page: cmdb.BasePage{
 			Start: 0,
 			Limit: 200,
