@@ -1097,21 +1097,23 @@ func (r *recycler) CreateRecycleOrder(kt *kit.Kit, param *types.CreateRecycleReq
 		}
 	}
 
-	// 3. classify hosts into groups with different recycle strategies
-	groups, err := classifier.ClassifyRecycleGroups(hosts, param.ReturnPlan)
+	previewResult, err := r.PreviewRecycleOrder(kt, param.ToPreviewParam(), bkBizIDMap)
 	if err != nil {
-		logs.Errorf("failed to preview recycle order, for classify hosts err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("failed to create recycle order, for preview err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	// 4. init and save recycle orders
-	orders, _, err := r.initAndSaveRecycleOrders(kt, param.SkipConfirm, param.Remark, groups, nil)
-	if err != nil {
-		logs.Errorf("failed to preview recycle order, init and save orders err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+	orders := make([]*table.RecycleOrder, len(previewResult.Info))
+	for i, info := range previewResult.Info {
+		if info == nil || info.RecycleOrder == nil {
+			logs.Errorf("failed to create recycle order, for preview result info is nil, rid: %s", kt.Rid)
+			return nil, errors.New("failed to create recycle order, for preview result info is nil")
+		}
+
+		orders[i] = info.RecycleOrder
 	}
 
-	r.setOrderCommitted(orders)
+	r.setOrderNextStatus(kt, orders)
 
 	rst := &types.CreateRecycleOrderRst{
 		Info: orders,
@@ -1319,35 +1321,6 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 		}
 
 		// do not dispatch order to start if set next status failed
-		if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), filter, update); err != nil {
-			logs.Warnf("failed to set order %s committed, err: %v", order.SuborderID, err)
-			continue
-		}
-
-		// add order to dispatch queue
-		r.dispatcher.Add(order.SuborderID)
-	}
-}
-
-func (r *recycler) setOrderCommitted(orders []*table.RecycleOrder) {
-	now := time.Now()
-	for _, order := range orders {
-		// need not set order committed if it's not uncommit
-		if order.Status != table.RecycleStatusUncommit {
-			logs.Warnf("failed to set order %s committed, for invalid status %s", order.SuborderID, order.Status)
-			continue
-		}
-
-		filter := &mapstr.MapStr{
-			"suborder_id": order.SuborderID,
-		}
-
-		update := &mapstr.MapStr{
-			"status":    table.RecycleStatusCommitted,
-			"update_at": now,
-		}
-
-		// do not dispatch order to start if set committed failed
 		if err := dao.Set().RecycleOrder().UpdateRecycleOrder(context.Background(), filter, update); err != nil {
 			logs.Warnf("failed to set order %s committed, err: %v", order.SuborderID, err)
 			continue

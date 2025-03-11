@@ -248,6 +248,18 @@ func (req *CreateRecycleReq) Validate() error {
 	return nil
 }
 
+// ToPreviewParam convert to preview param
+func (req *CreateRecycleReq) ToPreviewParam() *PreviewRecycleReq {
+	return &PreviewRecycleReq{
+		IPs:         req.IPs,
+		AssetIDs:    req.AssetIDs,
+		HostIDs:     req.HostIDs,
+		ReturnPlan:  req.ReturnPlan,
+		SkipConfirm: req.SkipConfirm,
+		Remark:      req.Remark,
+	}
+}
+
 // CreateRecycleOrderRst create recycle order result
 type CreateRecycleOrderRst struct {
 	Info []*table.RecycleOrder `json:"info"`
