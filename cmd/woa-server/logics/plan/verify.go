@@ -90,6 +90,7 @@ func (c *Controller) VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireTy
 			ZoneID:        subOrder.Spec.Zone,
 			DiskType:      subOrder.Spec.DiskType.GetWithDefault(),
 			CpuCore:       int64(subOrder.Replicas) * cpuCore,
+			DiskSize:      int64(subOrder.Replicas) * subOrder.Spec.DiskSize,
 		})
 	}
 

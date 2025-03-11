@@ -1652,14 +1652,16 @@ func (c *Controller) VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType
 	for i, need := range needs {
 		if need.IsPrePaid {
 			// verify pre paid.
-			result[i], err = c.getPrePaidDemandMatch(kt, requireType, prodMaxAvailable, need)
+			result[i], err = c.getDemandMatchResult(kt, requireType, prodMaxAvailable, need,
+				[]enumor.PlanTypeCode{enumor.PlanTypeCodeInPlan})
 			if err != nil {
 				logs.Errorf("failed to loop verify pre paid match, err: %v, need: %+v, rid: %s", err, need, kt.Rid)
 				return nil, err
 			}
 		} else {
 			// verify post paid by hour.
-			result[i], err = c.getPostPaidByHourDemandMatch(kt, requireType, prodRemain, need)
+			result[i], err = c.getDemandMatchResult(kt, requireType, prodRemain, need,
+				enumor.GetPlanTypeCodeHcmMembers())
 			if err != nil {
 				logs.Errorf("failed to loop verify post paid by hour, err: %v, need: %+v, rid: %s", err, need, kt.Rid)
 				return nil, err
@@ -1881,77 +1883,20 @@ func (c *Controller) compactResPlanPoolMatch(kt *kit.Kit, pool1 ResPlanPoolMatch
 	return nil
 }
 
-// getPrePaidDemandMatch get prepaid demand match.
-func (c *Controller) getPrePaidDemandMatch(kt *kit.Kit, requireType enumor.RequireType,
-	prodMaxAvailable ResPlanPoolMatch, need VerifyResPlanElemV2) (VerifyResPlanResElem, error) {
-
-	matchDemandIDs := make([]string, 0)
-	// 检查[预测内]是否有余量
-	allResPlanCore := int64(0)
-	needCpuCore := need.CpuCore
-	for key, availableCpuCoreMap := range prodMaxAvailable {
-		// 已经匹配完需要的核心数
-		if needCpuCore == 0 {
-			break
-		}
-
-		isSkip := isSkipDemandMatch(requireType, key, need, enumor.PlanTypeCodeInPlan)
-		if isSkip {
-			continue
-		}
-
-		matched, err := c.IsDeviceMatched(kt, []string{key.DeviceType}, need.DeviceType)
-		if err != nil {
-			logs.Errorf("failed to check device matched, err: %v, rid: %s", err, kt.Rid)
-			return VerifyResPlanResElem{}, err
-		}
-
-		if !matched[0] {
-			continue
-		}
-
-		for demandID, availableCpuCore := range availableCpuCoreMap {
-			if availableCpuCore <= 0 || needCpuCore <= 0 {
-				continue
-			}
-			allResPlanCore += availableCpuCore
-			canConsume := max(min(availableCpuCore, needCpuCore), 0)
-			needCpuCore -= canConsume
-			prodMaxAvailable[key][demandID] -= canConsume
-			matchDemandIDs = append(matchDemandIDs, demandID)
-			logs.Infof("get pre paid match loop, key: %+v, demandID: %s, prodMaxAvailableKey: %+v, canConsume: %f, "+
-				"needCpuCore: %f, need: %+v, rid: %s", key, demandID, prodMaxAvailable[key], canConsume,
-				needCpuCore, need, kt.Rid)
-		}
-	}
-
-	if needCpuCore != 0 {
-		return VerifyResPlanResElem{
-			VerifyResult: enumor.VerifyResPlanRstFailed,
-			Reason:       fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore),
-		}, nil
-	}
-
-	return VerifyResPlanResElem{VerifyResult: enumor.VerifyResPlanRstPass, MatchDemandIDs: matchDemandIDs}, nil
-}
-
-// getPostPaidByHourDemandMatch get post paid by hour demand match.
-func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, requireType enumor.RequireType,
-	prodRemain ResPlanPoolMatch, need VerifyResPlanElemV2) (VerifyResPlanResElem, error) {
+// getDemandMatchResult get demand match result.
+func (c *Controller) getDemandMatchResult(kt *kit.Kit, requireType enumor.RequireType,
+	prodRemain ResPlanPoolMatch, need VerifyResPlanElemV2, matchPlanType []enumor.PlanTypeCode) (
+	VerifyResPlanResElem, error) {
 
 	matchDemandIDs := make([]string, 0)
 	allResPlanCore := int64(0)
 	needCpuCore := need.CpuCore
-	for _, planType := range enumor.GetPlanTypeCodeHcmMembers() {
+	skipReasonCoreMap := make(map[ResPlanPoolKeyV2]map[string]int64)
+	for _, planType := range matchPlanType {
 		for key, remainCpuCoreMap := range prodRemain {
 			// 已经匹配完需要的核心数
 			if needCpuCore == 0 {
 				break
-			}
-
-			isSkip := isSkipDemandMatch(requireType, key, need, planType)
-			if isSkip {
-				continue
 			}
 
 			matched, err := c.IsDeviceMatched(kt, []string{key.DeviceType}, need.DeviceType)
@@ -1965,8 +1910,19 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, requireType enumo
 				continue
 			}
 
+			isSkip, skipReason := isSkipDemandMatch(requireType, key, need, planType)
+			// 当预测的关键属性（例如业务、项目类型、预测内外）不匹配时，可以硬性跳过，不提醒用户预测不匹配
+			if isSkip && skipReason == "" {
+				continue
+			}
+			skipReasonCoreMap[key] = make(map[string]int64)
+
 			for demandID, remainCpuCore := range remainCpuCoreMap {
 				if remainCpuCore <= 0 || needCpuCore <= 0 {
+					continue
+				}
+				if isSkip {
+					skipReasonCoreMap[key][skipReason] += remainCpuCore
 					continue
 				}
 				allResPlanCore += remainCpuCore
@@ -1975,17 +1931,31 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, requireType enumo
 				prodRemain[key][demandID] -= canConsume
 				matchDemandIDs = append(matchDemandIDs, demandID)
 			}
-			logs.Infof("get post paid by hour match loop, requireType: %d, allResPlanCore: %d, key: %+v, "+
+			logs.Infof("get res plan demand match loop, requireType: %d, allResPlanCore: %d, key: %+v, "+
 				"remainCpuCoreMap: %+v, prodRemain[key]: %+v, needCpuCore: %d, need: %+v, rid: %s", requireType,
 				allResPlanCore, key, remainCpuCoreMap, prodRemain[key], needCpuCore, need, kt.Rid)
 		}
 	}
+	logs.Infof("get res plan demand match, not match skip core: %+v, rid: %s", skipReasonCoreMap, kt.Rid)
 
 	if needCpuCore != 0 {
-		return VerifyResPlanResElem{
+		verifyRes := VerifyResPlanResElem{
 			VerifyResult: enumor.VerifyResPlanRstFailed,
-			Reason:       fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore),
-		}, nil
+		}
+
+		// 如果用没匹配上的预测尝试够用，推荐用户用该方案
+		for _, skipReason := range skipReasonCoreMap {
+			for reason, skipCpu := range skipReason {
+				if need.CpuCore <= skipCpu {
+					verifyRes.Reason = reason
+					return verifyRes, nil
+				}
+			}
+		}
+
+		// 没匹配上的核心数也不够，返回差多少核心
+		verifyRes.Reason = fmt.Sprintf("可用预测量不足，需要%d核，余量%d核", need.CpuCore, allResPlanCore)
+		return verifyRes, nil
 	}
 
 	return VerifyResPlanResElem{VerifyResult: enumor.VerifyResPlanRstPass, MatchDemandIDs: matchDemandIDs}, nil
@@ -1993,28 +1963,37 @@ func (c *Controller) getPostPaidByHourDemandMatch(kt *kit.Kit, requireType enumo
 
 // isSkipDemandMatch 是否跳过不进行预测匹配
 func isSkipDemandMatch(requireType enumor.RequireType, key ResPlanPoolKeyV2, need VerifyResPlanElemV2,
-	planType enumor.PlanTypeCode) bool {
+	planType enumor.PlanTypeCode) (bool, string) {
 
 	// 机房裁撤支持预测内、预测外都可以选择包年包月，可以忽略预测内、预测外 --story=121848852
 	if requireType == enumor.RequireTypeDissolve {
 		return isDiffDemandMatch(key, need)
 	} else {
 		if key.PlanType != planType {
-			return true
+			return true, ""
 		}
 		return isDiffDemandMatch(key, need)
 	}
 }
 
-// isDiffDemandMatch 比较预测单是否有不相同的参数
-func isDiffDemandMatch(key ResPlanPoolKeyV2, need VerifyResPlanElemV2) bool {
-	if key.AvailableTime != need.AvailableTime || key.ObsProject != need.ObsProject ||
-		key.BkBizID != need.BkBizID || key.DemandClass != need.DemandClass ||
-		key.RegionID != need.RegionID || key.DiskType != need.DiskType {
-
-		return true
+// isDiffDemandMatch 比较预测单是否有不相同的参数，并返回不匹配原因
+func isDiffDemandMatch(key ResPlanPoolKeyV2, need VerifyResPlanElemV2) (bool, string) {
+	// 这些不匹配原因是显而易见的，不需要再显式返回原因
+	if key.AvailableTime != need.AvailableTime || key.BkBizID != need.BkBizID || key.RegionID != need.RegionID ||
+		key.ObsProject != need.ObsProject {
+		return true, ""
 	}
-	return false
+
+	// 申请单中包含磁盘时，校验磁盘类型
+	if need.DiskSize > 0 && key.DiskType != need.DiskType {
+		return true, enumor.DiskTypeIsNotMatch.GenerateMsg(need.DiskType.Name(), key.DiskType.Name())
+	}
+
+	if key.DemandClass != need.DemandClass {
+		return true, enumor.DemandClassIsNotMatch.GenerateMsg(string(need.DemandClass), string(key.DemandClass))
+	}
+
+	return false, ""
 }
 
 // getMatchedPlanDemandIDs get matched plan demand ids.
