@@ -19,7 +19,12 @@
 
 package enumor
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+
+	"hcm/pkg/criteria/constant"
+)
 
 const (
 	// RollingServerResourcePoolTask 滚服项目默认的CRP任务标识
@@ -112,4 +117,37 @@ func (t ReturnedStatus) Validate() error {
 	}
 
 	return nil
+}
+
+// RsUnReturnedSubOrderFineState is rolling unreturned sub order fine state.
+type RsUnReturnedSubOrderFineState string
+
+const (
+	// RsFineExemptionState 滚服子单申请第1日到22天内
+	RsFineExemptionState RsUnReturnedSubOrderFineState = "豁免期"
+	// RsImpendingFineState 滚服子单申请第23日到30日
+	RsImpendingFineState RsUnReturnedSubOrderFineState = "即将产生罚金"
+	// RsHasFineState 滚服子单申请第31日-第121日
+	RsHasFineState RsUnReturnedSubOrderFineState = "已产生罚金"
+)
+
+// GetRsUnReturnedSubOrderFineState get rolling server unreturned sub order fine state.
+func GetRsUnReturnedSubOrderFineState(appliedTime, curTime time.Time) (RsUnReturnedSubOrderFineState, error) {
+	if curTime.Before(appliedTime) {
+		return "", fmt.Errorf("applied date %s is later than current date %s", appliedTime, curTime)
+	}
+
+	if curTime.Before(appliedTime.AddDate(0, 0, constant.RsFineExemptionDay+1)) {
+		return RsFineExemptionState, nil
+	}
+
+	if curTime.Before(appliedTime.AddDate(0, 0, constant.CalculateFineStartDay)) {
+		return RsImpendingFineState, nil
+	}
+
+	if curTime.Before(appliedTime.AddDate(0, 0, constant.CalculateFineEndDay+1)) {
+		return RsHasFineState, nil
+	}
+
+	return "", fmt.Errorf("applied date %v, cur date: %v is not support", appliedTime, curTime)
 }

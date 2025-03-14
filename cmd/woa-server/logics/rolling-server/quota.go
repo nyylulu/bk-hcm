@@ -44,19 +44,20 @@ import (
 
 // createBaseQuotaConfigPeriodically 每个月1号生成当月的所有业务基础额度
 // 协程启动时必定会尝试创建一次当月基础额度（幂等），并将下次执行的时间设置为下个月的1号0点
-func (l *logics) createBaseQuotaConfigPeriodically() {
+func (l *logics) createBaseQuotaConfigPeriodically(loc *time.Location) {
 	for {
 		// 记录运行前的时间作为计算下次执行时间的基准，防止运行时超过0点错过1号
 		now := time.Now()
 		kt := core.NewBackendKit()
+		nextMonthFirstDay := time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, loc)
 
-		quotaMonth := rstypes.QuotaMonth(fmt.Sprintf("%04d-%02d", now.Year(), now.Month()))
+		quotaMonth := rstypes.QuotaMonth(fmt.Sprintf("%04d-%02d", nextMonthFirstDay.Year(), nextMonthFirstDay.Month()))
 		if _, err := l.CreateBizQuotaConfigsForAllBiz(kt, quotaMonth); err != nil {
 			logs.Errorf("create base quota configs for all biz failed, err: %v, rid: %s", err, kt.Rid)
 		}
 
 		// 计算下个月1号0点的时间
-		nextMonthFirstDay := time.Date(now.Year(), now.Month()+1, 1, 0, 0, 0, 0, now.Location())
+		nextMonthFirstDay.AddDate(0, 1, 0)
 
 		// 等待直到下个月1号0点
 		time.Sleep(time.Until(nextMonthFirstDay))
@@ -898,7 +899,7 @@ func (l *logics) isBizCurMonthHavingQuota(kt *kit.Kit, bizID int64, appliedCount
 		BkBizIDs: []int64{bizID},
 		RollingServerDateRange: rstypes.RollingServerDateRange{
 			Start: rstypes.RollingServerDateTimeItem{
-				Year: now.Year(), Month: int(now.Month()), Day: rstypes.FirstDay,
+				Year: now.Year(), Month: int(now.Month()), Day: constant.FirstDay,
 			},
 			End: rstypes.RollingServerDateTimeItem{
 				Year: now.Year(), Month: int(now.Month()), Day: now.Day(),
@@ -931,7 +932,7 @@ func (l *logics) isSystemCurMonthHavingQuota(kt *kit.Kit, appliedCount uint) (bo
 	summaryReq := &rstypes.CpuCoreSummaryReq{
 		RollingServerDateRange: rstypes.RollingServerDateRange{
 			Start: rstypes.RollingServerDateTimeItem{
-				Year: now.Year(), Month: int(now.Month()), Day: rstypes.FirstDay,
+				Year: now.Year(), Month: int(now.Month()), Day: constant.FirstDay,
 			},
 			End: rstypes.RollingServerDateTimeItem{
 				Year: now.Year(), Month: int(now.Month()), Day: now.Day(),

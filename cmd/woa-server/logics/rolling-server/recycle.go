@@ -71,7 +71,7 @@ func (l *logics) CalSplitRecycleHosts(kt *kit.Kit, bkBizID int64, hosts []*table
 	// 最后匹配91-121天的
 	matchRange = append(matchRange, rstypes.RecycleMatchDateRange{
 		Start: rstypes.CalculateMatchNinetyDay + 1,
-		End:   rstypes.CalculateFineEndDay,
+		End:   constant.CalculateFineEndDay,
 	})
 
 	// 是否继续滚服回收

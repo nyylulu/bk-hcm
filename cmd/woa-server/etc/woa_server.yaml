@@ -377,6 +377,12 @@ recover:
 
 rollingServer:
   syncBill: true
+  returnNotification:
+    enable: false
+    # 可用于开发调试，是否通知业务
+    sendToBusiness: false
+    # 通知时是否附带给该用户
+    defaultReceivers:
 
 caiche:
   host: http://127.0.0.1

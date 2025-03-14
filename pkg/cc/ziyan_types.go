@@ -791,7 +791,15 @@ func (c NgateCli) validate() error {
 
 // RollingServer 滚服相关配置
 type RollingServer struct {
-	SyncBill bool `yaml:"syncBill"`
+	SyncBill           bool                      `yaml:"syncBill"`
+	ReturnNotification RollingServerReturnNotice `yaml:"returnNotification"`
+}
+
+// RollingServerReturnNotice 滚服资源退换通知配置
+type RollingServerReturnNotice struct {
+	Enable           bool     `yaml:"enable"`
+	SendToBusiness   bool     `yaml:"sendToBusiness"`
+	DefaultReceivers []string `yaml:"defaultReceivers"`
 }
 
 // ResPlan 资源预测相关配置

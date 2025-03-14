@@ -17,28 +17,26 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
 package rollingserver
 
 import "hcm/pkg/criteria/validator"
 
-// RollingBillSyncReq sync request
-type RollingBillSyncReq struct {
-	// BkBizID 业务ID
-	BkBizID int64 `json:"bk_biz_id" validate:"required"`
-	// Year 记录账单的年份
-	Year int `json:"year" validate:"required"`
-	// Month 记录账单的月份
-	Month int `json:"month" validate:"required"`
-	// Day 记录账单的天
-	Day int `json:"day" validate:"required"`
+// PushReturnNoticeReq is request of push expire notice.
+type PushReturnNoticeReq struct {
+	BizIDs    []int64  `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	Receivers []string `json:"receivers" validate:"omitempty,max=10"`
 }
 
 // Validate ...
-func (r *RollingBillSyncReq) Validate() error {
-	if err := validator.Validate.Struct(r); err != nil {
-		return err
-	}
+func (p PushReturnNoticeReq) Validate() error {
+	return validator.Validate.Struct(p)
+}
 
-	return nil
+// PushReturnNoticeMsg push return notice msg
+type PushReturnNoticeMsg struct {
+	BizID                  int64
+	BizName                string
+	UnReturnedSubOrderMsgs []UnReturnedSubOrderMsg
+	Receivers              []string
+	CC                     []string
 }

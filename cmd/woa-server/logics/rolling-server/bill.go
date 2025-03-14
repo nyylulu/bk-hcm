@@ -28,7 +28,6 @@ import (
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/constant"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	rs "hcm/pkg/dal/table/rolling-server"
@@ -39,7 +38,6 @@ import (
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
-	"hcm/pkg/tools/times"
 
 	"github.com/shopspring/decimal"
 )
@@ -56,7 +54,7 @@ func (l *logics) syncBillsPeriodically() {
 		// 如果现在已经过了1点，再计算一次当天的罚金，防止刚好在1点的时候被重启了;最后计算明天的1点的时间
 		kt := core.NewBackendKit()
 		req := &rollingserver.RollingBillSyncReq{
-			BkBizID: rollingserver.SyncAllBiz,
+			BkBizID: constant.SyncAllBiz,
 			Year:    now.Year(),
 			Month:   int(now.Month()),
 			Day:     now.Day(),
@@ -75,7 +73,7 @@ func (l *logics) syncBillsPeriodically() {
 		kt := core.NewBackendKit()
 		now = time.Now()
 		req := &rollingserver.RollingBillSyncReq{
-			BkBizID: rollingserver.SyncAllBiz,
+			BkBizID: constant.SyncAllBiz,
 			Year:    now.Year(),
 			Month:   int(now.Month()),
 			Day:     now.Day(),
@@ -103,7 +101,7 @@ func (l *logics) SyncBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq) e
 		return err
 	}
 
-	if req.BkBizID != rollingserver.SyncAllBiz {
+	if req.BkBizID != constant.SyncAllBiz {
 		if _, ok := resPoolBizMap[req.BkBizID]; ok {
 			logs.Infof("skip resource pool business rolling bill sync, bizID: %d, rid: %s", req.BkBizID, kt.Rid)
 			return nil
@@ -164,7 +162,11 @@ func (l *logics) syncBizBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq
 	}
 
 	// 1.查询需要计算罚金的滚服申请记录表数据
-	appliedRecords, err := l.findBillAppliedRecords(kt, req)
+	startYear, startMonth, startDay := subDay(req.Year, req.Month, req.Day, constant.CalculateFineEndDay)
+	startDate := rollingserver.AppliedRecordDate{Year: startYear, Month: startMonth, Day: startDay}
+	endYear, endMonth, endDay := subDay(req.Year, req.Month, req.Day, constant.CalculateFineStartDay)
+	endDate := rollingserver.AppliedRecordDate{Year: endYear, Month: endMonth, Day: endDay}
+	appliedRecords, err := l.findAppliedRecords(kt, req.BkBizID, startDate, endDate)
 	if err != nil {
 		logs.Errorf("find rolling applied records failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
 		return err
@@ -175,7 +177,7 @@ func (l *logics) syncBizBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq
 	for i, appliedRecord := range appliedRecords {
 		appliedRecordIDs[i] = appliedRecord.ID
 	}
-	returnedRecordMap, err := l.findBillReturnedRecords(kt, appliedRecordIDs)
+	returnedRecordMap, err := l.findReturnedRecords(kt, appliedRecordIDs)
 	if err != nil {
 		logs.Errorf("find rolling returned records failed, err: %v, applied records: %v, rid: %s", err,
 			appliedRecordIDs, kt.Rid)
@@ -199,109 +201,6 @@ func (l *logics) syncBizBills(kt *kit.Kit, req *rollingserver.RollingBillSyncReq
 		end.Sub(start), kt.Rid)
 
 	return nil
-}
-
-// findBillAppliedRecords 查询需要计算罚金的滚服申请记录表数据
-func (l *logics) findBillAppliedRecords(kt *kit.Kit, req *rollingserver.RollingBillSyncReq) (
-	[]*rs.RollingAppliedRecord, error) {
-
-	startYear, startMonth, startDay := subDay(req.Year, req.Month, req.Day, rollingserver.CalculateFineEndDay)
-	endYear, endMonth, endDay := subDay(req.Year, req.Month, req.Day, rollingserver.CalculateFineStartDay)
-
-	records := make([]*rs.RollingAppliedRecord, 0)
-	listReq := &rsproto.RollingAppliedRecordListReq{
-		Filter: &filter.Expression{
-			Op: filter.And,
-			Rules: []filter.RuleFactory{
-				&filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: req.BkBizID},
-				// 大于等于该日期的申请记录
-				&filter.AtomRule{Field: "roll_date", Op: filter.GreaterThanEqual.Factory(),
-					Value: times.GetDataIntDate(startYear, startMonth, startDay)},
-				// 小于等于该日期的申请记录
-				&filter.AtomRule{Field: "roll_date", Op: filter.LessThanEqual.Factory(),
-					Value: times.GetDataIntDate(endYear, endMonth, endDay)},
-				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
-				&filter.AtomRule{
-					Field: "require_type", Op: filter.Equal.Factory(), Value: enumor.RequireTypeRollServer,
-				},
-			},
-		},
-		Page: &core.BasePage{
-			Start: 0,
-			Limit: constant.BatchOperationMaxLimit,
-		},
-	}
-
-	for {
-		result, err := l.client.DataService().Global.RollingServer.ListAppliedRecord(kt, listReq)
-		if err != nil {
-			logs.Errorf("list rolling applied record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
-			return nil, err
-		}
-		records = append(records, result.Details...)
-
-		if len(result.Details) < constant.BatchOperationMaxLimit {
-			break
-		}
-
-		listReq.Page.Start += constant.BatchOperationMaxLimit
-	}
-
-	return records, nil
-}
-
-func subDay(year, month, day int, subDay int) (int, int, int) {
-	originalDate := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
-	pastDate := originalDate.AddDate(0, 0, -subDay)
-
-	return pastDate.Year(), int(pastDate.Month()), pastDate.Day()
-}
-
-// findBillReturnedRecords 查询需要进行账单计算的主机回收记录
-func (l *logics) findBillReturnedRecords(kt *kit.Kit, appliedRecordIDs []string) (
-	map[string][]*rs.RollingReturnedRecord, error) {
-
-	recordMap := make(map[string][]*rs.RollingReturnedRecord)
-
-	for _, ids := range slice.Split(appliedRecordIDs, constant.BatchOperationMaxLimit) {
-		listReq := &rsproto.RollingReturnedRecordListReq{
-			Filter: &filter.Expression{
-				Op: filter.And,
-				Rules: []filter.RuleFactory{
-					&filter.AtomRule{Field: "applied_record_id", Op: filter.In.Factory(), Value: ids},
-					&filter.AtomRule{Field: "status", Op: filter.Equal.Factory(), Value: enumor.NormalStatus},
-				},
-			},
-			Page: &core.BasePage{
-				Start: 0,
-				Limit: constant.BatchOperationMaxLimit,
-			},
-		}
-
-		for {
-			result, err := l.client.DataService().Global.RollingServer.ListReturnedRecord(kt, listReq)
-			if err != nil {
-				logs.Errorf("list rolling returned record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
-				return nil, err
-			}
-
-			for _, record := range result.Details {
-				if _, ok := recordMap[record.AppliedRecordID]; !ok {
-					recordMap[record.AppliedRecordID] = make([]*rs.RollingReturnedRecord, 0)
-				}
-
-				recordMap[record.AppliedRecordID] = append(recordMap[record.AppliedRecordID], record)
-			}
-
-			if len(result.Details) < constant.BatchOperationMaxLimit {
-				break
-			}
-
-			listReq.Page.Start += constant.BatchOperationMaxLimit
-		}
-	}
-
-	return recordMap, nil
 }
 
 func (l *logics) addFineDetail(kt *kit.Kit, req *rollingserver.RollingBillSyncReq,
@@ -433,7 +332,7 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		return nil
 	}
 
-	details, err := l.getFineDetail(kt, req.BkBizID, req.Year, req.Month, rollingserver.FirstDay, req.Day)
+	details, err := l.getFineDetail(kt, req.BkBizID, req.Year, req.Month, constant.FirstDay, req.Day)
 	if err != nil {
 		logs.Errorf("get rolling fine detail failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
 		return err
@@ -485,13 +384,13 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		ProductID:           bizBelong.OpProductID,
 		BusinessSetID:       bizBelong.Bs1NameID,
 		BusinessSetName:     bizBelong.Bs1Name,
-		CityID:              rollingserver.DefaultCityID,
+		CityID:              constant.DefaultCityID,
 		BusinessID:          bizBelong.Bs2NameID,
 		BusinessName:        bizBelong.Bs2Name,
-		BusinessModID:       rollingserver.DefaultBusinessModID,
-		BusinessModName:     rollingserver.DefaultBusinessModName,
-		PlatformID:          rollingserver.PlatformID,
-		ResClassID:          rollingserver.ResClassID,
+		BusinessModID:       constant.DefaultBusinessModID,
+		BusinessModName:     constant.DefaultBusinessModName,
+		PlatformID:          constant.PlatformID,
+		ResClassID:          constant.ResClassID,
 		Amount:              amount.InexactFloat64(),
 		AmountInCurrentDate: amountInCurrentDate.InexactFloat64(),
 	}
@@ -528,7 +427,7 @@ func (l *logics) isBillExist(kt *kit.Kit, req *rollingserver.RollingBillSyncReq)
 			Limit: constant.BatchOperationMaxLimit,
 		},
 	}
-	if req.BkBizID != rollingserver.SyncAllBiz {
+	if req.BkBizID != constant.SyncAllBiz {
 		listReq.Filter.Rules = append(listReq.Filter.Rules,
 			&filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: req.BkBizID})
 	}
@@ -552,7 +451,7 @@ func (l *logics) isBillExist(kt *kit.Kit, req *rollingserver.RollingBillSyncReq)
 		listReq.Page.Start += constant.BatchOperationMaxLimit
 	}
 
-	if req.BkBizID != rollingserver.SyncAllBiz {
+	if req.BkBizID != constant.SyncAllBiz {
 		return len(existBizDetailMap) != 0, nil
 	}
 
@@ -592,12 +491,12 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 					querybuilder.AtomRule{
 						Field:    "bk_operate_dept_id",
 						Operator: querybuilder.OperatorEqual,
-						Value:    rollingserver.IEGOperateDeptID,
+						Value:    constant.IEGOperateDeptID,
 					},
 					querybuilder.AtomRule{
 						Field:    "bk_business_dept_id",
 						Operator: querybuilder.OperatorEqual,
-						Value:    rollingserver.IEGOperateDeptID,
+						Value:    constant.IEGOperateDeptID,
 					},
 				},
 			},

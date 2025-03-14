@@ -79,6 +79,8 @@ func (s *service) initService(h *rest.Handler) {
 
 	h.Add("ListBills", http.MethodPost, "/bills/list", s.ListBills)
 	h.Add("SyncBills", http.MethodPost, "/bills/sync", s.SyncBills)
+	h.Add("PushRollingServerReturnNotification", http.MethodPost, "/return_notifications/push",
+		s.PushReturnNotification)
 }
 
 // bizService 业务下的接口

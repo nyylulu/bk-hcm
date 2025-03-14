@@ -103,7 +103,7 @@ data:
     recover:
       {{- toYaml .Values.recover | nindent 6 }}
     rollingServer:
-      syncBill: {{ .Values.rollingServer.syncBill }}
+      {{- toYaml .Values.rollingServer | nindent 6 }}
     caiche:
       {{- toYaml .Values.caiche | nindent 6 }}
     localTimezone: {{ .Values.localTimezone }}

@@ -31,6 +31,8 @@ const (
 	DemandPenaltyRatioReportFailed WarnSign = "demand_penalty_ratio_report_failed"
 	// ResPlanExpireNotificationPushFailed res plan expire notification push failed.
 	ResPlanExpireNotificationPushFailed WarnSign = "res_plan_expire_notification_push_failed"
+	// RollingServerReturnNotificationPushFailed rolling server return notification push failed.
+	RollingServerReturnNotificationPushFailed WarnSign = "rolling_server_return_notification_push_failed"
 
 	// CvmResetSystemUpdatePwdFailed cvm reset system update pwd failed.
 	CvmResetSystemUpdatePwdFailed WarnSign = "cvm_reset_system_update_pwd_failed"

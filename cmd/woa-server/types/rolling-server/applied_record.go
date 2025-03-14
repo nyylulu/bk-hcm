@@ -17,28 +17,28 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package rollingserver ...
 package rollingserver
 
-import "hcm/pkg/criteria/validator"
+import "hcm/pkg/criteria/enumor"
 
-// RollingBillSyncReq sync request
-type RollingBillSyncReq struct {
-	// BkBizID 业务ID
-	BkBizID int64 `json:"bk_biz_id" validate:"required"`
-	// Year 记录账单的年份
-	Year int `json:"year" validate:"required"`
-	// Month 记录账单的月份
-	Month int `json:"month" validate:"required"`
-	// Day 记录账单的天
-	Day int `json:"day" validate:"required"`
+// AppliedRecordDate applied record date
+type AppliedRecordDate struct {
+	Year  int
+	Month int
+	Day   int
 }
 
-// Validate ...
-func (r *RollingBillSyncReq) Validate() error {
-	if err := validator.Validate.Struct(r); err != nil {
-		return err
-	}
-
-	return nil
+// UnReturnedSubOrderMsg unreturned sub order msg
+type UnReturnedSubOrderMsg struct {
+	SubOrderID        string
+	AppliedCore       int64
+	ReturnedCore      int64
+	AppliedUser       string
+	AppliedYear       int
+	AppliedMonth      int
+	AppliedDay        int
+	NeedReturnedYear  int
+	NeedReturnedMonth int
+	NeedReturnedDay   int
+	FineState         enumor.RsUnReturnedSubOrderFineState
 }

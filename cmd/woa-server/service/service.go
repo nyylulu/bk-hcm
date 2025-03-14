@@ -166,12 +166,6 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli)
-	if err != nil {
-		logs.Errorf("new rolling server logics failed, err: %v", err)
-		return nil, err
-	}
-
 	gcLogics, err := gclogics.New(apiClientSet, thirdCli)
 	if err != nil {
 		logs.Errorf("new green channel logics failed, err: %v", err)
@@ -188,6 +182,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create cmsi client, err: %v", err)
+		return nil, err
+	}
+
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
 		return nil, err
 	}
 
