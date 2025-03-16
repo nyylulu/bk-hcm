@@ -22,6 +22,7 @@ package lblogic
 
 import (
 	"fmt"
+
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -104,8 +105,8 @@ func getListener(kt *kit.Kit, cli *dataservice.Client, accountID, lbCloudID stri
 	return nil, nil
 }
 
-func getURLRule(kt *kit.Kit, cli *dataservice.Client, vendor enumor.Vendor, lbCloudID, listenerCloudID, domain, url string) (
-	*corelb.TCloudLbUrlRule, error) {
+func getURLRule(kt *kit.Kit, cli *dataservice.Client, vendor enumor.Vendor,
+	lbCloudID, listenerCloudID, domain, url string) (*corelb.TCloudLbUrlRule, error) {
 
 	switch vendor {
 	case enumor.TCloud:
@@ -133,7 +134,6 @@ func getURLRule(kt *kit.Kit, cli *dataservice.Client, vendor enumor.Vendor, lbCl
 				tools.RuleEqual("cloud_lbl_id", listenerCloudID),
 				tools.RuleEqual("domain", domain),
 				tools.RuleEqual("url", url),
-				tools.RuleEqual("vendor", vendor),
 			),
 			Page: core.NewDefaultBasePage(),
 		}
