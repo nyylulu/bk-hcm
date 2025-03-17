@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref, watchEffect } from 'vue';
 import { useI18n } from 'vue-i18n';
+import { useBusinessGlobalStore } from '@/store/business-global';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
@@ -27,6 +29,10 @@ const props = withDefaults(
 );
 
 const { t } = useI18n();
+const { getBizsId } = useWhereAmI();
+const { getBusinessNames } = useBusinessGlobalStore();
+
+const currentBusinessName = getBusinessNames(getBizsId())?.[0];
 const isShow = ref(false);
 const hasNoBizAccess = computed(() => props.processors.length !== props.processorsWithBizAccess.length);
 
@@ -109,7 +115,7 @@ watchEffect(() => {
           </div>
           <!-- 存在无权限审批人 -->
           <div v-else>
-            <p class="mb4">{{ t('审批人需要具备「DB数据生产环境」的「业务访问」权限，您可以：') }}</p>
+            <p class="mb4">{{ `审批人需要具备「${currentBusinessName}」的「业务访问」权限，您可以：` }}</p>
             <p class="mb4">
               1. {{ t('企业微信线下沟通，并') }}
               <copy-to-clipboard :content="ticketLink">
