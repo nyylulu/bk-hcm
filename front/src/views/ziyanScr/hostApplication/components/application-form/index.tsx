@@ -337,9 +337,10 @@ export default defineComponent({
         minWidth: 150,
         isDefaultShow: true,
         render({ cell }: { cell: string }) {
-          return cell || '--';
+          return <span v-bk-tooltips={{ content: cell, disabled: !cell?.length }}>{cell || '--'}</span>;
         },
         isHidden: isSpecialRequirement.value,
+        showOverflowTooltip: false,
       },
     ];
     // 添加按钮侧边栏公共表单对象
@@ -844,10 +845,11 @@ export default defineComponent({
         await IDCPMformRef.value.validate();
       }
 
+      // 需要注意当主机类型为物理机时不会存在networkInfoFormRef
       try {
-        await networkInfoFormRef.value.validate();
+        await networkInfoFormRef.value?.validate();
       } catch (error) {
-        networkInfoPanelRef.value.handleToggle(true);
+        networkInfoPanelRef.value?.handleToggle(true);
         return Promise.reject(error);
       }
 
