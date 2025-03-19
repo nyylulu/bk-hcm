@@ -1089,3 +1089,22 @@ func (svc *clbSvc) DescribeClusterResources(cts *rest.Contexts) (any, error) {
 
 	return result, nil
 }
+
+// TCloudZiyanDescribeSlaCapacity 查询性能保障规格参数
+func (svc *clbSvc) TCloudZiyanDescribeSlaCapacity(cts *rest.Contexts) (any, error) {
+	req := new(protolb.TCloudDescribeSlaCapacityOption)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.DescribeSlaCapacity(cts.Kit, req.TCloudDescribeSlaCapacityOption)
+}

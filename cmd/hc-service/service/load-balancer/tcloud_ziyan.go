@@ -42,6 +42,8 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 		"/vendors/tcloud-ziyan/load_balancers/batch", svc.BatchDeleteTCloudZiyanLoadBalancer)
 	h.Add("ListQuotaTCloudZiyanLB", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/quota", svc.ListTCloudZiyanLBQuota)
+	h.Add("TCloudZiyanDescribeSlaCapacity", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/sla/capacity/describe", svc.TCloudZiyanDescribeSlaCapacity)
 
 	h.Add("ZiyanCreateSnatIps", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/snat_ips/create", svc.ZiyanCreateSnatIps)

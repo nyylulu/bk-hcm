@@ -270,3 +270,11 @@ func (c *ClbClient) BatchRemoveListenerTarget(kt *kit.Kit, lbID string, req *hcp
 	return common.Request[hcproto.TCloudBatchUnbindRsReq, hcproto.BatchCreateResult](
 		c.client, http.MethodDelete, kt, req, "/load_balancers/%s/targets/batch", lbID)
 }
+
+// DescribeSlaCapacity 查询性能保障规格参数
+func (c *ClbClient) DescribeSlaCapacity(kt *kit.Kit, req *hcproto.TCloudDescribeSlaCapacityOption) (
+	*tclb.DescribeSlaCapacityResponseParams, error) {
+
+	return common.Request[hcproto.TCloudDescribeSlaCapacityOption, tclb.DescribeSlaCapacityResponseParams](
+		c.client, http.MethodPost, kt, req, "/load_balancers/sla/capacity/describe")
+}

@@ -41,3 +41,14 @@ type TCloudZiyanCreateClbOption struct {
 func (opt TCloudZiyanCreateClbOption) Validate() error {
 	return validator.Validate.Struct(opt)
 }
+
+// TCloudDescribeSlaCapacityOption 定义查询性能保障规格参数
+type TCloudDescribeSlaCapacityOption struct {
+	Region   string   `json:"region" validate:"required"`
+	SlaTypes []string `json:"sla_types" validate:"omitempty"`
+}
+
+// Validate ...
+func (opt TCloudDescribeSlaCapacityOption) Validate() error {
+	return validator.Validate.Struct(opt)
+}
