@@ -875,7 +875,7 @@ func (svc *clbSvc) updateTCloudZiyanDomainAttr(kt *kit.Kit, req *protolb.DomainA
 
 // BatchDeleteTCloudZiyanLoadBalancer ...
 func (svc *clbSvc) BatchDeleteTCloudZiyanLoadBalancer(cts *rest.Contexts) (any, error) {
-	req := new(protolb.TCloudBatchDeleteLoadbalancerReq)
+	req := new(protolb.BatchDeleteLoadBalancerReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
