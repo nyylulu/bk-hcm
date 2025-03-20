@@ -1207,6 +1207,7 @@ export default defineComponent({
                   <GreenChannelCpuCoreLimits
                     ref='green-channel-cpu-core-limits'
                     replicasCpuCores={replicasCpuCores.value}
+                    bizId={computedBiz.value}
                   />
                 )}
               </div>
