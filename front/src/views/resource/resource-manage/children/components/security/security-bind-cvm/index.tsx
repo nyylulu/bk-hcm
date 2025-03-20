@@ -1,7 +1,6 @@
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 import { useAccountStore, useResourceStore } from '@/store';
-import { useBusinessMapStore } from '@/store/useBusinessMap';
 import { DoublePlainObject } from '@/typings/resource';
 import { Button, Dialog, Table, Loading, Message, Alert, Input, ResizeLayout, Exception } from 'bkui-vue';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
@@ -12,7 +11,6 @@ import { CLOUD_HOST_STATUS } from '@/common/constant';
 import StatusAbnormal from '@/assets/image/Status-abnormal.png';
 import StatusNormal from '@/assets/image/Status-normal.png';
 import StatusUnknown from '@/assets/image/Status-unknown.png';
-import { useRegionsStore } from '@/store/useRegionsStore';
 import useColumns from '../../../../hooks/use-columns';
 import { useI18n } from 'vue-i18n';
 import './index.scss';
@@ -42,12 +40,10 @@ export default defineComponent({
     },
   },
   setup(props) {
-    const businessMapStore = useBusinessMapStore();
     const tableData = ref([]);
     const isDisassociateDisabled = ref(true);
     const isBindDialogLoading = ref(false);
     const isUnbindDialogLoading = ref(false);
-    const regionsStore = useRegionsStore();
     const { generateColumnsSettings } = useColumns('cvms');
     const { whereAmI } = useWhereAmI();
     const resourceStore = useResourceStore();
@@ -183,20 +179,26 @@ export default defineComponent({
             ),
           ),
         );
-        totalCount.value = countRes.data.count;
-        const cvmIds = detailsRes.data?.details?.map((cvm: any) => cvm.cvm_id);
-        const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}cvms/list`, {
-          filter: {
-            op: QueryRuleOPEnum.AND,
-            rules: [{ field: 'id', op: QueryRuleOPEnum.IN, value: cvmIds }],
-          },
-          page: {
-            start: 0,
-            limit: pagination.value.limit,
-            count: false,
-          },
-        });
-        tableData.value = res.data.details;
+        const cvmIds = detailsRes.data?.details?.map((cvm: any) => cvm.cvm_id) ?? [];
+        if (cvmIds.length > 0) {
+          const res = await http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}cvms/list`, {
+            filter: {
+              op: QueryRuleOPEnum.AND,
+              rules: [{ field: 'id', op: QueryRuleOPEnum.IN, value: cvmIds }],
+            },
+            page: {
+              start: 0,
+              limit: pagination.value.limit,
+              count: false,
+            },
+          });
+          tableData.value = res.data.details;
+          totalCount.value = countRes.data.count;
+        }
+      } catch (error) {
+        console.error(error);
+        tableData.value = [];
+        totalCount.value = 0;
       } finally {
         isTableLoading.value = false;
       }
