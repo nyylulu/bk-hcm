@@ -1,4 +1,4 @@
-import { defineComponent, computed, onBeforeMount, ref } from 'vue';
+import { defineComponent, computed, onBeforeMount, ref, PropType } from 'vue';
 import { useI18n } from 'vue-i18n';
 import Panel from '@/components/panel';
 import { timeFormatter } from '@/common/util';
@@ -6,6 +6,7 @@ import cssModule from './index.module.scss';
 import { useResourcePlanStore } from '@/store';
 import { useRoute } from 'vue-router';
 import { IPlanDemandResult } from '@/typings/resourcePlan';
+import { useBusinessGlobalStore } from '@/store/business-global';
 
 export default defineComponent({
   props: {
@@ -13,17 +14,24 @@ export default defineComponent({
       type: Boolean,
       default: true,
     },
+    updateCurrentBusinessId: Function as PropType<(id: number) => void>,
   },
   setup(props) {
     const { t } = useI18n();
     const route = useRoute();
     const { getPlanDemand, getPlanDemandByOrg } = useResourcePlanStore();
+    const { getBusinessNames } = useBusinessGlobalStore();
 
     const baseInfo = ref<IPlanDemandResult['data']>();
     const isLoading = ref(false);
 
     const baseList = computed(() => [
-      { label: t('业务'), value: baseInfo.value?.bk_biz_id },
+      {
+        label: t('业务'),
+        value: baseInfo.value?.bk_biz_id
+          ? getBusinessNames(baseInfo.value.bk_biz_id)?.[0] ?? baseInfo.value.bk_biz_id
+          : '--',
+      },
       { label: t('资源模式'), value: baseInfo.value?.res_mode },
       { label: t('运营产品'), value: baseInfo.value?.op_product_name },
       { label: t('机型族'), value: baseInfo.value?.device_family },
@@ -49,6 +57,9 @@ export default defineComponent({
           ? await getPlanDemand(+bizs, demandId as string)
           : await getPlanDemandByOrg(demandId as string);
         baseInfo.value = result.data;
+
+        // 设置当前业务
+        props.updateCurrentBusinessId(result.data.bk_biz_id);
       } catch (error) {
         console.error('Error fetching plan demand details:', error);
       } finally {

@@ -9,7 +9,7 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -43,7 +43,6 @@ import { SCR_POOL_PHASE_MAP, SCR_RECALL_DETAIL_STATUS_MAP } from '@/constants';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
-import routerAction from '@/router/utils/action';
 import { RESOURCE_DEMANDS_STATUS_NAME, RESOURCE_DEMANDS_STATUS_CLASSES } from '@/components/resource-plan/constants';
 
 interface LinkFieldOptions {
@@ -2208,19 +2207,7 @@ export default (type: string, isSimpleShow = false) => {
       field: 'ticket_id',
       minWidth: 200,
       align: 'center',
-      render: ({ cell }: { cell: string }) => (
-        <Button
-          theme='primary'
-          text
-          onClick={() =>
-            routerAction.redirect({
-              name: 'BizInvoiceResourceDetail',
-              query: { id: cell, [GLOBAL_BIZS_KEY]: route.query[GLOBAL_BIZS_KEY] },
-            })
-          }>
-          {cell}
-        </Button>
-      ),
+      // 服务下需要跳转至业务下单据详情，render由业务方决定
     },
     {
       label: '子订单号',

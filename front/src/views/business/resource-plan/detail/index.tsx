@@ -1,5 +1,5 @@
 // 资源管理 (业务)下 资源预测 详情
-import { defineComponent } from 'vue';
+import { defineComponent, ref } from 'vue';
 import Table from '@/components/resource-plan/resource-manage/detail/list/index';
 import Basic from '@/components/resource-plan/resource-manage/detail/basic/index';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -13,6 +13,11 @@ export default defineComponent({
     const router = useRouter();
     const route = useRoute();
     const { t } = useI18n();
+
+    const currentBusinessId = ref<number>();
+    const updateCurrentBusinessId = (id: number) => {
+      currentBusinessId.value = id;
+    };
 
     const handleAdjust = () => {
       const searchModel = JSON.parse(route.query.searchModel as string);
@@ -33,8 +38,8 @@ export default defineComponent({
           <Button class={cssModule.button} onClick={handleAdjust}>
             {t('调整预测')}
           </Button>
-          <Basic class={cssModule['mb-16']} isBiz={true}></Basic>
-          <Table isBiz={true}></Table>
+          <Basic class={cssModule['mb-16']} isBiz={true} updateCurrentBusinessId={updateCurrentBusinessId}></Basic>
+          <Table isBiz={true} currentBusinessId={currentBusinessId.value}></Table>
         </section>
       </>
     );
