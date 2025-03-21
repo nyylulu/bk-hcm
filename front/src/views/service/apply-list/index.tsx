@@ -33,6 +33,7 @@ export default defineComponent({
                       ...route.query,
                       id: data.id,
                       source: data.source,
+                      type: data.type,
                     },
                   });
                 }}>

@@ -169,6 +169,18 @@ func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
 		"/vendors/{vendor}/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizUrlRule)
 	h.Add("BatchDeleteBizUrlRuleByDomain", http.MethodDelete,
 		"/vendors/{vendor}/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizUrlRuleByDomain)
+	h.Add("ListBizRuleByTG", http.MethodPost,
+		"/vendors/{vendor}/target_groups/{target_group_id}/rules/list", svc.ListBizRuleByTG)
+	h.Add("CreateBizUrlRule", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/create", svc.CreateBizUrlRule)
+	h.Add("UpdateBizUrlRule", http.MethodPatch,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/{rule_id}", svc.UpdateBizUrlRule)
+	h.Add("BatchDeleteBizUrlRule", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizUrlRule)
+	h.Add("BatchDeleteBizUrlRuleByDomain", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizUrlRuleByDomain)
+	h.Add("ListRuleBindingStatus", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/binding_status/list", svc.ListRuleBindingStatus)
 }
 
 func bizSopService(h *rest.Handler, svc *lbSvc) {

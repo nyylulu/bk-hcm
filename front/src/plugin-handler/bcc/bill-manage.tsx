@@ -7,7 +7,7 @@ import { useOperationProducts } from '@/hooks/useOperationProducts';
 
 import { useI18n } from 'vue-i18n';
 import { reqBillsProductSummaryList, exportBillsProductSummary, exportBillsRootAccountSummary } from '@/api/bill';
-import { QueryRuleOPEnum, RulesItem } from '@/typings';
+import { FilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
 import { BillSearchRules } from '@/utils';
 import { BILL_MAIN_ACCOUNTS_KEY } from '@/constants';
 import { PluginHandlerType } from '../bill-manage';

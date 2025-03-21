@@ -378,7 +378,13 @@ export function InvalidLogin() {
     return;
   }
   const loginUrl = `${loginBaseUrl}/plain/?c_url=${encodeURIComponent(successUrl)}`;
-  showLoginModal({ loginUrl });
+  showLoginModal({
+    loginUrl,
+    onFail: () => {
+      const loginPageUrl = `${loginBaseUrl}/?c_url=${encodeURIComponent(window.location.href)}`;
+      location.href = loginPageUrl;
+    },
+  });
 }
 
 export * from './jsonp';
