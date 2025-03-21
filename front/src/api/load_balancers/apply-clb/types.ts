@@ -139,4 +139,5 @@ export interface ApplyClbModel {
   zhi_tong?: boolean;
   // 【自研云】指定Tgw独占集群标签, 指定"ziyan_mianliu"时开启免流特性
   tgw_group_name?: string;
+  [key: string]: any;
 }
