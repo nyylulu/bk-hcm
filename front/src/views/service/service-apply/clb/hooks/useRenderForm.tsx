@@ -378,6 +378,9 @@ export default (formModel: ApplyClbModel) => {
             content: () => {
               let eventName = '';
               eventName = 'showLbSpecTypeSelectDialog';
+              if (formModel.vendor === VendorEnum.ZIYAN) {
+                eventName = 'showZiyanLbSpecTypeSelectDialog';
+              }
               if (formModel.sla_type !== 'shared') {
                 return (
                   <SelectedItemPreviewComp

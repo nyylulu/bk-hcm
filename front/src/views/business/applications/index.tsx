@@ -71,7 +71,7 @@ export default defineComponent({
       },
       {
         label: t('负载均衡'),
-        name: 'load_balance',
+        name: 'load_balancer',
         Component: PublicCloudApplications,
         rules: [{ field: 'type', op: QueryRuleOPEnum.IN, value: ['create_load_balancer'] }],
       },

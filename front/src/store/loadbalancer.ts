@@ -1,7 +1,7 @@
 import { VendorEnum } from '@/common/constant';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
-import { IListResData } from '@/typings';
+import { IListResData, IQueryResData } from '@/typings';
 import { defineStore } from 'pinia';
 import { Ref, ref } from 'vue';
 
@@ -57,6 +57,16 @@ export interface ITargetGroupDetail {
   target_list: any[];
 }
 
+export interface ISlaSetItem {
+  SlaType: string;
+  SlaName: string;
+  MaxConn: number;
+  MaxCps: number;
+  MaxOutBits: number;
+  MaxInBits: number;
+  MaxQps: number;
+}
+
 interface IRulesBindingStatus {
   rule_id: string;
   binding_status: string;
@@ -106,6 +116,28 @@ export const useLoadBalancerStore = defineStore('load-balancer', () => {
     tgSearchTarget.value = v;
   };
 
+  const queryZiyanLoadBalancerSlaCapacityDescribeLoading = ref(false);
+  const queryZiyanLoadBalancerSlaCapacityDescribe = async (payload: {
+    account_id: string;
+    region: string;
+    sla_types?: string[];
+  }) => {
+    queryZiyanLoadBalancerSlaCapacityDescribeLoading.value = true;
+    try {
+      const res: IQueryResData<{ SlaSet: ISlaSetItem[] }> = await http.post(
+        '/api/v1/cloud/vendors/tcloud-ziyan/load_balancers/sla/capacity/describe',
+        payload,
+      );
+      const { SlaSet = [] } = res.data ?? {};
+      return SlaSet;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      queryZiyanLoadBalancerSlaCapacityDescribeLoading.value = false;
+    }
+  };
+
   // 查询规则绑定目标组状态接口
   const queryRulesBindingStatusListLoading = ref(false);
   const queryRulesBindingStatusList = async (vendor: VendorEnum, lblId: string, payload: { rule_ids: string[] }) => {
@@ -139,6 +171,8 @@ export const useLoadBalancerStore = defineStore('load-balancer', () => {
     setTgSearchTarget,
     listenerDetailWithTargetGroup,
     setListenerDetailWithTargetGroup,
+    queryZiyanLoadBalancerSlaCapacityDescribeLoading,
+    queryZiyanLoadBalancerSlaCapacityDescribe,
     queryRulesBindingStatusListLoading,
     queryRulesBindingStatusList,
   };
