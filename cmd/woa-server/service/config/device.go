@@ -133,6 +133,13 @@ func (s *service) CreateDevice(cts *rest.Contexts) (interface{}, error) {
 		return nil, err
 	}
 
+	// 在CRP device_type中同步该机型
+	if err = s.planLogics.SyncDeviceTypesFromCRP(cts.Kit, []string{inputData.DeviceType}); err != nil {
+		logs.Errorf("failed to sync res plan device type, err: %v, input: %+v, rid: %s", err, inputData,
+			cts.Kit.Rid)
+		return nil, err
+	}
+
 	return rst, nil
 }
 
@@ -152,6 +159,12 @@ func (s *service) CreateManyDevice(cts *rest.Contexts) (interface{}, error) {
 
 	if err = s.logics.Device().CreateManyDevice(cts.Kit, input); err != nil {
 		logs.Errorf("failed to create device in batch, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// 在CRP device_type中同步该机型
+	if err = s.planLogics.SyncDeviceTypesFromCRP(cts.Kit, []string{input.DeviceType}); err != nil {
+		logs.Errorf("failed to sync res plan device type, err: %v, input: %+v, rid: %s", err, input, cts.Kit.Rid)
 		return nil, err
 	}
 

@@ -59,3 +59,13 @@ type WoaDeviceTypeBatchUpdateReq struct {
 func (r *WoaDeviceTypeBatchUpdateReq) Validate() error {
 	return validator.Validate.Struct(r)
 }
+
+// WoaDeviceTypeSyncReq sync request
+type WoaDeviceTypeSyncReq struct {
+	DeviceTypes []string `json:"device_types" validate:"required,min=1,max=100"`
+}
+
+// Validate validate
+func (r *WoaDeviceTypeSyncReq) Validate() error {
+	return validator.Validate.Struct(r)
+}

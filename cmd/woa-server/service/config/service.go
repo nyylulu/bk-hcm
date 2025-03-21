@@ -24,6 +24,7 @@ import (
 	"net/http"
 
 	"hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
@@ -34,6 +35,7 @@ func InitService(c *capability.Capability) {
 	s := &service{
 		authorizer: c.Authorizer,
 		logics:     config.New(c.ThirdCli),
+		planLogics: c.PlanController,
 	}
 	h := rest.NewHandler()
 
@@ -58,6 +60,7 @@ func InitService(c *capability.Capability) {
 
 type service struct {
 	logics     config.Logics
+	planLogics plan.Logics
 	authorizer auth.Authorizer
 }
 

@@ -123,4 +123,5 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("CreateDeviceType", http.MethodPost, "/plans/device_types/batch/create", s.CreateDeviceType)
 	h.Add("UpdateDeviceType", http.MethodPatch, "/plans/device_types/batch", s.UpdateDeviceType)
 	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
+	h.Add("SyncDeviceType", http.MethodPost, "/plans/device_types/sync", s.SyncDeviceType)
 }

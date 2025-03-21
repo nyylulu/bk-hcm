@@ -350,6 +350,18 @@ func (r CoreType) Validate() error {
 	return nil
 }
 
+// CRPCoreTypeMap crp core type map
+var CRPCoreTypeMap = map[int]CoreType{
+	1: CoreTypeSmall,
+	2: CoreTypeMedium,
+	3: CoreTypeBig,
+}
+
+// GetCoreTypeByCRPCoreTypeID 根据 crp 的 coreTypeID 获取 coreType
+func GetCoreTypeByCRPCoreTypeID(coreTypeID int) CoreType {
+	return CRPCoreTypeMap[coreTypeID]
+}
+
 // ItsmServiceNameApply ITSM中的资源申请流程在 HCM 中的名称（此处名称并非与 ITSM 中的流程名称完全一致）
 const ItsmServiceNameApply = "资源申领流程"
 

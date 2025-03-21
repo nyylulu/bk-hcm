@@ -129,3 +129,31 @@ func (s *service) DeleteDeviceType(cts *rest.Contexts) (any, error) {
 	}
 	return nil, nil
 }
+
+// SyncDeviceType sync device type.
+func (s *service) SyncDeviceType(cts *rest.Contexts) (any, error) {
+	req := new(rpproto.WoaDeviceTypeSyncReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("failed to sync device type, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("failed to validate sync device type parameter, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.ZiYanResPlan, Action: meta.Find}}
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, authRes); err != nil {
+		return nil, err
+	}
+
+	err := s.planController.SyncDeviceTypesFromCRP(cts.Kit, req.DeviceTypes)
+	if err != nil {
+		logs.Errorf("failed to sync device type, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}

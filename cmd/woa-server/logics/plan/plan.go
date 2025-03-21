@@ -92,6 +92,8 @@ type Logics interface {
 	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
 	// GetAllDeviceTypeMap get all device type map.
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
+	// SyncDeviceTypesFromCRP sync device types from crp.
+	SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) error
 }
 
 // Controller motivates the resource plan ticket status flow.
