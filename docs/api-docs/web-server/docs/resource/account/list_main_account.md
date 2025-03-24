@@ -197,3 +197,4 @@ POST /api/v1/account/main_accounts/list
 | reviser             | string       | 修改者            |
 | created_at          | string       | 创建时间           |
 | updated_at          | string       | 修改时间           |
+| op_product_name     | string       | 运营产品名称（仅内部版返回） |

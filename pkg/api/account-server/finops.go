@@ -27,11 +27,11 @@ import (
 // ListOpProductReq ...
 type ListOpProductReq struct {
 	// 筛选事业群id列表，不传筛选全部
-	BgIds []int64 `json:"bg_ids"`
+	BgIds []int64 `json:"bg_ids" validate:"omitempty,max=20"`
 	// 要查询部门 id 列表(不传则筛选全部)
-	DeptIds []int64 `json:"dept_ids"`
+	DeptIds []int64 `json:"dept_ids" validate:"omitempty,max=20"`
 	// 要查询运营产品 id 列表(不传则筛选全部)
-	OpProductIds []int64 `json:"op_product_ids"`
+	OpProductIds []int64 `json:"op_product_ids" validate:"omitempty,max=100"`
 	// 要查询运营产品名称(支持全模糊匹配，不传则筛选全部)
 	OpProductName string        `json:"op_product_name"`
 	Page          core.BasePage `json:"page"`
