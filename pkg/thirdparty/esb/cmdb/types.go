@@ -844,7 +844,7 @@ type HostBizRel struct {
 // SearchBizResp search business response
 type SearchBizResp struct {
 	RespMeta `json:",inline"`
-	Data     *SearchBizRst `json:"data"`
+	Data     SearchBizRst `json:"data"`
 }
 
 // SearchBizRst search business result

@@ -510,9 +510,6 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 	}
 
 	bizIDs := make([]int64, 0)
-	if resp == nil || resp.Data == nil {
-		return bizIDs, nil
-	}
 
 	for _, biz := range resp.Data.Info {
 		bizIDs = append(bizIDs, biz.BkBizId)

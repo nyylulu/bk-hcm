@@ -92,10 +92,6 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
 		}
 
-		if resp.Data == nil || len(resp.Data.Info) == 0 {
-			return bizIDName, nil
-		}
-
 		for _, info := range resp.Data.Info {
 			if _, ok := groupIDMap[info.BkOperGrpNameID]; !ok && len(groupIDMap) != 0 {
 				continue
@@ -163,10 +159,6 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
 		}
 
-		if resp.Data == nil || len(resp.Data.Info) == 0 {
-			return bizIDName, nil
-		}
-
 		for _, info := range resp.Data.Info {
 			bizIDName[info.BkBizId] = info.BkBizName
 		}
@@ -199,11 +191,7 @@ func (l *logics) getAllBizIDName(kt *kit.Kit, groupIDMap map[int64]struct{}) (ma
 		return nil, err
 	}
 
-	if resp.Data == nil {
-		return make(map[int64]string), nil
-	}
-
-	bizIDName := make(map[int64]string, 0)
+	bizIDName := make(map[int64]string)
 	for _, info := range resp.Data.Info {
 		if _, ok := groupIDMap[info.BkOperGrpNameID]; !ok && len(groupIDMap) != 0 {
 			continue

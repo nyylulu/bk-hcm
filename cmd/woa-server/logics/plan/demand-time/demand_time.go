@@ -308,9 +308,16 @@ func (d DemandTimeFromTable) GetDemandStatusByExpectTime(kt *kit.Kit, expectTime
 		return "", times.DateRange{}, err
 	}
 
+	demandStart, demandEnd, err := d.getDemandMonthStartEndByTime(kt, t)
+	if err != nil {
+		logs.Errorf("failed to get demand start end, err: %v, expect_time: %s, rid: %s", err, expectTime,
+			kt.Rid)
+		return "", times.DateRange{}, err
+	}
+
 	demandRange := times.DateRange{
-		Start: monthStart.Format(constant.DateLayout),
-		End:   monthEnd.Format(constant.DateLayout),
+		Start: demandStart.Format(constant.DateLayout),
+		End:   demandEnd.Format(constant.DateLayout),
 	}
 
 	// 未到申领时间
