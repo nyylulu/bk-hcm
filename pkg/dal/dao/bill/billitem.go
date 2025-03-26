@@ -114,11 +114,12 @@ func (a AccountBillItemDao) List(kt *kit.Kit, commonOpt *typesbill.ItemCommonOpt
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list account bill item options is nil")
 	}
-
 	columnTypes := tablebill.AccountBillItemColumns.ColumnTypes()
+	columnTypes["extension.sku_description"] = enumor.String
 	columnTypes["extension.line_item_line_item_type"] = enumor.String
-	if err := opt.Validate(filter.NewExprOption(filter.RuleFields(columnTypes)),
-		core.NewDefaultPageOption()); err != nil {
+	err := opt.Validate(filter.NewExprOption(filter.RuleFields(columnTypes)),
+		core.NewDefaultPageOption())
+	if err != nil {
 		return nil, err
 	}
 

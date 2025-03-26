@@ -56,6 +56,7 @@ func init() {
 
 	opFactory[ContainsSensitive.Factory()] = ContainsSensitiveOp(ContainsSensitive)
 	opFactory[ContainsInsensitive.Factory()] = ContainsInsensitiveOp(ContainsInsensitive)
+	opFactory[StartsWith.Factory()] = StartsWithOp(StartsWith)
 
 	opFactory[JSONEqual.Factory()] = JSONEqualOp(JSONEqual)
 	opFactory[JSONNotEqual.Factory()] = JSONNotEqualOp(JSONEqual)
@@ -142,6 +143,9 @@ const (
 	// ContainsInsensitive operator match the value with
 	// regular expression with case-insensitive.
 	ContainsInsensitive OpType = "cis"
+
+	// StartsWith Operator of field LIKE value% case-sensitive.
+	StartsWith OpType = "sw"
 )
 
 // reference: https://dev.mysql.com/doc/refman/5.7/en/json-function-reference.html
@@ -174,7 +178,8 @@ func (op OpType) Validate() error {
 		GreaterThan, GreaterThanEqual,
 		LessThan, LessThanEqual,
 		In, NotIn,
-		ContainsSensitive, ContainsInsensitive:
+		ContainsSensitive, ContainsInsensitive,
+		StartsWith:
 
 	case JSONEqual, JSONNotEqual, JSONIn, JSONContains, JSONOverlaps,
 		JSONContainsPath, JSONNotContainsPath, JSONLength:
@@ -665,6 +670,58 @@ func (cso ContainsSensitiveOp) SQLExprAndValue(field string, value interface{}) 
 	placeholder := fieldPlaceholderName(field)
 	return fmt.Sprintf(`%s LIKE BINARY %s%s`, field, SqlPlaceholder, placeholder),
 		map[string]interface{}{placeholder: "%" + s + "%"}, nil
+}
+
+// StartsWithOp is op with starts with
+type StartsWithOp OpType
+
+// Name is 'sw', starts with
+func (cio StartsWithOp) Name() OpType {
+	return StartsWith
+}
+
+// ValidateValue validate 'like' operator's value
+func (cio StartsWithOp) ValidateValue(v interface{}, opt *ExprOption) error {
+	if reflect.TypeOf(v).Kind() != reflect.String {
+		return errors.New("sw operator's value should be an string")
+	}
+
+	value, ok := v.(string)
+	if !ok {
+		return errors.New("sw operator's value should be an string")
+	}
+
+	if len(value) == 0 {
+		return errors.New("sw operator's value can not be a empty string")
+	}
+
+	return nil
+}
+
+// SQLExprAndValue convert this operator's field and value to a mysql's sub query expression.
+func (cio StartsWithOp) SQLExprAndValue(field string, value interface{}) (string,
+	map[string]interface{}, error) {
+
+	if len(field) == 0 {
+		return "", nil, errors.New("field is empty")
+	}
+
+	if reflect.TypeOf(value).Kind() != reflect.String {
+		return "", nil, errors.New("sw operator's value should be an string")
+	}
+
+	s, ok := value.(string)
+	if !ok {
+		return "", nil, errors.New("sw operator's value should be an string")
+	}
+
+	if len(s) == 0 {
+		return "", nil, errors.New("sw operator's value can not be a empty string")
+	}
+
+	placeholder := fieldPlaceholderName(field)
+	return fmt.Sprintf(`%s LIKE %s%s`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
+		map[string]interface{}{placeholder: s + "%"}, nil
 }
 
 // ContainsInsensitiveOp is contains insensitive operator

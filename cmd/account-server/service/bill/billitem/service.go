@@ -53,6 +53,8 @@ func InitBillItemService(c *capability.Capability) {
 	h.Add("PullBillItemForThirdParty", "POST",
 		"/vendors/{vendor}/bills/items/pull", svc.PullBillItemForThirdParty)
 
+	h.Add("PullAIBills", "POST", "/vendors/{vendor}/bills/ai_items/pull", svc.PullAIBills)
+
 	h.Load(c.WebService)
 }
 
