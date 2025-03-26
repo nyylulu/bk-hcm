@@ -30,6 +30,8 @@ const (
 	FirstDay = 1
 	// CalculateFineStartDay 滚服机器"超期未退还"开始计算罚金的启始天数， 由于存在时区问题，可能会导致罚金不准，所以这里少算业务一天的罚金，从31变成32
 	CalculateFineStartDay = 32
+	// RollingServerLatestReturnDay 滚服机器用户可使用的最晚归还天数
+	RollingServerLatestReturnDay = 30
 	// CalculateFineEndDay 滚服机器"超期未退还"开始计算罚金的最后天数
 	CalculateFineEndDay = 121
 	// RsFineExemptionDay 滚服机器"超期未退还"豁免期天数

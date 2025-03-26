@@ -665,7 +665,7 @@ func (l *logics) findUnReturnedSubOrderMsg(kt *kit.Kit, bizID int64, startDate, 
 			return nil, err
 		}
 
-		endYear, endMonth, endDay := subDay(apply.Year, apply.Month, apply.Day, -constant.CalculateFineStartDay)
+		endYear, endMonth, endDay := subDay(apply.Year, apply.Month, apply.Day, -constant.RollingServerLatestReturnDay)
 		msg := rstypes.UnReturnedSubOrderMsg{
 			SubOrderID:        apply.SubOrderID,
 			AppliedCore:       converter.PtrToVal(apply.DeliveredCore),

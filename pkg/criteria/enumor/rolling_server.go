@@ -141,7 +141,7 @@ func GetRsUnReturnedSubOrderFineState(appliedTime, curTime time.Time) (RsUnRetur
 		return RsFineExemptionState, nil
 	}
 
-	if curTime.Before(appliedTime.AddDate(0, 0, constant.CalculateFineStartDay)) {
+	if curTime.Before(appliedTime.AddDate(0, 0, constant.RollingServerLatestReturnDay+1)) {
 		return RsImpendingFineState, nil
 	}
 
