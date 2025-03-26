@@ -128,7 +128,7 @@ type Interface interface {
 	// RecoverReturnCvm recover retrun CVM resource without yunti orderId
 	RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
 	// QueryReturnStatus query return status
-	QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
+	QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
 	// UpdateOrderInfo update recycle order info
 	UpdateOrderInfo(kt *kit.Kit, orderId, handler string, success, failed, pending uint, msg string) error
 	// UpdateReturnTaskInfo update return task info
@@ -1896,8 +1896,8 @@ func (r *recycler) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID,
 }
 
 // QueryReturnStatus transit host to biz
-func (r *recycler) QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
-	return r.dispatcher.GetReturn().QueryReturnStatus(task, hosts)
+func (r *recycler) QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+	return r.dispatcher.GetReturn().QueryReturnStatus(kt, task, hosts)
 }
 
 // UpdateOrderInfo update order info

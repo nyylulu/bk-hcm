@@ -146,9 +146,9 @@ func (r *Returner) dealReturnTask(kt *kit.Kit, task *table.ReturnTask) *event.Ev
 
 	switch task.Status {
 	case table.ReturnStatusInit:
-		return r.returnHosts(task, filterHosts)
+		return r.returnHosts(kt, task, filterHosts)
 	case table.ReturnStatusRunning:
-		return r.QueryReturnStatus(task, filterHosts)
+		return r.QueryReturnStatus(kt, task, filterHosts)
 	case table.ReturnStatusSuccess:
 		ev := &event.Event{Type: event.ReturnSuccess, Error: nil}
 		return ev
@@ -170,7 +170,7 @@ func (r *Returner) dealReturnTask(kt *kit.Kit, task *table.ReturnTask) *event.Ev
 	}
 }
 
-func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+func (r *Returner) returnHosts(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
 	taskId := ""
 	var err error
 	switch task.ResourceType {
@@ -184,16 +184,16 @@ func (r *Returner) returnHosts(task *table.ReturnTask, hosts []*table.RecycleHos
 			time.Sleep(gap)
 		}
 
-		taskId, err = r.returnCvm(task, hosts)
+		taskId, err = r.returnCvm(kt, task, hosts)
 	case table.ResourceTypePm:
-		taskId, err = r.returnPm(task, hosts)
+		taskId, err = r.returnPm(kt, task, hosts)
 	default:
 		err = fmt.Errorf("failed to return hosts, for unsupported resource type %s", task.ResourceType)
 	}
-	return r.updateReturnState(err, taskId, task, hosts)
+	return r.updateReturnState(kt, err, taskId, task, hosts)
 }
 
-func (r *Returner) updateReturnState(err error, taskId string, task *table.ReturnTask,
+func (r *Returner) updateReturnState(kt *kit.Kit, err error, taskId string, task *table.ReturnTask,
 	hosts []*table.RecycleHost) *event.Event {
 
 	if err == nil && taskId == "" {
@@ -205,46 +205,80 @@ func (r *Returner) updateReturnState(err error, taskId string, task *table.Retur
 	if err != nil {
 		if errUpdate := r.UpdateOrderInfo(context.Background(), task.SuborderID, recovertask.Handler, 0,
 			uint(len(hosts)), 0, err.Error()); errUpdate != nil {
-			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
-				task.SuborderID, errUpdate)
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v, "+
+				"rid: %s", task.SuborderID, errUpdate, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: errUpdate}
 		}
 
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
-	txnErr := dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
-		if errUpdate := r.UpdateOrderInfo(sc, task.SuborderID, "AUTO", 0, 0, uint(len(hosts)), ""); errUpdate != nil {
-			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle order %s info, err: %v",
-				task.SuborderID, errUpdate)
+	// 更新回收任务、回收主机的数据
+	eventInfo, err := r.updateRecycleHostTaskInfo(kt, task, taskId, len(hosts))
+	if err != nil {
+		return &event.Event{Type: event.ReturnFailed, Error: err}
+	}
+
+	return eventInfo
+}
+
+func (r *Returner) updateRecycleHostTaskInfo(kt *kit.Kit, task *table.ReturnTask, taskId string, hostsNum int) (
+	*event.Event, error) {
+
+	// 回收任务
+	task.TaskID = taskId
+	task.Status = table.ReturnStatusRunning
+	// 回收订单
+	recycleOrder := &table.RecycleOrder{
+		SuccessNum: 0,
+		PendingNum: uint(hostsNum),
+	}
+	// 回收主机
+	recycleHost := &table.RecycleHost{
+		Stage:  table.RecycleStageReturn,
+		Status: table.RecycleStatusReturning,
+	}
+
+	eventInfo := &event.Event{Type: event.ReturnHandling}
+	// 这批主机需要回收到[资源池]，需要更新回收任务、回收主机的状态为SUCCESS
+	if taskId == enumor.RollingServerResourcePoolTask {
+		task.Status = table.ReturnStatusSuccess
+		task.Message = "success"
+		recycleOrder.SuccessNum = uint(hostsNum)
+		recycleOrder.PendingNum = 0
+		recycleOrder.Message = "success"
+		recycleHost.Stage = table.RecycleStageDone
+		recycleHost.Status = table.RecycleStatusDone
+		eventInfo = &event.Event{Type: event.ReturnSuccess}
+	}
+
+	return eventInfo, dal.RunTransaction(kit.New(), func(sc mongo.SessionContext) error {
+		if errUpdate := r.UpdateOrderInfo(sc, task.SuborderID, "AUTO", recycleOrder.SuccessNum, recycleOrder.FailedNum,
+			recycleOrder.PendingNum, recycleOrder.Message); errUpdate != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle info, suborderID: %s, "+
+				"err: %v, taskId: %s, rid: %s", task.SuborderID, errUpdate, task.TaskID, kt.Rid)
 			return errUpdate
 		}
 
 		// update return task info
-		if err := r.UpdateReturnTaskInfo(sc, task, taskId, table.ReturnStatusRunning, ""); err != nil {
-			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, order id: %s, err: %v",
-				task.SuborderID, err)
+		if err := r.UpdateReturnTaskInfo(sc, task, task.TaskID, task.Status, task.Message); err != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update return task info, suborderID: %s, "+
+				"err: %v, taskId: %s, rid: %s", task.SuborderID, err, task.TaskID, kt.Rid)
 			return err
 		}
 
 		// update recycle host info
-		if err := r.updateHostInfo(sc, task, taskId); err != nil {
-			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, order id: %s, err: %v",
-				task.SuborderID, err)
+		if err := r.updateHostInfo(sc, task, task.TaskID, recycleHost.Stage, recycleHost.Status); err != nil {
+			logs.Errorf("recycler:logics:cvm:returnHosts:failed, failed to update recycle host info, suborderID: %s, "+
+				"err: %v, taskId: %s, rid: %s", task.SuborderID, err, task.TaskID, kt.Rid)
 			return err
 		}
 		return nil
 	})
-
-	if txnErr != nil {
-		return &event.Event{Type: event.ReturnFailed, Error: txnErr}
-	}
-
-	return &event.Event{Type: event.ReturnHandling}
 }
 
 // QueryReturnStatus 查询return任务状态
-func (r *Returner) QueryReturnStatus(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+func (r *Returner) QueryReturnStatus(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
 	if task.TaskID == "" {
 		ev := &event.Event{
 			Type:  event.ReturnFailed,
@@ -265,9 +299,9 @@ func (r *Returner) QueryReturnStatus(task *table.ReturnTask, hosts []*table.Recy
 
 	switch task.ResourceType {
 	case table.ResourceTypeCvm:
-		return r.queryCvmOrder(task, hosts)
+		return r.queryCvmOrder(kt, task, hosts)
 	case table.ResourceTypePm:
-		return r.queryPmOrder(task, hosts)
+		return r.queryPmOrder(kt, task, hosts)
 	default:
 		ev := &event.Event{
 			Type:  event.ReturnFailed,
@@ -343,7 +377,9 @@ func (r *Returner) UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnT
 	return nil
 }
 
-func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, taskId string) error {
+func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, taskId string,
+	hostStage table.RecycleStage, hostStatus table.RecycleStatus) error {
+
 	now := time.Now()
 	link := ""
 	if len(taskId) != 0 && taskId != enumor.RollingServerResourcePoolTask {
@@ -360,8 +396,8 @@ func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, t
 	}
 
 	update := mapstr.MapStr{
-		"stage":       table.RecycleStageReturn,
-		"status":      table.RecycleStatusReturning,
+		"stage":       hostStage,
+		"status":      hostStatus,
 		"return_id":   taskId,
 		"return_link": link,
 		"update_at":   now,

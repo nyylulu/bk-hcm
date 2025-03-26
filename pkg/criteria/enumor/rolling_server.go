@@ -27,7 +27,7 @@ import (
 )
 
 const (
-	// RollingServerResourcePoolTask 滚服项目默认的CRP任务标识
+	// RollingServerResourcePoolTask 需要把滚服项目的主机回收到资源池时使用的标识
 	RollingServerResourcePoolTask = "ROLLING_SERVER_RESOURCE_POOL"
 )
 

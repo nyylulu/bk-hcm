@@ -30,19 +30,19 @@ import (
 	cvt "hcm/pkg/tools/converter"
 )
 
-func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
+func (r *Returner) returnCvm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
 	instIds := make([]string, 0)
 	isResourcePool := false
 	for _, host := range hosts {
 		if host.InstID == "" {
-			logs.Warnf("invalid host %s with empty cvm instance id", host.IP)
+			logs.Warnf("invalid host %s with empty cvm instance id, rid: %s", host.IP, kt.Rid)
 			continue
 		}
 		// 如果是滚服订单，并且退还方式是“资源池”的话，不做退还到CRP的处理
 		if task.RecycleType == table.RecycleTypeRollServer && host.ReturnedWay == enumor.ResourcePoolReturnedWay {
 			isResourcePool = true
-			logs.Infof("return cvm host is rolling server need skip, subOrderID: %s, task: %+v, host: %+v",
-				task.SuborderID, cvt.PtrToVal(task), cvt.PtrToVal(host))
+			logs.Infof("return cvm host is rolling server need skip, subOrderID: %s, task: %+v, host: %+v, rid: %s",
+				task.SuborderID, cvt.PtrToVal(task), cvt.PtrToVal(host), kt.Rid)
 			continue
 		}
 		instIds = append(instIds, host.InstID)
@@ -50,14 +50,14 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 
 	// 如果这批主机Host都需要转移到资源池的话，则不需要调用crp接口
 	if len(instIds) == 0 && isResourcePool {
-		logs.Infof("recycler:logics:cvm:returnCvm:SKIP, not call cvm api, subOrderId: %s, task: %+v, hosts: %+v",
-			task.SuborderID, cvt.PtrToVal(task), cvt.PtrToSlice(hosts))
+		logs.Infof("recycler:logics:cvm:returnCvm:SKIP, not call cvm api, subOrderId: %s, task: %+v, hosts: %+v, "+
+			"rid: %s", task.SuborderID, cvt.PtrToVal(task), cvt.PtrToSlice(hosts), kt.Rid)
 		return enumor.RollingServerResourcePoolTask, nil
 	}
 
 	if len(instIds) == 0 {
-		logs.Errorf("failed to create cvm return order, for instance id list is empty, subOrderID: %s, task: %+v",
-			task.SuborderID, cvt.PtrToVal(task))
+		logs.Errorf("failed to create cvm return order, for instance id list is empty, subOrderID: %s, task: %+v, "+
+			"rid: %s", task.SuborderID, cvt.PtrToVal(task), kt.Rid)
 		return "", fmt.Errorf("failed to create cvm return order, for instance id list is empty")
 	}
 
@@ -70,7 +70,7 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 		resp, err = r.cvm.CreateCvmReturnOrder(nil, nil, req)
 		if err != nil {
 			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderID: %s, "+
-				"err: %v", task.SuborderID, err)
+				"err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
@@ -78,7 +78,8 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 
 		if resp.Error.Code != 0 {
 			logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderID: %s, "+
-				"code: %d, msg: %s, crpTraceID: %s", task.SuborderID, resp.Error.Code, resp.Error.Message, resp.TraceId)
+				"code: %d, msg: %s, crpTraceID: %s, rid: %s", task.SuborderID, resp.Error.Code, resp.Error.Message,
+				resp.TraceId, kt.Rid)
 			// retry after 30 seconds
 			time.Sleep(30 * time.Second)
 			continue
@@ -88,8 +89,8 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	}
 
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderId: %s, err: %v",
-			task.SuborderID, err)
+		logs.Errorf("recycler:logics:cvm:returnCvm:failed, failed to create cvm return order, subOrderId: %s, "+
+			"err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return "", err
 	}
 
@@ -106,7 +107,8 @@ func (r *Returner) returnCvm(task *table.ReturnTask, hosts []*table.RecycleHost)
 	if resp.Result.OrderId == "" {
 		return "", fmt.Errorf("cvm return task return empty crp order id, subOrderId: %s", task.SuborderID)
 	}
-	logs.Infof("recycler:logics:cvm:returnCvm:success, return cvm resp: %s, subOrderId: %s", respStr, task.SuborderID)
+	logs.Infof("recycler:logics:cvm:returnCvm:success, return cvm resp: %s, subOrderId: %s, rid: %s",
+		respStr, task.SuborderID, kt.Rid)
 	return resp.Result.OrderId, nil
 }
 
@@ -198,7 +200,7 @@ func (r *Returner) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 		// 成功调用cvm回退接口
 		logs.Infof("success to call cvm return api, num: %d, total: %d, subOrderId: %s, result: %v, traceID: %s, "+
 			"rid: %s", cvmNum, len(hosts), task.SuborderID, resp.Result, resp.TraceId, kt.Rid)
-		return r.updateReturnState(err, resp.Result.OrderId, task, hosts)
+		return r.updateReturnState(kt, err, resp.Result.OrderId, task, hosts)
 	}
 
 	logs.Errorf("return task is running, failed to return cvm, failedNum: %d, total: %d, subOrderId: %s, err: %v, "+
@@ -300,7 +302,7 @@ func (r *Returner) getCvmInfo(kt *kit.Kit, hosts []*table.RecycleHost) ([]*cvmap
 	return existCvms, nil
 }
 
-func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+func (r *Returner) queryCvmOrder(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
 	req := &cvmapi.ReturnDetailReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -316,11 +318,10 @@ func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleH
 			},
 		},
 	}
-
 	resp, err := r.cvm.QueryCvmReturnDetail(nil, nil, req)
 	if err != nil {
 		// keep loop query when error occurs until timeout
-		logs.Warnf("failed to query cvm return detail, err: %v", err)
+		logs.Warnf("failed to query cvm return detail, err: %v, rid: %s", err, kt.Rid)
 		return &event.Event{Type: event.ReturnHandling, Error: err}
 	}
 
@@ -328,13 +329,12 @@ func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleH
 	if b, err := json.Marshal(resp); err == nil {
 		respStr = string(b)
 	}
-
-	logs.Infof("query cvm return detail, subOrderID: %s, hostNum: %d, resp: %s", task.SuborderID, len(hosts), respStr)
-
+	logs.Infof("query cvm return detail, subOrderID: %s, taskID: %s, hostNum: %d, resp: %s, rid: %s", task.SuborderID,
+		task.TaskID, len(hosts), respStr, kt.Rid)
 	if resp.Error.Code != 0 {
 		// keep loop query when error occurs until timeout
-		logs.Warnf("failed to query cvm return detail, code: %d, msg: %s, crpTraceID: %s",
-			resp.Error.Code, resp.Error.Message, resp.TraceId)
+		logs.Warnf("failed to query cvm return detail, code: %d, msg: %s, crpTraceID: %s, rid: %s",
+			resp.Error.Code, resp.Error.Message, resp.TraceId, kt.Rid)
 		ev := &event.Event{
 			Type: event.ReturnHandling,
 			Error: fmt.Errorf("failed to query cvm return detail, code: %d, msg: %s, crpTraceID: %s", resp.Error.Code,
@@ -343,17 +343,15 @@ func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleH
 		return ev
 	}
 
-	successCnt, failedCnt, runningCnt, isRejected := r.parseCvmReturnDetail(hosts, resp.Result.Data)
-
+	successCnt, failedCnt, runningCnt, isRejected := r.parseCvmReturnDetail(kt, hosts, resp.Result.Data)
 	if runningCnt > 0 {
-		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+		if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 			""); err != nil {
-			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// ignore update error and continue to query
 		}
 		return &event.Event{Type: event.ReturnHandling, Error: nil}
 	}
-
 	if failedCnt > 0 {
 		msg := fmt.Sprintf("%d hosts return failed", failedCnt)
 
@@ -363,35 +361,32 @@ func (r *Returner) queryCvmOrder(task *table.ReturnTask, hosts []*table.RecycleH
 			r.rollbackTransit(hosts)
 		}
 
-		if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
-			logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
+		if err = r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
+			logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s",
+				task.SuborderID, err, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
-		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+		if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 			msg); err != nil {
-			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// ignore update error and continue to query
 		}
-
 		return &event.Event{Type: event.ReturnFailed, Error: nil}
 	}
-
-	if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
-		logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
+	if err = r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
+		logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
-
-	if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
+	if err = r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 		"success"); err != nil {
-		logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+		logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		// ignore update error and continue to query
 	}
-
 	return &event.Event{Type: event.ReturnSuccess}
 }
 
-func (r *Returner) parseCvmReturnDetail(hosts []*table.RecycleHost, details []*cvmapi.ReturnDetail) (uint, uint, uint,
-	bool) {
+func (r *Returner) parseCvmReturnDetail(kt *kit.Kit, hosts []*table.RecycleHost, details []*cvmapi.ReturnDetail) (
+	uint, uint, uint, bool) {
 
 	mapInst2Detail := make(map[string]*cvmapi.ReturnDetail)
 	for _, detail := range details {
@@ -419,7 +414,7 @@ func (r *Returner) parseCvmReturnDetail(hosts []*table.RecycleHost, details []*c
 				runningCnt++
 			}
 			if err := r.updateCvmHostInfo(host, detail); err != nil {
-				logs.Warnf("failed to update recycle host info, err: %v", err)
+				logs.Warnf("failed to update recycle host info, err: %v, rid: %s", err, kt.Rid)
 			}
 
 			switch detail.Status {
@@ -433,7 +428,8 @@ func (r *Returner) parseCvmReturnDetail(hosts []*table.RecycleHost, details []*c
 			}
 
 		default:
-			logs.Warnf("%s query cvm return detail failed, for invalid recycle host status %s", host.IP, host.Status)
+			logs.Warnf("%s query cvm return detail failed, for invalid recycle host status %s, rid: %s",
+				host.IP, host.Status, kt.Rid)
 			failedCnt++
 		}
 	}
