@@ -78,6 +78,7 @@ export default defineComponent({
         curApplyKey.value = res.data.id;
 
         if ([ApplicationStatus.pending, ApplicationStatus.delivering].includes(res.data.status)) {
+          clearInterval(interval);
           interval = setInterval(() => getMyApplyDetail(route.query.id as string), 5000);
         } else {
           clearInterval(interval);

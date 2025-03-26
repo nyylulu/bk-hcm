@@ -106,7 +106,7 @@ func (act BatchTaskUnBindTargetAction) Run(kt run.ExecuteKit, params any) (resul
 		}
 		if optErr != nil {
 			// abort
-			return nil, err
+			return nil, optErr
 		}
 		results = append(results, ret)
 	}

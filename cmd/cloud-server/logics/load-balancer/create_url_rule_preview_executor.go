@@ -252,8 +252,8 @@ func (c *CreateUrlRulePreviewExecutor) validateDefaultDomain(kt *kit.Kit) error 
 			logs.Errorf("decode classify key failed, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
-		listener, err := getListener(kt, c.dataServiceCli, c.accountID, cloudClbID, protocol, int(listenerPort),
-			c.bkBizID, c.vendor)
+		listener, err := getListener(kt, c.dataServiceCli, c.accountID,
+			cloudClbID, protocol, listenerPort, c.bkBizID, c.vendor)
 		if err != nil {
 			logs.Errorf("get listener failed, err: %v, rid: %s", err, kt.Rid)
 			return err
