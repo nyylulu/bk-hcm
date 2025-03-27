@@ -48,7 +48,7 @@ func (svc *clbSvc) initTCloudZiyanClbService(cap *capability.Capability) {
 	h.Add("ZiyanCreateSnatIps", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/snat_ips/create", svc.ZiyanCreateSnatIps)
 	h.Add("TCloudDeleteSnatIps", http.MethodDelete,
-		"/vendors/tcloud-ziyan/load_balancers/snat_ips", svc.ZiyanCreateSnatIps)
+		"/vendors/tcloud-ziyan/load_balancers/snat_ips", svc.ZiyanDeleteSnatIps)
 
 	h.Add("TCloudZiyanCreateUrlRule", http.MethodPost,
 		"/vendors/tcloud-ziyan/listeners/{lbl_id}/rules/batch/create", svc.TCloudZiyanCreateUrlRule)
