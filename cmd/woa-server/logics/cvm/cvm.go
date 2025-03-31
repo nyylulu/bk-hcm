@@ -64,108 +64,112 @@ type CVM struct {
 	BkProductName     string            `json:"bk_product_name"`
 }
 
-// executeApplyOrder CVM生产-创建单据
-func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
+// ExecuteApplyOrder CVM生产-创建单据
+func (l *logics) ExecuteApplyOrder(kt *kit.Kit, order *types.ApplyOrder) error {
 	kt = &kit.Kit{Ctx: context.Background(), User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
 		RequestSource: kt.RequestSource}
 
-	// 0. update generate record status to running
+	// update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
 			order.OrderId, err, kt.Rid)
-		return
+		return err
 	}
 
-	// 1. launch cvm request
+	// launch cvm request
 	request, err := l.buildCvmReq(kt, order)
 	if err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to launch cvm when build cvm request, "+
 			"err: %v, order id: %d, rid: %s", err, order.OrderId, kt.Rid)
 
 		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
 			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
-				order.OrderId, err, kt.Rid)
-			return
+				order.OrderId, subErr, kt.Rid)
+			return subErr
 		}
 
-		return
+		return err
 	}
 
-	// 2. launch cvm request
+	// launch cvm request
 	taskId, err := l.createCVM(request)
 	if err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when launch generate task, "+
 			"order id: %d, err: %v, rid: %s", order.OrderId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
 			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
-				order.OrderId, err, kt.Rid)
-			return
+				order.OrderId, subErr, kt.Rid)
+			return subErr
 		}
 
-		return
+		return err
 	}
 
-	// 3. update generate record status to running
+	// update apply order status to running
 	if err = l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", taskId, 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
 			order.OrderId, taskId, err, kt.Rid)
-		return
+		return err
 	}
 
-	// 4. check cvm task result
-	if err = l.checkCVM(taskId); err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when check generate task, "+
-			"order id: %s, task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
+	// create cvm device info from task result
+	order.TaskId = taskId
+	if err = l.CreateCvmFromTaskResult(kt, order); err != nil {
+		logs.Errorf("failed to create cvm from task result, order id: %d, err: %v, rid: %s", order.OrderId, err, kt.Rid)
+		return err
+	}
 
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+	return nil
+}
+
+// CreateCvmFromTaskResult create cvm from task result
+func (l *logics) CreateCvmFromTaskResult(kt *kit.Kit, order *types.ApplyOrder) error {
+	if order == nil {
+		logs.Errorf("create cvm failed, order is nil, rid: %s", kt.Rid)
+		return errors.New("create cvm failed, order is nil")
+	}
+
+	if order.TaskId == "" {
+		logs.Errorf("create cvm failed, can not find task id, task: %v, rid: %s", cvt.PtrToVal(order), kt.Rid)
+		err := fmt.Errorf("create cvm failed, can not find task id, order id: %d", order.OrderId)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 5. get generated cvm instances
-	hosts, err := l.listCVM(taskId)
+	// get generated cvm instances
+	hosts, err := l.listCVM(order.TaskId)
 	if err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to list created cvm, order id: %s, "+
-			"task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
-
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+		logs.Errorf("failed to list created cvm, err: %v, order id: %d, task id: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 6. save generated cvm instances info
-	if err = l.createDeviceInfo(order, hosts, taskId); err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to update generated device, "+
-			"order id: %s, taskId: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
-
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+	// save generated cvm instances info
+	if err = l.createDeviceInfo(order, hosts, order.TaskId); err != nil {
+		logs.Errorf("create cvm device info failed, err: %v, order id: %d, taskId: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 7. update generate record status to success
+	// update apply order status to success
 	if err = l.updateApplyOrder(order, types.ApplyStatusSuccess, "success", "", uint(len(hosts))); err != nil {
-		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-			order.OrderId, taskId, err, kt.Rid)
-		return
+		logs.Errorf("update apply order failed, err: %v, order id: %d, taskId: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		return err
 	}
 
 	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
@@ -178,16 +182,15 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
 				"deviceTypeCountMap: %v, rid: %s", err, subOrderID, order.BkBizId, deviceTypeCountMap, kt.Rid)
 
-			if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-				logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, "+
-					"rid: %s", order.OrderId, taskId, err, kt.Rid)
-				return
+			if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+				logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+				return subErr
 			}
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 // createCVM starts a cvm creating task(CVM生产-创建单据)

@@ -374,6 +374,8 @@ recover:
   enableApplyRecover: false
   # 开启回收单据恢复服务
   enableRecycleRecover: false
+  # 开启cvm生产恢复服务
+  enableCvmProdRecover: false
 
 rollingServer:
   syncBill: true

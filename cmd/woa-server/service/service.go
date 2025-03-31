@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/biz"
+	configlogic "hcm/cmd/woa-server/logics/config"
+	cvmlogic "hcm/cmd/woa-server/logics/cvm"
 	disLogics "hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
@@ -296,8 +298,10 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 
 	// init recoverer client
 	recoverConf := cc.WoaServer().Recover
-	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.esbClient.Cmdb(),
-		service.thirdCli.Sops, sd); err != nil {
+	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig, configlogic.New(service.thirdCli),
+		service.esbClient, service.rsLogic)
+	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
+		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
 		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
