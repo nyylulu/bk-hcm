@@ -1134,6 +1134,15 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 	}
 
 	cnt := cntTicket + cntOrder
+	// 翻页超过当前总数，直接返回空列表
+	if param.Page.Start > int(cnt) {
+		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", cnt, param.Page, kit.Rid)
+		return &types.GetApplyOrderRst{
+			Count: int64(cnt),
+			Info:  []*types.UnifyOrder{},
+		}, nil
+	}
+
 	mergedOrders := s.mergeApplyTicketOrder(tickets, orders)
 
 	begin := int(math.Max(0, float64(param.Page.Start)))
