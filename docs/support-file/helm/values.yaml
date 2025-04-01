@@ -13,7 +13,8 @@ image:
   registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.7.6.1
+  # tag版本，不需要带v前缀
+  tag: 1.7.6.2
 
 serviceAccount:
   create: true
@@ -687,9 +688,9 @@ accountserver:
     # 根账号需要抵扣的项目列表
     awsDeductAccountItems:
       deductItemTypes:
-        00000001: # 根账号ID
-          line_item_line_item_type: # 项目涵盖的费用类型
-            - Tax
+        #"123456789": # 根账号对应的云账号ID
+        #  line_item_line_item_type: # 项目涵盖的费用类型
+        #    - Tax
     gcpCredits:
     #- rootAccountCloudID: gcp_support_account
     #  returnConfigs:
