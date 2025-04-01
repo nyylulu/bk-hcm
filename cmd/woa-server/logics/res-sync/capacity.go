@@ -58,6 +58,7 @@ func (l *logics) SyncCapacity() error {
 
 		total = rst.Count
 		for _, device := range rst.Info {
+			subKt := kt.NewSubKit()
 			reqUpdate := &configTypes.UpdateCapacityParam{
 				RequireType: device.RequireType,
 				DeviceType:  device.DeviceType,
@@ -66,10 +67,10 @@ func (l *logics) SyncCapacity() error {
 			}
 
 			// 这里面会调用crp接口获取库存
-			if err = l.configLogics.Capacity().UpdateCapacity(kt, reqUpdate); err != nil {
+			if err = l.configLogics.Capacity().UpdateCapacity(subKt, reqUpdate); err != nil {
 				failed++
 				logs.Warnf("failed to update device capacity info, err: %v, device: %+v, rid: %s",
-					err, cvt.PtrToVal(device), kt.Rid)
+					err, cvt.PtrToVal(device), subKt.Rid)
 				// continue when error occurs
 				continue
 			}

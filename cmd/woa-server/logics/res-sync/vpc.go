@@ -44,13 +44,14 @@ func (l *logics) SyncVpc() error {
 	success := 0
 	failed := 0
 	for _, region := range regions.Info {
+		subKt := kt.NewSubKit()
 		req := &configTypes.GetVpcParam{
 			Region: region.Region,
 		}
 
-		if err = l.configLogics.Vpc().SyncVpc(kt, req); err != nil {
+		if err = l.configLogics.Vpc().SyncVpc(subKt, req); err != nil {
 			failed++
-			logs.Warnf("failed to sync vpc, region: %+v, err: %v, rid: %s", region, err, kt.Rid)
+			logs.Warnf("failed to sync vpc, region: %+v, err: %v, rid: %s", region, err, subKt.Rid)
 			// continue when error occurs
 			continue
 		}
