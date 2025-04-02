@@ -68,6 +68,7 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (any, error) {
 
 			InternetChargeType:      req.InternetChargeType,
 			InternetMaxBandwidthOut: req.InternetMaxBandwidthOut,
+			Egress:                  req.Egress,
 
 			BandwidthPackageID: req.BandwidthPackageID,
 			SlaType:            req.SlaType,
