@@ -1114,7 +1114,7 @@ export default defineComponent({
                     if (isRollingServer.value) return <RollingServerTipsAlert />;
                     if (isGreenChannel.value) return <GreenChannelTipsAlert />;
                     if (isSpringPool.value) return <HostApplySpringPoolTips />;
-                    return <HostApplyTipsAlert />;
+                    return <HostApplyTipsAlert requireType={order.value.model.requireType} />;
                   })()}
                 </div>
               </div>
