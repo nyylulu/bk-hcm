@@ -92,6 +92,7 @@ func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 
 		createT := tablers.ResPlanDemandTable{
 			Locked:          cvt.ValToPtr(enumor.CrpDemandUnLocked),
+			LockedCPUCore:   cvt.ValToPtr(int64(0)),
 			BkBizID:         item.BkBizID,
 			BkBizName:       item.BkBizName,
 			OpProductID:     item.OpProductID,

@@ -202,6 +202,7 @@ func convResConsumePoolToExpendMap(kt *kit.Kit, pool ResPlanConsumePool,
 		}
 
 		expendKey := ptypes.ResPlanDemandExpendKey{
+			DemandClass:   key.DemandClass,
 			BkBizID:       key.BkBizID,
 			PlanType:      key.PlanType,
 			AvailableTime: ptypes.AvailableMonth(key.AvailableTime),
@@ -381,6 +382,7 @@ func (c *Controller) getDemandExpendKeyFromTable(kt *kit.Kit, demand rpd.ResPlan
 	}
 
 	resPlanDemandExpendKey := ptypes.ResPlanDemandExpendKey{
+		DemandClass:   demand.DemandClass,
 		BkBizID:       demand.BkBizID,
 		PlanType:      demand.PlanType,
 		AvailableTime: ptypes.NewAvailableMonth(availableYear, availableMonth),
@@ -1475,7 +1477,6 @@ func (c *Controller) listAllPlanDemandsByBkBizID(kt *kit.Kit, bkBizID int64, sta
 	listOpt := &rpproto.ResPlanDemandListReq{
 		ListReq: core.ListReq{
 			Filter: tools.ExpressionAnd(
-				tools.RuleEqual("locked", int8(enumor.CrpDemandUnLocked)),
 				tools.RuleEqual("bk_biz_id", bkBizID),
 				tools.RuleGreaterThanEqual("expect_time", startDate),
 				tools.RuleLessThanEqual("expect_time", endDate),
@@ -1844,7 +1845,14 @@ func (c *Controller) GetProdResPlanPoolMatch(kt *kit.Kit, bkBizID int64, startDa
 		if _, ok := pool[key]; !ok {
 			pool[key] = make(map[string]int64, 0)
 		}
-		pool[key][demand.ID] += cvt.PtrToVal(demand.CpuCore)
+
+		// 变更中的预测只记录未上锁的部分
+		remainedCore := cvt.PtrToVal(demand.CpuCore)
+		if cvt.PtrToVal(demand.Locked) == enumor.CrpDemandLocked {
+			remainedCore -= cvt.PtrToVal(demand.LockedCPUCore)
+		}
+
+		pool[key][demand.ID] += remainedCore
 	}
 	// 记录日志方便排查问题
 	logs.Infof("get res plan demand pool match success, bkBizID: %d, requireType: %d, startDay: %+v, endDay: %+v, "+

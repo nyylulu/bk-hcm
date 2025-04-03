@@ -372,9 +372,7 @@ func (c *Controller) BatchUpsertResPlanDemand(kt *kit.Kit, upsertReq *rpproto.Re
 	}
 
 	// unlock all crp demands.
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: unlockDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(unlockDemandIDs, 0)
 	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Warnf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 	}

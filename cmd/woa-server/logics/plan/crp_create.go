@@ -162,9 +162,7 @@ func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, m
 			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
 		}
 	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
 	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err

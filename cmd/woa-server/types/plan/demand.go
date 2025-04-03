@@ -522,28 +522,29 @@ func (e *AdjustRPDemandReqElem) Validate() error {
 		return errors.New("invalid demand id, should be > 0")
 	}
 
+	// 常规修改和加急延期的通用参数校验
+	if e.OriginalInfo == nil {
+		return errors.New("original info of update demand can not be empty")
+	}
+
+	if err := e.OriginalInfo.Validate(); err != nil {
+		return err
+	}
+
+	if e.UpdatedInfo == nil {
+		return errors.New("updated info of update demand can not be empty")
+	}
+
+	if err := e.UpdatedInfo.Validate(); err != nil {
+		return err
+	}
+
 	switch e.AdjustType {
 	case enumor.RPDemandAdjustTypeUpdate:
 		if e.DemandSource != "" {
 			if err := e.DemandSource.Validate(); err != nil {
 				return err
 			}
-		}
-
-		if e.OriginalInfo == nil {
-			return errors.New("original info of update demand can not be empty")
-		}
-
-		if err := e.OriginalInfo.Validate(); err != nil {
-			return err
-		}
-
-		if e.UpdatedInfo == nil {
-			return errors.New("updated info of update demand can not be empty")
-		}
-
-		if err := e.UpdatedInfo.Validate(); err != nil {
-			return err
 		}
 	case enumor.RPDemandAdjustTypeDelay:
 		if len(e.ExpectTime) == 0 {
@@ -817,7 +818,7 @@ type DemandPenaltyBaseKey struct {
 
 // ResPlanDemandExpendKey is key of res plan demand expend.
 type ResPlanDemandExpendKey struct {
-	// DemandClass enumor.DemandClass // 目前暂时不考虑CVM和CA的区别
+	DemandClass enumor.DemandClass
 	// DiskType      enumor.DiskType
 	BkBizID       int64
 	PlanType      enumor.PlanTypeCode

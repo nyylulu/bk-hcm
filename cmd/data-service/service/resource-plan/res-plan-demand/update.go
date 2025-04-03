@@ -35,6 +35,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
@@ -130,7 +131,7 @@ func (svc *service) LockResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.dao.ResPlanDemand().ExamineAndLockAllRPDemand(cts.Kit, req.IDs); err != nil {
+	if err := svc.dao.ResPlanDemand().ExamineAndLockAllRPDemand(cts.Kit, req.LockedItems); err != nil {
 		logs.Errorf("lock res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -150,7 +151,11 @@ func (svc *service) UnlockResPlanDemand(cts *rest.Contexts) (interface{}, error)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.dao.ResPlanDemand().UnlockAllResPlanDemand(cts.Kit, req.IDs); err != nil {
+	ids := slice.Map(req.LockedItems, func(item rpproto.ResPlanDemandLockOpItem) string {
+		return item.ID
+	})
+
+	if err := svc.dao.ResPlanDemand().UnlockAllResPlanDemand(cts.Kit, ids); err != nil {
 		logs.Errorf("unlock res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
 	}

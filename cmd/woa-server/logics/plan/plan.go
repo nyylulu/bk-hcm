@@ -443,9 +443,7 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
 		}
 	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
 	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -576,9 +574,7 @@ func (c *Controller) unlockTicketOriginalDemands(kt *kit.Kit, ticket *TicketInfo
 		return nil
 	}
 
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
 	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err

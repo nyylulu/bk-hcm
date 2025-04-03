@@ -125,12 +125,46 @@ func (c *Controller) QueryAdjustAbleDemands(kt *kit.Kit, req *ptypes.AdjustAbleD
 	return rst.Result.Data, nil
 }
 
+func getDemandIDsAndLockedCoreFromAdjustReq(kt *kit.Kit, adjustElems []ptypes.AdjustRPDemandReqElem) (
+	[]string, []rpproto.ResPlanDemandLockOpItem, error) {
+
+	demandIDs := make([]string, len(adjustElems))
+	lockedItems := make([]rpproto.ResPlanDemandLockOpItem, len(adjustElems))
+	for i, adjust := range adjustElems {
+		demandIDs[i] = adjust.DemandID
+
+		// 修改时必须有修改前的原始信息
+		if adjust.OriginalInfo == nil {
+			logs.Errorf("failed to adjust biz res plan demand, original info is nil, demandID: %s, rid: %s",
+				adjust.DemandID, kt.Rid)
+			return nil, nil, errors.New("original info is nil")
+		}
+
+		// 当前不支持单独修改CBS类型，因此CVM参数必须提供，为兼容后续可能的扩展，这里不返回，而是锁住0核心
+		lockedCPUCore := int64(0)
+		if adjust.OriginalInfo.Cvm != nil {
+			lockedCPUCore = cvt.PtrToVal(adjust.OriginalInfo.Cvm.CpuCore)
+		}
+
+		lockedItems[i] = rpproto.ResPlanDemandLockOpItem{
+			ID:            adjust.DemandID,
+			LockedCPUCore: lockedCPUCore,
+		}
+	}
+
+	return demandIDs, lockedItems, nil
+}
+
 // AdjustBizResPlanDemand adjust biz res plan demand.
 func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDemandReq, bkBizID int64,
 	bizOrgRel *mtypes.BizOrgRel) (ticketID string, retErr error) {
 
-	demandIDs := slice.Map(req.Adjusts,
-		func(adjust ptypes.AdjustRPDemandReqElem) string { return adjust.DemandID })
+	// 从请求中提取修改的预测需求ID即预期变更的核心数
+	demandIDs, lockedItems, err := getDemandIDsAndLockedCoreFromAdjustReq(kt, req.Adjusts)
+	if err != nil {
+		logs.Errorf("failed to get demand ids and locked items from adjust req, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
 
 	// check whether all crp demand belong to the biz.
 	allBelong, err := c.AreAllDemandBelongToBiz(kt, demandIDs, bkBizID)
@@ -153,7 +187,7 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 
 	// lock all resource plan demand.
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: demandIDs,
+		LockedItems: lockedItems,
 	}
 	if err = c.client.DataService().Global.ResourcePlan.LockResPlanDemand(kt, lockReq); err != nil {
 		logs.Errorf("failed to lock all resource plan demand, err: %v, demandIDs: %v, rid: %s", err, demandIDs,
@@ -193,12 +227,33 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 	return ticketID, nil
 }
 
+func getDemandIDsAndLockedCoreFromCancelReq(kt *kit.Kit, cancelElems []ptypes.CancelRPDemandReqElem) (
+	[]string, []rpproto.ResPlanDemandLockOpItem, error) {
+
+	demandIDs := make([]string, len(cancelElems))
+	lockedItems := make([]rpproto.ResPlanDemandLockOpItem, len(cancelElems))
+	for i, cancel := range cancelElems {
+		demandIDs[i] = cancel.DemandID
+
+		lockedItems[i] = rpproto.ResPlanDemandLockOpItem{
+			ID:            cancel.DemandID,
+			LockedCPUCore: cancel.RemainedCpuCore,
+		}
+	}
+
+	return demandIDs, lockedItems, nil
+}
+
 // CancelBizResPlanDemand cancel biz res plan demand.
 func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDemandReq, bkBizID int64,
 	bizOrgRel *mtypes.BizOrgRel) (string, error) {
 
-	demandIDs := slice.Map(req.CancelDemands,
-		func(cancel ptypes.CancelRPDemandReqElem) string { return cancel.DemandID })
+	// 从请求中提取预测需求ID即预期变更的核心数
+	demandIDs, lockedItems, err := getDemandIDsAndLockedCoreFromCancelReq(kt, req.CancelDemands)
+	if err != nil {
+		logs.Errorf("failed to get demand ids and locked items from cancel req, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
 
 	// check whether all crp demand belong to the biz.
 	allBelong, err := c.AreAllDemandBelongToBiz(kt, demandIDs, bkBizID)
@@ -222,7 +277,7 @@ func (c *Controller) CancelBizResPlanDemand(kt *kit.Kit, req *ptypes.CancelRPDem
 
 	// lock all resource plan demand.
 	lockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: demandIDs,
+		LockedItems: lockedItems,
 	}
 	if err = c.client.DataService().Global.ResourcePlan.LockResPlanDemand(kt, lockReq); err != nil {
 		logs.Errorf("failed to lock all resource plan demand, err: %v, demandIDs: %v, rid: %s", err,
