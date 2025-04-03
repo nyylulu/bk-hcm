@@ -4,6 +4,7 @@ export interface PaginationType {
   start: number;
   count: number;
   limit: number;
+  current?: number;
   'limit-list'?: number[];
 }
 type GetDefaultPagination = (custom?: Partial<PaginationType>) => PaginationType;
@@ -18,6 +19,7 @@ export default function usePagination(cb: any, pageRef?: Reactive<PaginationType
     const config = {
       start: 0,
       count: 0,
+      current: 1,
       limit: defaultPagination.limit,
       'limit-list': defaultPagination['limit-list'],
     };
@@ -33,6 +35,7 @@ export default function usePagination(cb: any, pageRef?: Reactive<PaginationType
   const handlePageLimitChange = (v: number) => {
     pagination.limit = v;
     pagination.start = 0;
+    pagination.current = 1;
     cb();
   };
 
@@ -42,6 +45,7 @@ export default function usePagination(cb: any, pageRef?: Reactive<PaginationType
    */
   const handlePageValueChange = (v: number) => {
     pagination.start = (v - 1) * pagination.limit;
+    pagination.current = v;
     cb();
   };
 

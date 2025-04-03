@@ -8,7 +8,6 @@ import ZiyanLbSpecTypeSelectDialog from '@/views/business/load-balancer/componen
 import useBindEip from './hooks/useBindEip';
 import useRenderForm from './hooks/useRenderForm';
 import useBottomBar from './hooks/useBottomBar';
-import useHandleParams from './hooks/useHandleParams';
 import { useWhereAmI, Senarios } from '@/hooks/useWhereAmI';
 // import types
 import { ApplyClbModel } from '@/api/load_balancers/apply-clb/types';
@@ -43,6 +42,7 @@ export default defineComponent({
       slaType: '0',
       zhi_tong: false,
       tgw_group_name: '',
+      egress: undefined,
     });
 
     // use custom hooks
@@ -50,7 +50,6 @@ export default defineComponent({
       useRenderForm(formModel);
     const { BindEipDialog } = useBindEip(formModel);
     const { ApplyClbBottomBar } = useBottomBar(formModel, formRef, isInquiryPrices, isInquiryPricesLoading);
-    useHandleParams(formModel, formRef);
 
     return () => (
       <div class='apply-clb-page'>
