@@ -1,5 +1,9 @@
+import { h } from 'vue';
 import { ModelProperty } from '@/model/typings';
 import { TASK_DETAIL_STATUS_NAME } from '@/views/task/constants';
+import { ITaskDetailItem } from '@/store/task';
+import { TaskDetailStatus } from '@/views/task/typings';
+import { timeFormatter } from '@/common/util';
 
 export default [
   {
@@ -16,6 +20,11 @@ export default [
     id: 'updated_at',
     name: '结束时间',
     type: 'datetime',
+    render: ({ row }: { row: ITaskDetailItem }) =>
+      h(
+        'span',
+        [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(row.state) ? '--' : timeFormatter(row.updated_at),
+      ),
   },
   {
     id: 'state',

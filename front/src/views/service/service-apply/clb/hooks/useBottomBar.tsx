@@ -35,7 +35,7 @@ export default (
   // 权限校验
   const { handleAuth, authVerifyData } = useVerify();
   const globalPermissionDialogStore = useGlobalPermissionDialog();
-  const createActionName = computed(() => {
+  const createClbActionName = computed(() => {
     if (whereAmI.value === Senarios.business) {
       return 'biz_clb_resource_create';
     }
@@ -113,8 +113,8 @@ export default (
 
   // define handler function
   const handleApplyClb = async () => {
-    if (!authVerifyData.value?.permissionAction?.[createActionName.value]) {
-      handleAuth(createActionName.value);
+    if (!authVerifyData.value?.permissionAction?.[createClbActionName.value]) {
+      handleAuth(createClbActionName.value);
       globalPermissionDialogStore.setShow(true);
       return;
     }
@@ -171,7 +171,7 @@ export default (
           </div>
           <div class='operation-btn-wrap'>
             <Button
-              class={{ 'hcm-no-permision-btn': !authVerifyData.value?.permissionAction?.[createActionName.value] }}
+              class={{ 'hcm-no-permision-btn': !authVerifyData.value?.permissionAction?.[createClbActionName.value] }}
               theme='primary'
               onClick={handleApplyClb}
               loading={applyLoading.value}

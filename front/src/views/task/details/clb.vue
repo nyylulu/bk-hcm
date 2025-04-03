@@ -16,7 +16,7 @@ import ActionList from './children/action-list/action-list.vue';
 import Rerun from './children/rerun/rerun.vue';
 import Cancel from './children/cancel/cancel.vue';
 
-import { TASK_TYPE_NAME } from '../constants';
+import { TASK_CLB_TYPE_NAME } from '../constants';
 import { TaskClbType, TaskStatus, TaskDetailStatus } from '../typings';
 
 const taskStore = useTaskStore();
@@ -138,7 +138,7 @@ watch(status, (newStatus) => {
 watchEffect(async () => {
   const operations = taskDetails.value?.operations ?? [];
   const taskOps = Array.isArray(operations) ? operations : [operations];
-  const title = taskOps.map((op) => TASK_TYPE_NAME[op]).join(',');
+  const title = taskOps.map((op) => TASK_CLB_TYPE_NAME[op]).join(',');
 
   setTitle(title);
 });
@@ -243,23 +243,28 @@ onMounted(() => {
   + .content-card {
     margin-top: 20px;
   }
+
   :deep(.common-card-content) {
     width: 100%;
   }
 }
+
 .toolbar {
   display: flex;
   align-items: center;
   margin: 16px 0;
 }
+
 .stats {
   display: flex;
   gap: 16px;
   margin-left: 24px;
+
   .count-item {
     display: flex;
     align-items: center;
     gap: 4px;
+
     .num {
       font-style: normal;
     }
