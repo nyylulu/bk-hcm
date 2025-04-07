@@ -87,9 +87,9 @@ func (req *TCloudLoadBalancerCreateReq) Validate(bizRequired bool) error {
 		if converter.PtrToVal(req.CloudEipID) != "" {
 			return errors.New("eip id only support load balancer type 'INTERNAL'")
 		}
-		// 	公网不能指定子网
-		if converter.PtrToVal(req.CloudSubnetID) != "" {
-			return errors.New("subnet id is not supported for load balancer type 'OPEN'")
+		// 	公网IPv4 不能指定子网
+		if req.AddressIPVersion == typelb.IPV4IPVersion && converter.PtrToVal(req.CloudSubnetID) != "" {
+			return errors.New("subnet id is not supported for IPV4 load balancer with type 'OPEN'")
 		}
 	default:
 		return fmt.Errorf("unknown load balancer type: '%s'", req.LoadBalancerType)
