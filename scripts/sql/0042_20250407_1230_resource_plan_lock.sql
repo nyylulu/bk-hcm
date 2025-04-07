@@ -18,7 +18,7 @@
  */
 
 /*
-    SQLVER=9999,HCMVER=v9.9.9.9
+    SQLVER=0042,HCMVER=v1.7.6.3
 
     Notes:
     1. 预测需求表中添加变更中的核心数字段
@@ -30,6 +30,6 @@ alter table res_plan_demand add column
     `locked_cpu_core` bigint not null default 0 comment '变更中的核心数' after `locked`;
 
 CREATE OR REPLACE DEFINER='ADMIN'@'localhost' VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
-SELECT 'v9.9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+SELECT 'v1.7.6.3' as `hcm_ver`, '0042' as `sql_ver`;
 
 COMMIT;
