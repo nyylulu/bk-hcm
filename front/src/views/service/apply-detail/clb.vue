@@ -1,10 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, reactive } from 'vue';
 import { RouteLocationRaw } from 'vue-router';
 import { ModelProperty } from '@/model/typings';
 import { APPLICATION_TYPE_MAP } from '../apply-list/constants';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { LB_ISP, NET_CHARGE_MAP, VendorMap } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, LB_ISP, NET_CHARGE_MAP, VendorMap } from '@/common/constant';
 import { LB_NETWORK_TYPE_MAP } from '@/constants';
 import { IApplicationDetail } from './index';
 
@@ -39,7 +39,7 @@ const clbDetail = computed(() => {
         zone: backup_zones.length > 0 ? `主备可用区 主(${zones[0]})备(${backup_zones[0]})` : zones.join(','),
       });
     } else {
-      Object.assign(detail, { zone: zones.join(',') });
+      Object.assign(detail, { zone: zones?.join(',') });
     }
 
     return detail;
@@ -79,10 +79,11 @@ const paramInfoFields: ModelProperty[] = [
   { id: 'name', name: '实例名称', type: 'string' },
 ];
 
-const navigateTo: RouteLocationRaw = {
-  path: '/service/my-apply',
-  query: { type: 'load_balancer' },
-};
+// 跳转至业务-单据列表
+const navigateTo: RouteLocationRaw = reactive({
+  name: 'ApplicationsManage',
+  query: computed(() => ({ type: 'load_balancer', [GLOBAL_BIZS_KEY]: clbDetail.value.bk_biz_id })),
+});
 </script>
 
 <template>

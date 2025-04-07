@@ -84,7 +84,7 @@ export default defineComponent({
         ],
       };
 
-      if ([VendorEnum.TCLOUD, VendorEnum.AWS].includes(vendor as VendorEnum)) {
+      if ([VendorEnum.TCLOUD, VendorEnum.AWS, VendorEnum.ZIYAN].includes(vendor as VendorEnum)) {
         if (Array.isArray(zone)) {
           zone.length > 0 && filter.rules.push({ field: 'zone', op: QueryRuleOPEnum.IN, value: zone });
         } else {
