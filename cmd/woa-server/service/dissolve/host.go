@@ -205,7 +205,8 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 	if len(req.HostIDs) != len(rst.Details) {
 		logs.Errorf("get host info not match with bk_host_ids, count: %d, host_id count: %d, rid: %s",
 			len(rst.Details), len(req.HostIDs), cts.Kit.Rid)
-		return nil, fmt.Errorf("host count not match, there could be invalid bk_host_id or no permissions")
+		return nil, errf.NewFromErr(errf.RecordNotFound,
+			fmt.Errorf("host count not match, there could be invalid bk_host_id or no permissions"))
 	}
 
 	hostIDAssetIDMap := make(map[int64]string)
