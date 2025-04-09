@@ -25,6 +25,8 @@ import (
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/kit"
 	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
+
+	clb "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/clb/v20180317"
 )
 
 // TCloudZiyan 自研云adaptor接口，基本同步腾讯云接口，避免冗余
@@ -32,4 +34,6 @@ type TCloudZiyan interface {
 	tcloud.TCloud
 	GetBPaasApplicationDetail(kt *kit.Kit, applicationID uint64) (*bpaas.GetBpaasApplicationDetailResponseParams, error)
 	CreateZiyanLoadBalancer(kt *kit.Kit, opt *typelb.TCloudZiyanCreateClbOption) (*poller.BaseDoneResult, error)
+	DescribeSlaCapacity(kt *kit.Kit, opt *typelb.TCloudDescribeSlaCapacityOption) (
+		*clb.DescribeSlaCapacityResponseParams, error)
 }

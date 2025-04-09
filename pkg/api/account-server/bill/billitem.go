@@ -236,3 +236,48 @@ func (f *FileDownloadResp) Filepath() string {
 func (f *FileDownloadResp) IsDeleteFile() bool {
 	return true
 }
+
+// PullAIBillsReq ...
+type PullAIBillsReq struct {
+	BillYear  uint `json:"bill_year" validate:"required"`
+	BillMonth uint `json:"bill_month" validate:"required,min=1,max=12"`
+
+	RootAccountCloudIds []string `json:"root_account_cloud_ids" validate:"max=10"`
+	MainAccountCloudIds []string `json:"main_account_cloud_ids" validate:"max=10"`
+
+	BeginBillDay *uint `json:"begin_bill_day" validate:"omitempty,min=1,max=31"`
+	EndBillDay   *uint `json:"end_bill_day" validate:"omitempty,min=1,max=31"`
+
+	Page *core.BasePage `json:"page" validate:"required"`
+}
+
+// Validate ListBillItemReq
+func (r *PullAIBillsReq) Validate() error {
+	if r.BeginBillDay != nil && r.EndBillDay == nil || r.BeginBillDay == nil && r.EndBillDay != nil {
+		return errf.New(errf.InvalidParameter, "begin_bill_day and end_bill_day must be both empty or not empty")
+	}
+	if r.BeginBillDay != nil && r.EndBillDay != nil && *r.BeginBillDay > *r.EndBillDay {
+		return errf.New(errf.InvalidParameter, "begin_bill_day must be less or equal than end_bill_day")
+	}
+
+	return validator.Validate.Struct(r)
+}
+
+type AIBillItem struct {
+	ID                 string              `json:"id"`
+	Year               int                 `json:"year"`
+	Month              int                 `json:"month"`
+	Day                int                 `json:"day"`
+	Vendor             enumor.Vendor       `json:"vendor"`
+	ProductID          int64               `json:"product_id"`
+	MainAccountCloudID string              `json:"main_account_cloud_id"`
+	MainAccountEmail   string              `json:"main_account_email"`
+	MainAccountName    string              `json:"main_account_name"`
+	LLMTYpe            string              `json:"llm_type"`
+	Cost               string              `json:"cost"`
+	Rate               string              `json:"rate"`
+	CostRMB            string              `json:"cost_rmb"`
+	Currency           enumor.CurrencyCode `json:"currency"`
+	UpdatedAt          string              `json:"updated_at"`
+	RawBill            json.RawMessage     `json:"raw_bill"`
+}

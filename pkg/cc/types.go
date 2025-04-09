@@ -35,12 +35,14 @@ import (
 	"hcm/pkg/version"
 
 	etcd3 "go.etcd.io/etcd/client/v3"
+	"google.golang.org/grpc"
 )
 
 // Recover 配置是否开启recover服务
 type Recover struct {
 	EnableApplyRecover   bool `yaml:"enableApplyRecover"`   // 开启申请订单恢复服务
 	EnableRecycleRecover bool `yaml:"enableRecycleRecover"` // 开启回收订单恢复服务
+	EnableCvmProdRecover bool `yaml:"enableCvmProdRecover"` // 开启cvm生产恢复服务
 }
 
 // Service defines Setting related runtime.
@@ -117,6 +119,10 @@ func (es Etcd) ToConfig() (etcd3.Config, error) {
 		PermitWithoutStream:  false,
 	}
 
+	// set grpc.WithBlock() to make sure quick fail when etcd endpoint is unavailable.
+	// if not, etcd client may wait forever for incorrect(or unavailable) etcd endpoint
+	// ref: https://github.com/etcd-io/etcd/issues/9877
+	c.DialOptions = append(c.DialOptions, grpc.WithBlock())
 	return c, nil
 }
 
@@ -467,6 +473,13 @@ type SysOption struct {
 	BindIP net.IP
 	// Versioned Setting if show current version info.
 	Versioned bool
+
+	// current env for service discovery
+	Environment string
+	// service label for service discovery
+	Labels []string
+	// if true always be follower
+	DisableElection bool
 }
 
 // CheckV check if show current version info.
@@ -800,6 +813,7 @@ var (
 	defaultMainAccountSummarySyncDuration = 10 * time.Minute
 	defaultRootAccountSummarySyncDuration = 10 * time.Minute
 	defaultDailySummarySyncDuration       = 30 * time.Second
+	defaultMonthTaskSyncDuration          = 30 * time.Second
 )
 
 // BillControllerOption bill controller option
@@ -809,6 +823,7 @@ type BillControllerOption struct {
 	ControllerSyncDuration         *time.Duration `yaml:"controllerSyncDuration,omitempty"`
 	MainAccountSummarySyncDuration *time.Duration `yaml:"mainAccountSummarySyncDuration,omitempty"`
 	RootAccountSummarySyncDuration *time.Duration `yaml:"rootAccountSummarySyncDuration,omitempty"`
+	MonthTaskSyncDuration          *time.Duration `yaml:"monthTaskSyncDuration,omitempty"`
 	DailySummarySyncDuration       *time.Duration `yaml:"dailySummarySyncDuration,omitempty"`
 }
 
@@ -821,6 +836,9 @@ func (bco *BillControllerOption) trySetDefault() {
 	}
 	if bco.RootAccountSummarySyncDuration == nil {
 		bco.RootAccountSummarySyncDuration = &defaultRootAccountSummarySyncDuration
+	}
+	if bco.MonthTaskSyncDuration == nil {
+		bco.MonthTaskSyncDuration = &defaultMonthTaskSyncDuration
 	}
 	if bco.DailySummarySyncDuration == nil {
 		bco.DailySummarySyncDuration = &defaultDailySummarySyncDuration
@@ -854,6 +872,11 @@ func (c *CMSI) validate() error {
 // BillCommonExpense ...
 type BillCommonExpense struct {
 	ExcludeAccountCloudIDs []string `yaml:"excludeAccountCloudIDs" validate:"dive,required"`
+}
+
+// BillDeductItemsExpense ...
+type BillDeductItemsExpense struct {
+	DeductItemTypes map[string]map[string][]string `yaml:"deductItemTypes" validate:"dive,required"`
 }
 
 // CreditReturn ...
@@ -900,11 +923,12 @@ func (opt *GcpCreditConfig) Validate() error {
 
 // BillAllocationOption ...
 type BillAllocationOption struct {
-	AwsSavingsPlans     []AwsSavingsPlansOption `yaml:"awsSavingsPlans"`
-	AwsCommonExpense    BillCommonExpense       `yaml:"awsCommonExpense"`
-	GcpCredits          []GcpCreditConfig       `yaml:"gcpCredits"`
-	GcpCommonExpense    BillCommonExpense       `yaml:"gcpCommonExpense"`
-	HuaweiCommonExpense BillCommonExpense       `yaml:"huaweiCommonExpense"`
+	AwsSavingsPlans       []AwsSavingsPlansOption `yaml:"awsSavingsPlans"`
+	AwsCommonExpense      BillCommonExpense       `yaml:"awsCommonExpense"`
+	AwsDeductAccountItems BillDeductItemsExpense  `yaml:"awsDeductAccountItems"`
+	GcpCredits            []GcpCreditConfig       `yaml:"gcpCredits"`
+	GcpCommonExpense      BillCommonExpense       `yaml:"gcpCommonExpense"`
+	HuaweiCommonExpense   BillCommonExpense       `yaml:"huaweiCommonExpense"`
 }
 
 func (opt *BillAllocationOption) validate() error {

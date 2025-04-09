@@ -36,7 +36,7 @@ import (
 
 // UpdateHostPwd 更新密码库中的主机密码
 // @doc https://bkapigw.woa.com/docs/apigw-api/bk-sam-pwd/update_database_password/doc?stage=prod
-func (s *samPwdCli) UpdateHostPwd(kt *kit.Kit, req *UpdateHostPwdReq) (*UpdateHostPwdResp, error) {
+func (s *samPwdCli) UpdateHostPwd(kt *kit.Kit, req UpdateHostPwdReq) (*UpdateHostPwdResp, error) {
 	encryPwd, err := encrypt(req.Password, s.config.BkToken)
 	if err != nil {
 		return nil, err
@@ -44,7 +44,7 @@ func (s *samPwdCli) UpdateHostPwd(kt *kit.Kit, req *UpdateHostPwdReq) (*UpdateHo
 	req.Password = encryPwd
 
 	return apigateway.ApiGatewayCall[UpdateHostPwdReq, UpdateHostPwdResp](s.client, s.config, rest.POST,
-		kt, req, "/pwd/update_database_password")
+		kt, &req, "/pwd/update_database_password")
 }
 
 // encrypt plaintext with the passphrase

@@ -14,11 +14,14 @@
 package sops
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math/rand"
+	"strings"
 	"time"
 
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
@@ -296,11 +299,13 @@ func startSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, bkB
 }
 
 // CheckTaskStatus check sops task status
-func CheckTaskStatus(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, bkBizID int64) error {
+func CheckTaskStatus(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, bkBizID int64) (
+	*sopsapi.GetTaskStatusResp, error) {
+
 	// 如果该任务不是Linux或Windows任务，则不会创建标准运维任务，就不用去标准运维查询任务状态
 	if taskID <= 0 && bkBizID <= 0 {
 		logs.Infof("sops:process:check task status empty")
-		return nil
+		return nil, nil
 	}
 
 	checkFunc := func(obj interface{}, err error) (bool, error) {
@@ -351,10 +356,77 @@ func CheckTaskStatus(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, b
 		return sopsCli.GetTaskStatus(kt.Ctx, kt.Header(), taskID, bkBizID)
 	}
 
-	_, err := utils.Retry(doFunc, checkFunc, 3600, 10)
+	ret, err := utils.Retry(doFunc, checkFunc, 3600, 10)
+	checkResp, ok := ret.(*sopsapi.GetTaskStatusResp)
+	if !ok {
+		logs.Errorf("sops:process:check task status, ret is not the right type sopsapi.GetTaskStatusResp, taskID: %d, "+
+			"ret: %+v, rid: %s", taskID, ret, kt.Rid)
+		return nil, errf.New(errf.DecodeRequestFailed, "sops status ret type is not right")
+	}
 	if err != nil {
-		return err
+		logs.Errorf("sops:process:check task status, retry failed, taskID: %d, bkBizID: %d, err: %v, rid: %s",
+			taskID, bkBizID, err, kt.Rid)
+		return checkResp, err
 	}
 
-	return nil
+	return checkResp, nil
+}
+
+// parseIdleCheckFailedNodeParentID parse idle check failed node parent id
+func parseIdleCheckFailedNodeParentID(kt *kit.Kit, statusResp *sopsapi.GetTaskStatusResp) (
+	nodeID string, parentID string) {
+
+	// 只解析空闲检查的任务
+	if statusResp == nil || statusResp.Data == nil ||
+		!strings.Contains(statusResp.Data.Name, sopsapi.IdleCheckTaskIdentifier) ||
+		statusResp.Data.State != sopsapi.TaskStateFailed {
+		return nodeID, parentID
+	}
+
+	for _, item := range statusResp.Data.Children {
+		if len(nodeID) > 0 || len(parentID) > 0 {
+			break
+		}
+		for _, subItem := range item.Children {
+			if !strings.Contains(subItem.Name, sopsapi.IdleCheckTaskIdentifier) ||
+				subItem.State != sopsapi.TaskStateFailed {
+				continue
+			}
+			nodeID = subItem.ID
+			parentID = subItem.ParentID
+			break
+		}
+	}
+	logs.Infof("sops:process:parse idle check node id, nodeID: %s, parentID: %s, rid: %s", nodeID, parentID, kt.Rid)
+	return nodeID, parentID
+}
+
+// GetIdleCheckFailedJobUrl get idle check failed job url
+func GetIdleCheckFailedJobUrl(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, bkBizID int64,
+	statusResp *sopsapi.GetTaskStatusResp) (string, error) {
+
+	nodeID, parentID := parseIdleCheckFailedNodeParentID(kt, statusResp)
+	if len(nodeID) == 0 || len(parentID) == 0 {
+		return "", nil
+	}
+
+	nodeData, err := sopsCli.GetTaskNodeData(kt, kt.Header(), taskID, bkBizID, nodeID, parentID)
+	if err != nil || nodeData == nil {
+		logs.Errorf("sops:process:get idle check failed job url, failed to get task node data, taskID: %d, "+
+			"bkBizID: %d, nodeID: %s, parentID: %s, err: %v, rid: %s", taskID, bkBizID, nodeID, parentID, err, kt.Rid)
+		return "", err
+	}
+
+	jobInstURL := ""
+	for _, item := range nodeData.Outputs {
+		if item.Key != sopsapi.IdleCheckJobInstURLField {
+			continue
+		}
+		if err = json.Unmarshal(item.Value, &jobInstURL); err != nil {
+			return "", err
+		}
+		break
+	}
+
+	return jobInstURL, nil
 }

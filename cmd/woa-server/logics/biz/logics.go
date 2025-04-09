@@ -25,6 +25,10 @@ type Logics interface {
 	ListAuthorizedBiz(kt *kit.Kit) ([]int64, error)
 	// GetBizOrgRel get biz org relation.
 	GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, error)
+	// BatchCheckUserBizAccessAuth batch check user biz access auth.
+	BatchCheckUserBizAccessAuth(kt *kit.Kit, bkBizID int64, userNames []string) (map[string]bool, error)
+	// GetBkBizMaintainer get biz maintainer.
+	GetBkBizMaintainer(kt *kit.Kit, bkBizIDs []int64) (map[int64][]string, error)
 }
 
 type logics struct {

@@ -18,6 +18,7 @@ import (
 	planLogics "hcm/cmd/woa-server/logics/plan"
 	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 )
@@ -26,6 +27,7 @@ import (
 func InitService(c *capability.Capability) {
 	logics := taskLogics.New(c.SchedulerIf, c.RecyclerIf, c.InformerIf, c.OperationIf)
 	s := &service{
+		client:     c.Client,
 		logics:     logics,
 		planLogics: c.PlanController,
 		authorizer: c.Authorizer,
@@ -48,6 +50,7 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
+	client     *client.ClientSet
 	logics     taskLogics.Logics
 	planLogics planLogics.Logics
 	authorizer auth.Authorizer
@@ -158,5 +161,8 @@ func bizService(h *rest.Handler, s *service) {
 	h.Add("CancelBizApplyTicketItsm", http.MethodPost, "/apply/ticket/itsm_audit/cancel", s.CancelBizApplyTicketItsm)
 	h.Add("CancelBizApplyTicketCrp", http.MethodPost, "/apply/ticket/crp_audit/cancel", s.CancelBizApplyTicketCrp)
 	h.Add("AuditBizApplyTicket", http.MethodPost, "/audit/apply/ticket", s.AuditBizApplyTicket)
+
+	h.Add("CheckHostUworkTicketStatus", http.MethodPost, "/hosts/uwork_tickets/status/check",
+		s.CheckHostUworkTicketStatus)
 
 }

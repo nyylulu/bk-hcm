@@ -263,3 +263,31 @@ func (t *ZiyanAdpt) CLBDescribeTaskStatus(kt *kit.Kit, opt *typelb.TCloudDescrib
 	}
 	return resp.Response, nil
 }
+
+// DescribeSlaCapacity 查询性能保障规格参数
+// https://tcloud4api.woa.com/document/product/214/39899?!preview&!document=1
+func (t *ZiyanAdpt) DescribeSlaCapacity(kt *kit.Kit, opt *typelb.TCloudDescribeSlaCapacityOption) (
+	*clb.DescribeSlaCapacityResponseParams, error) {
+
+	if opt == nil {
+		return nil, errf.New(errf.InvalidParameter, "describe sla capacity option can not be nil")
+	}
+
+	if err := opt.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := t.clientSet.ClbClient(opt.Region)
+	if err != nil {
+		return nil, fmt.Errorf("init tencent cloud clb client failed, region: %s, err: %v", opt.Region, err)
+	}
+	req := clb.NewDescribeSlaCapacityRequest()
+	req.SlaTypes = opt.SlaTypes
+
+	resp, err := client.DescribeSlaCapacityWithContext(kt.Ctx, req)
+	if err != nil {
+		logs.Errorf("tencent cloud describe sla capacity failed, req: %+v, err: %v, rid: %s", req, err, kt.Rid)
+		return nil, err
+	}
+	return resp.Response, nil
+}

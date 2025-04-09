@@ -100,6 +100,8 @@ const (
 	CvmVpcMethod = "getVpcInfo"
 	// CvmSubnetMethod CVM subnet信息查询方法
 	CvmSubnetMethod = "getSubNetInfo"
+	// CvmRealSubnetMethod CVM 获取私有子网
+	CvmRealSubnetMethod = "getRealSubnetInfo"
 	// CvmCbsDemandChangeLogQueryMethod 预测需求的变更记录查询接口
 	CvmCbsDemandChangeLogQueryMethod = "queryDemandChangeLogForIEG"
 	// CvmCbsPlanOrderChangeMethod 预测需求的订单变更流水接口

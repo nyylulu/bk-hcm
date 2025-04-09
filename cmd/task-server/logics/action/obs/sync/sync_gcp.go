@@ -75,9 +75,7 @@ func (act SyncAction) doSyncGcpBillItem(kt *kit.Kit,
 	syncOpt *SyncOption, start, limit uint64) error {
 
 	flt := tools.ExpressionAnd(
-		tools.RuleEqual("vendor", syncOpt.Vendor),
-		tools.RuleEqual("bill_year", syncOpt.BillYear),
-		tools.RuleEqual("bill_month", syncOpt.BillMonth),
+		tools.RuleEqual("root_account_id", syncOpt.RootAccountID),
 		tools.RuleEqual("main_account_id", syncOpt.MainAccountID),
 	)
 	comOpt := &databill.ItemCommonOpt{

@@ -18,7 +18,7 @@ spec:
       annotations:
         checksum/configmap: {{ include (print $.Template.BasePath "/authserver/configmap.yaml") . | sha256sum }}
       {{- if .Values.authserver.podAnnotations }}
-        {{ toYaml .Values.authserver.podAnnotations | indent 8 }}
+        {{- toYaml .Values.authserver.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ template "bk-hcm.serviceAccountName" . }}
@@ -77,15 +77,19 @@ spec:
             - mountPath: /data/hcm/etc
               name: config
             {{- if not .Values.etcd.enabled }}
+            {{- if .Values.externalEtcd.tls.enabled }}
             - mountPath: /data/hcm/etc/certs
               name:  etcd-certs
+            {{- end }}
             {{- end }}
       volumes:
         - name: config
           configMap:
             name: {{ template "bk-hcm.fullname" . }}-authserver-config
       {{- if not .Values.etcd.enabled }}
+      {{- if .Values.externalEtcd.tls.enabled }}
         - name: etcd-certs
           secret:
             secretName: {{ template "bk-hcm.etcdSecretName" . }}
+      {{- end }}
       {{- end }}

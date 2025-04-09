@@ -49,6 +49,7 @@ func (r *ListZoneReq) Validate() error {
 // ListDeviceTypeReq defines list device type request.
 type ListDeviceTypeReq struct {
 	DeviceClasses []string `json:"device_classes"`
+	DeviceTypes   []string `json:"device_types"`
 }
 
 // Validate whether ListDeviceTypeReq is valid.
@@ -62,10 +63,12 @@ func (r *ListDeviceTypeReq) Validate() error {
 
 // ListDeviceTypeRst defines list device type result.
 type ListDeviceTypeRst struct {
-	DeviceType string `json:"device_type"`
-	CoreType   string `json:"core_type"`
-	CpuCore    int64  `json:"cpu_core"`
-	Memory     int64  `json:"memory"`
+	DeviceType   string `json:"device_type"`
+	CoreType     string `json:"core_type"`
+	CpuCore      int64  `json:"cpu_core"`
+	Memory       int64  `json:"memory"`
+	DeviceClass  string `json:"device_class"`
+	DeviceFamily string `json:"device_family"`
 }
 
 // ListBizsByOpProdReq defines list bizs by op product request.
@@ -114,4 +117,26 @@ type OpProduct struct {
 type PlanProduct struct {
 	PlanProductID   int64  `json:"plan_product_id"`
 	PlanProductName string `json:"plan_product_name"`
+}
+
+// OrgTopoReq is the get org topo request
+type OrgTopoReq struct {
+	View enumor.View `json:"view" validate:"required"`
+}
+
+// Validate OrgTopoReq
+func (req *OrgTopoReq) Validate() error {
+	return req.View.Validate()
+}
+
+// OrgInfo define cost organization information.
+type OrgInfo struct {
+	ID          string     `json:"id"`
+	Name        string     `json:"name"`
+	FullName    string     `json:"full_name"`
+	Level       int64      `json:"level"`
+	HasChildren bool       `json:"has_children"`
+	Children    []*OrgInfo `json:"children"`
+	TofDeptID   string     `json:"tof_dept_id"`
+	Parent      string     `json:"parent"`
 }

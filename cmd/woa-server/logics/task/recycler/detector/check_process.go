@@ -74,7 +74,7 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	}
 
 	// 1. create job
-	jobId, jobUrl, err := sops.CreateIdleCheckSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
+	jobId, sopsUrl, err := sops.CreateIdleCheckSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, host %s failed to check process, bkBizID: %d, err: %v",
 			ip, bkBizID, err)
@@ -82,19 +82,26 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	}
 
 	// 2. get job status
-	if err = sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
+	if statusResp, err := sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
 			logs.Infof("sops:process:check:host %s ping death, skip check process step, jobId: %d, bkBizID: %d, "+
 				"err: %v", ip, jobId, bkBizID, err)
 			return "", nil
 		}
+		// 如果失败的是JOB节点，则获取JOB平台的链接
+		jobInstURL, jobInstErr := sops.GetIdleCheckFailedJobUrl(d.kt, d.sops, jobId, bkBizID, statusResp)
 		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, check job status, host: %s, jobId: %d, bkBizID: %d, "+
-			"jobUrl: %s, err: %v", ip, jobId, bkBizID, jobUrl, err)
-		return "", fmt.Errorf("host %s failed to check process, job id: %d, jobUrl: %s, bkBizID: %d, err: %v",
-			ip, jobId, jobUrl, bkBizID, err)
+			"sopsUrl: %s, err: %v, jobInstURL: %s, jobInstErr: %v, rid: %s",
+			ip, jobId, bkBizID, sopsUrl, err, jobInstURL, jobInstErr, d.kt.Rid)
+		jobErrMsg := ""
+		if jobInstURL != "" {
+			jobErrMsg = fmt.Sprintf("作业平台(JOB): %s,", jobInstURL)
+		}
+		return "", fmt.Errorf("host %s failed to check process, jobID: %d, sopsUrl: %s, %s err: %v",
+			ip, jobId, sopsUrl, jobErrMsg, err)
 	}
-	return jobUrl, nil
+	return sopsUrl, nil
 }
 
 func (d *Detector) removeUnusedComment(comment string) string {

@@ -1,8 +1,7 @@
-import { defineComponent, ref, onMounted, computed } from 'vue';
+import { defineComponent, ref, onMounted, computed, reactive } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import apiService from '@/api/scrApi';
 import { Button } from 'bkui-vue';
-import { useRouter } from 'vue-router';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import { useI18n } from 'vue-i18n';
@@ -10,19 +9,18 @@ import cssModule from './index.module.scss';
 import GridFilterComp from '@/components/grid-filter-comp';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
-// import { useVerify } from '@/hooks';
-// import ErrorPage from '@/views/error-pages/403';
+import { useConfigRequirementStore, type IRequirementObsProject } from '@/store/config/requirement';
+import ResourceDemandsResult from './resource-demands-result.vue';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { ResourceDemandResultStatusCode } from '@/typings/resourcePlan';
+import routerAction from '@/router/utils/action';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 export default defineComponent({
   name: 'BusinessHostInventory',
   setup() {
-    // const { authVerifyData } = useVerify();
-    // if (!authVerifyData.value.permissionAction.ziyan_resource_inventory_find)
-    //   return () => <ErrorPage urlKeyId='biz_ziyan_resource_inventory' />;
-
     const { columns } = useColumns('hostInventor');
     const deviceGroups = ['标准型', '高IO型', '大数据型', '计算型'];
-    const router = useRouter();
     const { t } = useI18n();
     const filter = ref({
       require_type: 1,
@@ -73,6 +71,11 @@ export default defineComponent({
     const loadResources = () => {
       getListData();
     };
+
+    const whereAmI = useWhereAmI();
+    const configRequirementStore = useConfigRequirementStore();
+    const requirementObsProjectMap = ref<IRequirementObsProject>({});
+
     const emptyform = () => {
       filter.value = {
         require_type: 1,
@@ -131,39 +134,100 @@ export default defineComponent({
       options.value.cpu = cpu || [];
       options.value.mem = mem || [];
     };
-    const getfetchOptionslist = async () => {
-      const { info } = await apiService.getRequireTypes();
+    const getOptions = async () => {
+      const [{ info }, obsProjectMap] = await Promise.all([
+        apiService.getRequireTypes(),
+        configRequirementStore.getRequirementObsProject(),
+      ]);
       options.value.require_types = info;
+      requirementObsProjectMap.value = obsProjectMap;
     };
-    const application = (row: any) => {
-      router.push({
+    const handleApply = (row: any) => {
+      routerAction.open({
         path: '/business/service/service-apply/cvm',
         query: {
           ...row,
+          from: 'businessCvmInventory',
+          [GLOBAL_BIZS_KEY]: whereAmI.getBizsId(),
         },
       });
     };
     onMounted(() => {
       loadRestrict();
-      getfetchOptionslist();
+      getOptions();
     });
+
+    const demandStatus = reactive<Record<number, { code: number; text: string }>>({});
+    const updateResourceDemands = (planStatus: { code: number; text: string }, row: any) => {
+      demandStatus[row.id] = planStatus;
+    };
 
     const { CommonTable, getListData, isLoading } = useTable({
       tableOptions: {
         columns: [
           ...columns,
           {
+            label: '预测情况',
+            width: 150,
+            render: ({ row }: { row: any }) => (
+              <ResourceDemandsResult
+                data={row}
+                obsProjectMap={requirementObsProjectMap.value}
+                bizId={whereAmI.getBizsId()}
+                onUpdate={updateResourceDemands}
+              />
+            ),
+          },
+          {
             label: '操作',
-            width: 120,
+            width: 180,
+            showOverflowTooltip: false,
             render: ({ row }: { row: any }) => {
               return (
-                <Button
-                  text
-                  theme='primary'
-                  disabled={row.listenerNum > 0 || row.delete_protect}
-                  onClick={() => application(row)}>
-                  一键申请
-                </Button>
+                <div class={cssModule['operation-button-group']}>
+                  <Button
+                    text
+                    theme='primary'
+                    disabled={
+                      row.listenerNum > 0 ||
+                      row.delete_protect ||
+                      [
+                        undefined,
+                        ResourceDemandResultStatusCode.BGNone,
+                        ResourceDemandResultStatusCode.BIZNone,
+                      ].includes(demandStatus[row.id]?.code)
+                    }
+                    onClick={() => handleApply(row)}>
+                    一键申请
+                  </Button>
+                  {/* 滚服禁用，增加提示 滚服由BG统一提交预测 */}
+                  <Button
+                    text
+                    theme='primary'
+                    disabled={row.listenerNum > 0 || row.delete_protect || row.require_type === 6}
+                    v-bk-tooltips={{ content: '滚服由BG统一提交预测', disabled: row.require_type !== 6 }}
+                    onClick={() => {
+                      routerAction.open({
+                        path: '/business/resource-plan/add',
+                        query: {
+                          [GLOBAL_BIZS_KEY]: whereAmI.getBizsId(),
+                          action: 'add',
+                          payload: encodeURIComponent(
+                            JSON.stringify({
+                              obs_project: requirementObsProjectMap.value[row.require_type],
+                              region_id: row.region,
+                              zone_id: row.zone,
+                              cvm: {
+                                device_type: row.device_type,
+                              },
+                            }),
+                          ),
+                        },
+                      });
+                    }}>
+                    增加预测
+                  </Button>
+                </div>
               );
             },
           },
@@ -201,12 +265,18 @@ export default defineComponent({
         <GridFilterComp
           rules={[
             {
+              // 小额绿通和春保资源池不显示
               title: t('需求类型'),
               content: (
                 <bk-select v-model={filter.value.require_type}>
-                  {options.value.require_types.map((item) => (
-                    <bk-option key={item.require_type} value={item.require_type} label={item.require_name}></bk-option>
-                  ))}
+                  {options.value.require_types
+                    .filter((item) => ![7, 8].includes(item.require_type))
+                    .map((item) => (
+                      <bk-option
+                        key={item.require_type}
+                        value={item.require_type}
+                        label={item.require_name}></bk-option>
+                    ))}
                 </bk-select>
               ),
             },

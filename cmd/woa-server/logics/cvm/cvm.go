@@ -22,9 +22,11 @@ import (
 	"strings"
 	"time"
 
+	"hcm/cmd/woa-server/logics/config"
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
+	"hcm/pkg"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
@@ -63,108 +65,112 @@ type CVM struct {
 	BkProductName     string            `json:"bk_product_name"`
 }
 
-// executeApplyOrder CVM生产-创建单据
-func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
+// ExecuteApplyOrder CVM生产-创建单据
+func (l *logics) ExecuteApplyOrder(kt *kit.Kit, order *types.ApplyOrder) error {
 	kt = &kit.Kit{Ctx: context.Background(), User: kt.User, Rid: kt.Rid, AppCode: kt.AppCode, TenantID: kt.TenantID,
 		RequestSource: kt.RequestSource}
 
-	// 0. update generate record status to running
+	// update generate record status to running
 	if err := l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", "", 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
 			order.OrderId, err, kt.Rid)
-		return
+		return err
 	}
 
-	// 1. launch cvm request
+	// launch cvm request
 	request, err := l.buildCvmReq(kt, order)
 	if err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to launch cvm when build cvm request, "+
 			"err: %v, order id: %d, rid: %s", err, order.OrderId, kt.Rid)
 
 		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
 			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
-				order.OrderId, err, kt.Rid)
-			return
+				order.OrderId, subErr, kt.Rid)
+			return subErr
 		}
 
-		return
+		return err
 	}
 
-	// 2. launch cvm request
+	// launch cvm request
 	taskId, err := l.createCVM(request)
 	if err != nil {
 		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when launch generate task, "+
 			"order id: %d, err: %v, rid: %s", order.OrderId, err, kt.Rid)
 
 		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
 			logs.Errorf("failed to create cvm when update generate record, order id: %d, err: %v, rid: %s",
-				order.OrderId, err, kt.Rid)
-			return
+				order.OrderId, subErr, kt.Rid)
+			return subErr
 		}
 
-		return
+		return err
 	}
 
-	// 3. update generate record status to running
+	// update apply order status to running
 	if err = l.updateApplyOrder(order, types.ApplyStatusRunning, "handling", taskId, 0); err != nil {
 		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
 			order.OrderId, taskId, err, kt.Rid)
-		return
+		return err
 	}
 
-	// 4. check cvm task result
-	if err = l.checkCVM(taskId); err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to create cvm when check generate task, "+
-			"order id: %s, task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
+	// create cvm device info from task result
+	order.TaskId = taskId
+	if err = l.CreateCvmFromTaskResult(kt, order); err != nil {
+		logs.Errorf("failed to create cvm from task result, order id: %d, err: %v, rid: %s", order.OrderId, err, kt.Rid)
+		return err
+	}
 
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+	return nil
+}
+
+// CreateCvmFromTaskResult create cvm from task result
+func (l *logics) CreateCvmFromTaskResult(kt *kit.Kit, order *types.ApplyOrder) error {
+	if order == nil {
+		logs.Errorf("create cvm failed, order is nil, rid: %s", kt.Rid)
+		return errors.New("create cvm failed, order is nil")
+	}
+
+	if order.TaskId == "" {
+		logs.Errorf("create cvm failed, can not find task id, task: %v, rid: %s", cvt.PtrToVal(order), kt.Rid)
+		err := fmt.Errorf("create cvm failed, can not find task id, order id: %d", order.OrderId)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 5. get generated cvm instances
-	hosts, err := l.listCVM(taskId)
+	// get generated cvm instances
+	hosts, err := l.listCVM(order.TaskId)
 	if err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to list created cvm, order id: %s, "+
-			"task id: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
-
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+		logs.Errorf("failed to list created cvm, err: %v, order id: %d, task id: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 6. save generated cvm instances info
-	if err = l.createDeviceInfo(order, hosts, taskId); err != nil {
-		logs.Errorf("scheduler:logics:execute:apply:order:failed, failed to update generated device, "+
-			"order id: %s, taskId: %s, err: %v, rid: %s", order.OrderId, taskId, err, kt.Rid)
-
-		// update generate record status to failed
-		if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-			logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-				order.OrderId, taskId, err, kt.Rid)
-			return
+	// save generated cvm instances info
+	if err = l.createDeviceInfo(order, hosts, order.TaskId); err != nil {
+		logs.Errorf("create cvm device info failed, err: %v, order id: %d, taskId: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+			return subErr
 		}
-
-		return
+		return err
 	}
 
-	// 7. update generate record status to success
+	// update apply order status to success
 	if err = l.updateApplyOrder(order, types.ApplyStatusSuccess, "success", "", uint(len(hosts))); err != nil {
-		logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, rid: %s",
-			order.OrderId, taskId, err, kt.Rid)
-		return
+		logs.Errorf("update apply order failed, err: %v, order id: %d, taskId: %s, rid: %s", err, order.OrderId,
+			order.TaskId, kt.Rid)
+		return err
 	}
 
 	if enumor.RequireType(order.RequireType) == enumor.RequireTypeRollServer {
@@ -177,16 +183,15 @@ func (l *logics) executeApplyOrder(kt *kit.Kit, order *types.ApplyOrder) {
 			logs.Errorf("update rolling delivered cpu field failed, err: %v, suborder_id: %s, bizID: %d, "+
 				"deviceTypeCountMap: %v, rid: %s", err, subOrderID, order.BkBizId, deviceTypeCountMap, kt.Rid)
 
-			if err = l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); err != nil {
-				logs.Errorf("failed to create cvm when update generate record, order id: %d, taskId: %s, err: %v, "+
-					"rid: %s", order.OrderId, taskId, err, kt.Rid)
-				return
+			if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
+				logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
+				return subErr
 			}
-			return
+			return err
 		}
 	}
 
-	return
+	return nil
 }
 
 // createCVM starts a cvm creating task(CVM生产-创建单据)
@@ -499,7 +504,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	if order.Spec.Vpc != "" {
 		req.VPCId = order.Spec.Vpc
 	} else {
-		vpc, err := l.getCvmVpc(order.Spec.Region)
+		vpc, err := config.GetDftCvmVpc(order.Spec.Region)
 		if err != nil {
 			logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm vpc failed, err: %v, "+
 				"order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
@@ -525,7 +530,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	// image
 	req.ImageId = order.Spec.ImageId
 	// security group
-	sg, err := l.getCvmDftSecGroup(order.Spec.Region)
+	sg, err := config.GetCvmDftSecGroup(order.Spec.Region)
 	if err != nil {
 		logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm drg secGroup failed, "+
 			"err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
@@ -569,58 +574,13 @@ func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, str
 	return bizBelong.OpProductID, bizBelong.OpProductName, nil
 }
 
-var regionToVpc = map[string]string{
-	"ap-guangzhou":     "vpc-03nkx9tv",
-	"ap-tianjin":       "vpc-1yoew5gc",
-	"ap-shanghai":      "vpc-2x7lhtse",
-	"eu-frankfurt":     "vpc-38klpz7z",
-	"ap-singapore":     "vpc-706wf55j",
-	"ap-tokyo":         "vpc-8iple1iq",
-	"ap-seoul":         "vpc-99wg8fre",
-	"ap-hongkong":      "vpc-b5okec48",
-	"na-toronto":       "vpc-drefwt2v",
-	"ap-xian-ec":       "vpc-efw4kf6r",
-	"ap-nanjing":       "vpc-fb7sybzv",
-	"ap-chongqing":     "vpc-gelpqsur",
-	"ap-shenzhen":      "vpc-kwgem8tj",
-	"na-siliconvalley": "vpc-n040n5bl",
-	"ap-hangzhou-ec":   "vpc-puhasca0",
-	"ap-fuzhou-ec":     "vpc-hdxonj2q",
-	"ap-wuhan-ec":      "vpc-867lsj6w",
-	"ap-beijing":       "vpc-bhb0y6g8",
-}
-
-func (l *logics) getCvmVpc(region string) (string, error) {
-	vpc, ok := regionToVpc[region]
-	if !ok {
-		return "", fmt.Errorf("found no vpc with region %s", region)
-	}
-
-	return vpc, nil
-}
-
 func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, uint, error) {
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: region,
-			VpcId:  vpc,
-		},
-	}
-	// 园区-分区Campus
-	if len(zone) > 0 && zone != cvmapi.CvmSeparateCampus {
-		req.Params.Zone = zone
+	if len(zone) <= 0 {
+		return "", 0, fmt.Errorf("get cvm subnet failed, zone is empty")
 	}
 
-	resp, err := l.cvm.QueryCvmSubnet(kt.Ctx, kt.Header(), req)
+	subnetList, err := l.getSubnetList(kt, region, zone, vpc)
 	if err != nil {
-		logs.Errorf("failed to get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
-			err, region, zone, vpc, kt.Rid)
 		return "", 0, err
 	}
 
@@ -646,7 +606,7 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 
 	subnetId := ""
 	leftIp := uint(0)
-	for _, subnet := range resp.Result {
+	for _, subnet := range subnetList {
 		// subnet is not effective
 		if _, ok := mapIdTosubnet[subnet.Id]; !ok {
 			continue
@@ -662,14 +622,16 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	}
 
 	if subnetId == "" {
-		logs.Errorf("getCvmSubnet found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc,
-			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		logs.Errorf("getCvmSubnet found no subnet with region: %s, zone: %s, vpc: %s, cfgSubnets: %+v, "+
+			"subnetList: %+v, rid: %s", region, zone, vpc, cvt.PtrToSlice(cfgSubnets.Info),
+			cvt.PtrToSlice(subnetList), kt.Rid)
 		return "", 0, fmt.Errorf("found no subnet with region: %s, zone: %s, vpc: %s", region, zone, vpc)
 	}
 
 	if leftIp <= 0 {
-		logs.Errorf("getCvmSubnet found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region, zone, vpc,
-			cvt.PtrToSlice(cfgSubnets.Info), cvt.PtrToSlice(resp.Result))
+		logs.Errorf("getCvmSubnet found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s, cfgSubnets: %+v, "+
+			"subnetList: %+v, rid: %s", region, zone, vpc, cvt.PtrToSlice(cfgSubnets.Info),
+			cvt.PtrToSlice(subnetList), kt.Rid)
 		return subnetId, leftIp, fmt.Errorf("found no subnet with left ip > 0, region: %s, zone: %s, vpc: %s", region,
 			zone, vpc)
 	}
@@ -677,111 +639,41 @@ func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, ui
 	return subnetId, leftIp, nil
 }
 
-// SecGroup network security group
-type SecGroup struct {
-	SecurityGroupId   string `json:"securityGroupId"`
-	SecurityGroupName string `json:"securityGroupName"`
-	SecurityGroupDesc string `json:"securityGroupDesc"`
-}
+func (l *logics) getSubnetList(kt *kit.Kit, region string, zone string, vpc string) ([]*cvmapi.SubnetInfo, error) {
+	zones := make([]string, 0)
+	// 园区-分区Campus，获取该区域下的可用区列表
+	if zone == cvmapi.CvmSeparateCampus {
+		zoneCond := mapstr.MapStr{}
+		zoneCond["region"] = mapstr.MapStr{pkg.BKDBIN: region}
+		zoneResp, err := l.confLogic.Zone().GetZone(kt, &zoneCond)
+		if err != nil {
+			logs.Errorf("failed to get cvm subnet zone list, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zone, vpc, kt.Rid)
+			return nil, err
+		}
 
-var regionToSecGroup = map[string]*SecGroup{
-	"ap-guangzhou": {
-		SecurityGroupId:   "sg-ka67ywe9",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"ap-tianjin": {
-		SecurityGroupId:   "sg-c28492qp",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-shanghai": {
-		SecurityGroupId:   "sg-ibqae0te",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"eu-frankfurt": {
-		SecurityGroupId:   "sg-cet13de0",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-singapore": {
-		SecurityGroupId:   "sg-hjtqedoe",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-tokyo": {
-		SecurityGroupId:   "sg-o1lfldnk",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-seoul": {
-		SecurityGroupId:   "sg-i7h8hv5r",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-hongkong": {
-		SecurityGroupId:   "sg-59kfufmn",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"na-toronto": {
-		SecurityGroupId:   "sg-7l82d7km",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-xian-ec": {
-		SecurityGroupId:   "sg-o4bmz4kg",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-nanjing": {
-		SecurityGroupId:   "sg-dybs7i3y",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"ap-chongqing": {
-		SecurityGroupId:   "sg-l5usnzxw",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-shenzhen": {
-		SecurityGroupId:   "sg-qkfewp0u",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"na-siliconvalley": {
-		SecurityGroupId:   "sg-q7usygae",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-hangzhou-ec": {
-		SecurityGroupId:   "sg-4ezyvbvl",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-fuzhou-ec": {
-		SecurityGroupId:   "sg-leqa6w29",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-wuhan-ec": {
-		SecurityGroupId:   "sg-p5ld4xyq",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-beijing": {
-		SecurityGroupId:   "sg-rjwj7cnt",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-}
-
-func (l *logics) getCvmDftSecGroup(region string) (*SecGroup, error) {
-	sg, ok := regionToSecGroup[region]
-	if !ok {
-		return nil, fmt.Errorf("found no security group with region %s", region)
+		for _, zoneItem := range zoneResp.Info {
+			zones = append(zones, zoneItem.Zone)
+		}
+	} else {
+		zones = append(zones, zone)
 	}
 
-	return sg, nil
+	var subnetList = make([]*cvmapi.SubnetInfo, 0)
+	// 遍历可用区，获取子网列表
+	for _, zoneValue := range zones {
+		subnetReq := cvmapi.SubnetRealParam{
+			Region:      region,
+			CloudCampus: zoneValue,
+			VpcId:       vpc,
+		}
+		resp, err := l.cvm.QueryRealCvmSubnet(kt, subnetReq)
+		if err != nil {
+			logs.Errorf("failed to loop get cvm subnet info, err: %v, region: %s, zone: %s, vpc: %s, rid: %s",
+				err, region, zoneValue, vpc, kt.Rid)
+			return nil, err
+		}
+		subnetList = append(subnetList, resp.Result...)
+	}
+	return subnetList, nil
 }

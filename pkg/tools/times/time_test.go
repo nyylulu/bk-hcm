@@ -142,3 +142,35 @@ func TestIsLastNDaysOfMonth(t *testing.T) {
 		})
 	}
 }
+
+func TestDaysUntilEndOfTheMonth(t *testing.T) {
+	type args struct {
+		t time.Time
+	}
+	tests := []struct {
+		name string
+		args args
+		want int
+	}{
+		{"test1", args{
+			t: time.Date(2024, 2, 28, 13, 28, 59, 0, time.Local),
+		}, 2},
+		{"test2", args{
+			t: time.Date(2025, 2, 28, 13, 28, 59, 0, time.Local),
+		}, 1},
+		{"test3", args{
+			t: time.Date(2024, 11, 28, 0, 0, 0, 0, time.Local),
+		}, 3},
+		{"test4", args{
+			t: time.Date(2024, 12, 25, 0, 0, 0, 0, time.Local),
+		}, 7},
+		{"test5", args{
+			t: time.Date(2024, 12, 31, 0, 0, 0, 0, time.Local),
+		}, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equalf(t, tt.want, DaysUntilEndOfTheMonth(tt.args.t), "DaysUntilEndOfTheMonth(%v)", tt.args.t)
+		})
+	}
+}

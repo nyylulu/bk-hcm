@@ -63,6 +63,8 @@ type Client interface {
 	OperateNode(kt *kit.Kit, req *OperateNodeReq) (*OperateNodeResp, error)
 	// GetTicketLog get itsm ticket logs
 	GetTicketLog(kt *kit.Kit, id string) (*GetTicketLogResp, error)
+	// ApproveNode 通过/拒绝 ITSM指定节点 自动识别 `审批意见`、`备注` 字段
+	ApproveNode(kt *kit.Kit, param *ApproveNodeOpt) error
 }
 
 // NewClient initialize a new itsm client

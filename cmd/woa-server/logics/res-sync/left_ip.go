@@ -56,15 +56,16 @@ func (l *logics) SyncLeftIP() error {
 
 		total += len(rst.Info)
 		for _, zone := range rst.Info {
+			subKt := kt.NewSubKit()
 			syncReq := &types.SyncLeftIPParam{
 				Region: zone.Region,
 				Zone:   zone.Zone,
 			}
 
-			if err = l.configLogics.LeftIP().SyncLeftIP(kt, syncReq); err != nil {
+			if err = l.configLogics.LeftIP().SyncLeftIP(subKt, syncReq); err != nil {
 				failed++
 				logs.Warnf("failed to sync zone left ip info, err: %v, region: %s, zone: %s, rid: %s",
-					err, zone.Region, zone.Zone, kt.Rid)
+					err, zone.Region, zone.Zone, subKt.Rid)
 				// continue when error occurs
 				continue
 			}

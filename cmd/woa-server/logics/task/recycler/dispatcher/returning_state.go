@@ -22,6 +22,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/cmd/woa-server/logics/task/recycler/event"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
@@ -74,21 +75,23 @@ func (rs *ReturningState) UpdateState(ctx EventContext, ev *event.Event) error {
 
 // Execute executes action in returning state
 func (rs *ReturningState) Execute(ctx EventContext) error {
+	kt := core.NewBackendKit()
 	taskCtx, ok := ctx.(*CommonContext)
 	if !ok {
-		logs.Errorf("failed to convert to common context")
+		logs.Errorf("failed to convert to common context, rid: %s", kt.Rid)
 		return errors.New("failed to convert to common context")
 	}
 
 	if taskCtx.Order == nil {
-		logs.Errorf("state %s failed to execute, for invalid context order is nil", rs.Name())
+		logs.Errorf("state %s failed to execute, for invalid context order is nil, rid: %s", rs.Name(), kt.Rid)
 		return fmt.Errorf("state %s failed to execute, for invalid context order is nil", rs.Name())
 	}
 	orderId := taskCtx.Order.SuborderID
 	// run return tasks
-	ev := taskCtx.Dispatcher.returner.DealRecycleOrder(taskCtx.Order)
+	ev := taskCtx.Dispatcher.returner.DealRecycleOrder(kt, taskCtx.Order)
 	// 记录日志，方便排查问题
-	logs.Infof("recycler:logics:cvm:ReturningState:start, subOrderID: %s, ev: %+v", orderId, cvt.PtrToVal(ev))
+	logs.Infof("recycler:logics:cvm:ReturningState:start, subOrderID: %s, ev: %+v, rid: %s",
+		orderId, cvt.PtrToVal(ev), kt.Rid)
 	return rs.UpdateState(ctx, ev)
 }
 

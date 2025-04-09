@@ -84,8 +84,15 @@ func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			return nil, errf.NewFromErr(errf.InvalidParameter, err)
 		}
 
+		coreType := enumor.CoreType(item.CoreType)
+		if err := coreType.Validate(); err != nil {
+			logs.Errorf("invalid core type: %s, rid: %s", coreType, kt.Rid)
+			return nil, err
+		}
+
 		createT := tablers.ResPlanDemandTable{
 			Locked:          cvt.ValToPtr(enumor.CrpDemandUnLocked),
+			LockedCPUCore:   cvt.ValToPtr(int64(0)),
 			BkBizID:         item.BkBizID,
 			BkBizName:       item.BkBizName,
 			OpProductID:     item.OpProductID,
@@ -109,7 +116,7 @@ func (svc *service) batchCreateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			DeviceFamily:    item.DeviceFamily,
 			DeviceClass:     item.DeviceClass,
 			DeviceType:      item.DeviceType,
-			CoreType:        item.CoreType,
+			CoreType:        coreType,
 			DiskType:        item.DiskType,
 			DiskTypeName:    item.DiskTypeName,
 			OS:              &types.Decimal{Decimal: cvt.PtrToVal(item.OS)},

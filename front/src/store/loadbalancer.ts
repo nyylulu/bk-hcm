@@ -1,3 +1,7 @@
+import { VendorEnum } from '@/common/constant';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import http from '@/http';
+import { IListResData, IQueryResData } from '@/typings';
 import { defineStore } from 'pinia';
 import { Ref, ref } from 'vue';
 
@@ -17,7 +21,60 @@ export type TGOperationScene =
   | 'port' // 批量修改端口
   | 'weight'; // 批量修改权重
 
+export interface ITargetGroupDetail {
+  id: string;
+  cloud_id: string;
+  name: string;
+  vendor: string;
+  account_id: string;
+  bk_biz_id: number;
+  target_group_type: string;
+  vpc_id: string;
+  cloud_vpc_id: string;
+  region: string;
+  protocol: string;
+  port: number;
+  weight: number;
+  health_check: {
+    health_switch: number;
+    time_out: number;
+    interval_time: number;
+    health_num: number;
+    un_health_num: number;
+    http_code: number;
+    check_type: string;
+    http_check_path: string;
+    http_check_domain: string;
+    http_check_method: string;
+    source_ip_type: number;
+    extended_code: string;
+  };
+  memo: string;
+  creator: string;
+  reviser: string;
+  created_at: string;
+  updated_at: string;
+  target_list: any[];
+}
+
+export interface ISlaSetItem {
+  SlaType: string;
+  SlaName: string;
+  MaxConn: number;
+  MaxCps: number;
+  MaxOutBits: number;
+  MaxInBits: number;
+  MaxQps: number;
+}
+
+interface IRulesBindingStatus {
+  rule_id: string;
+  binding_status: string;
+}
+
 export const useLoadBalancerStore = defineStore('load-balancer', () => {
+  const { getBusinessApiPath } = useWhereAmI();
+
   // state - 目标组id
   const targetGroupId = ref('');
   const setTargetGroupId = (v: string) => {
@@ -59,6 +116,46 @@ export const useLoadBalancerStore = defineStore('load-balancer', () => {
     tgSearchTarget.value = v;
   };
 
+  const queryZiyanLoadBalancerSlaCapacityDescribeLoading = ref(false);
+  const queryZiyanLoadBalancerSlaCapacityDescribe = async (payload: {
+    account_id: string;
+    region: string;
+    sla_types?: string[];
+  }) => {
+    queryZiyanLoadBalancerSlaCapacityDescribeLoading.value = true;
+    try {
+      const res: IQueryResData<{ SlaSet: ISlaSetItem[] }> = await http.post(
+        '/api/v1/cloud/vendors/tcloud-ziyan/load_balancers/sla/capacity/describe',
+        payload,
+      );
+      const { SlaSet = [] } = res.data ?? {};
+      return SlaSet;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      queryZiyanLoadBalancerSlaCapacityDescribeLoading.value = false;
+    }
+  };
+
+  // 查询规则绑定目标组状态接口
+  const queryRulesBindingStatusListLoading = ref(false);
+  const queryRulesBindingStatusList = async (vendor: VendorEnum, lblId: string, payload: { rule_ids: string[] }) => {
+    queryRulesBindingStatusListLoading.value = true;
+    try {
+      const res: IListResData<IRulesBindingStatus[]> = await http.post(
+        `/api/v1/cloud/${getBusinessApiPath()}vendors/${vendor}/listeners/${lblId}/rules/binding_status/list`,
+        payload,
+      );
+      return res.data?.details || [];
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    } finally {
+      queryRulesBindingStatusListLoading.value = false;
+    }
+  };
+
   return {
     targetGroupId,
     setTargetGroupId,
@@ -74,5 +171,9 @@ export const useLoadBalancerStore = defineStore('load-balancer', () => {
     setTgSearchTarget,
     listenerDetailWithTargetGroup,
     setListenerDetailWithTargetGroup,
+    queryZiyanLoadBalancerSlaCapacityDescribeLoading,
+    queryZiyanLoadBalancerSlaCapacityDescribe,
+    queryRulesBindingStatusListLoading,
+    queryRulesBindingStatusList,
   };
 });

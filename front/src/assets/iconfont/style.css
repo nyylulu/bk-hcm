@@ -26,6 +26,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-minus-circle:before {
 	content: "\e14a";
 }
+.bkhcm-icon-notice:before {
+	content: "\e176";
+}
 .bkhcm-icon-plus-circle:before {
 	content: "\e10c";
 }
@@ -269,8 +272,17 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-close:before {
 	content: "\e15d";
 }
+.bkhcm-icon-delete:before {
+	content: "\e173";
+}
 .bkhcm-icon-release-note:before {
 	content: "\e16d";
+}
+.bkhcm-icon-user2:before {
+	content: "\e175";
+}
+.bkhcm-icon-configuration:before {
+	content: "\e174";
 }
 .bkhcm-icon-jiebang:before {
 	content: "\e156";

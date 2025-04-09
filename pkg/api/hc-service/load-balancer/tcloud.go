@@ -58,6 +58,7 @@ type TCloudLoadBalancerCreateReq struct {
 	InternetMaxBandwidthOut *int64   `json:"internet_max_bandwidth_out" validate:"omitempty"`
 	BandwidthPackageID      *string  `json:"bandwidth_package_id" validate:"omitempty"`
 	BandwidthpkgSubType     *string  `json:"bandwidthpkg_sub_type" validate:"omitempty"`
+	Egress                  *string  `json:"egress" validate:"omitempty"`
 
 	SlaType      *string `json:"sla_type" validate:"omitempty"`
 	AutoRenew    *bool   `json:"auto_renew" validate:"omitempty"`
@@ -86,9 +87,9 @@ func (req *TCloudLoadBalancerCreateReq) Validate(bizRequired bool) error {
 		if converter.PtrToVal(req.CloudEipID) != "" {
 			return errors.New("eip id only support load balancer type 'INTERNAL'")
 		}
-		// 	公网不能指定子网
-		if converter.PtrToVal(req.CloudSubnetID) != "" {
-			return errors.New("subnet id is not supported for load balancer type 'OPEN'")
+		// 	公网IPv4 不能指定子网
+		if req.AddressIPVersion == typelb.IPV4IPVersion && converter.PtrToVal(req.CloudSubnetID) != "" {
+			return errors.New("subnet id is not supported for IPV4 load balancer with type 'OPEN'")
 		}
 	default:
 		return fmt.Errorf("unknown load balancer type: '%s'", req.LoadBalancerType)
@@ -460,15 +461,15 @@ func (r RegisterTarget) Validate() error {
 	return validator.Validate.Struct(r)
 }
 
-// TCloudBatchDeleteLoadbalancerReq ...
-type TCloudBatchDeleteLoadbalancerReq struct {
+// BatchDeleteLoadBalancerReq ...
+type BatchDeleteLoadBalancerReq struct {
 	AccountID string   `json:"account_id" validate:"required"`
 	Region    string   `json:"region" validate:"required"`
 	IDs       []string `json:"ids" validate:"required,min=1"`
 }
 
 // Validate ...
-func (r *TCloudBatchDeleteLoadbalancerReq) Validate() error {
+func (r *BatchDeleteLoadBalancerReq) Validate() error {
 	if len(r.IDs) > constant.BatchListenerMaxLimit {
 		return errors.New("batch delete limit is 20")
 	}

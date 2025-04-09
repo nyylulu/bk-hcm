@@ -3,11 +3,11 @@ import { defineComponent, reactive } from 'vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import SubnetPreviewDialog from '../cvm/children/SubnetPreviewDialog';
 import LbSpecTypeSelectDialog from '@/views/business/load-balancer/components/LbSpecTypeDialog';
+import ZiyanLbSpecTypeSelectDialog from '@/views/business/load-balancer/components/LbSpecTypeDialog/ziyan.vue';
 // import custom hooks
 import useBindEip from './hooks/useBindEip';
 import useRenderForm from './hooks/useRenderForm';
 import useBottomBar from './hooks/useBottomBar';
-import useHandleParams from './hooks/useHandleParams';
 import { useWhereAmI, Senarios } from '@/hooks/useWhereAmI';
 // import types
 import { ApplyClbModel } from '@/api/load_balancers/apply-clb/types';
@@ -42,14 +42,14 @@ export default defineComponent({
       slaType: '0',
       zhi_tong: false,
       tgw_group_name: '',
+      egress: undefined,
     });
 
     // use custom hooks
-    const { subnetData, isSubnetPreviewDialogShow, ApplyClbForm, formRef, isInquiryPricesLoading } =
+    const { subnetData, isSubnetPreviewDialogShow, ApplyClbForm, formRef, isInquiryPrices, isInquiryPricesLoading } =
       useRenderForm(formModel);
     const { BindEipDialog } = useBindEip(formModel);
-    const { ApplyClbBottomBar } = useBottomBar(formModel, formRef, isInquiryPricesLoading);
-    useHandleParams(formModel, formRef);
+    const { ApplyClbBottomBar } = useBottomBar(formModel, formRef, isInquiryPrices, isInquiryPricesLoading);
 
     return () => (
       <div class='apply-clb-page'>
@@ -72,6 +72,13 @@ export default defineComponent({
         <BindEipDialog />
         {/* 负载均衡规格类型选择弹框 */}
         <LbSpecTypeSelectDialog v-model={formModel.sla_type} />
+        {/* 自研云负载均衡规格类型选择弹框 */}
+        <ZiyanLbSpecTypeSelectDialog
+          accountId={formModel.account_id}
+          region={formModel.region}
+          slaType={formModel.sla_type}
+          onConfirm={(slaType) => (formModel.sla_type = slaType)}
+        />
       </div>
     );
   },

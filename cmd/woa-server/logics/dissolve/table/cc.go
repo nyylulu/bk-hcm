@@ -21,6 +21,7 @@ package table
 
 import (
 	"fmt"
+	"slices"
 	"strconv"
 	"strings"
 	"sync"
@@ -30,6 +31,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
@@ -76,11 +78,6 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 						Operator: querybuilder.OperatorIn,
 						Value:    names[start:end],
 					},
-					querybuilder.AtomRule{
-						Field:    "bk_operate_dept_id",
-						Operator: querybuilder.OperatorEqual,
-						Value:    3, // 只需要查询ieg的数据
-					},
 				},
 			},
 		}
@@ -93,10 +90,6 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 
 		if !resp.Result || resp.Code != 0 {
 			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
-		}
-
-		if resp.Data == nil || len(resp.Data.Info) == 0 {
-			return bizIDName, nil
 		}
 
 		for _, info := range resp.Data.Info {
@@ -152,11 +145,6 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 						Operator: querybuilder.OperatorIn,
 						Value:    ids[start:end],
 					},
-					querybuilder.AtomRule{
-						Field:    "bk_operate_dept_id",
-						Operator: querybuilder.OperatorEqual,
-						Value:    3, // 只需要查询ieg的数据
-					},
 				},
 			},
 		}
@@ -169,10 +157,6 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 
 		if !resp.Result || resp.Code != 0 {
 			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
-		}
-
-		if resp.Data == nil || len(resp.Data.Info) == 0 {
-			return bizIDName, nil
 		}
 
 		for _, info := range resp.Data.Info {
@@ -199,18 +183,6 @@ func (l *logics) getAllBizIDName(kt *kit.Kit, groupIDMap map[int64]struct{}) (ma
 	req := &cmdb.SearchBizReq{
 		Fields: []string{"bk_biz_id", "bk_biz_name", "bk_oper_grp_name_id"},
 		Page:   cmdb.BasePage{Start: 0, Limit: noLimit},
-		Filter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
-						Field:    "bk_operate_dept_id",
-						Operator: querybuilder.OperatorEqual,
-						Value:    3, // 只需要查询ieg的数据
-					},
-				},
-			},
-		},
 	}
 
 	resp, err := l.esbCli.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
@@ -219,11 +191,7 @@ func (l *logics) getAllBizIDName(kt *kit.Kit, groupIDMap map[int64]struct{}) (ma
 		return nil, err
 	}
 
-	if resp.Data == nil {
-		return make(map[int64]string), nil
-	}
-
-	bizIDName := make(map[int64]string, 0)
+	bizIDName := make(map[int64]string)
 	for _, info := range resp.Data.Info {
 		if _, ok := groupIDMap[info.BkOperGrpNameID]; !ok && len(groupIDMap) != 0 {
 			continue
@@ -249,38 +217,75 @@ func (l *logics) getBlackBizIDName(kt *kit.Kit) (map[int64]string, error) {
 
 func (l *logics) getHostByIDFromCC(kt *kit.Kit, hostIDs []int64, page *core.BasePage, source ReqSourceI) ([]cmdb.Host,
 	int64, error) {
-	req := &cmdb.ListHostReq{
-		HostPropertyFilter: &cmdb.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
-						Field: pkg.BKHostIDField, Operator: querybuilder.OperatorIn, Value: hostIDs,
+	if page.Count {
+		req := &cmdb.ListHostReq{
+			HostPropertyFilter: &cmdb.QueryFilter{
+				Rule: querybuilder.CombinedRule{
+					Condition: querybuilder.ConditionAnd,
+					Rules: []querybuilder.Rule{
+						querybuilder.AtomRule{
+							Field: pkg.BKHostIDField, Operator: querybuilder.OperatorIn, Value: hostIDs,
+						},
 					},
 				},
 			},
-		},
-	}
-
-	if !page.Count {
-		req.Fields = source.GetCCHostFields()
-		req.Page = cmdb.BasePage{Start: int64(page.Start), Limit: int64(page.Limit), Sort: pkg.BKHostIDField}
-		hosts, err := l.getHostFromCC(kt, req)
+		}
+		count, err := l.getHostCountFromCC(kt, req)
 		if err != nil {
-			logs.Errorf("get host from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
+			logs.Errorf("get host count from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
 			return nil, 0, err
 		}
 
-		return hosts, 0, nil
+		return nil, count, nil
 	}
 
-	count, err := l.getHostCountFromCC(kt, req)
-	if err != nil {
-		logs.Errorf("get host count from cc failed, err: %v, cond: %+v, rid: %s", err, req, kt.Rid)
+	if page.Start > uint32(len(hostIDs)) {
+		return make([]cmdb.Host, 0), 0, nil
+	}
+
+	var lock sync.Mutex
+	hosts := make([]cmdb.Host, 0)
+	doFunc := func(ids []int64) error {
+		req := &cmdb.ListHostReq{
+			HostPropertyFilter: &cmdb.QueryFilter{
+				Rule: querybuilder.CombinedRule{
+					Condition: querybuilder.ConditionAnd,
+					Rules: []querybuilder.Rule{
+						querybuilder.AtomRule{
+							Field: pkg.BKHostIDField, Operator: querybuilder.OperatorIn, Value: ids,
+						},
+					},
+				},
+			},
+			Fields: source.GetCCHostFields(),
+			Page:   cmdb.BasePage{Start: 0, Limit: int64(len(ids)), Sort: pkg.BKHostIDField},
+		}
+		subHosts, err := l.getHostFromCC(kt, req)
+		if err != nil {
+			logs.Errorf("get host failed, err: %v, host ids: %v, rid: %s", err, ids, kt.Rid)
+			return err
+		}
+
+		lock.Lock()
+		defer lock.Unlock()
+		hosts = append(hosts, subHosts...)
+		return nil
+	}
+
+	var eg, _ = errgroup.WithContext(kt.Ctx)
+	eg.SetLimit(20)
+	slices.Sort(hostIDs)
+	end := min(len(hostIDs), int(page.Start+uint32(page.Limit)))
+	for _, batch := range slice.Split(hostIDs[page.Start:end], pkg.BKMaxPageSize) {
+		curBatch := batch
+		eg.Go(func() error { return doFunc(curBatch) })
+	}
+
+	if err := eg.Wait(); err != nil {
 		return nil, 0, err
 	}
 
-	return nil, count, nil
+	return hosts, 0, nil
 }
 
 const noLimit = 999999999
@@ -294,14 +299,14 @@ func (l *logics) getAllHostIDFromCC(kt *kit.Kit, conds []*cmdb.QueryFilter) ([]i
 	hostIDs := make([]int64, 0)
 	var lock sync.Mutex
 	pipeline := make(chan struct{}, 20)
-	doFunc := func(cond *cmdb.QueryFilter) error {
+	doFunc := func(cond cmdb.QueryFilter) error {
 		defer func() {
 			<-pipeline
 		}()
 
 		req := &cmdb.ListHostReq{
 			Fields:             []string{pkg.BKHostIDField},
-			HostPropertyFilter: cond,
+			HostPropertyFilter: &cond,
 			Page:               cmdb.BasePage{Start: 0, Limit: noLimit, Sort: pkg.BKHostIDField},
 		}
 		hosts, err := l.getHostFromCC(kt, req)
@@ -322,7 +327,7 @@ func (l *logics) getAllHostIDFromCC(kt *kit.Kit, conds []*cmdb.QueryFilter) ([]i
 	for _, cond := range conds {
 		pipeline <- struct{}{}
 		curCond := cond
-		eg.Go(func() error { return doFunc(curCond) })
+		eg.Go(func() error { return doFunc(converter.PtrToVal(curCond)) })
 	}
 
 	if err := eg.Wait(); err != nil {
@@ -337,70 +342,38 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.Host,
 		return nil, fmt.Errorf("call cc req is nil")
 	}
 
-	count := req.Page.Limit
-	if count > pkg.BKMaxInstanceLimit {
-		req.Page.Limit = pkg.BKMaxInstanceLimit
+	limit := req.Page.Limit
+	if req.Page.Limit > pkg.BKMaxPageSize {
+		req.Page.Limit = pkg.BKMaxPageSize
 	}
 
 	result := make([]cmdb.Host, 0)
-	req.Page.Sort = pkg.BKHostIDField
-	hosts, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
-	if err != nil {
-		logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-		return nil, err
-	}
-	for _, host := range hosts.Data.Info {
-		result = append(result, *host)
-	}
-
-	if int64(len(hosts.Data.Info)) < req.Page.Limit {
-		return result, nil
-	}
-
-	if count > hosts.Data.Count {
-		count = hosts.Data.Count
-	}
-
-	req.Page.Start += pkg.BKMaxInstanceLimit
-	wg := sync.WaitGroup{}
-	pipe := make(chan struct{}, 50)
-	var firstErr error
-	var lock sync.Mutex
-	for start := req.Page.Start; start < count && firstErr == nil; start += pkg.BKMaxInstanceLimit {
-		wg.Add(1)
-		pipe <- struct{}{}
-
-		pageLimit := int64(pkg.BKMaxInstanceLimit)
-		if start+pkg.BKMaxInstanceLimit > count {
-			pageLimit = int64(count - start)
+	for {
+		resp, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
 		}
 
-		go func(req cmdb.ListHostReq, start, pageLimit int64) {
-			defer func() {
-				<-pipe
-				wg.Done()
-			}()
+		if !resp.Result || resp.Code != 0 {
+			logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
+			return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
+		}
 
-			req.Page.Start = start
-			req.Page.Limit = pageLimit
+		for _, host := range resp.Data.Info {
+			result = append(result, converter.PtrToVal(host))
+		}
 
-			hosts, err = l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), &req)
-			if err != nil {
-				logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-				firstErr = err
-				return
-			}
+		if int64(len(resp.Data.Info)) < req.Page.Limit || int64(len(result)) == limit {
+			break
+		}
 
-			lock.Lock()
-			for _, host := range hosts.Data.Info {
-				result = append(result, *host)
-			}
-			lock.Unlock()
+		req.Page.Start += req.Page.Limit
 
-		}(*req, start, pageLimit)
+		if int64(len(result))+req.Page.Limit > limit {
+			req.Page.Limit = limit - int64(len(result))
+		}
 	}
-
-	wg.Wait()
 
 	return result, nil
 }

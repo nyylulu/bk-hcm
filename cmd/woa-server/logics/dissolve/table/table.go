@@ -69,10 +69,13 @@ func New(recycledModule logicsmodule.RecycledModule, recycledHost logicshost.Rec
 func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (
 	*dissolve.ListHostDetails, error) {
 
-	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, false)
+	assetIDs, err := l.getAssetIDByModule(kt, req.ModuleNames, false)
 	if err != nil {
 		logs.Errorf("get host asset id by module name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
+	}
+	if len(assetIDs) == 0 {
+		return &dissolve.ListHostDetails{}, nil
 	}
 
 	bizIDName, err := l.getBizIDNameByName(kt, req.BizNames, make([]string, 0))
@@ -90,7 +93,7 @@ func (l *logics) FindOriginHost(kt *kit.Kit, req *dissolve.HostListReq, source R
 		return nil, err
 	}
 
-	cond, err := req.GetESCond(moduleAssetIDMap, bizIDName, blackBizIDName)
+	cond, err := req.GetESCond(assetIDs, bizIDName, blackBizIDName)
 	if err != nil {
 		logs.Errorf("get es cond failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
@@ -161,14 +164,18 @@ func (l *logics) getCurBizName(kt *kit.Kit, hosts []dissolve.Host) ([]dissolve.H
 func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqSourceI) (
 	*dissolve.ListHostDetails, error) {
 
-	moduleAssetIDMap, err := l.getAssetIDByModule(kt, req.ModuleNames, true)
+	assetIDs, err := l.getAssetIDByModule(kt, req.ModuleNames, true)
 	if err != nil {
 		logs.Errorf("get host asset id by module name failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
+	if len(assetIDs) == 0 {
+		return &dissolve.ListHostDetails{Details: []dissolve.Host{}}, nil
+	}
+
 	// 1.由于有些条件值不在cc的主机字段上，所以先根据主机上有的字段，查出host id
-	conds := req.GetCCHostCond(moduleAssetIDMap)
+	conds := req.GetCCHostCond(assetIDs)
 	originHostIDs, err := l.getAllHostIDFromCC(kt, conds)
 	if err != nil {
 		logs.Errorf("get host id from cc failed, err: %v, cond: %+v, rid: %s", err, conds, kt.Rid)
@@ -232,7 +239,7 @@ func (l *logics) FindCurHost(kt *kit.Kit, req *dissolve.HostListReq, source ReqS
 			return
 		}
 
-		cond, err := req.GetESCond(moduleAssetIDMap, bizIDName, blackBizIDName)
+		cond, err := req.GetESCond(assetIDs, bizIDName, blackBizIDName)
 		if err != nil {
 			logs.Errorf("get es cond failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			firstErr = err

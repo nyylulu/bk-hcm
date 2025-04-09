@@ -83,9 +83,11 @@ watch(
 
   .row-action {
     padding: 4px 0;
+
     :deep(.item-content) {
       gap: 10px;
     }
+
     .bk-button {
       min-width: 86px;
     }

@@ -21,13 +21,16 @@
 package recoverer
 
 import (
+	"hcm/cmd/woa-server/logics/cvm"
 	"hcm/cmd/woa-server/logics/task/recoverer/apply"
+	cvmprod "hcm/cmd/woa-server/logics/task/recoverer/cvm-prod"
 	"hcm/cmd/woa-server/logics/task/recoverer/recycle"
 	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/logics/task/scheduler"
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/esb/cmdb"
@@ -40,11 +43,11 @@ type recoverer struct {
 
 // New create a recoverer
 func New(cfg *cc.Recover, kt *kit.Kit, itsmCli itsm.Client, recycler recycler.Interface, scheduler scheduler.Interface,
-	cmdbCli cmdb.Client, sopsCli sopsapi.SopsClientInterface) error {
+	cvmLogic cvm.Logics, cmdbCli cmdb.Client, sopsCli sopsapi.SopsClientInterface, sd serviced.State) error {
 	// 查看配置是否开启
 	if cfg.EnableApplyRecover {
 		logs.Infof("start apply recover service, rid: %s", kt.Rid)
-		if err := apply.StartRecover(kt, itsmCli, scheduler, cmdbCli, sopsCli); err != nil {
+		if err := apply.StartRecover(kt, itsmCli, scheduler, cmdbCli, sopsCli, sd); err != nil {
 			logs.Errorf("failed to start apply recoverer, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
@@ -52,11 +55,17 @@ func New(cfg *cc.Recover, kt *kit.Kit, itsmCli itsm.Client, recycler recycler.In
 
 	if cfg.EnableRecycleRecover {
 		logs.Infof("start recycle recover service, rid: %s", kt.Rid)
-		if err := recycle.StartRecover(kt, itsmCli, recycler, cmdbCli); err != nil {
+		if err := recycle.StartRecover(kt, itsmCli, recycler, cmdbCli, sd); err != nil {
 			logs.Errorf("failed to start recycle recoverer, err: %v, rid: %s", err, kt.Rid)
 			return err
 		}
 	}
+
+	if cfg.EnableCvmProdRecover {
+		logs.Infof("start cvm product recover service, rid: %s", kt.Rid)
+		cvmprod.StartRecover(kt, cvmLogic, sd)
+	}
+
 	return nil
 }
 

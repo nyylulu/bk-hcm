@@ -2,20 +2,22 @@ import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, u
 import { useRouter, useRoute } from 'vue-router';
 import './index.scss';
 import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
+import { Plus } from 'bkui-vue/lib/icon';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import BusinessSelector from '@/components/business-selector/index.vue';
 import AreaSelector from '../AreaSelector';
 import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import DiskTypeSelect from '../DiskTypeSelect';
-import NetworkInfoPanel from '../network-info-panel/index.vue';
+import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
-import applicationSideslider from '../application-sideslider';
+import applicationSideslider from '../application-sideslider/index.vue';
 import WName from '@/components/w-name';
 import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
 import HostApplySpringPoolTips from './spring-pool/tips.vue';
 import CvmMaxCapacity from '@/views/ziyanScr/components/cvm-max-capacity/index.vue';
+import ReqTypeValue from '@/components/display-value/req-type-value.vue';
 import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 import { useAccountStore, useUserStore } from '@/store';
 import usePlanStore from '@/store/usePlanStore';
@@ -62,6 +64,10 @@ export default defineComponent({
     const accountStore = useAccountStore();
     const IDCPMformRef = ref();
     const QCLOUDCVMformRef = ref();
+
+    const networkInfoFormRef = ref();
+    const networkInfoPanelRef = useTemplateRef<typeof NetworkInfoCollapsePanel>('network-info-panel');
+
     const router = useRouter();
     const route = useRoute();
     const addResourceRequirements = ref(false);
@@ -318,7 +324,7 @@ export default defineComponent({
       {
         field: 'verify_result',
         label: '预检状态',
-        width: 90,
+        minWidth: 90,
         isDefaultShow: true,
         render({ cell }: { cell: VerifyStatus }) {
           return <span class={`status-${cell}`}>{VerifyStatusMap[cell] || '待校验'}</span>;
@@ -328,12 +334,13 @@ export default defineComponent({
       {
         field: 'reason',
         label: '预检信息',
-        width: 200,
+        minWidth: 150,
         isDefaultShow: true,
         render({ cell }: { cell: string }) {
-          return cell || '--';
+          return <span v-bk-tooltips={{ content: cell, disabled: !cell?.length }}>{cell || '--'}</span>;
         },
         isHidden: isSpecialRequirement.value,
+        showOverflowTooltip: false,
       },
     ];
     // 添加按钮侧边栏公共表单对象
@@ -427,6 +434,7 @@ export default defineComponent({
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.subnet = '';
         QCLOUDCVMForm.value.spec.device_type = '';
+        selectedCvmDeviceType.value = null;
       }
     };
 
@@ -590,6 +598,12 @@ export default defineComponent({
       }
       if (route?.query?.id) {
         assignment(route?.query);
+
+        // 来源为业务下CVM库存一键或资源预测申请时，需要回填需求类型
+        if (route.query.from === 'businessCvmInventory' || route.query.from === 'businessResourcePlan') {
+          order.value.model.requireType = Number(route.query.require_type);
+        }
+
         addResourceRequirements.value = true;
       }
     };
@@ -711,6 +725,7 @@ export default defineComponent({
         resourceFormRef.value?.clearValidate();
         QCLOUDCVMformRef.value?.clearValidate();
         IDCPMformRef.value?.clearValidate();
+        networkInfoFormRef.value?.clearValidate();
       });
     };
     const CAtriggerShow = (isShow: boolean) => {
@@ -829,6 +844,15 @@ export default defineComponent({
       } else {
         await IDCPMformRef.value.validate();
       }
+
+      // 需要注意当主机类型为物理机时不会存在networkInfoFormRef
+      try {
+        await networkInfoFormRef.value?.validate();
+      } catch (error) {
+        networkInfoPanelRef.value?.handleToggle(true);
+        return Promise.reject(error);
+      }
+
       if (title.value === '增加资源需求') {
         if (resourceForm.value.resourceType === 'QCLOUDCVM') {
           cloudTableData.value.push(cloudResourceForm());
@@ -1077,6 +1101,8 @@ export default defineComponent({
                   <hcm-form-req-type
                     appearance='card'
                     v-model={order.value.model.requireType}
+                    // 春保资源池不显示
+                    filter={(list: any) => list.filter((item: any) => item.require_type !== 8)}
                     onChange={() => {
                       // 手动更改时，需要清空已保存的需求
                       clearResRequirements();
@@ -1088,7 +1114,7 @@ export default defineComponent({
                     if (isRollingServer.value) return <RollingServerTipsAlert />;
                     if (isGreenChannel.value) return <GreenChannelTipsAlert />;
                     if (isSpringPool.value) return <HostApplySpringPoolTips />;
-                    return <HostApplyTipsAlert />;
+                    return <HostApplyTipsAlert requireType={order.value.model.requireType} />;
                   })()}
                 </div>
               </div>
@@ -1139,6 +1165,7 @@ export default defineComponent({
                 <Button
                   class='button'
                   theme='primary'
+                  outline
                   onClick={() => {
                     addResourceRequirements.value = true;
                     title.value = '增加资源需求';
@@ -1152,6 +1179,7 @@ export default defineComponent({
                     }的CPU可用额度，不允许添加`,
                     disabled: !((isSpecialRequirement.value || isSpringPool.value) && availableCpuCoreQuota.value <= 0),
                   }}>
+                  <Plus class={'prefix-icon'} />
                   添加
                 </Button>
                 <Button
@@ -1179,6 +1207,7 @@ export default defineComponent({
                   <GreenChannelCpuCoreLimits
                     ref='green-channel-cpu-core-limits'
                     replicasCpuCores={replicasCpuCores.value}
+                    bizId={computedBiz.value}
                   />
                 )}
               </div>
@@ -1241,7 +1270,7 @@ export default defineComponent({
               </CommonCard>
             )}
 
-            <bk-form-item class={'mt16'}>
+            <bk-form-item class={'mt16 form-button-row'}>
               {!isSpecialRequirement.value ? (
                 // 非滚服、非小额绿通
                 <>
@@ -1524,12 +1553,29 @@ export default defineComponent({
                   </CommonCard>
 
                   {resourceForm.value.resourceType === 'QCLOUDCVM' && (
-                    <Form model={QCLOUDCVMForm.value.spec} formType='vertical' class='mt15'>
-                      <NetworkInfoPanel
+                    <Form
+                      model={QCLOUDCVMForm.value.spec}
+                      formType='vertical'
+                      class='mt15'
+                      ref={networkInfoFormRef}
+                      rules={{
+                        subnet: [
+                          {
+                            validator: (value: string) => (QCLOUDCVMForm.value.spec.vpc ? !!value : true),
+                            message: '选择 VPC 后必须选择子网',
+                            trigger: 'change',
+                          },
+                        ],
+                      }}>
+                      <NetworkInfoCollapsePanel
+                        ref={'network-info-panel'}
+                        class='network-info-collapse-panel'
                         v-model:vpc={QCLOUDCVMForm.value.spec.vpc}
                         v-model:subnet={QCLOUDCVMForm.value.spec.subnet}
                         region={resourceForm.value.region}
                         zone={resourceForm.value.zone}
+                        vpcProperty={'vpc'}
+                        subnetProperty={'subnet'}
                         disabledVpc={resourceForm.value.zone === 'cvm_separate_campus'}
                         disabledSubnet={resourceForm.value.zone === 'cvm_separate_campus'}
                         onChangeVpc={handleVpcChange}
@@ -1589,6 +1635,11 @@ export default defineComponent({
                                   },
                                 }}
                               </DevicetypeSelector>
+                              {selectedCvmDeviceType.value && (
+                                <>
+                                  <div class='form-item-tips'>{`所选机型为${selectedCvmDeviceType.value.device_type}，CPU为${selectedCvmDeviceType.value.cpu_amount}核，内存为${selectedCvmDeviceType.value.ram_amount}G`}</div>
+                                </>
+                              )}
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <bk-select
@@ -1740,14 +1791,14 @@ export default defineComponent({
                       content: '当前地域无资源预测，提预测单后再按量申请',
                       disabled: !(
                         !isSpecialRequirement.value &&
-                        resourceForm.value.zone &&
+                        !!resourceForm.value.zone &&
                         resourceForm.value.resourceType === 'QCLOUDCVM' &&
                         !hasPlanedDeviceType.value
                       ),
                     }}
                     disabled={
                       !isSpecialRequirement.value &&
-                      resourceForm.value.zone &&
+                      !!resourceForm.value.zone &&
                       resourceForm.value.resourceType === 'QCLOUDCVM' &&
                       !hasPlanedDeviceType.value
                     }>
@@ -1763,18 +1814,33 @@ export default defineComponent({
 
           {/* CVM一键申请 */}
           <Sideslider
-            class='common-sideslider'
-            width={1100}
+            class='common-sideslider cvm-apply-sideslider'
+            width={960}
             isShow={CVMapplication.value}
-            title='CVM一键申请'
+            title='一键申请主机'
             onClosed={() => {
               CAtriggerShow(false);
             }}>
-            <applicationSideslider
-              isShow={CVMapplication.value}
-              device={device.value}
-              onOneApplication={OneClickApplication}
-            />
+            {{
+              header: () => (
+                <div class='custom-header-content'>
+                  一键申请主机
+                  <ReqTypeValue
+                    value={device.value.filter.require_type}
+                    display={{ appearance: 'tag' }}
+                    {...{ theme: 'info' }}
+                  />
+                </div>
+              ),
+              default: () => (
+                <applicationSideslider
+                  isShow={CVMapplication.value}
+                  requireType={device.value.filter.require_type}
+                  bizId={computedBiz.value}
+                  onApply={OneClickApplication}
+                />
+              ),
+            }}
           </Sideslider>
         </div>
       </div>

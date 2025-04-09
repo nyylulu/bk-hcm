@@ -1,4 +1,5 @@
-import { defineComponent, ref, provide } from 'vue';
+import { defineComponent, ref, provide, watch, nextTick } from 'vue';
+import { useRoute } from 'vue-router';
 import planRemark from './plan-remark.js';
 import cssModule from './index.module.scss';
 import Header from './header';
@@ -12,6 +13,7 @@ import Add from '@/components/resource-plan/add';
 
 export default defineComponent({
   setup() {
+    const route = useRoute();
     const { getBizsId } = useWhereAmI();
 
     const basicRef = ref();
@@ -25,6 +27,7 @@ export default defineComponent({
       remark: planRemark,
       demands: [],
     });
+    const initAddParams = ref({});
 
     const handleShowAdd = () => {
       initDemand.value = undefined;
@@ -39,6 +42,19 @@ export default defineComponent({
     const validate = () => {
       return Promise.all([basicRef.value.validate(), listRef.value.validate(), memoRef.value.validate()]);
     };
+
+    watch(
+      () => route.query.action,
+      (action) => {
+        if (action === 'add') {
+          initAddParams.value = JSON.parse(decodeURIComponent(route.query.payload as string));
+          nextTick(() => {
+            handleShowAdd();
+          });
+        }
+      },
+      { immediate: true },
+    );
 
     provide('validate', validate);
 
@@ -56,7 +72,11 @@ export default defineComponent({
           <Memo class={cssModule['mt-16']} ref={memoRef} v-model={planTicket.value}></Memo>
           <Button class={cssModule['mt-16']} v-model={planTicket.value}></Button>
         </section>
-        <Add v-model:isShow={isShowAdd.value} v-model={planTicket.value} initDemand={initDemand.value}></Add>
+        <Add
+          v-model:isShow={isShowAdd.value}
+          v-model={planTicket.value}
+          initDemand={initDemand.value}
+          initAddParams={initAddParams.value}></Add>
       </>
     );
   },

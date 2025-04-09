@@ -41,6 +41,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -51,7 +52,7 @@ type ResPlanDemandInterface interface {
 	UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression, model *rpd.ResPlanDemandTable) error
 	List(kt *kit.Kit, opt *types.ListOption) (*rpproto.ResPlanDemandListResult, error)
 	DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Expression) error
-	ExamineAndLockAllRPDemand(kt *kit.Kit, demandIDs []string) error
+	ExamineAndLockAllRPDemand(kt *kit.Kit, lockedItems []rpproto.ResPlanDemandLockOpItem) error
 	UnlockAllResPlanDemand(kt *kit.Kit, demandIDs []string) error
 }
 
@@ -122,12 +123,12 @@ func (d ResPlanDemandDao) UpdateWithTx(kt *kit.Kit, tx *sqlx.Tx, filterExpr *fil
 
 	effected, err := d.Orm.Txn(tx).Update(kt.Ctx, sql, tools.MapMerge(toUpdate, whereValue))
 	if err != nil {
-		logs.ErrorJson("update resource plan demand failed, filter: %v, err: %v, rid: %s", filterExpr, err, kt.Rid)
+		logs.Errorf("update resource plan demand failed, filter: %v, err: %v, rid: %s", filterExpr, err, kt.Rid)
 		return err
 	}
 
 	if effected == 0 {
-		logs.ErrorJson("update resource plan demand, but record not found, filter: %v, rid: %s", filterExpr, kt.Rid)
+		logs.Errorf("update resource plan demand, but record not found, filter: %v, rid: %s", filterExpr, kt.Rid)
 	}
 
 	return nil
@@ -155,7 +156,7 @@ func (d ResPlanDemandDao) List(kt *kit.Kit, opt *types.ListOption) (*rpproto.Res
 
 		count, err := d.Orm.Do().Count(kt.Ctx, sql, whereValue)
 		if err != nil {
-			logs.ErrorJson("count res plan demand failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
+			logs.Errorf("count res plan demand failed, err: %v, filter: %v, rid: %s", err, opt.Filter, kt.Rid)
 			return nil, err
 		}
 
@@ -192,7 +193,7 @@ func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 	sql := fmt.Sprintf(`DELETE FROM %s %s`, table.ResPlanDemandTable, whereExpr)
 
 	if _, err = d.Orm.Txn(tx).Delete(kt.Ctx, sql, whereValue); err != nil {
-		logs.ErrorJson("delete resource plan demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
+		logs.Errorf("delete resource plan demand failed, err: %v, filter: %v, rid: %s", err, expr, kt.Rid)
 		return err
 	}
 
@@ -200,12 +201,16 @@ func (d ResPlanDemandDao) DeleteWithTx(kt *kit.Kit, tx *sqlx.Tx, expr *filter.Ex
 }
 
 // ExamineAndLockAllRPDemand examine and lock all resource plan demand.
-func (d ResPlanDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, demandIDs []string) error {
-	if len(demandIDs) == 0 {
-		return errf.New(errf.InvalidParameter, "demand ids can not be empty")
+func (d ResPlanDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, lockedItems []rpproto.ResPlanDemandLockOpItem) error {
+	if len(lockedItems) == 0 {
+		return errf.New(errf.InvalidParameter, "locked items can not be empty")
 	}
 
-	opt := tools.ContainersExpression("id", demandIDs)
+	ids := slice.Map(lockedItems, func(item rpproto.ResPlanDemandLockOpItem) string {
+		return item.ID
+	})
+
+	opt := tools.ContainersExpression("id", ids)
 	whereExpr, whereValue, err := opt.SQLWhereExpr(tools.DefaultSqlWhereOption)
 	if err != nil {
 		return err
@@ -225,13 +230,23 @@ func (d ResPlanDemandDao) ExamineAndLockAllRPDemand(kt *kit.Kit, demandIDs []str
 			return nil, errors.New("some resource plan demand has been locked")
 		}
 
-		updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanDemandTable, enumor.CrpDemandLocked,
-			whereExpr)
-		return d.Orm.Txn(txn).Update(kt.Ctx, updateSql, whereValue)
+		for _, item := range lockedItems {
+			updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d where id = :id`,
+				table.ResPlanDemandTable, enumor.CrpDemandLocked, item.LockedCPUCore)
+
+			whereValue["id"] = item.ID
+			_, err = d.Orm.Txn(txn).Update(kt.Ctx, updateSql, whereValue)
+			if err != nil {
+				logs.Errorf("update resource plan demand failed, err: %v, demand_id: %s, rid: %s",
+					err, item.ID, kt.Rid)
+				return nil, err
+			}
+		}
+		return nil, nil
 	})
 
 	if err != nil {
-		logs.ErrorJson("examine and lock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("examine and lock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -250,11 +265,11 @@ func (d ResPlanDemandDao) UnlockAllResPlanDemand(kt *kit.Kit, demandIDs []string
 		return err
 	}
 
-	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d %s`, table.ResPlanDemandTable, enumor.CrpDemandUnLocked,
-		whereExpr)
+	updateSql := fmt.Sprintf(`UPDATE %s SET locked=%d, locked_cpu_core=%d %s`, table.ResPlanDemandTable,
+		enumor.CrpDemandUnLocked, 0, whereExpr)
 
 	if _, err = d.Orm.Do().Update(kt.Ctx, updateSql, whereValue); err != nil {
-		logs.ErrorJson("unlock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("unlock all resource plan demand failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 

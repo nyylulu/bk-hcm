@@ -2,18 +2,19 @@
 
 - 该接口提供版本：v1.2.1+。
 - 该接口所需权限：账号查看。
-- 该接口功能描述：查询账号列表。
+- 该接口功能描述：查询账号列表。v1.7.3+起该接口不分页，返回用户有权限访问且符合筛选条件的全量数据。
 
-### URL
+拥有以下权限的人可以查询账号列表:
 
-POST /api/v1/cloud/accounts/list
+1. 有 `资源接入-账号查看` 权限，按账号的实例鉴权
+2. 有 账号所属业务的`业务访问` 权限
+3. 是 `负责人`
 
 ### 输入参数
 
 | 参数名称   | 参数类型   | 必选 | 描述     |
 |--------|--------|----|--------|
 | filter | object | 是  | 查询过滤条件 |
-| page   | object | 是  | 分页设置   |
 
 #### filter
 
@@ -82,16 +83,6 @@ POST /api/v1/cloud/accounts/list
 }
 ```
 
-#### page
-
-| 参数名称  | 参数类型   | 必选 | 描述                                                                                                                                                  |
-|-------|--------|----|-----------------------------------------------------------------------------------------------------------------------------------------------------|
-| count | bool   | 是  | 是否返回总记录条数。 如果为true，查询结果返回总记录条数 count，但查询结果详情数据 details 为空数组，此时 start 和 limit 参数将无效，且必需设置为0。如果为false，则根据 start 和 limit 参数，返回查询结果详情数据，但总记录条数 count 为0 |
-| start | uint32 | 否  | 记录开始位置，start 起始值为0                                                                                                                                  |
-| limit | uint32 | 否  | 每页限制条数，最大500，不能为0                                                                                                                                   |
-| sort  | string | 否  | 排序字段，返回数据将按该字段进行排序                                                                                                                                  |
-| order | string | 否  | 排序顺序（枚举值：ASC、DESC）                                                                                                                                  |
-
 #### 查询参数介绍：
 
 | 参数名称       | 参数类型         | 描述                                                               |
@@ -99,7 +90,7 @@ POST /api/v1/cloud/accounts/list
 | id         | string       | 账号ID                                                             |
 | vendor     | string       | 供应商（枚举值：tcloud、aws、azure、gcp、huawei）                             |
 | name       | string       | 名称                                                               |
-| managers   | string array | 账号管理者                                                            |
+| managers   | string array | 账号负责人                                                            |
 | type       | string       | 账号类型 (枚举值：resource:资源账号、registration:登记账号、security_audit:安全审计账号) |
 | site       | string       | 站点（枚举值：china:中国站、international:国际站）                              |
 | price      | string       | 余额                                                               |
@@ -129,33 +120,6 @@ POST /api/v1/cloud/accounts/list
         "value": "Jim"
       }
     ]
-  },
-  "page": {
-    "count": false,
-    "start": 0,
-    "limit": 500
-  }
-}
-```
-
-#### 获取数量请求参数示例
-
-如创建者为Jim的账号数量。
-
-```json
-{
-  "filter": {
-    "op": "and",
-    "rules": [
-      {
-        "field": "creator",
-        "op": "eq",
-        "value": "Jim"
-      }
-    ]
-  },
-  "page": {
-    "count": true
   }
 }
 ```
@@ -169,7 +133,7 @@ POST /api/v1/cloud/accounts/list
   "code": 0,
   "message": "",
   "data": {
-    "count": 0,
+    "count": 1,
     "details": [
       {
         "id": "00000002",
@@ -186,27 +150,12 @@ POST /api/v1/cloud/accounts/list
         "bk_biz_ids": [
           310
         ],
-        "sync_status": "success",
-        "sync_failed_reason": "",
         "creator": "Jim",
         "reviser": "Jim",
         "created_at": "2022-12-26T07:42:15Z",
         "updated_at": "2023-04-19T19:29:15Z"
       }
     ]
-  }
-}
-```
-
-#### 获取数量返回结果示例
-
-```json
-{
-  "code": 0,
-  "message": "",
-  "data": {
-    "count": 0,
-    "details": null
   }
 }
 ```

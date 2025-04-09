@@ -83,8 +83,8 @@ export const useResourcePlanStore = defineStore({
       return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/device_class/list`);
     },
     // 获取机型类型列表
-    getDeviceTypes(device_classes?: string[]) {
-      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/device_type/list`, { device_classes });
+    getDeviceTypes(device_classes?: string[], device_types?: string[]) {
+      return http.post(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/woa/meta/device_type/list`, { device_classes, device_types });
     },
     // 查询单据类型列表。
     getTicketTypesList(): Promise<ITicketTypesResult> {

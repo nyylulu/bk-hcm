@@ -321,7 +321,7 @@ func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm
 			BkHostID:     cvm.BkHostID,
 			Password:     pwd,
 			UserName:     operator, //  操作人
-			GenerateTime: time.Now().Format(constant.DateTimeLayout),
+			GenerateTime: time.Now().Format(time.RFC3339),
 		}
 		rangeMS := [2]uint{constant.CvmBatchTaskRetryDelayMinMS, constant.CvmBatchTaskRetryDelayMaxMS}
 		policy := retry.NewRetryPolicy(0, rangeMS)

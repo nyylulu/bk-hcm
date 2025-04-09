@@ -1,27 +1,20 @@
 import { defineComponent, type PropType, ref, computed } from 'vue';
 import { useI18n } from 'vue-i18n';
+import http from '@/http';
 import { useZiyanScrStore } from '@/store/ziyanScr';
 import { useBusinessGlobalStore } from '@/store/business-global';
-import { useUserStore } from '@/store';
 import { getDisplayText } from '@/utils';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import Panel from '@/components/panel';
-import HcmSearchOrg from '@/components/search/org.vue';
+import TreeSelector, { type ITreeItem } from '@/components/tree-selector/index.vue';
 import HcmSearchBusiness from '@/components/search/business.vue';
 import HcmSearchUser from '@/components/search/user.vue';
 import CurrentDialog from '../current-dialog';
-import ModuleDialog from '../module-dialog';
 import OriginDialog from '../origin-dialog';
 import cssModule from './index.module.scss';
 
 import type { IDissolve } from '@/typings/ziyanScr';
-import type { Department } from '@/typings';
-
-interface IDepartmentWithExtras extends Department {
-  extras?: {
-    code: string;
-  };
-}
+import type { IQueryResData } from '@/typings';
 
 export default defineComponent({
   components: {
@@ -34,9 +27,8 @@ export default defineComponent({
     const { t } = useI18n();
     const ziyanScrStore = useZiyanScrStore();
     const businessGlobalStore = useBusinessGlobalStore();
-    const userStore = useUserStore();
 
-    const columns = [
+    const tableColumns = [
       {
         label: '业务',
         field: 'bk_biz_name',
@@ -72,33 +64,34 @@ export default defineComponent({
     const isLoading = ref(false);
     const organizations = ref([]);
     const orgChecked = ref([]);
-    const operators = ref([userStore.username]);
+    const operators = ref([]);
     const bkBizIds = ref([]);
     const dissloveList = ref<IDissolve[]>([]);
     const currentDialogShow = ref(false);
-    const moduleDialogShow = ref(false);
     const originDialogShow = ref(false);
     const searchParams = ref();
     const moduleNames = ref<string[]>([]);
-    const tableColumns = ref(columns);
+    const exportColumns = ref(tableColumns);
 
-    const orgRef = ref(null);
+    const currentRowData = ref<IDissolve>();
+
+    const treeSelectorRef = ref(null);
 
     const isMeetSearchConditions = computed(() => props.moduleNames.length);
 
     const groupIds = computed(() => {
       const leafIds = new Set<string>();
 
-      const collectLeafCodes = (dept: IDepartmentWithExtras) => {
-        if (!dept?.has_children && dept?.extras?.code) {
-          leafIds.add(dept.extras.code);
+      const collectLeafCodes = (dept: ITreeItem) => {
+        if (!dept?.has_children && dept?.tof_dept_id) {
+          leafIds.add(dept.tof_dept_id);
         }
         if (dept?.has_children && dept?.children) {
           dept.children.forEach((child) => collectLeafCodes(child));
         }
       };
 
-      // 收集所选节点下的所有叶子节点的code数据
+      // 收集所选节点下的所有叶子节点的tof_dept_id数据
       orgChecked.value.forEach((org) => {
         collectLeafCodes(org);
       });
@@ -109,7 +102,7 @@ export default defineComponent({
     const handleSearch = async () => {
       isLoading.value = true;
 
-      tableColumns.value = columns.concat(
+      exportColumns.value = tableColumns.concat(
         props.moduleNames.map((moduleName) => ({ label: moduleName, field: `module_host_count.${moduleName}` })),
       );
 
@@ -117,18 +110,32 @@ export default defineComponent({
       ziyanScrStore
         .getDissolveList({
           group_ids: groupIds.value,
-          bk_biz_names: !bkBizIds.value?.[0] ? [] : businessGlobalStore.getBusinessNames(bkBizIds.value),
+          bk_biz_names: !bkBizIds.value?.[0]
+            ? businessGlobalStore.getBusinessNames(businessGlobalStore.businessAuthorizedList.map((item) => item.id))
+            : businessGlobalStore.getBusinessNames(bkBizIds.value),
           module_names: moduleNames.value,
           operators: operators.value,
         })
         .then((result) => {
           const list = result?.data?.items || [];
-          const fixedBizIds = ['total', 'recycle-progress'];
+          const fixedBizIds = ['total'];
+
+          // “裁撤进度”合并到“总数中”
+          const totalIndex = list.findIndex((item) => item.bk_biz_id === 'total');
+          const processIndex = list.findIndex((item) => item.bk_biz_id === 'recycle-progress');
+          if (totalIndex > -1) {
+            list[totalIndex].progress = list[processIndex]?.progress;
+          }
+          if (processIndex > -1) {
+            list.splice(processIndex, 1);
+          }
+
           dissloveList.value = list.sort((a, b) => {
             const countA = (a?.total?.current?.host_count || 0) as number;
             const countB = (b?.total?.current?.host_count || 0) as number;
+            // 置顶
             if (fixedBizIds.includes(a.bk_biz_id as string) || fixedBizIds.includes(b.bk_biz_id as string)) {
-              return 0;
+              return -1;
             }
             return countB - countA;
           });
@@ -139,43 +146,50 @@ export default defineComponent({
     };
 
     const handleReset = () => {
-      orgRef.value.clear();
+      treeSelectorRef.value.clear();
       bkBizIds.value = [];
-      operators.value = [userStore.username];
+      operators.value = [];
+    };
+
+    const getOrg = async () => {
+      const res: IQueryResData<ITreeItem> = await http.post('/api/v1/woa/metas/org_topos/list', { view: 'ieg' });
+      return res.data.children;
     };
 
     const setSearchParams = (bkBizNames: string[], moduleNames: string[]) => {
       searchParams.value = {
         group_ids: groupIds.value,
-        bk_biz_names: bkBizNames,
+        bk_biz_names: bkBizNames.length
+          ? bkBizNames
+          : businessGlobalStore.getBusinessNames(businessGlobalStore.businessAuthorizedList.map((item) => item.id)),
         module_names: moduleNames,
         operators: operators.value,
       };
     };
 
-    const handleShowOriginDialog = (bkBizNames: string[]) => {
+    const handleShowOriginDialog = (bkBizNames: string[], row: IDissolve) => {
       originDialogShow.value = true;
       setSearchParams(bkBizNames, moduleNames.value);
+      currentRowData.value = row;
     };
 
-    const handleShowCurrentDialog = (bkBizNames: string[]) => {
+    const handleShowCurrentDialog = (bkBizNames: string[], row: IDissolve) => {
       currentDialogShow.value = true;
       setSearchParams(bkBizNames, moduleNames.value);
-    };
-
-    const handleShowModuleDialog = (bkBizNames: string[], moduleName: string) => {
-      moduleDialogShow.value = true;
-      setSearchParams(bkBizNames, [moduleName]);
+      currentRowData.value = row;
     };
 
     return () => (
       <Panel>
         <section class={cssModule.search}>
           <span class={cssModule['search-label']}>{t('组织')}：</span>
-          <HcmSearchOrg
-            ref={orgRef}
+          <TreeSelector
+            ref={treeSelectorRef}
+            data={getOrg}
             class={cssModule['search-item']}
-            {...{ placeholder: '请选择或输入名称查找', searchPlaceholder: '请输入2个以上字符搜索' }}
+            {...{
+              placeholder: '请选择或输入名称查找',
+            }}
             v-model={organizations.value}
             v-model:checked={orgChecked.value}
           />
@@ -205,7 +219,7 @@ export default defineComponent({
           <export-to-excel-button
             data={dissloveList.value}
             text={t('导出')}
-            columns={tableColumns.value}
+            columns={exportColumns.value}
             theme='primary'
             filename={t('整体裁撤信息')}
           />
@@ -225,16 +239,18 @@ export default defineComponent({
             </bk-table-column>
             <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
               {{
-                default: ({ row }: { row: IDissolve }) => (
-                  <bk-button
-                    text
-                    theme='primary'
-                    onClick={() =>
-                      handleShowOriginDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
-                    }>
-                    {getDisplayText(row?.total?.origin?.host_count)}
-                  </bk-button>
-                ),
+                default: ({ row }: { row: IDissolve }) => {
+                  return row.bk_biz_name !== '裁撤进度' ? (
+                    <bk-button
+                      text
+                      theme='primary'
+                      onClick={() => handleShowOriginDialog(row.bk_biz_name === '总数' ? [] : [row.bk_biz_name], row)}>
+                      {getDisplayText(row?.total?.origin?.host_count)}
+                    </bk-button>
+                  ) : (
+                    getDisplayText(row?.total?.origin?.host_count)
+                  );
+                },
               }}
             </bk-table-column>
             <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'>
@@ -244,16 +260,18 @@ export default defineComponent({
             </bk-table-column>
             <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
               {{
-                default: ({ row }: { row: IDissolve }) => (
-                  <bk-button
-                    text
-                    theme='primary'
-                    onClick={() =>
-                      handleShowCurrentDialog(['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name])
-                    }>
-                    {getDisplayText(row?.total?.current?.host_count)}
-                  </bk-button>
-                ),
+                default: ({ row }: { row: IDissolve }) => {
+                  return row.bk_biz_name !== '裁撤进度' ? (
+                    <bk-button
+                      text
+                      theme='primary'
+                      onClick={() => handleShowCurrentDialog(row.bk_biz_name === '总数' ? [] : [row.bk_biz_name], row)}>
+                      {getDisplayText(row?.total?.current?.host_count)}
+                    </bk-button>
+                  ) : (
+                    getDisplayText(row?.total?.current?.host_count)
+                  );
+                },
               }}
             </bk-table-column>
             <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'>
@@ -261,30 +279,16 @@ export default defineComponent({
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.current?.cpu_count)}</>,
               }}
             </bk-table-column>
-            {moduleNames.value.map((moduleName: string) => (
-              <bk-table-column label={moduleName} field={moduleName} width={`${moduleName.length * 15}px`}>
-                {{
-                  default: ({ row }: { row: IDissolve }) => (
-                    <bk-button
-                      text
-                      theme='primary'
-                      onClick={() =>
-                        handleShowModuleDialog(
-                          ['总数', '裁撤进度'].includes(row.bk_biz_name) ? [] : [row.bk_biz_name],
-                          moduleName,
-                        )
-                      }>
-                      {getDisplayText(row?.module_host_count?.[moduleName])}
-                    </bk-button>
-                  ),
-                }}
-              </bk-table-column>
-            ))}
           </bk-table>
         </bk-loading>
-        <CurrentDialog v-model:isShow={currentDialogShow.value} searchParams={searchParams.value}></CurrentDialog>
-        <ModuleDialog v-model:isShow={moduleDialogShow.value} searchParams={searchParams.value}></ModuleDialog>
-        <OriginDialog v-model:isShow={originDialogShow.value} searchParams={searchParams.value}></OriginDialog>
+        <CurrentDialog
+          v-model:isShow={currentDialogShow.value}
+          searchParams={searchParams.value}
+          rowData={currentRowData.value}></CurrentDialog>
+        <OriginDialog
+          v-model:isShow={originDialogShow.value}
+          searchParams={searchParams.value}
+          rowData={currentRowData.value}></OriginDialog>
       </Panel>
     );
   },

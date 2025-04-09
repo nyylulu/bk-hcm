@@ -24,57 +24,20 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
-	"hcm/pkg/dal/table/dissolve/module"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
-// getAssetIDByModule 当模块的裁撤状态为为「部分裁」时，返回它所需要进行裁撤主机的固资产号
-// onlyIncomplete参数表示只返回当前阶段为未裁撤的主机
-func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplete bool) (map[string][]string, error) {
-	result := make(map[string][]string)
+// getAssetIDByModule 查询模块需要进行裁撤的主机固资号，onlyIncomplete参数表示只返回当前阶段为未裁撤的主机
+func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplete bool) ([]string, error) {
+	result := make([]string, 0)
 	if len(modules) == 0 {
 		return result, nil
 	}
 
-	filter, err := tools.And(
-		tools.ContainersExpression("name", modules),
-		tools.EqualExpression("recycle_type", int(module.Part)),
-	)
-	if err != nil {
-		return nil, err
-	}
-	page := &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit, Sort: "id"}
-	opt := &types.ListOption{Fields: []string{"name"}, Filter: filter, Page: page}
-
-	partTypeModule := make([]string, 0)
-	for {
-		list, err := l.recycledModule.List(kt, opt)
-		if err != nil {
-			logs.Errorf("list recycle module failed, err: %v, opt: %+v, rid: %s", err, opt, kt.Rid)
-			return nil, err
-		}
-
-		for _, v := range list.Details {
-			partTypeModule = append(partTypeModule, *v.Name)
-		}
-
-		if len(list.Details) < int(core.DefaultMaxPageLimit) {
-			break
-		}
-
-		opt.Page.Start += uint32(core.DefaultMaxPageLimit)
-	}
-
-	if len(partTypeModule) == 0 {
-		return result, nil
-	}
-
-	for _, name := range partTypeModule {
-		result[name] = make([]string, 0)
-	}
-
-	filter = tools.ContainersExpression("module", partTypeModule)
+	var err error
+	filter := tools.ContainersExpression("module", modules)
 	if onlyIncomplete {
 		filter, err = tools.And(filter,
 			tools.ContainersExpression("abolish_phase", []enumor.AbolishPhase{enumor.Incomplete, enumor.BsiComplete,
@@ -85,8 +48,8 @@ func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplet
 		}
 	}
 
-	page = &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit, Sort: "id"}
-	opt = &types.ListOption{Fields: []string{"module", "asset_id"}, Filter: filter, Page: page}
+	page := &core.BasePage{Start: 0, Limit: core.DefaultMaxPageLimit, Sort: "id"}
+	opt := &types.ListOption{Fields: []string{"asset_id"}, Filter: filter, Page: page}
 	for {
 		list, err := l.recycledHost.List(kt, opt)
 		if err != nil {
@@ -95,7 +58,7 @@ func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplet
 		}
 
 		for _, v := range list.Details {
-			result[*v.Module] = append(result[*v.Module], *v.AssetID)
+			result = append(result, cvt.PtrToVal(v.AssetID))
 		}
 
 		if len(list.Details) < int(core.DefaultMaxPageLimit) {

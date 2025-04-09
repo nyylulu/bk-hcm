@@ -10,14 +10,12 @@ POST /api/v1/woa/task/audit/apply/ticket
 
 ### 输入参数
 
-| 参数名称        | 参数类型       | 必选 | 描述             |
-|----------------|--------------|------|-----------------|
-| order_id       | int	        | 是   | 单据ID           |
-| itsm_ticket_id | string       | 是   | ITSM流程单据单号   |
-| state_id       | int	        | 是   | ITSM流程单据节点ID |
-| operator       | string       | 是   | 单据节点处理人      |
-| approval	     | bool         | 是   | 是否通过           |
-| remark	     | string       | 否   | 审核意见           |
+| 参数名称      | 参数类型   | 必选 | 描述           |
+|-----------|--------|----|--------------|
+| order_id  | int	   | 是  | 单据ID         |
+| state_id  | int	   | 是  | ITSM流程单据节点ID |
+| approval	 | bool   | 是  | 是否通过         |
+| remark	   | string | 否  | 审核意见         |
 
 ### 调用示例
 
@@ -25,12 +23,10 @@ POST /api/v1/woa/task/audit/apply/ticket
 
 ```json
 {
-  "order_id":1001,
-  "itsm_ticket_id":"REQ20220425000011",
-  "state_id":1957,
-  "operator":"xxx",
-  "approval":true,
-  "remark":"同意"
+  "order_id": 1001,
+  "state_id": 1957,
+  "approval": true,
+  "remark": "同意"
 }
 ```
 
@@ -40,21 +36,21 @@ POST /api/v1/woa/task/audit/apply/ticket
 
 ```json
 {
-  "result":true,
-  "code":0,
-  "message":"success",
+  "result": true,
+  "code": 0,
+  "message": "success",
   "data": null
 }
 ```
 
 ### 响应参数说明
 
-| 参数名称    | 参数类型       | 描述               |
-|------------|--------------|--------------------|
-| result     | bool         | 请求成功与否。true:请求成功；false请求失败 |
-| code       | int          | 错误编码。 0表示success，>0表示失败错误  |
-| message    | string       | 请求失败返回的错误信息 |
-| data	     | object array | 响应数据             |
+| 参数名称    | 参数类型         | 描述                         |
+|---------|--------------|----------------------------|
+| result  | bool         | 请求成功与否。true:请求成功；false请求失败 |
+| code    | int          | 错误编码。 0表示success，>0表示失败错误  |
+| message | string       | 请求失败返回的错误信息                |
+| data	   | object array | 响应数据                       |
 
 #### data
 

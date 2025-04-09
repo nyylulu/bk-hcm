@@ -2,6 +2,7 @@ import { localStorageActions } from '@/common/util';
 import { QueryRuleOPEnum, RulesItem } from '@/typings';
 import { RouteLocationNormalizedLoaded } from 'vue-router';
 import { decodeValueByAtob } from './common';
+import { CURRENCY_SYMBOL_MAP } from '@/constants';
 
 // 将输入的字符串形式的数字转换并格式化为指定精度的字符串表示
 export function formatBillCost(value: string, fixed = 3): string {
@@ -15,6 +16,34 @@ export function formatBillCost(value: string, fixed = 3): string {
   }
 
   return num % 1 === 0 ? num.toString() : num.toFixed(fixed);
+}
+
+export function calcBillData(last: string, current: string): string {
+  const lastCost = parseFloat(formatBillCost(last));
+  const currentCost = parseFloat(formatBillCost(current));
+  const balance = currentCost - lastCost;
+  const ratio = formatBillCost(String((balance / lastCost) * 100));
+  if (balance === 0) return '0';
+  if (lastCost === 0) return formatBillCost(String(currentCost * 100));
+  return ratio;
+}
+// 环比计算
+export function formatBillRatio(last: string, current: string): string {
+  const ratio = calcBillData(last, current);
+  return +ratio > 0 ? `+${ratio}%` : `${ratio}%`;
+}
+
+export function formatBillRatioClass(last: string, current: string): string {
+  let className = 'red';
+  const ratio = calcBillData(last, current);
+  if (+ratio < 30 && +ratio > -30) {
+    className = 'green';
+  }
+  return className;
+}
+
+export function formatBillSymbol(money: string, currency: string): string {
+  return (CURRENCY_SYMBOL_MAP[currency] ?? '') + formatBillCost(money);
 }
 
 // 账单查询规则类

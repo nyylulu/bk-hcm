@@ -28,6 +28,7 @@ export interface CvmDeviceType {
   device_type_class: 'SpecialType' | 'CommonType'; // 通/专用机型，SpecialType专用，CommonType通用
   cpu_amount: number; // cpu核数
   device_group: string; // 机型族
+  ram_amount: string; // 内容容量
 }
 export type CvmDeviceTypeList = Array<CvmDeviceType>;
 

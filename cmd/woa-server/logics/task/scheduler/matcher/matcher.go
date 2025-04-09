@@ -42,6 +42,7 @@ import (
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/metadata"
 	toolsutil "hcm/pkg/tools/util"
 	"hcm/pkg/tools/utils/wait"
@@ -469,54 +470,24 @@ func (m *Matcher) setGenerateRecordMatched(generateId uint64) error {
 
 // InitDevices start init devices
 func (m *Matcher) InitDevices(order *types.ApplyOrder, unreleased []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
-
 	// start init step
 	if err := record.StartStep(order.SubOrderId, types.StepNameInit); err != nil {
 		logs.Errorf("failed to start init step, order id: %s, err: %v", order.SubOrderId, err)
 		return nil, err
 	}
 
-	mutex := sync.Mutex{}
-	errs := make([]error, 0)
-	observeDevices := make([]*types.DeviceInfo, 0)
-	appendError := func(err error) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		errs = append(errs, err)
-	}
-	appendDevice := func(device *types.DeviceInfo) {
-		mutex.Lock()
-		defer mutex.Unlock()
-		observeDevices = append(observeDevices, device)
-	}
-
-	eg := errgroup.Group{}
-	// 每个主机都会创建一个init task，这里防止无限制并发
-	eg.SetLimit(30)
-	for _, device := range unreleased {
-		deviceInfo := device
-		eg.Go(func() error {
-			if err := m.ProcessInitStep(deviceInfo); err != nil {
-				appendError(err)
-			} else {
-				appendDevice(deviceInfo)
-			}
-			return nil
-		})
-	}
-	err := eg.Wait()
-	if err != nil {
-		logs.Errorf("failed to process init step devices, subOrderID: %s, err: %v", order.SubOrderId, err)
-		return nil, err
+	successDeviceMap, errMap := m.ProcessInitStep(unreleased)
+	if len(errMap) > 0 {
+		// todo 暂时和原逻辑保持一致，这里err不做处理，ProcessInitStep内已经有打印错误日志
 	}
 
 	// update init step
-	if err = record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
+	if err := record.UpdateInitStep(order.SubOrderId, order.Total); err != nil {
 		logs.Errorf("failed to update init step, subOrderID: %s, err: %v", order.SubOrderId, err)
 		return nil, err
 	}
 
-	return observeDevices, nil
+	return maps.Values(successDeviceMap), nil
 }
 
 // DeliverDevices deliver devices to business
@@ -544,34 +515,69 @@ func (m *Matcher) DeliverDevices(order *types.ApplyOrder, observeDevices []*type
 	return nil
 }
 
-// ProcessInitStep start a goroutine to perform initialization tasks on a certain machine
-func (m *Matcher) ProcessInitStep(device *types.DeviceInfo) error {
-	// TODO: check device not support yet
-	// 1. check devices
-	/*
-		if err := m.checkDevice(device); err != nil {
-			logs.Errorf("failed to check device, ip: %s, err: %v", device.IP, err)
-			return
-		}
-	*/
-	// 2. init devices
+// ProcessInitStep process init step
+func (m *Matcher) ProcessInitStep(devices []*types.DeviceInfo) (map[int]*types.DeviceInfo, map[int]error) {
 	maxRetry := 3
-	var err error
-	for try := 0; try < maxRetry; try++ {
-		if err = m.initDevice(device); err != nil {
-			logs.Errorf("failed to init device, will retry in 60s, ip: %s, err: %v", device.Ip, err)
-			time.Sleep(180 * time.Second)
+	errMap := make(map[int]error)
+	deviceInitMsgMap := make(map[int]*types.DeviceInitMsg)
+	successDeviceMap := make(map[int]*types.DeviceInfo)
+	eg := errgroup.Group{}
+	eg.SetLimit(10)
+	var lock sync.Mutex
+
+	// 1. 创建主机初始化任务
+	for idx, device := range devices {
+		curDevice := device
+		curIdx := idx
+		if curDevice.IsInited {
+			successDeviceMap[curIdx] = curDevice
+			logs.Infof("host %s is initialized, need not init", curDevice.Ip)
 			continue
 		}
-		break
+		eg.Go(func() error {
+			var err error
+			var initMsg *types.DeviceInitMsg
+			for try := 0; try < maxRetry; try++ {
+				if initMsg, err = m.initDevice(curDevice); err != nil {
+					logs.Errorf("failed to init device, will retry in 60s, ip: %s, err: %v", curDevice.Ip, err)
+					// 从yunti同步给公司cmdb, 到cc去同步公司cmdb信息，拿到ip，有时候会有1分钟内的延迟，所以这里sleep1分钟
+					time.Sleep(time.Minute)
+					continue
+				}
+				break
+			}
+			lock.Lock()
+			defer lock.Unlock()
+			if err != nil {
+				errMap[curIdx] = err
+				return nil
+			}
+			deviceInitMsgMap[curIdx] = initMsg
+			return nil
+		})
 	}
+	_ = eg.Wait()
 
-	if err != nil {
-		logs.Errorf("failed to init device, ip: %s, err: %v", device.Ip, err)
-		return err
+	// 2. 检查主机初始化任务是否执行完成
+	for idx, msg := range deviceInitMsgMap {
+		curMsg := msg
+		curIdx := idx
+		eg.Go(func() error {
+			err := m.CheckSopsUpdate(curMsg.BizID, curMsg.Device, curMsg.JobUrl, curMsg.JobID)
+			lock.Lock()
+			defer lock.Unlock()
+			if err != nil {
+				logs.Errorf("failed to check sops task, ip: %s, err: %v", curMsg.Device.Ip, err)
+				errMap[curIdx] = err
+				return nil
+			}
+			successDeviceMap[curIdx] = curMsg.Device
+			return nil
+		})
 	}
+	_ = eg.Wait()
 
-	return nil
+	return successDeviceMap, errMap
 }
 
 // matchDevice deal match device tasks
@@ -627,16 +633,16 @@ func (m *Matcher) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, erro
 }
 
 // initDevice executes device initialization task
-func (m *Matcher) initDevice(info *types.DeviceInfo) error {
+func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, error) {
 	if info.IsInited {
 		logs.Infof("host %s is initialized, need not init", info.Ip)
-		return nil
+		return &types.DeviceInitMsg{Device: info}, nil
 	}
 
 	// create init record
 	if err := record.CreateInitRecord(info.SubOrderId, info.Ip); err != nil {
 		logs.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
-		return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+		return nil, fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
 	}
 
 	// 1. create job
@@ -645,7 +651,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by ip failed, ip: %s, infoBkBizID: %d, "+
 			"err: %v", info.Ip, info.BkBizId, err)
-		return err
+		return nil, err
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
@@ -653,12 +659,12 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, infoBkBizID: %d, "+
 			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostID, err)
-		return err
+		return nil, err
 	}
 	bkBizID, ok := bkBizIDs[hostInfo.BkHostID]
 	if !ok {
 		logs.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
-		return fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
+		return nil, fmt.Errorf("can not find biz id by host id: %d", hostInfo.BkHostID)
 	}
 	jobId, jobUrl, err := sops.CreateInitSopsTask(m.kt, m.sops, info.Ip, m.sopsOpt.DevnetIP, bkBizID, hostInfo.BkOsType,
 		info.SubOrderId)
@@ -668,11 +674,11 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 		// update init record
 		errRecord := record.UpdateInitRecord(info.SubOrderId, info.Ip, "", "", err.Error(), types.InitStatusFailed)
 		if errRecord != nil {
-			logs.Errorf("host %s failed to initialize, bkBidID: %d, bkHostID: %d, err: %v",
+			logs.Errorf("update init record failed, host ip: %s, bkBidID: %d, bkHostID: %d, err: %v",
 				info.Ip, info.BkBizId, info.BkHostId, errRecord)
-			return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, errRecord)
+			return nil, fmt.Errorf("update init record failed, host ip: %s, err: %v", info.Ip, errRecord)
 		}
-		return fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
+		return nil, fmt.Errorf("host %s failed to initialize, err: %v", info.Ip, err)
 	}
 
 	jobIDStr := strconv.FormatInt(jobId, 10)
@@ -684,7 +690,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) error {
 			info.Ip, jobId, jobUrl, bkBizID, errRecord)
 	}
 
-	return m.CheckSopsUpdate(bkBizID, info, jobUrl, jobIDStr)
+	return &types.DeviceInitMsg{Device: info, JobUrl: jobUrl, JobID: jobIDStr, BizID: bkBizID}, nil
 }
 
 // CheckSopsUpdate 检查sops任务状态并更新
@@ -696,7 +702,7 @@ func (m *Matcher) CheckSopsUpdate(bkBizID int64, info *types.DeviceInfo, jobUrl 
 		return fmt.Errorf("can not get jobId by jobIDStr, jobIDStr: %s", jobIDStr)
 	}
 
-	if err := sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
+	if _, err = sops.CheckTaskStatus(m.kt, m.sops, jobId, bkBizID); err != nil {
 		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, jobID: %d, "+
 			"jobUrl: %s, bkBizID: %d, err: %v", info.Ip, jobId, jobUrl, bkBizID, err)
 		// update init record

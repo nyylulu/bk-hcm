@@ -170,6 +170,8 @@ type Biz struct {
 	BizName string `json:"bk_biz_name"`
 	// 二级业务id
 	BsName2ID int64 `json:"bs2_name_id"`
+	// 运维负责人
+	BkBizMaintainer string `json:"bk_biz_maintainer"`
 }
 
 // -------------------------- cloud area --------------------------
@@ -867,7 +869,7 @@ type HostBizRel struct {
 // SearchBizResp search business response
 type SearchBizResp struct {
 	RespMeta `json:",inline"`
-	Data     *SearchBizRst `json:"data"`
+	Data     SearchBizRst `json:"data"`
 }
 
 // SearchBizRst search business result

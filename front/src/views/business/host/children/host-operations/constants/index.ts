@@ -10,6 +10,7 @@ export const OPERATE_STATUS_MAP: ConstantMapRecord = {
   2: t('不在空闲机模块，不可重装'),
   3: t('云服务器未处于关机状态'),
   4: t('云服务器未处于开机状态'),
+  5: t('物理机不支持操作'),
 };
 
 // 物理机

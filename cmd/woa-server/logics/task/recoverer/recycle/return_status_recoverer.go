@@ -79,7 +79,7 @@ func (r *recycleRecoverer) recoverReturnedStatus(kt *kit.Kit, order *table.Recyc
 	case table.ReturnStatusInit:
 		ev = r.recoverReturnHosts(kt, returnTask, hosts)
 	case table.ReturnStatusRunning:
-		ev = r.recoverQueryReturnStatus(returnTask, hosts)
+		ev = r.recoverQueryReturnStatus(kt, returnTask, hosts)
 	case table.ReturnStatusSuccess:
 		ev = &event.Event{Type: event.ReturnSuccess}
 	case table.ReturnStatusFailed:
@@ -101,10 +101,10 @@ func (r *recycleRecoverer) recoverReturnedStatus(kt *kit.Kit, order *table.Recyc
 }
 
 // RecoverQueryReturnStatus 查询return任务状态
-func (r *recycleRecoverer) recoverQueryReturnStatus(returnTask *table.ReturnTask,
+func (r *recycleRecoverer) recoverQueryReturnStatus(kt *kit.Kit, returnTask *table.ReturnTask,
 	hosts []*table.RecycleHost) *event.Event {
 
-	return r.recyclerIf.QueryReturnStatus(returnTask, hosts)
+	return r.recyclerIf.QueryReturnStatus(kt, returnTask, hosts)
 }
 
 // RecoverReturnHosts recover hosts which status is ReturnStatusInit

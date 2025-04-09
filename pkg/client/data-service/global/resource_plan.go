@@ -181,3 +181,33 @@ func (b *ResourcePlanClient) DeleteResPlanWeek(kt *kit.Kit, req *dataproto.Batch
 	return common.RequestNoResp[dataproto.BatchDeleteReq](
 		b.client, rest.DELETE, kt, req, "/res_plans/res_plan_weeks/batch")
 }
+
+// --- woa device type ---
+
+// ListWoaDeviceType list woa device type
+func (b *ResourcePlanClient) ListWoaDeviceType(kt *kit.Kit, req *rpproto.WoaDeviceTypeListReq) (
+	*rpproto.WoaDeviceTypeListResult, error) {
+
+	return common.Request[rpproto.WoaDeviceTypeListReq, rpproto.WoaDeviceTypeListResult](
+		b.client, rest.POST, kt, req, "/res_plans/woa_device_types/list")
+}
+
+// BatchCreateWoaDeviceType batch create woa device type
+func (b *ResourcePlanClient) BatchCreateWoaDeviceType(kt *kit.Kit, req *rpproto.WoaDeviceTypeBatchCreateReq) (
+	*core.BatchCreateResult, error) {
+
+	return common.Request[rpproto.WoaDeviceTypeBatchCreateReq, core.BatchCreateResult](
+		b.client, rest.POST, kt, req, "/res_plans/woa_device_types/batch/create")
+}
+
+// BatchUpdateWoaDeviceType update woa device type
+func (b *ResourcePlanClient) BatchUpdateWoaDeviceType(kt *kit.Kit, req *rpproto.WoaDeviceTypeBatchUpdateReq) error {
+	return common.RequestNoResp[rpproto.WoaDeviceTypeBatchUpdateReq](
+		b.client, rest.PATCH, kt, req, "/res_plans/woa_device_types/batch")
+}
+
+// BatchDeleteWoaDeviceType batch delete woa device type
+func (b *ResourcePlanClient) BatchDeleteWoaDeviceType(kt *kit.Kit, req *dataproto.BatchDeleteReq) error {
+	return common.RequestNoResp[dataproto.BatchDeleteReq](
+		b.client, rest.DELETE, kt, req, "/res_plans/woa_device_types/batch")
+}

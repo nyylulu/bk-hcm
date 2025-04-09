@@ -63,29 +63,31 @@ export default defineComponent({
     );
 
     watch(
-      () => [props.suborderId, props.stepId, curStatus.value],
+      () => [props.suborderId, props.stepId, curStatus.value, props.isShow],
       () => {
-        switch (props.stepId) {
-          case 2: {
-            fetchData.value = scrStore.getProductionDetails;
-            // 增加折叠列，显示crp审批流信息
-            tableColumns.value = [{ type: 'expand', minWidth: 50 }, ...producingColumns];
-            break;
+        if (props.isShow) {
+          switch (props.stepId) {
+            case 2: {
+              fetchData.value = scrStore.getProductionDetails;
+              // 增加折叠列，显示crp审批流信息
+              tableColumns.value = [{ type: 'expand', minWidth: 50 }, ...producingColumns];
+              break;
+            }
+            case 3: {
+              fetchData.value = scrStore.getInitializationDetails;
+              tableColumns.value = initialColumns;
+              break;
+            }
+            case 4: {
+              fetchData.value = scrStore.getDeliveryDetails;
+              tableColumns.value = deliveryColumns;
+              break;
+            }
           }
-          case 3: {
-            fetchData.value = scrStore.getInitializationDetails;
-            tableColumns.value = initialColumns;
-            break;
-          }
-          case 4: {
-            fetchData.value = scrStore.getDeliveryDetails;
-            tableColumns.value = deliveryColumns;
-            break;
-          }
-        }
 
-        pagination.start = 0;
-        getListData();
+          pagination.start = 0;
+          getListData();
+        }
       },
       { immediate: true, deep: true },
     );

@@ -55,6 +55,8 @@ type DemandTime interface {
 	// GetDemandDateRangeInMonth 返回给定时间所属需求周期的起始和结束时间
 	// 目前需求周期以月为单位，因此该方法返回需求月的起始和结束时间
 	GetDemandDateRangeInMonth(kt *kit.Kit, t time.Time) (times.DateRange, error)
+	// GetDemandDateRangeByYearMonth 返回给定时间所属需求周期的起始和结束时间，入参为年、月
+	GetDemandDateRangeByYearMonth(kt *kit.Kit, year int, month time.Month) (times.DateRange, error)
 	// GetDemandDateRangeInWeek 返回给定时间所在周的起始和结束时间
 	GetDemandDateRangeInWeek(kt *kit.Kit, t time.Time) times.DateRange
 
@@ -165,7 +167,22 @@ func (d DemandTimeFromTable) GetDemandYearMonth(kt *kit.Kit, t time.Time) (int, 
 
 // GetDemandDateRangeInMonth get the date range of a month based on the input time from a demand perspective.
 func (d DemandTimeFromTable) GetDemandDateRangeInMonth(kt *kit.Kit, t time.Time) (times.DateRange, error) {
-	startDate, endDate, err := d.getDemandMonthStartEnd(kt, t)
+	startDate, endDate, err := d.getDemandMonthStartEndByTime(kt, t)
+	if err != nil {
+		return times.DateRange{}, err
+	}
+
+	return times.DateRange{
+		Start: startDate.Format(constant.DateLayout),
+		End:   endDate.Format(constant.DateLayout),
+	}, nil
+}
+
+// GetDemandDateRangeByYearMonth get the date range of a month based on the input time from a demand perspective.
+func (d DemandTimeFromTable) GetDemandDateRangeByYearMonth(kt *kit.Kit, year int, month time.Month) (
+	times.DateRange, error) {
+
+	startDate, endDate, err := d.getDemandMonthStartEnd(kt, year, month)
 	if err != nil {
 		return times.DateRange{}, err
 	}
@@ -186,9 +203,9 @@ func (d DemandTimeFromTable) GetDemandDateRangeInWeek(kt *kit.Kit, t time.Time) 
 	}
 }
 
-// getDemandMonthStartEnd 获取给定时间的需求年月的第一天和最后一天
+// getDemandMonthStartEndByTime 获取给定时间的需求年月的第一天和最后一天
 // 当输入时间在所在周跨月，则统一将该周周一所在月作为需求月
-func (d DemandTimeFromTable) getDemandMonthStartEnd(kt *kit.Kit, t time.Time) (time.Time, time.Time, error) {
+func (d DemandTimeFromTable) getDemandMonthStartEndByTime(kt *kit.Kit, t time.Time) (time.Time, time.Time, error) {
 	// 获取需求所属年月
 	year, month, err := d.GetDemandYearMonth(kt, t)
 	if err != nil {
@@ -197,7 +214,13 @@ func (d DemandTimeFromTable) getDemandMonthStartEnd(kt *kit.Kit, t time.Time) (t
 		return time.Time{}, time.Time{}, err
 	}
 
-	timeCompactInt := times.ConvTimeToCompactInt(t)
+	return d.getDemandMonthStartEnd(kt, year, month)
+}
+
+// getDemandMonthStartEnd 获取给定需求年月的第一天和最后一天
+func (d DemandTimeFromTable) getDemandMonthStartEnd(kt *kit.Kit, year int, month time.Month) (time.Time, time.Time,
+	error) {
+
 	// 获取该需求月的范围
 	listReq := &rpproto.ResPlanWeekListReq{
 		ListReq: core.ListReq{
@@ -211,13 +234,13 @@ func (d DemandTimeFromTable) getDemandMonthStartEnd(kt *kit.Kit, t time.Time) (t
 
 	rst, err := d.client.DataService().Global.ResourcePlan.ListResPlanWeek(kt, listReq)
 	if err != nil {
-		logs.Errorf("failed to list res plan week, err: %v, demand_time: %d, rid: %s", err, timeCompactInt,
+		logs.Errorf("failed to list res plan week, err: %v, year: %d, month: %d, rid: %s", err, year, month,
 			kt.Rid)
 		return time.Time{}, time.Time{}, err
 	}
 
 	if len(rst.Details) == 0 {
-		logs.Errorf("no res plan week found, demand_time: %d, rid: %s", timeCompactInt, kt.Rid)
+		logs.Errorf("no res plan week found, year: %d, month: %d, rid: %s", year, month, kt.Rid)
 		return time.Time{}, time.Time{}, errors.New("cannot determine which month the demand belongs to")
 	}
 
@@ -278,16 +301,23 @@ func (d DemandTimeFromTable) GetDemandStatusByExpectTime(kt *kit.Kit, expectTime
 		return "", times.DateRange{}, err
 	}
 
-	monthStart, monthEnd, err := d.getDemandMonthStartEnd(kt, time.Now())
+	monthStart, monthEnd, err := d.getDemandMonthStartEndByTime(kt, time.Now())
 	if err != nil {
 		logs.Errorf("failed to get demand month start end, err: %v, expect_time: %s, rid: %s", err, expectTime,
 			kt.Rid)
 		return "", times.DateRange{}, err
 	}
 
+	demandStart, demandEnd, err := d.getDemandMonthStartEndByTime(kt, t)
+	if err != nil {
+		logs.Errorf("failed to get demand start end, err: %v, expect_time: %s, rid: %s", err, expectTime,
+			kt.Rid)
+		return "", times.DateRange{}, err
+	}
+
 	demandRange := times.DateRange{
-		Start: monthStart.Format(constant.DateLayout),
-		End:   monthEnd.Format(constant.DateLayout),
+		Start: demandStart.Format(constant.DateLayout),
+		End:   demandEnd.Format(constant.DateLayout),
 	}
 
 	// 未到申领时间

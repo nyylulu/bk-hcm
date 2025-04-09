@@ -9,6 +9,7 @@ import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelect
 import { HelpFill, Search } from 'bkui-vue/lib/icon';
 import { Button, Form, Select, Sideslider } from 'bkui-vue';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import { ICvmDeviceDetailItem } from '@/typings/ziyanScr';
 const { FormItem } = Form;
 // import { statusList } from './transform';
 // import './index.scss';
@@ -138,7 +139,7 @@ export default defineComponent({
       deviceTypeDisabled.value = false;
       filterOrders();
     };
-    const oneKeyApply = (row) => {
+    const oneKeyApply = (row: ICvmDeviceDetailItem) => {
       emit('oneKeyApply', row);
     };
     const { columns } = useColumns('cvmFastProduceQuery');

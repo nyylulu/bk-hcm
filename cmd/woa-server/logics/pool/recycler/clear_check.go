@@ -130,22 +130,35 @@ func (r *Recycler) checkClearCheckStatus(task *table.RecallDetail) error {
 	}
 
 	// 检查标准运维的任务状态
-	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+	if statusResp, err := sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
 		// if host ping death, go ahead to recycle
-		if strings.Contains(err.Error(), "ping death") {
-			logs.Infof("task %s ping death, bkBizID: %d, skip clear check step", taskID, bkBizID)
-		} else {
-			logs.Infof("sops:process:check:clear check status, failed to clear check, job id: %d, bkBizID: %d, "+
-				"err: %v", taskID, bkBizID, err)
+		if !strings.Contains(err.Error(), "ping death") {
+			// 如果失败的是JOB节点，则获取JOB平台的链接
+			jobInstURL, jobInstErr := sops.GetIdleCheckFailedJobUrl(
+				r.kt, r.sops, int64(taskID), int64(bkBizID), statusResp)
+			if jobInstErr != nil {
+				logs.Errorf("failed to clear check, job id: %d, bkBizID: %d, jobInstErr: %v, rid: %s",
+					taskID, bkBizID, jobInstErr, r.kt.Rid)
+			}
+
+			jobErrMsg := ""
+			if jobInstURL != "" {
+				jobErrMsg = fmt.Sprintf("作业平台(JOB): %s,", jobInstURL)
+			}
+
+			logs.Errorf("sops:process:check:clear check status, failed to clear check, jobID: %d, bkBizID: %d, "+
+				"hostID: %d, jobInstURL: %s, err: %v, rid: %s", taskID, bkBizID, task.HostID, jobInstURL, err, r.kt.Rid)
 
 			errUpdate := r.updateTaskClearCheckStatus(task, "", "", "", err.Error(), table.RecallStatusClearCheckFailed)
 			if errUpdate != nil {
-				logs.Warnf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v",
-					taskID, bkBizID, errUpdate)
+				logs.Warnf("failed to update recall task status, taskID: %d, bkBizID: %d, err: %v, rid: %s",
+					taskID, bkBizID, errUpdate, r.kt.Rid)
 			}
 
-			return fmt.Errorf("failed to clear check, job id: %d, bkBizID: %d, err: %v", taskID, bkBizID, err)
+			return fmt.Errorf("failed to clear check, job id: %d, bkBizID: %d, %s err: %v",
+				taskID, bkBizID, jobErrMsg, err)
 		}
+		logs.Errorf("task %s ping death, bkBizID: %d, skip clear check step", taskID, bkBizID)
 	}
 
 	// update task status

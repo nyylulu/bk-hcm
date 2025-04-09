@@ -14,6 +14,7 @@ package sopsapi
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 
@@ -39,8 +40,8 @@ type SopsClientInterface interface {
 	GetTaskNodeDetail(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
 		*GetTaskNodeDetailResp, error)
 	// GetTaskNodeData get sops task node data
-	GetTaskNodeData(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
-		*GetTaskNodeDataResp, error)
+	GetTaskNodeData(kt *kit.Kit, header http.Header, taskID, bkBizID int64, nodeID string, subStacks string) (
+		*GetTaskNodeDataRst, error)
 	// GetTaskList get sops task list
 	GetTaskList(ctx context.Context, header http.Header, bkBizID int64, keyword string) ([]*GetTaskListRst, error)
 	// GetTaskDetail get sops task detail
@@ -245,8 +246,8 @@ func (c *sopsApi) GetTaskNodeDetail(ctx context.Context, header http.Header, tas
 }
 
 // GetTaskNodeData get sops task node data
-func (c *sopsApi) GetTaskNodeData(ctx context.Context, header http.Header, taskID, bkBizID int64, nodeID string) (
-	*GetTaskNodeDataResp, error) {
+func (c *sopsApi) GetTaskNodeData(kt *kit.Kit, header http.Header, taskID, bkBizID int64, nodeID string,
+	subStacks string) (*GetTaskNodeDataRst, error) {
 
 	subPath := "/get_task_node_data/%d/%d"
 	key, val := c.getAuthHeader()
@@ -255,26 +256,31 @@ func (c *sopsApi) GetTaskNodeData(ctx context.Context, header http.Header, taskI
 	}
 	header.Set(key, val)
 	resp := new(GetTaskNodeDataResp)
-	err := c.client.Get().
-		WithContext(ctx).
+	cli := c.client.Get().
+		WithContext(kt.Ctx).
 		SubResourcef(subPath, bkBizID, taskID).
 		WithHeaders(header).
-		WithParam("node_id", nodeID).
-		Do().
-		Into(resp)
-
+		WithParam("node_id", nodeID)
+	if len(subStacks) > 0 {
+		subStacksJSON, err := json.Marshal([]string{subStacks})
+		if err != nil {
+			return nil, err
+		}
+		cli = cli.WithParam("subprocess_stack", string(subStacksJSON))
+	}
+	err := cli.Do().Into(resp)
 	if err != nil {
-		logs.Errorf("failed to send get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, err: %v",
-			taskID, bkBizID, nodeID, err)
+		logs.Errorf("failed to send get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, subStacks: %v, "+
+			"err: %v, rid: %s", taskID, bkBizID, nodeID, subStacks, err, kt.Rid)
 		return nil, err
 	}
 
 	if !resp.Result || resp.Code != 0 {
 		return nil, fmt.Errorf("failed to parse get task node data api, taskID: %d, bkBizID: %d, nodeID: %s, "+
-			"errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, resp.Code, resp.Message)
+			"subStacks: %s, errCode: %d, errMsg: %s", taskID, bkBizID, nodeID, subStacks, resp.Code, resp.Message)
 	}
 
-	return resp, nil
+	return resp.Data, nil
 }
 
 // GetTaskDetail get sops task detail

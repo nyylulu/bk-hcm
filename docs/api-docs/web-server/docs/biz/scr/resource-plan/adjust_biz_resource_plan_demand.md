@@ -8,6 +8,8 @@
 
 POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
 
+### 输入参数
+
 | 参数名称    | 参数类型         | 必选 | 描述           |
 |---------|--------------|----|--------------|
 | adjusts | object array | 是  | 调整列表，数量最大100 |

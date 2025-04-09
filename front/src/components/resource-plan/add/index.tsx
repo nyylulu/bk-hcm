@@ -1,4 +1,5 @@
 import { defineComponent, type PropType, ref, watch } from 'vue';
+import { useResourcePlanStore } from '@/store';
 import CommonSideslider from '@/components/common-sideslider';
 import Basic from './basic';
 import CVM from './cvm';
@@ -23,12 +24,17 @@ export default defineComponent({
     isEdit: {
       type: Boolean,
     },
+    // 添加时自动填充的参数数据，通常来源于页面跳转自动打开添加页面时传入
+    initAddParams: {
+      type: Object as PropType<Partial<IPlanTicketDemand>>,
+    },
   },
 
   emits: ['update:isShow', 'update:modelValue', 'updateDemand'],
 
   setup(props, { emit }) {
     const { t } = useI18n();
+    const resourcePlanStore = useResourcePlanStore();
 
     const basicRef = ref(null);
     const cvmRef = ref(null);
@@ -42,15 +48,15 @@ export default defineComponent({
     const planTicketDemand = ref<IPlanTicketDemand>();
     const adjustType = ref();
 
-    const initData = () => {
+    const initData = async () => {
       resourceType.value = props.initDemand?.demand_res_types.length < 2 ? 'cbs' : 'cvm';
       adjustType.value =
         props.initDemand && props.initDemand.adjustType === AdjustType.time ? AdjustType.time : AdjustType.config;
       planTicketDemand.value = {
-        obs_project: '',
+        obs_project: props.initAddParams?.obs_project || '',
         expect_time: '',
-        region_id: '',
-        zone_id: '',
+        region_id: props.initAddParams?.region_id || '',
+        zone_id: props.initAddParams?.zone_id || '',
         demand_source: '指标变化',
         remark: '',
         demand_res_types: ['CVM', 'CBS'],
@@ -72,6 +78,15 @@ export default defineComponent({
         },
         ...props.initDemand,
       };
+
+      // 回填初始的device_type和device_class数据
+      if (resourceType.value === 'cvm' && props.initAddParams?.cvm?.device_type) {
+        const result = await resourcePlanStore.getDeviceTypes(undefined, [props.initAddParams?.cvm?.device_type]);
+        if (result?.data?.details?.length) {
+          planTicketDemand.value.cvm.device_type = result.data.details[0].device_type;
+          planTicketDemand.value.cvm.device_class = result.data.details[0].device_class;
+        }
+      }
     };
 
     const isConfigAdjustDisabled = ref(false);

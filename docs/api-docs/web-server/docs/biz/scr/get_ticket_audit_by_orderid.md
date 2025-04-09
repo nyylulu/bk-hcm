@@ -43,8 +43,12 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/get/apply/ticket/audit
     "current_steps": [
       {
         "name": "负责人审核",
-        "processors": "aaa,bbb",
-        "state_id": 1957
+        "processors": ["aaa","bbb"],
+        "state_id": 1957,
+        "processors_auth": {
+          "aaa": true,
+          "bbb": false
+        }
       }
     ],
     "logs": [
@@ -95,15 +99,16 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/get/apply/ticket/audit
 | itsm_ticket_link | string	      | ITSM流程单据链接                                                    |
 | status           | string       | 单据当前状态。"RUNNING": 处理中, "FINISHED": 已结束, "TERMINATED": 被终止     |
 | current_steps	   | object array | 单据当前步骤列表                                                      |
-| logs	            | object array | 单据处理日志信息列表                                                    |
+| logs	           | object array | 单据处理日志信息列表                                                    |
 
 #### current_steps
 
-| 参数名称       | 参数类型   | 描述    |
-|------------|--------|-------|
-| name	      | string | 步骤名称  |
-| processors | string | 处理人列表 |
-| state_id   | int    | 节点ID  |
+| 参数名称         | 参数类型       | 描述           |
+|-----------------|--------------|----------------|
+| name	          | string       | 步骤名称        |
+| processors      | string array | 处理人列表      |
+| state_id        | int          | 节点ID         |
+| processors_auth | object       | 处理人是否有权限 |
 
 #### logs
 

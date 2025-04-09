@@ -68,6 +68,7 @@ func (svc *clbSvc) BatchCreateTCloudZiyanClb(cts *rest.Contexts) (any, error) {
 
 			InternetChargeType:      req.InternetChargeType,
 			InternetMaxBandwidthOut: req.InternetMaxBandwidthOut,
+			Egress:                  req.Egress,
 
 			BandwidthPackageID: req.BandwidthPackageID,
 			SlaType:            req.SlaType,
@@ -875,7 +876,7 @@ func (svc *clbSvc) updateTCloudZiyanDomainAttr(kt *kit.Kit, req *protolb.DomainA
 
 // BatchDeleteTCloudZiyanLoadBalancer ...
 func (svc *clbSvc) BatchDeleteTCloudZiyanLoadBalancer(cts *rest.Contexts) (any, error) {
-	req := new(protolb.TCloudBatchDeleteLoadbalancerReq)
+	req := new(protolb.BatchDeleteLoadBalancerReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
@@ -1088,4 +1089,23 @@ func (svc *clbSvc) DescribeClusterResources(cts *rest.Contexts) (any, error) {
 	}
 
 	return result, nil
+}
+
+// TCloudZiyanDescribeSlaCapacity 查询性能保障规格参数
+func (svc *clbSvc) TCloudZiyanDescribeSlaCapacity(cts *rest.Contexts) (any, error) {
+	req := new(protolb.TCloudDescribeSlaCapacityOption)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	return client.DescribeSlaCapacity(cts.Kit, req.TCloudDescribeSlaCapacityOption)
 }

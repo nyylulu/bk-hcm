@@ -1,9 +1,12 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
+import { h } from 'vue';
 import { Model, Column } from '@/decorator';
 import { VendorEnum, VendorMap } from '@/common/constant';
 import { TaskDetailStatus } from '@/views/task/typings';
+import { ITaskDetailItem } from '@/store/task';
 import { TASK_DETAIL_STATUS_NAME } from '@/views/task/constants';
 import { getPrivateIPs } from '@/utils/common';
+import { timeFormatter } from '@/common/util';
 
 @Model('task/detail-cvm.view')
 export class DetailCvmView {
@@ -13,7 +16,15 @@ export class DetailCvmView {
   @Column('datetime', { name: '开始时间', sort: true })
   created_at: string;
 
-  @Column('datetime', { name: '结束时间', sort: true })
+  @Column('datetime', {
+    name: '结束时间',
+    sort: true,
+    render: ({ row }: { row?: ITaskDetailItem }) =>
+      h(
+        'span',
+        [TaskDetailStatus.INIT, TaskDetailStatus.RUNNING].includes(row.state) ? '--' : timeFormatter(row.updated_at),
+      ),
+  })
   updated_at: string;
 
   @Column('enum', {

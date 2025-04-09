@@ -20,6 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/tools/metadata"
@@ -63,20 +64,20 @@ type RecycleCheckRst struct {
 
 // RecycleCheckInfo resource recycle check info
 type RecycleCheckInfo struct {
-	HostID        int64  `json:"bk_host_id"`
-	AssetID       string `json:"asset_id"`
-	IP            string `json:"ip"`
-	BkHostOuterIP string `json:"bk_host_outerip"`
-	BizID         int64  `json:"bk_biz_id"`
-	BizName       string `json:"bk_biz_name"`
-	TopoModule    string `json:"topo_module"`
-	Operator      string `json:"operator"`
-	BakOperator   string `json:"bak_operator"`
-	DeviceType    string `json:"device_type"`
-	State         string `json:"state"`
-	InputTime     string `json:"input_time"`
-	Recyclable    bool   `json:"recyclable"`
-	Message       string `json:"message"`
+	HostID           int64  `json:"bk_host_id"`
+	AssetID          string `json:"asset_id"`
+	IP               string `json:"ip"`
+	BkHostOuterIP    string `json:"bk_host_outerip"`
+	BizID            int64  `json:"bk_biz_id"`
+	BizName          string `json:"bk_biz_name"`
+	ModuleDefaultVal int64  `json:"module_default_val"`
+	Operator         string `json:"operator"`
+	BakOperator      string `json:"bak_operator"`
+	DeviceType       string `json:"device_type"`
+	State            string `json:"state"`
+	InputTime        string `json:"input_time"`
+	Recyclable       bool   `json:"recyclable"`
+	Message          string `json:"message"`
 }
 
 // ReturnPlan resource return plan specification
@@ -245,6 +246,18 @@ func (req *CreateRecycleReq) Validate() error {
 	}
 
 	return nil
+}
+
+// ToPreviewParam convert to preview param
+func (req *CreateRecycleReq) ToPreviewParam() *PreviewRecycleReq {
+	return &PreviewRecycleReq{
+		IPs:         req.IPs,
+		AssetIDs:    req.AssetIDs,
+		HostIDs:     req.HostIDs,
+		ReturnPlan:  req.ReturnPlan,
+		SkipConfirm: req.SkipConfirm,
+		Remark:      req.Remark,
+	}
 }
 
 // CreateRecycleOrderRst create recycle order result
@@ -1244,4 +1257,30 @@ func (r *StartRecycleOrderByRecycleTypeItem) Validate() error {
 	}
 
 	return nil
+}
+
+// CheckHostUworkTicketReq check host uwork ticket request
+type CheckHostUworkTicketReq struct {
+	BkHostIDs []int64 `json:"bk_host_ids" validate:"required,min=1"`
+}
+
+// Validate CheckHostUworkTicketReq validate
+func (r CheckHostUworkTicketReq) Validate() error {
+	if len(r.BkHostIDs) > constant.BatchOperationMaxLimit {
+		return fmt.Errorf("batch check max limit is %d", constant.BatchOperationMaxLimit)
+	}
+
+	return validator.Validate.Struct(r)
+}
+
+// CheckHostUworkTicketResp check host uwork ticket resp
+type CheckHostUworkTicketResp struct {
+	Details []CheckHostUworkTicketItem `json:"details"`
+}
+
+// CheckHostUworkTicketItem check host uwork ticket item
+type CheckHostUworkTicketItem struct {
+	BkHostID       int64    `json:"bk_host_id"`
+	HasOpenTickets bool     `json:"has_open_tickets"`
+	OpenTicketIDs  []string `json:"open_ticket_ids"`
 }

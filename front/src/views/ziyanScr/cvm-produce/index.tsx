@@ -7,7 +7,7 @@ import MemberSelect from '@/components/MemberSelect';
 import AreaSelector from '../hostApplication/components/AreaSelector';
 import ZoneSelector from '../hostApplication/components/ZoneSelector';
 import FastCvmProduce from './component/fast-cvm-produce';
-import CreateOrder from './component/create-order';
+import CreateOrderDialog from './component/create-order/index.vue';
 import { useUserStore } from '@/store';
 import SuccessProduceDetail from './component/success-produce-detail';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
@@ -18,6 +18,7 @@ import { statusList } from './transform';
 import { merge, throttle } from 'lodash';
 import dayjs from 'dayjs';
 import './index.scss';
+import { ICvmDeviceDetailItem } from '@/typings/ziyanScr';
 const { FormItem } = Form;
 export default defineComponent({
   components: {
@@ -25,7 +26,7 @@ export default defineComponent({
     AreaSelector,
     ZoneSelector,
     FastCvmProduce,
-    CreateOrder,
+    CreateOrderDialog,
     SuccessProduceDetail,
     FloatInput,
   },
@@ -154,16 +155,22 @@ export default defineComponent({
         };
       },
     });
-    const isCreateOrderVisible = ref(false);
-    const fastProduceData = ref({});
-    const handleOrderCreate = (resource) => {
-      isCreateOrderVisible.value = true;
+
+    const isCreateCvmDialogShow = ref(false);
+    const handleCreateCvmConfirmSuccess = () => {
+      pageInfo.value.start = 0;
+      loadOrders();
+    };
+    const handleCreateCvmClosed = () => {
+      fastProduceData.value = null;
+    };
+
+    const fastProduceData = ref(null);
+    const handleOrderCreate = (resource: ICvmDeviceDetailItem) => {
+      isCreateCvmDialogShow.value = true;
       if (resource) {
         fastProduceData.value = resource;
       }
-    };
-    const clearDataInfo = () => {
-      fastProduceData.value = {};
     };
     const isFastProVisible = ref(false);
     const handleFastCvmProduce = () => {
@@ -177,13 +184,6 @@ export default defineComponent({
         label: item.require_name,
         value: item.require_type,
       }));
-    };
-    const queryProduceOrder = () => {
-      pageInfo.value.start = 0;
-      loadOrders(true);
-    };
-    const updateCvmProduce = () => {
-      queryProduceOrder();
     };
     const throttleLoadHostInfo = ref(null);
     const loadProducedResources = (orderId) => {
@@ -314,7 +314,7 @@ export default defineComponent({
           </div>
         </div>
         <div class='btn-container oper-btn-pad'>
-          <Button theme='primary' onClick={() => handleOrderCreate(false)}>
+          <Button theme='primary' onClick={() => handleOrderCreate(null)}>
             <Plus />
             创建单据
           </Button>
@@ -341,11 +341,11 @@ export default defineComponent({
             },
           }}
         </CommonTable>
-        <create-order
-          v-model={isCreateOrderVisible.value}
-          onUpdateProduceData={updateCvmProduce}
-          onClearDataInfo={clearDataInfo}
-          dataInfo={fastProduceData.value}
+        <CreateOrderDialog
+          v-model={isCreateCvmDialogShow.value}
+          cvmDeviceDetail={fastProduceData.value}
+          onConfirm-success={handleCreateCvmConfirmSuccess}
+          onClosed={handleCreateCvmClosed}
         />
         <fast-cvm-produce v-model={isFastProVisible.value} onOneKeyApply={handleOrderCreate} />
         <success-produce-detail v-model={isShowProduceDetail.value} tableData={producedDetail.value} />

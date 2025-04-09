@@ -12,6 +12,7 @@ const props = withDefaults(
     disabled?: boolean;
     useNameValue?: boolean;
     appearance?: 'card';
+    filter?: (list: IRequirementItem[]) => IRequirementItem[];
   }>(),
   {
     multiple: false,
@@ -47,6 +48,9 @@ const configRequirementStore = useConfigRequirementStore();
 
 watchEffect(async () => {
   list.value = await configRequirementStore.getRequirementType();
+  if (props.filter) {
+    list.value = props.filter(list.value);
+  }
 });
 
 const options: Record<IRequirementItem['require_type'], { tags: string[]; icon: string; recommend: boolean }> = {

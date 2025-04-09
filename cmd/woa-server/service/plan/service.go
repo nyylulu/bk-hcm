@@ -25,6 +25,7 @@ import (
 	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/plan"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
@@ -39,6 +40,7 @@ func InitService(c *capability.Capability) {
 		esbClient:      c.EsbClient,
 		authorizer:     c.Authorizer,
 		bizLogics:      c.BizLogic,
+		client:         c.Client,
 	}
 	h := rest.NewHandler()
 
@@ -53,6 +55,7 @@ type service struct {
 	planController *plan.Controller
 	authorizer     auth.Authorizer
 	bizLogics      biz.Logics
+	client         *client.ClientSet
 }
 
 func (s *service) initPlanService(h *rest.Handler) {
@@ -74,12 +77,16 @@ func (s *service) initPlanService(h *rest.Handler) {
 	h.Add("CreateBizResPlanTicket", http.MethodPost, "/bizs/{bk_biz_id}/plans/resources/tickets/create",
 		s.CreateBizResPlanTicket)
 	h.Add("GetResPlanTicket", http.MethodGet, "/plans/resources/tickets/{id}", s.GetResPlanTicket)
-	h.Add("GetBizResPlanTicket", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{id}",
-		s.GetBizResPlanTicket)
-	h.Add("GetResPlanTicketAudit", http.MethodGet, "/plans/resources/tickets/{ticket_id}/audit",
-		s.GetResPlanTicketAudit)
-	h.Add("GetBizResPlanTicketAudit", http.MethodGet, "/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit",
-		s.GetBizResPlanTicketAudit)
+	h.Add("GetBizResPlanTicket", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{id}", s.GetBizResPlanTicket)
+	h.Add("GetResPlanTicketAudit", http.MethodGet,
+		"/plans/resources/tickets/{ticket_id}/audit", s.GetResPlanTicketAudit)
+	h.Add("GetBizResPlanTicketAudit", http.MethodGet,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/audit", s.GetBizResPlanTicketAudit)
+	h.Add("ApproveResPlanTicketITSMNode", http.MethodPost,
+		"/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveResPlanTicketITSMNode)
+	h.Add("ApproveBizResPlanTicketITSMNode", http.MethodPost,
+		"/bizs/{bk_biz_id}/plans/resources/tickets/{ticket_id}/approve_itsm_node", s.ApproveBizResPlanTicketITSMNode)
 
 	// demand
 	h.Add("ListResPlanDemand", http.MethodPost, "/plans/resources/demands/list", s.ListResPlanDemand)
@@ -105,7 +112,16 @@ func (s *service) initPlanService(h *rest.Handler) {
 	// penalty
 	h.Add("CalcPenaltyBase", http.MethodPost, "/plans/penalty/base/calc", s.CalcPenaltyBase)
 	h.Add("CalcAndPushPenaltyRatio", http.MethodPost, "/plans/penalty/ratio/push", s.CalcAndPushPenaltyRatio)
+	h.Add("PushExpireNotification", http.MethodPost, "/plans/demands/expire_notifications/push",
+		s.PushExpireNotification)
 
 	// demand week
 	h.Add("ImportDemandWeek", http.MethodPost, "/plans/demand_week/import", s.ImportDemandWeek)
+
+	// woa device type
+	h.Add("ListDeviceType", http.MethodPost, "/plans/device_types/list", s.ListDeviceType)
+	h.Add("CreateDeviceType", http.MethodPost, "/plans/device_types/batch/create", s.CreateDeviceType)
+	h.Add("UpdateDeviceType", http.MethodPatch, "/plans/device_types/batch", s.UpdateDeviceType)
+	h.Add("DeleteDeviceType", http.MethodDelete, "/plans/device_types/batch", s.DeleteDeviceType)
+	h.Add("SyncDeviceType", http.MethodPost, "/plans/device_types/sync", s.SyncDeviceType)
 }

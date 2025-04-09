@@ -1,6 +1,8 @@
 import { getCurrentScope, onScopeDispose, ref } from 'vue';
 import type { Awaitable } from '@/typings';
 
+export type TimeoutPollAction = ReturnType<typeof useTimeoutPoll>;
+
 export default function useTimeoutPoll(
   fn: () => Awaitable<void>,
   interval: number,

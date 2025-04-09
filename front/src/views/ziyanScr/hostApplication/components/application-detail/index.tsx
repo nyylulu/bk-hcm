@@ -1,4 +1,4 @@
-import { Ref, defineComponent, onMounted, ref, computed, onUnmounted } from 'vue';
+import { Ref, defineComponent, ref, computed, onUnmounted, reactive, onBeforeMount, onMounted } from 'vue';
 import { useRoute } from 'vue-router';
 import './index.scss';
 
@@ -7,18 +7,21 @@ import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
+import { useUserStore } from '@/store';
 import { timeFormatter } from '@/common/util';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
 import http from '@/http';
 
-import { Button, Table, Message } from 'bkui-vue';
+import { Button, Table, Message, PopConfirm } from 'bkui-vue';
 import { Copy } from 'bkui-vue/lib/icon';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import DetailInfo from '@/views/resource/resource-manage/common/info/detail-info';
 import Panel from '@/components/panel';
 import WName from '@/components/w-name';
 import ModifyRecord from './modify-record';
-import ItsmTicketAudit from './itsm-ticket-audit.vue';
+import ItsmTicketAudit, { type IItsmTicketAudit } from './itsm-ticket-audit.vue';
+import type { IQueryResData } from '@/typings';
+import ApprovalStatus from './approval-status.vue';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -29,15 +32,17 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
+    const userStore = useUserStore();
     const { getBusinessApiPath } = useWhereAmI();
-    const ips = ref({});
+
+    const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
       info: any;
       [key: string]: any;
     }> = ref({ info: [] });
     const { transformRequireTypes } = useRequireTypes();
-    const { columns: cloudcolumns } = useColumns('cloudRequirementSubOrder');
-    const { columns: physicalcolumns } = useColumns('physicalRequirementSubOrder');
+    const { columns: cloudColumns } = useColumns('cloudRequirementSubOrder');
+    const { columns: physicalColumns } = useColumns('physicalRequirementSubOrder');
     const { selections, handleSelectionChange } = useSelection();
 
     // 需求子单相关num字段
@@ -75,10 +80,10 @@ export default defineComponent({
     ];
 
     // 给云主机添加num字段
-    cloudcolumns.splice(3, 0, ...numColumns);
+    cloudColumns.splice(3, 0, ...numColumns);
 
-    const Hostcolumns = [
-      ...cloudcolumns,
+    const hostColumns = [
+      ...cloudColumns,
       {
         label: '操作',
         width: 120,
@@ -93,7 +98,7 @@ export default defineComponent({
       },
     ];
 
-    const Machinecolumns = [
+    const machineColumns = [
       { type: 'selection', width: 30, minWidth: 30, align: 'center' },
       {
         label: '机型',
@@ -102,7 +107,7 @@ export default defineComponent({
       },
       // 给物理机添加num字段
       ...numColumns,
-      ...physicalcolumns,
+      ...physicalColumns,
       {
         label: '操作',
         width: 120,
@@ -117,7 +122,7 @@ export default defineComponent({
     ];
     const showRecordSlider = ref(false);
     const recordParams = ref({});
-    const showRecord = (row) => {
+    const showRecord = (row: any) => {
       showRecordSlider.value = true;
       recordParams.value = {
         suborderId: row.suborder_id,
@@ -134,14 +139,10 @@ export default defineComponent({
     });
     const batchMessage = () => {
       const message = !clipHostIp.value.length ? '仅复制已交付IP' : '已复制';
-      Message({
-        message,
-        theme: 'success',
-        duration: 1500,
-      });
+      Message({ message, theme: 'success', duration: 1500 });
     };
     const suborders = ref([]);
-    const cloundMachineList = computed(() => {
+    const cloudMachineList = computed(() => {
       return suborders.value.filter((item) => {
         return item.resource_type === 'QCLOUDCVM';
       });
@@ -154,7 +155,7 @@ export default defineComponent({
 
     const demandDetailTimer: any = { id: null, count: 0 };
     // 获取需求子单
-    const getdemandDetail = async () => {
+    const getDemandDetail = async () => {
       if (detail.value.stage === 'AUDIT') return;
       const orderId = route.params.id;
       const { data } = await http.post(
@@ -167,7 +168,7 @@ export default defineComponent({
       );
       detail.value.info = data.info;
       const list = data?.info || [];
-      list.forEach((item) => {
+      list.forEach((item: any) => {
         if (item.enableDiskCheck) item.spec.enableDiskCheck = '是';
       });
       if (!isEqual(suborders.value, list)) {
@@ -181,7 +182,7 @@ export default defineComponent({
       if (demandDetailTimer.count < 60 && list.some((item: any) => item.pending_num !== 0)) {
         demandDetailTimer.count += 1;
         demandDetailTimer.id = setTimeout(() => {
-          getdemandDetail();
+          getDemandDetail();
         }, 30000);
       }
     };
@@ -194,22 +195,13 @@ export default defineComponent({
       detail.value = data;
       suborders.value = data?.suborders || [];
     };
-
-    const getDeliveredHostField = async (suborderId) => {
+    const getDeliveredHostField = async (suborderId: string) => {
       const params = {
         filter: {
           condition: 'AND',
           rules: [
-            {
-              field: 'suborder_id',
-              operator: 'equal',
-              value: suborderId,
-            },
-            {
-              field: 'bk_biz_id',
-              operator: 'in',
-              value: [detail.value.bk_biz_id],
-            },
+            { field: 'suborder_id', operator: 'equal', value: suborderId },
+            { field: 'bk_biz_id', operator: 'in', value: [detail.value.bk_biz_id] },
           ],
         },
       };
@@ -218,13 +210,59 @@ export default defineComponent({
         params,
       );
       return Promise.resolve().then(() => {
-        const value = data?.info?.map((item) => item.ip);
+        const value = data?.info?.map((item: any) => item.ip);
         return value;
       });
     };
+
+    // 获取审批流信息
+    const itsmTicketAuditOptions = reactive({ data: null, isLoading: false });
+    const getItsmTicketAudit = async () => {
+      itsmTicketAuditOptions.isLoading = true;
+      try {
+        const order_id = Number(route.params.id);
+        const bk_biz_id = Number(route.query.bkBizId);
+        const res: IQueryResData<IItsmTicketAudit> = await http.post(
+          `/api/v1/woa/${getBusinessApiPath()}task/get/apply/ticket/audit`,
+          { order_id, bk_biz_id },
+        );
+        itsmTicketAuditOptions.data = res.data;
+      } catch (error) {
+        console.error(error);
+        itsmTicketAuditOptions.data = null;
+      } finally {
+        itsmTicketAuditOptions.isLoading = false;
+      }
+    };
+
+    // 撤单
+    const hasCancelBtn = computed(
+      () =>
+        route.query?.creator === userStore.username &&
+        ['管理员审批', 'leader审批'].includes(itsmTicketAuditOptions.data?.current_steps[0]?.name),
+    );
+    const isCancelItsmTicketLoading = ref(false);
+    const cancelItsmTicket = async () => {
+      const { order_id } = itsmTicketAuditOptions.data;
+      isCancelItsmTicketLoading.value = true;
+      try {
+        await http.post(`/api/v1/woa/${getBusinessApiPath()}task/apply/ticket/itsm_audit/cancel`, { order_id });
+        Message({ theme: 'success', message: '撤单成功' });
+        getItsmTicketAudit();
+      } catch (error) {
+        console.error(error);
+      } finally {
+        isCancelItsmTicketLoading.value = false;
+      }
+    };
+
+    onBeforeMount(() => {
+      getItsmTicketAudit();
+    });
+
     onMounted(async () => {
       await getOrderDetail(route.params.id as string);
-      await getdemandDetail();
+      await getDemandDetail();
     });
 
     onUnmounted(() => {
@@ -234,9 +272,36 @@ export default defineComponent({
 
     return () => (
       <div class={'application-detail-container'}>
-        <DetailHeader>单据详情</DetailHeader>
+        <DetailHeader>
+          {{
+            default: () => '单据详情',
+            right: () =>
+              hasCancelBtn.value ? (
+                <PopConfirm
+                  trigger='click'
+                  placement='top-end'
+                  title='撤销单据'
+                  content='撤销单据后，将取消本次的资源申请！'
+                  onConfirm={cancelItsmTicket}>
+                  <Button class='host-application-cancel-btn' loading={isCancelItsmTicketLoading.value}>
+                    撤单
+                  </Button>
+                </PopConfirm>
+              ) : null,
+          }}
+        </DetailHeader>
         <div class={'detail-wrapper'}>
-          <Panel title='基本信息'>
+          <ApprovalStatus class='mb24' ticketAuditDetail={itsmTicketAuditOptions.data} />
+
+          <Panel title='审批信息'>
+            <ItsmTicketAudit
+              data={itsmTicketAuditOptions.data}
+              isLoading={itsmTicketAuditOptions.isLoading}
+              refreshApi={getItsmTicketAudit}
+            />
+          </Panel>
+
+          <Panel title='基本信息' class='mt24'>
             <DetailInfo
               detail={detail.value}
               fields={[
@@ -276,13 +341,13 @@ export default defineComponent({
               disabled={selections.value.length === 0}>
               批量复制IP
             </Button>
-            {cloundMachineList.value.length > 0 && (
+            {cloudMachineList.value.length > 0 && (
               <>
                 <p class={'mt16 mb8'}>云主机</p>
                 <Table
                   showOverflowTooltip
-                  data={cloundMachineList.value}
-                  columns={Hostcolumns}
+                  data={cloudMachineList.value}
+                  columns={hostColumns}
                   {...{
                     onSelect: (selections: any) => {
                       handleSelectionChange(selections, () => true, false);
@@ -308,18 +373,10 @@ export default defineComponent({
                     },
                   }}
                   data={physicMachineList.value}
-                  columns={Machinecolumns}
+                  columns={machineColumns}
                 />
               </>
             )}
-          </Panel>
-
-          <Panel title='审批流程' class='mt24'>
-            <ItsmTicketAudit
-              orderId={+route.params.id}
-              creator={route.query.creator as string}
-              bkBizId={Number(route.query.bkBizId)}
-            />
           </Panel>
         </div>
         <ModifyRecord v-model={showRecordSlider.value} showObj={recordParams.value} />

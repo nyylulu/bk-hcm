@@ -25,6 +25,7 @@ import (
 
 	"hcm/pkg/api/core"
 	rpproto "hcm/pkg/api/data-service/resource-plan"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -34,6 +35,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 
 	"github.com/jmoiron/sqlx"
@@ -72,6 +74,14 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 	[]string, error) {
 
 	for _, updateReq := range updateReqs {
+		coreType := enumor.CoreType(updateReq.CoreType)
+		if coreType != "" {
+			if err := coreType.Validate(); err != nil {
+				logs.Errorf("invalid core type: %s, rid: %s", coreType, kt.Rid)
+				return nil, err
+			}
+		}
+
 		record := &tablers.ResPlanDemandTable{
 			ID:              updateReq.ID,
 			OpProductID:     updateReq.OpProductID,
@@ -80,7 +90,7 @@ func (svc *service) batchUpdateResPlanDemandWithTx(kt *kit.Kit, txn *sqlx.Tx,
 			PlanProductName: updateReq.PlanProductName,
 			VirtualDeptID:   updateReq.VirtualDeptID,
 			VirtualDeptName: updateReq.VirtualDeptName,
-			CoreType:        updateReq.CoreType,
+			CoreType:        coreType,
 			Reviser:         kt.User,
 		}
 		if updateReq.OS != nil {
@@ -121,7 +131,7 @@ func (svc *service) LockResPlanDemand(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.dao.ResPlanDemand().ExamineAndLockAllRPDemand(cts.Kit, req.IDs); err != nil {
+	if err := svc.dao.ResPlanDemand().ExamineAndLockAllRPDemand(cts.Kit, req.LockedItems); err != nil {
 		logs.Errorf("lock res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
 	}
@@ -141,7 +151,11 @@ func (svc *service) UnlockResPlanDemand(cts *rest.Contexts) (interface{}, error)
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.dao.ResPlanDemand().UnlockAllResPlanDemand(cts.Kit, req.IDs); err != nil {
+	ids := slice.Map(req.LockedItems, func(item rpproto.ResPlanDemandLockOpItem) string {
+		return item.ID
+	})
+
+	if err := svc.dao.ResPlanDemand().UnlockAllResPlanDemand(cts.Kit, ids); err != nil {
 		logs.Errorf("unlock res plan demand failed, err: %v, rid: %v", err, cts.Kit.Rid)
 		return nil, err
 	}

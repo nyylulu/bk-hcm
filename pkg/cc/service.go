@@ -124,6 +124,8 @@ type CloudServerSetting struct {
 	Itsm           ApiGateway     `yaml:"itsm"`
 	CloudSelection CloudSelection `yaml:"cloudSelection"`
 	Cmsi           CMSI           `yaml:"cmsi"`
+	UserMgr        ApiGateway     `yaml:"userMgr"`
+	OrgTopoConfig  BillConfig     `yaml:"orgTopoConfig"`
 
 	// 内部版配置
 	Cmdb   ApiGateway `yaml:"cmdb"`
@@ -409,6 +411,11 @@ func (s WebServerSetting) Validate() error {
 	return nil
 }
 
+// LabelSwitch switch for labels
+type LabelSwitch struct {
+	AwsCN bool `json:"awsCN" yaml:"awsCN"`
+}
+
 // TaskServerSetting defines task server used setting options.
 type TaskServerSetting struct {
 	// 自研云增加的配置写在这里
@@ -422,6 +429,8 @@ type TaskServerSetting struct {
 	Database DataBase  `yaml:"database"`
 	Log      LogOption `yaml:"log"`
 	Async    Async     `yaml:"async"`
+
+	UseLabel LabelSwitch `yaml:"useLabel"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -486,6 +495,7 @@ type WoaServerSetting struct {
 	Database        DataBase  `yaml:"database"`
 	Log             LogOption `yaml:"log"`
 	Esb             Esb       `yaml:"esb"`
+	BkHcmURL        string    `yaml:"bkHcmUrl"`
 	MongoDB         MongoDB   `yaml:"mongodb"`
 	Watch           MongoDB   `yaml:"watch"`
 	Redis           Redis     `yaml:"redis"`
@@ -497,9 +507,11 @@ type WoaServerSetting struct {
 	Blacklist       string           `yaml:"blacklist"`
 	UseMongo        bool             `yaml:"useMongo"`
 	Recover         Recover          `yaml:"recover"`
+	LocalTimezone   string           `yaml:"localTimezone"`
 	RollingServer   RollingServer    `yaml:"rollingServer"`
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`
+	Cmsi            CMSI             `yaml:"cmsi"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -528,6 +540,10 @@ func (s WoaServerSetting) Validate() error {
 
 	if err := s.Esb.validate(); err != nil {
 		return err
+	}
+
+	if s.BkHcmURL == "" {
+		return fmt.Errorf("bkHcmUrl should not be empty")
 	}
 
 	// 开启Mongo之后才校验参数

@@ -19,10 +19,26 @@
 
 package hclb
 
+import (
+	typelb "hcm/pkg/adaptor/types/load-balancer"
+	"hcm/pkg/criteria/validator"
+)
+
 // TCloudZiyanLoadBalancerCreateReq tcloud batch create req.
 type TCloudZiyanLoadBalancerCreateReq struct {
 	TCloudLoadBalancerCreateReq `json:",inline"`
 	ZhiTong                     *bool    `json:"zhi_tong"`
 	TgwGroupName                *string  `json:"tgw_group_name"`
 	ClusterIDs                  []string `json:"cluster_ids"`
+}
+
+// TCloudDescribeSlaCapacityOption ...
+type TCloudDescribeSlaCapacityOption struct {
+	AccountID                               string `json:"account_id" validate:"required"`
+	*typelb.TCloudDescribeSlaCapacityOption `json:",inline" validate:"required"`
+}
+
+// Validate tcloud clb list option.
+func (opt TCloudDescribeSlaCapacityOption) Validate() error {
+	return validator.Validate.Struct(opt)
 }

@@ -12,9 +12,10 @@ import { azureHandler, azurePreHandler } from './azure/DataHandler';
 import { ziyanHandler, ZiyanPreHandler } from './ziyan/DataHandler';
 
 export interface IHead {
+  maxWidth?: number;
   minWidth?: number;
   title: string;
-  width: number;
+  width?: number;
   renderAppend?: () => VNode;
   required?: boolean;
   memo?: string;

@@ -171,23 +171,14 @@ func (s *subnet) DeleteSubnet(kt *kit.Kit, instId int64) error {
 
 // SyncSubnet sync subnet config from yunti
 func (s *subnet) SyncSubnet(kt *kit.Kit, param *types.GetSubnetParam) error {
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: param.Region,
-			Zone:   param.Zone,
-			VpcId:  param.Vpc,
-		},
+	subnetReq := cvmapi.SubnetRealParam{
+		Region:      param.Region,
+		CloudCampus: param.Zone,
+		VpcId:       param.Vpc,
 	}
-
-	resp, err := s.cvm.QueryCvmSubnet(kt.Ctx, nil, req)
+	resp, err := s.cvm.QueryRealCvmSubnet(kt, subnetReq)
 	if err != nil {
-		logs.Errorf("failed to get cvm subnet info, err: %v", err)
+		logs.Errorf("failed to get cvm subnet info, err: %v, param: %+v, rid: %s", err, cvt.PtrToVal(param), kt.Rid)
 		return err
 	}
 

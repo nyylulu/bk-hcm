@@ -21,12 +21,20 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
+	dataproto "hcm/pkg/api/data-service/cloud"
+	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
@@ -1128,4 +1136,105 @@ func (s *service) StartRecycleOrderByRecycleType(cts *rest.Contexts) (any, error
 	}
 
 	return nil, nil
+}
+
+// CheckHostUworkTicketStatus check host uwork ticket status
+func (s *service) CheckHostUworkTicketStatus(cts *rest.Contexts) (any, error) {
+	return s.checkHostUworkTicketStatus(cts, handler.ListBizAuthRes)
+}
+
+func (s *service) checkHostUworkTicketStatus(cts *rest.Contexts, authHandler handler.ListAuthResHandler) (
+	interface{}, error) {
+
+	req := new(types.CheckHostUworkTicketReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, err
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 权限校验
+	authFilter, noPermFlag, err := authHandler(cts, &handler.ListAuthResOption{Authorizer: s.authorizer,
+		ResType: meta.Cvm, Action: meta.Find, Filter: tools.AllExpression()})
+	if err != nil {
+		return nil, err
+	}
+
+	if noPermFlag {
+		return nil, errf.NewFromErr(errf.PermissionDenied, fmt.Errorf("no permission"))
+	}
+
+	// 获取CVM info，包括cvm_id、固资号
+	cvmInfos, err := s.getCVMsByBkHostIDs(cts.Kit, req.BkHostIDs, authFilter)
+	if err != nil {
+		logs.Errorf("failed to get host info by bk_host_ids, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if len(cvmInfos) != len(req.BkHostIDs) {
+		logs.Errorf("get host info not match with bk_host_ids, host count: %d, host_id count: %d, rid: %s",
+			len(cvmInfos), len(req.BkHostIDs), cts.Kit.Rid)
+		return nil, fmt.Errorf("host count not match, there could be invalid bk_host_id or no permissions")
+	}
+
+	resp := new(types.CheckHostUworkTicketResp)
+	resp.Details = make([]types.CheckHostUworkTicketItem, len(req.BkHostIDs))
+	for i, bkHostID := range req.BkHostIDs {
+		if cvmInfos[bkHostID].Extension == nil {
+			logs.Errorf("host extension is nil, host: %v, rid: %s", cvmInfos[bkHostID], cts.Kit.Rid)
+			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
+		}
+
+		assetID := cvmInfos[bkHostID].Extension.BkAssetID
+		openTickets, err := s.logics.Recycler().CheckUworkOpenTicket(cts.Kit, assetID)
+		if err != nil {
+			logs.Errorf("failed to check uwork open ticket, err: %v, asset_id: %s, rid: %s", err, assetID,
+				cts.Kit.Rid)
+			return nil, err
+		}
+
+		resp.Details[i] = types.CheckHostUworkTicketItem{
+			BkHostID:       bkHostID,
+			HasOpenTickets: len(openTickets) > 0,
+			OpenTicketIDs:  openTickets,
+		}
+	}
+
+	return resp, nil
+}
+
+func (s *service) getCVMsByBkHostIDs(kt *kit.Kit, bkHostIDs []int64, authFilter *filter.Expression) (
+	map[int64]corecvm.Cvm[corecvm.TCloudZiyanHostExtension], error) {
+
+	cvms := make(map[int64]corecvm.Cvm[corecvm.TCloudZiyanHostExtension])
+	for _, batch := range slice.Split(bkHostIDs, constant.BatchOperationMaxLimit) {
+		rules := make([]filter.RuleFactory, 0)
+		rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
+		rules = append(rules, tools.RuleJsonIn("extension.bk_host_id", batch))
+		rules = append(rules, authFilter)
+
+		listFilter := &filter.Expression{
+			Op:    filter.And,
+			Rules: rules,
+		}
+
+		listReq := &dataproto.CvmListReq{
+			Field:  []string{"id", "extension"},
+			Filter: listFilter,
+			Page:   core.NewDefaultBasePage(),
+		}
+
+		rst, err := s.client.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), listReq)
+		if err != nil {
+			logs.Errorf("failed to list cvm by bk_host_id, err: %v, bk_host_ids: %v, rid: %s", err, batch, kt.Rid)
+			return nil, err
+		}
+
+		for _, one := range rst.Details {
+			cvms[one.Extension.HostID] = one
+		}
+	}
+
+	return cvms, nil
 }

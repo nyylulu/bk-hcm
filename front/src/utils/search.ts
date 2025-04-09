@@ -2,7 +2,7 @@ import type { ParsedQs } from 'qs';
 import merge from 'lodash/merge';
 import { ModelPropertyGeneric, ModelPropertySearch, ModelPropertyType } from '@/model/typings';
 import { findProperty } from '@/model/utils';
-import { QueryFilterType, QueryRuleOPEnum, RulesItem } from '@/typings';
+import { ISearchSelectValue, QueryFilterType, QueryFilterTypeLegacy, QueryRuleOPEnum, RulesItem } from '@/typings';
 import dayjs from 'dayjs';
 import isoWeek from 'dayjs/plugin/isoWeek';
 
@@ -81,64 +81,71 @@ export const convertValue = (
   return value;
 };
 
-export const transformSimpleCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
-  const queryFilter: QueryFilterType = { op: 'and', rules: [] };
+export const transformSimpleCondition = (
+  condition: Record<string, any>,
+  properties: ModelPropertyGeneric[],
+  legacy?: boolean,
+) => {
+  const queryFilter: QueryFilterType | QueryFilterTypeLegacy = !legacy
+    ? { op: 'and', rules: [] }
+    : { condition: 'AND', rules: [] };
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties);
-    if (!property) {
-      continue;
-    }
-
-    // 忽略空值
-    if ([null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length)) {
+    if (!property || isValueEmpty(value)) {
       continue;
     }
 
     if (property.meta?.search?.filterRules) {
-      queryFilter.rules.push(property.meta?.search?.filterRules(value));
+      queryFilter.rules.push(property.meta.search.filterRules(value));
       continue;
     }
 
-    if (property.type === 'datetime' && Array.isArray(value)) {
-      queryFilter.rules.push({
-        op: QueryRuleOPEnum.AND,
-        rules: [
-          {
-            op: QueryRuleOPEnum.GTE,
-            field: id,
-            value: convertValue(value?.[0], property, QueryRuleOPEnum.GTE) as RulesItem['value'],
-          },
-          {
-            op: QueryRuleOPEnum.LTE,
-            field: id,
-            value: convertValue(value?.[1], property, QueryRuleOPEnum.LTE) as RulesItem['value'],
-          },
-        ],
-      });
-      continue;
+    const rule = createQueryRule(id, value, property, legacy);
+    if (rule) {
+      queryFilter.rules.push(rule);
     }
-
-    const { op } = getDefaultRule(property);
-    queryFilter.rules.push({
-      op,
-      field: id,
-      value: convertValue(value, property, op) as RulesItem['value'],
-    });
   }
 
   return queryFilter;
+};
+
+const isValueEmpty = (value: any): boolean =>
+  [null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length);
+
+const createQueryRule = (id: string, value: any, property: ModelPropertyGeneric, legacy?: boolean): RulesItem => {
+  const createRuleItem = (
+    field: string,
+    value: any,
+    property: ModelPropertyGeneric,
+    op: QueryRuleOPEnum,
+  ): RulesItem => {
+    return {
+      [!legacy ? 'op' : 'operator']: op,
+      field,
+      value: convertValue(value, property, op) as RulesItem['value'],
+    };
+  };
+
+  if (property.type === 'datetime' && Array.isArray(value)) {
+    return {
+      op: QueryRuleOPEnum.AND,
+      rules: [
+        createRuleItem(id, value[0], property, QueryRuleOPEnum.GTE),
+        createRuleItem(id, value[1], property, QueryRuleOPEnum.LTE),
+      ],
+    };
+  }
+
+  const { op } = getDefaultRule(property);
+  return createRuleItem(id, value, property, op);
 };
 
 export const transformFlatCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {
   const params: Record<string, any> = {};
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties) as ModelPropertySearch;
-    if (!property) {
-      continue;
-    }
 
-    // 忽略空值
-    if ([null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length)) {
+    if (!property || isValueEmpty(value)) {
       continue;
     }
 
@@ -154,44 +161,45 @@ export const transformFlatCondition = (condition: Record<string, any>, propertie
   return params;
 };
 
+// 获取简单搜索条件 - search-select
+export const getSimpleConditionBySearchSelect = (
+  searchValue: ISearchSelectValue,
+  options: Array<{ field: string; formatter: Function }> = [],
+) => {
+  // 非数组，直接返回空
+  if (!Array.isArray(searchValue)) return null;
+
+  const applyFormatters = (value: string, field: string) =>
+    options.find((opt) => opt.field === field)?.formatter(value) || value;
+
+  // 将搜索值转换为 rules，rule之间为AND关系，rule.values之间为OR关系
+  return Object.fromEntries(
+    searchValue.reduce((conditionMap, { id, values }) => {
+      const formattedValues = values.map((v) => applyFormatters(v.id, id));
+      conditionMap.set(id, [...(conditionMap.get(id) || []), ...formattedValues]);
+      return conditionMap;
+    }, new Map<string, Array<string>>()),
+  );
+};
+
 // 处理本地搜索，返回一个filterFn - search-select
 export const getLocalFilterFnBySearchSelect = (
-  searchValue: Array<{ id: string; name: string; values: { id: string; name: string }[] }>,
+  searchValue: ISearchSelectValue,
   options: Array<{ field: string; formatter: Function }> = [],
 ) => {
   // 非数组，直接返回空函数，不过滤
   if (!Array.isArray(searchValue)) return () => true;
 
-  const getValue = (value: { id: string; name: string }, key: string) => {
-    let searchVal = value.id;
-    options.forEach(({ field, formatter }) => {
-      if (field === key) searchVal = formatter(searchVal);
-    });
-    return searchVal;
-  };
-
-  // 将搜索值转换为 rules，rule之间为AND关系，rule.values之间为OR关系
-  const rules = searchValue.reduce<Array<{ key: string; values: string[] }>>((prev, { id, values }) => {
-    // 查找结果数组中是否已经存在该 id 的条目
-    const existing = prev.find(({ key }) => key === id);
-
-    if (existing) {
-      // 如果存在，则合并 values
-      existing.values.push(...values.map((value) => getValue(value, id)));
-    } else {
-      // 如果不存在，创建一个新的条目
-      prev.push({ key: id, values: values.map((value) => getValue(value, id)) });
-    }
-    return prev;
-  }, []);
+  const condition = getSimpleConditionBySearchSelect(searchValue, options);
+  const rules = Object.entries(condition).map(([key, values]) => ({ key, values }));
 
   // 构建过滤函数
   return (item: any) =>
-    rules.every(({ key, values }) => {
-      const itemValues = item[key];
-      // 将itemValues转为字符串，这样既可以比较数字，又可以比较字符串和字符串数组
-      return itemValues && values.some((v) => String(itemValues).includes(v));
-    });
+    rules.every(
+      ({ key, values }) =>
+        // 将itemValues转为字符串，这样既可以比较数字，又可以比较字符串和字符串数组
+        item[key] && values.some((v) => String(item[key]).includes(v)),
+    );
 };
 
 export const enableCount = (params = {}, enable = false) => {

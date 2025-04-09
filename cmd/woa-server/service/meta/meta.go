@@ -27,6 +27,7 @@ import (
 	imeta "hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
 )
 
 // ListDiskType lists disk type.
@@ -110,23 +111,28 @@ func (s *service) ListDeviceType(cts *rest.Contexts) (interface{}, error) {
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	opt := tools.AllExpression()
+	var opt []*filter.AtomRule
 	if len(req.DeviceClasses) > 0 {
-		opt = tools.ContainersExpression("device_class", req.DeviceClasses)
+		opt = append(opt, tools.RuleIn("device_class", req.DeviceClasses))
 	}
-	devTypeMap, err := s.dao.WoaDeviceType().GetDeviceTypeMap(cts.Kit, opt)
+	if len(req.DeviceTypes) > 0 {
+		opt = append(opt, tools.RuleIn("device_type", req.DeviceTypes))
+	}
+	devTypeMap, err := s.dao.WoaDeviceType().GetDeviceTypeMap(cts.Kit, tools.ExpressionAnd(opt...))
 	if err != nil {
-		logs.Errorf("failed to get device type map, err: %v, rid: %s", err, cts.Kit.Rid)
+		logs.Errorf("failed to get device type map, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 		return nil, errf.NewFromErr(errf.Aborted, err)
 	}
 
 	details := make([]mtypes.ListDeviceTypeRst, 0, len(devTypeMap))
 	for _, v := range devTypeMap {
 		details = append(details, mtypes.ListDeviceTypeRst{
-			DeviceType: v.DeviceType,
-			CoreType:   v.CoreType,
-			CpuCore:    v.CpuCore,
-			Memory:     v.Memory,
+			DeviceType:   v.DeviceType,
+			CoreType:     v.CoreType,
+			CpuCore:      v.CpuCore,
+			Memory:       v.Memory,
+			DeviceClass:  v.DeviceClass,
+			DeviceFamily: v.DeviceFamily,
 		})
 	}
 
@@ -262,4 +268,37 @@ func (s *service) CreateResourcePoolBiz(cts *rest.Contexts) (any, error) {
 	}
 
 	return s.client.DataService().Global.RollingServer.BatchCreateResPoolBiz(cts.Kit, req)
+}
+
+// ListOrgTopos list org topos.
+func (s *service) ListOrgTopos(cts *rest.Contexts) (any, error) {
+	if err := s.authorizer.AuthorizeWithPerm(cts.Kit, imeta.ResourceAttribute{Basic: &imeta.Basic{
+		Type: imeta.ServiceResDissolve, Action: imeta.Find}}); err != nil {
+		logs.Errorf("no permission to get org topo resource, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	req := new(mtypes.OrgTopoReq)
+	if err := cts.DecodeInto(req); err != nil {
+		logs.Errorf("get org topo decode failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := req.Validate(); err != nil {
+		logs.Errorf("get org topo request validate failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	ret, err := s.logics.GetOrgTopo(cts.Kit, req.View)
+	if err != nil {
+		logs.Errorf("failed to get org topo, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.Aborted, err)
+	}
+
+	return ret, nil
+}
+
+// ListRequireObsProject lists require obs project.
+func (s *service) ListRequireObsProject(_ *rest.Contexts) (any, error) {
+	return enumor.RequireTypeObsProjectMap, nil
 }

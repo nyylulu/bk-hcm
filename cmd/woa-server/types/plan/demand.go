@@ -39,20 +39,23 @@ import (
 
 // ListResPlanDemandReq is list resource plan demand request.
 type ListResPlanDemandReq struct {
-	BkBizIDs        []int64              `json:"bk_biz_ids" validate:"omitempty,max=100"`
-	OpProductIDs    []int64              `json:"op_product_ids" validate:"omitempty,max=100"`
-	PlanProductIDs  []int64              `json:"plan_product_ids" validate:"omitempty,max=100"`
-	DemandIDs       []string             `json:"demand_ids" validate:"omitempty,max=100"`
-	ObsProjects     []enumor.ObsProject  `json:"obs_projects" validate:"omitempty,max=100"`
-	DemandClasses   []enumor.DemandClass `json:"demand_classes" validate:"omitempty,max=100"`
-	DeviceClasses   []string             `json:"device_classes" validate:"omitempty,max=100"`
-	DeviceTypes     []string             `json:"device_types" validate:"omitempty,max=100"`
-	RegionIDs       []string             `json:"region_ids" validate:"omitempty,max=100"`
-	ZoneIDs         []string             `json:"zone_ids" validate:"omitempty,max=100"`
-	PlanTypes       []enumor.PlanType    `json:"plan_types" validate:"omitempty,max=100"`
-	ExpiringOnly    bool                 `json:"expiring_only" validate:"omitempty"`
-	ExpectTimeRange *times.DateRange     `json:"expect_time_range" validate:"required"`
-	Page            *core.BasePage       `json:"page" validate:"required"`
+	BkBizIDs        []int64               `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	OpProductIDs    []int64               `json:"op_product_ids" validate:"omitempty,max=100"`
+	PlanProductIDs  []int64               `json:"plan_product_ids" validate:"omitempty,max=100"`
+	DemandIDs       []string              `json:"demand_ids" validate:"omitempty,max=100"`
+	ObsProjects     []enumor.ObsProject   `json:"obs_projects" validate:"omitempty,max=100"`
+	DemandClasses   []enumor.DemandClass  `json:"demand_classes" validate:"omitempty,max=100"`
+	CoreTypes       []enumor.CoreType     `json:"core_types" validate:"omitempty,max=100"`
+	DeviceFamilies  []string              `json:"device_families" validate:"omitempty,max=100"`
+	DeviceClasses   []string              `json:"device_classes" validate:"omitempty,max=100"`
+	DeviceTypes     []string              `json:"device_types" validate:"omitempty,max=100"`
+	RegionIDs       []string              `json:"region_ids" validate:"omitempty,max=100"`
+	ZoneIDs         []string              `json:"zone_ids" validate:"omitempty,max=100"`
+	PlanTypes       []enumor.PlanType     `json:"plan_types" validate:"omitempty,max=100"`
+	ExpiringOnly    bool                  `json:"expiring_only" validate:"omitempty"`
+	ExpectTimeRange *times.DateRange      `json:"expect_time_range" validate:"required"`
+	Statuses        []enumor.DemandStatus `json:"statuses" validate:"omitempty,max=5"`
+	Page            *core.BasePage        `json:"page" validate:"required"`
 }
 
 // Validate whether ListResPlanDemandReq is valid.
@@ -97,6 +100,12 @@ func (r ListResPlanDemandReq) Validate() error {
 
 	if r.ExpectTimeRange != nil {
 		if err := r.ExpectTimeRange.Validate(); err != nil {
+			return err
+		}
+	}
+
+	for _, status := range r.Statuses {
+		if err := status.Validate(); err != nil {
 			return err
 		}
 	}
@@ -215,6 +224,7 @@ type ListResPlanDemandItem struct {
 	DemandClass      enumor.DemandClass   `json:"demand_class"`
 	DemandResType    enumor.DemandResType `json:"demand_res_type"`
 	ExpectTime       string               `json:"expect_time"`
+	CanApplyTime     string               `json:"can_apply_time"`
 	ExpiredTime      string               `json:"expired_time"`
 	DeviceClass      string               `json:"device_class"`
 	DeviceType       string               `json:"device_type"`
@@ -238,9 +248,12 @@ type ListResPlanDemandItem struct {
 	PlanType         enumor.PlanType      `json:"plan_type"`
 	ObsProject       enumor.ObsProject    `json:"obs_project"`
 	DeviceFamily     string               `json:"device_family"`
+	CoreType         enumor.CoreType      `json:"core_type"`
 	DiskType         enumor.DiskType      `json:"disk_type"`
 	DiskTypeName     string               `json:"disk_type_name"`
 	DiskIO           int64                `json:"disk_io"`
+	Creator          string               `json:"creator"`
+	Reviser          string               `json:"reviser"`
 }
 
 // SetStatus set demand status
@@ -311,7 +324,7 @@ type GetPlanDemandDetailResp struct {
 	ZoneID          string            `json:"zone_id"`
 	ZoneName        string            `json:"zone_name"`
 	PlanType        enumor.PlanType   `json:"plan_type"`
-	CoreType        string            `json:"core_type"`
+	CoreType        enumor.CoreType   `json:"core_type"`
 	DeviceFamily    string            `json:"device_family"`
 	DeviceClass     string            `json:"device_class"`
 	DeviceType      string            `json:"device_type"`
@@ -509,28 +522,29 @@ func (e *AdjustRPDemandReqElem) Validate() error {
 		return errors.New("invalid demand id, should be > 0")
 	}
 
+	// 常规修改和加急延期的通用参数校验
+	if e.OriginalInfo == nil {
+		return errors.New("original info of update demand can not be empty")
+	}
+
+	if err := e.OriginalInfo.Validate(); err != nil {
+		return err
+	}
+
+	if e.UpdatedInfo == nil {
+		return errors.New("updated info of update demand can not be empty")
+	}
+
+	if err := e.UpdatedInfo.Validate(); err != nil {
+		return err
+	}
+
 	switch e.AdjustType {
 	case enumor.RPDemandAdjustTypeUpdate:
 		if e.DemandSource != "" {
 			if err := e.DemandSource.Validate(); err != nil {
 				return err
 			}
-		}
-
-		if e.OriginalInfo == nil {
-			return errors.New("original info of update demand can not be empty")
-		}
-
-		if err := e.OriginalInfo.Validate(); err != nil {
-			return err
-		}
-
-		if e.UpdatedInfo == nil {
-			return errors.New("updated info of update demand can not be empty")
-		}
-
-		if err := e.UpdatedInfo.Validate(); err != nil {
-			return err
 		}
 	case enumor.RPDemandAdjustTypeDelay:
 		if len(e.ExpectTime) == 0 {
@@ -646,6 +660,17 @@ func (c *CalcAndPushPenaltyRatioReq) Validate() error {
 	return nil
 }
 
+// PushExpireNoticeReq is request of push expire notice.
+type PushExpireNoticeReq struct {
+	BkBizIDs  []int64  `json:"bk_biz_ids" validate:"omitempty,max=100"`
+	Receivers []string `json:"receivers" validate:"omitempty,max=10"`
+}
+
+// Validate whether PushExpireNoticeReq is valid.
+func (p PushExpireNoticeReq) Validate() error {
+	return validator.Validate.Struct(p)
+}
+
 // DemandResource is demand resource.
 // Include device type, cpu core and disk size now.
 // The OS and memory can be calculated by cpu core and device type.
@@ -753,7 +778,7 @@ func (c *CrpOrderChangeInfo) GetAggregateKey(bkBizID int64, deviceTypes map[stri
 	return key, nil
 }
 
-// ResPlanDemandKey is key of res plan demand.
+// ResPlanDemandKey is key of res plan demand. Used to uniquely identify a resource plan demand.
 type ResPlanDemandKey struct {
 	BkBizID       int64
 	DemandClass   enumor.DemandClass
@@ -793,7 +818,7 @@ type DemandPenaltyBaseKey struct {
 
 // ResPlanDemandExpendKey is key of res plan demand expend.
 type ResPlanDemandExpendKey struct {
-	// DemandClass enumor.DemandClass // 目前暂时不考虑CVM和CA的区别
+	DemandClass enumor.DemandClass
 	// DiskType      enumor.DiskType
 	BkBizID       int64
 	PlanType      enumor.PlanTypeCode

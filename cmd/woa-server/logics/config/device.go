@@ -205,8 +205,7 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 		return nil, err
 	}
 	// 记录日志
-	logs.Infof("get config device type, QueryCvmInstanceType, instTypes: %+v, resp; %+v, rid: %s",
-		instTypes, resp.Result.Data, kt.Rid)
+	logs.Infof("get config device type, QueryCvmInstanceType, instTypes: %+v, rid: %s", instTypes, kt.Rid)
 
 	infos := make([]types.DeviceTypeItem, 0)
 	for _, item := range resp.Result.Data {
@@ -215,6 +214,9 @@ func (d *device) GetDeviceType(kt *kit.Kit, input *types.GetDeviceParam) (*types
 			DeviceTypeClass: item.InstanceTypeClass,
 			DeviceGroup:     item.InstanceGroup,
 			CPUAmount:       item.CPUAmount,
+			RamAmount:       item.RamAmount,
+			CoreType:        item.CoreType,
+			DeviceClass:     item.InstanceClassDesc,
 		})
 	}
 

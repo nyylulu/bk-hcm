@@ -143,7 +143,7 @@ func (r *Recycler) checkInitializeStatus(task *table.RecallDetail) error {
 		return fmt.Errorf("failed to convert initial biz id %s to int, err: %v", task.InitializeBizID, err)
 	}
 
-	if err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
+	if _, err = sops.CheckTaskStatus(r.kt, r.sops, int64(taskID), int64(bkBizID)); err != nil {
 		logs.Infof("sops:process:check:matcher:ieod init device, host %s failed to initialize, job id: %d, "+
 			"bkBizID: %d, err: %v", ip, taskID, bkBizID, err)
 

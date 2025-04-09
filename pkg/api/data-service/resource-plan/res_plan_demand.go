@@ -148,11 +148,43 @@ func (r *ResPlanDemandUpdateReq) Validate() error {
 
 // ResPlanDemandLockOpReq lock operation request
 type ResPlanDemandLockOpReq struct {
-	IDs []string `json:"ids" validate:"required,min=1,max=100,dive,gt=0"`
+	LockedItems []ResPlanDemandLockOpItem `json:"locked_objs" validate:"required,min=1,max=100"`
 }
 
 // Validate validate
 func (r ResPlanDemandLockOpReq) Validate() error {
+	for _, item := range r.LockedItems {
+		if err := item.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return validator.Validate.Struct(r)
+}
+
+// NewResPlanDemandLockOpReqBatch return ResPlanDemandLockOpReq has same locked_cpu_core
+func NewResPlanDemandLockOpReqBatch(demandIDs []string, lockedCPUCore int64) *ResPlanDemandLockOpReq {
+	items := make([]ResPlanDemandLockOpItem, len(demandIDs))
+	for i, id := range demandIDs {
+		items[i] = ResPlanDemandLockOpItem{
+			ID:            id,
+			LockedCPUCore: lockedCPUCore,
+		}
+	}
+
+	return &ResPlanDemandLockOpReq{
+		LockedItems: items,
+	}
+}
+
+// ResPlanDemandLockOpItem lock operation item
+type ResPlanDemandLockOpItem struct {
+	ID            string `json:"id" validate:"required"`
+	LockedCPUCore int64  `json:"locked_cpu_core"`
+}
+
+// Validate validate
+func (r ResPlanDemandLockOpItem) Validate() error {
 	return validator.Validate.Struct(r)
 }
 

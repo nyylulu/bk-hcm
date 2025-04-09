@@ -23,3 +23,12 @@ const (
 	// UnsetRecycleTime defines default value for unset recycle time
 	UnsetRecycleTime = -1
 )
+
+// GlobalConfigTypeRecycle 回收相关配置类型
+const GlobalConfigTypeRecycle = "recycle"
+
+// RecycleDetectConcurrenceConfigKey 回收预检并发配置
+const RecycleDetectConcurrenceConfigKey = "detect_concurrence"
+
+// DetectDefaultConcurrence 预检单个单据默认并发数
+const DetectDefaultConcurrence = 10

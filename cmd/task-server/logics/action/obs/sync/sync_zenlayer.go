@@ -82,9 +82,7 @@ func (act SyncAction) doSyncZenlayerBillItem(kt *kit.Kit,
 	syncOpt *SyncOption, start, limit uint64) error {
 
 	expressions := []*filter.AtomRule{
-		tools.RuleEqual("vendor", syncOpt.Vendor),
-		tools.RuleEqual("bill_year", syncOpt.BillYear),
-		tools.RuleEqual("bill_month", syncOpt.BillMonth),
+		tools.RuleEqual("root_account_id", syncOpt.RootAccountID),
 		tools.RuleEqual("main_account_id", syncOpt.MainAccountID),
 	}
 	listFilter := tools.ExpressionAnd(expressions...)

@@ -13,7 +13,8 @@ image:
   registry: docker-repo.bk.tencent.com/bk-hcm/oa-image
   pullPolicy: IfNotPresent
   pullSecrets: []
-  tag: 1.7.2.2
+  # tag版本，不需要带v前缀
+  tag: 1.7.6.3-alpha.2
 
 serviceAccount:
   create: true
@@ -319,6 +320,37 @@ dataservice:
         targetPort: 80
         nodePort:
   port: 80
+  # data server obs账单推送db， 目前是滚服罚金账单在用
+  obsDatabase:
+    # defines resource database related settings.
+    resource:
+      # is a seed list of host:port addresses of database nodes.
+      endpoints:
+        - 127.0.0.1:3306
+      database: hcm
+      user: root
+      password: admin
+      # DialTimeoutSec is timeout in seconds to wait for a response from the db server
+      # all the timeout default value reference:
+      # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html.
+      dialTimeoutSec:
+      readTimeoutSec:
+      writeTimeoutSec:
+      maxIdleTimeoutMin:
+      maxOpenConn:
+      maxIdleConn:
+      # defines tls related options.
+      tls:
+        # server should be accessed without verifying the TLS certificate.
+        insecureSkipVerify:
+        # server requires TLS client certificate authentication.
+        certFile:
+        # server requires TLS client certificate authentication.
+        keyFile:
+        # trusted root certificates for server.
+        caFile:
+        # the password to decrypt the certificate.
+        password:
 
 hcservice:
   ## 镜像
@@ -530,38 +562,43 @@ taskserver:
       watchIntervalSec: 1
       # taskTimeoutSec 判断任务执行超时时间
       taskTimeoutSec: 300
+  # whether to use label to filter service.
+  useLabel:
+    # use label when pull aws china site bills
+    # if true, you should deploy at least one hc service with option: "--label AWSCN" to pull aws china site bills.
+    awsCN: false
+  # task server obs账单推送db， 目前是三方云账单在用
+  obsDatabase:
+    # defines resource database related settings.
+    resource:
+      # is a seed list of host:port addresses of database nodes.
+      endpoints:
+        - 127.0.0.1:3306
+      database: hcm
+      user: root
+      password: admin
+      # DialTimeoutSec is timeout in seconds to wait for a response from the db server
+      # all the timeout default value reference:
+      # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html.
+      dialTimeoutSec:
+      readTimeoutSec:
+      writeTimeoutSec:
+      maxIdleTimeoutMin:
+      maxOpenConn:
+      maxIdleConn:
+      # defines tls related options.
+      tls:
+        # server should be accessed without verifying the TLS certificate.
+        insecureSkipVerify:
+        # server requires TLS client certificate authentication.
+        certFile:
+        # server requires TLS client certificate authentication.
+        keyFile:
+        # trusted root certificates for server.
+        caFile:
+        # the password to decrypt the certificate.
+        password:
 
-# defines obs database related settings.
-obsDatabase:
-  # defines resource database related settings.
-  resource:
-    # is a seed list of host:port addresses of database nodes.
-    endpoints:
-      - 127.0.0.1:3306
-    database: hcm
-    user: root
-    password: admin
-    # DialTimeoutSec is timeout in seconds to wait for a response from the db server
-    # all the timeout default value reference:
-    # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html.
-    dialTimeoutSec:
-    readTimeoutSec:
-    writeTimeoutSec:
-    maxIdleTimeoutMin:
-    maxOpenConn:
-    maxIdleConn:
-    # defines tls related options.
-    tls:
-      # server should be accessed without verifying the TLS certificate.
-      insecureSkipVerify:
-      # server requires TLS client certificate authentication.
-      certFile:
-      # server requires TLS client certificate authentication.
-      keyFile:
-      # trusted root certificates for server.
-      caFile:
-      # the password to decrypt the certificate.
-      password:
   # maxSlowLogLatencyMS defines the max tolerance in millisecond to execute
   # the database command, if the cost time of execute have >= the maxSlowLogLatencyMS
   # then this request will be logged.
@@ -638,7 +675,7 @@ accountserver:
     mainAccountSummarySyncDuration:
     rootAccountSummarySyncDuration:
     dailySummarySyncDuration:
-
+    monthTaskSyncDuration:
   billAllocation:
     # aws savings plans allocation option
     awsSavingsPlans:
@@ -648,6 +685,12 @@ accountserver:
     awsCommonExpense:
       excludeAccountCloudIds:
       #  - 123456789
+    # 根账号需要抵扣的项目列表
+    awsDeductAccountItems:
+      deductItemTypes:
+        #"123456789": # 根账号对应的云账号ID
+        #  line_item_line_item_type: # 项目涵盖的费用类型
+        #    - Tax
     gcpCredits:
     #- rootAccountCloudID: gcp_support_account
     #  returnConfigs:
@@ -986,10 +1029,7 @@ egress:
   enabled: true
   replicasNum: 2
   podCidrs:
-    - 9.0.0.0/8
-    - 10.0.0.0/8
-    - 11.0.0.0/8
-    - 30.0.0.0/8
+    - 127.0.0.0/8 # 示例，请修改为实际网段
   rules:
     - dport: 80
       host: example.com
@@ -1094,8 +1134,16 @@ ngate:
   app_code: xxxx
   app_secret: xxxx
 
+localTimezone: "Asia/Shanghai"
+
 rollingServer:
   syncBill: true
+  returnNotification:
+    enable: false
+    # 可用于开发调试，是否通知业务
+    sendToBusiness: false
+    # 通知时是否附带给该用户
+    defaultReceivers:
 resPlan:
   reportPenaltyRatio: false
 
@@ -1173,3 +1221,38 @@ sampwd:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+# 用户管理的配置.
+userMgr:
+  # endpoints is a seed list of host:port addresses of api gateway nodes.
+  endpoints:
+    - http://demo.com
+  # appCode is the BlueKing app code of hcm to request api gateway.
+  appCode: xxxx
+  # appSecret is the BlueKing app secret of hcm to request api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request api gateway.
+  user: xxxx
+  # bkTicket is the BlueKing access ticket of hcm to request api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request api gateway.
+  bkToken: xxxxxxxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
+# orgTopoConfig org topo config settings.
+orgTopoConfig:
+  # enable if enable org topo config.
+  enable: false
+  # syncIntervalMin org topo config interval, unit: min.
+  syncIntervalMin: 600

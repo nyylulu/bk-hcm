@@ -28,7 +28,6 @@ import (
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/async/action"
 	"hcm/pkg/async/action/run"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/orm"
@@ -86,7 +85,7 @@ func (act FlowSlaveOperateWatchAction) Run(kt run.ExecuteKit, params interface{}
 		return nil, errf.New(errf.InvalidParameter, "params type mismatch")
 	}
 
-	end := time.Now().Add(5 * time.Minute)
+	end := time.Now().Add(OperateWatchTimeout)
 	for {
 		if time.Now().After(end) {
 			return nil, fmt.Errorf("wait timeout, async task flow: %s is running", opt.FlowID)
@@ -126,23 +125,7 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 	flowInfo tableasync.AsyncFlowTable) (bool, error) {
 
 	switch flowInfo.State {
-	case enumor.FlowSuccess, enumor.FlowCancel:
-		var resStatus enumor.ResFlowStatus
-		if flowInfo.State == enumor.FlowSuccess {
-			resStatus = enumor.SuccessResFlowStatus
-		}
-		if flowInfo.State == enumor.FlowCancel {
-			resStatus = enumor.CancelResFlowStatus
-		}
-
-		if err := act.updateTargetGroupListenerRuleRelBindStatus(kt.Kit(), opt, flowInfo.State); err != nil {
-			return false, err
-		}
-
-		// 解锁资源
-		err := act.processUnlockResFlow(kt, opt, resStatus)
-		return true, err
-	case enumor.FlowFailed:
+	case enumor.FlowSuccess, enumor.FlowCancel, enumor.FlowFailed:
 		// 当Flow失败时，检查资源锁定是否超时
 		resFlowLockList, err := act.queryResFlowLock(kt, opt)
 		if err != nil {
@@ -152,32 +135,21 @@ func (act FlowSlaveOperateWatchAction) processResFlow(kt run.ExecuteKit, opt *Fl
 			return true, nil
 		}
 
-		// 更新目标组与监听器的绑定状态
-		if err = act.updateTargetGroupListenerRuleRelBindStatus(kt.Kit(), opt, flowInfo.State); err != nil {
+		var resStatus enumor.ResFlowStatus
+		if flowInfo.State == enumor.FlowSuccess {
+			resStatus = enumor.SuccessResFlowStatus
+		}
+		if flowInfo.State == enumor.FlowCancel || flowInfo.State == enumor.FlowFailed {
+			resStatus = enumor.CancelResFlowStatus
+		}
+
+		if err := act.updateTargetGroupListenerRuleRelBindStatus(kt.Kit(), opt, flowInfo.State); err != nil {
 			return false, err
 		}
 
-		// 目前只有CLB的资源需要超时解锁
-		switch resFlowLockList[0].ResType {
-		case enumor.LoadBalancerCloudResType, enumor.ListenerCloudResType,
-			enumor.TargetGroupCloudResType, enumor.TCLoudUrlRuleCloudResType:
-
-			createTime, err := time.Parse(constant.TimeStdFormat, string(resFlowLockList[0].CreatedAt))
-			if err != nil {
-				return false, err
-			}
-
-			nowTime := time.Now()
-			if nowTime.Sub(createTime).Hours() > constant.ResFlowLockExpireDays*24 {
-				err = act.processUnlockResFlow(kt, opt, enumor.TimeoutResFlowStatus)
-				return true, err
-			}
-		default:
-			// CVM主机重装等资源，需要立刻解锁
-			err = act.processUnlockResFlow(kt, opt, enumor.CancelResFlowStatus)
-			return true, err
-		}
-		return false, nil
+		// 解锁资源
+		err = act.processUnlockResFlow(kt, opt, resStatus)
+		return true, err
 	case enumor.FlowInit:
 		// 需要检查资源是否已锁定
 		resFlowLockList, err := act.queryResFlowLock(kt, opt)

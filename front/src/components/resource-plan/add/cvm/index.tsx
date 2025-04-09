@@ -109,9 +109,11 @@ export default defineComponent({
 
     watch(
       () => props.planTicketDemand.cvm.device_class,
-      () => {
-        // 重置机型规格
-        handleUpdatePlanTicketDemand('device_type', '');
+      (_newVal, oldVal) => {
+        if (oldVal) {
+          // 重置机型规格
+          handleUpdatePlanTicketDemand('device_type', '');
+        }
         // 更新数据
         getDeviceTypes();
       },

@@ -27,6 +27,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/config"
 	greenchannel "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
@@ -170,12 +171,13 @@ type scheduler struct {
 	rsLogics     rollingserver.Logics
 	gcLogics     greenchannel.Logics
 	crpCli       cvmapi.CVMClientInterface
+	bizLogic     biz.Logics
 }
 
 // New creates a scheduler
 func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
-	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics) (
-	*scheduler, error) {
+	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics,
+	bizLogic biz.Logics) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -214,6 +216,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 		configLogics: config.New(thirdCli),
 		rsLogics:     rsLogics,
 		gcLogics:     gcLogics,
+		bizLogic:     bizLogic,
 	}
 
 	return scheduler, nil
@@ -345,7 +348,7 @@ func (s *scheduler) GetApplyTicket(kit *kit.Kit, param *types.GetApplyTicketReq)
 }
 
 // GetApplyAuditItsm gets resource apply ticket audit info
-func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditItsmReq) (
+func (s *scheduler) GetApplyAuditItsm(kt *kit.Kit, param *types.GetApplyAuditItsmReq) (
 	*types.GetApplyAuditItsmRst, error) {
 
 	filter := mapstr.MapStr{
@@ -356,42 +359,53 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 		filter["bk_biz_id"] = param.BkBizID
 	}
 
-	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kit.Ctx, &filter)
+	inst, err := model.Operation().ApplyTicket().GetApplyTicket(kt.Ctx, &filter)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if inst.ItsmTicketId == "" {
-		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty, rid: %s", kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty, rid: %s", kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, for itsm ticket sn is empty")
 	}
 
-	statusResp, err := s.itsm.GetTicketStatus(kit, inst.ItsmTicketId)
+	statusResp, err := s.itsm.GetTicketStatus(kt, inst.ItsmTicketId)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if statusResp.Code != 0 {
 		logs.Errorf("failed to get apply ticket audit info, code: %d, msg: %s, rid: %s", statusResp.Code,
-			statusResp.ErrMsg, kit.Rid)
+			statusResp.ErrMsg, kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, code: %d, msg: %s", statusResp.Code,
 			statusResp.ErrMsg)
 	}
 
+	rst, err := s.getItsmApplyAuditRst(kt, param, statusResp, inst)
+	if err != nil {
+		return nil, err
+	}
+
+	return rst, nil
+}
+
+func (s *scheduler) getItsmApplyAuditRst(kt *kit.Kit, param *types.GetApplyAuditItsmReq,
+	statusResp *itsm.GetTicketStatusResp, inst *types.ApplyTicket) (*types.GetApplyAuditItsmRst, error) {
+
 	status := statusResp.Data.CurrentStatus
 	link := statusResp.Data.TicketUrl
 
-	logResp, err := s.itsm.GetTicketLog(kit, inst.ItsmTicketId)
+	logResp, err := s.itsm.GetTicketLog(kt, inst.ItsmTicketId)
 	if err != nil {
-		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply ticket audit info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
 	if logResp.Code != 0 {
 		logs.Errorf("failed to get apply ticket audit info, code: %d, msg: %s, rid: %s", logResp.Code, logResp.ErrMsg,
-			kit.Rid)
+			kt.Rid)
 		return nil, fmt.Errorf("failed to get apply ticket audit info, code: %d, msg: %s", logResp.Code, logResp.ErrMsg)
 	}
 
@@ -407,10 +421,18 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 	}
 
 	for _, step := range statusResp.Data.CurrentSteps {
+		// 校验审批人是否有该业务的访问权限
+		processorUsers := strings.Split(step.Processors, ",")
+		processorAuth, err := s.bizLogic.BatchCheckUserBizAccessAuth(kt, param.BkBizID, processorUsers)
+		if err != nil {
+			return nil, err
+		}
+
 		rst.CurrentSteps = append(rst.CurrentSteps, &types.ApplyAuditItsmStep{
-			Name:       step.Name,
-			Processors: step.Processors,
-			StateId:    step.StateId,
+			Name:           step.Name,
+			Processors:     processorUsers,
+			StateId:        step.StateId,
+			ProcessorsAuth: processorAuth,
 		})
 	}
 	for _, log := range logResp.Data.Logs {
@@ -421,7 +443,6 @@ func (s *scheduler) GetApplyAuditItsm(kit *kit.Kit, param *types.GetApplyAuditIt
 			Source:    log.Source,
 		})
 	}
-
 	return rst, nil
 }
 
@@ -1113,6 +1134,15 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 	}
 
 	cnt := cntTicket + cntOrder
+	// 翻页超过当前总数，直接返回空列表
+	if param.Page.Start > int(cnt) {
+		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", cnt, param.Page, kit.Rid)
+		return &types.GetApplyOrderRst{
+			Count: int64(cnt),
+			Info:  []*types.UnifyOrder{},
+		}, nil
+	}
+
 	mergedOrders := s.mergeApplyTicketOrder(tickets, orders)
 
 	begin := int(math.Max(0, float64(param.Page.Start)))
@@ -1626,7 +1656,7 @@ func (s *scheduler) ResumeApplyOrder(_ *kit.Kit, _ mapstr.MapStr) error {
 }
 
 // StartApplyOrder starts resource apply order
-func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderReq) error {
+func (s *scheduler) StartApplyOrder(kt *kit.Kit, param *types.StartApplyOrderReq) error {
 	filter := map[string]interface{}{
 		"suborder_id": mapstr.MapStr{
 			pkg.BKDBIN: param.SuborderID,
@@ -1635,15 +1665,15 @@ func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderRe
 
 	page := metadata.BasePage{}
 
-	insts, err := model.Operation().ApplyOrder().FindManyApplyOrder(kit.Ctx, page, filter)
+	insts, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, filter)
 	if err != nil {
-		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kit.Rid)
+		logs.Errorf("failed to get apply order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
 	cnt := len(insts)
 	if cnt == 0 {
-		logs.Errorf("found no apply order to start, orderNum: %d, rid: %s", cnt, kit.Rid)
+		logs.Errorf("found no apply order to start, orderNum: %d, rid: %s", cnt, kt.Rid)
 		return fmt.Errorf("found no apply order to start")
 	}
 
@@ -1659,23 +1689,29 @@ func (s *scheduler) StartApplyOrder(kit *kit.Kit, param *types.StartApplyOrderRe
 	}
 
 	// set order status wait
-	if err := s.startOrder(insts); err != nil {
-		logs.Errorf("failed to start apply order, err: %v", err)
+	if err := s.startOrder(kt, insts); err != nil {
+		logs.Errorf("failed to start apply order, err: %v, rid: %s", err, kt.Rid)
 		return fmt.Errorf("failed to start apply order, err: %v", err)
 	}
 
 	return nil
 }
 
-func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
+func (s *scheduler) startOrder(kt *kit.Kit, orders []*types.ApplyOrder) error {
 	now := time.Now()
 	for _, order := range orders {
 		// cannot start apply order if its stage is not SUSPEND
 		if order.Stage != types.TicketStageSuspend {
-			logs.Errorf("cannot start order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
-				types.TicketStageSuspend)
+			logs.Errorf("cannot start order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Stage,
+				types.TicketStageSuspend, kt.Rid)
 			return fmt.Errorf("cannot start order %s, for its stage %s != %s", order.SubOrderId, order.Stage,
 				types.TicketStageSuspend)
+		}
+
+		if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
+			logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, order.SubOrderId,
+				kt.Rid)
+			return err
 		}
 
 		filter := &mapstr.MapStr{
@@ -1690,9 +1726,31 @@ func (s *scheduler) startOrder(orders []*types.ApplyOrder) error {
 		}
 
 		if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
-			logs.Warnf("failed to set order %s running, err: %v", order.SubOrderId, err)
+			logs.Errorf("failed to set order %s running, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 			return fmt.Errorf("failed to set order %s running, err: %v", order.SubOrderId, err)
 		}
+	}
+
+	return nil
+}
+
+func (s *scheduler) startSubOrderFailedStep(kt *kit.Kit, subOrderID string) error {
+	filter := mapstr.MapStr{
+		"suborder_id": subOrderID,
+		"status":      types.StepStatusFailed,
+	}
+
+	now := time.Now()
+	doc := mapstr.MapStr{
+		"status":    types.StepStatusHandling,
+		"message":   types.StepMsgHandling,
+		"start_at":  now,
+		"update_at": now,
+	}
+
+	if err := model.Operation().ApplyStep().UpdateApplyStep(kt.Ctx, &filter, &doc); err != nil {
+		logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, subOrderID, kt.Rid)
+		return err
 	}
 
 	return nil
@@ -1798,7 +1856,7 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 	}
 
 	// modify apply order
-	if err := s.modifyOrder(order, param); err != nil {
+	if err := s.modifyOrder(kt, order, param); err != nil {
 		logs.Errorf("failed to modify apply order, err: %v, rid: %s", err, kt.Rid)
 		return fmt.Errorf("failed to modify apply order, err: %v", err)
 	}
@@ -1949,14 +2007,20 @@ func (s *scheduler) validateModifyZone(order *types.ApplyOrder, param *types.Mod
 	return nil
 }
 
-func (s *scheduler) modifyOrder(order *types.ApplyOrder, param *types.ModifyApplyReq) error {
+func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	now := time.Now()
 	// cannot modify apply order if its stage is not SUSPEND
 	if order.Stage != types.TicketStageSuspend {
-		logs.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
-			types.TicketStageSuspend)
+		logs.Errorf("cannot modify order %s, for its stage %s != %s, rid: %s", order.SubOrderId, order.Status,
+			types.TicketStageSuspend, kt.Rid)
 		return fmt.Errorf("cannot modify order %s, for its stage %s != %s", order.SubOrderId, order.Status,
 			types.TicketStageSuspend)
+	}
+
+	if err := s.startSubOrderFailedStep(kt, order.SubOrderId); err != nil {
+		logs.Errorf("failed to start order failed step, err: %v, sub orderID: %s, rid: %s", err, order.SubOrderId,
+			kt.Rid)
+		return err
 	}
 
 	filter := &mapstr.MapStr{
@@ -1983,7 +2047,7 @@ func (s *scheduler) modifyOrder(order *types.ApplyOrder, param *types.ModifyAppl
 	}
 
 	if err := model.Operation().ApplyOrder().UpdateApplyOrder(context.Background(), filter, update); err != nil {
-		logs.Warnf("failed to set order %s terminate, err: %v", order.SubOrderId, err)
+		logs.Errorf("failed to set order %s terminate, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return fmt.Errorf("failed to set order %s terminate, err: %v", order.SubOrderId, err)
 	}
 
@@ -2084,7 +2148,11 @@ func (s *scheduler) GetApplyModify(kt *kit.Kit, param *types.GetApplyModifyReq) 
 
 // ProcessInitStep processes orders with init step
 func (s *scheduler) ProcessInitStep(device *types.DeviceInfo) error {
-	return s.matcher.ProcessInitStep(device)
+	_, errMap := s.matcher.ProcessInitStep([]*types.DeviceInfo{device})
+	if len(errMap) != 0 {
+		return errMap[0]
+	}
+	return nil
 }
 
 // CheckSopsUpdate checks sops task and update status, return err if sops task failed or update failed
@@ -2122,8 +2190,7 @@ func (s *scheduler) GetGenerateRecords(kt *kit.Kit, subOrderId string) ([]*types
 func (s *scheduler) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 	order *types.ApplyOrder) error {
 
-	_, err := s.generator.AddCvmDevices(kt, taskId, generateId, order)
-	if err != nil {
+	if err := s.generator.AddCvmDevices(kt, taskId, generateId, order); err != nil {
 		logs.Errorf("failed to check and update cvm device, orderId: %s, err: %v, rid: %s", err, order.SubOrderId,
 			kt.Rid)
 		return err

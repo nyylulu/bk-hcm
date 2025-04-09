@@ -56,6 +56,7 @@ func init() {
 
 	opFactory[ContainsSensitive.Factory()] = ContainsSensitiveOp(ContainsSensitive)
 	opFactory[ContainsInsensitive.Factory()] = ContainsInsensitiveOp(ContainsInsensitive)
+	opFactory[StartsWith.Factory()] = StartsWithOp(StartsWith)
 
 	opFactory[JSONEqual.Factory()] = JSONEqualOp(JSONEqual)
 	opFactory[JSONNotEqual.Factory()] = JSONNotEqualOp(JSONEqual)
@@ -142,6 +143,9 @@ const (
 	// ContainsInsensitive operator match the value with
 	// regular expression with case-insensitive.
 	ContainsInsensitive OpType = "cis"
+
+	// StartsWith Operator of field LIKE value% case-sensitive.
+	StartsWith OpType = "sw"
 )
 
 // reference: https://dev.mysql.com/doc/refman/5.7/en/json-function-reference.html
@@ -174,7 +178,8 @@ func (op OpType) Validate() error {
 		GreaterThan, GreaterThanEqual,
 		LessThan, LessThanEqual,
 		In, NotIn,
-		ContainsSensitive, ContainsInsensitive:
+		ContainsSensitive, ContainsInsensitive,
+		StartsWith:
 
 	case JSONEqual, JSONNotEqual, JSONIn, JSONContains, JSONOverlaps,
 		JSONContainsPath, JSONNotContainsPath, JSONLength:
@@ -667,6 +672,58 @@ func (cso ContainsSensitiveOp) SQLExprAndValue(field string, value interface{}) 
 		map[string]interface{}{placeholder: "%" + s + "%"}, nil
 }
 
+// StartsWithOp is op with starts with
+type StartsWithOp OpType
+
+// Name is 'sw', starts with
+func (cio StartsWithOp) Name() OpType {
+	return StartsWith
+}
+
+// ValidateValue validate 'like' operator's value
+func (cio StartsWithOp) ValidateValue(v interface{}, opt *ExprOption) error {
+	if reflect.TypeOf(v).Kind() != reflect.String {
+		return errors.New("sw operator's value should be an string")
+	}
+
+	value, ok := v.(string)
+	if !ok {
+		return errors.New("sw operator's value should be an string")
+	}
+
+	if len(value) == 0 {
+		return errors.New("sw operator's value can not be a empty string")
+	}
+
+	return nil
+}
+
+// SQLExprAndValue convert this operator's field and value to a mysql's sub query expression.
+func (cio StartsWithOp) SQLExprAndValue(field string, value interface{}) (string,
+	map[string]interface{}, error) {
+
+	if len(field) == 0 {
+		return "", nil, errors.New("field is empty")
+	}
+
+	if reflect.TypeOf(value).Kind() != reflect.String {
+		return "", nil, errors.New("sw operator's value should be an string")
+	}
+
+	s, ok := value.(string)
+	if !ok {
+		return "", nil, errors.New("sw operator's value should be an string")
+	}
+
+	if len(s) == 0 {
+		return "", nil, errors.New("sw operator's value can not be a empty string")
+	}
+
+	placeholder := fieldPlaceholderName(field)
+	return fmt.Sprintf(`%s LIKE %s%s`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
+		map[string]interface{}{placeholder: s + "%"}, nil
+}
+
 // ContainsInsensitiveOp is contains insensitive operator
 type ContainsInsensitiveOp OpType
 
@@ -747,7 +804,7 @@ func (op JSONEqualOp) SQLExprAndValue(field string, value interface{}) (string, 
 	}
 
 	placeholder := fieldPlaceholderName(strings.ReplaceAll(field, JSONFieldSeparator, ""))
-	return fmt.Sprintf(`%s = %s%s`, jsonFiledSqlFormat(field), SqlPlaceholder, placeholder),
+	return fmt.Sprintf(`%s = %s%s`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
 		map[string]interface{}{placeholder: value}, nil
 }
 
@@ -778,7 +835,7 @@ func (op JSONNotEqualOp) SQLExprAndValue(field string, value interface{}) (strin
 	}
 
 	placeholder := fieldPlaceholderName(strings.ReplaceAll(field, JSONFieldSeparator, ""))
-	return fmt.Sprintf(`%s != %s%s`, jsonFiledSqlFormat(field), SqlPlaceholder, placeholder),
+	return fmt.Sprintf(`%s != %s%s`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
 		map[string]interface{}{placeholder: value}, nil
 }
 
@@ -841,20 +898,21 @@ func (op JSONInOp) SQLExprAndValue(field string, value interface{}) (string, map
 	}
 
 	placeholder := fieldPlaceholderName(strings.ReplaceAll(field, JSONFieldSeparator, ""))
-	return fmt.Sprintf(`%s IN (%s%s)`, jsonFiledSqlFormat(field), SqlPlaceholder, placeholder),
+	return fmt.Sprintf(`%s IN (%s%s)`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
 		map[string]interface{}{placeholder: value}, nil
 }
 
-// jsonFiledSqlFormat
+// jsonFieldSqlFormat
 // 1. 会将用户传入的 json 字段名由 "extension.vpc_id" 转为 `extension->>"$.vpc_id"`。
 // 2. 如果规则中不存在'.'，则不进行转换。
-func jsonFiledSqlFormat(field string) string {
+func jsonFieldSqlFormat(field string) string {
 	if !strings.ContainsAny(field, JSONFieldSeparator) {
 		return field
 	}
 
-	index := strings.Index(field, JSONFieldSeparator)
-	return fmt.Sprintf(`%s->>'$."%s"'`, field[0:index], field[index+1:])
+	fields := strings.Split(field, JSONFieldSeparator)
+	// use  JSON_UNQUOTE and JSON_EXTRACT function to support mariadb
+	return fmt.Sprintf(`JSON_UNQUOTE(JSON_EXTRACT(%s,'$."%s"'))`, fields[0], strings.Join(fields[1:], `"."`))
 }
 
 // JSONContainsOp is json array field contain operator
@@ -884,7 +942,7 @@ func (op JSONContainsOp) SQLExprAndValue(field string, value interface{}) (strin
 	}
 
 	placeholder := fieldPlaceholderName(strings.ReplaceAll(field, JSONFieldSeparator, ""))
-	return fmt.Sprintf("JSON_CONTAINS(%s, JSON_ARRAY(%s%s))", jsonFiledSqlFormat(field), SqlPlaceholder, placeholder),
+	return fmt.Sprintf("JSON_CONTAINS(%s, JSON_ARRAY(%s%s))", jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
 		map[string]interface{}{placeholder: value}, nil
 }
 
@@ -963,7 +1021,7 @@ func (op JSONOverlapsOp) SQLExprAndValue(field string, value interface{}) (strin
 		valueMap[oneFieldName] = valueOf.Index(i).Interface()
 	}
 
-	return fmt.Sprintf("JSON_OVERLAPS(%s, %s)", jsonFiledSqlFormat(field), arrayFunc), valueMap, nil
+	return fmt.Sprintf("JSON_OVERLAPS(%s, %s)", jsonFieldSqlFormat(field), arrayFunc), valueMap, nil
 }
 
 // JSONContainsPathOp is json field json contain path operator
@@ -1059,7 +1117,7 @@ func (op JSONLengthOp) SQLExprAndValue(field string, value interface{}) (string,
 	}
 
 	placeholder := fieldPlaceholderName(strings.ReplaceAll(field, JSONFieldSeparator, ""))
-	return fmt.Sprintf(`JSON_LENGTH(%s) = %s%s`, jsonFiledSqlFormat(field), SqlPlaceholder, placeholder),
+	return fmt.Sprintf(`JSON_LENGTH(%s) = %s%s`, jsonFieldSqlFormat(field), SqlPlaceholder, placeholder),
 		map[string]interface{}{
 			placeholder: value,
 		}, nil

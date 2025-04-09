@@ -23,6 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 
+	actbill "hcm/cmd/task-server/logics/action/bill/common"
 	actcli "hcm/cmd/task-server/logics/action/cli"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/data-service/bill"
@@ -47,13 +48,20 @@ type AwsOutsideBillMonthTask struct {
 func (a AwsOutsideBillMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, index uint64) (
 	itemList []bill.RawBillItem, isFinished bool, err error) {
 
+	rootInfo, err := actcli.GetDataService().Global.RootAccount.GetBasicInfo(kt, opt.RootAccountID)
+	if err != nil {
+		logs.Errorf("fail to get root account(%s), err: %v, rid: %s", opt.RootAccountID, err, kt.Rid)
+		return nil, false, fmt.Errorf("fail to get root account, err: %w", err)
+	}
+
+	hcCli := actbill.GetHCServiceByAwsSite(rootInfo.Site)
 	rootBillReq := &hcbill.AwsRootOutsideMonthBillListReq{
 		RootAccountID: opt.RootAccountID,
 		BillYear:      uint(opt.BillYear),
 		BillMonth:     uint(opt.BillMonth),
 		Page:          &hcbill.AwsBillListPage{Offset: index, Limit: a.GetBatchSize(kt)},
 	}
-	billResp, err := actcli.GetHCService().Aws.Bill.ListRootOutsideMonthBill(kt, rootBillReq)
+	billResp, err := hcCli.Aws.Bill.ListRootOutsideMonthBill(kt, rootBillReq)
 	if err != nil {
 		return nil, false, err
 	}
@@ -96,9 +104,9 @@ func (a AwsOutsideBillMonthTask) Split(kt *kit.Kit, opt *MonthTaskActionOption,
 	if len(rawItemList) == 0 {
 		return nil, nil
 	}
-	a.initExtension(opt)
+	a.initExtension(kt, opt)
 
-	cloudIdSummaryMainMap, err := a.listSummaryMains(kt, opt)
+	cloudIdSummaryMainMap, err := listSummaryMains(kt, opt)
 	if err != nil {
 		logs.Errorf("fail to list summary main for spilt outside bill month, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -143,8 +151,7 @@ func (a AwsOutsideBillMonthTask) Split(kt *kit.Kit, opt *MonthTaskActionOption,
 }
 
 // 获取summary信息
-func (a AwsOutsideBillMonthTask) listSummaryMains(kt *kit.Kit, opt *MonthTaskActionOption) (
-	map[string]*bill.BillSummaryMain, error) {
+func listSummaryMains(kt *kit.Kit, opt *MonthTaskActionOption) (map[string]*bill.BillSummaryMain, error) {
 
 	summaryListReq := &bill.BillSummaryMainListReq{
 		Filter: tools.ExpressionAnd(

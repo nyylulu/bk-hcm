@@ -12,6 +12,7 @@ import { SITE_TYPE_MAP } from '@/common/constant';
 import { useOperationProducts } from '@/hooks/useOperationProducts';
 import { VendorAccountNameMap } from './constants';
 import { useVerify } from '@/hooks';
+import { IApplicationDetail } from '../index';
 
 const { FormItem } = Form;
 const { Option } = Select;
@@ -48,7 +49,7 @@ export default defineComponent({
   props: {
     detail: {
       required: true,
-      type: Object as PropType<IDetail>,
+      type: Object as PropType<IApplicationDetail>,
     },
   },
   setup(props) {

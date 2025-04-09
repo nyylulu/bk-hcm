@@ -48,7 +48,7 @@
     "@blueking/ediatable": "^0.0.1-beta.19",
     "@blueking/login-modal": "^1.0.1",
     "@blueking/notice-component": "^2.0.5",
-    "@blueking/org-selector": "^0.0.6",
+    "@blueking/org-selector": "^0.0.7",
     "@blueking/release-note": "^0.0.1-beta.17",
     "@blueking/roll-request": "^1.0.2",
     "@types/lodash": "^4.14.182",

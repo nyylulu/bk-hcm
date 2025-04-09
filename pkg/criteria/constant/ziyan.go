@@ -19,6 +19,8 @@
 
 package constant
 
+import "time"
+
 // 自研账号需要使用内部域名
 const (
 	// InternalVpcEndpoint vpc 内部域名
@@ -41,4 +43,10 @@ const (
 
 	// IEGDeptName 互动娱乐事业部
 	IEGDeptName = "互动娱乐事业部"
+)
+
+// 等待时间
+const (
+	// IntervalWaitTaskStart 任务启动前的等待时间
+	IntervalWaitTaskStart = time.Second * 5
 )

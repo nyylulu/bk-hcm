@@ -1,17 +1,18 @@
 import { Message } from 'bkui-vue';
 import routerAction from '@/router/utils/action';
-import { ApplyClbModel } from '@/api/load_balancers/apply-clb/types';
 import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
-export const applyClbSuccessHandler = (isBusinessPage: boolean, goBack: () => void, formModel: ApplyClbModel) => {
+export const applyClbSuccessHandler = (isBusinessPage: boolean, goBack: () => void, args: any) => {
   Message({ theme: 'success', message: '购买成功' });
+  const { id, bk_biz_id: bkBizId } = args || {};
   if (isBusinessPage) {
     // 业务下购买CLB, 跳转至单据管理-负载均衡
     routerAction.redirect({
-      name: 'ApplicationsManage',
+      path: '/business/applications/detail',
       query: {
-        [GLOBAL_BIZS_KEY]: formModel.bk_biz_id,
-        type: 'load_balance',
+        [GLOBAL_BIZS_KEY]: bkBizId,
+        type: 'load_balancer',
+        id,
       },
     });
   } else goBack();

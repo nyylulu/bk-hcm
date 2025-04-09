@@ -116,7 +116,7 @@ func (svc *lbSvc) deleteListenerByLb(kt *kit.Kit, txn *sqlx.Tx, lbId string) err
 	}
 	// 删除对应的规则
 	for _, listener := range listenerResp.Details {
-		err := svc.deleteRuleByListener(kt, txn, listener.ID)
+		err := svc.deleteRuleByListener(kt, txn, listener.ID, listener.Vendor)
 		if err != nil {
 			logs.Errorf("fail to delete load balancer rule of listener(%s), err: %v, rid: %s",
 				listener.ID, err, kt.Rid)
@@ -130,19 +130,16 @@ func (svc *lbSvc) deleteListenerByLb(kt *kit.Kit, txn *sqlx.Tx, lbId string) err
 }
 
 // 删除监听器关联规则
-func (svc *lbSvc) deleteRuleByListener(kt *kit.Kit, txn *sqlx.Tx, listenerID string) error {
-	ruleResp, err := svc.dao.LoadBalancerTCloudUrlRule().List(kt, &types.ListOption{
-		Filter: tools.EqualExpression("lbl_id", listenerID),
-		Page:   core.NewDefaultBasePage(),
-	})
+func (svc *lbSvc) deleteRuleByListener(kt *kit.Kit, txn *sqlx.Tx, listenerID string, vendor enumor.Vendor) error {
+	ruleIDs, err := svc.listRuleIDsByListener(kt, listenerID, vendor)
 	if err != nil {
-		logs.Errorf("fail to list load balancer rule of listener(%s), err: %v, rid: %s", listenerID, err, kt.Rid)
+		logs.Errorf("fail to list rule ids by listener(%s), err: %v, rid: %s", listenerID, err, kt.Rid)
 		return err
 	}
-	if len(ruleResp.Details) == 0 {
+
+	if len(ruleIDs) == 0 {
 		return nil
 	}
-	ruleIds := slice.Map(ruleResp.Details, func(r tablelb.TCloudLbUrlRuleTable) string { return r.ID })
 
 	// 删除跟目标组的绑定关系
 	err = svc.deleteTargetGroupListenerRuleRelByListener(kt, txn, []string{listenerID})
@@ -150,8 +147,41 @@ func (svc *lbSvc) deleteRuleByListener(kt *kit.Kit, txn *sqlx.Tx, listenerID str
 		logs.Errorf("fail to delete target rule rel of listener(%s), err: %v, rid: %s", listenerID, err, kt.Rid)
 		return err
 	}
-	ruleIDFilter := tools.ContainersExpression("id", ruleIds)
-	return svc.dao.LoadBalancerTCloudUrlRule().DeleteWithTx(kt, txn, ruleIDFilter)
+	ruleIDFilter := tools.ContainersExpression("id", ruleIDs)
+	switch vendor {
+	case enumor.TCloud:
+		return svc.dao.LoadBalancerTCloudUrlRule().DeleteWithTx(kt, txn, ruleIDFilter)
+	case enumor.TCloudZiyan:
+		return svc.dao.LoadBalancerTCloudZiyanUrlRule().DeleteWithTx(kt, txn, ruleIDFilter)
+	default:
+		return fmt.Errorf("unsupported vendor: %s for delete rule by listener", vendor)
+	}
+}
+
+func (svc *lbSvc) listRuleIDsByListener(kt *kit.Kit, listenerID string, vendor enumor.Vendor) ([]string, error) {
+	listReq := &types.ListOption{
+		Filter: tools.EqualExpression("lbl_id", listenerID),
+		Page:   core.NewDefaultBasePage(),
+	}
+
+	switch vendor {
+	case enumor.TCloud:
+		ruleResp, err := svc.dao.LoadBalancerTCloudUrlRule().List(kt, listReq)
+		if err != nil {
+			logs.Errorf("fail to list load balancer rule of listener(%s), err: %v, rid: %s", listenerID, err, kt.Rid)
+			return nil, err
+		}
+		return slice.Map(ruleResp.Details, func(r tablelb.TCloudLbUrlRuleTable) string { return r.ID }), nil
+	case enumor.TCloudZiyan:
+		ruleResp, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().List(kt, listReq)
+		if err != nil {
+			logs.Errorf("fail to list load balancer rule of listener(%s), err: %v, rid: %s", listenerID, err, kt.Rid)
+			return nil, err
+		}
+		return slice.Map(ruleResp.Details, func(r *tablelb.TCloudZiyanLbUrlRuleTable) string { return r.ID }), nil
+	default:
+		return nil, fmt.Errorf("unsupported vendor: %s for list ruleIDs by listener", vendor)
+	}
 }
 
 // BatchDeleteTargetGroup batch delete target group.
@@ -289,10 +319,11 @@ func (svc *lbSvc) BatchDeleteListener(cts *rest.Contexts) (any, error) {
 	_, err = svc.dao.Txn().AutoTxn(cts.Kit, func(txn *sqlx.Tx, opt *orm.TxnOption) (any, error) {
 		// 本层直接级联删除，有数据不报错
 		// 删除对应监听器规则
-		for _, lblId := range lblIds {
-			err = svc.deleteRuleByListener(cts.Kit, txn, lblId)
+		for _, listener := range listResp.Details {
+			err = svc.deleteRuleByListener(cts.Kit, txn, listener.ID, listener.Vendor)
 			if err != nil {
-				logs.Errorf("fail to delete rule of listener(%s), err: %v, rid: %s", lblId, err, cts.Kit.Rid)
+				logs.Errorf("fail to delete rule of listener(%s), err: %v, rid: %s",
+					listener.ID, err, cts.Kit.Rid)
 				return nil, err
 			}
 		}

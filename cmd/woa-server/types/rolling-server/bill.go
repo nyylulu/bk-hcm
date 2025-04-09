@@ -22,31 +22,6 @@ package rollingserver
 
 import "hcm/pkg/criteria/validator"
 
-const (
-	// SyncAllBiz sync rolling all business bill
-	SyncAllBiz = -1
-	// FirstDay 每月第一天
-	FirstDay = 1
-	// CalculateFineStartDay 滚服机器"超期未退还"开始计算罚金的启始天数
-	CalculateFineStartDay = 31
-	// CalculateFineEndDay 滚服机器"超期未退还"开始计算罚金的最后天数
-	CalculateFineEndDay = 121
-
-	// DefaultCityID 城市ID默认值
-	DefaultCityID = 10000
-	// DefaultBusinessModID 三级业务id默认值
-	DefaultBusinessModID = 0
-	// DefaultBusinessModName 三级业务名称默认值
-	DefaultBusinessModName = ""
-	// PlatformID 平台ID
-	PlatformID = 496
-	// ResClassID 资源规格ID
-	ResClassID = 4911
-
-	// IEGOperateDeptID IEG初始运维部门ID
-	IEGOperateDeptID = 3
-)
-
 // RollingBillSyncReq sync request
 type RollingBillSyncReq struct {
 	// BkBizID 业务ID

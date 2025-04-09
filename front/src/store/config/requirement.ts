@@ -10,10 +10,25 @@ export interface IRequirementItem {
   require_type: number;
 }
 
+export interface IRequirementObsProject {
+  [key: number]: string;
+}
+
+export enum RequirementType {
+  Regular = 1,
+  Spring = 2,
+  Dissolve = 3,
+  RollServer = 6,
+  GreenChannel = 7,
+  SpringResPool = 8,
+}
+
 type RequirementResponse = IQueryResData<{ count: number; info: IRequirementItem[] }>;
+type RequirementObsProjectResponse = IQueryResData<IRequirementObsProject>;
 
 export const useConfigRequirementStore = defineStore('config-requirement', () => {
   const requirementTypeList = ref<IRequirementItem[]>();
+  const requirementObsProjectMap = ref<IRequirementObsProject>();
 
   const getRequirementType = async () => {
     if (requirementTypeList.value) {
@@ -32,7 +47,23 @@ export const useConfigRequirementStore = defineStore('config-requirement', () =>
     }
   };
 
+  const getRequirementObsProject = async () => {
+    if (requirementObsProjectMap.value) {
+      return requirementObsProjectMap.value;
+    }
+    try {
+      const res: RequirementObsProjectResponse = await http.post('/api/v1/woa/meta/requirement/obs_project/list');
+      requirementObsProjectMap.value = res?.data ?? [];
+
+      return requirementObsProjectMap.value;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    }
+  };
+
   return {
     getRequirementType,
+    getRequirementObsProject,
   };
 });

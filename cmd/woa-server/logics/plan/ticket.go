@@ -178,7 +178,7 @@ func (c *Controller) constructResPlanTicket(kt *kit.Kit, req *CreateResPlanTicke
 }
 
 // GetItsmAndCrpAuditStatus get itsm and crp audit status.
-func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.GetRPTicketStatusInfo) (
+func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, bkBizID int64, ticketStatus *ptypes.GetRPTicketStatusInfo) (
 	*ptypes.GetRPTicketItsmAudit, *ptypes.GetRPTicketCrpAudit, error) {
 
 	itsmAudit := &ptypes.GetRPTicketItsmAudit{
@@ -189,7 +189,6 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 		CrpSn:  ticketStatus.CrpSn,
 		CrpUrl: ticketStatus.CrpUrl,
 	}
-
 	// 审批未开始
 	if ticketStatus.ItsmSn == "" {
 		itsmAudit.Status = enumor.RPTicketStatusInit
@@ -215,7 +214,7 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 		return nil, nil, fmt.Errorf("itsm audit log is empty, sn: %s", ticketStatus.ItsmSn)
 	}
 
-	itsmAudit, err = c.setItsmAuditDetails(itsmAudit, itsmStatus, itsmLogs.Data)
+	itsmAudit, err = c.setItsmAuditDetails(kt, bkBizID, itsmAudit, itsmStatus, itsmLogs.Data)
 	if err != nil {
 		logs.Errorf("failed to set itsm audit details, err: %v, sn: %s, rid: %s", err, ticketStatus.ItsmSn, kt.Rid)
 		return nil, nil, err
@@ -243,7 +242,7 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 	itsmAudit.StatusName = itsmAudit.Status.Name()
 
 	// 流程走到CRP步骤，获取CRP审批记录和当前审批节点
-	crpCurrentSteps, err := c.GetCrpCurrentApprove(kt, ticketStatus.CrpSn)
+	crpCurrentSteps, err := c.GetCrpCurrentApprove(kt, bkBizID, ticketStatus.CrpSn)
 	if err != nil {
 		logs.Errorf("failed to get crp current approve, err: %v, sn: %s, rid: %s", err, ticketStatus.CrpSn, kt.Rid)
 		return nil, nil, err
@@ -260,20 +259,32 @@ func (c *Controller) GetItsmAndCrpAuditStatus(kt *kit.Kit, ticketStatus *ptypes.
 	crpAudit.Message = ticketStatus.Message
 	crpAudit.CurrentSteps = crpCurrentSteps
 	crpAudit.Logs = crpApproveLogs
-
 	return itsmAudit, crpAudit, nil
 }
 
-func (c *Controller) setItsmAuditDetails(itsmAudit *ptypes.GetRPTicketItsmAudit, current *itsm.GetTicketStatusResp,
-	logData *itsm.GetTicketLogRst) (*ptypes.GetRPTicketItsmAudit, error) {
+func (c *Controller) setItsmAuditDetails(kt *kit.Kit, bkBizID int64, itsmAudit *ptypes.GetRPTicketItsmAudit,
+	current *itsm.GetTicketStatusResp, logData *itsm.GetTicketLogRst) (*ptypes.GetRPTicketItsmAudit, error) {
 
 	// current steps
 	itsmAudit.CurrentSteps = make([]*ptypes.ItsmAuditStep, len(current.Data.CurrentSteps))
 	for i, step := range current.Data.CurrentSteps {
+		// 校验审批人是否有该业务的访问权限
+		processors := strings.Split(step.Processors, ",")
+		processorAuth := make(map[string]bool)
+		var err error
+		if bkBizID > 0 && len(processors) > 0 {
+			processorAuth, err = c.bizLogics.BatchCheckUserBizAccessAuth(kt, bkBizID, processors)
+			if err != nil {
+				return nil, err
+			}
+		}
+
+		// 校验审批人是否有该业务的访问权限
 		itsmAudit.CurrentSteps[i] = &ptypes.ItsmAuditStep{
-			StateID:    step.StateId,
-			Name:       step.Name,
-			Processors: strings.Split(step.Processors, ","),
+			StateID:        step.StateId,
+			Name:           step.Name,
+			Processors:     processors,
+			ProcessorsAuth: processorAuth,
 		}
 	}
 
@@ -304,7 +315,7 @@ func (c *Controller) setItsmAuditDetails(itsmAudit *ptypes.GetRPTicketItsmAudit,
 }
 
 // GetCrpCurrentApprove 查询当前审批节点
-func (c *Controller) GetCrpCurrentApprove(kt *kit.Kit, orderID string) ([]*ptypes.CrpAuditStep, error) {
+func (c *Controller) GetCrpCurrentApprove(kt *kit.Kit, bkBizID int64, orderID string) ([]*ptypes.CrpAuditStep, error) {
 	req := &cvmapi.QueryPlanOrderReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -344,10 +355,18 @@ func (c *Controller) GetCrpCurrentApprove(kt *kit.Kit, orderID string) ([]*ptype
 		return []*ptypes.CrpAuditStep{}, nil
 	}
 
+	// 校验审批人是否有该业务的访问权限
+	processorUsers := strings.Split(processors, ";")
+	processorAuth, err := c.bizLogics.BatchCheckUserBizAccessAuth(kt, bkBizID, processorUsers)
+	if err != nil {
+		return nil, err
+	}
+
 	currentStep := &ptypes.CrpAuditStep{
-		StateID:    "", // CRP接口暂时没有节点的ID，后续实现审批操作功能时，必须补全这个ID
-		Name:       orderItem.Data.BaseInfo.StatusDesc,
-		Processors: strings.Split(processors, ";"),
+		StateID:        "", // CRP接口暂时没有节点的ID，后续实现审批操作功能时，必须补全这个ID
+		Name:           orderItem.Data.BaseInfo.StatusDesc,
+		Processors:     processorUsers,
+		ProcessorsAuth: processorAuth,
 	}
 
 	return []*ptypes.CrpAuditStep{currentStep}, nil

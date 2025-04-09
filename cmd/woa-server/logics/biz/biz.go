@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
+	"strings"
 
 	mtypes "hcm/cmd/woa-server/types/meta"
 	"hcm/pkg/iam/meta"
@@ -23,6 +24,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 )
 
 // ListAuthorizedBiz list authorized biz with biz access permission from cmdb.
@@ -106,4 +108,60 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, er
 	}
 
 	return rst, nil
+}
+
+// BatchCheckUserBizAccessAuth batch check user biz access auth.
+func (l *logics) BatchCheckUserBizAccessAuth(kt *kit.Kit, bkBizID int64, userNames []string) (map[string]bool, error) {
+	authRes := meta.ResourceAttribute{Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID}
+	userAuthMap, err := l.authorizer.AuthorizeByUsers(kt, userNames, authRes)
+	if err != nil {
+		logs.Errorf("failed to check authorize by users, bkBizID: %d, err: %v, userNames: %v, rid: %s",
+			bkBizID, err, userNames, kt.Rid)
+		return nil, err
+	}
+
+	processorAuth := make(map[string]bool)
+	for _, userName := range userNames {
+		if authInfo, ok := userAuthMap[userName]; ok {
+			processorAuth[userName] = authInfo.IsAuth
+		}
+	}
+	return processorAuth, nil
+}
+
+// GetBkBizMaintainer get bk biz maintainer.
+func (l *logics) GetBkBizMaintainer(kt *kit.Kit, bkBizIDs []int64) (map[int64][]string, error) {
+	data := make(map[int64][]string)
+
+	bkBizIDs = slice.Unique(bkBizIDs)
+	if len(bkBizIDs) == 0 {
+		return data, nil
+	}
+
+	for _, split := range slice.Split(bkBizIDs, cmdb.BusinessSearchMaxLimit) {
+		rules := []cmdb.Rule{
+			&cmdb.AtomRule{
+				Field:    "bk_biz_id",
+				Operator: cmdb.OperatorIn,
+				Value:    split,
+			},
+		}
+		expression := &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: rules}}
+
+		params := &cmdb.SearchBizParams{
+			BizPropertyFilter: expression,
+			Fields:            []string{"bk_biz_id", "bk_biz_name", "bk_biz_maintainer"},
+		}
+		resp, err := l.esbClient.Cmdb().SearchBusiness(kt, params)
+		if err != nil {
+			logs.Errorf("call cmdb search business api failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)
+		}
+
+		for _, biz := range resp.Info {
+			data[biz.BizID] = strings.Split(biz.BkBizMaintainer, ",")
+		}
+	}
+
+	return data, nil
 }

@@ -65,6 +65,9 @@ func InitService(c *capability.Capability) {
 	h.Add("TCloudDescribeClusterResources", http.MethodPost,
 		"/vendors/tcloud-ziyan/load_balancers/cluster_resources/describe", svc.TCloudDescribeClusterResources)
 
+	h.Add("TCloudZiyanDescribeSlaCapacity", http.MethodPost,
+		"/vendors/tcloud-ziyan/load_balancers/sla/capacity/describe", svc.TCloudDescribeSlaCapacity)
+
 	bizH := rest.NewHandler()
 	bizH.Path("/bizs/{bk_biz_id}")
 	bizService(bizH, svc)
@@ -79,6 +82,8 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 	// h.Add("BizBatchCreateLB", http.MethodPost, "/load_balancers/create", svc.BizBatchCreateLB)
 	h.Add("UpdateBizTCloudLoadBalancer", http.MethodPatch,
 		"/vendors/{vendor}/load_balancers/{id}", svc.UpdateBizTCloudLoadBalancer)
+	h.Add("InquiryPriceBizLoadBalancer", http.MethodPost, "/load_balancers/prices/inquiry",
+		svc.InquiryPriceBizLoadBalancer)
 	h.Add("ListBizLoadBalancer", http.MethodPost, "/load_balancers/list", svc.ListBizLoadBalancer)
 	h.Add("ListLoadBalancerWithDeleteProtection", http.MethodPost,
 		"/load_balancers/with/delete_protection/list", svc.ListBizLoadBalancerWithDeleteProtect)
@@ -152,20 +157,32 @@ func bizService(h *rest.Handler, svc *lbSvc) {
 
 func bizURLRuleService(h *rest.Handler, svc *lbSvc) {
 	// 规则
-	h.Add("GetBizTCloudUrlRule", http.MethodGet,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/{rule_id}", svc.GetBizTCloudUrlRule)
+	h.Add("GetBizUrlRule", http.MethodGet,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/{rule_id}", svc.GetBizUrlRule)
 	h.Add("ListBizUrlRulesByListener", http.MethodPost,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/list", svc.ListBizUrlRulesByListener)
-	h.Add("ListBizTCloudRuleByTG", http.MethodPost,
-		"/vendors/tcloud/target_groups/{target_group_id}/rules/list", svc.ListBizTCloudRuleByTG)
-	h.Add("CreateBizTCloudUrlRule", http.MethodPost,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/create", svc.CreateBizTCloudUrlRule)
-	h.Add("UpdateBizTCloudUrlRule", http.MethodPatch,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/{rule_id}", svc.UpdateBizTCloudUrlRule)
-	h.Add("BatchDeleteBizTCloudUrlRule", http.MethodDelete,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizTCloudUrlRule)
-	h.Add("BatchDeleteBizTCloudUrlRuleByDomain", http.MethodDelete,
-		"/vendors/tcloud/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizTCloudUrlRuleByDomain)
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/list", svc.ListBizUrlRulesByListener)
+	h.Add("ListBizRuleByTG", http.MethodPost,
+		"/vendors/{vendor}/target_groups/{target_group_id}/rules/list", svc.ListBizRuleByTG)
+	h.Add("CreateBizUrlRule", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/create", svc.CreateBizUrlRule)
+	h.Add("UpdateBizUrlRule", http.MethodPatch,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/{rule_id}", svc.UpdateBizUrlRule)
+	h.Add("BatchDeleteBizUrlRule", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizUrlRule)
+	h.Add("BatchDeleteBizUrlRuleByDomain", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizUrlRuleByDomain)
+	h.Add("ListBizRuleByTG", http.MethodPost,
+		"/vendors/{vendor}/target_groups/{target_group_id}/rules/list", svc.ListBizRuleByTG)
+	h.Add("CreateBizUrlRule", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/create", svc.CreateBizUrlRule)
+	h.Add("UpdateBizUrlRule", http.MethodPatch,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/{rule_id}", svc.UpdateBizUrlRule)
+	h.Add("BatchDeleteBizUrlRule", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/batch", svc.BatchDeleteBizUrlRule)
+	h.Add("BatchDeleteBizUrlRuleByDomain", http.MethodDelete,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/by/domains/batch", svc.BatchDeleteBizUrlRuleByDomain)
+	h.Add("ListRuleBindingStatus", http.MethodPost,
+		"/vendors/{vendor}/listeners/{lbl_id}/rules/binding_status/list", svc.ListRuleBindingStatus)
 }
 
 func bizSopService(h *rest.Handler, svc *lbSvc) {

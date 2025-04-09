@@ -139,7 +139,7 @@ func (svc *lbSvc) listLoadBalancerWithDeleteProtect(cts *rest.Contexts, authHand
 		lb := &corelb.LoadBalancerWithDeleteProtect{BaseLoadBalancer: detail.BaseLoadBalancer}
 
 		// 目前仅支持tcloud 的删除保护
-		if detail.Vendor == enumor.TCloud {
+		if detail.Vendor == enumor.TCloud || detail.Vendor == enumor.TCloudZiyan {
 			extension := corelb.TCloudClbExtension{}
 			err := json.Unmarshal(detail.Extension, &extension)
 			if err != nil {

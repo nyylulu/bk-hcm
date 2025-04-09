@@ -3,6 +3,7 @@ module hcm
 go 1.21
 
 require (
+	github.com/bluele/gcache v0.0.2
 	cloud.google.com/go/asset v1.19.0
 	cloud.google.com/go/bigquery v1.59.1
 	cloud.google.com/go/iam v1.1.7
@@ -191,7 +192,7 @@ require (
 	golang.org/x/xerrors v0.0.0-20231012003039-104605ab7028 // indirect
 	google.golang.org/appengine v1.6.8 // indirect
 	google.golang.org/genproto v0.0.0-20240227224415-6ceb2ff114de // indirect
-	google.golang.org/grpc v1.63.2 // indirect
+	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.34.1 // indirect
 	gopkg.in/ini.v1 v1.67.0 // indirect
 )

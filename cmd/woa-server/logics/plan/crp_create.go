@@ -162,9 +162,7 @@ func (c *Controller) updateTicketStatusFailed(kt *kit.Kit, ticket *TicketInfo, m
 			allDemandIDs = append(allDemandIDs, (*demand.Original).DemandID)
 		}
 	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
 	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -240,8 +238,6 @@ func (c *Controller) createAdjustCrpTicket(kt *kit.Kit, ticket *TicketInfo) (str
 		logs.Errorf("failed to adjust cvm & cbs plan order, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
-
-	logs.Warnf("add crp res-plan resp: %v", *resp)
 
 	if resp.Error.Code != 0 {
 		logs.Errorf("failed to adjust cvm & cbs plan order, code: %d, msg: %s, req: %v, crp_trace: %s, rid: %s",
@@ -411,11 +407,24 @@ func (c *Controller) prePrepareAdjustAbleData(kt *kit.Kit, adjustType enumor.Crp
 	adjustAbleCrpDemands []*cvmapi.CvmCbsPlanQueryItem, adjustDemandsRemainAvail map[string]*AdjustAbleRemainObj,
 	demand rpt.ResPlanDemand) (map[string]*AdjustAbleRemainObj, error) {
 
+	// 查询原始预测的预测内外情况
+	demandDetail, err := c.GetResPlanDemandDetail(kt, demand.Original.DemandID, []int64{})
+	if err != nil {
+		logs.Errorf("failed to get res plan demand detail, err: %v, demand_id: %s, rid: %s", err,
+			demand.Original.DemandID, kt.Rid)
+		return nil, err
+	}
+
 	// 遍历可用于调减的crp预测，凑齐调减总量
 	needCpuCores := demand.Original.Cvm.CpuCore
 	for _, adjustAbleD := range adjustAbleCrpDemands {
 		if needCpuCores <= 0 {
 			break
+		}
+
+		// 预测内外需一致
+		if demandDetail.PlanType.GetCode() != enumor.PlanType(adjustAbleD.InPlan).GetCode() {
+			continue
 		}
 
 		remainedCpuCores := adjustAbleD.RealCoreAmount

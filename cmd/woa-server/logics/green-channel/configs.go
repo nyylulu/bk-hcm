@@ -85,11 +85,9 @@ func (l *logics) GetConfigs(kt *kit.Kit) (gctypes.Config, error) {
 func (l *logics) getConfigsFromData(kt *kit.Kit) ([]tablegconf.GlobalConfigTable, error) {
 	filter := tools.ExpressionAnd(tools.RuleEqual("config_type", constant.ConfigTypeGreenChannel))
 
-	dataReq := &datagconf.ListReq{
-		ListReq: core.ListReq{
-			Filter: filter,
-			Page:   core.NewDefaultBasePage(),
-		},
+	dataReq := &core.ListReq{
+		Filter: filter,
+		Page:   core.NewDefaultBasePage(),
 	}
 	dataResp, err := l.client.DataService().Global.GlobalConfig.List(kt, dataReq)
 	if err != nil {

@@ -8,11 +8,15 @@
 
 POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 
+### 输入参数
+
 | 参数名称              | 参数类型         | 必选 | 描述                                               |
 |-------------------|--------------|----|--------------------------------------------------|
 | demand_ids        | string array | 否  | 预测需求ID列表，不传时查询全部，数量最大100                         |
 | obs_projects      | string array | 否  | OBS项目类型列表，不传时查询全部，数量最大100                        |
 | demand_classes    | string array | 否  | 预测需求类型列表，不传时查询全部，数量最大100                         |
+| core_types        | string array | 否  | 核心类型列表，不传时查询全部，数量最大100                           | 
+| device_families   | string array | 否  | 机型族列表，不传时查询全部，数量最大100                            |
 | device_classes    | string array | 否  | 机型分类列表，不传时查询全部，数量最大100                           |
 | device_types      | string array | 否  | 机型规格列表，不传时查询全部，数量最大100                           |
 | region_ids        | string array | 否  | 地区/城市ID列表，不传时查询全部，数量最大100                        |
@@ -20,9 +24,10 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | plan_types        | string array | 否  | 计划类型列表，不传时查询全部，数量最大100                           |
 | expiring_only     | bool         | 否  | 是否只查询即将过期的需求，传true时只返回即将过期的需求，传false时查询全部，默认查询全部 |
 | expect_time_range | object       | 是  | 期望交付时间范围                                         |
+| statuses          | string array | 否  | 状态，枚举值：can_apply（可申领）、not_ready（未到申领时间）、expired（已过期）、spent_all（已耗尽）、locked（变更中），不传时查询全部，数量最大5 |
 | page              | object       | 是  | 分页设置                                             |
 
-### expect_time_range
+#### expect_time_range
 
 | 参数名称  | 参数类型   | 必选 | 描述                                          |
 |-------|--------|----|---------------------------------------------|
@@ -52,6 +57,12 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
   "demand_classes": [
     "CVM"
   ],
+  "core_types": [
+    "大核心"
+  ],
+  "device_families": [
+    "标准型"
+  ],
   "device_classes": [
     "标准型S5"
   ],
@@ -72,6 +83,9 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
     "start": "2024-01-01",
     "end": "2024-01-01"
   },
+  "statuses": [
+    "can_apply"
+  ],
   "page": {
     "count": false,
     "start": 0,
@@ -132,6 +146,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
         "plan_type": "预测内",
         "obs_project": "常规项目",
         "device_family": "高IO型",
+        "core_type": "大核心",
         "disk_type": "CLOUD_PREMIUM",
         "disk_type_name": "高性能云硬盘",
         "disk_io": 15
@@ -185,6 +200,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | demand_class       | string | 预测的需求类型，枚举值：CVM、CA                                                                |
 | demand_res_type    | string | 预测资源类型，枚举值：CVM、CBS                                                                |
 | expect_time        | string | 期望交付日期，格式为YYYY-MM-DD，例如2024-01-01                                                 |
+| can_apply_time     | string | 可申领时间，格式为YYYY-MM-DD，例如2024-01-01                                               |
 | expired_time       | string | 预测申领截止日期，格式为YYYY-MM-DD，例如2024-01-01                                               |
 | device_class       | string | 机型类型                                                                              |
 | device_type        | string | 机型规格                                                                              |
@@ -207,6 +223,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/list
 | plan_type          | string | 计划类型                                                                              |
 | obs_project        | string | OBS项目类型                                                                           |
 | device_family      | string | 机型族                                                                               |
+| core_type          | string | 核心类型                                                                              |
 | disk_type          | string | 云盘类型                                                                              |
 | disk_type_name     | string | 云盘类型名称                                                                            |
 | disk_io            | int    | 云盘IO                                                                              |

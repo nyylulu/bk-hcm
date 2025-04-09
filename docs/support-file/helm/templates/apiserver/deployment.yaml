@@ -18,7 +18,7 @@ spec:
       annotations:
         checksum/configmap: {{ include (print $.Template.BasePath "/apiserver/configmap.yaml") . | sha256sum }}
       {{- if .Values.apiserver.podAnnotations }}
-        {{ toYaml .Values.apiserver.podAnnotations | indent 8 }}
+        {{- toYaml .Values.apiserver.podAnnotations | nindent 8 }}
       {{- end }}
     spec:
       serviceAccountName: {{ template "bk-hcm.serviceAccountName" . }}
@@ -87,8 +87,10 @@ spec:
               subPath: apigw_public.key
             {{- end }}
             {{- if not .Values.etcd.enabled }}
+            {{- if .Values.externalEtcd.tls.enabled }}
             - mountPath: /data/hcm/etc/certs
               name:  etcd-certs
+            {{- end }}
             {{- end }}
 
       volumes:
@@ -103,7 +105,9 @@ spec:
                 path: apigw_public.key
             {{- end }}
       {{- if not .Values.etcd.enabled }}
+      {{- if .Values.externalEtcd.tls.enabled }}
         - name: etcd-certs
           secret:
             secretName: {{ template "bk-hcm.etcdSecretName" . }}
+      {{- end }}
       {{- end }}

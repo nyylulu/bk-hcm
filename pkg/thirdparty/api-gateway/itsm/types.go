@@ -96,7 +96,7 @@ const (
 	ActionTypeTransition string = "TRANSITION"
 )
 
-// MapStateKey 资源申请单的状态
+// MapStateKey 申请单对应的审批意见节点key
 var MapStateKey = map[int64][]string{
 	// devhk环境
 	// leader审核
@@ -160,3 +160,6 @@ const (
 	// AuditNodeEnd 流程结束
 	AuditNodeEnd string = "流程结束."
 )
+
+// ValidateTypeRequire itsm 必填节点
+const ValidateTypeRequire = "REQUIRE"

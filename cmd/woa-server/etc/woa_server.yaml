@@ -235,6 +235,38 @@ dvm:
   secret_key: test
   operator: admin
 
+# defines cmsi related settings.
+cmsi:
+  cc:
+    - manager1@example.com
+    - manager2@example.com
+  sender: hcm@example.com
+  # endpoints is a seed list of host:port addresses of finops api gateway nodes.
+  endpoints:
+    - http://demo.com
+  # appCode is the BlueKing app code of hcm to request finops api gateway.
+  appCode: bk-hcm
+  # appSecret is the BlueKing app secret of hcm to request finops api gateway.
+  appSecret: xxxxxxxxx
+  # user is the BlueKing user of hcm to request finops api gateway.
+  user: bk-hcm
+  # bkTicket is the BlueKing access ticket of hcm to request finops api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request finops api gateway.
+  bkToken: xxxxxxxxx
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+
 # defines itsm related settings.
 itsm:
   # endpoints is a seed list of host:port addresses of itsm api gateway nodes.
@@ -342,9 +374,17 @@ recover:
   enableApplyRecover: false
   # 开启回收单据恢复服务
   enableRecycleRecover: false
+  # 开启cvm生产恢复服务
+  enableCvmProdRecover: false
 
 rollingServer:
   syncBill: true
+  returnNotification:
+    enable: false
+    # 可用于开发调试，是否通知业务
+    sendToBusiness: false
+    # 通知时是否附带给该用户
+    defaultReceivers:
 
 caiche:
   host: http://127.0.0.1
@@ -353,6 +393,10 @@ caiche:
 
 resPlan:
   reportPenaltyRatio: false
+  expireNotification:
+    enable: false
+    sendToBusiness: false
+    defaultReceiver: ""
 
 # 开启自研云资源同步服务,单位:分钟
 resourceSync:

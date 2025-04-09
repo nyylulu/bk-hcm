@@ -23,9 +23,9 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/metadata"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
+	"hcm/pkg/tools/metadata"
 )
 
 // LeftIPIf provides management interface for operations of left ip config
@@ -197,21 +197,12 @@ func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 }
 
 func (l *leftIP) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi.SubnetInfo, error) {
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: region,
-			Zone:   zone,
-			VpcId:  vpc,
-		},
+	subnetReq := cvmapi.SubnetRealParam{
+		Region:      region,
+		CloudCampus: zone,
+		VpcId:       vpc,
 	}
-
-	resp, err := l.cvm.QueryCvmSubnet(nil, nil, req)
+	resp, err := l.cvm.QueryRealCvmSubnet(kt, subnetReq)
 	if err != nil {
 		logs.Errorf("failed to get cvm subnet info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

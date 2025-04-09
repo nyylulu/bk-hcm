@@ -26,7 +26,10 @@ const ExpireDays = -15
 const ResourceOperationService = 931
 
 // ApplyGoroutinesNum 订单申请恢复服务开启协程数量
-const ApplyGoroutinesNum = 5 // applyRecover协程数量
+const ApplyGoroutinesNum = 10 // applyRecover协程数量
+
+// CvmProdRecoverGoroutinesNum cvm生产恢复服务开启协程数量
+const CvmProdRecoverGoroutinesNum = 5
 
 // RebornBizId reborn业务ID
 const RebornBizId int64 = 213

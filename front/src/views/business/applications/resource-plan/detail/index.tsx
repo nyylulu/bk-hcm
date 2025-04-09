@@ -5,7 +5,7 @@ import { useResourcePlanStore } from '@/store';
 
 import Header from '@/components/resource-plan/applications/detail/header';
 import Approval from '@/components/resource-plan/applications/detail/approval';
-import TicketAudit from '@/components/resource-plan/applications/detail/ticket-audit/index.vue';
+import ResourcePlanTicketAudit from '@/components/resource-plan/applications/detail/ticket-audit/index.vue';
 import Basic from '@/components/resource-plan/applications/detail/basic';
 import List from '@/components/resource-plan/applications/detail/list';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -48,7 +48,7 @@ export default defineComponent({
         if (res1?.data?.status_info?.status === 'init' || res1?.data?.status_info?.status === 'auditing') {
           autoFlashTask.resume();
         } else {
-          autoFlashTask.pause();
+          autoFlashTask.reset();
         }
       } catch (error) {
         console.error('error', error); // eslint-disable-line no-console
@@ -73,7 +73,14 @@ export default defineComponent({
             isBiz={true}
             errorMessage={errorMessage.value}
             ticketAuditDetail={ticketAuditDetail.value}></Approval>
-          {isTicketAuditDetailShow.value && <TicketAudit detail={ticketAuditDetail.value} />}
+          {isTicketAuditDetailShow.value && (
+            <ResourcePlanTicketAudit
+              detail={ticketAuditDetail.value}
+              fetchData={getResultData}
+              timeoutPollAction={autoFlashTask}
+              isBusinessPage
+            />
+          )}
           <Basic baseInfo={ticketDetail.value?.base_info} class={cssModule['mb-16']} isBiz={true}></Basic>
           <List demands={ticketDetail.value?.demands} isBiz={true}></List>
         </section>

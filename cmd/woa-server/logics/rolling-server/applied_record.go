@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"time"
 
+	model "hcm/cmd/woa-server/model/task"
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
@@ -30,12 +31,17 @@ import (
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/mapstr"
 	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/converter"
+	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
+	"hcm/pkg/tools/times"
 )
 
 // CanApplyHost 是否可以通过滚服项目申请主机，如果不可以，会通过第二个返回值说明原因
@@ -346,7 +352,7 @@ func (l *logics) getRollingCurMonthCVMProdCpuCore(kt *kit.Kit, instGroupDeviceSi
 					Start: rstypes.RollingServerDateTimeItem{
 						Year:  now.Year(),
 						Month: int(now.Month()),
-						Day:   rstypes.FirstDay,
+						Day:   constant.FirstDay,
 					},
 					End: rstypes.RollingServerDateTimeItem{
 						Year:  now.Year(),
@@ -513,4 +519,218 @@ func (l *logics) calculateUpdateRecord(specialRecords map[enumor.CoreType][]*rst
 	}
 
 	return updatedRecords, nil
+}
+
+func subDay(year, month, day int, subDay int) (int, int, int) {
+	originalDate := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	pastDate := originalDate.AddDate(0, 0, -subDay)
+
+	return pastDate.Year(), int(pastDate.Month()), pastDate.Day()
+}
+
+// findAppliedRecords find applied records
+func (l *logics) findAppliedRecords(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate) (
+	[]*rstable.RollingAppliedRecord, error) {
+
+	records := make([]*rstable.RollingAppliedRecord, 0)
+	listReq := &rsproto.RollingAppliedRecordListReq{
+		Filter: &filter.Expression{
+			Op: filter.And,
+			Rules: []filter.RuleFactory{
+				&filter.AtomRule{Field: "bk_biz_id", Op: filter.Equal.Factory(), Value: bizID},
+				// 大于等于该日期的申请记录
+				&filter.AtomRule{Field: "roll_date", Op: filter.GreaterThanEqual.Factory(),
+					Value: times.GetDataIntDate(startDate.Year, startDate.Month, startDate.Day)},
+				// 小于等于该日期的申请记录
+				&filter.AtomRule{Field: "roll_date", Op: filter.LessThanEqual.Factory(),
+					Value: times.GetDataIntDate(endDate.Year, endDate.Month, endDate.Day)},
+				&filter.AtomRule{Field: "applied_type", Op: filter.Equal.Factory(), Value: enumor.NormalAppliedType},
+				&filter.AtomRule{
+					Field: "require_type", Op: filter.Equal.Factory(), Value: enumor.RequireTypeRollServer,
+				},
+			},
+		},
+		Page: &core.BasePage{
+			Start: 0,
+			Limit: constant.BatchOperationMaxLimit,
+		},
+	}
+
+	for {
+		result, err := l.client.DataService().Global.RollingServer.ListAppliedRecord(kt, listReq)
+		if err != nil {
+			logs.Errorf("list rolling applied record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
+			return nil, err
+		}
+		records = append(records, result.Details...)
+
+		if len(result.Details) < constant.BatchOperationMaxLimit {
+			break
+		}
+
+		listReq.Page.Start += constant.BatchOperationMaxLimit
+	}
+
+	return records, nil
+}
+
+// findReturnedRecords find returned records
+func (l *logics) findReturnedRecords(kt *kit.Kit, appliedRecordIDs []string) (
+	map[string][]*rstable.RollingReturnedRecord, error) {
+
+	recordMap := make(map[string][]*rstable.RollingReturnedRecord)
+
+	for _, ids := range slice.Split(appliedRecordIDs, constant.BatchOperationMaxLimit) {
+		listReq := &rsproto.RollingReturnedRecordListReq{
+			Filter: &filter.Expression{
+				Op: filter.And,
+				Rules: []filter.RuleFactory{
+					&filter.AtomRule{Field: "applied_record_id", Op: filter.In.Factory(), Value: ids},
+					&filter.AtomRule{Field: "status", Op: filter.Equal.Factory(), Value: enumor.NormalStatus},
+				},
+			},
+			Page: &core.BasePage{
+				Start: 0,
+				Limit: constant.BatchOperationMaxLimit,
+			},
+		}
+
+		for {
+			result, err := l.client.DataService().Global.RollingServer.ListReturnedRecord(kt, listReq)
+			if err != nil {
+				logs.Errorf("list rolling returned record failed, err: %v, req: %+v, rid: %s", err, *listReq, kt.Rid)
+				return nil, err
+			}
+
+			for _, record := range result.Details {
+				if _, ok := recordMap[record.AppliedRecordID]; !ok {
+					recordMap[record.AppliedRecordID] = make([]*rstable.RollingReturnedRecord, 0)
+				}
+
+				recordMap[record.AppliedRecordID] = append(recordMap[record.AppliedRecordID], record)
+			}
+
+			if len(result.Details) < constant.BatchOperationMaxLimit {
+				break
+			}
+
+			listReq.Page.Start += constant.BatchOperationMaxLimit
+		}
+	}
+
+	return recordMap, nil
+}
+
+func (l *logics) findUnReturnedSubOrderMsg(kt *kit.Kit, bizID int64, startDate, endDate rstypes.AppliedRecordDate) (
+	[]rstypes.UnReturnedSubOrderMsg, error) {
+
+	// 1.查询业务滚服申请记录
+	appliedRecords, err := l.findAppliedRecords(kt, bizID, startDate, endDate)
+	if err != nil {
+		logs.Errorf("find rolling applied records failed, err: %v, bizID: %d, rid: %s", err, bizID, kt.Rid)
+		return nil, err
+	}
+	if len(appliedRecords) == 0 {
+		return nil, nil
+	}
+
+	// 2.根据step1里的滚服申请记录的唯一标识，匹配滚服回收执行记录表里的数据，得到该子单目前对应的退还记录
+	appliedRecordIDs := make([]string, len(appliedRecords))
+	for i, appliedRecord := range appliedRecords {
+		appliedRecordIDs[i] = appliedRecord.ID
+	}
+	returnedRecordMap, err := l.findReturnedRecords(kt, appliedRecordIDs)
+	if err != nil {
+		logs.Errorf("find rolling returned records failed, err: %v, applied records: %v, rid: %s", err,
+			appliedRecordIDs, kt.Rid)
+		return nil, err
+	}
+
+	// 3.计算出未退还完成的子单信息
+	messages := make([]rstypes.UnReturnedSubOrderMsg, 0)
+	now := time.Now()
+	for _, apply := range appliedRecords {
+		var returnedCore int64
+		for _, returnedRecord := range returnedRecordMap[apply.ID] {
+			returnedCore += converter.PtrToVal(returnedRecord.MatchAppliedCore)
+		}
+		if returnedCore >= converter.PtrToVal(apply.DeliveredCore) {
+			continue
+		}
+		appliedTime := time.Date(apply.Year, time.Month(apply.Month), apply.Day, 0, 0, 0, 0, now.Location())
+		fineState, err := enumor.GetRsUnReturnedSubOrderFineState(appliedTime, now)
+		if err != nil {
+			logs.Errorf("get rolling server unreturned sub order fine state failed, err: %v, applied record id: %d, "+
+				"appliedTime: %v, now: %v, rid: %s", err, apply.ID, appliedTime, now, kt.Rid)
+			return nil, err
+		}
+
+		endYear, endMonth, endDay := subDay(apply.Year, apply.Month, apply.Day, -constant.RollingServerLatestReturnDay)
+		msg := rstypes.UnReturnedSubOrderMsg{
+			SubOrderID:        apply.SubOrderID,
+			AppliedCore:       converter.PtrToVal(apply.DeliveredCore),
+			ReturnedCore:      returnedCore,
+			AppliedYear:       apply.Year,
+			AppliedMonth:      apply.Month,
+			AppliedDay:        apply.Day,
+			NeedReturnedYear:  endYear,
+			NeedReturnedMonth: endMonth,
+			NeedReturnedDay:   endDay,
+			FineState:         fineState,
+		}
+		messages = append(messages, msg)
+	}
+
+	// 4.补充未退还单据其他信息
+	if len(messages) == 0 {
+		return nil, nil
+	}
+	result, err := l.fillOutUnReturnedSubOrderMsg(kt, messages)
+	if err != nil {
+		logs.Errorf("fill out unreturned sub order msg failed, err: %v, messages: %v, rid: %s", err, messages, kt.Rid)
+		return nil, err
+	}
+
+	return result, nil
+}
+
+// fillOutUnReturnedSubOrderMsg 补充未退还订单的其他信息
+func (l *logics) fillOutUnReturnedSubOrderMsg(kt *kit.Kit, messages []rstypes.UnReturnedSubOrderMsg) (
+	[]rstypes.UnReturnedSubOrderMsg, error) {
+
+	if len(messages) == 0 {
+		return messages, nil
+	}
+
+	subOrderIDs := make([]string, 0)
+	for _, msg := range messages {
+		subOrderIDs = append(subOrderIDs, msg.SubOrderID)
+	}
+
+	// 查询子单申请人
+	subOrderIDUserMap := make(map[string]string)
+	for _, ids := range slice.Split(subOrderIDs, constant.BatchOperationMaxLimit) {
+		cond := mapstr.MapStr{"suborder_id": &mapstr.MapStr{pkg.BKDBIN: ids}}
+		page := metadata.BasePage{Limit: constant.BatchOperationMaxLimit}
+		subOrders, err := model.Operation().ApplyOrder().FindManyApplyOrder(kt.Ctx, page, cond)
+		if err != nil {
+			logs.Errorf("get apply order failed, err: %v, filter: %v, rid: %s", err, cond, kt.Rid)
+			return nil, err
+		}
+		for _, subOrder := range subOrders {
+			subOrderIDUserMap[subOrder.SubOrderId] = subOrder.User
+		}
+	}
+
+	// 补充信息
+	for i, msg := range messages {
+		user, ok := subOrderIDUserMap[msg.SubOrderID]
+		if !ok {
+			logs.Errorf("get sub order user failed, sub order id: %s, rid: %s", msg.SubOrderID, kt.Rid)
+			return nil, fmt.Errorf("get sub order user failed, sub order id: %s", msg.SubOrderID)
+		}
+		messages[i].AppliedUser = user
+	}
+
+	return messages, nil
 }

@@ -131,7 +131,10 @@ func (l *logics) Delete(kt *kit.Kit, ids []string) error {
 
 // IsDissolveHost check if host is dissolve host.
 func (l *logics) IsDissolveHost(kt *kit.Kit, assetIDs []string) (map[string]bool, error) {
-	result := make(map[string]bool)
+	result := make(map[string]bool, len(assetIDs))
+	for _, id := range assetIDs {
+		result[id] = false
+	}
 
 	for _, ids := range slice.Split(assetIDs, int(core.DefaultMaxPageLimit)) {
 		req := &types.ListOption{

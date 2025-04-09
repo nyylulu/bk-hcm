@@ -21,9 +21,11 @@ package account
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"hcm/pkg/api/cloud-server/account"
+	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	hsaccount "hcm/pkg/api/hc-service/account"
@@ -31,9 +33,11 @@ import (
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/slice"
 )
 
 // GetAccount get account with options
@@ -41,7 +45,7 @@ func (a *accountSvc) GetAccount(cts *rest.Contexts) (interface{}, error) {
 	accountID := cts.PathParameter("account_id").String()
 
 	// 校验用户有该账号的查看权限
-	if err := a.checkPermission(cts, meta.Find, accountID); err != nil {
+	if err := a.checkGetAccountPermission(cts, accountID); err != nil {
 		return nil, err
 	}
 
@@ -107,17 +111,70 @@ func (a *accountSvc) GetAccount(cts *rest.Contexts) (interface{}, error) {
 	}
 }
 
+func (a *accountSvc) checkGetAccountPermission(cts *rest.Contexts, accountID string) error {
+	listReq := &core.ListReq{
+		Filter: tools.EqualExpression("id", accountID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	accounts, err := a.client.DataService().Global.Account.List(cts.Kit.Ctx, cts.Kit.Header(), listReq)
+	if err != nil {
+		logs.Errorf("list account failed, err: %v, req: %v, rid: %s", err, listReq, cts.Kit.Rid)
+		return err
+	}
+	if len(accounts.Details) == 0 {
+		return fmt.Errorf("account not found: %s", accountID)
+	}
+	if slice.IsItemInSlice(accounts.Details[0].Managers, cts.Kit.User) {
+		return nil
+	}
+
+	// 账号查看权限校验 & 业务访问权限
+	resources := []meta.ResourceAttribute{
+		{
+			Basic: &meta.Basic{
+				Type:       meta.Account,
+				Action:     meta.Find,
+				ResourceID: accountID,
+			},
+		},
+	}
+	for _, bkBizID := range accounts.Details[0].BkBizIDs {
+		resources = append(resources, meta.ResourceAttribute{
+			Basic: &meta.Basic{
+				Type:       meta.Biz,
+				Action:     meta.Access,
+				ResourceID: strconv.FormatInt(bkBizID, 10),
+			},
+		})
+	}
+	decisions, authorized, err := a.authorizer.Authorize(cts.Kit, resources...)
+	if authorized {
+		return nil
+	}
+	for i := range decisions {
+		if decisions[i].Authorized {
+			return nil
+		}
+	}
+	return fmt.Errorf("no permission for access account %s", accountID)
+}
+
 // 补充回收详情，转换回收时间
 func accountDetailFullFill[T protocloud.AccountExtensionGetResp](svc *accountSvc, cts *rest.Contexts,
 	acc *protocloud.AccountGetResult[T]) (*protocloud.AccountGetResult[T], error) {
 	acc.RecycleReserveTime = convertRecycleReverseTime(acc.RecycleReserveTime)
-	status, failedReason, err := svc.getAccountSyncDetail(cts, acc.ID, string(acc.Vendor))
+	syncDetails, err := svc.getAccountsSyncDetail(cts, acc.ID)
 	if err != nil {
 		logs.Errorf("fail to get account sync detail, accountID: %s, rid: %s", acc.ID, cts.Kit.Rid)
 		return nil, err
 	}
-	acc.SyncStatus = status
-	acc.SyncFailedReason = failedReason
+	for _, detail := range syncDetails[acc.ID] {
+		acc.SyncStatus = detail.ResStatus
+		if detail.ResStatus == string(enumor.SyncFailed) {
+			acc.SyncFailedReason = string(detail.ResFailedReason)
+			break
+		}
+	}
 	return acc, nil
 }
 

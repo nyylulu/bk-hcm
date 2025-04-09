@@ -5,8 +5,9 @@ import { useI18n } from 'vue-i18n';
 import { useGreenChannelQuotaStore } from '@/store/green-channel/quota';
 
 defineOptions({ name: 'green-channel-cpu-core-limits' });
-defineProps<{
+const props = defineProps<{
   replicasCpuCores: number;
+  bizId: string | number;
 }>();
 
 const { t } = useI18n();
@@ -20,7 +21,7 @@ const availableCpuCoreQuota = computed(() => {
 const cpuCoreQuota = computed(() => globalQuotaConfig.value?.biz_quota);
 
 onBeforeMount(() => {
-  greenChannelQuotaStore.getGlobalQuota(false);
+  greenChannelQuotaStore.getGlobalQuota(false, [Number(props.bizId)]);
 });
 
 defineExpose({ availableCpuCoreQuota });

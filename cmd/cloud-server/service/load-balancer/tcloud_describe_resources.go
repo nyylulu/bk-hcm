@@ -142,3 +142,19 @@ func (svc *lbSvc) TCloudDescribeClusterResources(cts *rest.Contexts) (any, error
 		return nil, fmt.Errorf("unsupport vendor %s", account.Vendor)
 	}
 }
+
+// TCloudDescribeSlaCapacity ...
+func (svc *lbSvc) TCloudDescribeSlaCapacity(cts *rest.Contexts) (any, error) {
+	req := new(protolb.TCloudDescribeSlaCapacityOption)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 由于用户不会去申请自研云账号的权限，所以不进行鉴权
+
+	return svc.client.HCService().TCloudZiyan.Clb.DescribeSlaCapacity(cts.Kit, req)
+}

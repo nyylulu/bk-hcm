@@ -11,7 +11,7 @@ export default [
     beforeEnter: async (to, from, next) => {
       const greenChannelQuotaStore = useGreenChannelQuotaStore();
       try {
-        await greenChannelQuotaStore.getGlobalQuota();
+        await greenChannelQuotaStore.getGlobalQuota(true);
       } finally {
         next();
       }

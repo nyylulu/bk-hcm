@@ -2,14 +2,15 @@
 import { useI18n } from 'vue-i18n';
 import type { ITimelineItem } from './typings';
 
-import { Share } from 'bkui-vue/lib/icon';
+import { Copy, Share } from 'bkui-vue/lib/icon';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 interface IProp {
   title: string;
-  loading: boolean;
+  loading?: boolean;
   ticketLink: string;
   logs: ITimelineItem[];
+  copyText: string;
 }
 
 // 审批流信息通用模板
@@ -20,22 +21,38 @@ const { t } = useI18n();
 </script>
 
 <template>
-  <bk-loading :loading="loading" class="ticket-audit-wrapper">
-    <div class="header">
-      <div class="title">{{ title }}</div>
-      <bk-link theme="primary" target="_blank" :disabled="!ticketLink" :href="ticketLink">
-        <div class="link-content">
-          <span>{{ t('单据详情') }}</span>
-          <Share width="14" height="14" class="ml6" />
-        </div>
-      </bk-link>
-      <copy-to-clipboard class="ml6" :disabled="!ticketLink" :content="ticketLink" />
-      <slot name="header-end"></slot>
+  <div>
+    <!-- loading态 -->
+    <bk-loading loading v-if="loading">
+      <div style="width: 100%; height: 300px" />
+    </bk-loading>
+    <!-- 审批流信息展示 -->
+    <div v-else class="ticket-audit-wrapper">
+      <div class="header">
+        <!-- title -->
+        <div class="title">{{ title }}</div>
+        <!-- tools slot -->
+        <slot name="tools"></slot>
+        <!-- copy -->
+        <copy-to-clipboard v-if="ticketLink" class="ml12" :content="ticketLink">
+          <bk-button theme="primary" text>
+            <copy width="18" height="18" />
+            {{ copyText }}
+          </bk-button>
+        </copy-to-clipboard>
+        <!-- link -->
+        <bk-link class="link-wrap" theme="primary" target="_blank" :disabled="!ticketLink" :href="ticketLink">
+          <div class="link-content">
+            <span>{{ t('单据详情') }}</span>
+            <share width="14" height="14" class="ml6" />
+          </div>
+        </bk-link>
+      </div>
+      <div class="content">
+        <bk-timeline :list="logs" />
+      </div>
     </div>
-    <div class="content">
-      <bk-timeline :list="logs" />
-    </div>
-  </bk-loading>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -46,20 +63,22 @@ const { t } = useI18n();
     margin-bottom: 12px;
 
     .title {
-      margin-right: 24px;
       color: $font-deep-color;
       font-weight: 700;
     }
 
-    .link-content {
-      display: flex;
-      align-items: center;
+    .link-wrap {
+      margin-left: auto;
+      .link-content {
+        display: flex;
+        align-items: center;
+      }
     }
   }
 
   .content {
-    display: flow-root;
-    padding: 0 100px;
+    padding: 12px 24px 0;
+    background: #f5f7fa;
 
     :deep(.bk-timeline) {
       .bk-timeline-dot {

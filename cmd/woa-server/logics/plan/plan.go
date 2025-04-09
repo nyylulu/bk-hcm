@@ -29,6 +29,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/biz"
 	demandtime "hcm/cmd/woa-server/logics/plan/demand-time"
+	"hcm/cmd/woa-server/storage/driver/mongodb"
 	ptypes "hcm/cmd/woa-server/types/plan"
 	ttypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
@@ -46,6 +47,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
@@ -81,21 +83,27 @@ type Logics interface {
 	// GetProdResConsumePoolV2 get biz resource consume pool.
 	GetProdResConsumePoolV2(kt *kit.Kit, bkBizIDs []int64, startDay, endDay time.Time) (ResPlanConsumePool, error)
 	// VerifyResPlanDemandV2 verify resource plan demand for subOrders.
-	VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, obsProject enumor.ObsProject, subOrders []ttypes.Suborder) (
+	VerifyResPlanDemandV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, subOrders []ttypes.Suborder) (
 		[]ptypes.VerifyResPlanDemandElem, error)
 	// VerifyProdDemandsV2 verify whether the needs of biz can be satisfied.
-	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, needs []VerifyResPlanElemV2) ([]VerifyResPlanResElem, error)
+	VerifyProdDemandsV2(kt *kit.Kit, bkBizID int64, requireType enumor.RequireType, needs []VerifyResPlanElemV2) (
+		[]VerifyResPlanResElem, error)
 	// AddMatchedPlanDemandExpendLogs add matched plan demand expend logs.
 	AddMatchedPlanDemandExpendLogs(kt *kit.Kit, bkBizID int64, subOrder *ttypes.ApplyOrder) error
 	// GetAllDeviceTypeMap get all device type map.
 	GetAllDeviceTypeMap(kt *kit.Kit) (map[string]wdt.WoaDeviceTypeTable, error)
+	// SyncDeviceTypesFromCRP sync device types from crp.
+	SyncDeviceTypesFromCRP(kt *kit.Kit, deviceTypes []string) error
 }
 
 // Controller motivates the resource plan ticket status flow.
 type Controller struct {
+	resPlanCfg     cc.ResPlan
 	dao            dao.Set
 	sd             serviced.State
 	client         *client.ClientSet
+	bkHcmURL       string
+	CmsiClient     cmsi.Client
 	esbCli         esb.Client
 	itsmCli        itsm.Client
 	itsmFlow       cc.ItsmFlow
@@ -122,7 +130,7 @@ const (
 )
 
 // New creates a resource plan ticket controller instance.
-func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.Client,
+func New(sd serviced.State, client *client.ClientSet, dao dao.Set, cmsiCli cmsi.Client, itsmCli itsm.Client,
 	crpCli cvmapi.CVMClientInterface, esbCli esb.Client, bizLogic biz.Logics) (*Controller, error) {
 
 	var itsmFlowCfg cc.ItsmFlow
@@ -141,9 +149,12 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 	}
 
 	ctrl := &Controller{
+		resPlanCfg:     cc.WoaServer().ResPlan,
 		dao:            dao,
 		sd:             sd,
 		client:         client,
+		bkHcmURL:       cc.WoaServer().BkHcmURL,
+		CmsiClient:     cmsiCli,
 		esbCli:         esbCli,
 		itsmCli:        itsmCli,
 		itsmFlow:       itsmFlowCfg,
@@ -161,14 +172,33 @@ func New(sd serviced.State, client *client.ClientSet, dao dao.Set, itsmCli itsm.
 	return ctrl, nil
 }
 
+func (c *Controller) recoverLog(keywords constant.WarnSign) {
+	if r := recover(); r != nil {
+		logs.Errorf("%s: panic: %v\n%s", keywords, r, debug.Stack())
+	}
+}
+
 // Run starts dispatcher
 func (c *Controller) Run() {
+	// controller启动后需等待一段时间，mongo等服务初始化完成后才能开始定时任务 TODO 用统一的任务调度模块来执行定时任务，确保在初始化之后
+	for {
+		if mongodb.Client() == nil {
+			logs.Warnf("mongodb client is not ready, wait seconds to retry")
+			time.Sleep(constant.IntervalWaitTaskStart)
+			continue
+		}
+		break
+	}
+
+	loc, err := time.LoadLocation(cc.WoaServer().LocalTimezone)
+	if err != nil {
+		logs.Warnf("%s: load location: %s failed: %v", constant.ResPlanExpireNotificationPushFailed,
+			cc.WoaServer().LocalTimezone, err)
+		loc = time.UTC
+	}
+
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.ResPlanTicketWatchFailed)
 
 		// TODO: get interval from config
 		// list and watch tickets every 2 minutes
@@ -178,11 +208,7 @@ func (c *Controller) Run() {
 	// TODO: get worker num from config
 	for i := 0; i < 10; i++ {
 		go func() {
-			defer func() {
-				if r := recover(); r != nil {
-					logs.Errorf("%s: panic: %v\n%s", constant.ResPlanTicketWatchFailed, r, debug.Stack())
-				}
-			}()
+			defer c.recoverLog(constant.ResPlanTicketWatchFailed)
 
 			// get and handle tickets every 2 minutes
 			wait.JitterUntil(c.runWorker, 2*time.Minute, 0.5, true, c.ctx)
@@ -191,28 +217,31 @@ func (c *Controller) Run() {
 
 	// 每周一生成12周后的核算基准数据
 	go func() {
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyBaseGenerateFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.DemandPenaltyBaseGenerateFailed)
 
 		c.generatePenaltyBase(c.ctx)
 	}()
 
 	// 每月最后7天，每天下午18:00计算当月罚金分摊比例并推送到CRP
 	go func() {
-		if !cc.WoaServer().ResPlan.ReportPenaltyRatio {
+		if !c.resPlanCfg.ReportPenaltyRatio {
 			return
 		}
 
-		defer func() {
-			if r := recover(); r != nil {
-				logs.Errorf("%s: panic: %v\n%s", constant.DemandPenaltyRatioReportFailed, r, debug.Stack())
-			}
-		}()
+		defer c.recoverLog(constant.DemandPenaltyRatioReportFailed)
 
-		c.calcAndReportPenaltyRatioToCRP(c.ctx)
+		c.calcAndReportPenaltyRatioToCRP(c.ctx, loc)
+	}()
+
+	// 预测到期提醒通知
+	go func() {
+		if !c.resPlanCfg.ExpireNotification.Enable {
+			return
+		}
+
+		defer c.recoverLog(constant.ResPlanExpireNotificationPushFailed)
+
+		c.pushExpireNotificationsRegular(c.ctx, loc)
 	}()
 
 	select {
@@ -359,26 +388,22 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		logs.Errorf("failed to query crp plan order, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-
 	if resp.Error.Code != 0 {
 		logs.Errorf("%s: failed to query crp plan order, code: %d, msg: %s, crp_sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, resp.Error.Code, resp.Error.Message, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("failed to query crp plan order, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
 	}
-
 	if resp.Result == nil {
 		logs.Errorf("%s: failed to query crp plan order, for result is empty, crp_sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return errors.New("failed to query crp plan order, for result is empty")
 	}
-
 	planItem, ok := resp.Result[ticket.CrpSn]
 	if !ok {
 		logs.Errorf("%s: query crp plan order return no result by sn: %s, rid: %s",
 			constant.ResPlanTicketWatchFailed, ticket.CrpSn, kt.Rid)
 		return fmt.Errorf("query crp plan order return no result by sn: %s", ticket.CrpSn)
 	}
-
 	// CRP返回状态码为： 1 追加单， 2 调整单， 3 订单不存在， 4 其它错误（只有1 和 2 是正确的）
 	if planItem.Code != 1 && planItem.Code != 2 {
 		logs.Errorf("%s: failed to query crp plan order, order status is incorrect, code: %d, data: %+v, rid: %s",
@@ -403,7 +428,6 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 	default:
 		return c.checkTicketTimeout(kt, ticket)
 	}
-
 	if err := c.updateTicketStatus(kt, update); err != nil {
 		logs.Errorf("failed to update resource plan ticket status, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -419,14 +443,11 @@ func (c *Controller) checkCrpTicket(kt *kit.Kit, ticket *TicketInfo) error {
 			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
 		}
 	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
 	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
 		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
-
 	return nil
 }
 
@@ -474,25 +495,11 @@ func (c *Controller) checkItsmTicket(kt *kit.Kit, ticket *TicketInfo) error {
 		return err
 	}
 
-	// 单据被拒需要释放资源
 	if update.Status != enumor.RPTicketStatusRejected && update.Status != enumor.RPTicketStatusRevoked {
 		return nil
 	}
-	allDemandIDs := make([]string, 0)
-	for _, demand := range ticket.Demands {
-		if demand.Original != nil {
-			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
-		}
-	}
-	unlockReq := &rpproto.ResPlanDemandLockOpReq{
-		IDs: allDemandIDs,
-	}
-	if err = c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
-		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
-		return err
-	}
-
-	return nil
+	// 单据被拒需要释放资源
+	return c.unlockTicketOriginalDemands(kt, ticket)
 }
 
 func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
@@ -539,8 +546,37 @@ func (c *Controller) finishAuditFlow(kt *kit.Kit, ticket *TicketInfo) error {
 
 	// crp单据通过后更新本地数据表
 	if err := c.applyResPlanDemandChange(kt, ticket); err != nil {
+		// 单据更新失败需要释放原资源
+		unlockErr := c.unlockTicketOriginalDemands(kt, ticket)
+		if unlockErr != nil {
+			logs.Warnf("failed to unlock ticket original demands, err: %v, id: %s, rid: %s", unlockErr,
+				ticket.ID, kt.Rid)
+		}
+
 		logs.Errorf("%s: failed to upsert crp demand, err: %v, rid: %s", constant.DemandChangeAppliedFailed,
 			err, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+// unlockTicketOriginalDemands 解锁订单中的原始预测需求，用于预测修改失败等特殊情况，避免死锁
+func (c *Controller) unlockTicketOriginalDemands(kt *kit.Kit, ticket *TicketInfo) error {
+	allDemandIDs := make([]string, 0)
+	for _, demand := range ticket.Demands {
+		if demand.Original != nil {
+			allDemandIDs = append(allDemandIDs, demand.Original.DemandID)
+		}
+	}
+
+	if len(allDemandIDs) == 0 {
+		return nil
+	}
+
+	unlockReq := rpproto.NewResPlanDemandLockOpReqBatch(allDemandIDs, 0)
+	if err := c.client.DataService().Global.ResourcePlan.UnlockResPlanDemand(kt, unlockReq); err != nil {
+		logs.Errorf("failed to unlock all resource plan demand, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -709,7 +745,8 @@ CPU变更核数：%.2f
 		Creator:        ticket.Applicant,
 		Title:          fmt.Sprintf("%s(业务ID: %d)资源预测申请", ticket.BkBizName, ticket.BkBizID),
 		ContentDisplay: content,
-		ExtraFields:    map[string]interface{}{"res_plan_url": fmt.Sprintf(c.itsmFlow.RedirectUrlTemplate, ticket.ID)},
+		ExtraFields: map[string]interface{}{"res_plan_url": fmt.Sprintf(c.itsmFlow.RedirectUrlTemplate,
+			ticket.ID, ticket.BkBizID)},
 	}
 
 	sn, err := c.itsmCli.CreateTicket(kt, createTicketReq)
@@ -728,5 +765,15 @@ func (c *Controller) updateTicketStatus(kt *kit.Kit, ticket *rpts.ResPlanTicketS
 		return err
 	}
 
+	return nil
+}
+
+// ApproveTicketITSMByBiz 审批 预测单itsm节点
+func (c *Controller) ApproveTicketITSMByBiz(kt *kit.Kit, ticketID string, param *itsm.ApproveNodeOpt) error {
+
+	if err := c.itsmCli.ApproveNode(kt, param); err != nil {
+		logs.Errorf("failed to approve itsm node of plan ticket %s, err: %v, rid: %s", ticketID, err, kt.Rid)
+		return err
+	}
 	return nil
 }

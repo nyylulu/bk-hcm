@@ -24,22 +24,23 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/erpapi"
 )
 
-func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
+func (r *Returner) returnPm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) (string, error) {
 	assetIds := make([]string, 0)
 	for _, host := range hosts {
 		if host.AssetID == "" {
-			logs.Warnf("invalid host %s with empty asset id", host.AssetID)
+			logs.Warnf("invalid host %s with empty asset id, rid: %s", host.AssetID, kt.Rid)
 			continue
 		}
 		assetIds = append(assetIds, host.AssetID)
 	}
 
 	if len(assetIds) == 0 {
-		logs.Errorf("failed to create device return order, for asset list is empty")
+		logs.Errorf("failed to create device return order, for asset list is empty, rid: %s", kt.Rid)
 		return "", fmt.Errorf("failed to create device return order, for asset list is empty")
 	}
 
@@ -94,7 +95,8 @@ func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) 
 
 	resp, err := r.erp.CreateDeviceReturnOrder(nil, nil, req)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:returnPm:failed, failed to create device return order, err: %v", err)
+		logs.Errorf("recycler:logics:cvm:returnPm:failed, failed to create device return order, err: %v, rid: %s",
+			err, kt.Rid)
 		return "", err
 	}
 
@@ -103,39 +105,40 @@ func (r *Returner) returnPm(task *table.ReturnTask, hosts []*table.RecycleHost) 
 		respStr = string(b)
 	}
 
-	logs.Infof("recycler:logics:cvm:returnPm:success, return pm resp: %s", respStr)
+	logs.Infof("recycler:logics:cvm:returnPm:success, return pm resp: %s, rid: %s", respStr, kt.Rid)
 
-	return r.parseReturnPmResp(resp)
+	return r.parseReturnPmResp(kt, resp)
 }
 
-func (r *Returner) parseReturnPmResp(resp *erpapi.ErpResp) (string, error) {
+func (r *Returner) parseReturnPmResp(kt *kit.Kit, resp *erpapi.ErpResp) (string, error) {
 	if resp.DataSet.Header.Code != 0 {
-		logs.Errorf("pm return task failed, code: %d, msg: %s", resp.DataSet.Header.Code, resp.DataSet.Header.ErrMsg)
+		logs.Errorf("pm return task failed, code: %d, msg: %s, rid: %s", resp.DataSet.Header.Code,
+			resp.DataSet.Header.ErrMsg, kt.Rid)
 		return "", fmt.Errorf("pm return task failed, code: %d, msg: %s", resp.DataSet.Header.Code,
 			resp.DataSet.Header.ErrMsg)
 	}
 
 	bytes, err := json.Marshal(resp.DataSet.Data)
 	if err != nil {
-		logs.Errorf("pm return task failed, for parse pm return response err: %v", err)
+		logs.Errorf("pm return task failed, for parse pm return response err: %v, rid: %s", err, kt.Rid)
 		return "", fmt.Errorf("pm return task failed, for parse pm return response err: %v", err)
 	}
 
 	var retData erpapi.ReturnRespData
 	if err := json.Unmarshal(bytes, &retData); err != nil {
-		logs.Errorf("pm return task failed, for parse pm return response err: %v", err)
+		logs.Errorf("pm return task failed, for parse pm return response err: %v, rid: %s", err, kt.Rid)
 		return "", fmt.Errorf("pm return task failed, for parse pm return response err: %v", err)
 	}
 
 	if retData.OrderId == "" {
-		logs.Errorf("pm return task failed, for order id is empty")
+		logs.Errorf("pm return task failed, for order id is empty, rid: %s", kt.Rid)
 		return "", fmt.Errorf("pm return task return empty order id")
 	}
 
 	return retData.OrderId, nil
 }
 
-func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
+func (r *Returner) queryPmOrder(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event {
 	// construct erp pm return request
 	req := &erpapi.ErpReq{
 		Params: &erpapi.ErpParam{
@@ -161,7 +164,8 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 	resp, err := r.erp.QueryDeviceReturnOrders(nil, nil, req)
 	if err != nil {
 		// keep loop query when error occurs until timeout
-		logs.Warnf("failed to query pm return detail, err: %v", err)
+		logs.Warnf("failed to query pm return detail, err: %v, suborderID: %s, taskID: %s, rid: %s",
+			err, task.SuborderID, task.TaskID, kt.Rid)
 		return &event.Event{Type: event.ReturnHandling, Error: err}
 	}
 
@@ -170,12 +174,13 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		respStr = string(b)
 	}
 
-	logs.Infof("query pm return detail resp: %s", respStr)
+	logs.Infof("query pm return detail suborderID: %s, taskID: %s, resp: %s, rid: %s",
+		task.SuborderID, task.TaskID, respStr, kt.Rid)
 
 	if resp.DataSet.Header.Code != 0 {
 		// keep loop query when error occurs until timeout
-		logs.Warnf("failed to query pm return detail, code: %d, msg: %s", resp.DataSet.Header.Code,
-			resp.DataSet.Header.ErrMsg)
+		logs.Warnf("failed to query pm return detail, suborderID: %s, taskID: %s, code: %d, msg: %s, rid: %s",
+			task.SuborderID, task.TaskID, resp.DataSet.Header.Code, resp.DataSet.Header.ErrMsg, kt.Rid)
 		ev := &event.Event{
 			Type: event.ReturnHandling,
 			Error: fmt.Errorf("failed to query pm return detail, code: %d, msg: %s", resp.DataSet.Header.Code,
@@ -186,7 +191,7 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 
 	bytes, err := json.Marshal(resp.DataSet.Data)
 	if err != nil {
-		logs.Errorf("query pm return detail failed, for parse pm return response err: %v", err)
+		logs.Errorf("query pm return detail failed, for parse pm return response err: %v, rid: %s", err, kt.Rid)
 		ev := &event.Event{
 			Type:  event.ReturnFailed,
 			Error: fmt.Errorf("query pm return detail failed, for parse pm return response err: %v", err),
@@ -195,8 +200,8 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 	}
 
 	var retData erpapi.OrderQueryRespData
-	if err := json.Unmarshal(bytes, &retData); err != nil {
-		logs.Errorf("query pm return detail failed, for parse pm return response err: %v", err)
+	if err = json.Unmarshal(bytes, &retData); err != nil {
+		logs.Errorf("query pm return detail failed, for parse pm return response err: %v, rid: %s", err, kt.Rid)
 		ev := &event.Event{
 			Type:  event.ReturnFailed,
 			Error: fmt.Errorf("query pm return detail failed, for parse pm return response err: %v", err),
@@ -204,8 +209,13 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		return ev
 	}
 
-	successCnt, failedCnt, runningCnt, isApproving, isRejected := r.parsePmReturnDetail(hosts, retData.ResultSet)
+	return r.processPmReturnResult(kt, task, hosts, retData)
+}
 
+func (r *Returner) processPmReturnResult(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost,
+	retData erpapi.OrderQueryRespData) *event.Event {
+
+	successCnt, failedCnt, runningCnt, isApproving, isRejected := r.parsePmReturnDetail(kt, hosts, retData.ResultSet)
 	if runningCnt > 0 {
 		handler := "AUTO"
 		msg := ""
@@ -215,7 +225,7 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		}
 		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, handler, successCnt, failedCnt, runningCnt,
 			msg); err != nil {
-			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// ignore update error and continue to query
 		}
 		return &event.Event{Type: event.ReturnHandling, Error: nil}
@@ -231,12 +241,13 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 		}
 
 		if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {
-			logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
+			logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s",
+				task.SuborderID, err, kt.Rid)
 			return &event.Event{Type: event.ReturnFailed, Error: err}
 		}
 		if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 			msg); err != nil {
-			logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+			logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 			// ignore update error and continue to query
 		}
 
@@ -244,21 +255,21 @@ func (r *Returner) queryPmOrder(task *table.ReturnTask, hosts []*table.RecycleHo
 	}
 
 	if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusSuccess, "success"); err != nil {
-		logs.Errorf("failed to update return task info, order id: %s, err: %v", task.SuborderID, err)
+		logs.Errorf("failed to update return task info, order id: %s, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		return &event.Event{Type: event.ReturnFailed, Error: err}
 	}
 
 	if err := r.UpdateOrderInfo(context.Background(), task.SuborderID, "AUTO", successCnt, failedCnt, runningCnt,
 		"success"); err != nil {
-		logs.Warnf("failed to update recycle order %s info, err: %v", task.SuborderID, err)
+		logs.Warnf("failed to update recycle order %s info, err: %v, rid: %s", task.SuborderID, err, kt.Rid)
 		// ignore update error and continue to query
 	}
 
 	return &event.Event{Type: event.ReturnSuccess, Error: nil}
 }
 
-func (r *Returner) parsePmReturnDetail(hosts []*table.RecycleHost, details []*erpapi.OrderQueryRst) (uint, uint, uint,
-	bool, bool) {
+func (r *Returner) parsePmReturnDetail(kt *kit.Kit, hosts []*table.RecycleHost, details []*erpapi.OrderQueryRst) (
+	uint, uint, uint, bool, bool) {
 
 	mapAsset2Detail := make(map[string]*erpapi.OrderQueryRst)
 	for _, detail := range details {
@@ -291,16 +302,16 @@ func (r *Returner) parsePmReturnDetail(hosts []*table.RecycleHost, details []*er
 				if detail.RecycleStatus == 7 {
 					// success
 					successCnt++
-					if err := r.updatePmHostInfo(host, detail); err != nil {
-						logs.Warnf("failed to update recycle host info, err: %v", err)
+					if err := r.updatePmHostInfo(kt, host, detail); err != nil {
+						logs.Warnf("failed to update recycle host info, err: %v, rid: %s", err, kt.Rid)
 					}
 				} else if detail.RecycleStatus == 6 || detail.RecycleStatus == 8 ||
 					detail.Status == 3 || detail.Status == 6 || detail.Status == 9 || detail.Status == 12 ||
 					detail.CheckStatus == 3 {
 					// failed
 					failedCnt++
-					if err := r.updatePmHostInfo(host, detail); err != nil {
-						logs.Warnf("failed to update recycle host info, err: %v", err)
+					if err := r.updatePmHostInfo(kt, host, detail); err != nil {
+						logs.Warnf("failed to update recycle host info, err: %v, rid: %s", err, kt.Rid)
 					}
 				} else {
 					// running
@@ -308,7 +319,8 @@ func (r *Returner) parsePmReturnDetail(hosts []*table.RecycleHost, details []*er
 				}
 			}
 		default:
-			logs.Warnf("%s query pm return detail failed, for invalid recycle host status %s", host.IP, host.Status)
+			logs.Warnf("%s query pm return detail failed, for invalid recycle host status %s, rid: %s",
+				host.IP, host.Status, kt.Rid)
 			failedCnt++
 		}
 	}
@@ -316,7 +328,7 @@ func (r *Returner) parsePmReturnDetail(hosts []*table.RecycleHost, details []*er
 	return successCnt, failedCnt, runningCnt, isApproving, isRejected
 }
 
-func (r *Returner) updatePmHostInfo(host *table.RecycleHost, detail *erpapi.OrderQueryRst) error {
+func (r *Returner) updatePmHostInfo(kt *kit.Kit, host *table.RecycleHost, detail *erpapi.OrderQueryRst) error {
 	filter := mapstr.MapStr{
 		"suborder_id": host.SuborderID,
 		"ip":          host.IP,
@@ -338,7 +350,7 @@ func (r *Returner) updatePmHostInfo(host *table.RecycleHost, detail *erpapi.Orde
 	}
 
 	if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), &filter, &update); err != nil {
-		logs.Errorf("failed to update recycle host, ip: %s, err: %v", host.IP, err)
+		logs.Errorf("failed to update recycle host, ip: %s, err: %v, rid: %s", host.IP, err, kt.Rid)
 		return err
 	}
 

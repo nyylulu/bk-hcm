@@ -31,7 +31,6 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/cvmapi"
 )
 
 // recoverGenerateStep 恢复generateStep为StepStatusInit｜StepStatusHandling的订单
@@ -63,12 +62,8 @@ func (r *applyRecoverer) recoverGenerateStep(kt *kit.Kit, order *types.ApplyOrde
 		return nil
 	}
 
-	switch order.Spec.Zone {
-	case cvmapi.CvmSeparateCampus:
-		return r.recoverSeparateGenerate(kt, generateRecords, order)
-	default:
-		return r.recoverConcGenerate(kt, generateRecords[0], order)
-	}
+	return r.recoverGenerate(kt, generateRecords, order)
+
 }
 
 func (r *applyRecoverer) recoverPmHandling(kt *kit.Kit, generateRecord *types.GenerateRecord,
@@ -141,53 +136,11 @@ func (r *applyRecoverer) recoverPmResource(kt *kit.Kit, generateRecord *types.Ge
 	return "", nil
 }
 
-// recoverConcGenerate 恢复集中生产机器的订单
-func (r *applyRecoverer) recoverConcGenerate(kt *kit.Kit, generateRecord *types.GenerateRecord,
+// recoverGenerate 恢复生产未完成的订单
+func (r *applyRecoverer) recoverGenerate(kt *kit.Kit, generateRecords []*types.GenerateRecord,
 	order *types.ApplyOrder) error {
 
-	switch generateRecord.Status {
-	case types.GenerateStatusInit:
-		// 未知是否调用云梯接口生产，订单失败人工处理
-		msg := "can not get generateId, unknown generate status, check yunti to find if devices are generated"
-		if err := r.dealGenerateFailed(kt, order, generateRecord.GenerateId, msg); err != nil {
-			logs.Errorf("failed to update generate status to failed, err: %v, subOrderId: %s, rid: %s", err,
-				order.SubOrderId, kt.Rid)
-			return err
-		}
-
-	case types.GenerateStatusHandling:
-		if err := r.recoverConGenerateHandling(kt, order, generateRecord); err != nil {
-			logs.Errorf("failed to recover generate handling concentrate generate orders, err: %v, subOrderId: %s, rid: %s",
-				err, order.SubOrderId, kt.Rid)
-			return err
-		}
-
-	case types.GenerateStatusSuccess:
-		err := r.recoverGenerateSuccess(kt, order, generateRecord)
-		if err != nil {
-			logs.Errorf("failed to recover generate success concentrate generate orders, err: %v, subOrderId: %s, rid: %s",
-				err, order.SubOrderId, kt.Rid)
-			return err
-		}
-	case types.GenerateStatusFailed:
-		logs.Infof("ignore generate failed order, subOrderId: %s, rid: %s", order.SubOrderId, kt.Rid)
-	case types.GenerateStatusSuspend:
-		logs.Infof("ignore generate suspend order, subOrderId: %s, rid: %s", order.SubOrderId, kt.Rid)
-	default:
-		logs.Errorf("recover concentrated generate: unknown generate status, subOrderId: %s, generateId: %d, status: %d,"+
-			"rid: %s", order.SubOrderId, generateRecord.GenerateId, generateRecord.Status, kt.Rid)
-		return fmt.Errorf("recover concentrated generate: unknown generate status, subOrderId: %s, generateId: %d, "+
-			"status: %d", order.SubOrderId, generateRecord.GenerateId, generateRecord.Status)
-	}
-
-	return nil
-}
-
-// recoverSeparateGenerate 恢复分区生产未完成的订单
-func (r *applyRecoverer) recoverSeparateGenerate(kt *kit.Kit, generateRecords []*types.GenerateRecord,
-	order *types.ApplyOrder) error {
-
-	// 分区生产订单中，若有未完成订单generateRecord为init时，设置状态为GenerateStatusSuspend，不再触发后续生产
+	// 生产订单中，若有未完成订单generateRecord为init时，设置状态为GenerateStatusSuspend，不再触发后续生产
 	isSuspend := false
 	dealRecords := make([]*types.GenerateRecord, 0)
 	for _, record := range generateRecords {
@@ -203,7 +156,7 @@ func (r *applyRecoverer) recoverSeparateGenerate(kt *kit.Kit, generateRecords []
 		dealRecords = append(dealRecords, record)
 	}
 
-	if err := r.recoverSepGenerateHandling(kt, order, dealRecords, isSuspend); err != nil {
+	if err := r.recoverGenerateHandling(kt, order, dealRecords, isSuspend); err != nil {
 		for _, record := range dealRecords {
 			if err = r.updateGenerateRecord(kt, record.GenerateId, types.GenerateStatusFailed); err != nil {
 				logs.Errorf("failed to recover generate record to failed status, err: %v, subOrderId: %s, rid: %s",
@@ -224,8 +177,8 @@ func (r *applyRecoverer) recoverSeparateGenerate(kt *kit.Kit, generateRecords []
 			return err
 		}
 
-		logs.Errorf("failed to recover CvmSeparateCampus generate orders, err: %v, subOrderId: %d, rid: %s",
-			order.SubOrderId, err, kt.Rid)
+		logs.Errorf("failed to recover generate orders, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId,
+			kt.Rid)
 		return err
 	}
 	return nil
@@ -296,28 +249,8 @@ func (r *applyRecoverer) recoverGenerateSuccess(kt *kit.Kit, order *types.ApplyO
 	return nil
 }
 
-// recoverGenerateHandling 恢复集中生产机器订单，申请状态为ApplyStatusMatching且generateRecord状态为handling的订单
-func (r *applyRecoverer) recoverConGenerateHandling(kt *kit.Kit, order *types.ApplyOrder,
-	generateRecord *types.GenerateRecord) error {
-
-	generateId := generateRecord.GenerateId
-	taskId := generateRecord.TaskId
-	if err := r.schedulerIf.AddCvmDevices(kt, taskId, generateId, order); err != nil {
-		logs.Errorf("failed to check and update cvm device, err: %v, suborderId: %s, rid: %s ", err, order.SubOrderId,
-			kt.Rid)
-		return err
-	}
-	// update generate step record
-	if err := record.UpdateGenerateStep(order.SubOrderId, order.Total, nil); err != nil {
-		logs.Errorf("failed to generate device, err: %v, subOrderId: %s, rid: %s", err, order.SubOrderId, kt.Rid)
-		return err
-	}
-	logs.Infof("Successfully dispatch apply subOrder: %s, rid: %s", order.SubOrderId, kt.Rid)
-	return nil
-}
-
-// recoverSepGenerateHandling 恢复CvmSeparateCampus订单，订单状态为ApplyStatusMatching且generateRecord的状态为handling
-func (r *applyRecoverer) recoverSepGenerateHandling(kt *kit.Kit, order *types.ApplyOrder,
+// recoverGenerateHandling 恢复订单状态为ApplyStatusMatching且generateRecord的状态为handling
+func (r *applyRecoverer) recoverGenerateHandling(kt *kit.Kit, order *types.ApplyOrder,
 	recordInfos []*types.GenerateRecord, isSuspend bool) error {
 
 	errorNum, generateNum := int64(0), int64(0)

@@ -22,6 +22,7 @@ import (
 	"strings"
 	"time"
 
+	"hcm/cmd/woa-server/logics/config"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
@@ -138,6 +139,7 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 			Memo:              cvm.NoteInfo,
 			Operator:          cvm.Operator,
 			BakOperator:       cvm.Operator,
+			ChargeType:        cvmapi.ChargeTypePrePaid,
 			InheritInstanceId: cvm.InheritInstanceId,
 		},
 	}
@@ -145,10 +147,10 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	// 计费模式
 	if len(cvm.ChargeType) > 0 {
 		createReq.Params.ChargeType = cvm.ChargeType
-		// 包年包月时才需要设置计费时长
-		if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid {
-			createReq.Params.ChargeMonths = cvm.ChargeMonths
-		}
+	}
+	// 包年包月时才需要设置计费时长
+	if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid && cvm.ChargeMonths > 0 {
+		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
 
 	// set system disk parameters
@@ -245,8 +247,13 @@ func (g *Generator) checkCVM(orderId string) error {
 		}
 
 		if status != enumor.CrpOrderStatusFinish {
-			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId,
-				resp.Result.Data[0].Status)
+			return true, fmt.Errorf("order %s failed, status: %d", resp.Result.Data[0].OrderId, status)
+		}
+
+		// crp侧订单完成时，不一定代表cvm生产成功，这里需要做处理，如果没有成功创建的实例，则也认为创建失败
+		if resp.Result.Data[0].SucInstanceCount <= 0 {
+			return true, fmt.Errorf("order %s failed, status: %d, sucInstanceCount: %d", resp.Result.Data[0].OrderId,
+				status, resp.Result.Data[0].SucInstanceCount)
 		}
 
 		return true, nil
@@ -318,7 +325,9 @@ func (g *Generator) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 }
 
 // buildCvmReq construct a cvm creating task request
-func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint) (*types.CVM, error) {
+func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone string, replicas uint,
+	excludeSubnetIDMap map[string]struct{}) (*types.CVM, error) {
+
 	// TODO: get parameters from config
 	// construct cvm launch req
 	req := &types.CVM{
@@ -345,7 +354,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	if order.Spec.Vpc != "" {
 		req.VPCId = order.Spec.Vpc
 	} else {
-		vpc, err := g.getCvmVpc(order.Spec.Region)
+		vpc, err := config.GetDftCvmVpc(order.Spec.Region)
 		if err != nil {
 			return nil, err
 		}
@@ -364,6 +373,11 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		subnetID := ""
 		applyNum := uint(0)
 		for _, subnet := range subnetList {
+			if _, ok := excludeSubnetIDMap[subnet.Id]; ok {
+				logs.Warnf("exclude subnet id: %s, subOrderID: %s, rid: %s", subnet.Id, order.SubOrderId, kt.Rid)
+				continue
+			}
+
 			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
 				req.VPCId, subnet.Id, order.Spec.ChargeType)
 			if err != nil {
@@ -423,7 +437,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	req.ImageId = order.Spec.ImageId
 	req.ImageName = order.Spec.Image
 	// security group
-	sg, err := g.getCvmDftSecGroup(order.Spec.Region)
+	sg, err := config.GetCvmDftSecGroup(order.Spec.Region)
 	if err != nil {
 		return nil, err
 	}
@@ -463,36 +477,6 @@ func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, 
 	return bizBelong.OpProductID, bizBelong.OpProductName, nil
 }
 
-var regionToVpc = map[string]string{
-	"ap-guangzhou":     "vpc-03nkx9tv",
-	"ap-tianjin":       "vpc-1yoew5gc",
-	"ap-shanghai":      "vpc-2x7lhtse",
-	"eu-frankfurt":     "vpc-38klpz7z",
-	"ap-singapore":     "vpc-706wf55j",
-	"ap-tokyo":         "vpc-8iple1iq",
-	"ap-seoul":         "vpc-99wg8fre",
-	"ap-hongkong":      "vpc-b5okec48",
-	"na-toronto":       "vpc-drefwt2v",
-	"ap-xian-ec":       "vpc-efw4kf6r",
-	"ap-nanjing":       "vpc-fb7sybzv",
-	"ap-chongqing":     "vpc-gelpqsur",
-	"ap-shenzhen":      "vpc-kwgem8tj",
-	"na-siliconvalley": "vpc-n040n5bl",
-	"ap-hangzhou-ec":   "vpc-puhasca0",
-	"ap-fuzhou-ec":     "vpc-hdxonj2q",
-	"ap-wuhan-ec":      "vpc-867lsj6w",
-	"ap-beijing":       "vpc-bhb0y6g8",
-}
-
-func (g *Generator) getCvmVpc(region string) (string, error) {
-	vpc, ok := regionToVpc[region]
-	if !ok {
-		return "", fmt.Errorf("found no vpc with region %s", region)
-	}
-
-	return vpc, nil
-}
-
 // AvailSubnetList available subnet list
 type AvailSubnetList []*cvmapi.SubnetInfo
 
@@ -516,21 +500,12 @@ func (l AvailSubnetList) Swap(i, j int) {
 
 func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.ApplyOrder) (AvailSubnetList, error) {
 	subnetList := AvailSubnetList{}
-	req := &cvmapi.SubnetReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmSubnetMethod,
-		},
-		Params: &cvmapi.SubnetParam{
-			DeptId: cvmapi.CvmDeptId,
-			Region: order.Spec.Region,
-			Zone:   zone,
-			VpcId:  vpc,
-		},
+	subnetReq := cvmapi.SubnetRealParam{
+		Region:      order.Spec.Region,
+		CloudCampus: zone,
+		VpcId:       vpc,
 	}
-
-	resp, err := g.cvm.QueryCvmSubnet(nil, nil, req)
+	resp, err := g.cvm.QueryRealCvmSubnet(kt, subnetReq)
 	if err != nil {
 		logs.Errorf("failed to get cvm subnet info, subOrderID: %s, err: %v, region: %s, zone: %s, vpc: %s, "+
 			"crpResp: %+v, rid: %s", order.SubOrderId, err, order.Spec.Region, zone, vpc, cvt.PtrToVal(resp), kt.Rid)
@@ -584,113 +559,4 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.App
 	}
 
 	return subnetList, nil
-}
-
-// SecGroup network security group
-type SecGroup struct {
-	SecurityGroupId   string `json:"securityGroupId"`
-	SecurityGroupName string `json:"securityGroupName"`
-	SecurityGroupDesc string `json:"securityGroupDesc"`
-}
-
-var regionToSecGroup = map[string]*SecGroup{
-	"ap-guangzhou": {
-		SecurityGroupId:   "sg-ka67ywe9",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"ap-tianjin": {
-		SecurityGroupId:   "sg-c28492qp",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-shanghai": {
-		SecurityGroupId:   "sg-ibqae0te",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"eu-frankfurt": {
-		SecurityGroupId:   "sg-cet13de0",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-singapore": {
-		SecurityGroupId:   "sg-hjtqedoe",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-tokyo": {
-		SecurityGroupId:   "sg-o1lfldnk",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-seoul": {
-		SecurityGroupId:   "sg-i7h8hv5r",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "云梯默认安全组",
-	},
-	"ap-hongkong": {
-		SecurityGroupId:   "sg-59kfufmn",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"na-toronto": {
-		SecurityGroupId:   "sg-7l82d7km",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-xian-ec": {
-		SecurityGroupId:   "sg-o4bmz4kg",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-nanjing": {
-		SecurityGroupId:   "sg-dybs7i3y",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "腾讯自研上云-默认安全组",
-	},
-	"ap-chongqing": {
-		SecurityGroupId:   "sg-l5usnzxw",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-shenzhen": {
-		SecurityGroupId:   "sg-qkfewp0u",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"na-siliconvalley": {
-		SecurityGroupId:   "sg-q7usygae",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-hangzhou-ec": {
-		SecurityGroupId:   "sg-4ezyvbvl",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-fuzhou-ec": {
-		SecurityGroupId:   "sg-leqa6w29",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-wuhan-ec": {
-		SecurityGroupId:   "sg-p5ld4xyq",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-	"ap-beijing": {
-		SecurityGroupId:   "sg-rjwj7cnt",
-		SecurityGroupName: "云梯默认安全组",
-		SecurityGroupDesc: "",
-	},
-}
-
-func (g *Generator) getCvmDftSecGroup(region string) (*SecGroup, error) {
-	sg, ok := regionToSecGroup[region]
-	if !ok {
-		return nil, fmt.Errorf("found no security group with region %s", region)
-	}
-
-	return sg, nil
 }

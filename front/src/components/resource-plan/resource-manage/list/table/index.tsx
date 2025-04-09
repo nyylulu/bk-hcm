@@ -1,19 +1,22 @@
-import { defineComponent, computed, ref, PropType } from 'vue';
+import { defineComponent, computed, ref, PropType, onMounted } from 'vue';
 import { Button, Dropdown } from 'bkui-vue';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import { useTable } from '@/hooks/useResourcePlanTable';
 import { useI18n } from 'vue-i18n';
+import routerAction from '@/router/utils/action';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import BatchCancellationDialog from '@/components/resource-plan/resource-manage/list/table/components/batch-cancellation-dialog/batch-cancellation-dialog';
 import cssModule from './index.module.scss';
 import { useRoute, useRouter } from 'vue-router';
 import { IListResourcesDemandsItem, IListResourcesDemandsParam, ResourcesDemandsStatus } from '@/typings/resourcePlan';
+import { useConfigRequirementStore, type IRequirementObsProject } from '@/store/config/requirement';
 import { IPageQuery } from '@/typings';
 import { useResourcePlanStore } from '@/store';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
 import { ITimeRange } from '@/typings/plan';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 
@@ -43,6 +46,8 @@ export default defineComponent({
     const router = useRouter();
     const { columns, generateColumnsSettings } = useColumns('resourceForecast');
     const { getResourcesDemandsList, getResourcesDemandsListByOrg } = useResourcePlanStore();
+    const { getRequirementObsProject } = useConfigRequirementStore();
+    const requirementObsProjectMap = ref<IRequirementObsProject>({});
     const { getBizsId } = useWhereAmI();
 
     const { authVerifyData, handleAuth } = useVerify();
@@ -120,20 +125,19 @@ export default defineComponent({
           minWidth: 100,
           isDefaultShow: true,
           render: ({ data }: { data: IListResourcesDemandsItem }) => {
-            const firstActions = operationDropdownList.slice(0, 1)[0];
             return (
               <div class={cssModule['operation-column']}>
                 <Button
                   text
                   theme={'primary'}
                   class={`${
-                    !authVerifyData.value?.permissionAction?.biz_resource_plan_operate
+                    !authVerifyData.value?.permissionAction?.biz_iaas_resource_create
                       ? 'hcm-no-permision-text-btn'
                       : undefined
                   }`}
-                  disabled={!isRowSelectEnable({ row: data })}
-                  onClick={() => handleOperate(firstActions.type as OperationActions, data)}>
-                  {firstActions.label}
+                  disabled={data.status !== ResourcesDemandsStatus.CAN_APPLY}
+                  onClick={() => handleApply(data)}>
+                  一键申领
                 </Button>
                 <Dropdown trigger='click' disabled={!isRowSelectEnable({ row: data })}>
                   {{
@@ -144,7 +148,7 @@ export default defineComponent({
                     ),
                     content: () => (
                       <DropdownMenu>
-                        {operationDropdownList.slice(1).map(({ label, type }) => (
+                        {operationDropdownList.map(({ label, type }) => (
                           <DropdownItem
                             key={type}
                             onClick={() => handleOperate(type as OperationActions, data)}
@@ -165,6 +169,10 @@ export default defineComponent({
           },
         },
       ];
+    });
+
+    onMounted(async () => {
+      requirementObsProjectMap.value = await getRequirementObsProject();
     });
 
     const settings = generateColumnsSettings(tableColumns.value);
@@ -252,6 +260,28 @@ export default defineComponent({
       } else if (type === OperationActions.ADJUST) {
         handleToEdit([data]);
       }
+    };
+
+    const handleApply = (data: IListResourcesDemandsItem) => {
+      const { demand_id, bk_biz_id, device_type, region_id: region, zone_id: zone, obs_project } = data;
+
+      // 由obs_project得到requireType
+      const requireType = Object.entries(requirementObsProjectMap.value).find(
+        ([, value]) => value === obs_project,
+      )?.[0];
+
+      routerAction.open({
+        path: '/business/service/service-apply/cvm',
+        query: {
+          device_type,
+          region,
+          zone,
+          require_type: requireType,
+          id: demand_id,
+          from: 'businessResourcePlan',
+          [GLOBAL_BIZS_KEY]: bk_biz_id,
+        },
+      });
     };
 
     const searchTableData = (data: Partial<IListResourcesDemandsParam>) => {

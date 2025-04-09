@@ -37,6 +37,7 @@ var ResPlanDemandColumns = utils.MergeColumns(nil, ResPlanDemandColumnDescriptor
 var ResPlanDemandColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "id", NamedC: "id", Type: enumor.String},
 	{Column: "locked", NamedC: "locked", Type: enumor.Numeric},
+	{Column: "locked_cpu_core", NamedC: "locked_cpu_core", Type: enumor.Numeric},
 	{Column: "bk_biz_id", NamedC: "bk_biz_id", Type: enumor.Numeric},
 	{Column: "bk_biz_name", NamedC: "bk_biz_name", Type: enumor.String},
 	{Column: "op_product_id", NamedC: "op_product_id", Type: enumor.Numeric},
@@ -80,6 +81,8 @@ type ResPlanDemandTable struct {
 	ID string `db:"id" json:"id" validate:"lte=64"`
 	// Locked 是否锁定
 	Locked *enumor.CrpDemandLockStatus `db:"locked" json:"locked"`
+	// LockedCPUCore 锁定的CPU核数
+	LockedCPUCore *int64 `db:"locked_cpu_core" json:"locked_cpu_core"`
 	// BkBizID 业务ID
 	BkBizID int64 `db:"bk_biz_id" json:"bk_biz_id"`
 	// BkBizName 业务名称
@@ -127,7 +130,7 @@ type ResPlanDemandTable struct {
 	// DeviceType 机型类型
 	DeviceType string `db:"device_type" json:"device_type" validate:"lte=64"`
 	// CoreType 核心类型
-	CoreType string `db:"core_type" json:"core_type" validate:"lte=64"`
+	CoreType enumor.CoreType `db:"core_type" json:"core_type" validate:"lte=64"`
 	// DiskType 磁盘类型
 	DiskType enumor.DiskType `db:"disk_type" json:"disk_type" validate:"lte=64"`
 	// DiskTypeName 磁盘类型名称
@@ -269,6 +272,14 @@ func (r ResPlanDemandTable) bizInsertValidate() error {
 }
 
 func (r ResPlanDemandTable) resourceInsertValidate() error {
+	if r.LockedCPUCore == nil {
+		return errors.New("locked cpu core can not be nil")
+	}
+
+	if cvt.PtrToVal(r.LockedCPUCore) < 0 {
+		return errors.New("locked cpu core should be >= 0")
+	}
+
 	if r.OS.Sign() < 0 {
 		return errors.New("os should be >= 0")
 	}
@@ -401,7 +412,10 @@ func (r ResPlanDemandTable) bizUpdateValidate() error {
 }
 
 func (r ResPlanDemandTable) resourceUpdateValidate() error {
-	// 虽然新增时os等资源不可以为0，但是可以通过更新将其缩减为0
+	if cvt.PtrToVal(r.LockedCPUCore) < 0 {
+		return errors.New("locked cpu core should be >= 0")
+	}
+
 	if r.OS.Sign() < 0 {
 		return errors.New("os should be >= 0")
 	}

@@ -67,15 +67,16 @@ func (l *logics) SyncSubnet() error {
 
 		for _, zone := range zoneList {
 			for _, vpc := range vpcs.Info {
+				subKt := kt.NewSubKit()
 				reqSync := &configTypes.GetSubnetParam{
 					Region: region,
 					Zone:   zone.Zone,
 					Vpc:    vpc.VpcId,
 				}
-				if err = l.configLogics.Subnet().SyncSubnet(kt, reqSync); err != nil {
+				if err = l.configLogics.Subnet().SyncSubnet(subKt, reqSync); err != nil {
 					failed++
 					logs.Warnf("failed to sync subnet, region: %s, zone: %s, vpc: %s, err: %v, rid: %s",
-						region, zone.Zone, vpc.VpcId, err, kt.Rid)
+						region, zone.Zone, vpc.VpcId, err, subKt.Rid)
 					// continue when error occurs
 					continue
 				}

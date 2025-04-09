@@ -30,6 +30,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
+	"hcm/pkg/thirdparty/api-gateway/usermgr"
 	"hcm/pkg/thirdparty/esb"
 
 	"github.com/emicklei/go-restful/v3"
@@ -48,4 +49,5 @@ type Capability struct {
 	BKBaseCli  bkbase.Client
 	Finops     finops.Client
 	CmsiCli    cmsi.Client
+	UserMgrCli usermgr.Client
 }

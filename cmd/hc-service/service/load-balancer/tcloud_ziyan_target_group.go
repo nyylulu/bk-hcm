@@ -152,7 +152,7 @@ func (svc *clbSvc) batchAddZiyanTargetsToGroup(kt *kit.Kit, req *protolb.TCloudB
 			failIDs)
 	}
 
-	rsIDs, err := svc.batchCreateTargetDb(kt, req, lbInfo.AccountID, req.TargetGroupID)
+	rsIDs, err := svc.batchCreateTargetDb(kt, req, lbInfo.AccountID, req.TargetGroupID, lbInfo.Region)
 	if err != nil {
 		return nil, err
 	}

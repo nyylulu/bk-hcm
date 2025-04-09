@@ -637,13 +637,13 @@ func (svc *lbSvc) BatchCreateListenerWithRule(cts *rest.Contexts) (any, error) {
 
 	switch vendor {
 	case enumor.TCloud, enumor.TCloudZiyan:
-		return svc.batchCreateTCloudListenerWithRule(cts)
+		return svc.batchCreateTCloudListenerWithRule(cts, vendor)
 	default:
 		return nil, errf.New(errf.InvalidParameter, "unsupported vendor: "+string(vendor))
 	}
 }
 
-func (svc *lbSvc) batchCreateTCloudListenerWithRule(cts *rest.Contexts) (any, error) {
+func (svc *lbSvc) batchCreateTCloudListenerWithRule(cts *rest.Contexts, vendor enumor.Vendor) (any, error) {
 	req := new(dataproto.ListenerWithRuleBatchCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -653,7 +653,7 @@ func (svc *lbSvc) batchCreateTCloudListenerWithRule(cts *rest.Contexts) (any, er
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	ids, err := svc.insertListenerWithRule(cts.Kit, enumor.TCloud, req)
+	ids, err := svc.insertListenerWithRule(cts.Kit, vendor, req)
 	if err != nil {
 		return nil, err
 	}

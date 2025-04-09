@@ -10,7 +10,7 @@ export default (selectorRef: Ref<typeof DevicetypeSelector>, chargeType: Ref<str
   const { cvmChargeTypes } = useCvmChargeType();
 
   const isPlanedDeviceTypeLoading = ref(false);
-  const availableDeviceTypeSet = reactive({ prepaid: new Set(), postpaid: new Set() }); // 预测内的机型
+  const availableDeviceTypeSet = reactive<{ [key in string]: Set<any> }>({ prepaid: new Set(), postpaid: new Set() }); // 预测内的机型
   const hasPlanedDeviceType = computed(
     () => availableDeviceTypeSet.postpaid.size || availableDeviceTypeSet.prepaid.size,
   ); // 有预测内的机型

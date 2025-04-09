@@ -50,9 +50,9 @@ database:
     # is a seed list of host:port addresses of database nodes.
     endpoints:
       - 127.0.0.1:3306
-    database: xxx
-    user: xxx
-    password: xxx
+    database: ***
+    user: ***
+    password: ***
     # DialTimeoutSec is timeout in seconds to wait for a response from the db server
     # all the timeout default value reference:
     # https://dev.mysql.com/doc/refman/8.0/en/server-system-variables.html.
@@ -127,6 +127,12 @@ log:
   alsoToStdErr: false
   # log level.
   verbosity: 0
+
+# whether to use label to filter service.
+useLabel:
+  # use label when pull aws china site bills
+  # if true, you should deploy at least one hc service with option: "--label AWSCN" to pull aws china site bills.
+  awsCN: false
 
 # 内部版 推送账单到obs的数据库配置
 obsDatabase:

@@ -2,6 +2,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  height: 52px;
 
   .status {
     display: flex;
@@ -41,10 +42,5 @@
   color: #d9001b;
   .error-message-color {
     color: #d9001b !important;
-  }
-}
-.title {
-  > span {
-    margin-bottom: 0px !important;
   }
 }

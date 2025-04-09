@@ -63,7 +63,6 @@ log:
   verbosity: 0
 
 
-
 # bill controller
 controller:
   # 关闭账单拉取
@@ -72,6 +71,7 @@ controller:
   mainAccountSummarySyncDuration:
   rootAccountSummarySyncDuration:
   dailySummarySyncDuration:
+  monthTaskSyncDuration: 
 
 # tmp file dir, default: /tmp
 tmpFileDir: /tmp
@@ -85,6 +85,13 @@ billAllocation:
   awsCommonExpense:
     excludeAccountCloudIDs:
 #      - 123456789
+  # 根账号需要抵扣的项目列表
+  awsDeductAccountItems:
+    deductItemTypes:
+      "123456789": # 根账号对应的云账号ID
+        line_item_line_item_type: # 项目涵盖的费用类型
+          - Tax
+          - Fee
   gcpCredits:
 #    - rootAccountCloudID: gcp_support_account
 #      returnConfigs:

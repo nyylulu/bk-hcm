@@ -164,3 +164,24 @@ export interface IApplyCrpTicketAudit {
 export type IApplyCrpTicketAuditLogItem = IApplyCrpTicketAudit['logs'][number];
 export type IApplyCrpTicketAuditCurrentStepItem = IApplyCrpTicketAudit['current_step'];
 export type IApplyCrpTicketAuditFailInfoItem = IApplyCrpTicketAudit['current_step']['fail_instance_info'][number];
+
+export interface ICvmDeviceDetailItem {
+  id: number;
+  require_type: number;
+  region: string;
+  zone: string;
+  device_type: string;
+  cpu: number;
+  mem: number;
+  disk: number;
+  remark: string;
+  label: {
+    device_group: string;
+    device_size: string;
+  };
+  capacity_flag: number;
+  enable_capacity: boolean;
+  enable_apply: boolean;
+  score: number;
+  comment: string;
+}

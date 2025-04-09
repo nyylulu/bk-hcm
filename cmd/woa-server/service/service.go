@@ -29,6 +29,8 @@ import (
 	"time"
 
 	"hcm/cmd/woa-server/logics/biz"
+	configlogic "hcm/cmd/woa-server/logics/config"
+	cvmlogic "hcm/cmd/woa-server/logics/cvm"
 	disLogics "hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	planctrl "hcm/cmd/woa-server/logics/plan"
@@ -70,6 +72,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/es"
 	"hcm/pkg/thirdparty/esb"
@@ -165,12 +168,6 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli)
-	if err != nil {
-		logs.Errorf("new rolling server logics failed, err: %v", err)
-		return nil, err
-	}
-
 	gcLogics, err := gclogics.New(apiClientSet, thirdCli)
 	if err != nil {
 		logs.Errorf("new green channel logics failed, err: %v", err)
@@ -183,7 +180,20 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, itsmCli, thirdCli.CVM, esbClient, bizLogic)
+	cmsiCfg := cc.WoaServer().Cmsi
+	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create cmsi client, err: %v", err)
+		return nil, err
+	}
+
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli)
+	if err != nil {
+		logs.Errorf("new rolling server logics failed, err: %v", err)
+		return nil, err
+	}
+
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, esbClient, bizLogic)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err
@@ -215,7 +225,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		}
 
 		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
-			cc.WoaServer().ClientConfig, planCtrl)
+			cc.WoaServer().ClientConfig, planCtrl, bizLogic)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -280,7 +290,7 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
 	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic,
-		service.dissolveLogic)
+		service.dissolveLogic, service.client)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -288,8 +298,10 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 
 	// init recoverer client
 	recoverConf := cc.WoaServer().Recover
-	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.esbClient.Cmdb(),
-		service.thirdCli.Sops); err != nil {
+	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig, configlogic.New(service.thirdCli),
+		service.esbClient, service.rsLogic)
+	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
+		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
 		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}

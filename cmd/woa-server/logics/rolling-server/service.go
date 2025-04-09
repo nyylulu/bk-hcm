@@ -21,19 +21,27 @@
 package rollingserver
 
 import (
+	"runtime/debug"
+	"time"
+
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/config"
+	"hcm/cmd/woa-server/storage/driver/mongodb"
 	rolling_server "hcm/cmd/woa-server/types/rolling-server"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	rsproto "hcm/pkg/api/data-service/rolling-server"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	rstable "hcm/pkg/dal/table/rolling-server"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/esb"
 )
 
@@ -83,12 +91,14 @@ type Logics interface {
 	// ListReturnedRecordsBySubOrderID 根据回收子订单ID查询滚服回收列表
 	ListReturnedRecordsBySubOrderID(kt *kit.Kit, bkBizID int64, subOrderID string) (
 		[]*rstable.RollingReturnedRecord, error)
-	// GetAllReturnedCpuCore 获取指定时间内所有业务回收的CPU总核心数
-	GetAllReturnedCpuCore(kt *kit.Kit) (int64, error)
+	// GetCurrentMonthAllReturnedCpuCore 获取当月所有业务回收的CPU总核心数
+	GetCurrentMonthAllReturnedCpuCore(kt *kit.Kit) (int64, error)
 	// GetRollingGlobalQuota 查询系统配置的全局总额度
 	GetRollingGlobalQuota(kt *kit.Kit) (int64, error)
 	// CheckReturnedStatusBySubOrderID 校验回收订单是否有滚服剩余额度
 	CheckReturnedStatusBySubOrderID(kt *kit.Kit, orders []*table.RecycleOrder) error
+	// PushReturnNotifications 推送归还到期提醒通知
+	PushReturnNotifications(kt *kit.Kit, bizIDs []int64, extraReceivers []string) error
 }
 
 // logics rolling server logics.
@@ -97,23 +107,66 @@ type logics struct {
 	client       *client.ClientSet
 	esbClient    esb.Client
 	configLogics config.Logics
+	bizLogics    biz.Logics
+	cmsiClient   cmsi.Client
+	thirdCli     *thirdparty.Client
 }
 
 // New creates rolling server logics instance.
-func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thirdCli *thirdparty.Client) (Logics,
-	error) {
+func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thirdCli *thirdparty.Client,
+	bizLogic biz.Logics, cmsiCli cmsi.Client) (Logics, error) {
+
 	rsLogics := &logics{
 		sd:           sd,
 		client:       client,
 		esbClient:    esbClient,
 		configLogics: config.New(thirdCli),
+		bizLogics:    bizLogic,
+		cmsiClient:   cmsiCli,
+		thirdCli:     thirdCli,
+	}
+
+	go rsLogics.run()
+
+	return rsLogics, nil
+}
+
+func (l *logics) run() {
+	// 启动后需等待一段时间，mongo等服务初始化完成后才能开始定时任务 TODO 用统一的任务调度模块来执行定时任务，确保在初始化之后
+	for {
+		if mongodb.Client() == nil {
+			logs.Warnf("mongodb client is not ready, wait seconds to retry")
+			time.Sleep(constant.IntervalWaitTaskStart)
+			continue
+		}
+		break
+	}
+
+	loc, err := time.LoadLocation(cc.WoaServer().LocalTimezone)
+	if err != nil {
+		logs.Warnf("%s: load location: %s failed: %v", constant.RollingServerReturnNotificationPushFailed,
+			cc.WoaServer().LocalTimezone, err)
+		loc = time.UTC
 	}
 
 	if cc.WoaServer().RollingServer.SyncBill {
-		go rsLogics.syncBillsPeriodically()
+		go l.syncBillsPeriodically()
 	}
 
-	go rsLogics.createBaseQuotaConfigPeriodically()
+	go l.createBaseQuotaConfigPeriodically(loc)
 
-	return rsLogics, nil
+	// 滚服归还到期提醒通知
+	go func() {
+		if !cc.WoaServer().RollingServer.ReturnNotification.Enable {
+			return
+		}
+
+		defer func() {
+			if r := recover(); r != nil {
+				logs.Errorf("%s: panic: %v\n%s", constant.RollingServerReturnNotificationPushFailed, r, debug.Stack())
+			}
+		}()
+
+		l.pushReturnNotificationsPeriodically(loc)
+	}()
 }

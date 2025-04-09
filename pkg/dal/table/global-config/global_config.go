@@ -55,7 +55,7 @@ type GlobalConfigTable struct {
 	ConfigKey string `db:"config_key" json:"config_key"`
 	// ConfigValue global config value, json format
 	ConfigValue types.JsonField `db:"config_value" json:"config_value"`
-	// ConfigType global config type, enum: string/int/float/bool/map/slice
+	// ConfigType global config type 业务场景
 	ConfigType string `db:"config_type" json:"config_type"`
 	// Memo global config memo
 	Memo *string `db:"memo" json:"memo"`

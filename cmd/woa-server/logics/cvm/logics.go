@@ -38,6 +38,10 @@ import (
 type Logics interface {
 	// CreateApplyOrder creates cvm apply order
 	CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*types.CvmCreateResult, error)
+	// ExecuteApplyOrder execute cvm apply order
+	ExecuteApplyOrder(kt *kit.Kit, order *types.ApplyOrder) error
+	// CreateCvmFromTaskResult create cvm from task result
+	CreateCvmFromTaskResult(kt *kit.Kit, order *types.ApplyOrder) error
 	// GetApplyOrderById get cvm apply order info
 	GetApplyOrderById(kt *kit.Kit, param *types.CvmOrderReq) (*types.CvmOrderResult, error)
 	// GetApplyOrder get cvm apply order info
@@ -134,7 +138,13 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 		id, cvt.PtrToVal(param), kt.Rid)
 
 	// execute cvm apply order
-	go l.executeApplyOrder(kt, order)
+	go func() {
+		if err = l.ExecuteApplyOrder(kt, order); err != nil {
+			logs.Errorf("failed to execute cvm apply order, err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order),
+				kt.Rid)
+			return
+		}
+	}()
 
 	rst := &types.CvmCreateResult{
 		OrderId: id,

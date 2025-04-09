@@ -24,6 +24,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/dissolve"
 	"hcm/cmd/woa-server/service/capability"
+	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/esb"
@@ -32,6 +33,7 @@ import (
 // InitService initial the service
 func InitService(c *capability.Capability) {
 	s := &service{
+		client:     c.Client,
 		logics:     c.DissolveLogic,
 		esbClient:  c.EsbClient,
 		authorizer: c.Authorizer,
@@ -45,6 +47,7 @@ func InitService(c *capability.Capability) {
 }
 
 type service struct {
+	client     *client.ClientSet
 	logics     dissolve.Logics
 	esbClient  esb.Client
 	authorizer auth.Authorizer
@@ -68,4 +71,7 @@ func (s *service) initDissolveService(h *rest.Handler) {
 	h.Add("ListOriginHost", http.MethodPost, "/dissolve/host/origin/list", s.ListOriginHost)
 	h.Add("ListCurrentHost", http.MethodPost, "/dissolve/host/current/list", s.ListCurHost)
 	h.Add("ListResDissolveTable", http.MethodPost, "/dissolve/table/list", s.ListResDissolveTable)
+
+	h.Add("CheckHostDissolveStatus", http.MethodPost, "/bizs/{bk_biz_id}/dissolve/hosts/status/check",
+		s.CheckHostDissolveStatus)
 }

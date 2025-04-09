@@ -22,7 +22,7 @@ import StatusFailure from '@/assets/image/failed-account.png';
 import { HOST_RUNNING_STATUS, HOST_SHUTDOWN_STATUS } from '../common/table/HostOperations';
 import './use-columns.scss';
 import { defaults } from 'lodash';
-import { timeFormatter, timeUTCFormatter, formatTags } from '@/common/util';
+import { timeFormatter, formatTags } from '@/common/util';
 import {
   APPLICATION_LAYER_LIST,
   CLB_STATUS_MAP,
@@ -32,7 +32,7 @@ import {
   SCHEDULER_MAP,
   TRANSPORT_LAYER_LIST,
 } from '@/constants/clb';
-import { formatBillCost, getInstVip } from '@/utils';
+import { formatBillCost, getInstVip, formatBillRatio, formatBillRatioClass } from '@/utils';
 import { Spinner } from 'bkui-vue/lib/icon';
 import { APPLICATION_STATUS_MAP, APPLICATION_TYPE_MAP } from '@/views/service/apply-list/constants';
 import dayjs from 'dayjs';
@@ -54,7 +54,8 @@ interface LinkFieldOptions {
   sort?: boolean; // 是否支持排序
 }
 
-export default (type: string, isSimpleShow = false, vendor?: string) => {
+export default (type: string, isSimpleShow = false, vendor?: string, options?: any) => {
+  const customRender = options?.customRender ?? (() => {});
   const router = useRouter();
   const route = useRoute();
   const accountStore = useAccountStore();
@@ -1380,7 +1381,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           text: CLB_BINDING_STATUS[bindingStatus],
         })),
       },
-      render: ({ cell }: { cell: string }) => {
+      render: ({ cell, data }: { cell: string; data: any }) => {
         let icon = StatusSuccess;
         switch (cell) {
           case 'binding':
@@ -1389,6 +1390,18 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           case 'success':
             icon = StatusSuccess;
             break;
+        }
+        // 七层监听器，不在此处展示状态
+        if (APPLICATION_LAYER_LIST.includes(data.protocol)) {
+          return (
+            <>
+              <i
+                class='hcm-icon bkhcm-icon-38moxingshibai-01 text-gray font-normal cursor mr8'
+                v-bk-tooltips={{ content: 'HTTP/HTTPS监听器的同步状态，请到URL列表查看' }}
+              />
+              <span>--</span>
+            </>
+          );
         }
         return cell ? (
           <div class='status-column-cell'>
@@ -1411,7 +1424,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       idFiled: 'name',
       onlyShowOnList: false,
       width: 200,
-      render: ({ id, name }) => (
+      render: ({ id, name, vendor }) => (
         <Button
           text
           theme='primary'
@@ -1419,7 +1432,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
             {
               name: LBRouteName.tg,
               params: { id },
-              query: { ...route.query, type: 'detail' },
+              query: { ...route.query, type: 'detail', vendor },
             },
             () => {
               loadBalancerStore.setTgSearchTarget(name);
@@ -1526,6 +1539,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '内网IP',
       field: 'private_ip_address',
       isDefaultShow: true,
+      minWidth: 120,
       render: ({ data }: any) => {
         return [
           ...(data.private_ipv4_addresses || []),
@@ -1538,6 +1552,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     {
       label: '公网IP',
       field: 'public_ip_address',
+      minWidth: 120,
       render: ({ data }: any) => {
         return (
           [
@@ -1553,6 +1568,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '名称',
       field: 'name',
       isDefaultShow: true,
+      minWidth: 120,
       render: ({ data }: any) => {
         return data.name || data.inst_name;
       },
@@ -1576,6 +1592,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '所属VPC',
       field: 'cloud_vpc_ids',
       isDefaultShow: true,
+      minWidth: 150,
       render: ({ cell }: { cell: string[] }) => cell?.join(','),
     },
   ];
@@ -1598,23 +1615,15 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
           text: CLB_BINDING_STATUS[bindingStatus],
         })),
       },
-      render: ({ cell }: { cell: string }) => {
-        let icon = StatusSuccess;
-        switch (cell) {
-          case 'binding':
-            icon = StatusLoading;
-            break;
-          case 'success':
-            icon = StatusSuccess;
-            break;
-        }
-        return cell ? (
-          <div class='status-column-cell'>
-            <img class={`status-icon${cell === 'binding' ? ' spin-icon' : ''}`} src={icon} alt='' />
-            <span>{CLB_BINDING_STATUS[cell]}</span>
-          </div>
-        ) : (
-          '--'
+      render: () => {
+        return (
+          <>
+            <i
+              class='hcm-icon bkhcm-icon-38moxingshibai-01 text-gray font-normal cursor mr8'
+              v-bk-tooltips={{ content: 'HTTP/HTTPS监听器的同步状态，请到URL列表查看' }}
+            />
+            <span>--</span>
+          </>
         );
       },
     },
@@ -1946,14 +1955,14 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '创建时间',
       field: 'created_at',
       render({ cell }: any) {
-        return timeUTCFormatter(cell);
+        return timeFormatter(cell);
       },
     },
     {
       label: '更新时间',
       field: 'updated_at',
       render({ cell }: any) {
-        return timeUTCFormatter(cell);
+        return timeFormatter(cell);
       },
     },
     {
@@ -1970,84 +1979,93 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '一级账号ID',
       field: 'root_account_cloud_id',
       isDefaultShow: true,
+      width: 95,
     },
     {
       label: '一级账号名称',
       field: 'root_account_name',
       isDefaultShow: true,
+      width: 110,
     },
     {
       label: '云厂商',
       field: 'vendor',
       isDefaultShow: true,
+      width: 90,
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
     },
     {
       label: '账号状态',
       field: 'state',
       isDefaultShow: true,
+      width: 85,
       render: ({ cell }: any) => BILLS_ROOT_ACCOUNT_SUMMARY_STATE_MAP[cell],
     },
     {
-      label: '账单同步（人民币-元）当月',
-      field: 'current_month_rmb_cost_synced',
+      label: '账单版本',
+      field: 'current_version',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      width: 85,
     },
     {
-      label: '账单同步（人民币-元）上月',
-      field: 'last_month_rmb_cost_synced',
+      label: '币种',
+      field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      width: 90,
+      render: ({ cell }: any) => {
+        const value = CURRENCY_MAP[cell] ?? '人民币';
+        return <span class={['currency', cell?.toLowerCase()]}>{value}</span>;
+      },
     },
     {
-      label: '账单同步（美金-美元）当月',
+      label: '已确认账单',
       field: 'current_month_cost_synced',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost_synced'),
     },
     {
-      label: '账单同步（美金-美元）上月',
-      field: 'last_month_cost_synced',
+      label: '当前账单',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      children: [
+        {
+          label: '当月',
+          sort: true,
+          field: 'current_month_cost',
+          align: 'right',
+          width: 200,
+          render: (args: any) => customRender(args, 'current_month_cost'),
+        },
+        {
+          label: '上月',
+          sort: true,
+          field: 'last_month_cost_synced',
+          align: 'right',
+          width: 200,
+          render: (args: any) => customRender(args, 'last_month_cost_synced'),
+        },
+        {
+          label: '环比',
+          sort: true,
+          align: 'right',
+          width: 120,
+          render: ({ data }: any) => {
+            const { last_month_cost_synced, current_month_cost } = data;
+            const value = formatBillRatio(last_month_cost_synced, current_month_cost);
+            const className = formatBillRatioClass(last_month_cost_synced, current_month_cost);
+            return <span class={className}>{value}</span>;
+          },
+        },
+      ],
     },
     {
-      label: '账单同步环比',
-      field: 'month_on_month_value',
-      isDefaultShow: true,
-    },
-    {
-      label: '当前账单人民币（元）',
-      field: 'current_month_rmb_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '当前账单美金（美元）',
-      field: 'current_month_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '调账人民币（元）',
-      field: 'adjustment_rmb_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '调账美金（美元）',
+      label: '调账',
       field: 'adjustment_cost',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 130,
+      render: (args: any) => customRender(args, 'adjustment_cost'),
     },
   ];
 
@@ -2056,69 +2074,64 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '二级账号ID',
       field: 'main_account_cloud_id',
       isDefaultShow: true,
+      width: 95,
     },
     {
       label: '二级账号名称',
       field: 'main_account_name',
       isDefaultShow: true,
+      width: 110,
     },
     {
       label: '云厂商',
       field: 'vendor',
       isDefaultShow: true,
+      width: 90,
       render: ({ cell }: { cell: VendorEnum }) => VendorMap[cell],
+    },
+    {
+      label: '账单版本',
+      field: 'current_version',
+      isDefaultShow: true,
+      width: 85,
     },
     {
       label: '一级账号名称',
       field: 'root_account_name',
       isDefaultShow: true,
+      width: 110,
+    },
+    {
+      label: '币种',
+      field: 'currency',
+      isDefaultShow: true,
+      width: 90,
+      render: ({ cell }: any) => {
+        const value = CURRENCY_MAP[cell] ?? '人民币';
+        return <span class={['currency', cell?.toLowerCase()]}>{value}</span>;
+      },
     },
     {
       label: '运营产品名称',
       field: 'product_name',
       isDefaultShow: true,
+      width: 85,
     },
     {
-      label: '已确认账单人民币（元）',
-      field: 'current_month_rmb_cost_synced',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '已确认账单美金（美元）',
+      label: '已确认账单',
       field: 'current_month_cost_synced',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost_synced'),
     },
     {
-      label: '当前账单人民币（元）',
-      field: 'current_month_rmb_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '当前账单美金（美元）',
+      label: '当前账单',
       field: 'current_month_cost',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '调账人民币（元）',
-      field: 'adjustment_rmb_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '调账美金（美元）',
-      field: 'adjustment_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost'),
     },
   ];
 
@@ -2134,46 +2147,72 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       isDefaultShow: true,
     },
     {
-      label: '已确认账单人民币（元）',
-      field: 'current_month_rmb_cost_synced',
+      label: '币种',
+      field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      width: 90,
+      render: ({ cell }: any) => {
+        const value = CURRENCY_MAP[cell] ?? '人民币';
+        return <span class={['currency', cell?.toLowerCase()]}>{value}</span>;
+      },
     },
     {
-      label: '已确认账单美金（美元）',
+      label: '已确认账单',
       field: 'current_month_cost_synced',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost_synced'),
     },
     {
-      label: '当前账单人民币（元）',
-      field: 'current_month_rmb_cost',
-      isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
-    },
-    {
-      label: '当前账单美金（美元）',
+      label: '当前账单',
       field: 'current_month_cost',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost'),
+    },
+  ];
+
+  const billsBizSummaryColumns = [
+    {
+      label: '业务ID',
+      field: 'bk_biz_id',
+      isDefaultShow: true,
+      width: 110,
     },
     {
-      label: '调账人民币（元）',
-      field: 'adjustment_rmb_cost',
+      label: '业务名称',
+      field: 'bk_biz_id',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      width: 150,
+      render: ({ data }: any) => businessMapStore.businessMap.get(data.bk_biz_id) || '未分配',
     },
     {
-      label: '调账美金（美元）',
-      field: 'adjustment_cost',
+      label: '币种',
+      field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => formatBillCost(cell),
-      sort: true,
+      width: 90,
+      render: ({ cell }: any) => {
+        const value = CURRENCY_MAP[cell] ?? '人民币';
+        return <span class={['currency', cell?.toLowerCase()]}>{value}</span>;
+      },
+    },
+    {
+      label: '已确认账单',
+      field: 'current_month_cost_synced',
+      isDefaultShow: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost_synced'),
+    },
+    {
+      label: '当前账单',
+      field: 'current_month_cost',
+      isDefaultShow: true,
+      align: 'right',
+      width: 200,
+      render: (args: any) => customRender(args, 'current_month_cost'),
     },
   ];
 
@@ -2214,7 +2253,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '币种',
       field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => CURRENCY_MAP[cell],
+      render: ({ cell }: any) => CURRENCY_MAP[cell] ?? '--',
     },
     {
       label: '本期应付金额',
@@ -2282,7 +2321,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '币种',
       field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => CURRENCY_MAP[cell],
+      render: ({ cell }: any) => CURRENCY_MAP[cell] ?? '--',
     },
     {
       label: '本期应付金额',
@@ -2350,7 +2389,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '币种',
       field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => CURRENCY_MAP[cell],
+      render: ({ cell }: any) => CURRENCY_MAP[cell] ?? '--',
     },
     {
       label: '本期应付金额',
@@ -2418,7 +2457,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '币种',
       field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => CURRENCY_MAP[cell],
+      render: ({ cell }: any) => CURRENCY_MAP[cell] ?? '--',
     },
     {
       label: '本期应付金额',
@@ -2531,7 +2570,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
       label: '币种',
       field: 'currency',
       isDefaultShow: true,
-      render: ({ cell }: any) => CURRENCY_MAP[cell],
+      render: ({ cell }: any) => CURRENCY_MAP[cell] ?? '--',
     },
     {
       label: '本期应付金额',
@@ -2633,6 +2672,7 @@ export default (type: string, isSimpleShow = false, vendor?: string) => {
     billsRootAccountSummary: billsRootAccountSummaryColumns,
     billsMainAccountSummary: billsMainAccountSummaryColumns,
     billsProductSummary: billsProductSummaryColumns,
+    billsBizSummary: billsBizSummaryColumns,
     billDetailAws: billDetailAwsColumns,
     billDetailAzure: billDetailAzureColumns,
     billDetailGcp: billDetailGcpColumns,

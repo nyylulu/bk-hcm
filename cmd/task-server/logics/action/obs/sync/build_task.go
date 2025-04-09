@@ -27,8 +27,7 @@ import (
 )
 
 // BuildSyncTask build sync bill item task
-func BuildSyncTask(
-	mainAccountID string, vendor enumor.Vendor, billYear, billMonth int,
+func BuildSyncTask(rootAccountID, mainAccountID string, vendor enumor.Vendor, billYear, billMonth int,
 	start, limit uint64) ts.CustomFlowTask {
 
 	return ts.CustomFlowTask{
@@ -38,6 +37,7 @@ func BuildSyncTask(
 			Vendor:        vendor,
 			BillYear:      billYear,
 			BillMonth:     billMonth,
+			RootAccountID: rootAccountID,
 			MainAccountID: mainAccountID,
 			Start:         start,
 			Limit:         limit,
