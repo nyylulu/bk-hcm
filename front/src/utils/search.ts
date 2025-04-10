@@ -34,6 +34,7 @@ export const getDefaultRule: GetDefaultRule = (property, custom) => {
     business: { op: searchOp || IN, value: [] },
     'req-type': { op: searchOp || IN, value: [] },
     'req-stage': { op: searchOp || IN, value: [] },
+    'cloud-area': { op: searchOp || IN, value: [] },
   };
 
   return {
@@ -81,6 +82,23 @@ export const convertValue = (
   return value;
 };
 
+const isValueEmpty = (value: any): boolean =>
+  [null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length);
+
+const createRuleItem = (
+  field: string,
+  value: any,
+  property: ModelPropertyGeneric,
+  op: QueryRuleOPEnum,
+  legacy?: boolean,
+): RulesItem => {
+  return {
+    [!legacy ? 'op' : 'operator']: op,
+    field,
+    value: convertValue(value, property, op) as RulesItem['value'],
+  };
+};
+
 export const transformSimpleCondition = (
   condition: Record<string, any>,
   properties: ModelPropertyGeneric[],
@@ -89,8 +107,10 @@ export const transformSimpleCondition = (
   const queryFilter: QueryFilterType | QueryFilterTypeLegacy = !legacy
     ? { op: 'and', rules: [] }
     : { condition: 'AND', rules: [] };
+
   for (const [id, value] of Object.entries(condition || {})) {
     const property = findProperty(id, properties);
+
     if (!property || isValueEmpty(value)) {
       continue;
     }
@@ -100,44 +120,22 @@ export const transformSimpleCondition = (
       continue;
     }
 
-    const rule = createQueryRule(id, value, property, legacy);
-    if (rule) {
-      queryFilter.rules.push(rule);
+    if (property.type === 'datetime' && Array.isArray(value)) {
+      queryFilter.rules.push({
+        op: QueryRuleOPEnum.AND,
+        rules: [
+          createRuleItem(id, value[0], property, QueryRuleOPEnum.GTE),
+          createRuleItem(id, value[1], property, QueryRuleOPEnum.LTE),
+        ],
+      });
+      continue;
     }
+
+    const { op } = getDefaultRule(property);
+    queryFilter.rules.push(createRuleItem(id, value, property, op, legacy));
   }
 
   return queryFilter;
-};
-
-const isValueEmpty = (value: any): boolean =>
-  [null, undefined, ''].includes(value) || (Array.isArray(value) && !value.length);
-
-const createQueryRule = (id: string, value: any, property: ModelPropertyGeneric, legacy?: boolean): RulesItem => {
-  const createRuleItem = (
-    field: string,
-    value: any,
-    property: ModelPropertyGeneric,
-    op: QueryRuleOPEnum,
-  ): RulesItem => {
-    return {
-      [!legacy ? 'op' : 'operator']: op,
-      field,
-      value: convertValue(value, property, op) as RulesItem['value'],
-    };
-  };
-
-  if (property.type === 'datetime' && Array.isArray(value)) {
-    return {
-      op: QueryRuleOPEnum.AND,
-      rules: [
-        createRuleItem(id, value[0], property, QueryRuleOPEnum.GTE),
-        createRuleItem(id, value[1], property, QueryRuleOPEnum.LTE),
-      ],
-    };
-  }
-
-  const { op } = getDefaultRule(property);
-  return createRuleItem(id, value, property, op);
 };
 
 export const transformFlatCondition = (condition: Record<string, any>, properties: ModelPropertyGeneric[]) => {

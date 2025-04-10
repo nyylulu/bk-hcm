@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	dataproto "hcm/pkg/api/data-service"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client"
 	dataservice "hcm/pkg/client/data-service"
@@ -82,6 +83,85 @@ func (svc *cvmSvc) listCvms(kt *kit.Kit, cvmIDs ...string) ([]corecvm.BaseCvm, e
 	return result, nil
 }
 
+func (svc *cvmSvc) listSecurityGroupMap(kt *kit.Kit, sgIDs ...string) (map[string]cloud.BaseSecurityGroup, error) {
+	if len(sgIDs) == 0 {
+		return nil, fmt.Errorf("security group ids is empty")
+	}
+
+	result := make(map[string]cloud.BaseSecurityGroup)
+	for _, ids := range slice.Split(sgIDs, int(core.DefaultMaxPageLimit)) {
+		req := &protocloud.SecurityGroupListReq{
+			Filter: tools.ContainersExpression("id", ids),
+			Page:   core.NewDefaultBasePage(),
+		}
+		resp, err := svc.dataCli.Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("list security groups failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+		for _, one := range resp.Details {
+			result[one.ID] = one
+		}
+	}
+
+	return result, nil
+}
+
+func (svc *cvmSvc) getSecurityGroupMapByCloudIDs(kt *kit.Kit, vendor enumor.Vendor, cloudIDs []string) (
+	map[string]string, error) {
+
+	cloudIDs = slice.Unique(cloudIDs)
+	m := make(map[string]string)
+	for _, ids := range slice.Split(cloudIDs, int(core.DefaultMaxPageLimit)) {
+		req := &protocloud.SecurityGroupListReq{
+			Field: []string{"id", "cloud_id"},
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("cloud_id", ids),
+				tools.RuleEqual("vendor", vendor),
+			),
+			Page: core.NewDefaultBasePage(),
+		}
+		resp, err := svc.dataCli.Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), req)
+		if err != nil {
+			logs.Errorf("request dataservice list security group failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+			return nil, err
+		}
+		for _, one := range resp.Details {
+			m[one.CloudID] = one.ID
+		}
+	}
+	return m, nil
+}
+
+// createSGCommonRels 先删除cvmID关联的安全组关系，再创建新的安全组关系
+func (svc *cvmSvc) createSGCommonRels(kt *kit.Kit, vendor enumor.Vendor, resType enumor.CloudResourceType, cvmID string, sgIDs []string) error {
+
+	createReq := &protocloud.SGCommonRelBatchUpsertReq{
+		DeleteReq: &dataproto.BatchDeleteReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("res_id", cvmID),
+				tools.RuleEqual("res_type", resType),
+			),
+		},
+	}
+
+	for i, sgID := range sgIDs {
+		createReq.Rels = append(createReq.Rels, protocloud.SGCommonRelCreate{
+			SecurityGroupID: sgID,
+			ResVendor:       vendor,
+			ResID:           cvmID,
+			ResType:         resType,
+			Priority:        int64(i) + 1,
+		})
+	}
+	if err := svc.dataCli.Global.SGCommonRel.BatchUpsertSgCommonRels(kt, createReq); err != nil {
+		logs.Errorf("request dataservice create security group cvm rels failed, err: %v, req: %+v, rid: %s",
+			err, createReq, kt.Rid)
+		return err
+	}
+	return nil
+}
+
 func (svc *cvmSvc) getCvms(kt *kit.Kit, vendor enumor.Vendor, region string, cvmIDs []string) ([]corecvm.BaseCvm,
 	error) {
 	if len(cvmIDs) == 0 {
@@ -104,30 +184,6 @@ func (svc *cvmSvc) getCvms(kt *kit.Kit, vendor enumor.Vendor, region string, cvm
 			return nil, err
 		}
 		result = append(result, listResp.Details...)
-	}
-
-	return result, nil
-}
-
-func (svc *cvmSvc) listSecurityGroupMap(kt *kit.Kit, sgIDs ...string) (map[string]cloud.BaseSecurityGroup, error) {
-	if len(sgIDs) == 0 {
-		return nil, fmt.Errorf("security group ids is empty")
-	}
-
-	result := make(map[string]cloud.BaseSecurityGroup)
-	for _, ids := range slice.Split(sgIDs, int(core.DefaultMaxPageLimit)) {
-		req := &protocloud.SecurityGroupListReq{
-			Filter: tools.ContainersExpression("id", ids),
-			Page:   core.NewDefaultBasePage(),
-		}
-		resp, err := svc.dataCli.Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), req)
-		if err != nil {
-			logs.Errorf("list security groups failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-			return nil, err
-		}
-		for _, one := range resp.Details {
-			result[one.ID] = one
-		}
 	}
 
 	return result, nil

@@ -182,6 +182,8 @@ type Set interface {
 	GlobalConfig() globalconfig.Interface
 	OrgTopo() orgtopo.Interface
 
+	ResUsageBizRel() cloud.ResUsageBizRel
+
 	Txn() *Txn
 }
 
@@ -1044,4 +1046,11 @@ func (s *set) GlobalConfig() globalconfig.Interface {
 // OrgTopo returns orgtopo dao.
 func (s *set) OrgTopo() orgtopo.Interface {
 	return orgtopo.New(s.orm, s.idGen)
+}
+
+// ResUsageBizRel return resource biz relation dao.
+func (s *set) ResUsageBizRel() cloud.ResUsageBizRel {
+	return &cloud.ResUsageBizRelDao{
+		Orm: s.orm,
+	}
 }

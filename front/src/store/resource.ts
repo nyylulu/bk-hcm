@@ -1,11 +1,9 @@
 import http from '@/http';
 import { defineStore } from 'pinia';
-
-import { useAccountStore } from '@/store';
-import { VendorEnum } from '@/common/constant';
 import rollRequest from '@blueking/roll-request';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { VendorEnum } from '@/common/constant';
 import { FilterType } from '@/typings';
-import { getQueryStringParams } from '@/common/util';
 // import { json2Query } from '@/common/util';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
@@ -29,10 +27,9 @@ export interface BatchBindSecurityInfoParams {
 
 // 获取
 const getBusinessApiPath = (type?: string) => {
-  const store = useAccountStore();
-  const bizs = getQueryStringParams('bizs');
+  const { getBizsId } = useWhereAmI();
   if (location.href.includes('business') && type !== 'images') {
-    return `bizs/${store.bizs || bizs}/`;
+    return `bizs/${getBizsId()}/`;
   }
   return '';
 };

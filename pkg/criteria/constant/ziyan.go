@@ -37,6 +37,8 @@ const (
 	InternalCertEndpoint = "ssl.internal.tencentcloudapi.com"
 	// InternalClbEndpoint 负载均衡内部域名
 	InternalClbEndpoint = "clb.internal.tencentcloudapi.com"
+	// InternalTagEndpoint 标签内部域名
+	InternalTagEndpoint = "tag.internal.tencentcloudapi.com"
 
 	// InternalBPaasEndpoint bpaas 内部域名
 	InternalBPaasEndpoint = "bpaas.internal.tencentcloudapi.com"

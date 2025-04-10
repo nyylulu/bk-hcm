@@ -56,3 +56,5 @@ data:
       {{- toYaml .Values.userMgr | nindent 6 }}
     orgTopoConfig:
       {{- toYaml .Values.cloudserver.orgTopoConfig | nindent 6 }}
+    taskManagement:
+      {{- toYaml .Values.cloudserver.taskManagement | nindent 6 }}

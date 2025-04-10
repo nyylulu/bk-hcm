@@ -31,7 +31,6 @@ import (
 	networkinterface "hcm/pkg/adaptor/types/network-interface"
 	"hcm/pkg/api/core"
 	dataproto "hcm/pkg/api/data-service/cloud"
-	protocloud "hcm/pkg/api/data-service/cloud"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -57,10 +56,10 @@ func (svc *cvmSvc) initTCloudCvmService(cap *capability.Capability) {
 	h.Add("BatchResetTCloudCvmPwd", http.MethodPost, "/vendors/tcloud/cvms/batch/reset/pwd", svc.BatchResetTCloudCvmPwd)
 	h.Add("BatchResetTCloudCvm", http.MethodPost, "/vendors/tcloud/cvms/reset", svc.BatchResetTCloudCvm)
 
-	h.Add("BatchAssociateTCloudSecurityGroup", http.MethodPost, "/vendors/tcloud/cvms/security_groups/batch/associate",
-		svc.BatchAssociateTCloudSecurityGroup)
 	h.Add("ListTCloudCvmNetworkInterface", http.MethodPost, "/vendors/tcloud/cvms/network_interfaces/list",
 		svc.ListTCloudCvmNetworkInterface)
+	h.Add("BatchAssociateTCloudSecurityGroup", http.MethodPost, "/vendors/tcloud/cvms/security_groups/batch/associate",
+		svc.BatchAssociateTCloudSecurityGroup)
 
 	h.Load(cap.WebService)
 }
@@ -94,7 +93,8 @@ func (svc *cvmSvc) BatchAssociateTCloudSecurityGroup(cts *rest.Contexts) (interf
 
 	sgMap, err := svc.listSecurityGroupMap(cts.Kit, req.SecurityGroupIDs...)
 	if err != nil {
-		logs.Errorf("list security groups failed, err: %v, sgIDs: %v, rid: %s", err, req.SecurityGroupIDs, cts.Kit.Rid)
+		logs.Errorf("list security groups failed, err: %v, sgIDs: %v, rid: %s",
+			err, req.SecurityGroupIDs, cts.Kit.Rid)
 		return nil, err
 	}
 	sgCloudIDs := make([]string, 0, len(req.SecurityGroupIDs))
@@ -119,17 +119,11 @@ func (svc *cvmSvc) BatchAssociateTCloudSecurityGroup(cts *rest.Contexts) (interf
 		return nil, err
 	}
 
-	createReq := &protocloud.SGCvmRelBatchCreateReq{}
-	for _, sgID := range req.SecurityGroupIDs {
-		createReq.Rels = append(createReq.Rels, protocloud.SGCvmRelCreate{
-			SecurityGroupID: sgID,
-			CvmID:           req.CvmID,
-		})
-	}
-	if err = svc.dataCli.Global.SGCvmRel.BatchCreateSgCvmRels(cts.Kit.Ctx, cts.Kit.Header(), createReq); err != nil {
-		logs.Errorf("request dataservice create security group cvm rels failed, err: %v, req: %+v, rid: %s",
-			err, createReq, cts.Kit.Rid)
-		return nil, err
+	err = svc.createSGCommonRels(cts.Kit, enumor.TCloud, enumor.CvmCloudResType, req.CvmID, req.SecurityGroupIDs)
+	if err != nil {
+		// 不抛出err, 尽最大努力交付
+		logs.Errorf("create sg common rels failed, err: %v, cvmID: %s, sgIDs: %v, rid: %s",
+			err, req.CvmID, req.SecurityGroupIDs, cts.Kit.Rid)
 	}
 	return nil, nil
 }

@@ -5,7 +5,7 @@ import { useUserStore } from '@/store/user';
 import { AppearanceType, DisplayType } from './typings';
 import WxworkLink from './appearance/wxwork-link.vue';
 
-const props = defineProps<{ value: string | string[]; display: DisplayType }>();
+const props = defineProps<{ value: string | string[]; display?: DisplayType }>();
 
 const localValue = computed(() => {
   if (!props.value) {
@@ -28,7 +28,7 @@ const displayValue = computed(() => {
     }
     return `${user.username}(${user.display_name})`;
   });
-  return names?.join?.(';');
+  return names?.join?.(';') || '--';
 });
 
 const userStore = useUserStore();

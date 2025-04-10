@@ -410,7 +410,7 @@ func (g *securityGroup) TCloudZiyanSecurityGroupDisassociateLoadBalancer(cts *re
 
 // TCloudZiyanListSecurityGroupStatistic ...
 func (g *securityGroup) TCloudZiyanListSecurityGroupStatistic(cts *rest.Contexts) (any, error) {
-	req := new(proto.TCloudListSecurityGroupStatisticReq)
+	req := new(proto.ListSecurityGroupStatisticReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}

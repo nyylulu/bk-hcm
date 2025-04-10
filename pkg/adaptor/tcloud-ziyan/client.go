@@ -34,6 +34,7 @@ import (
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	cvm "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/cvm/v20170312"
 	ssl "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl/v20191205"
+	tag "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tag/v20180813"
 	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
@@ -129,6 +130,19 @@ func (c *clientSet) ClbClient(region string) (*clb.Client, error) {
 	// 使用内部域名
 	c.profile.HttpProfile.Endpoint = constant.InternalClbEndpoint
 	client, err := clb.NewClient(c.credential, region, c.profile)
+	if err != nil {
+		return nil, err
+	}
+	client.WithHttpTransport(metric.GetZiyanRecordRoundTripper(nil))
+
+	return client, nil
+}
+
+// TagClient tcloud tag client
+func (c *clientSet) TagClient() (*tag.Client, error) {
+	// 使用内部域名
+	c.profile.HttpProfile.Endpoint = constant.InternalClbEndpoint
+	client, err := tag.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err
 	}

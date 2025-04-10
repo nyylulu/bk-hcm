@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, h, ref, watchEffect } from 'vue';
+import { computed, h, ref, watchEffect, useId } from 'vue';
 import debounce from 'lodash/debounce';
 import { useUserStore, type IUserItem } from '@/store/user';
 import { userSelectorRecentSelectedKey } from '@/constants/storage-symbols';
@@ -26,6 +26,9 @@ const props = withDefaults(defineProps<IUserSelectorProps>(), {
   collapseTags: true,
   placeholder: '请输入',
 });
+
+const id = useId();
+const activeSearchId = ref<string | null>(null);
 
 const model = defineModel<string | string[]>();
 
@@ -140,10 +143,21 @@ const handleInput = debounce(async (inputValue: string) => {
     return;
   }
 
+  activeSearchId.value = id;
+
   const list = await userStore.search(value);
   const newList = list.filter((item) => !userList.value.some((oldItem) => oldItem.username === item.username));
   userList.value = [...userList.value, ...newList];
+
+  activeSearchId.value = null;
 }, 500);
+
+const handleSelect = () => {
+  // 临时修复单选时，如果输入框中有值，失焦后不隐藏下拉列表的问题
+  if (!props.multiple) {
+    tagInputRef.value?.handleBlur();
+  }
+};
 
 const handleClickMe = () => {
   if (props.multiple) {
@@ -183,11 +197,14 @@ const handleClickMe = () => {
     :save-key="'username'"
     :search-key="['username', 'display_name']"
     @input="handleInput"
+    @select="handleSelect"
   >
     <template #suffix>
       <div class="suffix">
-        <div class="me" v-show="!userStore.searchLoading" @click.stop="handleClickMe">我</div>
-        <div class="loading" v-show="userStore.searchLoading">
+        <div class="me" v-show="!(activeSearchId === id && userStore.searchLoading)" @click.stop="handleClickMe">
+          我
+        </div>
+        <div class="loading" v-show="activeSearchId === id && userStore.searchLoading">
           <bk-loading :loading="userStore.searchLoading" mode="spin" size="mini" />
         </div>
       </div>
@@ -202,11 +219,13 @@ const handleClickMe = () => {
     margin-right: 5px;
     display: flex;
     align-items: center;
+
     .me {
       color: $default-color;
       cursor: pointer;
       z-index: 1;
     }
+
     .loading {
       transform: scale(0.75);
     }
