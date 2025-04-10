@@ -103,4 +103,4 @@ POST /api/v1/cloud/cvms/list/operate/status
 | bk_svr_source_type_id  | string        | 服务来源类型ID(0:未知1:自有2:托管3:租用4:虚拟机5:容器) |
 | status	                | string        | 主机状态                                |
 | srv_status             | string        | CC的运营状态                             |
-| operate_status         | int   	       | 可操作状态(0:正常1:不是主备负责人2:不在空闲机模块)       |
+| operate_status         | int   	       | 可操作状态(0:正常1:不是主备负责人2:不在空闲机模块3:云服务器未处于关机状态4:云服务器未处于开机状态5:物理机不支持操作)       |

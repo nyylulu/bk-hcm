@@ -26,8 +26,8 @@ import (
 	proto "hcm/pkg/api/cloud-server"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
-	corecvm "hcm/pkg/api/core/cloud/cvm"
 	"hcm/pkg/api/core/cloud"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
@@ -40,6 +40,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
@@ -470,9 +471,17 @@ func validateOperateStatusForReset(user, moduleName, _ string,
 		moduleName != constant.IdleMachineModuleName {
 		return enumor.CvmOperateStatusNoIdle
 	}
+
+	// 主备负责人
 	if !strings.Contains(host.Extension.Operator, user) &&
 		!strings.Contains(host.Extension.BkBakOperator, user) {
 		return enumor.CvmOperateStatusNoOperator
+	}
+
+	// 物理机不支持操作
+	if host.Extension != nil && host.Extension.SvrSourceTypeID != "" &&
+		cmdb.IsPhysicalMachine(host.Extension.SvrSourceTypeID) {
+		return enumor.CvmOperateStatusPmNoOperate
 	}
 	return enumor.CvmOperateStatusNormal
 }
@@ -480,10 +489,18 @@ func validateOperateStatusForReset(user, moduleName, _ string,
 func validateOperateStatusForOperate(user, _, cloudCvmStatus string, operationType enumor.CvmOperateType,
 	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
 
+	// 主备负责人
 	if !strings.Contains(host.Extension.Operator, user) &&
 		!strings.Contains(host.Extension.BkBakOperator, user) {
 		return enumor.CvmOperateStatusNoOperator
 	}
+
+	// 物理机不支持操作
+	if host.Extension != nil && host.Extension.SvrSourceTypeID != "" &&
+		cmdb.IsPhysicalMachine(host.Extension.SvrSourceTypeID) {
+		return enumor.CvmOperateStatusPmNoOperate
+	}
+
 	switch operationType {
 	case enumor.CvmOperateTypeStart:
 		if cloudCvmStatus != enumor.TCloudCvmStatusStopped {

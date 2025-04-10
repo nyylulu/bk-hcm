@@ -224,10 +224,15 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 			}
 		}
 
-		cloudCvm, ok := mapCloudIDToCvm[host.CloudID]
-		if !ok {
-			logs.Warnf("cloud cvm not found, cloud_id: %v, host_id: %v, rid: %s", host.CloudID, hostID, kt.Rid)
-			return nil, fmt.Errorf("cloud cvm not found, cloud_id: %v, host_id: %v", host.CloudID, hostID)
+		// 只有虚拟机才需要判断云端状态
+		var cvmCloudStatus string
+		if host.Extension != nil && host.Extension.SvrSourceTypeID == cmdb.SvrSourceTypeIDCVM {
+			cvmCloudInfo, ok := mapCloudIDToCvm[host.CloudID]
+			if !ok {
+				logs.Warnf("cloud cvm not found, cloud_id: %v, host_id: %v, rid: %s", host.CloudID, hostID, kt.Rid)
+				return nil, fmt.Errorf("cloud cvm not found, cloud_id: %v, host_id: %v", host.CloudID, hostID)
+			}
+			cvmCloudStatus = cvmCloudInfo.Status
 		}
 
 		cvmHosts = append(cvmHosts, cscvm.CvmBatchOperateHostInfo{
@@ -253,7 +258,7 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 			SvrSourceTypeID:      host.Extension.SvrSourceTypeID,
 			Status:               hostCvmMap[hostID].Status,
 			SrvStatus:            host.Extension.SrvStatus,
-			OperateStatus:        validateStatusFunc(kt.User, moduleName, cloudCvm.Status, host),
+			OperateStatus:        validateStatusFunc(kt.User, moduleName, cvmCloudStatus, host),
 		})
 	}
 
@@ -267,6 +272,11 @@ func (svc *cvmSvc) mapTCloudZiyanCloudCvms(kt *kit.Kit, cvms map[int64]corecvm.C
 	// group by account, region
 	mapAccountRegionToCvmCloudID := make(map[string][]string)
 	for _, host := range cvms {
+		// 物理机不需要获取云端数据
+		if host.Extension != nil && host.Extension.SvrSourceTypeID != "" &&
+			cmdb.IsPhysicalMachine(host.Extension.SvrSourceTypeID) {
+			continue
+		}
 		key := getCombinedKey(host.AccountID, host.Region, "+")
 		mapAccountRegionToCvmCloudID[key] = append(mapAccountRegionToCvmCloudID[key], host.CloudID)
 	}
