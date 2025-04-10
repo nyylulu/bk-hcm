@@ -31,6 +31,9 @@ import FormUser from './form/user.vue';
 import FormReqType from './form/req-type.vue';
 import FormReqStage from './form/req-stage.vue';
 
+// 权限组件
+import Auth from './auth/auth.vue';
+
 const components = [
   PermissionDialog,
   SearchAccount,
@@ -55,6 +58,7 @@ const components = [
   FormUser,
   FormReqType,
   FormReqStage,
+  Auth,
 ];
 export default {
   install(app: App) {

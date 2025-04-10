@@ -40,7 +40,7 @@
   "dependencies": {
     "@antv/l7": "^2.20.2",
     "@antv/l7-maps": "^2.20.2",
-    "@blueking/app-select": "^0.0.1-beta.6",
+    "@blueking/app-select": "0.0.1-beta.13",
     "@blueking/babel-preset-bk": "^2.1.0-beta4",
     "@blueking/cli-service-webpack": "0.0.0-beta26",
     "@blueking/collapsible-tag": "^1.1.0-beta.4",
