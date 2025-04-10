@@ -43,4 +43,6 @@ type CVM struct {
 	InheritInstanceId string            `json:"inherit_instance_id"`
 	BkProductID       int64             `json:"bk_product_id"`
 	BkProductName     string            `json:"bk_product_name"`
+	VirtualDeptID     int64             `json:"virtual_dept_id"`
+	VirtualDeptName   string            `json:"virtual_dept_name"`
 }

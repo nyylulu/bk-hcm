@@ -106,6 +106,10 @@ func (g *Generator) createCVM(kt *kit.Kit, cvm *types.CVM, order *types.ApplyOrd
 }
 
 func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
+	deptName := cvmapi.CvmLaunchDeptName
+	if cvm.VirtualDeptName != "" {
+		deptName = cvm.VirtualDeptName
+	}
 	createReq := &cvmapi.OrderCreateReq{
 		ReqMeta: cvmapi.ReqMeta{
 			Id:      cvmapi.CvmId,
@@ -114,7 +118,7 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 		},
 		Params: &cvmapi.OrderCreateParams{
 			Zone:          cvm.Zone,
-			DeptName:      cvmapi.CvmLaunchDeptName,
+			DeptName:      deptName,
 			ProductName:   cvm.BkProductName,
 			Business1Id:   cvmapi.CvmLaunchBiz1Id,
 			Business1Name: cvmapi.CvmLaunchBiz1Name,
@@ -143,7 +147,6 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 			InheritInstanceId: cvm.InheritInstanceId,
 		},
 	}
-
 	// 计费模式
 	if len(cvm.ChargeType) > 0 {
 		createReq.Params.ChargeType = cvm.ChargeType
@@ -152,7 +155,6 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	if createReq.Params.ChargeType == cvmapi.ChargeTypePrePaid && cvm.ChargeMonths > 0 {
 		createReq.Params.ChargeMonths = cvm.ChargeMonths
 	}
-
 	// set system disk parameters
 	itDev := regexp.MustCompile(`^IT3\.|^IT2\.|^I3\.|^IT5\.|^IT5c\.`).FindStringSubmatch(cvm.InstanceType)
 	if len(itDev) > 0 {
@@ -162,7 +164,6 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypePremium
 		createReq.Params.SystemDiskSize = cvmapi.CvmLaunchSystemDiskSizePremium
 	}
-
 	// set system disk and data disk for special instance type.
 	if cvm.InstanceType == "BMGY5.16XLARGE256" {
 		createReq.Params.SystemDiskType = cvmapi.CvmLaunchSystemDiskTypeBasic
@@ -445,36 +446,39 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	req.SecurityGroupName = sg.SecurityGroupName
 	req.SecurityGroupDesc = sg.SecurityGroupDesc
 
-	productID, productName, err := g.getProductMsg(kt, order)
+	productInfo, err := g.getProductInfo(kt, order)
 	if err != nil {
 		logs.Errorf("get product message failed, err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
 		return nil, err
 	}
 
-	req.BkProductID = productID
-	req.BkProductName = productName
+	req.BkProductID = productInfo.OpProductID
+	req.BkProductName = productInfo.OpProductName
+	req.VirtualDeptID = productInfo.VirtualDeptID
+	req.VirtualDeptName = productInfo.VirtualDeptName
 
 	return req, nil
 }
 
-func (g *Generator) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, string, error) {
+func (g *Generator) getProductInfo(kt *kit.Kit, order *types.ApplyOrder) (cmdb.SearchBizBelonging, error) {
 	if order.RequireType.IsUseManageBizPlan() {
-		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
+		return cmdb.SearchBizBelonging{
+			OpProductID: cvmapi.CvmLaunchProjectId, OpProductName: cvmapi.CvmLaunchProductName,
+			VirtualDeptID: cvmapi.CvmDeptId, VirtualDeptName: cvmapi.CvmLaunchDeptName}, nil
 	}
 
 	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
 	resp, err := g.cc.SearchBizBelonging(kt, param)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
-		return 0, "", err
+		return cmdb.SearchBizBelonging{}, err
 	}
 	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
-		return 0, "", errors.New("search biz belonging, but resp is empty or len resp != 1")
+		return cmdb.SearchBizBelonging{}, errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
-	bizBelong := (*resp)[0]
-	return bizBelong.OpProductID, bizBelong.OpProductName, nil
+	return (*resp)[0], nil
 }
 
 // AvailSubnetList available subnet list
