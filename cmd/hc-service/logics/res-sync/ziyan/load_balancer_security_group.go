@@ -122,7 +122,7 @@ func (cli *client) upsertSgRelForLb(kt *kit.Kit, lbId string, startIdx int, stay
 		// 填充云上id
 		createDel.Rels = append(createDel.Rels, protocloud.SGCommonRelCreate{
 			SecurityGroupID: cloudSgMap[cloudID],
-			Vendor:          enumor.TCloudZiyan,
+			ResVendor:       enumor.TCloudZiyan,
 			ResID:           lbId,
 			ResType:         enumor.LoadBalancerCloudResType,
 			Priority:        int64(i + startIdx + 1),

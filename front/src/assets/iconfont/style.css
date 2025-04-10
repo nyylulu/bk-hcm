@@ -92,6 +92,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 .bkhcm-icon-loading-circle:before {
 	content: "\e109";
 }
+.bkhcm-icon-qw:before {
+	content: "\e178";
+}
 .bkhcm-icon-bianji:before {
 	content: "\e11d";
 }
@@ -268,6 +271,9 @@ url("fonts/iconcool.eot?#iefix") format("embedded-opentype");
 }
 .bkhcm-icon-alert:before {
 	content: "\e159";
+}
+.bkhcm-icon-clear:before {
+	content: "\e177";
 }
 .bkhcm-icon-close:before {
 	content: "\e15d";

@@ -21,6 +21,7 @@ package handler
 
 import (
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/meta"
@@ -52,21 +53,27 @@ func ListBizAuthRes(cts *rest.Contexts, opt *ListAuthResOption) (*filter.Express
 		return nil, false, nil
 	}
 
-	rules := make([]filter.RuleFactory, 0)
-	rules = append(rules, tools.RuleEqual("bk_biz_id", bizID))
+	bizRules := make([]*filter.AtomRule, 0)
+	bizRules = append(bizRules, tools.RuleEqual("bk_biz_id", bizID))
+	if opt.ResType == meta.SecurityGroup {
+		// 安全组允许使用业务访问，TODO 后续需要以更通用的方式扩展到其他资源
+		bizRules = append(bizRules, tools.RuleEqual("usage_biz_id", bizID))
+		// -1 表示使用业务为全部业务
+		bizRules = append(bizRules, tools.RuleEqual("usage_biz_id", constant.UnassignedBiz))
+	}
+
 	if (opt.ResType == meta.Vpc || opt.ResType == meta.Subnet) && opt.Action == meta.Find {
 		// 对vpc或subnet资源的查询操作，需添加暴露自研云资源的or条件，表示自研云的这两种资源对所有业务都可见，为临时解决方案，后期需去除
-		rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
+		bizRules = append(bizRules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
 	}
-	expression := filter.Expression{
-		Op:    filter.Or,
-		Rules: rules,
-	}
-	bizFilter, err := tools.And(&expression, opt.Filter)
+
+	bizFilter := tools.ExpressionOr(bizRules...)
+
+	finalFilter, err := tools.And(bizFilter, opt.Filter)
 	if err != nil {
 		return nil, false, err
 	}
-	return bizFilter, false, err
+	return finalFilter, false, err
 }
 
 // ListResourceAuthRes 资源下 查询校验

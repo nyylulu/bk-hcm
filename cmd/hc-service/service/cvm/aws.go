@@ -25,12 +25,13 @@ import (
 
 	syncaws "hcm/cmd/hc-service/logics/res-sync/aws"
 	"hcm/cmd/hc-service/service/capability"
+	"hcm/pkg/adaptor/aws"
 	typecore "hcm/pkg/adaptor/types/core"
 	typecvm "hcm/pkg/adaptor/types/cvm"
 	typesnetwork "hcm/pkg/adaptor/types/network-interface"
 	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	dataproto "hcm/pkg/api/data-service/cloud"
-	protocloud "hcm/pkg/api/data-service/cloud"
 	protocvm "hcm/pkg/api/hc-service/cvm"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
@@ -55,6 +56,7 @@ func (svc *cvmSvc) initAwsCvmService(cap *capability.Capability) {
 
 	h.Add("BatchAssociateAwsSecurityGroup", http.MethodPost, "/vendors/aws/cvms/security_groups/batch/associate",
 		svc.BatchAssociateAwsSecurityGroup)
+
 	h.Add("ListAwsCvmNetworkInterface", http.MethodPost, "/vendors/aws/cvms/network_interfaces/list",
 		svc.ListAwsCvmNetworkInterface)
 
@@ -114,19 +116,70 @@ func (svc *cvmSvc) BatchAssociateAwsSecurityGroup(cts *rest.Contexts) (interface
 		return nil, err
 	}
 
-	createReq := &protocloud.SGCvmRelBatchCreateReq{}
-	for _, sgID := range req.SecurityGroupIDs {
-		createReq.Rels = append(createReq.Rels, protocloud.SGCvmRelCreate{
-			SecurityGroupID: sgID,
-			CvmID:           req.CvmID,
-		})
-	}
-	if err = svc.dataCli.Global.SGCvmRel.BatchCreateSgCvmRels(cts.Kit.Ctx, cts.Kit.Header(), createReq); err != nil {
-		logs.Errorf("request dataservice create security group cvm rels failed, err: %v, req: %+v, rid: %s",
-			err, createReq, cts.Kit.Rid)
+	if err = svc.createSGCommonRelsForAws(cts.Kit, awsCli, req.Region, cvmList[0]); err != nil {
+		logs.Errorf("create sg common rels failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 	return nil, nil
+}
+
+func (svc *cvmSvc) createSGCommonRelsForAws(kt *kit.Kit, client *aws.Aws, region string, cvm corecvm.BaseCvm) error {
+
+	awsCvms, err := svc.listAwsCvmFromCloud(kt, client, region, cvm)
+	if err != nil {
+		logs.Errorf("list aws cvm from cloud failed, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	sgCloudIDs := make([]string, 0)
+	for _, one := range awsCvms[0].SecurityGroups {
+		sgCloudIDs = append(sgCloudIDs, converter.PtrToVal(one.GroupId))
+	}
+
+	sgCloudIDToIDMap, err := svc.getSecurityGroupMapByCloudIDs(kt, enumor.Aws, sgCloudIDs)
+	if err != nil {
+		logs.Errorf("get security group map by cloud ids failed, err: %v, cloudIDs: %v, rid: %s",
+			err, sgCloudIDs, kt.Rid)
+		return err
+	}
+
+	sgIDs := make([]string, 0, len(sgCloudIDs))
+	for _, cloudID := range sgCloudIDs {
+		sgID, ok := sgCloudIDToIDMap[cloudID]
+		if !ok {
+			logs.Errorf("security group not found, cloudID: %s, rid: %s", cloudID, kt.Rid)
+			return fmt.Errorf("security group (%s) not found", cloudID)
+		}
+		sgIDs = append(sgIDs, sgID)
+	}
+
+	err = svc.createSGCommonRels(kt, enumor.Aws, enumor.CvmCloudResType, cvm.ID, sgIDs)
+	if err != nil {
+		// 不抛出err, 尽最大努力交付
+		logs.Errorf("create sg common rels failed, err: %v, cvmID: %s, sgIDs: %v, rid: %s",
+			err, cvm.ID, sgIDs, kt.Rid)
+	}
+
+	return nil
+}
+
+func (svc *cvmSvc) listAwsCvmFromCloud(kt *kit.Kit, client *aws.Aws, region string, cvm corecvm.BaseCvm) (
+	[]typecvm.AwsCvm, error) {
+
+	listOpt := &typecvm.AwsListOption{
+		Region:   region,
+		CloudIDs: []string{cvm.CloudID},
+	}
+	awsCvms, _, err := client.ListCvm(kt, listOpt)
+	if err != nil {
+		logs.Errorf("list aws cvm failed, err: %v, opt: %v, rid: %s", err, listOpt, kt.Rid)
+		return nil, err
+	}
+	if len(awsCvms) == 0 {
+		logs.Errorf("aws cvm(%s) not found, rid: %s", cvm.CloudID, kt.Rid)
+		return nil, fmt.Errorf("aws cvm(%s) not found", cvm.CloudID)
+	}
+	return awsCvms, nil
 }
 
 // BatchCreateAwsCvm ...

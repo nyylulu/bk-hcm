@@ -317,7 +317,7 @@ func (act BatchTaskCvmResetAction) updateHostPwd(kt *kit.Kit, cvms []corecvm.Cvm
 
 	var errMap = make(map[int]error)
 	for idx, cvm := range cvms {
-		pwdReq := &sampwdapi.UpdateHostPwdReq{
+		pwdReq := sampwdapi.UpdateHostPwdReq{
 			BkHostID:     cvm.BkHostID,
 			Password:     pwd,
 			UserName:     operator, //  操作人

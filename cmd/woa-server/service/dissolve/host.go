@@ -185,7 +185,7 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 
 	rules := make([]filter.RuleFactory, 0)
 	rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
-	rules = append(rules, tools.RuleJsonIn("extension.bk_host_id", req.HostIDs))
+	rules = append(rules, tools.RuleJsonIn("bk_host_id", req.HostIDs))
 	rules = append(rules, authFilter)
 	listFilter := &filter.Expression{
 		Op:    filter.And,
@@ -214,7 +214,7 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 			logs.Errorf("host extension is nil, host: %v, rid: %s", host, cts.Kit.Rid)
 			return nil, errf.New(errf.InvalidParameter, "host info is invalid, can not find host asset id")
 		}
-		hostIDAssetIDMap[host.Extension.HostID] = host.Extension.BkAssetID
+		hostIDAssetIDMap[host.BkHostID] = host.Extension.BkAssetID
 	}
 
 	assetIDStatusMap, err := s.logics.RecycledHost().IsDissolveHost(cts.Kit, maps.Values(hostIDAssetIDMap))

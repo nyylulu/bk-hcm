@@ -20,5 +20,6 @@ module.exports = {
     'no-console': ['error', { allow: ['warn', 'error'] }],
     'no-debugger': 'error',
     'linebreak-style': 0,
+    'vue/require-explicit-emits': 0,
   },
 };

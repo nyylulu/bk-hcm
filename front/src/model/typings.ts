@@ -17,7 +17,8 @@ export type ModelPropertyType =
   | 'region'
   | 'business'
   | 'req-type'
-  | 'req-stage';
+  | 'req-stage'
+  | 'cloud-area';
 
 export type ModelPropertyMeta = {
   display?: PropertyDisplayConfig;
@@ -52,6 +53,7 @@ export type PropertyColumnConfig = {
   width?: number | string;
   minWidth?: number | string;
   defaultHidden?: boolean;
+  showOverflowTooltip?: boolean;
 };
 
 export type PropertyFormConfig = {

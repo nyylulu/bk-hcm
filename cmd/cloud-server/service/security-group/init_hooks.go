@@ -30,8 +30,4 @@ func initSecurityGroupServiceHooks(svc *securityGroupSvc, h *rest.Handler) {
 		"/bizs/{bk_biz_id}/security_groups/associate/cvms/batch", svc.BatchAssociateBizCvm)
 	h.Add("BatchDisassociateBizCvm", http.MethodPost,
 		"/bizs/{bk_biz_id}/security_groups/disassociate/cvms/batch", svc.BatchDisassociateBizCvm)
-	h.Add("BatchAssociateBizCloudCvm", http.MethodPost,
-		"/bizs/{bk_biz_id}/security_groups/associate/cloud_cvms/batch", svc.BatchAssociateBizCloudCvm)
-	h.Add("BatchDisassociateBizCloudCvm", http.MethodPost,
-		"/bizs/{bk_biz_id}/security_groups/disassociate/cloud_cvms/batch", svc.BatchDisassociateBizCloudCvm)
 }

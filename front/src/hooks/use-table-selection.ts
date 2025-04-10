@@ -8,10 +8,10 @@ type SelectionType = {
 
 type UseTableSelectionParams = {
   isRowSelectable: (args: { row: SelectionType['row'] }) => boolean;
-  idKey?: string;
+  rowKey?: string;
 };
 
-export default function useTableSelection({ isRowSelectable, idKey = 'id' }: UseTableSelectionParams) {
+export default function useTableSelection({ isRowSelectable, rowKey = 'id' }: UseTableSelectionParams) {
   const selections = ref([]);
 
   const handleSelectChange = (selection: SelectionType, isAll = false) => {
@@ -30,7 +30,7 @@ export default function useTableSelection({ isRowSelectable, idKey = 'id' }: Use
     }
     // 取消选择某一个
     if (!isAll && !selection.checked) {
-      const index = selections.value.findIndex((item) => item[idKey] === selection.row[idKey]);
+      const index = selections.value.findIndex((item) => item[rowKey] === selection.row[rowKey]);
       if (index !== -1) {
         selections.value.splice(index, 1);
       }
