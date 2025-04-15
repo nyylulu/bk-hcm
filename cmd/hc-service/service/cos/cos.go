@@ -32,6 +32,7 @@ func InitCosService(cap *capability.Capability) {
 	}
 
 	svc.initTCloudCosService(cap)
+	svc.initTCloudZiyanCosService(cap)
 }
 
 type cosSvc struct {

@@ -17,7 +17,6 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package cos ...
 package cos
 
 import (
@@ -32,16 +31,19 @@ import (
 	"hcm/pkg/tools/converter"
 )
 
-func (svc *cosSvc) initTCloudCosService(cap *capability.Capability) {
+func (svc *cosSvc) initTCloudZiyanCosService(cap *capability.Capability) {
 	h := rest.NewHandler()
-	h.Add("CreateTCloudCosBucket", http.MethodPost, "/vendors/tcloud/cos/buckets/create", svc.CreateTCloudCosBucket)
-	h.Add("DeleteTCloudCosBucket", http.MethodDelete, "/vendors/tcloud/cos/buckets/delete", svc.DeleteTCloudCosBucket)
-	h.Add("ListTCloudCosBucket", http.MethodPost, "/vendors/tcloud/cos/buckets/list", svc.ListTCloudCosBucket)
+	h.Add("CreateTCloudZiyanCosBucket", http.MethodPost, "/vendors/tcloud-ziyan/cos/buckets/create",
+		svc.CreateTCloudZiyanCosBucket)
+	h.Add("DeleteTCloudZiyanCosBucket", http.MethodDelete, "/vendors/tcloud-ziyan/cos/buckets/delete",
+		svc.DeleteTCloudZiyanCosBucket)
+	h.Add("ListTCloudZiyanCosBucket", http.MethodPost, "/vendors/tcloud-ziyan/cos/buckets/list",
+		svc.ListTCloudZiyanCosBucket)
 	h.Load(cap.WebService)
 }
 
-// CreateTCloudCosBucket create tcloud cos bucket.
-func (svc *cosSvc) CreateTCloudCosBucket(cts *rest.Contexts) (interface{}, error) {
+// CreateTCloudZiyanCosBucket create tcloud ziyan cos bucket.
+func (svc *cosSvc) CreateTCloudZiyanCosBucket(cts *rest.Contexts) (interface{}, error) {
 	req := new(protocos.TCloudCreateBucketReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -51,7 +53,7 @@ func (svc *cosSvc) CreateTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	tcloud, err := svc.ad.TCloud(cts.Kit, req.AccountID)
+	tcloud, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -74,7 +76,7 @@ func (svc *cosSvc) CreateTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 	}
 
 	if err = tcloud.CreateBucket(cts.Kit, opt); err != nil {
-		logs.Errorf("tcloud create bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req),
+		logs.Errorf("tcloud ziyan create bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req),
 			cts.Kit.Rid)
 		return nil, err
 	}
@@ -82,8 +84,8 @@ func (svc *cosSvc) CreateTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 	return nil, nil
 }
 
-// DeleteTCloudCosBucket delete tcloud cos bucket.
-func (svc *cosSvc) DeleteTCloudCosBucket(cts *rest.Contexts) (interface{}, error) {
+// DeleteTCloudZiyanCosBucket delete tcloud ziyan cos bucket.
+func (svc *cosSvc) DeleteTCloudZiyanCosBucket(cts *rest.Contexts) (interface{}, error) {
 	req := new(protocos.TCloudDeleteBucketReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -93,7 +95,7 @@ func (svc *cosSvc) DeleteTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	tcloud, err := svc.ad.TCloud(cts.Kit, req.AccountID)
+	tcloud, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -103,7 +105,7 @@ func (svc *cosSvc) DeleteTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 		Region: req.Region,
 	}
 	if err = tcloud.DeleteBucket(cts.Kit, opt); err != nil {
-		logs.Errorf("tcloud delete bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req),
+		logs.Errorf("tcloud ziyan delete bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req),
 			cts.Kit.Rid)
 		return nil, err
 	}
@@ -111,8 +113,8 @@ func (svc *cosSvc) DeleteTCloudCosBucket(cts *rest.Contexts) (interface{}, error
 	return nil, nil
 }
 
-// ListTCloudCosBucket list tcloud cos bucket.
-func (svc *cosSvc) ListTCloudCosBucket(cts *rest.Contexts) (interface{}, error) {
+// ListTCloudZiyanCosBucket list tcloud ziyan cos bucket.
+func (svc *cosSvc) ListTCloudZiyanCosBucket(cts *rest.Contexts) (interface{}, error) {
 	req := new(protocos.TCloudBucketListReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -122,7 +124,7 @@ func (svc *cosSvc) ListTCloudCosBucket(cts *rest.Contexts) (interface{}, error) 
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	tcloud, err := svc.ad.TCloud(cts.Kit, req.AccountID)
+	tcloud, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
 	if err != nil {
 		return nil, err
 	}
@@ -138,7 +140,8 @@ func (svc *cosSvc) ListTCloudCosBucket(cts *rest.Contexts) (interface{}, error) 
 	}
 	result, err := tcloud.ListBuckets(cts.Kit, opt)
 	if err != nil {
-		logs.Errorf("tcloud list bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req), cts.Kit.Rid)
+		logs.Errorf("tcloud ziyan list bucket failed, err: %v, req: %+v, rid: %s", err, converter.PtrToVal(req),
+			cts.Kit.Rid)
 		return nil, err
 	}
 
