@@ -101,18 +101,22 @@ func batchUpdateCvm[T corecvm.Extension](cts *rest.Contexts, svc *cvmSvc, vendor
 				CloudSubnetIDs:       one.CloudSubnetIDs,
 				CloudImageID:         one.CloudImageID,
 				ImageID:              one.ImageID,
-				OsName:               one.OsName,
 				Memo:                 one.Memo,
 				Status:               one.Status,
 				PrivateIPv4Addresses: one.PrivateIPv4Addresses,
 				PrivateIPv6Addresses: one.PrivateIPv6Addresses,
 				PublicIPv4Addresses:  one.PublicIPv4Addresses,
 				PublicIPv6Addresses:  one.PublicIPv6Addresses,
-				MachineType:          one.MachineType,
 				CloudCreatedTime:     one.CloudCreatedTime,
 				CloudLaunchedTime:    one.CloudLaunchedTime,
 				CloudExpiredTime:     one.CloudExpiredTime,
 				Reviser:              cts.Kit.User,
+				VpcIDs:               one.VpcIDs,
+				SubnetIDs:            one.SubnetIDs,
+				// 升降配可能会修改机型
+				MachineType: one.MachineType,
+				// 重装可能修改操作系统名称
+				OsName: one.OsName,
 			}
 
 			if one.BkCloudID != nil {

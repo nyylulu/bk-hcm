@@ -20,9 +20,13 @@
 package ziyan
 
 import (
+	"fmt"
+	"net/http"
+
 	"hcm/pkg/adaptor/metric"
 	"hcm/pkg/adaptor/tcloud"
 	"hcm/pkg/adaptor/types"
+	typescos "hcm/pkg/adaptor/types/cos"
 	"hcm/pkg/criteria/constant"
 	bpaas "hcm/pkg/thirdparty/tencentcloud/bpaas/v20181217"
 
@@ -36,6 +40,7 @@ import (
 	ssl "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/ssl/v20191205"
 	tag "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tag/v20180813"
 	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
+	"github.com/tencentyun/cos-go-sdk-v5"
 )
 
 type clientSet struct {
@@ -173,6 +178,34 @@ func (c *clientSet) BPaasClient() (*bpaas.Client, error) {
 		return nil, err
 	}
 	client.WithHttpTransport(metric.GetZiyanRecordRoundTripper(nil))
+
+	return client, nil
+}
+
+var cosUrlMap = map[typescos.UrlType]string{
+	typescos.NormalUrl:            constant.InternalCosEndpoint,
+	typescos.UrlWithNameAndRegion: constant.InternalCosEndpointWithNameAndRegion,
+}
+
+// CosClient tcloud ziyan cos client
+func (c *clientSet) CosClient(opt *typescos.ClientOpt) (*cos.Client, error) {
+	if opt == nil {
+		return nil, fmt.Errorf("cos client opt is nil")
+	}
+
+	cosUrl, err := opt.GetUrl(cosUrlMap)
+	if err != nil {
+		return nil, err
+	}
+	client := cos.NewClient(
+		cosUrl,
+		&http.Client{
+			Transport: &cos.AuthorizationTransport{
+				SecretID:  c.credential.GetSecretId(),
+				SecretKey: c.credential.GetSecretKey(),
+			},
+		},
+	)
 
 	return client, nil
 }

@@ -96,8 +96,12 @@ export const useResourceStore = defineStore({
     delete(type: string, id: string | number) {
       return http.delete(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath(type)}${type}/${id}`);
     },
-    deleteBatch(type: string, data: any) {
-      return http.delete(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath(type)}${type}/batch`, { data });
+    deleteBatch(type: string, data: any, config?: any) {
+      return http.delete(
+        `${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath(type)}${type}/batch`,
+        { data },
+        config,
+      );
     },
     recyclBatch(type: string, data: any) {
       return http.delete(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/recycled/${type}/batch`, { data });
@@ -153,7 +157,7 @@ export const useResourceStore = defineStore({
     },
     // 获取根据主机安全组列表
     getSecurityGroupsListByCvmId(id: string) {
-      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}security_groups/cvms/${id}`);
+      return http.get(`${BK_HCM_AJAX_URL_PREFIX}/api/v1/cloud/${getBusinessApiPath()}security_groups/res/cvm/${id}`);
     },
     // 操作主机相关
     cvmOperate(type: string, data: { ids: string[] }) {
