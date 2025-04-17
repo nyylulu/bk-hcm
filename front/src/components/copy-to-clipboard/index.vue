@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useSlots } from 'vue';
+import { ref, useSlots } from 'vue';
 import { Button, Message } from 'bkui-vue';
 import { Copy } from 'bkui-vue/lib/icon';
 import { BkDropdownItem } from 'bkui-vue/lib/dropdown';
@@ -8,7 +8,7 @@ import useClipboard from 'vue-clipboard3';
 defineOptions({ name: 'CopyToClipboard' });
 
 export interface ICopyToClipboardProps {
-  content: string;
+  content: string | (() => Promise<string>);
   type?: 'icon' | 'dropdown-item';
   text?: string;
   disabled?: boolean;
@@ -32,13 +32,23 @@ const slots = useSlots();
 
 const { toClipboard } = useClipboard();
 
+const contentLoading = ref(false);
+
 const handleCopy = async () => {
   if (props.disabled) {
     return;
   }
   try {
     const { content } = props;
-    await toClipboard(content);
+    let newContent = '';
+    if (typeof content === 'function') {
+      contentLoading.value = true;
+      newContent = await content();
+      contentLoading.value = false;
+    } else {
+      newContent = content;
+    }
+    await toClipboard(newContent);
     Message({ theme: 'success', message: props.successMsg });
     emit('success', content);
   } catch (e) {
@@ -51,7 +61,7 @@ const handleCopy = async () => {
 <template>
   <template v-if="slots.default">
     <div @click.stop="handleCopy" class="copy-to-clipboard">
-      <slot v-bind="{ disabled: props.disabled, disabledTips: props.disabledTips }"></slot>
+      <slot v-bind="{ disabled: props.disabled, disabledTips: props.disabledTips, loading: contentLoading }"></slot>
     </div>
   </template>
   <Button
@@ -59,6 +69,7 @@ const handleCopy = async () => {
     class="copy-to-clipboard-button"
     :text="true"
     :disabled="props.disabled"
+    :loading="contentLoading"
     @click.stop="handleCopy"
     v-bk-tooltips="{
       content: props.disabled ? props.disabledTips : props.text,
