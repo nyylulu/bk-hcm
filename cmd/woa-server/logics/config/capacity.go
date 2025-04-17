@@ -40,14 +40,16 @@ type CapacityIf interface {
 }
 
 // NewCapacityOp creates a capacity interface
-func NewCapacityOp(thirdCli *thirdparty.Client) CapacityIf {
+func NewCapacityOp(vpc VpcIf, thirdCli *thirdparty.Client) CapacityIf {
 	return &capacity{
 		cvm: thirdCli.OldCVM,
+		vpc: vpc,
 	}
 }
 
 type capacity struct {
 	cvm cvmapi.CVMClientInterface
+	vpc VpcIf
 }
 
 // GetCapacity gets resource apply capacity info
@@ -61,8 +63,9 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	}
 	vpcID := input.Vpc
 	if vpcID == "" {
-		dftVpc, err := GetDftCvmVpc(input.Region)
+		dftVpc, err := c.vpc.GetRegionDftVpc(kt, input.Region)
 		if err != nil {
+			logs.Errorf("failed to get default vpc for err: %v, region: %s, rid: %s", err, input.Region, kt.Rid)
 			return nil, err
 		}
 		vpcID = dftVpc
@@ -72,7 +75,13 @@ func (c *capacity) GetCapacity(kt *kit.Kit, input *types.GetCapacityParam) (*typ
 	if input.Subnet != "" {
 		filter["subnet_id"] = input.Subnet
 	} else {
-		if IsDftCvmVpc(vpcID) {
+		isDftRegionVpc, err := c.vpc.IsRegionDftVpc(kt, vpcID)
+		if err != nil {
+			logs.Errorf("failed to determine whether it is the default vpc, err: %v, region: %s, vpc id: %s, rid: %s",
+				err, input.Region, vpcID, kt.Rid)
+			return nil, err
+		}
+		if isDftRegionVpc {
 			// filter subnet with name prefix cvm_use_
 			filter["subnet_name"] = mapstr.MapStr{
 				pkg.BKDBLIKE: "^cvm_use_",

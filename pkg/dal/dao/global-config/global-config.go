@@ -24,6 +24,7 @@ import (
 	"fmt"
 
 	"hcm/pkg/api/core"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	idgenerator "hcm/pkg/dal/dao/id-generator"
 	"hcm/pkg/dal/dao/orm"
@@ -137,9 +138,10 @@ func (d Dao) List(kt *kit.Kit, opt *types.ListOption) (*types.ListResult[tablegc
 	if opt == nil {
 		return nil, errf.New(errf.InvalidParameter, "list global config options is nil")
 	}
-
+	columnTypes := tablegconf.GlobalConfigTableColumns.ColumnTypes()
+	columnTypes["config_value.vpc_id"] = enumor.String
 	if err := opt.ValidateExcludeFilter(
-		filter.NewExprOption(filter.RuleFields(tablegconf.GlobalConfigTableColumns.ColumnTypes())),
+		filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption()); err != nil {
 		return nil, err
 	}

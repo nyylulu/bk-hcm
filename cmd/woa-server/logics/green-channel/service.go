@@ -25,7 +25,6 @@ import (
 	gctypes "hcm/cmd/woa-server/types/green-channel"
 	"hcm/pkg/client"
 	"hcm/pkg/kit"
-	"hcm/pkg/thirdparty"
 )
 
 // Logics provides management interface for green channel.
@@ -44,10 +43,10 @@ type logics struct {
 }
 
 // New creates green channel logics instance.
-func New(client *client.ClientSet, thirdCli *thirdparty.Client) (Logics, error) {
+func New(client *client.ClientSet, configLogics config.Logics) (Logics, error) {
 	gcLogics := &logics{
 		client:       client,
-		configLogics: config.New(thirdCli),
+		configLogics: configLogics,
 	}
 
 	return gcLogics, nil

@@ -53,3 +53,10 @@ const (
 	// IntervalWaitTaskStart 任务启动前的等待时间
 	IntervalWaitTaskStart = time.Second * 5
 )
+
+const (
+	// GlobalConfigTypeRegionDefaultVpc 地域默认vpc
+	GlobalConfigTypeRegionDefaultVpc = "region_default_vpc"
+	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
+	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
+)

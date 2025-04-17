@@ -68,7 +68,7 @@ type Generator struct {
 
 // New creates a generator
 func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
-	clientConf cc.ClientConfig) (*Generator, error) {
+	clientConf cc.ClientConfig, configLogics config.Logics) (*Generator, error) {
 
 	predicateFuncs := initPredicateFuncs()
 	priorityFuncs := initpriorityFuncs()
@@ -81,7 +81,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdpart
 		priorityFuncs:  priorityFuncs,
 		ctx:            ctx,
 		clientConf:     clientConf,
-		configLogics:   config.New(thirdCli),
+		configLogics:   configLogics,
 		rsLogics:       rsLogics,
 		poolLogics:     poolLogics.New(ctx, clientConf, thirdCli, esbCli),
 	}

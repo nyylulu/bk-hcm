@@ -34,7 +34,7 @@ import (
 func InitService(c *capability.Capability) {
 	s := &service{
 		authorizer: c.Authorizer,
-		logics:     config.New(c.ThirdCli),
+		logics:     c.ConfigLogics,
 		planLogics: c.PlanController,
 	}
 	h := rest.NewHandler()
@@ -54,6 +54,7 @@ func InitService(c *capability.Capability) {
 	s.initVpc(h)
 	s.initZone(h)
 	s.initCapacity(h)
+	s.initSg(h)
 
 	h.Load(c.WebService)
 }
@@ -172,6 +173,7 @@ func (s *service) initVpc(h *rest.Handler) {
 	h.Add("UpdateVpc", http.MethodPut, "/config/update/config/cvm/vpc/{id}", s.UpdateVpc)
 	h.Add("DeleteVpc", http.MethodDelete, "/config/delete/config/cvm/vpc/{id}", s.DeleteVpc)
 	h.Add("SyncVpc", http.MethodPost, "/config/sync/config/cvm/vpc", s.SyncVpc)
+	h.Add("UpsertRegionDftVpc", http.MethodPost, "/config/region/default_vpc/upsert", s.UpsertRegionDftVpc)
 }
 
 func (s *service) initZone(h *rest.Handler) {
@@ -186,4 +188,8 @@ func (s *service) initZone(h *rest.Handler) {
 func (s *service) initCapacity(h *rest.Handler) {
 	h.Add("GetCapacity", http.MethodPost, "/config/find/cvm/capacity", s.GetCapacity)
 	h.Add("UpdateCapacity", http.MethodPost, "/config/sync/cvm/capacity", s.UpdateCapacity)
+}
+
+func (s *service) initSg(h *rest.Handler) {
+	h.Add("UpsertRegionDftSg", http.MethodPost, "/config/region/default_sg/upsert", s.UpsertRegionDftSg)
 }

@@ -24,6 +24,7 @@ import (
 	"hcm/cmd/woa-server/model/task"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -75,7 +76,7 @@ func (d *Dispatcher) runWorker() error {
 		logs.Errorf("failed to deal apply order, for get apply order from informer err: %v", err)
 		return err
 	}
-	if err := d.dispatchHandler(kit.New(), order); err != nil {
+	if err := d.dispatchHandler(core.NewBackendKit(), order); err != nil {
 		logs.Errorf("failed to dispatch apply order %s, err: %v", order, err)
 		return err
 	}

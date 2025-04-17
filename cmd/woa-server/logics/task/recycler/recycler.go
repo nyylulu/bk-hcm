@@ -152,7 +152,8 @@ type recycler struct {
 
 // New create a recycler
 func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, authorizer auth.Authorizer,
-	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet) (Interface, error) {
+	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet,
+	configLogics configLogics.Logics) (Interface, error) {
 
 	// new detector
 	moduleDetector, err := detector.New(ctx, thirdCli, esbCli, cliSet)
@@ -185,7 +186,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, au
 		cvm:           thirdCli.CVM,
 		dispatcher:    dispatch,
 		authorizer:    authorizer,
-		configLogics:  configLogics.New(thirdCli),
+		configLogics:  configLogics,
 		rsLogic:       rsLogic,
 		dissolveLogic: dissolveLogic,
 	}

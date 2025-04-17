@@ -28,7 +28,6 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/serviced"
-	"hcm/pkg/thirdparty"
 	"hcm/pkg/tools/utils/wait"
 )
 
@@ -52,11 +51,11 @@ type logics struct {
 }
 
 // New creates resource sync logics instance.
-func New(sd serviced.State, client *client.ClientSet, thirdCli *thirdparty.Client) (Logics, error) {
+func New(sd serviced.State, client *client.ClientSet, configLogics config.Logics) (Logics, error) {
 	logic := &logics{
 		sd:           sd,
 		client:       client,
-		configLogics: config.New(thirdCli),
+		configLogics: configLogics,
 	}
 	go logic.Run()
 	return logic, nil

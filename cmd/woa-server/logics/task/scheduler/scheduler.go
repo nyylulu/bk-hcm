@@ -176,7 +176,7 @@ type scheduler struct {
 // New creates a scheduler
 func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
 	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics,
-	bizLogic biz.Logics) (*scheduler, error) {
+	bizLogic biz.Logics, configLogics config.Logics) (*scheduler, error) {
 
 	// new recommend module
 	recommend, err := recommender.New(ctx, thirdCli)
@@ -185,13 +185,13 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf, planLogics)
+	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf, planLogics, configLogics)
 	if err != nil {
 		return nil, err
 	}
 
 	// new generator
-	generate, err := generator.New(ctx, rsLogics, thirdCli, esbCli, clientConf)
+	generate, err := generator.New(ctx, rsLogics, thirdCli, esbCli, clientConf, configLogics)
 	if err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 		generator:    generate,
 		matcher:      match,
 		recommend:    recommend,
-		configLogics: config.New(thirdCli),
+		configLogics: configLogics,
 		rsLogics:     rsLogics,
 		gcLogics:     gcLogics,
 		bizLogic:     bizLogic,

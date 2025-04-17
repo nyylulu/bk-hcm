@@ -13,6 +13,7 @@
 package config
 
 import (
+	"hcm/pkg/client"
 	"hcm/pkg/thirdparty"
 )
 
@@ -28,6 +29,7 @@ type Logics interface {
 	Device() DeviceIf
 	Capacity() CapacityIf
 	LeftIP() LeftIPIf
+	Sg() SgIf
 }
 
 type logics struct {
@@ -41,21 +43,24 @@ type logics struct {
 	device         DeviceIf
 	capacity       CapacityIf
 	leftIP         LeftIPIf
+	sg             SgIf
 }
 
 // New create a logics manager
-func New(thirdCli *thirdparty.Client) Logics {
+func New(client *client.ClientSet, thirdCli *thirdparty.Client) Logics {
+	vpcOp := NewVpcOp(client, thirdCli)
 	return &logics{
 		requirement:    NewRequirementOp(),
 		region:         NewRegionOp(),
 		zone:           NewZoneOp(),
-		vpc:            NewVpcOp(thirdCli),
+		vpc:            vpcOp,
 		subnet:         NewSubnetOp(thirdCli),
 		deviceRestrict: NewDeviceRestrictOp(),
 		cvmImage:       NewCvmImageOp(),
 		device:         NewDeviceOp(thirdCli),
-		capacity:       NewCapacityOp(thirdCli),
-		leftIP:         NewLeftIPOp(thirdCli),
+		capacity:       NewCapacityOp(vpcOp, thirdCli),
+		leftIP:         NewLeftIPOp(vpcOp, thirdCli),
+		sg:             NewSgOp(client),
 	}
 }
 
@@ -107,4 +112,9 @@ func (l *logics) Capacity() CapacityIf {
 // LeftIP left ip interface
 func (l *logics) LeftIP() LeftIPIf {
 	return l.leftIP
+}
+
+// Sg security group interface
+func (l *logics) Sg() SgIf {
+	return l.sg
 }

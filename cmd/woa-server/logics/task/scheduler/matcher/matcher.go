@@ -67,12 +67,13 @@ type Matcher struct {
 
 // New create a matcher
 func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
-	clientConf cc.ClientConfig, informer informer.Interface, planLogics plan.Logics) (*Matcher, error) {
+	clientConf cc.ClientConfig, informer informer.Interface, planLogics plan.Logics, configLogics config.Logics) (
+	*Matcher, error) {
 
 	matcher := &Matcher{
 		rsLogics:     rsLogics,
 		planLogics:   planLogics,
-		configLogics: config.New(thirdCli),
+		configLogics: configLogics,
 		informer:     informer,
 		sops:         thirdCli.Sops,
 		sopsOpt:      clientConf.Sops,

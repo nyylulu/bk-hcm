@@ -22,7 +22,6 @@ package cvm
 import (
 	"net/http"
 
-	"hcm/cmd/woa-server/logics/config"
 	"hcm/cmd/woa-server/logics/cvm"
 	"hcm/cmd/woa-server/service/capability"
 	"hcm/pkg/iam/auth"
@@ -33,7 +32,7 @@ import (
 func InitService(c *capability.Capability) {
 	s := &service{
 		authorizer: c.Authorizer,
-		logics:     cvm.New(c.ThirdCli, c.Conf.ClientConfig, config.New(c.ThirdCli), c.EsbClient, c.RsLogic),
+		logics:     cvm.New(c.ThirdCli, c.Conf.ClientConfig, c.ConfigLogics, c.EsbClient, c.RsLogic),
 	}
 	h := rest.NewHandler()
 
