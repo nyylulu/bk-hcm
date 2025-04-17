@@ -355,8 +355,14 @@ func isHostChange(cloud cvm.Cvm[cvm.TCloudZiyanHostExtension], db cvm.Cvm[cvm.TC
 	if !assert.IsStringSliceEqual(db.CloudVpcIDs, cloud.CloudVpcIDs) {
 		return true
 	}
+	if !assert.IsStringSliceEqual(db.VpcIDs, cloud.VpcIDs) {
+		return true
+	}
 
 	if !assert.IsStringSliceEqual(db.CloudSubnetIDs, cloud.CloudSubnetIDs) {
+		return true
+	}
+	if !assert.IsStringSliceEqual(db.SubnetIDs, cloud.SubnetIDs) {
 		return true
 	}
 
