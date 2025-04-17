@@ -39,6 +39,11 @@ func NewHuaweiMonthDescriber(rootAccountCloudID string) MonthTaskDescriber {
 	// set exclude account id
 	commonExpenseConfig := cc.AccountServer().BillAllocation.HuaweiCommonExpense
 	describer.CommonExpenseExcludeCloudIDs = commonExpenseConfig.ExcludeAccountCloudIDs
+	for _, localDeductConfig := range cc.AccountServer().BillAllocation.HuaweiTaxDeducts {
+		if localDeductConfig.RootAccountCloudID == rootAccountCloudID {
+			describer.TaxDeductConfig = true
+		}
+	}
 
 	return describer
 }
@@ -47,12 +52,20 @@ func NewHuaweiMonthDescriber(rootAccountCloudID string) MonthTaskDescriber {
 type huaweiMonthDescriber struct {
 	RootAccountCloudID           string
 	CommonExpenseExcludeCloudIDs []string
+	TaxDeductConfig              bool
 }
 
 // GetMonthTaskTypes huawei month tasks
 func (huawei *huaweiMonthDescriber) GetMonthTaskTypes() []enumor.MonthTaskType {
-	// vendor huawei only have support month task type
-	return []enumor.MonthTaskType{enumor.HuaweiSupportMonthTask}
+
+	var monthTaskTypes []enumor.MonthTaskType
+	monthTaskTypes = append(monthTaskTypes, enumor.HuaweiSupportMonthTask)
+
+	if huawei.TaxDeductConfig {
+		monthTaskTypes = append(monthTaskTypes, enumor.HuaweiTaxDeductMonthTask)
+	}
+
+	return monthTaskTypes
 }
 
 // GetTaskExtension extension for task

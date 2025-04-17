@@ -921,20 +921,59 @@ func (opt *GcpCreditConfig) Validate() error {
 	return nil
 }
 
+// LocalDeductConfig defines local deduct config.
+type LocalDeductConfig struct {
+	RootAccountCloudID string `yaml:"rootAccountCloudID" validate:"required"`
+	Name               string `yaml:"name" validate:"required"`
+}
+
+func (c *LocalDeductConfig) validate() error {
+	if c.RootAccountCloudID == "" {
+		return errors.New("root account cloud id cannot be empty for local deduct config")
+	}
+	if c.Name == "" {
+		return errors.New("name cannot be empty for local deduct config")
+	}
+
+	return nil
+}
+
 // BillAllocationOption ...
 type BillAllocationOption struct {
 	AwsSavingsPlans       []AwsSavingsPlansOption `yaml:"awsSavingsPlans"`
 	AwsCommonExpense      BillCommonExpense       `yaml:"awsCommonExpense"`
+	AwsAIDeducts          []LocalDeductConfig     `yaml:"awsAIDeduct"`
 	AwsDeductAccountItems BillDeductItemsExpense  `yaml:"awsDeductAccountItems"`
-	GcpCredits            []GcpCreditConfig       `yaml:"gcpCredits"`
-	GcpCommonExpense      BillCommonExpense       `yaml:"gcpCommonExpense"`
-	HuaweiCommonExpense   BillCommonExpense       `yaml:"huaweiCommonExpense"`
+
+	GcpCredits       []GcpCreditConfig   `yaml:"gcpCredits"`
+	GcpCommonExpense BillCommonExpense   `yaml:"gcpCommonExpense"`
+	GcpAIDeducts     []LocalDeductConfig `yaml:"gcpAIDeduct"`
+
+	HuaweiCommonExpense BillCommonExpense `yaml:"huaweiCommonExpense"`
+
+	HuaweiTaxDeducts []LocalDeductConfig `yaml:"huaweiTaxDeduct"`
 }
 
 func (opt *BillAllocationOption) validate() error {
 	for i := range opt.AwsSavingsPlans {
 		if err := opt.AwsSavingsPlans[i].validate(); err != nil {
 			return errors.New(fmt.Sprintf("aws savings plans index %d validation failed, %v", i, err))
+		}
+	}
+
+	for i := range opt.AwsAIDeducts {
+		if err := opt.AwsAIDeducts[i].validate(); err != nil {
+			return errors.New(fmt.Sprintf("aws ai deduct index %d validation failed, %v", i, err))
+		}
+	}
+	for i := range opt.GcpAIDeducts {
+		if err := opt.GcpAIDeducts[i].validate(); err != nil {
+			return errors.New(fmt.Sprintf("gcp ai deduct index %d validation failed, %v", i, err))
+		}
+	}
+	for i := range opt.HuaweiTaxDeducts {
+		if err := opt.HuaweiTaxDeducts[i].validate(); err != nil {
+			return errors.New(fmt.Sprintf("huawei tax deduct index %d validation failed, %v", i, err))
 		}
 	}
 	return nil

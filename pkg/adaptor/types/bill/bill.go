@@ -397,6 +397,12 @@ type HuaWeiFeeRecordListOption struct {
 	BillDateEnd   string `json:"bill_date_end" validate:"required"`
 	// Limit: 最大值为1000
 	Page *HuaWeiBillPage `json:"page" validate:"omitempty"`
+
+	BillType         *int32  `json:"bill_type" validate:"omitempty"`
+	CloudServiceType *string `json:"cloud_service_type" validate:"omitempty"`
+	ChargeMode       *string `json:"charge_mode" validate:"omitempty"`
+	Region           *string `json:"region" validate:"omitempty"`
+	ResourceID       *string `json:"resource_id" validate:"omitempty"`
 }
 
 // Validate huawei huawei fee record list option.
@@ -420,6 +426,7 @@ type HuaWeiBillPage struct {
 	Offset *int32 `json:"offset,omitempty"`
 }
 
+// HuaWeiQueryLimit define huawei query limit.
 const HuaWeiQueryLimit = 1000
 
 // Validate huawei bill offset page extension.
@@ -447,6 +454,7 @@ type AzureBillListOption struct {
 	Page *AzureBillPage `json:"page" validate:"omitempty"`
 }
 
+// AzureQueryLimit define azure query limit.
 const AzureQueryLimit = 1000
 
 // Validate azure bill list option.

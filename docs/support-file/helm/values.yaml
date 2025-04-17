@@ -677,6 +677,18 @@ accountserver:
     dailySummarySyncDuration:
     monthTaskSyncDuration:
   billAllocation:
+    awsAIDeduct:
+      - rootAccountCloudID: "1234abc"
+        name: ai
+        memo: 抵扣ai相关账单
+    gcpAIDeduct:
+      - rootAccountCloudID: "abc1234"
+        name: ai
+        memo: 抵扣ai相关账单
+    huaweiTaxDeduct:
+      - rootAccountCloudID: "abab123"
+        name: tax
+        memo: 抵扣华为云税费
     # aws savings plans allocation option
     awsSavingsPlans:
     #    - rootAccountCloudId: xxx

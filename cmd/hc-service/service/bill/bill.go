@@ -56,6 +56,7 @@ func InitBillService(cap *capability.Capability) {
 	h.Add("TCloudGetBillList", "POST", "/vendors/tcloud/bills/list", v.TCloudGetBillList)
 	h.Add("HuaWeiGetBillList", "POST", "/vendors/huawei/bills/list", v.HuaWeiGetBillList)
 	h.Add("HuaWeiGetFeeRecordList", "POST", "/vendors/huawei/feerecords/list", v.HuaWeiGetFeeRecordList)
+	h.Add("HuaWeiQueryFeeRecord", "POST", "/vendors/huawei/feerecords/query", v.HuaWeiQueryFeeRecord)
 	h.Add("AzureGetBillList", "POST", "/vendors/azure/bills/list", v.AzureGetBillList)
 	h.Add("GcpGetBillList", "POST", "/vendors/gcp/bills/list", v.GcpGetBillList)
 	h.Add("GcpGetRootAccountBillList", "POST", "/vendors/gcp/root_account_bills/list", v.GcpGetRootAccountBillList)

@@ -223,14 +223,20 @@ const (
 	AwsSupportMonthTask MonthTaskType = "support"
 	// DeductMonthTask deduct month task
 	DeductMonthTask MonthTaskType = "deduct"
+	// AwsAIDeductMonthTask ai bill deduct
+	AwsAIDeductMonthTask MonthTaskType = "ai_deduct"
 
 	// GcpCreditsMonthTask gcp credits month task
 	GcpCreditsMonthTask MonthTaskType = "credits"
 	// GcpSupportMonthTask gcp support month task
 	GcpSupportMonthTask MonthTaskType = "support"
+	// GcpAIDeductMonthTask ai bill deduct
+	GcpAIDeductMonthTask MonthTaskType = "ai_deduct"
 
 	// HuaweiSupportMonthTask 华为support plan
 	HuaweiSupportMonthTask MonthTaskType = "support"
+	// HuaweiTaxDeductMonthTask tax bill deduct
+	HuaweiTaxDeductMonthTask MonthTaskType = "tax_deduct"
 )
 
 // MonthTaskStep 月度任务步骤

@@ -71,12 +71,24 @@ controller:
   mainAccountSummarySyncDuration:
   rootAccountSummarySyncDuration:
   dailySummarySyncDuration:
-  monthTaskSyncDuration: 
+  monthTaskSyncDuration: 10m
 
 # tmp file dir, default: /tmp
 tmpFileDir: /tmp
 
 billAllocation:
+  awsAIDeduct:
+    - rootAccountCloudID: "1234abc"
+      name: ai
+      memo: 抵扣ai相关账单
+  gcpAIDeduct:
+    - rootAccountCloudID: "abc1234"
+      name: ai
+      memo: 抵扣ai相关账单
+  huaweiTaxDeduct:
+    - rootAccountCloudID: "abab123"
+      name: tax
+      memo: 抵扣华为云税费
   # aws savings plans allocation option
   awsSavingsPlans:
 #    - rootAccountCloudID: xxx
@@ -101,6 +113,7 @@ billAllocation:
   gcpCommonExpense:
     excludeAccountCloudIDs:
       # - "account_do_not_share_common_expense"
+
 # defines esb related settings.
 esb:
   # endpoints is a seed list of host:port addresses of esb nodes.
