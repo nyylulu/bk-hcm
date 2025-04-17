@@ -42,6 +42,10 @@ const (
 
 	// InternalBPaasEndpoint bpaas 内部域名
 	InternalBPaasEndpoint = "bpaas.internal.tencentcloudapi.com"
+	// InternalCosEndpoint cos内部域名
+	InternalCosEndpoint = "https://service.cos-internal.tencentcos.cn"
+	// InternalCosEndpointWithNameAndRegion cos带存储桶和地域的内部域名
+	InternalCosEndpointWithNameAndRegion = "https://%s.cos-internal.%s.tencentcos.cn"
 
 	// IEGDeptName 互动娱乐事业部
 	IEGDeptName = "互动娱乐事业部"

@@ -101,7 +101,9 @@ const cloneSecurityData = reactive<ICloneSecurityProps>({
 
 const templateData = ref([]);
 
-const { searchData, searchValue, filter } = useFilter(props);
+const { searchData, searchValue, filter } = useFilter(props, {
+  mgmt_type: (value) => (value === 'unknown' ? '' : value),
+});
 
 const { datas, pagination, isLoading, handlePageChange, handlePageSizeChange, handleSort, getList } =
   useQueryCommonList(
@@ -184,7 +186,11 @@ const selectSearchData = computed(() => {
         {
           name: t('管理类型'),
           id: 'mgmt_type',
-          children: Object.entries(MGMT_TYPE_MAP).map(([id, name]) => ({ id, name })),
+          children: [
+            { id: SecurityGroupManageType.BIZ, name: t('业务管理') },
+            { id: SecurityGroupManageType.PLATFORM, name: t('平台管理') },
+            { id: 'unknown', name: t('未确认') },
+          ],
           multiple: true,
         },
         {
@@ -262,7 +268,7 @@ const isCurRowSelectEnable = (row: any) => {
 const { selections, handleSelectionChange, resetSelections } = useSelection();
 
 const groupColumns = [
-  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true, notDisplayedInBusiness: true },
   {
     label: '安全组 ID',
     field: 'cloud_id',
@@ -352,7 +358,6 @@ const groupColumns = [
   {
     label: t('关联的资源类型'),
     field: 'rel_res',
-    filter: true,
     width: 200,
     isDefaultShow: true,
     render: ({ cell }: { cell: { res_name: string; count: number }[] }) => {
@@ -565,7 +570,7 @@ const groupColumns = [
 const groupSettings = generateColumnsSettings(groupColumns);
 
 const gcpColumns = [
-  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true, notDisplayedInBusiness: true },
   {
     label: '防火墙 ID	',
     field: 'cloud_id',
@@ -794,7 +799,7 @@ const gcpColumns = [
 const gcpSettings = generateColumnsSettings(gcpColumns);
 
 const templateColumns = [
-  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true },
+  { type: 'selection', width: 30, minWidth: 30, onlyShowOnList: true, notDisplayedInBusiness: true },
   {
     label: '模板ID',
     field: 'cloud_id',
@@ -998,10 +1003,17 @@ watch(
 // 配置规则&删除安全组
 const currentSecurityGroup = ref<ISecurityGroupOperateItem>(null);
 const isChangeEffectConfirmDialogShow = ref(false);
-const isSecurityGroupSingleDeleteDialogShow = ref(false);
+const securityGroupDeleteDialogState = reactive({
+  isShow: false,
+  isHidden: true,
+});
 const handleFillCurrentSecurityGroup = async (rowData: ISecurityGroupOperateItem, type: string) => {
-  if (type === 'rule') isChangeEffectConfirmDialogShow.value = true;
-  else isSecurityGroupSingleDeleteDialogShow.value = true;
+  if (type === 'rule') {
+    isChangeEffectConfirmDialogShow.value = true;
+  } else {
+    securityGroupDeleteDialogState.isShow = true;
+    securityGroupDeleteDialogState.isHidden = false;
+  }
 
   const { ruleCountMap, relatedResourcesList } = await securityGroupStore.queryRuleCountAndRelatedResources([
     rowData.id,
@@ -1256,12 +1268,15 @@ watch(
     />
 
     <!-- 删除安全组 -->
-    <security-group-single-delete-dialog
-      v-model="isSecurityGroupSingleDeleteDialogShow"
-      :loading="securityGroupStore.isQueryRuleCountAndRelatedResourcesLoading"
-      :detail="currentSecurityGroup"
-      @success="handleSecurityGroupOperationSuccess"
-    />
+    <template v-if="!securityGroupDeleteDialogState.isHidden">
+      <security-group-single-delete-dialog
+        v-model="securityGroupDeleteDialogState.isShow"
+        :loading="securityGroupStore.isQueryRuleCountAndRelatedResourcesLoading"
+        :detail="currentSecurityGroup"
+        @hidden="securityGroupDeleteDialogState.isHidden = true"
+        @success="handleSecurityGroupOperationSuccess"
+      />
+    </template>
 
     <!-- 克隆安全组弹窗 -->
     <template v-if="cloneSecurityData.isShow">
