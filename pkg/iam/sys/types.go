@@ -86,7 +86,6 @@ const (
 const (
 	// BizAccess biz resource access action id to register iam.
 	BizAccess client.ActionID = "biz_access"
-
 	// BizIaaSResCreate biz iaas resource create action id to register iam.
 	BizIaaSResCreate client.ActionID = "biz_iaas_resource_create"
 	// BizIaaSResOperate biz iaas resource operate action id to register iam.
@@ -238,6 +237,13 @@ const (
 	// GreenChannel 平台管理-小额绿通
 	GreenChannel client.ActionID = "green_channel"
 
+	// CosBucketCreate cos bucket create action id to register iam.
+	CosBucketCreate client.ActionID = "cos_bucket_create"
+	// CosBucketFind cos bucket find action id to register iam.
+	CosBucketFind client.ActionID = "cos_bucket_find"
+	// CosBucketDelete cos bucket delete action id to register iam.
+	CosBucketDelete client.ActionID = "cos_bucket_delete"
+
 	// Skip is an action that no need to auth
 	Skip client.ActionID = "skip"
 )
@@ -319,4 +325,8 @@ var ActionIDNameMap = map[client.ActionID]string{
 	MainAccountEdit:   "账号-二级账号编辑",
 
 	AwsSavingsPlansCostQuery: "AWS-SavingsPlans成本查询",
+
+	CosBucketCreate: "COS桶创建",
+	CosBucketFind:   "COS桶查询",
+	CosBucketDelete: "COS桶删除",
 }

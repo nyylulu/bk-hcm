@@ -43,6 +43,7 @@ import (
 	"hcm/cmd/cloud-server/service/capability"
 	"hcm/cmd/cloud-server/service/cert"
 	cloudselection "hcm/cmd/cloud-server/service/cloud-selection"
+	"hcm/cmd/cloud-server/service/cos"
 	"hcm/cmd/cloud-server/service/cvm"
 	"hcm/cmd/cloud-server/service/disk"
 	"hcm/cmd/cloud-server/service/eip"
@@ -368,6 +369,8 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 
 	task.InitService(c)
 	orgtopo.InitService(c)
+
+	cos.InitService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }
