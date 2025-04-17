@@ -17,7 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math"
 	"reflect"
 	"regexp"
 	"sort"
@@ -1105,16 +1104,6 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 	orderFilter := param.GetFilter(false)
 	ticketFilter := param.GetFilter(true)
 
-	cntTicket, err := model.Operation().ApplyTicket().CountApplyTicket(kit.Ctx, ticketFilter)
-	if err != nil {
-		return nil, err
-	}
-
-	cntOrder, err := model.Operation().ApplyOrder().CountApplyOrder(kit.Ctx, orderFilter)
-	if err != nil {
-		return nil, err
-	}
-
 	page := metadata.BasePage{
 		Sort:  "-create_at",
 		Limit: pkg.BKNoLimit,
@@ -1132,27 +1121,26 @@ func (s *scheduler) GetApplyOrder(kit *kit.Kit, param *types.GetApplyParam) (*ty
 		logs.Errorf("get apply order failed, err: %v, rid: %s", err, kit.Rid)
 		return nil, err
 	}
+	mergedOrders := s.mergeApplyTicketOrder(tickets, orders)
+	total := len(mergedOrders)
 
-	cnt := cntTicket + cntOrder
 	// 翻页超过当前总数，直接返回空列表
-	if param.Page.Start > int(cnt) {
-		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", cnt, param.Page, kit.Rid)
+	if param.Page.Start > total {
+		logs.Warnf("start out of range, cnt: %d, param page: %+v, rid: %s", total, param.Page, kit.Rid)
 		return &types.GetApplyOrderRst{
-			Count: int64(cnt),
+			Count: int64(total),
 			Info:  []*types.UnifyOrder{},
 		}, nil
 	}
 
-	mergedOrders := s.mergeApplyTicketOrder(tickets, orders)
-
-	begin := int(math.Max(0, float64(param.Page.Start)))
-	end := int(cnt)
+	begin := max(0, param.Page.Start)
+	end := total
 	if param.Page.Limit > 0 {
-		end = int(math.Min(float64(begin+param.Page.Limit), float64(cnt)))
+		end = min(begin+param.Page.Limit, total)
 	}
 
 	rst := &types.GetApplyOrderRst{
-		Count: int64(cnt),
+		Count: int64(total),
 		Info:  mergedOrders[begin:end],
 	}
 
