@@ -8,6 +8,7 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { BkButtonGroup } from 'bkui-vue/lib/button';
 import useBatchOperation from './use-batch-operation';
 import HcmDropdown from '@/components/hcm-dropdown/index.vue';
+import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 export const HOST_SHUTDOWN_STATUS = [
   'TERMINATED',
@@ -44,6 +45,7 @@ export type OperationMapItem = {
   loading?: boolean;
   authId?: string;
   actionName?: string;
+  moaScene?: MoaRequestScene;
 };
 
 export const operationMap = {
@@ -60,6 +62,7 @@ export const operationMap = {
     // 鉴权参数
     authId: 'biz_iaas_resource_operate',
     actionName: 'biz_iaas_resource_operate',
+    moaScene: MoaRequestScene.cvm_start,
   },
   [OperationActions.STOP]: {
     label: '关机',
@@ -69,6 +72,7 @@ export const operationMap = {
     // 鉴权参数
     authId: 'biz_iaas_resource_operate',
     actionName: 'biz_iaas_resource_operate',
+    moaScene: MoaRequestScene.cvm_stop,
   },
   [OperationActions.REBOOT]: {
     label: '重启',
@@ -78,6 +82,7 @@ export const operationMap = {
     // 鉴权参数
     authId: 'biz_iaas_resource_operate',
     actionName: 'biz_iaas_resource_operate',
+    moaScene: MoaRequestScene.cvm_reboot,
   },
   [OperationActions.RECYCLE]: {
     label: '回收',

@@ -1,30 +1,26 @@
 <script setup lang="ts">
 import { reactive, ref, useAttrs } from 'vue';
 import { useI18n } from 'vue-i18n';
-import { merge } from 'lodash';
 
 import Cookies from 'js-cookie';
 import i18n, { Locale } from '@/language/i18n';
-import { useUserStore } from '@/store';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import http from '@/http';
 
-import type { IExposes, IMoaVerifyResult, IPromptPayloadTypes, IProps } from './typings';
+import type { IExposes, IMoaVerifyResult, IProps } from './typings';
 import type { IQueryResData } from '@/typings';
 
 import MoaVerifyResult from './moa-verify-result.vue';
 
 defineOptions({ name: 'moa-verify-btn' });
 const props = withDefaults(defineProps<IProps>(), {
-  channel: 'moa',
   verifyText: 'MOA校验',
   theme: 'primary',
   showVerifyResult: true,
 });
-const attrs = useAttrs();
+const attrs: any = useAttrs();
 
-const userStore = useUserStore();
 const { t } = useI18n();
 const { getBusinessApiPath } = useWhereAmI();
 
@@ -33,52 +29,9 @@ const languageMap: { [key in Locale]: string } = {
   'zh-cn': 'zh',
   en: 'en',
 };
-const defaultPromptPayload: IPromptPayloadTypes = {
-  zh: {
-    title: '',
-    desc: '',
-    navigator: '导航栏',
-    buttons: [
-      { desc: '确定', button_type: 'confirm' },
-      { desc: '取消', button_type: 'cancel' },
-    ],
-  },
-  en: {
-    title: '',
-    desc: '',
-    navigator: 'navigator',
-    buttons: [
-      { desc: 'Allow', button_type: 'confirm' },
-      { desc: 'Do Not Allow', button_type: 'cancel' },
-    ],
-  },
-};
 
 let session_id: string;
 const loading = ref(false);
-const handleClick = async () => {
-  const bluekingLanguage = (Cookies.get('blueking_language') || i18n.global.locale.value) as Locale;
-  const { username } = userStore;
-  const { channel, promptPayload } = props;
-
-  const language = languageMap[bluekingLanguage];
-
-  const res: IQueryResData<{ session_id: string }> = await http.post(`/api/v1/web/${getBusinessApiPath()}moa/request`, {
-    username,
-    channel,
-    language,
-    prompt_payload: JSON.stringify(merge(defaultPromptPayload, promptPayload)),
-  });
-
-  session_id = res.data?.session_id;
-
-  Object.assign(verifyResult, getDefaultVerifyResult());
-  loading.value = true;
-  verifyMoa();
-
-  // 轮询 moa 验证结果
-  verifyTask.resume();
-};
 
 const getDefaultVerifyResult = (): IMoaVerifyResult => ({
   session_id: '',
@@ -87,12 +40,14 @@ const getDefaultVerifyResult = (): IMoaVerifyResult => ({
 });
 const resetVerifyResult = () => Object.assign(verifyResult, getDefaultVerifyResult());
 const verifyResult = reactive<IMoaVerifyResult>(getDefaultVerifyResult());
+
 const verifyMoa = async () => {
   try {
-    const { username } = userStore;
-    const res: IQueryResData<IMoaVerifyResult> = await http.post(`/api/v1/web/${getBusinessApiPath()}moa/verify`, {
-      username,
+    const { scene, resIds } = props;
+    const res: IQueryResData<IMoaVerifyResult> = await http.post(`/api/v1/cloud/${getBusinessApiPath()}moa/verify`, {
+      scene,
       session_id,
+      res_ids: resIds,
     });
     const { status } = res.data ?? {};
 
@@ -110,7 +65,30 @@ const verifyMoa = async () => {
 
 const verifyTask = useTimeoutPoll(() => {
   verifyMoa();
-}, 10 * 1000);
+}, 5 * 1000);
+
+const handleClick = async () => {
+  const bluekingLanguage = (Cookies.get('blueking_language') || i18n.global.locale.value) as Locale;
+  const { scene, resIds } = props;
+  const language = languageMap[bluekingLanguage];
+
+  const res: IQueryResData<{ session_id: string }> = await http.post(
+    `/api/v1/cloud/${getBusinessApiPath()}moa/request`,
+    {
+      language,
+      scene,
+      res_ids: resIds,
+    },
+  );
+
+  session_id = res.data?.session_id;
+
+  Object.assign(verifyResult, getDefaultVerifyResult());
+  loading.value = true;
+
+  // 轮询 moa 验证结果
+  verifyTask.resume();
+};
 
 defineExpose<IExposes>({ verifyResult, resetVerifyResult });
 </script>
@@ -125,7 +103,7 @@ defineExpose<IExposes>({ verifyResult, resetVerifyResult });
       :class="attrs.class"
       @click="handleClick"
     >
-      {{ props.verifyText }}
+      {{ verifyText }}
     </bk-button>
     <teleport v-if="loading" :to="boundary" :disabled="disableTeleport || !boundary" defer>
       <bk-alert class="loading-message" theme="warning" closable>

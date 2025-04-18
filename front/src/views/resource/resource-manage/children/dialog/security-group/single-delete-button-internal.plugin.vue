@@ -1,20 +1,23 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n';
-import { computed, useAttrs, useTemplateRef } from 'vue';
+import { computed, useTemplateRef } from 'vue';
 import { Message } from 'bkui-vue';
 import { useResourceStore } from '@/store';
 import DeleteButton from './single-delete-button.vue';
 import MoaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
 import { MoaRequestScene } from '@/components/moa-verify/typings';
 
+const props = withDefaults(defineProps<{ id: string; disabled: boolean }>(), {
+  disabled: true,
+});
+
 const verifyTipsRef = useTemplateRef<HTMLElement>('verify-tips');
 const moaVerifyRef = useTemplateRef<InstanceType<typeof MoaVerifyBtn>>('moa-verify');
 
-const verifyDisabled = computed(() => moaVerifyRef.value?.verifyResult?.button_type !== 'confirm');
+const verifyDisabled = computed(() => props.disabled || moaVerifyRef.value?.verifyResult?.button_type !== 'confirm');
+
 const { t } = useI18n();
 const resourceStore = useResourceStore();
-
-const attrs = useAttrs();
 
 const emit = defineEmits<{
   (e: 'del', sessionId: string): void;
@@ -28,7 +31,7 @@ const handleDelete = async () => {
   try {
     await resourceStore.deleteBatch(
       'security_groups',
-      { ids: [attrs.id], session_id: moaVerifyRef?.value?.verifyResult?.session_id },
+      { ids: [props.id], session_id: moaVerifyRef?.value?.verifyResult?.session_id },
       { globalError: false },
     );
     emit('success');
@@ -50,13 +53,13 @@ const handleDelete = async () => {
     <moa-verify-btn
       class="verify-container"
       ref="moa-verify"
-      :disabled="$attrs.disabled"
+      :disabled="disabled"
       :scene="MoaRequestScene.sg_delete"
-      :res-ids="[$attrs.id as string]"
+      :res-ids="[id]"
       :boundary="verifyTipsRef"
       :success-text="t('校验成功')"
     />
-    <delete-button v-bind="$attrs" :disabled="verifyDisabled" :loading="loading" @del="handleDelete"></delete-button>
+    <delete-button :disabled="verifyDisabled" :loading="loading" @del="handleDelete"></delete-button>
     <div class="verify-tips" ref="verify-tips"></div>
   </div>
 </template>

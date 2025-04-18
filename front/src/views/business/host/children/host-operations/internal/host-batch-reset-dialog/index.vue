@@ -8,6 +8,7 @@ import firstStep from './first-step/index.vue';
 import secondStep from './second-step/index.vue';
 import thirdStep from './third-step/index.vue';
 import moaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
+import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 import { useCvmOperateStore } from '@/store/cvm-operate';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
@@ -87,6 +88,9 @@ const nextStepDisabledOptions = computed(() => {
 });
 
 const submitHosts = computed(() => thirdStepRef.value?.submitHosts || []);
+
+const hostIds = computed(() => submitHosts.value.map((item) => item.id));
+
 const handleNext = async () => {
   if (state.curStep === 1) {
     // 若当前为第一步，直接跳转第二步
@@ -164,16 +168,8 @@ defineExpose<Exposes>({ show });
           v-if="state.curStep === 3"
           class="button moa-verify-btn"
           ref="moa-verify"
-          :prompt-payload="{
-            zh: {
-              title: 'HCM-主机重装确认',
-              desc: `您正在对${submitHosts.length}台主机重装系统，是否同意本次操作？`,
-            },
-            en: {
-              title: 'HCM-Host Reinstall Verification',
-              desc: `Reinstall OS on ${submitHosts.length} host(s). Do you agree to this operation?`,
-            },
-          }"
+          :scene="MoaRequestScene.cvm_reset"
+          :res-ids="hostIds"
           :boundary="footerRef"
           :success-text="t('校验成功，请点击右侧“重装”按钮，5分钟内有效。')"
         />

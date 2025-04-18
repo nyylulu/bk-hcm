@@ -486,10 +486,10 @@ const groupColumns = [
         if (isResourcePage && isAssigned) {
           return { content: t('安全组已分配，请到业务下操作'), disabled: !isAssigned };
         }
-        if (isResourcePage && !isCheckVendorInResource) {
+        if (isResourcePage && isCheckVendorInResource) {
           return {
             content: t('自研云安全组只允许业务下操作'),
-            disabled: !(isResourcePage && !isCheckVendorInResource),
+            disabled: !(isResourcePage && isCheckVendorInResource),
           };
         }
         if (!isResourcePage && isPlatformManage) {

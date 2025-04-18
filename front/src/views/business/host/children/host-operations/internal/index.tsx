@@ -1,4 +1,4 @@
-import { PropType, computed, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
+import { PropType, defineComponent, ref, toRefs, useTemplateRef, withDirectives } from 'vue';
 import { useRouter } from 'vue-router';
 import cssModule from '../index.module.scss';
 
@@ -19,6 +19,7 @@ import HostBatchResetDialog from './host-batch-reset-dialog/index.vue';
 import CvmStatusCollapseTable from '../children/cvm-status-collapse-table.vue';
 import CvmStatusTable from '../children/cvm-status-table.vue';
 import MoaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
+import { MoaRequestScene } from '@/components/moa-verify/typings';
 
 import { useVerify } from '@/hooks';
 import { useGlobalPermissionDialog } from '@/store/useGlobalPermissionDialog';
@@ -48,6 +49,7 @@ export const operationMap: Record<OperationActions, OperationMapItem> = {
     // 鉴权参数
     authId: 'biz_iaas_resource_operate',
     actionName: 'biz_iaas_resource_operate',
+    moaScene: MoaRequestScene.cvm_reset,
   },
 };
 
@@ -202,24 +204,6 @@ export default defineComponent({
 
     // 主机重装
     const hostBatchResetDialogRef = useTemplateRef<typeof HostBatchResetDialog>('host-batch-reset-dialog');
-
-    // 开/关机、重启 MOA校验
-    const moaVerifyPromptPayload = computed(() => {
-      const operateName = operationMap[operationType.value].label;
-      const operateNameEn = operationMap[operationType.value].labelEn;
-      const operateNum = tableData.value.length;
-
-      return {
-        zh: {
-          title: `HCM-主机${operateName}确认`,
-          desc: `您正在对${operateNum}台主机执行${operateName}，是否同意本次操作？`,
-        },
-        en: {
-          title: `HCM-Host ${operateNameEn} Verification`,
-          desc: `${operateNameEn} OS on ${operateNum} host(s). Do you agree to this operation?`,
-        },
-      };
-    });
 
     const footerRef = useTemplateRef<HTMLElement>('footer');
 
@@ -383,7 +367,8 @@ export default defineComponent({
                             ref='moa-verify'
                             class={cssModule['moa-verify-btn']}
                             verifyText='MOA校验'
-                            promptPayload={moaVerifyPromptPayload.value}
+                            scene={operationMap[operationType.value].moaScene}
+                            resIds={targetHost.value.map((host) => host.id)}
                             boundary={footerRef.value}
                             successText={`校验成功，请点击右侧“${
                               operationMap[operationType.value].label

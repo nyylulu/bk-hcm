@@ -153,6 +153,11 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
 
   const getZiyanCvmOperateStatus = async (type: OperationActions) => {
     isDialogLoading.value = true;
+
+    // 先清空在公共hook中设置的数据
+    targetHost.value = [];
+    unTargetHost.value = [];
+
     try {
       const ids = selections.value.map((v) => v.id);
       const operate_type = type as CvmOperateType;

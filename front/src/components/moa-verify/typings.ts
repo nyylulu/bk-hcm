@@ -1,25 +1,14 @@
-// 业务需要传入 title、desc
-interface IPromptPayloadType {
-  title: string;
-  desc: string;
-  navigator?: string;
-  footer?: string;
-  icon_url?: string;
-  buttons?: {
-    desc: string;
-    button_type: string;
-  }[];
-}
-
-export interface IPromptPayloadTypes {
-  zh: IPromptPayloadType;
-  en: IPromptPayloadType;
-  [key: string]: IPromptPayloadType;
+export enum MoaRequestScene {
+  sg_delete = 'sg_delete',
+  cvm_start = 'cvm_start',
+  cvm_stop = 'cvm_stop',
+  cvm_reset = 'cvm_reset',
+  cvm_reboot = 'cvm_reboot',
 }
 
 export interface IProps {
-  channel?: 'moa' | 'sms'; // 二次验证通道
-  promptPayload: IPromptPayloadTypes; // 二次验证弹窗内容
+  scene: MoaRequestScene;
+  resIds: string[]; // 操作影响资源IDs
   verifyText?: string;
   successText?: string;
   failText?: string;
