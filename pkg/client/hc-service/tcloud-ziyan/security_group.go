@@ -128,3 +128,11 @@ func (cli *SecurityGroupClient) DisassociateLb(kt *kit.Kit, req *hclb.TCloudDisA
 	return common.RequestNoResp[hclb.TCloudDisAssociateLbSecurityGroupReq](cli.client, rest.POST, kt, req,
 		"/security_groups/disassociate/load_balancers")
 }
+
+// BatchUpdateSecurityGroupRule batch update security group rule.
+func (cli *SecurityGroupClient) BatchUpdateSecurityGroupRule(kt *kit.Kit, sgID string,
+	request *proto.TCloudSGRuleBatchUpdateReq) error {
+
+	return common.RequestNoResp[proto.TCloudSGRuleBatchUpdateReq](cli.client, rest.PUT, kt, request,
+		"/security_groups/%s/rules/batch/update", sgID)
+}

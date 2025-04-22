@@ -69,6 +69,8 @@ func (s DeleteSgAction) Run(kt run.ExecuteKit, params any) (any, error) {
 	switch opt.Vendor {
 	case enumor.TCloud:
 		err = cli.TCloud.SecurityGroup.DeleteSecurityGroup(kt.Kit(), opt.ID)
+	case enumor.TCloudZiyan:
+		err = cli.TCloudZiyan.SecurityGroup.DeleteSecurityGroup(kt.Kit(), opt.ID)
 	case enumor.Aws:
 		err = cli.Aws.SecurityGroup.DeleteSecurityGroup(kt.Kit(), opt.ID)
 	case enumor.HuaWei:

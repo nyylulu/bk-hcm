@@ -137,51 +137,6 @@ func (svc *securityGroupSvc) updateTCloudSGRule(cts *rest.Contexts, sgBaseInfo *
 	return nil, nil
 }
 
-func (svc *securityGroupSvc) updateTCloudZiyanSGRule(cts *rest.Contexts, sgBaseInfo *types.CloudResourceBasicInfo,
-	id string) (interface{}, error) {
-
-	req := new(proto.TCloudSGRuleUpdateReq)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, err
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	// create update audit.
-	updateFields, err := converter.StructToMap(req)
-	if err != nil {
-		logs.Errorf("convert request to map failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
-	err = svc.audit.ChildResUpdateAudit(cts.Kit, enumor.SecurityGroupRuleAuditResType, sgBaseInfo.ID, id, updateFields)
-	if err != nil {
-		logs.Errorf("create update audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, err
-	}
-
-	updateReq := &hcproto.TCloudSGRuleUpdateReq{
-		Protocol:                   req.Protocol,
-		Port:                       req.Port,
-		CloudServiceID:             req.CloudServiceID,
-		CloudServiceGroupID:        req.CloudServiceGroupID,
-		IPv4Cidr:                   req.IPv4Cidr,
-		IPv6Cidr:                   req.IPv6Cidr,
-		CloudAddressID:             req.CloudAddressID,
-		CloudAddressGroupID:        req.CloudAddressGroupID,
-		CloudTargetSecurityGroupID: req.CloudTargetSecurityGroupID,
-		Action:                     req.Action,
-		Memo:                       req.Memo,
-	}
-	if err := svc.client.HCService().TCloudZiyan.SecurityGroup.UpdateSecurityGroupRule(cts.Kit,
-		sgBaseInfo.ID, id, updateReq); err != nil {
-		return nil, err
-	}
-
-	return nil, nil
-}
-
 func (svc *securityGroupSvc) updateAwsSGRule(cts *rest.Contexts, sgBaseInfo *types.CloudResourceBasicInfo,
 	id string) (interface{}, error) {
 
@@ -324,6 +279,8 @@ func (svc *securityGroupSvc) batchUpdateSGRule(cts *rest.Contexts,
 	switch vendor {
 	case enumor.TCloud:
 		return svc.batchUpdateTCloudSGRule(cts, sgBaseInfo)
+	case enumor.TCloudZiyan:
+		return svc.batchUpdateZiyanSGRule(cts, sgBaseInfo)
 	default:
 		return nil, errf.Newf(errf.Unknown, "update SecurityGroup rule, vendor: %s not support", vendor)
 	}
@@ -348,6 +305,7 @@ func (svc *securityGroupSvc) batchUpdateTCloudSGRule(cts *rest.Contexts, sgBaseI
 	}
 	err := svc.client.HCService().TCloud.SecurityGroup.BatchUpdateSecurityGroupRule(cts.Kit, sgBaseInfo.ID, updateReq)
 	if err != nil {
+		logs.Errorf("update tcloud security group rule failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
 	}
 

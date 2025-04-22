@@ -196,6 +196,71 @@ func (g *securityGroup) getTCloudZiyanSGRuleByID(cts *rest.Contexts, id string, 
 	return &listResp.Details[0], nil
 }
 
+// BatchUpdateZiyanSGRule update tcloud ziyan security group rule.
+func (g *securityGroup) BatchUpdateZiyanSGRule(cts *rest.Contexts) (interface{}, error) {
+	sgID := cts.PathParameter("security_group_id").String()
+	if len(sgID) == 0 {
+		return nil, errf.New(errf.InvalidParameter, "security_group_id is required")
+	}
+
+	req := new(hcservice.TCloudSGRuleBatchUpdateReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	sgMap, err := g.getSecurityGroupMap(cts.Kit, []string{sgID})
+	if err != nil {
+		logs.Errorf("get security group map failed, sg: %s, err: %v, rid: %s", sgID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	sg, ok := sgMap[sgID]
+	if !ok {
+		return nil, errf.New(errf.InvalidParameter, "security group not found")
+	}
+
+	syncParam := &ziyan.SyncBaseParams{AccountID: req.AccountID, Region: sg.Region,
+		CloudIDs: []string{sgID},
+	}
+
+	version, err := g.getTCloudSGRulesVersion(cts.Kit, client, sg.Region, sg.CloudID)
+	if err != nil {
+		logs.Errorf("get ziyan security group rules version failed, sg: %s, err: %v, rid: %s", sgID, err, cts.Kit.Rid)
+		return nil, err
+	}
+	opt := &adptsgrule.TCloudUpdateOption{Region: sg.Region, CloudSecurityGroupID: sg.CloudID, Version: version}
+
+	if len(req.EgressRuleSet) > 0 {
+		opt.EgressRuleSet = convertTCloudUpdateSpec(req.EgressRuleSet)
+	} else {
+		opt.IngressRuleSet = convertTCloudUpdateSpec(req.IngressRuleSet)
+	}
+
+	if err = client.BatchUpdateSecurityGroupRule(cts.Kit, opt); err != nil {
+		bpaasSN := errf.GetBPassSNFromErr(err)
+		if len(bpaasSN) > 0 {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				req.AccountID, sg.BkBizID, enumor.UpdateSecurityGroupRule, opt, bpaasSN)
+		}
+
+		logs.Errorf("request adaptor to update ziyan security group rule failed, err: %v, opt: %v, rid: %s", err, opt,
+			cts.Kit.Rid)
+		_, _ = g.syncZiyanSGRule(cts.Kit, syncParam)
+		return nil, err
+	}
+	if _, syncErr := g.syncZiyanSGRule(cts.Kit, syncParam); syncErr != nil {
+		return nil, syncErr
+	}
+	return nil, nil
+}
+
 // DeleteTCloudZiyanSGRule delete tcloud ziyan security group rule.
 func (g *securityGroup) DeleteTCloudZiyanSGRule(cts *rest.Contexts) (any, error) {
 	sgID := cts.PathParameter("security_group_id").String()
