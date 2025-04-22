@@ -26,7 +26,7 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useFormModel from '@/hooks/useFormModel';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import apiService from '@/api/scrApi';
-import { VendorEnum, CLOUD_CVM_DISKTYPE } from '@/common/constant';
+import { VendorEnum, CLOUD_CVM_DISKTYPE, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { VerifyStatus, VerifyStatusMap } from './constants';
 import { ChargeType } from '@/typings/plan';
 import { cloneDeep } from 'lodash';
@@ -923,10 +923,14 @@ export default defineComponent({
           message,
         });
         // 合代码之后完善跳转路由
-        const path = props.isbusiness ? '/business/applications' : '/service/hostApplication';
-        router.push({
-          path,
-        });
+        if (props.isbusiness) {
+          router.replace({
+            name: 'ApplicationsManage',
+            query: { [GLOBAL_BIZS_KEY]: bk_biz_id, type: 'host_apply' },
+          });
+        } else {
+          router.replace({ name: MENU_SERVICE_HOST_APPLICATION });
+        }
       } finally {
         isLoading.value = false;
       }
