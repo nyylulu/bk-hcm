@@ -61,6 +61,46 @@ watch(
   },
 );
 
+const denyUpdateKeys = [
+  'sg-qkfewp0u',
+  'sg-rzheledx',
+  'sg-ibqae0te',
+  'sg-ka67ywe9',
+  'sg-eag5dvzm',
+  'sg-4ezyvbvl',
+  'sg-dybs7i3y',
+  'sg-leqa6w29',
+  'sg-qjn542yi',
+  'sg-rjwj7cnt',
+  'sg-c28492qp',
+  'sg-5qwjawx2',
+  'sg-p5ld4xyq',
+  'sg-fohw41u4',
+  'sg-mdzp3pem',
+  'sg-g504fnlx',
+  'sg-l5usnzxw',
+  'sg-o4bmz4kg',
+  'sg-jvdlgqyx',
+  'sg-59kfufmn',
+  'sg-i7h8hv5r',
+  'sg-o1lfldnk',
+  'sg-hjtqedoe',
+  'sg-m33on5qq',
+  'sg-q7usygae',
+  'sg-cet13de0',
+  'sg-14oaxxkc',
+  'sg-osi7m525',
+  'sg-9sfhy229',
+  'sg-7l82d7km',
+  '云梯默认安全组',
+];
+const isZiyanInResource = computed(
+  () => whereAmI.value === Senarios.resource && detail.value?.vendor === 'tcloud-ziyan',
+);
+const isZiyanDenyUpdate = computed(() => {
+  const { vendor, cloud_id, name } = detail.value ?? {};
+  return vendor === 'tcloud-ziyan' && denyUpdateKeys.some((val) => val === cloud_id || name.includes(val));
+});
 const isAssigned = computed(() => detail.value.bk_biz_id !== -1);
 // 资源下已分配，不可以update安全组
 const hasEditScopeInResource = computed(() => whereAmI.value === Senarios.resource && !isAssigned.value);
@@ -174,6 +214,8 @@ const getTemplateData = async (detail: { account_id: string }) => {
   templateData.portGroupList = res[3]?.data?.details;
 };
 
+provide('isZiyanInResource', isZiyanInResource);
+provide('isZiyanDenyUpdate', isZiyanDenyUpdate);
 provide('isAssigned', isAssigned);
 provide('hasEditScopeInResource', hasEditScopeInResource);
 provide('hasEditScopeInBusiness', hasEditScopeInBusiness);

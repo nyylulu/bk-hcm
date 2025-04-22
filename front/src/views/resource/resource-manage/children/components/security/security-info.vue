@@ -43,6 +43,7 @@ const { t } = useI18n();
 const isResourcePage = inject<ComputedRef<boolean>>('isResourcePage');
 const hasEditScopeInBusiness = inject<ComputedRef<boolean>>('hasEditScopeInBusiness');
 const hasEditScopeInResource = inject<ComputedRef<boolean>>('hasEditScopeInResource');
+const isZiyanDenyUpdate = inject<ComputedRef<boolean>>('isZiyanDenyUpdate');
 const operateTooltipsOption = inject<ComputedRef<IOverflowTooltipOption>>('operateTooltipsOption');
 
 const resourceStore = useResourceStore();
@@ -88,7 +89,7 @@ const mgmtAttrFields: FieldList = [
     prop: 'mgmt_biz_id',
     render: (val: number) => {
       const { bk_biz_id, mgmt_type } = props.detail;
-      const editEnabled = bk_biz_id === -1 && mgmt_type === SecurityGroupManageType.BIZ;
+      const editEnabled = bk_biz_id === -1 && mgmt_type === SecurityGroupManageType.BIZ && !isZiyanDenyUpdate.value;
       return h('div', [
         val === -1 ? '--' : h(BusinessValue, { value: val }),
         editEnabled &&
@@ -124,7 +125,7 @@ const mgmtAttrFields: FieldList = [
     prop: 'usage_biz_ids',
     render: (val: number[]) => {
       const { bk_biz_id } = props.detail;
-      const unassigned = bk_biz_id === -1;
+      const unassigned = bk_biz_id === -1 && !isZiyanDenyUpdate.value;
       return h('div', { style: { display: 'flex', alignItems: 'center', width: '100%' } }, [
         h(UsageBizValue, { value: val, style: { width: 'calc(100% - 24px)', flex: 0, whiteSpace: 'nowrap' } }),
         unassigned &&
@@ -143,7 +144,7 @@ const mgmtAttrFields: FieldList = [
     prop: 'manager',
     render: (val: string) => {
       const { bk_biz_id } = props.detail;
-      const unassigned = bk_biz_id === -1;
+      const unassigned = bk_biz_id === -1 && !isZiyanDenyUpdate.value;
       return h('div', [
         h(UserValue, { value: val }),
         unassigned &&
@@ -161,7 +162,7 @@ const mgmtAttrFields: FieldList = [
     prop: 'bak_manager',
     render: (val: string) => {
       const { bk_biz_id } = props.detail;
-      const unassigned = bk_biz_id === -1;
+      const unassigned = bk_biz_id === -1 && !isZiyanDenyUpdate.value;
       return h('div', [
         h(UserValue, { value: val }),
         unassigned &&
@@ -231,7 +232,7 @@ const settingInfo = computed(() => {
       prop: 'name',
       edit: !isResourcePage.value
         ? hasEditScopeInBusiness.value && !['azure', 'aws'].includes(props.vendor)
-        : hasEditScopeInResource.value && !['azure', 'aws'].includes(props.vendor),
+        : hasEditScopeInResource.value && !['azure', 'aws'].includes(props.vendor) && !isZiyanDenyUpdate.value,
     },
     { name: t('云资源ID'), prop: 'cloud_id' },
     { name: t('云厂商'), prop: 'vendorName' },
@@ -244,7 +245,7 @@ const settingInfo = computed(() => {
       prop: 'memo',
       edit: !isResourcePage.value
         ? hasEditScopeInBusiness.value && props.vendor !== 'aws'
-        : hasEditScopeInResource.value && props.vendor !== 'aws',
+        : hasEditScopeInResource.value && props.vendor !== 'aws' && !isZiyanDenyUpdate.value,
     },
   ];
   if ([VendorEnum.TCLOUD, VendorEnum.AWS, VendorEnum.HUAWEI].includes(props.vendor)) {

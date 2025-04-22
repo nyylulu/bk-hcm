@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, inject, Ref, ref, useTemplateRef, watch } from 'vue';
+import { computed, ComputedRef, inject, Ref, ref, useTemplateRef, watch } from 'vue';
 import { useI18n } from 'vue-i18n';
 import {
   type ISecurityGroupDetail,
@@ -105,6 +105,8 @@ const getList = async (sort = 'created_at', order = 'DESC') => {
 
 const selected = ref<SecurityGroupRelResourceByBizItem[]>([]);
 const isAssigned = inject<Ref<boolean>>('isAssigned');
+const isZiyanInResource = inject<ComputedRef<boolean>>('isZiyanInResource');
+const isZiyanDenyUnbind = inject<ComputedRef<boolean>>('isZiyanDenyUpdate');
 const isClb = computed(() => {
   // 暂不支持负载均衡相关的操作
   return tabActive.value === SecurityGroupRelatedResourceName.CLB;
@@ -112,6 +114,9 @@ const isClb = computed(() => {
 const bindDisabledTooltipsOption = computed(() => {
   if (!isBusinessPage.value && isAssigned.value) {
     return { content: t('安全组已分配，请到业务下操作'), disabled: isBusinessPage.value || !isAssigned.value };
+  }
+  if (isZiyanInResource.value) {
+    return { content: t('自研云安全组请到业务下操作'), disabled: !isZiyanInResource.value };
   }
   if (isClb.value) {
     return {
@@ -125,11 +130,17 @@ const unbindDisabledTooltipsOption = computed(() => {
   if (!isBusinessPage.value && isAssigned.value) {
     return { content: t('安全组已分配，请到业务下操作'), disabled: isBusinessPage.value || !isAssigned.value };
   }
+  if (isZiyanInResource.value) {
+    return { content: t('自研云安全组请到业务下操作'), disabled: !isZiyanInResource.value };
+  }
   if (isClb.value) {
     return {
       content: RELATED_RES_OPERATE_DISABLED_TIPS_MAP[RELATED_RES_OPERATE_TYPE.UNBIND],
       disabled: !isClb.value,
     };
+  }
+  if (isZiyanDenyUnbind.value) {
+    return { content: t('云梯默认安全组不允许解绑'), disabled: !isZiyanDenyUnbind.value };
   }
   return { disabled: true };
 });
@@ -213,7 +224,7 @@ watch(
         <bk-button
           theme="primary"
           :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.[authAction] }"
-          :disabled="(!isBusinessPage && isAssigned) || isClb"
+          :disabled="(!isBusinessPage && isAssigned) || isClb || isZiyanInResource"
           v-bk-tooltips="bindDisabledTooltipsOption"
           @click="handleShowOperateDialog('bind')"
         >
@@ -222,7 +233,9 @@ watch(
         </bk-button>
         <bk-button
           :class="{ 'hcm-no-permision-btn': !authVerifyData?.permissionAction?.[authAction] }"
-          :disabled="!selected.length || (!isBusinessPage && isAssigned) || isClb"
+          :disabled="
+            !selected.length || (!isBusinessPage && isAssigned) || isClb || isZiyanInResource || isZiyanDenyUnbind
+          "
           v-bk-tooltips="unbindDisabledTooltipsOption"
           @click="handleShowOperateDialog('batch-unbind')"
         >
@@ -263,7 +276,7 @@ watch(
             :class="{ 'hcm-no-permision-text-btn': !authVerifyData?.permissionAction?.[authAction] }"
             theme="primary"
             text
-            :disabled="(!isBusinessPage && isAssigned) || isClb"
+            :disabled="(!isBusinessPage && isAssigned) || isClb || isZiyanInResource || isZiyanDenyUnbind"
             v-bk-tooltips="unbindDisabledTooltipsOption"
             @click="handleShowOperateDialog('single-unbind', row)"
           >
