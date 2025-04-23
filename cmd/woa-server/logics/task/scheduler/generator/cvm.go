@@ -211,7 +211,7 @@ func (g *Generator) needRetryCreateCvm(code int, msg string) bool {
 }
 
 // checkCVM checks cvm creating task result
-func (g *Generator) checkCVM(orderId string) error {
+func (g *Generator) checkCVM(kt *kit.Kit, orderId, subOrderID string) error {
 	checkFunc := func(obj interface{}, err error) (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("failed to query cvm order by id %s, err: %v", orderId, err)
@@ -239,6 +239,9 @@ func (g *Generator) checkCVM(orderId string) error {
 			return false, fmt.Errorf("query cvm order return %d orders with order id: %s", num, orderId)
 		}
 
+		// 检查CRP订单是否超出处理时间并记录日志
+		g.checkRecordCrpOrderTimeout(kt, subOrderID, resp)
+
 		status := enumor.CrpOrderStatus(resp.Result.Data[0].Status)
 		if status != enumor.CrpOrderStatusFinish &&
 			status != enumor.CrpOrderStatusReject &&
@@ -252,8 +255,9 @@ func (g *Generator) checkCVM(orderId string) error {
 
 		// crp侧订单完成时，不一定代表cvm生产成功，这里需要做处理，如果没有成功创建的实例，则也认为创建失败
 		if resp.Result.Data[0].SucInstanceCount <= 0 {
-			return true, fmt.Errorf("order %s failed, status: %d, sucInstanceCount: %d", resp.Result.Data[0].OrderId,
-				status, resp.Result.Data[0].SucInstanceCount)
+			return true, fmt.Errorf("CRP申领失败，详情可咨询2000(TEG技术支持)，CRP申请单链接: %s, status: %d, "+
+				"sucInstanceCount: %d", cvmapi.CvmOrderLinkPrefix+resp.Result.Data[0].OrderId, status,
+				resp.Result.Data[0].SucInstanceCount)
 		}
 
 		return true, nil
@@ -272,7 +276,7 @@ func (g *Generator) checkCVM(orderId string) error {
 	}
 
 	// TODO: get retry strategy from config
-	_, err := utils.Retry(doFunc, checkFunc, 86400, 60)
+	_, err := utils.Retry(doFunc, checkFunc, uint64(7*types.OneDayDuration.Seconds()), 60)
 	return err
 }
 
@@ -566,4 +570,17 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.App
 	}
 
 	return subnetList, nil
+}
+
+func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, subOrderID string, crpResp *cvmapi.OrderQueryResp) {
+	if crpResp == nil || crpResp.Result == nil || crpResp.Error.Code != 0 || len(crpResp.Result.Data) != 1 {
+		return
+	}
+
+	createTime, err := time.Parse(constant.DateTimeLayout, crpResp.Result.Data[0].CreateTime)
+	if err == nil && createTime.Add(types.OneDayDuration).Before(time.Now()) {
+		logs.Warnf("%s: query crp cvm apply order timeout, subOrderID: %s, crpOrderID: %s, crpTraceID: %s, rid: %s",
+			constant.CvmApplyOrderCrpProductTimeout, subOrderID, crpResp.Result.Data[0].OrderId,
+			crpResp.TraceId, kt.Rid)
+	}
 }

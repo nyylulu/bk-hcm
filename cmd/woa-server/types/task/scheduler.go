@@ -935,6 +935,8 @@ func (param *GetApplyParam) Validate() error {
 const (
 	dateLayout     = "2006-01-02"
 	datetimeLayout = "2006-01-02 15:04:05"
+	// OneDayDuration is one day duration
+	OneDayDuration = time.Hour * 24
 )
 
 // GetFilter get mgo filter
