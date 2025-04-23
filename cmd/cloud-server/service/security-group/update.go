@@ -113,6 +113,12 @@ func (svc *securityGroupSvc) updateSecurityGroup(cts *rest.Contexts, validHandle
 			id, updateReq)
 
 	case enumor.TCloudZiyan:
+		err = validateZiyanSGName(req.Name)
+		if err != nil {
+			logs.Errorf("validate ziyan security group name failed, err: %v, name: %s, rid: %s",
+				err, req.Name, cts.Kit.Rid)
+			return nil, err
+		}
 		updateReq := &hcproto.SecurityGroupUpdateReq{
 			Name: req.Name,
 			Memo: req.Memo,
