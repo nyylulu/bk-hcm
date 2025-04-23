@@ -51,6 +51,7 @@ import (
 	"hcm/cmd/cloud-server/service/image"
 	instancetype "hcm/cmd/cloud-server/service/instance-type"
 	loadbalancer "hcm/cmd/cloud-server/service/load-balancer"
+	"hcm/cmd/cloud-server/service/moa"
 	networkinterface "hcm/cmd/cloud-server/service/network-interface"
 	"hcm/cmd/cloud-server/service/org-topo"
 	"hcm/cmd/cloud-server/service/recycle"
@@ -85,6 +86,7 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/usermgr"
 	"hcm/pkg/thirdparty/esb"
+	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -107,6 +109,9 @@ type Service struct {
 	finOps     pkgfinops.Client
 	cmsiCli    cmsi.Client
 	userMgrCli usermgr.Client
+	// moaCli 调用接入MOA的第三方系统API集合
+	moaCli  pkgmoa.Client
+	etcdCli *etcd3.Client
 }
 
 // NewService create a service instance.
@@ -149,7 +154,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		go bill.CloudBillConfigCreate(interval, sd, apiClientSet)
 	}
 
-	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, esbClient)
+	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, esbClient, svr.moaCli, svr.etcdCli)
 
 	go appcvm.TimingHandleDeliverApplication(svr.client, 2*time.Second)
 
@@ -232,6 +237,20 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		logs.Errorf("failed to create usermgr client, err: %v", err)
 		return nil, nil, nil, err
 	}
+	moaCfg := cc.CloudServer().MOA
+	moaCli, err := pkgmoa.NewClient(&moaCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create moa client, err: %v", err)
+		return nil, nil, nil, err
+	}
+	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	etcdClient, err := etcd3.New(etcdCfg)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
 	svr := &Service{
 		client:     apiClientSet,
@@ -244,6 +263,8 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		finOps:     finOpsCli,
 		cmsiCli:    cmsiCli,
 		userMgrCli: userMgrCli,
+		moaCli:     moaCli,
+		etcdCli:    etcdClient,
 	}
 
 	return apiClientSet, esb.EsbClient(), svr, nil
@@ -325,7 +346,7 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 		Audit:      s.audit,
 		Cipher:     s.cipher,
 		EsbClient:  s.esbClient,
-		Logics:     logics.NewLogics(s.client, s.esbClient),
+		Logics:     logics.NewLogics(s.client, s.esbClient, s.moaCli, s.etcdCli),
 		ItsmCli:    s.itsmCli,
 		BKBaseCli:  s.bkBaseCli,
 		Finops:     s.finOps,
@@ -369,6 +390,7 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 
 	task.InitService(c)
 	orgtopo.InitService(c)
+	moa.InitService(c)
 
 	cos.InitService(c)
 

@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"hcm/cmd/cloud-server/logics/audit"
+	moalogic "hcm/cmd/cloud-server/logics/moa"
 	securitygroup "hcm/cmd/cloud-server/logics/security-group"
 	"hcm/cmd/cloud-server/service/capability"
 	"hcm/pkg/client"
@@ -37,6 +38,7 @@ func InitSecurityGroupService(c *capability.Capability) {
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
 		audit:      c.Audit,
+		moaLogic:   c.Logics.Moa,
 		sgLogic:    c.Logics.SecurityGroup,
 		esb:        c.EsbClient,
 	}
@@ -189,4 +191,5 @@ type securityGroupSvc struct {
 	audit      audit.Interface
 	esb        esb.Client
 	sgLogic    securitygroup.Interface
+	moaLogic   moalogic.Interface
 }

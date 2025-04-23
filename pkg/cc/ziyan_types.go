@@ -21,11 +21,14 @@
 package cc
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
+	cvt "hcm/pkg/tools/converter"
 )
 
 const (
@@ -815,18 +818,175 @@ type ResPlanExpireNotice struct {
 	DefaultReceivers []string `yaml:"defaultReceivers"`
 }
 
-// MOA MOA api配置
+// MOA 太湖/MOA api配置
 type MOA struct {
-	PaasID    string    `yaml:"paasID"`
-	Token     string    `yaml:"token"`
-	Endpoints []string  `yaml:"endpoints"`
-	TLS       TLSConfig `yaml:"tls"`
+	PaasID          string      `yaml:"paasID"`
+	Token           string      `yaml:"token"`
+	Endpoints       []string    `yaml:"endpoints"`
+	TLS             TLSConfig   `yaml:"tls"`
+	DefaultTemplate MoaTplCfg   `yaml:"defaultTemplate"`
+	Templates       []MoaTplCfg `yaml:"templates"`
 }
 
 // validate do validate
 func (c *MOA) validate() error {
 	if len(c.Endpoints) == 0 {
 		return errors.New("moa endpoints is empty")
+	}
+	if err := c.DefaultTemplate.ValidateDefaultTemplate(); err != nil {
+		return fmt.Errorf("moa default template config err: %w", err)
+	}
+	for i, template := range c.Templates {
+		if err := template.Validate(false); err != nil {
+			return fmt.Errorf("moa templates[%d] scene: %s, title: %s, err: %w",
+				i, template.Scene, template.ZH.Title, err)
+		}
+	}
+
+	return nil
+}
+
+// MoaTplCfg moa payload with i18n
+type MoaTplCfg struct {
+	Scene   enumor.MoaScene      `yaml:"scene" json:"-"`
+	Channel enumor.Moa2FAChannel `yaml:"channel" json:"-" `
+	Timeout time.Duration        `yaml:"timeout" json:"-" `
+	ZH      MoaPayload           `yaml:"zh" json:"zh"`
+	EN      MoaPayload           `yaml:"en" json:"en"`
+}
+
+// BuildPayload build payload to string
+func (p *MoaTplCfg) BuildPayload(affectCount int) (string, error) {
+	tmp := *p
+	tmp.ZH.Desc = fmt.Sprintf(p.ZH.Desc, affectCount)
+	tmp.EN.Desc = fmt.Sprintf(p.EN.Desc, affectCount)
+	result, err := json.Marshal(tmp)
+	if err != nil {
+		return "", err
+	}
+	return string(result), nil
+}
+
+// ValidateDefaultTemplate validate default template, all required fields must be set
+func (p *MoaTplCfg) ValidateDefaultTemplate() error {
+	return p.Validate(true)
+}
+
+// Validate only name is required
+func (p *MoaTplCfg) Validate(defaultTemplateCheck bool) error {
+	if defaultTemplateCheck {
+		// 默认模板超时时间必填
+		if p.Timeout == 0 {
+			return errors.New("timeout is required for default template")
+		}
+		// 默认模板channel必填
+		if len(p.Channel) == 0 {
+			return errors.New("channel is not set for default template")
+		}
+	} else {
+		// 默认模板不需要校验场景
+		if len(p.Scene) == 0 {
+			return errors.New("scene is not set")
+		}
+	}
+	if p.Timeout < 0 {
+		return errors.New("timeout should not be less than 0")
+	}
+
+	if len(p.Channel) > 0 {
+		if err := p.Channel.Validate(); err != nil {
+			return err
+		}
+	}
+	if err := p.ZH.Validate(defaultTemplateCheck); err != nil {
+		return fmt.Errorf("zh: %w", err)
+	}
+	if err := p.EN.Validate(defaultTemplateCheck); err != nil {
+		return fmt.Errorf("en: %w", err)
+	}
+
+	return nil
+}
+
+// MoaPayload moa payload
+type MoaPayload struct {
+	Title     string      `json:"title" yaml:"title"`
+	Desc      string      `json:"desc" yaml:"desc"`
+	Navigator string      `json:"navigator" yaml:"navigator"`
+	IconURL   *string     `json:"icon_url" yaml:"iconUrl"`
+	Footer    string      `json:"footer" yaml:"footer"`
+	Buttons   []MoaButton `json:"buttons" yaml:"buttons"`
+}
+
+// Over 生成用当前配置覆盖给定配置的副本
+func (p *MoaPayload) Over(defaultPayload *MoaPayload) MoaPayload {
+	overlay := cvt.PtrToVal(defaultPayload)
+	if p.Title != "" {
+		overlay.Title = p.Title
+	}
+	if p.Desc != "" {
+		overlay.Desc = p.Desc
+	}
+	if p.Navigator != "" {
+		overlay.Navigator = p.Navigator
+	}
+
+	if p.IconURL != nil {
+		overlay.IconURL = p.IconURL
+	}
+	if p.Footer != "" {
+		overlay.Footer = p.Footer
+	}
+	if p.Buttons != nil {
+		overlay.Buttons = p.Buttons
+	}
+	return overlay
+}
+
+// Validate ...
+func (p *MoaPayload) Validate(defaultTemplateCheck bool) error {
+	if defaultTemplateCheck {
+		if len(p.Title) == 0 {
+			return errors.New("title is not set")
+		}
+
+		if len(p.Desc) == 0 {
+			return errors.New("desc is not set")
+		}
+
+		if len(p.Buttons) == 0 {
+			return errors.New("buttons is not set")
+		}
+	}
+
+	for i, button := range p.Buttons {
+		if err := button.Validate(); err != nil {
+			return fmt.Errorf("buttons[%d]: %w", i, err)
+		}
+	}
+
+	return nil
+
+}
+
+// MoaButton moa button
+type MoaButton struct {
+	Desc       string               `json:"desc" yaml:"desc" validate:"required"`
+	ButtonType enumor.MoaButtonType `json:"button_type" yaml:"button_type"`
+}
+
+// Validate ...
+func (b *MoaButton) Validate() error {
+	if len(b.Desc) == 0 {
+		return errors.New("desc is not set")
+	}
+
+	if len(b.ButtonType) == 0 {
+		return errors.New("button_type is not set")
+	}
+
+	if err := b.ButtonType.Validate(); err != nil {
+		return err
 	}
 	return nil
 }

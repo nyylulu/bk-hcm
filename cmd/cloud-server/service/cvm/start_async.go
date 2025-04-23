@@ -38,7 +38,6 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
-	"hcm/pkg/tools/util"
 )
 
 // BatchAsyncStartCvm batch start cvm.
@@ -66,12 +65,12 @@ func (svc *cvmSvc) batchAsyncStartCvmSvc(cts *rest.Contexts, bkBizID int64, vali
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.validateMOAResult(cts, req.SessionID); err != nil {
-		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
-		return nil, err
-	}
 	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMStart, req.SessionID); err != nil {
+		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
 		return nil, err
 	}
 	if err := svc.createAudit(cts, protoaudit.Start, req.IDs); err != nil {
@@ -156,7 +155,8 @@ func (svc *cvmSvc) validateAuthorize(cts *rest.Contexts, ids []string,
 func (svc *cvmSvc) createAudit(cts *rest.Contexts, operationAction protoaudit.OperationAction, ids []string) error {
 
 	for _, tmpIDs := range slice.Split(ids, constant.BatchOperationMaxLimit) {
-		if err := svc.audit.ResBaseOperationAudit(cts.Kit, enumor.CvmAuditResType, operationAction, tmpIDs); err != nil {
+		err := svc.audit.ResBaseOperationAudit(cts.Kit, enumor.CvmAuditResType, operationAction, tmpIDs)
+		if err != nil {
 			logs.Errorf("create operation audit failed, err: %v, cvmIDs: %v, rid: %s", err, tmpIDs, cts.Kit.Rid)
 			return err
 		}
@@ -164,38 +164,7 @@ func (svc *cvmSvc) createAudit(cts *rest.Contexts, operationAction protoaudit.Op
 	return nil
 }
 
-func (svc *cvmSvc) validateMOAResult(cts *rest.Contexts, sessionID string) error {
-	resp, err := svc.etcdCli.Get(cts.Kit.Ctx, sessionID)
-	if err != nil {
-		logs.Errorf("get session failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return err
-	}
-	if resp.Count == 0 {
-		return errf.Newf(errf.MOAValidationTimeoutError, "no session found by id: %s", sessionID)
-	}
-	kv := resp.Kvs[0]
-	valueStr := string(kv.Value)
-	result := util.SplitString(valueStr, "-")
-	if len(result) != 2 {
-		logs.Errorf("invalid verification result, sessionID: %s, value: %s, rid: %s", sessionID, valueStr, cts.Kit.Rid)
-		return fmt.Errorf("invalid verification result")
-	}
-	if result[0] != cts.Kit.User {
-		logs.Errorf("verification username is not match, sessionID: %s, value: %s, currUser: %s, rid: %s",
-			sessionID, valueStr, cts.Kit.User, cts.Kit.Rid)
-		return fmt.Errorf("verification username is not match")
-	}
-	if result[1] != enumor.VerificationResultConfirm {
-		logs.Errorf("verification result is not confirm, sessionID: %s, value: %s, currUser: %s, result: %v, rid: %s",
-			sessionID, valueStr, cts.Kit.User, result, cts.Kit.Rid)
-		return fmt.Errorf("verification result is not confirm, result: %s", result)
-	}
+func (svc *cvmSvc) validateMOAResult(kt *kit.Kit, scene enumor.MoaScene, sessionID string) error {
 
-	// delete key-value
-	if _, err = svc.etcdCli.Delete(cts.Kit.Ctx, sessionID); err != nil {
-		logs.Errorf("delete session failed, err: %v, rid: %s", err, cts.Kit.Rid)
-		return err
-	}
-
-	return nil
+	return svc.moaLogic.CheckCachedResult(kt, scene, sessionID)
 }

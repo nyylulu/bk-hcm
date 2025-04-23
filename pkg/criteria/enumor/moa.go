@@ -19,16 +19,100 @@
 
 package enumor
 
-const (
-	// VerificationStatusPending ...
-	VerificationStatusPending = "pending"
-	// VerificationStatusFinish ...
-	VerificationStatusFinish = "finish"
+import (
+	"errors"
+
+	"hcm/pkg/iam/meta"
 )
 
+// MoaStatus MOA验证状态
+type MoaStatus string
+
 const (
-	// VerificationResultConfirm ...
-	VerificationResultConfirm = "confirm"
-	// VerificationResultCancel ...
-	VerificationResultCancel = "cancel"
+	// MoaStatusPending ...
+	MoaStatusPending MoaStatus = "pending"
+	// MoaStatusFinish ...
+	MoaStatusFinish MoaStatus = "finish"
+)
+
+// Moa2FAChannel 2FA渠道
+type Moa2FAChannel string
+
+const (
+	// Moa2FAChannelMOA MOA弹窗确认
+	Moa2FAChannelMOA Moa2FAChannel = "moa"
+	// Moa2FAChannelSMS 短信验证码
+	Moa2FAChannelSMS Moa2FAChannel = "sms"
+)
+
+// Validate ...
+func (m Moa2FAChannel) Validate() error {
+	switch m {
+	case Moa2FAChannelMOA, Moa2FAChannelSMS:
+		return nil
+	default:
+		return errors.New("invalid moa 2fa channel: " + string(m))
+	}
+}
+
+// MoaButtonType Moa 操作按钮类型
+type MoaButtonType string
+
+const (
+	// MoaButtonTypeCancel 取消按钮
+	MoaButtonTypeCancel MoaButtonType = "cancel"
+	// MoaButtonTypeConfirm 确定按钮
+	MoaButtonTypeConfirm MoaButtonType = "confirm"
+)
+
+// Validate ...
+func (m MoaButtonType) Validate() error {
+	switch m {
+	case MoaButtonTypeCancel, MoaButtonTypeConfirm:
+		return nil
+	default:
+		return errors.New("invalid moa button type: " + string(m))
+	}
+}
+
+// MoaScene 需要MOA验证的操作场景
+type MoaScene string
+
+const (
+	// MoaSceneSGDelete 安全组删除
+	MoaSceneSGDelete MoaScene = "sg_delete"
+	// MoaSceneCVMStart CVM开机
+	MoaSceneCVMStart MoaScene = "cvm_start"
+	// MoaSceneCVMStop CVM关机
+	MoaSceneCVMStop MoaScene = "cvm_stop"
+	// MoaSceneCVMReset CVM重装
+	MoaSceneCVMReset MoaScene = "cvm_reset"
+	// MoaSceneCVMReboot CVM重启
+	MoaSceneCVMReboot MoaScene = "cvm_reboot"
+)
+
+// GetResType ...
+func (s MoaScene) GetResType() meta.ResourceType {
+	switch s {
+	case MoaSceneSGDelete:
+		return meta.SecurityGroup
+	case MoaSceneCVMStart, MoaSceneCVMStop, MoaSceneCVMReset, MoaSceneCVMReboot:
+		return meta.Cvm
+	default:
+		return "unknown_moa_scene"
+	}
+}
+
+// MoaVerifyStatus MOA验证状态
+type MoaVerifyStatus string
+
+const (
+	// MoaVerifyPending 等待用户验证
+	MoaVerifyPending MoaVerifyStatus = "pending"
+	// MoaVerifyConfirmed 用户已确认
+	MoaVerifyConfirmed MoaVerifyStatus = "confirmed"
+	// MoaVerifyRejected 用户已拒绝
+	MoaVerifyRejected MoaVerifyStatus = "rejected"
+	// MoaVerifyNotFound 相关信息未找到或已失效
+	MoaVerifyNotFound MoaVerifyStatus = "expired_or_not_found"
 )

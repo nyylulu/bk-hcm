@@ -58,3 +58,5 @@ data:
       {{- toYaml .Values.cloudserver.orgTopoConfig | nindent 6 }}
     taskManagement:
       {{- toYaml .Values.cloudserver.taskManagement | nindent 6 }}
+    moa:
+      {{- toYaml .Values.moa | nindent 6 }}

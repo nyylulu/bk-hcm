@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +19,16 @@
 
 package moa
 
-import "hcm/pkg/criteria/validator"
+import (
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+)
 
 // InitiateVerificationReq ...
 type InitiateVerificationReq struct {
-	Username      string `json:"username" validate:"required"`
-	Channel       string `json:"channel" validate:"required"`
-	Language      string `json:"language" validate:"required"`
-	PromptPayload string `json:"prompt_payload" validate:"required"`
+	Language string          `json:"language" validate:"required"`
+	Scene    enumor.MoaScene `json:"scene" validate:"required,max=64"`
+	ResIDs   []string        `json:"res_ids" validate:"required,min=1"`
 }
 
 // Validate ...
@@ -41,8 +43,9 @@ type InitiateVerificationResp struct {
 
 // VerificationReq ...
 type VerificationReq struct {
-	SessionId string `json:"session_id" validate:"required"`
-	Username  string `json:"username" validate:"required"`
+	SessionId string          `json:"session_id" validate:"required"`
+	Scene     enumor.MoaScene `json:"scene" validate:"required"`
+	ResIDs    []string        `json:"res_ids" validate:"required,min=1"`
 }
 
 // Validate ...
@@ -52,7 +55,7 @@ func (v *VerificationReq) Validate() error {
 
 // VerificationResp ...
 type VerificationResp struct {
-	SessionId  string `json:"session_id"`
-	Status     string `json:"status"`
-	ButtonType string `json:"button_type"`
+	SessionId  string               `json:"session_id"`
+	Status     enumor.MoaStatus     `json:"status"`
+	ButtonType enumor.MoaButtonType `json:"button_type,omitempty"`
 }

@@ -42,7 +42,7 @@ func (m *moaCli) Request(kt *kit.Kit, req *InitiateVerificationReq) (*InitiateVe
 	return resp, nil
 }
 
-// Verify 验证结果
+// Verify 验证结果，用户确认后仅第一次verify有效
 func (m *moaCli) Verify(kt *kit.Kit, req *VerificationReq) (*VerificationResp, error) {
 	resp, err := call[VerificationResp](m.client, m.config, rest.POST, kt, req, nil, "/verify")
 	if err != nil {

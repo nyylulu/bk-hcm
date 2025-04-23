@@ -44,7 +44,8 @@ func (svc *cvmSvc) BatchAsyncRebootBizCvm(cts *rest.Contexts) (interface{}, erro
 	return svc.batchAsyncRebootCvmSvc(cts, bizID, handler.BizOperateAuth)
 }
 
-func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, validHandler handler.ValidWithAuthHandler) (
+func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64,
+	validHandler handler.ValidWithAuthHandler) (
 	interface{}, error) {
 
 	req := new(proto.BatchCvmPowerOperateReq)
@@ -55,12 +56,12 @@ func (svc *cvmSvc) batchAsyncRebootCvmSvc(cts *rest.Contexts, bkBizID int64, val
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.validateMOAResult(cts, req.SessionID); err != nil {
-		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
-		return nil, err
-	}
 	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMReboot, req.SessionID); err != nil {
+		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
 		return nil, err
 	}
 	if err := svc.createAudit(cts, audit.Reboot, req.IDs); err != nil {

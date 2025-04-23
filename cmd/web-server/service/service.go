@@ -38,7 +38,6 @@ import (
 	"hcm/cmd/web-server/service/cloud/vpc"
 	"hcm/cmd/web-server/service/cmdb"
 	"hcm/cmd/web-server/service/itsm"
-	"hcm/cmd/web-server/service/moa"
 	"hcm/cmd/web-server/service/notice"
 	templateSvc "hcm/cmd/web-server/service/template"
 	"hcm/cmd/web-server/service/user"
@@ -58,7 +57,6 @@ import (
 	pkgitsm "hcm/pkg/thirdparty/api-gateway/itsm"
 	pkgnotice "hcm/pkg/thirdparty/api-gateway/notice"
 	"hcm/pkg/thirdparty/esb"
-	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/ssl"
 	pkgversion "hcm/pkg/version"
 
@@ -79,8 +77,6 @@ type Service struct {
 	itsmCli pkgitsm.Client
 	// noticeCli notification center client
 	noticeCli pkgnotice.Client
-	// moaCli 调用接入MOA的第三方系统API集合
-	moaCli pkgmoa.Client
 }
 
 // NewService create a service instance.
@@ -137,13 +133,6 @@ func NewService(dis serviced.Discover) (*Service, error) {
 		return nil, err
 	}
 
-	moaCfg := cc.WebServer().MOA
-	moaCli, err := pkgmoa.NewClient(&moaCfg, metrics.Register())
-	if err != nil {
-		logs.Errorf("failed to create moa client, err: %v", err)
-		return nil, err
-	}
-
 	return &Service{
 		client:     apiClientSet,
 		esbClient:  esbClient,
@@ -151,7 +140,6 @@ func NewService(dis serviced.Discover) (*Service, error) {
 		authorizer: authorizer,
 		itsmCli:    itsmCli,
 		noticeCli:  noticeCli,
-		moaCli:     moaCli,
 	}, nil
 }
 
@@ -275,7 +263,6 @@ func (s *Service) apiSet() *restful.WebService {
 		Authorizer: s.authorizer,
 		ItsmCli:    s.itsmCli,
 		NoticeCli:  s.noticeCli,
-		MoaCli:     s.moaCli,
 	}
 
 	user.InitUserService(c)
@@ -289,7 +276,6 @@ func (s *Service) apiSet() *restful.WebService {
 		notice.InitService(c)
 	}
 	templateSvc.InitTemplateService(c)
-	moa.InitService(c)
 
 	return ws
 }

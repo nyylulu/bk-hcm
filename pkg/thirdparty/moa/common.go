@@ -19,7 +19,10 @@
 
 package moa
 
-import "hcm/pkg/criteria/validator"
+import (
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/validator"
+)
 
 // InitiateVerificationResp the response of the verification request
 type InitiateVerificationResp struct {
@@ -28,10 +31,10 @@ type InitiateVerificationResp struct {
 
 // InitiateVerificationReq 发起验证的请求体
 type InitiateVerificationReq struct {
-	Username      string `json:"username" validate:"required"`
-	Channel       string `json:"channel" validate:"required"`
-	Language      string `json:"language" validate:"required"`
-	PromptPayload string `json:"promptPayload" validate:"required"`
+	Username      string               `json:"username" validate:"required"`
+	Channel       enumor.Moa2FAChannel `json:"channel" validate:"required"`
+	Language      string               `json:"language" validate:"required"`
+	PromptPayload string               `json:"promptPayload" validate:"required"`
 }
 
 // Validate ...
@@ -52,7 +55,7 @@ func (v *VerificationReq) Validate() error {
 
 // VerificationResp ...
 type VerificationResp struct {
-	SessionId  string `json:"sessionId"`
-	Status     string `json:"status"`
-	ButtonType string `json:"buttonType"`
+	SessionId  string               `json:"sessionId"`
+	Status     enumor.MoaStatus     `json:"status"`
+	ButtonType enumor.MoaButtonType `json:"buttonType"`
 }

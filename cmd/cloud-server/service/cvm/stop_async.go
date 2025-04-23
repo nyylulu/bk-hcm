@@ -55,12 +55,13 @@ func (svc *cvmSvc) batchAsyncStopCvmSvc(cts *rest.Contexts, bkBizID int64, valid
 		return nil, errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
-	if err := svc.validateMOAResult(cts, req.SessionID); err != nil {
-		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
-		return nil, err
-	}
 	if err := svc.validateAuthorize(cts, req.IDs, validHandler); err != nil {
 		logs.Errorf("validate authorize and create audit failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err := svc.validateMOAResult(cts.Kit, enumor.MoaSceneCVMStop, req.SessionID); err != nil {
+		logs.Errorf("validate moa result failed, err: %v, sessionID: %s, rid: %s", err, req.SessionID, cts.Kit.Rid)
 		return nil, err
 	}
 	if err := svc.createAudit(cts, audit.Stop, req.IDs); err != nil {

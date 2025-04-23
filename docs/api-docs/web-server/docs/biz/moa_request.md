@@ -1,32 +1,38 @@
 ### 描述
 
-- 该接口提供版本：v1.7.0.7+。
+- 该接口提供版本：v1.7.0.7+。 9.9.9
 - 该接口所需权限：业务访问。
-- 该接口功能描述：发起MOA二次校验。
+- 该接口功能描述：发起MOA二次校验，仅支持对当前登录用户发起验证。
 
 ### URL
 
-POST /api/v1/web/bizs/{bk_biz_id}/moa/request
+POST /api/v1/cloud/bizs/{bk_biz_id}/moa/request
 
 ### 输入参数
 
-| 参数名称           | 参数类型    | 必选 | 描述                                        |
-|----------------|---------|----|-------------------------------------------|
-| username	      | string	 | 是	 | 用户名                                       |
-| channel	       | string	 | 是	 | 	使用哪种二次验证通道(1) moa: MOA弹窗确认(2) sms: 短信验证码 |
-| language	      | string	 | 是	 | 语言                                        |
-| prompt_payload | string  | 是	 | 二次验证弹窗内容, 参考调用示例进行调整                      |
+| 参数名称     | 参数类型      | 必选 | 描述         |
+|----------|-----------|----|------------|
+| language | string	   | 是  | 语言:  zh/en |
+| scene    | string    | 是  | 请求场景标识     |
+| res_ids  | []string	 | 是  | 操作影响资源ID   |
 
+#### scene 取值
+
+| scene      | 操作场景  |
+|------------|-------|
+| sg_delete  | 安全组删除 |
+| cvm_start  | CVM开机 |
+| cvm_stop   | CVM关机 |
+| cvm_reset  | CVM重装 |
+| cvm_reboot | CVM重启 |
 
 ### 调用示例
 
-
 ```json
 {
-    "username": "zhangsan",
-    "channel": "moa",
-    "language": "zh",
-    "prompt_payload": "{\"zh\":{\"title\":\"新设备登录授权\",\"navigator\":\"导航栏\",\"desc\":\"您的账号正在新设备登录MOA，是否同意本次操作？\",\"footer\":\"\",\"buttons\":[{\"desc\":\"确定\",\"button_type\":\"confirm\"},{\"desc\":\"取消\",\"button_type\":\"cancel\"}]},\"en\":{\"title\":\"Two-step verification\",\"navigator\":\"navigator\",\"desc\":\"A new device is signing in MOA\",\"icon_url\":\"https://xxx.xxx.xxx\",\"footer\":\"\",\"buttons\":[{\"desc\":\"Allow\",\"button_type\":\"confirm\"},{\"desc\":\"Do Not Allow\",\"button_type\":\"cancel\"}]}}"
+  "language": "zh",
+  "scene": "sg_delete",
+  "affected_count": 1
 }
 ```
 
@@ -52,6 +58,7 @@ POST /api/v1/web/bizs/{bk_biz_id}/moa/request
 | data    | object | 响应数据 |
 
 #### data参数说明
+
 | 参数名称       | 参数类型   | 描述               |
 |------------|--------|------------------|
 | session_id | string | 会话ID, 用于查询二次验证结果 |

@@ -59,5 +59,4 @@ data:
     notice:
       {{- toYaml .Values.webserver.notice | nindent 6 }}
     templatePath: {{ .Values.webserver.templatePath }}
-    moa:
-      {{- toYaml .Values.webserver.moa | nindent 6 }}
+

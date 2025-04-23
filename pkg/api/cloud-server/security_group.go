@@ -270,6 +270,8 @@ func (i BatchUpdateSGMgmtAttrItem) Validate() error {
 // SecurityGroupBatchDeleteReq security group update request.
 type SecurityGroupBatchDeleteReq struct {
 	IDs []string `json:"ids" validate:"required,max=100"`
+	// MOA session ID
+	SessionID string `json:"session_id" validate:"required"`
 }
 
 // Validate security group delete request.

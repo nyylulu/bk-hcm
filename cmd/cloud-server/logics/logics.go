@@ -25,9 +25,13 @@ import (
 	"hcm/cmd/cloud-server/logics/cvm"
 	"hcm/cmd/cloud-server/logics/disk"
 	"hcm/cmd/cloud-server/logics/eip"
+	moalogic "hcm/cmd/cloud-server/logics/moa"
 	securitygroup "hcm/cmd/cloud-server/logics/security-group"
 	"hcm/pkg/client"
 	"hcm/pkg/thirdparty/esb"
+	pkgmoa "hcm/pkg/thirdparty/moa"
+
+	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 // Logics defines cloud-server common logics.
@@ -37,10 +41,11 @@ type Logics struct {
 	Cvm           cvm.Interface
 	Eip           eip.Interface
 	SecurityGroup securitygroup.Interface
+	Moa           moalogic.Interface
 }
 
 // NewLogics create a new cloud server logics.
-func NewLogics(c *client.ClientSet, esbClient esb.Client) *Logics {
+func NewLogics(c *client.ClientSet, esbClient esb.Client, moaClient pkgmoa.Client, etcdCli *etcd3.Client) *Logics {
 	auditLogics := audit.NewAudit(c.DataService())
 	eipLogics := eip.NewEip(c, auditLogics)
 	diskLogics := disk.NewDisk(c, auditLogics)
@@ -50,5 +55,5 @@ func NewLogics(c *client.ClientSet, esbClient esb.Client) *Logics {
 		Cvm:           cvm.NewCvm(c, auditLogics, eipLogics, diskLogics, esbClient),
 		Eip:           eip.NewEip(c, auditLogics),
 		SecurityGroup: securitygroup.NewSecurityGroup(c, auditLogics),
-	}
+		Moa:           moalogic.NewMoa(moaClient, etcdCli)}
 }

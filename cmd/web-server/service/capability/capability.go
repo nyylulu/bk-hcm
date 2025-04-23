@@ -26,7 +26,6 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/notice"
 	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/moa"
 
 	"github.com/emicklei/go-restful/v3"
 )
@@ -39,5 +38,4 @@ type Capability struct {
 	Authorizer auth.Authorizer
 	ItsmCli    itsm.Client
 	NoticeCli  notice.Client
-	MoaCli     moa.Client
 }

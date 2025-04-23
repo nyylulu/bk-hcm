@@ -482,23 +482,7 @@ webserver:
       # the password to decrypt the certificate.
       password:
   templatePath: /data/hcm/template
-  moa:
-    endpoints:
-      - http://demo.com
-    paasID: 1234
-    token: abcd
-    # defines tls related options.
-    tls:
-      # server should be accessed without verifying the TLS certificate.
-      insecureSkipVerify:
-      # server requires TLS client certificate authentication.
-      certFile:
-      # server requires TLS client certificate authentication.
-      keyFile:
-      # trusted root certificates for server.
-      caFile:
-      # the password to decrypt the certificate.
-      password:
+
 
 taskserver:
   ## 镜像
@@ -1258,3 +1242,85 @@ orgTopoConfig:
   enable: false
   # syncIntervalMin org topo config interval, unit: min.
   syncIntervalMin: 600
+
+# 太湖/MOA 配置
+moa:
+  endpoints:
+    - http://demo.com
+  paasID: 1234
+  token: abcd
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:
+  # default template for confirm dialog.
+  defaultTemplate:
+    # moa/sms
+    channel: moa
+    timeout: 5m
+    zh:
+      title: HCM-操作确认
+      desc: 是否同意本次操作？
+      navigator: 操作授权确认
+      icon_url:
+      footer:
+      buttons:
+        - desc: 确定
+          button_type: confirm
+        - desc: 取消
+          button_type: cancel
+    en:
+      title: HCM-Operation Verification
+      desc: Do you agree to this operation?
+      navigator: Operation Authorization
+      footer: "here is footer"
+      buttons:
+        - desc: Allow
+          button_type: confirm
+        - desc: Do Not Allow
+          button_type: cancel
+  # templates for confirm dialog.
+  templates:
+    - scene: sg_delete
+      zh:
+        title: HCM-安全组删除确认
+        desc: 您正在对 %d 个安全组执行参数操作，是否同意本次操作？
+      en:
+        title: HCM-Security Group Delete Verification
+        desc: Delete %d security group(s). Do you agree to this operation?
+    - scene: cvm_reboot
+      zh:
+        title: HCM-主机重启确认
+        desc: 您正在对 %d 台主机执行重启，是否同意本次操作？
+      en:
+        title: HCM-Host Reboot Verification
+        desc: Reboot OS on %d host(s). Do you agree to this operation?
+    - scene: cvm_reset
+      zh:
+        title: HCM-主机重装确认
+        desc: 您正在对 %d 台主机执行重装，是否同意本次操作？
+      en:
+        title: HCM-Host Reinstall Verification
+        desc: Reinstall OS on %d host(s). Do you agree to this operation?
+    - scene: cvm_start
+      zh:
+        title: HCM-主机开机确认
+        desc: 您正在对 %d 台主机执行开机，是否同意本次操作？
+      en:
+        title: HCM-Host Start Verification
+        desc: Start OS on %d host(s). Do you agree to this operation?
+    - scene: cvm_stop
+      zh:
+        title: HCM-主机关机确认
+        desc: 您正在对 %d 台主机执行关机，是否同意本次操作？
+      en:
+        title: HCM-Host Stop Verification
+        desc: Stop OS on %d host(s). Do you agree to this operation?

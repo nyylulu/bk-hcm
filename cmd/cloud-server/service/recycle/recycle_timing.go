@@ -38,9 +38,12 @@ import (
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/esb"
+	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/retry"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/times"
+
+	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 type recycle struct {
@@ -50,11 +53,13 @@ type recycle struct {
 }
 
 // RecycleTiming timing recycle all resource.
-func RecycleTiming(c *client.ClientSet, state serviced.State, conf cc.Recycle, esbClient esb.Client) {
+func RecycleTiming(c *client.ClientSet, state serviced.State, conf cc.Recycle, esbClient esb.Client,
+	moaClient pkgmoa.Client, etcdCli *etcd3.Client) {
+
 	r := &recycle{
 		client: c,
 		state:  state,
-		logics: logics.NewLogics(c, esbClient),
+		logics: logics.NewLogics(c, esbClient, moaClient, etcdCli),
 	}
 
 	go r.recycleTiming(enumor.DiskCloudResType, r.recycleDiskWorker, conf)

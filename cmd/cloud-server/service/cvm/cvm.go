@@ -28,32 +28,20 @@ import (
 	"hcm/cmd/cloud-server/logics/cvm"
 	"hcm/cmd/cloud-server/logics/disk"
 	"hcm/cmd/cloud-server/logics/eip"
+	moalogic "hcm/cmd/cloud-server/logics/moa"
 	"hcm/cmd/cloud-server/service/capability"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
-	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
-	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-
-	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
 // InitCvmService initialize the cvm service.
 func InitCvmService(c *capability.Capability) {
-	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
-	if err != nil {
-		logs.Errorf("convert etcd config failed, err: %v", err)
-		return
-	}
-	etcdCli, err := etcd3.New(etcdCfg)
-	if err != nil {
-		logs.Errorf("create etcd client failed, err: %v", err)
-		return
-	}
+
 	svc := &cvmSvc{
 		client:     c.ApiClient,
 		authorizer: c.Authorizer,
@@ -61,7 +49,7 @@ func InitCvmService(c *capability.Capability) {
 		diskLgc:    c.Logics.Disk,
 		cvmLgc:     c.Logics.Cvm,
 		eipLgc:     c.Logics.Eip,
-		etcdCli:    etcdCli,
+		moaLogic:   c.Logics.Moa,
 	}
 
 	h := rest.NewHandler()
@@ -104,7 +92,8 @@ func InitCvmService(c *capability.Capability) {
 	h.Add("BatchAsyncStartCvm", http.MethodPost, "/cvms/batch/start_async", svc.BatchAsyncStartCvm)
 	h.Add("BatchAsyncStopCvm", http.MethodPost, "/cvms/batch/stop_async", svc.BatchAsyncStopCvm)
 	h.Add("BatchAsyncRebootCvm", http.MethodPost, "/cvms/batch/reboot_async", svc.BatchAsyncRebootCvm)
-	h.Add("BatchAsyncStartBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/start_async", svc.BatchAsyncStartBizCvm)
+	h.Add("BatchAsyncStartBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/start_async",
+		svc.BatchAsyncStartBizCvm)
 	h.Add("BatchAsyncStopBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/stop_async", svc.BatchAsyncStopBizCvm)
 	h.Add("BatchAsyncRebootBizCvm", http.MethodPost, "/bizs/{bk_biz_id}/cvms/batch/reboot_async",
 		svc.BatchAsyncRebootBizCvm)
@@ -133,7 +122,7 @@ type cvmSvc struct {
 	diskLgc    disk.Interface
 	cvmLgc     cvm.Interface
 	eipLgc     eip.Interface
-	etcdCli    *etcd3.Client
+	moaLogic   moalogic.Interface
 }
 
 // batchListCvmByIDs 批量获取CVM列表

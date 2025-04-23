@@ -87,6 +87,11 @@ func (svc *securityGroupSvc) batchDeleteSecurityGroup(cts *rest.Contexts, validH
 		return nil, err
 	}
 
+	err = svc.moaLogic.CheckCachedResult(cts.Kit, enumor.MoaSceneSGDelete, req.SessionID)
+	if err != nil {
+		return nil, err
+	}
+
 	// 检查是否还有绑定的资源
 	if err = svc.checkSGBinding(cts.Kit, basicInfoMap); err != nil {
 		return nil, err

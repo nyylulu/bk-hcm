@@ -32,12 +32,14 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/usermgr"
 	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/moa"
 
 	"github.com/emicklei/go-restful/v3"
 )
 
 // Capability defines the service's capability
 type Capability struct {
+	MoaCli     moa.Client
 	WebService *restful.WebService
 	ApiClient  *client.ClientSet
 	Authorizer auth.Authorizer
