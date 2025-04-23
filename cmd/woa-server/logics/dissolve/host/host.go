@@ -138,7 +138,10 @@ func (l *logics) IsDissolveHost(kt *kit.Kit, assetIDs []string) (map[string]bool
 
 	for _, ids := range slice.Split(assetIDs, int(core.DefaultMaxPageLimit)) {
 		req := &types.ListOption{
-			Filter: tools.ContainersExpression("asset_id", ids),
+			Filter: tools.ExpressionAnd(
+				tools.RuleIn("asset_id", ids),
+				tools.RuleNotEqual("abolish_phase", enumor.Complete),
+			),
 			Fields: []string{"asset_id"},
 			Page:   core.NewDefaultBasePage(),
 		}
