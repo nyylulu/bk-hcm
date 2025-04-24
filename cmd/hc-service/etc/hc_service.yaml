@@ -98,3 +98,7 @@ esb:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+# security group mgmt skip list
+securityGroupMgmtSkipList:
+  - sg-xxxxxx

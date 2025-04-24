@@ -3,7 +3,6 @@ module hcm
 go 1.21
 
 require (
-	github.com/bluele/gcache v0.0.2
 	cloud.google.com/go/asset v1.19.0
 	cloud.google.com/go/bigquery v1.59.1
 	cloud.google.com/go/iam v1.1.7
@@ -18,6 +17,7 @@ require (
 	github.com/Azure/azure-sdk-for-go/sdk/resourcemanager/subscription/armsubscription v1.0.0
 	github.com/TencentBlueKing/gopkg v1.1.0
 	github.com/aws/aws-sdk-go v1.44.334
+	github.com/bluele/gcache v0.0.2
 	github.com/coccyx/timeparser v0.0.0-20161029180942-5644122b3667
 	github.com/emicklei/go-restful v2.16.0+incompatible
 	github.com/emicklei/go-restful/v3 v3.11.0

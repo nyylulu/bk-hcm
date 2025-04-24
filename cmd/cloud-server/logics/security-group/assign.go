@@ -48,6 +48,8 @@ func ListSecurityGroupRulesByCloudTargetSGID(kt *kit.Kit, cli *dataservice.Clien
 		cloudSGToSgRulesMap, err = listAzureSecurityGroupRulesByCloudTargetSGID(kt, cli, sgID)
 	case enumor.HuaWei:
 		cloudSGToSgRulesMap, err = listHuaweiSecurityGroupRulesByCloudTargetSGID(kt, cli, sgID)
+	case enumor.TCloudZiyan:
+		cloudSGToSgRulesMap, err = listTCloudZiyanSecurityGroupRulesByCloudTargetSGID(kt, cli, sgID)
 	default:
 		return nil, fmt.Errorf("unsupported vendor %s for validateSecurityGroupRuleRel", vendor)
 	}

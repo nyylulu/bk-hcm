@@ -72,6 +72,8 @@ type Interface interface {
 
 	RemoveHostFromCC(kt *kit.Kit, params *DelHostParams) error
 	HostWithRelRes(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error)
+
+	SecurityGroupUsageBiz(kt *kit.Kit, params *SyncSGUsageBizParams) error
 }
 
 var _ Interface = new(client)

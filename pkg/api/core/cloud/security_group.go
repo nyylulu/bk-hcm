@@ -53,6 +53,11 @@ func (sg BaseSecurityGroup) GetID() string {
 	return sg.ID
 }
 
+// GetCloudID return cloud id
+func (sg BaseSecurityGroup) GetCloudID() string {
+	return sg.CloudID
+}
+
 // SecurityGroup define security group
 type SecurityGroup[Extension SecurityGroupExtension] struct {
 	BaseSecurityGroup `json:",inline"`

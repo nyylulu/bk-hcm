@@ -146,7 +146,7 @@ func (c *clientSet) ClbClient(region string) (*clb.Client, error) {
 // TagClient tcloud tag client
 func (c *clientSet) TagClient() (*tag.Client, error) {
 	// 使用内部域名
-	c.profile.HttpProfile.Endpoint = constant.InternalClbEndpoint
+	c.profile.HttpProfile.Endpoint = constant.InternalTagEndpoint
 	client, err := tag.NewClient(c.credential, "", c.profile)
 	if err != nil {
 		return nil, err

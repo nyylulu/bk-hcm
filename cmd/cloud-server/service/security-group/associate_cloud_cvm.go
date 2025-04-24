@@ -58,6 +58,8 @@ func (svc *securityGroupSvc) batchAssociateCvms(cts *rest.Contexts,
 	switch sgInfo.Vendor {
 	case enumor.TCloud:
 		return svc.batchAssociateTCloudCvms(cts, req)
+	case enumor.TCloudZiyan:
+		return svc.batchAssociateTCloudZiyanCvms(cts, req)
 	default:
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for batch associate cvm", sgInfo.Vendor)
 	}
@@ -90,7 +92,7 @@ func (svc *securityGroupSvc) batchAssociateTCloudCvms(cts *rest.Contexts,
 	err := svc.client.HCService().TCloud.SecurityGroup.BatchAssociateCvm(cts.Kit, req.SecurityGroupID,
 		req.CvmIDs)
 	if err != nil {
-		logs.Errorf("fail to call hc service associate cloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+		logs.Errorf("fail to call hc service associate cloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid: %s",
 			err, req.SecurityGroupID, req.CvmIDs, cts.Kit.Rid)
 		return nil, err
 	}
@@ -126,7 +128,20 @@ func (svc *securityGroupSvc) batchDisassociateCvm(cts *rest.Contexts, validHandl
 		err := svc.client.HCService().TCloud.SecurityGroup.BatchDisassociateCvm(cts.Kit,
 			req.SecurityGroupID, req.CvmIDs)
 		if err != nil {
-			logs.Errorf("fail to call hc service dissociate cloud cvm, err: %v, sg_id: %s, cloud_cvm_ids: %v, rid:%s",
+			logs.Errorf("fail to call hc service dissociate cloud cvm, err: %v, sg_id: %s, cvm_ids: %v, rid: %s",
+				err, req.SecurityGroupID, req.CvmIDs, cts.Kit.Rid)
+			return nil, err
+		}
+		return nil, nil
+	case enumor.TCloudZiyan:
+		// create operation audit.
+		if err = svc.createTCloudDisassociateCvmAudit(cts, req); err != nil {
+			return nil, err
+		}
+		err := svc.client.HCService().TCloudZiyan.SecurityGroup.BatchDisassociateCvm(cts.Kit, req.SecurityGroupID,
+			req.CvmIDs)
+		if err != nil {
+			logs.Errorf("fail to call hc service dissociate ziyan cvm, err: %v, sg_id: %s, cvm_ids: %v, rid: %s",
 				err, req.SecurityGroupID, req.CvmIDs, cts.Kit.Rid)
 			return nil, err
 		}

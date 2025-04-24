@@ -79,6 +79,13 @@ func (svc *securityGroupSvc) CloneBizSecurityGroup(cts *rest.Contexts) (interfac
 			return nil, err
 		}
 		return result, nil
+	case enumor.TCloudZiyan:
+		result, err := svc.tcloudZiyanCloneSecurityGroup(cts.Kit, bizID, sg, req)
+		if err != nil {
+			logs.Errorf("clone security group failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+			return nil, err
+		}
+		return result, nil
 	default:
 		return nil, fmt.Errorf("unsupported vendor: %s for clone security group", sg.Vendor)
 	}

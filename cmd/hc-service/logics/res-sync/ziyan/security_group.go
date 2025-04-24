@@ -289,17 +289,24 @@ func (cli *client) listSGFromCloud(kt *kit.Kit, params *SyncBaseParams) ([]secur
 			Limit:  typecore.TCloudQueryLimit,
 		},
 	}
-	result, err := cli.cloudCli.ListSecurityGroupNew(kt, opt)
-	if err != nil {
-		if strings.Contains(err.Error(), tcloud.ErrNotFound) {
-			return nil, nil
+	result := make([]securitygroup.TCloudSG, 0, len(params.CloudIDs))
+	for {
+		tmp, err := cli.cloudCli.ListSecurityGroupNew(kt, opt)
+		if err != nil {
+			if strings.Contains(err.Error(), tcloud.ErrNotFound) {
+				return nil, nil
+			}
+
+			logs.Errorf("[%s] list sg from cloud failed, err: %v, account: %s, opt: %v, rid: %s", enumor.TCloudZiyan,
+				err, params.AccountID, opt, kt.Rid)
+			return nil, err
 		}
-
-		logs.Errorf("[%s] list sg from cloud failed, err: %v, account: %s, opt: %v, rid: %s", enumor.TCloudZiyan,
-			err, params.AccountID, opt, kt.Rid)
-		return nil, err
+		result = append(result, tmp...)
+		if len(tmp) < typecore.TCloudQueryLimit {
+			break
+		}
+		opt.Page.Offset += opt.Page.Limit
 	}
-
 	return result, nil
 }
 

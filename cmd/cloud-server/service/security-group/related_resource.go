@@ -232,6 +232,8 @@ func (svc *securityGroupSvc) chooseListSecurityGroupStatisticFunc(vendor enumor.
 		return svc.client.HCService().HuaWei.SecurityGroup.ListSecurityGroupStatistic, nil
 	case enumor.Azure:
 		return svc.client.HCService().Azure.SecurityGroup.ListSecurityGroupStatistic, nil
+	case enumor.TCloudZiyan:
+		return svc.client.HCService().TCloudZiyan.SecurityGroup.ListSecurityGroupStatistic, nil
 	default:
 		return nil, fmt.Errorf("vendor: %s not support for ListSecurityGroupStatistic", vendor)
 	}

@@ -40,10 +40,10 @@ func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
 	h.Add("BatchUpdateZiyanSGRule", "PUT",
 		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/update", svc.BatchUpdateZiyanSGRule)
 
-	h.Add("TZiyanSGBatchAssociateCloudCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/associate/cloud_cvms/batch", svc.TZiyanSGBatchAssociateCloudCvm)
-	h.Add("TZiyanSGBatchDisassociateCloudCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/disassociate/cloud_cvms/batch", svc.TZiyanSGBatchDisassociateCloudCvm)
+	h.Add("TZiyanSGBatchAssociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/cvms/batch", svc.TZiyanSGBatchAssociateCvm)
+	h.Add("TZiyanSGBatchDisassociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/cvms/batch", svc.TZiyanSGBatchDisassociateCvm)
 
 	h.Add("TCloudZiyanSecurityGroupAssociateLoadBalancer", "POST",
 		"/vendors/tcloud-ziyan/security_groups/associate/load_balancers",
@@ -53,4 +53,6 @@ func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
 		svc.TCloudZiyanSecurityGroupDisassociateLoadBalancer)
 	h.Add("TCloudZiyanListSecurityGroupStatistic", "POST", "/vendors/tcloud-ziyan/security_groups/statistic",
 		svc.TCloudZiyanListSecurityGroupStatistic)
+	h.Add("TCloudZiyanCloneSecurityGroup", "POST", "/vendors/tcloud-ziyan/security_groups/clone",
+		svc.TCloudZiyanCloneSecurityGroup)
 }

@@ -34,9 +34,11 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
 	tablecloud "hcm/pkg/dal/table/cloud"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/tools/slice"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -306,4 +308,22 @@ func (svc *tcloudZiyanSGRuleSvc) DeleteTCloudZiyanRule(cts *rest.Contexts) (inte
 	}
 
 	return nil, nil
+}
+
+func (svc *securityGroupSvc) listTCloudZiyanSecurityGroupRulesCount(kt *kit.Kit, ids []string) (
+	map[string]int64, error) {
+
+	result := make(map[string]int64)
+	for _, sgIDs := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+		resp, err := svc.dao.TCloudZiyanSGRule().CountBySecurityGroupIDs(kt,
+			tools.ContainersExpression("security_group_id", sgIDs))
+		if err != nil {
+			logs.Errorf("listTCloudSecurityGroupRulesCount failed, err: %v, ids: %v, rid: %s", err, sgIDs, kt.Rid)
+			return nil, err
+		}
+		for k, v := range resp {
+			result[k] = v
+		}
+	}
+	return result, nil
 }

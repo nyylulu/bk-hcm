@@ -36,3 +36,6 @@ data:
 
     sync:
       {{- toYaml .Values.hcservice.sync | nindent 6 }}
+    securityGroupMgmtSkipList:
+      {{- toYaml .Values.hcservice.securityGroupMgmtSkipList | nindent 6 }}
+

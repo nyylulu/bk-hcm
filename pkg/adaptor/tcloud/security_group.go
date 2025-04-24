@@ -174,7 +174,7 @@ func (t *TCloudImpl) ListSecurityGroupNew(kt *kit.Kit, opt *securitygroup.TCloud
 
 	sgs := make([]securitygroup.TCloudSG, 0, len(resp.Response.SecurityGroupSet))
 	for _, one := range resp.Response.SecurityGroupSet {
-		sgs = append(sgs, securitygroup.TCloudSG{one})
+		sgs = append(sgs, securitygroup.TCloudSG{SecurityGroup: one})
 	}
 	return sgs, nil
 }

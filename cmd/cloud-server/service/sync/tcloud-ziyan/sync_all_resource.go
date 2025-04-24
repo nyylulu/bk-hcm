@@ -136,4 +136,5 @@ var syncOrder = []syncItem{
 	{enumor.SecurityGroupCloudResType, SyncSG},
 	{enumor.CertCloudResType, SyncCert},
 	{enumor.LoadBalancerCloudResType, SyncLoadBalancer},
+	{enumor.SecurityGroupUsageBizRelResType, SyncSGUsageBizRel},
 }

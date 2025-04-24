@@ -264,8 +264,9 @@ func (s DataServiceSetting) Validate() error {
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
-	Esb          Esb      `yaml:"esb"`
-	ZiyanSecrets []Secret `yaml:"ziyanSecrets"`
+	Esb                   Esb      `yaml:"esb"`
+	ZiyanSecrets          []Secret `yaml:"ziyanSecrets"`
+	SecurityGroupSkipList []string `yaml:"securityGroupMgmtSkipList"`
 
 	Network    Network    `yaml:"network"`
 	Service    Service    `yaml:"service"`

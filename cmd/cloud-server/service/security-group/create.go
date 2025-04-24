@@ -21,7 +21,6 @@ package securitygroup
 
 import (
 	"fmt"
-	"strings"
 
 	ziyanlogic "hcm/cmd/cloud-server/logics/ziyan"
 	"hcm/cmd/cloud-server/service/common"
@@ -249,18 +248,6 @@ func (svc *securityGroupSvc) checkAzureSGParams(req *proto.SecurityGroupCreateRe
 		return errf.New(errf.InvalidParameter, "resource_group_name can only be lowercase")
 	}
 
-	return nil
-}
-
-const (
-	// InvalidSGNameYunti 不合法的安全组名称, 安全组名称中不能包含的子串
-	InvalidSGNameYunti = "云梯默认安全组"
-)
-
-func validateZiyanSGName(name string) error {
-	if strings.Contains(name, InvalidSGNameYunti) {
-		return errf.New(errf.InvalidParameter, fmt.Sprintf("name can not contain %s", InvalidSGNameYunti))
-	}
 	return nil
 }
 

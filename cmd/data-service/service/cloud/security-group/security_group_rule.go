@@ -57,6 +57,8 @@ func (svc *securityGroupSvc) CountSecurityGroupRules(cts *rest.Contexts) (interf
 		return svc.listHuaweiSecurityGroupRulesCount(cts.Kit, req.SecurityGroupIDs)
 	case enumor.Azure:
 		return svc.listAzureSecurityGroupRulesCount(cts.Kit, req.SecurityGroupIDs)
+	case enumor.TCloudZiyan:
+		return svc.listTCloudZiyanSecurityGroupRulesCount(cts.Kit, req.SecurityGroupIDs)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for CountSecurityGroupRules", vendor)
 	}

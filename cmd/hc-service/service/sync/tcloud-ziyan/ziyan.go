@@ -60,6 +60,7 @@ func InitService(cap *capability.Capability) {
 	h.Add("SyncHostWithRelResByCond", "POST", "/hosts/with/relation_resources/by_condition/sync",
 		v.SyncHostWithRelResByCond)
 	h.Add("DeleteHost", "DELETE", "/hosts/by_condition/delete", v.DeleteHostByCond)
+	h.Add("SyncSecurityGroupUsageBiz", "POST", "/security_groups/usage_biz_rels/sync", v.SyncSecurityGroupUsageBiz)
 
 	h.Load(cap.WebService)
 }

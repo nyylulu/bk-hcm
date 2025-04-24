@@ -407,6 +407,9 @@ hcservice:
         listConcurrent: 1
     # if no any rule matched, use this default config
     defaultConcurrent: 1
+  # 安全组资源归属白名单, 数据类型[]string
+  securityGroupMgmtSkipList:
+    # - sg-xxxxx
 
 webserver:
   ## 镜像
