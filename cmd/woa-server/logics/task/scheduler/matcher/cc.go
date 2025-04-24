@@ -25,9 +25,9 @@ import (
 
 // transferHostAndSetOperator transfer host and set operator in cc 3.0
 func (m *Matcher) transferHostAndSetOperator(info *types.DeviceInfo, order *types.ApplyOrder) error {
-	hostId, err := m.cc.GetHostId(nil, nil, info.Ip)
+	hostId, err := m.cc.GetHostIDByAssetID(nil, nil, info.AssetId)
 	if err != nil {
-		logs.Errorf("failed to get host id by ip: %s, err: %v", info.Ip, err)
+		logs.Errorf("failed to get host id by asset id: %s, err: %v", info.AssetId, err)
 		return err
 	}
 
