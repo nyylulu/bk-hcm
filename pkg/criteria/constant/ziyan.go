@@ -55,4 +55,7 @@ const (
 const (
 	// IntervalWaitTaskStart 任务启动前的等待时间
 	IntervalWaitTaskStart = time.Second * 5
+
+	// IntervalWaitResourceSync 资源变更后，考虑云上存在的延迟，允许同步等待一段时间
+	IntervalWaitResourceSync = time.Second * 3
 )

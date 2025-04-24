@@ -30,21 +30,23 @@ import (
 type Interface interface {
 	CloudCli() ziyan.TCloudZiyan
 
+	// SecurityGroup 同步安全组
 	SecurityGroup(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGOption) (*SyncResult, error)
 	RemoveSecurityGroupDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 	RemoveSecurityGroupDeleteFromCloudV2(kt *kit.Kit, accountID string, region string,
 		allCloudIDMap map[string]struct{}) error
+	SecurityGroupRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGRuleOption) (*SyncResult, error)
+	SecurityGroupUsageBiz(kt *kit.Kit, params *SyncSGUsageBizParams) error
 
+	// Subnet 同步子网
 	Subnet(kt *kit.Kit, params *SyncBaseParams, opt *SyncSubnetOption) (*SyncResult, error)
 	RemoveSubnetDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 
+	// Vpc 同步VPC
 	Vpc(kt *kit.Kit, params *SyncBaseParams, opt *SyncVpcOption) (*SyncResult, error)
 	RemoveVpcDeleteFromCloud(kt *kit.Kit, accountID string, region string) error
 
-	SecurityGroupRule(kt *kit.Kit, params *SyncBaseParams, opt *SyncSGRuleOption) (*SyncResult, error)
-
 	Zone(kt *kit.Kit, opt *SyncZoneOption) (*SyncResult, error)
-
 	Region(kt *kit.Kit, opt *SyncRegionOption) (*SyncResult, error)
 
 	ArgsTplAddress(kt *kit.Kit, params *SyncBaseParams, opt *SyncArgsTplOption) (*SyncResult, error)
@@ -72,8 +74,6 @@ type Interface interface {
 
 	RemoveHostFromCC(kt *kit.Kit, params *DelHostParams) error
 	HostWithRelRes(kt *kit.Kit, params *SyncHostParams) (*SyncResult, error)
-
-	SecurityGroupUsageBiz(kt *kit.Kit, params *SyncSGUsageBizParams) error
 }
 
 var _ Interface = new(client)

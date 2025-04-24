@@ -372,6 +372,13 @@ func (s *securityGroup) UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGr
 		return err
 	}
 
+	// 更新管理属性到云上（如果有需要的话）
+	if err := s.updateSingleCloudMgmtAttr(kt, sg.ID); err != nil {
+		logs.Errorf("update cloud security group management attributes failed, err: %v, sg_id: %s, rid: %s", err,
+			sg.ID, kt.Rid)
+		return err
+	}
+
 	// 更新使用业务列表
 	if len(mgmtAttr.UsageBizIDs) <= 0 {
 		return nil
@@ -388,6 +395,45 @@ func (s *securityGroup) UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGr
 	err = s.client.DataService().Global.ResUsageBizRel.SetBizRels(kt, enumor.SecurityGroupCloudResType, sgID, setRelReq)
 	if err != nil {
 		logs.Errorf("set security group usage biz rel failed, err: %v, sg_id: %s, rid: %s", err, sgID, kt.Rid)
+		return err
+	}
+
+	return nil
+}
+
+func (s *securityGroup) updateSingleCloudMgmtAttr(kt *kit.Kit, sgID string) error {
+	listReq := &dataproto.SecurityGroupListReq{
+		Field:  []string{},
+		Filter: tools.EqualExpression("id", sgID),
+		Page:   core.NewDefaultBasePage(),
+	}
+	sgInfos, err := s.client.DataService().Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), listReq)
+	if err != nil {
+		logs.Errorf("list security group failed, err: %v, sg_id: %s, rid: %s", err, sgID, kt.Rid)
+		return err
+	}
+
+	if len(sgInfos.Details) != 1 {
+		logs.Errorf("list security group failed, len: %d, sg_id: %s, rid: %s", len(sgInfos.Details), sgID, kt.Rid)
+		return fmt.Errorf("security group: %s not found", sgID)
+	}
+
+	// 平台管理不更新
+	if sgInfos.Details[0].MgmtType == enumor.MgmtTypePlatform {
+		logs.Infof("platform security group cannot be updated cloud mgmt attr, sg_id: %s, rid: %s", sgID, kt.Rid)
+		return nil
+	}
+
+	updateAttrItem := proto.BatchUpdateSGMgmtAttrItem{
+		ID:         sgID,
+		Manager:    sgInfos.Details[0].Manager,
+		BakManager: sgInfos.Details[0].BakManager,
+		MgmtBizID:  sgInfos.Details[0].MgmtBizID,
+	}
+	sgMap := make(map[string]cloud.BaseSecurityGroup)
+	sgMap[sgID] = sgInfos.Details[0]
+	if err := s.updateCloudMgmtAttr(kt, []proto.BatchUpdateSGMgmtAttrItem{updateAttrItem}, sgMap); err != nil {
+		logs.Errorf("update cloud security group management attributes failed, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
 
@@ -443,6 +489,12 @@ func (s *securityGroup) BatchUpdateSGMgmtAttr(kt *kit.Kit, mgmtAttrs []proto.Bat
 				sg.AccountID, sg.ID, kt.Rid)
 			return fmt.Errorf("biz: %d are not belong to account: %s", attr.MgmtBizID, sg.AccountID)
 		}
+	}
+
+	// 更新管理属性到云上（如果有需要的话）
+	if err := s.updateCloudMgmtAttr(kt, mgmtAttrs, sgInfos); err != nil {
+		logs.Errorf("update cloud security group management attributes failed, err: %v, rid: %s", err, kt.Rid)
+		return err
 	}
 
 	if err := s.batchUpdateSecurityGroupMgmtAttr(kt, mgmtAttrs, sgInfos); err != nil {
@@ -540,4 +592,37 @@ func (s *securityGroup) isBizsBelongToAccount(kt *kit.Kit, accountID string, mgm
 	}
 
 	return true, nil
+}
+
+// updateCloudMgmtAttr 更新安全组在云上的管理属性
+func (s *securityGroup) updateCloudMgmtAttr(kt *kit.Kit, mgmtAttrs []proto.BatchUpdateSGMgmtAttrItem,
+	sgInfos map[string]cloud.BaseSecurityGroup) error {
+
+	groupByVendor := make(map[enumor.Vendor][]proto.BatchUpdateSGMgmtAttrItem)
+	for _, attr := range mgmtAttrs {
+		if _, ok := sgInfos[attr.ID]; !ok {
+			logs.Warnf("failed to update cloud mgmt attr, security group: %s not found, rid: %s", attr.ID, kt.Rid)
+			continue
+		}
+
+		groupByVendor[sgInfos[attr.ID].Vendor] = append(groupByVendor[sgInfos[attr.ID].Vendor], attr)
+	}
+
+	for vendor, attrs := range groupByVendor {
+		switch vendor {
+		case enumor.TCloudZiyan:
+			if err := s.updateTCloudZiyanMgmtAttr(kt, attrs, sgInfos); err != nil {
+				logs.Errorf("failed to update cloud mgmt attr, vendor: %s, err: %v, rid: %s", vendor, err, kt.Rid)
+				return err
+			}
+		case enumor.TCloud, enumor.Aws, enumor.Gcp, enumor.Azure, enumor.HuaWei, enumor.Zenlayer, enumor.Kaopu:
+			// 暂不需要更新云上属性
+			continue
+		default:
+			logs.Warnf("update cloud mgmt attr, unsupported vendor: %s, rid: %s", vendor, kt.Rid)
+			continue
+		}
+	}
+
+	return nil
 }

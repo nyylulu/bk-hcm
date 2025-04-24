@@ -184,6 +184,8 @@ func (svc *securityGroupSvc) getSGBingResFunc(vendor enumor.Vendor) (statSGFunc,
 		statSGBindingRes = svc.client.HCService().HuaWei.SecurityGroup.ListSecurityGroupStatistic
 	case enumor.Azure:
 		statSGBindingRes = svc.client.HCService().Azure.SecurityGroup.ListSecurityGroupStatistic
+	case enumor.TCloudZiyan:
+		statSGBindingRes = svc.client.HCService().TCloudZiyan.SecurityGroup.ListSecurityGroupStatistic
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "unsupported vendor for sg binding check: %s", vendor)
 	}

@@ -260,14 +260,20 @@ func (svc *securityGroupSvc) createTCloudZiyanSecurityGroup(cts *rest.Contexts, 
 		return nil, err
 	}
 	createReq := &hcproto.TCloudSecurityGroupCreateReq{
-		Region:    req.Region,
-		Name:      req.Name,
-		Memo:      req.Memo,
-		AccountID: req.AccountID,
-		BkBizID:   bizID,
+		Region:      req.Region,
+		Name:        req.Name,
+		Memo:        req.Memo,
+		AccountID:   req.AccountID,
+		BkBizID:     bizID,
+		MgmtType:    req.MgmtType,
+		MgmtBizID:   req.MgmtBizID,
+		Manager:     req.Manager,
+		BakManager:  req.BakManager,
+		UsageBizIds: req.UsageBizIds,
 	}
 	// 打业务标签
-	tags, err := ziyanlogic.GenTagsForBizs(cts.Kit, esb.EsbClient().Cmdb(), bizID)
+	tags, err := ziyanlogic.GenTagsForBizsWithManager(cts.Kit, esb.EsbClient().Cmdb(), req.MgmtBizID,
+		req.Manager, req.BakManager)
 	if err != nil {
 		logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, rid: %s", err, bizID, cts.Kit.Rid)
 		return nil, fmt.Errorf("failed to generate biz tag, err: %w", err)

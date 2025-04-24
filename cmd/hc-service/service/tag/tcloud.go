@@ -44,6 +44,8 @@ func InitTagService(cap *capability.Capability) {
 
 	h.Add("TCloudBatchTagRes", "POST", "/vendors/tcloud/tags/tag_resources/batch", v.TCloudBatchTagRes)
 
+	initTagServiceHooks(v, h)
+
 	h.Load(cap.WebService)
 }
 

@@ -20,11 +20,20 @@
 package securitygroup
 
 import (
+	"fmt"
+
+	ziyanlogic "hcm/cmd/cloud-server/logics/ziyan"
+	proto "hcm/pkg/api/cloud-server"
 	"hcm/pkg/api/core"
+	"hcm/pkg/api/core/cloud"
 	dataproto "hcm/pkg/api/data-service/cloud"
+	apitag "hcm/pkg/api/hc-service/tag"
 	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/esb"
 )
 
 // listTCloudZiyanSecurityGroupRulesByCloudTargetSGID 查询来源为安全组的 安全组规则,
@@ -55,4 +64,68 @@ func listTCloudZiyanSecurityGroupRulesByCloudTargetSGID(kt *kit.Kit, cli *datase
 	}
 
 	return sgCloudIDToRuleIDs, nil
+}
+
+// updateTCloudZiyanMgmtAttr 更新自研云安全组的云上管理属性（即标签）
+func (s *securityGroup) updateTCloudZiyanMgmtAttr(kt *kit.Kit, mgmtAttrs []proto.BatchUpdateSGMgmtAttrItem,
+	sgInfos map[string]cloud.BaseSecurityGroup) error {
+
+	// 将相同的标签合并统一请求
+	type tagGroup struct {
+		AccountID  string
+		BizID      int64
+		Manager    string
+		BakManager string
+	}
+	tagGroupMap := make(map[tagGroup][]string)
+	for _, attr := range mgmtAttrs {
+		sgInfo, ok := sgInfos[attr.ID]
+		if !ok {
+			logs.Warnf("update tcloud-ziyan tag failed, security group info not found, sg_id: %s, rid: %s",
+				attr.ID, kt.Rid)
+			continue
+		}
+
+		tgroup := tagGroup{
+			AccountID:  sgInfo.AccountID,
+			BizID:      attr.MgmtBizID,
+			Manager:    attr.Manager,
+			BakManager: attr.BakManager,
+		}
+		tagGroupMap[tgroup] = append(tagGroupMap[tgroup], attr.ID)
+	}
+
+	for tagStr, sgIDs := range tagGroupMap {
+		// 生成业务标签
+		tags, err := ziyanlogic.GenTagsForBizsWithManager(kt, esb.EsbClient().Cmdb(), tagStr.BizID,
+			tagStr.Manager, tagStr.BakManager)
+		if err != nil {
+			logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, sg_ids: %v, rid: %s", err, tagStr.BizID,
+				sgIDs, kt.Rid)
+			return fmt.Errorf("failed to generate biz tag, err: %w", err)
+		}
+
+		resources := make([]apitag.TCloudResourceInfo, 0, len(sgIDs))
+		for _, sgID := range sgIDs {
+			resources = append(resources, apitag.TCloudResourceInfo{
+				Region:     sgInfos[sgID].Region,
+				ResType:    enumor.SecurityGroupCloudResType,
+				ResCloudID: sgInfos[sgID].CloudID,
+			})
+		}
+
+		tagReq := &apitag.TCloudBatchTagResRequest{
+			AccountID: tagStr.AccountID,
+			Resources: resources,
+			Tags:      tags,
+		}
+
+		_, err = s.client.HCService().TCloudZiyan.Tag.TCloudZiyanBatchTagRes(kt, tagReq)
+		if err != nil {
+			logs.Errorf("failed to tag sg, err: %v, rid: %s", err, kt.Rid)
+			return err
+		}
+	}
+
+	return nil
 }

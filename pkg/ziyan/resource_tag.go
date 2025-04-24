@@ -108,13 +108,23 @@ func (i *ResourceMeta) GetTagMap() apicore.TagMap {
 
 // GetTagPairs ...
 func (i *ResourceMeta) GetTagPairs() []apicore.TagPair {
-	tagPairs := []apicore.TagPair{
-		{Key: TagKeyOpProduct, Value: fmt.Sprintf("%s_%d", i.OpProductName, i.OpProductID)},
-		{Key: TagKeyBs1, Value: fmt.Sprintf("%s_%d", i.Bs1Name, i.Bs1NameID)},
-		{Key: TagKeyBs2, Value: fmt.Sprintf("%s_%d", i.Bs2Name, i.Bs2NameID)},
-		{Key: TagKeyOpDept, Value: fmt.Sprintf("%s_%d", i.VirtualDeptName, i.VirtualDeptID)},
-		{Key: TagKeyManager, Value: i.Manager},
+	tagPairs := make([]apicore.TagPair, 0)
+
+	if i.OpProductID > 0 {
+		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyOpProduct, Value: fmt.Sprintf("%s_%d",
+			i.OpProductName, i.OpProductID)})
+		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyBs1, Value: fmt.Sprintf("%s_%d",
+			i.Bs1Name, i.Bs1NameID)})
+		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyBs2, Value: fmt.Sprintf("%s_%d",
+			i.Bs2Name, i.Bs2NameID)})
+		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyOpDept, Value: fmt.Sprintf("%s_%d",
+			i.VirtualDeptName, i.VirtualDeptID)})
 	}
+
+	if len(i.Manager) > 0 {
+		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyManager, Value: i.Manager})
+	}
+
 	if len(i.BakManager) > 0 {
 		tagPairs = append(tagPairs, apicore.TagPair{Key: TagKeyBakManager, Value: i.BakManager})
 	}
@@ -164,6 +174,13 @@ func GetResourceMetaByBizForUser(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, 
 func GetResourceMetaByBiz(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64) (tags *ResourceMeta, err error) {
 
 	return GetResourceMetaByBizForUser(kt, ccCli, bkBizId, kt.User, kt.User)
+}
+
+// GetResourceMetaByBizWithManager 为自研云资源生成业务标签，支持传入负责人和备份负责人
+func GetResourceMetaByBizWithManager(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, manager, bakManager string) (
+	tags *ResourceMeta, err error) {
+
+	return GetResourceMetaByBizForUser(kt, ccCli, bkBizId, manager, bakManager)
 }
 
 // 业务id 不会变化，只会增加
