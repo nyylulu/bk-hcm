@@ -19,6 +19,7 @@ import (
 	"fmt"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -32,6 +33,11 @@ import (
 	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/utils"
+)
+
+var (
+	// cvmApplyNumReg CVM主机申请匹配数量
+	cvmApplyNumReg = regexp.MustCompile(`计算最终当前可申领量(\d+)`)
 )
 
 // createCVM starts a cvm creating task
@@ -68,7 +74,10 @@ func (g *Generator) createCVM(kt *kit.Kit, cvm *types.CVM, order *types.ApplyOrd
 			logs.Warnf("scheduler:logics:generator:create:cvm:failed to create cvm launch order, subOrderID: %s, "+
 				"code: %d, msg: %s, crpTraceID: %s, rid: %s", order.SubOrderId, resp.Error.Code, resp.Error.Message,
 				resp.TraceId, kt.Rid)
-			if g.needRetryCreateCvm(resp.Error.Code, resp.Error.Message) {
+			if isRetry, applyNum := g.needRetryCreateCvm(resp.Error.Code, resp.Error.Message); isRetry {
+				if applyNum > 0 {
+					createReq.Params.ApplyNum = min(applyNum, createReq.Params.ApplyNum)
+				}
 				continue
 			}
 		}
@@ -187,27 +196,48 @@ func (g *Generator) getCreateCvmReq(cvm *types.CVM) *cvmapi.OrderCreateReq {
 	return createReq
 }
 
-func (g *Generator) needRetryCreateCvm(code int, msg string) bool {
+func (g *Generator) needRetryCreateCvm(code int, msg string) (bool, int) {
 	// success
 	if code == 0 {
-		return false
-	}
-
-	// no capacity enough
-	if code == -20004 && strings.Contains(msg, "无法满足本次需求量") {
-		return false
-	}
-
-	if code == -20000 && strings.Contains(msg, "无法满足本次需求量") {
-		return false
+		return false, 0
 	}
 
 	// sold out
 	if code == -20004 && strings.Contains(msg, "已售罄，请更换可用区") {
-		return false
+		return false, 0
 	}
 
-	return true
+	// no capacity enough
+	if code == -20004 || code == -20000 {
+		applyNum := g.getCrpCvmRemainNum(msg)
+		if applyNum > 0 {
+			return true, applyNum
+		}
+		return false, 0
+	}
+
+	return true, 0
+}
+
+func (g *Generator) getCrpCvmRemainNum(msg string) int {
+	if !strings.Contains(msg, "无法满足本次需求量") {
+		return 0
+	}
+
+	// 解析CRP的报错消息获取最终可申请的数量
+	return g.parseCrpCvmApplyNum(msg)
+}
+
+// parseCrpCvmApplyNum 解析CRP的报错消息获取最终可申请的数量
+func (g *Generator) parseCrpCvmApplyNum(msg string) int {
+	match := cvmApplyNumReg.FindStringSubmatch(msg)
+	if len(match) > 1 {
+		applyNum, err := strconv.Atoi(match[1])
+		if err == nil && applyNum > 0 {
+			return applyNum
+		}
+	}
+	return 0
 }
 
 // checkCVM checks cvm creating task result
