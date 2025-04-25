@@ -619,3 +619,85 @@ type DeviceTypeCpuItem struct {
 	DeviceGroup string          `json:"device_group"` // 机型族
 	CoreType    enumor.CoreType `json:"core_type"`    // 机型核心类型
 }
+
+// UpsertRegionDftVpcReq upsert region default vpc request.
+type UpsertRegionDftVpcReq struct {
+	RegionDftVpcInfos []RegionDftVpc `json:"region_dft_vpc_infos" validate:"min=1,max=100"`
+}
+
+// Validate ...
+func (u *UpsertRegionDftVpcReq) Validate() error {
+	if err := validator.Validate.Struct(u); err != nil {
+		return err
+	}
+
+	for _, v := range u.RegionDftVpcInfos {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DftVpc default vpc.
+type DftVpc struct {
+	VpcID string `json:"vpc_id" validate:"required"`
+}
+
+// RegionDftVpc region default vpc.
+type RegionDftVpc struct {
+	Region string `json:"region" validate:"required"`
+	DftVpc
+}
+
+// Validate ...
+func (req RegionDftVpc) Validate() error {
+	if err := validator.Validate.Struct(req.DftVpc); err != nil {
+		return err
+	}
+
+	return validator.Validate.Struct(req)
+}
+
+// UpsertRegionDftSgReq upsert region default security group request.
+type UpsertRegionDftSgReq struct {
+	RegionDftSgInfos []RegionDftSg `json:"region_dft_sg_infos" validate:"min=1,max=100"`
+}
+
+// Validate ...
+func (u *UpsertRegionDftSgReq) Validate() error {
+	if err := validator.Validate.Struct(u); err != nil {
+		return err
+	}
+
+	for _, v := range u.RegionDftSgInfos {
+		if err := v.Validate(); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// DftSecurityGroup default security group.
+type DftSecurityGroup struct {
+	SgID   string `json:"security_group_id" validate:"required"`
+	SgName string `json:"security_group_name" validate:"omitempty"`
+	SgDesc string `json:"security_group_desc" validate:"omitempty"`
+}
+
+// RegionDftSg region default security group.
+type RegionDftSg struct {
+	Region string `json:"region" validate:"required"`
+	DftSecurityGroup
+}
+
+// Validate ...
+func (req RegionDftSg) Validate() error {
+	if err := validator.Validate.Struct(req.DftSecurityGroup); err != nil {
+		return err
+	}
+
+	return validator.Validate.Struct(req)
+}

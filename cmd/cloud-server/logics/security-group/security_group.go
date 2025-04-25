@@ -36,6 +36,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/slice"
+	"hcm/pkg/ziyan"
 )
 
 // Interface define security group interface.
@@ -47,9 +48,13 @@ type Interface interface {
 	ListSGRelBusiness(kt *kit.Kit, currentBizID int64, sgID string) (*proto.ListSGRelBusinessResp, error)
 	UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGroupUpdateMgmtAttrReq, sgID string) error
 	BatchUpdateSGMgmtAttr(kt *kit.Kit, mgmtAttrs []proto.BatchUpdateSGMgmtAttrItem) error
+	FindYuntiDefaultSG(kt *kit.Kit, sgIDs []string) (yuntiSGCloudID string, err error)
 }
 
 type securityGroup struct {
+	// ziyan 特殊逻辑
+	sgOp ziyan.SgIf
+
 	client *client.ClientSet
 	audit  audit.Interface
 }
@@ -57,6 +62,7 @@ type securityGroup struct {
 // NewSecurityGroup new security group.
 func NewSecurityGroup(client *client.ClientSet, audit audit.Interface) Interface {
 	return &securityGroup{
+		sgOp:   ziyan.NewSgOp(client),
 		client: client,
 		audit:  audit,
 	}

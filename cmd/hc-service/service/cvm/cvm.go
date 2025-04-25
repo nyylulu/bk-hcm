@@ -134,7 +134,8 @@ func (svc *cvmSvc) getSecurityGroupMapByCloudIDs(kt *kit.Kit, vendor enumor.Vend
 }
 
 // createSGCommonRels 先删除cvmID关联的安全组关系，再创建新的安全组关系
-func (svc *cvmSvc) createSGCommonRels(kt *kit.Kit, vendor enumor.Vendor, resType enumor.CloudResourceType, cvmID string, sgIDs []string) error {
+func (svc *cvmSvc) createSGCommonRels(kt *kit.Kit, vendor enumor.Vendor, resType enumor.CloudResourceType, cvmID string,
+	sgIDs []string) error {
 
 	createReq := &protocloud.SGCommonRelBatchUpsertReq{
 		DeleteReq: &dataproto.BatchDeleteReq{

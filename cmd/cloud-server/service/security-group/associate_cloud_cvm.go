@@ -134,11 +134,19 @@ func (svc *securityGroupSvc) batchDisassociateCvm(cts *rest.Contexts, validHandl
 		}
 		return nil, nil
 	case enumor.TCloudZiyan:
+		yuntiSgCloudID, err := svc.sgLogic.FindYuntiDefaultSG(cts.Kit, []string{req.SecurityGroupID})
+		if err != nil {
+			logs.Errorf("find yunti default sg failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+			return nil, err
+		}
+		if yuntiSgCloudID != "" {
+			return nil, errf.Newf(errf.InvalidParameter, "云梯默认安全组 %s 不能被解绑", yuntiSgCloudID)
+		}
 		// create operation audit.
 		if err = svc.createTCloudDisassociateCvmAudit(cts, req); err != nil {
 			return nil, err
 		}
-		err := svc.client.HCService().TCloudZiyan.SecurityGroup.BatchDisassociateCvm(cts.Kit, req.SecurityGroupID,
+		err = svc.client.HCService().TCloudZiyan.SecurityGroup.BatchDisassociateCvm(cts.Kit, req.SecurityGroupID,
 			req.CvmIDs)
 		if err != nil {
 			logs.Errorf("fail to call hc service dissociate ziyan cvm, err: %v, sg_id: %s, cvm_ids: %v, rid: %s",

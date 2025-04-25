@@ -29,6 +29,7 @@ import (
 	"hcm/cmd/cloud-server/logics/disk"
 	"hcm/cmd/cloud-server/logics/eip"
 	moalogic "hcm/cmd/cloud-server/logics/moa"
+	securitygroup "hcm/cmd/cloud-server/logics/security-group"
 	"hcm/cmd/cloud-server/service/capability"
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
@@ -50,6 +51,7 @@ func InitCvmService(c *capability.Capability) {
 		cvmLgc:     c.Logics.Cvm,
 		eipLgc:     c.Logics.Eip,
 		moaLogic:   c.Logics.Moa,
+		sgLogic:    c.Logics.SecurityGroup,
 	}
 
 	h := rest.NewHandler()
@@ -123,6 +125,7 @@ type cvmSvc struct {
 	cvmLgc     cvm.Interface
 	eipLgc     eip.Interface
 	moaLogic   moalogic.Interface
+	sgLogic    securitygroup.Interface
 }
 
 // batchListCvmByIDs 批量获取CVM列表

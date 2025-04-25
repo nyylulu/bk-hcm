@@ -25,6 +25,7 @@ import (
 
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
+	corecvm "hcm/pkg/api/core/cloud/cvm"
 	proto "hcm/pkg/api/data-service"
 	"hcm/pkg/api/data-service/cloud"
 	protocvm "hcm/pkg/api/hc-service/cvm"
@@ -87,6 +88,10 @@ func (svc *cvmSvc) batchAssociateSecurityGroups(cts *rest.Contexts, validHandler
 			logs.Errorf("batch associate security groups failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
 			return nil, err
 		}
+	case enumor.TCloudZiyan:
+		if err = svc.ziyanBatchAssociateSG(cts.Kit, sgIDs, cvmID, curCvm); err != nil {
+			return nil, err
+		}
 	case enumor.Aws:
 		req := &protocvm.AwsCvmBatchAssociateSecurityGroupReq{
 			SecurityGroupIDs: sgIDs,
@@ -103,6 +108,33 @@ func (svc *cvmSvc) batchAssociateSecurityGroups(cts *rest.Contexts, validHandler
 		return nil, errf.Newf(errf.Unknown, "vendor: %s not support for batch associate security groups", curCvm.Vendor)
 	}
 	return nil, nil
+}
+
+func (svc *cvmSvc) ziyanBatchAssociateSG(kt *kit.Kit, sgIDs []string, cvmID string,
+	curCvm corecvm.BaseCvm) error {
+
+	// 检查是否是云梯默认安全组
+	yuntiSgCloudID, err := svc.sgLogic.FindYuntiDefaultSG(kt, sgIDs)
+	if err != nil {
+		logs.Errorf("find yunti default sg failed, err: %v, security group ids: %v,  rid: %s", err, sgIDs, kt.Rid)
+		return err
+	}
+	if yuntiSgCloudID == "" {
+		return errf.Newf(errf.InvalidParameter, "必须包含云梯默认安全组")
+	}
+
+	req := &protocvm.TCloudCvmBatchAssociateSecurityGroupReq{
+		SecurityGroupIDs: sgIDs,
+		CvmID:            cvmID,
+		Region:           curCvm.Region,
+		AccountID:        curCvm.AccountID,
+	}
+	err = svc.client.HCService().TCloudZiyan.Cvm.BatchAssociateSecurityGroup(kt, req)
+	if err != nil {
+		logs.Errorf("batch associate security groups failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
+		return err
+	}
+	return nil
 }
 
 func (svc *cvmSvc) deleteSecurityGroupAndCvmRelationship(kt *kit.Kit, cvmID string, sgIDs []string) error {

@@ -114,13 +114,13 @@ type logics struct {
 
 // New creates rolling server logics instance.
 func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thirdCli *thirdparty.Client,
-	bizLogic biz.Logics, cmsiCli cmsi.Client) (Logics, error) {
+	bizLogic biz.Logics, cmsiCli cmsi.Client, configLogics config.Logics) (Logics, error) {
 
 	rsLogics := &logics{
 		sd:           sd,
 		client:       client,
 		esbClient:    esbClient,
-		configLogics: config.New(thirdCli),
+		configLogics: configLogics,
 		bizLogics:    bizLogic,
 		cmsiClient:   cmsiCli,
 		thirdCli:     thirdCli,

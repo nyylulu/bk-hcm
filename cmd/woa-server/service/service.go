@@ -30,6 +30,7 @@ import (
 
 	"hcm/cmd/woa-server/logics/biz"
 	configlogic "hcm/cmd/woa-server/logics/config"
+	conflogics "hcm/cmd/woa-server/logics/config"
 	cvmlogic "hcm/cmd/woa-server/logics/cvm"
 	disLogics "hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
@@ -58,6 +59,7 @@ import (
 	"hcm/cmd/woa-server/storage/driver/mongodb"
 	redisCli "hcm/cmd/woa-server/storage/driver/redis"
 	"hcm/cmd/woa-server/storage/stream"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/errf"
@@ -103,6 +105,7 @@ type Service struct {
 	bizLogic      biz.Logics
 	dissolveLogic disLogics.Logics
 	resSyncLogic  ressynclogics.Logics
+	configLogics  configlogic.Logics
 }
 
 // NewService create a service instance.
@@ -168,7 +171,8 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	gcLogics, err := gclogics.New(apiClientSet, thirdCli)
+	configLogics := conflogics.New(apiClientSet, thirdCli)
+	gcLogics, err := gclogics.New(apiClientSet, configLogics)
 	if err != nil {
 		logs.Errorf("new green channel logics failed, err: %v", err)
 		return nil, err
@@ -187,7 +191,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli)
+	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli, configLogics)
 	if err != nil {
 		logs.Errorf("new rolling server logics failed, err: %v", err)
 		return nil, err
@@ -206,7 +210,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 
 	dissolveLogics := disLogics.New(daoSet, esbClient, esCli, thirdCli, cc.WoaServer())
 
-	kt := kit.New()
+	kt := core.NewBackendKit()
 	// Mongo开关打开才生成Client链接
 	var informerIf informer.Interface
 	var schedulerIf scheduler.Interface
@@ -225,7 +229,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		}
 
 		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
-			cc.WoaServer().ClientConfig, planCtrl, bizLogic)
+			cc.WoaServer().ClientConfig, planCtrl, bizLogic, configLogics)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
@@ -247,6 +251,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		planController: planCtrl,
 		bizLogic:       bizLogic,
 		dissolveLogic:  dissolveLogics,
+		configLogics:   configLogics,
 	}
 	return newOtherClient(kt, service, itsmCli, sd)
 }
@@ -290,7 +295,7 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
 	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic,
-		service.dissolveLogic, service.client)
+		service.dissolveLogic, service.client, service.configLogics)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -298,8 +303,8 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 
 	// init recoverer client
 	recoverConf := cc.WoaServer().Recover
-	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig, configlogic.New(service.thirdCli),
-		service.esbClient, service.rsLogic)
+	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,
+		service.configLogics, service.esbClient, service.rsLogic)
 	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
 		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
 		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
@@ -312,7 +317,7 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	resSyncLogics, err := ressynclogics.New(sd, service.client, service.thirdCli)
+	resSyncLogics, err := ressynclogics.New(sd, service.client, service.configLogics)
 	if err != nil {
 		logs.Errorf("new resource sync logics failed, err: %v", err)
 		return nil, err
@@ -404,6 +409,7 @@ func (s *Service) apiSet() *restful.Container {
 		BizLogic:       s.bizLogic,
 		DissolveLogic:  s.dissolveLogic,
 		ResSyncLogic:   s.resSyncLogic,
+		ConfigLogics:   s.configLogics,
 	}
 
 	config.InitService(c)

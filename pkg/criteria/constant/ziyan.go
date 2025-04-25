@@ -59,3 +59,10 @@ const (
 	// IntervalWaitResourceSync 资源变更后，考虑云上存在的延迟，允许同步等待一段时间
 	IntervalWaitResourceSync = time.Second * 3
 )
+
+const (
+	// GlobalConfigTypeRegionDefaultVpc 地域默认vpc
+	GlobalConfigTypeRegionDefaultVpc = "region_default_vpc"
+	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
+	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
+)

@@ -43,14 +43,16 @@ type LeftIPIf interface {
 }
 
 // NewLeftIPOp creates a left ip interface
-func NewLeftIPOp(thirdCli *thirdparty.Client) LeftIPIf {
+func NewLeftIPOp(vpc VpcIf, thirdCli *thirdparty.Client) LeftIPIf {
 	return &leftIP{
 		cvm: thirdCli.OldCVM,
+		vpc: vpc,
 	}
 }
 
 type leftIP struct {
 	cvm cvmapi.CVMClientInterface
+	vpc VpcIf
 }
 
 // GetLeftIP get left ip config list
@@ -132,8 +134,9 @@ func (l *leftIP) UpdateLeftIPBatch(kt *kit.Kit, cond, update map[string]interfac
 // SyncLeftIP sync zone left ip from yunti
 func (l *leftIP) SyncLeftIP(kt *kit.Kit, input *types.SyncLeftIPParam) error {
 	// 1. query subnet from db
-	vpc, err := GetDftCvmVpc(input.Region)
+	vpc, err := l.vpc.GetRegionDftVpc(kt, input.Region)
 	if err != nil {
+		logs.Errorf("failed to get default vpc for err: %v, region: %s, rid: %s", err, input.Region, kt.Rid)
 		return err
 	}
 

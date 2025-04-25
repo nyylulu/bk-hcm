@@ -215,3 +215,11 @@ func (cli *CvmClient) ResetCvm(kt *kit.Kit, request *protocvm.TCloudBatchResetCv
 
 	return nil
 }
+
+// BatchAssociateSecurityGroup ....
+func (cli *CvmClient) BatchAssociateSecurityGroup(kt *kit.Kit,
+	req *protocvm.TCloudCvmBatchAssociateSecurityGroupReq) error {
+
+	return common.RequestNoResp[protocvm.TCloudCvmBatchAssociateSecurityGroupReq](
+		cli.client, http.MethodPost, kt, req, "/cvms/security_groups/batch/associate")
+}

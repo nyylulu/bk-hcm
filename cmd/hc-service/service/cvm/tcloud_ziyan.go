@@ -20,6 +20,7 @@
 package cvm
 
 import (
+	"fmt"
 	"net/http"
 
 	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
@@ -54,7 +55,11 @@ func (svc *cvmSvc) initTCloudZiyanCvmService(cap *capability.Capability) {
 		svc.BatchStopTCloudZiyanCvm)
 	h.Add("BatchRebootTCloudZiyanCvm", http.MethodPost, "/vendors/tcloud-ziyan/cvms/batch/reboot",
 		svc.BatchRebootTCloudZiyanCvm)
-	h.Add("BatchResetTCloudZiyanCvm", http.MethodPost, "/vendors/tcloud-ziyan/cvms/reset", svc.BatchResetTCloudZiyanCvm)
+	h.Add("BatchResetTCloudZiyanCvm", http.MethodPost,
+		"/vendors/tcloud-ziyan/cvms/reset", svc.BatchResetTCloudZiyanCvm)
+
+	h.Add("BatchAssociateTCloudSecurityGroup", http.MethodPost,
+		"/vendors/tcloud-ziyan/cvms/security_groups/batch/associate", svc.BatchAssociateZiyanSecurityGroup)
 	h.Load(cap.WebService)
 }
 
@@ -400,5 +405,68 @@ func (svc *cvmSvc) BatchResetTCloudZiyanCvm(cts *rest.Contexts) (any, error) {
 		}
 	}
 
+	return nil, nil
+}
+
+// BatchAssociateZiyanSecurityGroup ...
+func (svc *cvmSvc) BatchAssociateZiyanSecurityGroup(cts *rest.Contexts) (any, error) {
+	req := new(protocvm.TCloudCvmBatchAssociateSecurityGroupReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	ziyan, err := svc.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	cvmList, err := svc.listCvms(cts.Kit, req.CvmID)
+	if err != nil {
+		logs.Errorf("get cvms failed, err: %v, cvmID: %s, rid: %s", err, req.CvmID, cts.Kit.Rid)
+		return nil, err
+	}
+	if len(cvmList) == 0 {
+		logs.Errorf("cvm not found, cvmID: %s, rid: %s", req.CvmID, cts.Kit.Rid)
+		return nil, fmt.Errorf("cvm (%s) not found", req.CvmID)
+	}
+	cvmCloudID := cvmList[0].CloudID
+
+	sgMap, err := svc.listSecurityGroupMap(cts.Kit, req.SecurityGroupIDs...)
+	if err != nil {
+		logs.Errorf("list security groups failed, err: %v, sgIDs: %v, rid: %s",
+			err, req.SecurityGroupIDs, cts.Kit.Rid)
+		return nil, err
+	}
+	sgCloudIDs := make([]string, 0, len(req.SecurityGroupIDs))
+	for _, id := range req.SecurityGroupIDs {
+		sg, ok := sgMap[id]
+		if !ok {
+			logs.Errorf("security group not found, sgID: %s, rid: %s", id, cts.Kit.Rid)
+			return nil, fmt.Errorf("security group (%s) not found", id)
+		}
+		sgCloudIDs = append(sgCloudIDs, sg.CloudID)
+	}
+
+	opt := &typecvm.TCloudAssociateSecurityGroupsOption{
+		Region:                req.Region,
+		CloudSecurityGroupIDs: sgCloudIDs,
+		CloudCvmID:            cvmCloudID,
+	}
+
+	err = ziyan.BatchCvmAssociateSecurityGroups(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("batch associate ziyan security group failed, err: %v, opt: %v, rid: %s", err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err = svc.createSGCommonRels(cts.Kit, enumor.TCloudZiyan, enumor.CvmCloudResType, req.CvmID, req.SecurityGroupIDs)
+	if err != nil {
+		// 不抛出err, 尽最大努力交付
+		logs.Errorf("create sg common rels failed, err: %v, cvmID: %s, sgIDs: %v, rid: %s",
+			err, req.CvmID, req.SecurityGroupIDs, cts.Kit.Rid)
+	}
 	return nil, nil
 }

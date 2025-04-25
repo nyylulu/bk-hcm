@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/logics/config"
 	model "hcm/cmd/woa-server/model/cvm"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/cvm"
@@ -504,7 +503,7 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	if order.Spec.Vpc != "" {
 		req.VPCId = order.Spec.Vpc
 	} else {
-		vpc, err := config.GetDftCvmVpc(order.Spec.Region)
+		vpc, err := l.confLogic.Vpc().GetRegionDftVpc(kt, order.Spec.Region)
 		if err != nil {
 			logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm vpc failed, err: %v, "+
 				"order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
@@ -530,15 +529,15 @@ func (l *logics) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder) (*CVM, error)
 	// image
 	req.ImageId = order.Spec.ImageId
 	// security group
-	sg, err := config.GetCvmDftSecGroup(order.Spec.Region)
+	sg, err := l.confLogic.Sg().GetRegionDftSg(kt, order.Spec.Region)
 	if err != nil {
-		logs.Errorf("scheduler:logics:build:cvm:request:failed, build cvm req get cvm drg secGroup failed, "+
-			"err: %v, order: %+v, rid: %s", err, cvt.PtrToVal(order), kt.Rid)
+		logs.Errorf("build cvm req get cvm default secGroup failed, err: %v, order: %+v, rid: %s", err,
+			cvt.PtrToVal(order), kt.Rid)
 		return nil, err
 	}
-	req.SecurityGroupId = sg.SecurityGroupId
-	req.SecurityGroupName = sg.SecurityGroupName
-	req.SecurityGroupDesc = sg.SecurityGroupDesc
+	req.SecurityGroupId = sg.SgID
+	req.SecurityGroupName = sg.SgName
+	req.SecurityGroupDesc = sg.SgDesc
 
 	productID, productName, err := l.getProductMsg(kt, order)
 	if err != nil {

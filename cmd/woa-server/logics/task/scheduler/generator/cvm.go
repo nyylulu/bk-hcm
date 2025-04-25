@@ -22,7 +22,6 @@ import (
 	"strings"
 	"time"
 
-	"hcm/cmd/woa-server/logics/config"
 	cfgtypes "hcm/cmd/woa-server/types/config"
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/constant"
@@ -354,8 +353,10 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	if order.Spec.Vpc != "" {
 		req.VPCId = order.Spec.Vpc
 	} else {
-		vpc, err := config.GetDftCvmVpc(order.Spec.Region)
+		vpc, err := g.configLogics.Vpc().GetRegionDftVpc(kt, order.Spec.Region)
 		if err != nil {
+			logs.Errorf("failed to get region default vpc, err: %v, subOrderID: %s, region: %s, rid: %s", err,
+				order.SubOrderId, order.Spec.Region, kt.Rid)
 			return nil, err
 		}
 		req.VPCId = vpc
@@ -437,13 +438,15 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 	req.ImageId = order.Spec.ImageId
 	req.ImageName = order.Spec.Image
 	// security group
-	sg, err := config.GetCvmDftSecGroup(order.Spec.Region)
+	sg, err := g.configLogics.Sg().GetRegionDftSg(kt, order.Spec.Region)
 	if err != nil {
+		logs.Errorf("failed to get region default sg, err: %v, subOrderID: %s, region: %s, rid: %s", err,
+			order.SubOrderId, order.Spec.Region, kt.Rid)
 		return nil, err
 	}
-	req.SecurityGroupId = sg.SecurityGroupId
-	req.SecurityGroupName = sg.SecurityGroupName
-	req.SecurityGroupDesc = sg.SecurityGroupDesc
+	req.SecurityGroupId = sg.SgID
+	req.SecurityGroupName = sg.SgName
+	req.SecurityGroupDesc = sg.SgDesc
 
 	productID, productName, err := g.getProductMsg(kt, order)
 	if err != nil {

@@ -21,6 +21,7 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/tools/converter"
 )
 
 // GetVpc gets vpc config list
@@ -133,6 +134,25 @@ func (s *service) SyncVpc(cts *rest.Contexts) (interface{}, error) {
 
 	if err := s.logics.Vpc().SyncVpc(cts.Kit, inputData); err != nil {
 		logs.Errorf("failed to sync vpc, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// UpsertRegionDftVpc upsert region default vpc
+func (s *service) UpsertRegionDftVpc(cts *rest.Contexts) (interface{}, error) {
+	input := new(types.UpsertRegionDftVpcReq)
+	if err := cts.DecodeInto(input); err != nil {
+		return nil, err
+	}
+	if err := input.Validate(); err != nil {
+		return nil, err
+	}
+
+	if err := s.logics.Vpc().UpsertRegionDftVpc(cts.Kit, input.RegionDftVpcInfos); err != nil {
+		logs.Errorf("failed to upsert region default vpc, err: %v, input: %v, rid: %s", err, converter.PtrToVal(input),
+			cts.Kit.Rid)
 		return nil, err
 	}
 

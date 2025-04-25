@@ -15,16 +15,24 @@ package config
 import (
 	"fmt"
 
-	"go.mongodb.org/mongo-driver/mongo"
 	"hcm/cmd/woa-server/model/config"
 	types "hcm/cmd/woa-server/types/config"
+	"hcm/pkg/api/core"
+	cgconf "hcm/pkg/api/core/global-config"
+	datagconf "hcm/pkg/api/data-service/global_config"
+	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
+	"hcm/pkg/tools/json"
+
+	"go.mongodb.org/mongo-driver/mongo"
 )
 
 // VpcIf provides management interface for operations of vpc config
@@ -41,17 +49,25 @@ type VpcIf interface {
 	DeleteVpc(kt *kit.Kit, instId int64) error
 	// SyncVpc sync vpc config from yunti
 	SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error
+	// GetRegionDftVpc gets the default vpc of a region.
+	GetRegionDftVpc(kt *kit.Kit, region string) (string, error)
+	// IsDftRegionVpc check if given vpc is the default vpc of a region.
+	IsRegionDftVpc(kt *kit.Kit, vpc string) (bool, error)
+	// UpsertRegionDftVpc upsert the default vpc of region.
+	UpsertRegionDftVpc(kt *kit.Kit, input []types.RegionDftVpc) error
 }
 
 // NewVpcOp creates a vpc interface
-func NewVpcOp(thirdCli *thirdparty.Client) VpcIf {
+func NewVpcOp(client *client.ClientSet, thirdCli *thirdparty.Client) VpcIf {
 	return &vpc{
-		cvm: thirdCli.OldCVM,
+		cvm:    thirdCli.OldCVM,
+		client: client,
 	}
 }
 
 type vpc struct {
-	cvm cvmapi.CVMClientInterface
+	cvm    cvmapi.CVMClientInterface
+	client *client.ClientSet
 }
 
 // GetVpc get vpc type config list
@@ -214,5 +230,174 @@ func (v *vpc) SyncVpc(kt *kit.Kit, param *types.GetVpcParam) error {
 			return txnErr
 		}
 	}
+	return nil
+}
+
+// 请勿继续添加内容，应该通过/config/region/default_vpc/upsert接口添加到db
+var regionToVpc = map[string]string{
+	"ap-guangzhou":       "vpc-03nkx9tv",
+	"ap-tianjin":         "vpc-1yoew5gc",
+	"ap-shanghai":        "vpc-2x7lhtse",
+	"eu-frankfurt":       "vpc-38klpz7z",
+	"ap-singapore":       "vpc-706wf55j",
+	"ap-tokyo":           "vpc-8iple1iq",
+	"ap-seoul":           "vpc-99wg8fre",
+	"ap-hongkong":        "vpc-b5okec48",
+	"na-toronto":         "vpc-drefwt2v",
+	"ap-xian-ec":         "vpc-efw4kf6r",
+	"ap-nanjing":         "vpc-fb7sybzv",
+	"ap-chongqing":       "vpc-gelpqsur",
+	"ap-shenzhen":        "vpc-kwgem8tj",
+	"na-siliconvalley":   "vpc-n040n5bl",
+	"ap-hangzhou-ec":     "vpc-puhasca0",
+	"ap-fuzhou-ec":       "vpc-hdxonj2q",
+	"ap-wuhan-ec":        "vpc-867lsj6w",
+	"ap-beijing":         "vpc-bhb0y6g8",
+	"ap-jinan-ec":        "vpc-kgepmcdd",
+	"ap-chengdu":         "vpc-r1wicnlq",
+	"ap-zhengzhou-ec":    "vpc-54mjeaf8",
+	"ap-shenyang-ec":     "vpc-rea7a2kc",
+	"ap-changsha-ec":     "vpc-erdqk82h",
+	"ap-hefei-ec":        "vpc-e0a5jxa7",
+	"ap-shijiazhuang-ec": "vpc-6b3vbija",
+}
+
+// GetRegionDftVpc gets the default vpc of a region.
+func (v *vpc) GetRegionDftVpc(kt *kit.Kit, region string) (string, error) {
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleEqual("config_key", region),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+
+	list, err := v.client.DataService().Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to get default vpc, err: %v, region: %s, rid: %s", err, region, kt.Rid)
+		return "", err
+	}
+	if len(list.Details) == 0 {
+		// 兜底兼容逻辑，防止部署时还没添加默认值
+		vpcVal, ok := regionToVpc[region]
+		if !ok {
+			return "", fmt.Errorf("found no default vpc with region: %s", region)
+		}
+		return vpcVal, nil
+	}
+	result := new(types.DftVpc)
+	if err = json.UnmarshalFromString(string(list.Details[0].ConfigValue), &result); err != nil {
+		logs.Errorf("failed to unmarshal vpc, err: %v, region: %s, rid: %s", err, region, kt.Rid)
+		return "", err
+	}
+
+	return result.VpcID, nil
+}
+
+// IsRegionDftVpc check if given vpc is the default vpc of a region.
+func (v *vpc) IsRegionDftVpc(kt *kit.Kit, vpc string) (bool, error) {
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleJSONEqual("config_value.vpc_id", vpc),
+		),
+		Page: &core.BasePage{Count: true},
+	}
+
+	list, err := v.client.DataService().Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to get default vpc, err: %v, vpc: %s, rid: %s", err, vpc, kt.Rid)
+		return false, err
+	}
+	if list.Count > 0 {
+		return true, nil
+	}
+
+	// 兜底兼容逻辑，防止部署时还没添加默认值
+	for _, val := range regionToVpc {
+		if vpc == val {
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
+// UpsertRegionDftVpc upsert the default vpc of region.
+func (v *vpc) UpsertRegionDftVpc(kt *kit.Kit, input []types.RegionDftVpc) error {
+	if len(input) > constant.BatchOperationMaxLimit {
+		return fmt.Errorf("input length must be less than %d", constant.BatchOperationMaxLimit)
+	}
+
+	regions := make([]string, 0, len(input))
+	regionVpcMap := make(map[string]types.DftVpc, len(input))
+	for _, regionDftVpc := range input {
+		if err := regionDftVpc.Validate(); err != nil {
+			return err
+		}
+
+		if _, ok := regionVpcMap[regionDftVpc.Region]; ok {
+			return fmt.Errorf("found duplicate region: %s", regionDftVpc.Region)
+		}
+
+		regions = append(regions, regionDftVpc.Region)
+		regionVpcMap[regionDftVpc.Region] = regionDftVpc.DftVpc
+	}
+
+	listReq := &core.ListReq{
+		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("config_type", constant.GlobalConfigTypeRegionDefaultVpc),
+			tools.RuleJsonIn("config_key", regions),
+		),
+		Page: core.NewDefaultBasePage(),
+	}
+
+	list, err := v.client.DataService().Global.GlobalConfig.List(kt, listReq)
+	if err != nil {
+		logs.Errorf("failed to get default vpc, err: %v, region: %v, rid: %s", err, regions, kt.Rid)
+		return err
+	}
+	existRegionDftVpc := make(map[string]cgconf.GlobalConfig, len(list.Details))
+	for _, detail := range list.Details {
+		existRegionDftVpc[detail.ConfigKey] = cgconf.GlobalConfig{
+			ID:          detail.ID,
+			ConfigKey:   detail.ConfigKey,
+			ConfigValue: detail.ConfigValue,
+			ConfigType:  detail.ConfigType,
+			Memo:        detail.Memo,
+		}
+	}
+
+	update := make([]cgconf.GlobalConfig, 0)
+	create := make([]cgconf.GlobalConfigT[any], 0)
+	for regionKey, vpcVal := range regionVpcMap {
+		if detail, ok := existRegionDftVpc[regionKey]; ok {
+			detail.ConfigValue = vpcVal
+			update = append(update, detail)
+			continue
+		}
+		create = append(create, cgconf.GlobalConfigT[any]{
+			ConfigKey:   regionKey,
+			ConfigValue: vpcVal,
+			ConfigType:  constant.GlobalConfigTypeRegionDefaultVpc,
+		})
+	}
+
+	if len(update) != 0 {
+		updateReq := &datagconf.BatchUpdateReq{Configs: update}
+		if err = v.client.DataService().Global.GlobalConfig.BatchUpdate(kt, updateReq); err != nil {
+			logs.Errorf("failed to update region default vpc, err: %v, data: %v, rid: %s", err, update, kt.Rid)
+			return err
+		}
+	}
+
+	if len(create) != 0 {
+		createReq := &datagconf.BatchCreateReqT[any]{Configs: create}
+		if _, err = v.client.DataService().Global.GlobalConfig.BatchCreate(kt, createReq); err != nil {
+			logs.Errorf("failed to create region default vpc, err: %v, data: %v, rid: %s", err, create, kt.Rid)
+			return err
+		}
+	}
+
 	return nil
 }

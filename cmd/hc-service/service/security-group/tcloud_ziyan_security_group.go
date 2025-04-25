@@ -20,10 +20,12 @@
 package securitygroup
 
 import (
+	"errors"
 	"fmt"
 
 	"hcm/cmd/hc-service/logics/res-sync/ziyan"
 	tziyan "hcm/pkg/adaptor/tcloud-ziyan"
+	typecvm "hcm/pkg/adaptor/types/cvm"
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	adptsg "hcm/pkg/adaptor/types/security-group"
 	"hcm/pkg/api/core"
@@ -42,8 +44,8 @@ import (
 	vpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 )
 
-// CreateTCloudZiyanSecurityGroup create tcloud ziyan security group.
-func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
+// CreateZiyanSecurityGroup create tcloud ziyan security group.
+func (g *securityGroup) CreateZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
 	req := new(proto.TCloudSecurityGroupCreateReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -107,8 +109,125 @@ func (g *securityGroup) CreateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	return core.CreateResult{ID: result.IDs[0]}, nil
 }
 
-// DeleteTCloudZiyanSecurityGroup delete tcloud ziyan security group.
-func (g *securityGroup) DeleteTCloudZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
+// ZiyanSecurityGroupAssociateCvm ...
+func (g *securityGroup) ZiyanSecurityGroupAssociateCvm(cts *rest.Contexts) (interface{}, error) {
+	req := new(proto.SecurityGroupAssociateCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sg, cvm, err := g.getSecurityGroupAndCvm(cts.Kit, req.SecurityGroupID, req.CvmID)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, sg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &adptsg.TCloudAssociateCvmOption{
+		Region:               sg.Region,
+		CloudSecurityGroupID: sg.CloudID,
+		CloudCvmID:           cvm.CloudID,
+	}
+	if err = client.SecurityGroupCvmAssociate(cts.Kit, opt); err != nil {
+
+		if bpaasSN := errf.GetBPassSNFromErr(err); len(bpaasSN) > 0 {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				sg.AccountID, sg.BkBizID, enumor.AssociateSecurityGroup, opt, bpaasSN)
+		}
+
+		logs.Errorf("request adaptor to tcloud security group associate cvm failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	err = g.createSGCommonRelsForTCloudZiyan(cts.Kit, client, sg.Region, map[string]string{cvm.CloudID: cvm.ID})
+	if err != nil {
+		logs.Errorf("create security group cvm rels failed, err: %v, rid: %s", err, cts.Kit.Rid)
+		return nil, err
+	}
+	// TODO: 同步主机数据
+
+	return nil, nil
+}
+
+// ZiyanSecurityGroupDisassociateCvm ...
+func (g *securityGroup) ZiyanSecurityGroupDisassociateCvm(cts *rest.Contexts) (interface{}, error) {
+	req := new(proto.SecurityGroupAssociateCvmReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sg, cvm, err := g.getSecurityGroupAndCvm(cts.Kit, req.SecurityGroupID, req.CvmID)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, sg.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	listCvmOpt := &typecvm.TCloudListOption{
+		Region:   sg.Region,
+		CloudIDs: []string{cvm.CloudID},
+	}
+	cvms, err := client.ListCvm(cts.Kit, listCvmOpt)
+	if err != nil {
+		logs.Errorf("request adaptor to list cvm failed, err: %v, opt: %v, rid: %s", err, listCvmOpt, cts.Kit)
+		return nil, err
+	}
+
+	if len(cvms) == 0 {
+		return nil, errf.New(errf.RecordNotFound, "cvm not found from cloud")
+	}
+
+	if len(cvms[0].SecurityGroupIds) <= 1 {
+		return nil, errors.New("the last security group of the cvm is not allowed to disassociate")
+	}
+
+	opt := &adptsg.TCloudAssociateCvmOption{
+		Region:               sg.Region,
+		CloudSecurityGroupID: sg.CloudID,
+		CloudCvmID:           cvm.CloudID,
+	}
+	if err = client.SecurityGroupCvmDisassociate(cts.Kit, opt); err != nil {
+
+		if bpaasSN := errf.GetBPassSNFromErr(err); len(bpaasSN) > 0 {
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
+				sg.AccountID, sg.BkBizID, enumor.DisassociateSecurityGroup, opt, bpaasSN)
+		}
+
+		logs.Errorf("request adaptor to tcloud security group disassociate cvm failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	deleteReq := buildSGCommonRelDeleteReq(enumor.Ziyan, req.CvmID, []string{req.SecurityGroupID},
+		enumor.CvmCloudResType)
+	if err = g.dataCli.Global.SGCommonRel.BatchDeleteSgCommonRels(cts.Kit, deleteReq); err != nil {
+		logs.Errorf("request dataservice delete security group cvm rels failed, err: %v, req: %+v, rid: %s",
+			err, deleteReq, cts.Kit.Rid)
+		return nil, err
+	}
+
+	// TODO: 同步主机数据
+
+	return nil, nil
+}
+
+// DeleteZiyanSecurityGroup delete tcloud ziyan security group.
+func (g *securityGroup) DeleteZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
 	id := cts.PathParameter("id").String()
 	if len(id) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "id is required")
@@ -154,8 +273,8 @@ func (g *securityGroup) DeleteTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	return nil, nil
 }
 
-// UpdateTCloudZiyanSecurityGroup update tcloud ziyan security group.
-func (g *securityGroup) UpdateTCloudZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
+// UpdateZiyanSecurityGroup update tcloud ziyan security group.
+func (g *securityGroup) UpdateZiyanSecurityGroup(cts *rest.Contexts) (interface{}, error) {
 	id := cts.PathParameter("id").String()
 	if len(id) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "id is required")
@@ -218,8 +337,130 @@ func (g *securityGroup) UpdateTCloudZiyanSecurityGroup(cts *rest.Contexts) (inte
 	return nil, nil
 }
 
-// TZiyanSGBatchAssociateCvm 根据cvmID 绑定安全组
-func (g *securityGroup) TZiyanSGBatchAssociateCvm(cts *rest.Contexts) (any, error) {
+// ZiyanSecurityGroupAssociateLoadBalancer ...
+func (g *securityGroup) ZiyanSecurityGroupAssociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
+	req := new(hclb.TCloudSetLbSecurityGroupReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 根据LbID查询负载均衡基本信息
+	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
+	if err != nil {
+		return nil, err
+	}
+
+	sgCloudIDs, sgComReq, err := g.getUpsertSGIDsParams(cts.Kit, enumor.Ziyan, req, sgComList)
+	if err != nil {
+		return nil, err
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &typelb.TCloudSetClbSecurityGroupOption{
+		Region:         lbInfo.Region,
+		LoadBalancerID: lbInfo.CloudID,
+		SecurityGroups: sgCloudIDs,
+	}
+	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud security group associate lb failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	if err = g.dataCli.Global.SGCommonRel.BatchUpsertSgCommonRels(cts.Kit, sgComReq); err != nil {
+		logs.Errorf("request dataservice upsert security group lb rels failed, err: %v, req: %+v, rid: %s",
+			err, sgComReq, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// ZiyanSecurityGroupDisassociateLoadBalancer ...
+func (g *securityGroup) ZiyanSecurityGroupDisassociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
+	req := new(hclb.TCloudDisAssociateLbSecurityGroupReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	// 根据LbID查询负载均衡基本信息
+	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
+	if err != nil {
+		return nil, err
+	}
+
+	allSGIDs := make([]string, 0)
+	existSG := false
+	for _, rel := range sgComList.Details {
+		if rel.SecurityGroupID == req.SecurityGroupID {
+			existSG = true
+		}
+		allSGIDs = append(allSGIDs, rel.SecurityGroupID)
+	}
+	if !existSG {
+		return nil, errf.Newf(errf.RecordNotFound, "not found sg id: %s", req.SecurityGroupID)
+	}
+
+	sgMap, err := g.getSecurityGroupMap(cts.Kit, allSGIDs)
+	if err != nil {
+		return nil, err
+	}
+
+	// 安全组的云端ID数组
+	sgCloudIDs := make([]string, 0)
+	for _, sgID := range allSGIDs {
+		sg, ok := sgMap[sgID]
+		if !ok {
+			continue
+		}
+		if sg.ID == req.SecurityGroupID {
+			// 跳过用户需要解绑的安全组ID
+			continue
+		}
+		sgCloudIDs = append(sgCloudIDs, sg.CloudID)
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &typelb.TCloudSetClbSecurityGroupOption{
+		Region:         lbInfo.Region,
+		LoadBalancerID: lbInfo.CloudID,
+		SecurityGroups: sgCloudIDs,
+	}
+	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
+		logs.Errorf("request adaptor to tcloud security group disAssociate lb failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	deleteReq := buildSGCommonRelDeleteReq(
+		enumor.TCloud, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
+	if err = g.dataCli.Global.SGCommonRel.BatchDeleteSgCommonRels(cts.Kit, deleteReq); err != nil {
+		logs.Errorf("request dataservice tcloud delete security group lb rels failed, err: %v, req: %+v, rid: %s",
+			err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+// ZiyanSGBatchAssociateCvm 根据cvmID 绑定安全组
+func (g *securityGroup) ZiyanSGBatchAssociateCvm(cts *rest.Contexts) (any, error) {
 
 	req := new(proto.SecurityGroupBatchAssociateCvmReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -313,7 +554,7 @@ func (g *securityGroup) createSGCommonRelsForTCloudZiyan(kt *kit.Kit, client tzi
 			sgIDs = append(sgIDs, sgID)
 		}
 
-		err = g.createSGCommonRels(kt, enumor.TCloudZiyan, enumor.CvmCloudResType, cvmID, sgIDs)
+		err = g.createSGCommonRels(kt, enumor.Ziyan, enumor.CvmCloudResType, cvmID, sgIDs)
 		if err != nil {
 			// 不抛出err, 尽最大努力交付
 			logs.Errorf("create sg common rels failed, err: %v, cvmID: %s, sgIDs: %v, rid: %s",
@@ -324,8 +565,60 @@ func (g *securityGroup) createSGCommonRelsForTCloudZiyan(kt *kit.Kit, client tzi
 	return nil
 }
 
-// TZiyanSGBatchDisassociateCvm  根据cvm云id 解绑安全组
-func (g *securityGroup) TZiyanSGBatchDisassociateCvm(cts *rest.Contexts) (any, error) {
+// ZiyanListSecurityGroupStatistic ...
+func (g *securityGroup) ZiyanListSecurityGroupStatistic(cts *rest.Contexts) (any, error) {
+	req := new(proto.ListSecurityGroupStatisticReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	sgMap, err := g.getSecurityGroupMap(cts.Kit, req.SecurityGroupIDs)
+	if err != nil {
+		logs.Errorf("get security group map failed, sgID: %v, err: %v, rid: %s", req.SecurityGroupIDs, err, cts.Kit.Rid)
+		return nil, err
+	}
+
+	cloudIDToSgIDMap := make(map[string]string)
+	for _, sgID := range req.SecurityGroupIDs {
+		sg, ok := sgMap[sgID]
+		if !ok {
+			logs.Errorf("security group: %s not found, rid: %s", sgID, cts.Kit.Rid)
+			return nil, fmt.Errorf("tcloud-ziyan security group: %s not found", sgID)
+		}
+		cloudIDToSgIDMap[sg.CloudID] = sgID
+	}
+
+	client, err := g.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if err != nil {
+		return nil, err
+	}
+
+	opt := &adptsg.TCloudListOption{
+		Region:   req.Region,
+		CloudIDs: converter.MapKeyToSlice(cloudIDToSgIDMap),
+	}
+	resp, err := client.DescribeSecurityGroupAssociationStatistics(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("request adaptor to tcloud-ziyan security group statistic failed, err: %v, opt: %v, rid: %s",
+			err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	sgIDToResourceCountMap := make(map[string]map[string]int64)
+	for _, one := range resp {
+		sgID := cloudIDToSgIDMap[converter.PtrToVal(one.SecurityGroupId)]
+		sgIDToResourceCountMap[sgID] = tcloudSGAssociateStatisticToResourceCountMap(one)
+	}
+
+	return resCountMapToSGStatisticResp(sgIDToResourceCountMap), nil
+}
+
+// ZiyanSGBatchDisassociateCvm  根据cvm云id 解绑安全组
+func (g *securityGroup) ZiyanSGBatchDisassociateCvm(cts *rest.Contexts) (any, error) {
 	req := new(proto.SecurityGroupBatchAssociateCvmReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
@@ -385,178 +678,8 @@ func (g *securityGroup) TZiyanSGBatchDisassociateCvm(cts *rest.Contexts) (any, e
 	return nil, nil
 }
 
-// TCloudZiyanSecurityGroupAssociateLoadBalancer ...
-func (g *securityGroup) TCloudZiyanSecurityGroupAssociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
-	req := new(hclb.TCloudSetLbSecurityGroupReq)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	// 根据LbID查询负载均衡基本信息
-	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
-	if err != nil {
-		return nil, err
-	}
-
-	sgCloudIDs, sgComReq, err := g.getUpsertSGIDsParams(cts.Kit, req, sgComList)
-	if err != nil {
-		return nil, err
-	}
-
-	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := &typelb.TCloudSetClbSecurityGroupOption{
-		Region:         lbInfo.Region,
-		LoadBalancerID: lbInfo.CloudID,
-		SecurityGroups: sgCloudIDs,
-	}
-	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to tcloud security group associate lb failed, err: %v, opt: %v, rid: %s",
-			err, opt, cts.Kit.Rid)
-		return nil, err
-	}
-
-	if err = g.dataCli.Global.SGCommonRel.BatchUpsertSgCommonRels(cts.Kit, sgComReq); err != nil {
-		logs.Errorf("request dataservice upsert security group lb rels failed, err: %v, req: %+v, rid: %s",
-			err, sgComReq, cts.Kit.Rid)
-		return nil, err
-	}
-
-	return nil, nil
-}
-
-// TCloudZiyanSecurityGroupDisassociateLoadBalancer ...
-func (g *securityGroup) TCloudZiyanSecurityGroupDisassociateLoadBalancer(cts *rest.Contexts) (interface{}, error) {
-	req := new(hclb.TCloudDisAssociateLbSecurityGroupReq)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	// 根据LbID查询负载均衡基本信息
-	lbInfo, sgComList, err := g.getLoadBalancerInfoAndSGComRels(cts.Kit, req.LbID)
-	if err != nil {
-		return nil, err
-	}
-
-	allSGIDs := make([]string, 0)
-	existSG := false
-	for _, rel := range sgComList.Details {
-		if rel.SecurityGroupID == req.SecurityGroupID {
-			existSG = true
-		}
-		allSGIDs = append(allSGIDs, rel.SecurityGroupID)
-	}
-	if !existSG {
-		return nil, errf.Newf(errf.RecordNotFound, "not found sg id: %s", req.SecurityGroupID)
-	}
-
-	sgMap, err := g.getSecurityGroupMap(cts.Kit, allSGIDs)
-	if err != nil {
-		return nil, err
-	}
-
-	// 安全组的云端ID数组
-	sgCloudIDs := make([]string, 0)
-	for _, sgID := range allSGIDs {
-		sg, ok := sgMap[sgID]
-		if !ok {
-			continue
-		}
-		sgCloudIDs = append(sgCloudIDs, sg.CloudID)
-	}
-
-	client, err := g.ad.TCloudZiyan(cts.Kit, lbInfo.AccountID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := &typelb.TCloudSetClbSecurityGroupOption{
-		Region:         lbInfo.Region,
-		LoadBalancerID: lbInfo.CloudID,
-		SecurityGroups: sgCloudIDs,
-	}
-	if _, err = client.SetLoadBalancerSecurityGroups(cts.Kit, opt); err != nil {
-		logs.Errorf("request adaptor to tcloud security group disAssociate lb failed, err: %v, opt: %v, rid: %s",
-			err, opt, cts.Kit.Rid)
-		return nil, err
-	}
-
-	deleteReq := buildSGCommonRelDeleteReq(
-		enumor.TCloud, req.LbID, []string{req.SecurityGroupID}, enumor.LoadBalancerCloudResType)
-	if err = g.dataCli.Global.SGCommonRel.BatchDeleteSgCommonRels(cts.Kit, deleteReq); err != nil {
-		logs.Errorf("request dataservice tcloud delete security group lb rels failed, err: %v, req: %+v, rid: %s",
-			err, req, cts.Kit.Rid)
-		return nil, err
-	}
-
-	return nil, nil
-}
-
-// TCloudZiyanListSecurityGroupStatistic ...
-func (g *securityGroup) TCloudZiyanListSecurityGroupStatistic(cts *rest.Contexts) (any, error) {
-	req := new(proto.ListSecurityGroupStatisticReq)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	sgMap, err := g.getSecurityGroupMap(cts.Kit, req.SecurityGroupIDs)
-	if err != nil {
-		logs.Errorf("get security group map failed, sgID: %v, err: %v, rid: %s", req.SecurityGroupIDs, err, cts.Kit.Rid)
-		return nil, err
-	}
-
-	cloudIDToSgIDMap := make(map[string]string)
-	for _, sgID := range req.SecurityGroupIDs {
-		sg, ok := sgMap[sgID]
-		if !ok {
-			logs.Errorf("security group: %s not found, rid: %s", sgID, cts.Kit.Rid)
-			return nil, fmt.Errorf("tcloud-ziyan security group: %s not found", sgID)
-		}
-		cloudIDToSgIDMap[sg.CloudID] = sgID
-	}
-
-	client, err := g.ad.TCloudZiyan(cts.Kit, req.AccountID)
-	if err != nil {
-		return nil, err
-	}
-
-	opt := &adptsg.TCloudListOption{
-		Region:   req.Region,
-		CloudIDs: converter.MapKeyToSlice(cloudIDToSgIDMap),
-	}
-	resp, err := client.DescribeSecurityGroupAssociationStatistics(cts.Kit, opt)
-	if err != nil {
-		logs.Errorf("request adaptor to tcloud-ziyan security group statistic failed, err: %v, opt: %v, rid: %s",
-			err, opt, cts.Kit.Rid)
-		return nil, err
-	}
-
-	sgIDToResourceCountMap := make(map[string]map[string]int64)
-	for _, one := range resp {
-		sgID := cloudIDToSgIDMap[converter.PtrToVal(one.SecurityGroupId)]
-		sgIDToResourceCountMap[sgID] = tcloudSGAssociateStatisticToResourceCountMap(one)
-	}
-
-	return resCountMapToSGStatisticResp(sgIDToResourceCountMap), nil
-}
-
-// TCloudZiyanCloneSecurityGroup ...
-func (g *securityGroup) TCloudZiyanCloneSecurityGroup(cts *rest.Contexts) (any, error) {
+// ZiyanCloneSecurityGroup ...
+func (g *securityGroup) ZiyanCloneSecurityGroup(cts *rest.Contexts) (any, error) {
 
 	req := new(proto.TCloudSecurityGroupCloneReq)
 	if err := cts.DecodeInto(req); err != nil {

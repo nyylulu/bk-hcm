@@ -329,7 +329,7 @@ func (g *securityGroup) TCloudSecurityGroupAssociateLoadBalancer(cts *rest.Conte
 		return nil, err
 	}
 
-	sgCloudIDs, sgComReq, err := g.getUpsertSGIDsParams(cts.Kit, req, sgComList)
+	sgCloudIDs, sgComReq, err := g.getUpsertSGIDsParams(cts.Kit, enumor.TCloud, req, sgComList)
 	if err != nil {
 		return nil, err
 	}
@@ -359,7 +359,7 @@ func (g *securityGroup) TCloudSecurityGroupAssociateLoadBalancer(cts *rest.Conte
 	return nil, nil
 }
 
-func (g *securityGroup) getUpsertSGIDsParams(kt *kit.Kit, req *hclb.TCloudSetLbSecurityGroupReq,
+func (g *securityGroup) getUpsertSGIDsParams(kt *kit.Kit, vendor enumor.Vendor, req *hclb.TCloudSetLbSecurityGroupReq,
 	sgComList *protocloud.SGCommonRelListResult) ([]string, *protocloud.SGCommonRelBatchUpsertReq, error) {
 
 	delSGIDs := make([]string, 0)
@@ -372,7 +372,7 @@ func (g *securityGroup) getUpsertSGIDsParams(kt *kit.Kit, req *hclb.TCloudSetLbS
 	}
 	if len(delSGIDs) > 0 {
 		sgComReq.DeleteReq = buildSGCommonRelDeleteReq(
-			enumor.TCloud, req.LbID, delSGIDs, enumor.LoadBalancerCloudResType)
+			vendor, req.LbID, delSGIDs, enumor.LoadBalancerCloudResType)
 	}
 
 	tmpPriority := int64(0)
@@ -380,7 +380,7 @@ func (g *securityGroup) getUpsertSGIDsParams(kt *kit.Kit, req *hclb.TCloudSetLbS
 		tmpPriority++
 		sgComReq.Rels = append(sgComReq.Rels, protocloud.SGCommonRelCreate{
 			SecurityGroupID: newSGID,
-			ResVendor:       enumor.TCloud,
+			ResVendor:       vendor,
 			ResID:           req.LbID,
 			ResType:         enumor.LoadBalancerCloudResType,
 			Priority:        tmpPriority,
@@ -779,7 +779,8 @@ func (g *securityGroup) TCloudSGBatchDisassociateCvm(cts *rest.Contexts) (any, e
 		return nil, err
 	}
 
-	deleteReq, err := buildSGCommonRelDeleteReqForMultiResource(enumor.CvmCloudResType, req.SecurityGroupID, req.CvmIDs...)
+	deleteReq, err := buildSGCommonRelDeleteReqForMultiResource(enumor.CvmCloudResType, req.SecurityGroupID,
+		req.CvmIDs...)
 	if err != nil {
 		logs.Errorf("build sg cvm rel delete req failed, err: %v, rid: %s", err, cts.Kit.Rid)
 		return nil, err
@@ -875,7 +876,8 @@ func (g *securityGroup) TCloudCloneSecurityGroup(cts *rest.Contexts) (any, error
 	return core.CreateResult{ID: sgID}, nil
 }
 
-func (g *securityGroup) createSecurityGroupForData(kt *kit.Kit, req *proto.TCloudSecurityGroupCloneReq, accountID string, sg *vpc.SecurityGroup) (string, error) {
+func (g *securityGroup) createSecurityGroupForData(kt *kit.Kit, req *proto.TCloudSecurityGroupCloneReq,
+	accountID string, sg *vpc.SecurityGroup) (string, error) {
 
 	tags := make([]core.TagPair, 0, len(sg.TagSet))
 	for _, tag := range sg.TagSet {

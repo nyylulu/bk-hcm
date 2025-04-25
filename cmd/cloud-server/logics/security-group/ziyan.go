@@ -34,6 +34,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/tools/slice"
 )
 
 // listTCloudZiyanSecurityGroupRulesByCloudTargetSGID 查询来源为安全组的 安全组规则,
@@ -128,4 +129,47 @@ func (s *securityGroup) updateTCloudZiyanMgmtAttr(kt *kit.Kit, mgmtAttrs []proto
 	}
 
 	return nil
+}
+
+// FindYuntiDefaultSG 查找给定安全组id中的云梯默认安全组，自研云云梯默认安全组不能被解绑
+func (s *securityGroup) FindYuntiDefaultSG(kt *kit.Kit, sgIDs []string) (yuntiSGCloudID string, err error) {
+	allDftSgMap, err := s.sgOp.GetAllDftSg(kt)
+	if err != nil {
+		logs.Errorf("list all yunti default sg failed, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	for _, ids := range slice.Split(sgIDs, int(core.DefaultMaxPageLimit)) {
+		listReq := &dataproto.SecurityGroupListReq{
+			Field:  []string{"id", "name", "region", "cloud_id"},
+			Filter: tools.ExpressionAnd(tools.RuleIn("id", ids)),
+			Page: &core.BasePage{
+				Start: 0,
+				Limit: uint(len(ids)),
+				Sort:  "id",
+				Order: core.Ascending,
+			},
+		}
+
+		sgResp, err := s.client.DataService().Global.SecurityGroup.ListSecurityGroup(kt.Ctx, kt.Header(), listReq)
+		if err != nil {
+			logs.Errorf("list security group for check yunti default failed, err: %v, ids: %v, rid: %s",
+				err, ids, kt.Rid)
+			return "", err
+		}
+		for i := range sgResp.Details {
+			sg := sgResp.Details[i]
+			defaultSG, ok := allDftSgMap[sg.Region]
+			if !ok {
+				logs.Errorf("yunti default sg not found for sg: %s(%s), region: %s, rid: %s",
+					sg.CloudID, sg.ID, sg.Region, kt.Rid)
+				return "", fmt.Errorf("yunti default sg not found for sg: %s(%s), region: %s",
+					sg.CloudID, sg.ID, sg.Region)
+			}
+			if defaultSG == sg.CloudID {
+				return sg.CloudID, nil
+			}
+		}
+	}
+	return "", nil
 }

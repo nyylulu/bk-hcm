@@ -23,36 +23,40 @@ import "hcm/pkg/rest"
 
 func initSecurityGroupServiceHooks(svc *securityGroup, h *rest.Handler) {
 
-	h.Add("CreateTCloudZiyanSecurityGroup", "POST",
-		"/vendors/tcloud-ziyan/security_groups/create", svc.CreateTCloudZiyanSecurityGroup)
-	h.Add("DeleteTCloudZiyanSecurityGroup", "DELETE",
-		"/vendors/tcloud-ziyan/security_groups/{id}", svc.DeleteTCloudZiyanSecurityGroup)
-	h.Add("UpdateTCloudZiyanSecurityGroup", "PATCH",
-		"/vendors/tcloud-ziyan/security_groups/{id}", svc.UpdateTCloudZiyanSecurityGroup)
-	h.Add("BatchCreateTCloudZiyanSGRule", "POST",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/create",
-		svc.BatchCreateTCloudZiyanSGRule)
-	h.Add("UpdateTCloudZiyanSGRule", "PUT",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.UpdateTCloudZiyanSGRule)
-	h.Add("DeleteTCloudZiyanSGRule", "DELETE",
-		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.DeleteTCloudZiyanSGRule)
+	h.Add("CreateZiyanSecurityGroup", "POST",
+		"/vendors/tcloud-ziyan/security_groups/create", svc.CreateZiyanSecurityGroup)
+	h.Add("DeleteZiyanSecurityGroup", "DELETE",
+		"/vendors/tcloud-ziyan/security_groups/{id}", svc.DeleteZiyanSecurityGroup)
+	h.Add("UpdateZiyanSecurityGroup", "PATCH",
+		"/vendors/tcloud-ziyan/security_groups/{id}", svc.UpdateZiyanSecurityGroup)
+	h.Add("BatchCreateZiyanSGRule", "POST",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/create", svc.BatchCreateZiyanSGRule)
+	h.Add("UpdateZiyanSGRule", "PUT",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.UpdateZiyanSGRule)
+	h.Add("DeleteZiyanSGRule", "DELETE",
+		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/{id}", svc.DeleteZiyanSGRule)
 
 	h.Add("BatchUpdateZiyanSGRule", "PUT",
 		"/vendors/tcloud-ziyan/security_groups/{security_group_id}/rules/batch/update", svc.BatchUpdateZiyanSGRule)
 
-	h.Add("TZiyanSGBatchAssociateCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/associate/cvms/batch", svc.TZiyanSGBatchAssociateCvm)
-	h.Add("TZiyanSGBatchDisassociateCvm", "POST",
-		"/vendors/tcloud-ziyan/security_groups/disassociate/cvms/batch", svc.TZiyanSGBatchDisassociateCvm)
+	h.Add("ZiyanSGBatchAssociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/cvms/batch", svc.ZiyanSGBatchAssociateCvm)
+	h.Add("ZiyanSGBatchDisassociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/cvms/batch", svc.ZiyanSGBatchDisassociateCvm)
 
-	h.Add("TCloudZiyanSecurityGroupAssociateLoadBalancer", "POST",
+	h.Add("ZiyanSecurityGroupAssociateLoadBalancer", "POST",
 		"/vendors/tcloud-ziyan/security_groups/associate/load_balancers",
-		svc.TCloudZiyanSecurityGroupAssociateLoadBalancer)
-	h.Add("TCloudZiyanSecurityGroupDisassociateLoadBalancer", "POST",
+		svc.ZiyanSecurityGroupAssociateLoadBalancer)
+	h.Add("ZiyanSecurityGroupDisassociateLoadBalancer", "POST",
 		"/vendors/tcloud-ziyan/security_groups/disassociate/load_balancers",
-		svc.TCloudZiyanSecurityGroupDisassociateLoadBalancer)
-	h.Add("TCloudZiyanListSecurityGroupStatistic", "POST", "/vendors/tcloud-ziyan/security_groups/statistic",
-		svc.TCloudZiyanListSecurityGroupStatistic)
-	h.Add("TCloudZiyanCloneSecurityGroup", "POST", "/vendors/tcloud-ziyan/security_groups/clone",
-		svc.TCloudZiyanCloneSecurityGroup)
+		svc.ZiyanSecurityGroupDisassociateLoadBalancer)
+	h.Add("ZiyanListSecurityGroupStatistic", "POST",
+		"/vendors/tcloud-ziyan/security_groups/statistic", svc.ZiyanListSecurityGroupStatistic)
+	h.Add("ZiyanCloneSecurityGroup", "POST",
+		"/vendors/tcloud-ziyan/security_groups/clone", svc.ZiyanCloneSecurityGroup)
+
+	h.Add("ZiyanSecurityGroupAssociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/associate/cvms", svc.ZiyanSecurityGroupAssociateCvm)
+	h.Add("TCloudSecurityGroupDisassociateCvm", "POST",
+		"/vendors/tcloud-ziyan/security_groups/disassociate/cvms", svc.ZiyanSecurityGroupDisassociateCvm)
 }

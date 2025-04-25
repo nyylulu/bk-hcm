@@ -140,6 +140,20 @@ func (svc *securityGroupSvc) disassociateCvm(cts *rest.Contexts, validHandler ha
 		}
 		err = svc.client.HCService().TCloud.SecurityGroup.DisassociateCvm(cts.Kit.Ctx, cts.Kit.Header(),
 			associateReq)
+	case enumor.TCloudZiyan:
+		yuntiSgCloudID, err := svc.sgLogic.FindYuntiDefaultSG(cts.Kit, []string{req.SecurityGroupID})
+		if err != nil {
+			logs.Errorf("find yunti default sg failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+			return nil, err
+		}
+		if yuntiSgCloudID != "" {
+			return nil, errf.Newf(errf.InvalidParameter, "云梯默认安全组 %s 不能被解绑", yuntiSgCloudID)
+		}
+		associateReq := &hcproto.SecurityGroupAssociateCvmReq{
+			SecurityGroupID: req.SecurityGroupID,
+			CvmID:           req.CvmID,
+		}
+		err = svc.client.HCService().TCloudZiyan.SecurityGroup.DisassociateCvm(cts.Kit, associateReq)
 
 	case enumor.HuaWei:
 		associateReq := &hcproto.SecurityGroupAssociateCvmReq{

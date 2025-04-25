@@ -158,3 +158,11 @@ func (cli *SecurityGroupClient) SyncSecurityGroupUsageBizRel(kt *kit.Kit, req *s
 	return common.RequestNoResp[sync.TCloudSyncReq](cli.client, rest.POST, kt, req,
 		"/security_groups/usage_biz_rels/sync")
 }
+
+// DisassociateCvm ...
+func (cli *SecurityGroupClient) DisassociateCvm(kt *kit.Kit, req *proto.SecurityGroupAssociateCvmReq) error {
+
+	return common.RequestNoResp[proto.SecurityGroupAssociateCvmReq](cli.client, rest.POST, kt, req,
+		"/security_groups/disassociate/cvms")
+
+}

@@ -37,9 +37,9 @@ import (
 	"hcm/pkg/tools/slice"
 )
 
-// BatchCreateTCloudZiyanSGRule 批量创建自研云安全组规则
+// BatchCreateZiyanSGRule 批量创建自研云安全组规则
 // 腾讯云安全组规则索引是一个动态的，所以每次创建需要将云上安全组规则计算一遍。
-func (g *securityGroup) BatchCreateTCloudZiyanSGRule(cts *rest.Contexts) (any, error) {
+func (g *securityGroup) BatchCreateZiyanSGRule(cts *rest.Contexts) (any, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security group id is required")
@@ -101,8 +101,8 @@ func (g *securityGroup) BatchCreateTCloudZiyanSGRule(cts *rest.Contexts) (any, e
 	return &core.BatchCreateResult{IDs: createdIds}, nil
 }
 
-// UpdateTCloudZiyanSGRule update tcloud ziyan security group rule.
-func (g *securityGroup) UpdateTCloudZiyanSGRule(cts *rest.Contexts) (any, error) {
+// UpdateZiyanSGRule update tcloud ziyan security group rule.
+func (g *securityGroup) UpdateZiyanSGRule(cts *rest.Contexts) (any, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security_group_id is required")
@@ -261,8 +261,8 @@ func (g *securityGroup) BatchUpdateZiyanSGRule(cts *rest.Contexts) (interface{},
 	return nil, nil
 }
 
-// DeleteTCloudZiyanSGRule delete tcloud ziyan security group rule.
-func (g *securityGroup) DeleteTCloudZiyanSGRule(cts *rest.Contexts) (any, error) {
+// DeleteZiyanSGRule delete tcloud ziyan security group rule.
+func (g *securityGroup) DeleteZiyanSGRule(cts *rest.Contexts) (any, error) {
 	sgID := cts.PathParameter("security_group_id").String()
 	if len(sgID) == 0 {
 		return nil, errf.New(errf.InvalidParameter, "security_group_id is required")
