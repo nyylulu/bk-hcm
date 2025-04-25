@@ -84,6 +84,7 @@ type OrderItem struct {
 	ProductName       string             `json:"productName"`
 	FailInstanceInfos []FailInstanceInfo `json:"failInstanceInfo"`
 	SucInstanceCount  int                `json:"sucInstanceCount"`
+	CreateTime        string             `json:"createTime"` // 提单时间，示例：2023-02-28 11:16:47
 }
 
 // InstanceQueryResp cvm instance query response

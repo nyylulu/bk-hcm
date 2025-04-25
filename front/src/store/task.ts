@@ -1,5 +1,6 @@
 import { ref } from 'vue';
 import { defineStore } from 'pinia';
+import rollRequest from '@blueking/roll-request';
 import http from '@/http';
 import { QueryRuleOPEnum, IListResData, QueryBuilderType } from '@/typings';
 import { VendorEnum } from '@/common/constant';
@@ -160,6 +161,25 @@ export const useTaskStore = defineStore('task', () => {
     }
   };
 
+  const getTaskDetailListAll = async (params: QueryBuilderType & { bk_biz_id: number }) => {
+    const { bk_biz_id, ...data } = params;
+    try {
+      const list = await rollRequest({
+        httpClient: http,
+        pageEnableCountKey: 'count',
+      }).rollReqUseCount<ITaskItem>(`/api/v1/cloud/bizs/${bk_biz_id}/task_details/list`, data, {
+        limit: 500,
+        countGetter: (res) => res.data.count,
+        listGetter: (res) => res.data.details,
+      });
+
+      return list;
+    } catch (error) {
+      console.error(error);
+      return Promise.reject(error);
+    }
+  };
+
   const getTaskDetails = async (id: ITaskItem['id'], bizId: number): Promise<ITaskItem> => {
     taskDetailsLoading.value = true;
     try {
@@ -256,6 +276,7 @@ export const useTaskStore = defineStore('task', () => {
     getTaskCounts,
     getTaskDetails,
     getTaskDetailList,
+    getTaskDetailListAll,
     getTaskDetailListStatus,
     taskRerunValidate,
     taskRerunSubmit,

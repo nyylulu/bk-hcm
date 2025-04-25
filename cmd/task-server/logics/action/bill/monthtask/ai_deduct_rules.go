@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,24 +17,29 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-// Package cos ...
-package cos
+package monthtask
 
 import (
-	cloudadaptor "hcm/cmd/hc-service/logics/cloud-adaptor"
-	"hcm/cmd/hc-service/service/capability"
+	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/runtime/filter"
 )
 
-// InitCosService initial cos service.
-func InitCosService(cap *capability.Capability) {
-	svc := &cosSvc{
-		ad: cap.CloudAdaptor,
-	}
-
-	svc.initTCloudCosService(cap)
-	svc.initTCloudZiyanCosService(cap)
+// GenAwsFilterRules generate aws filter rules
+func GenAwsFilterRules() (rules []filter.RuleFactory) {
+	return []filter.RuleFactory{tools.RuleStartsWith("hc_product_name", "Claude")}
 }
 
-type cosSvc struct {
-	ad *cloudadaptor.CloudAdaptorClient
+// GenGcpFilterRules generate gcp filter rules
+func GenGcpFilterRules() (rules []filter.RuleFactory) {
+	rules = []filter.RuleFactory{
+		tools.ExpressionOr(
+			tools.RuleStartsWith("hc_product_name", "Gemini"),
+			tools.RuleStartsWith("hc_product_name", "Vertex"),
+			tools.RuleStartsWith("hc_product_name", "Claude"),
+		),
+		tools.ExpressionOr(
+			tools.RuleStartsWith("extension.sku_description", "Gemini"),
+			tools.RuleStartsWith("extension.sku_description", "Claude"),
+		)}
+	return rules
 }

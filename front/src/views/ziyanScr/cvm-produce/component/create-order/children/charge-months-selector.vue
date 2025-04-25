@@ -25,7 +25,7 @@ const chargeMonthsOption = computed(() => {
 </script>
 
 <template>
-  <hcm-form-enum v-model="model" :option="chargeMonthsOption" :filterable="false" :disabled="disabled" />
+  <hcm-form-enum v-model.number="model" :option="chargeMonthsOption" :filterable="false" :disabled="disabled" />
 </template>
 
 <style scoped lang="scss"></style>

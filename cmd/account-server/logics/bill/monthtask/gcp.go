@@ -48,6 +48,12 @@ func NewGcpMonthTaskDescriber(rootAccountCloudID string) MonthTaskDescriber {
 		describer.CreditReturnConfigs = creditConfigs.ReturnConfigs
 	}
 
+	for _, localDeductConfig := range cc.AccountServer().BillAllocation.GcpAIDeducts {
+		if localDeductConfig.RootAccountCloudID == rootAccountCloudID {
+			describer.AIDeductConfig = true
+		}
+	}
+
 	return describer
 }
 
@@ -56,6 +62,8 @@ type GcpMonthDescriber struct {
 	RootAccountCloudID           string
 	CommonExpenseExcludeCloudIDs []string
 	CreditReturnConfigs          []cc.CreditReturn
+
+	AIDeductConfig bool
 }
 
 // GetTaskExtension ...
@@ -76,5 +84,15 @@ func (gcp *GcpMonthDescriber) GetTaskExtension() (map[string]string, error) {
 
 // GetMonthTaskTypes gcp month tasks
 func (gcp *GcpMonthDescriber) GetMonthTaskTypes() []enumor.MonthTaskType {
-	return []enumor.MonthTaskType{enumor.GcpCreditsMonthTask, enumor.GcpSupportMonthTask}
+
+	monthTaskTypes := []enumor.MonthTaskType{
+		enumor.GcpCreditsMonthTask,
+	}
+
+	if gcp.AIDeductConfig {
+		monthTaskTypes = append(monthTaskTypes, enumor.GcpAIDeductMonthTask)
+	}
+	monthTaskTypes = append(monthTaskTypes, enumor.GcpSupportMonthTask)
+
+	return monthTaskTypes
 }

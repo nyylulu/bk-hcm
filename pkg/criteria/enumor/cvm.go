@@ -59,6 +59,8 @@ const (
 	CvmOperateStatusNoStop CvmOperateStatus = 3
 	// CvmOperateStatusNoRunning 状态-云服务器未处于开机状态
 	CvmOperateStatusNoRunning CvmOperateStatus = 4
+	// CvmOperateStatusPmNoOperate 状态-物理机不支持操作
+	CvmOperateStatusPmNoOperate CvmOperateStatus = 5
 )
 
 // CvmOperateType define cvm operate type

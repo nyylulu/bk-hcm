@@ -47,16 +47,19 @@ func NewAwsMonthDescriber(rootAccountCloudID string) MonthTaskDescriber {
 		describer.SpArnPrefix = spOpt.SpArnPrefix
 	}
 
-	// 过滤符合条件的账号抵扣配置
-	describer.RootAccountDeductItemTypes = cc.AccountServer().BillAllocation.AwsDeductAccountItems.DeductItemTypes
-	filterDeductItemTypes := make(map[string][]string)
-	for rootAccountKey, rootAccountItem := range describer.RootAccountDeductItemTypes {
-		if rootAccountKey != rootAccountCloudID {
-			continue
+	for _, localDeductConfig := range cc.AccountServer().BillAllocation.AwsAIDeducts {
+		if localDeductConfig.RootAccountCloudID == rootAccountCloudID {
+			describer.AIDeductConfig = true
 		}
-		filterDeductItemTypes = rootAccountItem
 	}
-	awsDeductItemTypes, err := json.Marshal(filterDeductItemTypes)
+
+	// 过滤符合条件的账号抵扣配置
+	deductConfigs := cc.AccountServer().BillAllocation.AwsDeductAccountItems.DeductItemTypes
+	currentAccountDeductConfig := deductConfigs[rootAccountCloudID]
+	if len(currentAccountDeductConfig) == 0 {
+		currentAccountDeductConfig = map[string][]string{}
+	}
+	awsDeductItemTypes, err := json.Marshal(currentAccountDeductConfig)
 	if err != nil {
 		logs.Warnf("fail to json marshal awsDeductAccountItems config, err: %v", err)
 	}
@@ -71,8 +74,8 @@ type awsMonthDescriber struct {
 	SpArnPrefix                  string
 	SpAccountCloudID             string
 	CommonExpenseExcludeCloudIDs []string
-	RootAccountDeductItemTypes   map[string]map[string][]string // 根账号需要抵扣的项目列表
-	DeductItemTypes              string                         // 需要抵扣的账单明细项目类型列表，比如税费Tax
+	DeductItemTypes              string // 需要抵扣的账单明细项目类型列表，比如税费Tax
+	AIDeductConfig               bool
 }
 
 // GetMonthTaskTypes aws month tasks
@@ -86,11 +89,13 @@ func (aws *awsMonthDescriber) GetMonthTaskTypes() []enumor.MonthTaskType {
 		monthTaskTypes = append(monthTaskTypes, enumor.AwsSavingsPlansMonthTask)
 	}
 
+	if aws.AIDeductConfig {
+		monthTaskTypes = append(monthTaskTypes, enumor.AwsAIDeductMonthTask)
+	}
+
 	// 根账号配置了需要抵扣的项目
-	if len(aws.RootAccountDeductItemTypes) > 0 {
-		if _, ok := aws.RootAccountDeductItemTypes[aws.RootAccountCloudID]; ok {
-			monthTaskTypes = append(monthTaskTypes, enumor.DeductMonthTask)
-		}
+	if len(aws.DeductItemTypes) > 0 {
+		monthTaskTypes = append(monthTaskTypes, enumor.DeductMonthTask)
 	}
 
 	monthTaskTypes = append(monthTaskTypes, enumor.AwsSupportMonthTask)

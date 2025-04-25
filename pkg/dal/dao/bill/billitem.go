@@ -117,6 +117,9 @@ func (a AccountBillItemDao) List(kt *kit.Kit, commonOpt *typesbill.ItemCommonOpt
 	columnTypes := tablebill.AccountBillItemColumns.ColumnTypes()
 	columnTypes["extension.sku_description"] = enumor.String
 	columnTypes["extension.line_item_line_item_type"] = enumor.String
+	columnTypes["extension.sku_description"] = enumor.String
+	columnTypes["extension.bill_type"] = enumor.Numeric
+
 	err := opt.Validate(filter.NewExprOption(filter.RuleFields(columnTypes)),
 		core.NewDefaultPageOption())
 	if err != nil {

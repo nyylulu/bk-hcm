@@ -734,7 +734,7 @@ func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
 	order *types.ApplyOrder) error {
 
 	// 1. check cvm task result
-	if err := g.checkCVM(taskId); err != nil {
+	if err := g.checkCVM(kt, taskId, order.SubOrderId); err != nil {
 		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to create cvm when check generate task, "+
 			"order id: %s, task id: %s, err: %v, rid: %s", order.SubOrderId, taskId, err, kt.Rid)
 
@@ -1439,6 +1439,10 @@ func (g *Generator) MatchPM(order *types.ApplyOrder) error {
 	existCount := uint(len(existDevices))
 	if existCount >= order.Total {
 		logs.Infof("apply order %s has been scheduled %d pm", order.SubOrderId, existCount)
+		// check if need retry match task
+		if err = g.retryMatchDevice(existDevices); err != nil {
+			logs.Warnf("failed to retry match device, order id: %s, err: %v", order.SubOrderId, err)
+		}
 		return nil
 	}
 

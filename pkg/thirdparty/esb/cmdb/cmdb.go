@@ -59,8 +59,8 @@ type Client interface {
 	AddHost(ctx context.Context, header http.Header, req *AddHostReq) (*AddHostResp, error)
 	// TransferHost transfer host to another business in cc 3.0
 	TransferHost(ctx context.Context, header http.Header, req *TransferHostReq) (*TransferHostResp, error)
-	// GetHostId gets host id by ip in cc 3.0
-	GetHostId(ctx context.Context, header http.Header, ip string) (int64, error)
+	// GetHostIDByAssetID gets host id by asset id in cc 3.0
+	GetHostIDByAssetID(ctx context.Context, header http.Header, assetID string) (int64, error)
 	// UpdateHosts update host info in cc 3.0
 	UpdateHosts(ctx context.Context, header http.Header, req *UpdateHostsReq) (*UpdateHostsResp, error)
 	// GetHostBizIds gets host biz id by host id in cc 3.0
@@ -261,7 +261,7 @@ func (c *cmdb) TransferHost(ctx context.Context, header http.Header, req *Transf
 }
 
 // GetHostId gets host id by ip in cc 3.0
-func (c *cmdb) GetHostId(ctx context.Context, header http.Header, ip string) (int64, error) {
+func (c *cmdb) GetHostIDByAssetID(ctx context.Context, header http.Header, assetID string) (int64, error) {
 	subPath := "/cc/list_hosts_without_biz/"
 	key, val := c.getAuthHeader()
 	if header == nil {
@@ -275,9 +275,9 @@ func (c *cmdb) GetHostId(ctx context.Context, header http.Header, ip string) (in
 				Condition: querybuilder.ConditionAnd,
 				Rules: []querybuilder.Rule{
 					querybuilder.AtomRule{
-						Field:    pkg.BKHostInnerIPField,
+						Field:    pkg.BKAssetIDField,
 						Operator: querybuilder.OperatorEqual,
-						Value:    ip,
+						Value:    assetID,
 					},
 				},
 			},

@@ -108,6 +108,7 @@ func (svc *clbSvc) CreateTCloudZiyanListener(cts *rest.Contexts) (interface{}, e
 		SessionType:       req.SessionType,
 		Certificate:       req.Certificate,
 		HealthCheck:       req.HealthCheck,
+		EndPort:           uint64(cvt.PtrToVal(req.EndPort)),
 	}
 
 	result, err := tcloudAdpt.CreateListener(cts.Kit, lblOpt)
@@ -185,6 +186,7 @@ func (svc *clbSvc) createZiyanListenerDB(kt *kit.Kit, req *protolb.TCloudListene
 			SniSwitch:     req.SniSwitch,
 			Certificate:   req.Certificate,
 			Region:        lbInfo.Region,
+			EndPort:       req.EndPort,
 		}}}
 	created, err := svc.dataCli.TCloudZiyan.LoadBalancer.BatchCreateTCloudListenerWithRule(kt, ruleCreateReq)
 	if err != nil {

@@ -393,7 +393,11 @@ func (l *logics) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 		return nil, fmt.Errorf("object with order id %s is not a cvm instance response: %+v", orderId, obj)
 	}
 
-	logs.Infof("scheduler:logics:cvm:list:success, orderId: %s, get cvm instance resp: %+v", orderId, resp)
+	respJSON, err := json.Marshal(resp)
+	if err != nil {
+		logs.Warnf("get zone capacity failed to marshal capacityResp, orderId: %s, err: %v", orderId, err)
+	}
+	logs.Infof("scheduler:logics:cvm:list:success, orderId: %s, get cvm instance resp: %s", orderId, respJSON)
 
 	if resp.Error.Code != 0 {
 		return nil, fmt.Errorf("list cvm instance failed, code: %d, msg: %s", resp.Error.Code, resp.Error.Message)
@@ -401,6 +405,12 @@ func (l *logics) listCVM(orderId string) ([]*cvmapi.InstanceItem, error) {
 
 	if resp.Result == nil {
 		return nil, errors.New("list cvm instance failed, for result is null")
+	}
+
+	// CRP生产失败没有返回主机列表
+	if len(resp.Result.Data) == 0 {
+		return nil, fmt.Errorf("list cvm instance empty, can not find crp created cvm, orderID: %s, crpTraceID: %s",
+			orderId, resp.TraceId)
 	}
 
 	return resp.Result.Data, nil

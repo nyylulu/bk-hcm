@@ -61,6 +61,8 @@ func (svc *cosSvc) DeleteCosBucket(cts *rest.Contexts) (any, error) {
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
 		return svc.deleteTCloudCosBucket(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.deleteTCloudZiyanCosBucket(cts.Kit, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -76,6 +78,23 @@ func (svc *cosSvc) deleteTCloudCosBucket(kt *kit.Kit, rawReq json.RawMessage) (a
 	}
 
 	if err := svc.client.HCService().TCloud.Cos.DeleteCosBucket(kt, req); err != nil {
+		logs.Errorf("delete cos bucket failed, err: %v, req: %v, rid: %s", err, converter.PtrToVal(req), kt.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (svc *cosSvc) deleteTCloudZiyanCosBucket(kt *kit.Kit, rawReq json.RawMessage) (any, error) {
+	req := new(protocos.TCloudDeleteBucketReq)
+	if err := json.Unmarshal(rawReq, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := svc.client.HCService().TCloudZiyan.Cos.DeleteCosBucket(kt, req); err != nil {
 		logs.Errorf("delete cos bucket failed, err: %v, req: %v, rid: %s", err, converter.PtrToVal(req), kt.Rid)
 		return nil, err
 	}

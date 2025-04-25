@@ -36,4 +36,6 @@ const (
 
 	// CvmResetSystemUpdatePwdFailed cvm reset system update pwd failed.
 	CvmResetSystemUpdatePwdFailed WarnSign = "cvm_reset_system_update_pwd_failed"
+	// CvmApplyOrderCrpProductTimeout cvm apply order crp product timeout.
+	CvmApplyOrderCrpProductTimeout WarnSign = "cvm_apply_order_crp_product_timeout"
 )

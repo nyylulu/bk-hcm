@@ -66,6 +66,55 @@ export default defineComponent({
       rollRequestConfig: { enabled: true, limit: 50 },
     });
 
+    const priorityVpcName = [
+      'VPC-IEG-SZ',
+      'VPC-IEG-SH',
+      'VPC-IEG-GZ',
+      'VPC-IEG-JN-EC',
+      'VPC-IEG-HZ-EC',
+      'VPC-IEG-NJ',
+      'VPC-IEG-FZ',
+      'VPC-IEG-HF-EC',
+      'VPC-IEG-BJ',
+      'VPC-IEG-TJ',
+      'VPC-IEG-SJZ-EC',
+      'VPC-IEG-WH-EC',
+      'VPC-IEG-CS-EC',
+      'VPC-IEF-CS-EC',
+      'VPC-IEG-ZZ-EC',
+      'VPC-IEG-CD',
+      'VPC-IEG-CQ',
+      'VPC-IEG-XA-EC',
+      'VPC-IEG-SY-EC',
+      'VPC-IEG-HK',
+      'VPC-IEG-SR',
+      'VPC-IEG-DJ',
+      'VPC-IEG-XJP',
+      'VPC-IEG-MG',
+      'VPC-IEG-GG',
+      'VPC-IEG-FLKF',
+      'VPC-IEG-MM',
+      'VPC-IEG-FJNY',
+      'VPC-IEG-SBL',
+    ];
+    const sortPriorityVpc = (list: IVpcWithSubnetCountItem[]) => {
+      const sortedList = [...list];
+      sortedList.sort((a, b) => {
+        const aInPriority = priorityVpcName.some((priorityName) => a.name.endsWith(priorityName));
+        const bInPriority = priorityVpcName.some((priorityName) => b.name.endsWith(priorityName));
+
+        // 如果a在优先列表而b不在，a排前面
+        if (aInPriority && !bInPriority) return -1;
+        // 如果b在优先列表而a不在，b排前面
+        if (!aInPriority && bInPriority) return 1;
+        return 0;
+      });
+      return sortedList;
+    };
+    const displayDataList = computed(() => {
+      return sortPriorityVpc(dataList.value);
+    });
+
     // clear-handler - 清空数据
     const handleClear = () => {
       selected.value = '';
@@ -93,7 +142,7 @@ export default defineComponent({
     return () => (
       <div class='region-vpc-selector'>
         <Select v-model={selected.value} onClear={handleClear} loading={isDataLoad.value} disabled={props.isDisabled}>
-          {dataList.value.map(({ id, name, cloud_id, extension }) => {
+          {displayDataList.value.map(({ id, name, cloud_id, extension }) => {
             if (props.vendor) {
               const cidrs = extension?.cidr?.map((obj: any) => obj.cidr).join(',') || '';
               return <Option key={id} id={cloud_id} name={`${cloud_id} ${name} ${cidrs}`} />;

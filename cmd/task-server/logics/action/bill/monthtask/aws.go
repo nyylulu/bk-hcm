@@ -49,6 +49,8 @@ func newAwsRunner(taskType enumor.MonthTaskType) (MonthTaskRunner, error) {
 		return &AwsSavingsPlanMonthTask{}, nil
 	case enumor.DeductMonthTask:
 		return &AwsDeductMonthTask{}, nil
+	case enumor.AwsAIDeductMonthTask:
+		return &AwsAIDeductMonthTask{}, nil
 	default:
 		return nil, errors.New("not support task type of aws: " + string(taskType))
 	}

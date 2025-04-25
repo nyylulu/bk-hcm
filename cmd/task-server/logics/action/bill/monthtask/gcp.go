@@ -67,6 +67,8 @@ func newGcpRunner(taskType enumor.MonthTaskType) (MonthTaskRunner, error) {
 		return &GcpSupportMonthTask{}, nil
 	case enumor.GcpCreditsMonthTask:
 		return &GcpCreditMonthTask{}, nil
+	case enumor.GcpAIDeductMonthTask:
+		return &GcpAIDeductMonthTask{}, nil
 	default:
 		return nil, errors.New("not support task type of gcp: " + string(taskType))
 	}

@@ -85,6 +85,12 @@ func (h *HuaWei) GetFeeRecordList(kt *kit.Kit, opt *typesBill.HuaWeiFeeRecordLis
 	req.BillDateBegin = &opt.BillDateBegin
 	req.BillDateEnd = &opt.BillDateEnd
 
+	req.BillType = opt.BillType
+	req.CloudServiceType = opt.CloudServiceType
+	req.ChargeMode = opt.ChargeMode
+	req.Region = opt.Region
+	req.ResourceId = opt.ResourceID
+
 	// 统计类型。默认值为3。 1：按账期 3：按明细；
 	// 当前版本sdk没有StatisticType字段，暂时先不填，默认为3
 	// req.StatisticType = proto.Int(3)

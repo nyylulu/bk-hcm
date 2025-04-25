@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n';
 import { useRouter } from 'vue-router';
 import { useResourcePlanStore } from '@/store';
 import cssModule from './index.module.scss';
-
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
 import type { IPlanTicket } from '@/typings/resourcePlan';
 
 export default defineComponent({
@@ -30,6 +30,7 @@ export default defineComponent({
           path: '/business/applications/resource-plan/detail',
           query: {
             id: data.data.id,
+            [GLOBAL_BIZS_KEY]: props.modelValue.bk_biz_id,
           },
         });
       } catch (error: any) {

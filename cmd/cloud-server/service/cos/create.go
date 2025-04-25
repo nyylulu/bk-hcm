@@ -61,6 +61,8 @@ func (svc *cosSvc) CreateCosBucket(cts *rest.Contexts) (any, error) {
 	switch accountInfo.Vendor {
 	case enumor.TCloud:
 		return svc.createTCloudCosBucket(cts.Kit, req.Data)
+	case enumor.TCloudZiyan:
+		return svc.createTCloudZiyanCosBucket(cts.Kit, req.Data)
 	default:
 		return nil, fmt.Errorf("vendor: %s not support", accountInfo.Vendor)
 	}
@@ -76,6 +78,23 @@ func (svc *cosSvc) createTCloudCosBucket(kt *kit.Kit, rawReq json.RawMessage) (a
 	}
 
 	if err := svc.client.HCService().TCloud.Cos.CreateCosBucket(kt, req); err != nil {
+		logs.Errorf("create cos bucket failed, err: %v, req: %v, rid: %s", err, converter.PtrToVal(req), kt.Rid)
+		return nil, err
+	}
+
+	return nil, nil
+}
+
+func (svc *cosSvc) createTCloudZiyanCosBucket(kt *kit.Kit, rawReq json.RawMessage) (any, error) {
+	req := new(protocos.TCloudCreateBucketReq)
+	if err := json.Unmarshal(rawReq, req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if err := svc.client.HCService().TCloudZiyan.Cos.CreateCosBucket(kt, req); err != nil {
 		logs.Errorf("create cos bucket failed, err: %v, req: %v, rid: %s", err, converter.PtrToVal(req), kt.Rid)
 		return nil, err
 	}

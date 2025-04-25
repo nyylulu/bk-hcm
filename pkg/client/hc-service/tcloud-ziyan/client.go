@@ -39,6 +39,7 @@ type Client struct {
 	Vpc           *VpcClient
 	BandPkg       *BandwidthPackageClient
 	Tag           *TagClient
+	Cos           *CosClient
 }
 
 // NewClient create a new tcloud api client.
@@ -58,5 +59,6 @@ func NewClient(client rest.ClientInterface) *Client {
 		Subnet:        NewSubnetClient(client),
 		BandPkg:       NewBandPkgClient(client),
 		Tag:           NewTagClient(client),
+		Cos:           NewCosClient(client),
 	}
 }

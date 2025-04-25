@@ -75,12 +75,18 @@ const (
 	AwsSavingsPlansCostCodeReverse = "SavingsPlanCostReverse"
 	// AwsDeductCostCodeReverse aws deduct cost code reverse
 	AwsDeductCostCodeReverse = "DeductCostReverse"
+	// AwsAIDeductProductCode aws ai deduct product code
+	AwsAIDeductProductCode = "AIDeduct"
 
 	// GcpCreditReturnCost Gcp credit return cost, negative value, e.g. -10.00000
 	GcpCreditReturnCost = "Credit"
-
 	// GcpCreditReturnCostReverse Gcp credit return cost reverse, positive value, e.g. 10.00000
 	GcpCreditReturnCostReverse = "CreditReverse"
+	// GcpAIDeductProductCode aws ai deduct product code
+	GcpAIDeductProductCode = "AIDeduct"
+
+	// HuaweiTaxDeductProductCode ..
+	HuaweiTaxDeductProductCode = "TaxDeduct"
 )
 
 // HuaweiBillTypePurchase 华为账单类型-新购
@@ -88,3 +94,43 @@ const HuaweiBillTypePurchase = int32(1)
 
 // HuaweiBillChargeModeMonthlyYearly 华为账单计费模式-包年包月
 const HuaweiBillChargeModeMonthlyYearly = "1"
+
+// 华为云账单类型常量定义
+const (
+	// HuaweiBillTypeExpenditurePurchase 1:消费-新购
+	HuaweiBillTypeExpenditurePurchase = 1
+	// HuaweiBillTypeExpenditureRenewal 2:消费-续订
+	HuaweiBillTypeExpenditureRenewal = 2
+	// HuaweiBillTypeExpenditureChange 3:消费-变更
+	HuaweiBillTypeExpenditureChange = 3
+	// HuaweiBillTypeRefundUnsubscription 4:退款-退订
+	HuaweiBillTypeRefundUnsubscription = 4
+	// HuaweiBillTypeExpenditureUse 5:消费-使用
+	HuaweiBillTypeExpenditureUse = 5
+	// HuaweiBillTypeExpenditureAutoRenewal 8:消费-自动续订
+	HuaweiBillTypeExpenditureAutoRenewal = 8
+	// HuaweiBillTypeAdjustmentCompensation 9:调账-补偿
+	HuaweiBillTypeAdjustmentCompensation = 9
+	// HuaweiBillTypeExpenditureHourlyBilling 12:消费-按时计费
+	HuaweiBillTypeExpenditureHourlyBilling = 12
+	// HuaweiBillTypeExpenditureMonthEndDeduction 14:消费-服务支持计划月末扣费
+	HuaweiBillTypeExpenditureMonthEndDeduction = 14
+	// HuaweiBillTypeExpenditureTax 15:消费-税金
+	HuaweiBillTypeExpenditureTax = 15
+	// HuaweiBillTypeAdjustmentDeduction 16:调账-扣费
+	HuaweiBillTypeAdjustmentDeduction = 16
+	// HuaweiBillTypeExpenditureDifferenceAmount 17:消费-保底差额
+	HuaweiBillTypeExpenditureDifferenceAmount = 17
+	// HuaweiBillTypeRefundChange 20:退款-变更
+	HuaweiBillTypeRefundChange = 20
+	// HuaweiBillTypeSavingsPlansUsed 23:消费-节省计划抵扣
+	HuaweiBillTypeSavingsPlansUsed = 23
+	// HuaweiBillTypeRefundChangingToPayPerUse 24:退款-包年/包月转按需
+	HuaweiBillTypeRefundChangingToPayPerUse = 24
+	// HuaweiBillTypeRefundUnsubscriptionTax 100:退款-退订税金
+	HuaweiBillTypeRefundUnsubscriptionTax = 100
+	// HuaweiBillTypeAdjustmentTaxCompensation 101:调账-补偿税金
+	HuaweiBillTypeAdjustmentTaxCompensation = 101
+	// HuaweiBillTypeAdjustmentTaxDeduction 102:调账-扣费税金
+	HuaweiBillTypeAdjustmentTaxDeduction = 102
+)

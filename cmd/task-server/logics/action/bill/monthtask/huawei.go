@@ -45,6 +45,8 @@ func newHuaweiRunner(taskType enumor.MonthTaskType) (MonthTaskRunner, error) {
 	switch taskType {
 	case enumor.HuaweiSupportMonthTask:
 		return &HuaweiSupportMonthTask{}, nil
+	case enumor.HuaweiTaxDeductMonthTask:
+		return &HuaweiTaxDeductMonthTask{}, nil
 	default:
 		return nil, errors.New("not support task type of huawei: " + string(taskType))
 	}

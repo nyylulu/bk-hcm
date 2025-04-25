@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"strings"
 
+	"hcm/cmd/task-server/logics/action/bill/monthtask"
 	"hcm/pkg/api/account-server/bill"
 	"hcm/pkg/api/core"
 	accountset "hcm/pkg/api/core/account-set"
@@ -295,21 +296,9 @@ func (b *billItemSvc) buildAIFilters(kt *kit.Kit, vendor enumor.Vendor, req *bil
 	var rules []filter.RuleFactory
 	switch vendor {
 	case enumor.Aws:
-		rules = append(rules,
-			tools.RuleStartsWith("hc_product_name", "Claude"),
-		)
+		rules = append(rules, monthtask.GenAwsFilterRules()...)
 	case enumor.Gcp:
-		rules = append(rules,
-			tools.ExpressionOr(
-				tools.RuleStartsWith("hc_product_name", "Gemini"),
-				tools.RuleStartsWith("hc_product_name", "Vertex"),
-				tools.RuleStartsWith("hc_product_name", "Claude"),
-			),
-			tools.ExpressionOr(
-				tools.RuleStartsWith("extension.sku_description", "Gemini"),
-				tools.RuleStartsWith("extension.sku_description", "Claude"),
-			),
-		)
+		rules = append(rules, monthtask.GenGcpFilterRules()...)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "invalid vendor: %s", vendor)
 	}

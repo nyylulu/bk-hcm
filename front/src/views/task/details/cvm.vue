@@ -37,8 +37,6 @@ const taskDetails = ref<ITaskItem>();
 
 const condition = ref<Record<string, any>>({});
 
-const selections = ref([]);
-
 // 本任务统计数据
 const counts = ref<ITaskCountItem>();
 
@@ -136,8 +134,22 @@ watchEffect(async () => {
   setTitle(`主机${title}`);
 });
 
-const handleActionSelect = (data: any[]) => {
-  selections.value = data;
+const getStatusIPs = async (status?: TaskDetailStatus) => {
+  const list = await taskStore.getTaskDetailListAll({
+    bk_biz_id: bizId.value,
+    filter: transformSimpleCondition(
+      {
+        task_management_id: id.value,
+        state: status,
+      },
+      taskDetailsViewProperties,
+    ),
+    fields: ['param'],
+  });
+
+  const ips = list.map((item) => getPrivateIPs(item.param)).join('\n');
+
+  return ips;
 };
 
 const handleClickStatusCount = (status?: TaskDetailStatus) => {
@@ -196,19 +208,19 @@ onMounted(() => {
         </span>
       </div>
       <div class="action-buttons">
-        <copy-to-clipboard :disabled="!allIPs" :content="allIPs">
-          <template #default="{ disabled }">
-            <bk-button theme="primary" @click="handleActionSelect" :disabled="disabled">复制全部IP</bk-button>
+        <copy-to-clipboard :disabled="!counts?.total" :content="() => getStatusIPs()">
+          <template #default="{ disabled, loading }">
+            <bk-button theme="primary" :disabled="disabled" :loading="loading">复制全部IP</bk-button>
           </template>
         </copy-to-clipboard>
-        <copy-to-clipboard :disabled="!allSuccessIPs" :content="allSuccessIPs">
-          <template #default="{ disabled }">
-            <bk-button @click="handleActionSelect" :disabled="disabled">复制成功IP</bk-button>
+        <copy-to-clipboard :disabled="!counts?.success" :content="() => getStatusIPs(TaskDetailStatus.SUCCESS)">
+          <template #default="{ disabled, loading }">
+            <bk-button :disabled="disabled" :loading="loading">复制成功IP</bk-button>
           </template>
         </copy-to-clipboard>
-        <copy-to-clipboard :disabled="!allFailIPs" :content="allFailIPs">
-          <template #default="{ disabled }">
-            <bk-button @click="handleActionSelect" :disabled="disabled">复制失败IP</bk-button>
+        <copy-to-clipboard :disabled="!counts?.failed" :content="() => getStatusIPs(TaskDetailStatus.FAILED)">
+          <template #default="{ disabled, loading }">
+            <bk-button :disabled="disabled" :loading="loading">复制失败IP</bk-button>
           </template>
         </copy-to-clipboard>
       </div>
@@ -220,7 +232,6 @@ onMounted(() => {
       :detail="taskDetails"
       :pagination="pagination"
       :selectable="false"
-      @select="handleActionSelect"
     />
   </common-card>
 </template>

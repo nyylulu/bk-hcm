@@ -116,3 +116,54 @@ func (b bill) HuaWeiGetFeeRecordList(cts *rest.Contexts) (interface{}, error) {
 		Currency: enumor.CurrencyCode(cvt.PtrToVal(resp.Currency)),
 	}, nil
 }
+
+// HuaWeiQueryFeeRecord query huawei fee record, supports more filter option
+func (b bill) HuaWeiQueryFeeRecord(cts *rest.Contexts) (any, error) {
+	req := new(hcbillservice.HuaWeiFeeRecordQueryReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
+	}
+
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	if req.Page == nil {
+		req.Page = &typesBill.HuaWeiBillPage{Offset: proto.Int32(0), Limit: proto.Int32(typesBill.HuaWeiQueryLimit)}
+	}
+
+	cli, err := b.ad.HuaWeiRoot(cts.Kit, req.RootAccountID)
+	if err != nil {
+		logs.Errorf("huawei request adaptor client err, err: %+v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
+		return nil, err
+	}
+
+	opt := &typesBill.HuaWeiFeeRecordListOption{
+		AccountID:     req.RootAccountID,
+		SubAccountID:  req.MainAccountCloudID,
+		Month:         req.Month,
+		BillDateBegin: req.BillDateBegin,
+		BillDateEnd:   req.BillDateEnd,
+		Page: &typesBill.HuaWeiBillPage{
+			Offset: req.Page.Offset,
+			Limit:  req.Page.Limit,
+		},
+
+		BillType:         req.BillType,
+		CloudServiceType: req.CloudServiceType,
+		ChargeMode:       req.ChargeMode,
+		Region:           req.Region,
+		ResourceID:       req.ResourceID,
+	}
+	resp, err := cli.GetFeeRecordList(cts.Kit, opt)
+	if err != nil {
+		logs.Errorf("fail to get huawei fee record, err: %+v, opt: %+v, rid: %s", err, opt, cts.Kit.Rid)
+		return nil, err
+	}
+
+	return &hcbillservice.HuaWeiRootBillListResult{
+		Count:    cvt.PtrToVal(resp.TotalCount),
+		Details:  cvt.PtrToVal(resp.FeeRecords),
+		Currency: enumor.CurrencyCode(cvt.PtrToVal(resp.Currency)),
+	}, nil
+}

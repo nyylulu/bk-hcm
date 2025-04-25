@@ -387,7 +387,7 @@ func (r *DefaultMonthTaskRunner) ensureMonthTaskAccountedStep(kt *kit.Kit, task 
 func (r *DefaultMonthTaskRunner) createMonthTaskFlow(kt *kit.Kit, task *billcore.MonthTask,
 	step enumor.MonthTaskStep) (*core.CreateResult, error) {
 
-	memo := fmt.Sprintf("%s:%s %s(%s) %d-%02dv%d", task.Type, step, r.rootAccountCloudID, r.rootAccountID,
+	memo := fmt.Sprintf("%s:%s %.16s(%s) %d-%02dv%d", task.Type, step, r.rootAccountCloudID, r.rootAccountID,
 		task.BillYear, task.BillMonth, task.VersionID)
 
 	flowReq := &taskserver.AddCustomFlowReq{
