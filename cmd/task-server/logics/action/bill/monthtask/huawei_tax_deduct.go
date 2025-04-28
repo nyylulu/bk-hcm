@@ -133,7 +133,11 @@ func (a *HuaweiTaxDeductMonthTask) Split(kt *kit.Kit, opt *MonthTaskActionOption
 				accountCloudId, kt.Rid)
 			return nil, fmt.Errorf("can not found main account(%s) for huawei tax deduct split", accountCloudId)
 		}
-
+		ext.CloudServiceType = cvt.ValToPtr(constant.HuaweiTaxDeductProductCode)
+		ext.ResourceType = cvt.ValToPtr(constant.HuaweiTaxDeductProductCode)
+		// 取反，保证明细数据正确
+		ext.DebtAmount = cvt.ValToPtr(-cvt.PtrToVal(ext.DebtAmount))
+		ext.CreditAmount = cvt.ValToPtr(-cvt.PtrToVal(ext.CreditAmount))
 		// 清除账单类型，防止后续被重复扣减
 		ext.BillType = cvt.ValToPtr[int32](0)
 		extJson, err := json.Marshal(ext)
