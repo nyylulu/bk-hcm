@@ -59,11 +59,12 @@ type huaweiMonthDescriber struct {
 func (huawei *huaweiMonthDescriber) GetMonthTaskTypes() []enumor.MonthTaskType {
 
 	var monthTaskTypes []enumor.MonthTaskType
-	monthTaskTypes = append(monthTaskTypes, enumor.HuaweiSupportMonthTask)
-
+	// step 1. tax deduct
 	if huawei.TaxDeductConfig {
 		monthTaskTypes = append(monthTaskTypes, enumor.HuaweiTaxDeductMonthTask)
 	}
+	// step 2. support
+	monthTaskTypes = append(monthTaskTypes, enumor.HuaweiSupportMonthTask)
 
 	return monthTaskTypes
 }
