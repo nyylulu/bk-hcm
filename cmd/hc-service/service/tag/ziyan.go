@@ -76,26 +76,39 @@ func (t *tag) TCloudZiyanBatchTagRes(cts *rest.Contexts) (interface{}, error) {
 		}
 		resourceGroupByMap[resKey] = append(resourceGroupByMap[resKey], resTmp.ResCloudID)
 	}
-	client, err := t.ad.TCloudZiyan(cts.Kit, req.AccountID)
-	if err != nil {
-		logs.Errorf("fail to get tcloud-ziyan adaptor: %v, rid: %s", err, cts.Kit.Rid)
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+
+	// 无论云上操作是否成功，都触发一次同步，确保本地数据和云上一致
+	var hitErr error
+	defer func() {
+		// 当云上操作成功时，需等待云上标签变更
+		var waitCloudSync bool
+		if hitErr == nil {
+			waitCloudSync = true
+		}
+		// 将云上最新的标签版本同步到本地
+		err = t.syncResourceTag(cts.Kit, resourceGroupByMap, req.AccountID, req.Tags, waitCloudSync)
+		if err != nil {
+			logs.Errorf("failed to sync resources after tagging resources, err: %v, res: %+v, rid: %s", err,
+				req.Resources, cts.Kit.Rid)
+			return
+		}
+	}()
+
+	client, hitErr := t.ad.TCloudZiyan(cts.Kit, req.AccountID)
+	if hitErr != nil {
+		logs.Errorf("fail to get tcloud-ziyan adaptor: %v, accountID: %s, rid: %s", hitErr, req.AccountID,
+			cts.Kit.Rid)
+		return nil, errf.NewFromErr(errf.InvalidParameter, hitErr)
 	}
 	opt := &typestag.TCloudTagResOpt{
 		ResourceList: resourceList,
 		Tags:         req.Tags,
 	}
-	resp, err := client.TagResources(cts.Kit, opt)
-	if err != nil {
-		return nil, err
-	}
-
-	// 将云上最新的标签版本同步到本地
-	err = t.syncResourceTag(cts.Kit, resourceGroupByMap, req.AccountID, req.Tags)
-	if err != nil {
-		logs.Errorf("failed to sync resources after tagging resources, err: %v, res: %+v, rid: %s", err,
-			req.Resources, cts.Kit.Rid)
-		return nil, err
+	resp, hitErr := client.TagResources(cts.Kit, opt)
+	if hitErr != nil {
+		logs.Errorf("fail to tag resources, err: %v, accountID: %s, resources: %v, tags: %+v, rid: %s", hitErr,
+			req.AccountID, resourceList, req.Tags, cts.Kit.Rid)
+		return nil, hitErr
 	}
 
 	return resp, nil
@@ -103,7 +116,7 @@ func (t *tag) TCloudZiyanBatchTagRes(cts *rest.Contexts) (interface{}, error) {
 
 // syncResourceTag 将云上最新的标签同步回本地
 func (t *tag) syncResourceTag(kt *kit.Kit, resGroupByMap map[resSyncGroupByKey][]string, accountID string,
-	tags []core.TagPair) error {
+	tags []core.TagPair, waitCloudSync bool) error {
 
 	// 打标签后，同步一次，将云上标签同步回本地
 	syncCli, err := t.syncCli.TCloudZiyan(kt, accountID)
@@ -122,7 +135,7 @@ func (t *tag) syncResourceTag(kt *kit.Kit, resGroupByMap map[resSyncGroupByKey][
 
 		switch key.ResType {
 		case enumor.SecurityGroupCloudResType:
-			if err := t.syncSecurityGroupTag(kt, syncCli, params, core.NewTagMap(tags...)); err != nil {
+			if err := t.syncSecurityGroupTag(kt, syncCli, params, core.NewTagMap(tags...), waitCloudSync); err != nil {
 				logs.Warnf("failed to sync security group after tagging resources, err: %v, "+
 					"res cloud_ids: %v, rid: %s", err, resources, kt.Rid)
 			}
@@ -139,7 +152,7 @@ func (t *tag) syncResourceTag(kt *kit.Kit, resGroupByMap map[resSyncGroupByKey][
 }
 
 func (t *tag) syncSecurityGroupTag(kt *kit.Kit, syncCli ziyan.Interface, syncParams *ziyan.SyncBaseParams,
-	tagsMap core.TagMap) error {
+	tagsMap core.TagMap, waitCloudSync bool) error {
 
 	if err := syncParams.Validate(); err != nil {
 		return errf.NewFromErr(errf.InvalidParameter, err)
@@ -151,6 +164,25 @@ func (t *tag) syncSecurityGroupTag(kt *kit.Kit, syncCli ziyan.Interface, syncPar
 		return errf.NewFromErr(errf.InvalidParameter, err)
 	}
 
+	// 无论如何都需要同步一次
+	defer func() {
+		// 同步安全组资源到本地
+		if _, err := syncCli.SecurityGroup(kt, syncParams, new(ziyan.SyncSGOption)); err != nil {
+			logs.Errorf("failed to sync sg after tagging resources, err: %v, res cloud_ids: %v, rid: %s", err,
+				syncParams.CloudIDs, kt.Rid)
+			return
+		}
+	}()
+
+	// 云上操作失败的情况下，同步不需要等待云上更新
+	if !waitCloudSync {
+		return nil
+	}
+
+	// 云上标签更新有延迟，轮询云上资源，直到云上标签版本与本地一致
+	startWaiting := time.Now()
+	isMatch := false
+
 	listOpt := &typessg.TCloudListOption{
 		Region:   syncParams.Region,
 		CloudIDs: syncParams.CloudIDs,
@@ -159,9 +191,6 @@ func (t *tag) syncSecurityGroupTag(kt *kit.Kit, syncCli ziyan.Interface, syncPar
 		},
 	}
 
-	// 云上标签更新有延迟，轮询云上资源，直到云上标签版本与本地一致
-	startWaiting := time.Now()
-	isMatch := false
 outside:
 	for time.Now().Before(startWaiting.Add(constant.IntervalWaitResourceSync)) {
 		time.Sleep(time.Millisecond * 300)
@@ -198,13 +227,6 @@ outside:
 		logs.Errorf("failed to wait tcloud-ziyan security group sync: timeout, res cloud_ids: %v, rid: %s",
 			syncParams.CloudIDs, kt.Rid)
 		return errors.New("failed to wait tcloud-ziyan security group sync: timeout")
-	}
-
-	// 同步安全组资源到本地
-	if _, err := syncCli.SecurityGroup(kt, syncParams, new(ziyan.SyncSGOption)); err != nil {
-		logs.Errorf("failed to sync sg after tagging resources, err: %v, res cloud_ids: %v, rid: %s", err,
-			syncParams.CloudIDs, kt.Rid)
-		return err
 	}
 
 	return nil

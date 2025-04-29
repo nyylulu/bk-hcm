@@ -358,6 +358,13 @@ func (s *securityGroup) UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGr
 			sg.AccountID)
 	}
 
+	// 更新管理属性到云上（如果有需要的话）
+	if err := s.updateSingleCloudMgmtAttr(kt, mgmtAttr, sg.ID); err != nil {
+		logs.Errorf("update cloud security group management attributes failed, err: %v, sg_id: %s, rid: %s", err,
+			sg.ID, kt.Rid)
+		return err
+	}
+
 	// 更新管理属性
 	updateItems := make([]dataproto.BatchUpdateSGMgmtAttrItem, 0)
 	updateItems = append(updateItems, dataproto.BatchUpdateSGMgmtAttrItem{
@@ -375,13 +382,6 @@ func (s *securityGroup) UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGr
 	if err := s.client.DataService().Global.SecurityGroup.BatchUpdateSecurityGroupMgmtAttr(kt, updateReq); err != nil {
 		logs.Errorf("batch update security group management attributes failed, err: %v, rid: %s", err,
 			kt.Rid)
-		return err
-	}
-
-	// 更新管理属性到云上（如果有需要的话）
-	if err := s.updateSingleCloudMgmtAttr(kt, sg.ID); err != nil {
-		logs.Errorf("update cloud security group management attributes failed, err: %v, sg_id: %s, rid: %s", err,
-			sg.ID, kt.Rid)
 		return err
 	}
 
@@ -407,7 +407,11 @@ func (s *securityGroup) UpdateSGMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGr
 	return nil
 }
 
-func (s *securityGroup) updateSingleCloudMgmtAttr(kt *kit.Kit, sgID string) error {
+// updateSingleCloudMgmtAttr 更新单个安全组的云上管理属性，以本地数据为准
+// 因先同步再更新本地数据，需要将本次期望的更新属性合并到本地数据中
+func (s *securityGroup) updateSingleCloudMgmtAttr(kt *kit.Kit, mgmtAttr *proto.SecurityGroupUpdateMgmtAttrReq,
+	sgID string) error {
+
 	listReq := &dataproto.SecurityGroupListReq{
 		Field:  []string{},
 		Filter: tools.EqualExpression("id", sgID),
@@ -436,6 +440,16 @@ func (s *securityGroup) updateSingleCloudMgmtAttr(kt *kit.Kit, sgID string) erro
 		BakManager: sgInfos.Details[0].BakManager,
 		MgmtBizID:  sgInfos.Details[0].MgmtBizID,
 	}
+	if mgmtAttr.MgmtBizID != 0 {
+		updateAttrItem.MgmtBizID = mgmtAttr.MgmtBizID
+	}
+	if mgmtAttr.Manager != "" {
+		updateAttrItem.Manager = mgmtAttr.Manager
+	}
+	if mgmtAttr.BakManager != "" {
+		updateAttrItem.BakManager = mgmtAttr.BakManager
+	}
+
 	sgMap := make(map[string]cloud.BaseSecurityGroup)
 	sgMap[sgID] = sgInfos.Details[0]
 	if err := s.updateCloudMgmtAttr(kt, []proto.BatchUpdateSGMgmtAttrItem{updateAttrItem}, sgMap); err != nil {
