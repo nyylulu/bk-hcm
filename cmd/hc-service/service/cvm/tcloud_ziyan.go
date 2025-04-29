@@ -25,6 +25,7 @@ import (
 
 	syncziyan "hcm/cmd/hc-service/logics/res-sync/ziyan"
 	"hcm/cmd/hc-service/service/capability"
+	tziyan "hcm/pkg/adaptor/tcloud-ziyan"
 	adcore "hcm/pkg/adaptor/types/core"
 	typecvm "hcm/pkg/adaptor/types/cvm"
 	"hcm/pkg/api/core"
@@ -35,6 +36,7 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/esb"
@@ -144,16 +146,10 @@ func (svc *cvmSvc) BatchStartTCloudZiyanCvm(cts *rest.Contexts) (interface{}, er
 		return nil, err
 	}
 
-	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
 	for bizID, hostIDs := range bizIDToHostIDs {
-		params := &syncziyan.SyncHostParams{
-			AccountID: req.AccountID,
-			BizID:     bizID,
-			HostIDs:   hostIDs,
-		}
-		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		err = svc.syncTCloudZiyanCvmWithRelRes(cts.Kit, client, req.AccountID, bizID, hostIDs)
 		if err != nil {
-			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			logs.Errorf("sync tcloud-ziyan cvm with rel res failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
 	}
@@ -206,16 +202,10 @@ func (svc *cvmSvc) BatchStopTCloudZiyanCvm(cts *rest.Contexts) (interface{}, err
 		return nil, err
 	}
 
-	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
 	for bizID, hostIDs := range bizIDToHostIDs {
-		params := &syncziyan.SyncHostParams{
-			AccountID: req.AccountID,
-			BizID:     bizID,
-			HostIDs:   hostIDs,
-		}
-		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		err = svc.syncTCloudZiyanCvmWithRelRes(cts.Kit, client, req.AccountID, bizID, hostIDs)
 		if err != nil {
-			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			logs.Errorf("sync tcloud-ziyan cvm with rel res failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
 	}
@@ -268,16 +258,10 @@ func (svc *cvmSvc) BatchRebootTCloudZiyanCvm(cts *rest.Contexts) (interface{}, e
 		return nil, err
 	}
 
-	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
 	for bizID, hostIDs := range bizIDToHostIDs {
-		params := &syncziyan.SyncHostParams{
-			AccountID: req.AccountID,
-			BizID:     bizID,
-			HostIDs:   hostIDs,
-		}
-		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		err = svc.syncTCloudZiyanCvmWithRelRes(cts.Kit, client, req.AccountID, bizID, hostIDs)
 		if err != nil {
-			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			logs.Errorf("sync tcloud-ziyan cvm with rel res failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
 	}
@@ -391,16 +375,10 @@ func (svc *cvmSvc) BatchResetTCloudZiyanCvm(cts *rest.Contexts) (any, error) {
 		bizIDToHostIDs[one.BkBizID] = append(bizIDToHostIDs[one.BkBizID], one.BkHostID)
 	}
 
-	syncClient := syncziyan.NewClient(svc.dataCli, client, esb.EsbClient())
 	for bizID, hostIDs := range bizIDToHostIDs {
-		params := &syncziyan.SyncHostParams{
-			AccountID: req.AccountID,
-			BizID:     bizID,
-			HostIDs:   hostIDs,
-		}
-		_, err = syncClient.HostWithRelRes(cts.Kit, params)
+		err = svc.syncTCloudZiyanCvmWithRelRes(cts.Kit, client, req.AccountID, bizID, hostIDs)
 		if err != nil {
-			logs.Errorf("sync tcloud-ziyan cvm failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			logs.Errorf("sync tcloud-ziyan cvm with rel res failed, err: %v, rid: %s", err, cts.Kit.Rid)
 			return nil, err
 		}
 	}
@@ -433,6 +411,14 @@ func (svc *cvmSvc) BatchAssociateZiyanSecurityGroup(cts *rest.Contexts) (any, er
 		return nil, fmt.Errorf("cvm (%s) not found", req.CvmID)
 	}
 	cvmCloudID := cvmList[0].CloudID
+	defer func() {
+		err = svc.syncTCloudZiyanCvmWithRelRes(cts.Kit, ziyan, req.AccountID, cvmList[0].BkBizID,
+			[]int64{cvmList[0].BkHostID})
+		if err != nil {
+			logs.Errorf("sync tcloud-ziyan cvm with rel res failed, err: %v, rid: %s", err, cts.Kit.Rid)
+			return
+		}
+	}()
 
 	sgMap, err := svc.listSecurityGroupMap(cts.Kit, req.SecurityGroupIDs...)
 	if err != nil {
@@ -469,4 +455,22 @@ func (svc *cvmSvc) BatchAssociateZiyanSecurityGroup(cts *rest.Contexts) (any, er
 			err, req.CvmID, req.SecurityGroupIDs, cts.Kit.Rid)
 	}
 	return nil, nil
+}
+
+func (svc *cvmSvc) syncTCloudZiyanCvmWithRelRes(kt *kit.Kit, ziyan tziyan.TCloudZiyan, accountID string, bkBizID int64,
+	hostIDs []int64) error {
+
+	syncClient := syncziyan.NewClient(svc.dataCli, ziyan, esb.EsbClient())
+	params := &syncziyan.SyncHostParams{
+		AccountID: accountID,
+		BizID:     bkBizID,
+		HostIDs:   hostIDs,
+	}
+
+	_, err := syncClient.HostWithRelRes(kt, params)
+	if err != nil {
+		logs.Errorf("sync tcloud-ziyan cvm with res failed, err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+	return nil
 }
