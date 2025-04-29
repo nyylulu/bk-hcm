@@ -37,6 +37,7 @@ import (
 	planctrl "hcm/cmd/woa-server/logics/plan"
 	ressynclogics "hcm/cmd/woa-server/logics/res-sync"
 	rslogics "hcm/cmd/woa-server/logics/rolling-server"
+	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recoverer"
@@ -106,6 +107,8 @@ type Service struct {
 	dissolveLogic disLogics.Logics
 	resSyncLogic  ressynclogics.Logics
 	configLogics  configlogic.Logics
+	taskLogic     taskLogics.Logics
+	cvmLogic      cvmlogic.Logics
 }
 
 // NewService create a service instance.
@@ -301,19 +304,24 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		return nil, err
 	}
 
-	// init recoverer client
-	recoverConf := cc.WoaServer().Recover
-	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,
-		service.configLogics, service.esbClient, service.rsLogic)
-	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
-		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
-		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
-	}
-
 	operationIf, err := operation.New(kt.Ctx)
 	if err != nil {
 		logs.Errorf("new operation failed, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
+	taskLogic := taskLogics.New(service.schedulerIf, recyclerIf, service.informerIf, operationIf)
+	service.taskLogic = taskLogic
+
+	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,
+		service.configLogics, service.esbClient, service.rsLogic, service.taskLogic)
+	service.cvmLogic = cvmLogic
+
+	// init recoverer client
+	recoverConf := cc.WoaServer().Recover
+	if err = recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.cvmLogic,
+		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
+		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
@@ -410,6 +418,8 @@ func (s *Service) apiSet() *restful.Container {
 		DissolveLogic:  s.dissolveLogic,
 		ResSyncLogic:   s.resSyncLogic,
 		ConfigLogics:   s.configLogics,
+		TaskLogic:      s.taskLogic,
+		CvmLogic:       s.cvmLogic,
 	}
 
 	config.InitService(c)

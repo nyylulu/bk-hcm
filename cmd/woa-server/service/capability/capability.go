@@ -23,11 +23,13 @@ package capability
 import (
 	"hcm/cmd/woa-server/logics/biz"
 	"hcm/cmd/woa-server/logics/config"
+	cvmlogic "hcm/cmd/woa-server/logics/cvm"
 	"hcm/cmd/woa-server/logics/dissolve"
 	gclogics "hcm/cmd/woa-server/logics/green-channel"
 	"hcm/cmd/woa-server/logics/plan"
 	ressync "hcm/cmd/woa-server/logics/res-sync"
 	rslogic "hcm/cmd/woa-server/logics/rolling-server"
+	taskLogics "hcm/cmd/woa-server/logics/task"
 	"hcm/cmd/woa-server/logics/task/informer"
 	"hcm/cmd/woa-server/logics/task/operation"
 	"hcm/cmd/woa-server/logics/task/recycler"
@@ -66,4 +68,6 @@ type Capability struct {
 	DissolveLogic  dissolve.Logics
 	ResSyncLogic   ressync.Logics
 	ConfigLogics   config.Logics
+	TaskLogic      taskLogics.Logics
+	CvmLogic       cvmlogic.Logics
 }
