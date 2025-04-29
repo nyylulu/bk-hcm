@@ -129,6 +129,9 @@ func (svc *securityGroupSvc) listRuleByVendor(cts *rest.Contexts, vendor enumor.
 			listReq, sgID)
 
 	case enumor.TCloudZiyan:
+		// 强制按照云上策略索引排序
+		req.Page.Sort = "cloud_policy_index"
+		req.Page.Order = core.Ascending
 		listReq := &dataproto.TCloudSGRuleListReq{
 			Filter: req.Filter,
 			Page:   req.Page,
