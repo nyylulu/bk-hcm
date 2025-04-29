@@ -19,7 +19,6 @@ import (
 
 	"hcm/cmd/woa-server/logics/config"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
-	taskLogics "hcm/cmd/woa-server/logics/task"
 	model "hcm/cmd/woa-server/model/cvm"
 	types "hcm/cmd/woa-server/types/cvm"
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
@@ -59,12 +58,11 @@ type logics struct {
 	confLogic config.Logics
 	esbClient esb.Client
 	rsLogic   rollingserver.Logics
-	taskLogic taskLogics.Logics
 }
 
 // New create a logics manager
 func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics,
-	esbClient esb.Client, rsLogic rollingserver.Logics, taskLogic taskLogics.Logics) Logics {
+	esbClient esb.Client, rsLogic rollingserver.Logics) Logics {
 
 	return &logics{
 		cvm:       thirdCli.CVM,
@@ -72,7 +70,6 @@ func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.
 		cliConf:   cliConf,
 		esbClient: esbClient,
 		rsLogic:   rsLogic,
-		taskLogic: taskLogic,
 	}
 }
 

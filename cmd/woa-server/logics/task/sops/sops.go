@@ -356,7 +356,7 @@ func CheckTaskStatus(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, taskID, b
 		return sopsCli.GetTaskStatus(kt.Ctx, kt.Header(), taskID, bkBizID)
 	}
 
-	ret, err := utils.Retry(doFunc, checkFunc, 3600, uint64(rand.Intn(5)+15))
+	ret, err := utils.Retry(doFunc, checkFunc, 3600, 10)
 	checkResp, ok := ret.(*sopsapi.GetTaskStatusResp)
 	if !ok {
 		logs.Errorf("sops:process:check task status, ret is not the right type sopsapi.GetTaskStatusResp, taskID: %d, "+

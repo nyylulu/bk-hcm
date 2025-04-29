@@ -142,19 +142,6 @@ func (l *logics) CreateCvmFromTaskResult(kt *kit.Kit, order *types.ApplyOrder) e
 		return err
 	}
 
-	// check cvm task result
-	orderStr := strconv.FormatUint(order.OrderId, 10)
-	if err := l.taskLogic.Scheduler().GetGenerator().CheckCVM(kt, order.TaskId, orderStr); err != nil {
-		logs.Errorf("create cvm product failed, failed to check crp cvm status, orderID: %d, crpTaskID: %s, "+
-			"err: %v, rid: %s", order.OrderId, order.TaskId, err, kt.Rid)
-
-		if subErr := l.updateApplyOrder(order, types.ApplyStatusFailed, err.Error(), "", 0); subErr != nil {
-			logs.Errorf("update apply order failed, err: %v, order id: %d, rid: %s", subErr, order.OrderId, kt.Rid)
-			return subErr
-		}
-		return err
-	}
-
 	// get generated cvm instances
 	hosts, err := l.listCVM(order.TaskId)
 	if err != nil {
