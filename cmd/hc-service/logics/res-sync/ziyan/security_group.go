@@ -189,6 +189,7 @@ func (cli *client) createSG(kt *kit.Kit, accountID string, region string,
 			Name:      cvt.PtrToVal(one.SecurityGroupName),
 			Memo:      one.SecurityGroupDesc,
 			AccountID: accountID,
+			MgmtBizID: constant.UnassignedBiz,
 			Extension: &cloudcore.TCloudSecurityGroupExtension{
 				CloudProjectID: one.ProjectId,
 			},
