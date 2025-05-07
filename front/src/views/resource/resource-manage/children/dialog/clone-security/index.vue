@@ -4,7 +4,6 @@ import { Dialog, Form, Message } from 'bkui-vue';
 import { ref, computed, h, reactive, watch, useTemplateRef } from 'vue';
 import { useResourceStore, useBusinessStore } from '@/store';
 
-import UsageBizValue from '../../components/security/usage-biz-value.vue';
 import SecurityGroupManagerSelector from '@/views/resource/resource-manage/children/components/security/manager-selector/index.vue';
 import { useI18n } from 'vue-i18n';
 import {
@@ -24,6 +23,7 @@ import {
 import { huaweiSourceAddressTypes } from '@/views/resource/resource-manage/children/components/security/add-rule/vendors/huawei';
 import { SecurityRuleEnum, HuaweiSecurityRuleEnum, AzureSecurityRuleEnum, QueryRuleOPEnum } from '@/typings';
 import { VendorEnum } from '@/common/constant';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 
 export interface IData {
   [key: string]: any;
@@ -37,6 +37,10 @@ const props = defineProps<ICloneSecurityProps>();
 
 const emit = defineEmits(['update:isShow', 'success']);
 const { t } = useI18n();
+
+const { getBizsId } = useWhereAmI();
+const currentBusinessId = computed(() => getBizsId());
+
 // tab 信息
 const types = [
   { name: 'ingress', label: t('入站规则') },
@@ -87,6 +91,10 @@ const inColumns: any = computed(() =>
             arr: TcloudSourceTypeArr,
           },
           [VendorEnum.TCLOUD]: {
+            types: tcloudSourceAddressTypes,
+            arr: TcloudSourceTypeArr,
+          },
+          [VendorEnum.ZIYAN]: {
             types: tcloudSourceAddressTypes,
             arr: TcloudSourceTypeArr,
           },
@@ -291,6 +299,10 @@ const outColumns: any = computed(() =>
             types: tcloudSourceAddressTypes,
             arr: TcloudSourceTypeArr,
           },
+          [VendorEnum.ZIYAN]: {
+            types: tcloudSourceAddressTypes,
+            arr: TcloudSourceTypeArr,
+          },
         };
         const { types } = targetMap[nowVendor];
         const { arr } = targetMap[nowVendor];
@@ -462,12 +474,12 @@ watch(
     <div class="security-info">
       <div class="info-wrap">
         <span class="label">{{ t('管理业务：') }}</span>
-        <display-value :property="{ type: 'business' }" :value="props.data.mgmt_biz_id" />
+        <display-value :property="{ type: 'business' }" :value="currentBusinessId" />
       </div>
       <div>
         <div class="info-wrap usage-bizs">
           <span class="label">{{ t('使用业务：') }}</span>
-          <usage-biz-value :value="props.data.usage_biz_ids" />
+          <display-value :property="{ type: 'business' }" :value="currentBusinessId" />
         </div>
       </div>
     </div>
