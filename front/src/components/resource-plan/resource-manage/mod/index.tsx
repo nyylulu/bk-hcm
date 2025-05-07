@@ -16,7 +16,7 @@ import { useModColumn } from './useModColumn';
 import { timeFormatter } from '@/common/util';
 import dayjs from 'dayjs';
 import Panel from '@/components/panel';
-import { getDateRangeIntersectionWithMonth, isDateInRange } from '@/utils/plan';
+import { isDateInRange } from '@/utils/plan';
 import CommonDialog from '@/components/common-dialog';
 
 const { FormItem } = Form;
@@ -41,14 +41,14 @@ export default defineComponent({
     const isPlanEditShow = ref(false);
     const tableRef = ref();
     const delayFormRef = ref();
-    const timeStrictRange = ref({
-      start: '',
-      end: '',
-    });
     const { formModel } = useFormModel({
       time: dayjs().add(13, 'week').format('YYYY-MM-DD'),
     });
     const { formModel: timeRange, setFormValues: setTimeRange } = useFormModel<IExceptTimeRange>({});
+    const timeStrictRange = computed(() => ({
+      start: timeRange.date_range_in_week?.start || '',
+      end: timeRange.date_range_in_week?.end || '',
+    }));
     const tableColumns = [
       ...columns,
       {
@@ -221,11 +221,6 @@ export default defineComponent({
         const expect_time = timeFormatter(time, 'YYYY-MM-DD');
         const { data } = await planStore.get_demand_available_time(expect_time);
         setTimeRange(data);
-        timeStrictRange.value = getDateRangeIntersectionWithMonth(
-          timeRange.date_range_in_week.start,
-          timeRange.date_range_in_week.end,
-          timeRange.year_month_week.month,
-        );
       },
       {
         deep: true,

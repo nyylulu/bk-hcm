@@ -10,7 +10,7 @@ import usePlanStore from '@/store/usePlanStore';
 import type { IPlanTicketDemand, IRegion, IZone } from '@/typings/resourcePlan';
 import { timeFormatter } from '@/common/util';
 import { AdjustType, IExceptTimeRange } from '@/typings/plan';
-import { getDateRangeIntersectionWithMonth, isDateInRange } from '@/utils/plan';
+import { isDateInRange } from '@/utils/plan';
 import useFormModel from '@/hooks/useFormModel';
 
 dayjs.extend(isBetween);
@@ -37,10 +37,14 @@ export default defineComponent({
     const { t } = useI18n();
     const resourcePlanStore = useResourcePlanStore();
     const { formModel: timeRange, setFormValues: setTimeRange } = useFormModel<IExceptTimeRange>({
-      year_month_week: undefined,
-      date_range_in_week: undefined,
-      date_range_in_month: undefined,
+      year_month_week: null,
+      date_range_in_week: null,
+      date_range_in_month: null,
     });
+    const timeStrictRange = computed(() => ({
+      start: timeRange.date_range_in_week?.start || '',
+      end: timeRange.date_range_in_week?.end || '',
+    }));
 
     // 记录原始到货期望时间（修改预测需求）
     const originExpectTime = props.type !== AdjustType.none ? props.planTicketDemand.expect_time : '';
@@ -54,10 +58,6 @@ export default defineComponent({
     const isLoadingRegion = ref(false);
     const isLoadingZone = ref(false);
     const isLoadingSource = ref(false);
-    const timeStrictRange = ref({
-      start: '',
-      end: '',
-    });
 
     const isThirteenDate = computed(() => {
       const expectedDate = dayjs(props.planTicketDemand.expect_time);
@@ -159,10 +159,6 @@ export default defineComponent({
 
       // 检查给定日期是否在本周内
       if (currentDate.isBetween(startOfWeek, endOfWeek, 'day', '[]')) {
-        // 检查给定日期是否跨月
-        if (currentDate.month() !== startOfWeek.month()) {
-          return true;
-        }
         return false;
       }
       return dayjs(currentDate).isBefore(dayjs());
@@ -219,18 +215,12 @@ export default defineComponent({
 
         // data 复制到 timeRange
         setTimeRange(data);
-        // 计算所在周没有跨月的日期
-        timeStrictRange.value = getDateRangeIntersectionWithMonth(
-          timeRange.date_range_in_week.start,
-          timeRange.date_range_in_week.end,
-          timeRange.year_month_week.month,
-        );
-        // 是否跨月
+        // 判断当前日期是否在周期内
         const disabledWithDateRange = isDateInRange(timeFormatter(time, 'YYYY-MM-DD'), timeStrictRange.value);
 
         emit('update:submitTooltips', {
           content: t(
-            `日期落在${timeRange.year_month_week?.year}年${timeRange.year_month_week?.month}月W${timeRange.year_month_week?.week},需要在${timeStrictRange.value.start}~${timeStrictRange.value.end}间申领`,
+            `日期落在${timeRange.year_month_week?.year}年${timeRange.year_month_week?.month}月W${timeRange.year_month_week?.week}, 需要选择${timeStrictRange.value.start}~${timeStrictRange.value.end}的日期`,
           ),
           disabled: disabledWithDateRange,
         });
