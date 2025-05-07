@@ -65,6 +65,8 @@ const getDefaultModel = () => {
 const formModel = reactive(getDefaultModel());
 
 const isRollingServer = computed(() => formModel.require_type === 6);
+const isSpringPool = computed(() => formModel.require_type === 8);
+const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
 const isSpecialRequirement = computed(() => [6, 7].includes(formModel.require_type));
 watch(isSpecialRequirement, (val) => {
   if (!val) {
@@ -199,6 +201,13 @@ const isSubmitDisabled = computed(() => !isSpecialRequirement.value && !hasPlane
 const isSubmitLoading = ref(false);
 const formRef = ref();
 const formRules = {
+  replicas: [
+    {
+      validator: (value: number) => !(isRollingServerLike.value && value > 100),
+      message: t('注意：因云接口限制，单次的机器数最大值为100，超过后请手动克隆为多条配置'),
+      trigger: 'blur',
+    },
+  ],
   'spec.subnet': [
     {
       validator: (value: string) => (formModel.spec.vpc ? !!value : true),
