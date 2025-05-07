@@ -1685,12 +1685,12 @@ export default defineComponent({
                               )}
                             </bk-form-item>
                             <bk-form-item label='需求数量' required property='replicas'>
-                              <Input
-                                type='number'
+                              <hcm-form-number
                                 class='commonCard-form-select'
                                 v-model={QCLOUDCVMForm.value.spec.replicas}
                                 min={1}
-                                max={1000}></Input>
+                                max={1000}
+                              />
                               {resourceForm.value.resourceType === 'QCLOUDCVM' && (
                                 <CvmMaxCapacity params={cvmMaxCapacityQueryParams.value} />
                               )}
@@ -1749,11 +1749,7 @@ export default defineComponent({
                             </bk-form-item>
                             <div class='commonCard-form'>
                               <bk-form-item label='需求数量' required property='replicas'>
-                                <Input
-                                  class={'input-demand'}
-                                  type='number'
-                                  v-model={pmForm.value.spec.replicas}
-                                  min={1}></Input>
+                                <hcm-form-number class='input-demand' v-model={pmForm.value.spec.replicas} min={1} />
                               </bk-form-item>
                               <bk-form-item
                                 label='反亲和性'
