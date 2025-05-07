@@ -166,9 +166,13 @@ export const ZiyanRenderRow = defineComponent({
     watch(
       () => formModel.protocol,
       () => {
-        if (formModel.protocol === 'ALL') {
+        if (['ALL', 'icmp', 'gre', 'icmpv6'].includes(formModel.protocol)) {
           formModel.port = 'ALL';
-        } else formModel.port = '';
+        } else {
+          formModel.port = '';
+          formModel.cloud_service_id = '';
+          formModel.cloud_service_group_id = '';
+        }
       },
     );
 
@@ -286,6 +290,7 @@ export const ZiyanRenderRow = defineComponent({
                   v-model={formModel.port}
                   ref={portRef}
                   disabled={['ALL', 'icmp', 'gre', 'icmpv6'].includes(formModel.protocol)}
+                  clearable={!['ALL', 'icmp', 'gre', 'icmpv6'].includes(formModel.protocol)}
                   rules={[
                     {
                       validator: (value: string) => Boolean(value),
