@@ -24,11 +24,9 @@ import (
 	"fmt"
 
 	actcli "hcm/cmd/task-server/logics/action/cli"
-	adbilltypes "hcm/pkg/adaptor/types/bill"
 	"hcm/pkg/api/core"
 	protocore "hcm/pkg/api/core/account-set"
 	"hcm/pkg/api/data-service/bill"
-	hcbill "hcm/pkg/api/hc-service/bill"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
@@ -36,19 +34,19 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
-	"hcm/pkg/tools/times"
 
 	"github.com/shopspring/decimal"
+	"github.com/tidwall/gjson"
 )
 
 // HuaweiSupportMonthTask
-// 1. 拉根账号下的support plan 账单 直接用根账号cloud_id 接口拉取，再分摊到个各个账号下
+// 1. 华为支持费拉取本地根账号下所有账单，包括前面的其他month task 生成的账单
 // 2. 分摊到子账号下
 type HuaweiSupportMonthTask struct {
 	huaweiMonthTaskBaseRunner
 }
 
-// Pull support bill item
+// Pull ...
 func (a HuaweiSupportMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, index uint64) (
 	itemList []bill.RawBillItem, isFinished bool, err error) {
 
@@ -58,65 +56,61 @@ func (a HuaweiSupportMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, in
 		return nil, false, err
 	}
 
-	// 获取指定月份最后一天
-	lastDay, err := times.GetLastDayOfMonth(opt.BillYear, opt.BillMonth)
+	mainAccounts, err := actcli.GetDataService().Global.MainAccount.List(kt, &core.ListReq{
+		Filter: tools.EqualExpression("cloud_id", rootAccount.CloudID),
+		Page:   core.NewDefaultBasePage(),
+		Fields: []string{"id"},
+	})
 	if err != nil {
-		logs.Errorf("fail get last day of month for huawei month task, year: %d, month: %d, err: %v, rid: %s",
-			opt.BillYear, opt.BillMonth, err, kt.Rid)
 		return nil, false, err
 	}
+	if len(mainAccounts.Details) != 1 {
+		return nil, false, fmt.Errorf("huawei root account(%s) as main not found for pull support", rootAccount.CloudID)
+	}
+	rootAsMainID := mainAccounts.Details[0].ID
 
-	rootBillReq := &hcbill.HuaWeiFeeRecordListReq{
-		RootAccountID:      opt.RootAccountID,
-		MainAccountCloudID: rootAccount.CloudID,
-		Month:              fmt.Sprintf("%d-%02d", opt.BillYear, opt.BillMonth),
-		BillDateBegin:      fmt.Sprintf("%d-%02d-%02d", opt.BillYear, opt.BillMonth, 1),
-		BillDateEnd:        fmt.Sprintf("%d-%02d-%02d", opt.BillYear, opt.BillMonth, lastDay),
-		Page: &adbilltypes.HuaWeiBillPage{
-			Offset: cvt.ValToPtr(int32(index)),
-			Limit:  cvt.ValToPtr(int32(a.GetBatchSize(kt))),
+	req := &bill.BillItemListReq{
+		ItemCommonOpt: &bill.ItemCommonOpt{
+			Vendor: opt.Vendor,
+			Year:   opt.BillYear,
+			Month:  opt.BillMonth,
+		},
+		ListReq: &core.ListReq{
+			Filter: tools.ExpressionAnd(
+				tools.RuleEqual("root_account_id", opt.RootAccountID),
+				tools.RuleEqual("main_account_id", rootAsMainID),
+				// filter out bills produced by previous support month task
+				tools.RuleNotIn("hc_product_name", []string{constant.BillCommonExpenseReverseName}),
+			),
+			Page: &core.BasePage{
+				Start: uint32(index),
+				Limit: uint(a.GetBatchSize(kt)),
+				Sort:  "id",
+			},
 		},
 	}
-	billResp, err := actcli.GetHCService().HuaWei.Bill.ListFeeRecord(kt, rootBillReq)
+	billResp, err := actcli.GetDataService().Global.Bill.ListBillItemRaw(kt, req)
 	if err != nil {
+		logs.Infof("fail to list bill item for huawei support, err: %v, rid: %s", err, kt.Rid)
 		return nil, false, err
 	}
-	if len(billResp.Details) == 0 {
-		return nil, true, nil
-	}
-	for _, record := range billResp.Details {
 
-		creditCost := decimal.NewFromFloat(0)
-		if record.CreditAmount != nil {
-			creditCost = decimal.NewFromFloat(*record.CreditAmount)
+	if len(billResp.Details) == 0 {
+		return itemList, true, nil
+	}
+
+	for _, item := range billResp.Details {
+		region := gjson.Get(string(item.Extension), "region").String()
+		newBillItem := bill.RawBillItem{
+			Region:        region,
+			HcProductCode: item.HcProductCode,
+			HcProductName: item.HcProductName,
+			BillCurrency:  item.Currency,
+			BillCost:      item.Cost,
+			ResAmount:     item.ResAmount,
+			ResAmountUnit: item.ResAmountUnit,
+			Extension:     types.JsonField(item.Extension),
 		}
-		debtCost := decimal.NewFromFloat(0)
-		if record.DebtAmount != nil {
-			debtCost = decimal.NewFromFloat(*record.DebtAmount)
-		}
-		extensionBytes, err := json.Marshal(record)
-		if err != nil {
-			return nil, false, fmt.Errorf("marshal huawei support bill item %v failed", record)
-		}
-		newBillItem := bill.RawBillItem{}
-		if record.Region != nil {
-			newBillItem.Region = *record.Region
-		}
-		if record.CloudServiceType != nil {
-			newBillItem.HcProductCode = *record.CloudServiceType
-		}
-		if record.CloudServiceTypeName != nil {
-			newBillItem.HcProductName = *record.CloudServiceTypeName
-		}
-		newBillItem.BillCurrency = billResp.Currency
-		newBillItem.BillCost = creditCost.Add(debtCost)
-		if record.Usage != nil {
-			newBillItem.ResAmount = decimal.NewFromFloat(*record.Usage)
-		}
-		if record.UsageMeasureId != nil {
-			newBillItem.ResAmountUnit = fmt.Sprintf("%d", *record.UsageMeasureId)
-		}
-		newBillItem.Extension = types.JsonField(extensionBytes)
 		itemList = append(itemList, newBillItem)
 	}
 	supportDone := uint64(len(billResp.Details)) < a.GetBatchSize(kt)
@@ -259,5 +253,5 @@ func (a *HuaweiSupportMonthTask) GetHcProductCodes() []string {
 
 // GetBatchSize ...
 func (a HuaweiSupportMonthTask) GetBatchSize(kt *kit.Kit) uint64 {
-	return 1000
+	return 500
 }
