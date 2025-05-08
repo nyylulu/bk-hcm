@@ -109,11 +109,7 @@ func BatchUpdateTaskDetailResultState(kt *kit.Kit, ids []string, state enumor.Ta
 			if reason != nil {
 				// 需要截取否则超出DB字段长度限制，会更新状态失败
 				runesReason := []rune(reason.Error())
-				maxLength := 1000
-				if len(runesReason) < maxLength {
-					maxLength = len(runesReason)
-				}
-				field.Reason = string(runesReason[:maxLength])
+				field.Reason = string(runesReason[:min(1000, len(runesReason))])
 			}
 			detailUpdates[i] = field
 		}

@@ -33,6 +33,8 @@ alter table vpc
 
 alter table cvm
     add column bk_host_id bigint DEFAULT -1 COMMENT '主机ID';
+alter table cvm
+    ADD INDEX idx_bk_host_id (`bk_host_id`, `id`);
 
 update cvm set bk_host_id = JSON_EXTRACT(extension, '$.bk_host_id') where vendor = 'tcloud-ziyan'
   and JSON_EXTRACT(extension, '$.bk_host_id') is not null and JSON_EXTRACT(extension, '$.bk_host_id') != 0;
