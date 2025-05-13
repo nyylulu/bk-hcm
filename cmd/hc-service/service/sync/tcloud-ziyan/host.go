@@ -34,6 +34,7 @@ import (
 	"hcm/pkg/rest"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/converter"
 )
 
 // SyncHostWithRelRes ....
@@ -209,7 +210,8 @@ func (hd *hostHandler) RemoveDeleteFromCloud(kt *kit.Kit) error {
 func (hd *hostHandler) DeleteHost(kt *kit.Kit, params *ziyan.DelHostParams) error {
 	err := hd.syncCli.RemoveHostFromCC(kt, params)
 	if err != nil {
-		logs.Errorf("remove host by cc host ids failed, err: %v, ids: %+v, rid: %s", err, hd.request.DelHostIDs, kt.Rid)
+		logs.Errorf("remove host by cc host ids failed, err: %v, params: %+v, rid: %s", err, converter.PtrToVal(params),
+			kt.Rid)
 		return err
 	}
 
