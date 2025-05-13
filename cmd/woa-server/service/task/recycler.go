@@ -1212,7 +1212,7 @@ func (s *service) getCVMsByBkHostIDs(kt *kit.Kit, bkHostIDs []int64, authFilter 
 	for _, batch := range slice.Split(bkHostIDs, constant.BatchOperationMaxLimit) {
 		rules := make([]filter.RuleFactory, 0)
 		rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
-		rules = append(rules, tools.RuleJsonIn("bk_host_id", batch))
+		rules = append(rules, tools.RuleIn("bk_host_id", batch))
 		rules = append(rules, authFilter)
 
 		listFilter := &filter.Expression{
@@ -1221,7 +1221,7 @@ func (s *service) getCVMsByBkHostIDs(kt *kit.Kit, bkHostIDs []int64, authFilter 
 		}
 
 		listReq := &dataproto.CvmListReq{
-			Field:  []string{"id", "extension"},
+			Field:  []string{"id", "bk_host_id", "extension"},
 			Filter: listFilter,
 			Page:   core.NewDefaultBasePage(),
 		}

@@ -185,14 +185,14 @@ func (s *service) checkHostDissolveStatus(cts *rest.Contexts, authHandler handle
 
 	rules := make([]filter.RuleFactory, 0)
 	rules = append(rules, tools.RuleEqual("vendor", enumor.TCloudZiyan))
-	rules = append(rules, tools.RuleJsonIn("bk_host_id", req.HostIDs))
+	rules = append(rules, tools.RuleIn("bk_host_id", req.HostIDs))
 	rules = append(rules, authFilter)
 	listFilter := &filter.Expression{
 		Op:    filter.And,
 		Rules: rules,
 	}
 	listReq := &dataproto.CvmListReq{
-		Field:  []string{"extension"},
+		Field:  []string{"bk_host_id", "extension"},
 		Filter: listFilter,
 		Page:   core.NewDefaultBasePage(),
 	}
