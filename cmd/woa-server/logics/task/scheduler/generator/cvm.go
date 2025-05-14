@@ -240,8 +240,8 @@ func (g *Generator) parseCrpCvmApplyNum(msg string) int {
 	return 0
 }
 
-// checkCVM checks cvm creating task result
-func (g *Generator) checkCVM(kt *kit.Kit, orderId, subOrderID string) error {
+// CheckCVM checks cvm creating task result
+func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string) error {
 	checkFunc := func(obj interface{}, err error) (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("failed to query cvm order by id %s, err: %v", orderId, err)
