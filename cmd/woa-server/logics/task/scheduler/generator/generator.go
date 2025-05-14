@@ -1156,6 +1156,7 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 			GenerateId:   generateId,
 			BkBizId:      int(order.BkBizId),
 			User:         order.User,
+			AssetId:      item.AssetId,
 			Ip:           item.Ip,
 			RequireType:  order.RequireType,
 			ResourceType: order.ResourceType,
@@ -1181,9 +1182,9 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 		}
 		// add device detail info from cc
 		if host, ok := mapAssetIDToHost[item.AssetId]; !ok {
-			logs.Warnf("failed to get %s detail info in cc", item.AssetId)
+			logs.Warnf("failed to get host detail info in cc, subOrderID: %s, assetID: %s", order.SubOrderId,
+				item.AssetId)
 		} else {
-			device.AssetId = host.BkAssetID
 			// update device type from cc
 			device.DeviceType = host.SvrDeviceClass
 			device.ZoneName = host.SubZone
