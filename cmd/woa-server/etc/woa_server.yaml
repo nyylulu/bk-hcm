@@ -198,12 +198,6 @@ xray:
   client_id: test
   secret_key: test
 
-gcs:
-  host: http://127.0.0.1
-  secret_id: test
-  secret_key: test
-  operator: admin
-
 tcaplus:
   host: http://127.0.0.1
 
@@ -404,3 +398,31 @@ resourceSync:
   syncSubnet: 30
   syncCapacity: 360
   syncLeftIP: 360
+
+# defines bkdbm related settings.
+bkdbm:
+  # endpoints is a seed list of host:port addresses of bkdbm api gateway nodes.
+  endpoints:
+    - http://127.0.0.1
+  # appCode is the BlueKing app code of hcm to request bkdbm api gateway.
+  appCode: test
+  # appSecret is the BlueKing app secret of hcm to request bkdbm api gateway.
+  appSecret: test
+  # user is the BlueKing user of hcm to request bkdbm api gateway.
+  user: admin
+  # bkTicket is the BlueKing access ticket of hcm to request bkdbm api gateway.
+  bkTicket:
+  # bkToken is the BlueKing access token of hcm to request bkdbm api gateway.
+  bkToken:
+  # defines tls related options.
+  tls:
+    # server should be accessed without verifying the TLS certificate.
+    insecureSkipVerify:
+    # server requires TLS client certificate authentication.
+    certFile:
+    # server requires TLS client certificate authentication.
+    keyFile:
+    # trusted root certificates for server.
+    caFile:
+    # the password to decrypt the certificate.
+    password:

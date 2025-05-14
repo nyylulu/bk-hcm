@@ -22,14 +22,14 @@ import (
 	"hcm/pkg/logs"
 )
 
-func (d *Detector) checkGCS(step *table.DetectStep, retry int) (int, string, error) {
+func (d *Detector) checkTcaplus(step *table.DetectStep, retry int) (int, string, error) {
 	attempt := 0
 	exeInfo := ""
 	var err error = nil
 
 	for i := 0; i < retry; i++ {
 		attempt = i
-		exeInfo, err = d.checkGCSAndTcaplus(step.IP)
+		exeInfo, err = d.checkTcaplusIP(step.IP)
 		if err == nil {
 			break
 		}
@@ -43,29 +43,8 @@ func (d *Detector) checkGCS(step *table.DetectStep, retry int) (int, string, err
 	return attempt, exeInfo, err
 }
 
-func (d *Detector) checkGCSAndTcaplus(ip string) (string, error) {
+func (d *Detector) checkTcaplusIP(ip string) (string, error) {
 	exeInfos := make([]string, 0)
-
-	respGcs, err := d.gcs.CheckGCS(nil, nil, ip)
-	if err != nil {
-		logs.Errorf("failed to check gcs, ip: %s, err: %v", ip, err)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check gcs, err: %v", err)
-	}
-
-	gcsRespStr := d.structToStr(respGcs)
-	exeInfo := fmt.Sprintf("gcs response: %s", gcsRespStr)
-	exeInfos = append(exeInfos, exeInfo)
-
-	if respGcs.Code != 0 {
-		logs.Infof("failed to check gcs, ip: %s, code: %d, msg: %s", ip, respGcs.Code, respGcs.Message)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check gcs, code: %d, msg: %s", respGcs.Code,
-			respGcs.Message)
-	}
-
-	if respGcs.Data.RowsNum > 0 || len(respGcs.Data.Detail) > 0 {
-		logs.Infof("%s has gcs records, gcs resp: %+v", ip, respGcs)
-		return strings.Join(exeInfos, "\n"), fmt.Errorf("has %d gcs records", respGcs.Data.RowsNum)
-	}
 
 	respTcaplus, err := d.tcaplus.CheckTcaplus(nil, nil, ip)
 	if err != nil {
@@ -74,7 +53,7 @@ func (d *Detector) checkGCSAndTcaplus(ip string) (string, error) {
 	}
 
 	tcaplusRespStr := d.structToStr(respTcaplus)
-	exeInfo = fmt.Sprintf("tcaplus response: %s", tcaplusRespStr)
+	exeInfo := fmt.Sprintf("tcaplus response: %s", tcaplusRespStr)
 	exeInfos = append(exeInfos, exeInfo)
 
 	cnt := len(respTcaplus.Data)

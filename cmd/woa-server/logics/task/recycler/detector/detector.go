@@ -34,11 +34,11 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/bkdbm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/esb/cmdb"
-	"hcm/pkg/thirdparty/gcsapi"
 	"hcm/pkg/thirdparty/l5api"
 	"hcm/pkg/thirdparty/ngateapi"
 	"hcm/pkg/thirdparty/safetyapi"
@@ -59,7 +59,6 @@ type Detector struct {
 	xray    xrayapi.XrayClientInterface
 	xship   xshipapi.XshipClientInterface
 	tmp     tmpapi.TMPClientInterface
-	gcs     gcsapi.GcsClientInterface
 	tcaplus tcaplusapi.TcaplusClientInterface
 	tgw     tgwapi.TgwClientInterface
 	l5      l5api.L5ClientInterface
@@ -68,6 +67,7 @@ type Detector struct {
 	tcOpt   cc.TCloudCli
 	sops    sopsapi.SopsClientInterface
 	ngate   ngateapi.NgateClientInterface
+	bkDbm   bkdbm.Client
 
 	cliSet *client.ClientSet
 
@@ -86,7 +86,6 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, cl
 		xray:    thirdCli.Xray,
 		xship:   thirdCli.Xship,
 		tmp:     thirdCli.Tmp,
-		gcs:     thirdCli.GCS,
 		tcaplus: thirdCli.Tcaplus,
 		tgw:     thirdCli.TGW,
 		l5:      thirdCli.L5,
@@ -95,6 +94,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, cl
 		tcOpt:   thirdCli.TencentCloudOpt,
 		sops:    thirdCli.Sops,
 		ngate:   thirdCli.Ngate,
+		bkDbm:   thirdCli.BkDbm,
 		kt:      kt,
 		cliSet:  cliSet,
 	}
@@ -503,6 +503,7 @@ func (d *Detector) getRecycleSteps() ([]*table.DetectStepCfg, error) {
 		"enable": true,
 	}
 	page := metadata.BasePage{
+		Sort:  "sequence",
 		Start: 0,
 		Limit: pkg.BKNoLimit,
 	}
@@ -573,8 +574,10 @@ func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, s
 		attempt, exeInfo, err = d.preCheck(step, retry)
 	case table.StepCheckUwork:
 		attempt, exeInfo, err = d.checkUwork(step, retry)
-	case table.StepCheckGCS:
-		attempt, exeInfo, err = d.checkGCS(step, retry)
+	case table.StepCheckTcaplus:
+		attempt, exeInfo, err = d.checkTcaplus(step, retry)
+	case table.StepCheckDBM:
+		attempt, exeInfo, err = d.checkDbm(step, retry)
 	case table.StepBasicCheck:
 		attempt, exeInfo, err = d.basicCheck(step, retry)
 	case table.StepCheckOwner:

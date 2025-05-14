@@ -231,7 +231,8 @@ type DetectStepName string
 const (
 	StepPreCheck       DetectStepName = "PRE_CHECK"
 	StepCheckUwork     DetectStepName = "CHECK_UWORK"
-	StepCheckGCS       DetectStepName = "CHECK_GCS"
+	StepCheckTcaplus   DetectStepName = "CHECK_TCAPLUS"
+	StepCheckDBM       DetectStepName = "CHECK_DBM"
 	StepBasicCheck     DetectStepName = "BASIC_CHECK"
 	StepCheckOwner     DetectStepName = "CHECK_OWNER"
 	StepCvmCheck       DetectStepName = "CVM_CHECK"

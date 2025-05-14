@@ -125,7 +125,6 @@ type ClientConfig struct {
 	ErpOpt    ErpCli     `yaml:"erp"`
 	TmpOpt    TmpCli     `yaml:"tmp"`
 	Xray      XrayCli    `yaml:"xray"`
-	GCS       GCSCli     `yaml:"gcs"`
 	Tcaplus   TcaplusCli `yaml:"tcaplus"`
 	TGW       TGWCli     `yaml:"tgw"`
 	L5        L5Cli      `yaml:"l5"`
@@ -135,6 +134,7 @@ type ClientConfig struct {
 	ITSM      ApiGateway `yaml:"itsm"`
 	Ngate     NgateCli   `yaml:"ngate"`
 	CaiChe    CaiCheCli  `yaml:"caiche"`
+	BkDbm     ApiGateway `yaml:"bkdbm"`
 }
 
 func (c ClientConfig) validate() error {
@@ -170,10 +170,6 @@ func (c ClientConfig) validate() error {
 		return err
 	}
 
-	if err := c.GCS.validate(); err != nil {
-		return err
-	}
-
 	if err := c.Tcaplus.validate(); err != nil {
 		return err
 	}
@@ -199,6 +195,10 @@ func (c ClientConfig) validate() error {
 	}
 
 	if err := c.CaiChe.Validate(); err != nil {
+		return err
+	}
+
+	if err := c.BkDbm.validate(); err != nil {
 		return err
 	}
 
@@ -387,35 +387,6 @@ func (x XrayCli) validate() error {
 
 	if len(x.SecretKey) == 0 {
 		return errors.New("xray.secret_key is not set")
-	}
-
-	return nil
-}
-
-// GCSCli gcs client options
-type GCSCli struct {
-	// gcs api address
-	GcsApiAddr string `yaml:"host"`
-	SecretID   string `yaml:"secret_id"`
-	SecretKey  string `yaml:"secret_key"`
-	Operator   string `yaml:"operator"`
-}
-
-func (c GCSCli) validate() error {
-	if len(c.GcsApiAddr) == 0 {
-		return errors.New("gcs.host is not set")
-	}
-
-	if len(c.SecretID) == 0 {
-		return errors.New("gcs.secret_id is not set")
-	}
-
-	if len(c.SecretKey) == 0 {
-		return errors.New("gcs.secret_key is not set")
-	}
-
-	if len(c.Operator) == 0 {
-		return errors.New("gcs.operator is not set")
 	}
 
 	return nil

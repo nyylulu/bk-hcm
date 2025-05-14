@@ -24,6 +24,7 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
+	"hcm/pkg/thirdparty/api-gateway/bkdbm"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/api-gateway/usermgr"
@@ -31,7 +32,6 @@ import (
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
 	"hcm/pkg/thirdparty/erpapi"
-	"hcm/pkg/thirdparty/gcsapi"
 	"hcm/pkg/thirdparty/l5api"
 	"hcm/pkg/thirdparty/ngateapi"
 	"hcm/pkg/thirdparty/safetyapi"
@@ -55,7 +55,6 @@ type Client struct {
 	Erp             erpapi.ErpClientInterface
 	Tmp             tmpapi.TMPClientInterface
 	Xray            xrayapi.XrayClientInterface
-	GCS             gcsapi.GcsClientInterface
 	Tcaplus         tcaplusapi.TcaplusClientInterface
 	TGW             tgwapi.TgwClientInterface
 	L5              l5api.L5ClientInterface
@@ -67,6 +66,7 @@ type Client struct {
 	Ngate           ngateapi.NgateClientInterface
 	CaiChe          caiche.CaiCheClientInterface
 	UserMgr         usermgr.Client
+	BkDbm           bkdbm.Client
 }
 
 // NewClient new third party client
@@ -139,12 +139,6 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		return nil, err
 	}
 
-	gcs, err := gcsapi.NewGcsClientInterface(opts.GCS, reg)
-	if err != nil {
-		logs.Errorf("failed to new gcs api client, err: %v", err)
-		return nil, err
-	}
-
 	tcaplus, err := tcaplusapi.NewTcaplusClientInterface(opts.Tcaplus, reg)
 	if err != nil {
 		logs.Errorf("failed to new tcaplus api client, err: %v", err)
@@ -191,7 +185,6 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 		Erp:             erp,
 		Tmp:             tmp,
 		Xray:            xray,
-		GCS:             gcs,
 		Tcaplus:         tcaplus,
 		TGW:             tgw,
 		L5:              l5,
@@ -224,6 +217,13 @@ func newApiGWClient(opts cc.ClientConfig, reg prometheus.Registerer, client *Cli
 		return nil, err
 	}
 	client.ITSM = itsmCli
+
+	dbmCli, err := bkdbm.NewClient(&opts.BkDbm, reg)
+	if err != nil {
+		logs.Errorf("create bkdbm client failed, err: %v", err)
+		return nil, err
+	}
+	client.BkDbm = dbmCli
 
 	return client, nil
 }

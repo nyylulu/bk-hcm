@@ -55,8 +55,8 @@ data:
       {{- toYaml .Values.tmp | nindent 6 }}
     xray:
       {{- toYaml .Values.xray | nindent 6 }}
-    gcs:
-      {{- toYaml .Values.gcs | nindent 6 }}
+    bkdbm:
+      {{- toYaml .Values.bkdbm | nindent 6 }}
     tcaplus:
       {{- toYaml .Values.tcaplus | nindent 6 }}
     tgw:

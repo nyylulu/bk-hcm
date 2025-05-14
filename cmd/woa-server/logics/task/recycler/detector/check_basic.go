@@ -85,7 +85,7 @@ func (d *Detector) checkTmp(ip string) (string, error) {
 
 	respTmp, err := d.tmp.CheckTMP(nil, nil, ip)
 	if err != nil {
-		logs.Errorf("recycler:logics:cvm:checkTmp:failed, failed to check gcs, ip: %s, err: %v", ip, err)
+		logs.Errorf("recycle detector check basic tmp failed, ip: %s, err: %v", ip, err)
 		return strings.Join(exeInfos, "\n"), fmt.Errorf("failed to check tmp, err: %v", err)
 	}
 
