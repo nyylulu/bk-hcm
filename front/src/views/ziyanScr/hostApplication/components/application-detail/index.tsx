@@ -1,15 +1,17 @@
-import { Ref, defineComponent, ref, computed, onUnmounted, reactive, onBeforeMount, onMounted } from 'vue';
-import { useRoute } from 'vue-router';
+import { Ref, defineComponent, ref, computed, onUnmounted, reactive, onBeforeMount } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import './index.scss';
 
 import { isEqual } from 'lodash';
-import { useWhereAmI } from '@/hooks/useWhereAmI';
+import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
 import { useUserStore } from '@/store';
 import { timeFormatter } from '@/common/util';
 import { getBusinessNameById } from '@/views/ziyanScr/host-recycle/field-dictionary';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 import http from '@/http';
 
 import { Button, Table, Message, PopConfirm } from 'bkui-vue';
@@ -32,8 +34,19 @@ export default defineComponent({
   },
   setup() {
     const route = useRoute();
+    const router = useRouter();
     const userStore = useUserStore();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { whereAmI, getBusinessApiPath, getBizsId } = useWhereAmI();
+
+    const backRoute = computed(() => {
+      if (whereAmI.value === Senarios.business) {
+        return {
+          name: 'ApplicationsManage',
+          query: { [GLOBAL_BIZS_KEY]: detail.value?.bk_biz_id, type: 'host_apply' },
+        };
+      }
+      return { name: MENU_SERVICE_HOST_APPLICATION };
+    });
 
     const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
@@ -186,6 +199,7 @@ export default defineComponent({
         }, 30000);
       }
     };
+
     // 获取单据详情
     const getOrderDetail = async (orderId: string) => {
       const { data } = await http.post(
@@ -195,6 +209,7 @@ export default defineComponent({
       detail.value = data;
       suborders.value = data?.suborders || [];
     };
+
     const getDeliveredHostField = async (suborderId: string) => {
       const params = {
         filter: {
@@ -256,11 +271,18 @@ export default defineComponent({
       }
     };
 
-    onBeforeMount(() => {
-      getItsmTicketAudit();
-    });
+    const validateBizId = () => {
+      const globalBizId = getBizsId();
+      const orderBizId = Number(route.query.bkBizId);
+      return globalBizId === orderBizId;
+    };
 
-    onMounted(async () => {
+    onBeforeMount(async () => {
+      if (whereAmI.value === Senarios.business && !validateBizId()) {
+        router.replace(backRoute.value);
+        return;
+      }
+      getItsmTicketAudit();
       await getOrderDetail(route.params.id as string);
       await getDemandDetail();
     });
