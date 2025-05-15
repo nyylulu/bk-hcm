@@ -11,7 +11,6 @@ import RoutingManage from '@/views/resource/resource-manage/children/manage/rout
 import ImageManage from '@/views/resource/resource-manage/children/manage/image-manage.vue';
 import NetworkInterfaceManage from '@/views/resource/resource-manage/children/manage/network-interface-manage.vue';
 import recyclebinManage from '@/views/resource/recyclebin-manager/recyclebin-manager.vue';
-import { useVerify } from '@/hooks';
 import useAdd from '@/views/resource/resource-manage/hooks/use-add';
 import GcpAdd from '@/views/resource/resource-manage/children/add/gcp-add';
 // forms
@@ -177,15 +176,6 @@ const submit = async (data: any) => {
   isLoading.value = false;
 };
 
-// const handleToPage = () => {
-//   const isHostManagePage = route.path.includes('/business/host');
-//   const isDriveManagePage = route.path.includes('/business/drive');
-//   let destination = '';
-//   if (isHostManagePage) destination = '/business/host/recyclebin/cvm';
-//   if (isDriveManagePage) destination = '/business/drive/recyclebin/disk';
-//   router.push({ path: destination });
-// };
-
 const handleBeforeClose = () => {
   if (isFormDataChanged.value) {
     InfoBox({
@@ -201,15 +191,6 @@ const handleBeforeClose = () => {
   }
 };
 
-// 权限hook
-const {
-  showPermissionDialog,
-  handlePermissionConfirm,
-  handlePermissionDialog,
-  handleAuth,
-  permissionParams,
-  authVerifyData,
-} = useVerify();
 const computedSecurityText = computed(() => {
   if (renderComponent.value !== SecurityManage) return '新建';
   switch (securityType.value) {
@@ -229,104 +210,85 @@ const handleEditTemplate = (payload: any) => {
 </script>
 
 <template>
-  <div>
-    <div
-      class="business-manage-wrapper"
-      :class="[
-        route.path === '/business/host' ? 'is-host-page' : '',
-        route.path === '/business/recyclebin' ? 'is-recycle-page' : '',
-      ]"
-    >
-      <bk-loading class="common-card-wrap" :loading="!accountStore.bizs">
-        <component
-          v-if="accountStore.bizs"
-          ref="componentRef"
-          :is="renderComponent"
-          :filter="filter"
-          :is-resource-page="isResourcePage"
-          :auth-verify-data="authVerifyData"
-          @auth="(val: string) => {
-            handleAuth(val)
-          }"
-          @handleSecrityType="handleSecrityType"
-          @editTemplate="handleEditTemplate"
-          @edit="handleEdit"
-          v-model:isFormDataChanged="isFormDataChanged"
-        >
-          <span>
-            <hcm-auth
-              :sign="{ type: AUTH_BIZ_CREATE_IAAS_RESOURCE, relation: [accountStore.bizs] }"
-              v-slot="{ noPerm }"
-            >
-              <bk-button theme="primary" class="mw64 mr10" :disabled="noPerm" @click="handleAdd">
-                {{
-                  renderComponent === DriveManage ||
-                  renderComponent === HostManage ||
-                  renderComponent === SubnetManage ||
-                  renderComponent === VpcManage
-                    ? '申请'
-                    : computedSecurityText
-                }}
-              </bk-button>
-            </hcm-auth>
-          </span>
-
-          <template #recycleHistory>
-            <!-- <bk-button class="f-right" theme="primary" @click="handleToPage">
-            {{ '回收记录' }}
-          </bk-button> -->
-          </template>
-        </component>
-      </bk-loading>
-      <bk-sideslider
-        v-model:isShow="isShowSideSlider"
-        width="800"
-        title="新增"
-        quick-close
-        :before-close="handleBeforeClose"
+  <div
+    class="business-manage-wrapper"
+    :class="[
+      route.path === '/business/host' ? 'is-host-page' : '',
+      route.path === '/business/recyclebin' ? 'is-recycle-page' : '',
+    ]"
+  >
+    <bk-loading class="common-card-wrap" :loading="!accountStore.bizs">
+      <component
+        v-if="accountStore.bizs"
+        ref="componentRef"
+        :is="renderComponent"
+        :filter="filter"
+        :is-resource-page="isResourcePage"
+        :bk-biz-id="accountStore.bizs"
+        @handleSecrityType="handleSecrityType"
+        @editTemplate="handleEditTemplate"
+        @edit="handleEdit"
+        v-model:isFormDataChanged="isFormDataChanged"
       >
-        <template #default>
-          <component
-            :is="renderForm"
-            :filter="filter"
-            @cancel="handleCancel"
-            @success="handleSuccess"
-            :detail="formDetail"
-            :is-edit="isEdit"
-            :show="isShowSideSlider"
-            v-model:isFormDataChanged="isFormDataChanged"
-          ></component>
-        </template>
-      </bk-sideslider>
-      <permission-dialog
-        v-model:is-show="showPermissionDialog"
-        :params="permissionParams"
-        @cancel="handlePermissionDialog"
-        @confirm="handlePermissionConfirm"
-      ></permission-dialog>
+        <span>
+          <hcm-auth :sign="{ type: AUTH_BIZ_CREATE_IAAS_RESOURCE, relation: [accountStore.bizs] }" v-slot="{ noPerm }">
+            <bk-button theme="primary" class="mw64 mr10" :disabled="noPerm" @click="handleAdd">
+              {{
+                renderComponent === DriveManage ||
+                renderComponent === HostManage ||
+                renderComponent === SubnetManage ||
+                renderComponent === VpcManage
+                  ? '申请'
+                  : computedSecurityText
+              }}
+            </bk-button>
+          </hcm-auth>
+        </span>
+        <template #recycleHistory></template>
+      </component>
+    </bk-loading>
+    <bk-sideslider
+      v-model:isShow="isShowSideSlider"
+      width="800"
+      title="新增"
+      quick-close
+      :before-close="handleBeforeClose"
+    >
+      <template #default>
+        <component
+          :is="renderForm"
+          :filter="filter"
+          @cancel="handleCancel"
+          @success="handleSuccess"
+          :detail="formDetail"
+          :is-edit="isEdit"
+          :show="isShowSideSlider"
+          v-model:isFormDataChanged="isFormDataChanged"
+        ></component>
+      </template>
+    </bk-sideslider>
 
-      <gcp-add
-        v-model:is-show="isShowGcpAdd"
-        :gcp-title="gcpTitle"
-        :is-add="isAdd"
-        :loading="isLoading"
-        :detail="{}"
-        @submit="submit"
-      ></gcp-add>
+    <gcp-add
+      v-model:is-show="isShowGcpAdd"
+      :gcp-title="gcpTitle"
+      :is-add="isAdd"
+      :loading="isLoading"
+      :detail="{}"
+      @submit="submit"
+    ></gcp-add>
 
-      <TemplateDialog
-        :is-show="isTemplateDialogShow"
-        :is-edit="isTemplateDialogEdit"
-        :payload="templateDialogPayload"
-        :handle-close="() => (isTemplateDialogShow = false)"
-        :handle-success="
-          () => {
-            isTemplateDialogShow = false;
-            handleSuccess();
-          }
-        "
-      />
-    </div>
+    <TemplateDialog
+      :is-show="isTemplateDialogShow"
+      :is-edit="isTemplateDialogEdit"
+      :payload="templateDialogPayload"
+      :handle-close="() => (isTemplateDialogShow = false)"
+      :handle-success="
+        () => {
+          isTemplateDialogShow = false;
+          handleSuccess();
+        }
+      "
+    />
   </div>
 </template>
 
