@@ -3,12 +3,13 @@ import { defineComponent, PropType, ref, watch } from 'vue';
 import { Message, Table } from 'bkui-vue';
 import { BkRadioButton, BkRadioGroup } from 'bkui-vue/lib/radio';
 import CommonDialog from '@/components/common-dialog';
+import CrpTicketAudit from './crp-ticket-audit.vue';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 import { useZiyanScrStore } from '@/store';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
-import CrpTicketAudit from './crp-ticket-audit.vue';
 
 export interface SubOrderInfo {
   step_name: string;
@@ -162,6 +163,16 @@ export default defineComponent({
                 撤单
               </bk-button>
             </bk-pop-confirm>
+          )}
+          {props.subOrderInfo.step_id === 3 && (
+            <CopyToClipboard
+              style='margin-left: auto'
+              content={list.value.map((item) => item.ip).join('\n')}
+              disabled={!list.value.length}>
+              <bk-button theme='primary' disabled={!list.value.length}>
+                复制IP
+              </bk-button>
+            </CopyToClipboard>
           )}
         </div>
         <bk-loading loading={isLoading.value}>

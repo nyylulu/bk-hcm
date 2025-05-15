@@ -8,6 +8,7 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import usePagination from '@/hooks/usePagination';
 import useTimeoutPoll from '@/hooks/use-timeout-poll';
 import CrpTicketAudit from '@/views/business/applications/apply/applications/suborder-detail/crp-ticket-audit.vue';
+import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 
 export default defineComponent({
   props: {
@@ -142,6 +143,16 @@ export default defineComponent({
                 撤单
               </bk-button>
             </bk-pop-confirm>
+          )}
+          {props.stepId === 3 && (
+            <CopyToClipboard
+              style='margin-left: auto'
+              content={list.value.map((item) => item.ip).join('\n')}
+              disabled={!list.value.length}>
+              <bk-button theme='primary' disabled={!list.value.length}>
+                复制IP
+              </bk-button>
+            </CopyToClipboard>
           )}
         </div>
         <bk-loading loading={isLoading.value}>
