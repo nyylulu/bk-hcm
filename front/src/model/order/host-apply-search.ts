@@ -36,6 +36,20 @@ export class HostApplySearch {
   })
   order_id: number;
 
+  @Column('string', {
+    name: '子单号',
+    meta: {
+      display: { appearance: 'tag-input' },
+      search: {
+        format: (value) => {
+          return toArray(value).map((val) => String(val));
+        },
+      },
+    },
+    index: 1,
+  })
+  suborder_id: string;
+
   @Column('datetime', {
     name: '申请时间',
     meta: {

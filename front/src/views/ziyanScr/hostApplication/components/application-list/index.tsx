@@ -420,16 +420,18 @@ export default defineComponent({
         return {
           type: 'daterange',
           format: 'yyyy-MM-dd',
+          clearable: false,
         };
       }
       if (field.id === 'order_id') {
         return {
+          collapseTags: true,
           pasteFn: (value: string) =>
             value
               .split(/\r\n|\n|\r/)
-              .filter((tag) => /^\d+$/.test(tag))
+              .filter((tag) => /^\d+(-\d+)?$/.test(tag)) // 匹配纯数字或数字-数字格式
               .map((tag) => ({ id: tag, name: tag })),
-          placeholder: '请输入单号',
+          placeholder: '请输入主单号/子单号',
         };
       }
       return {};
@@ -438,7 +440,13 @@ export default defineComponent({
     const handleSearch = () => {
       // TODO: 实际无效
       pagination.start = 0;
-      searchQs.set(searchValues.value);
+
+      // 将子单号从主单号条件中分离
+      const { order_id: orderId, ...rest } = searchValues.value;
+      const orderIds = orderId.filter((item: string) => /^\d+$/.test(item));
+      const suborderIds = orderId.filter((item: string) => /^\d+-\d+$/.test(item));
+
+      searchQs.set({ ...rest, order_id: orderIds, suborder_id: suborderIds });
     };
 
     const handleReset = () => {
@@ -454,7 +462,9 @@ export default defineComponent({
         };
         condition.value = searchQs.get(query, defaultCondition);
 
-        searchValues.value = condition.value;
+        // 将子单号合并到主单号条件中
+        const { order_id: orderId, suborder_id: suborderId, ...rest } = condition.value;
+        searchValues.value = { ...rest, order_id: [...(orderId || []), ...(suborderId || [])] };
 
         getListData();
       },
@@ -559,16 +569,19 @@ export default defineComponent({
       <div class={'apply-list-container'}>
         <div class={'filter-container'} style={{ margin: '0 24px 20px 24px' }}>
           <GridContainer layout='vertical' column={4} content-min-width={300} gap={[16, 60]}>
-            {searchFields.map((field) => (
-              <GridItemFormElement key={field.id} label={field.name}>
-                <HocSearch
-                  is={field.type}
-                  display={field.meta?.display}
-                  v-model={searchValues.value[field.id]}
-                  {...getSearchCompProps(field)}
-                />
-              </GridItemFormElement>
-            ))}
+            {searchFields
+              // 子单号不单独作为一个搜索框，而是集成到主单号框内
+              .filter((field) => field.id !== 'suborder_id')
+              .map((field) => (
+                <GridItemFormElement key={field.id} label={field.name}>
+                  <HocSearch
+                    is={field.type}
+                    display={field.meta?.display}
+                    v-model={searchValues.value[field.id]}
+                    {...getSearchCompProps(field)}
+                  />
+                </GridItemFormElement>
+              ))}
             <GridItem span={4}>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <bk-button theme='primary' style={{ minWidth: '86px' }} onClick={handleSearch}>
