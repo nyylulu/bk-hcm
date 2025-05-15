@@ -34,6 +34,7 @@ export interface IDissolve {
     };
   };
   progress: string;
+  [key: string]: any;
 }
 
 export type IDissolveList = IQueryResData<{ items: IDissolve[] }>;

@@ -66,7 +66,7 @@ export default defineComponent({
     const orgChecked = ref([]);
     const operators = ref([]);
     const bkBizIds = ref([]);
-    const dissloveList = ref<IDissolve[]>([]);
+    const dissolveList = ref<IDissolve[]>([]);
     const currentDialogShow = ref(false);
     const originDialogShow = ref(false);
     const searchParams = ref();
@@ -130,7 +130,7 @@ export default defineComponent({
             list.splice(processIndex, 1);
           }
 
-          dissloveList.value = list.sort((a, b) => {
+          dissolveList.value = list.sort((a, b) => {
             const countA = (a?.total?.current?.host_count || 0) as number;
             const countB = (b?.total?.current?.host_count || 0) as number;
             // 置顶
@@ -179,6 +179,26 @@ export default defineComponent({
       currentRowData.value = row;
     };
 
+    // TODO：table组件目前配置sortFn存在问题，对于那些不支持默认sort的field，借用钩子来对数组进行排序
+    const handleColumnSort = ({ column, type }: any) => {
+      const { field } = column;
+      const manualSortFields = ['progress'];
+      if (manualSortFields.includes(field)) {
+        if (type === 'null') {
+          // type为'null'时，恢复默认排序
+          dissolveList.value.sort((a, b) => {
+            return Number(b?.total?.current?.host_count || 0) - Number(a?.total?.current?.host_count || 0);
+          });
+        } else {
+          dissolveList.value.sort((a, b) => {
+            const aValue = parseFloat(a?.[field] || 0);
+            const bValue = parseFloat(b?.[field] || 0);
+            return type === 'asc' ? aValue - bValue : bValue - aValue;
+          });
+        }
+      }
+    };
+
     return () => (
       <Panel>
         <section class={cssModule.search}>
@@ -217,7 +237,7 @@ export default defineComponent({
             {t('重置')}
           </bk-button>
           <export-to-excel-button
-            data={dissloveList.value}
+            data={dissolveList.value}
             text={t('导出')}
             columns={exportColumns.value}
             theme='primary'
@@ -228,16 +248,17 @@ export default defineComponent({
         <bk-loading loading={isLoading.value}>
           <bk-table
             show-overflow-tooltip
-            data={dissloveList.value}
+            data={dissolveList.value}
             max-height={'calc(100vh - 531px)'}
+            onColumnSort={handleColumnSort}
             class={cssModule.table}>
             <bk-table-column label={t('业务')} field='bk_biz_name' min-width='150px' fixed='left'></bk-table-column>
-            <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px'>
+            <bk-table-column label={t('裁撤进度')} field='progress' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.progress)}</>,
               }}
             </bk-table-column>
-            <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px'>
+            <bk-table-column label={t('原始数量')} field='total.origin.host_count' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => {
                   return row.bk_biz_name !== '裁撤进度' ? (
@@ -253,12 +274,12 @@ export default defineComponent({
                 },
               }}
             </bk-table-column>
-            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px'>
+            <bk-table-column label={t('原始CPU')} field='total.origin.cpu_count' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.origin?.cpu_count)}</>,
               }}
             </bk-table-column>
-            <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px'>
+            <bk-table-column label={t('当前数量')} field='total.current.host_count' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => {
                   return row.bk_biz_name !== '裁撤进度' ? (
@@ -274,7 +295,7 @@ export default defineComponent({
                 },
               }}
             </bk-table-column>
-            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px'>
+            <bk-table-column label={t('当前CPU')} field='total.current.cpu_count' min-width='150px' sort>
               {{
                 default: ({ row }: { row: IDissolve }) => <>{getDisplayText(row?.total?.current?.cpu_count)}</>,
               }}
