@@ -141,7 +141,7 @@ export default defineComponent({
               />
             </FormItem>
             <FormItem label='交付时间'>
-              <bk-date-picker type='daterange' v-model={formModel.dateRange} />
+              <bk-date-picker type='daterange' v-model={formModel.dateRange} clearable={false} />
             </FormItem>
             <FormItem label='内网 IP'>
               <Input

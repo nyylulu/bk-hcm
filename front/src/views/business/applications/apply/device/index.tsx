@@ -3,7 +3,6 @@ import cssModule from './index.module.scss';
 
 import { Button, Input, TagInput } from 'bkui-vue';
 import ScrCreateFilterSelector from '@/views/ziyanScr/resource-manage/create/ScrCreateFilterSelector';
-import MemberSelect from '@/components/MemberSelect';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import GridFilterComp from '@/components/grid-filter-comp';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
@@ -91,12 +90,7 @@ export default defineComponent({
     });
 
     const searchRulesKey = 'host_apply_device_rules';
-    const filterOrders = (searchRulesStr?: string) => {
-      if (searchRulesStr) {
-        // 解决人员选择器搜索问题
-        formModel.bkUsername.length > 0 &&
-          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bkUsername])]);
-      }
+    const filterOrders = () => {
       pagination.start = 0;
       getListData();
     };
@@ -147,22 +141,11 @@ export default defineComponent({
             },
             {
               title: t('申请人'),
-              content: (
-                <MemberSelect
-                  v-model={formModel.bkUsername}
-                  multiple
-                  clearable
-                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
-                    username,
-                    display_name: username,
-                  }))}
-                  placeholder={t('请输入企业微信名')}
-                />
-              ),
+              content: <hcm-form-user v-model={formModel.bkUsername} />,
             },
             {
               title: t('交付时间'),
-              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} />,
+              content: <ScrDatePicker class='full-width' v-model={formModel.dateRange} clearable={false} />,
             },
             {
               title: t('内网IP'),

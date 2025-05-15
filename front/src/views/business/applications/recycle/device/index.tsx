@@ -7,7 +7,6 @@ import { Select } from 'bkui-vue';
 import GridFilterComp from '@/components/grid-filter-comp';
 import ExportToExcelButton from '@/components/export-to-excel-button';
 import FloatInput from '@/components/float-input';
-import MemberSelect from '@/components/MemberSelect';
 import ScrDatePicker from '@/components/scr/scr-date-picker';
 
 import { useI18n } from 'vue-i18n';
@@ -126,13 +125,8 @@ export default defineComponent({
     });
 
     const searchRulesKey = 'host_recycle_device_rules';
-    const filterOrders = (searchRulesStr?: string) => {
+    const filterOrders = () => {
       // 回填
-      if (searchRulesStr) {
-        // 解决人员选择器搜索问题
-        formModel.bk_username.length > 0 &&
-          userStore.setMemberDefaultList([...new Set([...userStore.memberDefaultList, ...formModel.bk_username])]);
-      }
       formModel.bk_biz_id = [getBizsId()];
       pagination.start = 0;
       getListData();
@@ -223,18 +217,7 @@ export default defineComponent({
             },
             {
               title: t('回收人'),
-              content: (
-                <MemberSelect
-                  v-model={formModel.bk_username}
-                  multiple
-                  clearable
-                  placeholder={t('请输入企业微信名')}
-                  defaultUserlist={userStore.memberDefaultList.map((username) => ({
-                    username,
-                    display_name: username,
-                  }))}
-                />
-              ),
+              content: <hcm-form-user v-model={formModel.bk_username} />,
             },
             {
               title: t('完成时间'),

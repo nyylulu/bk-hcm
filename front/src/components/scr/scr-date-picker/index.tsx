@@ -7,6 +7,7 @@ export default defineComponent({
     modelValue: {
       type: Array as PropType<string[]>,
     },
+    clearable: Boolean,
   },
   setup(props, { emit }) {
     const range = ref([...props.modelValue]);
@@ -29,6 +30,6 @@ export default defineComponent({
       },
     );
 
-    return () => <DatePicker v-model={range.value} type={'daterange'} />;
+    return () => <DatePicker v-model={range.value} type={'daterange'} clearable={props.clearable} />;
   },
 });
