@@ -78,6 +78,15 @@ export const useAccountSelectorCard = () => {
                   onChange={handleChange}
                   style={isBusinessPage ? { width: '620px' } : {}}
                 />
+                {isAccountShow.value && (
+                  <p class='font-small'>
+                    注意：自研云仅支持云主机，IDC物理机申请。DevCloud机器请到
+                    <bk-link class='ml4 mr4' theme='primary' href='https://devcloud.woa.com/' target='_blank'>
+                      <span class='font-small'>https://devcloud.woa.com/</span>
+                    </bk-link>
+                    申请。
+                  </p>
+                )}
               </FormItem>
             </Form>
           </CommonCard>
