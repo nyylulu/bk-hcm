@@ -29,6 +29,19 @@ export default defineComponent({
           message: t('实例数量应大于0'),
           trigger: 'change',
         },
+        {
+          // CPU总核数为小数时，不允许通过，需要提醒用户更改实例数量为整数
+          validator: () => props.planTicketDemand.cvm.cpu_core % 1 === 0,
+          message: t('请调整实例数为整数'),
+          trigger: 'change',
+        },
+      ],
+      cpu_core: [
+        {
+          validator: (value: number) => value % 1 === 0,
+          message: t('CPU总核数不允许为小数'),
+          trigger: 'change',
+        },
       ],
     };
 
@@ -39,12 +52,12 @@ export default defineComponent({
     const isLoadingDeviceTypes = ref(false);
     const deviceTypeInfo = ref('');
 
-    const handleUpdatePlanTicketDemand = (key: string, value: unknown) => {
+    const handleUpdatePlanTicketDemand = (cvmInfo: Partial<IPlanTicketDemand['cvm']>) => {
       emit('update:planTicketDemand', {
         ...props.planTicketDemand,
         cvm: {
           ...props.planTicketDemand.cvm,
-          [key]: value,
+          ...cvmInfo,
         },
       });
     };
@@ -91,10 +104,12 @@ export default defineComponent({
       const osNum = +props.planTicketDemand.cvm.os;
 
       nextTick(() => {
-        handleUpdatePlanTicketDemand('cpu_core', perCpuCore * osNum);
-
+        handleUpdatePlanTicketDemand({
+          cpu_core: perCpuCore * osNum,
+          memory: perMemory * osNum,
+        });
         nextTick(() => {
-          handleUpdatePlanTicketDemand('memory', perMemory * osNum);
+          validate();
         });
       });
     };
@@ -112,7 +127,7 @@ export default defineComponent({
       (_newVal, oldVal) => {
         if (oldVal) {
           // 重置机型规格
-          handleUpdatePlanTicketDemand('device_type', '');
+          handleUpdatePlanTicketDemand({ device_type: '' });
         }
         // 更新数据
         getDeviceTypes();
@@ -161,9 +176,9 @@ export default defineComponent({
                 clearable
                 loading={isLoadingDeviceClasses.value}
                 modelValue={props.planTicketDemand.cvm.device_class}
-                onChange={(val: string) => handleUpdatePlanTicketDemand('device_class', val)}>
+                onChange={(val: string) => handleUpdatePlanTicketDemand({ device_class: val })}>
                 {deviceClasses.value.map((deviceClass) => (
-                  <bk-option id={deviceClass} name={deviceClass}></bk-option>
+                  <bk-option id={deviceClass} name={deviceClass} key={deviceClass}></bk-option>
                 ))}
               </bk-select>
             </bk-form-item>
@@ -173,9 +188,12 @@ export default defineComponent({
                 clearable
                 loading={isLoadingDeviceTypes.value}
                 modelValue={props.planTicketDemand.cvm.device_type}
-                onChange={(val: string) => handleUpdatePlanTicketDemand('device_type', val)}>
+                onChange={(val: string) => handleUpdatePlanTicketDemand({ device_type: val })}>
                 {deviceTypes.value.map((deviceType) => (
-                  <bk-option id={deviceType.device_type} name={deviceType.device_type}></bk-option>
+                  <bk-option
+                    id={deviceType.device_type}
+                    name={deviceType.device_type}
+                    key={deviceType.device_type}></bk-option>
                 ))}
               </bk-select>
               <span class={cssModule.info}>{deviceTypeInfo.value}</span>
@@ -187,11 +205,11 @@ export default defineComponent({
                 suffix={t('台')}
                 min={0}
                 modelValue={props.planTicketDemand.cvm.os}
-                onChange={(val: number) => handleUpdatePlanTicketDemand('os', val || 0)}
+                onChange={(val: number) => handleUpdatePlanTicketDemand({ os: val || 0 })}
                 clearable
               />
             </bk-form-item>
-            <bk-form-item label={t('CPU总核数')} property='name'>
+            <bk-form-item label={t('CPU总核数')} property='cpu_core'>
               <span class={cssModule.number}>{props.planTicketDemand.cvm.cpu_core} 核</span>
             </bk-form-item>
             <bk-form-item label={t('内存总量')} property='name'>

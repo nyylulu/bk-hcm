@@ -192,7 +192,7 @@ export interface IPlanTicketDemand {
     res_mode: string;
     device_class: string;
     device_type: string;
-    os: string;
+    os: string | number;
     cpu_core: number;
     memory: number;
   };
