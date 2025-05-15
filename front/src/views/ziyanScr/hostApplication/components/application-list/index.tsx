@@ -5,6 +5,7 @@ import { Button, Message, Table, Sideslider } from 'bkui-vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useRoute, useRouter } from 'vue-router';
+import routerAction from '@/router/utils/action';
 import moment from 'moment';
 import WName from '@/components/w-name';
 import { Copy, DataShape, HelpDocumentFill } from 'bkui-vue/lib/icon';
@@ -56,10 +57,13 @@ export default defineComponent({
     const businessGlobalStore = useBusinessGlobalStore();
 
     const reapply = (data: any) => {
-      router.push({
-        path: '/service/hostApplication/apply',
-        query: { order_id: data.order_id, unsubmitted: 0 },
-      });
+      routerAction.redirect(
+        {
+          path: '/service/hostApplication/apply',
+          query: { order_id: data.order_id, unsubmitted: 0 },
+        },
+        { history: true },
+      );
     };
     const modify = (data: any) => {
       router.push({
@@ -479,7 +483,7 @@ export default defineComponent({
       },
     );
 
-    const getOrderRoute = (row) => {
+    const getOrderRoute = (row: any) => {
       let routeParams: any = {
         name: 'host-application-detail',
         params: {
@@ -493,7 +497,7 @@ export default defineComponent({
           query: { order_id: row.order_id, unsubmitted: 1 },
         };
       }
-      router.push(routeParams);
+      routerAction.redirect(routeParams, { history: true });
     };
     // 获取匹配详情
     const getMatchDetails = async (subOrderId: number) => {

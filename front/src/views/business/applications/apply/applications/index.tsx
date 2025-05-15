@@ -1,5 +1,6 @@
 import { computed, defineComponent, ref, watch, onMounted, reactive } from 'vue';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
+import routerAction from '@/router/utils/action';
 import cssModule from './index.module.scss';
 
 import { Button, Message } from 'bkui-vue';
@@ -100,15 +101,18 @@ export default defineComponent({
       if (row.stage === 'UNCOMMIT') {
         routeParams = { name: 'applyCvm', query: { ...routeParams.query, order_id: row.order_id, unsubmitted: 1 } };
       }
-      router.push(routeParams);
+      routerAction.redirect(routeParams, { history: true });
     };
 
     const modify = (data: any) => {
-      router.push({ name: 'HostApplicationsModify', query: { ...data } });
+      router.push({ name: 'HostApplicationsModify', query: { ...route.query, ...data } });
     };
 
     const reapply = (data: any) => {
-      router.push({ name: 'applyCvm', query: { order_id: data.order_id, unsubmitted: 0 } });
+      routerAction.redirect(
+        { name: 'applyCvm', query: { ...route.query, order_id: data.order_id, unsubmitted: 0 } },
+        { history: true },
+      );
     };
 
     const throttleInfo = ref(null);

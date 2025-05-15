@@ -1,16 +1,18 @@
 import { defineComponent } from 'vue';
 import { useI18n } from 'vue-i18n';
 import cssModule from './index.module.scss';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 
 export default defineComponent({
   setup() {
     const { t } = useI18n();
     const router = useRouter();
+    const route = useRoute();
 
     const handleClick = () => {
       router.push({
         path: '/business/resource-plan',
+        query: { ...route.query },
       });
     };
 

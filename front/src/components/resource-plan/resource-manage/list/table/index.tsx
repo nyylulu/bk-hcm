@@ -21,10 +21,10 @@ import { GLOBAL_BIZS_KEY } from '@/common/constant';
 const { DropdownMenu, DropdownItem } = Dropdown;
 
 export enum OperationActions {
-  EDIT = 'edit',
-  DELETE = 'delete',
-  ADJUST = 'adjust',
-  CANCEL = 'cancel',
+  SERVICE_ADJUST = 'service_adjust',
+  SERVICE_CANCEL = 'service_cancel',
+  BIZ_ADJUST = 'biz_adjust',
+  BIZ_CANCEL = 'biz_cancel',
   PURCHASE = 'purchase',
 }
 
@@ -53,26 +53,26 @@ export default defineComponent({
     const { authVerifyData, handleAuth } = useVerify();
     const globalPermissionDialog = useGlobalPermissionDialog();
     const operationMap = {
-      [OperationActions.EDIT]: {
-        label: t('修改'),
-        loading: false,
-      },
-      [OperationActions.DELETE]: {
-        label: t('删除'),
-        loading: false,
-      },
-      [OperationActions.ADJUST]: {
+      [OperationActions.SERVICE_ADJUST]: {
         label: t('调整'),
         loading: false,
       },
-      [OperationActions.CANCEL]: {
+      [OperationActions.SERVICE_CANCEL]: {
+        label: t('取消'),
+        loading: false,
+      },
+      [OperationActions.BIZ_ADJUST]: {
+        label: t('调整'),
+        loading: false,
+      },
+      [OperationActions.BIZ_CANCEL]: {
         label: t('取消'),
         loading: false,
       },
     };
 
-    const bizActions = [OperationActions.ADJUST, OperationActions.CANCEL];
-    const serviceActions = [OperationActions.EDIT, OperationActions.DELETE];
+    const bizActions = [OperationActions.BIZ_ADJUST, OperationActions.BIZ_CANCEL];
+    const serviceActions = [OperationActions.SERVICE_ADJUST, OperationActions.SERVICE_CANCEL];
     const operationDropdownList = Object.entries(operationMap)
       .filter(([type]) => (props.isBiz ? bizActions : serviceActions).includes(type as OperationActions))
       .map(([type, value]) => ({
@@ -218,7 +218,7 @@ export default defineComponent({
       }
     };
 
-    const handleToEdit = (data: IListResourcesDemandsItem[]) => {
+    const handleToAdjust = (data: IListResourcesDemandsItem[]) => {
       if (!authVerifyData.value.permissionAction.biz_resource_plan_operate) {
         // 无权限
         handleAuth('biz_resource_plan_operate');
@@ -229,12 +229,17 @@ export default defineComponent({
         router.push({
           path,
           query: {
+            [GLOBAL_BIZS_KEY]: getBizsId(),
             planIds,
             start: props.expectTimeRange.start,
             end: props.expectTimeRange.end,
           },
         });
       }
+    };
+
+    const handleToBizPage = (bizId: number) => {
+      router.push({ name: 'bizResourcePlanList', query: { [GLOBAL_BIZS_KEY]: bizId, ...route.query } });
     };
 
     const handleCancel = () => {
@@ -254,11 +259,13 @@ export default defineComponent({
         globalPermissionDialog.setShow(true);
         return;
       }
-      if (type === OperationActions.CANCEL) {
+      if (type === OperationActions.BIZ_CANCEL) {
         currentRowsData.value = [data];
         isShow.value = true;
-      } else if (type === OperationActions.ADJUST) {
-        handleToEdit([data]);
+      } else if (type === OperationActions.BIZ_ADJUST) {
+        handleToAdjust([data]);
+      } else if ([OperationActions.SERVICE_ADJUST, OperationActions.SERVICE_CANCEL].includes(type)) {
+        handleToBizPage(data.bk_biz_id);
       }
     };
 
@@ -317,7 +324,7 @@ export default defineComponent({
                       ? 'hcm-no-permision-btn'
                       : undefined
                   }`}
-                  onClick={() => handleToEdit(selection.value)}
+                  onClick={() => handleToAdjust(selection.value)}
                   disabled={!selection.value.length}>
                   {t('批量调整')}
                 </Button>

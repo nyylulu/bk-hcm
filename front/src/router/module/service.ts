@@ -5,6 +5,7 @@ import {
   MENU_SERVICE_HOST_RECYCLE_ENTRY,
   MENU_SERVICE_HOST_RECYCLE,
 } from '@/constants/menu-symbol';
+import Meta from '../meta';
 
 const { t } = i18n.global;
 
@@ -158,8 +159,13 @@ const serviceMenus: RouteRecordRaw[] = [
         name: 'host-application-detail',
         component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
         meta: {
-          activeKey: 'apply',
-          notMenu: true,
+          ...new Meta({
+            activeKey: 'apply',
+            notMenu: true,
+            menu: {
+              relative: MENU_SERVICE_HOST_APPLICATION,
+            },
+          }),
         },
       },
       {

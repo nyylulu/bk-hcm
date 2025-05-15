@@ -1018,7 +1018,7 @@ export default defineComponent({
 
     return () => (
       <div>
-        <DetailHeader backRouteName={whereAmI.value === Senarios.business ? 'hostBusinessList' : 'reosurceManagePage'}>
+        <DetailHeader>
           <p class={'purchase-cvm-header-title'}>购买主机</p>
         </DetailHeader>
         <div

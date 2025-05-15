@@ -225,11 +225,14 @@ export default defineComponent({
       });
     };
     const returnPreDetails = (row: any) => {
-      router.push({ name: 'HostRecyclePreDetail', query: { suborder_id: row.suborder_id } });
+      router.push({ name: 'HostRecyclePreDetail', query: { ...route.query, suborder_id: row.suborder_id } });
     };
     const getBatchSuborderId = () => selections.value.map((item) => item.suborder_id);
     const goToPrecheck = () => {
-      router.push({ name: 'HostRecyclePreDetail', query: { suborder_id: getBatchSuborderId().join('\n') } });
+      router.push({
+        name: 'HostRecyclePreDetail',
+        query: { ...route.query, suborder_id: getBatchSuborderId().join('\n') },
+      });
     };
     const textTip = (text: string, theme: 'error' | 'success') => {
       const themeDes = { error: t('失败'), success: t('成功') };

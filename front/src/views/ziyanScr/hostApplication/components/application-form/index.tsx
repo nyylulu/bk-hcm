@@ -1076,7 +1076,7 @@ export default defineComponent({
 
     return () => (
       <div class='host-application-form-wrapper'>
-        {!props.isbusiness && <DetailHeader backRouteName={MENU_SERVICE_HOST_APPLICATION}>新增申请</DetailHeader>}
+        {!props.isbusiness && <DetailHeader useRouterAction>新增申请</DetailHeader>}
         <div class={props.isbusiness ? '' : 'apply-form-wrapper'}>
           {/* 申请单据表单 */}
           <bk-form

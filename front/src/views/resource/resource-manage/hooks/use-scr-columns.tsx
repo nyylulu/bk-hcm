@@ -9,7 +9,8 @@ import { ref } from 'vue';
 import type { Ref } from 'vue';
 import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
-import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP } from '@/common/constant';
+import routerAction from '@/router/utils/action';
+import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -536,9 +537,9 @@ export default (type: string, isSimpleShow = false) => {
               };
               if (Senarios.business === whereAmI.value) {
                 // 业务下
-                Object.assign(to, { name: 'HostApplicationsDetail' });
+                Object.assign(to, { name: 'HostApplicationsDetail', [GLOBAL_BIZS_KEY]: data.bk_biz_id });
               }
-              router.push(to);
+              routerAction.redirect(to, { history: true });
             }}>
             {cell}
           </Button>

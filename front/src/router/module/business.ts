@@ -590,8 +590,11 @@ const businesseMenus: RouteRecordRaw[] = [
             name: 'HostApplicationsDetail',
             component: () => import('@/views/ziyanScr/hostApplication/components/application-detail/index'),
             meta: {
-              activeKey: 'applications',
-              notMenu: true,
+              ...new Meta({
+                activeKey: 'applications',
+                notMenu: true,
+                menu: { relative: 'ApplicationsManage' },
+              }),
             },
           },
           {
@@ -710,7 +713,7 @@ const businesseMenus: RouteRecordRaw[] = [
         component: () => import('@/views/business/resource-plan/mod'),
         meta: {
           backRouter: -1,
-          activeKey: 'planList',
+          activeKey: 'bizResourcePlan',
           notMenu: true,
         },
       },

@@ -234,7 +234,7 @@ export default defineComponent({
     };
     return () => (
       <div class='div-RecyclingResources'>
-        <DetailHeader backRouteName='hostRecycle'>
+        <DetailHeader>
           <span class='header-title-prefix'>主机回收</span>
         </DetailHeader>
         <div class='common-sub-main-container'>

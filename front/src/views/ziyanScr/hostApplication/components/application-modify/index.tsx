@@ -18,6 +18,8 @@ import http from '@/http';
 import { getEntirePath } from '@/utils';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
 import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 
 export default defineComponent({
   components: {
@@ -26,7 +28,7 @@ export default defineComponent({
   setup() {
     const router = useRouter();
     const route = useRoute();
-    const { getBusinessApiPath } = useWhereAmI();
+    const { isBusinessPage, getBusinessApiPath } = useWhereAmI();
     const cvmOneKeyApplyVisible = ref(false);
 
     const onZoneChange = () => {
@@ -198,9 +200,11 @@ export default defineComponent({
       });
       if (code === 0) {
         Message({ theme: 'success', message: '提交成功' });
-        router.push({
-          path: '/service/hostApplication',
-        });
+        if (isBusinessPage) {
+          router.replace({ name: 'ApplicationsManage', query: { [GLOBAL_BIZS_KEY]: bizId.value, type: 'host_apply' } });
+        } else {
+          router.replace({ name: MENU_SERVICE_HOST_APPLICATION });
+        }
       }
       nextTick(() => {
         formRef.value.clearValidate();

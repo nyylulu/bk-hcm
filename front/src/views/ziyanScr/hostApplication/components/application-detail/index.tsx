@@ -3,7 +3,7 @@ import { useRoute } from 'vue-router';
 import './index.scss';
 
 import { isEqual } from 'lodash';
-import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import { useWhereAmI } from '@/hooks/useWhereAmI';
 import { useRequireTypes } from '@/views/ziyanScr/hooks/use-require-types';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -22,8 +22,6 @@ import ModifyRecord from './modify-record';
 import ItsmTicketAudit, { type IItsmTicketAudit } from './itsm-ticket-audit.vue';
 import type { IQueryResData } from '@/typings';
 import ApprovalStatus from './approval-status.vue';
-import { GLOBAL_BIZS_KEY } from '@/common/constant';
-import { MENU_SERVICE_HOST_APPLICATION } from '@/constants/menu-symbol';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -35,17 +33,7 @@ export default defineComponent({
   setup() {
     const route = useRoute();
     const userStore = useUserStore();
-    const { whereAmI, getBusinessApiPath } = useWhereAmI();
-
-    const backRoute = computed(() => {
-      if (whereAmI.value === Senarios.business) {
-        return {
-          name: 'ApplicationsManage',
-          query: { [GLOBAL_BIZS_KEY]: detail.value?.bk_biz_id, type: 'host_apply' },
-        };
-      }
-      return { name: MENU_SERVICE_HOST_APPLICATION };
-    });
+    const { getBusinessApiPath } = useWhereAmI();
 
     const ips = ref<{ [key: string]: any }>({});
     const detail: Ref<{
@@ -284,7 +272,7 @@ export default defineComponent({
 
     return () => (
       <div class={'application-detail-container'}>
-        <DetailHeader to={backRoute.value}>
+        <DetailHeader useRouterAction>
           {{
             default: () => '单据详情',
             right: () =>
