@@ -28,15 +28,14 @@ import (
 	"hcm/pkg/api/core"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
 	rr "hcm/pkg/api/core/recycle-record"
-	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/kit"
-	"hcm/pkg/metrics"
-	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	// FIXME: delete
+	esbcmdb "hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Interface define cvm interface.
@@ -50,41 +49,37 @@ type Interface interface {
 	BatchFinalizeRelRecord(kt *kit.Kit, resType enumor.CloudResourceType,
 		status enumor.RecycleRecordStatus, resIds []string) error
 	QueryCvmBySGID(k *kit.Kit, bizID int64, sgID string) (any, error)
-	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.ListBizHostResult, error)
+	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*esbcmdb.ListBizHostResult, error)
 	QuerySecurityGroupNamesByCloudID(kt *kit.Kit, vendor enumor.Vendor,
 		sgCloudIds []string) (map[string]string, error)
-	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error)
-	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
+	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*esbcmdb.HostBizRel, error)
+	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*esbcmdb.ModuleInfo, error)
 	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
-	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation, cvmList []corecvm.BaseCvm) (
+	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation,
+		cvmList []corecvm.BaseCvm) (
 		string, error)
 }
 
 type cvm struct {
-	client    *client.ClientSet
-	audit     audit.Interface
-	eip       eip.Interface
-	disk      disk.Interface
-	esbClient esb.Client
-	cmdb      cmdb.Client
+	client     *client.ClientSet
+	audit      audit.Interface
+	eip        eip.Interface
+	disk       disk.Interface
+	esbClient  esb.Client
+	cmdbClient cmdb.Client
 }
 
 // NewCvm new cvm.
 func NewCvm(client *client.ClientSet, audit audit.Interface, eip eip.Interface, disk disk.Interface,
-	esbClient esb.Client) Interface {
-
-	cmdbCfg := cc.CloudServer().Cmdb
-	cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), esbClient)
-	if err != nil {
-		return nil
-	}
+	cmdbClient cmdb.Client) Interface {
 	return &cvm{
-		client:    client,
-		audit:     audit,
-		eip:       eip,
-		disk:      disk,
-		esbClient: esbClient,
-		cmdb:      cmdbCli,
+		client: client,
+		audit:  audit,
+		eip:    eip,
+		disk:   disk,
+		// FIXME: delete
+		esbClient:  esb.EsbClient(),
+		cmdbClient: cmdbClient,
 	}
 }
 

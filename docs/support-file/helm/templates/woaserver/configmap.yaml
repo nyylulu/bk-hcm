@@ -111,3 +111,5 @@ data:
       {{- toYaml .Values.resPlan | nindent 6 }}
     resourceSync:
       {{- toYaml .Values.resourceSync | nindent 6 }}
+    tenant:
+      {{- toYaml .Values.tenant | nindent 6 }}

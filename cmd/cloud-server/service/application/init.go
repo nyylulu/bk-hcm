@@ -40,6 +40,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
@@ -57,6 +58,7 @@ func InitApplicationService(c *capability.Capability, bkHcmUrl string) {
 		esbCli:     c.EsbClient,
 		bkHcmUrl:   bkHcmUrl,
 		cmsiCli:    c.CmsiCli,
+		cmdbCli:    c.CmdbCli,
 		finOpsCli:  c.Finops,
 	}
 	h := rest.NewHandler()
@@ -101,6 +103,7 @@ type applicationSvc struct {
 	esbCli     esb.Client
 	bkHcmUrl   string
 	cmsiCli    cmsi.Client
+	cmdbCli    cmdb.Client
 	finOpsCli  finops.Client
 }
 
@@ -110,13 +113,13 @@ func (a *applicationSvc) getCallbackUrl() string {
 
 func (a *applicationSvc) getHandlerOption(cts *rest.Contexts) *handlers.HandlerOption {
 	return &handlers.HandlerOption{
-		Cts:       cts,
-		Client:    a.client,
-		ItsmCli:   a.itsmCli,
-		EsbClient: a.esbCli,
-		Cipher:    a.cipher,
-		Audit:     a.audit,
-		CmsiCli:   a.cmsiCli,
+		Cts:     cts,
+		Client:  a.client,
+		ItsmCli: a.itsmCli,
+		Cipher:  a.cipher,
+		Audit:   a.audit,
+		CmsiCli: a.cmsiCli,
+		CmdbCli: a.cmdbCli,
 		FinOpsCli: a.finOpsCli,
 	}
 }

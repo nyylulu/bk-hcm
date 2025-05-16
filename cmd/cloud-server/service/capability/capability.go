@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/cryptography"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty/api-gateway/bkbase"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
@@ -51,5 +52,7 @@ type Capability struct {
 	BKBaseCli  bkbase.Client
 	Finops     finops.Client
 	CmsiCli    cmsi.Client
+	CmdbCli    cmdb.Client
+
 	UserMgrCli usermgr.Client
 }

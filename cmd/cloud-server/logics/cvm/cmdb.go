@@ -75,6 +75,7 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 	if len(req.BkHostIDs) > 0 {
 		combinedRule.Rules = append(combinedRule.Rules, cmdb.In("bk_host_id", req.BkHostIDs))
 	}
+
 	params := &cmdb.ListBizHostParams{
 		BizID:              req.BkBizID,
 		BkSetIDs:           req.BkSetIDs,
@@ -83,7 +84,8 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 		Page:               req.Page,
 		HostPropertyFilter: &cmdb.QueryFilter{Rule: combinedRule},
 	}
-	cmdbResult, err := c.cmdb.ListBizHost(kt, params)
+	// FIXME: esb -> apigw
+	cmdbResult, err := c.esbClient.Cmdb().ListBizHost(kt, params)
 	if err != nil {
 		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, cvt.PtrToVal(req), kt.Rid)
 		return nil, err
@@ -97,7 +99,8 @@ func (c *cvm) GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel,
 		BkHostId: hostIds,
 	}
 
-	resp, err := c.cmdb.FindHostBizRelation(kt.Ctx, kt.Header(), req)
+	// FIXME: esb -> apigw
+	resp, err := c.esbClient.Cmdb().FindHostBizRelation(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -126,7 +129,9 @@ func (c *cvm) GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*
 			Limit: 200,
 		},
 	}
-	resp, err := c.cmdb.SearchModule(kit, req)
+
+	// FIXME: esb -> apigw
+	resp, err := c.esbClient.Cmdb().SearchModule(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err

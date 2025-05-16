@@ -38,6 +38,7 @@ import (
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // InitCvmService initialize the cvm service.
@@ -50,6 +51,8 @@ func InitCvmService(c *capability.Capability) {
 		diskLgc:    c.Logics.Disk,
 		cvmLgc:     c.Logics.Cvm,
 		eipLgc:     c.Logics.Eip,
+		cmdbCli:    c.CmdbCli,
+
 		moaLogic:   c.Logics.Moa,
 		sgLogic:    c.Logics.SecurityGroup,
 	}
@@ -124,6 +127,8 @@ type cvmSvc struct {
 	diskLgc    disk.Interface
 	cvmLgc     cvm.Interface
 	eipLgc     eip.Interface
+	cmdbCli    cmdb.Client
+
 	moaLogic   moalogic.Interface
 	sgLogic    securitygroup.Interface
 }

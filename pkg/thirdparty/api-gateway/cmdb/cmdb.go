@@ -22,19 +22,31 @@ package cmdb
 import (
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
-	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 	apigateway "hcm/pkg/thirdparty/api-gateway"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/prometheus/client_golang/prometheus"
 )
 
+// Client is an api-gateway client to request cmdb.
+type Client interface {
+	SearchBusiness(kt *kit.Kit, params *SearchBizParams) (*SearchBizResult, error)
+	SearchCloudArea(kt *kit.Kit, params *SearchCloudAreaParams) (*SearchCloudAreaResult, error)
+	ListBizHost(kt *kit.Kit, params *ListBizHostParams) (*ListBizHostResult, error)
+	SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error)
+	FindHostTopoRelation(kt *kit.Kit, params *FindHostTopoRelationParams) (*HostTopoRelationResult, error)
+	FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error)
+	ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error)
+	GetBizBriefCacheTopo(kt *kit.Kit, params *GetBizBriefCacheTopoParams) (*GetBizBriefCacheTopoResult, error)
+	DeleteCloudHostFromBiz(kt *kit.Kit, params *DeleteCloudHostFromBizParams) error
+	AddCloudHostToBiz(kt *kit.Kit, params *AddCloudHostToBizParams) (*BatchCreateResult, error)
+	ListHostWithoutBiz(kt *kit.Kit, req *ListHostWithoutBizParams) (*ListHostWithoutBizResult, error)
+}
+
 // NewClient initialize a new cmdbApiGateWay client
-func NewClient(cfg *cc.ApiGateway, reg prometheus.Registerer, esbClient esb.Client) (cmdb.Client, error) {
+func NewClient(cfg *cc.ApiGateway, reg prometheus.Registerer) (Client, error) {
 	tls := &ssl.TLSConfig{
 		InsecureSkipVerify: cfg.TLS.InsecureSkipVerify,
 		CertFile:           cfg.TLS.CertFile,
@@ -61,44 +73,130 @@ func NewClient(cfg *cc.ApiGateway, reg prometheus.Registerer, esbClient esb.Clie
 		config: cfg,
 		client: restCli,
 	}
-	if esbClient != nil {
-		agw.Client = esbClient.Cmdb()
-	}
 	return agw, nil
 }
+
+var _ Client = (*cmdbApiGateWay)(nil)
 
 // cmdbApiGateWay is an esb client to request cmdbApiGateWay.
 type cmdbApiGateWay struct {
 	config *cc.ApiGateway
 	// http client instance
 	client rest.ClientInterface
-	// fall back to esbCall
-	cmdb.Client
 }
 
-// ListBizHost ...
-func (c *cmdbApiGateWay) ListBizHost(kt *kit.Kit, req *cmdb.ListBizHostParams) (
-	*cmdb.ListBizHostResult, error) {
-
-	return apigateway.ApiGatewayCall[cmdb.ListBizHostParams, cmdb.ListBizHostResult](c.client, c.config, rest.POST,
-		kt, req, "/hosts/app/%d/list_hosts", req.BizID)
-}
-
-// UpdateCvmOS ...
-func (c *cmdbApiGateWay) UpdateCvmOSAndSvrStatus(kt *kit.Kit, req *cmdb.UpdateCvmOSReq) error {
-
-	err := req.Validate()
+// DeleteCloudHostFromBiz ...
+func (c *cmdbApiGateWay) DeleteCloudHostFromBiz(kt *kit.Kit, params *DeleteCloudHostFromBizParams) error {
+	err := params.Validate()
 	if err != nil {
 		return err
 	}
-
-	_, err = apigateway.ApiGatewayCall[cmdb.UpdateCvmOSReq, interface{}](c.client, c.config, rest.PUT,
-		kt, req, "/shipper/update/reinstall/cmdb/cvm")
+	_, err = apigateway.ApiGatewayCall[DeleteCloudHostFromBizParams, interface{}](c.client, c.config,
+		rest.DELETE, kt, params, "/deletemany/cloud_hosts")
 	if err != nil {
-		logs.Errorf("call cmdb api gateway to update cvm os failed, err: %v", err)
 		return err
 	}
 	return nil
 }
 
-// 其他请求使用esb 接口
+// AddCloudHostToBiz ...
+func (c *cmdbApiGateWay) AddCloudHostToBiz(kt *kit.Kit, params *AddCloudHostToBizParams) (*BatchCreateResult, error) {
+	err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[AddCloudHostToBizParams, BatchCreateResult](c.client, c.config,
+		rest.POST, kt, params, "/createmany/cloud_hosts")
+}
+
+// GetBizBriefCacheTopo 根据业务ID,查询该业务的全量简明拓扑树信息。
+// 该业务拓扑的全量信息，包含了从业务这个根节点开始，到自定义层级实例(如果主线的拓扑层级中包含)，到集群、模块等中间的所有拓扑层级树数据。
+func (c *cmdbApiGateWay) GetBizBriefCacheTopo(kt *kit.Kit, params *GetBizBriefCacheTopoParams) (
+	*GetBizBriefCacheTopoResult, error) {
+
+	err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[GetBizBriefCacheTopoParams, GetBizBriefCacheTopoResult](c.client, c.config,
+		rest.GET, kt, params, "/cache/find/cache/topo/brief/biz/%d", params.BkBizID)
+}
+
+// ResourceWatch ...
+func (c *cmdbApiGateWay) ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error) {
+	err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[WatchEventParams, WatchEventResult](c.client, c.config, rest.POST, kt, params,
+		"/event/watch/resource/%s", params.Resource)
+}
+
+// FindHostBizRelations ...
+func (c *cmdbApiGateWay) FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error) {
+	err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[HostModuleRelationParams, []HostTopoRelation](c.client, c.config, rest.POST, kt, params,
+		"/hosts/modules/read")
+}
+
+// FindHostTopoRelation ...
+func (c *cmdbApiGateWay) FindHostTopoRelation(kt *kit.Kit, params *FindHostTopoRelationParams) (
+	*HostTopoRelationResult, error) {
+
+	if err := params.Validate(); err != nil {
+		return nil, err
+	}
+
+	return apigateway.ApiGatewayCall[FindHostTopoRelationParams, HostTopoRelationResult](c.client, c.config, rest.POST,
+		kt, params, "/host/topo/relation/read")
+}
+
+// SearchModule ...
+func (c *cmdbApiGateWay) SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error) {
+	err := params.Validate()
+	if err != nil {
+		return nil, err
+	}
+
+	// 0 代表了bk_supplier_account
+	return apigateway.ApiGatewayCall[SearchModuleParams, ModuleInfoResult](c.client, c.config, rest.POST, kt, params,
+		"/module/search/0/%d/%d", params.BizID, params.BkSetID)
+}
+
+// ListBizHost ...
+func (c *cmdbApiGateWay) ListBizHost(kt *kit.Kit, req *ListBizHostParams) (*ListBizHostResult, error) {
+	err := req.Validate()
+	if err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[ListBizHostParams, ListBizHostResult](c.client, c.config, rest.POST, kt, req,
+		"/hosts/app/%d/list_hosts", req.BizID)
+}
+
+// SearchBusiness ...
+func (c *cmdbApiGateWay) SearchBusiness(kt *kit.Kit, req *SearchBizParams) (*SearchBizResult, error) {
+	// 0 代表了bk_supplier_account
+	return apigateway.ApiGatewayCall[SearchBizParams, SearchBizResult](c.client, c.config, rest.POST,
+		kt, req, "/biz/search/0")
+}
+
+// SearchCloudArea search cmdb cloud area
+func (c *cmdbApiGateWay) SearchCloudArea(kt *kit.Kit, params *SearchCloudAreaParams) (*SearchCloudAreaResult, error) {
+
+	return apigateway.ApiGatewayCall[SearchCloudAreaParams, SearchCloudAreaResult](c.client, c.config, rest.POST, kt, params,
+		"/findmany/cloudarea")
+}
+
+// ListHostWithoutBiz list cmdb host without biz.
+func (c *cmdbApiGateWay) ListHostWithoutBiz(kt *kit.Kit, req *ListHostWithoutBizParams) (
+	*ListHostWithoutBizResult, error) {
+
+	if err := req.Validate(); err != nil {
+		return nil, err
+	}
+	return apigateway.ApiGatewayCall[ListHostWithoutBizParams, ListHostWithoutBizResult](c.client, c.config,
+		rest.POST, kt, req, "/hosts/list_hosts_without_app")
+}

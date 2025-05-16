@@ -81,11 +81,11 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/bkbase"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/usermgr"
-	"hcm/pkg/thirdparty/esb"
 	pkgmoa "hcm/pkg/thirdparty/moa"
 	"hcm/pkg/tools/ssl"
 
@@ -100,14 +100,14 @@ type Service struct {
 	authorizer auth.Authorizer
 	audit      logicaudit.Interface
 	cipher     cryptography.Crypto
-	// EsbClient 调用接入ESB的第三方系统API集合
-	esbClient esb.Client
 	// itsmCli itsm client.
 	itsmCli   itsm.Client
 	bkBaseCli bkbase.Client
+	cmsiCli   cmsi.Client
+	cmdbCli   cmdb.Client
+
 	// finOps  Finops client
 	finOps     pkgfinops.Client
-	cmsiCli    cmsi.Client
 	userMgrCli usermgr.Client
 	// moaCli 调用接入MOA的第三方系统API集合
 	moaCli  pkgmoa.Client
@@ -116,7 +116,7 @@ type Service struct {
 
 // NewService create a service instance.
 func NewService(sd serviced.ServiceDiscover) (*Service, error) {
-	apiClientSet, esbClient, svr, err := getCloudClientSvr(sd)
+	apiClientSet, svr, err := getCloudClientSvr(sd)
 	if err != nil {
 		return nil, err
 	}
@@ -154,7 +154,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		go bill.CloudBillConfigCreate(interval, sd, apiClientSet)
 	}
 
-	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, esbClient, svr.moaCli, svr.etcdCli)
+	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, svr.cmdbCli, svr.moaCli, svr.etcdCli)
 
 	go appcvm.TimingHandleDeliverApplication(svr.client, 2*time.Second)
 
@@ -168,7 +168,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	return svr, nil
 }
 
-func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Client, *Service, error) {
+func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service, error) {
 	tls := cc.CloudServer().Network.TLS
 	var tlsConfig *ssl.TLSConfig
 	if tls.Enable() {
@@ -184,72 +184,72 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 	// initiate system api client set.
 	restCli, err := restcli.NewClient(tlsConfig)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	apiClientSet := client.NewClientSet(restCli, sd)
 	authorizer, err := auth.NewAuthorizer(sd, tls)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	// 加解密器
 	cipher, err := newCipherFromConfig(cc.CloudServer().Crypto)
 	if err != nil {
-		return nil, nil, nil, err
-	}
-
-	// 创建ESB Client
-	esbConfig := cc.CloudServer().Esb
-	if err = esb.InitEsbClient(&esbConfig, metrics.Register()); err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	itsmCfg := cc.CloudServer().Itsm
 	itsmCli, err := itsm.NewClient(&itsmCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create itsm client, err: %v", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	bkbaseCfg := cc.CloudServer().CloudSelection.BkBase
 	bkbaseCli, err := bkbase.NewClient(&bkbaseCfg.ApiGateway, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create bkbase client, err: %v", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	finOpsCfg := cc.CloudServer().FinOps
 	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	cmsiCfg := cc.CloudServer().Cmsi
 	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create cmsi client, err: %v", err)
-		return nil, nil, nil, err
+		return nil, nil, err
+	}
+
+	cmdbCfg := cc.CloudServer().Cmdb
+	cmdbCli, err := cmdb.NewClient(&cmdbCfg, metrics.Register())
+	if err != nil {
+		return nil, nil, err
 	}
 
 	userMgrCfg := cc.CloudServer().UserMgr
 	userMgrCli, err := usermgr.NewClient(&userMgrCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create usermgr client, err: %v", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	moaCfg := cc.CloudServer().MOA
 	moaCli, err := pkgmoa.NewClient(&moaCfg, metrics.Register())
 	if err != nil {
 		logs.Errorf("failed to create moa client, err: %v", err)
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 	etcdClient, err := etcd3.New(etcdCfg)
 	if err != nil {
-		return nil, nil, nil, err
+		return nil, nil, err
 	}
 
 	svr := &Service{
@@ -257,17 +257,18 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, esb.Clie
 		authorizer: authorizer,
 		audit:      logicaudit.NewAudit(apiClientSet.DataService()),
 		cipher:     cipher,
-		esbClient:  esb.EsbClient(),
 		itsmCli:    itsmCli,
 		bkBaseCli:  bkbaseCli,
 		finOps:     finOpsCli,
 		cmsiCli:    cmsiCli,
+		cmdbCli:    cmdbCli,
+
 		userMgrCli: userMgrCli,
 		moaCli:     moaCli,
 		etcdCli:    etcdClient,
 	}
 
-	return apiClientSet, esb.EsbClient(), svr, nil
+	return apiClientSet, svr, nil
 }
 
 // newCipherFromConfig 根据配置文件里的加密配置，选择配置的算法并生成对应的加解密器
@@ -345,12 +346,12 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 		Authorizer: s.authorizer,
 		Audit:      s.audit,
 		Cipher:     s.cipher,
-		EsbClient:  s.esbClient,
-		Logics:     logics.NewLogics(s.client, s.esbClient, s.moaCli, s.etcdCli),
+		Logics:     logics.NewLogics(s.client, s.cmdbCli, s.moaCli, s.etcdCli),
 		ItsmCli:    s.itsmCli,
 		BKBaseCli:  s.bkBaseCli,
 		Finops:     s.finOps,
 		CmsiCli:    s.cmsiCli,
+		CmdbCli:    s.cmdbCli,
 		UserMgrCli: s.userMgrCli,
 	}
 
