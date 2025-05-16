@@ -53,7 +53,8 @@ func EsbClient() Client {
 
 // Client esb client
 type Client interface {
-	//Cmdb() cmdb.Client
+	// FIXME: 注释被我打开了
+	Cmdb() cmdb.Client
 	Login() login.Client
 	Iam() iam.Client
 }

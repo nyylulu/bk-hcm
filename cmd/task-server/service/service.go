@@ -51,7 +51,7 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/alarmapi"
-	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/sampwdapi"
 	"hcm/pkg/tools/ssl"
 
@@ -102,12 +102,15 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 		}
 	}
 
-	cmdbCfg := cc.TaskServer().Cmdb
-	cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), nil)
-	if err != nil {
-		logs.Errorf("create cmdb client failed, err: %v", err)
-		return nil, err
-	}
+	// FIXME: esb -> apigw
+	// cmdbCfg := cc.TaskServer().Cmdb
+	// cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), nil)
+	// if err != nil {
+	// 	logs.Errorf("create cmdb client failed, err: %v", err)
+	// 	return nil, err
+	// }
+	cmdbCli := esb.EsbClient().Cmdb()
+
 	var alarmCli alarmapi.AlarmClientInterface
 	if cc.TaskServer().AlarmCli != nil {
 		alarmCli, err = alarmapi.NewAlarmClientInterface(*cc.TaskServer().AlarmCli, metrics.Register())

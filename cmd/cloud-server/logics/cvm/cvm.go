@@ -33,6 +33,9 @@ import (
 	"hcm/pkg/dal/dao/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/thirdparty/esb"
+	// FIXME: delete
+	esbcmdb "hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Interface define cvm interface.
@@ -46,11 +49,11 @@ type Interface interface {
 	BatchFinalizeRelRecord(kt *kit.Kit, resType enumor.CloudResourceType,
 		status enumor.RecycleRecordStatus, resIds []string) error
 	QueryCvmBySGID(k *kit.Kit, bizID int64, sgID string) (any, error)
-	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.ListBizHostResult, error)
+	GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*esbcmdb.ListBizHostResult, error)
 	QuerySecurityGroupNamesByCloudID(kt *kit.Kit, vendor enumor.Vendor,
 		sgCloudIds []string) (map[string]string, error)
-	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error)
-	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*cmdb.ModuleInfo, error)
+	GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*esbcmdb.HostBizRel, error)
+	GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*esbcmdb.ModuleInfo, error)
 	CvmResetSystem(kt *kit.Kit, params *TaskManageBaseReq) (string, error)
 	CvmPowerOperation(kt *kit.Kit, bkBizID int64, uniqueID string, taskOperation enumor.TaskOperation,
 		cvmList []corecvm.BaseCvm) (
@@ -62,6 +65,7 @@ type cvm struct {
 	audit      audit.Interface
 	eip        eip.Interface
 	disk       disk.Interface
+	esbClient  esb.Client
 	cmdbClient cmdb.Client
 }
 
@@ -69,10 +73,12 @@ type cvm struct {
 func NewCvm(client *client.ClientSet, audit audit.Interface, eip eip.Interface, disk disk.Interface,
 	cmdbClient cmdb.Client) Interface {
 	return &cvm{
-		client:     client,
-		audit:      audit,
-		eip:        eip,
-		disk:       disk,
+		client: client,
+		audit:  audit,
+		eip:    eip,
+		disk:   disk,
+		// FIXME: delete
+		esbClient:  esb.EsbClient(),
 		cmdbClient: cmdbClient,
 	}
 }
