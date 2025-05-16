@@ -548,6 +548,11 @@ func (s TaskServerSetting) Validate() error {
 	return nil
 }
 
+// TenantEnable get tenant is enabled.
+func (s *TaskServerSetting) TenantEnable() bool {
+	return s.Tenant.Enabled
+}
+
 // WoaServerSetting defines woa server used setting options.
 type WoaServerSetting struct {
 	Network         Network   `yaml:"network"`
@@ -572,6 +577,8 @@ type WoaServerSetting struct {
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`
 	Cmsi            CMSI             `yaml:"cmsi"`
+
+	Tenant TenantConfig `yaml:"tenant"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -645,7 +652,7 @@ func (s WoaServerSetting) Validate() error {
 }
 
 // TenantEnable get tenant is enabled.
-func (s *TaskServerSetting) TenantEnable() bool {
+func (s *WoaServerSetting) TenantEnable() bool {
 	return s.Tenant.Enabled
 }
 
