@@ -28,7 +28,7 @@ import (
 	moalogic "hcm/cmd/cloud-server/logics/moa"
 	securitygroup "hcm/cmd/cloud-server/logics/security-group"
 	"hcm/pkg/client"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	pkgmoa "hcm/pkg/thirdparty/moa"
 
 	etcd3 "go.etcd.io/etcd/client/v3"
@@ -45,14 +45,14 @@ type Logics struct {
 }
 
 // NewLogics create a new cloud server logics.
-func NewLogics(c *client.ClientSet, esbClient esb.Client, moaClient pkgmoa.Client, etcdCli *etcd3.Client) *Logics {
+func NewLogics(c *client.ClientSet, cmdbClient cmdb.Client, moaClient pkgmoa.Client, etcdCli *etcd3.Client) *Logics {
 	auditLogics := audit.NewAudit(c.DataService())
 	eipLogics := eip.NewEip(c, auditLogics)
 	diskLogics := disk.NewDisk(c, auditLogics)
 	return &Logics{
 		Audit:         auditLogics,
 		Disk:          disk.NewDisk(c, auditLogics),
-		Cvm:           cvm.NewCvm(c, auditLogics, eipLogics, diskLogics, esbClient),
+		Cvm:           cvm.NewCvm(c, auditLogics, eipLogics, diskLogics, cmdbClient),
 		Eip:           eip.NewEip(c, auditLogics),
 		SecurityGroup: securitygroup.NewSecurityGroup(c, auditLogics),
 		Moa:           moalogic.NewMoa(moaClient, etcdCli)}

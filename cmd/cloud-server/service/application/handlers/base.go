@@ -28,6 +28,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/cryptography"
 	"hcm/pkg/rest"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/finops"
 	itsm2 "hcm/pkg/thirdparty/api-gateway/itsm"
@@ -44,6 +45,7 @@ type HandlerOption struct {
 	ItsmCli   itsm2.Client
 	FinOpsCli finops.Client
 	CmsiCli   cmsi.Client
+	CmdbCli   cmdb.Client
 }
 
 // BaseApplicationHandler 基础的Handler 一些公共函数和属性处理，可以给到其他具体Handler组合
@@ -53,11 +55,11 @@ type BaseApplicationHandler struct {
 
 	Cts        *rest.Contexts
 	Client     *client.ClientSet
-	EsbClient  esb.Client
 	Cipher     cryptography.Crypto
 	Audit      audit.Interface
 	FinOpsCli  finops.Client
 	CmsiClient cmsi.Client
+	CmdbClient cmdb.Client
 }
 
 // NewBaseApplicationHandler ...
@@ -69,10 +71,10 @@ func NewBaseApplicationHandler(
 		vendor:          vendor,
 		Cts:             opt.Cts,
 		Client:          opt.Client,
-		EsbClient:       opt.EsbClient,
 		Cipher:          opt.Cipher,
 		Audit:           opt.Audit,
 		CmsiClient:      opt.CmsiCli,
+		CmdbClient:      opt.CmdbCli,
 		FinOpsCli:       opt.FinOpsCli,
 	}
 }

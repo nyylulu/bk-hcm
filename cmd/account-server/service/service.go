@@ -55,8 +55,8 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	pkgfinops "hcm/pkg/thirdparty/api-gateway/finops"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/jarvis"
 	"hcm/pkg/thirdparty/obs"
 	"hcm/pkg/tools/ssl"
@@ -78,7 +78,7 @@ type Service struct {
 	authorizer  auth.Authorizer
 	audit       logicaudit.Interface
 	billManager *bill.BillManager
-	esbClient   esb.Client
+	cmdbClient  cmdb.Client
 }
 
 // NewService create a service instance.
@@ -115,9 +115,8 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		return nil, err
 	}
 
-	// 创建ESB Client
-	esbConfig := cc.AccountServer().Esb
-	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
+	cmdbCfg := cc.AccountServer().Cmdb
+	cmdbCli, err := cmdb.NewClient(&cmdbCfg, metrics.Register())
 	if err != nil {
 		return nil, err
 	}
@@ -186,7 +185,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		authorizer:  authorizer,
 		audit:       logicaudit.NewAudit(apiClientSet.DataService()),
 		billManager: newBillManager,
-		esbClient:   esbClient,
+		cmdbClient:  cmdbCli,
 	}
 
 	return svr, nil
@@ -279,7 +278,7 @@ func (s *Service) apiSet() *restful.Container {
 		ApiClient:  s.clientSet,
 		Authorizer: s.authorizer,
 		Audit:      s.audit,
-		EsbClient:  s.esbClient,
+		CmdbClient: s.cmdbClient,
 	}
 
 	mainaccount.InitService(c)

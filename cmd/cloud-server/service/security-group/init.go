@@ -29,7 +29,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // InitSecurityGroupService initial the security group service
@@ -40,7 +40,7 @@ func InitSecurityGroupService(c *capability.Capability) {
 		audit:      c.Audit,
 		moaLogic:   c.Logics.Moa,
 		sgLogic:    c.Logics.SecurityGroup,
-		esb:        c.EsbClient,
+		cmdbClient: c.CmdbCli,
 	}
 
 	h := rest.NewHandler()
@@ -189,7 +189,7 @@ type securityGroupSvc struct {
 	client     *client.ClientSet
 	authorizer auth.Authorizer
 	audit      audit.Interface
-	esb        esb.Client
+	cmdbClient cmdb.Client
 	sgLogic    securitygroup.Interface
 	moaLogic   moalogic.Interface
 }

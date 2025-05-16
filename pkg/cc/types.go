@@ -1123,3 +1123,8 @@ func (r *SyncConcurrentRule) Validate() error {
 	}
 	return nil
 }
+
+// TenantConfig tenant config
+type TenantConfig struct {
+	Enabled bool `yaml:"enabled"`
+}
