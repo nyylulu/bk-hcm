@@ -84,6 +84,7 @@ import (
 	rollingfinedetail "hcm/cmd/data-service/service/rolling-server/rolling-fine-detail"
 	"hcm/cmd/data-service/service/rolling-server/rolling-returned"
 	"hcm/cmd/data-service/service/task"
+	"hcm/cmd/data-service/service/tenant"
 	"hcm/cmd/data-service/service/user"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/errf"
@@ -306,6 +307,7 @@ func (s *Service) apiSet() *restful.Container {
 	woadevicetype.InitService(capability)
 
 	task.InitService(capability)
+	tenant.InitService(capability)
 
 	resusagebizrel.InitService(capability)
 
