@@ -167,11 +167,15 @@ export default defineComponent({
           {props.subOrderInfo.step_id === 3 && (
             <CopyToClipboard
               style='margin-left: auto'
-              content={list.value.map((item) => item.ip).join('\n')}
-              disabled={!list.value.length}>
-              <bk-button theme='primary' disabled={!list.value.length}>
-                复制IP
-              </bk-button>
+              content={() => scrStore.getInitializationDetailsIps(String(props.subOrderInfo.suborder_id))}
+              disabled={!pagination.count}>
+              {{
+                default: ({ disabled, loading }: { disabled: boolean; loading: boolean }) => (
+                  <bk-button theme='primary' disabled={disabled} loading={loading}>
+                    复制全部IP
+                  </bk-button>
+                ),
+              }}
             </CopyToClipboard>
           )}
         </div>

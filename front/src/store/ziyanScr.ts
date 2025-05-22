@@ -13,9 +13,11 @@ import type {
   IDissolveHostOriginListParam,
   IDissolveRecycledModuleListParam,
   IApplyCrpTicketAudit,
+  ITaskApplyRecordInitItem,
 } from '@/typings/ziyanScr';
 import { transferSimpleConditions } from '@/utils/scr/simple-query-builder';
 import { useWhereAmI } from '@/hooks/useWhereAmI';
+import rollRequest from '@blueking/roll-request';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -122,6 +124,19 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
       page,
       filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
     });
+
+  // 资源初始化详情全部ip
+  const getInitializationDetailsIps = async (subOrderId: string) => {
+    const list = await rollRequest({
+      httpClient: http,
+      pageEnableCountKey: 'count',
+    }).rollReq<ITaskApplyRecordInitItem>(
+      `/api/v1/woa/${getBusinessApiPath()}task/find/apply/record/init`,
+      { suborder_id: subOrderId },
+      { limit: 500, countGetter: (res) => res.data.count, listGetter: (res) => res.data.info },
+    );
+    return list.map((item) => item.ip).join('\n');
+  };
 
   // 本地盘性能压测
   const getDiskCheckDetails = (subOrderId: any, page: any, status: any) =>
@@ -232,6 +247,7 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     createOnlineTask,
     getProductionDetails,
     getInitializationDetails,
+    getInitializationDetailsIps,
     getDiskCheckDetails,
     getDeliveryDetails,
     getApplyCrpTicketAudit,
