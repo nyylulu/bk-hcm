@@ -243,7 +243,7 @@ func (m *Matcher) updateGenerateFailed(generateId uint64) error {
 // UpdateApplyOrderStatus update apply order status
 func (m *Matcher) UpdateApplyOrderStatus(order *types.ApplyOrder) error {
 	// 1. get unreleased devices from db
-	devices, err := m.getUnreleasedDevice(order.SubOrderId)
+	devices, err := m.GetUnreleasedDevice(order.SubOrderId)
 	if err != nil {
 		logs.Errorf("failed to get unreleased device, order id: %s, err: %v", order.SubOrderId, err)
 		return err
@@ -618,8 +618,8 @@ func (m *Matcher) getGeneratedDevice(genId uint64) ([]*types.DeviceInfo, error) 
 	return devices, nil
 }
 
-// getUnreleasedDevice gets unreleased devices bindings to current apply order
-func (m *Matcher) getUnreleasedDevice(orderId string) ([]*types.DeviceInfo, error) {
+// GetUnreleasedDevice gets unreleased devices bindings to current apply order
+func (m *Matcher) GetUnreleasedDevice(orderId string) ([]*types.DeviceInfo, error) {
 	filter := &mapstr.MapStr{
 		"suborder_id": orderId,
 	}
