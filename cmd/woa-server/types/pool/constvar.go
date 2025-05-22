@@ -14,6 +14,22 @@
 package pool
 
 const (
+
+	/* 基本业务逻辑
+	上架  匹配业务/匹配模块 (BizIDMatch/ModuleIDPoolMatch) -> 资源池业务/资源池模块 (BizIDPool/ModuleIDPool)
+	借出（机器提取）资源池业务/资源池模块 (BizIDPool/ModuleIDPool) -> 用户业务-用户模块
+	归还：用户业务/用户模块 -> 资源池业务/下架中转模块 (BizIDPool/ModuleIDPoolRecalling)
+	回收：资源池业务/下架中转模块 (BizIDPool/ModuleIDPoolRecalling) -> 匹配业务/匹配模块 (BizIDMatch/ModuleIDPoolMatch)
+
+	具体：
+	上架： 资源运营服务-SA云化池 -> 资源运营服务-CR资源池
+	借出： 资源运营服务-CR资源池 -> 用户业务-用户模块
+	归还： 用户业务-用户模块 -> 资源运营服务-CR资源下架中
+	回收： 资源运营服务-CR资源下架中 -> 资源运营服务-SA云化池
+	*/
+
+	// BizIDMatch 资源上架源业务
+	BizIDMatch int64 = 931
 	// BizIDPool biz id of 资源运营服务
 	BizIDPool int64 = 931
 	// ModuleIDPool module id of CR资源池

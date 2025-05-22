@@ -190,7 +190,7 @@ func (r *Recaller) returnHost(task *table.RecallTask) error {
 		return err
 	}
 
-	// update recall detail
+	// 创建下架回收记录，并放入下架回收队列
 	if err = r.createRecallDetail(task, hosts); err != nil {
 		logs.Errorf("scheduler:cvm:recaller:returnHost:failed, failed to create recall detail, err: %v", err)
 		return err

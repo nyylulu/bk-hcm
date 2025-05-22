@@ -38,4 +38,9 @@ const (
 	CvmResetSystemUpdatePwdFailed WarnSign = "cvm_reset_system_update_pwd_failed"
 	// CvmApplyOrderCrpProductTimeout cvm apply order crp product timeout.
 	CvmApplyOrderCrpProductTimeout WarnSign = "cvm_apply_order_crp_product_timeout"
+
+	// CvmRecycleFailed 主机回收失败
+	CvmRecycleFailed WarnSign = "cvm_recycle_failed"
+	// CvmRecycleStuck 主机回收单据长时间未更新
+	CvmRecycleStuck WarnSign = "cvm_recycle_stuck"
 )

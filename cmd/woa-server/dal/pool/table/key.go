@@ -29,4 +29,8 @@ const (
 	ZoneKey = "zone"
 	// GradeTagKey is host grade tag key
 	GradeTagKey = "grade_tag"
+	// CloudRegionKey 云上region id: ap-nanjing
+	CloudRegionKey = "bk_cloud_region"
+	// CloudZoneKey 云上可用区id: ap-nanjing-1
+	CloudZoneKey = "bk_cloud_zone"
 )

@@ -1367,3 +1367,13 @@ bkdbm:
     caFile:
     # the password to decrypt the certificate.
     password:
+
+# 卡单检测
+stuckCheck:
+  recycle:
+    enable: true
+    interval: 24h
+    startUpDelay: 2m
+    # 关注 [now-maxTime,now-minTime] 的单据
+    minTime: 24h
+    maxTime: 336h

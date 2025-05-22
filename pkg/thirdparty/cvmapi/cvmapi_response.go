@@ -307,6 +307,7 @@ type CvmCbsPlanQueryItem struct {
 	ResourceMode          string  `json:"resourceMode"`
 	StatisticalClass      string  `json:"statisticalClass"`
 	VagueStatus           int     `json:"vagueStatus"`
+	ReviewStatus          string  `json:"reviewStatus"`
 	GenerationType        string  `json:"generation_type"`
 }
 
@@ -380,6 +381,7 @@ func (i *CvmCbsPlanQueryItem) Clone() *CvmCbsPlanQueryItem {
 		ResourceMode:          i.ResourceMode,
 		StatisticalClass:      i.StatisticalClass,
 		VagueStatus:           i.VagueStatus,
+		ReviewStatus:          i.ReviewStatus,
 		GenerationType:        i.GenerationType,
 	}
 }

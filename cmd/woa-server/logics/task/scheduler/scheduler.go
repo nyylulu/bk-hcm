@@ -1860,29 +1860,57 @@ func (s *scheduler) ModifyApplyOrder(kt *kit.Kit, param *types.ModifyApplyReq) e
 
 func (s *scheduler) validateModification(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
 	// validate replicas
-	if param.Replicas > order.Total {
-		logs.Errorf("modified replicas cannot exceeds origin value %d", order.Total)
-		return fmt.Errorf("modified replicas cannot exceeds origin value %d", order.Total)
-	}
-	if param.Replicas <= 0 {
-		logs.Errorf("modified replicas should be positive integer")
-		return errors.New("modified replicas should be positive integer")
-	}
-	if param.Replicas < order.SuccessNum {
-		logs.Errorf("modified replicas cannot be less than successfully delivered amount %d", order.SuccessNum)
-		return fmt.Errorf("modified replicas cannot be less than successfully delivered amount %d", order.SuccessNum)
+	if err := s.validateReplicas(kt, order, param); err != nil {
+		logs.Errorf("failed to validate modify replicas num, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
+		return err
 	}
 
 	// validate device type
 	if err := s.validateModifyDeviceType(kt, order, param); err != nil {
-		logs.Errorf("failed to validate modify device type, err: %v", err)
+		logs.Errorf("failed to validate modify device type, subOrderID: %s, err: %v, rid: %s",
+			order.SubOrderId, err, kt.Rid)
 		return err
 	}
 
 	// validate zone
 	if err := s.validateModifyZone(order, param); err != nil {
-		logs.Errorf("failed to validate modify zone, err: %v", err)
+		logs.Errorf("failed to validate modify zone, subOrderID: %s, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return err
+	}
+
+	return nil
+}
+
+func (s *scheduler) validateReplicas(kt *kit.Kit, order *types.ApplyOrder, param *types.ModifyApplyReq) error {
+	if param.Replicas > order.Total {
+		logs.Errorf("modified replicas cannot exceeds origin value %d, subOrderID: %s, rid: %s",
+			order.Total, order.SubOrderId, kt.Rid)
+		return fmt.Errorf("modified replicas cannot exceeds origin value %d", order.Total)
+	}
+	if param.Replicas <= 0 {
+		logs.Errorf("modified replicas should be positive integer, subOrderID: %s, rid: %s", order.SubOrderId, kt.Rid)
+		return errors.New("modified replicas should be positive integer")
+	}
+	if param.Replicas < order.SuccessNum {
+		logs.Errorf("modified replicas cannot be less than successfully delivered amount %d, subOrderID: %s, rid: %s",
+			order.SuccessNum, order.SubOrderId, kt.Rid)
+		return fmt.Errorf("modified replicas cannot be less than successfully delivered amount %d", order.SuccessNum)
+	}
+
+	// 获取实际生产成功的数量
+	deviceInfos, err := s.matcher.GetUnreleasedDevice(order.SubOrderId)
+	if err != nil {
+		logs.Errorf("failed to get generate records, subOrderID: %s, err: %v, srid: %s", order.SubOrderId, err, kt.Rid)
+		return err
+	}
+
+	// 修改的剩余可申请数量，不能小于已生产成功的数量
+	hasGenSuccCount := len(deviceInfos)
+	if int(param.Replicas) < hasGenSuccCount {
+		logs.Errorf("modified replicas cannot be less than success generator amount %d, subOrderID: %s, rid: %s",
+			hasGenSuccCount, order.SubOrderId, kt.Rid)
+		return fmt.Errorf("modified replicas cannot be less than success generator amount %d", hasGenSuccCount)
 	}
 
 	return nil
