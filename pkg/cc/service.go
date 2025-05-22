@@ -519,6 +519,7 @@ type WoaServerSetting struct {
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`
 	Cmsi            CMSI             `yaml:"cmsi"`
+	StuckCheck      StuckCheck       `yaml:"stuckCheck"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -531,6 +532,7 @@ func (s *WoaServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
+	s.StuckCheck.trySetDefault()
 
 	return
 }

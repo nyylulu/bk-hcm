@@ -65,4 +65,5 @@ type AppliedRecordKey struct {
 type AppliedRecordInfo struct {
 	SumCpuCore       int64            `json:"sum_cpu_core"`
 	AppliedIDCoreMap map[string]int64 `json:"applied_id_core_map"`
+	AppliedIDs       []string         `json:"applied_ids"`
 }

@@ -215,11 +215,12 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 
 		// 该滚服申请单所有的CPU核心数
 		sumCpuCore := applyMatchedInfo.SumCpuCore + applyMatchedInfoOld.SumCpuCore
-		if hostItem.IsMatched || hostItem.CpuCore > sumCpuCore {
+		if hostItem.IsMatched || sumCpuCore <= 0 {
 			logs.Warnf("cycleMatchRecycleCvmHostQuotaLoop, matched skip has matched or cpu core exceed, "+
-				"deviceGroup: %s, sumCpuCore: %d, applyMatchedInfo: %+v, applyMatchedInfoOld: %+v, hostItem: %+v, "+
-				"rid: %s", hostItem.DeviceGroup, sumCpuCore, applyMatchedInfo, applyMatchedInfoOld,
-				cvt.PtrToVal(hostItem), kt.Rid)
+				"deviceGroup: %s, hostIP: %s, hostCpuCore: %d, deviceGroup: %s, coreType: %s, sumCpuCore: %d, "+
+				"applyMatchedInfo: %+v, applyMatchedInfoOld: %+v, hostItem: %+v, rid: %s", hostItem.DeviceGroup,
+				hostItem.IP, hostItem.CpuCore, hostItem.DeviceGroup, hostItem.CoreType, sumCpuCore, applyMatchedInfo,
+				applyMatchedInfoOld, cvt.PtrToVal(hostItem), kt.Rid)
 			continue
 		}
 
@@ -227,7 +228,7 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 		applyMatchedInfo, hostMatchedCpuCore = l.applyMatchHostCPUCore(hostItem, applyMatchedInfo, hostMatchedCpuCore)
 		applyMap[key] = applyMatchedInfo
 		// 匹配成功
-		if hostItem.CpuCore <= hostMatchedCpuCore {
+		if hostItem.CpuCore <= hostMatchedCpuCore || hostMatchedCpuCore >= sumCpuCore {
 			globalQuota, allBizReturnedCpuCore = l.hostMatchSuccess(hostItem, globalQuota, allBizReturnedCpuCore)
 
 			// 记录日志方便排查业务问题
@@ -243,7 +244,7 @@ func (l *logics) cycleMatchRollingServerCvmHostQuota(kt *kit.Kit, appliedRecords
 		applyMap[keyOld] = applyMatchedInfoOld
 
 		// 匹配成功
-		if hostItem.CpuCore <= hostMatchedCpuCore {
+		if hostItem.CpuCore <= hostMatchedCpuCore || hostMatchedCpuCore >= sumCpuCore {
 			globalQuota, allBizReturnedCpuCore = l.hostMatchSuccess(hostItem, globalQuota, allBizReturnedCpuCore)
 
 			// 记录日志方便排查业务问题
@@ -283,7 +284,11 @@ func (l *logics) applyMatchHostCPUCore(hostItem *rstypes.RecycleHostMatchInfo,
 	applyMatchedInfo rstypes.AppliedRecordInfo, hostMatchedCpuCore int64) (rstypes.AppliedRecordInfo, int64) {
 
 	// 匹配滚服申请记录
-	for applyID, applyRemainCore := range applyMatchedInfo.AppliedIDCoreMap {
+	for _, applyID := range applyMatchedInfo.AppliedIDs {
+		applyRemainCore, ok := applyMatchedInfo.AppliedIDCoreMap[applyID]
+		if !ok {
+			continue
+		}
 		// 该主机剩余未匹配的CPU核心数
 		needMatchedCPUCore := hostItem.CpuCore - hostMatchedCpuCore
 		if needMatchedCPUCore <= 0 {
@@ -319,9 +324,10 @@ func (l *logics) getAppliedRecordByKey(kt *kit.Kit, hostItem *rstypes.RecycleHos
 	}
 	applyMatchedInfo, ok := applyMap[key]
 	if !ok {
-		logs.Warnf("cycleMatchRecycleCvmHostQuotaLoop, matched skip, ok: %v, deviceGroup: %s, coreType: %s, "+
-			"applyMatchedInfo: %+v, hostItem: %+v, rid: %s", ok, hostItem.DeviceGroup, hostItem.CoreType,
-			applyMatchedInfo, cvt.PtrToVal(hostItem), kt.Rid)
+		logs.Warnf("cycleMatchRecycleCvmHostQuotaLoop, matched skip, ok: %v, hostIP: %s, deviceGroup: %s, "+
+			"hostCoreType: %s, coreType: %s, cpuCore: %d, applyMatchedInfo: %+v, hostItem: %+v, rid: %s",
+			ok, hostItem.IP, hostItem.DeviceGroup, hostItem.CoreType, coreType, hostItem.CpuCore, applyMatchedInfo,
+			cvt.PtrToVal(hostItem), kt.Rid)
 		applyMatchedInfo = rstypes.AppliedRecordInfo{}
 	}
 
@@ -342,6 +348,7 @@ func gatherRollingServerApplyCPUCore(appliedRecords []*rstable.RollingAppliedRec
 		if _, ok := applyMap[key]; !ok {
 			applyMap[key] = rstypes.AppliedRecordInfo{
 				AppliedIDCoreMap: make(map[string]int64),
+				AppliedIDs:       make([]string, 0),
 			}
 		}
 
@@ -356,6 +363,7 @@ func gatherRollingServerApplyCPUCore(appliedRecords []*rstable.RollingAppliedRec
 		appliedInfo := applyMap[key]
 		appliedInfo.SumCpuCore += remainCore
 		appliedInfo.AppliedIDCoreMap[apply.ID] = remainCore
+		appliedInfo.AppliedIDs = append(appliedInfo.AppliedIDs, apply.ID)
 		applyMap[key] = appliedInfo
 	}
 	return applyMap

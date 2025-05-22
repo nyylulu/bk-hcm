@@ -1132,8 +1132,8 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 		mapAssetIDToHost[host.BkAssetID] = host
 	}
 
-	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v",
-		order.SubOrderId, ips, assetIds)
+	logs.Infof("successfully sync device info to cc, subOrderID: %s, ips: %+v, assets: %+v, ccHostNum: %d",
+		order.SubOrderId, ips, assetIds, len(ccHosts))
 	devices := g.buildDevicesInfo(items, order, generateId, mapAssetIDToHost)
 	return devices, nil
 }
@@ -1146,8 +1146,8 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 	var devices []*types.DeviceInfo
 
 	for _, item := range items {
-		if isDup, _ := g.isDuplicateHost(order.SubOrderId, item.Ip); isDup {
-			logs.Warnf("duplicate host for order id: %s, ip: %s", order.SubOrderId, item.Ip)
+		if isDup, _ := g.isDuplicateHost(order.SubOrderId, item.AssetId); isDup {
+			logs.Warnf("duplicate host for order id: %s, ip: %s, assetId: %s", order.SubOrderId, item.Ip, item.AssetId)
 			continue
 		}
 		device := &types.DeviceInfo{
@@ -1230,15 +1230,15 @@ func (g *Generator) createGeneratedDevice(order *types.ApplyOrder, generateId ui
 	return nil
 }
 
-func (g *Generator) isDuplicateHost(suborderId, ip string) (bool, error) {
+func (g *Generator) isDuplicateHost(suborderID, assetID string) (bool, error) {
 	filter := map[string]interface{}{
-		"suborder_id": suborderId,
-		"ip":          ip,
+		"suborder_id": suborderID,
+		"asset_id":    assetID,
 	}
 
 	cnt, err := model.Operation().DeviceInfo().CountDeviceInfo(context.Background(), filter)
 	if err != nil {
-		logs.Errorf("failed to count device info, order id: %s, ip: %s, err: %v", suborderId, ip, err)
+		logs.Errorf("failed to count device info, suborderID: %s, assetID: %s, err: %v", suborderID, assetID, err)
 		return false, err
 	}
 
