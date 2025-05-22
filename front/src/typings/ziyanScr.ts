@@ -186,3 +186,16 @@ export interface ICvmDeviceDetailItem {
   score: number;
   comment: string;
 }
+
+export interface ITaskApplyRecordInitItem {
+  suborder_id: string;
+  ip: string;
+  task_id: string;
+  task_link: string;
+  status: number;
+  message: string;
+  create_at: string;
+  update_at: string;
+  start_at: string;
+  end_at: string;
+}
