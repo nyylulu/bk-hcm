@@ -57,10 +57,6 @@ module.exports = {
       new replaceStaticUrlPlugin(),
       new webpack.NormalModuleReplacementPlugin(/\.plugin(\.\w+)?$/, function(resource) {
         resource.request = resource.request.replace(/\.plugin/, `${env.isInternal ? '-internal.plugin' : '.plugin'}`);
-
-        if (resource.createData) {
-          resource.createData.request = resource.request;
-        }
       }),
     );
     webpackConfig.plugins.push(
