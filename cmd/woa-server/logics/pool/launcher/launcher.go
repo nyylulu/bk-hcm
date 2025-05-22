@@ -20,6 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
+	"hcm/cmd/woa-server/types/pool"
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
@@ -134,7 +135,7 @@ func (l *Launcher) dispatchHandler(id uint64) error {
 		return errors.New("failed to deal launch task, for get no hosts")
 	}
 
-	if err = l.transferHost2Pool(hostIDs, 931); err != nil {
+	if err = l.transferHost2Pool(hostIDs, pool.BizIDMatch); err != nil {
 		logs.Errorf("scheduler:cvm:launcher:dispatchHandler:failed, failed to transfer hosts to pool, id: %d, err: %v",
 			id, err)
 		return err

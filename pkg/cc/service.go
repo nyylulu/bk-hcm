@@ -577,6 +577,7 @@ type WoaServerSetting struct {
 	ResPlan         ResPlan          `yaml:"resPlan"`
 	ResourceSync    ResourceSync     `yaml:"resourceSync"`
 	Cmsi            CMSI             `yaml:"cmsi"`
+	StuckCheck      StuckCheck       `yaml:"stuckCheck"`
 
 	Tenant TenantConfig `yaml:"tenant"`
 }
@@ -591,6 +592,7 @@ func (s *WoaServerSetting) trySetDefault() {
 	s.Network.trySetDefault()
 	s.Service.trySetDefault()
 	s.Log.trySetDefault()
+	s.StuckCheck.trySetDefault()
 
 	return
 }
