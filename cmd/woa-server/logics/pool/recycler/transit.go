@@ -26,7 +26,7 @@ import (
 
 func (r *Recycler) dealTransitTask(task *table.RecallDetail) error {
 	// transfer hosts from 资源运营服务-CR资源下架中 to 资源运营服务-SA云化池
-	if err := r.transferHost(task.HostID, types.BizIDPool, types.BizIDPool, types.ModuleIDPoolMatch); err != nil {
+	if err := r.transferHost(task.HostID, types.BizIDPool, types.BizIDMatch, types.ModuleIDPoolMatch); err != nil {
 		logs.Errorf("failed to transfer host %d, err: %v", task.HostID, err)
 
 		errUpdate := r.updateTaskTransitStatus(task, err.Error(), table.RecallStatusTransitFailed)
