@@ -134,6 +134,8 @@ type Interface interface {
 	// UpdateReturnTaskInfo update return task info
 	UpdateReturnTaskInfo(ctx context.Context, task *table.ReturnTask, taskId string, status table.ReturnStatus,
 		msg string) error
+
+	StartStuckCheckLoop(kt *kit.Kit)
 }
 
 // recycler provides resource recycle service
@@ -199,6 +201,7 @@ func (r *recycler) RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts [
 	return r.dispatcher.GetReturn().RecoverReturnCvm(kt, task, hosts)
 }
 
+// GetDispatcher get dispatcher
 func (r *recycler) GetDispatcher() *dispatcher.Dispatcher {
 	return r.dispatcher
 }

@@ -57,6 +57,8 @@ import (
 
 // Logics provides management interface for resource plan.
 type Logics interface {
+	// GetResPlanDemandDetail get res plan demand detail.
+	GetResPlanDemandDetail(kt *kit.Kit, demandID string, bkBizIDs []int64) (*ptypes.GetPlanDemandDetailResp, error)
 	// CreateAuditFlow creates an audit flow for resource plan ticket.
 	CreateAuditFlow(kt *kit.Kit, ticketID string) error
 	// CreateResPlanTicket create resource plan ticket.

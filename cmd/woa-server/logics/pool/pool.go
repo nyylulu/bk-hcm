@@ -172,6 +172,8 @@ func (p *pool) getHostDetailInfo(ips, assetIds []string, hostIds []int64) ([]*ta
 				table.RegionKey:       host.BkZoneName,
 				table.ZoneKey:         host.SubZone,
 				table.GradeTagKey:     gradeTag,
+				table.CloudRegionKey:  host.BkCloudRegion,
+				table.CloudZoneKey:    host.BkCloudZone,
 			},
 		}
 
@@ -240,6 +242,8 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb
 			"operator",
 			"bk_bak_operator",
 			"srv_status",
+			"bk_cloud_region",
+			"bk_cloud_zone",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
@@ -704,7 +708,7 @@ func (p *pool) GetPoolHost(kt *kit.Kit, param *types.GetPoolHostReq) (*types.Get
 	return rst, nil
 }
 
-// DrawHost draw hosts from resource pool
+// DrawHost 从资源池借出主机到指定业务下：
 func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	// try
 	// lock host
@@ -745,7 +749,7 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	// transfer host to destination business
 	for _, hostID := range param.HostIDs {
 		// transfer hosts from 资源运营服务-CR资源池 to destination business
-		if err := p.transferHost(hostID, 931, param.ToBizID, 0); err != nil {
+		if err := p.transferHost(hostID, types.BizIDPool, param.ToBizID, 0); err != nil {
 			logs.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
@@ -1202,8 +1206,8 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 
 func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*cmdb.ListBizHostParams, error) {
 	req := &cmdb.ListBizHostParams{
-		BizID:       931,
-		BkModuleIDs: []int64{239149},
+		BizID:       types.BizIDMatch,
+		BkModuleIDs: []int64{types.ModuleIDPoolMatch},
 		Fields: []string{
 			"bk_host_id",
 			"bk_asset_id",

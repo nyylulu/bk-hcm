@@ -113,3 +113,5 @@ data:
       {{- toYaml .Values.resourceSync | nindent 6 }}
     tenant:
       {{- toYaml .Values.tenant | nindent 6 }}
+    stuckCheck:
+      {{- toYaml .Values.stuckCheck | nindent 6 }}
