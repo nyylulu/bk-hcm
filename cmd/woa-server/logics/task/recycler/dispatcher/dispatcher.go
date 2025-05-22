@@ -26,6 +26,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/returner"
 	"hcm/cmd/woa-server/logics/task/recycler/transit"
 	"hcm/pkg"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/metadata"
@@ -181,8 +182,8 @@ func (d *Dispatcher) dispatchHandler(orderId string) error {
 		Dispatcher: d,
 	}
 	if err := task.State.Execute(taskCtx); err != nil {
-		logs.Errorf("failed to execute task, err: %v, order id: %s, state: %s", err, order.SuborderID,
-			task.State.Name())
+		logs.Errorf("[%s] failed to execute task, err: %v, order id: %s, state: %s",
+			constant.CvmRecycleFailed, err, order.SuborderID, task.State.Name())
 		return err
 	}
 

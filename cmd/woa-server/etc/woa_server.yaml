@@ -404,3 +404,12 @@ resourceSync:
   syncSubnet: 30
   syncCapacity: 360
   syncLeftIP: 360
+
+stuckCheck:
+  recycle:
+    enable: true
+    interval: 24h
+    startUpDelay: 2m
+    # 关注 [now-maxTime,now-minTime] 的单据
+    minTime: 24h
+    maxTime: 336h

@@ -63,6 +63,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/handler"
@@ -303,6 +304,17 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+
+	go func() {
+		defer func() {
+			if err := recover(); err != nil {
+				logs.Errorf("[%s] recycler stuck check loop exit unexpectedly, err: %v, rid: %s",
+					constant.CvmRecycleStuck, err, kt.Rid)
+			}
+		}()
+
+		recyclerIf.StartStuckCheckLoop(kt.NewSubKit())
+	}()
 
 	operationIf, err := operation.New(kt.Ctx)
 	if err != nil {

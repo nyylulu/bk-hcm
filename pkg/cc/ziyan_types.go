@@ -23,6 +23,7 @@ package cc
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
@@ -921,4 +922,39 @@ func (c ResourceSync) Validate() error {
 	}
 
 	return nil
+}
+
+// StuckCheckCfg stuck check config.
+type StuckCheckCfg struct {
+	Enable       bool          `yaml:"enable"`
+	Interval     time.Duration `yaml:"interval"`
+	StartUpDelay time.Duration `yaml:"startUpDelay"`
+	MaxTime      time.Duration `yaml:"maxTime"`
+	MinTime      time.Duration `yaml:"minTime"`
+}
+
+// StuckCheck order stuck check.
+type StuckCheck struct {
+	Recycle StuckCheckCfg `yaml:"recycle"`
+}
+
+func (c *StuckCheck) trySetDefault() {
+	c.Recycle.trySetDefault()
+}
+
+func (c *StuckCheckCfg) trySetDefault() {
+	if c.Interval <= 0 {
+		c.Interval = 24 * time.Hour
+	}
+
+	if c.MaxTime <= 0 {
+		c.MaxTime = 14 * 24 * time.Hour
+	}
+
+	if c.MinTime <= 0 {
+		c.MinTime = 24 * time.Hour
+	}
+	if c.StartUpDelay <= 0 {
+		c.StartUpDelay = 2 * time.Minute
+	}
 }
