@@ -279,6 +279,9 @@ function handleCustomErrorCode(error: any) {
   if (error.code === 2000000 && error.message === 'host is invalid') return;
   // todo: 主机回收，业务报错外抛至组件
   if (error.code === 2000018) return;
+
+  // 其他业务报错，统一处理
+  if (error.code !== 0) Message({ theme: 'error', message: error.message });
 }
 
 /**
