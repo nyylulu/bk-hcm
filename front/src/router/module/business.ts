@@ -532,7 +532,7 @@ const businesseMenus: RouteRecordRaw[] = [
           {
             path: '',
             name: 'operationRecords',
-            component: () => import('@/views/resource/resource-manage/operationRecord/index'),
+            component: () => import('@/views/resource/resource-manage/operationRecord/index.vue'),
             meta: {
               activeKey: 'businessRecord',
               isShowBreadcrumb: true,
