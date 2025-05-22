@@ -66,3 +66,10 @@ const (
 	// GlobalConfigTypeRegionDefaultSecGroup 地域默认安全组
 	GlobalConfigTypeRegionDefaultSecGroup = "region_default_security_group"
 )
+
+const (
+	// GpuInstanceClass 实例族-GPU型
+	GpuInstanceClass = "GPU"
+	// GPUDeviceTypeChargeMonth GPU机型-计费模式-60个月
+	GPUDeviceTypeChargeMonth uint = 60
+)

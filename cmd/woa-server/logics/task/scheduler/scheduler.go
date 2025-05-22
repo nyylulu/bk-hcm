@@ -155,6 +155,8 @@ type Interface interface {
 	CancelApplyTicketItsm(kt *kit.Kit, req *types.CancelApplyTicketItsmReq) error
 	// CancelApplyTicketCrp cancel apply ticket which in crp
 	CancelApplyTicketCrp(kt *kit.Kit, req *types.CancelApplyTicketCrpReq) error
+	// VerifyCvmGPUChargeMonth verify cvm gpu charge month
+	VerifyCvmGPUChargeMonth(kt *kit.Kit, subOrders []*types.Suborder) error
 }
 
 // scheduler provides resource apply service
@@ -953,6 +955,12 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 		}
 	}
 
+	// GPU特殊机型的计费时长校验
+	if err = s.VerifyCvmGPUChargeMonth(kt, param.Suborders); err != nil {
+		logs.Errorf("failed to verify cvm gpu charge month, err: %v, rid: %s", err, kt.Rid)
+		return nil, err
+	}
+
 	param, err = s.fillCVMAppliedCore(kt, param)
 	if err != nil {
 		logs.Errorf("failed to fill applied core, err: %v, rid: %s", err, kt.Rid)
@@ -993,6 +1001,60 @@ func (s *scheduler) CreateApplyOrder(kt *kit.Kit, param *types.ApplyReq) (*types
 	})
 
 	return rst, txnErr
+}
+
+// VerifyCvmGPUChargeMonth GPU特殊机型的计费时长校验
+func (s *scheduler) VerifyCvmGPUChargeMonth(kt *kit.Kit, subOrders []*types.Suborder) error {
+	if len(subOrders) == 0 {
+		return nil
+	}
+
+	// 计费模式为包年包月，需要根据机型校验年限
+	deviceTypes := make([]string, 0)
+	for _, suborder := range subOrders {
+		if suborder.ResourceType == types.ResourceTypeCvm && suborder.Spec != nil &&
+			suborder.Spec.ChargeType == cvmapi.ChargeTypePrePaid {
+			deviceTypes = append(deviceTypes, suborder.Spec.DeviceType)
+		}
+	}
+
+	// 没有符合条件的机型，不需要校验
+	if len(deviceTypes) == 0 {
+		return nil
+	}
+
+	deviceTypeInfoMap, err := s.configLogics.Device().ListDeviceTypeInfoFromCrp(kt, deviceTypes)
+	if err != nil {
+		logs.Errorf("get crp cvm instance info by device type failed, err: %v, deviceTypes: %v, rid: %s",
+			err, deviceTypes, kt.Rid)
+		return err
+	}
+
+	// 计费模式为包年包月，特殊机型+GPU的机型，计费时长必须为5年
+	for _, suborder := range subOrders {
+		if suborder.Spec == nil || suborder.Spec.ChargeType != cvmapi.ChargeTypePrePaid {
+			continue
+		}
+
+		deviceInfo, ok := deviceTypeInfoMap[suborder.Spec.DeviceType]
+		if !ok {
+			continue
+		}
+
+		// 特殊机型+GPU的机型，计费时长必须为5年
+		if deviceInfo.InstanceTypeClass == cvmapi.SpecialType &&
+			strings.Contains(deviceInfo.InstanceGroup, constant.GpuInstanceClass) &&
+			suborder.Spec.ChargeMonths != constant.GPUDeviceTypeChargeMonth {
+
+			logs.Warnf("special gpu instance charge month must be %d months, deviceTypes: %v, deviceType: %s, "+
+				"chargeMonth: %d, deviceInfo: %+v, rid: %s", constant.GPUDeviceTypeChargeMonth, deviceTypes,
+				suborder.Spec.DeviceType, suborder.Spec.ChargeMonths, deviceInfo, kt.Rid)
+			return errf.New(errf.CvmApplyVerifyFailed, fmt.Sprintf("special gpu instance charge month "+
+				"must be %d months", constant.GPUDeviceTypeChargeMonth))
+		}
+	}
+
+	return nil
 }
 
 func (s *scheduler) checkRollingServer(kt *kit.Kit, param *types.ApplyReq) error {

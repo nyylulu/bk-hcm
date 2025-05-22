@@ -20,9 +20,11 @@ import (
 	"hcm/cmd/woa-server/logics/config"
 	rollingserver "hcm/cmd/woa-server/logics/rolling-server"
 	taskLogics "hcm/cmd/woa-server/logics/task"
+	"hcm/cmd/woa-server/logics/task/scheduler"
 	model "hcm/cmd/woa-server/model/cvm"
 	types "hcm/cmd/woa-server/types/cvm"
 	rstypes "hcm/cmd/woa-server/types/rolling-server"
+	taskTypes "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
@@ -60,11 +62,13 @@ type logics struct {
 	esbClient esb.Client
 	rsLogic   rollingserver.Logics
 	taskLogic taskLogics.Logics
+	schedulerLogic scheduler.Interface
 }
 
 // New create a logics manager
 func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics,
-	esbClient esb.Client, rsLogic rollingserver.Logics, taskLogic taskLogics.Logics) Logics {
+	esbClient esb.Client, rsLogic rollingserver.Logics, taskLogic taskLogics.Logics,
+	schedulerLogic scheduler.Interface) Logics {
 
 	return &logics{
 		cvm:       thirdCli.CVM,
@@ -73,6 +77,7 @@ func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.
 		esbClient: esbClient,
 		rsLogic:   rsLogic,
 		taskLogic: taskLogic,
+		schedulerLogic: schedulerLogic,
 	}
 }
 
@@ -130,6 +135,21 @@ func (l *logics) CreateApplyOrder(kt *kit.Kit, param *types.CvmCreateReq) (*type
 			logs.Errorf("create rolling applied record failed, err: %v, order: %+v, rid: %s", err, *order, kt.Rid)
 			return nil, err
 		}
+	}
+
+	// GPU特殊机型的计费时长校验
+	verifySubOrderReq := []*taskTypes.Suborder{
+		{
+			ResourceType: taskTypes.ResourceTypeCvm,
+			Spec: &taskTypes.ResourceSpec{
+				ChargeType:   order.Spec.ChargeType,
+				ChargeMonths: order.Spec.ChargeMonths,
+				DeviceType:   order.Spec.DeviceType,
+			},
+		},
+	}
+	if err = l.schedulerLogic.VerifyCvmGPUChargeMonth(kt, verifySubOrderReq); err != nil {
+		return nil, err
 	}
 
 	if err = model.Operation().ApplyOrder().CreateApplyOrder(kt.Ctx, order); err != nil {
