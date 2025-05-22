@@ -85,46 +85,6 @@ func convAdjustAbleQueryParam(req *ptypes.AdjustAbleDemandsReq) *cvmapi.CvmCbsAd
 	return reqParams
 }
 
-// QueryAdjustAbleDemands query demands that can be adjusted.
-func (c *Controller) QueryAdjustAbleDemands(kt *kit.Kit, req *ptypes.AdjustAbleDemandsReq) (
-	[]*cvmapi.CvmCbsPlanQueryItem, error) {
-
-	if err := req.Validate(); err != nil {
-		return nil, err
-	}
-
-	// init request parameter.
-	queryReq := &cvmapi.CvmCbsAdjustAblePlanQueryReq{
-		ReqMeta: cvmapi.ReqMeta{
-			Id:      cvmapi.CvmId,
-			JsonRpc: cvmapi.CvmJsonRpc,
-			Method:  cvmapi.CvmCbsAdjustAblePlanQueryMethod,
-		},
-		Params: convAdjustAbleQueryParam(req),
-	}
-
-	rst, err := c.crpCli.QueryAdjustAbleDemand(kt.Ctx, kt.Header(), queryReq)
-	if err != nil {
-		logs.Errorf("failed to query adjust able demands, err: %s, req: %+v, rid: %s", err, *queryReq.Params,
-			kt.Rid)
-		return nil, err
-	}
-
-	if rst.Error.Code != 0 {
-		logs.Errorf("failed to query adjust able demands, err: %s, crp_trace: %s, rid: %s", rst.Error.Message,
-			rst.TraceId, kt.Rid)
-		return nil, errors.New(rst.Error.Message)
-	}
-
-	if rst.Result == nil || len(rst.Result.Data) == 0 {
-		logs.Errorf("failed to query adjust able demands, return is empty, crp_trace: %s, rid: %s",
-			rst.TraceId, kt.Rid)
-		return nil, errors.New("no demands can be adjusted in CRP")
-	}
-
-	return rst.Result.Data, nil
-}
-
 func getDemandIDsAndLockedCoreFromAdjustReq(kt *kit.Kit, adjustElems []ptypes.AdjustRPDemandReqElem) (
 	[]string, []rpproto.ResPlanDemandLockOpItem, error) {
 
