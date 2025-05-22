@@ -326,7 +326,7 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 	service.taskLogic = taskLogic
 
 	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,
-		service.configLogics, service.esbClient, service.rsLogic, service.taskLogic)
+		service.configLogics, service.esbClient, service.rsLogic, service.taskLogic, service.schedulerIf)
 	service.cvmLogic = cvmLogic
 
 	// init recoverer client

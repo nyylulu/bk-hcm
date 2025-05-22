@@ -79,4 +79,6 @@ const (
 
 	// ResPlanVerifyFailed 资源预测余量校验失败
 	ResPlanVerifyFailed int32 = 2000020
+	// CvmApplyVerifyFailed CVM申请主机校验失败
+	CvmApplyVerifyFailed int32 = 2000021
 )
