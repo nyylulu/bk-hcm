@@ -3,14 +3,17 @@ import usePlanStore from '@/store/usePlanStore';
 import useCvmChargeType from '@/views/ziyanScr/hooks/use-cvm-charge-type';
 import type { DeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 
-import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import CvmDevicetypeSelector from '../../components/devicetype-selector/cvm-devicetype-selector.vue';
 
-export default (selectorRef: Ref<typeof DevicetypeSelector>, chargeType: Ref<string>) => {
+export default (cvmDevicetypeSelector: Ref<typeof CvmDevicetypeSelector>, chargeType: Ref<string>) => {
   const planStore = usePlanStore();
   const { cvmChargeTypes } = useCvmChargeType();
 
   const isPlanedDeviceTypeLoading = ref(false);
-  const availableDeviceTypeSet = reactive<{ [key in string]: Set<any> }>({ prepaid: new Set(), postpaid: new Set() }); // 预测内的机型
+  const availableDeviceTypeSet = reactive<{ [key in string]: Set<string> }>({
+    prepaid: new Set(),
+    postpaid: new Set(),
+  }); // 预测内的机型
   const hasPlanedDeviceType = computed(
     () => availableDeviceTypeSet.postpaid.size || availableDeviceTypeSet.prepaid.size,
   ); // 有预测内的机型
@@ -21,7 +24,7 @@ export default (selectorRef: Ref<typeof DevicetypeSelector>, chargeType: Ref<str
       chargeType.value === cvmChargeTypes.PREPAID ? availableDeviceTypeSet.prepaid : availableDeviceTypeSet.postpaid;
 
     // 将预测内的机型列表排在前面
-    selectorRef.value.handleSort(
+    cvmDevicetypeSelector.value?.selectorRef?.handleSort(
       (a: DeviceType, b: DeviceType) => Number(targetSet.has(b.device_type)) - Number(targetSet.has(a.device_type)),
     );
     return targetSet;

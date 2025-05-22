@@ -1,7 +1,7 @@
 import { defineComponent, onMounted, ref, watch, nextTick, computed, reactive, useTemplateRef } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import './index.scss';
-import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert, Tag } from 'bkui-vue';
+import { Input, Button, Sideslider, Message, Dropdown, Radio, Form, Alert } from 'bkui-vue';
 import { Plus } from 'bkui-vue/lib/icon';
 import CommonCard from '@/components/CommonCard';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
@@ -11,7 +11,8 @@ import ZoneTagSelector from '@/components/zone-tag-selector/index.vue';
 import DiskTypeSelect from '../DiskTypeSelect';
 import NetworkInfoCollapsePanel from '../network-info-collapse-panel/index.vue';
 import AntiAffinityLevelSelect from '../AntiAffinityLevelSelect';
-import DevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/index.vue';
+import CvmDevicetypeSelector from '@/views/ziyanScr/components/devicetype-selector/cvm-devicetype-selector.vue';
+import ChargeMonthsSelector from '@/views/ziyanScr/cvm-produce/component/create-order/children/charge-months-selector.vue';
 import applicationSideslider from '../application-sideslider/index.vue';
 import WName from '@/components/w-name';
 import HostApplyTipsAlert from './host-apply-tips-alert/index.vue';
@@ -39,7 +40,7 @@ import InheritPackageFormItem, {
   type RollingServerHost,
 } from '@/views/ziyanScr/rolling-server/inherit-package-form-item/index.vue';
 import RollingServerCpuCoreLimits from '@/views/ziyanScr/rolling-server/cpu-core-limits/index.vue';
-import { DeviceType, CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
+import { CvmDeviceType } from '@/views/ziyanScr/components/devicetype-selector/types';
 // 小额绿通
 import GreenChannelTipsAlert from './green-channel/tips-alert.vue';
 import GreenChannelCpuCoreLimits from './green-channel/cpu-core-limits.vue';
@@ -107,7 +108,7 @@ export default defineComponent({
       },
     });
 
-    const deviceTypeSelectorRef = useTemplateRef<typeof DevicetypeSelector>('device-type-selector');
+    const cvmDevicetypeSelectorRef = useTemplateRef<typeof CvmDevicetypeSelector>('cvm-devicetype-selector');
     const selectedChargeType = computed(() => resourceForm.value.charge_type);
     const {
       isPlanedDeviceTypeLoading,
@@ -115,43 +116,7 @@ export default defineComponent({
       computedAvailableDeviceTypeSet,
       hasPlanedDeviceType,
       getPlanedDeviceType,
-    } = usePlanDeviceType(deviceTypeSelectorRef, selectedChargeType);
-
-    // 机型排序
-    const deviceTypeCompareFn = (a: DeviceType, b: DeviceType) => {
-      // 非滚服、非小额绿通，走预测
-      if (!isSpecialRequirement.value) {
-        const set = computedAvailableDeviceTypeSet.value;
-        return Number(set.has(b.device_type)) - Number(set.has(a.device_type));
-      }
-      // 滚服、小额绿通
-      const aDeviceTypeClass = (a as CvmDeviceType).device_type_class;
-      const bDeviceTypeClass = (b as CvmDeviceType).device_type_class;
-      if (aDeviceTypeClass === 'CommonType' && bDeviceTypeClass === 'SpecialType') return -1;
-      if (aDeviceTypeClass === 'SpecialType' && bDeviceTypeClass === 'CommonType') return 1;
-      return 0;
-    };
-    // 机型选项禁用
-    const deviceTypeOptionDisabledCallback = (option: DeviceType) => {
-      // 非滚服、非小额绿通
-      if (!isSpecialRequirement.value) {
-        return !computedAvailableDeviceTypeSet.value.has(option.device_type);
-      }
-      // 滚服、小额绿通
-      const { device_type_class, device_group } = option as CvmDeviceType;
-      return (
-        'SpecialType' === device_type_class ||
-        (isRollingServer.value && device_group !== rollingServerHost?.device_group)
-      );
-    };
-    const deviceTypeOptionDisabledTipsCallback = (option: DeviceType) => {
-      // 非滚服、非小额绿通
-      if (!isSpecialRequirement.value) return '当前机型不在有效预测范围内';
-      // 滚服、小额绿通
-      const { device_type_class, device_group } = option as CvmDeviceType;
-      if (device_type_class === 'SpecialType') return '专用机型不允许选择';
-      if (isRollingServer.value && device_group !== rollingServerHost?.device_group) return '机型族不匹配';
-    };
+    } = usePlanDeviceType(cvmDevicetypeSelectorRef, selectedChargeType);
 
     const formRef = ref();
     const IDCPMIndex = ref(-1);
@@ -164,7 +129,7 @@ export default defineComponent({
     const { columns: CloudHostcolumns, generateColumnsSettings } = useColumns('CloudHost');
     let cloudHostSetting = generateColumnsSettings(CloudHostcolumns);
     const { columns: PhysicalMachinecolumns } = useColumns('PhysicalMachine');
-    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips, getMonthName } = useCvmChargeType();
+    const { cvmChargeTypes, cvmChargeTypeNames, cvmChargeTypeTips } = useCvmChargeType();
     const cloudTableColumns = ref([]);
 
     // 特殊需求类型（滚服项目、小额绿通）-状态
@@ -174,33 +139,16 @@ export default defineComponent({
     const isRollingServerLike = computed(() => isRollingServer.value || isSpringPool.value);
     const isSpecialRequirement = computed(() => isRollingServer.value || isGreenChannel.value);
 
-    // 选择的cvm机型
-    const selectedCvmDeviceType = ref<CvmDeviceType>(null);
-    // 需求类型-常规项目
-    const isNormalRequireType = computed(() => order.value.model.requireType === 1);
-
-    // 是否为默认包4年
-    const isDefaultFourYears = computed(
-      () =>
-        isNormalRequireType.value &&
-        selectedCvmDeviceType.value?.device_type_class === 'SpecialType' &&
-        resourceForm.value.charge_type === cvmChargeTypes.PREPAID,
-    );
-
-    // 购买时长的禁用状态
-    const chargeMonthDisabledState = computed(() => {
-      if (isRollingServer.value || isDefaultFourYears.value) {
-        return {
-          disabled: true,
-          tips: isRollingServer.value
-            ? '继承原有套餐包年包月时长，此处的购买时长为剩余时长'
-            : '专用机型只能选择4年套餐',
-        };
-      }
-      return {
-        disabled: false,
-      };
-    });
+    const chargeMonthsDisabledState = ref(null);
+    const handleDeviceTypeChange = (result: {
+      deviceType: CvmDeviceType;
+      chargeMonths: number;
+      chargeMonthsDisabledState: { disabled: boolean; content: string };
+    }) => {
+      QCLOUDCVMForm.value.spec.cpu = result?.deviceType?.cpu_amount;
+      resourceForm.value.charge_months = result?.chargeMonths;
+      chargeMonthsDisabledState.value = result?.chargeMonthsDisabledState;
+    };
 
     // 滚服继承套餐的机器
     let rollingServerHost: RollingServerHost = null;
@@ -434,7 +382,6 @@ export default defineComponent({
       if (resourceForm.value.resourceType === 'QCLOUDCVM') {
         QCLOUDCVMForm.value.spec.subnet = '';
         QCLOUDCVMForm.value.spec.device_type = '';
-        selectedCvmDeviceType.value = null;
       }
     };
 
@@ -466,12 +413,6 @@ export default defineComponent({
       pmForm.value.options.deviceTypes = info || [];
     };
 
-    // RAID 类型
-    const handleDeviceTypeChange = () => {
-      pmForm.value.spec.raid_type =
-        pmForm.value.options.deviceTypes?.find((item) => item.device_type === pmForm.value.spec.device_type)?.raid ||
-        '';
-    };
     // 获取可用的IDCPM列表
     const IDCPMlist = () => {
       IDCPMDeviceTypes();
@@ -490,19 +431,12 @@ export default defineComponent({
     watch(
       () => pmForm.value.spec.device_type,
       () => {
-        handleDeviceTypeChange();
+        // RAID 类型
+        pmForm.value.spec.raid_type =
+          pmForm.value.options.deviceTypes?.find((item) => item.device_type === pmForm.value.spec.device_type)?.raid ||
+          '';
       },
     );
-
-    // 获取 QCLOUDCVM机型列表
-    const cvmDevicetypeParams = computed(() => {
-      const { region, zone } = resourceForm.value;
-      return {
-        region,
-        zone: zone !== 'cvm_separate_campus' ? zone : undefined,
-        require_type: order.value.model.requireType,
-      };
-    });
 
     const clonelist = (originRow: any, resourceType: string) => {
       const cloneRow = cloneDeep(originRow);
@@ -554,13 +488,18 @@ export default defineComponent({
         loadImages();
       },
     );
+    // 计费模式变更时，处理购买时长默认值
     watch(
       () => resourceForm.value.charge_type,
       (chargeType) => {
-        if (chargeType === cvmChargeTypes.PREPAID) {
-          resourceForm.value.charge_months = 36;
-        } else {
+        if (chargeType === cvmChargeTypes.POSTPAID_BY_HOUR) {
           resourceForm.value.charge_months = undefined;
+        } else {
+          // 这里需要将calculateChargeMonthsState放到下一个tick中执行，避免计算时用的还是旧的计费模式值
+          nextTick(() => {
+            const { chargeMonths } = cvmDevicetypeSelectorRef.value?.calculateChargeMonthsState() || {};
+            resourceForm.value.charge_months = chargeMonths;
+          });
         }
       },
     );
@@ -1530,25 +1469,17 @@ export default defineComponent({
                           </bk-form-item>
                           {resourceForm.value.charge_type === cvmChargeTypes.PREPAID && (
                             <bk-form-item label='购买时长' required property='charge_months'>
-                              <bk-select
-                                v-model={resourceForm.value.charge_months}
-                                filterable={false}
-                                clearable={false}
+                              <ChargeMonthsSelector
                                 style={{ width: '260px' }}
-                                disabled={chargeMonthDisabledState.value.disabled}
+                                v-model={resourceForm.value.charge_months}
+                                requireType={order.value.model.requireType}
+                                isGpuDeviceType={cvmDevicetypeSelectorRef.value?.isGpuDeviceType}
+                                disabled={chargeMonthsDisabledState.value?.disabled}
                                 v-bk-tooltips={{
-                                  content: chargeMonthDisabledState.value.tips,
-                                  disabled: !chargeMonthDisabledState.value.disabled,
-                                }}>
-                                {(function () {
-                                  const options = isRollingServer.value
-                                    ? Array.from({ length: 48 }, (v, i) => i + 1)
-                                    : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
-                                  return options.map((option) => (
-                                    <bk-option key={option} value={option} name={getMonthName(option)} />
-                                  ));
-                                })()}
-                              </bk-select>
+                                  content: chargeMonthsDisabledState.value?.content,
+                                  disabled: !chargeMonthsDisabledState.value?.disabled,
+                                }}
+                              />
                             </bk-form-item>
                           )}
                         </>
@@ -1599,51 +1530,23 @@ export default defineComponent({
                             ref={QCLOUDCVMformRef}
                             form-type='vertical'>
                             <bk-form-item label='机型' required property='device_type'>
-                              <DevicetypeSelector
-                                ref='device-type-selector'
-                                class='commonCard-form-select'
+                              <CvmDevicetypeSelector
+                                ref='cvm-devicetype-selector'
                                 v-model={QCLOUDCVMForm.value.spec.device_type}
-                                resourceType='cvm'
-                                params={cvmDevicetypeParams.value}
+                                selectorClass='commonCard-form-select'
+                                tipClass='mt4 form-item-tips'
+                                region={resourceForm.value.region}
+                                zone={resourceForm.value.zone}
+                                requireType={order.value.model.requireType}
+                                chargeType={resourceForm.value.charge_type}
+                                computedAvailableDeviceTypeSet={computedAvailableDeviceTypeSet.value}
+                                rollingServerHost={rollingServerHost}
                                 disabled={resourceForm.value.zone === ''}
                                 isLoading={isPlanedDeviceTypeLoading.value}
                                 placeholder={resourceForm.value.zone === '' ? '请先选择可用区' : '请选择机型'}
-                                sort={deviceTypeCompareFn}
-                                optionDisabled={deviceTypeOptionDisabledCallback}
-                                optionDisabledTipsContent={deviceTypeOptionDisabledTipsCallback}
-                                onChange={(result) => {
-                                  QCLOUDCVMForm.value.spec.cpu = (result as CvmDeviceType)?.cpu_amount;
-                                  selectedCvmDeviceType.value = result as CvmDeviceType;
-                                  if (isDefaultFourYears.value) {
-                                    // 专用机型默认包4年
-                                    resourceForm.value.charge_months = 48;
-                                  }
-                                }}>
-                                {{
-                                  option: (option: CvmDeviceType) => {
-                                    const { device_type, device_type_class, device_group } = option;
-                                    const isSpecialType = device_type_class === 'SpecialType';
-                                    return (
-                                      <>
-                                        <span>{device_type}</span>
-                                        <Tag class='ml12' theme={isSpecialType ? 'danger' : 'success'} size='small'>
-                                          {isSpecialType ? '专用机型' : '通用机型'}
-                                        </Tag>
-                                        {device_group && (
-                                          <Tag class='ml12' size='small'>
-                                            {device_group}
-                                          </Tag>
-                                        )}
-                                      </>
-                                    );
-                                  },
-                                }}
-                              </DevicetypeSelector>
-                              {selectedCvmDeviceType.value && (
-                                <>
-                                  <div class='form-item-tips'>{`所选机型为${selectedCvmDeviceType.value.device_type}，CPU为${selectedCvmDeviceType.value.cpu_amount}核，内存为${selectedCvmDeviceType.value.ram_amount}G`}</div>
-                                </>
-                              )}
+                                showTip
+                                onChange={handleDeviceTypeChange}
+                              />
                             </bk-form-item>
                             <bk-form-item label='镜像' required property='image_id'>
                               <bk-select
