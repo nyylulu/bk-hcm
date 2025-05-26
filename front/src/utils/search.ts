@@ -117,7 +117,9 @@ export const transformSimpleCondition = (
     }
 
     if (property.meta?.search?.filterRules) {
-      queryFilter.rules.push(property.meta.search.filterRules(value));
+      //* 如果是search-select，可能需要配合validateValues使用，避免无效请求
+      const rules = property.meta.search.filterRules(value);
+      rules && queryFilter.rules.push(rules);
       continue;
     }
 
