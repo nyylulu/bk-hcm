@@ -33,7 +33,7 @@ export const useZones = () => {
   fetchZones();
   const getZoneCn = (zoneId) => {
     const zone = zoneList.value.find((zone) => zone.zone === zoneId);
-    const zoneLabel = zone?.zone_cn || zoneId || '-';
+    const zoneLabel = zone?.zone_cn || zoneId || '--';
     const cmdbZoneName = zone?.cmdb_zone_name ? `(${zone.cmdb_zone_name})` : '';
 
     return `${zoneLabel}${cmdbZoneName}`;
