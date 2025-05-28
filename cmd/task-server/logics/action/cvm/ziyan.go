@@ -144,7 +144,7 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		return err
 	}
 
-	if err = validateCvmSvrStatus(kt, cvms); err != nil {
+	if err = validateCvmSvrStatus(kt, cvms, detail); err != nil {
 		logs.Errorf("fail to validate cvm status, err: %v, req: %+v, rid: %s")
 		return err
 	}
@@ -232,12 +232,15 @@ func (act BatchTaskCvmResetAction) resetTCloudZiyanCvm(kt *kit.Kit, detail coret
 		// 更新失败不影响主流程，记录告警日志
 		logs.Errorf("%s: failed to update host pwd, detailID: %s, taskManageID: %s, flowID: %s, errMap: %+v, rid: %s",
 			constant.CvmResetSystemUpdatePwdFailed, detail.ID, detail.TaskManagementID, detail.FlowID, errMap, kt.Rid)
+		return fmt.Errorf("主机重装成功，但iegtjj密码库更新失败(一般是由于主机的主备负责人发生变化)")
 	}
 
 	return nil
 }
 
-func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) error {
+func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHostExtension],
+	detail coretask.Detail) error {
+
 	// get cvm info from cc, and check the srv_status isn't resetting
 	mapBizToHostIDs := make(map[int64][]int64)
 	for _, cvm := range cvms {
@@ -246,7 +249,7 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 	for bizID, hostIDs := range mapBizToHostIDs {
 		params := &cmdb.ListBizHostParams{
 			BizID:  bizID,
-			Fields: []string{"bk_host_id", "bk_host_innerip", "srv_status"},
+			Fields: []string{"bk_host_id", "bk_host_innerip", "srv_status", "operator", "bk_bak_operator"},
 			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
 			HostPropertyFilter: &cmdb.QueryFilter{
 				Rule: &cmdb.CombinedRule{
@@ -265,10 +268,21 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 		}
 
 		for _, host := range hostResult.Info {
-			logs.Errorf("cvm srv_status: %s, hostID: %d, hostInnerIP: %s, rid: %s",
-				host.SrvStatus, host.BkHostID, host.BkHostInnerIP, kt.Rid)
+			logs.Infof("cvm reset check status loop, hostID: %d, srv_status: %s, hostInnerIP: %s, operator: %s, "+
+				"bkOperator: %s, detailCreator: %s, rid: %s", host.BkHostID, host.SrvStatus, host.BkHostInnerIP,
+				host.Operator, host.BkBakOperator, detail.Creator, kt.Rid)
+			// 校验主备负责人
+			if !strings.Contains(host.Operator, detail.Creator) &&
+				!strings.Contains(host.BkBakOperator, detail.Creator) {
+
+				logs.Errorf("cvm reset check operator failed, hostID: %d, 重装的主机负责人校验失败："+
+					"主机[%s]的主要负责人[%s]、备份负责人[%s]和当前任务执行人[%s]不匹配，请重新校验后提交, rid: %s",
+					host.BkHostID, host.BkHostInnerIP, host.Operator, host.BkBakOperator, detail.Creator, kt.Rid)
+				return fmt.Errorf("重装的主机负责人校验失败：主机[%s]的负责人和当前任务执行人[%s]不匹配，请重新校验后提交",
+					host.BkHostInnerIP, detail.Creator)
+			}
 			if host.SrvStatus == constant.ResetingSrvStatus {
-				logs.Errorf("cvm srv_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
+				logs.Errorf("cvm reset check srv status failed, hostID: %d, cvm is resetting, hostInnerIP: %s, rid: %s",
 					host.BkHostID, host.BkHostInnerIP, kt.Rid)
 				return fmt.Errorf("cvm srv_status is resetting, hostID: %d, hostInnerIP: %s, rid: %s",
 					host.BkHostID, host.BkHostInnerIP, kt.Rid)
