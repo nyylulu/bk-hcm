@@ -132,7 +132,7 @@ func FilterMap[V any, O any](s []V, filter func(V) bool, mapFunc func(V) O) []O 
 	return subSlice
 }
 
-// NotIn get elements in slice A but not in slice B.
+// NotIn get elements in slice B but not in slice A.
 func NotIn[S ~[]E, E comparable](sliceA, sliceB S) S {
 	diffs := make(map[E]struct{}, 0)
 	mapA := make(map[E]struct{})

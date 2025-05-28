@@ -21,6 +21,7 @@ package dailysplit
 
 import (
 	rawjson "encoding/json"
+	"strings"
 
 	protocore "hcm/pkg/api/core/account-set"
 	billcore "hcm/pkg/api/core/bill"
@@ -55,6 +56,7 @@ func (ds *GcpSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 		logs.Errorf("fail to marshal gcp raw bill item extension for split, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+
 	usageBillItem := bill.BillItemCreateReq[rawjson.RawMessage]{
 		RootAccountID: opt.RootAccountID,
 		MainAccountID: opt.MainAccountID,
@@ -68,7 +70,8 @@ func (ds *GcpSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 		Currency:      item.BillCurrency,
 		Cost:          item.BillCost,
 		HcProductCode: item.HcProductCode,
-		HcProductName: item.HcProductName,
+		// 去除前导空格
+		HcProductName: strings.TrimLeft(item.HcProductName, " \t\n\r"),
 		ResAmount:     item.ResAmount,
 		ResAmountUnit: item.ResAmountUnit,
 		Extension:     cvt.ValToPtr[rawjson.RawMessage](rawExt),
