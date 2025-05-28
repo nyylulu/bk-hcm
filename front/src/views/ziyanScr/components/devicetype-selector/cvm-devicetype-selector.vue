@@ -128,7 +128,7 @@ const isDefaultFourYears = computed(
     props.chargeType === cvmChargeTypes.PREPAID &&
     selectedCvmDeviceType.value?.device_type_class === 'SpecialType',
 );
-// GPU机型默认包5年
+// GPU机型默认包6年
 const isGpuDeviceType = computed(
   () =>
     selectedCvmDeviceType.value?.device_type_class === 'SpecialType' &&
@@ -148,8 +148,8 @@ const handleChange = (result: SelectionType) => {
 const calculateChargeMonthsState = () => {
   const getTooltipOption = () => {
     if (isGpuDeviceType.value) {
-      // GPU机型属于专用机型的特殊情况，只能选择5年
-      return { disabled: true, content: 'GPU机型只能选择5年套餐' };
+      // GPU机型属于专用机型的特殊情况，只能选择6年
+      return { disabled: true, content: 'GPU机型只能选择6年套餐' };
     }
     if (isRollingServer.value || isDefaultFourYears.value) {
       return {
@@ -165,7 +165,7 @@ const calculateChargeMonthsState = () => {
   // 计算购买时长
   let chargeMonths = 36;
   if (isDefaultFourYears.value) chargeMonths = 48;
-  if (isGpuDeviceType.value) chargeMonths = 60;
+  if (isGpuDeviceType.value) chargeMonths = 72;
 
   // 计算禁用状态
   const chargeMonthsDisabledState = getTooltipOption();
