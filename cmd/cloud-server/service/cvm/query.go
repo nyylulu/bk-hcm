@@ -338,11 +338,6 @@ func chooseValidateFunc(operateType enumor.CvmOperateType) (validateOperateStatu
 func validateOperateStatusForReset(user, moduleName, _ string,
 	host corecvm.Cvm[corecvm.TCloudZiyanHostExtension]) enumor.CvmOperateStatus {
 
-	if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
-		moduleName != constant.IdleMachineModuleName {
-		return enumor.CvmOperateStatusNoIdle
-	}
-
 	// 主备负责人
 	if !strings.Contains(host.Extension.Operator, user) &&
 		!strings.Contains(host.Extension.BkBakOperator, user) {
@@ -354,6 +349,12 @@ func validateOperateStatusForReset(user, moduleName, _ string,
 		cmdb.IsPhysicalMachine(host.Extension.SvrSourceTypeID) {
 		return enumor.CvmOperateStatusPmNoOperate
 	}
+
+	if moduleName != constant.IdleMachine && moduleName != constant.CCIdleMachine &&
+		moduleName != constant.IdleMachineModuleName {
+		return enumor.CvmOperateStatusNoIdle
+	}
+
 	return enumor.CvmOperateStatusNormal
 }
 
