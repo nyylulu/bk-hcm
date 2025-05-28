@@ -31,7 +31,7 @@ import type { ModelProperty } from '@/model/typings';
 import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearch } from '@/model/order/host-apply-search';
-import { GLOBAL_BIZS_KEY } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
 
 const { BK_HCM_AJAX_URL_PREFIX } = window.PROJECT_CONFIG;
 
@@ -316,6 +316,17 @@ export default defineComponent({
                   </div>
                   <div style={'height: 30px!important;line-height: 30px;'}>
                     {t('园区')}：{getZoneCn(data.spec?.zone)}
+                    {data.spec?.zone === 'cvm_separate_campus' && (
+                      <>
+                        (
+                        <display-value
+                          value={data.spec.region}
+                          property={{ type: 'region' }}
+                          vendor={VendorEnum.ZIYAN}
+                        />
+                        )
+                      </>
+                    )}
                   </div>
                 </div>
               );

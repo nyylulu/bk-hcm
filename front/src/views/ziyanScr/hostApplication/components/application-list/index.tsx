@@ -33,6 +33,7 @@ import { getModel } from '@/model/manager';
 import HocSearch from '@/model/hoc-search.vue';
 import { HostApplySearchNonBusiness } from '@/model/order/host-apply-search';
 import { serviceShareBizSelectedKey } from '@/constants/storage-symbols';
+import { VendorEnum } from '@/common/constant';
 
 export default defineComponent({
   setup() {
@@ -242,7 +243,20 @@ export default defineComponent({
                     资源类型：{getResourceTypeName(data?.resource_type)}
                   </div>
                   <div style={'height: 20px!important;line-height: 20px;'}>机型：{data.spec?.device_type || '--'}</div>
-                  <div style={'height: 30px!important;line-height: 30px;'}>园区：{getZoneCn(data.spec?.zone)}</div>
+                  <div style={'height: 30px!important;line-height: 30px;'}>
+                    园区：{getZoneCn(data.spec?.zone)}
+                    {data.spec?.zone === 'cvm_separate_campus' && (
+                      <>
+                        (
+                        <display-value
+                          value={data.spec.region}
+                          property={{ type: 'region' }}
+                          vendor={VendorEnum.ZIYAN}
+                        />
+                        )
+                      </>
+                    )}
+                  </div>
                 </div>
               );
             },
