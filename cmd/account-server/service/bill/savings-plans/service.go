@@ -225,7 +225,7 @@ func (s *service) getMainAccountMap(kt *kit.Kit, spCloudId string, spCostList []
 		}
 		if len(cloudIds) != len(accResp.Details) {
 			gotCloudIds := slice.Map(accResp.Details, func(a *accountcore.BaseMainAccount) string { return a.CloudID })
-			notFoundIds := slice.NotIn(cloudIds, gotCloudIds)
+			notFoundIds := slice.NotIn(gotCloudIds, cloudIds)
 			logs.Errorf("some account can not be found: %v, rid: %s", notFoundIds, kt.Rid)
 			return nil, fmt.Errorf("some account can not be found: %v", notFoundIds)
 		}

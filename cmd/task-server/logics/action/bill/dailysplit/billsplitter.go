@@ -22,6 +22,7 @@ package dailysplit
 import (
 	rawjson "encoding/json"
 	"fmt"
+	"strings"
 
 	protocore "hcm/pkg/api/core/account-set"
 	"hcm/pkg/api/data-service/bill"
@@ -83,7 +84,8 @@ func (ds *DefaultSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOpti
 		Currency:      item.BillCurrency,
 		Cost:          item.BillCost,
 		HcProductCode: item.HcProductCode,
-		HcProductName: item.HcProductName,
+		// 去除前导空格
+		HcProductName: strings.TrimLeft(item.HcProductName, " \t\n\r"),
 		ResAmount:     item.ResAmount,
 		ResAmountUnit: item.ResAmountUnit,
 		Extension:     &ext,
