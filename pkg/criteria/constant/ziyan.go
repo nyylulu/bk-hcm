@@ -70,6 +70,6 @@ const (
 const (
 	// GpuInstanceClass 实例族-GPU型
 	GpuInstanceClass = "GPU"
-	// GPUDeviceTypeChargeMonth GPU机型-计费模式-60个月
-	GPUDeviceTypeChargeMonth uint = 60
+	// GPUDeviceTypeChargeMonth GPU机型-计费模式-72个月
+	GPUDeviceTypeChargeMonth uint = 72
 )
