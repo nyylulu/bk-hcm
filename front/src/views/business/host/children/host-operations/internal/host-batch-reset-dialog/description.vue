@@ -20,9 +20,9 @@ const toggle = () => {
   <div class="i-description">
     <strong>{{ t('重要说明') }}</strong>
     <div class="content" :class="{ 'is-collapse': isCollapse }">
-      <p>1. {{ t('重装的主机，必须在配置平台的空闲机模块中，单次重装仅限500个IP') }}</p>
+      <p>1. {{ t('重装的主机，建议在配置平台的空闲机模块中，单次重装仅限500个IP') }}</p>
       <p>
-        2. {{ t('仅支持云主机的重装，DC物理机（自研云）重装请到') }}
+        2. {{ t('仅支持云主机的重装，IDC物理机（自研云）重装请到') }}
         <hcm-link theme="primary" size="small" target="_blank" href="https://server.woa.com">
           https://server.woa.com
         </hcm-link>
