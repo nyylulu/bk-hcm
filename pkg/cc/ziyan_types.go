@@ -548,9 +548,10 @@ func (i ItsmFlow) validate() error {
 
 // ResourceDissolve resource dissolve config
 type ResourceDissolve struct {
-	OriginDate       string   `yaml:"originDate"`
-	ProjectNames     []string `yaml:"projectNames"`
-	SyncDissolveHost bool     `yaml:"syncDissolveHost"`
+	OriginDate               string   `yaml:"originDate"`
+	ProjectNames             []string `yaml:"projectNames"`
+	ListExcludedProjectNames []string `yaml:"listExcludedProjectNames"`
+	SyncDissolveHost         bool     `yaml:"syncDissolveHost"`
 }
 
 func (r ResourceDissolve) validate() error {

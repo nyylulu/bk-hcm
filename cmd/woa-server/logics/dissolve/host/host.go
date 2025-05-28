@@ -273,6 +273,7 @@ func transferToHost(devices []caiche.Device) []define.RecycleHostTable {
 			InnerIP:      converter.ValToPtr(device.ServerLanIP),
 			Module:       converter.ValToPtr(device.Module),
 			AbolishPhase: converter.ValToPtr(device.AbolishPhase),
+			ProjectName:  converter.ValToPtr(device.ProjectName),
 		}
 
 		hosts = append(hosts, data)
@@ -315,15 +316,19 @@ func diff(dbHosts []define.RecycleHostTable, caiCheHosts []define.RecycleHostTab
 }
 
 func isChange(new, old define.RecycleHostTable) bool {
-	if *new.InnerIP != *old.InnerIP {
+	if converter.PtrToVal(new.InnerIP) != converter.PtrToVal(old.InnerIP) {
 		return true
 	}
 
-	if *new.Module != *old.Module {
+	if converter.PtrToVal(new.Module) != converter.PtrToVal(old.Module) {
 		return true
 	}
 
-	if *new.AbolishPhase != *old.AbolishPhase {
+	if converter.PtrToVal(new.AbolishPhase) != converter.PtrToVal(old.AbolishPhase) {
+		return true
+	}
+
+	if converter.PtrToVal(new.ProjectName) != converter.PtrToVal(old.ProjectName) {
 		return true
 	}
 
