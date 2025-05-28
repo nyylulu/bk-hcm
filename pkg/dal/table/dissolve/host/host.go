@@ -39,6 +39,7 @@ var RecycleHostColumnDescriptor = utils.ColumnDescriptors{
 	{Column: "inner_ip", NamedC: "inner_ip", Type: enumor.String},
 	{Column: "module", NamedC: "module", Type: enumor.String},
 	{Column: "abolish_phase", NamedC: "abolish_phase", Type: enumor.String},
+	{Column: "project_name", NamedC: "project_name", Type: enumor.String},
 	{Column: "creator", NamedC: "creator", Type: enumor.String},
 	{Column: "reviser", NamedC: "reviser", Type: enumor.String},
 	{Column: "created_at", NamedC: "created_at", Type: enumor.Time},
@@ -57,6 +58,8 @@ type RecycleHostTable struct {
 	Module *string `db:"module" json:"module"`
 	// AbolishPhase 裁撤阶段
 	AbolishPhase *enumor.AbolishPhase `db:"abolish_phase" json:"abolish_phase"`
+	// ProjectName 项目名称
+	ProjectName *string `db:"project_name" json:"project_name"`
 	// Creator 创建者
 	Creator string `db:"creator" validate:"max=64" json:"creator"`
 	// Reviser 更新者
@@ -96,6 +99,10 @@ func (r RecycleHostTable) InsertValidate() error {
 
 	if r.AbolishPhase == nil {
 		return errors.New("abolish_phase can not be empty")
+	}
+
+	if r.ProjectName == nil {
+		return errors.New("project_name can not be empty")
 	}
 
 	if len(r.Creator) == 0 {

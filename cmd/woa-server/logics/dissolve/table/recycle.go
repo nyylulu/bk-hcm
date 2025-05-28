@@ -21,6 +21,7 @@ package table
 
 import (
 	"hcm/pkg/api/core"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/dal/dao/types"
@@ -44,6 +45,14 @@ func (l *logics) getAssetIDByModule(kt *kit.Kit, modules []string, onlyIncomplet
 				enumor.Retain}))
 		if err != nil {
 			logs.Errorf("build filter with abolish_phase failed, err: %v, filter: %+v, rid: %s", err, filter, kt.Rid)
+			return nil, err
+		}
+	}
+	listExcludedProjectNames := cc.WoaServer().ResDissolve.ListExcludedProjectNames
+	if len(listExcludedProjectNames) != 0 {
+		filter, err = tools.And(filter, tools.RuleNotIn("project_name", listExcludedProjectNames))
+		if err != nil {
+			logs.Errorf("build filter with project_name failed, err: %v, filter: %+v, rid: %s", err, filter, kt.Rid)
 			return nil, err
 		}
 	}
