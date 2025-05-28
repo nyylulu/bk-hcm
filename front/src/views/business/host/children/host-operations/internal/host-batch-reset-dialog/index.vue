@@ -30,35 +30,39 @@ const cvmOperateStore = useCvmOperateStore();
 
 const isShow = ref(false);
 const listData = reactive<CvmListRestDataView>({ reset: [], unReset: [], count: 0 });
+const nonIdleCvmList = computed(() => listData.reset.filter((item) => item.operate_status === 2));
 const show = async (ids: string[]) => {
-  try {
-    // 获取主机重装状态list
-    const list = (await cvmOperateStore.getCvmListOperateStatus({ ids, operate_type: 'reset' })).map((item) => ({
-      ...item,
-      private_ip_address: getPrivateIPs(item),
-      public_ip_address: getPublicIPs(item),
-    }));
+  isShow.value = true;
 
-    // 组装主机重装状态data
-    Object.assign(listData, {
-      reset: list.filter((item) => item.operate_status === 0),
-      unReset: list.filter((item) => item.operate_status !== 0),
-      count: list.length,
-    });
+  // 获取主机重装状态list
+  const list = (await cvmOperateStore.getCvmListOperateStatus({ ids, operate_type: 'reset' })).map((item) => ({
+    ...item,
+    private_ip_address: getPrivateIPs(item),
+    public_ip_address: getPublicIPs(item),
+  }));
 
-    isShow.value = true;
-  } catch (error) {
-    console.error(error);
-  }
+  // 组装主机重装状态data
+  Object.assign(listData, {
+    reset: list.filter((item) => [0, 2].includes(item.operate_status)), // 0：可重装 2：非空闲机
+    unReset: list.filter((item) => ![0, 2].includes(item.operate_status)),
+    count: list.length,
+  });
 };
 const hide = () => {
   isShow.value = false;
-  state.curStep = 1;
+  Object.assign(state, { curStep: 1, isAgreeFirstStep: false });
+  Object.assign(listData, { reset: [], unReset: [], count: 0 });
+};
+
+// 删除可重装机器
+const handleDelete = (index: number) => {
+  listData.reset.splice(index, 1);
 };
 
 const state = reactive({
   steps: [{ title: t('确认主机') }, { title: t('设置参数') }, { title: '重装确认' }],
   curStep: 1,
+  isAgreeFirstStep: false,
 });
 
 const secondStepRef = useTemplateRef('second-step-ref');
@@ -71,9 +75,9 @@ const nextStepDisabledOptions = computed(() => {
   let content = '';
 
   if (state.curStep === 1) {
-    // 若当前为第一步, 检查是否有可重装的主机
-    disabled = listData.reset.length === 0;
-    content = t('没有可重装的主机');
+    // 若当前为第一步, 检查是否有可重装的主机以及是否勾选影响须知
+    disabled = listData.reset.length === 0 || (nonIdleCvmList.value.length > 0 && !state.isAgreeFirstStep);
+    content = listData.reset.length === 0 ? t('没有可重装的主机') : t('机器处于非空闲机模块，请确认左侧的影响须知');
   } else if (state.curStep === 2) {
     // 若当前为第二步，检查镜像参数、密码是否为空
     disabled = secondStepRef.value?.isParamsHasEmptyValue;
@@ -156,7 +160,13 @@ defineExpose<Exposes>({ show });
     <bk-steps class="i-steps" :steps="state.steps" :cur-step="state.curStep" />
 
     <!-- 1.确认机器 -->
-    <first-step v-show="state.curStep === 1" :list-data="listData" />
+    <first-step
+      v-show="state.curStep === 1"
+      :list-data="listData"
+      :non-idle-cvm-list="nonIdleCvmList"
+      :loading="cvmOperateStore.isCvmListOperateStatusLoading"
+      @delete="handleDelete"
+    />
     <!-- 2.参数设置 -->
     <second-step ref="second-step-ref" v-show="state.curStep === 2" :list="listData.reset" />
     <!-- 3.信息确认 -->
@@ -164,6 +174,14 @@ defineExpose<Exposes>({ show });
 
     <template #footer>
       <div class="i-footer-wrap" ref="footer">
+        <!-- 非空闲机操作影响须知 -->
+        <bk-checkbox
+          v-if="state.curStep === 1 && nonIdleCvmList.length > 0"
+          v-model="state.isAgreeFirstStep"
+          class="idle-cvm-agree"
+        >
+          {{ t('我已确认所选主机正确，并确认非空闲机模块重装不会对业务造成影响') }}
+        </bk-checkbox>
         <moa-verify-btn
           v-if="state.curStep === 3"
           class="button moa-verify-btn"
@@ -206,6 +224,10 @@ defineExpose<Exposes>({ show });
 
     .button {
       min-width: 88px;
+    }
+
+    .idle-cvm-agree {
+      margin-right: auto;
     }
 
     .moa-verify-btn {

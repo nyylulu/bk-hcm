@@ -29,8 +29,8 @@ watchEffect(() => {
 </script>
 
 <template>
-  <bk-collapse v-model="activeIndex" use-block-theme v-if="renderList.length">
-    <bk-collapse-panel v-for="(item, index) in renderList" :key="index" :name="index">
+  <bk-collapse v-if="renderList.length" v-model="activeIndex" use-block-theme class="cvm-status-collapse-table">
+    <bk-collapse-panel v-for="(item, index) in renderList" :key="index" :name="index" icon="right-shape">
       <span class="name">{{ item.name }}</span>
       <span class="count">{{ `${t(`（`)}${item.value.length}${t('）')}` }}</span>
 
@@ -48,4 +48,22 @@ watchEffect(() => {
   />
 </template>
 
-<style scoped lang="scss"></style>
+<style scoped lang="scss">
+.cvm-status-collapse-table {
+  :deep(.bk-collapse-header) {
+    background: #ffebeb;
+
+    .bk-collapse-icon {
+      width: 12px;
+    }
+  }
+
+  .name {
+    color: #313238;
+  }
+
+  .count {
+    color: #979ba5;
+  }
+}
+</style>
