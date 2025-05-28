@@ -100,26 +100,62 @@ const (
 var MapStateKey = map[int64][]string{
 	// devhk环境
 	// leader审核
-	7185: []string{
+	7185: {
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	7184: []string{
+	7184: {
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// 新增的流程节点-leader审核New
+	8402: {
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 新增的流程节点-指定审批人审核
+	8415: {
+		// 审批意见key
+		"Ld4c8fea80c42dde4aa0df1dd754bf0e",
+		// 备注key
+		"nfcf13aae19acd83c6d8dbebe43f1cdb"},
+	// 新增的流程节点-管理员审核New
+	8401: {
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key
 		"e3dda6544a3a67f67d85737a9027e4e5"},
 	// stage环境
 	// leader审核
-	7250: []string{
+	7250: {
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	7249: []string{
+	7249: {
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// 新增的流程节点-leader审核New
+	8469: {
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 新增的流程节点-指定审批人审核
+	8475: {
+		// 审批意见key
+		"ee139dcb6867015f2291426364efdf30",
+		// 备注key
+		"rf01d178180b08ab4c986bc2193d5470"},
+	// 新增的流程节点-管理员审核New
+	8468: {
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key
@@ -127,26 +163,62 @@ var MapStateKey = map[int64][]string{
 
 	// grey环境
 	// leader审核
-	6241: []string{
+	6241: {
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	6240: []string{
+	6240: {
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// 新增的流程节点-leader审核New
+	7939: {
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 新增的流程节点-指定审批人审核
+	7945: {
+		// 审批意见key
+		"O0da1a6409e966565eb3eacd710a9248",
+		// 备注key
+		"R45a1a4a6ef613a5075fb60681892d87"},
+	// 新增的流程节点-管理员审核New
+	7938: {
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key
 		"e3dda6544a3a67f67d85737a9027e4e5"},
 	// prod环境
 	// leader审核
-	6204: []string{
+	6204: {
 		// 审批意见key
 		"eb81f856de91db69e5d2d2c5a7c45c40",
 		// 备注key
 		"5357038ea9c2b82567166bb872e59b2d"},
 	// 管理员审核
-	6203: []string{
+	6203: {
+		// 审批意见key
+		"811a0bd2bf65a754b522bc1e48e1c91e",
+		// 备注key
+		"e3dda6544a3a67f67d85737a9027e4e5"},
+	// 新增的流程节点-leader审核New
+	7972: {
+		// 审批意见key
+		"eb81f856de91db69e5d2d2c5a7c45c40",
+		// 备注key
+		"5357038ea9c2b82567166bb872e59b2d"},
+	// 新增的流程节点-指定审批人审核
+	7978: {
+		// 审批意见key
+		"b87bf5e3da6356ba98c06f0d2c96e886",
+		// 备注key
+		"b2a59335c6fc9e382c32b2166338723c"},
+	// 新增的流程节点-管理员审核New
+	7971: {
 		// 审批意见key
 		"811a0bd2bf65a754b522bc1e48e1c91e",
 		// 备注key
