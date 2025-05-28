@@ -22,9 +22,9 @@ const chargeMonthsOption = computed(() => {
     ? Array.from({ length: 48 }, (_, i) => i + 1)
     : [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 24, 36, 48];
 
-  // GPU机型只能选择5年套餐
+  // GPU机型只能选择6年套餐
   if (props.isGpuDeviceType) {
-    months = [60];
+    months = [72];
   }
 
   return months.reduce((acc, month) => ({ ...acc, [month]: getMonthName(month) }), {});

@@ -23,7 +23,7 @@ const props = defineProps<IProps>();
 const helperText = computed(() => {
   const { isDefaultFourYears, isGpuDeviceType } = props;
   if (isGpuDeviceType) {
-    return 'GPU类机型只能选择5年套餐，按100%折扣比例计费（预测外需先选择”按量计费“后再转为”包年包月“5年套餐）';
+    return 'GPU类机型只能选择6年套餐，按100%折扣比例计费（预测外需先选择”按量计费“后再转为”包年包月“6年套餐）';
   }
   if (isDefaultFourYears) {
     return '专用机型只能选择4年套餐，按100%折扣比例计费（预测外需先选择”按量计费“后再转为”包年包月“4年套餐）';
