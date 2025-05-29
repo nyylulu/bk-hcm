@@ -31,7 +31,6 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/cc"
-	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
@@ -1333,15 +1332,6 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 			types.TicketStageSuspend, kt.Rid)
 		return fmt.Errorf("cannot match device, for order %s stage %s != %s", order.SubOrderId, order.Stage,
 			types.TicketStageSuspend)
-	}
-
-	// 如果是滚服类型，需要进行当月滚服额度的扣减
-	if order.RequireType == enumor.RequireTypeRollServer {
-		if err = g.rsLogics.ReduceRollingCvmProdAppliedRecord(kt, param.Device); err != nil {
-			logs.Errorf("reduce rolling server cvm product applied record failed, err: %+v, devices: %+v, rid: %s", err,
-				param.Device, kt.Rid)
-			return err
-		}
 	}
 
 	// set apply order status MATCHING
