@@ -261,15 +261,16 @@ type GetMatchDeviceReq struct {
 
 // MatchSpec resource apply match specification
 type MatchSpec struct {
-	Region      []string `json:"region"`
-	Zone        []string `json:"zone"`
-	DeviceType  []string `json:"device_type"`
-	Image       []string `json:"image"`
-	OsType      string   `json:"os_type"`
-	RaidType    []string `json:"raid_type"`
-	DiskType    []string `json:"disk_type"`
-	NetworkType []string `json:"network_type"`
-	Isp         []string `json:"isp"`
+	Region             []string `json:"region"`
+	Zone               []string `json:"zone"`
+	DeviceType         []string `json:"device_type"`
+	Image              []string `json:"image"`
+	OsType             string   `json:"os_type"`
+	RaidType           []string `json:"raid_type"`
+	DiskType           []string `json:"disk_type"`
+	NetworkType        []string `json:"network_type"`
+	Isp                []string `json:"isp"`
+	InstanceChargeType string   `json:"instance_charge_type"`
 }
 
 // Validate whether GetMatchDeviceReq is valid
@@ -288,23 +289,26 @@ type GetMatchDeviceRst struct {
 
 // MatchDevice resource apply match device info
 type MatchDevice struct {
-	BkHostId     int64   `json:"bk_host_id"`
-	AssetId      string  `json:"asset_id"`
-	Ip           string  `json:"ip"`
-	OuterIp      string  `json:"outer_ip"`
-	Isp          string  `json:"isp"`
-	DeviceType   string  `json:"device_type"`
-	OsType       string  `json:"os_type"`
-	Region       string  `json:"region"`
-	Zone         string  `json:"zone"`
-	Module       string  `json:"module"`
-	Equipment    int64   `json:"equipment"`
-	IdcUnit      string  `json:"idc_unit"`
-	IdcLogicArea string  `json:"idc_logic_area"`
-	RaidType     string  `json:"raid_type"`
-	InputTime    string  `json:"input_time"`
-	MatchScore   float64 `json:"match_score"`
-	MatchTag     bool    `json:"match_tag"`
+	BkHostId           int64     `json:"bk_host_id"`
+	AssetId            string    `json:"asset_id"`
+	Ip                 string    `json:"ip"`
+	OuterIp            string    `json:"outer_ip"`
+	Isp                string    `json:"isp"`
+	DeviceType         string    `json:"device_type"`
+	OsType             string    `json:"os_type"`
+	Region             string    `json:"region"`
+	Zone               string    `json:"zone"`
+	Module             string    `json:"module"`
+	Equipment          int64     `json:"equipment"`
+	IdcUnit            string    `json:"idc_unit"`
+	IdcLogicArea       string    `json:"idc_logic_area"`
+	RaidType           string    `json:"raid_type"`
+	InputTime          string    `json:"input_time"`
+	MatchScore         float64   `json:"match_score"`
+	MatchTag           bool      `json:"match_tag"`
+	InstanceChargeType string    `json:"instance_charge_type"`
+	BillingStartTime   time.Time `json:"billing_start_time"`
+	BillingExpireTime  time.Time `json:"billing_expire_time"`
 }
 
 // MatchDeviceReq resource apply manual match devices request

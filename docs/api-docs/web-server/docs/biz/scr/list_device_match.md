@@ -20,8 +20,8 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/apply/match/device
 | pending_num         |	int          | 是	| 待匹配资源数量      |
 
 #### spec
-| 参数名称      | 参数类型       | 描述              |
-|--------------|--------------|-------------------|
+| 参数名称      | 参数类型    | 描述              |
+|--------------|---------|-------------------|
 | region       | string	array | 地域               |
 | zone         | string	array | 可用区             |
 | device_type  | string	array | 机型               |
@@ -31,6 +31,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/task/findmany/apply/match/device
 | disk_type	   | string	array | 数据盘磁盘类型。"CLOUD_SSD": SSD云硬盘, "CLOUD_PREMIUM": 高性能云盘 |
 | network_type | string	array | 网络类型。"ONETHOUSAND": 千兆, "TENTHOUSAND": 万兆 |
 | isp	       | string	array | 外网运营商          |
+| instance_charge_type     | string  | 实例计费模式。(PREPAID：表示预付费，即包年包月、POSTPAID_BY_HOUR：表示后付费，即按量计费、CDHPAID：专用宿主机付费，即只对专用宿主机计费，不对专用宿主机上的实例计费。) |
 
 ### 调用示例
 

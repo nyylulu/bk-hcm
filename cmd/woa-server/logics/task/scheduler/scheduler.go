@@ -1588,6 +1588,13 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 				Value:    param.Spec.Isp,
 			})
 		}
+		if len(param.Spec.InstanceChargeType) != 0 {
+			rule.Rules = append(rule.Rules, querybuilder.AtomRule{
+				Field:    "instance_charge_type",
+				Operator: querybuilder.OperatorEqual,
+				Value:    param.Spec.InstanceChargeType,
+			})
+		}
 	}
 	req := &cmdb.ListBizHostParams{
 		BizID:       931,
@@ -1614,6 +1621,9 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			"logic_domain",
 			"raid_name",
 			"svr_input_time",
+			"instance_charge_type",
+			"billing_start_time",
+			"billing_expire_time",
 		},
 		Page: cmdb.BasePage{
 			Start: 0,
@@ -1650,23 +1660,26 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			tagNum++
 		}
 		device := &types.MatchDevice{
-			BkHostId:     host.BkHostID,
-			AssetId:      host.BkAssetID,
-			Ip:           host.GetUniqIp(),
-			OuterIp:      host.BkHostOuterIP,
-			Isp:          host.BkIpOerName,
-			DeviceType:   host.SvrDeviceClass,
-			OsType:       host.BkOSName,
-			Region:       host.BkZoneName,
-			Zone:         host.SubZone,
-			Module:       host.ModuleName,
-			Equipment:    int64(rackId),
-			IdcUnit:      host.IdcUnitName,
-			IdcLogicArea: host.LogicDomain,
-			RaidType:     host.RaidName,
-			InputTime:    host.SvrInputTime,
-			MatchScore:   1.0,
-			MatchTag:     tag,
+			BkHostId:           host.BkHostID,
+			AssetId:            host.BkAssetID,
+			Ip:                 host.GetUniqIp(),
+			OuterIp:            host.BkHostOuterIP,
+			Isp:                host.BkIpOerName,
+			DeviceType:         host.SvrDeviceClass,
+			OsType:             host.BkOSName,
+			Region:             host.BkZoneName,
+			Zone:               host.SubZone,
+			Module:             host.ModuleName,
+			Equipment:          int64(rackId),
+			IdcUnit:            host.IdcUnitName,
+			IdcLogicArea:       host.LogicDomain,
+			RaidType:           host.RaidName,
+			InputTime:          host.SvrInputTime,
+			MatchScore:         1.0,
+			MatchTag:           tag,
+			InstanceChargeType: host.InstanceChargeType,
+			BillingStartTime:   host.BillingStartTime,
+			BillingExpireTime:  host.BillingExpireTime,
 		}
 
 		rst.Info = append(rst.Info, device)
