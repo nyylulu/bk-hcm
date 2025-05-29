@@ -4,8 +4,10 @@ import useFormModel from '@/hooks/useFormModel';
 import { Button, Form, Input, Message } from 'bkui-vue';
 import http from '@/http';
 import { timeFormatter } from '@/common/util';
+import { INSTANCE_CHARGE_MAP } from '@/common/constant';
 import CommonLocalTable from '@/components/CommonLocalTable';
 import { removeEmptyFields } from '@/utils/scr/remove-query-fields';
+import { useLegacyTableSettings } from '@/hooks/use-table-settings';
 import AreaSelector from '@/views/ziyanScr/hostApplication/components/AreaSelector';
 import ZoneSelector from '@/views/ziyanScr/hostApplication/components/ZoneSelector';
 import useSelection from '@/views/resource/resource-manage/hooks/use-selection';
@@ -39,6 +41,7 @@ export default defineComponent({
         device_type: [props.formModelData.spec.device_type],
         disk_type: [props.formModelData.spec.disk_type],
         os_type: '',
+        instance_charge_type: props.formModelData.spec.charge_type,
       },
     });
     const options = ref([
@@ -71,12 +74,12 @@ export default defineComponent({
       );
     };
     const tableColumns = ref([
-      { type: 'selection', width: 30, minWidth: 30, isDefaultShow: true },
+      { type: 'selection', fixed: true, width: 30, minWidth: 30 },
       {
         field: 'match_tag',
         label: '星标',
         width: 60,
-        minWidth: 60,
+        defaultHidden: true,
         render: ({ data }: any) => {
           if (data.matchTag) {
             return <i class='hcm-icon bkhcm-icon-collect' color='gold'></i>;
@@ -93,16 +96,35 @@ export default defineComponent({
       {
         field: 'ip',
         label: '内网 IP',
-        width: 120,
+        width: 110,
       },
       {
         field: 'device_type',
         label: '机型',
+        width: 130,
+      },
+      {
+        field: 'instance_charge_type',
+        label: '计费模式',
+        width: 90,
+        render: ({ cell }: any) => INSTANCE_CHARGE_MAP[cell] || '--',
+      },
+      {
+        field: 'billing_start_time',
+        label: '计费开始时间',
+        width: 150,
+        render: ({ data }: any) => (data.instance_charge_type ? timeFormatter(data.billing_start_time) : '--'),
+      },
+      {
+        field: 'billing_expire_time',
+        label: '计费结束时间',
+        width: 150,
+        render: ({ data }: any) => (data.instance_charge_type ? timeFormatter(data.billing_expire_time) : '--'),
       },
       {
         field: 'os_type',
         label: '操作系统',
-        width: 250,
+        width: 230,
       },
       {
         field: 'equipment',
@@ -112,30 +134,53 @@ export default defineComponent({
       {
         field: 'zone',
         label: '园区',
+        width: 100,
       },
       {
         field: 'module',
         label: '模块',
+        width: 120,
       },
       {
         field: 'idc_unit',
         label: 'IDC 单元',
+        width: 90,
       },
       {
         field: 'idc_logic_area',
         label: '逻辑区域',
+        width: 110,
       },
       {
         field: 'input_time',
         label: '入库时间',
+        defaultHidden: true,
+        width: 120,
         render: ({ cell }: any) => timeFormatter(cell),
       },
       {
-        prop: 'match_score',
+        field: 'match_score',
         label: '匹配得分',
-        width: 90,
+        defaultHidden: true,
+        width: 120,
       },
     ]);
+
+    const { settings: tableSettings } = useLegacyTableSettings(tableColumns.value.slice(1));
+
+    const chareTypeSet = computed(() => new Set(selections.value.map((item) => item.instance_charge_type)));
+    const initialChareTypeSet = computed(() => new Set([props.formModelData.spec.charge_type]));
+    const isInitialChareTypeEmpty = computed(() => !props.formModelData.spec.charge_type?.length);
+    const isChareTypeHasEmpty = computed(() => [...chareTypeSet.value].some((item) => !item.length));
+    const isChareTypeDifferent = computed(
+      () =>
+        chareTypeSet.value.size > 0 &&
+        !isInitialChareTypeEmpty.value &&
+        !isChareTypeHasEmpty.value &&
+        (initialChareTypeSet.value.size !== chareTypeSet.value.size ||
+          [...chareTypeSet.value].some((item) => !initialChareTypeSet.value.has(item))),
+    );
+
     const ipArray = computed(() => {
       const ipv4 = /^((25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(25[0-5]|2[0-4]\d|[01]?\d\d?)$/;
       const ips = [];
@@ -156,9 +201,6 @@ export default defineComponent({
     const onResourceTypeChange = () => {
       formModel.spec.region = [];
       formModel.spec.zone = [];
-      formModel.spec.device_type = [];
-    };
-    const onZoneChange = () => {
       formModel.spec.device_type = [];
     };
 
@@ -219,7 +261,6 @@ export default defineComponent({
                   resourceType: formModel.resource_type,
                   region: formModel.spec.region,
                 }}
-                onChange={onZoneChange}
               />
             </FormItem>
             <FormItem label='机型'>
@@ -244,6 +285,13 @@ export default defineComponent({
             <FormItem label='内网IP'>
               <Input type='textarea' v-model={formModel.ips} />
             </FormItem>
+            <FormItem label='计费模式'>
+              <bk-select v-model={formModel.spec.instance_charge_type}>
+                {Object.entries(INSTANCE_CHARGE_MAP).map(([value, label]) => (
+                  <bk-option key={value} value={value} label={label} />
+                ))}
+              </bk-select>
+            </FormItem>
           </Form>
         </div>
         <Button theme={'primary'} onClick={loadResource} class={'ml24 mr8'} loading={isLoading.value}>
@@ -260,6 +308,20 @@ export default defineComponent({
           手工匹配资源
         </Button>
         <div class={'Devices-CommonTable'}>
+          {isInitialChareTypeEmpty.value && <bk-alert theme='error' title='原单据的计费模式为空' />}
+          {!isInitialChareTypeEmpty.value && isChareTypeHasEmpty.value && (
+            <bk-alert theme='error' title='选择匹配的资源，存在计费模式为空的情况' />
+          )}
+          {isChareTypeDifferent.value && (
+            <bk-alert
+              theme='warning'
+              title={`所匹配的主机，与原单据的计费模式不同，请确认。原单据(${[...initialChareTypeSet.value]
+                .map((type) => INSTANCE_CHARGE_MAP[type as string] || '--')
+                .join('、')})，选择匹配(${[...chareTypeSet.value]
+                .map((type) => INSTANCE_CHARGE_MAP[type as string] || '--')
+                .join('、')})`}
+            />
+          )}
           <CommonLocalTable
             loading={isLoading.value}
             hasSearch={false}
@@ -273,6 +335,7 @@ export default defineComponent({
                 onSelectAll: (selections: any) => {
                   handleSelectionChange(selections, () => true, true);
                 },
+                settings: tableSettings.value,
               },
             }}
             tableData={domainList.value}

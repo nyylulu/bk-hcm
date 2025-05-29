@@ -32,3 +32,32 @@ export default function useTableSettings(columns: ModelPropertyColumn[], options
     settings,
   };
 }
+
+export const useLegacyTableSettings = (
+  columns: Array<{ label?: any; field?: any; defaultHidden?: any }>,
+  options?: UseTableSettingsOptions,
+) => {
+  const { defaults = [] } = options || {};
+  const settings = ref<Settings>({
+    fields: [],
+    checked: [],
+    trigger: 'manual',
+  });
+
+  columns.forEach((col) => {
+    settings.value.fields.push({
+      label: col.label,
+      field: col.field,
+    });
+  });
+
+  if (defaults?.length) {
+    settings.value.checked = defaults.slice();
+  } else {
+    settings.value.checked = columns.filter((col) => !col.defaultHidden).map((col) => col.field);
+  }
+
+  return {
+    settings,
+  };
+};
