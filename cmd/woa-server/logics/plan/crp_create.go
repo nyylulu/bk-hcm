@@ -203,7 +203,7 @@ func (c *Controller) constructAddReq(kt *kit.Kit, ticket *TicketInfo) (*cvmapi.A
 			CoreAmount:      int(demand.Updated.Cvm.CpuCore),
 			Desc:            demand.Updated.Remark,
 			InstanceIO:      int(demand.Updated.Cbs.DiskIo),
-			DiskTypeName:    demand.Updated.Cbs.DiskTypeName,
+			DiskTypeName:    demand.Updated.Cbs.DiskType.Name(),
 			DiskAmount:      int(demand.Updated.Cbs.DiskSize),
 		}
 
