@@ -19,6 +19,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
+	"hcm/pkg/runtime/filter"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/json"
 	"hcm/pkg/tools/slice"
@@ -354,4 +355,64 @@ func (svc *lbSvc) listZiyanRuleHealthAndCert(kt *kit.Kit, ruleIds []string) (map
 	return converter.SliceToMap(resp.Details, func(t *tablelb.TCloudZiyanLbUrlRuleTable) (string, tcloudHealthCert) {
 		return t.ID, tcloudHealthCert{Health: t.HealthCheck, Cert: t.Certificate}
 	}), nil
+}
+
+func (svc *lbSvc) listTCloudZiyanLoadBalancerUrlRuleByTgIDs(kt *kit.Kit,
+	lblReq protocloud.ListenerQueryItem, cloudClbIDs, cloudLblIDs, targetGroupIDs []string) (
+	[]protocloud.LoadBalancerUrlRuleResult, error) {
+
+	lblTargetFilter := make([]*filter.AtomRule, 0)
+	lblTargetFilter = append(lblTargetFilter, tools.RuleIn("cloud_lb_id", cloudClbIDs))
+	lblTargetFilter = append(lblTargetFilter, tools.RuleIn("cloud_lbl_id", cloudLblIDs))
+	if len(targetGroupIDs) > 0 {
+		lblTargetFilter = append(lblTargetFilter, tools.RuleIn("target_group_id", targetGroupIDs))
+	}
+	if len(lblReq.RuleType) > 0 {
+		lblTargetFilter = append(lblTargetFilter, tools.RuleEqual("rule_type", lblReq.RuleType))
+		if lblReq.RuleType == enumor.Layer7RuleType {
+			if len(lblReq.Domain) > 0 {
+				lblTargetFilter = append(lblTargetFilter, tools.RuleEqual("domain", lblReq.Domain))
+			}
+			if len(lblReq.Url) > 0 {
+				lblTargetFilter = append(lblTargetFilter, tools.RuleEqual("url", lblReq.Url))
+			}
+		}
+	}
+	opt := &types.ListOption{
+		Filter: tools.ExpressionAnd(lblTargetFilter...),
+		Page:   core.NewDefaultBasePage(),
+	}
+	lblTargetList := make([]protocloud.LoadBalancerUrlRuleResult, 0)
+	for {
+		loopLblTargetList, err := svc.dao.LoadBalancerTCloudZiyanUrlRule().List(kt, opt)
+		if err != nil {
+			logs.Errorf("list load balancer tcloud-ziyan url rule failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, fmt.Errorf("list load balancer tcloud-ziyan url rule failed, err: %v", err)
+		}
+
+		for _, item := range loopLblTargetList.Details {
+			urlRuleResult := protocloud.LoadBalancerUrlRuleResult{
+				LbID:               item.LbID,
+				CloudClbID:         item.CloudLbID,
+				LblID:              item.LblID,
+				CloudLblID:         item.CloudLBLID,
+				TargetGroupRuleMap: make(map[string]protocloud.DomainUrlRuleInfo),
+			}
+			urlRuleResult.TargetGroupIDs = append(urlRuleResult.TargetGroupIDs, item.TargetGroupID)
+			urlRuleResult.TargetGroupRuleMap[item.TargetGroupID] = protocloud.DomainUrlRuleInfo{
+				RuleID:      item.ID,
+				CloudRuleID: item.CloudID,
+				RuleType:    item.RuleType,
+				Domain:      item.Domain,
+				Url:         item.URL,
+			}
+			lblTargetList = append(lblTargetList, urlRuleResult)
+		}
+		if uint(len(loopLblTargetList.Details)) < core.DefaultMaxPageLimit {
+			break
+		}
+
+		opt.Page.Start += uint32(core.DefaultMaxPageLimit)
+	}
+	return lblTargetList, nil
 }

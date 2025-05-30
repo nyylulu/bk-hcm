@@ -730,7 +730,7 @@ func (svc *lbSvc) ListTargetGroupListenerRel(cts *rest.Contexts) (interface{}, e
 }
 
 func convTableToBaseTargetListenerRuleRel(one *tablelb.TargetGroupListenerRuleRelTable) *corelb.
-BaseTargetListenerRuleRel {
+	BaseTargetListenerRuleRel {
 
 	return &corelb.BaseTargetListenerRuleRel{
 		ID:                  one.ID,
@@ -900,17 +900,25 @@ func (svc *lbSvc) queryListenerWithTargets(kt *kit.Kit, req *protocloud.ListList
 	if err != nil {
 		return nil, err
 	}
+
 	// 未查询到符合的监听器列表
 	if len(cloudLblIDs) == 0 {
 		logs.Errorf("list biz listener with targets empty, req: %+v, rid: %s", cvt.PtrToVal(req), kt.Rid)
 		return nil, nil
 	}
 
-	// 根据RSIP获取绑定的目标组ID列表
-	targetGroupRsList, targetGroupIDs, err := svc.listListenerWithTarget(kt, req, lblReq)
+	// 获取监听器绑定的目标组ID列表
+	cloudTargetGroupIDs, err := svc.listTargetGroupIDsByRelCond(kt, req, lblReq, cloudLblIDs)
 	if err != nil {
 		return nil, err
 	}
+
+	// 根据目标组ID、RS信息，获取绑定的RS及目标组ID列表
+	targetGroupRsList, targetGroupIDs, err := svc.listListenerWithTarget(kt, req, lblReq, cloudTargetGroupIDs)
+	if err != nil {
+		return nil, err
+	}
+
 	// 未查询到符合的监听器列表
 	if len(targetGroupIDs) == 0 {
 		logs.Errorf("list load balancer target with targets empty, req: %+v, rid: %s", cvt.PtrToVal(req), kt.Rid)
@@ -922,6 +930,9 @@ func (svc *lbSvc) queryListenerWithTargets(kt *kit.Kit, req *protocloud.ListList
 	switch req.Vendor {
 	case enumor.TCloud:
 		lblUrlRuleList, err = svc.listTCloudLoadBalancerUrlRuleByTgIDs(kt, lblReq, cloudClbIDs,
+			cloudLblIDs, targetGroupIDs)
+	case enumor.TCloudZiyan:
+		lblUrlRuleList, err = svc.listTCloudZiyanLoadBalancerUrlRuleByTgIDs(kt, lblReq, cloudClbIDs,
 			cloudLblIDs, targetGroupIDs)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "batch query listener with targets failed, invalid vendor: %s",
@@ -1019,11 +1030,11 @@ func (svc *lbSvc) getRsListByTargetGroupIDs(item protocloud.LoadBalancerUrlRuleR
 			lblRsMap[item.CloudLblID].RsList = append(lblRsMap[item.CloudLblID].RsList,
 				&protocloud.LoadBalancerTargetRsList{
 					BaseTarget:  targetGroupItem.BaseTarget,
-					RuleID:      item.TargetGrouRuleMap[targetGroupID].RuleID,
-					CloudRuleID: item.TargetGrouRuleMap[targetGroupID].CloudRuleID,
-					RuleType:    item.TargetGrouRuleMap[targetGroupID].RuleType,
-					Domain:      item.TargetGrouRuleMap[targetGroupID].Domain,
-					Url:         item.TargetGrouRuleMap[targetGroupID].Url,
+					RuleID:      item.TargetGroupRuleMap[targetGroupID].RuleID,
+					CloudRuleID: item.TargetGroupRuleMap[targetGroupID].CloudRuleID,
+					RuleType:    item.TargetGroupRuleMap[targetGroupID].RuleType,
+					Domain:      item.TargetGroupRuleMap[targetGroupID].Domain,
+					Url:         item.TargetGroupRuleMap[targetGroupID].Url,
 				})
 		}
 	}
@@ -1206,9 +1217,10 @@ func (svc *lbSvc) listBizListenerByLbIDs(kt *kit.Kit, req *protocloud.ListListen
 
 // listListenerWithTarget 根据账号ID、RsIP查询绑定的目标组列表
 func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, req *protocloud.ListListenerWithTargetsReq,
-	lblReq protocloud.ListenerQueryItem) (map[string][]protocloud.LoadBalancerTargetRsList, []string, error) {
+	lblReq protocloud.ListenerQueryItem, cloudTargetGroupIDs []string) (
+	map[string][]protocloud.LoadBalancerTargetRsList, []string, error) {
 
-	targetList, err := svc.listTargetByCond(kt, req, lblReq)
+	targetList, err := svc.listTargetByCond(kt, req, lblReq, cloudTargetGroupIDs)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -1245,25 +1257,27 @@ func (svc *lbSvc) listListenerWithTarget(kt *kit.Kit, req *protocloud.ListListen
 }
 
 func (svc *lbSvc) listTargetByCond(kt *kit.Kit, req *protocloud.ListListenerWithTargetsReq,
-	lblReq protocloud.ListenerQueryItem) ([]corelb.BaseTarget, error) {
-
-	targetFilter := make([]*filter.AtomRule, 0)
-	targetFilter = append(targetFilter, tools.RuleEqual("account_id", req.AccountID))
-	targetFilter = append(targetFilter, tools.RuleEqual("inst_type", lblReq.InstType))
-	targetFilter = append(targetFilter, tools.RuleIn("ip", lblReq.RsIPs))
-	if len(lblReq.RsPorts) > 0 {
-		targetFilter = append(targetFilter, tools.RuleIn("port", lblReq.RsPorts))
-	}
-	if len(lblReq.RsWeights) > 0 {
-		targetFilter = append(targetFilter, tools.RuleIn("weight", lblReq.RsWeights))
-	}
+	lblReq protocloud.ListenerQueryItem, cloudTargetGroupIDs []string) ([]corelb.BaseTarget, error) {
 
 	targetList := make([]corelb.BaseTarget, 0)
-	opt := &types.ListOption{
-		Filter: tools.ExpressionAnd(targetFilter...),
-		Page:   core.NewDefaultBasePage(),
-	}
-	for {
+	for _, partCloudTargetGroupIDs := range slice.Split(cloudTargetGroupIDs, int(filter.DefaultMaxInLimit)) {
+		targetFilter := make([]*filter.AtomRule, 0)
+		targetFilter = append(targetFilter, tools.RuleEqual("account_id", req.AccountID))
+		targetFilter = append(targetFilter, tools.RuleEqual("inst_type", lblReq.InstType))
+		targetFilter = append(targetFilter, tools.RuleIn("cloud_target_group_id", partCloudTargetGroupIDs))
+		if len(lblReq.RsIPs) > 0 {
+			targetFilter = append(targetFilter, tools.RuleIn("ip", lblReq.RsIPs))
+		}
+		if len(lblReq.RsPorts) > 0 {
+			targetFilter = append(targetFilter, tools.RuleIn("port", lblReq.RsPorts))
+		}
+		if len(lblReq.RsWeights) > 0 {
+			targetFilter = append(targetFilter, tools.RuleIn("weight", lblReq.RsWeights))
+		}
+		opt := &types.ListOption{
+			Filter: tools.ExpressionAnd(targetFilter...),
+			Page:   core.NewDefaultBasePage(),
+		}
 		loopTargetList, err := svc.dao.LoadBalancerTarget().List(kt, opt)
 		if err != nil {
 			logs.Errorf("list load balancer target failed, err: %v, req: %+v, rid: %s",
@@ -1298,11 +1312,6 @@ func (svc *lbSvc) listTargetByCond(kt *kit.Kit, req *protocloud.ListListenerWith
 				},
 			})
 		}
-		if uint(len(loopTargetList.Details)) < core.DefaultMaxPageLimit {
-			break
-		}
-
-		opt.Page.Start += uint32(core.DefaultMaxPageLimit)
 	}
 	return targetList, nil
 }
@@ -1342,14 +1351,14 @@ func (svc *lbSvc) listTCloudLoadBalancerUrlRuleByTgIDs(kt *kit.Kit,
 
 		for _, item := range loopLblTargetList.Details {
 			urlRuleResult := protocloud.LoadBalancerUrlRuleResult{
-				LbID:              item.LbID,
-				CloudClbID:        item.CloudLbID,
-				LblID:             item.LblID,
-				CloudLblID:        item.CloudLBLID,
-				TargetGrouRuleMap: make(map[string]protocloud.DomainUrlRuleInfo),
+				LbID:               item.LbID,
+				CloudClbID:         item.CloudLbID,
+				LblID:              item.LblID,
+				CloudLblID:         item.CloudLBLID,
+				TargetGroupRuleMap: make(map[string]protocloud.DomainUrlRuleInfo),
 			}
 			urlRuleResult.TargetGroupIDs = append(urlRuleResult.TargetGroupIDs, item.TargetGroupID)
-			urlRuleResult.TargetGrouRuleMap[item.TargetGroupID] = protocloud.DomainUrlRuleInfo{
+			urlRuleResult.TargetGroupRuleMap[item.TargetGroupID] = protocloud.DomainUrlRuleInfo{
 				RuleID:      item.ID,
 				CloudRuleID: item.CloudID,
 				RuleType:    item.RuleType,
@@ -1454,4 +1463,32 @@ func (svc *lbSvc) convertBatchListListener(lblList []tablelb.LoadBalancerListene
 		})
 	}
 	return lblResult, nil
+}
+
+func (svc *lbSvc) listTargetGroupIDsByRelCond(kt *kit.Kit, req *protocloud.ListListenerWithTargetsReq,
+	lblReq protocloud.ListenerQueryItem, cloudLblIDs []string) ([]string, error) {
+
+	cloudTargetGroupIDs := make([]string, 0)
+	for _, partCloudLblIDs := range slice.Split(cloudLblIDs, int(filter.DefaultMaxInLimit)) {
+		ruleRelFilter := make([]*filter.AtomRule, 0)
+		ruleRelFilter = append(ruleRelFilter, tools.RuleEqual("vendor", req.Vendor))
+		ruleRelFilter = append(ruleRelFilter, tools.RuleIn("cloud_lb_id", lblReq.CloudLbIDs))
+		ruleRelFilter = append(ruleRelFilter, tools.RuleIn("cloud_lbl_id", partCloudLblIDs))
+		ruleRelFilter = append(ruleRelFilter, tools.RuleEqual("listener_rule_type", lblReq.RuleType))
+		ruleRelFilter = append(ruleRelFilter, tools.RuleEqual("binding_status", enumor.SuccessBindingStatus))
+		opt := &types.ListOption{
+			Filter: tools.ExpressionAnd(ruleRelFilter...),
+			Page:   core.NewDefaultBasePage(),
+		}
+		targetGroupRelList, err := svc.dao.LoadBalancerTargetGroupListenerRuleRel().List(kt, opt)
+		if err != nil {
+			logs.Errorf("list target group listener rule rel failed, err: %v, req: %+v, lblReq: %+v, rid: %s",
+				err, cvt.PtrToVal(req), lblReq, kt.Rid)
+			return nil, fmt.Errorf("list target group listener rule rel failed, err: %v", err)
+		}
+		for _, item := range targetGroupRelList.Details {
+			cloudTargetGroupIDs = append(cloudTargetGroupIDs, item.CloudTargetGroupID)
+		}
+	}
+	return slice.Unique(cloudTargetGroupIDs), nil
 }

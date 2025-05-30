@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	cloudCvm "hcm/pkg/api/core/cloud/cvm"
+	corelb "hcm/pkg/api/core/cloud/load-balancer"
 	dataservice "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
@@ -223,7 +224,16 @@ func (l *Layer4ListenerBindRSPreviewExecutor) validateTarget(kt *kit.Kit, lbID s
 func (l *Layer4ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit,
 	curDetail *Layer4ListenerBindRSDetail, lbID string) (string, error) {
 
-	lb, err := getTCloudLoadBalancer(kt, l.dataServiceCli, lbID)
+	var lb *corelb.LoadBalancer[corelb.TCloudClbExtension]
+	var err error
+	switch l.vendor {
+	case enumor.TCloud:
+		lb, err = getTCloudLoadBalancer(kt, l.dataServiceCli, lbID)
+	case enumor.TCloudZiyan:
+		lb, err = getTCloudZiyanLoadBalancer(kt, l.dataServiceCli, lbID)
+	default:
+		return "", fmt.Errorf("layer4 listener bind rs preview validate, unsupported vendor: %s", l.vendor)
+	}
 	if err != nil {
 		return "", err
 	}

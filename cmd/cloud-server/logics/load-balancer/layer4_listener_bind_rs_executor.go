@@ -125,7 +125,7 @@ func (c *Layer4ListenerBindRSExecutor) validate(kt *kit.Kit) error {
 
 	for _, detail := range c.details {
 		if detail.Status == NotExecutable {
-			return fmt.Errorf("record(%v) is not executable", detail)
+			return fmt.Errorf("layer4 listener bind rs failed, record is not executable: %+v", detail)
 		}
 	}
 	return nil
@@ -302,8 +302,10 @@ func (c *Layer4ListenerBindRSExecutor) buildFlowTask(kt *kit.Kit, lb corelb.Base
 	tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
 
 	switch c.vendor {
-	case enumor.TCloud, enumor.TCloudZiyan:
+	case enumor.TCloud:
 		return c.buildTCloudFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs)
+	case enumor.TCloudZiyan:
+		return c.buildTCloudZiyanFlowTask(kt, lb, targetGroupID, details, generator, tgToListenerCloudIDs)
 	default:
 		return nil, fmt.Errorf("not support vendor: %s", c.vendor)
 	}
