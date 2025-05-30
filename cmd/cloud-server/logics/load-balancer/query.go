@@ -201,11 +201,12 @@ func getTarget(kt *kit.Kit, cli *dataservice.Client, tgID, instID string, port i
 	return nil, nil
 }
 
-func getTargetGroupID(kt *kit.Kit, cli *dataservice.Client, ruleCloudID string) (string, error) {
+func getTargetGroupID(kt *kit.Kit, cli *dataservice.Client, lbID string, ruleCloudID string) (string, error) {
 	listReq := &core.ListReq{
 		Fields: []string{"target_group_id"},
 		Page:   core.NewDefaultBasePage(),
 		Filter: tools.ExpressionAnd(
+			tools.RuleEqual("lb_id", lbID),
 			tools.RuleEqual("cloud_listener_rule_id", ruleCloudID),
 		),
 	}
@@ -320,7 +321,7 @@ func validateCvmExist(kt *kit.Kit, dataServiceCli *dataservice.Client, rsIP stri
 	}
 
 	cloudVpcIDs := []string{tcloudLB.CloudVpcID}
-	if converter.PtrToVal(tcloudLB.Extension.Snat) {
+	if tcloudLB.Extension.SupportCrossRegionV1() {
 		cloudVpcIDs = append(cloudVpcIDs, converter.PtrToVal(tcloudLB.Extension.TargetCloudVpcID))
 	}
 
