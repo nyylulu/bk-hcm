@@ -639,3 +639,46 @@ const (
 func (r ResPlanNotMatchReason) GenerateMsg(applyType string, planType string) string {
 	return fmt.Sprintf("%s：申请单为(%s)，预测单为(%s)", r, applyType, planType)
 }
+
+// CRPDiskType is crp disk type.
+type CRPDiskType int
+
+const (
+	// CRPDiskTypePREMIUM CLOUD_PREMIUM
+	CRPDiskTypePREMIUM CRPDiskType = 606
+	// CRPDiskTypeSSD CLOUD_SSD
+	CRPDiskTypeSSD CRPDiskType = 607
+)
+
+// Validate CRPDiskType.
+func (c CRPDiskType) Validate() error {
+	switch c {
+	case CRPDiskTypePREMIUM:
+	case CRPDiskTypeSSD:
+	default:
+		return fmt.Errorf("unsupported crp disk type: %d", c)
+	}
+	return nil
+}
+
+// CRPDiskTypeNameMap crp disk type name map.
+var CRPDiskTypeNameMap = map[CRPDiskType]string{
+	CRPDiskTypePREMIUM: "高性能云硬盘",
+	CRPDiskTypeSSD:     "SSD云硬盘",
+}
+
+// Name return disk type name.
+func (c CRPDiskType) Name() string {
+	return CRPDiskTypeNameMap[c]
+}
+
+// GetCRPDiskTypeFromCRPName get CRPDiskType from crp disk type name.
+func GetCRPDiskTypeFromCRPName(name string) (CRPDiskType, error) {
+	for k, v := range CRPDiskTypeNameMap {
+		if v == name {
+			return k, nil
+		}
+	}
+
+	return 0, fmt.Errorf("unsupported crp disk type name: %s", name)
+}

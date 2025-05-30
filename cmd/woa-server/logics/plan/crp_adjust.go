@@ -380,10 +380,10 @@ func (c *CrpAdjustTicketCreator) calcAdjustAbleDCanConsumeCPU(kt *kit.Kit, adjus
 	updateExpectTime string) (int64, error) {
 
 	var canConsume int64
-	// 磁盘类型需一致
-	if adjustAbleD.DiskTypeName != demandDetail.DiskTypeName {
+	// 磁盘类型需一致，未知的磁盘类型（包括空值）除外
+	if adjustAbleD.DiskType.Name() != demandDetail.DiskTypeName {
 		// 加急延期场景CRP会根据原预测的磁盘类型创建新的预测，此时需保证磁盘类型完全一致，不能为空
-		if adjustType == enumor.CrpAdjustTypeDelay || adjustAbleD.DiskTypeName != "" {
+		if adjustType == enumor.CrpAdjustTypeDelay || adjustAbleD.DiskType.Name() != "" {
 			return canConsume, nil
 		}
 	}
@@ -446,6 +446,13 @@ func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, planProd
 	demand rpt.ResPlanDemand) (
 	*cvmapi.AdjustUpdatedData, error) {
 
+	// 根据HCM的diskType，生成CRP的diskType和diskName
+	diskTypeName := demand.Updated.Cbs.DiskType.Name()
+	diskType, err := enumor.GetCRPDiskTypeFromCRPName(diskTypeName)
+	if err != nil {
+		return nil, err
+	}
+
 	demandItem := &cvmapi.CvmCbsPlanQueryItem{
 		SliceId:         demand.Original.DemandID,
 		ProjectName:     string(demand.Updated.ObsProject),
@@ -460,8 +467,8 @@ func (c *CrpAdjustTicketCreator) constructAdjustAppendData(kt *kit.Kit, planProd
 		UseTime:         demand.Updated.ExpectTime,
 		CvmAmount:       demand.Updated.Cvm.Os.InexactFloat64(),
 		InstanceIO:      int(demand.Updated.Cbs.DiskIo),
-		DiskType:        0,
-		DiskTypeName:    demand.Updated.Cbs.DiskTypeName,
+		DiskType:        diskType,
+		DiskTypeName:    diskTypeName,
 		AllDiskAmount:   demand.Updated.Cbs.DiskSize,
 	}
 
