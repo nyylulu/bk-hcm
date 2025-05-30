@@ -43,6 +43,7 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/adaptor/types/cvm"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -60,6 +61,7 @@ import (
 	"hcm/pkg/tools/language"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 
 	"go.mongodb.org/mongo-driver/mongo"
@@ -1792,6 +1794,13 @@ func (s *scheduler) startOrder(kt *kit.Kit, orders []*types.ApplyOrder) error {
 			logs.Errorf("failed to set order %s running, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 			return fmt.Errorf("failed to set order %s running, err: %v", order.SubOrderId, err)
 		}
+
+		go func(suborderID string) {
+			if err := s.retryFailedDevices(kt, suborderID); err != nil {
+				logs.Errorf("failed to retry failed devices, err: %v, sub orderID: %s, rid: %s", err, suborderID,
+					kt.Rid)
+			}
+		}(order.SubOrderId)
 	}
 
 	return nil
@@ -1817,6 +1826,80 @@ func (s *scheduler) startSubOrderFailedStep(kt *kit.Kit, subOrderID string) erro
 	}
 
 	return nil
+}
+
+// retryTimeoutMin 重试失败主机对应超时分钟数
+const retryTimeoutMin = 10
+
+func (s *scheduler) retryFailedDevices(oldKt *kit.Kit, subOrderID string) error {
+	kt := core.NewBackendKit()
+	kt.Rid = oldKt.Rid
+
+	timeout := retryTimeoutMin * time.Minute
+	startTime := time.Now()
+
+	for {
+		if time.Since(startTime) > timeout {
+			logs.Errorf("retry failed devices timeout, sub order id: %s, rid: %s", subOrderID, kt.Rid)
+			return fmt.Errorf("retry failed devices timeout, sub order id: %s", subOrderID)
+		}
+
+		filter := &mapstr.MapStr{"suborder_id": subOrderID}
+		order, err := model.Operation().ApplyOrder().GetApplyOrder(kt.Ctx, filter)
+		if err != nil {
+			logs.Errorf("failed to get apply order, err: %v, sub order id: %s, rid: %s", err, subOrderID, kt.Rid)
+			return err
+		}
+
+		// 子单的状态是types.ApplyStatusWaitForMatch时，表示子单在主流程等待调度，此时也需要在这里进行等待
+		if order.Status == types.ApplyStatusWaitForMatch {
+			logs.Warnf("sleep one second, order status is %s, sub order id: %s, rid: %s", order.Status, subOrderID,
+				kt.Rid)
+			time.Sleep(time.Second)
+			continue
+		}
+
+		// 如果子单的状态是types.ApplyStatusMatching时，表示子单正在生产主机，此时可以进行失败主机重试，否则返回错误
+		if order.Status != types.ApplyStatusMatching {
+			logs.Errorf("order status is not matching, id: %s, status: %s, rid: %s", subOrderID, order.Status, kt.Rid)
+			return fmt.Errorf("order status is not matching, id: %s, status: %s", subOrderID, order.Status)
+		}
+
+		devices, err := model.Operation().DeviceInfo().GetDeviceInfo(kt.Ctx, filter)
+		if err != nil {
+			logs.Errorf("failed to get binding devices to sub order id: %s, err: %v, rid: %s", subOrderID, err, kt.Rid)
+			return err
+		}
+
+		// 在主机生产的主流程中，如果生产的数量已经大于子单所需要的数量时，也会触发失败主机的重试，所以这里不需要重复操作了
+		if len(devices) >= int(order.Total) {
+			logs.Infof("devices len(%d) greater than order total(%d), sub order id: %s, rid: %s", len(devices),
+				order.Total, subOrderID, kt.Rid)
+			return nil
+		}
+
+		genIDs := make([]int64, 0)
+		for _, device := range devices {
+			if !device.IsDelivered {
+				genIDs = append(genIDs, int64(device.GenerateId))
+			}
+		}
+		if len(genIDs) == 0 {
+			return nil
+		}
+
+		genIDs = slice.Unique(genIDs)
+		filter = &mapstr.MapStr{"generate_id": &mapstr.MapStr{pkg.BKDBIN: genIDs}}
+		update := mapstr.MapStr{"is_matched": false, "update_at": time.Now()}
+		if err = model.Operation().GenerateRecord().UpdateGenerateRecord(kt.Ctx, filter, &update); err != nil {
+			logs.Errorf("failed to update generate record, err: %v, generate ids: %v, sub order id: %s, update: %+v, "+
+				"rid: %s", err, genIDs, subOrderID, update, kt.Rid)
+			return err
+		}
+		logs.Infof("update generate record, generate ids: %v, sub order id: %s, rid: %s", genIDs, subOrderID, kt.Rid)
+
+		return nil
+	}
 }
 
 // TerminateApplyOrder terminates resource apply order
@@ -2141,6 +2224,13 @@ func (s *scheduler) modifyOrder(kt *kit.Kit, order *types.ApplyOrder, param *typ
 		logs.Errorf("failed to set order %s terminate, err: %v, rid: %s", order.SubOrderId, err, kt.Rid)
 		return fmt.Errorf("failed to set order %s terminate, err: %v", order.SubOrderId, err)
 	}
+
+	go func(suborderID string) {
+		if err := s.retryFailedDevices(kt, suborderID); err != nil {
+			logs.Errorf("failed to retry failed devices, err: %v, sub orderID: %s, rid: %s", err, suborderID,
+				kt.Rid)
+		}
+	}(order.SubOrderId)
 
 	return nil
 }
