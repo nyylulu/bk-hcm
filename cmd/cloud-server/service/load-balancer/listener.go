@@ -594,7 +594,7 @@ func (svc *lbSvc) listListenerWithTarget(cts *rest.Contexts, authHandler handler
 
 	req.BkBizID = bkBizID
 	switch accountInfo.Vendor {
-	case enumor.TCloud:
+	case enumor.TCloud, enumor.TCloudZiyan:
 		resList, err = svc.client.DataService().Global.LoadBalancer.ListLoadBalancerListenerWithTargets(cts.Kit, req)
 		if err != nil {
 			logs.Errorf("tcloud list listener with targets failed, err: %v, req: %+v, rid: %s", err, req, cts.Kit.Rid)
@@ -602,6 +602,7 @@ func (svc *lbSvc) listListenerWithTarget(cts *rest.Contexts, authHandler handler
 		}
 		return resList, nil
 	default:
-		return nil, errf.Newf(errf.InvalidParameter, "req: %+v, vendor: %s not support", req, accountInfo.Vendor)
+		return nil, errf.Newf(errf.InvalidParameter, "list listener with targets failed, vendor: %s not support, "+
+			"listTargetReq: %+v", accountInfo.Vendor, req)
 	}
 }

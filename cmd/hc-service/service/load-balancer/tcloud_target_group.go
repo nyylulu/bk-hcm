@@ -21,8 +21,6 @@
 package loadbalancer
 
 import (
-	"errors"
-
 	typelb "hcm/pkg/adaptor/types/load-balancer"
 	"hcm/pkg/api/core"
 	corelb "hcm/pkg/api/core/cloud/load-balancer"
@@ -125,16 +123,8 @@ func (svc *clbSvc) batchAddTargetsToGroup(kt *kit.Kit, req *protolb.TCloudBatchO
 			Port:       cvt.ValToPtr(rsItem.Port),
 			Weight:     rsItem.Weight,
 		}
-		switch rsItem.InstType {
-		case enumor.CvmInstType:
-			tmpRs.InstanceId = cvt.ValToPtr(rsItem.CloudInstID)
-		case enumor.EniInstType:
-			// 跨域rs 指定 ip
-			tmpRs.EniIp = cvt.ValToPtr(rsItem.IP)
-		default:
-			return nil, errors.New(string("invalid target type: " + rsItem.InstType))
-		}
-
+		// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+		tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 		if ruleInfo.RuleType == enumor.Layer7RuleType {
 			tmpRs.LocationId = cvt.ValToPtr(ruleInfo.CloudID)
 		}
@@ -280,12 +270,13 @@ func (svc *clbSvc) batchUnRegisterTargetCloud(kt *kit.Kit, req *protolb.TCloudBa
 		for _, rsItem := range req.RsList {
 			tmpRs := &typelb.BatchTarget{
 				ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
 				Port:       cvt.ValToPtr(rsItem.Port),
 			}
 			if ruleItem.RuleType == enumor.Layer7RuleType {
 				tmpRs.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 			}
+			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 		}
 		failIDs, err := tcloudAdpt.DeRegisterTargets(kt, rsOpt)
@@ -421,11 +412,13 @@ func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBa
 			rsOpt.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 		}
 		for _, rsItem := range req.RsList {
-			rsOpt.Targets = append(rsOpt.Targets, &typelb.BatchTarget{
-				Type:       cvt.ValToPtr(string(rsItem.InstType)),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
-				Port:       cvt.ValToPtr(rsItem.Port),
-			})
+			tmpRs := &typelb.BatchTarget{
+				Type: cvt.ValToPtr(string(rsItem.InstType)),
+				Port: cvt.ValToPtr(rsItem.Port),
+			}
+			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 		}
 		rsOpt.NewPort = cvt.PtrToVal(req.RsList[0].NewPort)
 		err = tcloudAdpt.ModifyTargetPort(kt, rsOpt)
@@ -541,20 +534,22 @@ func (svc *clbSvc) batchModifyTargetWeightCloud(kt *kit.Kit, req *protolb.TCloud
 	}
 	for _, ruleItem := range urlRuleList.Details {
 		rsOpt.LoadBalancerId = ruleItem.CloudLbID
-		tmpRs := &typelb.TargetWeightRule{
+		tmpWeightRule := &typelb.TargetWeightRule{
 			ListenerId: cvt.ValToPtr(ruleItem.CloudLBLID),
 		}
 		if ruleItem.RuleType == enumor.Layer7RuleType {
-			tmpRs.LocationId = cvt.ValToPtr(ruleItem.CloudID)
+			tmpWeightRule.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 		}
 		for _, rsItem := range req.RsList {
-			tmpRs.Targets = append(tmpRs.Targets, &typelb.BatchTarget{
-				Type:       cvt.ValToPtr(string(rsItem.InstType)),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
-				Port:       cvt.ValToPtr(rsItem.Port),
-				Weight:     rsItem.NewWeight,
-			})
-			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpRs)
+			tmpRs := &typelb.BatchTarget{
+				Type:   cvt.ValToPtr(string(rsItem.InstType)),
+				Port:   cvt.ValToPtr(rsItem.Port),
+				Weight: rsItem.NewWeight,
+			}
+			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
+			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		}
 		err = tcloudAdpt.ModifyTargetWeight(kt, rsOpt)
 		if err != nil {
@@ -718,12 +713,13 @@ func (svc *clbSvc) unbindTCloudListenerTargets(kt *kit.Kit, req *protolb.TCloudB
 		for _, rsItem := range item.RsList {
 			tmpRs := &typelb.BatchTarget{
 				ListenerId: cvt.ValToPtr(item.CloudLblID),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
 				Port:       cvt.ValToPtr(rsItem.Port),
 			}
 			if rsItem.RuleType == enumor.Layer7RuleType {
 				tmpRs.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
 			}
+			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 			targetIDs = append(targetIDs, rsItem.ID)
 			cloudLblIDs = append(cloudLblIDs, item.CloudLblID)
@@ -882,19 +878,21 @@ func (svc *clbSvc) modifyTCloudListenerTargetsWeight(kt *kit.Kit, req *protolb.T
 	}
 	for _, item := range lblRsList {
 		for _, rsItem := range item.RsList {
-			tmpRs := &typelb.TargetWeightRule{ListenerId: cvt.ValToPtr(item.CloudLblID)}
+			tmpWeightRule := &typelb.TargetWeightRule{ListenerId: cvt.ValToPtr(item.CloudLblID)}
 			if rsItem.RuleType == enumor.Layer7RuleType {
-				tmpRs.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
+				tmpWeightRule.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
 			}
-			tmpRs.Targets = append(tmpRs.Targets, &typelb.BatchTarget{
-				Type:       cvt.ValToPtr(string(rsItem.InstType)),
-				InstanceId: cvt.ValToPtr(rsItem.CloudInstID),
-				Port:       cvt.ValToPtr(rsItem.Port),
-				Weight:     cvt.ValToPtr(req.NewRsWeight),
-			})
-			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpRs)
+			tmpRs := &typelb.BatchTarget{
+				Type:   cvt.ValToPtr(string(rsItem.InstType)),
+				Port:   cvt.ValToPtr(rsItem.Port),
+				Weight: req.NewRsWeight,
+			}
+			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
+			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 			updateRsList = append(updateRsList, &dataproto.TargetBaseReq{
-				ID: rsItem.ID, NewWeight: cvt.ValToPtr(req.NewRsWeight),
+				ID: rsItem.ID, NewWeight: req.NewRsWeight,
 			})
 			cloudRuleIDs = append(cloudRuleIDs, rsItem.CloudRuleID)
 		}
@@ -908,8 +906,22 @@ func (svc *clbSvc) modifyTCloudListenerTargetsWeight(kt *kit.Kit, req *protolb.T
 	return cloudRuleIDs, updateRsList, nil
 }
 
+// setTargetInstanceIDAndEniIP 根据RS的实例类型，设置RS的InstanceId、EniIp
+func setTargetInstanceIDAndEniIP(instType enumor.InstType, cloudInstID, rsIP string,
+	targetInfo *typelb.BatchTarget) *typelb.BatchTarget {
+
+	// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
+	if instType == enumor.CvmInstType {
+		targetInfo.InstanceId = cvt.ValToPtr(cloudInstID)
+	} else {
+		// 跨域rs 指定 ip
+		targetInfo.EniIp = cvt.ValToPtr(rsIP)
+	}
+	return targetInfo
+}
+
 func (svc *clbSvc) filterListenerTargetWeightList(kt *kit.Kit, lbID string,
-	details []*dataproto.ListBatchListenerResult, newRsWeight int64) ([]*dataproto.ListBatchListenerResult, error) {
+	details []*dataproto.ListBatchListenerResult, newRsWeight *int64) ([]*dataproto.ListBatchListenerResult, error) {
 
 	lblRsList := make([]*dataproto.ListBatchListenerResult, 0)
 	for _, detail := range details {

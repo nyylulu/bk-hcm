@@ -446,7 +446,7 @@ type ListListenerWithTargetsReq struct {
 	Vendor            enumor.Vendor       `json:"vendor" validate:"required,min=1"`
 	AccountID         string              `json:"account_id" validate:"required,min=1"`
 	ListenerQueryList []ListenerQueryItem `json:"rule_query_list" validate:"required,min=1,max=20"`
-	NewRsWeight       int64               `json:"new_rs_weight" validate:"omitempty"`
+	NewRsWeight       *int64              `json:"new_rs_weight" validate:"omitempty"`
 }
 
 // Validate request.
@@ -477,7 +477,7 @@ type ListenerQueryItem struct {
 	Domain        string              `json:"domain" validate:"omitempty"`
 	Url           string              `json:"url" validate:"omitempty"`
 	InstType      enumor.InstType     `json:"inst_type" validate:"required,min=1"`
-	RsIPs         []string            `json:"rs_ips" validate:"required,min=1"`
+	RsIPs         []string            `json:"rs_ips" validate:"omitempty"`
 	RsPorts       []int64             `json:"rs_ports" validate:"omitempty"`
 	RsWeights     []int64             `json:"rs_weights" validate:"omitempty"`
 }
@@ -527,6 +527,7 @@ type ListBatchListenerResult struct {
 	Protocol     enumor.ProtocolType         `json:"protocol"`
 	Port         int64                       `json:"port"`
 	RsList       []*LoadBalancerTargetRsList `json:"rs_list"`
+	NewRsWeight  *int64                      `json:"new_rs_weight"`
 }
 
 // LoadBalancerTargetRsList 负载均衡下的RS列表
@@ -541,12 +542,12 @@ type LoadBalancerTargetRsList struct {
 
 // LoadBalancerUrlRuleResult 负载均衡四层/七层规则信息
 type LoadBalancerUrlRuleResult struct {
-	LbID              string                       `json:"lb_id"`
-	CloudClbID        string                       `json:"cloud_lb_id"`
-	LblID             string                       `json:"lbl_id"`
-	CloudLblID        string                       `json:"cloud_lbl_id"`
-	TargetGroupIDs    []string                     `json:"target_group_ids"`
-	TargetGrouRuleMap map[string]DomainUrlRuleInfo `json:"target_group_rule_map"`
+	LbID               string                       `json:"lb_id"`
+	CloudClbID         string                       `json:"cloud_lb_id"`
+	LblID              string                       `json:"lbl_id"`
+	CloudLblID         string                       `json:"cloud_lbl_id"`
+	TargetGroupIDs     []string                     `json:"target_group_ids"`
+	TargetGroupRuleMap map[string]DomainUrlRuleInfo `json:"target_group_rule_map"`
 }
 
 // DomainUrlRuleInfo 负载均衡四层/七层规则信息

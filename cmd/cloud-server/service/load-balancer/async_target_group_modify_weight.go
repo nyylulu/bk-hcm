@@ -200,7 +200,7 @@ func (svc *lbSvc) initFlowModifyTargetWeight(kt *kit.Kit, req *cslb.TCloudBatchM
 			ActionID:   actionID,
 			ActionName: enumor.ActionTargetGroupModifyWeight,
 			Params: &actionlb.OperateRsOption{
-				Vendor:                      enumor.TCloud,
+				Vendor:                      vendor,
 				TCloudBatchOperateTargetReq: *rsWeightParams,
 			},
 			Retry: &tableasync.Retry{

@@ -210,6 +210,7 @@ func (c *BatchDeleteListenerExecutor) checkListenerBindTargets(kt *kit.Kit, lbID
 			Filter: tools.ExpressionAnd(
 				tools.RuleEqual("account_id", c.accountID),
 				tools.RuleIn("target_group_id", tgPartIDs),
+				tools.RuleNotEqual("weight", 0),
 			),
 			Page: &core.BasePage{Count: true},
 		}

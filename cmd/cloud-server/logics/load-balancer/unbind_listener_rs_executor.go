@@ -45,10 +45,12 @@ import (
 )
 
 func newBatchListenerUnbindRsExecutor(cli *dataservice.Client, taskCli *taskserver.Client,
-	vendor enumor.Vendor, bkBizID int64, accountID string, regionIDs []string) *BatchListenerUnbindRsExecutor {
+	vendor enumor.Vendor, bkBizID int64, accountID string, regionIDs []string,
+	operationType OperationType) *BatchListenerUnbindRsExecutor {
 
 	return &BatchListenerUnbindRsExecutor{
 		taskType:            enumor.ListenerUnbindRsTaskType,
+		operationType:       enumor.TaskOperation(operationType),
 		taskCli:             taskCli,
 		basePreviewExecutor: newBasePreviewExecutor(cli, vendor, bkBizID, accountID, regionIDs),
 	}
@@ -58,11 +60,12 @@ func newBatchListenerUnbindRsExecutor(cli *dataservice.Client, taskCli *taskserv
 type BatchListenerUnbindRsExecutor struct {
 	*basePreviewExecutor
 
-	taskType    enumor.TaskType
-	taskCli     *taskserver.Client
-	params      *dataproto.ListListenerWithTargetsReq
-	details     []*dataproto.ListBatchListenerResult
-	taskDetails []*batchListenerUnbindRsTaskDetail
+	taskType      enumor.TaskType
+	operationType enumor.TaskOperation
+	taskCli       *taskserver.Client
+	params        *dataproto.ListListenerWithTargetsReq
+	details       []*dataproto.ListBatchListenerResult
+	taskDetails   []*batchListenerUnbindRsTaskDetail
 }
 
 // 用于记录 detail - 异步任务flow&task - 任务管理 之间的关系
@@ -237,7 +240,7 @@ func (c *BatchListenerUnbindRsExecutor) createTaskManagement(
 				AccountIDs: []string{c.accountID},
 				Resource:   enumor.TaskManagementResClb,
 				State:      enumor.TaskManagementRunning, // 默认:执行中
-				Operations: []enumor.TaskOperation{enumor.TaskUnbindListenerRs},
+				Operations: []enumor.TaskOperation{c.operationType},
 				Extension: &coretask.ManagementExt{
 					LblTargetsReq: c.params,
 				},
@@ -261,11 +264,11 @@ func (c *BatchListenerUnbindRsExecutor) createTaskManagement(
 // createTaskDetails 创建任务详情列表
 func (c *BatchListenerUnbindRsExecutor) createTaskDetails(kt *kit.Kit, taskID string) error {
 	taskDetailsCreateReq := &task.CreateDetailReq{}
-	for _, detail := range c.params.ListenerQueryList {
+	for _, detail := range c.details {
 		taskDetailsCreateReq.Items = append(taskDetailsCreateReq.Items, task.CreateDetailField{
 			BkBizID:          c.bkBizID,
 			TaskManagementID: taskID,
-			Operation:        enumor.TaskUnbindListenerRs,
+			Operation:        c.operationType,
 			State:            enumor.TaskDetailInit,
 			Param:            detail,
 		})
@@ -277,9 +280,9 @@ func (c *BatchListenerUnbindRsExecutor) createTaskDetails(kt *kit.Kit, taskID st
 		return err
 	}
 
-	if len(result.IDs) != len(c.params.ListenerQueryList) {
-		return fmt.Errorf("create task details failed, expect created[%d] task details, but got [%d]",
-			len(c.params.ListenerQueryList), len(result.IDs))
+	if len(result.IDs) != len(c.details) {
+		return fmt.Errorf("create task details failed, operation: %s, expect created[%d] task details, but got [%d]",
+			c.operationType, len(c.details), len(result.IDs))
 	}
 
 	for i := range result.IDs {
