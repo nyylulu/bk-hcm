@@ -141,6 +141,13 @@ func (cli *client) ListenerTargets(kt *kit.Kit, param *SyncBaseParams, opt *Sync
 		logs.Errorf("fail to list related res during targets syncing, err: %v, rid: %s", err, kt.Rid)
 		return err
 	}
+
+	if lb.VpcID == "" && !lb.Extension.SupportCrossRegionV1() {
+		// 对于不支持跨域1.0 且 没有本地VPC ID的情况，直接跳过。对于公网clb，腾讯云允许删除对应的vpc，导致本地无法找到对应的vpc
+		logs.Errorf("lb %s has no valid vpc, skip target syncing, rid: %s", lb.CloudID, kt.Rid)
+		return nil
+	}
+
 	// 一个目标组只处理一次
 	isTGHandled := genExists[string]()
 	compareWrapper := func(rel *corelb.BaseTargetListenerRuleRel, cloudTargets []*tclb.Backend) error {
@@ -321,6 +328,13 @@ func (cli *client) createLocalTargetGroupL7(kt *kit.Kit, opt *SyncListenerOption
 		CloudLblID:          dbRule.CloudLBLID,
 		BindingStatus:       enumor.SuccessBindingStatus,
 	}
+	if lb.Extension.SupportCrossRegionV1() {
+		tgCreate.TargetGroup.CloudVpcID = cvt.PtrToVal(lb.Extension.TargetCloudVpcID)
+		tgCreate.TargetGroup.Region = cvt.PtrToVal(lb.Extension.TargetRegion)
+	} else {
+		tgCreate.TargetGroup.CloudVpcID = lb.CloudVpcID
+		tgCreate.TargetGroup.Region = lb.Region
+	}
 
 	tgCreateReq := &dataproto.TCloudBatchCreateTgWithRelReq{
 		TargetGroups: []dataproto.CreateTargetGroupWithRel[corelb.TCloudTargetGroupExtension]{tgCreate},
@@ -399,6 +413,14 @@ func (cli *client) createLocalTargetGroupL4(kt *kit.Kit, opt *SyncListenerOption
 		LblID:               lbl.ID,
 		CloudLblID:          lbl.CloudID,
 		BindingStatus:       enumor.SuccessBindingStatus,
+	}
+
+	if lb.Extension.SupportCrossRegionV1() {
+		tgCreate.TargetGroup.CloudVpcID = cvt.PtrToVal(lb.Extension.TargetCloudVpcID)
+		tgCreate.TargetGroup.Region = cvt.PtrToVal(lb.Extension.TargetRegion)
+	} else {
+		tgCreate.TargetGroup.CloudVpcID = lb.CloudVpcID
+		tgCreate.TargetGroup.Region = lb.Region
 	}
 
 	tgCreateReq := &dataproto.TCloudBatchCreateTgWithRelReq{
