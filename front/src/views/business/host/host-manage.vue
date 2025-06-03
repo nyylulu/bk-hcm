@@ -8,6 +8,8 @@ import { useResourceStore } from '@/store';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { ResourceTypeEnum } from '@/common/resource-constant';
 import ResourceSearchSelect from '@/components/resource-search-select/index.vue';
+import { ValidateValuesFunc } from 'bkui-vue/lib/search-select/utils';
+import { parseIP } from '@/utils';
 
 const { useColumns, useTableListQuery, HostOperations } = businessHostManagePlugin;
 
@@ -29,6 +31,15 @@ const cloudAreas = ref([]);
 const { whereAmI, isResourcePage } = useWhereAmI();
 
 const { searchValue, filter } = useFilterHost(props);
+const validateValues: ValidateValuesFunc = async (item, values) => {
+  if (!item) return '请选择条件';
+  // IP值为单选，这里可以简单处理（即便是多IP搜索，粘贴上去也是一个值）
+  if (['private_ip', 'public_ip'].includes(item.id)) {
+    const { IPv4List, IPv6List } = parseIP(values[0].id);
+    return Boolean(IPv4List.length || IPv6List.length) ? true : 'IP格式有误';
+  }
+  return true;
+};
 
 const { selections, handleSelectionChange, resetSelections } = useTableSelection();
 
@@ -88,10 +99,7 @@ getCloudAreas();
 
 <template>
   <bk-loading :loading="isLoading" opacity="1">
-    <section
-      class="flex-row align-items-center"
-      :class="isResourcePage ? 'justify-content-end' : 'justify-content-between'"
-    >
+    <section class="toolbar" :class="isResourcePage ? 'justify-content-end' : 'justify-content-between'">
       <slot></slot>
       <HostOperations
         ref="hostOperationRef"
@@ -103,7 +111,11 @@ getCloudAreas();
       ></HostOperations>
 
       <div class="flex-row align-items-center justify-content-arround search-selector-container">
-        <resource-search-select v-model="searchValue" :resource-type="ResourceTypeEnum.CVM" value-behavior="need-key" />
+        <resource-search-select
+          v-model="searchValue"
+          :resource-type="ResourceTypeEnum.CVM"
+          :validate-values="validateValues"
+        />
         <slot name="recycleHistory"></slot>
       </div>
     </section>
@@ -150,6 +162,11 @@ getCloudAreas();
 }
 .search-selector-container {
   margin-left: auto;
+}
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 :deep(.operation-column) {
   height: 100%;

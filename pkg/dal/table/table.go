@@ -265,6 +265,8 @@ const (
 
 	// TaskDetailTable 任务详情表
 	TaskDetailTable = "task_detail"
+	// TenantTable 租户表
+	TenantTable = "tenant"
 	// TaskManagementTable 任务管理表
 	TaskManagementTable = "task_management"
 	//	GlobalConfigTable 全局配置表
@@ -417,6 +419,7 @@ var TableMap = map[Name]TableConfig{
 
 	TaskManagementTable: {},
 	TaskDetailTable:     {},
+	TenantTable:         {},
 
 	GlobalConfigTable: {},
 	OrgTopoTable:      {},
