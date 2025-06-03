@@ -36,29 +36,14 @@ import {
 import { jsonp } from '@/http';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
-const {
-  VERSION,
-  BK_COMPONENT_API_URL,
-  BK_HCM_DOMAIN,
-  ENABLE_CLOUD_SELECTION,
-  ENABLE_ACCOUNT_BILL,
-  ZIYAN_CLB_BIZ_WHITELIST,
-} = window.PROJECT_CONFIG;
+const { VERSION, BK_COMPONENT_API_URL, BK_HCM_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } =
+  window.PROJECT_CONFIG;
 
 export default defineComponent({
   name: 'Home',
   setup() {
     const NAV_WIDTH = 240;
     const NAV_TYPE = 'top-bottom';
-
-    let ziyanClbBizWhitelist;
-    try {
-      // 兼容 undefined, null, 'null', 'undefined', '', '[]'
-      ziyanClbBizWhitelist = ZIYAN_CLB_BIZ_WHITELIST ? JSON.parse(ZIYAN_CLB_BIZ_WHITELIST) ?? [] : [];
-    } catch (error) {
-      console.error('Failed to parse ZIYAN_CLB_BIZ_WHITELIST', error);
-      ziyanClbBizWhitelist = [];
-    }
 
     const { t } = useI18n();
     const route = useRoute();
@@ -67,7 +52,7 @@ export default defineComponent({
     const { fetchBusinessMap, fetchAuthedBusinessList } = useBusinessMapStore();
     const { fetchAllCloudAreas } = useCloudAreaStore();
     const { fetchRegions } = useRegionsStore();
-    const { whereAmI, getBizsId } = useWhereAmI();
+    const { whereAmI } = useWhereAmI();
     const { getAuthVerifyData, authVerifyData } = useVerify(); // 权限中心权限
 
     const openedKeys: string[] = [];
@@ -275,8 +260,7 @@ export default defineComponent({
                   activeKey={route.meta.activeKey as string}>
                   {menus.value
                     .map((menuItem) => {
-                      const { hasPageRoute, groupTitle, notMenu, checkAuth, checkZiyanBizWhitelist } =
-                        menuItem.meta || {};
+                      const { hasPageRoute, groupTitle, notMenu, checkAuth } = menuItem.meta || {};
 
                       // menuItem.children 是一个数组, 且没有配置 hasPageRoute(页面级子路由)
                       if (Array.isArray(menuItem.children) && !hasPageRoute) {
@@ -285,13 +269,12 @@ export default defineComponent({
                           .filter((child) => !child.meta?.notMenu)
                           // 构建子菜单项
                           .map((child) => {
-                            const { checkAuth, checkZiyanBizWhitelist } = child.meta || {};
+                            const { checkAuth } = child.meta || {};
 
                             if (
                               // 配置了 checkAuth 且不具备访问权限，隐藏菜单
-                              (checkAuth && !authVerifyData.value?.permissionAction[checkAuth as string]) ||
-                              // 配置了 checkZiyanBizWhitelist，且当前业务不在白名单中，隐藏菜单
-                              (checkZiyanBizWhitelist && !ziyanClbBizWhitelist.includes(getBizsId()))
+                              checkAuth &&
+                              !authVerifyData.value?.permissionAction[checkAuth as string]
                             ) {
                               return null;
                             }
@@ -335,9 +318,7 @@ export default defineComponent({
                         // notMenu = true，隐藏菜单
                         notMenu ||
                         // 配置了 checkAuth 且不具备访问权限，隐藏菜单
-                        (checkAuth && !authVerifyData.value?.permissionAction[checkAuth as string]) ||
-                        // 配置了 checkZiyanBizWhitelist，且当前业务不在白名单中，隐藏菜单
-                        (checkZiyanBizWhitelist && !ziyanClbBizWhitelist.includes(getBizsId()))
+                        (checkAuth && !authVerifyData.value?.permissionAction[checkAuth as string])
                       ) {
                         return null;
                       }
