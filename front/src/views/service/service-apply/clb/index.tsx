@@ -2,8 +2,6 @@ import { defineComponent, reactive } from 'vue';
 // import components
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import SubnetPreviewDialog from '../cvm/children/SubnetPreviewDialog';
-import LbSpecTypeSelectDialog from '@/views/business/load-balancer/components/LbSpecTypeDialog';
-import ZiyanLbSpecTypeSelectDialog from '@/views/business/load-balancer/components/LbSpecTypeDialog/ziyan.vue';
 // import custom hooks
 import useBindEip from './hooks/useBindEip';
 import useRenderForm from './hooks/useRenderForm';
@@ -70,15 +68,6 @@ export default defineComponent({
           handleClose={() => (isSubnetPreviewDialogShow.value = false)}
         />
         <BindEipDialog />
-        {/* 负载均衡规格类型选择弹框 */}
-        <LbSpecTypeSelectDialog v-model={formModel.sla_type} />
-        {/* 自研云负载均衡规格类型选择弹框 */}
-        <ZiyanLbSpecTypeSelectDialog
-          accountId={formModel.account_id}
-          region={formModel.region}
-          slaType={formModel.sla_type}
-          onConfirm={(slaType) => (formModel.sla_type = slaType)}
-        />
       </div>
     );
   },
