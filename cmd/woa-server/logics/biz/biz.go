@@ -22,8 +22,7 @@ import (
 	"hcm/pkg/iam/meta"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
-	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/slice"
 )
 
@@ -37,7 +36,7 @@ func (l *logics) ListAuthorizedBiz(kt *kit.Kit) ([]int64, error) {
 	}
 
 	// search cmdb biz with biz access permission.
-	cmdbReq := &cmdb.SearchBizReq{
+	cmdbReq := &cmdb.SearchBizParams{
 		Fields: []string{"bk_biz_id", "bk_biz_name"},
 	}
 	if !authResp.IsAny {
@@ -50,27 +49,27 @@ func (l *logics) ListAuthorizedBiz(kt *kit.Kit) ([]int64, error) {
 			ids = append(ids, intID)
 		}
 
-		cmdbReq.Filter = &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+		cmdbReq.BizPropertyFilter = &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorIn,
+						Operator: cmdb.OperatorIn,
 						Value:    ids,
 					},
 				},
 			},
 		}
 	}
-	resp, err := l.esbClient.Cmdb().SearchBiz(nil, nil, cmdbReq)
+	resp, err := l.cmdbCli.SearchBusiness(kt, cmdbReq)
 	if err != nil {
 		return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)
 	}
 
-	bkBizIDs := make([]int64, 0, len(resp.Data.Info))
-	for _, info := range resp.Data.Info {
-		bkBizIDs = append(bkBizIDs, info.BkBizId)
+	bkBizIDs := make([]int64, 0, len(resp.Info))
+	for _, info := range resp.Info {
+		bkBizIDs = append(bkBizIDs, info.BizID)
 	}
 
 	return bkBizIDs, nil
@@ -79,11 +78,11 @@ func (l *logics) ListAuthorizedBiz(kt *kit.Kit) ([]int64, error) {
 // GetBizOrgRel get biz org relation.
 func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, error) {
 	// search cmdb business belonging.
-	req := &cmdb.SearchBizBelongingParams{
+	req := &cmdb.SearchBizCompanyCmdbInfoParams{
 		BizIDs: []int64{bkBizID},
 	}
 
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, req)
+	resp, err := l.cmdbCli.SearchBizCompanyCmdbInfo(kt, req)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -97,10 +96,10 @@ func (l *logics) GetBizOrgRel(kt *kit.Kit, bkBizID int64) (*mtypes.BizOrgRel, er
 	// convert search biz belonging response to biz org relation response.
 	bizBelong := (*resp)[0]
 	rst := &mtypes.BizOrgRel{
-		BkBizID:         bizBelong.BizID,
+		BkBizID:         bizBelong.BkBizID,
 		BkBizName:       bizBelong.BizName,
-		OpProductID:     bizBelong.OpProductID,
-		OpProductName:   bizBelong.OpProductName,
+		OpProductID:     bizBelong.BkProductID,
+		OpProductName:   bizBelong.BkProductName,
 		PlanProductID:   bizBelong.PlanProductID,
 		PlanProductName: bizBelong.PlanProductName,
 		VirtualDeptID:   bizBelong.VirtualDeptID,
@@ -152,7 +151,7 @@ func (l *logics) GetBkBizMaintainer(kt *kit.Kit, bkBizIDs []int64) (map[int64][]
 			BizPropertyFilter: expression,
 			Fields:            []string{"bk_biz_id", "bk_biz_name", "bk_biz_maintainer"},
 		}
-		resp, err := l.esbClient.Cmdb().SearchBusiness(kt, params)
+		resp, err := l.cmdbCli.SearchBusiness(kt, params)
 		if err != nil {
 			logs.Errorf("call cmdb search business api failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)

@@ -24,13 +24,14 @@ import (
 	hclb "hcm/pkg/api/hc-service/load-balancer"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 )
 
 // PrepareReq 预处理请求参数
 func (a *ApplicationOfCreateZiyanLB) PrepareReq() error {
 	// 补充业务tag
-	tags, err := ziyanlogic.GenTagsForBizs(a.Cts.Kit, a.EsbClient.Cmdb(), a.req.BkBizID)
+	tags, err := ziyanlogic.GenTagsForBizs(a.Cts.Kit, cmdb.CmdbClient(), a.req.BkBizID)
 	if err != nil {
 		logs.Errorf("fail to generate tags for load balancer application: err: %v,req: %+v, rid: %s",
 			err, a.req, a.Cts.Kit.Rid)

@@ -22,7 +22,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 )
@@ -37,9 +37,9 @@ func (l *logics) GetBizsByOpProd(kt *kit.Kit, prodID int64) ([]mtypes.Biz, error
 
 	result := make([]mtypes.Biz, 0)
 	for _, bizBelong := range allBizBelonging {
-		if bizBelong.OpProductID == prodID {
+		if bizBelong.BkProductID == prodID {
 			result = append(result, mtypes.Biz{
-				BkBizID:   bizBelong.BizID,
+				BkBizID:   bizBelong.BkBizID,
 				BkBizName: bizBelong.BizName,
 			})
 		}
@@ -49,25 +49,25 @@ func (l *logics) GetBizsByOpProd(kt *kit.Kit, prodID int64) ([]mtypes.Biz, error
 }
 
 // getCmdbAllBizBelonging get cmdb all biz belonging.
-func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.SearchBizBelonging, error) {
-	result := make([]cmdb.SearchBizBelonging, 0)
+func (l *logics) getCmdbAllBizBelonging(kt *kit.Kit) ([]cmdb.CompanyCmdbInfo, error) {
+	result := make([]cmdb.CompanyCmdbInfo, 0)
 	batch := constant.SearchBizBelongingMaxLimit
 	start := 0
 	for {
-		req := &cmdb.SearchBizBelongingParams{
-			Page: cmdb.SearchBizBelongingPage{
-				Limit: batch,
-				Start: start,
+		req := &cmdb.SearchBizCompanyCmdbInfoParams{
+			Page: &cmdb.BasePage{
+				Limit: int64(batch),
+				Start: int64(start),
 			},
 		}
 
-		resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, req)
+		resp, err := l.cmdbCli.SearchBizCompanyCmdbInfo(kt, req)
 		if err != nil {
 			logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 			return nil, err
 		}
 
-		result = append(result, *resp...)
+		result = append(result, cvt.PtrToVal(resp)...)
 
 		if len(*resp) <= 0 {
 			break
@@ -90,9 +90,9 @@ func (l *logics) GetOpProducts(kt *kit.Kit) ([]mtypes.OpProduct, error) {
 	// use map to unique op product.
 	opProdMap := make(map[int64]mtypes.OpProduct)
 	for _, bizBelong := range allBizBelonging {
-		opProdMap[bizBelong.OpProductID] = mtypes.OpProduct{
-			OpProductID:   bizBelong.OpProductID,
-			OpProductName: bizBelong.OpProductName,
+		opProdMap[bizBelong.BkProductID] = mtypes.OpProduct{
+			OpProductID:   bizBelong.BkProductID,
+			OpProductName: bizBelong.BkProductName,
 		}
 	}
 

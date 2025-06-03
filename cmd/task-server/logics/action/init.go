@@ -40,7 +40,7 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty/alarmapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/sampwdapi"
 )
 

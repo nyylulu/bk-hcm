@@ -51,14 +51,14 @@ func (r *Recycler) createInitializeTask(task *table.RecallDetail) error {
 	}
 
 	// 根据IP获取主机信息
-	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(r.kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:recycler:ieod init, get host info by host id failed, ip: %s, err: %v", ip, err)
 		return err
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(r.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:recycler:ieod init, get host info by host id failed, ip: %s, bkHostID: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)

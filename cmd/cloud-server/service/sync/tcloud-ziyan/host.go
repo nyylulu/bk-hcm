@@ -29,8 +29,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // SyncHost 调用bkcc的接口，同步自研云的主机
@@ -94,7 +93,7 @@ func listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 		BizPropertyFilter: &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{iegRule}}},
 		Fields:            []string{"bk_biz_id"},
 	}
-	resp, err := esb.EsbClient().Cmdb().SearchBusiness(kt, params)
+	resp, err := cmdb.CmdbClient().SearchBusiness(kt, params)
 	if err != nil {
 		logs.Errorf("search business from cc failed, err: %v, param:%+v, rid: %s", err, params, kt.Rid)
 		return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)

@@ -41,7 +41,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty/alarmapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/sampwdapi"
 	"hcm/pkg/tools/retry"
 )
@@ -250,7 +250,7 @@ func validateCvmSvrStatus(kt *kit.Kit, cvms []corecvm.Cvm[corecvm.TCloudZiyanHos
 		params := &cmdb.ListBizHostParams{
 			BizID:  bizID,
 			Fields: []string{"bk_host_id", "bk_host_innerip", "srv_status", "operator", "bk_bak_operator"},
-			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
+			Page:   &cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
 			HostPropertyFilter: &cmdb.QueryFilter{
 				Rule: &cmdb.CombinedRule{
 					Condition: "AND",

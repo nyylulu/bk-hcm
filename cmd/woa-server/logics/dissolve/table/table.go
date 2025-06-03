@@ -30,9 +30,8 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // Table provides interface for operations of dissolve table.
@@ -45,20 +44,20 @@ type Table interface {
 type logics struct {
 	recycledHost   logicshost.RecycledHost
 	recycledModule logicsmodule.RecycledModule
-	esbCli         esb.Client
+	cmdbCli        cmdb.Client
 	esCli          *es.EsCli
 	originDate     string
 	blacklist      string
 }
 
 // New create resource dissolve table logics.
-func New(recycledModule logicsmodule.RecycledModule, recycledHost logicshost.RecycledHost, esbCli esb.Client,
+func New(recycledModule logicsmodule.RecycledModule, recycledHost logicshost.RecycledHost, cmdbCli cmdb.Client,
 	esCli *es.EsCli, originDate string, blacklist string) Table {
 
 	return &logics{
 		recycledHost:   recycledHost,
 		recycledModule: recycledModule,
-		esbCli:         esbCli,
+		cmdbCli:        cmdbCli,
 		esCli:          esCli,
 		originDate:     originDate,
 		blacklist:      blacklist,

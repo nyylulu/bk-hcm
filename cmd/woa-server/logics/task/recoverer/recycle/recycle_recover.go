@@ -32,8 +32,8 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 // recycleRecoverer 回收恢复服务

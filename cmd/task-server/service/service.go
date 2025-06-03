@@ -51,8 +51,9 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/alarmapi"
-	"hcm/pkg/thirdparty/esb"
+	apigwcc "hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/sampwdapi"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -102,15 +103,10 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 		}
 	}
 
-	// FIXME: esb -> apigw
-	// cmdbCfg := cc.TaskServer().Cmdb
-	// cmdbCli, err := apigwcc.NewClient(&cmdbCfg, metrics.Register(), nil)
-	// if err != nil {
-	// 	logs.Errorf("create cmdb client failed, err: %v", err)
-	// 	return nil, err
-	// }
-	cmdbCli := esb.EsbClient().Cmdb()
-
+	if err := apigwcc.InitCmdbClient(converter.ValToPtr(cc.TaskServer().Cmdb), metrics.Register()); err != nil {
+		logs.Errorf("init cmdb client failed, err: %v", err)
+		return nil, err
+	}
 	var alarmCli alarmapi.AlarmClientInterface
 	if cc.TaskServer().AlarmCli != nil {
 		alarmCli, err = alarmapi.NewAlarmClientInterface(*cc.TaskServer().AlarmCli, metrics.Register())
@@ -128,7 +124,7 @@ func NewService(sd serviced.ServiceDiscover, shutdownWaitTimeSec int) (*Service,
 		}
 	}
 
-	logicsaction.Init(apiClientSet, dao, obsDao, cmdbCli, alarmCli, samPwdCli)
+	logicsaction.Init(apiClientSet, dao, obsDao, apigwcc.CmdbClient(), alarmCli, samPwdCli)
 	async, err := createAndStartAsync(sd, dao, shutdownWaitTimeSec)
 	if err != nil {
 		return nil, err

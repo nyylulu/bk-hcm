@@ -50,7 +50,7 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据IP获取主机信息
-	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(r.kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:recycler:config check, get host info by ip failed, ip: %s, hostID: %d, "+
 			"err: %v", ip, task.HostID, err)
@@ -58,7 +58,7 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(r.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, taskHostID: %d, "+
 			"bkHostID: %d, err: %v", ip, task.HostID, hostInfo.BkHostID, err)
@@ -71,7 +71,7 @@ func (r *Recycler) createConfCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 创建配置检查任务-只有Linux任务
-	taskID, jobUrl, err := sops.CreateConfigCheckSopsTask(r.kt, r.sops, r.esbCli.Cmdb(), ip, bkBizID)
+	taskID, jobUrl, err := sops.CreateConfigCheckSopsTask(r.kt, r.sops, r.cmdbCli, ip, bkBizID)
 	if err != nil {
 		logs.Errorf("sops:process:check:config check, host %s failed to conf check, bkBizID: %d, err: %v",
 			ip, bkBizID, err)

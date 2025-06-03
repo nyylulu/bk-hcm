@@ -22,7 +22,8 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
 
 	"go.uber.org/ratelimit"
@@ -136,19 +137,12 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.Host, error) {
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(nil, nil, req)
+	resp, err := d.cc.ListHost(d.kt, req)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, err: %v", err)
 		return nil, err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, code: %d, msg: %s",
-			resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return converter.SliceToPtr(resp.Info), nil
 }
 
 // getHostBaseInfo get host base info in cc 3.0
@@ -189,40 +183,29 @@ func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.Host, erro
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(nil, nil, req)
+	resp, err := d.cc.ListHost(d.kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return converter.SliceToPtr(resp.Info), nil
 }
 
 // getHostTopoInfo get host topo info in cc 3.0
-func (d *Detector) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostBizRel, error) {
-	req := &cmdb.HostBizRelReq{
-		BkHostId: hostIds,
+func (d *Detector) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostTopoRelation, error) {
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
 	}
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.FindHostBizRelation(nil, nil, req)
+	resp, err := d.cc.FindHostBizRelations(d.kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data, nil
+	return converter.SliceToPtr(converter.PtrToVal(resp)), nil
 }
 
 // getModuleInfo get module info in cc 3.0

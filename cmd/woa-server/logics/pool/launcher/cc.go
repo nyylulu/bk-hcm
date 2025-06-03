@@ -13,11 +13,9 @@
 package launcher
 
 import (
-	"fmt"
-
 	types "hcm/cmd/woa-server/types/pool"
-	"hcm/pkg/logs"
-	ccapi "hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/api/core"
+	ccapi "hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // transferHost2Pool transfer hosts to CR pool module
@@ -47,14 +45,11 @@ func (l *Launcher) transferHost(hostIds []int64, srcBizId, destBizId, destModule
 		transferReq.To.ToModuleID = destModuleId
 	}
 
-	resp, err := l.esbCli.Cmdb().TransferHost(nil, nil, transferReq)
+	kt := core.NewBackendKit()
+	err := l.cmdbCli.TransferHost(kt, transferReq)
 	if err != nil {
 		return err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("scheduler:cvm:launcher:transferHost:failed, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return fmt.Errorf("failed to transfer host to target business, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-	}
 	return nil
 }

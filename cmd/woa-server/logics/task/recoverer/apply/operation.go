@@ -115,7 +115,7 @@ func (r *applyRecoverer) getSuborders(kt *kit.Kit, orderId uint64) ([]*types.App
 // getHostBizID 利用ip获得业务ID
 func (r *applyRecoverer) getHostBizID(kt *kit.Kit, ip string) (int64, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt.Ctx, kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt, ip, 0)
 	if err != nil {
 		logs.Errorf("recover: deliver status handling, get host info by host ip failed, err: %v, ip: %s, rid: %s", err,
 			ip, kt.Rid)
@@ -123,7 +123,7 @@ func (r *applyRecoverer) getHostBizID(kt *kit.Kit, ip string) (int64, error) {
 	}
 	// 根据BkHostID去cmdb获取bkBizID
 	hostIds := []int64{hostInfo.BkHostID}
-	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt.Ctx, kt.Header(), hostIds)
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt, hostIds)
 	if err != nil {
 		logs.Errorf("recover: get host info by host id failed, err: %v, ip: %s, BkHostID: %d, rid: %s", err, ip,
 			hostInfo.BkHostID, kt.Rid)
@@ -196,14 +196,14 @@ func (r *applyRecoverer) recoverStartStep(kt *kit.Kit, suborderId string, stepNa
 // getBizID 根据IP获取所属业务ID
 func (r *applyRecoverer) getBizID(kt *kit.Kit, ip string) (int64, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt.Ctx, kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt, ip, 0)
 	if err != nil {
 		logs.Errorf("recover: deliver status handling, get host info by host ip failed, ip: %s, err: %v, rid: %s", ip,
 			err, kt.Rid)
 		return 0, err
 	}
 	// 根据BkHostID去cmdb获取bkBizID
-	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt.Ctx, kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("recover: deliver status handling, get host info by host id failed, ip: %s, BkHostID: %d, "+
 			"err: %v, rid: %s", ip, hostInfo.BkHostID, err, kt.Rid)

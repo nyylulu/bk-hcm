@@ -29,7 +29,6 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
 )
 
 // InitService initial the plan service.
@@ -37,7 +36,6 @@ func InitService(c *capability.Capability) {
 	s := &service{
 		dao:            c.Dao,
 		planController: c.PlanController,
-		esbClient:      c.EsbClient,
 		authorizer:     c.Authorizer,
 		bizLogics:      c.BizLogic,
 		client:         c.Client,
@@ -51,7 +49,6 @@ func InitService(c *capability.Capability) {
 
 type service struct {
 	dao            dao.Set
-	esbClient      esb.Client
 	planController *plan.Controller
 	authorizer     auth.Authorizer
 	bizLogics      biz.Logics

@@ -36,7 +36,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -284,18 +284,18 @@ func (l *logics) getRollingMatchCpuCore(kt *kit.Kit, devices []*types.MatchDevic
 		},
 	}
 	for {
-		resp, err := l.esbClient.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
+		resp, err := l.cmdbClient.ListHost(kt, req)
 		if err != nil {
 			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, *req, kt.Rid)
 			return nil, err
 		}
-		for _, host := range resp.Data.Info {
+		for _, host := range resp.Info {
 			if _, ok := deviceTypeCountMap[host.SvrDeviceClassName]; !ok {
 				deviceTypeCountMap[host.SvrDeviceClassName] = 0
 			}
 			deviceTypeCountMap[host.SvrDeviceClassName]++
 		}
-		if len(resp.Data.Info) < pkg.BKMaxInstanceLimit {
+		if len(resp.Info) < pkg.BKMaxInstanceLimit {
 			break
 		}
 		req.Page.Start += pkg.BKMaxInstanceLimit

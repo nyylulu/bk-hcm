@@ -38,6 +38,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/assert"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
@@ -880,7 +881,7 @@ func (cli *client) fillBkBizId(kt *kit.Kit, lbFromCloud []typeslb.TCloudClb) err
 		}
 		bs2NameIds = append(bs2NameIds, clb.Bs2NameID)
 	}
-	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cli.esb.Cmdb(), bs2NameIds)
+	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cmdb.CmdbClient(), bs2NameIds)
 	if err != nil {
 		logs.Errorf("fail to get bkBizId by bs2NameIds for clb, err: %v, rid: %s", err, kt.Rid)
 		return err

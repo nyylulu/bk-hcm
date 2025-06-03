@@ -30,8 +30,8 @@ import (
 	"hcm/pkg/cc"
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	esCli "hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/utils/wait"
 )
 
@@ -49,7 +49,7 @@ type logics struct {
 }
 
 // New create a logics manager
-func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, thirdCli *thirdparty.Client,
+func New(dao dao.Set, cmdbCli cmdb.Client, esCli *esCli.EsCli, thirdCli *thirdparty.Client,
 	conf cc.WoaServerSetting) Logics {
 
 	recycledModule := module.New(dao)
@@ -68,7 +68,7 @@ func New(dao dao.Set, esbCli esb.Client, esCli *esCli.EsCli, thirdCli *thirdpart
 	return &logics{
 		recycledModule: recycledModule,
 		recycledHost:   recycledHost,
-		table:          dissolvetable.New(recycledModule, recycledHost, esbCli, esCli, originDate, blacklist),
+		table:          dissolvetable.New(recycledModule, recycledHost, cmdbCli, esCli, originDate, blacklist),
 	}
 }
 

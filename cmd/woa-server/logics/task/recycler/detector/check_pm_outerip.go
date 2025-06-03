@@ -29,7 +29,7 @@ import (
 	"hcm/cmd/woa-server/logics/task/sops"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/ngateapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/retry"
@@ -189,7 +189,7 @@ func (d *Detector) recycleNgateIP(step *table.DetectStep, hostInfo *cmdb.Host) (
 // recycleSopsOuterIP 回收外网IP
 func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := d.cc.GetHostInfoByIP(d.kt.Ctx, d.kt.Header(), ip, 0)
+	hostInfo, err := d.cc.GetHostInfoByIP(d.kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:recycle outer ip, get host info by ip failed, ip: %s, err: %v", ip, err)
 		return "", err
@@ -203,7 +203,7 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:recycle outer ip, get host biz id failed, ip: %s, bkHostId: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)

@@ -24,7 +24,7 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/utils/wait"
 
@@ -33,17 +33,17 @@ import (
 
 // Launcher dispatch and deal launch task
 type Launcher struct {
-	esbCli esb.Client
-	queue  workqueue.RateLimitingInterface
-	ctx    context.Context
+	cmdbCli cmdb.Client
+	queue   workqueue.RateLimitingInterface
+	ctx     context.Context
 }
 
 // New create a dispatcher
-func New(ctx context.Context, esbCli esb.Client) *Launcher {
+func New(ctx context.Context, cmdbCli cmdb.Client) *Launcher {
 	dispatcher := &Launcher{
-		esbCli: esbCli,
-		queue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "launcher"),
-		ctx:    ctx,
+		cmdbCli: cmdbCli,
+		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "launcher"),
+		ctx:     ctx,
 	}
 
 	// TODO: get worker num from config

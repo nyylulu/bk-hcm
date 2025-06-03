@@ -36,7 +36,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
@@ -119,7 +119,7 @@ func (l *logics) GetBkBizName(kt *kit.Kit, bkBizIDs []int64) (map[int64]string, 
 			BizPropertyFilter: expression,
 			Fields:            []string{"bk_biz_id", "bk_biz_name"},
 		}
-		resp, err := l.esbClient.Cmdb().SearchBusiness(kt, params)
+		resp, err := l.cmdbClient.SearchBusiness(kt, params)
 		if err != nil {
 			logs.Errorf("call cmdb search business api failed, err: %v, rid: %s", err, kt.Rid)
 			return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)

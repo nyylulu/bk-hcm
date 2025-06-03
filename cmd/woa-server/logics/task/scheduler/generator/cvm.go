@@ -29,8 +29,8 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/utils"
 )
@@ -489,30 +489,30 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 		return nil, err
 	}
 
-	req.BkProductID = productInfo.OpProductID
-	req.BkProductName = productInfo.OpProductName
+	req.BkProductID = productInfo.BkProductID
+	req.BkProductName = productInfo.BkProductName
 	req.VirtualDeptID = productInfo.VirtualDeptID
 	req.VirtualDeptName = productInfo.VirtualDeptName
 
 	return req, nil
 }
 
-func (g *Generator) getProductInfo(kt *kit.Kit, order *types.ApplyOrder) (cmdb.SearchBizBelonging, error) {
+func (g *Generator) getProductInfo(kt *kit.Kit, order *types.ApplyOrder) (cmdb.CompanyCmdbInfo, error) {
 	if order.RequireType.IsUseManageBizPlan() {
-		return cmdb.SearchBizBelonging{
-			OpProductID: cvmapi.CvmLaunchProjectId, OpProductName: cvmapi.CvmLaunchProductName,
+		return cmdb.CompanyCmdbInfo{
+			BkProductID: cvmapi.CvmLaunchProjectId, BkProductName: cvmapi.CvmLaunchProductName,
 			VirtualDeptID: cvmapi.CvmDeptId, VirtualDeptName: cvmapi.CvmLaunchDeptName}, nil
 	}
 
-	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
-	resp, err := g.cc.SearchBizBelonging(kt, param)
+	param := &cmdb.SearchBizCompanyCmdbInfoParams{BizIDs: []int64{order.BkBizId}}
+	resp, err := g.cc.SearchBizCompanyCmdbInfo(kt, param)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
-		return cmdb.SearchBizBelonging{}, err
+		return cmdb.CompanyCmdbInfo{}, err
 	}
 	if resp == nil || len(*resp) != 1 {
 		logs.Errorf("search biz belonging, but resp is empty or len resp != 1, rid: %s", kt.Rid)
-		return cmdb.SearchBizBelonging{}, errors.New("search biz belonging, but resp is empty or len resp != 1")
+		return cmdb.CompanyCmdbInfo{}, errors.New("search biz belonging, but resp is empty or len resp != 1")
 	}
 
 	return (*resp)[0], nil

@@ -18,7 +18,7 @@ import (
 
 	"hcm/pkg/cc"
 	"hcm/pkg/thirdparty"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // Logics provides management interface for operations of resource pool
@@ -31,9 +31,9 @@ type logics struct {
 }
 
 // New create a logics manager
-func New(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, esbCli esb.Client) Logics {
+func New(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) Logics {
 	return &logics{
-		pool: NewPoolIf(ctx, cliConf, thirdCli, esbCli),
+		pool: NewPoolIf(ctx, cliConf, thirdCli, cmdbCli),
 	}
 
 }

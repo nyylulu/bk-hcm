@@ -162,7 +162,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 
 	if cc.CloudServer().OrgTopoConfig.Enable {
 		interval := time.Duration(cc.CloudServer().OrgTopoConfig.SyncIntervalMin) * time.Minute
-		go orgtopo.OrgTopoTiming(apiClientSet, sd, interval)
+		go orgtopo.OrgTopoTiming(svr.client, svr.userMgrCli, sd, interval)
 	}
 
 	return svr, nil
@@ -191,7 +191,6 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service
 	if err != nil {
 		return nil, nil, err
 	}
-
 	// 加解密器
 	cipher, err := newCipherFromConfig(cc.CloudServer().Crypto)
 	if err != nil {
@@ -211,43 +210,8 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service
 		logs.Errorf("failed to create bkbase client, err: %v", err)
 		return nil, nil, err
 	}
-
-	finOpsCfg := cc.CloudServer().FinOps
-	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	cmsiCfg := cc.CloudServer().Cmsi
-	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
-	if err != nil {
-		logs.Errorf("failed to create cmsi client, err: %v", err)
-		return nil, nil, err
-	}
-
 	cmdbCfg := cc.CloudServer().Cmdb
-	cmdbCli, err := cmdb.NewClient(&cmdbCfg, metrics.Register())
-	if err != nil {
-		return nil, nil, err
-	}
-
-	userMgrCfg := cc.CloudServer().UserMgr
-	userMgrCli, err := usermgr.NewClient(&userMgrCfg, metrics.Register())
-	if err != nil {
-		logs.Errorf("failed to create usermgr client, err: %v", err)
-		return nil, nil, err
-	}
-	moaCfg := cc.CloudServer().MOA
-	moaCli, err := pkgmoa.NewClient(&moaCfg, metrics.Register())
-	if err != nil {
-		logs.Errorf("failed to create moa client, err: %v", err)
-		return nil, nil, err
-	}
-	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
-	if err != nil {
-		return nil, nil, err
-	}
-	etcdClient, err := etcd3.New(etcdCfg)
+	err = cmdb.InitCmdbClient(&cmdbCfg, metrics.Register())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -259,16 +223,84 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service
 		cipher:     cipher,
 		itsmCli:    itsmCli,
 		bkBaseCli:  bkbaseCli,
-		finOps:     finOpsCli,
-		cmsiCli:    cmsiCli,
-		cmdbCli:    cmdbCli,
-
-		userMgrCli: userMgrCli,
-		moaCli:     moaCli,
-		etcdCli:    etcdClient,
+		cmdbCli:    cmdb.CmdbClient(),
 	}
-
+	if err = svr.withEtcdClient(); err != nil {
+		return nil, nil, err
+	}
+	if err = svr.withMoaClient(); err != nil {
+		return nil, nil, err
+	}
+	if err = svr.withUserMgrCli(); err != nil {
+		return nil, nil, err
+	}
+	if err = svr.withCmsiClient(); err != nil {
+		return nil, nil, err
+	}
+	if err = svr.withFinOpsClient(); err != nil {
+		return nil, nil, err
+	}
 	return apiClientSet, svr, nil
+}
+
+func (s *Service) withFinOpsClient() error {
+	finOpsCfg := cc.CloudServer().FinOps
+	finOpsCli, err := pkgfinops.NewClient(&finOpsCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create finops client, err: %v", err)
+		return err
+	}
+	s.finOps = finOpsCli
+	return nil
+}
+
+func (s *Service) withCmsiClient() error {
+	cmsiCfg := cc.CloudServer().Cmsi
+	cmsiCli, err := cmsi.NewClient(&cmsiCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create cmsi client, err: %v", err)
+		return err
+	}
+	s.cmsiCli = cmsiCli
+	return nil
+}
+
+func (s *Service) withUserMgrCli() error {
+	userMgrCfg := cc.CloudServer().UserMgr
+	userMgrCli, err := usermgr.NewClient(&userMgrCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create usermgr client, err: %v", err)
+		return err
+	}
+	s.userMgrCli = userMgrCli
+	return nil
+}
+
+func (s *Service) withMoaClient() error {
+	moaCfg := cc.CloudServer().MOA
+	moaCli, err := pkgmoa.NewClient(&moaCfg, metrics.Register())
+	if err != nil {
+		logs.Errorf("failed to create moa client, err: %v", err)
+		return err
+	}
+	s.moaCli = moaCli
+	return nil
+
+}
+
+func (s *Service) withEtcdClient() error {
+	etcdCfg, err := cc.CloudServer().Service.Etcd.ToConfig()
+	if err != nil {
+		logs.Errorf("failed to get etcd config, err: %v", err)
+		return err
+	}
+	etcdClient, err := etcd3.New(etcdCfg)
+	if err != nil {
+		logs.Errorf("failed to create etcd client, err: %v", err)
+		return err
+	}
+	s.etcdCli = etcdClient
+	return nil
 }
 
 // newCipherFromConfig 根据配置文件里的加密配置，选择配置的算法并生成对应的加解密器

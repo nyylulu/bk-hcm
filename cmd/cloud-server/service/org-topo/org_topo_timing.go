@@ -27,13 +27,15 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/usermgr"
 )
 
 // OrgTopoTiming timing sync org topo.
-func OrgTopoTiming(c *client.ClientSet, state serviced.State, intervalMin time.Duration) {
+func OrgTopoTiming(c *client.ClientSet, userMgrCli usermgr.Client, state serviced.State, intervalMin time.Duration) {
 	r := &orgTopoSvc{
-		client: c,
-		state:  state,
+		client:     c,
+		state:      state,
+		userMgrCli: userMgrCli,
 	}
 
 	go r.orgTopoTiming(intervalMin)

@@ -28,13 +28,14 @@ import (
 	"hcm/cmd/woa-server/logics/pool/recycler"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/util"
@@ -83,21 +84,21 @@ type PoolIf interface {
 }
 
 // NewPoolIf creates a pool interface
-func NewPoolIf(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, esb esb.Client) PoolIf {
-	recycle := recycler.New(ctx, cliConf, thirdCli, esb)
-	recall := recaller.New(ctx, esb)
+func NewPoolIf(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) PoolIf {
+	recycle := recycler.New(ctx, cliConf, thirdCli, cmdbCli)
+	recall := recaller.New(ctx, cmdbCli)
 	recall.SetRecycler(recycle)
 
 	return &pool{
-		esbCli:   esb,
-		launcher: launcher.New(ctx, esb),
+		cmdbCli:  cmdbCli,
+		launcher: launcher.New(ctx, cmdbCli),
 		recaller: recall,
 		recycler: recycle,
 	}
 }
 
 type pool struct {
-	esbCli   esb.Client
+	cmdbCli  cmdb.Client
 	launcher *launcher.Launcher
 	recaller *recaller.Recaller
 	recycler *recycler.Recycler
@@ -251,18 +252,14 @@ func (p *pool) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb
 		},
 	}
 
-	resp, err := p.esbCli.Cmdb().ListHost(nil, nil, req)
+	kt := core.NewBackendKit()
+	resp, err := p.cmdbCli.ListHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return converter.SliceToPtr(resp.Info), nil
 }
 
 func (p *pool) getGradeCfg() (map[string]*table.GradeCfg, error) {
@@ -360,35 +357,31 @@ func (p *pool) startLaunchTask(task *table.LaunchTask) {
 
 // HostBizRelReq
 // getHostTopoInfo get host topo info in cc 3.0
-func (p *pool) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostBizRel, error) {
-	req := &cmdb.HostBizRelReq{
-		BkHostId: hostIds,
+func (p *pool) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostTopoRelation, error) {
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
 	}
 
-	resp, err := p.esbCli.Cmdb().FindHostBizRelation(nil, nil, req)
+	kt := core.NewBackendKit()
+	resp, err := p.cmdbCli.FindHostBizRelations(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data, nil
+	return converter.SliceToPtr(converter.PtrToVal(resp)), nil
 }
 
 // getBizInfo get business info in cc 3.0
-func (p *pool) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
-	req := &cmdb.SearchBizReq{
-		Filter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+func (p *pool) getBizInfo(bizIds []int64) ([]*cmdb.Biz, error) {
+	req := &cmdb.SearchBizParams{
+		BizPropertyFilter: &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorIn,
+						Operator: cmdb.OperatorIn,
 						Value:    bizIds,
 					},
 				},
@@ -401,18 +394,14 @@ func (p *pool) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
 		},
 	}
 
-	resp, err := p.esbCli.Cmdb().SearchBiz(nil, nil, req)
+	kt := core.NewBackendKit()
+	resp, err := p.cmdbCli.SearchBusiness(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc business info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc business info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc business info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return converter.SliceToPtr(resp.Info), nil
 }
 
 // getModuleInfo get module info in cc 3.0
@@ -431,7 +420,7 @@ func (p *pool) getModuleInfo(kt *kit.Kit, bizId int64, moduleIds []int64) ([]*cm
 		},
 	}
 
-	resp, err := p.esbCli.Cmdb().SearchModule(kt, req)
+	resp, err := p.cmdbCli.SearchModule(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -749,7 +738,7 @@ func (p *pool) DrawHost(kt *kit.Kit, param *types.DrawHostReq) error {
 	// transfer host to destination business
 	for _, hostID := range param.HostIDs {
 		// transfer hosts from 资源运营服务-CR资源池 to destination business
-		if err := p.transferHost(hostID, types.BizIDPool, param.ToBizID, 0); err != nil {
+		if err := p.transferHost(kt, hostID, types.BizIDPool, param.ToBizID, 0); err != nil {
 			logs.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
@@ -801,7 +790,7 @@ func (p *pool) ReturnHost(kt *kit.Kit, param *types.ReturnHostReq) error {
 
 	for _, hostID := range param.HostIDs {
 		// transfer hosts to 资源运营服务-CR资源下架中
-		if err := p.transferHost(hostID, param.FromBizID, types.BizIDPool, types.ModuleIDPoolRecalling); err != nil {
+		if err := p.transferHost(kt, hostID, param.FromBizID, types.BizIDPool, types.ModuleIDPoolRecalling); err != nil {
 			logs.Errorf("failed to transfer host %d, err: %v, rid: %s", hostID, err, kt.Rid)
 			return err
 		}
@@ -889,7 +878,7 @@ func (p *pool) checkHostStatus(hosts []*table.PoolHost, hostIDs []int64) error {
 }
 
 // transferHost transfer host to target business in cc 3.0
-func (p *pool) transferHost(hostID, fromBizID, toBizID, toModuleId int64) error {
+func (p *pool) transferHost(kt *kit.Kit, hostID, fromBizID, toBizID, toModuleId int64) error {
 	transferReq := &cmdb.TransferHostReq{
 		From: cmdb.TransferHostSrcInfo{
 			FromBizID: fromBizID,
@@ -906,14 +895,9 @@ func (p *pool) transferHost(hostID, fromBizID, toBizID, toModuleId int64) error 
 		transferReq.To.ToModuleID = toModuleId
 	}
 
-	resp, err := p.esbCli.Cmdb().TransferHost(nil, nil, transferReq)
+	err := p.cmdbCli.TransferHost(kt, transferReq)
 	if err != nil {
 		return err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to transfer host from biz %d to %d, host id: %d, code: %d, msg: %s", fromBizID,
-			toBizID, hostID, resp.Code, resp.ErrMsg)
 	}
 
 	return nil
@@ -1162,7 +1146,7 @@ func (p *pool) GetLaunchMatchDevice(kt *kit.Kit, param *types.GetLaunchMatchDevi
 		return nil, err
 	}
 
-	resp, err := p.esbCli.Cmdb().ListBizHost(kt, req)
+	resp, err := p.cmdbCli.ListBizHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -1231,7 +1215,7 @@ func (p *pool) createListMatchDeviceReq(param *types.GetLaunchMatchDeviceReq) (*
 			"raid_name",
 			"svr_input_time",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},

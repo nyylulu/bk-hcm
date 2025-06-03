@@ -53,10 +53,9 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/language"
 	"hcm/pkg/tools/metadata"
@@ -179,7 +178,7 @@ type scheduler struct {
 
 // New creates a scheduler
 func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchannel.Logics, thirdCli *thirdparty.Client,
-	esbCli esb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics,
+	cmdbCli cmdb.Client, informerIf informer.Interface, clientConf cc.ClientConfig, planLogics plan.Logics,
 	bizLogic biz.Logics, configLogics config.Logics) (*scheduler, error) {
 
 	// new recommend module
@@ -189,13 +188,13 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 	}
 
 	// new matcher
-	match, err := matcher.New(ctx, rsLogics, thirdCli, esbCli, clientConf, informerIf, planLogics, configLogics)
+	match, err := matcher.New(ctx, rsLogics, thirdCli, cmdbCli, clientConf, informerIf, planLogics, configLogics)
 	if err != nil {
 		return nil, err
 	}
 
 	// new generator
-	generate, err := generator.New(ctx, rsLogics, thirdCli, esbCli, clientConf, configLogics)
+	generate, err := generator.New(ctx, rsLogics, thirdCli, cmdbCli, clientConf, configLogics)
 	if err != nil {
 		return nil, err
 	}
@@ -211,7 +210,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, gcLogics greenchann
 		lang:         language.NewFromCtx(language.EmptyLanguageSetting),
 		itsm:         thirdCli.ITSM,
 		crpCli:       thirdCli.CVM,
-		cc:           esbCli.Cmdb(),
+		cc:           cmdbCli,
 		dispatcher:   dispatch,
 		generator:    generate,
 		matcher:      match,
@@ -1627,7 +1626,7 @@ func (s *scheduler) GetMatchDevice(kit *kit.Kit, param *types.GetMatchDeviceReq)
 			"billing_start_time",
 			"billing_expire_time",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},
@@ -2491,14 +2490,13 @@ func (s *scheduler) getInheritedHostFromCC(kt *kit.Kit, param *getHostFromCCReq)
 
 	fields := []string{"bk_svr_device_cls_name", "instance_charge_type", "billing_start_time", "billing_expire_time",
 		"bk_cloud_inst_id", "dept_name"}
-	page := cmdb.BasePage{Start: 0, Limit: 1}
 
 	if param.BizID != 0 {
 		req := &cmdb.ListBizHostParams{
 			BizID:              param.BizID,
 			HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 			Fields:             fields,
-			Page:               page,
+			Page:               &cmdb.BasePage{Start: 0, Limit: 1},
 		}
 		resp, err := s.cc.ListBizHost(kt, req)
 		if err != nil {
@@ -2517,20 +2515,20 @@ func (s *scheduler) getInheritedHostFromCC(kt *kit.Kit, param *getHostFromCCReq)
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{Rule: rule},
 		Fields:             fields,
-		Page:               page,
+		Page:               cmdb.BasePage{Start: 0, Limit: 1},
 	}
-	resp, err := s.cc.ListHost(kt.Ctx, kt.Header(), req)
+	resp, err := s.cc.ListHost(kt, req)
 	if err != nil {
 		logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
-	if len(resp.Data.Info) != 1 {
-		logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(resp.Data.Info), param, kt.Rid)
+	if len(resp.Info) != 1 {
+		logs.Errorf("host is invalid, count: %d, param: %+v, rid: %s", len(resp.Info), param, kt.Rid)
 		return nil, errors.New("该主机在配置平台(bkcc)不存在")
 	}
 
-	return resp.Data.Info[0], nil
+	return cvt.ValToPtr(resp.Info[0]), nil
 }
 
 func (s *scheduler) checkInheritedHost(kt *kit.Kit, param *types.CheckRollingServerHostReq, host *cmdb.Host) error {

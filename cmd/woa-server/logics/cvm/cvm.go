@@ -31,8 +31,8 @@ import (
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/utils"
 )
@@ -581,8 +581,8 @@ func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, str
 		return cvmapi.CvmLaunchProjectId, cvmapi.CvmLaunchProductName, nil
 	}
 
-	param := &cmdb.SearchBizBelongingParams{BizIDs: []int64{order.BkBizId}}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, param)
+	param := &cmdb.SearchBizCompanyCmdbInfoParams{BizIDs: []int64{order.BkBizId}}
+	resp, err := l.cmdbCli.SearchBizCompanyCmdbInfo(kt, param)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, param: %+v, rid: %s", err, *param, kt.Rid)
 		return 0, "", err
@@ -593,7 +593,7 @@ func (l *logics) getProductMsg(kt *kit.Kit, order *types.ApplyOrder) (int64, str
 	}
 
 	bizBelong := (*resp)[0]
-	return bizBelong.OpProductID, bizBelong.OpProductName, nil
+	return bizBelong.BkProductID, bizBelong.BkProductName, nil
 }
 
 func (l *logics) getCvmSubnet(kt *kit.Kit, region, zone, vpc string) (string, uint, error) {

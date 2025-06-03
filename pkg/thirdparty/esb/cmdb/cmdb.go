@@ -47,10 +47,6 @@ type Client interface {
 	GetBizBriefCacheTopo(kt *kit.Kit, params *GetBizBriefCacheTopoParams) (*GetBizBriefCacheTopoResult, error)
 	FindHostTopoRelation(kt *kit.Kit, params *FindHostTopoRelationParams) (*HostTopoRelationResult, error)
 	SearchModule(kt *kit.Kit, params *SearchModuleParams) (*ModuleInfoResult, error)
-	// SearchBizCompanyCmdbInfo 返回cc业务在公司cmdb的信息
-	SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmdbInfoParams) (*[]CompanyCmdbInfo, error)
-	// SearchBizBelonging search cmdb business belonging.
-	SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*[]SearchBizBelonging, error)
 	ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*WatchEventResult, error)
 	FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error)
 	ListHost(ctx context.Context, header http.Header, req *ListHostReq) (*ListHostResp, error)
@@ -85,6 +81,10 @@ type Client interface {
 	GetHostInfoByHostID(ctx context.Context, header http.Header, bkHostID int64) (*Host, error)
 	// UpdateCvmOSAndSvrStatus update host info in CMDB, used for cvm reset
 	UpdateCvmOSAndSvrStatus(kt *kit.Kit, req *UpdateCvmOSReq) error
+	// SearchBizCompanyCmdbInfo 返回cc业务在公司cmdb的信息
+	SearchBizCompanyCmdbInfo(kt *kit.Kit, params *SearchBizCompanyCmdbInfoParams) (*[]CompanyCmdbInfo, error)
+	// SearchBizBelonging search cmdb business belonging.
+	SearchBizBelonging(kt *kit.Kit, params *SearchBizBelongingParams) (*[]SearchBizBelonging, error)
 }
 
 // NewClient initialize a new cmdb client

@@ -21,6 +21,7 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
 )
@@ -54,7 +55,7 @@ func (t *Transit) TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHo
 
 	// 转移到资源池
 	if len(resPoolReturnHosts) > 0 {
-		ev = t.dealTransitTask2ResourcePool(order, resPoolReturnHosts)
+		ev = t.dealTransitTask2ResourcePool(kt, order, resPoolReturnHosts)
 		logs.Infof("recycler:logics:cvm:transitCvm:resourcePool:end, transit to resource pool, subOrderId: %s, "+
 			"resPoolReturnHosts: %+v, event: %+v, rid: %s", order.SuborderID, cvt.PtrToSlice(resPoolReturnHosts),
 			cvt.PtrToVal(ev), kt.Rid)
@@ -64,11 +65,11 @@ func (t *Transit) TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHo
 		return ev
 	}
 
-	return t.dealTransitTask2TransitCvm(order, crpReturnHosts)
+	return t.dealTransitTask2TransitCvm(kt, order, crpReturnHosts)
 }
 
 // dealTransitTask2Transit deal hosts transit task and transfer host to CR transit module for cvm
-func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+func (t *Transit) dealTransitTask2TransitCvm(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	hostIds := make([]int64, 0)
 	assetIds := make([]string, 0)
 	ips := make([]string, 0)
@@ -89,7 +90,7 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	}
 
 	// get biz's module "待回收"
-	moduleID, err := t.cc.GetBizRecycleModuleID(nil, nil, order.BizID)
+	moduleID, err := t.cc.GetBizInternalModuleID(kt, order.BizID)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to get biz %d recycle module id, "+
 			"err: %v, subOrderId: %s", order.BizID, err, order.SuborderID)
@@ -114,7 +115,7 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 	}
 
 	// transfer hosts to module CR_IEG_资源服务系统专用退回中转勿改勿删 in the origin biz
-	if err = t.TransferHost2BizTransit(hosts, order.BizID, moduleID, order.BizID); err != nil {
+	if err = t.TransferHost2BizTransit(kt, hosts, order.BizID, moduleID, order.BizID); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2TransitCvm:failed, failed to transfer host "+
 			"to biz's CR transit module in CMDB, err: %v, order.SuborderID: %s", err, order.SuborderID)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
@@ -151,7 +152,7 @@ func (t *Transit) dealTransitTask2TransitCvm(order *table.RecycleOrder, hosts []
 }
 
 // dealTransitTask2ResourcePool 转移主机到指定的资源池(reborn业务、数据待清理模块)
-func (t *Transit) dealTransitTask2ResourcePool(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+func (t *Transit) dealTransitTask2ResourcePool(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	hostIds := make([]int64, 0)
 	assetIds := make([]string, 0)
 	ips := make([]string, 0)
@@ -183,7 +184,7 @@ func (t *Transit) dealTransitTask2ResourcePool(order *table.RecycleOrder, hosts 
 		return ev
 	}
 
-	ev := t.dealRollingServerTransit2Pool(order, hosts)
+	ev := t.dealRollingServerTransit2Pool(kt, order, hosts)
 	// 记录转移日志
 	logs.Infof("recycler:logics:cvm:dealTransitTask2ResourcePool:end, suborderID: %s, hosts: %+v, ev: %+v",
 		order.SuborderID, cvt.PtrToSlice(hosts), cvt.PtrToVal(ev))
@@ -191,7 +192,7 @@ func (t *Transit) dealTransitTask2ResourcePool(order *table.RecycleOrder, hosts 
 }
 
 // dealRollingServerTransit2Pool deal rolling server hosts transit task and transfer host to CR resource pool
-func (t *Transit) dealRollingServerTransit2Pool(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
+func (t *Transit) dealRollingServerTransit2Pool(kt *kit.Kit, order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event {
 	hostIds := make([]int64, 0)
 	ips := make([]string, 0)
 	for _, host := range hosts {
@@ -212,7 +213,7 @@ func (t *Transit) dealRollingServerTransit2Pool(order *table.RecycleOrder, hosts
 	// transfer hosts to reborn-_数据待清理
 	destBiz := recovertask.RebornBizId
 	destModule := recovertask.DataToCleanedModule
-	if err := t.TransferHost(hostIds, order.BizID, destBiz, destModule); err != nil {
+	if err := t.TransferHost(kt, hostIds, order.BizID, destBiz, destModule); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealRollingServerTransit2Pool:failed, failed to transfer host to biz %d "+
 			"module %d, subOrderID: %s, err: %v", destBiz, destModule, order.SuborderID, err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,

@@ -36,8 +36,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/assert"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
@@ -167,7 +166,7 @@ func (cli *client) getHostBizID(kt *kit.Kit, hostIDs []int64) (map[int64]int64, 
 	hostBizIDMap := make(map[int64]int64)
 	for _, batch := range slice.Split(hostIDs, int(core.DefaultMaxPageLimit)) {
 		req := &cmdb.HostModuleRelationParams{HostID: batch}
-		relationRes, err := esb.EsbClient().Cmdb().FindHostBizRelations(kt, req)
+		relationRes, err := cmdb.CmdbClient().FindHostBizRelations(kt, req)
 		if err != nil {
 			logs.Errorf("fail to find cmdb topo relation, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
@@ -551,7 +550,7 @@ func (cli *client) getHostFromCCByBizID(kt *kit.Kit, bizID int64, fields []strin
 	params := &cmdb.ListBizHostParams{
 		BizID:  bizID,
 		Fields: fields,
-		Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
+		Page:   &cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
 		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: &cmdb.CombinedRule{
 				Condition: "AND",
@@ -580,19 +579,14 @@ func (cli *client) getHostFromCCByHostIDs(kt *kit.Kit, hostIDs []int64, fields [
 			},
 		}
 
-		resp, err := esb.EsbClient().Cmdb().ListHost(kt.Ctx, kt.Header(), params)
+		resp, err := cmdb.CmdbClient().ListHost(kt, params)
 		if err != nil {
 			logs.Errorf("get host from cc failed, err: %v, params: %+v, rid: %s", err, params, kt.Rid)
 			return nil, err
 		}
 
-		if !resp.Result || resp.Code != 0 {
-			logs.Errorf("get host from cc failed, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
-			return nil, fmt.Errorf("get host from cc failed, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		}
-
-		for _, host := range resp.Data.Info {
-			res = append(res, converter.PtrToVal(host))
+		for _, host := range resp.Info {
+			res = append(res, host)
 		}
 	}
 
@@ -607,7 +601,7 @@ func (cli *client) getBizHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs [
 		params := &cmdb.ListBizHostParams{
 			BizID:  bizID,
 			Fields: fields,
-			Page:   cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
+			Page:   &cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"},
 			HostPropertyFilter: &cmdb.QueryFilter{
 				Rule: &cmdb.CombinedRule{
 					Condition: "AND",
@@ -633,7 +627,7 @@ func (cli *client) getBizHostFromCCByHostIDs(kt *kit.Kit, bizID int64, hostIDs [
 func (cli *client) getBizHostFromCC(kt *kit.Kit, params *cmdb.ListBizHostParams) ([]cmdb.Host, error) {
 	hosts := make([]cmdb.Host, 0)
 	for {
-		result, err := esb.EsbClient().Cmdb().ListBizHost(kt, params)
+		result, err := cmdb.CmdbClient().ListBizHost(kt, params)
 		if err != nil {
 			logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, params, kt.Rid)
 			return nil, err

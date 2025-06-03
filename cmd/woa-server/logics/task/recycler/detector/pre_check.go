@@ -20,7 +20,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/util"
 )
 
@@ -102,13 +102,13 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 	}
 
 	mapBizToModule := make(map[int64][]int64)
-	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
+	mapHostToRel := make(map[int64]*cmdb.HostTopoRelation)
 	for _, rel := range relations {
-		mapHostToRel[rel.BkHostId] = rel
-		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
-			mapBizToModule[rel.BkBizId] = []int64{rel.BkModuleId}
+		mapHostToRel[rel.HostID] = rel
+		if _, ok := mapBizToModule[rel.BizID]; !ok {
+			mapBizToModule[rel.BizID] = []int64{rel.BkModuleID}
 		} else {
-			mapBizToModule[rel.BkBizId] = append(mapBizToModule[rel.BkBizId], rel.BkModuleId)
+			mapBizToModule[rel.BizID] = append(mapBizToModule[rel.BizID], rel.BkModuleID)
 		}
 	}
 
@@ -127,7 +127,7 @@ func (d *Detector) checkRecyclability(step *table.DetectStep) (string, error) {
 
 	moduleId := int64(0)
 	if rel, ok := mapHostToRel[hostBase[0].BkHostID]; ok {
-		moduleId = rel.BkModuleId
+		moduleId = rel.BkModuleID
 	}
 	var moduleDefaultVal int64
 	if module, ok := mapModuleIdToModule[moduleId]; ok {

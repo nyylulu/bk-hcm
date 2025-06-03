@@ -31,9 +31,9 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 type recoverer struct {

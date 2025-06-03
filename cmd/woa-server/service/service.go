@@ -76,10 +76,10 @@ import (
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/ssl"
 
 	"github.com/emicklei/go-restful/v3"
@@ -90,9 +90,8 @@ type Service struct {
 	client         *client.ClientSet
 	dao            dao.Set
 	planController *planctrl.Controller
-	// EsbClient 调用接入ESB的第三方系统API集合
-	esbClient esb.Client
-	itsmCli   itsm.Client
+	cmdbCli        cmdb.Client
+	itsmCli        itsm.Client
 	// authorizer 鉴权所需接口集合
 	authorizer    auth.Authorizer
 	thirdCli      *thirdparty.Client
@@ -141,11 +140,12 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	}
 
 	// 创建ESB Client
-	esbConfig := cc.WoaServer().Esb
-	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
-	if err != nil {
+	cmdbConfig := cc.WoaServer().Cmdb
+
+	if err = cmdb.InitCmdbClient(&cmdbConfig, metrics.Register()); err != nil {
 		return nil, err
 	}
+	cmdbCli := cmdb.CmdbClient()
 
 	itsmCfg := cc.WoaServer().ITSM
 	itsmCli, err := itsm.NewClient(&itsmCfg, metrics.Register())
@@ -182,7 +182,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	bizLogic, err := biz.New(esbClient, authorizer)
+	bizLogic, err := biz.New(cmdbCli, authorizer)
 	if err != nil {
 		logs.Errorf("new biz logic failed, err: %v", err)
 		return nil, err
@@ -195,13 +195,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli, configLogics)
+	rsLogics, err := rslogics.New(sd, apiClientSet, cmdbCli, thirdCli, bizLogic, cmsiCli, configLogics)
 	if err != nil {
 		logs.Errorf("new rolling server logics failed, err: %v", err)
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, esbClient, bizLogic)
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, bizLogic)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err
@@ -212,7 +212,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	dissolveLogics := disLogics.New(daoSet, esbClient, esCli, thirdCli, cc.WoaServer())
+	dissolveLogics := disLogics.New(daoSet, cmdbCli, esCli, thirdCli, cc.WoaServer())
 
 	kt := core.NewBackendKit()
 	// Mongo开关打开才生成Client链接
@@ -232,7 +232,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 			return nil, err
 		}
 
-		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
+		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, cmdbCli, informerIf,
 			cc.WoaServer().ClientConfig, planCtrl, bizLogic, configLogics)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
@@ -243,7 +243,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	service := &Service{
 		client:         apiClientSet,
 		dao:            daoSet,
-		esbClient:      esbClient,
+		cmdbCli:        cmdbCli,
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
 		clientConf:     cc.WoaServer(),
@@ -298,7 +298,7 @@ func initMongoDB(kt *kit.Kit, dis serviced.ServiceDiscover) (stream.LoopInterfac
 }
 
 func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd serviced.State) (*Service, error) {
-	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.esbClient, service.authorizer, service.rsLogic,
+	recyclerIf, err := recycler.New(kt.Ctx, service.thirdCli, service.cmdbCli, service.authorizer, service.rsLogic,
 		service.dissolveLogic, service.client, service.configLogics)
 	if err != nil {
 		logs.Errorf("new recycler failed, err: %v, rid: %s", err, kt.Rid)
@@ -326,13 +326,13 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 	service.taskLogic = taskLogic
 
 	cvmLogic := cvmlogic.New(service.thirdCli, service.clientConf.ClientConfig,
-		service.configLogics, service.esbClient, service.rsLogic, service.taskLogic, service.schedulerIf)
+		service.configLogics, service.cmdbCli, service.rsLogic, service.taskLogic, service.schedulerIf)
 	service.cvmLogic = cvmLogic
 
 	// init recoverer client
 	recoverConf := cc.WoaServer().Recover
-	if err = recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, service.cvmLogic,
-		service.esbClient.Cmdb(), service.thirdCli.Sops, sd); err != nil {
+	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
+		service.cmdbCli, service.thirdCli.Sops, sd); err != nil {
 		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
@@ -415,7 +415,7 @@ func (s *Service) apiSet() *restful.Container {
 		WebService:     ws,
 		Authorizer:     s.authorizer,
 		PlanController: s.planController,
-		EsbClient:      s.esbClient,
+		CmdbCli:        s.cmdbCli,
 		ThirdCli:       s.thirdCli,
 		Conf:           s.clientConf,
 		SchedulerIf:    s.schedulerIf,

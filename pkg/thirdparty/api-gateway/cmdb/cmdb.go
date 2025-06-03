@@ -22,6 +22,7 @@ package cmdb
 import (
 	"hcm/pkg/cc"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/rest/client"
 	apigateway "hcm/pkg/thirdparty/api-gateway"
@@ -32,6 +33,8 @@ import (
 
 // Client is an api-gateway client to request cmdb.
 type Client interface {
+	ZiyanCmdbClient
+
 	SearchBusiness(kt *kit.Kit, params *SearchBizParams) (*SearchBizResult, error)
 	SearchCloudArea(kt *kit.Kit, params *SearchCloudAreaParams) (*SearchCloudAreaResult, error)
 	ListBizHost(kt *kit.Kit, params *ListBizHostParams) (*ListBizHostResult, error)
@@ -43,6 +46,26 @@ type Client interface {
 	DeleteCloudHostFromBiz(kt *kit.Kit, params *DeleteCloudHostFromBizParams) error
 	AddCloudHostToBiz(kt *kit.Kit, params *AddCloudHostToBizParams) (*BatchCreateResult, error)
 	ListHostWithoutBiz(kt *kit.Kit, req *ListHostWithoutBizParams) (*ListHostWithoutBizResult, error)
+}
+
+var (
+	cmdbClient Client
+)
+
+// InitCmdbClient init esb client.
+func InitCmdbClient(cfg *cc.ApiGateway, reg prometheus.Registerer) error {
+	cli, err := NewClient(cfg, reg)
+	if err != nil {
+		return err
+	}
+
+	cmdbClient = cli
+	return nil
+}
+
+// CmdbClient get cmdb client.
+func CmdbClient() Client {
+	return cmdbClient
 }
 
 // NewClient initialize a new cmdbApiGateWay client
@@ -188,6 +211,23 @@ func (c *cmdbApiGateWay) SearchCloudArea(kt *kit.Kit, params *SearchCloudAreaPar
 
 	return apigateway.ApiGatewayCall[SearchCloudAreaParams, SearchCloudAreaResult](c.client, c.config, rest.POST, kt, params,
 		"/findmany/cloudarea")
+}
+
+// UpdateCvmOSAndSvrStatus ...
+func (c *cmdbApiGateWay) UpdateCvmOSAndSvrStatus(kt *kit.Kit, req *UpdateCvmOSReq) error {
+
+	err := req.Validate()
+	if err != nil {
+		return err
+	}
+
+	_, err = apigateway.ApiGatewayCall[UpdateCvmOSReq, interface{}](c.client, c.config, rest.PUT,
+		kt, req, "/shipper/update/reinstall/cmdb/cvm")
+	if err != nil {
+		logs.Errorf("call cmdb api gateway to update cvm os failed, err: %v", err)
+		return err
+	}
+	return nil
 }
 
 // ListHostWithoutBiz list cmdb host without biz.

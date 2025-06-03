@@ -19,7 +19,7 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/kit"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // Logics provides management interface for operations of model and instance and related resources like association
@@ -35,15 +35,15 @@ type Logics interface {
 }
 
 type logics struct {
-	esbClient  esb.Client
+	cmdbCli    cmdb.Client
 	authorizer auth.Authorizer
 	dao        dao.Set
 }
 
 // New create a logics manager
-func New(esbClient esb.Client, authorizer auth.Authorizer, dao dao.Set) Logics {
+func New(cmdbCli cmdb.Client, authorizer auth.Authorizer, dao dao.Set) Logics {
 	return &logics{
-		esbClient:  esbClient,
+		cmdbCli:    cmdbCli,
 		authorizer: authorizer,
 		dao:        dao,
 	}

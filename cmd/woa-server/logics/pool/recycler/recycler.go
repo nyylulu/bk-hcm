@@ -26,9 +26,9 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/thirdparty/tjjapi"
 	"hcm/pkg/thirdparty/xshipapi"
 	"hcm/pkg/tools/utils/wait"
@@ -39,7 +39,7 @@ import (
 
 // Recycler dispatch and deal recycle task
 type Recycler struct {
-	esbCli  esb.Client
+	cmdbCli cmdb.Client
 	cvm     cvmapi.CVMClientInterface
 	tjj     tjjapi.TjjClientInterface
 	xship   xshipapi.XshipClientInterface
@@ -52,9 +52,9 @@ type Recycler struct {
 }
 
 // New create a dispatcher
-func New(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, esbCli esb.Client) *Recycler {
+func New(ctx context.Context, cliConf cc.ClientConfig, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) *Recycler {
 	dispatcher := &Recycler{
-		esbCli:  esbCli,
+		cmdbCli: cmdbCli,
 		cvm:     thirdCli.CVM,
 		tjj:     thirdCli.Tjj,
 		xship:   thirdCli.Xship,

@@ -104,7 +104,7 @@ func (r *applyRecoverer) recoverPmHandling(kt *kit.Kit, generateRecord *types.Ge
 		return "", nil
 	}
 	// 机器数量小于生产数量，重新触发匹配
-	return "", r.schedulerIf.GetGenerator().MatchPM(order)
+	return "", r.schedulerIf.GetGenerator().MatchPM(kt, order)
 }
 
 func (r *applyRecoverer) recoverPmResource(kt *kit.Kit, generateRecord *types.GenerateRecord,
@@ -118,7 +118,7 @@ func (r *applyRecoverer) recoverPmResource(kt *kit.Kit, generateRecord *types.Ge
 				err, order.SubOrderId, kt.Rid)
 			return "", err
 		}
-		return "", r.schedulerIf.GetGenerator().MatchPM(order)
+		return "", r.schedulerIf.GetGenerator().MatchPM(kt, order)
 	case types.GenerateStatusHandling:
 		return r.recoverPmHandling(kt, generateRecord, order)
 	case types.GenerateStatusSuccess:

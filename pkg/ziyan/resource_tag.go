@@ -31,7 +31,7 @@ import (
 	"hcm/pkg/criteria/validator"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/util"
 )
@@ -144,7 +144,7 @@ func GetResourceMetaByBizForUser(kt *kit.Kit, ccCli cmdb.Client, bkBizId int64, 
 		return nil, err
 	}
 	if companyInfoList == nil || len(*companyInfoList) < 1 {
-		return nil, errors.New("no data returned form cc")
+		return nil, errors.New("no data returned from cc")
 	}
 	cmdbBizInfo := (*companyInfoList)[0]
 	if cmdbBizInfo.BkBizID != bkBizId {

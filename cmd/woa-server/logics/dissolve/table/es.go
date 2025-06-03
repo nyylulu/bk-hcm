@@ -27,8 +27,8 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb/cmdb"
 
 	"golang.org/x/sync/errgroup"
 )

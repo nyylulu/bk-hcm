@@ -237,7 +237,7 @@ func (r *Returner) processPmReturnResult(kt *kit.Kit, task *table.ReturnTask, ho
 		// transfer hosts back to recycle module if return order is rejected
 		if isRejected {
 			msg = "return order is rejected, hosts are transited back to recycle module"
-			r.rollbackTransit(hosts)
+			r.rollbackTransit(kt, hosts)
 		}
 
 		if err := r.UpdateReturnTaskInfo(context.Background(), task, "", table.ReturnStatusFailed, msg); err != nil {

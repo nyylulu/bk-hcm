@@ -85,7 +85,7 @@ func (svc *certSvc) CreateTCloudZiyanCert(cts *rest.Contexts) (interface{}, erro
 	}
 
 	cloudIDs := result.SuccessCloudIDs
-	syncClient := syncziyan.NewClient(svc.dataCli, tcloud, svc.esb)
+	syncClient := syncziyan.NewClient(svc.dataCli, tcloud, svc.cmdbCli)
 
 	params := &syncziyan.SyncBaseParams{
 		AccountID: req.AccountID,

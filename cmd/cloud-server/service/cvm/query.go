@@ -26,8 +26,8 @@ import (
 	proto "hcm/pkg/api/cloud-server"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/api/core"
-	dataproto "hcm/pkg/api/data-service/cloud"
 	corecvm "hcm/pkg/api/core/cloud/cvm"
+	dataproto "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/client"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
@@ -39,7 +39,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
 )

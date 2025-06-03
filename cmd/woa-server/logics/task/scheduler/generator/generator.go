@@ -37,10 +37,9 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/dvmapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -66,7 +65,7 @@ type Generator struct {
 }
 
 // New creates a generator
-func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, cmdbCli cmdb.Client,
 	clientConf cc.ClientConfig, configLogics config.Logics) (*Generator, error) {
 
 	predicateFuncs := initPredicateFuncs()
@@ -75,14 +74,14 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdpart
 	generator := &Generator{
 		cvm:            thirdCli.CVM,
 		dvm:            thirdCli.DVM,
-		cc:             esbCli.Cmdb(),
+		cc:             cmdbCli,
 		predicateFuncs: predicateFuncs,
 		priorityFuncs:  priorityFuncs,
 		ctx:            ctx,
 		clientConf:     clientConf,
 		configLogics:   configLogics,
 		rsLogics:       rsLogics,
-		poolLogics:     poolLogics.New(ctx, clientConf, thirdCli, esbCli),
+		poolLogics:     poolLogics.New(ctx, clientConf, thirdCli, cmdbCli),
 	}
 
 	return generator, nil
@@ -416,7 +415,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 	}
 
 	// 5. get allocatable docker hosts
-	allocatableHosts, err := g.getAllocatableHosts(selector, order.ResourceType, existingHostMap)
+	allocatableHosts, err := g.getAllocatableHosts(kt, selector, order.ResourceType, existingHostMap)
 	if err != nil {
 		logs.Errorf("failed to get allocatable hosts, err: %v, order id: %s", err, order.SubOrderId)
 		return err
@@ -482,7 +481,7 @@ func (g *Generator) GenerateDVM(kt *kit.Kit, order *types.ApplyOrder) error {
 		wg.Add(1)
 		go func(order *types.ApplyOrder, selector *types.DVMSelector, host *types.HostPriority, replicas uint) {
 			defer wg.Done()
-			genId, err := g.launchDvm(order, selector, host, replicas)
+			genId, err := g.launchDvm(kt, order, selector, host, replicas)
 			if err != nil {
 				logs.Errorf("failed to launch dvm, err: %v", err)
 				appendError(err)
@@ -830,8 +829,8 @@ func (g *Generator) createDeviceInfo(kt *kit.Kit, order *types.ApplyOrder, gener
 }
 
 // launchDvm creates docker vm and return created device ips
-func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSelector, host *types.HostPriority,
-	replicas uint) (uint64, error) {
+func (g *Generator) launchDvm(kt *kit.Kit, order *types.ApplyOrder, applyRequest *types.DVMSelector,
+	host *types.HostPriority, replicas uint) (uint64, error) {
 
 	// 1. init generate record
 	generateId, err := g.initGenerateRecord(order.ResourceType, order.SubOrderId, replicas, false)
@@ -842,31 +841,10 @@ func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSe
 	}
 
 	// 2. launch dvm request
-	request := &dvmapi.OrderCreateReq{
-		Cores:     applyRequest.Cores,
-		Memory:    applyRequest.Memory,
-		Disk:      applyRequest.Disk,
-		Image:     applyRequest.Image,
-		SetId:     host.SetId,
-		HostType:  host.DeviceClass,
-		HostIp:    []string{host.IP},
-		Affinity:  0,
-		MountPath: applyRequest.DataDiskMountPath,
-		Replicas:  replicas,
-		Operator:  order.User,
-		Module:    applyRequest.Zone,
-		// 资源运营服务
-		DisplayName: "931",
-		// 开发测试-SCR_加工池
-		AppModuleName: "51524",
-		Reason:        order.Remark,
-		HostRole:      applyRequest.HostRole,
-	}
-
-	taskId, err := g.createDVM(request)
+	taskId, err := g.createDVM(applyRequest, order, host, replicas)
 	if err != nil {
-		logs.Errorf("failed to create docker vm when launch generate task, order id: %s, err: %v", order.SubOrderId,
-			err)
+		logs.Errorf("failed to create docker vm when launch generate task, order id: %s, err: %v",
+			order.SubOrderId, err)
 
 		// update generate record status to Done
 		if errRecord := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId,
@@ -876,7 +854,6 @@ func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSe
 			return generateId, fmt.Errorf("failed to launch dvm, order id: %s, task id: %s, err: %v", order.SubOrderId,
 				taskId, errRecord)
 		}
-
 		return generateId, fmt.Errorf("failed to create docker vm, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
@@ -925,6 +902,16 @@ func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSe
 			order.SubOrderId, taskId, err)
 	}
 
+	if err = g.saveGenerateCvmInstancesInfo(kt, taskId, generateId, order, hosts); err != nil {
+		return generateId, err
+	}
+
+	return generateId, nil
+}
+
+func (g *Generator) saveGenerateCvmInstancesInfo(kt *kit.Kit, taskId string, generateId uint64,
+	order *types.ApplyOrder, hosts []dvmapi.TaskList) error {
+
 	deviceList := make([]*types.DeviceInfo, 0)
 	successIps := make([]string, 0)
 	for _, host := range hosts {
@@ -941,21 +928,20 @@ func (g *Generator) launchDvm(order *types.ApplyOrder, applyRequest *types.DVMSe
 	}
 
 	// 6. save generated cvm instances info
-	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
-		return generateId, fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
+		return fmt.Errorf("failed to update generated device, order id: %s, err: %v", order.SubOrderId, err)
 	}
 
 	// 7. update generate record status to WaitForMatch
-	if err := g.UpdateGenerateRecord(context.Background(), order.ResourceType, generateId, types.GenerateStatusSuccess,
+	if err := g.UpdateGenerateRecord(kt.Ctx, order.ResourceType, generateId, types.GenerateStatusSuccess,
 		"success", "", successIps); err != nil {
 		logs.Errorf("failed to launch docker vm when update generate record, order id: %s, task id: %s, err: %v",
 			order.SubOrderId, taskId, err)
-		return generateId, fmt.Errorf("failed to launch docker vm, order id: %s, task id: %s, err: %v",
+		return fmt.Errorf("failed to launch docker vm, order id: %s, task id: %s, err: %v",
 			order.SubOrderId, taskId, err)
 	}
-
-	return generateId, nil
+	return nil
 }
 
 // getOrderGenRecords gets all generate records related to given order
@@ -1070,7 +1056,7 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 		assetIds = append(assetIds, item.AssetId)
 	}
 
-	devices, err := g.syncHostToCMDB(order, generateId, items)
+	devices, err := g.syncHostToCMDB(kt, order, generateId, items)
 	if err != nil {
 		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v, rid: %s", order.SubOrderId,
 			generateId, err, kt.Rid)
@@ -1089,8 +1075,7 @@ func (g *Generator) createGeneratedDevices(kt *kit.Kit, order *types.ApplyOrder,
 	return nil
 }
 
-func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
-	items []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
+func (g *Generator) syncHostToCMDB(kt *kit.Kit, order *types.ApplyOrder, generateId uint64, items []*types.DeviceInfo) ([]*types.DeviceInfo, error) {
 	ips := make([]string, 0)
 	assetIds := make([]string, 0)
 	for _, item := range items {
@@ -1108,7 +1093,7 @@ func (g *Generator) syncHostToCMDB(order *types.ApplyOrder, generateId uint64,
 
 	// 1. sync device info to cc
 	if order.ResourceType == types.ResourceTypeCvm {
-		if err := g.syncHostByAsset(assetIds); err != nil {
+		if err := g.syncHostByAsset(kt, assetIds); err != nil {
 			logs.Errorf("failed to sync device info to cc, order id: %s, err: %v, rid: %s", order.SubOrderId, err)
 			return nil, err
 		}
@@ -1203,7 +1188,7 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 	return devices
 }
 
-func (g *Generator) createGeneratedDevice(order *types.ApplyOrder, generateId uint64, items []*types.DeviceInfo) error {
+func (g *Generator) createGeneratedDevice(kt *kit.Kit, order *types.ApplyOrder, generateId uint64, items []*types.DeviceInfo) error {
 	ips := make([]string, 0)
 	assetIds := make([]string, 0)
 	for _, item := range items {
@@ -1211,7 +1196,7 @@ func (g *Generator) createGeneratedDevice(order *types.ApplyOrder, generateId ui
 		assetIds = append(assetIds, item.AssetId)
 	}
 
-	devices, err := g.syncHostToCMDB(order, generateId, items)
+	devices, err := g.syncHostToCMDB(kt, order, generateId, items)
 	if err != nil {
 		logs.Errorf("failed to syn to cmdb, order id: %s, generateId: %d, err: %v", order.SubOrderId, generateId, err)
 		return err
@@ -1296,7 +1281,7 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 			"raid_name",
 			"svr_input_time",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},
@@ -1365,7 +1350,7 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	}
 
 	// 3. save generated cvm instances info
-	if err = g.createGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err = g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s, rid: %s", err, order.SubOrderId,
 			kt.Rid)
@@ -1418,7 +1403,7 @@ func (g *Generator) lockApplyOrder(order *types.ApplyOrder) error {
 }
 
 // MatchPM automatically match physical machine devices
-func (g *Generator) MatchPM(order *types.ApplyOrder) error {
+func (g *Generator) MatchPM(kt *kit.Kit, order *types.ApplyOrder) error {
 	// 1. get history generated devices
 	existDevices, err := g.getUnreleasedDevice(order.SubOrderId)
 	if err != nil {
@@ -1440,7 +1425,7 @@ func (g *Generator) MatchPM(order *types.ApplyOrder) error {
 	logs.Infof("apply order %s existing device number: %d", order.SubOrderId, existCount)
 
 	// 3. match pm
-	if err := g.matchPM(order, existDevices); err != nil {
+	if err := g.matchPM(kt, order, existDevices); err != nil {
 		logs.Errorf("failed to match pm, suborder id: %s", order.SubOrderId)
 		return err
 	}

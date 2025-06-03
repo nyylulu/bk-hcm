@@ -14,14 +14,13 @@ package recycler
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"hcm/cmd/woa-server/dal/pool/dao"
 	"hcm/cmd/woa-server/dal/pool/table"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg/logs"
-	ccapi "hcm/pkg/thirdparty/esb/cmdb"
+	ccapi "hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 func (r *Recycler) dealTransitTask(task *table.RecallDetail) error {
@@ -64,16 +63,10 @@ func (r *Recycler) transferHost(hostID, fromBizID, toBizID, toModuleId int64) er
 		transferReq.To.ToModuleID = toModuleId
 	}
 
-	resp, err := r.esbCli.Cmdb().TransferHost(nil, nil, transferReq)
+	err := r.cmdbCli.TransferHost(r.kt, transferReq)
 	if err != nil {
 		return err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to transfer host from biz %d to %d, host id: %d, code: %d, msg: %s", fromBizID,
-			toBizID, hostID, resp.Code, resp.ErrMsg)
-	}
-
 	return nil
 }
 

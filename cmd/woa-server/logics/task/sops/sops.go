@@ -24,8 +24,8 @@ import (
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/utils"
 )
 
@@ -96,7 +96,7 @@ func CreateIdleCheckSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, i
 func CreateConfigCheckSopsTask(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, ccCli cmdb.Client, ip string,
 	bkBizID int64) (int64, string, error) {
 
-	hostInfo, err := ccCli.GetHostInfoByIP(kt.Ctx, kt.Header(), ip, 0)
+	hostInfo, err := ccCli.GetHostInfoByIP(kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:config check, get host info by host id failed, ip: %s, err: %v", ip, err)
 		return 0, "", err

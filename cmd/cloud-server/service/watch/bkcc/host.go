@@ -35,8 +35,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/slice"
 )
 
@@ -68,7 +67,7 @@ func (w *Watcher) watchCCEvent(sd serviced.ServiceDiscover, resType cmdb.CursorT
 		}
 		param.Cursor = cursor
 
-		result, err := esb.EsbClient().Cmdb().ResourceWatch(kt, param)
+		result, err := cmdb.CmdbClient().ResourceWatch(kt, param)
 		if err != nil {
 			logs.Errorf("watch cmdb host resource failed, err: %v, req: %+v, rid: %s", err, param, kt.Rid)
 			// 如果事件节点不存在，cc会返回该错误码，此时需要将cursor设置为""，从当前时间开始监听事件
@@ -178,7 +177,7 @@ func (w *Watcher) upsertHost(kt *kit.Kit, upsertHostIDs []int64) error {
 		return nil
 	}
 
-	bizHostMap, err := getHostBizID(kt, upsertHostIDs)
+	bizHostMap, err := getHostBizID(kt, cmdb.CmdbClient(), upsertHostIDs)
 	if err != nil {
 		logs.Errorf("get biz host map failed, err: %v, ids: %v, rid: %s", err, upsertHostIDs, kt.Rid)
 		return err
@@ -244,7 +243,7 @@ func (w *Watcher) getTCloudZiyanAccountID(kt *kit.Kit) (string, error) {
 	return accounts.Details[0].ID, nil
 }
 
-func getHostBizID(kt *kit.Kit, hostIDs []int64) (map[int64][]int64, error) {
+func getHostBizID(kt *kit.Kit, cli cmdb.Client, hostIDs []int64) (map[int64][]int64, error) {
 	if len(hostIDs) == 0 {
 		return make(map[int64][]int64), nil
 	}
@@ -252,7 +251,7 @@ func getHostBizID(kt *kit.Kit, hostIDs []int64) (map[int64][]int64, error) {
 	hostBizIDMap := make(map[int64]int64)
 	for _, batch := range slice.Split(hostIDs, int(core.DefaultMaxPageLimit)) {
 		req := &cmdb.HostModuleRelationParams{HostID: batch}
-		relationRes, err := esb.EsbClient().Cmdb().FindHostBizRelations(kt, req)
+		relationRes, err := cli.FindHostBizRelations(kt, req)
 		if err != nil {
 			logs.Errorf("fail to find cmdb topo relation, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err

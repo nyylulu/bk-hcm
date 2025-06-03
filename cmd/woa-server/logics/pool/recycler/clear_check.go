@@ -50,7 +50,7 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据HostID获取主机信息
-	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByHostID(r.kt.Ctx, r.kt.Header(), task.HostID)
+	hostInfo, err := r.cmdbCli.GetHostInfoByHostID(r.kt, task.HostID)
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check, get host info by host id failed, bkHostID: %d, err: %v",
 			task.HostID, err)
@@ -58,7 +58,7 @@ func (r *Recycler) createClearCheckTask(task *table.RecallDetail) error {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(r.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)

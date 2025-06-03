@@ -19,19 +19,18 @@ import (
 	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
-	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // transferHostAndSetOperator transfer host and set operator in cc 3.0
 func (m *Matcher) transferHostAndSetOperator(info *types.DeviceInfo, order *types.ApplyOrder) error {
-	hostId, err := m.cc.GetHostIDByAssetID(nil, nil, info.AssetId)
+	hostId, err := m.cc.GetHostIDByAssetID(m.kt, info.AssetId)
 	if err != nil {
 		logs.Errorf("failed to get host id by asset id: %s, err: %v", info.AssetId, err)
 		return err
 	}
 
-	idMap, err := m.cc.GetHostBizIds(nil, nil, []int64{hostId})
+	idMap, err := m.cc.GetHostBizIds(m.kt, []int64{hostId})
 	if err != nil {
 		logs.Errorf("failed to get host biz id, ip: %s, err: %v", info.Ip, err)
 		return err
@@ -71,14 +70,9 @@ func (m *Matcher) transferHost(info *types.DeviceInfo, hostId, bizId int64) erro
 		},
 	}
 
-	resp, err := m.cc.TransferHost(nil, nil, transferReq)
+	err := m.cc.TransferHost(m.kt, transferReq)
 	if err != nil {
 		return err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to transfer host to target business, ip: %s, biz id: %d, code: %d, msg: %s", info.Ip,
-			bizId, resp.Code, resp.ErrMsg)
 	}
 
 	return nil
@@ -99,27 +93,22 @@ func (m *Matcher) UpdateHostOperator(info *types.DeviceInfo, hostId int64, opera
 		},
 	}
 
-	resp, err := m.cc.UpdateHosts(nil, nil, req)
+	_, err := m.cc.UpdateHosts(m.kt, req)
 	if err != nil {
 		return err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to update host operator, ip: %s, code: %d, msg: %s", info.Ip, resp.Code, resp.ErrMsg)
-	}
-
 	return nil
 }
 
 func (m *Matcher) getBizName(bizId int64) string {
-	req := &cmdb.SearchBizReq{
-		Filter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+	req := &cmdb.SearchBizParams{
+		BizPropertyFilter: &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorEqual,
+						Operator: cmdb.OperatorEqual,
 						Value:    bizId,
 					},
 				},
@@ -132,22 +121,16 @@ func (m *Matcher) getBizName(bizId int64) string {
 		},
 	}
 
-	resp, err := m.cc.SearchBiz(nil, nil, req)
+	resp, err := m.cc.SearchBusiness(m.kt, req)
 	if err != nil {
 		logs.Warnf("failed to get cc business info, err: %v", err)
 		return ""
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Warnf("failed to get cc business info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return ""
-	}
-
-	cnt := len(resp.Data.Info)
+	cnt := len(resp.Info)
 	if cnt != 1 {
 		logs.Warnf("get invalid cc business info count %d != 1", cnt)
 		return ""
 	}
-
-	return resp.Data.Info[0].BkBizName
+	return resp.Info[0].BizName
 }

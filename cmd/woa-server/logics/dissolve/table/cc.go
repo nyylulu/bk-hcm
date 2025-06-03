@@ -30,7 +30,7 @@ import (
 	"hcm/pkg/api/core"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
@@ -58,7 +58,7 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 	names = util.StrArrayUnique(names)
 	bizIDName := make(map[int64]string, 0)
 
-	req := &cmdb.SearchBizReq{
+	req := &cmdb.SearchBizParams{
 		Fields: []string{"bk_biz_id", "bk_biz_name", "bk_oper_grp_name_id"},
 		Page:   cmdb.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit},
 	}
@@ -69,38 +69,34 @@ func (l *logics) getBizIDNameByName(kt *kit.Kit, names []string, groupIDs []stri
 	}
 
 	for {
-		req.Filter = &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+		req.BizPropertyFilter = &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_name",
-						Operator: querybuilder.OperatorIn,
+						Operator: cmdb.OperatorIn,
 						Value:    names[start:end],
 					},
 				},
 			},
 		}
 
-		resp, err := l.esbCli.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
+		resp, err := l.cmdbCli.SearchBusiness(kt, req)
 		if err != nil {
 			logs.Errorf("call cmdb search business api failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
 
-		if !resp.Result || resp.Code != 0 {
-			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
-		}
-
-		for _, info := range resp.Data.Info {
+		for _, info := range resp.Info {
 			if _, ok := groupIDMap[info.BkOperGrpNameID]; !ok && len(groupIDMap) != 0 {
 				continue
 			}
 
-			bizIDName[info.BkBizId] = info.BkBizName
+			bizIDName[info.BizID] = info.BizName
 		}
 
-		if len(resp.Data.Info) < pkg.BKMaxInstanceLimit {
+		if len(resp.Info) < pkg.BKMaxInstanceLimit {
 			break
 		}
 
@@ -125,7 +121,7 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 	ids = util.IntArrayUnique(ids)
 	bizIDName := make(map[int64]string, 0)
 
-	req := &cmdb.SearchBizReq{
+	req := &cmdb.SearchBizParams{
 		Fields: []string{"bk_biz_id", "bk_biz_name"},
 		Page:   cmdb.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit},
 	}
@@ -136,34 +132,30 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 	}
 
 	for {
-		req.Filter = &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+		req.BizPropertyFilter = &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorIn,
+						Operator: cmdb.OperatorIn,
 						Value:    ids[start:end],
 					},
 				},
 			},
 		}
 
-		resp, err := l.esbCli.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
+		resp, err := l.cmdbCli.SearchBusiness(kt, req)
 		if err != nil {
 			logs.Errorf("call cmdb search business api failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
 
-		if !resp.Result || resp.Code != 0 {
-			return nil, fmt.Errorf("failed to get biz id, err: %s", resp.ErrMsg)
+		for _, info := range resp.Info {
+			bizIDName[info.BizID] = info.BizName
 		}
 
-		for _, info := range resp.Data.Info {
-			bizIDName[info.BkBizId] = info.BkBizName
-		}
-
-		if len(resp.Data.Info) < pkg.BKMaxInstanceLimit {
+		if len(resp.Info) < pkg.BKMaxInstanceLimit {
 			break
 		}
 
@@ -180,23 +172,23 @@ func (l *logics) getBizIDNameByID(kt *kit.Kit, ids []int64) (map[int64]string, e
 }
 
 func (l *logics) getAllBizIDName(kt *kit.Kit, groupIDMap map[int64]struct{}) (map[int64]string, error) {
-	req := &cmdb.SearchBizReq{
+	req := &cmdb.SearchBizParams{
 		Fields: []string{"bk_biz_id", "bk_biz_name", "bk_oper_grp_name_id"},
 		Page:   cmdb.BasePage{Start: 0, Limit: noLimit},
 	}
 
-	resp, err := l.esbCli.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
+	resp, err := l.cmdbCli.SearchBusiness(kt, req)
 	if err != nil {
 		logs.Errorf("call cmdb search business api failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return nil, err
 	}
 
 	bizIDName := make(map[int64]string)
-	for _, info := range resp.Data.Info {
+	for _, info := range resp.Info {
 		if _, ok := groupIDMap[info.BkOperGrpNameID]; !ok && len(groupIDMap) != 0 {
 			continue
 		}
-		bizIDName[info.BkBizId] = info.BkBizName
+		bizIDName[info.BizID] = info.BizName
 	}
 
 	return bizIDName, nil
@@ -349,22 +341,17 @@ func (l *logics) getHostFromCC(kt *kit.Kit, req *cmdb.ListHostReq) ([]cmdb.Host,
 
 	result := make([]cmdb.Host, 0)
 	for {
-		resp, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
+		resp, err := l.cmdbCli.ListHost(kt, req)
 		if err != nil {
 			logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
 
-		if !resp.Result || resp.Code != 0 {
-			logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-			return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
+		for _, host := range resp.Info {
+			result = append(result, host)
 		}
 
-		for _, host := range resp.Data.Info {
-			result = append(result, converter.PtrToVal(host))
-		}
-
-		if int64(len(resp.Data.Info)) < req.Page.Limit || int64(len(result)) == limit {
+		if int64(len(resp.Info)) < req.Page.Limit || int64(len(result)) == limit {
 			break
 		}
 
@@ -384,13 +371,13 @@ func (l *logics) getHostCountFromCC(kt *kit.Kit, req *cmdb.ListHostReq) (int64, 
 	}
 
 	req.Page = cmdb.BasePage{Start: 0, Limit: 1, Sort: pkg.BKHostIDField}
-	hosts, err := l.esbCli.Cmdb().ListHost(kt.Ctx, kt.Header(), req)
+	hosts, err := l.cmdbCli.ListHost(kt, req)
 	if err != nil {
 		logs.Errorf("list host from cc failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 		return 0, err
 	}
 
-	return int64(hosts.Data.Count), nil
+	return int64(hosts.Count), nil
 }
 
 // getHostIDByBizCond 筛选hostIDs, 获取在bizIDName对应的业务中，但是不在blackBizIDName业务的host id结果
@@ -405,7 +392,7 @@ func (l *logics) getHostIDByBizCond(kt *kit.Kit, originHostIDs []int64, bizIDNam
 			<-pipeline
 		}()
 
-		subHostBizIDMap, err := l.esbCli.Cmdb().GetHostBizIds(kt.Ctx, kt.Header(), hostIDs)
+		subHostBizIDMap, err := l.cmdbCli.GetHostBizIds(kt, hostIDs)
 		if err != nil {
 			logs.Errorf("get host biz id failed, err: %v, originHostIDs: %v, rid: %s", err, hostIDs, kt.Rid)
 			return err

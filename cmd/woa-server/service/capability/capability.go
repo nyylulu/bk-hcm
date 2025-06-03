@@ -39,9 +39,9 @@ import (
 	"hcm/pkg/dal/dao"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/itsm"
 	"hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb"
 
 	"github.com/emicklei/go-restful/v3"
 )
@@ -52,7 +52,7 @@ type Capability struct {
 	Dao            dao.Set
 	WebService     *restful.WebService
 	PlanController *plan.Controller
-	EsbClient      esb.Client
+	CmdbCli        cmdb.Client
 	ItsmClient     itsm.Client
 	ThirdCli       *thirdparty.Client
 	Authorizer     auth.Authorizer

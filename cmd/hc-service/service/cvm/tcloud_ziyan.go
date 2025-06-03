@@ -39,7 +39,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
 
@@ -460,7 +460,7 @@ func (svc *cvmSvc) BatchAssociateZiyanSecurityGroup(cts *rest.Contexts) (any, er
 func (svc *cvmSvc) syncTCloudZiyanCvmWithRelRes(kt *kit.Kit, ziyan tziyan.TCloudZiyan, accountID string, bkBizID int64,
 	hostIDs []int64) error {
 
-	syncClient := syncziyan.NewClient(svc.dataCli, ziyan, esb.EsbClient())
+	syncClient := syncziyan.NewClient(svc.dataCli, ziyan, cmdb.CmdbClient())
 	params := &syncziyan.SyncHostParams{
 		AccountID: accountID,
 		BizID:     bkBizID,

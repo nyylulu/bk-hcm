@@ -22,22 +22,22 @@ package cscvm
 import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/validator"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // CmdbHostListReq 从cc 查询主机api 接口
 type CmdbHostListReq struct {
 	// 为false则只拉取cmdb信息，为true则进一步拉取对应云上cvm信息
-	QueryFromCloud bool          `json:"query_from_cloud"`
-	AccountID      string        `json:"account_id" validate:"required"`
-	Region         string        `json:"region" validate:"omitempty"`
-	Zone           string        `json:"zone" validate:"omitempty"`
-	CloudInstIDs   []string      `json:"inst_ids" validate:"omitempty"`
-	CloudVpcIDs    []string      `json:"cloud_vpc_ids" validate:"omitempty"`
-	CloudSubnetIDs []string      `json:"cloud_subnet_ids" validate:"omitempty"`
-	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
-	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
-	Page           cmdb.BasePage `json:"page" validate:"required"`
+	QueryFromCloud bool           `json:"query_from_cloud"`
+	AccountID      string         `json:"account_id" validate:"required"`
+	Region         string         `json:"region" validate:"omitempty"`
+	Zone           string         `json:"zone" validate:"omitempty"`
+	CloudInstIDs   []string       `json:"inst_ids" validate:"omitempty"`
+	CloudVpcIDs    []string       `json:"cloud_vpc_ids" validate:"omitempty"`
+	CloudSubnetIDs []string       `json:"cloud_subnet_ids" validate:"omitempty"`
+	BkSetIDs       []int64        `json:"bk_set_ids" validate:"omitempty"`
+	BkModuleIDs    []int64        `json:"bk_module_ids" validate:"omitempty"`
+	Page           *cmdb.BasePage `json:"page" validate:"required"`
 }
 
 // Validate CloudHostListReq.
@@ -48,19 +48,19 @@ func (req CmdbHostListReq) Validate() error {
 // CmdbHostQueryReq 从cc 查询主机
 type CmdbHostQueryReq struct {
 	BkBizID        int64
-	Vendor         enumor.Vendor `json:"vendor" validate:"omitempty"`
-	AccountID      string        `json:"account_id" validate:"required"`
-	Region         string        `json:"region" validate:"omitempty"`
-	Zone           string        `json:"zone" validate:"omitempty"`
-	CloudVpcIDs    []string      `json:"cloud_vpc_ids" validate:"omitempty"`
-	CloudSubnetIDs []string      `json:"cloud_subnet_ids" validate:"omitempty"`
-	CloudInstIDs   []string      `json:"inst_ids" validate:"omitempty"`
-	BkSetIDs       []int64       `json:"bk_set_ids" validate:"omitempty"`
-	BkModuleIDs    []int64       `json:"bk_module_ids" validate:"omitempty"`
-	InnerIP        []string      `json:"inner_ip" validate:"omitempty"`
-	OuterIP        []string      `json:"outer_ip" validate:"omitempty"`
-	InnerIPv6      []string      `json:"inner_ipv6" validate:"omitempty"`
-	OuterIPv6      []string      `json:"outer_ipv6" validate:"omitempty"`
-	BkHostIDs      []int64       `json:"bk_host_ids" validate:"omitempty"`
-	Page           cmdb.BasePage `json:"page" validate:"required"`
+	Vendor         enumor.Vendor  `json:"vendor" validate:"omitempty"`
+	AccountID      string         `json:"account_id" validate:"required"`
+	Region         string         `json:"region" validate:"omitempty"`
+	Zone           string         `json:"zone" validate:"omitempty"`
+	CloudVpcIDs    []string       `json:"cloud_vpc_ids" validate:"omitempty"`
+	CloudSubnetIDs []string       `json:"cloud_subnet_ids" validate:"omitempty"`
+	CloudInstIDs   []string       `json:"inst_ids" validate:"omitempty"`
+	BkSetIDs       []int64        `json:"bk_set_ids" validate:"omitempty"`
+	BkModuleIDs    []int64        `json:"bk_module_ids" validate:"omitempty"`
+	InnerIP        []string       `json:"inner_ip" validate:"omitempty"`
+	OuterIP        []string       `json:"outer_ip" validate:"omitempty"`
+	InnerIPv6      []string       `json:"inner_ipv6" validate:"omitempty"`
+	OuterIPv6      []string       `json:"outer_ipv6" validate:"omitempty"`
+	BkHostIDs      []int64        `json:"bk_host_ids" validate:"omitempty"`
+	Page           *cmdb.BasePage `json:"page" validate:"required"`
 }

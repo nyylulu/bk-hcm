@@ -24,10 +24,11 @@ import (
 	"hcm/cmd/woa-server/logics/pool/recycler"
 	types "hcm/cmd/woa-server/types/pool"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb"
-	ccapi "hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	ccapi "hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/utils/wait"
 
@@ -37,17 +38,17 @@ import (
 // Recaller dispatch and deal recall task
 type Recaller struct {
 	recycler *recycler.Recycler
-	esbCli   esb.Client
+	cmdbCli  cmdb.Client
 	queue    workqueue.RateLimitingInterface
 	ctx      context.Context
 }
 
 // New create a dispatcher
-func New(ctx context.Context, esbCli esb.Client) *Recaller {
+func New(ctx context.Context, cmdbCli cmdb.Client) *Recaller {
 	dispatcher := &Recaller{
-		esbCli: esbCli,
-		queue:  workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recaller"),
-		ctx:    ctx,
+		cmdbCli: cmdbCli,
+		queue:   workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recaller"),
+		ctx:     ctx,
 	}
 
 	// TODO: get worker num from config
@@ -276,19 +277,13 @@ func (r *Recaller) transferHost(hostID, fromBizID, toBizID, toModuleId int64) er
 		transferReq.To.ToModuleID = toModuleId
 	}
 
-	resp, err := r.esbCli.Cmdb().TransferHost(nil, nil, transferReq)
+	kt := core.NewBackendKit()
+	kt.Ctx = r.ctx
+	err := r.cmdbCli.TransferHost(kt, transferReq)
 	if err != nil {
 		logs.Errorf("scheduler:cvm:recaller:transferHost:failed, err: %v, req: %+v", err, transferReq)
 		return err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("scheduler:cvm:recaller:transferHost:failed, %d to %d, hostID: %d, code: %d, msg: %s",
-			fromBizID, toBizID, resp.Code, resp.ErrMsg)
-		return fmt.Errorf("failed to transfer host from biz %d to %d, host id: %d, code: %d, msg: %s", fromBizID,
-			toBizID, hostID, resp.Code, resp.ErrMsg)
-	}
-
 	return nil
 }
 

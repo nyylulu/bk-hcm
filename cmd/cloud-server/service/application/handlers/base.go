@@ -60,8 +60,6 @@ type BaseApplicationHandler struct {
 	FinOpsCli  finops.Client
 	CmsiClient cmsi.Client
 	CmdbClient cmdb.Client
-	// FIXME: delete
-	EsbClient esb.Client
 }
 
 // NewBaseApplicationHandler ...
@@ -77,7 +75,6 @@ func NewBaseApplicationHandler(
 		Audit:           opt.Audit,
 		CmsiClient:      opt.CmsiCli,
 		CmdbClient:      opt.CmdbCli,
-		EsbClient:       opt.EsbClient,
 		FinOpsCli:       opt.FinOpsCli,
 	}
 }

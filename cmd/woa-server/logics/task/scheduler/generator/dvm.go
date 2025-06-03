@@ -21,14 +21,38 @@ import (
 
 	"hcm/cmd/woa-server/logics/task/scheduler/algorithm"
 	types "hcm/cmd/woa-server/types/task"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/tools/utils"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/dvmapi"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/tools/utils"
 )
 
 // createDVM starts a docker vm creating task
-func (g *Generator) createDVM(req *dvmapi.OrderCreateReq) (string, error) {
+func (g *Generator) createDVM(applyRequest *types.DVMSelector, order *types.ApplyOrder,
+	host *types.HostPriority, replicas uint) (string, error) {
+
+	req := &dvmapi.OrderCreateReq{
+		Cores:     applyRequest.Cores,
+		Memory:    applyRequest.Memory,
+		Disk:      applyRequest.Disk,
+		Image:     applyRequest.Image,
+		SetId:     host.SetId,
+		HostType:  host.DeviceClass,
+		HostIp:    []string{host.IP},
+		Affinity:  0,
+		MountPath: applyRequest.DataDiskMountPath,
+		Replicas:  replicas,
+		Operator:  order.User,
+		Module:    applyRequest.Zone,
+		// 资源运营服务
+		DisplayName: "931",
+		// 开发测试-SCR_加工池
+		AppModuleName: "51524",
+		Reason:        order.Remark,
+		HostRole:      applyRequest.HostRole,
+	}
+
 	// call dvm api to launchCvm dvm order
 	resp, err := g.dvm.CreateDvmOrder(nil, nil, req)
 	if err != nil {
@@ -291,7 +315,7 @@ func (g *Generator) antiAffinityValue(antiAffinityLevel string, host types.HostP
 	return value
 }
 
-func (g *Generator) getAllocatableHosts(applyRequest *types.DVMSelector, resourceType types.ResourceType,
+func (g *Generator) getAllocatableHosts(kt *kit.Kit, applyRequest *types.DVMSelector, resourceType types.ResourceType,
 	existingHostMap map[string]*dvmapi.DockerHost) (types.HostPriorityList, error) {
 
 	// 1. list cluster
@@ -316,7 +340,7 @@ func (g *Generator) getAllocatableHosts(applyRequest *types.DVMSelector, resourc
 	}
 
 	// 3. 补全Host信息,包括母机对应的虚拟比等
-	tmpHosts, err := g.toHost(allocatableHosts, existingHostMap)
+	tmpHosts, err := g.toHost(kt, allocatableHosts, existingHostMap)
 	if err != nil {
 		logs.Errorf("failed to complete docker host info, err: %v", err)
 		return nil, err
@@ -448,8 +472,8 @@ func (g *Generator) listAllocatableHost(cluster *dvmapi.DockerCluster, applyRequ
 	return allocatableHosts, nil
 }
 
-func (g *Generator) toHost(allocatableHosts []*dvmapi.DockerHost, existingHostMapping map[string]*dvmapi.DockerHost) (
-	[]*dvmapi.DockerHost, error) {
+func (g *Generator) toHost(kt *kit.Kit, allocatableHosts []*dvmapi.DockerHost,
+	existingHostMapping map[string]*dvmapi.DockerHost) ([]*dvmapi.DockerHost, error) {
 
 	hosts := make([]*dvmapi.DockerHost, 0)
 	ips := make([]string, 0)
@@ -459,7 +483,7 @@ func (g *Generator) toHost(allocatableHosts []*dvmapi.DockerHost, existingHostMa
 		ips = append(ips, host.IP)
 	}
 	if len(ips) > 0 {
-		topoInfos, err := g.listDeviceTopo(ips)
+		topoInfos, err := g.listDeviceTopo(kt, ips)
 		if err != nil {
 			return nil, fmt.Errorf("list device topoinfo failed: %v", err)
 		}

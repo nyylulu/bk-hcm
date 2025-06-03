@@ -49,14 +49,14 @@ func (r *Recycler) createDataDeleteTask(task *table.RecallDetail) error {
 	}
 
 	// 根据IP获取主机信息
-	hostInfo, err := r.esbCli.Cmdb().GetHostInfoByIP(r.kt.Ctx, r.kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(r.kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:data clear, get host info by host id failed, ip: %s, err: %v", ip, err)
 		return err
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := r.esbCli.Cmdb().GetHostBizIds(r.kt.Ctx, r.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := r.cmdbCli.GetHostBizIds(r.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:data clear, get host biz id failed, ip: %s, bkHostId: %d, err: %v",
 			ip, hostInfo.BkHostID, err)

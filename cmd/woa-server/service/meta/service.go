@@ -36,7 +36,7 @@ func InitService(c *capability.Capability) {
 		dao:        c.Dao,
 		client:     c.Client,
 		authorizer: c.Authorizer,
-		logics:     meta.New(c.EsbClient, c.Authorizer, c.Dao),
+		logics:     meta.New(c.CmdbCli, c.Authorizer, c.Dao),
 	}
 	h := rest.NewHandler()
 

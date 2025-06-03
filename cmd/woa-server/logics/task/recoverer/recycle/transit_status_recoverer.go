@@ -27,7 +27,8 @@ import (
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/converter"
 )
 
 // recoverTransitedOrders 恢复状态为RecycleStatusTransiting的待回收订单
@@ -133,8 +134,8 @@ func (r *recycleRecoverer) dealDissolveTransit(kt *kit.Kit, order *table.Recycle
 	for _, host := range hosts {
 		hostIds = append(hostIds, host.HostID)
 	}
-	findRelReq := &cmdb.HostBizRelReq{BkHostId: hostIds}
-	resp, err := r.cmdbCli.FindHostBizRelation(kt.Ctx, kt.Header(), findRelReq)
+	findRelReq := &cmdb.HostModuleRelationParams{HostID: hostIds}
+	resp, err := r.cmdbCli.FindHostBizRelations(kt, findRelReq)
 	if err != nil {
 		logs.Errorf("recycle: failed to get biz host relation, subOrderId: %s, err: %v, rid: %s", order.SuborderID, err,
 			kt.Rid)
@@ -142,12 +143,13 @@ func (r *recycleRecoverer) dealDissolveTransit(kt *kit.Kit, order *table.Recycle
 	}
 
 	// 机器查询不到，说明转移成功
-	if len(resp.Data) == 0 {
+	rels := converter.PtrToVal(resp)
+	if len(rels) == 0 {
 		return &event.Event{Type: event.TransitSuccess}
 	}
 
-	currentHostBiz := resp.Data[0].BkBizId
-	currentHostModule := resp.Data[0].BkModuleId
+	currentHostBiz := rels[0].BizID
+	currentHostModule := rels[0].BkModuleID
 	// 未转移到reborn业务或cr_中转模块
 	if currentHostBiz == order.BizID && currentHostModule != recovertask.CrRelayModuleId {
 		if ev := r.recyclerIf.DealTransitTask2Transit(order, hosts); ev.Type == event.TransitSuccess {
@@ -168,16 +170,16 @@ func (r *recycleRecoverer) dealDissolveTransit(kt *kit.Kit, order *table.Recycle
 		return &event.Event{
 			Type: event.TransitFailed,
 			Error: fmt.Errorf("failed to deal transit task for order, subOrderId: %s, bizId %d", order.SuborderID,
-				resp.Data[0].BkBizId),
+				rels[0].BizID),
 		}
 	}
 
-	if err = r.recyclerIf.TransferHost2BizTransit(hosts, srcBizId, srcModuleId, order.BizID); err != nil {
+	if err = r.recyclerIf.TransferHost2BizTransit(kt, hosts, srcBizId, srcModuleId, order.BizID); err != nil {
 		logs.Errorf("failed to transfer host to biz, err: %v, subOrderId: %s, rid: %v", err, order.SuborderID, kt.Rid)
 		return &event.Event{
 			Type: event.TransitFailed,
 			Error: fmt.Errorf("failed to deal transit task for order, subOrderId: %s, bizId %d", order.SuborderID,
-				resp.Data[0].BkBizId),
+				rels[0].BizID),
 		}
 	}
 	return &event.Event{Type: event.TransitSuccess}
@@ -190,7 +192,8 @@ func (r *recycleRecoverer) dealRegularTransit(kt *kit.Kit, order *table.RecycleO
 	for _, host := range hosts {
 		hostIds = append(hostIds, host.HostID)
 	}
-	resp, err := r.cmdbCli.FindHostBizRelation(kt.Ctx, kt.Header(), &cmdb.HostBizRelReq{BkHostId: hostIds})
+	req := &cmdb.HostModuleRelationParams{HostID: hostIds}
+	resp, err := r.cmdbCli.FindHostBizRelations(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get biz host relation, err: %v, subOrderId: %s, rid: %s", err, order.SuborderID, kt.Rid)
 		return &event.Event{
@@ -199,15 +202,16 @@ func (r *recycleRecoverer) dealRegularTransit(kt *kit.Kit, order *table.RecycleO
 		}
 	}
 	// PM类型常规机器转移到reborn_数据待清理模块（cc可查询）
-	if len(resp.Data) != 1 {
+	rels := converter.PtrToVal(resp)
+	if len(rels) != 1 {
 		logs.Errorf("failed to get biz host relation, err: %v, subOrderId: %s, rid: %v", err, order.SuborderID, kt.Rid)
 		return &event.Event{
 			Type:  event.TransitFailed,
 			Error: fmt.Errorf("failed to get biz host relation, err: %v, subOrderId: %s", err, order.SuborderID),
 		}
 	}
-	currentHostBiz := resp.Data[0].BkBizId
-	currentHostModule := resp.Data[0].BkModuleId
+	currentHostBiz := rels[0].BizID
+	currentHostModule := rels[0].BkModuleID
 	switch currentHostBiz {
 	case recovertask.RebornBizId:
 		// 若当前在reborn业务下的DataPendingClean模块

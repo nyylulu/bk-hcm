@@ -37,7 +37,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/hooks/handler"
 	"hcm/pkg/tools/slice"
@@ -219,7 +219,7 @@ func (svc *cvmSvc) listTCloudZiyanCvmOperateHost(kt *kit.Kit, cvmIDs []string,
 		hostID := host.BkHostID
 		moduleName := ""
 		if rel, ok := mapHostToRel[hostID]; ok {
-			if module, exist := mapModuleIdToModule[rel.BkModuleId]; exist {
+			if module, exist := mapModuleIdToModule[rel.BkModuleID]; exist {
 				moduleName = module.BkModuleName
 			}
 		}
@@ -317,7 +317,7 @@ func getCombinedKey(main, sub, sep string) string {
 }
 
 // listCmdbHostRelModule 查询cc的主机列表及Topo关系
-func (svc *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]*cmdb.HostBizRel,
+func (svc *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int64]cmdb.HostTopoRelation,
 	map[int64]*cmdb.ModuleInfo, error) {
 
 	// get host topo info
@@ -329,14 +329,14 @@ func (svc *cvmSvc) listCmdbHostRelModule(kt *kit.Kit, hostIDs []int64) (map[int6
 
 	bizIds := make([]int64, 0)
 	mapBizToModule := make(map[int64][]int64)
-	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
+	mapHostToRel := make(map[int64]cmdb.HostTopoRelation)
 	for _, rel := range relations {
-		mapHostToRel[rel.BkHostId] = rel
-		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
-			mapBizToModule[rel.BkBizId] = []int64{rel.BkModuleId}
-			bizIds = append(bizIds, rel.BkBizId)
+		mapHostToRel[rel.HostID] = rel
+		if _, ok := mapBizToModule[rel.BizID]; !ok {
+			mapBizToModule[rel.BizID] = []int64{rel.BkModuleID}
+			bizIds = append(bizIds, rel.BizID)
 		} else {
-			mapBizToModule[rel.BkBizId] = append(mapBizToModule[rel.BkBizId], rel.BkModuleId)
+			mapBizToModule[rel.BizID] = append(mapBizToModule[rel.BizID], rel.BkModuleID)
 		}
 	}
 

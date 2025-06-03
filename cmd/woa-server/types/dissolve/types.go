@@ -32,8 +32,8 @@ import (
 	hostdefine "hcm/pkg/dal/table/dissolve/host"
 	moduledefine "hcm/pkg/dal/table/dissolve/module"
 	"hcm/pkg/runtime/filter"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/es"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/slice"
 )

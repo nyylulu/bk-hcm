@@ -128,7 +128,7 @@ func (r *applyRecoverer) recoverDelivering(kt *kit.Kit, order *types.ApplyOrder,
 			"order.bkBizId: %d", order.SubOrderId, ip, order.BkBizId)
 	}
 
-	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt.Ctx, kt.Header(), ip, 0)
+	hostInfo, err := r.cmdbCli.GetHostInfoByIP(kt, ip, 0)
 	if err != nil {
 		logs.Errorf("recover: get host info by host ip failed, subOrderId: %s, ip: %s, err: %v, rid: %s",
 			order.SubOrderId, ip, err, kt.Rid)

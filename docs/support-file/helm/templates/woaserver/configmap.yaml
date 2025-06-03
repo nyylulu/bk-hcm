@@ -21,18 +21,6 @@ data:
       {{- toYaml .Values.woaserver.log | nindent 6 }}
     database:
       {{- include "common.tplvalues.render" (dict "value" (include "bk-hcm.databaseConfig" .) "context" $) | nindent 6 }}
-    esb:
-      endpoints:
-        - {{ .Values.bkEsbApiUrl }}
-      appCode: {{ .Values.appCode }}
-      appSecret: {{ .Values.appSecret }}
-      user: admin
-      tls:
-        insecureSkipVerify:
-        certFile:
-        keyFile:
-        caFile:
-        password:
     bkHcmUrl: {{ .Values.bkHCMUrl }}
     useMongo: {{ .Values.useMongo }}
     mongodb:
@@ -115,3 +103,5 @@ data:
       {{- toYaml .Values.tenant | nindent 6 }}
     stuckCheck:
       {{- toYaml .Values.stuckCheck | nindent 6 }}
+    cmdb:
+      {{- toYaml .Values.cmdb | nindent 6 }}

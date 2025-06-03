@@ -155,7 +155,7 @@ func (cli *client) assignSGToBiz(kt *kit.Kit, sg *cloudcore.BaseSecurityGroup) (
 		return false, nil
 	}
 
-	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cli.esb.Cmdb(), []int64{meta.Bs2NameID})
+	bizIds, err := ziyan.GetBkBizIdByBs2(kt, cli.cmdbCli, []int64{meta.Bs2NameID})
 	if err != nil {
 		logs.Errorf("fail to get bkBizId by bs2NameIds for clb, err: %v, rid: %s", err, kt.Rid)
 		return false, err

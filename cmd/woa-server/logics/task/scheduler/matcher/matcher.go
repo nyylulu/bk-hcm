@@ -38,9 +38,8 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/bkchatapi"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/metadata"
@@ -66,7 +65,7 @@ type Matcher struct {
 }
 
 // New create a matcher
-func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, esbCli esb.Client,
+func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdparty.Client, cmdbCli cmdb.Client,
 	clientConf cc.ClientConfig, informer informer.Interface, planLogics plan.Logics, configLogics config.Logics) (
 	*Matcher, error) {
 
@@ -77,7 +76,7 @@ func New(ctx context.Context, rsLogics rollingserver.Logics, thirdCli *thirdpart
 		informer:     informer,
 		sops:         thirdCli.Sops,
 		sopsOpt:      clientConf.Sops,
-		cc:           esbCli.Cmdb(),
+		cc:           cmdbCli,
 		bkchat:       thirdCli.BkChat,
 		ctx:          ctx,
 		kt:           &kit.Kit{Ctx: ctx, Rid: uuid.UUID()},
@@ -648,7 +647,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 
 	// 1. create job
 	// 根据IP获取主机信息
-	hostInfo, err := m.cc.GetHostInfoByIP(m.kt.Ctx, m.kt.Header(), info.Ip, 0)
+	hostInfo, err := m.cc.GetHostInfoByIP(m.kt, info.Ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by ip failed, ip: %s, infoBkBizID: %d, "+
 			"err: %v", info.Ip, info.BkBizId, err)
@@ -656,7 +655,7 @@ func (m *Matcher) initDevice(info *types.DeviceInfo) (*types.DeviceInitMsg, erro
 	}
 
 	// 根据bkHostID去cmdb获取bkBizID
-	bkBizIDs, err := m.cc.GetHostBizIds(m.kt.Ctx, m.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := m.cc.GetHostBizIds(m.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:matcher:ieod init, get host info by host id failed, ip: %s, infoBkBizID: %d, "+
 			"bkHostID: %d, err: %v", info.Ip, info.BkBizId, hostInfo.BkHostID, err)

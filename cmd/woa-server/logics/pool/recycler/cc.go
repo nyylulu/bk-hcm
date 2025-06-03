@@ -20,8 +20,9 @@ import (
 
 	"hcm/pkg"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (r *Recycler) getIpByHostID(hostID int64) (string, error) {
@@ -80,18 +81,13 @@ func (r *Recycler) getHostBaseInfo(hostIds []int64) ([]*cmdb.Host, error) {
 		},
 	}
 
-	resp, err := r.esbCli.Cmdb().ListHost(nil, nil, req)
+	resp, err := r.cmdbCli.ListHost(r.kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return converter.SliceToPtr(resp.Info), nil
 }
 
 // getUniqIp get CC host unique inner ip

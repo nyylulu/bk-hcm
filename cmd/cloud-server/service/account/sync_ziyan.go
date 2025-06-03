@@ -36,7 +36,7 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/ziyan"
 
@@ -51,7 +51,7 @@ func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizI
 		return nil, err
 	}
 	if bizID != constant.UnassignedBiz {
-		meta, err := ziyan.GetResourceMetaByBiz(cts.Kit, esb.EsbClient().Cmdb(), bizID)
+		meta, err := ziyan.GetResourceMetaByBiz(cts.Kit, cmdb.CmdbClient(), bizID)
 		if err != nil {
 			logs.Errorf("fail to get resource meta by biz(%d), err: %v, rid: %s", bizID, err, cts.Kit.Rid)
 			return nil, err

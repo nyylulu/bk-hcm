@@ -27,7 +27,6 @@ import (
 	"hcm/pkg/client"
 	"hcm/pkg/iam/auth"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
 )
 
 // InitService initial the service
@@ -35,7 +34,6 @@ func InitService(c *capability.Capability) {
 	s := &service{
 		client:     c.Client,
 		logics:     c.DissolveLogic,
-		esbClient:  c.EsbClient,
 		authorizer: c.Authorizer,
 	}
 
@@ -49,7 +47,6 @@ func InitService(c *capability.Capability) {
 type service struct {
 	client     *client.ClientSet
 	logics     dissolve.Logics
-	esbClient  esb.Client
 	authorizer auth.Authorizer
 }
 

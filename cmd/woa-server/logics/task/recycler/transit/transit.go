@@ -25,13 +25,13 @@ import (
 	"hcm/cmd/woa-server/logics/task/recycler/event"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/cc"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/tmpapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
@@ -48,11 +48,11 @@ type Transit struct {
 }
 
 // New creates a device transit station
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, rsLogic rslogics.Logics) (
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, rsLogic rslogics.Logics) (
 	*Transit, error) {
 
 	transit := &Transit{
-		cc:      esbCli.Cmdb(),
+		cc:      cmdbCli,
 		tmp:     thirdCli.Tmp,
 		ctx:     ctx,
 		rsLogic: rsLogic,
@@ -62,7 +62,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, rs
 }
 
 // getBizHost get biz hosts by bkBizID and bkHostIds
-func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHostResult, error) {
+func (t *Transit) getBizHost(kt *kit.Kit, bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHostResult, error) {
 
 	var hosts = &cmdb.ListBizHostResult{}
 	startIndex := 0
@@ -85,12 +85,12 @@ func (t *Transit) getBizHost(bkBizID int64, bkHostIds []int64) (*cmdb.ListBizHos
 					},
 				},
 			},
-			Page: cmdb.BasePage{
+			Page: &cmdb.BasePage{
 				Start: int64(startIndex),
 				Limit: pkg.BKMaxInstanceLimit,
 			},
 		}
-		resp, err := t.cc.ListBizHost(kit.New(), params)
+		resp, err := t.cc.ListBizHost(kt, params)
 		if err != nil {
 			logs.Errorf("call cmdb to list biz host failed, bkBizID: %d, err: %v, params: %v", bkBizID, err, params)
 			return nil, err
@@ -185,7 +185,9 @@ func (t *Transit) DealTransitTask2Pool(order *table.RecycleOrder, hosts []*table
 	// transfer hosts to reborn-_数据待清理
 	destBiz := recovertask.RebornBizId
 	destModule := recovertask.DataToCleanedModule
-	if err := t.TransferHost(hostIds, order.BizID, destBiz, destModule); err != nil {
+	kt := core.NewBackendKit()
+	kt.Ctx = t.ctx
+	if err := t.TransferHost(kt, hostIds, order.BizID, destBiz, destModule); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2Pool:failed, failed to transfer host to biz %d module %d, "+
 			"subOrderID: %s, err: %v", destBiz, destModule, order.SuborderID, err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
@@ -245,8 +247,10 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 		return ev
 	}
 
+	kt := core.NewBackendKit()
+	kt.Ctx = t.ctx
 	// transfer hosts to reborn-_CR中转
-	if err := t.transferHost2CrTransit(hostIds, order.BizID); err != nil {
+	if err := t.transferHost2CrTransit(kt, hostIds, order.BizID); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2Transit:failed, failed to transfer host to "+
 			"CR transit module, err: %v", err)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
@@ -283,7 +287,7 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 	srcBizId := recovertask.RebornBizId
 	srcModuleId := recovertask.CrRelayModuleId
 
-	if err := t.TransferHost2BizTransit(hosts, srcBizId, srcModuleId, order.BizID); err != nil {
+	if err := t.TransferHost2BizTransit(kt, hosts, srcBizId, srcModuleId, order.BizID); err != nil {
 		logs.Errorf("recycler:logics:cvm:dealTransitTask2Transit:failed, failed to transfer host to biz's "+
 			"CR transit module in CMDB, err: %v, srcBizId: %d, bizID: %d", err, srcBizId, order.BizID)
 		if errUpdate := t.UpdateHostInfo(order, table.RecycleStageTransit,
@@ -306,7 +310,7 @@ func (t *Transit) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*ta
 }
 
 // TransferHost 调用cc接口转移主机
-func (t *Transit) TransferHost(hostIds []int64, srcBizId, destBizId, destModuleId int64) error {
+func (t *Transit) TransferHost(kt *kit.Kit, hostIds []int64, srcBizId, destBizId, destModuleId int64) error {
 	transferReq := &cmdb.TransferHostReq{
 		From: cmdb.TransferHostSrcInfo{
 			FromBizID: srcBizId,
@@ -318,54 +322,47 @@ func (t *Transit) TransferHost(hostIds []int64, srcBizId, destBizId, destModuleI
 		},
 	}
 
-	resp, err := t.cc.TransferHost(nil, nil, transferReq)
+	err := t.cc.TransferHost(kt, transferReq)
 	if err != nil {
 		return err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to transfer host to target business, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-	}
 	return nil
 }
 
 // transferHost2CrTransit transfer hosts to CR transit module
-func (t *Transit) transferHost2CrTransit(hostIds []int64, srcBizId int64) error {
+func (t *Transit) transferHost2CrTransit(kt *kit.Kit, hostIds []int64, srcBizId int64) error {
 	// transfer hosts to reborn-_CR中转
 	destBiz := recovertask.RebornBizId
 	destModule := recovertask.CrRelayModuleId
-	return t.TransferHost(hostIds, srcBizId, destBiz, destModule)
+	return t.TransferHost(kt, hostIds, srcBizId, destBiz, destModule)
 }
 
 // countHostBizRelation get host topo info in cc 3.0
-func (t *Transit) countHostBizRelation(hostIds []int64) (int, error) {
-	req := &cmdb.HostBizRelReq{
-		BkHostId: hostIds,
+func (t *Transit) countHostBizRelation(kt *kit.Kit, hostIds []int64) (int, error) {
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
 	}
 
-	resp, err := t.cc.FindHostBizRelation(nil, nil, req)
+	resp, err := t.cc.FindHostBizRelations(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return 0, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return 0, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
-	}
-
-	return len(resp.Data), nil
+	return len(cvt.PtrToVal(resp)), nil
 }
 
 // TransferHost2BizTransit transfer hosts to given business's CR transit module in CMDB
-func (t *Transit) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error {
+func (t *Transit) TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHost, srcBizID, srcModuleID,
+	destBizId int64) error {
 	hostIds := make([]int64, 0)
 	for _, host := range hosts {
 		hostIds = append(hostIds, host.HostID)
 	}
 	subOrderId := hosts[0].SuborderID
 	// 查询仍在当前业务下的主机，避免部分转移重试失败
-	listResult, err := t.getBizHost(srcBizID, hostIds)
+	listResult, err := t.getBizHost(kt, srcBizID, hostIds)
 	if err != nil {
 		logs.Errorf("failed to get biz host number, srcBizID: %d, srcModuleID: %d, destBizId: %d, subOrderId: %s, "+
 			"err: %v", srcBizID, srcModuleID, destBizId, subOrderId, err)
@@ -373,7 +370,7 @@ func (t *Transit) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, 
 	}
 	// 若当前业务下没有主机，判断主机是否被他人转移导致查询不到
 	if listResult.Count == 0 {
-		hostToposCount, err := t.countHostBizRelation(hostIds)
+		hostToposCount, err := t.countHostBizRelation(kt, hostIds)
 		if err != nil {
 			return err
 		}
@@ -416,17 +413,11 @@ func (t *Transit) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, 
 			},
 		}
 
-		resp, err := t.cc.Hosts2CrTransit(nil, nil, req)
+		_, err := t.cc.Hosts2CrTransit(kit.New(), req)
 		if err != nil {
 			logs.Errorf("recycler:logics:cvm:transferHost2BizTransit:failed, failed to transfer host to "+
 				"CR transit module, err: %v, req: %+v", err, cvt.PtrToVal(req))
 			return fmt.Errorf("failed to transfer host to CR transit module, err: %v", err)
-		}
-
-		if resp.Result == false || resp.Code != 0 {
-			logs.Errorf("recycler:logics:cvm:transferHost2BizTransit:failed, failed to transfer host to "+
-				"CR transit module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-			return fmt.Errorf("failed to transfer host to CR transit module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
 		}
 
 		begin = end

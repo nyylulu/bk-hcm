@@ -28,7 +28,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 const (

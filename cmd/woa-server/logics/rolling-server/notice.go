@@ -33,8 +33,8 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/tools/slice"
 	"hcm/pkg/tools/times"
 )
@@ -92,7 +92,7 @@ func (l *logics) PushReturnNotifications(kt *kit.Kit, bizIDs []int64, extraRecei
 		rules := []cmdb.Rule{&cmdb.AtomRule{Field: "bk_biz_id", Operator: cmdb.OperatorIn, Value: subBizIDs}}
 		expression := &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: rules}}
 		params := &cmdb.SearchBizParams{BizPropertyFilter: expression, Fields: []string{"bk_biz_id", "bk_biz_name"}}
-		resp, err := l.esbClient.Cmdb().SearchBusiness(kt, params)
+		resp, err := l.cmdbClient.SearchBusiness(kt, params)
 		if err != nil {
 			logs.Errorf("call cmdb search business api failed, err: %v, bizIDs: %v, rid: %s", err, subBizIDs, kt.Rid)
 			return err

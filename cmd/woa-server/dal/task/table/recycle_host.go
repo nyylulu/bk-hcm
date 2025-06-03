@@ -17,7 +17,7 @@ import (
 	"time"
 
 	"hcm/pkg/criteria/enumor"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 )
 
 // RecycleHost defines a recycle host's detail information

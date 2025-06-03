@@ -20,15 +20,13 @@
 package cvm
 
 import (
-	"fmt"
-
 	"hcm/pkg"
 	cscvm "hcm/pkg/api/cloud-server/cvm"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 )
 
@@ -84,8 +82,7 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 		Page:               req.Page,
 		HostPropertyFilter: &cmdb.QueryFilter{Rule: combinedRule},
 	}
-	// FIXME: esb -> apigw
-	cmdbResult, err := c.esbClient.Cmdb().ListBizHost(kt, params)
+	cmdbResult, err := c.cmdbClient.ListBizHost(kt, params)
 	if err != nil {
 		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, cvt.PtrToVal(req), kt.Rid)
 		return nil, err
@@ -94,24 +91,18 @@ func (c *cvm) GetCmdbBizHosts(kt *kit.Kit, req *cscvm.CmdbHostQueryReq) (*cmdb.L
 }
 
 // GetHostTopoInfo get host topo info in cc 3.0
-func (c *cvm) GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostBizRel, error) {
-	req := &cmdb.HostBizRelReq{
-		BkHostId: hostIds,
+func (c *cvm) GetHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]cmdb.HostTopoRelation, error) {
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
 	}
 
-	// FIXME: esb -> apigw
-	resp, err := c.esbClient.Cmdb().FindHostBizRelation(kt.Ctx, kt.Header(), req)
+	resp, err := c.cmdbClient.FindHostBizRelations(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg, kt.Rid)
-		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data, nil
+	return cvt.PtrToVal(resp), nil
 }
 
 // GetModuleInfo get module info in cc 3.0
@@ -129,9 +120,7 @@ func (c *cvm) GetModuleInfo(kit *kit.Kit, bkBizID int64, moduleIds []int64) ([]*
 			Limit: 200,
 		},
 	}
-
-	// FIXME: esb -> apigw
-	resp, err := c.esbClient.Cmdb().SearchModule(kit, req)
+	resp, err := c.cmdbClient.SearchModule(kit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc module info, err: %v, rid: %s", err, kit.Rid)
 		return nil, err

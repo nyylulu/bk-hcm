@@ -35,10 +35,9 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
 	"hcm/pkg/thirdparty/api-gateway/bkdbm"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	"hcm/pkg/thirdparty/l5api"
 	"hcm/pkg/thirdparty/ngateapi"
 	"hcm/pkg/thirdparty/safetyapi"
@@ -76,13 +75,13 @@ type Detector struct {
 }
 
 // New creates a detector
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, cliSet *client.ClientSet) (
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, cliSet *client.ClientSet) (
 	*Detector, error) {
 
 	kt := core.NewBackendKit()
 	kt.Ctx = ctx
 	detector := &Detector{
-		cc:      esbCli.Cmdb(),
+		cc:      cmdbCli,
 		xray:    thirdCli.Xray,
 		xship:   thirdCli.Xship,
 		tmp:     thirdCli.Tmp,

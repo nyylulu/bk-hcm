@@ -31,7 +31,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/maps"
 	"hcm/pkg/tools/slice"
 )
@@ -156,7 +156,7 @@ func (c *cvm) filterCmdbBizHost(kt *kit.Kit, bizID int64, cloudCvms []corecvm.Cv
 		BkBizID:      bizID,
 		Vendor:       enumor.TCloudZiyan,
 		CloudInstIDs: maps.Keys(cloudCvmMap),
-		Page:         cmdb.BasePage{Limit: typecore.TCloudQueryLimit, Start: 0},
+		Page:         &cmdb.BasePage{Limit: typecore.TCloudQueryLimit, Start: 0},
 	}
 	cmdbResult, err := c.GetCmdbBizHosts(kt, cmdbReq)
 

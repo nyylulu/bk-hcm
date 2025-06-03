@@ -35,8 +35,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb/cmdb"
-	"hcm/pkg/tools/querybuilder"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/slice"
 
 	"github.com/shopspring/decimal"
@@ -358,10 +357,10 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		return nil
 	}
 
-	bizReq := &cmdb.SearchBizBelongingParams{
+	bizReq := &cmdb.SearchBizCompanyCmdbInfoParams{
 		BizIDs: []int64{req.BkBizID},
 	}
-	resp, err := l.esbClient.Cmdb().SearchBizBelonging(kt, bizReq)
+	resp, err := l.cmdbClient.SearchBizCompanyCmdbInfo(kt, bizReq)
 	if err != nil {
 		logs.Errorf("failed to search biz belonging, err: %v, rid: %s", err, kt.Rid)
 		return err
@@ -381,7 +380,7 @@ func (l *logics) calculateBill(kt *kit.Kit, req *rollingserver.RollingBillSyncRe
 		Month:               req.Month,
 		Day:                 req.Day,
 		DataDate:            getObsDataDate(req.Year, req.Month, req.Day),
-		ProductID:           bizBelong.OpProductID,
+		ProductID:           bizBelong.BkProductID,
 		BusinessSetID:       bizBelong.Bs1NameID,
 		BusinessSetName:     bizBelong.Bs1Name,
 		CityID:              constant.DefaultCityID,
@@ -483,19 +482,19 @@ func (l *logics) isBillExist(kt *kit.Kit, req *rollingserver.RollingBillSyncReq)
 }
 
 func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
-	req := &cmdb.SearchBizReq{
-		Filter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+	req := &cmdb.SearchBizParams{
+		BizPropertyFilter: &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_operate_dept_id",
-						Operator: querybuilder.OperatorEqual,
+						Operator: cmdb.OperatorEqual,
 						Value:    constant.IEGOperateDeptID,
 					},
-					querybuilder.AtomRule{
+					cmdb.AtomRule{
 						Field:    "bk_business_dept_id",
-						Operator: querybuilder.OperatorEqual,
+						Operator: cmdb.OperatorEqual,
 						Value:    constant.IEGOperateDeptID,
 					},
 				},
@@ -503,7 +502,7 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 		},
 		Fields: []string{"bk_biz_id"},
 	}
-	resp, err := l.esbClient.Cmdb().SearchBiz(kt.Ctx, kt.Header(), req)
+	resp, err := l.cmdbClient.SearchBusiness(kt, req)
 	if err != nil {
 		logs.Errorf("search business from cc failed, err: %v, param:%+v, rid: %s", err, req, kt.Rid)
 		return nil, fmt.Errorf("call cmdb search business api failed, err: %v", err)
@@ -511,8 +510,8 @@ func (l *logics) listIEGBizIDs(kt *kit.Kit) ([]int64, error) {
 
 	bizIDs := make([]int64, 0)
 
-	for _, biz := range resp.Data.Info {
-		bizIDs = append(bizIDs, biz.BkBizId)
+	for _, biz := range resp.Info {
+		bizIDs = append(bizIDs, biz.BizID)
 	}
 
 	return bizIDs, nil

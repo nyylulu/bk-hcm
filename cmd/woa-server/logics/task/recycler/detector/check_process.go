@@ -54,14 +54,14 @@ func (d *Detector) checkProcess(step *table.DetectStep, retry int) (int, string,
 // checkIsClear 空闲检查
 func (d *Detector) checkIsClear(ip string) (string, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := d.cc.GetHostInfoByIP(d.kt.Ctx, d.kt.Header(), ip, 0)
+	hostInfo, err := d.cc.GetHostInfoByIP(d.kt, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check, get host info by ip failed, ip: %s, err: %v", ip, err)
 		return "", err
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt.Ctx, d.kt.Header(), []int64{hostInfo.BkHostID})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.kt, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)

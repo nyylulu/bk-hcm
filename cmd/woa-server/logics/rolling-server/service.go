@@ -41,8 +41,8 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/api-gateway/cmsi"
-	"hcm/pkg/thirdparty/esb"
 )
 
 // Logics provides management interface for rolling server.
@@ -105,7 +105,7 @@ type Logics interface {
 type logics struct {
 	sd           serviced.State
 	client       *client.ClientSet
-	esbClient    esb.Client
+	cmdbClient   cmdb.Client
 	configLogics config.Logics
 	bizLogics    biz.Logics
 	cmsiClient   cmsi.Client
@@ -113,13 +113,13 @@ type logics struct {
 }
 
 // New creates rolling server logics instance.
-func New(sd serviced.State, client *client.ClientSet, esbClient esb.Client, thirdCli *thirdparty.Client,
+func New(sd serviced.State, client *client.ClientSet, cmdbCli cmdb.Client, thirdCli *thirdparty.Client,
 	bizLogic biz.Logics, cmsiCli cmsi.Client, configLogics config.Logics) (Logics, error) {
 
 	rsLogics := &logics{
 		sd:           sd,
 		client:       client,
-		esbClient:    esbClient,
+		cmdbClient:   cmdbCli,
 		configLogics: configLogics,
 		bizLogics:    bizLogic,
 		cmsiClient:   cmsiCli,

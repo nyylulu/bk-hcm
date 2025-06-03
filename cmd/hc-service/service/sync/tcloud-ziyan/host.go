@@ -32,8 +32,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/converter"
 )
 
@@ -135,7 +134,7 @@ func (hd *hostHandler) Next(kt *kit.Kit) ([]string, error) {
 	params := &cmdb.ListBizHostParams{
 		BizID:  hd.request.BizID,
 		Fields: []string{"bk_host_id"},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: int64(hd.offset),
 			Limit: int64(core.DefaultMaxPageLimit),
 			Sort:  "bk_host_id",
@@ -148,7 +147,7 @@ func (hd *hostHandler) Next(kt *kit.Kit) ([]string, error) {
 		},
 	}
 
-	result, err := esb.EsbClient().Cmdb().ListBizHost(kt, params)
+	result, err := cmdb.CmdbClient().ListBizHost(kt, params)
 	if err != nil {
 		logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, params, kt.Rid)
 		return nil, err

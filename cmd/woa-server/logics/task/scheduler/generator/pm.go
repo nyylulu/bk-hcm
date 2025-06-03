@@ -22,13 +22,13 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/querybuilder"
 )
 
 // matchPM match pm devices
-func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.DeviceInfo) error {
+func (g *Generator) matchPM(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo) error {
 	replicas := order.Total - uint(len(existDevices))
 
 	// 1. init generate record
@@ -85,7 +85,7 @@ func (g *Generator) matchPM(order *types.ApplyOrder, existDevices []*types.Devic
 	}
 
 	// 4. save matched pm instances info
-	if err := g.createGeneratedDevice(order, generateId, deviceList); err != nil {
+	if err := g.createGeneratedDevice(kt, order, generateId, deviceList); err != nil {
 		logs.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 		return fmt.Errorf("failed to update generated device, err: %v, order id: %s", err, order.SubOrderId)
 	}
@@ -221,7 +221,7 @@ func (g *Generator) listHostFromPool(order *types.ApplyOrder) ([]*cmdb.Host, err
 			"raid_name",
 			"svr_input_time",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},

@@ -44,9 +44,8 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/language"
 	"hcm/pkg/tools/maps"
@@ -124,7 +123,7 @@ type Interface interface {
 	// DealTransitTask2Transit transit Pm resource which is dissolved or expired
 	DealTransitTask2Transit(order *table.RecycleOrder, hosts []*table.RecycleHost) *event.Event
 	// TransferHost2BizTransit transfer host to business module
-	TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error
+	TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error
 	// RecoverReturnCvm recover retrun CVM resource without yunti orderId
 	RecoverReturnCvm(kt *kit.Kit, task *table.ReturnTask, hosts []*table.RecycleHost) *event.Event
 	// QueryReturnStatus query return status
@@ -153,24 +152,24 @@ type recycler struct {
 }
 
 // New create a recycler
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, authorizer auth.Authorizer,
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, authorizer auth.Authorizer,
 	rsLogic rslogics.Logics, dissolveLogic dissolve.Logics, cliSet *client.ClientSet,
 	configLogics configLogics.Logics) (Interface, error) {
 
 	// new detector
-	moduleDetector, err := detector.New(ctx, thirdCli, esbCli, cliSet)
+	moduleDetector, err := detector.New(ctx, thirdCli, cmdbCli, cliSet)
 	if err != nil {
 		return nil, err
 	}
 
 	// new returner
-	moduleReturner, err := returner.New(ctx, thirdCli, esbCli)
+	moduleReturner, err := returner.New(ctx, thirdCli, cmdbCli)
 	if err != nil {
 		return nil, err
 	}
 
 	// new transit
-	moduleTransit, err := transit.New(ctx, thirdCli, esbCli, rsLogic)
+	moduleTransit, err := transit.New(ctx, thirdCli, cmdbCli, rsLogic)
 
 	// new dispatcher
 	dispatch, err := dispatcher.New(ctx)
@@ -184,7 +183,7 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client, au
 
 	recycler := &recycler{
 		lang:          language.NewFromCtx(language.EmptyLanguageSetting),
-		cc:            esbCli.Cmdb(),
+		cc:            cmdbCli,
 		cvm:           thirdCli.CVM,
 		dispatcher:    dispatch,
 		authorizer:    authorizer,
@@ -223,7 +222,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 	}
 
 	// 1. get host base info
-	hostBase, err := r.getHostBaseInfo(param.IPs, param.AssetIDs, param.HostIDs)
+	hostBase, err := r.getHostBaseInfo(kt, param.IPs, param.AssetIDs, param.HostIDs)
 	if err != nil {
 		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -239,7 +238,7 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 	}
 
 	// 2. get host topo info
-	relations, err := r.getHostTopoInfo(hostIds)
+	relations, err := r.getHostTopoInfo(kt, hostIds)
 	if err != nil {
 		logs.Errorf("failed to recycle check, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -247,73 +246,59 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 
 	bizIds := make([]int64, 0)
 	mapBizToModule := make(map[int64][]int64)
-	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
+	mapHostToRel := make(map[int64]*cmdb.HostTopoRelation)
 	for _, rel := range relations {
 		// 如果访问的是业务下的接口，但是查出来的业务不属于当前业务，需要报错或过滤掉
-		if _, ok := bkBizIDMap[rel.BkBizId]; !ok && len(bkBizIDMap) > 0 {
+		if _, ok := bkBizIDMap[rel.BizID]; !ok && len(bkBizIDMap) > 0 {
 			return nil, errf.Newf(errf.InvalidParameter, "bizID:%d where the hostID:%d is located is not in "+
-				"the bizIDMap:%+v passed in", rel.BkBizId, rel.BkHostId, bkBizIDMap)
+				"the bizIDMap:%+v passed in", rel.BizID, rel.HostID, bkBizIDMap)
 		}
 
-		mapHostToRel[rel.BkHostId] = rel
-		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
-			mapBizToModule[rel.BkBizId] = []int64{rel.BkModuleId}
-			bizIds = append(bizIds, rel.BkBizId)
+		mapHostToRel[rel.HostID] = rel
+		if _, ok := mapBizToModule[rel.BizID]; !ok {
+			mapBizToModule[rel.BizID] = []int64{rel.BkModuleID}
+			bizIds = append(bizIds, rel.BizID)
 		} else {
-			mapBizToModule[rel.BkBizId] = append(mapBizToModule[rel.BkBizId], rel.BkModuleId)
+			mapBizToModule[rel.BizID] = append(mapBizToModule[rel.BizID], rel.BkModuleID)
 		}
 	}
 
-	bizList, err := r.getBizInfo(bizIds)
+	mapBizIdToBiz, err := r.getBizInfo(kt, bizIds)
 	if err != nil {
 		logs.Errorf("failed to recycle check, for get business info err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	mapBizIdToBiz := make(map[int64]*cmdb.BizInfo)
-	for _, biz := range bizList {
-		mapBizIdToBiz[biz.BkBizId] = biz
-	}
-
-	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
-	for bizId, moduleIds := range mapBizToModule {
-		moduleIdUniq := util.IntArrayUnique(moduleIds)
-		moduleList, err := r.getModuleInfo(kt, bizId, moduleIdUniq)
-		if err != nil {
-			logs.Errorf("failed to recycle check, for get module info err: %v, rid: %s", err, kt.Rid)
-			return nil, err
-		}
-		for _, module := range moduleList {
-			mapModuleIdToModule[module.BkModuleId] = module
-		}
+	mapModuleIdToModule, err := r.getModuleInfoMap(kt, mapBizToModule)
+	if err != nil {
+		logs.Errorf("failed to recycle check, for get module info err: %v, rid: %s", err, kt.Rid)
+		return nil, err
 	}
 
 	// 3. check recycle permissions
-	mapBizPermission := make(map[int64]bool)
-	for _, bizId := range bizIds {
-		err = r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
-			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
-		})
-		if err != nil {
-			logs.Warnf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
-			mapBizPermission[bizId] = false
-			continue
-		}
-		mapBizPermission[bizId] = true
-	}
+	mapBizPermission := r.checkRecyclePermissions(kt, resType, action, bizIds)
 
 	// 4. check recyclability and create check result
+	rst := r.checkRecycleAbility(kt, hostBase, mapHostToRel, mapBizIdToBiz, mapBizPermission, mapModuleIdToModule)
+
+	return rst, nil
+}
+
+func (r *recycler) checkRecycleAbility(kt *kit.Kit, hostBase []*cmdb.Host,
+	mapHostToRel map[int64]*cmdb.HostTopoRelation, mapBizIdToBiz map[int64]*cmdb.Biz, mapBizPermission map[int64]bool,
+	mapModuleIdToModule map[int64]*cmdb.ModuleInfo) *types.RecycleCheckRst {
+
 	checkInfos := make([]*types.RecycleCheckInfo, 0)
 	for _, host := range hostBase {
 		bizId := int64(0)
 		moduleId := int64(0)
 		if rel, ok := mapHostToRel[host.BkHostID]; ok {
-			bizId = rel.BkBizId
-			moduleId = rel.BkModuleId
+			bizId = rel.BizID
+			moduleId = rel.BkModuleID
 		}
 		bizName := ""
 		if biz, ok := mapBizIdToBiz[bizId]; ok {
-			bizName = biz.BkBizName
+			bizName = biz.BizName
 		} else if bizId == 5000008 {
 			// 业务资源池
 			bizName = "业务资源池"
@@ -348,8 +333,43 @@ func (r *recycler) RecycleCheck(kt *kit.Kit, param *types.RecycleCheckReq, bkBiz
 		Count: int64(len(checkInfos)),
 		Info:  checkInfos,
 	}
+	return rst
+}
 
-	return rst, nil
+func (r *recycler) checkRecyclePermissions(kt *kit.Kit, resType meta.ResourceType, action meta.Action,
+	bizIds []int64) map[int64]bool {
+
+	mapBizPermission := make(map[int64]bool)
+	for _, bizId := range bizIds {
+		err := r.authorizer.AuthorizeWithPerm(kt, meta.ResourceAttribute{
+			Basic: &meta.Basic{Type: resType, Action: action}, BizID: bizId,
+		})
+		if err != nil {
+			logs.Warnf("failed to check recycle permission, bizID: %d, err: %v", bizId, err)
+			mapBizPermission[bizId] = false
+			continue
+		}
+		mapBizPermission[bizId] = true
+	}
+	return mapBizPermission
+}
+
+func (r *recycler) getModuleInfoMap(kt *kit.Kit, mapBizToModule map[int64][]int64) (
+	map[int64]*cmdb.ModuleInfo, error) {
+
+	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
+	for bizId, moduleIds := range mapBizToModule {
+		moduleIdUniq := util.IntArrayUnique(moduleIds)
+		moduleList, err := r.getModuleInfo(kt, bizId, moduleIdUniq)
+		if err != nil {
+			logs.Errorf("failed to recycle check, for get module info err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
+		for _, module := range moduleList {
+			mapModuleIdToModule[module.BkModuleId] = module
+		}
+	}
+	return mapModuleIdToModule, nil
 }
 
 // fillCheckInfo fill host with recyclability check info
@@ -377,7 +397,7 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 	[]*table.RecycleHost, error) {
 
 	// 1. get host base info
-	hostBase, err := r.getHostBaseInfo(ips, assetIds, hostIds)
+	hostBase, err := r.getHostBaseInfo(kt, ips, assetIds, hostIds)
 	if err != nil {
 		logs.Errorf("failed to get host detail info, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, err
@@ -417,39 +437,34 @@ func (r *recycler) getHostDetailInfo(kt *kit.Kit, ips, assetIds []string, hostId
 	return hostDetails, nil
 }
 
-func (r *recycler) getBizModuleRelByHostIDs(kt *kit.Kit, bkHostIds []int64) (map[int64]*cmdb.HostBizRel,
-	map[int64]*cmdb.BizInfo, map[int64]*cmdb.ModuleInfo, error) {
+func (r *recycler) getBizModuleRelByHostIDs(kt *kit.Kit, bkHostIds []int64) (map[int64]*cmdb.HostTopoRelation,
+	map[int64]*cmdb.Biz, map[int64]*cmdb.ModuleInfo, error) {
 
-	relations, err := r.getHostTopoInfo(bkHostIds)
+	relations, err := r.getHostTopoInfo(kt, bkHostIds)
 	if err != nil {
 		logs.Errorf("failed to get host detail info, for list host err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, err
 	}
 
 	bizIds := make([]int64, 0)
-	mapHostToRel := make(map[int64]*cmdb.HostBizRel)
+	mapHostToRel := make(map[int64]*cmdb.HostTopoRelation)
 	mapBizToModule := make(map[int64][]int64)
 	for _, rel := range relations {
-		bizIds = append(bizIds, rel.BkBizId)
-		mapHostToRel[rel.BkHostId] = rel
+		bizIds = append(bizIds, rel.BizID)
+		mapHostToRel[rel.HostID] = rel
 
 		// 记录业务ID跟模块ID的映射
-		if _, ok := mapBizToModule[rel.BkBizId]; !ok {
-			mapBizToModule[rel.BkBizId] = make([]int64, 0)
+		if _, ok := mapBizToModule[rel.BizID]; !ok {
+			mapBizToModule[rel.BizID] = make([]int64, 0)
 		}
-		mapBizToModule[rel.BkBizId] = append(mapBizToModule[rel.BkBizId], rel.BkModuleId)
+		mapBizToModule[rel.BizID] = append(mapBizToModule[rel.BizID], rel.BkModuleID)
 	}
 	bizIds = util.IntArrayUnique(bizIds)
 
-	bizList, err := r.getBizInfo(bizIds)
+	mapBizIdToBiz, err := r.getBizInfo(kt, bizIds)
 	if err != nil {
 		logs.Errorf("failed to get host detail info, for get business info err: %v, rid: %s", err, kt.Rid)
 		return nil, nil, nil, err
-	}
-
-	mapBizIdToBiz := make(map[int64]*cmdb.BizInfo)
-	for _, biz := range bizList {
-		mapBizIdToBiz[biz.BkBizId] = biz
 	}
 
 	mapModuleIdToModule := make(map[int64]*cmdb.ModuleInfo)
@@ -469,7 +484,7 @@ func (r *recycler) getBizModuleRelByHostIDs(kt *kit.Kit, bkHostIds []int64) (map
 }
 
 func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
-	mapHostToRel map[int64]*cmdb.HostBizRel, mapBizIdToBiz map[int64]*cmdb.BizInfo,
+	mapHostToRel map[int64]*cmdb.HostTopoRelation, mapBizIdToBiz map[int64]*cmdb.Biz,
 	mapModuleIdToModule map[int64]*cmdb.ModuleInfo) []*table.RecycleHost {
 
 	hostDetails := make([]*table.RecycleHost, 0)
@@ -477,12 +492,12 @@ func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
 		bizId := int64(0)
 		moduleId := int64(0)
 		if rel, ok := mapHostToRel[host.BkHostID]; ok {
-			bizId = rel.BkBizId
-			moduleId = rel.BkModuleId
+			bizId = rel.BizID
+			moduleId = rel.BkModuleID
 		}
 		bizName := ""
 		if biz, ok := mapBizIdToBiz[bizId]; ok {
-			bizName = biz.BkBizName
+			bizName = biz.BizName
 		} else if bizId == 5000008 {
 			// 业务资源池
 			bizName = "业务资源池"
@@ -526,7 +541,7 @@ func (r *recycler) getHostDetails(kt *kit.Kit, hostBase []*cmdb.Host,
 }
 
 // getHostBaseInfo get host base info in cc 3.0
-func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*cmdb.Host, error) {
+func (r *recycler) getHostBaseInfo(kt *kit.Kit, ips, assetIds []string, hostIds []int64) ([]*cmdb.Host, error) {
 	rule := querybuilder.CombinedRule{
 		Condition: querybuilder.ConditionOr,
 		Rules:     make([]querybuilder.Rule, 0),
@@ -593,50 +608,40 @@ func (r *recycler) getHostBaseInfo(ips, assetIds []string, hostIds []int64) ([]*
 		},
 	}
 
-	resp, err := r.cc.ListHost(nil, nil, req)
+	resp, err := r.cc.ListHost(kt, req)
 	if err != nil {
-		logs.Errorf("failed to get cc host info, err: %v", err)
+		logs.Errorf("failed to get cc host info, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data.Info, nil
+	return cvt.SliceToPtr(resp.Info), nil
 }
 
 // getHostTopoInfo get host topo info in cc 3.0
-func (r *recycler) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostBizRel, error) {
-	req := &cmdb.HostBizRelReq{
-		BkHostId: hostIds,
+func (r *recycler) getHostTopoInfo(kt *kit.Kit, hostIds []int64) ([]*cmdb.HostTopoRelation, error) {
+	req := &cmdb.HostModuleRelationParams{
+		HostID: hostIds,
 	}
 
-	resp, err := r.cc.FindHostBizRelation(nil, nil, req)
+	resp, err := r.cc.FindHostBizRelations(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host topo info, code: %d, msg: %s, rid: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host topo info, err: %s", resp.ErrMsg)
-	}
-
-	return resp.Data, nil
+	return cvt.SliceToPtr(cvt.PtrToVal(resp)), nil
 }
 
 // getBizInfo get business info in cc 3.0
-func (r *recycler) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
-	req := &cmdb.SearchBizReq{
-		Filter: &querybuilder.QueryFilter{
-			Rule: querybuilder.CombinedRule{
-				Condition: querybuilder.ConditionAnd,
-				Rules: []querybuilder.Rule{
-					querybuilder.AtomRule{
+func (r *recycler) getBizInfo(kt *kit.Kit, bizIds []int64) (map[int64]*cmdb.Biz, error) {
+	req := &cmdb.SearchBizParams{
+		BizPropertyFilter: &cmdb.QueryFilter{
+			Rule: cmdb.CombinedRule{
+				Condition: cmdb.ConditionAnd,
+				Rules: []cmdb.Rule{
+					cmdb.AtomRule{
 						Field:    "bk_biz_id",
-						Operator: querybuilder.OperatorIn,
+						Operator: cmdb.OperatorIn,
 						Value:    bizIds,
 					},
 				},
@@ -649,18 +654,17 @@ func (r *recycler) getBizInfo(bizIds []int64) ([]*cmdb.BizInfo, error) {
 		},
 	}
 
-	resp, err := r.cc.SearchBiz(nil, nil, req)
+	resp, err := r.cc.SearchBusiness(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc business info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc business info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc business info, err: %s", resp.ErrMsg)
+	mapBizIdToBiz := make(map[int64]*cmdb.Biz)
+	for _, biz := range resp.Info {
+		mapBizIdToBiz[biz.BizID] = &biz
 	}
-
-	return resp.Data.Info, nil
+	return mapBizIdToBiz, nil
 }
 
 // getModuleInfo get module info in cc 3.0
@@ -1792,7 +1796,7 @@ func (r *recycler) GetRecycleBizHost(kit *kit.Kit, param *types.GetRecycleBizHos
 			"svr_input_time",
 			"srv_status",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: int64(param.Page.Start),
 			Limit: int64(param.Page.Limit),
 		},
@@ -1895,8 +1899,8 @@ func (r *recycler) DealTransitTask2Transit(order *table.RecycleOrder, hosts []*t
 }
 
 // TransferHost2BizTransit transit host to biz
-func (r *recycler) TransferHost2BizTransit(hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error {
-	return r.dispatcher.GetTransit().TransferHost2BizTransit(hosts, srcBizID, srcModuleID, destBizId)
+func (r *recycler) TransferHost2BizTransit(kt *kit.Kit, hosts []*table.RecycleHost, srcBizID, srcModuleID, destBizId int64) error {
+	return r.dispatcher.GetTransit().TransferHost2BizTransit(kt, hosts, srcBizID, srcModuleID, destBizId)
 }
 
 // QueryReturnStatus transit host to biz

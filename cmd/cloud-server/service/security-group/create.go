@@ -35,7 +35,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
-	"hcm/pkg/thirdparty/esb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/assert"
 	"hcm/pkg/tools/hooks/handler"
 )
@@ -272,7 +272,7 @@ func (svc *securityGroupSvc) createTCloudZiyanSecurityGroup(cts *rest.Contexts, 
 		UsageBizIds: req.UsageBizIds,
 	}
 	// 打业务标签
-	tags, err := ziyanlogic.GenTagsForBizsWithManager(cts.Kit, esb.EsbClient().Cmdb(), req.MgmtBizID,
+	tags, err := ziyanlogic.GenTagsForBizsWithManager(cts.Kit, cmdb.CmdbClient(), req.MgmtBizID,
 		req.Manager, req.BakManager)
 	if err != nil {
 		logs.Errorf("gen tags for biz sg failed, err: %v, biz: %d, rid: %s", err, bizID, cts.Kit.Rid)

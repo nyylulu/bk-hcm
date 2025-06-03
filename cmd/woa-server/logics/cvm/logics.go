@@ -31,8 +31,8 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
-	"hcm/pkg/thirdparty/esb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 )
@@ -59,7 +59,7 @@ type logics struct {
 	cvm       cvmapi.CVMClientInterface
 	cliConf   cc.ClientConfig
 	confLogic config.Logics
-	esbClient esb.Client
+	cmdbCli   cmdb.Client
 	rsLogic   rollingserver.Logics
 	taskLogic taskLogics.Logics
 	schedulerLogic scheduler.Interface
@@ -67,14 +67,14 @@ type logics struct {
 
 // New create a logics manager
 func New(thirdCli *thirdparty.Client, cliConf cc.ClientConfig, confLogic config.Logics,
-	esbClient esb.Client, rsLogic rollingserver.Logics, taskLogic taskLogics.Logics,
+	cmdbCli cmdb.Client, rsLogic rollingserver.Logics, taskLogic taskLogics.Logics,
 	schedulerLogic scheduler.Interface) Logics {
 
 	return &logics{
 		cvm:       thirdCli.CVM,
 		confLogic: confLogic,
 		cliConf:   cliConf,
-		esbClient: esbClient,
+		cmdbCli:   cmdbCli,
 		rsLogic:   rsLogic,
 		taskLogic: taskLogic,
 		schedulerLogic: schedulerLogic,

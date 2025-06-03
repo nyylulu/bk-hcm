@@ -20,7 +20,7 @@ import (
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/querybuilder"
 )
 
@@ -87,7 +87,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(nil, nil, req)
+	resp, err := d.cc.ListHost(d.kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return "", err
@@ -96,12 +96,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 	respStr := d.structToStr(resp)
 	exeInfo := fmt.Sprintf("vm check response: %s", respStr)
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return exeInfo, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
-	vmNum := len(resp.Data.Info)
+	vmNum := len(resp.Info)
 	if vmNum > 0 {
 		logs.Errorf("host has %d vm", vmNum)
 		return exeInfo, fmt.Errorf("host has %d vm", vmNum)

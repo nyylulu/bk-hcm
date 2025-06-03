@@ -16,7 +16,6 @@ package returner
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"time"
 
@@ -26,16 +25,16 @@ import (
 	daltypes "hcm/cmd/woa-server/storage/dal/types"
 	recovertask "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
+	"hcm/pkg/api/core"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/dal"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/thirdparty/erpapi"
-	"hcm/pkg/thirdparty/esb"
-	"hcm/pkg/thirdparty/esb/cmdb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/querybuilder"
@@ -45,19 +44,19 @@ import (
 
 // Returner deal with device return tasks
 type Returner struct {
-	esb esb.Client
-	cvm cvmapi.CVMClientInterface
-	erp erpapi.ErpClientInterface
-	ctx context.Context
+	cmdbCli cmdb.Client
+	cvm     cvmapi.CVMClientInterface
+	erp     erpapi.ErpClientInterface
+	ctx     context.Context
 }
 
 // New creates a returner
-func New(ctx context.Context, thirdCli *thirdparty.Client, esbCli esb.Client) (*Returner, error) {
+func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) (*Returner, error) {
 	returner := &Returner{
-		esb: esbCli,
-		cvm: thirdCli.CVM,
-		erp: thirdCli.Erp,
-		ctx: ctx,
+		cmdbCli: cmdbCli,
+		cvm:     thirdCli.CVM,
+		erp:     thirdCli.Erp,
+		ctx:     ctx,
 	}
 
 	return returner, nil
@@ -411,7 +410,7 @@ func (r *Returner) updateHostInfo(ctx context.Context, task *table.ReturnTask, t
 	return nil
 }
 
-func (r *Returner) rollbackTransit(hosts []*table.RecycleHost) {
+func (r *Returner) rollbackTransit(kt *kit.Kit, hosts []*table.RecycleHost) {
 	if len(hosts) == 0 {
 		return
 	}
@@ -423,21 +422,21 @@ func (r *Returner) rollbackTransit(hosts []*table.RecycleHost) {
 	for _, host := range hosts {
 		assetIDs = append(assetIDs, host.AssetID)
 	}
-	if err := r.transferHost2BizIdle(assetIDs, bizID); err != nil {
+	if err := r.transferHost2BizIdle(kt, assetIDs, bizID); err != nil {
 		logs.Warnf("failed to transfer host from CR transit module back to idle module")
 		return
 	}
 
 	// 2. get new host IDs after transit hosts back to idle module
 	// note: host ID change after transit back to business idle module
-	hostIDs, err := r.getHostIDByAsset(assetIDs, bizID)
+	hostIDs, err := r.getHostIDByAsset(kt, assetIDs, bizID)
 	if err != nil {
 		logs.Warnf("failed to get host ID by asset, err: %v", err)
 		return
 	}
 
 	// 3. transit hosts from idle module to recycle module
-	if err := r.transferHost2BizRecycle(hostIDs, bizID); err != nil {
+	if err := r.transferHost2BizRecycle(kt, hostIDs, bizID); err != nil {
 		logs.Warnf("failed to transfer host to recycle module")
 		return
 	}
@@ -450,7 +449,7 @@ func (r *Returner) rollbackTransit(hosts []*table.RecycleHost) {
 }
 
 // transferHost2BizIdle transfer hosts from CR transit module back to idle module in CMDB
-func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) error {
+func (r *Returner) transferHost2BizIdle(kt *kit.Kit, assetIds []string, destBizId int64) error {
 	// once 10 hosts at most
 	maxNum := 10
 	begin := 0
@@ -469,18 +468,12 @@ func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) erro
 			AssetIDs: assetIds[begin:end],
 		}
 
-		resp, err := r.esb.Cmdb().HostsCrTransit2Idle(nil, nil, req)
+		err := r.cmdbCli.HostsCrTransit2Idle(kt, req)
 		begin = end
 		if err != nil {
 			logs.Errorf("failed to transfer host back to idle module, err: %v", err)
 			return err
 		}
-
-		if resp.Result == false || resp.Code != 0 {
-			logs.Warnf("failed to transfer host back to idle module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-			return fmt.Errorf("failed to transfer host back to idle module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		}
-
 		logs.Infof("transfer host back to idle module success, hosts: %v", req.AssetIDs)
 	}
 
@@ -488,7 +481,7 @@ func (r *Returner) transferHost2BizIdle(assetIds []string, destBizId int64) erro
 }
 
 // getHostIDByAsset get host ID by asset ID
-func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, error) {
+func (r *Returner) getHostIDByAsset(kt *kit.Kit, assetIDs []string, bizID int64) ([]int64, error) {
 	hostIDs := make([]int64, 0)
 
 	req := &cmdb.ListBizHostParams{
@@ -516,13 +509,13 @@ func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, er
 			"bk_asset_id",
 			"bk_host_innerip",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},
 	}
 
-	resp, err := r.esb.Cmdb().ListBizHost(kit.New(), req)
+	resp, err := r.cmdbCli.ListBizHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
@@ -536,9 +529,9 @@ func (r *Returner) getHostIDByAsset(assetIDs []string, bizID int64) ([]int64, er
 }
 
 // transferHost2BizRecycle transfer hosts from business idle module to recycle module in CMDB
-func (r *Returner) transferHost2BizRecycle(hostIDs []int64, bizID int64) error {
+func (r *Returner) transferHost2BizRecycle(kt *kit.Kit, hostIDs []int64, bizID int64) error {
 	// get business recycle module id
-	moduleID, err := r.getBizRecycleModuleID(bizID)
+	moduleID, err := r.getBizRecycleModuleID(kt, bizID)
 	if err != nil {
 		logs.Errorf("failed to get biz %d recycle module ID, err: %v", bizID, err)
 		return err
@@ -556,14 +549,9 @@ func (r *Returner) transferHost2BizRecycle(hostIDs []int64, bizID int64) error {
 		},
 	}
 
-	resp, err := r.esb.Cmdb().TransferHost(nil, nil, req)
+	err = r.cmdbCli.TransferHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to transfer host to recycle module %d, err: %v", moduleID, err)
-		return err
-	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to transfer host to recycle module %d, code: %d, msg: %s", moduleID, resp.Code, resp.ErrMsg)
 		return err
 	}
 
@@ -571,34 +559,12 @@ func (r *Returner) transferHost2BizRecycle(hostIDs []int64, bizID int64) error {
 }
 
 // getBizRecycleModuleID get business recycle module ID
-func (r *Returner) getBizRecycleModuleID(bizID int64) (int64, error) {
-	req := &cmdb.GetBizInternalModuleReq{
-		BkBizID: bizID,
-	}
-	resp, err := r.esb.Cmdb().GetBizInternalModule(nil, nil, req)
+func (r *Returner) getBizRecycleModuleID(kt *kit.Kit, bizID int64) (int64, error) {
+	moduleID, err := r.cmdbCli.GetBizInternalModuleID(kt, bizID)
 	if err != nil {
 		logs.Errorf("failed to get biz internal module, err: %v", err)
 		return 0, fmt.Errorf("failed to get biz internal module, err: %v", err)
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get biz internal module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return 0, fmt.Errorf("failed to get biz internal module, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-	}
-
-	moduleID := int64(0)
-	for _, module := range resp.Data.Module {
-		if module.Default == cmdb.DftModuleRecycle {
-			moduleID = module.BkModuleId
-			break
-		}
-	}
-
-	if moduleID <= 0 {
-		logs.Errorf("get no biz recycle module ID")
-		return 0, errors.New("get no biz recycle module ID")
-	}
-
 	return moduleID, nil
 }
 
@@ -619,15 +585,11 @@ func (r *Returner) setHostOperator(hostIDs []int64, operator string) error {
 		req.Update = append(req.Update, update)
 	}
 
-	resp, err := r.esb.Cmdb().UpdateHosts(nil, nil, req)
+	kt := core.NewBackendKit()
+	_, err := r.cmdbCli.UpdateHosts(kt, req)
 	if err != nil {
 		return err
 	}
-
-	if resp.Result == false || resp.Code != 0 {
-		return fmt.Errorf("failed to set host operator, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-	}
-
 	return nil
 }
 

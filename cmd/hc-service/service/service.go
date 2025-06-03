@@ -62,6 +62,7 @@ import (
 	restcli "hcm/pkg/rest/client"
 	"hcm/pkg/runtime/shutdown"
 	"hcm/pkg/serviced"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/esb"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/ssl"
@@ -87,6 +88,10 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 
 	cloudAdaptor := cloudadaptor.NewCloudAdaptorClient(cliSet.DataService())
 	if err = esb.InitEsbClient(cvt.ValToPtr(cc.HCService().Esb), metrics.Register()); err != nil {
+		return nil, err
+	}
+
+	if err = cmdb.InitCmdbClient(cvt.ValToPtr(cc.HCService().Cmdb), metrics.Register()); err != nil {
 		return nil, err
 	}
 

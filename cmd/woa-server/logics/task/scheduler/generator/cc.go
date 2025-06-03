@@ -17,13 +17,15 @@ import (
 	"fmt"
 
 	"hcm/pkg"
+	"hcm/pkg/api/core"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
-	"hcm/pkg/thirdparty/esb/cmdb"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/querybuilder"
 )
 
 // syncHostByAsset sync host info to cc 3.0 by asset id
-func (g *Generator) syncHostByAsset(assetIds []string) error {
+func (g *Generator) syncHostByAsset(kt *kit.Kit, assetIds []string) error {
 	// once 10 hosts at most
 	maxNum := 10
 	begin := 0
@@ -40,17 +42,11 @@ func (g *Generator) syncHostByAsset(assetIds []string) error {
 			AssetIDs: assetIds[begin:end],
 		}
 
-		resp, err := g.cc.AddHost(nil, nil, req)
+		err := g.cc.AddHost(kt, req)
 		if err != nil {
 			logs.Errorf("failed to call cc api to sync host, err: %v", err)
 			return fmt.Errorf("failed to call cc api to sync host, err: %v", err)
 		}
-
-		if resp.Result == false || resp.Code != 0 {
-			logs.Errorf("sync host to cc response failure, code: %d, err: %s", resp.Code, resp.ErrMsg)
-			return fmt.Errorf("sync host to cc response failure, code: %d, err: %s", resp.Code, resp.ErrMsg)
-		}
-
 		begin = end
 	}
 
@@ -75,17 +71,12 @@ func (g *Generator) syncHostByIp(ips []string) error {
 			InnerIps: ips[begin:end],
 		}
 
-		resp, err := g.cc.AddHost(nil, nil, req)
+		kt := core.NewBackendKit()
+		err := g.cc.AddHost(kt, req)
 		if err != nil {
 			logs.Errorf("failed to call cc api to sync host, err: %v", err)
 			return fmt.Errorf("failed to call cc api to sync host, err: %v", err)
 		}
-
-		if resp.Result == false || resp.Code != 0 {
-			logs.Errorf("sync host to cc response failure, code: %d, err: %s", resp.Code, resp.ErrMsg)
-			return fmt.Errorf("sync host to cc response failure, code: %d, err: %s", resp.Code, resp.ErrMsg)
-		}
-
 		begin = end
 	}
 
@@ -93,7 +84,7 @@ func (g *Generator) syncHostByIp(ips []string) error {
 }
 
 // listDeviceTopo list device topology info
-func (g *Generator) listDeviceTopo(ips []string) ([]*cmdb.DeviceTopoInfo, error) {
+func (g *Generator) listDeviceTopo(kt *kit.Kit, ips []string) ([]*cmdb.DeviceTopoInfo, error) {
 	req := &cmdb.ListHostReq{
 		HostPropertyFilter: &cmdb.QueryFilter{
 			Rule: cmdb.CombinedRule{
@@ -139,19 +130,14 @@ func (g *Generator) listDeviceTopo(ips []string) ([]*cmdb.DeviceTopoInfo, error)
 		},
 	}
 
-	resp, err := g.cc.ListHost(nil, nil, req)
+	resp, err := g.cc.ListHost(kt, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
 	}
 
-	if resp.Result == false || resp.Code != 0 {
-		logs.Errorf("failed to get cc host info, code: %d, msg: %s", resp.Code, resp.ErrMsg)
-		return nil, fmt.Errorf("failed to get cc host info, err: %s", resp.ErrMsg)
-	}
-
 	topoInfos := make([]*cmdb.DeviceTopoInfo, 0)
-	for _, host := range resp.Data.Info {
+	for _, host := range resp.Info {
 		topo := &cmdb.DeviceTopoInfo{
 			InnerIP:      host.GetUniqIp(),
 			AssetID:      host.BkAssetID,

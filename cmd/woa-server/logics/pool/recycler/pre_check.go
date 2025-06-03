@@ -23,8 +23,8 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/tools/querybuilder"
-	"hcm/pkg/thirdparty/esb/cmdb"
 )
 
 func (r *Recycler) dealPreCheckTask(task *table.RecallDetail) error {
@@ -77,7 +77,7 @@ func (r *Recycler) getHostByIDFromPool(hostID int64) (*cmdb.Host, error) {
 			"bk_asset_id",
 			"bk_host_innerip",
 		},
-		Page: cmdb.BasePage{
+		Page: &cmdb.BasePage{
 			Start: 0,
 			Limit: pkg.BKMaxInstanceLimit,
 		},
@@ -88,7 +88,7 @@ func (r *Recycler) getHostByIDFromPool(hostID int64) (*cmdb.Host, error) {
 		}
 	}
 
-	resp, err := r.esbCli.Cmdb().ListBizHost(kit.New(), req)
+	resp, err := r.cmdbCli.ListBizHost(kit.New(), req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err

@@ -288,9 +288,10 @@ func (s *DataServiceSetting) TenantEnable() bool {
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
-	Esb                   Esb      `yaml:"esb"`
-	ZiyanSecrets          []Secret `yaml:"ziyanSecrets"`
-	SecurityGroupSkipList []string `yaml:"securityGroupMgmtSkipList"`
+	Esb                   Esb        `yaml:"esb"`
+	ZiyanSecrets          []Secret   `yaml:"ziyanSecrets"`
+	SecurityGroupSkipList []string   `yaml:"securityGroupMgmtSkipList"`
+	Cmdb                  ApiGateway `yaml:"cmdb"`
 
 	Network    Network      `yaml:"network"`
 	Service    Service      `yaml:"service"`
@@ -332,6 +333,10 @@ func (s HCServiceSetting) Validate() error {
 		if err := secret.Validate(); err != nil {
 			return err
 		}
+	}
+
+	if err := s.Cmdb.validate(); err != nil {
+		return err
 	}
 
 	return nil
@@ -555,15 +560,15 @@ func (s *TaskServerSetting) TenantEnable() bool {
 
 // WoaServerSetting defines woa server used setting options.
 type WoaServerSetting struct {
-	Network         Network   `yaml:"network"`
-	Service         Service   `yaml:"service"`
-	Database        DataBase  `yaml:"database"`
-	Log             LogOption `yaml:"log"`
-	Esb             Esb       `yaml:"esb"`
-	BkHcmURL        string    `yaml:"bkHcmUrl"`
-	MongoDB         MongoDB   `yaml:"mongodb"`
-	Watch           MongoDB   `yaml:"watch"`
-	Redis           Redis     `yaml:"redis"`
+	Network         Network    `yaml:"network"`
+	Service         Service    `yaml:"service"`
+	Database        DataBase   `yaml:"database"`
+	Log             LogOption  `yaml:"log"`
+	Cmdb            ApiGateway `yaml:"cmdb"`
+	BkHcmURL        string     `yaml:"bkHcmUrl"`
+	MongoDB         MongoDB    `yaml:"mongodb"`
+	Watch           MongoDB    `yaml:"watch"`
+	Redis           Redis      `yaml:"redis"`
 	ClientConfig    `yaml:",inline"`
 	ItsmFlows       []ItsmFlow       `yaml:"itsmFlows"`
 	CancelItsmFlows []ItsmFlow       `yaml:"cancelItsmFlows"`
@@ -607,7 +612,7 @@ func (s WoaServerSetting) Validate() error {
 		return err
 	}
 
-	if err := s.Esb.validate(); err != nil {
+	if err := s.Cmdb.validate(); err != nil {
 		return err
 	}
 
