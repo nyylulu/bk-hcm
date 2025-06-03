@@ -433,7 +433,6 @@ const businesseMenus: RouteRecordRaw[] = [
           title: '负载均衡',
           activeKey: 'businessClb',
           icon: 'hcm-icon bkhcm-icon-loadbalancer',
-          checkZiyanBizWhitelist: true,
         },
       },
       {
