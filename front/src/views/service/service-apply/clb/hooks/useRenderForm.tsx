@@ -13,6 +13,7 @@ import CommonCard from '@/components/CommonCard';
 import VpcReviewPopover from '../../components/common/VpcReviewPopover';
 import SelectedItemPreviewComp from '@/components/SelectedItemPreviewComp';
 import LbSpecTypeDialog from '@/views/business/load-balancer/components/lb-spec-type-dialog';
+import ZiyanLBSpecTypeDialog from '@/views/business/load-balancer/components/lb-spec-type-dialog/ziyan.vue';
 import BandwidthPackageSelector, { IBandwidthPackage } from '../../components/common/BandwidthPackageSelector';
 // import types
 import { type ISubnetItem } from '../../cvm/children/SubnetPreviewDialog';
@@ -76,6 +77,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
   };
 
   const lbSpecTypeDialogState = reactive({ isHidden: true, isShow: false });
+  const ziyanLBSpecTypeDialogState = reactive({ isHidden: true, isShow: false });
   const selectedSlaTypeBandWidthLimit = ref<number>();
   const handleLBSpecTypeChange = ({ slaType, bandwidthLimit }: { slaType: string; bandwidthLimit: number }) => {
     formModel.sla_type = slaType;
@@ -400,6 +402,11 @@ export default (formModel: Reactive<ApplyClbModel>) => {
             hidden: formModel.slaType !== '1',
             content: () => {
               const handleClick = () => {
+                if (formModel.vendor === VendorEnum.ZIYAN) {
+                  ziyanLBSpecTypeDialogState.isHidden = false;
+                  ziyanLBSpecTypeDialogState.isShow = true;
+                  return;
+                }
                 lbSpecTypeDialogState.isHidden = false;
                 lbSpecTypeDialogState.isShow = true;
               };
@@ -663,6 +670,17 @@ export default (formModel: Reactive<ApplyClbModel>) => {
               specAvailabilitySet={specAvailabilitySet.value}
               onConfirm={handleLBSpecTypeChange}
               onHidden={() => (lbSpecTypeDialogState.isHidden = true)}
+            />
+          )}
+          {/* 自研云负载均衡规格类型选择弹框 */}
+          {!ziyanLBSpecTypeDialogState.isHidden && (
+            <ZiyanLBSpecTypeDialog
+              v-model={ziyanLBSpecTypeDialogState.isShow}
+              accountId={formModel.account_id}
+              region={formModel.region}
+              slaType={formModel.sla_type}
+              onConfirm={handleLBSpecTypeChange}
+              onHidden={() => (ziyanLBSpecTypeDialogState.isHidden = true)}
             />
           )}
         </>
