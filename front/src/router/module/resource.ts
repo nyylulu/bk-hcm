@@ -17,7 +17,7 @@ const resourceMenus: RouteRecordRaw[] = [
           {
             path: 'record',
             name: 'operationRecord',
-            component: () => import('@/views/resource/resource-manage/operationRecord/index'),
+            component: () => import('@/views/resource/resource-manage/operationRecord/index.vue'),
           },
           {
             path: 'account',
