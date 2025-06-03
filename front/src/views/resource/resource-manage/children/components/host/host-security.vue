@@ -1,6 +1,5 @@
 <script lang="ts" setup>
 import { ref, PropType, reactive, h, watch, computed, inject, withDirectives } from 'vue';
-import { bkTooltips, Button, Message } from 'bkui-vue';
 import { useI18n } from 'vue-i18n';
 import useQueryCommonList from '@/views/resource/resource-manage/hooks/use-query-list-common';
 import useColumns from '@/views/resource/resource-manage/hooks/use-columns';
