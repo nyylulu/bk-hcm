@@ -17,10 +17,12 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
+// Package tenant ...
 package tenant
 
 import (
 	"fmt"
+
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/tenant"
 	"hcm/pkg/criteria/enumor"
