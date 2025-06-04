@@ -433,7 +433,6 @@ const businesseMenus: RouteRecordRaw[] = [
           title: '负载均衡',
           activeKey: 'businessClb',
           icon: 'hcm-icon bkhcm-icon-loadbalancer',
-          checkZiyanBizWhitelist: true,
         },
       },
       {
@@ -532,7 +531,7 @@ const businesseMenus: RouteRecordRaw[] = [
           {
             path: '',
             name: 'operationRecords',
-            component: () => import('@/views/resource/resource-manage/operationRecord/index'),
+            component: () => import('@/views/resource/resource-manage/operationRecord/index.vue'),
             meta: {
               activeKey: 'businessRecord',
               isShowBreadcrumb: true,

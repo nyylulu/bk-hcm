@@ -340,12 +340,7 @@ export default (formModel: ApplyClbModel) => {
       // 重置 sla_type
       formModel.slaType = '0';
       formModel.sla_type = 'shared';
-      if (val) {
-        bus.$emit(
-          'updateSpecAvailabilitySet',
-          val.filter(({ SpecType }) => SpecType !== 'shared'),
-        );
-      } else {
+      if (!val) {
         Message({ theme: 'warning', message: '当前地域下无可用规格, 请切换地域' });
       }
     },
@@ -379,5 +374,6 @@ export default (formModel: ApplyClbModel) => {
     isInquiryPrices,
     isInquiryPricesLoading,
     currentResourceListMap,
+    specAvailabilitySet,
   };
 };
