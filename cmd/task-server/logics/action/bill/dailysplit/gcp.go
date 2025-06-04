@@ -27,6 +27,7 @@ import (
 	billcore "hcm/pkg/api/core/bill"
 	"hcm/pkg/api/data-service/bill"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
@@ -47,6 +48,12 @@ func (ds *GcpSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 		logs.Errorf("fail to unmarshal gcp raw bill item extension for split, err: %v, rid: %s", err, kt.Rid)
 		return nil, err
 	}
+
+	hcProductName := strings.TrimLeft(item.HcProductName, " \t\n\r")
+	if enumor.IsAIBillItem(cvt.PtrToVal(ext.SkuDescription)) {
+		hcProductName = constant.AddBillItemAIPrefix(hcProductName)
+	}
+
 	// 聚合credit数组
 	groupedCredits := ds.groupCredits(ext.CreditInfos)
 	ext.CreditInfos = groupedCredits
@@ -70,8 +77,7 @@ func (ds *GcpSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 		Currency:      item.BillCurrency,
 		Cost:          item.BillCost,
 		HcProductCode: item.HcProductCode,
-		// 去除前导空格
-		HcProductName: strings.TrimLeft(item.HcProductName, " \t\n\r"),
+		HcProductName: hcProductName,
 		ResAmount:     item.ResAmount,
 		ResAmountUnit: item.ResAmountUnit,
 		Extension:     cvt.ValToPtr[rawjson.RawMessage](rawExt),

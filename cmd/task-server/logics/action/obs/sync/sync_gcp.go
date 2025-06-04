@@ -28,6 +28,7 @@ import (
 	accountsetcore "hcm/pkg/api/core/account-set"
 	asproto "hcm/pkg/api/data-service/account-set"
 	databill "hcm/pkg/api/data-service/bill"
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/orm"
 	"hcm/pkg/dal/dao/tools"
@@ -207,7 +208,8 @@ func (act SyncAction) convertGcpBill(kt *kit.Kit, syncOpt *SyncOption, result *d
 		} else {
 			// 某些账单是HCM生成的（如支持费），没有云上原始账单，也没有生成对应的Extension字段。
 			// 这里使用生成的产品名称填充，保证用户有一个可读的账单
-			newItem.ServiceDescription = item.HcProductName
+			// 在hcm侧会将ai条目的HcProductName字段拼接特定前缀，在将数据创建到obs时，需要去掉。
+			newItem.ServiceDescription = constant.TrimBillItemAIPrefix(item.HcProductName)
 			newItem.ServiceId = item.HcProductCode
 		}
 		retList = append(retList, newItem)
