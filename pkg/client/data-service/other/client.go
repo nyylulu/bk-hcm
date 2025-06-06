@@ -23,7 +23,7 @@ import (
 	"hcm/pkg/rest"
 )
 
-// Client is a tcloud api client
+// Client is a `other vendor` api client
 type Client struct {
 	*restClient
 	Account *AccountClient
@@ -34,7 +34,7 @@ type restClient struct {
 	client rest.ClientInterface
 }
 
-// NewClient create a new tcloud api client.
+// NewClient create a new `other vendor` api client.
 func NewClient(client rest.ClientInterface) *Client {
 	return &Client{
 		restClient: &restClient{client: client},

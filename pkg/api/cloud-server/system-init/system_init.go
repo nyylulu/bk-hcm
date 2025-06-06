@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2025 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,26 +17,15 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package sync
+package apisysteminit
 
-import (
-	"hcm/cmd/hc-service/service/capability"
-	"hcm/cmd/hc-service/service/sync/aws"
-	"hcm/cmd/hc-service/service/sync/azure"
-	"hcm/cmd/hc-service/service/sync/gcp"
-	"hcm/cmd/hc-service/service/sync/huawei"
-	"hcm/cmd/hc-service/service/sync/other"
-	"hcm/cmd/hc-service/service/sync/tcloud"
-	"hcm/cmd/hc-service/service/sync/tcloud-ziyan"
-)
+// SystemInitResult ...
+type SystemInitResult struct {
+	OtherAccountInitResult *OtherAccountInitResult `json:"other_account_result,omitempty"`
+}
 
-// InitService initial tcloud sync service
-func InitService(cap *capability.Capability) {
-	tcloud.InitService(cap)
-	aws.InitService(cap)
-	gcp.InitService(cap)
-	huawei.InitService(cap)
-	azure.InitService(cap)
-	ziyan.InitService(cap)
-	other.InitService(cap)
+// OtherAccountInitResult ...
+type OtherAccountInitResult struct {
+	CreatedAccountID string `json:"created_account_id,omitempty"`
+	ExistsAccountID  string `json:"exists_account_id,omitempty"`
 }
