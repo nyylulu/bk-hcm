@@ -36,7 +36,8 @@ import (
 // Interface MOA Logic
 type Interface interface {
 	// RequestMoa 向MOA发起验证
-	RequestMoa(kt *kit.Kit, scene enumor.MoaScene, affectedCount int, lang string) (sessionID string, err error)
+	RequestMoa(kt *kit.Kit, scene enumor.MoaScene, affectedCount int, lang enumor.MoaLanguage) (
+		sessionID string, err error)
 	// VerifyMoa 向MOA查询验证结果
 	VerifyMoa(kt *kit.Kit, scene enumor.MoaScene, sessionID string) (status enumor.MoaVerifyStatus, err error)
 	// CheckCachedResult 检查本地是否有用户请求结果，如果已通过会删除结果
@@ -83,7 +84,7 @@ type moaLogic struct {
 }
 
 // RequestMoa 发起Moa二次验证，会将对应SessionID存入etcd
-func (m *moaLogic) RequestMoa(kt *kit.Kit, scene enumor.MoaScene, affectedCount int, lang string) (
+func (m *moaLogic) RequestMoa(kt *kit.Kit, scene enumor.MoaScene, affectedCount int, lang enumor.MoaLanguage) (
 	sessionID string, err error) {
 
 	moaCfg, isDefault := GetMoaConfig(scene)
@@ -94,6 +95,11 @@ func (m *moaLogic) RequestMoa(kt *kit.Kit, scene enumor.MoaScene, affectedCount 
 	if err != nil {
 		logs.Errorf("build payload failed, err: %v, scene: %v, count: %d, rid: %s", err, scene, affectedCount, kt.Rid)
 		return "", fmt.Errorf("build payload failed, err: %v", err)
+	}
+
+	// 默认使用中文
+	if lang == "" {
+		lang = enumor.MoaLanguageZh
 	}
 
 	opt := &pkgmoa.InitiateVerificationReq{

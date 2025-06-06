@@ -26,13 +26,18 @@ import (
 
 // InitiateVerificationReq ...
 type InitiateVerificationReq struct {
-	Language string          `json:"language" validate:"required"`
-	Scene    enumor.MoaScene `json:"scene" validate:"required,max=64"`
-	ResIDs   []string        `json:"res_ids" validate:"required,min=1"`
+	Language enumor.MoaLanguage `json:"language" validate:"omitempty"`
+	Scene    enumor.MoaScene    `json:"scene" validate:"required,max=64"`
+	ResIDs   []string           `json:"res_ids" validate:"required,min=1"`
 }
 
 // Validate ...
 func (m *InitiateVerificationReq) Validate() error {
+	if m.Language != "" {
+		if err := m.Language.Validate(); err != nil {
+			return err
+		}
+	}
 	return validator.Validate.Struct(m)
 }
 
