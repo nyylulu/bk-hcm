@@ -31,6 +31,7 @@ import (
 	"hcm/cmd/cloud-server/logics"
 	logicaudit "hcm/cmd/cloud-server/logics/audit"
 	"hcm/cmd/cloud-server/service/account"
+	"hcm/cmd/cloud-server/service/admin"
 	"hcm/cmd/cloud-server/service/application"
 	appcvm "hcm/cmd/cloud-server/service/application/handlers/cvm"
 	approvalprocess "hcm/cmd/cloud-server/service/approval_process"
@@ -134,11 +135,7 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		interval := time.Duration(cc.CloudServer().CloudResource.Sync.SyncIntervalMin) * time.Minute
 		go sync.CloudResourceSync(interval, sd, apiClientSet)
 
-		etcdOpt, err := cc.CloudServer().Service.Etcd.ToConfig()
-		if err != nil {
-			return nil, fmt.Errorf("get etcd config failed, err: %v", err)
-		}
-		etcdCli, err := etcd3.New(etcdOpt)
+		etcdCli, err := etcd3.New(etcdCfg)
 		if err != nil {
 			return nil, fmt.Errorf("new etcd client failed, err: %v", err)
 		}
@@ -226,7 +223,7 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service
 	}
 
 	cmdbCfg := cc.CloudServer().Cmdb
-	cmdbCli, err := cmdb.NewClient(&cmdbCfg, metrics.Register())
+	err = cmdb.InitCmdbClient(&cmdbCfg, metrics.Register())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -261,8 +258,7 @@ func getCloudClientSvr(sd serviced.ServiceDiscover) (*client.ClientSet, *Service
 		bkBaseCli:  bkbaseCli,
 		finOps:     finOpsCli,
 		cmsiCli:    cmsiCli,
-		cmdbCli:    cmdbCli,
-
+		cmdbCli:    cmdb.CmdbClient(),
 		userMgrCli: userMgrCli,
 		moaCli:     moaCli,
 		etcdCli:    etcdClient,
@@ -394,6 +390,8 @@ func (s *Service) apiSet(bkHcmUrl string) *restful.Container {
 	moa.InitService(c)
 
 	cos.InitService(c)
+
+	admin.InitAdminService(c)
 
 	return restful.NewContainer().Add(c.WebService)
 }

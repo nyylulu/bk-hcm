@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/client/hc-service/azure"
 	"hcm/pkg/client/hc-service/gcp"
 	"hcm/pkg/client/hc-service/huawei"
+	"hcm/pkg/client/hc-service/other"
 	"hcm/pkg/client/hc-service/tcloud"
 	hcziyancli "hcm/pkg/client/hc-service/tcloud-ziyan"
 	"hcm/pkg/criteria/enumor"
@@ -35,11 +36,12 @@ import (
 
 // Client is hc-service api client.
 type Client struct {
-	TCloud      *tcloud.Client
-	Aws         *aws.Client
-	HuaWei      *huawei.Client
-	Gcp         *gcp.Client
-	Azure       *azure.Client
+	TCloud *tcloud.Client
+	Aws    *aws.Client
+	HuaWei *huawei.Client
+	Gcp    *gcp.Client
+	Azure  *azure.Client
+	Other  *other.Client
 	TCloudZiyan *hcziyancli.Client
 }
 
@@ -62,6 +64,9 @@ func NewClient(c *client.Capability, version string) *Client {
 		),
 		Azure: azure.NewClient(
 			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Azure)),
+		),
+		Other: other.NewClient(
+			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.Other)),
 		),
 		TCloudZiyan: hcziyancli.NewClient(
 			rest.NewClient(c, fmt.Sprintf("%s/%s", prefixPath, enumor.TCloudZiyan)),

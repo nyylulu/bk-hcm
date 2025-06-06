@@ -59,6 +59,8 @@ func (svc *cvmSvc) BatchCreateCvm(cts *rest.Contexts) (interface{}, error) {
 		return batchCreateCvm[corecvm.GcpCvmExtension](cts, svc, vendor)
 	case enumor.TCloudZiyan:
 		return batchCreateCvm[corecvm.TCloudZiyanHostExtension](cts, svc, vendor)
+	case enumor.Other:
+		return batchCreateCvm[corecvm.OtherCvmExtension](cts, svc, vendor)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}

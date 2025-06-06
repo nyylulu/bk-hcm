@@ -442,3 +442,6 @@ moa:
       en:
         title: HCM-Host Stop Verification
         desc: Stop OS on %d host(s). Do you agree to this operation?
+
+# ccHostPoolBiz cmdb host pool biz id
+ccHostPoolBiz: 1
