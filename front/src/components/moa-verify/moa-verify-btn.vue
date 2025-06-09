@@ -70,7 +70,7 @@ const verifyTask = useTimeoutPoll(() => {
 const handleClick = async () => {
   const bluekingLanguage = (Cookies.get('blueking_language') || i18n.global.locale.value) as Locale;
   const { scene, resIds } = props;
-  const language = languageMap[bluekingLanguage];
+  const language = languageMap[bluekingLanguage.toLocaleLowerCase()] ?? languageMap['zh-cn'];
 
   const res: IQueryResData<{ session_id: string }> = await http.post(
     `/api/v1/cloud/${getBusinessApiPath()}moa/request`,
