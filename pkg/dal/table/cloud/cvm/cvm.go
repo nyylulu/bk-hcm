@@ -114,6 +114,7 @@ func (t Table) TableName() table.Name {
 
 var skipPartialFieldValidateVendor = map[enumor.Vendor]struct{}{
 	enumor.Other: {},
+	enumor.Ziyan: {},
 }
 
 // InsertValidate cvm table when insert.

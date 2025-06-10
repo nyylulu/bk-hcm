@@ -205,7 +205,15 @@ func (w *Watcher) upsertHost(kt *kit.Kit, upsertHosts []cmdb.Host) error {
 						continue
 					}
 				}
-			// todo add other case
+			case enumor.Ziyan:
+				for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+					req := &sync.TCloudZiyanSyncHostByCondReq{BizID: bizID, HostIDs: batch, AccountID: accountID}
+					err = w.CliSet.HCService().TCloudZiyan.Cvm.SyncHostWithRelResByCond(kt.Ctx, kt.Header(), req)
+					if err != nil {
+						logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, batch, kt.Rid)
+						continue
+					}
+				}
 			default:
 				logs.Errorf("not support vendor: %s, hostIDs: %v, rid: %s", vendor, hostIDs, kt.Rid)
 			}
@@ -312,7 +320,15 @@ func (w *Watcher) deleteHost(kt *kit.Kit, deleteHosts []cmdb.Host) error {
 					continue
 				}
 			}
-		// todo add other case
+		case enumor.TCloudZiyan:
+			for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+				req := &sync.TCloudZiyanDelHostByCondReq{HostIDs: batch, AccountID: accountID}
+				if err = w.CliSet.HCService().TCloudZiyan.Cvm.DeleteHostByCond(kt.Ctx, kt.Header(), req); err != nil {
+					logs.Errorf("delete host failed, err: %v, vendor: %s, accountID: %s, ids: %+v, rid: %s", err,
+						enumor.TCloudZiyan, accountID, batch, kt.Rid)
+					continue
+				}
+			}
 		default:
 			logs.Errorf("not support vendor: %s, hostIDs: %v, rid: %s", vendor, hostIDs, kt.Rid)
 		}

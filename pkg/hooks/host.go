@@ -30,20 +30,32 @@ import (
 
 // AdjustOtherSyncerListCCHostParams ...
 func AdjustOtherSyncerListCCHostParams(kt *kit.Kit, params *cmdb.ListBizHostParams) (*cmdb.ListBizHostParams, error) {
+	params.HostPropertyFilter = &cmdb.QueryFilter{
+		Rule: &cmdb.CombinedRule{
+			Condition: "AND",
+			Rules:     []cmdb.Rule{&cmdb.AtomRule{Field: "bk_cloud_id", Operator: cmdb.OperatorNotEqual, Value: 0}},
+		},
+	}
 	return params, nil
 }
 
 // GetOtherSyncerListDBHostFilter ...
 func GetOtherSyncerListDBHostFilter(kt *kit.Kit, rules []*filter.AtomRule) (*filter.Expression, error) {
+	rules = append(rules, tools.RuleNotEqual("vendor", enumor.Ziyan))
 	return tools.ExpressionAnd(rules...), nil
 }
 
 // AdjustWatcherVendor ...
 func AdjustWatcherVendor(kt *kit.Kit, vendors []enumor.Vendor) []enumor.Vendor {
+	vendors = append(vendors, enumor.Ziyan)
 	return vendors
 }
 
 // MatchWatcherUpsertHost ...
 func MatchWatcherUpsertHost(kt *kit.Kit, host cmdb.Host) (bool, enumor.Vendor, error) {
+	if host.BkCloudID == 0 {
+		return true, enumor.Ziyan, nil
+	}
+
 	return false, "", nil
 }
