@@ -128,7 +128,7 @@ func (i *itsm) CreateApplyTicket(kt *kit.Kit, user string, orderId uint64, bizID
 			},
 			{
 				Key:   TicketKeyApplyLink,
-				Value: fmt.Sprintf(i.config.ApplyLinkFormat, orderId, bizID),
+				Value: fmt.Sprintf(i.config.ApplyLinkFormat, orderId, bizID, bizID),
 			},
 			{
 				Key:   TicketKeyNeedSysAudit,
