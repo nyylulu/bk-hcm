@@ -1,7 +1,7 @@
 import { defineComponent, onMounted, ref, computed, watch, reactive } from 'vue';
 import './index.scss';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
-import { Button, Message, Table, Sideslider } from 'bkui-vue';
+import { Button, Message, Table } from 'bkui-vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useRoute, useRouter } from 'vue-router';
@@ -723,9 +723,9 @@ export default defineComponent({
           />
         </CommonDialog>
 
-        <Sideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderDirective='if'>
+        <CommonSideslider v-model:isShow={isMatchPanelShow.value} title='待匹配' width={1600} renderType='if'>
           <MatchPanel data={curRow.value} handleClose={() => (isMatchPanelShow.value = false)} />
-        </Sideslider>
+        </CommonSideslider>
       </div>
     );
   },
