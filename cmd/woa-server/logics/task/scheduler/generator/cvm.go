@@ -414,8 +414,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 				continue
 			}
 
-			capacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, subnet.Id, order.Spec.ChargeType)
+			capacity, err := g.getCapacity(kt, order, zone, req.VPCId, subnet.Id)
 			if err != nil {
 				logs.Errorf("failed to get capacity with subnet %s, subOrderID: %s, subnetNum: %d, zone: %s, "+
 					"reqVpcID: %s, err: %v, rid: %s", subnet.Id, order.SubOrderId, len(subnetList), zone,
@@ -441,8 +440,7 @@ func (g *Generator) buildCvmReq(kt *kit.Kit, order *types.ApplyOrder, zone strin
 
 		if subnetID == "" || applyNum <= 0 {
 			// get capacity detail as component of error message
-			capInfo, _ := g.getCapacityDetail(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region, zone,
-				req.VPCId, "", order.Spec.ChargeType)
+			capInfo, _ := g.getCapacityDetail(kt, order, zone, req.VPCId, "")
 			capInfoStr, err := json.Marshal(capInfo)
 			if err != nil {
 				logs.Warnf("buildCvmReq:get empty subnet info json marshal failed, err: %+v, rid: %s", err, kt.Rid)

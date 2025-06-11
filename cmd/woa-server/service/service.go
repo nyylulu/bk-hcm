@@ -142,8 +142,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 
 	// 创建ESB Client
 	esbConfig := cc.WoaServer().Esb
-	esbClient, err := esb.NewClient(&esbConfig, metrics.Register())
-	if err != nil {
+	if err = esb.InitEsbClient(&esbConfig, metrics.Register()); err != nil {
 		return nil, err
 	}
 
@@ -182,7 +181,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	bizLogic, err := biz.New(esbClient, authorizer)
+	bizLogic, err := biz.New(esb.EsbClient(), authorizer)
 	if err != nil {
 		logs.Errorf("new biz logic failed, err: %v", err)
 		return nil, err
@@ -195,13 +194,13 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	rsLogics, err := rslogics.New(sd, apiClientSet, esbClient, thirdCli, bizLogic, cmsiCli, configLogics)
+	rsLogics, err := rslogics.New(sd, apiClientSet, esb.EsbClient(), thirdCli, bizLogic, cmsiCli, configLogics)
 	if err != nil {
 		logs.Errorf("new rolling server logics failed, err: %v", err)
 		return nil, err
 	}
 
-	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, esbClient, bizLogic)
+	planCtrl, err := planctrl.New(sd, apiClientSet, daoSet, cmsiCli, itsmCli, thirdCli.CVM, esb.EsbClient(), bizLogic)
 	if err != nil {
 		logs.Errorf("new plan controller failed, err: %v", err)
 		return nil, err
@@ -212,7 +211,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	dissolveLogics := disLogics.New(daoSet, esbClient, esCli, thirdCli, cc.WoaServer())
+	dissolveLogics := disLogics.New(daoSet, esb.EsbClient(), esCli, thirdCli, cc.WoaServer())
 
 	kt := core.NewBackendKit()
 	// Mongo开关打开才生成Client链接
@@ -232,7 +231,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 			return nil, err
 		}
 
-		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esbClient, informerIf,
+		schedulerIf, err = scheduler.New(kt.Ctx, rsLogics, gcLogics, thirdCli, esb.EsbClient(), informerIf,
 			cc.WoaServer().ClientConfig, planCtrl, bizLogic, configLogics)
 		if err != nil {
 			logs.Errorf("new scheduler failed, err: %v, rid: %s", err, kt.Rid)
@@ -243,7 +242,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 	service := &Service{
 		client:         apiClientSet,
 		dao:            daoSet,
-		esbClient:      esbClient,
+		esbClient:      esb.EsbClient(),
 		authorizer:     authorizer,
 		thirdCli:       thirdCli,
 		clientConf:     cc.WoaServer(),

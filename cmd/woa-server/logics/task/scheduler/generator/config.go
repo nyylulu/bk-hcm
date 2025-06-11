@@ -17,11 +17,12 @@ import (
 	"errors"
 
 	cfgtype "hcm/cmd/woa-server/types/config"
+	"hcm/cmd/woa-server/types/task"
+	types "hcm/cmd/woa-server/types/task"
 	"hcm/pkg"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
-	"hcm/pkg/thirdparty/cvmapi"
 	"hcm/pkg/tools/querybuilder"
 	"hcm/pkg/tools/util"
 )
@@ -113,21 +114,22 @@ func (g *Generator) getZoneList(kt *kit.Kit, region string) ([]*cfgtype.Zone, er
 }
 
 // getCapacity get resource apply capacity info
-func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc,
-	subnet string, chargeType cvmapi.ChargeType) (map[string]int64, error) {
+func (g *Generator) getCapacity(kt *kit.Kit, order *task.ApplyOrder, zone, vpc, subnet string) (
+	map[string]int64, error) {
 
 	param := &cfgtype.GetCapacityParam{
-		RequireType:      requireType,
-		DeviceType:       deviceType,
-		Region:           region,
+		RequireType:      order.RequireType,
+		DeviceType:       order.Spec.DeviceType,
+		Region:           order.Spec.Region,
 		Zone:             zone,
 		Vpc:              vpc,
 		Subnet:           subnet,
-		IgnorePrediction: !requireType.NeedVerifyResPlan(),
+		IgnorePrediction: !order.RequireType.NeedVerifyResPlan(),
+		BizID:            order.BkBizId,
 	}
 	// 计费模式,默认包年包月
-	if len(chargeType) > 0 {
-		param.ChargeType = chargeType
+	if len(order.Spec.ChargeType) > 0 {
+		param.ChargeType = order.Spec.ChargeType
 	}
 
 	rst, err := g.configLogics.Capacity().GetCapacity(kt, param)
@@ -144,20 +146,21 @@ func (g *Generator) getCapacity(kt *kit.Kit, requireType enumor.RequireType, dev
 }
 
 // getCapacityDetail get resource apply capacity detail info
-func (g *Generator) getCapacityDetail(kt *kit.Kit, requireType enumor.RequireType, deviceType, region, zone, vpc,
-	subnet string, chargeType cvmapi.ChargeType) (*cfgtype.CapacityInfo, error) {
+func (g *Generator) getCapacityDetail(kt *kit.Kit, order *types.ApplyOrder, zone, vpc, subnet string) (
+	*cfgtype.CapacityInfo, error) {
 
 	param := &cfgtype.GetCapacityParam{
-		RequireType: requireType,
-		DeviceType:  deviceType,
-		Region:      region,
+		RequireType: order.RequireType,
+		DeviceType:  order.Spec.DeviceType,
+		Region:      order.Spec.Region,
 		Zone:        zone,
 		Vpc:         vpc,
 		Subnet:      subnet,
+		BizID:       order.BkBizId,
 	}
 	// 计费模式,默认包年包月
-	if len(chargeType) > 0 {
-		param.ChargeType = chargeType
+	if len(order.Spec.ChargeType) > 0 {
+		param.ChargeType = order.Spec.ChargeType
 	}
 
 	rst, err := g.configLogics.Capacity().GetCapacity(kt, param)
