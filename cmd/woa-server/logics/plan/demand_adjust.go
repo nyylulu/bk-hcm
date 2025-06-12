@@ -34,6 +34,7 @@ import (
 	"hcm/pkg/dal/dao/tools"
 	rpdtablers "hcm/pkg/dal/table/resource-plan/res-plan-demand"
 	rpt "hcm/pkg/dal/table/resource-plan/res-plan-ticket"
+	dttablers "hcm/pkg/dal/table/resource-plan/woa-device-type"
 	"hcm/pkg/dal/table/types"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -85,46 +86,14 @@ func convAdjustAbleQueryParam(req *ptypes.AdjustAbleDemandsReq) *cvmapi.CvmCbsAd
 	return reqParams
 }
 
-func getDemandIDsAndLockedCoreFromAdjustReq(kt *kit.Kit, adjustElems []ptypes.AdjustRPDemandReqElem) (
-	[]string, []rpproto.ResPlanDemandLockOpItem, error) {
-
-	demandIDs := make([]string, len(adjustElems))
-	lockedItems := make([]rpproto.ResPlanDemandLockOpItem, len(adjustElems))
-	for i, adjust := range adjustElems {
-		demandIDs[i] = adjust.DemandID
-
-		// 修改时必须有修改前的原始信息
-		if adjust.OriginalInfo == nil {
-			logs.Errorf("failed to adjust biz res plan demand, original info is nil, demandID: %s, rid: %s",
-				adjust.DemandID, kt.Rid)
-			return nil, nil, errors.New("original info is nil")
-		}
-
-		// 当前不支持单独修改CBS类型，因此CVM参数必须提供，为兼容后续可能的扩展，这里不返回，而是锁住0核心
-		lockedCPUCore := int64(0)
-		if adjust.OriginalInfo.Cvm != nil {
-			lockedCPUCore = cvt.PtrToVal(adjust.OriginalInfo.Cvm.CpuCore)
-		}
-
-		lockedItems[i] = rpproto.ResPlanDemandLockOpItem{
-			ID:            adjust.DemandID,
-			LockedCPUCore: lockedCPUCore,
-		}
-	}
-
-	return demandIDs, lockedItems, nil
-}
-
 // AdjustBizResPlanDemand adjust biz res plan demand.
 func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDemandReq, bkBizID int64,
 	bizOrgRel *mtypes.BizOrgRel) (ticketID string, retErr error) {
 
-	// 从请求中提取修改的预测需求ID即预期变更的核心数
-	demandIDs, lockedItems, err := getDemandIDsAndLockedCoreFromAdjustReq(kt, req.Adjusts)
-	if err != nil {
-		logs.Errorf("failed to get demand ids and locked items from adjust req, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
+	// 从请求中提取修改的预测需求ID
+	demandIDs := slice.Map(req.Adjusts, func(adjust ptypes.AdjustRPDemandReqElem) string {
+		return adjust.DemandID
+	})
 
 	// check whether all crp demand belong to the biz.
 	allBelong, err := c.AreAllDemandBelongToBiz(kt, demandIDs, bkBizID)
@@ -142,6 +111,13 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 	demandClass, err := c.ExamineDemandClass(kt, demandIDs)
 	if err != nil {
 		logs.Errorf("failed to examine demand class, err: %v, rid: %s", err, kt.Rid)
+		return "", err
+	}
+
+	// construct adjust biz resource plan demand request.
+	adjustReq, lockedItems, err := c.constructAdjustReq(kt, bizOrgRel, demandClass, req)
+	if err != nil {
+		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
 		return "", err
 	}
 
@@ -163,13 +139,6 @@ func (c *Controller) AdjustBizResPlanDemand(kt *kit.Kit, req *ptypes.AdjustRPDem
 			}
 		}
 	}()
-
-	// construct adjust biz resource plan demand request.
-	adjustReq, err := c.constructAdjustReq(kt, bizOrgRel, demandClass, req)
-	if err != nil {
-		logs.Errorf("failed to construct adjust resource plan ticket request, err: %v, rid: %s", err, kt.Rid)
-		return "", err
-	}
 
 	// create cancel resource plan ticket.
 	ticketID, err = c.CreateResPlanTicket(kt, adjustReq)
@@ -346,7 +315,7 @@ func (c *Controller) ExamineDemandClass(kt *kit.Kit, demandIDs []string) (enumor
 
 // constructAdjustReq construct create resource plan ticket request of adjust.
 func (c *Controller) constructAdjustReq(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel, demandClass enumor.DemandClass,
-	req *ptypes.AdjustRPDemandReq) (*CreateResPlanTicketReq, error) {
+	req *ptypes.AdjustRPDemandReq) (*CreateResPlanTicketReq, []rpproto.ResPlanDemandLockOpItem, error) {
 
 	updateDemands := make([]ptypes.AdjustRPDemandReqElem, 0)
 	delayDemands := make([]ptypes.AdjustRPDemandReqElem, 0)
@@ -357,7 +326,7 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel
 		case enumor.RPDemandAdjustTypeDelay:
 			delayDemands = append(delayDemands, adjust)
 		default:
-			return nil, fmt.Errorf("unsupported resource plan demand adjust type: %s", adjust.AdjustType)
+			return nil, nil, fmt.Errorf("unsupported resource plan demand adjust type: %s", adjust.AdjustType)
 		}
 	}
 
@@ -365,14 +334,14 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel
 	updates, err := c.constructUpdateDemands(kt, updateDemands, demandClass)
 	if err != nil {
 		logs.Errorf("failed to construct update demands, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, err
 	}
 
 	// construct delay demands.
 	delays, err := c.constructDelayDemands(kt, delayDemands, demandClass)
 	if err != nil {
 		logs.Errorf("failed to construct delay demands, err: %v, rid: %s", err, kt.Rid)
-		return nil, err
+		return nil, nil, err
 	}
 
 	demands := append(updates, delays...)
@@ -383,7 +352,16 @@ func (c *Controller) constructAdjustReq(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel
 		Demands:     demands,
 	}
 
-	return adjustReq, nil
+	// determine how many CPU cores to locked based on the final adjusted cpu cores.
+	lockedItems := make([]rpproto.ResPlanDemandLockOpItem, 0, len(demands))
+	for _, demand := range demands {
+		lockedItems = append(lockedItems, rpproto.ResPlanDemandLockOpItem{
+			ID:            demand.Original.DemandID,
+			LockedCPUCore: demand.Original.Cvm.CpuCore,
+		})
+	}
+
+	return adjustReq, lockedItems, nil
 }
 
 // constructCancelReq construct create resource plan ticket request of cancel.
@@ -393,10 +371,7 @@ func (c *Controller) constructCancelReq(kt *kit.Kit, bizOrgRel *mtypes.BizOrgRel
 	originDemandMap := make(map[string]ptypes.CreateResPlanDemandResource)
 	for _, cancelD := range cancelDemands {
 		originDemandMap[cancelD.DemandID] = ptypes.CreateResPlanDemandResource{
-			Os:       decimal.NewFromInt(0),
-			CpuCore:  cancelD.RemainedCpuCore,
-			Memory:   0,
-			DiskSize: 0,
+			CpuCore: cancelD.RemainedCpuCore,
 		}
 	}
 
@@ -532,49 +507,76 @@ func (c *Controller) constructOriginalDemandMap(kt *kit.Kit,
 			return nil, fmt.Errorf("device type: %s is not found", demand.DeviceType)
 		}
 
-		// 变更前资源量以请求中的变更前数据为准
-		originCPUCore := originDemandMap[demand.ID].CpuCore
-		originOS := decimal.NewFromInt(originCPUCore).Div(decimal.NewFromInt(deviceType.CpuCore))
-		originMem := originOS.Mul(decimal.NewFromInt(deviceType.Memory)).IntPart()
+		originDemandRemainRes, ok := originDemandMap[demand.ID]
+		if !ok {
+			logs.Errorf("failed to list demand, demand id: %s, rid: %s", demand.ID, kt.Rid)
+			return nil, fmt.Errorf("demand id: %s is not found", demand.ID)
+		}
 
-		expectTimeStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime),
-			constant.DateLayoutCompact, constant.DateLayout)
+		demandItem, err := c.constructOriginalDemandWithCPUCore(kt, demand, originDemandRemainRes, deviceType)
 		if err != nil {
-			logs.Errorf("failed to convert expect time to string, err: %v, expect time: %d, rid: %s", err,
-				demand.ExpectTime, kt.Rid)
+			logs.Errorf("failed to construct original demand with cpu core, err: %v, demand_id: %s, "+
+				"remain res: %+v, rid: %s", err, demand.ID, originDemandRemainRes, kt.Rid)
 			return nil, err
 		}
 
-		demandOriginMap[demand.ID] = &rpt.OriginalRPDemandItem{
-			DemandID:   demand.ID,
-			ObsProject: demand.ObsProject,
-			ExpectTime: expectTimeStr,
-			ZoneID:     demand.ZoneID,
-			ZoneName:   demand.ZoneName,
-			RegionID:   demand.RegionID,
-			RegionName: demand.RegionName,
-			AreaID:     demand.AreaID,
-			AreaName:   demand.AreaName,
-			Cvm: rpt.Cvm{
-				ResMode:      demand.ResMode.Name(),
-				DeviceType:   demand.DeviceType,
-				DeviceClass:  demand.DeviceClass,
-				DeviceFamily: demand.DeviceFamily,
-				CoreType:     string(demand.CoreType),
-				Os:           types.Decimal{Decimal: originOS},
-				CpuCore:      originCPUCore,
-				Memory:       originMem,
-			},
-			Cbs: rpt.Cbs{
-				DiskType:     demand.DiskType,
-				DiskTypeName: demand.DiskTypeName,
-				DiskIo:       demand.DiskIO,
-				DiskSize:     originDemandMap[demand.ID].DiskSize,
-			},
-		}
+		demandOriginMap[demand.ID] = demandItem
 	}
 
 	return demandOriginMap, nil
+}
+
+// constructOriginalDemandWithCPUCore construct original demand according to db demand,
+// with cpu core specified via parameters.
+func (c *Controller) constructOriginalDemandWithCPUCore(kt *kit.Kit, demand rpdtablers.ResPlanDemandTable,
+	originDemandRemainRes ptypes.CreateResPlanDemandResource, deviceType dttablers.WoaDeviceTypeTable) (
+	*rpt.OriginalRPDemandItem, error) {
+
+	// 变更前资源量以请求中的变更前数据为准
+	originCPUCore := originDemandRemainRes.CpuCore
+	originOS := decimal.NewFromInt(originCPUCore).Div(decimal.NewFromInt(deviceType.CpuCore))
+	// 请求中可能以os为基准变更，此时请求中的cpu core应该为 CreateResPlanDemandUseOsField
+	if originCPUCore == ptypes.CreateResPlanDemandUseOsField {
+		originOS = originDemandRemainRes.Os
+		originCPUCore = originOS.Mul(decimal.NewFromInt(deviceType.CpuCore)).Round(0).IntPart()
+	}
+	originMem := originOS.Mul(decimal.NewFromInt(deviceType.Memory)).Round(0).IntPart()
+
+	expectTimeStr, err := times.TransTimeStrWithLayout(strconv.Itoa(demand.ExpectTime),
+		constant.DateLayoutCompact, constant.DateLayout)
+	if err != nil {
+		logs.Errorf("failed to convert expect time to string, err: %v, expect time: %d, rid: %s", err,
+			demand.ExpectTime, kt.Rid)
+		return nil, err
+	}
+
+	return &rpt.OriginalRPDemandItem{
+		DemandID:   demand.ID,
+		ObsProject: demand.ObsProject,
+		ExpectTime: expectTimeStr,
+		ZoneID:     demand.ZoneID,
+		ZoneName:   demand.ZoneName,
+		RegionID:   demand.RegionID,
+		RegionName: demand.RegionName,
+		AreaID:     demand.AreaID,
+		AreaName:   demand.AreaName,
+		Cvm: rpt.Cvm{
+			ResMode:      demand.ResMode.Name(),
+			DeviceType:   demand.DeviceType,
+			DeviceClass:  demand.DeviceClass,
+			DeviceFamily: demand.DeviceFamily,
+			CoreType:     string(demand.CoreType),
+			Os:           types.Decimal{Decimal: originOS},
+			CpuCore:      originCPUCore,
+			Memory:       originMem,
+		},
+		Cbs: rpt.Cbs{
+			DiskType:     demand.DiskType,
+			DiskTypeName: demand.DiskTypeName,
+			DiskIo:       demand.DiskIO,
+			DiskSize:     originDemandRemainRes.DiskSize,
+		},
+	}, nil
 }
 
 // constructDelayDemands construct delay demand.
@@ -586,10 +588,30 @@ func (c *Controller) constructDelayDemands(kt *kit.Kit, delays []ptypes.AdjustRP
 	}
 
 	// construct crp demand id and origin demand map, crp demand id and remain cpu core map.
-	originDemandMap := slice.FuncToMap(delays,
-		func(update ptypes.AdjustRPDemandReqElem) (string, ptypes.CreateResPlanDemandResource) {
-			return update.DemandID, update.OriginalInfo.GetResource()
-		})
+	originDemandMap := make(map[string]ptypes.CreateResPlanDemandResource)
+	for _, delayD := range delays {
+		delayResource := delayD.OriginalInfo.GetResource()
+		// 部分延期时，将 CreateResPlanDemandResource.CpuCore 置为0，此时延期的数量以os为准
+		if delayD.DelayOs != nil {
+			delayOSDecimal, err := decimal.NewFromString(cvt.PtrToVal(delayD.DelayOs))
+			if err != nil {
+				logs.Errorf("failed to convert delay os to decimal, err: %v, delay os: %s, rid: %s", err,
+					delayD.DelayOs, kt.Rid)
+				return nil, err
+			}
+			// 部分延期核数不可超过可延期的总核数
+			if delayOSDecimal.Compare(delayResource.Os) > 0 {
+				logs.Errorf("delay os is greater than original os, delay os: %s, original os: %s, rid: %s",
+					cvt.PtrToVal(delayD.DelayOs), delayResource.Os.String(), kt.Rid)
+				return nil, fmt.Errorf("期望延期：%s台，可延期最大为：%s台", delayOSDecimal.String(),
+					delayResource.Os.String())
+			}
+			delayResource.Os = delayOSDecimal
+			delayResource.CpuCore = ptypes.CreateResPlanDemandUseOsField
+		}
+		originDemandMap[delayD.DemandID] = delayResource
+	}
+
 	demandOriginMap, err := c.constructOriginalDemandMap(kt, originDemandMap)
 	if err != nil {
 		logs.Errorf("failed to construct original demand map, err: %v, rid: %s", err, kt.Rid)
