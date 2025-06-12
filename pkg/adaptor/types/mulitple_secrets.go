@@ -54,6 +54,11 @@ func (m *MultiSecret) GetCredential() (ak string, sk string, token string) {
 	return m.secrets[idx].CloudSecretID, m.secrets[idx].CloudSecretKey, ""
 }
 
+// GetSecrets 获取所有秘钥
+func (m *MultiSecret) GetSecrets() []BaseSecret {
+	return m.secrets
+}
+
 // setRandomIndex 设置随机起始点
 func (m *MultiSecret) setRandomIndex() {
 	m.currentIndex.Add(uint64(rand.Intn(len(m.secrets))))

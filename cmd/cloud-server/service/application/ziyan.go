@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2024 THL A29 Limited,
+ * Copyright (C) 2025 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +17,24 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package types
+package application
 
 import (
-	"hcm/pkg/cc"
+	hcservice "hcm/pkg/api/hc-service"
+	"hcm/pkg/criteria/errf"
+	"hcm/pkg/rest"
 )
 
-// WrapZiyanMultiSecret wrap ziyan multi secret. 每次调用返回独立的secret id 列表
-func WrapZiyanMultiSecret(mainSecret *BaseSecret) *MultiSecret {
-	if mainSecret == nil {
-		return nil
-	}
-	secrets := cc.HCService().ZiyanSecrets
-	var backupSecrets = make([]BaseSecret, len(secrets))
-	for i := range secrets {
-		backupSecrets[i].CloudSecretID = secrets[i].ID
-		backupSecrets[i].CloudSecretKey = secrets[i].Key
+// QueryBPaasApplication 查询bpaas申请单详情
+func (a *applicationSvc) QueryBPaasApplication(cts *rest.Contexts) (any, error) {
+	req := new(hcservice.GetBPaasApplicationReq)
+	if err := cts.DecodeInto(req); err != nil {
+		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
 	}
 
-	return NewMultiSecretWithRandomIndex(*mainSecret, backupSecrets...)
+	if err := req.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
+	return a.client.HCService().TCloudZiyan.Application.QueryBPaasApplicationDetail(cts.Kit, req)
 }

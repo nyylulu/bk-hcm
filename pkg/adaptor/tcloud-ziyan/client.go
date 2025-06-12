@@ -52,7 +52,7 @@ type clientSet struct {
 func newClientSet(s *types.BaseSecret, profile *profile.ClientProfile) *clientSet {
 	return &clientSet{
 		// 自研云使用随机秘钥
-		credential: types.WarpZiyanMultiSecret(s),
+		credential: types.WrapZiyanMultiSecret(s),
 		profile:    profile,
 	}
 

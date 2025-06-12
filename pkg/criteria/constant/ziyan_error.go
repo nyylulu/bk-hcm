@@ -43,4 +43,6 @@ const (
 	CvmRecycleFailed WarnSign = "cvm_recycle_failed"
 	// CvmRecycleStuck 主机回收单据长时间未更新
 	CvmRecycleStuck WarnSign = "cvm_recycle_stuck"
+
+	WaitAndCheckBPaasFailed WarnSign = "WaitAndCheckBPaasFailed"
 )
