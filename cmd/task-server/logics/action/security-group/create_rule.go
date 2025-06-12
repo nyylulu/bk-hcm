@@ -26,6 +26,7 @@ import (
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/criteria/validator"
+	"hcm/pkg/logs"
 )
 
 // CreateHuaweiSGRuleAction security group delete action
@@ -64,6 +65,15 @@ func (s CreateHuaweiSGRuleAction) Run(kt run.ExecuteKit, params any) (any, error
 	if err := req.Validate(); err != nil {
 		return nil, err
 	}
-	return actcli.GetHCService().HuaWei.SecurityGroup.CreateSecurityGroupRule(kt.Kit(), req.SGID, req.RuleReq)
+	result, err := actcli.GetHCService().HuaWei.SecurityGroup.CreateSecurityGroupRule(kt.Kit(), req.SGID, req.RuleReq)
+	caught, handleErr := handleBPaasErr(kt, err)
+	if handleErr != nil {
+		logs.Errorf("try caught bpaas err failed, caught: %v, err: %v, rid: %s", caught, handleErr, kt.Kit().Rid)
+		return nil, handleErr
+	}
+	if caught {
+		return nil, nil
+	}
+	return result, err
 
 }

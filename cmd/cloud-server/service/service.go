@@ -32,6 +32,7 @@ import (
 	logicaudit "hcm/cmd/cloud-server/logics/audit"
 	"hcm/cmd/cloud-server/service/account"
 	"hcm/cmd/cloud-server/service/application"
+	"hcm/cmd/cloud-server/service/application/handlers"
 	appcvm "hcm/cmd/cloud-server/service/application/handlers/cvm"
 	approvalprocess "hcm/cmd/cloud-server/service/approval_process"
 	argstpl "hcm/cmd/cloud-server/service/argument-template"
@@ -157,6 +158,8 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 	recycle.RecycleTiming(apiClientSet, sd, cc.CloudServer().Recycle, svr.cmdbCli, svr.moaCli, svr.etcdCli)
 
 	go appcvm.TimingHandleDeliverApplication(svr.client, 2*time.Second)
+
+	go handlers.TimingCheckBPaaSApplication(svr.client, sd, 30*time.Second)
 
 	go task.TimingHandleTaskMgmtState(apiClientSet, sd, time.Second)
 

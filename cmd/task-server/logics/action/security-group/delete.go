@@ -81,6 +81,14 @@ func (s DeleteSgAction) Run(kt run.ExecuteKit, params any) (any, error) {
 		return nil, errf.Newf(errf.Unknown, "id: %s vendor: %s not support", opt.ID, opt.Vendor)
 	}
 	if err != nil {
+		caught, handleErr := handleBPaasErr(kt, err)
+		if handleErr != nil {
+			logs.Errorf("try caught bpaas err failed, caught: %v, err: %v, rid: %s", caught, handleErr, kt.Kit().Rid)
+			return nil, handleErr
+		}
+		if caught {
+			return nil, nil
+		}
 		logs.Errorf("delete security group failed, err: %v, vendor: %s, opt: %v, rid: %s",
 			err, opt.Vendor, opt, kt.Kit().Rid)
 		return nil, err
