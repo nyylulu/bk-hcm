@@ -1123,12 +1123,22 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
           {data.name || '--'}
         </Button>
       ),
+      renderSuffix: (data) => {
+        return <CopyToClipboard content={data.name} class='copy-icon ml4' />;
+      },
+      contentClass: 'use-columns-copy-cell',
     }),
     {
       label: '负载均衡ID',
       field: 'cloud_id',
       isDefaultShow: true,
       width: 120,
+      render: ({ cell }: any) => (
+        <div class='use-columns-copy-cell'>
+          <span>{cell}</span>
+          <CopyToClipboard content={cell} class='copy-icon ml4' />
+        </div>
+      ),
     },
     {
       label: () => (
@@ -1137,7 +1147,15 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
       field: 'domain',
       width: 150,
       isDefaultShow: true,
-      render: ({ cell }: { cell: string }) => cell || '--',
+      render: ({ cell }: { cell: string }) => {
+        if (!cell) return '--';
+        return (
+          <div class='use-columns-copy-cell'>
+            <span>{cell}</span>
+            <CopyToClipboard content={cell} class='copy-icon ml4' />
+          </div>
+        );
+      },
     },
     {
       label: '负载均衡VIP',
@@ -1145,7 +1163,14 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
       width: 150,
       isDefaultShow: true,
       render: ({ data }: any) => {
-        return getInstVip(data);
+        const displayValue = getInstVip(data);
+        if (displayValue === '--') return displayValue;
+        return (
+          <div class='use-columns-copy-cell'>
+            <span>{displayValue}</span>
+            <CopyToClipboard content={displayValue} class='copy-icon ml4' />
+          </div>
+        );
       },
     },
     {
