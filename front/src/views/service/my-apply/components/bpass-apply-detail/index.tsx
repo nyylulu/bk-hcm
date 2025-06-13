@@ -217,7 +217,7 @@ export default defineComponent({
           {props.isGotoSecurityRuleShow && (
             <div class='item'>
               <label class='label'>安全组ID:</label>
-              <div>{props.params.sg_cloud_id}</div>
+              <div>{props.params.sg_cloud_id ?? '--'}</div>
             </div>
           )}
         </div>

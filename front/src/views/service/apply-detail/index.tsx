@@ -126,6 +126,7 @@ export default defineComponent({
         'delete_security_group_rule',
       ].includes(currentApplyData.value?.type),
     );
+    const isGotoSecurityRuleDisabled = computed(() => !JSON.parse(currentApplyData.value?.content)?.sg_id);
     const gotoSecurityRule = () => {
       const securityInfo = JSON.parse(currentApplyData.value.content);
       routerAction.open({
@@ -156,7 +157,7 @@ export default defineComponent({
               ),
               right: () =>
                 isGotoSecurityRuleShow.value ? (
-                  <bk-button theme='primary' onClick={gotoSecurityRule}>
+                  <bk-button theme='primary' disabled={isGotoSecurityRuleDisabled.value} onClick={gotoSecurityRule}>
                     跳转至安全组规则
                   </bk-button>
                 ) : undefined,
