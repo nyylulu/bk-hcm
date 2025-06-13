@@ -1,4 +1,4 @@
-import { defineComponent, onUnmounted, ref, watch } from 'vue';
+import { computed, defineComponent, onUnmounted, ref, watch } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import ApplyDetail from '@/views/service/my-apply/components/apply-detail/index.vue';
@@ -9,6 +9,8 @@ import AccountApplyDetail from './account-apply-detail';
 import BpassApplyDetail, { BpaasEndStatus } from '../my-apply/components/bpass-apply-detail';
 import Clb from './clb.vue';
 import useFormModel from '@/hooks/useFormModel';
+import routerAction from '@/router/utils/action';
+import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
 
 export enum ApplicationStatus {
   pending = 'pending',
@@ -72,7 +74,7 @@ export default defineComponent({
             bpaas_sn: +res.data.sn,
           });
           const bpaasRes = await accountStore.getBpassDetail(bpassPayload);
-          currentApplyData.value = bpaasRes.data;
+          currentApplyData.value = { ...currentApplyData.value, ...bpaasRes.data };
           if (BpaasEndStatus.includes(bpaasRes.data.Status)) clearInterval(interval);
         }
         curApplyKey.value = res.data.id;
@@ -116,16 +118,49 @@ export default defineComponent({
       },
     );
 
+    const isGotoSecurityRuleShow = computed(() =>
+      [
+        'create_security_group',
+        'create_security_group_rule',
+        'update_security_group_rule',
+        'delete_security_group_rule',
+      ].includes(currentApplyData.value?.type),
+    );
+    const gotoSecurityRule = () => {
+      const securityInfo = JSON.parse(currentApplyData.value.content);
+      routerAction.open({
+        path: '/business/security/detail',
+        query: {
+          [GLOBAL_BIZS_KEY]: accountStore.bizs,
+          id: securityInfo.sg_id,
+          vendor: securityInfo.vendor ?? VendorEnum.ZIYAN,
+          scene: 'rule',
+        },
+      });
+    };
+
     const render = () => {
       let vNode = (
         <div class={'apply-detail-container'}>
           <DetailHeader>
-            <span class={'title'}>申请单详情</span>
-            <span class={'sub-title'}>
-              &nbsp;-&nbsp;
-              {APPLICATION_TYPE_MAP[currentApplyData.value.type as keyof typeof APPLICATION_TYPE_MAP] ||
-                currentApplyData.value.BpaasName}
-            </span>
+            {{
+              default: () => (
+                <>
+                  <span class={'title'}>申请单详情</span>
+                  <span class={'sub-title'}>
+                    &nbsp;-&nbsp;
+                    {APPLICATION_TYPE_MAP[currentApplyData.value.type as keyof typeof APPLICATION_TYPE_MAP] ||
+                      currentApplyData.value.BpaasName}
+                  </span>
+                </>
+              ),
+              right: () =>
+                isGotoSecurityRuleShow.value ? (
+                  <bk-button theme='primary' onClick={gotoSecurityRule}>
+                    跳转至安全组规则
+                  </bk-button>
+                ) : undefined,
+            }}
           </DetailHeader>
           {!isBpaas.value ? (
             <div class={'apply-content-wrapper'}>
@@ -145,6 +180,7 @@ export default defineComponent({
                 key={curApplyKey.value}
                 getBpaasDetail={getMyApplyDetail}
                 bpaasPayload={bpassPayload}
+                isGotoSecurityRuleShow={isGotoSecurityRuleShow.value}
               />
             </div>
           )}
