@@ -126,15 +126,23 @@ export default defineComponent({
         'delete_security_group_rule',
       ].includes(currentApplyData.value?.type),
     );
-    const isGotoSecurityRuleDisabled = computed(() => !JSON.parse(currentApplyData.value?.content)?.sg_id);
+    const currentApplyDataContent = computed<any>(() => {
+      let content = {};
+      try {
+        content = JSON.parse(currentApplyData.value?.content ?? null);
+      } catch {
+        console.error('parse currentApplyData.content error');
+      }
+      return content;
+    });
+    const isGotoSecurityRuleDisabled = computed(() => !currentApplyDataContent.value?.sg_id);
     const gotoSecurityRule = () => {
-      const securityInfo = JSON.parse(currentApplyData.value.content);
       routerAction.open({
         path: '/business/security/detail',
         query: {
           [GLOBAL_BIZS_KEY]: accountStore.bizs,
-          id: securityInfo.sg_id,
-          vendor: securityInfo.vendor ?? VendorEnum.ZIYAN,
+          id: currentApplyDataContent.value?.sg_id,
+          vendor: currentApplyDataContent.value?.vendor ?? VendorEnum.ZIYAN,
           scene: 'rule',
         },
       });
@@ -181,6 +189,7 @@ export default defineComponent({
                 key={curApplyKey.value}
                 getBpaasDetail={getMyApplyDetail}
                 bpaasPayload={bpassPayload}
+                bpaasJsonContent={currentApplyDataContent.value}
                 isGotoSecurityRuleShow={isGotoSecurityRuleShow.value}
               />
             </div>
