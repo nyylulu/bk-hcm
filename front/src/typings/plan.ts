@@ -34,9 +34,10 @@ export interface IDemandListDetail {
   disk_type: string; // 云盘类型
   disk_type_name: string; // 云盘类型名称
   disk_io: number; // 云盘IO
-  adjustType: AdjustType;
+  adjustType?: AdjustType;
   demand_source: string; // 变更原因
   res_mode: string; // 资源模式
+  delay_os?: string;
 }
 
 export enum AdjustType {
@@ -146,6 +147,7 @@ export interface IAdjust {
   updated_info: AdjustInfo; // 更新后的信息
   expect_time?: string; // 期望交付时间，adjust_type为delay时必填，格式为YYYY-MM-DD，例如2024-01-01 (可选)
   delay_reason?: string; // 延期原因，adjust_type为delay时必填 (可选)
+  delay_os?: string; // 延期OS数
 }
 
 // 数据
