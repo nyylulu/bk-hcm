@@ -23,11 +23,12 @@ import (
 	"errors"
 	"fmt"
 
+	"hcm/cmd/cloud-server/logics/ziyan"
 	proto "hcm/pkg/api/cloud-server/application"
-	hcservice "hcm/pkg/api/hc-service"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/criteria/errf"
 	"hcm/pkg/iam/meta"
+	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 )
 
@@ -78,22 +79,16 @@ func (a *applicationSvc) GetApplication(cts *rest.Contexts) (interface{}, error)
 		resp.TicketUrl = ticket.TicketURL
 	case enumor.ApplicationSourceBPaas:
 		// 仅返回通用信息，其他信息由前端调用 QueryBPaasApplication 查询
+		err := ziyan.CheckAndUpdateBPaasStatus(cts.Kit, a.client.DataService(), a.client.HCService(), application)
+		if err != nil {
+			// 忽略错误
+			logs.Errorf("try check and update bpaas status failed, err: %v, application id: %s, rid:%s",
+				err, applicationID, cts.Kit.Rid)
+			// 不影响前端获取单据信息
+		}
+
 	default:
 		return nil, errors.New("unknown application source: " + string(application.Source))
 	}
 	return resp, nil
-}
-
-// QueryBPaasApplication 查询bpaas申请单详情
-func (a *applicationSvc) QueryBPaasApplication(cts *rest.Contexts) (any, error) {
-	req := new(hcservice.GetBPaasApplicationReq)
-	if err := cts.DecodeInto(req); err != nil {
-		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)
-	}
-
-	if err := req.Validate(); err != nil {
-		return nil, errf.NewFromErr(errf.InvalidParameter, err)
-	}
-
-	return a.client.HCService().TCloudZiyan.Application.QueryTCloudZiyanBPaasApplicationDetail(cts.Kit, req)
 }

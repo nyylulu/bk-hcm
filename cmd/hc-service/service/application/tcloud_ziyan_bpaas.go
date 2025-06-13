@@ -19,8 +19,8 @@ func InitApplicationService(cap *capability.Capability) {
 
 	h := rest.NewHandler()
 
-	h.Add("QueryTCloudZiyanBPaasApplicationDetail", "POST", "/vendors/tcloud-ziyan/application/bpaas/query",
-		a.QueryTCloudZiyanBPaasApplicationDetail)
+	h.Add("QueryBPaasApplicationDetail", "POST",
+		"/vendors/tcloud-ziyan/application/bpaas/query", a.QueryBPaasApplicationDetail)
 
 	h.Load(cap.WebService)
 }
@@ -30,8 +30,8 @@ type application struct {
 	cs *client.ClientSet
 }
 
-// QueryTCloudZiyanBPaasApplicationDetail ...
-func (a *application) QueryTCloudZiyanBPaasApplicationDetail(cts *rest.Contexts) (any, error) {
+// QueryBPaasApplicationDetail ...
+func (a *application) QueryBPaasApplicationDetail(cts *rest.Contexts) (any, error) {
 	req := new(hcservice.GetBPaasApplicationReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, errf.NewFromErr(errf.DecodeRequestFailed, err)

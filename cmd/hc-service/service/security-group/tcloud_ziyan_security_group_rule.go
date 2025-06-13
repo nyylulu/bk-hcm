@@ -26,6 +26,7 @@ import (
 	adptsgrule "hcm/pkg/adaptor/types/security-group-rule"
 	"hcm/pkg/api/core"
 	corecloud "hcm/pkg/api/core/cloud"
+	"hcm/pkg/api/core/ziyan"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	hcservice "hcm/pkg/api/hc-service"
 	"hcm/pkg/criteria/enumor"
@@ -80,10 +81,19 @@ func (g *securityGroup) BatchCreateZiyanSGRule(cts *rest.Contexts) (any, error) 
 	}
 
 	if err := client.CreateSecurityGroupRule(cts.Kit, opt); err != nil {
-		bpaasSN := errf.GetBPassSNFromErr(err)
+		bpaasSN := errf.GetBPaasSNFromErr(err)
 		if len(bpaasSN) > 0 {
-			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				sg.AccountID, sg.BkBizID, enumor.CreateSecurityGroupRule, opt, bpaasSN)
+			content := &coreziyan.BPaasApplicationContent{
+				Action:               enumor.CreateSecurityGroupRule,
+				SN:                   bpaasSN,
+				AccountID:            sg.AccountID,
+				BkBizID:              sg.BkBizID,
+				Region:               sg.Region,
+				SecurityGroupID:      sg.ID,
+				SecurityGroupCloudID: sg.CloudID,
+				Params:               opt,
+			}
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, content)
 		}
 
 		logs.Errorf("request adaptor to create tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
@@ -150,7 +160,7 @@ func (g *securityGroup) UpdateZiyanSGRule(cts *rest.Contexts) (any, error) {
 	}
 
 	if err := client.UpdateSecurityGroupRule(cts.Kit, opt); err != nil {
-		bpaasSN := errf.GetBPassSNFromErr(err)
+		bpaasSN := errf.GetBPaasSNFromErr(err)
 		if len(bpaasSN) > 0 {
 			sg, err := g.getSecurityGroupByID(cts, sgID)
 			if err != nil {
@@ -158,8 +168,17 @@ func (g *securityGroup) UpdateZiyanSGRule(cts *rest.Contexts) (any, error) {
 					err, sgID, cts.Kit.Rid)
 				return nil, err
 			}
-			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				rule.AccountID, sg.BkBizID, enumor.UpdateSecurityGroupRule, opt, bpaasSN)
+			content := &coreziyan.BPaasApplicationContent{
+				Action:               enumor.UpdateSecurityGroupRule,
+				SN:                   bpaasSN,
+				AccountID:            sg.AccountID,
+				BkBizID:              sg.BkBizID,
+				Region:               sg.Region,
+				SecurityGroupID:      sg.ID,
+				SecurityGroupCloudID: sg.CloudID,
+				Params:               opt,
+			}
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, content)
 		}
 
 		logs.Errorf("request adaptor to update tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",
@@ -244,10 +263,19 @@ func (g *securityGroup) BatchUpdateZiyanSGRule(cts *rest.Contexts) (interface{},
 	}
 
 	if err = client.BatchUpdateSecurityGroupRule(cts.Kit, opt); err != nil {
-		bpaasSN := errf.GetBPassSNFromErr(err)
+		bpaasSN := errf.GetBPaasSNFromErr(err)
 		if len(bpaasSN) > 0 {
-			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				req.AccountID, sg.BkBizID, enumor.UpdateSecurityGroupRule, opt, bpaasSN)
+			content := &coreziyan.BPaasApplicationContent{
+				Action:               enumor.UpdateSecurityGroupRule,
+				SN:                   bpaasSN,
+				AccountID:            sg.AccountID,
+				BkBizID:              sg.BkBizID,
+				Region:               sg.Region,
+				SecurityGroupID:      sg.ID,
+				SecurityGroupCloudID: sg.CloudID,
+				Params:               opt,
+			}
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, content)
 		}
 
 		logs.Errorf("request adaptor to update ziyan security group rule failed, err: %v, opt: %v, rid: %s", err, opt,
@@ -305,7 +333,7 @@ func (g *securityGroup) DeleteZiyanSGRule(cts *rest.Contexts) (any, error) {
 	}
 	if err := client.DeleteSecurityGroupRule(cts.Kit, opt); err != nil {
 
-		bpaasSN := errf.GetBPassSNFromErr(err)
+		bpaasSN := errf.GetBPaasSNFromErr(err)
 		if len(bpaasSN) > 0 {
 			sg, err := g.getSecurityGroupByID(cts, sgID)
 			if err != nil {
@@ -313,8 +341,18 @@ func (g *securityGroup) DeleteZiyanSGRule(cts *rest.Contexts) (any, error) {
 					err, sgID, cts.Kit.Rid)
 				return nil, err
 			}
-			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli,
-				rule.AccountID, sg.BkBizID, enumor.DeleteSecurityGroupRule, opt, bpaasSN)
+
+			content := &coreziyan.BPaasApplicationContent{
+				Action:               enumor.DeleteSecurityGroupRule,
+				SN:                   bpaasSN,
+				AccountID:            sg.AccountID,
+				BkBizID:              sg.BkBizID,
+				Region:               sg.Region,
+				SecurityGroupID:      sg.ID,
+				SecurityGroupCloudID: sg.CloudID,
+				Params:               opt,
+			}
+			return nil, parseAndSaveBPaasApplication(cts.Kit, g.dataCli, content)
 		}
 
 		logs.Errorf("request adaptor to delete tcloud ziyan security group rule failed, err: %v, opt: %v, rid: %s",

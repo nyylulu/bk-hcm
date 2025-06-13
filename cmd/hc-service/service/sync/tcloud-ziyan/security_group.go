@@ -51,7 +51,8 @@ var _ handler.HandlerV2[securitygroup.TCloudSG] = new(sgHandler)
 // Next ...
 func (hd *sgHandler) Next(kt *kit.Kit) ([]securitygroup.TCloudSG, error) {
 	listOpt := &securitygroup.TCloudListOption{
-		Region: hd.request.Region,
+		Region:   hd.request.Region,
+		CloudIDs: hd.request.CloudIDs,
 		Page: &typecore.TCloudPage{
 			Offset: hd.offset,
 			Limit:  typecore.TCloudQueryLimit,

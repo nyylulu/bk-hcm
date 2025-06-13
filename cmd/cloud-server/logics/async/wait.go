@@ -27,6 +27,7 @@ import (
 	"hcm/pkg/api/core"
 	taskserver "hcm/pkg/client/task-server"
 	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/criteria/errf"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -75,6 +76,10 @@ func WaitTaskToEnd(kt *kit.Kit, cli *taskserver.Client, id string) error {
 		}
 
 		if flow.State == enumor.FlowSuccess {
+
+			if sn, ok := flow.ShareData.Get("bpaas_sn"); ok {
+				return errf.New(errf.NeedBPaasApproval, sn)
+			}
 			return nil
 		}
 

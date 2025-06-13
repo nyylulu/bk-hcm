@@ -20,6 +20,7 @@
 package securitygroup
 
 import (
+	"hcm/pkg/api/core/ziyan"
 	dataproto "hcm/pkg/api/data-service"
 	datacli "hcm/pkg/client/data-service"
 	"hcm/pkg/criteria/enumor"
@@ -29,42 +30,39 @@ import (
 	"hcm/pkg/tools/json"
 )
 
-func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client, accountID string, bkBizID int64,
-	action enumor.ApplicationType, content any, bpaasSN string) error {
+func parseAndSaveBPaasApplication(kt *kit.Kit, dataCli *datacli.Client,
+	content *coreziyan.BPaasApplicationContent) error {
 
-	logs.Infof("bpaas approval triggered, action: %s, application id: %v, account id: %s, rid: %s",
-		action, bpaasSN, accountID, kt.Rid)
-	// 保存本地申请单
-	contentStr, err := json.MarshalToString(content)
-	if err != nil {
-		logs.Errorf("fail to marshal content to string, err: %v, action: %s, rid: %s", err, action, kt.Rid)
+	if err := content.Validate(); err != nil {
 		return err
 	}
 
-	contentStr, err = json.UpdateMerge(map[string]interface{}{"account_id": accountID}, contentStr)
+	logs.Infof("bpaas approval triggered, action: %s, sn: %v, account id: %s, rid: %s",
+		content.Action, content.SN, content.AccountID, kt.Rid)
+	// 保存本地申请单
+	contentStr, err := json.MarshalToString(content)
 	if err != nil {
-		logs.Errorf("fail to merge account id(%s) into content(%s), err: %v, action: %s, rid: %s",
-			accountID, contentStr, err, action, kt.Rid)
+		logs.Errorf("fail to marshal content to string, err: %v, action: %s, rid: %s", err, content.Action, kt.Rid)
 		return err
 	}
 
 	applicationReq := &dataproto.ApplicationCreateReq{
 		Source:         enumor.ApplicationSourceBPaas,
-		SN:             bpaasSN,
-		Type:           action,
+		SN:             content.SN,
+		Type:           content.Action,
 		Status:         enumor.Pending,
 		Applicant:      kt.User,
 		Content:        contentStr,
 		DeliveryDetail: "{}",
 		Memo:           nil,
-		BkBizIDs:       []int64{bkBizID},
+		BkBizIDs:       []int64{content.BkBizID},
 	}
 	resp, err := dataCli.Global.Application.CreateApplication(kt.Ctx, kt.Header(), applicationReq)
 	if err != nil {
-		logs.Errorf("fail to create application for bpaas(id: %s), err: %v, action: %s, rid: %s",
-			bpaasSN, err, action, kt.Rid)
+		logs.Errorf("fail to create application for bpaas(sn: %s), err: %v, action: %s, rid: %s",
+			content.SN, err, content.Action, kt.Rid)
 		return err
 	}
-	// 重新返回bpaas错误以触发前端提示, 这里直接
-	return errf.New(errf.NeedBPassApproval, resp.ID)
+	// 重新返回bpaas错误以触发前端提示, 这里直接在错误message中写入申请单id
+	return errf.New(errf.NeedBPaasApproval, resp.ID)
 }

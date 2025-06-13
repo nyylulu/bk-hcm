@@ -29,11 +29,12 @@ import (
 	"hcm/pkg/tools/uuid"
 )
 
-func TestGetBPassSNFromErr(t *testing.T) {
+func TestGetBPaasSNFromErr(t *testing.T) {
 	type args struct {
 		err error
 	}
-	tclouBPassdErr := &errors.TencentCloudSDKError{Code: v20170312.INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED,
+	tcloudBPaasErr := &errors.TencentCloudSDKError{Code: v20170312.
+		INVALIDPARAMETERVALUE_MEMBERAPPROVALAPPLICATIONSTARTED,
 		Message: "当前操作在审批中(ApplicationId: `123456789`)", RequestId: uuid.UUID()}
 	tcloudErr := &errors.TencentCloudSDKError{Code: v20170312.INVALIDPARAMETERVALUE_MALFORMED,
 		Message: "错误错误错误", RequestId: uuid.UUID()}
@@ -44,7 +45,7 @@ func TestGetBPassSNFromErr(t *testing.T) {
 	}{
 		{
 			"正确",
-			args{err: tclouBPassdErr},
+			args{err: tcloudBPaasErr},
 			"123456789",
 		},
 		{
@@ -55,8 +56,8 @@ func TestGetBPassSNFromErr(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := GetBPassSNFromErr(tt.args.err); !reflect.DeepEqual(got, tt.want) {
-				t.Errorf("GetBPassSNFromErr() = %v, want %v", got, tt.want)
+			if got := GetBPaasSNFromErr(tt.args.err); !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("GetBPaasSNFromErr() = %v, want %v", got, tt.want)
 			}
 		})
 	}

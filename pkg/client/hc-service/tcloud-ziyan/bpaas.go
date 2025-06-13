@@ -1,6 +1,8 @@
 package hcziyancli
 
 import (
+	"encoding/json"
+
 	hcservice "hcm/pkg/api/hc-service"
 	"hcm/pkg/client/common"
 	"hcm/pkg/kit"
@@ -19,10 +21,10 @@ func NewApplicationClient(client rest.ClientInterface) *ApplicationClient {
 	}
 }
 
-// QueryTCloudZiyanBPaasApplicationDetail 查询bpaas申请单详情
-func (a *ApplicationClient) QueryTCloudZiyanBPaasApplicationDetail(kt *kit.Kit,
-	req *hcservice.GetBPaasApplicationReq) (*any, error) {
+// QueryBPaasApplicationDetail 查询bpaas申请单详情
+func (a *ApplicationClient) QueryBPaasApplicationDetail(kt *kit.Kit, req *hcservice.GetBPaasApplicationReq) (
+	*json.RawMessage, error) {
 
-	return common.Request[hcservice.GetBPaasApplicationReq, any](
+	return common.Request[hcservice.GetBPaasApplicationReq, json.RawMessage](
 		a.client, rest.POST, kt, req, "/application/bpaas/query")
 }
