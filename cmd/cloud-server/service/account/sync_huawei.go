@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2024 THL A29 Limited,
+ * Copyright (C) 2022 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,8 +25,9 @@ import (
 	"strings"
 	"time"
 
+	"hcm/cmd/cloud-server/service/sync/huawei"
 	"hcm/cmd/cloud-server/service/sync/lock"
-	tziyan "hcm/cmd/cloud-server/service/sync/tcloud-ziyan"
+	adaptorhuawei "hcm/pkg/adaptor/huawei"
 	cloudaccount "hcm/pkg/api/cloud-server/account"
 	"hcm/pkg/api/core"
 	"hcm/pkg/api/core/cloud/region"
@@ -36,31 +37,17 @@ import (
 	"hcm/pkg/logs"
 	"hcm/pkg/rest"
 	"hcm/pkg/runtime/filter"
-	"hcm/pkg/thirdparty/esb"
 	"hcm/pkg/tools/slice"
-	"hcm/pkg/ziyan"
 
 	etcd3 "go.etcd.io/etcd/client/v3"
 )
 
-func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizID int64, res enumor.CloudResourceType) (
+func (a *accountSvc) huaweiCondSyncRes(cts *rest.Contexts, accountID string, resType enumor.CloudResourceType) (
 	any, error) {
 
-	req, syncFunc, err := a.decodeZiyanCondSyncRequest(cts, res)
+	req, syncFunc, err := a.decodeHuaweiCondSyncRequest(cts, resType)
 	if err != nil {
 		return nil, err
-	}
-	if bizID != constant.UnassignedBiz {
-		meta, err := ziyan.GetResourceMetaByBiz(cts.Kit, esb.EsbClient().Cmdb(), bizID)
-		if err != nil {
-			logs.Errorf("fail to get resource meta by biz(%d), err: %v, rid: %s", bizID, err, cts.Kit.Rid)
-			return nil, err
-		}
-		syncTag := meta.GetSyncFilterTag()
-		if req.TagFilters == nil {
-			req.TagFilters = core.MultiValueTagMap{}
-		}
-		req.TagFilters.Set(syncTag.Key, []string{syncTag.Value})
 	}
 
 	leaseID, err := lock.Manager.TryLock(lock.Key(accountID))
@@ -71,11 +58,9 @@ func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizI
 		return nil, err
 	}
 	logs.Infof("lock account sync key: %s, rid: %s", lock.Key(accountID), cts.Kit.Rid)
-	syncParams := &tziyan.CondSyncParams{
-		AccountID:  accountID,
-		Regions:    req.Regions,
-		CloudIDs:   req.CloudIDs,
-		TagFilters: req.TagFilters,
+	syncParams := &huawei.CondSyncParams{
+		AccountID: accountID,
+		Regions:   req.Regions,
 	}
 	startAt := time.Now()
 	go func(leaseID etcd3.LeaseID) {
@@ -97,18 +82,18 @@ func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizI
 		err = syncFunc(cts.Kit, a.client, syncParams)
 		if err != nil {
 			logs.Errorf("[%s] conditional sync failed on resource(%s), err: %v, account: %s, req: %+v, "+
-				"cost: %s, rid: %s", err, enumor.TCloudZiyan, res, accountID, req, time.Since(startAt), cts.Kit.Rid)
+				"cost: %s, rid: %s", err, enumor.HuaWei, resType, accountID, req, time.Since(startAt), cts.Kit.Rid)
 			return
 		}
 		logs.Infof("[%s] conditional sync succeed on resource(%s), account: %s, req: %+v, cost: %s, rid: %s",
-			enumor.TCloudZiyan, res, accountID, req, time.Since(startAt), cts.Kit.Rid)
+			enumor.HuaWei, resType, accountID, req, time.Since(startAt), cts.Kit.Rid)
 	}(leaseID)
 
 	return "started", nil
 }
 
-func (a *accountSvc) decodeZiyanCondSyncRequest(cts *rest.Contexts, resType enumor.CloudResourceType) (
-	*cloudaccount.ResCondSyncReq, tziyan.CondSyncFunc, error) {
+func (a *accountSvc) decodeHuaweiCondSyncRequest(cts *rest.Contexts, resType enumor.CloudResourceType) (
+	*cloudaccount.ResCondSyncReq, huawei.CondSyncFunc, error) {
 
 	req := new(cloudaccount.ResCondSyncReq)
 	if err := cts.DecodeInto(req); err != nil {
@@ -118,24 +103,26 @@ func (a *accountSvc) decodeZiyanCondSyncRequest(cts *rest.Contexts, resType enum
 		return nil, nil, err
 	}
 
-	syncFunc, ok := tziyan.GetCondSyncFunc(resType)
+	syncFunc, ok := huawei.GetCondSyncFunc(resType)
 	if !ok {
-		return nil, nil, fmt.Errorf("ziyan conditional sync resource does not support %s", resType)
+		return nil, nil, fmt.Errorf("huawei conditional sync resource does not support %s", resType)
 	}
 
 	var rules []*filter.AtomRule
 	if len(req.Regions) > 0 {
 		rules = append(rules, tools.RuleIn("region_id", req.Regions))
 	}
+	rules = append(rules, tools.RuleEqual("service", adaptorhuawei.Vpc))
 
 	// check region
 	regionListReq := &core.ListReq{
 		Filter: tools.ExpressionAnd(rules...),
 		Page:   core.NewDefaultBasePage(),
 	}
-	var regionList = make([]region.TCloudRegion, 0, len(req.Regions))
+	var regionList = make([]region.HuaWeiRegion, 0, len(req.Regions))
 	for {
-		regionResult, err := a.client.DataService().TCloudZiyan.Region.ListRegion(cts.Kit, regionListReq)
+		regionResult, err := a.client.DataService().HuaWei.Region.ListRegion(
+			cts.Kit.Ctx, cts.Kit.Header(), regionListReq)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -148,6 +135,6 @@ func (a *accountSvc) decodeZiyanCondSyncRequest(cts *rest.Contexts, resType enum
 	if len(req.Regions) > 0 && len(regionList) != len(req.Regions) {
 		return nil, nil, errors.New("request regions mismatch regions on db")
 	}
-	req.Regions = slice.Map(regionList, region.TCloudRegion.GetCloudID)
+	req.Regions = slice.Unique(req.Regions)
 	return req, syncFunc, nil
 }
