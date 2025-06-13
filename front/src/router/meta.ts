@@ -29,7 +29,7 @@ interface Extra {
 
 export interface RouteMetaConfig {
   available?: boolean;
-  owner?: string;
+  owner?: symbol | string;
   title?: string;
   authKey?: string;
   view?: string;
@@ -38,7 +38,7 @@ export interface RouteMetaConfig {
   auth?: Auth;
   layout?: Layout;
   notMenu?: boolean;
-  activeKey?: string;
+  activeKey?: symbol | string;
   isShowBreadcrumb?: boolean;
   icon?: string;
   hasPageRoute?: boolean;

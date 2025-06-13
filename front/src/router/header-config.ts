@@ -43,12 +43,4 @@ export const headRouteConfig = [
     name: '平台管理',
     path: '/platform',
   },
-
-  // 接下来是 资源选型、平台管理
-  // {
-  //   id: 'workbench',
-  //   name: '工作台',
-  //   route: 'workbench',
-  //   href: '#/workbench/audit',
-  // },
 ];

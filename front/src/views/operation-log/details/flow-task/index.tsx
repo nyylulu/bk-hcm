@@ -1,6 +1,6 @@
 import { computed, defineComponent, ref, watch } from 'vue';
 import './index.scss';
-import DetailHeader from '../../common/header/detail-header';
+import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import { useRoute } from 'vue-router';
 import { Success } from 'bkui-vue/lib/icon';
 import { Button, Select, Tab, TimeLine } from 'bkui-vue';

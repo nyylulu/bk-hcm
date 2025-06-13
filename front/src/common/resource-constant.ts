@@ -6,4 +6,5 @@ export enum ResourceTypeEnum {
   CLB = 'clb',
   ACCOUNT = 'account',
   HOST = 'host',
+  SECURITY_GROUP = 'security_group',
 }

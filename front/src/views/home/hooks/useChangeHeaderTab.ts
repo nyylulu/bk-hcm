@@ -1,7 +1,6 @@
 import { ref, watch } from 'vue';
 import { useRoute, useRouter, type RouteRecordRaw } from 'vue-router';
 // import routes
-import workbench from '@/router/module/workbench';
 import resource from '@/router/module/resource';
 import resourcePlan from '@/router/module/resource-plan';
 import service from '@/router/module/service';
@@ -56,10 +55,6 @@ export default () => {
         break;
       case 'service':
         menus.value = service;
-        break;
-      case 'workbench':
-        menus.value = workbench;
-        accountStore.updateBizsId(0); // 初始化业务ID
         break;
       case 'scheme':
         menus.value = scheme;

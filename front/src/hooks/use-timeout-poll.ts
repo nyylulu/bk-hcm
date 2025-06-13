@@ -6,7 +6,7 @@ export type TimeoutPollAction = ReturnType<typeof useTimeoutPoll>;
 export default function useTimeoutPoll(
   fn: () => Awaitable<void>,
   interval: number,
-  options?: { immediate?: boolean; max: number },
+  options?: { immediate?: boolean; max?: number },
 ) {
   const { immediate = false, max = 100 } = options || {};
 
@@ -37,7 +37,7 @@ export default function useTimeoutPoll(
       return;
     }
 
-    if (times >= max) {
+    if (max !== -1 && times >= max) {
       return;
     }
     times += 1;
