@@ -16,11 +16,11 @@ import { QueryRuleOPEnum } from '@/typings';
 import { useResourceStore } from '@/store';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { SecurityGroupManageType } from '@/constants/security-group';
+import routerAction from '@/router/utils/action';
 
 const { t } = useI18n();
 
 const route = useRoute();
-const activeTab = ref(route.query?.activeTab);
 const securityId = ref(route.query?.id);
 const vendor = ref(route.query?.vendor);
 const resourceStore = useResourceStore();
@@ -36,23 +36,16 @@ const resoureStore = useResourceStore();
 
 const { loading, detail, getDetail } = useDetail('security_groups', securityId.value as string);
 
-const tabs = ref([
-  {
-    name: t('基本信息'),
-    value: 'detail',
-  },
-  {
-    name: t('安全组规则'),
-    value: 'rule',
-  },
-  {
-    name: t('关联实例'),
-    value: 'relate',
-  },
-]);
+const tabs = [
+  { name: t('基本信息'), value: 'detail' },
+  { name: t('安全组规则'), value: 'rule' },
+  { name: t('关联实例'), value: 'relate' },
+];
+const activeTab = ref(route.query?.scene || tabs[0].value);
 
 const handleTabsChange = (val: string) => {
   if (val === 'rule') getRelatedSecurityGroups(detail.value);
+  routerAction.redirect({ query: { ...route.query, scene: val } });
 };
 
 watch(

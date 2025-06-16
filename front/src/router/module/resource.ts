@@ -1,6 +1,7 @@
 // import { CogShape } from 'bkui-vue/lib/icon';
 import type { RouteRecordRaw } from 'vue-router';
 import i18n from '@/language/i18n';
+import { operationLogRsc as operationLogRscRouteConfig } from '@/views/operation-log/route-config';
 
 const { t } = i18n.global;
 
@@ -14,11 +15,7 @@ const resourceMenus: RouteRecordRaw[] = [
         name: 'reosurceManagePage',
         component: () => import('@/views/resource/resource-manage/resource-manage.vue'),
         children: [
-          {
-            path: 'record',
-            name: 'operationRecord',
-            component: () => import('@/views/resource/resource-manage/operationRecord/index.vue'),
-          },
+          operationLogRscRouteConfig[0],
           {
             path: 'account',
             name: t('账号详情'),
@@ -73,16 +70,7 @@ const resourceMenus: RouteRecordRaw[] = [
           notMenu: true,
         },
       },
-      {
-        path: '/resource/record/detail',
-        name: 'resourceRecordDetail',
-        component: () => import('@/views/resource/resource-manage/operationRecord/RecordDetail/index'),
-        meta: {
-          activeKey: 'resourceResource',
-          breadcrumb: [t('云管'), t('资源'), '详情'],
-          notMenu: true,
-        },
-      },
+      operationLogRscRouteConfig[1],
       {
         path: '/resource/service-apply/cvm',
         name: 'resourceApplyCvm',

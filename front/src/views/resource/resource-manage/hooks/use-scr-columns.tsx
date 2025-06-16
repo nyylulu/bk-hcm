@@ -559,6 +559,16 @@ export default (type: string, isSimpleShow = false) => {
         return <WName name={cell} />;
       },
     },
+    {
+      label: '交付人',
+      field: 'deliverer',
+      width: 150,
+      render({ cell }: any) {
+        const name = cell === 'icr' ? 'ICR' : cell;
+        const alias = cell === 'icr' ? 'ICR（IEG资源服务助手）' : cell;
+        return <WName name={name} alias={alias} />;
+      },
+    },
     { label: '内网IP', field: 'ip' },
     { label: '固资号', field: 'asset_id' },
     { label: '资源类型', field: 'resource_type' },

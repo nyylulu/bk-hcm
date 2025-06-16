@@ -55,11 +55,15 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
         { bk_biz_id, bk_asset_id, region },
         { globalError: false },
       );
-      rollingServerHost.value = res.data;
-      // 将校验成功的机器代表信息回传
-      emit('validateSuccess', res.data);
-      checkMessage.value = '';
-      resolve(true);
+      if (res.code === 0) {
+        rollingServerHost.value = res.data;
+        // 将校验成功的机器代表信息回传
+        emit('validateSuccess', res.data);
+        checkMessage.value = '';
+        resolve(true);
+      } else {
+        throw res;
+      }
     } catch (error: any) {
       // 校验失败
       rollingServerHost.value = null;

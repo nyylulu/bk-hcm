@@ -123,8 +123,7 @@ func (svc *clbSvc) batchAddTargetsToGroup(kt *kit.Kit, req *protolb.TCloudBatchO
 			Port:       cvt.ValToPtr(rsItem.Port),
 			Weight:     rsItem.Weight,
 		}
-		// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-		tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+		tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 		if ruleInfo.RuleType == enumor.Layer7RuleType {
 			tmpRs.LocationId = cvt.ValToPtr(ruleInfo.CloudID)
 		}
@@ -275,8 +274,7 @@ func (svc *clbSvc) batchUnRegisterTargetCloud(kt *kit.Kit, req *protolb.TCloudBa
 			if ruleItem.RuleType == enumor.Layer7RuleType {
 				tmpRs.LocationId = cvt.ValToPtr(ruleItem.CloudID)
 			}
-			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 		}
 		failIDs, err := tcloudAdpt.DeRegisterTargets(kt, rsOpt)
@@ -416,8 +414,7 @@ func (svc *clbSvc) batchModifyTargetPortCloud(kt *kit.Kit, req *protolb.TCloudBa
 				Type: cvt.ValToPtr(string(rsItem.InstType)),
 				Port: cvt.ValToPtr(rsItem.Port),
 			}
-			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 		}
 		rsOpt.NewPort = cvt.PtrToVal(req.RsList[0].NewPort)
@@ -546,8 +543,7 @@ func (svc *clbSvc) batchModifyTargetWeightCloud(kt *kit.Kit, req *protolb.TCloud
 				Port:   cvt.ValToPtr(rsItem.Port),
 				Weight: rsItem.NewWeight,
 			}
-			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
 			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 		}
@@ -718,8 +714,7 @@ func (svc *clbSvc) unbindTCloudListenerTargets(kt *kit.Kit, req *protolb.TCloudB
 			if rsItem.RuleType == enumor.Layer7RuleType {
 				tmpRs.LocationId = cvt.ValToPtr(rsItem.CloudRuleID)
 			}
-			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			rsOpt.Targets = append(rsOpt.Targets, tmpRs)
 			targetIDs = append(targetIDs, rsItem.ID)
 			cloudLblIDs = append(cloudLblIDs, item.CloudLblID)
@@ -887,8 +882,7 @@ func (svc *clbSvc) modifyTCloudListenerTargetsWeight(kt *kit.Kit, req *protolb.T
 				Port:   cvt.ValToPtr(rsItem.Port),
 				Weight: req.NewRsWeight,
 			}
-			// 对于cvm，使用InstanceId参数，其他所有类型，使用EniIp参数 --story=124323667
-			tmpRs = setTargetInstanceIDAndEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
+			tmpRs = setTargetInstanceIDOrEniIP(rsItem.InstType, rsItem.CloudInstID, rsItem.IP, tmpRs)
 			tmpWeightRule.Targets = append(tmpWeightRule.Targets, tmpRs)
 			rsOpt.ModifyList = append(rsOpt.ModifyList, tmpWeightRule)
 			updateRsList = append(updateRsList, &dataproto.TargetBaseReq{
@@ -993,4 +987,19 @@ func (svc *clbSvc) filterListenerTargetWeightList(kt *kit.Kit, lbID string,
 		lblRsList = append(lblRsList, lblRsInfo)
 	}
 	return lblRsList, nil
+}
+
+// setTargetInstanceIDOrEniIP 根据RS的实例类型，设置RS的InstanceId或者EniIp --story=124323667
+func setTargetInstanceIDOrEniIP(instType enumor.InstType, cloudInstID, rsIP string,
+	targetInfo *typelb.BatchTarget) *typelb.BatchTarget {
+
+	// CVM类型、跨域1.0，使用InstanceId参数
+	if instType == enumor.CvmInstType {
+		targetInfo.InstanceId = cvt.ValToPtr(cloudInstID)
+		return targetInfo
+	}
+
+	// 非CVM类型需要指定eniIP
+	targetInfo.EniIp = cvt.ValToPtr(rsIP)
+	return targetInfo
 }

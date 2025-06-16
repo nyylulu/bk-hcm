@@ -74,8 +74,7 @@ type layer7ListenerBindRSTaskDetail struct {
 
 // Execute ...
 func (c *Layer7ListenerBindRSExecutor) Execute(kt *kit.Kit, source enumor.TaskManagementSource,
-	rawDetails json.RawMessage) (
-	string, error) {
+	rawDetails json.RawMessage) (string, error) {
 
 	err := c.unmarshalData(rawDetails)
 	if err != nil {

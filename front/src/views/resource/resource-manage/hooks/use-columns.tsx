@@ -181,7 +181,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             disabled: !cell || cell === -1,
             theme: 'light',
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -289,7 +290,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             disabled: !cell || cell === -1,
             theme: 'light',
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -473,7 +475,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             disabled: !cell || cell === -1,
             theme: 'light',
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -822,7 +825,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             disabled: !cell || cell === -1,
             theme: 'light',
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -1019,7 +1023,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             disabled: !cell || cell === -1,
             theme: 'light',
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -1119,16 +1124,27 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             () => {
               loadBalancerStore.setLbTreeSearchTarget({ ...data, searchK: 'lb_name', searchV: data.name, type: 'lb' });
             },
-          )}>
+          )}
+        >
           {data.name || '--'}
         </Button>
       ),
+      renderSuffix: (data) => {
+        return <CopyToClipboard content={data.name} class='copy-icon ml4' />;
+      },
+      contentClass: 'use-columns-copy-cell',
     }),
     {
       label: '负载均衡ID',
       field: 'cloud_id',
       isDefaultShow: true,
       width: 120,
+      render: ({ cell }: any) => (
+        <div class='use-columns-copy-cell'>
+          <span>{cell}</span>
+          <CopyToClipboard content={cell} class='copy-icon ml4' />
+        </div>
+      ),
     },
     {
       label: () => (
@@ -1137,7 +1153,15 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
       field: 'domain',
       width: 150,
       isDefaultShow: true,
-      render: ({ cell }: { cell: string }) => cell || '--',
+      render: ({ cell }: { cell: string }) => {
+        if (!cell) return '--';
+        return (
+          <div class='use-columns-copy-cell'>
+            <span>{cell}</span>
+            <CopyToClipboard content={cell} class='copy-icon ml4' />
+          </div>
+        );
+      },
     },
     {
       label: '负载均衡VIP',
@@ -1145,7 +1169,14 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
       width: 150,
       isDefaultShow: true,
       render: ({ data }: any) => {
-        return getInstVip(data);
+        const displayValue = getInstVip(data);
+        if (displayValue === '--') return displayValue;
+        return (
+          <div class='use-columns-copy-cell'>
+            <span>{displayValue}</span>
+            <CopyToClipboard content={displayValue} class='copy-icon ml4' />
+          </div>
+        );
       },
     },
     {
@@ -1189,7 +1220,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             content: businessMapStore.businessMap.get(cell),
             disabled: !cell || cell === -1,
           }}
-          theme={cell === -1 ? false : 'success'}>
+          theme={cell === -1 ? false : 'success'}
+        >
           {cell === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),
@@ -1308,7 +1340,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
                 type: 'listener',
               });
             },
-          )}>
+          )}
+        >
           {data.name || '--'}
         </Button>
       ),
@@ -1424,7 +1457,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             () => {
               loadBalancerStore.setTgSearchTarget(name);
             },
-          )}>
+          )}
+        >
           {name}
         </Button>
       ),
@@ -1634,7 +1668,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
               type: 'detail',
               protocol,
             },
-          })}>
+          })}
+        >
           {lbl_name}
         </Button>
       ),
@@ -1810,7 +1845,8 @@ export default (type: string, isSimpleShow = false, vendor?: string, options?: a
             content: businessMapStore.businessMap.get(cell),
             disabled: !cell || cell === -1,
           }}
-          theme={data.bk_biz_id === -1 ? false : 'success'}>
+          theme={data.bk_biz_id === -1 ? false : 'success'}
+        >
           {data.bk_biz_id === -1 ? '未分配' : '已分配'}
         </bk-tag>
       ),

@@ -108,9 +108,9 @@ func (a *accountSvc) ziyanCondSyncRes(cts *rest.Contexts, accountID string, bizI
 }
 
 func (a *accountSvc) decodeZiyanCondSyncRequest(cts *rest.Contexts, resType enumor.CloudResourceType) (
-	*cloudaccount.TCloudResCondSyncReq, tziyan.CondSyncFunc, error) {
+	*cloudaccount.ResCondSyncReq, tziyan.CondSyncFunc, error) {
 
-	req := new(cloudaccount.TCloudResCondSyncReq)
+	req := new(cloudaccount.ResCondSyncReq)
 	if err := cts.DecodeInto(req); err != nil {
 		return nil, nil, err
 	}

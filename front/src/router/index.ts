@@ -8,7 +8,6 @@ import {
 import { MENU_BUSINESS, MENU_PLATFORM_MANAGEMENT, MENU_ROLLING_SERVER_MANAGEMENT } from '@/constants/menu-symbol';
 import { businessViews, platformManagementViews } from '@/views';
 import common from './module/common';
-import workbench from './module/workbench';
 import resource from './module/resource';
 import resourceInside from './module/resource-inside';
 import resourcePlan from './module/resource-plan';
@@ -25,13 +24,11 @@ import { isArray, isRegExp, isString } from 'lodash';
 const { t } = i18n.global;
 const routes: RouteRecordRaw[] = [
   ...common,
-  ...workbench,
   ...resource,
   ...resourceInside,
   ...resourcePlan,
   ...service,
   ...serviceInside,
-  // ...business,
   ...scheme,
   ...bill,
   {

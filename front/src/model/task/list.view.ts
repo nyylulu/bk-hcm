@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Model, Column } from '@/decorator';
 import { VendorEnum, VendorMap } from '@/common/constant';
-import { TaskType, TaskStatus, TaskSource } from '@/views/task/typings';
+import { type TaskType, TaskStatus, TaskSource } from '@/views/task/typings';
 import { TASK_TYPE_NAME, TASK_SOURCE_NAME, TASK_STATUS_NAME } from '@/views/task/constants';
 
 @Model('task/list.view')

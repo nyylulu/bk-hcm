@@ -61,6 +61,7 @@ watch(
     const renderColumns = baseColumns.slice();
     switch (vendor) {
       case VendorEnum.TCLOUD:
+      case VendorEnum.ZIYAN:
         if (operationType === Operation.create_layer4_listener) {
           renderColumns.splice(
             4,

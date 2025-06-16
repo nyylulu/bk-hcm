@@ -100,7 +100,11 @@ export default defineStore('planStore', () => {
   /**
    * IDemandListDetail 转换为 IAdjust
    */
-  function convertToAdjust(originalDetail: IDemandListDetail, updatedDetail: IDemandListDetail): IAdjust {
+  function convertToAdjust(
+    originalDetail: IDemandListDetail,
+    updatedDetail: IDemandListDetail,
+    delayOs?: string,
+  ): IAdjust {
     const mapDetailToAdjustInfo = (detail: IDemandListDetail): AdjustInfo => {
       const demandResTypes: string[] = ['CBS'];
       if (detail.remained_cpu_core > 0 || detail.remained_memory > 0) {
@@ -116,16 +120,13 @@ export default defineStore('planStore', () => {
         // demand_source、remark 在编辑时不可调整，接口需要填写，产品结论是先给默认值
         demand_source: '指标变化',
         remark: '',
-        cvm:
-          detail.demand_class === 'CVM'
-            ? {
-                res_mode: detail.res_mode,
-                device_type: detail.device_type,
-                os: detail.remained_os,
-                cpu_core: detail.remained_cpu_core,
-                memory: detail.remained_memory,
-              }
-            : undefined,
+        cvm: {
+          res_mode: detail.res_mode,
+          device_type: detail.device_type,
+          os: detail.remained_os,
+          cpu_core: detail.remained_cpu_core,
+          memory: detail.remained_memory,
+        },
         cbs: {
           disk_type: detail.disk_type,
           disk_io: detail.disk_io,
@@ -142,6 +143,7 @@ export default defineStore('planStore', () => {
       updated_info: mapDetailToAdjustInfo(updatedDetail),
       expect_time: updatedDetail.adjustType === AdjustType.time ? updatedDetail.expect_time : undefined,
       delay_reason: updatedDetail.adjustType === AdjustType.time ? '' : undefined,
+      delay_os: delayOs,
     };
   }
 

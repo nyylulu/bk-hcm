@@ -81,6 +81,11 @@ export default defineComponent({
       required: true,
       type: Function,
     },
+    isGotoSecurityRuleShow: Boolean,
+    bpaasJsonContent: {
+      required: true,
+      type: Object,
+    },
   },
   setup(props) {
     const renderStatus = (status: BpaasNodeStatus | BpaasStatus) => {
@@ -213,6 +218,12 @@ export default defineComponent({
             <label class={'label'}>操作时间:</label>
             <div>{props.params.ModifyTime}</div>
           </div>
+          {props.isGotoSecurityRuleShow && (
+            <div class='item'>
+              <label class='label'>安全组ID:</label>
+              <div>{props.bpaasJsonContent?.sg_cloud_id ?? '--'}</div>
+            </div>
+          )}
         </div>
 
         <div class={'detail-card'}>

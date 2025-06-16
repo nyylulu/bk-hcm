@@ -10,7 +10,6 @@ import GridItemFormElement from '@/components/layout/grid-container/grid-item-fo
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import WName from '@/components/w-name';
 import StageDetailSideslider from './stage-detail';
-import MatchSideslider from './match';
 
 import moment from 'moment';
 import { useI18n } from 'vue-i18n';
@@ -48,13 +47,10 @@ export default defineComponent({
     const { transformRequireTypes } = useRequireTypes();
 
     const stageDetailSidesliderRef = ref();
-    const matchSidesliderRef = ref();
 
     const stageDetailSlideState = reactive({
       suborderId: undefined,
     });
-
-    const curRow = ref({});
 
     const orderClipboard = ref<any>({});
     const machineDetails = ref([]);
@@ -345,21 +341,6 @@ export default defineComponent({
           {
             label: t('待交付数'),
             field: 'pending_num',
-            render({ cell, data }: any) {
-              return cell ? (
-                <Button
-                  theme='primary'
-                  text
-                  onClick={() => {
-                    curRow.value = data;
-                    matchSidesliderRef.value.triggerShow(true);
-                  }}>
-                  {cell}
-                </Button>
-              ) : (
-                cell
-              );
-            },
           },
           {
             label: t('已交付数'),
@@ -572,7 +553,6 @@ export default defineComponent({
           details={machineDetails.value}
           onChangeSlideShow={handleChangeStageSlideShow}
         />
-        <MatchSideslider ref={matchSidesliderRef} data={curRow.value} />
       </>
     );
   },

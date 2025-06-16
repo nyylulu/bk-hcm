@@ -29,15 +29,13 @@ export default defineComponent({
     ];
 
     return () => (
-      <div class={'host-application-container'}>
-        <Tab v-model:active={activeName.value} type='unborder-card' class={'tab-wrapper'}>
-          {tabs.map(({ key, label, component }) => (
-            <BkTabPanel key={key} label={label} name={key} renderDirective='if'>
-              {component()}
-            </BkTabPanel>
-          ))}
-        </Tab>
-      </div>
+      <Tab v-model:active={activeName.value} type='unborder-card'>
+        {tabs.map(({ key, label, component }) => (
+          <BkTabPanel key={key} label={label} name={key} renderDirective='if'>
+            {component()}
+          </BkTabPanel>
+        ))}
+      </Tab>
     );
   },
 });

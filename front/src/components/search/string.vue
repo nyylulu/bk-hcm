@@ -9,6 +9,9 @@ const props = withDefaults(
   {
     multiple: true,
     option: () => ({}),
+    display: () => ({
+      appearance: 'tag-input',
+    }),
   },
 );
 const model = defineModel<string | string[]>();
@@ -53,7 +56,7 @@ const localModel = computed({
     ></bk-tag-input>
   </template>
   <!-- input -->
-  <bk-input v-else v-model="localModel" v-bind="attr"></bk-input>
+  <bk-input v-else v-model="localModel" clearable v-bind="attr"></bk-input>
 </template>
 
 <style scoped></style>

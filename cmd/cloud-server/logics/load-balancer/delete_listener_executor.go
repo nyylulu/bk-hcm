@@ -203,7 +203,7 @@ func (c *BatchDeleteListenerExecutor) checkListenerBindTargets(kt *kit.Kit, lbID
 		targetGroupIDs = append(targetGroupIDs, item.TargetGroupID)
 	}
 
-	// 只需要查询目标组绑定的RS数量即可
+	// 只需要查询目标组绑定的权重非0的RS数量即可
 	targetNum := uint64(0)
 	for _, tgPartIDs := range slice.Split(targetGroupIDs, int(core.DefaultMaxPageLimit)) {
 		targetReq := &core.ListReq{
@@ -222,7 +222,8 @@ func (c *BatchDeleteListenerExecutor) checkListenerBindTargets(kt *kit.Kit, lbID
 	}
 
 	if targetNum > 0 {
-		return fmt.Errorf("listener[%v] has bind target num: %d, tgGroupIDs: %v", lblIDs, targetNum, targetGroupIDs)
+		return fmt.Errorf("listener[%v] has bind non-zero weight target num: %d, tgGroupIDs: %v",
+			lblIDs, targetNum, targetGroupIDs)
 	}
 
 	return nil

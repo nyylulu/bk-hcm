@@ -1,8 +1,10 @@
-import { PropType, defineComponent, ref } from 'vue';
+import { PropType, defineComponent, reactive, ref } from 'vue';
 import StepDialog from '@/components/step-dialog/step-dialog';
 import './add-rule.scss';
-import { VendorEnum } from '@/common/constant';
+import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
 import AddRuleTable from '../../components/security/add-rule/AddRuleTable';
+import { useAccountStore } from '@/store';
+import routerAction from '@/router/utils/action';
 
 export type SecurityRule = {
   name: string;
@@ -65,6 +67,8 @@ export default defineComponent({
   emits: ['update:isShow', 'submit'],
 
   setup(props, { emit }) {
+    const accountStore = useAccountStore();
+
     const instance = ref();
     const isSubmitLoading = ref(false);
     const steps = [
@@ -91,11 +95,40 @@ export default defineComponent({
       isSubmitLoading.value = true;
       try {
         await instance.value.handleSubmit();
+        emit('submit');
+        emit('update:isShow', false);
+      } catch (error: any) {
+        // 弹出bpaas结果确认弹窗
+        if (error.code === 2000012) {
+          showBpaasResultConfirmDialog(error);
+        }
       } finally {
         isSubmitLoading.value = false;
       }
-      emit('submit');
-      emit('update:isShow', false);
+    };
+
+    const bpaasResultConfirmState = reactive({ isShow: false, isHidden: false, errorId: '' });
+    const showBpaasResultConfirmDialog = (error: any) => {
+      bpaasResultConfirmState.isHidden = false;
+      bpaasResultConfirmState.isShow = true;
+      bpaasResultConfirmState.errorId = error.message;
+    };
+    const handleBpaasResultConfirm = () => {
+      routerAction.open({
+        path: '/business/applications/detail',
+        query: {
+          [GLOBAL_BIZS_KEY]: accountStore.bizs,
+          type: 'security_group',
+          id: bpaasResultConfirmState.errorId,
+          source: 'bpaas',
+        },
+      });
+      handleClose();
+    };
+    const handleBpaasResultClosed = () => {
+      bpaasResultConfirmState.isHidden = true;
+      bpaasResultConfirmState.isShow = false;
+      bpaasResultConfirmState.errorId = '';
     };
 
     return {
@@ -103,6 +136,9 @@ export default defineComponent({
       handleClose,
       handleConfirm,
       isSubmitLoading,
+      bpaasResultConfirmState,
+      handleBpaasResultConfirm,
+      handleBpaasResultClosed,
     };
   },
 
@@ -118,6 +154,18 @@ export default defineComponent({
           steps={this.steps}
           onConfirm={this.handleConfirm}
           onCancel={this.handleClose}></step-dialog>
+        {!this.bpaasResultConfirmState.isHidden && (
+          <bk-dialog
+            v-model:isShow={this.bpaasResultConfirmState.isShow}
+            title='结果确认'
+            confirmText='查看审计流程'
+            onConfirm={this.handleBpaasResultConfirm}
+            onClosed={this.handleBpaasResultClosed}>
+            <span>
+              当前配置已提交，查看审批流程关注进度。在审批通过后，返回安全组规则列表，点击安全组“同步”按钮以获取最新规则数据
+            </span>
+          </bk-dialog>
+        )}
       </>
     );
   },

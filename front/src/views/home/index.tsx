@@ -257,7 +257,7 @@ export default defineComponent({
                   style={{ width: `${NAV_WIDTH}px` }}
                   uniqueOpen={false}
                   openedKeys={openedKeys}
-                  activeKey={route.meta.activeKey as string}>
+                  activeKey={route.meta.activeKey?.toString()}>
                   {menus.value
                     .map((menuItem) => {
                       const { hasPageRoute, groupTitle, notMenu, checkAuth } = menuItem.meta || {};
@@ -288,7 +288,7 @@ export default defineComponent({
                                       whereAmI.value === Senarios.business ? accountStore.bizs : undefined,
                                   },
                                 }}>
-                                <Menu.Item key={child.meta?.activeKey as string}>
+                                <Menu.Item key={child.meta?.activeKey?.toString()}>
                                   {{
                                     icon: () => <i class={child.meta?.icon} />,
                                     default: () => (
@@ -326,7 +326,7 @@ export default defineComponent({
                       // 正常显示菜单
                       return (
                         <RouterLink to={getRouteLinkParams(menuItem)}>
-                          <Menu.Item key={menuItem.meta.activeKey as string}>
+                          <Menu.Item key={menuItem.meta?.activeKey?.toString()}>
                             {{
                               icon: () => <i class={menuItem.meta.icon} />,
                               default: () => menuItem.meta?.title,

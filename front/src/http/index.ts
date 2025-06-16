@@ -290,8 +290,6 @@ function handleCustomErrorCode(error: any) {
   }
   // zenlayer 账单导入错误码
   if ([2000015, 2000016, 2000017].includes(error.code)) return;
-  // 滚服项目-继承套餐校验
-  if (error.code === 2000000 && error.message === 'host is invalid') return;
   // todo: 主机回收，业务报错外抛至组件
   if (error.code === 2000018) return;
 

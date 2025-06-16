@@ -1,4 +1,4 @@
-import { defineComponent, nextTick, onBeforeMount, ref } from 'vue';
+import { defineComponent, nextTick, onBeforeMount, PropType, ref } from 'vue';
 import Panel from '@/components/panel';
 import { Button, DatePicker, Select, Checkbox } from 'bkui-vue';
 import { Info as InfoIcon } from 'bkui-vue/lib/icon';
@@ -29,8 +29,9 @@ export default defineComponent({
       type: Boolean,
       required: true,
     },
+    expectTimeRange: Object as PropType<{ start: string; end: string }>,
   },
-  emits: ['search', 'expectTimeRangeChange'],
+  emits: ['search', 'update:expectTimeRange'],
   setup(props, { emit }) {
     const { Option } = Select;
     const router = useRouter();
@@ -49,12 +50,7 @@ export default defineComponent({
       zone_ids: [], // 可用区
       plan_types: [], // 计划类型
       expiring_only: false, // 过期状态
-      expect_time_range: {
-        // 当前时间所在月份的第1天往前加1周
-        start: dayjs().startOf('month').subtract(1, 'week').startOf('day').format('YYYY-MM-DD'),
-        // 当前时间往后加14周
-        end: dayjs().add(14, 'week').endOf('day').format('YYYY-MM-DD'),
-      }, // 期望交付时间范围
+      expect_time_range: props.expectTimeRange, // 期望交付时间范围
       statuses: [], // 状态
     };
 
@@ -104,7 +100,7 @@ export default defineComponent({
           end: timeFormatter(val[1], 'YYYY-MM-DD'),
         };
         searchModel.value[key] = range;
-        emit('expectTimeRangeChange', range);
+        emit('update:expectTimeRange', range);
       } else {
         searchModel.value[key] = undefined;
       }
@@ -238,7 +234,7 @@ export default defineComponent({
       nextTick(() => {
         if (route.query.searchModel) {
           searchModel.value = JSON.parse(route.query.searchModel as string);
-          emit('expectTimeRangeChange', searchModel.value.expect_time_range);
+          emit('update:expectTimeRange', searchModel.value.expect_time_range);
         }
         handleSearch();
       });

@@ -1,4 +1,4 @@
-import { defineComponent, computed, ref, PropType, onMounted } from 'vue';
+import { defineComponent, computed, ref, PropType, onMounted, reactive } from 'vue';
 import { Button, Dropdown } from 'bkui-vue';
 import { Plus as PlusIcon } from 'bkui-vue/lib/icon';
 import { useTable } from '@/hooks/useResourcePlanTable';
@@ -6,6 +6,7 @@ import { useI18n } from 'vue-i18n';
 import routerAction from '@/router/utils/action';
 import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import BatchCancellationDialog from '@/components/resource-plan/resource-manage/list/table/components/batch-cancellation-dialog/batch-cancellation-dialog';
+import BatchPostponeSideslider from '@/components/resource-plan/resource-manage/list/table/components/batch-postpone-sideslider/index.vue';
 import cssModule from './index.module.scss';
 import { useRoute, useRouter } from 'vue-router';
 import { IListResourcesDemandsItem, IListResourcesDemandsParam, ResourcesDemandsStatus } from '@/typings/resourcePlan';
@@ -26,6 +27,7 @@ export enum OperationActions {
   BIZ_ADJUST = 'biz_adjust',
   BIZ_CANCEL = 'biz_cancel',
   PURCHASE = 'purchase',
+  BIZ_BATCH_POSTPONE = 'biz_batch_postpone',
 }
 
 export default defineComponent({
@@ -69,9 +71,13 @@ export default defineComponent({
         label: t('取消'),
         loading: false,
       },
+      [OperationActions.BIZ_BATCH_POSTPONE]: {
+        label: t('部分延期'),
+        loading: false,
+      },
     };
 
-    const bizActions = [OperationActions.BIZ_ADJUST, OperationActions.BIZ_CANCEL];
+    const bizActions = [OperationActions.BIZ_ADJUST, OperationActions.BIZ_CANCEL, OperationActions.BIZ_BATCH_POSTPONE];
     const serviceActions = [OperationActions.SERVICE_ADJUST, OperationActions.SERVICE_CANCEL];
     const operationDropdownList = Object.entries(operationMap)
       .filter(([type]) => (props.isBiz ? bizActions : serviceActions).includes(type as OperationActions))
@@ -252,6 +258,8 @@ export default defineComponent({
       }
     };
 
+    const batchPostponeSidesliderState = reactive({ isHidden: true, isShow: false, data: null });
+
     const handleOperate = (type: OperationActions, data: IListResourcesDemandsItem) => {
       if (!authVerifyData.value?.permissionAction?.biz_resource_plan_operate) {
         // 无权限
@@ -264,6 +272,8 @@ export default defineComponent({
         isShow.value = true;
       } else if (type === OperationActions.BIZ_ADJUST) {
         handleToAdjust([data]);
+      } else if (type === OperationActions.BIZ_BATCH_POSTPONE) {
+        Object.assign(batchPostponeSidesliderState, { isHidden: false, isShow: true, data });
       } else if ([OperationActions.SERVICE_ADJUST, OperationActions.SERVICE_CANCEL].includes(type)) {
         handleToBizPage(data.bk_biz_id);
       }
@@ -382,6 +392,16 @@ export default defineComponent({
           />
         </bk-loading>
         <BatchCancellationDialog v-model:isShow={isShow.value} data={currentRowsData.value} onRefresh={triggerApi} />
+        {!batchPostponeSidesliderState.isHidden && (
+          <BatchPostponeSideslider
+            v-model:isShow={batchPostponeSidesliderState.isShow}
+            data={batchPostponeSidesliderState.data}
+            onHidden={() => {
+              batchPostponeSidesliderState.isHidden = true;
+              batchPostponeSidesliderState.data = null;
+            }}
+          />
+        )}
       </div>
     );
   },

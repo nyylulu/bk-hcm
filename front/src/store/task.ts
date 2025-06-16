@@ -5,7 +5,7 @@ import http from '@/http';
 import { QueryRuleOPEnum, IListResData, QueryBuilderType } from '@/typings';
 import { VendorEnum } from '@/common/constant';
 import { enableCount, maxPageParams, onePageParams } from '@/utils/search';
-import { TaskDetailStatus, TaskStatus, TaskType } from '@/views/task/typings';
+import { TaskDetailStatus, TaskStatus, type TaskType } from '@/views/task/typings';
 
 export interface ITaskItem {
   id: string;
