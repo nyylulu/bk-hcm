@@ -1,16 +1,15 @@
 import { computed, defineComponent, onUnmounted, ref, watch } from 'vue';
 import './index.scss';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
-import ApplyDetail from '@/views/service/my-apply/components/apply-detail/index.vue';
 import { useAccountStore } from '@/store';
 import { useRoute } from 'vue-router';
-import { ACCOUNT_TYPES, APPLICATION_TYPE_MAP, COMMON_TYPES } from '../apply-list/constants';
-import AccountApplyDetail from './account-apply-detail';
-import BpassApplyDetail, { BpaasEndStatus } from '../my-apply/components/bpass-apply-detail';
+import { APPLICATION_TYPE_MAP } from '../apply-list/constants';
 import Clb from './clb.vue';
 import useFormModel from '@/hooks/useFormModel';
 import routerAction from '@/router/utils/action';
 import { GLOBAL_BIZS_KEY, VendorEnum } from '@/common/constant';
+import { BpaasEndStatus } from '../my-apply/components/bpass-apply-detail';
+import { applyContentRender } from './apply-content-render.plugin';
 
 export enum ApplicationStatus {
   pending = 'pending',
@@ -49,9 +48,8 @@ export default defineComponent({
     const curApplyKey = ref('');
     const isCancelBtnLoading = ref(false);
     const route = useRoute();
-    const isBpaas = ref(false);
 
-    const { formModel: bpassPayload, setFormValues: setBpassPayload } = useFormModel({
+    const { formModel: bpaasPayload, setFormValues: setBpaasPayload } = useFormModel({
       bpaas_sn: 0,
       account_id: '',
       id: '',
@@ -66,18 +64,11 @@ export default defineComponent({
       try {
         const res = await accountStore.getApplyAccountDetail(id);
         currentApplyData.value = res.data;
-        if (isBpaas.value) {
-          setBpassPayload({
-            applicant: res.data.applicant,
-            account_id: JSON.parse(res.data.content).account_id,
-            id: res.data.id,
-            bpaas_sn: +res.data.sn,
-          });
-          const bpaasRes = await accountStore.getBpassDetail(bpassPayload);
-          currentApplyData.value = { ...currentApplyData.value, ...bpaasRes.data };
-          if (BpaasEndStatus.includes(bpaasRes.data.Status)) clearInterval(interval);
-        }
         curApplyKey.value = res.data.id;
+
+        if (res.data.source === 'bpaas') {
+          resolveBpaasDetail(res);
+        }
 
         if ([ApplicationStatus.pending, ApplicationStatus.delivering].includes(res.data.status)) {
           clearInterval(interval);
@@ -88,6 +79,18 @@ export default defineComponent({
       } finally {
         isLoading.value = false;
       }
+    };
+
+    const resolveBpaasDetail = async (res: any) => {
+      setBpaasPayload({
+        applicant: res.data.applicant,
+        account_id: JSON.parse(res.data.content).account_id,
+        id: res.data.id,
+        bpaas_sn: +res.data.sn,
+      });
+      const bpaasRes = await accountStore.getBpassDetail(bpaasPayload);
+      currentApplyData.value = { ...currentApplyData.value, ...bpaasRes.data };
+      if (BpaasEndStatus.includes(bpaasRes.data.Status)) clearInterval(interval);
     };
 
     onUnmounted(() => {
@@ -106,9 +109,8 @@ export default defineComponent({
     };
 
     watch(
-      [() => route.query.id, () => route.query.source],
-      ([id, source]) => {
-        isBpaas.value = source === 'bpaas';
+      () => route.query.id,
+      (id) => {
         if (id) {
           getMyApplyDetail(id as string);
         }
@@ -118,14 +120,10 @@ export default defineComponent({
       },
     );
 
-    const isGotoSecurityRuleShow = computed(() =>
-      [
-        'create_security_group',
-        'create_security_group_rule',
-        'update_security_group_rule',
-        'delete_security_group_rule',
-      ].includes(currentApplyData.value?.type),
-    );
+    const subTitle = computed(() => {
+      return APPLICATION_TYPE_MAP[currentApplyData.value?.type] || currentApplyData.value?.BpaasName;
+    });
+
     const currentApplyDataContent = computed<any>(() => {
       let content = {};
       try {
@@ -135,6 +133,15 @@ export default defineComponent({
       }
       return content;
     });
+
+    const isGotoSecurityRuleShow = computed(() =>
+      [
+        'create_security_group',
+        'create_security_group_rule',
+        'update_security_group_rule',
+        'delete_security_group_rule',
+      ].includes(currentApplyData.value?.type),
+    );
     const isGotoSecurityRuleDisabled = computed(() => !currentApplyDataContent.value?.sg_id);
     const gotoSecurityRule = () => {
       routerAction.open({
@@ -143,13 +150,18 @@ export default defineComponent({
           [GLOBAL_BIZS_KEY]: accountStore.bizs,
           id: currentApplyDataContent.value?.sg_id,
           vendor: currentApplyDataContent.value?.vendor ?? VendorEnum.ZIYAN,
-          scene: 'rule',
+          active: 'rule',
         },
       });
     };
 
     const render = () => {
-      let vNode = (
+      // 负载均衡详情
+      if (!currentApplyData.value?.type) return null;
+      if (['create_load_balancer'].includes(currentApplyData.value.type)) {
+        return <Clb applicationDetail={currentApplyData.value} loading={isLoading.value} />;
+      }
+      return (
         <div class={'apply-detail-container'}>
           <DetailHeader>
             {{
@@ -158,8 +170,7 @@ export default defineComponent({
                   <span class={'title'}>申请单详情</span>
                   <span class={'sub-title'}>
                     &nbsp;-&nbsp;
-                    {APPLICATION_TYPE_MAP[currentApplyData.value.type as keyof typeof APPLICATION_TYPE_MAP] ||
-                      currentApplyData.value.BpaasName}
+                    {subTitle.value}
                   </span>
                 </>
               ),
@@ -171,36 +182,25 @@ export default defineComponent({
                 ) : undefined,
             }}
           </DetailHeader>
-          {!isBpaas.value ? (
-            <div class={'apply-content-wrapper'}>
-              {ACCOUNT_TYPES.includes(currentApplyData.value.type) && (
-                <AccountApplyDetail detail={currentApplyData.value} />
-              )}
-
-              {COMMON_TYPES.includes(currentApplyData.value.type) && (
-                <ApplyDetail params={currentApplyData.value} key={curApplyKey.value} onCancel={handleCancel} />
-              )}
-            </div>
-          ) : (
-            <div class={'apply-content-wrapper'}>
-              <BpassApplyDetail
-                loading={isLoading.value}
-                params={currentApplyData.value}
-                key={curApplyKey.value}
-                getBpaasDetail={getMyApplyDetail}
-                bpaasPayload={bpassPayload}
-                bpaasJsonContent={currentApplyDataContent.value}
-                isGotoSecurityRuleShow={isGotoSecurityRuleShow.value}
-              />
-            </div>
-          )}
+          <div class={'apply-content-wrapper'}>
+            {applyContentRender(
+              currentApplyData,
+              curApplyKey,
+              {
+                cancelLoading: isCancelBtnLoading.value,
+                onCancel: handleCancel,
+              },
+              {
+                loading: isLoading.value,
+                getBpaasDetail: getMyApplyDetail,
+                bpaasPayload,
+                bpaasJsonContent: currentApplyDataContent.value,
+                isGotoSecurityRuleShow: isGotoSecurityRuleShow.value,
+              },
+            )}
+          </div>
         </div>
       );
-      // 负载均衡详情
-      if (route.query.type?.includes('load_balancer')) {
-        vNode = <Clb applicationDetail={currentApplyData.value} loading={isLoading.value} />;
-      }
-      return vNode;
     };
 
     return render;
