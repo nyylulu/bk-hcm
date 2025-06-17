@@ -137,7 +137,7 @@ func (d *Detector) getHostBaseInfo(ips []string) ([]*cmdb.Host, error) {
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
+	resp, err := d.cc.ListHost(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:getHostBaseInfo:failed, failed to get cc host info, err: %v", err)
 		return nil, err
@@ -183,7 +183,7 @@ func (d *Detector) getHostBaseInfoByAsset(assetIds []string) ([]*cmdb.Host, erro
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
+	resp, err := d.cc.ListHost(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return nil, err
@@ -199,7 +199,7 @@ func (d *Detector) getHostTopoInfo(hostIds []int64) ([]*cmdb.HostTopoRelation, e
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.FindHostBizRelations(d.kt, req)
+	resp, err := d.cc.FindHostBizRelations(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host topo info, err: %v", err)
 		return nil, err

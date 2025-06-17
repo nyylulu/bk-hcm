@@ -25,6 +25,7 @@ import (
 	"net"
 	"strconv"
 
+	"hcm/cmd/woa-server/logics/task/recycler"
 	"hcm/cmd/woa-server/options"
 	"hcm/cmd/woa-server/service"
 	"hcm/pkg/cc"
@@ -77,6 +78,7 @@ func (s *woaServer) prepare(opt *options.Option) error {
 	// init metrics
 	network := cc.WoaServer().Network
 	metrics.InitMetrics(net.JoinHostPort(network.BindIP, strconv.Itoa(int(network.Port))))
+	recycler.InitRecyclerMetrics(metrics.Register())
 
 	// new api server discovery client.
 	svcOpt := serviced.NewServiceOption(cc.WoaServerName, cc.WoaServer().Network, opt.Sys)

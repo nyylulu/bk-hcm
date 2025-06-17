@@ -64,3 +64,33 @@ func RunTransaction(kt *kit.Kit, logicFunc func(mongo.SessionContext) error) err
 	}
 	return nil
 }
+
+// RunTransactionKit runs a function in a transaction, sub kit version
+func RunTransactionKit(kt *kit.Kit, logicFunc func(kt *kit.Kit) error) error {
+	session, err := mongodb.Client().GetDBClient().StartSession()
+	if err != nil {
+		logs.Errorf("create start session failed, err: %v, rid: %s", err, kt.Rid)
+		return fmt.Errorf("create start session failed, err: %v, rid: %s", err, kt.Rid)
+	}
+	subKit := kt.NewSubKit()
+	defer session.EndSession(subKit.Ctx)
+	sc := mongo.NewSessionContext(subKit.Ctx, session)
+	subKit.Ctx = sc
+
+	if err = session.StartTransaction(); err != nil {
+		logs.Errorf("start transaction failed,  err: %v, rid: %s", err, kt.Rid)
+		return err
+	}
+
+	err = logicFunc(subKit)
+	if err != nil {
+		return err
+	}
+
+	if err = session.CommitTransaction(sc); err != nil {
+		logs.Errorf("commit transaction failed, err: %v, rid: %s", err, kt.Rid)
+		return fmt.Errorf("commit transaction failed, err: %v", err)
+	}
+
+	return nil
+}

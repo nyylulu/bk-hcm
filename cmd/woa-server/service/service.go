@@ -331,7 +331,7 @@ func newOtherClient(kt *kit.Kit, service *Service, itsmCli itsm.Client, sd servi
 
 	// init recoverer client
 	recoverConf := cc.WoaServer().Recover
-	if err := recoverer.New(&recoverConf, kt, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
+	if err := recoverer.New(kt, &recoverConf, itsmCli, recyclerIf, service.schedulerIf, cvmLogic,
 		service.cmdbCli, service.thirdCli.Sops, sd); err != nil {
 		logs.Errorf("new recoverer failed, err: %v, rid: %s", err, kt.Rid)
 		return nil, err

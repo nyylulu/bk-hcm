@@ -17,6 +17,7 @@ package dispatcher
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
@@ -28,6 +29,7 @@ import (
 	"hcm/pkg"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
+	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/tools/metadata"
 	"hcm/pkg/tools/utils/wait"
@@ -46,10 +48,16 @@ type Dispatcher struct {
 }
 
 // New create a dispatcher
-func New(ctx context.Context) (*Dispatcher, error) {
+func New(ctx context.Context, moduleDetector *detector.Detector, moduleReturner *returner.Returner,
+	moduleTransit *transit.Transit, logic rslogics.Logics) (*Dispatcher, error) {
+
 	dispatcher := &Dispatcher{
-		queue: workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recycle_dispatch"),
-		ctx:   ctx,
+		queue:    workqueue.NewNamedRateLimitingQueue(workqueue.DefaultControllerRateLimiter(), "recycle_dispatch"),
+		ctx:      ctx,
+		detector: moduleDetector,
+		returner: moduleReturner,
+		transit:  moduleTransit,
+		rsLogic:  logic,
 	}
 
 	// TODO: get worker num from config
@@ -59,43 +67,21 @@ func New(ctx context.Context) (*Dispatcher, error) {
 }
 
 // GetTransit get dispatcher member transit
+// Deprecated: 不应该对外暴露
 func (d *Dispatcher) GetTransit() *transit.Transit {
 	return d.transit
 }
 
 // GetReturn get dispatcher member returner
+// Deprecated: 不应该对外暴露
 func (d *Dispatcher) GetReturn() *returner.Returner {
 	return d.returner
 }
 
 // GetDetector get dispatcher member detector
+// Deprecated: 不应该对外暴露
 func (d *Dispatcher) GetDetector() *detector.Detector {
 	return d.detector
-}
-
-// SetDetector set dispatcher member detector
-func (d *Dispatcher) SetDetector(detector *detector.Detector) {
-	d.detector = detector
-}
-
-// SetReturner set dispatcher member returner
-func (d *Dispatcher) SetReturner(returner *returner.Returner) {
-	d.returner = returner
-}
-
-// SetTransit set dispatcher member transit
-func (d *Dispatcher) SetTransit(transit *transit.Transit) {
-	d.transit = transit
-}
-
-// GetRollServerLogic get dispatcher roll server logic
-func (d *Dispatcher) GetRollServerLogic() rslogics.Logics {
-	return d.rsLogic
-}
-
-// SetRollServerLogic set dispatcher roll server logic
-func (d *Dispatcher) SetRollServerLogic(rsLogic rslogics.Logics) {
-	d.rsLogic = rsLogic
 }
 
 // Run starts dispatcher
@@ -132,20 +118,9 @@ func (d *Dispatcher) Pop() (string, error) {
 }
 
 // Add add recycle order to recycle order queue
+// 兼容旧单据恢复、流转逻辑, 暂时保留
 func (d *Dispatcher) Add(orderId string) {
 	d.queue.Add(orderId)
-}
-
-// StartRecycleOrder start recycle order
-func (d *Dispatcher) StartRecycleOrder(orderId string) {
-	// deal recycle order
-	if err := d.detector.DealRecycleOrder(orderId); err != nil {
-		logs.Errorf("failed to deal recycle order, order id: %d, err: %v", orderId, err)
-		return
-	}
-
-	logs.Infof("Successfully start recycle order %d", orderId)
-	return
 }
 
 // runWorker deals with recycle order
@@ -155,7 +130,7 @@ func (d *Dispatcher) runWorker() error {
 		logs.Errorf("failed to deal recycle order, for get recycle order from informer err: %v", err)
 		return err
 	}
-
+	logs.Infof("recycler dispatcher get one recycle order %s", orderId)
 	if err := d.dispatchHandler(orderId); err != nil {
 		logs.Errorf("failed to dispatch recycle order, err: %v, order id: %s", err, orderId)
 		return err
@@ -167,21 +142,29 @@ func (d *Dispatcher) runWorker() error {
 }
 
 // dispatchHandler recycle order dispatch handler
-func (d *Dispatcher) dispatchHandler(orderId string) error {
+func (d *Dispatcher) dispatchHandler(orderId string) (err error) {
 
+	var order *table.RecycleOrder
 	// get recycle order by key
-	order, err := d.getRecycleOrder(orderId)
+	order, err = d.getRecycleOrder(orderId)
 	if err != nil {
 		logs.Errorf("failed to get recycle order %s, err: %v", orderId, err)
 		return err
 	}
+
+	// 记录任务执行指标
+	startAt := time.Now()
+	defer func() {
+		d.recordMetrics(startAt, order, err)
+	}()
 
 	task := NewTask(order.Status)
 	taskCtx := &CommonContext{
 		Order:      order,
 		Dispatcher: d,
 	}
-	if err := task.State.Execute(taskCtx); err != nil {
+
+	if err = task.State.Execute(taskCtx); err != nil {
 		logs.Errorf("[%s] failed to execute task, err: %v, order id: %s, state: %s",
 			constant.CvmRecycleFailed, err, order.SuborderID, task.State.Name())
 		return err
@@ -223,4 +206,30 @@ func (d *Dispatcher) getRecycleHosts(orderId string) ([]*table.RecycleHost, erro
 	}
 
 	return insts, nil
+}
+func (d *Dispatcher) recordMetrics(startAt time.Time, order *table.RecycleOrder, err error) {
+	labels := map[string]string{
+		"status":    string(order.Status),
+		"bk_biz_id": strconv.FormatInt(order.BizID, 10),
+	}
+
+	// 记录单次状态执行耗时
+	currentStateCost := time.Since(startAt)
+	dispatcherMetrics.OrderStateCostSec.With(labels).Observe(currentStateCost.Seconds())
+
+	// 记录从提交到当前状态耗时
+	if order.CommittedAt.After(order.CreateAt) {
+		costSinceCommit := time.Since(order.CommittedAt)
+		dispatcherMetrics.RecycleStateCostSinceCommitSec.With(labels).Observe(costSinceCommit.Seconds())
+	}
+
+	// 记录错误
+	if err != nil {
+		dispatcherMetrics.OrderStateErrCounter.With(labels).Inc()
+	}
+}
+
+// Cancel 取消子单调度
+func (d *Dispatcher) Cancel(kt *kit.Kit, suborderID string) error {
+	return d.detector.Cancel(kt, suborderID)
 }

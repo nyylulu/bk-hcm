@@ -74,8 +74,8 @@ func (s *service) initRecyclerService(h *rest.Handler) {
 	h.Add("ListDetectHost", http.MethodPost, "/list/recycle/detect/host", s.ListDetectHost)
 	h.Add("GetRecycleDetectStep", http.MethodPost, "/findmany/recycle/detect/step", s.GetRecycleDetectStep)
 	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order", s.StartRecycleOrder)
-	h.Add("StartRecycleOrder", http.MethodPost, "/start/recycle/order/by/recycle_type",
-		s.StartRecycleOrderByRecycleType)
+	h.Add("StartRecycleOrderByRecycleType", http.MethodPost,
+		"/start/recycle/order/by/recycle_type", s.StartRecycleOrderByRecycleType)
 	h.Add("StartRecycleDetect", http.MethodPost, "/start/recycle/detect", s.StartRecycleDetect)
 	h.Add("ReviseRecycleOrder", http.MethodPost, "/revise/recycle/order", s.ReviseRecycleOrder)
 	h.Add("PauseRecycleOrder", http.MethodPost, "/pause/recycle", s.PauseRecycleOrder)

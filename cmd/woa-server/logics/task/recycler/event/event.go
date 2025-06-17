@@ -36,4 +36,12 @@ const (
 	ReturnFailed   EvType = "RETURN_FAILED"
 	ReturnHandling EvType = "RETURN_HANDLING"
 	ReturnSuccess  EvType = "RETURN_SUCCESS"
+	NoAction       EvType = "NO_ACTION"
 )
+
+// GetNoActionEvent returns a no action event, which means do not transfer the order to next step.
+func GetNoActionEvent() Event {
+	return Event{
+		Type: NoAction,
+	}
+}

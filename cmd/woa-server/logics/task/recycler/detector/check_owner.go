@@ -87,7 +87,7 @@ func (d *Detector) checkHasVm(ip string) (string, error) {
 
 	// set rate limit to avoid cc api error "API rate limit exceeded by stage/resource strategy"
 	ccLimiter.Take()
-	resp, err := d.cc.ListHost(d.kt, req)
+	resp, err := d.cc.ListHost(d.backendKit, req)
 	if err != nil {
 		logs.Errorf("failed to get cc host info, err: %v", err)
 		return "", err

@@ -54,14 +54,14 @@ func (d *Detector) checkProcess(step *table.DetectStep, retry int) (int, string,
 // checkIsClear 空闲检查
 func (d *Detector) checkIsClear(ip string) (string, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := d.cc.GetHostInfoByIP(d.kt, ip, 0)
+	hostInfo, err := d.cc.GetHostInfoByIP(d.backendKit, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check, get host info by ip failed, ip: %s, err: %v", ip, err)
 		return "", err
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt, []int64{hostInfo.BkHostID})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.backendKit, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:idle check process, get host biz id failed, ip: %s, bkHostId: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)
@@ -74,7 +74,7 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	}
 
 	// 1. create job
-	jobId, sopsUrl, err := sops.CreateIdleCheckSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
+	jobId, sopsUrl, err := sops.CreateIdleCheckSopsTask(d.backendKit, d.sops, ip, bkBizID, hostInfo.BkOsType)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, host %s failed to check process, bkBizID: %d, err: %v",
 			ip, bkBizID, err)
@@ -82,7 +82,7 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 	}
 
 	// 2. get job status
-	if statusResp, err := sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
+	if statusResp, err := sops.CheckTaskStatus(d.backendKit, d.sops, jobId, bkBizID); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
 			logs.Infof("sops:process:check:host %s ping death, skip check process step, jobId: %d, bkBizID: %d, "+
@@ -90,10 +90,10 @@ func (d *Detector) checkIsClear(ip string) (string, error) {
 			return "", nil
 		}
 		// 如果失败的是JOB节点，则获取JOB平台的链接
-		jobInstURL, jobInstErr := sops.GetIdleCheckFailedJobUrl(d.kt, d.sops, jobId, bkBizID, statusResp)
+		jobInstURL, jobInstErr := sops.GetIdleCheckFailedJobUrl(d.backendKit, d.sops, jobId, bkBizID, statusResp)
 		logs.Errorf("recycler:logics:cvm:checkIsClear:failed, check job status, host: %s, jobId: %d, bkBizID: %d, "+
 			"sopsUrl: %s, err: %v, jobInstURL: %s, jobInstErr: %v, rid: %s",
-			ip, jobId, bkBizID, sopsUrl, err, jobInstURL, jobInstErr, d.kt.Rid)
+			ip, jobId, bkBizID, sopsUrl, err, jobInstURL, jobInstErr, d.backendKit.Rid)
 		jobErrMsg := ""
 		if jobInstURL != "" {
 			jobErrMsg = fmt.Sprintf("作业平台(JOB): %s,", jobInstURL)

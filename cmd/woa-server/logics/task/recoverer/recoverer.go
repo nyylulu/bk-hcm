@@ -36,13 +36,8 @@ import (
 	"hcm/pkg/thirdparty/api-gateway/sopsapi"
 )
 
-type recoverer struct {
-	apply   apply.Interface
-	recycle recycle.Interface
-}
-
 // New create a recoverer
-func New(cfg *cc.Recover, kt *kit.Kit, itsmCli itsm.Client, recycler recycler.Interface, scheduler scheduler.Interface,
+func New(kt *kit.Kit, cfg *cc.Recover, itsmCli itsm.Client, recycler recycler.Interface, scheduler scheduler.Interface,
 	cvmLogic cvm.Logics, cmdbCli cmdb.Client, sopsCli sopsapi.SopsClientInterface, sd serviced.State) error {
 	// 查看配置是否开启
 	if cfg.EnableApplyRecover {
@@ -68,19 +63,3 @@ func New(cfg *cc.Recover, kt *kit.Kit, itsmCli itsm.Client, recycler recycler.In
 
 	return nil
 }
-
-// Interface apply recoverer interface
-type Interface interface {
-	// Apply recoverer interface
-	Apply() apply.Interface
-	// Recycle recoverer interface
-	Recycle() recycle.Interface
-}
-
-// Recycle return recycle recoverer client
-func (i *recoverer) Recycle() recycle.Interface {
-	return i.recycle
-}
-
-// Apply return apply recoverer
-func (i *recoverer) Apply() apply.Interface { return i.apply }

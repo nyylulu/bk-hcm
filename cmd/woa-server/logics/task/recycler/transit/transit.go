@@ -108,12 +108,13 @@ func (t *Transit) getBizHost(kt *kit.Kit, bkBizID int64, bkHostIds []int64) (*cm
 
 // DealRecycleOrder deals with recycle order by running transit tasks
 func (t *Transit) DealRecycleOrder(order *table.RecycleOrder) *event.Event {
+
 	// init recycle host status
 	stage := table.RecycleStageTransit
 	status := table.RecycleStatusTransiting
 	if err := t.UpdateHostInfo(order, stage, status); err != nil {
 		logs.Errorf("failed to update recycle hosts, subOrderId: %s, err: %v", order.SuborderID, err)
-		return &event.Event{Type: event.DetectFailed, Error: err}
+		return &event.Event{Type: event.TransitFailed, Error: err}
 	}
 
 	// get hosts by order id

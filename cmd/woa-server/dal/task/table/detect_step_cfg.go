@@ -27,4 +27,14 @@ type DetectStepCfg struct {
 	Retry       int            `json:"retry" bson:"retry"`
 	CreateAt    time.Time      `json:"create_at" bson:"create_at"`
 	UpdateAt    time.Time      `json:"update_at" bson:"update_at"`
+
+	// 	新字段
+	RateLimitQps     int   `json:"rate_limit_qps" bson:"rate_limit_qps"`
+	RateLimitBurst   int   `json:"rate_limit_burst" bson:"rate_limit_burst"`
+	RetryIntervalSec int64 `json:"retry_interval_sec" bson:"retry_interval_sec"`
+	// 重试的时候就算成功也重新执行，如PreCheck 必须每次都检查负责人、所属模块是否符合条件
+	RetryOnSuccess bool `json:"retry_on_success" bson:"retry_on_success"`
+	BatchSize      int  `json:"batch_size" bson:"batch_size"`
+	// 并发数量
+	Worker int `json:"worker" bson:"worker"`
 }
