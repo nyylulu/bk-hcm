@@ -41,4 +41,6 @@ type RecycleOrder struct {
 	Remark        string        `json:"remark" bson:"remark"`
 	CreateAt      time.Time     `json:"create_at" bson:"create_at"`
 	UpdateAt      time.Time     `json:"update_at" bson:"update_at"`
+	// 提交时间，用于计算耗时
+	CommittedAt time.Time `json:"committed_at" bson:"committed_at"`
 }

@@ -65,6 +65,9 @@ const (
 
 	// CloudApiSubSys defines all cloud api related subsystem
 	CloudApiSubSys = "cloudapi"
+
+	// HostRecycleSubSys defines all the recycle related sub system.
+	HostRecycleSubSys = "host_recycle"
 )
 
 // labels

@@ -109,7 +109,7 @@ func (s *service) PreviewBizRecycleOrder(cts *rest.Contexts) (any, error) {
 	return s.previewRecycleOrder(cts, bkBizIDMap)
 }
 
-// PreviewRecycleOrder preview recycle order
+// PreviewRecycleOrder 资源下创建回收单据，TODO 没有鉴权、没有提交的单据没有处理
 func (s *service) PreviewRecycleOrder(cts *rest.Contexts) (any, error) {
 	return s.previewRecycleOrder(cts, make(map[int64]struct{}))
 }
@@ -165,7 +165,7 @@ func (s *service) AuditRecycleOrder(cts *rest.Contexts) (any, error) {
 	return nil, nil
 }
 
-// CreateBizRecycleOrder create biz recycle order
+// CreateBizRecycleOrder create biz recycle order 非前端接口
 func (s *service) CreateBizRecycleOrder(cts *rest.Contexts) (any, error) {
 	bkBizID, err := cts.PathParameter("bk_biz_id").Int64()
 	if err != nil {
@@ -180,12 +180,12 @@ func (s *service) CreateBizRecycleOrder(cts *rest.Contexts) (any, error) {
 	return s.createRecycleOrder(cts, bkBizIDMap, meta.Biz, meta.Recycle)
 }
 
-// CreateRecycleOrder create recycle order
+// CreateRecycleOrder create recycle order 非前端接口
 func (s *service) CreateRecycleOrder(cts *rest.Contexts) (any, error) {
 	return s.createRecycleOrder(cts, make(map[int64]struct{}), meta.ZiYanResource, meta.Recycle)
 }
 
-// createRecycleOrder create and start recycle orders
+// createRecycleOrder 创建并直接启动， 非前端接口
 func (s *service) createRecycleOrder(cts *rest.Contexts, bkBizIDMap map[int64]struct{}, resType meta.ResourceType,
 	action meta.Action) (any, error) {
 

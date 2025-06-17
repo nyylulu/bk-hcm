@@ -203,27 +203,6 @@ const (
 	DetectStatusFailed  DetectStatus = "FAILED"
 )
 
-// DetectStatusSeq recycle detection status sequence, for recycle detection task ordering
-type DetectStatusSeq int
-
-// definition of various detection task status sequence
-const (
-	DetectStatusSeqFailed  DetectStatusSeq = 1
-	DetectStatusSeqPaused  DetectStatusSeq = 2
-	DetectStatusSeqRunning DetectStatusSeq = 3
-	DetectStatusSeqInit    DetectStatusSeq = 4
-	DetectStatusSeqSuccess DetectStatusSeq = 5
-)
-
-// DetectStatus2Seq map of recycle detection status to recycle detection status sequence
-var DetectStatus2Seq = map[DetectStatus]DetectStatusSeq{
-	DetectStatusFailed:  DetectStatusSeqFailed,
-	DetectStatusPaused:  DetectStatusSeqPaused,
-	DetectStatusRunning: DetectStatusSeqRunning,
-	DetectStatusInit:    DetectStatusSeqInit,
-	DetectStatusSuccess: DetectStatusSeqSuccess,
-}
-
 // DetectStepName detection task step name
 type DetectStepName string
 

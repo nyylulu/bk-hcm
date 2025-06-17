@@ -189,7 +189,7 @@ func (d *Detector) recycleNgateIP(step *table.DetectStep, hostInfo *cmdb.Host) (
 // recycleSopsOuterIP 回收外网IP
 func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	// 根据IP获取主机信息
-	hostInfo, err := d.cc.GetHostInfoByIP(d.kt, ip, 0)
+	hostInfo, err := d.cc.GetHostInfoByIP(d.backendKit, ip, 0)
 	if err != nil {
 		logs.Errorf("sops:process:check:recycle outer ip, get host info by ip failed, ip: %s, err: %v", ip, err)
 		return "", err
@@ -203,7 +203,7 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 根据bk_host_id，获取bk_biz_id
-	bkBizIDs, err := d.cc.GetHostBizIds(d.kt, []int64{hostInfo.BkHostID})
+	bkBizIDs, err := d.cc.GetHostBizIds(d.backendKit, []int64{hostInfo.BkHostID})
 	if err != nil {
 		logs.Errorf("sops:process:check:recycle outer ip, get host biz id failed, ip: %s, bkHostId: %d, "+
 			"err: %v", ip, hostInfo.BkHostID, err)
@@ -216,7 +216,7 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 1. create job
-	jobId, jobUrl, err := sops.CreateRecycleOuterIPSopsTask(d.kt, d.sops, ip, bkBizID, hostInfo.BkOsType)
+	jobId, jobUrl, err := sops.CreateRecycleOuterIPSopsTask(d.backendKit, d.sops, ip, bkBizID, hostInfo.BkOsType)
 	if err != nil {
 		logs.Errorf("recycler:logics:cvm:recycleSopsOuterIP:failed, host %s failed to recycle outer ip, "+
 			"bkBizID: %d, err: %v", ip, bkBizID, err)
@@ -224,7 +224,7 @@ func (d *Detector) recycleSopsOuterIP(ip string) (string, error) {
 	}
 
 	// 2. get job status
-	if _, err = sops.CheckTaskStatus(d.kt, d.sops, jobId, bkBizID); err != nil {
+	if _, err = sops.CheckTaskStatus(d.backendKit, d.sops, jobId, bkBizID); err != nil {
 		// if host ping death, go ahead to recycle
 		if strings.Contains(err.Error(), "ping death") {
 			logs.Infof("sops:process:check:host %s ping death, skip recycle outer ip process step, jobId: %d, "+

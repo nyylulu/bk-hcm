@@ -62,8 +62,8 @@ func (rs *ReturningState) UpdateState(ctx EventContext, ev *event.Event) error {
 		}
 
 		go func() {
-			// query every 5 minutes
-			time.Sleep(time.Minute * 5)
+			// 等待2分钟后重新查询
+			time.Sleep(time.Minute * 2)
 			taskCtx.Dispatcher.Add(taskCtx.Order.SuborderID)
 		}()
 	}
@@ -111,6 +111,9 @@ func (rs *ReturningState) setNextState(order *table.RecycleOrder, ev *event.Even
 		update["handler"] = "AUTO"
 	case event.ReturnFailed:
 		update["status"] = table.RecycleStatusReturnFailed
+		if ev.Error != nil {
+			update["message"] = ev.Error.Error()
+		}
 	case event.ReturnHandling:
 		logs.Infof("recycle return order is handling, subOrderId: %s, type: %s", order.SuborderID, ev.Type)
 	default:

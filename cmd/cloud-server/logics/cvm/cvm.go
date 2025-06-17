@@ -62,7 +62,6 @@ type cvm struct {
 	eip        eip.Interface
 	disk       disk.Interface
 	cmdbClient cmdb.Client
-	cmdb       cmdb.Client
 }
 
 // NewCvm new cvm.

@@ -158,6 +158,8 @@ func (cs *CommittedState) initTasks(ctx context.Context, order *table.RecycleOrd
 			OrderID:    order.OrderID,
 			SuborderID: order.SuborderID,
 			TaskID:     fmt.Sprintf("%s-%d", order.SuborderID, index+1),
+			HostID:     host.HostID,
+			AssetID:    host.AssetID,
 			IP:         host.IP,
 			User:       order.User,
 			Status:     table.DetectStatusInit,
@@ -218,6 +220,9 @@ func (cs *CommittedState) setNextState(order *table.RecycleOrder, ev *event.Even
 	case event.CommitFailed:
 		update["stage"] = table.RecycleStageTerminate
 		update["status"] = table.RecycleStatusTerminate
+		if ev.Error != nil {
+			update["message"] = ev.Error.Error()
+		}
 	default:
 		logs.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)
 		return fmt.Errorf("unknown event type: %s, subOrderId: %s, status: %s", ev.Type, order.SuborderID, order.Status)

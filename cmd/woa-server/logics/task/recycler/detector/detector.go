@@ -17,20 +17,15 @@ package detector
 import (
 	"context"
 	"fmt"
-	"strconv"
 	"time"
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
 	"hcm/pkg"
 	"hcm/pkg/api/core"
-	gcore "hcm/pkg/api/core/global-config"
-	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/cc"
 	"hcm/pkg/client"
-	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
-	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
@@ -46,10 +41,8 @@ import (
 	"hcm/pkg/thirdparty/tmpapi"
 	"hcm/pkg/thirdparty/xrayapi"
 	"hcm/pkg/thirdparty/xshipapi"
-	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
-
-	"golang.org/x/sync/errgroup"
+	"hcm/pkg/tools/slice"
 )
 
 // Detector detects rejected device for recycle
@@ -70,8 +63,10 @@ type Detector struct {
 
 	cliSet *client.ClientSet
 
-	ctx context.Context
-	kt  *kit.Kit
+	// 仅能作为后台操作kit，不能用到单个单据的执行
+	backendKit *kit.Kit
+
+	StepExecutors map[table.DetectStepName]StepExecutor
 }
 
 // New creates a detector
@@ -81,23 +76,27 @@ func New(ctx context.Context, thirdCli *thirdparty.Client, cmdbCli cmdb.Client, 
 	kt := core.NewBackendKit()
 	kt.Ctx = ctx
 	detector := &Detector{
-		cc:      cmdbCli,
-		xray:    thirdCli.Xray,
-		xship:   thirdCli.Xship,
-		tmp:     thirdCli.Tmp,
-		tcaplus: thirdCli.Tcaplus,
-		tgw:     thirdCli.TGW,
-		l5:      thirdCli.L5,
-		safety:  thirdCli.Safety,
-		cvm:     thirdCli.CVM,
-		tcOpt:   thirdCli.TencentCloudOpt,
-		sops:    thirdCli.Sops,
-		ngate:   thirdCli.Ngate,
-		bkDbm:   thirdCli.BkDbm,
-		kt:      kt,
-		cliSet:  cliSet,
+		backendKit: kt,
+		cc:         cmdbCli,
+		xray:       thirdCli.Xray,
+		xship:      thirdCli.Xship,
+		tmp:        thirdCli.Tmp,
+		tcaplus:    thirdCli.Tcaplus,
+		tgw:        thirdCli.TGW,
+		l5:         thirdCli.L5,
+		safety:     thirdCli.Safety,
+		cvm:        thirdCli.CVM,
+		tcOpt:      thirdCli.TencentCloudOpt,
+		sops:       thirdCli.Sops,
+		ngate:      thirdCli.Ngate,
+		bkDbm:      thirdCli.BkDbm,
+		cliSet:     cliSet,
 	}
-
+	err := detector.initStepExecutor(detector.backendKit)
+	if err != nil {
+		logs.Errorf("failed to init step executors, err: %v", err)
+		return nil, err
+	}
 	return detector, nil
 }
 
@@ -138,94 +137,8 @@ func (d *Detector) CheckDetectStatus(subOrderId string) error {
 		": %d", subOrderId, cnt)
 }
 
-// DealRecycleOrder deals with recycle order by running detection tasks
-func (d *Detector) DealRecycleOrder(orderId string) error {
-	// get tasks by order id
-
-	taskInfos, err := d.getRecycleTasks(orderId)
-	if err != nil {
-		logs.Errorf("failed to get recycle tasks by order id: %d, err: %v", orderId, err)
-		return err
-	}
-
-	// run recycle tasks
-	eg := errgroup.Group{}
-	// 每个主机都会创建一个recycle task，这里防止无限制并发
-	// 从全局配置读取
-	detectConcurrence, err := d.GetDetectConcurrence()
-	if err != nil {
-		logs.Errorf("failed to get detect concurrence for order: %s, err: %v, rid: %s", orderId, err, d.kt.Rid)
-		return err
-	}
-	eg.SetLimit(detectConcurrence)
-	logs.Infof("start detect recycle order: %s, concurrence: %d, rid: %s", orderId, detectConcurrence, d.kt.Rid)
-	for _, task := range taskInfos {
-		taskInfo := task
-		eg.Go(func() error {
-			d.RunRecycleTask(taskInfo, 0)
-			return nil
-		})
-	}
-	return eg.Wait()
-}
-
-// GetDetectConcurrence 获取单个单据内 预检并发数配置
-func (d *Detector) GetDetectConcurrence() (concurrence int, err error) {
-
-	listReq := &core.ListReq{
-		Filter: tools.ExpressionAnd(
-			tools.RuleEqual("config_type", constant.GlobalConfigTypeRecycle),
-			tools.RuleEqual("config_key", constant.RecycleDetectConcurrenceConfigKey)),
-		Page:   core.NewDefaultBasePage(),
-		Fields: nil,
-	}
-	resp, err := d.cliSet.DataService().Global.GlobalConfig.List(d.kt, listReq)
-	if err != nil {
-		logs.Errorf("failed to get detect concurrence, err: %v, rid: %s", err, d.kt.Rid)
-		return
-	}
-	if len(resp.Details) == 0 {
-		// 设置默认值
-		createReq := &datagconf.BatchCreateReqT[any]{
-			Configs: []gcore.GlobalConfigT[any]{{
-				ConfigKey:   constant.RecycleDetectConcurrenceConfigKey,
-				ConfigValue: constant.DetectDefaultConcurrence,
-				ConfigType:  constant.GlobalConfigTypeRecycle,
-				Memo:        cvt.ValToPtr("回收预检并发数"),
-			}}}
-		_, err := d.cliSet.DataService().Global.GlobalConfig.BatchCreate(d.kt, createReq)
-		if err != nil {
-			// 忽略创建失败, 后续再创建即可
-			logs.Warnf("failed to create detect concurrence, err: %v, rid: %s", err, d.kt.Rid)
-		}
-		return constant.DetectDefaultConcurrence, nil
-	}
-	configValue := string(resp.Details[0].ConfigValue)
-	parseInt, err := strconv.ParseUint(configValue, 10, 64)
-	if err != nil {
-		logs.Errorf("fail to parse detect concurrence value: %s, err: %v, rid: %s",
-			resp.Details[0].ConfigValue, err, d.kt.Rid)
-		return constant.DetectDefaultConcurrence, nil
-	}
-	return int(parseInt), nil
-}
-
-// DealRecycleTask deals with recycle task
-func (d *Detector) DealRecycleTask(taskId string) error {
-	// get task by task id
-	task, err := d.getRecycleTaskById(taskId)
-	if err != nil {
-		logs.Errorf("failed to get recycle task by task id: %d, err: %v", taskId, err)
-		return err
-	}
-
-	go d.RunRecycleTask(task, 0)
-
-	return nil
-}
-
-// getRecycleTasks gets recycle tasks by recycle order id
-func (d *Detector) getRecycleTasks(orderId string) ([]*table.DetectTask, error) {
+// getDetectTasks 查询预检任务，每个主机会有一个DetectTask
+func (d *Detector) getDetectTasks(kt *kit.Kit, orderId string) ([]*table.DetectTask, error) {
 	filter := map[string]interface{}{
 		"suborder_id": orderId,
 	}
@@ -233,9 +146,9 @@ func (d *Detector) getRecycleTasks(orderId string) ([]*table.DetectTask, error) 
 		Start: 0,
 		Limit: pkg.BKNoLimit,
 	}
-	tasks, err := dao.Set().DetectTask().FindManyDetectTask(context.Background(), page, filter)
+	tasks, err := dao.Set().DetectTask().FindManyDetectTask(kt.Ctx, page, filter)
 	if err != nil {
-		logs.Errorf("failed to get recycle tasks by order id: %s", orderId)
+		logs.Errorf("failed to get recycle tasks by order id: %s, rid: %s", orderId, kt.Rid)
 		return nil, err
 	}
 
@@ -266,238 +179,7 @@ func (d *Detector) getRecycleTaskById(taskId string) (*table.DetectTask, error) 
 	return tasks[0], nil
 }
 
-// RunRecycleTask runs recycle task
-func (d *Detector) RunRecycleTask(task *table.DetectTask, startStep uint) {
-	// check task status
-	if task.Status == table.DetectStatusSuccess || task.Status == table.DetectStatusRunning {
-		logs.Infof("recycle task need not dispatch, taskId: %s, status: %s", task.TaskID, task.Status)
-		return
-	}
-
-	// get recycle steps
-	steps, err := d.getRecycleSteps()
-	if err != nil {
-		logs.Errorf("failed to run recycle task, taskId: %s, err: %v", task.TaskID, err)
-		return
-	}
-
-	// init task status
-	if err := d.initTaskStatus(task); err != nil {
-		logs.Errorf("failed to init recycle task status, task id: %s, err: %v", task.TaskID, err)
-		return
-	}
-
-	// run recycle steps in serial
-	total := uint(len(steps))
-	success, failed := task.SuccessNum, task.FailedNum
-	if startStep == 0 {
-		success, failed = 0, 0
-	}
-
-	var lastErr error = nil
-	if failed != 0 {
-		lastErr = fmt.Errorf("recycle some step failed")
-	}
-
-	for i := startStep; i < total; i++ {
-		step := steps[i]
-		errRun := d.runRecycleStep(task, step)
-		if errRun != nil {
-			logs.Errorf("failed to run recycle step, step name: %s, taskId: %s, err: %v", step.Name, task.TaskID,
-				errRun)
-			lastErr = errRun
-			failed++
-		} else {
-			success++
-		}
-		if err = d.updateTaskProgress(task, total, success, failed); err != nil {
-			logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
-				"taskId: %s, subOrderID: %s, err: %v", task.TaskID, task.SuborderID, err)
-		}
-	}
-
-	// update task status
-	if err = d.updateRecycleTask(task, lastErr); err != nil {
-		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle task status, "+
-			"taskId: %s, err: %v", task.TaskID, err)
-	}
-
-	// update recycle task
-	if err = d.updateRecycleHost(task.SuborderID, task.IP, lastErr); err != nil {
-		logs.Errorf("recycler:logics:cvm:runRecycleTask:failed, failed to update recycle host: %s, subOrderID: %s, "+
-			"err: %v", task.IP, task.SuborderID, err)
-	}
-
-	logs.Infof("finish recycle order detect step, subOrderId: %s", task.SuborderID)
-	return
-}
-
-func (d *Detector) runRecycleStep(task *table.DetectTask, stepCfg *table.DetectStepCfg) error {
-	// check step status
-	stepId := fmt.Sprintf("%s-%d", task.TaskID, stepCfg.ID)
-	steps, err := d.getRecycleTaskStep(stepId)
-	if err != nil {
-		logs.Errorf("failed to get recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name, err)
-		return err
-	}
-
-	step := new(table.DetectStep)
-	cnt := len(steps)
-	if cnt > 1 {
-		logs.Errorf("recycler:logics:cvm:runRecycleStep:failed, failed to get recycle step, for invalid count > 1, "+
-			"step id: %s, taskID: %s, subOrderID: %s, IP: %s", stepId, task.TaskID, task.SuborderID, task.IP)
-		return fmt.Errorf("failed to get recycle step, for invalid count > 1, step id: %s", stepId)
-	} else if cnt == 1 {
-		step = steps[0]
-	} else {
-		// init step status
-		step, err = d.initRecycleStep(task, stepCfg)
-		if err != nil {
-			logs.Errorf("failed to init recycle step, task id: %s, step name: %s, err: %v", task.TaskID, stepCfg.Name,
-				err)
-			return err
-		}
-	}
-
-	// can not skip pre-check step
-	if step.Status == table.DetectStatusSuccess && step.StepName != table.StepPreCheck {
-		logs.Infof("recycler:logics:cvm:runRecycleStep:has success, step %s already success, skip", stepId)
-		return nil
-	} else if step.Status == table.DetectStatusRunning {
-		logs.Errorf("recycler:logics:cvm:runRecycleStep:running, step %s is running, can not execute again", stepId)
-		return fmt.Errorf("step %s is running, can not execute again", stepId)
-	}
-
-	// update step status to running
-	if err = d.updateRecycleStep(step, table.DetectStatusRunning, 0, "running", ""); err != nil {
-		logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
-		return err
-	}
-
-	// execute step
-	attempt, exeInfo, errExec := d.executeRecycleStep(step, stepCfg.Retry)
-	if errExec != nil {
-		logs.Errorf("recycler:logics:cvm:runRecycleStep:failed, failed to execute recycle step, step id: %s, "+
-			"stepName: %s, err: %v, subOrderID: %s, IP: %s", step.ID, step.StepName, errExec, task.SuborderID, task.IP)
-	} else {
-		logs.Infof("recycler:logics:cvm:runRecycleStep:success, success to execute recycle step, step id: %s, "+
-			"stepName: %s, subOrderID: %s, IP: %s", step.ID, step.StepName, task.SuborderID, task.IP)
-	}
-
-	// update step status
-	if errExec != nil {
-		if err = d.updateRecycleStep(step, table.DetectStatusFailed, attempt, errExec.Error(), exeInfo); err != nil {
-			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
-			return err
-		}
-	} else {
-		if err = d.updateRecycleStep(step, table.DetectStatusSuccess, attempt, "success", exeInfo); err != nil {
-			logs.Errorf("failed to update recycle step, step id: %s, err: %v", step.ID, err)
-			return err
-		}
-	}
-
-	// return execution result
-	return errExec
-}
-
-func (d *Detector) initTaskStatus(task *table.DetectTask) error {
-	task.Status = table.DetectStatusRunning
-
-	filter := &mapstr.MapStr{
-		"task_id": task.TaskID,
-	}
-
-	doc := &mapstr.MapStr{
-		"status":     task.Status,
-		"status_seq": table.DetectStatusSeqRunning,
-		"message":    "running",
-		"update_at":  time.Now(),
-	}
-
-	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
-		logs.Errorf("failed to update recycle task, ip: %s, update: %+v, err: %v", task.IP, doc, err)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Detector) updateRecycleTask(task *table.DetectTask, lastErr error) error {
-	task.Status = table.DetectStatusSuccess
-
-	filter := &mapstr.MapStr{
-		"task_id": task.TaskID,
-	}
-
-	if lastErr != nil {
-		task.Status = table.DetectStatusFailed
-	}
-
-	seq, ok := table.DetectStatus2Seq[task.Status]
-	if !ok {
-		logs.Warnf("found no recycle status seq by %v", task.Status)
-		seq = 0
-	}
-	doc := &mapstr.MapStr{
-		"status":     task.Status,
-		"status_seq": seq,
-		"update_at":  time.Now(),
-	}
-
-	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
-		logs.Errorf("failed to update detection task, task id: %s, update: %+v, err: %v", task.TaskID, doc, err)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Detector) updateTaskProgress(task *table.DetectTask, total, success, failed uint) error {
-	filter := &mapstr.MapStr{
-		"task_id": task.TaskID,
-	}
-
-	doc := &mapstr.MapStr{
-		"total_num":   total,
-		"success_num": success,
-		"failed_num":  failed,
-		"update_at":   time.Now(),
-	}
-
-	if err := dao.Set().DetectTask().UpdateDetectTask(context.Background(), filter, doc); err != nil {
-		logs.Errorf("failed to update recycle task, task id: %s, update: %+v, err: %v", task.TaskID, doc, err)
-		return err
-	}
-
-	return nil
-}
-
-func (d *Detector) updateRecycleHost(orderId, ip string, lastErr error) error {
-	status := table.RecycleStatusDetecting
-
-	filter := &mapstr.MapStr{
-		"suborder_id": orderId,
-		"ip":          ip,
-	}
-
-	if lastErr != nil {
-		status = table.RecycleStatusDetectFailed
-	}
-
-	doc := &mapstr.MapStr{
-		"status":    status,
-		"update_at": time.Now(),
-	}
-
-	if err := dao.Set().RecycleHost().UpdateRecycleHost(context.Background(), filter, doc); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (d *Detector) getRecycleSteps() ([]*table.DetectStepCfg, error) {
+func (d *Detector) getDetectStepConfigs() ([]*table.DetectStepCfg, error) {
 	filter := map[string]interface{}{
 		"enable": true,
 	}
@@ -516,25 +198,7 @@ func (d *Detector) getRecycleSteps() ([]*table.DetectStepCfg, error) {
 	return steps, nil
 }
 
-func (d *Detector) getRecycleTaskStep(stepId string) ([]*table.DetectStep, error) {
-	filter := map[string]interface{}{
-		"id": stepId,
-	}
-	page := metadata.BasePage{
-		Start: 0,
-		Limit: 1,
-	}
-
-	insts, err := dao.Set().DetectStep().FindManyDetectStep(context.Background(), page, filter)
-	if err != nil {
-		logs.Errorf("failed to get recycle task step, err: %v, step id: %s", err, stepId)
-		return nil, err
-	}
-
-	return insts, nil
-}
-
-func (d *Detector) initRecycleStep(task *table.DetectTask, cfg *table.DetectStepCfg) (*table.DetectStep, error) {
+func prepareStepForTask(task *table.DetectTask, cfg *table.DetectStepCfg) *table.DetectStep {
 	now := time.Now()
 	step := &table.DetectStep{
 		OrderID:    task.OrderID,
@@ -545,6 +209,8 @@ func (d *Detector) initRecycleStep(task *table.DetectTask, cfg *table.DetectStep
 		StepName:   cfg.Name,
 		StepDesc:   cfg.Description,
 		IP:         task.IP,
+		HostID:     task.HostID,
+		AssetID:    task.AssetID,
 		User:       task.User,
 		RetryTime:  0,
 		Status:     table.DetectStatusInit,
@@ -554,23 +220,18 @@ func (d *Detector) initRecycleStep(task *table.DetectTask, cfg *table.DetectStep
 		CreateAt:   now,
 		UpdateAt:   now,
 	}
-
-	if err := dao.Set().DetectStep().CreateDetectStep(context.Background(), step); err != nil {
-		logs.Errorf("failed to save step, step id: %s", step.ID)
-		return nil, fmt.Errorf("failed to save step, step id: %s", step.ID)
-	}
-
-	return step, nil
+	return step
 }
 
+// TODO 原逻辑参考 改造完删除
 func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, string, error) {
 	attempt := 0
 	exeInfo := ""
 	var err error
 
 	switch step.StepName {
-	case table.StepPreCheck:
-		attempt, exeInfo, err = d.preCheck(step, retry)
+	// case table.StepPreCheck:
+	// 	attempt, exeInfo, err = d.preCheck(step, retry)
 	case table.StepCheckUwork:
 		attempt, exeInfo, err = d.checkUwork(step, retry)
 	case table.StepCheckTcaplus:
@@ -628,4 +289,57 @@ func (d *Detector) updateRecycleStep(step *table.DetectStep, status table.Detect
 	}
 
 	return nil
+}
+
+func (d *Detector) fillTaskHostIDMap(kt *kit.Kit, taskList []*table.DetectTask,
+	suborderID string) (map[int64]*table.DetectTask, error) {
+
+	hostIDTaskMap := make(map[int64]*table.DetectTask, len(taskList))
+	taskIPMap := make(map[string]*table.DetectTask)
+	ipList := make([]string, 0)
+
+	for _, task := range taskList {
+		if task.HostID >= 0 {
+			hostIDTaskMap[task.HostID] = task
+			continue
+		}
+		taskIPMap[task.IP] = task
+		ipList = append(ipList, task.IP)
+	}
+
+	page := metadata.BasePage{
+		Start: 0,
+		Limit: pkg.BKMaxInstanceLimit,
+	}
+
+	for _, ipBatch := range slice.Split(ipList, pkg.BKMaxInstanceLimit) {
+		filter := map[string]interface{}{
+			"suborder_id": suborderID,
+			"ip": mapstr.MapStr{
+				pkg.BKDBIN: ipBatch,
+			},
+		}
+		hostList, err := dao.Set().RecycleHost().FindManyRecycleHost(kt.Ctx, page, filter)
+		if err != nil {
+			logs.Errorf("failed to get recycle hosts, err: %v", err)
+			return nil, err
+		}
+		for _, inst := range hostList {
+			task := taskIPMap[inst.IP]
+			if task == nil {
+				logs.Errorf("get host by ip got unknown ip: %s, rid: %s", inst.IP, kt.Rid)
+				return nil, fmt.Errorf("get host by ip got unknown ip: %s, rid: %s", inst.IP, kt.Rid)
+			}
+			task.AssetID = inst.AssetID
+			task.HostID = inst.HostID
+			hostIDTaskMap[inst.HostID] = task
+			delete(taskIPMap, inst.IP)
+		}
+	}
+
+	if len(taskIPMap) > 0 {
+		logs.Errorf("failed to get host id by ip, task ip map: %+v, rid: %s", taskIPMap, kt.Rid)
+		return nil, fmt.Errorf("failed to get host id by ip, task ip map: %+v, rid: %s", taskIPMap, kt.Rid)
+	}
+	return hostIDTaskMap, nil
 }
