@@ -52,7 +52,8 @@ export default defineComponent({
       if (res.code === 0) {
         Message({ message: '提交成功', theme: 'success' });
       } else {
-        throw res;
+        // 业务报错外抛至add-rule组件中处理
+        return Promise.reject(res);
       }
     };
 

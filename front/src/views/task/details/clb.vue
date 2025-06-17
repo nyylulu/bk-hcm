@@ -26,13 +26,6 @@ interface ArrayDataItem {
   weight: string[];
 }
 
-interface ArrayDataItem {
-  domain: string[];
-  url: string[];
-  ip: string[];
-  weight: string[];
-}
-
 const taskStore = useTaskStore();
 const { getBizsId } = useWhereAmI();
 const route = useRoute();

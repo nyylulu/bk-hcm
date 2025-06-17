@@ -20,6 +20,11 @@
 // Package constant 账单状态package
 package constant
 
+import (
+	"fmt"
+	"strings"
+)
+
 // 状态(0:默认1:创建存储桶2:设置存储桶权限3:创建成本报告4:检查yml文件5:创建CloudFormation模版99:重新生成cur成本报告100:正常)
 const (
 	StatusDefault              = 0
@@ -134,3 +139,16 @@ const (
 	// HuaweiBillTypeAdjustmentTaxDeduction 102:调账-扣费税金
 	HuaweiBillTypeAdjustmentTaxDeduction = 102
 )
+
+// BillItemAIPrefix AI账单条目前缀
+const BillItemAIPrefix = "_HCM_AI_"
+
+// AddBillItemAIPrefix 添加AI账单条目前缀
+func AddBillItemAIPrefix(name string) string {
+	return fmt.Sprintf("%s%s", BillItemAIPrefix, name)
+}
+
+// TrimBillItemAIPrefix 去除AI账单条目前缀
+func TrimBillItemAIPrefix(name string) string {
+	return strings.TrimPrefix(name, BillItemAIPrefix)
+}

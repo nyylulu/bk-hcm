@@ -166,8 +166,8 @@ type SearchBizResult struct {
 
 // Biz is cmdb biz info.
 type Biz struct {
-	BizID         int64  `json:"bk_biz_id"`
-	BizName       string `json:"bk_biz_name"`
+	BizID   int64  `json:"bk_biz_id"`
+	BizName string `json:"bk_biz_name"`
 	// 二级业务id
 	BsName2ID int64 `json:"bs2_name_id"`
 	// 运维负责人
@@ -505,6 +505,7 @@ type ModuleInfo struct {
 	BkModuleName string `json:"bk_module_name"`
 	BkModuleId   int64  `json:"bk_module_id"`
 	Default      int64  `json:"default"`
+	Bs3NameID    int    `json:"bs3_name_id"`
 }
 
 // CloudVendor defines cmdb cloud vendor type.

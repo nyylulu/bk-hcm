@@ -74,6 +74,10 @@ func (a *accountSvc) SyncCloudResourceByCond(cts *rest.Contexts) (any, error) {
 		return nil, errf.Newf(errf.InvalidParameter, "account not found by vendor: %s", vendor)
 	}
 
+	if err := vendor.Validate(); err != nil {
+		return nil, errf.NewFromErr(errf.InvalidParameter, err)
+	}
+
 	switch vendor {
 	case enumor.TCloud:
 		return a.tcloudCondSyncRes(cts, accountID, resName)
@@ -85,7 +89,6 @@ func (a *accountSvc) SyncCloudResourceByCond(cts *rest.Contexts) (any, error) {
 		return a.azureCondSyncRes(cts, accountID, resName)
 	case enumor.TCloudZiyan:
 		return a.ziyanCondSyncRes(cts, accountID, constant.UnassignedBiz, resName)
-
 	default:
 		return nil, fmt.Errorf("conditional sync doesnot support vendor: %s", vendor)
 	}

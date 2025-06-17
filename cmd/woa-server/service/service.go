@@ -175,7 +175,7 @@ func NewService(dis serviced.ServiceDiscover, sd serviced.State) (*Service, erro
 		return nil, err
 	}
 
-	configLogics := conflogics.New(apiClientSet, thirdCli)
+	configLogics := conflogics.New(apiClientSet, thirdCli, cmdbCli)
 	gcLogics, err := gclogics.New(apiClientSet, configLogics)
 	if err != nil {
 		logs.Errorf("new green channel logics failed, err: %v", err)

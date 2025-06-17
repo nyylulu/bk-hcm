@@ -54,7 +54,7 @@ func (a *GcpAIDeductMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, ind
 	// ai 账单抵扣
 	flt := &filter.Expression{
 		Op:    filter.And,
-		Rules: GenGcpFilterRules(),
+		Rules: GenAIFilterRules(),
 	}
 	page := &core.BasePage{
 		Start: uint32(index),

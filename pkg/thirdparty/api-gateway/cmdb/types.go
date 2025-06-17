@@ -447,6 +447,7 @@ type ModuleInfo struct {
 	Default      int64  `json:"default"`
 
 	BkModuleId int64 `json:"bk_module_id"`
+	Bs3NameID  int   `json:"bs3_name_id"`
 }
 
 // CloudVendor defines cmdb cloud vendor type.

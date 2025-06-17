@@ -255,7 +255,7 @@ itsm:
   # serviceID is the service id of hcm to request itsm api gateway.
   serviceID: 100
   # applyLinkFormat is the format of the apply link.
-  applyLinkFormat: http://www.test.com/#/service/apply/records/%d
+  applyLinkFormat: http://www.test.com/#/service/apply/records/%d?bizs=%d&bkBizId=%d
   # defines tls related options.
   tls:
     # server should be accessed without verifying the TLS certificate.

@@ -6,24 +6,24 @@ import SecurityInfo from '../components/security/security-info.vue';
 import SecurityRelate from '../components/security/security-relate/index.vue';
 import SecurityRule from '../components/security/security-rule.vue';
 import Confirm from '@/components/confirm';
-import { useI18n } from 'vue-i18n';
 
 import { watch, ref, reactive, computed, provide } from 'vue';
-
+import { useI18n } from 'vue-i18n';
 import { useRoute } from 'vue-router';
-import useDetail from '../../hooks/use-detail';
-import { QueryRuleOPEnum } from '@/typings';
 import { useResourceStore } from '@/store';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
+import useDetail from '../../hooks/use-detail';
+import { QueryRuleOPEnum } from '@/typings';
 import { SecurityGroupManageType } from '@/constants/security-group';
 import routerAction from '@/router/utils/action';
 
-const { t } = useI18n();
-
 const route = useRoute();
+const resourceStore = useResourceStore();
+const { t } = useI18n();
+const { whereAmI, getBizsId } = useWhereAmI();
+
 const securityId = ref(route.query?.id);
 const vendor = ref(route.query?.vendor);
-const resourceStore = useResourceStore();
 const relatedSecurityGroups = ref([]);
 const templateData = reactive({
   ipList: [],
@@ -31,9 +31,6 @@ const templateData = reactive({
   portList: [],
   portGroupList: [],
 });
-const { whereAmI, getBizsId } = useWhereAmI();
-const resoureStore = useResourceStore();
-
 const { loading, detail, getDetail } = useDetail('security_groups', securityId.value as string);
 
 const tabs = [
@@ -41,11 +38,11 @@ const tabs = [
   { name: t('安全组规则'), value: 'rule' },
   { name: t('关联实例'), value: 'relate' },
 ];
-const activeTab = ref(route.query?.scene || tabs[0].value);
+const activeTab = ref(route.query?.active || tabs[0].value);
 
 const handleTabsChange = (val: string) => {
   if (val === 'rule') getRelatedSecurityGroups(detail.value);
-  routerAction.redirect({ query: { ...route.query, scene: val } });
+  routerAction.redirect({ query: { ...route.query, active: val } }, { replace: true });
 };
 
 watch(
@@ -172,7 +169,7 @@ const getTemplateData = async (detail: { account_id: string }) => {
     'service',
     'service_group',
   ].map((type) =>
-    resoureStore.getCommonList(
+    resourceStore.getCommonList(
       {
         filter: {
           op: 'and',

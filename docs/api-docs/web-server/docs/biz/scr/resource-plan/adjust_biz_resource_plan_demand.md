@@ -24,7 +24,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
 | original_info | object | 否  | 调整前需求信息，adjust_type为update时必填                               |
 | updated_info  | object | 否  | 调整后需求信息，adjust_type为update时必填                               |
 | expect_time   | string | 否  | 修改后的期望交付时间，，adjust_type为delay时必填，格式为YYYY-MM-DD，例如2024-01-01 |
-| delay_os      | int    | 否  | 延期OS数，adjust_type为delay时必填                                  |
+| delay_os      | string | 否  | 延期OS数，允许小数，指定该参数时为部分延期，不可超过预测总OS数                           |
 
 #### adjusts[i].original_info & adjusts[i].updated_info
 
@@ -120,7 +120,7 @@ POST /api/v1/woa/bizs/{bk_biz_id}/plans/resources/demands/adjust
       "demand_id": "0000002a",
       "adjust_type": "delay",
       "expect_time": "2025-01-01",
-      "delay_os": 10
+      "delay_os": "10.25"
     }
   ]
 }

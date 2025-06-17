@@ -730,7 +730,7 @@ func (svc *lbSvc) ListTargetGroupListenerRel(cts *rest.Contexts) (interface{}, e
 }
 
 func convTableToBaseTargetListenerRuleRel(one *tablelb.TargetGroupListenerRuleRelTable) *corelb.
-	BaseTargetListenerRuleRel {
+BaseTargetListenerRuleRel {
 
 	return &corelb.BaseTargetListenerRuleRel{
 		ID:                  one.ID,

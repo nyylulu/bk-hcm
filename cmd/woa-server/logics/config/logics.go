@@ -15,6 +15,7 @@ package config
 import (
 	"hcm/pkg/client"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/ziyan"
 )
 
@@ -48,7 +49,7 @@ type logics struct {
 }
 
 // New create a logics manager
-func New(client *client.ClientSet, thirdCli *thirdparty.Client) Logics {
+func New(client *client.ClientSet, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) Logics {
 	vpcOp := NewVpcOp(client, thirdCli)
 	return &logics{
 		requirement:    NewRequirementOp(),
@@ -59,7 +60,7 @@ func New(client *client.ClientSet, thirdCli *thirdparty.Client) Logics {
 		deviceRestrict: NewDeviceRestrictOp(),
 		cvmImage:       NewCvmImageOp(),
 		device:         NewDeviceOp(thirdCli),
-		capacity:       NewCapacityOp(vpcOp, thirdCli),
+		capacity:       NewCapacityOp(vpcOp, thirdCli, cmdbCli),
 		leftIP:         NewLeftIPOp(vpcOp, thirdCli),
 		sg:             ziyan.NewSgOp(client),
 	}

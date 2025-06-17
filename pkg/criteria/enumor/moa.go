@@ -116,3 +116,23 @@ const (
 	// MoaVerifyNotFound 相关信息未找到或已失效
 	MoaVerifyNotFound MoaVerifyStatus = "expired_or_not_found"
 )
+
+// MoaLanguage Moa 展示语言
+type MoaLanguage string
+
+const (
+	// MoaLanguageZh 展示语言-中文
+	MoaLanguageZh MoaLanguage = "zh"
+	// MoaLanguageEn 展示语言-英文
+	MoaLanguageEn MoaLanguage = "en"
+)
+
+// Validate ...
+func (m MoaLanguage) Validate() error {
+	switch m {
+	case MoaLanguageZh, MoaLanguageEn:
+		return nil
+	default:
+		return errors.New("invalid moa language: " + string(m))
+	}
+}
