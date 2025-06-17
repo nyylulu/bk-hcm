@@ -27,6 +27,7 @@ import (
 	corebill "hcm/pkg/api/core/bill"
 	"hcm/pkg/api/data-service/bill"
 	"hcm/pkg/criteria/constant"
+	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	cvt "hcm/pkg/tools/converter"
@@ -44,6 +45,11 @@ func (ds *AwsSplitter) DoSplit(kt *kit.Kit, opt *DailyAccountSplitActionOption, 
 	error) {
 
 	var billItems []bill.BillItemCreateReq[rawjson.RawMessage]
+
+	hcProductName := strings.TrimLeft(item.HcProductName, " \t\n\r")
+	if enumor.IsAIBillItem(hcProductName) {
+		hcProductName = constant.AddBillItemAIPrefix(hcProductName)
+	}
 
 	usageBillItem := bill.BillItemCreateReq[rawjson.RawMessage]{
 		RootAccountID: opt.RootAccountID,

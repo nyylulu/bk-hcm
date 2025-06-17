@@ -19,7 +19,23 @@
 
 package enumor
 
-import "fmt"
+import (
+	"fmt"
+	"regexp"
+	"strings"
+)
+
+var aiBillItemRegexp *regexp.Regexp
+
+func init() {
+	aiFlag := getAIBillItemAIFlag()
+	aiFlagOrStr := strings.Join(aiFlag, "|")
+
+	// (^|[^a-z]) - 开头或者非字母字符
+	// ($|[^a-z]) - 结尾或者非字母字符
+	pattern := fmt.Sprintf(`(^|[^a-z])(%s)($|[^a-z])`, aiFlagOrStr)
+	aiBillItemRegexp = regexp.MustCompile(pattern)
+}
 
 // BillSyncPeriodType 账单同步周期类型
 type BillSyncPeriodType string
@@ -284,3 +300,24 @@ var (
 		RootAccountBillSummaryStateStop:       "停止中",
 	}
 )
+
+// BillItemAIFlag 账单项AI标识
+type BillItemAIFlag string
+
+const (
+	// BillItemAIFlagGemini gemini
+	BillItemAIFlagGemini BillItemAIFlag = "gemini"
+	// BillItemAIFlagClaude claude
+	BillItemAIFlagClaude BillItemAIFlag = "claude"
+)
+
+func getAIBillItemAIFlag() []string {
+	return []string{string(BillItemAIFlagGemini), string(BillItemAIFlagClaude)}
+}
+
+// IsAIBillItem 判断账单项是否为AI账单
+func IsAIBillItem(str string) bool {
+	// 将字符串转换为小写以便忽略大小写
+	lowerStr := strings.ToLower(str)
+	return aiBillItemRegexp.MatchString(lowerStr)
+}

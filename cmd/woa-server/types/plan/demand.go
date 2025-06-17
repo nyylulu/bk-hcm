@@ -508,8 +508,8 @@ type AdjustRPDemandReqElem struct {
 	OriginalInfo *CreateResPlanDemandReq   `json:"original_info" validate:"omitempty"`
 	UpdatedInfo  *CreateResPlanDemandReq   `json:"updated_info" validate:"omitempty"`
 	ExpectTime   string                    `json:"expect_time" validate:"omitempty"`
-	// TODO: 目前DelayOs没有使用
-	DelayOs *int64 `json:"delay_os" validate:"omitempty"`
+	// DelayOs 用于部分延期，此时仅指定部分的 OS 会被调整
+	DelayOs *string `json:"delay_os" validate:"omitempty"`
 }
 
 // Validate whether AdjustRPDemandReqElem is valid.
@@ -551,7 +551,7 @@ func (e *AdjustRPDemandReqElem) Validate() error {
 			return errors.New("expect time of delay demand can not be empty")
 		}
 
-		// TODO：目前DelayOs没有使用，因此未做校验
+		// 全部延期时不需要指定DelayOs，因此不对DelayOs做校验
 	default:
 		return fmt.Errorf("unsupported resource plan demand adjust type: %s", e.AdjustType)
 	}

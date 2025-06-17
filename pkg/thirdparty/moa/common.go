@@ -33,7 +33,7 @@ type InitiateVerificationResp struct {
 type InitiateVerificationReq struct {
 	Username      string               `json:"username" validate:"required"`
 	Channel       enumor.Moa2FAChannel `json:"channel" validate:"required"`
-	Language      string               `json:"language" validate:"required"`
+	Language      enumor.MoaLanguage   `json:"language" validate:"required"`
 	PromptPayload string               `json:"promptPayload" validate:"required"`
 }
 

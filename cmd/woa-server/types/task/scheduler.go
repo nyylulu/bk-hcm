@@ -411,6 +411,7 @@ type DeviceInfo struct {
 	Remark            string             `json:"remark" bson:"remark"`
 	ZoneName          string             `json:"zone_name" bson:"zone_name"`
 	ZoneID            int                `json:"zone_id" bson:"zone_id"`
+	CloudZone         string             `json:"cloud_zone" bson:"cloud_zone"`
 	ModuleName        string             `json:"module_name" bson:"module_name"`
 	Equipment         string             `json:"rack_id" bson:"rack_id"`
 	IsMatched         bool               `json:"is_matched" bson:"is_matched"`

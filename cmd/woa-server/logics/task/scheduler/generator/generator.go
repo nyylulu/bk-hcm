@@ -195,9 +195,9 @@ func (g *Generator) generateCVMConcentrate(kt *kit.Kit, order *types.ApplyOrder,
 func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, existDevices []*types.DeviceInfo) error {
 	// 1. sum up each zone created devices
 	createdTotalCount := uint(0)
-	zoneCreatedCount := make(map[int]uint, 0)
+	zoneCreatedCount := make(map[string]uint, 0)
 	for _, device := range existDevices {
-		zoneCreatedCount[device.ZoneID]++
+		zoneCreatedCount[device.CloudZone]++
 		createdTotalCount++
 	}
 
@@ -215,8 +215,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 	}
 
 	// 3. get capacity
-	zoneCapacity, err := g.getCapacity(kt, order.RequireType, order.Spec.DeviceType, order.Spec.Region,
-		cvmapi.CvmSeparateCampus, "", "", order.Spec.ChargeType)
+	zoneCapacity, err := g.getCapacity(kt, order, cvmapi.CvmSeparateCampus, "", "")
 	if err != nil {
 		logs.Errorf("failed to generate cvm, for get zone capacity err: %v, order id: %s, rid: %s",
 			err, order.SubOrderId, kt.Rid)
@@ -249,7 +248,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 			// 一个城市有大于一个campus的话，该campus最多只能生产需求数量的一半
 			// 若单据无法完成，则剩余不生产，等人工介入处理
 			campusMax := math.Max(
-				maxCount-float64(zoneCreatedCount[int(zone.CmdbZoneId)]),
+				maxCount-float64(zoneCreatedCount[zone.Zone]),
 				0)
 			replicas = uint(math.Min(
 				math.Min(float64(order.Total-createdTotalCount), float64(zoneCapacity[zone.Zone])),
@@ -269,7 +268,7 @@ func (g *Generator) generateCVMSeparate(kt *kit.Kit, order *types.ApplyOrder, ex
 			continue
 		}
 
-		zoneCreatedCount[int(zone.CmdbZoneId)] += replicas
+		zoneCreatedCount[zone.Zone] += replicas
 		createdTotalCount += replicas
 
 		wg.Add(1)
@@ -783,6 +782,7 @@ func (g *Generator) createDeviceInfo(kt *kit.Kit, order *types.ApplyOrder, gener
 			GenerateTaskId:   taskId,
 			GenerateTaskLink: cvmapi.CvmOrderLinkPrefix + taskId,
 			Deliverer:        "icr",
+			CloudZone:        host.CloudCampus, // 记录当前主机所在可用区
 		})
 		successIps = append(successIps, host.LanIp)
 	}
@@ -1161,6 +1161,7 @@ func (g *Generator) buildDevicesInfo(items []*types.DeviceInfo, order *types.App
 			DiskCheckTaskLink: item.DiskCheckTaskLink,
 			Deliverer:         item.Deliverer,
 			IsManualMatched:   item.IsManualMatched,
+			CloudZone:         item.CloudZone,
 			CreateAt:          now,
 			UpdateAt:          now,
 		}
@@ -1301,7 +1302,7 @@ func (g *Generator) getHostDetail(assetIds []string) ([]*cmdb.Host, error) {
 	return hosts, nil
 }
 
-// MatchCVM manual match cvm devices
+// MatchCVM manual match cvm devices 手工匹配CVM
 func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 	// 1. get order by suborder id
 	order, err := g.GetApplyOrder(param.SuborderId)
@@ -1336,16 +1337,39 @@ func (g *Generator) MatchCVM(kt *kit.Kit, param *types.MatchDeviceReq) error {
 		return fmt.Errorf("failed to match cvm, err: %v, order id: %s", err, order.SubOrderId)
 	}
 
+	// 根据固资号，查询主机可用区
+	assetIDs := make([]string, 0)
+	for _, host := range param.Device {
+		assetIDs = append(assetIDs, host.AssetId)
+	}
+	hostMap, err := g.getHostZoneInfoByAssetIDs(kt, assetIDs)
+	if err != nil {
+		return fmt.Errorf("failed to batch get host list by assetIDs, err: %v, subOrderID: %s, rid: %s",
+			err, order.SubOrderId, kt.Rid)
+	}
+
 	// TODO: check whether device is locked by other orders
 	deviceList := make([]*types.DeviceInfo, 0)
 	successIps := make([]string, 0)
 	for _, host := range param.Device {
-		deviceList = append(deviceList, &types.DeviceInfo{
+		deviceInfo := &types.DeviceInfo{
 			Ip:              host.Ip,
 			AssetId:         host.AssetId,
 			Deliverer:       param.Operator,
 			IsManualMatched: true,
-		})
+		}
+		// 这里只是补充deviceInfo里面的zone信息，即使zone没有值也不影响后续逻辑
+		if hostInfo, ok := hostMap[host.AssetId]; ok {
+			deviceInfo.CloudZone = hostInfo.BkCloudZone
+			deviceInfo.ZoneName = hostInfo.SubZone
+			deviceInfo.ZoneID, err = strconv.Atoi(hostInfo.SubZoneId)
+			if err != nil {
+				// 记录日志
+				logs.Warnf("failed to convert sub zone id %s to int, subOrderID: %s, err: %+v, rid: %s",
+					hostInfo.SubZoneId, order.SubOrderId, err, kt.Rid)
+			}
+		}
+		deviceList = append(deviceList, deviceInfo)
 		successIps = append(successIps, host.Ip)
 	}
 
@@ -1500,4 +1524,30 @@ func (g *Generator) MatchPoolDevice(param *types.MatchPoolDeviceReq) error {
 	}
 
 	return nil
+}
+
+func (g *Generator) getHostZoneInfoByAssetIDs(kt *kit.Kit, assetIDs []string) (map[string]cmdb.Host, error) {
+	req := &cmdb.ListHostWithoutBizParams{
+		HostPropertyFilter: &cmdb.QueryFilter{Rule: &cmdb.CombinedRule{Condition: "AND", Rules: []cmdb.Rule{
+			&cmdb.AtomRule{Field: "bk_asset_id", Operator: cmdb.OperatorIn, Value: assetIDs},
+		}}},
+		Fields: []string{"bk_host_id", "bk_asset_id", "bk_cloud_zone", "sub_zone", "sub_zone_id"},
+		Page:   &cmdb.BasePage{Start: 0, Limit: pkg.BKMaxInstanceLimit},
+	}
+
+	resp, err := g.cc.ListHostWithoutBiz(kt, req)
+	if err != nil {
+		logs.Errorf("failed to get cc host info by asset ids, err: %v, assetIDs: %v, rid: %s", err, assetIDs, kt.Rid)
+		return nil, err
+	}
+
+	hostsMap := make(map[string]cmdb.Host, 0)
+	for _, host := range resp.Info {
+		if _, ok := hostsMap[host.BkAssetID]; ok {
+			continue
+		}
+		hostsMap[host.BkAssetID] = host
+	}
+
+	return hostsMap, nil
 }

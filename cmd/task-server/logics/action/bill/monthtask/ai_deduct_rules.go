@@ -20,26 +20,12 @@
 package monthtask
 
 import (
+	"hcm/pkg/criteria/constant"
 	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/runtime/filter"
 )
 
-// GenAwsFilterRules generate aws filter rules
-func GenAwsFilterRules() (rules []filter.RuleFactory) {
-	return []filter.RuleFactory{tools.RuleStartsWith("hc_product_name", "Claude")}
-}
-
-// GenGcpFilterRules generate gcp filter rules
-func GenGcpFilterRules() (rules []filter.RuleFactory) {
-	rules = []filter.RuleFactory{
-		tools.ExpressionOr(
-			tools.RuleStartsWith("hc_product_name", "Gemini"),
-			tools.RuleStartsWith("hc_product_name", "Vertex"),
-			tools.RuleStartsWith("hc_product_name", "Claude"),
-		),
-		tools.ExpressionOr(
-			tools.RuleStartsWith("extension.sku_description", "Gemini"),
-			tools.RuleStartsWith("extension.sku_description", "Claude"),
-		)}
-	return rules
+// GenAIFilterRules generate ai filter rules
+func GenAIFilterRules() (rules []filter.RuleFactory) {
+	return []filter.RuleFactory{tools.RuleStartsWith("hc_product_name", constant.BillItemAIPrefix)}
 }

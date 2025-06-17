@@ -25,6 +25,7 @@ import (
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/thirdparty"
+	"hcm/pkg/thirdparty/api-gateway/cmdb"
 	"hcm/pkg/thirdparty/cvmapi"
 	cvt "hcm/pkg/tools/converter"
 	"hcm/pkg/tools/metadata"
@@ -40,16 +41,18 @@ type CapacityIf interface {
 }
 
 // NewCapacityOp creates a capacity interface
-func NewCapacityOp(vpc VpcIf, thirdCli *thirdparty.Client) CapacityIf {
+func NewCapacityOp(vpc VpcIf, thirdCli *thirdparty.Client, cmdbCli cmdb.Client) CapacityIf {
 	return &capacity{
-		cvm: thirdCli.OldCVM,
-		vpc: vpc,
+		cvm:     thirdCli.OldCVM,
+		vpc:     vpc,
+		cmdbCli: cmdbCli,
 	}
 }
 
 type capacity struct {
-	cvm cvmapi.CVMClientInterface
-	vpc VpcIf
+	cvm     cvmapi.CVMClientInterface
+	vpc     VpcIf
+	cmdbCli cmdb.Client
 }
 
 // GetCapacity gets resource apply capacity info
@@ -212,7 +215,11 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 		return capacityInfo
 	}
 
-	req := c.createCapacityReq(input, zone, vpcList, vpcToSubnet)
+	req, err := c.createCapacityReq(kt, input, zone, vpcList, vpcToSubnet)
+	if err != nil {
+		logs.Errorf("failed to create cvm capacity req, err: %v, input: %+v, rid: %s", err, cvt.PtrToVal(input), kt.Rid)
+		return nil
+	}
 	resp, err := c.cvm.QueryCvmCapacity(nil, nil, req)
 	if err != nil {
 		logs.ErrorJson("failed to get cvm apply capacity, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
@@ -287,10 +294,15 @@ func (c *capacity) getZoneCapacity(kt *kit.Kit, input *types.GetCapacityParam, z
 	return capacityItem
 }
 
-func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string, vpcList []string,
-	vpcToSubnet map[string][]string) *cvmapi.CapacityReq {
+func (c *capacity) createCapacityReq(kt *kit.Kit, input *types.GetCapacityParam, zone string, vpcList []string,
+	vpcToSubnet map[string][]string) (*cvmapi.CapacityReq, error) {
 
 	projectName := input.RequireType.ToObsProject()
+	business3ID, err := c.getBusiness3ID(kt, input)
+	if err != nil {
+		logs.Errorf("failed to get business3 id, err: %v, input: %+v, rid: %s", err, cvt.PtrToVal(input), kt.Rid)
+		return nil, err
+	}
 
 	req := &cvmapi.CapacityReq{
 		ReqMeta: cvmapi.ReqMeta{
@@ -300,7 +312,7 @@ func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string,
 		},
 		Params: &cvmapi.CapacityParam{
 			DeptId:       cvmapi.CvmDeptId,
-			Business3Id:  cvmapi.CvmLaunchBiz3Id,
+			Business3Id:  business3ID,
 			CloudCampus:  zone,
 			InstanceType: input.DeviceType,
 			VpcId:        vpcList[0],
@@ -313,7 +325,41 @@ func (c *capacity) createCapacityReq(input *types.GetCapacityParam, zone string,
 		req.Params.ChargeType = input.ChargeType
 	}
 
-	return req
+	return req, nil
+}
+
+func (c *capacity) getBusiness3ID(kt *kit.Kit, input *types.GetCapacityParam) (int, error) {
+	business3ID := cvmapi.CvmLaunchBiz3Id
+	if input == nil || input.BizID == 0 {
+		logs.Warnf("can not find input bizID, use default val: %d, rid: %s", business3ID, kt.Rid)
+		return business3ID, nil
+	}
+
+	// 获取业务空闲机模块的三级业务id
+	req := &cmdb.SearchModuleParams{
+		BizID:     input.BizID,
+		Condition: mapstr.MapStr{"default": cmdb.DftModuleIdle},
+		Fields:    []string{"bs3_name_id"},
+		Page: cmdb.BasePage{
+			Start: 0,
+			Limit: 1,
+		},
+	}
+	module, err := c.cmdbCli.SearchModule(kt, req)
+	if err != nil {
+		logs.Errorf("failed to search module from cc, err: %v, req: %+v, rid: %s", err, cvt.PtrToVal(req), kt.Rid)
+		return 0, err
+	}
+	if len(module.Info) == 0 {
+		logs.Errorf("can not find idle module from cc, req: %+v, rid: %s", cvt.PtrToVal(req), kt.Rid)
+		return 0, fmt.Errorf("can not find idle module from cc, bizID: %d", input.BizID)
+	}
+
+	if module.Info[0].Bs3NameID != 0 {
+		return module.Info[0].Bs3NameID, nil
+	}
+
+	return business3ID, nil
 }
 
 func (c *capacity) querySubnet(kt *kit.Kit, region, zone, vpc string) ([]*cvmapi.SubnetInfo, error) {

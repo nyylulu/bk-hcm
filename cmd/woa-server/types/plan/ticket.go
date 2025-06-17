@@ -350,6 +350,19 @@ func (r *CreateResPlanDemandReq) cbsValidate() error {
 	return nil
 }
 
+// CreateResPlanDemandResource is create resource plan demand resource.
+type CreateResPlanDemandResource struct {
+	// Os 当 CpuCore 为 CreateResPlanDemandUseOsField 时，以 Os 为准
+	// 目前仅在延期场景使用，因为延期场景修改的预测量需要以OS为准，其他场景均以CPUCore为准
+	Os       decimal.Decimal `json:"os"`
+	CpuCore  int64           `json:"cpu_core"`
+	Memory   int64           `json:"memory"`
+	DiskSize int64           `json:"disk_size"`
+}
+
+// CreateResPlanDemandUseOsField 当需要使用OS字段时，需要设为此值
+const CreateResPlanDemandUseOsField = -1
+
 // GetResource get resource plan demand resource.
 func (r *CreateResPlanDemandReq) GetResource() CreateResPlanDemandResource {
 	return CreateResPlanDemandResource{
@@ -358,14 +371,6 @@ func (r *CreateResPlanDemandReq) GetResource() CreateResPlanDemandResource {
 		Memory:   cvt.PtrToVal(r.Cvm.Memory),
 		DiskSize: cvt.PtrToVal(r.Cbs.DiskSize),
 	}
-}
-
-// CreateResPlanDemandResource is create resource plan demand resource.
-type CreateResPlanDemandResource struct {
-	Os       decimal.Decimal `json:"os"`
-	CpuCore  int64           `json:"cpu_core"`
-	Memory   int64           `json:"memory"`
-	DiskSize int64           `json:"disk_size"`
 }
 
 // GetResPlanTicketResp is get resource plan ticket response.

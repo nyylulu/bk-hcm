@@ -295,10 +295,8 @@ func (b *billItemSvc) buildAIFilters(kt *kit.Kit, vendor enumor.Vendor, req *bil
 	// AI Service Filter
 	var rules []filter.RuleFactory
 	switch vendor {
-	case enumor.Aws:
-		rules = append(rules, monthtask.GenAwsFilterRules()...)
-	case enumor.Gcp:
-		rules = append(rules, monthtask.GenGcpFilterRules()...)
+	case enumor.Aws, enumor.Gcp:
+		rules = append(rules, monthtask.GenAIFilterRules()...)
 	default:
 		return nil, errf.Newf(errf.InvalidParameter, "invalid vendor: %s", vendor)
 	}

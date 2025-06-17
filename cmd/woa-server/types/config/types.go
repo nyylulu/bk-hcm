@@ -484,7 +484,8 @@ type GetCapacityParam struct {
 	// 计费模式(计费模式：PREPAID包年包月，POSTPAID_BY_HOUR按量计费，默认为：PREPAID)
 	ChargeType cvmapi.ChargeType `json:"charge_type"`
 	// IgnorePrediction 获取容量时，是否忽略预测
-	IgnorePrediction bool `json:"ignore_prediction"`
+	IgnorePrediction bool  `json:"ignore_prediction"`
+	BizID            int64 `json:"bk_biz_id"`
 }
 
 // Validate whether GetCapacityParam is valid

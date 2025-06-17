@@ -51,7 +51,7 @@ func (a *AwsAIDeductMonthTask) Pull(kt *kit.Kit, opt *MonthTaskActionOption, ind
 	rules := []filter.RuleFactory{
 		tools.RuleEqual("root_account_id", opt.RootAccountID),
 	}
-	rules = append(rules, GenAwsFilterRules()...)
+	rules = append(rules, GenAIFilterRules()...)
 
 	flt := &filter.Expression{
 		Op:    filter.And,

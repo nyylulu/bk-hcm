@@ -14,7 +14,7 @@ image:
   pullPolicy: IfNotPresent
   pullSecrets: []
   # tag版本，不需要带v前缀
-  tag: 1.8.0.3
+  tag: 1.8.0.10
 
 serviceAccount:
   create: true
@@ -487,6 +487,7 @@ webserver:
       # the password to decrypt the certificate.
       password:
   templatePath: /data/hcm/template
+
 
 taskserver:
   ## 镜像
