@@ -21,7 +21,7 @@ const getConfig = (custom = {}) => ({
   bundleAnalysis: false,
   replaceStatic: false,
   target: 'web',
-  lazyCompilation: true,
+  lazyCompilation: false,
   lazyCompilationHost: 'localhost',
   envPrefix: 'BK_',
   copy: {
@@ -47,7 +47,7 @@ const getConfig = (custom = {}) => ({
     return {
       resolve: {
         alias: {
-          '@pluginHandler': resolveBase(`./src/plugin-handler${process.env?.version === 'bcc' ? '/bcc' : ''}`),
+          '@pluginHandler': resolveBase(`./src/plugin-handler${process.env?.TARGET_MODE === 'bcc' ? '/bcc' : ''}`),
         },
       },
       devServer: {
@@ -79,7 +79,7 @@ const getConfig = (custom = {}) => ({
     config.plugin('moduleReplacement').use(webpack.NormalModuleReplacementPlugin, [
       /\.plugin(\.\w+)?$/,
       (resource) => {
-        if (process.env.version === 'bcc') {
+        if (process.env.TARGET_MODE === 'bcc') {
           resource.request = resource.request.replace(/\.plugin/, '-internal.plugin');
         }
       },
