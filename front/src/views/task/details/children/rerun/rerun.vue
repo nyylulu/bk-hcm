@@ -19,9 +19,8 @@ import GridContainer from '@/components/layout/grid-container/grid-container.vue
 import GridItem from '@/components/layout/grid-container/grid-item.vue';
 import columnFactory from '@/views/task/details/children/action-list/column-factory';
 
+const model = defineModel<boolean>({ default: false });
 const props = defineProps<{ resource: ResourceTypeEnum; info: Partial<ITaskItem>; selected: ITaskDetailItem[] }>();
-const model = defineModel({ default: false });
-
 const properties = getModel(RerunView).getProperties();
 
 const fields = ['vendors', 'region_id', 'operations'].map((id) => properties.find((item) => item.id === id));
@@ -173,7 +172,7 @@ const handleCancel = () => {
 </script>
 
 <template>
-  <bk-sideslider v-model:isShow="model" title="失败任务重试" width="60vw">
+  <bk-sideslider v-model:is-show="model" title="失败任务重试" width="60vw">
     <template #default>
       <grid-container :column="1" :label-width="110" class="info-content">
         <grid-item v-for="field in fields" :key="field.id" :label="field.name">
@@ -274,17 +273,21 @@ const handleCancel = () => {
 .info-content {
   margin-top: 12px;
 }
+
 .params-content {
   margin-top: 12px;
   padding: 0 32px;
 }
+
 .contnet-footer {
   display: flex;
   gap: 8px;
+
   .bk-button {
     min-width: 86px;
   }
 }
+
 .text-cell {
   max-width: 100%;
   padding: 1px 0 1px 16px;

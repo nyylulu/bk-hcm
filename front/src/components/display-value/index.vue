@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useAttrs } from 'vue';
 import type { ModelProperty, ModelPropertyType } from '@/model/typings';
+import ReqTypeValue from './req-type-value.vue';
 import EnumValue from './enum-value.vue';
 import StringValue from './string-value.vue';
 import NumberValue from './number-value.vue';
@@ -12,8 +13,8 @@ import CaValue from './ca-value.vue';
 import RegionValue from './region-value.vue';
 import BusinessValue from './business-value.vue';
 import UserValue from './user-value.vue';
-import ReqTypeValue from './req-type-value.vue';
 import CloudAreaValue from './cloud-area-value.vue';
+import JsonValue from './json-value.vue';
 import { DisplayType } from './typings';
 
 defineOptions({ name: 'DisplayValue' });
@@ -33,6 +34,7 @@ const props = withDefaults(
 
 const valueComps: Record<
   ModelPropertyType,
+  | typeof ReqTypeValue
   | typeof EnumValue
   | typeof DatetimeValue
   | typeof NumberValue
@@ -44,9 +46,10 @@ const valueComps: Record<
   | typeof RegionValue
   | typeof BusinessValue
   | typeof UserValue
-  | typeof ReqTypeValue
   | typeof CloudAreaValue
+  | typeof JsonValue
 > = {
+  'req-type': ReqTypeValue,
   enum: EnumValue,
   datetime: DatetimeValue,
   number: NumberValue,
@@ -59,7 +62,8 @@ const valueComps: Record<
   region: RegionValue,
   business: BusinessValue,
   user: UserValue,
-  'req-type': ReqTypeValue,
+  json: JsonValue,
+  user: UserValue,
   'cloud-area': CloudAreaValue,
 };
 

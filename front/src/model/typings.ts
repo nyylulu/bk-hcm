@@ -4,6 +4,8 @@ import { RulesItem, QueryRuleOPEnum, QueryRuleOPEnumLegacy } from '@/typings';
 import type { ResourceTypeEnum } from '@/common/resource-constant';
 
 export type ModelPropertyType =
+  | 'req-type'
+  | 'req-stage'
   | 'string'
   | 'datetime'
   | 'enum'
@@ -16,8 +18,7 @@ export type ModelPropertyType =
   | 'ca'
   | 'region'
   | 'business'
-  | 'req-type'
-  | 'req-stage'
+  | 'json'
   | 'cloud-area';
 
 export type ModelPropertyMeta = {

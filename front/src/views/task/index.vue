@@ -42,9 +42,11 @@ const tabComps: Record<string, any> = { clb, cvm };
 <style lang="scss" scoped>
 .page-task {
   height: 100%;
+
   :deep(.bk-tab-header) {
     padding: 0 12px;
   }
+
   :deep(.bk-tab-content) {
     padding: 16px;
   }

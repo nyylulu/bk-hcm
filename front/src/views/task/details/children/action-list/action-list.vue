@@ -6,13 +6,13 @@ import usePage from '@/hooks/use-page';
 import useTableSelection from '@/hooks/use-table-selection';
 import { ITaskDetailItem } from '@/store';
 import columnFactory from './column-factory';
-const { getColumns } = columnFactory();
-
 const props = withDefaults(defineProps<IActionListProps>(), {
   selectable: true,
 });
 
 const emit = defineEmits<(e: 'select', data: any[]) => void>();
+
+const { getColumns } = columnFactory();
 
 const { handlePageChange, handlePageSizeChange, handleSort } = usePage();
 
