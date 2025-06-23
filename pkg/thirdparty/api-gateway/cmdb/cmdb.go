@@ -46,6 +46,7 @@ type Client interface {
 	DeleteCloudHostFromBiz(kt *kit.Kit, params *DeleteCloudHostFromBizParams) error
 	AddCloudHostToBiz(kt *kit.Kit, params *AddCloudHostToBizParams) (*BatchCreateResult, error)
 	ListHostWithoutBiz(kt *kit.Kit, req *ListHostWithoutBizParams) (*ListHostWithoutBizResult, error)
+	ListResourcePoolHosts(kt *kit.Kit, params *ListResourcePoolHostsParams) (*ListResourcePoolHostsResult, error)
 }
 
 var (
@@ -156,13 +157,14 @@ func (c *cmdbApiGateWay) ResourceWatch(kt *kit.Kit, params *WatchEventParams) (*
 }
 
 // FindHostBizRelations ...
-func (c *cmdbApiGateWay) FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation, error) {
+func (c *cmdbApiGateWay) FindHostBizRelations(kt *kit.Kit, params *HostModuleRelationParams) (*[]HostTopoRelation,
+	error) {
 	err := params.Validate()
 	if err != nil {
 		return nil, err
 	}
-	return apigateway.ApiGatewayCall[HostModuleRelationParams, []HostTopoRelation](c.client, c.config, rest.POST, kt, params,
-		"/hosts/modules/read")
+	return apigateway.ApiGatewayCall[HostModuleRelationParams, []HostTopoRelation](c.client, c.config, rest.POST, kt,
+		params, "/hosts/modules/read")
 }
 
 // FindHostTopoRelation ...
@@ -209,8 +211,8 @@ func (c *cmdbApiGateWay) SearchBusiness(kt *kit.Kit, req *SearchBizParams) (*Sea
 // SearchCloudArea search cmdb cloud area
 func (c *cmdbApiGateWay) SearchCloudArea(kt *kit.Kit, params *SearchCloudAreaParams) (*SearchCloudAreaResult, error) {
 
-	return apigateway.ApiGatewayCall[SearchCloudAreaParams, SearchCloudAreaResult](c.client, c.config, rest.POST, kt, params,
-		"/findmany/cloudarea")
+	return apigateway.ApiGatewayCall[SearchCloudAreaParams, SearchCloudAreaResult](c.client, c.config, rest.POST, kt,
+		params, "/findmany/cloudarea")
 }
 
 // UpdateCvmOSAndSvrStatus ...
@@ -239,4 +241,12 @@ func (c *cmdbApiGateWay) ListHostWithoutBiz(kt *kit.Kit, req *ListHostWithoutBiz
 	}
 	return apigateway.ApiGatewayCall[ListHostWithoutBizParams, ListHostWithoutBizResult](c.client, c.config,
 		rest.POST, kt, req, "/hosts/list_hosts_without_app")
+}
+
+// ListResourcePoolHosts list resource pool hosts.
+func (c *cmdbApiGateWay) ListResourcePoolHosts(kt *kit.Kit, params *ListResourcePoolHostsParams) (
+	*ListResourcePoolHostsResult, error) {
+
+	return apigateway.ApiGatewayCall[ListResourcePoolHostsParams, ListResourcePoolHostsResult](c.client, c.config,
+		rest.POST, kt, params, "/hosts/list_resource_pool_hosts")
 }

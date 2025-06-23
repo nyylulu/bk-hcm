@@ -23,8 +23,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"github.com/jmoiron/sqlx"
-
 	"hcm/pkg/api/core"
 	protocloud "hcm/pkg/api/data-service/cloud"
 	"hcm/pkg/criteria/constant"
@@ -35,6 +33,8 @@ import (
 	tabletype "hcm/pkg/dal/table/types"
 	"hcm/pkg/rest"
 	"hcm/pkg/tools/json"
+
+	"github.com/jmoiron/sqlx"
 )
 
 // CreateAccount account with options
@@ -56,7 +56,8 @@ func (svc *service) CreateAccount(cts *rest.Contexts) (interface{}, error) {
 		return createAccount[protocloud.AzureAccountExtensionCreateReq](vendor, svc, cts)
 	case enumor.TCloudZiyan:
 		return createAccount[protocloud.TCloudAccountExtensionCreateReq](vendor, svc, cts)
-
+	case enumor.Other:
+		return createAccount[protocloud.OtherAccountExtensionCreateReq](vendor, svc, cts)
 	default:
 		return nil, fmt.Errorf("unsupport %s vendor for now", vendor)
 	}

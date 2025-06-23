@@ -101,6 +101,10 @@ func NewService(sd serviced.ServiceDiscover) (*Service, error) {
 		logs.Infof("sync concurrent[%d]: %s", i, rule.String())
 	}
 
+	if err = cmdb.InitCmdbClient(cvt.ValToPtr(cc.HCService().Cmdb), metrics.Register()); err != nil {
+		return nil, err
+	}
+
 	svr := &Service{
 		clientSet:    cliSet,
 		cloudAdaptor: cloudAdaptor,

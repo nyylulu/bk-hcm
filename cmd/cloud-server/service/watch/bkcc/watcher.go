@@ -23,6 +23,7 @@ import (
 	"fmt"
 	"sync"
 
+	"hcm/pkg/cc"
 	"hcm/pkg/client"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
@@ -34,16 +35,17 @@ import (
 
 // Watcher sync cc host operator
 type Watcher struct {
-	CliSet  *client.ClientSet
-	EtcdCli *clientv3.Client
-	leaseOp *leaseOp
+	CliSet        *client.ClientSet
+	EtcdCli       *clientv3.Client
+	leaseOp       *leaseOp
+	ccHostPoolBiz int64
 }
 
 // NewWatcher create cc Watcher
 func NewWatcher(cliSet *client.ClientSet, etcdCli *clientv3.Client) (Watcher, error) {
 	op := &leaseOp{cli: clientv3.NewLease(etcdCli), leaseMap: make(map[string]clientv3.LeaseID)}
-
-	return Watcher{CliSet: cliSet, EtcdCli: etcdCli, leaseOp: op}, nil
+	// todo ccHostPoolBiz后续使用cc提供的api获取
+	return Watcher{CliSet: cliSet, EtcdCli: etcdCli, leaseOp: op, ccHostPoolBiz: cc.CloudServer().CCHostPoolBiz}, nil
 }
 
 // Watch cc event

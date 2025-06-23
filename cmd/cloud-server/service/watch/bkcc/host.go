@@ -32,10 +32,12 @@ import (
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
+	"hcm/pkg/hooks"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
 	"hcm/pkg/serviced"
 	"hcm/pkg/thirdparty/api-gateway/cmdb"
+	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
 )
 
@@ -92,7 +94,7 @@ func (w *Watcher) watchCCEvent(sd serviced.ServiceDiscover, resType cmdb.CursorT
 		}
 
 		if err = consumeFunc(kt, result.Events); err != nil {
-			logs.Errorf("consume %s event failed, err: %+v, res: %+v, rid: %s", resType, err, result, kt.Rid)
+			logs.Errorf("consume event failed, err: %+v, type: %s, res: %+v, rid: %s", err, resType, result, kt.Rid)
 		}
 
 		if len(result.Events) != 0 {
@@ -116,8 +118,8 @@ func (w *Watcher) consumeHostEvent(kt *kit.Kit, events []cmdb.WatchEventDetail) 
 		return nil
 	}
 
-	idHostMap := make(map[int64]struct{})
-	deleteHostIDs := make([]int64, 0)
+	idHostMap := make(map[int64]cmdb.Host)
+	deleteHosts := make([]cmdb.Host, 0)
 
 	// 1. 获取需要创建、更新、删除的主机
 	for _, event := range events {
@@ -127,35 +129,30 @@ func (w *Watcher) consumeHostEvent(kt *kit.Kit, events []cmdb.WatchEventDetail) 
 			continue
 		}
 
-		// 不需要同步非自研云的机器
-		if host.BkCloudID != 0 {
-			continue
-		}
-
 		if event.EventType == cmdb.Delete {
-			deleteHostIDs = append(deleteHostIDs, host.BkHostID)
+			deleteHosts = append(deleteHosts, converter.PtrToVal(host))
 			delete(idHostMap, host.BkHostID)
 			continue
 		}
 
-		idHostMap[host.BkHostID] = struct{}{}
+		idHostMap[host.BkHostID] = converter.PtrToVal(host)
 	}
 
 	// 2. 创建或更新主机
-	upsertHostIDs := make([]int64, 0)
-	for id := range idHostMap {
-		upsertHostIDs = append(upsertHostIDs, id)
+	upsertHosts := make([]cmdb.Host, 0)
+	for _, host := range idHostMap {
+		upsertHosts = append(upsertHosts, host)
 	}
-	if len(upsertHostIDs) != 0 {
-		if err := w.upsertHost(kt, upsertHostIDs); err != nil {
-			logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, upsertHostIDs, kt.Rid)
+	if len(upsertHosts) != 0 {
+		if err := w.upsertHost(kt, upsertHosts); err != nil {
+			logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, upsertHosts, kt.Rid)
 		}
 	}
 
 	// 3. 删除需要删除的主机
-	if len(deleteHostIDs) != 0 {
-		if err := w.deleteHost(kt, deleteHostIDs); err != nil {
-			logs.Errorf("delete host failed, err: %v, ids: %+v, rid: %s", err, deleteHostIDs, kt.Rid)
+	if len(deleteHosts) != 0 {
+		if err := w.deleteHost(kt, deleteHosts); err != nil {
+			logs.Errorf("delete host failed, err: %v, ids: %+v, rid: %s", err, deleteHosts, kt.Rid)
 		}
 	}
 
@@ -172,29 +169,53 @@ func convertHost(kt *kit.Kit, data json.RawMessage) (*cmdb.Host, error) {
 	return host, nil
 }
 
-func (w *Watcher) upsertHost(kt *kit.Kit, upsertHostIDs []int64) error {
-	if len(upsertHostIDs) == 0 {
+func (w *Watcher) upsertHost(kt *kit.Kit, upsertHosts []cmdb.Host) error {
+	if len(upsertHosts) == 0 {
 		return nil
 	}
 
-	bizHostMap, err := getHostBizID(kt, cmdb.CmdbClient(), upsertHostIDs)
+	vendors := []enumor.Vendor{enumor.Other}
+	vendors = hooks.AdjustWatcherVendor(kt, vendors)
+	vendorAccountIDMap, err := w.getVendorAccountID(kt, vendors)
 	if err != nil {
-		logs.Errorf("get biz host map failed, err: %v, ids: %v, rid: %s", err, upsertHostIDs, kt.Rid)
+		logs.Errorf("get vendor account id failed, err: %v, vendors: %v, rid: %s", err, vendors, kt.Rid)
 		return err
 	}
 
-	accountID, err := w.getTCloudZiyanAccountID(kt)
+	bizIDVendorHostIDsMap, err := w.classifyHost(kt, upsertHosts, false)
 	if err != nil {
-		logs.Errorf("get tcloud ziyan account failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("classify host failed, err: %v, hosts: %v, rid: %s", err, upsertHosts, kt.Rid)
 		return err
 	}
 
-	for bizID, hostIDs := range bizHostMap {
-		for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
-			req := &sync.TCloudZiyanSyncHostByCondReq{BizID: bizID, HostIDs: batch, AccountID: accountID}
-			err = w.CliSet.HCService().TCloudZiyan.Cvm.SyncHostWithRelResByCond(kt.Ctx, kt.Header(), req)
-			if err != nil {
-				logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, batch, kt.Rid)
+	for bizID, vendorHostIDsMap := range bizIDVendorHostIDsMap {
+		for vendor, hostIDs := range vendorHostIDsMap {
+			accountID, ok := vendorAccountIDMap[vendor]
+			if !ok {
+				logs.Errorf("get vendor account id failed, err: %v, vendor: %s, rid: %s", err, vendor, kt.Rid)
+				continue
+			}
+			switch vendor {
+			case enumor.Other:
+				for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+					req := &sync.OtherSyncHostByCondReq{BizID: bizID, HostIDs: batch, AccountID: accountID}
+					err = w.CliSet.HCService().Other.Host.SyncHostWithRelResByCond(kt.Ctx, kt.Header(), req)
+					if err != nil {
+						logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, batch, kt.Rid)
+						continue
+					}
+				}
+			case enumor.Ziyan:
+				for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+					req := &sync.TCloudZiyanSyncHostByCondReq{BizID: bizID, HostIDs: batch, AccountID: accountID}
+					err = w.CliSet.HCService().TCloudZiyan.Cvm.SyncHostWithRelResByCond(kt.Ctx, kt.Header(), req)
+					if err != nil {
+						logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, batch, kt.Rid)
+						continue
+					}
+				}
+			default:
+				logs.Errorf("not support vendor: %s, hostIDs: %v, rid: %s", vendor, hostIDs, kt.Rid)
 			}
 		}
 	}
@@ -202,76 +223,170 @@ func (w *Watcher) upsertHost(kt *kit.Kit, upsertHostIDs []int64) error {
 	return nil
 }
 
-func (w *Watcher) deleteHost(kt *kit.Kit, hostIDs []int64) error {
-	if len(hostIDs) == 0 {
+const ignoreBizID int64 = 0
+
+func (w *Watcher) classifyHost(kt *kit.Kit, hosts []cmdb.Host, isIgnoreBizID bool) (
+	map[int64]map[enumor.Vendor][]int64, error) {
+
+	hostIDs := make([]int64, 0, len(hosts))
+	for _, host := range hosts {
+		hostIDs = append(hostIDs, host.BkHostID)
+	}
+	hostBizIDMap := make(map[int64]int64)
+	if !isIgnoreBizID {
+		var err error
+		hostBizIDMap, err = w.getHostBizID(kt, hostIDs)
+		if err != nil {
+			logs.Errorf("get host bizID map failed, err: %v, ids: %v, rid: %s", err, hostIDs, kt.Rid)
+			return nil, err
+		}
+	}
+
+	bizIDVendorHostIDsMap := make(map[int64]map[enumor.Vendor][]int64)
+	for _, host := range hosts {
+		bizID := ignoreBizID
+		if !isIgnoreBizID {
+			var ok bool
+			bizID, ok = hostBizIDMap[host.BkHostID]
+			if !ok {
+				logs.Errorf("get host bizID failed, hostID: %v, rid: %s", host.BkHostID, kt.Rid)
+				continue
+			}
+		}
+
+		if _, ok := bizIDVendorHostIDsMap[bizID]; !ok {
+			bizIDVendorHostIDsMap[bizID] = make(map[enumor.Vendor][]int64)
+		}
+
+		match, vendor, err := hooks.MatchWatcherUpsertHost(kt, host)
+		if err != nil {
+			logs.Errorf("match watcher upsert host failed, err: %v, host: %+v, rid: %s", err, host, kt.Rid)
+			continue
+		}
+		if match {
+			if _, ok := bizIDVendorHostIDsMap[bizID][vendor]; !ok {
+				bizIDVendorHostIDsMap[bizID][vendor] = make([]int64, 0)
+			}
+			bizIDVendorHostIDsMap[bizID][vendor] = append(bizIDVendorHostIDsMap[bizID][vendor], host.BkHostID)
+			continue
+		}
+
+		if _, ok := bizIDVendorHostIDsMap[bizID][enumor.Other]; !ok {
+			bizIDVendorHostIDsMap[bizID][enumor.Other] = make([]int64, 0)
+		}
+		bizIDVendorHostIDsMap[bizID][enumor.Other] = append(bizIDVendorHostIDsMap[bizID][enumor.Other], host.BkHostID)
+	}
+
+	return bizIDVendorHostIDsMap, nil
+}
+
+func (w *Watcher) deleteHost(kt *kit.Kit, deleteHosts []cmdb.Host) error {
+	if len(deleteHosts) == 0 {
 		return nil
 	}
 
-	accountID, err := w.getTCloudZiyanAccountID(kt)
+	vendors := []enumor.Vendor{enumor.Other}
+	vendors = hooks.AdjustWatcherVendor(kt, vendors)
+	vendorAccountIDMap, err := w.getVendorAccountID(kt, vendors)
 	if err != nil {
-		logs.Errorf("get tcloud ziyan account failed, err: %v, rid: %s", err, kt.Rid)
+		logs.Errorf("get vendor account id failed, err: %v, vendors: %v, rid: %s", err, vendors, kt.Rid)
 		return err
 	}
 
-	for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
-		req := &sync.TCloudZiyanDelHostByCondReq{HostIDs: batch, AccountID: accountID}
-		if err = w.CliSet.HCService().TCloudZiyan.Cvm.DeleteHostByCond(kt.Ctx, kt.Header(), req); err != nil {
-			logs.Errorf("delete host failed, err: %v, ids: %+v, rid: %s", err, batch, kt.Rid)
+	bizIDVendorHostIDsMap, err := w.classifyHost(kt, deleteHosts, true)
+	if err != nil {
+		logs.Errorf("classify host failed, err: %v, hosts: %v, rid: %s", err, deleteHosts, kt.Rid)
+		return err
+	}
+	vendorHostIDsMap, ok := bizIDVendorHostIDsMap[ignoreBizID]
+	if !ok {
+		logs.Errorf("can not get vendor host ids map, map: %v, rid: %s", bizIDVendorHostIDsMap, kt.Rid)
+		return errors.New("can not get vendor host ids map")
+	}
+
+	for vendor, hostIDs := range vendorHostIDsMap {
+		accountID, ok := vendorAccountIDMap[vendor]
+		if !ok {
+			logs.Errorf("get vendor account id failed, err: %v, vendor: %s, rid: %s", err, vendor, kt.Rid)
+			continue
+		}
+		switch vendor {
+		case enumor.Other:
+			for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+				req := &sync.OtherDelHostByCondReq{HostIDs: batch, AccountID: accountID}
+				if err = w.CliSet.HCService().Other.Host.DeleteHostByCond(kt.Ctx, kt.Header(), req); err != nil {
+					logs.Errorf("delete host failed, err: %v, account id: %s, ids: %+v, rid: %s", err, accountID, batch,
+						kt.Rid)
+					continue
+				}
+			}
+		case enumor.TCloudZiyan:
+			for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+				req := &sync.TCloudZiyanDelHostByCondReq{HostIDs: batch, AccountID: accountID}
+				if err = w.CliSet.HCService().TCloudZiyan.Cvm.DeleteHostByCond(kt.Ctx, kt.Header(), req); err != nil {
+					logs.Errorf("delete host failed, err: %v, vendor: %s, accountID: %s, ids: %+v, rid: %s", err,
+						enumor.TCloudZiyan, accountID, batch, kt.Rid)
+					continue
+				}
+			}
+		default:
+			logs.Errorf("not support vendor: %s, hostIDs: %v, rid: %s", vendor, hostIDs, kt.Rid)
 		}
 	}
 
 	return nil
 }
 
-func (w *Watcher) getTCloudZiyanAccountID(kt *kit.Kit) (string, error) {
+func (w *Watcher) getVendorAccountID(kt *kit.Kit, vendors []enumor.Vendor) (map[enumor.Vendor]string, error) {
 	req := &cloud.AccountListReq{
-		Filter: tools.ExpressionAnd(tools.RuleEqual("vendor", enumor.TCloudZiyan)),
-		Page:   &core.BasePage{Start: 0, Limit: 1},
+		Filter: tools.ExpressionAnd(tools.RuleIn("vendor", vendors)),
+		Page:   &core.BasePage{Start: 0, Limit: constant.BatchOperationMaxLimit},
 	}
 
 	accounts, err := w.CliSet.DataService().Global.Account.List(kt.Ctx, kt.Header(), req)
 	if err != nil {
 		logs.Errorf("get account failed, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
-		return "", err
+		return nil, err
 	}
 
 	if len(accounts.Details) == 0 {
 		logs.Errorf("can not get account, req: %+v, rid: %s", req, kt.Rid)
-		return "", errors.New("can not get tcloud ziyan account")
+		return nil, errors.New("can not get account")
 	}
 
-	return accounts.Details[0].ID, nil
+	vendorAccountIDMap := make(map[enumor.Vendor]string)
+	for _, account := range accounts.Details {
+		vendorAccountIDMap[account.Vendor] = account.ID
+	}
+
+	return vendorAccountIDMap, nil
 }
 
-func getHostBizID(kt *kit.Kit, cli cmdb.Client, hostIDs []int64) (map[int64][]int64, error) {
+func (w *Watcher) getHostBizID(kt *kit.Kit, hostIDs []int64) (map[int64]int64, error) {
 	if len(hostIDs) == 0 {
-		return make(map[int64][]int64), nil
+		return make(map[int64]int64), nil
 	}
 
 	hostBizIDMap := make(map[int64]int64)
 	for _, batch := range slice.Split(hostIDs, int(core.DefaultMaxPageLimit)) {
 		req := &cmdb.HostModuleRelationParams{HostID: batch}
-		relationRes, err := cli.FindHostBizRelations(kt, req)
+		relationRes, err := cmdb.CmdbClient().FindHostBizRelations(kt, req)
 		if err != nil {
 			logs.Errorf("fail to find cmdb topo relation, err: %v, req: %+v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
 
-		for _, relation := range *relationRes {
-			hostBizIDMap[relation.HostID] = relation.BizID
+		for _, relation := range converter.PtrToVal(relationRes) {
+			bizID := relation.BizID
+			if bizID == w.ccHostPoolBiz {
+				bizID = constant.HostPoolBiz
+			}
+
+			hostBizIDMap[relation.HostID] = bizID
 		}
 	}
 
-	bizHostMap := make(map[int64][]int64)
-	for hostID, bizID := range hostBizIDMap {
-		if _, ok := bizHostMap[bizID]; !ok {
-			bizHostMap[bizID] = make([]int64, 0)
-		}
-
-		bizHostMap[bizID] = append(bizHostMap[bizID], hostID)
-	}
-
-	return bizHostMap, nil
+	return hostBizIDMap, nil
 }
 
 // WatchHostRelationEvent 监听主机关系事件，增量修改主机关系
@@ -319,7 +434,13 @@ func (w *Watcher) consumeHostRelationEvent(kt *kit.Kit, events []cmdb.WatchEvent
 		return nil
 	}
 
-	if err = w.upsertHost(kt, updateHostIDs); err != nil {
+	updateHosts, err := w.listHostFromCC(kt, updateHostIDs)
+	if err != nil {
+		logs.Errorf("list host from cc failed, err: %v, hostIDs: %v, rid: %s", err, updateHostIDs, kt.Rid)
+		return err
+	}
+
+	if err = w.upsertHost(kt, updateHosts); err != nil {
 		logs.Errorf("upsert host failed, err: %v, hostIDs: %v, rid: %s", err, updateHostIDs, kt.Rid)
 	}
 
@@ -336,33 +457,83 @@ func convertHostRelation(kt *kit.Kit, data json.RawMessage) (*cmdb.HostTopoRelat
 	return relation, nil
 }
 
-func (w *Watcher) listHostFromDB(kt *kit.Kit, hostIDs []int64) ([]cvm.Cvm[cvm.TCloudZiyanHostExtension], error) {
-	req := &cloud.CvmListReq{
-		Filter: tools.ExpressionAnd(tools.RuleEqual("vendor", enumor.TCloudZiyan),
-			tools.RuleIn("bk_host_id", hostIDs)),
-		Page: &core.BasePage{
-			Start: 0,
-			Limit: core.DefaultMaxPageLimit,
-			Sort:  "id",
-		},
-	}
-
-	hosts := make([]cvm.Cvm[cvm.TCloudZiyanHostExtension], 0)
-	for {
-		result, err := w.CliSet.DataService().TCloudZiyan.Cvm.ListCvmExt(kt.Ctx, kt.Header(), req)
+func (w *Watcher) listHostFromDB(kt *kit.Kit, hostIDs []int64) ([]cvm.BaseCvm, error) {
+	hosts := make([]cvm.BaseCvm, 0)
+	for _, batch := range slice.Split(hostIDs, constant.BatchOperationMaxLimit) {
+		req := &core.ListReq{
+			Filter: tools.ExpressionAnd(tools.RuleIn("bk_host_id", batch)),
+			Page: &core.BasePage{
+				Start: 0,
+				Limit: constant.BatchOperationMaxLimit,
+				Sort:  "bk_host_id",
+			},
+		}
+		result, err := w.CliSet.DataService().Global.Cvm.ListCvm(kt, req)
 		if err != nil {
-			logs.ErrorJson("[%s] request dataservice to list cvm failed, err: %v, req: %v, rid: %s", enumor.TCloudZiyan,
-				err, req, kt.Rid)
+			logs.ErrorJson("request dataservice to list cvm failed, err: %v, req: %v, rid: %s", err, req, kt.Rid)
 			return nil, err
 		}
 
 		hosts = append(hosts, result.Details...)
+	}
 
-		if len(result.Details) < int(core.DefaultMaxPageLimit) {
-			break
+	return hosts, nil
+}
+
+func (w *Watcher) listHostFromCC(kt *kit.Kit, hostIDs []int64) ([]cmdb.Host, error) {
+	hostBizID, err := w.getHostBizID(kt, hostIDs)
+	if err != nil {
+		logs.Errorf("get host biz id failed, err: %v, hostIDs: %v, rid: %s", err, hostIDs, kt.Rid)
+		return nil, err
+	}
+	bizHostIDs := make(map[int64][]int64)
+	for hostID, bizID := range hostBizID {
+		if _, ok := bizHostIDs[bizID]; !ok {
+			bizHostIDs[bizID] = make([]int64, 0)
 		}
+		bizHostIDs[bizID] = append(bizHostIDs[bizID], hostID)
+	}
 
-		req.Page.Start += uint32(core.DefaultMaxPageLimit)
+	hosts := make([]cmdb.Host, 0)
+	for bizID, ids := range bizHostIDs {
+		for _, batch := range slice.Split(ids, int(core.DefaultMaxPageLimit)) {
+			filter := &cmdb.QueryFilter{
+				Rule: &cmdb.CombinedRule{
+					Condition: "AND",
+					Rules: []cmdb.Rule{
+						&cmdb.AtomRule{Field: "bk_host_id", Operator: cmdb.OperatorIn, Value: batch},
+					},
+				},
+			}
+			page := &cmdb.BasePage{Start: 0, Limit: int64(core.DefaultMaxPageLimit), Sort: "bk_host_id"}
+			if bizID == constant.HostPoolBiz {
+				params := &cmdb.ListResourcePoolHostsParams{
+					Fields:             cmdb.HostFields,
+					HostPropertyFilter: filter,
+					Page:               page,
+				}
+				result, err := cmdb.CmdbClient().ListResourcePoolHosts(kt, params)
+				if err != nil {
+					logs.Errorf("failed to list resource pool host, err: %v, req: %+v, rid: %s", err, params, kt.Rid)
+					return nil, err
+				}
+				hosts = append(hosts, result.Info...)
+				continue
+			}
+
+			params := &cmdb.ListBizHostParams{
+				BizID:              bizID,
+				Fields:             cmdb.HostFields,
+				HostPropertyFilter: filter,
+				Page:               page,
+			}
+			result, err := cmdb.CmdbClient().ListBizHost(kt, params)
+			if err != nil {
+				logs.Errorf("call cmdb to list biz host failed, err: %v, req: %+v, rid: %s", err, params, kt.Rid)
+				return nil, err
+			}
+			hosts = append(hosts, result.Info...)
+		}
 	}
 
 	return hosts, nil

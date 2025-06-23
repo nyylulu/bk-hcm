@@ -133,7 +133,6 @@ type CloudServerSetting struct {
 	Service        Service        `yaml:"service"`
 	Log            LogOption      `yaml:"log"`
 	Crypto         Crypto         `yaml:"crypto"`
-	Esb            Esb            `yaml:"esb"`
 	BkHcmUrl       string         `yaml:"bkHcmUrl"`
 	CloudResource  CloudResource  `yaml:"cloudResource"`
 	Recycle        Recycle        `yaml:"recycle"`
@@ -146,6 +145,7 @@ type CloudServerSetting struct {
 	TaskManagement TaskManagement `yaml:"taskManagement"`
 	Tenant         TenantConfig   `yaml:"tenant"`
 	Cmdb           ApiGateway     `yaml:"cmdb"`
+	CCHostPoolBiz  int64          `yaml:"ccHostPoolBiz"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -176,9 +176,6 @@ func (s CloudServerSetting) Validate() error {
 	if err := s.Crypto.validate(); err != nil {
 		return err
 	}
-	if err := s.Esb.validate(); err != nil {
-		return err
-	}
 
 	if err := s.Cmdb.validate(); err != nil {
 		return err
@@ -207,6 +204,10 @@ func (s CloudServerSetting) Validate() error {
 		return err
 	}
 
+	if s.CCHostPoolBiz == 0 {
+		return fmt.Errorf("ccHostPoolBiz should not be empty")
+	}
+
 	return nil
 }
 
@@ -225,7 +226,6 @@ type DataServiceSetting struct {
 	Database    DataBase     `yaml:"database"`
 	Objectstore ObjectStore  `yaml:"objectstore"`
 	Crypto      Crypto       `yaml:"crypto"`
-	Esb         Esb          `yaml:"esb"`
 	Cmdb        ApiGateway   `yaml:"cmdb"`
 	Tenant      TenantConfig `yaml:"tenant"`
 }
@@ -291,13 +291,14 @@ type HCServiceSetting struct {
 	Esb                   Esb        `yaml:"esb"`
 	ZiyanSecrets          []Secret   `yaml:"ziyanSecrets"`
 	SecurityGroupSkipList []string   `yaml:"securityGroupMgmtSkipList"`
-	Cmdb                  ApiGateway `yaml:"cmdb"`
 
-	Network    Network      `yaml:"network"`
-	Service    Service      `yaml:"service"`
-	Log        LogOption    `yaml:"log"`
-	SyncConfig SyncConfig   `yaml:"sync"`
-	Tenant     TenantConfig `yaml:"tenant"`
+	Network       Network      `yaml:"network"`
+	Service       Service      `yaml:"service"`
+	Log           LogOption    `yaml:"log"`
+	SyncConfig    SyncConfig   `yaml:"sync"`
+	Tenant        TenantConfig `yaml:"tenant"`
+	Cmdb          ApiGateway   `yaml:"cmdb"`
+	CCHostPoolBiz int64        `yaml:"ccHostPoolBiz"`
 }
 
 // trySetFlagBindIP try set flag bind ip.
@@ -337,6 +338,10 @@ func (s HCServiceSetting) Validate() error {
 
 	if err := s.Cmdb.validate(); err != nil {
 		return err
+	}
+
+	if s.CCHostPoolBiz == 0 {
+		return fmt.Errorf("ccHostPoolBiz should not be empty")
 	}
 
 	return nil
@@ -666,12 +671,11 @@ func (s *WoaServerSetting) TenantEnable() bool {
 // AccountServerSetting defines task server used setting options.
 type AccountServerSetting struct {
 	// 自研云增加的配置写在这里
-	FinOps       ApiGateway   `yaml:"finops"`
-	Jarvis       Jarvis       `yaml:"jarvis"`
-	ExchangeRate ExchangeRate `yaml:"exchangeRate"`
-	IEGObsOption IEGObsOption `yaml:"obs"`
-	Esb          Esb          `yaml:"esb"`
-
+	FinOps         ApiGateway           `yaml:"finops"`
+	Jarvis         Jarvis               `yaml:"jarvis"`
+	ExchangeRate   ExchangeRate         `yaml:"exchangeRate"`
+	IEGObsOption   IEGObsOption         `yaml:"obs"`
+	Esb            Esb                  `yaml:"esb"`
 	Network        Network              `yaml:"network"`
 	Service        Service              `yaml:"service"`
 	Controller     BillControllerOption `yaml:"controller"`

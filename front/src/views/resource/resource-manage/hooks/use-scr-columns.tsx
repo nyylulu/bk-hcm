@@ -7,10 +7,9 @@ import i18n from '@/language/i18n';
 import { type Settings } from 'bkui-vue/lib/table/props';
 import { ref } from 'vue';
 import type { Ref } from 'vue';
-import { CloudType } from '@/typings';
 import { RouteLocationRaw, useRoute, useRouter } from 'vue-router';
 import routerAction from '@/router/utils/action';
-import { CLOUD_HOST_STATUS, VendorEnum, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
+import { CLOUD_HOST_STATUS, VendorEnum, VendorMap, RESOURCE_PLAN_STATUSES_MAP, GLOBAL_BIZS_KEY } from '@/common/constant';
 import { useRegionsStore } from '@/store/useRegionsStore';
 import { Senarios, useWhereAmI } from '@/hooks/useWhereAmI';
 import { useBusinessMapStore } from '@/store/useBusinessMap';
@@ -3235,7 +3234,7 @@ export default (type: string, isSimpleShow = false) => {
       sort: true,
       onlyShowOnList: true,
       isDefaultShow: true,
-      render: ({ data }: any) => <span>{CloudType[data.vendor]}</span>,
+      render: ({ data }: any) => <span>{VendorMap[data.vendor]}</span>,
     },
     {
       label: '地域',
