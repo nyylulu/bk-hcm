@@ -28,7 +28,7 @@ data:
     obsDatabase:
       {{- toYaml .Values.taskserver.obsDatabase | nindent 6 }}
     cmdb:
-      {{- toYaml .Values.cmdbApiGateway | nindent 6 }}
+      {{- toYaml .Values.cmdb | nindent 6 }}
     alarm:
       {{- toYaml .Values.alarm | nindent 6 }}
     sampwd:
