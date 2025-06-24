@@ -366,8 +366,6 @@ func (s *Service) indexHandleFunc(req *restful.Request, resp *restful.Response) 
 		"ENABLE_CLOUD_SELECTION":      cc.WebServer().Web.EnableCloudSelection,
 		"ENABLE_ACCOUNT_BILL":         cc.WebServer().Web.EnableAccountBill,
 		"ENABLE_NOTICE":               cc.WebServer().Notice.Enable,
-
-		"ZIYAN_CLB_BIZ_WHITELIST": cc.WebServer().Web.ZiyanClbBizWhitelist,
 	}
 	err = tmpl.Execute(resp.ResponseWriter, content)
 	if err != nil {

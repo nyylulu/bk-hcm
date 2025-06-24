@@ -535,8 +535,6 @@ type Web struct {
 	BkCmdbCreateBizDocsUrl string `yaml:"bkCmdbCreateBizDocsUrl"`
 	EnableCloudSelection   bool   `yaml:"enableCloudSelection"`
 	EnableAccountBill      bool   `yaml:"enableAccountBill"`
-
-	ZiyanClbBizWhitelist string `yaml:"ziyanClbBizWhitelist"`
 }
 
 func (s Web) validate() error {
