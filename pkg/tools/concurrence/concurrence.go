@@ -20,14 +20,15 @@
 package concurrence
 
 import (
+	"sync"
 	gosync "sync"
 )
 
 // BaseExec 基础并发执行基础架子。
 // Params:
-// 	1. concurrenceLimit: 并发执行最大写协程数量
+//  1. concurrenceLimit: 并发执行最大写协程数量
 //  2. params: 并发执行变量参数
-//	3. execFunc: 并发执行函数
+//  3. execFunc: 并发执行函数
 func BaseExec[T any](concurrenceLimit int, params []T, execFunc func(param T) error) error {
 
 	pipeline := make(chan bool, concurrenceLimit)
@@ -58,4 +59,52 @@ func BaseExec[T any](concurrenceLimit int, params []T, execFunc func(param T) er
 	}
 
 	return nil
+}
+
+// BaseExecWithResult 带返回值的并发执行框架
+// Params:
+//  1. concurrenceLimit: 最大并发数
+//  2. params: 输入参数列表
+//  3. execFunc: 执行函数（返回结果和错误）
+//
+// Returns:
+//  1. 结果切片（保序）
+//  2. 首个遇到的错误
+func BaseExecWithResult[T any, R any](concurrenceLimit int, params []T, execFunc func(param T) (R, error)) ([]R, error) {
+	results := make([]R, len(params))
+	var lock sync.Mutex
+	var firstErr error
+
+	pipeline := make(chan bool, concurrenceLimit)
+	var wg sync.WaitGroup
+
+	for i, param := range params {
+		index := i // 捕获循环变量
+		pipeline <- true
+		wg.Add(1)
+
+		go func(p T, idx int) {
+			defer func() {
+				wg.Done()
+				<-pipeline
+			}()
+
+			res, err := execFunc(p)
+			lock.Lock()
+			defer lock.Unlock()
+
+			if err != nil && firstErr == nil {
+				firstErr = err
+			}
+
+			results[idx] = res
+		}(param, index)
+	}
+
+	wg.Wait()
+
+	if firstErr != nil {
+		return nil, firstErr
+	}
+	return results, nil
 }
