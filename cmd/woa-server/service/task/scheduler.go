@@ -1224,8 +1224,9 @@ func (s *service) MatchBizDevice(cts *rest.Contexts) (any, error) {
 		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
 	}
 
+	// 主机申领-业务粒度
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bkBizID,
 	})
 	if err != nil {
 		logs.Errorf("failed to check match biz device permission, bizID: %d, err: %v, rid: %s",
@@ -1268,8 +1269,9 @@ func (s *service) MatchBizPoolDevice(cts *rest.Contexts) (any, error) {
 		return nil, errf.New(errf.InvalidParameter, "biz id is invalid")
 	}
 
+	// 主机申领-业务粒度
 	err = s.authorizer.AuthorizeWithPerm(cts.Kit, meta.ResourceAttribute{
-		Basic: &meta.Basic{Type: meta.Biz, Action: meta.Access}, BizID: bkBizID,
+		Basic: &meta.Basic{Type: meta.ZiYanResource, Action: meta.Create}, BizID: bkBizID,
 	})
 	if err != nil {
 		logs.Errorf("failed to check match biz pool device permission, bizID: %d, err: %v, rid: %s",
