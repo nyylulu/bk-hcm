@@ -27,13 +27,14 @@ import (
 	hclb "hcm/pkg/api/hc-service/load-balancer"
 	ts "hcm/pkg/api/task-server"
 	"hcm/pkg/async/action"
-	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/cc"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/enumor"
 	"hcm/pkg/dal/dao/tools"
 	tableasync "hcm/pkg/dal/table/async"
 	"hcm/pkg/kit"
 	"hcm/pkg/logs"
+	"hcm/pkg/tools/concurrence"
 	"hcm/pkg/tools/converter"
 	"hcm/pkg/tools/slice"
 )
@@ -63,57 +64,46 @@ func (c *CreateLayer7ListenerPreviewExecutor) getTCloudZiyanListenersByPort(kt *
 	return nil, nil
 }
 
-func getTCloudZiyanLoadBalancer(kt *kit.Kit, cli *dataservice.Client, lbID string) (
-	*corelb.LoadBalancer[corelb.TCloudClbExtension], error) {
-
-	lb, err := cli.TCloudZiyan.LoadBalancer.Get(kt, lbID)
-	if err != nil {
-		logs.Errorf("get tcloud-ziyan load balancer failed, lb(%s), err: %v, rid: %s", lbID, err, kt.Rid)
-		return nil, err
-	}
-	return lb, nil
-}
-
-func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.BaseLoadBalancer,
+func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	targetGroupID string, details []*layer4ListenerBindRSTaskDetail,
 	generator func() (cur string, prev string), tgToListenerCloudIDs map[string]string) ([]ts.CustomFlowTask, error) {
 
-	tCloudLB, err := getTCloudZiyanLoadBalancer(kt, c.dataServiceCli, lb.ID)
-	if err != nil {
-		return nil, err
-	}
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
-		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
-		managementDetailIDs := make([]string, 0, len(taskDetails))
-		for _, detail := range taskDetails {
-			target := &hclb.RegisterTarget{
-				TargetType: detail.InstType,
-				Port:       int64(detail.RsPort[0]),
-				Weight:     converter.ValToPtr(int64(converter.PtrToVal(detail.Weight))),
-			}
-			if detail.InstType == enumor.EniInstType {
-				target.EniIp = detail.RsIp
-			}
+		targets, concurrentErr := concurrence.BaseExecWithResult(
+			cc.CloudServer().CLBImportConfig.ConcurrentCount, taskDetails,
+			func(detail *layer4ListenerBindRSTaskDetail) (*hclb.RegisterTarget, error) {
 
-			if detail.InstType == enumor.CvmInstType {
-				cvm, err := validateCvmExist(kt,
-					c.dataServiceCli, detail.RsIp, c.vendor, c.bkBizID, c.accountID, tCloudLB)
-				if err != nil {
-					logs.Errorf("validate cvm exist failed, ip: %s, err: %v, rid: %s", detail.RsIp, err, kt.Rid)
-					return nil, err
+				target := &hclb.RegisterTarget{
+					TargetType: detail.InstType,
+					Port:       int64(detail.RsPort[0]),
+					Weight:     converter.ValToPtr(int64(converter.PtrToVal(detail.Weight))),
+				}
+				if detail.InstType == enumor.EniInstType {
+					target.EniIp = detail.RsIp
 				}
 
-				target.CloudInstID = cvm.CloudID
-				target.InstName = cvm.Name
-				target.PrivateIPAddress = cvm.PrivateIPv4Addresses
-				target.PublicIPAddress = cvm.PublicIPv4Addresses
-				target.Zone = cvm.Zone
-			}
-			targets = append(targets, target)
-			managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
+				if detail.InstType == enumor.CvmInstType {
+					cvm, err := validateCvmExist(kt,
+						c.dataServiceCli, detail.RsIp, c.vendor, c.bkBizID, c.accountID, lb)
+					if err != nil {
+						logs.Errorf("validate cvm exist failed, ip: %s, err: %v, rid: %s", detail.RsIp, err, kt.Rid)
+						return nil, err
+					}
+
+					target.CloudInstID = cvm.CloudID
+					target.InstName = cvm.Name
+					target.PrivateIPAddress = cvm.PrivateIPv4Addresses
+					target.PublicIPAddress = cvm.PublicIPv4Addresses
+					target.Zone = cvm.Zone
+				}
+				return target, nil
+			})
+		if concurrentErr != nil {
+			logs.Errorf("batch validate cvm exist failed, err: %v, rid: %s", concurrentErr, kt.Rid)
+			return nil, concurrentErr
 		}
 
 		req := &hclb.BatchRegisterTCloudTargetReq{
@@ -122,6 +112,9 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 			RuleType:        enumor.Layer4RuleType,
 			Targets:         targets,
 		}
+		managementDetailIDs := slice.Map(taskDetails, func(detail *layer4ListenerBindRSTaskDetail) string {
+			return detail.taskDetailID
+		})
 		tmpTask := ts.CustomFlowTask{
 			ActionID:   action.ActIDType(cur),
 			ActionName: enumor.ActionBatchTaskTCloudBindTarget,
@@ -146,47 +139,45 @@ func (c *Layer4ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 	return result, nil
 }
 
-func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.BaseLoadBalancer,
+func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb corelb.LoadBalancerRaw,
 	targetGroupID string, details []*layer7ListenerBindRSTaskDetail, generator func() (cur string, prev string),
 	tgToListenerCloudIDs map[string]string, tgToCloudRuleIDs map[string]string) ([]ts.CustomFlowTask, error) {
 
-	tCloudLB, err := getTCloudZiyanLoadBalancer(kt, c.dataServiceCli, lb.ID)
-	if err != nil {
-		logs.Errorf("get tcloud-ziyan load balancer failed, lb(%s), err: %v, rid: %s", lb.ID, err, kt.Rid)
-		return nil, err
-	}
 	result := make([]ts.CustomFlowTask, 0)
 	for _, taskDetails := range slice.Split(details, constant.BatchTaskMaxLimit) {
 		cur, prev := generator()
 
-		targets := make([]*hclb.RegisterTarget, 0, len(taskDetails))
-		managementDetailIDs := make([]string, 0, len(taskDetails))
-		for _, detail := range taskDetails {
-			target := &hclb.RegisterTarget{
-				TargetType: detail.InstType,
-				Port:       int64(detail.RsPort[0]),
-				Weight:     converter.ValToPtr(int64(converter.PtrToVal(detail.Weight))),
-			}
-			if detail.InstType == enumor.EniInstType {
-				target.EniIp = detail.RsIp
-			}
-
-			if detail.InstType == enumor.CvmInstType && !converter.PtrToVal(tCloudLB.Extension.SnatPro) {
-				cvm, err := validateCvmExist(kt,
-					c.dataServiceCli, detail.RsIp, c.vendor, c.bkBizID, c.accountID, tCloudLB)
-				if err != nil {
-					logs.Errorf("validate cvm exist failed, ip: %s, err: %v, rid: %s", detail.RsIp, err, kt.Rid)
-					return nil, err
+		targets, concurrentErr := concurrence.BaseExecWithResult(
+			cc.CloudServer().CLBImportConfig.ConcurrentCount, taskDetails,
+			func(detail *layer7ListenerBindRSTaskDetail) (*hclb.RegisterTarget, error) {
+				target := &hclb.RegisterTarget{
+					TargetType: detail.InstType,
+					Port:       int64(detail.RsPort[0]),
+					Weight:     converter.ValToPtr(int64(converter.PtrToVal(detail.Weight))),
+				}
+				if detail.InstType == enumor.EniInstType {
+					target.EniIp = detail.RsIp
 				}
 
-				target.CloudInstID = cvm.CloudID
-				target.InstName = cvm.Name
-				target.PrivateIPAddress = cvm.PrivateIPv4Addresses
-				target.PublicIPAddress = cvm.PublicIPv4Addresses
-				target.Zone = cvm.Zone
-			}
-			targets = append(targets, target)
-			managementDetailIDs = append(managementDetailIDs, detail.taskDetailID)
+				if detail.InstType == enumor.CvmInstType {
+					cvm, err := validateCvmExist(kt,
+						c.dataServiceCli, detail.RsIp, c.vendor, c.bkBizID, c.accountID, lb)
+					if err != nil {
+						logs.Errorf("validate cvm exist failed, ip: %s, err: %v, rid: %s", detail.RsIp, err, kt.Rid)
+						return nil, err
+					}
+
+					target.CloudInstID = cvm.CloudID
+					target.InstName = cvm.Name
+					target.PrivateIPAddress = cvm.PrivateIPv4Addresses
+					target.PublicIPAddress = cvm.PublicIPv4Addresses
+					target.Zone = cvm.Zone
+				}
+				return target, nil
+			})
+		if concurrentErr != nil {
+			logs.Errorf("batch register tcloud target failed, err: %v, rid: %s", concurrentErr, kt.Rid)
+			return nil, concurrentErr
 		}
 
 		req := &hclb.BatchRegisterTCloudTargetReq{
@@ -196,6 +187,9 @@ func (c *Layer7ListenerBindRSExecutor) buildTCloudZiyanFlowTask(kt *kit.Kit, lb 
 			RuleType:        enumor.Layer7RuleType,
 			Targets:         targets,
 		}
+		managementDetailIDs := slice.Map(taskDetails, func(detail *layer7ListenerBindRSTaskDetail) string {
+			return detail.taskDetailID
+		})
 		tmpTask := ts.CustomFlowTask{
 			ActionID:   action.ActIDType(cur),
 			ActionName: enumor.ActionBatchTaskTCloudBindTarget,
