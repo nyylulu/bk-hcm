@@ -83,7 +83,7 @@ export const useCvmOperateStore = defineStore('cvm-operate', () => {
       const res = await http.post(`/api/v1/cloud/${getBusinessApiPath()}cvms/batch/reset_async`, params, {
         globalError: false,
       });
-      return res?.data;
+      return res;
     } catch (error) {
       console.error(error);
       return Promise.reject(error);

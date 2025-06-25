@@ -35,7 +35,7 @@ export default defineComponent({
       bk_zone_name: [],
       sub_zone: [],
       stage: [],
-      bk_username: [userStore.username],
+      bk_username: [],
     });
     const defaultTime = () => [new Date(dayjs().subtract(30, 'day').format('YYYY-MM-DD')), new Date()];
     const deviceForm = ref(defaultDeviceForm());

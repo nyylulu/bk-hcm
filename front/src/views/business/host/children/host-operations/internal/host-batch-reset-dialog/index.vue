@@ -113,22 +113,26 @@ const handleNext = async () => {
 
     try {
       const res = await cvmOperateStore.cvmBatchResetAsync(params);
-      Message({ theme: 'success', message: t('提交成功') });
-      hide();
-      // 跳转至新任务详情页
-      routerAction.redirect({
-        name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-        params: { resourceType: ResourceTypeEnum.CVM, id: res.task_management_id },
-        query: { bizs: getBizsId() },
-      });
-    } catch (error: any) {
-      if (error.code === 2000019) {
+
+      if (res.code === 0) {
+        Message({ theme: 'success', message: t('提交成功') });
+        hide();
+        // 跳转至新任务详情页
+        routerAction.redirect({
+          name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+          params: { resourceType: ResourceTypeEnum.CVM, id: res.task_management_id },
+          query: { bizs: getBizsId() },
+        });
+      } else if (res.code === 2000019) {
         // MOA校验过期
         Message({ theme: 'error', message: t('MOA校验过期，请重新发起校验后操作') });
         moaVerifyRef.value?.resetVerifyResult();
       } else {
-        Message({ theme: 'error', message: error.message });
+        Message({ theme: 'error', message: res.message });
       }
+    } catch (error: any) {
+      console.error(error);
+      return Promise.reject(error);
     }
   }
 };

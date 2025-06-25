@@ -205,23 +205,26 @@ const useBatchOperation = ({ selections, onFinished }: Params) => {
 
         const result = await businessStore.cvmOperateAsync(operationType.value, { ids: hostIds, session_id });
 
-        Message({ theme: 'success', message: '操作成功' });
+        if (result.code === 0) {
+          Message({ theme: 'success', message: '操作成功' });
 
-        // 跳转至新任务详情页
-        routerAction.redirect({
-          name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
-          params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
-          query: { bizs: getBizsId() },
-        });
-        operationType.value = OperationActions.NONE;
-      } catch (error: any) {
-        if (error.code === 2000019) {
+          // 跳转至新任务详情页
+          routerAction.redirect({
+            name: MENU_BUSINESS_TASK_MANAGEMENT_DETAILS,
+            params: { resourceType: ResourceTypeEnum.CVM, id: result.data.task_management_id },
+            query: { bizs: getBizsId() },
+          });
+          operationType.value = OperationActions.NONE;
+        } else if (result.code === 2000019) {
           // MOA校验过期
           Message({ theme: 'error', message: 'MOA校验过期，请重新发起校验后操作' });
           moaVerifyRef.value?.resetVerifyResult();
         } else {
-          Message({ theme: 'error', message: error.message });
+          Message({ theme: 'error', message: result.message });
         }
+      } catch (error: any) {
+        console.error(error);
+        return Promise.reject(error);
       } finally {
         isLoading.value = false;
       }

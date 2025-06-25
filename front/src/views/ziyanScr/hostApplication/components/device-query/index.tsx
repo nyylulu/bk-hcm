@@ -32,7 +32,7 @@ export default defineComponent({
     const { formModel, resetForm } = useFormModel({
       orderId: '',
       bkBizId: businessGlobalStore.getCacheSelected(serviceShareBizSelectedKey) ?? [0],
-      bkUsername: [userStore.username],
+      bkUsername: [],
       ip: '',
       requireType: '',
       suborderId: '',

@@ -10,6 +10,20 @@ import { INSTANCE_CHARGE_MAP } from '@/common/constant';
 import http from '@/http';
 import useCvmChargeType from '../../hooks/use-cvm-charge-type';
 
+defineOptions({ name: 'InheritPackageFormItem' });
+
+const model = defineModel<string>();
+
+const props = defineProps<{
+  region: string;
+  bizs?: number | string;
+}>();
+
+const emit = defineEmits<{
+  (e: 'validateSuccess', host: RollingServerHost): void;
+  (e: 'validateFailed'): void;
+}>();
+
 const { FormItem } = Form;
 
 export interface RollingServerHost {
@@ -21,17 +35,6 @@ export interface RollingServerHost {
   bk_cloud_inst_id: string;
   device_group: string;
 }
-
-defineOptions({ name: 'InheritPackageFormItem' });
-const props = defineProps<{
-  region: string;
-  bizs?: number | string;
-}>();
-const emit = defineEmits<{
-  (e: 'validateSuccess', host: RollingServerHost): void;
-  (e: 'validateFailed'): void;
-}>();
-const model = defineModel<string>();
 
 const { t } = useI18n();
 const { whereAmI, getBizsId } = useWhereAmI();
@@ -62,18 +65,23 @@ const checkRollingSeverHost = (bk_asset_id: string) => {
         checkMessage.value = '';
         resolve(true);
       } else {
-        throw res;
+        handleError(res);
+        reject(false);
       }
     } catch (error: any) {
       // 校验失败
-      rollingServerHost.value = null;
-      emit('validateFailed');
-      checkMessage.value = error.message;
+      handleError(error);
       reject(false);
     } finally {
       isCheckLoading.value = false;
     }
   });
+};
+
+const handleError = (error: any) => {
+  rollingServerHost.value = null;
+  emit('validateFailed');
+  checkMessage.value = error.message;
 };
 </script>
 

@@ -7,10 +7,16 @@ import DeleteButton from './single-delete-button.vue';
 import MoaVerifyBtn from '@/components/moa-verify/moa-verify-btn.vue';
 import { MoaRequestScene } from '@/components/moa-verify/typings';
 
+const loading = defineModel<boolean>('loading', { default: false });
+
 const props = withDefaults(defineProps<{ id: string; disabled: boolean }>(), {
   disabled: true,
 });
 
+const emit = defineEmits<{
+  (e: 'del', sessionId: string): void;
+  (e: 'success'): void;
+}>();
 const verifyTipsRef = useTemplateRef<HTMLElement>('verify-tips');
 const moaVerifyRef = useTemplateRef<InstanceType<typeof MoaVerifyBtn>>('moa-verify');
 
@@ -19,30 +25,26 @@ const verifyDisabled = computed(() => props.disabled || moaVerifyRef.value?.veri
 const { t } = useI18n();
 const resourceStore = useResourceStore();
 
-const emit = defineEmits<{
-  (e: 'del', sessionId: string): void;
-  (e: 'success'): void;
-}>();
-
-const loading = defineModel('loading', { default: false });
-
 const handleDelete = async () => {
   loading.value = true;
   try {
-    await resourceStore.deleteBatch(
+    const res = await resourceStore.deleteBatch(
       'security_groups',
       { ids: [props.id], session_id: moaVerifyRef?.value?.verifyResult?.session_id },
       { globalError: false },
     );
-    emit('success');
-  } catch (error: any) {
-    if (error.code === 2000019) {
+    if (res.code === 0) {
+      emit('success');
+    } else if (res.code === 2000019) {
       // MOA校验过期
       Message({ theme: 'error', message: t('MOA校验过期，请重新发起校验后操作') });
       moaVerifyRef.value?.resetVerifyResult();
     } else {
-      Message({ theme: 'error', message: error.message });
+      Message({ theme: 'error', message: res.message });
     }
+  } catch (error: any) {
+    console.error(error);
+    return Promise.reject(error);
   } finally {
     loading.value = false;
   }
@@ -74,16 +76,19 @@ const handleDelete = async () => {
   width: calc(100% - 66px);
   margin-right: auto;
 }
+
 .verify-container {
   width: calc(100% - 58px);
 
   :deep(.verify-result) {
     width: calc(100% - 102px);
   }
+
   :deep(.error-message) {
     max-width: calc(100% - 32px);
   }
 }
+
 .verify-tips {
   position: absolute;
   left: -12px;
