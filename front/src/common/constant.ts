@@ -590,6 +590,8 @@ export const LB_ISP: ConstantMapRecord = {
   CTCC: '中国电信',
   BGP: 'BGP',
   INTERNAL: '内网流量',
+  ziyan: '中小运营商',
+  ziyan_normal_bgp: 'BGP',
 };
 
 export const CLB_SPECS: ConstantMapRecord = {

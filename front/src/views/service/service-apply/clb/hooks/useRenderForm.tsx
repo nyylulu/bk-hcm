@@ -340,6 +340,19 @@ export default (formModel: Reactive<ApplyClbModel>) => {
           },
         },
         {
+          label: '安全组放通模式',
+          required: true,
+          property: 'load_balancer_pass_to_target',
+          description:
+            '安全组放通模式，是指用户的流程从CLB转发给后端RS时候，校验CLB和RS上绑定的安全组模式\n一、1次校验-仅校验CLB上的安全组，忽略后端RS的安全组，仅关注CLB上的安全组配置即可\n二、2次校验-同时校验CLB和RS上的安全组，需同时关注CLB和RS这2处绑定的安全组',
+          content: () => (
+            <bk-select v-model={formModel.load_balancer_pass_to_target} allowEmptyValues={[false]}>
+              <bk-option key={true} id={true} name='1次校验-仅校验CLB上的安全组' />
+              <bk-option key={false} id={false} name='2次校验-同时校验CLB和RS上的安全组' />
+            </bk-select>
+          ),
+        },
+        {
           label: '运营商类型',
           required: true,
           property: 'vip_isp',
@@ -349,6 +362,22 @@ export default (formModel: Reactive<ApplyClbModel>) => {
               <BkRadioGroup v-model={formModel.vip_isp}>
                 {ispList.value.map(({ Isp, TypeSet }) => {
                   const disabled = TypeSet.every(({ Availability }: any) => Availability === 'Unavailable');
+
+                  if (formModel.vendor === VendorEnum.ZIYAN && Isp === 'BGP') {
+                    // 自研云BGP，此处记录Type值，用于提交
+                    const value = TypeSet[0].Type;
+                    const disabled = TypeSet[0].Availability === 'Unavailable';
+                    return (
+                      <BkRadioButton
+                        class='w110'
+                        key={value}
+                        label={value}
+                        disabled={disabled}
+                        v-bk-tooltips={{ content: '当前地域不支持', disabled: !disabled }}>
+                        {LB_ISP[value]}
+                      </BkRadioButton>
+                    );
+                  }
 
                   return (
                     <BkRadioButton
@@ -365,6 +394,34 @@ export default (formModel: Reactive<ApplyClbModel>) => {
             );
           },
         },
+        {
+          label: '弹性公网 IP',
+          // 弹性IP，仅内网可绑定。公网类型无法指定IP。绑定弹性IP后，内网CLB当做公网CLB使用
+          hidden: !isIntranet.value,
+          content: () => {
+            if (formModel.cloud_eip_id) {
+              return (
+                <div style=''>
+                  <div class={'image-selector-selected-block-container'}>
+                    <div class={'selected-block mr8'}>{formModel.cloud_eip_id} </div>
+                    <EditLine
+                      fill='#3A84FF'
+                      width={13.5}
+                      height={13.5}
+                      onClick={() => bus.$emit('showBindEipDialog')}
+                    />
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <Button theme='primary' onClick={() => bus.$emit('showBindEipDialog')}>
+                <Plus class='f24' />
+                {t('绑定弹性 IP')}
+              </Button>
+            );
+          },
+        },
         [
           {
             label: '负载均衡规格类型',
@@ -372,16 +429,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
             property: 'slaType',
             description:
               '共享型实例：按照规格提供性能保障，单实例最大支持并发连接数5万、每秒新建连接数5000、每秒查询数（QPS）5000。\n性能容量型实例：按照规格提供性能保障，单实例最大可支持并发连接数1000万、每秒新建连接数100万、每秒查询数（QPS）30万。',
-            hidden: isIntranet.value,
             content: () => {
-              const tooltips = { content: t('请选择运营商类型'), disabled: !!formModel.vip_isp, boundary: 'parent' };
-              if (!ispList.value.length) {
-                Object.assign(tooltips, {
-                  content: t('当前地域/可用区无可用的运营商'),
-                  disabled: ispList.value.length,
-                  boundary: 'parent',
-                });
-              }
               return (
                 <Select
                   v-model={formModel.slaType}
@@ -390,7 +438,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
                   class='w220'
                   onChange={handleSlaTypeChange}>
                   <Option id='0' name={t('共享型')} />
-                  <Option id='1' name={t('性能容量型')} disabled={!formModel.vip_isp} v-bk-tooltips={tooltips} />
+                  <Option id='1' name={t('性能容量型')} />
                 </Select>
               );
             },
@@ -414,10 +462,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
                 return <SelectedItemPreviewComp content={CLB_SPECS[formModel.sla_type]} onClick={handleClick} />;
               }
               return (
-                <Button
-                  v-bk-tooltips={{ content: '请选择运营商类型', disabled: !!formModel.vip_isp }}
-                  disabled={!formModel.vip_isp}
-                  onClick={handleClick}>
+                <Button onClick={handleClick}>
                   <Plus class='f24' />
                   {t('选择实例规格')}
                 </Button>
@@ -449,34 +494,6 @@ export default (formModel: Reactive<ApplyClbModel>) => {
               </span>
             </div>
           ),
-        },
-        {
-          label: '弹性公网 IP',
-          // 弹性IP，仅内网可绑定。公网类型无法指定IP。绑定弹性IP后，内网CLB当做公网CLB使用
-          hidden: !isIntranet.value,
-          content: () => {
-            if (formModel.cloud_eip_id) {
-              return (
-                <div style=''>
-                  <div class={'image-selector-selected-block-container'}>
-                    <div class={'selected-block mr8'}>{formModel.cloud_eip_id} </div>
-                    <EditLine
-                      fill='#3A84FF'
-                      width={13.5}
-                      height={13.5}
-                      onClick={() => bus.$emit('showBindEipDialog')}
-                    />
-                  </div>
-                </div>
-              );
-            }
-            return (
-              <Button theme='primary' onClick={() => bus.$emit('showBindEipDialog')}>
-                <Plus class='f24' />
-                {t('绑定弹性 IP')}
-              </Button>
-            );
-          },
         },
       ],
     },
@@ -527,7 +544,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
           label: '共享带宽包',
           required: true,
           property: 'bandwidth_package_id',
-          hidden: formModel.internet_charge_type !== 'BANDWIDTH_PACKAGE',
+          hidden: formModel.internet_charge_type !== 'BANDWIDTH_PACKAGE' || isIntranet.value,
           content: () => (
             <BandwidthPackageSelector
               v-model={formModel.bandwidth_package_id}
@@ -544,7 +561,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
           label: '带宽上限（Mbps）',
           required: true,
           property: 'internet_max_bandwidth_out',
-          hidden: (!isIntranet.value && formModel.account_type === 'LEGACY') || isIntranet.value,
+          hidden: !isIntranet.value && formModel.account_type === 'LEGACY',
           content: () => (
             <div class='slider-wrap'>
               <Slider
@@ -711,7 +728,7 @@ export default (formModel: Reactive<ApplyClbModel>) => {
   // 清除校验结果
   const handleClearValidate = () => {
     nextTick(() => {
-      formRef.value.clearValidate();
+      formRef.value?.clearValidate();
     });
   };
 
@@ -783,15 +800,8 @@ export default (formModel: Reactive<ApplyClbModel>) => {
   );
 
   // 这个需要放到watch之后，避免数据清空之前就触发了effect
-  const {
-    ispList,
-    isResourceListLoading,
-    quotas,
-    isInquiryPrices,
-    isInquiryPricesLoading,
-    currentResourceListMap,
-    specAvailabilitySet,
-  } = useFilterResource(formModel);
+  const { ispList, isResourceListLoading, quotas, currentResourceListMap, specAvailabilitySet } =
+    useFilterResource(formModel);
 
   return {
     vpcData,
@@ -799,7 +809,5 @@ export default (formModel: Reactive<ApplyClbModel>) => {
     isSubnetPreviewDialogShow,
     ApplyClbForm,
     formRef,
-    isInquiryPrices,
-    isInquiryPricesLoading,
   };
 };
