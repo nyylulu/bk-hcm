@@ -462,7 +462,8 @@ func (s *Sys) compareResAction(registeredAction, action client.ResourceAction) b
 		registeredAction.Name != action.Name ||
 		registeredAction.NameEn != action.NameEn ||
 		registeredAction.Type != action.Type ||
-		registeredAction.Version < action.Version {
+		registeredAction.Version < action.Version ||
+		registeredAction.Hidden != action.Hidden {
 		return false
 	}
 

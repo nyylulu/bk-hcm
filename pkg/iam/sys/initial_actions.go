@@ -526,6 +526,7 @@ func genPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: accountResource,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   AccountKeyAccess,
 		Name:                 ActionIDNameMap[AccountKeyAccess],
@@ -534,6 +535,7 @@ func genPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: accountResource,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}}
 	actions = append(actions, genZiYanPlatformManageActions()...)
 	actions = append(actions, []client.ResourceAction{
@@ -545,6 +547,7 @@ func genPlatformManageActions() []client.ResourceAction {
 			RelatedResourceTypes: nil,
 			RelatedActions:       nil,
 			Version:              1,
+			Hidden:               true,
 		},
 	}...)
 	return actions
@@ -560,6 +563,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanCvmSubnet, // CVM子网-菜单粒度
 		Name:                 ActionIDNameMap[ZiyanCvmSubnet],
@@ -568,6 +572,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResShelves, // 资源上下架-菜单粒度
 		Name:                 ActionIDNameMap[ZiyanResShelves],
@@ -576,6 +581,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanCvmCreate, // CVM生产-菜单粒度
 		Name:                 ActionIDNameMap[ZiyanCvmCreate],
@@ -584,6 +590,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResDissolveManage, // 机房裁撤管理-菜单粒度
 		Name:                 ActionIDNameMap[ZiyanResDissolveManage],
@@ -592,6 +599,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResInventory, // 主机库存-菜单粒度
 		Name:                 ActionIDNameMap[ZiyanResInventory],
@@ -600,6 +608,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResCreate, // 主机申领-业务粒度
 		Name:                 ActionIDNameMap[ZiyanResCreate],
@@ -608,6 +617,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResRecycle, // 主机回收-业务粒度
 		Name:                 ActionIDNameMap[ZiyanResRecycle],
@@ -616,6 +626,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: bizResource,
 		RelatedActions:       []client.ActionID{BizAccess},
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   RootAccountManage,
 		Name:                 ActionIDNameMap[RootAccountManage],
@@ -624,6 +635,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   AccountBillManage,
 		Name:                 ActionIDNameMap[AccountBillManage],
@@ -632,6 +644,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   AccountBillPull,
 		Name:                 ActionIDNameMap[AccountBillPull],
@@ -640,6 +653,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: billCloudVendorResource,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:             AwsSavingsPlansCostQuery,
 		Name:           ActionIDNameMap[AwsSavingsPlansCostQuery],
@@ -656,6 +670,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   ZiyanResPlanManage,
 		Name:                 ActionIDNameMap[ZiyanResPlanManage],
@@ -664,6 +679,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	}, {
 		ID:                   RollingServerManage,
 		Name:                 ActionIDNameMap[RollingServerManage],
@@ -672,6 +688,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 		RelatedResourceTypes: nil,
 		RelatedActions:       nil,
 		Version:              1,
+		Hidden:               true,
 	},
 		{
 			ID:                   GreenChannel,
@@ -681,6 +698,7 @@ func genZiYanPlatformManageActions() []client.ResourceAction {
 			RelatedResourceTypes: nil,
 			RelatedActions:       nil,
 			Version:              1,
+			Hidden:               true,
 		},
 	}
 }
