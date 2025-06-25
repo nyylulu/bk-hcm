@@ -2,7 +2,8 @@ import { CreateRecallTaskModal } from '@/typings/scr';
 import { defineComponent, reactive, ref } from 'vue';
 import { Dialog, Form, Message } from 'bkui-vue';
 import ScrCreateFilterSelector from './ScrCreateFilterSelector';
-import ScrIdcZoneSelector from './ScrIdcZoneSelector';
+import QcloudRegionSelector from '../children/qcloud-region-selector.vue';
+import QcloudZoneSelector from '../children/qcloud-zone-selector.vue';
 import InputNumber from '@/components/input-number';
 import { useZiyanScrStore } from '@/store';
 import { useI18n } from 'vue-i18n';
@@ -18,8 +19,8 @@ export default defineComponent({
     const isLoading = ref(false);
     const formData = reactive<CreateRecallTaskModal>({
       device_type: '',
-      region: '',
-      zone: '',
+      bk_cloud_region: '',
+      bk_cloud_zone: '',
       replicas: 0,
       asset_ids: [],
     });
@@ -59,20 +60,10 @@ export default defineComponent({
             />
           </Form.FormItem>
           <Form.FormItem property='region' label='地域'>
-            <ScrCreateFilterSelector
-              v-model={formData.region}
-              api={ziyanScrStore.getIdcRegionList}
-              class='w200'
-              multiple={false}
-            />
+            <QcloudRegionSelector v-model={formData.bk_cloud_region} multiple={false} />
           </Form.FormItem>
           <Form.FormItem property='zone' label='园区'>
-            <ScrIdcZoneSelector
-              v-model={formData.zone}
-              cmdbRegionName={formData.region}
-              class='w200'
-              multiple={false}
-            />
+            <QcloudZoneSelector v-model={formData.bk_cloud_zone} multiple={false} region={[formData.bk_cloud_region]} />
           </Form.FormItem>
           <Form.FormItem property='replicas' label='数量'>
             <InputNumber v-model={formData.replicas} min={0} max={500} />

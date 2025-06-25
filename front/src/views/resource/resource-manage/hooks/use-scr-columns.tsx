@@ -44,6 +44,8 @@ import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
 import { ResourcesDemandsStatus, type IResourcesTicketItem } from '@/typings/resourcePlan';
 import { ChargeType, ChargeTypeMap } from '@/typings/plan';
 import { RESOURCE_DEMANDS_STATUS_NAME, RESOURCE_DEMANDS_STATUS_CLASSES } from '@/components/resource-plan/constants';
+import QcloudZoneValue from '@/views/ziyanScr/resource-manage/children/qcloud-zone-value.vue';
+import QcloudRegionValue from '@/views/ziyanScr/resource-manage/children/qcloud-region-value.vue';
 
 interface LinkFieldOptions {
   type: string; // 资源类型
@@ -1426,11 +1428,13 @@ export default (type: string, isSimpleShow = false) => {
     },
     {
       label: '地域',
-      field: 'region',
+      field: 'bk_cloud_region',
+      render: ({ data }: any) => <QcloudRegionValue value={data.bk_cloud_region} />,
     },
     {
       label: '园区',
-      field: 'zone',
+      field: 'bk_cloud_zone',
+      render: ({ data }: any) => <QcloudZoneValue value={data.bk_cloud_zone} />,
     },
     {
       label: '数量',

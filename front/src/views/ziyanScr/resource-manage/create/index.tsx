@@ -4,7 +4,8 @@ import { Button, Checkbox, Dialog, Message, TagInput } from 'bkui-vue';
 import DetailHeader from '@/views/resource/resource-manage/common/header/detail-header';
 import FilterFormItems from '../filter-form-items';
 import InputNumber from '@/components/input-number';
-import ScrIdcZoneSelector from './ScrIdcZoneSelector';
+import QcloudRegionSelector from '../children/qcloud-region-selector.vue';
+import QcloudZoneSelector from '../children/qcloud-zone-selector.vue';
 import ScrCreateFilterSelector from './ScrCreateFilterSelector';
 import CreateRecallTaskDialog from './CreateRecallTaskDialog';
 import CopyToClipboard from '@/components/copy-to-clipboard/index.vue';
@@ -13,6 +14,7 @@ import useColumns from '@/views/resource/resource-manage/hooks/use-scr-columns';
 import { useZiyanScrStore } from '@/store';
 import './index.scss';
 import type { PaginationType } from '@/hooks/usePagination';
+import { IQcloudRegionItem, IQcloudZoneItem } from '@/store/config/qcloud-resource';
 
 interface ILaunchDeviceItem {
   bk_host_id: number;
@@ -40,8 +42,8 @@ interface ScrResourceManageCreateFilterType {
 
 interface Spec {
   device_type: string[];
-  region: string[];
-  zone: string[];
+  bk_cloud_regions: string[];
+  bk_cloud_zones: string[];
   os_type: string[];
 }
 
@@ -57,12 +59,22 @@ export default defineComponent({
       asset_ids: [],
       spec: {
         device_type: [],
-        region: [],
-        zone: [],
+        bk_cloud_regions: [],
+        bk_cloud_zones: [],
         os_type: [],
       },
     });
     const filter = ref(getDefaultFilter());
+
+    // TODO: 后端上架接口支持bk_cloud_regions, bk_cloud_zones后，这里需要删掉
+    const selectedQcloudResource: Record<string, string[]> = { regionNames: [], zoneNames: [] };
+    const handleQcloudRegionChange = (qcloudRegions: IQcloudRegionItem[]) => {
+      selectedQcloudResource.regionNames = qcloudRegions.map((item) => item.cmdb_region_name);
+    };
+    const handleQcloudZoneChange = (qcloudZones: IQcloudZoneItem[]) => {
+      selectedQcloudResource.zoneNames = qcloudZones.map((item) => item.cmdb_zone_name);
+    };
+
     const filterFormItems = [
       {
         label: '机型',
@@ -80,12 +92,23 @@ export default defineComponent({
       {
         label: '地域',
         render: () => (
-          <ScrCreateFilterSelector v-model={filter.value.spec.region} api={ziyanScrStore.getIdcRegionList} />
+          <QcloudRegionSelector
+            v-model={filter.value.spec.bk_cloud_regions}
+            displayKey={props.type === 'online' ? 'cmdb_region_name' : undefined}
+            onChange={handleQcloudRegionChange}
+          />
         ),
       },
       {
         label: '园区',
-        render: () => <ScrIdcZoneSelector v-model={filter.value.spec.zone} cmdbRegionName={filter.value.spec.region} />,
+        render: () => (
+          <QcloudZoneSelector
+            v-model={filter.value.spec.bk_cloud_zones}
+            region={filter.value.spec.bk_cloud_regions}
+            displayKey={props.type === 'online' ? 'cmdb_zone_name' : undefined}
+            onChange={handleQcloudZoneChange}
+          />
+        ),
       },
       {
         label: '内网 IP',
@@ -147,10 +170,30 @@ export default defineComponent({
     const { CommonTable, dataList, getListData } = useTable({
       tableOptions: { columns, extra: { pagination } },
       requestOption: { dataPath: 'data.info', full: true },
-      scrConfig: () => ({
-        url,
-        payload: filter.value,
-      }),
+      scrConfig: () => {
+        // TODO: 上架相关的接口，后端暂时没有支持bk_cloud_regions, bk_cloud_zones，但后面会支持，因此前端这边暂时保留现状，接口处增加判断处理
+        const { ips, asset_ids, spec } = filter.value;
+        if (props.type === 'online') {
+          return {
+            url,
+            payload: {
+              ips,
+              asset_ids,
+              spec: {
+                ...spec,
+                region: selectedQcloudResource.regionNames,
+                zone: selectedQcloudResource.zoneNames,
+                bk_cloud_regions: undefined,
+                bk_cloud_zones: undefined,
+              },
+            },
+          };
+        }
+        return {
+          url,
+          payload: filter.value,
+        };
+      },
     });
 
     const reloadTableDataList = () => {
