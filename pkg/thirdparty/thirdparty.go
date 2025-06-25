@@ -49,6 +49,7 @@ import (
 type Client struct {
 	CVM             cvmapi.CVMClientInterface
 	OldCVM          cvmapi.CVMClientInterface
+	ResPlanCli      cvmapi.CVMClientInterface
 	DVM             dvmapi.DVMClientInterface
 	Tjj             tjjapi.TjjClientInterface
 	Xship           xshipapi.XshipClientInterface
@@ -92,6 +93,13 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 	cvm, err := cvmapi.NewCVMClientInterface(cvmConf, reg)
 	if err != nil {
 		logs.Errorf("failed to new cvm api client, conf: %v, err: %v", cvmConf, err)
+		return nil, err
+	}
+
+	resPlanConf := cvmapi.CVMCli{CvmApiAddr: opts.CrpOpt.CvmApiAddr}
+	resPlanCli, err := cvmapi.NewCVMClientInterface(resPlanConf, reg)
+	if err != nil {
+		logs.Errorf("failed to new res plan api client, conf: %v, err: %v", resPlanConf, err)
 		return nil, err
 	}
 
@@ -178,6 +186,7 @@ func newNoBKThirdClient(opts cc.ClientConfig, reg prometheus.Registerer) (*Clien
 	client := &Client{
 		CVM:             cvm,
 		OldCVM:          oldCvm,
+		ResPlanCli:      resPlanCli,
 		DVM:             dvm,
 		Tjj:             tjj,
 		Xship:           xship,

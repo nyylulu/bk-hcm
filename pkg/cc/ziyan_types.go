@@ -117,7 +117,9 @@ func (r Redis) validate() error {
 
 // ClientConfig third-party api client config set
 type ClientConfig struct {
-	CvmOpt    CVMCliConf `yaml:"cvm"`
+	CvmOpt CVMCliConf `yaml:"cvm"`
+	// CrpOpt 临时用于区分预测和资源申领的client
+	CrpOpt    CVMCliConf `yaml:"crp"`
 	TjjOpt    TjjCli     `yaml:"tjj"`
 	XshipOpt  XshipCli   `yaml:"xship"`
 	TCloudOpt TCloudCli  `yaml:"tencentcloud"`
