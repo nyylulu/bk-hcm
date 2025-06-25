@@ -1,4 +1,4 @@
-import { computed, defineComponent, ref, onMounted } from 'vue';
+import { computed, defineComponent, ref, onMounted, reactive } from 'vue';
 import { useTable } from '@/hooks/useTable/useTable';
 import { Search } from 'bkui-vue/lib/icon';
 import { Dialog, Form } from 'bkui-vue';
@@ -51,7 +51,7 @@ export default defineComponent({
     const deviceConfigDisabled = ref(false);
     const deviceTypeDisabled = ref(false);
     const batchEditDialogVisible = ref(false);
-    const createVisible = ref(false);
+    const createDeviceDialogState = reactive({ isShow: false, isHidden: false });
     const batchEditForm = ref({
       comment: '',
       enableCapacity: 0,
@@ -127,7 +127,8 @@ export default defineComponent({
       batchEditDialogVisible.value = true;
     };
     const createNewModel = () => {
-      createVisible.value = true;
+      createDeviceDialogState.isHidden = false;
+      createDeviceDialogState.isShow = true;
     };
     const triggerShow = (val: boolean) => {
       batchEditDialogVisible.value = val;
@@ -206,10 +207,6 @@ export default defineComponent({
       const { info } = await apiService.getRequireTypes();
       options.value.require_types = info;
     };
-    const createHandleConfirm = async () => {
-      await createRef.value.handleConfirm();
-      createVisible.value = false;
-    };
     onMounted(() => {
       loadRestrict();
       getfetchOptionslist();
@@ -244,11 +241,6 @@ export default defineComponent({
         };
       },
     });
-    const createRef = ref();
-    const createTriggerShow = () => {
-      createVisible.value = false;
-      createRef.value.clearValidate();
-    };
 
     const cvmDevicetypeParams = computed(() => {
       const { region, zone, device_group, cpu, mem, disk, enable_capacity, enable_apply } = filter.value;
@@ -410,16 +402,13 @@ export default defineComponent({
             </bk-form-item>
           </bk-form>
         </Dialog>
-        <Dialog
-          class='common-dialog'
-          close-icon={false}
-          isShow={createVisible.value}
-          title='创建新机型'
-          width={600}
-          onConfirm={createHandleConfirm}
-          onClosed={() => createTriggerShow()}>
-          <CreateDevice onQueryList={loadResources} ref={createRef} />
-        </Dialog>
+        {!createDeviceDialogState.isHidden && (
+          <CreateDevice
+            v-model:isShow={createDeviceDialogState.isShow}
+            onSubmit-success={loadResources}
+            onHidden={() => (createDeviceDialogState.isHidden = true)}
+          />
+        )}
       </div>
     );
   },
