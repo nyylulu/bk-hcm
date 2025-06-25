@@ -46,10 +46,6 @@ func (cli *SecretClient) TCloudSecret(kt *kit.Kit, accountID string) (*types.Bas
 		return nil, fmt.Errorf("get tcloud account failed, err: %v", err)
 	}
 
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
-	}
-
 	if account.Extension == nil {
 		return nil, errors.New("tcloud account extension is nil")
 	}
@@ -71,10 +67,6 @@ func (cli *SecretClient) TCloudZiyanSecret(kt *kit.Kit, accountID string) (*type
 	account, err := cli.data.TCloudZiyan.Account.Get(kt, accountID)
 	if err != nil {
 		return nil, fmt.Errorf("get tcloud ziyan account failed, err: %v", err)
-	}
-
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
 	}
 
 	if account.Extension == nil {
@@ -102,10 +94,6 @@ func (cli *SecretClient) AwsSecret(kt *kit.Kit, accountID string) (
 		return nil, "", "", fmt.Errorf("get aws account failed, err: %v", err)
 	}
 
-	if account.Type != enumor.ResourceAccount {
-		return nil, "", "", fmt.Errorf("account: %s not resource account type", accountID)
-	}
-
 	if account.Extension == nil {
 		return nil, "", "", errors.New("aws account extension is nil")
 	}
@@ -126,10 +114,6 @@ func (cli *SecretClient) HuaWeiSecret(kt *kit.Kit, accountID string) (*types.Bas
 	account, err := cli.data.HuaWei.Account.Get(kt.Ctx, kt.Header(), accountID)
 	if err != nil {
 		return nil, fmt.Errorf("get huawei account failed, err: %v", err)
-	}
-
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
 	}
 
 	if account.Extension == nil {
@@ -155,10 +139,6 @@ func (cli *SecretClient) AzureCredential(kt *kit.Kit, accountID string) (*types.
 		return nil, fmt.Errorf("get azure account failed, err: %v", err)
 	}
 
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
-	}
-
 	if account.Extension == nil {
 		return nil, errors.New("azure account extension is nil")
 	}
@@ -182,10 +162,6 @@ func (cli *SecretClient) GcpCredential(kt *kit.Kit, accountID string) (*types.Gc
 	account, err := cli.data.Gcp.Account.Get(kt.Ctx, kt.Header(), accountID)
 	if err != nil {
 		return nil, fmt.Errorf("get gcp account failed, err: %v", err)
-	}
-
-	if account.Type != enumor.ResourceAccount {
-		return nil, fmt.Errorf("account: %s not resource account type", accountID)
 	}
 
 	if account.Extension == nil {
