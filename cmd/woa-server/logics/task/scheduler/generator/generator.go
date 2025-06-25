@@ -727,11 +727,9 @@ func (g *Generator) launchCvm(kt *kit.Kit, order *types.ApplyOrder, createCvmReq
 }
 
 // AddCvmDevices check generated device, create device infos and update generate record status
-func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64,
-	order *types.ApplyOrder) error {
-
+func (g *Generator) AddCvmDevices(kt *kit.Kit, taskId string, generateId uint64, order *types.ApplyOrder) error {
 	// 1. check cvm task result
-	if err := g.CheckCVM(kt, taskId, order.SubOrderId); err != nil {
+	if err := g.CheckCVM(kt, taskId, order.SubOrderId, order.Spec.ChargeType); err != nil {
 		logs.Errorf("scheduler:logics:launch:cvm:failed, failed to create cvm when check generate task, "+
 			"order id: %s, task id: %s, err: %v, rid: %s", order.SubOrderId, taskId, err, kt.Rid)
 

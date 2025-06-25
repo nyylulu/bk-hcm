@@ -241,7 +241,7 @@ func (g *Generator) parseCrpCvmApplyNum(msg string) int {
 }
 
 // CheckCVM checks cvm creating task result
-func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string) error {
+func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string, chargeType cvmapi.ChargeType) error {
 	checkFunc := func(obj interface{}, err error) (bool, error) {
 		if err != nil {
 			return false, fmt.Errorf("failed to query cvm order by id %s, err: %v", orderId, err)
@@ -270,7 +270,7 @@ func (g *Generator) CheckCVM(kt *kit.Kit, orderId, subOrderID string) error {
 		}
 
 		// 检查CRP订单是否超出处理时间并记录日志
-		g.checkRecordCrpOrderTimeout(kt, subOrderID, resp)
+		g.checkRecordCrpOrderTimeout(kt, resp, subOrderID, chargeType)
 
 		status := enumor.CrpOrderStatus(resp.Result.Data[0].Status)
 		if status != enumor.CrpOrderStatusFinish &&
@@ -600,8 +600,15 @@ func (g *Generator) getCvmSubnet(kt *kit.Kit, zone, vpc string, order *types.App
 	return subnetList, nil
 }
 
-func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, subOrderID string, crpResp *cvmapi.OrderQueryResp) {
+func (g *Generator) checkRecordCrpOrderTimeout(kt *kit.Kit, crpResp *cvmapi.OrderQueryResp, subOrderID string,
+	chargeType cvmapi.ChargeType) {
+
 	if crpResp == nil || crpResp.Result == nil || crpResp.Error.Code != 0 || len(crpResp.Result.Data) != 1 {
+		return
+	}
+
+	// 只有计费模式:包年包月时才需要关注交付时长(计费模式为空时默认包年包月)
+	if len(chargeType) > 0 && chargeType != cvmapi.ChargeTypePrePaid {
 		return
 	}
 

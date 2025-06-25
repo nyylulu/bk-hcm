@@ -144,7 +144,8 @@ func (l *logics) CreateCvmFromTaskResult(kt *kit.Kit, order *types.ApplyOrder) e
 
 	// check cvm task result
 	orderStr := strconv.FormatUint(order.OrderId, 10)
-	if err := l.taskLogic.Scheduler().GetGenerator().CheckCVM(kt, order.TaskId, orderStr); err != nil {
+	if err := l.taskLogic.Scheduler().GetGenerator().CheckCVM(kt, order.TaskId, orderStr,
+		order.Spec.ChargeType); err != nil {
 		logs.Errorf("create cvm product failed, failed to check crp cvm status, orderID: %d, crpTaskID: %s, "+
 			"err: %v, rid: %s", order.OrderId, order.TaskId, err, kt.Rid)
 
