@@ -126,13 +126,16 @@ export const useZiyanScrStore = defineStore('ziyanScr', () => {
     });
 
   // 资源初始化详情全部ip
-  const getInitializationDetailsIps = async (subOrderId: string) => {
+  const getInitializationDetailsIps = async (subOrderId: string, status: number) => {
     const list = await rollRequest({
       httpClient: http,
       pageEnableCountKey: 'count',
     }).rollReq<ITaskApplyRecordInitItem>(
       `/api/v1/woa/${getBusinessApiPath()}task/find/apply/record/init`,
-      { suborder_id: subOrderId },
+      {
+        suborder_id: subOrderId,
+        filter: status || status === 0 ? transferSimpleConditions(['AND', ['status', '=', status]]) : undefined,
+      },
       { limit: 500, countGetter: (res) => res.data.count, listGetter: (res) => res.data.info },
     );
     return list.map((item) => item.ip).join('\n');

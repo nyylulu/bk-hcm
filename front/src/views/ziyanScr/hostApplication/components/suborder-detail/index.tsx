@@ -147,7 +147,7 @@ export default defineComponent({
           {props.stepId === 3 && (
             <CopyToClipboard
               style='margin-left: auto'
-              content={() => scrStore.getInitializationDetailsIps(String(props.suborderId))}
+              content={() => scrStore.getInitializationDetailsIps(String(props.suborderId), curStatus.value)}
               disabled={!pagination.count}>
               {{
                 default: ({ disabled, loading }: { disabled: boolean; loading: boolean }) => (
