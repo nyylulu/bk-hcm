@@ -288,9 +288,9 @@ func (s *DataServiceSetting) TenantEnable() bool {
 // HCServiceSetting defines hc service used setting options.
 type HCServiceSetting struct {
 	// 自研云增加的配置写在这里
-	Esb                   Esb        `yaml:"esb"`
-	ZiyanSecrets          []Secret   `yaml:"ziyanSecrets"`
-	SecurityGroupSkipList []string   `yaml:"securityGroupMgmtSkipList"`
+	Esb                   Esb      `yaml:"esb"`
+	ZiyanSecrets          []Secret `yaml:"ziyanSecrets"`
+	SecurityGroupSkipList []string `yaml:"securityGroupMgmtSkipList"`
 
 	Network       Network      `yaml:"network"`
 	Service       Service      `yaml:"service"`
@@ -553,6 +553,10 @@ func (s TaskServerSetting) Validate() error {
 		if err := s.SamPwdCli.validate(); err != nil {
 			return err
 		}
+	}
+
+	if err := s.Cmdb.validate(); err != nil {
+		return fmt.Errorf("cmdb validate error: %w", err)
 	}
 
 	return nil
