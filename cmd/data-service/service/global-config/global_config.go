@@ -21,9 +21,9 @@
 package globalconfig
 
 import (
+	"encoding/json"
 	"fmt"
 
-	"encoding/json"
 	"hcm/pkg/api/core"
 	datagconf "hcm/pkg/api/data-service/global_config"
 	"hcm/pkg/criteria/errf"

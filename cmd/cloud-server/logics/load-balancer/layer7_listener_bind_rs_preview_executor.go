@@ -270,7 +270,7 @@ func (l *Layer7ListenerBindRSPreviewExecutor) validateRS(kt *kit.Kit, curDetail 
 	if cvm.Region != targetRegion {
 		curDetail.Status.SetNotExecutable()
 		curDetail.ValidateResult = append(curDetail.ValidateResult,
-			fmt.Sprintf("rs(%s) region not match, rs.region: %s, lb.region: %v",
+			fmt.Sprintf("rs(%s) region not match, rs.region: %s, targetRegion: %v",
 				curDetail.RsIp, cvm.Region, targetRegion))
 		return cvm.CloudID, nil
 	}

@@ -61,7 +61,6 @@ const valueComps: Record<
   ca: CaValue,
   region: RegionValue,
   business: BusinessValue,
-  user: UserValue,
   json: JsonValue,
   user: UserValue,
   'cloud-area': CloudAreaValue,

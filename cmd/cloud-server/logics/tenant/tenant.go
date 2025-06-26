@@ -17,29 +17,44 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package core
+// Package tenant ...
+package tenant
 
 import (
-	"hcm/pkg/criteria/constant"
+	"hcm/pkg/api/core"
+	dataservice "hcm/pkg/client/data-service"
+	"hcm/pkg/criteria/enumor"
+	"hcm/pkg/dal/dao/tools"
 	"hcm/pkg/kit"
+	"hcm/pkg/logs"
 )
 
-// NewBackendKit 生成后端操作Kit.
-func NewBackendKit() *kit.Kit {
-	kt := kit.New()
-	kt.User = constant.BackendOperationUserKey
-	kt.AppCode = constant.BackendOperationAppCodeKey
-	// 设置后端操作的租户id
-	kt.SetBackendTenantID()
+// ListAllTenantID list all tenant_id from data-service
+func ListAllTenantID(kt *kit.Kit, ds *dataservice.Client) ([]string, error) {
+	tenantIDs := make([]string, 0)
 
-	return kt
-}
+	listReq := &core.ListReq{
+		Filter: tools.EqualExpression("status", enumor.TenantEnable),
+		Page:   core.NewDefaultBasePage(),
+	}
 
-// NewTenantBackendKit 生成指定租户的后端操作Kit.
-func NewTenantBackendKit(tenantID string) *kit.Kit {
-	kt := NewBackendKit()
-	// 设置后端操作的租户id
-	kt.TenantID = tenantID
+	for {
+		res, err := ds.Global.Tenant.List(kt, listReq)
+		if err != nil {
+			logs.Errorf("list tenant failed, err: %v, rid: %s", err, kt.Rid)
+			return nil, err
+		}
 
-	return kt
+		for _, item := range res.Details {
+			tenantIDs = append(tenantIDs, item.TenantID)
+		}
+
+		if len(res.Details) < int(listReq.Page.Limit) {
+			break
+		}
+
+		listReq.Page.Start += uint32(listReq.Page.Limit)
+	}
+
+	return tenantIDs, nil
 }
