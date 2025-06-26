@@ -430,3 +430,50 @@ func GetIdleCheckFailedJobUrl(kt *kit.Kit, sopsCli sopsapi.SopsClientInterface, 
 
 	return jobInstURL, nil
 }
+
+// IdleCheckParams 空闲检查任务参数
+type IdleCheckParams struct {
+	TemplateID int64
+	TaskName   string
+	CreateReq  *sopsapi.CreateTaskReq
+}
+
+// GetIdleCheckParams 获取空闲检查任务参数, 如果不是支持的操作系统，返回nil
+func GetIdleCheckParams(kt *kit.Kit, bkOsType cmdb.OsType, ip string, bkBizID int64) (
+	params *IdleCheckParams, supported bool, err error) {
+
+	var templateID int64
+	var taskName string
+	// 操作系统类型(Linux:1 Windows:2)
+	switch bkOsType {
+	case cmdb.LinuxOsType:
+		templateID = sopsapi.IdleCheckLinux
+		taskName = fmt.Sprintf(sopsapi.IdleCheckLinuxTaskNamePrefix, ip)
+	case cmdb.WindowsOsType:
+		templateID = sopsapi.IdleCheckWindows
+		taskName = fmt.Sprintf(sopsapi.IdleCheckWindowsTaskNamePrefix, ip)
+	default:
+		// 操作系统不是Linux、Windows的话，不处理
+		logs.Warnf("sops get idle check params, host is not Linux or Windows, ip: %s, bkOsType: %s, rid: %s",
+			ip, bkOsType, kt.Rid)
+		return nil, false, nil
+	}
+
+	constants := map[string]interface{}{
+		"${biz_cc_id}":   bkBizID,
+		"${bk_biz_id}":   bkBizID,
+		"${job_ip_list}": ip,
+	}
+
+	params = &IdleCheckParams{
+		TemplateID: templateID,
+		TaskName:   taskName,
+		CreateReq: &sopsapi.CreateTaskReq{
+			TemplateSource: sopsapi.CommonTemplateSource,
+			Name:           taskName,
+			Constants:      constants,
+		},
+	}
+
+	return params, true, nil
+}

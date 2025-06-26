@@ -1326,7 +1326,7 @@ func (r *recycler) setOrderNextStatus(kt *kit.Kit, orders []*table.RecycleOrder)
 			"update_at":    now,
 		}
 		if nextStatus == table.RecycleStatusCommitted {
-			(*update)["commited_at"] = now
+			(*update)["committed_at"] = now
 		}
 
 		// do not dispatch order to start if set next status failed

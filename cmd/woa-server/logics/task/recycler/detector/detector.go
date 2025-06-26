@@ -248,8 +248,8 @@ func (d *Detector) executeRecycleStep(step *table.DetectStep, retry int) (int, s
 		attempt, exeInfo, err = d.checkSecurityBaseline(step, retry)
 	case table.StepCheckReturn:
 		attempt, exeInfo, err = d.checkReturn(step, retry)
-	case table.StepCheckProcess:
-		attempt, exeInfo, err = d.checkProcess(step, retry)
+	// case table.StepCheckProcess:
+	// 	attempt, exeInfo, err = d.checkProcess(step, retry)
 	case table.StepCheckPmOuterIP: // 物理机外网IP回收及清理检查
 		attempt, exeInfo, err = d.checkPmOuterIP(step, retry)
 	default:

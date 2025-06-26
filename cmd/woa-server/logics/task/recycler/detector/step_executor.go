@@ -26,6 +26,7 @@ import (
 
 	"hcm/cmd/woa-server/dal/task/dao"
 	"hcm/cmd/woa-server/dal/task/table"
+	"hcm/pkg"
 	"hcm/pkg/criteria/constant"
 	"hcm/pkg/criteria/mapstr"
 	"hcm/pkg/kit"
@@ -60,14 +61,13 @@ func ScoreByCreateTime(step *StepMeta) int64 {
 
 // StepExecutor 预检步骤执行器
 type StepExecutor interface {
+	StepResultHandler
 	// GetStepName 获取当前步骤名
 	GetStepName() table.DetectStepName
 	// SubmitSteps 提交子单内的全部主机的当前预检步骤类型的主机
 	SubmitSteps(kt *kit.Kit, suborderID string, currentStepHosts []*table.DetectStep) (<-chan *Result, error)
 	// Start 启动
 	Start(kt *kit.Kit, workgroup DetectStepWorkGroup)
-	// HandleResult 处理多个步骤结果
-	HandleResult(kt *kit.Kit, steps []*StepMeta, err error, log string)
 	// CancelSuborder 取消指定子单的执行
 	CancelSuborder(kt *kit.Kit, suborderID string)
 }
@@ -75,8 +75,11 @@ type StepExecutor interface {
 // DetectStepWorkGroup 任务执行组
 type DetectStepWorkGroup interface {
 	Start(kt *kit.Kit)
-	Submit(kt *kit.Kit, step []*StepMeta)
-	// MaxBatchSize Submit函数所能进接受的最大数量
+	// Submit 提交子单内的全部主机的当前预检步骤类型的主机，steps的数量不能超过 MaxBatchSize。单次Submit应该对应对第三方接口的单次请求。
+	Submit(kt *kit.Kit, steps []*StepMeta)
+	// MaxBatchSize Submit函数所能接受的最大数量，
+	// 这里应该对应下游第三方系统的单次请求所能接受的参数数量，如果有多个步骤的请求应该以最小的限制为准。
+	// 若WorkGroup有自行维护限流的可以不受这个限制，如：标准运维同时要遵守全局频率限制。
 	MaxBatchSize() int
 }
 
@@ -131,8 +134,7 @@ func (sc *suborderChan) SendResult(r *Result) (allFinished bool) {
 	sc.ch <- r
 	allFinished = sc.remaining <= 0
 	if allFinished {
-		close(sc.ch)
-		sc.ch = nil
+		sc.closeWithoutLock()
 	}
 	return allFinished
 }
@@ -151,6 +153,11 @@ func (sc *suborderChan) String() string {
 func (sc *suborderChan) Close() {
 	sc.locker.Lock()
 	defer sc.locker.Unlock()
+	sc.closeWithoutLock()
+}
+
+// closeWithoutLock close and set to nil, use it after lock acquired
+func (sc *suborderChan) closeWithoutLock() {
 	if sc.ch != nil {
 		close(sc.ch)
 		sc.ch = nil
@@ -191,6 +198,10 @@ func (d *DetectStepExecutor) GetStepName() table.DetectStepName {
 // SubmitSteps 提交任务
 func (d *DetectStepExecutor) SubmitSteps(kt *kit.Kit, suborderID string, currentStepHosts []*table.DetectStep) (
 	<-chan *Result, error) {
+
+	if len(currentStepHosts) == 0 {
+		return nil, fmt.Errorf("can not submit empty step hosts, suborder: %s", suborderID)
+	}
 
 	for i, step := range currentStepHosts {
 		if step.StepName != d.GetStepName() {
@@ -271,8 +282,16 @@ func (d *DetectStepExecutor) scheduledOnce(kt *kit.Kit, workgroup DetectStepWork
 		time.Sleep(emptyStepSleepInterval)
 		return
 	}
-
-	// 4. 调用workgroup执行
+	// 1. 更新任务状态
+	stepIDs := slice.Map(steps, func(step *StepMeta) string { return step.Step.ID })
+	// 2. 更新任务状态
+	err := d.batchUpdateRecycleStep(kt, stepIDs, table.DetectStatusRunning)
+	if err != nil {
+		logs.Errorf("failed to update detect steps %v status to %s, err: %s, rid: %s",
+			stepIDs, table.DetectStatusRunning, err, kt.Rid)
+		// 状态更新失败时不影响继续执行
+	}
+	// 3. 调用workgroup执行
 	workgroup.Submit(kt, steps)
 }
 
@@ -286,7 +305,7 @@ func (d *DetectStepExecutor) PopTopK(k int) []*StepMeta {
 }
 
 // HandleResult 处理结果：1.持久化单个预检步骤结果到db 2. 通知Detector对应子单执行结果 3. 维护子单Channel状态
-func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string) {
+func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detectErr error, log string, needRetry bool) {
 	targetStatus := table.DetectStatusSuccess
 	errStr := "success"
 
@@ -300,14 +319,14 @@ func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detect
 			continue
 		}
 		// 1. 检查任务所属结果channel是否存在，且当前任务的rid和结果channel所属rid相符，否则跳过
-		resultSc := d.getChannelBySuborderID(kt, step.Step.SuborderID)
-		if resultSc == nil || resultSc.ch == nil {
-			logs.Errorf("failed to get channel of suborder %s, got nil data, detectErr: %v, resultSc: %+v, rid: %s",
-				step.Step.SuborderID, detectErr, resultSc, kt.Rid)
+		suborderChan := d.getChannelBySuborderID(kt, step.Step.SuborderID)
+		if suborderChan == nil || suborderChan.ch == nil {
+			logs.Errorf("failed to get channel of suborder %s, got nil data, detectErr: %v, suborderChan: %+v, rid: %s",
+				step.Step.SuborderID, detectErr, suborderChan, kt.Rid)
 			continue
 		}
 		// rid不相符，说明已经被重新入队
-		if resultSc.rid != step.Rid {
+		if suborderChan.rid != step.Rid {
 			logs.Warnf("discard detect result of suborder %s, stepRid: %s, err: %s, log: %s, rid: %s",
 				step.Step.SuborderID, step.Rid, errStr, log, kt.Rid)
 			continue
@@ -315,18 +334,23 @@ func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detect
 
 		d.recordMetric(step, detectErr)
 
-		attempt := step.RetryTimes
 		// 重试次数小于配置
-		if detectErr != nil && step.RetryTimes+1 < d.maxRetryTimes {
+		if needRetry && detectErr != nil && step.RetryTimes+1 < d.maxRetryTimes {
 			// 延迟入队，暂不写入结果
 			step.RetryTimes++
-			attempt++
+			// 写入中间结果到db
+			err := d.updateRecycleStep(kt, step.Step.ID, table.DetectStatusRunning, step.RetryTimes, errStr, log)
+			if err != nil {
+				logs.Errorf("%s: failed to update internal recycle step status, err: %v, step: %s, rid: %s",
+					constant.CvmRecycleFailed, err, step.Step.Describe(), kt.Rid)
+				return
+			}
 			go d.delayRetry(kt, step)
 			continue
 		}
 
 		// 持久化结果到db
-		err := d.updateRecycleStep(kt, step.Step.ID, targetStatus, attempt, errStr, log)
+		err := d.updateRecycleStep(kt, step.Step.ID, targetStatus, step.RetryTimes, errStr, log)
 		if err != nil {
 			logs.Errorf("%s: failed to update recycle step status, err: %v, step: %s, rid: %s",
 				constant.CvmRecycleFailed, err, step.Step.Describe(), kt.Rid)
@@ -339,14 +363,13 @@ func (d *DetectStepExecutor) HandleResult(kt *kit.Kit, steps []*StepMeta, detect
 			TaskID:   step.Step.TaskID,
 			Error:    detectErr,
 		}
-		allFinished := resultSc.SendResult(result)
+		allFinished := suborderChan.SendResult(result)
 		if allFinished {
 			// 发送完毕，清理信息
 			d.suborderChanMap.Delete(step.Step.SuborderID)
-			logs.Infof("all host of suborder %s detect finished, resultSc: %s, rid: %s",
-				step.Step.SuborderID, resultSc.String(), kt.Rid)
+			logs.Infof("detect step finished, step: %s, suborder: %s, suborderChan: %s, rid: %s",
+				d.GetStepName(), step.Step.SuborderID, suborderChan.String(), kt.Rid)
 		}
-
 	}
 }
 
@@ -380,6 +403,35 @@ func (d *DetectStepExecutor) getChannelBySuborderID(kt *kit.Kit, suborderID stri
 		return nil
 	}
 	return resultSc
+}
+func (d *DetectStepExecutor) batchUpdateRecycleStep(kt *kit.Kit, stepIDList []string, status table.DetectStatus) error {
+	filter := &mapstr.MapStr{
+		"id": map[string]any{
+			pkg.BKDBIN: stepIDList,
+		},
+	}
+
+	now := time.Now()
+	doc := mapstr.MapStr{
+		"status":    status,
+		"update_at": now,
+	}
+
+	switch status {
+	case table.DetectStatusSuccess, table.DetectStatusFailed:
+		doc["end_at"] = now
+	case table.DetectStatusRunning:
+		doc["start_at"] = now
+	default:
+		// do nothing for other status
+	}
+
+	if err := dao.Set().DetectStep().UpdateDetectStep(kt.Ctx, filter, &doc); err != nil {
+		logs.Errorf("failed to update recycle step: %s, update: %+v, err: %v", stepIDList, doc, err)
+		return err
+	}
+
+	return nil
 }
 
 func (d *DetectStepExecutor) updateRecycleStep(kt *kit.Kit, stepID string, status table.DetectStatus,
