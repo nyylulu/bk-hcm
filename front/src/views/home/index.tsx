@@ -10,7 +10,6 @@ import AccountVendorGroup from '@/views/resource/resource-manage/account/vendor-
 import GlobalPermissionDialog from '@/components/global-permission-dialog';
 
 import Cookies from 'js-cookie';
-import i18n from '@/language/i18n';
 import { useI18n } from 'vue-i18n';
 import { useVerify } from '@/hooks';
 import { useUserStore, useAccountStore, useCommonStore } from '@/store';
@@ -34,6 +33,7 @@ import {
   MENU_GREEN_CHANNEL_MANAGEMENT,
 } from '@/constants/menu-symbol';
 import { jsonp } from '@/http';
+import i18n from '@/language/i18n';
 
 const { DropdownMenu, DropdownItem } = Dropdown;
 const { VERSION, BK_COMPONENT_API_URL, BK_HCM_DOMAIN, ENABLE_CLOUD_SELECTION, ENABLE_ACCOUNT_BILL } =

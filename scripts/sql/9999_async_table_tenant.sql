@@ -1,7 +1,7 @@
 /*
  * TencentBlueKing is pleased to support the open source community by making
  * 蓝鲸智云 - 混合云管理平台 (BlueKing - Hybrid Cloud Management System) available.
- * Copyright (C) 2022 THL A29 Limited,
+ * Copyright (C) 2024 THL A29 Limited,
  * a Tencent company. All rights reserved.
  * Licensed under the MIT License (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,29 +17,23 @@
  * to the current version of the project delivered to anyone in the future.
  */
 
-package core
+/*
+    SQLVER=9999,HCMVER=v9.9.9
 
-import (
-	"hcm/pkg/criteria/constant"
-	"hcm/pkg/kit"
-)
+    Notes:
+    1. 修改`async_flow`表，增加`tenant_id`字段
+    2. 修改`async_flow_task`表，增加`tenant_id`字段
+*/
 
-// NewBackendKit 生成后端操作Kit.
-func NewBackendKit() *kit.Kit {
-	kt := kit.New()
-	kt.User = constant.BackendOperationUserKey
-	kt.AppCode = constant.BackendOperationAppCodeKey
-	// 设置后端操作的租户id
-	kt.SetBackendTenantID()
+START TRANSACTION;
 
-	return kt
-}
+alter table async_flow
+    add tenant_id varchar(64) not null default '' after worker;
 
-// NewTenantBackendKit 生成指定租户的后端操作Kit.
-func NewTenantBackendKit(tenantID string) *kit.Kit {
-	kt := NewBackendKit()
-	// 设置后端操作的租户id
-	kt.TenantID = tenantID
+alter table async_flow_task
+    add tenant_id varchar(64) not null default '' after result;
 
-	return kt
-}
+CREATE OR REPLACE VIEW `hcm_version`(`hcm_ver`, `sql_ver`) AS
+SELECT 'v9.9.9' as `hcm_ver`, '9999' as `sql_ver`;
+
+COMMIT;
